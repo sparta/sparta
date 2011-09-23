@@ -1,0 +1,17 @@
+"Previous Section"_Section_commands.html - "DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next Section"_Section_example.html :c
+
+:link(dws,http://lammps.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line 
+
+6. How-to discussions :h3
+
+The following sections describe how to use various options within
+DSMC.
+
+The example input scripts included in the DSMC distribution and
+highlighted in "this section"_Section_example.html also show how to
+setup and run various kinds of simulations.
+

@@ -1,0 +1,26 @@
+DSMC example problems
+
+Each of these sub-directories contains a sample problem you can run
+with DSMC.  They should all run quickly in a few seconds on a desktop
+machine.  Each problem has an input script (in.*) and produces a log
+file (log.*).  Some produce dump files (dump.*) when they run.
+
+A few sample log file outputs on different machines and different
+numbers of processors are included in the directories to compare your
+answers to.  E.g. a log file like log.test.date.foo.P means it ran on
+P processors of machine "foo" with the dated version of DSMC.  Note
+that these problems should get statistically similar answers when run
+on different machines or different numbers of processors, but not
+identical answers to those in the log of dump files included here.
+
+These are the sample problems in the various sub-directories:
+
+Here is how you might run and visualize one of the sample problems:
+
+cd foo
+cp ../../src/dsmc_linux .          # copy DSMC executable to this dir
+spk_dsmc < in.foo                  # run the problem
+
+Running the simulation produces the files dump.foo and log.dsmc.
+
+How to animate dump files or view image files:

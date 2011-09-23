@@ -1,0 +1,34 @@
+# LAMMPS library multiple-machine Makefile
+
+SHELL = /bin/sh
+
+# Definitions
+
+ROOT =	dsmc
+EXE =	lib$(ROOT)_$@.a
+
+SRC =	dsmc.cpp error.cpp input.cpp library.cpp  memory.cpp random_mars.cpp random_park.cpp timer.cpp universe.cpp variable.cpp 
+
+INC =	dsmc.h dsmctype.h error.h input.h library.h memory.h pointers.h random_mars.h random_park.h style_command.h timer.h universe.h variable.h version.h 
+
+OBJ =	$(SRC:.cpp=.o)
+
+# Targets
+
+help:
+	@echo 'Type "make target" where target is one of:'
+	@echo ''
+	@files="`ls MAKE/Makefile.*`"; \
+	for file in $$files; do head -1 $$file; done
+
+clean:
+	rm -rf Obj_*
+
+.DEFAULT:
+	@test -f MAKE/Makefile.$@
+	@if [ ! -d Obj_$@ ]; then mkdir Obj_$@; fi
+	@cp -p $(SRC) $(INC) Obj_$@
+	@cp MAKE/Makefile.$@ Obj_$@/Makefile
+	@cd Obj_$@; \
+	$(MAKE) $(MFLAGS) "OBJ = $(OBJ)" "INC = $(INC)" "EXE = ../$(EXE)" lib
+	@if [ -d Obj_$@ ]; then cd Obj_$@; rm -f $(SRC) $(INC) Makefile*; fi

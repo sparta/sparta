@@ -1,0 +1,39 @@
+This is the DSMC software package.
+
+DSMC stands for ...
+
+Copyright (2011) Sandia Corporation.  Under the terms of Contract
+DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
+certain rights in this software.  This software is distributed under
+the GNU General Public License.
+
+----------------------------------------------------------------------
+
+DSMC is a parallel Direct Simulation Monte Carlo code designed to run
+efficiently on parallel computers.  It was developed at Sandia
+National Laboratories, a US Department of Energy facility, with
+funding from the DOE.  It is an open-source code, distributed freely
+under the terms of the GNU Public License (GPL).
+
+The primary authors of the code are Steve Plimpton and Michael Gallis,
+who can be emailed at sjplimp@sandia.gov and magalli@sandia.gov.  The
+DSMC WWW Site at www.sandia.gov/~sjplimp/dsmc.html has more
+information about the code and its uses.
+
+The DSMC distribution includes the following files and directories:
+
+README			   this file
+LICENSE			   the GNU General Public License (GPL)
+bench			   benchmark problems
+doc			   documentation
+examples		   simple test problems
+python			   Python wrapper on DSMC as a library
+src			   source files
+tools			   pre- and post-processing tools
+
+Point your browser at any of these files to get started:
+
+doc/Manual.html	           the DSMC manual
+doc/Section_intro.html	   hi-level introduction to DSMC
+doc/Section_start.html	   how to build and use DSMC
+doc/Developer.pdf          DSMC developer guide

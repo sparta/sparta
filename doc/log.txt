@@ -1,0 +1,41 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://lammps.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+log command :h3
+
+[Syntax:]
+
+log file :pre
+
+file = name of new logfile :ul
+
+[Examples:]
+
+log log.equil :pre
+
+[Description:]
+
+This command closes the current DSMC log file, opens a new file with
+the specified name, and begins logging information to it.  If the
+specified file name is {none}, then no new log file is opened.
+
+If multiple processor partitions are being used, the file name should
+be a variable, so that different processors do not attempt to write to
+the same log file.
+
+The file "log.dsmc" is the default log file for a DSMC run.  The name
+of the initial log file can also be set by the command-line switch
+-log.  See "this section"_Section_start.html#start_6 for details.
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:]
+
+The default DSMC log file is named log.dsmc

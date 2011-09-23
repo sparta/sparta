@@ -1,0 +1,207 @@
+"Previous Section"_Section_tools.html - "DSMC WWW Site"_dws -
+"DSMC Documentation"_dd - "DSMC Commands"_dc - "Next
+Section"_Section_python.html :c
+
+:link(dws,http://lammps.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+10. Modifying & extending DSMC :h3
+
+DSMC is designed in a modular fashion so as to be easy to modify and
+extend with new functionality.  In fact, about 75% of its source code
+is files added in this fashion.
+
+In this section, changes and additions users can make are listed along
+with minimal instructions.  If you add a new feature to DSMC and
+think it will be of interest to general users, we encourage you to
+submit it to the developers for inclusion in the released version of
+DSMC.  Information about how to do this is provided
+"below"_#mod_14.
+
+The best way to add a new feature is to find a similar feature in
+DSMC and look at the corresponding source and header files to figure
+out what it does.  You will need some knowledge of C++ to be able to
+understand the hi-level structure of DSMC and its class
+organization, but functions (class methods) that do actual
+computations are written in vanilla C-style code and operate on simple
+C-style data structures (vectors and arrays).
+
+Most of the new features described in this section require you to
+write a new C++ derived class (except for exceptions described below,
+where you can make small edits to existing files).  Creating a new
+class requires 2 files, a source code file (*.cpp) and a header file
+(*.h).  The derived class must provide certain methods to work as a
+new option.  Depending on how different your new feature is compared
+to existing features, you can either derive from the base class
+itself, or from a derived class that already exists.  Enabling DSMC
+to invoke the new class is as simple as putting the two source
+files in the src dir and re-building DSMC.
+
+The advantage of C++ and its object-orientation is that all the code
+and variables needed to define the new feature are in the 2 files you
+write, and thus shouldn't make the rest of DSMC more complex or
+cause side-effect bugs.
+
+Here is a concrete example.  Suppose you write 2 files pair_foo.cpp
+and pair_foo.h that define a new class PairFoo that computes pairwise
+potentials described in the classic 1997 "paper"_#Foo by Foo, et al.
+If you wish to invoke those potentials in a DSMC input script with a
+command like
+
+pair_style foo 0.1 3.5 :pre
+
+then your pair_foo.h file should be structured as follows:
+
+#ifdef PAIR_CLASS
+PairStyle(foo,PairFoo)
+#else
+...
+(class definition for PairFoo)
+...
+#endif :pre
+
+where "foo" is the style keyword in the pair_style command, and
+PairFoo is the class name defined in your pair_foo.cpp and pair_foo.h
+files.
+
+When you re-build DSMC, your new pairwise potential becomes part of
+the executable and can be invoked with a pair_style command like the
+example above.  Arguments like 0.1 and 3.5 can be defined and
+processed by your new class.
+
+As illustrated by this pairwise example, many kinds of options are
+referred to in the DSMC documentation as the "style" of a particular
+command.
+
+The instructions below give the header file for the base class that
+these styles are derived from.  Public variables in that file are ones
+used and set by the derived classes which are also used by the base
+class.  Sometimes they are also used by the rest of DSMC.  Virtual
+functions in the base class header file which are set = 0 are ones you
+must define in your new derived class to give it the functionality
+DSMC expects.  Virtual functions that are not set to 0 are functions
+you can optionally define.
+
+Additionally, new output options can be added directly to the
+thermo.cpp, dump_custom.cpp, and variable.cpp files as explained
+below.
+
+:line
+
+Here are additional guidelines for modifying DSMC and adding new
+functionality:
+
+Think about whether what you want to do would be better as a pre- or
+post-processing step.  Many computations are more easily and more
+quickly done that way. :ulb,l
+
+Don't do anything within the timestepping of a run that isn't
+parallel.  E.g. don't accumulate a bunch of data on a single processor
+and analyze it.  You run the risk of seriously degrading the parallel
+efficiency. :l
+
+If your new feature reads arguments or writes output, make sure you
+follow the unit conventions discussed by the "units"_units.html
+command. :l
+
+If you add something you think is truly useful and doesn't impact
+DSMC performance when it isn't used, send an email to the
+"developers"_http://lammps.sandia.gov/authors.html.  We might be
+interested in adding it to the DSMC distribution.  See further
+details on this at the bottom of this page.  :l,ule
+
+:line
+
+Here are the subsequent topics discussed below, most of which are new
+features that can be added in the manner just described:
+
+10.14 "Submitting new features for inclusion in DSMC"_#mod_14 :all(b)
+
+:line
+:line
+
+10.14 Submitting new features for inclusion in DSMC :link(mod_14),h4
+
+We encourage users to submit new features that they add to DSMC to
+"the developers"_http://lammps.sandia.gov/authors.html, especially if
+you think the features will be of interest to other users.  If they
+are broadly useful we may add them as core files to DSMC or as part
+of a "standard package"_Section_start.html#start_3.  Else we will add
+them as a user-contributed package or file.  Examples of user packages
+are in src sub-directories that start with USER.  The USER-MISC
+package is simply a collection of (mostly) unrelated single files,
+which is the simplest way to have your contribution quickly added to
+the DSMC distribution.  You can see a list of the both standard and
+user packages by typing "make package" in the DSMC src directory.
+
+With user packages and files, all we are really providing (aside from
+the fame and fortune that accompanies having your name in the source
+code and on the "Authors page"_http://lammps.sandia.gov/authors.html
+of the "DSMC WWW site"_dws), is a means for you to distribute your
+work to the DSMC user community and a mechanism for others to easily
+try out your new feature.  This may help you find bugs or make contact
+with new collaborators.  Note that you're also implicitly agreeing to
+support your code which means answer questions, fix bugs, and maintain
+it if DSMC changes.
+
+The previous sections of this doc page describe how to add new
+features of various kinds to DSMC.  Packages are simply collections
+of one or more new class files which are invoked as a new "style"
+within a DSMC input script.  If designed correctly, these additions
+do not require changes to the main core of DSMC; they are simply
+add-on files.  If you think your new feature requires non-trivial
+changes in core DSMC files, you'll need to "communicate with the
+developers"_http://lammps.sandia.gov/authors.html, since we may or may
+not want to make those changes.  An example of a trivial change is
+making a parent-class method "virtual" when you derive a new child
+class from it.
+
+Here is what you need to do to submit a user package or single file
+for our consideration.  Following these steps will save time for both
+you and us.  See existing package files for examples.
+
+All source files you provide must compile with the most current
+version of DSMC. :ulb,l
+
+If your contribution is a single file (actually a *.cpp and *.h file)
+it can most rapidly be added to the USER-MISC directory.  Send us the
+one-line entry to add to the USER-MISC/README file in that dir, along
+with the 2 source files.  You can do this multiple times if you wish
+to contribute several individual features.  :l
+
+If your contribution is several related featues, it is probably best
+to make it a user package directory with a name like USER-FOO.  In
+addition to your new files, the directory should contain a README, and
+Install.csh file.  The README text file should contain your name and
+contact information and a brief description of what your new package
+does.  The Install.csh file enables DSMC to include and exclude your
+package.  See other README and Install.sh files in other USER
+directories as examples.  Send us a tarball of this USER-FOO
+directory. :l
+
+Your new source files need to have the DSMC copyright, GPL notice,
+and your name at the top, like other DSMC source files.  They need
+to create a class that is inside the DSMC namespace.  Other than
+that, your files can do whatever is necessary to implement the new
+features.  They don't have to be written in the same stylistic format
+and syntax as other DSMC files, though that would be nice. :l
+
+Finally, you must also send a documentation file for each new command
+or style you are adding to DSMC.  This will be one file for a
+single-file feature.  For a package, it might be several files.  These
+are simple text files which we will convert to HTML.  They must be in
+the same format as other *.txt files in the lammps/doc directory for
+similar commands and styles.  The "Restrictions" section of the doc
+page should indicate that your command is only available if DSMC is
+built with the appropriate USER-MISC or USER-FOO package.  See other
+user package doc files for an example of how to do this.  The txt2html
+tool we use to do the conversion can be downloaded from "this
+site"_http://www.sandia.gov/~sjplimp/download.html, so you can perform
+the HTML conversion yourself to proofread your doc page.  :l,ule
+
+Note that the more clear and self-explanatory you make your doc and
+README files, the more likely it is that users will try out your new
+feature.
