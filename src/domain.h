@@ -21,9 +21,19 @@ namespace DSMC_NS {
 
 class Domain : protected Pointers {
  public:
+  int box_exist;                    // 0 = not yet created, 1 = exists
+  int dimension;                    // 2,3
+
+  double boxlo[3],boxhi[3];         // box global bounds
+  double xprd,yprd,zprd;                 // global box dimensions
+  double prd[3];                    // array form of dimensions
+
   Domain(class DSMC *);
   ~Domain();
   void init() {}
+  void set_initial_box();
+  void set_global_box();
+  void print_box(const char *);
 };
 
 }

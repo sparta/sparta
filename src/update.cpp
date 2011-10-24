@@ -13,6 +13,8 @@
 ------------------------------------------------------------------------- */
 
 #include "update.h"
+#include "particle.h"
+#include "comm.h"
 
 using namespace DSMC_NS;
 
@@ -20,10 +22,32 @@ using namespace DSMC_NS;
 
 Update::Update(DSMC *dsmc) : Pointers(dsmc)
 {
+  dt = 0.1;
 }
 
 /* ---------------------------------------------------------------------- */
 
-Update::~Update()
+Update::~Update() {}
+
+/* ---------------------------------------------------------------------- */
+
+void Update::run(int nsteps)
 {
+  if (comm->me == 0) {
+    if (screen)
+      fprintf(screen,"Performing run ...\n");
+    if (logfile)
+      fprintf(logfile,"Performing run ...\n");
+  }
+
+  // loop over timesteps
+
+  for (int i = 0; i < nsteps; i++) {
+
+    ntimestep++;
+
+    // move and communicate particles
+
+    particle->move();
+  }
 }

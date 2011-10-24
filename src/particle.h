@@ -21,9 +21,23 @@ namespace DSMC_NS {
 
 class Particle : protected Pointers {
  public:
+  struct OnePart {
+    int id,type;            // particle ID, type
+    int icell;              // grid cell the particle is in (0 to N-1)
+    double x[3];            // coords of particle
+    double v[3];            // velocity of particle
+  };
+
+  bigint nglobal;           // global # of particles
+  int nlocal;               // # of particles I own
+  int maxlocal;             // max # of particles list can hold
+  OnePart *particles;       // list of particles I own
+
   Particle(class DSMC *);
   ~Particle();
   void init() {}
+  void create(int, char **);
+  void move();
 };
 
 }

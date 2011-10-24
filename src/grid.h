@@ -21,9 +21,28 @@ namespace DSMC_NS {
 
 class Grid : protected Pointers {
  public:
+  int grid_exist;
+
+  struct OneCell {
+    int id;
+    double lo[3],hi[3];
+    int neigh[6];
+    int proc;
+  };
+
+  OneCell *cells;
+  int ncell,maxcell;
+  
   Grid(class DSMC *);
   ~Grid();
   void init() {}
+  void create(int, char **);
+  int which_cell(double, double, double);
+
+ private:
+  int bstyle;
+  int nx,ny,nz;
+  double xdelta,ydelta,zdelta;
 };
 
 }

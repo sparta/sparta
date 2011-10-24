@@ -62,7 +62,12 @@ class Input : protected Pointers {
   void shell();
   void variable_command();
 
-  //void angle_coeff();          // DSMC commands
+  // DSMC commands
+
+  void create_grid();
+  void create_particles();
+  void dimension();
+  void timestep();
 };
 
 }

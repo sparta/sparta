@@ -23,6 +23,11 @@
 #include "style_command.h"
 #include "universe.h"
 #include "variable.h"
+#include "domain.h"
+#include "grid.h"
+#include "particle.h"
+#include "update.h"
+#include "random_mars.h"
 #include "error.h"
 #include "memory.h"
 
@@ -402,7 +407,10 @@ int Input::execute_command()
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
 
-  //else if (!strcmp(command,"angle_coeff")) angle_coeff();
+  else if (!strcmp(command,"create_grid")) create_grid();
+  else if (!strcmp(command,"create_particles")) create_particles();
+  else if (!strcmp(command,"dimension")) dimension();
+  else if (!strcmp(command,"timestep")) timestep();
 
   else flag = 0;
 
@@ -744,3 +752,40 @@ void Input::variable_command()
 /* ----------------------------------------------------------------------
    one function for each DSMC-specific input script command
 ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------- */
+
+void Input::create_grid()
+{
+  grid->create(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::create_particles()
+{
+  particle->create(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::dimension()
+{
+  if (narg != 1) error->all(FLERR,"Illegal dimension command");
+  if (domain->box_exist) 
+    error->all(FLERR,"Dimension command after simulation box is defined");
+  domain->dimension = atoi(arg[0]);
+  if (domain->dimension != 2 && domain->dimension != 3)
+    error->all(FLERR,"Illegal dimension command");
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::timestep()
+{
+  if (narg != 1) error->all(FLERR,"Illegal timestep command");
+  double dt = atof(arg[0]);
+  if (dt <= 0.0) error->all(FLERR,"Illegal timestep command");
+  update->dt = dt;
+}
+

@@ -21,9 +21,15 @@ namespace DSMC_NS {
 
 class Update : protected Pointers {
  public:
+  bigint ntimestep;               // current timestep
+  int nsteps;                     // # of steps to run
+  bigint firststep,laststep;      // 1st & last step of this run
+  double dt;                      // timestep size
+
   Update(class DSMC *);
   ~Update();
   void init() {}
+  void run(int);
 };
 
 }

@@ -26,6 +26,7 @@
 #include "surf.h"
 #include "output.h"
 #include "timer.h"
+#include "random_mars.h"
 #include "memory.h"
 #include "error.h"
 
@@ -336,9 +337,13 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
 
   input = new Input(this,narg,arg);
 
-  // allocate top-level classes
+  // allocate fundamental classes
 
   create();
+
+  // other top-level classes
+
+  //ranmaster = new RanMars(this);
 
   // if helpflag set, print help and exit
 
@@ -351,6 +356,7 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
 /* ----------------------------------------------------------------------
    shutdown DSMC
    delete top-level classes
+   delete fundamental classes
    close screen and log files in world and universe
    output files were already closed in destroy()
    delete fundamental classes
@@ -358,6 +364,8 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
 
 DSMC::~DSMC()
 {
+  //delete ranmaster;
+  
   destroy();
 
   if (universe->nworlds == 1) {

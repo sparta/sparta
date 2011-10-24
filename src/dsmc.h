@@ -21,7 +21,9 @@ namespace DSMC_NS {
 
 class DSMC {
  public:
-                                 // ptrs to fundamental DSMC classes
+
+  // fundamental DSMC classes
+
   class Memory *memory;          // memory allocation functions
   class Error *error;            // error handling
   class Universe *universe;      // universe of processors
@@ -44,6 +46,10 @@ class DSMC {
   char *suffix;                  // suffix to add to input script style names
   int suffix_enable;             // 1 if suffix enabled, 0 if disabled
   class Cuda *cuda;              // CUDA accelerator class
+
+  // other top-level DSMC classes and variables
+
+  //class RanMars *ranmaster;      // master RN generator
 
   DSMC(int, char **, MPI_Comm);
   ~DSMC();
