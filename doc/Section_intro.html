@@ -13,8 +13,7 @@
 </H3>
 <P>These sections provide an overview of what DSMC can and can't do,
 describe what it means for DSMC to be an open-source code, and
-acknowledge the funding and people who have contributed to DSMC over
-the years.
+acknowledge the funding and people who have contributed to DSMC.
 </P>
 1.1 <A HREF = "#intro_1">What is DSMC</A><BR>
 1.2 <A HREF = "#intro_2">DSMC features</A><BR>
@@ -26,19 +25,18 @@ the years.
 
 <A NAME = "intro_1"></A><H4>1.1 What is DSMC 
 </H4>
-<P>DSMC is a classical molecular dynamics code that models an ensemble
-of particles in a liquid, solid, or gaseous state.  It can model
-atomic, polymeric, biological, metallic, granular, and coarse-grained
-systems using a variety of force fields and boundary conditions.
+<P>DSMC is a Direct Simulation Montel Carlo code that models rarefied
+gases, using a variety of collision, chemistry, boundary condition
+models.
 </P>
 <P>For examples of DSMC simulations, see the Publications page of the
 <A HREF = "http://lammps.sandia.gov">DSMC WWW Site</A>.
 </P>
-<P>DSMC runs efficiently on single-processor desktop or laptop
-machines, but is designed for parallel computers.  It will run on any
-parallel machine that compiles C++ and supports the <A HREF = "http://www-unix.mcs.anl.gov/mpi">MPI</A>
-message-passing library.  This includes distributed- or shared-memory
-parallel machines and Beowulf-style clusters.
+<P>DSMC runs efficiently on single-processor desktop or laptop machines,
+but is designed for parallel computers.  It will run on any parallel
+machine that compiles C++ and supports the <A HREF = "http://www-unix.mcs.anl.gov/mpi">MPI</A> message-passing
+library.  This includes distributed- or shared-memory parallel
+machines as well as commodity clusters.
 </P>
 
 
@@ -49,26 +47,24 @@ WWW Site</A>.
 </P>
 <P>DSMC is a freely-available open-source code, distributed under the
 terms of the <A HREF = "http://www.gnu.org/copyleft/gpl.html">GNU Public License</A>, which means you can use or
-modify the code however you wish.  See <A HREF = "#intro_4">this section</A> for a brief
-discussion of the open-source philosophy.
+modify the code however you wish.  See <A HREF = "#intro_4">this section</A> for a
+brief discussion of the open-source philosophy.
 </P>
 
 
-<P>DSMC is designed to be easy to modify or extend with new
-capabilities, such as new force fields, atom types, boundary
-conditions, or diagnostics.  See <A HREF = "Section_modify.html">this section</A> for
-more details.
+<P>DSMC is designed to be easy to modify or extend with new capabilities,
+such as new collision or chemistry models, boundary conditions, or
+diagnostics.  See <A HREF = "Section_modify.html">this section</A> for more details.
 </P>
-<P>The current version of DSMC is written in C++.  Earlier versions
-were written in F77 and F90.  See <A HREF = "Section_history.html">this section</A>
-for more information on different versions.  All versions can be
-downloaded from the <A HREF = "http://lammps.sandia.gov">DSMC WWW Site</A>.
+<P>DSMC is written in C++ which is used at a hi-level to structure the
+code and its options in an object-oriented fashion.  The kernel
+computations use simple data structures and C-like code for effciency.
+So DSMC is really written in an object-oriented C style.
 </P>
-<P>DSMC was originally developed under a US Department of Energy CRADA
-(Cooperative Research and Development Agreement) between two DOE labs
-and 3 companies.  It is distributed by <A HREF = "http://www.sandia.gov">Sandia National Labs</A>.
-See <A HREF = "#intro_5">this section</A> for more information on DSMC funding and
-individuals who have contributed to DSMC.
+<P>DSMC was developed with internal funding at <A HREF = "http://www.sandia.gov">Sandia National
+Laboratories</A>, a US Department of Energy lab.  See <A HREF = "#intro_5">this
+section</A> for more information on DSMC funding and individuals
+who have contributed to DSMC.
 </P>
 
 
@@ -93,9 +89,9 @@ DSMC are listed in <A HREF = "#intro_5">this section</A>.
 <A NAME = "intro_2"></A><H4>1.2 DSMC features 
 </H4>
 <P>This section highlights DSMC features, with pointers to specific
-commands which give more details.  If DSMC doesn't have your
-favorite interatomic potential, boundary condition, or atom type, see
-<A HREF = "Section_modify.html">this section</A>, which describes how you can add it to
+commands which give more details.  If DSMC doesn't have your favorite
+collision model, boundary condition, or diagnostic, see <A HREF = "Section_modify.html">this
+section</A>, which describes how you can add it to
 DSMC.
 </P>
 <H4>General features 
@@ -105,7 +101,7 @@ DSMC.
 <LI>  spatial-decomposition of simulation domain for parallelism
 <LI>  open-source distribution
 <LI>  highly portable C++
-<LI>  optional libraries used: MPI and single-processor FFT
+<LI>  optional libraries used: MPI
 <LI>  easy to extend with new features and functionality
 <LI>  runs from an input script
 <LI>  syntax for defining and using variables and formulas
@@ -114,22 +110,10 @@ DSMC.
 <LI>  build as library, invoke DSMC thru library interface or provided Python wrapper
 <LI>  couple with other codes: DSMC calls other code, other code calls DSMC, umbrella code calls both 
 </UL>
-<H4>Particle and model types 
+<H4>Collision models 
 </H4>
 <P>(<A HREF = "atom_style.html">atom style</A> command)
 </P>
-<UL><LI>  atoms
-<LI>  coarse-grained particles (e.g. bead-spring polymers)
-<LI>  united-atom polymers or organic molecules
-<LI>  all-atom polymers, organic molecules, proteins, DNA
-<LI>  metals
-<LI>  granular materials
-<LI>  coarse-grained mesoscale models
-<LI>  extended spherical and ellipsoidal particles
-<LI>  point dipolar particles
-<LI>  rigid collections of particles
-<LI>  hybrid combinations of these 
-</UL>
 <H4>Force fields 
 </H4>
 <P>(<A HREF = "pair_style.html">pair style</A>, <A HREF = "bond_style.html">bond style</A>,
