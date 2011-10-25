@@ -60,6 +60,8 @@ void Grid::create(int narg, char **arg)
 
   if (nx < 1 || ny < 1 || nz < 1)
     error->all(FLERR,"Illegal create_grid command");
+  if (domain->dimension == 2 && nz != 1)
+    error->all(FLERR,"Create_grid nz value must be 1 for a 2d simulation");
 
   //if (strcmp(arg[3],"block") == 0) bstyle = BLOCK;
   //else if (strcmp(arg[3],"random") == 0) bstyle = RANDOM;
@@ -78,9 +80,6 @@ void Grid::create(int narg, char **arg)
   double yprd = domain->yprd;
   double zprd = domain->zprd;
 
-  if (dimension == 2 && nz != 1)
-    error->all(FLERR,"Create_grid defines multiple z cells for 2d domain");
-
   xdelta = xprd / nx;
   ydelta = yprd / ny;
   zdelta = zprd / nz;
@@ -88,7 +87,7 @@ void Grid::create(int narg, char **arg)
   // build a regular Nx x Ny x Nz global grid
   
   ncell = nx*ny*nz;
-  // check on exceed smallint
+  // check on exceeding smallint
   cells = (OneCell *) memory->smalloc(ncell*sizeof(OneCell),"grid:cells");
 
   int i,j,k,m;

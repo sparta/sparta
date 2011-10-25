@@ -37,8 +37,6 @@ Domain::~Domain() {}
 
 void Domain::set_initial_box()
 {
-  // error checks for orthogonal and triclinic domains
-
   if (boxlo[0] >= boxhi[0] || boxlo[1] >= boxhi[1] || boxlo[2] >= boxhi[2])
     error->one(FLERR,"Box bounds are invalid");
 }
@@ -54,7 +52,6 @@ void Domain::set_global_box()
   prd[1] = yprd = boxhi[1] - boxlo[1];
   prd[2] = zprd = boxhi[2] - boxlo[2];
 }
-
 
 /* ----------------------------------------------------------------------
    print box info

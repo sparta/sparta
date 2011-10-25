@@ -7,9 +7,9 @@ SHELL = /bin/sh
 ROOT =	dsmc
 EXE =	lib$(ROOT)_$@.a
 
-SRC =	dsmc.cpp error.cpp input.cpp library.cpp  memory.cpp random_mars.cpp random_park.cpp timer.cpp universe.cpp variable.cpp 
+SRC =	comm.cpp create_box.cpp domain.cpp dsmc.cpp error.cpp finish.cpp grid.cpp input.cpp library.cpp  memory.cpp output.cpp particle.cpp random_mars.cpp random_park.cpp run.cpp surf.cpp timer.cpp universe.cpp update.cpp variable.cpp velocity.cpp 
 
-INC =	dsmc.h dsmctype.h error.h input.h library.h memory.h pointers.h random_mars.h random_park.h style_command.h timer.h universe.h variable.h version.h 
+INC =	comm.h create_box.h domain.h dsmc.h dsmctype.h error.h finish.h grid.h input.h library.h memory.h output.h particle.h pointers.h random_mars.h random_park.h run.h style_command.h surf.h timer.h universe.h update.h variable.h velocity.h version.h 
 
 OBJ =	$(SRC:.cpp=.o)
 

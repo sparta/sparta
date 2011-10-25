@@ -29,7 +29,7 @@ CreateBox::CreateBox(DSMC *dsmc) : Pointers(dsmc) {}
 
 void CreateBox::command(int narg, char **arg)
 {
-  if (narg != 3) error->all(FLERR,"Illegal create_box command");
+  if (narg != 6) error->all(FLERR,"Illegal create_box command");
 
   if (domain->box_exist) 
     error->all(FLERR,"Cannot create_box after simulation box is defined");
@@ -39,12 +39,18 @@ void CreateBox::command(int narg, char **arg)
 
   domain->box_exist = 1;
 
-  domain->boxlo[0] = 0.0;
-  domain->boxhi[0] = atof(arg[0]);
-  domain->boxlo[1] = 0.0;
-  domain->boxhi[1] = atof(arg[1]);
-  domain->boxlo[2] = 0.0;
-  domain->boxhi[2] = atof(arg[2]);
+  domain->boxlo[0] = atof(arg[0]);
+  domain->boxhi[0] = atof(arg[1]);
+  domain->boxlo[1] = atof(arg[2]);
+  domain->boxhi[1] = atof(arg[3]);
+  domain->boxlo[2] = atof(arg[4]);
+  domain->boxhi[2] = atof(arg[5]);
+
+  if (domain->dimension == 2) {
+    if (domain->boxlo[2] >= 0.0 || domain->boxhi[2] <= 0.0)
+      error->all(FLERR,
+		 "Create_box z box bounds must straddle 0.0 for 2d simulation");
+  }
   
   // problem setup using info from header
 

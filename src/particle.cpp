@@ -140,7 +140,7 @@ void Particle::move()
 
     xnew[0] = x[0] + dt*v[0];
     xnew[1] = x[1] + dt*v[1];
-    if (dimension == 3) xnew[2] = x[2] + dt*v[2];
+    xnew[2] = x[2] + dt*v[2];
 
     icell = particles[i].icell;
     lo = cells[icell].lo;
