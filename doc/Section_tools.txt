@@ -2,7 +2,7 @@
 Documentation"_dd - "DSMC Commands"_dc - "Next
 Section"_Section_modify.html :c
 
-:link(dws,http://lammps.sandia.gov)
+:link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
 :link(dc,Section_commands.html#comm)
 

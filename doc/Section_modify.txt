@@ -2,7 +2,7 @@
 "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next
 Section"_Section_python.html :c
 
-:link(dws,http://lammps.sandia.gov)
+:link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
 :link(dc,Section_commands.html#comm)
 
@@ -109,7 +109,7 @@ command. :l
 
 If you add something you think is truly useful and doesn't impact
 DSMC performance when it isn't used, send an email to the
-"developers"_http://lammps.sandia.gov/authors.html.  We might be
+"developers"_http://dsmc.sandia.gov/authors.html.  We might be
 interested in adding it to the DSMC distribution.  See further
 details on this at the bottom of this page.  :l,ule
 
@@ -126,7 +126,7 @@ features that can be added in the manner just described:
 10.14 Submitting new features for inclusion in DSMC :link(mod_14),h4
 
 We encourage users to submit new features that they add to DSMC to
-"the developers"_http://lammps.sandia.gov/authors.html, especially if
+"the developers"_http://dsmc.sandia.gov/authors.html, especially if
 you think the features will be of interest to other users.  If they
 are broadly useful we may add them as core files to DSMC or as part
 of a "standard package"_Section_start.html#start_3.  Else we will add
@@ -139,7 +139,7 @@ user packages by typing "make package" in the DSMC src directory.
 
 With user packages and files, all we are really providing (aside from
 the fame and fortune that accompanies having your name in the source
-code and on the "Authors page"_http://lammps.sandia.gov/authors.html
+code and on the "Authors page"_http://dsmc.sandia.gov/authors.html
 of the "DSMC WWW site"_dws), is a means for you to distribute your
 work to the DSMC user community and a mechanism for others to easily
 try out your new feature.  This may help you find bugs or make contact
@@ -154,7 +154,7 @@ within a DSMC input script.  If designed correctly, these additions
 do not require changes to the main core of DSMC; they are simply
 add-on files.  If you think your new feature requires non-trivial
 changes in core DSMC files, you'll need to "communicate with the
-developers"_http://lammps.sandia.gov/authors.html, since we may or may
+developers"_http://dsmc.sandia.gov/authors.html, since we may or may
 not want to make those changes.  An example of a trivial change is
 making a parent-class method "virtual" when you derive a new child
 class from it.

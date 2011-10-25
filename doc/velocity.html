@@ -1,0 +1,78 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>velocity command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>velocity style args keyword value ... 
+</PRE>
+<UL><LI>group-ID = ID of group of atoms whose velocity will be changed 
+
+<LI>style = <I>create</I> or <I>set</I> 
+
+<PRE>  <I>create</I> args = delta seed
+    delta = spread in velocity (velocity units)
+    seed = random # seed (positive integer)
+  <I>set</I> args = vx vy vz
+    vx,vy,vz = velocity value (velocity units) 
+</PRE>
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>sum</I> 
+
+<PRE>  <I>sum</I> value = <I>no</I> or <I>yes</I> 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>velocity create 0.3 598093
+velocity set 2.0 0.0 0.0 sum yes 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set or change the velocities of all the current particles in one of
+several styles.  For each style, there are required arguments and
+optional keyword/value parameters.  Not all options are used by each
+style.  Each option has a default as listed below.
+</P>
+<P>The <I>create</I> style generates a spread of velocities using a random
+number generator intialized with the specified <I>seed</I>.  The <I>delta</I>
+value means that each velocity component from -delta to delta will
+sampled using a uniform random number.
+</P>
+<P>The <I>set</I> style sets the velocities of all particles to the specified
+values.
+</P>
+<HR>
+
+<P>The keyword/value option pairs are used in the following ways by the
+various styles.
+</P>
+<P>The <I>sum</I> option is used by all styles.  The new velocities will be
+added to the existing ones if sum = yes, or will replace them if sum =
+no.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>When using the <I>set</I> style for 2d simulations, <I>vz</I> must be specified
+as 0.0.
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are sum = no.
+</P>
+</HTML>

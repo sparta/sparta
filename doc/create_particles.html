@@ -1,0 +1,41 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>create_particles command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>create_particles N seed 
+</PRE>
+<UL><LI>N = # of particles to create
+<LI>seed = random # seed (positive integer) 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>create_particles 10000 187483 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Create or add an additional <I>N</I> particles to the simulation domain.
+</P>
+<P>A random number generator, initialized by the specified <I>seed</I>, is
+used to generate a random position for each particle within
+the simulation box.
+</P>
+<P>The particles are initialized with a velocity = 0.0.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

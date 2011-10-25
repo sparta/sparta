@@ -1,0 +1,36 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+create_particles command :h3
+
+[Syntax:]
+
+create_particles N seed :pre
+
+N = # of particles to create
+seed = random # seed (positive integer) :ul
+
+[Examples:]
+
+create_particles 10000 187483 :pre
+
+[Description:]
+
+Create or add an additional {N} particles to the simulation domain.
+
+A random number generator, initialized by the specified {seed}, is
+used to generate a random position for each particle within
+the simulation box.
+
+The particles are initialized with a velocity = 0.0.
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:] none

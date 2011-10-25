@@ -1,0 +1,36 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+dimension command :h3
+
+[Syntax:]
+
+dimension N :pre
+
+N = 2 or 3 :ul
+
+[Examples:]
+
+dimension 2 :pre
+
+[Description:]
+
+Set the dimensionality of the simulation.  By default DSMC runs 3d
+simulations, but 2d simulations can also be specified.
+
+[Restrictions:]
+
+This command must be used before the simulation box is defined by a
+"create_box"_create_box.html command.
+
+[Related commands:] none
+
+[Default:]
+
+dimension 3 :pre
+

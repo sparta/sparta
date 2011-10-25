@@ -1,0 +1,38 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+create_grid command :h3
+
+[Syntax:]
+
+create_grid Nx Ny Nz :pre
+
+Nx,Ny,Nz = size of grid in each dimension :ul
+
+[Examples:]
+
+create_grid 10 10 10
+create_grid 100 100 1 :pre
+
+[Description:]
+
+Overlay a regular {Nx} by {Ny} by {Nz} grid over the simulation
+domain defined by the "create_box"_create_box.html command.
+
+For 2d simulations, {Nz} must be set to 1.
+
+[Restrictions:]
+
+This command must be used after the simulation box is defined by the
+"create_box"_create_box.html command.
+
+[Related commands:]
+
+"create_box"_create_box.html
+
+[Default:] none

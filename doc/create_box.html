@@ -1,0 +1,42 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>create_box command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>create_box xlo xhi ylo yhi zlo zhi 
+</PRE>
+<PRE>xlo,xhi = box bounds in the x dimension (distance units)
+ylo,yhi = box bounds in the y dimension (distance units)
+zlo,zhi = box bounds in the z dimension (distance units) 
+</PRE>
+<P><B>Examples:</B>
+</P>
+<PRE>create_box 0 1 0 1 0 1
+create_box 0 1 0 1 -0.5 0.5
+create_box 0 10.0 0 5.0 -4.0 0.0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set the size of the simulation box.
+</P>
+<P>For a 2d simulation, as specifed by the <A HREF = "dimension.html">dimension</A>
+command, <I>zlo</I> < 0.0 and <I>zhi</I> > 0.0 is required.  This is so that the
+z dimensions straddle 0.0.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

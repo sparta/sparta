@@ -2,7 +2,7 @@
 "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next
 Section"_Section_history.html :c
 
-:link(dws,http://lammps.sandia.gov)
+:link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
 :link(dc,Section_commands.html#comm)
 
@@ -59,7 +59,7 @@ physics or numerical mistakes, like choosing too big a timestep,
 specifying erroneous force field coefficients, or putting 2 atoms on
 top of each other!  If you run into errors that DSMC doesn't catch
 that you think it should flag, please send an email to the
-"developers"_http://lammps.sandia.gov/authors.html.
+"developers"_http://dsmc.sandia.gov/authors.html.
 
 If you get an error message about an invalid command in your input
 script, you can determine what command is causing the problem by
@@ -115,12 +115,12 @@ If you are confident that you have found a bug in DSMC, follow these
 steps.
 
 Check the "New features and bug
-fixes"_http://lammps.sandia.gov/bug.html section of the "DSMC WWW
+fixes"_http://dsmc.sandia.gov/bug.html section of the "DSMC WWW
 site"_dws to see if the bug has already been reported or fixed or the
-"Unfixed bug"_http://lammps.sandia.gov/unbug.html to see if a fix is
+"Unfixed bug"_http://dsmc.sandia.gov/unbug.html to see if a fix is
 pending.
 
-Check the "mailing list"_http://lammps.sandia.gov/mail.html
+Check the "mailing list"_http://dsmc.sandia.gov/mail.html
 to see if it has been discussed before.
 
 If not, send an email to the mailing list describing the problem with
@@ -135,7 +135,7 @@ bug and try to identify what command or combination of commands is
 causing the problem.
 
 As a last resort, you can send an email directly to the
-"developers"_http://lammps.sandia.gov/authors.html.
+"developers"_http://dsmc.sandia.gov/authors.html.
 
 :line
 

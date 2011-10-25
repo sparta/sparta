@@ -1,6 +1,6 @@
 "Previous Section"_Section_intro.html - "DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next Section"_Section_commands.html :c
 
-:link(dws,http://lammps.sandia.gov)
+:link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
 :link(dc,Section_commands.html#comm)
 
@@ -54,7 +54,7 @@ launch these executables on a Windows box.
 
 The Windows executables for serial or parallel only include certain
 packages and bug-fixes/upgrades listed on "this
-page"_http://lammps.sandia.gov/bug.html up to a certain date, as
+page"_http://dsmc.sandia.gov/bug.html up to a certain date, as
 stated on the download page.  If you want something with more packages
 or that is more current, you'll have to download the source tarball
 and build it yourself from source code using Microsoft Visual Studio,
@@ -93,7 +93,7 @@ libraries, etc.  Such questions are better answered by a local expert.
 If you have a build problem that you are convinced is a DSMC issue
 (e.g. the compiler complains about a line of DSMC source code), then
 please send an email to the
-"developers"_http://lammps.sandia.gov/authors.html.
+"developers"_http://dsmc.sandia.gov/authors.html.
 
 If you succeed in building DSMC on a new kind of machine, for which
 there isn't a similar Makefile for in the src/MAKE directory, send it
@@ -737,7 +737,7 @@ mpirun -np 4 lmp_linux < in.lj :pre
 See "this page"_bench for timings for this and the other benchmarks
 on various platforms.
 
-:link(bench,http://lammps.sandia.gov/bench.html)
+:link(bench,http://dsmc.sandia.gov/bench.html)
 
 :line
 

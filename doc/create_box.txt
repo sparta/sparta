@@ -1,0 +1,37 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+create_box command :h3
+
+[Syntax:]
+
+create_box xlo xhi ylo yhi zlo zhi :pre
+
+xlo,xhi = box bounds in the x dimension (distance units)
+ylo,yhi = box bounds in the y dimension (distance units)
+zlo,zhi = box bounds in the z dimension (distance units) :pre
+
+[Examples:]
+
+create_box 0 1 0 1 0 1
+create_box 0 1 0 1 -0.5 0.5
+create_box 0 10.0 0 5.0 -4.0 0.0 :pre
+
+[Description:]
+
+Set the size of the simulation box.
+
+For a 2d simulation, as specifed by the "dimension"_dimension.html
+command, {zlo} < 0.0 and {zhi} > 0.0 is required.  This is so that the
+z dimensions straddle 0.0.
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:] none

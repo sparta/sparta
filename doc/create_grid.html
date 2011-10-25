@@ -1,0 +1,43 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>create_grid command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>create_grid Nx Ny Nz 
+</PRE>
+<UL><LI>Nx,Ny,Nz = size of grid in each dimension 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>create_grid 10 10 10
+create_grid 100 100 1 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Overlay a regular <I>Nx</I> by <I>Ny</I> by <I>Nz</I> grid over the simulation
+domain defined by the <A HREF = "create_box.html">create_box</A> command.
+</P>
+<P>For 2d simulations, <I>Nz</I> must be set to 1.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>This command must be used after the simulation box is defined by the
+<A HREF = "create_box.html">create_box</A> command.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "create_box.html">create_box</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

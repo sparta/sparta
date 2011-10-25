@@ -1,0 +1,30 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+run command :h3
+
+[Syntax:]
+
+run N :pre
+
+N = # of timesteps :ul
+
+[Examples:]
+
+run 10000
+run 1000000 :pre
+
+[Description:]
+
+Run or continue a simulation for a specified number of timesteps.
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:] none

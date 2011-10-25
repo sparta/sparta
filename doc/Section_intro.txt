@@ -1,6 +1,6 @@
 "Previous Section"_Manual.html - "DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next Section"_Section_start.html :c
 
-:link(dws,http://lammps.sandia.gov)
+:link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
 :link(dc,Section_commands.html#comm)
 
@@ -381,7 +381,7 @@ remain part of the code.
 
 In the spirit of an open-source code, these are various ways you can
 contribute to making DSMC better.  You can send email to the
-"developers"_http://lammps.sandia.gov/authors.html on any of these
+"developers"_http://dsmc.sandia.gov/authors.html on any of these
 items.
 
 Point prospective users to the "DSMC WWW Site"_dws.  Mention it in
@@ -390,7 +390,7 @@ talks or link to it from your WWW site. :ulb,l
 If you find an error or omission in this manual or on the "DSMC WWW
 Site"_dws, or have a suggestion for something to clarify or include,
 send an email to the
-"developers"_http://lammps.sandia.gov/authors.html. :l
+"developers"_http://dsmc.sandia.gov/authors.html. :l
 
 If you find a bug, "this section"_Section_errors.html#err_2 describes
 how to report it. :l
@@ -451,22 +451,22 @@ Hierarchical Modeling".
 The following paper describe the basic parallel algorithms used in
 DSMC.  If you use DSMC results in your published work, please cite
 DSMCaper and include a pointer to the "DSMC WWW Site"_dws
-(http://lammps.sandia.gov):
+(http://dsmc.sandia.gov):
 
 S. J. Plimpton, [Fast Parallel Algorithms for Short-Range Molecular
 Dynamics], J Comp Phys, 117, 1-19 (1995).
 
 Other papers describing specific algorithms used in DSMC are listed
-under the "Citing DSMC link"_http://lammps.sandia.gov/cite.html of
+under the "Citing DSMC link"_http://dsmc.sandia.gov/cite.html of
 the DSMC WWW page.
 
-The "Publications link"_http://lammps.sandia.gov/papers.html on the
+The "Publications link"_http://dsmc.sandia.gov/papers.html on the
 DSMC WWW page lists papers that have cited DSMC.  If your paper is
 not listed there for some reason, feel free to send us the info.  If
 the simulations in your paper produced cool pictures or animations,
 we'll be pleased to add them to the
-"Pictures"_http://lammps.sandia.gov/pictures.html or
-"Movies"_http://lammps.sandia.gov/movies.html pages of the DSMC WWW
+"Pictures"_http://dsmc.sandia.gov/pictures.html or
+"Movies"_http://dsmc.sandia.gov/movies.html pages of the DSMC WWW
 site.
 
 The core group of DSMC developers is at Sandia National Labs:

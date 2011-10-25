@@ -2,7 +2,7 @@
 "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next
 Section"_Manual.html :c
 
-:link(dws,http://lammps.sandia.gov)
+:link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
 :link(dc,Section_commands.html#comm)
 
@@ -21,14 +21,14 @@ molecular dynamics codes I've distributed.
 
 13.1 Coming attractions :h4,link(hist_1)
 
-The "Wish list link"_http://lammps.sandia.gov/future.html on the
+The "Wish list link"_http://dsmc.sandia.gov/future.html on the
 DSMC WWW page gives a list of features we are hoping to add to
 DSMC in the future, including contact names of individuals you can
 email if you are interested in contributing to the developement or
 would be a future user of that feature.
 
 You can also send "email to the
-developers"_http://lammps.sandia.gov/authors.html if you want to add
+developers"_http://dsmc.sandia.gov/authors.html if you want to add
 your wish to the list.
 
 :line
