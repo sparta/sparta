@@ -15,6 +15,7 @@
 #include "update.h"
 #include "particle.h"
 #include "comm.h"
+#include "timer.h"
 
 using namespace DSMC_NS;
 
@@ -46,8 +47,16 @@ void Update::run(int nsteps)
 
     ntimestep++;
 
-    // move and communicate particles
+    // move particles
 
+    timer->stamp();
     particle->move();
+    timer->stamp(TIME_MOVE);
+
+    // communicate particles
+
+    //timer->stamp();
+    //comm->migrate();
+    //timer->stamp(TIME_COMM);
   }
 }
