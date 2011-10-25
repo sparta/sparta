@@ -23,7 +23,7 @@ using namespace DSMC_NS;
 
 Update::Update(DSMC *dsmc) : Pointers(dsmc)
 {
-  dt = 0.1;
+  dt = 1.0;
 }
 
 /* ---------------------------------------------------------------------- */

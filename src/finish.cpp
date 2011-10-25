@@ -70,6 +70,18 @@ void Finish::end()
 			 BIGINT_FORMAT " atoms\n",
 			 time_loop,nprocs,update->nsteps,particle->nglobal);
   }
+
+
+  // dummy stats for now
+
+  if (me == 0) {
+    if (screen) fprintf(screen,"\nCells/particle/step: %g\n",
+			1.0*particle->cellcount/particle->nglobal/
+			update->nsteps);
+    if (logfile) fprintf(logfile,"\nCells/particle/step: %g\n",
+			 1.0*particle->cellcount/particle->nglobal/
+			 update->nsteps);
+  }
   
   // timing breakdowns
 

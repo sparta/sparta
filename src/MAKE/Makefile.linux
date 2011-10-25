@@ -35,7 +35,7 @@ DSMC_INC =	-DDSMC_GZIP
 
 MPI_INC =       -DMPICH_SKIP_MPICXX 
 MPI_PATH = 
-MPI_LIB =	-lmpich -lpthread
+MPI_LIB =	-lmpich -lmpl -lpthread
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)

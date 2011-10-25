@@ -21,6 +21,8 @@ namespace DSMC_NS {
 
 class Particle : protected Pointers {
  public:
+  int cellcount;
+
   struct OnePart {
     int id,type;            // particle ID, type
     int icell;              // grid cell the particle is in (0 to N-1)

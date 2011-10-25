@@ -131,7 +131,7 @@ void Particle::move()
   Grid::OneCell *cells = grid->cells;
   double dt = update->dt;
 
-  int cellcount = 0;
+  int count = 0;
 
   for (int i = 0; i < nlocal; i++) {
 
@@ -147,7 +147,7 @@ void Particle::move()
     hi = cells[icell].hi;
     neigh = cells[icell].neigh;
     inface = INTERIOR;
-    cellcount++;
+    count++;
 
     // advect particle from cell to cell until the move is done
 
@@ -251,7 +251,7 @@ void Particle::move()
 	else if (outface == YHI) inface = YLO;
 	else if (outface == ZLO) inface = ZHI;
 	else if (outface == ZHI) inface = ZLO;
-	cellcount++;
+	count++;
       }
     }
 
@@ -262,4 +262,6 @@ void Particle::move()
     x[2] = xnew[2];
     particles[i].icell = icell;
   }
+
+  cellcount += count;
 }

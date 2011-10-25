@@ -52,7 +52,7 @@ void Grid::create(int narg, char **arg)
 
   grid_exist = 1;
 
-  if (narg != 4) error->all(FLERR,"Illegal create_grid command");
+  if (narg != 3) error->all(FLERR,"Illegal create_grid command");
 
   nx = atoi(arg[0]);
   ny = atoi(arg[1]);
@@ -61,9 +61,9 @@ void Grid::create(int narg, char **arg)
   if (nx < 1 || ny < 1 || nz < 1)
     error->all(FLERR,"Illegal create_grid command");
 
-  if (strcmp(arg[3],"block") == 0) bstyle = BLOCK;
-  else if (strcmp(arg[3],"random") == 0) bstyle = RANDOM;
-  else error->all(FLERR,"Illegal create_grid command");
+  //if (strcmp(arg[3],"block") == 0) bstyle = BLOCK;
+  //else if (strcmp(arg[3],"random") == 0) bstyle = RANDOM;
+  //else error->all(FLERR,"Illegal create_grid command");
 
   // box and grid cell geometry
 
@@ -128,6 +128,7 @@ void Grid::create(int narg, char **arg)
   }
 
   // assign owner to each grid cell, based on specified bstyle
+  // just assign all to proc 0 for now
 
   for (m = 0; m < ncell; m++) cells[m].proc = 0;
 
