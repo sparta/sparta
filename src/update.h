@@ -29,7 +29,11 @@ class Update : protected Pointers {
   Update(class DSMC *);
   ~Update();
   void init() {}
+  void setup();
   void run(int);
+
+ private:
+  void check();
 };
 
 }

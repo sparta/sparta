@@ -10,14 +10,20 @@ create_particles command :h3
 
 [Syntax:]
 
-create_particles N seed :pre
+create_particles N seed keyword value ... :pre
 
-N = # of particles to create
-seed = random # seed (positive integer) :ul
+N = # of particles to create :ulb,l
+seed = random # seed (positive integer) :l
+
+zero or more keyword/value pairs may be appended :l
+keyword = {loop} :l
+  {loop} value = {all} or {local} :pre
+:ule
 
 [Examples:]
 
 create_particles 10000 187483 :pre
+create_particles 10000000 49892 loop local :pre
 
 [Description:]
 
@@ -29,8 +35,25 @@ the simulation box.
 
 The particles are initialized with a velocity = 0.0.
 
+The {loop} keyword controls how the particles are generated in parallel.
+
+If the setting is {all}, then every processor loops over all {N} particles.
+As the coordinates of each is created, each processor checks what
+grid cell it is in, and only stores the particle if it owns that grid cell.
+Thus the same set of particles are created, no matter how many processors
+are running the simulation
+
+If the setting is {loop}, then each of the {P} processors generates a
+{N/P} itself, independent of the other processors, using its own
+random number generation.  It only adds particles to grid cells that
+it owns.  This is a faster way to generate a large number of particles,
+but means that the particles generated depend on the number of
+processors used (though not in a statistical sense).
+
 [Restrictions:] none
 
 [Related commands:] none
 
-[Default:] none
+[Default:]
+
+The option defaults are loop = all.

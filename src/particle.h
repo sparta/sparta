@@ -21,7 +21,11 @@ namespace DSMC_NS {
 
 class Particle : protected Pointers {
  public:
-  int cellcount;
+  bigint nmove;             // dummy statistic for now
+  bigint ncellcross;        // dummy statistic for now
+
+  int nmigrate;             // # of particles to migrate to new procs
+  int *mlist;               // indices of particles to migrate
 
   struct OnePart {
     int id,type;            // particle ID, type
@@ -32,7 +36,6 @@ class Particle : protected Pointers {
 
   bigint nglobal;           // global # of particles
   int nlocal;               // # of particles I own
-  int maxlocal;             // max # of particles list can hold
   OnePart *particles;       // list of particles I own
 
   Particle(class DSMC *);
@@ -40,6 +43,18 @@ class Particle : protected Pointers {
   void init() {}
   void create(int, char **);
   void move();
+  void compress();
+  void grow(int);
+  bigint memory_usage();
+
+ private:
+  int seed;
+
+  int maxlocal;             // max # particles list can hold
+  int maxmigrate;           // max # migrate list can hold
+
+  void create_all(bigint);
+  void create_local(bigint);
 };
 
 }

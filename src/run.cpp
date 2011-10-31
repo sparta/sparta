@@ -51,7 +51,8 @@ void Run::command(int narg, char **arg)
     error->all(FLERR,"Too many timesteps");
   
   dsmc->init();
-  
+  update->setup();
+
   timer->barrier_start(TIME_LOOP);
   update->run(nsteps);
   timer->barrier_stop(TIME_LOOP);

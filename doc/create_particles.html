@@ -13,14 +13,25 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>create_particles N seed 
+<PRE>create_particles N seed keyword value ... 
 </PRE>
-<UL><LI>N = # of particles to create
+<UL><LI>N = # of particles to create 
+
 <LI>seed = random # seed (positive integer) 
+
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>loop</I> 
+
+<PRE>  <I>loop</I> value = <I>all</I> or <I>local</I> 
+</PRE>
+
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>create_particles 10000 187483 
+</PRE>
+<PRE>create_particles 10000000 49892 loop local 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -32,10 +43,27 @@ the simulation box.
 </P>
 <P>The particles are initialized with a velocity = 0.0.
 </P>
+<P>The <I>loop</I> keyword controls how the particles are generated in parallel.
+</P>
+<P>If the setting is <I>all</I>, then every processor loops over all <I>N</I> particles.
+As the coordinates of each is created, each processor checks what
+grid cell it is in, and only stores the particle if it owns that grid cell.
+Thus the same set of particles are created, no matter how many processors
+are running the simulation
+</P>
+<P>If the setting is <I>loop</I>, then each of the <I>P</I> processors generates a
+<I>N/P</I> itself, independent of the other processors, using its own
+random number generation.  It only adds particles to grid cells that
+it owns.  This is a faster way to generate a large number of particles,
+but means that the particles generated depend on the number of
+processors used (though not in a statistical sense).
+</P>
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B> none
 </P>
-<P><B>Default:</B> none
+<P><B>Default:</B>
+</P>
+<P>The option defaults are loop = all.
 </P>
 </HTML>

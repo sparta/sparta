@@ -31,18 +31,30 @@ class Grid : protected Pointers {
   };
 
   OneCell *cells;
-  int ncell,maxcell;
+  int ncell;
+  int nlocal;
   
   Grid(class DSMC *);
   ~Grid();
   void init() {}
   void create(int, char **);
   int which_cell(double, double, double);
+  bigint memory_usage();
 
  private:
-  int bstyle;
   int nx,ny,nz;
   double xdelta,ydelta,zdelta;
+  double xdeltainv,ydeltainv,zdeltainv;
+  int bstyle;
+  int user_procgrid[3];
+  int order,seed;
+
+  int procgrid[3];
+
+  void assign_stride();
+  void assign_block();
+  void assign_random();
+  void procs2grid();
 };
 
 }

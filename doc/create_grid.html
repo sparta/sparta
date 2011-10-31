@@ -13,14 +13,30 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>create_grid Nx Ny Nz 
+<PRE>create_grid Nx Ny Nz keyword args ... 
 </PRE>
 <UL><LI>Nx,Ny,Nz = size of grid in each dimension 
+</UL>
+<LI>zero or more keyword/arg pairs may be appended 
+
+<LI>keyword = <I>stride</I> or <I>block</I> or <I>random</I> 
+
+<PRE>  <I>stride</I> args = d1 d2 d3
+    d1 = <I>x</I> or <I>y</I> or <I>z</I>
+    d2 = <I>x</I> or <I>y</I> or <I>z</I>, not same as d1
+    d3 = <I>x</I> or <I>y</I> or <I>z</I>, not same as d1 or d2
+  <I>block</I> args = Px Py Pz
+    Px,Py,Pz = # of processors in each dimension
+  <I>random</I> args = seed
+    seed = random # seed (positive integer) 
+</PRE>
+
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>create_grid 10 10 10
-create_grid 100 100 1 
+create_grid 10 10 10 block 2 * *
+create_grid 100 100 1 stride y x z 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -28,6 +44,52 @@ create_grid 100 100 1
 domain defined by the <A HREF = "create_box.html">create_box</A> command.
 </P>
 <P>For 2d simulations, <I>Nz</I> must be set to 1.
+</P>
+<P>The optional <I>stride</I> and <I>block</I> and <I>random</I> keywords
+determine how grid cells are assigned to processors.
+If none are specified, then the default <I>block</I> setting
+is used, as listed below.
+</P>
+<P>The <I>stride</I> keyword means that every Pth cell is assigned to the same
+processor, where P is the number of processors.  E.g. if there are 100
+cells and 10 processors, then the 1st processor (proc 0) will be
+assigned cells 1,11,21, ..., 91.  The 2nd processor (proc 1) will be
+assigned cells 2,12,22 ..., 92.  And The 10th processor (proc 9) will
+be assigned cells 10,20,30, ..., 100.
+</P>
+<P>The arguments <I>d1</I>, <I>d2</I>, <I>d3</I> are some permutation of <I>x</I>, <I>y</I>, and
+<I>z</I> and determine how the N grid cells are ordered.  Each of the N
+cells has 3 indices (I,J,K) to describe its location in the 3d grid.
+If <I>d1</I> <I>d2</I> <I>d3</I> = <I>x</I> <I>z</I> <I>y</I>, then the cells will be ordered from 1
+to N with the I index varying fastest, the K index next, and the J
+index slowest.
+</P>
+<P>The <I>block</I> keyword maps the P processors to a <I>Px</I> by <I>Py</I> by <I>Pz</I>
+logical grid that overlays the actual <I>Nx</I> by <I>Ny</I> by <I>Nz</I> grid.  This
+effectively assigns a contiguous 3d sub-block of cells to each
+processor.
+</P>
+<P>Any of the <I>Px</I>, <I>Py</I>, <I>Pz</I> parameters can be specified with an
+asterisk "*", in which case DSMC will choose the number of processors
+in that dimension.  It will do this based on the size and shape of the
+global grid so as to minimize the surface-to-volume ratio of each
+processor's sub-block of cells.
+</P>
+<P>The product of Px, Py, Pz must equal P, the total # of processors DSMC
+is running on.  For a 2d simulation, Pz must equal 1. If multiple
+partitions are being used then P is the number of processors in this
+partition; see <A HREF = "Section_start.html#start_6">this section</A> for an
+explanation of the -partition command-line switch.
+</P>
+<P>Note that if you run on a large, prime number of processors P, then a
+grid such as 1 x P x 1 will be required, which may incur extra
+communication costs.
+</P>
+<P>The <I>random</I> keyword means that eacn grid cell will be assigned
+randomly to one of the processors.  This is done using a random number
+generator initialized with the specified <I>seed</I>.  Note that in this
+case every processor will typically not be assigned exactly the same
+number of cells.
 </P>
 <P><B>Restrictions:</B>
 </P>
@@ -38,6 +100,8 @@ domain defined by the <A HREF = "create_box.html">create_box</A> command.
 </P>
 <P><A HREF = "create_box.html">create_box</A>
 </P>
-<P><B>Default:</B> none
+<P><B>Default:</B>
+</P>
+<P>The option defaults are "block * * *",
 </P>
 </HTML>

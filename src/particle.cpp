@@ -12,7 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
-#include "dsmctype.h"
+#include "string.h"
 #include "stdlib.h"
 #include "particle.h"
 #include "domain.h"
@@ -25,8 +25,10 @@
 
 using namespace DSMC_NS;
 
-#define DELTA 10
+#define DELTA 10000
+
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};
+enum{ALL,LOCAL};
 
 /* ---------------------------------------------------------------------- */
 
@@ -35,6 +37,12 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;
+
+  maxmigrate = 0;
+  mlist = NULL;
+
+  nmove = 0;
+  ncellcross = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -42,6 +50,7 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
 Particle::~Particle()
 {
   memory->sfree(particles);
+  memory->destroy(mlist);
 }
 
 /* ----------------------------------------------------------------------
@@ -51,17 +60,61 @@ Particle::~Particle()
 
 void Particle::create(int narg, char **arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal create_particles command");
+  if (narg < 2) error->all(FLERR,"Illegal create_particles command");
 
-  int n = atoi(arg[0]);
+  bigint n = ATOBIGINT(arg[0]);
   if (n < 0) error->all(FLERR,"Illegal create_particles command");
-  int seed = atoi(arg[1]);
-  RanPark *random = new RanPark(dsmc,seed);
+  seed = atoi(arg[1]);
+  if (seed <= 0) error->all(FLERR,"Illegal create_particles command");
 
-  // add N particles within simulation box
-  // grid->which_cell() returns global grid cell index the particle is in
-  // if I own that grid cell, store particle
+  // optional args
 
+  int loop = ALL;
+
+  int iarg = 2;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"loop") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      if (strcmp(arg[iarg+1],"all") == 0) loop = ALL;
+      else if (strcmp(arg[iarg+1],"local") == 0) loop = LOCAL;
+      else error->all(FLERR,"Illegal create_particles command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal create_particles command");
+  }
+
+  // generate particles
+
+  bigint nprevious = nglobal;
+
+  if (loop == ALL) create_all(n);
+  else if (loop == LOCAL) create_local(n);
+
+  // error check
+
+  bigint nme = nlocal;
+  MPI_Allreduce(&nme,&nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  if (nglobal - nprevious != n) {
+    char str[128];
+    sprintf(str,"Created incorrect # of particles = " BIGINT_FORMAT,
+	    nglobal-nprevious);
+    error->all(FLERR,str);
+  }
+
+  // print stats
+
+  if (comm->me == 0) {
+    if (screen) fprintf(screen,"Created " BIGINT_FORMAT " particles\n",n);
+    if (logfile) fprintf(logfile,"Created " BIGINT_FORMAT " particles\n",n);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   create N particles in serial
+   every proc generates all N coords, only keeps those in cells it owns
+------------------------------------------------------------------------- */
+
+void Particle::create_all(bigint n)
+{
   int dimension = domain->dimension;
   double xlo = domain->boxlo[0];
   double ylo = domain->boxlo[1];
@@ -70,31 +123,28 @@ void Particle::create(int narg, char **arg)
   double yprd = domain->yprd;
   double zprd = domain->zprd;
 
+  int me = comm->me;
+  RanPark *random = new RanPark(dsmc,seed);
+
   int icell;
   double x,y,z;
-  int me = comm->me;
 
-  int id = nglobal;
-  nglobal += n;
+  // loop over all N particles
 
-  while (id < nglobal) {
-    id++;
+  for (bigint m = 0; m < n; m++) {
     x = xlo + random->uniform()*xprd;
     y = ylo + random->uniform()*yprd;
     z = zlo + random->uniform()*zprd;
     if (dimension == 2) z = 0.0;
 
+    // which_cell() returns global grid cell index the particle is in
+    // if I own that grid cell, store particle
+
     icell = grid->which_cell(x,y,z);
 
     if (grid->cells[icell].proc == me) {
-      if (nlocal == maxlocal) {
-	maxlocal += DELTA;
-	particles = (OnePart *)
-	  memory->srealloc(particles,maxlocal*sizeof(OnePart),
-			   "particle:particles");
-      }
-
-      particles[nlocal].id = id;
+      if (nlocal == maxlocal) grow(1);
+      particles[nlocal].id = 0;
       particles[nlocal].type = 1;
       particles[nlocal].icell = icell;
       particles[nlocal].x[0] = x;
@@ -108,16 +158,72 @@ void Particle::create(int narg, char **arg)
   }
 
   delete random;
-
-  // print stats
-
-  if (me == 0) {
-    if (screen) fprintf(screen,"Created %d particles\n",n);
-    if (logfile) fprintf(logfile,"Created %d particles\n",n);
-  }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   create N particles in serial
+   every proc generates all N coords, only keeps those in cells it owns
+------------------------------------------------------------------------- */
+
+void Particle::create_local(bigint n)
+{
+  int dimension = domain->dimension;
+
+  int me = comm->me;
+  RanPark *random = new RanPark(dsmc,seed+me);
+
+  Grid::OneCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  bigint nme = n/comm->nprocs;
+  if (me < n % comm->nprocs) nme++;
+
+  // list = list of indices of grid cells I own
+
+  int *list = new int[nglocal];
+  int ncell = grid->ncell;
+
+  int j = 0;
+  for (int i = 0; i < ncell; i++)
+    if (cells[i].proc == me) list[j++] = i;
+
+  // loop only over Nme particles I own
+
+  int icell;
+  double x,y,z;
+  double *lo,*hi;
+
+  for (bigint m = 0; m < nme; m++) {
+    j = static_cast<int> (random->uniform()*nglocal);
+    icell = list[j];
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    x = lo[0] + random->uniform() * (hi[0]-lo[0]);
+    y = lo[1] + random->uniform() * (hi[1]-lo[1]);
+    z = lo[2] + random->uniform() * (hi[2]-lo[2]);
+    if (dimension == 2) z = 0.0;
+
+    if (nlocal == maxlocal) grow(1);
+    particles[nlocal].id = 0;
+    particles[nlocal].type = 1;
+    particles[nlocal].icell = icell;
+    particles[nlocal].x[0] = x;
+    particles[nlocal].x[1] = y;
+    particles[nlocal].x[2] = z;
+    particles[nlocal].v[0] = 0.0;
+    particles[nlocal].v[1] = 0.0;
+    particles[nlocal].v[2] = 0.0;
+    nlocal++;
+  }
+
+  delete random;
+  delete [] list;
+}
+
+/* ----------------------------------------------------------------------
+   advect particles thru grid
+------------------------------------------------------------------------- */
 
 void Particle::move()
 {
@@ -127,11 +233,21 @@ void Particle::move()
   int *neigh;
   double frac,newfrac;
 
+  // extend migration list if necessary
+
+  if (nlocal > maxmigrate) {
+    maxmigrate = maxlocal;
+    memory->destroy(mlist);
+    memory->create(mlist,maxmigrate,"particle:mlist");
+  }
+
   int dimension = domain->dimension;
   Grid::OneCell *cells = grid->cells;
   double dt = update->dt;
+  int me = comm->me;
 
   int count = 0;
+  nmigrate = 0;
 
   for (int i = 0; i < nlocal; i++) {
 
@@ -256,12 +372,70 @@ void Particle::move()
     }
 
     // update final particle position and assign to new grid cell
-    
+    // add to migrate list if I don't own new cell
+
     x[0] = xnew[0];
     x[1] = xnew[1];
     x[2] = xnew[2];
     particles[i].icell = icell;
+    if (cells[icell].proc != me) mlist[nmigrate++] = i;
   }
 
-  cellcount += count;
+  nmove += nlocal;
+  ncellcross += count;
+}
+
+/* ----------------------------------------------------------------------
+   compress particle list to remove mlist of migrating particles
+   overwrite deleted particle with particle from end of nlocal list
+   j = mlist loop avoids overwrite with deleted particle at end of mlist
+------------------------------------------------------------------------- */
+
+void Particle::compress()
+{
+  int j,k;
+  int nbytes = sizeof(OnePart);
+
+  for (int i = 0; i < nmigrate; i++) {
+    j = mlist[i];
+    k = nlocal - 1;
+    while (k == mlist[nmigrate-1] && k > j) {
+      nmigrate--;
+      nlocal--;
+      k--;
+    }
+    memcpy(&particles[j],&particles[k],nbytes);
+    nlocal--;
+  }
+
+}
+
+/* ----------------------------------------------------------------------
+   insure particle list can hold nextra new particles
+------------------------------------------------------------------------- */
+
+void Particle::grow(int nextra)
+{
+  bigint target = (bigint) nlocal + nextra;
+  if (target <= maxlocal) return;
+  
+  bigint newmax = maxlocal;
+  while (newmax < target) newmax += DELTA;
+  
+  if (newmax > MAXSMALLINT) 
+    error->one(FLERR,"Per-processor grid count is too big");
+
+  maxlocal = newmax;
+  particles = (OnePart *)
+    memory->srealloc(particles,maxlocal*sizeof(OnePart),
+		     "particle:particles");
+}
+
+/* ---------------------------------------------------------------------- */
+
+bigint Particle::memory_usage()
+{
+  bigint bytes = (bigint) maxlocal * sizeof(OnePart);
+  bytes += (bigint) maxlocal * sizeof(int);
+  return bytes;
 }

@@ -21,11 +21,20 @@ namespace DSMC_NS {
 
 class Comm : protected Pointers {
  public:
+  bigint ncomm;                     // dummy statistic for now
+
   int me,nprocs;                    // proc info
 
   Comm(class DSMC *);
   ~Comm();
   void init() {}
+  void migrate();
+
+ private:
+  class Irregular *irregular;
+  char *sbuf,*rbuf;
+  int maxsend;
+  int *proclist;
 };
 
 }

@@ -17,12 +17,14 @@
 #include "grid.h"
 #include "domain.h"
 #include "comm.h"
+#include "random_park.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace DSMC_NS;
 
-enum{BLOCK,RANDOM};
+enum{STRIDE,BLOCK,RANDOM};
+enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
 
 /* ---------------------------------------------------------------------- */
 
@@ -52,7 +54,7 @@ void Grid::create(int narg, char **arg)
 
   grid_exist = 1;
 
-  if (narg != 3) error->all(FLERR,"Illegal create_grid command");
+  if (narg < 3) error->all(FLERR,"Illegal create_grid command");
 
   nx = atoi(arg[0]);
   ny = atoi(arg[1]);
@@ -63,9 +65,52 @@ void Grid::create(int narg, char **arg)
   if (domain->dimension == 2 && nz != 1)
     error->all(FLERR,"Create_grid nz value must be 1 for a 2d simulation");
 
-  //if (strcmp(arg[3],"block") == 0) bstyle = BLOCK;
-  //else if (strcmp(arg[3],"random") == 0) bstyle = RANDOM;
-  //else error->all(FLERR,"Illegal create_grid command");
+  // optional args
+
+  bstyle = BLOCK;
+  user_procgrid[0] = user_procgrid[1] = user_procgrid[2] = 0;
+
+  int iarg = 3;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"stride") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Illegal create_grid command");
+      bstyle = STRIDE;
+      if (strlen(arg[iarg+1]) + strlen(arg[iarg+2]) + strlen(arg[iarg+3]) != 3)
+	error->all(FLERR,"Illegal create_grid command");
+      char str[4];
+      str[0] = arg[iarg+1][0];
+      str[1] = arg[iarg+2][0];
+      str[2] = arg[iarg+3][0];
+      str[3] = 0;
+      if (strcmp(str,"xyz") == 0) order = XYZ;
+      else if (strcmp(str,"xzy") == 0) order = XZY;
+      else if (strcmp(str,"yxz") == 0) order = YXZ;
+      else if (strcmp(str,"yzx") == 0) order = YZX;
+      else if (strcmp(str,"zxy") == 0) order = ZXY;
+      else if (strcmp(str,"zyx") == 0) order = ZYX;
+      error->all(FLERR,"Illegal create_grid command");
+      iarg += 4;
+
+    } else if (strcmp(arg[3],"block") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Illegal create_grid command");
+      bstyle = BLOCK;
+      if (strcmp(arg[iarg+1],"*") == 0) user_procgrid[0] = 0;
+      else user_procgrid[0] = atoi(arg[iarg+1]);
+      if (strcmp(arg[iarg+1],"*") == 0) user_procgrid[1] = 0;
+      else user_procgrid[1] = atoi(arg[iarg+2]);
+      if (strcmp(arg[iarg+1],"*") == 0) user_procgrid[2] = 0;
+      else user_procgrid[2] = atoi(arg[iarg+3]);
+      iarg += 4;
+
+    } else if (strcmp(arg[3],"random") == 0) {
+      if (narg != 5) error->all(FLERR,"Illegal create_grid command");
+      bstyle = RANDOM;
+      seed = atoi(arg[iarg+1]);
+      if (seed <= 0) error->all(FLERR,"Illegal create_grid command");
+      iarg += 2;
+
+    } else error->all(FLERR,"Illegal create_grid command");
+  }
 
   // box and grid cell geometry
 
@@ -83,11 +128,16 @@ void Grid::create(int narg, char **arg)
   xdelta = xprd / nx;
   ydelta = yprd / ny;
   zdelta = zprd / nz;
+  xdeltainv = nx / xprd;
+  ydeltainv = ny / yprd;
+  zdeltainv = nz / zprd;
 
   // build a regular Nx x Ny x Nz global grid
   
-  ncell = nx*ny*nz;
-  // check on exceeding smallint
+  bigint ntotal = (bigint) nx * ny * nz;
+  if (ntotal > MAXSMALLINT) 
+    error->one(FLERR,"Per-processor grid count is too big");
+  ncell = ntotal;
   cells = (OneCell *) memory->smalloc(ncell*sizeof(OneCell),"grid:cells");
 
   int i,j,k,m;
@@ -126,11 +176,13 @@ void Grid::create(int narg, char **arg)
     }
   }
 
-  // assign owner to each grid cell, based on specified bstyle
-  // just assign all to proc 0 for now
+  // assign cells to processors based on bstyle
+  // calculates nlocal = # of cells I own
 
-  for (m = 0; m < ncell; m++) cells[m].proc = 0;
-
+  if (bstyle == STRIDE) assign_stride();
+  else if (bstyle == BLOCK) assign_block();
+  else if (bstyle == RANDOM) assign_random();
+  
   // stats
 
   if (comm->me == 0) {
@@ -141,11 +193,179 @@ void Grid::create(int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
+void Grid::assign_stride()
+{
+  int ix,iy,iz,nth;
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+  
+  nlocal = 0;
+  for (int m = 0; m < ncell; m++) {
+    ix = m % nx;
+    iy = (m / nx) % ny;
+    iz = m / (nx*ny);
+    
+    if (order == XYZ) nth = iz*nx*ny + iy*nx + ix;
+    else if (order == XZY) nth = iy*nx*nz + iz*nx + ix;
+    else if (order == YXZ) nth = iz*ny*nx + ix*ny + iy;
+    else if (order == YZX) nth = ix*ny*nz + iz*ny + iy;
+    else if (order == ZXY) nth = iy*nz*nx + ix*nz + iz;
+    else if (order == ZYX) nth = ix*nz*ny + iy*nz + iz;
+
+    cells[m].proc = nth % nprocs;
+    if (cells[m].proc == me) nlocal++;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Grid::assign_block()
+{
+  procs2grid();
+  if (procgrid[0]*procgrid[1]*procgrid[2] != comm->nprocs)
+    error->all(FLERR,"Bad grid of processors for create_grid");
+
+  int ix,iy,iz,ipx,ipy,ipz,iproc;
+  int me = comm->me;
+
+  nlocal = 0;
+  for (int m = 0; m < ncell; m++) {
+    ix = m % nx;
+    iy = (m / nx) % ny;
+    iz = m / (nx*ny);
+    ipx = ix*procgrid[0] / nx;
+    ipy = iy*procgrid[1] / ny;
+    ipz = iz*procgrid[2] / nz;
+    iproc = ipz*procgrid[0]*procgrid[1] + ipy*procgrid[0] + ipx;
+    cells[m].proc = iproc;
+    if (cells[m].proc == me) nlocal++;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Grid::assign_random()
+{
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+  RanPark *random = new RanPark(dsmc,seed);
+
+  nlocal = 0;
+  for (int m = 0; m < ncell; m++) {
+    cells[m].proc = nprocs * random->uniform();
+    if (cells[m].proc == me) nlocal++;
+  }
+
+  delete random;
+}
+
+/* ---------------------------------------------------------------------- */
+
 int Grid::which_cell(double x, double y, double z)
 {
-  int ix = x / xdelta;
-  int iy = y / ydelta;
-  int iz = z / zdelta;
+  int ix = x * xdeltainv;
+  int iy = y * ydeltainv;
+  int iz = z * zdeltainv;
   int icell = iz*nx*ny + iy*nx + ix;
   return icell;
 }
+
+/* ----------------------------------------------------------------------
+   assign nprocs to 3d grid so as to minimize surface area 
+   area = surface area of each of 3 faces of simulation box
+------------------------------------------------------------------------- */
+
+void Grid::procs2grid()
+{
+  int nprocs = comm->nprocs;
+  procgrid[0] = user_procgrid[0];
+  procgrid[1] = user_procgrid[1];
+  procgrid[2] = user_procgrid[2];
+
+  // all 3 proc counts are specified
+
+  if (procgrid[0] && procgrid[1] && procgrid[2]) return;
+
+  // 2 out of 3 proc counts are specified
+
+  if (procgrid[0] > 0 && procgrid[1] > 0) {
+    procgrid[2] = nprocs/(procgrid[0]*procgrid[1]);
+    return;
+  } else if (procgrid[0] > 0 && procgrid[2] > 0) {
+    procgrid[1] = nprocs/(procgrid[0]*procgrid[2]);
+    return;
+  } else if (procgrid[1] > 0 && procgrid[2] > 0) {
+    procgrid[0] = nprocs/(procgrid[1]*procgrid[2]);
+    return;
+  } 
+
+  // determine cross-sectional areas
+  // area[0] = xy, area[1] = xz, area[2] = yz
+
+  double area[3];
+  area[0] = nx*ny;
+  area[1] = nx*nz;
+  area[2] = ny*nz;
+
+  double bestsurf = 2.0 * (area[0]+area[1]+area[2]);
+
+  // loop thru all possible factorizations of nprocs
+  // only consider valid cases that match procgrid settings
+  // surf = surface area of a proc sub-domain
+
+  int ipx,ipy,ipz,valid;
+  double surf;
+
+  ipx = 1;
+  while (ipx <= nprocs) {
+    valid = 1;
+    if (user_procgrid[0] && ipx != user_procgrid[0]) valid = 0;
+    if (nprocs % ipx) valid = 0;
+    if (!valid) {
+      ipx++;
+      continue;
+    }
+
+    ipy = 1;
+    while (ipy <= nprocs/ipx) {
+      valid = 1;
+      if (user_procgrid[1] && ipy != user_procgrid[1]) valid = 0;
+      if ((nprocs/ipx) % ipy) valid = 0;
+      if (!valid) {
+	ipy++;
+	continue;
+      }
+      
+      ipz = nprocs/ipx/ipy;
+      valid = 1;
+      if (user_procgrid[2] && ipz != user_procgrid[2]) valid = 0;
+      if (domain->dimension == 2 && ipz != 1) valid = 0;
+      if (!valid) {
+	ipy++;
+	continue;
+      }
+      
+      surf = area[0]/ipx/ipy + area[1]/ipx/ipz + area[2]/ipy/ipz;
+      if (surf < bestsurf) {
+	bestsurf = surf;
+	procgrid[0] = ipx;
+	procgrid[1] = ipy;
+	procgrid[2] = ipz;
+      }
+      ipy++;
+    }
+
+    ipx++;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+bigint Grid::memory_usage()
+{
+  bigint bytes = (bigint) ncell * sizeof(OneCell);
+  return bytes;
+}
+
+

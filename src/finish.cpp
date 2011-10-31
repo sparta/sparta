@@ -19,6 +19,7 @@
 #include "finish.h"
 #include "update.h"
 #include "particle.h"
+#include "comm.h"
 #include "timer.h"
 #include "memory.h"
 
@@ -71,16 +72,47 @@ void Finish::end()
 			 time_loop,nprocs,update->nsteps,particle->nglobal);
   }
 
-
   // dummy stats for now
 
+  bigint nlocal = particle->nlocal;
+  bigint nptotal,nmtotal,ncctotal,nctotal;
+  MPI_Allreduce(&nlocal,&nptotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&particle->nmove,&nmtotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&particle->ncellcross,&ncctotal,1,MPI_DSMC_BIGINT,
+		MPI_SUM,world);
+  MPI_Allreduce(&comm->ncomm,&nctotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+
   if (me == 0) {
-    if (screen) fprintf(screen,"\nCells/particle/step: %g\n",
-			1.0*particle->cellcount/particle->nglobal/
-			update->nsteps);
-    if (logfile) fprintf(logfile,"\nCells/particle/step: %g\n",
-			 1.0*particle->cellcount/particle->nglobal/
-			 update->nsteps);
+    if (screen) {
+      fprintf(screen,"\n");
+      fprintf(screen,"Particle count = " BIGINT_FORMAT "\n",nptotal);
+      fprintf(screen,"Particle moves = " BIGINT_FORMAT "\n",nmtotal);
+      fprintf(screen,"Cell touches   = " BIGINT_FORMAT "\n",ncctotal);
+      fprintf(screen,"Particle comms = " BIGINT_FORMAT "\n",nctotal);
+      fprintf(screen,"Cell-touches/particle/step: %g\n",
+	      1.0*ncctotal/particle->nglobal/update->nsteps);
+      fprintf(screen,"Particle fraction migrating: %g\n",
+	      1.0*nctotal/particle->nglobal/update->nsteps);
+      fprintf(screen,"CPU/particle/step per proc: %g\n",
+	      time_loop/particle->nglobal/update->nsteps * comm->nprocs);
+      fprintf(screen,"CPU/particle/step in aggregate: %g\n",
+	      time_loop/particle->nglobal/update->nsteps);
+    }
+    if (logfile) {
+      fprintf(logfile,"\n");
+      fprintf(logfile,"Particle count = " BIGINT_FORMAT "\n",nptotal);
+      fprintf(logfile,"Particle moves = " BIGINT_FORMAT "\n",nmtotal);
+      fprintf(logfile,"Cell touches   = " BIGINT_FORMAT "\n",ncctotal);
+      fprintf(logfile,"Particle comms = " BIGINT_FORMAT "\n",nctotal);
+      fprintf(logfile,"Cell-touches/particle/step: %g\n",
+	      1.0*ncctotal/particle->nglobal/update->nsteps);
+      fprintf(logfile,"Particle fraction migrating: %g\n",
+	      1.0*nctotal/particle->nglobal/update->nsteps);
+      fprintf(logfile,"CPU/particle/step per proc: %g\n",
+	      time_loop/particle->nglobal/update->nsteps * comm->nprocs);
+      fprintf(logfile,"CPU/particle/step in aggregate: %g\n",
+	      time_loop/particle->nglobal/update->nsteps);
+    }
   }
   
   // timing breakdowns

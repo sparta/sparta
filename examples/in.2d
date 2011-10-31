@@ -1,0 +1,16 @@
+# advect particles on uniform Cartesian grid
+# single-step moves that cross grid cell boundaries are detected
+# particle effectively moves from cell to cell
+# particles reflect off global box boundaries
+
+dimension   	    2
+
+create_box  	    0 1 0 1 -0.5 0.5
+create_grid 	    100 100 1
+create_particles    1000000 938094
+
+velocity 	    create 0.01 49892
+
+timestep 	    1.0
+
+run 		    100
