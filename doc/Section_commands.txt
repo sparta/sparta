@@ -199,7 +199,7 @@ Initialization:
 Problem definition:
 
 "create_box"_create_box.html, "create_grid"_create_grid.html,
-"create_particles"_create_particles.html
+"create_particles"_create_particles.html, "species"_species.html
 
 Settings:
 
@@ -230,6 +230,7 @@ default DSMC build.  These dependencies are listed as Restrictions
 in the command's documentation.
 
 "clear"_clear.html,
+"collision"_collision.html,
 "create_particles"_create_particles.html,
 "create_box"_create_box.html,
 "create_grid"_create_grid.html,
@@ -245,6 +246,7 @@ in the command's documentation.
 "run"_run.html,
 "shell"_shell.html,
 "suffix"_suffix.html,
+"species"_species.html,
 "timestep"_timestep.html,
 "variable"_variable.html,
 "velocity"_velocity.html :tb(c=6,ea=c)
