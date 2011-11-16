@@ -26,13 +26,22 @@ class Update : protected Pointers {
   bigint firststep,laststep;      // 1st & last step of this run
   double dt;                      // timestep size
 
+  bigint nmove;             // dummy statistic for now
+  bigint ncellcross;        // dummy statistic for now
+
+  int nmigrate;             // # of particles to migrate to new procs
+  int *mlist;               // indices of particles to migrate
+
   Update(class DSMC *);
   ~Update();
   void init() {}
   void setup();
   void run(int);
+  void move();
 
  private:
+  int maxmigrate;            // max # of particles in mlist
+
   void check();
 };
 

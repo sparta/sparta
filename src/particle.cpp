@@ -26,8 +26,14 @@
 using namespace DSMC_NS;
 
 #define DELTA 10000
+#define DELTASPECIES 16
+#define MAXLINE 1024
 
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};
+// customize by adding an abbreviation string
+// also add a check for the keyword in 2 places in add_species()
+
+#define AIR "O N NO"
+
 enum{ALL,LOCAL};
 
 /* ---------------------------------------------------------------------- */
@@ -38,11 +44,8 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
   nlocal = maxlocal = 0;
   particles = NULL;
 
-  maxmigrate = 0;
-  mlist = NULL;
-
-  nmove = 0;
-  ncellcross = 0;
+  nspecies = maxspecies = 0;
+  species = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -50,7 +53,147 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
 Particle::~Particle()
 {
   memory->sfree(particles);
-  memory->destroy(mlist);
+  memory->sfree(species);
+}
+
+/* ----------------------------------------------------------------------
+   add one of more species to species list
+------------------------------------------------------------------------- */
+
+void Particle::add_species(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal species command");
+
+  if (comm->me == 0) {
+    fp = fopen(arg[0],"r");
+    if (fp == NULL) {
+      char str[128];
+      sprintf(str,"Cannot open species file %s",arg[0]);
+      error->one(FLERR,str);
+    }
+  }
+
+  // filespecies = list of species defined in file
+
+  nfilespecies = maxfilespecies = 0;
+  filespecies = NULL;
+
+  if (comm->me == 0) read_species_file();
+  MPI_Bcast(filespecies,nfilespecies*sizeof(Species),MPI_BYTE,0,world);
+  
+  // newspecies = # of new user-requested species
+  // names = list of new species IDs
+  // customize abbreviations by adding new keyword in 2 places
+
+  char line[MAXLINE];
+
+  int newspecies = 0;
+  for (int iarg = 1; iarg < narg; iarg++) {
+    if (strcmp(arg[iarg],"air") == 0) {
+      strcpy(line,AIR);
+      newspecies += wordcount(line,NULL);
+    } else newspecies++;
+  }
+
+  char **names = new char*[newspecies];
+  newspecies = 0;
+
+  for (int iarg = 1; iarg < narg; iarg++) {
+    if (strcmp(arg[iarg],"air") == 0) {
+      strcpy(line,AIR);
+      newspecies += wordcount(line,&names[newspecies]);
+    } else names[newspecies++] = arg[iarg];
+  }
+
+  // extend species list if necessary
+
+  if (nspecies + newspecies > maxspecies) {
+    while (nspecies+newspecies > maxspecies) maxspecies += DELTASPECIES;
+    species = (Species *) 
+      memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+  }
+
+  // extract info on user-requested species from file species list
+  
+  int j;
+
+  for (int i = 0; i < newspecies; i++) {
+    for (j = 0; j < nspecies; j++)
+      if (strcmp(names[i],species[j].id) == 0) break;
+    if (j < nspecies) error->all(FLERR,"Species ID is already defined");
+    for (j = 0; j < nfilespecies; j++)
+      if (strcmp(names[i],filespecies[j].id) == 0) break;
+    if (j == nfilespecies)
+      error->all(FLERR,"Species ID does not appear in species file");
+    memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
+    nspecies++;
+  }
+
+  memory->sfree(filespecies);
+  delete [] names;
+}
+
+/* ----------------------------------------------------------------------
+   read list of species defined in species file
+   store info in filespecies and nfilespecies
+   only invoked by proc 0
+------------------------------------------------------------------------- */
+
+void Particle::read_species_file()
+{
+  nfilespecies = maxfilespecies = 0;
+  filespecies = NULL;
+
+  // read file line by line
+  // skip blank lines or comment lines starting with '#'
+  // all other lines must have NWORDS 
+
+  int NWORDS = 14;
+  char **words = new char*[NWORDS];
+  char line[MAXLINE],copy[MAXLINE];
+
+  while (fgets(line,MAXLINE,fp)) {
+    int pre = strspn(line," \t\n");
+    if (pre == strlen(line) || line[pre] == '#') continue;
+
+    strcpy(copy,line);
+    int nwords = wordcount(copy,NULL);
+    if (nwords != NWORDS)
+      error->one(FLERR,"Incorrect line format in species file");
+
+    if (nfilespecies == maxfilespecies) {
+      maxfilespecies += DELTASPECIES;
+      filespecies = (Species *) 
+	memory->srealloc(filespecies,maxfilespecies*sizeof(Species),
+			 "particle:filespecies");
+    }
+
+    nwords = wordcount(line,words);
+    Species *fsp = &filespecies[nfilespecies];
+
+    if (strlen(words[0]) + 1 > 16) error->one(FLERR,"");
+    strcpy(fsp->id,words[0]);
+
+    fsp->molwt = atof(words[1]);
+    fsp->mass = atof(words[2]);
+    fsp->diam = atof(words[3]);
+    fsp->rotdof = atoi(words[4]);
+    fsp->rotrel = atoi(words[5]);
+    fsp->vibdof = atoi(words[6]);
+    fsp->vibrel = atoi(words[7]);
+    fsp->vibtemp = atof(words[8]);
+    fsp->specwt = atof(words[9]);
+    fsp->charge = atof(words[10]);
+    fsp->omega = atof(words[11]);
+    fsp->tref = atof(words[12]);
+    fsp->alpha = atof(words[13]);
+
+    nfilespecies++;
+  }
+
+  delete [] words;
+
+  fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -222,170 +365,6 @@ void Particle::create_local(bigint n)
 }
 
 /* ----------------------------------------------------------------------
-   advect particles thru grid
-------------------------------------------------------------------------- */
-
-void Particle::move()
-{
-  int icell,inface,outface;
-  double xnew[3];
-  double *x,*v,*lo,*hi;
-  int *neigh;
-  double frac,newfrac;
-
-  // extend migration list if necessary
-
-  if (nlocal > maxmigrate) {
-    maxmigrate = maxlocal;
-    memory->destroy(mlist);
-    memory->create(mlist,maxmigrate,"particle:mlist");
-  }
-
-  int dimension = domain->dimension;
-  Grid::OneCell *cells = grid->cells;
-  double dt = update->dt;
-  int me = comm->me;
-
-  int count = 0;
-  nmigrate = 0;
-
-  for (int i = 0; i < nlocal; i++) {
-
-    x = particles[i].x;
-    v = particles[i].v;
-
-    xnew[0] = x[0] + dt*v[0];
-    xnew[1] = x[1] + dt*v[1];
-    xnew[2] = x[2] + dt*v[2];
-
-    icell = particles[i].icell;
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-    neigh = cells[icell].neigh;
-    inface = INTERIOR;
-    count++;
-
-    // advect particle from cell to cell until the move is done
-
-    while (1) {
-
-      // check if particle crosses any cell face
-      // frac = fraction of move completed before hitting cell face
-      // this section should be as efficient as possible,
-      // since most particles won't do anything else
-
-      outface = INTERIOR;
-      frac = 1.0;
-      
-      if (xnew[0] < lo[0] && inface != XLO) {
-	frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
-	outface = XLO;
-      } else if (xnew[0] >= hi[0] && inface != XHI) {
-	frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
-	outface = XHI;
-      }
-
-      if (xnew[1] < lo[1] && inface != YLO) {
-	newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
-	if (newfrac < frac) {
-	  frac = newfrac;
-	  outface = YLO;
-	}
-      } else if (xnew[1] >= hi[1] && inface != YHI) {
-	newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
-	if (newfrac < frac) {
-	  frac = newfrac;
-	  outface = YHI;
-	}
-      }
-      
-      if (xnew[2] < lo[2] && inface != ZLO) {
-	newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
-	if (newfrac < frac) {
-	  frac = newfrac;
-	  outface = ZLO;
-	}
-      } else if (xnew[2] >= hi[2] && inface != ZHI) {
-	newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
-	if (newfrac < frac) {
-	  frac = newfrac;
-	  outface = ZHI;
-	}
-      }
-
-      // particle is interior to cell
-
-      if (outface == INTERIOR) break;
-
-      // set particle position exactly on face of cell
-      
-      x[0] += frac * (xnew[0]-x[0]);
-      x[1] += frac * (xnew[1]-x[1]);
-      x[2] += frac * (xnew[2]-x[2]);
-      
-      if (outface == XLO) x[0] = lo[0];
-      else if (outface == XHI) x[0] = hi[0]; 
-      else if (outface == YLO) x[1] = lo[1];
-      else if (outface == YHI) x[1] = hi[1]; 
-      else if (outface == ZLO) x[2] = lo[2];
-      else if (outface == ZHI) x[2] = hi[2]; 
-      
-      // assign new grid cell and new inface
-      // if particle crosses global boundary:
-      // reflect velocity and final position, remain in same cell
-      
-      if (neigh[outface] < 0) {
-	inface = outface;
-	if (outface == XLO) {
-	  xnew[0] = lo[0] + (lo[0]-xnew[0]);
-	  v[0] = -v[0];
-	} else if (outface == XHI) {
-	  xnew[0] = hi[0] - (xnew[0]-hi[0]);
-	  v[0] = -v[0];
-	} else if (outface == YLO) {
-	  xnew[1] = lo[1] + (lo[1]-xnew[1]);
-	  v[1] = -v[1];
-	} else if (outface == YHI) {
-	  xnew[1] = hi[1] - (xnew[1]-hi[1]);
-	  v[1] = -v[1];
-	} else if (outface == ZLO) {
-	  xnew[2] = lo[2] + (lo[2]-xnew[2]);
-	  v[2] = -v[2];
-	} else if (outface == ZHI) {
-	  xnew[2] = hi[2] - (xnew[2]-hi[2]);
-	  v[2] = -v[2];
-	}
-      } else {
-	icell = neigh[outface];
-	lo = cells[icell].lo;
-	hi = cells[icell].hi;
-	neigh = cells[icell].neigh;
-	
-	if (outface == XLO) inface = XHI;
-	else if (outface == XHI) inface = XLO;
-	else if (outface == YLO) inface = YHI;
-	else if (outface == YHI) inface = YLO;
-	else if (outface == ZLO) inface = ZHI;
-	else if (outface == ZHI) inface = ZLO;
-	count++;
-      }
-    }
-
-    // update final particle position and assign to new grid cell
-    // add to migrate list if I don't own new cell
-
-    x[0] = xnew[0];
-    x[1] = xnew[1];
-    x[2] = xnew[2];
-    particles[i].icell = icell;
-    if (cells[icell].proc != me) mlist[nmigrate++] = i;
-  }
-
-  nmove += nlocal;
-  ncellcross += count;
-}
-
-/* ----------------------------------------------------------------------
    compress particle list to remove mlist of migrating particles
    overwrite deleted particle with particle from end of nlocal list
    j = mlist loop avoids overwrite with deleted particle at end of mlist
@@ -395,6 +374,8 @@ void Particle::compress()
 {
   int j,k;
   int nbytes = sizeof(OnePart);
+  int *mlist = update->mlist;
+  int nmigrate = update->nmigrate;
 
   for (int i = 0; i < nmigrate; i++) {
     j = mlist[i];
@@ -407,7 +388,46 @@ void Particle::compress()
     memcpy(&particles[j],&particles[k],nbytes);
     nlocal--;
   }
+}
 
+/* ----------------------------------------------------------------------
+   sort particles into grid cells
+------------------------------------------------------------------------- */
+
+void Particle::sort()
+{
+  int i,icell;
+
+  // reallocate sort list as needed
+
+  if (maxsortparticle < maxlocal) {
+    maxsortparticle = maxlocal;
+    memory->destroy(next);
+    memory->create(next,maxsortparticle,"sort:next");
+  }
+
+  // build linked list for each cell
+
+  Grid::OneCell *cells = grid->cells;
+  int ncelllocal = grid->nlocal;
+
+  for (icell = 0; icell < ncelllocal; icell++) {
+    cells[icell].nparticles = 0;
+    cells[icell].first = -1;
+  }
+
+  for (i = 0; i < nlocal; i++) {
+    icell = particles[i].icell;
+    if (cells[icell].first < 0) {
+      cells[icell].first = i;
+      next[i] = -1;
+    } else {
+
+
+      next[i] = -1;
+    }
+    grid->cells[icell].nparticles++;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -429,6 +449,26 @@ void Particle::grow(int nextra)
   particles = (OnePart *)
     memory->srealloc(particles,maxlocal*sizeof(OnePart),
 		     "particle:particles");
+}
+
+/* ----------------------------------------------------------------------
+   count whitespace-delimited words in line
+   line will be modified, since strtok() inserts NULLs
+   if words is non-NULL, store ptr to each word
+------------------------------------------------------------------------- */
+
+int Particle::wordcount(char *line, char **words)
+{
+  int nwords = 0;
+  char *word = strtok(line," \t");
+
+  while (word) {
+    if (words) words[nwords] = word;
+    nwords++;
+    word = strtok(NULL," \t");
+  }
+
+  return nwords;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -35,6 +35,7 @@ class DSMC {
   class Domain *domain;          // simulation box
   class Grid *grid;              // volumetric grid cells
   class Surf *surf;              // surface elements
+  class Collide *collide;        // collisions and chemistry
   class Output *output;          // stats/dump/restart
   class Timer *timer;            // CPU timing info
 

@@ -15,22 +15,33 @@
 #include "update.h"
 #include "particle.h"
 #include "grid.h"
+#include "domain.h"
+#include "collide.h"
 #include "comm.h"
 #include "timer.h"
+#include "memory.h"
 #include "error.h"
 
 using namespace DSMC_NS;
+
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};
 
 /* ---------------------------------------------------------------------- */
 
 Update::Update(DSMC *dsmc) : Pointers(dsmc)
 {
   dt = 1.0;
+
+  maxmigrate = 0;
+  mlist = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
-Update::~Update() {}
+Update::~Update()
+{
+  memory->destroy(mlist);
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -86,6 +97,9 @@ void Update::setup()
 	      tave,tmin,tmax);
     }
   }
+
+  nmove = 0;
+  ncellcross = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -105,10 +119,12 @@ void Update::run(int nsteps)
 
     ntimestep++;
 
+    // create particles
+
     // move particles
 
     timer->stamp();
-    particle->move();
+    move();
     timer->stamp(TIME_MOVE);
 
     // communicate particles
@@ -117,10 +133,190 @@ void Update::run(int nsteps)
     comm->migrate();
     timer->stamp(TIME_COMM);
 
+    if (collide) {
+      timer->stamp();
+      particle->sort();
+      timer->stamp(TIME_SORT);
+
+      timer->stamp();
+      collide->collisions();
+      timer->stamp(TIME_COLLIDE);
+    }
+
+    // output
+
     // sanity check on particles in correct cells
 
     //check();
   }
+}
+
+/* ----------------------------------------------------------------------
+   advect particles thru grid
+------------------------------------------------------------------------- */
+
+void Update::move()
+{
+  int icell,inface,outface;
+  double xnew[3];
+  double *x,*v,*lo,*hi;
+  int *neigh;
+  double frac,newfrac;
+
+  // extend migration list if necessary
+
+  int nlocal = particle->nlocal;
+  int maxlocal = particle->maxlocal;
+
+  if (nlocal > maxmigrate) {
+    maxmigrate = maxlocal;
+    memory->destroy(mlist);
+    memory->create(mlist,maxmigrate,"particle:mlist");
+  }
+
+  int dimension = domain->dimension;
+  Particle::OnePart *particles = particle->particles;
+  Grid::OneCell *cells = grid->cells;
+  double dt = update->dt;
+  int me = comm->me;
+
+  int count = 0;
+  nmigrate = 0;
+
+  for (int i = 0; i < nlocal; i++) {
+
+    x = particles[i].x;
+    v = particles[i].v;
+
+    xnew[0] = x[0] + dt*v[0];
+    xnew[1] = x[1] + dt*v[1];
+    xnew[2] = x[2] + dt*v[2];
+
+    icell = particles[i].icell;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    neigh = cells[icell].neigh;
+    inface = INTERIOR;
+    count++;
+
+    // advect particle from cell to cell until the move is done
+
+    while (1) {
+
+      // check if particle crosses any cell face
+      // frac = fraction of move completed before hitting cell face
+      // this section should be as efficient as possible,
+      // since most particles won't do anything else
+
+      outface = INTERIOR;
+      frac = 1.0;
+      
+      if (xnew[0] < lo[0] && inface != XLO) {
+	frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
+	outface = XLO;
+      } else if (xnew[0] >= hi[0] && inface != XHI) {
+	frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
+	outface = XHI;
+      }
+
+      if (xnew[1] < lo[1] && inface != YLO) {
+	newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
+	if (newfrac < frac) {
+	  frac = newfrac;
+	  outface = YLO;
+	}
+      } else if (xnew[1] >= hi[1] && inface != YHI) {
+	newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+	if (newfrac < frac) {
+	  frac = newfrac;
+	  outface = YHI;
+	}
+      }
+      
+      if (xnew[2] < lo[2] && inface != ZLO) {
+	newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
+	if (newfrac < frac) {
+	  frac = newfrac;
+	  outface = ZLO;
+	}
+      } else if (xnew[2] >= hi[2] && inface != ZHI) {
+	newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
+	if (newfrac < frac) {
+	  frac = newfrac;
+	  outface = ZHI;
+	}
+      }
+
+      // particle is interior to cell
+
+      if (outface == INTERIOR) break;
+
+      // set particle position exactly on face of cell
+      
+      x[0] += frac * (xnew[0]-x[0]);
+      x[1] += frac * (xnew[1]-x[1]);
+      x[2] += frac * (xnew[2]-x[2]);
+      
+      if (outface == XLO) x[0] = lo[0];
+      else if (outface == XHI) x[0] = hi[0]; 
+      else if (outface == YLO) x[1] = lo[1];
+      else if (outface == YHI) x[1] = hi[1]; 
+      else if (outface == ZLO) x[2] = lo[2];
+      else if (outface == ZHI) x[2] = hi[2]; 
+      
+      // assign new grid cell and new inface
+      // if particle crosses global boundary:
+      // reflect velocity and final position, remain in same cell
+      
+      if (neigh[outface] < 0) {
+	inface = outface;
+	if (outface == XLO) {
+	  xnew[0] = lo[0] + (lo[0]-xnew[0]);
+	  v[0] = -v[0];
+	} else if (outface == XHI) {
+	  xnew[0] = hi[0] - (xnew[0]-hi[0]);
+	  v[0] = -v[0];
+	} else if (outface == YLO) {
+	  xnew[1] = lo[1] + (lo[1]-xnew[1]);
+	  v[1] = -v[1];
+	} else if (outface == YHI) {
+	  xnew[1] = hi[1] - (xnew[1]-hi[1]);
+	  v[1] = -v[1];
+	} else if (outface == ZLO) {
+	  xnew[2] = lo[2] + (lo[2]-xnew[2]);
+	  v[2] = -v[2];
+	} else if (outface == ZHI) {
+	  xnew[2] = hi[2] - (xnew[2]-hi[2]);
+	  v[2] = -v[2];
+	}
+      } else {
+	icell = neigh[outface];
+	lo = cells[icell].lo;
+	hi = cells[icell].hi;
+	neigh = cells[icell].neigh;
+	
+	if (outface == XLO) inface = XHI;
+	else if (outface == XHI) inface = XLO;
+	else if (outface == YLO) inface = YHI;
+	else if (outface == YHI) inface = YLO;
+	else if (outface == ZLO) inface = ZHI;
+	else if (outface == ZHI) inface = ZLO;
+	count++;
+      }
+    }
+
+    // update final particle position and assign to new grid cell
+    // add to migrate list if I don't own new cell
+
+    x[0] = xnew[0];
+    x[1] = xnew[1];
+    x[2] = xnew[2];
+    particles[i].icell = icell;
+    if (cells[icell].proc != me) mlist[nmigrate++] = i;
+  }
+
+  nmove += nlocal;
+  ncellcross += count;
 }
 
 /* ---------------------------------------------------------------------- */

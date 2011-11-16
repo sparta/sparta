@@ -38,6 +38,7 @@ style () {
 if (test $1 = "style") then
 
   style COMMAND_CLASS   ""          command    input
+  style COLLIDE_CLASS   collide_    collide    input
 
   #style ANGLE_CLASS     angle_      angle      force
   #style ATOM_CLASS      atom_vec_   atom       atom

@@ -28,6 +28,8 @@ class Grid : protected Pointers {
     double lo[3],hi[3];
     int neigh[6];
     int proc;
+    int nparticles;
+    int first;
   };
 
   OneCell *cells;

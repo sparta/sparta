@@ -18,6 +18,7 @@
 #include "irregular.h"
 #include "particle.h"
 #include "grid.h"
+#include "update.h"
 #include "memory.h"
 #include "error.h"
 
@@ -60,8 +61,8 @@ void Comm::migrate()
   Grid::OneCell *cells = grid->cells;
   Particle::OnePart *particles = particle->particles;
   int nbytes = sizeof(Particle::OnePart);
-  int *mlist = particle->mlist;
-  int nmigrate = particle->nmigrate;
+  int *mlist = update->mlist;
+  int nmigrate = update->nmigrate;
 
   // grow proclist and sbuf if necessary
 

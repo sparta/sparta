@@ -24,6 +24,7 @@
 #include "domain.h"
 #include "grid.h"
 #include "surf.h"
+#include "collide.h"
 #include "output.h"
 #include "timer.h"
 #include "random_mars.h"
@@ -400,6 +401,7 @@ void DSMC::create()
   domain = new Domain(this);
   grid = new Grid(this);
   surf = new Surf(this);
+  collide = NULL;
   output = new Output(this);
   timer = new Timer(this);
 }
@@ -416,6 +418,7 @@ void DSMC::init()
   domain->init();
   grid->init();
   surf->init();
+  if (collide) collide->init();
   output->init();
   timer->init();
 }
@@ -433,6 +436,7 @@ void DSMC::destroy()
   delete domain;
   delete grid;
   delete surf;
+  delete collide;
   delete output;
   delete timer;
 }
@@ -444,6 +448,13 @@ void DSMC::destroy()
 void DSMC::print_styles()
 {
   printf("\nList of style options included in this executable:\n\n");
+
+  printf("Collide styles:");
+#define COLLIDE_CLASS
+#define CollideStyle(key,Class) printf(" %s",#key);
+#include "style_collide.h"
+#undef COLLIDE_CLASS
+  printf("\n");
 
   printf("Command styles (add-on input script commands):");
 #define COMMAND_CLASS

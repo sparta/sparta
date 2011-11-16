@@ -49,6 +49,7 @@ class Pointers {
     domain(ptr->domain),
     grid(ptr->grid),
     surf(ptr->surf),
+    collide(ptr->collide),
     output(ptr->output),
     timer(ptr->timer),
     world(ptr->world),
@@ -70,6 +71,7 @@ class Pointers {
   Domain *&domain;
   Grid *&grid;
   Surf *&surf;
+  Collide *&collide;
   Output *&output;
   Timer *&timer;
 

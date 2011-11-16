@@ -51,7 +51,7 @@ void Finish::end()
   if (loopflag) {
     time_other = timer->array[TIME_LOOP] -
       (timer->array[TIME_MOVE] + timer->array[TIME_COLLIDE] + 
-       timer->array[TIME_CHEM] + timer->array[TIME_COMM] +
+       timer->array[TIME_SORT] + timer->array[TIME_COMM] +
        timer->array[TIME_OUTPUT]);
     
     time_loop = timer->array[TIME_LOOP];
@@ -77,8 +77,8 @@ void Finish::end()
   bigint nlocal = particle->nlocal;
   bigint nptotal,nmtotal,ncctotal,nctotal;
   MPI_Allreduce(&nlocal,&nptotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&particle->nmove,&nmtotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&particle->ncellcross,&ncctotal,1,MPI_DSMC_BIGINT,
+  MPI_Allreduce(&update->nmove,&nmtotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&update->ncellcross,&ncctotal,1,MPI_DSMC_BIGINT,
 		MPI_SUM,world);
   MPI_Allreduce(&comm->ncomm,&nctotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
 
@@ -147,15 +147,15 @@ void Finish::end()
 		time,time/time_loop*100.0);
     }
     
-    time = timer->array[TIME_CHEM];
+    time = timer->array[TIME_SORT];
     MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
     time = tmp/nprocs;
     if (me == 0) {
       if (screen) 
-	fprintf(screen,"Chem  time (%%) = %g (%g)\n",
+	fprintf(screen,"Sort  time (%%) = %g (%g)\n",
 		time,time/time_loop*100.0);
       if (logfile)
-	fprintf(logfile,"Chem  time (%%) = %g (%g)\n",
+	fprintf(logfile,"Sort  time (%%) = %g (%g)\n",
 		time,time/time_loop*100.0);
     }
     

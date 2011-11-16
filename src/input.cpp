@@ -27,6 +27,7 @@
 #include "grid.h"
 #include "particle.h"
 #include "update.h"
+#include "collide.h"
 #include "random_mars.h"
 #include "error.h"
 #include "memory.h"
@@ -407,9 +408,11 @@ int Input::execute_command()
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
 
+  else if (!strcmp(command,"collision")) collision();
   else if (!strcmp(command,"create_grid")) create_grid();
   else if (!strcmp(command,"create_particles")) create_particles();
   else if (!strcmp(command,"dimension")) dimension();
+  else if (!strcmp(command,"species")) species();
   else if (!strcmp(command,"timestep")) timestep();
 
   else flag = 0;
@@ -755,6 +758,26 @@ void Input::variable_command()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::collision()
+{
+  if (narg < 1) error->all(FLERR,"Illegal collision command");
+
+  if (collide) delete collide;
+
+  if (strcmp(arg[0],"none") == 0) collide = NULL;
+
+#define COLLIDE_CLASS
+#define CollideStyle(key,Class) \
+  else if (strcmp(arg[0],#key) == 0) \
+    collide = new Class(dsmc,narg,arg);
+#include "style_collide.h"
+#undef COLLIDE_CLASS
+
+  else error->all(FLERR,"Invalid collision style");
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::create_grid()
 {
   grid->create(narg,arg);
@@ -777,6 +800,13 @@ void Input::dimension()
   domain->dimension = atoi(arg[0]);
   if (domain->dimension != 2 && domain->dimension != 3)
     error->all(FLERR,"Illegal dimension command");
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::species()
+{
+  particle->add_species(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */
