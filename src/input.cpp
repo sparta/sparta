@@ -21,6 +21,7 @@
 #include "sys/stat.h"
 #include "input.h"
 #include "style_command.h"
+#include "style_collide.h"
 #include "universe.h"
 #include "variable.h"
 #include "domain.h"
@@ -28,7 +29,6 @@
 #include "particle.h"
 #include "update.h"
 #include "collide.h"
-#include "random_mars.h"
 #include "error.h"
 #include "memory.h"
 
@@ -771,6 +771,7 @@ void Input::collision()
   else if (strcmp(arg[0],#key) == 0) \
     collide = new Class(dsmc,narg,arg);
 #include "style_collide.h"
+#undef CollideStyle
 #undef COLLIDE_CLASS
 
   else error->all(FLERR,"Invalid collision style");

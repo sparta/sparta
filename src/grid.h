@@ -30,6 +30,7 @@ class Grid : protected Pointers {
     int proc;
     int nparticles;
     int first;
+    double volume;
   };
 
   OneCell *cells;
