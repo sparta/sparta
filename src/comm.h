@@ -28,7 +28,7 @@ class Comm : protected Pointers {
   Comm(class DSMC *);
   ~Comm();
   void init() {}
-  void migrate();
+  void migrate(int, int *);
 
  private:
   class Irregular *irregular;

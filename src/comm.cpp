@@ -55,15 +55,13 @@ Comm::~Comm()
    migrate particles to new procs after move
 ------------------------------------------------------------------------- */
 
-void Comm::migrate()
+void Comm::migrate(int nmigrate, int *mlist)
 {
   int i,j;
 
   Grid::OneCell *cells = grid->cells;
   Particle::OnePart *particles = particle->particles;
   int nbytes = sizeof(Particle::OnePart);
-  int *mlist = update->mlist;
-  int nmigrate = update->nmigrate;
 
   // grow proclist and sbuf if necessary
 
@@ -88,7 +86,7 @@ void Comm::migrate()
 
   // compress my list of particles
 
-  particle->compress();
+  particle->compress(nmigrate,mlist);
 
   // create irregular communication plan, perform comm, destroy plan
   // returned nrecv = size of buffer needed for incoming atoms

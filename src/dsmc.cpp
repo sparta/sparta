@@ -395,13 +395,13 @@ DSMC::~DSMC()
 
 void DSMC::create()
 {
-  particle = new Particle(this);
   update = new Update(this);
-  comm = new Comm(this);
-  domain = new Domain(this);
+  particle = new Particle(this);
   grid = new Grid(this);
   surf = new Surf(this);
+  domain = new Domain(this);
   collide = NULL;
+  comm = new Comm(this);
   output = new Output(this);
   timer = new Timer(this);
 }
@@ -412,13 +412,13 @@ void DSMC::create()
 
 void DSMC::init()
 {
-  particle->init();
   update->init();
-  comm->init();
-  domain->init();
+  particle->init();
   grid->init();
   surf->init();
+  domain->init();
   if (collide) collide->init();
+  comm->init();
   output->init();
   timer->init();
 }
@@ -430,13 +430,13 @@ void DSMC::init()
 
 void DSMC::destroy()
 {
-  delete particle;
   delete update;
-  delete comm;
-  delete domain;
+  delete particle;
   delete grid;
   delete surf;
+  delete domain;
   delete collide;
+  delete comm;
   delete output;
   delete timer;
 }

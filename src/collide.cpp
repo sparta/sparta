@@ -102,6 +102,8 @@ void Collide::collisions()
   Grid::OneCell *cells = grid->cells;
   int *mycells = grid->mycells;
   Particle::OnePart *particles = particle->particles;
+  int *cellcount = particle->cellcount;
+  int *first = particle->first;
   int *next = particle->next;
   int nglocal = grid->nlocal;
   int nspecies = particle->nspecies;
@@ -119,15 +121,14 @@ void Collide::collisions()
   for (int m = 0; m < nglocal; m++) {
 
     icell = mycells[m];
-    //volume = cells[icell].volume;
+    volume = cells[icell].volume;
+    np = cellcount[m];;
+    ip = first[m];
 
     // setup per-species particle lists for this cell
 
     for (i = 0; i < nspecies; i++) nsp[i] = 0;
 
-    printf("AAA %d\n",m);
-    np = cells[icell].nparticles;
-    ip = cells[icell].first;
     while (ip >= 0) {
       itype = particles[ip].type;
       if (nsp[itype] == maxsp[itype]) {
@@ -137,8 +138,6 @@ void Collide::collisions()
       splist[itype][nsp[itype]++] = ip;
       ip = next[ip];
     }
-
-    printf("AAA %d %d\n",m,nsp[0]);
 
     // compute collision attempt count for each species pair
 
@@ -168,8 +167,6 @@ void Collide::collisions()
 	}
       }
 
-    printf("AAA %d %d\n",m,nsp[0]);
-
     // perform collisions for each species pair in sscoll list
 
     for (i = 0; i < nsspair; i++) {
@@ -177,8 +174,6 @@ void Collide::collisions()
       jsp = sscoll[i][1];
       nattempt = sscoll[i][2];
       ncollattempt += nattempt;
-
-      printf("BBB %d %d\n",m,nattempt);
 
       for (k = 0; k < nattempt; k++) {
 

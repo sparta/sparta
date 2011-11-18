@@ -44,7 +44,10 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
   nspecies = maxspecies = 0;
   species = NULL;
 
-  maxsortparticle = 0;
+  maxgrid = 0;
+  cellcount = NULL;
+  first = NULL;
+  maxsort = 0;
   next = NULL;
 }
 
@@ -54,7 +57,25 @@ Particle::~Particle()
 {
   memory->sfree(particles);
   memory->sfree(species);
+  memory->destroy(cellcount);
+  memory->destroy(first);
   memory->destroy(next);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Particle::init()
+{
+  // reallocate cellcount and first lists as needed
+  // NOTE: when grid becomes dynamic, will need to do this in sort()
+
+  if (maxgrid < grid->nlocal) {
+    maxgrid = grid->nlocal;
+    memory->destroy(cellcount);
+    memory->destroy(first);
+    memory->create(first,maxgrid,"particle:first");
+    memory->create(cellcount,maxgrid,"particle:cellcount");
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -235,12 +256,10 @@ void Particle::read_species_file()
    j = mlist loop avoids overwrite with deleted particle at end of mlist
 ------------------------------------------------------------------------- */
 
-void Particle::compress()
+void Particle::compress(int nmigrate, int *mlist)
 {
   int j,k;
   int nbytes = sizeof(OnePart);
-  int *mlist = update->mlist;
-  int nmigrate = update->nmigrate;
 
   for (int i = 0; i < nmigrate; i++) {
     j = mlist[i];
@@ -263,12 +282,12 @@ void Particle::sort()
 {
   int i,icell;
 
-  // reallocate sort list as needed
+  // reallocate next list as needed
 
-  if (maxsortparticle < maxlocal) {
-    maxsortparticle = maxlocal;
+  if (maxsort < maxlocal) {
+    maxsort = maxlocal;
     memory->destroy(next);
-    memory->create(next,maxsortparticle,"sort:next");
+    memory->create(next,maxsort,"particle:next");
   }
 
   // build linked list of particles in each cell I own
@@ -279,19 +298,27 @@ void Particle::sort()
 
   for (i = 0; i < nglocal; i++) {
     icell = mycells[i];
-    cells[icell].nparticles = 0;
     cells[icell].first = -1;
+    cells[icell].count = 0;
+
+    //cellcount[i] = 0;
+    //first[i] = -1;
   }
 
   // reverse loop stores linked list in forward order
-
-  Grid::OneCell *cell;
+  // icell = local cell the particle is in
 
   for (i = nlocal-1; i >= 0; i--) {
-    cell = &cells[particles[i].icell];
-    next[i] = cell->first;
-    cell->first = i;
-    cell->nparticles++;
+    icell = particles[i].icell;
+    next[i] = cells[icell].first;
+    cells[icell].first = i;
+    cells[icell].count++;
+
+    // NOTE: this method seems much slower for some reason
+    //icell = cells[particles[i].icell].local;
+    //next[i] = first[icell];
+    //first[icell] = i;
+    //cellcount[icell]++;
   }
 }
 

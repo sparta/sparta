@@ -130,7 +130,7 @@ void Update::run(int nsteps)
     // communicate particles
 
     timer->stamp();
-    comm->migrate();
+    comm->migrate(nmigrate,mlist);
     timer->stamp(TIME_COMM);
 
     if (collide) {

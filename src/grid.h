@@ -29,12 +29,13 @@ class Grid : protected Pointers {
 
   struct OneCell {
     int id;
-    double lo[3],hi[3];
-    int neigh[6];
-    int proc;
-    int nparticles;
-    int first;
-    double volume;
+    double lo[3],hi[3];       // opposite corner pts of cell
+    int neigh[6];             // global indices of 6 neighbor cells
+                              // -1 if global boundary
+    int proc;                 // proc that owns this cell
+    int local;                // local index of cell if I own it
+    int first,count;
+    double volume;            // volume of cell
   };
 
   OneCell *cells;

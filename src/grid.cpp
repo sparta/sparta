@@ -74,6 +74,7 @@ void Grid::add_cell(int id, double *lo, double *hi, int *neigh)
 /* ----------------------------------------------------------------------
    setup owned grid cells
    create mycells list of owned cells
+   compute local index for owned cells
    compute volume of owned cells
 ------------------------------------------------------------------------- */
 
@@ -93,7 +94,10 @@ void Grid::setup_grid()
 
   nlocal = 0;
   for (int m = 0; m < ncell; m++)
-    if (cells[m].proc == me) mycells[nlocal++] = m;
+    if (cells[m].proc == me) {
+      cells[m].local = nlocal;
+      mycells[nlocal++] = m;
+    }
 
   // calculate volume of cells I own
 

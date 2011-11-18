@@ -22,8 +22,6 @@ namespace DSMC_NS {
 
 class Particle : protected Pointers {
  public:
-  int *next;                // index of next particle in each grid cell
-
   struct Species {          // info on each particle species
     char id[16];
     double molwt;
@@ -56,18 +54,23 @@ class Particle : protected Pointers {
   int maxlocal;             // max # particles list can hold
   OnePart *particles;       // list of particles I own
 
+  int *cellcount;           // count of particles in each grid cell I own
+  int *first;               // index of first particle in each grid cell
+  int *next;                // index of next particle in each grid cell
+
   Particle(class DSMC *);
   ~Particle();
-  void init() {}
+  void init();
   void add_particle(int, int, int, double, double, double);
   void add_species(int, char **);
-  void compress();
+  void compress(int, int *);
   void sort();
   void grow(int);
   bigint memory_usage();
 
  private:
-  int maxsortparticle;      // max # of particles next can hold
+  int maxgrid;              // max # of indices first can hold
+  int maxsort;              // max # of particles next can hold
   int maxspecies;           // max size of species list
 
   Species *filespecies;     // list of species read from file
