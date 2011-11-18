@@ -59,16 +59,14 @@ class Particle : protected Pointers {
   Particle(class DSMC *);
   ~Particle();
   void init() {}
+  void add_particle(int, int, int, double, double, double);
   void add_species(int, char **);
-  void create(int, char **);
   void compress();
   void sort();
   void grow(int);
   bigint memory_usage();
 
  private:
-  int seed;
-
   int maxsortparticle;      // max # of particles next can hold
   int maxspecies;           // max size of species list
 
@@ -77,8 +75,6 @@ class Particle : protected Pointers {
   int maxfilespecies;       // max size of filespecies list
   FILE *fp;                 // species file pointer
 
-  void create_all(bigint);
-  void create_local(bigint);
   void read_species_file();
   int wordcount(char *, char **);
 };

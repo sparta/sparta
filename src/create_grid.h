@@ -14,27 +14,21 @@
 
 #ifdef COMMAND_CLASS
 
-CommandStyle(create_particles,CreateParticles)
+CommandStyle(create_grid,CreateGrid)
 
 #else
 
-#ifndef DSMC_CREATE_PARTICLES_H
-#define DSMC_CREATE_PARTICLES_H
+#ifndef DSMC_CREATE_GRID_H
+#define DSMC_CREATE_GRID_H
 
 #include "pointers.h"
 
 namespace DSMC_NS {
 
-class CreateParticles : protected Pointers {
+class CreateGrid : protected Pointers {
  public:
-  CreateParticles(class DSMC *);
+  CreateGrid(class DSMC *);
   void command(int, char **);
-
- private:
-  int seed;
-
-  void create_all(bigint);
-  void create_local(bigint);
 };
 
 }

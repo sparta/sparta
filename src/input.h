@@ -64,9 +64,7 @@ class Input : protected Pointers {
 
   // DSMC commands
 
-  void collision();
-  void create_grid();
-  void create_particles();
+  void collisions();
   void dimension();
   void species();
   void timestep();

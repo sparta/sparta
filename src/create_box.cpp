@@ -29,8 +29,6 @@ CreateBox::CreateBox(DSMC *dsmc) : Pointers(dsmc) {}
 
 void CreateBox::command(int narg, char **arg)
 {
-  if (narg != 6) error->all(FLERR,"Illegal create_box command");
-
   if (domain->box_exist) 
     error->all(FLERR,"Cannot create_box after simulation box is defined");
 
@@ -38,6 +36,8 @@ void CreateBox::command(int narg, char **arg)
   //  error->all(FLERR,"Cannot run 2d simulation with nonperiodic Z dimension");
 
   domain->box_exist = 1;
+
+  if (narg != 6) error->all(FLERR,"Illegal create_box command");
 
   domain->boxlo[0] = atof(arg[0]);
   domain->boxhi[0] = atof(arg[1]);

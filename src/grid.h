@@ -23,6 +23,10 @@ class Grid : protected Pointers {
  public:
   int grid_exist;
 
+  int nx,ny,nz;
+  double xdelta,ydelta,zdelta;
+  double xdeltainv,ydeltainv,zdeltainv;
+
   struct OneCell {
     int id;
     double lo[3],hi[3];
@@ -42,24 +46,19 @@ class Grid : protected Pointers {
   Grid(class DSMC *);
   ~Grid();
   void init() {}
-  void create(int, char **);
+  void add_cell(int, double *, double *, int *);
+  void setup_grid();
   int which_cell(double, double, double);
+  void assign_stride(int);
+  void assign_block(int, int, int);
+  void assign_random(int);
+  void grow(int);
   bigint memory_usage();
 
  private:
-  int nx,ny,nz;
-  double xdelta,ydelta,zdelta;
-  double xdeltainv,ydeltainv,zdeltainv;
-  int bstyle;
-  int user_procgrid[3];
-  int order,seed;
+  int maxcell;
 
-  int procgrid[3];
-
-  void assign_stride();
-  void assign_block();
-  void assign_random();
-  void procs2grid();
+  void procs2grid(int &, int &, int &);
 };
 
 }

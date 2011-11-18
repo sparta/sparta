@@ -408,9 +408,7 @@ int Input::execute_command()
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
 
-  else if (!strcmp(command,"collision")) collision();
-  else if (!strcmp(command,"create_grid")) create_grid();
-  else if (!strcmp(command,"create_particles")) create_particles();
+  else if (!strcmp(command,"collisions")) collisions();
   else if (!strcmp(command,"dimension")) dimension();
   else if (!strcmp(command,"species")) species();
   else if (!strcmp(command,"timestep")) timestep();
@@ -759,9 +757,9 @@ void Input::variable_command()
 
 /* ---------------------------------------------------------------------- */
 
-void Input::collision()
+void Input::collisions()
 {
-  if (narg < 1) error->all(FLERR,"Illegal collision command");
+  if (narg < 1) error->all(FLERR,"Illegal collide command");
 
   if (collide) delete collide;
 
@@ -775,21 +773,7 @@ void Input::collision()
 #undef CollideStyle
 #undef COLLIDE_CLASS
 
-  else error->all(FLERR,"Invalid collision style");
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Input::create_grid()
-{
-  grid->create(narg,arg);
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Input::create_particles()
-{
-  particle->create(narg,arg);
+  else error->all(FLERR,"Invalid collide style");
 }
 
 /* ---------------------------------------------------------------------- */
