@@ -11,6 +11,9 @@ create_particles    1000000 938094
 
 velocity 	    create 0.01 49892
 
+species		    ../data/vss.data air N+ e
+collisions	    vss
+
 timestep 	    1.0
 
 run 		    100
