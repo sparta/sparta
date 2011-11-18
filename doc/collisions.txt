@@ -6,72 +6,36 @@
 
 :line
 
-species command :h3
+collisions command :h3
 
 [Syntax:]
 
-species file ID1 ID2 ... :pre
+collisions style args :pre
 
-file = filename that lists species
-ID1, ID2, ... = one or more species names listed in file
-multi-species abbreviations can also be used (see below) :ul
+style = {none} or {vss} :ulb,l
+args = arguments for that style :l
+  none args = none
+  vss args = none :pre
+:ule
 
 [Examples:]
 
-species species.data air
-species species.data air Cl
-species species.data O2 N2 NO
-species myfile H+ Cl- HCl :pre
+collisions none
+collisions vss :pre
 
 [Description:]
 
-Define one or more particle species to use in subsequent simulations.
-This command can be used as many times as desired to add species to a
-list of species that the simulation recognizes and has parameters for.
+Define what style of collisions will be performed by DSMC.  If
+collisions are performed, particles are sorted by grid cell every
+timestep and the appropriate collision model is invoked on a
+per-grid-cell basis.
 
-The {file} is a file that contains definitions for some number of
-species, not all of which need be used in a simulation.  Only those
-requested with specific IDs must be present in the file.  The format
-of the species file is discussed below.
+The {none} style means that no collisions will be performed,
+i.e. free molecular flow.
 
-Each {ID} is a character string used to identify the species, such as
-N or O2 or NO or D or Fe-, which can be any combination of
-alphanumeric characters, or "=", "-", or underscore.
+The {vss} style is the Variable Soft Sphere model.
 
-Instead of listing single-species IDs, one of several pre-defined
-multi-species names can be used, each of which expands into a list of
-several individual species IDs:
-
-air = N, O, NO 
-air++ = N, O, NO, e-
-etc :ul
-
-These abbreviations can be used in combination with single-species IDs
-as in the 2nd example above.
-
-:line
-
-The format of the species file depends on the particle style.  In each
-case, comment or blank lines are allowed in the file.  Comment lines
-start with a "#" character.  All other lines must have a whitespace
-separated format like this:
-
-species-ID prop1 prop2 prop3 ... propN
-
-The species-ID is a string that matches the requests species-ID, as
-described above.  The N property values are the set of values defined
-by the particle style.  The file is searched for a line with a
-species-ID that matches the requested ID used in the species command,
-and its properties are extracted.
-
-The list of properties defined in a species file for each particle
-style are as follows:
-
-standard = molwt, molmass, diam, rotdof, rotrel, vibdof, vibrel, vibtemp, specwt, charge, omega, tref, alpha :ul
-
-We should define what these mean and their units.
-
-We can add more of these definititions over time.
+VSS needs to be described and cited.
 
 :line
 
@@ -79,4 +43,7 @@ We can add more of these definititions over time.
 
 [Related commands:] none
 
-[Default:] none
+[Default:]
+
+style = none
+
