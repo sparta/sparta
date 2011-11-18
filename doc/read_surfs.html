@@ -1,0 +1,92 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>read_surfs command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>read_surfs id sfile keyword args ... 
+</PRE>
+<P>NOTE: This command is not yet implemented.
+</P>
+<UL><LI>id = ID to assign this surf 
+
+<LI>sfile = name of surface file 
+
+<LI>zero or more keywords 
+
+<LI>keyword = origin or rorigin or translate or scale or orient 
+
+<PRE>  origin = x y z
+  rorigin = xfrac yfrac zfrac
+  translate = dx dy dz
+  scale = sx sy sz
+  orient = dim a b c
+    dim = x or y or z
+    a,b,c = elements of vector 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<P>read_surfs surf.file
+</P>
+<P><B>Description:</B>
+</P>
+<P>Read the surface grid for one or more objects.  Optionally translate,
+scale, orient it.
+</P>
+<P>2d = line segments.
+</P>
+<P>3d = triangles.
+</P>
+<P>Must be watertight, meaning no pair of vertices is within epsilon.
+In 2d, also means every vertex is part of 2 line segments.  In 3d,
+also means every triangle edge is part of 2 triangles.
+</P>
+<HR>
+
+<P>Format of surface file
+</P>
+<P>same as data file in LAMMPS, comment and blank lines
+</P>
+<P>what are z values for 2d?
+</P>
+<P>N points (required)
+N lines (2d only)
+N tris (3d only)
+0 10 xlo xhi (required)
+0 10 ylo yhi
+0 10 zlo zhi (used for 2d?)
+</P>
+<P>Points
+</P>
+<P>id x y z
+</P>
+<P>Lines
+</P>
+<P>p1 p2
+</P>
+<P>Triangles
+</P>
+<P>p1 p2 p3
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>This command can only be used after the simulation box is defined by
+the <A HREF = "create_box.html">create_box</A> command.  And after a grid has been
+created by the <A HREF = "create_grid.html">create_grid</A> command.
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

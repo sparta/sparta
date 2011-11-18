@@ -12,6 +12,8 @@ create_grid command :h3
 
 create_grid Nx Ny Nz keyword args ... :pre
 
+NOTE: should add option to specify dx dy dz
+
 Nx,Ny,Nz = size of grid in each dimension :ul
 
 zero or more keyword/arg pairs may be appended :l
@@ -87,8 +89,8 @@ number of cells.
 
 [Restrictions:]
 
-This command must be used after the simulation box is defined by the
-"create_box"_create_box.html command.
+This command can only be used after the simulation box is defined by
+the "create_box"_create_box.html command.
 
 [Related commands:]
 

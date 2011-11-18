@@ -229,6 +229,7 @@ included when DSMC was built.  Not all packages are included in a
 default DSMC build.  These dependencies are listed as Restrictions
 in the command's documentation.
 
+"background"_background.html,
 "clear"_clear.html,
 "collisions"_collisions.html,
 "create_particles"_create_particles.html,

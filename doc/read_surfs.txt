@@ -1,0 +1,84 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+read_surfs command :h3
+
+[Syntax:]
+
+read_surfs id sfile keyword args ... :pre
+
+NOTE: This command is not yet implemented.
+
+id = ID to assign this surf :ulb,l
+sfile = name of surface file :l
+zero or more keywords :l
+keyword = origin or rorigin or translate or scale or orient :l
+  origin = x y z
+  rorigin = xfrac yfrac zfrac
+  translate = dx dy dz
+  scale = sx sy sz
+  orient = dim a b c
+    dim = x or y or z
+    a,b,c = elements of vector :pre
+:ule
+
+[Examples:]
+
+read_surfs surf.file
+
+[Description:]
+
+Read the surface grid for one or more objects.  Optionally translate,
+scale, orient it.
+
+2d = line segments.
+
+3d = triangles.
+
+Must be watertight, meaning no pair of vertices is within epsilon.
+In 2d, also means every vertex is part of 2 line segments.  In 3d,
+also means every triangle edge is part of 2 triangles.
+
+:line
+
+Format of surface file
+
+same as data file in LAMMPS, comment and blank lines
+
+what are z values for 2d?
+
+N points (required)
+N lines (2d only)
+N tris (3d only)
+0 10 xlo xhi (required)
+0 10 ylo yhi
+0 10 zlo zhi (used for 2d?)
+
+Points
+
+id x y z
+
+Lines
+
+p1 p2
+
+Triangles
+
+p1 p2 p3
+
+[Restrictions:]
+
+This command can only be used after the simulation box is defined by
+the "create_box"_create_box.html command.  And after a grid has been
+created by the "create_grid"_create_grid.html command.
+
+[Related commands:] none
+
+[Default:] none
+
+
