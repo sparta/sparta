@@ -35,6 +35,8 @@ class Grid : protected Pointers {
 
   OneCell *cells;
   int ncell;
+
+  int *mycells;
   int nlocal;
   
   Grid(class DSMC *);

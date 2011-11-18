@@ -12,6 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "dsmctype.h"
 #include "mpi.h"
 #include "math.h"
 #include "string.h"
@@ -19,6 +20,7 @@
 #include "finish.h"
 #include "update.h"
 #include "particle.h"
+#include "collide.h"
 #include "comm.h"
 #include "timer.h"
 #include "memory.h"
@@ -75,24 +77,37 @@ void Finish::end()
   // dummy stats for now
 
   bigint nlocal = particle->nlocal;
-  bigint nptotal,nmtotal,ncctotal,nctotal;
+  bigint nptotal,nmtotal,ncctotal,ncmtotal;
+  bigint nclatotal = 0;
+  bigint ncltotal = 0;
+
   MPI_Allreduce(&nlocal,&nptotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&update->nmove,&nmtotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&update->ncellcross,&ncctotal,1,MPI_DSMC_BIGINT,
 		MPI_SUM,world);
-  MPI_Allreduce(&comm->ncomm,&nctotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&comm->ncomm,&ncmtotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  if (collide) {
+    MPI_Allreduce(&collide->ncollattempt,&nclatotal,1,MPI_DSMC_BIGINT,
+		  MPI_SUM,world);
+    MPI_Allreduce(&collide->ncollision,&ncltotal,1,MPI_DSMC_BIGINT,
+		  MPI_SUM,world);
+  }
 
   if (me == 0) {
     if (screen) {
       fprintf(screen,"\n");
       fprintf(screen,"Particle count = " BIGINT_FORMAT "\n",nptotal);
       fprintf(screen,"Particle moves = " BIGINT_FORMAT "\n",nmtotal);
-      fprintf(screen,"Cell touches   = " BIGINT_FORMAT "\n",ncctotal);
-      fprintf(screen,"Particle comms = " BIGINT_FORMAT "\n",nctotal);
+      fprintf(screen,"Cells touched  = " BIGINT_FORMAT "\n",ncctotal);
+      fprintf(screen,"Particle comms = " BIGINT_FORMAT "\n",ncmtotal);
+      fprintf(screen,"Coll attempt   = " BIGINT_FORMAT "\n",nclatotal);
+      fprintf(screen,"Coll performed = " BIGINT_FORMAT "\n",ncltotal);
       fprintf(screen,"Cell-touches/particle/step: %g\n",
 	      1.0*ncctotal/particle->nglobal/update->nsteps);
       fprintf(screen,"Particle fraction migrating: %g\n",
-	      1.0*nctotal/particle->nglobal/update->nsteps);
+	      1.0*ncmtotal/particle->nglobal/update->nsteps);
+      fprintf(screen,"Collisions/particle/step: %g\n",
+	      1.0*ncltotal/particle->nglobal/update->nsteps);
       fprintf(screen,"CPU/particle/step per proc: %g\n",
 	      time_loop/particle->nglobal/update->nsteps * comm->nprocs);
       fprintf(screen,"CPU/particle/step in aggregate: %g\n",
@@ -102,12 +117,16 @@ void Finish::end()
       fprintf(logfile,"\n");
       fprintf(logfile,"Particle count = " BIGINT_FORMAT "\n",nptotal);
       fprintf(logfile,"Particle moves = " BIGINT_FORMAT "\n",nmtotal);
-      fprintf(logfile,"Cell touches   = " BIGINT_FORMAT "\n",ncctotal);
-      fprintf(logfile,"Particle comms = " BIGINT_FORMAT "\n",nctotal);
+      fprintf(logfile,"Cells touched  = " BIGINT_FORMAT "\n",ncctotal);
+      fprintf(logfile,"Particle comms = " BIGINT_FORMAT "\n",ncmtotal);
+      fprintf(logfile,"Coll attempt   = " BIGINT_FORMAT "\n",nclatotal);
+      fprintf(logfile,"Coll performed = " BIGINT_FORMAT "\n",ncltotal);
       fprintf(logfile,"Cell-touches/particle/step: %g\n",
 	      1.0*ncctotal/particle->nglobal/update->nsteps);
       fprintf(logfile,"Particle fraction migrating: %g\n",
-	      1.0*nctotal/particle->nglobal/update->nsteps);
+	      1.0*ncmtotal/particle->nglobal/update->nsteps);
+      fprintf(logfile,"Collisions/particle/step: %g\n",
+	      1.0*ncltotal/particle->nglobal/update->nsteps);
       fprintf(logfile,"CPU/particle/step per proc: %g\n",
 	      time_loop/particle->nglobal/update->nsteps * comm->nprocs);
       fprintf(logfile,"CPU/particle/step in aggregate: %g\n",

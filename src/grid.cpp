@@ -34,6 +34,9 @@ Grid::Grid(DSMC *dsmc) : Pointers(dsmc)
 
   ncell = 0;
   cells = NULL;
+
+  nlocal = 0;
+  mycells = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -41,6 +44,7 @@ Grid::Grid(DSMC *dsmc) : Pointers(dsmc)
 Grid::~Grid()
 {
   memory->sfree(cells);
+  memory->sfree(mycells);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -183,6 +187,15 @@ void Grid::create(int narg, char **arg)
   else if (bstyle == BLOCK) assign_block();
   else if (bstyle == RANDOM) assign_random();
   
+  // mycells = indices of cells I own
+
+  memory->create(mycells,nlocal,"grid:mycells");
+
+  nlocal = 0;
+  int me = comm->me;
+  for (m = 0; m < ncell; m++)
+    if (cells[m].proc == me) mycells[nlocal++] = m;
+
   // stats
 
   if (comm->me == 0) {

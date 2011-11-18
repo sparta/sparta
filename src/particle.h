@@ -46,7 +46,7 @@ class Particle : protected Pointers {
 
   struct OnePart {
     int id,type;            // particle ID, type
-    int icell;              // grid cell the particle is in (0 to N-1)
+    int icell;              // local grid cell the particle is in (0 to N-1)
     double x[3];            // coords of particle
     double v[3];            // velocity of particle
   };
@@ -69,9 +69,7 @@ class Particle : protected Pointers {
  private:
   int seed;
 
-  int maxmigrate;           // max # migrate list can hold
   int maxsortparticle;      // max # of particles next can hold
-
   int maxspecies;           // max size of species list
 
   Species *filespecies;     // list of species read from file

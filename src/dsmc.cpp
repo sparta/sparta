@@ -453,6 +453,7 @@ void DSMC::print_styles()
 #define COLLIDE_CLASS
 #define CollideStyle(key,Class) printf(" %s",#key);
 #include "style_collide.h"
+#undef CollideStyle
 #undef COLLIDE_CLASS
   printf("\n");
 
@@ -460,6 +461,7 @@ void DSMC::print_styles()
 #define COMMAND_CLASS
 #define CommandStyle(key,Class) printf(" %s",#key);
 #include "style_command.h"
+#undef CommandStyle
 #undef COMMAND_CLASS
   printf("\n");
 }

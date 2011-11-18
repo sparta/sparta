@@ -12,6 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "mpi.h"
 #include "string.h"
 #include "stdlib.h"
 #include "particle.h"
@@ -46,6 +47,9 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
 
   nspecies = maxspecies = 0;
   species = NULL;
+
+  maxsortparticle = 0;
+  next = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -54,6 +58,7 @@ Particle::~Particle()
 {
   memory->sfree(particles);
   memory->sfree(species);
+  memory->destroy(next);
 }
 
 /* ----------------------------------------------------------------------
@@ -79,8 +84,16 @@ void Particle::add_species(int narg, char **arg)
   filespecies = NULL;
 
   if (comm->me == 0) read_species_file();
+  MPI_Bcast(&nfilespecies,1,MPI_INT,0,world);
+  if (nfilespecies >= maxfilespecies) {
+    memory->destroy(filespecies);
+    maxfilespecies = nfilespecies;
+    filespecies = (Species *) 
+      memory->smalloc(maxfilespecies*sizeof(Species),
+		      "particle:filespecies");
+  }
   MPI_Bcast(filespecies,nfilespecies*sizeof(Species),MPI_BYTE,0,world);
-  
+
   // newspecies = # of new user-requested species
   // names = list of new species IDs
   // customize abbreviations by adding new keyword in 2 places
@@ -316,29 +329,21 @@ void Particle::create_local(bigint n)
   RanPark *random = new RanPark(dsmc,seed+me);
 
   Grid::OneCell *cells = grid->cells;
+  int *mycells = grid->mycells;
   int nglocal = grid->nlocal;
 
   bigint nme = n/comm->nprocs;
   if (me < n % comm->nprocs) nme++;
 
-  // list = list of indices of grid cells I own
-
-  int *list = new int[nglocal];
-  int ncell = grid->ncell;
-
-  int j = 0;
-  for (int i = 0; i < ncell; i++)
-    if (cells[i].proc == me) list[j++] = i;
-
   // loop only over Nme particles I own
 
-  int icell;
+  int ilocal,icell;
   double x,y,z;
   double *lo,*hi;
 
   for (bigint m = 0; m < nme; m++) {
-    j = static_cast<int> (random->uniform()*nglocal);
-    icell = list[j];
+    ilocal = static_cast<int> (random->uniform()*nglocal);
+    icell = mycells[ilocal];
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
@@ -361,7 +366,6 @@ void Particle::create_local(bigint n)
   }
 
   delete random;
-  delete [] list;
 }
 
 /* ----------------------------------------------------------------------
@@ -406,27 +410,27 @@ void Particle::sort()
     memory->create(next,maxsortparticle,"sort:next");
   }
 
-  // build linked list for each cell
+  // build linked list of particles in each cell I own
 
   Grid::OneCell *cells = grid->cells;
-  int ncelllocal = grid->nlocal;
+  int *mycells = grid->mycells;
+  int nglocal = grid->nlocal;
 
-  for (icell = 0; icell < ncelllocal; icell++) {
+  for (i = 0; i < nglocal; i++) {
+    icell = mycells[i];
     cells[icell].nparticles = 0;
     cells[icell].first = -1;
   }
 
-  for (i = 0; i < nlocal; i++) {
-    icell = particles[i].icell;
-    if (cells[icell].first < 0) {
-      cells[icell].first = i;
-      next[i] = -1;
-    } else {
+  // reverse loop stores linked list in forward order
 
+  Grid::OneCell *cell;
 
-      next[i] = -1;
-    }
-    grid->cells[icell].nparticles++;
+  for (i = nlocal-1; i >= 0; i--) {
+    cell = &cells[particles[i].icell];
+    next[i] = cell->first;
+    cell->first = i;
+    cell->nparticles++;
   }
 }
 

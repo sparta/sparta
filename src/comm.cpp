@@ -12,6 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "mpi.h"
 #include "stdlib.h"
 #include "string.h"
 #include "comm.h"

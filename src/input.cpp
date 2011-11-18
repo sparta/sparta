@@ -433,6 +433,7 @@ int Input::execute_command()
     return 0;                           \
   }
 #include "style_command.h"
+#undef CommandStyle
 #undef COMMAND_CLASS
 
   // unrecognized command
