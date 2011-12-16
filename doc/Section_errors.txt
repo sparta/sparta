@@ -162,15 +162,503 @@ Errors: :h4,link(error)
 
 :dlb
 
-{1-3 bond count is inconsistent} :dt
+{} :dt
 
-An inconsistency was detected when computing the number of 1-3
-neighbors for each atom.  This likely means something is wrong with
-the bond topologies you have defined. :dd
+UNDOCUMENTED :dd
 
-{Zero-length lattice orient vector} :dt
+{%d particles are not in correct cell} :dt
+
+UNDOCUMENTED :dd
+
+{All universe/uloop variables must have same # of values} :dt
 
 Self-explanatory. :dd
+
+{All variables in next command must be same style} :dt
+
+Self-explanatory. :dd
+
+{Another input script is already being processed} :dt
+
+Cannot attempt to open a 2nd input script, when the original file is
+still being processed. :dd
+
+{Arccos of invalid value in variable formula} :dt
+
+Argument of arccos() must be between -1 and 1. :dd
+
+{Arcsin of invalid value in variable formula} :dt
+
+Argument of arcsin() must be between -1 and 1. :dd
+
+{Atom vector in equal-style variable formula} :dt
+
+Atom vectors generate one value per atom which is not allowed
+in an equal-style variable. :dd
+
+{Atom-style variable in equal-style variable formula} :dt
+
+Atom-style variables generate one value per atom which is not allowed
+in an equal-style variable. :dd
+
+{Bad grid of processors for create_grid} :dt
+
+UNDOCUMENTED :dd
+
+{Bigint setting in dsmctype.h is invalid} :dt
+
+UNDOCUMENTED :dd
+
+{Box bounds are invalid} :dt
+
+The box boundaries specified in the read_data file are invalid.  The
+lo value must be less than the hi value for all 3 dimensions. :dd
+
+{Can only use -plog with multiple partitions} :dt
+
+UNDOCUMENTED :dd
+
+{Can only use -pscreen with multiple partitions} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot create grid when grid is already defined} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot create/grow a vector/array of pointers for %s} :dt
+
+DSMC code is making an illegal call to the templated memory
+allocaters, to create a vector or array of pointers. :dd
+
+{Cannot create_box after simulation box is defined} :dt
+
+The create_box command cannot be used after a read_data, read_restart,
+or create_box command. :dd
+
+{Cannot create_grid before simulation box is defined} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot create_particles before simulation box is defined} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot open -reorder file} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot open input script %s} :dt
+
+Self-explanatory. :dd
+
+{Cannot open log.dsmc} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot open logfile} :dt
+
+The DSMC log file named in a command-line argument cannot be opened.
+Check that the path and name are correct. :dd
+
+{Cannot open logfile %s} :dt
+
+The DSMC log file specified in the input script cannot be opened.
+Check that the path and name are correct. :dd
+
+{Cannot open screen file} :dt
+
+The screen file specified as a command-line argument cannot be
+opened.  Check that the directory you are running in allows for files
+to be created. :dd
+
+{Cannot open species file %s} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot open universe log file} :dt
+
+For a multi-partition run, the master log file cannot be opened.
+Check that the directory you are running in allows for files to be
+created. :dd
+
+{Cannot open universe screen file} :dt
+
+For a multi-partition run, the master screen file cannot be opened.
+Check that the directory you are running in allows for files to be
+created. :dd
+
+{Cannot redefine variable as a different style} :dt
+
+An equal-style variable can be re-defined but only if it was
+originally an equal-style variable. :dd
+
+{Cannot run 2d simulation with nonperiodic Z dimension} :dt
+
+Use the boundary command to make the z dimension periodic in order to
+run a 2d simulation. :dd
+
+{Cannot set velocity to non-zero z value for 2d simulation} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot use -reorder after -partition} :dt
+
+UNDOCUMENTED :dd
+
+{Cannot use cwiggle in variable formula between runs} :dt
+
+This is a function of elapsed time. :dd
+
+{Cannot use ramp in variable formula between runs} :dt
+
+This is because the ramp() function is time dependent. :dd
+
+{Cannot use swiggle in variable formula between runs} :dt
+
+This is a function of elapsed time. :dd
+
+{Cannot use vdisplace in variable formula between runs} :dt
+
+This is a function of elapsed time. :dd
+
+{Compute used in variable between runs is not current} :dt
+
+Computes cannot be invoked by a variable in between runs.  Thus they
+must have been evaluated on the last timestep of the previous run in
+order for their value(s) to be accessed.  See the doc page for the
+variable command for more info. :dd
+
+{Create_box z box bounds must straddle 0.0 for 2d simulation} :dt
+
+UNDOCUMENTED :dd
+
+{Create_grid nz value must be 1 for a 2d simulation} :dt
+
+UNDOCUMENTED :dd
+
+{Created incorrect # of particles = %ld} :dt
+
+UNDOCUMENTED :dd
+
+{Dimension command after simulation box is defined} :dt
+
+The dimension command cannot be used after a read_data,
+read_restart, or create_box command. :dd
+
+{Divide by 0 in variable formula} :dt
+
+Self-explanatory. :dd
+
+{Empty brackets in variable} :dt
+
+There is no variable syntax that uses empty brackets.  Check
+the variable doc page. :dd
+
+{Expected floating point parameter in variable definition} :dt
+
+The quantity being read is a non-numeric value. :dd
+
+{Expected integer parameter in variable definition} :dt
+
+The quantity being read is a floating point or non-numeric value. :dd
+
+{Failed to allocate %ld bytes for array %s} :dt
+
+Your DSMC simulation has run out of memory.  You need to run a
+smaller simulation or on more processors. :dd
+
+{Failed to reallocate %ld bytes for array %s} :dt
+
+Your DSMC simulation has run out of memory.  You need to run a
+smaller simulation or on more processors. :dd
+
+{Fix in variable not computed at compatible time} :dt
+
+Fixes generate their values on specific timesteps.  The variable is
+requesting the values on a non-allowed timestep. :dd
+
+{Gmask function in equal-style variable formula} :dt
+
+Gmask is per-atom operation. :dd
+
+{Grmask function in equal-style variable formula} :dt
+
+Grmask is per-atom operation. :dd
+
+{Group ID in variable formula does not exist} :dt
+
+Self-explanatory. :dd
+
+{Illegal ... command} :dt
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running DSMC to see the offending line. :dd
+
+{Incorrect line format in species file} :dt
+
+UNDOCUMENTED :dd
+
+{Index between variable brackets must be positive} :dt
+
+Self-explanatory. :dd
+
+{Indexed per-atom vector in variable formula without atom map} :dt
+
+Accessing a value from an atom vector requires the ability to lookup
+an atom index, which is provided by an atom map.  An atom map does not
+exist (by default) for non-molecular problems.  Using the atom_modify
+map command will force an atom map to be created. :dd
+
+{Input line too long after variable substitution} :dt
+
+This is a hard (very large) limit defined in the input.cpp file. :dd
+
+{Input line too long: %s} :dt
+
+This is a hard (very large) limit defined in the input.cpp file. :dd
+
+{Invalid -reorder N value} :dt
+
+UNDOCUMENTED :dd
+
+{Invalid Boolean syntax in if command} :dt
+
+Self-explanatory. :dd
+
+{Invalid atom vector in variable formula} :dt
+
+The atom vector is not recognized. :dd
+
+{Invalid collide style} :dt
+
+UNDOCUMENTED :dd
+
+{Invalid command-line argument} :dt
+
+One or more command-line arguments is invalid.  Check the syntax of
+the command you are using to launch DSMC. :dd
+
+{Invalid compute ID in variable formula} :dt
+
+The compute is not recognized. :dd
+
+{Invalid entry in reorder file} :dt
+
+UNDOCUMENTED :dd
+
+{Invalid fix ID in variable formula} :dt
+
+The fix is not recognized. :dd
+
+{Invalid group function in variable formula} :dt
+
+Group function is not recognized. :dd
+
+{Invalid math function in variable formula} :dt
+
+Self-explanatory. :dd
+
+{Invalid math/group/special function in variable formula} :dt
+
+Self-explanatory. :dd
+
+{Invalid run command N value} :dt
+
+The number of timesteps must fit in a 32-bit integer.  If you want to
+run for more steps than this, perform multiple shorter runs. :dd
+
+{Invalid seed for Marsaglia random # generator} :dt
+
+The initial seed for this random number generator must be a positive
+integer less than or equal to 900 million. :dd
+
+{Invalid seed for Park random # generator} :dt
+
+The initial seed for this random number generator must be a positive
+integer. :dd
+
+{Invalid special function in variable formula} :dt
+
+Self-explanatory. :dd
+
+{Invalid syntax in variable formula} :dt
+
+Self-explanatory. :dd
+
+{Invalid variable evaluation in variable formula} :dt
+
+A variable used in a formula could not be evaluated. :dd
+
+{Invalid variable in next command} :dt
+
+Self-explanatory. :dd
+
+{Invalid variable name} :dt
+
+Variable name used in an input script line is invalid. :dd
+
+{Invalid variable name in variable formula} :dt
+
+Variable name is not recognized. :dd
+
+{Invalid variable style with next command} :dt
+
+Variable styles {equal} and {world} cannot be used in a next
+command. :dd
+
+{Label wasn't found in input script} :dt
+
+Self-explanatory. :dd
+
+{Log of zero/negative value in variable formula} :dt
+
+Self-explanatory. :dd
+
+{MPI_DSMC_BIGINT and bigint in dsmctype.h are not compatible} :dt
+
+UNDOCUMENTED :dd
+
+{Mismatched brackets in variable} :dt
+
+Self-explanatory. :dd
+
+{Mismatched compute in variable formula} :dt
+
+A compute is referenced incorrectly or a compute that produces per-atom
+values is used in an equal-style variable formula. :dd
+
+{Mismatched fix in variable formula} :dt
+
+A fix is referenced incorrectly or a fix that produces per-atom
+values is used in an equal-style variable formula. :dd
+
+{Mismatched variable in variable formula} :dt
+
+A variable is referenced incorrectly or an atom-style variable that
+produces per-atom values is used in an equal-style variable
+formula. :dd
+
+{Must use -in switch with multiple partitions} :dt
+
+A multi-partition simulation cannot read the input script from stdin.
+The -in command-line option must be used to specify a file. :dd
+
+{Non digit character between brackets in variable} :dt
+
+Self-explantory. :dd
+
+{Nprocs not a multiple of N for -reorder} :dt
+
+UNDOCUMENTED :dd
+
+{Partition numeric index is out of bounds} :dt
+
+UNDOCUMENTED :dd
+
+{Per-processor grid count is too big} :dt
+
+UNDOCUMENTED :dd
+
+{Power by 0 in variable formula} :dt
+
+Self-explanatory. :dd
+
+{Processor partitions are inconsistent} :dt
+
+The total number of processors in all partitions must match the number
+of processors DSMC is running on. :dd
+
+{Region ID in variable formula does not exist} :dt
+
+Self-explanatory. :dd
+
+{Rmask function in equal-style variable formula} :dt
+
+Rmask is per-atom operation. :dd
+
+{Run command before simulation box is defined} :dt
+
+The run command cannot be used before a read_data, read_restart, or
+create_box command. :dd
+
+{Small,big integers are not sized correctly} :dt
+
+UNDOCUMENTED :dd
+
+{Smallint setting in dsmctype.h is invalid} :dt
+
+UNDOCUMENTED :dd
+
+{Species ID does not appear in species file} :dt
+
+UNDOCUMENTED :dd
+
+{Species ID is already defined} :dt
+
+UNDOCUMENTED :dd
+
+{Sqrt of negative value in variable formula} :dt
+
+Self-explanatory. :dd
+
+{Substitution for illegal variable} :dt
+
+Input script line contained a variable that could not be substituted
+for. :dd
+
+{Too many timesteps} :dt
+
+UNDOCUMENTED :dd
+
+{Unbalanced quotes in input line} :dt
+
+No matching end double quote was found following a leading double
+quote. :dd
+
+{Unexpected end of -reorder file} :dt
+
+UNDOCUMENTED :dd
+
+{Unexpected end of reorder file} :dt
+
+UNDOCUMENTED :dd
+
+{Universe/uloop variable count < # of partitions} :dt
+
+A universe or uloop style variable must specify a number of values >= to the
+number of processor partitions. :dd
+
+{Unknown command: %s} :dt
+
+The command is not known to DSMC.  Check the input script. :dd
+
+{Variable formula compute array is accessed out-of-range} :dt
+
+Self-explanatory. :dd
+
+{Variable formula fix array is accessed out-of-range} :dt
+
+Self-explanatory. :dd
+
+{Variable name must be alphanumeric or underscore characters} :dt
+
+Self-explanatory. :dd
+
+{Velocity command before simulation box is defined} :dt
+
+The velocity command cannot be used before a read_data, read_restart,
+or create_box command. :dd
+
+{Velocity command with no particles existing} :dt
+
+UNDOCUMENTED :dd
+
+{World variable count doesn't match # of partitions} :dt
+
+A world-style variable must specify a number of values equal to the
+number of processor partitions. :dd
 
 :dle
 
@@ -178,14 +666,5 @@ Warnings: :h4,link(warn)
 
 :dlb
 
-{All element names have been set to 'C' for dump cfg} :dt
-
-Use the dump_modify command if you wish to override this. :dd
-
-{Using pair tail corrections with nonperiodic system} :dt
-
-This is probably a bogus thing to do, since tail corrections are
-computed by integrating the density of a periodic system out to
-infinity. :dd
-
 :dle
+

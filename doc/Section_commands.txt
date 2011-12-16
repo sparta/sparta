@@ -244,6 +244,7 @@ in the command's documentation.
 "log"_log.html,
 "next"_next.html,
 "print"_print.html,
+"read_surfs"_read_surfs.html,
 "run"_run.html,
 "shell"_shell.html,
 "suffix"_suffix.html,
