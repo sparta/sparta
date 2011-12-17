@@ -8,6 +8,8 @@
 
 mixture command :h3
 
+NOTE: not yet implemented
+
 [Syntax:]
 
 mixture ID species1 species2 ... keyword args ... :pre

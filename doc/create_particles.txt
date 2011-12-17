@@ -8,6 +8,8 @@
 
 create_particles command :h3
 
+NOTE: not yet implemented in this new syntax
+
 [Syntax:]
 
 create_particles mix-ID seed keyword value ... :pre

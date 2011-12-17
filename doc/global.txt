@@ -8,6 +8,8 @@
 
 global command :h3
 
+NOTE: not yet implemented
+
 [Syntax:]
 
 global keyword values :pre
