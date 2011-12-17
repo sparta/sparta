@@ -97,7 +97,7 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
 	       strcmp(arg[iarg],"-v") == 0) {
       if (iarg+3 > narg)
 	error->universe_all(FLERR,"Invalid command-line argument");
-      iarg += 2;
+      iarg += 3;
       while (iarg < narg && arg[iarg][0] != '-') iarg++;
     } else if (strcmp(arg[iarg],"-echo") == 0 || 
 	       strcmp(arg[iarg],"-e") == 0) {
@@ -134,6 +134,14 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
       strcpy(suffix,arg[iarg+1]);
       suffix_enable = 1;
       iarg += 2;
+    } else if (strcmp(arg[iarg],"-reorder") == 0 || 
+	       strcmp(arg[iarg],"-r") == 0) {
+      if (iarg+3 > narg) 
+	error->universe_all(FLERR,"Invalid command-line argument");
+      if (universe->existflag)
+	error->universe_all(FLERR,"Cannot use -reorder after -partition");
+      universe->reorder(arg[iarg+1],arg[iarg+2]);
+      iarg += 3;
     } else if (strcmp(arg[iarg],"-help") == 0 || 
 	       strcmp(arg[iarg],"-h") == 0) {
       if (iarg+1 > narg)
@@ -143,7 +151,7 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
     } else error->universe_all(FLERR,"Invalid command-line argument");
   }
 
-  // if no partition command-line switch, universe is one world w/ all procs
+  // if no partition command-line switch, universe is one world with all procs
 
   if (universe->existflag == 0) universe->add_world(NULL);
 
@@ -198,8 +206,8 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
     universe->ulogfile = NULL;
   }
 
-  // universe does not exist on its own, only a single world
-  // inherit settings from universe
+  // make universe and single world the same, since no partition switch
+  // world inherits settings from universe
   // set world screen, logfile, communicator, infile
   // open input script if from file
 
@@ -224,8 +232,8 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
       if (logfile) fprintf(logfile,"DSMC (%s)\n",universe->version);
     }
 
-  // universe is one or more worlds
-  // split into separate communicators
+  // universe is one or more worlds, as setup by partition switch
+  // split universe communicator into separate world communicators
   // set world screen, logfile, communicator, infile
   // open input script
 
@@ -453,7 +461,6 @@ void DSMC::print_styles()
 #define COLLIDE_CLASS
 #define CollideStyle(key,Class) printf(" %s",#key);
 #include "style_collide.h"
-#undef CollideStyle
 #undef COLLIDE_CLASS
   printf("\n");
 
@@ -461,7 +468,6 @@ void DSMC::print_styles()
 #define COMMAND_CLASS
 #define CommandStyle(key,Class) printf(" %s",#key);
 #include "style_command.h"
-#undef CommandStyle
 #undef COMMAND_CLASS
   printf("\n");
 }

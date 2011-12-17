@@ -65,3 +65,15 @@ class Grid : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Bad grid of processors for create_grid
+
+UNDOCUMENTED
+
+E: Per-processor grid count is too big
+
+UNDOCUMENTED
+
+*/

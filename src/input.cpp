@@ -29,6 +29,7 @@
 #include "particle.h"
 #include "update.h"
 #include "collide.h"
+#include "math_extra.h"
 #include "error.h"
 #include "memory.h"
 
@@ -404,12 +405,15 @@ int Input::execute_command()
   else if (!strcmp(command,"label")) label();
   else if (!strcmp(command,"log")) log();
   else if (!strcmp(command,"next")) next_command();
+  else if (!strcmp(command,"partition")) partition();
   else if (!strcmp(command,"print")) print();
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
 
   else if (!strcmp(command,"collisions")) collisions();
   else if (!strcmp(command,"dimension")) dimension();
+  else if (!strcmp(command,"global")) global();
+  else if (!strcmp(command,"mixture")) mixture();
   else if (!strcmp(command,"species")) species();
   else if (!strcmp(command,"timestep")) timestep();
 
@@ -682,6 +686,41 @@ void Input::next_command()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::partition()
+{
+  if (narg < 3) error->all(FLERR,"Illegal partition command");
+
+  int yesflag;
+  if (strcmp(arg[0],"yes") == 0) yesflag = 1;
+  else if (strcmp(arg[0],"no") == 0) yesflag = 0;
+  else error->all(FLERR,"Illegal partition command");
+
+  int ilo,ihi;
+  int flag = MathExtra::bounds(arg[1],universe->nworlds,ilo,ihi);
+  if (flag) error->all(FLERR,"Partition numeric index is out of bounds");
+
+  // copy original line to copy, since will use strtok() on it
+  // ptr = start of 4th word
+
+  strcpy(copy,line);
+  copy[strlen(copy)-1] = '\0';
+  char *ptr = strtok(copy," \t\n\r\f");
+  ptr = strtok(NULL," \t\n\r\f");
+  ptr = strtok(NULL," \t\n\r\f");
+  ptr += strlen(ptr) + 1;
+  ptr += strspn(ptr," \t\n\r\f");
+
+  // execute the remaining command line on requested partitions
+
+  if (yesflag) {
+    if (universe->iworld+1 >= ilo && universe->iworld+1 <= ihi) one(ptr);
+  } else {
+    if (universe->iworld+1 < ilo || universe->iworld+1 > ihi) one(ptr);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::print()
 {
   if (narg != 1) error->all(FLERR,"Illegal print command");
@@ -786,6 +825,19 @@ void Input::dimension()
   domain->dimension = atoi(arg[0]);
   if (domain->dimension != 2 && domain->dimension != 3)
     error->all(FLERR,"Illegal dimension command");
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::global()
+{
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::mixture()
+{
+  particle->mixture(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

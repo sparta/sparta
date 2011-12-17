@@ -39,3 +39,12 @@ class Domain : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Box bounds are invalid
+
+The box boundaries specified in the read_data file are invalid.  The
+lo value must be less than the hi value for all 3 dimensions.
+
+*/

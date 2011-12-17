@@ -58,6 +58,7 @@ class Input : protected Pointers {
   void label();
   void log();
   void next_command();
+  void partition();
   void print();
   void shell();
   void variable_command();
@@ -66,6 +67,8 @@ class Input : protected Pointers {
 
   void collisions();
   void dimension();
+  void global();
+  void mixture();
   void species();
   void timestep();
 };
@@ -73,3 +76,70 @@ class Input : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Label wasn't found in input script
+
+Self-explanatory.
+
+E: Input line too long: %s
+
+This is a hard (very large) limit defined in the input.cpp file.
+
+E: Unknown command: %s
+
+The command is not known to DSMC.  Check the input script.
+
+E: Another input script is already being processed
+
+Cannot attempt to open a 2nd input script, when the original file is
+still being processed.
+
+E: Cannot open input script %s
+
+Self-explanatory.
+
+E: Unbalanced quotes in input line
+
+No matching end double quote was found following a leading double
+quote.
+
+E: Invalid variable name
+
+Variable name used in an input script line is invalid.
+
+E: Substitution for illegal variable
+
+Input script line contained a variable that could not be substituted
+for.
+
+E: Input line too long after variable substitution
+
+This is a hard (very large) limit defined in the input.cpp file.
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running DSMC to see the offending line.
+
+E: Cannot open logfile %s
+
+The DSMC log file specified in the input script cannot be opened.
+Check that the path and name are correct.
+
+E: Partition numeric index is out of bounds
+
+UNDOCUMENTED
+
+E: Invalid collide style
+
+UNDOCUMENTED
+
+E: Dimension command after simulation box is defined
+
+The dimension command cannot be used after a read_data,
+read_restart, or create_box command.
+
+*/

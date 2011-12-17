@@ -44,3 +44,26 @@ class Velocity : protected Pointers {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running DSMC to see the offending line.
+
+E: Velocity command before simulation box is defined
+
+The velocity command cannot be used before a read_data, read_restart,
+or create_box command.
+
+E: Velocity command with no particles existing
+
+UNDOCUMENTED
+
+E: Cannot set velocity to non-zero z value for 2d simulation
+
+UNDOCUMENTED
+
+*/

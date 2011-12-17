@@ -48,3 +48,11 @@ class Update : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: %d particles are not in correct cell
+
+UNDOCUMENTED
+
+*/
