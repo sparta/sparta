@@ -22,6 +22,8 @@ keyword = origin or rorigin or translate or scale or orient :l
   rorigin = xfrac yfrac zfrac
   translate = dx dy dz
   scale = sx sy sz
+  flip
+  allowcut
   orient = dim a b c
     dim = x or y or z
     a,b,c = elements of vector :pre

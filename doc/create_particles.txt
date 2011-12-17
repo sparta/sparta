@@ -10,50 +10,84 @@ create_particles command :h3
 
 [Syntax:]
 
-create_particles N seed keyword value ... :pre
+create_particles mix-ID seed keyword value ... :pre
 
-N = # of particles to create :ulb,l
+mix-ID = ID of mixture to use when creating particles :ulb,l
 seed = random # seed (positive integer) :l
 
 zero or more keyword/value pairs may be appended :l
-keyword = {loop} :l
+keyword = {n} or {loop} :l
+  {n} value = Np = number of particles to create
   {loop} value = {all} or {local} :pre
 :ule
 
 [Examples:]
 
-create_particles 10000 187483 :pre
-create_particles 10000000 49892 loop local :pre
+create_particles background 187483
+create_particles air 39589
+create_particles air 49892 n 100000 loop local :pre
 
 [Description:]
 
-Create or add an additional {N} particles to the simulation domain.
+Create or add additional particles to the simulation domain.  The
+number of particles created and their individual attributes, such
+species and velocity, are determined by the mixture attributes, as
+specied by the {mix-ID}.  See the "mixture"_mixture.html command for
+more details.
 
-A random number generator, initialized by the specified {seed}, is
-used to generate a random position for each particle within
-the simulation box.
+The specified {seed} is used to initialize a random number generator,
+used by all the random operations described below for determining
+particle attributes.
 
-The particles are initialized with a velocity = 0.0.
+Unless the {n} keyword is used, the number of particles created is a
+function of the global {Fnum} value, the mixture number density, and
+the volume of the simulation domain.  The {Fnum} value is set by the
+"global fnum"_global.html command.  The mixture {nrho} is set by the
+"mixture"_mixture.html command.  The volume of the simulation
+is set by the "create_box"_create_box.html command.
 
-The {loop} keyword controls how the particles are generated in parallel.
+Based on these settings, each grid cell will have a target number of
+particles {M} to insert.  If {M} has a fractional value, e.g. 12.5,
+then 12 particles will be inserted, and a 13th depending on the
+outcome of a random number generation.  Each particle will be inserted
+at a random location within the grid cell.  The particle species will
+be chosen randomly in accord with the {frac} settings of the
+collection of species in the mixture, as set by the
+"mixture"_mixture.html command.  The velocity of the particle
+will be set to the sum of the streaming velocity and a thermal
+velocity sampled from the thermal temperature of the species.
+Both the streaming velocity and thermal temperature are also
+set by the "mixture"_mixture.html command.
 
-If the setting is {all}, then every processor loops over all {N} particles.
-As the coordinates of each is created, each processor checks what
-grid cell it is in, and only stores the particle if it owns that grid cell.
-Thus the same set of particles are created, no matter how many processors
-are running the simulation
+If the {n} keyword is used, than the {Fnum} and {nrho} settings are
+ignored and {Np} total particles are created.  This can be useful for
+debugging purposes.  See the discussion of the {loop} keyword below
+for how particle positions are assigned.  The assignment of species
+and velocity to each particles is done the same as described above.
 
-If the setting is {loop}, then each of the {P} processors generates a
-{N/P} itself, independent of the other processors, using its own
-random number generation.  It only adds particles to grid cells that
-it owns.  This is a faster way to generate a large number of particles,
-but means that the particles generated depend on the number of
-processors used (though not in a statistical sense).
+The {loop} keyword only applies when the {n} keyword is also used, and
+controls how the particles are generated in parallel.
+
+If the setting is {all}, then every processor loops over all {N}
+particles.  As the coordinates of each is created, each processor
+checks what grid cell it is in, and only stores the particle if it
+owns that grid cell.  Thus an identical set of particles are created,
+no matter how many processors are running the simulation
+
+If the setting is {local}, then each of the {P} processors generates a
+{N/P} subset of particles, using its own random number generation.  It
+only adds particles to grid cells that it owns.  This is a faster way
+to generate a large number of particles, but means that the individual
+attributes of particles will depend on the number of processors and
+the mapping of grid cells to procesors.  Statistically, the overall
+set of created particles should be the same as with the {all} setting.
 
 [Restrictions:] none
 
-[Related commands:] none
+[Related commands:]
+
+"mixture"_mixture.html
 
 [Default:]
 
-The option defaults are loop = all.
+The keyword defaults are loop = all.

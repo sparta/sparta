@@ -6,31 +6,58 @@
 
 :line
 
-background command :h3
+global command :h3
 
 [Syntax:]
 
-background species nrho temp vx vy vz :pre
+global keyword values :pre
 
-NOTE: This command is not yet implemented.
-
-species = {all} or species ID
-nrho = number density (# per length^3 units)
-temp = thermal temperature (temperature units)
-vx,vy,vz = streaming velocity (velocity units) :ul
+keyword = {fnum} or {nrho} or {vstream} or {temp} :ulb,l
+  {fnum} value = ratio
+    ratio = Fnum ratio of physical particles to simulation particles
+  {nrho} value = density
+    density = number density of background gas (# per length^3 units)
+  {vstream} values = Vx Vy Vz
+    Vx,Vy,Vz = streaming velocity of background gas (velocity units)
+  {temp} values = thermal
+    thermal = temperature of background gas (temperature units)
+:ule
 
 [Examples:]
 
-background all 1.0 300 0 0 0 :pre
+background fnum 1.0e20
+background vstream 100.0 0 0
+background temp 1000 :pre
 
 [Description:]
 
-Define properties of the background gas.
+Define global properties of the system.
+
+The {fnum} keyword sets the ratio of real, physical particles
+(i.e. molecules) to simulation particles.
+
+The {nrho} keyword sets the number density of the background gas.
+For 3d simulations the units are #/volume.  For 2d, the units are
+effectively #/area.
+
+Assuming your simulation is populated by particles from the
+background gas, the {fnum} and {nrho} settings determine
+how many particles will be present in your simulation.
+
+The {vstream} keyword sets the streaming velocity of the background
+gas.
+
+The {temp} keyword sets the thermal temperature of the background gas.
+This is a Gaussian velocity distribution superposed
+on top of the streaming velocity.
 
 [Restrictions:] none
 
-[Related commands:] none
+[Related commands:]
 
-[Default:] none
+"mixture"_mixture.html
 
+[Default:]
 
+The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
+0.0, temp = 300.

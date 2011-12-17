@@ -1,0 +1,33 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+seed command :h3
+
+[Syntax:]
+
+seed Nvalue :pre
+
+Nvalue = seed for a random number generator (positive integer) :ul
+
+[Examples:]
+
+seed 5838959 :pre
+
+[Description:]
+
+This command sets the random number seed for a master random number
+generator which is used by DSMC to initialize auxiliary random number
+generators which in turn are used for all operations in the code
+requiring random numbers.  Thus this command is required to perform
+any simulation with DSMC.
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:] none

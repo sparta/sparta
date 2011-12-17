@@ -6,31 +6,85 @@
 
 :line
 
-background command :h3
+mixture command :h3
 
 [Syntax:]
 
-background species nrho temp vx vy vz :pre
+mixture ID species1 species2 ... keyword args ... :pre
 
-NOTE: This command is not yet implemented.
+ID = user-defined name of the mixture :ulb,l
+species1, species2, ... = one of more species IDs to include in the mixture :l
 
-species = {all} or species ID
-nrho = number density (# per length^3 units)
-temp = thermal temperature (temperature units)
-vx,vy,vz = streaming velocity (velocity units) :ul
+zero or more keyword/arg pairs may be appended :l
+keyword = {nrho} or {frac} or {vstream} or {temp} :l
+  {nrho} arg = density
+    density = number density of entire mixture (# per length^3 units)
+  {frac} arg = fraction
+    fraction = relative number fraction for each of these species (0 to 1)
+  {vstream} args = Vx Vy Vz
+    Vx,Vy,Vz = streaming velocity of each of these species (velocity units)
+  {temp} arg = thermal
+    thermal = temperature of each of these species (temperature units)
+:ule
 
 [Examples:]
 
-background all 1.0 300 0 0 0 :pre
+mixture air N O NO
+mixture background N O :pre
 
 [Description:]
 
-Define properties of the background gas.
+Define a gas mixture which can be used via its ID in other commands
+such as "create_particles"_create_particles.html.  Any number of
+mixtures can be defined and used in a simulation.
+
+A mixture is a collection of one or more particle species as defined
+by the "species"_species.html command.  The mixture has global
+attributes and per-species attributes.  All attributes have default
+values if they are not specified explicitly.
+
+If the mixture command is used multiple times with the same ID, then
+any new species are added to the mixture.  Note that keywords which
+set per-species attibutes only apply to species in that specific
+mixture command.
+
+The {nrho} keyword sets the global density of the mixture.  It can be
+used in any mixture command to set the number density of the
+corresponding mixture.  For 3d simulations the units are #/volume.
+For 2d, the units are effectively #/area.
+
+The {frac} keyword sets a per-species attribute.  Its {fraction} value
+is the fraction (from 0 to 1 inclusive) of the total mixture number
+density that this species will comprise.
+
+The sum of assigned {frac} values cannot exceed 1.0.  If all
+species are assigned {frac} values, they must total to 1.0.
+
+If {frac} is not explcitly set for one or more species, then the
+fraction for the N unset species will be (1 - sum)/N, where sum
+is the sum of assigned {frac} values.
+
+The {vstream} keyword sets a per-species attribute.  The streaming
+velocity of particles of those species are set to the specified
+{Vx,Vy,Vz} values.
+
+The {temp} keyword sets a per-species attribute.  The thermal
+temperature of particles of those species is set to the specified
+{thermal} value.  This is a Gaussian velocity distribution superposed
+on top of the streaming velocity.
 
 [Restrictions:] none
 
-[Related commands:] none
+[Related commands:]
 
-[Default:] none
+"global"_global.html, "create_particles"_create_particles.html
 
+[Default:]
 
+The {nrho} default is the background gas density, as set by the
+"global"_global.html command.
+
+The {vstream} and {temp} defaults are also those of the background
+gas, as set by the "global"_global.html command.
+
+The {frac} default is descibed above.

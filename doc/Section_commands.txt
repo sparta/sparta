@@ -229,7 +229,6 @@ included when DSMC was built.  Not all packages are included in a
 default DSMC build.  These dependencies are listed as Restrictions
 in the command's documentation.
 
-"background"_background.html,
 "clear"_clear.html,
 "collisions"_collisions.html,
 "create_particles"_create_particles.html,
@@ -248,6 +247,7 @@ in the command's documentation.
 "print"_print.html,
 "read_surfs"_read_surfs.html,
 "run"_run.html,
+"seed"_shell.html,
 "shell"_shell.html,
 "suffix"_suffix.html,
 "species"_species.html,
