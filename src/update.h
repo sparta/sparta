@@ -26,6 +26,11 @@ class Update : protected Pointers {
   bigint firststep,laststep;      // 1st & last step of this run
   double dt;                      // timestep size
 
+  double fnum;           // ratio of real particles to simulation particles
+  double nrho;           // number density of background gas
+  double vstream[3];     // streaming velocity of background gas
+  double temp_thermal;   // thermal temperature of background gas
+
   bigint nmove;             // dummy statistic for now
   bigint ncellcross;        // dummy statistic for now
 
@@ -38,6 +43,7 @@ class Update : protected Pointers {
   void setup();
   void run(int);
   void move();
+  void global(int, char **);
 
  private:
   int maxmigrate;            // max # of particles in mlist

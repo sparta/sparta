@@ -12,6 +12,8 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "stdlib.h"
+#include "string.h"
 #include "update.h"
 #include "particle.h"
 #include "grid.h"
@@ -31,6 +33,11 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};
 Update::Update(DSMC *dsmc) : Pointers(dsmc)
 {
   dt = 1.0;
+
+  fnum = 1.0;
+  nrho = 1.0;
+  vstream[0] = vstream[1] = vstream[2] = 0.0;
+  temp_thermal = 300.0;
 
   maxmigrate = 0;
   mlist = NULL;
@@ -351,3 +358,30 @@ void Update::check()
   }
 }
 
+/* ----------------------------------------------------------------------
+   set global properites via global command in input script
+------------------------------------------------------------------------- */
+
+void Update::global(int narg, char **arg)
+{
+  if (narg < 1) error->all(FLERR,"Illegal global command");
+
+  if (strcmp(arg[0],"fnum") == 0) {
+    if (narg != 2) error->all(FLERR,"Illegal global command");
+    fnum = atof(arg[1]);
+    if (fnum <= 0.0) error->all(FLERR,"Illegal global command");
+  } else if (strcmp(arg[0],"nrho") == 0) {
+    if (narg != 2) error->all(FLERR,"Illegal global command");
+    nrho = atof(arg[1]);
+    if (nrho <= 0.0) error->all(FLERR,"Illegal global command");
+  } else if (strcmp(arg[0],"vstream") == 0) {
+    if (narg != 4) error->all(FLERR,"Illegal global command");
+    vstream[0] = atof(arg[1]);
+    vstream[1] = atof(arg[2]);
+    vstream[2] = atof(arg[3]);
+  } else if (strcmp(arg[0],"temp") == 0) {
+    if (narg != 2) error->all(FLERR,"Illegal global command");
+    temp_thermal = atof(arg[1]);
+    if (temp_thermal <= 0.0) error->all(FLERR,"Illegal global command");
+  } else error->all(FLERR,"Illegal global command");
+}

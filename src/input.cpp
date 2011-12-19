@@ -831,6 +831,7 @@ void Input::dimension()
 
 void Input::global()
 {
+  update->global(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -856,4 +857,3 @@ void Input::timestep()
   if (dt <= 0.0) error->all(FLERR,"Illegal timestep command");
   update->dt = dt;
 }
-
