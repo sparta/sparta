@@ -30,6 +30,9 @@ keyword = {nrho} or {frac} or {vstream} or {temp} :l
 [Examples:]
 
 mixture air N O NO
+mixture air N O NO vstream 250.0 0.0 0.0
+mixture air N frac 0.8
+mixture air O frac 0.2
 mixture background N O :pre
 
 [Description:]
