@@ -8,8 +8,6 @@
 
 global command :h3
 
-NOTE: not yet implemented
-
 [Syntax:]
 
 global keyword values :pre
@@ -22,7 +20,7 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} :ulb,l
   {vstream} values = Vx Vy Vz
     Vx,Vy,Vz = streaming velocity of background gas (velocity units)
   {temp} values = thermal
-    thermal = temperature of background gas (temperature units)
+    thermal = temperature of background gas (temperature units) :pre
 :ule
 
 [Examples:]

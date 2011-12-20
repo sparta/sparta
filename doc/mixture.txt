@@ -8,8 +8,6 @@
 
 mixture command :h3
 
-NOTE: not yet implemented
-
 [Syntax:]
 
 mixture ID species1 species2 ... keyword args ... :pre
@@ -26,7 +24,7 @@ keyword = {nrho} or {frac} or {vstream} or {temp} :l
   {vstream} args = Vx Vy Vz
     Vx,Vy,Vz = streaming velocity of each of these species (velocity units)
   {temp} arg = thermal
-    thermal = temperature of each of these species (temperature units)
+    thermal = temperature of each of these species (temperature units) :pre
 :ule
 
 [Examples:]
