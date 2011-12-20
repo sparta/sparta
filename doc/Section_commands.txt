@@ -244,6 +244,7 @@ in the command's documentation.
 "log"_log.html,
 "mixture"_mixture.html,
 "next"_next.html,
+"partition"_partition.html,
 "print"_print.html,
 "read_surfs"_read_surfs.html,
 "run"_run.html,
