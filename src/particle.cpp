@@ -59,9 +59,7 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
 
 Particle::~Particle()
 {
-  for (int i = 0; i < nspecies; i++) delete [] species[i].id;
   memory->sfree(species);
-
   for (int i = 0; i < nmixture; i++) delete mixture[i];
   memory->sfree(mixture);
 
@@ -270,7 +268,6 @@ void Particle::add_species(int narg, char **arg)
   }
 
   // extract info on user-requested species from file species list
-  // make explicit copy of ID string
 
   int j;
 
@@ -283,13 +280,9 @@ void Particle::add_species(int narg, char **arg)
     if (j == nfilespecies)
       error->all(FLERR,"Species ID does not appear in species file");
     memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
-    int n = strlen(filespecies[j].id) + 1;
-    species[nspecies].id = new char[n];
-    strcpy(species[nspecies].id,filespecies[j].id);
     nspecies++;
   }
 
-  for (int i = 0; i < nfilespecies; i++) delete [] filespecies[i].id;
   memory->sfree(filespecies);
   delete [] names;
 }
@@ -313,7 +306,7 @@ void Particle::add_mixture(int narg, char **arg)
     mixture = (Mixture **) memory->srealloc(mixture,
 					    (nmixture+1)*sizeof(Mixture *),
 					    "particle:mixture");
-    mixture[imix] = new Mixture(dsmc,arg[0]);
+    mixture[nmixture++] = new Mixture(dsmc,arg[0]);
   }
 
   // nsp = # of species args before optional keywords
@@ -396,8 +389,7 @@ void Particle::read_species_file()
     nwords = wordcount(line,words);
     Species *fsp = &filespecies[nfilespecies];
 
-    int n = strlen(words[0]) + 1;
-    fsp->id = new char[n];
+    if (strlen(words[0]) + 1 > 16) error->one(FLERR,"");
     strcpy(fsp->id,words[0]);
 
     fsp->molwt = atof(words[1]);

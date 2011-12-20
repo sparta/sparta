@@ -24,6 +24,7 @@
 #include "mixture.h"
 #include "random_park.h"
 #include "math_const.h"
+#include "memory.h"
 #include "error.h"
 
 using namespace DSMC_NS;
@@ -45,6 +46,7 @@ void CreateParticles::command(int narg, char **arg)
 
   imix = particle->find_mixture(arg[0]);
   if (imix < 0) error->all(FLERR,"Create_particles mixture ID does not exist");
+  particle->mixture[imix]->init();
 
   seed = atoi(arg[1]);
   if (seed <= 0) error->all(FLERR,"Illegal create_particles command");
@@ -57,9 +59,8 @@ void CreateParticles::command(int narg, char **arg)
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
-      n = ATOBIGINT(arg[0]);
+      n = ATOBIGINT(arg[iarg+1]);
       if (n <= 0) error->all(FLERR,"Illegal create_particles command");
-      else error->all(FLERR,"Illegal create_particles command");
       iarg += 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
@@ -133,14 +134,23 @@ void CreateParticles::create_local(bigint n)
     else volme += (hi[0]-lo[0]) * (hi[1]-lo[1]);
   }
   
-  double volbefore;
-  MPI_Scan(&volme,&volbefore,1,MPI_DOUBLE,MPI_SUM,world);
-  double voltotal;
-  MPI_Allreduce(&volme,&voltotal,1,MPI_DOUBLE,MPI_SUM,world);
-  
-  bigint nstart = n * (volbefore-volme)/voltotal;
-  bigint nstop = n * volbefore/voltotal;
+  double volupto;
+  MPI_Scan(&volme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
+
+  double *vols;
+  int nprocs = comm->nprocs;
+  memory->create(vols,nprocs,"create_particles:vols");
+  MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
+
+  bigint nstart,nstop;
+  if (me > 0) nstart = n * vols[me-1]/vols[nprocs-1];
+  else nstart = 0;
+  nstop = n * vols[me]/vols[nprocs-1];
   bigint nme = nstop-nstart;
+
+  printf("AAA %d %ld %ld %ld: %g %d\n",me,nme,nstart,nstop,volme,nglocal);
+
+  memory->destroy(vols);
 
   // loop over cells I own
   // ntarget = floating point # of particles to create in one cell

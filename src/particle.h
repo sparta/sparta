@@ -23,7 +23,7 @@ namespace DSMC_NS {
 class Particle : protected Pointers {
  public:
   struct Species {          // info on each particle species
-    char *id;
+    char id[16];
     double molwt;
     double mass;
     double diam;

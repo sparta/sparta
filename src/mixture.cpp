@@ -59,6 +59,8 @@ Mixture::Mixture(DSMC *dsmc, char *userid) : Pointers(dsmc)
 Mixture::~Mixture()
 {
   delete [] id;
+
+  memory->destroy(species);
   memory->destroy(fraction);
   memory->destroy(vstream);
   memory->destroy(temp_thermal);
