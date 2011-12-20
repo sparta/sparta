@@ -12,6 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "math.h"
 #include "string.h"
 #include "stdlib.h"
 #include "mixture.h"
@@ -45,6 +46,9 @@ Mixture::Mixture(DSMC *dsmc, char *userid) : Pointers(dsmc)
   fraction_flag = NULL;
   vstream_flag = NULL;
   temp_thermal_flag = NULL;
+
+  cummulative = NULL;
+  vscale = NULL;
   active = NULL;
 
   allocate(DELTA);
@@ -64,6 +68,10 @@ Mixture::~Mixture()
   memory->destroy(fraction_flag);
   memory->destroy(vstream_flag);
   memory->destroy(temp_thermal_flag);
+
+  memory->destroy(cummulative);
+  memory->destroy(vscale);
+  memory->destroy(active);
 }
 
 /* ----------------------------------------------------------------------
@@ -103,12 +111,25 @@ void Mixture::init()
     error->all(FLERR,str);
   }
 
-  // frac for each unset species = equal portion of unset remainder
+  // fraction for each unset species = equal portion of unset remainder
+  // cummulative = cummulative fraction across species
 
   for (int i = 0; i < nspecies; i++) {
     if (fraction_flag[i]) fraction[i] = fraction_user[i];
     else fraction[i] = (1.0-fraction_explicit) / fraction_implicit;
+    if (i) cummulative[i] = cummulative[i-1] + fraction[i];
+    else cummulative[i] = fraction[i];
   }  
+  cummulative[nspecies-1] = 1.0;
+
+  // vscale = factor to scale Gaussian unit variance by
+  // to get thermal distribution of velocities
+
+  for (int i = 0; i < nspecies; i++) {
+    int index = species[i];
+    vscale[i] = sqrt(update->kboltz * temp_thermal[index] /
+		     particle->species[index].mass);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -223,6 +244,9 @@ void Mixture::allocate(int n)
   memory->grow(fraction_flag,maxspecies,"mixture:fraction_flag");
   memory->grow(vstream_flag,maxspecies,"mixture:vstream_flag");
   memory->grow(temp_thermal_flag,maxspecies,"mixture:temp_thermal_flag");
+
+  memory->grow(cummulative,maxspecies,"mixture:cummulative");
+  memory->grow(vscale,maxspecies,"mixture:vscale");
   memory->grow(active,maxspecies,"mixture:active");
 
   for (int i = old; i < maxspecies; i++) {

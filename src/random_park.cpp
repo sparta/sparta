@@ -60,7 +60,7 @@ double RanPark::uniform()
 }
 
 /* ----------------------------------------------------------------------
-   gaussian RN 
+   gaussian RN with zero mean and unit variance
 ------------------------------------------------------------------------- */
 
 double RanPark::gaussian()
@@ -68,12 +68,11 @@ double RanPark::gaussian()
   double first,v1,v2,rsq,fac;
 
   if (!save) {
-    int again = 1;
-    while (again) {
+    while (1) {
       v1 = 2.0*uniform()-1.0;
       v2 = 2.0*uniform()-1.0;
       rsq = v1*v1 + v2*v2;
-      if (rsq < 1.0 && rsq != 0.0) again = 0;
+      if (rsq < 1.0 && rsq != 0.0) break;
     }
     fac = sqrt(-2.0*log(rsq)/rsq);
     second = v1*fac;

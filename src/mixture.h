@@ -36,6 +36,9 @@ class Mixture : protected Pointers {
   int *fraction_flag;
   int *vstream_flag;
   int *temp_thermal_flag;
+
+  double *cummulative;
+  double *vscale;
   int *active;
 
   Mixture(class DSMC *, char *);

@@ -12,6 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "math.h"
 #include "stdlib.h"
 #include "string.h"
 #include "create_particles.h"
@@ -20,10 +21,13 @@
 #include "grid.h"
 #include "comm.h"
 #include "domain.h"
+#include "mixture.h"
 #include "random_park.h"
+#include "math_const.h"
 #include "error.h"
 
 using namespace DSMC_NS;
+using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
@@ -61,12 +65,15 @@ void CreateParticles::command(int narg, char **arg)
   }
 
   // calculate N if not set explicitly
-  // eventually account for volumes of cut cells
+  // NOTE: eventually adjust for cells with cut volume
 
-  double vol;
-  if (domain->dimension == 2) vol = domain->xprd * domain->yprd;
-  else vol = domain->xprd * domain->yprd * domain->zprd;
-  n = update->nrho * vol / update->fnum;
+  if (n == 0) {
+    double voltotal;
+    if (domain->dimension == 3)
+      voltotal = domain->xprd * domain->yprd * domain->zprd;
+    else voltotal = domain->xprd * domain->yprd;
+    n = update->nrho * voltotal / update->fnum;
+  }
 
   // generate particles
 
@@ -80,8 +87,8 @@ void CreateParticles::command(int narg, char **arg)
   MPI_Allreduce(&nme,&nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
   if (nglobal - nprevious != n) {
     char str[128];
-    sprintf(str,"Created incorrect # of particles = " 
-	    BIGINT_FORMAT "out of" BIGINT_FORMAT,
+    sprintf(str,"Created incorrect # of particles: " 
+	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
 	    nglobal-nprevious,n);
     error->all(FLERR,str);
   }
@@ -112,34 +119,85 @@ void CreateParticles::create_local(bigint n)
   int *mycells = grid->mycells;
   int nglocal = grid->nlocal;
 
-  // eventually adjust nme for cut cell volume per proc
+  // volme = volume of grid cells I own
+  // Nme = # of particles I will create
+  // MPI_Scan() logic insures sum of nme = N
+  // NOTE: eventually adjust for cells with cut volume
 
-
-
-  bigint nme = n/comm->nprocs;
-  if (me < n % comm->nprocs) nme++;
+  double *lo,*hi;
+  double volme = 0.0;
+  for (int i = 0; i < nglocal; i++) {
+    lo = cells[mycells[i]].lo;
+    hi = cells[mycells[i]].hi;
+    if (dimension == 3) volme += (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    else volme += (hi[0]-lo[0]) * (hi[1]-lo[1]);
+  }
+  
+  double volbefore;
+  MPI_Scan(&volme,&volbefore,1,MPI_DOUBLE,MPI_SUM,world);
+  double voltotal;
+  MPI_Allreduce(&volme,&voltotal,1,MPI_DOUBLE,MPI_SUM,world);
+  
+  bigint nstart = n * (volbefore-volme)/voltotal;
+  bigint nstop = n * volbefore/voltotal;
+  bigint nme = nstop-nstart;
 
   // loop over cells I own
-  // create fractional particle with RN
-  // accumulate un-created particle from cell to cell
+  // ntarget = floating point # of particles to create in one cell
+  // npercell = integer # of particles to create in one cell
+  // basing ntarget on accumulated volume and nprev insures Nme total creations
+  // particle species = random value based on mixture fractions
+  // particle velocity = stream velocity + thermal velocity
 
-  int ilocal,icell;
-  double x,y,z;
-  double *lo,*hi;
+  int nspecies = particle->mixture[imix]->nspecies;
+  int *species = particle->mixture[imix]->species;
+  double *cummulative = particle->mixture[imix]->cummulative;
+  double **vstream = particle->mixture[imix]->vstream;
+  double *vscale = particle->mixture[imix]->vscale;
 
-  for (bigint m = 0; m < nme; m++) {
-    ilocal = static_cast<int> (random->uniform()*nglocal);
-    icell = mycells[ilocal];
+  int ilocal,icell,npercell,ispecies;
+  double x[3],v[3];
+  double volcell,ntarget,rn,vn,vr,theta1,theta2;
+
+  double volsum = 0.0;
+  bigint nprev = 0;
+
+  for (int i = 0; i < nglocal; i++) {
+    icell = mycells[i];
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    x = lo[0] + random->uniform() * (hi[0]-lo[0]);
-    y = lo[1] + random->uniform() * (hi[1]-lo[1]);
-    z = lo[2] + random->uniform() * (hi[2]-lo[2]);
-    if (dimension == 2) z = 0.0;
+    if (dimension == 3) volcell = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    else volcell = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+    volsum += volcell;
 
+    ntarget = nme * volsum/volme - nprev;
+    npercell = static_cast<int> (ntarget);
+    if (random->uniform() < ntarget-npercell) npercell++;
 
-    //particle->add_particle(0,1,icell,ispecies,x,v);
+    for (int m = 0; m < npercell; m++) {
+      rn = random->uniform();
+      ispecies = 0;
+      while (cummulative[ispecies] < rn) ispecies++;
+
+      x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+      x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+      x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+      if (dimension == 2) x[2] = 0.0;
+
+      vn = vscale[ispecies] * random->gaussian();
+      vr = vscale[ispecies] * random->gaussian();
+      theta1 = MY_2PI * random->uniform();
+      theta2 = MY_2PI * random->uniform();
+	
+      v[0] = vstream[ispecies][0] + vn*cos(theta1);
+      v[1] = vstream[ispecies][1] + vr*sin(theta2);
+      v[2] = vstream[ispecies][2] + vr*cos(theta2);
+
+      particle->add_particle(0,ispecies,icell,x,v);
+    }
+
+    nprev += npercell;
   }
 
   delete random;

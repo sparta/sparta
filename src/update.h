@@ -26,6 +26,8 @@ class Update : protected Pointers {
   bigint firststep,laststep;      // 1st & last step of this run
   double dt;                      // timestep size
 
+  double kboltz;         // Boltzmann constant (Joules/K)
+
   double fnum;           // ratio of real particles to simulation particles
   double nrho;           // number density of background gas
   double vstream[3];     // streaming velocity of background gas

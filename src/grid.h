@@ -38,11 +38,11 @@ class Grid : protected Pointers {
     double volume;            // volume of cell
   };
 
-  OneCell *cells;
-  int ncell;
+  OneCell *cells;             // global list of grid cells
+  int ncell;                  // total # of grid cells
 
-  int *mycells;
-  int nlocal;
+  int *mycells;               // indices of grid cells I own
+  int nlocal;                 // # of grid cells I own
   
   Grid(class DSMC *);
   ~Grid();

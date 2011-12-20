@@ -34,6 +34,8 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
 {
   dt = 1.0;
 
+  kboltz = 1.38066e-23;
+
   fnum = 1.0;
   nrho = 1.0;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
