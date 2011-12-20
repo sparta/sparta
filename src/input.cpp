@@ -838,7 +838,7 @@ void Input::global()
 
 void Input::mixture()
 {
-  particle->mixture(narg,arg);
+  particle->add_mixture(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

@@ -130,7 +130,7 @@ void Collide::collisions()
     for (i = 0; i < nspecies; i++) nsp[i] = 0;
 
     while (ip >= 0) {
-      itype = particles[ip].type;
+      itype = particles[ip].ispecies;
       if (nsp[itype] == maxsp[itype]) {
 	maxsp[itype] += DELTAPART;
 	memory->grow(splist[itype],maxsp[itype],"collide:splist");

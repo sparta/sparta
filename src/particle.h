@@ -23,7 +23,7 @@ namespace DSMC_NS {
 class Particle : protected Pointers {
  public:
   struct Species {          // info on each particle species
-    char id[16];
+    char *id;
     double molwt;
     double mass;
     double diam;
@@ -42,8 +42,12 @@ class Particle : protected Pointers {
   Species *species;         // list of particle species info
   int nspecies;             // # of defined species
 
+  class Mixture **mixture;
+  int nmixture;
+
   struct OnePart {
-    int id,type;            // particle ID, type
+    int id;                 // particle ID
+    int ispecies;           // index to particle species
     int icell;              // local grid cell the particle is in (0 to N-1)
     double x[3];            // coords of particle
     double v[3];            // velocity of particle
@@ -61,12 +65,14 @@ class Particle : protected Pointers {
   Particle(class DSMC *);
   ~Particle();
   void init();
-  void add_particle(int, int, int, double, double, double);
-  void add_species(int, char **);
-  void mixture(int, char **) {}
   void compress(int, int *);
   void sort();
   void grow(int);
+  void add_particle(int, int, int, double, double, double);
+  void add_species(int, char **);
+  void add_mixture(int, char **);
+  int find_species(char *);
+  int find_mixture(char *);
   bigint memory_usage();
 
  private:

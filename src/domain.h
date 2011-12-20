@@ -25,7 +25,7 @@ class Domain : protected Pointers {
   int dimension;                    // 2,3
 
   double boxlo[3],boxhi[3];         // box global bounds
-  double xprd,yprd,zprd;                 // global box dimensions
+  double xprd,yprd,zprd;            // global box dimensions
   double prd[3];                    // array form of dimensions
 
   Domain(class DSMC *);

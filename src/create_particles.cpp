@@ -16,6 +16,7 @@
 #include "string.h"
 #include "create_particles.h"
 #include "particle.h"
+#include "update.h"
 #include "grid.h"
 #include "comm.h"
 #include "domain.h"
@@ -23,8 +24,6 @@
 #include "error.h"
 
 using namespace DSMC_NS;
-
-enum{ALL,LOCAL};
 
 /* ---------------------------------------------------------------------- */
 
@@ -36,36 +35,43 @@ void CreateParticles::command(int narg, char **arg)
 {
   if (!domain->box_exist) 
     error->all(FLERR,
-	       "Cannot create_particles before simulation box is defined");
+	       "Cannot create particles before simulation box is defined");
 
   if (narg < 2) error->all(FLERR,"Illegal create_particles command");
 
-  bigint n = ATOBIGINT(arg[0]);
-  if (n < 0) error->all(FLERR,"Illegal create_particles command");
+  imix = particle->find_mixture(arg[0]);
+  if (imix < 0) error->all(FLERR,"Create_particles mixture ID does not exist");
+
   seed = atoi(arg[1]);
   if (seed <= 0) error->all(FLERR,"Illegal create_particles command");
-
+  
   // optional args
 
-  int loop = ALL;
+  bigint n = 0;
 
   int iarg = 2;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"loop") == 0) {
+    if (strcmp(arg[iarg],"n") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
-      if (strcmp(arg[iarg+1],"all") == 0) loop = ALL;
-      else if (strcmp(arg[iarg+1],"local") == 0) loop = LOCAL;
+      n = ATOBIGINT(arg[0]);
+      if (n <= 0) error->all(FLERR,"Illegal create_particles command");
       else error->all(FLERR,"Illegal create_particles command");
       iarg += 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
+  // calculate N if not set explicitly
+  // eventually account for volumes of cut cells
+
+  double vol;
+  if (domain->dimension == 2) vol = domain->xprd * domain->yprd;
+  else vol = domain->xprd * domain->yprd * domain->zprd;
+  n = update->nrho * vol / update->fnum;
+
   // generate particles
 
   bigint nprevious = particle->nglobal;
-
-  if (loop == ALL) create_all(n);
-  else if (loop == LOCAL) create_local(n);
+  create_local(n);
 
   // error check
 
@@ -74,8 +80,9 @@ void CreateParticles::command(int narg, char **arg)
   MPI_Allreduce(&nme,&nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
   if (nglobal - nprevious != n) {
     char str[128];
-    sprintf(str,"Created incorrect # of particles = " BIGINT_FORMAT,
-	    nglobal-nprevious);
+    sprintf(str,"Created incorrect # of particles = " 
+	    BIGINT_FORMAT "out of" BIGINT_FORMAT,
+	    nglobal-nprevious,n);
     error->all(FLERR,str);
   }
   particle->nglobal = nglobal;
@@ -89,10 +96,62 @@ void CreateParticles::command(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   create N particles in serial
+   create N particles in parallel
    every proc generates all N coords, only keeps those in cells it owns
+   created particle attributes depend on number of procs
 ------------------------------------------------------------------------- */
 
+void CreateParticles::create_local(bigint n)
+{
+  int dimension = domain->dimension;
+
+  int me = comm->me;
+  RanPark *random = new RanPark(dsmc,seed+me);
+
+  Grid::OneCell *cells = grid->cells;
+  int *mycells = grid->mycells;
+  int nglocal = grid->nlocal;
+
+  // eventually adjust nme for cut cell volume per proc
+
+
+
+  bigint nme = n/comm->nprocs;
+  if (me < n % comm->nprocs) nme++;
+
+  // loop over cells I own
+  // create fractional particle with RN
+  // accumulate un-created particle from cell to cell
+
+  int ilocal,icell;
+  double x,y,z;
+  double *lo,*hi;
+
+  for (bigint m = 0; m < nme; m++) {
+    ilocal = static_cast<int> (random->uniform()*nglocal);
+    icell = mycells[ilocal];
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    x = lo[0] + random->uniform() * (hi[0]-lo[0]);
+    y = lo[1] + random->uniform() * (hi[1]-lo[1]);
+    z = lo[2] + random->uniform() * (hi[2]-lo[2]);
+    if (dimension == 2) z = 0.0;
+
+
+    //particle->add_particle(0,1,icell,ispecies,x,v);
+  }
+
+  delete random;
+}
+
+/* ----------------------------------------------------------------------
+   create N particles in serial
+   every proc generates all N coords, only keeps those in cells it owns
+   created particle attributes should be independent of number of procs
+------------------------------------------------------------------------- */
+
+/*
 void CreateParticles::create_all(bigint n)
 {
   int dimension = domain->dimension;
@@ -121,52 +180,11 @@ void CreateParticles::create_all(bigint n)
     // if I own that grid cell, add particle
 
     icell = grid->which_cell(x,y,z);
-    if (grid->cells[icell].proc == me)
+    if (grid->cells[icell].proc == me) {
       particle->add_particle(0,1,icell,x,y,z);
+    }
   }
 
   delete random;
 }
-
-/* ----------------------------------------------------------------------
-   create N particles in serial
-   every proc generates all N coords, only keeps those in cells it owns
-------------------------------------------------------------------------- */
-
-void CreateParticles::create_local(bigint n)
-{
-  int dimension = domain->dimension;
-
-  int me = comm->me;
-  RanPark *random = new RanPark(dsmc,seed+me);
-
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
-  int nglocal = grid->nlocal;
-
-  bigint nme = n/comm->nprocs;
-  if (me < n % comm->nprocs) nme++;
-
-  // loop only over Nme particles I own
-
-  int ilocal,icell;
-  double x,y,z;
-  double *lo,*hi;
-
-  for (bigint m = 0; m < nme; m++) {
-    ilocal = static_cast<int> (random->uniform()*nglocal);
-    icell = mycells[ilocal];
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-
-    x = lo[0] + random->uniform() * (hi[0]-lo[0]);
-    y = lo[1] + random->uniform() * (hi[1]-lo[1]);
-    z = lo[2] + random->uniform() * (hi[2]-lo[2]);
-    if (dimension == 2) z = 0.0;
-
-    particle->add_particle(0,1,icell,x,y,z);
-  }
-
-  delete random;
-}
-
+*/

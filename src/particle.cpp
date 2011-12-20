@@ -19,13 +19,14 @@
 #include "grid.h"
 #include "update.h"
 #include "comm.h"
+#include "mixture.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace DSMC_NS;
 
 #define DELTA 10000
-#define DELTASPECIES 16
+#define DELTASMALL 16
 #define MAXLINE 1024
 
 // customize by adding an abbreviation string
@@ -41,8 +42,11 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
   nlocal = maxlocal = 0;
   particles = NULL;
 
-  nspecies = maxspecies = 0;
+  nspecies = maxspecies  = 0;
   species = NULL;
+
+  nmixture = 0;
+  mixture = NULL;
 
   maxgrid = 0;
   cellcount = NULL;
@@ -55,8 +59,13 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
 
 Particle::~Particle()
 {
-  memory->sfree(particles);
+  for (int i = 0; i < nspecies; i++) delete [] species[i].id;
   memory->sfree(species);
+
+  for (int i = 0; i < nmixture; i++) delete mixture[i];
+  memory->sfree(mixture);
+
+  memory->sfree(particles);
   memory->destroy(cellcount);
   memory->destroy(first);
   memory->destroy(next);
@@ -76,178 +85,6 @@ void Particle::init()
     memory->create(first,maxgrid,"particle:first");
     memory->create(cellcount,maxgrid,"particle:cellcount");
   }
-}
-
-/* ----------------------------------------------------------------------
-   add a particle to particle list
-------------------------------------------------------------------------- */
-
-void Particle::add_particle(int id, int type, int icell,
-			    double x, double y, double z)
-{
-  if (nlocal == maxlocal) grow(1);
-
-  OnePart *p = &particles[nlocal];
-
-  p->id = id;
-  p->type = type;
-  p->icell = icell;
-  p->x[0] = x;
-  p->x[1] = y;
-  p->x[2] = z;
-  p->v[0] = 0.0;
-  p->v[1] = 0.0;
-  p->v[2] = 0.0;
-
-  nlocal++;
-}
-
-/* ----------------------------------------------------------------------
-   add one of more species to species list
-------------------------------------------------------------------------- */
-
-void Particle::add_species(int narg, char **arg)
-{
-  if (narg < 2) error->all(FLERR,"Illegal species command");
-
-  if (comm->me == 0) {
-    fp = fopen(arg[0],"r");
-    if (fp == NULL) {
-      char str[128];
-      sprintf(str,"Cannot open species file %s",arg[0]);
-      error->one(FLERR,str);
-    }
-  }
-
-  // filespecies = list of species defined in file
-
-  nfilespecies = maxfilespecies = 0;
-  filespecies = NULL;
-
-  if (comm->me == 0) read_species_file();
-  MPI_Bcast(&nfilespecies,1,MPI_INT,0,world);
-  if (nfilespecies >= maxfilespecies) {
-    memory->destroy(filespecies);
-    maxfilespecies = nfilespecies;
-    filespecies = (Species *) 
-      memory->smalloc(maxfilespecies*sizeof(Species),
-		      "particle:filespecies");
-  }
-  MPI_Bcast(filespecies,nfilespecies*sizeof(Species),MPI_BYTE,0,world);
-
-  // newspecies = # of new user-requested species
-  // names = list of new species IDs
-  // customize abbreviations by adding new keyword in 2 places
-
-  char line[MAXLINE];
-
-  int newspecies = 0;
-  for (int iarg = 1; iarg < narg; iarg++) {
-    if (strcmp(arg[iarg],"air") == 0) {
-      strcpy(line,AIR);
-      newspecies += wordcount(line,NULL);
-    } else newspecies++;
-  }
-
-  char **names = new char*[newspecies];
-  newspecies = 0;
-
-  for (int iarg = 1; iarg < narg; iarg++) {
-    if (strcmp(arg[iarg],"air") == 0) {
-      strcpy(line,AIR);
-      newspecies += wordcount(line,&names[newspecies]);
-    } else names[newspecies++] = arg[iarg];
-  }
-
-  // extend species list if necessary
-
-  if (nspecies + newspecies > maxspecies) {
-    while (nspecies+newspecies > maxspecies) maxspecies += DELTASPECIES;
-    species = (Species *) 
-      memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
-  }
-
-  // extract info on user-requested species from file species list
-  
-  int j;
-
-  for (int i = 0; i < newspecies; i++) {
-    for (j = 0; j < nspecies; j++)
-      if (strcmp(names[i],species[j].id) == 0) break;
-    if (j < nspecies) error->all(FLERR,"Species ID is already defined");
-    for (j = 0; j < nfilespecies; j++)
-      if (strcmp(names[i],filespecies[j].id) == 0) break;
-    if (j == nfilespecies)
-      error->all(FLERR,"Species ID does not appear in species file");
-    memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
-    nspecies++;
-  }
-
-  memory->sfree(filespecies);
-  delete [] names;
-}
-
-/* ----------------------------------------------------------------------
-   read list of species defined in species file
-   store info in filespecies and nfilespecies
-   only invoked by proc 0
-------------------------------------------------------------------------- */
-
-void Particle::read_species_file()
-{
-  nfilespecies = maxfilespecies = 0;
-  filespecies = NULL;
-
-  // read file line by line
-  // skip blank lines or comment lines starting with '#'
-  // all other lines must have NWORDS 
-
-  int NWORDS = 14;
-  char **words = new char*[NWORDS];
-  char line[MAXLINE],copy[MAXLINE];
-
-  while (fgets(line,MAXLINE,fp)) {
-    int pre = strspn(line," \t\n");
-    if (pre == strlen(line) || line[pre] == '#') continue;
-
-    strcpy(copy,line);
-    int nwords = wordcount(copy,NULL);
-    if (nwords != NWORDS)
-      error->one(FLERR,"Incorrect line format in species file");
-
-    if (nfilespecies == maxfilespecies) {
-      maxfilespecies += DELTASPECIES;
-      filespecies = (Species *) 
-	memory->srealloc(filespecies,maxfilespecies*sizeof(Species),
-			 "particle:filespecies");
-    }
-
-    nwords = wordcount(line,words);
-    Species *fsp = &filespecies[nfilespecies];
-
-    if (strlen(words[0]) + 1 > 16) error->one(FLERR,"");
-    strcpy(fsp->id,words[0]);
-
-    fsp->molwt = atof(words[1]);
-    fsp->mass = atof(words[2]);
-    fsp->diam = atof(words[3]);
-    fsp->rotdof = atoi(words[4]);
-    fsp->rotrel = atoi(words[5]);
-    fsp->vibdof = atoi(words[6]);
-    fsp->vibrel = atoi(words[7]);
-    fsp->vibtemp = atof(words[8]);
-    fsp->specwt = atof(words[9]);
-    fsp->charge = atof(words[10]);
-    fsp->omega = atof(words[11]);
-    fsp->tref = atof(words[12]);
-    fsp->alpha = atof(words[13]);
-
-    nfilespecies++;
-  }
-
-  delete [] words;
-
-  fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -341,6 +178,248 @@ void Particle::grow(int nextra)
   particles = (OnePart *)
     memory->srealloc(particles,maxlocal*sizeof(OnePart),
 		     "particle:particles");
+}
+
+/* ----------------------------------------------------------------------
+   add a particle to particle list
+------------------------------------------------------------------------- */
+
+void Particle::add_particle(int id, int ispecies, int icell,
+			    double x, double y, double z)
+{
+  if (nlocal == maxlocal) grow(1);
+
+  OnePart *p = &particles[nlocal];
+
+  p->id = id;
+  p->ispecies = ispecies;
+  p->icell = icell;
+  p->x[0] = x;
+  p->x[1] = y;
+  p->x[2] = z;
+  p->v[0] = 0.0;
+  p->v[1] = 0.0;
+  p->v[2] = 0.0;
+
+  nlocal++;
+}
+
+/* ----------------------------------------------------------------------
+   add one of more species to species list
+------------------------------------------------------------------------- */
+
+void Particle::add_species(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal species command");
+
+  if (comm->me == 0) {
+    fp = fopen(arg[0],"r");
+    if (fp == NULL) {
+      char str[128];
+      sprintf(str,"Cannot open species file %s",arg[0]);
+      error->one(FLERR,str);
+    }
+  }
+
+  // filespecies = list of species defined in file
+
+  nfilespecies = maxfilespecies = 0;
+  filespecies = NULL;
+
+  if (comm->me == 0) read_species_file();
+  MPI_Bcast(&nfilespecies,1,MPI_INT,0,world);
+  if (nfilespecies >= maxfilespecies) {
+    memory->destroy(filespecies);
+    maxfilespecies = nfilespecies;
+    filespecies = (Species *) 
+      memory->smalloc(maxfilespecies*sizeof(Species),
+		      "particle:filespecies");
+  }
+  MPI_Bcast(filespecies,nfilespecies*sizeof(Species),MPI_BYTE,0,world);
+
+  // newspecies = # of new user-requested species
+  // names = list of new species IDs
+  // customize abbreviations by adding new keyword in 2 places
+
+  char line[MAXLINE];
+
+  int newspecies = 0;
+  for (int iarg = 1; iarg < narg; iarg++) {
+    if (strcmp(arg[iarg],"air") == 0) {
+      strcpy(line,AIR);
+      newspecies += wordcount(line,NULL);
+    } else newspecies++;
+  }
+
+  char **names = new char*[newspecies];
+  newspecies = 0;
+
+  for (int iarg = 1; iarg < narg; iarg++) {
+    if (strcmp(arg[iarg],"air") == 0) {
+      strcpy(line,AIR);
+      newspecies += wordcount(line,&names[newspecies]);
+    } else names[newspecies++] = arg[iarg];
+  }
+
+  // extend species list if necessary
+
+  if (nspecies + newspecies > maxspecies) {
+    while (nspecies+newspecies > maxspecies) maxspecies += DELTASMALL;
+    species = (Species *) 
+      memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+  }
+
+  // extract info on user-requested species from file species list
+  // make explicit copy of ID string
+
+  int j;
+
+  for (int i = 0; i < newspecies; i++) {
+    for (j = 0; j < nspecies; j++)
+      if (strcmp(names[i],species[j].id) == 0) break;
+    if (j < nspecies) error->all(FLERR,"Species ID is already defined");
+    for (j = 0; j < nfilespecies; j++)
+      if (strcmp(names[i],filespecies[j].id) == 0) break;
+    if (j == nfilespecies)
+      error->all(FLERR,"Species ID does not appear in species file");
+    memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
+    int n = strlen(filespecies[j].id) + 1;
+    species[nspecies].id = new char[n];
+    strcpy(species[nspecies].id,filespecies[j].id);
+    nspecies++;
+  }
+
+  for (int i = 0; i < nfilespecies; i++) delete [] filespecies[i].id;
+  memory->sfree(filespecies);
+  delete [] names;
+}
+
+/* ----------------------------------------------------------------------
+   add or augment a mixture of species
+------------------------------------------------------------------------- */
+
+void Particle::add_mixture(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal mixture command");
+
+  // imix = index if mixture ID already exists
+  // else instantiate a new mixture
+
+  int imix;
+  for (imix = 0; imix < nmixture; imix++)
+    if (strcmp(arg[0],mixture[imix]->id) == 0) break;
+
+  if (imix == nmixture) {
+    mixture = (Mixture **) memory->srealloc(mixture,
+					    (nmixture+1)*sizeof(Mixture *),
+					    "particle:mixture");
+    mixture[imix] = new Mixture(dsmc,arg[0]);
+  }
+
+  // nsp = # of species args before optional keywords
+  // iarg = start of optional keywords
+
+  int iarg = 1;
+  for (iarg = 2; iarg < narg; iarg++) {
+    if (strcmp(arg[iarg],"nrho") == 0) break;
+    if (strcmp(arg[iarg],"frac") == 0) break;
+    if (strcmp(arg[iarg],"vstream") == 0) break;
+    if (strcmp(arg[iarg],"temp_thermal") == 0) break;
+  }
+  int nsp = iarg - 1;
+
+  // pass list of species and list of params to Mixture
+
+  mixture[imix]->add_species(nsp,&arg[1]);
+  mixture[imix]->params(narg-iarg,&arg[iarg]);
+}
+
+/* ----------------------------------------------------------------------
+   return index of ID in list of species IDs
+   return -1 if not found
+------------------------------------------------------------------------- */
+
+int Particle::find_species(char *id)
+{
+  for (int i = 0; i < nspecies; i++)
+    if (strcmp(id,species[i].id) == 0) return i;
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   return index of ID in list of mixture IDs
+   return -1 if not found
+------------------------------------------------------------------------- */
+
+int Particle::find_mixture(char *id)
+{
+  for (int i = 0; i < nmixture; i++)
+    if (strcmp(id,mixture[i]->id) == 0) return i;
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   read list of species defined in species file
+   store info in filespecies and nfilespecies
+   only invoked by proc 0
+------------------------------------------------------------------------- */
+
+void Particle::read_species_file()
+{
+  nfilespecies = maxfilespecies = 0;
+  filespecies = NULL;
+
+  // read file line by line
+  // skip blank lines or comment lines starting with '#'
+  // all other lines must have NWORDS 
+
+  int NWORDS = 14;
+  char **words = new char*[NWORDS];
+  char line[MAXLINE],copy[MAXLINE];
+
+  while (fgets(line,MAXLINE,fp)) {
+    int pre = strspn(line," \t\n");
+    if (pre == strlen(line) || line[pre] == '#') continue;
+
+    strcpy(copy,line);
+    int nwords = wordcount(copy,NULL);
+    if (nwords != NWORDS)
+      error->one(FLERR,"Incorrect line format in species file");
+
+    if (nfilespecies == maxfilespecies) {
+      maxfilespecies += DELTASMALL;
+      filespecies = (Species *) 
+	memory->srealloc(filespecies,maxfilespecies*sizeof(Species),
+			 "particle:filespecies");
+    }
+
+    nwords = wordcount(line,words);
+    Species *fsp = &filespecies[nfilespecies];
+
+    int n = strlen(words[0]) + 1;
+    fsp->id = new char[n];
+    strcpy(fsp->id,words[0]);
+
+    fsp->molwt = atof(words[1]);
+    fsp->mass = atof(words[2]);
+    fsp->diam = atof(words[3]);
+    fsp->rotdof = atoi(words[4]);
+    fsp->rotrel = atoi(words[5]);
+    fsp->vibdof = atoi(words[6]);
+    fsp->vibrel = atoi(words[7]);
+    fsp->vibtemp = atof(words[8]);
+    fsp->specwt = atof(words[9]);
+    fsp->charge = atof(words[10]);
+    fsp->omega = atof(words[11]);
+    fsp->tref = atof(words[12]);
+    fsp->alpha = atof(words[13]);
+
+    nfilespecies++;
+  }
+
+  delete [] words;
+
+  fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
