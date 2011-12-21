@@ -410,6 +410,7 @@ int Input::execute_command()
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
 
+  else if (!strcmp(command,"boundary")) boundary();
   else if (!strcmp(command,"collisions")) collisions();
   else if (!strcmp(command,"dimension")) dimension();
   else if (!strcmp(command,"global")) global();
@@ -793,6 +794,13 @@ void Input::variable_command()
 /* ----------------------------------------------------------------------
    one function for each DSMC-specific input script command
 ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------- */
+
+void Input::boundary()
+{
+  domain->set_boundary(narg,arg);
+}
 
 /* ---------------------------------------------------------------------- */
 

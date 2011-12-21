@@ -24,6 +24,7 @@ using namespace DSMC_NS;
 
 enum{STRIDE,BLOCK,RANDOM};
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
+enum{PERIODIC,OUTFLOW,SPECULAR};            // same as in Domain
 
 /* ---------------------------------------------------------------------- */
 
@@ -105,6 +106,8 @@ void CreateGrid::command(int narg, char **arg)
   // box and grid cell geometry
 
   int dimension = domain->dimension;
+  int *bflag = domain->bflag;
+
   double xlo = domain->boxlo[0];
   double ylo = domain->boxlo[1];
   double zlo = domain->boxlo[2];
@@ -123,6 +126,7 @@ void CreateGrid::command(int narg, char **arg)
   double zdeltainv = nz / zprd;
 
   // build a regular Nx x Ny x Nz global grid
+  // neigh reflects either periodic or non-periodic BCs
   
   bigint ntotal = (bigint) nx * ny * nz;
   if (ntotal > MAXSMALLINT) 
@@ -153,12 +157,27 @@ void CreateGrid::command(int narg, char **arg)
 	neigh[4] = m - nx*ny;
 	neigh[5] = m + nx*ny;
 
-	if (i == 0) neigh[0] = -1;
-	if (i == nx-1) neigh[1] = -1;
-	if (j == 0) neigh[2] = -1;
-	if (j == ny-1) neigh[3] = -1;
-	if (k == 0) neigh[4] = -1;
-	if (k == nz-1) neigh[5] = -1;
+	if (i == 0) {
+	  if (bflag[0] == PERIODIC) neigh[0] += nx;
+	  else neigh[0] = -1;
+	} else if (i == nx-1) {
+	  if (bflag[1] == PERIODIC) neigh[1] -= nx;
+	  else neigh[1] = -1;
+	}
+	if (j == 0) {
+	  if (bflag[2] == PERIODIC) neigh[2] += ny;
+	  else neigh[2] = -1;
+	} else if (j == ny-1) {
+	  if (bflag[3] == PERIODIC) neigh[3] -= ny;
+	  else neigh[3] = -1;
+	}
+	if (k == 0) {
+	  if (bflag[4] == PERIODIC) neigh[4] += nz;
+	  else neigh[4] = -1;
+	} else if (k == nz-1) {
+	  if (bflag[5] == PERIODIC) neigh[5] -= nz;
+	  else neigh[5] = -1;
+	}
 
 	grid->add_cell(m+1,lo,hi,neigh);
 	m++;

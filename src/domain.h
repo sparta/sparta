@@ -28,11 +28,15 @@ class Domain : protected Pointers {
   double xprd,yprd,zprd;            // global box dimensions
   double prd[3];                    // array form of dimensions
 
+  int bflag[6];                     // boundary flags
+
   Domain(class DSMC *);
   ~Domain();
   void init() {}
   void set_initial_box();
   void set_global_box();
+  void set_boundary(int, char **);
+  int boundary(int, double *, double *, double *, double *);
   void print_box(const char *);
 };
 

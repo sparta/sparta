@@ -26,7 +26,7 @@
 
 using namespace DSMC_NS;
 
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as in Domain
 
 /* ---------------------------------------------------------------------- */
 
@@ -166,7 +166,7 @@ void Update::run(int nsteps)
 
 void Update::move()
 {
-  int icell,inface,outface;
+  int icell,inface,outface,outflag;
   double xnew[3];
   double *x,*v,*lo,*hi;
   int *neigh;
@@ -256,7 +256,7 @@ void Update::move()
 	}
       }
 
-      // particle is interior to cell
+      // particle stays interior to cell
 
       if (outface == INTERIOR) break;
 
@@ -273,32 +273,11 @@ void Update::move()
       else if (outface == ZLO) x[2] = lo[2];
       else if (outface == ZHI) x[2] = hi[2]; 
       
-      // assign new grid cell and new inface
-      // if particle crosses global boundary:
-      // reflect velocity and final position, remain in same cell
-      
-      if (neigh[outface] < 0) {
-	inface = outface;
-	if (outface == XLO) {
-	  xnew[0] = lo[0] + (lo[0]-xnew[0]);
-	  v[0] = -v[0];
-	} else if (outface == XHI) {
-	  xnew[0] = hi[0] - (xnew[0]-hi[0]);
-	  v[0] = -v[0];
-	} else if (outface == YLO) {
-	  xnew[1] = lo[1] + (lo[1]-xnew[1]);
-	  v[1] = -v[1];
-	} else if (outface == YHI) {
-	  xnew[1] = hi[1] - (xnew[1]-hi[1]);
-	  v[1] = -v[1];
-	} else if (outface == ZLO) {
-	  xnew[2] = lo[2] + (lo[2]-xnew[2]);
-	  v[2] = -v[2];
-	} else if (outface == ZHI) {
-	  xnew[2] = hi[2] - (xnew[2]-hi[2]);
-	  v[2] = -v[2];
-	}
-      } else {
+      // if cell has neighbor cell, move into that cell
+      // else enforce global boundary condition
+      // periodic BCs have a neighbor cell
+
+      if (neigh[outface] >= 0) {
 	icell = neigh[outface];
 	lo = cells[icell].lo;
 	hi = cells[icell].hi;
@@ -311,6 +290,10 @@ void Update::move()
 	else if (outface == ZLO) inface = ZHI;
 	else if (outface == ZHI) inface = ZLO;
 	count++;
+
+      } else {
+	outflag = domain->boundary(outface,x,v,lo,hi);
+	if (outflag) break;
       }
     }
 

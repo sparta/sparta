@@ -12,11 +12,15 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "string.h"
 #include "domain.h"
 #include "comm.h"
 #include "error.h"
 
 using namespace DSMC_NS;
+
+enum{PERIODIC,OUTFLOW,SPECULAR};
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as in Update
 
 /* ---------------------------------------------------------------------- */
 
@@ -24,6 +28,8 @@ Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
 {
   box_exist = 0;
   dimension = 3;
+
+  bflag[0] = bflag[1] = bflag[2] = bflag[3] = bflag[4] = bflag[5] = PERIODIC;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -51,6 +57,75 @@ void Domain::set_global_box()
   prd[0] = xprd = boxhi[0] - boxlo[0];
   prd[1] = yprd = boxhi[1] - boxlo[1];
   prd[2] = zprd = boxhi[2] - boxlo[2];
+}
+
+/* ----------------------------------------------------------------------
+   boundary settings from the input script 
+------------------------------------------------------------------------- */
+
+void Domain::set_boundary(int narg, char **arg)
+{
+  if (narg != 3) error->all(FLERR,"Illegal boundary command");
+
+  char c;
+  int m = 0;
+  for (int idim = 0; idim < 3; idim++)
+    for (int iside = 0; iside < 2; iside++) {
+      if (iside == 0) c = arg[idim][0];
+      else if (iside == 1 && strlen(arg[idim]) == 1) c = arg[idim][0];
+      else c = arg[idim][1];
+
+      if (c == 'o') bflag[m] = OUTFLOW;
+      else if (c == 'p') bflag[m] = PERIODIC;
+      else if (c == 's') bflag[m] = SPECULAR;
+      else error->all(FLERR,"Illegal boundary command");
+
+      m++;
+    }
+
+  for (m = 0; m < 6; m += 2)
+    if (bflag[m] == PERIODIC || bflag[m+1] == PERIODIC) {
+      if (bflag[m] != PERIODIC || bflag[m+1] != PERIODIC)
+	error->all(FLERR,"Both sides of boundary must be periodic");
+    }
+}
+
+/* ----------------------------------------------------------------------
+   particle hits global boundary
+   called by Update::move()
+   periodic case is handled in Update::move() as moving into neighbor cell
+   return 1 if OUTFLOW and particle is lost
+------------------------------------------------------------------------- */
+
+int Domain::boundary(int face, double *x, double *v, double *lo, double *hi)
+{
+  // tally stats?
+
+  if (bflag[face] == OUTFLOW) return 1;
+
+  // reflect velocity and final position
+
+  if (face == XLO) {
+    x[0] = lo[0] + (lo[0]-x[0]);
+    v[0] = -v[0];
+  } else if (face == XHI) {
+    x[0] = hi[0] - (x[0]-hi[0]);
+    v[0] = -v[0];
+  } else if (face == YLO) {
+    x[1] = lo[1] + (lo[1]-x[1]);
+    v[1] = -v[1];
+  } else if (face == YHI) {
+    x[1] = hi[1] - (x[1]-hi[1]);
+    v[1] = -v[1];
+  } else if (face == ZLO) {
+    x[2] = lo[2] + (lo[2]-x[2]);
+    v[2] = -v[2];
+  } else if (face == ZHI) {
+    x[2] = hi[2] - (x[2]-hi[2]);
+    v[2] = -v[2];
+  }
+  
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
