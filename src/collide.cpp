@@ -109,10 +109,7 @@ void Collide::collisions()
   int nspecies = particle->nspecies;
 
 
-
-
   return;
-
 
 
   // loop over cells I own
@@ -122,7 +119,7 @@ void Collide::collisions()
 
     icell = mycells[m];
     volume = cells[icell].volume;
-    np = cellcount[m];;
+    np = cellcount[m];
     ip = first[m];
 
     // setup per-species particle lists for this cell

@@ -292,7 +292,7 @@ void Update::move()
 	count++;
 
       } else {
-	outflag = domain->boundary(outface,x,v,lo,hi);
+	outflag = domain->boundary(outface,xnew,v,lo,hi);
 	if (outflag) break;
       }
     }
