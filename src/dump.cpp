@@ -61,6 +61,7 @@ Dump::Dump(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
   padflag = 0;
 
   maxbuf = 0;
+  buf = NULL;
 
   // parse filename for special syntax
   // if contains '%', write one file per proc and replace % with proc-ID

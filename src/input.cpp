@@ -31,6 +31,7 @@
 #include "collide.h"
 #include "output.h"
 #include "stats.h"
+#include "dump.h"
 #include "math_extra.h"
 #include "error.h"
 #include "memory.h"
@@ -415,6 +416,8 @@ int Input::execute_command()
   else if (!strcmp(command,"boundary")) boundary();
   else if (!strcmp(command,"collisions")) collisions();
   else if (!strcmp(command,"dimension")) dimension();
+  else if (!strcmp(command,"dump")) dump();
+  else if (!strcmp(command,"dump_modify")) dump_modify();
   else if (!strcmp(command,"global")) global();
   else if (!strcmp(command,"mixture")) mixture();
   else if (!strcmp(command,"species")) species();
@@ -422,6 +425,7 @@ int Input::execute_command()
   else if (!strcmp(command,"stats_modify")) stats_modify();
   else if (!strcmp(command,"stats_style")) stats_style();
   else if (!strcmp(command,"timestep")) timestep();
+  else if (!strcmp(command,"undump")) undump();
 
   else flag = 0;
 
@@ -842,6 +846,20 @@ void Input::dimension()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::dump()
+{
+  output->add_dump(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::dump_modify()
+{
+  output->modify_dump(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::global()
 {
   update->global(narg,arg);
@@ -893,4 +911,12 @@ void Input::timestep()
   double dt = atof(arg[0]);
   if (dt <= 0.0) error->all(FLERR,"Illegal timestep command");
   update->dt = dt;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::undump()
+{
+  if (narg != 1) error->all(FLERR,"Illegal undump command");
+  output->delete_dump(arg[0]);
 }

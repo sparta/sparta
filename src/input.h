@@ -68,6 +68,8 @@ class Input : protected Pointers {
   void boundary();
   void collisions();
   void dimension();
+  void dump();
+  void dump_modify();
   void global();
   void mixture();
   void species();
@@ -75,6 +77,7 @@ class Input : protected Pointers {
   void stats_modify();
   void stats_style();
   void timestep();
+  void undump();
 };
 
 }
