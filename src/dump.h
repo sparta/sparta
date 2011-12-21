@@ -24,10 +24,8 @@ class Dump : protected Pointers {
  public:
   char *id;                  // user-defined name of Dump
   char *style;               // style of Dump
-  int igroup,groupbit;       // group that Dump is performed on
 
   int first_flag;            // 0 if no initial dump, 1 if yes initial dump
-  int clearstep;             // 1 if dump invokes computes, 0 if not
 
   int comm_forward;          // size of forward communication (0 if none)
   int comm_reverse;          // size of reverse communication (0 if none)
@@ -40,12 +38,6 @@ class Dump : protected Pointers {
   virtual ~Dump();
   void init();
   virtual void write();
-
-  virtual int pack_comm(int, int *, double *, int, int *) {return 0;}
-  virtual void unpack_comm(int, int, double *) {}
-  virtual int pack_reverse_comm(int, int, double *) {return 0;}
-  virtual void unpack_reverse_comm(int, int *, double *) {}
-
   void modify_params(int, char **);
   virtual bigint memory_usage();
 
@@ -60,57 +52,34 @@ class Dump : protected Pointers {
 
   int header_flag;           // 0 = item, 2 = xyz
   int flush_flag;            // 0 if no flush, 1 if flush every dump
-  int sort_flag;             // 1 if sorted output
   int append_flag;           // 1 if open file in append mode, 0 if not
   int padflag;               // timestep padding in filename
   int singlefile_opened;     // 1 = one big file, already opened, else 0
-  int sortcol;               // 0 to sort on ID, 1-N on columns
-  int sortcolm1;             // sortcol - 1
-  int sortorder;             // ASCEND or DESCEND
 
   char boundstr[9];          // encoding of boundary flags
   char *format_default;      // default format string
   char *format_user;         // format string set by user
   char *format;              // format string for the file write
   FILE *fp;                  // file to write dump to
-  int size_one;              // # of quantities for one atom
-  int nme;                   // # of atoms in this dump from me
+  int size_one;              // # of quantities for one particle
+  int nme;                   // # of particles in this dump from me
 
   double boxxlo,boxxhi;      // local copies of domain values
-  double boxylo,boxyhi;      // lo/hi are bounding box for triclinic
+  double boxylo,boxyhi;
   double boxzlo,boxzhi;
-  double boxxy,boxxz,boxyz;
 
   bigint ntotal;             // # of per-atom lines in snapshot
-  int reorderflag;           // 1 if OK to reorder instead of sort
-  int ntotal_reorder;        // # of atoms that must be in snapshot
-  int nme_reorder;           // # of atoms I must own in snapshot
-  int idlo;                  // lowest ID I own when reordering
 
   int maxbuf;                // size of buf
   double *buf;               // memory for atom quantities
-
-  int maxids;                // size of ids
-  int maxsort;               // size of bufsort, idsort, index
-  int maxproc;               // size of proclist
-  int *ids;                  // list of atom IDs, if sorting on IDs
-  double *bufsort;
-  int *idsort,*index,*proclist;
-
-  class Irregular *irregular;
 
   virtual void init_style() = 0;
   virtual void openfile();
   virtual int modify_param(int, char **) {return 0;}
   virtual void write_header(bigint) = 0;
   virtual int count() = 0;
-  virtual void pack(int *) = 0;
+  virtual void pack() = 0;
   virtual void write_data(int, double *) = 0;
-
-  void sort();
-  static int idcompare(const void *, const void *);
-  static int bufcompare(const void *, const void *);
-  static int bufcompare_reverse(const void *, const void *);
 };
 
 }
