@@ -254,7 +254,6 @@ in the command's documentation.
 "suffix"_suffix.html,
 "species"_species.html,
 "timestep"_timestep.html,
-"variable"_variable.html,
-"velocity"_velocity.html :tb(c=6,ea=c)
+"variable"_variable.html :tb(c=6,ea=c)
 
 :line
