@@ -36,7 +36,7 @@ class Domain : protected Pointers {
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);
-  int boundary(int, double *, double *, double *, double *);
+  int boundary(int, int &, double *, double *, double *);
   void print_box(const char *);
 };
 

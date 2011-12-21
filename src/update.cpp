@@ -27,6 +27,7 @@
 using namespace DSMC_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as in Domain
+enum{PERIODIC,OUTFLOW,SPECULAR};              // same as in Domain
 
 /* ---------------------------------------------------------------------- */
 
@@ -275,15 +276,16 @@ void Update::move()
       else if (outface == ZHI) x[2] = hi[2]; 
       
       // if cell has neighbor cell, move into that cell
-      // else enforce global boundary condition
-      // periodic BCs have a neighbor cell
+      // else enforce global boundary conditions
 
       if (neigh[outface] >= 0) {
 	icell = neigh[outface];
 	lo = cells[icell].lo;
 	hi = cells[icell].hi;
 	neigh = cells[icell].neigh;
-	
+
+	// NOTE: should store faceflip[6]
+
 	if (outface == XLO) inface = XHI;
 	else if (outface == XHI) inface = XLO;
 	else if (outface == YLO) inface = YHI;
@@ -293,19 +295,35 @@ void Update::move()
 	count++;
 
       } else {
-	outflag = domain->boundary(outface,xnew,v,lo,hi);
-	if (outflag) break;
+        outflag = domain->boundary(outface,icell,x,xnew,v);
+	if (outflag == OUTFLOW) break;
+	else if (outflag == SPECULAR) inface = outface;
+	else if (outflag == PERIODIC) {
+	  lo = cells[icell].lo;
+	  hi = cells[icell].hi;
+	  neigh = cells[icell].neigh;
+
+	  if (outface == XLO) inface = XHI;
+	  else if (outface == XHI) inface = XLO;
+	  else if (outface == YLO) inface = YHI;
+	  else if (outface == YHI) inface = YLO;
+	  else if (outface == ZLO) inface = ZHI;
+	  else if (outface == ZHI) inface = ZLO;
+	  count++;
+	}
       }
     }
 
-    // update final particle position and assign to new grid cell
-    // add to migrate list if I don't own new cell
+    // update final particle position
+    // if OUTFLOW particle, set icell to -1 and add to migrate list,
+    //   which will delete it
+    // else reset icell and add to migrate list if I don't own new cell
 
     x[0] = xnew[0];
     x[1] = xnew[1];
     x[2] = xnew[2];
 
-    if (outflag) {
+    if (outflag == OUTFLOW) {
       particles[i].icell = -1;
       mlist[nmigrate++] = i;
     } else {

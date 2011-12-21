@@ -14,12 +14,13 @@
 
 #include "string.h"
 #include "domain.h"
+#include "grid.h"
 #include "comm.h"
 #include "error.h"
 
 using namespace DSMC_NS;
 
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as in CreateGrid
+enum{PERIODIC,OUTFLOW,SPECULAR};            // same as in CreateGrid, Update
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as in Update
 
 /* ---------------------------------------------------------------------- */
@@ -97,35 +98,77 @@ void Domain::set_boundary(int narg, char **arg)
    return 1 if OUTFLOW and particle is lost
 ------------------------------------------------------------------------- */
 
-int Domain::boundary(int face, double *x, double *v, double *lo, double *hi)
+int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v) 
 {
   // tally stats?
 
-  if (bflag[face] == OUTFLOW) return 1;
+  // outflow boundary, particle will be deleted if return 1
 
-  // reflect velocity and final position
+  if (bflag[face] == OUTFLOW) return OUTFLOW;
 
-  if (face == XLO) {
-    x[0] = lo[0] + (lo[0]-x[0]);
-    v[0] = -v[0];
-  } else if (face == XHI) {
-    x[0] = hi[0] - (x[0]-hi[0]);
-    v[0] = -v[0];
-  } else if (face == YLO) {
-    x[1] = lo[1] + (lo[1]-x[1]);
-    v[1] = -v[1];
-  } else if (face == YHI) {
-    x[1] = hi[1] - (x[1]-hi[1]);
-    v[1] = -v[1];
-  } else if (face == ZLO) {
-    x[2] = lo[2] + (lo[2]-x[2]);
-    v[2] = -v[2];
-  } else if (face == ZHI) {
-    x[2] = hi[2] - (x[2]-hi[2]);
-    v[2] = -v[2];
+  // periodic boundary
+  // adjust x and xnew by periodic box length
+  // assign new icell on other side of box
+
+  if (bflag[face] == PERIODIC) {
+    if (face == XLO) {
+      x[0] += xprd;
+      xnew[0] += xprd;
+      icell += grid->nx - 1;
+    } else if (face == XHI) {
+      x[0] -= xprd;
+      xnew[0] -= xprd;
+      icell -= grid->nx - 1;
+    } else if (face == YLO) {
+      x[1] += yprd;
+      xnew[1] += yprd;
+      icell += (grid->ny-1) * grid->nx;
+    } else if (face == YHI) {
+      x[1] -= yprd;
+      xnew[1] -= yprd;
+      icell -= (grid->ny-1) * grid->nx;
+    } else if (face == ZLO) {
+      x[2] += zprd;
+      xnew[2] += zprd;
+      icell += (grid->nz-1) * grid->ny * grid->nx;
+    } else if (face == ZHI) {
+      x[2] -= zprd;
+      xnew[2] -= zprd;
+      icell -= (grid->nz-1) * grid->ny * grid->nx;
+    }
+
+    return PERIODIC;
   }
-  
-  return 0;
+
+  // specular reflection boundary
+  // adjust xnew and velocity
+
+  if (bflag[face] == SPECULAR) {
+    double *lo = grid->cells[icell].lo;
+    double *hi = grid->cells[icell].hi;
+
+    if (face == XLO) {
+      xnew[0] = lo[0] + (lo[0]-xnew[0]);
+      v[0] = -v[0];
+    } else if (face == XHI) {
+      xnew[0] = hi[0] - (xnew[0]-hi[0]);
+      v[0] = -v[0];
+    } else if (face == YLO) {
+      xnew[1] = lo[1] + (lo[1]-xnew[1]);
+      v[1] = -v[1];
+    } else if (face == YHI) {
+      xnew[1] = hi[1] - (xnew[1]-hi[1]);
+      v[1] = -v[1];
+    } else if (face == ZLO) {
+      xnew[2] = lo[2] + (lo[2]-xnew[2]);
+      v[2] = -v[2];
+    } else if (face == ZHI) {
+      xnew[2] = hi[2] - (xnew[2]-hi[2]);
+      v[2] = -v[2];
+    }
+
+    return SPECULAR;
+  }
 }
 
 /* ----------------------------------------------------------------------
