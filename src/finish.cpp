@@ -61,6 +61,11 @@ void Finish::end()
     time_loop = tmp/nprocs;
   }
 
+  // recalculate nglobal
+
+  bigint n = particle->nlocal;
+  MPI_Allreduce(&n,&particle->nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+
   // overall loop time
 
   if (me == 0) {

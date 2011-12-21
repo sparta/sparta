@@ -165,17 +165,17 @@ void CreateGrid::command(int narg, char **arg)
 	  else neigh[1] = -1;
 	}
 	if (j == 0) {
-	  if (bflag[2] == PERIODIC) neigh[2] += ny;
+	  if (bflag[2] == PERIODIC) neigh[2] += ny*nx;
 	  else neigh[2] = -1;
 	} else if (j == ny-1) {
-	  if (bflag[3] == PERIODIC) neigh[3] -= ny;
+	  if (bflag[3] == PERIODIC) neigh[3] -= ny*nx;
 	  else neigh[3] = -1;
 	}
 	if (k == 0) {
-	  if (bflag[4] == PERIODIC) neigh[4] += nz;
+	  if (bflag[4] == PERIODIC) neigh[4] += nz*ny*nx;
 	  else neigh[4] = -1;
 	} else if (k == nz-1) {
-	  if (bflag[5] == PERIODIC) neigh[5] -= nz;
+	  if (bflag[5] == PERIODIC) neigh[5] -= nz*ny*nx;
 	  else neigh[5] = -1;
 	}
 

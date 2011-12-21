@@ -206,9 +206,10 @@ void Update::move()
     hi = cells[icell].hi;
     neigh = cells[icell].neigh;
     inface = INTERIOR;
+    outflag = 0;
     count++;
 
-    // advect particle from cell to cell until the move is done
+    // advect particle from cell to cell until single-step move is done
 
     while (1) {
 
@@ -303,8 +304,14 @@ void Update::move()
     x[0] = xnew[0];
     x[1] = xnew[1];
     x[2] = xnew[2];
-    particles[i].icell = icell;
-    if (cells[icell].proc != me) mlist[nmigrate++] = i;
+
+    if (outflag) {
+      particles[i].icell = -1;
+      mlist[nmigrate++] = i;
+    } else {
+      particles[i].icell = icell;
+      if (cells[icell].proc != me) mlist[nmigrate++] = i;
+    }
   }
 
   nmove += nlocal;

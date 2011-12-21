@@ -75,11 +75,15 @@ void Comm::migrate(int nmigrate, int *mlist)
 
   // fill proclist with procs to send to
   // pack sbuf with particles to migrate
+  // if icell < 0, particle is deleted but not sent
+  // nsend = particles that actually migrate
 
+  int nsend = 0;
   int offset = 0;
   for (i = 0; i < nmigrate; i++) {
     j = mlist[i];
-    proclist[i] = cells[particles[j].icell].proc;
+    if (particles[j].icell < 0) continue;
+    proclist[nsend++] = cells[particles[j].icell].proc;
     memcpy(&sbuf[offset],&particles[j],nbytes);
     offset += nbytes;
   }
@@ -91,9 +95,7 @@ void Comm::migrate(int nmigrate, int *mlist)
   // create irregular communication plan, perform comm, destroy plan
   // returned nrecv = size of buffer needed for incoming atoms
 
-  // create irregular communication plan
-
-  int nrecv = irregular->create(nmigrate,proclist);
+  int nrecv = irregular->create(nsend,proclist);
 
   // extend particle list if necessary
 
@@ -105,5 +107,5 @@ void Comm::migrate(int nmigrate, int *mlist)
 		      (char *) &particle->particles[particle->nlocal]);
   particle->nlocal += nrecv;
 
-  ncomm += nmigrate;
+  ncomm += nsend;
 }

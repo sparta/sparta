@@ -148,8 +148,6 @@ void CreateParticles::create_local(bigint n)
   nstop = n * vols[me]/vols[nprocs-1];
   bigint nme = nstop-nstart;
 
-  printf("AAA %d %ld %ld %ld: %g %d\n",me,nme,nstart,nstop,volme,nglocal);
-
   memory->destroy(vols);
 
   // loop over cells I own
