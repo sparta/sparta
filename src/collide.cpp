@@ -112,8 +112,10 @@ void Collide::collisions()
   return;
 
 
+  /*
   // loop over cells I own
   // NOTE: this is the NTC algorithm, could do simpler TC instead
+  // NTC pre-computes attempts, TC increments time until limit of timestep
 
   for (int m = 0; m < nglocal; m++) {
 
@@ -145,14 +147,68 @@ void Collide::collisions()
 	//nattempt = attempt_collision(icell,isp,jsp,volume);
 
 
+	const1 = PI * pow(2.0*(2.0-OMEGA)*BOLTZMANN*T_REF,OMEGA);
+	const2  = 0.5 * simulation_ratio2 * const1;
 
+	current = # of mols in group;
+	averate = current-1;
+	weighted_volume = vol of 3d cell;
+	weighted_volume = area of 2d cell (unit lenght in 3d);
+        B[isp][jsp] = ;
+        vre_max_array[icell][isp][jsp] = max rel velocity;
+        (rezeroed eveny N timesteps, never in steady-state)
+	(init to 
 
+     nattempt = const2 * dt * Current_PNmols * average_QNmols * 
+       B[P_idx][Q_idx] *vre_max_array[ensemble_idx][P_idx][Q_idx] /
+       weighted_volume;
 
+     // set B (VSS specific)
+     // OMEGA = ave of OMEGA_i and OMEGA_j
+
+     for(i=0;i < nspecies;++i)
+       {
+	 diam_i = SPECIES_Diameter(i);
+      mass_i = SPECIES_Mass(i);
+
+      for(j=0;j < nspecies;++j)
+      {
+          diam_j = SPECIES_Diameter(j);
+          mass_j = SPECIES_Mass(j);
+
+          diam_av = (diam_i + diam_j) / 2.0;
+          mr      = mass_i * (mass_j / (mass_i + mass_j));
+     
+          B[i][j] = diam_av * diam_av / pow(mr,OMEGA);
+      }
+   }
+
+	 // initial vre_max, should be species dependent
+
+   vr_indice = 1.0 - 2.0 * OMEGA ;
+          
+   max_thermal_velocity = 5.0/beta;
+
+   vrm = pow(max_thermal_velocity,vr_indice);
+
+   for(i=0;i< nensembles;++i)
+   {
+       for(j=0;j < nspecies;++j)
+       {
+           for(k=0;k < nspecies;++k)
+           {
+               vre_max_array[i][j][k] = vrm;
+           }
+       }
+   }
 
 	// species is off by 1 to Ntypes
 	//if (nsp[0]
 
+	 // convert Nattempt into integer Nattempt with RN
 
+
+	 // pick I,J pair to collide, insure I != J
 
 
 	nattempt = 10;
@@ -190,11 +246,17 @@ void Collide::collisions()
 	// kpart = NULL means no new particle
         // NOTE: worry about created kpart when add chemistry
 
+	// test collide resets vre_max whether collision happens or not
+
 	if (!test_collision(icell,isp,jsp,ipart,jpart)) continue;
+
 	setup_collision(ipart,jpart);
 	kpart = perform_collision(ipart,jpart);
 	ncollision++;
       }
     }
   }
+
+  */
+
 }

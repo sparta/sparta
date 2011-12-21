@@ -20,6 +20,7 @@
 #include "domain.h"
 #include "collide.h"
 #include "comm.h"
+#include "output.h"
 #include "timer.h"
 #include "memory.h"
 #include "error.h"
@@ -110,19 +111,14 @@ void Update::setup()
 
   nmove = 0;
   ncellcross = 0;
+
+  output->setup(1);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void Update::run(int nsteps)
 {
-  if (comm->me == 0) {
-    if (screen)
-      fprintf(screen,"Performing run ...\n");
-    if (logfile)
-      fprintf(logfile,"Performing run ...\n");
-  }
-
   // loop over timesteps
 
   for (int i = 0; i < nsteps; i++) {
@@ -153,7 +149,13 @@ void Update::run(int nsteps)
       timer->stamp(TIME_COLLIDE);
     }
 
-    // output
+    // all output
+
+    if (ntimestep == output->next) {
+      timer->stamp();
+      output->write(ntimestep);
+      timer->stamp(TIME_OUTPUT);
+    }
 
     // sanity check on particles in correct cells
 

@@ -39,13 +39,13 @@ if (test $1 = "style") then
 
   style COMMAND_CLASS   ""          command    input
   style COLLIDE_CLASS   collide_    collide    input
+  style DUMP_CLASS      dump_       dump       output
 
   #style ANGLE_CLASS     angle_      angle      force
   #style ATOM_CLASS      atom_vec_   atom       atom
   #style BOND_CLASS      bond_       bond       force
   #style COMPUTE_CLASS   compute_    compute    modify
   #style DIHEDRAL_CLASS  dihedral_   dihedral   force
-  #style DUMP_CLASS      dump_       dump       output
   #style FIX_CLASS       fix_        fix        modify
   #style IMPROPER_CLASS  improper_   improper   force
   #style INTEGRATE_CLASS ""          integrate  update

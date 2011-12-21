@@ -71,6 +71,9 @@ class Input : protected Pointers {
   void global();
   void mixture();
   void species();
+  void stats();
+  void stats_modify();
+  void stats_style();
   void timestep();
 };
 

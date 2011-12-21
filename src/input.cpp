@@ -29,6 +29,8 @@
 #include "particle.h"
 #include "update.h"
 #include "collide.h"
+#include "output.h"
+#include "stats.h"
 #include "math_extra.h"
 #include "error.h"
 #include "memory.h"
@@ -416,6 +418,9 @@ int Input::execute_command()
   else if (!strcmp(command,"global")) global();
   else if (!strcmp(command,"mixture")) mixture();
   else if (!strcmp(command,"species")) species();
+  else if (!strcmp(command,"stats")) stats();
+  else if (!strcmp(command,"stats_modify")) stats_modify();
+  else if (!strcmp(command,"stats_style")) stats_style();
   else if (!strcmp(command,"timestep")) timestep();
 
   else flag = 0;
@@ -854,6 +859,30 @@ void Input::mixture()
 void Input::species()
 {
   particle->add_species(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::stats()
+{
+  if (narg != 1) error->all(FLERR,"Illegal stats command");
+  int n = atoi(arg[0]);
+  if (n < 0) error->all(FLERR,"Illegal stats command");
+  output->stats_every = n;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::stats_modify()
+{
+  output->stats->modify_params(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::stats_style()
+{
+  output->create_stats(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */
