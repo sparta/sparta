@@ -236,6 +236,8 @@ in the command's documentation.
 "create_box"_create_box.html,
 "create_grid"_create_grid.html,
 "dimension"_dimension.html,
+"dump"_dump.html,
+"dump_modify"_dump_modify.html,
 "echo"_echo.html,
 "global"_global.html,
 "if"_if.html,
@@ -257,6 +259,7 @@ in the command's documentation.
 "stats_modify"_modify.html,
 "stats_style"_stats_style.html,
 "timestep"_timestep.html,
+"undump"_undump.html,
 "variable"_variable.html :tb(c=6,ea=c)
 
 :line
