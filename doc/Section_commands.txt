@@ -253,6 +253,9 @@ in the command's documentation.
 "shell"_shell.html,
 "suffix"_suffix.html,
 "species"_species.html,
+"stats"_stats.html,
+"stats_modify"_modify.html,
+"stats_style"_stats_style.html,
 "timestep"_timestep.html,
 "variable"_variable.html :tb(c=6,ea=c)
 

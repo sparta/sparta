@@ -1,0 +1,84 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>stats_style command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>stats_style arg1 arg2 ... 
+</PRE>
+<UL><LI>arg1,arg2,... = list of statistical attributes 
+
+<P>  possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
+                        npart, temp, 
+                        vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
+</P>
+<PRE>      step = timestep
+      elapsed = timesteps since start of this run
+      dt = timestep size
+      cpu = elapsed CPU time in seconds
+      tpcpu = time per CPU second
+      spcpu = timesteps per CPU second
+      npart = # of particles
+      temp = temperature
+      vol = volume of simulation box
+      lx,ly,lz = simulation box lengths
+      xlo,xhi,ylo,yhi,zlo,zhi = box boundaries 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>stats_style step cpu npart temp
+stats_style step temp cpu spcpu npart xlo xhi 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set the content of statistical data printed to the screen and log
+file.
+</P>
+<P>The values printed by the various keywords are instantaneous values,
+calculated on the current timestep.
+</P>
+<P>Options invoked by the <A HREF = "thermo_modify.html">stats_modify</A> command can
+be used to set the numeric precision of each printed value, as well as
+other attributes of the statistics.
+</P>
+<HR>
+
+<P>The <I>step</I> and <I>elapsed</I> keywords refer to timestep count.  <I>Step</I> is
+the current timestep, or iteration count when a
+<A HREF = "minimize.html">minimization</A> is being performed.  <I>Elapsed</I> is the
+number of timesteps elapsed since the beginning of this run.
+</P>
+<P>The <I>cpu</I> keyword is elapsed CPU seconds since the beginning of this
+run.  The <I>tpcpu</I> and <I>spcpu</I> keywords are measures of how fast your
+simulation is currently running.  The <I>tpcpu</I> keyword is simulation
+time per CPU second, where simulation time is in time
+<A HREF = "units.html">units</A>.  The <I>spcpu</I> keyword is the number of timesteps
+per CPU second.  Both quantities are on-the-fly metrics, measured
+relative to the last time they were invoked.  Thus if you are printing
+out statistical output every 100 timesteps, the two keywords will
+continually output the time and timestep rate for the last 100 steps.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "stats.html">stats</A>, <A HREF = "stats_modify.html">stats_modify</A>
+</P>
+<P><B>Default:</B>
+</P>
+<PRE>stats_style step cpu npart temp 
+</PRE>
+</HTML>

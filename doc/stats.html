@@ -1,0 +1,49 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>stats command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>stats N 
+</PRE>
+<UL><LI>N = output statistics every N timesteps 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>stats 100 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Compute and print statistical info (e.g. particle count, temperature)
+on timesteps that are a multiple of N and at the beginning and end of
+a simulation.  A value of 0 will only print statistics at the
+beginning and end.
+</P>
+<P>The content and format of what is printed is controlled by the
+<A HREF = "stats_style.html">stats_style</A> and <A HREF = "stats_modify.html">stats_modify</A>
+commands.
+</P>
+<P>The timesteps on which statistical output is written can also be
+controlled by a <A HREF = "variable.html">variable</A>.  See the <A HREF = "stats_modify.html">stats_modify
+every</A> command.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "stats_style.html">stats_style</A>, <A HREF = "stats_modify.html">stats_modify</A>
+</P>
+<P><B>Default:</B>
+</P>
+<PRE>stats 0 
+</PRE>
+</HTML>

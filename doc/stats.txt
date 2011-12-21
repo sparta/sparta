@@ -1,0 +1,44 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+stats command :h3
+
+[Syntax:]
+
+stats N :pre
+
+N = output statistics every N timesteps :ul
+
+[Examples:]
+
+stats 100 :pre
+
+[Description:]
+
+Compute and print statistical info (e.g. particle count, temperature)
+on timesteps that are a multiple of N and at the beginning and end of
+a simulation.  A value of 0 will only print statistics at the
+beginning and end.
+
+The content and format of what is printed is controlled by the
+"stats_style"_stats_style.html and "stats_modify"_stats_modify.html
+commands.
+
+The timesteps on which statistical output is written can also be
+controlled by a "variable"_variable.html.  See the "stats_modify
+every"_stats_modify.html command.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"stats_style"_stats_style.html, "stats_modify"_stats_modify.html
+
+[Default:]
+
+stats 0 :pre

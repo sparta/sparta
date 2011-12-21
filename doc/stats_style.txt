@@ -1,0 +1,77 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+stats_style command :h3
+
+[Syntax:]
+
+stats_style arg1 arg2 ... :pre
+
+arg1,arg2,... = list of statistical attributes :ulb,l
+  possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
+                        npart, temp, 
+                        vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
+
+      step = timestep
+      elapsed = timesteps since start of this run
+      dt = timestep size
+      cpu = elapsed CPU time in seconds
+      tpcpu = time per CPU second
+      spcpu = timesteps per CPU second
+      npart = # of particles
+      temp = temperature
+      vol = volume of simulation box
+      lx,ly,lz = simulation box lengths
+      xlo,xhi,ylo,yhi,zlo,zhi = box boundaries :pre
+:ule
+
+[Examples:]
+
+stats_style step cpu npart temp
+stats_style step temp cpu spcpu npart xlo xhi :pre
+
+[Description:]
+
+Set the content of statistical data printed to the screen and log
+file.
+
+The values printed by the various keywords are instantaneous values,
+calculated on the current timestep.
+
+Options invoked by the "stats_modify"_thermo_modify.html command can
+be used to set the numeric precision of each printed value, as well as
+other attributes of the statistics.
+
+:line
+
+The {step} and {elapsed} keywords refer to timestep count.  {Step} is
+the current timestep, or iteration count when a
+"minimization"_minimize.html is being performed.  {Elapsed} is the
+number of timesteps elapsed since the beginning of this run.
+
+The {cpu} keyword is elapsed CPU seconds since the beginning of this
+run.  The {tpcpu} and {spcpu} keywords are measures of how fast your
+simulation is currently running.  The {tpcpu} keyword is simulation
+time per CPU second, where simulation time is in time
+"units"_units.html.  The {spcpu} keyword is the number of timesteps
+per CPU second.  Both quantities are on-the-fly metrics, measured
+relative to the last time they were invoked.  Thus if you are printing
+out statistical output every 100 timesteps, the two keywords will
+continually output the time and timestep rate for the last 100 steps.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"stats"_stats.html, "stats_modify"_stats_modify.html
+
+[Default:]
+
+stats_style step cpu npart temp :pre
