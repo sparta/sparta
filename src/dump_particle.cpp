@@ -74,6 +74,11 @@ DumpParticle::DumpParticle(DSMC *dsmc, int narg, char **arg) :
   dchoose = NULL;
   clist = NULL;
 
+  // element names
+
+  ntypes = particle->nspecies;
+  typenames = NULL;
+
   // setup format strings
 
   vformat = new char*[size_one];
@@ -116,6 +121,11 @@ DumpParticle::~DumpParticle()
   memory->destroy(choose);
   memory->destroy(dchoose);
   memory->destroy(clist);
+
+  if (typenames) {
+    for (int i = 1; i <= ntypes; i++) delete [] typenames[i];
+    delete [] typenames;
+  }
 
   for (int i = 0; i < size_one; i++) delete [] vformat[i];
   delete [] vformat;
