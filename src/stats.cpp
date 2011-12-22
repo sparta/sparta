@@ -21,6 +21,7 @@
 #include "update.h"
 #include "particle.h"
 #include "domain.h"
+#include "output.h"
 #include "timer.h"
 #include "memory.h"
 #include "error.h"
@@ -231,7 +232,7 @@ void Stats::modify_params(int narg, char **arg)
 	strcpy(format_float_user,arg[iarg+2]);
       } else {
 	int i = atoi(arg[iarg+1]) - 1;
-	if (i < 0 || i >= nfield_initial)
+	if (i < 0 || i >= nfield)
 	  error->all(FLERR,"Illegal stats_modify command");
 	if (format_user[i]) delete [] format_user[i];
 	int n = strlen(arg[iarg+2]) + 1;
