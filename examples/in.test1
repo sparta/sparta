@@ -5,15 +5,21 @@
 
 dimension   	    3
 
-create_box  	    0 1 0 1 0 1
-create_grid 	    100 100 100
-create_particles    1000000 12345 #loop local
+boundary	    o o o
+create_box  	    0 100 0 100 0 100
+create_grid 	    10 10 10
+#create_grid 	    100 100 100
 
-velocity 	    create 0.01 49892
+species		    ../data/vss.data N O
+mixture		    air N O
 
-species		    ../data/vss.data air N+ e
-collisions	    vss
+create_particles    air 12345 n 100000
 
-timestep 	    1.0
+#collisions	    vss
 
+timestep 	    0.0001
+
+dump		    1 particle 10 tmp.dump id type x y z
+
+stats		    10
 run 		    100
