@@ -42,12 +42,6 @@ keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {b
     entry = color (for sequential style)
       color = name of color used for a bin of values
   {append} arg = {yes} or {no}
-  {bcolor} args = type color
-    type = bond type or range of types (see below)
-    color = name of color or color1/color2/...
-  {bdiam} args = type diam
-    type = bond type or range of types (see below)
-    diam = diameter of bonds of that type (distance units)
   {backcolor} arg = color
     color = name of color for background
   {boxcolor} arg = color
@@ -241,43 +235,6 @@ command is used after the "dump"_dump.html command, but before the
 first command that causes dump snapshots to be output, e.g. a
 "run"_run.html command.  Once the dump file has been opened, this
 keyword has no further effect.
-
-:line
-
-The {bcolor} keyword applies only to the dump {image} style.  It can
-be used with the "dump image"_dump_image.html command, with its {bond}
-keyword, when its color setting is {type}, to set the color that bonds
-of each type will be drawn in the image.
-
-The specified {type} should be an integer from 1 to Nbondtypes = the
-number of bond types.  A wildcard asterisk can be used in place of or
-in conjunction with the {type} argument to specify a range of bond
-types.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
-number of bond types, then an asterisk with no numeric values means
-all types from 1 to N.  A leading asterisk means all types from 1 to n
-(inclusive).  A trailing asterisk means all types from n to N
-(inclusive).  A middle asterisk means all types from m to n
-(inclusive).
-
-The specified {color} can be a single color which is any of the 140
-pre-defined colors (see below) or a color name defined by the
-dump_modify color option.  Or it can be two or more colors separated
-by a "/" character, e.g. red/green/blue.  In the former case, that
-color is assigned to all the specified bond types.  In the latter
-case, the list of colors are assigned in a round-robin fashion to each
-of the specified bond types.
-
-:line
-
-The {bdiam} keyword applies only to the dump {image} style.  It can be
-used with the "dump image"_dump_image.html command, with its {bond}
-keyword, when its diam setting is {type}, to set the diameter that
-bonds of each type will be drawn in the image.  The specified {type}
-should be an integer from 1 to Nbondtypes.  As with the {bcolor}
-keyword, a wildcard asterisk can be used as part of the {type}
-argument to specify a range of bond types.  The specified {diam} is
-the size in whatever distance "units"_units.html you are using,
-e.g. Angstroms.
 
 :line
 

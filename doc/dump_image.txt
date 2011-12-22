@@ -1,8 +1,8 @@
-"LAMMPS WWW Site"_lws - "LAMMPS Documentation"_ld - "LAMMPS Commands"_lc :c
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
 
-:link(lws,http://lammps.sandia.gov)
-:link(ld,Manual.html)
-:link(lc,Section_commands.html#comm)
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
 
 :line
 
@@ -10,23 +10,18 @@ dump image command :h3
 
 [Syntax:]
 
-dump ID group-ID image N file color diameter keyword value ... :pre
+dump ID image N file color diameter keyword value ... :pre
 
 ID = user-assigned name for the dump :ulb,l
-group-ID = ID of the group of atoms to be imaged :l
-image = style of dump command (other styles {atom} or {cfg} or {dcd} or {xtc} or {xyz} or {local} or {custom} are discussed on the "dump"_dump.html doc page) :l
+image = style of dump command (other styles {particle} are discussed on the "dump"_dump.html doc page) :l
 N = dump every this many timesteps :l
 file = name of file to write image to :l
 color = atom attribute that determines color of each atom :l
 diameter = atom attribute that determines size of each atom :l
 zero or more keyword/value pairs may be appended :l
-keyword = {adiam} or {atom} or {bond} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {axes} or {shiny} or {ssao} :l
+keyword = {adiam} or {atom} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {axes} or {shiny} or {ssao} :l
   {adiam} value = number = numeric value for atom diameter (distance units)
   {atom} = yes/no = do or do not draw atoms
-  {bond} values = color width = color and width of bonds
-    color = {atom} or {type} or {none}
-    width = number or {atom} or {type} or {none}
-      number = numeric value for bond width (distance units)
   {size} values = width height = size of images
     width = width of image in # of pixels
     height = height of image in # of pixels
@@ -68,11 +63,11 @@ dump myDump all image 100 dump.*.jpg type type :pre
 
 [Description:]
 
-Dump a high-quality ray-traced image of the atom configuration every N
+Dump a high-quality ray-traced image of the simulation every N
 timesteps as either a JPG or PPM file.  A series of such images can
 easily be converted into an animated movie of your simulation; see
 further details below.  Other dump styles store snapshots of numerical
-data asociated with atoms in various formats, as discussed on the
+data asociated with particles in various formats, as discussed on the
 "dump"_dump.html doc page.
 
 Here are two sample images, rendered as 1024x1024 JPG files.  Click to
@@ -85,20 +80,12 @@ see the full-size images:
 
 </DIV>
 
-Only atoms in the specified group are rendered in the image.  The
-"dump_modify region and thresh"_dump_modify.html commands can also
-alter what atoms are included in the image.
-
 The filename suffix determines whether a JPG or PPM file is created.
 If the suffix is ".jpg" or ".jpeg", then a JPG file is created, else a
 PPM file is created, which is a text-based format.  To write out JPG
-files, you must build LAMMPS with a JPEG library.  See "this
+files, you must build DSMC with a JPEG library.  See "this
 section"_Section_start.html#start_2_4 of the manual for instructions
 on how to do this.
-
-IMPORTANT NOTE: Because periodic boundary conditions are enforced only
-on timesteps when neighbor lists are rebuilt, the coordinates of an
-atom in the image may be slightly outside the simulation box.
 
 :line
 
@@ -124,18 +111,15 @@ correct ordering.
 :line
 
 The {color} and {diameter} settings determine the color and size of
-atoms rendered in the image.  They can be any atom attribute defined
-for the "dump custom"_dump.html command, including {type} and
-{element}.  This includes per-atom quantities calculated by a
-"compute"_compute.html, "fix"_fix.html, or "variable"_variable.html,
-which are prefixed by "c_", "f_", or "v_" respectively.  Note that the
-{diameter} setting can be overridden with a numeric value by the
-optional {adiam} keyword, in which case you can specify the {diameter}
-setting with any valid atom attribute.
+particles rendered in the image.  They can be any particle attribute
+defined for the "dump paticle"_dump.html command, including {type}.
+Note that the {diameter} setting can be overridden with a numeric
+value by the optional {adiam} keyword, in which case you can specify
+the {diameter} setting with any valid particle attribute.
 
 If {type} is specified for the {color} setting, then the color of each
-atom is determined by its atom type.  By default the mapping of types
-to colors is as follows:
+particle is determined by its type = species index.  By default the
+mapping of types to colors is as follows:
 
 type 1 = red
 type 2 = green
@@ -148,40 +132,28 @@ and repeats itself for types > 6.  This mapping can be changed by the
 "dump_modify acolor"_dump_modify.html command.
 
 If {type} is specified for the {diameter} setting then the diameter of
-each atom is determined by its atom type.  By default all types have
-diameter 1.0.  This mapping can be changed by the "dump_modify
-adiam"_dump_modify.html command.
+each particle is determined by its type = species index.  By default
+all types have diameter 1.0.  This mapping can be changed by the
+"dump_modify adiam"_dump_modify.html command.
 
-If {element} is specified for the {color} and/or {diameter} setting,
-then the color and/or diameter of each atom is determined by which
-element it is, which in turn is specified by the element-to-type
-mapping specified by the "dump_modify element" command.  By default
-every atom type is C (carbon).  Every element has a color and diameter
-associated with it, which is the same as the colors and sizes used by
-the "AtomEye"_atomeye visualization package.
-
-:link(atomeye,http://mt.seas.upenn.edu/Archive/Graphics/A)
-
-If other atom attributes are used for the {color} or {diameter}
+If other particle attributes are used for the {color} or {diameter}
 settings, they are interpreted in the following way.
 
 If "vx", for example, is used as the {color} setting, then the color
-of the atom will depend on the x-component of its velocity.  The
-association of a per-atom value with a specific color is determined by
-a "color map", which can be specified via the
+of the particle will depend on the x-component of its velocity.  The
+association of a per-particle value with a specific color is
+determined by a "color map", which can be specified via the
 "dump_modify"_dump_modify.html command.  The basic idea is that the
-atom-attribute will be within a range of values, and every value
+particle-attribute will be within a range of values, and every value
 within the range is mapped to a specific color.  Depending on how the
 color map is defined, that mapping can take place via interpolation so
 that a value of -3.2 is halfway between "red" and "blue", or
 discretely so that the value of -3.2 is "orange".
 
-If "vx", for example, is used as the {diameter} setting, then the atom
-will be rendered using the x-component of its velocity as the
-diameter.  If the per-atom value <= 0.0, them the atom will not be
-drawn.  Note that finite-size spherical particles, as defined by
-"atom_style sphere"_atom_style.html define a per-particle radius or
-diameter, which can be used as the {diameter} setting.
+If "vx", for example, is used as the {diameter} setting, then the
+particle will be rendered using the x-component of its velocity as the
+diameter.  If the per-particle value <= 0.0, them the atom will not be
+drawn. 
 
 :line
 
@@ -189,60 +161,17 @@ The various kewords listed above control how the image is rendered.
 As listed below, all of the keywords have defaults, most of which you
 will likely not need to change.  The "dump modify"_dump_modify.html
 also has options specific to the dump image style, particularly for
-assigning colors to atoms, bonds, and other image features.
+assigning colors to particles and other image features.
 
 :line
 
 The {adiam} keyword allows you to override the {diameter} setting to a
-per-atom attribute with a specified numeric value.  All atoms will be
-drawn with that diameter, e.g. 1.5, which is in whatever distance
-"units"_units.html the input script defines, e.g. Angstroms.
+per-atom attribute with a specified numeric value.  All particles will
+be drawn with that diameter, e.g. 1.5, which is in whatever distance
+"units"_units.html the input script defines.
 
-The {atom} keyword allow you to turn off the drawing of all atoms,
+The {atom} keyword allow you to turn off the drawing of all particles,
 if the specified value is {no}.
-
-The {bond} keyword allows to you to alter how bonds are drawn.  A bond
-is only drawn if both atoms in the bond are being drawn due to being
-in the specified group and due to other selection criteria
-(e.g. region, threshhold settings of the
-"dump_modify"_dump_modify.html command).  By default, bonds are drawn
-if they are defined in the input data file as read by the
-"read_data"_read_data.html command.  Using {none} for both the bond
-{color} and {width} value will turn off the drawing of all bonds.
-
-If {atom} is specified for the bond {color} value, then each bond is
-drawn in 2 halves, with the color of each half being the color of the
-atom at that end of the bond.
-
-If {type} is specified for the {color} value, then the color of each
-bond is determined by its bond type.  By default the mapping of bond
-types to colors is as follows:
-
-type 1 = red
-type 2 = green
-type 3 = blue
-type 4 = yellow
-type 5 = aqua
-type 6 = cyan :ul
-
-and repeats itself for bond types > 6.  This mapping can be changed by
-the "dump_modify bcolor"_dump_modify.html command.
-
-The bond {width} value can be a numeric value or {atom} or {type} (or
-{none} as indicated above).
-
-If a numeric value is specified, then all bonds will be drawn as
-cylinders with that diameter, e.g. 1.0, which is in whatever distance
-"units"_units.html the input script defines, e.g. Angstroms.
-
-If {atom} is specified for the {width} value, then each bond
-will be drawn with a width corresponding to the minimum diameter
-of the 2 atoms in the bond.
-
-If {type} is specified for the {width} value then the diameter of each
-bond is determined by its bond type.  By default all types have
-diameter 0.5.  This mapping can be changed by the "dump_modify
-bdiam"_dump_modify.html command.
 
 :line
 
@@ -346,12 +275,12 @@ image will appear.  The {sfactor} value must be a value 0.0 <=
 and {sfactor} = 0 is a rough non-shiny surface.
 
 The {ssao} keyword turns on/off a screen space ambient occlusion
-(SSAO) model for depth shading.  If {yes} is set, then atoms further
-away from the viewer are darkened via a randomized process, which is
-perceived as depth.  The calculation of this effect can increase the
-cost of computing the image by roughly 2x.  The strength of the effect
-can be scaled by the {dfactor} parameter.  If {no} is set, no depth
-shading is performed.
+(SSAO) model for depth shading.  If {yes} is set, then particles
+further away from the viewer are darkened via a randomized process,
+which is perceived as depth.  The calculation of this effect can
+increase the cost of computing the image by roughly 2x.  The strength
+of the effect can be scaled by the {dfactor} parameter.  If {no} is
+set, no depth shading is performed.
 
 :line
 
@@ -400,17 +329,11 @@ obviously play movie files directly. :ule,l
 
 :line
 
-See "Section_modify"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to LAMMPS to calculate
-per-atom quantities which could then be output into dump files.
-
-:line
-
 [Restrictions:]
 
-To write JPG images, you must use a -DLAMMPS_JPEG switch when building
-LAMMPS and link with a JPEG library.  See the "Making
-LAMMPS"_Section_start.html#start_2_4 section of the documentation for
+To write JPG images, you must use a -DDSMC_JPEG switch when building
+DSMC and link with a JPEG library.  See the "Making
+DSMC"_Section_start.html#start_2_4 section of the documentation for
 details.
 
 [Related commands:]
@@ -423,8 +346,6 @@ The defaults for the keywords are as follows:
 
 adiam = not specified (use diameter setting)
 atom = yes
-bond = none none (if no bonds in system)
-bond = atom 0.5 (if bonds in system)
 size = 512 512
 view = 60 30 (for 3d)
 view = 0 0 (for 2d)
