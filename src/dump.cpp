@@ -26,10 +26,6 @@
 
 using namespace DSMC_NS;
 
-// allocate space for static class variable
-
-Dump *Dump::dumpptr;
-
 #define BIG 1.0e20
 #define IBIG 2147483647
 #define EPSILON 1.0e-6

@@ -30,10 +30,6 @@ class Dump : protected Pointers {
   int comm_forward;          // size of forward communication (0 if none)
   int comm_reverse;          // size of reverse communication (0 if none)
 
-  // static variable across all Dump objects
-
-  static Dump *dumpptr;         // holds a ptr to Dump currently being used
-
   Dump(class DSMC *, int, char **);
   virtual ~Dump();
   void init();
