@@ -8,7 +8,7 @@
 
 seed command :h3
 
-NOTE: not yet implemented
+NOTE: this command is not yet implemented
 
 [Syntax:]
 
