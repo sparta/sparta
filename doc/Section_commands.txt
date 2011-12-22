@@ -237,6 +237,7 @@ in the command's documentation.
 "create_grid"_create_grid.html,
 "dimension"_dimension.html,
 "dump"_dump.html,
+"dump_image"_dump_image.html,
 "dump_modify"_dump_modify.html,
 "echo"_echo.html,
 "global"_global.html,
