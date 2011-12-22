@@ -40,7 +40,7 @@ MPI_LIB =
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)
-# only needed if -DDSMC_JPEG listed with LMP_INC
+# only needed if -DDSMC_JPEG listed with DSMC_INC
 # INC = path for jpeglib.h
 # PATH = path for JPEG library
 # LIB = name of JPEG library
@@ -53,7 +53,7 @@ JPG_LIB =
 # build rules and dependencies
 # no need to edit this section
 
-EXTRA_INC = $(LMP_INC) $(PKG_INC) $(MPI_INC) $(FFT_INC) $(JPG_INC) $(PKG_SYSINC)
+EXTRA_INC = $(DSMC_INC) $(PKG_INC) $(MPI_INC) $(FFT_INC) $(JPG_INC) $(PKG_SYSINC)
 EXTRA_PATH = $(PKG_PATH) $(MPI_PATH) $(FFT_PATH) $(JPG_PATH) $(PKG_SYSPATH)
 EXTRA_LIB = $(PKG_LIB) $(MPI_LIB) $(FFT_LIB) $(JPG_LIB) $(PKG_SYSLIB)
 
