@@ -55,7 +55,7 @@ class DumpParticle : public Dump {
   int *argindex;             // index into compute,fix scalar_atom,vector_atom
                              // 0 for scalar_atom, 1-N for vector_atom values
 
-  int ntypes;                // # of atom types
+  int ntypes;                // # of particle types
   char **typenames;	     // array of element names for each type
 
   // private methods

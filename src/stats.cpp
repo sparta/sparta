@@ -184,6 +184,64 @@ void Stats::compute(int flag)
 
 void Stats::modify_params(int narg, char **arg)
 {
+  if (narg == 0) error->all(FLERR,"Illegal stats_modify command");
+
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"every") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal stats_modify command");
+      if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
+	delete [] output->var_stats;
+	int n = strlen(&arg[iarg+1][2]) + 1;
+	output->var_stats = new char[n];
+	strcpy(output->var_stats,&arg[iarg+1][2]);
+      } else error->all(FLERR,"Illegal stats_modify command");
+      output->stats_every = 0;
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"flush") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal stats_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) flushflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) flushflag = 1;
+      else error->all(FLERR,"Illegal stats_modify command");
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"format") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal stats_modify command");
+      if (strcmp(arg[iarg+1],"int") == 0) {
+	if (format_int_user) delete [] format_int_user;
+	int n = strlen(arg[iarg+2]) + 1;
+	format_int_user = new char[n];
+	strcpy(format_int_user,arg[iarg+2]);
+	if (format_bigint_user) delete [] format_bigint_user;
+	n = strlen(format_int_user) + 3;
+	format_bigint_user = new char[n];
+	char *ptr = strchr(format_int_user,'d');
+	if (ptr == NULL) 
+	  error->all(FLERR,
+		     "Stats_modify int format does not contain d character");
+	*ptr = '\0';
+	sprintf(format_bigint_user,"%s%s%s",format_int_user,
+		BIGINT_FORMAT,ptr+1);
+	*ptr = 'd';
+      } else if (strcmp(arg[iarg+1],"float") == 0) {
+	if (format_float_user) delete [] format_float_user;
+	int n = strlen(arg[iarg+2]) + 1;
+	format_float_user = new char[n];
+	strcpy(format_float_user,arg[iarg+2]);
+      } else {
+	int i = atoi(arg[iarg+1]) - 1;
+	if (i < 0 || i >= nfield_initial)
+	  error->all(FLERR,"Illegal stats_modify command");
+	if (format_user[i]) delete [] format_user[i];
+	int n = strlen(arg[iarg+2]) + 1;
+	format_user[i] = new char[n];
+	strcpy(format_user[i],arg[iarg+2]);
+      }
+      iarg += 3;
+
+    } else error->all(FLERR,"Illegal stats_modify command");
+  }
 }
 
 /* ----------------------------------------------------------------------
