@@ -29,8 +29,7 @@
     d3 = <I>x</I> or <I>y</I> or <I>z</I>, not same as d1 or d2
   <I>block</I> args = Px Py Pz
     Px,Py,Pz = # of processors in each dimension
-  <I>random</I> args = seed
-    seed = random # seed (positive integer) 
+  <I>random</I> args = none 
 </PRE>
 
 </UL>
@@ -88,10 +87,9 @@ grid such as 1 x P x 1 will be required, which may incur extra
 communication costs.
 </P>
 <P>The <I>random</I> keyword means that eacn grid cell will be assigned
-randomly to one of the processors.  This is done using a random number
-generator initialized with the specified <I>seed</I>.  Note that in this
-case every processor will typically not be assigned exactly the same
-number of cells.
+randomly to one of the processors.  Note that in this case every
+processor will typically not be assigned exactly the same number of
+cells.
 </P>
 <P><B>Restrictions:</B>
 </P>

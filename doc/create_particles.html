@@ -13,11 +13,9 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>create_particles mix-ID seed keyword value ... 
+<PRE>create_particles mix-ID keyword value ... 
 </PRE>
 <UL><LI>mix-ID = ID of mixture to use when creating particles 
-
-<LI>seed = random # seed (positive integer) 
 
 <LI>zero or more keyword/value pairs may be appended 
 
@@ -30,9 +28,8 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>create_particles background 187483
-create_particles air 39589
-create_particles air 49892 n 100000 loop local 
+<PRE>create_particles background
+create_particles air n 100000 loop local 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -41,10 +38,6 @@ number of particles created and their individual attributes, such
 species and velocity, are determined by the mixture attributes, as
 specied by the <I>mix-ID</I>.  See the <A HREF = "mixture.html">mixture</A> command for
 more details.
-</P>
-<P>The specified <I>seed</I> is used to initialize a random number generator,
-used by all the random operations described below for determining
-particle attributes.
 </P>
 <P>Unless the <I>n</I> keyword is used, the number of particles created is a
 function of the global <I>Fnum</I> value, the mixture number density, and

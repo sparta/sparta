@@ -10,11 +10,9 @@ create_particles command :h3
 
 [Syntax:]
 
-create_particles mix-ID seed keyword value ... :pre
+create_particles mix-ID keyword value ... :pre
 
 mix-ID = ID of mixture to use when creating particles :ulb,l
-seed = random # seed (positive integer) :l
-
 zero or more keyword/value pairs may be appended :l
 keyword = {n} or {loop} :l
   {n} value = Np = number of particles to create
@@ -23,9 +21,8 @@ keyword = {n} or {loop} :l
 
 [Examples:]
 
-create_particles background 187483
-create_particles air 39589
-create_particles air 49892 n 100000 loop local :pre
+create_particles background
+create_particles air n 100000 loop local :pre
 
 [Description:]
 
@@ -34,10 +31,6 @@ number of particles created and their individual attributes, such
 species and velocity, are determined by the mixture attributes, as
 specied by the {mix-ID}.  See the "mixture"_mixture.html command for
 more details.
-
-The specified {seed} is used to initialize a random number generator,
-used by all the random operations described below for determining
-particle attributes.
 
 Unless the {n} keyword is used, the number of particles created is a
 function of the global {Fnum} value, the mixture number density, and

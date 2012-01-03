@@ -253,7 +253,7 @@ in the command's documentation.
 "read_surfs"_read_surfs.html,
 "restart"_restart,
 "run"_run.html,
-"seed"_shell.html,
+"seed"_seed.html,
 "shell"_shell.html,
 "suffix"_suffix.html,
 "species"_species.html,

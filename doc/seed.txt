@@ -8,8 +8,6 @@
 
 seed command :h3
 
-NOTE: this command is not yet implemented
-
 [Syntax:]
 
 seed Nvalue :pre
