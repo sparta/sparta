@@ -248,18 +248,15 @@ DumpImage::DumpImage(DSMC *dsmc, int narg, char **arg) :
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"ssao") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Illegal dump image command");
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
       if (strcmp(arg[iarg+1],"yes") == 0) image->ssao = YES;
       else if (strcmp(arg[iarg+1],"no") == 0) image->ssao = NO;
       else error->all(FLERR,"Illegal dump image command");
-      int seed = atoi(arg[iarg+2]);
-      if (seed <= 0) error->all(FLERR,"Illegal dump image command");
-      image->seed = seed;
-      double ssaoint = atof(arg[iarg+3]);
+      double ssaoint = atof(arg[iarg+2]);
       if (ssaoint < 0.0 || ssaoint > 1.0)
 	error->all(FLERR,"Illegal dump image command");
       image->ssaoint = ssaoint;
-      iarg += 4;
+      iarg += 3;
 
     } else error->all(FLERR,"Illegal dump image command");
   }

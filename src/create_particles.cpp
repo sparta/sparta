@@ -42,21 +42,17 @@ void CreateParticles::command(int narg, char **arg)
   if (!domain->box_exist) 
     error->all(FLERR,
 	       "Cannot create particles before simulation box is defined");
-
-  if (narg < 2) error->all(FLERR,"Illegal create_particles command");
+  if (narg < 1) error->all(FLERR,"Illegal create_particles command");
 
   imix = particle->find_mixture(arg[0]);
   if (imix < 0) error->all(FLERR,"Create_particles mixture ID does not exist");
   particle->mixture[imix]->init();
 
-  seed = atoi(arg[1]);
-  if (seed <= 0) error->all(FLERR,"Illegal create_particles command");
-  
   // optional args
 
   bigint n = 0;
 
-  int iarg = 2;
+  int iarg = 1;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");

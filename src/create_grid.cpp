@@ -59,7 +59,7 @@ void CreateGrid::command(int narg, char **arg)
   int px = 0;
   int py = 0;
   int pz = 0;
-  int order,seed;
+  int order;
 
   int iarg = 3;
   while (iarg < narg) {
@@ -94,11 +94,9 @@ void CreateGrid::command(int narg, char **arg)
       iarg += 4;
 
     } else if (strcmp(arg[3],"random") == 0) {
-      if (narg != 5) error->all(FLERR,"Illegal create_grid command");
+      if (iarg+1 > narg) error->all(FLERR,"Illegal create_grid command");
       bstyle = RANDOM;
-      seed = atoi(arg[iarg+1]);
-      if (seed <= 0) error->all(FLERR,"Illegal create_grid command");
-      iarg += 2;
+      iarg += 1;
 
     } else error->all(FLERR,"Illegal create_grid command");
   }
@@ -185,7 +183,7 @@ void CreateGrid::command(int narg, char **arg)
 
   if (bstyle == STRIDE) grid->assign_stride(order);
   else if (bstyle == BLOCK) grid->assign_block(px,py,pz);
-  else if (bstyle == RANDOM) grid->assign_random(seed);
+  else if (bstyle == RANDOM) grid->assign_random();
   
   // make list of cells I own
 

@@ -52,7 +52,7 @@ class Grid : protected Pointers {
   int which_cell(double, double, double);
   void assign_stride(int);
   void assign_block(int, int, int);
-  void assign_random(int);
+  void assign_random();
   void grow(int);
   bigint memory_usage();
 

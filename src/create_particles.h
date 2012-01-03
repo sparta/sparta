@@ -32,7 +32,6 @@ class CreateParticles : protected Pointers {
 
  private:
   int imix;
-  int seed;
 
   void create_local(bigint);
 };

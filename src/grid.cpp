@@ -176,7 +176,7 @@ void Grid::assign_block(int px, int py, int pz)
 
 /* ---------------------------------------------------------------------- */
 
-void Grid::assign_random(int seed)
+void Grid::assign_random()
 {
   int me = comm->me;
   int nprocs = comm->nprocs;

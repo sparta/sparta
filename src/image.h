@@ -31,7 +31,6 @@ class Image : protected Pointers {
   double persp;                 // perspective factor
   double shiny;                 // shininess of objects
   int ssao;                     // SSAO on or off
-  int seed;                     // RN seed for SSAO
   double ssaoint;               // strength of shading from 0 to 1
   double *boxcolor;             // color to draw box outline with
   int background[3];            // RGB values of background
