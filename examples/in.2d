@@ -14,7 +14,7 @@ mixture		    air N O
 
 global		    nrho 100.0
 
-create_particles    air 12345 
+create_particles    air
 
 #collisions	    vss
 
