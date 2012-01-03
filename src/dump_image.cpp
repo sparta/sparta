@@ -35,7 +35,7 @@ using namespace DSMC_NS;
 using namespace MathConst;
 
 enum{PPM,JPG};
-enum{NUMERIC,ATOM,TYPE,ELEMENT,ATTRIBUTE,MINVALUE,MAXVALUE};
+enum{NUMERIC,ATOM,TYPE,ELEMENT,ATTRIBUTE};
 enum{STATIC,DYNAMIC};
 enum{NO,YES};
 

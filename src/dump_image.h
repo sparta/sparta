@@ -67,7 +67,6 @@ class DumpImage : public DumpParticle {
   void box_center();
   void view_params();
   void box_bounds();
-  void color_minmax();
 
   void create_image();
 };
