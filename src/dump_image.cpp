@@ -614,12 +614,11 @@ void DumpImage::create_image()
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
     diameter *= axesdiam;
 
-    double (*boxcorners)[3];
     double axes[4][3];
     axes[0][0] = boxxlo; axes[0][1] = boxylo; axes[0][2] = boxzlo;
     axes[1][0] = boxxhi; axes[1][1] = boxylo; axes[1][2] = boxzlo;
     axes[2][0] = boxxlo; axes[2][1] = boxyhi; axes[2][2] = boxzlo;
-    axes[4][0] = boxxlo; axes[4][1] = boxylo; axes[4][2] = boxzhi;
+    axes[3][0] = boxxlo; axes[3][1] = boxylo; axes[3][2] = boxzhi;
 
     double offset = MAX(boxxhi-boxxlo,boxyhi-boxylo);
     if (domain->dimension == 3) offset = MAX(offset,boxzhi-boxzlo);
@@ -627,7 +626,7 @@ void DumpImage::create_image()
     axes[0][0] -= offset; axes[0][1] -= offset; axes[0][2] -= offset;
     axes[1][0] -= offset; axes[1][1] -= offset; axes[1][2] -= offset;
     axes[2][0] -= offset; axes[2][1] -= offset; axes[2][2] -= offset;
-    axes[4][0] -= offset; axes[4][1] -= offset; axes[4][2] -= offset;
+    axes[3][0] -= offset; axes[3][1] -= offset; axes[3][2] -= offset;
 
     axes[1][0] = axes[0][0] + axeslen*(axes[1][0]-axes[0][0]);
     axes[1][1] = axes[0][1] + axeslen*(axes[1][1]-axes[0][1]);
@@ -635,9 +634,9 @@ void DumpImage::create_image()
     axes[2][0] = axes[0][0] + axeslen*(axes[2][0]-axes[0][0]);
     axes[2][1] = axes[0][1] + axeslen*(axes[2][1]-axes[0][1]);
     axes[2][2] = axes[0][2] + axeslen*(axes[2][2]-axes[0][2]);
-    axes[4][0] = axes[0][0] + axeslen*(axes[4][0]-axes[0][0]);
-    axes[4][1] = axes[0][1] + axeslen*(axes[4][1]-axes[0][1]);
-    axes[4][2] = axes[0][2] + axeslen*(axes[4][2]-axes[0][2]);
+    axes[3][0] = axes[0][0] + axeslen*(axes[3][0]-axes[0][0]);
+    axes[3][1] = axes[0][1] + axeslen*(axes[3][1]-axes[0][1]);
+    axes[3][2] = axes[0][2] + axeslen*(axes[3][2]-axes[0][2]);
 
     image->draw_axes(axes,diameter);
   }

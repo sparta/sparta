@@ -16,11 +16,13 @@
 #include "string.h"
 #include "update.h"
 #include "particle.h"
-#include "grid.h"
+#include "modify.h"
 #include "domain.h"
-#include "collide.h"
 #include "comm.h"
+#include "collide.h"
+#include "grid.h"
 #include "output.h"
+#include "random_mars.h"
 #include "timer.h"
 #include "memory.h"
 #include "error.h"
@@ -45,6 +47,8 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
 
   maxmigrate = 0;
   mlist = NULL;
+
+  ranmaster = new RanMars(dsmc);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -52,6 +56,7 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
 Update::~Update()
 {
   memory->destroy(mlist);
+  delete ranmaster;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -119,13 +124,18 @@ void Update::setup()
 
 void Update::run(int nsteps)
 {
+  int n_start_of_step = modify->n_start_of_step;
+  int n_end_of_step = modify->n_end_of_step;
+
   // loop over timesteps
 
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
 
-    // create particles
+    // start of step fixes
+
+    if (n_start_of_step) modify->start_of_step();
 
     // move particles
 
@@ -149,6 +159,10 @@ void Update::run(int nsteps)
       timer->stamp(TIME_COLLIDE);
     }
 
+    // diagnostic fixes
+
+    if (n_end_of_step) modify->end_of_step();
+
     // all output
 
     if (ntimestep == output->next) {
@@ -156,10 +170,6 @@ void Update::run(int nsteps)
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
-
-    // sanity check on particles in correct cells
-
-    //check();
   }
 }
 
@@ -336,38 +346,6 @@ void Update::move()
 
   nmove += nlocal;
   ncellcross += count;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Update::check()
-{
-  int icell;
-  double *x,*lo,*hi;
-
-  Particle::OnePart *particles = particle->particles;
-  Grid::OneCell *cells = grid->cells;
-
-  int nlocal = particle->nlocal;
-
-  int flag = 0;
-  for (int i = 0; i < nlocal; i++) {
-    x = particles[i].x;
-    icell = particles[i].icell;
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-    if (x[0] < lo[0] || x[0] > hi[0] ||
-	x[1] < lo[1] || x[1] > hi[1] ||
-	x[2] < lo[2] || x[2] > hi[2]) flag++;
-  }
-
-  int flagall;
-  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
-  if (flagall) {
-    char str[128];
-    sprintf(str,"%d particles are not in correct cell",flagall);
-    error->all(FLERR,str);
-  }
 }
 
 /* ----------------------------------------------------------------------

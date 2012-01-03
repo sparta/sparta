@@ -170,6 +170,8 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v)
 
     return SPECULAR;
   }
+
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

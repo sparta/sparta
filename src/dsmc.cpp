@@ -21,13 +21,13 @@
 #include "particle.h"
 #include "update.h"
 #include "comm.h"
+#include "modify.h"
 #include "domain.h"
 #include "grid.h"
 #include "surf.h"
 #include "collide.h"
 #include "output.h"
 #include "timer.h"
-#include "random_mars.h"
 #include "memory.h"
 #include "error.h"
 
@@ -403,13 +403,14 @@ DSMC::~DSMC()
 
 void DSMC::create()
 {
-  update = new Update(this);
   particle = new Particle(this);
+  update = new Update(this);
+  comm = new Comm(this);
+  domain = new Domain(this);
+  modify = new Modify(this);
   grid = new Grid(this);
   surf = new Surf(this);
-  domain = new Domain(this);
   collide = NULL;
-  comm = new Comm(this);
   output = new Output(this);
   timer = new Timer(this);
 }
@@ -420,13 +421,14 @@ void DSMC::create()
 
 void DSMC::init()
 {
-  update->init();
   particle->init();
+  update->init();
+  comm->init();
+  domain->init();
+  modify->init();
   grid->init();
   surf->init();
-  domain->init();
   if (collide) collide->init();
-  comm->init();
   output->init();
   timer->init();
 }
@@ -438,13 +440,14 @@ void DSMC::init()
 
 void DSMC::destroy()
 {
-  delete update;
   delete particle;
+  delete update;
+  delete comm;
+  delete domain;
+  delete modify;
   delete grid;
   delete surf;
-  delete domain;
   delete collide;
-  delete comm;
   delete output;
   delete timer;
 }
@@ -462,6 +465,27 @@ void DSMC::print_styles()
 #define CollideStyle(key,Class) printf(" %s",#key);
 #include "style_collide.h"
 #undef COLLIDE_CLASS
+  printf("\n");
+
+  printf("Compute styles:");
+#define COMPUTE_CLASS
+#define ComputeStyle(key,Class) printf(" %s",#key);
+#include "style_compute.h"
+#undef COMPUTE_CLASS
+  printf("\n");
+
+  printf("Dump styles:");
+#define DUMP_CLASS
+#define DumpStyle(key,Class) printf(" %s",#key);
+#include "style_dump.h"
+#undef DUMP_CLASS
+  printf("\n");
+
+  printf("Fix styles:");
+#define FIX_CLASS
+#define FixStyle(key,Class) printf(" %s",#key);
+#include "style_fix.h"
+#undef FIX_CLASS
   printf("\n");
 
   printf("Command styles (add-on input script commands):");

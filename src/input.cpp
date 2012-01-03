@@ -25,11 +25,13 @@
 #include "universe.h"
 #include "variable.h"
 #include "domain.h"
+#include "modify.h"
 #include "grid.h"
 #include "particle.h"
 #include "update.h"
 #include "collide.h"
 #include "output.h"
+#include "random_mars.h"
 #include "stats.h"
 #include "dump.h"
 #include "math_extra.h"
@@ -415,17 +417,23 @@ int Input::execute_command()
 
   else if (!strcmp(command,"boundary")) boundary();
   else if (!strcmp(command,"collisions")) collisions();
+  else if (!strcmp(command,"compute")) compute();
   else if (!strcmp(command,"dimension")) dimension();
   else if (!strcmp(command,"dump")) dump();
   else if (!strcmp(command,"dump_modify")) dump_modify();
+  else if (!strcmp(command,"fix")) fix();
   else if (!strcmp(command,"global")) global();
   else if (!strcmp(command,"mixture")) mixture();
+  else if (!strcmp(command,"seed")) seed();
   else if (!strcmp(command,"species")) species();
   else if (!strcmp(command,"stats")) stats();
   else if (!strcmp(command,"stats_modify")) stats_modify();
   else if (!strcmp(command,"stats_style")) stats_style();
   else if (!strcmp(command,"timestep")) timestep();
+  else if (!strcmp(command,"uncompute")) uncompute();
   else if (!strcmp(command,"undump")) undump();
+  else if (!strcmp(command,"unfix")) unfix();
+
 
   else flag = 0;
 
@@ -834,6 +842,13 @@ void Input::collisions()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::compute()
+{
+  modify->add_compute(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::dimension()
 {
   if (narg != 1) error->all(FLERR,"Illegal dimension command");
@@ -860,6 +875,13 @@ void Input::dump_modify()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::fix()
+{
+  modify->add_fix(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::global()
 {
   update->global(narg,arg);
@@ -870,6 +892,18 @@ void Input::global()
 void Input::mixture()
 {
   particle->add_mixture(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::seed()
+{
+  if (narg != 1) error->all(FLERR,"Illegal seed command");
+
+  int seed = atoi(arg[0]);
+  if (seed <= 0) error->all(FLERR,"Illegal seed command");
+
+  update->ranmaster->init(seed);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -915,8 +949,24 @@ void Input::timestep()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::uncompute()
+{
+  if (narg != 1) error->all(FLERR,"Illegal uncompute command");
+  modify->delete_compute(arg[0]);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::undump()
 {
   if (narg != 1) error->all(FLERR,"Illegal undump command");
   output->delete_dump(arg[0]);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::unfix()
+{
+  if (narg != 1) error->all(FLERR,"Illegal unfix command");
+  modify->delete_fix(arg[0]);
 }

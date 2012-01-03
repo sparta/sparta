@@ -12,25 +12,43 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
-// Marsaglia random number generator
-
 #include "math.h"
 #include "random_mars.h"
 #include "error.h"
 
 using namespace DSMC_NS;
 
+/* ---------------------------------------------------------------------- 
+    Marsaglia RNG
+------------------------------------------------------------------------ */
+
+RanMars::RanMars(DSMC *dsmc) : Pointers(dsmc)
+{
+  initflag = 0;
+  u = NULL;
+}
+
 /* ---------------------------------------------------------------------- */
 
-RanMars::RanMars(DSMC *dsmc, int seed) : Pointers(dsmc)
+RanMars::~RanMars()
+{
+  delete [] u;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void RanMars::init(int seed)
 {
   int ij,kl,i,j,k,l,ii,jj,m;
   double s,t;
 
-  if (seed <= 0 || seed > 900000000)
-    error->all(FLERR,"Invalid seed for Marsaglia random # generator");
+  initflag = 1;
 
-  save = 0;
+  // assume input seed is positive value > 0
+  // insure seed is from 1 to 900,000,000 inclusive
+  
+  while (seed > 900000000) seed -= 900000000;
+
   u = new double[97+1];
 
   ij = (seed-1)/30082;
@@ -61,19 +79,14 @@ RanMars::RanMars(DSMC *dsmc, int seed) : Pointers(dsmc)
   uniform();
 }
 
-/* ---------------------------------------------------------------------- */
-
-RanMars::~RanMars()
-{
-  delete [] u;
-}
-
 /* ----------------------------------------------------------------------
    uniform RN 
 ------------------------------------------------------------------------- */
 
 double RanMars::uniform()
 {
+  if (!initflag) error->all(FLERR,"Seed command has not been used");
+
   double uni = u[i97] - u[j97];
   if (uni < 0.0) uni += 1.0;
   u[i97] = uni;

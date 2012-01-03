@@ -67,17 +67,22 @@ class Input : protected Pointers {
 
   void boundary();
   void collisions();
+  void compute();
   void dimension();
   void dump();
   void dump_modify();
+  void fix();
   void global();
   void mixture();
+  void seed();
   void species();
   void stats();
   void stats_modify();
   void stats_style();
   void timestep();
+  void uncompute();
   void undump();
+  void unfix();
 };
 
 }

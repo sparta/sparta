@@ -23,7 +23,9 @@
 #include "string.h"
 #include "image.h"
 #include "math_extra.h"
+#include "update.h"
 #include "random_mars.h"
+#include "random_park.h"
 #include "math_const.h"
 #include "error.h"
 #include "memory.h"
@@ -111,8 +113,11 @@ Image::Image(DSMC *dsmc) : Pointers(dsmc)
 
   // RNG for SSAO depth shading
 
-  if (ssao) random = new RanMars(dsmc,seed+me); 
-  else random = NULL;
+  if (ssao) {
+    random = new RanPark(update->ranmaster->uniform());
+    double seed = update->ranmaster->uniform();
+    random->reset(seed,me,100);
+  } else random = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -415,7 +420,7 @@ void Image::draw_axes(double (*axes)[3], double diameter)
 {
   draw_cylinder(axes[0],axes[1],color2rgb("red"),diameter,3);
   draw_cylinder(axes[0],axes[2],color2rgb("green"),diameter,3);
-  draw_cylinder(axes[0],axes[4],color2rgb("blue"),diameter,3);
+  draw_cylinder(axes[0],axes[3],color2rgb("blue"),diameter,3);
 }
 
 /* ----------------------------------------------------------------------

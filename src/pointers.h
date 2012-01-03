@@ -47,6 +47,7 @@ class Pointers {
     update(ptr->update),
     comm(ptr->comm),
     domain(ptr->domain),
+    modify(ptr->modify),
     grid(ptr->grid),
     surf(ptr->surf),
     collide(ptr->collide),
@@ -69,6 +70,7 @@ class Pointers {
   Update *&update;
   Comm *&comm;
   Domain *&domain;
+  Modify *&modify;
   Grid *&grid;
   Surf *&surf;
   Collide *&collide;

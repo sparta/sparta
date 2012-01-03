@@ -19,7 +19,9 @@
 #include "unistd.h"
 #include "variable.h"
 #include "universe.h"
+#include "update.h"
 #include "random_mars.h"
+#include "random_park.h"
 #include "memory.h"
 #include "error.h"
 
@@ -1259,7 +1261,9 @@ double Variable::collapse_tree(Tree *tree)
       int seed = static_cast<int> (collapse_tree(tree->right));
       if (seed <= 0)
 	error->one(FLERR,"Invalid math function in variable formula");
-      randomatom = new RanMars(dsmc,seed+me);
+      randomatom = new RanPark(update->ranmaster->uniform());
+      double rseed = update->ranmaster->uniform();
+      randomatom->reset(rseed,me,100);
     }
     return 0.0;
   }
@@ -1273,7 +1277,9 @@ double Variable::collapse_tree(Tree *tree)
       int seed = static_cast<int> (collapse_tree(tree->right));
       if (seed <= 0)
 	error->one(FLERR,"Invalid math function in variable formula");
-      randomatom = new RanMars(dsmc,seed+me);
+      randomatom = new RanPark(update->ranmaster->uniform());
+      double rseed = update->ranmaster->uniform();
+      randomatom->reset(rseed,me,100);
     }
     return 0.0;
   }
@@ -1527,7 +1533,9 @@ double Variable::eval_tree(Tree *tree, int i)
       int seed = static_cast<int> (eval_tree(tree->right,i));
       if (seed <= 0) 
 	error->one(FLERR,"Invalid math function in variable formula");
-      randomatom = new RanMars(dsmc,seed+me);
+      randomatom = new RanPark(update->ranmaster->uniform());
+      double rseed = update->ranmaster->uniform();
+      randomatom->reset(rseed,me,100);
     }
     return randomatom->uniform()*(upper-lower)+lower;
   }
@@ -1540,7 +1548,9 @@ double Variable::eval_tree(Tree *tree, int i)
       int seed = static_cast<int> (eval_tree(tree->right,i));
       if (seed <= 0) 
 	error->one(FLERR,"Invalid math function in variable formula");
-      randomatom = new RanMars(dsmc,seed+me);
+      randomatom = new RanPark(update->ranmaster->uniform());
+      double rseed = update->ranmaster->uniform();
+      randomatom->reset(rseed,me,100);
     }
     return mu + sigma*randomatom->gaussian();
   }
@@ -1907,7 +1917,9 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
 	int seed = static_cast<int> (value3);
 	if (seed <= 0)
 	  error->all(FLERR,"Invalid math function in variable formula");
-	randomequal = new RanMars(dsmc,seed);
+	randomequal = new RanPark(update->ranmaster->uniform());
+	double rseed = update->ranmaster->uniform();
+	randomequal->reset(rseed,me,100);
       }
       argstack[nargstack++] = randomequal->uniform()*(value2-value1) + value1;
     }
@@ -1922,7 +1934,9 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
 	int seed = static_cast<int> (value3);
 	if (seed <= 0)
 	  error->all(FLERR,"Invalid math function in variable formula");
-	randomequal = new RanMars(dsmc,seed);
+	randomequal = new RanPark(update->ranmaster->uniform());
+	double rseed = update->ranmaster->uniform();
+	randomequal->reset(rseed,me,100);
       }
       argstack[nargstack++] = value1 + value2*randomequal->gaussian();
     }

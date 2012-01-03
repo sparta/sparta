@@ -12,11 +12,8 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
-// Park/Miller RNG
-
 #include "math.h"
 #include "random_park.h"
-#include "error.h"
 
 using namespace DSMC_NS;
 
@@ -26,24 +23,41 @@ using namespace DSMC_NS;
 #define IQ 127773
 #define IR 2836
 
-#define IA1 1366
-#define IC1 150889
-#define IM1 714025
-#define IA2 8121
-#define IC2 28411
-#define IM2 134456
-#define IA3 7141
-#define IC3 54773
-#define IM3 259200
+/* ---------------------------------------------------------------------- 
+   Park/Miller RNG
+   assume iseed is a positive int
+------------------------------------------------------------------------ */
 
-/* ---------------------------------------------------------------------- */
-
-RanPark::RanPark(DSMC *dsmc, int seed_init) : Pointers(dsmc)
+RanPark::RanPark(int iseed)
 {
-  if (seed_init <= 0)
-    error->all(FLERR,"Invalid seed for Park random # generator");
-  seed = seed_init;
-  save = 0;
+  seed = iseed;
+}
+
+/* ---------------------------------------------------------------------- 
+   set seed to positive int
+   assume 0.0 <= rseed < 1.0
+------------------------------------------------------------------------ */
+
+RanPark::RanPark(double rseed)
+{
+  seed = static_cast<int> (rseed*IM);
+  if (seed == 0) seed = 1;
+}
+
+/* ---------------------------------------------------------------------- 
+   reset seed to a positive int based on rseed and offset
+   assume 0.0 <= rseed < 1.0 and offset is an int >= 0
+   fmod() insures no overflow when static cast to int
+   warmup the new RNG if requested
+   typically used to setup one RN generator per proc or site or particle
+------------------------------------------------------------------------ */
+
+void RanPark::reset(double rseed, int offset, int warmup)
+{
+  seed = static_cast<int> (fmod(rseed*IM+offset,IM));
+  if (seed < 0) seed = -seed;
+  if (seed == 0) seed = 1;
+  for (int i = 0; i < warmup; i++) uniform();
 }
 
 /* ----------------------------------------------------------------------
@@ -83,63 +97,4 @@ double RanPark::gaussian()
     save = 0;
   }
   return first;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void RanPark::reset(int seed_init)
-{
-  if (seed_init <= 0)
-    error->all(FLERR,"Invalid seed for Park random # generator");
-  seed = seed_init;
-  save = 0;
-}
-
-/* ----------------------------------------------------------------------
-   reset the seed based on atom coords and ibase = caller seed
-   use hash function, treating user seed and coords as sequence of input ints
-   this is Jenkins One-at-a-time hash, see Wikipedia entry on hash tables
-------------------------------------------------------------------------- */
-
-void RanPark::reset(int ibase, double *coord)
-{
-  int i;
-
-  char *str = (char *) &ibase;
-  int n = sizeof(int);
-
-  unsigned int hash = 0;
-  for (i = 0; i < n; i++) {
-    hash += str[i];
-    hash += (hash << 10);
-    hash ^= (hash >> 6);
-  }
-
-  str = (char *) coord;
-  n = 3 * sizeof(double);
-  for (i = 0; i < n; i++) {
-    hash += str[i];
-    hash += (hash << 10);
-    hash ^= (hash >> 6);
-  }
-
-  hash += (hash << 3);
-  hash ^= (hash >> 11);
-  hash += (hash << 15);
-
-  // keep 31 bits of unsigned int as new seed
-
-  seed = hash & 0x7ffffff;
-
-  // warm up the RNG
-
-  for (i = 0; i < 5; i++) uniform();
-  save = 0;
-}
-
-/* ---------------------------------------------------------------------- */
-
-int RanPark::state()
-{
-  return seed;
 }

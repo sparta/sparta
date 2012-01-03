@@ -372,6 +372,7 @@ void Stats::addfield(const char *key, FnPtr func, int typeflag)
 
 int Stats::evaluate_keyword(char *word, double *answer)
 {
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

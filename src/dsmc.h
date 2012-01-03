@@ -33,6 +33,7 @@ class DSMC {
   class Update *update;          // timestepper
   class Comm *comm;              // inter-processor communication
   class Domain *domain;          // simulation box
+  class Modify *modify;          // fixes and computes
   class Grid *grid;              // volumetric grid cells
   class Surf *surf;              // surface elements
   class Collide *collide;        // collisions and chemistry

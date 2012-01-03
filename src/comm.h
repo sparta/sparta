@@ -21,9 +21,9 @@ namespace DSMC_NS {
 
 class Comm : protected Pointers {
  public:
-  bigint ncomm;                     // dummy statistic for now
-
   int me,nprocs;                    // proc info
+
+  bigint ncomm;                     // dummy statistic for now
 
   Comm(class DSMC *);
   ~Comm();

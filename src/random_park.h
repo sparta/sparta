@@ -12,22 +12,19 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
-#ifndef DSMC_RANPARK_H
-#define DSMC_RANPARK_H
-
-#include "pointers.h"
+#ifndef DSMC_RAN_PARK_H
+#define DSMC_RAN_PARK_H
 
 namespace DSMC_NS {
 
-class RanPark : protected Pointers {
-  friend class Set;
+class RanPark {
  public:
-  RanPark(class DSMC *, int);
+  RanPark(int);
+  RanPark(double);
+  ~RanPark() {}
+  void reset(double, int, int);
   double uniform();
   double gaussian();
-  void reset(int);
-  void reset(int, double *);
-  int state();
 
  private:
   int seed,save;
@@ -37,12 +34,3 @@ class RanPark : protected Pointers {
 }
 
 #endif
-
-/* ERROR/WARNING messages:
-
-E: Invalid seed for Park random # generator
-
-The initial seed for this random number generator must be a positive
-integer.
-
-*/

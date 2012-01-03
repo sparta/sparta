@@ -16,8 +16,10 @@
 #include "string.h"
 #include "collide.h"
 #include "particle.h"
+#include "update.h"
 #include "grid.h"
 #include "comm.h"
+#include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
 
@@ -41,8 +43,9 @@ Collide::Collide(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
 
   sscoll = NULL;
 
-  // NOTE: need to handle RNG and seeds better, like kMC
-  random = new RanPark(dsmc,SEED+comm->me);
+  random = new RanPark(update->ranmaster->uniform());
+  double seed = update->ranmaster->uniform();
+  random->reset(seed,comm->me,100);
 }
 
 /* ---------------------------------------------------------------------- */

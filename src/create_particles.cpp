@@ -22,6 +22,7 @@
 #include "comm.h"
 #include "domain.h"
 #include "mixture.h"
+#include "random_mars.h"
 #include "random_park.h"
 #include "math_const.h"
 #include "memory.h"
@@ -114,7 +115,9 @@ void CreateParticles::create_local(bigint n)
   int dimension = domain->dimension;
 
   int me = comm->me;
-  RanPark *random = new RanPark(dsmc,seed+me);
+  RanPark *random = new RanPark(update->ranmaster->uniform());
+  double seed = update->ranmaster->uniform();
+  random->reset(seed,me,100);
 
   Grid::OneCell *cells = grid->cells;
   int *mycells = grid->mycells;
@@ -229,7 +232,7 @@ void CreateParticles::create_all(bigint n)
   double zprd = domain->zprd;
 
   int me = comm->me;
-  RanPark *random = new RanPark(dsmc,seed);
+  RanPark *random = new RandomPark(update->ranmaster->uniform());
 
   int icell;
   double x,y,z;

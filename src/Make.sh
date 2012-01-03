@@ -37,22 +37,11 @@ style () {
 
 if (test $1 = "style") then
 
-  style COMMAND_CLASS   ""          command    input
   style COLLIDE_CLASS   collide_    collide    input
+  style COMMAND_CLASS   ""          command    input
+  style COMPUTE_CLASS   compute_    compute    modify
   style DUMP_CLASS      dump_       dump       output
-
-  #style ANGLE_CLASS     angle_      angle      force
-  #style ATOM_CLASS      atom_vec_   atom       atom
-  #style BOND_CLASS      bond_       bond       force
-  #style COMPUTE_CLASS   compute_    compute    modify
-  #style DIHEDRAL_CLASS  dihedral_   dihedral   force
-  #style FIX_CLASS       fix_        fix        modify
-  #style IMPROPER_CLASS  improper_   improper   force
-  #style INTEGRATE_CLASS ""          integrate  update
-  #style KSPACE_CLASS    ""          kspace     force
-  #style MINIMIZE_CLASS  min_        minimize   update
-  #style PAIR_CLASS      pair_       pair       force
-  #style REGION_CLASS    region_     region     domain
+  style FIX_CLASS       fix_        fix        modify
 
 # edit Makefile.lib
 # called by "make makelib"

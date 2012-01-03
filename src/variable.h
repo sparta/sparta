@@ -47,8 +47,8 @@ class Variable : protected Pointers {
   char ***data;            // str value of each variable's values
   double PI;
 
-  class RanMars *randomequal;   // random number generator for equal-style vars
-  class RanMars *randomatom;    // random number generator for atom-style vars
+  class RanPark *randomequal;   // random number generator for equal-style vars
+  class RanPark *randomatom;    // random number generator for atom-style vars
 
   int precedence[16];      // precedence level of math operators
                            // set length to include OR in enum

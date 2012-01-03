@@ -13,8 +13,10 @@
 ------------------------------------------------------------------------- */
 
 #include "grid.h"
+#include "update.h"
 #include "domain.h"
 #include "comm.h"
+#include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
 #include "error.h"
@@ -178,7 +180,7 @@ void Grid::assign_random(int seed)
 {
   int me = comm->me;
   int nprocs = comm->nprocs;
-  RanPark *random = new RanPark(dsmc,seed);
+  RanPark *random = new RanPark(update->ranmaster->uniform());
 
   for (int m = 0; m < ncell; m++)
     cells[m].proc = nprocs * random->uniform();

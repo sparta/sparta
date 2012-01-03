@@ -39,6 +39,8 @@ class Update : protected Pointers {
   int nmigrate;             // # of particles to migrate to new procs
   int *mlist;               // indices of particles to migrate
 
+  class RanMars *ranmaster;   // master random number generator
+
   Update(class DSMC *);
   ~Update();
   void init() {}
@@ -49,18 +51,8 @@ class Update : protected Pointers {
 
  private:
   int maxmigrate;            // max # of particles in mlist
-
-  void check();
 };
 
 }
 
 #endif
-
-/* ERROR/WARNING messages:
-
-E: %d particles are not in correct cell
-
-UNDOCUMENTED
-
-*/
