@@ -27,6 +27,7 @@ class Update : protected Pointers {
   double dt;                      // timestep size
 
   double kboltz;         // Boltzmann constant (Joules/K)
+  double mvv2e;          // // conversion of mv^2 to energy
 
   double fnum;           // ratio of real particles to simulation particles
   double nrho;           // number density of background gas

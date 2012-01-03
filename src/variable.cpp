@@ -1256,30 +1256,24 @@ double Variable::collapse_tree(Tree *tree)
 
   if (tree->type == RANDOM) {
     collapse_tree(tree->left);
-    collapse_tree(tree->middle);
+    collapse_tree(tree->right);
     if (randomatom == NULL) {
-      int seed = static_cast<int> (collapse_tree(tree->right));
-      if (seed <= 0)
-	error->one(FLERR,"Invalid math function in variable formula");
       randomatom = new RanPark(update->ranmaster->uniform());
-      double rseed = update->ranmaster->uniform();
-      randomatom->reset(rseed,me,100);
+      double seed = update->ranmaster->uniform();
+      randomatom->reset(seed,me,100);
     }
     return 0.0;
   }
 
   if (tree->type == NORMAL) {
     collapse_tree(tree->left);
-    double sigma = collapse_tree(tree->middle);
+    double sigma = collapse_tree(tree->right);
     if (sigma < 0.0)
       error->one(FLERR,"Invalid math function in variable formula");
     if (randomatom == NULL) {
-      int seed = static_cast<int> (collapse_tree(tree->right));
-      if (seed <= 0)
-	error->one(FLERR,"Invalid math function in variable formula");
       randomatom = new RanPark(update->ranmaster->uniform());
-      double rseed = update->ranmaster->uniform();
-      randomatom->reset(rseed,me,100);
+      double seed = update->ranmaster->uniform();
+      randomatom->reset(seed,me,100);
     }
     return 0.0;
   }
@@ -1528,29 +1522,23 @@ double Variable::eval_tree(Tree *tree, int i)
 
   if (tree->type == RANDOM) {
     double lower = eval_tree(tree->left,i);
-    double upper = eval_tree(tree->middle,i);
+    double upper = eval_tree(tree->right,i);
     if (randomatom == NULL) {
-      int seed = static_cast<int> (eval_tree(tree->right,i));
-      if (seed <= 0) 
-	error->one(FLERR,"Invalid math function in variable formula");
       randomatom = new RanPark(update->ranmaster->uniform());
-      double rseed = update->ranmaster->uniform();
-      randomatom->reset(rseed,me,100);
+      double seed = update->ranmaster->uniform();
+      randomatom->reset(seed,me,100);
     }
     return randomatom->uniform()*(upper-lower)+lower;
   }
   if (tree->type == NORMAL) {
     double mu = eval_tree(tree->left,i);
-    double sigma = eval_tree(tree->middle,i);
+    double sigma = eval_tree(tree->right,i);
     if (sigma < 0.0) 
       error->one(FLERR,"Invalid math function in variable formula");
     if (randomatom == NULL) {
-      int seed = static_cast<int> (eval_tree(tree->right,i));
-      if (seed <= 0) 
-	error->one(FLERR,"Invalid math function in variable formula");
       randomatom = new RanPark(update->ranmaster->uniform());
-      double rseed = update->ranmaster->uniform();
-      randomatom->reset(rseed,me,100);
+      double seed = update->ranmaster->uniform();
+      randomatom->reset(seed,me,100);
     }
     return mu + sigma*randomatom->gaussian();
   }
@@ -1909,34 +1897,28 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     else argstack[nargstack++] = atan2(value1,value2);
 
   } else if (strcmp(word,"random") == 0) {
-    if (narg != 3)
+    if (narg != 2)
       error->all(FLERR,"Invalid math function in variable formula");
     if (tree) newtree->type = RANDOM;
     else {
       if (randomequal == NULL) {
-	int seed = static_cast<int> (value3);
-	if (seed <= 0)
-	  error->all(FLERR,"Invalid math function in variable formula");
 	randomequal = new RanPark(update->ranmaster->uniform());
-	double rseed = update->ranmaster->uniform();
-	randomequal->reset(rseed,me,100);
+	double seed = update->ranmaster->uniform();
+	randomequal->reset(seed,me,100);
       }
       argstack[nargstack++] = randomequal->uniform()*(value2-value1) + value1;
     }
   } else if (strcmp(word,"normal") == 0) {
-    if (narg != 3)
+    if (narg != 2)
       error->all(FLERR,"Invalid math function in variable formula");
     if (tree) newtree->type = NORMAL;
     else {
       if (value2 < 0.0) 
 	error->all(FLERR,"Invalid math function in variable formula");
       if (randomequal == NULL) {
-	int seed = static_cast<int> (value3);
-	if (seed <= 0)
-	  error->all(FLERR,"Invalid math function in variable formula");
 	randomequal = new RanPark(update->ranmaster->uniform());
-	double rseed = update->ranmaster->uniform();
-	randomequal->reset(rseed,me,100);
+	double seed = update->ranmaster->uniform();
+	randomequal->reset(seed,me,100);
       }
       argstack[nargstack++] = value1 + value2*randomequal->gaussian();
     }
@@ -1958,102 +1940,6 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       error->all(FLERR,"Invalid math function in variable formula");
     if (tree) newtree->type = ROUND;
     else argstack[nargstack++] = MYROUND(value1);
-
-    /*
-  } else if (strcmp(word,"ramp") == 0) {
-    if (narg != 2)
-      error->all(FLERR,"Invalid math function in variable formula");
-    if (update->whichflag == 0)
-      error->all(FLERR,"Cannot use ramp in variable formula between runs");
-    if (tree) newtree->type = RAMP;
-    else {
-      double delta = update->ntimestep - update->beginstep;
-      delta /= update->endstep - update->beginstep;
-      double value = value1 + delta*(value2-value1);
-      argstack[nargstack++] = value;
-    }
-
-  } else if (strcmp(word,"stagger") == 0) {
-    if (narg != 2)
-      error->all(FLERR,"Invalid math function in variable formula");
-    if (tree) newtree->type = STAGGER;
-    else {
-      int ivalue1 = static_cast<int> (value1);
-      int ivalue2 = static_cast<int> (value2);
-      if (ivalue1 <= 0 || ivalue2 <= 0 || ivalue1 <= ivalue2)
-	error->all(FLERR,"Invalid math function in variable formula");
-      int lower = update->ntimestep/ivalue1 * ivalue1;
-      int delta = update->ntimestep - lower;
-      double value;
-      if (delta < ivalue2) value = lower+ivalue2;
-      else value = lower+ivalue1;
-      argstack[nargstack++] = value;
-    }
-
-  } else if (strcmp(word,"logfreq") == 0) {
-    if (narg != 3)
-      error->all(FLERR,"Invalid math function in variable formula");
-    if (tree) newtree->type = LOGFREQ;
-    else {
-      int ivalue1 = static_cast<int> (value1);
-      int ivalue2 = static_cast<int> (value2);
-      int ivalue3 = static_cast<int> (value3);
-      if (ivalue1 <= 0 || ivalue2 <= 0 || ivalue3 <= 0 || ivalue2 >= ivalue3)
-	error->all(FLERR,"Invalid math function in variable formula");
-      double value;
-      if (update->ntimestep < ivalue1) value = ivalue1;
-      else {
-	int lower = ivalue1;
-	while (update->ntimestep >= ivalue3*lower) lower *= ivalue3;
-	int multiple = update->ntimestep/lower;
-	if (multiple < ivalue2) value = (multiple+1)*lower;
-	else value = lower*ivalue3;
-      }
-      argstack[nargstack++] = value;
-    }
-
-  } else if (strcmp(word,"vdisplace") == 0) {
-    if (narg != 2)
-      error->all(FLERR,"Invalid math function in variable formula");
-    if (update->whichflag == 0)
-      error->all(FLERR,"Cannot use vdisplace in variable formula between runs");
-    if (tree) newtree->type = VDISPLACE;
-    else {
-      double delta = update->ntimestep - update->beginstep;
-      double value = value1 + value2*delta*update->dt;
-      argstack[nargstack++] = value;
-    }
-
-  } else if (strcmp(word,"swiggle") == 0) {
-    if (narg != 3)
-      error->all(FLERR,"Invalid math function in variable formula");
-    if (update->whichflag == 0)
-      error->all(FLERR,"Cannot use swiggle in variable formula between runs");
-    if (tree) newtree->type = CWIGGLE;
-    else {
-      if (value3 == 0.0)
-	error->all(FLERR,"Invalid math function in variable formula");
-      double delta = update->ntimestep - update->beginstep;
-      double omega = 2.0*PI/value3;
-      double value = value1 + value2*sin(omega*delta*update->dt);
-      argstack[nargstack++] = value;
-    }
-
-  } else if (strcmp(word,"cwiggle") == 0) {
-    if (narg != 3)
-      error->all(FLERR,"Invalid math function in variable formula");
-    if (update->whichflag == 0)
-      error->all(FLERR,"Cannot use cwiggle in variable formula between runs");
-    if (tree) newtree->type = CWIGGLE;
-    else {
-      if (value3 == 0.0)
-	error->all(FLERR,"Invalid math function in variable formula");
-      double delta = update->ntimestep - update->beginstep;
-      double omega = 2.0*PI/value3;
-      double value = value1 + value2*(1.0-cos(omega*delta*update->dt));
-      argstack[nargstack++] = value;
-    }
-    */
   }
 
   delete [] arg1;

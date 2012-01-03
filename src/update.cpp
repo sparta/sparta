@@ -39,6 +39,7 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
   dt = 1.0;
 
   kboltz = 1.38066e-23;
+  mvv2e = 1.0;
 
   fnum = 1.0;
   nrho = 1.0;
