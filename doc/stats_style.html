@@ -18,8 +18,10 @@
 <UL><LI>arg1,arg2,... = list of statistical attributes 
 
 <P>  possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
-                        npart, temp, 
-                        vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
+                        npart, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
+			c_ID, c_ID[I], c_ID[I][J],
+                        f_ID, f_ID[I], f_ID[I][J],
+                        v_name
 </P>
 <PRE>      step = timestep
       elapsed = timesteps since start of this run
@@ -28,17 +30,23 @@
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second
       npart = # of particles
-      temp = temperature
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
-      xlo,xhi,ylo,yhi,zlo,zhi = box boundaries 
+      xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
+      c_ID = global scalar value calculated by a compute with ID
+      c_ID[I] = Ith component of global vector calculated by a compute with ID
+      c_ID[I][J] = I,J component of global array calculated by a compute with ID
+      f_ID = global scalar value calculated by a fix with ID
+      f_ID[I] = Ith component of global vector calculated by a fix with ID
+      f_ID[I][J] = I,J component of global array calculated by a fix with ID
+      v_name = scalar value calculated by an equal-style variable with name 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>stats_style step cpu npart temp
-stats_style step temp cpu spcpu npart xlo xhi 
+stats_style step temp cpu spcpu npart xlo xhi c_myTemp 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -71,6 +79,50 @@ continually output the time and timestep rate for the last 100 steps.
 </P>
 <HR>
 
+<P>The <I>c_ID</I> and <I>c_ID[I]</I> and <I>c_ID[I][J]</I> keywords allow global
+values calculated by a compute to be output.  As discussed on the
+<A HREF = "compute.html">compute</A> doc page, computes can calculate global,
+per-particle, or per-cell values.  Only global values can be
+referenced by this command.  However, per-particle or per-cell compute
+values can be referenced in a <A HREF = "variable.html">variable</A> and the
+variable referenced, as discussed below.
+</P>
+<P>The ID in the keyword should be replaced by the actual ID of a compute
+that has been defined elsewhere in the input script.  See the
+<A HREF = "compute.html">compute</A> command for details.  If the compute calculates
+a global scalar, vector, or array, then the keyword formats with 0, 1,
+or 2 brackets will reference a scalar value from the compute.
+</P>
+<P>The <I>f_ID</I> and <I>f_ID[I]</I> and <I>f_ID[I][J]</I> keywords allow global
+values calculated by a fix to be output.  As discussed on the
+<A HREF = "fix.html">fix</A> doc page, fixes can calculate global, per-particle, or
+per-cell values.  Only global values can be referenced by this
+command.  However, per-particle or per-cell fix values can be
+referenced in a <A HREF = "variable.html">variable</A> and the variable referenced,
+as discussed below.
+</P>
+<P>The ID in the keyword should be replaced by the actual ID of a fix
+that has been defined elsewhere in the input script.  See the
+<A HREF = "fix.html">fix</A> command for details.  If the fix calculates a global
+scalar, vector, or array, then the keyword formats with 0, 1, or 2
+brackets will reference a scalar value from the fix.
+</P>
+<P>The <I>v_name</I> keyword allow the current value of a variable to be
+output.  The name in the keyword should be replaced by the variable
+name that has been defined elsewhere in the input script.  Only
+equal-style variables can be referenced.  See the
+<A HREF = "variable.html">variable</A> command for details.  Variables of style
+<I>equal</I> can reference per-particle or per-cell properties or stats
+keywords, or they can invoke other computes, fixes, or variables when
+evaluated, so this is a very general means of creating statistical
+output.
+</P>
+<P>See <A HREF = "Section_modify.html">Section_modify</A> for information on how to add
+new compute and fix styles to DSMC to calculate quantities that can
+then be referenced with these keywords to generate statistical output.
+</P>
+<HR>
+
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
@@ -79,6 +131,6 @@ continually output the time and timestep rate for the last 100 steps.
 </P>
 <P><B>Default:</B>
 </P>
-<PRE>stats_style step cpu npart temp 
+<PRE>stats_style step cpu npart 
 </PRE>
 </HTML>

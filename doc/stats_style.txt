@@ -14,8 +14,10 @@ stats_style arg1 arg2 ... :pre
 
 arg1,arg2,... = list of statistical attributes :ulb,l
   possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
-                        npart, temp, 
-                        vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
+                        npart, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
+			c_ID, c_ID\[I\], c_ID\[I\]\[J\],
+                        f_ID, f_ID\[I\], f_ID\[I\]\[J\],
+                        v_name
 
       step = timestep
       elapsed = timesteps since start of this run
@@ -24,16 +26,22 @@ arg1,arg2,... = list of statistical attributes :ulb,l
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second
       npart = # of particles
-      temp = temperature
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
-      xlo,xhi,ylo,yhi,zlo,zhi = box boundaries :pre
+      xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
+      c_ID = global scalar value calculated by a compute with ID
+      c_ID\[I\] = Ith component of global vector calculated by a compute with ID
+      c_ID\[I\]\[J\] = I,J component of global array calculated by a compute with ID
+      f_ID = global scalar value calculated by a fix with ID
+      f_ID\[I\] = Ith component of global vector calculated by a fix with ID
+      f_ID\[I\]\[J\] = I,J component of global array calculated by a fix with ID
+      v_name = scalar value calculated by an equal-style variable with name :pre
 :ule
 
 [Examples:]
 
 stats_style step cpu npart temp
-stats_style step temp cpu spcpu npart xlo xhi :pre
+stats_style step temp cpu spcpu npart xlo xhi c_myTemp :pre
 
 [Description:]
 
@@ -66,6 +74,50 @@ continually output the time and timestep rate for the last 100 steps.
 
 :line
 
+The {c_ID} and {c_ID\[I\]} and {c_ID\[I\]\[J\]} keywords allow global
+values calculated by a compute to be output.  As discussed on the
+"compute"_compute.html doc page, computes can calculate global,
+per-particle, or per-cell values.  Only global values can be
+referenced by this command.  However, per-particle or per-cell compute
+values can be referenced in a "variable"_variable.html and the
+variable referenced, as discussed below.
+
+The ID in the keyword should be replaced by the actual ID of a compute
+that has been defined elsewhere in the input script.  See the
+"compute"_compute.html command for details.  If the compute calculates
+a global scalar, vector, or array, then the keyword formats with 0, 1,
+or 2 brackets will reference a scalar value from the compute.
+
+The {f_ID} and {f_ID\[I\]} and {f_ID\[I\]\[J\]} keywords allow global
+values calculated by a fix to be output.  As discussed on the
+"fix"_fix.html doc page, fixes can calculate global, per-particle, or
+per-cell values.  Only global values can be referenced by this
+command.  However, per-particle or per-cell fix values can be
+referenced in a "variable"_variable.html and the variable referenced,
+as discussed below.
+
+The ID in the keyword should be replaced by the actual ID of a fix
+that has been defined elsewhere in the input script.  See the
+"fix"_fix.html command for details.  If the fix calculates a global
+scalar, vector, or array, then the keyword formats with 0, 1, or 2
+brackets will reference a scalar value from the fix.
+
+The {v_name} keyword allow the current value of a variable to be
+output.  The name in the keyword should be replaced by the variable
+name that has been defined elsewhere in the input script.  Only
+equal-style variables can be referenced.  See the
+"variable"_variable.html command for details.  Variables of style
+{equal} can reference per-particle or per-cell properties or stats
+keywords, or they can invoke other computes, fixes, or variables when
+evaluated, so this is a very general means of creating statistical
+output.
+
+See "Section_modify"_Section_modify.html for information on how to add
+new compute and fix styles to DSMC to calculate quantities that can
+then be referenced with these keywords to generate statistical output.
+
+:line
+
 [Restrictions:] none
 
 [Related commands:]
@@ -74,4 +126,4 @@ continually output the time and timestep rate for the last 100 steps.
 
 [Default:]
 
-stats_style step cpu npart temp :pre
+stats_style step cpu npart :pre
