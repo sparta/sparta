@@ -108,6 +108,8 @@ available in DSMC:
 
 "temp"_compute_temp.html - temperature of all the particles :ul
 
+:line
+
 [Restrictions:] none
 
 [Related commands:]

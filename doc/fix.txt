@@ -128,6 +128,8 @@ list of fix styles available in LAMMPS:
 "grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
 "print"_fix_print.html - print text and variables during a simulation :ul
 
+:line
+
 [Restrictions:] none
 
 [Related commands:]
