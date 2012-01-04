@@ -50,6 +50,13 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
   mlist = NULL;
 
   ranmaster = new RanMars(dsmc);
+
+  faceflip[XLO] = XHI;
+  faceflip[XHI] = XLO;
+  faceflip[YLO] = YHI;
+  faceflip[YHI] = YLO;
+  faceflip[ZLO] = ZHI;
+  faceflip[ZHI] = ZLO;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -58,6 +65,14 @@ Update::~Update()
 {
   memory->destroy(mlist);
   delete ranmaster;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Update::init()
+{
+  if (domain->dimension == 3) move = &Update::move3d;
+  else if (domain->dimension == 2) move = &Update::move2d;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -90,7 +105,7 @@ void Update::run(int nsteps)
     // move particles
 
     timer->stamp();
-    move();
+    (this->*move)();
     timer->stamp(TIME_MOVE);
 
     // communicate particles
@@ -124,10 +139,10 @@ void Update::run(int nsteps)
 }
 
 /* ----------------------------------------------------------------------
-   advect particles thru grid
+   advect particles thru grid in 3d manner
 ------------------------------------------------------------------------- */
 
-void Update::move()
+void Update::move3d()
 {
   int icell,inface,outface,outflag;
   double xnew[3];
@@ -245,15 +260,7 @@ void Update::move()
 	lo = cells[icell].lo;
 	hi = cells[icell].hi;
 	neigh = cells[icell].neigh;
-
-	// NOTE: should store faceflip[6]
-
-	if (outface == XLO) inface = XHI;
-	else if (outface == XHI) inface = XLO;
-	else if (outface == YLO) inface = YHI;
-	else if (outface == YHI) inface = YLO;
-	else if (outface == ZLO) inface = ZHI;
-	else if (outface == ZHI) inface = ZLO;
+	inface = faceflip[outface];
 	count++;
 
       } else {
@@ -284,6 +291,152 @@ void Update::move()
     x[0] = xnew[0];
     x[1] = xnew[1];
     x[2] = xnew[2];
+
+    if (outflag == OUTFLOW) {
+      particles[i].icell = -1;
+      mlist[nmigrate++] = i;
+    } else {
+      particles[i].icell = icell;
+      if (cells[icell].proc != me) mlist[nmigrate++] = i;
+    }
+  }
+
+  nmove += nlocal;
+  ncellcross += count;
+}
+
+/* ----------------------------------------------------------------------
+   advect particles thru grid in 2d manner
+------------------------------------------------------------------------- */
+
+void Update::move2d()
+{
+  int icell,inface,outface,outflag;
+  double xnew[2];
+  double *x,*v,*lo,*hi;
+  int *neigh;
+  double frac,newfrac;
+
+  // extend migration list if necessary
+
+  int nlocal = particle->nlocal;
+  int maxlocal = particle->maxlocal;
+
+  if (nlocal > maxmigrate) {
+    maxmigrate = maxlocal;
+    memory->destroy(mlist);
+    memory->create(mlist,maxmigrate,"particle:mlist");
+  }
+
+  int dimension = domain->dimension;
+  Particle::OnePart *particles = particle->particles;
+  Grid::OneCell *cells = grid->cells;
+  double dt = update->dt;
+  int me = comm->me;
+
+  int count = 0;
+  nmigrate = 0;
+
+  for (int i = 0; i < nlocal; i++) {
+
+    x = particles[i].x;
+    v = particles[i].v;
+
+    xnew[0] = x[0] + dt*v[0];
+    xnew[1] = x[1] + dt*v[1];
+
+    icell = particles[i].icell;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    neigh = cells[icell].neigh;
+    inface = INTERIOR;
+    outflag = 0;
+    count++;
+
+    // advect particle from cell to cell until single-step move is done
+
+    while (1) {
+
+      // check if particle crosses any cell face
+      // frac = fraction of move completed before hitting cell face
+      // this section should be as efficient as possible,
+      // since most particles won't do anything else
+
+      outface = INTERIOR;
+      frac = 1.0;
+      
+      if (xnew[0] < lo[0] && inface != XLO) {
+	frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
+	outface = XLO;
+      } else if (xnew[0] >= hi[0] && inface != XHI) {
+	frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
+	outface = XHI;
+      }
+
+      if (xnew[1] < lo[1] && inface != YLO) {
+	newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
+	if (newfrac < frac) {
+	  frac = newfrac;
+	  outface = YLO;
+	}
+      } else if (xnew[1] >= hi[1] && inface != YHI) {
+	newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+	if (newfrac < frac) {
+	  frac = newfrac;
+	  outface = YHI;
+	}
+      }
+      
+      // particle stays interior to cell
+
+      if (outface == INTERIOR) break;
+
+      // set particle position exactly on edge of cell
+      
+      x[0] += frac * (xnew[0]-x[0]);
+      x[1] += frac * (xnew[1]-x[1]);
+      
+      if (outface == XLO) x[0] = lo[0];
+      else if (outface == XHI) x[0] = hi[0]; 
+      else if (outface == YLO) x[1] = lo[1];
+      else if (outface == YHI) x[1] = hi[1]; 
+      
+      // if cell has neighbor cell, move into that cell
+      // else enforce global boundary conditions
+
+      if (neigh[outface] >= 0) {
+	icell = neigh[outface];
+	lo = cells[icell].lo;
+	hi = cells[icell].hi;
+	neigh = cells[icell].neigh;
+	inface = faceflip[outface];
+	count++;
+
+      } else {
+        outflag = domain->boundary(outface,icell,x,xnew,v);
+	if (outflag == OUTFLOW) break;
+	else if (outflag == SPECULAR) inface = outface;
+	else if (outflag == PERIODIC) {
+	  lo = cells[icell].lo;
+	  hi = cells[icell].hi;
+	  neigh = cells[icell].neigh;
+
+	  if (outface == XLO) inface = XHI;
+	  else if (outface == XHI) inface = XLO;
+	  else if (outface == YLO) inface = YHI;
+	  else if (outface == YHI) inface = YLO;
+	  count++;
+	}
+      }
+    }
+
+    // update final particle position
+    // if OUTFLOW particle, set icell to -1 and add to migrate list,
+    //   which will delete it
+    // else reset icell and add to migrate list if I don't own new cell
+
+    x[0] = xnew[0];
+    x[1] = xnew[1];
 
     if (outflag == OUTFLOW) {
       particles[i].icell = -1;

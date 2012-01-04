@@ -44,14 +44,20 @@ class Update : protected Pointers {
 
   Update(class DSMC *);
   ~Update();
-  void init() {}
+  void init();
   void setup();
   void run(int);
-  void move();
   void global(int, char **);
 
  private:
   int maxmigrate;            // max # of particles in mlist
+  int faceflip[6];
+
+  typedef void (Update::*FnPtr)();
+  FnPtr move;                // ptr to move method
+
+  void move3d();             // variants of move method
+  void move2d();
 };
 
 }
