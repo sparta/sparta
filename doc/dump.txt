@@ -19,27 +19,26 @@ N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
   {image} args = discussed on "dump image"_dump_image.html doc page
-  {custom} args = list of atom attributes
-    possible attributes = id, type, x, y, z, xs, ys, zs, vx, vy, vz :pre
+  {custom} args = list of particle attributes
+    possible attributes = id, type, x, y, z, xs, ys, zs, vx, vy, vz,
+                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = particle ID
       type = particle species
       x,y,z = unscaled particle coordinates
       xs,ys,zs = scaled particle coordinates
-      vx,vy,vz = atom velocities :pre
-
+      vx,vy,vz = particle velocities
+      c_ID = per-particle vector calculated by a compute with ID
+      c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID
+      f_ID = per-particle vector calculated by a fix with ID
+      f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID
+      v_name = per-particle vector calculated by an particle-style variable with name :pre
 :ule
 
 [Examples:]
 
-dump myDump all atom 100 dump.atom
-dump 2 subgroup atom 50 dump.run.bin
-dump 4a all custom 100 dump.myforce.* id type x y vx fx
-dump 4b flow custom 100 dump.%.myforce id type c_myF\[3\] v_ke
-dump 2 inner cfg 10 dump.snap.*.cfg id type xs ys zs vx vy vz
-dump snap all cfg 100 dump.config.*.cfg id type xs ys zs id type c_Stress[2]
-dump 1 all xtc 1000 file.xtc
-dump e_data all custom 100 dump.eff id type x y z spin eradius fx fy fz eforce :pre
+dump 1 particle 100 dump.myforce.* id type x y vx fx
+dump 2 particle 100 dump.%.myforce id type c_myF\[3\] v_ke :pre
 
 [Description:]
 
@@ -49,9 +48,9 @@ exception; it creates a JPG or PPM image file of the simulation
 configuration every N timesteps, as discussed on the "dump
 image"_dump_image.html doc page.
 
-Only information for atoms in the specified group is dumped.  The
+Only information for particles in the specified group is dumped.  The
 "dump_modify thresh and region"_dump_modify.html commands can also
-alter what atoms are included.  Not all styles support all these
+alter what particles are included.  Not all styles support all these
 options; see details below.
 
 As described below, the filename determines the kind of output (text
@@ -141,7 +140,7 @@ to convert it back to text format (see the "binary2txt
 tool"_Section_tools.html#binary) or write your own code to read the
 binary file.  The format of the binary file can be understood by
 looking at the tools/binary2txt.cpp file.  This option is only
-available for the {atom} and {custom} styles.
+available for the {particle} style.
 
 If the filename ends with ".gz", the dump file (or files, if "*" or "%"
 is also used) is written in gzipped format.  A gzipped dump file will
@@ -155,15 +154,56 @@ part of the {particle} style.
 
 The {id}, {type}, {vx}, {vy}, {vz} attributes are self-explanatory.
 
-{Id} is the atom ID.  {Type} is an integer index representing the
+{Id} is the particle ID.  {Type} is an integer index representing the
 particle species.  {Vx}, {vy}, {vz} are components of particle
 velocity.
 
-There are several options for outputting atom coordinates.  The {x},
-{y}, {z} attributes write particle coordinates "unscaled", in the
+There are several options for outputting particle coordinates.  The
+{x}, {y}, {z} attributes write particle coordinates "unscaled", in the
 appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} if you
 want the coordinates "scaled" to the box size, so that each value is
 0.0 to 1.0.
+
+The {c_ID} and {c_ID\[N\]} attributes allow per-particle vectors or
+arrays calculated by a "compute"_compute.html to be output.  The ID in
+the attribute should be replaced by the actual ID of the compute that
+has been defined previously in the input script.  See the
+"compute"_compute.html command for details.
+
+Note that computes which calculate global or per-cell quantities, as
+opposed to per-particle quantities, cannot be output in a dump
+particle command.  Instead, global quantities can be output by the
+"stats_style"_stats_style.html command, and per-cell quantities can be
+output by the dump grid command.
+
+If {c_ID} is used as a attribute, then the per-particle vector
+calculated by the compute is printed.  If {c_ID\[N\]} is used, then N
+must be in the range from 1-M, which will print the Nth column of the
+M-length per-particle array calculated by the compute.
+
+The {f_ID} and {f_ID\[N\]} attributes allow vector or array
+per-particle quantities calculated by a "fix"_fix.html to be output.
+The ID in the attribute should be replaced by the actual ID of the fix
+that has been defined previously in the input script.
+
+If {f_ID} is used as a attribute, then the per-particle vector
+calculated by the fix is printed.  If {f_ID\[N\]} is used, then N must
+be in the range from 1-M, which will print the Nth column of the
+M-length per-particle array calculated by the fix.
+
+The {v_name} attribute allows per-particle vectors calculated by a
+"variable"_variable.html to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only a particle-style
+variable can be referenced, since it is the only style that generates
+per-particle values.  Variables of style {particle} can reference
+per-particle attributes, stats keywords, or invoke other computes,
+fixes, or variables when they are evaluated, so this is a very general
+means of creating quantities to output to a dump file.
+
+See "Section_modify"_Section_modify.html of the manual for information
+on how to add new compute and fix styles to DSMC to calculate
+per-particle quantities which could then be output into dump files.
 
 :line
 

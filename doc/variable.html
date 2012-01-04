@@ -314,8 +314,8 @@ would occur with the default precedence.
 </P>
 <P>The 6 relational operators return either a 1.0 or 0.0 depending on
 whether the relationship between x and y is TRUE or FALSE.  For
-example the expression x<10.0 in an atom-style variable formula will
-return 1.0 for all atoms whose x-coordinate is less than 10.0, and 0.0
+example the expression x<10.0 in an particle-style variable formula will
+return 1.0 for all particles whose x-coordinate is less than 10.0, and 0.0
 for the others.  The logical AND operator will return 1.0 if both its
 arguments are non-zero, else it returns 0.0.  The logical OR operator
 will return 1.0 if either of its arguments is non-zero, else it
@@ -557,15 +557,15 @@ elsewhere in the input script.  As discussed on this doc page,
 particle-style variables generate a per-particle vector of values; all
 other variable styles generate a global scalar value.  An equal-style
 variable can only use scalar values, which means another equal-style
-variable.  Atom-style variables can use either other equal-style
-or atom-style variables.
+variable.  Particle-style variables can use either other equal-style
+or particle-style variables.
 </P>
 <P>Examples of different kinds of variable references are as follows.
 There is no ambiguity as to what a reference means, since variables
 produce only a global scalar or a per-particle vectors, never both.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
-<TR><TD >v_name</TD><TD > scalar, or per-atom vector 
+<TR><TD >v_name</TD><TD > scalar, or per-particle vector 
 </TD></TR></TABLE></DIV>
 
 <P>IMPORTANT NOTE: If you define variables in circular manner like this:
@@ -636,15 +636,12 @@ is evaluated later.
 <P><B>Variable Accuracy:</B>
 </P>
 <P>Obviously, DSMC attempts to evaluate variables containing formulas
-(<I>equal</I> and <I>atom</I> style variables) accurately whenever the
+(<I>equal</I> and <I>particle</I> style variables) accurately whenever the
 evaluation is performed.  Depending on what is included in the
 formula, this may require invoking a <A HREF = "compute.html">compute</A>, either
 directly or indirectly via a thermo keyword, or accessing a value
 previously calculated by a compute, or accessing a value calculated
-and stored by a <A HREF = "fix.html">fix</A>.  If the compute is one that calculates
-the pressure or energy of the system, then these quantities need to be
-tallied during the evaluation of the interatomic potentials (pair,
-bond, etc) on timesteps that the variable will need the values.
+and stored by a <A HREF = "fix.html">fix</A>.
 </P>
 <P>DSMC keeps track of all of this during a <A HREF = "run.html">run</A> or <A HREF = "minimize.html">energy
 minimization</A>.  An error will be generated if you
