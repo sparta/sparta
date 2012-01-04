@@ -92,7 +92,8 @@ void Modify::init()
     compute[i]->invoked_scalar = -1;
     compute[i]->invoked_vector = -1;
     compute[i]->invoked_array = -1;
-    compute[i]->invoked_peratom = -1;
+    compute[i]->invoked_per_particle = -1;
+    compute[i]->invoked_per_cell = -1;
   }
 }
 

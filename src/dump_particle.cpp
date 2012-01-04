@@ -26,11 +26,14 @@ using namespace DSMC_NS;
 
 // customize by adding keyword
 
-enum{ID,TYPE,X,Y,Z,XS,YS,ZS,VX,VY,VZ};
+enum{ID,TYPE,X,Y,Z,XS,YS,ZS,VX,VY,VZ,
+     COMPUTE,FIX,VARIABLE};
 enum{LT,LE,GT,GE,EQ,NEQ};
 enum{INT,DOUBLE,STRING};
 
 enum{PERIODIC,OUTFLOW,SPECULAR};            // same as in Domain
+
+#define INVOKED_PERPARTICLE 8
 
 /* ---------------------------------------------------------------------- */
 
