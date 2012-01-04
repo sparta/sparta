@@ -51,7 +51,7 @@ file.
 The values printed by the various keywords are instantaneous values,
 calculated on the current timestep.
 
-Options invoked by the "stats_modify"_thermo_modify.html command can
+Options invoked by the "stats_modify"_stats_modify.html command can
 be used to set the numeric precision of each printed value, as well as
 other attributes of the statistics.
 

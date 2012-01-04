@@ -92,4 +92,3 @@ every command will be overridden.
 The option defaults are flush = no, format int = "%8d", format float =
 "%12.8g", and every = non-variable setting provided by the
 "stats"_stats.html command.
-
