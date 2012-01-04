@@ -40,7 +40,7 @@ Fix::Fix(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
   strcpy(style,arg[1]);
 
   scalar_flag = vector_flag = array_flag = 0;
-  peratom_flag = 0;
+  per_particle_flag = per_cell_flag = 0;
 
   // mask settings - same as in modify.cpp
 

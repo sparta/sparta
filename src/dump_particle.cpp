@@ -19,6 +19,12 @@
 #include "update.h"
 #include "domain.h"
 #include "particle.h"
+#include "modify.h"
+#include "compute.h"
+#include "fix.h"
+#include "fix.h"
+#include "input.h"
+#include "variable.h"
 #include "memory.h"
 #include "error.h"
 
@@ -33,14 +39,14 @@ enum{INT,DOUBLE,STRING};
 
 enum{PERIODIC,OUTFLOW,SPECULAR};            // same as in Domain
 
-#define INVOKED_PERPARTICLE 8
+#define INVOKED_PER_PARTICLE 8
 
 /* ---------------------------------------------------------------------- */
 
 DumpParticle::DumpParticle(DSMC *dsmc, int narg, char **arg) :
   Dump(dsmc, narg, arg)
 {
-  if (narg == 4) error->all(FLERR,"No dump custom arguments specified");
+  if (narg == 4) error->all(FLERR,"No dump particle arguments specified");
 
   nevery = atoi(arg[3]);
 
@@ -60,6 +66,19 @@ DumpParticle::DumpParticle(DSMC *dsmc, int narg, char **arg) :
   memory->create(field2index,nfield,"dump:field2index");
   memory->create(argindex,nfield,"dump:argindex");
 
+  ncompute = 0;
+  id_compute = NULL;
+  compute = NULL;
+
+  nfix = 0;
+  id_fix = NULL;
+  fix = NULL;
+
+  nvariable = 0;
+  id_variable = NULL;
+  variable = NULL;
+  vbuf = NULL;
+
   // process attributes
   // ioptional = start of additional optional args
   // only dump image style processes optional args
@@ -67,10 +86,10 @@ DumpParticle::DumpParticle(DSMC *dsmc, int narg, char **arg) :
   ioptional = parse_fields(narg,arg);
 
   if (ioptional < narg && strcmp(style,"image") != 0)
-    error->all(FLERR,"Invalid attribute in dump custom command");
+    error->all(FLERR,"Invalid attribute in dump particle command");
   size_one = nfield = ioptional - 4;
 
-  // atom selection arrays
+  // particle selection arrays
 
   maxlocal = 0;
   choose = NULL;
@@ -120,6 +139,20 @@ DumpParticle::~DumpParticle()
   memory->destroy(thresh_array);
   memory->destroy(thresh_op);
   memory->destroy(thresh_value);
+
+  for (int i = 0; i < ncompute; i++) delete [] id_compute[i];
+  memory->sfree(id_compute);
+  delete [] compute;
+
+  for (int i = 0; i < nfix; i++) delete [] id_fix[i];
+  memory->sfree(id_fix);
+  delete [] fix;
+
+  for (int i = 0; i < nvariable; i++) delete [] id_variable[i];
+  memory->sfree(id_variable);
+  delete [] variable;
+  for (int i = 0; i < nvariable; i++) memory->destroy(vbuf[i]);
+  delete [] vbuf;
 
   memory->destroy(choose);
   memory->destroy(dchoose);
@@ -181,6 +214,35 @@ void DumpParticle::init_style()
 
   if (binary) write_choice = &DumpParticle::write_binary;
   else write_choice = &DumpParticle::write_text;
+
+  // find current ptr for each compute,fix,variable
+  // check that fix frequency is acceptable
+
+  int icompute;
+  for (int i = 0; i < ncompute; i++) {
+    icompute = modify->find_compute(id_compute[i]);
+    if (icompute < 0) 
+      error->all(FLERR,"Could not find dump particle compute ID");
+    compute[i] = modify->compute[icompute];
+  }
+
+  int ifix;
+  for (int i = 0; i < nfix; i++) {
+    ifix = modify->find_fix(id_fix[i]);
+    if (ifix < 0) error->all(FLERR,"Could not find dump particle fix ID");
+    fix[i] = modify->fix[ifix];
+    if (nevery % modify->fix[ifix]->per_particle_freq)
+      error->all(FLERR,
+		 "Dump particle and fix not computed at compatible times");
+  }
+
+  int ivariable;
+  for (int i = 0; i < nvariable; i++) {
+    ivariable = input->variable->find(id_variable[i]);
+    if (ivariable < 0) 
+      error->all(FLERR,"Could not find dump particle variable name");
+    variable[i] = ivariable;
+  }
 
   // open single file, one time only
 
@@ -248,9 +310,30 @@ int DumpParticle::count()
     memory->create(choose,maxlocal,"dump:choose");
     memory->create(dchoose,maxlocal,"dump:dchoose");
     memory->create(clist,maxlocal,"dump:clist");
+
+    for (i = 0; i < nvariable; i++) {
+      memory->destroy(vbuf[i]);
+      memory->create(vbuf[i],maxlocal,"dump:vbuf");
+    }
   }
 
-  // choose all local atoms for output
+  // invoke Computes for per-particle quantities
+
+  if (ncompute) {
+    for (i = 0; i < ncompute; i++)
+      if (!(compute[i]->invoked_flag & INVOKED_PER_PARTICLE)) {
+	compute[i]->compute_per_particle();
+	compute[i]->invoked_flag |= INVOKED_PER_PARTICLE;
+      }
+  }
+
+  // evaluate particle-style Variables for per-particle quantities
+
+  if (nvariable)
+    for (i = 0; i < nvariable; i++)
+      input->variable->compute_particle(variable[i],vbuf[i],1,0);
+
+  // choose all local particles for output
 
   for (i = 0; i < nlocal; i++) choose[i] = 1;
 
@@ -324,9 +407,34 @@ int DumpParticle::count()
 	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].v[2];
 	ptr = dchoose;
 	nstride = 1;
+
+      } else if (thresh_array[ithresh] == COMPUTE) {
+	i = nfield + ithresh;
+	if (argindex[i] == 0) {
+	  ptr = compute[field2index[i]]->vector_particle;
+	  nstride = 1;
+	} else {
+	  ptr = &compute[field2index[i]]->array_particle[0][argindex[i]-1];
+	  nstride = compute[field2index[i]]->size_per_particle_cols;
+	}
+
+      } else if (thresh_array[ithresh] == FIX) {
+	i = nfield + ithresh;
+	if (argindex[i] == 0) {
+	  ptr = fix[field2index[i]]->vector_particle;
+	  nstride = 1;
+	} else {
+	  ptr = &fix[field2index[i]]->array_particle[0][argindex[i]-1];
+	  nstride = fix[field2index[i]]->size_per_particle_cols;
+	}
+
+      } else if (thresh_array[ithresh] == VARIABLE) {
+	i = nfield + ithresh;
+	ptr = vbuf[field2index[i]];
+	nstride = 1;
       }
 
-      // unselect atoms that don't meet threshhold criterion
+      // unselect particles that don't meet threshhold criterion
 
       value = thresh_value[ithresh];
 
@@ -353,8 +461,8 @@ int DumpParticle::count()
   }
 
   // compress choose flags into clist
-  // nchoose = # of selected atoms
-  // clist[i] = local index of each selected atom
+  // nchoose = # of selected particles
+  // clist[i] = local index of each selected particle
 
   nchoose = 0;
   for (i = 0; i < nlocal; i++)
@@ -451,10 +559,187 @@ int DumpParticle::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpParticle::pack_vz;
       vtype[i] = DOUBLE;
 
+    // compute value = c_ID
+    // if no trailing [], then arg is set to 0, else arg is int between []
+
+    } else if (strncmp(arg[iarg],"c_",2) == 0) {
+      pack_choice[i] = &DumpParticle::pack_compute;
+      vtype[i] = DOUBLE;
+
+      int n = strlen(arg[iarg]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[iarg][2]);
+
+      char *ptr = strchr(suffix,'[');
+      if (ptr) {
+	if (suffix[strlen(suffix)-1] != ']')
+	  error->all(FLERR,"Invalid attribute in dump particle command");
+	argindex[i] = atoi(ptr+1);
+	*ptr = '\0';
+      } else argindex[i] = 0;
+
+      n = modify->find_compute(suffix);
+      if (n < 0) error->all(FLERR,"Could not find dump particle compute ID");
+      if (modify->compute[n]->per_particle_flag == 0)
+	error->all(FLERR,
+		   "Dump particle compute does not compute per-particle info");
+      if (argindex[i] == 0 && modify->compute[n]->size_per_particle_cols > 0)
+	error->all(FLERR,
+		   "Dump particle compute does not calculate "
+		   "per-particle vector");
+      if (argindex[i] > 0 && modify->compute[n]->size_per_particle_cols == 0)
+	error->all(FLERR,
+		   "Dump particle compute does not calculate "
+		   "per-particle array");
+      if (argindex[i] > 0 && 
+	  argindex[i] > modify->compute[n]->size_per_particle_cols)
+	error->all(FLERR,
+		   "Dump particle compute vector is accessed out-of-range");
+
+      field2index[i] = add_compute(suffix);
+      delete [] suffix;
+      
+    // fix value = f_ID
+    // if no trailing [], then arg is set to 0, else arg is between []
+
+    } else if (strncmp(arg[iarg],"f_",2) == 0) {
+      pack_choice[i] = &DumpParticle::pack_fix;
+      vtype[i] = DOUBLE;
+
+      int n = strlen(arg[iarg]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[iarg][2]);
+
+      char *ptr = strchr(suffix,'[');
+      if (ptr) {
+	if (suffix[strlen(suffix)-1] != ']')
+	  error->all(FLERR,"Invalid attribute in dump particle command");
+	argindex[i] = atoi(ptr+1);
+	*ptr = '\0';
+      } else argindex[i] = 0;
+
+      n = modify->find_fix(suffix);
+      if (n < 0) error->all(FLERR,"Could not find dump particle fix ID");
+      if (modify->fix[n]->per_particle_flag == 0)
+	error->all(FLERR,"Dump particle fix does not compute "
+		   "per-particle info");
+      if (argindex[i] == 0 && modify->fix[n]->size_per_particle_cols > 0)
+	error->all(FLERR,"Dump particle fix does not compute "
+		   "per-particle vector");
+      if (argindex[i] > 0 && modify->fix[n]->size_per_particle_cols == 0)
+	error->all(FLERR,"Dump particle fix does not compute "
+		   "per-particle array");
+      if (argindex[i] > 0 && 
+	  argindex[i] > modify->fix[n]->size_per_particle_cols)
+	error->all(FLERR,"Dump particle fix vector is accessed out-of-range");
+
+      field2index[i] = add_fix(suffix);
+      delete [] suffix;
+
+    // variable value = v_name
+
+    } else if (strncmp(arg[iarg],"v_",2) == 0) {
+      pack_choice[i] = &DumpParticle::pack_variable;
+      vtype[i] = DOUBLE;
+
+      int n = strlen(arg[iarg]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[iarg][2]);
+
+      argindex[i] = 0;
+
+      n = input->variable->find(suffix);
+      if (n < 0) error->all(FLERR,"Could not find dump particle variable name");
+      if (input->variable->particle_style(n) == 0)
+	error->all(FLERR,"Dump particle variable is not "
+		   "particle-style variable");
+
+      field2index[i] = add_variable(suffix);
+      delete [] suffix;
+
     } else return iarg;
   }
 
   return narg;
+}
+
+/* ----------------------------------------------------------------------
+   add Compute to list of Compute objects used by dump
+   return index of where this Compute is in list
+   if already in list, do not add, just return index, else add to list
+------------------------------------------------------------------------- */
+
+int DumpParticle::add_compute(char *id)
+{
+  int icompute;
+  for (icompute = 0; icompute < ncompute; icompute++)
+    if (strcmp(id,id_compute[icompute]) == 0) break;
+  if (icompute < ncompute) return icompute;
+  
+  id_compute = (char **)
+    memory->srealloc(id_compute,(ncompute+1)*sizeof(char *),"dump:id_compute");
+  delete [] compute;
+  compute = new Compute*[ncompute+1];
+
+  int n = strlen(id) + 1;
+  id_compute[ncompute] = new char[n];
+  strcpy(id_compute[ncompute],id);
+  ncompute++;
+  return ncompute-1;
+}
+
+/* ----------------------------------------------------------------------
+   add Fix to list of Fix objects used by dump
+   return index of where this Fix is in list
+   if already in list, do not add, just return index, else add to list
+------------------------------------------------------------------------- */
+
+int DumpParticle::add_fix(char *id)
+{
+  int ifix;
+  for (ifix = 0; ifix < nfix; ifix++)
+    if (strcmp(id,id_fix[ifix]) == 0) break;
+  if (ifix < nfix) return ifix;
+  
+  id_fix = (char **)
+    memory->srealloc(id_fix,(nfix+1)*sizeof(char *),"dump:id_fix");
+  delete [] fix;
+  fix = new Fix*[nfix+1];
+
+  int n = strlen(id) + 1;
+  id_fix[nfix] = new char[n];
+  strcpy(id_fix[nfix],id);
+  nfix++;
+  return nfix-1;
+}
+
+/* ----------------------------------------------------------------------
+   add Variable to list of Variables used by dump
+   return index of where this Variable is in list
+   if already in list, do not add, just return index, else add to list
+------------------------------------------------------------------------- */
+
+int DumpParticle::add_variable(char *id)
+{
+  int ivariable;
+  for (ivariable = 0; ivariable < nvariable; ivariable++)
+    if (strcmp(id,id_variable[ivariable]) == 0) break;
+  if (ivariable < nvariable) return ivariable;
+  
+  id_variable = (char **)
+    memory->srealloc(id_variable,(nvariable+1)*sizeof(char *),
+		     "dump:id_variable");
+  delete [] variable;
+  variable = new int[nvariable+1];
+  delete [] vbuf;
+  vbuf = new double*[nvariable+1];
+  for (int i = 0; i <= nvariable; i++) vbuf[i] = NULL;
+
+  int n = strlen(id) + 1;
+  id_variable[nvariable] = new char[n];
+  strcpy(id_variable[nvariable],id);
+  nvariable++;
+  return nvariable-1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -502,7 +787,112 @@ int DumpParticle::modify_param(int narg, char **arg)
     else if (strcmp(arg[1],"vy") == 0) thresh_array[nthresh] = VY;
     else if (strcmp(arg[1],"vz") == 0) thresh_array[nthresh] = VZ;
 
-    else error->all(FLERR,"Invalid dump_modify threshhold operator");
+    // compute value = c_ID
+    // if no trailing [], then arg is set to 0, else arg is between []
+    // must grow field2index and argindex arrays, since access is beyond nfield
+
+    else if (strncmp(arg[1],"c_",2) == 0) {
+      thresh_array[nthresh] = COMPUTE;
+      memory->grow(field2index,nfield+nthresh+1,"dump:field2index");
+      memory->grow(argindex,nfield+nthresh+1,"dump:argindex");
+      int n = strlen(arg[1]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[1][2]);
+    
+      char *ptr = strchr(suffix,'[');
+      if (ptr) {
+	if (suffix[strlen(suffix)-1] != ']')
+	  error->all(FLERR,"Invalid attribute in dump modify command");
+	argindex[nfield+nthresh] = atoi(ptr+1);
+	*ptr = '\0';
+      } else argindex[nfield+nthresh] = 0;
+      
+      n = modify->find_compute(suffix);
+      if (n < 0) error->all(FLERR,"Could not find dump modify compute ID");
+
+      if (modify->compute[n]->per_particle_flag == 0)
+	error->all(FLERR,
+		   "Dump modify compute ID does not compute per-particle info");
+      if (argindex[nfield+nthresh] == 0 && 
+	  modify->compute[n]->size_per_particle_cols > 0)
+	error->all(FLERR,
+		   "Dump modify compute ID does not compute "
+		   "per-particle vector");
+      if (argindex[nfield+nthresh] > 0 && 
+	  modify->compute[n]->size_per_particle_cols == 0)
+	error->all(FLERR,
+		   "Dump modify compute ID does not compute "
+		   "per-particle array");
+      if (argindex[nfield+nthresh] > 0 && 
+	  argindex[nfield+nthresh] > modify->compute[n]->size_per_particle_cols)
+	error->all(FLERR,"Dump modify compute ID vector is not large enough");
+
+      field2index[nfield+nthresh] = add_compute(suffix);
+      delete [] suffix;
+
+    // fix value = f_ID
+    // if no trailing [], then arg is set to 0, else arg is between []
+    // must grow field2index and argindex arrays, since access is beyond nfield
+
+    } else if (strncmp(arg[1],"f_",2) == 0) {
+      thresh_array[nthresh] = FIX;
+      memory->grow(field2index,nfield+nthresh+1,"dump:field2index");
+      memory->grow(argindex,nfield+nthresh+1,"dump:argindex");
+      int n = strlen(arg[1]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[1][2]);
+    
+      char *ptr = strchr(suffix,'[');
+      if (ptr) {
+	if (suffix[strlen(suffix)-1] != ']')
+	  error->all(FLERR,"Invalid attribute in dump modify command");
+	argindex[nfield+nthresh] = atoi(ptr+1);
+	*ptr = '\0';
+      } else argindex[nfield+nthresh] = 0;
+      
+      n = modify->find_fix(suffix);
+      if (n < 0) error->all(FLERR,"Could not find dump modify fix ID");
+
+      if (modify->fix[n]->per_particle_flag == 0)
+	error->all(FLERR,"Dump modify fix ID does not compute "
+		   "per-particle info");
+      if (argindex[nfield+nthresh] == 0 && 
+	  modify->fix[n]->size_per_particle_cols > 0)
+	error->all(FLERR,"Dump modify fix ID does not compute "
+		   "per-particle vector");
+      if (argindex[nfield+nthresh] > 0 && 
+	  modify->fix[n]->size_per_particle_cols == 0)
+	error->all(FLERR,"Dump modify fix ID does not compute "
+		   "per-particle array");
+      if (argindex[nfield+nthresh] > 0 && 
+	  argindex[nfield+nthresh] > modify->fix[n]->size_per_particle_cols)
+	error->all(FLERR,"Dump modify fix ID vector is not large enough");
+
+      field2index[nfield+nthresh] = add_fix(suffix);
+      delete [] suffix;
+
+    // variable value = v_ID
+    // must grow field2index and argindex arrays, since access is beyond nfield
+
+    } else if (strncmp(arg[1],"v_",2) == 0) {
+      thresh_array[nthresh] = VARIABLE;
+      memory->grow(field2index,nfield+nthresh+1,"dump:field2index");
+      memory->grow(argindex,nfield+nthresh+1,"dump:argindex");
+      int n = strlen(arg[1]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[1][2]);
+    
+      argindex[nfield+nthresh] = 0;
+      
+      n = input->variable->find(suffix);
+      if (n < 0) error->all(FLERR,"Could not find dump modify variable name");
+      if (input->variable->particle_style(n) == 0)
+	error->all(FLERR,"Dump modify variable is not particle-style variable");
+
+      field2index[nfield+nthresh] = add_variable(suffix);
+      delete [] suffix;
+
+    } else error->all(FLERR,"Invalid dump_modify threshhold operator");
 
     // set operation type of threshhold
 
@@ -542,13 +932,65 @@ bigint DumpParticle::memory_usage()
    extraction of Compute, Fix, Variable results
 ------------------------------------------------------------------------- */
 
-/* ----------------------------------------------------------------------
-   one method for every attribute dump custom can output
-   the atom property is packed into buf starting at n with stride size_one
-   customize a new attribute by adding a method
-------------------------------------------------------------------------- */
+void DumpParticle::pack_compute(int n)
+{
+  double *vector = compute[field2index[n]]->vector_particle;
+  double **array = compute[field2index[n]]->array_particle;
+  int index = argindex[n];
+
+  if (index == 0) {
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = vector[clist[i]];
+      n += size_one;
+    }
+  } else {
+    index--;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = array[clist[i]][index];
+      n += size_one;
+    }
+  }
+}
 
 /* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_fix(int n)
+{
+  double *vector = fix[field2index[n]]->vector_particle;
+  double **array = fix[field2index[n]]->array_particle;
+  int index = argindex[n];
+
+  if (index == 0) {
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = vector[clist[i]];
+      n += size_one;
+    }
+  } else {
+    index--;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = array[clist[i]][index];
+      n += size_one;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_variable(int n)
+{
+  double *vector = vbuf[field2index[n]];
+
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = vector[clist[i]];
+    n += size_one;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   one method for every attribute dump particle can output
+   the particle property is packed into buf starting at n with stride size_one
+   customize a new attribute by adding a method
+------------------------------------------------------------------------- */
 
 void DumpParticle::pack_id(int n)
 {

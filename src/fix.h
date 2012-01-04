@@ -31,12 +31,16 @@ class Fix : protected Pointers {
   int size_array_cols;           // columns in global array
   int global_freq;               // frequency s/v data is available at
 
-  int peratom_flag;              // 0/1 if per-atom data is stored
-  int size_peratom_cols;         // 0 = vector, N = columns in peratom array
-  int peratom_freq;              // frequency per-atom data is available at
+  int per_particle_flag;         // 0/1 if per-particle data is stored
+  int size_per_particle_cols;    // 0 = vector, N = cols in per-particle array
+  int per_particle_freq;         // frequency per-particle data is available at
 
-  double *vector_atom;           // computed per-atom vector
-  double **array_atom;           // computed per-atom array
+  int per_cell_flag;             // 0/1 if per-cell data is stored
+  int size_per_cell_cols;        // 0 = vector, N = cols in per-cell array
+  int per_cell_freq;             // frequency per-cell data is available at
+
+  double *vector_particle;       // computed per-particle vector
+  double **array_particle;       // computed per-particle array
 
   int START_OF_STEP,END_OF_STEP;    // mask settings
 

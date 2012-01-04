@@ -27,11 +27,11 @@ class Variable : protected Pointers {
   void set(char *, int, char **);
   int next(int, char **);
   int find(char *);
-  int equalstyle(int);
-  int atomstyle(int);
+  int equal_style(int);
+  int particle_style(int);
   char *retrieve(char *);
   double compute_equal(int);
-  void compute_atom(int, int, double *, int, int);
+  void compute_particle(int, double *, int, int);
   int int_between_brackets(char *&);
   double evaluate_boolean(char *);
 
@@ -47,13 +47,13 @@ class Variable : protected Pointers {
   char ***data;            // str value of each variable's values
   double PI;
 
-  class RanPark *randomequal;   // random number generator for equal-style vars
-  class RanPark *randomatom;    // random number generator for atom-style vars
+  class RanPark *randomequal;   // RNG for equal-style vars
+  class RanPark *randompart;    // RNG for particle-style vars
 
   int precedence[16];      // precedence level of math operators
                            // set length to include OR in enum
 
-  struct Tree {            // parse tree for atom-style variables
+  struct Tree {            // parse tree for particle-style variables
     double value;
     double *array;
     int *iarray;
@@ -72,14 +72,10 @@ class Variable : protected Pointers {
   void free_tree(Tree *);
   int find_matching_paren(char *, int, char *&);
   int math_function(char *, char *, Tree **, Tree **, int &, double *, int &);
-  int group_function(char *, char *, Tree **, Tree **, int &, double *, int &);
-  int region_function(char *);
   int special_function(char *, char *, Tree **, Tree **, 
 		       int &, double *, int &);
-  void peratom2global(int, char *, double *, int, int,
-		      Tree **, Tree **, int &, double *, int &);
-  int is_atom_vector(char *);
-  void atom_vector(char *, Tree **, Tree **, int &);
+  int is_particle_vector(char *);
+  void particle_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
   double numeric(char *);

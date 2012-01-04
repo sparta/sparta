@@ -44,6 +44,7 @@ void Run::command(int narg, char **arg)
 
   // perform a single run
 
+  update->runflag = 1;
   update->nsteps = nsteps;
   update->firststep = update->ntimestep;
   update->laststep = update->ntimestep + nsteps;
@@ -60,5 +61,6 @@ void Run::command(int narg, char **arg)
   Finish finish(dsmc);
   finish.end();
   
+  update->runflag = 0;
   update->firststep = update->laststep = 0;
 }

@@ -516,7 +516,7 @@ void Stats::set_fields(int narg, char **arg)
       } else if (arg[i][0] == 'v') {
 	n = input->variable->find(id);
 	if (n < 0) error->all(FLERR,"Could not find stats variable name");
-	if (input->variable->equalstyle(n) == 0)
+	if (input->variable->equal_style(n) == 0)
 	  error->all(FLERR,"Stats variable is not equal-style variable");
 	if (argindex1[nfield]) 
 	  error->all(FLERR,"Stats variable cannot be indexed");

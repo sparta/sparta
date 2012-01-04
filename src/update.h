@@ -24,6 +24,7 @@ class Update : protected Pointers {
   bigint ntimestep;               // current timestep
   int nsteps;                     // # of steps to run
   bigint firststep,laststep;      // 1st & last step of this run
+  int runflag;                    // 0 for unset, 1 for run
   double dt;                      // timestep size
 
   double kboltz;         // Boltzmann constant (Joules/K)

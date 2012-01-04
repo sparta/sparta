@@ -324,70 +324,70 @@ void DumpImage::init_style()
     thetavar = input->variable->find(thetastr);
     if (thetavar < 0) 
       error->all(FLERR,"Variable name for dump image theta does not exist");
-    if (!input->variable->equalstyle(thetavar))
+    if (!input->variable->equal_style(thetavar))
       error->all(FLERR,"Variable for dump image theta is invalid style");
   }
   if (phistr) {
     phivar = input->variable->find(phistr);
     if (phivar < 0) 
       error->all(FLERR,"Variable name for dump image phi does not exist");
-    if (!input->variable->equalstyle(phivar))
+    if (!input->variable->equal_style(phivar))
       error->all(FLERR,"Variable for dump image phi is invalid style");
   }
   if (cxstr) {
     cxvar = input->variable->find(cxstr);
     if (cxvar < 0) 
       error->all(FLERR,"Variable name for dump image center does not exist");
-    if (!input->variable->equalstyle(cxvar))
+    if (!input->variable->equal_style(cxvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (cystr) {
     cyvar = input->variable->find(cystr);
     if (cyvar < 0) 
       error->all(FLERR,"Variable name for dump image center does not exist");
-    if (!input->variable->equalstyle(cyvar))
+    if (!input->variable->equal_style(cyvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (czstr) {
     czvar = input->variable->find(czstr);
     if (czvar < 0) 
       error->all(FLERR,"Variable name for dump image center does not exist");
-    if (!input->variable->equalstyle(czvar))
+    if (!input->variable->equal_style(czvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (upxstr) {
     upxvar = input->variable->find(upxstr);
     if (upxvar < 0) 
       error->all(FLERR,"Variable name for dump image center does not exist");
-    if (!input->variable->equalstyle(upxvar))
+    if (!input->variable->equal_style(upxvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (upystr) {
     upyvar = input->variable->find(upystr);
     if (upyvar < 0) 
       error->all(FLERR,"Variable name for dump image center does not exist");
-    if (!input->variable->equalstyle(upyvar))
+    if (!input->variable->equal_style(upyvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (upzstr) {
     upzvar = input->variable->find(upzstr);
     if (upzvar < 0) 
       error->all(FLERR,"Variable name for dump image center does not exist");
-    if (!input->variable->equalstyle(upzvar))
+    if (!input->variable->equal_style(upzvar))
       error->all(FLERR,"Variable for dump image center is invalid style");
   }
   if (zoomstr) {
     zoomvar = input->variable->find(zoomstr);
     if (zoomvar < 0) 
       error->all(FLERR,"Variable name for dump image zoom does not exist");
-    if (!input->variable->equalstyle(zoomvar))
+    if (!input->variable->equal_style(zoomvar))
       error->all(FLERR,"Variable for dump image zoom is invalid style");
   }
   if (perspstr) {
     perspvar = input->variable->find(perspstr);
     if (perspvar < 0) 
       error->all(FLERR,"Variable name for dump image persp does not exist");
-    if (!input->variable->equalstyle(perspvar))
+    if (!input->variable->equal_style(perspvar))
       error->all(FLERR,"Variable for dump image persp is invalid style");
   }
 

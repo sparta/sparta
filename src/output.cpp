@@ -96,7 +96,7 @@ void Output::init()
     ivar_stats = input->variable->find(var_stats);
     if (ivar_stats < 0)
       error->all(FLERR,"Variable name for stats every does not exist");
-    if (!input->variable->equalstyle(ivar_stats))
+    if (!input->variable->equal_style(ivar_stats))
       error->all(FLERR,"Variable for stats every is invalid style");
   }
 
@@ -106,7 +106,7 @@ void Output::init()
       ivar_dump[i] = input->variable->find(var_dump[i]);
       if (ivar_dump[i] < 0)
 	error->all(FLERR,"Variable name for dump every does not exist");
-      if (!input->variable->equalstyle(ivar_dump[i]))
+      if (!input->variable->equal_style(ivar_dump[i]))
 	error->all(FLERR,"Variable for dump every is invalid style");
     }
 }
