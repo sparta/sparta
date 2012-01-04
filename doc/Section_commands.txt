@@ -285,4 +285,5 @@ Compute styles :h4
 See the "compute"_compute.html command for one-line descriptions of
 each style or click on the style itself for a full description:
 
+"ke/particle"_compute_ke_particle.html,
 "temp"_compute_temp.html :tb(c=6,ea=c)
