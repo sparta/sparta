@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>name = name of variable to define 
 
-<LI>style = <I>delete</I> or <I>index</I> or <I>loop</I> or <I>world</I> or <I>universe</I> or <I>uloop</I> or <I>string</I> or <I>equal</I> or <I>atom</I> 
+<LI>style = <I>delete</I> or <I>index</I> or <I>loop</I> or <I>world</I> or <I>universe</I> or <I>uloop</I> or <I>string</I> or <I>equal</I> or <I>particle</I> 
 
 <PRE>  <I>delete</I> = no args
   <I>index</I> args = one or more strings
@@ -39,17 +39,21 @@
     N = integer size of loop
     pad = all values will be same length, e.g. 001, 002, ..., 100
   <I>string</I> arg = one string
-  <I>equal</I> or <I>atom</I> args = one formula containing numbers, thermo keywords, math operations, group functions, atom values and vectors, compute/fix/variable references
+  <I>equal</I> or <I>particle</I> args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
-    thermo keywords = vol, ke, press, etc from <A HREF = "thermo_style.html">thermo_style</A>
+    stats keywords = step, npart, vol, etc from <A HREF = "stats_style.html">stats_style</A>
     math operators = (), -x, x+y, x-y, x*y, x/y, x^y, 
                      x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x||y, !x
     math functions = sqrt(x), exp(x), ln(x), log(x),
                      sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(y,x),
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
                      ramp(x,y), stagger(x,y), logfreq(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-    variable references = v_name, v_name[i] 
+    special functions = sum(x), min(x), max(x), ave(x), trap(x)
+    particle vector = mass, type, x, y, z, vx, vy, vz
+    compute references = c_ID, c_ID[i], c_ID[i][j]
+    fix references = f_ID, f_ID[i], f_ID[i][j]
+    variable references = v_name 
 </PRE>
 
 </UL>
@@ -62,7 +66,7 @@ variable b1 equal x[234]+0.5*vol
 variable b1 equal "x[234] + 0.5*vol"
 variable b equal xcm(mol1,x)/2.0
 variable b equal c_myTemp
-variable b atom x*y/vol
+variable b particle x*y/vol
 variable foo string myfile
 variable temp world 300.0 310.0 320.0 ${Tfinal}
 variable x universe 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
@@ -82,14 +86,10 @@ assigned to the variable.  Variables of style <I>equal</I> store a formula
 which when evaluated produces a single numeric value which can be
 output either directly (see the <A HREF = "print.html">print</A>, <A HREF = "fix_print.html">fix
 print</A>, and <A HREF = "run.html">run every</A> commands) or as part
-of thermodynamic output (see the <A HREF = "thermo_style.html">thermo_style</A>
-command), or used as input to an averaging fix (see the <A HREF = "fix_ave_time.html">fix
-ave/time</A> command).  Variables of style <I>atom</I> store
-a formula which when evaluated produces one numeric value per atom
-which can be output to a dump file (see the <A HREF = "dump.html">dump custom</A>
-command) or used as input to an averaging fix (see the <A HREF = "fix_ave_spatial.html">fix
-ave/spatial</A> and <A HREF = "fix_ave_atom.html">fix ave/atom</A>
-commands).
+of statistical output (see the <A HREF = "stats_style.html">stats_style</A>
+command).  Variables of style <I>particle</I> store a formula which when
+evaluated produces one numeric value per particle which can be output
+to a dump file (see the <A HREF = "dump.html">dump custom</A> command).
 </P>
 <P>In the discussion that follows, the "name" of the variable is the
 arbitrary string that is the 1st argument in the variable command.
@@ -103,7 +103,7 @@ different values when it is evaluated at different times during a
 simulation.
 </P>
 <P>IMPORTANT NOTE: When the input script line that defines a variable of
-style <I>equal</I> or <I>atom</I> that contain a formula is encountered, the
+style <I>equal</I> or <I>particle</I> that contain a formula is encountered, the
 formula is NOT immediately evaluated and the result stored.  See the
 discussion below about "Immediate Evaluation of Variables" if you want
 to do this.
@@ -119,11 +119,12 @@ means that using the <A HREF = "Section_start.html#start_6">command-line switch<
 script.
 </P>
 <P>There are two exceptions to this rule.  First, variables of style
-<I>string</I> and <I>equal</I> and <I>atom</I> ARE redefined each time the command is
-encountered.  This allows these style of variables to be redefined
-multiple times in an input script.  In a loop, this means the formula
-associated with an <I>equal</I> or <I>atom</I> style variable can change if it
-contains a substitution for another variable, e.g. $x.
+<I>string</I> and <I>equal</I> and <I>particle</I> ARE redefined each time the
+command is encountered.  This allows these style of variables to be
+redefined multiple times in an input script.  In a loop, this means
+the formula associated with an <I>equal</I> or <I>particle</I> style variable
+can change if it contains a substitution for another variable,
+e.g. $x.
 </P>
 <P>Second, as described below, if a variable is iterated on to the end of
 its list of strings via the <A HREF = "next.html">next</A> command, it is removed
@@ -221,79 +222,70 @@ script.
 </P>
 <HR>
 
-<P>For the <I>equal</I> and <I>atom</I> styles, a single string is specified which
-represents a formula that will be evaluated afresh each time the
+<P>For the <I>equal</I> and <I>particle</I> styles, a single string is specified
+which represents a formula that will be evaluated afresh each time the
 variable is used.  If you want spaces in the string, enclose it in
 double quotes so the parser will treat it as a single argument.  For
 <I>equal</I> style variables the formula computes a scalar quantity, which
 becomes the value of the variable whenever it is evaluated.  For
-<I>atom</I> style variables the formula computes one quantity for each
-atom whenever it is evaluated.
+<I>particle</I> style variables the formula computes one quantity for each
+particle whenever it is evaluated.
 </P>
-<P>Note that <I>equal</I> and <I>atom</I> variables can produce different values at
-different stages of the input script or at different times during a
-run.  For example, if an <I>equal</I> variable is used in a <A HREF = "fix_print.html">fix
+<P>Note that <I>equal</I> and <I>particle</I> variables can produce different
+values at different stages of the input script or at different times
+during a run.  For example, if an <I>equal</I> variable is used in a <A HREF = "fix_print.html">fix
 print</A> command, different values could be printed each
 timestep it was invoked.  If you want a variable to be evaluated
 immediately, so that the result is stored by the variable instead of
 the string, see the section below on "Immediate Evaluation of
 Variables".
 </P>
-<P>The next command cannot be used with <I>equal</I> or <I>atom</I> style
+<P>The next command cannot be used with <I>equal</I> or <I>particle</I> style
 variables, since there is only one string.
 </P>
-<P>The formula for an <I>equal</I> or <I>atom</I> variable can contain a variety
-of quantities.  The syntax for each kind of quantity is simple, but
-multiple quantities can be nested and combined in various ways to
-build up formulas of arbitrary complexity.  For example, this is a
-valid (though strange) variable formula:
+<P>The formula for an <I>equal</I> or <I>particle</I> variable can contain a
+variety of quantities.  The syntax for each kind of quantity is
+simple, but multiple quantities can be nested and combined in various
+ways to build up formulas of arbitrary complexity.  For example, this
+is a valid (though strange) variable formula:
 </P>
-<PRE>variable x equal "pe + c_MyTemp / vol^(1/3)" 
+<PRE>variable x equal "npart + c_MyTemp / vol^(1/3)" 
 </PRE>
-<P>Specifically, an formula can contain numbers, thermo keywords, math
-operators, math functions, group functions, region functions, atom
-values, atom vectors, compute references, fix references, and
-references to other variables.
+<P>Specifically, a formula can contain numbers, stats keywords, math
+operators, math functions, particle vectors, compute references, fix
+references, and references to other variables.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >Number</TD><TD > 0.2, 100, 1.0e20, -15.4, etc</TD></TR>
 <TR><TD >Constant</TD><TD > PI</TD></TR>
-<TR><TD >Thermo keywords</TD><TD > vol, pe, ebond, etc</TD></TR>
+<TR><TD >Stats keywords</TD><TD > step, npart, vol, etc</TD></TR>
 <TR><TD >Math operators</TD><TD > (), -x, x+y, x-y, x*y, x/y, x^y, x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x||y, !x</TD></TR>
-<TR><TD >Math functions</TD><TD > sqrt(x), exp(x), ln(x), log(x), sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(y,x), random(x,y), normal(x,y), ceil(x), floor(x), round(x), </TD></TR>
-<TR><TD >Other variables</TD><TD > v_name, v_name[i] 
+<TR><TD >Math functions</TD><TD > sqrt(x), exp(x), ln(x), log(x), sin(x), cos(x), tan(x),      asin(x), acos(x), atan(x), atan2(y,x), random(x,y,z), normal(x,y,z),      ceil(x), floor(x), round(x), ramp(x,y), stagger(x,y), logfreq(x,y,z),      vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)</TD></TR>
+<TR><TD >Special functions</TD><TD > sum(x), min(x), max(x), ave(x), trap(x)</TD></TR>
+<TR><TD >Particle vectors</TD><TD > mass, type, x, y, z, vx, vy, vz</TD></TR>
+<TR><TD >Compute references</TD><TD > c_ID, c_ID[i], c_ID[i][j]</TD></TR>
+<TR><TD >Fix references</TD><TD > f_ID, f_ID[i], f_ID[i][j]</TD></TR>
+<TR><TD >Other variables</TD><TD > v_name 
 </TD></TR></TABLE></DIV>
 
 <HR>
 
 <P>Most of the formula elements produce a scalar value.  A few produce a
-per-atom vector of values.  These are the atom vectors, compute
-references that represent a per-atom vector, fix references that
-represent a per-atom vector, and variables that are atom-style
-variables.  Math functions that operate on scalar values produce a
-scalar value; math function that operate on per-atom vectors do so
-element-by-element and produce a per-atom vector.
+per-particle vector of values.  These are the particle vectors,
+compute references that represent a per-particle vector, fix
+references that represent a per-particles vector, and variables that
+are particle-style variables.  Math functions that operate on scalar
+values produce a scalar value; math function that operate on
+per-particle vectors do so element-by-element and produce a
+per-particle vector.
 </P>
 <P>A formula for equal-style variables cannot use any formula element
-that produces a per-atom vector.  A formula for an atom-style variable
-can use formula elements that produce either a scalar value or a
-per-atom vector.  Atom-style variables are evaluated by other commands
-that define a <A HREF = "group.html">group</A> on which they operate, e.g. a
-<A HREF = "dump.html">dump</A> or <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> command.
-When they invoke the atom-style variable, only atoms in the group are
-inlcuded in the formula evaluation.  The variable evaluates to 0.0 for
-atoms not in the group.
+that produces a per-particle vector.  A formula for an particle-style
+variable can use formula elements that produce either a scalar value
+or a per-particle vector.
 </P>
-<P>The thermo keywords allowed in a formula are those defined by the
-<A HREF = "thermo_style.html">thermo_style custom</A> command.  Thermo keywords that
-require a <A HREF = "compute.html">compute</A> to calculate their values such as
-"temp" or "press", use computes stored and invoked by the
-<A HREF = "thermo_style.html">thermo_style</A> command.  This means that you can
-only use those keywords in a variable if the style you are using with
-the thermo_style command (and the thermo keywords associated with that
-style) also define and use the needed compute.  Note that some thermo
-keywords use a compute indirectly to calculate their value (e.g. the
-enthalpy keyword uses temp, pe, and pressure).  If a variable is
+<P>The stats keywords allowed in a formula are those defined by the
+<A HREF = "stats_style.html">stats_style custom</A> command.  If a variable is
 evaluated directly in an input script (not during a run), then the
 values accessed by the thermo keyword must be current.  See the
 discussion below about "Variable Accuracy".
@@ -305,9 +297,9 @@ discussion below about "Variable Accuracy".
 <P>Math operators are written in the usual way, where the "x" and "y" in
 the examples can themselves be arbitrarily complex formulas, as in the
 examples above.  In this syntax, "x" and "y" can be scalar values or
-per-atom vectors.  For example, "ke/natoms" is the division of two
-scalars, where "vy+vz" is the element-by-element sum of two per-atom
-vectors of y and z velocities.
+per-particle vectors.  For example, "vol/npart" is the division of two
+scalars, where "vy+vz" is the element-by-element sum of two
+per-particle vectors of y and z velocities.
 </P>
 <P>Operators are evaluated left to right and have the usual C-style
 precedence: unary minus and unary logical NOT operator "!" have the
@@ -331,10 +323,11 @@ returns 0.0.  The logical NOT operator returns 1.0 if its argument is
 0.0, else it returns 0.0.
 </P>
 <P>These relational and logical operators can be used as a masking or
-selection operation in a formula.  For example, the number of atoms
-whose properties satifsy one or more criteria could be calculated by
-taking the returned per-atom vector of ones and zeroes and passing it
-to the <A HREF = "compute_reduce.html">compute reduce</A> command.
+selection operation in a formula.  For example, the number of
+particles whose properties satifsy one or more criteria could be
+calculated by taking the returned per-particle vector of ones and
+zeroes and passing it to the <A HREF = "compute_reduce.html">compute reduce</A>
+command.
 </P>
 <HR>
 
@@ -343,11 +336,11 @@ to the <A HREF = "compute_reduce.html">compute reduce</A> command.
 <P>Math functions are specified as keywords followed by one or more
 parenthesized arguments "x", "y", "z", each of which can themselves be
 arbitrarily complex formulas.  In this syntax, the arguments can
-represent scalar values or per-atom vectors.  In the latter case, the
-math operation is performed on each element of the vector.  For
-example, "sqrt(natoms)" is the sqrt() of a scalar, where "sqrt(y*z)"
-yields a per-atom vector with each element being the sqrt() of the
-product of one atom's y and z coordinates.
+represent scalar values or per-particle vectors.  In the latter case,
+the math operation is performed on each element of the vector.  For
+example, "sqrt(npart)" is the sqrt() of a scalar, where "sqrt(y*z)"
+yields a per-particle vector with each element being the sqrt() of the
+product of one particle's y and z coordinates.
 </P>
 <P>Most of the math functions perform obvious operations.  The ln() is
 the natural log; log() is the base 10 log. 
@@ -358,41 +351,221 @@ function also takes 2 arguments: x = mu and y = sigma.  It generates a
 Gaussian variate centered on mu with variance sigma^2.  For
 equal-style variables, every processor uses the same random number
 seed so that they each generate the same sequence of random numbers.
-For atom-style variables, a unique seed is created for each processor.
-This effectively generates a different random number for each atom
-being looped over in the atom-style variable.
+For particle-style variables, a unique seed is created for each
+processor.  This effectively generates a different random number for
+each particle being looped over in the particle-style variable.
 </P>
 <P>IMPORTANT NOTE: Internally, there is just one random number generator
-for all equal-style variables and one for all atom-style variables.
-If you define multiple variables (of each style) which use the
-random() or normal() math functions, then the internal random number
-generators will only be initialized once.
+for all equal-style variables and one for all particle-style
+variables.  If you define multiple variables (of each style) which use
+the random() or normal() math functions, then the internal random
+number generators will only be initialized once.
 </P>
 <P>The ceil(), floor(), and round() functions are those in the C math
 library.  Ceil() is the smallest integer not less than its argument.
 Floor() if the largest integer not greater than its argument.  Round()
 is the nearest integer to its argument.
 </P>
+<P>The ramp(x,y) function uses the current timestep to generate a value
+linearly intepolated between the specified x,y values over the course
+of a run, according to this formula:
+</P>
+<PRE>value = x + (y-x) * (timestep-startstep) / (stopstep-startstep) 
+</PRE>
+<P>The run begins on startstep and ends on stopstep.  Startstep and
+stopstep can span multiple runs, using the <I>start</I> and <I>stop</I> keywords
+of the <A HREF = "run.html">run</A> command.  See the <A HREF = "run.html">run</A> command for
+details of how to do this.
+</P>
+<P>The stagger(x,y) function uses the current timestep to generate a new
+timestep.  X,y > 0 and x > y is required.  The generated timesteps
+increase in a staggered fashion, as the sequence
+x,x+y,2x,2x+y,3x,3x+y,etc.  For any current timestep, the next
+timestep in the sequence is returned.  Thus if stagger(1000,100) is
+used in a variable by the <A HREF = "dump_modify.html">dump_modify every</A>
+command, it will generate the sequence of output timesteps:
+</P>
+<PRE>100,1000,1100,2000,2100,3000,etc 
+</PRE>
+<P>The logfreq(x,y,z) function uses the current timestep to generate a
+new timestep.  X,y,z > 0 and y < z is required.  The generated
+timesteps increase in a logarithmic fashion, as the sequence
+x,2x,3x,...y*x,z*x,2*z*x,3*z*x,...y*z*x,z*z*x,2*z*x*x,etc.  For any
+current timestep, the next timestep in the sequence is returned.  Thus
+if logfreq(100,4,10) is used in a variable by the <A HREF = "dump_modify.html">dump_modify
+every</A> command, it will generate the sequence of
+output timesteps:
+</P>
+<PRE>100,200,300,400,1000,2000,3000,4000,10000,20000,etc 
+</PRE>
+<P>The vdisplace(x,y) function takes 2 arguments: x = coord0 and y =
+velocity, and uses the elapsed time to change the coordinate value by
+a linear displacement due to the applied velocity over the course of a
+run, according to this formula:
+</P>
+<PRE>value = coord0 + velocity*(timestep-startstep)*dt 
+</PRE>
+<P>where dt = the timestep size.
+</P>
+<P>The run begins on startstep.  Startstep can span multiple runs, using
+the <I>start</I> keyword of the <A HREF = "run.html">run</A> command.  See the
+<A HREF = "run.html">run</A> command for details of how to do this.  Note that the
+<A HREF = "thermo_style.html">thermo_style</A> keyword elaplong =
+timestep-startstep.
+</P>
+<P>The swiggle(x,y,z) and cwiggle(x,y,z) functions each take 3 arguments:
+x = coord0, y = amplitude, z = period.  They use the elapsed time to
+oscillate the coordinate value by a sin() or cos() function over the
+course of a run, according to one of these formulas, where
+omega = 2 PI / period:
+</P>
+<PRE>value = coord0 + Amplitude * sin(omega*(timestep-startstep)*dt)
+value = coord0 + Amplitude * (1 - cos(omega*(timestep-startstep)*dt)) 
+</PRE>
+<P>where dt = the timestep size.
+</P>
+<P>The run begins on startstep.  Startstep can span multiple runs, using
+the <I>start</I> keyword of the <A HREF = "run.html">run</A> command.  See the
+<A HREF = "run.html">run</A> command for details of how to do this.  Note that the
+<A HREF = "thermo_style.html">thermo_style</A> keyword elaplong =
+timestep-startstep.
+</P>
+<HR>
+
+<H4>Special Functions 
+</H4>
+<P>Special functions take specific kinds of arguments, meaning their
+arguments cannot be formulas themselves.
+</P>
+<P>The sum(x), min(x), max(x), ave(x), and trap(x) functions each take 1
+argument which is of the form "c_ID" or "c_ID[N]" or "f_ID" or
+"f_ID[N]".  The first two are computes and the second two are fixes;
+the ID in the reference should be replaced by the ID of a compute or
+fix defined elsewhere in the input script.  The compute or fix must
+produce either a global vector or array.  If it produces a global
+vector, then the notation without "[N]" should be used.  If it
+produces a global array, then the notation with "[N]" should be
+used, when N is an integer, to specify which column of the global
+array is being referenced.
+</P>
+<P>These functions operate on the global vector of inputs and reduce it
+to a single scalar value.  This is analagous to the operation of the
+<A HREF = "compute_reduce.html">compute reduce</A> command, which invokes the same
+functions on per-particle vectors.
+</P>
+<P>The sum() function calculates the sum of all the vector elements.  The
+min() and max() functions find the minimum and maximum element
+respectively.  The ave() function is the same as sum() except that it
+divides the result by the length of the vector.  The trap() function
+is the same as sum() except the first and last elements are multiplied
+by a weighting factor of 1/2 when performing the sum.  This
+effectively implements an integratiion via the trapezoidal rule on the
+global vector of data.  I.e. consider a set of points, equally spaced
+by 1 in their x coordinate: (1,V1), (2,V2), ..., (N,VN), where the Vi
+are the values in the global vector of length N.  The integral from 1
+to N of these points is trap().  When appropriately normalized by the
+timestep size, this function is useful for calculating integrals of
+time-series data, like that generated by the <A HREF = "fix_ave_correlate.html">fix
+ave/correlate</A> command.
+</P>
+<HR>
+
+<H4>Particle Vectors 
+</H4>
+<P>Particle vectors generate one value per particle, so that a reference
+like "vx" means the x-component of each particles's velocity will be
+used when evaluating the variable.
+</P>
+<HR>
+
+<H4>Compute References 
+</H4>
+<P>Compute references access quantities calculated by a
+<A HREF = "compute.html">compute</A>.  The ID in the reference should be replaced by
+the ID of a compute defined elsewhere in the input script.  As
+discussed in the doc page for the <A HREF = "compute.html">compute</A> command,
+computes can produce global, per-particle, or per-cell values.  Only
+global and per-particle values can be used in a variable.  Computes
+can also produce a scalar, vector, or array.  An equal-style variable
+can only use scalar values, which means a global scalar, or an element
+of a global vector or array.  Particle-style variables can use the
+same scalar values.  They can also use per-particle vector values.  A
+vector value can be a per-particle vector itself, or a column of an
+per-particle array.  See the doc pages for individual computes to see
+what kind of values they produce.
+</P>
+<P>Examples of different kinds of compute references are as follows.
+There is no ambiguity as to what a reference means, since computes
+only produce global or per-particle quantities, never both.
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >c_ID</TD><TD > global scalar, or per-particle vector</TD></TR>
+<TR><TD >c_ID[I]</TD><TD > Ith element of global vector, or Ith column from per-particle array</TD></TR>
+<TR><TD >c_ID[I][J]</TD><TD > I,J element of global array 
+</TD></TR></TABLE></DIV>
+
+<P>If a variable containing a compute is evaluated directly in an input
+script (not during a run), then the values accessed by the compute
+must be current.  See the discussion below about "Variable Accuracy".
+</P>
+<HR>
+
+<H4>Fix References 
+</H4>
+<P>Fix references access quantities calculated by a <A HREF = "compute.html">fix</A>.
+The ID in the reference should be replaced by the ID of a fix defined
+elsewhere in the input script.  As discussed in the doc page for the
+<A HREF = "fix.html">fix</A> command, fixes can produce global, per-particle, or
+per-cell values.  Only global and per-particle values can be used in a
+variable.  Fixes can also produce a scalar, vector, or array.  An
+equal-style variable can only use scalar values, which means a global
+scalar, or an element of a global vector or array.  Particle-style
+variables can use the same scalar values.  They can also use
+per-particle vector values.  A vector value can be a per-particle
+vector itself, or a column of an per-particle array.  See the doc
+pages for individual fixes to see what kind of values they produce.
+</P>
+<P>The different kinds of fix references are exactly the same as the
+compute references listed in the above table, where "c_" is replaced
+by "f_".  Again, there is no ambiguity as to what a reference means,
+since fixes only produce global or per-particle quantities, never both.
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >f_ID</TD><TD > global scalar, or per-particle vector</TD></TR>
+<TR><TD >f_ID[I]</TD><TD > Ith element of global vector, or Ith column from per-particle array</TD></TR>
+<TR><TD >f_ID[I][J]</TD><TD > I,J element of global array 
+</TD></TR></TABLE></DIV>
+
+<P>If a variable containing a fix is evaluated directly in an input
+script (not during a run), then the values accessed by the fix should
+be current.  See the discussion below about "Variable Accuracy".
+</P>
+<P>Note that some fixes only generate quantities on certain timesteps.
+If a variable attempts to access the fix on non-allowed timesteps, an
+error is generated.  For example, the <A HREF = "fix_ave_time.html">fix ave/time</A>
+command may only generate averaged quantities every 100 steps.  See
+the doc pages for individual fix commands for details.
+</P>
+<HR>
+
 <H4>Variable References 
 </H4>
 <P>Variable references access quantities calulated by other variables,
 which will cause those variables to be evaluated.  The name in the
 reference should be replaced by the name of a variable defined
 elsewhere in the input script.  As discussed on this doc page,
-atom-style variables generate a per-atom vector of values; all other
-variable styles generate a global scalar value.  An equal-style
-variable can reference a global scalar value produced by another
-variable, but not a per-atom vector produced by an atom-style
-variable.  Atom-style variables can reference either global scalar or
-per-atom vector values produced by kind of variable.
+particle-style variables generate a per-particle vector of values; all
+other variable styles generate a global scalar value.  An equal-style
+variable can only use scalar values, which means another equal-style
+variable.  Atom-style variables can use either other equal-style
+or atom-style variables.
 </P>
 <P>Examples of different kinds of variable references are as follows.
 There is no ambiguity as to what a reference means, since variables
-produce only a global scalar or a per-atom vectors, never both.
+produce only a global scalar or a per-particle vectors, never both.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
-<TR><TD >v_name</TD><TD > scalar, or per-atom vector</TD></TR>
-<TR><TD >v_name[I]</TD><TD > atom I's value in per-atom vector 
+<TR><TD >v_name</TD><TD > scalar, or per-atom vector 
 </TD></TR></TABLE></DIV>
 
 <P>IMPORTANT NOTE: If you define variables in circular manner like this:
@@ -584,12 +757,6 @@ print "Final potential energy = $e"
 <HR>
 
 <P><B>Restrictions:</B>
-</P>
-<P>Indexing any formula element by global atom ID, such as an atom value,
-requires the atom style to use a global mapping in order to look up
-the vector indices.  By default, only atom styles with molecular
-information create global maps.  The <A HREF = "atom_modify.html">atom_modify
-map</A> command can override the default.
 </P>
 <P>All <I>universe</I>- and <I>uloop</I>-style variables defined in an input script
 must have the same number of values.

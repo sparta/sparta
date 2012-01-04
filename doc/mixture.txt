@@ -41,6 +41,9 @@ Define a gas mixture which can be used via its ID in other commands
 such as "create_particles"_create_particles.html.  Any number of
 mixtures can be defined and used in a simulation.
 
+The ID of a mixture can only contain alphanumeric characters and
+underscores.
+
 A mixture is a collection of one or more particle species as defined
 by the "species"_species.html command.  The mixture has global
 attributes and per-species attributes.  All attributes have default
