@@ -17,7 +17,7 @@ arg1,arg2,... = list of statistical attributes :ulb,l
                         npart, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
 			c_ID, c_ID\[I\], c_ID\[I\]\[J\],
                         f_ID, f_ID\[I\], f_ID\[I\]\[J\],
-                        v_name
+                        v_name :pre
 
       step = timestep
       elapsed = timesteps since start of this run
