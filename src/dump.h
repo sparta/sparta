@@ -26,6 +26,7 @@ class Dump : protected Pointers {
   char *style;               // style of Dump
 
   int first_flag;            // 0 if no initial dump, 1 if yes initial dump
+  int clearstep;             // 1 if dump invokes computes, 0 if not
 
   int comm_forward;          // size of forward communication (0 if none)
   int comm_reverse;          // size of reverse communication (0 if none)

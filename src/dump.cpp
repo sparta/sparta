@@ -53,6 +53,7 @@ Dump::Dump(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
   flush_flag = 1;
   format = NULL;
   format_user = NULL;
+  clearstep = 0;
   append_flag = 0;
   padflag = 0;
 

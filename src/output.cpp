@@ -134,7 +134,7 @@ void Output::setup(int flag)
 
   if (ndump) {
     for (int idump = 0; idump < ndump; idump++) {
-      //if (dump[idump]->clearstep) modify->clearstep_compute();
+      if (dump[idump]->clearstep) modify->clearstep_compute();
       writeflag = 0;
       if (every_dump[idump] && ntimestep % every_dump[idump] == 0 && 
 	  last_dump[idump] != ntimestep) writeflag = 1;
@@ -220,7 +220,7 @@ void Output::write(bigint ntimestep)
 
     for (int idump = 0; idump < ndump; idump++) {
       if (next_dump[idump] == ntimestep && last_dump[idump] != ntimestep) {
-        //if (dump[idump]->clearstep) modify->clearstep_compute();
+        if (dump[idump]->clearstep) modify->clearstep_compute();
 	dump[idump]->write();
 	last_dump[idump] = ntimestep;
 	if (every_dump[idump]) next_dump[idump] += every_dump[idump];
@@ -267,7 +267,7 @@ void Output::write(bigint ntimestep)
   // stats may invoke computes so wrap with clear/add
 
   if (next_stats == ntimestep && last_stats != ntimestep) {
-    //modify->clearstep_compute();
+    modify->clearstep_compute();
     stats->compute(1);
     last_stats = ntimestep;
     if (stats_every) next_stats += stats_every;
