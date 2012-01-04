@@ -1,69 +1,52 @@
-"LAMMPS WWW Site"_lws - "LAMMPS Documentation"_ld - "LAMMPS Commands"_lc :c
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
 
-:link(lws,http://lammps.sandia.gov)
-:link(ld,Manual.html)
-:link(lc,Section_commands.html#comm)
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
 
 :line
 
-fix nve command :h3
-fix nve/cuda command :h3
+fix grid/check command :h3
 
 [Syntax:]
 
-fix ID group-ID nve :pre
+fix ID grid/check N :pre
 
-ID, group-ID are documented in "fix"_fix.html command
-nve = style name of this fix command :ul
+ID is documented in "fix"_fix.html command
+grid/check = style name of this fix command
+N = check every N timesteps :ul
 
 [Examples:]
 
-fix 1 all nve :pre
+fix 1 grid/check 100 :pre
 
 [Description:]
 
-Perform constant NVE integration to update position and velocity for
-atoms in the group each timestep.  V is volume; E is energy.  This
-creates a system trajectory consistent with the microcanonical
-ensemble.
+Check if particles are inside the grid cell they are supposed to be,
+based on their current coordinates.  This is useful as a debugging
+check to insure that no particles have been assigned to the incorrect
+grid cell during the particle move stage of the DSMC algorithm.
 
-:line
+The check is performed every {N} timesteps.  Particles not inside the
+correct grid cell are counted and the value of the count can be
+monitored (see below).  A value of 0 is "correct", meaning that no
+particle was found to be outside its assigned grid cell.
 
-Styles with a {cuda} suffix are functionally the same as the
-corresponding style without the suffix.  They have been optimized to
-run faster, depending on your available hardware, as discussed in
-"Section_accelerate"_Section_accelerate.html of the manual.  The
-accelerated styles take the same arguments and should produce the same
-results, except for round-off and precision issues.
-
-These accelerated styles are part of the USER-CUDA package.  They are
-only enabled if LAMMPS was built with that package.  See the "Making
-LAMMPS"_Section_start.html#start_3 section for more info.
-
-You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the "-suffix command-line
-switch"_Section_start.html#start_6 when you invoke LAMMPS, or you can
-use the "suffix"_suffix.html command in your input script.
-
-See "Section_accelerate"_Section_accelerate.html of the manual for
-more instructions on how to use the accelerated styles effectively.
-
-:line
-
-[Restart, fix_modify, output, run start/stop, minimize info:]
+[Restart, fix_modify, output:]
 
 No information about this fix is written to "binary restart
 files"_restart.html.  None of the "fix_modify"_fix_modify.html options
-are relevant to this fix.  No global or per-atom quantities are stored
-by this fix for access by various "output
-commands"_Section_howto.html#howto_15.  No parameter of this fix can
-be used with the {start/stop} keywords of the "run"_run.html command.
-This fix is not invoked during "energy minimization"_minimize.html.
+are relevant to this fix.
+
+This fix computes a global scalar which can be accessed by various
+"output commands"_Section_howto.html#howto_15.  The scalar is the
+count of how many particles were not in the correct grid cell.  The
+count is cummulative over all the timesteps the check was performed
+since the start of the run.  It is re-initialized to zero each time a
+run is performed.
 
 [Restrictions:] none
 
-[Related commands:]
-
-"fix nvt"_fix_nh.html, "fix npt"_fix_nh.html
+[Related commands:] none
 
 [Default:] none

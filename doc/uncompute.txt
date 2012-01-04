@@ -1,8 +1,8 @@
-"LAMMPS WWW Site"_lws - "LAMMPS Documentation"_ld - "LAMMPS Commands"_lc :c
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
 
-:link(lws,http://lammps.sandia.gov)
-:link(ld,Manual.html)
-:link(lc,Section_commands.html#comm)
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
 
 :line
 
@@ -22,8 +22,7 @@ uncompute lower-boundary :pre
 [Description:]
 
 Delete a compute that was previously defined with a "compute"_compute.html
-command.  This also wipes out any additional changes made to the compute
-via the "compute_modify"_compute_modify.html command.
+command.
 
 [Restrictions:] none
 
