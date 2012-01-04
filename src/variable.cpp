@@ -20,10 +20,13 @@
 #include "variable.h"
 #include "universe.h"
 #include "update.h"
+#include "domain.h"
 #include "particle.h"
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
+#include "output.h"
+#include "stats.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
@@ -46,7 +49,7 @@ enum{DONE,ADD,SUBTRACT,MULTIPLY,DIVIDE,CARAT,UNARY,
      SQRT,EXP,LN,LOG,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,
      RANDOM,NORMAL,CEIL,FLOOR,ROUND,RAMP,STAGGER,LOGFREQ,
      VDISPLACE,SWIGGLE,CWIGGLE,
-     VALUE,DOUBLEARRAY,INTARRAY,TYPEARRAY};
+     VALUE,ARRAY,PARTARRAYDOUBLE,PARTARRAYINT,SPECARRAY};
 
 // customize by adding a special function
 
@@ -600,12 +603,16 @@ void Variable::copy(int narg, char **from, char **to)
    str is an equal-style or atom-style formula containing one or more items:
      number = 0.0, -5.45, 2.8e-4, ...
      constant = PI
-     thermo keyword = ke, vol, atoms, ...
+     stats keyword = step, npart, vol, ...
      math operation = (),-x,x+y,x-y,x*y,x/y,x^y,
                       x==y,x!=y,x<y,x<=y,x>y,x>=y,x&&y,x||y,
                       sqrt(x),exp(x),ln(x),log(x),
 		      sin(x),cos(x),tan(x),asin(x),atan2(y,x),...
-     variable = v_name, v_name[i]
+     special function = sum(x),min(x), ...
+     atom vector = x, y, vx, ...
+     compute = c_ID, c_ID[i], c_ID[i][j]
+     fix = f_ID, f_ID[i], f_ID[i][j]
+     variable = v_name
    equal-style variables passes in tree = NULL:
      evaluate the formula, return result as a double
    particle-style variable passes in tree = non-NULL:
@@ -694,7 +701,8 @@ double Variable::evaluate(char *str, Tree **tree)
       delete [] number;
 
     // ----------------
-    // letter: v_name, v_name[], exp()
+    // letter: c_ID, c_ID[], c_ID[][], f_ID, f_ID[], f_ID[][],
+    //         v_name, exp(), x, PI, vol
     // ----------------
 
     } else if (isalpha(onechar)) {
@@ -714,10 +722,315 @@ double Variable::evaluate(char *str, Tree **tree)
       word[n] = '\0';
 
       // ----------------
+      // compute
+      // ----------------
+
+      if (strncmp(word,"c_",2) == 0) {
+	if (domain->box_exist == 0)
+	  error->all(FLERR,
+		     "Variable evaluation before simulation box is defined");
+ 
+	n = strlen(word) - 2 + 1;
+	char *id = new char[n];
+	strcpy(id,&word[2]);
+
+	int icompute = modify->find_compute(id);
+	if (icompute < 0) error->all(FLERR,
+				     "Invalid compute ID in variable formula");
+	Compute *compute = modify->compute[icompute];
+	delete [] id;
+
+	// parse zero or one or two trailing brackets
+	// point i beyond last bracket
+	// nbracket = # of bracket pairs
+	// index1,index2 = int inside each bracket pair
+
+	int nbracket,index1,index2;
+	if (str[i] != '[') nbracket = 0;
+	else {
+	  nbracket = 1;
+	  ptr = &str[i];
+	  index1 = int_between_brackets(ptr);
+	  i = ptr-str+1;
+	  if (str[i] == '[') {
+	    nbracket = 2;
+	    ptr = &str[i];
+	    index2 = int_between_brackets(ptr);
+	    i = ptr-str+1;
+	  }
+	}
+
+        // c_ID = scalar from global scalar
+
+	if (nbracket == 0 && compute->scalar_flag) {
+
+	  if (update->runflag == 0) {
+	    if (compute->invoked_scalar != update->ntimestep)
+	      error->all(FLERR,"Compute used in variable between runs "
+			 "is not current");
+	  } else if (!(compute->invoked_flag & INVOKED_SCALAR)) {
+	    compute->compute_scalar();
+	    compute->invoked_flag |= INVOKED_SCALAR;
+	  }
+
+	  value1 = compute->scalar;
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+        // c_ID[i] = scalar from global vector
+
+	} else if (nbracket == 1 && compute->vector_flag) {
+
+	  if (index1 > compute->size_vector)
+	    error->all(FLERR,"Variable formula compute vector "
+		       "is accessed out-of-range");
+	  if (update->runflag == 0) {
+	    if (compute->invoked_vector != update->ntimestep)
+	      error->all(FLERR,"Compute used in variable between runs "
+			 "is not current");
+	  } else if (!(compute->invoked_flag & INVOKED_VECTOR)) {
+	    compute->compute_vector();
+	    compute->invoked_flag |= INVOKED_VECTOR;
+	  }
+
+	  value1 = compute->vector[index1-1];
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+        // c_ID[i][j] = scalar from global array
+
+	} else if (nbracket == 2 && compute->array_flag) {
+
+	  if (index1 > compute->size_array_rows)
+	    error->all(FLERR,"Variable formula compute array "
+		       "is accessed out-of-range");
+	  if (index2 > compute->size_array_cols)
+	    error->all(FLERR,"Variable formula compute array "
+		       "is accessed out-of-range");
+	  if (update->runflag == 0) {
+	    if (compute->invoked_array != update->ntimestep)
+	      error->all(FLERR,"Compute used in variable between runs "
+			 "is not current");
+	  } else if (!(compute->invoked_flag & INVOKED_ARRAY)) {
+	    compute->compute_array();
+	    compute->invoked_flag |= INVOKED_ARRAY;
+	  }
+
+	  value1 = compute->array[index1-1][index2-1];
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+        // c_ID = vector from per-particle vector
+
+	} else if (nbracket == 0 && compute->per_particle_flag && 
+		   compute->size_per_particle_cols == 0) {
+
+	  if (tree == NULL)
+	    error->all(FLERR,
+		       "Per-particle compute in equal-style variable formula");
+	  if (update->runflag == 0) {
+	    if (compute->invoked_per_particle != update->ntimestep)
+	      error->all(FLERR,"Compute used in variable between runs "
+			 "is not current");
+	  } else if (!(compute->invoked_flag & INVOKED_PER_PARTICLE)) {
+	    compute->compute_per_particle();
+	    compute->invoked_flag |= INVOKED_PER_PARTICLE;
+	  }
+
+	  Tree *newtree = new Tree();
+	  newtree->type = ARRAY;
+	  newtree->array = compute->vector_particle;
+	  newtree->nstride = 1;
+	  newtree->left = newtree->middle = newtree->right = NULL;
+	  treestack[ntreestack++] = newtree;
+
+        // c_ID[i] = vector from per-particle array
+
+	} else if (nbracket == 1 && compute->per_particle_flag &&
+		   compute->size_per_particle_cols > 0) {
+
+	  if (tree == NULL)
+	    error->all(FLERR,
+		       "Per-particle compute in equal-style variable formula");
+	  if (index1 > compute->size_per_particle_cols)
+	    error->all(FLERR,"Variable formula compute array "
+		       "is accessed out-of-range");
+	  if (update->runflag == 0) {
+	    if (compute->invoked_per_particle != update->ntimestep)
+	      error->all(FLERR,"Compute used in variable between runs "
+			 "is not current");
+	  } else if (!(compute->invoked_flag & INVOKED_PER_PARTICLE)) {
+	    compute->compute_per_particle();
+	    compute->invoked_flag |= INVOKED_PER_PARTICLE;
+	  }
+
+	  Tree *newtree = new Tree();
+	  newtree->type = ARRAY;
+	  newtree->array = &compute->array_particle[0][index1-1];
+	  newtree->nstride = compute->size_per_particle_cols;
+	  newtree->left = newtree->middle = newtree->right = NULL;
+	  treestack[ntreestack++] = newtree;
+
+	} else error->all(FLERR,"Mismatched compute in variable formula");
+
+      // ----------------
+      // fix
+      // ----------------
+
+      } else if (strncmp(word,"f_",2) == 0) {
+	if (domain->box_exist == 0)
+	  error->all(FLERR,
+		     "Variable evaluation before simulation box is defined");
+ 
+	n = strlen(word) - 2 + 1;
+	char *id = new char[n];
+	strcpy(id,&word[2]);
+
+	int ifix = modify->find_fix(id);
+	if (ifix < 0) error->all(FLERR,"Invalid fix ID in variable formula");
+	Fix *fix = modify->fix[ifix];
+	delete [] id;
+
+	// parse zero or one or two trailing brackets
+	// point i beyond last bracket
+	// nbracket = # of bracket pairs
+	// index1,index2 = int inside each bracket pair
+
+	int nbracket,index1,index2;
+	if (str[i] != '[') nbracket = 0;
+	else {
+	  nbracket = 1;
+	  ptr = &str[i];
+	  index1 = int_between_brackets(ptr);
+	  i = ptr-str+1;
+	  if (str[i] == '[') {
+	    nbracket = 2;
+	    ptr = &str[i];
+	    index2 = int_between_brackets(ptr);
+	    i = ptr-str+1;
+	  }
+	}
+
+        // f_ID = scalar from global scalar
+
+	if (nbracket == 0 && fix->scalar_flag) {
+
+	  if (update->runflag > 0 && update->ntimestep % fix->global_freq)
+	    error->all(FLERR,"Fix in variable not computed at compatible time");
+
+	  value1 = fix->compute_scalar();
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+        // f_ID[i] = scalar from global vector
+
+	} else if (nbracket == 1 && fix->vector_flag) {
+
+	  if (index1 > fix->size_vector)
+	    error->all(FLERR,
+		       "Variable formula fix vector is accessed out-of-range");
+	  if (update->runflag > 0 && update->ntimestep % fix->global_freq)
+	    error->all(FLERR,"Fix in variable not computed at compatible time");
+
+	  value1 = fix->compute_vector(index1-1);
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+        // f_ID[i][j] = scalar from global array
+
+	} else if (nbracket == 2 && fix->array_flag) {
+
+	  if (index1 > fix->size_array_rows)
+	    error->all(FLERR,
+		       "Variable formula fix array is accessed out-of-range");
+	  if (index2 > fix->size_array_cols)
+	    error->all(FLERR,
+		       "Variable formula fix array is accessed out-of-range");
+	  if (update->runflag > 0 && update->ntimestep % fix->global_freq)
+	    error->all(FLERR,"Fix in variable not computed at compatible time");
+
+	  value1 = fix->compute_array(index1-1,index2-1);
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+        // f_ID = vector from per-particle vector
+
+	} else if (nbracket == 0 && fix->per_particle_flag && 
+		   fix->size_per_particle_cols == 0) {
+
+	  if (tree == NULL)
+	    error->all(FLERR,
+		       "Per-particle fix in equal-style variable formula");
+	  if (update->runflag > 0 && 
+	      update->ntimestep % fix->per_particle_freq)
+	    error->all(FLERR,"Fix in variable not computed at compatible time");
+
+	  Tree *newtree = new Tree();
+	  newtree->type = ARRAY;
+	  newtree->array = fix->vector_particle;
+	  newtree->nstride = 1;
+	  newtree->left = newtree->middle = newtree->right = NULL;
+	  treestack[ntreestack++] = newtree;
+
+        // f_ID[i] = vector from per-particle array
+
+	} else if (nbracket == 1 && fix->per_particle_flag &&
+		   fix->size_per_particle_cols > 0) {
+
+	  if (tree == NULL)
+	    error->all(FLERR,
+		       "Per-particle fix in equal-style variable formula");
+	  if (index1 > fix->size_per_particle_cols)
+	    error->all(FLERR,
+		       "Variable formula fix array is accessed out-of-range");
+	  if (update->runflag > 0 && 
+	      update->ntimestep % fix->per_particle_freq)
+	    error->all(FLERR,"Fix in variable not computed at compatible time");
+
+	  Tree *newtree = new Tree();
+	  newtree->type = ARRAY;
+	  newtree->array = &fix->array_particle[0][index1-1];
+	  newtree->nstride = fix->size_per_particle_cols;
+	  newtree->left = newtree->middle = newtree->right = NULL;
+	  treestack[ntreestack++] = newtree;
+
+	} else error->all(FLERR,"Mismatched fix in variable formula");
+
+      // ----------------
       // variable
       // ----------------
 
-      if (strncmp(word,"v_",2) == 0) {
+      } else if (strncmp(word,"v_",2) == 0) {
 	n = strlen(word) - 2 + 1;
 	char *id = new char[n];
 	strcpy(id,&word[2]);
@@ -740,7 +1053,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	  i = ptr-str+1;
 	}
 
-        // v_name = scalar from non atom-style global scalar
+        // v_name = scalar from non particle-style global scalar
 
 	if (nbracket == 0 && style[ivar] != PARTICLE) {
 
@@ -755,7 +1068,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	    treestack[ntreestack++] = newtree;
 	  } else argstack[nargstack++] = atof(var);
 
-        // v_name = vector from atom-style per-atom vector
+        // v_name = vector from particle-style per-particle vector
 
 	} else if (nbracket == 0 && style[ivar] == PARTICLE) {
 
@@ -770,14 +1083,14 @@ double Variable::evaluate(char *str, Tree **tree)
 
 	delete [] id;
 
-      // ----------------
-      // math function or 
+      // ----------------\
+      // math/special function or atom vector or constant or stats keyword
       // ----------------
 
       } else {
 
 	// ----------------
-	// math or group or special function, or constant
+	// math or special function
 	// ----------------
 
 	if (str[i] == '(') {
@@ -787,13 +1100,21 @@ double Variable::evaluate(char *str, Tree **tree)
 
 	  if (math_function(word,contents,tree,
 			    treestack,ntreestack,argstack,nargstack));
-	  //else if (group_function(word,contents,tree,
-	  //			  treestack,ntreestack,argstack,nargstack));
 	  else if (special_function(word,contents,tree,
 				    treestack,ntreestack,argstack,nargstack));
-	  else error->all(FLERR,"Invalid math/group/special function "
+	  else error->all(FLERR,"Invalid math/special function "
 			  "in variable formula");
 	  delete [] contents;
+
+	// ----------------
+	// atom vector
+	// ----------------
+
+	} else if (is_particle_vector(word)) {
+	  if (domain->box_exist == 0)
+	    error->all(FLERR,
+		       "Variable evaluation before simulation box is defined");
+	  particle_vector(word,tree,treestack,ntreestack);
 
 	// ----------------
 	// constant
@@ -801,6 +1122,26 @@ double Variable::evaluate(char *str, Tree **tree)
 
 	} else if (is_constant(word)) {
 	  value1 = constant(word);
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+	// ----------------
+	// stats keyword
+	// ----------------
+
+	} else {
+	  if (domain->box_exist == 0)
+	    error->all(FLERR,
+		       "Variable evaluation before simulation box is defined");
+ 
+	  int flag = output->stats->evaluate_keyword(word,&value1);
+	  if (flag) error->all(FLERR,
+			       "Invalid stats keyword in variable formula");
 	  if (tree) {
 	    Tree *newtree = new Tree();
 	    newtree->type = VALUE;
@@ -971,7 +1312,7 @@ double Variable::evaluate(char *str, Tree **tree)
 /* ----------------------------------------------------------------------
    one-time collapse of a particle-style variable parse tree
    tree was created by one-time parsing of formula string via evaulate()
-   only keep tree nodes that depend on DOUBLEARRAY, INTARRAY, TYPEARRAY
+   only keep tree nodes that depend on ARRAYs
    remainder is converted to single VALUE
    this enables optimal eval_tree loop over atoms
    customize by adding a function:
@@ -986,9 +1327,10 @@ double Variable::collapse_tree(Tree *tree)
   double arg1,arg2;
 
   if (tree->type == VALUE) return tree->value;
-  if (tree->type == DOUBLEARRAY) return 0.0;
-  if (tree->type == INTARRAY) return 0.0;
-  if (tree->type == TYPEARRAY) return 0.0;
+  if (tree->type == ARRAY) return 0.0;
+  if (tree->type == PARTARRAYDOUBLE) return 0.0;
+  if (tree->type == PARTARRAYINT) return 0.0;
+  if (tree->type == SPECARRAY) return 0.0;
 
   if (tree->type == ADD) {
     arg1 = collapse_tree(tree->left);
@@ -1386,13 +1728,14 @@ double Variable::eval_tree(Tree *tree, int i)
   double arg,arg1,arg2,arg3;
 
   if (tree->type == VALUE) return tree->value;
-  if (tree->type == DOUBLEARRAY) 
-    return *((double *) &tree->array[i*tree->nstride]);
-  if (tree->type == INTARRAY)
-    return *((int *) &tree->array[i*tree->nstride]);
-  if (tree->type == TYPEARRAY)
+  if (tree->type == ARRAY) return tree->array[i*tree->nstride];
+  if (tree->type == PARTARRAYDOUBLE) 
+    return *((double *) &tree->carray[i*tree->nstride]);
+  if (tree->type == PARTARRAYINT)
+    return *((int *) &tree->carray[i*tree->nstride]);
+  if (tree->type == SPECARRAY)
     return *((double *) 
-	     &tree->array[particle->particles[i].ispecies*tree->nstride]);
+	     &tree->carray[particle->particles[i].ispecies*tree->nstride]);
 
   if (tree->type == ADD)
     return eval_tree(tree->left,i) + eval_tree(tree->right,i);
@@ -2141,25 +2484,31 @@ void Variable::particle_vector(char *word, Tree **tree,
   Particle::Species *species = particle->species;
 
   Tree *newtree = new Tree();
-  newtree->type = DOUBLEARRAY;
+  newtree->type = PARTARRAYDOUBLE;
   newtree->nstride = sizeof(Particle::OnePart);
   newtree->left = newtree->middle = newtree->right = NULL;
   treestack[ntreestack++] = newtree;
 
   if (strcmp(word,"mass") == 0) {
-    newtree->type = TYPEARRAY;
+    newtree->type = SPECARRAY;
     newtree->nstride = sizeof(Particle::Species);
-    newtree->array = (char *) &species[0].mass;
+    newtree->carray = (char *) &species[0].mass;
   } else if (strcmp(word,"type") == 0) {
-    newtree->type = INTARRAY;
-    newtree->array = (char *) &particles[0].ispecies;
+    newtree->type = PARTARRAYINT;
+    newtree->carray = (char *) &particles[0].ispecies;
   }
-  else if (strcmp(word,"x") == 0) newtree->array = (char *) &particles[0].x[0];
-  else if (strcmp(word,"y") == 0) newtree->array = (char *) &particles[0].x[1];
-  else if (strcmp(word,"z") == 0) newtree->array = (char *) &particles[0].x[2];
-  else if (strcmp(word,"vx") == 0) newtree->array = (char *) &particles[0].v[0];
-  else if (strcmp(word,"vy") == 0) newtree->array = (char *) &particles[0].v[1];
-  else if (strcmp(word,"vz") == 0) newtree->array = (char *) &particles[0].v[2];
+  else if (strcmp(word,"x") == 0)
+    newtree->carray = (char *) &particles[0].x[0];
+  else if (strcmp(word,"y") == 0)
+    newtree->carray = (char *) &particles[0].x[1];
+  else if (strcmp(word,"z") == 0)
+    newtree->carray = (char *) &particles[0].x[2];
+  else if (strcmp(word,"vx") == 0)
+    newtree->carray = (char *) &particles[0].v[0];
+  else if (strcmp(word,"vy") == 0)
+    newtree->carray = (char *) &particles[0].v[1];
+  else if (strcmp(word,"vz") == 0)
+    newtree->carray = (char *) &particles[0].v[2];
 }
 
 /* ----------------------------------------------------------------------
