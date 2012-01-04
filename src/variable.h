@@ -55,8 +55,7 @@ class Variable : protected Pointers {
 
   struct Tree {            // parse tree for particle-style variables
     double value;
-    double *array;
-    int *iarray;
+    char *array;
     int type;
     int nstride;
     int ivalue1,ivalue2;

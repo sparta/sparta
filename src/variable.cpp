@@ -42,11 +42,11 @@ enum{ARG,OP};
 // customize by adding a function
 
 enum{DONE,ADD,SUBTRACT,MULTIPLY,DIVIDE,CARAT,UNARY,
-       NOT,EQ,NE,LT,LE,GT,GE,AND,OR,
-       SQRT,EXP,LN,LOG,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,
-       RANDOM,NORMAL,CEIL,FLOOR,ROUND,RAMP,STAGGER,LOGFREQ,
-       VDISPLACE,SWIGGLE,CWIGGLE,
-       VALUE,ATOMARRAY,TYPEARRAY,INTARRAY};
+     NOT,EQ,NE,LT,LE,GT,GE,AND,OR,
+     SQRT,EXP,LN,LOG,SIN,COS,TAN,ASIN,ACOS,ATAN,ATAN2,
+     RANDOM,NORMAL,CEIL,FLOOR,ROUND,RAMP,STAGGER,LOGFREQ,
+     VDISPLACE,SWIGGLE,CWIGGLE,
+     VALUE,DOUBLEARRAY,INTARRAY,TYPEARRAY};
 
 // customize by adding a special function
 
@@ -971,7 +971,7 @@ double Variable::evaluate(char *str, Tree **tree)
 /* ----------------------------------------------------------------------
    one-time collapse of a particle-style variable parse tree
    tree was created by one-time parsing of formula string via evaulate()
-   only keep tree nodes that depend on ATOMARRAY, TYPEARRAY, INTARRAY
+   only keep tree nodes that depend on DOUBLEARRAY, INTARRAY, TYPEARRAY
    remainder is converted to single VALUE
    this enables optimal eval_tree loop over atoms
    customize by adding a function:
@@ -986,9 +986,9 @@ double Variable::collapse_tree(Tree *tree)
   double arg1,arg2;
 
   if (tree->type == VALUE) return tree->value;
-  if (tree->type == ATOMARRAY) return 0.0;
-  if (tree->type == TYPEARRAY) return 0.0;
+  if (tree->type == DOUBLEARRAY) return 0.0;
   if (tree->type == INTARRAY) return 0.0;
+  if (tree->type == TYPEARRAY) return 0.0;
 
   if (tree->type == ADD) {
     arg1 = collapse_tree(tree->left);
@@ -1386,9 +1386,13 @@ double Variable::eval_tree(Tree *tree, int i)
   double arg,arg1,arg2,arg3;
 
   if (tree->type == VALUE) return tree->value;
-  if (tree->type == ATOMARRAY) return tree->array[i*tree->nstride];
-  //if (tree->type == TYPEARRAY) return tree->array[atom->type[i]];
-  if (tree->type == INTARRAY) return (double) tree->iarray[i*tree->nstride];
+  if (tree->type == DOUBLEARRAY) 
+    return *((double *) &tree->array[i*tree->nstride]);
+  if (tree->type == INTARRAY)
+    return *((int *) &tree->array[i*tree->nstride]);
+  if (tree->type == TYPEARRAY)
+    return *((double *) 
+	     &tree->array[particle->particles[i].ispecies*tree->nstride]);
 
   if (tree->type == ADD)
     return eval_tree(tree->left,i) + eval_tree(tree->right,i);
@@ -2133,36 +2137,29 @@ void Variable::particle_vector(char *word, Tree **tree,
   if (tree == NULL)
     error->all(FLERR,"Particle vector in equal-style variable formula");
 
+  Particle::OnePart *particles = particle->particles;
+  Particle::Species *species = particle->species;
+
   Tree *newtree = new Tree();
-  newtree->type = ATOMARRAY;
-  newtree->nstride = 3;
+  newtree->type = DOUBLEARRAY;
+  newtree->nstride = sizeof(Particle::OnePart);
   newtree->left = newtree->middle = newtree->right = NULL;
   treestack[ntreestack++] = newtree;
 
-  /*
   if (strcmp(word,"mass") == 0) {
-    if (atom->rmass) {
-      newtree->nstride = 1;
-      newtree->array = atom->rmass;
-    } else {
-      newtree->type = TYPEARRAY;
-      newtree->array = atom->mass;
-    }
+    newtree->type = TYPEARRAY;
+    newtree->nstride = sizeof(Particle::Species);
+    newtree->array = (char *) &species[0].mass;
   } else if (strcmp(word,"type") == 0) {
     newtree->type = INTARRAY;
-    newtree->nstride = 1;
-    newtree->iarray = atom->type;
+    newtree->array = (char *) &particles[0].ispecies;
   }
-  else if (strcmp(word,"x") == 0) newtree->array = &atom->x[0][0];
-  else if (strcmp(word,"y") == 0) newtree->array = &atom->x[0][1];
-  else if (strcmp(word,"z") == 0) newtree->array = &atom->x[0][2];
-  else if (strcmp(word,"vx") == 0) newtree->array = &atom->v[0][0];
-  else if (strcmp(word,"vy") == 0) newtree->array = &atom->v[0][1];
-  else if (strcmp(word,"vz") == 0) newtree->array = &atom->v[0][2];
-  else if (strcmp(word,"fx") == 0) newtree->array = &atom->f[0][0];
-  else if (strcmp(word,"fy") == 0) newtree->array = &atom->f[0][1];
-  else if (strcmp(word,"fz") == 0) newtree->array = &atom->f[0][2];
-  */
+  else if (strcmp(word,"x") == 0) newtree->array = (char *) &particles[0].x[0];
+  else if (strcmp(word,"y") == 0) newtree->array = (char *) &particles[0].x[1];
+  else if (strcmp(word,"z") == 0) newtree->array = (char *) &particles[0].x[2];
+  else if (strcmp(word,"vx") == 0) newtree->array = (char *) &particles[0].v[0];
+  else if (strcmp(word,"vy") == 0) newtree->array = (char *) &particles[0].v[1];
+  else if (strcmp(word,"vz") == 0) newtree->array = (char *) &particles[0].v[2];
 }
 
 /* ----------------------------------------------------------------------

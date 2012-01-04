@@ -592,7 +592,7 @@ int Stats::add_variable(const char *id)
 }
 
 /* ----------------------------------------------------------------------
-   compute a single thermodyanmic value, word is any keyword in custom list
+   compute a single stats value, word is any stats keyword
    called when a variable is evaluated by Variable class
    return value as double in answer
    return 0 if str is recoginzed keyword, 1 if unrecognized
@@ -601,6 +601,59 @@ int Stats::add_variable(const char *id)
 
 int Stats::evaluate_keyword(char *word, double *answer)
 {
+  // invoke a lo-level stats routine to compute the variable value
+
+  if (strcmp(word,"step") == 0) {
+    compute_step();
+    dvalue = bivalue;
+
+  } else if (strcmp(word,"elapsed") == 0) {
+    if (update->runflag == 0) 
+      error->all(FLERR,
+		 "This variable stats keyword cannot be used between runs");
+    compute_elapsed();
+    dvalue = bivalue;
+
+  } else if (strcmp(word,"dt") == 0) {
+    compute_dt();
+
+  } else if (strcmp(word,"cpu") == 0) {
+    if (update->runflag == 0) 
+      error->all(FLERR,
+		 "This variable stats keyword cannot be used between runs");
+    compute_cpu();
+
+  } else if (strcmp(word,"tpcpu") == 0) {
+    if (update->runflag == 0) 
+      error->all(FLERR,
+		 "This variable stats keyword cannot be used between runs");
+    compute_tpcpu();
+
+  } else if (strcmp(word,"spcpu") == 0) {
+    if (update->runflag == 0) 
+      error->all(FLERR,
+		 "This variable stats keyword cannot be used between runs");
+    compute_spcpu();
+
+  } else if (strcmp(word,"npart") == 0) {
+    compute_npart();
+    dvalue = bivalue;
+
+  } else if (strcmp(word,"vol") == 0) compute_vol();
+  else if (strcmp(word,"lx") == 0) compute_lx();
+  else if (strcmp(word,"ly") == 0) compute_ly();
+  else if (strcmp(word,"lz") == 0) compute_lz();
+
+  else if (strcmp(word,"xlo") == 0) compute_xlo();
+  else if (strcmp(word,"xhi") == 0) compute_xhi();
+  else if (strcmp(word,"ylo") == 0) compute_ylo();
+  else if (strcmp(word,"yhi") == 0) compute_yhi();
+  else if (strcmp(word,"zlo") == 0) compute_zlo();
+  else if (strcmp(word,"zhi") == 0) compute_zhi();
+
+  else return 1;
+
+  *answer = dvalue;
   return 0;
 }
 
