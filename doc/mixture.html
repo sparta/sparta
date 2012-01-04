@@ -53,13 +53,15 @@ underscores.
 </P>
 <P>A mixture is a collection of one or more particle species as defined
 by the <A HREF = "species.html">species</A> command.  The mixture has global
-attributes and per-species attributes.  All attributes have default
-values if they are not specified explicitly.
+attributes and per-species attributes.  Any of these attributes can be
+set by using the mixture command several times for the same ID, using
+the appropriate species.  All attributes have default values if they
+are not specified explicitly.
 </P>
-<P>If the mixture command is used multiple times with the same ID, then
-any new species are added to the mixture.  Note that keywords which
-set per-species attibutes only apply to species in that specific
-mixture command.
+<P>If the mixture command is used with the same ID as a previously
+defined mixture, then any new species which appear for the first time
+are added to the mixture.  Note that keywords which set per-species
+attibutes only apply to species in that specific mixture command.
 </P>
 <P>The <I>nrho</I> keyword sets the global density of the mixture.  It can be
 used in any mixture command to set the number density of the
