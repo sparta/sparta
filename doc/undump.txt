@@ -1,0 +1,33 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+undump command :h3
+
+[Syntax:]
+
+undump dump-ID :pre
+
+dump-ID = ID of previously defined dump :ul
+
+[Examples:]
+
+undump mine
+undump 2 :pre
+
+[Description:]
+
+Turn off a previously defined dump so that it is no longer active.
+This closes the file associated with the dump.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"dump"_dump.html
+
+[Default:] none

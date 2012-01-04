@@ -1,0 +1,57 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+boundary command :h3
+
+[Syntax:]
+
+boundary x y z :pre
+
+x,y,z = {o} or {p} or {s}, one or two letters :ulb,l
+  {o} is outflow
+  {p} is periodic
+  {s} is specular reflection :pre
+:ule
+
+[Examples:]
+
+boundary o p 
+boundary o so
+boundary s p s :pre
+
+[Description:]
+
+Set the style of boundaries for the global simulation box in each of
+the x, y, z dimensions.  A single letter assigns the same style to
+both the lower and upper face of the box.  Two letters assigns the
+first style to the lower face and the second style to the upper face.
+The size of the simulation box is set by the
+"create_box"_create_box.html command.
+
+The boundary style determines how particles exiting the box
+are handled.
+
+The style {o} means an outflow boundary, so that particles freely exit
+the simulation.
+
+The style {p} means the box is periodic, so that particles exit one
+end of the box and re-enter the other end.  The {p} style must be
+applied to both faces of a dimension.
+
+The styles {s} means a specularly reflecting boundary.  Particles that
+cross this boundary have their velocity reversed and re-enter the box.
+
+[Restrictions:] none
+
+For 2d simulations, the z dimension must be periodic.
+
+[Related commands:] none
+
+[Default:]
+
+boundary p p p :pre

@@ -1,0 +1,195 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>dump command 
+</H3>
+<H3><A HREF = "dump_image.html">dump image</A> command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>dump ID style N file args 
+</PRE>
+<UL><LI>ID = user-assigned name for the dump 
+
+<LI>style = <I>particle</I> or <I>image</I> 
+
+<LI>N = dump every this many timesteps 
+
+<LI>file = name of file to write dump info to 
+
+<LI>args = list of arguments for a particular style 
+
+<PRE>  <I>image</I> args = discussed on <A HREF = "dump_image.html">dump image</A> doc page
+  <I>custom</I> args = list of atom attributes
+    possible attributes = id, type, x, y, z, xs, ys, zs, vx, vy, vz 
+</PRE>
+<PRE>      id = particle ID
+      type = particle species
+      x,y,z = unscaled particle coordinates
+      xs,ys,zs = scaled particle coordinates
+      vx,vy,vz = atom velocities 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>dump myDump all atom 100 dump.atom
+dump 2 subgroup atom 50 dump.run.bin
+dump 4a all custom 100 dump.myforce.* id type x y vx fx
+dump 4b flow custom 100 dump.%.myforce id type c_myF[3] v_ke
+dump 2 inner cfg 10 dump.snap.*.cfg id type xs ys zs vx vy vz
+dump snap all cfg 100 dump.config.*.cfg id type xs ys zs id type c_Stress<B>2</B>
+dump 1 all xtc 1000 file.xtc
+dump e_data all custom 100 dump.eff id type x y z spin eradius fx fy fz eforce 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Dump a snapshot of simulation quantities to one or more files every N
+timesteps in one of several styles.  The <I>image</I> style is the
+exception; it creates a JPG or PPM image file of the simulation
+configuration every N timesteps, as discussed on the <A HREF = "dump_image.html">dump
+image</A> doc page.
+</P>
+<P>Only information for atoms in the specified group is dumped.  The
+<A HREF = "dump_modify.html">dump_modify thresh and region</A> commands can also
+alter what atoms are included.  Not all styles support all these
+options; see details below.
+</P>
+<P>As described below, the filename determines the kind of output (text
+or binary or gzipped, one big file or one per timestep, one big file
+or one per processor).
+</P>
+<HR>
+
+<P>The <I>style</I> keyword determines what quantities are written to the file
+and in what format.  Settings made via the
+<A HREF = "dump_modify.html">dump_modify</A> command can also alter the format of
+individual values and the file itself.
+</P>
+<P>The <I>particle</I> style create files in a simple text format that is
+self-explanatory when viewing a dump file.  Many of the DSMC
+<A HREF = "Section_tools.html">post-processing tools</A>, including
+<A HREF = "http://www.sandia.gov/~sjplimp/pizza.html">Pizza.py</A>, work with this
+format.
+</P>
+<P>For post-processing purposes the <I>particle</I> text files are
+self-describing in the following sense.
+</P>
+<P>The dimensions of the simulation box are included in each snapshot.
+This information is is formatted as:
+</P>
+<PRE>ITEM: BOX BOUNDS xx yy zz
+xlo xhi
+ylo yhi
+zlo zhi 
+</PRE>
+<P>where xlo,xhi are the maximum extents of the simulation box in the
+x-dimension, and similarly for y and z.  The "xx yy zz" represent 6
+characters that encode the style of boundary for each of the 6
+simulation box boundaries (xlo,xhi and ylo,yhi and zlo,zhi).  Each of
+the 6 characters is either o = outflow, p = periodic, or s = specular.
+See the <A HREF = "doc/boundary.html">boundary</A> command for details.
+</P>
+<P>The "ITEM: ATOMS" line in each snapshot lists column descriptors for
+the per-particle lines that follow.  The descriptors will be the
+particle attributes you specify in the dump command for the <I>particle</I>
+style.
+</P>
+<P>Style <I>particle</I> allows you to specify a list of particle attributes
+to be written to the dump file for each particle.  Possible attributes
+are listed above and will appear in the order specified.  An
+explanation of the possible dump particle attributes is given below.
+</P>
+<HR>
+
+<P>Dumps are performed on timesteps that are a multiple of N (including
+timestep 0).  Note that this means a dump will not be performed on the
+initial timestep after the dump command is invoked, if the current
+timestep is not a multiple of N.  This behavior can be changed via the
+<A HREF = "dump_modify.html">dump_modify first</A> command.  N can be changed
+between runs by using the <A HREF = "dump_modify.html">dump_modify every</A>
+command.
+</P>
+<P>The specified filename determines how the dump file(s) is written.
+The default is to write one large text file, which is opened when the
+dump command is invoked and closed when an <A HREF = "undump.html">undump</A>
+command is used or when DSMC exits.
+</P>
+<P>Dump filenames can contain two wildcard characters.  If a "*"
+character appears in the filename, then one file per snapshot is
+written and the "*" character is replaced with the timestep value.
+For example, tmp.dump.* becomes tmp.dump.0, tmp.dump.10000,
+tmp.dump.20000, etc.  Note that the <A HREF = "dump_modify.html">dump_modify pad</A>
+command can be used to insure all timestep numbers are the same length
+(e.g. 00010), which can make it easier to read a series of dump files
+in order by some post-processing tools.
+</P>
+<P>If a "%" character appears in the filename, then one file is written
+for each processor and the "%" character is replaced with the
+processor ID from 0 to P-1.  For example, tmp.dump.% becomes
+tmp.dump.0, tmp.dump.1, ... tmp.dump.P-1, etc.  This creates smaller
+files and can be a fast mode of output on parallel machines that
+support parallel I/O for output.
+</P>
+<P>Note that the "*" and "%" characters can be used together to produce a
+large number of small dump files!
+</P>
+<P>If the filename ends with ".bin", the dump file (or files, if "*" or
+"%" is also used) is written in binary format.  A binary dump file
+will be about the same size as a text version, but will typically
+write out much faster.  Of course, when post-processing, you will need
+to convert it back to text format (see the <A HREF = "Section_tools.html#binary">binary2txt
+tool</A>) or write your own code to read the
+binary file.  The format of the binary file can be understood by
+looking at the tools/binary2txt.cpp file.  This option is only
+available for the <I>atom</I> and <I>custom</I> styles.
+</P>
+<P>If the filename ends with ".gz", the dump file (or files, if "*" or "%"
+is also used) is written in gzipped format.  A gzipped dump file will
+be about 3x smaller than the text version, but will also take longer
+to write.
+</P>
+<HR>
+
+<P>This section explains the particle attributes that can be specified as
+part of the <I>particle</I> style.
+</P>
+<P>The <I>id</I>, <I>type</I>, <I>vx</I>, <I>vy</I>, <I>vz</I> attributes are self-explanatory.
+</P>
+<P><I>Id</I> is the atom ID.  <I>Type</I> is an integer index representing the
+particle species.  <I>Vx</I>, <I>vy</I>, <I>vz</I> are components of particle
+velocity.
+</P>
+<P>There are several options for outputting atom coordinates.  The <I>x</I>,
+<I>y</I>, <I>z</I> attributes write particle coordinates "unscaled", in the
+appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> if you
+want the coordinates "scaled" to the box size, so that each value is
+0.0 to 1.0.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>To write gzipped dump files, you must compile DSMC with the
+-DDSMC_GZIP option - see the <A HREF = "Section_start.html#start_2">Making DSMC</A>
+section of the documentation.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump_image.html">dump image</A>, <A HREF = "dump_modify.html">dump_modify</A>,
+<A HREF = "undump.html">undump</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The defaults for the image style are listed on the <A HREF = "dump_image.html">dump
+image</A> doc page.
+</P>
+</HTML>

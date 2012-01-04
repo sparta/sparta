@@ -1,0 +1,64 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>boundary command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>boundary x y z 
+</PRE>
+<UL><LI>x,y,z = <I>o</I> or <I>p</I> or <I>s</I>, one or two letters 
+
+<PRE>  <I>o</I> is outflow
+  <I>p</I> is periodic
+  <I>s</I> is specular reflection 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>boundary o p 
+boundary o so
+boundary s p s 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set the style of boundaries for the global simulation box in each of
+the x, y, z dimensions.  A single letter assigns the same style to
+both the lower and upper face of the box.  Two letters assigns the
+first style to the lower face and the second style to the upper face.
+The size of the simulation box is set by the
+<A HREF = "create_box.html">create_box</A> command.
+</P>
+<P>The boundary style determines how particles exiting the box
+are handled.
+</P>
+<P>The style <I>o</I> means an outflow boundary, so that particles freely exit
+the simulation.
+</P>
+<P>The style <I>p</I> means the box is periodic, so that particles exit one
+end of the box and re-enter the other end.  The <I>p</I> style must be
+applied to both faces of a dimension.
+</P>
+<P>The styles <I>s</I> means a specularly reflecting boundary.  Particles that
+cross this boundary have their velocity reversed and re-enter the box.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P>For 2d simulations, the z dimension must be periodic.
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B>
+</P>
+<PRE>boundary p p p 
+</PRE>
+</HTML>
