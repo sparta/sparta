@@ -120,7 +120,7 @@ void Modify::end_of_step()
    add a new fix or replace one with same ID
 ------------------------------------------------------------------------- */
 
-void Modify::add_fix(int narg, char **arg, char *suffix)
+void Modify::add_fix(int narg, char **arg)
 {
   if (domain->box_exist == 0) 
     error->all(FLERR,"Fix command before simulation box is defined");
@@ -212,7 +212,7 @@ int Modify::find_fix(const char *id)
    add a new compute
 ------------------------------------------------------------------------- */
 
-void Modify::add_compute(int narg, char **arg, char *suffix)
+void Modify::add_compute(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR,"Illegal compute command");
 

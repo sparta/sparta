@@ -36,11 +36,11 @@ class Modify : protected Pointers {
   void start_of_step();
   void end_of_step();
 
-  void add_fix(int, char **, char *suffix = NULL);
+  void add_fix(int, char **);
   void delete_fix(const char *);
   int find_fix(const char *);
 
-  void add_compute(int, char **, char *suffix = NULL);
+  void add_compute(int, char **);
   void delete_compute(const char *);
   int find_compute(const char *);
   void clearstep_compute();
