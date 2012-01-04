@@ -31,6 +31,7 @@ using namespace DSMC_NS;
 RanPark::RanPark(int iseed)
 {
   seed = iseed;
+  save = 0;
 }
 
 /* ---------------------------------------------------------------------- 
@@ -42,6 +43,7 @@ RanPark::RanPark(double rseed)
 {
   seed = static_cast<int> (rseed*IM);
   if (seed == 0) seed = 1;
+  save = 0;
 }
 
 /* ---------------------------------------------------------------------- 

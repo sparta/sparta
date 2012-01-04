@@ -24,9 +24,9 @@ class Stats : protected Pointers {
   ~Stats();
   void init();
   void modify_params(int, char **);
+  void set_fields(int, char **);
   void header();
   void compute(int);
-  void set_fields(int, char **);
   int evaluate_keyword(char *, double *);
 
  private:
@@ -60,19 +60,35 @@ class Stats : protected Pointers {
   int *argindex1;        // indices into compute,fix scalar,vector
   int *argindex2;
 
-                         // data for keyword-specific Compute objects
-                         // index = where they are in computes list
-                         // id = ID of Compute objects
-                         // Compute * = ptrs to the Compute objects
+  int ncompute;                // # of Compute objects called by thermo
+  char **id_compute;           // their IDs
+  int *compute_which;          // 0/1/2 if should call scalar,vector,array
+  class Compute **computes;    // list of ptrs to the Compute objects
+
+  int nfix;                    // # of Fix objects called by thermo
+  char **id_fix;               // their IDs
+  class Fix **fixes;           // list of ptrs to the Fix objects
+
+  int nvariable;               // # of variables evaulated by thermo
+  char **id_variable;          // list of variable names
+  int *variables;              // list of Variable indices
 
   // private methods
 
   void allocate();
   void deallocate();
 
+  int add_compute(const char *, int);
+  int add_fix(const char *);
+  int add_variable(const char *);
+
   typedef void (Stats::*FnPtr)();
   void addfield(const char *, FnPtr, int);
   FnPtr *vfunc;                // list of ptrs to functions
+
+  void compute_compute();      // functions that compute a single value
+  void compute_fix();          // via calls to  Compute,Fix,Variable classes
+  void compute_variable();
 
   // functions that compute a single value
   // customize a new keyword by adding a method prototype
@@ -85,7 +101,6 @@ class Stats : protected Pointers {
   void compute_spcpu();
 
   void compute_npart();
-  void compute_temp();
 
   void compute_vol();
   void compute_lx();

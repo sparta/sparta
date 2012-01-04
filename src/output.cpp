@@ -21,7 +21,10 @@
 #include "input.h"
 #include "variable.h"
 #include "update.h"
+#include "particle.h"
+#include "grid.h"
 #include "domain.h"
+#include "modify.h"
 #include "stats.h"
 #include "dump.h"
 #include "write_restart.h"
@@ -170,14 +173,14 @@ void Output::setup(int flag)
 
   // print memory usage unless being called between multiple runs
 
-  // if (flag) memory_usage();
+  if (flag) memory_usage();
 
   // always do stats with header at start of run
   // set next_stats to multiple of every or last step of run (if smaller)
   // if every = 0, set next_stats to last step of run
   // stats may invoke computes so wrap with clear/add
 
-  //modify->clearstep_compute();
+  modify->clearstep_compute();
 
   stats->header();
   stats->compute(0);
@@ -468,28 +471,59 @@ void Output::create_restart(int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    sum and print memory usage
-   result is only memory on proc 0, not averaged across procs
 ------------------------------------------------------------------------- */
 
-/*
 void Output::memory_usage()
 {
-  bigint bytes = 0;
-  bytes += atom->memory_usage();
-  bytes += neighbor->memory_usage();
-  bytes += comm->memory_usage();
-  bytes += update->memory_usage();
-  bytes += force->memory_usage();
+  bigint pbytes,gbytes,bytes;
+  pbytes = particle->memory_usage();
+  gbytes = grid->memory_usage();
+  bytes = pbytes + gbytes;
   bytes += modify->memory_usage();
-  for (int i = 0; i < ndump; i++) dump[i]->memory_usage();
 
-  double mbytes = bytes/1024.0/1024.0;
+  double scale = 1.0/1024.0/1024.0;
+
+  bigint ave,min,max;
+
+  MPI_Allreduce(&pbytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  double pave = scale * ave/comm->nprocs;
+  MPI_Allreduce(&pbytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
+  double pmin = scale * min;
+  MPI_Allreduce(&pbytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
+  double pmax = scale * max;
+
+  MPI_Allreduce(&gbytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  double gave = scale * ave/comm->nprocs;
+  MPI_Allreduce(&gbytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
+  double gmin = scale * min;
+  MPI_Allreduce(&gbytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
+  double gmax = scale * max;
+
+  MPI_Allreduce(&bytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  double tave = scale * ave/comm->nprocs;
+  MPI_Allreduce(&bytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
+  double tmin = scale * min;
+  MPI_Allreduce(&bytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
+  double tmax = scale * max;
 
   if (comm->me == 0) {
-    if (screen)
-      fprintf(screen,"Memory usage per processor = %g Mbytes\n",mbytes);
-    if (logfile) 
-      fprintf(logfile,"Memory usage per processor = %g Mbytes\n",mbytes);
+    if (screen) {
+      fprintf(screen,"Memory usage per proc in Mbytes:\n");
+      fprintf(screen,"  particles (ave,min,max) = %g %g %g\n",
+	      pave,pmin,pmax);
+      fprintf(screen,"  grid      (ave,min,max) = %g %g %g\n",
+	      gave,gmin,gmax);
+      fprintf(screen,"  total     (ave,min,max) = %g %g %g\n",
+	      tave,tmin,tmax);
+    }
+    if (logfile) {
+      fprintf(logfile,"Memory usage per proc in Mbytes:\n");
+      fprintf(logfile,"  particles (ave,min,max) = %g %g %g\n",
+	      pave,pmin,pmax);
+      fprintf(logfile,"  grid      (ave,min,max) = %g %g %g\n",
+	      gave,gmin,gmax);
+      fprintf(logfile,"  total     (ave,min,max) = %g %g %g\n",
+	      tave,tmin,tmax);
+    }
   }
 }
-*/

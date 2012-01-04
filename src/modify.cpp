@@ -214,7 +214,7 @@ int Modify::find_fix(const char *id)
 
 void Modify::add_compute(int narg, char **arg, char *suffix)
 {
-  if (narg < 3) error->all(FLERR,"Illegal compute command");
+  if (narg < 2) error->all(FLERR,"Illegal compute command");
 
   // error check
 

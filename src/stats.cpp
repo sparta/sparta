@@ -21,6 +21,11 @@
 #include "update.h"
 #include "particle.h"
 #include "domain.h"
+#include "modify.h"
+#include "fix.h"
+#include "compute.h"
+#include "input.h"
+#include "variable.h"
 #include "output.h"
 #include "timer.h"
 #include "memory.h"
@@ -31,11 +36,17 @@ using namespace DSMC_NS;
 // customize a new keyword by adding to this list:
 
 // step, elapsed, dt, cpu, tpcpu, spcpu
-// npart, temp, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi
+// npart, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi
 
 enum{INT,FLOAT,BIGINT};
+enum{SCALAR,VECTOR,ARRAY};
+
+#define INVOKED_SCALAR 1
+#define INVOKED_VECTOR 2
+#define INVOKED_ARRAY 4
 
 #define MAXLINE 8192               // make this 4x longer than Input::MAXLINE
+#define DELTA 8
 
 /* ---------------------------------------------------------------------- */
 
@@ -58,14 +69,14 @@ Stats::Stats(DSMC *dsmc) : Pointers(dsmc)
 
   // default args
 
-  char **arg = new char*[4];
+  char **arg = new char*[3];
   arg[0] = (char *) "step";
   arg[1] = (char *) "cpu";
   arg[2] = (char *) "npart";
-  arg[3] = (char *) "temp";
 
-  nfield = 0;
-  set_fields(4,arg);
+  nfield = 3;
+  allocate();
+  set_fields(3,arg);
 
   delete [] arg;
 
@@ -128,6 +139,37 @@ void Stats::init()
 
     if (i == nfield-1) strcat(format[i],"\n");
   }
+
+  // find current ptr for each Compute ID
+
+  int icompute;
+  for (int i = 0; i < ncompute; i++) {
+    icompute = modify->find_compute(id_compute[i]);
+    if (icompute < 0) error->all(FLERR,"Could not find stats compute ID");
+    computes[i] = modify->compute[icompute];
+  }
+
+  // find current ptr for each Fix ID
+  // check that fix frequency is acceptable with stats output frequency
+
+  int ifix;
+  for (int i = 0; i < nfix; i++) {
+    ifix = modify->find_fix(id_fix[i]);
+    if (ifix < 0) error->all(FLERR,"Could not find stats fix ID");
+    fixes[i] = modify->fix[ifix];
+    if (output->stats_every % fixes[i]->global_freq)
+      error->all(FLERR,"Stats and fix not computed at compatible times");
+  }
+
+  // find current ptr for each Variable ID
+
+  int ivariable;
+  for (int i = 0; i < nvariable; i++) {
+    ivariable = input->variable->find(id_variable[i]);
+    if (ivariable < 0) 
+      error->all(FLERR,"Could not find stats variable name");
+    variables[i] = ivariable;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -153,6 +195,26 @@ void Stats::compute(int flag)
 
   firststep = flag;
   bigint ntimestep = update->ntimestep;
+
+  // invoke Compute methods needed for stats keywords
+
+  for (i = 0; i < ncompute; i++)
+    if (compute_which[i] == SCALAR) {
+      if (!(computes[i]->invoked_flag & INVOKED_SCALAR)) {
+	computes[i]->compute_scalar();
+	computes[i]->invoked_flag |= INVOKED_SCALAR;
+      }
+    } else if (compute_which[i] == VECTOR) {
+      if (!(computes[i]->invoked_flag & INVOKED_VECTOR)) {
+	computes[i]->compute_vector();
+	computes[i]->invoked_flag |= INVOKED_VECTOR;
+      }
+    } else if (compute_which[i] == ARRAY) {
+      if (!(computes[i]->invoked_flag & INVOKED_ARRAY)) {
+	computes[i]->compute_array();
+	computes[i]->invoked_flag |= INVOKED_ARRAY;
+      }
+    }
 
   // add each stat value to line with its specific format
 
@@ -266,6 +328,21 @@ void Stats::allocate()
   field2index = new int[n];
   argindex1 = new int[n];
   argindex2 = new int[n];
+
+  // memory for computes, fixes, variables
+
+  ncompute = 0;
+  id_compute = new char*[n];
+  compute_which = new int[n];
+  computes = new Compute*[n];
+
+  nfix = 0;
+  id_fix = new char*[n];
+  fixes = new Fix*[n];
+
+  nvariable = 0;
+  id_variable = new char*[n];
+  variables = new int[n];
 }
 
 /* ----------------------------------------------------------------------
@@ -289,6 +366,19 @@ void Stats::deallocate()
   delete [] field2index;
   delete [] argindex1;
   delete [] argindex2;
+
+  for (int i = 0; i < ncompute; i++) delete [] id_compute[i];
+  delete [] id_compute;
+  delete [] compute_which;
+  delete [] computes;
+
+  for (int i = 0; i < nfix; i++) delete [] id_fix[i];
+  delete [] id_fix;
+  delete [] fixes;
+
+  for (int i = 0; i < nvariable; i++) delete [] id_variable[i];
+  delete [] id_variable;
+  delete [] variables;
 }
 
 /* ----------------------------------------------------------------------
@@ -321,8 +411,6 @@ void Stats::set_fields(int narg, char **arg)
 
     } else if (strcmp(arg[i],"npart") == 0) {
       addfield("Npart",&Stats::compute_npart,BIGINT);
-    } else if (strcmp(arg[i],"temp") == 0) {
-      addfield("Temp",&Stats::compute_temp,FLOAT);
 
     } else if (strcmp(arg[i],"vol") == 0) {
       addfield("Volume",&Stats::compute_vol,FLOAT);
@@ -346,6 +434,99 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"zhi") == 0) {
       addfield("Zhi",&Stats::compute_zhi,FLOAT);
 
+    // compute value = c_ID, fix value = f_ID, variable value = v_ID
+    // count trailing [] and store int arguments
+    // copy = at most 8 chars of ID to pass to addfield
+
+    } else if ((strncmp(arg[i],"c_",2) == 0) || 
+	       (strncmp(arg[i],"f_",2) == 0) ||
+	       (strncmp(arg[i],"v_",2) == 0)) {
+
+      int n = strlen(arg[i]);
+      char *id = new char[n];
+      strcpy(id,&arg[i][2]);
+      char copy[9];
+      strncpy(copy,id,8);
+      copy[8] = '\0';
+
+      // parse zero or one or two trailing brackets from ID
+      // argindex1,argindex2 = int inside each bracket pair, 0 if no bracket
+
+      char *ptr = strchr(id,'[');
+      if (ptr == NULL) argindex1[nfield] = 0;
+      else {
+	*ptr = '\0';
+	argindex1[nfield] = input->variable->int_between_brackets(ptr);
+	ptr++;
+	if (*ptr == '[') {
+	  argindex2[nfield] = input->variable->int_between_brackets(ptr);
+	  ptr++;
+	} else argindex2[nfield] = 0;
+      }
+
+      if (arg[i][0] == 'c') {
+	n = modify->find_compute(id);
+	if (n < 0) error->all(FLERR,"Could not find stats compute ID");
+	if (argindex1[nfield] == 0 && modify->compute[n]->scalar_flag == 0)
+	  error->all(FLERR,"Stats compute does not compute scalar");
+	if (argindex1[nfield] > 0 && argindex2[nfield] == 0) {
+	  if (modify->compute[n]->vector_flag == 0)
+	    error->all(FLERR,"Stats compute does not compute vector");
+	  if (argindex1[nfield] > modify->compute[n]->size_vector)
+	    error->all(FLERR,"Stats compute vector is accessed out-of-range");
+	}
+	if (argindex1[nfield] > 0 && argindex2[nfield] > 0) {
+	  if (modify->compute[n]->array_flag == 0)
+	    error->all(FLERR,"Stats compute does not compute array");
+	  if (argindex1[nfield] > modify->compute[n]->size_array_rows ||
+	      argindex2[nfield] > modify->compute[n]->size_array_cols)
+	    error->all(FLERR,"Stats compute array is accessed out-of-range");
+	}
+
+	if (argindex1[nfield] == 0)
+	  field2index[nfield] = add_compute(id,SCALAR);
+	else if (argindex2[nfield] == 0)
+	  field2index[nfield] = add_compute(id,VECTOR);
+	else 
+	  field2index[nfield] = add_compute(id,ARRAY);
+	addfield(copy,&Stats::compute_compute,FLOAT);
+
+      } else if (arg[i][0] == 'f') {
+	n = modify->find_fix(id);
+	if (n < 0) error->all(FLERR,"Could not find stats fix ID");
+	if (argindex1[nfield] == 0 && modify->fix[n]->scalar_flag == 0)
+	  error->all(FLERR,"Stats fix does not compute scalar");
+	if (argindex1[nfield] > 0 && argindex2[nfield] == 0) {
+	  if (modify->fix[n]->vector_flag == 0)
+	    error->all(FLERR,"Stats fix does not compute vector");
+	  if (argindex1[nfield] > modify->fix[n]->size_vector)
+	    error->all(FLERR,"Stats fix vector is accessed out-of-range");
+	}
+	if (argindex1[nfield] > 0 && argindex2[nfield] > 0) {
+	  if (modify->fix[n]->array_flag == 0)
+	    error->all(FLERR,"Stats fix does not compute array");
+	  if (argindex1[nfield] > modify->fix[n]->size_array_rows ||
+	      argindex2[nfield] > modify->fix[n]->size_array_cols)
+	    error->all(FLERR,"Stats fix array is accessed out-of-range");
+	}
+
+	field2index[nfield] = add_fix(id);
+	addfield(copy,&Stats::compute_fix,FLOAT);
+
+      } else if (arg[i][0] == 'v') {
+	n = input->variable->find(id);
+	if (n < 0) error->all(FLERR,"Could not find stats variable name");
+	if (input->variable->equalstyle(n) == 0)
+	  error->all(FLERR,"Stats variable is not equal-style variable");
+	if (argindex1[nfield]) 
+	  error->all(FLERR,"Stats variable cannot be indexed");
+
+	field2index[nfield] = add_variable(id);
+	addfield(copy,&Stats::compute_variable,FLOAT);
+      }
+
+      delete [] id;
+
     } else error->all(FLERR,"Invalid keyword in stats_style command");
   }
 }
@@ -363,6 +544,54 @@ void Stats::addfield(const char *key, FnPtr func, int typeflag)
 }
 
 /* ----------------------------------------------------------------------
+   add compute ID to list of Compute objects to call
+   return location of where this Compute is in list
+   if already in list with same which, do not add, just return index
+------------------------------------------------------------------------- */
+
+int Stats::add_compute(const char *id, int which)
+{
+  int icompute;
+  for (icompute = 0; icompute < ncompute; icompute++)
+    if ((strcmp(id,id_compute[icompute]) == 0) && 
+	which == compute_which[icompute]) break;
+  if (icompute < ncompute) return icompute;
+
+  int n = strlen(id) + 1;
+  id_compute[ncompute] = new char[n];
+  strcpy(id_compute[ncompute],id);
+  compute_which[ncompute] = which;
+  ncompute++;
+  return ncompute-1;
+}
+
+/* ----------------------------------------------------------------------
+   add fix ID to list of Fix objects to call
+------------------------------------------------------------------------- */
+
+int Stats::add_fix(const char *id)
+{
+  int n = strlen(id) + 1;
+  id_fix[nfix] = new char[n];
+  strcpy(id_fix[nfix],id);
+  nfix++;
+  return nfix-1;
+}
+
+/* ----------------------------------------------------------------------
+   add variable ID to list of Variables to evaluate
+------------------------------------------------------------------------- */
+
+int Stats::add_variable(const char *id)
+{
+  int n = strlen(id) + 1;
+  id_variable[nvariable] = new char[n];
+  strcpy(id_variable[nvariable],id);
+  nvariable++;
+  return nvariable-1;
+}
+
+/* ----------------------------------------------------------------------
    compute a single thermodyanmic value, word is any keyword in custom list
    called when a variable is evaluated by Variable class
    return value as double in answer
@@ -377,12 +606,45 @@ int Stats::evaluate_keyword(char *word, double *answer)
 
 /* ----------------------------------------------------------------------
    extraction of Compute, Fix, Variable results
-   compute/fix are normalized by atoms if returning extensive value
-   variable value is not normalized (formula should normalize if desired)
 ------------------------------------------------------------------------- */
 
+void Stats::compute_compute()
+{
+  int m = field2index[ifield];
+  Compute *compute = computes[m];
+
+  if (compute_which[m] == SCALAR)
+    dvalue = compute->scalar;
+  else if (compute_which[m] == VECTOR)
+    dvalue = compute->vector[argindex1[ifield]-1];
+  else
+    dvalue = compute->array[argindex1[ifield]-1][argindex2[ifield]-1];
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_fix()
+{
+  int m = field2index[ifield];
+  Fix *fix = fixes[m];
+
+  if (argindex1[ifield] == 0)
+    dvalue = fix->compute_scalar();
+  else if (argindex2[ifield] == 0)
+    dvalue = fix->compute_vector(argindex1[ifield]-1);
+  else
+    dvalue = fix->compute_array(argindex1[ifield]-1,argindex2[ifield]-1);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_variable()
+{
+  dvalue = input->variable->compute_equal(variables[field2index[ifield]]);
+}
+
 /* ----------------------------------------------------------------------
-   one method for every keyword thermo can output
+   one method for every keyword stats can output
    called by compute() or evaluate_keyword()
    compute will have already been called
    set ivalue/dvalue/bivalue if value is int/double/bigint
@@ -467,13 +729,6 @@ void Stats::compute_npart()
   bigint n = particle->nlocal;
   MPI_Allreduce(&n,&particle->nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
   bivalue = particle->nglobal;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Stats::compute_temp()
-{
-  dvalue = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */

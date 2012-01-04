@@ -63,7 +63,7 @@ class Output : protected Pointers {
   void create_stats(int, char **);   // create a Stats style
   void create_restart(int, char **); // create Restart and restart files
 
-  //void memory_usage();               // print out memory usage
+  void memory_usage();               // print out memory usage
 };
 
 }
