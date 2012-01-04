@@ -15,6 +15,7 @@
 #include "math.h"
 #include "string.h"
 #include "stdlib.h"
+#include "ctype.h"
 #include "mixture.h"
 #include "update.h"
 #include "particle.h"
@@ -29,9 +30,18 @@ using namespace DSMC_NS;
 
 Mixture::Mixture(DSMC *dsmc, char *userid) : Pointers(dsmc)
 {
+  // mixture ID must be all alphanumeric chars or underscores
+
   int n = strlen(userid) + 1;
   id = new char[n];
   strcpy(id,userid);
+
+  for (int i = 0; i < n-1; i++)
+    if (!isalnum(id[i]) && id[i] != '_')
+      error->all(FLERR,
+		 "Mixture ID must be alphanumeric or underscore characters");
+
+  // initialize mixture values
 
   nspecies = maxspecies = 0;
   nrho_flag = 0;

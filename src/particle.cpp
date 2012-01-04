@@ -298,14 +298,13 @@ void Particle::add_mixture(int narg, char **arg)
   // imix = index if mixture ID already exists
   // else instantiate a new mixture
 
-  int imix;
-  for (imix = 0; imix < nmixture; imix++)
-    if (strcmp(arg[0],mixture[imix]->id) == 0) break;
+  int imix = find_mixture(arg[0]);
 
-  if (imix == nmixture) {
+  if (imix < 0) {
     mixture = (Mixture **) memory->srealloc(mixture,
 					    (nmixture+1)*sizeof(Mixture *),
 					    "particle:mixture");
+    imix = nmixture;
     mixture[nmixture++] = new Mixture(dsmc,arg[0]);
   }
 
