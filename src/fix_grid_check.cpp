@@ -61,6 +61,7 @@ void FixGridCheck::end_of_step()
 
   Particle::OnePart *particles = particle->particles;
   Grid::OneCell *cells = grid->cells;
+  int *mycells = grid->mycells;
 
   int nlocal = particle->nlocal;
 
@@ -69,6 +70,7 @@ void FixGridCheck::end_of_step()
 
   for (int i = 0; i < nlocal; i++) {
     x = particles[i].x;
+    //icell = mycells[particles[i].icell];
     icell = particles[i].icell;
     lo = cells[icell].lo;
     hi = cells[icell].hi;

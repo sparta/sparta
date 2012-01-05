@@ -20,9 +20,9 @@
 
 using namespace DSMC_NS;
 
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as in CreateGrid, Update,
-                                            // DumpParticle
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as in Update
+enum{PERIODIC,OUTFLOW,SPECULAR};            // same as CreateGrid, Update,
+                                            // DumpParticle, FixInflow
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow
 
 /* ---------------------------------------------------------------------- */
 

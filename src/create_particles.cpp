@@ -164,7 +164,7 @@ void CreateParticles::create_local(bigint n)
 
   int ilocal,icell,npercell,ispecies;
   double x[3],v[3];
-  double volcell,ntarget,rn,vn,vr,theta1,theta2;
+  double vol,ntarget,rn,vn,vr,theta1,theta2;
 
   double volsum = 0.0;
   bigint nprev = 0;
@@ -174,9 +174,9 @@ void CreateParticles::create_local(bigint n)
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
-    if (dimension == 3) volcell = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else volcell = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-    volsum += volcell;
+    if (dimension == 3) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    else vol = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+    volsum += vol;
 
     ntarget = nme * volsum/volme - nprev;
     npercell = static_cast<int> (ntarget);

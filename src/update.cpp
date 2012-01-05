@@ -29,8 +29,8 @@
 
 using namespace DSMC_NS;
 
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as in Domain
-enum{PERIODIC,OUTFLOW,SPECULAR};              // same as in Domain
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as Domain
+enum{PERIODIC,OUTFLOW,SPECULAR};              // same as Domain
 
 /* ---------------------------------------------------------------------- */
 

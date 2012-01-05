@@ -73,6 +73,8 @@ Particle::~Particle()
 
 void Particle::init()
 {
+  for (int i = 0; i < nmixture; i++) mixture[i]->init();
+
   // reallocate cellcount and first lists as needed
   // NOTE: when grid becomes dynamic, will need to do this in sort()
 

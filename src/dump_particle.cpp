@@ -37,7 +37,7 @@ enum{ID,TYPE,X,Y,Z,XS,YS,ZS,VX,VY,VZ,
 enum{LT,LE,GT,GE,EQ,NEQ};
 enum{INT,DOUBLE,STRING};
 
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as in Domain
+enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
 
 #define INVOKED_PER_PARTICLE 8
 
@@ -48,9 +48,9 @@ DumpParticle::DumpParticle(DSMC *dsmc, int narg, char **arg) :
 {
   if (narg == 4) error->all(FLERR,"No dump particle arguments specified");
 
-  nevery = atoi(arg[3]);
-
   clearstep = 1;
+
+  nevery = atoi(arg[3]);
 
   // size_one may be shrunk below if additional optional args exist
 

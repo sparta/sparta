@@ -24,7 +24,7 @@ using namespace DSMC_NS;
 
 enum{STRIDE,BLOCK,RANDOM};
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as in Domain
+enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
 
 /* ---------------------------------------------------------------------- */
 
@@ -123,7 +123,7 @@ void CreateGrid::command(int narg, char **arg)
   double zdeltainv = nz / zprd;
 
   // build a regular Nx x Ny x Nz global grid
-  // neigh reflects either periodic or non-periodic BCs
+  // neigh[face] = -1 if cell is adjacent to global boundary
   
   bigint ntotal = (bigint) nx * ny * nz;
   if (ntotal > MAXSMALLINT) 
