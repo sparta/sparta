@@ -127,7 +127,7 @@ void Particle::sort()
     memory->create(next,maxsort,"particle:next");
   }
 
-  // build linked list of particles in each cell I own
+  // initialize linked list of particles in cells I own
 
   Grid::OneCell *cells = grid->cells;
   int *mycells = grid->mycells;
@@ -143,7 +143,7 @@ void Particle::sort()
   }
 
   // reverse loop stores linked list in forward order
-  // icell = local cell the particle is in
+  // icell = global cell the particle is in
 
   for (i = nlocal-1; i >= 0; i--) {
     icell = particles[i].icell;
@@ -152,6 +152,7 @@ void Particle::sort()
     cells[icell].count++;
 
     // NOTE: this method seems much slower for some reason
+    // uses separate, smaller vectors for first & cellcount
     //icell = cells[particles[i].icell].local;
     //next[i] = first[icell];
     //first[icell] = i;

@@ -79,7 +79,7 @@ void CreateGrid::command(int narg, char **arg)
       else if (strcmp(str,"yzx") == 0) order = YZX;
       else if (strcmp(str,"zxy") == 0) order = ZXY;
       else if (strcmp(str,"zyx") == 0) order = ZYX;
-      error->all(FLERR,"Illegal create_grid command");
+      else error->all(FLERR,"Illegal create_grid command");
       iarg += 4;
 
     } else if (strcmp(arg[3],"block") == 0) {

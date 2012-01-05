@@ -47,8 +47,8 @@ class Particle : protected Pointers {
 
   struct OnePart {
     int id;                 // particle ID
-    int ispecies;           // index to particle species
-    int icell;              // local grid cell the particle is in (0 to N-1)
+    int ispecies;           // particle species index
+    int icell;              // global grid cell the particle is in
     double x[3];            // coords of particle
     double v[3];            // velocity of particle
   };
