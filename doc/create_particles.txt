@@ -14,15 +14,14 @@ create_particles mix-ID keyword value ... :pre
 
 mix-ID = ID of mixture to use when creating particles :ulb,l
 zero or more keyword/value pairs may be appended :l
-keyword = {n} or {loop} :l
+keyword = {n} :l
   {n} value = Np = number of particles to create
-  {loop} value = {all} or {local} :pre
 :ule
 
 [Examples:]
 
 create_particles background
-create_particles air n 100000 loop local :pre
+create_particles air n 100000 :pre
 
 [Description:]
 
@@ -46,17 +45,16 @@ outcome of a random number generation.  Each particle will be inserted
 at a random location within the grid cell.  The particle species will
 be chosen randomly in accord with the {frac} settings of the
 collection of species in the mixture, as set by the
-"mixture"_mixture.html command.  The velocity of the particle
-will be set to the sum of the streaming velocity and a thermal
-velocity sampled from the thermal temperature of the species.
-Both the streaming velocity and thermal temperature are also
-set by the "mixture"_mixture.html command.
+"mixture"_mixture.html command.  The velocity of the particle will be
+set to the sum of the streaming velocity and a thermal velocity
+sampled from the thermal temperature of the species.  Both the
+streaming velocity and thermal temperature are also set by the
+"mixture"_mixture.html command.
 
 If the {n} keyword is used, than the {Fnum} and {nrho} settings are
 ignored and {Np} total particles are created.  This can be useful for
-debugging purposes.  See the discussion of the {loop} keyword below
-for how particle positions are assigned.  The assignment of species
-and velocity to each particles is done the same as described above.
+debugging purposes.  The assignment of species and velocity to each
+particles is done the same as described above.
 
 The {loop} keyword only applies when the {n} keyword is also used, and
 controls how the particles are generated in parallel.
@@ -83,4 +81,4 @@ set of created particles should be the same as with the {all} setting.
 
 [Default:]
 
-The keyword defaults are loop = all.
+There are no keyword defaults.

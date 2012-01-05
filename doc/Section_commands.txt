@@ -276,6 +276,7 @@ See the "fix"_fix.html command for one-line descriptions
 of each style or click on the style itself for a full description:
 
 "grid/check"_fix_grid_check.html,
+"inflow"_fix_inflow.html,
 "print"_fix_print.html :tb(c=6,ea=c)
 
 :line

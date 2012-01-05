@@ -1,0 +1,56 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+fix inflow command :h3
+
+[Syntax:]
+
+fix ID inflow N mix-ID face1 face2 ... keyword value ... :pre
+
+ID is documented in "fix"_fix.html command
+inflow = style name of this fix command
+N = insert particles every N steps :ul
+
+[Examples:]
+
+fix in inflow 1 air all
+fix in inflow 10 mymix xlo yhi n 1000 :pre
+
+[Description:]
+
+
+
+
+Check if particles are inside the grid cell they are supposed to be,
+based on their current coordinates.  This is useful as a debugging
+check to insure that no particles have been assigned to the incorrect
+grid cell during the particle move stage of the DSMC algorithm.
+
+The check is performed every {N} timesteps.  Particles not inside the
+correct grid cell are counted and the value of the count can be
+monitored (see below).  A value of 0 is "correct", meaning that no
+particle was found to be outside its assigned grid cell.
+
+[Restart, fix_modify, output:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.  None of the "fix_modify"_fix_modify.html options
+are relevant to this fix.
+
+This fix computes a global scalar which can be accessed by various
+"output commands"_Section_howto.html#howto_15.  The scalar is the
+count of how many particles were not in the correct grid cell.  The
+count is cummulative over all the timesteps the check was performed
+since the start of the run.  It is re-initialized to zero each time a
+run is performed.
+
+[Restrictions:] none
+
+[Related commands:] none
+
+[Default:] none

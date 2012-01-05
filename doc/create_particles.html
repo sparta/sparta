@@ -19,17 +19,15 @@
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>n</I> or <I>loop</I> 
+<LI>keyword = <I>n</I> 
 
-<PRE>  <I>n</I> value = Np = number of particles to create
-  <I>loop</I> value = <I>all</I> or <I>local</I> 
-</PRE>
+  <I>n</I> value = Np = number of particles to create
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>create_particles background
-create_particles air n 100000 loop local 
+create_particles air n 100000 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -53,17 +51,16 @@ outcome of a random number generation.  Each particle will be inserted
 at a random location within the grid cell.  The particle species will
 be chosen randomly in accord with the <I>frac</I> settings of the
 collection of species in the mixture, as set by the
-<A HREF = "mixture.html">mixture</A> command.  The velocity of the particle
-will be set to the sum of the streaming velocity and a thermal
-velocity sampled from the thermal temperature of the species.
-Both the streaming velocity and thermal temperature are also
-set by the <A HREF = "mixture.html">mixture</A> command.
+<A HREF = "mixture.html">mixture</A> command.  The velocity of the particle will be
+set to the sum of the streaming velocity and a thermal velocity
+sampled from the thermal temperature of the species.  Both the
+streaming velocity and thermal temperature are also set by the
+<A HREF = "mixture.html">mixture</A> command.
 </P>
 <P>If the <I>n</I> keyword is used, than the <I>Fnum</I> and <I>nrho</I> settings are
 ignored and <I>Np</I> total particles are created.  This can be useful for
-debugging purposes.  See the discussion of the <I>loop</I> keyword below
-for how particle positions are assigned.  The assignment of species
-and velocity to each particles is done the same as described above.
+debugging purposes.  The assignment of species and velocity to each
+particles is done the same as described above.
 </P>
 <P>The <I>loop</I> keyword only applies when the <I>n</I> keyword is also used, and
 controls how the particles are generated in parallel.
@@ -90,6 +87,6 @@ set of created particles should be the same as with the <I>all</I> setting.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The keyword defaults are loop = all.
+<P>There are no keyword defaults.
 </P>
 </HTML>
