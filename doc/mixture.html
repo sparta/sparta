@@ -21,16 +21,16 @@
 
 <LI>zero or more keyword/arg pairs may be appended 
 
-<LI>keyword = <I>nrho</I> or <I>frac</I> or <I>vstream</I> or <I>temp</I> 
+<LI>keyword = <I>frac</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> 
 
-<PRE>  <I>nrho</I> arg = density
-    density = number density of entire mixture (# per length^3 units)
-  <I>frac</I> arg = fraction
+<PRE>  <I>frac</I> arg = fraction
     fraction = relative number fraction for each of these species (0 to 1)
+  <I>nrho</I> arg = density
+    density = number density of entire mixture (# per length^3 units)
   <I>vstream</I> args = Vx Vy Vz
-    Vx,Vy,Vz = streaming velocity of each of these species (velocity units)
+    Vx,Vy,Vz = streaming velocity of entire mixture (velocity units)
   <I>temp</I> arg = thermal
-    thermal = temperature of each of these species (temperature units) 
+    thermal = temperature of entire mixture (temperature units) 
 </PRE>
 
 </UL>
@@ -53,24 +53,19 @@ underscores.
 </P>
 <P>A mixture is a collection of one or more particle species as defined
 by the <A HREF = "species.html">species</A> command.  The mixture has global
-attributes and per-species attributes.  Any of these attributes can be
-set by using the mixture command several times for the same ID, using
-the appropriate species.  All attributes have default values if they
+attributes as well as per-species attributes.  Any of these attributes
+can be set by using the mixture command several times for the same ID,
+using the desired species.  All attributes have default values if they
 are not specified explicitly.
 </P>
 <P>If the mixture command is used with the same ID as a previously
-defined mixture, then any new species which appear for the first time
-are added to the mixture.  Note that keywords which set per-species
-attibutes only apply to species in that specific mixture command.
-</P>
-<P>The <I>nrho</I> keyword sets the global density of the mixture.  It can be
-used in any mixture command to set the number density of the
-corresponding mixture.  For 3d simulations the units are #/volume.
-For 2d, the units are effectively #/area.
+defined mixture, then any new species which appears for the first time
+is added to the mixture.  Note that keywords which set per-species
+attibutes only apply to the species listed in that command.
 </P>
 <P>The <I>frac</I> keyword sets a per-species attribute.  Its <I>fraction</I> value
-is the fraction (from 0 to 1 inclusive) of the total mixture number
-density that this species will comprise.
+is the fraction (from 0 to 1 inclusive) of the total number density of
+the mixture that this species will comprise.
 </P>
 <P>The sum of assigned <I>frac</I> values cannot exceed 1.0.  If all
 species are assigned <I>frac</I> values, they must total to 1.0.
@@ -79,14 +74,21 @@ species are assigned <I>frac</I> values, they must total to 1.0.
 fraction for the N unset species will be (1 - sum)/N, where sum
 is the sum of assigned <I>frac</I> values.
 </P>
-<P>The <I>vstream</I> keyword sets a per-species attribute.  The streaming
-velocity of particles of those species are set to the specified
-<I>Vx,Vy,Vz</I> values.
+<P>The <I>nrho</I> keyword sets a global attribute, namely the density of the
+mixture.  It can be used in any mixture command to set the number
+density of the corresponding mixture.  For 3d simulations the units
+are #/volume.  For 2d, the units are effectively #/area.
 </P>
-<P>The <I>temp</I> keyword sets a per-species attribute.  The thermal
-temperature of particles of those species is set to the specified
-<I>thermal</I> value.  This is a Gaussian velocity distribution superposed
-on top of the streaming velocity.
+<P>The <I>vstream</I> keyword sets a global attribute, namely the streaming
+velocity of the mixture.  All particles created using the mixture will
+hvae the specified <I>Vx,Vy,Vz</I> values.
+</P>
+<P>The <I>temp</I> keyword sets a global attribute, namely the thermal
+temperature of particles in the mixture, which is set to the specified
+<I>thermal</I> value.  In terms of particle velocity, this is used to
+sample a Gaussian velocity distribution at the requested temperature
+which is superposed on top of the streaming velocity when a particle's
+velocity is set.
 </P>
 <P><B>Restrictions:</B> none
 </P>
@@ -96,12 +98,9 @@ on top of the streaming velocity.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The <I>nrho</I> default is the background gas density, as set by the
-<A HREF = "global.html">global</A> command.
+<P>The <I>frac</I> default is described above.
 </P>
-<P>The <I>vstream</I> and <I>temp</I> defaults are also those of the background
-gas, as set by the <A HREF = "global.html">global</A> command.
-</P>
-<P>The <I>frac</I> default is descibed above.
+<P>The <I>nrho</I>, <I>vstream</I>, and <I>temp</I> defaults are those defined for the
+background gas density, as set by the <A HREF = "global.html">global</A> command.
 </P>
 </HTML>
