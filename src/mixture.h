@@ -24,18 +24,18 @@ class Mixture : protected Pointers {
   char *id;
   int nspecies;
   int *species;
+  double *fraction;
+  double *fraction_user;
   double nrho;
   double nrho_user;
-  double *fraction;
-  double **vstream;
-  double *temp_thermal;
-  double *fraction_user;
-  double **vstream_user;
-  double *temp_thermal_user;
-  int nrho_flag;
+  double vstream[3];
+  double vstream_user[3];
+  double temp_thermal;
+  double temp_thermal_user;
   int *fraction_flag;
-  int *vstream_flag;
-  int *temp_thermal_flag;
+  int nrho_flag;
+  int vstream_flag;
+  int temp_thermal_flag;
 
   double *cummulative;
   double *vscale;

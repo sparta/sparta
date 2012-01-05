@@ -55,6 +55,7 @@ double ComputeTemp::compute_scalar()
 
   bigint n = particle->nlocal;
   MPI_Allreduce(&n,&particle->nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  if (particle->nglobal == 0) return 0.0;
 
   double factor = update->mvv2e / 
     (domain->dimension * particle->nglobal * update->kboltz);

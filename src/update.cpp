@@ -23,6 +23,7 @@
 #include "grid.h"
 #include "output.h"
 #include "random_mars.h"
+#include "random_park.h"
 #include "timer.h"
 #include "memory.h"
 #include "error.h"
@@ -50,6 +51,7 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
   mlist = NULL;
 
   ranmaster = new RanMars(dsmc);
+  random = NULL;
 
   faceflip[XLO] = XHI;
   faceflip[XHI] = XLO;
@@ -65,6 +67,7 @@ Update::~Update()
 {
   memory->destroy(mlist);
   delete ranmaster;
+  delete random;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -73,6 +76,12 @@ void Update::init()
 {
   if (domain->dimension == 3) move = &Update::move3d;
   else if (domain->dimension == 2) move = &Update::move2d;
+
+  if (random == NULL) {
+    random = new RanPark(ranmaster->uniform());
+    double seed = ranmaster->uniform();
+    random->reset(seed,comm->me,100);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -100,6 +109,7 @@ void Update::run(int nsteps)
 
     // start of step fixes
 
+    ncurrent = particle->nlocal;
     if (n_start_of_step) modify->start_of_step();
 
     // move particles
@@ -148,7 +158,7 @@ void Update::move3d()
   double xnew[3];
   double *x,*v,*lo,*hi;
   int *neigh;
-  double frac,newfrac;
+  double dtfrac,frac,newfrac;
 
   // extend migration list if necessary
 
@@ -175,9 +185,16 @@ void Update::move3d()
     x = particles[i].x;
     v = particles[i].v;
 
-    xnew[0] = x[0] + dt*v[0];
-    xnew[1] = x[1] + dt*v[1];
-    xnew[2] = x[2] + dt*v[2];
+    if (i < ncurrent) {
+      xnew[0] = x[0] + dt*v[0];
+      xnew[1] = x[1] + dt*v[1];
+      xnew[2] = x[2] + dt*v[2];
+    } else {
+      dtfrac = dt*random->uniform();
+      xnew[0] = x[0] + dtfrac*v[0];
+      xnew[1] = x[1] + dtfrac*v[1];
+      xnew[2] = x[2] + dtfrac*v[2];
+    }
 
     icell = particles[i].icell;
     lo = cells[icell].lo;
@@ -315,7 +332,7 @@ void Update::move2d()
   double xnew[2];
   double *x,*v,*lo,*hi;
   int *neigh;
-  double frac,newfrac;
+  double dtfrac,frac,newfrac;
 
   // extend migration list if necessary
 
@@ -342,8 +359,14 @@ void Update::move2d()
     x = particles[i].x;
     v = particles[i].v;
 
-    xnew[0] = x[0] + dt*v[0];
-    xnew[1] = x[1] + dt*v[1];
+    if (i < ncurrent) {
+      xnew[0] = x[0] + dt*v[0];
+      xnew[1] = x[1] + dt*v[1];
+    } else {
+      dtfrac = dt*random->uniform();
+      xnew[0] = x[0] + dtfrac*v[0];
+      xnew[1] = x[1] + dtfrac*v[1];
+    }
 
     icell = particles[i].icell;
     lo = cells[icell].lo;

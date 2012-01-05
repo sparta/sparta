@@ -51,8 +51,11 @@ class Update : protected Pointers {
   void global(int, char **);
 
  private:
+  int ncurrent;              // local # of particles before insertion
   int maxmigrate;            // max # of particles in mlist
   int faceflip[6];
+
+  class RanPark *random;     // RNG for particle timestep moves
 
   typedef void (Update::*FnPtr)();
   FnPtr move;                // ptr to move method

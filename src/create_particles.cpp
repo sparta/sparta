@@ -70,7 +70,7 @@ void CreateParticles::command(int narg, char **arg)
     if (domain->dimension == 3)
       voltotal = domain->xprd * domain->yprd * domain->zprd;
     else voltotal = domain->xprd * domain->yprd;
-    n = update->nrho * voltotal / update->fnum;
+    n = particle->mixture[imix]->nrho * voltotal / update->fnum;
   }
 
   // generate particles
@@ -159,7 +159,7 @@ void CreateParticles::create_local(bigint n)
   int nspecies = particle->mixture[imix]->nspecies;
   int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
-  double **vstream = particle->mixture[imix]->vstream;
+  double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
 
   int ilocal,icell,npercell,ispecies;
@@ -197,9 +197,9 @@ void CreateParticles::create_local(bigint n)
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
 	
-      v[0] = vstream[ispecies][0] + vn*cos(theta1);
-      v[1] = vstream[ispecies][1] + vr*sin(theta2);
-      v[2] = vstream[ispecies][2] + vr*cos(theta2);
+      v[0] = vstream[0] + vn*cos(theta1);
+      v[1] = vstream[1] + vr*sin(theta2);
+      v[2] = vstream[2] + vr*cos(theta2);
 
       particle->add_particle(0,ispecies,icell,x,v);
     }

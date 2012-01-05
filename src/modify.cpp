@@ -77,7 +77,7 @@ void Modify::init()
 
   // create lists of fixes to call at each stage of run
 
-  list_init(END_OF_STEP,n_start_of_step,list_start_of_step);
+  list_init(START_OF_STEP,n_start_of_step,list_start_of_step);
   list_init(END_OF_STEP,n_end_of_step,list_end_of_step);
 
   // init each fix

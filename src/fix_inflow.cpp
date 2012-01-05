@@ -64,6 +64,7 @@ FixInflow::FixInflow(DSMC *dsmc, int narg, char **arg) :
     else if (strcmp(arg[iarg],"zlo") == 0) faces[ZLO] = 1;
     else if (strcmp(arg[iarg],"zhi") == 0) faces[ZHI] = 1;
     else break;
+    iarg++;
   }
 
   // error check
@@ -101,7 +102,7 @@ FixInflow::FixInflow(DSMC *dsmc, int narg, char **arg) :
 FixInflow::~FixInflow()
 {
   delete random;
-  memory->destroy(cellface);
+  memory->sfree(cellface);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -117,7 +118,7 @@ int FixInflow::setmask()
 
 void FixInflow::init()
 {
-  // cannot inflow onto periodic boundary
+  // cannot inflow thru periodic boundary
 
   for (int i = 0; i < 6; i++)
     if (faces[i] && domain->bflag[i] == PERIODIC)
@@ -146,35 +147,180 @@ void FixInflow::init()
     }
   }
 
-  // cellface = cell/face pair for all inserts I perform on my grid cells
+  // cellface = per-face data struct for all inserts performed on my grid cells
 
-  memory->destroy(cellface);
-  memory->create(cellface,ncf,2,"inflow:cellface");
-
+  memory->sfree(cellface);
+  cellface = (CellFace *) memory->smalloc(ncf*sizeof(CellFace),
+					  "inflow:cellface");
   ncf = 0;
-  for (int i = 0; i < nglocal; i++) {
-    icell = mycells[i];
-    if (cells[icell].neigh[XLO] < 0 && faces[XLO]) {
-      cellface[ncf][0] = icell; cellface[ncf++][1] = XLO;
-    }
-    if (cells[icell].neigh[XHI] < 0 && faces[XHI]) {
-      cellface[ncf][0] = icell; cellface[ncf++][1] = XHI;
-    }
-    if (cells[icell].neigh[YLO] < 0 && faces[XLO]) {
-      cellface[ncf][0] = icell; cellface[ncf++][1] = YLO;
-    }
-    if (cells[icell].neigh[YHI] < 0 && faces[XHI]) {
-      cellface[ncf][0] = icell; cellface[ncf++][1] = YHI;
-    }
-    if (dimension == 3) {
+
+  if (dimension == 3) {
+    for (int i = 0; i < nglocal; i++) {
+      icell = mycells[i];
+      if (cells[icell].neigh[XLO] < 0 && faces[XLO]) {
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = XLO;
+	cellface[ncf].area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
+	  (cells[icell].hi[2]-cells[icell].lo[2]);
+	cellface[ncf].lo[0] = cells[icell].lo[0];
+	cellface[ncf].hi[0] = cells[icell].lo[0];
+	cellface[ncf].lo[1] = cells[icell].lo[1];
+	cellface[ncf].hi[1] = cells[icell].hi[1];
+	cellface[ncf].lo[2] = cells[icell].lo[2];
+	cellface[ncf].hi[2] = cells[icell].hi[2];
+	cellface[ncf].normal[0] = -1.0;
+	cellface[ncf].normal[1] = 0.0;
+	cellface[ncf].normal[2] = 0.0;
+	ncf++;
+      }
+      if (cells[icell].neigh[XHI] < 0 && faces[XHI]) {
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = XHI;
+	cellface[ncf].area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
+	  (cells[icell].hi[2]-cells[icell].lo[2]);
+	cellface[ncf].lo[0] = cells[icell].hi[0];
+	cellface[ncf].hi[0] = cells[icell].hi[0];
+	cellface[ncf].lo[1] = cells[icell].lo[1];
+	cellface[ncf].hi[1] = cells[icell].hi[1];
+	cellface[ncf].lo[2] = cells[icell].lo[2];
+	cellface[ncf].hi[2] = cells[icell].hi[2];
+	cellface[ncf].normal[0] = 1.0;
+	cellface[ncf].normal[1] = 0.0;
+	cellface[ncf].normal[2] = 0.0;
+	ncf++;
+      }
+      if (cells[icell].neigh[YLO] < 0 && faces[YLO]) {
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = YLO;
+	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+	  (cells[icell].hi[2]-cells[icell].lo[2]);
+	cellface[ncf].lo[0] = cells[icell].lo[0];
+	cellface[ncf].hi[0] = cells[icell].hi[0];
+	cellface[ncf].lo[1] = cells[icell].lo[1];
+	cellface[ncf].hi[1] = cells[icell].lo[1];
+	cellface[ncf].lo[2] = cells[icell].lo[2];
+	cellface[ncf].hi[2] = cells[icell].hi[2];
+	cellface[ncf].normal[0] = 0.0;
+	cellface[ncf].normal[1] = -1.0;
+	cellface[ncf].normal[2] = 0.0;
+	ncf++;
+      }
+      if (cells[icell].neigh[YHI] < 0 && faces[YHI]) {
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = YHI;
+	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+	  (cells[icell].hi[2]-cells[icell].lo[2]);
+	cellface[ncf].lo[0] = cells[icell].lo[0];
+	cellface[ncf].hi[0] = cells[icell].hi[0];
+	cellface[ncf].lo[1] = cells[icell].hi[1];
+	cellface[ncf].hi[1] = cells[icell].hi[1];
+	cellface[ncf].lo[2] = cells[icell].lo[2];
+	cellface[ncf].hi[2] = cells[icell].hi[2];
+	cellface[ncf].normal[0] = 0.0;
+	cellface[ncf].normal[1] = 1.0;
+	cellface[ncf].normal[2] = 0.0;
+	ncf++;
+      }
       if (cells[icell].neigh[ZLO] < 0 && faces[ZLO]) {
-	cellface[ncf][0] = icell; cellface[ncf++][1] = ZLO;
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = ZLO;
+	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+	  (cells[icell].hi[1]-cells[icell].lo[1]);
+	cellface[ncf].lo[0] = cells[icell].lo[0];
+	cellface[ncf].hi[0] = cells[icell].hi[0];
+	cellface[ncf].lo[1] = cells[icell].lo[1];
+	cellface[ncf].hi[1] = cells[icell].hi[1];
+	cellface[ncf].lo[2] = cells[icell].lo[2];
+	cellface[ncf].hi[2] = cells[icell].lo[2];
+	cellface[ncf].normal[0] = 0.0;
+	cellface[ncf].normal[1] = 0.0;
+	cellface[ncf].normal[2] = -1.0;
+	ncf++;
       }
       if (cells[icell].neigh[ZHI] < 0 && faces[ZHI]) {
-	cellface[ncf][0] = icell; cellface[ncf++][1] = ZHI;
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = ZHI;
+	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+	  (cells[icell].hi[1]-cells[icell].lo[1]);
+	cellface[ncf].lo[0] = cells[icell].lo[0];
+	cellface[ncf].hi[0] = cells[icell].hi[0];
+	cellface[ncf].lo[1] = cells[icell].lo[1];
+	cellface[ncf].hi[1] = cells[icell].hi[1];
+	cellface[ncf].lo[2] = cells[icell].hi[2];
+	cellface[ncf].hi[2] = cells[icell].hi[2];
+	cellface[ncf].normal[0] = 0.0;
+	cellface[ncf].normal[1] = 0.0;
+	cellface[ncf].normal[2] = 1.0;
+	ncf++;
+      }
+    }
+
+  } else {
+    for (int i = 0; i < nglocal; i++) {
+      icell = mycells[i];
+      if (cells[icell].neigh[XLO] < 0 && faces[XLO]) {
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = XLO;
+	cellface[ncf].area = (cells[icell].hi[1]-cells[icell].lo[1]);
+	cellface[ncf].lo[0] = cells[icell].lo[0];
+	cellface[ncf].hi[0] = cells[icell].lo[0];
+	cellface[ncf].lo[1] = cells[icell].lo[1];
+	cellface[ncf].hi[1] = cells[icell].hi[1];
+	cellface[ncf].lo[2] = 0.0;
+	cellface[ncf].hi[2] = 0.0;
+	cellface[ncf].normal[0] = -1.0;
+	cellface[ncf].normal[1] = 0.0;
+	cellface[ncf].normal[2] = 0.0;
+	ncf++;
+      }
+      if (cells[icell].neigh[XHI] < 0 && faces[XHI]) {
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = XHI;
+	cellface[ncf].area = (cells[icell].hi[1]-cells[icell].lo[1]);
+	cellface[ncf].lo[0] = cells[icell].hi[0];
+	cellface[ncf].hi[0] = cells[icell].hi[0];
+	cellface[ncf].lo[1] = cells[icell].lo[1];
+	cellface[ncf].hi[1] = cells[icell].hi[1];
+	cellface[ncf].lo[2] = 0.0;
+	cellface[ncf].hi[2] = 0.0;
+	cellface[ncf].normal[0] = 1.0;
+	cellface[ncf].normal[1] = 0.0;
+	cellface[ncf].normal[2] = 0.0;
+	ncf++;
+      }
+      if (cells[icell].neigh[YLO] < 0 && faces[YLO]) {
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = YLO;
+	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]);
+	cellface[ncf].lo[0] = cells[icell].lo[0];
+	cellface[ncf].hi[0] = cells[icell].hi[0];
+	cellface[ncf].lo[1] = cells[icell].lo[1];
+	cellface[ncf].hi[1] = cells[icell].lo[1];
+	cellface[ncf].lo[2] = 0.0;
+	cellface[ncf].hi[2] = 0.0;
+	cellface[ncf].normal[0] = 0.0;
+	cellface[ncf].normal[1] = -1.0;
+	cellface[ncf].normal[2] = 0.0;
+	ncf++;
+      }
+      if (cells[icell].neigh[YHI] < 0 && faces[YHI]) {
+	cellface[ncf].icell = icell;
+	cellface[ncf].iface = YHI;
+	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]);
+	cellface[ncf].lo[0] = cells[icell].lo[0];
+	cellface[ncf].hi[0] = cells[icell].hi[0];
+	cellface[ncf].lo[1] = cells[icell].hi[1];
+	cellface[ncf].hi[1] = cells[icell].hi[1];
+	cellface[ncf].lo[2] = 0.0;
+	cellface[ncf].hi[2] = 0.0;
+	cellface[ncf].normal[0] = 0.0;
+	cellface[ncf].normal[1] = 1.0;
+	cellface[ncf].normal[2] = 0.0;
+	ncf++;
       }
     }
   }
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -191,24 +337,23 @@ void FixInflow::start_of_step()
   int nspecies = particle->mixture[imix]->nspecies;
   int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
-  double **vstream = particle->mixture[imix]->vstream;
+  double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
 
   int ilocal,icell,iface,npercell,ispecies;
   double x[3],v[3];
-  double vol,ntarget,rn,vn,vr,theta1,theta2;
-  double *lo,*hi;
+  double area,ntarget,rn,vn,vr,theta1,theta2,dot;
+  double *lo,*hi,*normal;
 
   for (int i = 0; i < ncf; i++) {
-    icell = cellface[i][0];
-    iface = cellface[i][1];
+    icell = cellface[i].icell;
+    iface = cellface[i].iface;
+    area = cellface[i].area;
+    lo = cellface[i].lo;
+    hi = cellface[i].hi;
+    normal = cellface[i].normal;
 
-    // local or global cell?
-    // worry about normal dir dotted into vstream?
-
-    //double area = 1.0;
-    //double vol = area*dt*vstream;
-    //ntarget = nme * volsum/volme - nprev;
+    ntarget = 2.5;
     npercell = static_cast<int> (ntarget);
     if (random->uniform() < ntarget-npercell) npercell++;
 
@@ -220,16 +365,20 @@ void FixInflow::start_of_step()
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
       x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
-      if (dimension == 2) x[2] = 0.0;
 
-      vn = vscale[ispecies] * random->gaussian();
-      vr = vscale[ispecies] * random->gaussian();
-      theta1 = MY_2PI * random->uniform();
-      theta2 = MY_2PI * random->uniform();
+      while (1) {
+	vn = vscale[ispecies] * random->gaussian();
+	vr = vscale[ispecies] * random->gaussian();
+	theta1 = MY_2PI * random->uniform();
+	theta2 = MY_2PI * random->uniform();
 	
-      v[0] = vstream[ispecies][0] + vn*cos(theta1);
-      v[1] = vstream[ispecies][1] + vr*sin(theta2);
-      v[2] = vstream[ispecies][2] + vr*cos(theta2);
+	v[0] = vstream[0] + vn*cos(theta1);
+	v[1] = vstream[1] + vr*sin(theta2);
+	v[2] = vstream[2] + vr*cos(theta2);
+
+	dot = v[0]*normal[0] + v[1]*normal[1] + v[2]*normal[2];
+	if (dot <= 0.0) break;
+      }
 
       particle->add_particle(0,ispecies,icell,x,v);
     }

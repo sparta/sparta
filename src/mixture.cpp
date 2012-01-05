@@ -43,19 +43,17 @@ Mixture::Mixture(DSMC *dsmc, char *userid) : Pointers(dsmc)
 
   // initialize mixture values
 
-  nspecies = maxspecies = 0;
-  nrho_flag = 0;
-
   species = NULL;
+
+  nspecies = maxspecies = 0;
+
   fraction = NULL;
-  vstream = NULL;
-  temp_thermal = NULL;
   fraction_user = NULL;
-  vstream_user = NULL;
-  temp_thermal_user = NULL;
   fraction_flag = NULL;
-  vstream_flag = NULL;
-  temp_thermal_flag = NULL;
+
+  nrho_flag = 0;
+  vstream_flag = 0;
+  temp_thermal_flag = 0;
 
   cummulative = NULL;
   vscale = NULL;
@@ -72,14 +70,8 @@ Mixture::~Mixture()
 
   memory->destroy(species);
   memory->destroy(fraction);
-  memory->destroy(vstream);
-  memory->destroy(temp_thermal);
   memory->destroy(fraction_user);
-  memory->destroy(vstream_user);
-  memory->destroy(temp_thermal_user);
   memory->destroy(fraction_flag);
-  memory->destroy(vstream_flag);
-  memory->destroy(temp_thermal_flag);
 
   memory->destroy(cummulative);
   memory->destroy(vscale);
@@ -95,6 +87,17 @@ void Mixture::init()
 {
   if (nrho_flag) nrho = nrho_user;
   else nrho = update->nrho;
+  if (vstream_flag) {
+    vstream[0] = vstream_user[0];
+    vstream[1] = vstream_user[1];
+    vstream[2] = vstream_user[2];
+  } else {
+    vstream[0] = update->vstream[0];
+    vstream[1] = update->vstream[1];
+    vstream[2] = update->vstream[2];
+  }
+  if (temp_thermal_flag) temp_thermal = temp_thermal_user;
+  else temp_thermal = update->temp_thermal;
 
   // frac_explicit = sum for species with explicity set fractions
   // frac_implicit = number of unset species
@@ -104,17 +107,6 @@ void Mixture::init()
   for (int i = 0; i < nspecies; i++) {
     if (fraction_flag[i]) fraction_explicit += fraction_user[i];
     else fraction_implicit++;
-    if (vstream_flag[i]) {
-      vstream[i][0] = vstream_user[i][0];
-      vstream[i][1] = vstream_user[i][1];
-      vstream[i][2] = vstream_user[i][2];
-    } else {
-      vstream[i][0] = update->vstream[0];
-      vstream[i][1] = update->vstream[1];
-      vstream[i][2] = update->vstream[2];
-    }
-    if (temp_thermal_flag[i]) temp_thermal[i] = temp_thermal_user[i];
-    else temp_thermal[i] = update->temp_thermal;
   }
 
   if (fraction_explicit > 1.0) {
@@ -135,11 +127,12 @@ void Mixture::init()
   cummulative[nspecies-1] = 1.0;
 
   // vscale = factor to scale Gaussian unit variance by
-  // to get thermal distribution of velocities
+  //          to get thermal distribution of velocities
+  // per-species value since includes species mass
 
   for (int i = 0; i < nspecies; i++) {
     int index = species[i];
-    vscale[i] = sqrt(update->kboltz * temp_thermal[index] /
+    vscale[i] = sqrt(update->kboltz * temp_thermal /
 		     particle->species[index].mass);
   }
 }
@@ -193,12 +186,7 @@ void Mixture::params(int narg, char **arg)
 {
   int iarg = 0;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"nrho") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
-      nrho = atof(arg[iarg+1]);
-      if (nrho <= 0.0) error->all(FLERR,"Illegal mixture command");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"frac") == 0) {
+    if (strcmp(arg[iarg],"frac") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       double value = atof(arg[iarg+1]);
       if (value < 0.0 || value > 1.0) 
@@ -209,28 +197,24 @@ void Mixture::params(int narg, char **arg)
 	  fraction_user[i] = value;
 	}
       iarg += 2;
+    } else if (strcmp(arg[iarg],"nrho") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
+      nrho_user = atof(arg[iarg+1]);
+      if (nrho_user <= 0.0) error->all(FLERR,"Illegal mixture command");
+      nrho_flag = 1;
+      iarg += 2;
     } else if (strcmp(arg[iarg],"vstream") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal mixture command");
-      double vx = atof(arg[iarg+1]);
-      double vy = atof(arg[iarg+2]);
-      double vz = atof(arg[iarg+3]);
-      for (int i = 0; i < nspecies; i++)
-	if (active[i]) {
-	  vstream_flag[i] = 1;
-	  vstream_user[i][0] = vx;
-	  vstream_user[i][1] = vy;
-	  vstream_user[i][2] = vz;
-	}
+      vstream_user[0] = atof(arg[iarg+1]);
+      vstream_user[1] = atof(arg[iarg+2]);
+      vstream_user[2] = atof(arg[iarg+3]);
+      vstream_flag = 1;
       iarg += 4;
     } else if (strcmp(arg[iarg],"temp") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
-      double value = atof(arg[iarg+1]);
-      if (value < 0.0) error->all(FLERR,"Illegal mixture command");
-      for (int i = 0; i < nspecies; i++)
-	if (active[i]) {
-	  temp_thermal_flag[i] = 1;
-	  temp_thermal_user[i] = value;
-	}
+      temp_thermal_user = atof(arg[iarg+1]);
+      if (temp_thermal_user <= 0.0) error->all(FLERR,"Illegal mixture command");
+      temp_thermal_flag = 1;
       iarg += 2;
     } else error->all(FLERR,"Illegal mixture command");
   }
@@ -248,22 +232,12 @@ void Mixture::allocate(int n)
 
   memory->grow(species,maxspecies,"mixture:species");
   memory->grow(fraction,maxspecies,"mixture:species");
-  memory->grow(vstream,maxspecies,3,"mixture:vstream");
-  memory->grow(temp_thermal,maxspecies,"mixture:temp_thermal");
   memory->grow(fraction_user,maxspecies,"mixture:fraction_user");
-  memory->grow(vstream_user,maxspecies,3,"mixture:vstream_user");
-  memory->grow(temp_thermal_user,maxspecies,"mixture:temp_thermal_user");
   memory->grow(fraction_flag,maxspecies,"mixture:fraction_flag");
-  memory->grow(vstream_flag,maxspecies,"mixture:vstream_flag");
-  memory->grow(temp_thermal_flag,maxspecies,"mixture:temp_thermal_flag");
 
   memory->grow(cummulative,maxspecies,"mixture:cummulative");
   memory->grow(vscale,maxspecies,"mixture:vscale");
   memory->grow(active,maxspecies,"mixture:active");
 
-  for (int i = old; i < maxspecies; i++) {
-    fraction_flag[i] = 0;
-    vstream_flag[i] = 0;
-    temp_thermal_flag[i] = 0;
-  }
+  for (int i = old; i < maxspecies; i++) fraction_flag[i] = 0;
 }

@@ -39,8 +39,17 @@ class FixInflow : public Fix {
   int faces[6];
   bigint np;
 
+  struct CellFace {
+    int icell;
+    int iface;
+    double area;
+    double lo[3];
+    double hi[3];
+    double normal[3];
+  };
+
+  CellFace *cellface;
   int ncf;
-  int **cellface;
 
   class RanPark *random;
 };
