@@ -212,25 +212,27 @@ void Update::move3d()
       // frac = fraction of move completed before hitting cell face
       // this section should be as efficient as possible,
       // since most particles won't do anything else
+      // used to do this, but don't now think is necessary:
+      // if (xnew[0] < lo[0] && inface != XLO) {
 
       outface = INTERIOR;
       frac = 1.0;
       
-      if (xnew[0] < lo[0] && inface != XLO) {
+      if (xnew[0] < lo[0]) {
 	frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
 	outface = XLO;
-      } else if (xnew[0] >= hi[0] && inface != XHI) {
+      } else if (xnew[0] >= hi[0]) {
 	frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
 	outface = XHI;
       }
 
-      if (xnew[1] < lo[1] && inface != YLO) {
+      if (xnew[1] < lo[1]) {
 	newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
 	if (newfrac < frac) {
 	  frac = newfrac;
 	  outface = YLO;
 	}
-      } else if (xnew[1] >= hi[1] && inface != YHI) {
+      } else if (xnew[1] >= hi[1]) {
 	newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
 	if (newfrac < frac) {
 	  frac = newfrac;
@@ -238,13 +240,13 @@ void Update::move3d()
 	}
       }
       
-      if (xnew[2] < lo[2] && inface != ZLO) {
+      if (xnew[2] < lo[2]) {
 	newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
 	if (newfrac < frac) {
 	  frac = newfrac;
 	  outface = ZLO;
 	}
-      } else if (xnew[2] >= hi[2] && inface != ZHI) {
+      } else if (xnew[2] >= hi[2]) {
 	newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
 	if (newfrac < frac) {
 	  frac = newfrac;
@@ -288,13 +290,7 @@ void Update::move3d()
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
-
-	  if (outface == XLO) inface = XHI;
-	  else if (outface == XHI) inface = XLO;
-	  else if (outface == YLO) inface = YHI;
-	  else if (outface == YHI) inface = YLO;
-	  else if (outface == ZLO) inface = ZHI;
-	  else if (outface == ZHI) inface = ZLO;
+	  inface = faceflip[outface];
 	  count++;
 	}
       }
@@ -388,21 +384,21 @@ void Update::move2d()
       outface = INTERIOR;
       frac = 1.0;
       
-      if (xnew[0] < lo[0] && inface != XLO) {
+      if (xnew[0] < lo[0]) {
 	frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
 	outface = XLO;
-      } else if (xnew[0] >= hi[0] && inface != XHI) {
+      } else if (xnew[0] >= hi[0]) {
 	frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
 	outface = XHI;
       }
 
-      if (xnew[1] < lo[1] && inface != YLO) {
+      if (xnew[1] < lo[1]) {
 	newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
 	if (newfrac < frac) {
 	  frac = newfrac;
 	  outface = YLO;
 	}
-      } else if (xnew[1] >= hi[1] && inface != YHI) {
+      } else if (xnew[1] >= hi[1]) {
 	newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
 	if (newfrac < frac) {
 	  frac = newfrac;
@@ -443,11 +439,7 @@ void Update::move2d()
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
-
-	  if (outface == XLO) inface = XHI;
-	  else if (outface == XHI) inface = XLO;
-	  else if (outface == YLO) inface = YHI;
-	  else if (outface == YHI) inface = YLO;
+	  inface = faceflip[outface];
 	  count++;
 	}
       }
