@@ -41,7 +41,7 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
   runflag = 0;
 
   unit_style = NULL;
-  set_units("cgs");
+  set_units("si");
 
   fnum = 1.0;
   nrho = 1.0;
