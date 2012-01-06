@@ -10,20 +10,79 @@ fix inflow command :h3
 
 [Syntax:]
 
-fix ID inflow N mix-ID face1 face2 ... keyword value ... :pre
+fix ID inflow mix-ID face1 face2 ... keyword value ... :pre
 
-ID is documented in "fix"_fix.html command
-inflow = style name of this fix command
-N = insert particles every N steps :ul
+ID is documented in "fix"_fix.html command :ulb,l
+inflow = style name of this fix command :l
+mix-ID = ID of mixture to use when creating particles :l
+face1,face2,... = one or more of {all} or {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi}
+zero or more keyword/value pairs may be appended :l
+keyword = {n} or {nevery} :l
+  {n} value = Np = number of particles to create
+  {nevery} value = Nstep = insert Np particles every this many timesteps :pre
+:ule
 
 [Examples:]
 
-fix in inflow 1 air all
-fix in inflow 10 mymix xlo yhi n 1000 :pre
+fix in inflow air all
+fix in inflow mymix xlo yhi n 1000 nevery 10 :pre
 
 [Description:]
 
-Need to doc this ...
+Insert particles into the simulation box continuously during a
+simulation.  The particles are inserted at the specified faces using
+properties of the specified mixture.  If done every timestep, this has
+the effect of a continuous influx of particles thru the face(s).
+
+The properties of the inserted particles are from the mixture with ID
+{mix-ID}.  This determines what particle species are in the mixture at
+what relative fractions, and its number density, streaming velocity,
+and temperature.  See the "mixture"_mixture.html command for details.
+
+One or more faces of the simulation box can be specified via the
+{face1}, {face2}, etc arguments.  There are 6 individual faces that
+can be specified as {xlo}, {xhi}, {ylo}, {yhi}, {zlo}, or {zhi}.
+Specifying {all} is the same as specifying all 6 individual faces.
+
+On each insertion timestep, each cell with a face(s) adjacent to an
+inflow boundary perform the following computation at the beginning of
+the DSMC timestep.  The number of particles {M} to be inserted on the
+face is calculated, which is a function of the global {Fnum} value,
+the mixture number density, the mixture streaming velocity and thermal
+temperature, the area of the face, and its orientation relative to the
+streaming velocity.
+
+If {M} has a fractional value, e.g. 12.5, then 12 particles will be
+inserted, and a 13th depending on the outcome of a random number
+generation.  Each particle will be inserted at a random location on
+the face.  The particle species will be chosen randomly in accord with
+the {frac} settings of the collection of species in the mixture, as
+set by the "mixture"_mixture.html command.  The velocity of the
+particle will be set to the sum of the streaming velocity of the
+mixture and a thermal velocity sampled from the thermal temperature of
+the mixture.  Both the streaming velocity and thermal temperature are
+also set by the "mixture"_mixture.html command.
+
+If the final particle velocity is not "into" the grid cell, then the
+velocity sampling is repeated until it is.  This insures that {M}
+particles enter the simulation domain as desired.
+
+Inserted particles advect for a random fraction of the timestep, the
+first time they are moved following insertion.  This insures a
+continuous flow field of particles entering the simulation box through
+that face.
+
+The {n} and {nevery} keywords can be useful for debugging purposes.
+
+If the {n} keyword is used, then the {Fnum} and {nrho} settings are
+ignored and {Np} total particles are inserted every timestep particles
+are inserted.  This is done on a per-cell basis by dividing {Np} by
+the total number of grid cells that are adjacent to the specified
+faces and inserting an equal number or particles per grid cell.
+
+If the {nevery} keyword is used, particles are only inserted every
+{Nstep} timesteps.  This will give non-continuous, clumpy behavior in
+the inlet flow field if {Nstep} > 1.
 
 [Restart, fix_modify, output:]
 
@@ -31,15 +90,24 @@ No information about this fix is written to "binary restart
 files"_restart.html.  None of the "fix_modify"_fix_modify.html options
 are relevant to this fix.
 
-This fix computes a global scalar which can be accessed by various
-"output commands"_Section_howto.html#howto_15.  The scalar is the
-count of how many particles were not in the correct grid cell.  The
-count is cummulative over all the timesteps the check was performed
-since the start of the run.  It is re-initialized to zero each time a
-run is performed.
+This fix computes a global vector of length 2 which can be accessed by
+various "output commands"_Section_howto.html#howto_15.  The first
+element of the vector is the total number of particles inserted on the
+most recent insertion step.  The second element is the cummulative
+total number inserted since the beginning of the run.  It is
+initialized to zero each time a run is performed.
 
-[Restrictions:] none
+[Restrictions:]
 
-[Related commands:] none
+Particles cannot be inserted on {z} faces of the simluation box for a
+2d simulation.  Particles cannot be inserted on periodic faces of the
+simulation box.
 
-[Default:] none
+[Related commands:]
+
+"mixture"_mixture.html, "create_particles"_create_particles.html
+
+[Default:]
+
+The keyword defaults are n = 0 and nevery = 1.
+

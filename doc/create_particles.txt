@@ -31,12 +31,13 @@ species and velocity, are determined by the mixture attributes, as
 specied by the {mix-ID}.  See the "mixture"_mixture.html command for
 more details.
 
-Unless the {n} keyword is used, the number of particles created is a
-function of the global {Fnum} value, the mixture number density, and
-the volume of the simulation domain.  The {Fnum} value is set by the
-"global fnum"_global.html command.  The mixture {nrho} is set by the
-"mixture"_mixture.html command.  The volume of the simulation
-is set by the "create_box"_create_box.html command.
+Unless the {n} keyword is used with a value > 0, the number of
+particles created is a function of the global {Fnum} value, the
+mixture number density, and the volume of the simulation domain.  The
+{Fnum} value is set by the "global fnum"_global.html command.  The
+mixture {nrho} is set by the "mixture"_mixture.html command.  The
+volume of the simulation is set by the "create_box"_create_box.html
+command.
 
 Based on these settings, each grid cell will have a target number of
 particles {M} to insert.  If {M} has a fractional value, e.g. 12.5,
@@ -46,15 +47,19 @@ at a random location within the grid cell.  The particle species will
 be chosen randomly in accord with the {frac} settings of the
 collection of species in the mixture, as set by the
 "mixture"_mixture.html command.  The velocity of the particle will be
-set to the sum of the streaming velocity and a thermal velocity
-sampled from the thermal temperature of the species.  Both the
-streaming velocity and thermal temperature are also set by the
+set to the sum of the streaming velocity of the mixture and a thermal
+velocity sampled from the thermal temperature of the mixture.  Both
+the streaming velocity and thermal temperature are also set by the
 "mixture"_mixture.html command.
 
 If the {n} keyword is used, than the {Fnum} and {nrho} settings are
-ignored and {Np} total particles are created.  This can be useful for
-debugging purposes.  The assignment of species and velocity to each
-particles is done the same as described above.
+ignored and {Np} total particles are created.  If {Np} is 0, then the
+number of particles created is calculated as described above.
+Inserting {Np} particles can be useful for debugging purposes.  The
+assignment of species and velocity to each particles is done the same
+as described above.
+
+NOTE: the {loop} keyword is not yet implemented.
 
 The {loop} keyword only applies when the {n} keyword is also used, and
 controls how the particles are generated in parallel.
@@ -77,8 +82,8 @@ set of created particles should be the same as with the {all} setting.
 
 [Related commands:]
 
-"mixture"_mixture.html
+"mixture"_mixture.html, "fix inflow"_fix_inflow.html
 
 [Default:]
 
-There are no keyword defaults.
+The keyword default is n = 0.

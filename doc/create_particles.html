@@ -37,12 +37,13 @@ species and velocity, are determined by the mixture attributes, as
 specied by the <I>mix-ID</I>.  See the <A HREF = "mixture.html">mixture</A> command for
 more details.
 </P>
-<P>Unless the <I>n</I> keyword is used, the number of particles created is a
-function of the global <I>Fnum</I> value, the mixture number density, and
-the volume of the simulation domain.  The <I>Fnum</I> value is set by the
-<A HREF = "global.html">global fnum</A> command.  The mixture <I>nrho</I> is set by the
-<A HREF = "mixture.html">mixture</A> command.  The volume of the simulation
-is set by the <A HREF = "create_box.html">create_box</A> command.
+<P>Unless the <I>n</I> keyword is used with a value > 0, the number of
+particles created is a function of the global <I>Fnum</I> value, the
+mixture number density, and the volume of the simulation domain.  The
+<I>Fnum</I> value is set by the <A HREF = "global.html">global fnum</A> command.  The
+mixture <I>nrho</I> is set by the <A HREF = "mixture.html">mixture</A> command.  The
+volume of the simulation is set by the <A HREF = "create_box.html">create_box</A>
+command.
 </P>
 <P>Based on these settings, each grid cell will have a target number of
 particles <I>M</I> to insert.  If <I>M</I> has a fractional value, e.g. 12.5,
@@ -52,15 +53,19 @@ at a random location within the grid cell.  The particle species will
 be chosen randomly in accord with the <I>frac</I> settings of the
 collection of species in the mixture, as set by the
 <A HREF = "mixture.html">mixture</A> command.  The velocity of the particle will be
-set to the sum of the streaming velocity and a thermal velocity
-sampled from the thermal temperature of the species.  Both the
-streaming velocity and thermal temperature are also set by the
+set to the sum of the streaming velocity of the mixture and a thermal
+velocity sampled from the thermal temperature of the mixture.  Both
+the streaming velocity and thermal temperature are also set by the
 <A HREF = "mixture.html">mixture</A> command.
 </P>
 <P>If the <I>n</I> keyword is used, than the <I>Fnum</I> and <I>nrho</I> settings are
-ignored and <I>Np</I> total particles are created.  This can be useful for
-debugging purposes.  The assignment of species and velocity to each
-particles is done the same as described above.
+ignored and <I>Np</I> total particles are created.  If <I>Np</I> is 0, then the
+number of particles created is calculated as described above.
+Inserting <I>Np</I> particles can be useful for debugging purposes.  The
+assignment of species and velocity to each particles is done the same
+as described above.
+</P>
+<P>NOTE: the <I>loop</I> keyword is not yet implemented.
 </P>
 <P>The <I>loop</I> keyword only applies when the <I>n</I> keyword is also used, and
 controls how the particles are generated in parallel.
@@ -83,10 +88,10 @@ set of created particles should be the same as with the <I>all</I> setting.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "mixture.html">mixture</A>
+<P><A HREF = "mixture.html">mixture</A>, <A HREF = "fix_inflow.html">fix inflow</A>
 </P>
 <P><B>Default:</B>
 </P>
-<P>There are no keyword defaults.
+<P>The keyword default is n = 0.
 </P>
 </HTML>

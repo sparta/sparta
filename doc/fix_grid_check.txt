@@ -42,8 +42,8 @@ This fix computes a global scalar which can be accessed by various
 "output commands"_Section_howto.html#howto_15.  The scalar is the
 count of how many particles were not in the correct grid cell.  The
 count is cummulative over all the timesteps the check was performed
-since the start of the run.  It is re-initialized to zero each time a
-run is performed.
+since the start of the run.  It is initialized to zero each time a run
+is performed.
 
 [Restrictions:] none
 
