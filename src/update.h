@@ -27,8 +27,9 @@ class Update : protected Pointers {
   int runflag;                    // 0 for unset, 1 for run
   double dt;                      // timestep size
 
-  double kboltz;         // Boltzmann constant (Joules/K)
-  double mvv2e;          // // conversion of mv^2 to energy
+  char *unit_style;      // style of units used throughout simulation
+  double boltz;          // Boltzmann constant (eng/degree K)
+  double mvv2e;          // conversion of mv^2 to energy
 
   double fnum;           // ratio of real particles to simulation particles
   double nrho;           // number density of background gas
@@ -46,6 +47,7 @@ class Update : protected Pointers {
   Update(class DSMC *);
   ~Update();
   void init();
+  void set_units(const char *);
   void setup();
   void run(int);
   void global(int, char **);

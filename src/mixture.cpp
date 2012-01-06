@@ -132,7 +132,7 @@ void Mixture::init()
 
   for (int i = 0; i < nspecies; i++) {
     int index = species[i];
-    vscale[i] = sqrt(update->kboltz * temp_thermal /
+    vscale[i] = sqrt(update->boltz * temp_thermal /
 		     particle->species[index].mass);
   }
 }

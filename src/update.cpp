@@ -37,10 +37,11 @@ enum{PERIODIC,OUTFLOW,SPECULAR};              // same as Domain
 
 Update::Update(DSMC *dsmc) : Pointers(dsmc)
 {
-  dt = 1.0;
+  ntimestep = 0;
+  runflag = 0;
 
-  kboltz = 1.38066e-23;
-  mvv2e = 1.0;
+  unit_style = NULL;
+  set_units("cgs");
 
   fnum = 1.0;
   nrho = 1.0;
@@ -82,6 +83,33 @@ void Update::init()
     double seed = ranmaster->uniform();
     random->reset(seed,comm->me,100);
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Update::set_units(const char *style)
+{
+  // physical constants from:
+  // http://physics.nist.gov/cuu/Constants/Table/allascii.txt
+  
+  if (strcmp(style,"cgs") == 0) {
+    boltz = 1.3806504e-16;
+    mvv2e = 1.0;
+
+    dt = 1.0;
+
+  } else if (strcmp(style,"si") == 0) {
+    boltz = 1.3806504e-23;
+    mvv2e = 1.0;
+
+    dt = 1.0;
+    
+  } else error->all(FLERR,"Illegal units command");
+
+  delete [] unit_style;
+  int n = strlen(style) + 1;
+  unit_style = new char[n];
+  strcpy(unit_style,style);
 }
 
 /* ---------------------------------------------------------------------- */

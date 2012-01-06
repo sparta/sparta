@@ -58,7 +58,7 @@ double ComputeTemp::compute_scalar()
   if (particle->nglobal == 0) return 0.0;
 
   double factor = update->mvv2e / 
-    (domain->dimension * particle->nglobal * update->kboltz);
+    (domain->dimension * particle->nglobal * update->boltz);
   scalar *= factor;
   return scalar;
 }

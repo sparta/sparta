@@ -433,7 +433,7 @@ int Input::execute_command()
   else if (!strcmp(command,"uncompute")) uncompute();
   else if (!strcmp(command,"undump")) undump();
   else if (!strcmp(command,"unfix")) unfix();
-
+  else if (!strcmp(command,"units")) units();
 
   else flag = 0;
 
@@ -969,4 +969,14 @@ void Input::unfix()
 {
   if (narg != 1) error->all(FLERR,"Illegal unfix command");
   modify->delete_fix(arg[0]);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::units()
+{
+  if (narg != 1) error->all(FLERR,"Illegal units command");
+  if (domain->box_exist) 
+    error->all(FLERR,"Units command after simulation box is defined");
+  update->set_units(arg[0]);
 }
