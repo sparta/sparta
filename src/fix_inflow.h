@@ -33,16 +33,16 @@ class FixInflow : public Fix {
   int setmask();
   void init();
   void start_of_step();
+  double compute_vector(int);
 
  private:
   int nevery,imix;
   int faces[6];
-  bigint np;
+  int np,nonce,ntotal;
+  int npercell,nthresh;
 
   struct CellFace {
-    int icell;
-    int iface;
-    double area;
+    double ntarget;
     double lo[3];
     double hi[3];
     double normal[3];

@@ -50,44 +50,44 @@ void CreateParticles::command(int narg, char **arg)
 
   // optional args
 
-  bigint n = 0;
+  bigint np = 0;
 
   int iarg = 1;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
-      n = ATOBIGINT(arg[iarg+1]);
-      if (n <= 0) error->all(FLERR,"Illegal create_particles command");
+      np = ATOBIGINT(arg[iarg+1]);
+      if (np <= 0) error->all(FLERR,"Illegal create_particles command");
       iarg += 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
-  // calculate N if not set explicitly
+  // calculate Np if not set explicitly
   // NOTE: eventually adjust for cells with cut volume
 
-  if (n == 0) {
+  if (np == 0) {
     double voltotal;
     if (domain->dimension == 3)
       voltotal = domain->xprd * domain->yprd * domain->zprd;
     else voltotal = domain->xprd * domain->yprd;
-    n = particle->mixture[imix]->nrho * voltotal / update->fnum;
+    np = particle->mixture[imix]->nrho * voltotal / update->fnum;
   }
 
   // generate particles
 
   bigint nprevious = particle->nglobal;
-  create_local(n);
+  create_local(np);
 
   // error check
 
   bigint nglobal;
   bigint nme = particle->nlocal;
   MPI_Allreduce(&nme,&nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
-  if (nglobal - nprevious != n) {
+  if (nglobal - nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of particles: " 
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
-	    nglobal-nprevious,n);
+	    nglobal-nprevious,np);
     error->all(FLERR,str);
   }
   particle->nglobal = nglobal;
@@ -95,18 +95,18 @@ void CreateParticles::command(int narg, char **arg)
   // print stats
 
   if (comm->me == 0) {
-    if (screen) fprintf(screen,"Created " BIGINT_FORMAT " particles\n",n);
-    if (logfile) fprintf(logfile,"Created " BIGINT_FORMAT " particles\n",n);
+    if (screen) fprintf(screen,"Created " BIGINT_FORMAT " particles\n",np);
+    if (logfile) fprintf(logfile,"Created " BIGINT_FORMAT " particles\n",np);
   }
 }
 
 /* ----------------------------------------------------------------------
-   create N particles in parallel
-   every proc generates all N coords, only keeps those in cells it owns
+   create Np particles in parallel
+   every proc fraction of Np for cells it owns
    created particle attributes depend on number of procs
 ------------------------------------------------------------------------- */
 
-void CreateParticles::create_local(bigint n)
+void CreateParticles::create_local(bigint np)
 {
   int dimension = domain->dimension;
 
@@ -121,7 +121,7 @@ void CreateParticles::create_local(bigint n)
 
   // volme = volume of grid cells I own
   // Nme = # of particles I will create
-  // MPI_Scan() logic insures sum of nme = N
+  // MPI_Scan() logic insures sum of nme = Np
   // NOTE: eventually adjust for cells with cut volume
 
   double *lo,*hi;
@@ -142,9 +142,9 @@ void CreateParticles::create_local(bigint n)
   MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
 
   bigint nstart,nstop;
-  if (me > 0) nstart = n * vols[me-1]/vols[nprocs-1];
+  if (me > 0) nstart = np * vols[me-1]/vols[nprocs-1];
   else nstart = 0;
-  nstop = n * vols[me]/vols[nprocs-1];
+  nstop = np * vols[me]/vols[nprocs-1];
   bigint nme = nstop-nstart;
 
   memory->destroy(vols);
@@ -211,8 +211,8 @@ void CreateParticles::create_local(bigint n)
 }
 
 /* ----------------------------------------------------------------------
-   create N particles in serial
-   every proc generates all N coords, only keeps those in cells it owns
+   create Np particles in serial
+   every proc generates all Np coords, only keeps those in cells it owns
    created particle attributes should be independent of number of procs
 ------------------------------------------------------------------------- */
 

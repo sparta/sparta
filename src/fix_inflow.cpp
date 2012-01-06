@@ -12,6 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "mpi.h"
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
@@ -41,23 +42,26 @@ FixInflow::FixInflow(DSMC *dsmc, int narg, char **arg) :
 {
   if (narg < 4) error->all(FLERR,"Illegal fix inflow command");
 
-  nevery = atoi(arg[2]);
-  if (nevery <= 0) error->all(FLERR,"Illegal fix inflow command");
+  vector_flag = 1;
+  size_vector = 2;
+  global_freq = 1;
 
-  imix = particle->find_mixture(arg[3]);
+  imix = particle->find_mixture(arg[2]);
   if (imix < 0) error->all(FLERR,"Fix inflow mixture ID does not exist");
 
-  // extract list of faces
+  // flag specified faces
 
   faces[XLO] = faces[XHI] = faces[YLO] = faces[YHI] =
     faces[ZLO] = faces[ZHI] = 0;
 
-  int iarg = 4;
+  int iarg = 3;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"all") == 0)
-      faces[XLO] = faces[XHI] = faces[YLO] = faces[YHI] =
-	faces[ZLO] = faces[ZHI] = 1;
-    else if (strcmp(arg[iarg],"xlo") == 0) faces[XLO] = 1;
+    if (strcmp(arg[iarg],"all") == 0) {
+      if (domain->dimension == 3)
+	faces[XLO] = faces[XHI] = faces[YLO] = faces[YHI] =
+	  faces[ZLO] = faces[ZHI] = 1;
+      else faces[XLO] = faces[XHI] = faces[YLO] = faces[YHI] = 1;
+    } else if (strcmp(arg[iarg],"xlo") == 0) faces[XLO] = 1;
     else if (strcmp(arg[iarg],"xhi") == 0) faces[XHI] = 1;
     else if (strcmp(arg[iarg],"ylo") == 0) faces[YLO] = 1;
     else if (strcmp(arg[iarg],"yhi") == 0) faces[YHI] = 1;
@@ -67,23 +71,29 @@ FixInflow::FixInflow(DSMC *dsmc, int narg, char **arg) :
     iarg++;
   }
 
+  // optional args
+
+  np = 0;
+  nevery = 1;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"n") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      np = atoi(arg[iarg+1]);
+      if (np <= 0) error->all(FLERR,"Illegal create_particles command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"nevery") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      nevery = atoi(arg[iarg+1]);
+      if (nevery <= 0) error->all(FLERR,"Illegal create_particles command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal create_particles command");
+  }
+
   // error check
 
   if (domain->dimension == 2 && (faces[ZLO] || faces[ZHI])) 
     error->all(FLERR,"Cannot use fix inflow in z dimension for 2d simulation");
-
-  // parse optional args
-
-  np = 0;
-
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"n") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix inflow command");
-      np = ATOBIGINT(arg[iarg+1]);
-      if (np <= 0) error->all(FLERR,"Illegal fix inflow command");
-      iarg += 2;
-    } else error->all(FLERR,"Illegal fix inflow command");
-  }
 
   // RNG
 
@@ -95,6 +105,10 @@ FixInflow::FixInflow(DSMC *dsmc, int narg, char **arg) :
   // local storage
 
   cellface = NULL;
+
+  // counters
+
+  nonce = ntotal = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -152,16 +166,20 @@ void FixInflow::init()
   memory->sfree(cellface);
   cellface = (CellFace *) memory->smalloc(ncf*sizeof(CellFace),
 					  "inflow:cellface");
+
+  double nrho = particle->mixture[imix]->nrho;
+  double *vstream = particle->mixture[imix]->vstream;
+  double fnum = update->fnum;
+  double dt = update->dt;
+
+  double area;
+
   ncf = 0;
 
   if (dimension == 3) {
     for (int i = 0; i < nglocal; i++) {
       icell = mycells[i];
       if (cells[icell].neigh[XLO] < 0 && faces[XLO]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = XLO;
-	cellface[ncf].area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
-	  (cells[icell].hi[2]-cells[icell].lo[2]);
 	cellface[ncf].lo[0] = cells[icell].lo[0];
 	cellface[ncf].hi[0] = cells[icell].lo[0];
 	cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -171,13 +189,13 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = -1.0;
 	cellface[ncf].normal[1] = 0.0;
 	cellface[ncf].normal[2] = 0.0;
+	area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
+	  (cells[icell].hi[2]-cells[icell].lo[2]);
+	cellface[ncf].ntarget = nrho * area*vstream[0]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
       if (cells[icell].neigh[XHI] < 0 && faces[XHI]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = XHI;
-	cellface[ncf].area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
-	  (cells[icell].hi[2]-cells[icell].lo[2]);
 	cellface[ncf].lo[0] = cells[icell].hi[0];
 	cellface[ncf].hi[0] = cells[icell].hi[0];
 	cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -187,13 +205,13 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = 1.0;
 	cellface[ncf].normal[1] = 0.0;
 	cellface[ncf].normal[2] = 0.0;
+	area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
+	  (cells[icell].hi[2]-cells[icell].lo[2]);
+	cellface[ncf].ntarget = nrho * area*vstream[0]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
       if (cells[icell].neigh[YLO] < 0 && faces[YLO]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = YLO;
-	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
-	  (cells[icell].hi[2]-cells[icell].lo[2]);
 	cellface[ncf].lo[0] = cells[icell].lo[0];
 	cellface[ncf].hi[0] = cells[icell].hi[0];
 	cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -203,13 +221,13 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = 0.0;
 	cellface[ncf].normal[1] = -1.0;
 	cellface[ncf].normal[2] = 0.0;
+	area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+	  (cells[icell].hi[2]-cells[icell].lo[2]);
+	cellface[ncf].ntarget = nrho * area*vstream[1]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
       if (cells[icell].neigh[YHI] < 0 && faces[YHI]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = YHI;
-	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
-	  (cells[icell].hi[2]-cells[icell].lo[2]);
 	cellface[ncf].lo[0] = cells[icell].lo[0];
 	cellface[ncf].hi[0] = cells[icell].hi[0];
 	cellface[ncf].lo[1] = cells[icell].hi[1];
@@ -219,13 +237,13 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = 0.0;
 	cellface[ncf].normal[1] = 1.0;
 	cellface[ncf].normal[2] = 0.0;
+	area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+	  (cells[icell].hi[2]-cells[icell].lo[2]);
+	cellface[ncf].ntarget = nrho * area*vstream[1]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
       if (cells[icell].neigh[ZLO] < 0 && faces[ZLO]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = ZLO;
-	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
-	  (cells[icell].hi[1]-cells[icell].lo[1]);
 	cellface[ncf].lo[0] = cells[icell].lo[0];
 	cellface[ncf].hi[0] = cells[icell].hi[0];
 	cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -235,13 +253,13 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = 0.0;
 	cellface[ncf].normal[1] = 0.0;
 	cellface[ncf].normal[2] = -1.0;
+	area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+	  (cells[icell].hi[1]-cells[icell].lo[1]);
+	cellface[ncf].ntarget = nrho * area*vstream[2]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
       if (cells[icell].neigh[ZHI] < 0 && faces[ZHI]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = ZHI;
-	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
-	  (cells[icell].hi[1]-cells[icell].lo[1]);
 	cellface[ncf].lo[0] = cells[icell].lo[0];
 	cellface[ncf].hi[0] = cells[icell].hi[0];
 	cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -251,6 +269,10 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = 0.0;
 	cellface[ncf].normal[1] = 0.0;
 	cellface[ncf].normal[2] = 1.0;
+	area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+	  (cells[icell].hi[1]-cells[icell].lo[1]);
+	cellface[ncf].ntarget = nrho * area*vstream[2]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
     }
@@ -259,9 +281,6 @@ void FixInflow::init()
     for (int i = 0; i < nglocal; i++) {
       icell = mycells[i];
       if (cells[icell].neigh[XLO] < 0 && faces[XLO]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = XLO;
-	cellface[ncf].area = (cells[icell].hi[1]-cells[icell].lo[1]);
 	cellface[ncf].lo[0] = cells[icell].lo[0];
 	cellface[ncf].hi[0] = cells[icell].lo[0];
 	cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -271,12 +290,12 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = -1.0;
 	cellface[ncf].normal[1] = 0.0;
 	cellface[ncf].normal[2] = 0.0;
+	area = (cells[icell].hi[1]-cells[icell].lo[1]);
+	cellface[ncf].ntarget = nrho * area*vstream[0]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
       if (cells[icell].neigh[XHI] < 0 && faces[XHI]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = XHI;
-	cellface[ncf].area = (cells[icell].hi[1]-cells[icell].lo[1]);
 	cellface[ncf].lo[0] = cells[icell].hi[0];
 	cellface[ncf].hi[0] = cells[icell].hi[0];
 	cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -286,12 +305,12 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = 1.0;
 	cellface[ncf].normal[1] = 0.0;
 	cellface[ncf].normal[2] = 0.0;
+	area = (cells[icell].hi[1]-cells[icell].lo[1]);
+	cellface[ncf].ntarget = nrho * area*vstream[0]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
       if (cells[icell].neigh[YLO] < 0 && faces[YLO]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = YLO;
-	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]);
 	cellface[ncf].lo[0] = cells[icell].lo[0];
 	cellface[ncf].hi[0] = cells[icell].hi[0];
 	cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -301,12 +320,12 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = 0.0;
 	cellface[ncf].normal[1] = -1.0;
 	cellface[ncf].normal[2] = 0.0;
+	area = (cells[icell].hi[0]-cells[icell].lo[0]);
+	cellface[ncf].ntarget = nrho * area*vstream[1]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
       if (cells[icell].neigh[YHI] < 0 && faces[YHI]) {
-	cellface[ncf].icell = icell;
-	cellface[ncf].iface = YHI;
-	cellface[ncf].area = (cells[icell].hi[0]-cells[icell].lo[0]);
 	cellface[ncf].lo[0] = cells[icell].lo[0];
 	cellface[ncf].hi[0] = cells[icell].hi[0];
 	cellface[ncf].lo[1] = cells[icell].hi[1];
@@ -316,11 +335,32 @@ void FixInflow::init()
 	cellface[ncf].normal[0] = 0.0;
 	cellface[ncf].normal[1] = 1.0;
 	cellface[ncf].normal[2] = 0.0;
+	area = (cells[icell].hi[0]-cells[icell].lo[0]);
+	cellface[ncf].ntarget = nrho * area*vstream[1]*dt / fnum;
+	if (cellface[ncf].ntarget < 0.0) cellface[ncf].ntarget = 0;
 	ncf++;
       }
     }
   }
 
+  // if Np > 0, npercell = # of insertions per cellface pair
+  // set nthresh so as to achieve exactly Np insertions
+  // cells > cells_with_no_extra need to insert 1 extra particle
+
+  if (np > 0) {
+    int all,nupto;
+    MPI_Allreduce(&ncf,&all,1,MPI_INT,MPI_SUM,world);
+    npercell = np / all;
+    int cells_with_no_extra = all - (np % all);
+    MPI_Scan(&ncf,&nupto,1,MPI_INT,MPI_SUM,world);
+    if (cells_with_no_extra < nupto-ncf) nthresh = 0;
+    else if (cells_with_no_extra >= nupto) nthresh = ncf;
+    else nthresh = cells_with_no_extra - (nupto-ncf);
+  }
+
+  // cummulative counter
+
+  ntotal = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -330,7 +370,6 @@ void FixInflow::start_of_step()
   if (update->ntimestep % nevery) return;
 
   int dimension = domain->dimension;
-
   Particle::OnePart *particles = particle->particles;
   Grid::OneCell *cells = grid->cells;
 
@@ -340,24 +379,33 @@ void FixInflow::start_of_step()
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
 
-  int ilocal,icell,iface,npercell,ispecies;
+  int icell,iface,ninsert,ispecies;
   double x[3],v[3];
   double area,ntarget,rn,vn,vr,theta1,theta2,dot;
   double *lo,*hi,*normal;
 
+  nonce = 0;
+
   for (int i = 0; i < ncf; i++) {
-    icell = cellface[i].icell;
-    iface = cellface[i].iface;
-    area = cellface[i].area;
     lo = cellface[i].lo;
     hi = cellface[i].hi;
     normal = cellface[i].normal;
 
-    ntarget = 2.5;
-    npercell = static_cast<int> (ntarget);
-    if (random->uniform() < ntarget-npercell) npercell++;
+    // ninsert = # to insert in this cell
+    // pre-computed in init() for np = 0 and np > 0 cases
 
-    for (int m = 0; m < npercell; m++) {
+    if (np == 0) {
+      ntarget = cellface[i].ntarget;
+      ninsert = static_cast<int> (ntarget);
+      if (random->uniform() < ntarget-ninsert) ninsert++;
+    } else {
+      ninsert = npercell;
+      if (i >= nthresh) ninsert++;
+    }
+
+    // loop until inserted particle velocity is into simulation box
+
+    for (int m = 0; m < ninsert; m++) {
       rn = random->uniform();
       ispecies = 0;
       while (cummulative[ispecies] < rn) ispecies++;
@@ -382,5 +430,22 @@ void FixInflow::start_of_step()
 
       particle->add_particle(0,ispecies,icell,x,v);
     }
+    nonce += ninsert;
   }
+
+  ntotal += nonce;
+}
+
+/* ----------------------------------------------------------------------
+   return one-step or total count of particle insertions
+------------------------------------------------------------------------- */
+
+double FixInflow::compute_vector(int i)
+{
+  double one,all;
+  
+  if (i == 0) one = nonce;
+  else one = ntotal;
+  MPI_Allreduce(&one,&all,1,MPI_DOUBLE,MPI_SUM,world);
+  return all;
 }
