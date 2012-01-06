@@ -265,6 +265,7 @@ in the command's documentation.
 "uncompute"_uncompute.html,
 "undump"_undump.html,
 "unfix"_unfix.html,
+"units"_units.html,
 "variable"_variable.html.
 "write_restart"_write_restart.html :tb(c=6,ea=c)
 

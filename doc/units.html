@@ -1,0 +1,72 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>units command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>units style 
+</PRE>
+<UL><LI>style = <I>cgs</I> or <I>si</I> 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>units cgs 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command sets the style of units used for a simulation.  It
+determines the units of all quantities specified in the input script
+and various input files read by DSMC, as well as the units of all
+quantities output to the screen, log file, dump files, and other
+output files.  Typically, this command is used at the very beginning
+of an input script.
+</P>
+<P>For style <I>cgs</I>, these are the units:
+</P>
+<UL><LI>mass = grams
+<LI>distance = centimeters
+<LI>area = cm^2
+<LI>volume = cm^3
+<LI>time = seconds
+<LI>energy = ergs
+<LI>velocity = centimeters/second
+<LI>temperature = degrees K 
+</UL>
+<P>For style <I>si</I>, these are the units:
+</P>
+<UL><LI>mass = kilograms
+<LI>distance = meters
+<LI>area = m^2
+<LI>volume = m^3
+<LI>time = seconds
+<LI>energy = Joules
+<LI>velocity = meters/second
+<LI>temperature = degrees K 
+</UL>
+<P>The units command also sets the timestep size for each style:
+distance to default values for each style:
+</P>
+<UL><LI>For style <I>cgs</I> this is dt = 1.0 sec.
+<LI>For style <I>si</I> this is dt = 1.0 sec. 
+</UL>
+<P><B>Restrictions:</B>
+</P>
+<P>This command cannot be used after the simulation box is defined by the
+<A HREF = "create_box.html">create_box</A> command.
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B>
+</P>
+<PRE>units cgs 
+</PRE>
+</HTML>

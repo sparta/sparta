@@ -1,0 +1,67 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+units command :h3
+
+[Syntax:]
+
+units style :pre
+
+style = {cgs} or {si} :ul
+
+[Examples:]
+
+units cgs :pre
+
+[Description:]
+
+This command sets the style of units used for a simulation.  It
+determines the units of all quantities specified in the input script
+and various input files read by DSMC, as well as the units of all
+quantities output to the screen, log file, dump files, and other
+output files.  Typically, this command is used at the very beginning
+of an input script.
+
+For style {cgs}, these are the units:
+
+mass = grams
+distance = centimeters
+area = cm^2
+volume = cm^3
+time = seconds
+energy = ergs
+velocity = centimeters/second
+temperature = degrees K :ul
+
+For style {si}, these are the units:
+
+mass = kilograms
+distance = meters
+area = m^2
+volume = m^3
+time = seconds
+energy = Joules
+velocity = meters/second
+temperature = degrees K :ul
+
+The units command also sets the timestep size for each style:
+distance to default values for each style:
+
+For style {cgs} this is dt = 1.0 sec.
+For style {si} this is dt = 1.0 sec. :ul
+
+[Restrictions:]
+
+This command cannot be used after the simulation box is defined by the
+"create_box"_create_box.html command.
+
+[Related commands:] none
+
+[Default:]
+
+units cgs :pre
