@@ -64,4 +64,4 @@ This command cannot be used after the simulation box is defined by the
 
 [Default:]
 
-units cgs :pre
+units si :pre
