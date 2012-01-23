@@ -233,7 +233,7 @@ in the command's documentation.
 "clear"_clear.html,
 "collisions"_collisions.html,
 "compute"_compute.html,
-"create_particles"_create_particles.html,
+"create_molecules"_create_molecules.html,
 "create_box"_create_box.html,
 "create_grid"_create_grid.html,
 "dimension"_dimension.html,
@@ -276,6 +276,7 @@ Fix styles :h4
 See the "fix"_fix.html command for one-line descriptions
 of each style or click on the style itself for a full description:
 
+"ave/grid"_fix_ave_grid.html,
 "ave/time"_fix_ave_time.html,
 "grid/check"_fix_grid_check.html,
 "inflow"_fix_inflow.html,
@@ -288,5 +289,5 @@ Compute styles :h4
 See the "compute"_compute.html command for one-line descriptions of
 each style or click on the style itself for a full description:
 
-"ke/particle"_compute_ke_particle.html,
+"ke/molecule"_compute_ke_molecule.html,
 "temp"_compute_temp.html :tb(c=6,ea=c)
