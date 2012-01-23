@@ -42,7 +42,8 @@ class FixAveGrid : public Fix {
   bigint nvalid;
   int *which,*argindex,*value2index;
   char **ids;
-  double **array;
+
+  int *pcount;
 
   bigint nextvalid();
 };

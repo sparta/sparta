@@ -58,8 +58,8 @@ class Dump : protected Pointers {
   char *format_user;         // format string set by user
   char *format;              // format string for the file write
   FILE *fp;                  // file to write dump to
-  int size_one;              // # of quantities for one particle
-  int nme;                   // # of particles in this dump from me
+  int size_one;              // # of quantities for one entity
+  int nme;                   // # of entities in this dump from me
 
   double boxxlo,boxxhi;      // local copies of domain values
   double boxylo,boxyhi;

@@ -22,7 +22,6 @@
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
-#include "fix.h"
 #include "input.h"
 #include "variable.h"
 #include "memory.h"
@@ -86,7 +85,6 @@ DumpParticle::DumpParticle(DSMC *dsmc, int narg, char **arg) :
   // only dump image style processes optional args
 
   ioptional = parse_fields(narg,arg);
-
   if (ioptional < narg && strcmp(style,"image") != 0)
     error->all(FLERR,"Invalid attribute in dump particle command");
   size_one = nfield = ioptional - 4;

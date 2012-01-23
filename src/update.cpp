@@ -66,6 +66,7 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
 
 Update::~Update()
 {
+  delete [] unit_style;
   memory->destroy(mlist);
   delete ranmaster;
   delete random;
