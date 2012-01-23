@@ -14,12 +14,11 @@ dump command :h3
 dump ID style N file args :pre
 
 ID = user-assigned name for the dump :ulb,l
-style = {particle} or {image} :l
+style = {particle} or {grid} or {surf} or {image} :l
 N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
-  {image} args = discussed on "dump image"_dump_image.html doc page
-  {custom} args = list of particle attributes
+  {particle} args = list of particle attributes
     possible attributes = id, type, x, y, z, xs, ys, zs, vx, vy, vz,
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
@@ -32,13 +31,29 @@ args = list of arguments for a particular style :l
       c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID
       f_ID = per-particle vector calculated by a fix with ID
       f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID
-      v_name = per-particle vector calculated by an particle-style variable with name :pre
+      v_name = per-particle vector calculated by an particle-style variable with name
+  {grid} args = list of grid attributes
+    possible attributes = id, proc, xlo, ylo, zlo, xhi, yhi, zhi,
+                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+
+      id = grid cell ID
+      proc = processor that owns grid cell
+      xlo,ylo,zlo = coords of lower left corner of grid cell
+      xhi,yhi,zhi = coords of lower left corner of grid cell
+      c_ID = per-cell vector calculated by a compute with ID
+      c_ID\[N\] = Nth column of per-cell array calculated by a compute with ID
+      f_ID = per-cell vector calculated by a fix with ID
+      f_ID\[N\] = Nth column of per-cell array calculated by a fix with ID
+      v_name = per-cell vector calculated by an cell-style variable with name
+  {surf} args = not yet supported
+  {image} args = discussed on "dump image"_dump_image.html doc page :pre
 :ule
 
 [Examples:]
 
 dump 1 particle 100 dump.myforce.* id type x y vx fx
-dump 2 particle 100 dump.%.myforce id type c_myF\[3\] v_ke :pre
+dump 2 particle 100 dump.%.myforce id type c_myF\[3\] v_ke
+dump 3 grid 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi :pre
 
 [Description:]
 
@@ -48,10 +63,10 @@ exception; it creates a JPG or PPM image file of the simulation
 configuration every N timesteps, as discussed on the "dump
 image"_dump_image.html doc page.
 
-Only information for particles in the specified group is dumped.  The
-"dump_modify thresh and region"_dump_modify.html commands can also
-alter what particles are included.  Not all styles support all these
-options; see details below.
+The {style} keyword determines what quantities are written to the file
+and in what format.  Settings made via the
+"dump_modify"_dump_modify.html command can also alter what info is
+included in the file and the format of individual values.
 
 As described below, the filename determines the kind of output (text
 or binary or gzipped, one big file or one per timestep, one big file
@@ -59,19 +74,14 @@ or one per processor).
 
 :line
 
-The {style} keyword determines what quantities are written to the file
-and in what format.  Settings made via the
-"dump_modify"_dump_modify.html command can also alter the format of
-individual values and the file itself.
-
-The {particle} style create files in a simple text format that is
-self-explanatory when viewing a dump file.  Many of the DSMC
-"post-processing tools"_Section_tools.html, including
+The {particle} and {grid} and {surf} styles create files in a simple
+text format that is self-explanatory when viewing a dump file.  Many
+of the DSMC "post-processing tools"_Section_tools.html, including
 "Pizza.py"_http://www.sandia.gov/~sjplimp/pizza.html, work with this
 format.
 
-For post-processing purposes the {particle} text files are
-self-describing in the following sense.
+For post-processing purposes the text files are self-describing in the
+following sense.
 
 The dimensions of the simulation box are included in each snapshot.
 This information is is formatted as:
@@ -88,15 +98,16 @@ simulation box boundaries (xlo,xhi and ylo,yhi and zlo,zhi).  Each of
 the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the "boundary"_doc/boundary.html command for details.
 
-The "ITEM: ATOMS" line in each snapshot lists column descriptors for
-the per-particle lines that follow.  The descriptors will be the
-particle attributes you specify in the dump command for the {particle}
-style.
+The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" line in each
+snapshot lists column descriptors for the per-particle or per-cell or
+per-surf lines that follow.  The descriptors will be the attributes
+you specify in the dump command for the style.
 
-Style {particle} allows you to specify a list of particle attributes
-to be written to the dump file for each particle.  Possible attributes
-are listed above and will appear in the order specified.  An
-explanation of the possible dump particle attributes is given below.
+Styles {particle} and {grid} and {surf} allow you to specify a list of
+attributes to be written to the dump file for each particle or grid
+cell or surface.  Possible attributes are listed above and will appear
+in the order specified.  An explanation of the possible attributes is
+given below.
 
 :line
 
@@ -152,17 +163,15 @@ to write.
 This section explains the particle attributes that can be specified as
 part of the {particle} style.
 
-The {id}, {type}, {vx}, {vy}, {vz} attributes are self-explanatory.
-
 {Id} is the particle ID.  {Type} is an integer index representing the
-particle species.  {Vx}, {vy}, {vz} are components of particle
-velocity.
+particle species.
 
-There are several options for outputting particle coordinates.  The
-{x}, {y}, {z} attributes write particle coordinates "unscaled", in the
-appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} if you
-want the coordinates "scaled" to the box size, so that each value is
-0.0 to 1.0.
+The {x}, {y}, {z} attributes write particle coordinates "unscaled", in
+the appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} if
+you want the coordinates "scaled" to the box size, so that each value
+is 0.0 to 1.0.
+
+{Vx}, {vy}, {vz} are components of particle velocity.
 
 The {c_ID} and {c_ID\[N\]} attributes allow per-particle vectors or
 arrays calculated by a "compute"_compute.html to be output.  The ID in
@@ -204,6 +213,68 @@ means of creating quantities to output to a dump file.
 See "Section_modify"_Section_modify.html of the manual for information
 on how to add new compute and fix styles to DSMC to calculate
 per-particle quantities which could then be output into dump files.
+
+:line
+
+This section explains the particle attributes that can be specified as
+part of the {grid} style.
+
+{Id} is the grid cell ID. 
+
+{Proc} is the ID of the processor which owns the grid cell.
+
+The {xlo}, {ylo}, {zlo} attributes write the coordinates of the
+lower-left corner of the grid cell in the appropriate distance
+"units"_units.html.  The {xhi}, {yhi}, {zhi} attributes write the
+coordinates of the upper-right corner of the grid cell.
+
+The {c_ID} and {c_ID\[N\]} attributes allow per-cell vectors or arrays
+calculated by a "compute"_compute.html to be output.  The ID in the
+attribute should be replaced by the actual ID of the compute that has
+been defined previously in the input script.  See the
+"compute"_compute.html command for details.
+
+Note that computes which calculate global or per-particle quantities,
+as opposed to per-grid quantities, cannot be output in a dump grid
+command.  Instead, global quantities can be output by the
+"stats_style"_stats_style.html command, and per-particle quantities
+can be output by the dump particle command.
+
+If {c_ID} is used as a attribute, then the per-cell vector calculated
+by the compute is printed.  If {c_ID\[N\]} is used, then N must be in
+the range from 1-M, which will print the Nth column of the M-length
+per-cell array calculated by the compute.
+
+The {f_ID} and {f_ID\[N\]} attributes allow vector or array per-cell
+quantities calculated by a "fix"_fix.html to be output.  The ID in the
+attribute should be replaced by the actual ID of the fix that has been
+defined previously in the input script.
+
+If {f_ID} is used as a attribute, then the per-cell vector calculated
+by the fix is printed.  If {f_ID\[N\]} is used, then N must be in the
+range from 1-M, which will print the Nth column of the M-length
+per-cell array calculated by the fix.
+
+The {v_name} attribute allows per-cell vectors calculated by a
+"variable"_variable.html to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only a cell-style variable
+can be referenced, since it is the only style that generates per-cell
+values.  Variables of style {cell} can reference per-cell attributes,
+stats keywords, or invoke other computes, fixes, or variables when
+they are evaluated, so this is a very general means of creating
+quantities to output to a dump file.
+
+See "Section_modify"_Section_modify.html of the manual for information
+on how to add new compute and fix styles to DSMC to calculate per-cell
+quantities which could then be output into dump files.
+
+:line
+
+This section explains the particle attributes that can be specified as
+part of the {surf} style.
+
+This style is not yet supported.
 
 :line
 

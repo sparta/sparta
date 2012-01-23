@@ -19,7 +19,7 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
-<LI>style = <I>particle</I> or <I>image</I> 
+<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
 
 <LI>N = dump every this many timesteps 
 
@@ -27,8 +27,7 @@
 
 <LI>args = list of arguments for a particular style 
 
-<PRE>  <I>image</I> args = discussed on <A HREF = "dump_image.html">dump image</A> doc page
-  <I>custom</I> args = list of particle attributes
+<PRE>  <I>particle</I> args = list of particle attributes
     possible attributes = id, type, x, y, z, xs, ys, zs, vx, vy, vz,
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name 
 </PRE>
@@ -41,14 +40,30 @@
       c_ID[N] = Nth column of per-particle array calculated by a compute with ID
       f_ID = per-particle vector calculated by a fix with ID
       f_ID[N] = Nth column of per-particle array calculated by a fix with ID
-      v_name = per-particle vector calculated by an particle-style variable with name 
+      v_name = per-particle vector calculated by an particle-style variable with name
+  <I>grid</I> args = list of grid attributes
+    possible attributes = id, proc, xlo, ylo, zlo, xhi, yhi, zhi,
+                          c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+</PRE>
+<PRE>      id = grid cell ID
+      proc = processor that owns grid cell
+      xlo,ylo,zlo = coords of lower left corner of grid cell
+      xhi,yhi,zhi = coords of lower left corner of grid cell
+      c_ID = per-cell vector calculated by a compute with ID
+      c_ID[N] = Nth column of per-cell array calculated by a compute with ID
+      f_ID = per-cell vector calculated by a fix with ID
+      f_ID[N] = Nth column of per-cell array calculated by a fix with ID
+      v_name = per-cell vector calculated by an cell-style variable with name
+  <I>surf</I> args = not yet supported
+  <I>image</I> args = discussed on <A HREF = "dump_image.html">dump image</A> doc page 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>dump 1 particle 100 dump.myforce.* id type x y vx fx
-dump 2 particle 100 dump.%.myforce id type c_myF[3] v_ke 
+dump 2 particle 100 dump.%.myforce id type c_myF[3] v_ke
+dump 3 grid 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -58,10 +73,10 @@ exception; it creates a JPG or PPM image file of the simulation
 configuration every N timesteps, as discussed on the <A HREF = "dump_image.html">dump
 image</A> doc page.
 </P>
-<P>Only information for particles in the specified group is dumped.  The
-<A HREF = "dump_modify.html">dump_modify thresh and region</A> commands can also
-alter what particles are included.  Not all styles support all these
-options; see details below.
+<P>The <I>style</I> keyword determines what quantities are written to the file
+and in what format.  Settings made via the
+<A HREF = "dump_modify.html">dump_modify</A> command can also alter what info is
+included in the file and the format of individual values.
 </P>
 <P>As described below, the filename determines the kind of output (text
 or binary or gzipped, one big file or one per timestep, one big file
@@ -69,19 +84,14 @@ or one per processor).
 </P>
 <HR>
 
-<P>The <I>style</I> keyword determines what quantities are written to the file
-and in what format.  Settings made via the
-<A HREF = "dump_modify.html">dump_modify</A> command can also alter the format of
-individual values and the file itself.
-</P>
-<P>The <I>particle</I> style create files in a simple text format that is
-self-explanatory when viewing a dump file.  Many of the DSMC
-<A HREF = "Section_tools.html">post-processing tools</A>, including
+<P>The <I>particle</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
+text format that is self-explanatory when viewing a dump file.  Many
+of the DSMC <A HREF = "Section_tools.html">post-processing tools</A>, including
 <A HREF = "http://www.sandia.gov/~sjplimp/pizza.html">Pizza.py</A>, work with this
 format.
 </P>
-<P>For post-processing purposes the <I>particle</I> text files are
-self-describing in the following sense.
+<P>For post-processing purposes the text files are self-describing in the
+following sense.
 </P>
 <P>The dimensions of the simulation box are included in each snapshot.
 This information is is formatted as:
@@ -98,15 +108,16 @@ simulation box boundaries (xlo,xhi and ylo,yhi and zlo,zhi).  Each of
 the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the <A HREF = "doc/boundary.html">boundary</A> command for details.
 </P>
-<P>The "ITEM: ATOMS" line in each snapshot lists column descriptors for
-the per-particle lines that follow.  The descriptors will be the
-particle attributes you specify in the dump command for the <I>particle</I>
-style.
+<P>The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" line in each
+snapshot lists column descriptors for the per-particle or per-cell or
+per-surf lines that follow.  The descriptors will be the attributes
+you specify in the dump command for the style.
 </P>
-<P>Style <I>particle</I> allows you to specify a list of particle attributes
-to be written to the dump file for each particle.  Possible attributes
-are listed above and will appear in the order specified.  An
-explanation of the possible dump particle attributes is given below.
+<P>Styles <I>particle</I> and <I>grid</I> and <I>surf</I> allow you to specify a list of
+attributes to be written to the dump file for each particle or grid
+cell or surface.  Possible attributes are listed above and will appear
+in the order specified.  An explanation of the possible attributes is
+given below.
 </P>
 <HR>
 
@@ -162,17 +173,15 @@ to write.
 <P>This section explains the particle attributes that can be specified as
 part of the <I>particle</I> style.
 </P>
-<P>The <I>id</I>, <I>type</I>, <I>vx</I>, <I>vy</I>, <I>vz</I> attributes are self-explanatory.
-</P>
 <P><I>Id</I> is the particle ID.  <I>Type</I> is an integer index representing the
-particle species.  <I>Vx</I>, <I>vy</I>, <I>vz</I> are components of particle
-velocity.
+particle species.
 </P>
-<P>There are several options for outputting particle coordinates.  The
-<I>x</I>, <I>y</I>, <I>z</I> attributes write particle coordinates "unscaled", in the
-appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> if you
-want the coordinates "scaled" to the box size, so that each value is
-0.0 to 1.0.
+<P>The <I>x</I>, <I>y</I>, <I>z</I> attributes write particle coordinates "unscaled", in
+the appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> if
+you want the coordinates "scaled" to the box size, so that each value
+is 0.0 to 1.0.
+</P>
+<P><I>Vx</I>, <I>vy</I>, <I>vz</I> are components of particle velocity.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-particle vectors or
 arrays calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in
@@ -214,6 +223,68 @@ means of creating quantities to output to a dump file.
 <P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
 on how to add new compute and fix styles to DSMC to calculate
 per-particle quantities which could then be output into dump files.
+</P>
+<HR>
+
+<P>This section explains the particle attributes that can be specified as
+part of the <I>grid</I> style.
+</P>
+<P><I>Id</I> is the grid cell ID. 
+</P>
+<P><I>Proc</I> is the ID of the processor which owns the grid cell.
+</P>
+<P>The <I>xlo</I>, <I>ylo</I>, <I>zlo</I> attributes write the coordinates of the
+lower-left corner of the grid cell in the appropriate distance
+<A HREF = "units.html">units</A>.  The <I>xhi</I>, <I>yhi</I>, <I>zhi</I> attributes write the
+coordinates of the upper-right corner of the grid cell.
+</P>
+<P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-cell vectors or arrays
+calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
+attribute should be replaced by the actual ID of the compute that has
+been defined previously in the input script.  See the
+<A HREF = "compute.html">compute</A> command for details.
+</P>
+<P>Note that computes which calculate global or per-particle quantities,
+as opposed to per-grid quantities, cannot be output in a dump grid
+command.  Instead, global quantities can be output by the
+<A HREF = "stats_style.html">stats_style</A> command, and per-particle quantities
+can be output by the dump particle command.
+</P>
+<P>If <I>c_ID</I> is used as a attribute, then the per-cell vector calculated
+by the compute is printed.  If <I>c_ID[N]</I> is used, then N must be in
+the range from 1-M, which will print the Nth column of the M-length
+per-cell array calculated by the compute.
+</P>
+<P>The <I>f_ID</I> and <I>f_ID[N]</I> attributes allow vector or array per-cell
+quantities calculated by a <A HREF = "fix.html">fix</A> to be output.  The ID in the
+attribute should be replaced by the actual ID of the fix that has been
+defined previously in the input script.
+</P>
+<P>If <I>f_ID</I> is used as a attribute, then the per-cell vector calculated
+by the fix is printed.  If <I>f_ID[N]</I> is used, then N must be in the
+range from 1-M, which will print the Nth column of the M-length
+per-cell array calculated by the fix.
+</P>
+<P>The <I>v_name</I> attribute allows per-cell vectors calculated by a
+<A HREF = "variable.html">variable</A> to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only a cell-style variable
+can be referenced, since it is the only style that generates per-cell
+values.  Variables of style <I>cell</I> can reference per-cell attributes,
+stats keywords, or invoke other computes, fixes, or variables when
+they are evaluated, so this is a very general means of creating
+quantities to output to a dump file.
+</P>
+<P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
+on how to add new compute and fix styles to DSMC to calculate per-cell
+quantities which could then be output into dump files.
+</P>
+<HR>
+
+<P>This section explains the particle attributes that can be specified as
+part of the <I>surf</I> style.
+</P>
+<P>This style is not yet supported.
 </P>
 <HR>
 
