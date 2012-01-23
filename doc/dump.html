@@ -19,7 +19,7 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
-<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
+<LI>style = <I>molecule</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
 
 <LI>N = dump every this many timesteps 
 
@@ -27,20 +27,20 @@
 
 <LI>args = list of arguments for a particular style 
 
-<PRE>  <I>particle</I> args = list of particle attributes
+<PRE>  <I>molecule</I> args = list of molecule attributes
     possible attributes = id, type, x, y, z, xs, ys, zs, vx, vy, vz,
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name 
 </PRE>
-<PRE>      id = particle ID
-      type = particle species
-      x,y,z = unscaled particle coordinates
-      xs,ys,zs = scaled particle coordinates
-      vx,vy,vz = particle velocities
+<PRE>      id = molecule ID
+      type = molecule species
+      x,y,z = unscaled molecule coordinates
+      xs,ys,zs = scaled molecule coordinates
+      vx,vy,vz = molecule velocities
       c_ID = per-molecule vector calculated by a compute with ID
       c_ID[N] = Nth column of per-molecule array calculated by a compute with ID
       f_ID = per-molecule vector calculated by a fix with ID
       f_ID[N] = Nth column of per-molecule array calculated by a fix with ID
-      v_name = per-molecule vector calculated by an particle-style variable with name
+      v_name = per-molecule vector calculated by an molecule-style variable with name
   <I>grid</I> args = list of grid attributes
     possible attributes = id, proc, xlo, ylo, zlo, xhi, yhi, zhi,
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name 
@@ -61,8 +61,8 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>dump 1 particle 100 dump.myforce.* id type x y vx fx
-dump 2 particle 100 dump.%.myforce id type c_myF[3] v_ke
+<PRE>dump 1 molecule 100 dump.myforce.* id type x y vx fx
+dump 2 molecule 100 dump.%.myforce id type c_myF[3] v_ke
 dump 3 grid 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi 
 </PRE>
 <P><B>Description:</B>
@@ -84,7 +84,7 @@ or one per processor).
 </P>
 <HR>
 
-<P>The <I>particle</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
+<P>The <I>molecule</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
 of the DSMC <A HREF = "Section_tools.html">post-processing tools</A>, including
 <A HREF = "http://www.sandia.gov/~sjplimp/pizza.html">Pizza.py</A>, work with this
@@ -113,8 +113,8 @@ snapshot lists column descriptors for the per-molecule or per-grid or
 per-surf lines that follow.  The descriptors will be the attributes
 you specify in the dump command for the style.
 </P>
-<P>Styles <I>particle</I> and <I>grid</I> and <I>surf</I> allow you to specify a list of
-attributes to be written to the dump file for each particle or grid
+<P>Styles <I>molecule</I> and <I>grid</I> and <I>surf</I> allow you to specify a list of
+attributes to be written to the dump file for each molecule or grid
 cell or surface.  Possible attributes are listed above and will appear
 in the order specified.  An explanation of the possible attributes is
 given below.
@@ -161,7 +161,7 @@ to convert it back to text format (see the <A HREF = "Section_tools.html#binary"
 tool</A>) or write your own code to read the
 binary file.  The format of the binary file can be understood by
 looking at the tools/binary2txt.cpp file.  This option is only
-available for the <I>particle</I> style.
+available for the <I>molecule</I> style.
 </P>
 <P>If the filename ends with ".gz", the dump file (or files, if "*" or "%"
 is also used) is written in gzipped format.  A gzipped dump file will
@@ -170,18 +170,18 @@ to write.
 </P>
 <HR>
 
-<P>This section explains the particle attributes that can be specified as
-part of the <I>particle</I> style.
+<P>This section explains the molecule attributes that can be specified as
+part of the <I>molecule</I> style.
 </P>
-<P><I>Id</I> is the particle ID.  <I>Type</I> is an integer index representing the
-particle species.
+<P><I>Id</I> is the molecule ID.  <I>Type</I> is an integer index representing the
+molecule species.
 </P>
-<P>The <I>x</I>, <I>y</I>, <I>z</I> attributes write particle coordinates "unscaled", in
+<P>The <I>x</I>, <I>y</I>, <I>z</I> attributes write molecule coordinates "unscaled", in
 the appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> if
 you want the coordinates "scaled" to the box size, so that each value
 is 0.0 to 1.0.
 </P>
-<P><I>Vx</I>, <I>vy</I>, <I>vz</I> are components of particle velocity.
+<P><I>Vx</I>, <I>vy</I>, <I>vz</I> are components of molecule velocity.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-molecule vectors or
 arrays calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in
@@ -191,7 +191,7 @@ has been defined previously in the input script.  See the
 </P>
 <P>Note that computes which calculate global or per-grid quantities, as
 opposed to per-molecule quantities, cannot be output in a dump
-particle command.  Instead, global quantities can be output by the
+molecule command.  Instead, global quantities can be output by the
 <A HREF = "stats_style.html">stats_style</A> command, and per-grid quantities can be
 output by the dump grid command.
 </P>
@@ -213,9 +213,9 @@ M-length per-molecule array calculated by the fix.
 <P>The <I>v_name</I> attribute allows per-molecule vectors calculated by a
 <A HREF = "variable.html">variable</A> to be output.  The name in the attribute
 should be replaced by the actual name of the variable that has been
-defined previously in the input script.  Only a particle-style
+defined previously in the input script.  Only a molecule-style
 variable can be referenced, since it is the only style that generates
-per-molecule values.  Variables of style <I>particle</I> can reference
+per-molecule values.  Variables of style <I>molecule</I> can reference
 per-molecule attributes, stats keywords, or invoke other computes,
 fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
@@ -226,8 +226,8 @@ per-molecule quantities which could then be output into dump files.
 </P>
 <HR>
 
-<P>This section explains the particle attributes that can be specified as
-part of the <I>grid</I> style.
+<P>This section explains the grid cell attributes that can be specified
+as part of the <I>grid</I> style.
 </P>
 <P><I>Id</I> is the grid cell ID. 
 </P>
@@ -248,7 +248,7 @@ been defined previously in the input script.  See the
 as opposed to per-grid quantities, cannot be output in a dump grid
 command.  Instead, global quantities can be output by the
 <A HREF = "stats_style.html">stats_style</A> command, and per-molecule quantities
-can be output by the dump particle command.
+can be output by the dump molecule command.
 </P>
 <P>If <I>c_ID</I> is used as a attribute, then the per-grid vector calculated
 by the compute is printed.  If <I>c_ID[N]</I> is used, then N must be in
@@ -281,8 +281,8 @@ quantities which could then be output into dump files.
 </P>
 <HR>
 
-<P>This section explains the particle attributes that can be specified as
-part of the <I>surf</I> style.
+<P>This section explains the surface element attributes that can be
+specified as part of the <I>surf</I> style.
 </P>
 <P>This style is not yet supported.
 </P>
