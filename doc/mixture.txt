@@ -38,7 +38,7 @@ mixture background N O :pre
 [Description:]
 
 Define a gas mixture which can be used via its ID in other commands
-such as "create_particles"_create_particles.html.  Any number of
+such as "create_molecules"_create_molecules.html.  Any number of
 mixtures can be defined and used in a simulation.
 
 The ID of a mixture can only contain alphanumeric characters and
@@ -87,7 +87,7 @@ velocity is set.
 
 [Related commands:]
 
-"global"_global.html, "create_particles"_create_particles.html
+"global"_global.html, "create_molecules"_create_molecules.html
 
 [Default:]
 

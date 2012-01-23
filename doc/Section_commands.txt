@@ -164,7 +164,7 @@ These items must be setup to run a DSMC calculation:
 
 simulation box via "create_box"_create_box.html
 grid via "create_grid"_create_grid.html
-particles via "create_particles"_create_particles.html :ul
+particles via "create_molecules"_create_molecules.html :ul
 
 (3) Settings
 
@@ -199,7 +199,7 @@ Initialization:
 Problem definition:
 
 "create_box"_create_box.html, "create_grid"_create_grid.html,
-"create_particles"_create_particles.html, "species"_species.html
+"create_molecules"_create_molecules.html, "species"_species.html
 
 Settings:
 
