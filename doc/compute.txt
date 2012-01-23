@@ -94,7 +94,7 @@ command.  Or the values can be referenced in a "variable
 equal"_variable.html or "variable atom"_variable.html command. :ulb,l
 
 Per-molecule values can be output via the "dump particle"_dump.html
-command.  Or the per-particle values can be referenced in an
+command.  Or the per-molecule values can be referenced in an
 "molecule-style variable"_variable.html. :l
 
 Per-grid values can be output via the "dump grid"_dump.html command.

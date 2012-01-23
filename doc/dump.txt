@@ -27,11 +27,11 @@ args = list of arguments for a particular style :l
       x,y,z = unscaled particle coordinates
       xs,ys,zs = scaled particle coordinates
       vx,vy,vz = particle velocities
-      c_ID = per-particle vector calculated by a compute with ID
-      c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID
-      f_ID = per-particle vector calculated by a fix with ID
-      f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID
-      v_name = per-particle vector calculated by an particle-style variable with name
+      c_ID = per-molecule vector calculated by a compute with ID
+      c_ID\[N\] = Nth column of per-molecule array calculated by a compute with ID
+      f_ID = per-molecule vector calculated by a fix with ID
+      f_ID\[N\] = Nth column of per-molecule array calculated by a fix with ID
+      v_name = per-molecule vector calculated by an particle-style variable with name
   {grid} args = list of grid attributes
     possible attributes = id, proc, xlo, ylo, zlo, xhi, yhi, zhi,
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
@@ -99,7 +99,7 @@ the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the "boundary"_doc/boundary.html command for details.
 
 The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" line in each
-snapshot lists column descriptors for the per-particle or per-grid or
+snapshot lists column descriptors for the per-molecule or per-grid or
 per-surf lines that follow.  The descriptors will be the attributes
 you specify in the dump command for the style.
 
@@ -173,46 +173,46 @@ is 0.0 to 1.0.
 
 {Vx}, {vy}, {vz} are components of particle velocity.
 
-The {c_ID} and {c_ID\[N\]} attributes allow per-particle vectors or
+The {c_ID} and {c_ID\[N\]} attributes allow per-molecule vectors or
 arrays calculated by a "compute"_compute.html to be output.  The ID in
 the attribute should be replaced by the actual ID of the compute that
 has been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
 Note that computes which calculate global or per-grid quantities, as
-opposed to per-particle quantities, cannot be output in a dump
+opposed to per-molecule quantities, cannot be output in a dump
 particle command.  Instead, global quantities can be output by the
 "stats_style"_stats_style.html command, and per-grid quantities can be
 output by the dump grid command.
 
-If {c_ID} is used as a attribute, then the per-particle vector
+If {c_ID} is used as a attribute, then the per-molecule vector
 calculated by the compute is printed.  If {c_ID\[N\]} is used, then N
 must be in the range from 1-M, which will print the Nth column of the
-M-length per-particle array calculated by the compute.
+M-length per-molecule array calculated by the compute.
 
 The {f_ID} and {f_ID\[N\]} attributes allow vector or array
-per-particle quantities calculated by a "fix"_fix.html to be output.
+per-molecule quantities calculated by a "fix"_fix.html to be output.
 The ID in the attribute should be replaced by the actual ID of the fix
 that has been defined previously in the input script.
 
-If {f_ID} is used as a attribute, then the per-particle vector
+If {f_ID} is used as a attribute, then the per-molecule vector
 calculated by the fix is printed.  If {f_ID\[N\]} is used, then N must
 be in the range from 1-M, which will print the Nth column of the
-M-length per-particle array calculated by the fix.
+M-length per-molecule array calculated by the fix.
 
-The {v_name} attribute allows per-particle vectors calculated by a
+The {v_name} attribute allows per-molecule vectors calculated by a
 "variable"_variable.html to be output.  The name in the attribute
 should be replaced by the actual name of the variable that has been
 defined previously in the input script.  Only a particle-style
 variable can be referenced, since it is the only style that generates
-per-particle values.  Variables of style {particle} can reference
-per-particle attributes, stats keywords, or invoke other computes,
+per-molecule values.  Variables of style {particle} can reference
+per-molecule attributes, stats keywords, or invoke other computes,
 fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
 
 See "Section_modify"_Section_modify.html of the manual for information
 on how to add new compute and fix styles to DSMC to calculate
-per-particle quantities which could then be output into dump files.
+per-molecule quantities which could then be output into dump files.
 
 :line
 
@@ -234,10 +234,10 @@ attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
-Note that computes which calculate global or per-particle quantities,
+Note that computes which calculate global or per-molecule quantities,
 as opposed to per-grid quantities, cannot be output in a dump grid
 command.  Instead, global quantities can be output by the
-"stats_style"_stats_style.html command, and per-particle quantities
+"stats_style"_stats_style.html command, and per-molecule quantities
 can be output by the dump particle command.
 
 If {c_ID} is used as a attribute, then the per-grid vector calculated

@@ -80,12 +80,12 @@ convenient way to simply output one or more global values to a file.
 <P>Each listed value can be the result of a <A HREF = "compute.html">compute</A> or
 <A HREF = "fix.html">fix</A> or the evaluation of an equal-style
 <A HREF = "variable.html">variable</A>.  In each case, the compute, fix, or variable
-must produce a global quantity, not a per-particle or per-grid
+must produce a global quantity, not a per-molecule or per-grid
 quantity.  If you wish to spatial- or time-average or histogram
-per-particle quantities from a compute, fix, or variable, then see the
+per-molecule quantities from a compute, fix, or variable, then see the
 <A HREF = "fix_ave_spatial.html">fix ave/spatial</A>, <A HREF = "fix_ave_atom.html">fix
 ave/atom</A>, or <A HREF = "fix_ave_histo.html">fix ave/histo</A>
-commands.  If you wish to sum a per-particle or per-grid quantity into
+commands.  If you wish to sum a per-molecule or per-grid quantity into
 a single global quantity, see the <A HREF = "compute_reduce.html">compute reduce</A>
 command.
 </P>
@@ -95,7 +95,7 @@ few <A HREF = "fix.html">fixes</A> produce global quantities.  See the doc pages
 individual fixes for info on which ones produce such values.
 <A HREF = "variable.html">Variables</A> of style <I>equal</I> are the only ones that can
 be used with this fix.  Variables of style <I>particle</I> or <I>cell</I> cannot
-be used, since they produce per-particle or per-grid values.
+be used, since they produce per-molecule or per-grid values.
 </P>
 <P>The input values must either be all scalars or all vectors (or
 arrays), depending on the setting of the <I>mode</I> keyword.  In both

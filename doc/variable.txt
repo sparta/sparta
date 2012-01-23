@@ -266,18 +266,18 @@ Other variables: v_name :tb(s=:)
 :line
 
 Most of the formula elements produce a scalar value.  A few produce a
-per-particle vector of values.  These are the particle vectors,
-compute references that represent a per-particle vector, fix
-references that represent a per-particles vector, and variables that
+per-molecule vector of values.  These are the particle vectors,
+compute references that represent a per-molecule vector, fix
+references that represent a per-molecules vector, and variables that
 are particle-style variables.  Math functions that operate on scalar
 values produce a scalar value; math function that operate on
-per-particle vectors do so element-by-element and produce a
-per-particle vector.
+per-molecule vectors do so element-by-element and produce a
+per-molecule vector.
 
 A formula for equal-style variables cannot use any formula element
-that produces a per-particle vector.  A formula for an particle-style
+that produces a per-molecule vector.  A formula for an particle-style
 variable can use formula elements that produce either a scalar value
-or a per-particle vector.
+or a per-molecule vector.
 
 The stats keywords allowed in a formula are those defined by the
 "stats_style custom"_stats_style.html command.  If a variable is
@@ -292,9 +292,9 @@ Math Operators :h4
 Math operators are written in the usual way, where the "x" and "y" in
 the examples can themselves be arbitrarily complex formulas, as in the
 examples above.  In this syntax, "x" and "y" can be scalar values or
-per-particle vectors.  For example, "vol/npart" is the division of two
+per-molecule vectors.  For example, "vol/npart" is the division of two
 scalars, where "vy+vz" is the element-by-element sum of two
-per-particle vectors of y and z velocities.
+per-molecule vectors of y and z velocities.
 
 Operators are evaluated left to right and have the usual C-style
 precedence: unary minus and unary logical NOT operator "!" have the
@@ -320,7 +320,7 @@ returns 0.0.  The logical NOT operator returns 1.0 if its argument is
 These relational and logical operators can be used as a masking or
 selection operation in a formula.  For example, the number of
 particles whose properties satifsy one or more criteria could be
-calculated by taking the returned per-particle vector of ones and
+calculated by taking the returned per-molecule vector of ones and
 zeroes and passing it to the "compute reduce"_compute_reduce.html
 command.
 
@@ -331,10 +331,10 @@ Math Functions :h4
 Math functions are specified as keywords followed by one or more
 parenthesized arguments "x", "y", "z", each of which can themselves be
 arbitrarily complex formulas.  In this syntax, the arguments can
-represent scalar values or per-particle vectors.  In the latter case,
+represent scalar values or per-molecule vectors.  In the latter case,
 the math operation is performed on each element of the vector.  For
 example, "sqrt(npart)" is the sqrt() of a scalar, where "sqrt(y*z)"
-yields a per-particle vector with each element being the sqrt() of the
+yields a per-molecule vector with each element being the sqrt() of the
 product of one particle's y and z coordinates.
 
 Most of the math functions perform obvious operations.  The ln() is
@@ -446,7 +446,7 @@ array is being referenced.
 These functions operate on the global vector of inputs and reduce it
 to a single scalar value.  This is analagous to the operation of the
 "compute reduce"_compute_reduce.html command, which invokes the same
-functions on per-particle vectors.
+functions on per-molecule vectors.
 
 The sum() function calculates the sum of all the vector elements.  The
 min() and max() functions find the minimum and maximum element
@@ -479,22 +479,22 @@ Compute references access quantities calculated by a
 "compute"_compute.html.  The ID in the reference should be replaced by
 the ID of a compute defined elsewhere in the input script.  As
 discussed in the doc page for the "compute"_compute.html command,
-computes can produce global, per-particle, or per-grid values.  Only
-global and per-particle values can be used in a variable.  Computes
+computes can produce global, per-molecule, or per-grid values.  Only
+global and per-molecule values can be used in a variable.  Computes
 can also produce a scalar, vector, or array.  An equal-style variable
 can only use scalar values, which means a global scalar, or an element
 of a global vector or array.  Particle-style variables can use the
-same scalar values.  They can also use per-particle vector values.  A
-vector value can be a per-particle vector itself, or a column of an
-per-particle array.  See the doc pages for individual computes to see
+same scalar values.  They can also use per-molecule vector values.  A
+vector value can be a per-molecule vector itself, or a column of an
+per-molecule array.  See the doc pages for individual computes to see
 what kind of values they produce.
 
 Examples of different kinds of compute references are as follows.
 There is no ambiguity as to what a reference means, since computes
-only produce global or per-particle quantities, never both.
+only produce global or per-molecule quantities, never both.
 
-c_ID: global scalar, or per-particle vector
-c_ID\[I\]: Ith element of global vector, or Ith column from per-particle array
+c_ID: global scalar, or per-molecule vector
+c_ID\[I\]: Ith element of global vector, or Ith column from per-molecule array
 c_ID\[I\]\[J\]: I,J element of global array :tb(s=:)
 
 If a variable containing a compute is evaluated directly in an input
@@ -508,23 +508,23 @@ Fix References :h4
 Fix references access quantities calculated by a "fix"_compute.html.
 The ID in the reference should be replaced by the ID of a fix defined
 elsewhere in the input script.  As discussed in the doc page for the
-"fix"_fix.html command, fixes can produce global, per-particle, or
-per-grid values.  Only global and per-particle values can be used in a
+"fix"_fix.html command, fixes can produce global, per-molecule, or
+per-grid values.  Only global and per-molecule values can be used in a
 variable.  Fixes can also produce a scalar, vector, or array.  An
 equal-style variable can only use scalar values, which means a global
 scalar, or an element of a global vector or array.  Particle-style
 variables can use the same scalar values.  They can also use
-per-particle vector values.  A vector value can be a per-particle
-vector itself, or a column of an per-particle array.  See the doc
+per-molecule vector values.  A vector value can be a per-molecule
+vector itself, or a column of an per-molecule array.  See the doc
 pages for individual fixes to see what kind of values they produce.
 
 The different kinds of fix references are exactly the same as the
 compute references listed in the above table, where "c_" is replaced
 by "f_".  Again, there is no ambiguity as to what a reference means,
-since fixes only produce global or per-particle quantities, never both.
+since fixes only produce global or per-molecule quantities, never both.
 
-f_ID: global scalar, or per-particle vector
-f_ID\[I\]: Ith element of global vector, or Ith column from per-particle array
+f_ID: global scalar, or per-molecule vector
+f_ID\[I\]: Ith element of global vector, or Ith column from per-molecule array
 f_ID\[I\]\[J\]: I,J element of global array :tb(s=:)
 
 If a variable containing a fix is evaluated directly in an input
@@ -545,7 +545,7 @@ Variable references access quantities calulated by other variables,
 which will cause those variables to be evaluated.  The name in the
 reference should be replaced by the name of a variable defined
 elsewhere in the input script.  As discussed on this doc page,
-particle-style variables generate a per-particle vector of values; all
+particle-style variables generate a per-molecule vector of values; all
 other variable styles generate a global scalar value.  An equal-style
 variable can only use scalar values, which means another equal-style
 variable.  Particle-style variables can use either other equal-style
@@ -553,9 +553,9 @@ or particle-style variables.
 
 Examples of different kinds of variable references are as follows.
 There is no ambiguity as to what a reference means, since variables
-produce only a global scalar or a per-particle vectors, never both.
+produce only a global scalar or a per-molecule vectors, never both.
 
-v_name: scalar, or per-particle vector :tb(s=:)
+v_name: scalar, or per-molecule vector :tb(s=:)
 
 IMPORTANT NOTE: If you define variables in circular manner like this:
 
