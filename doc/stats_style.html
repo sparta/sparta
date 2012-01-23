@@ -18,7 +18,7 @@
 <UL><LI>arg1,arg2,... = list of statistical attributes 
 
 <PRE>  possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
-                        npart, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
+                        nmol, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
 			c_ID, c_ID[I], c_ID[I][J],
                         f_ID, f_ID[I], f_ID[I][J],
                         v_name 
@@ -29,7 +29,7 @@
       cpu = elapsed CPU time in seconds
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second
-      npart = # of particles
+      nmol = # of molecules
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
@@ -45,8 +45,8 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>stats_style step cpu npart temp
-stats_style step temp cpu spcpu npart xlo xhi c_myTemp 
+<PRE>stats_style step cpu nmol temp
+stats_style step temp cpu spcpu nmol xlo xhi c_myTemp 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -82,8 +82,8 @@ continually output the time and timestep rate for the last 100 steps.
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> and <I>c_ID[I][J]</I> keywords allow global
 values calculated by a compute to be output.  As discussed on the
 <A HREF = "compute.html">compute</A> doc page, computes can calculate global,
-per-particle, or per-grid values.  Only global values can be
-referenced by this command.  However, per-particle or per-grid compute
+per-molecule, or per-grid values.  Only global values can be
+referenced by this command.  However, per-molecule or per-grid compute
 values can be referenced in a <A HREF = "variable.html">variable</A> and the
 variable referenced, as discussed below.
 </P>
@@ -95,9 +95,9 @@ or 2 brackets will reference a scalar value from the compute.
 </P>
 <P>The <I>f_ID</I> and <I>f_ID[I]</I> and <I>f_ID[I][J]</I> keywords allow global
 values calculated by a fix to be output.  As discussed on the
-<A HREF = "fix.html">fix</A> doc page, fixes can calculate global, per-particle, or
+<A HREF = "fix.html">fix</A> doc page, fixes can calculate global, per-molecule, or
 per-grid values.  Only global values can be referenced by this
-command.  However, per-particle or per-grid fix values can be
+command.  However, per-molecule or per-grid fix values can be
 referenced in a <A HREF = "variable.html">variable</A> and the variable referenced,
 as discussed below.
 </P>
@@ -112,7 +112,7 @@ output.  The name in the keyword should be replaced by the variable
 name that has been defined elsewhere in the input script.  Only
 equal-style variables can be referenced.  See the
 <A HREF = "variable.html">variable</A> command for details.  Variables of style
-<I>equal</I> can reference per-particle or per-grid properties or stats
+<I>equal</I> can reference per-molecule or per-grid properties or stats
 keywords, or they can invoke other computes, fixes, or variables when
 evaluated, so this is a very general means of creating statistical
 output.
@@ -131,6 +131,6 @@ then be referenced with these keywords to generate statistical output.
 </P>
 <P><B>Default:</B>
 </P>
-<PRE>stats_style step cpu npart 
+<PRE>stats_style step cpu nmol 
 </PRE>
 </HTML>
