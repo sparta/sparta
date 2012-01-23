@@ -9,36 +9,36 @@
 
 <HR>
 
-<H3>create_particles command 
+<H3>create_molecules command 
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>create_particles mix-ID keyword value ... 
+<PRE>create_molecules mix-ID keyword value ... 
 </PRE>
-<UL><LI>mix-ID = ID of mixture to use when creating particles 
+<UL><LI>mix-ID = ID of mixture to use when creating molecules 
 
 <LI>zero or more keyword/value pairs may be appended 
 
 <LI>keyword = <I>n</I> 
 
-  <I>n</I> value = Np = number of particles to create
+  <I>n</I> value = Np = number of molecules to create
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>create_particles background
-create_particles air n 100000 
+<PRE>create_molecules background
+create_molecules air n 100000 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Create or add additional particles to the simulation domain.  The
-number of particles created and their individual attributes, such
+<P>Create or add additional molecules to the simulation domain.  The
+number of molecules created and their individual attributes, such
 species and velocity, are determined by the mixture attributes, as
 specied by the <I>mix-ID</I>.  See the <A HREF = "mixture.html">mixture</A> command for
 more details.
 </P>
 <P>Unless the <I>n</I> keyword is used with a value > 0, the number of
-particles created is a function of the global <I>Fnum</I> value, the
+molecules created is a function of the global <I>Fnum</I> value, the
 mixture number density, and the volume of the simulation domain.  The
 <I>Fnum</I> value is set by the <A HREF = "global.html">global fnum</A> command.  The
 mixture <I>nrho</I> is set by the <A HREF = "mixture.html">mixture</A> command.  The
@@ -46,43 +46,43 @@ volume of the simulation is set by the <A HREF = "create_box.html">create_box</A
 command.
 </P>
 <P>Based on these settings, each grid cell will have a target number of
-particles <I>M</I> to insert.  If <I>M</I> has a fractional value, e.g. 12.5,
-then 12 particles will be inserted, and a 13th depending on the
-outcome of a random number generation.  Each particle will be inserted
-at a random location within the grid cell.  The particle species will
+molecules <I>M</I> to insert.  If <I>M</I> has a fractional value, e.g. 12.5,
+then 12 molecules will be inserted, and a 13th depending on the
+outcome of a random number generation.  Each molecule will be inserted
+at a random location within the grid cell.  The molecule species will
 be chosen randomly in accord with the <I>frac</I> settings of the
 collection of species in the mixture, as set by the
-<A HREF = "mixture.html">mixture</A> command.  The velocity of the particle will be
+<A HREF = "mixture.html">mixture</A> command.  The velocity of the molecule will be
 set to the sum of the streaming velocity of the mixture and a thermal
 velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
 <A HREF = "mixture.html">mixture</A> command.
 </P>
 <P>If the <I>n</I> keyword is used, than the <I>Fnum</I> and <I>nrho</I> settings are
-ignored and <I>Np</I> total particles are created.  If <I>Np</I> is 0, then the
-number of particles created is calculated as described above.
-Inserting <I>Np</I> particles can be useful for debugging purposes.  The
-assignment of species and velocity to each particles is done the same
+ignored and <I>Np</I> total molecules are created.  If <I>Np</I> is 0, then the
+number of molecules created is calculated as described above.
+Inserting <I>Np</I> molecules can be useful for debugging purposes.  The
+assignment of species and velocity to each molecules is done the same
 as described above.
 </P>
 <P>NOTE: the <I>loop</I> keyword is not yet implemented.
 </P>
 <P>The <I>loop</I> keyword only applies when the <I>n</I> keyword is also used, and
-controls how the particles are generated in parallel.
+controls how the molecules are generated in parallel.
 </P>
 <P>If the setting is <I>all</I>, then every processor loops over all <I>N</I>
-particles.  As the coordinates of each is created, each processor
-checks what grid cell it is in, and only stores the particle if it
-owns that grid cell.  Thus an identical set of particles are created,
+molecules.  As the coordinates of each is created, each processor
+checks what grid cell it is in, and only stores the molecule if it
+owns that grid cell.  Thus an identical set of molecules are created,
 no matter how many processors are running the simulation
 </P>
 <P>If the setting is <I>local</I>, then each of the <I>P</I> processors generates a
-<I>N/P</I> subset of particles, using its own random number generation.  It
-only adds particles to grid cells that it owns.  This is a faster way
-to generate a large number of particles, but means that the individual
-attributes of particles will depend on the number of processors and
+<I>N/P</I> subset of molecules, using its own random number generation.  It
+only adds molecules to grid cells that it owns.  This is a faster way
+to generate a large number of molecules, but means that the individual
+attributes of molecules will depend on the number of processors and
 the mapping of grid cells to procesors.  Statistically, the overall
-set of created particles should be the same as with the <I>all</I> setting.
+set of created molecules should be the same as with the <I>all</I> setting.
 </P>
 <P><B>Restrictions:</B> none
 </P>
