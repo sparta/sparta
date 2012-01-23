@@ -43,20 +43,20 @@ calculations accessed in the various ways described above.
 :line
 
 Computes calculate one of three styles of quantities: global,
-per-particle, or per-cell.  A global quantity is one or more
+per-particle, or per-grid.  A global quantity is one or more
 system-wide values, e.g. the temperature of the system.  A
 per-particle quantity is one or more values per particle, e.g. the
-kinetic energy of each particle.  A per-cell quantity is one or more
+kinetic energy of each particle.  A per-grid quantity is one or more
 values per grid cell.  Computes that produce per-particle quantities
 have the word "particle" in their style, e.g. {ke/particle}.  Computes
-that produce per-cell quantities have the word "particle" in their
+that produce per-grid quantities have the word "particle" in their
 style, e.g. {ke/cell}.  Styles with neither "particle" or "cell" in
 their style produce global quantities.
 
 Note that a single compute produces either global or per-particle or
-per-cell quantities, but never more than one of these.
+per-grid quantities, but never more than one of these.
 
-Global, per-atom, and per-cell quantities each come in three kinds: a
+Global, per-atom, and per-grid quantities each come in three kinds: a
 single scalar value, a vector of values, or a 2d array of values.  The
 doc page for each compute describes the style and kind of values it
 produces, e.g. a per-atom vector.  Some computes produce more than one

@@ -76,7 +76,7 @@ The {n} and {nevery} keywords can be useful for debugging purposes.
 
 If the {n} keyword is used, then the {Fnum} and {nrho} settings are
 ignored and {Np} total particles are inserted every timestep particles
-are inserted.  This is done on a per-cell basis by dividing {Np} by
+are inserted.  This is done on a per-grid basis by dividing {Np} by
 the total number of grid cells that are adjacent to the specified
 faces and inserting an equal number or particles per grid cell.
 
@@ -84,18 +84,20 @@ If the {nevery} keyword is used, particles are only inserted every
 {Nstep} timesteps.  This will give non-continuous, clumpy behavior in
 the inlet flow field if {Nstep} > 1.
 
-[Restart, fix_modify, output:]
+:line
+
+[Restart, fix_modify, output info:]
 
 No information about this fix is written to "binary restart
 files"_restart.html.  None of the "fix_modify"_fix_modify.html options
 are relevant to this fix.
 
 This fix computes a global vector of length 2 which can be accessed by
-various "output commands"_Section_howto.html#howto_15.  The first
-element of the vector is the total number of particles inserted on the
-most recent insertion step.  The second element is the cummulative
-total number inserted since the beginning of the run.  It is
-initialized to zero each time a run is performed.
+various output commands.  The first element of the vector is the total
+number of particles inserted on the most recent insertion step.  The
+second element is the cummulative total number inserted since the
+beginning of the run.  The 2nd value is initialized to zero each time
+a run is performed.
 
 [Restrictions:]
 

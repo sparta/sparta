@@ -49,11 +49,11 @@
       proc = processor that owns grid cell
       xlo,ylo,zlo = coords of lower left corner of grid cell
       xhi,yhi,zhi = coords of lower left corner of grid cell
-      c_ID = per-cell vector calculated by a compute with ID
-      c_ID[N] = Nth column of per-cell array calculated by a compute with ID
-      f_ID = per-cell vector calculated by a fix with ID
-      f_ID[N] = Nth column of per-cell array calculated by a fix with ID
-      v_name = per-cell vector calculated by an cell-style variable with name
+      c_ID = per-grid vector calculated by a compute with ID
+      c_ID[N] = Nth column of per-grid array calculated by a compute with ID
+      f_ID = per-grid vector calculated by a fix with ID
+      f_ID[N] = Nth column of per-grid array calculated by a fix with ID
+      v_name = per-grid vector calculated by an cell-style variable with name
   <I>surf</I> args = not yet supported
   <I>image</I> args = discussed on <A HREF = "dump_image.html">dump image</A> doc page 
 </PRE>
@@ -109,7 +109,7 @@ the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the <A HREF = "doc/boundary.html">boundary</A> command for details.
 </P>
 <P>The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" line in each
-snapshot lists column descriptors for the per-particle or per-cell or
+snapshot lists column descriptors for the per-particle or per-grid or
 per-surf lines that follow.  The descriptors will be the attributes
 you specify in the dump command for the style.
 </P>
@@ -189,10 +189,10 @@ the attribute should be replaced by the actual ID of the compute that
 has been defined previously in the input script.  See the
 <A HREF = "compute.html">compute</A> command for details.
 </P>
-<P>Note that computes which calculate global or per-cell quantities, as
+<P>Note that computes which calculate global or per-grid quantities, as
 opposed to per-particle quantities, cannot be output in a dump
 particle command.  Instead, global quantities can be output by the
-<A HREF = "stats_style.html">stats_style</A> command, and per-cell quantities can be
+<A HREF = "stats_style.html">stats_style</A> command, and per-grid quantities can be
 output by the dump grid command.
 </P>
 <P>If <I>c_ID</I> is used as a attribute, then the per-particle vector
@@ -238,7 +238,7 @@ lower-left corner of the grid cell in the appropriate distance
 <A HREF = "units.html">units</A>.  The <I>xhi</I>, <I>yhi</I>, <I>zhi</I> attributes write the
 coordinates of the upper-right corner of the grid cell.
 </P>
-<P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-cell vectors or arrays
+<P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-grid vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
@@ -250,33 +250,33 @@ command.  Instead, global quantities can be output by the
 <A HREF = "stats_style.html">stats_style</A> command, and per-particle quantities
 can be output by the dump particle command.
 </P>
-<P>If <I>c_ID</I> is used as a attribute, then the per-cell vector calculated
+<P>If <I>c_ID</I> is used as a attribute, then the per-grid vector calculated
 by the compute is printed.  If <I>c_ID[N]</I> is used, then N must be in
 the range from 1-M, which will print the Nth column of the M-length
-per-cell array calculated by the compute.
+per-grid array calculated by the compute.
 </P>
-<P>The <I>f_ID</I> and <I>f_ID[N]</I> attributes allow vector or array per-cell
+<P>The <I>f_ID</I> and <I>f_ID[N]</I> attributes allow vector or array per-grid
 quantities calculated by a <A HREF = "fix.html">fix</A> to be output.  The ID in the
 attribute should be replaced by the actual ID of the fix that has been
 defined previously in the input script.
 </P>
-<P>If <I>f_ID</I> is used as a attribute, then the per-cell vector calculated
+<P>If <I>f_ID</I> is used as a attribute, then the per-grid vector calculated
 by the fix is printed.  If <I>f_ID[N]</I> is used, then N must be in the
 range from 1-M, which will print the Nth column of the M-length
-per-cell array calculated by the fix.
+per-grid array calculated by the fix.
 </P>
-<P>The <I>v_name</I> attribute allows per-cell vectors calculated by a
+<P>The <I>v_name</I> attribute allows per-grid vectors calculated by a
 <A HREF = "variable.html">variable</A> to be output.  The name in the attribute
 should be replaced by the actual name of the variable that has been
 defined previously in the input script.  Only a cell-style variable
-can be referenced, since it is the only style that generates per-cell
-values.  Variables of style <I>cell</I> can reference per-cell attributes,
+can be referenced, since it is the only style that generates per-grid
+values.  Variables of style <I>cell</I> can reference per-grid attributes,
 stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 </P>
 <P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
-on how to add new compute and fix styles to DSMC to calculate per-cell
+on how to add new compute and fix styles to DSMC to calculate per-grid
 quantities which could then be output into dump files.
 </P>
 <HR>

@@ -67,12 +67,12 @@ convenient way to simply output one or more global values to a file.
 Each listed value can be the result of a "compute"_compute.html or
 "fix"_fix.html or the evaluation of an equal-style
 "variable"_variable.html.  In each case, the compute, fix, or variable
-must produce a global quantity, not a per-particle or per-cell
+must produce a global quantity, not a per-particle or per-grid
 quantity.  If you wish to spatial- or time-average or histogram
 per-particle quantities from a compute, fix, or variable, then see the
 "fix ave/spatial"_fix_ave_spatial.html, "fix
 ave/atom"_fix_ave_atom.html, or "fix ave/histo"_fix_ave_histo.html
-commands.  If you wish to sum a per-particle or per-cell quantity into
+commands.  If you wish to sum a per-particle or per-grid quantity into
 a single global quantity, see the "compute reduce"_compute_reduce.html
 command.
 
@@ -82,7 +82,7 @@ few "fixes"_fix.html produce global quantities.  See the doc pages for
 individual fixes for info on which ones produce such values.
 "Variables"_variable.html of style {equal} are the only ones that can
 be used with this fix.  Variables of style {particle} or {cell} cannot
-be used, since they produce per-particle or per-cell values.
+be used, since they produce per-particle or per-grid values.
 
 The input values must either be all scalars or all vectors (or
 arrays), depending on the setting of the {mode} keyword.  In both
@@ -258,6 +258,27 @@ of output.  In the third line the values are replaced with the
 appropriate fields from the fix ave/time command.
 
 :line
+
+[Restart, fix_modify, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.  None of the "fix_modify"_fix_modify.html options
+are relevant to this fix.
+
+This fix produces a global scalar or global vector or global array
+which can be accessed by various output commands.  The values can only
+be accessed on timesteps that are multiples of {Nfreq} since that is
+when averaging is performed.
+
+A scalar is produced if only a single input value is averaged and
+{mode} = scalar.  A vector is produced if multiple input values are
+averaged for {mode} = scalar, or a single input value for {mode} =
+vector.  In the first case, the length of the vector is the number of
+inputs.  In the second case, the length of the vector is the same as
+the length of the input vector.  An array is produced if multiple
+input values are averaged and {mode} = vector.  The global array has #
+of rows = length of the input vectors and # of columns = number of
+inputs.
 
 [Restrictions:] none
 

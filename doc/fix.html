@@ -67,7 +67,7 @@ for individual fixes for info on which ones can be restarted.
 <HR>
 
 <P>Some fixes calculate one of three styles of quantities: global,
-per-particle, or per-cell, which can be used by other commands or
+per-particle, or per-grid, which can be used by other commands or
 output as described below.  A global quantity is one or more
 system-wide values, e.g. the energy of a wall interacting with
 particles.  A per-particle quantity is one or more values per
@@ -76,7 +76,7 @@ Per-cell quantities are calculated by each processor based on the grid
 cells it owns.
 </P>
 <P>Note that a single fix may produces either global or per-atom or
-per-cell quantities (or none at all), but never more than one of
+per-grid quantities (or none at all), but never more than one of
 these.
 </P>
 <P>Global, per-atom, and local quantities each come in three kinds: a

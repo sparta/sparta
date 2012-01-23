@@ -85,7 +85,7 @@ that face.
 </P>
 <P>If the <I>n</I> keyword is used, then the <I>Fnum</I> and <I>nrho</I> settings are
 ignored and <I>Np</I> total particles are inserted every timestep particles
-are inserted.  This is done on a per-cell basis by dividing <I>Np</I> by
+are inserted.  This is done on a per-grid basis by dividing <I>Np</I> by
 the total number of grid cells that are adjacent to the specified
 faces and inserting an equal number or particles per grid cell.
 </P>
@@ -93,18 +93,20 @@ faces and inserting an equal number or particles per grid cell.
 <I>Nstep</I> timesteps.  This will give non-continuous, clumpy behavior in
 the inlet flow field if <I>Nstep</I> > 1.
 </P>
-<P><B>Restart, fix_modify, output:</B>
+<HR>
+
+<P><B>Restart, fix_modify, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
 files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
 are relevant to this fix.
 </P>
 <P>This fix computes a global vector of length 2 which can be accessed by
-various <A HREF = "Section_howto.html#howto_15">output commands</A>.  The first
-element of the vector is the total number of particles inserted on the
-most recent insertion step.  The second element is the cummulative
-total number inserted since the beginning of the run.  It is
-initialized to zero each time a run is performed.
+various output commands.  The first element of the vector is the total
+number of particles inserted on the most recent insertion step.  The
+second element is the cummulative total number inserted since the
+beginning of the run.  The 2nd value is initialized to zero each time
+a run is performed.
 </P>
 <P><B>Restrictions:</B>
 </P>

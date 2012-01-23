@@ -77,8 +77,8 @@ continually output the time and timestep rate for the last 100 steps.
 The {c_ID} and {c_ID\[I\]} and {c_ID\[I\]\[J\]} keywords allow global
 values calculated by a compute to be output.  As discussed on the
 "compute"_compute.html doc page, computes can calculate global,
-per-particle, or per-cell values.  Only global values can be
-referenced by this command.  However, per-particle or per-cell compute
+per-particle, or per-grid values.  Only global values can be
+referenced by this command.  However, per-particle or per-grid compute
 values can be referenced in a "variable"_variable.html and the
 variable referenced, as discussed below.
 
@@ -91,8 +91,8 @@ or 2 brackets will reference a scalar value from the compute.
 The {f_ID} and {f_ID\[I\]} and {f_ID\[I\]\[J\]} keywords allow global
 values calculated by a fix to be output.  As discussed on the
 "fix"_fix.html doc page, fixes can calculate global, per-particle, or
-per-cell values.  Only global values can be referenced by this
-command.  However, per-particle or per-cell fix values can be
+per-grid values.  Only global values can be referenced by this
+command.  However, per-particle or per-grid fix values can be
 referenced in a "variable"_variable.html and the variable referenced,
 as discussed below.
 
@@ -107,7 +107,7 @@ output.  The name in the keyword should be replaced by the variable
 name that has been defined elsewhere in the input script.  Only
 equal-style variables can be referenced.  See the
 "variable"_variable.html command for details.  Variables of style
-{equal} can reference per-particle or per-cell properties or stats
+{equal} can reference per-particle or per-grid properties or stats
 keywords, or they can invoke other computes, fixes, or variables when
 evaluated, so this is a very general means of creating statistical
 output.

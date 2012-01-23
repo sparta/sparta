@@ -82,8 +82,8 @@ continually output the time and timestep rate for the last 100 steps.
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> and <I>c_ID[I][J]</I> keywords allow global
 values calculated by a compute to be output.  As discussed on the
 <A HREF = "compute.html">compute</A> doc page, computes can calculate global,
-per-particle, or per-cell values.  Only global values can be
-referenced by this command.  However, per-particle or per-cell compute
+per-particle, or per-grid values.  Only global values can be
+referenced by this command.  However, per-particle or per-grid compute
 values can be referenced in a <A HREF = "variable.html">variable</A> and the
 variable referenced, as discussed below.
 </P>
@@ -96,8 +96,8 @@ or 2 brackets will reference a scalar value from the compute.
 <P>The <I>f_ID</I> and <I>f_ID[I]</I> and <I>f_ID[I][J]</I> keywords allow global
 values calculated by a fix to be output.  As discussed on the
 <A HREF = "fix.html">fix</A> doc page, fixes can calculate global, per-particle, or
-per-cell values.  Only global values can be referenced by this
-command.  However, per-particle or per-cell fix values can be
+per-grid values.  Only global values can be referenced by this
+command.  However, per-particle or per-grid fix values can be
 referenced in a <A HREF = "variable.html">variable</A> and the variable referenced,
 as discussed below.
 </P>
@@ -112,7 +112,7 @@ output.  The name in the keyword should be replaced by the variable
 name that has been defined elsewhere in the input script.  Only
 equal-style variables can be referenced.  See the
 <A HREF = "variable.html">variable</A> command for details.  Variables of style
-<I>equal</I> can reference per-particle or per-cell properties or stats
+<I>equal</I> can reference per-particle or per-grid properties or stats
 keywords, or they can invoke other computes, fixes, or variables when
 evaluated, so this is a very general means of creating statistical
 output.

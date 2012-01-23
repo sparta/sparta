@@ -484,7 +484,7 @@ used when evaluating the variable.
 <A HREF = "compute.html">compute</A>.  The ID in the reference should be replaced by
 the ID of a compute defined elsewhere in the input script.  As
 discussed in the doc page for the <A HREF = "compute.html">compute</A> command,
-computes can produce global, per-particle, or per-cell values.  Only
+computes can produce global, per-particle, or per-grid values.  Only
 global and per-particle values can be used in a variable.  Computes
 can also produce a scalar, vector, or array.  An equal-style variable
 can only use scalar values, which means a global scalar, or an element
@@ -516,7 +516,7 @@ must be current.  See the discussion below about "Variable Accuracy".
 The ID in the reference should be replaced by the ID of a fix defined
 elsewhere in the input script.  As discussed in the doc page for the
 <A HREF = "fix.html">fix</A> command, fixes can produce global, per-particle, or
-per-cell values.  Only global and per-particle values can be used in a
+per-grid values.  Only global and per-particle values can be used in a
 variable.  Fixes can also produce a scalar, vector, or array.  An
 equal-style variable can only use scalar values, which means a global
 scalar, or an element of a global vector or array.  Particle-style

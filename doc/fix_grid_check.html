@@ -35,19 +35,22 @@ correct grid cell are counted and the value of the count can be
 monitored (see below).  A value of 0 is "correct", meaning that no
 particle was found to be outside its assigned grid cell.
 </P>
-<P><B>Restart, fix_modify, output:</B>
+<HR>
+
+<P><B>Restart, fix_modify, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
 files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
 are relevant to this fix.
 </P>
 <P>This fix computes a global scalar which can be accessed by various
-<A HREF = "Section_howto.html#howto_15">output commands</A>.  The scalar is the
-count of how many particles were not in the correct grid cell.  The
-count is cummulative over all the timesteps the check was performed
-since the start of the run.  It is initialized to zero each time a run
-is performed.
+output commands.  The scalar is the count of how many particles were
+not in the correct grid cell.  The count is cummulative over all the
+timesteps the check was performed since the start of the run.  It is
+initialized to zero each time a run is performed.
 </P>
+<HR>
+
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B> none
