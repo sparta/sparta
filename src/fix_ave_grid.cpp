@@ -1,0 +1,348 @@
+/* ----------------------------------------------------------------------
+   DSMC - Sandia parallel DSMC code
+   www.sandia.gov/~sjplimp/dsmc.html
+   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
+   Sandia National Laboratories
+
+   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
+   certain rights in this software.  This software is distributed under 
+   the GNU General Public License.
+
+   See the README file in the top-level DSMC directory.
+------------------------------------------------------------------------- */
+
+#include "dsmctype.h"
+#include "stdlib.h"
+#include "string.h"
+#include "fix_ave_grid.h"
+#include "grid.h"
+#include "update.h"
+#include "modify.h"
+#include "compute.h"
+#include "input.h"
+#include "variable.h"
+#include "memory.h"
+#include "error.h"
+
+using namespace DSMC_NS;
+
+enum{COMPUTE,FIX,VARIABLE};
+
+#define INVOKED_PER_CELL 8
+
+/* ---------------------------------------------------------------------- */
+
+FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
+  Fix(dsmc, narg, arg)
+{
+  if (narg < 7) error->all(FLERR,"Illegal fix ave/cell command");
+
+  nevery = atoi(arg[3]);
+  nrepeat = atoi(arg[4]);
+  per_cell_freq = atoi(arg[5]);
+
+  // parse remaining values
+
+  which = new int[narg-6];
+  argindex = new int[narg-6];
+  ids = new char*[narg-6];
+  value2index = new int[narg-6];
+  nvalues = 0;
+
+  int iarg = 6;
+  while (iarg < narg) {
+    ids[nvalues] = NULL;
+
+    if (strncmp(arg[iarg],"c_",2) == 0 || 
+	       strncmp(arg[iarg],"f_",2) == 0 || 
+	       strncmp(arg[iarg],"v_",2) == 0) {
+      if (arg[iarg][0] == 'c') which[nvalues] = COMPUTE;
+      else if (arg[iarg][0] == 'f') which[nvalues] = FIX;
+      else if (arg[iarg][0] == 'v') which[nvalues] = VARIABLE;
+
+      int n = strlen(arg[iarg]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[iarg][2]);
+
+      char *ptr = strchr(suffix,'[');
+      if (ptr) {
+	if (suffix[strlen(suffix)-1] != ']')
+	  error->all(FLERR,"Illegal fix ave/cell command");
+	argindex[nvalues] = atoi(ptr+1);
+	*ptr = '\0';
+      } else argindex[nvalues] = 0;
+
+      n = strlen(suffix) + 1;
+      ids[nvalues] = new char[n];
+      strcpy(ids[nvalues],suffix);
+      nvalues++;
+      delete [] suffix;
+
+    } else error->all(FLERR,"Illegal fix ave/cell command");
+
+    iarg++;
+  }
+
+  // setup and error check
+  // for fix inputs, check that fix frequency is acceptable
+
+  if (nevery <= 0 || nrepeat <= 0 || per_cell_freq <= 0)
+    error->all(FLERR,"Illegal fix ave/cell command");
+  if (per_cell_freq % nevery || (nrepeat-1)*nevery >= per_cell_freq)
+    error->all(FLERR,"Illegal fix ave/cell command");
+
+  for (int i = 0; i < nvalues; i++) {
+    if (which[i] == COMPUTE) {
+      int icompute = modify->find_compute(ids[i]);
+      if (icompute < 0)
+	error->all(FLERR,"Compute ID for fix ave/cell does not exist");
+      if (modify->compute[icompute]->per_cell_flag == 0)
+	error->all(FLERR,
+		   "Fix ave/cell compute does not calculate per-cell values");
+      if (argindex[i] == 0 && 
+	  modify->compute[icompute]->size_per_cell_cols != 0)
+	error->all(FLERR,"Fix ave/cell compute does not "
+		   "calculate a per-cell vector");
+      if (argindex[i] && modify->compute[icompute]->size_per_cell_cols == 0)
+	error->all(FLERR,"Fix ave/cell compute does not "
+		   "calculate a per-cell array");
+      if (argindex[i] && 
+	  argindex[i] > modify->compute[icompute]->size_per_cell_cols)
+	error->all(FLERR,"Fix ave/cell compute array is accessed out-of-range");
+
+    } else if (which[i] == FIX) {
+      int ifix = modify->find_fix(ids[i]);
+      if (ifix < 0)
+	error->all(FLERR,"Fix ID for fix ave/cell does not exist");
+      if (modify->fix[ifix]->per_cell_flag == 0)
+	error->all(FLERR,"Fix ave/cell fix does not calculate per-cell values");
+      if (argindex[i] == 0 && modify->fix[ifix]->size_per_cell_cols != 0)
+	error->all(FLERR,
+		   "Fix ave/cell fix does not calculate a per-cell vector");
+      if (argindex[i] && modify->fix[ifix]->size_per_cell_cols == 0)
+	error->all(FLERR,
+		   "Fix ave/cell fix does not calculate a per-cell array");
+      if (argindex[i] && argindex[i] > modify->fix[ifix]->size_per_cell_cols)
+	error->all(FLERR,"Fix ave/cell fix array is accessed out-of-range");
+      if (nevery % modify->fix[ifix]->per_cell_freq)
+	error->all(FLERR,
+		   "Fix for fix ave/cell not computed at compatible time");
+
+    } else if (which[i] == VARIABLE) {
+      int ivariable = input->variable->find(ids[i]);
+      if (ivariable < 0)
+	error->all(FLERR,"Variable name for fix ave/cell does not exist");
+      if (input->variable->cell_style(ivariable) == 0)
+	error->all(FLERR,"Fix ave/cell variable is not cell-style variable");
+    }
+  }
+
+  // this fix produces either a per-cell vector or array
+
+  per_cell_flag = 1;
+  if (nvalues == 1) size_per_cell_cols = 0;
+  else size_per_cell_cols = nvalues;
+
+  // perform initial allocation of cell-based array
+  // register with Grid class at some point, if load-balance?
+
+  array = NULL;
+  //grow_arrays(grid->nlocal);
+  //grid->add_callback(0);
+
+  // zero the array since dump may access it on timestep 0
+  // zero the array since a variable may access it before first run
+
+  int nlocal = grid->nlocal;
+  for (int i = 0; i < nlocal; i++)
+    for (int m = 0; m < nvalues; m++)
+      array[i][m] = 0.0;
+  
+  // nvalid = next step on which end_of_step does something
+
+  irepeat = 0;
+  nvalid = nextvalid();
+}
+
+/* ---------------------------------------------------------------------- */
+
+FixAveGrid::~FixAveGrid()
+{
+  // unregister callback to this fix from Grid class
+ 
+  //grid->delete_callback(id,0);
+
+  delete [] which;
+  delete [] argindex;
+  for (int m = 0; m < nvalues; m++) delete [] ids[m];
+  delete [] ids;
+  delete [] value2index;
+
+  memory->destroy(array);
+}
+
+/* ---------------------------------------------------------------------- */
+
+int FixAveGrid::setmask()
+{
+  int mask = 0;
+  mask |= END_OF_STEP;
+  return mask;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixAveGrid::init()
+{
+  // set indices and check validity of all computes,fixes,variables
+
+  for (int m = 0; m < nvalues; m++) {
+    if (which[m] == COMPUTE) {
+      int icompute = modify->find_compute(ids[m]);
+      if (icompute < 0)
+	error->all(FLERR,"Compute ID for fix ave/cell does not exist");
+      value2index[m] = icompute;
+      
+    } else if (which[m] == FIX) {
+      int ifix = modify->find_fix(ids[m]);
+      if (ifix < 0) 
+	error->all(FLERR,"Fix ID for fix ave/cell does not exist");
+      value2index[m] = ifix;
+
+    } else if (which[m] == VARIABLE) {
+      int ivariable = input->variable->find(ids[m]);
+      if (ivariable < 0) 
+	error->all(FLERR,"Variable name for fix ave/cell does not exist");
+      value2index[m] = ivariable;
+
+    } else value2index[m] = -1;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   only does something if nvalid = current timestep
+------------------------------------------------------------------------- */
+
+void FixAveGrid::setup(int vflag)
+{
+  end_of_step();
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixAveGrid::end_of_step()
+{
+  int i,j,m,n;
+
+  // skip if not step which requires doing something
+
+  bigint ntimestep = update->ntimestep;
+  if (ntimestep != nvalid) return;
+
+  // zero if first step
+
+  int nlocal = grid->nlocal;
+
+  if (irepeat == 0)
+    for (i = 0; i < nlocal; i++)
+      for (m = 0; m < nvalues; m++)
+	array[i][m] = 0.0;
+  
+  // accumulate results of attributes,computes,fixes,variables to local copy
+  // compute/fix/variable may invoke computes so wrap with clear/add
+
+  for (m = 0; m < nvalues; m++) {
+    n = value2index[m];
+    j = argindex[m];
+
+    // invoke compute if not previously invoked
+
+    if (which[m] == COMPUTE) {
+      Compute *compute = modify->compute[n];
+      if (!(compute->invoked_flag & INVOKED_PER_CELL)) {
+	compute->compute_per_cell();
+	compute->invoked_flag |= INVOKED_PER_CELL;
+      }
+
+      if (j == 0) {
+	double *compute_vector = compute->vector_cell;
+	for (i = 0; i < nlocal; i++)
+	  array[i][m] += compute_vector[i];
+      } else {
+	int jm1 = j - 1;
+	double **compute_array = compute->array_cell;
+	for (i = 0; i < nlocal; i++)
+	  array[i][m] += compute_array[i][jm1];
+      }
+
+    // access fix fields, guaranteed to be ready
+
+    } else if (which[m] == FIX) {
+      if (j == 0) {
+	double *fix_vector = modify->fix[n]->vector_cell;
+	for (i = 0; i < nlocal; i++)
+	  array[i][m] += fix_vector[i];
+      } else {
+	int jm1 = j - 1;
+	double **fix_array = modify->fix[n]->array_cell;
+	for (i = 0; i < nlocal; i++)
+	  array[i][m] += fix_array[i][jm1];
+      }
+
+    // evaluate cell-style variable
+    // final argument = 1 sums result to array
+
+    }
+    //} else if (which[m] == VARIABLE && array)
+    // input->variable->compute_cell(n,0,&array[0][m],nvalues,1);
+  }
+
+  // done if irepeat < nrepeat
+  // else reset irepeat and nvalid
+
+  irepeat++;
+  if (irepeat < nrepeat) {
+    nvalid += nevery;
+    return;
+  }
+
+  irepeat = 0;
+  nvalid = ntimestep+per_cell_freq - (nrepeat-1)*nevery;
+
+  // average the final result for the Nfreq timestep
+
+  double repeat = nrepeat;
+  for (i = 0; i < nlocal; i++)
+    for (m = 0; m < nvalues; m++)
+      array[i][m] /= repeat;
+}
+
+/* ----------------------------------------------------------------------
+   memory usage of local cell-based array
+------------------------------------------------------------------------- */
+
+double FixAveGrid::memory_usage()
+{
+  double bytes;
+  bytes = grid->nlocal*nvalues * sizeof(double);
+  return bytes;
+}
+
+/* ----------------------------------------------------------------------
+   calculate nvalid = next step on which end_of_step does something
+   can be this timestep if multiple of nfreq and nrepeat = 1
+   else backup from next multiple of nfreq
+------------------------------------------------------------------------- */
+
+bigint FixAveGrid::nextvalid()
+{
+  bigint nvalid = (update->ntimestep/per_cell_freq)*per_cell_freq + 
+    per_cell_freq;
+  if (nvalid-per_cell_freq == update->ntimestep && nrepeat == 1)
+    nvalid = update->ntimestep;
+  else
+    nvalid -= (nrepeat-1)*nevery;
+  if (nvalid < update->ntimestep) nvalid += per_cell_freq;
+  return nvalid;
+}

@@ -546,6 +546,16 @@ int Variable::particle_style(int ivar)
 }
 
 /* ----------------------------------------------------------------------
+   return 1 if variable is CELL style, 0 if not
+------------------------------------------------------------------------- */
+  
+int Variable::cell_style(int ivar)
+{
+  if (style[ivar] == CELL) return 1;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
    remove Nth variable from list and compact list
 ------------------------------------------------------------------------- */
   

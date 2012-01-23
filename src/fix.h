@@ -41,6 +41,8 @@ class Fix : protected Pointers {
 
   double *vector_particle;       // computed per-particle vector
   double **array_particle;       // computed per-particle array
+  double *vector_cell;           // computed per-cell vector
+  double **array_cell;           // computed per-cell array
 
   int START_OF_STEP,END_OF_STEP;    // mask settings
 

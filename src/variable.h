@@ -29,9 +29,11 @@ class Variable : protected Pointers {
   int find(char *);
   int equal_style(int);
   int particle_style(int);
+  int cell_style(int);
   char *retrieve(char *);
   double compute_equal(int);
   void compute_particle(int, double *, int, int);
+  void compute_cell(int, double *, int, int);
   int int_between_brackets(char *&);
   double evaluate_boolean(char *);
 
