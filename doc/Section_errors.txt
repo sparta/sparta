@@ -240,7 +240,7 @@ or create_box command. :dd
 
 UNDOCUMENTED :dd
 
-{Cannot create_particles before simulation box is defined} :dt
+{Cannot create_molecules before simulation box is defined} :dt
 
 UNDOCUMENTED :dd
 

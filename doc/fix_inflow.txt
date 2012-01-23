@@ -107,7 +107,7 @@ simulation box.
 
 [Related commands:]
 
-"mixture"_mixture.html, "create_particles"_create_particles.html
+"mixture"_mixture.html, "create_molecules"_create_molecules.html
 
 [Default:]
 
