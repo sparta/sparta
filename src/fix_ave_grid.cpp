@@ -158,11 +158,11 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   memory->create(pcount,nglocal,"ave/time:pcount");
 
   if (nvalues == 0)
-    memory->create(array_grid,nglocal,STANDARD,"ave/time:array_cell");
+    memory->create(array_grid,nglocal,STANDARD,"ave/time:array_grid");
   else if (nvalues == 1) 
-    memory->create(vector_grid,nglocal,"ave/time:vector_cell");
+    memory->create(vector_grid,nglocal,"ave/time:vector_grid");
   else
-    memory->create(array_grid,nglocal,nvalues,"ave/time:array_cell");
+    memory->create(array_grid,nglocal,nvalues,"ave/time:array_grid");
   
   // zero vector/array since dump may access it on timestep 0
   // zero vector/array since a variable may access it before first run
