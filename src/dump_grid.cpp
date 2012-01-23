@@ -37,7 +37,7 @@ enum{INT,DOUBLE};
 
 enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
 
-#define INVOKED_PER_CELL 16
+#define INVOKED_PER_GRID 16
 
 /* ---------------------------------------------------------------------- */
 
@@ -199,7 +199,7 @@ void DumpGrid::init_style()
     ifix = modify->find_fix(id_fix[i]);
     if (ifix < 0) error->all(FLERR,"Could not find dump grid fix ID");
     fix[i] = modify->fix[ifix];
-    if (nevery % modify->fix[ifix]->per_cell_freq)
+    if (nevery % modify->fix[ifix]->per_grid_freq)
       error->all(FLERR,"Dump grid and fix not computed at compatible times");
   }
 
@@ -364,18 +364,18 @@ int DumpGrid::parse_fields(int narg, char **arg)
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid compute ID");
-      if (modify->compute[n]->per_cell_flag == 0)
+      if (modify->compute[n]->per_grid_flag == 0)
 	error->all(FLERR,"Dump grid compute does not compute per-grid info");
-      if (argindex[i] == 0 && modify->compute[n]->size_per_cell_cols > 0)
+      if (argindex[i] == 0 && modify->compute[n]->size_per_grid_cols > 0)
 	error->all(FLERR,
 		   "Dump grid compute does not calculate "
 		   "per-grid vector");
-      if (argindex[i] > 0 && modify->compute[n]->size_per_cell_cols == 0)
+      if (argindex[i] > 0 && modify->compute[n]->size_per_grid_cols == 0)
 	error->all(FLERR,
 		   "Dump grid compute does not calculate "
 		   "per-grid array");
       if (argindex[i] > 0 && 
-	  argindex[i] > modify->compute[n]->size_per_cell_cols)
+	  argindex[i] > modify->compute[n]->size_per_grid_cols)
 	error->all(FLERR,
 		   "Dump grid compute vector is accessed out-of-range");
 
@@ -403,17 +403,17 @@ int DumpGrid::parse_fields(int narg, char **arg)
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid fix ID");
-      if (modify->fix[n]->per_cell_flag == 0)
+      if (modify->fix[n]->per_grid_flag == 0)
 	error->all(FLERR,"Dump grid fix does not compute "
 		   "per-grid info");
-      if (argindex[i] == 0 && modify->fix[n]->size_per_cell_cols > 0)
+      if (argindex[i] == 0 && modify->fix[n]->size_per_grid_cols > 0)
 	error->all(FLERR,"Dump grid fix does not compute "
 		   "per-grid vector");
-      if (argindex[i] > 0 && modify->fix[n]->size_per_cell_cols == 0)
+      if (argindex[i] > 0 && modify->fix[n]->size_per_grid_cols == 0)
 	error->all(FLERR,"Dump grid fix does not compute "
 		   "per-grid array");
       if (argindex[i] > 0 && 
-	  argindex[i] > modify->fix[n]->size_per_cell_cols)
+	  argindex[i] > modify->fix[n]->size_per_grid_cols)
 	error->all(FLERR,"Dump grid fix vector is accessed out-of-range");
 
       field2index[i] = add_fix(suffix);

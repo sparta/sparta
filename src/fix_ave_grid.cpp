@@ -32,7 +32,7 @@ enum{COMPUTE,FIX,VARIABLE};
 
 #define STANDARD 6
 
-#define INVOKED_PER_CELL 16
+#define INVOKED_PER_GRID 16
 
 /* ---------------------------------------------------------------------- */
 
@@ -43,7 +43,7 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
 
   nevery = atoi(arg[2]);
   nrepeat = atoi(arg[3]);
-  per_cell_freq = atoi(arg[4]);
+  per_grid_freq = atoi(arg[4]);
 
   // parse remaining values
 
@@ -94,9 +94,9 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   // setup and error check
   // for fix inputs, check that fix frequency is acceptable
 
-  if (nevery <= 0 || nrepeat <= 0 || per_cell_freq <= 0)
+  if (nevery <= 0 || nrepeat <= 0 || per_grid_freq <= 0)
     error->all(FLERR,"Illegal fix ave/grid command");
-  if (per_cell_freq % nevery || (nrepeat-1)*nevery >= per_cell_freq)
+  if (per_grid_freq % nevery || (nrepeat-1)*nevery >= per_grid_freq)
     error->all(FLERR,"Illegal fix ave/grid command");
 
   for (int i = 0; i < nvalues; i++) {
@@ -104,35 +104,35 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
       int icompute = modify->find_compute(ids[i]);
       if (icompute < 0)
 	error->all(FLERR,"Compute ID for fix ave/grid does not exist");
-      if (modify->compute[icompute]->per_cell_flag == 0)
+      if (modify->compute[icompute]->per_grid_flag == 0)
 	error->all(FLERR,
 		   "Fix ave/grid compute does not calculate per-cell values");
       if (argindex[i] == 0 && 
-	  modify->compute[icompute]->size_per_cell_cols != 0)
+	  modify->compute[icompute]->size_per_grid_cols != 0)
 	error->all(FLERR,"Fix ave/grid compute does not "
 		   "calculate a per-cell vector");
-      if (argindex[i] && modify->compute[icompute]->size_per_cell_cols == 0)
+      if (argindex[i] && modify->compute[icompute]->size_per_grid_cols == 0)
 	error->all(FLERR,"Fix ave/grid compute does not "
 		   "calculate a per-cell array");
       if (argindex[i] && 
-	  argindex[i] > modify->compute[icompute]->size_per_cell_cols)
+	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
 
     } else if (which[i] == FIX) {
       int ifix = modify->find_fix(ids[i]);
       if (ifix < 0)
 	error->all(FLERR,"Fix ID for fix ave/grid does not exist");
-      if (modify->fix[ifix]->per_cell_flag == 0)
+      if (modify->fix[ifix]->per_grid_flag == 0)
 	error->all(FLERR,"Fix ave/grid fix does not calculate per-cell values");
-      if (argindex[i] == 0 && modify->fix[ifix]->size_per_cell_cols != 0)
+      if (argindex[i] == 0 && modify->fix[ifix]->size_per_grid_cols != 0)
 	error->all(FLERR,
 		   "Fix ave/grid fix does not calculate a per-cell vector");
-      if (argindex[i] && modify->fix[ifix]->size_per_cell_cols == 0)
+      if (argindex[i] && modify->fix[ifix]->size_per_grid_cols == 0)
 	error->all(FLERR,
 		   "Fix ave/grid fix does not calculate a per-cell array");
-      if (argindex[i] && argindex[i] > modify->fix[ifix]->size_per_cell_cols)
+      if (argindex[i] && argindex[i] > modify->fix[ifix]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid fix array is accessed out-of-range");
-      if (nevery % modify->fix[ifix]->per_cell_freq)
+      if (nevery % modify->fix[ifix]->per_grid_freq)
 	error->all(FLERR,
 		   "Fix for fix ave/grid not computed at compatible time");
 
@@ -147,10 +147,10 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
 
   // this fix produces either a per-cell vector or array
 
-  per_cell_flag = 1;
-  if (nvalues == 0) size_per_cell_cols = STANDARD;
-  else if (nvalues == 1) size_per_cell_cols = 0;
-  else size_per_cell_cols = nvalues;
+  per_grid_flag = 1;
+  if (nvalues == 0) size_per_grid_cols = STANDARD;
+  else if (nvalues == 1) size_per_grid_cols = 0;
+  else size_per_grid_cols = nvalues;
 
   // perform initial allocation of cell-based count and vector/array
 
@@ -315,9 +315,9 @@ void FixAveGrid::end_of_step()
 
       if (which[m] == COMPUTE) {
 	Compute *compute = modify->compute[n];
-	if (!(compute->invoked_flag & INVOKED_PER_CELL)) {
-	  compute->compute_per_cell();
-	  compute->invoked_flag |= INVOKED_PER_CELL;
+	if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+	  compute->compute_per_grid();
+	  compute->invoked_flag |= INVOKED_PER_GRID;
 	}
 	
 	if (j == 0) {
@@ -382,7 +382,7 @@ void FixAveGrid::end_of_step()
   }
 
   irepeat = 0;
-  nvalid = ntimestep+per_cell_freq - (nrepeat-1)*nevery;
+  nvalid = ntimestep+per_grid_freq - (nrepeat-1)*nevery;
 
   // average the final result for the Nfreq timestep
 
@@ -421,12 +421,12 @@ double FixAveGrid::memory_usage()
 
 bigint FixAveGrid::nextvalid()
 {
-  bigint nvalid = (update->ntimestep/per_cell_freq)*per_cell_freq + 
-    per_cell_freq;
-  if (nvalid-per_cell_freq == update->ntimestep && nrepeat == 1)
+  bigint nvalid = (update->ntimestep/per_grid_freq)*per_grid_freq + 
+    per_grid_freq;
+  if (nvalid-per_grid_freq == update->ntimestep && nrepeat == 1)
     nvalid = update->ntimestep;
   else
     nvalid -= (nrepeat-1)*nevery;
-  if (nvalid < update->ntimestep) nvalid += per_cell_freq;
+  if (nvalid < update->ntimestep) nvalid += per_grid_freq;
   return nvalid;
 }
