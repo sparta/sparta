@@ -1,0 +1,48 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute ke/mol command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID ke/mol 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command
+<LI>ke/mol = style name of this compute command 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 ke/mol 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that calculates the per-atom translational
+kinetic energy for each molecule.
+</P>
+<P>The kinetic energy is simply 1/2 m v^2, where m is the mass and v is
+the velocity of each molecule.
+</P>
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-molecule vector, which can be accessed
+by any command that uses per-molecule values from a compute as input.
+</P>
+<P>The per-molecule vector values will be in energy <A HREF = "units.html">units</A>.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump.html">dump mol</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

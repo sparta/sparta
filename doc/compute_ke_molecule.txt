@@ -1,0 +1,43 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+compute ke/mol command :h3
+
+[Syntax:]
+
+compute ID ke/mol :pre
+
+ID is documented in "compute"_compute.html command
+ke/mol = style name of this compute command :ul
+
+[Examples:]
+
+compute 1 ke/mol :pre
+
+[Description:]
+
+Define a computation that calculates the per-atom translational
+kinetic energy for each molecule.
+
+The kinetic energy is simply 1/2 m v^2, where m is the mass and v is
+the velocity of each molecule.
+
+[Output info:]
+
+This compute calculates a per-molecule vector, which can be accessed
+by any command that uses per-molecule values from a compute as input.
+
+The per-molecule vector values will be in energy "units"_units.html.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"dump mol"_dump.html
+
+[Default:] none
