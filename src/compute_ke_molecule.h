@@ -14,23 +14,23 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(ke/particle,ComputeKEParticle)
+ComputeStyle(ke/mol,ComputeKEMolecule)
 
 #else
 
-#ifndef DSMC_COMPUTE_KE_PARTICLE_H
-#define DSMC_COMPUTE_KE_PARTICLE_H
+#ifndef DSMC_COMPUTE_KE_MOLECULE_H
+#define DSMC_COMPUTE_KE_MOLECULE_H
 
 #include "compute.h"
 
 namespace DSMC_NS {
 
-class ComputeKEParticle : public Compute {
+class ComputeKEMolecule : public Compute {
  public:
-  ComputeKEParticle(class DSMC *, int, char **);
-  ~ComputeKEParticle();
+  ComputeKEMolecule(class DSMC *, int, char **);
+  ~ComputeKEMolecule();
   void init();
-  void compute_per_particle();
+  void compute_per_molecule();
   double memory_usage();
 
  private:

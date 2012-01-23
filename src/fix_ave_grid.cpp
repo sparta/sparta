@@ -106,14 +106,14 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
 	error->all(FLERR,"Compute ID for fix ave/grid does not exist");
       if (modify->compute[icompute]->per_grid_flag == 0)
 	error->all(FLERR,
-		   "Fix ave/grid compute does not calculate per-cell values");
+		   "Fix ave/grid compute does not calculate per-grid values");
       if (argindex[i] == 0 && 
 	  modify->compute[icompute]->size_per_grid_cols != 0)
 	error->all(FLERR,"Fix ave/grid compute does not "
-		   "calculate a per-cell vector");
+		   "calculate a per-grid vector");
       if (argindex[i] && modify->compute[icompute]->size_per_grid_cols == 0)
 	error->all(FLERR,"Fix ave/grid compute does not "
-		   "calculate a per-cell array");
+		   "calculate a per-grid array");
       if (argindex[i] && 
 	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
@@ -123,13 +123,13 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
       if (ifix < 0)
 	error->all(FLERR,"Fix ID for fix ave/grid does not exist");
       if (modify->fix[ifix]->per_grid_flag == 0)
-	error->all(FLERR,"Fix ave/grid fix does not calculate per-cell values");
+	error->all(FLERR,"Fix ave/grid fix does not calculate per-grid values");
       if (argindex[i] == 0 && modify->fix[ifix]->size_per_grid_cols != 0)
 	error->all(FLERR,
-		   "Fix ave/grid fix does not calculate a per-cell vector");
+		   "Fix ave/grid fix does not calculate a per-grid vector");
       if (argindex[i] && modify->fix[ifix]->size_per_grid_cols == 0)
 	error->all(FLERR,
-		   "Fix ave/grid fix does not calculate a per-cell array");
+		   "Fix ave/grid fix does not calculate a per-grid array");
       if (argindex[i] && argindex[i] > modify->fix[ifix]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid fix array is accessed out-of-range");
       if (nevery % modify->fix[ifix]->per_grid_freq)
@@ -145,7 +145,7 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
     }
   }
 
-  // this fix produces either a per-cell vector or array
+  // this fix produces either a per-grid vector or array
 
   per_grid_flag = 1;
   if (nvalues == 0) size_per_grid_cols = STANDARD;

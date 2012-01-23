@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "string.h"
-#include "compute_ke_particle.h"
+#include "compute_ke_molecule.h"
 #include "particle.h"
 #include "update.h"
 #include "modify.h"
@@ -25,13 +25,13 @@ using namespace DSMC_NS;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeKEParticle::ComputeKEParticle(DSMC *dsmc, int narg, char **arg) :
+ComputeKEMolecule::ComputeKEMolecule(DSMC *dsmc, int narg, char **arg) :
   Compute(dsmc, narg, arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal compute ke/particle command");
+  if (narg != 2) error->all(FLERR,"Illegal compute ke/mol command");
 
-  per_particle_flag = 1;
-  size_per_particle_cols = 0;
+  per_molecule_flag = 1;
+  size_per_molecule_cols = 0;
 
   nmax = 0;
   ke = NULL;
@@ -39,27 +39,27 @@ ComputeKEParticle::ComputeKEParticle(DSMC *dsmc, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-ComputeKEParticle::~ComputeKEParticle()
+ComputeKEMolecule::~ComputeKEMolecule()
 {
   memory->destroy(ke);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeKEParticle::init()
+void ComputeKEMolecule::init()
 {
   int count = 0;
   for (int i = 0; i < modify->ncompute; i++)
-    if (strcmp(modify->compute[i]->style,"ke/particle") == 0) count++;
+    if (strcmp(modify->compute[i]->style,"ke/molecule") == 0) count++;
   if (count > 1 && comm->me == 0)
-    error->warning(FLERR,"More than one compute ke/particle");
+    error->warning(FLERR,"More than one compute ke/mol");
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeKEParticle::compute_per_particle()
+void ComputeKEMolecule::compute_per_molecule()
 {
-  invoked_per_particle = update->ntimestep;
+  invoked_per_molecule = update->ntimestep;
 
   // grow ke array if necessary
 
@@ -67,7 +67,7 @@ void ComputeKEParticle::compute_per_particle()
     memory->destroy(ke);
     nmax = particle->maxlocal;
     memory->create(ke,nmax,"particle/atom:ke");
-    vector_particle = ke;
+    vector_molecule = ke;
   }
 
   // compute kinetic energy for each atom in group
@@ -91,7 +91,7 @@ void ComputeKEParticle::compute_per_particle()
    memory usage of local atom-based array
 ------------------------------------------------------------------------- */
 
-double ComputeKEParticle::memory_usage()
+double ComputeKEMolecule::memory_usage()
 {
   double bytes = nmax * sizeof(double);
   return bytes;

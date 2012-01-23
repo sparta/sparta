@@ -78,7 +78,7 @@ void CollideVSS::init()
 	pow(2.0*(2.0-omega)*kboltz*tref,omega);
     }
 
-  // vremax = max relative velocity factors on per-cell, per-species basis
+  // vremax = max relative velocity factors on per-grid, per-species basis
   
   // NOTE: what is beta and OMEGA
   double beta = 1.0;

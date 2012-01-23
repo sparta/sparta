@@ -36,7 +36,7 @@ using namespace DSMC_NS;
 // customize a new keyword by adding to this list:
 
 // step, elapsed, dt, cpu, tpcpu, spcpu
-// npart, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi
+// nmol, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi
 
 enum{INT,FLOAT,BIGINT};
 enum{SCALAR,VECTOR,ARRAY};
@@ -72,7 +72,7 @@ Stats::Stats(DSMC *dsmc) : Pointers(dsmc)
   char **arg = new char*[3];
   arg[0] = (char *) "step";
   arg[1] = (char *) "cpu";
-  arg[2] = (char *) "npart";
+  arg[2] = (char *) "nmol";
 
   nfield = 3;
   allocate();
@@ -409,8 +409,8 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"spcpu") == 0) {
       addfield("S/CPU",&Stats::compute_spcpu,FLOAT);
 
-    } else if (strcmp(arg[i],"npart") == 0) {
-      addfield("Npart",&Stats::compute_npart,BIGINT);
+    } else if (strcmp(arg[i],"nmol") == 0) {
+      addfield("Nmol",&Stats::compute_nmol,BIGINT);
 
     } else if (strcmp(arg[i],"vol") == 0) {
       addfield("Volume",&Stats::compute_vol,FLOAT);
@@ -635,8 +635,8 @@ int Stats::evaluate_keyword(char *word, double *answer)
 		 "This variable stats keyword cannot be used between runs");
     compute_spcpu();
 
-  } else if (strcmp(word,"npart") == 0) {
-    compute_npart();
+  } else if (strcmp(word,"nmol") == 0) {
+    compute_nmol();
     dvalue = bivalue;
 
   } else if (strcmp(word,"vol") == 0) compute_vol();
@@ -777,7 +777,7 @@ void Stats::compute_spcpu()
 
 /* ---------------------------------------------------------------------- */
 
-void Stats::compute_npart()
+void Stats::compute_nmol()
 {
   bigint n = particle->nlocal;
   MPI_Allreduce(&n,&particle->nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);

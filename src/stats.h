@@ -50,7 +50,7 @@ class Stats : protected Pointers {
   double last_time;
   bigint last_step;
 
-  bigint npart;
+  bigint nmol;
                          // data used by routines that compute single values
   int ivalue;            // integer value to print
   double dvalue;         // double value to print
@@ -100,7 +100,7 @@ class Stats : protected Pointers {
   void compute_tpcpu();
   void compute_spcpu();
 
-  void compute_npart();
+  void compute_nmol();
 
   void compute_vol();
   void compute_lx();
