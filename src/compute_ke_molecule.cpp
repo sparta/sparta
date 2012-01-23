@@ -28,7 +28,7 @@ using namespace DSMC_NS;
 ComputeKEMolecule::ComputeKEMolecule(DSMC *dsmc, int narg, char **arg) :
   Compute(dsmc, narg, arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal compute ke/mol command");
+  if (narg != 2) error->all(FLERR,"Illegal compute ke/molecule command");
 
   per_molecule_flag = 1;
   size_per_molecule_cols = 0;
@@ -52,7 +52,7 @@ void ComputeKEMolecule::init()
   for (int i = 0; i < modify->ncompute; i++)
     if (strcmp(modify->compute[i]->style,"ke/molecule") == 0) count++;
   if (count > 1 && comm->me == 0)
-    error->warning(FLERR,"More than one compute ke/mol");
+    error->warning(FLERR,"More than one compute ke/molecule");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -66,7 +66,7 @@ void ComputeKEMolecule::compute_per_molecule()
   if (particle->nlocal > nmax) {
     memory->destroy(ke);
     nmax = particle->maxlocal;
-    memory->create(ke,nmax,"particle/atom:ke");
+    memory->create(ke,nmax,"ke/molecule:ke");
     vector_molecule = ke;
   }
 
