@@ -13,7 +13,7 @@ create_grid 	    10 10 10
 species		    ../data/vss.data N O
 mixture		    air N O
 
-create_particles    air n 100000
+create_molecules    air n 100000
 
 #collisions	    vss
 
