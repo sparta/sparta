@@ -38,7 +38,7 @@ enum{INT,DOUBLE,STRING};
 
 enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
 
-#define INVOKED_PER_PARTICLE 8
+#define INVOKED_PER_MOLECULE 8
 
 /* ---------------------------------------------------------------------- */
 
@@ -231,7 +231,7 @@ void DumpParticle::init_style()
     ifix = modify->find_fix(id_fix[i]);
     if (ifix < 0) error->all(FLERR,"Could not find dump particle fix ID");
     fix[i] = modify->fix[ifix];
-    if (nevery % modify->fix[ifix]->per_particle_freq)
+    if (nevery % modify->fix[ifix]->per_molecule_freq)
       error->all(FLERR,
 		 "Dump particle and fix not computed at compatible times");
   }
@@ -317,21 +317,21 @@ int DumpParticle::count()
     }
   }
 
-  // invoke Computes for per-particle quantities
+  // invoke Computes for per-molecule quantities
 
   if (ncompute) {
     for (i = 0; i < ncompute; i++)
-      if (!(compute[i]->invoked_flag & INVOKED_PER_PARTICLE)) {
-	compute[i]->compute_per_particle();
-	compute[i]->invoked_flag |= INVOKED_PER_PARTICLE;
+      if (!(compute[i]->invoked_flag & INVOKED_PER_MOLECULE)) {
+	compute[i]->compute_per_molecule();
+	compute[i]->invoked_flag |= INVOKED_PER_MOLECULE;
       }
   }
 
-  // evaluate particle-style Variables for per-particle quantities
+  // evaluate molecule-style Variables for per-molecule quantities
 
   if (nvariable)
     for (i = 0; i < nvariable; i++)
-      input->variable->compute_particle(variable[i],vbuf[i],1,0);
+      input->variable->compute_molecule(variable[i],vbuf[i],1,0);
 
   // choose all local particles for output
 
@@ -411,21 +411,21 @@ int DumpParticle::count()
       } else if (thresh_array[ithresh] == COMPUTE) {
 	i = nfield + ithresh;
 	if (argindex[i] == 0) {
-	  ptr = compute[field2index[i]]->vector_particle;
+	  ptr = compute[field2index[i]]->vector_molecule;
 	  nstride = 1;
 	} else {
-	  ptr = &compute[field2index[i]]->array_particle[0][argindex[i]-1];
-	  nstride = compute[field2index[i]]->size_per_particle_cols;
+	  ptr = &compute[field2index[i]]->array_molecule[0][argindex[i]-1];
+	  nstride = compute[field2index[i]]->size_per_molecule_cols;
 	}
 
       } else if (thresh_array[ithresh] == FIX) {
 	i = nfield + ithresh;
 	if (argindex[i] == 0) {
-	  ptr = fix[field2index[i]]->vector_particle;
+	  ptr = fix[field2index[i]]->vector_molecule;
 	  nstride = 1;
 	} else {
-	  ptr = &fix[field2index[i]]->array_particle[0][argindex[i]-1];
-	  nstride = fix[field2index[i]]->size_per_particle_cols;
+	  ptr = &fix[field2index[i]]->array_molecule[0][argindex[i]-1];
+	  nstride = fix[field2index[i]]->size_per_molecule_cols;
 	}
 
       } else if (thresh_array[ithresh] == VARIABLE) {
@@ -580,19 +580,19 @@ int DumpParticle::parse_fields(int narg, char **arg)
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle compute ID");
-      if (modify->compute[n]->per_particle_flag == 0)
+      if (modify->compute[n]->per_molecule_flag == 0)
 	error->all(FLERR,
-		   "Dump particle compute does not compute per-particle info");
-      if (argindex[i] == 0 && modify->compute[n]->size_per_particle_cols > 0)
-	error->all(FLERR,
-		   "Dump particle compute does not calculate "
-		   "per-particle vector");
-      if (argindex[i] > 0 && modify->compute[n]->size_per_particle_cols == 0)
+		   "Dump particle compute does not compute per-molecule info");
+      if (argindex[i] == 0 && modify->compute[n]->size_per_molecule_cols > 0)
 	error->all(FLERR,
 		   "Dump particle compute does not calculate "
-		   "per-particle array");
+		   "per-molecule vector");
+      if (argindex[i] > 0 && modify->compute[n]->size_per_molecule_cols == 0)
+	error->all(FLERR,
+		   "Dump particle compute does not calculate "
+		   "per-molecule array");
       if (argindex[i] > 0 && 
-	  argindex[i] > modify->compute[n]->size_per_particle_cols)
+	  argindex[i] > modify->compute[n]->size_per_molecule_cols)
 	error->all(FLERR,
 		   "Dump particle compute vector is accessed out-of-range");
 
@@ -620,17 +620,17 @@ int DumpParticle::parse_fields(int narg, char **arg)
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle fix ID");
-      if (modify->fix[n]->per_particle_flag == 0)
+      if (modify->fix[n]->per_molecule_flag == 0)
 	error->all(FLERR,"Dump particle fix does not compute "
-		   "per-particle info");
-      if (argindex[i] == 0 && modify->fix[n]->size_per_particle_cols > 0)
+		   "per-molecule info");
+      if (argindex[i] == 0 && modify->fix[n]->size_per_molecule_cols > 0)
 	error->all(FLERR,"Dump particle fix does not compute "
-		   "per-particle vector");
-      if (argindex[i] > 0 && modify->fix[n]->size_per_particle_cols == 0)
+		   "per-molecule vector");
+      if (argindex[i] > 0 && modify->fix[n]->size_per_molecule_cols == 0)
 	error->all(FLERR,"Dump particle fix does not compute "
-		   "per-particle array");
+		   "per-molecule array");
       if (argindex[i] > 0 && 
-	  argindex[i] > modify->fix[n]->size_per_particle_cols)
+	  argindex[i] > modify->fix[n]->size_per_molecule_cols)
 	error->all(FLERR,"Dump particle fix vector is accessed out-of-range");
 
       field2index[i] = add_fix(suffix);
@@ -650,9 +650,9 @@ int DumpParticle::parse_fields(int narg, char **arg)
 
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle variable name");
-      if (input->variable->particle_style(n) == 0)
+      if (input->variable->molecule_style(n) == 0)
 	error->all(FLERR,"Dump particle variable is not "
-		   "particle-style variable");
+		   "molecule-style variable");
 
       field2index[i] = add_variable(suffix);
       delete [] suffix;
@@ -810,21 +810,21 @@ int DumpParticle::modify_param(int narg, char **arg)
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify compute ID");
 
-      if (modify->compute[n]->per_particle_flag == 0)
+      if (modify->compute[n]->per_molecule_flag == 0)
 	error->all(FLERR,
-		   "Dump modify compute ID does not compute per-particle info");
+		   "Dump modify compute ID does not compute per-molecule info");
       if (argindex[nfield+nthresh] == 0 && 
-	  modify->compute[n]->size_per_particle_cols > 0)
+	  modify->compute[n]->size_per_molecule_cols > 0)
 	error->all(FLERR,
 		   "Dump modify compute ID does not compute "
-		   "per-particle vector");
+		   "per-molecule vector");
       if (argindex[nfield+nthresh] > 0 && 
-	  modify->compute[n]->size_per_particle_cols == 0)
+	  modify->compute[n]->size_per_molecule_cols == 0)
 	error->all(FLERR,
 		   "Dump modify compute ID does not compute "
-		   "per-particle array");
+		   "per-molecule array");
       if (argindex[nfield+nthresh] > 0 && 
-	  argindex[nfield+nthresh] > modify->compute[n]->size_per_particle_cols)
+	  argindex[nfield+nthresh] > modify->compute[n]->size_per_molecule_cols)
 	error->all(FLERR,"Dump modify compute ID vector is not large enough");
 
       field2index[nfield+nthresh] = add_compute(suffix);
@@ -853,19 +853,19 @@ int DumpParticle::modify_param(int narg, char **arg)
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify fix ID");
 
-      if (modify->fix[n]->per_particle_flag == 0)
+      if (modify->fix[n]->per_molecule_flag == 0)
 	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-particle info");
+		   "per-molecule info");
       if (argindex[nfield+nthresh] == 0 && 
-	  modify->fix[n]->size_per_particle_cols > 0)
+	  modify->fix[n]->size_per_molecule_cols > 0)
 	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-particle vector");
+		   "per-molecule vector");
       if (argindex[nfield+nthresh] > 0 && 
-	  modify->fix[n]->size_per_particle_cols == 0)
+	  modify->fix[n]->size_per_molecule_cols == 0)
 	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-particle array");
+		   "per-molecule array");
       if (argindex[nfield+nthresh] > 0 && 
-	  argindex[nfield+nthresh] > modify->fix[n]->size_per_particle_cols)
+	  argindex[nfield+nthresh] > modify->fix[n]->size_per_molecule_cols)
 	error->all(FLERR,"Dump modify fix ID vector is not large enough");
 
       field2index[nfield+nthresh] = add_fix(suffix);
@@ -886,8 +886,8 @@ int DumpParticle::modify_param(int narg, char **arg)
       
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify variable name");
-      if (input->variable->particle_style(n) == 0)
-	error->all(FLERR,"Dump modify variable is not particle-style variable");
+      if (input->variable->molecule_style(n) == 0)
+	error->all(FLERR,"Dump modify variable is not molecule-style variable");
 
       field2index[nfield+nthresh] = add_variable(suffix);
       delete [] suffix;
@@ -934,8 +934,8 @@ bigint DumpParticle::memory_usage()
 
 void DumpParticle::pack_compute(int n)
 {
-  double *vector = compute[field2index[n]]->vector_particle;
-  double **array = compute[field2index[n]]->array_particle;
+  double *vector = compute[field2index[n]]->vector_molecule;
+  double **array = compute[field2index[n]]->array_molecule;
   int index = argindex[n];
 
   if (index == 0) {
@@ -956,8 +956,8 @@ void DumpParticle::pack_compute(int n)
 
 void DumpParticle::pack_fix(int n)
 {
-  double *vector = fix[field2index[n]]->vector_particle;
-  double **array = fix[field2index[n]]->array_particle;
+  double *vector = fix[field2index[n]]->vector_molecule;
+  double **array = fix[field2index[n]]->array_molecule;
   int index = argindex[n];
 
   if (index == 0) {

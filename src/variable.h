@@ -28,11 +28,11 @@ class Variable : protected Pointers {
   int next(int, char **);
   int find(char *);
   int equal_style(int);
-  int particle_style(int);
-  int cell_style(int);
+  int molecule_style(int);
+  int grid_style(int);
   char *retrieve(char *);
   double compute_equal(int);
-  void compute_particle(int, double *, int, int);
+  void compute_molecule(int, double *, int, int);
   void compute_grid(int, double *, int, int);
   int int_between_brackets(char *&);
   double evaluate_boolean(char *);
@@ -76,8 +76,8 @@ class Variable : protected Pointers {
   int math_function(char *, char *, Tree **, Tree **, int &, double *, int &);
   int special_function(char *, char *, Tree **, Tree **, 
 		       int &, double *, int &);
-  int is_particle_vector(char *);
-  void particle_vector(char *, Tree **, Tree **, int &);
+  int is_molecule_vector(char *);
+  void molecule_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
   double numeric(char *);

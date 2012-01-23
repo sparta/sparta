@@ -27,7 +27,7 @@ class Compute : protected Pointers {
   double *vector;           // computed global vector
   double **array;           // computed global array
   double *vector_molecule;  // computed per-molecule vector
-  double **array_moleclue;  // computed per-molecule array
+  double **array_molecule;  // computed per-molecule array
   double *vector_grid;      // computed per-grid vector
   double **array_grid;      // computed per-grid array
 

@@ -140,8 +140,8 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
       int ivariable = input->variable->find(ids[i]);
       if (ivariable < 0)
 	error->all(FLERR,"Variable name for fix ave/grid does not exist");
-      if (input->variable->cell_style(ivariable) == 0)
-	error->all(FLERR,"Fix ave/grid variable is not cell-style variable");
+      if (input->variable->grid_style(ivariable) == 0)
+	error->all(FLERR,"Fix ave/grid variable is not grid-style variable");
     }
   }
 

@@ -39,7 +39,7 @@ using namespace DSMC_NS;
 
 #define MYROUND(a) (( a-floor(a) ) >= .5) ? ceil(a) : floor(a)
 
-enum{INDEX,LOOP,WORLD,UNIVERSE,ULOOP,STRING,EQUAL,PARTICLE,CELL};
+enum{INDEX,LOOP,WORLD,UNIVERSE,ULOOP,STRING,EQUAL,MOLECULE,GRID};
 enum{ARG,OP};
 
 // customize by adding a function
@@ -58,7 +58,8 @@ enum{SUM,XMIN,XMAX,AVE,TRAP};
 #define INVOKED_SCALAR 1
 #define INVOKED_VECTOR 2
 #define INVOKED_ARRAY 4
-#define INVOKED_PER_PARTICLE 8
+#define INVOKED_PER_MOLECULE 8
+#define INVOKED_PER_GRID 16
 
 #define BIG 1.0e20
 
@@ -284,20 +285,20 @@ void Variable::set(int narg, char **arg)
     copy(1,&arg[2],data[nvar]);
     data[nvar][1] = NULL;
     
-  // PARTICLE
-  // remove pre-existing var if also style PARTICLE (allows it to be reset)
+  // MOLECULE
+  // remove pre-existing var if also style MOLECULE (allows it to be reset)
   // num = 1, which = 1st value
   // data = 1 value, string to eval
 
-  } else if (strcmp(arg[1],"particle") == 0) {
+  } else if (strcmp(arg[1],"mol") == 0) {
     if (narg != 3) error->all(FLERR,"Illegal variable command");
     if (find(arg[0]) >= 0) {
-      if (style[find(arg[0])] != PARTICLE)
+      if (style[find(arg[0])] != MOLECULE)
 	error->all(FLERR,"Cannot redefine variable as a different style");
       remove(find(arg[0]));
     }
     if (nvar == maxvar) extend();
-    style[nvar] = PARTICLE;
+    style[nvar] = MOLECULE;
     num[nvar] = 1;
     which[nvar] = 0;
     pad[nvar] = 0;
@@ -360,11 +361,11 @@ int Variable::next(int narg, char **arg)
       error->all(FLERR,"All variables in next command must be same style");
   }
 
-  // invalid styles STRING or EQUAL or WORLD or PARTICLE
+  // invalid styles STRING or EQUAL or WORLD or MOLECULE
 
   int istyle = style[find(arg[0])];
   if (istyle == STRING || istyle == EQUAL || istyle == WORLD || 
-      istyle == PARTICLE)
+      istyle == MOLECULE)
     error->all(FLERR,"Invalid variable style with next command");
 
   // increment all variables in list
@@ -430,7 +431,7 @@ int Variable::next(int narg, char **arg)
    if INDEX or WORLD or UNIVERSE or STRING var, return ptr to stored string
    if LOOP or ULOOP var, write int to data[0] and return ptr to string
    if EQUAL var, evaluate variable and put result in str
-   if PARTICLE var, return NULL
+   if MOLECULE var, return NULL
    return NULL if no variable or which is bad, caller must respond
 ------------------------------------------------------------------------- */
 
@@ -466,7 +467,7 @@ char *Variable::retrieve(char *name)
     data[ivar][1] = new char[n];
     strcpy(data[ivar][1],result);
     str = data[ivar][1];
-  } else if (style[ivar] == PARTICLE) return NULL;
+  } else if (style[ivar] == MOLECULE) return NULL;
 
   return str;
 }
@@ -481,12 +482,12 @@ double Variable::compute_equal(int ivar)
 }
 
 /* ----------------------------------------------------------------------
-   compute result of particle-style variable evaluation
+   compute result of molecule-style variable evaluation
    answers are placed every stride locations into result
    if sumflag, add variable values to existing result
 ------------------------------------------------------------------------- */
 
-void Variable::compute_particle(int ivar, double *result,
+void Variable::compute_molecule(int ivar, double *result,
 				int stride, int sumflag)
 {
   Tree *tree;
@@ -536,22 +537,22 @@ int Variable::equal_style(int ivar)
 }
 
 /* ----------------------------------------------------------------------
-   return 1 if variable is PARTICLE style, 0 if not
+   return 1 if variable is MOLECULE style, 0 if not
 ------------------------------------------------------------------------- */
   
-int Variable::particle_style(int ivar)
+int Variable::molecule_style(int ivar)
 {
-  if (style[ivar] == PARTICLE) return 1;
+  if (style[ivar] == MOLECULE) return 1;
   return 0;
 }
 
 /* ----------------------------------------------------------------------
-   return 1 if variable is CELL style, 0 if not
+   return 1 if variable is GRID style, 0 if not
 ------------------------------------------------------------------------- */
   
-int Variable::cell_style(int ivar)
+int Variable::grid_style(int ivar)
 {
-  if (style[ivar] == CELL) return 1;
+  if (style[ivar] == GRID) return 1;
   return 0;
 }
 
@@ -625,7 +626,7 @@ void Variable::copy(int narg, char **from, char **to)
      variable = v_name
    equal-style variables passes in tree = NULL:
      evaluate the formula, return result as a double
-   particle-style variable passes in tree = non-NULL:
+   molecule-style variable passes in tree = non-NULL:
      parse the formula but do not evaluate it
      create a parse tree and return it
 ------------------------------------------------------------------------- */
@@ -845,54 +846,54 @@ double Variable::evaluate(char *str, Tree **tree)
 	    treestack[ntreestack++] = newtree;
 	  } else argstack[nargstack++] = value1;
 
-        // c_ID = vector from per-particle vector
+        // c_ID = vector from per-molecule vector
 
-	} else if (nbracket == 0 && compute->per_particle_flag && 
-		   compute->size_per_particle_cols == 0) {
+	} else if (nbracket == 0 && compute->per_molecule_flag && 
+		   compute->size_per_molecule_cols == 0) {
 
 	  if (tree == NULL)
 	    error->all(FLERR,
-		       "Per-particle compute in equal-style variable formula");
+		       "Per-molecule compute in equal-style variable formula");
 	  if (update->runflag == 0) {
-	    if (compute->invoked_per_particle != update->ntimestep)
+	    if (compute->invoked_per_molecule != update->ntimestep)
 	      error->all(FLERR,"Compute used in variable between runs "
 			 "is not current");
-	  } else if (!(compute->invoked_flag & INVOKED_PER_PARTICLE)) {
-	    compute->compute_per_particle();
-	    compute->invoked_flag |= INVOKED_PER_PARTICLE;
+	  } else if (!(compute->invoked_flag & INVOKED_PER_MOLECULE)) {
+	    compute->compute_per_molecule();
+	    compute->invoked_flag |= INVOKED_PER_MOLECULE;
 	  }
 
 	  Tree *newtree = new Tree();
 	  newtree->type = ARRAY;
-	  newtree->array = compute->vector_particle;
+	  newtree->array = compute->vector_molecule;
 	  newtree->nstride = 1;
 	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
 
-        // c_ID[i] = vector from per-particle array
+        // c_ID[i] = vector from per-molecule array
 
-	} else if (nbracket == 1 && compute->per_particle_flag &&
-		   compute->size_per_particle_cols > 0) {
+	} else if (nbracket == 1 && compute->per_molecule_flag &&
+		   compute->size_per_molecule_cols > 0) {
 
 	  if (tree == NULL)
 	    error->all(FLERR,
-		       "Per-particle compute in equal-style variable formula");
-	  if (index1 > compute->size_per_particle_cols)
+		       "Per-molecule compute in equal-style variable formula");
+	  if (index1 > compute->size_per_molecule_cols)
 	    error->all(FLERR,"Variable formula compute array "
 		       "is accessed out-of-range");
 	  if (update->runflag == 0) {
-	    if (compute->invoked_per_particle != update->ntimestep)
+	    if (compute->invoked_per_molecule != update->ntimestep)
 	      error->all(FLERR,"Compute used in variable between runs "
 			 "is not current");
-	  } else if (!(compute->invoked_flag & INVOKED_PER_PARTICLE)) {
-	    compute->compute_per_particle();
-	    compute->invoked_flag |= INVOKED_PER_PARTICLE;
+	  } else if (!(compute->invoked_flag & INVOKED_PER_MOLECULE)) {
+	    compute->compute_per_molecule();
+	    compute->invoked_flag |= INVOKED_PER_MOLECULE;
 	  }
 
 	  Tree *newtree = new Tree();
 	  newtree->type = ARRAY;
-	  newtree->array = &compute->array_particle[0][index1-1];
-	  newtree->nstride = compute->size_per_particle_cols;
+	  newtree->array = &compute->array_molecule[0][index1-1];
+	  newtree->nstride = compute->size_per_molecule_cols;
 	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
 
@@ -993,44 +994,44 @@ double Variable::evaluate(char *str, Tree **tree)
 	    treestack[ntreestack++] = newtree;
 	  } else argstack[nargstack++] = value1;
 
-        // f_ID = vector from per-particle vector
+        // f_ID = vector from per-molecule vector
 
-	} else if (nbracket == 0 && fix->per_particle_flag && 
-		   fix->size_per_particle_cols == 0) {
+	} else if (nbracket == 0 && fix->per_molecule_flag && 
+		   fix->size_per_molecule_cols == 0) {
 
 	  if (tree == NULL)
 	    error->all(FLERR,
-		       "Per-particle fix in equal-style variable formula");
+		       "Per-molecule fix in equal-style variable formula");
 	  if (update->runflag > 0 && 
-	      update->ntimestep % fix->per_particle_freq)
+	      update->ntimestep % fix->per_molecule_freq)
 	    error->all(FLERR,"Fix in variable not computed at compatible time");
 
 	  Tree *newtree = new Tree();
 	  newtree->type = ARRAY;
-	  newtree->array = fix->vector_particle;
+	  newtree->array = fix->vector_molecule;
 	  newtree->nstride = 1;
 	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
 
-        // f_ID[i] = vector from per-particle array
+        // f_ID[i] = vector from per-molecule array
 
-	} else if (nbracket == 1 && fix->per_particle_flag &&
-		   fix->size_per_particle_cols > 0) {
+	} else if (nbracket == 1 && fix->per_molecule_flag &&
+		   fix->size_per_molecule_cols > 0) {
 
 	  if (tree == NULL)
 	    error->all(FLERR,
-		       "Per-particle fix in equal-style variable formula");
-	  if (index1 > fix->size_per_particle_cols)
+		       "Per-molecule fix in equal-style variable formula");
+	  if (index1 > fix->size_per_molecule_cols)
 	    error->all(FLERR,
 		       "Variable formula fix array is accessed out-of-range");
 	  if (update->runflag > 0 && 
-	      update->ntimestep % fix->per_particle_freq)
+	      update->ntimestep % fix->per_molecule_freq)
 	    error->all(FLERR,"Fix in variable not computed at compatible time");
 
 	  Tree *newtree = new Tree();
 	  newtree->type = ARRAY;
-	  newtree->array = &fix->array_particle[0][index1-1];
-	  newtree->nstride = fix->size_per_particle_cols;
+	  newtree->array = &fix->array_molecule[0][index1-1];
+	  newtree->nstride = fix->size_per_molecule_cols;
 	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
 
@@ -1065,7 +1066,7 @@ double Variable::evaluate(char *str, Tree **tree)
 
         // v_name = scalar from non particle-style global scalar
 
-	if (nbracket == 0 && style[ivar] != PARTICLE) {
+	if (nbracket == 0 && style[ivar] != MOLECULE) {
 
 	  char *var = retrieve(id);
 	  if (var == NULL)
@@ -1078,9 +1079,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	    treestack[ntreestack++] = newtree;
 	  } else argstack[nargstack++] = atof(var);
 
-        // v_name = vector from particle-style per-particle vector
+        // v_name = vector from particle-style per-molecule vector
 
-	} else if (nbracket == 0 && style[ivar] == PARTICLE) {
+	} else if (nbracket == 0 && style[ivar] == MOLECULE) {
 
 	  if (tree == NULL)
 	    error->all(FLERR,
@@ -1120,11 +1121,11 @@ double Variable::evaluate(char *str, Tree **tree)
 	// atom vector
 	// ----------------
 
-	} else if (is_particle_vector(word)) {
+	} else if (is_molecule_vector(word)) {
 	  if (domain->box_exist == 0)
 	    error->all(FLERR,
 		       "Variable evaluation before simulation box is defined");
-	  particle_vector(word,tree,treestack,ntreestack);
+	  molecule_vector(word,tree,treestack,ntreestack);
 
 	// ----------------
 	// constant
@@ -2460,7 +2461,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
      mass,type,x,y,z,vx,vy,vz,fx,fy,fz
 ------------------------------------------------------------------------- */
 
-int Variable::is_particle_vector(char *word)
+int Variable::is_molecule_vector(char *word)
 {
   if (strcmp(word,"mass") == 0) return 1;
   if (strcmp(word,"type") == 0) return 1;
@@ -2484,7 +2485,7 @@ int Variable::is_particle_vector(char *word)
      mass,type,x,y,z,vx,vy,vz,fx,fy,fz
 ------------------------------------------------------------------------- */
 
-void Variable::particle_vector(char *word, Tree **tree,
+void Variable::molecule_vector(char *word, Tree **tree,
 			       Tree **treestack, int &ntreestack)
 {
   if (tree == NULL)

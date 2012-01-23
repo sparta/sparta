@@ -31,16 +31,16 @@ class Fix : protected Pointers {
   int size_array_cols;           // columns in global array
   int global_freq;               // frequency s/v data is available at
 
-  int per_particle_flag;         // 0/1 if per-particle data is stored
-  int size_per_particle_cols;    // 0 = vector, N = cols in per-particle array
-  int per_particle_freq;         // frequency per-particle data is available at
+  int per_molecule_flag;         // 0/1 if per-molecule data is stored
+  int size_per_molecule_cols;    // 0 = vector, N = cols in per-molecule array
+  int per_molecule_freq;         // frequency per-molecule data is available at
 
   int per_grid_flag;             // 0/1 if per-grid data is stored
   int size_per_grid_cols;        // 0 = vector, N = cols in per-grid array
   int per_grid_freq;             // frequency per-grid data is available at
 
-  double *vector_particle;       // computed per-particle vector
-  double **array_particle;       // computed per-particle array
+  double *vector_molecule;       // computed per-molecule vector
+  double **array_molecule;       // computed per-molecule array
   double *vector_grid;           // computed per-grid vector
   double **array_grid;           // computed per-grid array
 

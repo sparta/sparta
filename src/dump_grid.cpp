@@ -433,7 +433,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
 
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid variable name");
-      if (input->variable->cell_style(n) == 0)
+      if (input->variable->grid_style(n) == 0)
 	error->all(FLERR,"Dump grid variable is not grid-style variable");
 
       field2index[i] = add_variable(suffix);
