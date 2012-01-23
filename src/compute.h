@@ -28,8 +28,8 @@ class Compute : protected Pointers {
   double **array;           // computed global array
   double *vector_particle;  // computed per-particle vector
   double **array_particle;  // computed per-particle array
-  double *vector_cell;      // computed per-cell vector
-  double **array_cell;      // computed per-cell array
+  double *vector_grid;      // computed per-cell vector
+  double **array_grid;      // computed per-cell array
 
   int scalar_flag;          // 0/1 if compute_scalar() function exists
   int vector_flag;          // 0/1 if compute_vector() function exists
@@ -41,7 +41,7 @@ class Compute : protected Pointers {
   int per_particle_flag;      // 0/1 if compute_per_particle() function exists
   int size_per_particle_cols; // 0 = vector, N = columns in per-particle array
 
-  int per_grid_flag;          // 0/1 if compute_per_cell() function exists
+  int per_grid_flag;          // 0/1 if compute_per_grid() function exists
   int size_per_grid_cols;     // 0 = vector, N = columns in per-cell array
 
   int invoked_flag;       // non-zero if invoked or accessed this step, 0 if not
@@ -49,7 +49,7 @@ class Compute : protected Pointers {
   bigint invoked_vector;       // ditto for compute_vector()
   bigint invoked_array;        // ditto for compute_array()
   bigint invoked_per_particle; // ditto for compute_per_particle()
-  bigint invoked_per_grid;     // ditto for compute_per_cell()
+  bigint invoked_per_grid;     // ditto for compute_per_grid()
 
   Compute(class DSMC *, int, char **);
   virtual ~Compute();

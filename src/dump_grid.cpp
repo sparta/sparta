@@ -530,8 +530,8 @@ int DumpGrid::add_variable(char *id)
 
 void DumpGrid::pack_compute(int n)
 {
-  double *vector = compute[field2index[n]]->vector_cell;
-  double **array = compute[field2index[n]]->array_cell;
+  double *vector = compute[field2index[n]]->vector_grid;
+  double **array = compute[field2index[n]]->array_grid;
   int index = argindex[n];
 
   printf("AAA %d\n",index);
@@ -554,8 +554,8 @@ void DumpGrid::pack_compute(int n)
 
 void DumpGrid::pack_fix(int n)
 {
-  double *vector = fix[field2index[n]]->vector_cell;
-  double **array = fix[field2index[n]]->array_cell;
+  double *vector = fix[field2index[n]]->vector_grid;
+  double **array = fix[field2index[n]]->array_grid;
   int index = argindex[n];
 
   if (index == 0) {

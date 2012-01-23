@@ -158,11 +158,11 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   memory->create(pcount,nglocal,"ave/time:pcount");
 
   if (nvalues == 0)
-    memory->create(array_cell,nglocal,STANDARD,"ave/time:array_cell");
+    memory->create(array_grid,nglocal,STANDARD,"ave/time:array_cell");
   else if (nvalues == 1) 
-    memory->create(vector_cell,nglocal,"ave/time:vector_cell");
+    memory->create(vector_grid,nglocal,"ave/time:vector_cell");
   else
-    memory->create(array_cell,nglocal,nvalues,"ave/time:array_cell");
+    memory->create(array_grid,nglocal,nvalues,"ave/time:array_cell");
   
   // zero vector/array since dump may access it on timestep 0
   // zero vector/array since a variable may access it before first run
@@ -170,14 +170,14 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   if (nvalues == 0) {
     for (int i = 0; i < nglocal; i++)
       for (int m = 0; m < STANDARD; m++)
-	array_cell[i][m] = 0.0;
+	array_grid[i][m] = 0.0;
   } else if (nvalues == 0) {
     for (int i = 0; i < nglocal; i++)
-      vector_cell[i] = 0.0;
+      vector_grid[i] = 0.0;
   } else {
     for (int i = 0; i < nglocal; i++)
       for (int m = 0; m < nvalues; m++)
-	array_cell[i][m] = 0.0;
+	array_grid[i][m] = 0.0;
   }
 
   // nvalid = next step on which end_of_step does something
@@ -197,9 +197,9 @@ FixAveGrid::~FixAveGrid()
   delete [] value2index;
 
   memory->destroy(pcount);
-  if (nvalues == 0) memory->destroy(array_cell);
-  else if (nvalues == 1) memory->destroy(vector_cell);
-  else memory->destroy(array_cell);
+  if (nvalues == 0) memory->destroy(array_grid);
+  else if (nvalues == 1) memory->destroy(vector_grid);
+  else memory->destroy(array_grid);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -269,14 +269,14 @@ void FixAveGrid::end_of_step()
     if (nvalues == 0) {
       for (i = 0; i < nglocal; i++)
 	for (m = 0; m < STANDARD; m++)
-	  array_cell[i][m] = 0.0;
+	  array_grid[i][m] = 0.0;
     } else if (nvalues == 1) {
       for (i = 0; i < nglocal; i++)
-	vector_cell[i] = 0.0;
+	vector_grid[i] = 0.0;
     } else {
       for (i = 0; i < nglocal; i++)
 	for (m = 0; m < nvalues; m++)
-	  array_cell[i][m] = 0.0;
+	  array_grid[i][m] = 0.0;
     }
   }
 
@@ -297,7 +297,7 @@ void FixAveGrid::end_of_step()
       pcount[ilocal]++;
 
       v = particles[i].v;
-      row = array_cell[ilocal];
+      row = array_grid[ilocal];
       row[0] += v[0];
       row[1] += v[1];
       row[2] += v[2];
@@ -321,23 +321,23 @@ void FixAveGrid::end_of_step()
 	}
 	
 	if (j == 0) {
-	  double *compute_vector = compute->vector_cell;
+	  double *compute_vector = compute->vector_grid;
 	  if (nvalues == 1) {
 	    for (i = 0; i < nglocal; i++)
-	      vector_cell[i] += compute_vector[i];
+	      vector_grid[i] += compute_vector[i];
 	  } else {
 	    for (i = 0; i < nglocal; i++)
-	      array_cell[i][m] += compute_vector[i];
+	      array_grid[i][m] += compute_vector[i];
 	  }
 	} else {
 	  int jm1 = j - 1;
-	  double **compute_array = compute->array_cell;
+	  double **compute_array = compute->array_grid;
 	  if (nvalues == 1) {
 	    for (i = 0; i < nglocal; i++)
-	      vector_cell[i] += compute_array[i][jm1];
+	      vector_grid[i] += compute_array[i][jm1];
 	  } else {
 	    for (i = 0; i < nglocal; i++)
-	      array_cell[i][m] += compute_array[i][jm1];
+	      array_grid[i][m] += compute_array[i][jm1];
 	  }
 	}
 	
@@ -345,23 +345,23 @@ void FixAveGrid::end_of_step()
 	
       } else if (which[m] == FIX) {
 	if (j == 0) {
-	  double *fix_vector = modify->fix[n]->vector_cell;
+	  double *fix_vector = modify->fix[n]->vector_grid;
 	  if (nvalues == 1) {
 	    for (i = 0; i < nglocal; i++)
-	      vector_cell[i] += fix_vector[i];
+	      vector_grid[i] += fix_vector[i];
 	  } else {
 	    for (i = 0; i < nglocal; i++)
-	      array_cell[i][m] += fix_vector[i];
+	      array_grid[i][m] += fix_vector[i];
 	  }
 	} else {
 	  int jm1 = j - 1;
-	  double **fix_array = modify->fix[n]->array_cell;
+	  double **fix_array = modify->fix[n]->array_grid;
 	  if (nvalues == 1) {
 	    for (i = 0; i < nglocal; i++)
-	      vector_cell[i] += fix_array[i][jm1];
+	      vector_grid[i] += fix_array[i][jm1];
 	  } else {
 	    for (i = 0; i < nglocal; i++)
-	      array_cell[i][m] += fix_array[i][jm1];
+	      array_grid[i][m] += fix_array[i][jm1];
 	  }
 	}
 
@@ -389,14 +389,14 @@ void FixAveGrid::end_of_step()
   if (nvalues == 0) {
     for (i = 0; i < nglocal; i++)
       for (m = 0; m < STANDARD; m++)
-	array_cell[i][m] /= pcount[i];
+	array_grid[i][m] /= pcount[i];
   } else if (nvalues == 1) {
     for (i = 0; i < nglocal; i++)
-      vector_cell[i] /= pcount[i];
+      vector_grid[i] /= pcount[i];
   } else {
     for (i = 0; i < nglocal; i++)
       for (m = 0; m < nvalues; m++)
-	array_cell[i][m] /= pcount[i];
+	array_grid[i][m] /= pcount[i];
   }
 }
 
