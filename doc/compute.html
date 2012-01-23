@@ -46,24 +46,25 @@ calculations accessed in the various ways described above.
 <HR>
 
 <P>Computes calculate one of three styles of quantities: global,
-per-particle, or per-grid.  A global quantity is one or more
+per-molecule, or per-grid.  A global quantity is one or more
 system-wide values, e.g. the temperature of the system.  A
-per-particle quantity is one or more values per particle, e.g. the
-kinetic energy of each particle.  A per-grid quantity is one or more
-values per grid cell.  Computes that produce per-particle quantities
-have the word "particle" in their style, e.g. <I>ke/particle</I>.  Computes
-that produce per-grid quantities have the word "particle" in their
-style, e.g. <I>ke/cell</I>.  Styles with neither "particle" or "cell" in
-their style produce global quantities.
+per-molecule quantity is one or more values per molecule, e.g. the
+kinetic energy of each molecule.  A per-grid quantity is one or more
+values per grid cell.  Computes that produce per-molecule quantities
+have the word "molecule" in their style, e.g. <I>ke/molecule</I>.  Computes
+that produce per-grid quantities have the word "grid" in their style,
+e.g. <I>ke/grid</I>.  Styles with neither "molecule" or "grid" in their
+style produce global quantities.
 </P>
-<P>Note that a single compute produces either global or per-particle or
+<P>Note that a single compute produces either global or per-molecule or
 per-grid quantities, but never more than one of these.
 </P>
-<P>Global, per-atom, and per-grid quantities each come in three kinds: a
-single scalar value, a vector of values, or a 2d array of values.  The
-doc page for each compute describes the style and kind of values it
-produces, e.g. a per-atom vector.  Some computes produce more than one
-kind of a single style, e.g. a global scalar and a global vector.
+<P>Global, per-molecule, and per-grid quantities each come in three
+kinds: a single scalar value, a vector of values, or a 2d array of
+values.  The doc page for each compute describes the style and kind of
+values it produces, e.g. a per-molecule vector.  Some computes produce
+more than one kind of a single style, e.g. a global scalar and a
+global vector.
 </P>
 <P>When a compute quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -97,12 +98,12 @@ ways:
 command.  Or the values can be referenced in a <A HREF = "variable.html">variable
 equal</A> or <A HREF = "variable.html">variable atom</A> command. 
 
-<LI>Per-particle values can be output via the <A HREF = "dump.html">dump particle</A>
+<LI>Per-molecule values can be output via the <A HREF = "dump.html">dump particle</A>
 command.  Or the per-particle values can be referenced in an
-<A HREF = "variable.html">particle-style variable</A>. 
+<A HREF = "variable.html">molecule-style variable</A>. 
 
-<LI>Per-cell values can be output via the <A HREF = "dump.html">dump grid</A> command.
-Or the per-particle values can be referenced in an <A HREF = "variable.html">grid-style
+<LI>Per-grid values can be output via the <A HREF = "dump.html">dump grid</A> command.
+Or the per-grid values can be referenced in a <A HREF = "variable.html">grid-style
 variable</A>. 
 </UL>
 <HR>
@@ -111,7 +112,8 @@ variable</A>.
 and what it does.  Here is an alphabetic list of compute styles
 available in DSMC:
 </P>
-<UL><LI><A HREF = "compute_temp.html">temp</A> - temperature of all the particles 
+<UL><LI><A HREF = "compute_ke_molecule.html">ke/molecule</A> - temperature of each molecule
+<LI><A HREF = "compute_temp.html">temp</A> - temperature of all the molecules 
 </UL>
 <HR>
 

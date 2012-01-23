@@ -64,10 +64,10 @@ for individual fixes for info on which ones can be restarted.
 :line
 
 Some fixes calculate one of three styles of quantities: global,
-per-particle, or per-grid, which can be used by other commands or
+per-molecule, or per-grid, which can be used by other commands or
 output as described below.  A global quantity is one or more
 system-wide values, e.g. the energy of a wall interacting with
-particles.  A per-particle quantity is one or more values per
+particles.  A per-molecule quantity is one or more values per
 particle, e.g. the displacement vector for each particle since time 0.
 Per-cell quantities are calculated by each processor based on the grid
 cells it owns.
@@ -111,12 +111,12 @@ Global values can be output via the "stats_style"_stats_style.html
 command.  Or the values can be referenced in a "variable
 equal"_variable.html or "variable atom"_variable.html command. :ulb,l
 
-Per-particle values can be output via the "dump particle"_dump.html
-command.  Or the per-particle values can be referenced in an
-"particle-style variable"_variable.html. :l
+Per-molecule values can be output via the "dump particle"_dump.html
+command.  Or the per-molecule values can be referenced in an
+"molecule-style variable"_variable.html. :l
 
-Per-cell values can be output via the "dump grid"_dump.html command.
-Or the per-particle values can be referenced in an "grid-style
+Per-grid values can be output via the "dump grid"_dump.html command.
+Or the per-grid values can be referenced in a "grid-style
 variable"_variable.html. :l,ule
 
 :line
@@ -125,7 +125,10 @@ Each fix style has its own documentation page which describes its
 arguments and what it does, as listed below.  Here is an alphabetic
 list of fix styles available in LAMMPS:
 
+"ave/grid"_fix_ave_grid.html - compute per-grid time-averaged quantities
+"ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
 "grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
+"inflow"_fix_inflow.html - inject molecules at global boundaries
 "print"_fix_print.html - print text and variables during a simulation :ul
 
 :line

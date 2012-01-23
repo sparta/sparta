@@ -43,24 +43,25 @@ calculations accessed in the various ways described above.
 :line
 
 Computes calculate one of three styles of quantities: global,
-per-particle, or per-grid.  A global quantity is one or more
+per-molecule, or per-grid.  A global quantity is one or more
 system-wide values, e.g. the temperature of the system.  A
-per-particle quantity is one or more values per particle, e.g. the
-kinetic energy of each particle.  A per-grid quantity is one or more
-values per grid cell.  Computes that produce per-particle quantities
-have the word "particle" in their style, e.g. {ke/particle}.  Computes
-that produce per-grid quantities have the word "particle" in their
-style, e.g. {ke/cell}.  Styles with neither "particle" or "cell" in
-their style produce global quantities.
+per-molecule quantity is one or more values per molecule, e.g. the
+kinetic energy of each molecule.  A per-grid quantity is one or more
+values per grid cell.  Computes that produce per-molecule quantities
+have the word "molecule" in their style, e.g. {ke/molecule}.  Computes
+that produce per-grid quantities have the word "grid" in their style,
+e.g. {ke/grid}.  Styles with neither "molecule" or "grid" in their
+style produce global quantities.
 
-Note that a single compute produces either global or per-particle or
+Note that a single compute produces either global or per-molecule or
 per-grid quantities, but never more than one of these.
 
-Global, per-atom, and per-grid quantities each come in three kinds: a
-single scalar value, a vector of values, or a 2d array of values.  The
-doc page for each compute describes the style and kind of values it
-produces, e.g. a per-atom vector.  Some computes produce more than one
-kind of a single style, e.g. a global scalar and a global vector.
+Global, per-molecule, and per-grid quantities each come in three
+kinds: a single scalar value, a vector of values, or a 2d array of
+values.  The doc page for each compute describes the style and kind of
+values it produces, e.g. a per-molecule vector.  Some computes produce
+more than one kind of a single style, e.g. a global scalar and a
+global vector.
 
 When a compute quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -92,12 +93,12 @@ Global values can be output via the "stats_style"_stats_style.html
 command.  Or the values can be referenced in a "variable
 equal"_variable.html or "variable atom"_variable.html command. :ulb,l
 
-Per-particle values can be output via the "dump particle"_dump.html
+Per-molecule values can be output via the "dump particle"_dump.html
 command.  Or the per-particle values can be referenced in an
-"particle-style variable"_variable.html. :l
+"molecule-style variable"_variable.html. :l
 
-Per-cell values can be output via the "dump grid"_dump.html command.
-Or the per-particle values can be referenced in an "grid-style
+Per-grid values can be output via the "dump grid"_dump.html command.
+Or the per-grid values can be referenced in a "grid-style
 variable"_variable.html. :l,ule
 
 :line
@@ -106,7 +107,8 @@ Each compute style has its own doc page which describes its arguments
 and what it does.  Here is an alphabetic list of compute styles
 available in DSMC:
 
-"temp"_compute_temp.html - temperature of all the particles :ul
+"ke/molecule"_compute_ke_molecule.html - temperature of each molecule
+"temp"_compute_temp.html - temperature of all the molecules :ul
 
 :line
 
