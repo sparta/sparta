@@ -42,7 +42,7 @@ enum{NO,YES};
 /* ---------------------------------------------------------------------- */
 
 DumpImage::DumpImage(DSMC *dsmc, int narg, char **arg) : 
-  DumpParticle(dsmc, narg, arg)
+  DumpMolecule(dsmc, narg, arg)
 {
   if (binary || multiproc) error->all(FLERR,"Invalid dump image filename");
 
@@ -316,7 +316,7 @@ void DumpImage::init_style()
   if (multifile == 0) 
     error->all(FLERR,"Dump image requires one snapshot per file");
 
-  DumpParticle::init_style();
+  DumpMolecule::init_style();
 
   // check variables
 
@@ -688,7 +688,7 @@ void DumpImage::unpack_comm(int n, int first, double *buf)
 
 int DumpImage::modify_param(int narg, char **arg)
 {
-  int n = DumpParticle::modify_param(narg,arg);
+  int n = DumpMolecule::modify_param(narg,arg);
   if (n) return n;
 
   if (strcmp(arg[0],"acolor") == 0) {

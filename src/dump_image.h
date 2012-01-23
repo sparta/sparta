@@ -21,11 +21,11 @@ DumpStyle(image,DumpImage)
 #ifndef DSMC_DUMP_IMAGE_H
 #define DSMC_DUMP_IMAGE_H
 
-#include "dump_particle.h"
+#include "dump_molecule.h"
 
 namespace DSMC_NS {
 
-class DumpImage : public DumpParticle {
+class DumpImage : public DumpMolecule {
  public:
   DumpImage(class DSMC *, int, char**);
   ~DumpImage();
