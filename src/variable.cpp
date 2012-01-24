@@ -290,7 +290,7 @@ void Variable::set(int narg, char **arg)
   // num = 1, which = 1st value
   // data = 1 value, string to eval
 
-  } else if (strcmp(arg[1],"mol") == 0) {
+  } else if (strcmp(arg[1],"molecule") == 0) {
     if (narg != 3) error->all(FLERR,"Illegal variable command");
     if (find(arg[0]) >= 0) {
       if (style[find(arg[0])] != MOLECULE)

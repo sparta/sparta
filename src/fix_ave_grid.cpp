@@ -28,9 +28,8 @@
 
 using namespace DSMC_NS;
 
-enum{COMPUTE,FIX,VARIABLE};
-
-#define STANDARD 6
+enum{STANDARD,COMPUTE,FIX,VARIABLE};
+enum{ONE,RUNNING};
 
 #define INVOKED_PER_GRID 16
 
@@ -45,21 +44,50 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   nrepeat = atoi(arg[3]);
   per_grid_freq = atoi(arg[4]);
 
-  // parse remaining values
+  // scan values, then read options
 
-  which = new int[narg-5];
-  argindex = new int[narg-5];
-  ids = new char*[narg-5];
-  value2index = new int[narg-5];
   nvalues = 0;
 
   int iarg = 5;
   while (iarg < narg) {
-    ids[nvalues] = NULL;
+    if ((strcmp(arg[iarg],"standard") == 0) ||
+	(strncmp(arg[iarg],"c_",2) == 0) || 
+	(strncmp(arg[iarg],"f_",2) == 0) || 
+	(strncmp(arg[iarg],"v_",2) == 0)) {
+      nvalues++;
+      iarg++;
+    } else break;
+  }
+  if (nvalues == 0) error->all(FLERR,"Illegal fix ave/grid command");
 
-    if (strncmp(arg[iarg],"c_",2) == 0 || 
+  options(narg,arg);
+
+  // parse values until one isn't recognized
+  // treat value = "standard" as a special case
+
+  which = argindex = value2index = NULL;
+  ids = NULL;
+  allocate_values(nvalues);
+  nvalues = 0;
+  standard = 0;
+
+  iarg = 5;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"standard") == 0) {
+      if (nvalues != 0) error->all(FLERR,"Illegal fix ave/grid command");
+      standard = 1;
+      nvalues = 7 * particle->nspecies;
+      allocate_values(nvalues);
+      for (int i = 0; i < nvalues; i++) {
+	which[i] = STANDARD;
+	ids[i] = NULL;
+      }
+
+    } else if (strncmp(arg[iarg],"c_",2) == 0 || 
 	       strncmp(arg[iarg],"f_",2) == 0 || 
 	       strncmp(arg[iarg],"v_",2) == 0) {
+
+      if (standard) error->all(FLERR,"Illegal fix ave/grid command");
       if (arg[iarg][0] == 'c') which[nvalues] = COMPUTE;
       else if (arg[iarg][0] == 'f') which[nvalues] = FIX;
       else if (arg[iarg][0] == 'v') which[nvalues] = VARIABLE;
@@ -82,14 +110,10 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
       nvalues++;
       delete [] suffix;
 
-    } else error->all(FLERR,"Illegal fix ave/grid command");
+    } else break;
 
     iarg++;
   }
-
-  // for now, allow no explicit values
-
-  if (nvalues) error->all(FLERR,"Illegal fix ave/grid command");
 
   // setup and error check
   // for fix inputs, check that fix frequency is acceptable
@@ -148,30 +172,34 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   // this fix produces either a per-grid vector or array
 
   per_grid_flag = 1;
-  if (nvalues == 0) size_per_grid_cols = STANDARD;
-  else if (nvalues == 1) size_per_grid_cols = 0;
+  if (nvalues == 1) size_per_grid_cols = 0;
   else size_per_grid_cols = nvalues;
 
-  // perform initial allocation of cell-based count and vector/array
+  // allocate accumulators
+  // if ave = RUNNING, allocate extra set of accvec/accarray
+  // mcount = molecule counts = only needed for standard
 
   int nglocal = grid->nlocal;
-  memory->create(pcount,nglocal,"ave/time:pcount");
+  int nspecies = particle->nspecies;
 
-  if (nvalues == 0)
-    memory->create(array_grid,nglocal,STANDARD,"ave/time:array_grid");
-  else if (nvalues == 1) 
-    memory->create(vector_grid,nglocal,"ave/time:vector_grid");
-  else
-    memory->create(array_grid,nglocal,nvalues,"ave/time:array_grid");
+  if (standard) memory->create(mcount,nspecies,nglocal,"ave/time:mcount");
+  else mcount = NULL;
+
+  if (nvalues == 1) memory->create(vector_grid,nglocal,"ave/time:vector_grid");
+  else memory->create(array_grid,nglocal,nvalues,"ave/time:array_grid");
   
+  if (ave == RUNNING) {
+    if (nvalues == 1) memory->create(accvec,nglocal,"ave/time:accvec");
+    else memory->create(accarray,nglocal,nvalues,"ave/time:accarray");
+  } else {
+    if (nvalues == 1) accvec = vector_grid;
+    else accarray = array_grid;
+  }
+
   // zero vector/array since dump may access it on timestep 0
   // zero vector/array since a variable may access it before first run
 
   if (nvalues == 0) {
-    for (int i = 0; i < nglocal; i++)
-      for (int m = 0; m < STANDARD; m++)
-	array_grid[i][m] = 0.0;
-  } else if (nvalues == 0) {
     for (int i = 0; i < nglocal; i++)
       vector_grid[i] = 0.0;
   } else {
@@ -182,6 +210,7 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
 
   // nvalid = next step on which end_of_step does something
 
+  nsample = 0;
   irepeat = 0;
   nvalid = nextvalid();
 }
@@ -190,16 +219,19 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
 
 FixAveGrid::~FixAveGrid()
 {
-  delete [] which;
-  delete [] argindex;
-  for (int m = 0; m < nvalues; m++) delete [] ids[m];
-  delete [] ids;
-  delete [] value2index;
+  memory->destroy(which);
+  memory->destroy(argindex);
+  memory->destroy(value2index);
+  for (int i = 0; i < nvalues; i++) delete [] ids[i];
+  memory->sfree(ids);
 
-  memory->destroy(pcount);
-  if (nvalues == 0) memory->destroy(array_grid);
-  else if (nvalues == 1) memory->destroy(vector_grid);
+  memory->destroy(mcount);
+  if (nvalues == 1) memory->destroy(vector_grid);
   else memory->destroy(array_grid);
+  if (ave == RUNNING) {
+    if (nvalues == 1) memory->destroy(accvec);
+    else memory->destroy(accarray);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -253,57 +285,59 @@ void FixAveGrid::setup(int vflag)
 
 void FixAveGrid::end_of_step()
 {
-  int i,j,m,n;
+  int i,j,m,n,isp,icol;
 
   // skip if not step which requires doing something
 
   bigint ntimestep = update->ntimestep;
   if (ntimestep != nvalid) return;
 
-  // zero vector/array if first step
+  // zero accumulators if ave = ONE and first sample
 
+  int nspecies = particle->nspecies;
   int nglocal = grid->nlocal;
 
-  if (irepeat == 0) {
-    for (i = 0; i < nglocal; i++) pcount[i] = 0;
-    if (nvalues == 0) {
+  if (ave == ONE && irepeat == 0) {
+    if (standard) {
+      for (isp = 0; isp < nspecies; isp++)
+	for (i = 0; i < nglocal; i++)
+	  mcount[isp][i] = 0;
+    }
+    if (nvalues == 1) {
       for (i = 0; i < nglocal; i++)
-	for (m = 0; m < STANDARD; m++)
-	  array_grid[i][m] = 0.0;
-    } else if (nvalues == 1) {
-      for (i = 0; i < nglocal; i++)
-	vector_grid[i] = 0.0;
+	accvec[i] = 0.0;
     } else {
       for (i = 0; i < nglocal; i++)
 	for (m = 0; m < nvalues; m++)
-	  array_grid[i][m] = 0.0;
+	  accarray[i][m] = 0.0;
     }
   }
 
-  // accumulate results of attributes,computes,fixes,variables to local copy
+  // accumulate results of attributes,computes,fixes,variables
 
-  if (nvalues == 0) {
+  if (standard) {
     Grid::OneCell *cells = grid->cells;
     Particle::Species *species = particle->species;
     Particle::OnePart *particles = particle->particles;
     int nlocal = particle->nlocal;
 
     int icell,ilocal;
-    double *v,*row;
+    double *v;
 
     for (int i = 0; i < nlocal; i++) {
+      isp = particles[i].ispecies;
       icell = particles[i].icell;
       ilocal = cells[icell].local;
-      pcount[ilocal]++;
+      mcount[isp][ilocal]++;
+      icol = isp*7;
 
       v = particles[i].v;
-      row = array_grid[ilocal];
-      row[0] += v[0];
-      row[1] += v[1];
-      row[2] += v[2];
-      row[3] += v[0]*v[0];
-      row[4] += v[1]*v[1];
-      row[5] += v[2]*v[2];
+      accarray[ilocal][icol+1] += v[0];
+      accarray[ilocal][icol+2] += v[1];
+      accarray[ilocal][icol+3] += v[2];
+      accarray[ilocal][icol+4] += v[0]*v[0];
+      accarray[ilocal][icol+5] += v[1]*v[1];
+      accarray[ilocal][icol+6] += v[2]*v[2];
     }
 
   } else {
@@ -324,20 +358,20 @@ void FixAveGrid::end_of_step()
 	  double *compute_vector = compute->vector_grid;
 	  if (nvalues == 1) {
 	    for (i = 0; i < nglocal; i++)
-	      vector_grid[i] += compute_vector[i];
+	      accvec[i] += compute_vector[i];
 	  } else {
 	    for (i = 0; i < nglocal; i++)
-	      array_grid[i][m] += compute_vector[i];
+	      accarray[i][m] += compute_vector[i];
 	  }
 	} else {
 	  int jm1 = j - 1;
 	  double **compute_array = compute->array_grid;
 	  if (nvalues == 1) {
 	    for (i = 0; i < nglocal; i++)
-	      vector_grid[i] += compute_array[i][jm1];
+	      accvec[i] += compute_array[i][jm1];
 	  } else {
 	    for (i = 0; i < nglocal; i++)
-	      array_grid[i][m] += compute_array[i][jm1];
+	      accarray[i][m] += compute_array[i][jm1];
 	  }
 	}
 	
@@ -348,20 +382,20 @@ void FixAveGrid::end_of_step()
 	  double *fix_vector = modify->fix[n]->vector_grid;
 	  if (nvalues == 1) {
 	    for (i = 0; i < nglocal; i++)
-	      vector_grid[i] += fix_vector[i];
+	      accvec[i] += fix_vector[i];
 	  } else {
 	    for (i = 0; i < nglocal; i++)
-	      array_grid[i][m] += fix_vector[i];
+	      accarray[i][m] += fix_vector[i];
 	  }
 	} else {
 	  int jm1 = j - 1;
 	  double **fix_array = modify->fix[n]->array_grid;
 	  if (nvalues == 1) {
 	    for (i = 0; i < nglocal; i++)
-	      vector_grid[i] += fix_array[i][jm1];
+	      accvec[i] += fix_array[i][jm1];
 	  } else {
 	    for (i = 0; i < nglocal; i++)
-	      array_grid[i][m] += fix_array[i][jm1];
+	      accarray[i][m] += fix_array[i][jm1];
 	  }
 	}
 
@@ -375,6 +409,7 @@ void FixAveGrid::end_of_step()
   // done if irepeat < nrepeat
   // else reset irepeat and nvalid
 
+  nsample++;
   irepeat++;
   if (irepeat < nrepeat) {
     nvalid += nevery;
@@ -384,32 +419,106 @@ void FixAveGrid::end_of_step()
   irepeat = 0;
   nvalid = ntimestep+per_grid_freq - (nrepeat-1)*nevery;
 
-  // average the final result for the Nfreq timestep
+  // average the accumulators for output on Nfreq timestep
+  // molecule count is normalized by nsample
+  // molecule properties are normalized by molecule count
+  // reset nsample if ave = ONE
+  // NOTE: have to decide how to do averaging for non-standard case
 
-  if (nvalues == 0) {
-    for (i = 0; i < nglocal; i++)
-      for (m = 0; m < STANDARD; m++)
-	array_grid[i][m] /= pcount[i];
-  } else if (nvalues == 1) {
-    for (i = 0; i < nglocal; i++)
-      vector_grid[i] /= pcount[i];
+  if (ave == ONE) {
+    if (standard) {
+      for (i = 0; i < nglocal; i++)
+	for (isp = 0; isp < nspecies; isp++) {
+	  icol = isp*7;
+	  if (mcount[isp][i]) {
+	    array_grid[i][icol+1] /= mcount[isp][i];
+	    array_grid[i][icol+2] /= mcount[isp][i];
+	    array_grid[i][icol+3] /= mcount[isp][i];
+	    array_grid[i][icol+4] /= mcount[isp][i];
+	    array_grid[i][icol+5] /= mcount[isp][i];
+	    array_grid[i][icol+6] /= mcount[isp][i];
+	  }
+	}
+      for (i = 0; i < nglocal; i++)
+	for (isp = 0; isp < nspecies; isp++)
+	  array_grid[i][isp*7] = 1.0*mcount[isp][i] / nsample;
+    }
   } else {
-    for (i = 0; i < nglocal; i++)
-      for (m = 0; m < nvalues; m++)
-	array_grid[i][m] /= pcount[i];
+    if (standard) {
+      for (i = 0; i < nglocal; i++)
+	for (isp = 0; isp < nspecies; isp++) {
+	  icol = isp*7;
+	  if (mcount[isp][i]) {
+	    array_grid[i][icol+1] = accarray[i][icol+1] / mcount[isp][i];
+	    array_grid[i][icol+2] = accarray[i][icol+2] / mcount[isp][i];
+	    array_grid[i][icol+3] = accarray[i][icol+3] / mcount[isp][i];
+	    array_grid[i][icol+4] = accarray[i][icol+4] / mcount[isp][i];
+	    array_grid[i][icol+5] = accarray[i][icol+5] / mcount[isp][i];
+	    array_grid[i][icol+6] = accarray[i][icol+6] / mcount[isp][i];
+	  } else {
+	    array_grid[i][icol+1] = 0.0;
+	    array_grid[i][icol+2] = 0.0;
+	    array_grid[i][icol+3] = 0.0;
+	    array_grid[i][icol+4] = 0.0;
+	    array_grid[i][icol+5] = 0.0;
+	    array_grid[i][icol+6] = 0.0;
+	  }
+	}
+      for (i = 0; i < nglocal; i++)
+	for (isp = 0; isp < nspecies; isp++)
+	  array_grid[i][isp*7] = 1.0*mcount[isp][i] / nsample;
+    }
+  }
+
+  if (ave == ONE) nsample = 0;
+}
+
+/* ----------------------------------------------------------------------
+   parse optional args
+------------------------------------------------------------------------- */
+
+void FixAveGrid::options(int narg, char **arg)
+{
+  // option defaults
+
+  ave = ONE;
+
+  // optional args
+
+  int iarg = 5 + nvalues;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"ave") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/grid command");
+      if (strcmp(arg[iarg+1],"one") == 0) ave = ONE;
+      else if (strcmp(arg[iarg+1],"running") == 0) ave = RUNNING;
+      else error->all(FLERR,"Illegal fix ave/timgrid command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal fix ave/time command");
   }
 }
 
 /* ----------------------------------------------------------------------
-   memory usage of local cell-based array
+   reallocate vectors for each input value, of length N
+------------------------------------------------------------------------- */
+
+void FixAveGrid::allocate_values(int n)
+{
+  memory->grow(which,n,"ave/time:which");
+  memory->grow(argindex,n,"ave/time:argindex");
+  memory->grow(value2index,n,"ave/time:value2index");
+  ids = (char **) memory->srealloc(ids,n*sizeof(char *),"ave/time:ids");
+}
+
+/* ----------------------------------------------------------------------
+   memory usage of accumulators
 ------------------------------------------------------------------------- */
 
 double FixAveGrid::memory_usage()
 {
-  double bytes = grid->nlocal * sizeof(int);
-  if (nvalues == 0) bytes += grid->nlocal*STANDARD * sizeof(double);
-  else if (nvalues == 1) bytes += grid->nlocal * sizeof(double);
-  else bytes += grid->nlocal*nvalues * sizeof(double);
+  double bytes = 0.0;
+  if (standard) bytes += grid->nlocal*particle->nspecies * sizeof(int);
+  bytes += grid->nlocal*nvalues * sizeof(double);
+  if (ave == RUNNING) bytes += grid->nlocal*nvalues * sizeof(double);
   return bytes;
 }
 

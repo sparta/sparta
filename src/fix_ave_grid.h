@@ -37,14 +37,18 @@ class FixAveGrid : public Fix {
   double memory_usage();
 
  private:
-  int nvalues;
-  int nevery,nrepeat,irepeat;
+  int nvalues,standard,ave;
+  int nevery,nrepeat,irepeat,nsample;
   bigint nvalid;
   int *which,*argindex,*value2index;
   char **ids;
 
-  int *pcount;
+  int **mcount;
+  double *accvec;
+  double **accarray;
 
+  void options(int, char **);
+  void allocate_values(int);
   bigint nextvalid();
 };
 

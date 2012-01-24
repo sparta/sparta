@@ -14,7 +14,7 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(ke/mol,ComputeKEMolecule)
+ComputeStyle(ke/molecule,ComputeKEMolecule)
 
 #else
 

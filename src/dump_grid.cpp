@@ -51,6 +51,7 @@ DumpGrid::DumpGrid(DSMC *dsmc, int narg, char **arg) :
   nevery = atoi(arg[3]);
 
   // size_one may be shrunk below if additional optional args exist
+  // size_one may be increased below if a value is a compute or fix array
 
   size_one = nfield = narg - 4;
   pack_choice = new FnPtrPack[nfield];
