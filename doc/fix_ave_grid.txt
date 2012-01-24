@@ -10,7 +10,7 @@ fix ave/grid command :h3
 
 [Syntax:]
 
-fix ID ave/grid Nevery Nrepeat Nfreq value1 value2 ... :pre
+fix ID ave/grid Nevery Nrepeat Nfreq value1 value2 ... keyword args ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 ave/grid = style name of this fix command :l
@@ -18,21 +18,25 @@ Nevery = use input values every this many timesteps :l
 Nrepeat = # of times to use input values for calculating averages :l
 Nfreq = calculate averages every this many timesteps
 zero or more input values can be listed :l
-value = n, u, v, w, usq, vsq, wsq, c_ID, c_ID\[i\], f_ID, f_ID\[i\], v_name :l
-  n = average particle count
-  u,v,w = average x,y,z velocity
-  usq,vsq,wsq = average x,y,z velocity squared
+value = standard, c_ID, c_ID\[i\], f_ID, f_ID\[i\], v_name :l
+  standard = pre-defined set of per-grid values = n u v w usq vsq wsq
+  NOTE: the following value options are not yet supported
   c_ID = per-grid vector calculated by a compute with ID
   c_ID\[I\] = Ith column of per-grid array calculated by a compute with ID
   f_ID = per-grid vector calculated by a fix with ID
   f_ID\[I\] = Ith column of per-grid array calculated by a fix with ID
   v_name = per-grid vector calculated by an cell-style variable with name :pre
+zero or more keyword/arg pairs may be appended :l
+keyword = {ave}
+  {ave} args = one or running
+    one = output a new average value every Nfreq steps
+    running = accumulate average continuously :pre
 :ule
 
 [Examples:]
 
-fix 1 all ave/grid 1 100 100 :pre
-fix 1 all ave/grid 10 20 1000 c_my_stress\[1\] :pre
+fix 1 all ave/grid 1 100 100 ave running
+fix 1 all ave/grid 10 20 1000 c_mine :pre
 
 [Description:]
 
@@ -41,13 +45,13 @@ average them cell by cell over longer timescales.  The resulting
 per-grid averages can be used by other output commands such as the
 "dump grid"_dump.html command.
 
-Each input value can be a cell attribute (ID, coordinates, etc) or can
-be the result of a "compute"_compute.html or "fix"_fix.html or the
-evaluation of an grid-style "variable"_variable.html.  In the latter
-cases, the compute, fix, or variable must produce a per-grid vector,
-not a global quantity or per-molecule quantity.  If you wish to
-time-average global quantities from a compute, fix, or variable, then
-see the "fix ave/time"_fix_ave_time.html command.
+Each input value can be a standard cell attribute or can be the result
+of a "compute"_compute.html or "fix"_fix.html or the evaluation of an
+grid-style "variable"_variable.html.  In the latter cases, the
+compute, fix, or variable must produce a per-grid vector, not a global
+quantity or per-molecule quantity.  If you wish to time-average global
+quantities from a compute, fix, or variable, then see the "fix
+ave/time"_fix_ave_time.html command.
 
 "Computes"_compute.html that produce per-grid vectors or arrays are
 those which have the word {grid} in their style name.  See the doc
@@ -77,17 +81,24 @@ timestep 200, etc.
 
 :line
 
-NOTE: Currently no input values can be specified explicity with this
-command.  When no values are specified, it is as if 7 values were
-specified:
+If the single value {standard} is listed then statistics will be
+tallied on 7 quantities per species:
 
 n u v w usq vsq wsq :pre
 
-The grid attribute value {n} is the average number of particles per
-grid cell.  The {u,v,w} attributes are the average velocities of the
-particles in the x,y,z directions.  The {usq,vsq,wsq} attributes are
-the average squared velocities of the particles in the x,y,z
-directions.
+for a total of 7*Nsp values, where Nsp = # of species.
+
+{N} is the count of molecules (of a species) in a grid cell.  {U,v,w}
+are the velocities of the same molecules in the x,y,z directions.
+{Usq,vsq,wsq} are the squared velocities of the same molecules in the
+x,y,z directions.  These quanties are continuously tallied until a
+timestep that is a multiple of {Nfreq}, then normalized for output.
+{N} is normalized by the number of contributing samples, so that the
+output value is average molecule count for a grid cell.  The other 6
+quantities are normalized by the number of contributing molecules, so
+the output values are average velocity or velocity-squared for a grid
+cell.  See the {ave} keyword for a setting that affects whether the
+tallies are zeroed after each {Nfreq} output.
 
 If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  If no bracketed term is
@@ -113,6 +124,27 @@ variable"_variable.html Variables of style {grid} can reference
 thermodynamic keywords, or invoke other computes, fixes, or variables
 when they are evaluated, so this is a very general means of generating
 per-grid quantities to time average.
+
+NOTE: say something about how compute, fix, variable quantities
+are normalized for output.
+
+:line
+
+Additional optional keywords also affect the operation of this fix. 
+
+The {ave} keyword determines what happens to the accumulation of
+statistics every {Nfreq} timesteps.
+
+If the {ave} setting is {one}, then the values produced on timesteps
+that are multiples of Nfreq are independent of each other.  Normalization
+(as described above) is performed, and all tallies are zeroed before
+accumulating over the next {Nfreq} steps.
+
+If the {ave} setting is {running}, then tallies are never zeroed.
+Thus the output at any {Nfreq} timestep is normalized over all
+previously accumulated samples since the fix was defined.  The tallies
+can only be zeroed by deleting the fix via the unfix command, or by
+re-defining the fix, or by re-specifying it.
 
 :line
 
