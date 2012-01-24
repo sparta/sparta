@@ -27,9 +27,9 @@ args = list of arguments for a particular style :l
       x,y,z = unscaled molecule coordinates
       xs,ys,zs = scaled molecule coordinates
       vx,vy,vz = molecule velocities
-      c_ID = per-molecule vector calculated by a compute with ID
+      c_ID = per-molecule vector (or array) calculated by a compute with ID
       c_ID\[N\] = Nth column of per-molecule array calculated by a compute with ID
-      f_ID = per-molecule vector calculated by a fix with ID
+      f_ID = per-molecule vector (or array) calculated by a fix with ID
       f_ID\[N\] = Nth column of per-molecule array calculated by a fix with ID
       v_name = per-molecule vector calculated by an molecule-style variable with name
   {grid} args = list of grid attributes
@@ -40,9 +40,9 @@ args = list of arguments for a particular style :l
       proc = processor that owns grid cell
       xlo,ylo,zlo = coords of lower left corner of grid cell
       xhi,yhi,zhi = coords of lower left corner of grid cell
-      c_ID = per-grid vector calculated by a compute with ID
+      c_ID = per-grid vector (or array) calculated by a compute with ID
       c_ID\[N\] = Nth column of per-grid array calculated by a compute with ID
-      f_ID = per-grid vector calculated by a fix with ID
+      f_ID = per-grid vector (or array) calculated by a fix with ID
       f_ID\[N\] = Nth column of per-grid array calculated by a fix with ID
       v_name = per-grid vector calculated by an cell-style variable with name
   {surf} args = not yet supported
@@ -240,20 +240,32 @@ command.  Instead, global quantities can be output by the
 "stats_style"_stats_style.html command, and per-molecule quantities
 can be output by the dump molecule command.
 
-If {c_ID} is used as a attribute, then the per-grid vector calculated
-by the compute is printed.  If {c_ID\[N\]} is used, then N must be in
-the range from 1-M, which will print the Nth column of the M-length
-per-grid array calculated by the compute.
+If {c_ID} is used as a attribute, and the compute calculates a
+per-grid vector, then the per-grid vector is printed.  If {c_ID\[N\]}
+is used, then N must be in the range from 1-M, which will print the
+Nth column of the M-column per-grid array calculated by the compute.
+If {c_ID} is used, and the compute calculates a per-grid array, then
+it is the same as if the individual columns of the array had been
+listed one by one.  See the example below for fixes.
 
-The {f_ID} and {f_ID\[N\]} attributes allow vector or array per-grid
-quantities calculated by a "fix"_fix.html to be output.  The ID in the
-attribute should be replaced by the actual ID of the fix that has been
-defined previously in the input script.
+The {f_ID} and {f_ID\[N\]} attributes allow per-grid vectors or arrays
+calculated by a "fix"_fix.html to be output.  The ID in the attribute
+should be replaced by the actual ID of the fix that has been defined
+previously in the input script.
 
-If {f_ID} is used as a attribute, then the per-grid vector calculated
-by the fix is printed.  If {f_ID\[N\]} is used, then N must be in the
-range from 1-M, which will print the Nth column of the M-length
-per-grid array calculated by the fix.
+If {f_ID} is used as a attribute, and the fix calculates a per-grid
+vector, then the per-grid vector is printed.  If {f_ID\[N\]} is used,
+then N must be in the range from 1-M, which will print the Nth column
+of the M-columne per-grid array calculated by the fix.  If {f_ID} is
+used, and the fix calculates a per-grid array, then it is the same as
+if the individual columns of the array had been listed one by one.
+E.g. these 2 dump commands are equivalent for a simulation with 1
+species, since the fix ave/grid standard command produces a 7-column
+per-grid array:
+
+fix 1 ave/grid 10 100 1000 standard
+dump 1 grid 1000 tmp.grid id f_1
+dump 1 grid 1000 tmp.grid id f_1[1] f_1[2] f_1[3] f_1[4] f_1[5] f_1[6] f_1[7] :pre
 
 The {v_name} attribute allows per-grid vectors calculated by a
 "variable"_variable.html to be output.  The name in the attribute
