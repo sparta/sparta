@@ -38,6 +38,7 @@ enum{INT,DOUBLE};
 enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
 
 #define INVOKED_PER_GRID 16
+#define CHUNK 8
 
 /* ---------------------------------------------------------------------- */
 
@@ -50,61 +51,42 @@ DumpGrid::DumpGrid(DSMC *dsmc, int narg, char **arg) :
 
   nevery = atoi(arg[3]);
 
-  // size_one may be shrunk below if additional optional args exist
-  // size_one may be increased below if a value is a compute or fix array
-
-  size_one = nfield = narg - 4;
-  pack_choice = new FnPtrPack[nfield];
-  vtype = new int[nfield];
-
-  // computes, fixes, variables which the dump accesses
-
-  memory->create(field2index,nfield,"dump:field2index");
-  memory->create(argindex,nfield,"dump:argindex");
-
-  ncompute = 0;
-  id_compute = NULL;
-  compute = NULL;
-
-  nfix = 0;
-  id_fix = NULL;
-  fix = NULL;
-
-  nvariable = 0;
-  id_variable = NULL;
-  variable = NULL;
-  vbuf = NULL;
-
-  // process attributes
-  // ioptional = start of additional optional args
-  // only dump image style processes optional args
+  // scan values and set size_one
+  // array entries may expand into multiple fields
+  // could use ioptional to add on keyword/arg pairs
 
   ioptional = parse_fields(narg,arg);
   if (ioptional < narg)
     error->all(FLERR,"Invalid attribute in dump grid command");
-  size_one = nfield = ioptional - 4;
+  size_one = nfield;
 
   // setup format strings
 
-  vformat = new char*[size_one];
+  vformat = new char*[nfield];
 
-  format_default = new char[3*size_one+1];
+  format_default = new char[3*nfield+1];
   format_default[0] = '\0';
 
-  for (int i = 0; i < size_one; i++) {
+  for (int i = 0; i < nfield; i++) {
     if (vtype[i] == INT) strcat(format_default,"%d ");
     else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
     vformat[i] = NULL;
   }
 
-  // setup column string
+  // setup column string using field2arg
+  // add column subscripts to array args that were expanded
 
   int n = 0;
-  for (int iarg = 4; iarg < narg; iarg++) n += strlen(arg[iarg]) + 2;
+  for (int i = 0; i < nfield; i++) n += strlen(arg[field2arg[i]]) + 6;
   columns = new char[n];
   columns[0] = '\0';
-  for (int iarg = 4; iarg < narg; iarg++) {
-    strcat(columns,arg[iarg]);
+  char subscript[6];
+  for (int i = 0; i < nfield; i++) {
+    strcat(columns,arg[field2arg[i]]);
+    if (argindex[i] > 0 && columns[strlen(columns)-1] != ']') {
+      sprintf(subscript,"[%d]",argindex[i]);
+      strcat(columns,subscript);
+    }
     strcat(columns," ");
   }
 }
@@ -113,8 +95,9 @@ DumpGrid::DumpGrid(DSMC *dsmc, int narg, char **arg) :
 
 DumpGrid::~DumpGrid()
 {
-  delete [] pack_choice;
-  delete [] vtype;
+  memory->sfree(pack_choice);
+  memory->destroy(vtype);
+  memory->destroy(field2arg);
   memory->destroy(field2index);
   memory->destroy(argindex);
 
@@ -132,7 +115,7 @@ DumpGrid::~DumpGrid()
   for (int i = 0; i < nvariable; i++) memory->destroy(vbuf[i]);
   delete [] vbuf;
 
-  for (int i = 0; i < size_one; i++) delete [] vformat[i];
+  for (int i = 0; i < nfield; i++) delete [] vformat[i];
   delete [] vformat;
 
   delete [] columns;
@@ -154,7 +137,7 @@ void DumpGrid::init_style()
   // tokenize the format string and add space at end of each format element
 
   char *ptr;
-  for (int i = 0; i < size_one; i++) {
+  for (int i = 0; i < nfield; i++) {
     if (i == 0) ptr = strtok(format," \0");
     else ptr = strtok(NULL," \0");
     delete [] vformat[i];
@@ -238,7 +221,7 @@ void DumpGrid::header_binary(bigint ndump)
   fwrite(&boxyhi,sizeof(double),1,fp);
   fwrite(&boxzlo,sizeof(double),1,fp);
   fwrite(&boxzhi,sizeof(double),1,fp);
-  fwrite(&size_one,sizeof(int),1,fp);
+  fwrite(&nfield,sizeof(int),1,fp);
   if (multiproc) {
     int one = 1;
     fwrite(&one,sizeof(int),1,fp);
@@ -264,6 +247,22 @@ void DumpGrid::header_item(bigint ndump)
 
 int DumpGrid::count()
 {
+  // invoke Computes for per-grid quantities
+
+  if (ncompute) {
+    for (int i = 0; i < ncompute; i++)
+      if (!(compute[i]->invoked_flag & INVOKED_PER_GRID)) {
+	compute[i]->compute_per_grid();
+	compute[i]->invoked_flag |= INVOKED_PER_GRID;
+      }
+  }
+
+  // evaluate grid-style Variables for per-grid quantities
+
+  if (nvariable)
+    for (int i = 0; i < nvariable; i++)
+      input->variable->compute_grid(variable[i],vbuf[i],1,0);
+
   return grid->nlocal;
 }
 
@@ -312,133 +311,209 @@ void DumpGrid::write_text(int n, double *mybuf)
 
 int DumpGrid::parse_fields(int narg, char **arg)
 {
+  // initialize per-field lists
+
+  pack_choice = NULL;
+  vtype = NULL;
+  field2arg = NULL;
+  field2index = NULL;
+  argindex = NULL;
+
+  int maxfield = narg - 4;
+  allocate_values(maxfield);
+  nfield = 0;
+
+  ncompute = 0;
+  id_compute = NULL;
+  compute = NULL;
+
+  nfix = 0;
+  id_fix = NULL;
+  fix = NULL;
+
+  nvariable = 0;
+  id_variable = NULL;
+  variable = NULL;
+  vbuf = NULL;
+
   // customize by adding to if statement
 
-  int i;
   for (int iarg = 4; iarg < narg; iarg++) {
-    i = iarg-4;
+    if (nfield == maxfield) {
+      maxfield += CHUNK;
+      allocate_values(maxfield);
+    }
+
+    argindex[nfield] = -1;
 
     if (strcmp(arg[iarg],"id") == 0) {
-      pack_choice[i] = &DumpGrid::pack_id;
-      vtype[i] = INT;
+      pack_choice[nfield] = &DumpGrid::pack_id;
+      vtype[nfield] = INT;
+      field2arg[nfield] = iarg;
+      nfield++;
     } else if (strcmp(arg[iarg],"proc") == 0) {
-      pack_choice[i] = &DumpGrid::pack_proc;
-      vtype[i] = INT;
+      pack_choice[nfield] = &DumpGrid::pack_proc;
+      vtype[nfield] = INT;
+      field2arg[nfield] = iarg;
+      nfield++;
 
     } else if (strcmp(arg[iarg],"xlo") == 0) {
-      pack_choice[i] = &DumpGrid::pack_xlo;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpGrid::pack_xlo;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
     } else if (strcmp(arg[iarg],"ylo") == 0) {
-      pack_choice[i] = &DumpGrid::pack_ylo;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpGrid::pack_ylo;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
     } else if (strcmp(arg[iarg],"zlo") == 0) {
-      pack_choice[i] = &DumpGrid::pack_zlo;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpGrid::pack_zlo;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
     } else if (strcmp(arg[iarg],"xhi") == 0) {
-      pack_choice[i] = &DumpGrid::pack_xhi;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpGrid::pack_xhi;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
     } else if (strcmp(arg[iarg],"yhi") == 0) {
-      pack_choice[i] = &DumpGrid::pack_yhi;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpGrid::pack_yhi;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
     } else if (strcmp(arg[iarg],"zhi") == 0) {
-      pack_choice[i] = &DumpGrid::pack_zhi;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpGrid::pack_zhi;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
 
     // compute value = c_ID
-    // if no trailing [], then arg is set to 0, else arg is int between []
+    // if no trailing [], then index = 0, else index = int between []
+    // if index = 0 and compute stores array, expand to one value per column
 
     } else if (strncmp(arg[iarg],"c_",2) == 0) {
-      pack_choice[i] = &DumpGrid::pack_compute;
-      vtype[i] = DOUBLE;
-
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
+      int index;
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump grid command");
-	argindex[i] = atoi(ptr+1);
+	index = atoi(ptr+1);
 	*ptr = '\0';
-      } else argindex[i] = 0;
+      } else index = 0;
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid compute ID");
       if (modify->compute[n]->per_grid_flag == 0)
 	error->all(FLERR,"Dump grid compute does not compute per-grid info");
-      if (argindex[i] == 0 && modify->compute[n]->size_per_grid_cols > 0)
+      if (index > 0 && modify->compute[n]->size_per_grid_cols == 0)
 	error->all(FLERR,
-		   "Dump grid compute does not calculate "
-		   "per-grid vector");
-      if (argindex[i] > 0 && modify->compute[n]->size_per_grid_cols == 0)
-	error->all(FLERR,
-		   "Dump grid compute does not calculate "
-		   "per-grid array");
-      if (argindex[i] > 0 && 
-	  argindex[i] > modify->compute[n]->size_per_grid_cols)
-	error->all(FLERR,
-		   "Dump grid compute vector is accessed out-of-range");
+		   "Dump grid compute does not calculate per-grid array");
+      if (index > 0 && index > modify->compute[n]->size_per_grid_cols)
+	error->all(FLERR,"Dump grid compute vector is accessed out-of-range");
 
-      field2index[i] = add_compute(suffix);
+      if (index == 0 && modify->compute[n]->size_per_grid_cols > 0) {
+	int ncol = modify->compute[n]->size_per_grid_cols;
+	for (int i = 0; i < ncol; i++) {
+	  if (nfield == maxfield) {
+	    maxfield += CHUNK;
+	    allocate_values(maxfield);
+	  }
+	  pack_choice[nfield] = &DumpGrid::pack_compute;
+	  vtype[nfield] = DOUBLE;
+	  argindex[nfield] = i+1;
+	  field2arg[nfield] = iarg;
+	  field2index[nfield] = add_compute(suffix);
+	  nfield++;
+	} 
+      } else {
+	pack_choice[nfield] = &DumpGrid::pack_compute;
+	vtype[nfield] = DOUBLE;
+	argindex[nfield] = index;
+	field2arg[nfield] = iarg;
+	field2index[nfield] = add_compute(suffix);
+	nfield++;
+      }
+
       delete [] suffix;
-      
+
     // fix value = f_ID
-    // if no trailing [], then arg is set to 0, else arg is between []
+    // if no trailing [], then index = 0, else index = int between []
+    // if index = 0 and compute stores array, expand to one value per column
 
     } else if (strncmp(arg[iarg],"f_",2) == 0) {
-      pack_choice[i] = &DumpGrid::pack_fix;
-      vtype[i] = DOUBLE;
-
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
+      int index;
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump grid command");
-	argindex[i] = atoi(ptr+1);
+	index = atoi(ptr+1);
 	*ptr = '\0';
-      } else argindex[i] = 0;
+      } else index = 0;
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid fix ID");
       if (modify->fix[n]->per_grid_flag == 0)
-	error->all(FLERR,"Dump grid fix does not compute "
-		   "per-grid info");
-      if (argindex[i] == 0 && modify->fix[n]->size_per_grid_cols > 0)
-	error->all(FLERR,"Dump grid fix does not compute "
-		   "per-grid vector");
-      if (argindex[i] > 0 && modify->fix[n]->size_per_grid_cols == 0)
-	error->all(FLERR,"Dump grid fix does not compute "
-		   "per-grid array");
-      if (argindex[i] > 0 && 
-	  argindex[i] > modify->fix[n]->size_per_grid_cols)
+	error->all(FLERR,"Dump grid fix does not compute per-grid info");
+      if (index > 0 && modify->fix[n]->size_per_grid_cols == 0)
+	error->all(FLERR,"Dump grid fix does not compute per-grid array");
+      if (index > 0 && index > modify->fix[n]->size_per_grid_cols)
 	error->all(FLERR,"Dump grid fix vector is accessed out-of-range");
 
-      field2index[i] = add_fix(suffix);
+      if (index == 0 && modify->fix[n]->size_per_grid_cols > 0) {
+	int ncol = modify->fix[n]->size_per_grid_cols;
+	for (int i = 0; i < ncol; i++) {
+	  if (nfield == maxfield) {
+	    maxfield += CHUNK;
+	    allocate_values(maxfield);
+	  }
+	  pack_choice[nfield] = &DumpGrid::pack_fix;
+	  vtype[nfield] = DOUBLE;
+	  argindex[nfield] = i+1;
+	  field2arg[nfield] = iarg;
+	  field2index[nfield] = add_fix(suffix);
+	  nfield++;
+	} 
+      } else {
+	pack_choice[nfield] = &DumpGrid::pack_fix;
+	vtype[nfield] = DOUBLE;
+	argindex[nfield] = index;
+	field2arg[nfield] = iarg;
+	field2index[nfield] = add_fix(suffix);
+	nfield++;
+      }
+
       delete [] suffix;
 
     // variable value = v_name
 
     } else if (strncmp(arg[iarg],"v_",2) == 0) {
-      pack_choice[i] = &DumpGrid::pack_variable;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpGrid::pack_variable;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
 
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
-      argindex[i] = 0;
+      argindex[nfield] = 0;
 
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid variable name");
       if (input->variable->grid_style(n) == 0)
 	error->all(FLERR,"Dump grid variable is not grid-style variable");
 
-      field2index[i] = add_variable(suffix);
+      field2index[nfield] = add_variable(suffix);
       delete [] suffix;
+      nfield++;
 
     } else return iarg;
   }
@@ -526,6 +601,20 @@ int DumpGrid::add_variable(char *id)
 }
 
 /* ----------------------------------------------------------------------
+   reallocate vectors for each input value, of length N
+------------------------------------------------------------------------- */
+
+void DumpGrid::allocate_values(int n)
+{
+  pack_choice = (FnPtrPack *) 
+    memory->srealloc(pack_choice,n*sizeof(FnPtrPack),"dump:pack_choice");
+  memory->grow(vtype,n,"dump:vtype");
+  memory->grow(field2arg,n,"dump:field2arg");
+  memory->grow(field2index,n,"dump:field2index");
+  memory->grow(argindex,n,"dump:argindex");
+}
+
+/* ----------------------------------------------------------------------
    extraction of Compute, Fix, Variable results
 ------------------------------------------------------------------------- */
 
@@ -534,8 +623,6 @@ void DumpGrid::pack_compute(int n)
   double *vector = compute[field2index[n]]->vector_grid;
   double **array = compute[field2index[n]]->array_grid;
   int index = argindex[n];
-
-  printf("AAA %d\n",index);
 
   if (index == 0) {
     for (int i = 0; i < nglocal; i++) {

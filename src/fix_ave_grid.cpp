@@ -179,8 +179,8 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   // if ave = RUNNING, allocate extra set of accvec/accarray
   // mcount = molecule counts = only needed for standard
 
-  int nglocal = grid->nlocal;
-  int nspecies = particle->nspecies;
+  nspecies = particle->nspecies;
+  nglocal = grid->nlocal;
 
   if (standard) memory->create(mcount,nspecies,nglocal,"ave/time:mcount");
   else mcount = NULL;
@@ -196,15 +196,35 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
     else accarray = array_grid;
   }
 
+  // zero mcount,accvec,accarray one time if ave = RUNNING
+
+  int i,isp,m;
+
+  if (ave == RUNNING) {
+    if (standard) {
+      for (isp = 0; isp < nspecies; isp++)
+	for (i = 0; i < nglocal; i++)
+	  mcount[isp][i] = 0;
+    }
+    if (nvalues == 1) {
+      for (i = 0; i < nglocal; i++)
+	accvec[i] = 0.0;
+    } else {
+      for (i = 0; i < nglocal; i++)
+	for (m = 0; m < nvalues; m++)
+	  accarray[i][m] = 0.0;
+    }
+  }
+
   // zero vector/array since dump may access it on timestep 0
   // zero vector/array since a variable may access it before first run
 
   if (nvalues == 0) {
-    for (int i = 0; i < nglocal; i++)
+    for (i = 0; i < nglocal; i++)
       vector_grid[i] = 0.0;
   } else {
-    for (int i = 0; i < nglocal; i++)
-      for (int m = 0; m < nvalues; m++)
+    for (i = 0; i < nglocal; i++)
+      for (m = 0; m < nvalues; m++)
 	array_grid[i][m] = 0.0;
   }
 
@@ -247,6 +267,11 @@ int FixAveGrid::setmask()
 
 void FixAveGrid::init()
 {
+  // nspecies cannot have changed since constructor
+
+  if (standard && particle->nspecies != nspecies)
+	error->all(FLERR,"Species count changed for fix ave/grid");
+
   // set indices and check validity of all computes,fixes,variables
 
   for (int m = 0; m < nvalues; m++) {
@@ -293,9 +318,6 @@ void FixAveGrid::end_of_step()
   if (ntimestep != nvalid) return;
 
   // zero accumulators if ave = ONE and first sample
-
-  int nspecies = particle->nspecies;
-  int nglocal = grid->nlocal;
 
   if (ave == ONE && irepeat == 0) {
     if (standard) {
@@ -516,9 +538,9 @@ void FixAveGrid::allocate_values(int n)
 double FixAveGrid::memory_usage()
 {
   double bytes = 0.0;
-  if (standard) bytes += grid->nlocal*particle->nspecies * sizeof(int);
-  bytes += grid->nlocal*nvalues * sizeof(double);
-  if (ave == RUNNING) bytes += grid->nlocal*nvalues * sizeof(double);
+  if (standard) bytes += nglocal*nspecies * sizeof(int);
+  bytes += nglocal*nvalues * sizeof(double);
+  if (ave == RUNNING) bytes += nglocal*nvalues * sizeof(double);
   return bytes;
 }
 

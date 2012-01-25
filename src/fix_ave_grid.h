@@ -43,6 +43,9 @@ class FixAveGrid : public Fix {
   int *which,*argindex,*value2index;
   char **ids;
 
+  int nspecies;
+  int nglocal;
+
   int **mcount;
   double *accvec;
   double **accarray;

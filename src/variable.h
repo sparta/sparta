@@ -33,7 +33,7 @@ class Variable : protected Pointers {
   char *retrieve(char *);
   double compute_equal(int);
   void compute_molecule(int, double *, int, int);
-  void compute_grid(int, double *, int, int);
+  void compute_grid(int, double *, int, int) {}
   int int_between_brackets(char *&);
   double evaluate_boolean(char *);
 
