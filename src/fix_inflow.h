@@ -42,16 +42,19 @@ class FixInflow : public Fix {
   int npercell,nthresh;
 
   struct CellFace {
-    double ntarget;
     double lo[3];
     double hi[3];
     double normal[3];
+    double ntarget;
+    double *ntargetsp;
   };
 
   CellFace *cellface;
   int ncf;
 
   class RanPark *random;
+
+  double mol_inflow(int, double);
 };
 
 }
