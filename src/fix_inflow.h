@@ -38,8 +38,9 @@ class FixInflow : public Fix {
  private:
   int nevery,imix;
   int faces[6];
-  int np,nonce,ntotal;
+  int np,perspecies;
   int npercell,nthresh;
+  int nsingle,ntotal;
 
   struct CellFace {
     double lo[3];
@@ -47,6 +48,9 @@ class FixInflow : public Fix {
     double normal[3];
     double ntarget;
     double *ntargetsp;
+    int icell;
+    int ndim;
+    int pdim1,pdim2;
   };
 
   CellFace *cellface;
