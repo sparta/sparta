@@ -3,6 +3,7 @@
 # particle effectively moves from cell to cell
 # particles reflect off global box boundaries
 
+seed	    	    12345
 dimension   	    3
 
 boundary	    o o o
@@ -19,7 +20,7 @@ create_molecules    air n 100000
 
 timestep 	    0.0001
 
-dump		    1 particle 10 tmp.dump id type x y z
+dump		    1 molecule 500 tmp.dump id type x y z
 
-stats		    10
-run 		    100
+stats		    100
+run 		    1000

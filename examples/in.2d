@@ -3,6 +3,7 @@
 # particle effectively moves from cell to cell
 # particles reflect off global box boundaries
 
+seed	    	    12345
 dimension   	    2
 
 boundary	    os ss p
@@ -10,7 +11,7 @@ create_box  	    0 10 0 10 -0.5 0.5
 create_grid 	    100 100 1
 
 species		    ../data/vss.data N O
-mixture		    air N O
+mixture		    air N O vstream 1000.0 -1000.0 0
 
 global		    nrho 100.0
 
@@ -20,9 +21,9 @@ create_molecules    air
 
 timestep 	    0.0001
 
-dump		    1 particle 50 tmp.dump id type x y z
+#dump		    1 molecule 50 tmp.dump id type x y z
 dump                2 image 50 tmp.*.jpg type type adiam 0.1 view 0 0 zoom 1.3
 dump_modify	    2 pad 5
 
-stats		    10
-run 		    20000
+stats		    100
+run 		    1000
