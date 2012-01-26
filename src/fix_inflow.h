@@ -43,18 +43,18 @@ class FixInflow : public Fix {
   int nsingle,ntotal;
 
   struct CellFace {
-    double lo[3];
-    double hi[3];
-    double normal[3];
-    double ntarget;
-    double *ntargetsp;
-    int icell;
-    int ndim;
-    int pdim1,pdim2;
+    double lo[3];               // lower-left corner of face
+    double hi[3];               // upper-right corner of face
+    double normal[3];           // inward normal from external boundary
+    double ntarget;             // # of mols to insert for all species
+    double *ntargetsp;          // # of mols to insert for each species
+    int icell;                  // associated cell index
+    int ndim;                   // dim (0,1,2) normal to face
+    int pdim1,pdim2;            // 2 dims (0,1,2) parallel to face
   };
 
-  CellFace *cellface;
-  int ncf;
+  CellFace *cellface;           // cell/face pairs to insert particles on
+  int ncf;                      // # of cell/face pairs
 
   class RanPark *random;
 

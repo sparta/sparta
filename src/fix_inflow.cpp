@@ -208,7 +208,7 @@ void FixInflow::init()
       cellface[ncf].hi[1] = cells[icell].hi[1];
       cellface[ncf].lo[2] = cells[icell].lo[2];
       cellface[ncf].hi[2] = cells[icell].hi[2];
-      cellface[ncf].normal[0] = -1.0;
+      cellface[ncf].normal[0] = 1.0;
       cellface[ncf].normal[1] = 0.0;
       cellface[ncf].normal[2] = 0.0;
       
@@ -227,9 +227,7 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       for (int isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
-	printf("SETUP %d %g\n",isp,cellface[ncf].ntargetsp[isp]);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-	printf("  SETUP %d %g\n",isp,cellface[ncf].ntargetsp[isp]);
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
       }
       ncf++;
@@ -246,7 +244,7 @@ void FixInflow::init()
       cellface[ncf].hi[1] = cells[icell].hi[1];
       cellface[ncf].lo[2] = cells[icell].lo[2];
       cellface[ncf].hi[2] = cells[icell].hi[2];
-      cellface[ncf].normal[0] = 1.0;
+      cellface[ncf].normal[0] = -1.0;
       cellface[ncf].normal[1] = 0.0;
       cellface[ncf].normal[2] = 0.0;
       
@@ -283,7 +281,7 @@ void FixInflow::init()
       cellface[ncf].lo[2] = cells[icell].lo[2];
       cellface[ncf].hi[2] = cells[icell].hi[2];
       cellface[ncf].normal[0] = 0.0;
-      cellface[ncf].normal[1] = -1.0;
+      cellface[ncf].normal[1] = 1.0;
       cellface[ncf].normal[2] = 0.0;
       
       area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
@@ -319,7 +317,7 @@ void FixInflow::init()
       cellface[ncf].lo[2] = cells[icell].lo[2];
       cellface[ncf].hi[2] = cells[icell].hi[2];
       cellface[ncf].normal[0] = 0.0;
-      cellface[ncf].normal[1] = 1.0;
+      cellface[ncf].normal[1] = -1.0;
       cellface[ncf].normal[2] = 0.0;
       
       area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
@@ -356,7 +354,7 @@ void FixInflow::init()
       cellface[ncf].hi[2] = cells[icell].lo[2];
       cellface[ncf].normal[0] = 0.0;
       cellface[ncf].normal[1] = 0.0;
-      cellface[ncf].normal[2] = -1.0;
+      cellface[ncf].normal[2] = 1.0;
       
       area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
 	(cells[icell].hi[1]-cells[icell].lo[1]);
@@ -386,7 +384,7 @@ void FixInflow::init()
       cellface[ncf].hi[2] = cells[icell].hi[2];
       cellface[ncf].normal[0] = 0.0;
       cellface[ncf].normal[1] = 0.0;
-      cellface[ncf].normal[2] = 1.0;
+      cellface[ncf].normal[2] = -1.0;
       
       area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
 	(cells[icell].hi[1]-cells[icell].lo[1]);
@@ -454,6 +452,10 @@ void FixInflow::start_of_step()
   //       first stage: normal dimension (ndim)
   //       second stage: parallel dimensions (pdim1,pdim2)
 
+  // NOTE: worry about do while loops spinning endlessly
+  //       due to difficulty of generating a valid particle to insert
+  //       may especially happen if force Np insertions on backflow boundary
+
   nsingle = 0;
 
   for (int i = 0; i < ncf; i++) {
@@ -511,7 +513,7 @@ void FixInflow::start_of_step()
 	if (i >= nthresh) ninsert++;
       }
 
-      printf("AAA %d %d\n",icell,ninsert);
+      //printf("AAA %d %d\n",icell,ninsert);
 
       for (int m = 0; m < ninsert; m++) {
 	rn = random->uniform();
@@ -525,13 +527,13 @@ void FixInflow::start_of_step()
 	do {
 	  do {
 	    beta_un = (6.0*random->gaussian() - 3.0);
-	    printf("CCC %g %g\n",beta_un,indot);
+	    //printf("CCC %g %g\n",beta_un,indot);
 	  } while (beta_un + indot < 0.0);
 	  normalized_distbn_fn = 2.0 * (beta_un + indot) / 
 	    (indot + sqrt(indot*indot + 2.0)) *
 	    exp(0.5 + (0.5*indot)*(indot-sqrt(indot*indot + 2.0)) - 
 		beta_un*beta_un);
-	  printf("BBB %g\n",normalized_distbn_fn);
+	  //printf("BBB %g\n",normalized_distbn_fn);
 	} while (normalized_distbn_fn < random->gaussian());
 	
 	v[ndim] = beta_un + vstream[0];
