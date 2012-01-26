@@ -152,6 +152,7 @@ void FixInflow::init()
       error->all(FLERR,"Cannot use fix inflow on periodic boundary");
 
   // ncf = # of my cell/face pairs to insert onto
+  // some may be eliminated later if no particles are actually inserted
 
   int dimension = domain->dimension;
 
@@ -176,6 +177,7 @@ void FixInflow::init()
 
   // cellface = per-face data struct for all inserts performed on my grid cells
   // indot = dot product of vstream with outward face normal
+  // skip the cellface if indot < 0.0, since no particles will be inserted
   // 2d vs 3d adjusts lo[2],hi[2] and area
 
   memory->sfree(cellface);
@@ -225,6 +227,8 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
+      if (indot < 0.0) continue;
+
       for (int isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
@@ -261,6 +265,8 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
+      if (indot < 0.0) continue;
+
       for (int isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
@@ -297,6 +303,8 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
+      if (indot < 0.0) continue;
+
       for (int isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
@@ -333,6 +341,8 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
+      if (indot < 0.0) continue;
+
       for (int isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
@@ -363,6 +373,8 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
+      if (indot < 0.0) continue;
+
       for (int isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
@@ -393,6 +405,8 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
+      if (indot < 0.0) continue;
+
       for (int isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
@@ -402,7 +416,7 @@ void FixInflow::init()
     }
   }
   
-  // if Np > 0, npercell = # of insertions per cellface pair
+  // if Np > 0, npercell = # of insertions per active cellface pair
   // set nthresh so as to achieve exactly Np insertions
   // cells > cells_with_no_extra need to insert 1 extra particle
 
@@ -452,7 +466,8 @@ void FixInflow::start_of_step()
   //       first stage: normal dimension (ndim)
   //       second stage: parallel dimensions (pdim1,pdim2)
 
-  // NOTE: worry about do while loops spinning endlessly
+  // NOTE: if allow particle insertion on backflow boundaries
+  //       then should worry about do while loops spinning endlessly
   //       due to difficulty of generating a valid particle to insert
   //       may especially happen if force Np insertions on backflow boundary
 
@@ -555,12 +570,16 @@ void FixInflow::start_of_step()
 /* ----------------------------------------------------------------------
    calculate flux of particles of species ISP entering a grid cell
    see Bird 1994, eq 4.22
+   NOTE: could add option to insert particles on backflow boundaries
+         when indot < 0.0
 ------------------------------------------------------------------------- */
 
 double FixInflow::mol_inflow(int isp, double indot)
 {
   double *vscale = particle->mixture[imix]->vscale;
   double *fraction = particle->mixture[imix]->fraction;
+
+  if (indot < 0.0) error->one(FLERR,"Fix inflow used on outflow boundary");
 
   double inward_number_flux = 0.0;
   if (indot >= 0.0) {
