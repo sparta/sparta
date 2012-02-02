@@ -551,7 +551,7 @@ void FixInflow::start_of_step()
 	  //printf("BBB %g\n",normalized_distbn_fn);
 	} while (normalized_distbn_fn < random->gaussian());
 	
-	v[ndim] = beta_un + vstream[0];
+	v[ndim] = beta_un*vscale[isp] + vstream[0];
 	
 	theta = MY_PI * random->gaussian();
 	v[pdim1] = vscale[isp]*sin(theta) + vstream[1];
