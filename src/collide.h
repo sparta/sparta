@@ -22,8 +22,8 @@ namespace DSMC_NS {
 
 class Collide : protected Pointers {
  public:
-  bigint ncollattempt;
-  bigint ncollision;
+  int ncoll_attempt;
+  int ncoll;
   char *style;
  
   Collide(class DSMC *, int, char **);
@@ -31,7 +31,7 @@ class Collide : protected Pointers {
   virtual void init();
   void collisions();
 
-  virtual int attempt_collision(int, int, int, double) = 0;
+  virtual double attempt_collision(int, int, int, double) = 0;
   virtual int test_collision(int, int, int, 
 			     Particle::OnePart *, Particle::OnePart *) = 0;
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
@@ -39,17 +39,18 @@ class Collide : protected Pointers {
 					       Particle::OnePart *) = 0;
 
  protected:
-  int nspecies;       // # of species defined
-  int oldspecies;     // # of species defined on previous run
-  int *nsp;           // # of particles in one cell of each species
-  int *maxsp;         // max # of splist indices allocated per species
-  int **splist;       // indices of particles in one cell of each species
+  int ngroups;        // # of groups
+  int *ngroup;        // # of particles in one cell of each group
+  int *maxgroup;      // max # of glist indices allocated per group
+  int **glist;        // indices of particles in one cell of each group
 
-  int nsspair;        // # of species pairs to do collisions for
-  int **sscoll;       // Nx3 list of species pairs to do collisions for
-                      // 0 = sp I, 1 = sp J, 2 = # of collisions to attempt
+  int npair;          // # of group pairs to do collisions for
+  int **gpair;        // Nx3 list of species pairs to do collisions for
+                      // 0 = igroup, 1 = jgroup, 2 = # of attempt collisions
 
-  class RanPark *random;
+  char *mixID;               // ID of mixture to use for groups
+  class Mixture *mixture;    // ptr to mixture
+  class RanPark *random;     // RNG for collision generation
 };
 
 }

@@ -17,19 +17,19 @@
 #include "grid.h"
 #include "update.h"
 #include "random_park.h"
+#include "math_const.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace DSMC_NS;
-
-#define PI 3.14159265358979323846
+using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
 CollideVSS::CollideVSS(DSMC *dsmc, int narg, char **arg) :
   Collide(dsmc, narg, arg)
 {
-  if (narg != 1) error->all(FLERR,"Illegal collision vss command");
+  if (narg != 2) error->all(FLERR,"Illegal collision vss command");
 
   prefactor = NULL;
   vremax = NULL;
@@ -49,8 +49,7 @@ void CollideVSS::init()
 {
   Collide::init();
 
-  // NOTE: this assumes grid->nlocal is static
-
+  /*
   if (nspecies != oldspecies) {
     memory->destroy(prefactor);
     memory->destroy(vremax);
@@ -62,7 +61,6 @@ void CollideVSS::init()
 
   Particle::Species *species = particle->species;
 
-  // NOTE: what is kboltz and fratio
   double kboltz = 1.0;
   double fratio = 1.0;
 
@@ -74,7 +72,7 @@ void CollideVSS::init()
       double mr = species[isp].mass * species[jsp].mass /
 	(species[isp].mass + species[jsp].mass);
       double b = diam*diam / pow(mr,omega);
-      prefactor[isp][jsp] = 0.5 * PI * fratio * update->dt * b *
+      prefactor[isp][jsp] = 0.5 * MY_PI * fratio * update->dt * b *
 	pow(2.0*(2.0-omega)*kboltz*tref,omega);
     }
 
@@ -95,25 +93,39 @@ void CollideVSS::init()
     for (int isp = 0; isp < nspecies; isp++)
       for (int jsp = 0; jsp < nspecies; jsp++)
 	vremax[icell][isp][jsp] = vrm;
+
+  */
 }
 
 /* ---------------------------------------------------------------------- */
 
-int CollideVSS::attempt_collision(int icell, int isp, int jsp, double volume)
+double CollideVSS::attempt_collision(int icell, 
+				     int igroup, int jgroup, double volume)
 {
-  int nattempt = prefactor[isp][jsp] * nsp[isp] * (nsp[jsp]-1) * 
-    vremax[icell][isp][jsp] * volume;
-  return nattempt;
+  // dummy attempt frequency
+
+  double attempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1);
+
+  /*
+  //int nattempt = prefactor[isp][jsp] * nsp[isp] * (nsp[jsp]-1) * 
+  //  vremax[icell][isp][jsp] * volume;
+  */
+
+  return attempt;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   test if collision actually occurs
+   also update vremax
+------------------------------------------------------------------------- */
 
-int CollideVSS::test_collision(int icell, int isp, int jsp,
-				Particle::OnePart *ip, Particle::OnePart *jp)
+int CollideVSS::test_collision(int icell, int igroup, int jgroup,
+			       Particle::OnePart *ip, Particle::OnePart *jp)
 {
-  // test if collision actually occurs
-  // also update vremax
+  if (random->uniform() < 0.5) return 1;
+  return 0;
 
+  /*
   double *vi = ip->v;
   double *vj = jp->v;
   double du  = vi[0] - vj[0];
@@ -125,6 +137,7 @@ int CollideVSS::test_collision(int icell, int isp, int jsp,
   vremax[icell][isp][jsp] = MAX(vre,vremax[icell][isp][jsp]);
   if (vre/vremax[icell][isp][jsp] < random->uniform()) return 0;
   return 1;
+  */
 }
 
 /* ---------------------------------------------------------------------- */
@@ -161,10 +174,29 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip, 
 						  Particle::OnePart *jp)
 {
-  // NOTE: need to define/set this flag, e.g. thru input script
+  // dummy collision = just swap velocities
+
+  double tmp;
+
+  double *vi = ip->v;
+  double *vj = jp->v;
+  tmp = vi[0];
+  vi[0] = vj[0];
+  vj[0] = tmp;
+  tmp = vi[1];
+  vi[1] = vj[1];
+  vj[1] = tmp;
+  tmp = vi[2];
+  vi[2] = vj[2];
+  vj[2] = tmp;
+
+  return NULL;
+
+  /*
   if (eng_exchange) EEXCHANGE_NonReactingEDisposal(ip,jp);
   SCATTER_TwoBodyScattering(ip,jp);
   return NULL;
+  */
 }
 
 /* ---------------------------------------------------------------------- */

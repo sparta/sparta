@@ -37,6 +37,11 @@ class Mixture : protected Pointers {
   int vstream_flag;
   int temp_thermal_flag;
 
+  int allspecies;
+  int ngroups;
+  int *species2group;
+  char **groups;
+
   double *cummulative;
   double *vscale;
   int *active;

@@ -92,9 +92,9 @@ void Finish::end()
 		MPI_SUM,world);
   MPI_Allreduce(&comm->ncomm,&ncmtotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
   if (collide) {
-    MPI_Allreduce(&collide->ncollattempt,&nclatotal,1,MPI_DSMC_BIGINT,
+    MPI_Allreduce(&collide->ncoll_attempt,&nclatotal,1,MPI_DSMC_BIGINT,
 		  MPI_SUM,world);
-    MPI_Allreduce(&collide->ncollision,&ncltotal,1,MPI_DSMC_BIGINT,
+    MPI_Allreduce(&collide->ncoll,&ncltotal,1,MPI_DSMC_BIGINT,
 		  MPI_SUM,world);
   }
 

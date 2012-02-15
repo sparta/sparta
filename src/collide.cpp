@@ -16,12 +16,14 @@
 #include "string.h"
 #include "collide.h"
 #include "particle.h"
+#include "mixture.h"
 #include "update.h"
 #include "grid.h"
 #include "comm.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
+#include "error.h"
 
 using namespace DSMC_NS;
 
@@ -36,16 +38,19 @@ Collide::Collide(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
   style = new char[n];
   strcpy(style,arg[0]);
 
-  nspecies = 0;
-  nsp = NULL;
-  maxsp = NULL;
-  splist = NULL;
-
-  sscoll = NULL;
+  n = strlen(arg[1]) + 1;
+  mixID = new char[n];
+  strcpy(mixID,arg[1]);
 
   random = new RanPark(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
+
+  ngroups = 0;
+  ngroup = NULL;
+  maxgroup = NULL;
+  glist = NULL;
+  gpair = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -53,213 +58,146 @@ Collide::Collide(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
 Collide::~Collide()
 {
   delete [] style;
+  delete [] mixID;
   delete random;
 
-  delete [] nsp;
-  delete [] maxsp;
-  for (int i = 0; i < nspecies; i++) memory->destroy(splist[i]);
-  delete [] splist;
-  memory->destroy(sscoll);
+  delete [] ngroup;
+  delete [] maxgroup;
+  for (int i = 0; i < ngroups; i++) memory->destroy(glist[i]);
+  delete [] glist;
+  memory->destroy(gpair);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void Collide::init()
 {
-  oldspecies = nspecies;
-  nspecies = particle->nspecies;
+  // require mixture to contain all species
 
-  // reallocate one-cell data structures that depend on # of species
-  // NOTE: this assumes nglocal is static
+  int imix = particle->find_mixture(mixID);
+  if (imix < 0) error->all(FLERR,"Collision mixture does not exist");
+  mixture = particle->mixture[imix];
 
-  if (nspecies != oldspecies) {
-    delete [] nsp;
-    delete [] maxsp;
-    for (int i = 0; i < oldspecies; i++) memory->destroy(splist[i]);
-    delete [] splist;
-    memory->destroy(sscoll);
+  if (mixture->allspecies == 0)
+    error->all(FLERR,"Collision mixture does not exist");
 
-    nsp = new int[nspecies];
-    maxsp = new int[nspecies];
-    splist = new int*[nspecies];
-    for (int i = 0; i < nspecies; i++) {
-      maxsp[i] = DELTAPART;
-      memory->create(splist[i],DELTAPART,"collide:splist");
+  // reallocate one-cell data structs that depend on # of groups
+
+  int oldgroups = ngroups;
+  ngroups = mixture->ngroups;
+
+  if (ngroups != oldgroups) {
+    delete [] ngroup;
+    delete [] maxgroup;
+    for (int i = 0; i < oldgroups; i++) memory->destroy(glist[i]);
+    delete [] glist;
+    memory->destroy(gpair);
+
+    ngroup = new int[ngroups];
+    maxgroup = new int[ngroups];
+    glist = new int*[ngroups];
+    for (int i = 0; i < ngroups; i++) {
+      maxgroup[i] = DELTAPART;
+      memory->create(glist[i],DELTAPART,"collide:glist");
     }
-    memory->create(sscoll,nspecies*nspecies,3,"collide:sscoll");
+    memory->create(gpair,ngroups*ngroups,3,"collide:gpair");
   }
-
-  ncollattempt = 0;
-  ncollision = 0;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+  NTC algorithm on pairs of groups
+  pre-compute # of attempts per group pair
+------------------------------------------------------------------------- */
 
 void Collide::collisions()
 {
-  int i,j,k,icell,itype,isp,jsp,ip,jp,np;
-  int nattempt;
-  double volume;
+  int i,j,k,ip,jp,np,icell,itype,igroup,jgroup,nattempt;
+  double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
 
   Grid::OneCell *cells = grid->cells;
   int *mycells = grid->mycells;
+  int nglocal = grid->nlocal;
+
   Particle::OnePart *particles = particle->particles;
   int *cellcount = particle->cellcount;
   int *first = particle->first;
   int *next = particle->next;
-  int nglocal = grid->nlocal;
-  int nspecies = particle->nspecies;
 
+  int *species2group = mixture->species2group;
 
-  return;
-
-
-  /*
   // loop over cells I own
-  // NOTE: this is the NTC algorithm, could do simpler TC instead
-  // NTC pre-computes attempts, TC increments time until limit of timestep
+
+  ncoll_attempt = 0;
+  ncoll = 0;
 
   for (int m = 0; m < nglocal; m++) {
-
     icell = mycells[m];
     volume = cells[icell].volume;
     np = cellcount[m];
     ip = first[m];
 
-    // setup per-species particle lists for this cell
+    // setup per-group particle lists for this cell
 
-    for (i = 0; i < nspecies; i++) nsp[i] = 0;
+    for (i = 0; i < ngroups; i++) ngroup[i] = 0;
 
     while (ip >= 0) {
       itype = particles[ip].ispecies;
-      if (nsp[itype] == maxsp[itype]) {
-	maxsp[itype] += DELTAPART;
-	memory->grow(splist[itype],maxsp[itype],"collide:splist");
+      igroup = species2group[itype];
+      if (ngroup[igroup] == maxgroup[igroup]) {
+	maxgroup[igroup] += DELTAPART;
+	memory->grow(glist[igroup],maxgroup[igroup],"collide:grouplist");
       }
-      splist[itype][nsp[itype]++] = ip;
+      glist[igroup][ngroup[igroup]++] = ip;
       ip = next[ip];
     }
 
-    // compute collision attempt count for each species pair
+    // attempt = exact collision attempt count for a pair of groups
+    // nattempt = rounded attempt with RN
+    // add pairing to gpair
 
-    nsspair = 0;
-    for (isp = 0; isp < nspecies; isp++)
-      for (jsp = 0; jsp < nspecies; jsp++) {
-	// NOTE: comment out for now to exercise list buidling
-	//nattempt = attempt_collision(icell,isp,jsp,volume);
+    npair = 0;
+    for (igroup = 0; igroup < ngroups; igroup++)
+      for (jgroup = 0; jgroup < ngroups; jgroup++) {
+	attempt = attempt_collision(icell,igroup,jgroup,volume);
+	nattempt = static_cast<int> (attempt);
+	if (attempt-nattempt > random->uniform()) nattempt++;
 
-
-	const1 = PI * pow(2.0*(2.0-OMEGA)*BOLTZMANN*T_REF,OMEGA);
-	const2  = 0.5 * simulation_ratio2 * const1;
-
-	current = # of mols in group;
-	averate = current-1;
-	weighted_volume = vol of 3d cell;
-	weighted_volume = area of 2d cell (unit lenght in 3d);
-        B[isp][jsp] = ;
-        vre_max_array[icell][isp][jsp] = max rel velocity;
-        (rezeroed eveny N timesteps, never in steady-state)
-	(init to 
-
-     nattempt = const2 * dt * Current_PNmols * average_QNmols * 
-       B[P_idx][Q_idx] *vre_max_array[ensemble_idx][P_idx][Q_idx] /
-       weighted_volume;
-
-     // set B (VSS specific)
-     // OMEGA = ave of OMEGA_i and OMEGA_j
-
-     for(i=0;i < nspecies;++i)
-       {
-	 diam_i = SPECIES_Diameter(i);
-      mass_i = SPECIES_Mass(i);
-
-      for(j=0;j < nspecies;++j)
-      {
-          diam_j = SPECIES_Diameter(j);
-          mass_j = SPECIES_Mass(j);
-
-          diam_av = (diam_i + diam_j) / 2.0;
-          mr      = mass_i * (mass_j / (mass_i + mass_j));
-     
-          B[i][j] = diam_av * diam_av / pow(mr,OMEGA);
-      }
-   }
-
-	 // initial vre_max, should be species dependent
-
-   vr_indice = 1.0 - 2.0 * OMEGA ;
-          
-   max_thermal_velocity = 5.0/beta;
-
-   vrm = pow(max_thermal_velocity,vr_indice);
-
-   for(i=0;i< nensembles;++i)
-   {
-       for(j=0;j < nspecies;++j)
-       {
-           for(k=0;k < nspecies;++k)
-           {
-               vre_max_array[i][j][k] = vrm;
-           }
-       }
-   }
-
-	// species is off by 1 to Ntypes
-	//if (nsp[0]
-
-	 // convert Nattempt into integer Nattempt with RN
-
-
-	 // pick I,J pair to collide, insure I != J
-
-
-	nattempt = 10;
 	if (nattempt) {
-	  sscoll[nsspair][0] = isp;
-	  sscoll[nsspair][1] = jsp;
-	  sscoll[nsspair][2] = nattempt;
-	  nsspair++;
+	  gpair[npair][0] = igroup;
+	  gpair[npair][1] = jgroup;
+	  gpair[npair][2] = nattempt;
+	  ncoll_attempt += nattempt;
+	  npair++;
 	}
       }
 
-    // perform collisions for each species pair in sscoll list
+    // perform collisions for each group pairing in gpair list
+    // select random particle in each group
+    // if igroup = jgroup, cannot be same particle
+    // test if collision actually occurs
+    // NOTE: will need to reset vremax
+    // NOTE: will need to account for chemistry & update group lists
 
-    for (i = 0; i < nsspair; i++) {
-      isp = sscoll[i][0];
-      jsp = sscoll[i][1];
-      nattempt = sscoll[i][2];
-      ncollattempt += nattempt;
+    for (i = 0; i < npair; i++) {
+      igroup = gpair[i][0];
+      jgroup = gpair[i][1];
+      nattempt = gpair[i][2];
 
       for (k = 0; k < nattempt; k++) {
+	i = ngroup[igroup] * random->uniform();
+	j = ngroup[jgroup] * random->uniform();
+	if (igroup == jgroup)
+	  while (i == j) j = ngroup[jgroup] * random->uniform();
 
-	// select random particle of each species
-	// if isp = jsp, cannot be same particle
+	ipart = &particles[glist[igroup][i]];
+	jpart = &particles[glist[jgroup][j]];
 
-	i = nsp[isp] * random->uniform();
-	j = nsp[jsp] * random->uniform();
-	if (isp == jsp)
-	  while (i == j) j = nsp[jsp] * random->uniform();
-
-	ipart = &particles[splist[isp][i]];
-	jpart = &particles[splist[jsp][j]];
-
-	// test if collision actually occurs
-	// if so, perform a collision
-	// kpart = NULL means no new particle
-        // NOTE: worry about created kpart when add chemistry
-
-	// test collide resets vre_max whether collision happens or not
-
-	if (!test_collision(icell,isp,jsp,ipart,jpart)) continue;
-
+	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
 	setup_collision(ipart,jpart);
 	kpart = perform_collision(ipart,jpart);
-	ncollision++;
+	ncoll++;
       }
     }
   }
-
-  */
-
 }
