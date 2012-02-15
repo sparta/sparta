@@ -15,13 +15,14 @@ collisions style args :pre
 style = {none} or {vss} :ulb,l
 args = arguments for that style :l
   none args = none
-  vss args = none :pre
+  vss args = mix-ID :pre
+    mix-ID = ID of mixture to use for group definitions
 :ule
 
 [Examples:]
 
 collisions none
-collisions vss :pre
+collisions vss background :pre
 
 [Description:]
 
@@ -30,10 +31,13 @@ collisions are performed, particles are sorted by grid cell every
 timestep and the appropriate collision model is invoked on a
 per-grid-cell basis.
 
-The {none} style means that no collisions will be performed,
-i.e. free molecular flow.
+The {none} style means that no collisions will be performed, i.e. free
+molecular flow.
 
-The {vss} style is the Variable Soft Sphere model.
+The {vss} style is the Variable Soft Sphere model.  It requires a
+mixture ID to be specified which must contain all the species defined
+for the simulation.  The group definitions in the mixture will be used
+to perform collisions between all pairs of groups.
 
 VSS needs to be described and cited.
 
@@ -41,7 +45,9 @@ VSS needs to be described and cited.
 
 [Restrictions:] none
 
-[Related commands:] none
+[Related commands:]
+
+"mixture"_mixture.html
 
 [Default:]
 

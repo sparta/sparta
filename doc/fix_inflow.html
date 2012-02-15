@@ -24,10 +24,11 @@
 <LI>face1,face2,... = one or more of <I>all</I> or <I>xlo</I> or <I>xhi</I> or <I>ylo</I> or <I>yhi</I> or <I>zlo</I> or <I>zhi</I>
 zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>n</I> or <I>nevery</I> 
+<LI>keyword = <I>n</I> or <I>nevery</I> or <I>perspecies</I> 
 
 <PRE>  <I>n</I> value = Np = number of particles to create
-  <I>nevery</I> value = Nstep = insert Np particles every this many timesteps 
+  <I>nevery</I> value = Nstep = insert every this many timesteps
+  <I>perspecies</I> value = <I>yes</I> or <I>no</I> 
 </PRE>
 
 </UL>
@@ -54,8 +55,10 @@ can be specified as <I>xlo</I>, <I>xhi</I>, <I>ylo</I>, <I>yhi</I>, <I>zlo</I>, 
 Specifying <I>all</I> is the same as specifying all 6 individual faces.
 </P>
 <P>On each insertion timestep, each cell with a face(s) adjacent to an
-inflow boundary perform the following computation at the beginning of
-the DSMC timestep.  The number of particles <I>M</I> to be inserted on the
+inflow boundary performs the following computation at the beginning of
+the DSMC timestep.
+</P>
+<P>The number of particles <I>M</I> to be inserted on the
 face is calculated, which is a function of the global <I>Fnum</I> value,
 the mixture number density, the mixture streaming velocity and thermal
 temperature, the area of the face, and its orientation relative to the
@@ -76,22 +79,53 @@ also set by the <A HREF = "mixture.html">mixture</A> command.
 velocity sampling is repeated until it is.  This insures that <I>M</I>
 particles enter the simulation domain as desired.
 </P>
-<P>Inserted particles advect for a random fraction of the timestep, the
-first time they are moved following insertion.  This insures a
-continuous flow field of particles entering the simulation box through
-that face.
+<P>The first timestep that inserted particles are advected, they move for
+a random fraction of the timestep.  This insures a continuous flow
+field of particles enters the simulation box through that face.
 </P>
-<P>The <I>n</I> and <I>nevery</I> keywords can be useful for debugging purposes.
+<HR>
+
+<P>The <I>n</I> keyword can be useful for debugging purposes.  If <I>Np</I> is set
+to 0, then the count of inserted particles is a function of the <I>Fnum</I>
+and <I>nrho</I> and other mixture settings, as described above.  If <I>Np</I> is
+set to a value > 0, then the <I>Fnum</I> and <I>nrho</I> settings are ignored,
+and <I>Np</I> particles are inserted.  This is done by dividing <I>Np</I> by the
+total number of grid cells that are adjacent to the specified box
+faces and inserting an equal number of particles per grid cell.
 </P>
-<P>If the <I>n</I> keyword is used, then the <I>Fnum</I> and <I>nrho</I> settings are
-ignored and <I>Np</I> total particles are inserted every timestep particles
-are inserted.  This is done on a per-grid basis by dividing <I>Np</I> by
-the total number of grid cells that are adjacent to the specified
-faces and inserting an equal number or particles per grid cell.
+<P>The <I>nevery</I> keyword determines how often particles are inserted.  If
+<I>Nstep</I> > 1, this will give non-continuous, clumpy behavior in the
+inlet flow field.
 </P>
-<P>If the <I>nevery</I> keyword is used, particles are only inserted every
-<I>Nstep</I> timesteps.  This will give non-continuous, clumpy behavior in
-the inlet flow field if <I>Nstep</I> > 1.
+<P>The <I>perspecies</I> keyword determines how the species of each inserted
+particle is randomly determined.  It has an effect on the statistical
+properties of the inserted particles.
+</P>
+<P>If <I>perspecies</I> is set to <I>yes</I>, then a target insertion number <I>M</I> is
+calculated for each species in a grid cell, which is a function of the
+relative number fraction of the species, as set by the <A HREF = "mixture.html">mixture
+nfrac</A> command.  If <I>M</I> has a fractional value,
+e.g. 12.5, then 12 particles of that species will always be inserted,
+and a 13th depending on the outcome of a randomly generated number.
+</P>
+<P>If <I>perspecies</I> is set to <I>no</I>, then a single target insertion number
+<I>M</I> is calculated for all the species in a grid cell.  Each time a
+particle is inserted, a random number is used to choose the species of
+the particle, based on the relative number fractions of all the
+species in the mixture.  As before, if <I>M</I> has a fractional value,
+e.g. 12.5, then 12 particles will always be inserted, and a 13th
+depending on the outcome of a randomly generated number.
+</P>
+<P>Here is a simple example, illustrating the difference between the two
+options.  Assume a mixture with 2 species, each with a relative number
+fraction of 0.5.  Assume a particular grid cell inserts 10 particles
+from that mixture.  If <I>perspecies</I> is set to <I>yes</I>, then exactly 5
+particles of each species will be inserted on every timestep
+insertions take place.  If <I>perspecies</I> is set to <I>no</I>, then exactly
+10 particles will be inserted every time and on average the insertion
+will be 5 particles of each of the two species.  But on one timestep
+it might be 6 of the first and 4 of the second.  On another timestep
+it might be 3 of the first and 7 of the second.
 </P>
 <HR>
 
@@ -114,12 +148,15 @@ a run is performed.
 2d simulation.  Particles cannot be inserted on periodic faces of the
 simulation box.
 </P>
+<P>A <I>n</I> setting of <I>Np</I> > 0 can only be used with a <I>perspecies</I> setting
+of <I>no</I>.
+</P>
 <P><B>Related commands:</B>
 </P>
 <P><A HREF = "mixture.html">mixture</A>, <A HREF = "create_molecules.html">create_molecules</A>
 </P>
 <P><B>Default:</B>
 </P>
-<P>The keyword defaults are n = 0 and nevery = 1.
+<P>The keyword defaults are n = 0, nevery = 1, perspecies = yes.
 </P>
 </HTML>

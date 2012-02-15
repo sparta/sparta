@@ -17,78 +17,114 @@
 </PRE>
 <UL><LI>ID = user-defined name of the mixture 
 
-<LI>species1, species2, ... = one of more species IDs to include in the mixture 
+<LI>species1, species2, ... = zero or more species IDs to include in the mixture 
 
 <LI>zero or more keyword/arg pairs may be appended 
 
-<LI>keyword = <I>frac</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> 
+<LI>keyword = <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>frac</I> or <I>group</I> 
 
-<PRE>  <I>frac</I> arg = fraction
-    fraction = relative number fraction for each of these species (0 to 1)
-  <I>nrho</I> arg = density
+<PRE>  <I>nrho</I> arg = density
     density = number density of entire mixture (# per length^3 units)
   <I>vstream</I> args = Vx Vy Vz
     Vx,Vy,Vz = streaming velocity of entire mixture (velocity units)
   <I>temp</I> arg = thermal
-    thermal = temperature of entire mixture (temperature units) 
+    thermal = temperature of entire mixture (temperature units)
+  <I>frac</I> arg = fraction
+    fraction = relative number fraction for each listed species (0 to 1)
+  <I>group</I> arg = <I>all</I> or <I>species</I> or group-ID
+    all = put each listed species (or all species if none listed) in the "all" group
+    species = put each listed species (or all species if none listed) in its own group
+    group-ID = put the listed species in a group with this ID 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>mixture air N O NO
-mixture air N O NO vstream 250.0 0.0 0.0
+<PRE>mixture air N O NO group lite
+mixture air N O NO vstream 250.0 0.0 0.0 group species
 mixture air N frac 0.8
 mixture air O frac 0.2
 mixture background N O 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Define a gas mixture which can be used via its ID in other commands
-such as <A HREF = "create_molecules.html">create_molecules</A>.  Any number of
-mixtures can be defined and used in a simulation.
+<P>Define a gas mixture and its properties.  A mixture can be referenced
+via its ID in other commands such as
+<A HREF = "create_molecules.html">create_molecules</A>.  Any number of mixtures can
+be defined and used in a simulation.
 </P>
 <P>The ID of a mixture can only contain alphanumeric characters and
 underscores.
 </P>
 <P>A mixture is a collection of one or more particle species as defined
 by the <A HREF = "species.html">species</A> command.  The mixture has global
-attributes as well as per-species attributes.  Any of these attributes
-can be set by using the mixture command several times for the same ID,
-using the desired species.  All attributes have default values if they
-are not specified explicitly.
+attributes as well as per-species attributes.  All attributes have
+default values unless they are explicitly specified.  The collection
+of species belonging to the mixture and the mixture's attributes can
+be defined by the mixture command, which can be used multiple times
+with the same ID to add species or re-define its attributes.
 </P>
-<P>If the mixture command is used with the same ID as a previously
-defined mixture, then any new species which appears for the first time
-is added to the mixture.  Note that keywords which set per-species
-attibutes only apply to the species listed in that command.
+<P>Zero or more species can be listed with the mixture command.  If a
+species is not already in the mixture (from a previous mixture command
+with the same ID), then the species is added to the mixture.  If the
+mixture command sets per-species properties, as discussed below, then
+those settings only apply to the species listed in this command, not
+to other species previously added to the mixture.
 </P>
-<P>The <I>frac</I> keyword sets a per-species attribute.  Its <I>fraction</I> value
-is the fraction (from 0 to 1 inclusive) of the total number density of
-the mixture that this species will comprise.
+<P>The <I>nrho</I> keyword sets a global attribute of the mixture, namely its
+density.  For 3d simulations the units of the specified <I>density</I> are
+#/volume.  For 2d, the units are effectively #/area, since the
+z-dimension thickness of the simulation box = 1.0.
 </P>
-<P>The sum of assigned <I>frac</I> values cannot exceed 1.0.  If all
-species are assigned <I>frac</I> values, they must total to 1.0.
+<P>The <I>vstream</I> keyword sets a global attribute of the mixture, namely
+the streaming velocity.  Particles created using the mixture will have
+the specified <I>Vx,Vy,Vz</I> values.
 </P>
-<P>If <I>frac</I> is not explcitly set for one or more species, then the
-fraction for the N unset species will be (1 - sum)/N, where sum
-is the sum of assigned <I>frac</I> values.
+<P>The <I>temp</I> keyword sets a global attribute of the mixture, namely the
+thermal temperature of its particles.  When particles are created,
+this value is used to sample a Gaussian velocity distribution, which
+is superposed on the streaming velocity, when a particle's velocity is
+initialized.
 </P>
-<P>The <I>nrho</I> keyword sets a global attribute, namely the density of the
-mixture.  It can be used in any mixture command to set the number
-density of the corresponding mixture.  For 3d simulations the units
-are #/volume.  For 2d, the units are effectively #/area.
+<P>The <I>frac</I> keyword sets a per-species attribute for individual species
+in the mixture.  Each species has a relative fractional density, such
+as 0.2, meaning one out of 5 particles is that species.  The sum of
+this value across all species in the mixture must equal 1.0.  The
+<I>frac</I> keyword sets this value for the listed species.  If this value
+is never set for M species out of the total N species in the mixture,
+then when a simulation is run, the <I>frac</I> value for each of the M
+species is set to (1 - sum)/M, where sum is the sum of the <I>frac</I>
+values for the N-M assigned species.
 </P>
-<P>The <I>vstream</I> keyword sets a global attribute, namely the streaming
-velocity of the mixture.  All particles created using the mixture will
-hvae the specified <I>Vx,Vy,Vz</I> values.
+<P>Each species in the mixture is assigned to a group.  Groups are used
+when performing collisions so that collisions attempts, partners, and
+parameters can be treated on a per-group basis for accuracy and
+efficiency.  The <I>group</I> keyword is used to make these assignments.
 </P>
-<P>The <I>temp</I> keyword sets a global attribute, namely the thermal
-temperature of particles in the mixture, which is set to the specified
-<I>thermal</I> value.  In terms of particle velocity, this is used to
-sample a Gaussian velocity distribution at the requested temperature
-which is superposed on top of the streaming velocity when a particle's
-velocity is set.
+<P>The specified group ID can be any string you choose.  Similar to the
+mixture ID, it can only contain alphanumeric characters and
+underscores.  Using the word "all" or "species" is used as a group-ID
+has special meaning as discussed below.  For any other ID, the listed
+species are assigned to that group.  Normally this should only be done
+once for each species, so that groups are not left empty.  If a
+species was previously assigned to another group, then it is
+re-assigned.
+</P>
+<P>If "all" is used as the group-ID and no species are specified, then
+all previously defined groups are deleted, and all species in the
+mixture are assigned to the same group, with group-ID = "all".  If
+individual species are listed in the mixture command, then only those
+species are (re)assigned to a group with group-ID = all.  This is also
+the default behavior for the mixture command for any new species
+specified; if the <I>group</I> keyword is not used, the new species are
+assigned to a group with group-ID = "all".
+</P>
+<P>If "species" is used as the group-ID and no species are specified,
+then all previously defined groups are deleted, and each species in
+the mixture is assigned to its own group, with group-ID = the species
+name.  If individual species are listed in the mixture command, then
+only those species are (re)assigned to a group with group-ID = the
+species name.
 </P>
 <P><B>Restrictions:</B> none
 </P>
@@ -98,9 +134,9 @@ velocity is set.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The <I>frac</I> default is described above.
-</P>
 <P>The <I>nrho</I>, <I>vstream</I>, and <I>temp</I> defaults are those defined for the
 background gas density, as set by the <A HREF = "global.html">global</A> command.
+The <I>frac</I> default is described above.  The <I>group</I> default (if new
+species are listed) is "all".
 </P>
 </HTML>
