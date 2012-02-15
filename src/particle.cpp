@@ -314,8 +314,8 @@ void Particle::add_mixture(int narg, char **arg)
   // nsp = # of species args before optional keywords
   // iarg = start of optional keywords
 
-  int iarg = 1;
-  for (iarg = 2; iarg < narg; iarg++) {
+  int iarg;
+  for (iarg = 1; iarg < narg; iarg++) {
     if (strcmp(arg[iarg],"nrho") == 0) break;
     if (strcmp(arg[iarg],"vstream") == 0) break;
     if (strcmp(arg[iarg],"temp") == 0) break;
@@ -326,6 +326,7 @@ void Particle::add_mixture(int narg, char **arg)
 
   // pass list of species and list of params to Mixture
 
+  printf("MIX %d %d %d\n",nsp,iarg,narg);
   mixture[imix]->add_species(nsp,&arg[1]);
   mixture[imix]->params(narg-iarg,&arg[iarg]);
 }

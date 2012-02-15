@@ -111,7 +111,7 @@ void Collide::init()
 
 void Collide::collisions()
 {
-  int i,j,k,ip,jp,np,icell,isp,igroup,jgroup,newgroup;
+  int i,j,k,ip,jp,np,icell,isp,ipair,igroup,jgroup,newgroup;
   int nattempt;
   int *ni,*nj,*ilist,*jlist;
   double attempt,volume;
@@ -180,10 +180,10 @@ void Collide::collisions()
     // NOTE: need to reset vremax ?
     // NOTE: ok to use pre-computed nattempt when Ngroup may have changed?
 
-    for (i = 0; i < npair; i++) {
-      igroup = gpair[i][0];
-      jgroup = gpair[i][1];
-      nattempt = gpair[i][2];
+    for (ipair = 0; ipair < npair; ipair++) {
+      igroup = gpair[ipair][0];
+      jgroup = gpair[ipair][1];
+      nattempt = gpair[ipair][2];
 
       ni = &ngroup[igroup];
       nj = &ngroup[jgroup];

@@ -81,6 +81,7 @@ Mixture::~Mixture()
   memory->destroy(cummulative);
 
   delete_groups();
+  memory->sfree(groups);
   memory->destroy(mix2group);
   memory->destroy(species2group);
 
@@ -260,6 +261,7 @@ void Mixture::params(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"frac") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
+      fracflag = 1;
       fracvalue = atof(arg[iarg+1]);
       if (fracvalue < 0.0 || fracvalue > 1.0) 
 	error->all(FLERR,"Illegal mixture command");
@@ -267,6 +269,7 @@ void Mixture::params(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"group") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
+      groupflag = 1;
       grouparg = iarg+1;
       iarg += 2;
 
@@ -381,8 +384,6 @@ void Mixture::allocate(int n)
 void Mixture::delete_groups()
 {
   for (int i = 0; i < ngroups; i++) delete [] groups[i];
-  memory->sfree(groups);
-  groups = NULL;
   ngroups = 0;
 }
 
@@ -394,7 +395,8 @@ void Mixture::add_group(const char *idgroup)
 {
   if (ngroups == maxgroup) {
     maxgroup += DELTA;
-    groups = (char **) memory->srealloc(groups,sizeof(char *),"mixture:groups");
+    groups = (char **) memory->srealloc(groups,maxgroup*sizeof(char *),
+					"mixture:groups");
   }
 
   int n = strlen(idgroup) + 1;
