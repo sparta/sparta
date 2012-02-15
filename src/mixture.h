@@ -37,10 +37,12 @@ class Mixture : protected Pointers {
   int vstream_flag;
   int temp_thermal_flag;
 
-  int allspecies;
-  int ngroups;
-  int *species2group;
-  char **groups;
+  int allspecies;             // 1 if mixture contains all species in model
+  int ngroups;                // # of defined groups
+  int *species2group;         // s2g[i] = map of species I (1 to Nsp) to
+                              //   group (0 to Ngroups-1),
+                              //   -1 if species not in mixture
+  char **groups;              // group IDs
 
   double *cummulative;
   double *vscale;

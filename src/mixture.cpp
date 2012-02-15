@@ -186,18 +186,7 @@ void Mixture::params(int narg, char **arg)
 {
   int iarg = 0;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"frac") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
-      double value = atof(arg[iarg+1]);
-      if (value < 0.0 || value > 1.0) 
-	error->all(FLERR,"Illegal mixture command");
-      for (int i = 0; i < nspecies; i++)
-	if (active[i]) {
-	  fraction_flag[i] = 1;
-	  fraction_user[i] = value;
-	}
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"nrho") == 0) {
+    if (strcmp(arg[iarg],"nrho") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       nrho_user = atof(arg[iarg+1]);
       if (nrho_user <= 0.0) error->all(FLERR,"Illegal mixture command");
@@ -216,6 +205,31 @@ void Mixture::params(int narg, char **arg)
       if (temp_thermal_user <= 0.0) error->all(FLERR,"Illegal mixture command");
       temp_thermal_flag = 1;
       iarg += 2;
+
+    } else if (strcmp(arg[iarg],"frac") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
+      double value = atof(arg[iarg+1]);
+      if (value < 0.0 || value > 1.0) 
+	error->all(FLERR,"Illegal mixture command");
+      for (int i = 0; i < nspecies; i++)
+	if (active[i]) {
+	  fraction_flag[i] = 1;
+	  fraction_user[i] = value;
+	}
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"group") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
+      double value = atof(arg[iarg+1]);
+      if (value < 0.0 || value > 1.0) 
+	error->all(FLERR,"Illegal mixture command");
+      for (int i = 0; i < nspecies; i++)
+	if (active[i]) {
+	  fraction_flag[i] = 1;
+	  fraction_user[i] = value;
+	}
+      iarg += 2;
+
     } else error->all(FLERR,"Illegal mixture command");
   }
 }

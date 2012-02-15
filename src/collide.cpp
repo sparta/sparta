@@ -111,7 +111,8 @@ void Collide::init()
 
 void Collide::collisions()
 {
-  int i,j,k,ip,jp,np,icell,itype,igroup,jgroup,nattempt;
+  int i,j,k,ip,jp,np,icell,isp,igroup,jgroup,newgroup;
+  int nattempt;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
 
@@ -142,8 +143,8 @@ void Collide::collisions()
     for (i = 0; i < ngroups; i++) ngroup[i] = 0;
 
     while (ip >= 0) {
-      itype = particles[ip].ispecies;
-      igroup = species2group[itype];
+      isp = particles[ip].ispecies;
+      igroup = species2group[isp];
       if (ngroup[igroup] == maxgroup[igroup]) {
 	maxgroup[igroup] += DELTAPART;
 	memory->grow(glist[igroup],maxgroup[igroup],"collide:grouplist");
@@ -176,8 +177,7 @@ void Collide::collisions()
     // select random particle in each group
     // if igroup = jgroup, cannot be same particle
     // test if collision actually occurs
-    // NOTE: will need to reset vremax
-    // NOTE: will need to account for chemistry & update group lists
+    // NOTE: need to reset vremax ?
 
     for (i = 0; i < npair; i++) {
       igroup = gpair[i][0];
@@ -197,6 +197,26 @@ void Collide::collisions()
 	setup_collision(ipart,jpart);
 	kpart = perform_collision(ipart,jpart);
 	ncoll++;
+
+	// ipart will always exist but may be in different group
+
+	newgroup = species2group[ipart->ispecies];
+	if (newgroup != igroup) {
+	}
+
+	// jpart may not exist and may be in different group
+
+	if (jpart) {
+	  newgroup = species2group[ipart->ispecies];
+	  if (newgroup != jgroup) {
+	  }
+	} else {
+	}
+
+	// if kpart exists, add it to the appropriate group
+
+	if (kpart) {
+	}
       }
     }
   }
