@@ -173,10 +173,11 @@ void Collide::collisions()
 	}
       }
 
-    // perform collisions for each group pairing in gpair list
+    // perform collisions for each pair of groups in gpair list
     // select random particle in each group
     // if igroup = jgroup, cannot be same particle
     // test if collision actually occurs
+    // if chemistry occurs, move output I,J,K particles to new group lists
     // NOTE: need to reset vremax ?
 
     for (i = 0; i < npair; i++) {
@@ -202,20 +203,36 @@ void Collide::collisions()
 
 	newgroup = species2group[ipart->ispecies];
 	if (newgroup != igroup) {
+	  // test for need to grow newgroup
+	  glist[newgroup][ngroup[newgroup]++] = glist[igroup][i];
+	  glist[igroup][i] = glist[igroup][ngroup[igroup]-1];
+	  ngroup[igroup]--;
 	}
 
-	// jpart may not exist and may be in different group
+	// jpart may not exist or may be in different group
 
 	if (jpart) {
-	  newgroup = species2group[ipart->ispecies];
+	  newgroup = species2group[jpart->ispecies];
 	  if (newgroup != jgroup) {
+	    // test for need to grow newgroup
+	    glist[newgroup][ngroup[newgroup]++] = glist[jgroup][j];
+	    glist[jgroup][j] = glist[jgroup][ngroup[jgroup]-1];
+	    ngroup[jgroup]--;
 	  }
 	} else {
+	  // what if this makes count -> 1 ??, ditto for others?
+	  glist[jgroup][j] = glist[jgroup][ngroup[jgroup]-1];
+	  ngroup[jgroup]--;
 	}
 
-	// if kpart exists, add it to the appropriate group
+	// if kpart exists, add it to appropriate group
 
 	if (kpart) {
+	  newgroup = species2group[kpart->ispecies];
+	  // test for need to grow group
+	  // need to know particle index of kpart
+	  // question is how it is added to particle list, who owns memory
+	  glist[newgroup][ngroup[newgroup]++] = 1;
 	}
       }
     }
