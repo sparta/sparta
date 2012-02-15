@@ -49,8 +49,8 @@ Collide::Collide(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
   glist = NULL;
   gpair = NULL;
 
-  ncoll_attempt = 0;
-  ncoll = 0;
+  ncollide_one = nattempt_one = 0;
+  ncollide_running = nattempt_running = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -122,22 +122,19 @@ void Collide::collisions()
   int nglocal = grid->nlocal;
 
   Particle::OnePart *particles = particle->particles;
-  int *cellcount = particle->cellcount;
-  int *first = particle->first;
   int *next = particle->next;
 
   int *species2group = mixture->species2group;
 
   // loop over cells I own
 
-  ncoll_attempt = 0;
-  ncoll = 0;
+  ncollide_one = nattempt_one = 0;
 
   for (int m = 0; m < nglocal; m++) {
     icell = mycells[m];
+    np = cells[icell].count;
+    ip = cells[icell].first;
     volume = cells[icell].volume;
-    np = cellcount[m];
-    ip = first[m];
 
     // setup per-group particle lists for this cell
 
@@ -169,7 +166,7 @@ void Collide::collisions()
 	  gpair[npair][0] = igroup;
 	  gpair[npair][1] = jgroup;
 	  gpair[npair][2] = nattempt;
-	  ncoll_attempt += nattempt;
+	  nattempt_one += nattempt;
 	  npair++;
 	}
       }
@@ -181,6 +178,7 @@ void Collide::collisions()
     // if chemistry occurs, move output I,J,K particles to new group lists
     // if chemistry occurs, exit attempt loop if group count goes to 0
     // NOTE: need to reset vremax ?
+    // NOTE: ok to use pre-computed nattempt when Ngroup may have changed?
 
     for (i = 0; i < npair; i++) {
       igroup = gpair[i][0];
@@ -191,6 +189,9 @@ void Collide::collisions()
       nj = &ngroup[jgroup];
       ilist = glist[igroup];
       jlist = glist[jgroup];
+
+      if (*ni == 0 || *nj == 0) continue;
+      if (igroup == jgroup && *ni == 1) continue;
 
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
@@ -204,7 +205,7 @@ void Collide::collisions()
 	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
 	setup_collision(ipart,jpart);
 	kpart = perform_collision(ipart,jpart);
-	ncoll++;
+	ncollide_one++;
 
 	// ipart may be in different group
 
@@ -251,4 +252,7 @@ void Collide::collisions()
       }
     }
   }
+
+  nattempt_running += nattempt_one;
+  ncollide_running += ncollide_one;
 }

@@ -58,8 +58,8 @@ class Particle : protected Pointers {
   int maxlocal;             // max # particles list can hold
   OnePart *particles;       // list of particles I own
 
-  int *cellcount;           // count of particles in each grid cell I own
-  int *first;               // index of first particle in each grid cell
+  //int *cellcount;           // count of particles in each grid cell I own
+  //int *first;               // index of first particle in each grid cell
   int *next;                // index of next particle in each grid cell
 
   Particle(class DSMC *);

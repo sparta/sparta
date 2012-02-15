@@ -34,8 +34,8 @@ class Grid : protected Pointers {
                               // -1 if global boundary
     int proc;                 // proc that owns this cell
     int local;                // local index of cell if I own it
-    int first;                // index of 1st particle in this cell
     int count;                // # of particles in this cell
+    int first;                // index of 1st particle in this cell
     double volume;            // volume of cell
   };
 

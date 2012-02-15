@@ -799,7 +799,7 @@ void Stats::compute_nmol()
 
 void Stats::compute_ncoll()
 {
-  bigint n = collide->ncoll;
+  bigint n = collide->ncollide_one;
   MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
 }
 
@@ -807,7 +807,7 @@ void Stats::compute_ncoll()
 
 void Stats::compute_nattempt()
 {
-  bigint n = collide->ncoll_attempt;
+  bigint n = collide->nattempt_one;
   MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
 }
 

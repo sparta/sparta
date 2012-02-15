@@ -154,6 +154,13 @@ void Mixture::init()
     error->warning(FLERR,str);
   }
 
+  // setup species2group
+
+  memory->destroy(species2group);
+  memory->create(species2group,particle->nspecies,"mixture:species2group");
+  for (int i = 0; i < particle->nspecies; i++) species2group[i] = -1;
+  for (int i = 0; i < nspecies; i++) species2group[species[i]] = mix2group[i];
+
   // vscale = factor to scale Gaussian unit variance by
   //          to get thermal distribution of velocities
   // per-species value since includes species mass

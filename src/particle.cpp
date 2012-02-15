@@ -49,8 +49,8 @@ Particle::Particle(DSMC *dsmc) : Pointers(dsmc)
   mixture = NULL;
 
   maxgrid = 0;
-  cellcount = NULL;
-  first = NULL;
+  //cellcount = NULL;
+  //first = NULL;
   maxsort = 0;
   next = NULL;
 }
@@ -64,8 +64,8 @@ Particle::~Particle()
   memory->sfree(mixture);
 
   memory->sfree(particles);
-  memory->destroy(cellcount);
-  memory->destroy(first);
+  //memory->destroy(cellcount);
+  //memory->destroy(first);
   memory->destroy(next);
 }
 
@@ -80,10 +80,10 @@ void Particle::init()
 
   if (maxgrid < grid->nlocal) {
     maxgrid = grid->nlocal;
-    memory->destroy(cellcount);
-    memory->destroy(first);
-    memory->create(first,maxgrid,"particle:first");
-    memory->create(cellcount,maxgrid,"particle:cellcount");
+    //    memory->destroy(cellcount);
+    //memory->destroy(first);
+    //memory->create(first,maxgrid,"particle:first");
+    //memory->create(cellcount,maxgrid,"particle:cellcount");
   }
 }
 

@@ -25,8 +25,8 @@ namespace DSMC_NS {
 
 class Collide : protected Pointers {
  public:
-  int ncoll_attempt;
-  int ncoll;
+  int ncollide_one,nattempt_one;
+  bigint ncollide_running,nattempt_running;
   char *style;
  
   Collide(class DSMC *, int, char **);

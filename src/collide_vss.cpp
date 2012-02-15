@@ -104,7 +104,7 @@ double CollideVSS::attempt_collision(int icell,
 {
   // dummy attempt frequency
 
-  double attempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1);
+  double attempt = 0.05 * ngroup[igroup] * (ngroup[jgroup]-1);
 
   /*
   //int nattempt = prefactor[isp][jsp] * nsp[isp] * (nsp[jsp]-1) * 
