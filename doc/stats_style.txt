@@ -14,7 +14,9 @@ stats_style arg1 arg2 ... :pre
 
 arg1,arg2,... = list of statistical attributes :ulb,l
   possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
-                        nmol, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi,
+                        nmol, ncoll, nattempt,
+			vol, lx, ly, lz,
+			xlo, xhi, ylo, yhi, zlo, zhi,
 			c_ID, c_ID\[I\], c_ID\[I\]\[J\],
                         f_ID, f_ID\[I\], f_ID\[I\]\[J\],
                         v_name :pre
@@ -26,6 +28,8 @@ arg1,arg2,... = list of statistical attributes :ulb,l
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second
       nmol = # of molecules
+      ncoll = # of collisions (this step)
+      nattempt = # of attempted collisions (this step)
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
@@ -71,6 +75,24 @@ per CPU second.  Both quantities are on-the-fly metrics, measured
 relative to the last time they were invoked.  Thus if you are printing
 out statistical output every 100 timesteps, the two keywords will
 continually output the time and timestep rate for the last 100 steps.
+
+:line
+
+The {nmol} keyword is the current number of molecules.
+
+The {ncoll} keyword is the number of collisions that occured
+on the current timestep.
+
+The {nattempt} keyword is the number of attempted collisions that
+occurred on the current timestep.
+
+The {vol} keyword is the volume (or area in 2d) of the simulation box.
+
+The {lx}, {ly}, {lz} keywords are the dimensions of the simulation
+box.
+
+The {xlo}, {xhi}, {ylo}, {yhi}, {zlo}, {zhi} keywords are the
+boundaries of the simulation box.
 
 :line
 
