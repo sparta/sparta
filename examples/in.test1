@@ -16,11 +16,12 @@ mixture		    air N O
 
 create_molecules    air n 100000
 
-#collisions	    vss
+collisions	    vss air
 
 timestep 	    0.0001
 
-dump		    1 molecule 500 tmp.dump id type x y z
+#dump		    1 molecule 10 tmp.dump id type x y z
 
-stats		    100
-run 		    1000
+stats_style	    step cpu nmol nattempt ncoll
+stats		    10
+run 		    100
