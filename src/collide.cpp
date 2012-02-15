@@ -27,9 +27,6 @@
 
 using namespace DSMC_NS;
 
-#define DELTAPART 128
-#define SEED 12345
-
 /* ---------------------------------------------------------------------- */
 
 Collide::Collide(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
@@ -51,6 +48,9 @@ Collide::Collide(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
   maxgroup = NULL;
   glist = NULL;
   gpair = NULL;
+
+  ncoll_attempt = 0;
+  ncoll = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -78,8 +78,8 @@ void Collide::init()
   if (imix < 0) error->all(FLERR,"Collision mixture does not exist");
   mixture = particle->mixture[imix];
 
-  if (mixture->allspecies == 0)
-    error->all(FLERR,"Collision mixture does not exist");
+  if (mixture->nspecies != particle->nspecies)
+    error->all(FLERR,"Collision mixture does not contain all species");
 
   // reallocate one-cell data structs that depend on # of groups
 
@@ -113,6 +113,7 @@ void Collide::collisions()
 {
   int i,j,k,ip,jp,np,icell,isp,igroup,jgroup,newgroup;
   int nattempt;
+  int *ni,*nj,*ilist,*jlist;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
 
@@ -178,6 +179,7 @@ void Collide::collisions()
     // if igroup = jgroup, cannot be same particle
     // test if collision actually occurs
     // if chemistry occurs, move output I,J,K particles to new group lists
+    // if chemistry occurs, exit attempt loop if group count goes to 0
     // NOTE: need to reset vremax ?
 
     for (i = 0; i < npair; i++) {
@@ -185,28 +187,36 @@ void Collide::collisions()
       jgroup = gpair[i][1];
       nattempt = gpair[i][2];
 
-      for (k = 0; k < nattempt; k++) {
-	i = ngroup[igroup] * random->uniform();
-	j = ngroup[jgroup] * random->uniform();
-	if (igroup == jgroup)
-	  while (i == j) j = ngroup[jgroup] * random->uniform();
+      ni = &ngroup[igroup];
+      nj = &ngroup[jgroup];
+      ilist = glist[igroup];
+      jlist = glist[jgroup];
 
-	ipart = &particles[glist[igroup][i]];
-	jpart = &particles[glist[jgroup][j]];
+      for (k = 0; k < nattempt; k++) {
+	i = *ni * random->uniform();
+	j = *nj * random->uniform();
+	if (igroup == jgroup)
+	  while (i == j) j = *nj * random->uniform();
+
+	ipart = &particles[ilist[i]];
+	jpart = &particles[jlist[j]];
 
 	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
 	setup_collision(ipart,jpart);
 	kpart = perform_collision(ipart,jpart);
 	ncoll++;
 
-	// ipart will always exist but may be in different group
+	// ipart may be in different group
 
 	newgroup = species2group[ipart->ispecies];
 	if (newgroup != igroup) {
-	  // test for need to grow newgroup
-	  glist[newgroup][ngroup[newgroup]++] = glist[igroup][i];
-	  glist[igroup][i] = glist[igroup][ngroup[igroup]-1];
-	  ngroup[igroup]--;
+	  addgroup(newgroup,ilist[i]);
+	  ilist[i] = ilist[*ni-1];
+	  (*ni)--;
+	  if (*ni <= 1) {
+	    if (*ni == 0) break;
+	    if (igroup == jgroup) break;
+	  }
 	}
 
 	// jpart may not exist or may be in different group
@@ -214,25 +224,29 @@ void Collide::collisions()
 	if (jpart) {
 	  newgroup = species2group[jpart->ispecies];
 	  if (newgroup != jgroup) {
-	    // test for need to grow newgroup
-	    glist[newgroup][ngroup[newgroup]++] = glist[jgroup][j];
-	    glist[jgroup][j] = glist[jgroup][ngroup[jgroup]-1];
-	    ngroup[jgroup]--;
+	    addgroup(newgroup,jlist[j]);
+	    jlist[j] = jlist[*nj-1];
+	    (*nj)--;
+	    if (*nj <= 1) {
+	      if (*nj == 0) break;
+	      if (igroup == jgroup) break;
+	    }
 	  }
 	} else {
-	  // what if this makes count -> 1 ??, ditto for others?
-	  glist[jgroup][j] = glist[jgroup][ngroup[jgroup]-1];
-	  ngroup[jgroup]--;
+	  jlist[j] = jlist[*nj-1];
+	  (*nj)--;
+	  if (*nj <= 1) {
+	    if (*nj == 0) break;
+	    if (igroup == jgroup) break;
+	  }
 	}
 
-	// if kpart exists, add it to appropriate group
+	// if kpart exists, add to appropriate group
+	// kpart was just added to particle list, so index = nlocal-1
 
 	if (kpart) {
 	  newgroup = species2group[kpart->ispecies];
-	  // test for need to grow group
-	  // need to know particle index of kpart
-	  // question is how it is added to particle list, who owns memory
-	  glist[newgroup][ngroup[newgroup]++] = 1;
+	  addgroup(newgroup,particle->nlocal-1);
 	}
       }
     }

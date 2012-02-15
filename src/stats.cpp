@@ -20,6 +20,7 @@
 #include "stats.h"
 #include "update.h"
 #include "particle.h"
+#include "collide.h"
 #include "domain.h"
 #include "modify.h"
 #include "fix.h"
@@ -36,7 +37,7 @@ using namespace DSMC_NS;
 // customize a new keyword by adding to this list:
 
 // step, elapsed, dt, cpu, tpcpu, spcpu
-// nmol, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi
+// nmol, ncoll, nattempt, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi
 
 enum{INT,FLOAT,BIGINT};
 enum{SCALAR,VECTOR,ARRAY};
@@ -411,6 +412,10 @@ void Stats::set_fields(int narg, char **arg)
 
     } else if (strcmp(arg[i],"nmol") == 0) {
       addfield("Nmol",&Stats::compute_nmol,BIGINT);
+    } else if (strcmp(arg[i],"ncoll") == 0) {
+      addfield("Ncoll",&Stats::compute_ncoll,BIGINT);
+    } else if (strcmp(arg[i],"nattempt") == 0) {
+      addfield("Natt",&Stats::compute_nattempt,BIGINT);
 
     } else if (strcmp(arg[i],"vol") == 0) {
       addfield("Volume",&Stats::compute_vol,FLOAT);
@@ -638,6 +643,12 @@ int Stats::evaluate_keyword(char *word, double *answer)
   } else if (strcmp(word,"nmol") == 0) {
     compute_nmol();
     dvalue = bivalue;
+  } else if (strcmp(word,"ncoll") == 0) {
+    compute_ncoll();
+    dvalue = bivalue;
+  } else if (strcmp(word,"nattempt") == 0) {
+    compute_nattempt();
+    dvalue = bivalue;
 
   } else if (strcmp(word,"vol") == 0) compute_vol();
   else if (strcmp(word,"lx") == 0) compute_lx();
@@ -782,6 +793,22 @@ void Stats::compute_nmol()
   bigint n = particle->nlocal;
   MPI_Allreduce(&n,&particle->nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
   bivalue = particle->nglobal;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_ncoll()
+{
+  bigint n = collide->ncoll;
+  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nattempt()
+{
+  bigint n = collide->ncoll_attempt;
+  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
 }
 
 /* ---------------------------------------------------------------------- */

@@ -21,32 +21,36 @@ namespace DSMC_NS {
 
 class Mixture : protected Pointers {
  public:
-  char *id;
-  int nspecies;
-  int *species;
-  double *fraction;
-  double *fraction_user;
-  double nrho;
-  double nrho_user;
-  double vstream[3];
-  double vstream_user[3];
-  double temp_thermal;
-  double temp_thermal_user;
-  int *fraction_flag;
-  int nrho_flag;
-  int vstream_flag;
-  int temp_thermal_flag;
+  char *id;                   // ID of mixture
+  int nspecies;               // # of species in mixture
+  int *species;               // species index in master Particle species list
 
-  int allspecies;             // 1 if mixture contains all species in model
+                              // global attributes
+  double nrho;                // number density
+  int nrho_flag;              // 1 if user set nrho
+  double nrho_user;           // user value
+  double vstream[3];          // stream velocity
+  int vstream_flag;           // 1 if user set vstream
+  double vstream_user[3];     // user value
+  double temp_thermal;        // thermal temperature
+  int temp_thermal_flag;      // 1 if user set thermal temp
+  double temp_thermal_user;   // user value
+
+                              // per-species attributes
+  double *fraction;           // relative fraction of each species
+  int *fraction_flag;         // 1 if user set fraction for a species
+  double *fraction_user;      // user value
+  double *cummulative;        // cummulative fraction for each species
+
   int ngroups;                // # of defined groups
-  int *species2group;         // s2g[i] = map of species I (1 to Nsp) to
-                              //   group (0 to Ngroups-1),
-                              //   -1 if species not in mixture
   char **groups;              // group IDs
+  int *mix2group;             // m2g[i] = group that mixture species I is in
+  int *species2group;         // s2g[i] = group that Particle species I is in
+                              // -1 if species I not in mixture
 
-  double *cummulative;
-  double *vscale;
-  int *active;
+  double *vscale;             // pre-computed velocity scale factor
+  int *active;                // 1 if species is active in a mixture command
+  int nactive;                // # of mixture species active in mixture cmd
 
   Mixture(class DSMC *, char *);
   ~Mixture();
@@ -55,9 +59,12 @@ class Mixture : protected Pointers {
   void params(int, char **);
 
  private:
-  int maxspecies;
+  int maxspecies,maxgroup;
 
   void allocate(int);
+  void delete_groups();
+  void add_group(const char *);
+  int find_group(const char *);
 };
 
 }

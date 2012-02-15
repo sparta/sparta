@@ -317,9 +317,10 @@ void Particle::add_mixture(int narg, char **arg)
   int iarg = 1;
   for (iarg = 2; iarg < narg; iarg++) {
     if (strcmp(arg[iarg],"nrho") == 0) break;
-    if (strcmp(arg[iarg],"frac") == 0) break;
     if (strcmp(arg[iarg],"vstream") == 0) break;
-    if (strcmp(arg[iarg],"temp_thermal") == 0) break;
+    if (strcmp(arg[iarg],"temp") == 0) break;
+    if (strcmp(arg[iarg],"frac") == 0) break;
+    if (strcmp(arg[iarg],"group") == 0) break;
   }
   int nsp = iarg - 1;
 

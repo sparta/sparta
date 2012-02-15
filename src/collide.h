@@ -16,9 +16,12 @@
 #define DSMC_COLLIDE_H
 
 #include "pointers.h"
+#include "memory.h"
 #include "particle.h"
 
 namespace DSMC_NS {
+
+#define DELTAPART 128
 
 class Collide : protected Pointers {
  public:
@@ -51,6 +54,15 @@ class Collide : protected Pointers {
   char *mixID;               // ID of mixture to use for groups
   class Mixture *mixture;    // ptr to mixture
   class RanPark *random;     // RNG for collision generation
+
+  inline void addgroup(int igroup, int n)
+  {
+    if (ngroup[igroup] == maxgroup[igroup]) {
+      maxgroup[igroup] += DELTAPART;
+      memory->grow(glist[igroup],maxgroup[igroup],"collide:grouplist");
+    }
+    glist[igroup][ngroup[igroup]++] = n;
+  }
 };
 
 }
