@@ -20,6 +20,10 @@
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
+#include "particle.h"
+#include "mixture.h"
+#include "collide.h"
+
 
 using namespace DSMC_NS;
 using namespace MathConst;
@@ -33,6 +37,7 @@ CollideVSS::CollideVSS(DSMC *dsmc, int narg, char **arg) :
 
   prefactor = NULL;
   vremax = NULL;
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -49,20 +54,28 @@ void CollideVSS::init()
 {
   Collide::init();
 
-  /*
-  if (nspecies != oldspecies) {
+  Particle::Species *species = particle->species;
+  int nspecies = particle->nspecies;
+  int imix = particle->find_mixture(mixID);
+
+
+  double *vscale = particle->mixture[imix]->vscale;
+  int *mix2group = particle->mixture[imix]->mix2group;
+
+
+//  if (particle->nspecies != mixture->oldspecies) {
     memory->destroy(prefactor);
     memory->destroy(vremax);
+//    memory->destroy(vrm);
     memory->create(prefactor,nspecies,nspecies,"collide:prefactor");
     memory->create(vremax,grid->nlocal,nspecies,nspecies,"collide:vremax");
-  }
+    memory->create(vrm,nspecies,nspecies,"collide:vrm");
+//  }
 
   // prefactor = static contributions to collision attempt frequencies
 
-  Particle::Species *species = particle->species;
-
-  double kboltz = 1.0;
-  double fratio = 1.0;
+  double beta = 1.0;
+  double cxs = 1.0;
 
   for (int isp = 0; isp < nspecies; isp++)
     for (int jsp = 0; jsp < nspecies; jsp++) {
@@ -70,31 +83,28 @@ void CollideVSS::init()
       double omega = 0.5 * (species[isp].omega + species[jsp].omega);
       double tref = 0.5 * (species[isp].tref + species[jsp].tref);
       double mr = species[isp].mass * species[jsp].mass /
-	(species[isp].mass + species[jsp].mass);
-      double b = diam*diam / pow(mr,omega);
-      prefactor[isp][jsp] = 0.5 * MY_PI * fratio * update->dt * b *
-	pow(2.0*(2.0-omega)*kboltz*tref,omega);
+	     (species[isp].mass + species[jsp].mass);
+             cxs = diam*diam*MY_PI;
+             prefactor[isp][jsp] = cxs *
+             pow(2.0*update->boltz*tref/mr,omega-0.5)/gamma(2.5-omega);
+      double beta=MIN(vscale[isp],vscale[jsp]);
+      double max_thermal_velocity = 3.0/beta;
+             vrm[isp][jsp] = cxs * max_thermal_velocity;
     }
 
   // vremax = max relative velocity factors on per-grid, per-species basis
   
-  // NOTE: what is beta and OMEGA
-
-  double beta = 1.0;
-  double OMEGA = 1.0;
-
-  vr_indice = 1.0 - 2.0 * OMEGA;
-  double max_thermal_velocity = 5.0/beta;
-  double vrm = pow(max_thermal_velocity,vr_indice);
-   
   int nglocal = grid->nlocal;
 
   for (int icell = 0; icell < nglocal; icell++)
     for (int isp = 0; isp < nspecies; isp++)
-      for (int jsp = 0; jsp < nspecies; jsp++)
-	vremax[icell][isp][jsp] = vrm;
-
-  */
+      for (int jsp = 0; jsp < nspecies; jsp++) {
+// vremax value assignment should be done at a group level.
+// each group should get the maximum vremax of all species involved.
+        int igroup = mix2group[isp];
+        int jgroup = mix2group[jsp];
+	vremax[icell][igroup][jgroup] = MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
+      }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -102,16 +112,18 @@ void CollideVSS::init()
 double CollideVSS::attempt_collision(int icell, 
 				     int igroup, int jgroup, double volume)
 {
-  // dummy attempt frequency
+ double fnum = update->fnum;
+ double dt = update->dt;
 
-  double attempt = 0.05 * ngroup[igroup] * (ngroup[jgroup]-1);
+ int nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
+    vremax[icell][igroup][jgroup] * dt * fnum / volume + random->uniform();
+// printf(" Attempts = %d %d %d %d\n", icell, ngroup[igroup],ngroup[jgroup],nattempt );
+// if (nattempt > 0) printf(" Attempts = %e %e %e \n", dt, fnum, volume);
+/* no residual number of attempts is kept. The number of attempts is randomly scaled
+   up or down. Better formulation for transient flows.
+*/
 
-  /*
-  //int nattempt = prefactor[isp][jsp] * nsp[isp] * (nsp[jsp]-1) * 
-  //  vremax[icell][isp][jsp] * volume;
-  */
-
-  return attempt;
+  return nattempt;
 }
 
 /* ----------------------------------------------------------------------
@@ -122,51 +134,84 @@ double CollideVSS::attempt_collision(int icell,
 int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 			       Particle::OnePart *ip, Particle::OnePart *jp)
 {
+  Particle::Species *species = particle->species;
+  Particle::OnePart *particles = particle->particles;
+
   if (random->uniform() < 0.5) return 1;
   return 0;
 
-  /*
   double *vi = ip->v;
   double *vj = jp->v;
+  int ispecies = ip->ispecies;
+  int jspecies = jp->ispecies;
   double du  = vi[0] - vj[0];
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
-  double vr  = sqrt(du*du + dv*dv + dw*dw);
-  double vre = pow(vr,vr_indice);
-  
-  vremax[icell][isp][jsp] = MAX(vre,vremax[icell][isp][jsp]);
-  if (vre/vremax[icell][isp][jsp] < random->uniform()) return 0;
+  double vr2 = du*du + dv*dv + dw*dw;
+  double omega1 = species[ispecies].omega;
+  double omega2 = species[jspecies].omega;
+  double omega = 0.5 * (omega1+omega2);
+  double vr  = pow(vr2,1-omega);
+// although the vremax is calcualted for the group the individual collisions
+// calculated species dependent vre
+  double vre = vr*prefactor[ispecies][jspecies];
+
+// update vremax if needed
+  vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
+  if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
   return 1;
-  */
 }
 
 /* ---------------------------------------------------------------------- */
 
 void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 {
-  /*
-  State *precolln  = &cdynamics.precolln;
-  State *postcolln = &cdynamics.postcolln;
 
-  precolln->ave_rotn_dof = (SPECIES_Rot_DoF(mola->species_idx) + 
-			    SPECIES_Rot_DoF(molb->species_idx)) / 2;
-  precolln->ave_vibn_dof = (SPECIES_Vib_DoF(mola->species_idx) +
-			    SPECIES_Vib_DoF(molb->species_idx)) / 2;
-  precolln->ave_dof      = 
-     (precolln->ave_rotn_dof  + precolln->ave_vibn_dof ) / 2;
+  Particle::Species *species = particle->species;
+  Particle::OnePart *particles = particle->particles;
 
-  precolln->etranslation = 0.5 * precolln->mr * precolln->vrs;
-  precolln->erotation    = mola->erotation  + molb->erotation;
-  precolln->evibration   = mola->evibration + molb->evibration;
-  precolln->einternal    = precolln->erotation + precolln->evibration;
-  precolln->etotal       = precolln->etranslation + precolln->einternal;
+  int isp = ip->ispecies;
+  int jsp = jp->ispecies;
 
-  postcolln->etranslation = 0.0;
-  postcolln->erotation    = 0.0;
-  postcolln->evibration   = 0.0;
-  postcolln->einternal    = 0.0;
-  postcolln->etotal       = precolln->etotal;
-  */
+  double *vi = ip->v;
+  double *vj = jp->v;
+
+  double du  = vi[0] - vj[0];
+  double dv  = vi[1] - vj[1];
+  double dw  = vi[2] - vj[2];
+
+  precoln.vr2 = du*du + dv*dv + dw*dw;
+
+  precoln.rotdof_i = species[isp].rotdof;
+  precoln.rotdof_j = species[jsp].rotdof;
+
+  precoln.vibdof_i = species[isp].vibdof;
+  precoln.vibdof_j = species[jsp].vibdof;
+
+  precoln.ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
+  precoln.ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.;
+
+  precoln.ave_dof = (precoln.ave_rotdof  + precoln.ave_vibdof)/2.;
+
+  precoln.mass_i = species[isp].mass;
+  precoln.mass_j = species[jsp].mass;
+
+  precoln.mr = species[isp].mass * species[jsp].mass /
+              (species[isp].mass + species[jsp].mass);
+
+  precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
+  precoln.erot  = ip->erot + jp->erot;
+  precoln.evib  = ip->ivib * update->boltz*species[isp].vibtemp
+                + jp->ivib * update->boltz*species[jsp].vibtemp;
+
+  precoln.eint   = precoln.erot + precoln.evib;
+  precoln.etotal = precoln.etrans + precoln.eint;
+
+  postcoln.etrans = 0.0;
+  postcoln.erot   = 0.0;
+  postcoln.evib   = 0.0;
+  postcoln.eint   = 0.0;
+  postcoln.etotal = precoln.etotal;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -174,29 +219,10 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip, 
 						  Particle::OnePart *jp)
 {
-  // dummy collision = just swap velocities
-
-  double tmp;
-
-  double *vi = ip->v;
-  double *vj = jp->v;
-  tmp = vi[0];
-  vi[0] = vj[0];
-  vj[0] = tmp;
-  tmp = vi[1];
-  vi[1] = vj[1];
-  vj[1] = tmp;
-  tmp = vi[2];
-  vi[2] = vj[2];
-  vj[2] = tmp;
-
-  return NULL;
-
-  /*
-  if (eng_exchange) EEXCHANGE_NonReactingEDisposal(ip,jp);
+//  if (eng_exchange) EEXCHANGE_NonReactingEDisposal(ip,jp);
+  EEXCHANGE_NonReactingEDisposal(ip,jp);
   SCATTER_TwoBodyScattering(ip,jp);
   return NULL;
-  */
 }
 
 /* ---------------------------------------------------------------------- */
@@ -204,72 +230,62 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
 void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip, 
 					    Particle::OnePart *jp)
 {
-  /*
-  State *precolln  = &cdynamics.precolln;
-  State *postcolln = &cdynamics.postcolln;
+//  Particle::OnePart *particles = particle->particles;
+  Particle::Species *species = particle->species;
 
-  double mass_a    = SPECIES_Mass(mola->species_idx);
-  double mass_b    = SPECIES_Mass(molb->species_idx);
+  double *vi = ip->v;
+  double *vj = jp->v;
+  int isp = ip->ispecies;
+  int jsp = jp->ispecies;
+  double mass_i = species[isp].mass;
+  double mass_j = species[jsp].mass;
 
-  double einternal    = mola->evibration + mola->erotation +
-		        molb->evibration + molb->erotation;
-  double etranslation = postcolln->etotal - einternal;
 
-  double cosX = 2.0*pow(RANF(), INVALPHA) - 1.0;
+  double alpha = 0.5 * (species[isp].alpha + species[jsp].alpha);
+  double mr = species[isp].mass * species[jsp].mass /
+	     (species[isp].mass + species[jsp].mass);
+
+  postcoln.eint = ip->erot + jp->erot
+                + ip->ivib * update->boltz*species[isp].vibtemp
+                + jp->ivib * update->boltz*species[jsp].vibtemp;
+
+
+  double cosX = 2.0*pow(random->uniform(), alpha) - 1.0;
   double sinX = sqrt(1.0 - cosX*cosX);
-  double eps  = RANF() * TWOPI;
-  double vr   = sqrt(2.0 * etranslation / postcolln->mr);
+  double eps  = random->uniform() * 2*MY_PI;
+  double vr   = sqrt(2.0 * postcoln.etrans / mr);
 
   double ua   = vr*cosX;
   double vb   = vr*sinX*cos(eps);
   double wc   = vr*sinX*sin(eps);
 
-  double du, dv, dw;
-  double mr;
-  double ke1, ke2;
-  double etotal, erotation, evibration;
-
   // The centre_of_mass velocity is calculated using reactant masses
 
-  double divisor = precolln->mass_a + precolln->mass_b;
+  double divisor = precoln.mass_i + precoln.mass_j;
+
   double ucmf =
-      ((precolln->mass_a * mola->velocity.u) +
-       (precolln->mass_b * molb->velocity.u)) / divisor;
+      ((precoln.mass_i * vi[0]) +
+       (precoln.mass_j * vj[0])) / divisor;
   double vcmf =
-      ((precolln->mass_a * mola->velocity.v)+
-       (precolln->mass_b * molb->velocity.v)) / divisor;
+      ((precoln.mass_i * vi[1])+
+       (precoln.mass_j * vj[1])) / divisor;
   double wcmf =
-      ((precolln->mass_a * mola->velocity.w)+
-       (precolln->mass_b * molb->velocity.w)) / divisor;
+      ((precoln.mass_i * vi[2])+
+       (precoln.mass_j * vj[2])) / divisor;
 
   // Compute new velocities for the products
 
-  divisor = mass_a + mass_b;
-  mola->velocity.u = ucmf - (mass_b/divisor)*ua;
-  mola->velocity.v = vcmf - (mass_b/divisor)*vb;
-  mola->velocity.w = wcmf - (mass_b/divisor)*wc;
-  molb->velocity.u = ucmf + (mass_a/divisor)*ua;
-  molb->velocity.v = vcmf + (mass_a/divisor)*vb;
-  molb->velocity.w = wcmf + (mass_a/divisor)*wc;
+//  printf("In Scatter Pre %e %e %e \n", vi[0], vi[1], vi[2]);
+  divisor = mass_i + mass_j;
+  vi[0] = ucmf - (mass_j/divisor)*ua;
+  vi[1] = vcmf - (mass_j/divisor)*vb;
+  vi[2] = wcmf - (mass_j/divisor)*wc;
+  vj[0] = ucmf + (mass_i/divisor)*ua;
+  vj[1] = vcmf + (mass_i/divisor)*vb;
+  vj[2] = wcmf + (mass_i/divisor)*wc;
 
-  // Econservation test
-
-  du = mola->velocity.u - molb->velocity.u;
-  dv = mola->velocity.v - molb->velocity.v;
-  dw = mola->velocity.w - molb->velocity.w;
-  mr = SPECIES_Mr(mola->species_idx, molb->species_idx);
-
-  if (!EQUAL(0.5*mr*(du*du+dv*dv+dw*dw)*1.0E10, etranslation*1.0E10))
-    fprintf(stderr,"2-Body Scatter: Violation of EConservation!\n");
-
-  etranslation = 0.5*mr*(du*du+dv*dv+dw*dw);
-  erotation    = mola->erotation  + molb->erotation;
-  evibration   = mola->evibration + molb->evibration;
-  etotal       = (etranslation + erotation + evibration);
-
-  if (!EQUAL(etotal*1.0E10, postcolln->etotal*1.0E10))
-    fprintf(stderr,"2-Body Scatter: Violation of EConservation!\n");
-  */
+//  printf("In Scatter aft %e %e %e \n", vi[0], vi[1], vi[2]);
+ return ;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -277,102 +293,98 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip, 
 						 Particle::OnePart *jp)
 {
-  /*
+  Particle::OnePart *kp;
+  Particle::Species *species = particle->species;
+
   static double AdjustFactor = 0.99999;
   static double rotn_phi     = 0.5;
+  static double vibn_phi     = 0.5;
+  double Exp_1,Exp_2,State_prob,Fraction_Rot,evib;
 
-  State *precolln  = &cdynamics.precolln;
-  State *postcolln = &cdynamics.postcolln;
 
-  Molecule * mol;
-  double E_Dispose,State_prob, Exp_1,Exp_2,Fraction_Rot;
-  double rdof, vdof;
   long i, Max_Level,Vib_state;
 
-  // Handle each kind of EDisposal for NonReacting reactants
+  // Handle each kind of EDisposal for NonReacing reactants
 
-  switch(cdynamics.state)
+  if (precoln.ave_dof == 0)
   {
-     case monatom_monatom:
-       mola->erotation  = 0.0;
-       molb->erotation  = 0.0;
-       mola->evibration = 0.0;
-       molb->evibration = 0.0;
-       break;
+    ip->erot  = 0.0;
+    jp->erot  = 0.0;
+    ip->ivib = 0;
+    jp->ivib = 0;
+  }
+  else 
+  {
+    double E_Dispose = precoln.etrans;
+    for (i = 0; i < 2; i++) {
+     if (i == 0) kp = ip; 
+     if (i == 1) kp = jp; 
+         int ksp = kp->ispecies;
 
-     case monatom_diatom:
-     case diatom_diatom:
-       E_Dispose = precolln->etranslation;
-       for (i = 0; i < 2; i++) {
-         if (i == 0) mol = mola; 
-         if (i == 1) mol = molb; 
-	 rdof = SPECIES_Rot_DoF(mol->species_idx);
-	 vdof = SPECIES_Vib_DoF(mol->species_idx);
-
-         if (vdof >= 2 && (vibn_phi>=RANF())) {
-	   E_Dispose += mol->evibration;
+         if (species[ksp].vibdof >= 2 && (vibn_phi>=random->uniform())) {
+           evib = (double) (kp->ivib*update->boltz*species[ksp].vibtemp);
+	   E_Dispose += evib;
 	   Max_Level  = (long) 
-	     (E_Dispose/(BOLTZMANN * SPECIES_Theta(mol->species_idx)));
+	     (E_Dispose/(update->boltz * species[ksp].vibtemp));
 
 	   do {
-	     Vib_state = (long) (RANF()*(Max_Level+AdjustFactor));
-	     mol->evibration = (double) 
- 	       (Vib_state*BOLTZMANN *SPECIES_Theta(mol->species_idx));
-	     State_prob = pow((1 - mol->evibration/E_Dispose),
-			      (1.5-SPECIES_Omega(mol->species_idx)));
-	   } while (State_prob < RANF());
+	     kp->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+	     evib = (double) 
+ 	       (kp->ivib * update->boltz * species[ksp].vibtemp);
+	     State_prob = pow((1 - evib / E_Dispose),
+			      (1.5 - species[ksp].omega));
+	   } while (State_prob < random->uniform());
 
-	   E_Dispose -= mol->evibration;
+	   E_Dispose -= evib;
          }
 
-         if ((rdof == 2) && (rotn_phi >= RANF())) {
-           E_Dispose += mol->erotation;
+         if ((species[ksp].rotdof == 2) && (rotn_phi >= random->uniform())) {
+           E_Dispose += kp->erot;
            Fraction_Rot = 
-	     1- pow(RANF(),(1/(2.5-SPECIES_Omega(mol->species_idx))));
-	   mol->erotation = Fraction_Rot*E_Dispose;
-	   E_Dispose -= mol->erotation;
+	     1- pow(random->uniform(),(1/(2.5-species[ksp].omega)));
+	   kp->erot = Fraction_Rot * E_Dispose;
+	   E_Dispose -= kp->erot;
 
-         } else if ((vdof > 2) && (rotn_phi >= RANF())) {
-           E_Dispose += mol->erotation;
-	   Exp_1 = rdof / 2;
-	   Exp_2 = 2.5 - SPECIES_Omega(mol->species_idx);
+         } else if ((species[ksp].rotdof > 2) && (rotn_phi >= random->uniform())) {
+           E_Dispose += kp->erot;
+	   Exp_1 = species[ksp].rotdof / 2;
+	   Exp_2 = 2.5 - species[ksp].omega;
 	   do {
-	     Fraction_Rot = RANF();
+	     Fraction_Rot = random->uniform();
 	     State_prob   = 
 	       ((Exp_1+Exp_2-2)/pow(((Exp_1-1)*Fraction_Rot),(Exp_1-1)) *
 	       ((Exp_1+Exp_2)/(Exp_2-1)*pow((1-Fraction_Rot),(Exp_2-1))));
-	   } while (State_prob < RANF());
-	   mol->erotation = Fraction_Rot*E_Dispose;
-	   E_Dispose -= mol->erotation;
+	   } while (State_prob < random->uniform());
+	   kp->erot = Fraction_Rot*E_Dispose;
+	   E_Dispose -= kp->erot;
          }
        } 
-       break;
-
-     default:
-       fprintf(stderr,"Nonsensical cdynamics - NonReactingEDisposal");
-       printf("Nonsensical cdynamics - NonReactingEDisposal");
-       exit(0);
    }
+
 
   // Compute the post-collision internal energies
 
-  postcolln->erotation = mola->erotation + molb->erotation;
-  postcolln->evibration = mola->evibration + molb->evibration;
+  postcoln.erot = ip->erot + jp->erot;
+  int isp = ip->ispecies;
+  int jsp = jp->ispecies;
+  postcoln.evib = ip->ivib * update->boltz*species[isp].vibtemp 
+                + jp->ivib * update->boltz*species[jsp].vibtemp;
 
   // Finally, compute the proportion of energy left over for scattering
 
-  postcolln->einternal    = postcolln->erotation + postcolln->evibration;
-  postcolln->etranslation = precolln->etotal -  postcolln->einternal;
-
-  if(postcolln->etranslation<0) {
+  postcoln.eint = postcoln.erot + postcoln.evib;
+  postcoln.etrans = precoln.etotal - postcoln.eint;
+/*
+  if(postcoln->etranslation<0) {
      fprintf(stderr,
 	"NEGATIVE ETRANSLATION IN Energy Disposal! Exiting!!\n");
      printf("NEGATIVE ETRANSLATION IN Energy Disposal! Exiting!!\n");
      printf("ET = %e, EV = %e, ER = %e, ETOT = %e \n", 
-	    postcolln->etranslation , 
-	    postcolln->erotation , postcolln->evibration,
-	    precolln->etotal); 
+	    postcoln->etranslation , 
+	    postcoln->erotation , postcoln->evibration,
+	    precoln->etotal); 
      exit(0);
   }
-  */
+*/
+ return;
 }

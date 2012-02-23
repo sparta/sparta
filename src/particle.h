@@ -51,6 +51,8 @@ class Particle : protected Pointers {
     int icell;              // global grid cell the particle is in
     double x[3];            // coords of particle
     double v[3];            // velocity of particle
+    double erot;
+    int ivib;
   };
 
   bigint nglobal;           // global # of particles
@@ -68,7 +70,7 @@ class Particle : protected Pointers {
   void compress(int, int *);
   void sort();
   void grow(int);
-  void add_particle(int, int, int, double *, double *);
+  void add_particle(int, int, int, double *, double *, double, int);
   void add_species(int, char **);
   void add_mixture(int, char **);
   int find_species(char *);

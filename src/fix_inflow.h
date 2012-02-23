@@ -23,6 +23,7 @@ FixStyle(inflow,FixInflow)
 
 #include "stdio.h"
 #include "fix.h"
+#include "create_molecules.h"
 
 namespace DSMC_NS {
 
@@ -57,6 +58,7 @@ class FixInflow : public Fix {
   int ncf;                      // # of cell/face pairs
 
   class RanPark *random;
+  class CreateMolecules;
 
   double mol_inflow(int, double);
 };

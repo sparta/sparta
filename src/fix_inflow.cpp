@@ -16,6 +16,7 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
+#include "create_molecules.h"
 #include "fix_inflow.h"
 #include "update.h"
 #include "particle.h"
@@ -457,6 +458,8 @@ void FixInflow::start_of_step()
   double x[3],v[3];
   double indot,rn,ntarget;
   double beta_un,normalized_distbn_fn,theta;
+  double erote;
+  int ivib;
 
   // insert molecules by cell/face pair
   // ntarget/ninsert is either perspecies or for all species
@@ -511,8 +514,11 @@ void FixInflow::start_of_step()
 	  theta = MY_PI * random->gaussian();
 	  v[pdim1] = vscale[isp]*sin(theta) + vstream[1];
 	  v[pdim2] = vscale[isp]*cos(theta) + vstream[2]; 
-	  
-	  particle->add_particle(0,isp,icell,x,v);
+/*
+          erote = CreateMolecules.erot(isp);
+          ivib = CreateMolecules.evib(isp);
+*/	  
+	  particle->add_particle(0,isp,icell,x,v,erote,ivib);
 	}
 
 	nsingle += ninsert;
@@ -556,8 +562,11 @@ void FixInflow::start_of_step()
 	theta = MY_PI * random->gaussian();
 	v[pdim1] = vscale[isp]*sin(theta) + vstream[1];
 	v[pdim2] = vscale[isp]*cos(theta) + vstream[2]; 
-
-	particle->add_particle(0,isp,icell,x,v);
+/*
+        erote = CreateMolecules.erot(isp);
+        ivib = CreateMolecules.evib(isp);
+*/
+	particle->add_particle(0,isp,icell,x,v,erote,ivib);
       }
 
       nsingle += ninsert;

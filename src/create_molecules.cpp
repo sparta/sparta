@@ -165,6 +165,7 @@ void CreateMolecules::create_local(bigint np)
   int ilocal,icell,npercell,ispecies;
   double x[3],v[3];
   double vol,ntarget,rn,vn,vr,theta1,theta2;
+  double erot, evib;
 
   double volsum = 0.0;
   bigint nprev = 0;
@@ -201,7 +202,13 @@ void CreateMolecules::create_local(bigint np)
       v[1] = vstream[1] + vr*sin(theta2);
       v[2] = vstream[2] + vr*cos(theta2);
 
-      particle->add_particle(0,ispecies,icell,x,v);
+
+      erot = update->boltz * update->temp_thermal * particle->species[ispecies].rotdof;
+      evib = update->boltz * update->temp_thermal * particle->species[ispecies].vibdof;
+
+      particle->add_particle(0,ispecies,icell,x,v,erot,evib);
+      
+
     }
 
     nprev += npercell;
@@ -251,5 +258,39 @@ void CreateMolecules::create_all(bigint n)
   }
 
   delete random;
+}
+*/
+
+double CreateMolecules::erot(int isp)
+{
+ RanPark *random = new RanPark(update->ranmaster->uniform());
+ double erote,a,i,erm,b;
+
+ if (particle->species[isp].rotdof == 2) {
+  erote = -log(random->uniform()) * update->boltz * update->temp_thermal;
+ }
+ else {
+  a=0.5*particle->species[isp].rotdof-1.;
+  i=0;
+  while (i == 0) {
+    erm=random->uniform()*10.;
+//-there is an energy cut-off at 10 kT
+    b=pow(erm/a,a)*exp(a-erm);
+    if (b > random->uniform()) i=1;
+  }
+    erote=erm*update->boltz*update->temp_thermal;
+ }
+  return erote;
+
+}
+
+/*
+int CreateMolecules::evib(int isp)
+{
+ RanPark *random = new RanPark(update->ranmaster->uniform());
+
+ int ivib = (int) -log(random->uniform) * update->temp_thermal / particle->species[isp].vibtemp;
+ return ivib;
+
 }
 */

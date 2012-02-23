@@ -186,7 +186,7 @@ void Particle::grow(int nextra)
 ------------------------------------------------------------------------- */
 
 void Particle::add_particle(int id, int ispecies, int icell,
-			    double *x, double *v)
+			    double *x, double *v, double erot, int ivib)
 {
   if (nlocal == maxlocal) grow(1);
 
@@ -201,6 +201,8 @@ void Particle::add_particle(int id, int ispecies, int icell,
   p->v[0] = v[0];
   p->v[1] = v[1];
   p->v[2] = v[2];
+  p->erot = erot;
+  p->ivib = ivib;
 
   nlocal++;
 }

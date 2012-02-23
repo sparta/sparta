@@ -6,10 +6,10 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
-CC =		icc
+CC =		mpicc
 CCFLAGS =	-O
 DEPFLAGS =	-M
-LINK =		icc
+LINK =		mpicc
 LINKFLAGS =	-O
 LIB =           -lstdc++
 ARCHIVE =	ar

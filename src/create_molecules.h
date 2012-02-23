@@ -29,6 +29,8 @@ class CreateMolecules : protected Pointers {
  public:
   CreateMolecules(class DSMC *);
   void command(int, char **);
+  double erot(int);
+  int evib(int);
 
  private:
   int imix;

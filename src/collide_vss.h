@@ -41,6 +41,7 @@ class CollideVSS : public Collide {
  private:
   int eng_exchange;
   double vr_indice;
+  double **vrm; // static portion of max collision frequency
   double **prefactor; // static portion of collision attempt frequency
   double ***vremax;   // max relative velocity, per cell, per species pair
 
@@ -48,6 +49,34 @@ class CollideVSS : public Collide {
 				 Particle::OnePart *);
   void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *, 
 				      Particle::OnePart *);
+
+  struct State
+  {
+   double    vr2;
+   double    vr;
+   double    mr;
+   double    rotdof_i;
+   double    rotdof_j;
+   double    vibdof_i;
+   double    vibdof_j;
+   double    ave_rotdof;
+   double    ave_vibdof;
+   double    ave_dof;
+   double    etrans;
+   double    erot;
+   double    evib;
+   double    eexchange;
+   double    eint;
+   double    etotal;
+
+   double    mass_i;
+   double    mass_j;
+  };
+ 
+
+ struct State precoln;
+ struct State postcoln;
+
 };
 
 }
