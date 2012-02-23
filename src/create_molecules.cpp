@@ -284,13 +284,14 @@ double CreateMolecules::erot(int isp)
 
 }
 
-/*
+
 int CreateMolecules::evib(int isp)
 {
  RanPark *random = new RanPark(update->ranmaster->uniform());
 
- int ivib = (int) -log(random->uniform) * update->temp_thermal / particle->species[isp].vibtemp;
+ int ivib = -log(random->uniform()) * update->temp_thermal 
+          / particle->species[isp].vibtemp;
  return ivib;
 
 }
-*/
+
