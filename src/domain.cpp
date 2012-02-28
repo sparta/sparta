@@ -17,10 +17,16 @@
 #include "grid.h"
 #include "comm.h"
 #include "error.h"
+#include "math.h"
+#include "particle.h"
+#include "update.h"
+#include "random_park.h"
+#include "math_const.h"
 
 using namespace DSMC_NS;
+using namespace MathConst;
 
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as CreateGrid, Update,
+enum{PERIODIC,OUTFLOW,SPECULAR,DIFFUSE};    // same as CreateGrid, Update,
                                             // DumpParticle, FixInflow
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow
 
@@ -28,6 +34,7 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow
 
 Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
 {
+
   box_exist = 0;
   dimension = 3;
 
@@ -80,6 +87,7 @@ void Domain::set_boundary(int narg, char **arg)
       if (c == 'o') bflag[m] = OUTFLOW;
       else if (c == 'p') bflag[m] = PERIODIC;
       else if (c == 's') bflag[m] = SPECULAR;
+      else if (c == 'd') bflag[m] = DIFFUSE;
       else error->all(FLERR,"Illegal boundary command");
 
       m++;
@@ -99,7 +107,7 @@ void Domain::set_boundary(int narg, char **arg)
    return 1 if OUTFLOW and particle is lost
 ------------------------------------------------------------------------- */
 
-int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v) 
+int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v, int isp) 
 {
   // tally stats?
 
@@ -144,6 +152,9 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v)
   // specular reflection boundary
   // adjust xnew and velocity
 
+  // specular reflection boundary
+  // adjust xnew and velocity
+
   if (bflag[face] == SPECULAR) {
     double *lo = grid->cells[icell].lo;
     double *hi = grid->cells[icell].hi;
@@ -171,6 +182,43 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v)
     return SPECULAR;
   }
 
+  if (bflag[face] == DIFFUSE) {
+    double *lo = grid->cells[icell].lo;
+    double *hi = grid->cells[icell].hi;
+    double dtr; // time remainder
+    double Twall =300.; // wall temprature Needs to come in through the input deck
+    double acc=0.9; // accommodation coefficient Needs to come in through the input deck
+
+ 
+    if (face == XLO) {
+      dtr = fabs((lo[0]-xnew[0])/v[0]);
+      reflect(v[0],v[1],v[2],isp,Twall,acc);
+      xnew[0] = lo[0] + v[0]*dtr;
+    } else if (face == XHI) {
+      dtr = fabs((xnew[0]-hi[0])/v[0]);
+      reflect(v[0],v[1],v[2],isp,Twall,acc);
+      xnew[0] = hi[0] - v[0]*dtr;
+    } else if (face == YLO) {
+      dtr = fabs((xnew[1]-lo[1])/v[1]);
+      reflect(v[1],v[0],v[2],isp,Twall,acc);
+      xnew[1] = lo[1] + v[1]*dtr;
+    } else if (face == YHI) {
+      dtr = fabs((xnew[1]-hi[1])/v[1]);
+      reflect(v[1],v[0],v[2],isp,Twall,acc);
+      xnew[1] = hi[1] - v[1]*dtr;
+    } else if (face == ZLO) {
+      dtr = fabs((xnew[2]-lo[2])/v[2]);
+      reflect(v[2],v[0],v[1],isp,Twall,acc);
+      xnew[2] = lo[2] + v[2]*dtr;
+    } else if (face == ZHI) {
+      dtr = fabs((xnew[2]-hi[2])/v[2]);
+      reflect(v[2],v[0],v[1],isp,Twall,acc);
+      xnew[2] = hi[2] - v[2]*dtr;
+    }
+
+    return DIFFUSE;
+  }
+
   return 0;
 }
 
@@ -188,4 +236,26 @@ void Domain::print_box(const char *str)
       fprintf(logfile,"%sorthogonal box = (%g %g %g) to (%g %g %g)\n",
 	      str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
   }
+}
+
+void Domain::reflect(double &v0, double &v1, double &v2, int isp, double Twall, double acc)
+{
+  Particle::Species *species = particle->species;
+
+  if (random->uniform() < acc)
+     v0 = -v0;     //Specular reflection
+  else {         //Diffuse reflection
+     double vrm = sqrt(2.*update->boltz*Twall/species[isp].mass);
+//-vrm is the most probable speed in species isp, see eqns (4.1) and (4.7)
+//-the normal velocity component has been generated (eqn(12.3))
+     v0 = vrm * random->uniform();
+     double theta1 = MY_2PI * random->uniform();
+     double theta2 = MY_2PI * random->uniform();
+     v1 =  vrm*sin(theta2);
+     v2 =  vrm*cos(theta2);
+/*
+        erot(isp);
+        evib(isp);
+*/
+   }
 }

@@ -189,6 +189,8 @@ void Update::move3d()
   int *neigh;
   double dtfrac,frac,newfrac;
 
+  Particle::Species *species = particle->species;
+
   // extend migration list if necessary
 
   int nlocal = particle->nlocal;
@@ -213,6 +215,7 @@ void Update::move3d()
 
     x = particles[i].x;
     v = particles[i].v;
+    int isp = particles[i].ispecies;
 
     if (i < ncurrent) {
       xnew[0] = x[0] + dt*v[0];
@@ -312,7 +315,7 @@ void Update::move3d()
 	count++;
 
       } else {
-        outflag = domain->boundary(outface,icell,x,xnew,v);
+        outflag = domain->boundary(outface,icell,x,xnew,v,isp);
 	if (outflag == OUTFLOW) break;
 	else if (outflag == SPECULAR) inface = outface;
 	else if (outflag == PERIODIC) {
@@ -383,6 +386,7 @@ void Update::move2d()
 
     x = particles[i].x;
     v = particles[i].v;
+    int isp = particles[i].ispecies;
 
     if (i < ncurrent) {
       xnew[0] = x[0] + dt*v[0];
@@ -461,7 +465,7 @@ void Update::move2d()
 	count++;
 
       } else {
-        outflag = domain->boundary(outface,icell,x,xnew,v);
+        outflag = domain->boundary(outface,icell,x,xnew,v,isp);
 	if (outflag == OUTFLOW) break;
 	else if (outflag == SPECULAR) inface = outface;
 	else if (outflag == PERIODIC) {

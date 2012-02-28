@@ -26,11 +26,12 @@ CommandStyle(create_molecules,CreateMolecules)
 namespace DSMC_NS {
 
 class CreateMolecules : protected Pointers {
+
  public:
   CreateMolecules(class DSMC *);
   void command(int, char **);
-  double erot(int);
   int evib(int);
+  double erot(int);
 
  private:
   int imix;

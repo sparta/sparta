@@ -165,7 +165,7 @@ void CreateMolecules::create_local(bigint np)
   int ilocal,icell,npercell,ispecies;
   double x[3],v[3];
   double vol,ntarget,rn,vn,vr,theta1,theta2;
-  double erot, evib;
+  double erote, ivib;
 
   double volsum = 0.0;
   bigint nprev = 0;
@@ -201,12 +201,11 @@ void CreateMolecules::create_local(bigint np)
       v[0] = vstream[0] + vn*cos(theta1);
       v[1] = vstream[1] + vr*sin(theta2);
       v[2] = vstream[2] + vr*cos(theta2);
-
-
-      erot = update->boltz * update->temp_thermal * particle->species[ispecies].rotdof;
-      evib = update->boltz * update->temp_thermal * particle->species[ispecies].vibdof;
-
-      particle->add_particle(0,ispecies,icell,x,v,erot,evib);
+/*
+      erote = CreateMolecules.erot(isp);
+      ivib = CreateMolecules.evib(isp);
+*/
+      particle->add_particle(0,ispecies,icell,x,v,erote,ivib);
       
 
     }

@@ -137,8 +137,8 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
 
-  if (random->uniform() < 0.5) return 1;
-  return 0;
+//  if (random->uniform() < 0.5) return 1;
+//  return 0;
 
   double *vi = ip->v;
   double *vj = jp->v;
