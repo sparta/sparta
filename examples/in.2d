@@ -10,7 +10,7 @@ boundary	    os ss p
 create_box  	    0 10 0 10 -0.5 0.5
 create_grid 	    10 10 1 stride x y z
 
-species		    ../data/vss.data N O
+species		    ../data/all.species N O
 mixture		    air N O vstream 1000.0 -1000.0 0
 mixture		    air group species
 
@@ -19,7 +19,7 @@ global		    nrho 1.0
 #create_molecules    air
 fix		    in inflow air xlo #perspecies no n 111
 
-collisions	    vss air
+collisions	    vss air ../data/all.vss
 
 timestep 	    0.0001
 

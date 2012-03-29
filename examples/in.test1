@@ -11,12 +11,12 @@ create_box  	    0 100 0 100 0 100
 create_grid 	    10 10 10
 #create_grid 	    100 100 100
 
-species		    ../data/vss.data N O
+species		    ../data/all.species N O
 mixture		    air N O
 
 create_molecules    air n 100000
 
-collisions	    vss air
+collisions	    vss air ../data/all.vss
 
 timestep 	    0.0001
 
