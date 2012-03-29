@@ -24,7 +24,6 @@ using namespace DSMC_NS;
 
 enum{STRIDE,BLOCK,RANDOM};
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
 
 /* ---------------------------------------------------------------------- */
 

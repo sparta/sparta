@@ -28,8 +28,8 @@
 using namespace DSMC_NS;
 using namespace MathConst;
 
-enum{PERIODIC,OUTFLOW,SPECULAR,DIFFUSE};    // same as CreateGrid, Update,
-                                            // DumpParticle, FixInflow
+enum{PERIODIC,OUTFLOW,SPECULAR,DIFFUSE};    // same as Update,
+                                            // DumpMolecule, FixInflow
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow
 
 /* ---------------------------------------------------------------------- */

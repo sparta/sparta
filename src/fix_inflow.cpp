@@ -34,7 +34,7 @@ using namespace DSMC_NS;
 using namespace MathConst;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Domain
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
+enum{PERIODIC,OUTFLOW,SPECULAR,DIFFUSE};    // same as Domain
 enum{NO,YES};
 
 /* ---------------------------------------------------------------------- */

@@ -31,7 +31,7 @@
 using namespace DSMC_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as Domain
-enum{PERIODIC,OUTFLOW,SPECULAR};              // same as Domain
+enum{PERIODIC,OUTFLOW,SPECULAR,DIFFUSE};      // same as Domain
 
 /* ---------------------------------------------------------------------- */
 
@@ -317,7 +317,8 @@ void Update::move3d()
       } else {
         outflag = domain->boundary(outface,icell,x,xnew,v,isp);
 	if (outflag == OUTFLOW) break;
-	else if (outflag == SPECULAR) inface = outface;
+	else if (outflag == SPECULAR || outflag == DIFFUSE) 
+	  inface = outface;
 	else if (outflag == PERIODIC) {
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
@@ -467,7 +468,8 @@ void Update::move2d()
       } else {
         outflag = domain->boundary(outface,icell,x,xnew,v,isp);
 	if (outflag == OUTFLOW) break;
-	else if (outflag == SPECULAR) inface = outface;
+	else if (outflag == SPECULAR || outflag == DIFFUSE)
+	  inface = outface;
 	else if (outflag == PERIODIC) {
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
