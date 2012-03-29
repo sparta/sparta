@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "string.h"
+#include "stdlib.h"
 #include "domain.h"
 #include "grid.h"
 #include "comm.h"
@@ -41,6 +42,13 @@ Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
   dimension = 3;
 
   bflag[0] = bflag[1] = bflag[2] = bflag[3] = bflag[4] = bflag[5] = PERIODIC;
+
+  // default values
+
+  for (int i = 0; i < 6; i++) {
+    acccoeff[i] = 1.0;
+    twall[i] = 273.15;
+  }
 
   // RNG for particle reflection off global boundaries
 
@@ -89,7 +97,7 @@ void Domain::set_global_box()
 }
 
 /* ----------------------------------------------------------------------
-   boundary settings from the input script 
+   boundary settings from input script 
 ------------------------------------------------------------------------- */
 
 void Domain::set_boundary(int narg, char **arg)
@@ -121,10 +129,45 @@ void Domain::set_boundary(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
+   boundary modifications from input script 
+------------------------------------------------------------------------- */
+
+void Domain::boundary_modify(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal boundary_modify command");
+
+  int face;
+  if (strcmp(arg[0],"xlo") == 0) face = XLO;
+  else if (strcmp(arg[0],"xhi") == 0) face = XHI;
+  else if (strcmp(arg[0],"ylo") == 0) face = YLO;
+  else if (strcmp(arg[0],"yhi") == 0) face = YHI;
+  else if (strcmp(arg[0],"zlo") == 0) face = ZLO;
+  else if (strcmp(arg[0],"zhi") == 0) face = ZHI;
+  else error->all(FLERR,"Illegal boundary_modify command");
+
+  int iarg = 1;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"acc") == 0) {
+      if (iarg + 2 > narg) error->all(FLERR,"Illegal boundary_modify command");
+      acccoeff[face] = atof(arg[iarg+1]);
+      if (acccoeff[face] < 0.0 || acccoeff[face] > 1.0) 
+	error->all(FLERR,"Illegal boundary_modify command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"temp") == 0) {
+      if (iarg + 2 > narg) error->all(FLERR,"Illegal boundary_modify command");
+      twall[face] = atof(arg[iarg+1]);
+      if (twall[face] < 0.0)
+	error->all(FLERR,"Illegal boundary_modify command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal boundary_modify command");
+  }
+}
+
+/* ----------------------------------------------------------------------
    particle hits global boundary
    called by Update::move()
    periodic case is handled in Update::move() as moving into neighbor cell
-   return 1 if OUTFLOW and particle is lost
+   return boundary type
 ------------------------------------------------------------------------- */
 
 int Domain::boundary(int face, int &icell, double *x, double *xnew, 
@@ -132,7 +175,7 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew,
 {
   // tally stats?
 
-  // outflow boundary, particle will be deleted if return 1
+  // outflow boundary, particle deleted by caller
 
   if (bflag[face] == OUTFLOW) return OUTFLOW;
 
@@ -176,65 +219,36 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew,
   if (bflag[face] == SPECULAR) {
     double *lo = grid->cells[icell].lo;
     double *hi = grid->cells[icell].hi;
+    int dim = face / 2;
 
-    if (face == XLO) {
-      xnew[0] = lo[0] + (lo[0]-xnew[0]);
-      v[0] = -v[0];
-    } else if (face == XHI) {
-      xnew[0] = hi[0] - (xnew[0]-hi[0]);
-      v[0] = -v[0];
-    } else if (face == YLO) {
-      xnew[1] = lo[1] + (lo[1]-xnew[1]);
-      v[1] = -v[1];
-    } else if (face == YHI) {
-      xnew[1] = hi[1] - (xnew[1]-hi[1]);
-      v[1] = -v[1];
-    } else if (face == ZLO) {
-      xnew[2] = lo[2] + (lo[2]-xnew[2]);
-      v[2] = -v[2];
-    } else if (face == ZHI) {
-      xnew[2] = hi[2] - (xnew[2]-hi[2]);
-      v[2] = -v[2];
+    if (face % 2 == 0) {
+      xnew[dim] = lo[dim] + (lo[dim]-xnew[dim]);
+      v[dim] = -v[dim];
+    } else {
+      xnew[dim] = hi[dim] - (xnew[dim]-hi[dim]);
+      v[dim] = -v[dim];
     }
 
     return SPECULAR;
   }
 
-  // dtr = time remainder
+  // dtr = time remaining after collision
   // wall temprature Needs to come in through input
   // accommodation coefficient needs to come in through input
 
   if (bflag[face] == DIFFUSE) {
     double *lo = grid->cells[icell].lo;
     double *hi = grid->cells[icell].hi;
-    double dtr;
-    double Twall = 300.0; 
-    double acc = 0.9; 
- 
-    if (face == XLO) {
-      dtr = fabs((lo[0]-xnew[0])/v[0]);
-      reflect(v[0],v[1],v[2],isp,Twall,acc);
-      xnew[0] = lo[0] + v[0]*dtr;
-    } else if (face == XHI) {
-      dtr = fabs((xnew[0]-hi[0])/v[0]);
-      reflect(v[0],v[1],v[2],isp,Twall,acc);
-      xnew[0] = hi[0] - v[0]*dtr;
-    } else if (face == YLO) {
-      dtr = fabs((xnew[1]-lo[1])/v[1]);
-      reflect(v[1],v[0],v[2],isp,Twall,acc);
-      xnew[1] = lo[1] + v[1]*dtr;
-    } else if (face == YHI) {
-      dtr = fabs((xnew[1]-hi[1])/v[1]);
-      reflect(v[1],v[0],v[2],isp,Twall,acc);
-      xnew[1] = hi[1] - v[1]*dtr;
-    } else if (face == ZLO) {
-      dtr = fabs((xnew[2]-lo[2])/v[2]);
-      reflect(v[2],v[0],v[1],isp,Twall,acc);
-      xnew[2] = lo[2] + v[2]*dtr;
-    } else if (face == ZHI) {
-      dtr = fabs((xnew[2]-hi[2])/v[2]);
-      reflect(v[2],v[0],v[1],isp,Twall,acc);
-      xnew[2] = hi[2] - v[2]*dtr;
+    int dim = face / 2;
+
+    if (face % 2 == 0) {
+      double dtr = fabs((lo[dim]-xnew[dim])/v[dim]);
+      reflect(face,isp,v);
+      xnew[dim] = lo[dim] + v[dim]*dtr;
+    } else {
+      double dtr = fabs((xnew[dim]-hi[dim])/v[dim]);
+      reflect(face,isp,v);
+      xnew[dim] = hi[dim] - v[dim]*dtr;
     }
 
     return DIFFUSE;
@@ -247,31 +261,31 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew,
    particle reflection off simulation box wall for DIFFUSE model
 ------------------------------------------------------------------------- */
 
-void Domain::reflect(double &v0, double &v1, double &v2, int isp, 
-		     double Twall, double acc)
+void Domain::reflect(int face, int isp, double *v)
 {
-  Particle::Species *species = particle->species;
-
   // specular reflection
 
-  if (random->uniform() < acc) v0 = -v0;
+  if (random->uniform() > acccoeff[face]) {
+    int dim = face / 2;
+    v[dim] = -v[dim];
 
   // diffuse reflection
   // vrm = most probable speed of species isp, eqns (4.1) and (4.7)
   // generate normal velocity component, eqn (12.3)
 
-  else {
-    double vrm = sqrt(2.*update->boltz*Twall/species[isp].mass);
-     v0 = vrm * random->uniform();
-     double theta1 = MY_2PI * random->uniform();
-     double theta2 = MY_2PI * random->uniform();
-     v1 =  vrm*sin(theta2);
-     v2 =  vrm*cos(theta2);
-     /*
-       erot(isp);
-       evib(isp);
-     */
-   }
+  } else {
+    Particle::Species *species = particle->species;
+    double vrm = sqrt(2.0*update->boltz*twall[face]/species[isp].mass);
+    v[0] = vrm * random->uniform();
+    double theta1 = MY_2PI * random->uniform();
+    double theta2 = MY_2PI * random->uniform();
+    v[1] = vrm*sin(theta2);
+    v[2] = vrm*cos(theta2);
+    /*
+      erot(isp);
+      evib(isp);
+    */
+  }
 }
 
 /* ----------------------------------------------------------------------

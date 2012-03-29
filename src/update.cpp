@@ -317,15 +317,13 @@ void Update::move3d()
       } else {
         outflag = domain->boundary(outface,icell,x,xnew,v,isp);
 	if (outflag == OUTFLOW) break;
-	else if (outflag == SPECULAR || outflag == DIFFUSE) 
-	  inface = outface;
 	else if (outflag == PERIODIC) {
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
 	  inface = faceflip[outface];
 	  count++;
-	}
+	} else inface = outface;
       }
     }
 
@@ -464,19 +462,17 @@ void Update::move2d()
 	neigh = cells[icell].neigh;
 	inface = faceflip[outface];
 	count++;
-
+ 
       } else {
         outflag = domain->boundary(outface,icell,x,xnew,v,isp);
 	if (outflag == OUTFLOW) break;
-	else if (outflag == SPECULAR || outflag == DIFFUSE)
-	  inface = outface;
 	else if (outflag == PERIODIC) {
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
 	  inface = faceflip[outface];
 	  count++;
-	}
+	} else inface = outface;
       }
     }
 

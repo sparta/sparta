@@ -416,6 +416,7 @@ int Input::execute_command()
   else if (!strcmp(command,"variable")) variable_command();
 
   else if (!strcmp(command,"boundary")) boundary();
+  else if (!strcmp(command,"boundary_modify")) boundary_modify();
   else if (!strcmp(command,"collisions")) collisions();
   else if (!strcmp(command,"compute")) compute();
   else if (!strcmp(command,"dimension")) dimension();
@@ -817,6 +818,13 @@ void Input::variable_command()
 void Input::boundary()
 {
   domain->set_boundary(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::boundary_modify()
+{
+  domain->boundary_modify(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

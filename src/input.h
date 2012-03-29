@@ -66,6 +66,7 @@ class Input : protected Pointers {
   // DSMC commands
 
   void boundary();
+  void boundary_modify();
   void collisions();
   void compute();
   void dimension();

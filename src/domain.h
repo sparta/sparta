@@ -36,12 +36,15 @@ class Domain : protected Pointers {
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);
+  void boundary_modify(int, char **);
   int boundary(int, int &, double *, double *, double *, int);
-  void reflect(double &, double &, double &, int, double, double);
+  void reflect(int, int, double *);
   void print_box(const char *);
 
  protected:
   class RanPark *random;     // RNG for particle reflection
+  double acccoeff[6];        // accomodation coeff for diffuse walls
+  double twall[6];           // wall temperatures for diffuse walls
 };
 
 }
