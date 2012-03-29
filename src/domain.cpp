@@ -20,6 +20,8 @@
 #include "math.h"
 #include "particle.h"
 #include "update.h"
+#include "comm.h"
+#include "random_mars.h"
 #include "random_park.h"
 #include "math_const.h"
 
@@ -39,11 +41,29 @@ Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
   dimension = 3;
 
   bflag[0] = bflag[1] = bflag[2] = bflag[3] = bflag[4] = bflag[5] = PERIODIC;
+
+  // RNG for particle reflection off global boundaries
+
+  random = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
-Domain::~Domain() {}
+Domain::~Domain()
+{
+  delete random;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Domain::init()
+{
+  if (random == NULL) {
+    random = new RanPark(update->ranmaster->uniform());
+    double seed = update->ranmaster->uniform();
+    random->reset(seed,comm->me,100);
+  }
+}
 
 /* ----------------------------------------------------------------------
    set initial global box
@@ -107,7 +127,8 @@ void Domain::set_boundary(int narg, char **arg)
    return 1 if OUTFLOW and particle is lost
 ------------------------------------------------------------------------- */
 
-int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v, int isp) 
+int Domain::boundary(int face, int &icell, double *x, double *xnew, 
+		     double *v, int isp) 
 {
   // tally stats?
 
@@ -152,9 +173,6 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v, i
   // specular reflection boundary
   // adjust xnew and velocity
 
-  // specular reflection boundary
-  // adjust xnew and velocity
-
   if (bflag[face] == SPECULAR) {
     double *lo = grid->cells[icell].lo;
     double *hi = grid->cells[icell].hi;
@@ -182,13 +200,16 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v, i
     return SPECULAR;
   }
 
+  // dtr = time remainder
+  // wall temprature Needs to come in through input
+  // accommodation coefficient needs to come in through input
+
   if (bflag[face] == DIFFUSE) {
     double *lo = grid->cells[icell].lo;
     double *hi = grid->cells[icell].hi;
-    double dtr; // time remainder
-    double Twall =300.; // wall temprature Needs to come in through the input deck
-    double acc=0.9; // accommodation coefficient Needs to come in through the input deck
-
+    double dtr;
+    double Twall = 300.0; 
+    double acc = 0.9; 
  
     if (face == XLO) {
       dtr = fabs((lo[0]-xnew[0])/v[0]);
@@ -223,6 +244,37 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew, double *v, i
 }
 
 /* ----------------------------------------------------------------------
+   particle reflection off simulation box wall for DIFFUSE model
+------------------------------------------------------------------------- */
+
+void Domain::reflect(double &v0, double &v1, double &v2, int isp, 
+		     double Twall, double acc)
+{
+  Particle::Species *species = particle->species;
+
+  // specular reflection
+
+  if (random->uniform() < acc) v0 = -v0;
+
+  // diffuse reflection
+  // vrm = most probable speed of species isp, eqns (4.1) and (4.7)
+  // generate normal velocity component, eqn(12.3)
+
+  else {
+    double vrm = sqrt(2.*update->boltz*Twall/species[isp].mass);
+     v0 = vrm * random->uniform();
+     double theta1 = MY_2PI * random->uniform();
+     double theta2 = MY_2PI * random->uniform();
+     v1 =  vrm*sin(theta2);
+     v2 =  vrm*cos(theta2);
+     /*
+       erot(isp);
+       evib(isp);
+     */
+   }
+}
+
+/* ----------------------------------------------------------------------
    print box info
 ------------------------------------------------------------------------- */
 
@@ -236,26 +288,4 @@ void Domain::print_box(const char *str)
       fprintf(logfile,"%sorthogonal box = (%g %g %g) to (%g %g %g)\n",
 	      str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
   }
-}
-
-void Domain::reflect(double &v0, double &v1, double &v2, int isp, double Twall, double acc)
-{
-  Particle::Species *species = particle->species;
-
-  if (random->uniform() < acc)
-     v0 = -v0;     //Specular reflection
-  else {         //Diffuse reflection
-     double vrm = sqrt(2.*update->boltz*Twall/species[isp].mass);
-//-vrm is the most probable speed in species isp, see eqns (4.1) and (4.7)
-//-the normal velocity component has been generated (eqn(12.3))
-     v0 = vrm * random->uniform();
-     double theta1 = MY_2PI * random->uniform();
-     double theta2 = MY_2PI * random->uniform();
-     v1 =  vrm*sin(theta2);
-     v2 =  vrm*cos(theta2);
-/*
-        erot(isp);
-        evib(isp);
-*/
-   }
 }

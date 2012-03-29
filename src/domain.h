@@ -32,17 +32,16 @@ class Domain : protected Pointers {
 
   Domain(class DSMC *);
   ~Domain();
-  void init() {}
+  void init();
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);
   int boundary(int, int &, double *, double *, double *, int);
+  void reflect(double &, double &, double &, int, double, double);
   void print_box(const char *);
-  void reflect(double &,  double &,  double &, int, double, double);
 
  protected:
-  class RanPark *random;     // RNG for collision generation
-
+  class RanPark *random;     // RNG for particle reflection
 };
 
 }
