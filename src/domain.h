@@ -29,6 +29,7 @@ class Domain : protected Pointers {
   double prd[3];                    // array form of dimensions
 
   int bflag[6];                     // boundary flags
+  int dynamicflag;                  // 1 if any boundary attribute is dynamic
 
   Domain(class DSMC *);
   ~Domain();
@@ -37,6 +38,7 @@ class Domain : protected Pointers {
   void set_global_box();
   void set_boundary(int, char **);
   void boundary_modify(int, char **);
+  void dynamic();
   int boundary(int, int &, double *, double *, double *, int);
   void reflect(int, int, double *);
   void print_box(const char *);
@@ -45,6 +47,11 @@ class Domain : protected Pointers {
   class RanPark *random;     // RNG for particle reflection
   double acccoeff[6];        // accomodation coeff for diffuse walls
   double twall[6];           // wall temperatures for diffuse walls
+
+
+  int twallvar[6];
+  int twallstyle[6];
+  char *twallstr[6];
 };
 
 }

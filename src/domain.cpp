@@ -22,6 +22,8 @@
 #include "particle.h"
 #include "update.h"
 #include "comm.h"
+#include "input.h"
+#include "variable.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "math_const.h"
@@ -33,6 +35,8 @@ enum{PERIODIC,OUTFLOW,SPECULAR,DIFFUSE};    // same as Update,
                                             // DumpMolecule, FixInflow
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow
 
+enum{CONSTANT,EQUAL};
+
 /* ---------------------------------------------------------------------- */
 
 Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
@@ -41,7 +45,12 @@ Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
   box_exist = 0;
   dimension = 3;
 
-  bflag[0] = bflag[1] = bflag[2] = bflag[3] = bflag[4] = bflag[5] = PERIODIC;
+  for (int i = 0; i < 6; i++) {
+    bflag[i] = PERIODIC;
+    twallstr[i] = NULL;
+  }
+
+  dynamicflag = 0;
 
   // default values
 
@@ -59,6 +68,7 @@ Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
 
 Domain::~Domain()
 {
+  for (int i = 0; i < 6; i++) delete [] twallstr[i];
   delete random;
 }
 
@@ -66,10 +76,24 @@ Domain::~Domain()
 
 void Domain::init()
 {
+  // initialize RNG for diffuse boundary reflection
+
   if (random == NULL) {
     random = new RanPark(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     random->reset(seed,comm->me,100);
+  }
+
+  // check variables
+
+  for (int i = 0; i < 6; i++) {
+    if (twallstr[i]) {
+      twallvar[i] = input->variable->find(twallstr[i]);
+      if (twallvar[i] < 0) 
+	error->all(FLERR,"Variable name for boundary twall does not exist");
+      if (input->variable->equal_style(twallvar[i])) twallstyle[i] = EQUAL;
+      else error->all(FLERR,"Variable for boundary twall is invalid style");
+    }
   }
 }
 
@@ -162,12 +186,31 @@ void Domain::boundary_modify(int narg, char **arg)
       iarg += 2;
     } else if (strcmp(arg[iarg],"temp") == 0) {
       if (iarg + 2 > narg) error->all(FLERR,"Illegal boundary_modify command");
-      twall[face] = atof(arg[iarg+1]);
-      if (twall[face] < 0.0)
-	error->all(FLERR,"Illegal boundary_modify command");
+      if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
+	delete [] twallstr[face];
+	int n = strlen(&arg[iarg+1][2]) + 1;
+	twallstr[face] = new char[n];
+	strcpy(twallstr[face],&arg[iarg+1][2]);
+      } else {
+	twall[face] = atof(arg[iarg+1]);
+	twallstyle[face] = CONSTANT;
+	if (twall[face] < 0.0)
+	  error->all(FLERR,"Illegal boundary_modify command");
+      }
       iarg += 2;
     } else error->all(FLERR,"Illegal boundary_modify command");
   }
+}
+
+/* ----------------------------------------------------------------------
+   update any dynamic property of any boundary
+------------------------------------------------------------------------- */
+
+void Domain::dynamic()
+{
+  for (int i = 0; i < 6; i++)
+    if (twallstyle[i] == EQUAL)
+      twall[i] = input->variable->compute_equal(twallvar[i]);
 }
 
 /* ----------------------------------------------------------------------

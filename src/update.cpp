@@ -129,7 +129,8 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
-
+  int domain_dynamic = domain->dynamicflag;
+  
   // loop over timesteps
 
   for (int i = 0; i < nsteps; i++) {
@@ -144,6 +145,7 @@ void Update::run(int nsteps)
     // move particles
 
     timer->stamp();
+    if (domain_dynamic) domain->dynamic();
     (this->*move)();
     timer->stamp(TIME_MOVE);
 
