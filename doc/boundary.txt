@@ -12,10 +12,11 @@ boundary command :h3
 
 boundary x y z :pre
 
-x,y,z = {o} or {p} or {s}, one or two letters :ulb,l
+x,y,z = {o} or {p} or {s} or {d}, one or two letters :ulb,l
   {o} is outflow
   {p} is periodic
-  {s} is specular reflection :pre
+  {s} is specular reflection
+  {d} is diffuse reflection :pre
 :ule
 
 [Examples:]
@@ -36,21 +37,48 @@ The size of the simulation box is set by the
 The boundary style determines how particles exiting the box
 are handled.
 
-The style {o} means an outflow boundary, so that particles freely exit
+Style {o} means an outflow boundary, so that particles freely exit
 the simulation.
 
-The style {p} means the box is periodic, so that particles exit one
+Style {p} means the box is periodic, so that particles exit one
 end of the box and re-enter the other end.  The {p} style must be
 applied to both faces of a dimension.
 
-The styles {s} means a specularly reflecting boundary.  Particles that
-cross this boundary have their velocity reversed and re-enter the box.
+Style {s} means a specularly reflecting boundary.  Particles that
+cross this boundary have their velocity reversed so as to re-enter the
+box.  The new velocity is used to advect the particle for the reminder
+of the timestep following the collision.
 
-[Restrictions:] none
+Style {d} means a diffuse reflecting boundary.  Two additional
+parameters are defined for each such boundary:
+
+acc = accomodation coefficient
+Twall = temperature of wall (temperature units)
+
+These parameters have default values of acc = 1.0 and Twall = 273.15K.
+They can be set to different values for an individual wall by the
+"boundary_modify"_boundary_modify.html command.
+
+The accomodation coefficient is a fractional value from 0.0 to 1.0.
+Each time a particle collides with the wall a random number RN is generated.
+If RN > acc, then specular reflection occurs, as described above.
+If RN <= acc, then diffuse relection occurs, using the following
+equation to reset the velocity of the particle, consistent with
+a thermal velocity equal to the wall temperature Twall:
+
+NOTE: eqs for diffuse reflection need to be added
+
+Note that the new velocity is always directed back into the
+simulatoion box.  The new velocity is used to advect the particle for
+the reminder of the timestep following the collision.
+
+[Restrictions:]
 
 For 2d simulations, the z dimension must be periodic.
 
-[Related commands:] none
+[Related commands:]
+
+"boundary_modify"_boundary_modify.html
 
 [Default:]
 

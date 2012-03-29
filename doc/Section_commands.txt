@@ -230,6 +230,7 @@ default DSMC build.  These dependencies are listed as Restrictions
 in the command's documentation.
 
 "boundary"_boundary.html,
+"boundary_modify"_boundary_modify.html,
 "clear"_clear.html,
 "collisions"_collisions.html,
 "compute"_compute.html,

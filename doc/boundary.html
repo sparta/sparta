@@ -15,11 +15,12 @@
 </P>
 <PRE>boundary x y z 
 </PRE>
-<UL><LI>x,y,z = <I>o</I> or <I>p</I> or <I>s</I>, one or two letters 
+<UL><LI>x,y,z = <I>o</I> or <I>p</I> or <I>s</I> or <I>d</I>, one or two letters 
 
 <PRE>  <I>o</I> is outflow
   <I>p</I> is periodic
-  <I>s</I> is specular reflection 
+  <I>s</I> is specular reflection
+  <I>d</I> is diffuse reflection 
 </PRE>
 
 </UL>
@@ -41,21 +42,48 @@ The size of the simulation box is set by the
 <P>The boundary style determines how particles exiting the box
 are handled.
 </P>
-<P>The style <I>o</I> means an outflow boundary, so that particles freely exit
+<P>Style <I>o</I> means an outflow boundary, so that particles freely exit
 the simulation.
 </P>
-<P>The style <I>p</I> means the box is periodic, so that particles exit one
+<P>Style <I>p</I> means the box is periodic, so that particles exit one
 end of the box and re-enter the other end.  The <I>p</I> style must be
 applied to both faces of a dimension.
 </P>
-<P>The styles <I>s</I> means a specularly reflecting boundary.  Particles that
-cross this boundary have their velocity reversed and re-enter the box.
+<P>Style <I>s</I> means a specularly reflecting boundary.  Particles that
+cross this boundary have their velocity reversed so as to re-enter the
+box.  The new velocity is used to advect the particle for the reminder
+of the timestep following the collision.
 </P>
-<P><B>Restrictions:</B> none
+<P>Style <I>d</I> means a diffuse reflecting boundary.  Two additional
+parameters are defined for each such boundary:
+</P>
+<P>acc = accomodation coefficient
+Twall = temperature of wall (temperature units)
+</P>
+<P>These parameters have default values of acc = 1.0 and Twall = 273.15K.
+They can be set to different values for an individual wall by the
+<A HREF = "boundary_modify.html">boundary_modify</A> command.
+</P>
+<P>The accomodation coefficient is a fractional value from 0.0 to 1.0.
+Each time a particle collides with the wall a random number RN is generated.
+If RN > acc, then specular reflection occurs, as described above.
+If RN <= acc, then diffuse relection occurs, using the following
+equation to reset the velocity of the particle, consistent with
+a thermal velocity equal to the wall temperature Twall:
+</P>
+<P>NOTE: eqs for diffuse reflection need to be added
+</P>
+<P>Note that the new velocity is always directed back into the
+simulatoion box.  The new velocity is used to advect the particle for
+the reminder of the timestep following the collision.
+</P>
+<P><B>Restrictions:</B>
 </P>
 <P>For 2d simulations, the z dimension must be periodic.
 </P>
-<P><B>Related commands:</B> none
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "boundary_modify.html">boundary_modify</A>
 </P>
 <P><B>Default:</B>
 </P>
