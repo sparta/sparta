@@ -20,15 +20,16 @@
 <LI>args = arguments for that style 
 
 <PRE>  none args = none
-  vss args = mix-ID 
+  vss args = file mix-ID
+    file = filename that lists species with their VSS model parameters
+    mix-ID = ID of mixture to use for group definitions 
 </PRE>
-    mix-ID = ID of mixture to use for group definitions
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>collisions none
-collisions vss background 
+collisions vss all.vss background 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -40,12 +41,40 @@ per-grid-cell basis.
 <P>The <I>none</I> style means that no collisions will be performed, i.e. free
 molecular flow.
 </P>
-<P>The <I>vss</I> style is the Variable Soft Sphere model.  It requires a
-mixture ID to be specified which must contain all the species defined
-for the simulation.  The group definitions in the mixture will be used
-to perform collisions between all pairs of groups.
+<HR>
+
+<P>The <I>vss</I> style is the Variable Soft Sphere model.  
 </P>
-<P>VSS needs to be described and cited.
+<P>NOTE: VSS model needs to be described and cited.
+</P>
+<P>The <I>vss</I> style requires a <I>file</I> be specified which contains
+definitions of VSS model parameters for some number of species, not
+all of which may be in use by this simulation.  Only species currently
+defined by the simulation simulation will be extracted from the file
+and they must be present in the file.
+</P>
+<P>The format of the file is as follows.  Comments or blank lines are
+allowed in the file.  Comment lines start with a "#" character.  All
+other lines must have format like this with values separated by
+whitespace:
+</P>
+<P>species-ID prop1 prop2 prop3 prop4
+</P>
+<P>The species-ID is a string that will be matched against the species
+list used by the simulation, as described above.  The properties are
+as follows:
+</P>
+<UL><LI>prop1 = diam = diamter of particle (distance units)
+<LI>prop2 = omega = ???
+<LI>prop3 = tref = reference temperature (temperature units)
+<LI>prop4 = alpha = ??? 
+</UL>
+<P>NOTE: give correct definitions and their units
+</P>
+<P>The <I>vss</I> style also requires a mixture ID to be specified which must
+contain all the species defined for the simulation.  The group
+definitions in the mixture will be used to perform collisions between
+various pairs of groups.
 </P>
 <HR>
 

@@ -28,14 +28,15 @@ species myfile H+ Cl- HCl
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Define one or more particle species to use in subsequent simulations.
-This command can be used as many times as desired to add species to a
-list of species that the simulation recognizes and has parameters for.
+<P>Define one or more particle species to use in the simulation.  This
+command can be used as many times as desired to add species to a list
+of species that the simulation recognizes and has parameters for.
 </P>
 <P>The <I>file</I> is a file that contains definitions for some number of
-species, not all of which need be used in a simulation.  Only those
-requested with specific IDs must be present in the file.  The format
-of the species file is discussed below.
+species, not all of which need to used by this simulation.  Only those
+requested with specific IDs will be extracted from the file and they
+must be present in the file.  The format of the species file is
+discussed below.
 </P>
 <P>Each <I>ID</I> is a character string used to identify the species, such as
 N or O2 or NO or D or Fe-, which can be any combination of
@@ -43,38 +44,37 @@ alphanumeric characters, or "=", "-", or underscore.
 </P>
 <P>Instead of listing single-species IDs, one of several pre-defined
 multi-species names can be used, each of which expands into a list of
-several individual species IDs:
+several individual species IDs.  The list of recognized
+abbreviations is as follows:
 </P>
 <UL><LI>air = N, O, NO 
-<LI>air++ = N, O, NO, e-
-<LI>etc 
 </UL>
 <P>These abbreviations can be used in combination with single-species IDs
 as in the 2nd example above.
 </P>
 <HR>
 
-<P>The format of the species file depends on the particle style.  In each
-case, comment or blank lines are allowed in the file.  Comment lines
-start with a "#" character.  All other lines must have a whitespace
-separated format like this:
+<P>The format of the species file is as follows.  Comments or blank lines
+are allowed in the file.  Comment lines start with a "#" character.
+All other lines must have format like this with values separated
+by whitespace:
 </P>
-<P>species-ID prop1 prop2 prop3 ... propN
+<P>species-ID prop1 prop2 ... prop9
 </P>
-<P>The species-ID is a string that matches the requests species-ID, as
-described above.  The N property values are the set of values defined
-by the particle style.  The file is searched for a line with a
-species-ID that matches the requested ID used in the species command,
-and its properties are extracted.
+<P>The species-ID is a string that will be matched against the requested
+species-ID, as described above.  The properties are as follows:
 </P>
-<P>The list of properties defined in a species file for each particle
-style are as follows:
-</P>
-<UL><LI>standard = molwt, molmass, diam, rotdof, rotrel, vibdof, vibrel, vibtemp, specwt, charge, omega, tref, alpha 
+<UL><LI>prop1 = molwt = molecular weight
+<LI>prop2 = mass = mass (mass units)
+<LI>prop3 = rotdof = rotational degrees of freedom
+<LI>prop4 = rotrel = rotational ???
+<LI>prop5 = vibdof = vibrational degrees of freedom
+<LI>prop6 = vibrel = vibrational ??
+<LI>prop7 = vibtemp = vibrational temperature (temperature units)
+<LI>prop8 = specwt = ???
+<LI>prop9 = charge = ??? 
 </UL>
-<P>We should define what these mean and their units.
-</P>
-<P>We can add more of these definititions over time.
+<P>NOTE: give correct definitions and their units
 </P>
 <HR>
 
