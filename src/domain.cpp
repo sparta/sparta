@@ -121,6 +121,9 @@ void Domain::set_boundary(int narg, char **arg)
       m++;
     }
 
+  if (dimension == 2 && (bflag[ZLO] != PERIODIC || bflag[ZHI] != PERIODIC))
+    error->all(FLERR,"Z dimension must be periodic for 2d simulation");
+      
   for (m = 0; m < 6; m += 2)
     if (bflag[m] == PERIODIC || bflag[m+1] == PERIODIC) {
       if (bflag[m] != PERIODIC || bflag[m+1] != PERIODIC)
@@ -144,6 +147,10 @@ void Domain::boundary_modify(int narg, char **arg)
   else if (strcmp(arg[0],"zlo") == 0) face = ZLO;
   else if (strcmp(arg[0],"zhi") == 0) face = ZHI;
   else error->all(FLERR,"Illegal boundary_modify command");
+
+  if (dimension == 2 && (face == ZLO || face == ZHI))
+    error->all(FLERR,"Cannot use boundary_modify command "
+	       "on Z dimension for 2d simulation");
 
   int iarg = 1;
   while (iarg < narg) {
