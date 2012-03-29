@@ -32,7 +32,7 @@ using namespace DSMC_NS;
 // customize by adding an abbreviation string
 // also add a check for the keyword in 2 places in add_species()
 
-#define AIR "O N NO"
+#define AIR "N O NO"
 
 /* ---------------------------------------------------------------------- */
 
@@ -372,7 +372,7 @@ void Particle::read_species_file()
   // skip blank lines or comment lines starting with '#'
   // all other lines must have NWORDS 
 
-  int NWORDS = 14;
+  int NWORDS = 10;
   char **words = new char*[NWORDS];
   char line[MAXLINE],copy[MAXLINE];
 
@@ -400,17 +400,13 @@ void Particle::read_species_file()
 
     fsp->molwt = atof(words[1]);
     fsp->mass = atof(words[2]);
-    fsp->diam = atof(words[3]);
-    fsp->rotdof = atoi(words[4]);
-    fsp->rotrel = atoi(words[5]);
-    fsp->vibdof = atoi(words[6]);
-    fsp->vibrel = atoi(words[7]);
-    fsp->vibtemp = atof(words[8]);
-    fsp->specwt = atof(words[9]);
-    fsp->charge = atof(words[10]);
-    fsp->omega = atof(words[11]);
-    fsp->tref = atof(words[12]);
-    fsp->alpha = atof(words[13]);
+    fsp->rotdof = atoi(words[3]);
+    fsp->rotrel = atoi(words[4]);
+    fsp->vibdof = atoi(words[5]);
+    fsp->vibrel = atoi(words[6]);
+    fsp->vibtemp = atof(words[7]);
+    fsp->specwt = atof(words[8]);
+    fsp->charge = atof(words[9]);
 
     nfilespecies++;
   }

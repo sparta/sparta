@@ -26,7 +26,6 @@ class Particle : protected Pointers {
     char id[16];
     double molwt;
     double mass;
-    double diam;
     int rotdof;
     int rotrel;
     int vibdof;
@@ -34,9 +33,6 @@ class Particle : protected Pointers {
     double vibtemp;
     double specwt;
     double charge;
-    double omega;
-    double tref;
-    double alpha;
   };
 
   Species *species;         // list of particle species info

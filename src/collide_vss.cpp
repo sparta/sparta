@@ -13,9 +13,12 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "string.h"
+#include "stdlib.h"
 #include "collide_vss.h"
 #include "grid.h"
 #include "update.h"
+#include "comm.h"
 #include "random_park.h"
 #include "math_const.h"
 #include "memory.h"
@@ -24,16 +27,35 @@
 #include "mixture.h"
 #include "collide.h"
 
-
 using namespace DSMC_NS;
 using namespace MathConst;
+
+#define MAXLINE 1024
 
 /* ---------------------------------------------------------------------- */
 
 CollideVSS::CollideVSS(DSMC *dsmc, int narg, char **arg) :
   Collide(dsmc, narg, arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal collision vss command");
+  if (narg != 3) error->all(FLERR,"Illegal collision vss command");
+
+  // proc 0 reads file to extract params for current species
+  // broadcasts params to all procs
+
+  nparams = particle->nspecies;
+  params = new Params[nparams];
+  if (comm->me == 0) read_param_file(arg[2]);
+  MPI_Bcast(params,nparams*sizeof(Params),MPI_BYTE,0,world);
+
+  // check that params were read for all species
+
+  for (int i = 0; i < nparams; i++)
+    if (params[i].diam < 0.0) {
+      char str[128];
+      sprintf(str,"Species %s did not appear in VSS parameter file",
+	      particle->species[i].id);
+      error->one(FLERR,str);
+    }
 
   prefactor = NULL;
   vremax = NULL;
@@ -43,6 +65,7 @@ CollideVSS::CollideVSS(DSMC *dsmc, int narg, char **arg) :
 
 CollideVSS::~CollideVSS()
 {
+  delete [] params;
   memory->destroy(prefactor);
   memory->destroy(vremax);
 }
@@ -52,6 +75,11 @@ CollideVSS::~CollideVSS()
 void CollideVSS::init()
 {
   Collide::init();
+
+  // initially read-in per-species params must match current species list
+
+  if (nparams != particle->nspecies)
+    error->all(FLERR,"VSS parameters do not match current species");
 
   Particle::Species *species = particle->species;
   int nspecies = particle->nspecies;
@@ -76,9 +104,9 @@ void CollideVSS::init()
 
   for (int isp = 0; isp < nspecies; isp++)
     for (int jsp = 0; jsp < nspecies; jsp++) {
-      double diam = 0.5 * (species[isp].diam + species[jsp].diam);
-      double omega = 0.5 * (species[isp].omega + species[jsp].omega);
-      double tref = 0.5 * (species[isp].tref + species[jsp].tref);
+      double diam = 0.5 * (params[isp].diam + params[jsp].diam);
+      double omega = 0.5 * (params[isp].omega + params[jsp].omega);
+      double tref = 0.5 * (params[isp].tref + params[jsp].tref);
       double mr = species[isp].mass * species[jsp].mass /
 	(species[isp].mass + species[jsp].mass);
       cxs = diam*diam*MY_PI;
@@ -107,8 +135,8 @@ void CollideVSS::init()
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::attempt_collision(int icell, 
-				     int igroup, int jgroup, double volume)
+double CollideVSS::attempt_collision(int icell, int igroup, int jgroup, 
+				     double volume)
 {
  double fnum = update->fnum;
  double dt = update->dt;
@@ -145,8 +173,8 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
   double vr2 = du*du + dv*dv + dw*dw;
-  double omega1 = species[ispecies].omega;
-  double omega2 = species[jspecies].omega;
+  double omega1 = params[ispecies].omega;
+  double omega2 = params[jspecies].omega;
   double omega = 0.5 * (omega1+omega2);
   double vr  = pow(vr2,1-omega);
 
@@ -238,7 +266,7 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   double mass_i = species[isp].mass;
   double mass_j = species[jsp].mass;
 
-  double alpha = 0.5 * (species[isp].alpha + species[jsp].alpha);
+  double alpha = 0.5 * (params[isp].alpha + params[jsp].alpha);
   double mr = species[isp].mass * species[jsp].mass /
 	     (species[isp].mass + species[jsp].mass);
 
@@ -298,6 +326,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
     jp->erot  = 0.0;
     ip->ivib = 0;
     jp->ivib = 0;
+
   } else {
     double E_Dispose = precoln.etrans;
     for (i = 0; i < 2; i++) {
@@ -315,7 +344,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 	 evib = (double) 
 	   (kp->ivib * update->boltz * species[ksp].vibtemp);
 	 State_prob = pow((1 - evib / E_Dispose),
-			  (1.5 - species[ksp].omega));
+			  (1.5 - params[ksp].omega));
        } while (State_prob < random->uniform());
        
        E_Dispose -= evib;
@@ -324,7 +353,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
      if ((species[ksp].rotdof == 2) && (rotn_phi >= random->uniform())) {
        E_Dispose += kp->erot;
        Fraction_Rot = 
-	 1- pow(random->uniform(),(1/(2.5-species[ksp].omega)));
+	 1- pow(random->uniform(),(1/(2.5-params[ksp].omega)));
        kp->erot = Fraction_Rot * E_Dispose;
        E_Dispose -= kp->erot;
        
@@ -332,7 +361,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 		(rotn_phi >= random->uniform())) {
        E_Dispose += kp->erot;
        Exp_1 = species[ksp].rotdof / 2;
-       Exp_2 = 2.5 - species[ksp].omega;
+       Exp_2 = 2.5 - params[ksp].omega;
        do {
 	 Fraction_Rot = random->uniform();
 	 State_prob = 
@@ -372,4 +401,75 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   */
 
  return;
+}
+
+/* ----------------------------------------------------------------------
+   read list of species defined in species file
+   store info in filespecies and nfilespecies
+   only invoked by proc 0
+------------------------------------------------------------------------- */
+
+void CollideVSS::read_param_file(char *fname)
+{
+  FILE *fp = fopen(fname,"r");
+  if (fp == NULL) {
+    char str[128];
+    sprintf(str,"Cannot open VSS parameter file %s",fname);
+    error->one(FLERR,str);
+  }
+
+  // set all diameters to -1, so can detect if not read
+
+  for (int i = 0; i < nparams; i++) params[i].diam = -1.0;
+
+  // read file line by line
+  // skip blank lines or comment lines starting with '#'
+  // all other lines must have NWORDS 
+
+  int NWORDS = 5;
+  char **words = new char*[NWORDS];
+  char line[MAXLINE],copy[MAXLINE];
+  int isp;
+
+  while (fgets(line,MAXLINE,fp)) {
+    int pre = strspn(line," \t\n");
+    if (pre == strlen(line) || line[pre] == '#') continue;
+
+    strcpy(copy,line);
+    int nwords = wordcount(copy,NULL);
+    if (nwords != NWORDS)
+      error->one(FLERR,"Incorrect line format in VSS parameter file");
+    nwords = wordcount(line,words);
+
+    isp = particle->find_species(words[0]);
+    if (isp < 0) continue;
+
+    params[isp].diam = atof(words[1]);
+    params[isp].omega = atof(words[2]);
+    params[isp].tref = atof(words[3]);
+    params[isp].alpha = atof(words[4]);
+  }
+
+  delete [] words;
+  fclose(fp);
+}
+
+/* ----------------------------------------------------------------------
+   count whitespace-delimited words in line
+   line will be modified, since strtok() inserts NULLs
+   if words is non-NULL, store ptr to each word
+------------------------------------------------------------------------- */
+
+int CollideVSS::wordcount(char *line, char **words)
+{
+  int nwords = 0;
+  char *word = strtok(line," \t");
+
+  while (word) {
+    if (words) words[nwords] = word;
+    nwords++;
+    word = strtok(NULL," \t");
+  }
+
+  return nwords;
 }
