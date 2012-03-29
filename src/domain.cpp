@@ -258,7 +258,7 @@ void Domain::reflect(double &v0, double &v1, double &v2, int isp,
 
   // diffuse reflection
   // vrm = most probable speed of species isp, eqns (4.1) and (4.7)
-  // generate normal velocity component, eqn(12.3)
+  // generate normal velocity component, eqn (12.3)
 
   else {
     double vrm = sqrt(2.*update->boltz*Twall/species[isp].mass);
