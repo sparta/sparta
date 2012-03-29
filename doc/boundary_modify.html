@@ -23,15 +23,16 @@
   <I>acc</I> value = frac
     frac = fractional value between 0.0 and 1.0 inclusive
   <I>temp</I> value = Twall
-    Twall = temperature of wall (temperature units) 
+    Twall = temperature of wall (temperature units)
+    Twall can be a variable (see below) 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>boundary_modify yhi acc 0.5 temp 300.0 
-</PRE>
-<PRE>boundary_modify zlo acc 0.75 
+<PRE>boundary_modify yhi acc 0.5 temp 300.0
+boundary_modify zlo acc 0.75
+boundary_modify zlo temp v_mytemp 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -46,6 +47,17 @@ as specified by the <A HREF = "boundary.html">boundary</A> command.
 keyword sets the wall temperature.  See the <A HREF = "boundary.html">boundary</A>
 command doc page for details of how these parameters are used to reset
 a particle's attributes when it collides with a diffuse boundary.
+</P>
+<P>The <I>Twall</I> value can be specified as an equal-style
+<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
+specified as v_name, where name is the variable name.  In this case,
+the variable will be evaluated each timestep, and its value used to
+determine the current wall temperature.
+</P>
+<P>Equal-style variables can specify formulas with various mathematical
+functions, and include <A HREF = "thermo_style.html">thermo_style</A> command
+keywords for the simulation box parameters and timestep and elapsed
+time.  Thus it is easy to specify a time-dependent temperature.
 </P>
 <P><B>Restrictions:</B> none
 </P>

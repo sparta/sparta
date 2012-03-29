@@ -18,13 +18,15 @@ keywords = {acc} or {temp}
   {acc} value = frac
     frac = fractional value between 0.0 and 1.0 inclusive
   {temp} value = Twall
-    Twall = temperature of wall (temperature units) :pre
+    Twall = temperature of wall (temperature units)
+    Twall can be a variable (see below) :pre
 :ule
 
 [Examples:]
 
-boundary_modify yhi acc 0.5 temp 300.0 :pre
-boundary_modify zlo acc 0.75 :pre
+boundary_modify yhi acc 0.5 temp 300.0
+boundary_modify zlo acc 0.75
+boundary_modify zlo temp v_mytemp :pre
 
 [Description:]
 
@@ -39,6 +41,17 @@ The {acc} keyword sets the accomodation coefficient.  The {temp}
 keyword sets the wall temperature.  See the "boundary"_boundary.html
 command doc page for details of how these parameters are used to reset
 a particle's attributes when it collides with a diffuse boundary.
+
+The {Twall} value can be specified as an equal-style
+"variable"_variable.html.  If the value is a variable, it should be
+specified as v_name, where name is the variable name.  In this case,
+the variable will be evaluated each timestep, and its value used to
+determine the current wall temperature.
+
+Equal-style variables can specify formulas with various mathematical
+functions, and include "thermo_style"_thermo_style.html command
+keywords for the simulation box parameters and timestep and elapsed
+time.  Thus it is easy to specify a time-dependent temperature.
 
 [Restrictions:] none
 
