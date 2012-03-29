@@ -1,0 +1,51 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+boundary_modify command :h3
+
+[Syntax:]
+
+boundary_modify wall keyword value ... :pre
+
+wall = {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :ulb,l
+one or more keyword/value pairs may be listed :l
+keywords = {acc} or {temp}
+  {acc} value = frac
+    frac = fractional value between 0.0 and 1.0 inclusive
+  {temp} value = Twall
+    Twall = temperature of wall (temperature units) :pre
+:ule
+
+[Examples:]
+
+boundary_modify yhi acc 0.5 temp 300.0 :pre
+boundary_modify zlo acc 0.75 :pre
+
+[Description:]
+
+Set parameters for one of the boundaries of the global simulation box.
+
+Any of the 6 faces can be selected via the {wall} setting.
+
+The {acc} and {temp} keywords only apply to diffuse-style walls,
+as specified by the "boundary"_boundary.html command.
+
+The {acc} keyword sets the accomodation coefficient.  The {temp}
+keyword sets the wall temperature.  See the "boundary"_boundary.html
+command doc page for details of how these parameters are used to reset
+a particle's attributes when it collides with a diffuse boundary.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"boundary"_boundary.html
+
+[Default:]
+
+The default values for all 6 walls are acc = 1.0 and temp = 273.15.

@@ -1,0 +1,60 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>boundary_modify command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>boundary_modify wall keyword value ... 
+</PRE>
+<UL><LI>wall = <I>xlo</I> or <I>xhi</I> or <I>ylo</I> or <I>yhi</I> or <I>zlo</I> or <I>zhi</I> 
+
+<LI>one or more keyword/value pairs may be listed 
+
+<PRE>keywords = <I>acc</I> or <I>temp</I>
+  <I>acc</I> value = frac
+    frac = fractional value between 0.0 and 1.0 inclusive
+  <I>temp</I> value = Twall
+    Twall = temperature of wall (temperature units) 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>boundary_modify yhi acc 0.5 temp 300.0 
+</PRE>
+<PRE>boundary_modify zlo acc 0.75 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set parameters for one of the boundaries of the global simulation box.
+</P>
+<P>Any of the 6 faces can be selected via the <I>wall</I> setting.
+</P>
+<P>The <I>acc</I> and <I>temp</I> keywords only apply to diffuse-style walls,
+as specified by the <A HREF = "boundary.html">boundary</A> command.
+</P>
+<P>The <I>acc</I> keyword sets the accomodation coefficient.  The <I>temp</I>
+keyword sets the wall temperature.  See the <A HREF = "boundary.html">boundary</A>
+command doc page for details of how these parameters are used to reset
+a particle's attributes when it collides with a diffuse boundary.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "boundary.html">boundary</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The default values for all 6 walls are acc = 1.0 and temp = 273.15.
+</P>
+</HTML>
