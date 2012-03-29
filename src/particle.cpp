@@ -328,7 +328,6 @@ void Particle::add_mixture(int narg, char **arg)
 
   // pass list of species and list of params to Mixture
 
-  printf("MIX %d %d %d\n",nsp,iarg,narg);
   mixture[imix]->add_species(nsp,&arg[1]);
   mixture[imix]->params(narg-iarg,&arg[iarg]);
 }
@@ -395,7 +394,8 @@ void Particle::read_species_file()
     nwords = wordcount(line,words);
     Species *fsp = &filespecies[nfilespecies];
 
-    if (strlen(words[0]) + 1 > 16) error->one(FLERR,"");
+    if (strlen(words[0]) + 1 > 16)
+      error->one(FLERR,"Invalid species ID in species file");
     strcpy(fsp->id,words[0]);
 
     fsp->molwt = atof(words[1]);
