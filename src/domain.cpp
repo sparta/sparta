@@ -27,6 +27,7 @@
 #include "random_mars.h"
 #include "random_park.h"
 #include "math_const.h"
+#include "update.h"
 
 using namespace DSMC_NS;
 using namespace MathConst;
@@ -327,7 +328,6 @@ void Domain::reflect(int face, int isp, double *v)
     Particle::Species *species = particle->species;
     double vrm = sqrt(2.0*update->boltz*twall[face]/species[isp].mass);
     v[0] = vrm * random->uniform();
-    double theta1 = MY_2PI * random->uniform();
     double theta2 = MY_2PI * random->uniform();
     v[1] = vrm*sin(theta2);
     v[2] = vrm*cos(theta2);

@@ -15,6 +15,7 @@ mixture		    air N O vstream 1000.0 -1000.0 0
 mixture		    air group species
 
 global		    nrho 1.0
+global		    fnum 1.0E26
 
 #create_molecules    air
 fix		    in inflow air xlo #perspecies no n 111

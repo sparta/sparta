@@ -193,14 +193,16 @@ void CreateMolecules::create_local(bigint np)
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
-      vn = vscale[ispecies] * random->gaussian();
-      vr = vscale[ispecies] * random->gaussian();
+      vn = vscale[ispecies] * sqrt(-log(random->uniform()));
+      vr = vscale[ispecies] * sqrt(-log(random->uniform()));
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
+/*    printf("%e %e %e %e\n", MY_2PI, vn, vr, vscale[ispecies]); */
 	
+      
       v[0] = vstream[0] + vn*cos(theta1);
       v[1] = vstream[1] + vr*sin(theta2);
-      v[2] = vstream[2] + vr*cos(theta2);
+      v[2] = vstream[2] + vr*sin(theta2);
 /*
       erote = CreateMolecules.erot(isp);
       ivib = CreateMolecules.evib(isp);

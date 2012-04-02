@@ -43,7 +43,6 @@ class Domain : protected Pointers {
   void reflect(int, int, double *);
   void print_box(const char *);
 
- protected:
   class RanPark *random;     // RNG for particle reflection
   double acccoeff[6];        // accomodation coeff for diffuse walls
   double twall[6];           // wall temperatures for diffuse walls

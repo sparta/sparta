@@ -27,6 +27,8 @@
 #include "timer.h"
 #include "memory.h"
 #include "error.h"
+#include "math.h"
+#include "math_const.h"
 
 using namespace DSMC_NS;
 
@@ -100,7 +102,7 @@ void Update::set_units(const char *style)
     dt = 1.0;
 
   } else if (strcmp(style,"si") == 0) {
-    boltz = 1.3806504e-23;
+    boltz = 1.380658e-23;
     mvv2e = 1.0;
 
     dt = 1.0;

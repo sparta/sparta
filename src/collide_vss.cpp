@@ -128,8 +128,8 @@ void CollideVSS::init()
       for (int jsp = 0; jsp < nspecies; jsp++) {
         int igroup = mix2group[isp];
         int jgroup = mix2group[jsp];
-	vremax[icell][igroup][jgroup] = 
-	  MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
+	vremax[icell][igroup][jgroup] = vrm[isp][jsp];
+//	  MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
       }
 }
 
@@ -141,7 +141,7 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
  double fnum = update->fnum;
  double dt = update->dt;
 
- int nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
+ double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
     vremax[icell][igroup][jgroup] * dt * fnum / volume + random->uniform();
 
  // printf(" Attempts = %d %d %d %d\n", icell, ngroup[igroup],ngroup[jgroup],nattempt );
@@ -188,6 +188,8 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
 
   if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
+  
+  printf("%e %e \n", vre, vremax[icell][igroup][jgroup]);
   return 1;
 }
 

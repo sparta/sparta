@@ -507,7 +507,7 @@ void FixInflow::start_of_step()
 	      (indot + sqrt(indot*indot + 2.0)) *
 	      exp(0.5 + (0.5*indot)*(indot-sqrt(indot*indot + 2.0)) - 
 		  beta_un*beta_un);
-	  } while (normalized_distbn_fn < random->gaussian());
+	  } while (normalized_distbn_fn < random->uniform());
 	  
 	  v[ndim] = beta_un + vstream[0];
 	  
@@ -555,11 +555,11 @@ void FixInflow::start_of_step()
 	    exp(0.5 + (0.5*indot)*(indot-sqrt(indot*indot + 2.0)) - 
 		beta_un*beta_un);
 	  //printf("BBB %g\n",normalized_distbn_fn);
-	} while (normalized_distbn_fn < random->gaussian());
+	} while (normalized_distbn_fn < random->uniform());
 	
 	v[ndim] = beta_un*vscale[isp] + vstream[0];
 	
-	theta = MY_PI * random->gaussian();
+	theta = MY_PI * random->uniform();
 	v[pdim1] = vscale[isp]*sin(theta) + vstream[1];
 	v[pdim2] = vscale[isp]*cos(theta) + vstream[2]; 
 /*
