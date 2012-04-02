@@ -187,6 +187,8 @@ int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
 
   vremax[ilocal][igroup][jgroup] = MAX(vre,vremax[ilocal][igroup][jgroup]);
 
+  printf("INSIDE\n");
+
   if (vre/vremax[ilocal][igroup][jgroup] < random->uniform()) return 0;
   return 1;
 }
