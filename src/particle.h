@@ -45,8 +45,8 @@ class Particle : protected Pointers {
     int id;                 // particle ID
     int ispecies;           // particle species index
     int icell;              // global grid cell the particle is in
-    double x[3];            // coords of particle
-    double v[3];            // velocity of particle
+    double x[3];            // particle position
+    double v[3];            // particle velocity
     double erot;
     int ivib;
   };
@@ -56,8 +56,12 @@ class Particle : protected Pointers {
   int maxlocal;             // max # particles list can hold
   OnePart *particles;       // list of particles I own
 
+  // currently stored in grid.h for every cell, whether I own it or not
+  // not sure why storing it here is slower
+
   //int *cellcount;           // count of particles in each grid cell I own
   //int *first;               // index of first particle in each grid cell
+
   int *next;                // index of next particle in each grid cell
 
   Particle(class DSMC *);
