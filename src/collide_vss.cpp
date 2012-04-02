@@ -189,7 +189,7 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 
   if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
   
-  printf("%e %e \n", vre, vremax[icell][igroup][jgroup]);
+//  printf("%e %e \n", vre, vremax[icell][igroup][jgroup]);
   return 1;
 }
 

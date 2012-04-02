@@ -20,7 +20,7 @@ create_grid 	    100 100 100
 species		    ../data/all.species N 
 mixture		    air N vstream 0.0 0.0 0.0 temp 300.00 nrho 7.07043E22
 
-create_molecules    air n 100000000 
+create_molecules    air n 10000 
 
 
 collisions	    vss air ../data/all.vss
