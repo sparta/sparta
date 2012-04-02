@@ -59,6 +59,7 @@ CollideVSS::CollideVSS(DSMC *dsmc, int narg, char **arg) :
 
   prefactor = NULL;
   vremax = NULL;
+  vrm = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -68,6 +69,7 @@ CollideVSS::~CollideVSS()
   delete [] params;
   memory->destroy(prefactor);
   memory->destroy(vremax);
+  memory->destroy(vrm);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -88,14 +90,13 @@ void CollideVSS::init()
   double *vscale = particle->mixture[imix]->vscale;
   int *mix2group = particle->mixture[imix]->mix2group;
 
-  // if (particle->nspecies != mixture->oldspecies) {
   memory->destroy(prefactor);
   memory->destroy(vremax);
-  // memory->destroy(vrm);
+  memory->destroy(vrm);
+
   memory->create(prefactor,nspecies,nspecies,"collide:prefactor");
   memory->create(vremax,grid->nlocal,nspecies,nspecies,"collide:vremax");
   memory->create(vrm,nspecies,nspecies,"collide:vrm");
-  // }
 
   // prefactor = static contributions to collision attempt frequencies
 
@@ -129,20 +130,19 @@ void CollideVSS::init()
         int igroup = mix2group[isp];
         int jgroup = mix2group[jsp];
 	vremax[icell][igroup][jgroup] = vrm[isp][jsp];
-//	  MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
       }
 }
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::attempt_collision(int icell, int igroup, int jgroup, 
+double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup, 
 				     double volume)
 {
  double fnum = update->fnum;
  double dt = update->dt;
 
  double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
-    vremax[icell][igroup][jgroup] * dt * fnum / volume + random->uniform();
+   vremax[ilocal][igroup][jgroup] * dt * fnum / volume + random->uniform();
 
  // printf(" Attempts = %d %d %d %d\n", icell, ngroup[igroup],ngroup[jgroup],nattempt );
  // if (nattempt > 0) printf(" Attempts = %e %e %e \n", dt, fnum, volume);
@@ -159,7 +159,7 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
    update vremax either way
 ------------------------------------------------------------------------- */
 
-int CollideVSS::test_collision(int icell, int igroup, int jgroup,
+int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
 			       Particle::OnePart *ip, Particle::OnePart *jp)
 {
   Particle::Species *species = particle->species;
@@ -185,11 +185,9 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 
   // update vremax if new max
 
-  vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
+  vremax[ilocal][igroup][jgroup] = MAX(vre,vremax[ilocal][igroup][jgroup]);
 
-  if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
-  
-//  printf("%e %e \n", vre, vremax[icell][igroup][jgroup]);
+  if (vre/vremax[ilocal][igroup][jgroup] < random->uniform()) return 0;
   return 1;
 }
 

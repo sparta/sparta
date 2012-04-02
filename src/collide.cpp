@@ -158,7 +158,7 @@ void Collide::collisions()
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = 0; jgroup < ngroups; jgroup++) {
-	attempt = attempt_collision(icell,igroup,jgroup,volume);
+	attempt = attempt_collision(m,igroup,jgroup,volume);
 	nattempt = static_cast<int> (attempt);
 	if (attempt-nattempt > random->uniform()) nattempt++;
 
@@ -202,7 +202,7 @@ void Collide::collisions()
 	ipart = &particles[ilist[i]];
 	jpart = &particles[jlist[j]];
 
-	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
+	if (!test_collision(m,igroup,jgroup,ipart,jpart)) continue;
 	setup_collision(ipart,jpart);
 	kpart = perform_collision(ipart,jpart);
 	ncollide_one++;
