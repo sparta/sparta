@@ -30,6 +30,7 @@ namespace MathExtra {
 
   inline void norm3(double *v);
   inline void normalize3(const double *v, double *ans);
+  inline void snorm3(const double, double *v);
   inline void snormalize3(const double, const double *v, double *ans);
   inline void negate3(double *v);
   inline void scale3(double s, double *v);
@@ -69,11 +70,11 @@ namespace MathExtra {
   inline void vecmat(const double *v, const double m[3][3], double *ans);
   inline void scalar_times3(const double f, double m[3][3]); 
 
-  // shape matrix operations
-  // upper-triangular 3x3 matrix stored in Voigt notation as 6-vector
+  // quaternion operations
 
-  inline void multiply_shape_shape(const double *one, const double *two,
-                                   double *ans);
+  inline void axisangle_to_quat(const double *v, const double angle,
+                                double *quat);
+  inline void quat_to_mat(const double *quat, double mat[3][3]);
 
   // various methods
 
@@ -102,6 +103,18 @@ void MathExtra::normalize3(const double *v, double *ans)
   ans[0] = v[0]*scale;
   ans[1] = v[1]*scale;
   ans[2] = v[2]*scale;
+}
+
+/* ----------------------------------------------------------------------
+   scale a vector to length in place
+------------------------------------------------------------------------- */
+
+void MathExtra::snorm3(const double length, double *v)
+{
+  double scale = length/sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+  v[0] *= scale;
+  v[1] *= scale;
+  v[2] *= scale;
 }
 
 /* ----------------------------------------------------------------------
@@ -403,7 +416,7 @@ void MathExtra::vecmat(const double *v, const double m[3][3], double *ans)
    matrix times scalar, in place
 ------------------------------------------------------------------------- */
 
-inline void MathExtra::scalar_times3(const double f, double m[3][3]) 
+void MathExtra::scalar_times3(const double f, double m[3][3]) 
 {
   m[0][0] *= f; m[0][1] *= f; m[0][2] *= f;
   m[1][0] *= f; m[1][1] *= f; m[1][2] *= f;
@@ -411,19 +424,50 @@ inline void MathExtra::scalar_times3(const double f, double m[3][3])
 }
 
 /* ----------------------------------------------------------------------
-   multiply 2 shape matrices
-   upper-triangular 3x3, stored as 6-vector in Voigt notation
+   compute quaternion from axis-angle rotation
+   v MUST be a unit vector
 ------------------------------------------------------------------------- */
 
-void MathExtra::multiply_shape_shape(const double *one, const double *two,
-                                     double *ans)
+void MathExtra::axisangle_to_quat(const double *v, const double angle,
+				  double *quat)
 {
-  ans[0] = one[0]*two[0];
-  ans[1] = one[1]*two[1];
-  ans[2] = one[2]*two[2];
-  ans[3] = one[1]*two[3] + one[3]*two[2];
-  ans[4] = one[0]*two[4] + one[5]*two[3] + one[4]*two[2];
-  ans[5] = one[0]*two[5] + one[5]*two[1];
+  double halfa = 0.5*angle;
+  double sina = sin(halfa);
+  quat[0] = cos(halfa);
+  quat[1] = v[0]*sina;
+  quat[2] = v[1]*sina;
+  quat[3] = v[2]*sina;
+}
+
+/* ----------------------------------------------------------------------
+   compute rotation matrix from quaternion
+   quat = [w i j k]
+------------------------------------------------------------------------- */
+
+void MathExtra::quat_to_mat(const double *quat, double mat[3][3])
+{
+  double w2 = quat[0]*quat[0];
+  double i2 = quat[1]*quat[1];
+  double j2 = quat[2]*quat[2];
+  double k2 = quat[3]*quat[3];
+  double twoij = 2.0*quat[1]*quat[2];
+  double twoik = 2.0*quat[1]*quat[3];
+  double twojk = 2.0*quat[2]*quat[3];
+  double twoiw = 2.0*quat[1]*quat[0];
+  double twojw = 2.0*quat[2]*quat[0];
+  double twokw = 2.0*quat[3]*quat[0];
+
+  mat[0][0] = w2+i2-j2-k2;
+  mat[0][1] = twoij-twokw;
+  mat[0][2] = twojw+twoik;
+
+  mat[1][0] = twoij+twokw;
+  mat[1][1] = w2-i2+j2-k2;
+  mat[1][2] = twojk-twoiw;
+	
+  mat[2][0] = twoik-twojw;
+  mat[2][1] = twojk+twoiw;
+  mat[2][2] = w2-i2-j2+k2;
 }
 
 #endif

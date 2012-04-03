@@ -55,6 +55,11 @@ class Surf : protected Pointers {
   void compute_line_normal(int, int);
   void compute_tri_normal(int, int);
   bigint memory_usage();
+
+ private:
+  int nsurf;                    // # of read-in surfaces, each with ID
+  char **ids;                   // read-in surface IDs
+
 };
 
 }

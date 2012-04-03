@@ -16,15 +16,15 @@
 #include "string.h"
 #include "stdlib.h"
 #include "read_surf.h"
+#include "math_extra.h"
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
 #include "error.h"
 #include "memory.h"
 
-#include <map>
-
 using namespace DSMC_NS;
+using namespace MathExtra;
 
 #define MAXLINE 256
 #define CHUNK 1024
@@ -56,9 +56,11 @@ void ReadSurf::command(int narg, char **arg)
   if (!grid->grid_exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
 
-  dimension = domain->dimension;
+  surf->surf_exist = 1;
 
   if (narg < 2) error->all(FLERR,"Illegal read_surf command");
+
+  dimension = domain->dimension;
 
   // set surface ID
 
@@ -126,6 +128,15 @@ void ReadSurf::command(int narg, char **arg)
   while (iarg < narg) {
     if (strcmp(arg[iarg],"origin") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
+      double ox = atof(arg[iarg+1]);
+      double oy = atof(arg[iarg+2]);
+      double oz = atof(arg[iarg+3]);
+      if (dimension == 2 && oz != 0.0) 
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      origin[0] = ox;
+      origin[1] = oy;
+      origin[2] = oz;
       iarg += 4;
     } else if (strcmp(arg[iarg],"trans") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
@@ -133,7 +144,8 @@ void ReadSurf::command(int narg, char **arg)
       double dy = atof(arg[iarg+2]);
       double dz = atof(arg[iarg+3]);
       if (dimension == 2 && dz != 0.0) 
-	error->all(FLERR,"Invalid read_surf trans setting for 2d simulation");
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
       origin[0] += dx;
       origin[1] += dy;
       origin[2] += dz;
@@ -141,20 +153,39 @@ void ReadSurf::command(int narg, char **arg)
       iarg += 4;
     } else if (strcmp(arg[iarg],"atrans") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double dx = atof(arg[iarg+1]);
-      double dy = atof(arg[iarg+2]);
-      double dz = atof(arg[iarg+3]);
-      if (dimension == 2 && dz != 0.0) 
-	error->all(FLERR,"Invalid read_surf trans setting for 2d simulation");
+      double ax = atof(arg[iarg+1]);
+      double ay = atof(arg[iarg+2]);
+      double az = atof(arg[iarg+3]);
+      if (dimension == 2 && az != 0.0) 
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      double dx = ax - origin[0];
+      double dy = ay - origin[1];
+      double dz = az - origin[2];
+      origin[0] = ax;
+      origin[1] = ay;
+      origin[2] = az;
       translate(dx,dy,dz);
       iarg += 4;
     } else if (strcmp(arg[iarg],"ftrans") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double dx = atof(arg[iarg+1]);
-      double dy = atof(arg[iarg+2]);
-      double dz = atof(arg[iarg+3]);
-      if (dimension == 2 && dz != 0.0) 
-	error->all(FLERR,"Invalid read_surf trans setting for 2d simulation");
+      double fx = atof(arg[iarg+1]);
+      double fy = atof(arg[iarg+2]);
+      double fz = atof(arg[iarg+3]);
+      if (dimension == 2 && fz != 0.5) 
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      double ax = domain->boxlo[0] + fx*domain->xprd;
+      double ay = domain->boxlo[1] + fy*domain->yprd;
+      double az;
+      if (dimension == 3) az = domain->boxlo[2] + fz*domain->zprd;
+      else az = 0.0;
+      double dx = ax - origin[0];
+      double dy = ay - origin[1];
+      double dz = az - origin[2];
+      origin[0] = ax;
+      origin[1] = ay;
+      origin[2] = az;
       translate(dx,dy,dz);
       iarg += 4;
     } else if (strcmp(arg[iarg],"scale") == 0) {
@@ -163,7 +194,8 @@ void ReadSurf::command(int narg, char **arg)
       double sy = atof(arg[iarg+2]);
       double sz = atof(arg[iarg+3]);
       if (dimension == 2 && sz != 1.0) 
-	error->all(FLERR,"Invalid read_surf scale setting for 2d simulation");
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
       scale(sx,sy,sz);
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
@@ -173,7 +205,11 @@ void ReadSurf::command(int narg, char **arg)
       double ry = atof(arg[iarg+3]);
       double rz = atof(arg[iarg+4]);
       if (dimension == 2 && (rx != 0.0 || ry != 0.0 || rz != 1.0))
-	error->all(FLERR,"Invalid read_surf trans setting for 2d simulation");
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      if (rx == 0.0 && ry == 0.0 && rz == 0.0)
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
       rotate(theta,rx,ry,rz);
       iarg += 5;
     } else if (strcmp(arg[iarg],"invert") == 0) {
@@ -465,36 +501,103 @@ void ReadSurf::read_tris()
 }
 
 /* ----------------------------------------------------------------------
-   translate new vertices
+   translate new vertices by (dx,dy,dz)
+   for 2d, dz will be 0.0
 ------------------------------------------------------------------------- */
 
 void ReadSurf::translate(double dx, double dy, double dz)
 {
+  Surf::Point *pts = surf->pts;
+  int m = npoint_old;
+  
+  for (int i = 0; i < npoint_new; i++) {
+    pts[m].x[0] += dx;
+    pts[m].x[1] += dy;
+    pts[m].x[2] += dz;
+    m++;
+  }
 }
 
-
 /* ----------------------------------------------------------------------
-   translate new vertices around origin
+   scale new vertices by (sx,sy,sz) around origin
+   for 2d, do not reset x[2] to avoid epsilon change
 ------------------------------------------------------------------------- */
 
 void ReadSurf::scale(double sx, double sy, double sz)
 {
+  Surf::Point *pts = surf->pts;
+  int m = npoint_old;
+  
+  for (int i = 0; i < npoint_new; i++) {
+    pts[m].x[0] = sx*(pts[m].x[0]-origin[0]) + origin[0];
+    pts[m].x[1] = sy*(pts[m].x[1]-origin[1]) + origin[1];
+    if (dimension == 3) pts[m].x[2] = sz*(pts[m].x[2]-origin[2]) + origin[2];
+    m++;
+  }
 }
 
 /* ----------------------------------------------------------------------
    rotate new vertices around origin
+   for 2d, do not reset x[2] to avoid epsilon change
 ------------------------------------------------------------------------- */
 
 void ReadSurf::rotate(double theta, double rx, double ry, double rz)
 {
+  double r[3],q[4],d[3],dnew[3];
+  double rotmat[3][3];
+
+  r[0] = rx; r[1] = ry; r[2] = rz;
+  MathExtra::norm3(r);
+  MathExtra::axisangle_to_quat(r,theta,q);
+  MathExtra::quat_to_mat(q,rotmat);
+
+  Surf::Point *pts = surf->pts;
+  int m = npoint_old;
+  
+  for (int i = 0; i < npoint_new; i++) {
+    d[0] = pts[m].x[0] - origin[0];
+    d[1] = pts[m].x[1] - origin[1];
+    d[2] = pts[m].x[2] - origin[2];
+    MathExtra::matvec(rotmat,d,dnew);
+    pts[m].x[0] = dnew[0] + origin[0];
+    pts[m].x[1] = dnew[1] + origin[1];
+    if (dimension == 3) pts[m].x[2] = dnew[2] + origin[2];
+    m++;
+  }
 }
 
 /* ----------------------------------------------------------------------
-   invert new vertex ordering
+   invert new vertex ordering within each line or tri
+   this flips direction of surface normal
 ------------------------------------------------------------------------- */
 
 void ReadSurf::invert()
 {
+  int tmp;
+
+  if (dimension == 2) {
+    Surf::Line *lines = surf->lines;
+    int m = nline_old;
+
+    for (int i = 0; i < nline_new; i++) {
+      tmp = lines[m].p1;
+      lines[m].p1 = lines[m].p2;
+      lines[m].p2 = tmp;
+      m++;
+    }
+  }
+
+  if (dimension == 3) {
+    Surf::Tri *tris = surf->tris;
+    int m = ntri_old;
+
+    for (int i = 0; i < nline_new; i++) {
+      tmp = tris[m].p2;
+      tris[m].p2 = tris[m].p3;
+      tris[m].p3 = tmp;
+      m++;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
