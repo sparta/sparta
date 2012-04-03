@@ -45,7 +45,7 @@ Grid::Grid(DSMC *dsmc) : Pointers(dsmc)
 Grid::~Grid()
 {
   memory->sfree(cells);
-  memory->sfree(mycells);
+  memory->destroy(mycells);
 }
 
 /* ---------------------------------------------------------------------- */

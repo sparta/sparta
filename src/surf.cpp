@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "surf.h"
+#include "memory.h"
 
 using namespace DSMC_NS;
 
@@ -20,10 +21,49 @@ using namespace DSMC_NS;
 
 Surf::Surf(DSMC *dsmc) : Pointers(dsmc)
 {
+  surf_exist = 0;
+
+  npoint = nline = ntri = 0;
+  pts = NULL;
+  lines = NULL;
+  tris = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Surf::~Surf()
 {
+   memory->sfree(pts);
+   memory->sfree(lines);
+   memory->sfree(tris);
+}
+
+/* ---------------------------------------------------------------------- */
+
+int Surf::add_id(char *idname)
+{
+  return 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Surf::compute_line_normal(int nstart, int n)
+{
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Surf::compute_tri_normal(int nstart, int n)
+{
+}
+
+/* ---------------------------------------------------------------------- */
+
+bigint Surf::memory_usage()
+{
+  bigint bytes = 0;
+  bytes += (bigint) npoint * sizeof(Point);
+  bytes += (bigint) nline * sizeof(Line);
+  bytes += (bigint) ntri * sizeof(Tri);
+  return bytes;
 }

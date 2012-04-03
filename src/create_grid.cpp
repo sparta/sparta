@@ -34,8 +34,7 @@ CreateGrid::CreateGrid(DSMC *dsmc) : Pointers(dsmc) {}
 void CreateGrid::command(int narg, char **arg)
 {
   if (!domain->box_exist) 
-    error->all(FLERR,
-	       "Cannot create_grid before simulation box is defined");
+    error->all(FLERR,"Cannot create_grid before simulation box is defined");
   if (grid->grid_exist)
     error->all(FLERR,"Cannot create grid when grid is already defined");
 

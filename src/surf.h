@@ -21,9 +21,40 @@ namespace DSMC_NS {
 
 class Surf : protected Pointers {
  public:
+  int surf_exist;
+
+  struct Point {
+    double x[3];
+  };
+
+  struct Line {
+    int id;                   // ID of surface it belongs to
+    int p1,p2;                // indices of points in line segment
+                              // rhand rule: z x (p2-p1) = outward normal
+    double norm[2];
+  };
+
+  struct Tri {
+    int id;                   // ID of surface it belongs to
+    int p1,p2,p3;             // indices of points in triangle
+                              // rhand rule: (p2-p1) x (p3-p1) = outward normal
+    double norm[3];
+  };
+
+  Point *pts;
+  Line *lines;
+  Tri *tris;
+  int npoint;
+  int nline;
+  int ntri;
+
   Surf(class DSMC *);
   ~Surf();
   void init() {}
+  int add_id(char *);
+  void compute_line_normal(int, int);
+  void compute_tri_normal(int, int);
+  bigint memory_usage();
 };
 
 }
