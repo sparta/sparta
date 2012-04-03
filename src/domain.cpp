@@ -331,8 +331,10 @@ void Domain::reflect(int face, int isp, double *v)
     double vrm = sqrt(2.0*update->boltz*twall[face]/species[isp].mass);
     v[dim] = vrm * sqrt(-log(random->uniform()));
     for (int i = 0; i < 3 ; i++) {
-    theta = MY_2PI * random->uniform();
-    if (i != dim)  v[i] = vrm*sqrt(-log(random->uniform()))*sin(theta);
+      if (i != dim) {
+	theta = MY_2PI * random->uniform();
+	v[i] = vrm*sqrt(-log(random->uniform()))*sin(theta);
+      }
     } 
     /*
       erot(isp);
