@@ -314,6 +314,8 @@ int Domain::boundary(int face, int &icell, double *x, double *xnew,
 
 void Domain::reflect(int face, int isp, double *v)
 {
+  double theta;
+
   // specular reflection
 
   int dim = face / 2;
@@ -328,9 +330,9 @@ void Domain::reflect(int face, int isp, double *v)
     Particle::Species *species = particle->species;
     double vrm = sqrt(2.0*update->boltz*twall[face]/species[isp].mass);
     v[dim] = vrm * sqrt(-log(random->uniform()));
-    double theta2 = MY_2PI * random->uniform();
-    for (int i=0; i++ ; i++) {
-    if (i != dim)  v[i] = vrm*sqrt(-log(random->uniform()))*sin(theta2);
+    for (int i = 0; i < 3 ; i++) {
+    theta = MY_2PI * random->uniform();
+    if (i != dim)  v[i] = vrm*sqrt(-log(random->uniform()))*sin(theta);
     } 
     /*
       erot(isp);
