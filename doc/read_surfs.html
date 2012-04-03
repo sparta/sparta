@@ -13,65 +13,77 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>read_surfs id sfile keyword args ... 
+<PRE>read_surfs surf-ID filename keyword args ... 
 </PRE>
-<P>NOTE: This command is not yet implemented.
-</P>
-<UL><LI>id = ID to assign this surf 
+<UL><LI>surf-ID = ID to assign to this surface 
 
-<LI>sfile = name of surface file 
+<LI>filename = name of surface file 
 
-<LI>zero or more keywords 
+<LI>zero or more keyword/args pairs may be appended 
 
-<LI>keyword = origin or rorigin or translate or scale or orient 
+<LI>keyword = <I>origin</I> or <I>forigin</I> or <I>trans</I> or <I>scale</I> or <I>rotate</I> or <I>invert</I> 
 
-<PRE>  origin = x y z
-  rorigin = xfrac yfrac zfrac
-  translate = dx dy dz
-  scale = sx sy sz
-  flip
-  allowcut
-  orient = dim a b c
-    dim = x or y or z
-    a,b,c = elements of vector 
+<PRE>  origin args = Ox Oy Oz
+    Ox,Oy,Oz = set origin of surface to this point (distance units)
+  trans args = Dx Dy Dz
+    Dx,Dy,Dz = translate origin by this displacement (distance units)
+  atrans args = Ax Ay Az
+    Ax,Ax,Az = translate origin to this absolute point (distance units)
+  ftrans args = Fx Fy Fz
+    Fx,Fy,Fz = translate origin to this fractional point in simulation box
+  scale args = Sx Sy Sz
+    Sx,Sy,Sz = scale surface by these factors around origin
+  rotate args = theta Rx Ry Rz
+    theta = rotate surface around its origin by this angle (degrees)
+    Rx,Ry,Rz = vector to rotate around in counter-clockwise direction
+  invert args = none 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<P>read_surfs surf.file
+<P>read_surfs sphere surf.file
+read_surfs sphere surf.file origin 
 </P>
 <P><B>Description:</B>
 </P>
-<P>Read the surface grid for one or more objects.  Optionally translate,
-scale, orient it.
+<P>Read the geometry of one or more surfaces from a file.  In DSMC, a
+"surface" is a grid of surface elements on the surface of a physical
+object embedded in the global simulation box.  The surface elements
+are triangles in 3d or line segments in 2d.  Particles collide with
+surface elements as they advect, and optionally perform surface
+chemistry during the collision.  Collision statistics for each surface
+element are tallied, which can be ouput via the dump surface command.
 </P>
-<P>2d = line segments.
+<P>The input file contains a list of triangles or line segments; DSMC
+does not know or care whether they represent one or more objects.
 </P>
-<P>3d = triangles.
+<P>All of the surface elements in the file are assigned a surf-ID, which
+can be used in other commands.  If the read_surfs command is used
+multiple times, to read multiple files, the same surf-ID can be
+re-used if desired.
 </P>
-<P>Must be watertight, meaning no pair of vertices is within epsilon.
-In 2d, also means every vertex is part of 2 line segments.  In 3d,
-also means every triangle edge is part of 2 triangles.
+<P>The format of the surface file is discussed below.  The optional
+keywords allow the vertices in the file to be translated, scaled, and
+rotated in various ways.  These allow a single input file, e.g. for a
+gridded unit sphere, to be used in a variety of simulations.
+</P>
+<P>NOTE: should we add a "refine" keyword
 </P>
 <HR>
 
-<P>Format of surface file
+<P>The format of a surface file is as follows.  Same as LAMMPS
+data file, comments, blank lines, header body, or more fixed?
 </P>
 <P>same as data file in LAMMPS, comment and blank lines
-</P>
-<P>what are z values for 2d?
 </P>
 <P>N points (required)
 N lines (2d only)
 N tris (3d only)
-0 10 xlo xhi (required)
-0 10 ylo yhi
-0 10 zlo zhi (used for 2d?)
 </P>
 <P>Points
 </P>
-<P>id x y z
+<P>id x y z (what about z)
 </P>
 <P>Lines
 </P>
@@ -81,14 +93,90 @@ N tris (3d only)
 </P>
 <P>p1 p2 p3
 </P>
+<P>discuss handedness
+</P>
+<HR>
+
+<P>The following optional keywords can be specified.  Their geometric
+transformations are performed in the order they are listed, which
+gives flexibility in how surfaces can be manipulated.  Note that the
+order may be important; e.g. performing a <I>scale</I> followed by a
+<I>rotate</I> may not be the same as a <I>rotate</I> followed by a <I>scale</I>.
+</P>
+<P>Most of the keywords perform a geometric transformation on all the
+vertices in the surface file with respect to an origin point.  By
+default the origin is (0.0,0.0,0.0), regardless of the position of
+individual vertices in the file.
+</P>
+<P>The <I>origin</I> keyword resets the origin to the specified <I>Ox,Oy,Oz</I>.
+This operation has no effect on the vertices.
+</P>
+<P>The <I>trans</I> keyword shifts or displaces the origin by the vector
+(Dx,Dy,Dz).  It also displaces each vertex by (Dx,Dy,Dz).
+</P>
+<P>The <I>atrans</I> keyword resets the origin to an absolute point (Ax,Ay,Az)
+which implies a displacement (Dx,Dy,Dz) from the current origin.  It
+also displaces each vertex by (Dx,Dy,Dz).
+</P>
+<P>The <I>ftrans</I> keyword resets the origin to a fractional point
+(Fx,Fy,Fz).  Fractional means that Fx = 0.0 is the lower edge/face in
+the x-dimension and Fx = 1.0 is the upper edge/face in the
+x-dimension, and similarly for Fy and Fz.  This change of origin
+implies a displacement (Dx,Dy,Dz) from the current origin.  This
+operation also displaces each vertex by (Dx,Dy,Dz).
+</P>
+<P>The <I>scale</I> keyword does not change the origin.  It computes the
+displacement vector of each vertex from the origin (delx,dely,delz)
+and scales that vector by (Sx,Sy,Sz), so that the new vertex
+coordinate is (Ox + Sx*delx,Oy + Sy*dely,Oz + Sz*delz).
+</P>
+<P>The <I>rotate</I> keyword does not change the origin.  It rotates the
+coordinates of all vertices around the origin by an angle <I>theta</I> in a
+counter-clockwise direction, around the vector <I>Rx,Ry,Rz</I>.  The vector
+can be thought of as starting at the origin.  Any rotation can be
+represented by an appropriate choice of origin, <I>theta</I> and
+(Rx,Ry,Rz).
+</P>
+<P>The <I>invert</I> keyword does not change the origin or any vertex
+coordinates.  It flips the direction of the outward surface normal of
+each surface element by changing the ordering of its vertices.  Since
+particles only collide with the outer surface of a surface element,
+this is a mechanism for using a surface files containing a single
+sphere (for example) as either a sphere to embed in a flow field, or a
+spherical outer boundary containing the flow.
+</P>
 <P><B>Restrictions:</B>
 </P>
 <P>This command can only be used after the simulation box is defined by
-the <A HREF = "create_box.html">create_box</A> command.  And after a grid has been
+the <A HREF = "create_box.html">create_box</A> command, and after a grid has been
 created by the <A HREF = "create_grid.html">create_grid</A> command.
+</P>
+<P>Every vertex in the final surface (after translation, rotation,
+scaling, etc) must be inside the global simulation box.  Inside means
+the vertex cannot be on the face of the simulation box, but must be
+interior to the box.  This restriction will be relaxed at some point.
+</P>
+<P>The surface elements in a single surface file must represent a
+"watertight" surface.  This means that no pair of vertices is within
+an epsilon distance of each other.  (HOW IS EPSILON DEFINED, should it
+be user-settable).  For a 3d simulation it additionally requires that
+every triangle edge is part of exactly 2 triangles.  For a 2d
+simulation it additionally requires that every vertex is part of
+exactly 2 line segments.  Thus if you want to model an infinitely thin
+flat plate, you should grid it on both sides.  Note that this
+definition of watertight does not require that the surface elements in
+a file represent a single physical object; multiple objects can be
+represented, provided each is watertight.
+</P>
+<P>When running a simulation with multiple surfaces, read from one or
+more surface files, you should insure they do not overlap/intersect
+each other.  DSMC does not check for this, but it will typically lead
+to unphysical particle dynamics.
 </P>
 <P><B>Related commands:</B> none
 </P>
-<P><B>Default:</B> none
+<P><B>Default:</B>
+</P>
+<P>The default origin for the vertices in the surface file is (0,0,0).
 </P>
 </HTML>
