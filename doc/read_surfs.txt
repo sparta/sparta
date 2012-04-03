@@ -15,7 +15,7 @@ read_surfs surf-ID filename keyword args ... :pre
 surf-ID = ID to assign to this surface :ulb,l
 filename = name of surface file :l
 zero or more keyword/args pairs may be appended :l
-keyword = {origin} or {forigin} or {trans} or {scale} or {rotate} or {invert} :l
+keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} :l
   origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   trans args = Dx Dy Dz
@@ -27,8 +27,8 @@ keyword = {origin} or {forigin} or {trans} or {scale} or {rotate} or {invert} :l
   scale args = Sx Sy Sz
     Sx,Sy,Sz = scale surface by these factors around origin
   rotate args = theta Rx Ry Rz
-    theta = rotate surface around its origin by this angle (degrees)
-    Rx,Ry,Rz = vector to rotate around in counter-clockwise direction
+    theta = rotate surface by this angle in counter-clockwise direction (degrees)
+    Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
   invert args = none :pre
 :ule
 
@@ -124,11 +124,10 @@ and scales that vector by (Sx,Sy,Sz), so that the new vertex
 coordinate is (Ox + Sx*delx,Oy + Sy*dely,Oz + Sz*delz).
 
 The {rotate} keyword does not change the origin.  It rotates the
-coordinates of all vertices around the origin by an angle {theta} in a
-counter-clockwise direction, around the vector {Rx,Ry,Rz}.  The vector
-can be thought of as starting at the origin.  Any rotation can be
-represented by an appropriate choice of origin, {theta} and
-(Rx,Ry,Rz).
+coordinates of all vertices by an angle {theta} in a counter-clockwise
+direction, around the vector starting at the origin and pointing in
+the direction {Rx,Ry,Rz}.  Any rotation can be represented by an
+appropriate choice of origin, {theta} and (Rx,Ry,Rz).
 
 The {invert} keyword does not change the origin or any vertex
 coordinates.  It flips the direction of the outward surface normal of

@@ -21,7 +21,7 @@
 
 <LI>zero or more keyword/args pairs may be appended 
 
-<LI>keyword = <I>origin</I> or <I>forigin</I> or <I>trans</I> or <I>scale</I> or <I>rotate</I> or <I>invert</I> 
+<LI>keyword = <I>origin</I> or <I>trans</I> or <I>atrans</I> or <I>ftrans</I> or <I>scale</I> or <I>rotate</I> or <I>invert</I> 
 
 <PRE>  origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
@@ -34,8 +34,8 @@
   scale args = Sx Sy Sz
     Sx,Sy,Sz = scale surface by these factors around origin
   rotate args = theta Rx Ry Rz
-    theta = rotate surface around its origin by this angle (degrees)
-    Rx,Ry,Rz = vector to rotate around in counter-clockwise direction
+    theta = rotate surface by this angle in counter-clockwise direction (degrees)
+    Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
   invert args = none 
 </PRE>
 
@@ -131,11 +131,10 @@ and scales that vector by (Sx,Sy,Sz), so that the new vertex
 coordinate is (Ox + Sx*delx,Oy + Sy*dely,Oz + Sz*delz).
 </P>
 <P>The <I>rotate</I> keyword does not change the origin.  It rotates the
-coordinates of all vertices around the origin by an angle <I>theta</I> in a
-counter-clockwise direction, around the vector <I>Rx,Ry,Rz</I>.  The vector
-can be thought of as starting at the origin.  Any rotation can be
-represented by an appropriate choice of origin, <I>theta</I> and
-(Rx,Ry,Rz).
+coordinates of all vertices by an angle <I>theta</I> in a counter-clockwise
+direction, around the vector starting at the origin and pointing in
+the direction <I>Rx,Ry,Rz</I>.  Any rotation can be represented by an
+appropriate choice of origin, <I>theta</I> and (Rx,Ry,Rz).
 </P>
 <P>The <I>invert</I> keyword does not change the origin or any vertex
 coordinates.  It flips the direction of the outward surface normal of
