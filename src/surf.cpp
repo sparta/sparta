@@ -65,7 +65,10 @@ int Surf::add_id(char *idnew)
   return nsurf-1;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   compute unit outward normal vectors of N lines starting at Nstart
+   outward normal = +z axis x (p2-p1)
+------------------------------------------------------------------------- */
 
 void Surf::compute_line_normal(int nstart, int n)
 {
@@ -87,12 +90,15 @@ void Surf::compute_line_normal(int nstart, int n)
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   compute unit outward normal vectors of N triangles starting at Nstart
+   outward normal = (p2-p1) x (p3-p1)
+------------------------------------------------------------------------- */
 
 void Surf::compute_tri_normal(int nstart, int n)
 {
   int p1,p2,p3;
-  double delta12[3],delta13[3],norm[3];
+  double delta12[3],delta13[3];
 
   int m = nstart;
   for (int i = 0; i < n; i++) {

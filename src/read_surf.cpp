@@ -28,7 +28,7 @@ using namespace MathExtra;
 
 #define MAXLINE 256
 #define CHUNK 1024
-#define DELTA 4
+#define EPSILON 1.0e-6
 
 /* ---------------------------------------------------------------------- */
 
@@ -218,11 +218,19 @@ void ReadSurf::command(int narg, char **arg)
     } else error->all(FLERR,"Invalid read_surf command");
   }
 
+  // NOTE: need to insure all point offsets are correct in line and tri
+  // at creation and at error checking time
+
   // error checks on new points,lines,tris
-  // all points inside simulation box
+  // all points must be strictly inside simulation box
   // no pair of points can be separted by less than EPSILON
   // 2d watertight = every point is part of exactly 2 lines
   // 3d watertight = every edge is part of exactly 2 triangles
+
+  check_point_inside();
+  check_point_pairs();
+  if (dimension == 2) check_watertight_2d();
+  if (dimension == 3) check_watertight_3d();
 
   // update Surf data structures
 
@@ -434,7 +442,6 @@ void ReadSurf::read_lines()
   }
 }
 
-
 /* ----------------------------------------------------------------------
    read/store all triangles
 ------------------------------------------------------------------------- */
@@ -597,6 +604,129 @@ void ReadSurf::invert()
       tris[m].p3 = tmp;
       m++;
     }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check if all new points are strictly inside global simulation box
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_point_inside()
+{
+  double *x;
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  Surf::Point *pts = surf->pts;
+
+  int m = npoint_old;
+  int nbad = 0;
+  for (int i = 0; i < npoint_new; i++) {
+    x = pts[m].x;
+    if (x[0] <= boxlo[0] || x[0] >= boxhi[0] ||
+	x[1] <= boxlo[1] || x[1] >= boxhi[1] ||
+	x[2] <= boxlo[2] || x[2] >= boxhi[2]) nbad++;
+    m++;
+  }
+
+  int nbadall;
+  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
+  if (nbadall) {
+    char str[128];
+    sprintf(str,"%d points read by read_surf are not inside simulation box");
+    error->all(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check if any pair of points are closer than epsilon
+   epsilon = EPSILON fraction of shortest box length
+   NOTE: need to bin points to avoid N^2 loop
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_point_pairs()
+{
+  double epsilon = MIN(domain->xprd,domain->yprd);
+  if (dimension == 3) epsilon = MIN(epsilon,domain->zprd);
+  epsilon *= EPSILON;
+
+
+}
+
+/* ----------------------------------------------------------------------
+   check if every new point is an end point of exactly 2 new line segments
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_watertight_2d()
+{
+  int p1,p2;
+  int *count;
+
+  memory->create(count,npoint_new,"readsurf:count");
+  for (int i = 0; i < npoint_new; i++) count[i] = 0;
+
+  Surf::Line *lines = surf->lines;
+
+  int m = nline_old;
+  for (int i = 0; i < nline_new; i++) {
+    p1 = lines[m].p1;
+    p2 = lines[m].p2;
+    count[p1]++;
+    count[p2]++;
+    m++;
+  }
+  
+  int nbad = 0;
+  for (int i = 0; i < npoint_new; i++)
+    if (count[i] != 2) nbad++;
+
+  memory->destroy(count);
+
+  int nbadall;
+  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
+  if (nbadall) {
+    char str[128];
+    sprintf(str,"%d lines read by read_surf are not watertight");
+    error->all(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check if every new triangle edge is part of exactly 2 new triangles
+   NOTE: how to enumerate edges
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_watertight_3d()
+{
+  int p1,p2;
+  int *count;
+
+  memory->create(count,npoint_new,"readsurf:count");
+  for (int i = 0; i < npoint_new; i++) count[i] = 0;
+
+  Surf::Line *lines = surf->lines;
+
+  int m = nline_old;
+  for (int i = 0; i < nline_new; i++) {
+    p1 = lines[m].p1;
+    p2 = lines[m].p2;
+    count[p1]++;
+    count[p2]++;
+    m++;
+  }
+  
+  int nbad = 0;
+  for (int i = 0; i < npoint_new; i++)
+    if (count[i] != 2) nbad++;
+
+  memory->destroy(count);
+
+  int nbadall;
+  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
+  if (nbadall) {
+    char str[128];
+    sprintf(str,"%d lines read by read_surf are not watertight");
+    error->all(FLERR,str);
   }
 }
 

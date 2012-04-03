@@ -58,6 +58,11 @@ class ReadSurf : protected Pointers {
   void rotate(double, double, double, double);
   void invert();
 
+  void check_point_inside();
+  void check_point_pairs();
+  void check_watertight_2d();
+  void check_watertight_3d();
+
   void open(char *);
   void parse_keyword(int);
   int count_words(char *);

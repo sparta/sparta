@@ -23,6 +23,7 @@
 #include "update.h"
 #include "particle.h"
 #include "grid.h"
+#include "surf.h"
 #include "domain.h"
 #include "modify.h"
 #include "stats.h"
@@ -475,10 +476,11 @@ void Output::create_restart(int narg, char **arg)
 
 void Output::memory_usage()
 {
-  bigint pbytes,gbytes,bytes;
+  bigint pbytes,gbytes,sbytes,bytes;
   pbytes = particle->memory_usage();
   gbytes = grid->memory_usage();
-  bytes = pbytes + gbytes;
+  sbytes = surf->memory_usage();
+  bytes = pbytes + gbytes + sbytes;
   bytes += modify->memory_usage();
 
   double scale = 1.0/1024.0/1024.0;
@@ -499,6 +501,13 @@ void Output::memory_usage()
   MPI_Allreduce(&gbytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
   double gmax = scale * max;
 
+  MPI_Allreduce(&sbytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  double save = scale * ave/comm->nprocs;
+  MPI_Allreduce(&sbytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
+  double smin = scale * min;
+  MPI_Allreduce(&sbytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
+  double smax = scale * max;
+
   MPI_Allreduce(&bytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
   double tave = scale * ave/comm->nprocs;
   MPI_Allreduce(&bytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
@@ -513,6 +522,8 @@ void Output::memory_usage()
 	      pave,pmin,pmax);
       fprintf(screen,"  grid      (ave,min,max) = %g %g %g\n",
 	      gave,gmin,gmax);
+      fprintf(screen,"  surf      (ave,min,max) = %g %g %g\n",
+	      save,smin,smax);
       fprintf(screen,"  total     (ave,min,max) = %g %g %g\n",
 	      tave,tmin,tmax);
     }
@@ -522,6 +533,8 @@ void Output::memory_usage()
 	      pave,pmin,pmax);
       fprintf(logfile,"  grid      (ave,min,max) = %g %g %g\n",
 	      gave,gmin,gmax);
+      fprintf(logfile,"  surf      (ave,min,max) = %g %g %g\n",
+	      save,smin,smax);
       fprintf(logfile,"  total     (ave,min,max) = %g %g %g\n",
 	      tave,tmin,tmax);
     }
