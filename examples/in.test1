@@ -6,21 +6,21 @@
 seed	    	    12345
 dimension   	    3
 
-boundary	    s s s
-boundary_modify     xhi acc 1.0 temp 300.00
-boundary_modify     xlo acc 1.0 temp 300.00
-boundary_modify     yhi acc 1.0 temp 300.00
-boundary_modify     ylo acc 1.0 temp 300.00
-boundary_modify     zhi acc 1.0 temp 300.00
-boundary_modify     zlo acc 1.0 temp 300.00
+boundary	    d d d
+boundary_modify     xhi acc 1.0 temp 273.15
+boundary_modify     xlo acc 1.0 temp 273.15
+boundary_modify     yhi acc 1.0 temp 273.15
+boundary_modify     ylo acc 1.0 temp 273.15
+boundary_modify     zhi acc 1.0 temp 273.15
+boundary_modify     zlo acc 1.0 temp 273.15
 create_box  	    0 1.E-3 0 1.E-3 0 1.E-3
 #create_grid 	    10 10 10
-create_grid 	    100 100 100
+create_grid 	    10 10 10
 
 species		    ../data/all.species N 
-mixture		    air N vstream 0.0 0.0 0.0 temp 300.00 nrho 7.07043E22
+mixture		    air N vstream 0.0 0.0 0.0 temp 273.15 nrho 7.07043E22
 
-create_molecules    air n 10000 
+create_molecules    air n 10000000
 
 
 collisions	    vss air ../data/all.vss

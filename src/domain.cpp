@@ -316,8 +316,8 @@ void Domain::reflect(int face, int isp, double *v)
 {
   // specular reflection
 
+  int dim = face / 2;
   if (random->uniform() > acccoeff[face]) {
-    int dim = face / 2;
     v[dim] = -v[dim];
 
   // diffuse reflection
@@ -327,10 +327,11 @@ void Domain::reflect(int face, int isp, double *v)
   } else {
     Particle::Species *species = particle->species;
     double vrm = sqrt(2.0*update->boltz*twall[face]/species[isp].mass);
-    v[0] = vrm * random->uniform();
+    v[dim] = vrm * sqrt(-log(random->uniform()));
     double theta2 = MY_2PI * random->uniform();
-    v[1] = vrm*sin(theta2);
-    v[2] = vrm*cos(theta2);
+    for (int i=0; i++ ; i++) {
+    if (i != dim)  v[i] = vrm*sqrt(-log(random->uniform()))*sin(theta2);
+    } 
     /*
       erot(isp);
       evib(isp);

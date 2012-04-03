@@ -112,7 +112,8 @@ void CollideVSS::init()
 	(species[isp].mass + species[jsp].mass);
       cxs = diam*diam*MY_PI;
       prefactor[isp][jsp] = cxs *
-	pow(2.0*update->boltz*tref/mr,omega-0.5)/gamma(2.5-omega);
+	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
+      printf(" Prefactor %e %e %e \n", cxs, omega, tgamma(2.5-omega));
       double beta = MIN(vscale[isp],vscale[jsp]);
       double max_thermal_velocity = 3.0/beta;
       vrm[isp][jsp] = cxs * max_thermal_velocity;
@@ -150,6 +151,7 @@ double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup,
     up or down. Better formulation for transient flows.
  */
 
+//  printf("%e %e \n",nattempt,vremax[ilocal][igroup][jgroup]);
   return nattempt;
 }
 
@@ -183,11 +185,12 @@ int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
 
   double vre = vr*prefactor[ispecies][jspecies];
 
+//  printf("INSIDE %e %e \n", vr, prefactor[ispecies][jspecies]);
   // update vremax if new max
 
   vremax[ilocal][igroup][jgroup] = MAX(vre,vremax[ilocal][igroup][jgroup]);
 
-  printf("INSIDE\n");
+//  printf("INSIDE %e %e \n", vre, vremax[ilocal][igroup][jgroup]);
 
   if (vre/vremax[ilocal][igroup][jgroup] < random->uniform()) return 0;
   return 1;
