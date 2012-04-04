@@ -113,7 +113,7 @@ void CollideVSS::init()
       cxs = diam*diam*MY_PI;
       prefactor[isp][jsp] = cxs *
 	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
-      printf(" Prefactor %e %e %e \n", cxs, omega, tgamma(2.5-omega));
+      //printf(" Prefactor %e %e %e \n", cxs, omega, tgamma(2.5-omega));
       double beta = MIN(vscale[isp],vscale[jsp]);
       double max_thermal_velocity = 3.0/beta;
       vrm[isp][jsp] = cxs * max_thermal_velocity;

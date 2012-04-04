@@ -77,9 +77,9 @@ void ReadSurf::command(int narg, char **arg)
 
   // extend pts,lines,tris data structures
 
-  Surf::Point *pts = surf->pts;
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
+  pts = surf->pts;
+  lines = surf->lines;
+  tris = surf->tris;
 
   npoint_old = surf->npoint;
   nline_old = surf->nline;
@@ -301,7 +301,7 @@ void ReadSurf::header()
       if (dimension == 3) 
 	error->all(FLERR,"Surf file cannot contain lines for 3d simulation");
       sscanf(line,"%d",&nline_new);
-    } else if (strstr(line,"tris")) {
+    } else if (strstr(line,"triangles")) {
       if (dimension == 2) 
 	error->all(FLERR,
 		   "Surf file cannot contain triangles for 2d simulation");
@@ -499,8 +499,8 @@ void ReadSurf::read_tris()
   }
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  %d lines\n",nline_new);
-    if (logfile) fprintf(logfile,"  %d lines\n",nline_new);
+    if (screen) fprintf(screen,"  %d triangles\n",ntri_new);
+    if (logfile) fprintf(logfile,"  %d triangles\n",ntri_new);
   }
 }
 
@@ -511,9 +511,7 @@ void ReadSurf::read_tris()
 
 void ReadSurf::translate(double dx, double dy, double dz)
 {
-  Surf::Point *pts = surf->pts;
   int m = npoint_old;
-  
   for (int i = 0; i < npoint_new; i++) {
     pts[m].x[0] += dx;
     pts[m].x[1] += dy;
@@ -529,9 +527,7 @@ void ReadSurf::translate(double dx, double dy, double dz)
 
 void ReadSurf::scale(double sx, double sy, double sz)
 {
-  Surf::Point *pts = surf->pts;
   int m = npoint_old;
-  
   for (int i = 0; i < npoint_new; i++) {
     pts[m].x[0] = sx*(pts[m].x[0]-origin[0]) + origin[0];
     pts[m].x[1] = sy*(pts[m].x[1]-origin[1]) + origin[1];
@@ -555,9 +551,7 @@ void ReadSurf::rotate(double theta, double rx, double ry, double rz)
   MathExtra::axisangle_to_quat(r,theta,q);
   MathExtra::quat_to_mat(q,rotmat);
 
-  Surf::Point *pts = surf->pts;
   int m = npoint_old;
-  
   for (int i = 0; i < npoint_new; i++) {
     d[0] = pts[m].x[0] - origin[0];
     d[1] = pts[m].x[1] - origin[1];
@@ -580,9 +574,7 @@ void ReadSurf::invert()
   int tmp;
 
   if (dimension == 2) {
-    Surf::Line *lines = surf->lines;
     int m = nline_old;
-
     for (int i = 0; i < nline_new; i++) {
       tmp = lines[m].p1;
       lines[m].p1 = lines[m].p2;
@@ -592,9 +584,7 @@ void ReadSurf::invert()
   }
 
   if (dimension == 3) {
-    Surf::Tri *tris = surf->tris;
     int m = ntri_old;
-
     for (int i = 0; i < nline_new; i++) {
       tmp = tris[m].p2;
       tris[m].p2 = tris[m].p3;
@@ -614,7 +604,6 @@ void ReadSurf::check_point_inside()
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
-  Surf::Point *pts = surf->pts;
 
   int m = npoint_old;
   int nbad = 0;
@@ -628,7 +617,7 @@ void ReadSurf::check_point_inside()
 
   if (nbad) {
     char str[128];
-    sprintf(str,"%d points read by read_surf are not inside simulation box",
+    sprintf(str,"%d read_surf points are not inside simulation box",
 	    nbad);
     error->all(FLERR,str);
   }
@@ -645,7 +634,6 @@ void ReadSurf::check_point_pairs()
   double dx,dy,dz,rsq;
   double origin[3];
 
-  Surf::Point *pts = surf->pts;
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
@@ -721,10 +709,29 @@ void ReadSurf::check_point_pairs()
     ix = static_cast<int> ((pts[m].x[0] - origin[0]) * xbininv);
     iy = static_cast<int> ((pts[m].x[1] - origin[1]) * ybininv);
     iz = static_cast<int> ((pts[m].x[2] - origin[2]) * zbininv);
-    bin[m] = binhead[i][j][k];
-    binhead[i][j][k] = m;
+    bin[m] = binhead[ix][iy][iz];
+    binhead[ix][iy][iz] = m;
     m++;
   }
+
+  // DEBUG
+
+  /*
+  int nmax;
+  for (i = 0; i < nbinx; i++)
+    for (j = 0; j < nbiny; j++)
+      for (k = 0; k < nbinz; k++) {
+	m = binhead[i][j][k];
+	n = 0;
+	while (m >= 0) {
+	  m = bin[m];
+	  n++;
+	}
+	nmax = MAX(nmax,n);
+      }
+
+  printf("MAX points in any pairwise bin = %d\n",nmax);
+  */
 
   // check distances for all pairs of particles in same bin
 
@@ -750,7 +757,7 @@ void ReadSurf::check_point_pairs()
 
   if (nbad) {
     char str[128];
-    sprintf(str,"%d point pairs read by read_surf are too close",nbad);
+    sprintf(str,"%d read_surf point pairs are too close",nbad);
     error->all(FLERR,str);
   }
 
@@ -774,8 +781,8 @@ void ReadSurf::check_point_pairs()
     ix = static_cast<int> ((pts[m].x[0] - origin[0]) * xbininv);
     iy = static_cast<int> ((pts[m].x[1] - origin[1]) * ybininv);
     iz = static_cast<int> ((pts[m].x[2] - origin[2]) * zbininv);
-    bin[m] = binhead[i][j][k];
-    binhead[i][j][k] = m;
+    bin[m] = binhead[ix][iy][iz];
+    binhead[ix][iy][iz] = m;
     m++;
   }
 
@@ -803,7 +810,7 @@ void ReadSurf::check_point_pairs()
 
   if (nbad) {
     char str[128];
-    sprintf(str,"%d point pairs read by read_surf are too close",nbad);
+    sprintf(str,"%d read_surf point pairs are too close",nbad);
     error->all(FLERR,str);
   }
 
@@ -826,8 +833,6 @@ void ReadSurf::check_watertight_2d()
   int *count;
   memory->create(count,npoint_new,"readsurf:count");
   for (int i = 0; i < npoint_new; i++) count[i] = 0;
-
-  Surf::Line *lines = surf->lines;
 
   int m = nline_old;
   for (int i = 0; i < nline_new; i++) {
@@ -852,7 +857,7 @@ void ReadSurf::check_watertight_2d()
 
   if (nbad) {
     char str[128];
-    sprintf(str,"%d lines read by read_surf are not watertight",nbad);
+    sprintf(str,"%d read_surf lines are not watertight",nbad);
     error->all(FLERR,str);
   }
 }
@@ -874,8 +879,6 @@ void ReadSurf::check_watertight_3d()
   memory->create(ecountmax,npoint_new,"readsurf:ecountmax");
   for (i = 0; i < npoint_new; i++) ecountmax[i] = 0;
 
-  Surf::Tri *tris = surf->tris;
-
   m = ntri_old;
   for (i = 0; i < ntri_new; i++) {
     p1 = tris[m].p1 - npoint_old;
@@ -886,8 +889,15 @@ void ReadSurf::check_watertight_3d()
     ecountmax[MIN(p3,p1)]++;
     m++;
   }
-  
+
   for (i = 0; i < npoint_new; i++) ecountmax[i] /= 2;
+
+  // DEBUG
+
+  /*
+  printf("ECMAX %d %d %d %d\n",
+	 ecountmax[0],ecountmax[1],ecountmax[2],ecountmax[3]);
+  */
 
   // ecount[I] = # of edges that vertex I is part of
   // edge[I][J] = Jth vertex connected to vertex I via an edge
@@ -913,51 +923,76 @@ void ReadSurf::check_watertight_3d()
     
     pi = MIN(p1,p2);
     pj = MAX(p1,p2);
-    for (j = 0; j < ecount[i]; j++)
+    for (j = 0; j < ecount[pi]; j++)
       if (edge[pi][j] == pj) break;
-    if (j == ecount[i]) {
-      if (ecount[i] == ecountmax[i]) nbad1++;
+    if (j == ecount[pi]) {
+      if (ecount[pi] == ecountmax[pi]) nbad1++;
       else {
-	edge[i][j] = pj;
-	count[i][j] = 1;
-	ecount[i]++;
+	edge[pi][j] = pj;
+	count[pi][j] = 1;
+	ecount[pi]++;
       }
-    } else count[i][j]++;
+    } else count[pi][j]++;
 
     pi = MIN(p2,p3);
     pj = MAX(p2,p3);
-    for (j = 0; j < ecount[i]; j++)
+    for (j = 0; j < ecount[pi]; j++)
       if (edge[pi][j] == pj) break;
-    if (j == ecount[i]) {
-      if (ecount[i] == ecountmax[i]) nbad1++;
+    if (j == ecount[pi]) {
+      if (ecount[pi] == ecountmax[pi]) nbad1++;
       else {
-	edge[i][j] = pj;
-	count[i][j] = 1;
-	ecount[i]++;
+	edge[pi][j] = pj;
+	count[pi][j] = 1;
+	ecount[pi]++;
       }
-    } else count[i][j]++;
+    } else count[pi][j]++;
 
     pi = MIN(p3,p1);
     pj = MAX(p3,p1);
-    for (j = 0; j < ecount[i]; j++)
+    for (j = 0; j < ecount[pi]; j++)
       if (edge[pi][j] == pj) break;
-    if (j == ecount[i]) {
-      if (ecount[i] == ecountmax[i]) nbad1++;
+    if (j == ecount[pi]) {
+      if (ecount[pi] == ecountmax[pi]) nbad1++;
       else {
-	edge[i][j] = pj;
-	count[i][j] = 1;
-	ecount[i]++;
+	edge[pi][j] = pj;
+	count[pi][j] = 1;
+	ecount[pi]++;
       }
-    } else count[i][j]++;
+    } else count[pi][j]++;
 
     m++;
   }
 
+  // DEBUG
+
+  /*
+  printf("NBAD1 %d\n",nbad1);
+
+    printf("EC %d %d %d %d\n",
+	   ecount[0],ecount[1],ecount[2],ecount[3]);
+
+    for (int ii = 0; ii < npoint_new; ii++) {
+      printf("PT %d:",ii+1);
+      for (j = 0; j < ecount[ii]; j++)
+	printf(" %d",edge[ii][j]+1);
+      printf("\n");
+    }
+    
+    for (int ii = 0; ii < npoint_new; ii++) {
+      printf("COUNT %d:",ii+1);
+      for (j = 0; j < ecount[ii]; j++)
+	printf(" %d",count[ii][j]);
+      printf("\n");
+    }
+    
+    printf("DONE %d\n",i+1);
+  */
+
   // check that all counts are 2 or 4
 
   int nbad2 = 0;
-  for (i = 0; i < ntri_new; i++)
-    for (j = 0; i < ecount[i]; j++)
+  for (i = 0; i < npoint_new; i++)
+    for (j = 0; j < ecount[i]; j++)
       if (count[i][j] != 2 && count[i][j] != 4) nbad2++;
 
   // clean up
@@ -972,7 +1007,7 @@ void ReadSurf::check_watertight_3d()
   int nbad = nbad1 + nbad2;
   if (nbad) {
     char str[128];
-    sprintf(str,"%d triangle edges read by read_surf are not watertight",nbad);
+    sprintf(str,"%d read_surf triangle edges are not watertight",nbad);
     error->all(FLERR,str);
   }
 }

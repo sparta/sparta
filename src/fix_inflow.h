@@ -56,6 +56,7 @@ class FixInflow : public Fix {
 
   CellFace *cellface;           // cell/face pairs to insert particles on
   int ncf;                      // # of cell/face pairs
+  int ncfmax;                   // max # of cell/face pairs for allocation
 
   class RanPark *random;
   class CreateMolecules;

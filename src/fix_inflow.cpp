@@ -116,7 +116,7 @@ FixInflow::FixInflow(DSMC *dsmc, int narg, char **arg) :
   // local storage
 
   cellface = NULL;
-  ncf = 0;
+  ncf = ncfmax = 0;
   
   // counters
 
@@ -129,7 +129,7 @@ FixInflow::~FixInflow()
 {
   delete random;
 
-  for (int i = 0; i < ncf; i++) delete [] cellface[i].ntargetsp;
+  for (int i = 0; i < ncfmax; i++) delete [] cellface[i].ntargetsp;
   memory->sfree(cellface);
 }
 
@@ -160,7 +160,6 @@ void FixInflow::init()
   Grid::OneCell *cells = grid->cells;
   int *mycells = grid->mycells;
   int nglocal = grid->nlocal;
-
   int icell;
 
   ncf = 0;
@@ -181,14 +180,17 @@ void FixInflow::init()
   // skip the cellface if indot < 0.0, since no particles will be inserted
   // 2d vs 3d adjusts lo[2],hi[2] and area
 
+  for (int i = 0; i < ncfmax; i++) delete [] cellface[i].ntargetsp;
   memory->sfree(cellface);
-  cellface = (CellFace *) memory->smalloc(ncf*sizeof(CellFace),
+  ncfmax = ncf;
+  cellface = (CellFace *) memory->smalloc(ncfmax*sizeof(CellFace),
 					  "inflow:cellface");
 
   int nspecies = particle->mixture[imix]->nspecies;
   int *species = particle->mixture[imix]->species;
 
-  for (int i = 0; i < ncf; i++) cellface[i].ntargetsp = new double[nspecies];
+  for (int i = 0; i < ncfmax; i++)
+    cellface[i].ntargetsp = new double[nspecies];
 
   double nrho = particle->mixture[imix]->nrho;
   double *vstream = particle->mixture[imix]->vstream;
