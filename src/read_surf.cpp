@@ -218,14 +218,11 @@ void ReadSurf::command(int narg, char **arg)
     } else error->all(FLERR,"Invalid read_surf command");
   }
 
-  // NOTE: need to insure all point offsets are correct in line and tri
-  // at creation and at error checking time
-
   // error checks on new points,lines,tris
   // all points must be strictly inside simulation box
   // no pair of points can be separted by less than EPSILON
   // 2d watertight = every point is part of exactly 2 lines
-  // 3d watertight = every edge is part of exactly 2 triangles
+  // 3d watertight = every edge is part of exactly 2 or 4 triangles
 
   check_point_inside();
   check_point_pairs();
@@ -427,8 +424,8 @@ void ReadSurf::read_lines()
       if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || p1 == p2)
 	error->all(FLERR,"Invalid point index in line");
       lines[n].id = id;
-      lines[n].p1 = p1;
-      lines[n].p2 = p2;
+      lines[n].p1 = p1-1 + npoint_old;
+      lines[n].p2 = p2-1 + npoint_old;
       n++;
       buf = next + 1;
     }
@@ -491,9 +488,9 @@ void ReadSurf::read_tris()
 	  p3 < 1 || p3 > npoint_new || p1 == p2 || p2 == p3)
 	error->all(FLERR,"Invalid point index in triangle");
       tris[n].id = id;
-      tris[n].p1 = p1;
-      tris[n].p2 = p2;
-      tris[n].p3 = p3;
+      tris[n].p1 = p1-1 + npoint_old;
+      tris[n].p2 = p2-1 + npoint_old;
+      tris[n].p3 = p3-1 + npoint_old;
       n++;
       buf = next + 1;
     }
@@ -629,28 +626,191 @@ void ReadSurf::check_point_inside()
     m++;
   }
 
-  int nbadall;
-  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
-  if (nbadall) {
+  if (nbad) {
     char str[128];
-    sprintf(str,"%d points read by read_surf are not inside simulation box");
+    sprintf(str,"%d points read by read_surf are not inside simulation box",
+	    nbad);
     error->all(FLERR,str);
   }
 }
 
 /* ----------------------------------------------------------------------
-   check if any pair of points are closer than epsilon
-   epsilon = EPSILON fraction of shortest box length
-   NOTE: need to bin points to avoid N^2 loop
+   check if any pair of points is closer than epsilon
+   done in O(N) manner by binning twice with offset bins
 ------------------------------------------------------------------------- */
 
 void ReadSurf::check_point_pairs()
 {
+  int i,j,k,m,n,ix,iy,iz;
+  double dx,dy,dz,rsq;
+  double origin[3];
+
+  Surf::Point *pts = surf->pts;
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  // epsilon = EPSILON fraction of shortest box length
+  // epssq = epsilon squared
+
   double epsilon = MIN(domain->xprd,domain->yprd);
   if (dimension == 3) epsilon = MIN(epsilon,domain->zprd);
   epsilon *= EPSILON;
+  double epssq = epsilon * epsilon;
 
+  // goal: N roughly cubic bins where N = # of new points
+  // nbinxyz = # of bins in each dimension
+  // xyzbin = bin size in each dimension
+  // for 2d, nbinz = 1
+  // add 1 to nbinxyz to allow for 2nd binning via offset origin
 
+  int nbinx,nbiny,nbinz;
+  double xbin,ybin,zbin;
+  double xbininv,ybininv,zbininv;
+  
+  if (dimension == 2) {
+    double vol_per_point = domain->xprd * domain->yprd / npoint_new;
+    xbin = ybin = sqrt(vol_per_point);
+    nbinx = static_cast<int> (domain->xprd / xbin);
+    nbiny = static_cast<int> (domain->yprd / ybin);
+    if (nbinx == 0) nbinx = 1;
+    if (nbiny == 0) nbiny = 1;
+    nbinz = 1;
+  } else {
+    double vol_per_point = domain->xprd * domain->yprd * domain->zprd / 
+      npoint_new;
+    xbin = ybin = zbin = pow(vol_per_point,1.0/3.0);
+    nbinx = static_cast<int> (domain->xprd / xbin);
+    nbiny = static_cast<int> (domain->yprd / ybin);
+    nbinz = static_cast<int> (domain->zprd / zbin);
+    if (nbinx == 0) nbinx = 1;
+    if (nbiny == 0) nbiny = 1;
+    if (nbinz == 0) nbinz = 1;
+  }
+
+  if (nbinx > 1) nbinx++;
+  if (nbiny > 1) nbiny++;
+  if (nbinz > 1) nbinz++;
+  xbin = domain->xprd / nbinx;
+  ybin = domain->yprd / nbiny;
+  zbin = domain->zprd / nbinz;
+  xbininv = 1.0/xbin;
+  ybininv = 1.0/ybin;
+  zbininv = 1.0/zbin;
+
+  // binhead[I][J][K] = point index of 1st point in bin IJK, -1 if none
+  // bin[I] = index of next point in same bin as point I, -1 if last
+
+  int ***binhead;
+  memory->create(binhead,nbinx,nbiny,nbinz,"readsurf:binhead");
+  int *bin;
+  memory->create(bin,npoint_new,"readsurf:bin");
+
+  // 1st binning = bins aligned with global box boundaries
+
+  for (i = 0; i < nbinx; i++)
+    for (j = 0; j < nbiny; j++)
+      for (k = 0; k < nbinz; k++)
+	binhead[i][j][k] = -1;
+
+  origin[0] = boxlo[0];
+  origin[1] = boxlo[1];
+  origin[2] = boxlo[2];
+
+  m = npoint_old;
+  for (i = 0; i < npoint_new; i++) {
+    ix = static_cast<int> ((pts[m].x[0] - origin[0]) * xbininv);
+    iy = static_cast<int> ((pts[m].x[1] - origin[1]) * ybininv);
+    iz = static_cast<int> ((pts[m].x[2] - origin[2]) * zbininv);
+    bin[m] = binhead[i][j][k];
+    binhead[i][j][k] = m;
+    m++;
+  }
+
+  // check distances for all pairs of particles in same bin
+
+  int nbad = 0;
+
+  for (i = 0; i < nbinx; i++)
+    for (j = 0; j < nbiny; j++)
+      for (k = 0; k < nbinz; k++) {
+	m = binhead[i][j][k];
+	while (m >= 0) {
+	  n = bin[m];
+	  while (n >= 0) {
+	    dx = pts[m].x[0] - pts[n].x[0];
+	    dy = pts[m].x[1] - pts[n].x[1];
+	    dz = pts[m].x[2] - pts[n].x[2];
+	    rsq = dx*dx + dy*dy + dz*dz;
+	    if (rsq < epssq) nbad++;
+	    n = bin[n];
+	  }
+	  m = bin[m];
+	}
+      }
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"%d point pairs read by read_surf are too close",nbad);
+    error->all(FLERR,str);
+  }
+
+  // 2nd binning = bins offset by 1/2 binsize wrt global box boundaries
+  // do not offset bin origin in a dimension with only 1 bin
+
+  for (i = 0; i < nbinx; i++)
+    for (j = 0; j < nbiny; j++)
+      for (k = 0; k < nbinz; k++)
+	binhead[i][j][k] = -1;
+
+  origin[0] = boxlo[0] - 0.5*xbin;
+  origin[1] = boxlo[1] - 0.5*ybin;
+  origin[2] = boxlo[2] - 0.5*zbin;
+  if (nbinx == 1) origin[0] = boxlo[0];
+  if (nbiny == 1) origin[1] = boxlo[1];
+  if (nbinz == 1) origin[2] = boxlo[2];
+
+  m = npoint_old;
+  for (i = 0; i < npoint_new; i++) {
+    ix = static_cast<int> ((pts[m].x[0] - origin[0]) * xbininv);
+    iy = static_cast<int> ((pts[m].x[1] - origin[1]) * ybininv);
+    iz = static_cast<int> ((pts[m].x[2] - origin[2]) * zbininv);
+    bin[m] = binhead[i][j][k];
+    binhead[i][j][k] = m;
+    m++;
+  }
+
+  // check distances for all pairs of particles in same bin
+
+  nbad = 0;
+
+  for (i = 0; i < nbinx; i++)
+    for (j = 0; j < nbiny; j++)
+      for (k = 0; k < nbinz; k++) {
+	m = binhead[i][j][k];
+	while (m >= 0) {
+	  n = bin[m];
+	  while (n >= 0) {
+	    dx = pts[m].x[0] - pts[n].x[0];
+	    dy = pts[m].x[1] - pts[n].x[1];
+	    dz = pts[m].x[2] - pts[n].x[2];
+	    rsq = dx*dx + dy*dy + dz*dz;
+	    if (rsq < epssq) nbad++;
+	    n = bin[n];
+	  }
+	  m = bin[m];
+	}
+      }
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"%d point pairs read by read_surf are too close",nbad);
+    error->all(FLERR,str);
+  }
+
+  // clean up
+
+  memory->destroy(binhead);
+  memory->destroy(bin);
 }
 
 /* ----------------------------------------------------------------------
@@ -660,8 +820,10 @@ void ReadSurf::check_point_pairs()
 void ReadSurf::check_watertight_2d()
 {
   int p1,p2;
-  int *count;
 
+  // count[I] = # of lines that vertex I is part of
+
+  int *count;
   memory->create(count,npoint_new,"readsurf:count");
   for (int i = 0; i < npoint_new; i++) count[i] = 0;
 
@@ -669,63 +831,148 @@ void ReadSurf::check_watertight_2d()
 
   int m = nline_old;
   for (int i = 0; i < nline_new; i++) {
-    p1 = lines[m].p1;
-    p2 = lines[m].p2;
+    p1 = lines[m].p1 - npoint_old;
+    p2 = lines[m].p2 - npoint_old;
     count[p1]++;
     count[p2]++;
     m++;
   }
   
+  // check that all counts are 2
+
   int nbad = 0;
   for (int i = 0; i < npoint_new; i++)
     if (count[i] != 2) nbad++;
 
+  // clean up
+
   memory->destroy(count);
 
-  int nbadall;
-  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
-  if (nbadall) {
+  // error message
+
+  if (nbad) {
     char str[128];
-    sprintf(str,"%d lines read by read_surf are not watertight");
+    sprintf(str,"%d lines read by read_surf are not watertight",nbad);
     error->all(FLERR,str);
   }
 }
 
 /* ----------------------------------------------------------------------
-   check if every new triangle edge is part of exactly 2 new triangles
-   NOTE: how to enumerate edges
+   check if every new triangle edge is part of exactly 2 or 4 new triangles
+   4 triangles with 1 common edge can occur with infinitely thin surface
 ------------------------------------------------------------------------- */
 
 void ReadSurf::check_watertight_3d()
 {
-  int p1,p2;
-  int *count;
+  int i,j,m,p1,p2,p3,pi,pj;
 
-  memory->create(count,npoint_new,"readsurf:count");
-  for (int i = 0; i < npoint_new; i++) count[i] = 0;
+  // ecountmax[I] = max # of edges that vertex I is part of
+  // use lowest vertex in each edge
+  // divide by 2 to give upper bound, assuming edge will appear 2 or 4 times
 
-  Surf::Line *lines = surf->lines;
+  int *ecountmax;
+  memory->create(ecountmax,npoint_new,"readsurf:ecountmax");
+  for (i = 0; i < npoint_new; i++) ecountmax[i] = 0;
 
-  int m = nline_old;
-  for (int i = 0; i < nline_new; i++) {
-    p1 = lines[m].p1;
-    p2 = lines[m].p2;
-    count[p1]++;
-    count[p2]++;
+  Surf::Tri *tris = surf->tris;
+
+  m = ntri_old;
+  for (i = 0; i < ntri_new; i++) {
+    p1 = tris[m].p1 - npoint_old;
+    p2 = tris[m].p2 - npoint_old;
+    p3 = tris[m].p3 - npoint_old;
+    ecountmax[MIN(p1,p2)]++;
+    ecountmax[MIN(p2,p3)]++;
+    ecountmax[MIN(p3,p1)]++;
     m++;
   }
   
-  int nbad = 0;
-  for (int i = 0; i < npoint_new; i++)
-    if (count[i] != 2) nbad++;
+  for (i = 0; i < npoint_new; i++) ecountmax[i] /= 2;
 
+  // ecount[I] = # of edges that vertex I is part of
+  // edge[I][J] = Jth vertex connected to vertex I via an edge
+  // count[I][J] = # of times edge IJ appears in surf of triangles
+  // edge & count allocated as ragged 2d arrays using ecountmax for 2nd dim
+  // insure ecount < ecountmax
+
+  int *ecount;
+  memory->create(ecount,npoint_new,"readsurf:ecount");
+  int **edge;
+  memory->create_ragged(edge,npoint_new,ecountmax,"readsurf:edge");
+  int **count;
+  memory->create_ragged(count,npoint_new,ecountmax,"readsurf:count");
+
+  for (i = 0; i < npoint_new; i++) ecount[i] = 0;
+
+  int nbad1 = 0;
+  m = ntri_old;
+  for (i = 0; i < ntri_new; i++) {
+    p1 = tris[m].p1 - npoint_old;
+    p2 = tris[m].p2 - npoint_old;
+    p3 = tris[m].p3 - npoint_old;
+    
+    pi = MIN(p1,p2);
+    pj = MAX(p1,p2);
+    for (j = 0; j < ecount[i]; j++)
+      if (edge[pi][j] == pj) break;
+    if (j == ecount[i]) {
+      if (ecount[i] == ecountmax[i]) nbad1++;
+      else {
+	edge[i][j] = pj;
+	count[i][j] = 1;
+	ecount[i]++;
+      }
+    } else count[i][j]++;
+
+    pi = MIN(p2,p3);
+    pj = MAX(p2,p3);
+    for (j = 0; j < ecount[i]; j++)
+      if (edge[pi][j] == pj) break;
+    if (j == ecount[i]) {
+      if (ecount[i] == ecountmax[i]) nbad1++;
+      else {
+	edge[i][j] = pj;
+	count[i][j] = 1;
+	ecount[i]++;
+      }
+    } else count[i][j]++;
+
+    pi = MIN(p3,p1);
+    pj = MAX(p3,p1);
+    for (j = 0; j < ecount[i]; j++)
+      if (edge[pi][j] == pj) break;
+    if (j == ecount[i]) {
+      if (ecount[i] == ecountmax[i]) nbad1++;
+      else {
+	edge[i][j] = pj;
+	count[i][j] = 1;
+	ecount[i]++;
+      }
+    } else count[i][j]++;
+
+    m++;
+  }
+
+  // check that all counts are 2 or 4
+
+  int nbad2 = 0;
+  for (i = 0; i < ntri_new; i++)
+    for (j = 0; i < ecount[i]; j++)
+      if (count[i][j] != 2 && count[i][j] != 4) nbad2++;
+
+  // clean up
+
+  memory->destroy(ecountmax);
+  memory->destroy(ecount);
+  memory->destroy(edge);
   memory->destroy(count);
 
-  int nbadall;
-  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
-  if (nbadall) {
+  // error messages
+
+  int nbad = nbad1 + nbad2;
+  if (nbad) {
     char str[128];
-    sprintf(str,"%d lines read by read_surf are not watertight");
+    sprintf(str,"%d triangle edges read by read_surf are not watertight",nbad);
     error->all(FLERR,str);
   }
 }
