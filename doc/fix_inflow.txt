@@ -49,7 +49,6 @@ On each insertion timestep, each cell with a face(s) adjacent to an
 inflow boundary performs the following computation at the beginning of
 the DSMC timestep.
 
-
 The number of particles {M} to be inserted on the
 face is calculated, which is a function of the global {Fnum} value,
 the mixture number density, the mixture streaming velocity and thermal

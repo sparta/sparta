@@ -15,7 +15,7 @@ create_molecules mix-ID keyword value ... :pre
 mix-ID = ID of mixture to use when creating molecules :ulb,l
 zero or more keyword/value pairs may be appended :l
 keyword = {n} :l
-  {n} value = Np = number of molecules to create
+  {n} value = Np = number of molecules to create :pre
 :ule
 
 [Examples:]
@@ -31,7 +31,7 @@ species and velocity, are determined by the mixture attributes, as
 specied by the {mix-ID}.  See the "mixture"_mixture.html command for
 more details.
 
-Unless the {n} keyword is used with a value > 0, the number of
+Unless the {n} keyword is used with a {Np} value > 0, the number of
 molecules created is a function of the global {Fnum} value, the
 mixture number density, and the volume of the simulation domain.  The
 {Fnum} value is set by the "global fnum"_global.html command.  The
@@ -52,12 +52,12 @@ velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
 "mixture"_mixture.html command.
 
-If the {n} keyword is used, than the {Fnum} and {nrho} settings are
-ignored and {Np} total molecules are created.  If {Np} is 0, then the
-number of molecules created is calculated as described above.
-Inserting {Np} molecules can be useful for debugging purposes.  The
-assignment of species and velocity to each molecules is done the same
-as described above.
+The {n} keyword can be useful for debugging purposes.  If {Np} is set
+to 0, then the count of created particles is a function of the {Fnum}
+and {nrho} and other mixture settings, as described above.  If {Np} is
+set to a value > 0, then the {Fnum} and {nrho} settings are ignored,
+and {Np} molecules are created.  The assignment of species and
+velocity to each molecules is done the same as described above.
 
 NOTE: the {loop} keyword is not yet implemented.
 

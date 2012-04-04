@@ -21,7 +21,8 @@
 
 <LI>keyword = <I>n</I> 
 
-  <I>n</I> value = Np = number of molecules to create
+<PRE>  <I>n</I> value = Np = number of molecules to create 
+</PRE>
 
 </UL>
 <P><B>Examples:</B>
@@ -37,7 +38,7 @@ species and velocity, are determined by the mixture attributes, as
 specied by the <I>mix-ID</I>.  See the <A HREF = "mixture.html">mixture</A> command for
 more details.
 </P>
-<P>Unless the <I>n</I> keyword is used with a value > 0, the number of
+<P>Unless the <I>n</I> keyword is used with a <I>Np</I> value > 0, the number of
 molecules created is a function of the global <I>Fnum</I> value, the
 mixture number density, and the volume of the simulation domain.  The
 <I>Fnum</I> value is set by the <A HREF = "global.html">global fnum</A> command.  The
@@ -58,12 +59,12 @@ velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
 <A HREF = "mixture.html">mixture</A> command.
 </P>
-<P>If the <I>n</I> keyword is used, than the <I>Fnum</I> and <I>nrho</I> settings are
-ignored and <I>Np</I> total molecules are created.  If <I>Np</I> is 0, then the
-number of molecules created is calculated as described above.
-Inserting <I>Np</I> molecules can be useful for debugging purposes.  The
-assignment of species and velocity to each molecules is done the same
-as described above.
+<P>The <I>n</I> keyword can be useful for debugging purposes.  If <I>Np</I> is set
+to 0, then the count of created particles is a function of the <I>Fnum</I>
+and <I>nrho</I> and other mixture settings, as described above.  If <I>Np</I> is
+set to a value > 0, then the <I>Fnum</I> and <I>nrho</I> settings are ignored,
+and <I>Np</I> molecules are created.  The assignment of species and
+velocity to each molecules is done the same as described above.
 </P>
 <P>NOTE: the <I>loop</I> keyword is not yet implemented.
 </P>
