@@ -29,6 +29,7 @@ using namespace MathExtra;
 #define MAXLINE 256
 #define CHUNK 1024
 #define EPSILON 1.0e-6
+#define BIG 1.0e20
 
 /* ---------------------------------------------------------------------- */
 
@@ -216,6 +217,36 @@ void ReadSurf::command(int narg, char **arg)
       invert();
       iarg += 1;
     } else error->all(FLERR,"Invalid read_surf command");
+  }
+
+  // extent of surf after geometric transformations
+
+  double extent[3][2];
+  extent[0][0] = extent[1][0] = extent[2][0] = BIG;
+  extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
+
+  int m = npoint_old;
+  for (int i = 0; i < npoint_new; i++) {
+    extent[0][0] = MIN(extent[0][0],pts[m].x[0]);
+    extent[0][1] = MAX(extent[0][1],pts[m].x[0]);
+    extent[1][0] = MIN(extent[1][0],pts[m].x[1]);
+    extent[1][1] = MAX(extent[1][1],pts[m].x[1]);
+    extent[2][0] = MIN(extent[2][0],pts[m].x[2]);
+    extent[2][1] = MAX(extent[2][1],pts[m].x[2]);
+    m++;
+  }
+
+  if (me == 0) {
+    if (screen) {
+      fprintf(screen,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
+      fprintf(screen,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
+      fprintf(screen,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
+    }
+    if (logfile) {
+      fprintf(logfile,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
+      fprintf(logfile,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
+      fprintf(logfile,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
+    }
   }
 
   // error checks on new points,lines,tris
