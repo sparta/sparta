@@ -36,6 +36,7 @@ class Grid : protected Pointers {
     int local;                // local index of cell if I own it
     int count;                // # of particles in this cell
     int first;                // index of 1st particle in this cell
+    int nsurf;                // # of lines or triangles in this cell
     double volume;            // volume of cell
   };
 
@@ -47,7 +48,7 @@ class Grid : protected Pointers {
   
   Grid(class DSMC *);
   ~Grid();
-  void init() {}
+  void init();
   void add_cell(int, double *, double *, int *);
   void setup_grid();
   int which_cell(double, double, double);
@@ -60,7 +61,25 @@ class Grid : protected Pointers {
  private:
   int maxcell;
 
+  int **csurfs;      // indices of lines/tris in each cell
+                     // ncell by cells->nsurf in size (ragged array)
+
   void procs2grid(int &, int &, int &);
+
+  void surf2grid();
+
+  int line_quad_intersect(double *, double *, double *,
+			  double *, double *);
+  int tri_hex_intersect(double *, double *, double *, double *,
+			double *, double *);
+  bool line_line_intersect(double *, double *, double *,
+			   double *, double *,
+			   double *, double &param, int &);
+  bool tri_line_intersect(double *, double *, double *, double *,
+			  double *, double *,
+			  double *, double &param, int &);
+  int lineside(double *, double *, double, double);
+  int triside(double *, double *, double, double, double);
 };
 
 }
