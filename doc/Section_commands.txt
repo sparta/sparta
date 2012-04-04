@@ -253,7 +253,7 @@ in the command's documentation.
 "next"_next.html,
 "partition"_partition.html,
 "print"_print.html,
-"read_surfs"_read_surfs.html,
+"read_surf"_read_surf.html,
 "restart"_restart,
 "run"_run.html,
 "seed"_seed.html,
