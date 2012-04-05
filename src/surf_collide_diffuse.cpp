@@ -22,9 +22,11 @@
 #include "comm.h"
 #include "random_mars.h"
 #include "random_park.h"
+#include "math_const.h"
 #include "error.h"
 
 using namespace DSMC_NS;
+using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
@@ -94,34 +96,32 @@ void SurfCollideDiffuse::dynamic()
 /* ----------------------------------------------------------------------
    particle collision with surface
    p = particle with current x = collision pt, current v = incident v
-   n = unit surface normal
-   xc = collision point
+   norm = surface normal unit vector
 ------------------------------------------------------------------------- */
 
 void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
 {
   // specular reflection
+  // reflect incident v around norm
 
   if (random->uniform() > acccoeff) {
-    // v[dim] = -v[dim];
-    // invert v around normal?
+
+
 
   // diffuse reflection
   // vrm = most probable speed of species isp, eqns (4.1) and (4.7)
-  // generate normal velocity component, eqn (12.3)
+  // vparallel = velocity component along surface normal, eqn (12.3)
+  // vperp12 = 2 velocity components perpendicular to surface normal
 
   } else {
-    /*
     Particle::Species *species = particle->species;
-    double vrm = sqrt(2.0*update->boltz*twall[face]/species[isp].mass);
-    v[dim] = vrm * sqrt(-log(random->uniform()));
-    for (int i = 0; i < 3 ; i++) {
-      if (i != dim) {
-	double theta = MY_2PI * random->uniform();
-	v[i] = vrm*sqrt(-log(random->uniform()))*sin(theta);
-      }
-    } 
-    */
+    double vrm = sqrt(2.0*update->boltz*twall/species[p->ispecies].mass);
+    double vparallel = vrm * sqrt(-log(random->uniform()));
+    double theta = MY_2PI * random->uniform();
+    double vperp1 = vrm*sqrt(-log(random->uniform()))*sin(theta);
+    theta = MY_2PI * random->uniform();
+    double vperp2 = vrm*sqrt(-log(random->uniform()))*sin(theta);
+
     /*
       erot(isp);
       evib(isp);
