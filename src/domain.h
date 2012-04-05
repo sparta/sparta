@@ -33,7 +33,7 @@ class Domain : protected Pointers {
 
   Domain(class DSMC *);
   ~Domain() {}
-  void init() {}
+  void init();
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);

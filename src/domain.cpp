@@ -38,6 +38,9 @@ Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
   box_exist = 0;
   dimension = 3;
 
+  for (int i = 0; i < 6; i++) bflag[i] = PERIODIC;
+  for (int i = 0; i < 6; i++) surf_collide[i] = -1;
+
   // surface normals of 6 box faces pointed inward towards particles
 
   norm[XLO][0] =  1.0; norm[XLO][1] =  0.0; norm[XLO][2] =  0.0;
@@ -46,6 +49,15 @@ Domain::Domain(DSMC *dsmc) : Pointers(dsmc)
   norm[YHI][0] =  0.0; norm[YHI][1] = -1.0; norm[YHI][2] =  0.0;
   norm[ZLO][0] =  0.0; norm[ZLO][1] =  0.0; norm[ZLO][2] =  1.0;
   norm[ZHI][0] =  0.0; norm[ZHI][1] =  0.0; norm[ZHI][2] = -1.0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Domain::init()
+{
+  for (int i = 0; i < 6; i++)
+    if (bflag[i] == SURFACE && surf_collide[i] < 0)
+      error->all(FLERR,"Box boundary not assigned a surf_collide ID");
 }
 
 /* ----------------------------------------------------------------------
@@ -93,6 +105,8 @@ void Domain::set_boundary(int narg, char **arg)
       else if (c == 's') bflag[m] = SURFACE;
       else error->all(FLERR,"Illegal boundary command");
 
+      if (bflag[m] != SURFACE) surf_collide[m] = -1;
+
       m++;
     }
 
@@ -135,6 +149,8 @@ void Domain::boundary_modify(int narg, char **arg)
   while (iarg < narg) {
     if (strcmp(arg[iarg],"surf") == 0) {
       if (iarg + 2 > narg) error->all(FLERR,"Illegal bound_modify command");
+      if (bflag[face] != SURFACE)
+	error->all(FLERR,"Bound_modify surf requires boundary be a surface");
       surf_collide[face] = surf->find_collide(arg[iarg+1]);
       if (surf_collide[face] < 0) 
 	error->all(FLERR,"Bound_modify surf_collide ID is unknown");
