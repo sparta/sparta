@@ -99,6 +99,17 @@ void Finish::end()
   }
 
   if (me == 0) {
+    double ctps,pfm,cps,cpspp,cpsa;
+    if (particle->nglobal == 0 || update->nsteps == 0) {
+      ctps = pfm = cps = cpspp = cpsa = 0.0;
+    } else {
+      ctps = 1.0*ncctotal/particle->nglobal/update->nsteps;
+      pfm = 1.0*ncmtotal/particle->nglobal/update->nsteps;
+      cps = 1.0*ncltotal/particle->nglobal/update->nsteps;
+      cpspp = time_loop/particle->nglobal/update->nsteps * comm->nprocs;
+      cpsa = time_loop/particle->nglobal/update->nsteps;
+    }
+
     if (screen) {
       fprintf(screen,"\n");
       fprintf(screen,"Particle count = " BIGINT_FORMAT "\n",nptotal);
@@ -107,16 +118,11 @@ void Finish::end()
       fprintf(screen,"Particle comms = " BIGINT_FORMAT "\n",ncmtotal);
       fprintf(screen,"Coll attempt   = " BIGINT_FORMAT "\n",nclatotal);
       fprintf(screen,"Coll performed = " BIGINT_FORMAT "\n",ncltotal);
-      fprintf(screen,"Cell-touches/particle/step: %g\n",
-	      1.0*ncctotal/particle->nglobal/update->nsteps);
-      fprintf(screen,"Particle fraction migrating: %g\n",
-	      1.0*ncmtotal/particle->nglobal/update->nsteps);
-      fprintf(screen,"Collisions/particle/step: %g\n",
-	      1.0*ncltotal/particle->nglobal/update->nsteps);
-      fprintf(screen,"CPU/particle/step per proc: %g\n",
-	      time_loop/particle->nglobal/update->nsteps * comm->nprocs);
-      fprintf(screen,"CPU/particle/step in aggregate: %g\n",
-	      time_loop/particle->nglobal/update->nsteps);
+      fprintf(screen,"Cell-touches/particle/step: %g\n",ctps);
+      fprintf(screen,"Particle fraction migrating: %g\n",pfm);
+      fprintf(screen,"Collisions/particle/step: %g\n",cps);
+      fprintf(screen,"CPU/particle/step per proc: %g\n",cpspp);
+      fprintf(screen,"CPU/particle/step in aggregate: %g\n",cpsa);
     }
     if (logfile) {
       fprintf(logfile,"\n");
@@ -126,16 +132,11 @@ void Finish::end()
       fprintf(logfile,"Particle comms = " BIGINT_FORMAT "\n",ncmtotal);
       fprintf(logfile,"Coll attempt   = " BIGINT_FORMAT "\n",nclatotal);
       fprintf(logfile,"Coll performed = " BIGINT_FORMAT "\n",ncltotal);
-      fprintf(logfile,"Cell-touches/particle/step: %g\n",
-	      1.0*ncctotal/particle->nglobal/update->nsteps);
-      fprintf(logfile,"Particle fraction migrating: %g\n",
-	      1.0*ncmtotal/particle->nglobal/update->nsteps);
-      fprintf(logfile,"Collisions/particle/step: %g\n",
-	      1.0*ncltotal/particle->nglobal/update->nsteps);
-      fprintf(logfile,"CPU/particle/step per proc: %g\n",
-	      time_loop/particle->nglobal/update->nsteps * comm->nprocs);
-      fprintf(logfile,"CPU/particle/step in aggregate: %g\n",
-	      time_loop/particle->nglobal/update->nsteps);
+      fprintf(logfile,"Cell-touches/particle/step: %g\n",ctps);
+      fprintf(logfile,"Particle fraction migrating: %g\n",pfm);
+      fprintf(logfile,"Collisions/particle/step: %g\n",cps);
+      fprintf(logfile,"CPU/particle/step per proc: %g\n",cpspp);
+      fprintf(logfile,"CPU/particle/step in aggregate: %g\n",cpsa);
     }
   }
   
