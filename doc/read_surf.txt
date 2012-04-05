@@ -45,48 +45,100 @@ object embedded in the global simulation box.  The surface elements
 are triangles in 3d or line segments in 2d.  Particles collide with
 surface elements as they advect, and optionally perform surface
 chemistry during the collision.  Collision statistics for each surface
-element are tallied, which can be ouput via the dump surface command.
+element are tallied, which can be ouput via the "dump
+surface"_dump.html command.
 
-The input file contains a list of triangles or line segments; DSMC
-does not know or care whether they represent one or more objects.
+The surface file contains a list of triangles or line segments; DSMC
+does not know or care whether they represent one or more physical
+objects.
 
 All of the surface elements in the file are assigned a surf-ID, which
 can be used in other commands.  If the read_surf command is used
-multiple times, to read multiple files, the same surf-ID can be
-re-used if desired.
+multiple times to read multiple files, the same surf-ID can be re-used
+if desired.
 
 The format of the surface file is discussed below.  The optional
 keywords allow the vertices in the file to be translated, scaled, and
 rotated in various ways.  These allow a single input file, e.g. for a
-gridded unit sphere, to be used in a variety of simulations.
-
-NOTE: should we add a "refine" keyword
+unit sphere, to be used in a variety of simulations.
 
 :line
 
-The format of a surface file is as follows.  Same as LAMMPS
-data file, comments, blank lines, header body, or more fixed?
+A surface file has a header and a body.  The header appears first.
+The first line of the header is always skipped; it typically contains
+a description of the file.  Then lines are read one at a time.  Lines
+can have a trailing comment starting with '#' that is ignored.  If the
+line is blank (only whitespace after comment is deleted), it is
+skipped.  If the line contains a header keyword, the corresponding
+value is read from the line.  If it doesn't contain a header keyword,
+the line begins the body of the file.
 
-same as data file in LAMMPS, comment and blank lines
+The body of the file contains two sections.  The first line of a
+section has only a keyword.  The next line is skipped.  The remaining
+lines of the section contain values.  The number of lines in a section
+depends on the section keyword as described below.  Zero or more blank
+lines can be used between sections.  Sections can appear in any order.
 
-N points (required)
-N lines (2d only)
-N tris (3d only)
+The formatting of individual lines in the data file (indentation,
+spacing between words and numbers) is not important except that header
+and section keywords must be capitalized as shown and can't have extra
+white space between their words.
 
-Points
+These are the recognized header keywords.  Header lines can come in
+any order.  The value(s) are read from the beginning of the line.
+Thus the keyword {points} should be in a line like "1000 points".
 
-id x y z (what about z)
+{points} = # of points in surface
+{lines} = # of line segments in surface (only allowed for 2d)
+{triangles} = # of triangles in surface (only allowed for 3d) :ul
 
-Lines
+These are the recognized section keywords for the body of the file.
 
-p1 p2
+{Points, Lines, Triangles} :ul
 
-Triangles
+The {Points} section consists of N consecutive entries, where N = # of
+points, each of this form:
 
-p1 p2 p3
+point-ID x y z    (for 3d) 
+point-ID x y      (for 2d) :pre
 
+The point-ID is ignored; it is only added to assist in examining the
+file.  The point-IDs should run consecutively from 1 to N.  {X,y,z}
+are the coordinates of the point in distance units.  Note that for 2d
+simulations, {z} should be omitted.
 
-discuss handedness
+The {Lines} section is only allowed for 2d simulations and consists of
+N entries, where N = # of lines, each of this form:
+
+line-ID p1 p2 :pre
+
+The line-ID is ignored; it is only added to assist in examining the
+file.  {P1} and {p2} are the point-IDs of the 2 end points of the line
+segment.  Each is a value from 1 to Npoints, as described above.
+
+The ordering of {p1} and {p2} is important as it defines the direction
+of the outward normal for the line segment when a molecule collides
+with it.  Molecules only collide with the "outer" edge of a line
+segment.  This is defined by a right-hand rule.  The outward normal N
+= (0,0,1) x (p2-p1).  In other words, a unit z-direction vector is
+crossed into the vector from {p1} to {p2} to determine the normal.
+
+The {Triangles} section is only allowed for 3d simulations and
+consists of N entries, where N = # of triangles, each of this form:
+
+tri-ID p1 p2 p3 :pre
+
+The tri-ID is ignored; it is only added to assist in examining the
+file.  {P1} and {p2} and {p3} are the point-IDs of the 3 corner points
+of the triangle.  Each is a value from 1 to Npoints, as described
+above.
+
+The ordering of {p1} and {p2} and {p3} is important as it defines the
+direction of the outward normal for the triangle when a molecule
+collides with it.  Molecules only collide with the "outer" face of a
+triangle. This is defined by a right-hand rule.  The outward normal N
+= (p2-p1) x (p3-p1).  In other words, the edge from {p1} to {p2} is
+crossed into the edge from {p1} to {p3} to determine the normal.
 
 :line
 
@@ -150,15 +202,20 @@ interior to the box.  This restriction will be relaxed at some point.
 
 The surface elements in a single surface file must represent a
 "watertight" surface.  This means that no pair of vertices is within
-an epsilon distance of each other.  (HOW IS EPSILON DEFINED, should it
-be user-settable).  For a 3d simulation it additionally requires that
-every triangle edge is part of exactly 2 triangles.  For a 2d
-simulation it additionally requires that every vertex is part of
-exactly 2 line segments.  Thus if you want to model an infinitely thin
-flat plate, you should grid it on both sides.  Note that this
-definition of watertight does not require that the surface elements in
-a file represent a single physical object; multiple objects can be
-represented, provided each is watertight.
+an epsilon distance of each other.  Epsilon is defined as an EPSILON
+fraction of the shortest simulation box length, where EPSILON is set
+to 1.0e-6 in src/read_syrf.cpp.
+
+For a 3d simulation, "watertight" additionally requires that every
+triangle edge is part of exactly 2 or 4 triangles.  For a 2d
+simulation it requires that every vertex is part of exactly 2 or 4
+line segments.  Thus if you want to model an infinitely thin object
+(e.g. a plane) plate, you should grid it on both sides, using the same
+vertices (this is why 4 triangles or line segments can border the same
+edge or point).  Note that this definition of watertight does not
+require that the surface elements in a file represent a single
+physical object; multiple objects can be represented, provided each is
+watertight.
 
 When running a simulation with multiple surfaces, read from one or
 more surface files, you should insure they do not overlap/intersect
