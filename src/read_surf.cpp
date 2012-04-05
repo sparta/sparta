@@ -251,7 +251,7 @@ void ReadSurf::command(int narg, char **arg)
   // error checks on new points,lines,tris
   // all points must be strictly inside simulation box
   // no pair of points can be separted by less than EPSILON
-  // 2d watertight = every point is part of exactly 2 lines
+  // 2d watertight = every point is part of exactly 2 or 4 lines
   // 3d watertight = every edge is part of exactly 2 or 4 triangles
 
   check_point_inside();
@@ -851,7 +851,7 @@ void ReadSurf::check_point_pairs()
 }
 
 /* ----------------------------------------------------------------------
-   check if every new point is an end point of exactly 2 new line segments
+   check if every new point is an end point of exactly 2 or 4 new lines
 ------------------------------------------------------------------------- */
 
 void ReadSurf::check_watertight_2d()
@@ -873,11 +873,11 @@ void ReadSurf::check_watertight_2d()
     m++;
   }
   
-  // check that all counts are 2
+  // check that all counts are 2 or 4
 
   int nbad = 0;
   for (int i = 0; i < npoint_new; i++)
-    if (count[i] != 2) nbad++;
+    if (count[i] != 2 && count[i] != 4) nbad++;
 
   // clean up
 

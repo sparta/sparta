@@ -322,6 +322,7 @@ void Grid::procs2grid(int &px, int &py, int &pz)
 
 /* ----------------------------------------------------------------------
    assign surface elements (lines or triangles) to grid cells
+   NOTE: no parallelism yet, since each proc owns entire grid & all surfs
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid()
@@ -345,7 +346,6 @@ void Grid::surf2grid()
   for (m = 0; m < ncell; m++) count[m] = 0;
 
   // NOTE: this logic is specific to regular Nx by Ny by Nz grid
-  // NOTE: no parallelism here yet, since each proc owns entire grid & surfs
   // tally count by double loop over surfs and grid cells within surf bbox
   // lo/hi = bounding box around surf
   // ijk lo/hi = grid index bounding box around surf
@@ -397,8 +397,8 @@ void Grid::surf2grid()
       for (i = ilo; i <= ihi; i++)
 	for (j = jlo; j <= jhi; j++) {
 	  icell = j*nx + i;
-	  if (Geom::line_quad_intersect(x1,x2,lines[m].norm,
-					cells[icell].lo,cells[icell].hi))
+	  if (Geometry::line_quad_intersect(x1,x2,lines[m].norm,
+					    cells[icell].lo,cells[icell].hi))
 	    count[icell]++;
 	}
     } else {
@@ -406,14 +406,14 @@ void Grid::surf2grid()
 	for (j = jlo; j <= jhi; j++)
 	  for (k = klo; k <= khi; k++) {
 	    icell = k*nx*ny + j*nx + i;
-	    if (Geom::tri_hex_intersect(x1,x2,x3,tris[m].norm,
-					cells[icell].lo,cells[icell].hi))
+	    if (Geometry::tri_hex_intersect(x1,x2,x3,tris[m].norm,
+					    cells[icell].lo,cells[icell].hi))
 	      count[icell]++;
 	  }
     }
   }
 
-  // allocate ragged csurfs array
+  // (re)allocate ragged csurfs array
   // csurfs[I][J] = index of Jth tri in global cell I
 
   memory->destroy(csurfs);
@@ -461,8 +461,8 @@ void Grid::surf2grid()
       for (i = ilo; i <= ihi; i++)
 	for (j = jlo; j <= jhi; j++) {
 	  icell = j*nx + i;
-	  if (Geom::line_quad_intersect(x1,x2,lines[m].norm,
-					cells[icell].lo,cells[icell].hi))
+	  if (Geometry::line_quad_intersect(x1,x2,lines[m].norm,
+					    cells[icell].lo,cells[icell].hi))
 	    csurfs[icell][count[icell]++] = m;
 	}
     } else {
@@ -470,8 +470,8 @@ void Grid::surf2grid()
 	for (j = jlo; j <= jhi; j++)
 	  for (k = klo; k <= khi; k++) {
 	    icell = k*nx*ny + j*nx + i;
-	    if (Geom::tri_hex_intersect(x1,x2,x3,tris[m].norm,
-					cells[icell].lo,cells[icell].hi))
+	    if (Geometry::tri_hex_intersect(x1,x2,x3,tris[m].norm,
+					    cells[icell].lo,cells[icell].hi))
 	      csurfs[icell][count[icell]++] = m;
 	  }
     }

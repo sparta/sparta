@@ -15,19 +15,18 @@
 #ifndef DSMC_GEOMETRY_H
 #define DSMC_GEOMETRY_H
 
-namespace Geom {
+namespace Geometry {
   int line_quad_intersect(double *, double *, double *,
 			  double *, double *);
   int tri_hex_intersect(double *, double *, double *, double *,
 			double *, double *);
-  bool line_line_intersect(double *, double *, double *,
-			   double *, double *,
+  bool line_line_intersect(double *, double *, 
+			   double *, double *, double *,
 			   double *, double &param, int &);
-  bool tri_line_intersect(double *, double *, double *, double *,
-			  double *, double *,
+  bool line_tri_intersect(double *, double *, 
+			  double *, double *, double *, double *,
 			  double *, double &param, int &);
-  int lineside(double *, double *, double, double);
-  int triside(double *, double *, double, double, double);
+  int whichside(double *, double *, double, double, double);
 }
 
 #endif
