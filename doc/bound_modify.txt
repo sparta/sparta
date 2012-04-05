@@ -14,19 +14,15 @@ bound_modify wall keyword value ... :pre
 
 wall = {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :ulb,l
 one or more keyword/value pairs may be listed :l
-keywords = {acc} or {temp}
-  {acc} value = frac
-    frac = fractional value between 0.0 and 1.0 inclusive
-  {temp} value = Twall
-    Twall = temperature of wall (temperature units)
-    Twall can be a variable (see below) :pre
+keywords = {surf}
+  {surf} value = surface collision ID
+    sc-ID = ID of a surface collision model :pre
 :ule
 
 [Examples:]
 
-bound_modify yhi acc 0.5 temp 300.0
-bound_modify zlo acc 0.75
-bound_modify zlo temp v_mytemp :pre
+bound_modify yhi surf 1
+bound_modify zlo surf hotwall :pre
 
 [Description:]
 
@@ -34,24 +30,15 @@ Set parameters for one of the boundaries of the global simulation box.
 
 Any of the 6 faces can be selected via the {wall} setting.
 
-The {acc} and {temp} keywords only apply to diffuse-style walls,
-as specified by the "boundary"_boundary.html command.
+The {surf} keyword can only be used when the boundary is of type "s",
+for surface, as set by the "boundary"_boundary.html command.  This
+keyword assigns a surface collision model to the boundary, as defined
+by the "surf_collide"_surf_collide.html command.  When that command is
+used, a surface collision ID is defined, which is specified with this
+command as {sc-ID}.
 
-The {acc} keyword sets the accomodation coefficient.  The {temp}
-keyword sets the wall temperature.  See the "boundary"_boundary.html
-command doc page for details of how these parameters are used to reset
-a particle's attributes when it collides with a diffuse boundary.
-
-The {Twall} value can be specified as an equal-style
-"variable"_variable.html.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current wall temperature.
-
-Equal-style variables can specify formulas with various mathematical
-functions, and include "thermo_style"_thermo_style.html command
-keywords for the simulation box parameters and timestep and elapsed
-time.  Thus it is easy to specify a time-dependent temperature.
+The effect of this keyword is that particle collisions with this
+boundary will be computed by the specified surface collision model.
 
 [Restrictions:] none
 
@@ -59,6 +46,4 @@ time.  Thus it is easy to specify a time-dependent temperature.
 
 "boundary"_boundary.html
 
-[Default:]
-
-The default values for all 6 walls are acc = 1.0 and temp = 273.15.
+[Default:] none

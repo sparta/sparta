@@ -15,20 +15,20 @@
 </P>
 <PRE>boundary x y z 
 </PRE>
-<UL><LI>x,y,z = <I>o</I> or <I>p</I> or <I>s</I> or <I>d</I>, one or two letters 
+<UL><LI>x,y,z = <I>o</I> or <I>p</I> or <I>r</I> or <I>s</I>, one or two letters 
 
 <PRE>  <I>o</I> is outflow
   <I>p</I> is periodic
-  <I>s</I> is specular reflection
-  <I>d</I> is diffuse reflection 
+  <I>r</I> is specular reflection
+  <I>s</I> is treat boundary as a surface 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>boundary o p 
-boundary o so
-boundary s p s 
+<PRE>boundary o p p
+boundary os o o
+boundary r p rs 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -49,33 +49,22 @@ the simulation.
 end of the box and re-enter the other end.  The <I>p</I> style must be
 applied to both faces of a dimension.
 </P>
-<P>Style <I>s</I> means a specularly reflecting boundary.  Particles that
+<P>Style <I>r</I> means a specularly reflecting boundary.  Particles that
 cross this boundary have their velocity reversed so as to re-enter the
 box.  The new velocity is used to advect the particle for the reminder
 of the timestep following the collision.
 </P>
-<P>Style <I>d</I> means a diffuse reflecting boundary.  Two additional
-parameters are defined for each such boundary:
+<P>Style <I>s</I> means the boundary is treated as a surface which allows the
+particle-surface interaction to be treated in a variety of ways via
+the options provided by the <A HREF = "surf_collide.html">surf_collide</A> command.
+This is effectively the same as when a particle collides with a
+triangulated surface read in and setup by the
+<A HREF = "read_surf.html">read_surf</A> command.
 </P>
-<P>acc = accomodation coefficient
-Twall = temperature of wall (temperature units)
-</P>
-<P>These parameters have default values of acc = 1.0 and Twall = 273.15K.
-They can be set to different values for an individual wall by the
+<P>For style <I>s</I>, the boundary face must also be assigned to a surface
+collision model defined by the <A HREF = "surf_collide.html">surf_collide</A>
+command.  The assignment of boundary to model is done via the
 <A HREF = "bound_modify.html">bound_modify</A> command.
-</P>
-<P>The accomodation coefficient is a fractional value from 0.0 to 1.0.
-Each time a particle collides with the wall a random number RN is generated.
-If RN > acc, then specular reflection occurs, as described above.
-If RN <= acc, then diffuse relection occurs, using the following
-equation to reset the velocity of the particle, consistent with
-a thermal velocity equal to the wall temperature Twall:
-</P>
-<P>NOTE: eqs for diffuse reflection need to be added
-</P>
-<P>Note that the new velocity is always directed back into the
-simulatoion box.  The new velocity is used to advect the particle for
-the reminder of the timestep following the collision.
 </P>
 <P><B>Restrictions:</B>
 </P>
@@ -83,7 +72,7 @@ the reminder of the timestep following the collision.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "bound_modify.html">bound_modify</A>
+<P><A HREF = "bound_modify.html">bound_modify</A>, <A HREF = "surf_collide.html">surf_collide</A>
 </P>
 <P><B>Default:</B>
 </P>

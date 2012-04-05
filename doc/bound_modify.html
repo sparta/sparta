@@ -19,20 +19,16 @@
 
 <LI>one or more keyword/value pairs may be listed 
 
-<PRE>keywords = <I>acc</I> or <I>temp</I>
-  <I>acc</I> value = frac
-    frac = fractional value between 0.0 and 1.0 inclusive
-  <I>temp</I> value = Twall
-    Twall = temperature of wall (temperature units)
-    Twall can be a variable (see below) 
+<PRE>keywords = <I>surf</I>
+  <I>surf</I> value = surface collision ID
+    sc-ID = ID of a surface collision model 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>bound_modify yhi acc 0.5 temp 300.0
-bound_modify zlo acc 0.75
-bound_modify zlo temp v_mytemp 
+<PRE>bound_modify yhi surf 1
+bound_modify zlo surf hotwall 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -40,24 +36,15 @@ bound_modify zlo temp v_mytemp
 </P>
 <P>Any of the 6 faces can be selected via the <I>wall</I> setting.
 </P>
-<P>The <I>acc</I> and <I>temp</I> keywords only apply to diffuse-style walls,
-as specified by the <A HREF = "boundary.html">boundary</A> command.
+<P>The <I>surf</I> keyword can only be used when the boundary is of type "s",
+for surface, as set by the <A HREF = "boundary.html">boundary</A> command.  This
+keyword assigns a surface collision model to the boundary, as defined
+by the <A HREF = "surf_collide.html">surf_collide</A> command.  When that command is
+used, a surface collision ID is defined, which is specified with this
+command as <I>sc-ID</I>.
 </P>
-<P>The <I>acc</I> keyword sets the accomodation coefficient.  The <I>temp</I>
-keyword sets the wall temperature.  See the <A HREF = "boundary.html">boundary</A>
-command doc page for details of how these parameters are used to reset
-a particle's attributes when it collides with a diffuse boundary.
-</P>
-<P>The <I>Twall</I> value can be specified as an equal-style
-<A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
-specified as v_name, where name is the variable name.  In this case,
-the variable will be evaluated each timestep, and its value used to
-determine the current wall temperature.
-</P>
-<P>Equal-style variables can specify formulas with various mathematical
-functions, and include <A HREF = "thermo_style.html">thermo_style</A> command
-keywords for the simulation box parameters and timestep and elapsed
-time.  Thus it is easy to specify a time-dependent temperature.
+<P>The effect of this keyword is that particle collisions with this
+boundary will be computed by the specified surface collision model.
 </P>
 <P><B>Restrictions:</B> none
 </P>
@@ -65,8 +52,6 @@ time.  Thus it is easy to specify a time-dependent temperature.
 </P>
 <P><A HREF = "boundary.html">boundary</A>
 </P>
-<P><B>Default:</B>
-</P>
-<P>The default values for all 6 walls are acc = 1.0 and temp = 273.15.
+<P><B>Default:</B> none
 </P>
 </HTML>

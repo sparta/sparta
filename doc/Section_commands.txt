@@ -256,19 +256,19 @@ in the command's documentation.
 "read_surf"_read_surf.html,
 "restart"_restart,
 "run"_run.html,
-"surf_collide"_surf_collide.html,
 "seed"_seed.html,
 "shell"_shell.html,
 "species"_species.html,
 "stats"_stats.html,
 "stats_modify"_modify.html,
 "stats_style"_stats_style.html,
+"surf_collide"_surf_collide.html,
 "timestep"_timestep.html,
 "uncompute"_uncompute.html,
 "undump"_undump.html,
 "unfix"_unfix.html,
 "units"_units.html,
-"variable"_variable.html.
+"variable"_variable.html,
 "write_restart"_write_restart.html :tb(c=6,ea=c)
 
 :line

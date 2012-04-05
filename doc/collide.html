@@ -9,18 +9,18 @@
 
 <HR>
 
-<H3>collisions command 
+<H3>collide command 
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>collisions style args 
+<PRE>collide style args 
 </PRE>
 <UL><LI>style = <I>none</I> or <I>vss</I> 
 
 <LI>args = arguments for that style 
 
-<PRE>  none args = none
-  vss args = mix-ID file
+<PRE>  <I>none</I> args = none
+  <I>vss</I> args = mix-ID file
     mix-ID = ID of mixture to use for group definitions
     file = filename that lists species with their VSS model parameters 
 </PRE>
@@ -28,18 +28,18 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>collisions none
-collisions vss all.vss background 
+<PRE>collide none
+collide vss all.vss background 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Define what style of collisions will be performed by DSMC.  If
-collisions are performed, particles are sorted by grid cell every
-timestep and the appropriate collision model is invoked on a
-per-grid-cell basis.
+<P>Define what style of particle-particle collisions will be performed by
+DSMC.  If collisions are performed, particles are sorted into grid
+cells every timestep and the appropriate collision model is invoked on
+a per-grid-cell basis.
 </P>
-<P>The <I>none</I> style means that no collisions will be performed, i.e. free
-molecular flow.
+<P>The <I>none</I> style means that no particle-particle collisions will be
+performed, i.e. free molecular flow.
 </P>
 <HR>
 

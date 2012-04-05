@@ -6,7 +6,7 @@
 
 :line
 
-collisions command :h3
+collide command :h3
 
 [Syntax:]
 
@@ -14,8 +14,8 @@ collide style args :pre
 
 style = {none} or {vss} :ulb,l
 args = arguments for that style :l
-  none args = none
-  vss args = mix-ID file
+  {none} args = none
+  {vss} args = mix-ID file
     mix-ID = ID of mixture to use for group definitions
     file = filename that lists species with their VSS model parameters :pre
 :ule
@@ -27,13 +27,13 @@ collide vss all.vss background :pre
 
 [Description:]
 
-Define what style of collisions will be performed by DSMC.  If
-collisions are performed, particles are sorted by grid cell every
-timestep and the appropriate collision model is invoked on a
-per-grid-cell basis.
+Define what style of particle-particle collisions will be performed by
+DSMC.  If collisions are performed, particles are sorted into grid
+cells every timestep and the appropriate collision model is invoked on
+a per-grid-cell basis.
 
-The {none} style means that no collisions will be performed, i.e. free
-molecular flow.
+The {none} style means that no particle-particle collisions will be
+performed, i.e. free molecular flow.
 
 :line
 
