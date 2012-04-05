@@ -85,6 +85,7 @@ void Surf::compute_line_normal(int nstart, int n)
     MathExtra::norm3(norm);
     lines[m].norm[0] = norm[0];
     lines[m].norm[1] = norm[1];
+    lines[m].norm[2] = 0.0;
     m++;
   }
 }
