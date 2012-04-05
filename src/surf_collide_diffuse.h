@@ -35,8 +35,8 @@ class SurfCollideDiffuse : public SurfCollide {
   void collide(Particle::OnePart *, double *);
 
  private:
-  double acccoeff;           // surface accomodation coeff
   double twall;              // surface temperature
+  double acc;                // surface accomodation coeff
 
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable

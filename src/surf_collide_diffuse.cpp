@@ -38,18 +38,18 @@ SurfCollideDiffuse::SurfCollideDiffuse(DSMC *dsmc, int narg, char **arg) :
 
   tstr = NULL;
 
-  acccoeff = atof(arg[2]);
-  if (acccoeff < 0.0 || acccoeff > 1.0) 
-    error->all(FLERR,"Illegal surf_collide diffuse command");
-
-  if (strstr(arg[3],"v_") == arg[3]) {
-    int n = strlen(&arg[3][2]) + 1;
+  if (strstr(arg[2],"v_") == arg[2]) {
+    int n = strlen(&arg[2][2]) + 1;
     tstr = new char[n];
-    strcpy(tstr,&arg[3][2]);
+    strcpy(tstr,&arg[2][2]);
   } else {
-    twall = atof(arg[3]);
+    twall = atof(arg[2]);
     if (twall < 0.0) error->all(FLERR,"Illegal surf_collide diffuse command");
   }
+
+  acc = atof(arg[3]);
+  if (acc < 0.0 || acc > 1.0) 
+    error->all(FLERR,"Illegal surf_collide diffuse command");
 
   random = NULL;
 }
@@ -105,7 +105,7 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
   // specular reflection
   // reflect incident v around norm
 
-  if (random->uniform() > acccoeff) {
+  if (random->uniform() > acc) {
     MathExtra::reflect3(p->v,norm);
 
   // diffuse reflection
