@@ -67,19 +67,6 @@ class Grid : protected Pointers {
   void procs2grid(int &, int &, int &);
 
   void surf2grid();
-
-  int line_quad_intersect(double *, double *, double *,
-			  double *, double *);
-  int tri_hex_intersect(double *, double *, double *, double *,
-			double *, double *);
-  bool line_line_intersect(double *, double *, double *,
-			   double *, double *,
-			   double *, double &param, int &);
-  bool tri_line_intersect(double *, double *, double *, double *,
-			  double *, double *,
-			  double *, double &param, int &);
-  int lineside(double *, double *, double, double);
-  int triside(double *, double *, double, double, double);
 };
 
 }
