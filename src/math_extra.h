@@ -40,6 +40,7 @@ namespace MathExtra {
   inline double lensq3(const double *v);
   inline double dot3(const double *v1, const double *v2);
   inline void cross3(const double *v1, const double *v2, double *ans);
+  inline void reflect3(double *v, const double *norm);
 
   // 3x3 matrix operations
 
@@ -209,6 +210,19 @@ void MathExtra::cross3(const double *v1, const double *v2, double *ans)
   ans[0] = v1[1]*v2[2] - v1[2]*v2[1];
   ans[1] = v1[2]*v2[0] - v1[0]*v2[2];
   ans[2] = v1[0]*v2[1] - v1[1]*v2[0];
+}
+
+/* ----------------------------------------------------------------------
+   reflect vector v around unit normal n
+   return updated v of same length = v - 2(v dot n)n
+------------------------------------------------------------------------- */
+
+void MathExtra::reflect3(double *v, const double *n)
+{
+  double dot = dot3(v,n);
+  v[0] -= 2.0*dot*n[0];
+  v[1] -= 2.0*dot*n[1];
+  v[2] -= 2.0*dot*n[2];
 }
 
 /* ----------------------------------------------------------------------

@@ -16,6 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "surf_collide_diffuse.h"
+#include "math_extra.h"
 #include "input.h"
 #include "variable.h"
 #include "update.h"
@@ -105,8 +106,7 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
   // reflect incident v around norm
 
   if (random->uniform() > acccoeff) {
-
-
+    MathExtra::reflect3(p->v,norm);
 
   // diffuse reflection
   // vrm = most probable speed of species isp, eqns (4.1) and (4.7)
