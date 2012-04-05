@@ -151,6 +151,10 @@ void SurfCollideDiffuse2::collide(Particle::OnePart *p, double *norm)
     double vperp1 = up * sin(theta);
     double vperp2 = up * cos(theta);
 
+    v[0] = vparallel*norm[0] + vperp1*AAA[0] + vperp2*BBB[0];
+    v[1] = vparallel*norm[1] + vperp1*AAA[1] + vperp2*BBB[1];
+    v[2] = vparallel*norm[2] + vperp1*AAA[2] + vperp2*BBB[2];
+
     /*
       erot(isp);
       evib(isp);
