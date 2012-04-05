@@ -24,7 +24,6 @@
 #include "memory.h"
 
 using namespace DSMC_NS;
-using namespace MathExtra;
 
 #define MAXLINE 256
 #define CHUNK 1024

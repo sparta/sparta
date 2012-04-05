@@ -17,7 +17,6 @@
 #include "memory.h"
 
 using namespace DSMC_NS;
-using namespace MathExtra;
 
 /* ---------------------------------------------------------------------- */
 
