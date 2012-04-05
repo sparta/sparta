@@ -230,9 +230,9 @@ default DSMC build.  These dependencies are listed as Restrictions
 in the command's documentation.
 
 "boundary"_boundary.html,
-"boundary_modify"_boundary_modify.html,
+"bound_modify"_bound_modify.html,
 "clear"_clear.html,
-"collisions"_collisions.html,
+"collide"_collide.html,
 "compute"_compute.html,
 "create_molecules"_create_molecules.html,
 "create_box"_create_box.html,
@@ -256,6 +256,7 @@ in the command's documentation.
 "read_surf"_read_surf.html,
 "restart"_restart,
 "run"_run.html,
+"surf_collide"_surf_collide.html,
 "seed"_seed.html,
 "shell"_shell.html,
 "species"_species.html,
@@ -292,3 +293,22 @@ each style or click on the style itself for a full description:
 
 "ke/molecule"_compute_ke_molecule.html,
 "temp"_compute_temp.html :tb(c=6,ea=c)
+
+:line
+
+Collide styles :h4
+
+See the "collide"_collide.html command for one-line descriptions of
+each style or click on the style itself for a full description:
+
+"vss"_collide_vss.html :tb(c=1,ea=c)
+
+:line
+
+Surf collide styles :h4
+
+See the "surf_collide"_surf_collide.html command for one-line
+descriptions of each style or click on the style itself for a full
+description:
+
+"diffuse"_surf_collide_diffuse.html :tb(c=1,ea=c)
