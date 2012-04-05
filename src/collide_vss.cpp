@@ -18,14 +18,14 @@
 #include "collide_vss.h"
 #include "grid.h"
 #include "update.h"
+#include "particle.h"
+#include "mixture.h"
+#include "collide.h"
 #include "comm.h"
 #include "random_park.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
-#include "particle.h"
-#include "mixture.h"
-#include "collide.h"
 
 using namespace DSMC_NS;
 using namespace MathConst;

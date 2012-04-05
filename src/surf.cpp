@@ -14,9 +14,14 @@
 
 #include "surf.h"
 #include "math_extra.h"
+#include "style_surf_collide.h"
+#include "surf_collide.h"
 #include "memory.h"
+#include "error.h"
 
 using namespace DSMC_NS;
+
+#define DELTA 4;
 
 /* ---------------------------------------------------------------------- */
 
@@ -31,6 +36,9 @@ Surf::Surf(DSMC *dsmc) : Pointers(dsmc)
   pts = NULL;
   lines = NULL;
   tris = NULL;
+
+  nsc = maxsc = 0;
+  sc = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -43,6 +51,9 @@ Surf::~Surf()
   memory->sfree(pts);
   memory->sfree(lines);
   memory->sfree(tris);
+
+  for (int i = 0; i < nsc; i++) delete sc[i];
+  memory->sfree(sc);
 }
 
 /* ----------------------------------------------------------------------
@@ -111,6 +122,59 @@ void Surf::compute_tri_normal(int nstart, int n)
     MathExtra::norm3(tris[m].norm);
     m++;
   }
+}
+
+/* ----------------------------------------------------------------------
+   add a surface collision model
+------------------------------------------------------------------------- */
+
+void Surf::add_collide(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal surf_collide command");
+
+  // error check
+
+  for (int i = 0; i < nsc; i++)
+    if (strcmp(arg[0],sc[i]->id) == 0)
+      error->all(FLERR,"Reuse of surf_collide ID");
+
+  // extend SurfCollide list if necessary
+
+  if (nsc == maxsc) {
+    maxsc += DELTA;
+    sc = (SurfCollide **)
+      memory->srealloc(sc,maxsc*sizeof(SurfCollide *),"surf:sc");
+  }
+
+  // check if ID already exists
+
+  if (0) return;
+
+#define SURF_COLLIDE_CLASS
+#define SurfCollideStyle(key,Class) \
+  else if (strcmp(arg[1],#key) == 0) \
+    sc[nsc] = new Class(dsmc,narg,arg);
+#include "style_surf_collide.h"
+#undef SurfCollideStyle
+#undef SURF_COLLIDE_CLASS
+
+  else error->all(FLERR,"Invalid surf_collide style");
+
+  nsc++;
+}
+
+/* ----------------------------------------------------------------------
+   find a surface collide by ID
+   return index of surf collide or -1 if not found
+------------------------------------------------------------------------- */
+
+int Surf::find_collide(const char *id)
+{
+  int isc;
+  for (isc = 0; isc < nsc; isc++)
+    if (strcmp(id,sc[isc]->id) == 0) break;
+  if (isc == nsc) return -1;
+  return isc;
 }
 
 /* ---------------------------------------------------------------------- */

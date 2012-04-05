@@ -883,4 +883,3 @@ void Stats::compute_zhi()
 {
   dvalue = domain->boxhi[2];
 }
-

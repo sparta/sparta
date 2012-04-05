@@ -42,6 +42,7 @@ if (test $1 = "style") then
   style COMPUTE_CLASS   compute_    compute    modify
   style DUMP_CLASS      dump_       dump       output
   style FIX_CLASS       fix_        fix        modify
+  style SURF_COLLIDE_CLASS       surf_collide_        surf_collide        surf
 
 # edit Makefile.lib
 # called by "make makelib"

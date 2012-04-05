@@ -48,12 +48,18 @@ class Surf : protected Pointers {
   int nline;
   int ntri;
 
+  class SurfCollide **sc;      // list of surface collision models
+  int nsc;                     // # of surface collision models
+  int maxsc;
+
   Surf(class DSMC *);
   ~Surf();
   void init() {}
   int add_id(char *);
   void compute_line_normal(int, int);
   void compute_tri_normal(int, int);
+  void add_collide(int, char **);
+  int find_collide(const char *);
   bigint memory_usage();
 
  private:

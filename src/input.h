@@ -66,8 +66,8 @@ class Input : protected Pointers {
   // DSMC commands
 
   void boundary();
-  void boundary_modify();
-  void collisions();
+  void bound_modify();
+  void collide_command();
   void compute();
   void dimension();
   void dump();
@@ -80,6 +80,7 @@ class Input : protected Pointers {
   void stats();
   void stats_modify();
   void stats_style();
+  void surf_collide();
   void timestep();
   void uncompute();
   void undump();

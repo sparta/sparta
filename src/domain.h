@@ -16,6 +16,7 @@
 #define DSMC_DOMAIN_H
 
 #include "pointers.h"
+#include "particle.h"
 
 namespace DSMC_NS {
 
@@ -29,28 +30,21 @@ class Domain : protected Pointers {
   double prd[3];                    // array form of dimensions
 
   int bflag[6];                     // boundary flags
-  int dynamicflag;                  // 1 if any boundary attribute is dynamic
 
   Domain(class DSMC *);
-  ~Domain();
-  void init();
+  ~Domain() {}
+  void init() {}
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);
   void boundary_modify(int, char **);
-  void dynamic();
-  int boundary(int, int &, double *, double *, double *, int);
-  void reflect(int, int, double *);
+  int collide(Particle::OnePart *, int, int &, double *);
   void print_box(const char *);
 
-  class RanPark *random;     // RNG for particle reflection
-  double acccoeff[6];        // accomodation coeff for diffuse walls
-  double twall[6];           // wall temperatures for diffuse walls
-
-
-  int twallvar[6];
-  int twallstyle[6];
-  char *twallstr[6];
+ private:
+  double norm[6][3];
+  int surf_collide[6];              // index of SurfCollide model
+                                    // for each bflag = SURFACE boundary
 };
 
 }

@@ -416,8 +416,8 @@ int Input::execute_command()
   else if (!strcmp(command,"variable")) variable_command();
 
   else if (!strcmp(command,"boundary")) boundary();
-  else if (!strcmp(command,"boundary_modify")) boundary_modify();
-  else if (!strcmp(command,"collisions")) collisions();
+  else if (!strcmp(command,"bound_modify")) bound_modify();
+  else if (!strcmp(command,"collide")) collide_command();
   else if (!strcmp(command,"compute")) compute();
   else if (!strcmp(command,"dimension")) dimension();
   else if (!strcmp(command,"dump")) dump();
@@ -430,6 +430,7 @@ int Input::execute_command()
   else if (!strcmp(command,"stats")) stats();
   else if (!strcmp(command,"stats_modify")) stats_modify();
   else if (!strcmp(command,"stats_style")) stats_style();
+  else if (!strcmp(command,"surf_collide")) surf_collide();
   else if (!strcmp(command,"timestep")) timestep();
   else if (!strcmp(command,"uncompute")) uncompute();
   else if (!strcmp(command,"undump")) undump();
@@ -822,18 +823,18 @@ void Input::boundary()
 
 /* ---------------------------------------------------------------------- */
 
-void Input::boundary_modify()
+void Input::bound_modify()
 {
   domain->boundary_modify(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void Input::collisions()
+void Input::collide_command()
 {
   if (narg < 1) error->all(FLERR,"Illegal collide command");
 
-  if (collide) delete collide;
+  delete collide;
 
   if (strcmp(arg[0],"none") == 0) collide = NULL;
 
@@ -943,6 +944,13 @@ void Input::stats_modify()
 void Input::stats_style()
 {
   output->create_stats(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::surf_collide()
+{
+  surf->add_collide(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

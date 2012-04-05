@@ -33,7 +33,7 @@
 using namespace DSMC_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as Domain
-enum{PERIODIC,OUTFLOW,SPECULAR,DIFFUSE};      // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};       // same as Domain
 
 /* ---------------------------------------------------------------------- */
 
@@ -131,7 +131,7 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
-  int domain_dynamic = domain->dynamicflag;
+  int dynamic = 0;
   
   // loop over timesteps
 
@@ -147,7 +147,7 @@ void Update::run(int nsteps)
     // move particles
 
     timer->stamp();
-    if (domain_dynamic) domain->dynamic();
+    //if (dynamic) domain->dynamic();
     (this->*move)();
     timer->stamp(TIME_MOVE);
 
@@ -319,7 +319,7 @@ void Update::move3d()
 	count++;
 
       } else {
-        outflag = domain->boundary(outface,icell,x,xnew,v,isp);
+        outflag = domain->collide(&particles[i],outface,icell,xnew);
 	if (outflag == OUTFLOW) break;
 	else if (outflag == PERIODIC) {
 	  lo = cells[icell].lo;
@@ -468,7 +468,7 @@ void Update::move2d()
 	count++;
  
       } else {
-        outflag = domain->boundary(outface,icell,x,xnew,v,isp);
+        outflag = domain->collide(&particles[i],outface,icell,xnew);
 	if (outflag == OUTFLOW) break;
 	else if (outflag == PERIODIC) {
 	  lo = cells[icell].lo;
