@@ -6,7 +6,7 @@
 seed	    	    12345
 dimension   	    2
 
-boundary	    os ss p
+boundary	    or rr p
 create_box  	    0 10 0 10 -0.5 0.5
 create_grid 	    10 10 1 stride x y z
 
@@ -20,7 +20,7 @@ global		    fnum 1.0E26
 #create_molecules    air
 fix		    in inflow air xlo #perspecies no n 111
 
-collisions	    vss air ../data/all.vss
+collide		    vss air ../data/all.vss
 
 timestep 	    0.0001
 

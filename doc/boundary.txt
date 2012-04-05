@@ -57,7 +57,7 @@ Twall = temperature of wall (temperature units)
 
 These parameters have default values of acc = 1.0 and Twall = 273.15K.
 They can be set to different values for an individual wall by the
-"boundary_modify"_boundary_modify.html command.
+"bound_modify"_bound_modify.html command.
 
 The accomodation coefficient is a fractional value from 0.0 to 1.0.
 Each time a particle collides with the wall a random number RN is generated.
@@ -78,7 +78,7 @@ For 2d simulations, the z dimension must be periodic.
 
 [Related commands:]
 
-"boundary_modify"_boundary_modify.html
+"bound_modify"_bound_modify.html
 
 [Default:]
 

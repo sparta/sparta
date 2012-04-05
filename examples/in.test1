@@ -14,7 +14,7 @@ boundary_modify     ylo acc 1.0 temp 273.15
 boundary_modify     zhi acc 1.0 temp 273.15
 boundary_modify     zlo acc 1.0 temp 273.15
 create_box  	    0 1.E-3 0 1.E-3 0 1.E-3
-#create_grid 	    10 10 10
+#create_grid 	    100 100 100
 create_grid 	    10 10 10
 
 species		    ../data/all.species N 
@@ -22,13 +22,11 @@ mixture		    air N vstream 0.0 0.0 0.0 temp 273.15 nrho 7.07043E22
 
 create_molecules    air n 10000
 
-
-collisions	    vss air ../data/all.vss
+collide		    vss air ../data/all.vss
 
 timestep 	    7.E-9
 compute             ke ke/molecule
 variable            foo molecule x+y
-
 
 #dump		    1 molecule 10 tmp.dump id type x y z
 #stats_style	    step cpu nmol nattempt ncoll

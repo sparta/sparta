@@ -10,7 +10,7 @@ collisions command :h3
 
 [Syntax:]
 
-collisions style args :pre
+collide style args :pre
 
 style = {none} or {vss} :ulb,l
 args = arguments for that style :l
@@ -22,8 +22,8 @@ args = arguments for that style :l
 
 [Examples:]
 
-collisions none
-collisions vss all.vss background :pre
+collide none
+collide vss all.vss background :pre
 
 [Description:]
 

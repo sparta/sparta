@@ -131,4 +131,3 @@ The {nrho}, {vstream}, and {temp} defaults are those defined for the
 background gas density, as set by the "global"_global.html command.
 The {frac} default is described above.  The {group} default (if new
 species are listed) is "all".
-

@@ -6,11 +6,11 @@
 
 :line
 
-boundary_modify command :h3
+bound_modify command :h3
 
 [Syntax:]
 
-boundary_modify wall keyword value ... :pre
+bound_modify wall keyword value ... :pre
 
 wall = {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :ulb,l
 one or more keyword/value pairs may be listed :l
@@ -24,9 +24,9 @@ keywords = {acc} or {temp}
 
 [Examples:]
 
-boundary_modify yhi acc 0.5 temp 300.0
-boundary_modify zlo acc 0.75
-boundary_modify zlo temp v_mytemp :pre
+bound_modify yhi acc 0.5 temp 300.0
+bound_modify zlo acc 0.75
+bound_modify zlo temp v_mytemp :pre
 
 [Description:]
 
