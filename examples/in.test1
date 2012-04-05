@@ -6,7 +6,7 @@
 seed	    	    12345
 dimension   	    3
 
-boundary	    d d d
+boundary	    s s s
 boundary_modify     xhi acc 1.0 temp 273.15
 boundary_modify     xlo acc 1.0 temp 273.15
 boundary_modify     yhi acc 1.0 temp 273.15
@@ -18,22 +18,22 @@ create_box  	    0 1.E-3 0 1.E-3 0 1.E-3
 create_grid 	    10 10 10
 
 species		    ../data/all.species N 
-mixture		    air N vstream 0.0 0.0 0.0 temp 273.15 nrho 7.07043E22
+mixture		    air N vstream 0.0 0.0 0.0 temp 273.15 
+global              nrho 1.00000E23
+global              fnum 1.00000E8
 
-create_molecules    air n 10000
+create_molecules    air #n 1000000
 
 collide		    vss air ../data/all.vss
 
-timestep 	    7.E-9
+timestep 	    1.E-9
 compute             ke ke/molecule
 variable            foo molecule x+y
 
 #dump		    1 molecule 10 tmp.dump id type x y z
-#stats_style	    step cpu nmol nattempt ncoll
-#stats_style         step cpu nmol nattempt ncoll c_temp 
 stats		    10
 fix                 check grid/check 1
 compute             temp temp
 stats_style         step cpu nmol nattempt ncoll c_temp 
 #f_in[1] f_in[2]
-run 		    100
+run 		    1000000

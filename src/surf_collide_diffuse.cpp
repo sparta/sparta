@@ -128,3 +128,33 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
     */
   }
 }
+
+void SurfCollideDiffuse2::collide(Particle::OnePart *p, double *norm)
+{
+  // specular reflection
+  // reflect incident v around norm
+
+  if (random->uniform() > acccoeff) {
+    MathExtra::reflect3(p->v,norm);
+
+  // diffuse reflection
+  // vrm = most probable speed of species isp, eqns (4.1) and (4.7)
+  // vparallel = velocity component along surface normal, eqn (12.3)
+  // vperp12 = 2 velocity components perpendicular to surface normal
+
+  } else {
+    Particle::Species *species = particle->species;
+    double vrm = sqrt(2.0*update->boltz*twall/species[p->ispecies].mass);
+    double vparallel = vrm * sqrt(-log(random->uniform()));
+    double theta = MY_2PI * random->uniform();
+    double up = vrm*sqrt(-log(random->uniform()))
+    double vperp1 = up * sin(theta);
+    double vperp2 = up * cos(theta);
+
+    /*
+      erot(isp);
+      evib(isp);
+    */
+  }
+}
+

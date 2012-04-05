@@ -145,13 +145,6 @@ double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup,
  double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
    vremax[ilocal][igroup][jgroup] * dt * fnum / volume + random->uniform();
 
- // printf(" Attempts = %d %d %d %d\n", icell, ngroup[igroup],ngroup[jgroup],nattempt );
- // if (nattempt > 0) printf(" Attempts = %e %e %e \n", dt, fnum, volume);
- /* no residual number of attempts is kept. The number of attempts is randomly scaled
-    up or down. Better formulation for transient flows.
- */
-
-//  printf("%e %e \n",nattempt,vremax[ilocal][igroup][jgroup]);
   return nattempt;
 }
 
@@ -178,19 +171,15 @@ int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
   double omega1 = params[ispecies].omega;
   double omega2 = params[jspecies].omega;
   double omega = 0.5 * (omega1+omega2);
-  double vr  = pow(vr2,1-omega);
+  double vro  = pow(vr2,omega-0.5);
 
   // although the vremax is calcualted for the group,
   // the individual collisions calculated species dependent vre
 
-  double vre = vr*prefactor[ispecies][jspecies];
+  double vre = sqrt(vr2)*prefactor[ispecies][jspecies]/vro;
 
-//  printf("INSIDE %e %e \n", vr, prefactor[ispecies][jspecies]);
-  // update vremax if new max
-
+//  printf("INSIDE %e %e \n", vre,vremax[ilocal][igroup][jgroup]);
   vremax[ilocal][igroup][jgroup] = MAX(vre,vremax[ilocal][igroup][jgroup]);
-
-//  printf("INSIDE %e %e \n", vre, vremax[ilocal][igroup][jgroup]);
 
   if (vre/vremax[ilocal][igroup][jgroup] < random->uniform()) return 0;
   return 1;

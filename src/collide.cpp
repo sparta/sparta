@@ -162,7 +162,7 @@ void Collide::collisions()
 	nattempt = static_cast<int> (attempt);
 	if (attempt-nattempt > random->uniform()) nattempt++;
 
-//	printf("NATTEMPT %d\n",nattempt);
+	printf("NATTEMPT %d %d\n",icell, nattempt);
 
 	if (nattempt) {
 	  gpair[npair][0] = igroup;
@@ -205,8 +205,8 @@ void Collide::collisions()
 	jpart = &particles[jlist[j]];
 
 	if (!test_collision(m,igroup,jgroup,ipart,jpart)) continue;
-	setup_collision(ipart,jpart);
-	kpart = perform_collision(ipart,jpart);
+//	setup_collision(ipart,jpart);
+//	kpart = perform_collision(ipart,jpart);
 	ncollide_one++;
 
 	// ipart may be in different group
