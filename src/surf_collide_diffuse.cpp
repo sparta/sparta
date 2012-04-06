@@ -98,6 +98,7 @@ void SurfCollideDiffuse::dynamic()
    particle collision with surface
    p = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
+   resets p->v to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)

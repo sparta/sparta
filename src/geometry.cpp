@@ -15,7 +15,7 @@
 #include "geometry.h"
 #include "math_extra.h"
 
-enum{OUTSIDE,INSIDE};
+enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
 namespace Geometry {
 
@@ -268,7 +268,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
    if TRUE also return:
      point = pt of intersection
      param = intersection pt is this fraction along line A (0-1 inclusive)
-     side = OUTSIDE or INSIDE (enum value)
+     side = side of B that was hit = ONSURF, OUTSIDE, ONSURF2OUT, ONSURF2IN
 ------------------------------------------------------------------------- */
 
 bool line_line_intersect(double *start, double *stop,
@@ -317,14 +317,15 @@ bool line_line_intersect(double *start, double *stop,
   if (MathExtra::dot3(edge,pvec) > 0.0) return false;
 
   // there is a valid intersection with line B
-  // set side to INSIDE or OUTSIDE
-  // if start point is inside or outside then is INSIDE or OUTSIDE
-  // if particle started on line B, then is opposite of stop point
+  // set side to ONSUFR, OUTSIDE, or INSIDE
+  // if start point is inside or outside then side = same
+  // if particle started on line B, side = ONSURF OUT/IN based on dotstop
 
   if (dotstart < 0.0) side = INSIDE;
   else if (dotstart > 0.0) side = OUTSIDE;
-  else if (dotstop > 0.0) side = INSIDE;
-  else if (dotstop < 0.0) side = OUTSIDE;
+  else if (dotstop > 0.0) side = ONSURF2OUT;
+  else side = ONSURF2IN;
+
   return true;
 }
 
@@ -342,7 +343,7 @@ bool line_line_intersect(double *start, double *stop,
    if TRUE also return:
      point = pt of intersection
      param = intersection pt is this fraction along line (0-1 inclusive)
-     side = OUTSIDE or INSIDE (enum value)
+     side = side of B that was hit = ONSURF, OUTSIDE, ONSURF2OUT, ONSURF2IN
 ------------------------------------------------------------------------- */
 
 bool line_tri_intersect(double *start, double *stop,
@@ -400,15 +401,16 @@ bool line_tri_intersect(double *start, double *stop,
   MathExtra::cross3(edge,pvec,xproduct);
   if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
 
-  // there is a valid intersection with the triangle
-  // set side to INSIDE or OUTSIDE
-  // if start point is inside or outside then is INSIDE or OUTSIDE
-  // if particle started on surface, then is opposite of stop point
+  // there is a valid intersection with triangle
+  // set side to ONSUFR, OUTSIDE, or INSIDE
+  // if start point is inside or outside then side = same
+  // if particle started on triangle, side = ONSURF OUT/IN based on dotstop
 
   if (dotstart < 0.0) side = INSIDE;
   else if (dotstart > 0.0) side = OUTSIDE;
-  else if (dotstop > 0.0) side = INSIDE;
-  else if (dotstop < 0.0) side = OUTSIDE;
+  else if (dotstop > 0.0) side = ONSURF2OUT;
+  else side = ONSURF2IN;
+
   return true;
 }
 

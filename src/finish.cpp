@@ -134,7 +134,7 @@ void Finish::end()
       fprintf(screen,"SurfColl occur = " BIGINT_FORMAT "\n",nscollide_total);
       fprintf(screen,"Collide attmpt = " BIGINT_FORMAT "\n",nattempt_total);
       fprintf(screen,"Collide occurs = " BIGINT_FORMAT "\n",ncollide_total);
-
+      fprintf(screen,"\n");
       fprintf(screen,"Particle-moves/step: %g\n",pms);
       fprintf(screen,"Cell-touches/particle/step: %g\n",ctps);
       fprintf(screen,"Particle fraction communicated: %g\n",pfc);
@@ -156,7 +156,7 @@ void Finish::end()
       fprintf(logfile,"SurfColl occur = " BIGINT_FORMAT "\n",nscollide_total);
       fprintf(logfile,"Collide attmpt = " BIGINT_FORMAT "\n",nattempt_total);
       fprintf(logfile,"Collide occurs = " BIGINT_FORMAT "\n",ncollide_total);
-
+      fprintf(logfile,"\n");
       fprintf(logfile,"Particle-moves/step: %g\n",pms);
       fprintf(logfile,"Cell-touches/particle/step: %g\n",ctps);
       fprintf(logfile,"Particle fraction communicated: %g\n",pfc);

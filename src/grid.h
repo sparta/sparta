@@ -46,6 +46,9 @@ class Grid : protected Pointers {
   int *mycells;               // indices of grid cells I own
   int nlocal;                 // # of grid cells I own
   
+  int **csurfs;      // indices of lines/tris in each cell
+                     // ncell by cells->nsurf in size (ragged array)
+
   Grid(class DSMC *);
   ~Grid();
   void init();
@@ -60,9 +63,6 @@ class Grid : protected Pointers {
 
  private:
   int maxcell;
-
-  int **csurfs;      // indices of lines/tris in each cell
-                     // ncell by cells->nsurf in size (ragged array)
 
   void procs2grid(int &, int &, int &);
 

@@ -56,6 +56,13 @@ Surf::~Surf()
   memory->sfree(sc);
 }
 
+/* ---------------------------------------------------------------------- */
+
+void Surf::init()
+{
+  for (int i = 0; i < nsc; i++) sc[i]->init();
+}
+
 /* ----------------------------------------------------------------------
    if idnew is already in ids list, return index
    else add it to ids list and return new index

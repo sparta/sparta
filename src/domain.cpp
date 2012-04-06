@@ -165,8 +165,7 @@ void Domain::boundary_modify(int narg, char **arg)
    icell = current global grid cell particle is in
    xnew = final position of particle at end of move
    return boundary type of global boundary
-   also update icell, xnew, particle velocity due to collision
-   NOTE: tally stats?
+   if needed, update icell and particle x,xnew,v due to collision
    NOTE: code below depends on grid structure = Nx by Ny by Nz cells
 ------------------------------------------------------------------------- */
 
@@ -180,7 +179,8 @@ int Domain::collide(Particle::OnePart *p, int face, int &icell, double *xnew)
     return OUTFLOW;
 
   // periodic boundary
-  // adjust x and xnew by periodic box length
+  // set x to be on periodic box face
+  // adjust xnew by periodic box length
   // assign new icell on other side of box
 
   case PERIODIC:
@@ -188,32 +188,32 @@ int Domain::collide(Particle::OnePart *p, int face, int &icell, double *xnew)
       double *x = p->x;
       switch (face) {
       case XLO:
-	x[0] += xprd;
+	x[0] = boxhi[0];
 	xnew[0] += xprd;
 	icell += grid->nx - 1;
 	break;
       case XHI:
-	x[0] -= xprd;
+	x[0] = boxlo[0];
 	xnew[0] -= xprd;
 	icell -= grid->nx - 1;
 	break;
       case YLO:
-	x[1] += yprd;
+	x[1] = boxhi[1];
 	xnew[1] += yprd;
 	icell += (grid->ny-1) * grid->nx;
 	break;
       case YHI:
-	x[1] -= yprd;
+	x[1] =  boxhi[1];
 	xnew[1] -= yprd;
 	icell -= (grid->ny-1) * grid->nx;
 	break;
       case ZLO:
-	x[2] += zprd;
+	x[2] = boxhi[2];
 	xnew[2] += zprd;
 	icell += (grid->nz-1) * grid->ny * grid->nx;
 	break;
       case ZHI:
-	x[2] -= zprd;
+	x[2] = boxlo[2];
 	xnew[2] -= zprd;
 	icell -= (grid->nz-1) * grid->ny * grid->nx;
 	break;

@@ -12,9 +12,11 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "math.h"
 #include "stdlib.h"
 #include "string.h"
 #include "update.h"
+#include "math_const.h"
 #include "particle.h"
 #include "modify.h"
 #include "domain.h"
@@ -22,19 +24,20 @@
 #include "collide.h"
 #include "grid.h"
 #include "surf.h"
+#include "surf_collide.h"
 #include "output.h"
+#include "geometry.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "timer.h"
 #include "memory.h"
 #include "error.h"
-#include "math.h"
-#include "math_const.h"
 
 using namespace DSMC_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};       // same as Domain
+enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Geometry
 
 /* ---------------------------------------------------------------------- */
 
@@ -84,9 +87,9 @@ void Update::init()
     //else move = &Update::move3d;
     move = &Update::move3d;
   } else if (domain->dimension == 2) {
-    //if (surf->npoint) move = &Update::move2d_surface;
-    //else move = &Update::move2d;
-    move = &Update::move2d;
+    if (surf->npoint) move = &Update::move2d_surface;
+    else move = &Update::move2d;
+    //move = &Update::move2d;
   }
 
   if (random == NULL) {
@@ -243,7 +246,6 @@ void Update::move3d()
 
   // loop over all my particles
 
-  int dimension = domain->dimension;
   Particle::OnePart *particles = particle->particles;
   Grid::OneCell *cells = grid->cells;
   double dt = update->dt;
@@ -253,7 +255,6 @@ void Update::move3d()
 
     x = particles[i].x;
     v = particles[i].v;
-    int isp = particles[i].ispecies;
 
     if (i < ncurrent) {
       xnew[0] = x[0] + dt*v[0];
@@ -271,7 +272,7 @@ void Update::move3d()
     hi = cells[icell].hi;
     neigh = cells[icell].neigh;
     inface = INTERIOR;
-    outflag = 0;
+    outflag = -1;
     ntouch_one++;
 
     // advect particle from cell to cell until single-step move is done
@@ -409,6 +410,275 @@ void Update::move3d()
 
 void Update::move2d_surface()
 {
+  int i,m,icell,inface,outface,outflag,isurf;
+  double xnew[3],xhold[3],xc[3],minxc[3];
+  double *x,*v,*lo,*hi;
+  int *neigh;
+  double dtfrac,frac,newfrac;
+  Surf::Line *line;
+  double param,minparam;
+  int side,minside,minsurf;
+  int nsurf,cflag;
+  bool flag;
+  double dtremain;
+  int exclude;
+
+  // needed for MathExtra calls
+
+  xnew[2] = 0.0;
+
+  // extend migration list if necessary
+
+  int nlocal = particle->nlocal;
+  int maxlocal = particle->maxlocal;
+
+  if (nlocal > maxmigrate) {
+    maxmigrate = maxlocal;
+    memory->destroy(mlist);
+    memory->create(mlist,maxmigrate,"particle:mlist");
+  }
+
+  // counters
+
+  ntouch_one = ncomm_one = 0;
+  nboundary_one = nexit_one = 0;
+  nscheck_one = nscollide_one = 0;
+  nmigrate = 0;
+
+  // loop over all my particles
+
+  Particle::OnePart *particles = particle->particles;
+  Grid::OneCell *cells = grid->cells;
+  int **csurfs = grid->csurfs;
+  Surf::Line *lines = surf->lines;
+  Surf::Point *pts = surf->pts;
+
+  double dt = update->dt;
+  int me = comm->me;
+
+  for (i = 0; i < nlocal; i++) {
+
+    x = particles[i].x;
+    v = particles[i].v;
+
+    if (i < ncurrent) {
+      xnew[0] = x[0] + dt*v[0];
+      xnew[1] = x[1] + dt*v[1];
+    } else {
+      dtfrac = dt*random->uniform();
+      xnew[0] = x[0] + dtfrac*v[0];
+      xnew[1] = x[1] + dtfrac*v[1];
+    }
+
+    dtremain = dt;
+    icell = particles[i].icell;
+    nsurf = cells[icell].nsurf;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    neigh = cells[icell].neigh;
+    inface = INTERIOR;
+    outflag = -1;
+    exclude = -1;
+    ntouch_one++;
+
+    // advect particle from cell to cell until single-step move is done
+
+    while (1) {
+
+      /*
+      if (i == 95) printf("PART 95: %d %d: %g %g: %g %g\n",
+			  update->ntimestep,nsurf,
+			  x[0],x[1],xnew[0],xnew[1]);
+      */
+
+      // check if particle crosses any cell face
+      // frac = fraction of move completed before hitting cell face
+      // this section should be as efficient as possible,
+      // since most particles won't do anything else
+
+      outface = INTERIOR;
+      frac = 1.0;
+      
+      if (xnew[0] < lo[0]) {
+	frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
+	outface = XLO;
+      } else if (xnew[0] >= hi[0]) {
+	frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
+	outface = XHI;
+      }
+
+      if (xnew[1] < lo[1]) {
+	newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
+	if (newfrac < frac) {
+	  frac = newfrac;
+	  outface = YLO;
+	}
+      } else if (xnew[1] >= hi[1]) {
+	newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+	if (newfrac < frac) {
+	  frac = newfrac;
+	  outface = YHI;
+	}
+      }
+      
+      // particle crosses cell face
+
+      if (outface != INTERIOR) {
+	xhold[0] = xnew[0];
+	xhold[1] = xnew[1];
+
+	xnew[0] = x[0] + frac*(xnew[0]-x[0]);
+	xnew[1] = x[1] + frac*(xnew[1]-x[1]);
+      
+	if (outface == XLO) xnew[0] = lo[0];
+	else if (outface == XHI) xnew[0] = hi[0]; 
+	else if (outface == YLO) xnew[1] = lo[1];
+	else if (outface == YHI) xnew[1] = hi[1]; 
+      }
+
+      // check for collisions with lines in cell
+      // find 1st surface hit via minparam
+      // if collision occurs, perform it with surface model
+      // reset x,v,dtremain,xnew and continue particle trajectory
+
+      if (nsurf) {
+	cflag = 0;
+	minparam = 2.0;
+	for (m = 0; m < nsurf; m++) {
+	  isurf = csurfs[icell][m];
+	  if (isurf == exclude) continue;
+	  line = &lines[isurf];
+	  flag = Geometry::
+	    line_line_intersect(x,xnew,
+				pts[line->p1].x,pts[line->p2].x,line->norm,
+				xc,param,side);
+
+	  /*
+	  if (flag && i == 95)
+	    printf("CHECK: %d %d %d %d: P1 %g %g: P2 %g %g: L1 %g %g: "
+		   "L2 %g %g: LN %g %g: XC %g %g: Param %g: Side %d: DTR %g\n",
+		   i,icell,nsurf,isurf,x[0],x[1],xnew[0],xnew[1],
+		   pts[line->p1].x[0],pts[line->p1].x[1],
+		   pts[line->p2].x[0],pts[line->p2].x[1],
+		   line->norm[0],line->norm[1],xc[0],xc[1],param,side,
+		   dtremain);
+	  */
+
+	  if (flag && side != ONSURF2OUT && param <= minparam) {
+	    if (param == minparam && side == INSIDE) continue;
+	    cflag = 1;
+	    minparam = param;
+	    minside = side;
+	    minsurf = isurf;
+	    minxc[0] = xc[0];
+	    minxc[1] = xc[1];
+	  }
+	}
+	nscheck_one += nsurf;
+
+	//printf("NSURF: %d %d %d %d\n",i,icell,nsurf,cflag);
+	//if (cflag) error->one(FLERR,"STOP");
+
+	if (cflag) {
+	  if (minside == INSIDE) 
+	    error->one(FLERR,"Particle hit inside of surface element");
+	  x[0] = minxc[0];
+	  x[1] = minxc[1];
+	  line = &lines[minsurf];
+	  //surf->sc[line->id]->collide(&particles[i],line->norm);
+	  surf->sc[0]->collide(&particles[i],line->norm);
+	  dtremain *= 1.0 - minparam*frac;
+	  xnew[0] = x[0] + dtremain*v[0];
+	  xnew[1] = x[1] + dtremain*v[1];
+	  //if (i == 95) printf("BEF CONTINUE %g %g: %g %g: %g %g %g\n",
+	  //		      x[0],x[1],xnew[0],xnew[1],
+	  //		      minparam,frac,dtremain);
+	  exclude = minsurf;
+	  nscollide_one++;
+	  continue;
+	}
+      }
+
+      // no surface collision & no cell crossing, so done
+
+      if (outface == INTERIOR) break;
+
+      // cell crossing: reset dtremain, restore xnew
+
+      exclude = -1;
+      dtremain *= 1.0-frac;
+      xnew[0] = xhold[0];
+      xnew[1] = xhold[1];
+
+      // set particle position exactly on edge of cell
+      
+      x[0] += frac * (xnew[0]-x[0]);
+      x[1] += frac * (xnew[1]-x[1]);
+      
+      if (outface == XLO) x[0] = lo[0];
+      else if (outface == XHI) x[0] = hi[0]; 
+      else if (outface == YLO) x[1] = lo[1];
+      else if (outface == YHI) x[1] = hi[1]; 
+      
+      // if cell has neighbor cell, move into that cell
+      // else enforce global boundary conditions
+
+      if (neigh[outface] >= 0) {
+	icell = neigh[outface];
+	nsurf = cells[icell].nsurf;
+	lo = cells[icell].lo;
+	hi = cells[icell].hi;
+	neigh = cells[icell].neigh;
+	inface = faceflip[outface];
+	ntouch_one++;
+ 
+      } else {
+        outflag = domain->collide(&particles[i],outface,icell,xnew);
+	if (outflag == OUTFLOW) {
+	  nexit_one++;
+	  break;
+	} else if (outflag == PERIODIC) {
+	  lo = cells[icell].lo;
+	  hi = cells[icell].hi;
+	  neigh = cells[icell].neigh;
+	  inface = faceflip[outface];
+	  ntouch_one++;
+	} else {
+	  inface = outface;
+	  nboundary_one++;
+	}
+      }
+    }
+
+    // update final particle position
+    // if OUTFLOW particle, set icell to -1 and add to migrate list,
+    //   which will delete it
+    // else reset icell and add to migrate list if I don't own new cell
+
+    x[0] = xnew[0];
+    x[1] = xnew[1];
+
+    if (outflag == OUTFLOW) {
+      particles[i].icell = -1;
+      mlist[nmigrate++] = i;
+    } else {
+      particles[i].icell = icell;
+      if (cells[icell].proc != me) {
+	mlist[nmigrate++] = i;
+	ncomm_one++;
+      }
+    }
+  }
+
+  // accumulate running totals
+
+  nmove_running += nlocal;
+  ntouch_running += ntouch_one;
+  ncomm_running += ncomm_one;
+  nboundary_running += nboundary_one;
+  nexit_running += nexit_one;
+  nscheck_running += nscheck_one;
+  nscollide_running += nscollide_one;
 }
 
 /* ----------------------------------------------------------------------
@@ -444,7 +714,6 @@ void Update::move2d()
 
   // loop over all my particles
 
-  int dimension = domain->dimension;
   Particle::OnePart *particles = particle->particles;
   Grid::OneCell *cells = grid->cells;
   double dt = update->dt;
@@ -454,7 +723,6 @@ void Update::move2d()
 
     x = particles[i].x;
     v = particles[i].v;
-    int isp = particles[i].ispecies;
 
     if (i < ncurrent) {
       xnew[0] = x[0] + dt*v[0];
@@ -470,7 +738,7 @@ void Update::move2d()
     hi = cells[icell].hi;
     neigh = cells[icell].neigh;
     inface = INTERIOR;
-    outflag = 0;
+    outflag = -1;
     ntouch_one++;
 
     // advect particle from cell to cell until single-step move is done
