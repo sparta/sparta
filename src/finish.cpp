@@ -79,64 +79,93 @@ void Finish::end()
 			 time_loop,nprocs,update->nsteps,particle->nglobal);
   }
 
-  // dummy stats for now
+  // cummulative stats over entire run
 
-  bigint nlocal = particle->nlocal;
-  bigint nptotal,nmtotal,ncctotal,ncmtotal;
-  bigint nclatotal = 0;
-  bigint ncltotal = 0;
+  bigint nmove_total,ntouch_total,ncomm_total;
+  bigint nboundary_total,nexit_total;
+  bigint nscheck_total,nscollide_total;
+  bigint nattempt_total = 0;
+  bigint ncollide_total = 0;
 
-  MPI_Allreduce(&nlocal,&nptotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&update->nmove,&nmtotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&update->ncellcross,&ncctotal,1,MPI_DSMC_BIGINT,
-		MPI_SUM,world);
-  MPI_Allreduce(&comm->ncomm,&ncmtotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&update->nmove_running,&nmove_total,1,
+		MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&update->ntouch_running,&ntouch_total,1,
+		MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&update->ncomm_running,&ncomm_total,1,
+		MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&update->nboundary_running,&nboundary_total,1,
+		MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&update->nexit_running,&nexit_total,1,
+		MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&update->nscheck_running,&nscheck_total,1,
+		MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&update->nscollide_running,&nscollide_total,1,
+		MPI_DSMC_BIGINT,MPI_SUM,world);
   if (collide) {
-    MPI_Allreduce(&collide->nattempt_running,&nclatotal,1,MPI_DSMC_BIGINT,
-		  MPI_SUM,world);
-    MPI_Allreduce(&collide->ncollide_running,&ncltotal,1,MPI_DSMC_BIGINT,
-		  MPI_SUM,world);
+    MPI_Allreduce(&collide->nattempt_running,&nattempt_total,1,
+		  MPI_DSMC_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&collide->ncollide_running,&ncollide_total,1,
+		  MPI_DSMC_BIGINT,MPI_SUM,world);
+  }
+
+  double pms,ctps,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
+  pms = ctps = pfc = pfcwb = pfeb = schps = sclps = caps = cps = 0.0;
+  if (update->nsteps) pms = 1.0*nmove_total/update->nsteps;
+  if (nmove_total) {
+    ctps = 1.0*ntouch_total/nmove_total;
+    pfc = 1.0*ncomm_total/nmove_total;
+    pfcwb = 1.0*nboundary_total/nmove_total;
+    pfeb = 1.0*nexit_total/nmove_total;
+    schps = 1.0*nscheck_total/nmove_total;
+    sclps = 1.0*nscollide_total/nmove_total;
+    caps = 1.0*nattempt_total/nmove_total;
+    cps = 1.0*ncollide_total/nmove_total;
   }
 
   if (me == 0) {
-    double ctps,pfm,cps,cpspp,cpsa;
-    if (particle->nglobal == 0 || update->nsteps == 0) {
-      ctps = pfm = cps = cpspp = cpsa = 0.0;
-    } else {
-      ctps = 1.0*ncctotal/particle->nglobal/update->nsteps;
-      pfm = 1.0*ncmtotal/particle->nglobal/update->nsteps;
-      cps = 1.0*ncltotal/particle->nglobal/update->nsteps;
-      cpspp = time_loop/particle->nglobal/update->nsteps * comm->nprocs;
-      cpsa = time_loop/particle->nglobal/update->nsteps;
-    }
-
     if (screen) {
       fprintf(screen,"\n");
-      fprintf(screen,"Particle count = " BIGINT_FORMAT "\n",nptotal);
-      fprintf(screen,"Particle moves = " BIGINT_FORMAT "\n",nmtotal);
-      fprintf(screen,"Cells touched  = " BIGINT_FORMAT "\n",ncctotal);
-      fprintf(screen,"Particle comms = " BIGINT_FORMAT "\n",ncmtotal);
-      fprintf(screen,"Coll attempt   = " BIGINT_FORMAT "\n",nclatotal);
-      fprintf(screen,"Coll performed = " BIGINT_FORMAT "\n",ncltotal);
+      fprintf(screen,"Particle moves = " BIGINT_FORMAT "\n",nmove_total);
+      fprintf(screen,"Cells touched  = " BIGINT_FORMAT "\n",ntouch_total);
+      fprintf(screen,"Particle comms = " BIGINT_FORMAT "\n",ncomm_total);
+      fprintf(screen,"Bound collides = " BIGINT_FORMAT "\n",nboundary_total);
+      fprintf(screen,"Bound exits    = " BIGINT_FORMAT "\n",nexit_total);
+      fprintf(screen,"SurfColl check = " BIGINT_FORMAT "\n",nscheck_total);
+      fprintf(screen,"SurfColl occur = " BIGINT_FORMAT "\n",nscollide_total);
+      fprintf(screen,"Collide attmpt = " BIGINT_FORMAT "\n",nattempt_total);
+      fprintf(screen,"Collide occurs = " BIGINT_FORMAT "\n",ncollide_total);
+
+      fprintf(screen,"Particle-moves/step: %g\n",pms);
       fprintf(screen,"Cell-touches/particle/step: %g\n",ctps);
-      fprintf(screen,"Particle fraction migrating: %g\n",pfm);
+      fprintf(screen,"Particle fraction communicated: %g\n",pfc);
+      fprintf(screen,"Particle fraction colliding with boundary: %g\n",pfcwb);
+      fprintf(screen,"Particle fraction exiting boundary: %g\n",pfeb);
+      fprintf(screen,"Surface-checks/particle/step: %g\n",schps);
+      fprintf(screen,"Surface-collisions/particle/step: %g\n",sclps);
+      fprintf(screen,"Collision-attempts/particle/step: %g\n",caps);
       fprintf(screen,"Collisions/particle/step: %g\n",cps);
-      fprintf(screen,"CPU/particle/step per proc: %g\n",cpspp);
-      fprintf(screen,"CPU/particle/step in aggregate: %g\n",cpsa);
     }
     if (logfile) {
       fprintf(logfile,"\n");
-      fprintf(logfile,"Particle count = " BIGINT_FORMAT "\n",nptotal);
-      fprintf(logfile,"Particle moves = " BIGINT_FORMAT "\n",nmtotal);
-      fprintf(logfile,"Cells touched  = " BIGINT_FORMAT "\n",ncctotal);
-      fprintf(logfile,"Particle comms = " BIGINT_FORMAT "\n",ncmtotal);
-      fprintf(logfile,"Coll attempt   = " BIGINT_FORMAT "\n",nclatotal);
-      fprintf(logfile,"Coll performed = " BIGINT_FORMAT "\n",ncltotal);
+      fprintf(logfile,"Particle moves = " BIGINT_FORMAT "\n",nmove_total);
+      fprintf(logfile,"Cells touched  = " BIGINT_FORMAT "\n",ntouch_total);
+      fprintf(logfile,"Particle comms = " BIGINT_FORMAT "\n",ncomm_total);
+      fprintf(logfile,"Bound collides = " BIGINT_FORMAT "\n",nboundary_total);
+      fprintf(logfile,"Bound exits    = " BIGINT_FORMAT "\n",nexit_total);
+      fprintf(logfile,"SurfColl check = " BIGINT_FORMAT "\n",nscheck_total);
+      fprintf(logfile,"SurfColl occur = " BIGINT_FORMAT "\n",nscollide_total);
+      fprintf(logfile,"Collide attmpt = " BIGINT_FORMAT "\n",nattempt_total);
+      fprintf(logfile,"Collide occurs = " BIGINT_FORMAT "\n",ncollide_total);
+
+      fprintf(logfile,"Particle-moves/step: %g\n",pms);
       fprintf(logfile,"Cell-touches/particle/step: %g\n",ctps);
-      fprintf(logfile,"Particle fraction migrating: %g\n",pfm);
+      fprintf(logfile,"Particle fraction communicated: %g\n",pfc);
+      fprintf(logfile,"Particle fraction colliding with boundary: %g\n",pfcwb);
+      fprintf(logfile,"Particle fraction exiting boundary: %g\n",pfeb);
+      fprintf(logfile,"Surface-checks/particle/step: %g\n",schps);
+      fprintf(logfile,"Surface-collisions/particle/step: %g\n",sclps);
+      fprintf(logfile,"Collision-attempts/particle/step: %g\n",caps);
       fprintf(logfile,"Collisions/particle/step: %g\n",cps);
-      fprintf(logfile,"CPU/particle/step per proc: %g\n",cpspp);
-      fprintf(logfile,"CPU/particle/step in aggregate: %g\n",cpsa);
     }
   }
   

@@ -36,8 +36,11 @@ using namespace DSMC_NS;
 
 // customize a new keyword by adding to this list:
 
-// step, elapsed, dt, cpu, tpcpu, spcpu
-// nmol, ncoll, nattempt, vol, lx, ly, lz, xlo, xhi, ylo, yhi, zlo, zhi
+// step,elapsed,dt,cpu,tpcpu,spcpu
+// nmol,ntouch,ncomm,nbound,nexit,nscoll,nscheck,ncoll,nattempt,
+// nmolave,ntouchave,ncommave,nboundave,nexitave,nscollave,nscheckave,
+// ncollave,nattemptave,
+// vol,lx,ly,lz,xlo,xhi,ylo,yhi,zlo,zhi
 
 enum{INT,FLOAT,BIGINT};
 enum{SCALAR,VECTOR,ARRAY};
@@ -412,10 +415,41 @@ void Stats::set_fields(int narg, char **arg)
 
     } else if (strcmp(arg[i],"nmol") == 0) {
       addfield("Nmol",&Stats::compute_nmol,BIGINT);
+    } else if (strcmp(arg[i],"ntouch") == 0) {
+      addfield("Ntouch",&Stats::compute_ntouch,BIGINT);
+    } else if (strcmp(arg[i],"ncomm") == 0) {
+      addfield("Ncomm",&Stats::compute_ncomm,BIGINT);
+    } else if (strcmp(arg[i],"nbound") == 0) {
+      addfield("Nbound",&Stats::compute_nbound,BIGINT);
+    } else if (strcmp(arg[i],"nexit") == 0) {
+      addfield("Nexit",&Stats::compute_nexit,BIGINT);
+    } else if (strcmp(arg[i],"nscoll") == 0) {
+      addfield("Nscoll",&Stats::compute_nscoll,BIGINT);
+    } else if (strcmp(arg[i],"nscheck") == 0) {
+      addfield("Nscheck",&Stats::compute_nscheck,BIGINT);
     } else if (strcmp(arg[i],"ncoll") == 0) {
       addfield("Ncoll",&Stats::compute_ncoll,BIGINT);
     } else if (strcmp(arg[i],"nattempt") == 0) {
-      addfield("Natt",&Stats::compute_nattempt,BIGINT);
+      addfield("Natt",&Stats::compute_natt,BIGINT);
+
+    } else if (strcmp(arg[i],"nmolave") == 0) {
+      addfield("Nmolave",&Stats::compute_nmolave,FLOAT);
+    } else if (strcmp(arg[i],"ntouchave") == 0) {
+      addfield("Ntouchave",&Stats::compute_ntouchave,FLOAT);
+    } else if (strcmp(arg[i],"ncommave") == 0) {
+      addfield("Ncommave",&Stats::compute_ncommave,FLOAT);
+    } else if (strcmp(arg[i],"nboundave") == 0) {
+      addfield("Nboundave",&Stats::compute_nboundave,FLOAT);
+    } else if (strcmp(arg[i],"nexitave") == 0) {
+      addfield("Nexitave",&Stats::compute_nexitave,FLOAT);
+    } else if (strcmp(arg[i],"nscollave") == 0) {
+      addfield("Nscollave",&Stats::compute_nscollave,FLOAT);
+    } else if (strcmp(arg[i],"nscheckave") == 0) {
+      addfield("Nschckave",&Stats::compute_nscheckave,FLOAT);
+    } else if (strcmp(arg[i],"ncollave") == 0) {
+      addfield("Ncollave",&Stats::compute_ncollave,FLOAT);
+    } else if (strcmp(arg[i],"nattemptave") == 0) {
+      addfield("Nattave",&Stats::compute_nattave,FLOAT);
 
     } else if (strcmp(arg[i],"vol") == 0) {
       addfield("Volume",&Stats::compute_vol,FLOAT);
@@ -643,14 +677,43 @@ int Stats::evaluate_keyword(char *word, double *answer)
   } else if (strcmp(word,"nmol") == 0) {
     compute_nmol();
     dvalue = bivalue;
+  } else if (strcmp(word,"ntouch") == 0) {
+    compute_ntouch();
+    dvalue = bivalue;
+  } else if (strcmp(word,"ncomm") == 0) {
+    compute_ncomm();
+    dvalue = bivalue;
+  } else if (strcmp(word,"nbound") == 0) {
+    compute_nbound();
+    dvalue = bivalue;
+  } else if (strcmp(word,"nexit") == 0) {
+    compute_nexit();
+    dvalue = bivalue;
+  } else if (strcmp(word,"nscoll") == 0) {
+    compute_nscoll();
+    dvalue = bivalue;
+  } else if (strcmp(word,"nscheck") == 0) {
+    compute_nscheck();
+    dvalue = bivalue;
   } else if (strcmp(word,"ncoll") == 0) {
     compute_ncoll();
     dvalue = bivalue;
   } else if (strcmp(word,"nattempt") == 0) {
-    compute_nattempt();
+    compute_natt();
     dvalue = bivalue;
+  }
 
-  } else if (strcmp(word,"vol") == 0) compute_vol();
+  else if (strcmp(word,"nmolave") == 0) compute_nmolave();
+  else if (strcmp(word,"ntouchave") == 0) compute_ntouchave();
+  else if (strcmp(word,"ncommave") == 0) compute_ncommave();
+  else if (strcmp(word,"nboundave") == 0) compute_nboundave();
+  else if (strcmp(word,"nexitave") == 0) compute_nexitave();
+  else if (strcmp(word,"nscollave") == 0) compute_nscollave();
+  else if (strcmp(word,"nscheckave") == 0) compute_nscheckave();
+  else if (strcmp(word,"ncollave") == 0) compute_ncollave();
+  else if (strcmp(word,"nattemptave") == 0) compute_nattave();
+
+  else if (strcmp(word,"vol") == 0) compute_vol();
   else if (strcmp(word,"lx") == 0) compute_lx();
   else if (strcmp(word,"ly") == 0) compute_ly();
   else if (strcmp(word,"lz") == 0) compute_lz();
@@ -797,18 +860,168 @@ void Stats::compute_nmol()
 
 /* ---------------------------------------------------------------------- */
 
-void Stats::compute_ncoll()
+void Stats::compute_ntouch()
 {
-  bigint n = collide->ncollide_one;
+  bigint n = update->ntouch_one;
   MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void Stats::compute_nattempt()
+void Stats::compute_ncomm()
 {
-  bigint n = collide->nattempt_one;
+  bigint n = update->ncomm_one;
   MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nbound()
+{
+  bigint n = update->nboundary_one;
+  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nexit()
+{
+  bigint n = update->nexit_one;
+  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nscoll()
+{
+  bigint n = update->nscollide_one;
+  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nscheck()
+{
+  bigint n = update->nscheck_one;
+  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_ncoll()
+{
+  if (!collide) bivalue = 0;
+  else {
+    bigint n = collide->ncollide_one;
+    MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_natt()
+{
+  if (!collide) bivalue = 0;
+  else {
+    bigint n = collide->nattempt_one;
+    MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nmolave()
+{
+  MPI_Allreduce(&update->nmove_running,&bivalue,1,MPI_DSMC_BIGINT,
+		MPI_SUM,world);
+  if (update->ntimestep == update->firststep) dvalue = 0.0;
+  else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_ntouchave()
+{
+  MPI_Allreduce(&update->ntouch_running,&bivalue,1,MPI_DSMC_BIGINT,
+		MPI_SUM,world);
+  if (update->ntimestep == update->firststep) dvalue = 0.0;
+  else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_ncommave()
+{
+  MPI_Allreduce(&update->ncomm_running,&bivalue,1,MPI_DSMC_BIGINT,
+		MPI_SUM,world);
+  if (update->ntimestep == update->firststep) dvalue = 0.0;
+  else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nboundave()
+{
+  MPI_Allreduce(&update->nboundary_running,&bivalue,1,MPI_DSMC_BIGINT,
+		MPI_SUM,world);
+  if (update->ntimestep == update->firststep) dvalue = 0.0;
+  else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nexitave()
+{
+  MPI_Allreduce(&update->nexit_running,&bivalue,1,MPI_DSMC_BIGINT,
+		MPI_SUM,world);
+  if (update->ntimestep == update->firststep) dvalue = 0.0;
+  else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nscollave()
+{
+  MPI_Allreduce(&update->nscollide_running,&bivalue,1,MPI_DSMC_BIGINT,
+		MPI_SUM,world);
+  if (update->ntimestep == update->firststep) dvalue = 0.0;
+  else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nscheckave()
+{
+  MPI_Allreduce(&update->nscheck_running,&bivalue,1,MPI_DSMC_BIGINT,
+		MPI_SUM,world);
+  if (update->ntimestep == update->firststep) dvalue = 0.0;
+  else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_ncollave()
+{
+  if (!collide) dvalue = 0.0;
+  else {
+    MPI_Allreduce(&collide->ncollide_running,&bivalue,1,MPI_DSMC_BIGINT,
+		  MPI_SUM,world);
+    if (update->ntimestep == update->firststep) dvalue = 0.0;
+    else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nattave()
+{
+  if (!collide) dvalue = 0.0;
+  else {
+    MPI_Allreduce(&collide->nattempt_running,&bivalue,1,MPI_DSMC_BIGINT,
+		  MPI_SUM,world);
+    if (update->ntimestep == update->firststep) dvalue = 0.0;
+    else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+  }
 }
 
 /* ---------------------------------------------------------------------- */

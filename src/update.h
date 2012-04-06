@@ -36,11 +36,24 @@ class Update : protected Pointers {
   double vstream[3];     // streaming velocity of background gas
   double temp_thermal;   // thermal temperature of background gas
 
-  bigint nmove;             // dummy statistic for now
-  bigint ncellcross;        // dummy statistic for now
+  int nmigrate;          // # of particles to migrate to new procs
+  int *mlist;            // indices of particles to migrate
 
-  int nmigrate;             // # of particles to migrate to new procs
-  int *mlist;               // indices of particles to migrate
+                         // current step counters
+  int ntouch_one;        // particle-cell touches
+  int ncomm_one;         // particles migrating to new procs
+  int nboundary_one;     // particles colliding with global boundary
+  int nexit_one;         // particles exiting outflow boundary
+  int nscheck_one;       // surface elements checked for collisions
+  int nscollide_one;     // particle/surface collisions
+
+  bigint nmove_running;      // running count of total particle moves
+  bigint ntouch_running;     // running count of current step counters
+  bigint ncomm_running;
+  bigint nboundary_running;
+  bigint nexit_running;
+  bigint nscheck_running;
+  bigint nscollide_running;
 
   class RanMars *ranmaster;   // master random number generator
 
@@ -62,7 +75,9 @@ class Update : protected Pointers {
   typedef void (Update::*FnPtr)();
   FnPtr move;                // ptr to move method
 
-  void move3d();             // variants of move method
+  void move3d_surface();     // variants of move method
+  void move3d();
+  void move2d_surface();
   void move2d();
 };
 

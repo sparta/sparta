@@ -21,6 +21,7 @@
 #include "comm.h"
 #include "collide.h"
 #include "grid.h"
+#include "surf.h"
 #include "output.h"
 #include "random_mars.h"
 #include "random_park.h"
@@ -78,8 +79,15 @@ Update::~Update()
 
 void Update::init()
 {
-  if (domain->dimension == 3) move = &Update::move3d;
-  else if (domain->dimension == 2) move = &Update::move2d;
+  if (domain->dimension == 3) {
+    //if (surf->npoint) move = &Update::move3d_surface;
+    //else move = &Update::move3d;
+    move = &Update::move3d;
+  } else if (domain->dimension == 2) {
+    //if (surf->npoint) move = &Update::move2d_surface;
+    //else move = &Update::move2d;
+    move = &Update::move2d;
+  }
 
   if (random == NULL) {
     random = new RanPark(ranmaster->uniform());
@@ -119,8 +127,18 @@ void Update::set_units(const char *style)
 
 void Update::setup()
 {
-  nmove = 0;
-  ncellcross = 0;
+  // initialize counters in case stats outputs them
+  // initialize running stats
+
+  ntouch_one = ncomm_one = 0;
+  nboundary_one = nexit_one = 0;
+  nscheck_one = nscollide_one = 0;
+
+  nmove_running = ntouch_running = ncomm_running = 0;
+  nboundary_running = nexit_running = 0;
+  nscheck_running = nscollide_running = 0;
+
+  // initial output
 
   output->setup(1);
 }
@@ -183,6 +201,16 @@ void Update::run(int nsteps)
 
 /* ----------------------------------------------------------------------
    advect particles thru grid in 3d manner
+   check for surface collisions
+------------------------------------------------------------------------- */
+
+void Update::move3d_surface()
+{
+}
+
+/* ----------------------------------------------------------------------
+   advect particles thru grid in 3d manner
+   no check for surface collisions
 ------------------------------------------------------------------------- */
 
 void Update::move3d()
@@ -206,14 +234,20 @@ void Update::move3d()
     memory->create(mlist,maxmigrate,"particle:mlist");
   }
 
+  // counters
+
+  ntouch_one = ncomm_one = 0;
+  nboundary_one = nexit_one = 0;
+  nscheck_one = nscollide_one = 0;
+  nmigrate = 0;
+
+  // loop over all my particles
+
   int dimension = domain->dimension;
   Particle::OnePart *particles = particle->particles;
   Grid::OneCell *cells = grid->cells;
   double dt = update->dt;
   int me = comm->me;
-
-  int count = 0;
-  nmigrate = 0;
 
   for (int i = 0; i < nlocal; i++) {
 
@@ -238,7 +272,7 @@ void Update::move3d()
     neigh = cells[icell].neigh;
     inface = INTERIOR;
     outflag = 0;
-    count++;
+    ntouch_one++;
 
     // advect particle from cell to cell until single-step move is done
 
@@ -316,18 +350,23 @@ void Update::move3d()
 	hi = cells[icell].hi;
 	neigh = cells[icell].neigh;
 	inface = faceflip[outface];
-	count++;
+	ntouch_one++;
 
       } else {
         outflag = domain->collide(&particles[i],outface,icell,xnew);
-	if (outflag == OUTFLOW) break;
-	else if (outflag == PERIODIC) {
+	if (outflag == OUTFLOW) {
+	  nexit_one++;
+	  break;
+	} else if (outflag == PERIODIC) {
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
 	  inface = faceflip[outface];
-	  count++;
-	} else inface = outface;
+	  ntouch_one++;
+	} else {
+	  inface = outface;
+	  nboundary_one++;
+	}
       }
     }
 
@@ -345,16 +384,36 @@ void Update::move3d()
       mlist[nmigrate++] = i;
     } else {
       particles[i].icell = icell;
-      if (cells[icell].proc != me) mlist[nmigrate++] = i;
+      if (cells[icell].proc != me) {
+	mlist[nmigrate++] = i;
+	ncomm_one++;
+      }
     }
   }
 
-  nmove += nlocal;
-  ncellcross += count;
+  // accumulate running totals
+
+  nmove_running += nlocal;
+  ntouch_running += ntouch_one;
+  ncomm_running += ncomm_one;
+  nboundary_running += nboundary_one;
+  nexit_running += nexit_one;
+  nscheck_running += nscheck_one;
+  nscollide_running += nscollide_one;
 }
 
 /* ----------------------------------------------------------------------
    advect particles thru grid in 2d manner
+   check for surface collisions
+------------------------------------------------------------------------- */
+
+void Update::move2d_surface()
+{
+}
+
+/* ----------------------------------------------------------------------
+   advect particles thru grid in 2d manner
+   no check for surface collisions
 ------------------------------------------------------------------------- */
 
 void Update::move2d()
@@ -376,14 +435,20 @@ void Update::move2d()
     memory->create(mlist,maxmigrate,"particle:mlist");
   }
 
+  // counters
+
+  ntouch_one = ncomm_one = 0;
+  nboundary_one = nexit_one = 0;
+  nscheck_one = nscollide_one = 0;
+  nmigrate = 0;
+
+  // loop over all my particles
+
   int dimension = domain->dimension;
   Particle::OnePart *particles = particle->particles;
   Grid::OneCell *cells = grid->cells;
   double dt = update->dt;
   int me = comm->me;
-
-  int count = 0;
-  nmigrate = 0;
 
   for (int i = 0; i < nlocal; i++) {
 
@@ -406,7 +471,7 @@ void Update::move2d()
     neigh = cells[icell].neigh;
     inface = INTERIOR;
     outflag = 0;
-    count++;
+    ntouch_one++;
 
     // advect particle from cell to cell until single-step move is done
 
@@ -465,18 +530,23 @@ void Update::move2d()
 	hi = cells[icell].hi;
 	neigh = cells[icell].neigh;
 	inface = faceflip[outface];
-	count++;
+	ntouch_one++;
  
       } else {
         outflag = domain->collide(&particles[i],outface,icell,xnew);
-	if (outflag == OUTFLOW) break;
-	else if (outflag == PERIODIC) {
+	if (outflag == OUTFLOW) {
+	  nexit_one++;
+	  break;
+	} else if (outflag == PERIODIC) {
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
 	  inface = faceflip[outface];
-	  count++;
-	} else inface = outface;
+	  ntouch_one++;
+	} else {
+	  inface = outface;
+	  nboundary_one++;
+	}
       }
     }
 
@@ -493,12 +563,22 @@ void Update::move2d()
       mlist[nmigrate++] = i;
     } else {
       particles[i].icell = icell;
-      if (cells[icell].proc != me) mlist[nmigrate++] = i;
+      if (cells[icell].proc != me) {
+	mlist[nmigrate++] = i;
+	ncomm_one++;
+      }
     }
   }
 
-  nmove += nlocal;
-  ncellcross += count;
+  // accumulate running totals
+
+  nmove_running += nlocal;
+  ntouch_running += ntouch_one;
+  ncomm_running += ncomm_one;
+  nboundary_running += nboundary_one;
+  nexit_running += nexit_one;
+  nscheck_running += nscheck_one;
+  nscollide_running += nscollide_one;
 }
 
 /* ----------------------------------------------------------------------

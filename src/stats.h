@@ -101,8 +101,24 @@ class Stats : protected Pointers {
   void compute_spcpu();
 
   void compute_nmol();
+  void compute_ntouch();
+  void compute_ncomm();
+  void compute_nbound();
+  void compute_nexit();
+  void compute_nscoll();
+  void compute_nscheck();
   void compute_ncoll();
-  void compute_nattempt();
+  void compute_natt();
+
+  void compute_nmolave();
+  void compute_ntouchave();
+  void compute_ncommave();
+  void compute_nboundave();
+  void compute_nexitave();
+  void compute_nscollave();
+  void compute_nscheckave();
+  void compute_ncollave();
+  void compute_nattave();
 
   void compute_vol();
   void compute_lx();

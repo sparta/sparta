@@ -117,6 +117,12 @@ void Collide::collisions()
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
 
+  // counters
+
+  ncollide_one = nattempt_one = 0;
+
+  // loop over cells I own
+
   Grid::OneCell *cells = grid->cells;
   int *mycells = grid->mycells;
   int nglocal = grid->nlocal;
@@ -125,10 +131,6 @@ void Collide::collisions()
   int *next = particle->next;
 
   int *species2group = mixture->species2group;
-
-  // loop over cells I own
-
-  ncollide_one = nattempt_one = 0;
 
   for (int m = 0; m < nglocal; m++) {
     icell = mycells[m];
@@ -180,7 +182,7 @@ void Collide::collisions()
     // if chemistry occurs, move output I,J,K particles to new group lists
     // if chemistry occurs, exit attempt loop if group count goes to 0
     // NOTE: need to reset vremax ?
-    // NOTE: ok to use pre-computed nattempt when Ngroup may have changed?
+    // NOTE: OK to use pre-computed nattempt when Ngroup may have changed?
 
     for (ipair = 0; ipair < npair; ipair++) {
       igroup = gpair[ipair][0];
@@ -254,6 +256,8 @@ void Collide::collisions()
       }
     }
   }
+
+  // accumulate running totals
 
   nattempt_running += nattempt_one;
   ncollide_running += ncollide_one;

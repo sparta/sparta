@@ -15,7 +15,7 @@
 #include "geometry.h"
 #include "math_extra.h"
 
-enum{NONE,OUTSIDE,INSIDE,BOTH};
+enum{OUTSIDE,INSIDE};
 
 namespace Geometry {
 

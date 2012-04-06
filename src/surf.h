@@ -28,14 +28,14 @@ class Surf : protected Pointers {
   };
 
   struct Line {
-    int id;                   // ID of surface it belongs to
+    int id;                // index of surface model it belongs to ???
     int p1,p2;                // indices of points in line segment
                               // rhand rule: z x (p2-p1) = outward normal
     double norm[3];           // outward normal to line segment
   };
 
   struct Tri {
-    int id;                   // ID of surface it belongs to
+    int id;                // index of surface model it belongs to
     int p1,p2,p3;             // indices of points in triangle
                               // rhand rule: (p2-p1) x (p3-p1) = outward normal
     double norm[3];           // outward normal to triangle
