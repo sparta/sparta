@@ -18,7 +18,10 @@
 <UL><LI>arg1,arg2,... = list of statistical attributes 
 
 <PRE>  possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
-                        nmol, ncoll, nattempt,
+                        nmol, ntouch, ncomm, nbound, nexit,
+			nscoll, nscheck, ncoll, nattempt,
+                        nmolave, ntouchave, ncommave, nboundave, nexitave,
+			nscollave, nscheckave, ncollave, nattemptave,
 			vol, lx, ly, lz,
 			xlo, xhi, ylo, yhi, zlo, zhi,
 			c_ID, c_ID[I], c_ID[I][J],
@@ -31,9 +34,15 @@
       cpu = elapsed CPU time in seconds
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second
-      nmol = # of molecules
-      ncoll = # of collisions (this step)
-      nattempt = # of attempted collisions (this step)
+      nmol,nmolave = # of molecules (this step, per-step)
+      ntouch,ntouchave = # of cell touches by molecules (this step, per-step)
+      ncomm,ncommave = # of molecules communicated (this step, per-step)
+      nbound,nboundave = # of boundary collisions (this step, per-step)
+      nexit,nexitave = # of boundary exits (this step, per-step)
+      nscoll,nscollave = # of surface collisions (this step, per-step)
+      nscheck,nscheckave = # of surface checks (this step, per-step)
+      ncoll,ncollave = # of molecule/molecule collisions (this step, per-step)
+      nattempt,nattemptave = # of attempted collisions (this step, per-step)
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
@@ -54,11 +63,12 @@ stats_style step temp cpu spcpu nmol xlo xhi c_myTemp
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Set the content of statistical data printed to the screen and log
-file.
+<P>Determine what statistical data is printed to the screen and log file.
 </P>
 <P>The values printed by the various keywords are instantaneous values,
-calculated on the current timestep.
+calculated on the current timestep.  The exception is the keywords
+suffixed by "ave", which print a running total divided by the number
+of timesteps.
 </P>
 <P>Options invoked by the <A HREF = "stats_modify.html">stats_modify</A> command can
 be used to set the numeric precision of each printed value, as well as
@@ -83,13 +93,45 @@ continually output the time and timestep rate for the last 100 steps.
 </P>
 <HR>
 
-<P>The <I>nmol</I> keyword is the current number of molecules.
+<P>The <I>nmol</I>, <I>ntouch</I>, <I>ncomm</I>, <I>nbound</I>, <I>nexit</I>, <I>nscoll</I>, <I>nscheck</I>,
+<I>ncoll</I>, and <I>nattempt</I> keywords all generate counts for the current
+timestep.
 </P>
-<P>The <I>ncoll</I> keyword is the number of collisions that occured
-on the current timestep.
+<P>The <I>nmolave</I>, <I>ntouchave</I>, <I>ncommave</I>, <I>nboundave</I>, <I>nexitave</I>,
+<I>nscollave</I>, <I>nscheckave</I>, <I>ncollave</I>, and <I>nattemptave</I> keywords all
+generate values that are the cummulative total of the corresponding
+count divided by <I>elapsed</I> = the number of timesteps since the start
+of the run.
 </P>
-<P>The <I>nattempt</I> keyword is the number of attempted collisions that
-occurred on the current timestep.
+<P>The <I>nmol</I> keyword is the number of molecules.
+</P>
+<P>The <I>ntouch</I> keyword is the number of cells touched by the molecules
+during the move portion of the timestep.  E.g. if a molecule moves
+from cell A to adjacent cell B, it touches 2 cells.
+</P>
+<P>The <I>ncomm</I> keyword is the number of molecules communicated
+to other processors.
+</P>
+<P>The <I>nbound</I> keyword is the number of molecules that collided with a
+global boundary.  Crossing a periodic boundary or exiting an outflow
+boundary is not counted.
+</P>
+<P>The <I>nexit</I> keyword is the number of molecules that exited the
+simulation box through an outflow boundary.
+</P>
+<P>The <I>nscoll</I> keyword is the number of molecule/surface collisions that
+occured, where a molecule collided with a geometric surface.
+</P>
+<P>The <I>nscheck</I> keyword is the number of molecule/surface collisions
+that were checked for.  If a cell is overlapped by N surface elements,
+all N must be checked for collisions each time a molecule in that cell
+moves.
+</P>
+<P>The <I>ncoll</I> keyword is the number of molecule/molecule collisions that
+occured.
+</P>
+<P>The <I>nattempt</I> keyword is the number of molecule/molecule collisions
+that were attempted.
 </P>
 <P>The <I>vol</I> keyword is the volume (or area in 2d) of the simulation box.
 </P>
