@@ -262,7 +262,7 @@ int Domain::collide(Particle::OnePart *p, int face, int &icell, double *xnew)
       } else {
 	double dtr = fabs((xnew[dim]-hi[dim])/v[dim]);
 	surf->sc[surf_collide[face]]->collide(p,norm[face]);
-	xnew[dim] = hi[dim] - v[dim]*dtr;
+	xnew[dim] = hi[dim] + v[dim]*dtr;
       }
       
       return SURFACE;

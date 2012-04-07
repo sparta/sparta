@@ -689,10 +689,14 @@ void Update::move2d_surface()
 void Update::move2d()
 {
   int icell,inface,outface,outflag;
-  double xnew[2];
+  double xnew[3];
   double *x,*v,*lo,*hi;
   int *neigh;
   double dtfrac,frac,newfrac;
+
+  // needed for MathExtra calls
+
+  xnew[2] = 0.0;
 
   // extend migration list if necessary
 
