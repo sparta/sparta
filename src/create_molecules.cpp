@@ -102,8 +102,8 @@ void CreateMolecules::command(int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    create Np molecules in parallel
-   every proc fraction of Np for cells it owns
-   created particle attributes depend on number of procs
+   every proc creates fraction of Np for cells it owns
+   attributes of created particle depend on number of procs
 ------------------------------------------------------------------------- */
 
 void CreateMolecules::create_local(bigint np)
@@ -142,9 +142,9 @@ void CreateMolecules::create_local(bigint np)
   MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
 
   bigint nstart,nstop;
-  if (me > 0) nstart = np * vols[me-1]/vols[nprocs-1];
+  if (me > 0) nstart = static_cast<int> (np * (vols[me-1]/vols[nprocs-1]));
   else nstart = 0;
-  nstop = np * vols[me]/vols[nprocs-1];
+  nstop = static_cast<int> (np * (vols[me]/vols[nprocs-1]));
   bigint nme = nstop-nstart;
 
   memory->destroy(vols);
