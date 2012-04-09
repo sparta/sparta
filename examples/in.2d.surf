@@ -1,0 +1,62 @@
+# advect particles on uniform Cartesian grid
+# single-step moves that cross grid cell boundaries are detected
+# particle effectively moves from cell to cell
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    2
+
+boundary	    os rr p
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    10 10 1 stride x y z
+
+species		    ../data/all.species N O
+mixture		    air N O vstream 1000.0 0 0 
+#mixture		    air N O vstream 1000.0 -1000.0 0
+mixture		    air group species
+
+global		    nrho 0.001
+
+#create_molecules    air
+fix		    in inflow air xlo #perspecies no n 111
+
+collide		    vss air ../data/all.vss
+
+timestep 	    0.0001
+
+compute		    ke ke/molecule
+variable	    foo molecule x+y
+
+surf_collide	    1 diffuse 300.0 0.9
+bound_modify	    xhi surf 1
+
+#read_surf	    data.square 1 trans 4.5 4.5 0 scale 2 2 1 &
+#		    rotate 45 0 0 1 invert
+
+#read_surf	    data.square 1 trans 5 5 0 invert
+
+read_surf	    data.jagged 1 trans 5 5 0 scale 0.75 0.75 1 &
+		    rotate 45 0 0 1 invert
+
+#dump		    1 molecule 100 tmp.dump id type x y z vx
+dump                2 image 10 tmp.*.jpg type type adiam 0.1 &
+		    view 0 0 zoom 1.3 size 1024 1024
+dump_modify	    2 pad 4
+
+#fix                 ave ave/grid 10 10 100 standard ave running
+
+#dump                3 grid 100 tmp.grid id f_ave
+#		    f_ave[1] f_ave[2] f_ave[3] f_ave[4] &
+#		    f_ave[5] f_ave[6] f_ave[7] &
+#		    f_ave[8] f_ave[9] f_ave[10] f_ave[11] &
+#		    f_ave[12] f_ave[13] f_ave[14]
+#dump                3 grid 1000 tmp.grid id f_ave[1] f_ave[8]
+
+stats		    10
+
+fix		    check grid/check 1
+compute		    temp temp
+#stats_style	    step cpu nmol nattempt ncoll c_temp f_in[1] f_in[2] ncollave
+stats_style	    step nmol nscheck nscoll
+
+run 		    500
