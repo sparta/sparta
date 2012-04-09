@@ -21,32 +21,30 @@ namespace DSMC_NS {
 
 class Surf : protected Pointers {
  public:
-  int surf_exist;
+    int surf_exist;         // 1 if any surfaces are defined, else 0
 
   struct Point {
     double x[3];
   };
 
   struct Line {
-    int id;                // index of surface model it belongs to ???
-    int p1,p2;                // indices of points in line segment
-                              // rhand rule: z x (p2-p1) = outward normal
-    double norm[3];           // outward normal to line segment
+    int isc;                // index of surface collision model it belongs to
+    int p1,p2;              // indices of points in line segment
+                            // rhand rule: z x (p2-p1) = outward normal
+    double norm[3];         // outward normal to line segment
   };
 
   struct Tri {
-    int id;                // index of surface model it belongs to
-    int p1,p2,p3;             // indices of points in triangle
-                              // rhand rule: (p2-p1) x (p3-p1) = outward normal
-    double norm[3];           // outward normal to triangle
+    int isc;                // index of surface collision model it belongs to
+    int p1,p2,p3;           // indices of points in triangle
+                            // rhand rule: (p2-p1) x (p3-p1) = outward normal
+    double norm[3];         // outward normal to triangle
   };
 
-  Point *pts;
-  Line *lines;
-  Tri *tris;
-  int npoint;
-  int nline;
-  int ntri;
+  Point *pts;               // list of points
+  Line *lines;              // list of lines
+  Tri *tris;                // list of tris
+  int npoint,nline,ntri;
 
   class SurfCollide **sc;      // list of surface collision models
   int nsc;                     // # of surface collision models
@@ -55,17 +53,11 @@ class Surf : protected Pointers {
   Surf(class DSMC *);
   ~Surf();
   void init();
-  int add_id(char *);
   void compute_line_normal(int, int);
   void compute_tri_normal(int, int);
   void add_collide(int, char **);
   int find_collide(const char *);
   bigint memory_usage();
-
- private:
-  int nsurf;                    // # of read-in surfaces, each with ID
-  char **ids;                   // read-in surface IDs
-
 };
 
 }

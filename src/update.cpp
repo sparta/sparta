@@ -91,10 +91,10 @@ Update::~Update()
 void Update::init()
 {
   if (domain->dimension == 3) {
-    if (surf->npoint) move = &Update::move3d_surface;
+    if (surf->surf_exist) move = &Update::move3d_surface;
     else move = &Update::move3d;
   } else if (domain->dimension == 2) {
-    if (surf->npoint) move = &Update::move2d_surface;
+    if (surf->surf_exist) move = &Update::move2d_surface;
     else move = &Update::move2d;
   }
 
@@ -585,8 +585,7 @@ void Update::move2d_surface()
 	  x[0] = minxc[0];
 	  x[1] = minxc[1];
 	  line = &lines[minsurf];
-	  //surf->sc[line->id]->collide(&particles[i],line->norm);
-	  surf->sc[0]->collide(&particles[i],line->norm);
+	  surf->sc[line->isc]->collide(&particles[i],line->norm);
 	  dtremain *= 1.0 - minparam*frac;
 	  xnew[0] = x[0] + dtremain*v[0];
 	  xnew[1] = x[1] + dtremain*v[1];

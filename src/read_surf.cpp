@@ -62,15 +62,16 @@ void ReadSurf::command(int narg, char **arg)
 
   dimension = domain->dimension;
 
-  // set surface ID
+  // surface collision model ID
 
-  id = surf->add_id(arg[0]);
+  isc = surf->find_collide(arg[1]);
+  if (isc < 0) error->all(FLERR,"Read_surf collision model ID does not exist");
 
   // read header info
 
   if (me == 0) {
     if (screen) fprintf(screen,"Reading surf file ...\n");
-    open(arg[1]);
+    open(arg[0]);
   }
 
   header();
@@ -453,7 +454,7 @@ void ReadSurf::read_lines()
       p2 = atoi(strtok(NULL," \t\n\r\f"));
       if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || p1 == p2)
 	error->all(FLERR,"Invalid point index in line");
-      lines[n].id = id;
+      lines[n].isc = isc;
       lines[n].p1 = p1-1 + npoint_old;
       lines[n].p2 = p2-1 + npoint_old;
       n++;
@@ -517,7 +518,7 @@ void ReadSurf::read_tris()
       if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || 
 	  p3 < 1 || p3 > npoint_new || p1 == p2 || p2 == p3)
 	error->all(FLERR,"Invalid point index in triangle");
-      tris[n].id = id;
+      tris[n].isc = isc;
       tris[n].p1 = p1-1 + npoint_old;
       tris[n].p2 = p2-1 + npoint_old;
       tris[n].p3 = p3-1 + npoint_old;

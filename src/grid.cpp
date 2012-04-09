@@ -60,7 +60,7 @@ void Grid::init()
 {
   // assign surf list to each global cell
 
-  if (surf->npoint) {
+  if (surf->surf_exist) {
     surf2grid();
 
     int icell;
@@ -514,7 +514,7 @@ bigint Grid::memory_usage()
   bigint bytes = (bigint) ncell * sizeof(OneCell);   // cells
   bytes += nlocal*sizeof(int);                       // mycells
 
-  if (surf->npoint) {                                // csurfs
+  if (surf->surf_exist) {                            // csurfs
     int n = 0;
     for (int i = 0; i < ncell; i++)
       n += cells[i].nsurf;

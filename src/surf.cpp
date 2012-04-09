@@ -29,9 +29,6 @@ Surf::Surf(DSMC *dsmc) : Pointers(dsmc)
 {
   surf_exist = 0;
 
-  nsurf = 0;
-  ids = NULL;
-
   npoint = nline = ntri = 0;
   pts = NULL;
   lines = NULL;
@@ -45,9 +42,6 @@ Surf::Surf(DSMC *dsmc) : Pointers(dsmc)
 
 Surf::~Surf()
 {
-  for (int i = 0; i < nsurf; i++) delete [] ids[i];
-  memory->sfree(ids);
-
   memory->sfree(pts);
   memory->sfree(lines);
   memory->sfree(tris);
@@ -61,25 +55,6 @@ Surf::~Surf()
 void Surf::init()
 {
   for (int i = 0; i < nsc; i++) sc[i]->init();
-}
-
-/* ----------------------------------------------------------------------
-   if idnew is already in ids list, return index
-   else add it to ids list and return new index
-------------------------------------------------------------------------- */
-
-int Surf::add_id(char *idnew)
-{
-  for (int i = 0; i < nsurf; i++)
-    if (strcmp(idnew,ids[i]) == 0) return i;
-
-  ids = (char **) memory->srealloc(ids,(nsurf+1)*sizeof(char *),"surf:id");
-  int n = strlen(idnew) + 1;
-  ids[nsurf] = new char[n];
-  strcpy(ids[nsurf],idnew);
-  nsurf++;
-
-  return nsurf-1;
 }
 
 /* ----------------------------------------------------------------------
@@ -171,8 +146,8 @@ void Surf::add_collide(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   find a surface collide by ID
-   return index of surf collide or -1 if not found
+   find a surface collide model by ID
+   return index of surf collide model or -1 if not found
 ------------------------------------------------------------------------- */
 
 int Surf::find_collide(const char *id)

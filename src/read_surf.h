@@ -39,7 +39,7 @@ class ReadSurf : protected Pointers {
   int compressed;
 
   int dimension;
-  int id;
+  int isc;
   double origin[3];
 
   Surf::Point *pts;
