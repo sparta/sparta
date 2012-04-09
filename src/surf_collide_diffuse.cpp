@@ -86,15 +86,6 @@ void SurfCollideDiffuse::init()
 }
 
 /* ----------------------------------------------------------------------
-   set current surface temperature
-------------------------------------------------------------------------- */
-
-void SurfCollideDiffuse::dynamic()
-{
-  twall = input->variable->compute_equal(tvar);
-}
-
-/* ----------------------------------------------------------------------
    particle collision with surface
    p = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
@@ -147,4 +138,13 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
       evib(isp);
     */
   }
+}
+
+/* ----------------------------------------------------------------------
+   set current surface temperature
+------------------------------------------------------------------------- */
+
+void SurfCollideDiffuse::dynamic()
+{
+  twall = input->variable->compute_equal(tvar);
 }

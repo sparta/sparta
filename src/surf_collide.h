@@ -27,10 +27,10 @@ class SurfCollide : protected Pointers {
  
   SurfCollide(class DSMC *, int, char **);
   virtual ~SurfCollide();
-  virtual void init();
-  virtual void dynamic() {}
-
+  virtual void init() = 0;
   virtual void collide(Particle::OnePart *, double *) = 0;
+
+  virtual void dynamic() {}
 
  protected:
 };

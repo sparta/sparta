@@ -14,34 +14,23 @@
 
 #ifdef SURF_COLLIDE_CLASS
 
-SurfCollideStyle(diffuse,SurfCollideDiffuse)
+SurfCollideStyle(specular,SurfCollideSpecular)
 
 #else
 
-#ifndef DSMC_SURF_COLLIDE_DIFFUSE_H
-#define DSMC_SURF_COLLIDE_DIFFUSE_H
+#ifndef DSMC_SURF_COLLIDE_SPECULAR_H
+#define DSMC_SURF_COLLIDE_SPECULAR_H
 
 #include "surf_collide.h"
 
 namespace DSMC_NS {
 
-class SurfCollideDiffuse : public SurfCollide {
+class SurfCollideSpecular : public SurfCollide {
  public:
-  SurfCollideDiffuse(class DSMC *, int, char **);
-  ~SurfCollideDiffuse();
-  void init();
+  SurfCollideSpecular(class DSMC *, int, char **);
+  ~SurfCollideSpecular() {}
+  void init() {}
   void collide(Particle::OnePart *, double *);
-
-  void dynamic();
-
- private:
-  double twall;              // surface temperature
-  double acc;                // surface accomodation coeff
-
-  char *tstr;                // temperature variable name (NULL if constant)
-  int tvar;                  // index of equal-style variable
-
-  class RanPark *random;     // RNG for particle reflection
 };
 
 }
