@@ -40,9 +40,9 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};       // same as Domain
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Geometry
 
-//#define MOVE_DEBUG 1            // un-comment to debug one particle's motion
-#define MOVE_DEBUG_PROC 0       // proc that owns particle
-#define MOVE_DEBUG_PARTICLE 0   // index of particle on owning proc
+//#define MOVE_DEBUG 1            // un-comment to debug motion of one particle
+#define MOVE_DEBUG_PROC 0       // owning proc
+#define MOVE_DEBUG_PARTICLE 63   // particle index on owning proc
 
 /* ---------------------------------------------------------------------- */
 
@@ -350,8 +350,8 @@ void Update::move3d_surface()
 	else if (outface == XHI) xnew[0] = hi[0]; 
 	else if (outface == YLO) xnew[1] = lo[1];
 	else if (outface == YHI) xnew[1] = hi[1];
-	else if (outface == ZLO) x[2] = lo[2];
-	else if (outface == ZHI) x[2] = hi[2]; 
+	else if (outface == ZLO) xnew[2] = lo[2];
+	else if (outface == ZHI) xnew[2] = hi[2]; 
       }
 
       // check for collisions with triangles in cell
@@ -401,8 +401,14 @@ void Update::move3d_surface()
 	nscheck_one += nsurf;
 
 	if (cflag) {
-	  if (minside == INSIDE) 
-	    error->one(FLERR,"Particle hit inside of surface element");
+	  if (minside == INSIDE) {
+	    char str[128];
+	    sprintf(str,
+		    "Particle %d on proc %d hit inside of "
+		    "surf %d on step " BIGINT_FORMAT,
+		    i,me,minsurf,update->ntimestep);
+	    error->one(FLERR,str);
+	  }
 	  x[0] = minxc[0];
 	  x[1] = minxc[1];
 	  x[2] = minxc[2];
@@ -877,8 +883,14 @@ void Update::move2d_surface()
 	nscheck_one += nsurf;
 
 	if (cflag) {
-	  if (minside == INSIDE) 
-	    error->one(FLERR,"Particle hit inside of surface element");
+	  if (minside == INSIDE) {
+	    char str[128];
+	    sprintf(str,
+		    "Particle %d on proc %d hit inside of "
+		    "surf %d on step " BIGINT_FORMAT,
+		    i,me,minsurf,update->ntimestep);
+	    error->one(FLERR,str);
+	  }
 	  x[0] = minxc[0];
 	  x[1] = minxc[1];
 	  line = &lines[minsurf];

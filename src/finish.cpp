@@ -71,11 +71,11 @@ void Finish::end()
   if (me == 0) {
     if (screen) fprintf(screen,
 			"Loop time of %g on %d procs for %d steps with " 
-			BIGINT_FORMAT " atoms\n",
+			BIGINT_FORMAT " molecules\n",
 			time_loop,nprocs,update->nsteps,particle->nglobal);
     if (logfile) fprintf(logfile,
 			 "Loop time of %g on %d procs for %d steps with " 
-			 BIGINT_FORMAT " atoms\n",
+			 BIGINT_FORMAT " molecules\n",
 			 time_loop,nprocs,update->nsteps,particle->nglobal);
   }
 

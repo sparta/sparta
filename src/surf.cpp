@@ -102,6 +102,7 @@ void Surf::compute_tri_normal(int nstart, int n)
     MathExtra::sub3(pts[p3].x,pts[p1].x,delta13);
     MathExtra::cross3(delta12,delta13,tris[m].norm);
     MathExtra::norm3(tris[m].norm);
+
     m++;
   }
 }

@@ -114,6 +114,12 @@ void ReadSurf::command(int narg, char **arg)
     read_tris();
   }
 
+  printf("AAA 6: %d %d %d: %g %g %g: %g %g %g: %g %g %g\n",
+	 tris[6].p1,tris[6].p2,tris[6].p3,
+	 pts[tris[6].p1].x[0],pts[tris[6].p1].x[1],pts[tris[6].p1].x[2],
+	 pts[tris[6].p2].x[0],pts[tris[6].p2].x[1],pts[tris[6].p2].x[2],
+	 pts[tris[6].p3].x[0],pts[tris[6].p3].x[1],pts[tris[6].p3].x[2]);
+
   // close file
 
   if (me == 0) {
@@ -151,6 +157,13 @@ void ReadSurf::command(int narg, char **arg)
       origin[1] += dy;
       origin[2] += dz;
       translate(dx,dy,dz);
+
+  printf("AAA 6: %d %d %d: %g %g %g: %g %g %g: %g %g %g\n",
+	 tris[6].p1,tris[6].p2,tris[6].p3,
+	 pts[tris[6].p1].x[0],pts[tris[6].p1].x[1],pts[tris[6].p1].x[2],
+	 pts[tris[6].p2].x[0],pts[tris[6].p2].x[1],pts[tris[6].p2].x[2],
+	 pts[tris[6].p3].x[0],pts[tris[6].p3].x[1],pts[tris[6].p3].x[2]);
+
       iarg += 4;
     } else if (strcmp(arg[iarg],"atrans") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
@@ -198,6 +211,13 @@ void ReadSurf::command(int narg, char **arg)
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       scale(sx,sy,sz);
+
+  printf("AAA 6: %d %d %d: %g %g %g: %g %g %g: %g %g %g\n",
+	 tris[6].p1,tris[6].p2,tris[6].p3,
+	 pts[tris[6].p1].x[0],pts[tris[6].p1].x[1],pts[tris[6].p1].x[2],
+	 pts[tris[6].p2].x[0],pts[tris[6].p2].x[1],pts[tris[6].p2].x[2],
+	 pts[tris[6].p3].x[0],pts[tris[6].p3].x[1],pts[tris[6].p3].x[2]);
+
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Invalid read_surf command");
@@ -215,6 +235,14 @@ void ReadSurf::command(int narg, char **arg)
       iarg += 5;
     } else if (strcmp(arg[iarg],"invert") == 0) {
       invert();
+
+
+  printf("AAA 6: %d %d %d: %g %g %g: %g %g %g: %g %g %g\n",
+	 tris[6].p1,tris[6].p2,tris[6].p3,
+	 pts[tris[6].p1].x[0],pts[tris[6].p1].x[1],pts[tris[6].p1].x[2],
+	 pts[tris[6].p2].x[0],pts[tris[6].p2].x[1],pts[tris[6].p2].x[2],
+	 pts[tris[6].p3].x[0],pts[tris[6].p3].x[1],pts[tris[6].p3].x[2]);
+
       iarg += 1;
     } else error->all(FLERR,"Invalid read_surf command");
   }
@@ -616,7 +644,7 @@ void ReadSurf::invert()
 
   if (dimension == 3) {
     int m = ntri_old;
-    for (int i = 0; i < nline_new; i++) {
+    for (int i = 0; i < ntri_new; i++) {
       tmp = tris[m].p2;
       tris[m].p2 = tris[m].p3;
       tris[m].p3 = tmp;
@@ -680,7 +708,8 @@ void ReadSurf::check_point_pairs()
   // nbinxyz = # of bins in each dimension
   // xyzbin = bin size in each dimension
   // for 2d, nbinz = 1
-  // add 1 to nbinxyz to allow for 2nd binning via offset origin
+  // after setting bin size, add 1 to nbinxyz
+  // this allows for 2nd binning via offset origin
 
   int nbinx,nbiny,nbinz;
   double xbin,ybin,zbin;
@@ -706,15 +735,16 @@ void ReadSurf::check_point_pairs()
     if (nbinz == 0) nbinz = 1;
   }
 
-  if (nbinx > 1) nbinx++;
-  if (nbiny > 1) nbiny++;
-  if (nbinz > 1) nbinz++;
   xbin = domain->xprd / nbinx;
   ybin = domain->yprd / nbiny;
   zbin = domain->zprd / nbinz;
   xbininv = 1.0/xbin;
   ybininv = 1.0/ybin;
   zbininv = 1.0/zbin;
+
+  if (nbinx > 1) nbinx++;
+  if (nbiny > 1) nbiny++;
+  if (nbinz > 1) nbinz++;
 
   // binhead[I][J][K] = point index of 1st point in bin IJK, -1 if none
   // bin[I] = index of next point in same bin as point I, -1 if last
