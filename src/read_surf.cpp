@@ -20,10 +20,12 @@
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
+#include "math_const.h"
 #include "error.h"
 #include "memory.h"
 
 using namespace DSMC_NS;
+using namespace MathConst;
 
 #define MAXLINE 256
 #define CHUNK 1024
@@ -576,6 +578,8 @@ void ReadSurf::rotate(double theta, double rx, double ry, double rz)
 {
   double r[3],q[4],d[3],dnew[3];
   double rotmat[3][3];
+
+  theta *= MY_PI/180.0;
 
   r[0] = rx; r[1] = ry; r[2] = rz;
   MathExtra::norm3(r);
