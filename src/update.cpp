@@ -12,6 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "mpi.h"
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
@@ -39,10 +40,17 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};       // same as Domain
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Geometry
 
+//#define MOVE_DEBUG 1            // un-comment to debug one particle's motion
+#define MOVE_DEBUG_PROC 0       // proc that owns particle
+#define MOVE_DEBUG_PARTICLE 0   // index of particle on owning proc
+
 /* ---------------------------------------------------------------------- */
 
 Update::Update(DSMC *dsmc) : Pointers(dsmc)
 {
+  MPI_Comm_rank(world,&me);
+  MPI_Comm_size(world,&nprocs);
+
   ntimestep = 0;
   runflag = 0;
 
@@ -83,13 +91,11 @@ Update::~Update()
 void Update::init()
 {
   if (domain->dimension == 3) {
-    //if (surf->npoint) move = &Update::move3d_surface;
-    //else move = &Update::move3d;
-    move = &Update::move3d;
+    if (surf->npoint) move = &Update::move3d_surface;
+    else move = &Update::move3d;
   } else if (domain->dimension == 2) {
     if (surf->npoint) move = &Update::move2d_surface;
     else move = &Update::move2d;
-    //move = &Update::move2d;
   }
 
   if (random == NULL) {
@@ -249,7 +255,6 @@ void Update::move3d()
   Particle::OnePart *particles = particle->particles;
   Grid::OneCell *cells = grid->cells;
   double dt = update->dt;
-  int me = comm->me;
 
   for (int i = 0; i < nlocal; i++) {
 
@@ -410,21 +415,19 @@ void Update::move3d()
 
 void Update::move2d_surface()
 {
-  int i,m,icell,inface,outface,outflag,isurf;
-  double xnew[3],xhold[3],xc[3],minxc[3];
-  double *x,*v,*lo,*hi;
+  bool hitflag;
+  int i,m,icell,inface,outface,outflag,isurf,exclude;
+  int side,minside,minsurf,nsurf,cflag;
   int *neigh;
-  double dtfrac,frac,newfrac;
+  double dtremain,dtfrac,frac,newfrac,param,minparam;
+  double *x,*v,*lo,*hi;
   Surf::Line *line;
-  double param,minparam;
-  int side,minside,minsurf;
-  int nsurf,cflag;
-  bool flag;
-  double dtremain;
-  int exclude;
 
-  // needed for MathExtra calls
+  // xnew,xc passed to geometry routines which use or set 3rd component
+  // xhold,minxc used locally w/out 3rd component
 
+  double xnew[3],xc[3];      
+  double xhold[2],minxc[2];
   xnew[2] = 0.0;
 
   // extend migration list if necessary
@@ -454,7 +457,6 @@ void Update::move2d_surface()
   Surf::Point *pts = surf->pts;
 
   double dt = update->dt;
-  int me = comm->me;
 
   for (i = 0; i < nlocal; i++) {
 
@@ -470,26 +472,26 @@ void Update::move2d_surface()
       xnew[1] = x[1] + dtfrac*v[1];
     }
 
-    dtremain = dt;
     icell = particles[i].icell;
     nsurf = cells[icell].nsurf;
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     neigh = cells[icell].neigh;
+    dtremain = dt;
     inface = INTERIOR;
     outflag = -1;
     exclude = -1;
     ntouch_one++;
 
-    // advect particle from cell to cell until single-step move is done
+    // advect particle from cell to cell until move is done
 
     while (1) {
 
-      /*
-      if (i == 95) printf("PART 95: %d %d: %g %g: %g %g\n",
-			  update->ntimestep,nsurf,
-			  x[0],x[1],xnew[0],xnew[1]);
-      */
+#ifdef MOVE_DEBUG
+      if (i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC) 
+	printf("PARTICLE %d: %d %d: %g %g: %g %g\n",MOVE_DEBUG_PARTICLE,
+	       update->ntimestep,nsurf,x[0],x[1],xnew[0],xnew[1]);
+#endif
 
       // check if particle crosses any cell face
       // frac = fraction of move completed before hitting cell face
@@ -538,8 +540,8 @@ void Update::move2d_surface()
 
       // check for collisions with lines in cell
       // find 1st surface hit via minparam
-      // if collision occurs, perform it with surface model
-      // reset x,v,dtremain,xnew and continue particle trajectory
+      // if collision occurs, perform collision with surface model
+      // reset x,v,xnew,dtremain and continue particle trajectory
 
       if (nsurf) {
 	cflag = 0;
@@ -548,23 +550,24 @@ void Update::move2d_surface()
 	  isurf = csurfs[icell][m];
 	  if (isurf == exclude) continue;
 	  line = &lines[isurf];
-	  flag = Geometry::
+	  hitflag = Geometry::
 	    line_line_intersect(x,xnew,
 				pts[line->p1].x,pts[line->p2].x,line->norm,
 				xc,param,side);
 
-	  /*
-	  if (flag && i == 95)
-	    printf("CHECK: %d %d %d %d: P1 %g %g: P2 %g %g: L1 %g %g: "
+#ifdef MOVE_DEBUG
+	  if (hitflag && i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC)
+	    printf("SURF COLLIDE: %d %d %d %d: P1 %g %g: P2 %g %g: L1 %g %g: "
 		   "L2 %g %g: LN %g %g: XC %g %g: Param %g: Side %d: DTR %g\n",
-		   i,icell,nsurf,isurf,x[0],x[1],xnew[0],xnew[1],
+		   MOVE_DEBUG_PARTICLE,icell,nsurf,isurf,
+		   x[0],x[1],xnew[0],xnew[1],
 		   pts[line->p1].x[0],pts[line->p1].x[1],
 		   pts[line->p2].x[0],pts[line->p2].x[1],
 		   line->norm[0],line->norm[1],xc[0],xc[1],param,side,
 		   dtremain);
-	  */
+#endif
 
-	  if (flag && side != ONSURF2OUT && param <= minparam) {
+	  if (hitflag && side != ONSURF2OUT && param <= minparam) {
 	    if (param == minparam && side == INSIDE) continue;
 	    cflag = 1;
 	    minparam = param;
@@ -575,9 +578,6 @@ void Update::move2d_surface()
 	  }
 	}
 	nscheck_one += nsurf;
-
-	//printf("NSURF: %d %d %d %d\n",i,icell,nsurf,cflag);
-	//if (cflag) error->one(FLERR,"STOP");
 
 	if (cflag) {
 	  if (minside == INSIDE) 
@@ -590,11 +590,15 @@ void Update::move2d_surface()
 	  dtremain *= 1.0 - minparam*frac;
 	  xnew[0] = x[0] + dtremain*v[0];
 	  xnew[1] = x[1] + dtremain*v[1];
-	  //if (i == 95) printf("BEF CONTINUE %g %g: %g %g: %g %g %g\n",
-	  //		      x[0],x[1],xnew[0],xnew[1],
-	  //		      minparam,frac,dtremain);
 	  exclude = minsurf;
 	  nscollide_one++;
+
+#ifdef MOVE_DEBUG
+	  if (i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC)
+	    printf("POST COLLISION %d: %g %g: %g %g: %g %g %g\n",
+		   MOVE_DEBUG_PARTICLE,
+		   x[0],x[1],xnew[0],xnew[1],minparam,frac,dtremain);
+#endif
 	  continue;
 	}
       }
@@ -638,6 +642,7 @@ void Update::move2d_surface()
 	  nexit_one++;
 	  break;
 	} else if (outflag == PERIODIC) {
+	  nsurf = cells[icell].nsurf;
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
@@ -721,7 +726,6 @@ void Update::move2d()
   Particle::OnePart *particles = particle->particles;
   Grid::OneCell *cells = grid->cells;
   double dt = update->dt;
-  int me = comm->me;
 
   for (int i = 0; i < nlocal; i++) {
 

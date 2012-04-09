@@ -66,6 +66,7 @@ class Update : protected Pointers {
   void global(int, char **);
 
  private:
+  int me,nprocs;
   int ncurrent;              // local # of particles before insertion
   int maxmigrate;            // max # of particles in mlist
   int faceflip[6];
