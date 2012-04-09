@@ -16,11 +16,12 @@
 <PRE>surf_collide ID style args 
 </PRE>
 <UL><LI>ID = user-assigned name for the surface collision model
-style = <I>diffuse</I> 
+style = <I>specular</I> or <I>diffuse</I> 
 
 <LI>args = arguments for that style 
 
-<PRE>  <I>diffuse</I> args = Tsurf acc
+<PRE>  <I>specular</I> args = none
+  <I>diffuse</I> args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
     acc = accommodation coefficient 
@@ -29,7 +30,8 @@ style = <I>diffuse</I>
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>surf_collide 1 diffuse 273.15 0.9
+<PRE>surf_collide 1 specular
+surf_collide 1 diffuse 273.15 0.9
 surf_collide heatwall diffuse v_ramp 0.8 
 </PRE>
 <P><B>Description:</B>
@@ -44,6 +46,12 @@ and line segments in 2d.
 </P>
 <HR>
 
+<P>The <I>specular</I> style computes a simple specular reflection model.  It
+requires no arguments.  Specular reflection means that a particle
+reflects off the surrace element with its incident velocity vector
+reversed with respect to the outward normal of the surface element.
+The particle's speed is unchanged.
+</P>
 <P>The <I>diffuse</I> style computes a simple diffusive reflection model.
 </P>
 <P>The model has 2 parameters set by the <I>Tsurf</I> and <I>acc</I> arguments.

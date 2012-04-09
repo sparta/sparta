@@ -13,8 +13,9 @@ surf_collide command :h3
 surf_collide ID style args :pre
 
 ID = user-assigned name for the surface collision model
-style = {diffuse} :ulb,l
+style = {specular} or {diffuse} :ulb,l
 args = arguments for that style :l
+  {specular} args = none
   {diffuse} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
@@ -23,6 +24,7 @@ args = arguments for that style :l
 
 [Examples:]
 
+surf_collide 1 specular
 surf_collide 1 diffuse 273.15 0.9
 surf_collide heatwall diffuse v_ramp 0.8 :pre
 
@@ -37,6 +39,12 @@ defines surfaces as collections of geometric elements, triangles in 3d
 and line segments in 2d.
 
 :line
+
+The {specular} style computes a simple specular reflection model.  It
+requires no arguments.  Specular reflection means that a particle
+reflects off the surrace element with its incident velocity vector
+reversed with respect to the outward normal of the surface element.
+The particle's speed is unchanged.
 
 The {diffuse} style computes a simple diffusive reflection model.
 
