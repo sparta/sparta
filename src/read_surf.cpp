@@ -114,12 +114,6 @@ void ReadSurf::command(int narg, char **arg)
     read_tris();
   }
 
-  printf("AAA 6: %d %d %d: %g %g %g: %g %g %g: %g %g %g\n",
-	 tris[6].p1,tris[6].p2,tris[6].p3,
-	 pts[tris[6].p1].x[0],pts[tris[6].p1].x[1],pts[tris[6].p1].x[2],
-	 pts[tris[6].p2].x[0],pts[tris[6].p2].x[1],pts[tris[6].p2].x[2],
-	 pts[tris[6].p3].x[0],pts[tris[6].p3].x[1],pts[tris[6].p3].x[2]);
-
   // close file
 
   if (me == 0) {
@@ -157,13 +151,6 @@ void ReadSurf::command(int narg, char **arg)
       origin[1] += dy;
       origin[2] += dz;
       translate(dx,dy,dz);
-
-  printf("AAA 6: %d %d %d: %g %g %g: %g %g %g: %g %g %g\n",
-	 tris[6].p1,tris[6].p2,tris[6].p3,
-	 pts[tris[6].p1].x[0],pts[tris[6].p1].x[1],pts[tris[6].p1].x[2],
-	 pts[tris[6].p2].x[0],pts[tris[6].p2].x[1],pts[tris[6].p2].x[2],
-	 pts[tris[6].p3].x[0],pts[tris[6].p3].x[1],pts[tris[6].p3].x[2]);
-
       iarg += 4;
     } else if (strcmp(arg[iarg],"atrans") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
@@ -211,13 +198,6 @@ void ReadSurf::command(int narg, char **arg)
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       scale(sx,sy,sz);
-
-  printf("AAA 6: %d %d %d: %g %g %g: %g %g %g: %g %g %g\n",
-	 tris[6].p1,tris[6].p2,tris[6].p3,
-	 pts[tris[6].p1].x[0],pts[tris[6].p1].x[1],pts[tris[6].p1].x[2],
-	 pts[tris[6].p2].x[0],pts[tris[6].p2].x[1],pts[tris[6].p2].x[2],
-	 pts[tris[6].p3].x[0],pts[tris[6].p3].x[1],pts[tris[6].p3].x[2]);
-
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Invalid read_surf command");
@@ -235,14 +215,6 @@ void ReadSurf::command(int narg, char **arg)
       iarg += 5;
     } else if (strcmp(arg[iarg],"invert") == 0) {
       invert();
-
-
-  printf("AAA 6: %d %d %d: %g %g %g: %g %g %g: %g %g %g\n",
-	 tris[6].p1,tris[6].p2,tris[6].p3,
-	 pts[tris[6].p1].x[0],pts[tris[6].p1].x[1],pts[tris[6].p1].x[2],
-	 pts[tris[6].p2].x[0],pts[tris[6].p2].x[1],pts[tris[6].p2].x[2],
-	 pts[tris[6].p3].x[0],pts[tris[6].p3].x[1],pts[tris[6].p3].x[2]);
-
       iarg += 1;
     } else error->all(FLERR,"Invalid read_surf command");
   }
