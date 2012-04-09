@@ -13,11 +13,11 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>read_surf surf-ID filename keyword args ... 
+<PRE>read_surf filename surfcoll-ID keyword args ... 
 </PRE>
-<UL><LI>surf-ID = ID to assign to this surface 
+<UL><LI>filename = name of surface file 
 
-<LI>filename = name of surface file 
+<LI>surfcoll-ID = ID of surface collision model 
 
 <LI>zero or more keyword/args pairs may be appended 
 
@@ -60,10 +60,11 @@ surface</A> command.
 does not know or care whether they represent one or more physical
 objects.
 </P>
-<P>All of the surface elements in the file are assigned a surf-ID, which
-can be used in other commands.  If the read_surf command is used
-multiple times to read multiple files, the same surf-ID can be re-used
-if desired.
+<P>All of the surface elements in the file are assigned a surfcoll-ID,
+which is the ID of a surface collision model previously defined by the
+<A HREF = "surf_collide.html">surf_collide</A> command.  This model will be used to
+perform collisions when particles collide with the surface elements in
+the surface.
 </P>
 <P>The format of the surface file is discussed below.  The optional
 keywords allow the vertices in the file to be translated, scaled, and
