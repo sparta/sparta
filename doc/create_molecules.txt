@@ -14,14 +14,19 @@ create_molecules mix-ID keyword value ... :pre
 
 mix-ID = ID of mixture to use when creating molecules :ulb,l
 zero or more keyword/value pairs may be appended :l
-keyword = {n} :l
-  {n} value = Np = number of molecules to create :pre
+keyword = {n} or {single} :l
+  {n} value = Np = number of molecules to create
+  {single} values = species-ID x y z vx vy vz
+    species-ID = ID of species of single molecule
+    x,y,z = position of molecule (distance units)
+    vx,vy,vz = velocity of molecule (velocity units) :pre
 :ule
 
 [Examples:]
 
 create_molecules background
-create_molecules air n 100000 :pre
+create_molecules air n 100000
+create_molecules air single N 5 5 5 10 -1 0 :pre
 
 [Description:]
 
@@ -59,6 +64,13 @@ set to a value > 0, then the {Fnum} and {nrho} settings are ignored,
 and {Np} molecules are created.  The assignment of species and
 velocity to each molecules is done the same as described above.
 
+The {single} keyword can also be useful for debugging purposes,
+e.g. to advect a single particle towards a surface.  A single particle
+of the specified species is inserted at the specified position and
+with the specified velocity.  In this case the {mix-ID} is ignored.
+
+:line
+
 NOTE: the {loop} keyword is not yet implemented.
 
 The {loop} keyword only applies when the {n} keyword is also used, and
@@ -78,7 +90,12 @@ attributes of molecules will depend on the number of processors and
 the mapping of grid cells to procesors.  Statistically, the overall
 set of created molecules should be the same as with the {all} setting.
 
-[Restrictions:] none
+:line
+
+[Restrictions:]
+
+A non-zero {Np} value for the {n} keyword cannot be used together with
+the {single} keyword.
 
 [Related commands:]
 

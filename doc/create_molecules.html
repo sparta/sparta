@@ -19,16 +19,21 @@
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>n</I> 
+<LI>keyword = <I>n</I> or <I>single</I> 
 
-<PRE>  <I>n</I> value = Np = number of molecules to create 
+<PRE>  <I>n</I> value = Np = number of molecules to create
+  <I>single</I> values = species-ID x y z vx vy vz
+    species-ID = ID of species of single molecule
+    x,y,z = position of molecule (distance units)
+    vx,vy,vz = velocity of molecule (velocity units) 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>create_molecules background
-create_molecules air n 100000 
+create_molecules air n 100000
+create_molecules air single N 5 5 5 10 -1 0 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -66,6 +71,13 @@ set to a value > 0, then the <I>Fnum</I> and <I>nrho</I> settings are ignored,
 and <I>Np</I> molecules are created.  The assignment of species and
 velocity to each molecules is done the same as described above.
 </P>
+<P>The <I>single</I> keyword can also be useful for debugging purposes,
+e.g. to advect a single particle towards a surface.  A single particle
+of the specified species is inserted at the specified position and
+with the specified velocity.  In this case the <I>mix-ID</I> is ignored.
+</P>
+<HR>
+
 <P>NOTE: the <I>loop</I> keyword is not yet implemented.
 </P>
 <P>The <I>loop</I> keyword only applies when the <I>n</I> keyword is also used, and
@@ -85,7 +97,12 @@ attributes of molecules will depend on the number of processors and
 the mapping of grid cells to procesors.  Statistically, the overall
 set of created molecules should be the same as with the <I>all</I> setting.
 </P>
-<P><B>Restrictions:</B> none
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>A non-zero <I>Np</I> value for the <I>n</I> keyword cannot be used together with
+the <I>single</I> keyword.
 </P>
 <P><B>Related commands:</B>
 </P>
