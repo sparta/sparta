@@ -115,8 +115,8 @@ void CollideVSS::init()
 	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
       //printf(" Prefactor %e %e %e \n", cxs, omega, tgamma(2.5-omega));
       double beta = MIN(vscale[isp],vscale[jsp]);
-      double max_thermal_velocity = 3.0/beta;
-      vrm[isp][jsp] = cxs * max_thermal_velocity;
+      double max_thermal_velocity = 10.0/beta;
+      vrm[isp][jsp] = cxs * pow(max_thermal_velocity*max_thermal_velocity,1-omega);
     }
 
   // vremax = max relative velocity factors on per-grid, per-species basis
@@ -130,7 +130,8 @@ void CollideVSS::init()
       for (int jsp = 0; jsp < nspecies; jsp++) {
         int igroup = mix2group[isp];
         int jgroup = mix2group[jsp];
-	vremax[icell][igroup][jgroup] = vrm[isp][jsp];
+
+	vremax[icell][igroup][jgroup] = MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
       }
 }
 
