@@ -171,12 +171,12 @@ int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
   double omega1 = params[ispecies].omega;
   double omega2 = params[jspecies].omega;
   double omega = 0.5 * (omega1+omega2);
-  double vro  = pow(vr2,omega-0.5);
+  double vro  = pow(vr2,1.-omega);
 
   // although the vremax is calcualted for the group,
   // the individual collisions calculated species dependent vre
 
-  double vre = sqrt(vr2)*prefactor[ispecies][jspecies]/vro;
+  double vre = vro*prefactor[ispecies][jspecies];
 
 //  printf("INSIDE %e %e \n", vre,vremax[ilocal][igroup][jgroup]);
   vremax[ilocal][igroup][jgroup] = MAX(vre,vremax[ilocal][igroup][jgroup]);
