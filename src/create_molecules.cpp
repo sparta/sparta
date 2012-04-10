@@ -51,6 +51,7 @@ void CreateMolecules::command(int narg, char **arg)
   // optional args
 
   bigint np = 0;
+  single = 0;
 
   int iarg = 1;
   while (iarg < narg) {
@@ -59,13 +60,30 @@ void CreateMolecules::command(int narg, char **arg)
       np = ATOBIGINT(arg[iarg+1]);
       if (np <= 0) error->all(FLERR,"Illegal create_molecules command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"single") == 0) {
+      if (iarg+8 > narg) error->all(FLERR,"Illegal create_molecules command");
+      single = 1;
+      ispecies = particle->find_species(arg[iarg+1]);
+      if (ispecies < 0) 
+	error->all(FLERR,"Create_molecules species ID does not exist");
+      xp = atof(arg[iarg+2]);
+      yp = atof(arg[iarg+3]);
+      zp = atof(arg[iarg+4]);
+      vx = atof(arg[iarg+5]);
+      vy = atof(arg[iarg+6]);
+      vz = atof(arg[iarg+7]);
+      iarg += 8;
     } else error->all(FLERR,"Illegal create_molecules command");
   }
+
+  if (np > 0 && single)
+    error->all(FLERR,"Cannot use n and single in create_molecules command");
 
   // calculate Np if not set explicitly
   // NOTE: eventually adjust for cells with cut volume
 
-  if (np == 0) {
+  if (single) np = 1;
+  else if (np == 0) {
     double voltotal;
     if (domain->dimension == 3)
       voltotal = domain->xprd * domain->yprd * domain->zprd;
@@ -76,7 +94,8 @@ void CreateMolecules::command(int narg, char **arg)
   // generate molecules
 
   bigint nprevious = particle->nglobal;
-  create_local(np);
+  if (single) create_single();
+  else create_local(np);
 
   // error check
 
@@ -97,6 +116,55 @@ void CreateMolecules::command(int narg, char **arg)
   if (comm->me == 0) {
     if (screen) fprintf(screen,"Created " BIGINT_FORMAT " molecules\n",np);
     if (logfile) fprintf(logfile,"Created " BIGINT_FORMAT " molecules\n",np);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   create a single molecule
+   find cell it is in, and store on appropriate processor
+   NOTE: what to do about energy options?
+------------------------------------------------------------------------- */
+
+void CreateMolecules::create_single()
+{
+  int i,m;
+  double x[3],v[3];
+  double *lo,*hi;
+
+  x[0] = xp;  x[1] = yp;  x[2] = zp;
+  v[0] = vx;  v[1] = vy;  v[2] = vz;
+
+  if (domain->dimension == 2 && x[2] != 0.0)
+    error->all(FLERR,"Create_molecules single requires z = 0 "
+	       "for 2d simulation");
+
+  Grid::OneCell *cells = grid->cells;
+  int *mycells = grid->mycells;
+  int nglocal = grid->nlocal;
+
+  int icell = -1;
+  for (i = 0; i < nglocal; i++) {
+    m = mycells[i];
+    lo = cells[m].lo;
+    hi = cells[m].hi;
+    if (x[0] >= lo[0] && x[0] < hi[0] &&
+	x[1] >= lo[1] && x[1] < hi[1] &&
+	x[2] >= lo[2] && x[2] < hi[2]) icell = m;
+  }
+
+  // test that exactly one proc owns particle
+
+  int flag,flagall;
+  if (icell < 0) flag = 0;
+  else flag = 1;
+  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
+  if (flagall != 1) 
+    error->all(FLERR,"Create_molecules single particle is outside domain");
+
+  if (icell >= 0) {
+    double erote = 0.0;
+    int ivib = 0;
+    particle->add_particle(0,ispecies,icell,x,v,erote,ivib);
   }
 }
 
@@ -165,7 +233,9 @@ void CreateMolecules::create_local(bigint np)
   int ilocal,icell,npercell,ispecies;
   double x[3],v[3];
   double vol,ntarget,rn,vn,vr,theta1,theta2;
-  double erote, ivib;
+
+  double erote = 0.0;
+  int ivib = 0;
 
   double volsum = 0.0;
   bigint nprev = 0;
@@ -207,8 +277,6 @@ void CreateMolecules::create_local(bigint np)
       ivib = CreateMolecules.evib(isp);
 */
       particle->add_particle(0,ispecies,icell,x,v,erote,ivib);
-      
-
     }
 
     nprev += npercell;
@@ -261,6 +329,7 @@ void CreateMolecules::create_all(bigint n)
 }
 */
 
+
 double CreateMolecules::erot(int isp)
 {
  RanPark *random = new RanPark(update->ranmaster->uniform());
@@ -274,7 +343,7 @@ double CreateMolecules::erot(int isp)
   i=0;
   while (i == 0) {
     erm=random->uniform()*10.;
-//-there is an energy cut-off at 10 kT
+    // there is an energy cut-off at 10 kT
     b=pow(erm/a,a)*exp(a-erm);
     if (b > random->uniform()) i=1;
   }
@@ -283,7 +352,6 @@ double CreateMolecules::erot(int isp)
   return erote;
 
 }
-
 
 int CreateMolecules::evib(int isp)
 {

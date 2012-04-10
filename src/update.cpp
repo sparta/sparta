@@ -42,7 +42,7 @@ enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Geometry
 
 //#define MOVE_DEBUG 1            // un-comment to debug motion of one particle
 #define MOVE_DEBUG_PROC 0       // owning proc
-#define MOVE_DEBUG_PARTICLE 63   // particle index on owning proc
+#define MOVE_DEBUG_PARTICLE 0   // particle index on owning proc
 
 /* ---------------------------------------------------------------------- */
 
@@ -906,10 +906,12 @@ void Update::move2d_surface()
 	  nscollide_one++;
 
 #ifdef MOVE_DEBUG
-	  if (i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC)
+	  if (i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC) {
 	    printf("POST COLLISION %d: %g %g: %g %g: %g %g %g\n",
 		   MOVE_DEBUG_PARTICLE,
 		   x[0],x[1],xnew[0],xnew[1],minparam,frac,dtremain);
+	    printf("PCV %g %g\n",v[0],v[1]);
+	  }
 #endif
 	  continue;
 	}

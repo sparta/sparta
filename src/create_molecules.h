@@ -34,8 +34,10 @@ class CreateMolecules : protected Pointers {
   double erot(int);
 
  private:
-  int imix;
+  int imix,single,ispecies;
+  double xp,yp,zp,vx,vy,vz;
 
+  void create_single();
   void create_local(bigint);
 };
 

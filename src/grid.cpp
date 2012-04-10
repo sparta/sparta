@@ -157,7 +157,12 @@ void Grid::setup_grid()
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   map a particle coordinate into a grid cell
+   NOTE: not currently used, see loop option in CreateMolecules
+   NOTE: what if particle is at upper boundary of domain
+   NOTE: assumes Nx by Ny by Nz grid
+------------------------------------------------------------------------- */
 
 int Grid::which_cell(double x, double y, double z)
 {

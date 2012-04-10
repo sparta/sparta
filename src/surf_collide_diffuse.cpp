@@ -99,13 +99,14 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
 
   if (random->uniform() > acc) {
     MathExtra::reflect3(p->v,norm);
+    printf("REFLECT\n");
 
   // diffuse reflection
   // vrm = most probable speed of species, eqns (4.1) and (4.7)
   // vperp = velocity component perpendicular to surface along norm, eqn (12.3)
   // vtan12 = 2 velocity components tangential to surface
   // tangent1 = component of particle v tangential to surface,
-  //   must have non-zero component or would be no collision
+  //   check if tangent1 = 0 (normal collision), set randomly
   // tangent2 = norm x tangent1 = orthogonal tangential direction
   // tangent12 are both unit vectors
 
@@ -126,6 +127,13 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
     tangent1[0] = v[0] - dot*norm[0];
     tangent1[1] = v[1] - dot*norm[1];
     tangent1[2] = v[2] - dot*norm[2];
+    if (MathExtra::lensq3(tangent1) == 0.0) {
+      tangent2[0] = random->uniform();
+      tangent2[1] = random->uniform();
+      tangent2[2] = random->uniform();
+      MathExtra::cross3(norm,tangent2,tangent1);
+    }
+
     MathExtra::norm3(tangent1);
     MathExtra::cross3(norm,tangent1,tangent2);
 
