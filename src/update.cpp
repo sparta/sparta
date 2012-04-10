@@ -356,6 +356,8 @@ void Update::move3d_surface()
 
       // check for collisions with triangles in cell
       // find 1st surface hit via minparam
+      // not considered a collision if particles starts on surf, moving out
+      // not considered a collision if 2 params are tied and one is INSIDE surf
       // if collision occurs, perform collision with surface model
       // reset x,v,xnew,dtremain and continue particle trajectory
 
@@ -843,6 +845,8 @@ void Update::move2d_surface()
 
       // check for collisions with lines in cell
       // find 1st surface hit via minparam
+      // not considered a collision if particles starts on surf, moving out
+      // not considered a collision if 2 params are tied and one is INSIDE surf
       // if collision occurs, perform collision with surface model
       // reset x,v,xnew,dtremain and continue particle trajectory
 
