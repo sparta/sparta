@@ -217,6 +217,13 @@ some of its triangles may include points on the faces of the
 simulation box.  A similar operation is performed in 2d with the 4
 clip edges represented by the edges of the global simulation box.
 </P>
+<P>If you use the <I>clip</I> keyword, you should check the resulting
+statistics of the clipped surface printed out by this command,
+including the minimum size of line and triangle edge lengths.  It is
+possible that very short lines or very small triangles will result
+near the box surface due to the clipping opertion, depending on the
+coordinates of the initial unclipped points.
+</P>
 <P><B>Restrictions:</B>
 </P>
 <P>This command can only be used after the simulation box is defined by
