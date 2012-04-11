@@ -15,7 +15,7 @@ read_surf filename surfcoll-ID keyword args ... :pre
 filename = name of surface file :ulb,l
 surfcoll-ID = ID of surface collision model :l
 zero or more keyword/args pairs may be appended :l
-keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} :l
+keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} :l
   origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   trans args = Dx Dy Dz
@@ -35,7 +35,7 @@ keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or 
 [Examples:]
 
 read_surf sphere surf.file
-read_surf sphere surf.file origin 
+read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip :pre
 
 [Description:]
 
@@ -51,6 +51,8 @@ surface"_dump.html command.
 The surface file contains a list of triangles or line segments; DSMC
 does not know or care whether they represent one or more physical
 objects.
+
+NOTE: doc that file can be gzipped
 
 All of the surface elements in the file are assigned a surfcoll-ID,
 which is the ID of a surface collision model previously defined by the
@@ -190,6 +192,23 @@ this is a mechanism for using a surface files containing a single
 sphere (for example) as either a sphere to embed in a flow field, or a
 spherical outer boundary containing the flow.
 
+The {clip} keyword does not change the origin.  It truncates or
+"clips" a surface that extends outside the simulation box in the
+following manner.  In 3d, each of the 6 clip planes represented by
+faces of the global simulation box are considered in turn.  Any
+triangle that straddles the face (with points on both sides of the
+clip plane), is truncated at the plane.  New points along the edges
+that cross the plane are created.  The triangle may also become a
+trapezoid, in which case it turned into 2 triangles.  Then all the
+points on the side of the clip plane that is outside the box, are
+projected onto the clip plane.  Finally, all triangles that lie in the
+clip plane are removed, as are any points that are unused after the
+triangle removal.  After this operation is repeated for all 6 faces,
+the remaining surface is entirely inside the simulation box, though
+some of its triangles may include points on the faces of the
+simulation box.  A similar operation is performed in 2d with the 4
+clip edges represented by the edges of the global simulation box.
+
 [Restrictions:]
 
 This command can only be used after the simulation box is defined by
@@ -197,23 +216,24 @@ the "create_box"_create_box.html command, and after a grid has been
 created by the "create_grid"_create_grid.html command.
 
 Every vertex in the final surface (after translation, rotation,
-scaling, etc) must be inside the global simulation box.  Inside means
-the vertex cannot be on the face of the simulation box, but must be
-interior to the box.  This restriction will be relaxed at some point.
+scaling, etc) must be inside or on the surface of the global
+simulation box.  Note that using the {clip} operation guarantees that
+this will be the case.
 
 The surface elements in a single surface file must represent a
-"watertight" surface.  This means that no pair of vertices is within
-an epsilon distance of each other.  Epsilon is defined as an EPSILON
-fraction of the shortest simulation box length, where EPSILON is set
-to 1.0e-6 in src/read_syrf.cpp.
+"watertight" surface.  For a 2d simulation this means that every point
+is part of exactly 2 or 4 line segments.  For a 3d simulation it means
+that every triangle edge is part of exactly 2 or 4 triangles.  Thus if
+you want to model an infinitely thin object (e.g. a plane), it must be
+gridded on both sides.  If you use the same vertices on both sides,
+this is why 4 line segments or triangles can border the same point or
+triangle edge.  An exception to this rule is made in 2d if a point is
+on the global face of the simulation box.  In that case it may only be
+part of one line segment.  Likewise in 3d, a triangle edge which lies
+entirely in the global face of the simulation box, can be part of only
+one triangle.
 
-For a 3d simulation, "watertight" additionally requires that every
-triangle edge is part of exactly 2 or 4 triangles.  For a 2d
-simulation it requires that every vertex is part of exactly 2 or 4
-line segments.  Thus if you want to model an infinitely thin object
-(e.g. a plane) plate, you should grid it on both sides, using the same
-vertices (this is why 4 triangles or line segments can border the same
-edge or point).  Note that this definition of watertight does not
+Note that this definition of watertight does not
 require that the surface elements in a file represent a single
 physical object; multiple objects can be represented, provided each is
 watertight.
