@@ -108,6 +108,36 @@ void Surf::compute_tri_normal(int nstart, int n)
 }
 
 /* ----------------------------------------------------------------------
+   return length of line M
+------------------------------------------------------------------------- */
+
+double Surf::line_size(int m)
+{
+  double delta[3];
+  MathExtra::sub3(pts[lines[m].p2].x,pts[lines[m].p1].x,delta);
+  return MathExtra::len3(delta);
+}
+
+/* ----------------------------------------------------------------------
+   return len = length of shortest edge of triangle M
+   return area = area of triangle M
+------------------------------------------------------------------------- */
+
+void Surf::tri_size(int m, double &len, double &area)
+{
+  double delta12[3],delta13[3],delta23[3],cross[3];
+
+  MathExtra::sub3(pts[tris[m].p2].x,pts[tris[m].p1].x,delta12);
+  MathExtra::sub3(pts[tris[m].p3].x,pts[tris[m].p1].x,delta13);
+  MathExtra::sub3(pts[tris[m].p3].x,pts[tris[m].p2].x,delta23);
+  len = MIN(MathExtra::len3(delta12),MathExtra::len3(delta13));
+  len = MIN(len,MathExtra::len3(delta23));
+
+  MathExtra::cross3(delta12,delta13,cross);
+  area = MathExtra::len3(cross);
+}
+
+/* ----------------------------------------------------------------------
    add a surface collision model
 ------------------------------------------------------------------------- */
 

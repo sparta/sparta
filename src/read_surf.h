@@ -65,12 +65,14 @@ class ReadSurf : protected Pointers {
   void clip3d();
 
   void check_point_inside();
-  void check_point_pairs();
   void check_watertight_2d();
   void check_watertight_3d();
 
   int find_edge(int, int);
   void add_edge(int, int, int);
+
+  double shortest_line();
+  void smallest_tri(double &, double &);
 
   void open(char *);
   void parse_keyword(int);

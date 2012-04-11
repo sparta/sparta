@@ -53,10 +53,15 @@ class Surf : protected Pointers {
   Surf(class DSMC *);
   ~Surf();
   void init();
+
   void compute_line_normal(int, int);
   void compute_tri_normal(int, int);
+  double line_size(int);
+  void tri_size(int, double &, double &);
+
   void add_collide(int, char **);
   int find_collide(const char *);
+
   bigint memory_usage();
 };
 

@@ -32,11 +32,8 @@ enum{NEITHER,BAD,GOOD};
 
 #define MAXLINE 256
 #define CHUNK 1024
-#define EPSILON 1.0e-6
 #define BIG 1.0e20
-#define DELTA 2             // must be 2 or greater 
-
-// NOTE: boost DELTA after debug
+#define DELTA 128           // must be 2 or greater 
 
 /* ---------------------------------------------------------------------- */
 
@@ -232,7 +229,18 @@ void ReadSurf::command(int narg, char **arg)
     } else error->all(FLERR,"Invalid read_surf command");
   }
 
+  // update Surf data structures
+
+  surf->pts = pts;
+  surf->lines = lines;
+  surf->tris = tris;
+
+  surf->npoint = npoint_old + npoint_new;
+  surf->nline = nline_old + nline_new;
+  surf->ntri = ntri_old + ntri_new;
+
   // extent of surf after geometric transformations
+  // compute sizes of smallest surface elements
 
   double extent[3][2];
   extent[0][0] = extent[1][0] = extent[2][0] = BIG;
@@ -249,38 +257,42 @@ void ReadSurf::command(int narg, char **arg)
     m++;
   }
 
+  double minlen,minarea;
+  if (dimension == 2) minlen = shortest_line();
+  if (dimension == 3) smallest_tri(minlen,minarea);
+
   if (me == 0) {
     if (screen) {
       fprintf(screen,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
       fprintf(screen,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
       fprintf(screen,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
+      if (dimension == 2)
+	fprintf(screen,"  %g min line length\n",minlen);
+      if (dimension == 3) {
+	fprintf(screen,"  %g min triangle edge length\n",minlen);
+	fprintf(screen,"  %g min triangle area\n",minarea);
+      }
     }
     if (logfile) {
       fprintf(logfile,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
       fprintf(logfile,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
       fprintf(logfile,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
+      if (dimension == 2)
+	fprintf(logfile,"  %g min line length\n",minlen);
+      if (dimension == 3) {
+	fprintf(logfile,"  %g min triangle edge length\n",minlen);
+	fprintf(logfile,"  %g min triangle area\n",minarea);
+      }
     }
   }
 
   // error checks on new points,lines,tris
   // all points must be inside or on surface of simulation box
-  // no pair of points can be separted by less than EPSILON
-  // surface must be watertight, i.e. closed
+  // surface must be watertight
 
   check_point_inside();
-  check_point_pairs();
   if (dimension == 2) check_watertight_2d();
   if (dimension == 3) check_watertight_3d();
-
-  // update Surf data structures
-
-  surf->pts = pts;
-  surf->lines = lines;
-  surf->tris = tris;
-
-  surf->npoint = npoint_old + npoint_new;
-  surf->nline = nline_old + nline_new;
-  surf->ntri = ntri_old + ntri_new;
 
   // compute normals of new lines or triangles
 
@@ -1107,12 +1119,350 @@ void ReadSurf::check_point_inside()
 }
 
 /* ----------------------------------------------------------------------
+   check if every new point is an end point of exactly 2 or 4 new lines
+   exception: not required of point on simulation box surface
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_watertight_2d()
+{
+  int p1,p2;
+
+  // count[I] = # of lines that vertex I is part of
+
+  int *count;
+  memory->create(count,npoint_new,"readsurf:count");
+  for (int i = 0; i < npoint_new; i++) count[i] = 0;
+
+  int m = nline_old;
+  for (int i = 0; i < nline_new; i++) {
+    p1 = lines[m].p1 - npoint_old;
+    p2 = lines[m].p2 - npoint_old;
+    count[p1]++;
+    count[p2]++;
+    m++;
+  }
+  
+  // check that all counts are 2 or 4
+  // allow for exception if point on box surface
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int nbad = 0;
+  m = nline_old;
+  for (int i = 0; i < npoint_new; i++) {
+    if (count[m] != 2 && count[m] != 4)
+      if (!Geometry::point_on_hex(pts[m].x,boxlo,boxhi)) nbad++;
+    m++;
+  }
+
+  // clean up
+
+  memory->destroy(count);
+
+  // error message
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"%d read_surf lines are not watertight",nbad);
+    error->all(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check if every new triangle edge is part of exactly 2 or 4 new triangles
+   4 triangles with 1 common edge can occur with infinitely thin surface
+   exception: not required of triangle edge on simulation box surface
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_watertight_3d()
+{
+  int i,j,m,p1,p2,p3,pi,pj;
+
+  // ecountmax[I] = max # of edges that vertex I is part of
+  // use lowest vertex in each edge
+
+  int *ecountmax;
+  memory->create(ecountmax,npoint_new,"readsurf:ecountmax");
+  for (i = 0; i < npoint_new; i++) ecountmax[i] = 0;
+
+  m = ntri_old;
+  for (i = 0; i < ntri_new; i++) {
+    p1 = tris[m].p1 - npoint_old;
+    p2 = tris[m].p2 - npoint_old;
+    p3 = tris[m].p3 - npoint_old;
+    ecountmax[MIN(p1,p2)]++;
+    ecountmax[MIN(p2,p3)]++;
+    ecountmax[MIN(p3,p1)]++;
+    m++;
+  }
+
+  // ecount[I] = # of edges that vertex I is part of
+  // edge[I][J] = Jth vertex connected to vertex I via an edge
+  // count[I][J] = # of times edge IJ appears in surf of triangles
+  // edge & count allocated as ragged 2d arrays using ecountmax for 2nd dim
+  // insure ecount < ecountmax
+
+  int *ecount;
+  memory->create(ecount,npoint_new,"readsurf:ecount");
+  int **edge;
+  memory->create_ragged(edge,npoint_new,ecountmax,"readsurf:edge");
+  int **count;
+  memory->create_ragged(count,npoint_new,ecountmax,"readsurf:count");
+
+  for (i = 0; i < npoint_new; i++) ecount[i] = 0;
+
+  m = ntri_old;
+  for (i = 0; i < ntri_new; i++) {
+    p1 = tris[m].p1 - npoint_old;
+    p2 = tris[m].p2 - npoint_old;
+    p3 = tris[m].p3 - npoint_old;
+    
+    pi = MIN(p1,p2);
+    pj = MAX(p1,p2);
+    for (j = 0; j < ecount[pi]; j++)
+      if (edge[pi][j] == pj) break;
+    if (j == ecount[pi]) {
+      edge[pi][j] = pj;
+      count[pi][j] = 1;
+      ecount[pi]++;
+    } else count[pi][j]++;
+
+    pi = MIN(p2,p3);
+    pj = MAX(p2,p3);
+    for (j = 0; j < ecount[pi]; j++)
+      if (edge[pi][j] == pj) break;
+    if (j == ecount[pi]) {
+      edge[pi][j] = pj;
+      count[pi][j] = 1;
+      ecount[pi]++;
+    } else count[pi][j]++;
+
+    pi = MIN(p3,p1);
+    pj = MAX(p3,p1);
+    for (j = 0; j < ecount[pi]; j++)
+      if (edge[pi][j] == pj) break;
+    if (j == ecount[pi]) {
+      edge[pi][j] = pj;
+      count[pi][j] = 1;
+      ecount[pi]++;
+    } else count[pi][j]++;
+
+    m++;
+  }
+
+  // check that all counts are 2 or 4
+  // allow for exception if edge on box surface
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int nbad = 0;
+  for (i = 0; i < npoint_new; i++)
+    for (j = 0; j < ecount[i]; j++)
+      if (count[i][j] != 2 && count[i][j] != 4)
+	if (!Geometry::point_on_hex(pts[i].x,boxlo,boxhi) ||
+	    !Geometry::point_on_hex(pts[edge[i][j]].x,boxlo,boxhi)) nbad++;
+
+
+  // clean up
+
+  memory->destroy(ecountmax);
+  memory->destroy(ecount);
+  memory->destroy(edge);
+  memory->destroy(count);
+
+  // error messages
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"%d read_surf triangle edges are not watertight",nbad);
+    error->all(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   find edge (I,J) in either order within edge list
+   return index of new point already created along the edge
+------------------------------------------------------------------------- */
+
+int ReadSurf::find_edge(int i, int j)
+{
+  for (int m = 0; m < nedge; m++) {
+    if (i == edge[m][0] && j == edge[m][1]) return edge[m][2];
+    if (i == edge[m][1] && j == edge[m][0]) return edge[m][2];
+  }
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   add edge (I,J) to edge list with index of new pt M created along that edge
+   grow edge list if necessary
+------------------------------------------------------------------------- */
+
+void ReadSurf::add_edge(int i, int j, int m)
+{
+  if (nedge == maxedge) {
+    maxedge += DELTA;
+    memory->grow(edge,maxedge,3,"readsurf:edge");
+  }
+
+  edge[nedge][0] = i;
+  edge[nedge][1] = j;
+  edge[nedge][2] = m;
+  nedge++;
+}
+
+/* ----------------------------------------------------------------------
+   return shortest line length
+------------------------------------------------------------------------- */
+
+double ReadSurf::shortest_line()
+{
+  double len = BIG;
+  int m = nline_old;
+  for (int i = 0; i < nline_new; i++) {
+    len = MIN(len,surf->line_size(m));
+    m++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   return shortest tri edge and smallest tri area
+------------------------------------------------------------------------- */
+
+void ReadSurf::smallest_tri(double &len, double &area)
+{
+  double lenone,areaone;
+
+  len = area = BIG;
+  int m = ntri_old;
+  for (int i = 0; i < ntri_new; i++) {
+    surf->tri_size(m,lenone,areaone);
+    len = MIN(len,lenone);
+    area = MIN(area,areaone);
+    m++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 opens data file
+   test if gzipped
+------------------------------------------------------------------------- */
+
+void ReadSurf::open(char *file)
+{
+  compressed = 0;
+  char *suffix = file + strlen(file) - 3;
+  if (suffix > file && strcmp(suffix,".gz") == 0) compressed = 1;
+  if (!compressed) fp = fopen(file,"r");
+  else {
+#ifdef LAMMPS_GZIP
+    char gunzip[128];
+    sprintf(gunzip,"gunzip -c %s",file);
+    fp = popen(gunzip,"r");
+#else
+    error->one(FLERR,"Cannot open gzipped file");
+#endif
+  }
+
+  if (fp == NULL) {
+    char str[128];
+    sprintf(str,"Cannot open file %s",file);
+    error->one(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   grab next keyword
+   read lines until one is non-blank
+   keyword is all text on line w/out leading & trailing white space
+   read one additional line (assumed blank)
+   if any read hits EOF, set keyword to empty
+   if first = 1, line variable holds non-blank line that ended header
+------------------------------------------------------------------------- */
+
+void ReadSurf::parse_keyword(int first)
+{
+  int eof = 0;
+
+  // proc 0 reads upto non-blank line plus 1 following line
+  // eof is set to 1 if any read hits end-of-file
+
+  if (me == 0) {
+    if (!first) {
+      if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
+    }
+    while (eof == 0 && strspn(line," \t\n\r") == strlen(line)) {
+      if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
+    }
+    if (fgets(buffer,MAXLINE,fp) == NULL) eof = 1;
+  }
+
+  // if eof, set keyword empty and return
+
+  MPI_Bcast(&eof,1,MPI_INT,0,world);
+  if (eof) {
+    keyword[0] = '\0';
+    return;
+  }
+
+  // bcast keyword line to all procs
+
+  int n;
+  if (me == 0) n = strlen(line) + 1;
+  MPI_Bcast(&n,1,MPI_INT,0,world);
+  MPI_Bcast(line,n,MPI_CHAR,0,world);
+
+  // copy non-whitespace portion of line into keyword
+
+  int start = strspn(line," \t\n\r");
+  int stop = strlen(line) - 1;
+  while (line[stop] == ' ' || line[stop] == '\t' 
+	 || line[stop] == '\n' || line[stop] == '\r') stop--;
+  line[stop+1] = '\0';
+  strcpy(keyword,&line[start]);
+}
+
+/* ----------------------------------------------------------------------
+   count and return words in a single line
+   make copy of line before using strtok so as not to change line
+   trim anything from '#' onward
+------------------------------------------------------------------------- */
+
+int ReadSurf::count_words(char *line)
+{
+  int n = strlen(line) + 1;
+  char *copy = (char *) memory->smalloc(n*sizeof(char),"copy");
+  strcpy(copy,line);
+
+  char *ptr;
+  if (ptr = strchr(copy,'#')) *ptr = '\0';
+
+  if (strtok(copy," \t\n\r\f") == NULL) {
+    memory->sfree(copy);
+    return 0;
+  }
+  n = 1;
+  while (strtok(NULL," \t\n\r\f")) n++;
+
+  memory->sfree(copy);
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   unneeded code for now
+------------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
    check if any pair of points is closer than epsilon
    done in O(N) manner by binning twice with offset bins
   //NOTE: check if bins allow for surf points
   //NOTE: or maybe should ignore surf points in this test, since clip
   //      could put them very close together
 ------------------------------------------------------------------------- */
+
+/* 
 
 void ReadSurf::check_point_pairs()
 {
@@ -1289,301 +1639,4 @@ void ReadSurf::check_point_pairs()
   memory->destroy(bin);
 }
 
-/* ----------------------------------------------------------------------
-   check if every new point is an end point of exactly 2 or 4 new lines
-   exception: not required of point on simulation box surface
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_watertight_2d()
-{
-  int p1,p2;
-
-  // count[I] = # of lines that vertex I is part of
-
-  int *count;
-  memory->create(count,npoint_new,"readsurf:count");
-  for (int i = 0; i < npoint_new; i++) count[i] = 0;
-
-  int m = nline_old;
-  for (int i = 0; i < nline_new; i++) {
-    p1 = lines[m].p1 - npoint_old;
-    p2 = lines[m].p2 - npoint_old;
-    count[p1]++;
-    count[p2]++;
-    m++;
-  }
-  
-  // check that all counts are 2 or 4
-  // allow for exception if point on box surface
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-
-  int nbad = 0;
-  m = nline_old;
-  for (int i = 0; i < npoint_new; i++) {
-    if (count[m] != 2 && count[m] != 4)
-      if (!Geometry::point_on_hex(pts[m].x,boxlo,boxhi)) nbad++;
-    m++;
-  }
-
-  // clean up
-
-  memory->destroy(count);
-
-  // error message
-
-  if (nbad) {
-    char str[128];
-    sprintf(str,"%d read_surf lines are not watertight",nbad);
-    error->all(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   check if every new triangle edge is part of exactly 2 or 4 new triangles
-   4 triangles with 1 common edge can occur with infinitely thin surface
-   exception: not required of triangle edge on simulation box surface
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_watertight_3d()
-{
-  int i,j,m,p1,p2,p3,pi,pj;
-
-  // ecountmax[I] = max # of edges that vertex I is part of
-  // use lowest vertex in each edge
-
-  int *ecountmax;
-  memory->create(ecountmax,npoint_new,"readsurf:ecountmax");
-  for (i = 0; i < npoint_new; i++) ecountmax[i] = 0;
-
-  m = ntri_old;
-  for (i = 0; i < ntri_new; i++) {
-    p1 = tris[m].p1 - npoint_old;
-    p2 = tris[m].p2 - npoint_old;
-    p3 = tris[m].p3 - npoint_old;
-    ecountmax[MIN(p1,p2)]++;
-    ecountmax[MIN(p2,p3)]++;
-    ecountmax[MIN(p3,p1)]++;
-    m++;
-  }
-
-  // ecount[I] = # of edges that vertex I is part of
-  // edge[I][J] = Jth vertex connected to vertex I via an edge
-  // count[I][J] = # of times edge IJ appears in surf of triangles
-  // edge & count allocated as ragged 2d arrays using ecountmax for 2nd dim
-  // insure ecount < ecountmax
-
-  int *ecount;
-  memory->create(ecount,npoint_new,"readsurf:ecount");
-  int **edge;
-  memory->create_ragged(edge,npoint_new,ecountmax,"readsurf:edge");
-  int **count;
-  memory->create_ragged(count,npoint_new,ecountmax,"readsurf:count");
-
-  for (i = 0; i < npoint_new; i++) ecount[i] = 0;
-
-  m = ntri_old;
-  for (i = 0; i < ntri_new; i++) {
-    p1 = tris[m].p1 - npoint_old;
-    p2 = tris[m].p2 - npoint_old;
-    p3 = tris[m].p3 - npoint_old;
-    
-    pi = MIN(p1,p2);
-    pj = MAX(p1,p2);
-    for (j = 0; j < ecount[pi]; j++)
-      if (edge[pi][j] == pj) break;
-    if (j == ecount[pi]) {
-      edge[pi][j] = pj;
-      count[pi][j] = 1;
-      ecount[pi]++;
-    } else count[pi][j]++;
-
-    pi = MIN(p2,p3);
-    pj = MAX(p2,p3);
-    for (j = 0; j < ecount[pi]; j++)
-      if (edge[pi][j] == pj) break;
-    if (j == ecount[pi]) {
-      edge[pi][j] = pj;
-      count[pi][j] = 1;
-      ecount[pi]++;
-    } else count[pi][j]++;
-
-    pi = MIN(p3,p1);
-    pj = MAX(p3,p1);
-    for (j = 0; j < ecount[pi]; j++)
-      if (edge[pi][j] == pj) break;
-    if (j == ecount[pi]) {
-      edge[pi][j] = pj;
-      count[pi][j] = 1;
-      ecount[pi]++;
-    } else count[pi][j]++;
-
-    m++;
-  }
-
-  // check that all counts are 2 or 4
-  // allow for exception if edge on box surface
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-
-  int nbad = 0;
-  for (i = 0; i < npoint_new; i++)
-    for (j = 0; j < ecount[i]; j++)
-      if (count[i][j] != 2 && count[i][j] != 4)
-	if (!Geometry::point_on_hex(pts[i].x,boxlo,boxhi) ||
-	    !Geometry::point_on_hex(pts[edge[i][j]].x,boxlo,boxhi)) nbad++;
-
-
-  // clean up
-
-  memory->destroy(ecountmax);
-  memory->destroy(ecount);
-  memory->destroy(edge);
-  memory->destroy(count);
-
-  // error messages
-
-  if (nbad) {
-    char str[128];
-    sprintf(str,"%d read_surf triangle edges are not watertight",nbad);
-    error->all(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   find edge (I,J) in either order within edge list
-------------------------------------------------------------------------- */
-
-int ReadSurf::find_edge(int i, int j)
-{
-  for (int m = 0; m < nedge; m++) {
-    if (i == edge[m][0] && j == edge[m][1]) return edge[m][2];
-    if (i == edge[m][1] && j == edge[m][0]) return edge[m][2];
-  }
-  return -1;
-}
-
-/* ----------------------------------------------------------------------
-   add edge (I,J) to edge list with index of pt M
-   grow edge list if necessary
-------------------------------------------------------------------------- */
-
-void ReadSurf::add_edge(int i, int j, int m)
-{
-  if (nedge == maxedge) {
-    maxedge += DELTA;
-    memory->grow(edge,maxedge,3,"readsurf:edge");
-  }
-
-  edge[nedge][0] = i;
-  edge[nedge][1] = j;
-  edge[nedge][2] = m;
-  nedge++;
-}
-
-/* ----------------------------------------------------------------------
-   proc 0 opens data file
-   test if gzipped
-------------------------------------------------------------------------- */
-
-void ReadSurf::open(char *file)
-{
-  compressed = 0;
-  char *suffix = file + strlen(file) - 3;
-  if (suffix > file && strcmp(suffix,".gz") == 0) compressed = 1;
-  if (!compressed) fp = fopen(file,"r");
-  else {
-#ifdef LAMMPS_GZIP
-    char gunzip[128];
-    sprintf(gunzip,"gunzip -c %s",file);
-    fp = popen(gunzip,"r");
-#else
-    error->one(FLERR,"Cannot open gzipped file");
-#endif
-  }
-
-  if (fp == NULL) {
-    char str[128];
-    sprintf(str,"Cannot open file %s",file);
-    error->one(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   grab next keyword
-   read lines until one is non-blank
-   keyword is all text on line w/out leading & trailing white space
-   read one additional line (assumed blank)
-   if any read hits EOF, set keyword to empty
-   if first = 1, line variable holds non-blank line that ended header
-------------------------------------------------------------------------- */
-
-void ReadSurf::parse_keyword(int first)
-{
-  int eof = 0;
-
-  // proc 0 reads upto non-blank line plus 1 following line
-  // eof is set to 1 if any read hits end-of-file
-
-  if (me == 0) {
-    if (!first) {
-      if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
-    }
-    while (eof == 0 && strspn(line," \t\n\r") == strlen(line)) {
-      if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
-    }
-    if (fgets(buffer,MAXLINE,fp) == NULL) eof = 1;
-  }
-
-  // if eof, set keyword empty and return
-
-  MPI_Bcast(&eof,1,MPI_INT,0,world);
-  if (eof) {
-    keyword[0] = '\0';
-    return;
-  }
-
-  // bcast keyword line to all procs
-
-  int n;
-  if (me == 0) n = strlen(line) + 1;
-  MPI_Bcast(&n,1,MPI_INT,0,world);
-  MPI_Bcast(line,n,MPI_CHAR,0,world);
-
-  // copy non-whitespace portion of line into keyword
-
-  int start = strspn(line," \t\n\r");
-  int stop = strlen(line) - 1;
-  while (line[stop] == ' ' || line[stop] == '\t' 
-	 || line[stop] == '\n' || line[stop] == '\r') stop--;
-  line[stop+1] = '\0';
-  strcpy(keyword,&line[start]);
-}
-
-/* ----------------------------------------------------------------------
-   count and return words in a single line
-   make copy of line before using strtok so as not to change line
-   trim anything from '#' onward
-------------------------------------------------------------------------- */
-
-int ReadSurf::count_words(char *line)
-{
-  int n = strlen(line) + 1;
-  char *copy = (char *) memory->smalloc(n*sizeof(char),"copy");
-  strcpy(copy,line);
-
-  char *ptr;
-  if (ptr = strchr(copy,'#')) *ptr = '\0';
-
-  if (strtok(copy," \t\n\r\f") == NULL) {
-    memory->sfree(copy);
-    return 0;
-  }
-  n = 1;
-  while (strtok(NULL," \t\n\r\f")) n++;
-
-  memory->sfree(copy);
-  return n;
-}
+*/

@@ -28,6 +28,7 @@ using namespace DSMC_NS;
 
 #define DELTA 10000
 #define EPSILON 1.0e-6
+#define BIG 1.0e20
 
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
 enum{SURFEXTERIOR,SURFINTERIOR,SURFCONTAIN};    // same as CreateMolecules
@@ -63,29 +64,50 @@ void Grid::init()
   // assign surf list to each global cell
 
   if (surf->surf_exist) {
+    int i,m;
+    double cmax,len,area;
+    int dimension = domain->dimension;
+
     surf2grid();
 
     int icell;
     int stotal = 0;
     int smax = 0;
+    double sratio = BIG;
     for (int m = 0; m < nlocal; m++) {
       icell = mycells[m];
       stotal += cells[icell].nsurf;
       smax = MAX(smax,cells[icell].nsurf);
+
+      cmax = MAX(cells[icell].hi[0] - cells[icell].lo[0],
+		 cells[icell].hi[1] - cells[icell].lo[1]);
+      if (dimension == 3) 
+	cmax = MAX(cmax,cells[icell].hi[2] - cells[icell].lo[2]);
+
+      for (int i = 0; i < cells[icell].nsurf; i++) {
+	surf->tri_size(csurfs[icell][i],len,area);
+	sratio = MIN(sratio,len/cmax);
+      }
     }
 
     int stotalall,smaxall;
+    double sratioall;
     MPI_Allreduce(&stotal,&stotalall,1,MPI_INT,MPI_SUM,world);
     MPI_Allreduce(&smax,&smaxall,1,MPI_INT,MPI_MAX,world);
+    MPI_Allreduce(&sratio,&sratioall,1,MPI_DOUBLE,MPI_MIN,world);
 
     if (comm->me == 0) {
       if (screen) {
-	fprintf(screen,"Total surf elements in all cells = %d\n",stotalall);
-	fprintf(screen,"Max surf elements in one cell = %d\n",smaxall);
+	fprintf(screen,"Grid/surf-element stats:\n");
+	fprintf(screen,"  total surfs in all grid cells = %d\n",stotalall);
+	fprintf(screen,"  max surfs in one grid cell = %d\n",smaxall);
+	fprintf(screen,"  min surf-size/cell-size ratio = %g\n",sratioall);
       }
       if (logfile) {
-	fprintf(logfile,"Total surf elements in all cells = %d\n",stotalall);
-	fprintf(logfile,"Max surf elements in one cell = %d\n",smaxall);
+	fprintf(logfile,"Grid/surf-element stats:\n");
+	fprintf(logfile,"  total surfs in all grid cells = %d\n",stotalall);
+	fprintf(logfile,"  max surfs in one grid cell = %d\n",smaxall);
+	fprintf(logfile,"  min surf-size/cell-size ratio = %g\n",sratioall);
       }
     }
   }
