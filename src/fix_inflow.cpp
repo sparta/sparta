@@ -23,6 +23,7 @@
 #include "mixture.h"
 #include "domain.h"
 #include "grid.h"
+#include "surf.h"
 #include "comm.h"
 #include "random_mars.h"
 #include "random_park.h"
@@ -33,8 +34,9 @@
 using namespace DSMC_NS;
 using namespace MathConst;
 
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Domain
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};     // same as Domain
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};         // same as Domain
+enum{SURFEXTERIOR,SURFINTERIOR,SURFCONTAIN};    // same as Grid
 enum{NO,YES};
 
 /* ---------------------------------------------------------------------- */
@@ -146,33 +148,79 @@ int FixInflow::setmask()
 
 void FixInflow::init()
 {
+  int i,j,m,n,isp;
+
   // cannot inflow thru periodic boundary
 
-  for (int i = 0; i < 6; i++)
+  for (i = 0; i < 6; i++)
     if (faces[i] && domain->bflag[i] == PERIODIC)
       error->all(FLERR,"Cannot use fix inflow on periodic boundary");
+
+  // allow[I][J] = 1 if my local cell I, face J allows insertions
+  // if cell is INTERIOR to surfs, disallow all faces
+  // if cell is SURFCONTAIN with a surf element vertex on face, disallow face
+  // else allow
+
+  int dimension = domain->dimension;
+  Surf::Point *pts = surf->pts;
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  Grid::OneCell *cells = grid->cells;
+  int **csurfs = grid->csurfs;
+  int *mycells = grid->mycells;
+  int nglocal = grid->nlocal;
+
+  int **allow;
+  memory->create(allow,nglocal,2*dimension,"inflow:allow");
+
+  int icell,dim;
+  double value;
+
+  for (int m = 0; m < nglocal; m++) {
+    icell = mycells[m];
+
+    if (cells[icell].inflag == SURFEXTERIOR) {
+      for (i = 0; i < 6; i++) allow[m][i] = 1;
+
+    } else if (cells[icell].inflag == SURFINTERIOR) {
+      for (i = 0; i < 6; i++) allow[m][i] = 0;
+
+    } else if (cells[icell].inflag == SURFCONTAIN) {
+      for (i = 0; i < 6; i++) {
+	allow[m][i] = 1;
+	dim = i / 2;
+	if (i % 2 == 0) value = domain->boxlo[dim];
+	else value = domain->boxhi[dim];
+	if (dimension == 2) {
+	  for (j = 0; j < cells[icell].nsurf; j++) {
+	    n = csurfs[icell][j];
+	    if (pts[lines[n].p1].x[dim] == value) allow[m][i] = 0;
+	    if (pts[lines[n].p2].x[dim] == value) allow[m][i] = 0;
+	  }
+	} else {
+	  for (j = 0; j < cells[icell].nsurf; j++) {
+	    n = csurfs[icell][j];
+	    if (pts[tris[n].p1].x[dim] == value) allow[m][i] = 0;
+	    if (pts[tris[n].p2].x[dim] == value) allow[m][i] = 0;
+	    if (pts[tris[n].p3].x[dim] == value) allow[m][i] = 0;
+	  }
+	}
+      }
+    }
+  }
 
   // ncf = # of my cell/face pairs to insert onto
   // some may be eliminated later if no particles are actually inserted
 
-  int dimension = domain->dimension;
-
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
-  int nglocal = grid->nlocal;
-  int icell;
-
   ncf = 0;
-  for (int i = 0; i < nglocal; i++) {
-    icell = mycells[i];
-    if (cells[icell].neigh[XLO] < 0 && faces[XLO]) ncf++;
-    if (cells[icell].neigh[XHI] < 0 && faces[XHI]) ncf++;
-    if (cells[icell].neigh[YLO] < 0 && faces[XLO]) ncf++;
-    if (cells[icell].neigh[YHI] < 0 && faces[XHI]) ncf++;
-    if (dimension == 3) {
-      if (cells[icell].neigh[ZLO] < 0 && faces[ZLO]) ncf++;
-      if (cells[icell].neigh[ZHI] < 0 && faces[ZHI]) ncf++;
-    }
+  for (m = 0; m < nglocal; m++) {
+    icell = mycells[m];
+    if (cells[icell].neigh[XLO] < 0 && faces[XLO] && allow[m][XLO]) ncf++;
+    if (cells[icell].neigh[XHI] < 0 && faces[XHI] && allow[m][XHI]) ncf++;
+    if (cells[icell].neigh[YLO] < 0 && faces[XLO] && allow[m][YLO]) ncf++;
+    if (cells[icell].neigh[YHI] < 0 && faces[XHI] && allow[m][YHI]) ncf++;
+    if (cells[icell].neigh[ZLO] < 0 && faces[ZLO] && allow[m][ZLO]) ncf++;
+    if (cells[icell].neigh[ZHI] < 0 && faces[ZHI] && allow[m][ZHI]) ncf++;
   }
 
   // cellface = per-face data struct for all inserts performed on my grid cells
@@ -180,7 +228,7 @@ void FixInflow::init()
   // skip the cellface if indot < 0.0, since no particles will be inserted
   // 2d vs 3d adjusts lo[2],hi[2] and area
 
-  for (int i = 0; i < ncfmax; i++) delete [] cellface[i].ntargetsp;
+  for (i = 0; i < ncfmax; i++) delete [] cellface[i].ntargetsp;
   memory->sfree(cellface);
   ncfmax = ncf;
   cellface = (CellFace *) memory->smalloc(ncfmax*sizeof(CellFace),
@@ -189,7 +237,7 @@ void FixInflow::init()
   int nspecies = particle->mixture[imix]->nspecies;
   int *species = particle->mixture[imix]->species;
 
-  for (int i = 0; i < ncfmax; i++)
+  for (i = 0; i < ncfmax; i++)
     cellface[i].ntargetsp = new double[nspecies];
 
   double nrho = particle->mixture[imix]->nrho;
@@ -200,9 +248,9 @@ void FixInflow::init()
   double area,indot;
 
   ncf = 0;
-  for (int i = 0; i < nglocal; i++) {
-    icell = mycells[i];
-    if (cells[icell].neigh[XLO] < 0 && faces[XLO]) {
+  for (m = 0; m < nglocal; m++) {
+    icell = mycells[m];
+    if (cells[icell].neigh[XLO] < 0 && faces[XLO] && allow[m][XLO]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 0;
       cellface[ncf].pdim1 = 1;
@@ -232,7 +280,7 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot < 0.0) continue;
 
-      for (int isp = 0; isp < nspecies; isp++) {
+      for (isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -240,7 +288,7 @@ void FixInflow::init()
       ncf++;
     }
     
-    if (cells[icell].neigh[XHI] < 0 && faces[XHI]) {
+    if (cells[icell].neigh[XHI] < 0 && faces[XHI] && allow[m][XHI]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 0;
       cellface[ncf].pdim1 = 1;
@@ -270,7 +318,7 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot < 0.0) continue;
 
-      for (int isp = 0; isp < nspecies; isp++) {
+      for (isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -278,7 +326,7 @@ void FixInflow::init()
       ncf++;
     }
 
-    if (cells[icell].neigh[YLO] < 0 && faces[YLO]) {
+    if (cells[icell].neigh[YLO] < 0 && faces[YLO] && allow[m][YLO]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 1;
       cellface[ncf].pdim1 = 0;
@@ -308,7 +356,7 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot < 0.0) continue;
 
-      for (int isp = 0; isp < nspecies; isp++) {
+      for (isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -316,7 +364,7 @@ void FixInflow::init()
       ncf++;
     }
 
-    if (cells[icell].neigh[YHI] < 0 && faces[YHI]) {
+    if (cells[icell].neigh[YHI] < 0 && faces[YHI] && allow[m][YHI]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 1;
       cellface[ncf].pdim1 = 0;
@@ -346,7 +394,7 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot < 0.0) continue;
 
-      for (int isp = 0; isp < nspecies; isp++) {
+      for (isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -354,7 +402,7 @@ void FixInflow::init()
       ncf++;
     }
 
-    if (cells[icell].neigh[ZLO] < 0 && faces[ZLO]) {
+    if (cells[icell].neigh[ZLO] < 0 && faces[ZLO] && allow[m][ZLO]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 2;
       cellface[ncf].pdim1 = 0;
@@ -378,7 +426,7 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot < 0.0) continue;
 
-      for (int isp = 0; isp < nspecies; isp++) {
+      for (isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -386,7 +434,7 @@ void FixInflow::init()
       ncf++;
     }
 
-    if (cells[icell].neigh[ZHI] < 0 && faces[ZHI]) {
+    if (cells[icell].neigh[ZHI] < 0 && faces[ZHI] && allow[m][ZHI]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 2;
       cellface[ncf].pdim1 = 0;
@@ -410,7 +458,7 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot < 0.0) continue;
 
-      for (int isp = 0; isp < nspecies; isp++) {
+      for (isp = 0; isp < nspecies; isp++) {
 	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -418,7 +466,11 @@ void FixInflow::init()
       ncf++;
     }
   }
-  
+
+  // clean up
+
+  memory->destroy(allow);
+
   // if Np > 0, npercell = # of insertions per active cellface pair
   // set nthresh so as to achieve exactly Np insertions
   // cells > cells_with_no_extra need to insert 1 extra particle

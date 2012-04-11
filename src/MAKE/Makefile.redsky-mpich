@@ -1,4 +1,4 @@
-# redsky - SUN X6275 with dual socket/quad core nodes, mpic++, openmpi
+# redsky-mpich - SUN X6275 with dual socket/quad core nodes, mpicc, MPICH
 
 SHELL = /bin/sh
 .IGNORE:
@@ -7,10 +7,10 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
-CC =		mpic++
+CC =		mpicc
 CCFLAGS =	-O2 -xsse4.2 -funroll-loops -fstrict-aliasing
 DEPFLAGS =	-M
-LINK =		mpic++
+LINK =		mpicc
 LINKFLAGS =	-O -xsse4.2 
 LIB =           -lstdc++
 ARCHIVE =	ar

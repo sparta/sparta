@@ -20,6 +20,7 @@
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
+#include "geometry.h"
 #include "math_const.h"
 #include "error.h"
 #include "memory.h"
@@ -27,10 +28,15 @@
 using namespace DSMC_NS;
 using namespace MathConst;
 
+enum{NEITHER,BAD,GOOD};
+
 #define MAXLINE 256
 #define CHUNK 1024
 #define EPSILON 1.0e-6
 #define BIG 1.0e20
+#define DELTA 2             // must be 2 or greater 
+
+// NOTE: boost DELTA after debug
 
 /* ---------------------------------------------------------------------- */
 
@@ -88,16 +94,17 @@ void ReadSurf::command(int narg, char **arg)
   nline_old = surf->nline;
   ntri_old = surf->ntri;
 
+  maxpoint = npoint_old + npoint_new;
+  maxline = nline_old + nline_new;
+  maxtri = ntri_old + ntri_new;
+
   pts = (Surf::Point *) 
-    memory->srealloc(pts,(npoint_old+npoint_new)*sizeof(Surf::Point),
-		     "surf:pts");
+    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
   lines = (Surf::Line *) 
-    memory->srealloc(lines,(nline_old+nline_new)*sizeof(Surf::Line),
-		     "surf:lines");
+    memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
   tris = (Surf::Tri *) 
-    memory->srealloc(tris,(ntri_old+ntri_new)*sizeof(Surf::Tri),
-		     "surf:tris");
-  
+    memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
+
   // read and store Points and Lines/Tris sections
 
   parse_keyword(1);
@@ -218,6 +225,10 @@ void ReadSurf::command(int narg, char **arg)
     } else if (strcmp(arg[iarg],"invert") == 0) {
       invert();
       iarg += 1;
+    } else if (strcmp(arg[iarg],"clip") == 0) {
+      if (dimension == 2) clip2d();
+      else clip3d();
+      iarg += 1;
     } else error->all(FLERR,"Invalid read_surf command");
   }
 
@@ -252,10 +263,9 @@ void ReadSurf::command(int narg, char **arg)
   }
 
   // error checks on new points,lines,tris
-  // all points must be strictly inside simulation box
+  // all points must be inside or on surface of simulation box
   // no pair of points can be separted by less than EPSILON
-  // 2d watertight = every point is part of exactly 2 or 4 lines
-  // 3d watertight = every edge is part of exactly 2 or 4 triangles
+  // surface must be watertight, i.e. closed
 
   check_point_inside();
   check_point_pairs();
@@ -412,6 +422,7 @@ void ReadSurf::read_points()
 
 /* ----------------------------------------------------------------------
    read/store all lines
+   alter p1,p2 indices with to follow previously stored points
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_lines()
@@ -474,6 +485,7 @@ void ReadSurf::read_lines()
 
 /* ----------------------------------------------------------------------
    read/store all triangles
+   alter p1,p2,p3 indices with to follow previously stored points
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_tris()
@@ -630,7 +642,443 @@ void ReadSurf::invert()
 }
 
 /* ----------------------------------------------------------------------
-   check if all new points are strictly inside global simulation box
+   clip all lines so fit inside simulation box
+   may discard some lines and their points completely
+   new points and lines may be added which touch box surface
+   condense data structures by removing deleted points & lines
+------------------------------------------------------------------------- */
+
+void ReadSurf::clip2d()
+{
+  int i,m,n,dim,side,flag;
+  double value,param;
+  double *x,*x1,*x2;
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  for (int iface = 0; iface < 4; iface++) {
+    dim = iface / 2;
+    side = iface % 2;
+    if (side == 0) value = boxlo[dim];
+    else value = boxhi[dim];
+
+    // check if line straddles clipping edge
+    // straddle = pts on different sides (not on) clipping edge
+    // create new point on edge and split line into two lines
+    // reallocate pts and lines if needed and reset x1,x2
+
+    m = nline_old;
+    n = nline_new;
+    for (i = 0; i < n; i++) {
+      x1 = pts[lines[m].p1].x;
+      x2 = pts[lines[m].p2].x;
+      flag = 0;
+      if (x1[dim] < value && x2[dim] > value) flag = 1;
+      if (x1[dim] > value && x2[dim] < value) flag = 1;
+      if (flag) {
+	if (npoint_new == maxpoint) {
+	  maxpoint += DELTA;
+	  pts = (Surf::Point *) 
+	    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
+	  x1 = pts[lines[m].p1].x;
+	  x2 = pts[lines[m].p2].x;
+	}
+	if (nline_new == maxline) {
+	  maxline += DELTA;
+	  lines = (Surf::Line *) 
+	    memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
+	}
+
+	param = (value-x1[dim]) / (x2[dim]-x1[dim]);
+	pts[npoint_new].x[0] = x1[0] + param*(x2[0]-x1[0]);
+	pts[npoint_new].x[1] = x1[1] + param*(x2[1]-x1[1]);
+	pts[npoint_new].x[2] = 0.0;
+	pts[npoint_new].x[dim] = value;
+	npoint_new++;
+
+	memcpy(&lines[nline_new],&lines[m],sizeof(Surf::Line));
+	lines[m].p2 = npoint_new-1;
+	lines[nline_new].p1 = npoint_new-1;
+	nline_new++;
+      }
+      m++;
+    }
+
+    // project all points outside clipping edge to the edge
+
+    m = npoint_old;
+    for (i = 0; i < npoint_new; i++) {
+      x = pts[m].x;
+      if (side == 0 && x[dim] < value) x[dim] = value;
+      if (side == 1 && x[dim] > value) x[dim] = value;
+      m++;
+    }
+
+    // ptflag[I] = # of lines that include point I
+    
+    int *ptflag;
+    memory->create(ptflag,npoint_new-npoint_old,"readsurf:ptflag");
+    m = npoint_old;
+    for (i = 0; i < npoint_new; i++) ptflag[m++] = 0;
+
+    m = nline_old;
+    for (i = 0; i < nline_new; i++) {
+      ptflag[lines[m].p1]++;
+      ptflag[lines[m].p2]++;
+      m++;
+    }
+
+    // lineflag[I] = 1 if line I can be removed b/c lies on clip edge
+    // also decrement ptflag for pts in removed line
+    
+    int *lineflag;
+    memory->create(lineflag,nline_new-nline_old,"readsurf:lineflag");
+    m = nline_old;
+    for (i = 0; i < nline_new; i++) lineflag[m++] = 0;
+
+    m = nline_old;
+    for (i = 0; i < nline_new; i++) {
+      if (pts[lines[m].p1].x[dim] == value && 
+	  pts[lines[m].p2].x[dim] == value) {
+	lineflag[m] = 1;
+	ptflag[lines[m].p1]--;
+	ptflag[lines[m].p2]--;
+      }
+      m++;
+    }
+
+    // condense pts/lines to remove deleted points and lines
+    // when delete points, set ptflag[I] = new index of point I for kept points
+    // renumber point indices in lines using altered ptflag
+    // reset npoint_new,nline_new
+
+    n = m = npoint_old;
+    for (i = 0; i < npoint_new; i++) {
+      if (ptflag[m]) {
+	memcpy(&pts[n],&pts[m],sizeof(Surf::Point));
+	ptflag[m] = n;
+	n++;
+      }
+      m++;
+    }
+    npoint_new = n - npoint_old;
+    
+    n = m = nline_old;
+    for (i = 0; i < nline_new; i++) {
+      if (!lineflag[m]) {
+	memcpy(&lines[n],&lines[m],sizeof(Surf::Line));
+	lines[n].p1 = ptflag[lines[n].p1 - npoint_old] + npoint_old;
+	lines[n].p2 = ptflag[lines[n].p2 - npoint_old] + npoint_old;
+	n++;
+      }
+      m++;
+    }
+    nline_new = n - nline_old;
+
+    // clean up
+
+    memory->destroy(ptflag);
+    memory->destroy(lineflag);
+  }
+
+  if (me == 0) {
+    if (screen) {
+      fprintf(screen,"  clipped to %d points\n",npoint_new);
+      fprintf(screen,"  clipped to %d lines\n",nline_new);
+    }
+    if (logfile) {
+      fprintf(logfile,"  clipped to %d points\n",npoint_new);
+      fprintf(logfile,"  clipped to %d lines\n",nline_new);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   clip all tris so fit inside simulation box
+   may discard some tris and their points completely
+   new points and tris may be added which touch box surface
+   condense data structures by removing deleted points & tris
+------------------------------------------------------------------------- */
+
+void ReadSurf::clip3d()
+{
+  int i,m,n,dim,side,flag;
+  int ngood,nbad,good,bad,ipt;
+  double value,param;
+  int p[3],pflag[3];
+  double *x,*xp[3];
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  for (int iface = 0; iface < 6; iface++) {
+    dim = iface / 2;
+    side = iface % 2;
+    if (side == 0) value = boxlo[dim];
+    else value = boxhi[dim];
+
+    // check if tri straddles clipping plane
+    // straddle = at least 2 pts on different sides (not on) clipping plane
+    // case A: 1 pt on good side of clipping plane, 1 bad, 1 bad or on plane
+    //   add 1 or 2 pts as needed on plane, keep as one tri
+    // case B: 2 pts on good side of clipping plane, 1 on bad
+    //   add 2 new points on plane, tri becomes trapezoid, so split into 2 tris
+    // reallocate pts and tris if needed and reset xp
+    // edge stores indices of pts already added, so don't create duplicate pts
+
+    nedge = maxedge = 0;
+    edge = NULL;
+    
+    m = ntri_old;
+    n = ntri_new;
+    for (i = 0; i < n; i++) {
+      p[0] = tris[m].p1;
+      p[1] = tris[m].p2;
+      p[2] = tris[m].p3;
+      xp[0] = pts[p[0]].x;
+      xp[1] = pts[p[1]].x;
+      xp[2] = pts[p[2]].x;
+
+      if (side == 0) {
+	if (xp[0][dim] < value) pflag[0] = BAD;
+	else if (xp[0][dim] > value) pflag[0] = GOOD;
+	else pflag[0] = NEITHER;
+	if (xp[1][dim] < value) pflag[1] = BAD;
+	else if (xp[1][dim] > value) pflag[1] = GOOD;
+	else pflag[1] = NEITHER;
+	if (xp[2][dim] < value) pflag[2] = BAD;
+	else if (xp[2][dim] > value) pflag[2] = GOOD;
+	else pflag[2] = NEITHER;
+      } else {
+	if (xp[0][dim] > value) pflag[0] = BAD;
+	else if (xp[0][dim] < value) pflag[0] = GOOD;
+	else pflag[0] = NEITHER;
+	if (xp[1][dim] > value) pflag[1] = BAD;
+	else if (xp[1][dim] < value) pflag[1] = GOOD;
+	else pflag[1] = NEITHER;
+	if (xp[2][dim] > value) pflag[2] = BAD;
+	else if (xp[2][dim] < value) pflag[2] = GOOD;
+	else pflag[2] = NEITHER;
+      }
+
+      nbad = ngood = 0;
+      if (pflag[0] == BAD) nbad++;
+      if (pflag[1] == BAD) nbad++;
+      if (pflag[2] == BAD) nbad++;
+      if (pflag[0] == GOOD) ngood++;
+      if (pflag[1] == GOOD) ngood++;
+      if (pflag[2] == GOOD) ngood++;
+
+      if (nbad && ngood) {
+	if (npoint_new+2 >= maxpoint) {
+	  maxpoint += DELTA;
+	  pts = (Surf::Point *) 
+	    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
+	  xp[0] = pts[p[0]].x;
+	  xp[1] = pts[p[1]].x;
+	  xp[2] = pts[p[2]].x;
+	}
+	if (ntri_new == maxtri) {
+	  maxtri += DELTA;
+	  tris = (Surf::Tri *) 
+	    memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
+	}
+
+	if (ngood == 1) {
+	  if (pflag[0] == GOOD) good = 0;
+	  else if (pflag[1] == GOOD) good = 1;
+	  else if (pflag[2] == GOOD) good = 2;
+	  if (pflag[0] == BAD) bad = 0;
+	  else if (pflag[1] == BAD) bad = 1;
+	  else if (pflag[2] == BAD) bad = 2;
+
+	  ipt = find_edge(p[good],p[bad]);
+	  if (ipt < 0) {
+	    param = (value-xp[good][dim]) / (xp[bad][dim]-xp[good][dim]);
+	    pts[npoint_new].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
+	    pts[npoint_new].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
+	    pts[npoint_new].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
+	    pts[npoint_new].x[dim] = value;
+	    ipt = npoint_new++;
+	    add_edge(p[good],p[bad],ipt);
+	  }
+
+	  if (bad == 0) tris[m].p1 = ipt;
+	  else if (bad == 1) tris[m].p2 = ipt;
+	  else if (bad == 2) tris[m].p3 = ipt;
+
+	  if (nbad == 2) {
+	    if (bad == 0 && pflag[1] == BAD) bad = 1;
+	    else bad = 2;
+
+	    ipt = find_edge(p[good],p[bad]);
+	    if (ipt < 0) {
+	      param = (value-xp[good][dim]) / (xp[bad][dim]-xp[good][dim]);
+	      pts[npoint_new].x[0] = 
+		xp[good][0] + param*(xp[bad][0]-xp[good][0]);
+	      pts[npoint_new].x[1] = 
+		xp[good][1] + param*(xp[bad][1]-xp[good][1]);
+	      pts[npoint_new].x[2] = 
+		xp[good][2] + param*(xp[bad][2]-xp[good][2]);
+	      pts[npoint_new].x[dim] = value;
+	      ipt = npoint_new++;
+	      add_edge(p[good],p[bad],ipt);
+	    }
+
+	    if (bad == 0) tris[m].p1 = ipt;
+	    else if (bad == 1) tris[m].p2 = ipt;
+	    else if (bad == 2) tris[m].p3 = ipt;
+	  }
+
+	} else if (ngood == 2) {
+	  if (pflag[0] == GOOD) good = 0;
+	  else if (pflag[1] == GOOD) good = 1;
+	  else if (pflag[2] == GOOD) good = 2;
+	  if (pflag[0] == BAD) bad = 0;
+	  else if (pflag[1] == BAD) bad = 1;
+	  else if (pflag[2] == BAD) bad = 2;
+
+	  ipt = find_edge(p[good],p[bad]);
+	  if (ipt < 0) {
+	    param = (value-xp[good][dim]) / (xp[bad][dim]-xp[good][dim]);
+	    pts[npoint_new].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
+	    pts[npoint_new].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
+	    pts[npoint_new].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
+	    pts[npoint_new].x[dim] = value;
+	    ipt = npoint_new++;
+	    add_edge(p[good],p[bad],ipt);
+	  }
+
+	  if (bad == 0) tris[m].p1 = ipt;
+	  else if (bad == 1) tris[m].p2 = ipt;
+	  else if (bad == 2) tris[m].p3 = ipt;
+
+	  memcpy(&tris[ntri_new],&tris[m],sizeof(Surf::Tri));
+	  if (good == 0) tris[ntri_new].p1 = ipt;
+	  else if (good == 1) tris[ntri_new].p2 = ipt;
+	  else if (good == 2) tris[ntri_new].p3 = ipt;
+
+	  if (good == 0 && pflag[1] == GOOD) good = 1;
+	  else good = 2;
+
+	  ipt = find_edge(p[good],p[bad]);
+	  if (ipt < 0) {
+	    param = (value-xp[good][dim]) / (xp[bad][dim]-xp[good][dim]);
+	    pts[npoint_new].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
+	    pts[npoint_new].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
+	    pts[npoint_new].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
+	    pts[npoint_new].x[dim] = value;
+	    ipt = npoint_new++;
+	    add_edge(p[good],p[bad],ipt);
+	  }
+
+	  if (bad == 0) tris[ntri_new].p1 = ipt;
+	  else if (bad == 1) tris[ntri_new].p2 = ipt;
+	  else if (bad == 2) tris[ntri_new].p3 = ipt;
+	  ntri_new++;
+	}
+      }
+      m++;
+    }
+
+    memory->destroy(edge);
+
+    // project all points outside clipping plane to the plane
+
+    m = npoint_old;
+    for (i = 0; i < npoint_new; i++) {
+      x = pts[m].x;
+      if (side == 0 && x[dim] < value) x[dim] = value;
+      if (side == 1 && x[dim] > value) x[dim] = value;
+      m++;
+    }
+
+    // ptflag[I] = # of tris that include point I
+    
+    int *ptflag;
+    memory->create(ptflag,npoint_new-npoint_old,"readsurf:ptflag");
+    m = npoint_old;
+    for (i = 0; i < npoint_new; i++) ptflag[m++] = 0;
+
+    m = ntri_old;
+    for (i = 0; i < ntri_new; i++) {
+      ptflag[tris[m].p1]++;
+      ptflag[tris[m].p2]++;
+      ptflag[tris[m].p3]++;
+      m++;
+    }
+
+    // triflag[I] = 1 if tri I can be removed b/c lies on clip plane
+    // also decrement ptflag for pts in removed tri
+    
+    int *triflag;
+    memory->create(triflag,ntri_new-ntri_old,"readsurf:triflag");
+    m = ntri_old;
+    for (i = 0; i < ntri_new; i++) triflag[m++] = 0;
+
+    m = ntri_old;
+    for (i = 0; i < ntri_new; i++) {
+      if (pts[tris[m].p1].x[dim] == value && 
+	  pts[tris[m].p2].x[dim] == value &&
+	  pts[tris[m].p3].x[dim] == value) {
+	triflag[m] = 1;
+	ptflag[tris[m].p1]--;
+	ptflag[tris[m].p2]--;
+	ptflag[tris[m].p3]--;
+      }
+      m++;
+    }
+
+    // condense pts/tris to remove deleted points and tris
+    // when delete points, set ptflag[I] = new index of point I for kept points
+    // renumber point indices in tris using altered ptflag
+    // reset npoint_new,ntri_new
+
+    n = m = npoint_old;
+    for (i = 0; i < npoint_new; i++) {
+      if (ptflag[m]) {
+	memcpy(&pts[n],&pts[m],sizeof(Surf::Point));
+	ptflag[m] = n;
+	n++;
+      }
+      m++;
+    }
+    npoint_new = n - npoint_old;
+    
+    n = m = ntri_old;
+    for (i = 0; i < ntri_new; i++) {
+      if (!triflag[m]) {
+	memcpy(&tris[n],&tris[m],sizeof(Surf::Tri));
+	tris[n].p1 = ptflag[tris[n].p1 - npoint_old] + npoint_old;
+	tris[n].p2 = ptflag[tris[n].p2 - npoint_old] + npoint_old;
+	tris[n].p3 = ptflag[tris[n].p3 - npoint_old] + npoint_old;
+	n++;
+      }
+      m++;
+    }
+    ntri_new = n - ntri_old;
+
+    // clean up
+
+    memory->destroy(ptflag);
+    memory->destroy(triflag);
+  }
+
+  if (me == 0) {
+    if (screen) {
+      fprintf(screen,"  clipped to %d points\n",npoint_new);
+      fprintf(screen,"  clipped to %d tris\n",ntri_new);
+    }
+    if (logfile) {
+      fprintf(logfile,"  clipped to %d points\n",npoint_new);
+      fprintf(logfile,"  clipped to %d tris\n",ntri_new);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check if all new points are inside or on surface of global simulation box
 ------------------------------------------------------------------------- */
 
 void ReadSurf::check_point_inside()
@@ -644,9 +1092,9 @@ void ReadSurf::check_point_inside()
   int nbad = 0;
   for (int i = 0; i < npoint_new; i++) {
     x = pts[m].x;
-    if (x[0] <= boxlo[0] || x[0] >= boxhi[0] ||
-	x[1] <= boxlo[1] || x[1] >= boxhi[1] ||
-	x[2] <= boxlo[2] || x[2] >= boxhi[2]) nbad++;
+    if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
     m++;
   }
 
@@ -661,6 +1109,9 @@ void ReadSurf::check_point_inside()
 /* ----------------------------------------------------------------------
    check if any pair of points is closer than epsilon
    done in O(N) manner by binning twice with offset bins
+  //NOTE: check if bins allow for surf points
+  //NOTE: or maybe should ignore surf points in this test, since clip
+  //      could put them very close together
 ------------------------------------------------------------------------- */
 
 void ReadSurf::check_point_pairs()
@@ -751,25 +1202,6 @@ void ReadSurf::check_point_pairs()
     m++;
   }
 
-  // DEBUG
-
-  /*
-  int nmax;
-  for (i = 0; i < nbinx; i++)
-    for (j = 0; j < nbiny; j++)
-      for (k = 0; k < nbinz; k++) {
-	m = binhead[i][j][k];
-	n = 0;
-	while (m >= 0) {
-	  m = bin[m];
-	  n++;
-	}
-	nmax = MAX(nmax,n);
-      }
-
-  printf("MAX points in any pairwise bin = %d\n",nmax);
-  */
-
   // check distances for all pairs of particles in same bin
 
   int nbad = 0;
@@ -859,6 +1291,7 @@ void ReadSurf::check_point_pairs()
 
 /* ----------------------------------------------------------------------
    check if every new point is an end point of exactly 2 or 4 new lines
+   exception: not required of point on simulation box surface
 ------------------------------------------------------------------------- */
 
 void ReadSurf::check_watertight_2d()
@@ -881,10 +1314,18 @@ void ReadSurf::check_watertight_2d()
   }
   
   // check that all counts are 2 or 4
+  // allow for exception if point on box surface
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
 
   int nbad = 0;
-  for (int i = 0; i < npoint_new; i++)
-    if (count[i] != 2 && count[i] != 4) nbad++;
+  m = nline_old;
+  for (int i = 0; i < npoint_new; i++) {
+    if (count[m] != 2 && count[m] != 4)
+      if (!Geometry::point_on_hex(pts[m].x,boxlo,boxhi)) nbad++;
+    m++;
+  }
 
   // clean up
 
@@ -902,6 +1343,7 @@ void ReadSurf::check_watertight_2d()
 /* ----------------------------------------------------------------------
    check if every new triangle edge is part of exactly 2 or 4 new triangles
    4 triangles with 1 common edge can occur with infinitely thin surface
+   exception: not required of triangle edge on simulation box surface
 ------------------------------------------------------------------------- */
 
 void ReadSurf::check_watertight_3d()
@@ -910,7 +1352,6 @@ void ReadSurf::check_watertight_3d()
 
   // ecountmax[I] = max # of edges that vertex I is part of
   // use lowest vertex in each edge
-  // divide by 2 to give upper bound, assuming edge will appear 2 or 4 times
 
   int *ecountmax;
   memory->create(ecountmax,npoint_new,"readsurf:ecountmax");
@@ -927,15 +1368,6 @@ void ReadSurf::check_watertight_3d()
     m++;
   }
 
-  for (i = 0; i < npoint_new; i++) ecountmax[i] /= 2;
-
-  // DEBUG
-
-  /*
-  printf("ECMAX %d %d %d %d\n",
-	 ecountmax[0],ecountmax[1],ecountmax[2],ecountmax[3]);
-  */
-
   // ecount[I] = # of edges that vertex I is part of
   // edge[I][J] = Jth vertex connected to vertex I via an edge
   // count[I][J] = # of times edge IJ appears in surf of triangles
@@ -951,7 +1383,6 @@ void ReadSurf::check_watertight_3d()
 
   for (i = 0; i < npoint_new; i++) ecount[i] = 0;
 
-  int nbad1 = 0;
   m = ntri_old;
   for (i = 0; i < ntri_new; i++) {
     p1 = tris[m].p1 - npoint_old;
@@ -963,12 +1394,9 @@ void ReadSurf::check_watertight_3d()
     for (j = 0; j < ecount[pi]; j++)
       if (edge[pi][j] == pj) break;
     if (j == ecount[pi]) {
-      if (ecount[pi] == ecountmax[pi]) nbad1++;
-      else {
-	edge[pi][j] = pj;
-	count[pi][j] = 1;
-	ecount[pi]++;
-      }
+      edge[pi][j] = pj;
+      count[pi][j] = 1;
+      ecount[pi]++;
     } else count[pi][j]++;
 
     pi = MIN(p2,p3);
@@ -976,12 +1404,9 @@ void ReadSurf::check_watertight_3d()
     for (j = 0; j < ecount[pi]; j++)
       if (edge[pi][j] == pj) break;
     if (j == ecount[pi]) {
-      if (ecount[pi] == ecountmax[pi]) nbad1++;
-      else {
-	edge[pi][j] = pj;
-	count[pi][j] = 1;
-	ecount[pi]++;
-      }
+      edge[pi][j] = pj;
+      count[pi][j] = 1;
+      ecount[pi]++;
     } else count[pi][j]++;
 
     pi = MIN(p3,p1);
@@ -989,48 +1414,27 @@ void ReadSurf::check_watertight_3d()
     for (j = 0; j < ecount[pi]; j++)
       if (edge[pi][j] == pj) break;
     if (j == ecount[pi]) {
-      if (ecount[pi] == ecountmax[pi]) nbad1++;
-      else {
-	edge[pi][j] = pj;
-	count[pi][j] = 1;
-	ecount[pi]++;
-      }
+      edge[pi][j] = pj;
+      count[pi][j] = 1;
+      ecount[pi]++;
     } else count[pi][j]++;
 
     m++;
   }
 
-  // DEBUG
-
-  /*
-  printf("NBAD1 %d\n",nbad1);
-
-    printf("EC %d %d %d %d\n",
-	   ecount[0],ecount[1],ecount[2],ecount[3]);
-
-    for (int ii = 0; ii < npoint_new; ii++) {
-      printf("PT %d:",ii+1);
-      for (j = 0; j < ecount[ii]; j++)
-	printf(" %d",edge[ii][j]+1);
-      printf("\n");
-    }
-    
-    for (int ii = 0; ii < npoint_new; ii++) {
-      printf("COUNT %d:",ii+1);
-      for (j = 0; j < ecount[ii]; j++)
-	printf(" %d",count[ii][j]);
-      printf("\n");
-    }
-    
-    printf("DONE %d\n",i+1);
-  */
-
   // check that all counts are 2 or 4
+  // allow for exception if edge on box surface
 
-  int nbad2 = 0;
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int nbad = 0;
   for (i = 0; i < npoint_new; i++)
     for (j = 0; j < ecount[i]; j++)
-      if (count[i][j] != 2 && count[i][j] != 4) nbad2++;
+      if (count[i][j] != 2 && count[i][j] != 4)
+	if (!Geometry::point_on_hex(pts[i].x,boxlo,boxhi) ||
+	    !Geometry::point_on_hex(pts[edge[i][j]].x,boxlo,boxhi)) nbad++;
+
 
   // clean up
 
@@ -1041,12 +1445,42 @@ void ReadSurf::check_watertight_3d()
 
   // error messages
 
-  int nbad = nbad1 + nbad2;
   if (nbad) {
     char str[128];
     sprintf(str,"%d read_surf triangle edges are not watertight",nbad);
     error->all(FLERR,str);
   }
+}
+
+/* ----------------------------------------------------------------------
+   find edge (I,J) in either order within edge list
+------------------------------------------------------------------------- */
+
+int ReadSurf::find_edge(int i, int j)
+{
+  for (int m = 0; m < nedge; m++) {
+    if (i == edge[m][0] && j == edge[m][1]) return edge[m][2];
+    if (i == edge[m][1] && j == edge[m][0]) return edge[m][2];
+  }
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   add edge (I,J) to edge list with index of pt M
+   grow edge list if necessary
+------------------------------------------------------------------------- */
+
+void ReadSurf::add_edge(int i, int j, int m)
+{
+  if (nedge == maxedge) {
+    maxedge += DELTA;
+    memory->grow(edge,maxedge,3,"readsurf:edge");
+  }
+
+  edge[nedge][0] = i;
+  edge[nedge][1] = j;
+  edge[nedge][2] = m;
+  nedge++;
 }
 
 /* ----------------------------------------------------------------------

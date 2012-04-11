@@ -99,7 +99,6 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
 
   if (random->uniform() > acc) {
     MathExtra::reflect3(p->v,norm);
-    printf("REFLECT\n");
 
   // diffuse reflection
   // vrm = most probable speed of species, eqns (4.1) and (4.7)

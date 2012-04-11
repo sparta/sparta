@@ -407,10 +407,10 @@ void DSMC::create()
   update = new Update(this);
   comm = new Comm(this);
   domain = new Domain(this);
-  modify = new Modify(this);
   grid = new Grid(this);
   surf = new Surf(this);
   collide = NULL;
+  modify = new Modify(this);
   output = new Output(this);
   timer = new Timer(this);
 }
@@ -425,10 +425,10 @@ void DSMC::init()
   update->init();
   comm->init();
   domain->init();
-  modify->init();
   grid->init();
   surf->init();
   if (collide) collide->init();
+  modify->init();              // after grid, so that grid/surf is flagged
   output->init();
   timer->init();
 }
@@ -444,10 +444,10 @@ void DSMC::destroy()
   delete update;
   delete comm;
   delete domain;
-  delete modify;
   delete grid;
   delete surf;
   delete collide;
+  delete modify;
   delete output;
   delete timer;
 }

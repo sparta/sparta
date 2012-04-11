@@ -47,6 +47,10 @@ class ReadSurf : protected Pointers {
   Surf::Tri *tris;
   int npoint_old,nline_old,ntri_old;
   int npoint_new,nline_new,ntri_new;
+  int maxpoint,maxline,maxtri;
+
+  int **edge;
+  int nedge,maxedge;
 
   void header();
   void read_points();
@@ -57,11 +61,16 @@ class ReadSurf : protected Pointers {
   void scale(double, double, double);
   void rotate(double, double, double, double);
   void invert();
+  void clip2d();
+  void clip3d();
 
   void check_point_inside();
   void check_point_pairs();
   void check_watertight_2d();
   void check_watertight_3d();
+
+  int find_edge(int, int);
+  void add_edge(int, int, int);
 
   void open(char *);
   void parse_keyword(int);

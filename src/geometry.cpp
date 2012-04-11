@@ -433,6 +433,25 @@ int whichside(double *v, double *norm, double x, double y, double z)
   else return 0;
 }
 
+/* ----------------------------------------------------------------------
+   determine if point x lies on surface of hex defined by lo and hi
+   return 1 if it does, 0 if not
+------------------------------------------------------------------------- */
+
+int point_on_hex(double *x, double *lo, double *hi)
+{
+  if ((x[0] == lo[0] || x[0] == hi[0]) && 
+      x[1] >= lo[1] && x[1] <= hi[1] && x[2] >= lo[2] && x[2] <= hi[2])
+    return 1;
+  if ((x[1] == lo[1] || x[1] == hi[1]) && 
+      x[0] >= lo[0] && x[0] <= hi[0] && x[2] >= lo[2] && x[2] <= hi[2])
+    return 1;
+  if ((x[2] == lo[2] || x[2] == hi[2]) && 
+      x[0] >= lo[0] && x[0] <= hi[0] && x[1] >= lo[1] && x[1] <= hi[1])
+    return 1;
+  return 0;
+}
+
 /* ---------------------------------------------------------------------- */
 
 }

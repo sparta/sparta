@@ -101,8 +101,6 @@ void CreateGrid::command(int narg, char **arg)
 
   // box and grid cell geometry
 
-  int dimension = domain->dimension;
-
   double xlo = domain->boxlo[0];
   double ylo = domain->boxlo[1];
   double zlo = domain->boxlo[2];

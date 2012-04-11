@@ -30,6 +30,8 @@ using namespace DSMC_NS;
 #define EPSILON 1.0e-6
 
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
+enum{SURFEXTERIOR,SURFINTERIOR,SURFCONTAIN};    // same as CreateMolecules
+                                                // same as FixInflow
 
 /* ---------------------------------------------------------------------- */
 
@@ -85,6 +87,17 @@ void Grid::init()
 	fprintf(logfile,"Total surf elements in all cells = %d\n",stotalall);
 	fprintf(logfile,"Max surf elements in one cell = %d\n",smaxall);
       }
+    }
+  }
+
+  // set inflag for each owned cell
+
+  if (surf->surf_exist) grid_inout();
+  else {
+    int icell;
+    for (int m = 0; m < nlocal; m++) {
+      icell = mycells[m];
+      cells[icell].inflag = SURFEXTERIOR; 
     }
   }
 }
@@ -490,6 +503,21 @@ void Grid::surf2grid()
   // clean up
     
   memory->destroy(count);
+}
+
+/* ----------------------------------------------------------------------
+   assign surface elements (lines or triangles) to grid cells
+   NOTE: no parallelism yet, since each proc owns entire grid & all surfs
+------------------------------------------------------------------------- */
+
+void Grid::grid_inout()
+{
+  int icell;
+  for (int m = 0; m < nlocal; m++) {
+    icell = mycells[m];
+    if (cells[icell].nsurf) cells[icell].inflag = SURFCONTAIN; 
+    else cells[icell].inflag = SURFEXTERIOR; 
+  }
 }
 
 /* ----------------------------------------------------------------------

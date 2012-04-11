@@ -36,6 +36,7 @@ class Grid : protected Pointers {
     int local;                // local index of cell if I own it
     int count;                // # of particles in this cell
     int first;                // index of 1st particle in this cell
+    int inflag;               // EXTERIOR, INTERIOR, or SURFCONTAIN
     int nsurf;                // # of lines or triangles in this cell
     double volume;            // volume of cell
   };
@@ -67,6 +68,7 @@ class Grid : protected Pointers {
   void procs2grid(int &, int &, int &);
 
   void surf2grid();
+  void grid_inout();
 };
 
 }
