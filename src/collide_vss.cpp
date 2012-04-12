@@ -115,7 +115,8 @@ void CollideVSS::init()
 	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
       //printf(" Prefactor %e %e %e \n", cxs, omega, tgamma(2.5-omega));
       double beta = MIN(vscale[isp],vscale[jsp]);
-      double max_thermal_velocity = 10.0/beta;
+      double max_thermal_velocity = 10.0*beta;
+//      printf(" Max thermal velocity= %e \n", beta*3) ;
       vrm[isp][jsp] = cxs * pow(max_thermal_velocity*max_thermal_velocity,1-omega);
     }
 
@@ -130,8 +131,9 @@ void CollideVSS::init()
       for (int jsp = 0; jsp < nspecies; jsp++) {
         int igroup = mix2group[isp];
         int jgroup = mix2group[jsp];
-
-	vremax[icell][igroup][jgroup] = MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
+// set the maximum vre of each species as the vre for the group
+           vremax[icell][igroup][jgroup] = vrm[isp][jsp];
+//	vremax[icell][igroup][jgroup] = MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
       }
 }
 
@@ -143,9 +145,13 @@ double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup,
  double fnum = update->fnum;
  double dt = update->dt;
 
- double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
-   vremax[ilocal][igroup][jgroup] * dt * fnum / volume + random->uniform();
+// double rannum = random->uniform();
+// printf("Random Number = %e \n", rannum);
 
+ double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
+//   vremax[ilocal][igroup][jgroup] * dt * fnum / volume + rannum;
+   vremax[ilocal][igroup][jgroup] * dt * fnum / volume + random->uniform();
+//   printf("Attemps = %e %d %d %e \n", nattempt,ngroup[igroup],ngroup[jgroup],vremax[ilocal][igroup][jgroup]);
   return nattempt;
 }
 
@@ -172,15 +178,16 @@ int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
   double omega1 = params[ispecies].omega;
   double omega2 = params[jspecies].omega;
   double omega = 0.5 * (omega1+omega2);
-  double vro  = pow(vr2,1.-omega);
+  double vro  = pow(vr2,1-omega);
 
   // although the vremax is calcualted for the group,
   // the individual collisions calculated species dependent vre
 
   double vre = vro*prefactor[ispecies][jspecies];
 
-//  printf("INSIDE %e %e \n", vre,vremax[ilocal][igroup][jgroup]);
+//  printf("INSIDE-1 %e %e \n", vre,vremax[ilocal][igroup][jgroup]);
   vremax[ilocal][igroup][jgroup] = MAX(vre,vremax[ilocal][igroup][jgroup]);
+//  printf("INSIDE-2 %e %e \n", vre,vremax[ilocal][igroup][jgroup]);
 
   if (vre/vremax[ilocal][igroup][jgroup] < random->uniform()) return 0;
   return 1;
@@ -316,6 +323,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
   // handle each kind of energy disposal for non-reacting reactants
 
+
   if (precoln.ave_dof == 0) {
     ip->erot  = 0.0;
     jp->erot  = 0.0;
@@ -381,8 +389,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = precoln.etotal - postcoln.eint;
-
-  /*
+/*
   if(postcoln->etranslation<0) {
      fprintf(stderr,
 	"NEGATIVE ETRANSLATION IN Energy Disposal! Exiting!!\n");
@@ -393,8 +400,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 	    precoln->etotal); 
      exit(0);
   }
-  */
-
+*/
  return;
 }
 
