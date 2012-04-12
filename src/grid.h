@@ -68,7 +68,9 @@ class Grid : protected Pointers {
   void procs2grid(int &, int &, int &);
 
   void surf2grid();
+  void surf2grid_stats();
   void grid_inout();
+  void grid_inout_stats();
 };
 
 }

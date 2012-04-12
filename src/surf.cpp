@@ -134,7 +134,7 @@ void Surf::tri_size(int m, double &len, double &area)
   len = MIN(len,MathExtra::len3(delta23));
 
   MathExtra::cross3(delta12,delta13,cross);
-  area = MathExtra::len3(cross);
+  area = 0.5 * MathExtra::len3(cross);
 }
 
 /* ----------------------------------------------------------------------

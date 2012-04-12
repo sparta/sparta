@@ -19,10 +19,10 @@
 #ifndef LMP_MATH_EXTRA_H
 #define LMP_MATH_EXTRA_H
 
+#include "dsmctype.h"
 #include "math.h"
 #include "stdio.h"
 #include "string.h"
-#include "error.h"
 
 namespace MathExtra {
 
@@ -77,9 +77,10 @@ namespace MathExtra {
                                 double *quat);
   inline void quat_to_mat(const double *quat, double mat[3][3]);
 
-  // various methods
+  // misc methods
 
-  int bounds(char *, int , int &, int &);
+  int bounds(char *, int, int &, int &);
+  char *num2str(DSMC_NS::bigint, char *);
 }
 
 /* ----------------------------------------------------------------------

@@ -22,10 +22,12 @@
 #include "particle.h"
 #include "collide.h"
 #include "comm.h"
+#include "math_extra.h"
 #include "timer.h"
 #include "memory.h"
 
 using namespace DSMC_NS;
+using namespace MathExtra;
 
 /* ---------------------------------------------------------------------- */
 
@@ -122,18 +124,29 @@ void Finish::end()
     cps = 1.0*ncollide_total/nmove_total;
   }
 
+  char str[32];
+
   if (me == 0) {
     if (screen) {
       fprintf(screen,"\n");
-      fprintf(screen,"Particle moves = " BIGINT_FORMAT "\n",nmove_total);
-      fprintf(screen,"Cells touched  = " BIGINT_FORMAT "\n",ntouch_total);
-      fprintf(screen,"Particle comms = " BIGINT_FORMAT "\n",ncomm_total);
-      fprintf(screen,"Bound collides = " BIGINT_FORMAT "\n",nboundary_total);
-      fprintf(screen,"Bound exits    = " BIGINT_FORMAT "\n",nexit_total);
-      fprintf(screen,"SurfColl check = " BIGINT_FORMAT "\n",nscheck_total);
-      fprintf(screen,"SurfColl occur = " BIGINT_FORMAT "\n",nscollide_total);
-      fprintf(screen,"Collide attmpt = " BIGINT_FORMAT "\n",nattempt_total);
-      fprintf(screen,"Collide occurs = " BIGINT_FORMAT "\n",ncollide_total);
+      fprintf(screen,"Particle moves = " BIGINT_FORMAT " %s\n",
+	      nmove_total,MathExtra::num2str(nmove_total,str));
+      fprintf(screen,"Cells touched  = " BIGINT_FORMAT " %s\n",
+	      ntouch_total,MathExtra::num2str(ntouch_total,str));
+      fprintf(screen,"Particle comms = " BIGINT_FORMAT " %s\n",
+	      ncomm_total,MathExtra::num2str(ncomm_total,str));
+      fprintf(screen,"Bound collides = " BIGINT_FORMAT " %s\n",
+	      nboundary_total,MathExtra::num2str(nboundary_total,str));
+      fprintf(screen,"Bound exits    = " BIGINT_FORMAT " %s\n",
+	      nexit_total,MathExtra::num2str(nexit_total,str));
+      fprintf(screen,"SurfColl check = " BIGINT_FORMAT " %s\n",
+	      nscheck_total,MathExtra::num2str(nscheck_total,str));
+      fprintf(screen,"SurfColl occur = " BIGINT_FORMAT " %s\n",
+	      nscollide_total,MathExtra::num2str(nscollide_total,str));
+      fprintf(screen,"Collide attmpt = " BIGINT_FORMAT " %s\n",
+	      nattempt_total,MathExtra::num2str(nattempt_total,str));
+      fprintf(screen,"Collide occurs = " BIGINT_FORMAT " %s\n",
+	      ncollide_total,MathExtra::num2str(ncollide_total,str));
       fprintf(screen,"\n");
       fprintf(screen,"Particle-moves/step: %g\n",pms);
       fprintf(screen,"Cell-touches/particle/step: %g\n",ctps);
@@ -147,15 +160,24 @@ void Finish::end()
     }
     if (logfile) {
       fprintf(logfile,"\n");
-      fprintf(logfile,"Particle moves = " BIGINT_FORMAT "\n",nmove_total);
-      fprintf(logfile,"Cells touched  = " BIGINT_FORMAT "\n",ntouch_total);
-      fprintf(logfile,"Particle comms = " BIGINT_FORMAT "\n",ncomm_total);
-      fprintf(logfile,"Bound collides = " BIGINT_FORMAT "\n",nboundary_total);
-      fprintf(logfile,"Bound exits    = " BIGINT_FORMAT "\n",nexit_total);
-      fprintf(logfile,"SurfColl check = " BIGINT_FORMAT "\n",nscheck_total);
-      fprintf(logfile,"SurfColl occur = " BIGINT_FORMAT "\n",nscollide_total);
-      fprintf(logfile,"Collide attmpt = " BIGINT_FORMAT "\n",nattempt_total);
-      fprintf(logfile,"Collide occurs = " BIGINT_FORMAT "\n",ncollide_total);
+      fprintf(logfile,"Particle moves = " BIGINT_FORMAT " %s\n",
+	      nmove_total,MathExtra::num2str(nmove_total,str));
+      fprintf(logfile,"Cells touched  = " BIGINT_FORMAT " %s\n",
+	      ntouch_total,MathExtra::num2str(ntouch_total,str));
+      fprintf(logfile,"Particle comms = " BIGINT_FORMAT " %s\n",
+	      ncomm_total,MathExtra::num2str(ncomm_total,str));
+      fprintf(logfile,"Bound collides = " BIGINT_FORMAT " %s\n",
+	      nboundary_total,MathExtra::num2str(nboundary_total,str));
+      fprintf(logfile,"Bound exits    = " BIGINT_FORMAT " %s\n",
+	      nexit_total,MathExtra::num2str(nexit_total,str));
+      fprintf(logfile,"SurfColl check = " BIGINT_FORMAT " %s\n",
+	      nscheck_total,MathExtra::num2str(nscheck_total,str));
+      fprintf(logfile,"SurfColl occur = " BIGINT_FORMAT " %s\n",
+	      nscollide_total,MathExtra::num2str(nscollide_total,str));
+      fprintf(logfile,"Collide attmpt = " BIGINT_FORMAT " %s\n",
+	      nattempt_total,MathExtra::num2str(nattempt_total,str));
+      fprintf(logfile,"Collide occurs = " BIGINT_FORMAT " %s\n",
+	      ncollide_total,MathExtra::num2str(ncollide_total,str));
       fprintf(logfile,"\n");
       fprintf(logfile,"Particle-moves/step: %g\n",pms);
       fprintf(logfile,"Cell-touches/particle/step: %g\n",ctps);

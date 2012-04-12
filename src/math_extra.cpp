@@ -12,10 +12,13 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
+#include "dsmctype.h"
 #include "stdio.h"
 #include "string.h"
 #include "stdlib.h"
 #include "math_extra.h"
+
+using namespace DSMC_NS;
 
 namespace MathExtra {
 
@@ -52,6 +55,23 @@ int bounds(char *str, int nmax, int &nlo, int &nhi)
 
   if (nlo < 1 || nhi > nmax) return 1;
   return 0;
+}
+
+/* ----------------------------------------------------------------------
+   convert a 64-bit integer into a string like "9.36B"
+   K = thousand, M = million, B = billion, T = trillion, P = peta, E = exa
+   for easier-to-understand output
+------------------------------------------------------------------------- */
+
+char *num2str(bigint n, char *outstr)
+{
+  if (n < 100000) sprintf(outstr,"(%1.3gK)",1.0e-3*n);
+  else if (n < 1000000000) sprintf(outstr,"(%1.3gM)",1.0e-6*n);
+  else if (n < 1000000000000) sprintf(outstr,"(%1.3gB)",1.0e-9*n);
+  else if (n < 1000000000000000) sprintf(outstr,"(%1.3gT)",1.0e-12*n);
+  else if (n < 1000000000000000000) sprintf(outstr,"(%1.3gP)",1.0e-15*n);
+  else sprintf(outstr,"(%1.3gE)",1.0e-18*n);
+  return outstr;
 }
 
 /* ---------------------------------------------------------------------- */

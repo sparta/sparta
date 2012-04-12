@@ -36,7 +36,7 @@ using namespace MathConst;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};         // same as Domain
-enum{SURFEXTERIOR,SURFINTERIOR,SURFCONTAIN};    // same as Grid
+enum{SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP};    // same as Grid
 enum{NO,YES};
 
 /* ---------------------------------------------------------------------- */
@@ -158,7 +158,7 @@ void FixInflow::init()
 
   // allow[I][J] = 1 if my local cell I, face J allows insertions
   // if cell is INTERIOR to surfs, disallow all faces
-  // if cell is SURFCONTAIN with a surf element vertex on face, disallow face
+  // if cell is SURFOVERLAP with a surf element vertex on face, disallow face
   // else allow
 
   int dimension = domain->dimension;
@@ -185,7 +185,7 @@ void FixInflow::init()
     } else if (cells[icell].inflag == SURFINTERIOR) {
       for (i = 0; i < 6; i++) allow[m][i] = 0;
 
-    } else if (cells[icell].inflag == SURFCONTAIN) {
+    } else if (cells[icell].inflag == SURFOVERLAP) {
       for (i = 0; i < 6; i++) {
 	allow[m][i] = 1;
 	dim = i / 2;

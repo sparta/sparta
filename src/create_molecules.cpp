@@ -31,7 +31,7 @@
 using namespace DSMC_NS;
 using namespace MathConst;
 
-enum{SURFEXTERIOR,SURFINTERIOR,SURFCONTAIN};       // same as Grid
+enum{SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP};       // same as Grid
 
 /* ---------------------------------------------------------------------- */
 
