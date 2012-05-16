@@ -18,8 +18,7 @@
 #define MIN(A,B) ((A) < (B)) ? (A) : (B)
 #define MAX(A,B) ((A) > (B)) ? (A) : (B)
 
-// this is used b/c 
-
+#define EPSSQ 1.0e-16
 #define EPSSQNEG -1.0e-16
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
@@ -581,12 +580,22 @@ bool line_line_intersect(double *start, double *stop,
   // pvec = vector from either line B vertex to intersection point
   // if dot product of edge with pvec < or > 0.0 for each pvec,
   //   intersection point is outside line B
+  // use EPSSQ and EPSSQNEG instead of 0.0 for following case:
+  //   intersection pt is on line end pt where 2 lines come together
+  //   want it to detect collision with at least one of lines
+  //   point can be epsilon away from end pt
+  //   this leads to pvec being epsilon vec in opposite dirs for 2 lines
+  //   this can lead to dot3() being negative espilon^2 for both lines,
+  //     depending on direction of 2 lines
+  //   thus this can lead to no collision with either line
+  //   haven't observed this in 2d, but did in 3d
+  //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
-  if (MathExtra::dot3(edge,pvec) < 0.0) return false;
+  if (MathExtra::dot3(edge,pvec) < EPSSQNEG) return false;
   MathExtra::sub3(point,v1,pvec);
-  if (MathExtra::dot3(edge,pvec) > 0.0) return false;
+  if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
 
   // there is a valid intersection with line B
   // set side to ONSUFR, OUTSIDE, or INSIDE
@@ -659,32 +668,29 @@ bool line_tri_intersect(double *start, double *stop,
   // xproduct = cross product of edge with pvec
   // if dot product of xproduct with norm < 0.0 for any of 3 edges,
   //   intersection point is outside tri
+  // use EPSSQNEG instead of 0.0 for following case:
+  //   intersection pt is on tri edge where 2 tris come together
+  //   want it to detect collision with at least one of tris
+  //   point can be epsilon away from edge
+  //   this leads to xproduct being epsilon vec in opposite dirs for 2 tris
+  //   this can lead to dot3() being negative espilon^2 for both tris,
+  //     depending on direction of 2 tri norms
+  //   thus this can lead to no collision with either tri
+  //   typical observed dot values were -1.0e-18, so use EPSSQNEG = -1.0e-16
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
   MathExtra::cross3(edge,pvec,xproduct);
-  //printf("1st edge %g: %g %g %g: %g %g %g: %g %g\n",
-  //	 MathExtra::dot3(xproduct,norm),point[0],point[1],point[2],
-  //	 xproduct[0],xproduct[1],xproduct[2],norm[0],param);
-  //if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
   if (MathExtra::dot3(xproduct,norm) < EPSSQNEG) return false;
 
   MathExtra::sub3(v2,v1,edge);
   MathExtra::sub3(point,v1,pvec);
   MathExtra::cross3(edge,pvec,xproduct);
-  //printf("2nd edge %g: %g %g %g: %g %g %g: %g %g\n",
-  //	 MathExtra::dot3(xproduct,norm),point[0],point[1],point[2],
-  //	 xproduct[0],xproduct[1],xproduct[2],norm[0],param);
-  //if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
   if (MathExtra::dot3(xproduct,norm) < EPSSQNEG) return false;
 
   MathExtra::sub3(v0,v2,edge);
   MathExtra::sub3(point,v2,pvec);
   MathExtra::cross3(edge,pvec,xproduct);
-  //printf("3rd edge %g: %g %g %g: %g %g %g: %g %g\n",
-  //	 MathExtra::dot3(xproduct,norm),point[0],point[1],point[2],
-  //	 xproduct[0],xproduct[1],xproduct[2],norm[0],param);
-  //if (MathExtra::dot3(xproduct,norm) < 0.0) return false;
   if (MathExtra::dot3(xproduct,norm) < EPSSQNEG) return false;
 
   // there is a valid intersection with triangle
