@@ -56,8 +56,15 @@ class Surf : protected Pointers {
 
   void compute_line_normal(int, int);
   void compute_tri_normal(int, int);
+  void quad_corner_point(int, double *, double *, double *);
+  void hex_corner_point(int, double *, double *, double *);
   double line_size(int);
   void tri_size(int, double &, double &);
+
+  void all_cell_corner_line(int, int *, double *, double *, int *);
+  void all_cell_corner_tri(int, int *, double *, double *, int *);
+  int one_cell_corner_line(int, int, int *, double *, double *, int *);
+  int one_cell_corner_tri(int, int, int *, double *, double *, int *);
 
   void add_collide(int, char **);
   int find_collide(const char *);

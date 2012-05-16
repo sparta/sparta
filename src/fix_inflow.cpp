@@ -25,6 +25,7 @@
 #include "grid.h"
 #include "surf.h"
 #include "comm.h"
+#include "geometry.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "math_const.h"
@@ -150,6 +151,15 @@ void FixInflow::init()
 {
   int i,j,m,n,isp;
 
+  // corners[i][j] = J corner points of face I of a grid cell
+  // works for 2d quads and 3d hexes
+  
+  int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7}, 
+		       {0,1,2,3}, {4,5,6,7}};
+
+  int nface_pts = 4;
+  if (domain->dimension == 2) nface_pts = 2;
+
   // cannot inflow thru periodic boundary
 
   for (i = 0; i < 6; i++)
@@ -157,9 +167,12 @@ void FixInflow::init()
       error->all(FLERR,"Cannot use fix inflow on periodic boundary");
 
   // allow[I][J] = 1 if my local cell I, face J allows insertions
-  // if cell is INTERIOR to surfs, disallow all faces
-  // if cell is SURFOVERLAP with a surf element vertex on face, disallow face
-  // else allow
+  // only allow if face adjoins global boundary with inflow defined
+  // if cell is SURFEXTERIOR, allow face
+  // if cell is SURFINTERIOR, disallow face
+  // if cell is SURFOVERLAP:
+  //   allow if any face corner point is SURFEXTERIOR and none is SURFINTERIOR
+  //   disallow if any pt of any cell line/tri touches face
 
   int dimension = domain->dimension;
   Surf::Point *pts = surf->pts;
@@ -167,45 +180,62 @@ void FixInflow::init()
   Surf::Tri *tris = surf->tris;
   Grid::OneCell *cells = grid->cells;
   int **csurfs = grid->csurfs;
+  int **cflags = grid->cflags;
   int *mycells = grid->mycells;
   int nglocal = grid->nlocal;
 
   int **allow;
-  memory->create(allow,nglocal,2*dimension,"inflow:allow");
+  memory->create(allow,nglocal,6,"inflow:allow");
 
-  int icell,dim;
+  int *flags;
+  int icell,dim,extflag;
   double value;
 
   for (int m = 0; m < nglocal; m++) {
     icell = mycells[m];
+    for (i = 0; i < 6; i++) {
+      if (faces[i] && cells[icell].neigh[i] < 0) {
+	if (cells[icell].inflag == SURFEXTERIOR) allow[m][i] = 1;
+	else if (cells[icell].inflag == SURFINTERIOR) allow[m][i] = 0;
+	else if (cells[icell].inflag == SURFOVERLAP) {
+	  allow[m][i] = 1;
+	  flags = cflags[i];
 
-    if (cells[icell].inflag == SURFEXTERIOR) {
-      for (i = 0; i < 6; i++) allow[m][i] = 1;
-
-    } else if (cells[icell].inflag == SURFINTERIOR) {
-      for (i = 0; i < 6; i++) allow[m][i] = 0;
-
-    } else if (cells[icell].inflag == SURFOVERLAP) {
-      for (i = 0; i < 6; i++) {
-	allow[m][i] = 1;
-	dim = i / 2;
-	if (i % 2 == 0) value = domain->boxlo[dim];
-	else value = domain->boxhi[dim];
-	if (dimension == 2) {
-	  for (j = 0; j < cells[icell].nsurf; j++) {
-	    n = csurfs[icell][j];
-	    if (pts[lines[n].p1].x[dim] == value) allow[m][i] = 0;
-	    if (pts[lines[n].p2].x[dim] == value) allow[m][i] = 0;
+	  extflag = 0;
+	  for (j = 0; j < nface_pts; j++) {
+	    if (flags[corners[i][j]] == SURFEXTERIOR) extflag = 1;
+	    else if (flags[corners[i][j]] == SURFINTERIOR) allow[m][i] = 0;
 	  }
-	} else {
-	  for (j = 0; j < cells[icell].nsurf; j++) {
-	    n = csurfs[icell][j];
-	    if (pts[tris[n].p1].x[dim] == value) allow[m][i] = 0;
-	    if (pts[tris[n].p2].x[dim] == value) allow[m][i] = 0;
-	    if (pts[tris[n].p3].x[dim] == value) allow[m][i] = 0;
+	  if (!extflag) allow[m][i] = 0;
+	  
+	  if (allow[m][i]) {
+	    if (dimension == 2) {
+	      for (j = 0; j < cells[icell].nsurf; j++) {
+		n = csurfs[icell][j];
+		if (Geometry::
+		    line_quad_face_touch(pts[lines[n].p1].x,
+					 pts[lines[n].p2].x,
+					 i,cells[icell].lo,cells[icell].hi)) {
+		  allow[m][i] = 0;
+		  break;
+		}
+	      }
+	    } else {
+	      for (j = 0; j < cells[icell].nsurf; j++) {
+		n = csurfs[icell][j];
+		if (Geometry::
+		    tri_hex_face_touch(pts[tris[n].p1].x,
+				       pts[tris[n].p2].x,
+				       pts[tris[n].p3].x,
+				       i,cells[icell].lo,cells[icell].hi)) {
+		  allow[m][i] = 0;
+		  break;
+		}
+	      }
+	    }
 	  }
 	}
-      }
+      } else allow[m][i] = 0;
     }
   }
 
@@ -215,12 +245,12 @@ void FixInflow::init()
   ncf = 0;
   for (m = 0; m < nglocal; m++) {
     icell = mycells[m];
-    if (cells[icell].neigh[XLO] < 0 && faces[XLO] && allow[m][XLO]) ncf++;
-    if (cells[icell].neigh[XHI] < 0 && faces[XHI] && allow[m][XHI]) ncf++;
-    if (cells[icell].neigh[YLO] < 0 && faces[XLO] && allow[m][YLO]) ncf++;
-    if (cells[icell].neigh[YHI] < 0 && faces[XHI] && allow[m][YHI]) ncf++;
-    if (cells[icell].neigh[ZLO] < 0 && faces[ZLO] && allow[m][ZLO]) ncf++;
-    if (cells[icell].neigh[ZHI] < 0 && faces[ZHI] && allow[m][ZHI]) ncf++;
+    if (allow[m][XLO]) ncf++;
+    if (allow[m][XHI]) ncf++;
+    if (allow[m][YLO]) ncf++;
+    if (allow[m][YHI]) ncf++;
+    if (allow[m][ZLO]) ncf++;
+    if (allow[m][ZHI]) ncf++;
   }
 
   // cellface = per-face data struct for all inserts performed on my grid cells
@@ -250,7 +280,7 @@ void FixInflow::init()
   ncf = 0;
   for (m = 0; m < nglocal; m++) {
     icell = mycells[m];
-    if (cells[icell].neigh[XLO] < 0 && faces[XLO] && allow[m][XLO]) {
+    if (allow[m][XLO]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 0;
       cellface[ncf].pdim1 = 1;
@@ -288,7 +318,7 @@ void FixInflow::init()
       ncf++;
     }
     
-    if (cells[icell].neigh[XHI] < 0 && faces[XHI] && allow[m][XHI]) {
+    if (allow[m][XHI]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 0;
       cellface[ncf].pdim1 = 1;
@@ -326,7 +356,7 @@ void FixInflow::init()
       ncf++;
     }
 
-    if (cells[icell].neigh[YLO] < 0 && faces[YLO] && allow[m][YLO]) {
+    if (allow[m][YLO]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 1;
       cellface[ncf].pdim1 = 0;
@@ -364,7 +394,7 @@ void FixInflow::init()
       ncf++;
     }
 
-    if (cells[icell].neigh[YHI] < 0 && faces[YHI] && allow[m][YHI]) {
+    if (allow[m][YHI]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 1;
       cellface[ncf].pdim1 = 0;
@@ -402,7 +432,7 @@ void FixInflow::init()
       ncf++;
     }
 
-    if (cells[icell].neigh[ZLO] < 0 && faces[ZLO] && allow[m][ZLO]) {
+    if (allow[m][ZLO]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 2;
       cellface[ncf].pdim1 = 0;
@@ -434,7 +464,7 @@ void FixInflow::init()
       ncf++;
     }
 
-    if (cells[icell].neigh[ZHI] < 0 && faces[ZHI] && allow[m][ZHI]) {
+    if (allow[m][ZHI]) {
       cellface[ncf].icell = icell;
       cellface[ncf].ndim = 2;
       cellface[ncf].pdim1 = 0;

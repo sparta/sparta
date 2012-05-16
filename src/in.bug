@@ -4,39 +4,37 @@
 # particles reflect off global box boundaries
 
 seed	    	    12345
-dimension   	    3
+dimension   	    2
 
-boundary	    s s s
-boundary_modify     xhi acc 1.0 temp 273.15
-boundary_modify     xlo acc 1.0 temp 273.15
-boundary_modify     yhi acc 1.0 temp 273.15
-boundary_modify     ylo acc 1.0 temp 273.15
-boundary_modify     zhi acc 1.0 temp 273.15
-boundary_modify     zlo acc 1.0 temp 273.15
-create_box  	    0 1.E-3 0 1.E-3 0 1.E-3
+boundary	    os rr p
+create_box  	    0 5 0 5 -0.5 0.5
+create_grid 	    5 5 1 stride x y z
 
-create_grid 	    10 10 10
-#create_grid 	    100 100 100
+species		    ../data/all.species N O
+mixture		    air N O vstream 1000.0 0 0 
+mixture		    air group species
 
-species		    ../data/all.species N 
-mixture		    air N vstream 0.0 0.0 0.0 temp 273.15 nrho 7.07043E22
+global		    nrho 0.1
 
-#create_molecules    air n 100000 
-create_molecules    air n 100000
+collide		    vss air ../data/all.vss
 
-collisions	    vss air ../data/all.vss
+timestep 	    0.0001
 
-timestep 	    7.E-9
-compute             ke ke/molecule
-variable            foo molecule x+y
+compute		    ke ke/molecule
+variable	    foo molecule x+y
 
+surf_collide	    1 diffuse 300.0 0.9
+bound_modify	    xhi surf 1
 
-#dump		    1 molecule 10 tmp.dump id type x y z
-#stats_style	    step cpu nmol nattempt ncoll
-#stats_style         step cpu nmol nattempt ncoll c_temp 
-stats		    10
-fix                 check grid/check 1
-compute             temp temp
-stats_style         step cpu nmol nattempt ncoll c_temp 
-#f_in[1] f_in[2]
-run 		    1
+read_surf	    data.square 1 trans 2 2 0 scale 3 3 1 invert clip
+
+create_molecules    air n 10000
+
+dump                2 image 10 tmp.*.jpg type type adiam 0.1 &
+		    view 0 0 zoom 1.3 size 512 512
+dump_modify	    2 pad 4
+
+fix		    check grid/check 1
+stats_style	    step nmol nscheck nscoll
+
+run 		    0

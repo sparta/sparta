@@ -18,8 +18,16 @@
 namespace Geometry {
   int line_quad_intersect(double *, double *, double *,
 			  double *, double *);
+  int quad_line_intersect_point(double *, double *, double *,
+				double *, double *, double *);
+  int line_quad_face_touch(double *, double *, int, double *, double *);
+
   int tri_hex_intersect(double *, double *, double *, double *,
 			double *, double *);
+  int hex_tri_intersect_point(double *, double *, double *, double *,
+			      double *, double *, double *);
+  int tri_hex_face_touch(double *, double *, double *, int, double *, double *);
+
   bool line_line_intersect(double *, double *, 
 			   double *, double *, double *,
 			   double *, double &param, int &);
@@ -28,6 +36,10 @@ namespace Geometry {
 			  double *, double &param, int &);
   int whichside(double *, double *, double, double, double);
   int point_on_hex(double *, double *, double *);
+  int point_in_hex(double *, double *, double *);
+
+  double line_fraction(double *, double *, double *);
+  double tri_fraction(double *, double *, double *, double *);
 }
 
 #endif

@@ -38,7 +38,7 @@ using namespace DSMC_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};       // same as Domain
-enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Geometry
+enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Geometry,Grid
 
 //#define MOVE_DEBUG 1            // un-comment to debug motion of one particle
 #define MOVE_DEBUG_PROC 0       // owning proc

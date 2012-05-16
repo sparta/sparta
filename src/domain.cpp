@@ -29,7 +29,7 @@ using namespace DSMC_NS;
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};     // same as Update,
                                             // DumpMolecule, FixInflow
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow, Grid
 
 /* ---------------------------------------------------------------------- */
 

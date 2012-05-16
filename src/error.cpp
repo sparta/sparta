@@ -16,8 +16,8 @@
 #include "stdlib.h"
 #include "error.h"
 #include "universe.h"
+#include "output.h"
 #include "memory.h"
-//#include "output.h"
 
 using namespace DSMC_NS;
 
@@ -41,7 +41,7 @@ void Error::universe_all(const char *file, int line, const char *str)
 				    "ERROR: %s (%s:%d)\n",str,file,line);
   }
 
-  //if (output) delete output;
+  if (output) delete output;
   if (universe->nworlds > 1) {
     if (screen && screen != stdout) fclose(screen);
     if (logfile) fclose(logfile);
@@ -81,7 +81,7 @@ void Error::all(const char *file, int line, const char *str)
     if (logfile) fprintf(logfile,"ERROR: %s (%s:%d)\n",str,file,line);
   }
 
-  //if (output) delete output;
+  if (output) delete output;
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 
@@ -139,7 +139,7 @@ void Error::done()
 {
   MPI_Barrier(world);
 
-  //if (output) delete output;
+  if (output) delete output;
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 

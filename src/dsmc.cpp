@@ -428,7 +428,7 @@ void DSMC::init()
   grid->init();
   surf->init();
   if (collide) collide->init();
-  modify->init();              // after grid, so that grid/surf is flagged
+  modify->init();              // after grid, so that csurfs/cflags is set
   output->init();
   timer->init();
 }
