@@ -31,7 +31,8 @@ args = list of arguments for a particular style :l
       c_ID\[N\] = Nth column of per-molecule array calculated by a compute with ID
       f_ID = per-molecule vector (or array) calculated by a fix with ID
       f_ID\[N\] = Nth column of per-molecule array calculated by a fix with ID
-      v_name = per-molecule vector calculated by an molecule-style variable with name
+      v_name = per-molecule vector calculated by a molecule-style variable with name :pre
+
   {grid} args = list of grid attributes
     possible attributes = id, proc, xlo, ylo, zlo, xhi, yhi, zhi,
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
@@ -44,8 +45,22 @@ args = list of arguments for a particular style :l
       c_ID\[N\] = Nth column of per-grid array calculated by a compute with ID
       f_ID = per-grid vector (or array) calculated by a fix with ID
       f_ID\[N\] = Nth column of per-grid array calculated by a fix with ID
-      v_name = per-grid vector calculated by an cell-style variable with name
-  {surf} args = not yet supported
+      v_name = per-grid vector calculated by a cell-style variable with name :pre
+
+  {surf} args = list of surf attributes
+    possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
+                          c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+
+      id = surf element ID
+      v1x,v1y,v1z = coords of 1st vertex in surface element
+      v1x,v1y,v1z = coords of 2nd vertex in surface element
+      v1x,v1y,v1z = coords of 3rd vertex in surface element
+      c_ID = per-surf vector (or array) calculated by a compute with ID
+      c_ID\[N\] = Nth column of per-surf array calculated by a compute with ID
+      f_ID = per-surf vector (or array) calculated by a fix with ID
+      f_ID\[N\] = Nth column of per-surfarray calculated by a fix with ID
+      v_name = per-surf vector calculated by a surf-style variable with name :pre
+
   {image} args = discussed on "dump image"_dump_image.html doc page :pre
 :ule
 

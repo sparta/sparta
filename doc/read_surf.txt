@@ -29,7 +29,8 @@ keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or 
   rotate args = theta Rx Ry Rz
     theta = rotate surface by this angle in counter-clockwise direction (degrees)
     Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
-  invert args = none :pre
+  invert args = none
+  clip args = none :pre
 :ule
 
 [Examples:]
@@ -198,7 +199,7 @@ following manner.  In 3d, each of the 6 clip planes represented by
 faces of the global simulation box are considered in turn.  Any
 triangle that straddles the face (with points on both sides of the
 clip plane), is truncated at the plane.  New points along the edges
-that cross the plane are created.  The triangle may also become a
+that cross the plane are created.  A triangle may also become a
 trapezoid, in which case it turned into 2 triangles.  Then all the
 points on the side of the clip plane that is outside the box, are
 projected onto the clip plane.  Finally, all triangles that lie in the
