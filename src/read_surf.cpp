@@ -1325,6 +1325,7 @@ double ReadSurf::shortest_line()
     len = MIN(len,surf->line_size(m));
     m++;
   }
+  return len;
 }
 
 /* ----------------------------------------------------------------------

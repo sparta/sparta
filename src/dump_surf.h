@@ -14,21 +14,21 @@
 
 #ifdef DUMP_CLASS
 
-DumpStyle(grid,DumpGrid)
+DumpStyle(surf,DumpSurf)
 
 #else
 
-#ifndef DSMC_DUMP_GRID_H
-#define DSMC_DUMP_GRID_H
+#ifndef DSMC_DUMP_SURF_H
+#define DSMC_DUMP_SURF_H
 
 #include "dump.h"
 
 namespace DSMC_NS {
 
-class DumpGrid : public Dump {
+class DumpSurf : public Dump {
  public:
-  DumpGrid(class DSMC *, int, char **);
-  ~DumpGrid();
+  DumpSurf(class DSMC *, int, char **);
+  ~DumpSurf();
 
  protected:
   int nevery;                // dump frequency to check Fix against
@@ -60,7 +60,7 @@ class DumpGrid : public Dump {
   double **vbuf;             // local storage for variable evaluation
 
   int dimension;
-  int nglocal;               // # of grid cells on this proc
+  int nslocal;               // # of surf elements on this proc
 
   // private methods
 
@@ -76,19 +76,19 @@ class DumpGrid : public Dump {
   int add_variable(char *);
   void allocate_values(int);
 
-  typedef void (DumpGrid::*FnPtrHeader)(bigint);
+  typedef void (DumpSurf::*FnPtrHeader)(bigint);
   FnPtrHeader header_choice;           // ptr to write header functions
   void header_binary(bigint);
   void header_item(bigint);
 
-  typedef void (DumpGrid::*FnPtrData)(int, double *);
+  typedef void (DumpSurf::*FnPtrData)(int, double *);
   FnPtrData write_choice;              // ptr to write data functions
   void write_binary(int, double *);
   void write_text(int, double *);
 
   // customize by adding a method prototype
 
-  typedef void (DumpGrid::*FnPtrPack)(int);
+  typedef void (DumpSurf::*FnPtrPack)(int);
   FnPtrPack *pack_choice;              // ptrs to pack functions
 
   void pack_compute(int);
@@ -96,14 +96,16 @@ class DumpGrid : public Dump {
   void pack_variable(int);
 
   void pack_id(int);
-  void pack_proc(int);
 
-  void pack_xlo(int);
-  void pack_ylo(int);
-  void pack_zlo(int);
-  void pack_xhi(int);
-  void pack_yhi(int);
-  void pack_zhi(int);
+  void pack_v1x(int);
+  void pack_v1y(int);
+  void pack_v1z(int);
+  void pack_v2x(int);
+  void pack_v2y(int);
+  void pack_v2z(int);
+  void pack_v3x(int);
+  void pack_v3y(int);
+  void pack_v3z(int);
 };
 
 }

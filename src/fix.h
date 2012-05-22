@@ -39,10 +39,16 @@ class Fix : protected Pointers {
   int size_per_grid_cols;        // 0 = vector, N = cols in per-grid array
   int per_grid_freq;             // frequency per-grid data is available at
 
+  int per_surf_flag;             // 0/1 if per-surf data is stored
+  int size_per_surf_cols;        // 0 = vector, N = cols in per-surf array
+  int per_surf_freq;             // frequency per-surf data is available at
+
   double *vector_molecule;       // computed per-molecule vector
   double **array_molecule;       // computed per-molecule array
   double *vector_grid;           // computed per-grid vector
   double **array_grid;           // computed per-grid array
+  double *vector_surf;           // computed per-surf vector
+  double **array_surf;           // computed per-surf array
 
   int START_OF_STEP,END_OF_STEP;    // mask settings
 

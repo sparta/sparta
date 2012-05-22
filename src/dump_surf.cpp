@@ -15,10 +15,11 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
-#include "dump_grid.h"
+#include "dump_surf.h"
 #include "update.h"
 #include "domain.h"
 #include "grid.h"
+#include "surf.h"
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
@@ -31,21 +32,21 @@ using namespace DSMC_NS;
 
 // customize by adding keyword
 
-enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,
+enum{ID,V1X,V1Y,V1Z,V2X,V2Y,V2Z,V3X,V3Y,V3Z,
      COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE};
 
 enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
 
-#define INVOKED_PER_GRID 16
+#define INVOKED_PER_SURF 32
 #define CHUNK 8
 
 /* ---------------------------------------------------------------------- */
 
-DumpGrid::DumpGrid(DSMC *dsmc, int narg, char **arg) :
+DumpSurf::DumpSurf(DSMC *dsmc, int narg, char **arg) :
   Dump(dsmc, narg, arg)
 {
-  if (narg == 4) error->all(FLERR,"No dump grid arguments specified");
+  if (narg == 4) error->all(FLERR,"No dump surf arguments specified");
 
   clearstep = 1;
   dimension = domain->dimension;
@@ -58,7 +59,7 @@ DumpGrid::DumpGrid(DSMC *dsmc, int narg, char **arg) :
 
   ioptional = parse_fields(narg,arg);
   if (ioptional < narg)
-    error->all(FLERR,"Invalid attribute in dump grid command");
+    error->all(FLERR,"Invalid attribute in dump surf command");
   size_one = nfield;
 
   // setup format strings
@@ -94,7 +95,7 @@ DumpGrid::DumpGrid(DSMC *dsmc, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-DumpGrid::~DumpGrid()
+DumpSurf::~DumpSurf()
 {
   memory->sfree(pack_choice);
   memory->destroy(vtype);
@@ -124,7 +125,7 @@ DumpGrid::~DumpGrid()
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::init_style()
+void DumpSurf::init_style()
 {
   delete [] format;
   char *str;
@@ -162,11 +163,11 @@ void DumpGrid::init_style()
 
   // setup function ptrs
 
-  if (binary) header_choice = &DumpGrid::header_binary;
-  else header_choice = &DumpGrid::header_item;
+  if (binary) header_choice = &DumpSurf::header_binary;
+  else header_choice = &DumpSurf::header_item;
 
-  if (binary) write_choice = &DumpGrid::write_binary;
-  else write_choice = &DumpGrid::write_text;
+  if (binary) write_choice = &DumpSurf::write_binary;
+  else write_choice = &DumpSurf::write_text;
 
   // find current ptr for each compute,fix,variable
   // check that fix frequency is acceptable
@@ -175,24 +176,24 @@ void DumpGrid::init_style()
   for (int i = 0; i < ncompute; i++) {
     icompute = modify->find_compute(id_compute[i]);
     if (icompute < 0) 
-      error->all(FLERR,"Could not find dump grid compute ID");
+      error->all(FLERR,"Could not find dump surf compute ID");
     compute[i] = modify->compute[icompute];
   }
 
   int ifix;
   for (int i = 0; i < nfix; i++) {
     ifix = modify->find_fix(id_fix[i]);
-    if (ifix < 0) error->all(FLERR,"Could not find dump grid fix ID");
+    if (ifix < 0) error->all(FLERR,"Could not find dump surf fix ID");
     fix[i] = modify->fix[ifix];
-    if (nevery % modify->fix[ifix]->per_grid_freq)
-      error->all(FLERR,"Dump grid and fix not computed at compatible times");
+    if (nevery % modify->fix[ifix]->per_surf_freq)
+      error->all(FLERR,"Dump surf and fix not computed at compatible times");
   }
 
   int ivariable;
   for (int i = 0; i < nvariable; i++) {
     ivariable = input->variable->find(id_variable[i]);
     if (ivariable < 0) 
-      error->all(FLERR,"Could not find dump grid variable name");
+      error->all(FLERR,"Could not find dump surf variable name");
     variable[i] = ivariable;
   }
 
@@ -203,7 +204,7 @@ void DumpGrid::init_style()
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::write_header(bigint ndump)
+void DumpSurf::write_header(bigint ndump)
 {
   if (multiproc) (this->*header_choice)(ndump);
   else if (me == 0) (this->*header_choice)(ndump);
@@ -211,7 +212,7 @@ void DumpGrid::write_header(bigint ndump)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::header_binary(bigint ndump)
+void DumpSurf::header_binary(bigint ndump)
 {
   fwrite(&update->ntimestep,sizeof(bigint),1,fp);
   fwrite(&ndump,sizeof(bigint),1,fp);
@@ -231,60 +232,60 @@ void DumpGrid::header_binary(bigint ndump)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::header_item(bigint ndump)
+void DumpSurf::header_item(bigint ndump)
 {
   fprintf(fp,"ITEM: TIMESTEP\n");
   fprintf(fp,BIGINT_FORMAT "\n",update->ntimestep);
-  fprintf(fp,"ITEM: NUMBER OF CELLS\n");
+  fprintf(fp,"ITEM: NUMBER OF SURFS\n");
   fprintf(fp,BIGINT_FORMAT "\n",ndump);
   fprintf(fp,"ITEM: BOX BOUNDS %s\n",boundstr);
   fprintf(fp,"%g %g\n",boxxlo,boxxhi);
   fprintf(fp,"%g %g\n",boxylo,boxyhi);
   fprintf(fp,"%g %g\n",boxzlo,boxzhi);
-  fprintf(fp,"ITEM: CELLS %s\n",columns);
+  fprintf(fp,"ITEM: SURFS %s\n",columns);
 }
 
 /* ---------------------------------------------------------------------- */
 
-int DumpGrid::count()
+int DumpSurf::count()
 {
-  // invoke Computes for per-grid quantities
+  // invoke Computes for per-surf quantities
 
   if (ncompute) {
     for (int i = 0; i < ncompute; i++)
-      if (!(compute[i]->invoked_flag & INVOKED_PER_GRID)) {
-	compute[i]->compute_per_grid();
-	compute[i]->invoked_flag |= INVOKED_PER_GRID;
+      if (!(compute[i]->invoked_flag & INVOKED_PER_SURF)) {
+	compute[i]->compute_per_surf();
+	compute[i]->invoked_flag |= INVOKED_PER_SURF;
       }
   }
 
-  // evaluate grid-style Variables for per-grid quantities
+  // evaluate surf-style Variables for per-surf quantities
 
   if (nvariable)
     for (int i = 0; i < nvariable; i++)
-      input->variable->compute_grid(variable[i],vbuf[i],1,0);
+      input->variable->compute_surf(variable[i],vbuf[i],1,0);
 
-  return grid->nlocal;
+  return surf->nlocal;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::pack()
+void DumpSurf::pack()
 {
-  nglocal = grid->nlocal;
+  nslocal = surf->nlocal;
   for (int n = 0; n < size_one; n++) (this->*pack_choice[n])(n);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::write_data(int n, double *mybuf)
+void DumpSurf::write_data(int n, double *mybuf)
 {
   (this->*write_choice)(n,mybuf);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::write_binary(int n, double *mybuf)
+void DumpSurf::write_binary(int n, double *mybuf)
 {
   n *= size_one;
   fwrite(&n,sizeof(int),1,fp);
@@ -293,7 +294,7 @@ void DumpGrid::write_binary(int n, double *mybuf)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::write_text(int n, double *mybuf)
+void DumpSurf::write_text(int n, double *mybuf)
 {
   int i,j;
 
@@ -310,7 +311,7 @@ void DumpGrid::write_text(int n, double *mybuf)
 
 /* ---------------------------------------------------------------------- */
 
-int DumpGrid::parse_fields(int narg, char **arg)
+int DumpSurf::parse_fields(int narg, char **arg)
 {
   // initialize per-field lists
 
@@ -348,47 +349,63 @@ int DumpGrid::parse_fields(int narg, char **arg)
     argindex[nfield] = -1;
 
     if (strcmp(arg[iarg],"id") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_id;
-      vtype[nfield] = INT;
-      field2arg[nfield] = iarg;
-      nfield++;
-    } else if (strcmp(arg[iarg],"proc") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_proc;
+      pack_choice[nfield] = &DumpSurf::pack_id;
       vtype[nfield] = INT;
       field2arg[nfield] = iarg;
       nfield++;
 
-    } else if (strcmp(arg[iarg],"xlo") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_xlo;
+    } else if (strcmp(arg[iarg],"v1x") == 0) {
+      pack_choice[nfield] = &DumpSurf::pack_v1x;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
-    } else if (strcmp(arg[iarg],"ylo") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_ylo;
+    } else if (strcmp(arg[iarg],"v1y") == 0) {
+      pack_choice[nfield] = &DumpSurf::pack_v1y;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
-    } else if (strcmp(arg[iarg],"zlo") == 0) {
+    } else if (strcmp(arg[iarg],"v1z") == 0) {
       if (dimension == 2) 
-	error->all(FLERR,"Invalid dump grid field for 2d simulation");
-      pack_choice[nfield] = &DumpGrid::pack_zlo;
+	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+      pack_choice[nfield] = &DumpSurf::pack_v1z;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
-    } else if (strcmp(arg[iarg],"xhi") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_xhi;
+    } else if (strcmp(arg[iarg],"v2x") == 0) {
+      pack_choice[nfield] = &DumpSurf::pack_v2x;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
-    } else if (strcmp(arg[iarg],"yhi") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_yhi;
+    } else if (strcmp(arg[iarg],"v2y") == 0) {
+      pack_choice[nfield] = &DumpSurf::pack_v2y;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
-    } else if (strcmp(arg[iarg],"zhi") == 0) {
+    } else if (strcmp(arg[iarg],"v2z") == 0) {
       if (dimension == 2) 
-	error->all(FLERR,"Invalid dump grid field for 2d simulation");
-      pack_choice[nfield] = &DumpGrid::pack_zhi;
+	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+      pack_choice[nfield] = &DumpSurf::pack_v2z;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"v3x") == 0) {
+      if (dimension == 2) 
+	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+      pack_choice[nfield] = &DumpSurf::pack_v3x;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"v3y") == 0) {
+      if (dimension == 2) 
+	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+      pack_choice[nfield] = &DumpSurf::pack_v3y;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"v3z") == 0) {
+      if (dimension == 2) 
+	error->all(FLERR,"Invalid dump surf field for 2d simulation");
+      pack_choice[nfield] = &DumpSurf::pack_v3z;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
@@ -406,20 +423,20 @@ int DumpGrid::parse_fields(int narg, char **arg)
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump grid command");
+	  error->all(FLERR,"Invalid attribute in dump surf command");
 	index = atoi(ptr+1);
 	*ptr = '\0';
       } else index = 0;
 
       n = modify->find_compute(suffix);
-      if (n < 0) error->all(FLERR,"Could not find dump grid compute ID");
+      if (n < 0) error->all(FLERR,"Could not find dump surf compute ID");
       if (modify->compute[n]->per_grid_flag == 0)
-	error->all(FLERR,"Dump grid compute does not compute per-grid info");
+	error->all(FLERR,"Dump surf compute does not compute per-grid info");
       if (index > 0 && modify->compute[n]->size_per_grid_cols == 0)
 	error->all(FLERR,
-		   "Dump grid compute does not calculate per-grid array");
+		   "Dump surf compute does not calculate per-grid array");
       if (index > 0 && index > modify->compute[n]->size_per_grid_cols)
-	error->all(FLERR,"Dump grid compute vector is accessed out-of-range");
+	error->all(FLERR,"Dump surf compute vector is accessed out-of-range");
 
       if (index == 0 && modify->compute[n]->size_per_grid_cols > 0) {
 	int ncol = modify->compute[n]->size_per_grid_cols;
@@ -428,7 +445,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
 	    maxfield += CHUNK;
 	    allocate_values(maxfield);
 	  }
-	  pack_choice[nfield] = &DumpGrid::pack_compute;
+	  pack_choice[nfield] = &DumpSurf::pack_compute;
 	  vtype[nfield] = DOUBLE;
 	  argindex[nfield] = i+1;
 	  field2arg[nfield] = iarg;
@@ -436,7 +453,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
 	  nfield++;
 	} 
       } else {
-	pack_choice[nfield] = &DumpGrid::pack_compute;
+	pack_choice[nfield] = &DumpSurf::pack_compute;
 	vtype[nfield] = DOUBLE;
 	argindex[nfield] = index;
 	field2arg[nfield] = iarg;
@@ -459,19 +476,19 @@ int DumpGrid::parse_fields(int narg, char **arg)
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump grid command");
+	  error->all(FLERR,"Invalid attribute in dump surf command");
 	index = atoi(ptr+1);
 	*ptr = '\0';
       } else index = 0;
 
       n = modify->find_fix(suffix);
-      if (n < 0) error->all(FLERR,"Could not find dump grid fix ID");
+      if (n < 0) error->all(FLERR,"Could not find dump surf fix ID");
       if (modify->fix[n]->per_grid_flag == 0)
-	error->all(FLERR,"Dump grid fix does not compute per-grid info");
+	error->all(FLERR,"Dump surf fix does not compute per-grid info");
       if (index > 0 && modify->fix[n]->size_per_grid_cols == 0)
-	error->all(FLERR,"Dump grid fix does not compute per-grid array");
+	error->all(FLERR,"Dump surf fix does not compute per-grid array");
       if (index > 0 && index > modify->fix[n]->size_per_grid_cols)
-	error->all(FLERR,"Dump grid fix vector is accessed out-of-range");
+	error->all(FLERR,"Dump surf fix vector is accessed out-of-range");
 
       if (index == 0 && modify->fix[n]->size_per_grid_cols > 0) {
 	int ncol = modify->fix[n]->size_per_grid_cols;
@@ -480,7 +497,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
 	    maxfield += CHUNK;
 	    allocate_values(maxfield);
 	  }
-	  pack_choice[nfield] = &DumpGrid::pack_fix;
+	  pack_choice[nfield] = &DumpSurf::pack_fix;
 	  vtype[nfield] = DOUBLE;
 	  argindex[nfield] = i+1;
 	  field2arg[nfield] = iarg;
@@ -488,7 +505,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
 	  nfield++;
 	} 
       } else {
-	pack_choice[nfield] = &DumpGrid::pack_fix;
+	pack_choice[nfield] = &DumpSurf::pack_fix;
 	vtype[nfield] = DOUBLE;
 	argindex[nfield] = index;
 	field2arg[nfield] = iarg;
@@ -501,7 +518,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
     // variable value = v_name
 
     } else if (strncmp(arg[iarg],"v_",2) == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_variable;
+      pack_choice[nfield] = &DumpSurf::pack_variable;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
 
@@ -512,9 +529,9 @@ int DumpGrid::parse_fields(int narg, char **arg)
       argindex[nfield] = 0;
 
       n = input->variable->find(suffix);
-      if (n < 0) error->all(FLERR,"Could not find dump grid variable name");
+      if (n < 0) error->all(FLERR,"Could not find dump surf variable name");
       if (input->variable->grid_style(n) == 0)
-	error->all(FLERR,"Dump grid variable is not grid-style variable");
+	error->all(FLERR,"Dump surf variable is not grid-style variable");
 
       field2index[nfield] = add_variable(suffix);
       delete [] suffix;
@@ -532,7 +549,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
 
-int DumpGrid::add_compute(char *id)
+int DumpSurf::add_compute(char *id)
 {
   int icompute;
   for (icompute = 0; icompute < ncompute; icompute++)
@@ -557,7 +574,7 @@ int DumpGrid::add_compute(char *id)
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
 
-int DumpGrid::add_fix(char *id)
+int DumpSurf::add_fix(char *id)
 {
   int ifix;
   for (ifix = 0; ifix < nfix; ifix++)
@@ -582,7 +599,7 @@ int DumpGrid::add_fix(char *id)
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
 
-int DumpGrid::add_variable(char *id)
+int DumpSurf::add_variable(char *id)
 {
   int ivariable;
   for (ivariable = 0; ivariable < nvariable; ivariable++)
@@ -609,7 +626,7 @@ int DumpGrid::add_variable(char *id)
    reallocate vectors for each input value, of length N
 ------------------------------------------------------------------------- */
 
-void DumpGrid::allocate_values(int n)
+void DumpSurf::allocate_values(int n)
 {
   pack_choice = (FnPtrPack *) 
     memory->srealloc(pack_choice,n*sizeof(FnPtrPack),"dump:pack_choice");
@@ -623,20 +640,20 @@ void DumpGrid::allocate_values(int n)
    extraction of Compute, Fix, Variable results
 ------------------------------------------------------------------------- */
 
-void DumpGrid::pack_compute(int n)
+void DumpSurf::pack_compute(int n)
 {
-  double *vector = compute[field2index[n]]->vector_grid;
-  double **array = compute[field2index[n]]->array_grid;
+  double *vector = compute[field2index[n]]->vector_surf;
+  double **array = compute[field2index[n]]->array_surf;
   int index = argindex[n];
 
   if (index == 0) {
-    for (int i = 0; i < nglocal; i++) {
+    for (int i = 0; i < nslocal; i++) {
       buf[n] = vector[i];
       n += size_one;
     }
   } else {
     index--;
-    for (int i = 0; i < nglocal; i++) {
+    for (int i = 0; i < nslocal; i++) {
       buf[n] = array[i][index];
       n += size_one;
     }
@@ -645,20 +662,20 @@ void DumpGrid::pack_compute(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::pack_fix(int n)
+void DumpSurf::pack_fix(int n)
 {
-  double *vector = fix[field2index[n]]->vector_grid;
-  double **array = fix[field2index[n]]->array_grid;
+  double *vector = fix[field2index[n]]->vector_surf;
+  double **array = fix[field2index[n]]->array_surf;
   int index = argindex[n];
 
   if (index == 0) {
-    for (int i = 0; i < nglocal; i++) {
+    for (int i = 0; i < nslocal; i++) {
       buf[n] = vector[i];
       n += size_one;
     }
   } else {
     index--;
-    for (int i = 0; i < nglocal; i++) {
+    for (int i = 0; i < nslocal; i++) {
       buf[n] = array[i][index];
       n += size_one;
     }
@@ -667,120 +684,188 @@ void DumpGrid::pack_fix(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::pack_variable(int n)
+void DumpSurf::pack_variable(int n)
 {
   double *vector = vbuf[field2index[n]];
 
-  for (int i = 0; i < nglocal; i++) {
+  for (int i = 0; i < nslocal; i++) {
     buf[n] = vector[i];
     n += size_one;
   }
 }
 
 /* ----------------------------------------------------------------------
-   one method for every attribute dump grid can output
-   the grid property is packed into buf starting at n with stride size_one
+   one method for every attribute dump surf can output
+   the surf property is packed into buf starting at n with stride size_one
    customize a new attribute by adding a method
 ------------------------------------------------------------------------- */
 
-void DumpGrid::pack_id(int n)
+void DumpSurf::pack_id(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *ids = surf->ids;
+  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].id;
+  for (int i = 0; i < nslocal; i++) {
+    buf[n] = ids[mysurfs[i]];
     n += size_one;
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::pack_proc(int n)
+void DumpSurf::pack_v1x(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  Surf::Point *pts = surf->pts;
+  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].proc;
+  if (dimension == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int i = 0; i < nslocal; i++) {
+      buf[n] = pts[lines[mysurfs[i]].p1].x[0];
+      n += size_one;
+    }
+  } else if (dimension == 3) {
+    Surf::Tri *tris = surf->tris;
+    for (int i = 0; i < nslocal; i++) {
+      buf[n] = pts[tris[mysurfs[i]].p1].x[0];
+      n += size_one;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpSurf::pack_v1y(int n)
+{
+  Surf::Point *pts = surf->pts;
+  int *mysurfs = surf->mysurfs;
+
+  if (dimension == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int i = 0; i < nslocal; i++) {
+      buf[n] = pts[lines[mysurfs[i]].p1].x[1];
+      n += size_one;
+    }
+  } else if (dimension == 3) {
+    Surf::Tri *tris = surf->tris;
+    for (int i = 0; i < nslocal; i++) {
+      buf[n] = pts[tris[mysurfs[i]].p1].x[1];
+      n += size_one;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpSurf::pack_v1z(int n)
+{
+  Surf::Point *pts = surf->pts;
+  Surf::Tri *tris = surf->tris;
+  int *mysurfs = surf->mysurfs;
+
+  for (int i = 0; i < nslocal; i++) {
+    buf[n] = pts[tris[mysurfs[i]].p1].x[2];
     n += size_one;
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::pack_xlo(int n)
+void DumpSurf::pack_v2x(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  Surf::Point *pts = surf->pts;
+  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].lo[0];
+  if (dimension == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int i = 0; i < nslocal; i++) {
+      buf[n] = pts[lines[mysurfs[i]].p2].x[0];
+      n += size_one;
+    }
+  } else if (dimension == 3) {
+    Surf::Tri *tris = surf->tris;
+    for (int i = 0; i < nslocal; i++) {
+      buf[n] = pts[tris[mysurfs[i]].p2].x[0];
+      n += size_one;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpSurf::pack_v2y(int n)
+{
+  Surf::Point *pts = surf->pts;
+  int *mysurfs = surf->mysurfs;
+
+  if (dimension == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int i = 0; i < nslocal; i++) {
+      buf[n] = pts[lines[mysurfs[i]].p2].x[1];
+      n += size_one;
+    }
+  } else if (dimension == 3) {
+    Surf::Tri *tris = surf->tris;
+    for (int i = 0; i < nslocal; i++) {
+      buf[n] = pts[tris[mysurfs[i]].p2].x[1];
+      n += size_one;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpSurf::pack_v2z(int n)
+{
+  Surf::Point *pts = surf->pts;
+  Surf::Tri *tris = surf->tris;
+  int *mysurfs = surf->mysurfs;
+
+  for (int i = 0; i < nslocal; i++) {
+    buf[n] = pts[tris[mysurfs[i]].p2].x[2];
     n += size_one;
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::pack_ylo(int n)
+void DumpSurf::pack_v3x(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  Surf::Point *pts = surf->pts;
+  Surf::Tri *tris = surf->tris;
+  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].lo[1];
+  for (int i = 0; i < nslocal; i++) {
+    buf[n] = pts[tris[mysurfs[i]].p3].x[0];
     n += size_one;
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::pack_zlo(int n)
+void DumpSurf::pack_v3y(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  Surf::Point *pts = surf->pts;
+  Surf::Tri *tris = surf->tris;
+  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].lo[2];
+  for (int i = 0; i < nslocal; i++) {
+    buf[n] = pts[tris[mysurfs[i]].p3].x[1];
     n += size_one;
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpGrid::pack_xhi(int n)
+void DumpSurf::pack_v3z(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  Surf::Point *pts = surf->pts;
+  Surf::Tri *tris = surf->tris;
+  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].hi[0];
+  for (int i = 0; i < nslocal; i++) {
+    buf[n] = pts[tris[mysurfs[i]].p3].x[2];
     n += size_one;
   }
 }
 
-/* ---------------------------------------------------------------------- */
-
-void DumpGrid::pack_yhi(int n)
-{
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
-
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].hi[1];
-    n += size_one;
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void DumpGrid::pack_zhi(int n)
-{
-  Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
-
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].hi[2];
-    n += size_one;
-  }
-}

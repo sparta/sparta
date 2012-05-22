@@ -30,6 +30,8 @@ class Compute : protected Pointers {
   double **array_molecule;  // computed per-molecule array
   double *vector_grid;      // computed per-grid vector
   double **array_grid;      // computed per-grid array
+  double *vector_surf;      // computed per-surf vector
+  double **array_surf;      // computed per-surf array
 
   int scalar_flag;          // 0/1 if compute_scalar() function exists
   int vector_flag;          // 0/1 if compute_vector() function exists
@@ -44,12 +46,16 @@ class Compute : protected Pointers {
   int per_grid_flag;          // 0/1 if compute_per_grid() function exists
   int size_per_grid_cols;     // 0 = vector, N = columns in per-grid array
 
+  int per_surf_flag;          // 0/1 if compute_per_surf() function exists
+  int size_per_surf_cols;     // 0 = vector, N = columns in per-surf array
+
   int invoked_flag;       // non-zero if invoked or accessed this step, 0 if not
   bigint invoked_scalar;  // last timestep on which compute_scalar() was invoked
   bigint invoked_vector;       // ditto for compute_vector()
   bigint invoked_array;        // ditto for compute_array()
   bigint invoked_per_molecule; // ditto for compute_per_molecule()
   bigint invoked_per_grid;     // ditto for compute_per_grid()
+  bigint invoked_per_surf;     // ditto for compute_per_surf()
 
   Compute(class DSMC *, int, char **);
   virtual ~Compute();
@@ -60,6 +66,7 @@ class Compute : protected Pointers {
   virtual void compute_array() {}
   virtual void compute_per_molecule() {}
   virtual void compute_per_grid() {}
+  virtual void compute_per_surf() {}
 
   virtual double memory_usage() {return 0.0;}
 };

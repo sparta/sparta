@@ -17,6 +17,7 @@
 #include "style_surf_collide.h"
 #include "surf_collide.h"
 #include "domain.h"
+#include "comm.h"
 #include "geometry.h"
 #include "memory.h"
 #include "error.h"
@@ -40,6 +41,9 @@ Surf::Surf(DSMC *dsmc) : Pointers(dsmc)
   lines = NULL;
   tris = NULL;
 
+  nlocal = 0;
+  mysurfs = NULL;
+
   nsc = maxsc = 0;
   sc = NULL;
 }
@@ -52,6 +56,8 @@ Surf::~Surf()
   memory->sfree(lines);
   memory->sfree(tris);
 
+  memory->sfree(mysurfs);
+
   for (int i = 0; i < nsc; i++) delete sc[i];
   memory->sfree(sc);
 }
@@ -60,6 +66,39 @@ Surf::~Surf()
 
 void Surf::init()
 {
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+
+  int nelem;
+  if (domain->dimension == 2) nelem = nline;
+  else nelem = ntri;
+
+  // set global IDs of all surf elements
+
+  memory->destroy(ids);
+  memory->create(ids,nelem,"surf:ids");
+  
+  for (int i = 0; i < nelem; i++) ids[i] = i+1;
+
+  // setup owned surf elements, every Pth
+  // create mysurfs list of owned surfs
+  // compute local index for owned surfs
+  // NOTE: what if # of surfs and nlocal changes between runs
+  //       could affect fix or compute that stores based on nlocal
+
+
+  nlocal = nelem/nprocs;
+  if (me < nelem % nprocs) nlocal++;
+
+  memory->destroy(mysurfs);
+  memory->create(mysurfs,nlocal,"surf:mysurfs");
+
+  nlocal = 0;
+  for (int m = me; m < nelem; m += nprocs)
+    mysurfs[nlocal++] = m;
+  
+  // initialize surface collision models
+
   for (int i = 0; i < nsc; i++) sc[i]->init();
 }
 

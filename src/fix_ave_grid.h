@@ -21,7 +21,6 @@ FixStyle(ave/grid,FixAveGrid)
 #ifndef LMP_FIX_AVE_GRID_H
 #define LMP_FIX_AVE_GRID_H
 
-#include "stdio.h"
 #include "fix.h"
 
 namespace DSMC_NS {
