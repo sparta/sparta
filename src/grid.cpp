@@ -81,7 +81,6 @@ void Grid::init()
       if (screen) fprintf(screen,"Grid/surf-element stats:\n");
       if (logfile) fprintf(logfile,"Grid/surf-element stats:\n");
     }
-
     surf2grid();
     surf2grid_stats();
   }
