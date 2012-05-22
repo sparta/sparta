@@ -54,7 +54,7 @@
       c_ID[N] = Nth column of per-grid array calculated by a compute with ID
       f_ID = per-grid vector (or array) calculated by a fix with ID
       f_ID[N] = Nth column of per-grid array calculated by a fix with ID
-      v_name = per-grid vector calculated by a cell-style variable with name 
+      v_name = per-grid vector calculated by a grid-style variable with name 
 </PRE>
 <PRE>  <I>surf</I> args = list of surf attributes
     possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
@@ -67,7 +67,7 @@
       c_ID = per-surf vector (or array) calculated by a compute with ID
       c_ID[N] = Nth column of per-surf array calculated by a compute with ID
       f_ID = per-surf vector (or array) calculated by a fix with ID
-      f_ID[N] = Nth column of per-surfarray calculated by a fix with ID
+      f_ID[N] = Nth column of per-surf array calculated by a fix with ID
       v_name = per-surf vector calculated by a surf-style variable with name 
 </PRE>
 <PRE>  <I>image</I> args = discussed on <A HREF = "dump_image.html">dump image</A> doc page 
@@ -204,12 +204,6 @@ the attribute should be replaced by the actual ID of the compute that
 has been defined previously in the input script.  See the
 <A HREF = "compute.html">compute</A> command for details.
 </P>
-<P>Note that computes which calculate global or per-grid quantities, as
-opposed to per-molecule quantities, cannot be output in a dump
-molecule command.  Instead, global quantities can be output by the
-<A HREF = "stats_style.html">stats_style</A> command, and per-grid quantities can be
-output by the dump grid command.
-</P>
 <P>If <I>c_ID</I> is used as a attribute, then the per-molecule vector
 calculated by the compute is printed.  If <I>c_ID[N]</I> is used, then N
 must be in the range from 1-M, which will print the Nth column of the
@@ -252,18 +246,13 @@ as part of the <I>grid</I> style.
 lower-left corner of the grid cell in the appropriate distance
 <A HREF = "units.html">units</A>.  The <I>xhi</I>, <I>yhi</I>, <I>zhi</I> attributes write the
 coordinates of the upper-right corner of the grid cell.
+The <I>zlo</I> and <I>zhi</I> attributes cannot be used for a 2d simulation.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-grid vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
 attribute should be replaced by the actual ID of the compute that has
 been defined previously in the input script.  See the
 <A HREF = "compute.html">compute</A> command for details.
-</P>
-<P>Note that computes which calculate global or per-molecule quantities,
-as opposed to per-grid quantities, cannot be output in a dump grid
-command.  Instead, global quantities can be output by the
-<A HREF = "stats_style.html">stats_style</A> command, and per-molecule quantities
-can be output by the dump molecule command.
 </P>
 <P>If <I>c_ID</I> is used as a attribute, and the compute calculates a
 per-grid vector, then the per-grid vector is printed.  If <I>c_ID[N]</I>
@@ -295,9 +284,9 @@ dump 1 grid 1000 tmp.grid id f_1<B>1</B> f_1<B>2</B> f_1<B>3</B> f_1<B>4</B> f_1
 <P>The <I>v_name</I> attribute allows per-grid vectors calculated by a
 <A HREF = "variable.html">variable</A> to be output.  The name in the attribute
 should be replaced by the actual name of the variable that has been
-defined previously in the input script.  Only a cell-style variable
+defined previously in the input script.  Only a grid-style variable
 can be referenced, since it is the only style that generates per-grid
-values.  Variables of style <I>cell</I> can reference per-grid attributes,
+values.  Variables of style <I>grid</I> can reference per-grid attributes,
 stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
@@ -309,9 +298,66 @@ quantities which could then be output into dump files.
 <HR>
 
 <P>This section explains the surface element attributes that can be
-specified as part of the <I>surf</I> style.
+specified as part of the <I>surf</I> style.  For 2d simulations, a surface
+element is a line segment with 2 end points.  Crossing the unit +z
+vector into the vector (v2-v1) determines the outward normal of the
+line segment.  For 3d simulations, a surface element is a triangle
+with 3 corner points.  Crossing (v2-v1) into (v3-v1) determines the
+outward normal of the triangle.
 </P>
-<P>This style is not yet supported.
+<P><I>Id</I> is the surface element ID.
+</P>
+<P>The <I>v1x</I>, <I>v1y</I>, <I>v1z</I>, <I>v2x</I>, <I>v2y</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, <I>v3z</I>
+attributes write the coordinates of the vertices of the end or corner
+points of the surface element.  The <I>v1z</I>, <I>v2z</I>, <I>v3x</I>, <I>v3y</I>, and
+<I>v3z</I> attributes cannot be used for a 2d simulation.
+</P>
+<P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-surf vectors or arrays
+calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
+attribute should be replaced by the actual ID of the compute that has
+been defined previously in the input script.  See the
+<A HREF = "compute.html">compute</A> command for details.
+</P>
+<P>If <I>c_ID</I> is used as a attribute, and the compute calculates a
+per-srf vector, then the per-surf vector is printed.  If <I>c_ID[N]</I>
+is used, then N must be in the range from 1-M, which will print the
+Nth column of the M-column per-surf array calculated by the compute.
+If <I>c_ID</I> is used, and the compute calculates a per-surf array, then
+it is the same as if the individual columns of the array had been
+listed one by one.  See the example below for fixes.
+</P>
+<P>The <I>f_ID</I> and <I>f_ID[N]</I> attributes allow per-surf vectors or arrays
+calculated by a <A HREF = "fix.html">fix</A> to be output.  The ID in the attribute
+should be replaced by the actual ID of the fix that has been defined
+previously in the input script.
+</P>
+<P>If <I>f_ID</I> is used as a attribute, and the fix calculates a per-surf
+vector, then the per-surf vector is printed.  If <I>f_ID[N]</I> is used,
+then N must be in the range from 1-M, which will print the Nth column
+of the M-columne per-surf array calculated by the fix.  If <I>f_ID</I> is
+used, and the fix calculates a per-surf array, then it is the same as
+if the individual columns of the array had been listed one by one.
+E.g. these 2 dump commands are equivalent for a simulation with 1
+species, since the fix ave/surf standard command produces a 7-column
+per-surf array:
+</P>
+<PRE>fix 1 ave/surf 10 100 1000 standard
+dump 1 surf 1000 tmp.surf id f_1
+dump 1 surf 1000 tmp.surf id f_1<B>1</B> f_1<B>2</B> f_1<B>3</B> f_1<B>4</B> f_1<B>5</B> f_1<B>6</B> f_1<B>7</B> 
+</PRE>
+<P>The <I>v_name</I> attribute allows per-surf vectors calculated by a
+<A HREF = "variable.html">variable</A> to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only a surf-style variable
+can be referenced, since it is the only style that generates per-surf
+values.  Variables of style <I>surf</I> can reference per-surf attributes,
+stats keywords, or invoke other computes, fixes, or variables when
+they are evaluated, so this is a very general means of creating
+quantities to output to a dump file.
+</P>
+<P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
+on how to add new compute and fix styles to DSMC to calculate per-surf
+quantities which could then be output into dump files.
 </P>
 <HR>
 
