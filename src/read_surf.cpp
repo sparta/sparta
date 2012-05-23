@@ -298,6 +298,10 @@ void ReadSurf::command(int narg, char **arg)
 
   if (dimension == 2) surf->compute_line_normal(nline_old,nline_new);
   if (dimension == 3) surf->compute_tri_normal(ntri_old,ntri_new);
+
+  // make list of surf elements I own
+
+  surf->setup_surf();
 }
 
 /* ----------------------------------------------------------------------

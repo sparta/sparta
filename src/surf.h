@@ -57,6 +57,7 @@ class Surf : protected Pointers {
   Surf(class DSMC *);
   ~Surf();
   void init();
+  void setup_surf();
 
   void compute_line_normal(int, int);
   void compute_tri_normal(int, int);

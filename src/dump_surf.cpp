@@ -18,7 +18,6 @@
 #include "dump_surf.h"
 #include "update.h"
 #include "domain.h"
-#include "grid.h"
 #include "surf.h"
 #include "modify.h"
 #include "compute.h"
@@ -430,16 +429,16 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf compute ID");
-      if (modify->compute[n]->per_grid_flag == 0)
-	error->all(FLERR,"Dump surf compute does not compute per-grid info");
-      if (index > 0 && modify->compute[n]->size_per_grid_cols == 0)
+      if (modify->compute[n]->per_surf_flag == 0)
+	error->all(FLERR,"Dump surf compute does not compute per-surf info");
+      if (index > 0 && modify->compute[n]->size_per_surf_cols == 0)
 	error->all(FLERR,
-		   "Dump surf compute does not calculate per-grid array");
-      if (index > 0 && index > modify->compute[n]->size_per_grid_cols)
+		   "Dump surf compute does not calculate per-surf array");
+      if (index > 0 && index > modify->compute[n]->size_per_surf_cols)
 	error->all(FLERR,"Dump surf compute vector is accessed out-of-range");
 
-      if (index == 0 && modify->compute[n]->size_per_grid_cols > 0) {
-	int ncol = modify->compute[n]->size_per_grid_cols;
+      if (index == 0 && modify->compute[n]->size_per_surf_cols > 0) {
+	int ncol = modify->compute[n]->size_per_surf_cols;
 	for (int i = 0; i < ncol; i++) {
 	  if (nfield == maxfield) {
 	    maxfield += CHUNK;
@@ -483,15 +482,15 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf fix ID");
-      if (modify->fix[n]->per_grid_flag == 0)
-	error->all(FLERR,"Dump surf fix does not compute per-grid info");
-      if (index > 0 && modify->fix[n]->size_per_grid_cols == 0)
-	error->all(FLERR,"Dump surf fix does not compute per-grid array");
-      if (index > 0 && index > modify->fix[n]->size_per_grid_cols)
+      if (modify->fix[n]->per_surf_flag == 0)
+	error->all(FLERR,"Dump surf fix does not compute per-surf info");
+      if (index > 0 && modify->fix[n]->size_per_surf_cols == 0)
+	error->all(FLERR,"Dump surf fix does not compute per-surf array");
+      if (index > 0 && index > modify->fix[n]->size_per_surf_cols)
 	error->all(FLERR,"Dump surf fix vector is accessed out-of-range");
 
-      if (index == 0 && modify->fix[n]->size_per_grid_cols > 0) {
-	int ncol = modify->fix[n]->size_per_grid_cols;
+      if (index == 0 && modify->fix[n]->size_per_surf_cols > 0) {
+	int ncol = modify->fix[n]->size_per_surf_cols;
 	for (int i = 0; i < ncol; i++) {
 	  if (nfield == maxfield) {
 	    maxfield += CHUNK;
@@ -530,8 +529,8 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf variable name");
-      if (input->variable->grid_style(n) == 0)
-	error->all(FLERR,"Dump surf variable is not grid-style variable");
+      if (input->variable->surf_style(n) == 0)
+	error->all(FLERR,"Dump surf variable is not surf-style variable");
 
       field2index[nfield] = add_variable(suffix);
       delete [] suffix;
