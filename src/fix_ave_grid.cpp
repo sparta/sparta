@@ -182,15 +182,15 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   nspecies = particle->nspecies;
   nglocal = grid->nlocal;
 
-  if (standard) memory->create(mcount,nspecies,nglocal,"ave/time:mcount");
+  if (standard) memory->create(mcount,nspecies,nglocal,"ave/grid:mcount");
   else mcount = NULL;
 
-  if (nvalues == 1) memory->create(vector_grid,nglocal,"ave/time:vector_grid");
-  else memory->create(array_grid,nglocal,nvalues,"ave/time:array_grid");
+  if (nvalues == 1) memory->create(vector_grid,nglocal,"ave/grid:vector_grid");
+  else memory->create(array_grid,nglocal,nvalues,"ave/grid:array_grid");
   
   if (ave == RUNNING) {
-    if (nvalues == 1) memory->create(accvec,nglocal,"ave/time:accvec");
-    else memory->create(accarray,nglocal,nvalues,"ave/time:accarray");
+    if (nvalues == 1) memory->create(accvec,nglocal,"ave/grid:accvec");
+    else memory->create(accarray,nglocal,nvalues,"ave/grid:accarray");
   } else {
     if (nvalues == 1) accvec = vector_grid;
     else accarray = array_grid;
@@ -513,9 +513,9 @@ void FixAveGrid::options(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/grid command");
       if (strcmp(arg[iarg+1],"one") == 0) ave = ONE;
       else if (strcmp(arg[iarg+1],"running") == 0) ave = RUNNING;
-      else error->all(FLERR,"Illegal fix ave/timgrid command");
+      else error->all(FLERR,"Illegal fix ave/grid command");
       iarg += 2;
-    } else error->all(FLERR,"Illegal fix ave/time command");
+    } else error->all(FLERR,"Illegal fix ave/grid command");
   }
 }
 
@@ -525,10 +525,10 @@ void FixAveGrid::options(int narg, char **arg)
 
 void FixAveGrid::allocate_values(int n)
 {
-  memory->grow(which,n,"ave/time:which");
-  memory->grow(argindex,n,"ave/time:argindex");
-  memory->grow(value2index,n,"ave/time:value2index");
-  ids = (char **) memory->srealloc(ids,n*sizeof(char *),"ave/time:ids");
+  memory->grow(which,n,"ave/grid:which");
+  memory->grow(argindex,n,"ave/grid:argindex");
+  memory->grow(value2index,n,"ave/grid:value2index");
+  ids = (char **) memory->srealloc(ids,n*sizeof(char *),"ave/grid:ids");
 }
 
 /* ----------------------------------------------------------------------

@@ -41,7 +41,7 @@ using namespace MathConst;
 
 #define MYROUND(a) (( a-floor(a) ) >= .5) ? ceil(a) : floor(a)
 
-enum{INDEX,LOOP,WORLD,UNIVERSE,ULOOP,STRING,EQUAL,MOLECULE,GRID};
+enum{INDEX,LOOP,WORLD,UNIVERSE,ULOOP,STRING,EQUAL,MOLECULE,GRID,SURF};
 enum{ARG,OP};
 
 // customize by adding a function
@@ -62,6 +62,7 @@ enum{SUM,XMIN,XMAX,AVE,TRAP};
 #define INVOKED_ARRAY 4
 #define INVOKED_PER_MOLECULE 8
 #define INVOKED_PER_GRID 16
+#define INVOKED_PER_SURF 32
 
 #define BIG 1.0e20
 
@@ -553,6 +554,16 @@ int Variable::molecule_style(int ivar)
 int Variable::grid_style(int ivar)
 {
   if (style[ivar] == GRID) return 1;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   return 1 if variable is SURF style, 0 if not
+------------------------------------------------------------------------- */
+  
+int Variable::surf_style(int ivar)
+{
+  if (style[ivar] == SURF) return 1;
   return 0;
 }
 

@@ -165,16 +165,18 @@ void Update::run(int nsteps)
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
+    //if (surfflag) 
 
     // start of step fixes
 
     ncurrent = particle->nlocal;
     if (n_start_of_step) modify->start_of_step();
 
+    //if (dynamic) domain->dynamic();
+
     // move particles
 
     timer->stamp();
-    //if (dynamic) domain->dynamic();
     (this->*move)();
     timer->stamp(TIME_MOVE);
 

@@ -30,6 +30,7 @@ class Variable : protected Pointers {
   int equal_style(int);
   int molecule_style(int);
   int grid_style(int);
+  int surf_style(int);
   char *retrieve(char *);
   double compute_equal(int);
   void compute_molecule(int, double *, int, int);
