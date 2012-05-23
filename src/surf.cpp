@@ -42,6 +42,7 @@ Surf::Surf(DSMC *dsmc) : Pointers(dsmc)
   tris = NULL;
 
   nlocal = 0;
+  ids = NULL;
   mysurfs = NULL;
 
   nsc = maxsc = 0;
@@ -56,6 +57,7 @@ Surf::~Surf()
   memory->sfree(lines);
   memory->sfree(tris);
 
+  memory->sfree(ids);
   memory->sfree(mysurfs);
 
   for (int i = 0; i < nsc; i++) delete sc[i];
@@ -85,7 +87,6 @@ void Surf::init()
   // compute local index for owned surfs
   // NOTE: what if # of surfs and nlocal changes between runs
   //       could affect fix or compute that stores based on nlocal
-
 
   nlocal = nelem/nprocs;
   if (me < nelem % nprocs) nlocal++;

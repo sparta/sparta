@@ -45,10 +45,10 @@ Compute::Compute(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
   // set child class defaults
 
   scalar_flag = vector_flag = array_flag = 0;
-  per_molecule_flag = per_grid_flag = 0;
+  per_molecule_flag = per_grid_flag = per_surf_flag = 0;
 
   invoked_scalar = invoked_vector = invoked_array = -1;
-  invoked_per_molecule = invoked_per_grid = -1;
+  invoked_per_molecule = invoked_per_grid = invoked_per_surf = -1;
 }
 
 /* ---------------------------------------------------------------------- */
