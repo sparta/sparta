@@ -1,0 +1,44 @@
+"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+
+:link(dws,http://dsmc.sandia.gov)
+:link(dd,Manual.html)
+:link(dc,Section_commands.html#comm)
+
+:line
+
+compute ke/grid command :h3
+
+[Syntax:]
+
+compute ID ke/grid :pre
+
+ID is documented in "compute"_compute.html command
+ke/grid = style name of this compute command :ul
+
+[Examples:]
+
+compute 1 ke/grid :pre
+
+[Description:]
+
+Define a computation that calculates the per-atom translational
+kinetic energy of all the molecules in each grid cell.
+
+The kinetic energy for the cell is simply the sum of 1/2 m v^2 over
+all the molecules in the cell, where m is the mass and v is the
+velocity of each molecule.
+
+[Output info:]
+
+This compute calculates a per-grid vector, which can be accessed by
+any command that uses per-grid values from a compute as input.
+
+The per-grid vector values will be in energy "units"_units.html.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"dump grid"_dump.html
+
+[Default:] none

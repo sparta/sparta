@@ -6,18 +6,18 @@
 
 :line
 
-compute ke/mol command :h3
+compute ke/molecule command :h3
 
 [Syntax:]
 
-compute ID ke/mol :pre
+compute ID ke/molecule :pre
 
 ID is documented in "compute"_compute.html command
-ke/mol = style name of this compute command :ul
+ke/molecule = style name of this compute command :ul
 
 [Examples:]
 
-compute 1 ke/mol :pre
+compute 1 ke/molecule :pre
 
 [Description:]
 
@@ -38,6 +38,6 @@ The per-molecule vector values will be in energy "units"_units.html.
 
 [Related commands:]
 
-"dump mol"_dump.html
+"dump molecule"_dump.html
 
 [Default:] none

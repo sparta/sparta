@@ -26,10 +26,10 @@
 <P><B>Description:</B>
 </P>
 <P>Define a computation that will be performed on a collection of
-particles or grid cells.  Quantities calculated by a compute are
-instantaneous values, meaning they are calculated from information
-about the current timestep or iteration, though a compute may
-internally store some information about a previous state of the
+particles or grid cells or surface elements.  Quantities calculated by
+a compute are instantaneous values, meaning they are calculated from
+information about the current timestep or iteration, though a compute
+may internally store some information about a previous state of the
 system.  Defining a compute does not perform a computation.  Instead
 computes are invoked by other DSMC commands as needed, e.g. to
 generate thermodynamic or dump file output.
@@ -45,26 +45,31 @@ calculations accessed in the various ways described above.
 </P>
 <HR>
 
-<P>Computes calculate one of three styles of quantities: global,
-per-molecule, or per-grid.  A global quantity is one or more
+<P>Computes calculate one of four styles of quantities: global,
+per-molecule, per-grid, or per-surf.  A global quantity is one or more
 system-wide values, e.g. the temperature of the system.  A
 per-molecule quantity is one or more values per molecule, e.g. the
 kinetic energy of each molecule.  A per-grid quantity is one or more
-values per grid cell.  Computes that produce per-molecule quantities
-have the word "molecule" in their style, e.g. <I>ke/molecule</I>.  Computes
-that produce per-grid quantities have the word "grid" in their style,
-e.g. <I>ke/grid</I>.  Styles with neither "molecule" or "grid" in their
-style produce global quantities.
+values per grid cell.  A per-surf quantity is one or more values per
+surface element.
+</P>
+<P>Computes that produce per-molecule quantities have the word "molecule"
+in their style name, e.g. <I>ke/molecule</I>.  Computes that produce
+per-grid quantities have the word "grid" in their style name,
+e.g. <I>ke/grid</I>.  Computes that produce per-surf quantities have the
+word "surf" in their style name, e.g. <I>ke/surf</I>.  Styles with neither
+"molecule" or "grid" or "surf" in their style nameproduce global
+quantities.
 </P>
 <P>Note that a single compute produces either global or per-molecule or
-per-grid quantities, but never more than one of these.
+per-grid or per-surf quantities, but never more than one of these.
 </P>
-<P>Global, per-molecule, and per-grid quantities each come in three
-kinds: a single scalar value, a vector of values, or a 2d array of
-values.  The doc page for each compute describes the style and kind of
-values it produces, e.g. a per-molecule vector.  Some computes produce
-more than one kind of a single style, e.g. a global scalar and a
-global vector.
+<P>Global, per-molecule, per-grid, and per-surf quantities each come in
+three kinds: a single scalar value, a vector of values, or a 2d array
+of values.  The doc page for each compute describes the style and kind
+of values it produces, e.g. a per-molecule vector.  Some computes
+produce more than one kind of a single style, e.g. a global scalar and
+a global vector.
 </P>
 <P>When a compute quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -95,16 +100,27 @@ various commands explain the details.
 ways:
 </P>
 <UL><LI>Global values can be output via the <A HREF = "stats_style.html">stats_style</A>
-command.  Or the values can be referenced in a <A HREF = "variable.html">variable
-equal</A> or <A HREF = "variable.html">variable atom</A> command. 
+command.  They can be time-averaged via the <A HREF = "fix_ave_time.html">fix
+ave/time</A> command.  Or the values can be referenced
+in a <A HREF = "variable.html">variable equal</A> or <A HREF = "variable.html">variable atom</A>
+command. 
 
 <LI>Per-molecule values can be output via the <A HREF = "dump.html">dump particle</A>
-command.  Or the per-molecule values can be referenced in an
-<A HREF = "variable.html">molecule-style variable</A>. 
+command.  They can be reduced to global values via the <A HREF = "doc/compute_reduce.html">compute
+reduce</A> command.  Or the per-molecule values
+can be referenced in an <A HREF = "variable.html">molecule-style variable</A>. 
 
 <LI>Per-grid values can be output via the <A HREF = "dump.html">dump grid</A> command.
-Or the per-grid values can be referenced in a <A HREF = "variable.html">grid-style
-variable</A>. 
+They can be time-averaged via the <A HREF = "fix_ave_grid.html">fix ave/grid</A>
+command.  They can be reduced to global values via the <A HREF = "doc/compute_reduce.html">compute
+reduce</A> command.  Or the per-grid values can
+be referenced in a <A HREF = "variable.html">grid-style variable</A>. 
+</UL>
+<LI>Per-surf values can be output via the <A HREF = "dump.html">dump surf</A> command.
+They can be time-averaged via the <A HREF = "fix_ave_surf.html">fix ave/surf</A>
+command.  They can be reduced to global values via the <A HREF = "doc/compute_reduce.html">compute
+reduce</A> command.  Or the per-surf values can
+be referenced in a <A HREF = "variable.html">surf-style variable</A>. 
 </UL>
 <HR>
 

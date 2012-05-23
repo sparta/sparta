@@ -279,6 +279,7 @@ See the "fix"_fix.html command for one-line descriptions
 of each style or click on the style itself for a full description:
 
 "ave/grid"_fix_ave_grid.html,
+"ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
 "grid/check"_fix_grid_check.html,
 "inflow"_fix_inflow.html,
