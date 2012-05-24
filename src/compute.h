@@ -49,6 +49,13 @@ class Compute : protected Pointers {
   int per_surf_flag;          // 0/1 if compute_per_surf() function exists
   int size_per_surf_cols;     // 0 = vector, N = columns in per-surf array
 
+  int bounceflag;             // 1 if compute needs surface bounce info
+
+  int timeflag;       // 1 if Compute stores list of timesteps it's called on
+  int ntime;          // # of entries in time list
+  int maxtime;        // max # of entries time list can hold
+  bigint *tlist;      // list of timesteps the Compute is called on
+
   int invoked_flag;       // non-zero if invoked or accessed this step, 0 if not
   bigint invoked_scalar;  // last timestep on which compute_scalar() was invoked
   bigint invoked_vector;       // ditto for compute_vector()
@@ -67,6 +74,10 @@ class Compute : protected Pointers {
   virtual void compute_per_molecule() {}
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
+
+  void addstep(bigint);
+  int matchstep(bigint);
+  void clearstep();
 
   virtual double memory_usage() {return 0.0;}
 };

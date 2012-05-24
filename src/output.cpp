@@ -154,10 +154,10 @@ void Output::setup(int flag)
 	  error->all(FLERR,"Dump every variable returned a bad timestep");
 	next_dump[idump] = nextdump;
       }
-      //if (dump[idump]->clearstep) {
-      //if (writeflag) modify->addstep_compute(next_dump[idump]);
-      //else modify->addstep_compute_all(next_dump[idump]);
-      //}
+      if (dump[idump]->clearstep) {
+	if (writeflag) modify->addstep_compute(next_dump[idump]);
+	else modify->addstep_compute_all(next_dump[idump]);
+      }
       if (idump) next_dump_any = MIN(next_dump_any,next_dump[idump]);
       else next_dump_any = next_dump[0];
     }
@@ -232,7 +232,7 @@ void Output::write(bigint ntimestep)
 	    error->all(FLERR,"Dump every variable returned a bad timestep");
 	  next_dump[idump] = nextdump;
 	}
-        //if (dump[idump]->clearstep) modify->addstep_compute(next_dump[idump]);
+        if (dump[idump]->clearstep) modify->addstep_compute(next_dump[idump]);
       }
       if (idump) next_dump_any = MIN(next_dump_any,next_dump[idump]);
       else next_dump_any = next_dump[0];
@@ -279,7 +279,7 @@ void Output::write(bigint ntimestep)
 	error->all(FLERR,"stats every variable returned a bad timestep");
     } else next_stats = update->laststep;
     next_stats = MIN(next_stats,update->laststep);
-    //modify->addstep_compute(next_stats);
+    modify->addstep_compute(next_stats);
   }
 
   // next = next timestep any output will be done

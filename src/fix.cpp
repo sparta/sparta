@@ -20,6 +20,8 @@
 
 using namespace DSMC_NS;
 
+#define DELTA 4
+
 /* ---------------------------------------------------------------------- */
 
 Fix::Fix(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
@@ -39,8 +41,11 @@ Fix::Fix(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
   style = new char[n];
   strcpy(style,arg[1]);
 
+  // set child class defaults
+
   scalar_flag = vector_flag = array_flag = 0;
   per_molecule_flag = per_grid_flag = per_surf_flag = 0;
+  bounceflag = 0;
 
   // mask settings - same as in modify.cpp
 

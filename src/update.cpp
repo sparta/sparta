@@ -20,6 +20,8 @@
 #include "math_const.h"
 #include "particle.h"
 #include "modify.h"
+#include "fix.h"
+#include "compute.h"
 #include "domain.h"
 #include "comm.h"
 #include "collide.h"
@@ -68,6 +70,9 @@ Update::Update(DSMC *dsmc) : Pointers(dsmc)
   ranmaster = new RanMars(dsmc);
   random = NULL;
 
+  nbounce = NULL;
+  bounce = NULL;
+
   faceflip[XLO] = XHI;
   faceflip[XHI] = XLO;
   faceflip[YLO] = YHI;
@@ -84,6 +89,8 @@ Update::~Update()
   memory->destroy(mlist);
   delete ranmaster;
   delete random;
+  memory->destroy(nbounce);
+  memory->destroy(bounce);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -147,6 +154,8 @@ void Update::setup()
   nboundary_running = nexit_running = 0;
   nscheck_running = nscollide_running = 0;
 
+  if (surf->surf_exist) bounce_setup();
+
   // initial output
 
   output->setup(1);
@@ -158,6 +167,7 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
+  int surf_exist = surf->surf_exist;
   int dynamic = 0;
   
   // loop over timesteps
@@ -165,7 +175,7 @@ void Update::run(int nsteps)
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
-    //if (surfflag) 
+    if (surf_exist) bounce_set(ntimestep);
 
     // start of step fixes
 
@@ -218,7 +228,7 @@ void Update::run(int nsteps)
 void Update::move3d_surface()
 {
   bool hitflag;
-  int i,m,icell,inface,outface,outflag,isurf,exclude;
+  int i,m,isp,icell,inface,outface,outflag,isurf,exclude;
   int side,minside,minsurf,nsurf,cflag;
   int *neigh;
   double dtremain,dtfrac,frac,newfrac,param,minparam;
@@ -422,6 +432,11 @@ void Update::move3d_surface()
 	  xnew[0] = x[0] + dtremain*v[0];
 	  xnew[1] = x[1] + dtremain*v[1];
 	  xnew[2] = x[2] + dtremain*v[2];
+	  if (bounceflag) {
+	    isp = particles[i].ispecies - 1;
+	    nbounce[isp][isurf]++;
+	    bounce[isp][isurf] += 10.0;
+	  }
 	  exclude = minsurf;
 	  nscollide_one++;
 
@@ -722,7 +737,7 @@ void Update::move3d()
 void Update::move2d_surface()
 {
   bool hitflag;
-  int i,m,icell,inface,outface,outflag,isurf,exclude;
+  int i,m,isp,icell,inface,outface,outflag,isurf,exclude;
   int side,minside,minsurf,nsurf,cflag;
   int *neigh;
   double dtremain,dtfrac,frac,newfrac,param,minparam;
@@ -904,6 +919,11 @@ void Update::move2d_surface()
 	  dtremain *= 1.0 - minparam*frac;
 	  xnew[0] = x[0] + dtremain*v[0];
 	  xnew[1] = x[1] + dtremain*v[1];
+	  if (bounceflag) {
+	    isp = particles[i].ispecies;
+	    nbounce[isp][isurf]++;
+	    bounce[isp][isurf] += 10.0;
+	  }
 	  exclude = minsurf;
 	  nscollide_one++;
 
@@ -1170,6 +1190,82 @@ void Update::move2d()
   nexit_running += nexit_one;
   nscheck_running += nscheck_one;
   nscollide_running += nscollide_one;
+}
+
+/* ----------------------------------------------------------------------
+   setup lists of fixes and computes that use surface bounce info
+------------------------------------------------------------------------- */
+
+void Update::bounce_setup()
+{
+  delete [] blist_fix;
+  blist_fix = NULL;
+  nblist_fix = 0;
+  for (int i = 0; i < modify->nfix; i++)
+    if (modify->fix[i]->bounceflag) nblist_fix++;
+  if (nblist_fix) blist_fix = new Fix*[nblist_fix];
+  nblist_fix = 0;
+  for (int i = 0; i < modify->nfix; i++) {
+    if (modify->fix[i]->bounceflag)
+      blist_fix[nblist_fix++] = modify->fix[i];
+  }
+
+  delete [] blist_compute;
+  blist_compute = NULL;
+  nblist_compute = 0;
+  for (int i = 0; i < modify->ncompute; i++)
+    if (modify->compute[i]->bounceflag) nblist_compute++;
+  if (nblist_compute) blist_compute = new Compute*[nblist_compute];
+  nblist_compute = 0;
+  for (int i = 0; i < modify->ncompute; i++) {
+    if (modify->compute[i]->bounceflag)
+      blist_compute[nblist_compute++] = modify->compute[i];
+  }
+
+  // NOTE: replace this with hash
+
+  int nelement = surf->nelement();
+  int nspecies = particle->nspecies;
+  memory->create(nbounce,nspecies,nelement,"update:nbounce");
+  memory->create(bounce,nspecies,nelement,"update:bounce");
+}
+
+/* ----------------------------------------------------------------------
+   set bounceflag for current timestep
+   bounceflag = 1 if any fix/compute needs surface bounce info on this step
+   else bounceflag = 0
+------------------------------------------------------------------------- */
+
+void Update::bounce_set(bigint ntimestep)
+{
+  int i,j;
+
+  // invoke matchstep() on all timestep-dependent computes to clear their arrays
+
+  bounceflag = 0;
+  for (i = 0; i < nblist_fix; i++)
+    if (blist_fix[i]->bouncenext == ntimestep) {
+      bounceflag = 1;
+      break;
+    }
+  if (!bounceflag)
+    for (i = 0; i < nblist_compute; i++)
+      if (blist_compute[i]->matchstep(ntimestep)) {
+	bounceflag = 1;
+	break;
+      }
+
+  // zero bounce arrays
+
+  if (bounceflag) {
+    int nelement = surf->nelement();
+    int nspecies = particle->nspecies;
+    for (i = 0; i < nspecies; i++)
+      for (j = 0; j < nelement; j++) {
+	nbounce[i][j] = 0;
+	bounce[i][j] = 0.0;
+      }
+  }
 }
 
 /* ----------------------------------------------------------------------

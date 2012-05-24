@@ -16,6 +16,7 @@
 #include "string.h"
 #include "modify.h"
 #include "domain.h"
+#include "update.h"
 #include "compute.h"
 #include "fix.h"
 #include "style_compute.h"
@@ -43,6 +44,8 @@ Modify::Modify(DSMC *dsmc) : Pointers(dsmc)
   fmask = NULL;
   list_start_of_step = list_end_of_step = NULL;
 
+  list_timeflag = NULL;
+
   ncompute = maxcompute = 0;
   compute = NULL;
 }
@@ -65,6 +68,8 @@ Modify::~Modify()
 
   delete [] list_start_of_step;
   delete [] list_end_of_step;
+
+  delete [] list_timeflag;
 }
 
 /* ----------------------------------------------------------------------
@@ -84,8 +89,16 @@ void Modify::init()
 
   for (i = 0; i < nfix; i++) fix[i]->init();
 
+  // create list of computes that store invocation times
+
+  list_init_compute();
+
   // init each compute
   // set invoked_scalar,vector,etc to -1 to force new run to re-compute them
+  // add initial timestep to all computes that store invocation times
+  //   since any of them may be invoked by initial thermo
+  // do not clear out invocation times stored within a compute,
+  //   b/c some may be holdovers from previous run, like for ave fixes
 
   for (i = 0; i < ncompute; i++) {
     compute[i]->init();
@@ -94,7 +107,9 @@ void Modify::init()
     compute[i]->invoked_array = -1;
     compute[i]->invoked_per_molecule = -1;
     compute[i]->invoked_per_grid = -1;
+    compute[i]->invoked_per_surf = -1;
   }
+  addstep_compute_all(update->ntimestep);
 }
 
 /* ----------------------------------------------------------------------
@@ -292,6 +307,32 @@ void Modify::clearstep_compute()
 }
 
 /* ----------------------------------------------------------------------
+   loop over computes that store invocation times
+   if its invoked flag set on this timestep, schedule next invocation
+   called everywhere that computes are used, after computes are invoked
+------------------------------------------------------------------------- */
+
+void Modify::addstep_compute(bigint newstep)
+{
+  for (int icompute = 0; icompute < n_timeflag; icompute++)
+    if (compute[list_timeflag[icompute]]->invoked_flag)
+      compute[list_timeflag[icompute]]->addstep(newstep);
+}
+
+/* ----------------------------------------------------------------------
+   loop over all computes
+   schedule next invocation for those that store invocation times
+   called when not sure what computes will be needed on newstep
+   do not loop only over n_timeflag, since may not be set yet
+------------------------------------------------------------------------- */
+
+void Modify::addstep_compute_all(bigint newstep)
+{
+  for (int icompute = 0; icompute < ncompute; icompute++)
+    if (compute[icompute]->timeflag) compute[icompute]->addstep(newstep);
+}
+
+/* ----------------------------------------------------------------------
    create list of fix indices for fixes which match mask
 ------------------------------------------------------------------------- */
 
@@ -305,6 +346,24 @@ void Modify::list_init(int mask, int &n, int *&list)
 
   n = 0;
   for (int i = 0; i < nfix; i++) if (fmask[i] & mask) list[n++] = i;
+}
+
+/* ----------------------------------------------------------------------
+   create list of compute indices for computes which store invocation times
+------------------------------------------------------------------------- */
+
+void Modify::list_init_compute()
+{
+  delete [] list_timeflag;
+
+  n_timeflag = 0;
+  for (int i = 0; i < ncompute; i++)
+    if (compute[i]->timeflag) n_timeflag++;
+  list_timeflag = new int[n_timeflag];
+
+  n_timeflag = 0;
+  for (int i = 0; i < ncompute; i++)
+    if (compute[i]->timeflag) list_timeflag[n_timeflag++] = i;
 }
 
 /* ----------------------------------------------------------------------

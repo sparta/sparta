@@ -58,6 +58,7 @@ class Surf : protected Pointers {
   ~Surf();
   void init();
   void setup_surf();
+  int nelement();
 
   void compute_line_normal(int, int);
   void compute_tri_normal(int, int);

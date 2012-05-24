@@ -229,10 +229,14 @@ FixAveGrid::FixAveGrid(DSMC *dsmc, int narg, char **arg) :
   }
 
   // nvalid = next step on which end_of_step does something
+  // add nvalid to all computes that store invocation times
+  // since don't know a priori which are invoked by this fix
+  // once in end_of_step() can set timestep for ones actually invoked
 
   nsample = 0;
   irepeat = 0;
   nvalid = nextvalid();
+  modify->addstep_compute_all(nvalid);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -336,6 +340,9 @@ void FixAveGrid::end_of_step()
   }
 
   // accumulate results of attributes,computes,fixes,variables
+  // compute/fix/variable may invoke computes so wrap with clear/add
+
+  modify->clearstep_compute();
 
   if (standard) {
     Grid::OneCell *cells = grid->cells;
@@ -421,7 +428,7 @@ void FixAveGrid::end_of_step()
 	  }
 	}
 
-      // evaluete cell-style variable
+      // evaluete grid-style variable
 
       } else if (which[m] == VARIABLE) {
       }
@@ -435,11 +442,13 @@ void FixAveGrid::end_of_step()
   irepeat++;
   if (irepeat < nrepeat) {
     nvalid += nevery;
+    modify->addstep_compute(nvalid);
     return;
   }
 
   irepeat = 0;
   nvalid = ntimestep+per_grid_freq - (nrepeat-1)*nevery;
+  modify->addstep_compute(nvalid);
 
   // average the accumulators for output on Nfreq timestep
   // molecule count is normalized by nsample

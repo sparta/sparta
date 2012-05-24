@@ -43,7 +43,10 @@ class Modify : protected Pointers {
   void add_compute(int, char **);
   void delete_compute(const char *);
   int find_compute(const char *);
+
   void clearstep_compute();
+  void addstep_compute(bigint);
+  void addstep_compute_all(bigint);
 
   bigint memory_usage();
 
@@ -53,7 +56,11 @@ class Modify : protected Pointers {
 
   int *list_start_of_step,*list_end_of_step;
 
+  int n_timeflag;            // list of computes that store time invocation
+  int *list_timeflag;
+
   void list_init(int, int &, int *&);
+  void list_init_compute();
 };
 
 }

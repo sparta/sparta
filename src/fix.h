@@ -50,6 +50,9 @@ class Fix : protected Pointers {
   double *vector_surf;           // computed per-surf vector
   double **array_surf;           // computed per-surf array
 
+  int bounceflag;                // 1 if fix needs surface bounce info
+  bigint bouncenext;             // next timestep fix needs bounce info
+
   int START_OF_STEP,END_OF_STEP;    // mask settings
 
   Fix(class DSMC *, int, char **);

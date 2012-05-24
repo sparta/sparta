@@ -74,6 +74,16 @@ void Surf::init()
 }
 
 /* ----------------------------------------------------------------------
+   return # of lines or triangles
+------------------------------------------------------------------------- */
+
+int Surf::nelement()
+{
+  if (domain->dimension == 2) return nline;
+  return ntri;
+}
+
+/* ----------------------------------------------------------------------
    setup owned surf elements
    create mysurfs list of owned surfs
    compute local index for owned cells
@@ -84,27 +94,25 @@ void Surf::setup_surf()
   int me = comm->me;
   int nprocs = comm->nprocs;
 
-  int nelem;
-  if (domain->dimension == 2) nelem = nline;
-  else nelem = ntri;
+  int n = nelement();
 
   // set global IDs of all surf elements
 
   memory->destroy(ids);
-  memory->create(ids,nelem,"surf:ids");
+  memory->create(ids,n,"surf:ids");
   
-  for (int i = 0; i < nelem; i++) ids[i] = i+1;
+  for (int i = 0; i < n; i++) ids[i] = i+1;
 
   // assign every Pth surf element to this proc
 
-  nlocal = nelem/nprocs;
-  if (me < nelem % nprocs) nlocal++;
+  nlocal = n/nprocs;
+  if (me < n % nprocs) nlocal++;
 
   memory->destroy(mysurfs);
   memory->create(mysurfs,nlocal,"surf:mysurfs");
 
   nlocal = 0;
-  for (int m = me; m < nelem; m += nprocs)
+  for (int m = me; m < n; m += nprocs)
     mysurfs[nlocal++] = m;
 }
 

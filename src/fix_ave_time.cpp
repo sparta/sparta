@@ -338,8 +338,12 @@ FixAveTime::FixAveTime(DSMC *dsmc, int narg, char **arg) :
       for (int j = 0; j < nvalues; j++) array_total[i][j] = 0.0;
 
   // nvalid = next step on which end_of_step does something
+  // add nvalid to all computes that store invocation times
+  // since don't know a priori which are invoked by this fix
+  // once in end_of_step() can set timestep for ones actually invoked
 
   nvalid = nextvalid();
+  modify->addstep_compute_all(nvalid);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -486,11 +490,13 @@ void FixAveTime::invoke_scalar(bigint ntimestep)
   irepeat++;
   if (irepeat < nrepeat) {
     nvalid += nevery;
+    modify->addstep_compute(nvalid);
     return;
   }
 
   irepeat = 0;
   nvalid = ntimestep + nfreq - (nrepeat-1)*nevery;
+  modify->addstep_compute(nvalid);
 
   // average the final result for the Nfreq timestep
 
