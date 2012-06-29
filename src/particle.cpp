@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "mpi.h"
+#include "math.h"
 #include "string.h"
 #include "stdlib.h"
 #include "particle.h"
@@ -20,6 +21,7 @@
 #include "update.h"
 #include "comm.h"
 #include "mixture.h"
+#include "random_park.h"
 #include "memory.h"
 #include "error.h"
 
@@ -354,6 +356,46 @@ int Particle::find_mixture(char *id)
   for (int i = 0; i < nmixture; i++)
     if (strcmp(id,mixture[i]->id) == 0) return i;
   return -1;
+}
+
+/* ----------------------------------------------------------------------
+   generate random rotational energy for a particle
+   only a function of species index and species properties
+------------------------------------------------------------------------- */
+
+double Particle::erot(int isp, RanPark *random)
+{
+ double eng,a,erm,b;
+
+ if (particle->species[isp].rotdof == 2)
+   eng = -log(random->uniform()) * update->boltz * update->temp_thermal;
+ else {
+   a = 0.5*particle->species[isp].rotdof-1.;
+   while (1) {
+     // energy cut-off at 10 kT
+     erm = 10.0*random->uniform();
+     b = pow(erm/a,a) * exp(a-erm);
+     if (b > random->uniform()) break;
+   }
+   // NOTE: is temp_thermal always set?
+   eng = erm * update->boltz * update->temp_thermal;
+ }
+
+ return eng;
+}
+
+/* ----------------------------------------------------------------------
+   generate random vibrational energy for a particle
+   only a function of species index and species properties
+------------------------------------------------------------------------- */
+
+int Particle::evib(int isp, RanPark *random)
+{
+  // NOTE: is temp_thermal always set?
+
+  int ivib = -log(random->uniform()) * update->temp_thermal /
+    particle->species[isp].vibtemp;
+  return ivib;
 }
 
 /* ----------------------------------------------------------------------

@@ -537,13 +537,11 @@ void FixInflow::start_of_step()
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
 
-  int icell,ninsert,isp,ndim,pdim1,pdim2;
+  int icell,ninsert,isp,ndim,pdim1,pdim2,ivib;
   double *lo,*hi,*normal;
   double x[3],v[3];
   double indot,rn,ntarget;
-  double beta_un,normalized_distbn_fn,theta;
-  double erote;
-  int ivib;
+  double beta_un,normalized_distbn_fn,theta,erot;
 
   // insert molecules by cell/face pair
   // ntarget/ninsert is either perspecies or for all species
@@ -598,11 +596,9 @@ void FixInflow::start_of_step()
 	  theta = MY_PI * random->gaussian();
 	  v[pdim1] = vscale[isp]*sin(theta) + vstream[1];
 	  v[pdim2] = vscale[isp]*cos(theta) + vstream[2]; 
-/*
-          erote = CreateMolecules.erot(isp);
-          ivib = CreateMolecules.evib(isp);
-*/	  
-	  particle->add_particle(0,isp,icell,x,v,erote,ivib);
+          erot = particle->erot(isp,random);
+          ivib = particle->evib(isp,random);
+	  particle->add_particle(0,isp,icell,x,v,erot,ivib);
 	}
 
 	nsingle += ninsert;
@@ -646,11 +642,9 @@ void FixInflow::start_of_step()
 	theta = MY_PI * random->uniform();
 	v[pdim1] = vscale[isp]*sin(theta) + vstream[1];
 	v[pdim2] = vscale[isp]*cos(theta) + vstream[2]; 
-/*
-        erote = CreateMolecules.erot(isp);
-        ivib = CreateMolecules.evib(isp);
-*/
-	particle->add_particle(0,isp,icell,x,v,erote,ivib);
+        erot = particle->erot(isp,random);
+        ivib = particle->evib(isp,random);
+	particle->add_particle(0,isp,icell,x,v,erot,ivib);
       }
 
       nsingle += ninsert;

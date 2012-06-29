@@ -47,8 +47,8 @@ class Particle : protected Pointers {
     int icell;              // global grid cell the particle is in
     double x[3];            // particle position
     double v[3];            // particle velocity
-    double erot;
-    int ivib;
+    double erot;            // rotational energy
+    int ivib;               // vibrational mode
   };
 
   bigint nglobal;           // global # of particles
@@ -75,6 +75,9 @@ class Particle : protected Pointers {
   void add_mixture(int, char **);
   int find_species(char *);
   int find_mixture(char *);
+  double erot(int, class RanPark *);
+  int evib(int, class RanPark *);
+
   bigint memory_usage();
 
  private:

@@ -389,6 +389,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = precoln.etotal - postcoln.eint;
+
 /*
   if(postcoln->etranslation<0) {
      fprintf(stderr,
@@ -401,6 +402,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
      exit(0);
   }
 */
+
  return;
 }
 

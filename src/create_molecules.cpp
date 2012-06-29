@@ -128,7 +128,6 @@ void CreateMolecules::command(int narg, char **arg)
 /* ----------------------------------------------------------------------
    create a single molecule
    find cell it is in, and store on appropriate processor
-   NOTE: what to do about energy options?
 ------------------------------------------------------------------------- */
 
 void CreateMolecules::create_single()
@@ -168,9 +167,11 @@ void CreateMolecules::create_single()
     error->all(FLERR,"Create_molecules single particle is outside domain");
 
   if (icell >= 0) {
-    double erote = 0.0;
-    int ivib = 0;
-    particle->add_particle(0,ispecies,icell,x,v,erote,ivib);
+    RanPark *random = new RanPark(update->ranmaster->uniform());
+    double erot = particle->erot(ispecies,random);
+    int ivib = particle->evib(ispecies,random);
+    particle->add_particle(0,ispecies,icell,x,v,erot,ivib);
+    delete random;
   }
 }
 
@@ -238,12 +239,9 @@ void CreateMolecules::create_local(bigint np)
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
 
-  int ilocal,icell,npercell,ispecies;
+  int ilocal,icell,npercell,ispecies,ivib;
   double x[3],v[3];
-  double vol,ntarget,rn,vn,vr,theta1,theta2;
-
-  double erote = 0.0;
-  int ivib = 0;
+  double vol,ntarget,rn,vn,vr,theta1,theta2,erot;
 
   double volsum = 0.0;
   bigint nprev = 0;
@@ -276,16 +274,13 @@ void CreateMolecules::create_local(bigint np)
       vr = vscale[ispecies] * sqrt(-log(random->uniform()));
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
-/*    printf("%e %e %e %e\n", MY_2PI, vn, vr, vscale[ispecies]); */
 	
       v[0] = vstream[0] + vn*cos(theta1);
       v[1] = vstream[1] + vr*sin(theta2);
       v[2] = vstream[2] + vr*sin(theta2);
-/*
-      erote = CreateMolecules.erot(isp);
-      ivib = CreateMolecules.evib(isp);
-*/
-      particle->add_particle(0,ispecies,icell,x,v,erote,ivib);
+      erot = particle->erot(ispecies,random);
+      ivib = particle->evib(ispecies,random);
+      particle->add_particle(0,ispecies,icell,x,v,erot,ivib);
     }
 
     nprev += npercell;
@@ -337,38 +332,3 @@ void CreateMolecules::create_all(bigint n)
   delete random;
 }
 */
-
-
-double CreateMolecules::erot(int isp)
-{
- RanPark *random = new RanPark(update->ranmaster->uniform());
- double erote,a,i,erm,b;
-
- if (particle->species[isp].rotdof == 2) {
-  erote = -log(random->uniform()) * update->boltz * update->temp_thermal;
- }
- else {
-  a=0.5*particle->species[isp].rotdof-1.;
-  i=0;
-  while (i == 0) {
-    erm=random->uniform()*10.;
-    // there is an energy cut-off at 10 kT
-    b=pow(erm/a,a)*exp(a-erm);
-    if (b > random->uniform()) i=1;
-  }
-    erote=erm*update->boltz*update->temp_thermal;
- }
-  return erote;
-
-}
-
-int CreateMolecules::evib(int isp)
-{
- RanPark *random = new RanPark(update->ranmaster->uniform());
-
- int ivib = -log(random->uniform()) * update->temp_thermal 
-          / particle->species[isp].vibtemp;
- return ivib;
-
-}
-

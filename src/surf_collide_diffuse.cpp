@@ -19,6 +19,7 @@
 #include "math_extra.h"
 #include "input.h"
 #include "variable.h"
+#include "particle.h"
 #include "update.h"
 #include "comm.h"
 #include "random_mars.h"
@@ -89,7 +90,8 @@ void SurfCollideDiffuse::init()
    particle collision with surface
    p = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
-   resets p->v to post-collision outward velocity
+   reset p->v to post-collision outward velocity
+   reset erot and ivib of particle to random new values
 ------------------------------------------------------------------------- */
 
 void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
@@ -112,8 +114,9 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
   } else {
     double tangent1[3],tangent2[3];
     Particle::Species *species = particle->species;
+    int ispecies = p->ispecies;
 
-    double vrm = sqrt(2.0*update->boltz*twall/species[p->ispecies].mass);
+    double vrm = sqrt(2.0*update->boltz*twall/species[ispecies].mass);
     double vperp = vrm * sqrt(-log(random->uniform()));
 
     double theta = MY_2PI * random->uniform();
@@ -139,11 +142,8 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
     v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0];
     v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1];
     v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
-
-    /*
-      erot(isp);
-      evib(isp);
-    */
+    p->erot = particle->erot(ispecies,random);
+    p->ivib = particle->evib(ispecies,random);
   }
 }
 
