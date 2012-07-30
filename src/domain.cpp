@@ -203,7 +203,7 @@ int Domain::collide(Particle::OnePart *p, int face, int &icell, double *xnew)
 	icell += (grid->ny-1) * grid->nx;
 	break;
       case YHI:
-	x[1] =  boxhi[1];
+	x[1] = boxhi[1];
 	xnew[1] -= yprd;
 	icell -= (grid->ny-1) * grid->nx;
 	break;
