@@ -13,20 +13,32 @@ surf_collide command :h3
 surf_collide ID style args :pre
 
 ID = user-assigned name for the surface collision model
-style = {specular} or {diffuse} :ulb,l
-args = arguments for that style :l
+style = {specular} or {diffuse} or {diffuse/translate} or {diffuse/rotate} :ulb,l
+args = arguments for specific style :l
   {specular} args = none
   {diffuse} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
-    acc = accommodation coefficient :pre
+    acc = accommodation coefficient
+  {diffuse/translate} args = Tsurf acc Vx Vy Vz
+    Tsurf = temperature of surface (temperature units)
+            Tsurf can be a variable (see below)
+    acc = accommodation coefficient
+    Vx,Vy,Vz = translational velocity of surface (velocity units)
+  {diffuse/rotate} args = Tsurf acc Pz Py Pz Rx Ry Rz
+    Tsurf = temperature of surface (temperature units)
+            Tsurf can be a variable (see below)
+    acc = accommodation coefficient
+    Px,Py,Pz = point to rotate surface around (distance units)
+    Wx,Wy,Wz = angular velocity of surface around point (radians/time) :pre
 :ule
 
 [Examples:]
 
 surf_collide 1 specular
 surf_collide 1 diffuse 273.15 0.9
-surf_collide heatwall diffuse v_ramp 0.8 :pre
+surf_collide heatwall diffuse v_ramp 0.8
+surf_collide heatwall diffuse/translate v_ramp 0.8 5.0 0.0 0.0 :pre
 
 [Description:]
 
@@ -45,6 +57,8 @@ requires no arguments.  Specular reflection means that a particle
 reflects off the surrace element with its incident velocity vector
 reversed with respect to the outward normal of the surface element.
 The particle's speed is unchanged.
+
+:line
 
 The {diffuse} style computes a simple diffusive reflection model.
 
@@ -75,6 +89,36 @@ Equal-style variables can specify formulas with various mathematical
 functions, and include "thermo_style"_thermo_style.html command
 keywords for the simulation box parameters and timestep and elapsed
 time.  Thus it is easy to specify a time-dependent temperature.
+
+:line
+
+The {diffuse/translate} style is the same as the diffuse style except
+that the surface is assumed to be translating with a constant
+velocity, specified by the vector (Vx,Vy,Vz).  This velocity is added
+to the final post-collisional velocity of each particle that collides
+with the surface.
+
+Note that you should define the velocity vector to be tangential to
+the surface.  Normally this style should only be used for flat
+surfaces, such as the simulation box wall.  DSMC does not check for
+either of these conditions.
+
+:line
+
+The {diffuse/rotate} style is the same as the diffuse style except
+that the surface is assumed to be rotating with a constant angular
+velocity, specified by the vector W = (Wx,Wy,Wz), around the specified
+point P = (Px,Py,Pz).  When a particle collides with the surface at a
+point X = (x,y,z), this implies that the collision point has a
+velocity given by V = (Vx,Vy,Vz) = W cross (X-P).  This velocity is
+added to the final post-collisional velocity of the particle.
+
+This style can be used to model a rotating wall, e.g. which is the end
+cap of a cylinder.  Or to model a rotating object consisting of
+surface elements, e.g. a sphere.  In either case, the surface itself
+does not move, e.g. the surface elements to not change position.  They
+are simply modeled as having a tangential velocity as if the entire
+object were rotating.
 
 :line
 
