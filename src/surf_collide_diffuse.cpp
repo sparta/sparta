@@ -128,6 +128,7 @@ void SurfCollideDiffuse::init()
    p = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
    reset p->v to post-collision outward velocity
+     with optional translation and rotation
    reset erot and ivib of particle to random new values
 ------------------------------------------------------------------------- */
 
@@ -176,6 +177,8 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
     MathExtra::norm3(tangent1);
     MathExtra::cross3(norm,tangent1,tangent2);
 
+    // add in translation or rotation term if specified
+
     if (trflag) {
       double vxdelta,vydelta,vzdelta;
       if (tflag) {
@@ -189,6 +192,8 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
       v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0] + vxdelta;
       v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1] + vydelta;
       v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2] + vzdelta;
+
+    // no translation or rotation
 
     } else {
       v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0];
