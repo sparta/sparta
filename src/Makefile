@@ -21,7 +21,7 @@ help:
 	@echo 'make makelib             update Makefile.lib for library build'
 	@echo 'make makelist            update Makefile.list used by old makes'
 	@echo ''
-	@echo 'make machine             build LAMMPS where machine is one of:'
+	@echo 'make machine             build DSMC where machine is one of:'
 	@echo ''
 	@files="`ls MAKE/Makefile.*`"; \
 	  for file in $$files; do head -1 $$file; done

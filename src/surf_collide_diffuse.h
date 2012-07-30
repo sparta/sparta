@@ -12,7 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
-#ifdef SURF_COLLIDE_CLASS
+#ifdef SURF_COLLIDE_DIFFUSE_CLASS
 
 SurfCollideStyle(diffuse,SurfCollideDiffuse)
 
@@ -37,6 +37,11 @@ class SurfCollideDiffuse : public SurfCollide {
  private:
   double twall;              // surface temperature
   double acc;                // surface accomodation coeff
+  double vx,vy,vz;           // translational velocity of surface
+  double wx,wy,wz;           // angular velocity of surface
+  double px,py,pz;           // point to rotate surface around
+  int tflag,rflag;           // flags for translation and rotation
+  int trflag;                // 1 if either tflag or rflag is set
 
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
