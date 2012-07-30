@@ -118,7 +118,9 @@ entire object were rotating.
 
 :line
 
-[Restrictions:] none
+[Restrictions:]
+
+The {translate} and {rotate} keywords cannot be used together.
 
 [Related commands:]
 
