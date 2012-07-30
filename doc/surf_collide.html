@@ -13,10 +13,10 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>surf_collide ID style args 
+<PRE>surf_collide ID style args keyword values ... 
 </PRE>
 <UL><LI>ID = user-assigned name for the surface collision model
-style = <I>specular</I> or <I>diffuse</I> or <I>diffuse/translate</I> or <I>diffuse/rotate</I> 
+style = <I>specular</I> or <I>diffuse</I> 
 
 <LI>args = arguments for specific style 
 
@@ -24,16 +24,15 @@ style = <I>specular</I> or <I>diffuse</I> or <I>diffuse/translate</I> or <I>diff
   <I>diffuse</I> args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
-    acc = accommodation coefficient
-  <I>diffuse/translate</I> args = Tsurf acc Vx Vy Vz
-    Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
-    acc = accommodation coefficient
+    acc = accommodation coefficient 
+</PRE>
+<LI>keyword = <I>translate</I> or <I>rotate</I> 
+
+<LI>values = values for specific keyword 
+
+<PRE>  <I>translate</I> args = Vx Vy Vz
     Vx,Vy,Vz = translational velocity of surface (velocity units)
-  <I>diffuse/rotate</I> args = Tsurf acc Pz Py Pz Rx Ry Rz
-    Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
-    acc = accommodation coefficient
+  <I>rotate</I> args = Pz Py Pz Wx Wy Wz
     Px,Py,Pz = point to rotate surface around (distance units)
     Wx,Wy,Wz = angular velocity of surface around point (radians/time) 
 </PRE>
@@ -44,7 +43,7 @@ style = <I>specular</I> or <I>diffuse</I> or <I>diffuse/translate</I> or <I>diff
 <PRE>surf_collide 1 specular
 surf_collide 1 diffuse 273.15 0.9
 surf_collide heatwall diffuse v_ramp 0.8
-surf_collide heatwall diffuse/translate v_ramp 0.8 5.0 0.0 0.0 
+surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -98,33 +97,33 @@ time.  Thus it is easy to specify a time-dependent temperature.
 </P>
 <HR>
 
-<P>The <I>diffuse/translate</I> style is the same as the diffuse style except
-that the surface is assumed to be translating with a constant
+<P>The keyword <I>translate</I> can only be applied to the <I>diffuse</I> style.
+It models the surface as if it were translating with a constant
 velocity, specified by the vector (Vx,Vy,Vz).  This velocity is added
 to the final post-collisional velocity of each particle that collides
 with the surface.
 </P>
 <P>Note that you should define the velocity vector to be tangential to
-the surface.  Normally this style should only be used for flat
+the surface.  Normally this keyword should only be used for flat
 surfaces, such as the simulation box wall.  DSMC does not check for
-either of these conditions.
+these conditions.
 </P>
 <HR>
 
-<P>The <I>diffuse/rotate</I> style is the same as the diffuse style except
-that the surface is assumed to be rotating with a constant angular
+<P>The keyword <I>rotate</I> can only be applied to the <I>diffuse</I> style.  It
+models the surface as if it were rotating with a constant angular
 velocity, specified by the vector W = (Wx,Wy,Wz), around the specified
 point P = (Px,Py,Pz).  When a particle collides with the surface at a
-point X = (x,y,z), this implies that the collision point has a
-velocity given by V = (Vx,Vy,Vz) = W cross (X-P).  This velocity is
-added to the final post-collisional velocity of the particle.
+point X = (x,y,z), the collision point has a velocity given by V =
+(Vx,Vy,Vz) = W cross (X-P).  This velocity is added to the final
+post-collisional velocity of the particle.
 </P>
-<P>This style can be used to model a rotating wall, e.g. which is the end
-cap of a cylinder.  Or to model a rotating object consisting of
-surface elements, e.g. a sphere.  In either case, the surface itself
-does not move, e.g. the surface elements to not change position.  They
-are simply modeled as having a tangential velocity as if the entire
-object were rotating.
+<P>This keyword can be used to model a rotating wall, e.g. the end cap of
+a cylinder.  Or to model a rotating object consisting of surface
+elements, e.g. a sphere.  In either case, the surface itself does not
+move or rotate, e.g. the surface elements do not change position.
+They are simply modeled as having a tangential velocity, as if the
+entire object were rotating.
 </P>
 <HR>
 

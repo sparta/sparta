@@ -10,25 +10,21 @@ surf_collide command :h3
 
 [Syntax:]
 
-surf_collide ID style args :pre
+surf_collide ID style args keyword values ... :pre
 
 ID = user-assigned name for the surface collision model
-style = {specular} or {diffuse} or {diffuse/translate} or {diffuse/rotate} :ulb,l
+style = {specular} or {diffuse} :ulb,l
 args = arguments for specific style :l
   {specular} args = none
   {diffuse} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
-    acc = accommodation coefficient
-  {diffuse/translate} args = Tsurf acc Vx Vy Vz
-    Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
-    acc = accommodation coefficient
+    acc = accommodation coefficient :pre
+keyword = {translate} or {rotate} :l
+values = values for specific keyword :l
+  {translate} args = Vx Vy Vz
     Vx,Vy,Vz = translational velocity of surface (velocity units)
-  {diffuse/rotate} args = Tsurf acc Pz Py Pz Rx Ry Rz
-    Tsurf = temperature of surface (temperature units)
-            Tsurf can be a variable (see below)
-    acc = accommodation coefficient
+  {rotate} args = Pz Py Pz Wx Wy Wz
     Px,Py,Pz = point to rotate surface around (distance units)
     Wx,Wy,Wz = angular velocity of surface around point (radians/time) :pre
 :ule
@@ -38,7 +34,7 @@ args = arguments for specific style :l
 surf_collide 1 specular
 surf_collide 1 diffuse 273.15 0.9
 surf_collide heatwall diffuse v_ramp 0.8
-surf_collide heatwall diffuse/translate v_ramp 0.8 5.0 0.0 0.0 :pre
+surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 :pre
 
 [Description:]
 
@@ -92,33 +88,33 @@ time.  Thus it is easy to specify a time-dependent temperature.
 
 :line
 
-The {diffuse/translate} style is the same as the diffuse style except
-that the surface is assumed to be translating with a constant
+The keyword {translate} can only be applied to the {diffuse} style.
+It models the surface as if it were translating with a constant
 velocity, specified by the vector (Vx,Vy,Vz).  This velocity is added
 to the final post-collisional velocity of each particle that collides
 with the surface.
 
 Note that you should define the velocity vector to be tangential to
-the surface.  Normally this style should only be used for flat
+the surface.  Normally this keyword should only be used for flat
 surfaces, such as the simulation box wall.  DSMC does not check for
-either of these conditions.
+these conditions.
 
 :line
 
-The {diffuse/rotate} style is the same as the diffuse style except
-that the surface is assumed to be rotating with a constant angular
+The keyword {rotate} can only be applied to the {diffuse} style.  It
+models the surface as if it were rotating with a constant angular
 velocity, specified by the vector W = (Wx,Wy,Wz), around the specified
 point P = (Px,Py,Pz).  When a particle collides with the surface at a
-point X = (x,y,z), this implies that the collision point has a
-velocity given by V = (Vx,Vy,Vz) = W cross (X-P).  This velocity is
-added to the final post-collisional velocity of the particle.
+point X = (x,y,z), the collision point has a velocity given by V =
+(Vx,Vy,Vz) = W cross (X-P).  This velocity is added to the final
+post-collisional velocity of the particle.
 
-This style can be used to model a rotating wall, e.g. which is the end
-cap of a cylinder.  Or to model a rotating object consisting of
-surface elements, e.g. a sphere.  In either case, the surface itself
-does not move, e.g. the surface elements to not change position.  They
-are simply modeled as having a tangential velocity as if the entire
-object were rotating.
+This keyword can be used to model a rotating wall, e.g. the end cap of
+a cylinder.  Or to model a rotating object consisting of surface
+elements, e.g. a sphere.  In either case, the surface itself does not
+move or rotate, e.g. the surface elements do not change position.
+They are simply modeled as having a tangential velocity, as if the
+entire object were rotating.
 
 :line
 
