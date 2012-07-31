@@ -6,48 +6,107 @@
 
 :line
 
-compute ke/grid command :h3
+compute sonine/grid command :h3
 
 [Syntax:]
 
-compute ID ke/grid mix-ID :pre
+compute ID sonine/grid mix-ID keyword values ... :pre
 
-ID is documented in "compute"_compute.html command
-ke/grid = style name of this compute command
-mix-ID = mixture ID to perform calculation on :ul
+ID is documented in "compute"_compute.html command :ulb,l
+ke/grid = style name of this compute command :l
+mix-ID = mixture ID to perform calculation on :l
+one or more keywords may be appended, multiple times :l
+keyword = {thermal} or {a} or {b} :l
+values = values for specific keyword :l
+  {thermal} args = none = calculate temperature
+  {a} args = dim order
+    dim = {x} or {y} or {z}
+    order = number from 1 to 5
+  {b} args = dim2 order
+    dim2 = {xx} or {yy} or {zz} or {xy} or {yz} or {xz}
+    order = number from 1 to 5 :pre
+:ule
 
 [Examples:]
 
-compute 1 ke/grid all
-compute 1 ke/grid air :pre
+compute 1 sonine/grid species thermal a x 3 a z 3 b xy 3 b xz 3
+compute 1 sonine/grid air a x 5 b xy 5 :pre
 
 [Description:]
 
-Define a computation that calculates the per-atom translational
-kinetic energy of the molecules in each grid cell.  The energy is
-calculated separately for each group of species in the specified
-mixture.  See the "mixture"_mixture.html command for how a set of
-species can be partitioned into groups.
+Define a computation that calculates the sonine moments of the
+velocity distribution of the molecules in each grid cell.  The moments
+are summed for each group of species in the specified mixture.  See
+the "mixture"_mixture.html command for how a set of species can be
+partitioned into groups.
 
-The kinetic energy for a group in the cell is simply the sum of 1/2 m
-v^2 over all the molecules in the cell and the group, where m is the
-mass and v is the velocity of each molecule.
+The {thermal} keyword computes the thermal temperature for a group of
+molecules in the cell.  The contribution of each molecule in the group
+to the temperature T is given by
+
+T = 1/2 mass Csq
+Csq = VTx*VTx + VTy*VTy + VTz*VTz
+VTx = Vx - VAVEx
+VTy = Vy - VAVEy
+VTz = Vz - VAVEz :pre
+
+where VAVE xyz are the components of the average velocity of molecules
+for that group in that cell.  VT xyz are the components of the thermal
+velocity of a molecule, obtained by subtracting off the average
+velocity.
+
+The {a} keyword calculates one or more sonine A moments for a group of
+molecules in the cell.  The contribution of each molecule in the group
+to each moment of the 5 moments is given by
+
+A1 = Vdim * pow(Csq,1)
+A2 = Vdim * pow(Csq,2)
+A3 = Vdim * pow(Csq,3)
+A4 = Vdim * pow(Csq,4)
+A5 = Vdim * pow(Csq,5) :pre
+
+where Vdim is Vx or Vy or Vz as specified by the {dim} value.  The
+number of moments computed is specified by the {order} value.
+
+The {b} keyword calculates one or more sonine B moments for a group of
+molecules in the cell.  The contribution of each molecule in the group
+to each moment of the 5 moments is given by
+
+B1 = Vdim1 * Vdim2 * pow(Csq,1)
+B2 = Vdim1 * Vdim2 * pow(Csq,2)
+B3 = Vdim1 * Vdim2 * pow(Csq,3)
+B4 = Vdim1 * Vdim2 * pow(Csq,4)
+B5 = Vdim1 * Vdim2 * pow(Csq,5) :pre
+
+where Vdim1 is Vx or Vy or Vz, and Vdim2 is also Vx or Vy or Vz, as
+specified by the {dim2} value.  E.g. if {dime2} is {xy}, then Vdim1 =
+{x} and Vdim2 = {y}.  The number of moments computed is specified by
+the {order} value.
 
 [Output info:]
 
-If the mixture has a single group, then this compute calculates a
-per-grid vector.  If the mixture has multiple groups, this compute
-calcualtes a per-grid array, with the number of columns equal to the
-number of groups.  Either can be accessed by any command that uses
+If the mixture has a single group and only a single moment is
+specified, then this compute calculates a per-grid vector.  If the
+mixture has multiple groups or multiple moments are specified, this
+compute calcualtes a per-grid array, with the number of columns equal
+to the number of groups times the number of moments per group.  The
+ordering of columns is first by moments, then by groups.  I.e. if the
+{thermal} and {b xy 2} moments were specified as keywords, then the
+1st thru 3rd columns would be the {thermal} and B1 and B2 moments of
+the first group, the 4th thru 6th columns would be the {thermal} and
+B1 and B2 moments of the second group, etc.
+
+Either the vector or array can be accessed by any command that uses
 per-grid values from a compute as input.
 
-The per-grid vector and array values will be in energy
-"units"_units.html.
+The per-grid vector and array values will be in the "units"_units.html
+appropriate to the individual moments as described above, e.g
+temperature units, velocity to the third power, 5th power, etc.
 
 [Restrictions:] none
 
 [Related commands:]
 
-"dump grid"_dump.html
+"fix ave/grid"_fix_ave_grid.html, "dump grid"_dump.html
 
 [Default:] none

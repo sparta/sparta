@@ -20,6 +20,7 @@ args = arguments for specific style :l
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
     acc = accommodation coefficient :pre
+zero or more keyword/arg pairs may be appended :l
 keyword = {translate} or {rotate} :l
 values = values for specific keyword :l
   {translate} args = Vx Vy Vz
