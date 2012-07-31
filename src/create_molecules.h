@@ -34,7 +34,7 @@ class CreateMolecules : protected Pointers {
   double erot(int);
 
  private:
-  int imix,single,ispecies;
+  int imix,single,mspecies;
   double xp,yp,zp,vx,vy,vz;
 
   void create_single();

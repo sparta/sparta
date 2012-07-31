@@ -12,7 +12,7 @@
    See the README file in the top-level DSMC directory.
 ------------------------------------------------------------------------- */
 
-#ifdef SURF_COLLIDE_DIFFUSE_CLASS
+#ifdef SURF_COLLIDE_CLASS
 
 SurfCollideStyle(diffuse,SurfCollideDiffuse)
 

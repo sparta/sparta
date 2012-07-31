@@ -27,7 +27,7 @@
 
 using namespace DSMC_NS;
 
-enum{TEMP,AMOM,BMOM};
+enum{THERMAL,AMOM,BMOM};
 enum{X,Y,Z};
 
 /* ---------------------------------------------------------------------- */
@@ -50,8 +50,8 @@ ComputeSonineGrid::ComputeSonineGrid(DSMC *dsmc, int narg, char **arg) :
 
   int iarg = 3;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"temp") == 0) {
-      which[nvalues] = TEMP;
+    if (strcmp(arg[iarg],"thermal") == 0) {
+      which[nvalues] = THERMAL;
       nvalues++;
       npergroup++;
       iarg++;
@@ -206,7 +206,7 @@ void ComputeSonineGrid::compute_per_grid()
       csq = vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] + 
         vthermal[2]*vthermal[2];
 
-      if (which[0] == TEMP)
+      if (which[0] == THERMAL)
         sonine_vector[ilocal] += 0.5*species[ispecies].mass*csq;
       else if (which[0] == AMOM)
         sonine_vector[ilocal] += vthermal[moment[0]]*csq;
@@ -262,7 +262,7 @@ void ComputeSonineGrid::compute_per_grid()
 
       k = igroup*npergroup;
       for (m = 0; m < nvalues; m++) {
-        if (which[m] == TEMP) {
+        if (which[m] == THERMAL) {
           sonine_array[ilocal][k++] += 0.5*species[ispecies].mass*csq;
         } else if (which[m] == AMOM) {
           prefactor = vthermal[moment[m]];

@@ -63,20 +63,20 @@ SurfCollideDiffuse::SurfCollideDiffuse(DSMC *dsmc, int narg, char **arg) :
       if (iarg+4 > narg) 
         error->all(FLERR,"Illegal surf_collide diffuse command");
       tflag = 1;
-      vx = atof(arg[iarg+2]);
-      vy = atof(arg[iarg+3]);
-      vz = atof(arg[iarg+4]);
+      vx = atof(arg[iarg+1]);
+      vy = atof(arg[iarg+2]);
+      vz = atof(arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
       if (iarg+7 > narg) 
         error->all(FLERR,"Illegal surf_collide diffuse command");
       rflag = 1;
-      px = atof(arg[iarg+2]);
-      py = atof(arg[iarg+3]);
-      pz = atof(arg[iarg+4]);
-      wx = atof(arg[iarg+5]);
-      wy = atof(arg[iarg+6]);
-      wz = atof(arg[iarg+7]);
+      px = atof(arg[iarg+1]);
+      py = atof(arg[iarg+2]);
+      pz = atof(arg[iarg+3]);
+      wx = atof(arg[iarg+4]);
+      wy = atof(arg[iarg+5]);
+      wz = atof(arg[iarg+6]);
       if (domain->dimension == 2 && pz != 0.0) 
         error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
       if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))

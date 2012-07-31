@@ -367,7 +367,9 @@ double Particle::erot(int isp, RanPark *random)
 {
  double eng,a,erm,b;
 
- if (particle->species[isp].rotdof == 2)
+ if (species[isp].rotdof < 2) return 0.0;
+
+ if (species[isp].rotdof == 2)
    eng = -log(random->uniform()) * update->boltz * update->temp_thermal;
  else {
    a = 0.5*particle->species[isp].rotdof-1.;
@@ -391,6 +393,8 @@ double Particle::erot(int isp, RanPark *random)
 
 int Particle::evib(int isp, RanPark *random)
 {
+ if (species[isp].rotdof < 2) return 0;
+
   // NOTE: is temp_thermal always set?
 
   int ivib = -log(random->uniform()) * update->temp_thermal /

@@ -65,8 +65,8 @@ void CreateMolecules::command(int narg, char **arg)
     } else if (strcmp(arg[iarg],"single") == 0) {
       if (iarg+8 > narg) error->all(FLERR,"Illegal create_molecules command");
       single = 1;
-      ispecies = particle->find_species(arg[iarg+1]);
-      if (ispecies < 0) 
+      mspecies = particle->find_species(arg[iarg+1]);
+      if (mspecies < 0) 
 	error->all(FLERR,"Create_molecules species ID does not exist");
       xp = atof(arg[iarg+2]);
       yp = atof(arg[iarg+3]);
@@ -168,9 +168,9 @@ void CreateMolecules::create_single()
 
   if (icell >= 0) {
     RanPark *random = new RanPark(update->ranmaster->uniform());
-    double erot = particle->erot(ispecies,random);
-    int ivib = particle->evib(ispecies,random);
-    particle->add_particle(0,ispecies,icell,x,v,erot,ivib);
+    double erot = particle->erot(mspecies,random);
+    int ivib = particle->evib(mspecies,random);
+    particle->add_particle(0,mspecies,icell,x,v,erot,ivib);
     delete random;
   }
 }
@@ -278,6 +278,7 @@ void CreateMolecules::create_local(bigint np)
       v[0] = vstream[0] + vn*cos(theta1);
       v[1] = vstream[1] + vr*sin(theta2);
       v[2] = vstream[2] + vr*sin(theta2);
+
       erot = particle->erot(ispecies,random);
       ivib = particle->evib(ispecies,random);
       particle->add_particle(0,ispecies,icell,x,v,erot,ivib);
