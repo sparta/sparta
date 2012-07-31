@@ -23,15 +23,15 @@ compute 1 ke/grid air :pre
 
 [Description:]
 
-Define a computation that calculates the per-atom translational
-kinetic energy of the molecules in each grid cell.  The energy is
-calculated separately for each group of species in the specified
-mixture.  See the "mixture"_mixture.html command for how a set of
-species can be partitioned into groups.
+Define a computation that calculates the translational kinetic energy
+of the molecules in each grid cell.  The energy is summed for each
+group of species in the specified mixture.  See the
+"mixture"_mixture.html command for how a set of species can be
+partitioned into groups.
 
-The kinetic energy for a group in the cell is simply the sum of 1/2 m
-v^2 over all the molecules in the cell and the group, where m is the
-mass and v is the velocity of each molecule.
+The kinetic energy for a group of molecules in a cell is simply the
+sum of 1/2 m v^2 over all the molecules both in the cell and the
+group, where m is the mass and v is the velocity of each molecule.
 
 [Output info:]
 
@@ -48,6 +48,6 @@ The per-grid vector and array values will be in energy
 
 [Related commands:]
 
-"dump grid"_dump.html
+"fix ave/grid"_fix_ave_grid.html, "dump grid"_dump.html
 
 [Default:] none
