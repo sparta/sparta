@@ -1,18 +1,18 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-// define integer data types used by DSMC and associated size limits
+// define integer data types used by SPARTA and associated size limits
 
 // smallint = variables for on-procesor system (nlocal, nmax, etc)
 // bigint = variables for total system (natoms, ntimestep, etc)
@@ -20,10 +20,10 @@
 // smallint must be an int, as defined by C compiler
 // bigint can be 32-bit or 64-bit int, must be >= smallint
 
-// MPI_DSMC_BIGINT = MPI data type corresponding to a bigint
+// MPI_SPARTA_BIGINT = MPI data type corresponding to a bigint
 
-#ifndef DSMC_DSMCTYPE_H
-#define DSMC_DSMCTYPE_H
+#ifndef SPARTA_SPTYPE_H
+#define SPARTA_SPTYPE_H
 
 #define __STDC_LIMIT_MACROS
 #define __STDC_FORMAT_MACROS
@@ -38,17 +38,17 @@
 #define PRId64 "ld"
 #endif
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
 // default to 32-bit smallint, 64-bit bigint
 
-#if !defined(DSMC_SMALL)
-#define DSMC_BIG
+#if !defined(SPARTA_SMALL)
+#define SPARTA_BIG
 #endif
 
 // allow user override of LONGLONG to LONG, necessary for some machines/MPI
 
-#ifdef DSMC_LONGLONG_TO_LONG
+#ifdef SPARTA_LONGLONG_TO_LONG
 #define MPI_LL MPI_LONG
 #define ATOLL atoll
 #else
@@ -59,14 +59,14 @@ namespace DSMC_NS {
 // for problems that exceed 2 billion (2^31) particles
 // 32-bit smallint, 64-bit bigint
 
-#ifdef DSMC_BIG
+#ifdef SPARTA_BIG
 
 typedef int smallint;
 typedef int64_t bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT64_MAX
-#define MPI_DSMC_BIGINT MPI_LL
+#define MPI_SPARTA_BIGINT MPI_LL
 #define BIGINT_FORMAT "%" PRId64
 #define ATOBIGINT ATOLL
 
@@ -75,7 +75,7 @@ typedef int64_t bigint;
 // for machines that do not support 64-bit ints
 // 32-bit smallint and bigint
 
-#ifdef DSMC_SMALL
+#ifdef SPARTA_SMALL
 
 typedef int smallint;
 typedef int bigint;
@@ -90,10 +90,10 @@ typedef int bigint;
 
 }
 
-// settings to enable DSMC to build under Windows
+// settings to enable SPARTA to build under Windows
 
 #ifdef _WIN32
-#include "dsmcwindows.h"
+#include "spartawindows.h"
 #endif
 
 #endif

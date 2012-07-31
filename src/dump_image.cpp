@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "math.h"
@@ -27,11 +27,11 @@
 #include "error.h"
 #include "memory.h"
 
-#ifdef DSMC_JPEG
+#ifdef SPARTA_JPEG
 #include "jpeglib.h"
 #endif
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{PPM,JPG};
@@ -41,8 +41,8 @@ enum{NO,YES};
 
 /* ---------------------------------------------------------------------- */
 
-DumpImage::DumpImage(DSMC *dsmc, int narg, char **arg) : 
-  DumpMolecule(dsmc, narg, arg)
+DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) : 
+  DumpMolecule(sparta, narg, arg)
 {
   if (binary || multiproc) error->all(FLERR,"Invalid dump image filename");
 
@@ -55,7 +55,7 @@ DumpImage::DumpImage(DSMC *dsmc, int narg, char **arg) :
     filetype = JPG;
   else filetype = PPM;
 
-#ifndef DSMC_JPEG
+#ifndef SPARTA_JPEG
   if (filetype == JPG) error->all(FLERR,"Cannot dump JPG file");
 #endif
 
@@ -73,7 +73,7 @@ DumpImage::DumpImage(DSMC *dsmc, int narg, char **arg) :
 
   // create Image class
 
-  image = new Image(dsmc);
+  image = new Image(sparta);
 
   // set defaults for optional args
 

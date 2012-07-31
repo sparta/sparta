@@ -1,32 +1,32 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 // Pointers class contains ptrs to master copy of
-//   fundamental DSMC class ptrs stored in dsmc.h
-// every DSMC class inherits from Pointers to access dsmc.h ptrs
+//   fundamental SPARTA class ptrs stored in sparta.h
+// every SPARTA class inherits from Pointers to access sparta.h ptrs
 // these variables are auto-initialized by Pointer class constructor
-// *& variables are really pointers to the pointers in dsmc.h
+// *& variables are really pointers to the pointers in sparta.h
 // & enables them to be accessed directly in any class, e.g. atom->x
 
-#ifndef DSMC_POINTERS_H
-#define DSMC_POINTERS_H
+#ifndef SPARTA_POINTERS_H
+#define SPARTA_POINTERS_H
 
-#include "dsmctype.h"
+#include "sptype.h"
 #include "mpi.h"
-#include "dsmc.h"
+#include "sparta.h"
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
 // universal defines inside namespace
 
@@ -37,8 +37,8 @@ namespace DSMC_NS {
 
 class Pointers {
  public:
-  Pointers(DSMC *ptr) : 
-    dsmc(ptr),
+  Pointers(SPARTA *ptr) : 
+    sparta(ptr),
     memory(ptr->memory),
     error(ptr->error),
     universe(ptr->universe),
@@ -60,7 +60,7 @@ class Pointers {
   virtual ~Pointers() {}
 
  protected:
-  DSMC *dsmc;
+  SPARTA *sparta;
   Memory *&memory;
   Error *&error;
   Universe *&universe;

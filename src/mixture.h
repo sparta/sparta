@@ -1,23 +1,23 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef DSMC_MIXTURE_H
-#define DSMC_MIXTURE_H
+#ifndef SPARTA_MIXTURE_H
+#define SPARTA_MIXTURE_H
 
 #include "pointers.h"
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
 class Mixture : protected Pointers {
  public:
@@ -52,7 +52,7 @@ class Mixture : protected Pointers {
   int *active;                // 1 if species is active in a mixture command
   int nactive;                // # of mixture species active in mixture cmd
 
-  Mixture(class DSMC *, char *);
+  Mixture(class SPARTA *, char *);
   ~Mixture();
   void init();
   void add_species(int, char **);

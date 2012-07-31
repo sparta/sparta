@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
@@ -18,18 +18,18 @@ FixStyle(inflow,FixInflow)
 
 #else
 
-#ifndef DSMC_FIX_INFLOW_H
-#define DSMC_FIX_INFLOW_H
+#ifndef SPARTA_FIX_INFLOW_H
+#define SPARTA_FIX_INFLOW_H
 
 #include "stdio.h"
 #include "fix.h"
 #include "create_molecules.h"
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
 class FixInflow : public Fix {
  public:
-  FixInflow(class DSMC *, int, char **);
+  FixInflow(class SPARTA *, int, char **);
   ~FixInflow();
   int setmask();
   void init();

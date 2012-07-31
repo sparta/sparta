@@ -1,24 +1,24 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef DSMC_INPUT_H
-#define DSMC_INPUT_H
+#ifndef SPARTA_INPUT_H
+#define SPARTA_INPUT_H
 
 #include "stdio.h"
 #include "pointers.h"
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
 class Input : protected Pointers {
  public:
@@ -26,7 +26,7 @@ class Input : protected Pointers {
   char **arg;                  // parsed args for command
   class Variable *variable;    // defined variables
 
-  Input(class DSMC *, int, char **);
+  Input(class SPARTA *, int, char **);
   ~Input();
   void file();                   // process all input
   void file(const char *);       // process an input script
@@ -63,7 +63,7 @@ class Input : protected Pointers {
   void shell();
   void variable_command();
 
-  // DSMC commands
+  // SPARTA commands
 
   void boundary();
   void bound_modify();
@@ -104,7 +104,7 @@ This is a hard (very large) limit defined in the input.cpp file.
 
 E: Unknown command: %s
 
-The command is not known to DSMC.  Check the input script.
+The command is not known to SPARTA.  Check the input script.
 
 E: Another input script is already being processed
 
@@ -137,11 +137,11 @@ E: Illegal ... command
 
 Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
-command-line option when running DSMC to see the offending line.
+command-line option when running SPARTA to see the offending line.
 
 E: Cannot open logfile %s
 
-The DSMC log file specified in the input script cannot be opened.
+The SPARTA log file specified in the input script cannot be opened.
 Check that the path and name are correct.
 
 E: Partition numeric index is out of bounds

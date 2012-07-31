@@ -1,18 +1,18 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "dsmctype.h"
+#include "sptype.h"
 #include "mpi.h"
 #include "math.h"
 #include "stdlib.h"
@@ -32,7 +32,7 @@
 #include "memory.h"
 #include "error.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 
 // customize a new keyword by adding to this list:
 
@@ -54,7 +54,7 @@ enum{SCALAR,VECTOR,ARRAY};
 
 /* ---------------------------------------------------------------------- */
 
-Stats::Stats(DSMC *dsmc) : Pointers(dsmc)
+Stats::Stats(SPARTA *sparta) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
 
@@ -854,7 +854,7 @@ void Stats::compute_spcpu()
 void Stats::compute_nmol()
 {
   bigint n = particle->nlocal;
-  MPI_Allreduce(&n,&particle->nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   bivalue = particle->nglobal;
 }
 
@@ -863,7 +863,7 @@ void Stats::compute_nmol()
 void Stats::compute_ntouch()
 {
   bigint n = update->ntouch_one;
-  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -871,7 +871,7 @@ void Stats::compute_ntouch()
 void Stats::compute_ncomm()
 {
   bigint n = update->ncomm_one;
-  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -879,7 +879,7 @@ void Stats::compute_ncomm()
 void Stats::compute_nbound()
 {
   bigint n = update->nboundary_one;
-  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -887,7 +887,7 @@ void Stats::compute_nbound()
 void Stats::compute_nexit()
 {
   bigint n = update->nexit_one;
-  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -895,7 +895,7 @@ void Stats::compute_nexit()
 void Stats::compute_nscoll()
 {
   bigint n = update->nscollide_one;
-  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -903,7 +903,7 @@ void Stats::compute_nscoll()
 void Stats::compute_nscheck()
 {
   bigint n = update->nscheck_one;
-  MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -913,7 +913,7 @@ void Stats::compute_ncoll()
   if (!collide) bivalue = 0;
   else {
     bigint n = collide->ncollide_one;
-    MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 }
 
@@ -924,7 +924,7 @@ void Stats::compute_natt()
   if (!collide) bivalue = 0;
   else {
     bigint n = collide->nattempt_one;
-    MPI_Allreduce(&n,&bivalue,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 }
 
@@ -932,7 +932,7 @@ void Stats::compute_natt()
 
 void Stats::compute_nmolave()
 {
-  MPI_Allreduce(&update->nmove_running,&bivalue,1,MPI_DSMC_BIGINT,
+  MPI_Allreduce(&update->nmove_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		MPI_SUM,world);
   if (update->ntimestep == update->firststep) dvalue = 0.0;
   else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
@@ -942,7 +942,7 @@ void Stats::compute_nmolave()
 
 void Stats::compute_ntouchave()
 {
-  MPI_Allreduce(&update->ntouch_running,&bivalue,1,MPI_DSMC_BIGINT,
+  MPI_Allreduce(&update->ntouch_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		MPI_SUM,world);
   if (update->ntimestep == update->firststep) dvalue = 0.0;
   else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
@@ -952,7 +952,7 @@ void Stats::compute_ntouchave()
 
 void Stats::compute_ncommave()
 {
-  MPI_Allreduce(&update->ncomm_running,&bivalue,1,MPI_DSMC_BIGINT,
+  MPI_Allreduce(&update->ncomm_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		MPI_SUM,world);
   if (update->ntimestep == update->firststep) dvalue = 0.0;
   else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
@@ -962,7 +962,7 @@ void Stats::compute_ncommave()
 
 void Stats::compute_nboundave()
 {
-  MPI_Allreduce(&update->nboundary_running,&bivalue,1,MPI_DSMC_BIGINT,
+  MPI_Allreduce(&update->nboundary_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		MPI_SUM,world);
   if (update->ntimestep == update->firststep) dvalue = 0.0;
   else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
@@ -972,7 +972,7 @@ void Stats::compute_nboundave()
 
 void Stats::compute_nexitave()
 {
-  MPI_Allreduce(&update->nexit_running,&bivalue,1,MPI_DSMC_BIGINT,
+  MPI_Allreduce(&update->nexit_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		MPI_SUM,world);
   if (update->ntimestep == update->firststep) dvalue = 0.0;
   else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
@@ -982,7 +982,7 @@ void Stats::compute_nexitave()
 
 void Stats::compute_nscollave()
 {
-  MPI_Allreduce(&update->nscollide_running,&bivalue,1,MPI_DSMC_BIGINT,
+  MPI_Allreduce(&update->nscollide_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		MPI_SUM,world);
   if (update->ntimestep == update->firststep) dvalue = 0.0;
   else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
@@ -992,7 +992,7 @@ void Stats::compute_nscollave()
 
 void Stats::compute_nscheckave()
 {
-  MPI_Allreduce(&update->nscheck_running,&bivalue,1,MPI_DSMC_BIGINT,
+  MPI_Allreduce(&update->nscheck_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		MPI_SUM,world);
   if (update->ntimestep == update->firststep) dvalue = 0.0;
   else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
@@ -1004,7 +1004,7 @@ void Stats::compute_ncollave()
 {
   if (!collide) dvalue = 0.0;
   else {
-    MPI_Allreduce(&collide->ncollide_running,&bivalue,1,MPI_DSMC_BIGINT,
+    MPI_Allreduce(&collide->ncollide_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		  MPI_SUM,world);
     if (update->ntimestep == update->firststep) dvalue = 0.0;
     else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
@@ -1017,7 +1017,7 @@ void Stats::compute_nattave()
 {
   if (!collide) dvalue = 0.0;
   else {
-    MPI_Allreduce(&collide->nattempt_running,&bivalue,1,MPI_DSMC_BIGINT,
+    MPI_Allreduce(&collide->nattempt_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		  MPI_SUM,world);
     if (update->ntimestep == update->firststep) dvalue = 0.0;
     else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);

@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
@@ -30,11 +30,11 @@
 #include "error.h"
 #include "memory.h"
 
-#ifdef DSMC_JPEG
+#ifdef SPARTA_JPEG
 #include "jpeglib.h"
 #endif
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 using namespace MathConst;
 
 #define NCOLORS 140
@@ -49,7 +49,7 @@ enum{NO,YES};
 
 /* ---------------------------------------------------------------------- */
 
-Image::Image(DSMC *dsmc) : Pointers(dsmc)
+Image::Image(SPARTA *sparta) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
@@ -1049,7 +1049,7 @@ void Image::compute_SSAO()
 
 void Image::write_JPG(FILE *fp) 
 {
-#ifdef DSMC_JPEG
+#ifdef SPARTA_JPEG
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
   JSAMPROW row_pointer;

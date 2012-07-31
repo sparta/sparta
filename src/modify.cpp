@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "stdio.h"
@@ -24,7 +24,7 @@
 #include "memory.h"
 #include "error.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 
 #define DELTA 4
 
@@ -35,7 +35,7 @@ using namespace DSMC_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Modify::Modify(DSMC *dsmc) : Pointers(dsmc)
+Modify::Modify(SPARTA *sparta) : Pointers(sparta)
 {
   nfix = maxfix = 0;
   n_start_of_step = n_end_of_step = 0;
@@ -179,7 +179,7 @@ void Modify::add_fix(int narg, char **arg)
 
 #define FIX_CLASS
 #define FixStyle(key,Class) \
-  else if (strcmp(arg[1],#key) == 0) fix[ifix] = new Class(dsmc,narg,arg);
+  else if (strcmp(arg[1],#key) == 0) fix[ifix] = new Class(sparta,narg,arg);
 #include "style_fix.h"
 #undef FixStyle
 #undef FIX_CLASS
@@ -253,7 +253,7 @@ void Modify::add_compute(int narg, char **arg)
 #define COMPUTE_CLASS
 #define ComputeStyle(key,Class) \
   else if (strcmp(arg[1],#key) == 0) \
-    compute[ncompute] = new Class(dsmc,narg,arg);
+    compute[ncompute] = new Class(sparta,narg,arg);
 #include "style_compute.h"
 #undef ComputeStyle
 #undef COMPUTE_CLASS

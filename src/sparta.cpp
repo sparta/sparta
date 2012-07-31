@@ -1,20 +1,20 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+  ia.gov/~sjplimp/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "mpi.h"
 #include "string.h"
-#include "dsmc.h"
+#include "sparta.h"
 #include "style_command.h"
 #include "universe.h"
 #include "input.h"
@@ -31,17 +31,17 @@
 #include "memory.h"
 #include "error.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 
 /* ----------------------------------------------------------------------
-   start up DSMC
+   start up SPARTA
    allocate fundamental classes (memory, error, universe, input)
    parse input switches
    initialize communicators, screen & logfile output
    input is allocated at end after MPI info is setup
 ------------------------------------------------------------------------- */
 
-DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
+SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
 {
   memory = new Memory(this);
   error = new Error(this);
@@ -188,9 +188,9 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
 	error->universe_one(FLERR,"Cannot open universe screen file");
     }
     if (logflag == 0) {
-      universe->ulogfile = fopen("log.dsmc","w");
+      universe->ulogfile = fopen("log.sparta","w");
       if (universe->ulogfile == NULL) 
-	error->universe_one(FLERR,"Cannot open log.dsmc");
+	error->universe_one(FLERR,"Cannot open log.sparta");
     } else if (strcmp(arg[logflag],"none") == 0)
       universe->ulogfile = NULL;
     else {
@@ -228,8 +228,8 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
     }
 
     if (universe->me == 0) {
-      if (screen) fprintf(screen,"DSMC (%s)\n",universe->version);
-      if (logfile) fprintf(logfile,"DSMC (%s)\n",universe->version);
+      if (screen) fprintf(screen,"SPARTA (%s)\n",universe->version);
+      if (logfile) fprintf(logfile,"SPARTA (%s)\n",universe->version);
     }
 
   // universe is one or more worlds, as setup by partition switch
@@ -270,7 +270,7 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
       if (partlogflag == 0)
        if (logflag == 0) {
          char str[32];
-         sprintf(str,"log.dsmc.%d",universe->iworld);
+         sprintf(str,"log.sparta.%d",universe->iworld);
          logfile = fopen(str,"w");
          if (logfile == NULL) error->one(FLERR,"Cannot open logfile");
        } else if (strcmp(arg[logflag],"none") == 0)
@@ -303,12 +303,12 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
     
     if (universe->me == 0) {
       if (universe->uscreen) {
-	fprintf(universe->uscreen,"DSMC (%s)\n",universe->version);
+	fprintf(universe->uscreen,"SPARTA (%s)\n",universe->version);
 	fprintf(universe->uscreen,"Running on %d partitions of processors\n",
 		universe->nworlds);
       }
       if (universe->ulogfile) {
-	fprintf(universe->ulogfile,"DSMC (%s)\n",universe->version);
+	fprintf(universe->ulogfile,"SPARTA (%s)\n",universe->version);
 	fprintf(universe->ulogfile,"Running on %d partitions of processors\n",
 		universe->nworlds);
       }
@@ -316,28 +316,28 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
     
     if (me == 0) {
       if (screen) {
-	fprintf(screen,"DSMC (%s)\n",universe->version);
+	fprintf(screen,"SPARTA (%s)\n",universe->version);
 	fprintf(screen,"Processor partition = %d\n",universe->iworld);
       }
       if (logfile) {
-	fprintf(logfile,"DSMC (%s)\n",universe->version);
+	fprintf(logfile,"SPARTA (%s)\n",universe->version);
 	fprintf(logfile,"Processor partition = %d\n",universe->iworld);
       }
     }
   }
 
-  // check datatype settings in dsmctype.h
+  // check datatype settings in sptype.h
 
   if (sizeof(smallint) != sizeof(int))
-    error->all(FLERR,"Smallint setting in dsmctype.h is invalid");
+    error->all(FLERR,"Smallint setting in sptype.h is invalid");
   if (sizeof(bigint) < sizeof(smallint))
-    error->all(FLERR,"Bigint setting in dsmctype.h is invalid");
+    error->all(FLERR,"Bigint setting in sptype.h is invalid");
 
   int mpisize;
-  MPI_Type_size(MPI_DSMC_BIGINT,&mpisize);
+  MPI_Type_size(MPI_SPARTA_BIGINT,&mpisize);
   if (mpisize != sizeof(bigint))
       error->all(FLERR,
-		 "MPI_DSMC_BIGINT and bigint in dsmctype.h are not compatible");
+		 "MPI_SPARTA_BIGINT and bigint in sptype.h are not compatible");
 
   if (sizeof(smallint) != 4 || sizeof(bigint) != 8)
     error->all(FLERR,"Small,big integers are not sized correctly");
@@ -363,7 +363,7 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
 }
 
 /* ----------------------------------------------------------------------
-   shutdown DSMC
+   shutdown SPARTA
    delete top-level classes
    delete fundamental classes
    close screen and log files in world and universe
@@ -371,7 +371,7 @@ DSMC::DSMC(int narg, char **arg, MPI_Comm communicator)
    delete fundamental classes
 ------------------------------------------------------------------------- */
 
-DSMC::~DSMC()
+SPARTA::~SPARTA()
 {
   //delete ranmaster;
   
@@ -401,7 +401,7 @@ DSMC::~DSMC()
    some classes have package variants
 ------------------------------------------------------------------------- */
 
-void DSMC::create()
+void SPARTA::create()
 {
   particle = new Particle(this);
   update = new Update(this);
@@ -419,7 +419,7 @@ void DSMC::create()
    initialize top-level classes
 ------------------------------------------------------------------------- */
 
-void DSMC::init()
+void SPARTA::init()
 {
   particle->init();
   update->init();
@@ -438,7 +438,7 @@ void DSMC::init()
    fundamental classes are deleted in destructor
 ------------------------------------------------------------------------- */
 
-void DSMC::destroy()
+void SPARTA::destroy()
 {
   delete particle;
   delete update;
@@ -456,7 +456,7 @@ void DSMC::destroy()
    for each style, print name of all child classes build into executable
 ------------------------------------------------------------------------- */
 
-void DSMC::print_styles()
+void SPARTA::print_styles()
 {
   printf("\nList of style options included in this executable:\n\n");
 

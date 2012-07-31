@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "math.h"
@@ -17,12 +17,12 @@
 #include "math_extra.h"
 #include "error.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollideSpecular::SurfCollideSpecular(DSMC *dsmc, int narg, char **arg) :
-  SurfCollide(dsmc, narg, arg)
+SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
+  SurfCollide(sparta, narg, arg)
 {
   if (narg != 2) error->all(FLERR,"Illegal surf_collide specular command");
 }

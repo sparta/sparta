@@ -1,28 +1,28 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef DSMC_UNIVERSE_H
-#define DSMC_UNIVERSE_H
+#ifndef SPARTA_UNIVERSE_H
+#define SPARTA_UNIVERSE_H
 
 #include "stdio.h"
 #include "pointers.h"
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
 class Universe : protected Pointers {
  public:
-  char *version;          // DSMC version string = date
+  char *version;          // SPARTA version string = date
 
   MPI_Comm uworld;        // communicator for entire universe
   int me,nprocs;          // my place in universe
@@ -36,11 +36,11 @@ class Universe : protected Pointers {
   int *procs_per_world;   // # of procs in each world
   int *root_proc;         // root proc in each world
 
-  MPI_Comm uorig;         // original communicator passed to DSMC instance
+  MPI_Comm uorig;         // original communicator passed to SPARTA instance
   int *uni2orig;          // proc I in universe uworld is 
                           // proc uni2orig[I] in original communicator
 
-  Universe(class DSMC *, MPI_Comm);
+  Universe(class SPARTA *, MPI_Comm);
   ~Universe();
   void reorder(char *, char *);
   void add_world(char *);
@@ -80,6 +80,6 @@ UNDOCUMENTED
 E: Invalid command-line argument
 
 One or more command-line arguments is invalid.  Check the syntax of
-the command you are using to launch DSMC.
+the command you are using to launch SPARTA.
 
 */

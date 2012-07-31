@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "stdio.h"
@@ -32,7 +32,7 @@
 #include "memory.h"
 #include "error.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 
 #define DELTA 1
 
@@ -40,11 +40,11 @@ using namespace DSMC_NS;
    initialize all output 
 ------------------------------------------------------------------------- */
 
-Output::Output(DSMC *dsmc) : Pointers(dsmc)
+Output::Output(SPARTA *sparta) : Pointers(sparta)
 {
   // create default Stats class
 
-  stats = new Stats(dsmc);
+  stats = new Stats(sparta);
     
   stats_every = 0;
   var_stats = NULL;
@@ -360,7 +360,7 @@ void Output::add_dump(int narg, char **arg)
 
 #define DUMP_CLASS
 #define DumpStyle(key,Class) \
-  else if (strcmp(arg[1],#key) == 0) dump[ndump] = new Class(dsmc,narg,arg);
+  else if (strcmp(arg[1],#key) == 0) dump[ndump] = new Class(sparta,narg,arg);
 #include "style_dump.h"
 #undef DUMP_CLASS
 
@@ -452,7 +452,7 @@ void Output::create_restart(int narg, char **arg)
     return;
   }
 
-  restart = new WriteRestart(dsmc);
+  restart = new WriteRestart(sparta);
 
   int n = strlen(arg[1]) + 3;
   restart1 = new char[n];
@@ -487,32 +487,32 @@ void Output::memory_usage()
 
   bigint ave,min,max;
 
-  MPI_Allreduce(&pbytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&pbytes,&ave,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double pave = scale * ave/comm->nprocs;
-  MPI_Allreduce(&pbytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&pbytes,&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
   double pmin = scale * min;
-  MPI_Allreduce(&pbytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
+  MPI_Allreduce(&pbytes,&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   double pmax = scale * max;
 
-  MPI_Allreduce(&gbytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&gbytes,&ave,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double gave = scale * ave/comm->nprocs;
-  MPI_Allreduce(&gbytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&gbytes,&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
   double gmin = scale * min;
-  MPI_Allreduce(&gbytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
+  MPI_Allreduce(&gbytes,&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   double gmax = scale * max;
 
-  MPI_Allreduce(&sbytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&sbytes,&ave,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double save = scale * ave/comm->nprocs;
-  MPI_Allreduce(&sbytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&sbytes,&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
   double smin = scale * min;
-  MPI_Allreduce(&sbytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
+  MPI_Allreduce(&sbytes,&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   double smax = scale * max;
 
-  MPI_Allreduce(&bytes,&ave,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&bytes,&ave,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double tave = scale * ave/comm->nprocs;
-  MPI_Allreduce(&bytes,&min,1,MPI_DSMC_BIGINT,MPI_MIN,world);
+  MPI_Allreduce(&bytes,&min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
   double tmin = scale * min;
-  MPI_Allreduce(&bytes,&max,1,MPI_DSMC_BIGINT,MPI_MAX,world);
+  MPI_Allreduce(&bytes,&max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
   double tmax = scale * max;
 
   if (comm->me == 0) {

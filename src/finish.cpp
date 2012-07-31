@@ -1,18 +1,18 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "dsmctype.h"
+#include "sptype.h"
 #include "mpi.h"
 #include "math.h"
 #include "string.h"
@@ -26,12 +26,12 @@
 #include "timer.h"
 #include "memory.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 using namespace MathExtra;
 
 /* ---------------------------------------------------------------------- */
 
-Finish::Finish(DSMC *dsmc) : Pointers(dsmc) {}
+Finish::Finish(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
@@ -66,7 +66,7 @@ void Finish::end()
   // recalculate nglobal
 
   bigint n = particle->nlocal;
-  MPI_Allreduce(&n,&particle->nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   // overall loop time
 
@@ -90,24 +90,24 @@ void Finish::end()
   bigint ncollide_total = 0;
 
   MPI_Allreduce(&update->nmove_running,&nmove_total,1,
-		MPI_DSMC_BIGINT,MPI_SUM,world);
+		MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&update->ntouch_running,&ntouch_total,1,
-		MPI_DSMC_BIGINT,MPI_SUM,world);
+		MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&update->ncomm_running,&ncomm_total,1,
-		MPI_DSMC_BIGINT,MPI_SUM,world);
+		MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&update->nboundary_running,&nboundary_total,1,
-		MPI_DSMC_BIGINT,MPI_SUM,world);
+		MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&update->nexit_running,&nexit_total,1,
-		MPI_DSMC_BIGINT,MPI_SUM,world);
+		MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&update->nscheck_running,&nscheck_total,1,
-		MPI_DSMC_BIGINT,MPI_SUM,world);
+		MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&update->nscollide_running,&nscollide_total,1,
-		MPI_DSMC_BIGINT,MPI_SUM,world);
+		MPI_SPARTA_BIGINT,MPI_SUM,world);
   if (collide) {
     MPI_Allreduce(&collide->nattempt_running,&nattempt_total,1,
-		  MPI_DSMC_BIGINT,MPI_SUM,world);
+		  MPI_SPARTA_BIGINT,MPI_SUM,world);
     MPI_Allreduce(&collide->ncollide_running,&ncollide_total,1,
-		  MPI_DSMC_BIGINT,MPI_SUM,world);
+		  MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 
   double pms,ctps,pfc,pfcwb,pfeb,schps,sclps,caps,cps;

@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "math.h"
@@ -28,14 +28,14 @@
 #include "memory.h"
 #include "error.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP};       // same as Grid
 
 /* ---------------------------------------------------------------------- */
 
-CreateMolecules::CreateMolecules(DSMC *dsmc) : Pointers(dsmc) {}
+CreateMolecules::CreateMolecules(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
@@ -95,7 +95,7 @@ void CreateMolecules::command(int narg, char **arg)
 
   // perform system init() so that grid cells know about surfs
 
-  dsmc->init();
+  sparta->init();
 
   // generate molecules
 
@@ -107,7 +107,7 @@ void CreateMolecules::command(int narg, char **arg)
 
   bigint nglobal;
   bigint nme = particle->nlocal;
-  MPI_Allreduce(&nme,&nglobal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   if (nglobal - nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of molecules: " 

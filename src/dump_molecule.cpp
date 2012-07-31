@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "math.h"
@@ -27,7 +27,7 @@
 #include "memory.h"
 #include "error.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 
 // customize by adding keyword
 
@@ -42,8 +42,8 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};            // same as Domain
 
 /* ---------------------------------------------------------------------- */
 
-DumpMolecule::DumpMolecule(DSMC *dsmc, int narg, char **arg) :
-  Dump(dsmc, narg, arg)
+DumpMolecule::DumpMolecule(SPARTA *sparta, int narg, char **arg) :
+  Dump(sparta, narg, arg)
 {
   if (narg == 4) error->all(FLERR,"No dump molecule arguments specified");
 

@@ -1,1 +1,1 @@
-#define DSMC_VERSION "24 Oct 2011"
+#define SPARTA_VERSION "1 Aug 2012"

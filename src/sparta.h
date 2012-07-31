@@ -1,34 +1,34 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef DSMC_DSMC_H
-#define DSMC_DSMC_H
+#ifndef SPARTA_SPARTA_H
+#define SPARTA_SPARTA_H
 
 #include "stdio.h"
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
-class DSMC {
+class SPARTA {
  public:
 
-  // fundamental DSMC classes
+  // fundamental SPARTA classes
 
   class Memory *memory;          // memory allocation functions
   class Error *error;            // error handling
   class Universe *universe;      // universe of processors
   class Input *input;            // input script processing
-                                 // ptrs to top-level DSMC-specific classes
+                                 // ptrs to top-level SPARTA-specific classes
   class Particle *particle;      // particles
   class Update *update;          // timestepper
   class Comm *comm;              // inter-processor communication
@@ -49,12 +49,12 @@ class DSMC {
   int suffix_enable;             // 1 if suffix enabled, 0 if disabled
   class Cuda *cuda;              // CUDA accelerator class
 
-  // other top-level DSMC classes and variables
+  // other top-level SPARTA classes and variables
 
   //class RanMars *ranmaster;      // master RN generator
 
-  DSMC(int, char **, MPI_Comm);
-  ~DSMC();
+  SPARTA(int, char **, MPI_Comm);
+  ~SPARTA();
   void create();
   void init();
   void destroy();
@@ -71,7 +71,7 @@ class DSMC {
 E: Invalid command-line argument
 
 One or more command-line arguments is invalid.  Check the syntax of
-the command you are using to launch DSMC.
+the command you are using to launch SPARTA.
 
 E: Cannot use -reorder after -partition
 
@@ -80,7 +80,7 @@ UNDOCUMENTED
 E: Processor partitions are inconsistent
 
 The total number of processors in all partitions must match the number
-of processors DSMC is running on.
+of processors SPARTA is running on.
 
 E: Must use -in switch with multiple partitions
 
@@ -101,7 +101,7 @@ For a multi-partition run, the master screen file cannot be opened.
 Check that the directory you are running in allows for files to be
 created.
 
-E: Cannot open log.dsmc
+E: Cannot open log.sparta
 
 UNDOCUMENTED
 
@@ -123,18 +123,18 @@ to be created.
 
 E: Cannot open logfile
 
-The DSMC log file named in a command-line argument cannot be opened.
+The SPARTA log file named in a command-line argument cannot be opened.
 Check that the path and name are correct.
 
-E: Smallint setting in dsmctype.h is invalid
+E: Smallint setting in sptype.h is invalid
 
 UNDOCUMENTED
 
-E: Bigint setting in dsmctype.h is invalid
+E: Bigint setting in sptype.h is invalid
 
 UNDOCUMENTED
 
-E: MPI_DSMC_BIGINT and bigint in dsmctype.h are not compatible
+E: MPI_SPARTA_BIGINT and bigint in sptype.h are not compatible
 
 UNDOCUMENTED
 

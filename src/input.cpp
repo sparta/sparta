@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "mpi.h"
@@ -42,14 +42,14 @@
 #include "omp.h"
 #endif
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 
 #define MAXLINE 2048
 #define DELTA 4
 
 /* ---------------------------------------------------------------------- */
 
-Input::Input(DSMC *dsmc, int argc, char **argv) : Pointers(dsmc)
+Input::Input(SPARTA *sparta, int argc, char **argv) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
 
@@ -72,7 +72,7 @@ Input::Input(DSMC *dsmc, int argc, char **argv) : Pointers(dsmc)
     infiles[0] = infile;
   } else infiles = NULL;
 
-  variable = new Variable(dsmc);
+  variable = new Variable(sparta);
 
   // process command-line args
   // check for args "-var" and "-echo"
@@ -450,7 +450,7 @@ int Input::execute_command()
 #define COMMAND_CLASS
 #define CommandStyle(key,Class)         \
   else if (strcmp(command,#key) == 0) { \
-    Class key(dsmc);			\
+    Class key(sparta);			\
     key.command(narg,arg);              \
     return 0;                           \
   }
@@ -472,8 +472,8 @@ int Input::execute_command()
 void Input::clear()
 {
   if (narg > 0) error->all(FLERR,"Illegal clear command");
-  dsmc->destroy();
-  dsmc->create();
+  sparta->destroy();
+  sparta->create();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -811,7 +811,7 @@ void Input::variable_command()
 /* ---------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   one function for each DSMC-specific input script command
+   one function for each SPARTA-specific input script command
 ------------------------------------------------------------------------- */
 
 /* ---------------------------------------------------------------------- */
@@ -841,7 +841,7 @@ void Input::collide_command()
 #define COLLIDE_CLASS
 #define CollideStyle(key,Class) \
   else if (strcmp(arg[0],#key) == 0) \
-    collide = new Class(dsmc,narg,arg);
+    collide = new Class(sparta,narg,arg);
 #include "style_collide.h"
 #undef CollideStyle
 #undef COLLIDE_CLASS

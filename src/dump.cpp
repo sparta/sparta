@@ -1,18 +1,18 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "dsmctype.h"
+#include "sptype.h"
 #include "mpi.h"
 #include "stdlib.h"
 #include "string.h"
@@ -24,7 +24,7 @@
 #include "memory.h"
 #include "error.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 
 #define BIG 1.0e20
 #define IBIG 2147483647
@@ -32,7 +32,7 @@ using namespace DSMC_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Dump::Dump(DSMC *dsmc, int narg, char **arg) : Pointers(dsmc)
+Dump::Dump(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
@@ -156,7 +156,7 @@ void Dump::write()
   int nmax;
   if (multiproc) nmax = nme;
   else {
-    MPI_Allreduce(&bnme,&ntotal,1,MPI_DSMC_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&bnme,&ntotal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     MPI_Allreduce(&nme,&nmax,1,MPI_INT,MPI_MAX,world);
   }
 
@@ -262,7 +262,7 @@ void Dump::openfile()
 
   if (me == 0 || multiproc) {
     if (compressed) {
-#ifdef DSMC_GZIP
+#ifdef SPARTA_GZIP
       char gzip[128];
       sprintf(gzip,"gzip -6 > %s",filecurrent);
       fp = popen(gzip,"w");

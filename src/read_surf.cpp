@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #include "mpi.h"
@@ -25,7 +25,7 @@
 #include "error.h"
 #include "memory.h"
 
-using namespace DSMC_NS;
+using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{NEITHER,BAD,GOOD};
@@ -37,7 +37,7 @@ enum{NEITHER,BAD,GOOD};
 
 /* ---------------------------------------------------------------------- */
 
-ReadSurf::ReadSurf(DSMC *dsmc) : Pointers(dsmc)
+ReadSurf::ReadSurf(SPARTA *sparta) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
   line = new char[MAXLINE];
@@ -1362,7 +1362,7 @@ void ReadSurf::open(char *file)
   if (suffix > file && strcmp(suffix,".gz") == 0) compressed = 1;
   if (!compressed) fp = fopen(file,"r");
   else {
-#ifdef DSMC_GZIP
+#ifdef SPARTA_GZIP
     char gunzip[128];
     sprintf(gunzip,"gunzip -c %s",file);
     fp = popen(gunzip,"r");

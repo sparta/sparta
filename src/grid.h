@@ -1,23 +1,23 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef DSMC_GRID_H
-#define DSMC_GRID_H
+#ifndef SPARTA_GRID_H
+#define SPARTA_GRID_H
 
 #include "pointers.h"
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
 class Grid : protected Pointers {
  public:
@@ -55,7 +55,7 @@ class Grid : protected Pointers {
                      // nlocal by 4/8 for 2d/3d
                      // corner pts ordered by x first, y next, z last
 
-  Grid(class DSMC *);
+  Grid(class SPARTA *);
   ~Grid();
   void init();
   void add_cell(int, double *, double *, int *);

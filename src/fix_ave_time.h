@@ -1,15 +1,15 @@
 /* ----------------------------------------------------------------------
-   DSMC - Sandia parallel DSMC code
-   www.sandia.gov/~sjplimp/dsmc.html
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   www.sandia.gov/sparta.html
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2011) Sandia Corporation.  Under the terms of Contract
+   Copyright (2012) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
-   See the README file in the top-level DSMC directory.
+   See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
@@ -18,17 +18,17 @@ FixStyle(ave/time,FixAveTime)
 
 #else
 
-#ifndef DSMC_FIX_AVE_TIME_H
-#define DSMC_FIX_AVE_TIME_H
+#ifndef SPARTA_FIX_AVE_TIME_H
+#define SPARTA_FIX_AVE_TIME_H
 
 #include "stdio.h"
 #include "fix.h"
 
-namespace DSMC_NS {
+namespace SPARTA_NS {
 
 class FixAveTime : public Fix {
  public:
-  FixAveTime(class DSMC *, int, char **);
+  FixAveTime(class SPARTA *, int, char **);
   ~FixAveTime();
   int setmask();
   void init();
@@ -79,7 +79,7 @@ E: Illegal ... command
 
 Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
-command-line option when running DSMC to see the offending line.
+command-line option when running SPARTA to see the offending line.
 
 E: Compute ID for fix ave/time does not exist
 
