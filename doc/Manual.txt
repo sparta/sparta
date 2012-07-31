@@ -1,17 +1,17 @@
 <HEAD>
 <TITLE>SPARTA Users Manual</TITLE>
 <META NAME="docnumber" CONTENT="name of code">
-<META NAME="author" CONTENT="http://www.sandia.gov/~sjplimp/dsmc.html - Sandia National Laboratories">
+<META NAME="author" CONTENT="http://sparta.sandia.gov - Sandia National Laboratories">
 <META NAME="copyright" CONTENT="Copyright (2011) Sandia Corporation.  This software and manual is distributed under the GNU General Public License.">
 </HEAD>
 
 <BODY>
 
-"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -54,10 +54,10 @@ under the terms of the GNU Public License (GPL).
 
 The primary developers of SPARTA are "Steve Plimpton"_sjp, and Michael
 Gallis_mg who can be contacted at sjplimp,magalli at sandia.gov.  The
-"SPARTA WWW Site"_dws at http://www.sandia.gov/~sjplimp/dsmc.html has
+"SPARTA WWW Site"_sws at http://sparta.sandia.gov has
 more information about the code and its uses.
 
-:link(bug,http://www.sandia.gov/~sjplimp/dsmc/bug.html)
+:link(bug,http://sparta.sandia.gov/bug.html)
 :link(sjp,http://www.sandia.gov/~sjplimp)
 
 :line

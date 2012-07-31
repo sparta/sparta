@@ -1,15 +1,15 @@
-"Previous Section"_Section_example.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_tools.html :c
+"Previous Section"_Section_example.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_tools.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
 8. Performance & scalability :h3
 
 SPARTA performance on several prototypical benchmarks and machines is
-discussed on the Benchmarks page of the "SPARTA WWW Site"_dws where
+discussed on the Benchmarks page of the "SPARTA WWW Site"_sws where
 CPU timings and parallel efficiencies are listed.  Here, the
 benchmarks are described briefly and some useful rules of thumb about
 their performance are highlighted.
@@ -72,6 +72,6 @@ fixed-size parallel efficiencies on these benchmarks above 50% so long
 as the atoms/processor count is a few 100 or greater - i.e. on 64 to
 128 processors.  Likewise, scaled-size parallel efficiencies will
 typically be 80% or greater up to very large processor counts.  The
-benchmark data on the "SPARTA WWW Site"_dws gives specific examples on
+benchmark data on the "SPARTA WWW Site"_sws gives specific examples on
 some different machines, including a run of 3/4 of a billion LJ atoms
 on 1500 processors that ran at 85% parallel efficiency.

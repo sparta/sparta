@@ -1,8 +1,8 @@
-"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "DSMSPARTAmmands"_dc :c
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "DSMSPARTAmmands"_sc :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 

@@ -1,10 +1,10 @@
-"Previous Section"_Section_python.html - "SPARTA WWW Site"_dws -
-"SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next
+"Previous Section"_Section_python.html - "SPARTA WWW Site"_sws -
+"SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next
 Section"_Section_history.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -116,7 +116,7 @@ steps.
 
 Check the "New features and bug
 fixes"_http://dsmc.sandia.gov/bug.html section of the "SPARTA WWW
-site"_dws to see if the bug has already been reported or fixed or the
+site"_sws to see if the bug has already been reported or fixed or the
 "Unfixed bug"_http://dsmc.sandia.gov/unbug.html to see if a fix is
 pending.
 

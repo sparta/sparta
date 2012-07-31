@@ -1,8 +1,8 @@
-"Previous Section"_Section_modify.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_errors.html :c
+"Previous Section"_Section_modify.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_errors.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -615,7 +615,7 @@ Note that for GL, you need to be able to run the Pizza.py GL tool,
 which is included in the pizza sub-directory.  See the "Pizza.py doc
 pages"_pizza for more info:
 
-:link(pizza,http://www.sandia.gov/~sjplimp/pizza.html)
+:link(pizza,http://pizza.sandia.gov)
 
 Note that for AtomEye, you need version 3, and there is a line in the
 scripts that specifies the path and name of the executable.  See the

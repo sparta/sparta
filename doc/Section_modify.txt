@@ -1,10 +1,10 @@
-"Previous Section"_Section_tools.html - "SPARTA WWW Site"_dws -
-"SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next
+"Previous Section"_Section_tools.html - "SPARTA WWW Site"_sws -
+"SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next
 Section"_Section_python.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -140,7 +140,7 @@ user packages by typing "make package" in the SPARTA src directory.
 With user packages and files, all we are really providing (aside from
 the fame and fortune that accompanies having your name in the source
 code and on the "Authors page"_http://dsmc.sandia.gov/authors.html
-of the "SPARTA WWW site"_dws), is a means for you to distribute your
+of the "SPARTA WWW site"_sws), is a means for you to distribute your
 SPARTA to the SPARTA user community and a mechanism for others to easily
 try out your new feature.  This may help you find bugs or make contact
 with new collaborators.  Note that you're also implicitly agreeing to

@@ -1,8 +1,8 @@
-"Previous Section"_Manual.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_start.html :c
+"Previous Section"_Manual.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_start.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -27,7 +27,7 @@ gases, using a variety of collision, chemistry, boundary condition
 models.
 
 For examples of SPARTA simulations, see the Publications page of the
-"SPARTA WWW Site"_dws.
+"SPARTA WWW Site"_sws.
 
 SPARTA runs efficiently on single-processor desktop or laptop machines,
 but is designed for parallel computers.  It will run on any parallel
@@ -40,7 +40,7 @@ machines as well as commodity clusters.
 SPARTA can model systems with only a few particles up to millions or
 billions.  See "this section"_Section_perf.html for information on SPARTA
 performance and scalability, or the Benchmarks section of the "SPARTA
-WWW Site"_dws.
+WWW Site"_sws.
 
 SPARTA is a freely-available open-source code, distributed under the
 terms of the "GNU Public License"_gnu, which means you can use or
@@ -215,7 +215,7 @@ plotting, and visualization for SPARTA simulations.  Pizza.py is
 written in "Python"_python and is available for download from "the
 Pizza.py WWW site"_pizza. :l,ule
 
-:link(pizza,http://www.sandia.gov/~sjplimp/pizza.html)
+:link(pizza,http://pizza.sandia.gov)
 :link(python,http://www.python.org)
 
 Specialized features :h4
@@ -384,11 +384,11 @@ contribute to making SPARTA better.  You can send email to the
 "developers"_http://dsmc.sandia.gov/authors.html on any of these
 items.
 
-Point prospective users to the "SPARTA WWW Site"_dws.  Mention it in
+Point prospective users to the "SPARTA WWW Site"_sws.  Mention it in
 talks or link to it from your WWW site. :ulb,l
 
 If you find an error or omission in this manual or on the "SPARTA WWW
-Site"_dws, or have a suggestion for something to clarify or include,
+Site"_sws, or have a suggestion for something to clarify or include,
 send an email to the
 "developers"_http://dsmc.sandia.gov/authors.html. :l
 
@@ -397,7 +397,7 @@ how to report it. :l
 
 If you publish a paper using SPARTA results, send the citation (and
 any cool pictures or movies if you like) to add to the Publications,
-Pictures, and Movies pages of the "SPARTA WWW Site"_dws, with links
+Pictures, and Movies pages of the "SPARTA WWW Site"_sws, with links
 and attributions back to you. :l
 
 Create a new Makefile.machine that can be added to the src/MAKE
@@ -415,14 +415,14 @@ like potentials, boundary conditions, diagnostic computations, etc.
 feature of general interest, it can be added to the SPARTA
 distribution. :l
 
-The Benchmark page of the "SPARTA WWW Site"_dws lists SPARTA
+The Benchmark page of the "SPARTA WWW Site"_sws lists SPARTA
 performance on various platforms.  The files needed to run the
 benchmarks are part of the SPARTA distribution.  If your machine is
 sufficiently different from those listed, your timing data can be
 added to the page. :l
 
 You can send feedback for the User Comments page of the "SPARTA WWW
-Site"_dws.  It might be added to the page.  No promises. :l
+Site"_sws.  It might be added to the page.  No promises. :l
 
 Cash.  Small denominations, unmarked bills preferred.  Paper sack OK.
 Leave on desk.  VISA also accepted.  Chocolate chip cookies
@@ -450,7 +450,7 @@ Hierarchical Modeling".
 
 The following paper describe the basic parallel algorithms used in
 SPARTA.  If you use SPARTA results in your published work, please cite
-the following paper and include a pointer to the "SPARTA WWW Site"_dws
+the following paper and include a pointer to the "SPARTA WWW Site"_sws
 (http://dsmc.sandia.gov):
 
 S. J. Plimpton, [Fast Parallel Algorithms for Short-Range Molecular

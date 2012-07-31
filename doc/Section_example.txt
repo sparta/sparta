@@ -1,8 +1,8 @@
-"Previous Section"_Section_howto.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_perf.html :c
+"Previous Section"_Section_howto.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_perf.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -23,7 +23,7 @@ The dump files produced by the example runs can be animated using the
 xmovie tool described in the "Additional Tools"_Section_tools.html
 section of the SPARTA documentation.  Animations of many of these
 examples can be viewed on the Movies section of the "SPARTA WWW
-Site"_dws.
+Site"_sws.
 
 These are the sample problems in the examples sub-directories:
 

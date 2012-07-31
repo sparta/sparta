@@ -1,10 +1,10 @@
-"Previous Section"_Section_perf.html - "SPARTA WWW Site"_dws - "SPARTA
-Documentation"_dd - "SPARTA Commands"_dc - "Next
+"Previous Section"_Section_perf.html - "SPARTA WWW Site"_sws - "SPARTA
+Documentation"_sd - "SPARTA Commands"_sc - "Next
 Section"_Section_modify.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -22,7 +22,7 @@ plotting, and visualization for SPARTA simulations.  Pizza.py is
 written in "Python"_python and is available for download from "the
 Pizza.py WWW site"_pizza.
 
-:link(pizza,http://www.sandia.gov/~sjplimp/pizza.html)
+:link(pizza,http://pizza.sandia.gov)
 :link(python,http://www.python.org)
 
 Note that many users write their own setup or analysis tools or use

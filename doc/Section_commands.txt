@@ -1,8 +1,8 @@
-"Previous Section"_Section_start.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_howto.html :c
+"Previous Section"_Section_start.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_howto.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -137,7 +137,7 @@ This section describes the structure of a typical SPARTA input script.
 The "examples" directory in the SPARTA distribution contains many
 sample input scripts; the corresponding problems are discussed in
 "this section"_Section_example.html, and animated on the "SPARTA WWW
-Site"_dws.
+Site"_sws.
 
 A SPARTA input script typically has 4 parts:
 

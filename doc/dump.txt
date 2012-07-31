@@ -1,8 +1,8 @@
-"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
    
@@ -92,8 +92,7 @@ or one per processor).
 The {molecule} and {grid} and {surf} styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
 of the SPARTA "post-processing tools"_Section_tools.html, including
-"Pizza.py"_http://www.sandia.gov/~sjplimp/pizza.html, work with this
-format.
+"Pizza.py"_http://pizza.sandia.gov, work with this format.
 
 For post-processing purposes the text files are self-describing in the
 following sense.

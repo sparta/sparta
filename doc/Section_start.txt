@@ -1,8 +1,8 @@
-"Previous Section"_Section_intro.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_commands.html :c
+"Previous Section"_Section_intro.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_commands.html :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -1112,7 +1112,7 @@ The current C++ began with a complete rewrite of SPARTA 2001, which
 was written in F90.  Features of earlier versions of SPARTA are listed
 in "this section"_Section_history.html.  The F90 and F77 versions
 (2001 and 99) are also freely distributed as open-source codes; check
-the "SPARTA WWW Site"_dws for distribution information if you prefer
+the "SPARTA WWW Site"_sws for distribution information if you prefer
 those versions.  The 99 and 2001 versions are no longer under active
 development; they do not have all the features of C++ SPARTA.
 

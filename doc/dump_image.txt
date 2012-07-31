@@ -1,8 +1,8 @@
-"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(dws,http://dsmc.sandia.gov)
-:link(dd,Manual.html)
-:link(dc,Section_commands.html#comm)
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
 
 :line
 
@@ -317,9 +317,9 @@ b) Use the freely available mplayer tool to view an MPEG movie. :l
 
 % mplayer foo.mpg :pre
 
-c) Use the "Pizza.py"_http://www.sandia.gov/~sjplimp/pizza.html
-"animate tool"_http://www.sandia.gov/~sjplimp/pizza/doc/animate.html,
-which works directly on a series of image files. :l
+c) Use the "Pizza.py"_http://pizza.sandia.gov "animate
+tool"_http://pizza.sandia.gov/doc/animate.html, which works directly
+on a series of image files. :l
 
 a = animate("foo*.jpg") :pre
 
