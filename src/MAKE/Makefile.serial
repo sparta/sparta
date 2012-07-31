@@ -1,4 +1,4 @@
-# serial = RedHat Linux box, g++4, no MPI, no FFTs
+# serial = RedHat Linux box, g++4, no MPI
 
 SHELL = /bin/sh
 
@@ -18,14 +18,14 @@ ARFLAGS =	-rc
 SIZE =		size
 
 # ---------------------------------------------------------------------
-# DSMC-specific settings
-# specify settings for DSMC features you will use
+# SPARTA-specific settings
+# specify settings for SPARTA features you will use
 # if you change any -D setting, do full re-compile after "make clean"
 
-# DSMC ifdef settings, OPTIONAL
+# SPARTA ifdef settings, OPTIONAL
 # see possible settings in doc/Section_start.html#2_2 (step 4)
 
-DSMC_INC =	-DDSMC_GZIP
+SPARTA_INC =	-DSPARTA_GZIP
 
 # MPI library, REQUIRED
 # see discussion in doc/Section_start.html#2_2 (step 5)
@@ -40,7 +40,7 @@ MPI_LIB =	../STUBS/libmpi.a
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)
-# only needed if -DDSMC_JPEG listed with DSMC_INC
+# only needed if -DSPARTA_JPEG listed with SPARTA_INC
 # INC = path for jpeglib.h
 # PATH = path for JPEG library
 # LIB = name of JPEG library
@@ -53,9 +53,9 @@ JPG_LIB =
 # build rules and dependencies
 # no need to edit this section
 
-EXTRA_INC = $(DSMC_INC) $(PKG_INC) $(MPI_INC) $(FFT_INC) $(JPG_INC) $(PKG_SYSINC)
-EXTRA_PATH = $(PKG_PATH) $(MPI_PATH) $(FFT_PATH) $(JPG_PATH) $(PKG_SYSPATH)
-EXTRA_LIB = $(PKG_LIB) $(MPI_LIB) $(FFT_LIB) $(JPG_LIB) $(PKG_SYSLIB)
+EXTRA_INC = $(SPARTA_INC) $(PKG_INC) $(MPI_INC) $(JPG_INC) $(PKG_SYSINC)
+EXTRA_PATH = $(PKG_PATH) $(MPI_PATH) $(JPG_PATH) $(PKG_SYSPATH)
+EXTRA_LIB = $(PKG_LIB) $(MPI_LIB) $(JPG_LIB) $(PKG_SYSLIB)
 
 # Link target
 
