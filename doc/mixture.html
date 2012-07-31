@@ -49,24 +49,45 @@ mixture background N O
 <P><B>Description:</B>
 </P>
 <P>Define a gas mixture and its properties.  A mixture can be referenced
-via its ID in other commands such as
-<A HREF = "create_molecules.html">create_molecules</A>.  Any number of mixtures can
-be defined and used in a simulation.
+via its ID in several other SPARTA commands such as
+<A HREF = "create_molecules.html">create_molecules</A> or <A HREF = "fix_ave_grid.html">fix
+ave/grid</A>.  Any number of mixtures can be defined
+and used in a simulation.
 </P>
 <P>The ID of a mixture can only contain alphanumeric characters and
 underscores.
 </P>
 <P>A mixture is a collection of one or more particle species as defined
-by the <A HREF = "species.html">species</A> command.  The mixture has global
-attributes as well as per-species attributes.  All attributes have
-default values unless they are explicitly specified.  The collection
-of species belonging to the mixture and the mixture's attributes can
-be defined by the mixture command, which can be used multiple times
-with the same ID to add species or re-define its attributes.
+by the <A HREF = "species.html">species</A> command.  Some or all of the species can
+be lumped together into groups, so that particles of all species in
+the group are acted on together by other commands.  The mixture has
+global attributes and per-species attributes.  All attributes have
+default values unless they are explicitly specified.
 </P>
+<P>Note that the mixture command can be used multiple times with the same
+ID to add species to the mixture or change its attributes.
+</P>
+<P>There are 2 default mixtures defined by SPARTA that always exist.
+</P>
+<P>The first default mixture has an ID = "all", and contains all species
+that have been defined.  When new species are added via the "species"
+command, they are automatically added to this mixture.  This mixture
+has only a single group, also named "all", which all species belong
+to.
+</P>
+<P>The second default mixture has an ID = "species", and also contains
+all species that have been defined.  When new species are added via
+the "species" command, they are also automatically added to this
+mixture.  This mixture has one group per species, each with the
+species name, so that each species that belongs to its own group.
+</P>
+<HR>
+
 <P>Zero or more species can be listed with the mixture command.  If a
 species is not already in the mixture (from a previous mixture command
-with the same ID), then the species is added to the mixture.  If the
+with the same ID), then the species is added to the mixture.
+</P>
+<P>If the
 mixture command sets per-species properties, as discussed below, then
 those settings only apply to the species listed in this command, not
 to other species previously added to the mixture.
