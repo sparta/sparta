@@ -91,8 +91,8 @@ void ComputeKEMolecule::compute_per_molecule()
    memory usage of local atom-based array
 ------------------------------------------------------------------------- */
 
-double ComputeKEMolecule::memory_usage()
+bigint ComputeKEMolecule::memory_usage()
 {
-  double bytes = nmax * sizeof(double);
+  bigint bytes = nmax * sizeof(double);
   return bytes;
 }

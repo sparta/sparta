@@ -31,7 +31,7 @@ class ComputeKEMolecule : public Compute {
   ~ComputeKEMolecule();
   void init();
   void compute_per_molecule();
-  double memory_usage();
+  bigint memory_usage();
 
  private:
   int nmax;

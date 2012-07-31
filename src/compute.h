@@ -79,7 +79,7 @@ class Compute : protected Pointers {
   int matchstep(bigint);
   void clearstep();
 
-  virtual double memory_usage() {return 0.0;}
+  virtual bigint memory_usage();
 };
 
 }

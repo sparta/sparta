@@ -122,3 +122,11 @@ void Compute::clearstep()
 {
   ntime = 0;
 }
+
+/* ---------------------------------------------------------------------- */
+
+bigint Compute::memory_usage()
+{
+  bigint bytes = 0;
+  return bytes;
+}
