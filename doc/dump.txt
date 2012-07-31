@@ -269,7 +269,7 @@ per-grid array:
 
 fix 1 ave/grid 10 100 1000 standard
 dump 1 grid 1000 tmp.grid id f_1
-dump 1 grid 1000 tmp.grid id f_1[1] f_1[2] f_1[3] f_1[4] f_1[5] f_1[6] f_1[7] :pre
+dump 1 grid 1000 tmp.grid id f_1\[1\] f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] f_1\[6\] f_1\[7\] :pre
 
 The {v_name} attribute allows per-grid vectors calculated by a
 "variable"_variable.html to be output.  The name in the attribute
@@ -333,7 +333,7 @@ per-surf array:
 
 fix 1 ave/surf 10 100 1000 standard
 dump 1 surf 1000 tmp.surf id f_1
-dump 1 surf 1000 tmp.surf id f_1[1] f_1[2] f_1[3] f_1[4] f_1[5] f_1[6] f_1[7] :pre
+dump 1 surf 1000 tmp.surf id f_1\[1\] f_1\[2\] f_1\[3\] f_1\[4\] f_1\[5\] f_1\[6\] f_1\[7\] :pre
 
 The {v_name} attribute allows per-surf vectors calculated by a
 "variable"_variable.html to be output.  The name in the attribute
