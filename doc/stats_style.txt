@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -177,7 +177,7 @@ evaluated, so this is a very general means of creating statistical
 output.
 
 See "Section_modify"_Section_modify.html for information on how to add
-new compute and fix styles to DSMC to calculate quantities that can
+new compute and fix styles to SPARTA to calculate quantities that can
 then be referenced with these keywords to generate statistical output.
 
 :line

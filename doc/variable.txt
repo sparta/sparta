@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -72,7 +72,7 @@ variable x delete :pre
 This command assigns one or more strings to a variable name for
 evaluation later in the input script or during a simulation.
 
-Variables can be used in several ways in DSMC.  A variable can be
+Variables can be used in several ways in SPARTA.  A variable can be
 referenced elsewhere in an input script to become part of a new input
 command.  For variable styles that store multiple strings, the
 "next"_next.html command can be used to increment which string is
@@ -184,7 +184,7 @@ inclusive, and the string N1 is initially assigned to the variable.
 For the {world} style, one or more strings are specified.  There must
 be one string for each processor partition or "world".  See "this
 section"_Section_start.html#start_6 of the manual for information on
-running DSMC with multiple partitions via the "-partition"
+running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command assigns one string to each
 world.  All processors in the world are assigned the same string.  The
 next command cannot be used with {equal} style variables, since there
@@ -197,7 +197,7 @@ different partitions.
 For the {universe} style, one or more strings are specified.  There
 must be at least as many strings as there are processor partitions or
 "worlds".  See "this page"_Section_start.html#start_6 for information
-on running DSMC with multiple partitions via the "-partition"
+on running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command initially assigns one
 string to each world.  When a "next"_next.html command is encountered
 using this variable, the first processor partition to encounter it, is
@@ -207,7 +207,7 @@ variable strings are consumed.  Thus, this command can be used to run
 one after the other on whatever partition becomes available, until
 they are all finished.  {Universe} style variables are incremented
 using the files "tmp.lammps.variable" and "tmp.lammps.variable.lock"
-which you will see in your directory during such a DSMC run.
+which you will see in your directory during such a SPARTA run.
 
 The {uloop} style is identical to the {universe} style except that the
 strings are the integers from 1 to N.  This allows generation of long
@@ -563,7 +563,7 @@ variable a equal v_b
 variable b equal v_a
 print $a :pre
 
-then DSMC may run for a while when the print statement is invoked!
+then SPARTA may run for a while when the print statement is invoked!
 
 :line
 
@@ -624,7 +624,7 @@ is evaluated later.
 
 [Variable Accuracy:]
 
-Obviously, DSMC attempts to evaluate variables containing formulas
+Obviously, SPARTA attempts to evaluate variables containing formulas
 ({equal} and {particle} style variables) accurately whenever the
 evaluation is performed.  Depending on what is included in the
 formula, this may require invoking a "compute"_compute.html, either
@@ -632,7 +632,7 @@ directly or indirectly via a thermo keyword, or accessing a value
 previously calculated by a compute, or accessing a value calculated
 and stored by a "fix"_fix.html.
 
-DSMC keeps track of all of this during a "run"_run.html or "energy
+SPARTA keeps track of all of this during a "run"_run.html or "energy
 minimization"_minimize.html.  An error will be generated if you
 attempt to evaluate a variable on timesteps when it cannot produce
 accurate values.  For example, if a "thermo_style
@@ -644,7 +644,7 @@ averaging frequency used in the fix command, then an error will occur.
 An input script can also request variables be evaluated before or
 after or in between runs, e.g. by including them in a
 "print"_print.html command.  In this case, if a compute is needed to
-evaluate a variable (either directly or indirectly), DSMC will not
+evaluate a variable (either directly or indirectly), SPARTA will not
 invoke the compute, but it will use a value previously calculated by
 the compute, and can do this only if it is current.  Fixes will always
 provide a quantity needed by a variable, but the quantity may or may
@@ -655,9 +655,9 @@ references to a compute or fix, and these values were calculated on
 the last timestep of a preceeding run, then they will be accessed and
 used by the variable and the result will be accurate.
 
-(2) DSMC may not be able to evaluate the variable and generate an
+(2) SPARTA may not be able to evaluate the variable and generate an
 error.  For example, if the variable requires a quantity from a
-"compute"_compute.html that is not current, DSMC will generate an
+"compute"_compute.html that is not current, SPARTA will generate an
 error.  This means, for example, that such a variable cannot be
 evaluated before the first run has occurred.  Likewise, in between
 runs, such a variable cannot be accessed unless it was evaluated on
@@ -704,7 +704,7 @@ until a run is performed.  Thus if a variable attempts to print this
 value before the first run, zeroes will be output.  Again, performing
 a 0-timestep run before printing the variable has the desired effect.
 
-(3) The variable may be evaluated incorrectly.  And DSMC may have
+(3) The variable may be evaluated incorrectly.  And SPARTA may have
 no way to detect this has occurred.  Consider the following sequence
 of commands:
 
@@ -721,7 +721,7 @@ evaluated on the final timestep and stored by the "compute
 pe"_compute_pe.html compute (this is done by the
 "thermo_style"_thermo_style.html command).  Then a pair coefficient is
 changed, altering the potential energy of the system.  When the
-potential energy is printed via the "e" variable, DSMC will use the
+potential energy is printed via the "e" variable, SPARTA will use the
 potential energy value stored by the "compute pe"_compute_pe.html
 compute, thinking it is current.  There are many other commands which
 could alter the state of the system between runs, causing a variable

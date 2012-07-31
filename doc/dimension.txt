@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -20,7 +20,7 @@ dimension 2 :pre
 
 [Description:]
 
-Set the dimensionality of the simulation.  By default DSMC runs 3d
+Set the dimensionality of the simulation.  By default SPARTA runs 3d
 simulations, but 2d simulations can also be specified.
 
 [Restrictions:]

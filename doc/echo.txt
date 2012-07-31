@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -21,7 +21,7 @@ echo log :pre
 
 [Description:]
 
-This command determines whether DSMC echoes each input script
+This command determines whether SPARTA echoes each input script
 command to the screen and/or log file as it is read and processed.  If
 an input script has errors, it can be useful to look at echoed output
 to see the last command processed.

@@ -1,5 +1,5 @@
-"Previous Section"_Section_errors.html - "DSMC WWW Site"_dws -
-"DSMC Documentation"_dd - "DSMC Commands"_dc - "Next
+"Previous Section"_Section_errors.html - "SPARTA WWW Site"_dws -
+"SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next
 Section"_Manual.html :c
 
 :link(dws,http://dsmc.sandia.gov)
@@ -10,8 +10,8 @@ Section"_Manual.html :c
 
 13. Future and history :h3
 
-This section lists features we are planning to add to DSMC, features
-of previous versions of DSMC, and features of other parallel
+This section lists features we are planning to add to SPARTA, features
+of previous versions of SPARTA, and features of other parallel
 molecular dynamics codes I've distributed.
 
 13.1 "Coming attractions"_#hist_1
@@ -22,8 +22,8 @@ molecular dynamics codes I've distributed.
 13.1 Coming attractions :h4,link(hist_1)
 
 The "Wish list link"_http://dsmc.sandia.gov/future.html on the
-DSMC WWW page gives a list of features we are hoping to add to
-DSMC in the future, including contact names of individuals you can
+SPARTA WWW page gives a list of features we are hoping to add to
+SPARTA in the future, including contact names of individuals you can
 email if you are interested in contributing to the developement or
 would be a future user of that feature.
 

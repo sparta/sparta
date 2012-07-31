@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "DSMSPARTAmmands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -28,7 +28,7 @@ collide vss all.vss background :pre
 [Description:]
 
 Define what style of particle-particle collisions will be performed by
-DSMC.  If collisions are performed, particles are sorted into grid
+SPARTA.  If collisions are performed, particles are sorted into grid
 cells every timestep and the appropriate collision model is invoked on
 a per-grid-cell basis.
 

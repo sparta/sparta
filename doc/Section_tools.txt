@@ -1,5 +1,5 @@
-"Previous Section"_Section_perf.html - "DSMC WWW Site"_dws - "DSMC
-Documentation"_dd - "DSMC Commands"_dc - "Next
+"Previous Section"_Section_perf.html - "SPARTA WWW Site"_dws - "SPARTA
+Documentation"_dd - "SPARTA Commands"_dc - "Next
 Section"_Section_modify.html :c
 
 :link(dws,http://dsmc.sandia.gov)
@@ -10,15 +10,15 @@ Section"_Section_modify.html :c
 
 9. Additional tools :h3
 
-DSMC is designed to be a computational kernel for performing
+SPARTA is designed to be a computational kernel for performing
 molecular dynamics computations.  Additional pre- and post-processing
 steps are often necessary to setup and analyze a simulation.  A few
-additional tools are provided with the DSMC distribution and are
+additional tools are provided with the SPARTA distribution and are
 described in this section.
 
 Our group has also written and released a separate toolkit called
 "Pizza.py"_pizza which provides tools for doing setup, analysis,
-plotting, and visualization for DSMC simulations.  Pizza.py is
+plotting, and visualization for SPARTA simulations.  Pizza.py is
 written in "Python"_python and is available for download from "the
 Pizza.py WWW site"_pizza.
 
@@ -26,15 +26,15 @@ Pizza.py WWW site"_pizza.
 :link(python,http://www.python.org)
 
 Note that many users write their own setup or analysis tools or use
-other existing codes and convert their output to a DSMC input format
-or vice versa.  The tools listed here are included in the DSMC
+other existing codes and convert their output to a SPARTA input format
+or vice versa.  The tools listed here are included in the SPARTA
 distribution as examples of auxiliary tools.  Some of them are not
-actively supported by Sandia, as they were contributed by DSMC
+actively supported by Sandia, as they were contributed by SPARTA
 users.  If you have problems using them, we can direct you to the
 authors.
 
 The source code for each of these codes is in the tools sub-directory
-of the DSMC distribution.  There is a Makefile (which you may need
+of the SPARTA distribution.  There is a Makefile (which you may need
 to edit for your platform) which will build several of the tools which
 reside in that directory.  Some of them are larger packages in their
 own sub-directories with their own Makefiles.

@@ -1,5 +1,5 @@
-"Previous Section"_Section_python.html - "DSMC WWW Site"_dws -
-"DSMC Documentation"_dd - "DSMC Commands"_dc - "Next
+"Previous Section"_Section_python.html - "SPARTA WWW Site"_dws -
+"SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next
 Section"_Section_history.html :c
 
 :link(dws,http://dsmc.sandia.gov)
@@ -11,7 +11,7 @@ Section"_Section_history.html :c
 12. Errors :h3
 
 This section describes the various kinds of errors you can encounter
-when using DSMC.
+when using SPARTA.
 
 12.1 "Common problems"_#err_1
 12.2 "Reporting bugs"_#err_2
@@ -21,7 +21,7 @@ when using DSMC.
 
 12.1 Common problems :link(err_1),h4
 
-If two DSMC runs do not produce the same answer on different
+If two SPARTA runs do not produce the same answer on different
 machines or different numbers of processors, this is typically not a
 bug.  In theory you should get identical answers on any number of
 processors and on any machine.  In practice, numerical round-off can
@@ -49,39 +49,39 @@ will produce different effects when run on different numbers of
 processors.  A commonly-used example is the "fix
 langevin"_fix_langevin.html command for thermostatting.
 
-A DSMC simulation typically has two stages, setup and run.  Most
-DSMC errors are detected at setup time; others like a bond
+A SPARTA simulation typically has two stages, setup and run.  Most
+SPARTA errors are detected at setup time; others like a bond
 stretching too far may not occur until the middle of a run.
 
-DSMC tries to flag errors and print informative error messages so
-you can fix the problem.  Of course, DSMC cannot figure out your
+SPARTA tries to flag errors and print informative error messages so
+you can fix the problem.  Of course, SPARTA cannot figure out your
 physics or numerical mistakes, like choosing too big a timestep,
 specifying erroneous force field coefficients, or putting 2 atoms on
-top of each other!  If you run into errors that DSMC doesn't catch
+top of each other!  If you run into errors that SPARTA doesn't catch
 that you think it should flag, please send an email to the
 "developers"_http://dsmc.sandia.gov/authors.html.
 
 If you get an error message about an invalid command in your input
 script, you can determine what command is causing the problem by
 looking in the log.lammps file or using the "echo command"_echo.html
-to see it on the screen.  For a given command, DSMC expects certain
-arguments in a specified order.  If you mess this up, DSMC will
+to see it on the screen.  For a given command, SPARTA expects certain
+arguments in a specified order.  If you mess this up, SPARTA will
 often flag the error, but it may read a bogus argument and assign a
 value that is valid, but not what you wanted.  E.g. trying to read the
 string "abc" as an integer value and assigning the associated variable
 a value of 0.
 
-Generally, DSMC will print a message to the screen and logfile and
+Generally, SPARTA will print a message to the screen and logfile and
 exit gracefully when it encounters a fatal error.  Sometimes it will
 print a WARNING to the screen and logfile and continue on; you can
 decide if the WARNING is important or not.  A WARNING message that is
 generated in the middle of a run is only printed to the screen, not to
-the logfile, to avoid cluttering up thermodynamic output.  If DSMC
+the logfile, to avoid cluttering up thermodynamic output.  If SPARTA
 crashes or hangs without spitting out an error message first then it
 could be a bug (see "this section"_#err_2) or one of the following
 cases:
 
-DSMC runs in the available memory a processor allows to be
+SPARTA runs in the available memory a processor allows to be
 allocated.  Most reasonable MD runs are compute limited, not memory
 limited, so this shouldn't be a bottleneck on most platforms.  Almost
 all large memory allocations in the code are done via C-style malloc's
@@ -89,19 +89,19 @@ which will generate an error message if you run out of memory.
 Smaller chunks of memory are allocated via C++ "new" statements.  If
 you are unlucky you could run out of memory just when one of these
 small requests is made, in which case the code will crash or hang (in
-parallel), since DSMC doesn't trap on those errors.
+parallel), since SPARTA doesn't trap on those errors.
 
-Illegal arithmetic can cause DSMC to run slow or crash.  This is
+Illegal arithmetic can cause SPARTA to run slow or crash.  This is
 typically due to invalid physics and numerics that your simulation is
 computing.  If you see wild thermodynamic values or NaN values in your
-DSMC output, something is wrong with your simulation.  If you
+SPARTA output, something is wrong with your simulation.  If you
 suspect this is happening, it is a good idea to print out
 thermodynamic info frequently (e.g. every timestep) via the
 "thermo"_thermo.html so you can monitor what is happening.
 Visualizing the atom movement is also a good idea to insure your model
 is behaving as you expect.
 
-In parallel, one way DSMC can hang is due to how different MPI
+In parallel, one way SPARTA can hang is due to how different MPI
 implementations handle buffering of messages.  If the code hangs
 without an error message, it may be that you need to specify an MPI
 setting or two (usually via an environment variable) to enable
@@ -111,11 +111,11 @@ buffering or boost the sizes of messages that can be buffered.
 
 12.2 Reporting bugs :link(err_2),h4
 
-If you are confident that you have found a bug in DSMC, follow these
+If you are confident that you have found a bug in SPARTA, follow these
 steps.
 
 Check the "New features and bug
-fixes"_http://dsmc.sandia.gov/bug.html section of the "DSMC WWW
+fixes"_http://dsmc.sandia.gov/bug.html section of the "SPARTA WWW
 site"_dws to see if the bug has already been reported or fixed or the
 "Unfixed bug"_http://dsmc.sandia.gov/unbug.html to see if a fix is
 pending.
@@ -142,7 +142,7 @@ As a last resort, you can send an email directly to the
 12.3 Error & warning messages :h4,link(err_3)
 
 These are two alphabetic lists of the "ERROR"_#error and
-"WARNING"_#warn messages DSMC prints out and the reason why.  If the
+"WARNING"_#warn messages SPARTA prints out and the reason why.  If the
 explanation here is not sufficient, the documentation for the
 offending command may help.  
 Error and warning messages also list the source file and line number
@@ -228,7 +228,7 @@ UNDOCUMENTED :dd
 
 {Cannot create/grow a vector/array of pointers for %s} :dt
 
-DSMC code is making an illegal call to the templated memory
+SPARTA code is making an illegal call to the templated memory
 allocaters, to create a vector or array of pointers. :dd
 
 {Cannot create_box after simulation box is defined} :dt
@@ -252,18 +252,18 @@ UNDOCUMENTED :dd
 
 Self-explanatory. :dd
 
-{Cannot open log.dsmc} :dt
+{Cannot open log.sparta} :dt
 
 UNDOCUMENTED :dd
 
 {Cannot open logfile} :dt
 
-The DSMC log file named in a command-line argument cannot be opened.
+The SPARTA log file named in a command-line argument cannot be opened.
 Check that the path and name are correct. :dd
 
 {Cannot open logfile %s} :dt
 
-The DSMC log file specified in the input script cannot be opened.
+The SPARTA log file specified in the input script cannot be opened.
 Check that the path and name are correct. :dd
 
 {Cannot open screen file} :dt
@@ -365,12 +365,12 @@ The quantity being read is a floating point or non-numeric value. :dd
 
 {Failed to allocate %ld bytes for array %s} :dt
 
-Your DSMC simulation has run out of memory.  You need to run a
+Your SPARTA simulation has run out of memory.  You need to run a
 smaller simulation or on more processors. :dd
 
 {Failed to reallocate %ld bytes for array %s} :dt
 
-Your DSMC simulation has run out of memory.  You need to run a
+Your SPARTA simulation has run out of memory.  You need to run a
 smaller simulation or on more processors. :dd
 
 {Fix in variable not computed at compatible time} :dt
@@ -394,7 +394,7 @@ Self-explanatory. :dd
 
 Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
-command-line option when running DSMC to see the offending line. :dd
+command-line option when running SPARTA to see the offending line. :dd
 
 {Incorrect line format in species file} :dt
 
@@ -438,7 +438,7 @@ UNDOCUMENTED :dd
 {Invalid command-line argument} :dt
 
 One or more command-line arguments is invalid.  Check the syntax of
-the command you are using to launch DSMC. :dd
+the command you are using to launch SPARTA. :dd
 
 {Invalid compute ID in variable formula} :dt
 
@@ -516,7 +516,7 @@ Self-explanatory. :dd
 
 Self-explanatory. :dd
 
-{MPI_DSMC_BIGINT and bigint in dsmctype.h are not compatible} :dt
+{MPI_SPARTA_BIGINT and bigint in dsmctype.h are not compatible} :dt
 
 UNDOCUMENTED :dd
 
@@ -568,7 +568,7 @@ Self-explanatory. :dd
 {Processor partitions are inconsistent} :dt
 
 The total number of processors in all partitions must match the number
-of processors DSMC is running on. :dd
+of processors SPARTA is running on. :dd
 
 {Region ID in variable formula does not exist} :dt
 
@@ -632,7 +632,7 @@ number of processor partitions. :dd
 
 {Unknown command: %s} :dt
 
-The command is not known to DSMC.  Check the input script. :dd
+The command is not known to SPARTA.  Check the input script. :dd
 
 {Variable formula compute array is accessed out-of-range} :dt
 

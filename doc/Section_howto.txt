@@ -1,4 +1,4 @@
-"Previous Section"_Section_commands.html - "DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next Section"_Section_example.html :c
+"Previous Section"_Section_commands.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_example.html :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -9,9 +9,9 @@
 6. How-to discussions :h3
 
 The following sections describe how to use various options within
-DSMC.
+SPARTA.
 
-The example input scripts included in the DSMC distribution and
+The example input scripts included in the SPARTA distribution and
 highlighted in "this section"_Section_example.html also show how to
 setup and run various kinds of simulations.
 

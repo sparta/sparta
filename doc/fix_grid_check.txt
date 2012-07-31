@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -25,7 +25,7 @@ fix 1 grid/check 100 :pre
 Check if particles are inside the grid cell they are supposed to be,
 based on their current coordinates.  This is useful as a debugging
 check to insure that no particles have been assigned to the incorrect
-grid cell during the particle move stage of the DSMC algorithm.
+grid cell during the particle move stage of the SPARTA algorithm.
 
 The check is performed every {N} timesteps.  Particles not inside the
 correct grid cell are counted and the value of the count can be

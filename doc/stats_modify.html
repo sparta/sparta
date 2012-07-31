@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -37,11 +37,11 @@ stats_modify line multi format float %g
 <P><B>Description:</B>
 </P>
 <P>Set options for how statistical information is computed and printed by
-DSMC.
+SPARTA.
 </P>
 <P>The <I>flush</I> keyword invokes a flush operation after statistical info
 is written to the log file.  This insures the output in that file is
-current (no buffering by the OS), even if DSMC halts before the
+current (no buffering by the OS), even if SPARTA halts before the
 simulation completes.
 </P>
 <P>The <I>format</I> keyword sets the numeric format of individual printed
@@ -55,7 +55,7 @@ take precedent over the <I>int</I> or <I>float</I> setting.
 <P>IMPORTANT NOTE: The statistical output values <I>step</I> and <I>npart</I> are
 stored internally as 8-byte signed integers, rather than the usual
 4-byte signed integers.  When specifying the "format int" keyword you
-can use a "%d"-style format identifier in the format string and DSMC
+can use a "%d"-style format identifier in the format string and SPARTA
 will convert this to the corresponding "%lu" form when it is applied
 to those keywords.  However, when specifying the "format M string"
 keyword for <I>step</I> and <I>natoms</I>, you should specify a string

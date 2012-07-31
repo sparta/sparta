@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -91,7 +91,7 @@ or one per processor).
 
 The {molecule} and {grid} and {surf} styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
-of the DSMC "post-processing tools"_Section_tools.html, including
+of the SPARTA "post-processing tools"_Section_tools.html, including
 "Pizza.py"_http://www.sandia.gov/~sjplimp/pizza.html, work with this
 format.
 
@@ -137,7 +137,7 @@ command.
 The specified filename determines how the dump file(s) is written.
 The default is to write one large text file, which is opened when the
 dump command is invoked and closed when an "undump"_undump.html
-command is used or when DSMC exits.
+command is used or when SPARTA exits.
 
 Dump filenames can contain two wildcard characters.  If a "*"
 character appears in the filename, then one file per snapshot is
@@ -220,7 +220,7 @@ fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
 
 See "Section_modify"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to DSMC to calculate
+on how to add new compute and fix styles to SPARTA to calculate
 per-molecule quantities which could then be output into dump files.
 
 :line
@@ -282,7 +282,7 @@ they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 
 See "Section_modify"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to DSMC to calculate per-grid
+on how to add new compute and fix styles to SPARTA to calculate per-grid
 quantities which could then be output into dump files.
 
 :line
@@ -346,15 +346,15 @@ they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 
 See "Section_modify"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to DSMC to calculate per-surf
+on how to add new compute and fix styles to SPARTA to calculate per-surf
 quantities which could then be output into dump files.
 
 :line
 
 [Restrictions:]
 
-To write gzipped dump files, you must compile DSMC with the
--DDSMC_GZIP option - see the "Making DSMC"_Section_start.html#start_2
+To write gzipped dump files, you must compile SPARTA with the
+-DSPARTA_GZIP option - see the "Making SPARTA"_Section_start.html#start_2
 section of the documentation.
 
 [Related commands:]

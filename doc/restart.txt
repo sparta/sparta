@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -33,7 +33,7 @@ Write out a binary restart file every so many timesteps as a run
 proceeds.  A value of 0 means do not write out restart files.  Using
 one filename as an argument will create a series of filenames which
 include the timestep in the filename.  Using two filenames will
-produce only 2 restart files.  DSMC will toggle between the 2 names as
+produce only 2 restart files.  SPARTA will toggle between the 2 names as
 it writes successive restart files.
 
 Similar to "dump"_dump.html files, the restart filename(s) can contain

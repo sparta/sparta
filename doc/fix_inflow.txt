@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -47,7 +47,7 @@ Specifying {all} is the same as specifying all 6 individual faces.
 
 On each insertion timestep, each cell with a face(s) adjacent to an
 inflow boundary performs the following computation at the beginning of
-the DSMC timestep.
+the SPARTA timestep.
 
 The number of particles {M} to be inserted on the
 face is calculated, which is a function of the global {Fnum} value,

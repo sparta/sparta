@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -24,7 +24,7 @@ jump SELF runloop :pre
 [Description:]
 
 This command closes the current input script file, opens the file with
-the specified name, and begins reading DSMC commands from that file.
+the specified name, and begins reading SPARTA commands from that file.
 Unlike the "include"_include.html command, the original file is not
 returned to, although by using multiple jump commands it is possible
 to chain from file to file or back to the original file.
@@ -69,7 +69,7 @@ jump in.lj loop :pre
 
 If the jump {file} argument is a variable, the jump command can be
 used to cause different processor partitions to run different input
-scripts.  In this example, DSMC is run on 40 processors, with 4
+scripts.  In this example, SPARTA is run on 40 processors, with 4
 partitions of 10 procs each.  An in.file containing the example
 variable and jump command will cause each partition to run a different
 simulation.
@@ -100,7 +100,7 @@ jump	    in.script loopa :pre
 [Restrictions:]
 
 If you jump to a file and it does not contain the specified label,
-DSMC will come to the end of the file and exit.
+SPARTA will come to the end of the file and exit.
 
 [Related commands:]
 

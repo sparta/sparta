@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -101,7 +101,7 @@ or one per processor).
 
 <P>The <I>molecule</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
-of the DSMC <A HREF = "Section_tools.html">post-processing tools</A>, including
+of the SPARTA <A HREF = "Section_tools.html">post-processing tools</A>, including
 <A HREF = "http://www.sandia.gov/~sjplimp/pizza.html">Pizza.py</A>, work with this
 format.
 </P>
@@ -147,7 +147,7 @@ command.
 <P>The specified filename determines how the dump file(s) is written.
 The default is to write one large text file, which is opened when the
 dump command is invoked and closed when an <A HREF = "undump.html">undump</A>
-command is used or when DSMC exits.
+command is used or when SPARTA exits.
 </P>
 <P>Dump filenames can contain two wildcard characters.  If a "*"
 character appears in the filename, then one file per snapshot is
@@ -230,7 +230,7 @@ fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
 </P>
 <P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
-on how to add new compute and fix styles to DSMC to calculate
+on how to add new compute and fix styles to SPARTA to calculate
 per-molecule quantities which could then be output into dump files.
 </P>
 <HR>
@@ -292,7 +292,7 @@ they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 </P>
 <P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
-on how to add new compute and fix styles to DSMC to calculate per-grid
+on how to add new compute and fix styles to SPARTA to calculate per-grid
 quantities which could then be output into dump files.
 </P>
 <HR>
@@ -356,15 +356,15 @@ they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 </P>
 <P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
-on how to add new compute and fix styles to DSMC to calculate per-surf
+on how to add new compute and fix styles to SPARTA to calculate per-surf
 quantities which could then be output into dump files.
 </P>
 <HR>
 
 <P><B>Restrictions:</B>
 </P>
-<P>To write gzipped dump files, you must compile DSMC with the
--DDSMC_GZIP option - see the <A HREF = "Section_start.html#start_2">Making DSMC</A>
+<P>To write gzipped dump files, you must compile SPARTA with the
+-DSPARTA_GZIP option - see the <A HREF = "Section_start.html#start_2">Making SPARTA</A>
 section of the documentation.
 </P>
 <P><B>Related commands:</B>

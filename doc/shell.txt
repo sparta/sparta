@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -48,15 +48,15 @@ the command in a shell.
 This is means to invoke other commands from your input script.  For
 example, you can move files around in preparation for the next section
 of the input script.  Or you can run a program that pre-processes data
-for input into DSMC.  Or you can run a program that post-processes
-DSMC output data.
+for input into SPARTA.  Or you can run a program that post-processes
+SPARTA output data.
 
 With the exception of {cd}, all commands, including ones invoked via a
 system() call, are executed by only a single processor, so that
 files/directories are not being manipulated by multiple processors.
 
 The {cd} cmd executes the Unix "cd" command to change the working
-directory.  All subsequent DSMC commands that read/write files will
+directory.  All subsequent SPARTA commands that read/write files will
 use the new directory.  All processors execute this command.
 
 The {mkdir} cmd executes the Unix "mkdir" command to create one or
@@ -89,7 +89,7 @@ with 3 arguments: file1 10 file2.
 
 [Restrictions:]
 
-DSMC does not detect errors or print warnings when any of these
+SPARTA does not detect errors or print warnings when any of these
 commands execute.  E.g. if the specified directory does not exist,
 executing the {cd} command will silently do nothing.
 

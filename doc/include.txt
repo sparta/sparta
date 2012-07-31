@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -21,11 +21,11 @@ include in.run2 :pre
 
 [Description:]
 
-This command opens a new input script file and begins reading DSMC
+This command opens a new input script file and begins reading SPARTA
 commands from that file.  When the new file is finished, the original
 file is returned to.  Include files can be nested as deeply as
 desired.  If input script A includes script B, and B includes A, then
-DSMC could run for a long time.
+SPARTA could run for a long time.
 
 If the filename is a variable (see the "variable"_variable.html
 command), different processor partitions can run different input

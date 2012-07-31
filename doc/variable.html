@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> 
+<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -78,7 +78,7 @@ variable x delete
 <P>This command assigns one or more strings to a variable name for
 evaluation later in the input script or during a simulation.
 </P>
-<P>Variables can be used in several ways in DSMC.  A variable can be
+<P>Variables can be used in several ways in SPARTA.  A variable can be
 referenced elsewhere in an input script to become part of a new input
 command.  For variable styles that store multiple strings, the
 <A HREF = "next.html">next</A> command can be used to increment which string is
@@ -190,7 +190,7 @@ inclusive, and the string N1 is initially assigned to the variable.
 <P>For the <I>world</I> style, one or more strings are specified.  There must
 be one string for each processor partition or "world".  See <A HREF = "Section_start.html#start_6">this
 section</A> of the manual for information on
-running DSMC with multiple partitions via the "-partition"
+running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command assigns one string to each
 world.  All processors in the world are assigned the same string.  The
 next command cannot be used with <I>equal</I> style variables, since there
@@ -203,7 +203,7 @@ different partitions.
 <P>For the <I>universe</I> style, one or more strings are specified.  There
 must be at least as many strings as there are processor partitions or
 "worlds".  See <A HREF = "Section_start.html#start_6">this page</A> for information
-on running DSMC with multiple partitions via the "-partition"
+on running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command initially assigns one
 string to each world.  When a <A HREF = "next.html">next</A> command is encountered
 using this variable, the first processor partition to encounter it, is
@@ -213,7 +213,7 @@ variable strings are consumed.  Thus, this command can be used to run
 one after the other on whatever partition becomes available, until
 they are all finished.  <I>Universe</I> style variables are incremented
 using the files "tmp.lammps.variable" and "tmp.lammps.variable.lock"
-which you will see in your directory during such a DSMC run.
+which you will see in your directory during such a SPARTA run.
 </P>
 <P>The <I>uloop</I> style is identical to the <I>universe</I> style except that the
 strings are the integers from 1 to N.  This allows generation of long
@@ -574,7 +574,7 @@ produce only a global scalar or a per-molecule vectors, never both.
 variable b equal v_a
 print $a 
 </PRE>
-<P>then DSMC may run for a while when the print statement is invoked!
+<P>then SPARTA may run for a while when the print statement is invoked!
 </P>
 <HR>
 
@@ -635,7 +635,7 @@ is evaluated later.
 
 <P><B>Variable Accuracy:</B>
 </P>
-<P>Obviously, DSMC attempts to evaluate variables containing formulas
+<P>Obviously, SPARTA attempts to evaluate variables containing formulas
 (<I>equal</I> and <I>particle</I> style variables) accurately whenever the
 evaluation is performed.  Depending on what is included in the
 formula, this may require invoking a <A HREF = "compute.html">compute</A>, either
@@ -643,7 +643,7 @@ directly or indirectly via a thermo keyword, or accessing a value
 previously calculated by a compute, or accessing a value calculated
 and stored by a <A HREF = "fix.html">fix</A>.
 </P>
-<P>DSMC keeps track of all of this during a <A HREF = "run.html">run</A> or <A HREF = "minimize.html">energy
+<P>SPARTA keeps track of all of this during a <A HREF = "run.html">run</A> or <A HREF = "minimize.html">energy
 minimization</A>.  An error will be generated if you
 attempt to evaluate a variable on timesteps when it cannot produce
 accurate values.  For example, if a <A HREF = "thermo_style.html">thermo_style
@@ -655,7 +655,7 @@ averaging frequency used in the fix command, then an error will occur.
 <P>An input script can also request variables be evaluated before or
 after or in between runs, e.g. by including them in a
 <A HREF = "print.html">print</A> command.  In this case, if a compute is needed to
-evaluate a variable (either directly or indirectly), DSMC will not
+evaluate a variable (either directly or indirectly), SPARTA will not
 invoke the compute, but it will use a value previously calculated by
 the compute, and can do this only if it is current.  Fixes will always
 provide a quantity needed by a variable, but the quantity may or may
@@ -666,9 +666,9 @@ references to a compute or fix, and these values were calculated on
 the last timestep of a preceeding run, then they will be accessed and
 used by the variable and the result will be accurate.
 </P>
-<P>(2) DSMC may not be able to evaluate the variable and generate an
+<P>(2) SPARTA may not be able to evaluate the variable and generate an
 error.  For example, if the variable requires a quantity from a
-<A HREF = "compute.html">compute</A> that is not current, DSMC will generate an
+<A HREF = "compute.html">compute</A> that is not current, SPARTA will generate an
 error.  This means, for example, that such a variable cannot be
 evaluated before the first run has occurred.  Likewise, in between
 runs, such a variable cannot be accessed unless it was evaluated on
@@ -715,7 +715,7 @@ until a run is performed.  Thus if a variable attempts to print this
 value before the first run, zeroes will be output.  Again, performing
 a 0-timestep run before printing the variable has the desired effect.
 </P>
-<P>(3) The variable may be evaluated incorrectly.  And DSMC may have
+<P>(3) The variable may be evaluated incorrectly.  And SPARTA may have
 no way to detect this has occurred.  Consider the following sequence
 of commands:
 </P>
@@ -732,7 +732,7 @@ evaluated on the final timestep and stored by the <A HREF = "compute_pe.html">co
 pe</A> compute (this is done by the
 <A HREF = "thermo_style.html">thermo_style</A> command).  Then a pair coefficient is
 changed, altering the potential energy of the system.  When the
-potential energy is printed via the "e" variable, DSMC will use the
+potential energy is printed via the "e" variable, SPARTA will use the
 potential energy value stored by the <A HREF = "compute_pe.html">compute pe</A>
 compute, thinking it is current.  There are many other commands which
 could alter the state of the system between runs, causing a variable

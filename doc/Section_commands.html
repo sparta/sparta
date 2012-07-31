@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "Section_start.html">Previous Section</A> - <A HREF = "http://dsmc.sandia.gov">DSMC WWW Site</A> - <A HREF = "Manual.html">DSMC Documentation</A> - <A HREF = "Section_commands.html#comm">DSMC Commands</A> - <A HREF = "Section_howto.html">Next Section</A> 
+<CENTER><A HREF = "Section_start.html">Previous Section</A> - <A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_howto.html">Next Section</A> 
 </CENTER>
 
 
@@ -11,10 +11,10 @@
 
 <H3>3. Commands 
 </H3>
-<P>This section describes how a DSMC input script is formatted and what
-commands are used to define a DSMC simulation.
+<P>This section describes how a SPARTA input script is formatted and what
+commands are used to define a SPARTA simulation.
 </P>
-3.1 <A HREF = "#cmd_1">DSMC input script</A><BR>
+3.1 <A HREF = "#cmd_1">SPARTA input script</A><BR>
 3.2 <A HREF = "#cmd_2">Parsing rules</A><BR>
 3.3 <A HREF = "#cmd_3">Input script structure</A><BR>
 3.4 <A HREF = "#cmd_4">Commands listed by category</A><BR>
@@ -22,11 +22,11 @@ commands are used to define a DSMC simulation.
 
 <HR>
 
-<A NAME = "cmd_1"></A><H4>3.1 DSMC input script 
+<A NAME = "cmd_1"></A><H4>3.1 SPARTA input script 
 </H4>
-<P>DSMC executes by reading commands from a input script (text file),
-one line at a time.  When the input script ends, DSMC exits.  Each
-command causes DSMC to take some action.  It may set an internal
+<P>SPARTA executes by reading commands from a input script (text file),
+one line at a time.  When the input script ends, SPARTA exits.  Each
+command causes SPARTA to take some action.  It may set an internal
 variable, read in a file, or run a simulation.  Most commands have
 default settings, which means you only need to use the command if you
 wish to change the default.
@@ -34,7 +34,7 @@ wish to change the default.
 <P>In many cases, the ordering of commands in an input script is not
 important.  However the following rules apply:
 </P>
-<P>(1) DSMC does not read your entire input script and then perform a
+<P>(1) SPARTA does not read your entire input script and then perform a
 simulation with all the settings.  Rather, the input script is read
 one line at a time and each command takes effect when it is read.
 Thus this sequence of commands:
@@ -66,9 +66,9 @@ is to have the desired effect.  For example, the
 up the simulation box and assigning atoms to processors.  If default
 values are not desired, the <A HREF = "processors.html">processors</A> and
 <A HREF = "boundary.html">boundary</A> commands need to be used before read_data to
-tell DSMC how to map processors to the simulation box.
+tell SPARTA how to map processors to the simulation box.
 </P>
-<P>Many input script errors are detected by DSMC and an ERROR or
+<P>Many input script errors are detected by SPARTA and an ERROR or
 WARNING message is printed.  <A HREF = "Section_errors.html">This section</A> gives
 more information on what errors mean.  The documentation for each
 command lists restrictions on how the command can be used.
@@ -78,11 +78,11 @@ command lists restrictions on how the command can be used.
 <A NAME = "cmd_2"></A><H4>3.2 Parsing rules 
 </H4>
 <P>Each non-blank line in the input script is treated as a command.
-DSMC commands are case sensitive.  Command names are lower-case, as
+SPARTA commands are case sensitive.  Command names are lower-case, as
 are specified command arguments.  Upper case letters may be used in
 file names or user-chosen ID strings.
 </P>
-<P>Here is how each line in the input script is parsed by DSMC:
+<P>Here is how each line in the input script is parsed by SPARTA:
 </P>
 <P>(1) If the last printable character on the line is a "&" character
 (with no surrounding quotes), the command is assumed to continue on
@@ -136,13 +136,13 @@ allowed, but that should be sufficient for most use cases.
 
 <H4><A NAME = "cmd_3"></A>3.3 Input script structure 
 </H4>
-<P>This section describes the structure of a typical DSMC input script.
-The "examples" directory in the DSMC distribution contains many
+<P>This section describes the structure of a typical SPARTA input script.
+The "examples" directory in the SPARTA distribution contains many
 sample input scripts; the corresponding problems are discussed in
-<A HREF = "Section_example.html">this section</A>, and animated on the <A HREF = "http://dsmc.sandia.gov">DSMC WWW
+<A HREF = "Section_example.html">this section</A>, and animated on the <A HREF = "http://dsmc.sandia.gov">SPARTA WWW
 Site</A>.
 </P>
-<P>A DSMC input script typically has 4 parts:
+<P>A SPARTA input script typically has 4 parts:
 </P>
 <OL><LI>Initialization
 <LI>Problem definition
@@ -163,7 +163,7 @@ read-in from a file.
 </P>
 <P>(2) Problem definition
 </P>
-<P>These items must be setup to run a DSMC calculation:
+<P>These items must be setup to run a SPARTA calculation:
 </P>
 <UL><LI>simulation box via <A HREF = "create_box.html">create_box</A>
 <LI>grid via <A HREF = "create_grid.html">create_grid</A>
@@ -187,12 +187,12 @@ specified: simulation parameters, output options, etc.
 
 <A NAME = "cmd_4"></A><H4>3.4 Commands listed by category 
 </H4>
-<P>This section lists all DSMC commands, grouped by category.  The
+<P>This section lists all SPARTA commands, grouped by category.  The
 <A HREF = "#cmd_5">next section</A> lists the same commands alphabetically.  Note
-that some style options for some commands are part of specific DSMC
+that some style options for some commands are part of specific SPARTA
 packages, which means they cannot be used unless the package was
-included when DSMC was built.  Not all packages are included in a
-default DSMC build.  These dependencies are listed as Restrictions
+included when SPARTA was built.  Not all packages are included in a
+default SPARTA build.  These dependencies are listed as Restrictions
 in the command's documentation.
 </P>
 <P>Initialization:
@@ -223,13 +223,13 @@ in the command's documentation.
 
 <H4><A NAME = "cmd_5"></A><A NAME = "comm"></A>3.5 Individual commands 
 </H4>
-<P>This section lists all DSMC commands alphabetically, with a separate
+<P>This section lists all SPARTA commands alphabetically, with a separate
 listing below of styles within certain commands.  The <A HREF = "#cmd_4">previous
 section</A> lists the same commands, grouped by category.  Note
-that some style options for some commands are part of specific DSMC
+that some style options for some commands are part of specific SPARTA
 packages, which means they cannot be used unless the package was
-included when DSMC was built.  Not all packages are included in a
-default DSMC build.  These dependencies are listed as Restrictions
+included when SPARTA was built.  Not all packages are included in a
+default SPARTA build.  These dependencies are listed as Restrictions
 in the command's documentation.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >

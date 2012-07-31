@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -29,7 +29,7 @@ subsequently substituted for in an input script command, the new value
 is used. 
 
 See the "variable"_variable.html command for info on how to define and
-use different kinds of variables in DSMC input scripts.  If a
+use different kinds of variables in SPARTA input scripts.  If a
 variable name is a single lower-case character from "a" to "z", it can
 be used in an input script command as $a or $z.  If it is multiple
 letters, it can be used as $\{myTemp\}.
@@ -56,12 +56,12 @@ the next value is assigned to the variable for all processors.  When
 the next command is used with {universe}- or {uloop}-style variables,
 the next value is assigned to whichever processor partition executes
 the command first.  All processors in the partition are assigned the
-same value.  Running DSMC on multiple partitions of processors via
+same value.  Running SPARTA on multiple partitions of processors via
 the "-partition" command-line switch is described in "this
 section"_Section_start.html#start_6 of the manual.  {Universe}- and
 {uloop}-style variables are incremented using the files
 "tmp.lammps.variable" and "tmp.lammps.variable.lock" which you will
-see in your directory during such a DSMC run.
+see in your directory during such a SPARTA run.
 
 Here is an example of running a series of simulations using the next
 command with an {index}-style variable.  If this input script is named

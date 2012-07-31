@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -39,11 +39,11 @@ surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 :pre
 
 [Description:]
 
-Define a style of particle-surface collisions to be performed by DSMC.
+Define a style of particle-surface collisions to be performed by SPARTA.
 One or more styles can be defined and assigned to different surfaces
 or simulation box boundaries via the "surface"_surface.html or
 "bound_modify"_bound_modify.html commands.  See the
-"read_surf"_read_surf.html command for a description of how DSMC
+"read_surf"_read_surf.html command for a description of how SPARTA
 defines surfaces as collections of geometric elements, triangles in 3d
 and line segments in 2d.
 
@@ -97,7 +97,7 @@ with the surface.
 
 Note that you should define the velocity vector to be tangential to
 the surface.  Normally this keyword should only be used for flat
-surfaces, such as the simulation box wall.  DSMC does not check for
+surfaces, such as the simulation box wall.  SPARTA does not check for
 these conditions.
 
 :line

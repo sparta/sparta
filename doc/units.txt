@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -22,7 +22,7 @@ units cgs :pre
 
 This command sets the style of units used for a simulation.  It
 determines the units of all quantities specified in the input script
-and various input files read by DSMC, as well as the units of all
+and various input files read by SPARTA, as well as the units of all
 quantities output to the screen, log file, dump files, and other
 output files.  Typically, this command is used at the very beginning
 of an input script.

@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -308,7 +308,7 @@ default, then it will not be written.
 The {flush} keyword determines whether a flush operation is invoked
 after a dump snapshot is written to the dump file.  A flush insures
 the output in that file is current (no buffering by the OS), even if
-DSMC halts before the simulation completes.  Flushes cannot be
+SPARTA halts before the simulation completes.  Flushes cannot be
 performed with dump style {xtc}.
 
 The text-based dump styles have a default C-style format string which
@@ -373,7 +373,7 @@ thresh = none :ul
 
 :line
 
-These are the 140 colors that DSMC pre-defines for use with the
+These are the 140 colors that SPARTA pre-defines for use with the
 "dump image"_dump_image.html and dump_modify commands.  Additional
 colors can be defined with the dump_modify color command.  The 3
 numbers listed for each name are the RGB (red/green/blue) values.

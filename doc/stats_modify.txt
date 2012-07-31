@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -31,11 +31,11 @@ stats_modify line multi format float %g :pre
 [Description:]
 
 Set options for how statistical information is computed and printed by
-DSMC.
+SPARTA.
 
 The {flush} keyword invokes a flush operation after statistical info
 is written to the log file.  This insures the output in that file is
-current (no buffering by the OS), even if DSMC halts before the
+current (no buffering by the OS), even if SPARTA halts before the
 simulation completes.
 
 The {format} keyword sets the numeric format of individual printed
@@ -49,7 +49,7 @@ take precedent over the {int} or {float} setting.
 IMPORTANT NOTE: The statistical output values {step} and {npart} are
 stored internally as 8-byte signed integers, rather than the usual
 4-byte signed integers.  When specifying the "format int" keyword you
-can use a "%d"-style format identifier in the format string and DSMC
+can use a "%d"-style format identifier in the format string and SPARTA
 will convert this to the corresponding "%lu" form when it is applied
 to those keywords.  However, when specifying the "format M string"
 keyword for {step} and {natoms}, you should specify a string

@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -82,7 +82,7 @@ see the full-size images:
 The filename suffix determines whether a JPG or PPM file is created.
 If the suffix is ".jpg" or ".jpeg", then a JPG file is created, else a
 PPM file is created, which is a text-based format.  To write out JPG
-files, you must build DSMC with a JPEG library.  See "this
+files, you must build SPARTA with a JPEG library.  See "this
 section"_Section_start.html#start_2_4 of the manual for instructions
 on how to do this.
 
@@ -330,9 +330,9 @@ obviously play movie files directly. :ule,l
 
 [Restrictions:]
 
-To write JPG images, you must use a -DDSMC_JPEG switch when building
-DSMC and link with a JPEG library.  See the "Making
-DSMC"_Section_start.html#start_2_4 section of the documentation for
+To write JPG images, you must use a -DSPARTA_JPEG switch when building
+SPARTA and link with a JPEG library.  See the "Making
+SPARTA"_Section_start.html#start_2_4 section of the documentation for
 details.
 
 [Related commands:]

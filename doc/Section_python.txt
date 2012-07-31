@@ -1,4 +1,4 @@
-"Previous Section"_Section_modify.html - "DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next Section"_Section_errors.html :c
+"Previous Section"_Section_modify.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_errors.html :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -6,22 +6,22 @@
 
 :line
 
-11. Python interface to DSMC :h3
+11. Python interface to SPARTA :h3
 
-The DSMC distribution includes some Python code in its python
-directory which wraps the library interface to DSMC.  This makes it
-is possible to run DSMC, invoke DSMC commands or give it an input
-script, extract DSMC results, an modify internal DSMC variables,
+The SPARTA distribution includes some Python code in its python
+directory which wraps the library interface to SPARTA.  This makes it
+is possible to run SPARTA, invoke SPARTA commands or give it an input
+script, extract SPARTA results, an modify internal SPARTA variables,
 either from a Python script or interactively from a Python prompt.
 
 "Python"_http://www.python.org is a powerful scripting and programming
-language which can be used to wrap software like DSMC and other
+language which can be used to wrap software like SPARTA and other
 packages.  It can be used to glue multiple pieces of software
 together, e.g. to run a coupled or multiscale model.  See "this
 section"_Section_howto.html#howto_10 of the manual and the couple
-directory of the distribution for more ideas about coupling DSMC to
+directory of the distribution for more ideas about coupling SPARTA to
 other codes.  See "this section"_Section_start.html#start_4 about how
-to build DSMC as a library, and "this
+to build SPARTA as a library, and "this
 section"_Section_howto.html#howto_19 for a description of the library
 interface provided in src/library.cpp and src/library.h and how to
 extend it for your needs.  As described below, that interface is what
@@ -29,32 +29,32 @@ is exposed to Python.  It is designed to be easy to add functions to.
 This has the effect of extending the Python inteface as well.  See
 details below.
 
-By using the Python interface DSMC can also be coupled with a GUI or
+By using the Python interface SPARTA can also be coupled with a GUI or
 visualization tools that display graphs or animations in real time as
-DSMC runs.  Examples of such scripts are inlcluded in the python
+SPARTA runs.  Examples of such scripts are inlcluded in the python
 directory.
 
 Two advantages of using Python are how concise the language is and
 that it can be run interactively, enabling rapid development and
 debugging of programs.  If you use it to mostly invoke costly
-operations within DSMC, such as running a simulation for a
+operations within SPARTA, such as running a simulation for a
 reasonable number of timesteps, then the overhead cost of invoking
-DSMC thru Python will be negligible.
+SPARTA thru Python will be negligible.
 
-Before using DSMC from a Python script, the Python on your machine
-must be "extended" to include an interface to the DSMC library.  If
+Before using SPARTA from a Python script, the Python on your machine
+must be "extended" to include an interface to the SPARTA library.  If
 your Python script will invoke MPI operations, you will also need to
 extend your Python with an interface to MPI itself.
 
-Thus you should first decide how you intend to use DSMC from Python.
+Thus you should first decide how you intend to use SPARTA from Python.
 There are 3 options:
 
-(1) Use DSMC on a single processor running Python.
+(1) Use SPARTA on a single processor running Python.
 
-(2) Use DSMC in parallel, where each processor runs Python, but your
+(2) Use SPARTA in parallel, where each processor runs Python, but your
 Python program does not use MPI.
 
-(3) Use DSMC in parallel, where each processor runs Python, and your
+(3) Use SPARTA in parallel, where each processor runs Python, and your
 Python script also makes MPI calls through a Python/MPI interface.
 
 Note that for (2) and (3) you will not be able to use Python
@@ -64,7 +64,7 @@ parallel machine) and they cannot all read what you type.
 
 Working in mode (1) does not require your machine to have MPI
 installed.  You should extend your Python with a serial version of
-DSMC and the dummy MPI library provided with DSMC.  See
+SPARTA and the dummy MPI library provided with SPARTA.  See
 instructions below on how to do this.
 
 Working in mode (2) requires your machine to have an MPI library
@@ -72,68 +72,68 @@ installed, but your Python does not need to be extended with MPI
 itself.  The MPI library must be a shared library (e.g. a *.so file on
 Linux) which is not typically created when MPI is built/installed.
 See instruction below on how to do this.  You should extend your
-Python with the a parallel versionn of DSMC which will use the
+Python with the a parallel versionn of SPARTA which will use the
 shared MPI system library.  See instructions below on how to do this.
 
 Working in mode (3) requires your machine to have MPI installed (as a
 shared library as in (2)).  You must also extend your Python with a
-parallel version of DSMC (same as in (2)) and with MPI itself, via
+parallel version of SPARTA (same as in (2)) and with MPI itself, via
 one of several available Python/MPI packages.  See instructions below
 on how to do the latter task.
 
 Several of the following sub-sections cover the rest of the Python
 setup discussion.  The next to last sub-section describes the Python
-syntax used to invoke DSMC.  The last sub-section describes example
+syntax used to invoke SPARTA.  The last sub-section describes example
 Python scripts included in the python directory.
 
-11.1 "Extending Python with a serial version of DSMC"_#py_1
+11.1 "Extending Python with a serial version of SPARTA"_#py_1
 11.2 "Creating a shared MPI library"_#py_2
-11.3 "Extending Python with a parallel version of DSMC"_#py_3
+11.3 "Extending Python with a parallel version of SPARTA"_#py_3
 11.4 "Extending Python with MPI"_#py_4
-11.5 "Testing the Python-DSMC interface"_#py_5
-11.6 "Using DSMC from Python"_#py_6
-11.7 "Example Python scripts that use DSMC"_#py_7 :ul
+11.5 "Testing the Python-SPARTA interface"_#py_5
+11.6 "Using SPARTA from Python"_#py_6
+11.7 "Example Python scripts that use SPARTA"_#py_7 :ul
 
 Before proceeding, there are 2 items to note.
 
-(1) The provided Python wrapper for DSMC uses the amazing and
+(1) The provided Python wrapper for SPARTA uses the amazing and
 magical (to me) "ctypes" package in Python, which auto-generates the
 interface code needed between Python and a set of C interface routines
 for a library.  Ctypes is part of standard Python for versions 2.5 and
 later.  You can check which version of Python you have installed, by
 simply typing "python" at a shell prompt.
 
-(2) Any library wrapped by Python, including DSMC, must be built as
+(2) Any library wrapped by Python, including SPARTA, must be built as
 a shared library (e.g. a *.so file on Linux and not a *.a file).  The
-python/setup_serial.py and setup.py scripts do this build for DSMC
-itself (described below).  But if you have DSMC configured to use
+python/setup_serial.py and setup.py scripts do this build for SPARTA
+itself (described below).  But if you have SPARTA configured to use
 additional packages that have their own libraries, then those
 libraries must also be shared libraries.  E.g. MPI, FFTW, or any of
-the libraries in lammps/lib.  When you build DSMC as a stand-alone
+the libraries in lammps/lib.  When you build SPARTA as a stand-alone
 code, you are not building shared versions of these libraries.
 
 The discussion below describes how to create a shared MPI library.  I
-suggest you start by configuing DSMC without packages installed that
+suggest you start by configuing SPARTA without packages installed that
 require any libraries besides MPI.  See "this
 section"_Section_start.html#start_3 of the manual for a discussion of
-DSMC pacakges.  E.g. do not use the KSPACE, GPU, MEAM, POEMS, or
+SPARTA pacakges.  E.g. do not use the KSPACE, GPU, MEAM, POEMS, or
 REAX packages.
 
 If you are successfully follow the steps belwo to build the Python
-wrappers and use this version of DSMC through Python, you can then
-take the next step of adding DSMC packages that use additional
+wrappers and use this version of SPARTA through Python, you can then
+take the next step of adding SPARTA packages that use additional
 libraries.  This will require you to build a shared library for that
 package's library, similar to what is described below for MPI.  It
 will also require you to edit the python/setup_serial.py or setup.py
 scripts to enable Python to access those libraries when it builds the
-DSMC wrapper.
+SPARTA wrapper.
 
 :line
 :line
 
-11.1 Extending Python with a serial version of DSMC :link(py_1),h4
+11.1 Extending Python with a serial version of SPARTA :link(py_1),h4
 
-From the python directory in the DSMC distribution, type
+From the python directory in the SPARTA distribution, type
 
 python setup_serial.py build :pre
 
@@ -142,7 +142,7 @@ and then one of these commands:
 sudo python setup_serial.py install
 python setup_serial.py install --home=~/foo :pre
 
-The "build" command should compile all the needed DSMC files,
+The "build" command should compile all the needed SPARTA files,
 including its dummy MPI library.  The first "install" command will put
 the needed files in your Python's site-packages sub-directory, so that
 Python can load them.  For example, if you installed Python yourself
@@ -152,7 +152,7 @@ this way often requires you to be able to write to the Python
 directories, which may require root priveleges, hence the "sudo"
 prefix.  If this is not the case, you can drop the "sudo".
 
-Alternatively, you can install the DSMC files (or any other Python
+Alternatively, you can install the SPARTA files (or any other Python
 packages) in your own user space.  The second "install" command does
 this, where you should replace "foo" with your directory of choice.
 
@@ -181,18 +181,18 @@ The end result should be the file libmpich.so in /usr/local/lib.
 
 IMPORTANT NOTE: If the file libmpich.a already exists in your
 installation directory (e.g. /usr/local/lib), you will now have both a
-static and shared MPI library.  This will be fine for running DSMC
+static and shared MPI library.  This will be fine for running SPARTA
 from Python since it only uses the shared library.  But if you now try
-to build DSMC by itself as a stand-alone program (cd lammps/src;
+to build SPARTA by itself as a stand-alone program (cd lammps/src;
 make foo) or build other codes that expect to link against libmpich.a,
 then those builds will typically fail if the linker uses libmpich.so
 instead.  This means you will need to remove the file
-/usr/local/lib/libmich.so before building DSMC again as a
+/usr/local/lib/libmich.so before building SPARTA again as a
 stand-alone code.
 
 :line
 
-11.3 Extending Python with a parallel version of DSMC :link(py_3),h4
+11.3 Extending Python with a parallel version of SPARTA :link(py_3),h4
 
 From the python directory, type
 
@@ -203,7 +203,7 @@ and then one of these commands:
 sudo python setup.py install
 python setup.py install --home=~/foo :pre
 
-The "build" command should compile all the needed DSMC C++ files,
+The "build" command should compile all the needed SPARTA C++ files,
 which will require MPI to be installed on your system.  This means it
 must find both the header file mpi.h and a shared library file,
 e.g. libmpich.so if the MPICH version of MPI is installed.  See the
@@ -221,7 +221,7 @@ write to the Python directories, which may require root priveleges,
 hence the "sudo" prefix.  If this is not the case, you can drop the
 "sudo".
 
-Alternatively, you can install the DSMC files (or any other Python
+Alternatively, you can install the SPARTA files (or any other Python
 packages) in your own user space.  The second "install" command does
 this, where you should replace "foo" with your directory of choice.
 
@@ -254,13 +254,13 @@ believe) creates a new alternate executable (in place of python
 itself) as a result.
 
 In principle any of these Python/MPI packages should work to invoke
-both calls to DSMC and MPI itself from a Python script running in
+both calls to SPARTA and MPI itself from a Python script running in
 parallel.  However, when I downloaded and looked at a few of them,
 their docuemtation was incomplete and I had trouble with their
 installation.  It's not clear if some of the packages are still being
 actively developed and supported.
 
-The one I recommend, since I have successfully used it with DSMC, is
+The one I recommend, since I have successfully used it with SPARTA, is
 Pypar.  Pypar requires the ubiquitous "Numpy
 package"_http://numpy.scipy.org be installed in your Python.  After
 launching python, type
@@ -305,13 +305,13 @@ and see one line of output for each processor you ran on.
 
 :line
 
-11.5 Testing the Python-DSMC interface :link(py_5),h4
+11.5 Testing the Python-SPARTA interface :link(py_5),h4
 
-Before using DSMC in a Python program, one more step is needed.  The
-interface to DSMC is via the Python ctypes package, which loads the
-shared DSMC library via a CDLL() call, which in turn is a wrapper on
+Before using SPARTA in a Python program, one more step is needed.  The
+interface to SPARTA is via the Python ctypes package, which loads the
+shared SPARTA library via a CDLL() call, which in turn is a wrapper on
 the C-library dlopen().  This command is different than a normal
-Python "import" and needs to be able to find the DSMC shared
+Python "import" and needs to be able to find the SPARTA shared
 library, which is either in the Python site-packages directory or in a
 local directory you specified in the "python setup.py install"
 command, as described above.
@@ -326,15 +326,15 @@ and then execute the shell file to insure the path has been updated.
 This will extend the path that dlopen() uses to look for shared
 libraries.
 
-To test if the serial DSMC library has been successfully installed
+To test if the serial SPARTA library has been successfully installed
 (mode 1 above), launch Python and type
 
 >>> from lammps import lammps
 >>> lmp = lammps() :pre
 
-If you get no errors, you're ready to use serial DSMC from Python.
+If you get no errors, you're ready to use serial SPARTA from Python.
 
-If you built DSMC for parallel use (mode 2 or 3 above), launch
+If you built SPARTA for parallel use (mode 2 or 3 above), launch
 Python in parallel:
 
 % mpirun -np 4 python test.script :pre
@@ -350,11 +350,11 @@ pypar.finalize() :pre
 Again, if you get no errors, you're good to go.
 
 Note that if you left out the "import pypar" line from this script,
-you would instantiate and run DSMC independently on each of the P
+you would instantiate and run SPARTA independently on each of the P
 processors specified in the mpirun command.  You can test if Pypar is
-enabling true parallel Python and DSMC by adding a line to the above
+enabling true parallel Python and SPARTA by adding a line to the above
 sequence of commands like lmp.file("in.lj") to run an input script and
-see if the DSMC run says it ran on P processors or if you get output
+see if the SPARTA run says it ran on P processors or if you get output
 from P duplicated 1-processor runs written to the screen.  In the
 latter case, Pypar is not working correctly.
 
@@ -362,7 +362,7 @@ Note that this line:
 
 from lammps import lammps :pre
 
-will import either the serial or parallel version of the DSMC
+will import either the serial or parallel version of the SPARTA
 library, as wrapped by lammps.py.  But if you installed both via
 setup_serial.py and setup.py, it will always import the parallel
 version, since it attempts that first.
@@ -398,9 +398,9 @@ Python on a single processor, not in parallel.
 :line
 :line
 
-11.6 Using DSMC from Python :link(py_6),h4
+11.6 Using SPARTA from Python :link(py_6),h4
 
-The Python interface to DSMC consists of a Python "lammps" module,
+The Python interface to SPARTA consists of a Python "lammps" module,
 the source code for which is in python/lammps.py, which creates a
 "lammps" object, with a set of methods that can be invoked on that
 object.  The sample Python code below assumes you have first imported
@@ -416,16 +416,16 @@ from lammps import LMPDPTRPTR as DPTRPTR :pre
 
 These are the methods defined by the lammps module.  If you look
 at the file src/library.cpp you will see that they correspond
-one-to-one with calls you can make to the DSMC library from a C++ or
+one-to-one with calls you can make to the SPARTA library from a C++ or
 C or Fortran program.
 
-lmp = lammps()           # create a DSMC object
+lmp = lammps()           # create a SPARTA object
 lmp = lammps(list)       # ditto, with command-line args, list = \["-echo","screen"\] :pre
 
-lmp.close()              # destroy a DSMC object :pre
+lmp.close()              # destroy a SPARTA object :pre
 
 lmp.file(file)           # run an entire input script, file = "in.lj"
-lmp.command(cmd)         # invoke a single DSMC command, cmd = "run 100" :pre
+lmp.command(cmd)         # invoke a single SPARTA command, cmd = "run 100" :pre
 
 xlo = lmp.extract_global(name,type)  # extract a global quantity
                                      # name = "boxxlo", "nlocal", etc
@@ -458,8 +458,8 @@ lmp.put_coords(x)                         # set all atom coords via x :pre
 
 :line
 
-The creation of a DSMC object does not take an MPI communicator as
-an argument.  There should be a way to do this, so that the DSMC
+The creation of a SPARTA object does not take an MPI communicator as
+an argument.  There should be a way to do this, so that the SPARTA
 instance runs on a subset of processors, if desired, but I don't yet
 know how from Pypar.  So for now, it runs on MPI_COMM_WORLD, which is
 all the processors.
@@ -469,14 +469,14 @@ commands to be invoked.
 
 The extract_global(), extract_atom(), extract_compute(),
 extract_fix(), and extract_variable() methods return values or
-pointers to data structures internal to DSMC.
+pointers to data structures internal to SPARTA.
 
 For extract_global() see the src/library.cpp file for the list of
 valid names.  New names could easily be added.  A double or integer is
 returned.  You need to specify the appropriate data type via the type
 argument.
 
-For extract_atom(), a pointer to internal DSMC atom-based data is
+For extract_atom(), a pointer to internal SPARTA atom-based data is
 returned, which you can use via normal Python subscripting.  See the
 extract() method in the src/atom.cpp file for a list of valid names.
 Again, new names could easily be added.  A pointer to a vector of
@@ -489,7 +489,7 @@ local data calulated by the compute or fix can be accessed.  What is
 returned depends on whether the compute or fix calculates a scalar or
 vector or array.  For a scalar, a single double value is returned.  If
 the compute or fix calculates a vector or array, a pointer to the
-internal DSMC data is returned, which you can use via normal Python
+internal SPARTA data is returned, which you can use via normal Python
 subscripting.  The one exception is that for a fix that calculates a
 global vector or array, a single double value from the vector or array
 is returned, indexed by I (vector) or I and J (array).  I,J are
@@ -511,7 +511,7 @@ specified group.
 
 The get_natoms() method returns the total number of atoms in the
 simulation, as an int.  Note that extract_global("natoms") returns the
-same value, but as a double, which is the way DSMC stores it to
+same value, but as a double, which is the way SPARTA stores it to
 allow for systems with more atoms than can be stored in an int (> 2
 billion).
 
@@ -519,7 +519,7 @@ The get_coords() method returns an ctypes vector of doubles of length
 3*natoms, for the coordinates of all the atoms in the simulation,
 ordered by x,y,z and then by atom ID (see code for put_coords()
 below).  The array can be used via normal Python subscripting.  If
-atom IDs are not consecutively ordered within DSMC, a None is
+atom IDs are not consecutively ordered within SPARTA, a None is
 returned as indication of an error.
 
 Note that the data structure get_coords() returns is different from
@@ -530,9 +530,9 @@ Get_coords() orders the atoms by atom ID while extract_atom() does
 not.  (3) Get_coords() returns a list of all atoms in the simulation;
 extract_atoms() returns just the atoms local to each processor.  (4)
 Finally, the get_coords() data structure is a copy of the atom coords
-stored internally in DSMC, whereas extract_atom returns an array
+stored internally in SPARTA, whereas extract_atom returns an array
 that points directly to the internal data.  This means you can change
-values inside DSMC from Python by assigning a new values to the
+values inside SPARTA from Python by assigning a new values to the
 extract_atom() array.  To do this with the get_atoms() vector, you
 need to change values in the vector, then invoke the put_coords()
 method.
@@ -540,7 +540,7 @@ method.
 The put_coords() method takes a vector of coordinates for all atoms in
 the simulation, assumed to be ordered by x,y,z and then by atom ID,
 and uses the values to overwrite the corresponding coordinates for
-each atom inside DSMC.  This requires DSMC to have its "map"
+each atom inside SPARTA.  This requires SPARTA to have its "map"
 option enabled; see the "atom_modify"_atom_modify.html command for
 details.  If it is not or if atom IDs are not consecutively ordered,
 no coordinates are reset,
@@ -566,18 +566,18 @@ get_coords(), since it is a ctypes vector of doubles.
 :line 
 
 As noted above, these Python class methods correspond one-to-one with
-the functions in the DSMC library interface in src/library.cpp and
+the functions in the SPARTA library interface in src/library.cpp and
 library.h.  This means you can extend the Python wrapper via the
 following steps:
 
 Add a new interface function to src/library.cpp and
 src/library.h. :ulb,l
 
-Verify the new function is syntactically correct by building DSMC as
+Verify the new function is syntactically correct by building SPARTA as
 a library - see "this section"_Section_start.html#start_4 of the
 manual. :l
 
-Add a wrapper method in the Python DSMC module to python/lammps.py
+Add a wrapper method in the Python SPARTA module to python/lammps.py
 for this interface function. :l
 
 Rebuild the Python wrapper via python/setup_serial.py or
@@ -589,18 +589,18 @@ Python script.  Isn't ctypes amazing? :l,ule
 :line
 :line
 
-11.7 Example Python scripts that use DSMC :link(py_7),h4
+11.7 Example Python scripts that use SPARTA :link(py_7),h4
 
 These are the Python scripts included as demos in the python/examples
-directory of the DSMC distribution, to illustrate the kinds of
-things that are possible when Python wraps DSMC.  If you create your
-own scripts, send them to us and we can include them in the DSMC
+directory of the SPARTA distribution, to illustrate the kinds of
+things that are possible when Python wraps SPARTA.  If you create your
+own scripts, send them to us and we can include them in the SPARTA
 distribution.
 
-trivial.py, read/run a DSMC input script thru Python,
-demo.py, invoke various DSMC library interface routines,
+trivial.py, read/run a SPARTA input script thru Python,
+demo.py, invoke various SPARTA library interface routines,
 simple.py, mimic operation of couple/simple/simple.cpp in Python,
-gui.py, GUI go/stop/temperature-slider to control DSMC,
+gui.py, GUI go/stop/temperature-slider to control SPARTA,
 plot.py, real-time temeperature plot with GnuPlot via Pizza.py,
 viz_tool.py, real-time viz via some viz package,
 vizplotgui_tool.py, combination of viz_tool.py and plot.py and gui.py :tb(c=2)

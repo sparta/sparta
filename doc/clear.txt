@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -21,8 +21,8 @@ clear
 [Description:]
 
 This command deletes all atoms, restores all settings to their default
-values, and frees all memory allocated by DSMC.  Once a clear
-command has been executed, it is as if DSMC were starting over, with
+values, and frees all memory allocated by SPARTA.  Once a clear
+command has been executed, it is as if SPARTA were starting over, with
 only the exceptions noted below.  This command enables multiple jobs
 to be run sequentially from one input script.
 

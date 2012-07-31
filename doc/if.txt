@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -14,11 +14,11 @@ if boolean then t1 t2 ... elif boolean f1 f2 ... elif boolean f1 f2 ... else e1 
 
 boolean = a Boolean expression evaluated as TRUE or FALSE (see below)
 then = required word
-t1,t2,...,tN = one or more DSMC commands to execute if condition is met, each enclosed in quotes
+t1,t2,...,tN = one or more SPARTA commands to execute if condition is met, each enclosed in quotes
 elif = optional word, can appear multiple times
-f1,f2,...,fN = one or more DSMC commands to execute if elif condition is met, each enclosed in quotes (optional arguments)
+f1,f2,...,fN = one or more SPARTA commands to execute if elif condition is met, each enclosed in quotes (optional arguments)
 else = optional argument
-e1,e2,...,eN = one or more DSMC commands to execute if no condition is met, each enclosed in quotes (optional arguments) :ul
+e1,e2,...,eN = one or more SPARTA commands to execute if no condition is met, each enclosed in quotes (optional arguments) :ul
 
 [Examples:]
 
@@ -55,7 +55,7 @@ Boolean expression is FALSE, then no commands are executed.
 
 The syntax for Boolean expressions is described below.
 
-Each command (t1, f1, e1, etc) can be any valid DSMC input script
+Each command (t1, f1, e1, etc) can be any valid SPARTA input script
 command.  If the command is more than one word, it must enclosed in
 quotes, so it will be treated as a single argument, as in the examples
 above.
@@ -77,9 +77,9 @@ else &
   'print "Minimum value = $b"' &
   "minimize 0.001 0.001 1000 10000" :pre
 
-Note that if one of the commands to execute is an invalid DSMC
+Note that if one of the commands to execute is an invalid SPARTA
 command, such as "exit" in the first example above, then executing the
-command will cause DSMC to halt.
+command will cause SPARTA to halt.
 
 Note that by jumping to a label in the same input script, the if
 command can be used to break out of a loop.  See the "variable

@@ -1,4 +1,4 @@
-"Previous Section"_Section_start.html - "DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next Section"_Section_howto.html :c
+"Previous Section"_Section_start.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_howto.html :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -8,10 +8,10 @@
 
 3. Commands :h3
 
-This section describes how a DSMC input script is formatted and what
-commands are used to define a DSMC simulation.
+This section describes how a SPARTA input script is formatted and what
+commands are used to define a SPARTA simulation.
 
-3.1 "DSMC input script"_#cmd_1
+3.1 "SPARTA input script"_#cmd_1
 3.2 "Parsing rules"_#cmd_2
 3.3 "Input script structure"_#cmd_3
 3.4 "Commands listed by category"_#cmd_4
@@ -19,11 +19,11 @@ commands are used to define a DSMC simulation.
 
 :line
 
-3.1 DSMC input script :link(cmd_1),h4
+3.1 SPARTA input script :link(cmd_1),h4
 
-DSMC executes by reading commands from a input script (text file),
-one line at a time.  When the input script ends, DSMC exits.  Each
-command causes DSMC to take some action.  It may set an internal
+SPARTA executes by reading commands from a input script (text file),
+one line at a time.  When the input script ends, SPARTA exits.  Each
+command causes SPARTA to take some action.  It may set an internal
 variable, read in a file, or run a simulation.  Most commands have
 default settings, which means you only need to use the command if you
 wish to change the default.
@@ -31,7 +31,7 @@ wish to change the default.
 In many cases, the ordering of commands in an input script is not
 important.  However the following rules apply:
 
-(1) DSMC does not read your entire input script and then perform a
+(1) SPARTA does not read your entire input script and then perform a
 simulation with all the settings.  Rather, the input script is read
 one line at a time and each command takes effect when it is read.
 Thus this sequence of commands:
@@ -63,9 +63,9 @@ is to have the desired effect.  For example, the
 up the simulation box and assigning atoms to processors.  If default
 values are not desired, the "processors"_processors.html and
 "boundary"_boundary.html commands need to be used before read_data to
-tell DSMC how to map processors to the simulation box.
+tell SPARTA how to map processors to the simulation box.
 
-Many input script errors are detected by DSMC and an ERROR or
+Many input script errors are detected by SPARTA and an ERROR or
 WARNING message is printed.  "This section"_Section_errors.html gives
 more information on what errors mean.  The documentation for each
 command lists restrictions on how the command can be used.
@@ -75,11 +75,11 @@ command lists restrictions on how the command can be used.
 3.2 Parsing rules :link(cmd_2),h4
 
 Each non-blank line in the input script is treated as a command.
-DSMC commands are case sensitive.  Command names are lower-case, as
+SPARTA commands are case sensitive.  Command names are lower-case, as
 are specified command arguments.  Upper case letters may be used in
 file names or user-chosen ID strings.
 
-Here is how each line in the input script is parsed by DSMC:
+Here is how each line in the input script is parsed by SPARTA:
 
 (1) If the last printable character on the line is a "&" character
 (with no surrounding quotes), the command is assumed to continue on
@@ -133,13 +133,13 @@ allowed, but that should be sufficient for most use cases.
 
 3.3 Input script structure :h4,link(cmd_3)
 
-This section describes the structure of a typical DSMC input script.
-The "examples" directory in the DSMC distribution contains many
+This section describes the structure of a typical SPARTA input script.
+The "examples" directory in the SPARTA distribution contains many
 sample input scripts; the corresponding problems are discussed in
-"this section"_Section_example.html, and animated on the "DSMC WWW
+"this section"_Section_example.html, and animated on the "SPARTA WWW
 Site"_dws.
 
-A DSMC input script typically has 4 parts:
+A SPARTA input script typically has 4 parts:
 
 Initialization
 Problem definition
@@ -160,7 +160,7 @@ The relevant commands are "dimension"_dimension.html
 
 (2) Problem definition
 
-These items must be setup to run a DSMC calculation:
+These items must be setup to run a SPARTA calculation:
 
 simulation box via "create_box"_create_box.html
 grid via "create_grid"_create_grid.html
@@ -184,12 +184,12 @@ A simulation is run using the "run"_run.html command.
 
 3.4 Commands listed by category :link(cmd_4),h4
 
-This section lists all DSMC commands, grouped by category.  The
+This section lists all SPARTA commands, grouped by category.  The
 "next section"_#cmd_5 lists the same commands alphabetically.  Note
-that some style options for some commands are part of specific DSMC
+that some style options for some commands are part of specific SPARTA
 packages, which means they cannot be used unless the package was
-included when DSMC was built.  Not all packages are included in a
-default DSMC build.  These dependencies are listed as Restrictions
+included when SPARTA was built.  Not all packages are included in a
+default SPARTA build.  These dependencies are listed as Restrictions
 in the command's documentation.
 
 Initialization:
@@ -220,13 +220,13 @@ Miscellaneous:
 
 3.5 Individual commands :h4,link(cmd_5),link(comm)
 
-This section lists all DSMC commands alphabetically, with a separate
+This section lists all SPARTA commands alphabetically, with a separate
 listing below of styles within certain commands.  The "previous
 section"_#cmd_4 lists the same commands, grouped by category.  Note
-that some style options for some commands are part of specific DSMC
+that some style options for some commands are part of specific SPARTA
 packages, which means they cannot be used unless the package was
-included when DSMC was built.  Not all packages are included in a
-default DSMC build.  These dependencies are listed as Restrictions
+included when SPARTA was built.  Not all packages are included in a
+default SPARTA build.  These dependencies are listed as Restrictions
 in the command's documentation.
 
 "boundary"_boundary.html,

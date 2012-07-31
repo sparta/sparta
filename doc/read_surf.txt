@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -40,7 +40,7 @@ read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip :pre
 
 [Description:]
 
-Read the geometry of one or more surfaces from a file.  In DSMC, a
+Read the geometry of one or more surfaces from a file.  In SPARTA, a
 "surface" is a grid of surface elements on the surface of a physical
 object embedded in the global simulation box.  The surface elements
 are triangles in 3d or line segments in 2d.  Particles collide with
@@ -49,7 +49,7 @@ chemistry during the collision.  Collision statistics for each surface
 element are tallied, which can be ouput via the "dump
 surface"_dump.html command.
 
-The surface file contains a list of triangles or line segments; DSMC
+The surface file contains a list of triangles or line segments; SPARTA
 does not know or care whether they represent one or more physical
 objects.
 
@@ -248,7 +248,7 @@ watertight.
 
 When running a simulation with multiple surfaces, read from one or
 more surface files, you should insure they do not overlap/intersect
-each other.  DSMC does not check for this, but it will typically lead
+each other.  SPARTA does not check for this, but it will typically lead
 to unphysical particle dynamics.
 
 [Related commands:] none

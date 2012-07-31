@@ -1,4 +1,4 @@
-"DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc :c
+"SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -36,7 +36,7 @@ Boltzmann constant, and T = temperature.
 This compute calculates a global scalar (the temperature).  This value
 can be used by any command that uses global scalar values from a
 compute as input.  See "this section"_Section_howto.html#howto_15 for
-an overview of DSMC output options.
+an overview of SPARTA output options.
 
 The scalar value will be in temperature "units"_units.html.
 

@@ -1,4 +1,4 @@
-"Previous Section"_Section_howto.html - "DSMC WWW Site"_dws - "DSMC Documentation"_dd - "DSMC Commands"_dc - "Next Section"_Section_perf.html :c
+"Previous Section"_Section_howto.html - "SPARTA WWW Site"_dws - "SPARTA Documentation"_dd - "SPARTA Commands"_dc - "Next Section"_Section_perf.html :c
 
 :link(dws,http://dsmc.sandia.gov)
 :link(dd,Manual.html)
@@ -8,7 +8,7 @@
 
 7. Example problems :h3
 
-The DSMC distribution includes an examples sub-directory with
+The SPARTA distribution includes an examples sub-directory with
 several sample problems.  Each problem is in a sub-directory of its
 own.  Most are 2d models so that they run quickly, requiring at most a
 couple of minutes to run on a desktop machine.  Each problem has an
@@ -21,8 +21,8 @@ log.crack.foo.P means it ran on P processors of machine "foo".
 
 The dump files produced by the example runs can be animated using the
 xmovie tool described in the "Additional Tools"_Section_tools.html
-section of the DSMC documentation.  Animations of many of these
-examples can be viewed on the Movies section of the "DSMC WWW
+section of the SPARTA documentation.  Animations of many of these
+examples can be viewed on the Movies section of the "SPARTA WWW
 Site"_dws.
 
 These are the sample problems in the examples sub-directories:
@@ -56,7 +56,7 @@ srd:      stochastic rotation dynamics (SRD) particles as solvent :tb(s=:)
 Here is how you might run and visualize one of the sample problems:
 
 cd indent
-cp ../../src/lmp_linux .           # copy DSMC executable to this dir
+cp ../../src/lmp_linux .           # copy SPARTA executable to this dir
 lmp_linux < in.indent              # run the problem :pre
 
 Running the simulation produces the files {dump.indent} and
