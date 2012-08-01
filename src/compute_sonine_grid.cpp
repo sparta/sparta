@@ -90,7 +90,7 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
   }
 
   per_grid_flag = 1;
-  ngroups = particle->mixture[imix]->ngroups;
+  ngroups = particle->mixture[imix]->ngroup;
   ntotal = ngroups*npergroup;
   if (ntotal == 0) size_per_grid_cols = 0;
   else size_per_grid_cols = ntotal;
@@ -119,7 +119,7 @@ ComputeSonineGrid::~ComputeSonineGrid()
 
 void ComputeSonineGrid::init()
 {
-  if (ngroups != particle->mixture[imix]->ngroups)
+  if (ngroups != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute ke/grid mixture has changed");
 
   // one-time allocation

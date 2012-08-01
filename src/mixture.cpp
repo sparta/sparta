@@ -44,9 +44,8 @@ Mixture::Mixture(SPARTA *sparta, char *userid) : Pointers(sparta)
 
   // initialize mixture values
 
-  species = NULL;
-
   nspecies = maxspecies = 0;
+  species = NULL;
 
   nrho_flag = 0;
   vstream_flag = 0;
@@ -57,7 +56,7 @@ Mixture::Mixture(SPARTA *sparta, char *userid) : Pointers(sparta)
   fraction_flag = NULL;
   cummulative = NULL;
 
-  ngroups = maxgroup = 0;
+  ngroup = maxgroup = 0;
   groups = NULL;
   mix2group = NULL;
   species2group = NULL;
@@ -65,7 +64,7 @@ Mixture::Mixture(SPARTA *sparta, char *userid) : Pointers(sparta)
   vscale = NULL;
   active = NULL;
 
-  allocate(DELTA);
+  allocate();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -87,6 +86,35 @@ Mixture::~Mixture()
 
   memory->destroy(vscale);
   memory->destroy(active);
+}
+
+/* ----------------------------------------------------------------------
+   process args of a mixture command
+   zero of more species IDs followed by optional args
+------------------------------------------------------------------------- */
+
+void Mixture::command(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal mixture command");
+
+  // nsp = # of listed species before optional keywords
+  // iarg = start of optional keywords
+
+  int iarg;
+  for (iarg = 1; iarg < narg; iarg++) {
+    if (strcmp(arg[iarg],"nrho") == 0) break;
+    if (strcmp(arg[iarg],"vstream") == 0) break;
+    if (strcmp(arg[iarg],"temp") == 0) break;
+    if (strcmp(arg[iarg],"frac") == 0) break;
+    if (strcmp(arg[iarg],"group") == 0) break;
+  }
+  int nsp = iarg - 1;
+
+  // add_species() for list of species
+  // params() for reamining optional keywords
+
+  add_species(nsp,&arg[1]);
+  params(narg-iarg,&arg[iarg]);
 }
 
 /* ----------------------------------------------------------------------
@@ -139,29 +167,6 @@ void Mixture::init()
   }  
   cummulative[nspecies-1] = 1.0;
 
-  // warn if any group has no species assigned to it
-
-  int count = 0;
-  for (int i = 0; i < ngroups; i++) {
-    int flag = 0;
-    for (int j = 0; j < nspecies; j++)
-      if (mix2group[j] == i) flag = 1;
-    if (!flag) count++;
-  }
-
-  if (count && comm->me == 0) {
-    char str[128];
-    sprintf(str,"Mixture %s has %d groups with no species",id,count);
-    error->warning(FLERR,str);
-  }
-
-  // setup species2group
-
-  memory->destroy(species2group);
-  memory->create(species2group,particle->nspecies,"mixture:species2group");
-  for (int i = 0; i < particle->nspecies; i++) species2group[i] = -1;
-  for (int i = 0; i < nspecies; i++) species2group[species[i]] = mix2group[i];
-
   // vscale = factor to scale Gaussian unit variance by
   //          to get thermal distribution of velocities
   // per-species value since includes species mass
@@ -171,6 +176,13 @@ void Mixture::init()
     vscale[i] = sqrt(2.0 * update->boltz * temp_thermal /
 		     particle->species[index].mass);
   }
+
+  // setup species2group
+
+  memory->destroy(species2group);
+  memory->create(species2group,particle->nspecies,"mixture:species2group");
+  for (int i = 0; i < particle->nspecies; i++) species2group[i] = -1;
+  for (int i = 0; i < nspecies; i++) species2group[species[i]] = mix2group[i];
 }
 
 /* ----------------------------------------------------------------------
@@ -179,51 +191,32 @@ void Mixture::init()
 
 void Mixture::add_species(int narg, char **arg)
 {
-  int i,j,index,exist;
+  int i,j,index;
 
-  // nnew = # of species not already in mixture list
+  // active[i] = 0 if species I not in list
+  // active[i] = 1 if species I is in list and already exists in mixture
+  // active[i] = 2 if species I is in list and added to mixture
+  // nactive = # of species in list
 
-  int nnew = 0;
+  nactive = narg;
+  for (i = 0; i < nspecies; i++) active[i] = 0;
+
   for (i = 0; i < narg; i++) {
     index = particle->find_species(arg[i]);
     if (index < 0) error->all(FLERR,"Mixture species is not defined");
-    exist = 0;
     for (j = 0; j < nspecies; j++)
-      if (species[j] == index) exist = 1;
-    if (!exist) nnew++;
-  }
-
-  // grow per-species arrays if necessary
-
-  if (nspecies + nnew > maxspecies) allocate(nspecies+nnew);
-
-  // add new species to mixture list
-
-  for (i = 0; i < narg; i++) {
-    index = particle->find_species(arg[i]);
-    exist = 0;
-    for (j = 0; j < nspecies; j++)
-      if (species[j] == index) exist = 1;
-    if (!exist) species[nspecies++] = index;
-  }
-
-  // active[i] = 1 if mixture species appears in this mixture command
-  // else 0
-
-  nactive = 0;
-  for (i = 0; i < nspecies; i++) active[i] = 0;
-  for (i = 0; i < narg; i++) {
-    index = particle->find_species(arg[i]);
-    for (j = 0; j < nspecies; j++)
-      if (species[j] == index) {
-	active[j] = 1;
-	nactive++;
-      }
+      if (species[j] == index) break;
+    if (j < nspecies) active[j] = 1;
+    else {
+      if (nspecies == maxspecies) allocate();
+      active[nspecies] = 2;
+      species[nspecies++] = index;
+    }
   }
 }
 
 /* ----------------------------------------------------------------------
-   process list of global or per-species params appearing in a mixture command
+   process optional keywords appearing in a mixture command
 ------------------------------------------------------------------------- */
 
 void Mixture::params(int narg, char **arg)
@@ -256,7 +249,8 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       temp_thermal_flag = 1;
       temp_thermal_user = atof(arg[iarg+1]);
-      if (temp_thermal_user <= 0.0) error->all(FLERR,"Illegal mixture command");
+      if (temp_thermal_user <= 0.0) 
+        error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"frac") == 0) {
@@ -271,12 +265,17 @@ void Mixture::params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       groupflag = 1;
       grouparg = iarg+1;
+      int n = strlen(arg[grouparg]);
+      for (int i = 0; i < n; i++)
+        if (!isalnum(id[i]) && id[i] != '_')
+          error->all(FLERR,"Mixture group ID must be "
+                     "alphanumeric or underscore characters");
       iarg += 2;
 
     } else error->all(FLERR,"Illegal mixture command");
   }
 
-  // apply per-species attributes
+  // assign per-species attributes
 
   if (fracflag) {
     for (int i = 0; i < nspecies; i++)
@@ -287,38 +286,25 @@ void Mixture::params(int narg, char **arg)
   }
 
   // assign species to groups
-  // if group-ID = all:
-  ///  no listed species: delete groups, assign all species to group "all"
-  //   yes listed species: assign listed species to group "all"
-  // if group-ID = species 
+  // end up with:
+  //   every species assigned to exactly one group via mix2group
+  //   no empty groups via shrink_groups()
+  // if group-ID = SELF:
   //   no listed species: delete groups, assign each species to own group
-  //   yes listed species: assign each listed species to own group
-  // if group-ID is user specified: assign listed species to that group
-  // if no groupflag and species listed: assign listed species to group "all"
+  //   listed species: assign each listed species to own group
+  // else if group-ID = user name:
+  //   no listed species: delete groups, assign all species to group-ID
+  //   listed species: assign listed species to group-ID
+  // else if group keyword not specified:
+  //   assign listed species that are new each to own group
 
   if (groupflag) {
-    if (strcmp(arg[grouparg],"all") == 0) {
-      if (nactive == 0) {
-	delete_groups();
-	add_group("all");
-	for (int i = 0; i < nspecies; i++)
-	  mix2group[i] = 0;
-      } else {
-	int igroup = find_group("all");
-	if (igroup < 0) {
-	  add_group("all");
-	  igroup = 0;
-	}
-	for (int i = 0; i < nspecies; i++)
-	  if (active[i]) mix2group[i] = 0;
-      }
-
-    } else if (strcmp(arg[grouparg],"species") == 0) {
+    if (strcmp(arg[grouparg],"SELF") == 0) {
       if (nactive == 0) {
 	delete_groups();
 	for (int i = 0; i < nspecies; i++) {
 	  add_group(particle->species[species[i]].id);
-	  mix2group[i] = ngroups-1;
+	  mix2group[i] = ngroup-1;
 	}
       } else {
 	for (int i = 0; i < nspecies; i++) {
@@ -326,44 +312,52 @@ void Mixture::params(int narg, char **arg)
 	  int igroup = find_group(particle->species[species[i]].id);
 	  if (igroup < 0) {
 	    add_group(particle->species[species[i]].id);
-	    igroup = ngroups-1;
+	    igroup = ngroup-1;
 	  }
 	  mix2group[i] = igroup;
 	}
       }
 
     } else {
-      for (int i = 0; i < nspecies; i++) {
-	if (!active[i]) continue;
-	int igroup = find_group(arg[grouparg]);
-	if (igroup < 0) {
-	  add_group(arg[grouparg]);
-	  igroup = ngroups-1;
-	}
-	mix2group[i] = igroup;
+      if (nactive == 0) {
+	delete_groups();
+        add_group(arg[grouparg]);
+	for (int i = 0; i < nspecies; i++) mix2group[i] = ngroup-1;
+      } else {
+        int igroup = find_group(arg[grouparg]);
+        if (igroup < 0) {
+          add_group(arg[grouparg]);
+          igroup = ngroup-1;
+        }
+        for (int i = 0; i < nspecies; i++)
+          if (active[i]) mix2group[i] = igroup;
       }
     }
 
   } else if (nactive) {
-    int igroup = find_group("all");
-    if (igroup < 0) {
-      add_group("all");
-      igroup = 0;
+    for (int i = 0; i < nspecies; i++) {
+      if (active[i] != 2) continue;
+      int igroup = find_group(particle->species[species[i]].id);
+      if (igroup < 0) {
+        add_group(particle->species[species[i]].id);
+        igroup = ngroup-1;
+      }
+      mix2group[i] = igroup;
     }
-    for (int i = 0; i < nspecies; i++)
-      if (active[i]) mix2group[i] = 0;
   }
+
+  shrink_groups();
 }
 
 /* ----------------------------------------------------------------------
-   (re)allocate all mixture arrays to hold N species
+   grow all mixture arrays
    set new per-species flags to 0
 ------------------------------------------------------------------------- */
 
-void Mixture::allocate(int n)
+void Mixture::allocate()
 {
   int old = maxspecies;
-  while (n > maxspecies) maxspecies += DELTA;
+  maxspecies += DELTA;
 
   memory->grow(species,maxspecies,"mixture:species");
   memory->grow(fraction,maxspecies,"mixture:species");
@@ -378,13 +372,38 @@ void Mixture::allocate(int n)
 }
 
 /* ----------------------------------------------------------------------
-   delete all groups
+   delete all groups, leave maxgroup unchanged
 ------------------------------------------------------------------------- */
 
 void Mixture::delete_groups()
 {
-  for (int i = 0; i < ngroups; i++) delete [] groups[i];
-  ngroups = 0;
+  for (int i = 0; i < ngroup; i++) delete [] groups[i];
+  ngroup = 0;
+}
+
+/* ----------------------------------------------------------------------
+   remove empty groups, leave maxgroup unchanged
+   compress group IDs, reset mix2group indices
+------------------------------------------------------------------------- */
+
+void Mixture::shrink_groups()
+{
+  int i,nsp;
+
+  int igroup = 0;
+  while (igroup < ngroup) {
+    nsp = 0;
+    for (i = 0; i < nspecies; i++)
+      if (mix2group[i] == igroup) nsp++;
+    if (nsp == 0) {
+      delete [] groups[igroup];
+      for (i = igroup; i < ngroup-1; i++)
+        groups[i] = groups[i+1];
+      for (i = 0; i < nspecies; i++)
+        if (mix2group[i] > igroup) mix2group[i]--;
+      ngroup--;
+    } else igroup++;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -393,16 +412,16 @@ void Mixture::delete_groups()
 
 void Mixture::add_group(const char *idgroup)
 {
-  if (ngroups == maxgroup) {
+  if (ngroup == maxgroup) {
     maxgroup += DELTA;
     groups = (char **) memory->srealloc(groups,maxgroup*sizeof(char *),
 					"mixture:groups");
   }
 
   int n = strlen(idgroup) + 1;
-  groups[ngroups] = new char[n];
-  strcpy(groups[ngroups],idgroup);
-  ngroups++;
+  groups[ngroup] = new char[n];
+  strcpy(groups[ngroup],idgroup);
+  ngroup++;
 }
 
 /* ----------------------------------------------------------------------
@@ -412,7 +431,7 @@ void Mixture::add_group(const char *idgroup)
 
 int Mixture::find_group(const char *idgroup)
 {
-  for (int i = 0; i < ngroups; i++)
+  for (int i = 0; i < ngroup; i++)
     if (strcmp(groups[i],idgroup) == 0) return i;
   return -1;
 }

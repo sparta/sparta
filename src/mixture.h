@@ -23,7 +23,7 @@ class Mixture : protected Pointers {
  public:
   char *id;                   // ID of mixture
   int nspecies;               // # of species in mixture
-  int *species;               // species index in master Particle species list
+  int *species;               // species indices in Particle species list
 
                               // global attributes
   double nrho;                // number density
@@ -39,30 +39,33 @@ class Mixture : protected Pointers {
                               // per-species attributes
   double *fraction;           // relative fraction of each species
   int *fraction_flag;         // 1 if user set fraction for a species
-  double *fraction_user;      // user value
+  double *fraction_user;      // user fractional value
   double *cummulative;        // cummulative fraction for each species
 
-  int ngroups;                // # of defined groups
+  int ngroup;                 // # of defined groups
   char **groups;              // group IDs
   int *mix2group;             // m2g[i] = group that mixture species I is in
   int *species2group;         // s2g[i] = group that Particle species I is in
                               // -1 if species I not in mixture
 
   double *vscale;             // pre-computed velocity scale factor
-  int *active;                // 1 if species is active in a mixture command
-  int nactive;                // # of mixture species active in mixture cmd
 
   Mixture(class SPARTA *, char *);
   ~Mixture();
+  void command(int, char **);
   void init();
-  void add_species(int, char **);
-  void params(int, char **);
-
+  
  private:
   int maxspecies,maxgroup;
 
-  void allocate(int);
+  int *active;                // 1 if species is active for mixture command
+  int nactive;                // # of active species for command
+
+  void add_species(int, char **);
+  void params(int, char **);
+  void allocate();
   void delete_groups();
+  void shrink_groups();
   void add_group(const char *);
   int find_group(const char *);
 };

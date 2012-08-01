@@ -295,7 +295,7 @@ void Particle::add_species(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   add or augment a mixture of species
+   create or augment a mixture of species
 ------------------------------------------------------------------------- */
 
 void Particle::add_mixture(int narg, char **arg)
@@ -315,23 +315,7 @@ void Particle::add_mixture(int narg, char **arg)
     mixture[nmixture++] = new Mixture(sparta,arg[0]);
   }
 
-  // nsp = # of species args before optional keywords
-  // iarg = start of optional keywords
-
-  int iarg;
-  for (iarg = 1; iarg < narg; iarg++) {
-    if (strcmp(arg[iarg],"nrho") == 0) break;
-    if (strcmp(arg[iarg],"vstream") == 0) break;
-    if (strcmp(arg[iarg],"temp") == 0) break;
-    if (strcmp(arg[iarg],"frac") == 0) break;
-    if (strcmp(arg[iarg],"group") == 0) break;
-  }
-  int nsp = iarg - 1;
-
-  // pass list of species and list of params to Mixture
-
-  mixture[imix]->add_species(nsp,&arg[1]);
-  mixture[imix]->params(narg-iarg,&arg[iarg]);
+  mixture[imix]->command(narg,arg);
 }
 
 /* ----------------------------------------------------------------------
