@@ -84,14 +84,22 @@ species name, so that each species that belongs to its own group.
 <HR>
 
 <P>Zero or more species can be listed with the mixture command.  If a
-species is not already in the mixture (from a previous mixture command
-with the same ID), then the species is added to the mixture.
+listed species is not already in the mixture, from a previous mixture
+command with the same ID, then that species is added to the mixture.
+It will be assigned default per-species attributes and to a default
+group, unless the appropriate keywords are also specified, as
+discussed below.
 </P>
-<P>If the
-mixture command sets per-species properties, as discussed below, then
-those settings only apply to the species listed in this command, not
-to other species previously added to the mixture.
+<P>Species can be listed which are already part of the mixture so that
+their per-species proerties can be changed, or so their group
+assignment can be changed, as disussed below.
 </P>
+<P>Zero species can be listed, if other keywords are used which change
+global attributes of the mixture or alter the group assignements, as
+discussed below.
+</P>
+<HR>
+
 <P>The <I>nrho</I> keyword sets a global attribute of the mixture, namely its
 density.  For 3d simulations the units of the specified <I>density</I> are
 #/volume.  For 2d, the units are effectively #/area, since the
@@ -107,6 +115,8 @@ this value is used to sample a Gaussian velocity distribution, which
 is superposed on the streaming velocity, when a particle's velocity is
 initialized.
 </P>
+<HR>
+
 <P>The <I>frac</I> keyword sets a per-species attribute for individual species
 in the mixture.  Each species has a relative fractional density, such
 as 0.2, meaning one out of 5 particles is that species.  The sum of
@@ -117,10 +127,15 @@ then when a simulation is run, the <I>frac</I> value for each of the M
 species is set to (1 - sum)/M, where sum is the sum of the <I>frac</I>
 values for the N-M assigned species.
 </P>
-<P>Each species in the mixture is assigned to a group.  Groups are used
-when performing collisions so that collisions attempts, partners, and
-parameters can be treated on a per-group basis for accuracy and
-efficiency.  The <I>group</I> keyword is used to make these assignments.
+<HR>
+
+<P>Each species in the mixture is assigned to exactly one group.  The
+<I>group</I> keyword can be used to set or change these assignments.
+</P>
+<P>Mixture groups are used when performing collisions so that collisions
+attempts, partners, and parameters can be treated on a per-group basis
+for accuracy and efficiency.  Also for fix ave/grid and per-grid
+computes.
 </P>
 <P>The specified group ID can be any string you choose.  Similar to the
 mixture ID, it can only contain alphanumeric characters and
@@ -147,6 +162,8 @@ name.  If individual species are listed in the mixture command, then
 only those species are (re)assigned to a group with group-ID = the
 species name.
 </P>
+<HR>
+
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
