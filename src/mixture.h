@@ -54,12 +54,15 @@ class Mixture : protected Pointers {
   ~Mixture();
   void command(int, char **);
   void init();
+  void add_species_default(char *);
   
  private:
   int maxspecies,maxgroup;
 
   int *active;                // 1 if species is active for mixture command
   int nactive;                // # of active species for command
+  int all_default;            // 1 if this is default mixture "all"
+  int species_default;        // 1 if this is default mixture "species"
 
   void add_species(int, char **);
   void params(int, char **);

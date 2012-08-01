@@ -42,6 +42,12 @@ Mixture::Mixture(SPARTA *sparta, char *userid) : Pointers(sparta)
       error->all(FLERR,
 		 "Mixture ID must be alphanumeric or underscore characters");
 
+  // special default mixtures
+
+  all_default = species_default = 0;
+  if (strcmp(id,"all") == 0) all_default = 1;
+  if (strcmp(id,"species") == 0) species_default = 1;
+
   // initialize mixture values
 
   nspecies = maxspecies = 0;
@@ -208,11 +214,31 @@ void Mixture::add_species(int narg, char **arg)
       if (species[j] == index) break;
     if (j < nspecies) active[j] = 1;
     else {
+      if (all_default || species_default)
+        error->all(FLERR,"Cannot add new species to mixture all or species");
       if (nspecies == maxspecies) allocate();
       active[nspecies] = 2;
       species[nspecies++] = index;
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   add a species to the default mixture "all" or "species"
+   set group assignment accordingly
+------------------------------------------------------------------------- */
+
+void Mixture::add_species_default(char *name)
+{
+  int index = particle->find_species(name);
+  if (nspecies == maxspecies) allocate();
+  species[nspecies] = index;
+
+  if (all_default && ngroup == 0) add_group("all");
+  if (species_default) add_group(name);
+  mix2group[nspecies] = ngroup-1;
+
+  nspecies++;
 }
 
 /* ----------------------------------------------------------------------
@@ -270,6 +296,9 @@ void Mixture::params(int narg, char **arg)
         if (!isalnum(id[i]) && id[i] != '_')
           error->all(FLERR,"Mixture group ID must be "
                      "alphanumeric or underscore characters");
+      if (all_default || species_default)
+        error->all(FLERR,
+                   "Cannot use group keyword with mixture all or species");
       iarg += 2;
 
     } else error->all(FLERR,"Illegal mixture command");

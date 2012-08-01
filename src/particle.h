@@ -40,6 +40,7 @@ class Particle : protected Pointers {
 
   class Mixture **mixture;
   int nmixture;
+  int maxmixture;
 
   struct OnePart {
     int id;                 // particle ID

@@ -30,6 +30,7 @@ using namespace SPARTA_NS;
 #define DELTA 10000
 #define DELTASMALL 16
 #define MAXLINE 1024
+#define CHUNK_MIXTURE 8
 
 // customize by adding an abbreviation string
 // also add a check for the keyword in 2 places in add_species()
@@ -47,14 +48,24 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   nspecies = maxspecies  = 0;
   species = NULL;
 
-  nmixture = 0;
-  mixture = NULL;
 
   maxgrid = 0;
   //cellcount = NULL;
   //first = NULL;
   maxsort = 0;
   next = NULL;
+
+  // create two default mixtures
+
+  nmixture = maxmixture = 0;
+  mixture = NULL;
+
+  char **newarg = new char*[1];
+  newarg[0] = (char *) "all";
+  add_mixture(1,newarg);
+  newarg[0] = (char *) "species";
+  add_mixture(1,newarg);
+  delete [] newarg;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -210,7 +221,7 @@ void Particle::add_particle(int id, int ispecies, int icell,
 }
 
 /* ----------------------------------------------------------------------
-   add one of more species to species list
+   add one or more species to species list
 ------------------------------------------------------------------------- */
 
 void Particle::add_species(int narg, char **arg)
@@ -275,6 +286,10 @@ void Particle::add_species(int narg, char **arg)
   }
 
   // extract info on user-requested species from file species list
+  // add new species to default mixtures "all" and "species"
+
+  int imix_all = find_mixture((char *) "all");
+  int imix_species = find_mixture((char *) "species");
 
   int j;
 
@@ -287,6 +302,8 @@ void Particle::add_species(int narg, char **arg)
     if (j == nfilespecies)
       error->all(FLERR,"Species ID does not appear in species file");
     memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
+    mixture[imix_all]->add_species_default(species[nspecies].id);
+    mixture[imix_species]->add_species_default(species[nspecies].id);
     nspecies++;
   }
 
@@ -300,7 +317,7 @@ void Particle::add_species(int narg, char **arg)
 
 void Particle::add_mixture(int narg, char **arg)
 {
-  if (narg < 2) error->all(FLERR,"Illegal mixture command");
+  if (narg < 1) error->all(FLERR,"Illegal mixture command");
 
   // imix = index if mixture ID already exists
   // else instantiate a new mixture
@@ -308,9 +325,12 @@ void Particle::add_mixture(int narg, char **arg)
   int imix = find_mixture(arg[0]);
 
   if (imix < 0) {
-    mixture = (Mixture **) memory->srealloc(mixture,
-					    (nmixture+1)*sizeof(Mixture *),
-					    "particle:mixture");
+    if (nmixture == maxmixture) {
+      maxmixture += CHUNK_MIXTURE;
+      mixture = (Mixture **) memory->srealloc(mixture,
+                                              maxmixture*sizeof(Mixture *),
+                                              "particle:mixture");
+    }
     imix = nmixture;
     mixture[nmixture++] = new Mixture(sparta,arg[0]);
   }
