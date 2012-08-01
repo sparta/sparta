@@ -14,34 +14,28 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(sonine/grid,ComputeSonineGrid)
+ComputeStyle(grid,ComputeGrid)
 
 #else
 
-#ifndef SPARTA_COMPUTE_SONINE_GRID_H
-#define SPARTA_COMPUTE_SONINE_GRID_H
+#ifndef SPARTA_COMPUTE_GRID_H
+#define SPARTA_COMPUTE_GRID_H
 
 #include "compute.h"
 
 namespace SPARTA_NS {
 
-class ComputeSonineGrid : public Compute {
+class ComputeGrid : public Compute {
  public:
-  ComputeSonineGrid(class SPARTA *, int, char **);
-  ~ComputeSonineGrid();
+  ComputeGrid(class SPARTA *, int, char **);
+  ~ComputeGrid();
   void init();
   void compute_per_grid();
   bigint memory_usage();
 
  private:
-  int imix,nvalue,ngroup,npergroup,ntotal;
-  int *which,*moment,*order;
-
-  double **vave,***avave;
-  int *count,**acount;
-
-  double *sonine_vector;
-  double **sonine_array;
+  int imix,nvalue,ngroup,ntotal;
+  int *which;
 };
 
 }

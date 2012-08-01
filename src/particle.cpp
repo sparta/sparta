@@ -302,9 +302,10 @@ void Particle::add_species(int narg, char **arg)
     if (j == nfilespecies)
       error->all(FLERR,"Species ID does not appear in species file");
     memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
-    mixture[imix_all]->add_species_default(species[nspecies].id);
-    mixture[imix_species]->add_species_default(species[nspecies].id);
     nspecies++;
+
+    mixture[imix_all]->add_species_default(species[nspecies-1].id);
+    mixture[imix_species]->add_species_default(species[nspecies-1].id);
   }
 
   memory->sfree(filespecies);

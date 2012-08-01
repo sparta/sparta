@@ -101,7 +101,7 @@ Mixture::~Mixture()
 
 void Mixture::command(int narg, char **arg)
 {
-  if (narg < 2) error->all(FLERR,"Illegal mixture command");
+  if (narg < 1) error->all(FLERR,"Illegal mixture command");
 
   // nsp = # of listed species before optional keywords
   // iarg = start of optional keywords
@@ -293,7 +293,7 @@ void Mixture::params(int narg, char **arg)
       grouparg = iarg+1;
       int n = strlen(arg[grouparg]);
       for (int i = 0; i < n; i++)
-        if (!isalnum(id[i]) && id[i] != '_')
+        if (!isalnum(arg[grouparg][i]) && arg[grouparg][i] != '_')
           error->all(FLERR,"Mixture group ID must be "
                      "alphanumeric or underscore characters");
       if (all_default || species_default)

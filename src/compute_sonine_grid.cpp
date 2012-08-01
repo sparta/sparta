@@ -45,53 +45,53 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
   which = new int[nmax];
   moment = new int[nmax];
   order = new int[nmax];
-  nvalues = 0;
+  nvalue = 0;
   npergroup = 0;
 
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"thermal") == 0) {
-      which[nvalues] = THERMAL;
-      nvalues++;
+      which[nvalue] = THERMAL;
+      nvalue++;
       npergroup++;
       iarg++;
     } else if (strcmp(arg[iarg],"a") == 0) {
       if (iarg+3 > narg) 
         error->all(FLERR,"Illegal compute sonine/grid command");
-      which[nvalues] = AMOM;
-      if (strcmp(arg[iarg+1],"x") == 0) moment[nvalues] = X;
-      else if (strcmp(arg[iarg+1],"y") == 0) moment[nvalues] = Y;
-      else if (strcmp(arg[iarg+1],"z") == 0) moment[nvalues] = Z;
+      which[nvalue] = AMOM;
+      if (strcmp(arg[iarg+1],"x") == 0) moment[nvalue] = X;
+      else if (strcmp(arg[iarg+1],"y") == 0) moment[nvalue] = Y;
+      else if (strcmp(arg[iarg+1],"z") == 0) moment[nvalue] = Z;
       else error->all(FLERR,"Illegal compute sonine/grid command");
-      order[nvalues] = atoi(arg[iarg+2]);
-      if (order[nvalues] < 1 || order[nvalues] > 5)
+      order[nvalue] = atoi(arg[iarg+2]);
+      if (order[nvalue] < 1 || order[nvalue] > 5)
         error->all(FLERR,"Illegal compute sonine/grid command");
-      nvalues++;
-      npergroup += order[nvalues];
+      nvalue++;
+      npergroup += order[nvalue];
       iarg += 3;
     } else if (strcmp(arg[iarg],"b") == 0) {
       if (iarg+3 > narg) 
         error->all(FLERR,"Illegal compute sonine/grid command");
-      which[nvalues] = BMOM;
-      if (strcmp(arg[iarg+1],"xx") == 0) moment[nvalues] = 3*X + X;
-      else if (strcmp(arg[iarg+1],"yy") == 0) moment[nvalues] = 3*Y + Y;
-      else if (strcmp(arg[iarg+1],"zz") == 0) moment[nvalues] = 3*Z + Z;
-      else if (strcmp(arg[iarg+1],"xy") == 0) moment[nvalues] = 3*X + Y;
-      else if (strcmp(arg[iarg+1],"yz") == 0) moment[nvalues] = 3*Y + Z;
-      else if (strcmp(arg[iarg+1],"xz") == 0) moment[nvalues] = 3*X + Z;
+      which[nvalue] = BMOM;
+      if (strcmp(arg[iarg+1],"xx") == 0) moment[nvalue] = 3*X + X;
+      else if (strcmp(arg[iarg+1],"yy") == 0) moment[nvalue] = 3*Y + Y;
+      else if (strcmp(arg[iarg+1],"zz") == 0) moment[nvalue] = 3*Z + Z;
+      else if (strcmp(arg[iarg+1],"xy") == 0) moment[nvalue] = 3*X + Y;
+      else if (strcmp(arg[iarg+1],"yz") == 0) moment[nvalue] = 3*Y + Z;
+      else if (strcmp(arg[iarg+1],"xz") == 0) moment[nvalue] = 3*X + Z;
       else error->all(FLERR,"Illegal compute sonine/grid command");
-      order[nvalues] = atoi(arg[iarg+2]);
-      if (order[nvalues] < 1 || order[nvalues] > 5)
+      order[nvalue] = atoi(arg[iarg+2]);
+      if (order[nvalue] < 1 || order[nvalue] > 5)
         error->all(FLERR,"Illegal compute sonine/grid command");
-      nvalues++;
-      npergroup += order[nvalues];
+      nvalue++;
+      npergroup += order[nvalue];
       iarg += 3;
     } else error->all(FLERR,"Illegal compute sonine/grid command");
   }
 
   per_grid_flag = 1;
-  ngroups = particle->mixture[imix]->ngroup;
-  ntotal = ngroups*npergroup;
+  ngroup = particle->mixture[imix]->ngroup;
+  ntotal = ngroup*npergroup;
   if (ntotal == 0) size_per_grid_cols = 0;
   else size_per_grid_cols = ntotal;
 
@@ -119,7 +119,7 @@ ComputeSonineGrid::~ComputeSonineGrid()
 
 void ComputeSonineGrid::init()
 {
-  if (ngroups != particle->mixture[imix]->ngroup)
+  if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute ke/grid mixture has changed");
 
   // one-time allocation
@@ -133,8 +133,8 @@ void ComputeSonineGrid::init()
     }
   } else {
     if (sonine_array == NULL) {
-      memory->create(avave,grid->nlocal,ngroups,3,"sonine/grid:vave");
-      memory->create(acount,grid->nlocal,ngroups,"sonine/grid:count");
+      memory->create(avave,grid->nlocal,ngroup,3,"sonine/grid:vave");
+      memory->create(acount,grid->nlocal,ngroup,"sonine/grid:count");
       memory->create(sonine_array,grid->nlocal,ntotal,
                      "sonine/grid:sonine_array");
       array_grid = sonine_array;
@@ -218,7 +218,7 @@ void ComputeSonineGrid::compute_per_grid()
   } else {
     for (i = 0; i < nglocal; i++) {
       for (j = 0; j < ntotal; j++) sonine_array[i][j] = 0.0;
-      for (j = 0; j < ngroups; j++) {
+      for (j = 0; j < ngroup; j++) {
         avave[i][j][0] = 0.0;
         avave[i][j][1] = 0.0;
         avave[i][j][2] = 0.0;
@@ -240,7 +240,7 @@ void ComputeSonineGrid::compute_per_grid()
     }
 
     for (i = 0; i < nlocal; i++)
-      for (j = 0; j < ngroups; j++) {
+      for (j = 0; j < ngroup; j++) {
         avave[ilocal][igroup][0] /= acount[ilocal][igroup];
         avave[ilocal][igroup][1] /= acount[ilocal][igroup];
         avave[ilocal][igroup][2] /= acount[ilocal][igroup];
@@ -261,7 +261,7 @@ void ComputeSonineGrid::compute_per_grid()
         vthermal[2]*vthermal[2];
 
       k = igroup*npergroup;
-      for (m = 0; m < nvalues; m++) {
+      for (m = 0; m < nvalue; m++) {
         if (which[m] == THERMAL) {
           sonine_array[ilocal][k++] += 0.5*species[ispecies].mass*csq;
         } else if (which[m] == AMOM) {
@@ -290,8 +290,8 @@ bigint ComputeSonineGrid::memory_usage()
     bytes += grid->nlocal * sizeof(int);
     bytes += grid->nlocal * sizeof(double);
   } else {
-    bytes += grid->nlocal*ngroups*3 * sizeof(double);
-    bytes += grid->nlocal*ngroups * sizeof(int);
+    bytes += grid->nlocal*ngroup*3 * sizeof(double);
+    bytes += grid->nlocal*ngroup * sizeof(int);
     bytes += grid->nlocal*ntotal * sizeof(double);
   }
   return bytes;
