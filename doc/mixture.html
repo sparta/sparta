@@ -30,11 +30,10 @@
   <I>temp</I> arg = thermal
     thermal = temperature of entire mixture (temperature units)
   <I>frac</I> arg = fraction
-    fraction = relative number fraction for each listed species (0 to 1)
-  <I>group</I> arg = <I>all</I> or <I>species</I> or group-ID
-    all = put each listed species (or all species if none listed) in the "all" group
-    species = put each listed species (or all species if none listed) in its own group
-    group-ID = put the listed species in a group with this ID 
+    fraction = number fraction for each listed species (0 to 1)
+  <I>group</I> arg = SELF or group-ID
+    SELF = put each listed species (or all species if none listed) in its own group
+    group-ID = put the listed species (or all species if none listed) in a group with this ID 
 </PRE>
 
 </UL>
@@ -49,53 +48,54 @@ mixture background N O
 <P><B>Description:</B>
 </P>
 <P>Define a gas mixture and its properties.  A mixture can be referenced
-via its ID in several other SPARTA commands such as
-<A HREF = "create_molecules.html">create_molecules</A> or <A HREF = "fix_ave_grid.html">fix
-ave/grid</A>.  Any number of mixtures can be defined
-and used in a simulation.
+by its ID in several other SPARTA commands such as
+<A HREF = "create_molecules.html">create_molecules</A> or <A HREF = "compute.html">pre-grid
+computes</A>.  Any number of mixtures can be defined and
+used in a simulation.
 </P>
 <P>The ID of a mixture can only contain alphanumeric characters and
 underscores.
 </P>
 <P>A mixture is a collection of one or more particle species as defined
-by the <A HREF = "species.html">species</A> command.  Some or all of the species can
-be lumped together into groups, so that particles of all species in
-the group are acted on together by other commands.  The mixture has
+by the <A HREF = "species.html">species</A> command.  Each species belongs to a
+named group within the mixture so that particles of all species in the
+group can be acted on together by other commands.  The mixture has
 global attributes and per-species attributes.  All attributes have
 default values unless they are explicitly specified.
 </P>
 <P>Note that the mixture command can be used multiple times with the same
-ID to add species to the mixture or change its attributes.
+ID, to add species to the mixture, define groups within the mixture,
+or change its attributes.
 </P>
 <P>There are 2 default mixtures defined by SPARTA that always exist.
 </P>
 <P>The first default mixture has an ID = "all", and contains all species
-that have been defined.  When new species are added via the "species"
-command, they are automatically added to this mixture.  This mixture
-has only a single group, also named "all", which all species belong
-to.
+that have been defined.  When new species are created via the
+"species" command, they are automatically added to this mixture.  This
+mixture has only a single group, also named "all", which all species
+belong to.
 </P>
 <P>The second default mixture has an ID = "species", and also contains
-all species that have been defined.  When new species are added via
+all species that have been defined.  When new species are created via
 the "species" command, they are also automatically added to this
-mixture.  This mixture has one group per species, each with the
+mixture.  This mixture has one group per species, each nanmed with the
 species name, so that each species that belongs to its own group.
 </P>
 <HR>
 
-<P>Zero or more species can be listed with the mixture command.  If a
-listed species is not already in the mixture, from a previous mixture
-command with the same ID, then that species is added to the mixture.
-It will be assigned default per-species attributes and to a default
-group, unless the appropriate keywords are also specified, as
-discussed below.
+<P>Zero or more species can be specified in the mixture command.  If a
+listed species is not already in the mixture, due to a previous
+mixture command with the same ID, then that species is added to the
+mixture.  As discussed below, it will be assigned to a default group
+and assigned default per-species attributes, unless the appropriate
+keywords are also specified.
 </P>
-<P>Species can be listed which are already part of the mixture so that
-their per-species proerties can be changed, or so their group
-assignment can be changed, as disussed below.
+<P>Species can be specified which are already part of the mixture, to
+change their group assignemnt or their per-species proerties, as
+disussed below.
 </P>
-<P>Zero species can be listed, if other keywords are used which change
-global attributes of the mixture or alter the group assignements, as
+<P>Zero species can be specified, if other keywords are used which alter
+group assignments or change global attributes of the mixture, as
 discussed below.
 </P>
 <HR>
@@ -122,45 +122,54 @@ in the mixture.  Each species has a relative fractional density, such
 as 0.2, meaning one out of 5 particles is that species.  The sum of
 this value across all species in the mixture must equal 1.0.  The
 <I>frac</I> keyword sets this value for the listed species.  If this value
-is never set for M species out of the total N species in the mixture,
-then when a simulation is run, the <I>frac</I> value for each of the M
-species is set to (1 - sum)/M, where sum is the sum of the <I>frac</I>
-values for the N-M assigned species.
+has never been set for M species out of the total N species in the
+mixture, then when a simulation is run, the <I>frac</I> value for each of
+the M species is set to (1 - sum)/M, where sum is the sum of the
+<I>frac</I> values for the N-M assigned species.
 </P>
 <HR>
 
 <P>Each species in the mixture is assigned to exactly one group.  The
 <I>group</I> keyword can be used to set or change these assignments.
 </P>
-<P>Mixture groups are used when performing collisions so that collisions
-attempts, partners, and parameters can be treated on a per-group basis
-for accuracy and efficiency.  Also for fix ave/grid and per-grid
-computes.
+<P>As described by the <A HREF = "collide.html">collide</A> command, mixture groups are
+used when performing collisions so that collisions attempts, partners,
+and parameters can be treated on a per-group basis for accuracy and
+efficiency.  <A HREF = "compute.html">Per-grid computes</A> also use mixture groups
+to calculate grid-based quantities on subsets of particles within each
+grid cell.
 </P>
 <P>The specified group ID can be any string you choose.  Similar to the
 mixture ID, it can only contain alphanumeric characters and
-underscores.  Using the word "all" or "species" is used as a group-ID
-has special meaning as discussed below.  For any other ID, the listed
-species are assigned to that group.  Normally this should only be done
-once for each species, so that groups are not left empty.  If a
-species was previously assigned to another group, then it is
-re-assigned.
+underscores.  Using SELF for the group ID has a special meaning as
+discussed below.
 </P>
-<P>If "all" is used as the group-ID and no species are specified, then
-all previously defined groups are deleted, and all species in the
-mixture are assigned to the same group, with group-ID = "all".  If
-individual species are listed in the mixture command, then only those
-species are (re)assigned to a group with group-ID = all.  This is also
-the default behavior for the mixture command for any new species
-specified; if the <I>group</I> keyword is not used, the new species are
-assigned to a group with group-ID = "all".
+<P>The operation of the <I>group</I> keyword depends on whether zero species
+or some species are specified explicitly in the mixture command.  It
+also depends on whether the group ID is SELF or a user-defined name.
+In each case, after the operation is done, any group IDs for the
+mixture that have no species assigned to them are deleted.
 </P>
-<P>If "species" is used as the group-ID and no species are specified,
-then all previously defined groups are deleted, and each species in
-the mixture is assigned to its own group, with group-ID = the species
-name.  If individual species are listed in the mixture command, then
-only those species are (re)assigned to a group with group-ID = the
-species name.
+<UL><LI>If zero species are listed and the group ID is SELF, then each species
+already in the mixture is assigned to a group with its species ID as
+the group ID.  I.e. there will now be one species per group. 
+
+<LI>If one or more species are listed and the group ID is SELF, then each
+listed species is assigned to a group with its species ID as the group
+ID. 
+
+<LI>If zero species are listed and the group ID is not SELF, then all
+species already in the mixture are assigned to a group with the
+specified ID. 
+
+<LI>If one or more species are listed and the group ID is not SELF, then
+the listed species are all assigned to a group with the specified
+ID. 
+</UL>
+<P>Note that if the <I>group</I> keyword is not used, no changes to group
+assignements are made.  If one or more new species are specified,
+which are not already in the mixture, then each is assigned to a group
+with the species ID as the group ID.
 </P>
 <HR>
 
@@ -174,7 +183,8 @@ species name.
 </P>
 <P>The <I>nrho</I>, <I>vstream</I>, and <I>temp</I> defaults are those defined for the
 background gas density, as set by the <A HREF = "global.html">global</A> command.
-The <I>frac</I> default is described above.  The <I>group</I> default (if new
-species are listed) is "all".
+The <I>frac</I> default is described above.  The <I>group</I> keyword has no
+default; if it is not used, new species not already in the mixture are
+each assigned to a group with the species ID as the group ID.
 </P>
 </HTML>
