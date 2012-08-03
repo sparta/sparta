@@ -240,6 +240,7 @@ bigint ComputeGrid::memory_usage()
   for (int i = 0; i < ngroup; i++) {
     if (norm_count[i]) bytes += grid->nlocal * sizeof(double);
     if (norm_mass[i]) bytes += grid->nlocal * sizeof(double);
+    if (norm_temp[i]) bytes += grid->nlocal * sizeof(double);
   }
   return bytes;
 }

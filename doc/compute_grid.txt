@@ -33,8 +33,8 @@ values = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} :l
 compute 1 grid species n u v w usq vsq wsq
 compute 1 grid air n u v w :pre
 
-These commands will dump standard per grid cell averages for each
-species to a file every 1000 steps:
+These commands will dump standard averages for each species and each
+grid cell to a file every 1000 steps:
 
 compute 1 grid species n u v w usq vsq wsq
 fix 1 ave/grid 10 100 1000 c_1
