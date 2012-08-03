@@ -29,7 +29,7 @@ using namespace SPARTA_NS;
 
 enum{THERMAL,AMOM,BMOM};
 enum{X,Y,Z};
-enum{NONE,COUNT,MASSWT};
+enum{NONE,COUNT,MASSWT,TEMPWT};
 
 /* ---------------------------------------------------------------------- */
 
@@ -95,24 +95,34 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
   ntotal = ngroup*npergroup;
   size_per_grid_cols = ntotal;
 
-  vave = NULL;
+  vcom = NULL;
+  masstot = NULL;
   sonine = NULL;
 
-  memory->create(group_norm_style,ngroup,"sonine/grid:group_norm_style");
-  norms = new double*[ngroup];
+  memory->create(value_norm_style,ngroup,npergroup,
+                 "sonine/grid:value_norm_style");
+  norm_count = new double*[ngroup];
+  norm_mass = new double*[ngroup];
+  norm_temp = new double*[ngroup];
 }
 
 /* ---------------------------------------------------------------------- */
 
 ComputeSonineGrid::~ComputeSonineGrid()
 {
-  memory->destroy(vave);
+  memory->destroy(vcom);
+  memory->destroy(masstot);
   memory->destroy(sonine);
 
-  memory->destroy(group_norm_style);
-  for (int i = 0; i < ngroup; i++)
-    memory->destroy(norms[i]);
-  delete [] norms;
+  memory->destroy(value_norm_style);
+  for (int i = 0; i < ngroup; i++) {
+    memory->destroy(norm_count[i]);
+    memory->destroy(norm_mass[i]);
+    memory->destroy(norm_temp[i]);
+  }
+  delete [] norm_count;
+  delete [] norm_mass;
+  delete [] norm_temp;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -126,15 +136,34 @@ void ComputeSonineGrid::init()
   // cannot allocate norms until now since depends on group sizes
 
   if (sonine == NULL) {
-    memory->create(vave,grid->nlocal,ngroup,3,"sonine/grid:vave");
+    memory->create(vcom,grid->nlocal,ngroup,3,"sonine/grid:vcom");
+    memory->create(masstot,grid->nlocal,ngroup,"sonine/grid:masstot");
     memory->create(sonine,grid->nlocal,ntotal,"sonine/grid:sonine");
     array_grid = sonine;
 
+    int m = 0;
+    for (int i = 0; i < ngroup; i++)
+      for (int j = 0; j < nvalue; j++) {
+        if (which[j] == THERMAL) value_norm_style[i][m++] = TEMPWT; 
+        else {
+          for (int k = 0; k < order[j]; j++)
+            if (particle->mixture[imix]->groupsize[i] == 1)
+              value_norm_style[i][m++] = COUNT; 
+            else value_norm_style[i][m++] = MASSWT;
+        }
+      }
+
     for (int i = 0; i < ngroup; i++) {
-      if (particle->mixture[imix]->groupsize[i] == 1)
-        group_norm_style[i] = COUNT; 
-      else group_norm_style[i] = MASSWT;
-      memory->create(norms[i],grid->nlocal,"sonine/grid:norms");
+      norm_count[i] = norm_mass[i] = norm_temp[i] = NULL;
+      for (int j = 0; j < npergroup; j++) {
+        if (value_norm_style[i][j] == NONE) continue;
+        if (value_norm_style[i][j] == COUNT && norm_count[i] == NULL)
+          memory->create(norm_count[i],grid->nlocal,"sonine/grid:norm_count");
+        if (value_norm_style[i][j] == MASSWT && norm_mass[i] == NULL)
+          memory->create(norm_mass[i],grid->nlocal,"sonine/grid:norm_mass");
+        if (value_norm_style[i][j] == TEMPWT && norm_temp[i] == NULL)
+          memory->create(norm_temp[i],grid->nlocal,"sonine/grid:norm_temp");
+      }
     }
   }
 }
@@ -152,81 +181,102 @@ void ComputeSonineGrid::compute_per_grid()
   Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
+  int *groupsize = particle->mixture[imix]->groupsize;
   int nlocal = particle->nlocal;
   int nglocal = grid->nlocal;
   double mvv2e = update->mvv2e;
+  double kbwt = 3.0*update->boltz;
 
   int i,j,k,m,n,ispecies,igroup,ilocal;
-  double prefactor,csq;
+  double prefactor,csq,wt;
   double *norm,*v;
   double vthermal[3];
 
-  for (i = 0; i < nglocal; i++) {
-    for (j = 0; j < ntotal; j++) sonine[i][j] = 0.0;
-    for (j = 0; j < ngroup; j++) {
-      vave[i][j][0] = 0.0;
-      vave[i][j][1] = 0.0;
-      vave[i][j][2] = 0.0;
-      count[i][j] = 0.0;
-    }
-  }
+  // compute COM velocity for each cell and group
 
-  for (j = 0; j < ngroup; j++) {
-    norm = norms[j];
-    for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+  for (i = 0; i < nglocal; i++) {
+    for (j = 0; j < ngroup; j++) {
+      vcom[i][j][0] = 0.0;
+      vcom[i][j][1] = 0.0;
+      vcom[i][j][2] = 0.0;
+      masstot[i][j] = 0.0;
+    }
   }
 
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
-    norm = norms[igroup];
-
     ilocal = cells[particles[i].icell].local;
+
+    if (groupsize[igroup] == 1) wt = 1.0;
+    else wt = species[ispecies].mass;
+    masstot[ilocal][igroup] += wt;
+
     v = particles[i].v;
-    vave[ilocal][igroup][0] += v[0];
-    vave[ilocal][igroup][1] += v[1];
-    vave[ilocal][igroup][2] += v[2];
-    if (group_norm_style[igroup] == COUNT) norm[ilocal] += 1.0;
-    else norm[ilocal] += species[particles[i].ispecies].mass;
+    vcom[ilocal][igroup][0] += wt * v[0];
+    vcom[ilocal][igroup][1] += wt * v[1];
+    vcom[ilocal][igroup][2] += wt * v[2];
   }
 
-  for (i = 0; i < nlocal; i++)
+  for (i = 0; i < nglocal; i++)
     for (j = 0; j < ngroup; j++) {
-      // check for div by 0.0
-      vave[i][j][0] /= norms[i][j];
-      vave[i][j][1] /= norms[i][j];
-      vave[i][j][2] /= norms[i][j];
+      if (masstot[i][j] == 0.0) continue;
+      vcom[i][j][0] /= masstot[i][j];
+      vcom[i][j][1] /= masstot[i][j];
+      vcom[i][j][2] /= masstot[i][j];
     }
   
+  // compute thermal temperature and sonine moments
+
+  for (i = 0; i < nglocal; i++)
+    for (j = 0; j < ntotal; j++) sonine[i][j] = 0.0;
+
+  for (j = 0; j < ngroup; j++) {
+    if (norm = norm_count[j])
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+    if (norm = norm_mass[j])
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+    if (norm = norm_temp[j])
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+  }
+
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
-    
     ilocal = cells[particles[i].icell].local;
-    v = particles[i].v;
-    
-    // apply mass weighting
 
-    vthermal[0] = v[0] - vave[ilocal][igroup][0];
-    vthermal[1] = v[1] - vave[ilocal][igroup][1];
-    vthermal[2] = v[2] - vave[ilocal][igroup][2];
+    if (norm_mass[igroup]) wt = species[ispecies].mass;
+    else wt = 1.0;
+    if (norm_count[igroup]) norm_count[igroup][ilocal] += 1.0;
+    if (norm_mass[igroup]) norm_mass[igroup][ilocal] += wt;
+
+    v = particles[i].v;
+    vthermal[0] = v[0] - vcom[ilocal][igroup][0];
+    vthermal[1] = v[1] - vcom[ilocal][igroup][1];
+    vthermal[2] = v[2] - vcom[ilocal][igroup][2];
     csq = vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] + 
       vthermal[2]*vthermal[2];
-    
+
     k = igroup*npergroup;
+    
     for (m = 0; m < nvalue; m++) {
-      if (which[m] == THERMAL) {
+      switch (which[m]) {
+      case THERMAL:
         sonine[ilocal][k++] += 0.5*species[ispecies].mass*csq;
-      } else if (which[m] == AMOM) {
-        prefactor = vthermal[moment[m]];
+        norm_temp[igroup][ilocal] += kbwt;
+        break;
+      case AMOM:
+        prefactor = wt * vthermal[moment[m]];
         for (n = 0; n < order[m]; n++)
           sonine[ilocal][k++] += prefactor*pow(csq,n);
-      } else if (which[m] == BMOM) {
-        prefactor = vthermal[moment[m] / 3] * vthermal[moment[m] % 3];
+        break;
+      case BMOM:
+        prefactor = wt * vthermal[moment[m] / 3] * vthermal[moment[m] % 3];
         for (n = 0; n < order[m]; n++)
           sonine[ilocal][k++] += prefactor*pow(csq,n);
+        break;
       }
     }
   }
@@ -238,8 +288,12 @@ void ComputeSonineGrid::compute_per_grid()
 
 double *ComputeSonineGrid::normptr(int n)
 {
-  int igroup = n / nvalue;
-  return norms[igroup];
+  int igroup = n / npergroup;
+  int ivalue = n % npergroup;
+  if (value_norm_style[igroup][ivalue] == COUNT) return norm_count[igroup];
+  if (value_norm_style[igroup][ivalue] == MASSWT) return norm_mass[igroup];
+  if (value_norm_style[igroup][ivalue] == TEMPWT) return norm_temp[igroup];
+  return NULL;
 }
 
 /* ----------------------------------------------------------------------
@@ -252,5 +306,10 @@ bigint ComputeSonineGrid::memory_usage()
   bytes += grid->nlocal*ngroup*3 * sizeof(double);
   bytes += grid->nlocal*ngroup * sizeof(int);
   bytes += grid->nlocal*ntotal * sizeof(double);
+  for (int i = 0; i < ngroup; i++) {
+    if (norm_count[i]) bytes += grid->nlocal * sizeof(double);
+    if (norm_mass[i]) bytes += grid->nlocal * sizeof(double);
+    if (norm_temp[i]) bytes += grid->nlocal * sizeof(double);
+  }
   return bytes;
 }

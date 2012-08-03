@@ -24,8 +24,8 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,U,V,W,USQ,VSQ,WSQ,KE,TEMP};
-enum{NONE,COUNT,MASSWT};
+enum{NUM,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE};
+enum{NONE,COUNT,MASSWT,TEMPWT};
 
 /* ---------------------------------------------------------------------- */
 
@@ -51,7 +51,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"vsq") == 0) which[nvalue++] = VSQ;
     else if (strcmp(arg[iarg],"wsq") == 0) which[nvalue++] = WSQ;
     else if (strcmp(arg[iarg],"ke") == 0) which[nvalue++] = KE;
-    else if (strcmp(arg[iarg],"temp") == 0) which[nvalue++] = TEMP;
+    else if (strcmp(arg[iarg],"temp") == 0) which[nvalue++] = TEMPERATURE;
     else error->all(FLERR,"Illegal compute grid command");
     iarg++;
   }
@@ -66,6 +66,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   memory->create(value_norm_style,ngroup,nvalue,"grid:value_norm_style");
   norm_count = new double*[ngroup];
   norm_mass = new double*[ngroup];
+  norm_temp = new double*[ngroup];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -79,9 +80,11 @@ ComputeGrid::~ComputeGrid()
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
     memory->destroy(norm_mass[i]);
+    memory->destroy(norm_temp[i]);
   }
   delete [] norm_count;
   delete [] norm_mass;
+  delete [] norm_temp;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -100,19 +103,23 @@ void ComputeGrid::init()
     for (int i = 0; i < ngroup; i++)
       for (int j = 0; j < nvalue; j++) {
         if (which[j] == NUM) value_norm_style[i][j] = NONE;
+        else if (which[j] == KE) value_norm_style[i][j] = COUNT; 
+        else if (which[j] == TEMPERATURE) value_norm_style[i][j] = TEMPWT; 
         else if (particle->mixture[imix]->groupsize[i] == 1)
           value_norm_style[i][j] = COUNT; 
         else value_norm_style[i][j] = MASSWT;
       }
 
     for (int i = 0; i < ngroup; i++) {
-      norm_count[i] = norm_mass[i] = NULL;
+      norm_count[i] = norm_mass[i] = norm_temp[i] = NULL;
       for (int j = 0; j < nvalue; j++) {
         if (value_norm_style[i][j] == NONE) continue;
         if (value_norm_style[i][j] == COUNT && norm_count[i] == NULL)
           memory->create(norm_count[i],grid->nlocal,"grid:norm_count");
         if (value_norm_style[i][j] == MASSWT && norm_mass[i] == NULL)
           memory->create(norm_mass[i],grid->nlocal,"grid:norm_mass");
+        if (value_norm_style[i][j] == TEMPWT && norm_temp[i] == NULL)
+          memory->create(norm_temp[i],grid->nlocal,"grid:norm_temp");
       }
     }
   }
@@ -133,6 +140,7 @@ void ComputeGrid::compute_per_grid()
   int nlocal = particle->nlocal;
   int nglocal = grid->nlocal;
   double mvv2e = update->mvv2e;
+  double kbwt = 3.0*update->boltz;
 
   int i,j,k,m,n,ispecies,igroup,ilocal;
   double wt;
@@ -146,6 +154,8 @@ void ComputeGrid::compute_per_grid()
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
     if (norm = norm_mass[j])
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+    if (norm = norm_temp[j])
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
   }
 
   // loop over all particles, skip species not in mixture group
@@ -156,10 +166,10 @@ void ComputeGrid::compute_per_grid()
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
-    if (norm_mass[igroup]) wt = species[ispecies].mass;
-    else wt = 1.0;
     ilocal = cells[particles[i].icell].local;
 
+    if (norm_mass[igroup]) wt = species[ispecies].mass;
+    else wt = 1.0;
     if (norm_count[igroup]) norm_count[igroup][ilocal] += 1.0;
     if (norm_mass[igroup]) norm_mass[igroup][ilocal] += wt;
 
@@ -194,10 +204,11 @@ void ComputeGrid::compute_per_grid()
           0.5 * mvv2e * species[ispecies].mass * 
           (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
         break;
-      case TEMP:
+      case TEMPERATURE:
         array_grid[ilocal][k++] += 
           0.5 * mvv2e * species[ispecies].mass * 
           (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        norm_temp[igroup][ilocal] += kbwt;
         break;
       }
     }
@@ -214,6 +225,7 @@ double *ComputeGrid::normptr(int n)
   int ivalue = n % nvalue;
   if (value_norm_style[igroup][ivalue] == COUNT) return norm_count[igroup];
   if (value_norm_style[igroup][ivalue] == MASSWT) return norm_mass[igroup];
+  if (value_norm_style[igroup][ivalue] == TEMPWT) return norm_temp[igroup];
   return NULL;
 }
 

@@ -38,12 +38,14 @@ class ComputeSonineGrid : public Compute {
   int imix,nvalue,ngroup,npergroup,ntotal;
   int *which,*moment,*order;
 
-  double ***vave;
+  double ***vcom;
+  double **masstot;
   double **sonine;
 
-  int *group_norm_style;      // norm style of all values in Ith group
-  double **norms;             // per-group ptr to norm vector by count or mass
-  double **count;
+  int **value_norm_style;       // I,J = norm style of Jth value in Ith group
+  double **norm_count;          // per-group ptr to norm vector, by count
+  double **norm_mass;           // per-group ptr to norm vector, by mass
+  double **norm_temp;           // per-group ptr to norm vector, by temperature
 };
 
 }
