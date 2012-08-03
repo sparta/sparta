@@ -45,8 +45,15 @@ zero or more input values can be listed
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>fix 1 all ave/grid 1 100 100 standard ave running
-fix 1 all ave/grid 10 20 1000 c_mine 
+<PRE>fix 1 all ave/grid 10 20 1000 c_mine
+fix 1 all ave/grid 1 100 100 c_2 ave running 
+</PRE>
+<P>These commands will dump standard averages for each species and each
+grid cell to a file every 1000 steps:
+</P>
+<PRE>compute 1 grid species n u v w usq vsq wsq
+fix 1 ave/grid 10 100 1000 c_1
+dump 1 grid 1000 tmp.grid id f_1 
 </PRE>
 <P><B>Description:</B>
 </P>
