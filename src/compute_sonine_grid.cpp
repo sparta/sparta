@@ -67,8 +67,8 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
       order[nvalue] = atoi(arg[iarg+2]);
       if (order[nvalue] < 1 || order[nvalue] > 5)
         error->all(FLERR,"Illegal compute sonine/grid command");
-      nvalue++;
       npergroup += order[nvalue];
+      nvalue++;
       iarg += 3;
     } else if (strcmp(arg[iarg],"b") == 0) {
       if (iarg+3 > narg) 
@@ -84,8 +84,8 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
       order[nvalue] = atoi(arg[iarg+2]);
       if (order[nvalue] < 1 || order[nvalue] > 5)
         error->all(FLERR,"Illegal compute sonine/grid command");
-      nvalue++;
       npergroup += order[nvalue];
+      nvalue++;
       iarg += 3;
     } else error->all(FLERR,"Illegal compute sonine/grid command");
   }
@@ -110,6 +110,10 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeSonineGrid::~ComputeSonineGrid()
 {
+  delete [] which;
+  delete [] moment;
+  delete [] order;
+
   memory->destroy(vcom);
   memory->destroy(masstot);
   memory->destroy(sonine);
@@ -141,17 +145,18 @@ void ComputeSonineGrid::init()
     memory->create(sonine,grid->nlocal,ntotal,"sonine/grid:sonine");
     array_grid = sonine;
 
-    int m = 0;
-    for (int i = 0; i < ngroup; i++)
+    for (int i = 0; i < ngroup; i++) {
+      int m = 0;
       for (int j = 0; j < nvalue; j++) {
         if (which[j] == THERMAL) value_norm_style[i][m++] = TEMPWT; 
         else {
-          for (int k = 0; k < order[j]; j++)
+          for (int k = 0; k < order[j]; k++)
             if (particle->mixture[imix]->groupsize[i] == 1)
               value_norm_style[i][m++] = COUNT; 
             else value_norm_style[i][m++] = MASSWT;
         }
       }
+    }
 
     for (int i = 0; i < ngroup; i++) {
       norm_count[i] = norm_mass[i] = norm_temp[i] = NULL;
