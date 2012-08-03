@@ -15,7 +15,7 @@
 #include "sptype.h"
 #include "stdlib.h"
 #include "string.h"
-#include "fix_ave_grid2.h"
+#include "fix_ave_grid.h"
 #include "grid.h"
 #include "particle.h"
 #include "update.h"
@@ -36,7 +36,7 @@ enum{ONE,RUNNING};
 
 /* ---------------------------------------------------------------------- */
 
-FixAveGrid2::FixAveGrid2(SPARTA *sparta, int narg, char **arg) :
+FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
   if (narg < 5) error->all(FLERR,"Illegal fix ave/grid command");
@@ -248,7 +248,7 @@ FixAveGrid2::FixAveGrid2(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixAveGrid2::~FixAveGrid2()
+FixAveGrid::~FixAveGrid()
 {
   memory->destroy(which);
   memory->destroy(argindex);
@@ -272,7 +272,7 @@ FixAveGrid2::~FixAveGrid2()
 
 /* ---------------------------------------------------------------------- */
 
-int FixAveGrid2::setmask()
+int FixAveGrid::setmask()
 {
   int mask = 0;
   mask |= END_OF_STEP;
@@ -281,7 +281,7 @@ int FixAveGrid2::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixAveGrid2::init()
+void FixAveGrid::init()
 {
   // set indices and check validity of all computes,fixes,variables
 
@@ -310,7 +310,7 @@ void FixAveGrid2::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixAveGrid2::setup()
+void FixAveGrid::setup()
 {
   // ont-time setup of norm pointers and nnorm
   // must do here after computes have been initialized
@@ -356,7 +356,7 @@ void FixAveGrid2::setup()
 
 /* ---------------------------------------------------------------------- */
 
-void FixAveGrid2::end_of_step()
+void FixAveGrid::end_of_step()
 {
   int i,j,m,n,isp,icol;
   double *norm,*cfv_norm;
@@ -541,7 +541,7 @@ void FixAveGrid2::end_of_step()
    parse optional args
 ------------------------------------------------------------------------- */
 
-void FixAveGrid2::options(int narg, char **arg)
+void FixAveGrid::options(int narg, char **arg)
 {
   // option defaults
 
@@ -565,7 +565,7 @@ void FixAveGrid2::options(int narg, char **arg)
    grow vectors for each input value
 ------------------------------------------------------------------------- */
 
-void FixAveGrid2::grow()
+void FixAveGrid::grow()
 {
   maxvalues += DELTA;
   memory->grow(which,maxvalues,"ave/grid:which");
@@ -578,7 +578,7 @@ void FixAveGrid2::grow()
    memory usage of accumulators
 ------------------------------------------------------------------------- */
 
-double FixAveGrid2::memory_usage()
+double FixAveGrid::memory_usage()
 {
   double bytes = 0.0;
   bytes += nglocal*nvalues * sizeof(double);
@@ -592,7 +592,7 @@ double FixAveGrid2::memory_usage()
    else backup from next multiple of nfreq
 ------------------------------------------------------------------------- */
 
-bigint FixAveGrid2::nextvalid()
+bigint FixAveGrid::nextvalid()
 {
   bigint nvalid = (update->ntimestep/per_grid_freq)*per_grid_freq + 
     per_grid_freq;

@@ -14,21 +14,21 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(ave/grid2,FixAveGrid2)
+FixStyle(ave/grid,FixAveGrid)
 
 #else
 
-#ifndef LMP_FIX_AVE_GRID2_H
-#define LMP_FIX_AVE_GRID2_H
+#ifndef LMP_FIX_AVE_GRID_H
+#define LMP_FIX_AVE_GRID_H
 
 #include "fix.h"
 
 namespace SPARTA_NS {
 
-class FixAveGrid2 : public Fix {
+class FixAveGrid : public Fix {
  public:
-  FixAveGrid2(class SPARTA *, int, char **);
-  ~FixAveGrid2();
+  FixAveGrid(class SPARTA *, int, char **);
+  ~FixAveGrid();
   int setmask();
   void init();
   void setup();
