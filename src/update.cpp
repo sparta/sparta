@@ -67,6 +67,9 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   maxmigrate = 0;
   mlist = NULL;
 
+  nblist_compute = 0;
+  blist_compute = NULL;
+
   ranmaster = new RanMars(sparta);
   random = NULL;
 
@@ -84,6 +87,7 @@ Update::~Update()
 {
   delete [] unit_style;
   memory->destroy(mlist);
+  delete [] blist_compute;
   delete ranmaster;
   delete random;
 }
@@ -117,13 +121,11 @@ void Update::set_units(const char *style)
   if (strcmp(style,"cgs") == 0) {
     boltz = 1.3806504e-16;
     mvv2e = 1.0;
-
     dt = 1.0;
 
   } else if (strcmp(style,"si") == 0) {
     boltz = 1.380658e-23;
     mvv2e = 1.0;
-
     dt = 1.0;
     
   } else error->all(FLERR,"Illegal units command");
@@ -427,7 +429,7 @@ void Update::move3d_surface()
 	  xnew[2] = x[2] + dtremain*v[2];
 	  if (bounceflag) {
             // invoke bounce compute tally() methods, need exact list
-	    isp = particles[i].ispecies - 1;
+            blist_compute[0]->tally(minsurf,particles[i].ispecies,v);
 	  }
 	  exclude = minsurf;
 	  nscollide_one++;
@@ -913,7 +915,7 @@ void Update::move2d_surface()
 	  xnew[1] = x[1] + dtremain*v[1];
 	  if (bounceflag) {
             // invoke bounce compute tally() methods, need exact list
-	    isp = particles[i].ispecies - 1;
+            blist_compute[0]->tally(minsurf,particles[i].ispecies,v);
 	  }
 	  exclude = minsurf;
 	  nscollide_one++;
@@ -1219,7 +1221,7 @@ void Update::bounce_set(bigint ntimestep)
   for (i = 0; i < nblist_compute; i++)
     if (blist_compute[i]->matchstep(ntimestep)) {
       bounceflag = 1;
-      //blist_compute[i]->clear();
+      blist_compute[i]->clear();
     }
 }
 

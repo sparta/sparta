@@ -53,10 +53,13 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   }
 
   bounceflag = 1;
+  timeflag = 1;
   per_surf_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
   ntotal = ngroup*nvalue;
   size_per_surf_cols = ntotal;
+
+  printf("COMPUTE NTOT %d\n",ntotal);
 
   array_surf = NULL;
 
@@ -128,6 +131,8 @@ void ComputeSurf::init()
 void ComputeSurf::compute_per_surf()
 {
   invoked_per_surf = update->ntimestep;
+
+  printf("COMP BOUNCE %ld %d\n",update->ntimestep,nbounce);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -137,6 +142,8 @@ void ComputeSurf::clear()
   int nslocal = surf->nlocal;
   double mvv2e = update->mvv2e;
   double kbwt = 3.0*update->boltz;
+
+  nbounce = 0;
 
   int i,j,k,m,n,ispecies,igroup,ilocal;
   double wt;
@@ -159,6 +166,9 @@ void ComputeSurf::clear()
 
 void ComputeSurf::tally(int isurf, int ispecies, double *v)
 {
+  nbounce++;
+  if (nbounce >= 0) return;
+
   // skip species not in mixture group
   // NOTE: skip here or in caller?
   // tally any norm associated with group into norms

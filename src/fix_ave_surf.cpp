@@ -122,6 +122,9 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
         }
       }
 
+      nvalues++;
+      delete [] suffix;
+
       iarg++;
     } else break;
   }
@@ -192,7 +195,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   nslocal = surf->nlocal;
   if (nvalues == 1) memory->create(vector_surf,nslocal,"ave/surf:vector_surf");
   else memory->create(array_surf,nslocal,nvalues,"ave/surf:array_surf");
-  
+
   if (ave == RUNNING) {
     if (nvalues == 1) memory->create(accvec,nslocal,"ave/surf:accvec");
     else memory->create(accarray,nslocal,nvalues,"ave/surf:accarray");
@@ -254,8 +257,8 @@ FixAveSurf::~FixAveSurf()
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
   memory->sfree(ids);
 
-  if (nvalues == 1) memory->destroy(vector_grid);
-  else memory->destroy(array_grid);
+  if (nvalues == 1) memory->destroy(vector_surf);
+  else memory->destroy(array_surf);
   if (ave == RUNNING) {
     if (nvalues == 1) memory->destroy(accvec);
     else memory->destroy(accarray);
@@ -315,6 +318,7 @@ void FixAveSurf::setup()
   // ont-time setup of norm pointers and nnorm
   // must do here after computes have been initialized
   // only store unique norms by checking if returned ptr matches previous ptr
+  // zero norm vectors one time if ave = RUNNING
   // NOTE: need to add logic for fixes and variables if enable them
 
   if (nnorm == 0) {
@@ -342,6 +346,10 @@ void FixAveSurf::setup()
             normindex[m] = nnorm;
             cfv_norms[nnorm] = ptr;
             memory->create(norms[nnorm],nslocal,"ave/surf:norms");
+            if (ave == RUNNING) {
+              double *norm = norms[nnorm];
+              for (int i = 0; i < nslocal; i++) norm[i] = 0.0;
+            }
             nnorm++;
           }
         }
@@ -546,7 +554,7 @@ void FixAveSurf::options(int narg, char **arg)
 
   // optional args
 
-  int iarg = 5 + nvalues;
+  int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"ave") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/surf command");

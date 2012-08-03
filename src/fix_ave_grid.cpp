@@ -315,6 +315,7 @@ void FixAveGrid::setup()
   // ont-time setup of norm pointers and nnorm
   // must do here after computes have been initialized
   // only store unique norms by checking if returned ptr matches previous ptr
+  // zero norm vectors one time if ave = RUNNING
   // NOTE: need to add logic for fixes and variables if enable them
 
   if (nnorm == 0) {
@@ -342,6 +343,10 @@ void FixAveGrid::setup()
             normindex[m] = nnorm;
             cfv_norms[nnorm] = ptr;
             memory->create(norms[nnorm],nglocal,"ave/grid:norms");
+            if (ave == RUNNING) {
+              double *norm = norms[nnorm];
+              for (int i = 0; i < nglocal; i++) norm[i] = 0.0;
+            }
             nnorm++;
           }
         }
