@@ -123,8 +123,10 @@ Each compute style has its own doc page which describes its arguments
 and what it does.  Here is an alphabetic list of compute styles
 available in SPARTA:
 
-"ke/molecule"_compute_ke_molecule.html - temperature of each molecule
-"temp"_compute_temp.html - temperature of all the molecules :ul
+"grid"_compute_grid.html - varioud per grid cell quantities
+"ke/molecule"_compute_ke_molecule.html - temperature per molecule
+"sonine/grid"_compute_sonine_grid.html - Sonine moments per grid cell
+"temp"_compute_temp.html - temperature of all molecules :ul
 
 :line
 

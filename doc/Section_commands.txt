@@ -292,8 +292,9 @@ Compute styles :h4
 See the "compute"_compute.html command for one-line descriptions of
 each style or click on the style itself for a full description:
 
-"ke/grid"_compute_ke_grid.html,
+"grid"_compute_grid.html,
 "ke/molecule"_compute_ke_molecule.html,
+"sonine/grid"_compute_sonine_grid.html,
 "temp"_compute_temp.html :tb(c=6,ea=c)
 
 :line

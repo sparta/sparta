@@ -26,10 +26,9 @@
 <LI>Nfreq = calculate averages every this many timesteps
 zero or more input values can be listed 
 
-<LI>value = standard, c_ID, c_ID[i], f_ID, f_ID[i], v_name 
+<LI>value = c_ID, c_ID[i], f_ID, f_ID[i], v_name 
 
-<PRE>  standard = pre-defined set of per-grid values = n u v w usq vsq wsq
-  c_ID = per-grid vector calculated by a compute with ID
+<PRE>  c_ID = per-grid vector calculated by a compute with ID
   c_ID[I] = Ith column of per-grid array calculated by a compute with ID
   f_ID = per-grid vector calculated by a fix with ID
   f_ID[I] = Ith column of per-grid array calculated by a fix with ID
@@ -52,17 +51,17 @@ fix 1 all ave/grid 10 20 1000 c_mine
 <P><B>Description:</B>
 </P>
 <P>Use one or more per-grid vectors as inputs every few timesteps, and
-average them grid cell by grid cell over longer timescales.  The
-resulting per-grid averages can be used by other output commands such
-as the <A HREF = "dump.html">dump grid</A> command.
+average them grid cell by grid cell over longer timescales, applying
+appropriate normalization factors.  The resulting per grid cell
+averages can be used by other output commands such as the <A HREF = "dump.html">dump
+grid</A> command.
 </P>
-<P>Each input value can be a standard grid cell attribute or can be the
-result of a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> or the evaluation
-of a grid-style <A HREF = "variable.html">variable</A>.  In the latter cases, the
-compute, fix, or variable must produce a per-grid vector, not a global
-quantity or per-molecule quantity.  If you wish to time-average global
-quantities from a compute, fix, or variable, then see the <A HREF = "fix_ave_time.html">fix
-ave/time</A> command.
+<P>Each input value can be the result of a <A HREF = "compute.html">compute</A> or
+<A HREF = "fix.html">fix</A> or the evaluation of a grid-style
+<A HREF = "variable.html">variable</A>.  The compute, fix, or variable must produce
+a per-grid vector, not a global quantity or per-molecule quantity.  If
+you wish to time-average global quantities from a compute, fix, or
+variable, then see the <A HREF = "fix_ave_time.html">fix ave/time</A> command.
 </P>
 <P><A HREF = "compute.html">Computes</A> that produce per-grid vectors or arrays are
 those which have the word <I>grid</I> in their style name.  See the doc
@@ -92,26 +91,6 @@ timestep 200, etc.
 </P>
 <HR>
 
-<P>If the single value <I>standard</I> is listed then statistics will be
-tallied on 7 quantities per species:
-</P>
-<PRE>n u v w usq vsq wsq 
-</PRE>
-<P>for a total of 7*Nsp values, where Nsp = # of species.
-</P>
-<P><I>N</I> is the count of molecules (of a species) in a grid cell in the
-current timestep.  <I>U,v,w</I> are the velocities of the same molecules in
-the x,y,z directions.  <I>Usq,vsq,wsq</I> are the squared velocities of the
-same molecules in the x,y,z directions.  These quanties are
-continuously tallied until a timestep that is a multiple of <I>Nfreq</I>,
-then normalized for output.  <I>N</I> is normalized by the number of
-contributing samples, so that the output value is average molecule
-count for a grid cell.  The other 6 quantities are normalized by the
-number of contributing molecules, so the output values are average
-velocity or velocity-squared for a grid cell.  See the <I>ave</I> keyword
-for a setting that affects whether the tallies are zeroed after each
-<I>Nfreq</I> output.
-</P>
 <P>If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  If no bracketed term is
 appended, the per-grid vector calculated by the compute is used.  If a
@@ -175,8 +154,7 @@ is when averaging is performed.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "compute.html">compute</A>, <A HREF = "fix_ave_histo.html">fix ave/histo</A>, <A HREF = "fix_ave_spatial.html">fix
-ave/spatial</A>, <A HREF = "fix_ave_time.html">fix ave/time</A>,
+<P><A HREF = "compute.html">compute</A>, <A HREF = "fix_ave_time.html">fix ave/time</A>,
 <A HREF = "variable.html">variable</A>
 </P>
 <P><B>Default:</B>

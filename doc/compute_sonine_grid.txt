@@ -13,16 +13,16 @@ compute sonine/grid command :h3
 compute ID sonine/grid mix-ID keyword values ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
-ke/grid = style name of this compute command :l
+sonine/grid = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more keywords may be appended, multiple times :l
 keyword = {thermal} or {a} or {b} :l
 values = values for specific keyword :l
-  {thermal} args = none = calculate temperature
-  {a} args = dim order
+  {thermal} args = none = thermal temperature
+  {a} args = dim order = sonine A moment
     dim = {x} or {y} or {z}
     order = number from 1 to 5
-  {b} args = dim2 order
+  {b} args = dim2 order = sonine B moment
     dim2 = {xx} or {yy} or {zz} or {xy} or {yz} or {xz}
     order = number from 1 to 5 :pre
 :ule
@@ -40,68 +40,99 @@ are summed for each group of species in the specified mixture.  See
 the "mixture"_mixture.html command for how a set of species can be
 partitioned into groups.
 
-The {thermal} keyword computes the thermal temperature for a group of
-molecules in the cell.  The contribution of each molecule in the group
-to the temperature T is given by
+Along with summing each specified value, a normalization factor is
+also computed.  If the group has a single species, the normalization
+factor is typically just the count of contributing molecules.  If the
+group has mutlipe species, the normalization factor is typically the
+total mass of the contributing molecules.  The normalization factors
+are used by other commands that process values produced by this
+compute.
 
-T = 1/2 mass Csq
-Csq = VTx*VTx + VTy*VTy + VTz*VTz
-VTx = Vx - VAVEx
-VTy = Vy - VAVEy
-VTz = Vz - VAVEz :pre
+For example, for the {a} value, the "dump grid"_dump.html command,
+will generate the average sonine A moment for molecules in a grid
+cell, averaged over molecules in the group.  The "fix
+ave/grid"_fix_ave_grid.html command will generate the average sonine A
+moment for molecules in a grid cell, averaged both over molecules in
+the group and time.
 
-where VAVE xyz are the components of the average velocity of molecules
-for that group in that cell.  VT xyz are the components of the thermal
-velocity of a molecule, obtained by subtracting off the average
-velocity.
+:line
 
-The {a} keyword calculates one or more sonine A moments for a group of
-molecules in the cell.  The contribution of each molecule in the group
-to each moment of the 5 moments is given by
+The {thermal} keyword computes the summed thermal kinetic energy for
+all molecules in the group.  The normalization factor is 3 times the
+count of molecules times the Boltzmann factor {kB}, so that the sum
+divided by the normalization factor is the temperature {T}.
 
-A1 = Vdim * pow(Csq,1)
-A2 = Vdim * pow(Csq,2)
-A3 = Vdim * pow(Csq,3)
-A4 = Vdim * pow(Csq,4)
-A5 = Vdim * pow(Csq,5) :pre
+thermal_KE = Sum_i (1/2 mass_i Csq_i)
+Csq = Cx*Cx + Cy*Cy + Cz*Cz
+Cx = Vx - COMx
+Cy = Vy - COMy
+Cz = Vz - COMz
+COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
+COMy = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
+COMz = Sum_i (mass_i Vz_i) / Sum_i (mass_i)
+3/2 kB T = thermal_KE :pre
 
-where Vdim is Vx or Vy or Vz as specified by the {dim} value.  The
-number of moments computed is specified by the {order} value.
+Note that the thermal kinetic energy is calculated from {C} = the
+thermal velocity of each molecule, which is its velocity minus the
+center-of-mass (COM) velocity of molecules in that cell and group.
+The COM velocity is the mass-weighted sum of the velocities of
+molecules in the group divided by the total mass of the molecules.
 
-The {b} keyword calculates one or more sonine B moments for a group of
-molecules in the cell.  The contribution of each molecule in the group
-to each moment of the 5 moments is given by
+:line
 
-B1 = Vdim1 * Vdim2 * pow(Csq,1)
-B2 = Vdim1 * Vdim2 * pow(Csq,2)
-B3 = Vdim1 * Vdim2 * pow(Csq,3)
-B4 = Vdim1 * Vdim2 * pow(Csq,4)
-B5 = Vdim1 * Vdim2 * pow(Csq,5) :pre
+The {a} keyword calculates the sum of one or more sonine A moments for
+all molecules in the group.  If the group has multiple species, the
+sum is mass-weighted and the normalization factor is the total mass.
 
-where Vdim1 is Vx or Vy or Vz, and Vdim2 is also Vx or Vy or Vz, as
-specified by the {dim2} value.  E.g. if {dime2} is {xy}, then Vdim1 =
-{x} and Vdim2 = {y}.  The number of moments computed is specified by
-the {order} value.
+A1 = Sum_i (mass_i * Vdim * pow(Csq,1))
+A2 = Sum_i (mass_i * Vdim * pow(Csq,2))
+A3 = Sum_i (mass_i * Vdim * pow(Csq,3))
+A4 = Sum_i (mass_i * Vdim * pow(Csq,4))
+A5 = Sum_i (mass_i * Vdim * pow(Csq,5)) :pre
+
+Vdim is Vx or Vy or Vz as specified by the {dim} value.  {Csq} is the
+squared thermal velocity of the molecule and has the same meaning as
+above in the {thermal} equations.  The number of moments computed is
+specified by the {order} value.  If the group has a single species, no
+mass weighting is done and the normalization factor is the count of
+molecules.
+
+The {b} keyword calculates the sum of one or more sonine B moments for
+all molecules in the group.  If the group has multiple species, the
+sum is mass-weighted and the normalization factor is the total mass.
+
+B1 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,1))
+B2 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,2))
+B3 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,3))
+B4 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,4))
+B5 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,5)) :pre
+
+Vdim is Vx or Vy or Vz as specified by the {dim} value.  {Csq} is the
+squared thermal velocity of the molecule and has the same meaning as
+above in the {thermal} equations.  The number of moments computed is
+specified by the {order} value.  If the group has a single species, no
+mass weighting is done and the normalization factor is the count of
+molecules.
+
+:line
 
 [Output info:]
 
-If the mixture has a single group and only a single moment is
-specified, then this compute calculates a per-grid vector.  If the
-mixture has multiple groups or multiple moments are specified, this
-compute calcualtes a per-grid array, with the number of columns equal
-to the number of groups times the number of moments per group.  The
-ordering of columns is first by moments, then by groups.  I.e. if the
+This compute calculates a per-grid array, with the number of columns
+is equal to the number of values times the number of groups.  The
+ordering of columns is first by values, then by groups.  I.e. if the
 {thermal} and {b xy 2} moments were specified as keywords, then the
 1st thru 3rd columns would be the {thermal} and B1 and B2 moments of
 the first group, the 4th thru 6th columns would be the {thermal} and
 B1 and B2 moments of the second group, etc.
 
-Either the vector or array can be accessed by any command that uses
-per-grid values from a compute as input.
+The array can be accessed by any command that uses per-grid values
+from a compute as input.
 
-The per-grid vector and array values will be in the "units"_units.html
-appropriate to the individual moments as described above, e.g
-temperature units, velocity to the third power, 5th power, etc.
+The per-grid array values will be in the "units"_units.html
+appropriate to the individual values as described above.  {Thermal} is
+in temperature units.  A and B are in units like velocity cubed or
+velocity to the 6th power.
 
 [Restrictions:] none
 
