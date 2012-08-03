@@ -629,15 +629,21 @@ void DumpGrid::pack_compute(int n)
   double **array = compute[field2index[n]]->array_grid;
   int index = argindex[n];
 
+  // apply normalization to each per-grid value
+
   if (index == 0) {
+    double *norm = compute[field2index[n]]->normptr(index);
     for (int i = 0; i < nglocal; i++) {
-      buf[n] = vector[i];
+      if (norm[i] > 0.0) buf[n] = vector[i] / norm[i];
+      else buf[n] = 0.0;
       n += size_one;
     }
   } else {
     index--;
+    double *norm = compute[field2index[n]]->normptr(index);
     for (int i = 0; i < nglocal; i++) {
-      buf[n] = array[i][index];
+      if (norm[i] > 0.0) buf[n] = array[i][index] / norm[i];
+      else buf[n] = 0.0;
       n += size_one;
     }
   }
