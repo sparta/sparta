@@ -31,6 +31,8 @@ class ComputeSurf : public Compute {
   ~ComputeSurf();
   void init();
   void compute_per_surf();
+  void clear();
+  void tally(int isurf, int ispecies, double *v);
   double *normptr(int);
   bigint memory_usage();
 

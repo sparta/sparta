@@ -74,6 +74,9 @@ class Compute : protected Pointers {
   virtual void compute_per_molecule() {}
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
+  virtual void clear() {}
+  virtual void tally(int, int, double *) {}
+
   virtual double *normptr(int) {return NULL;}
 
   void addstep(bigint);

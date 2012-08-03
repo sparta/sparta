@@ -52,6 +52,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
+  bounceflag = 1;
   per_surf_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
   ntotal = ngroup*nvalue;
@@ -122,16 +123,17 @@ void ComputeSurf::init()
 
 /* ---------------------------------------------------------------------- */
 
+// NOTE: what does this method even do if tally() is moved elsewhere?
+
 void ComputeSurf::compute_per_surf()
 {
   invoked_per_surf = update->ntimestep;
+}
 
-  // compute kinetic energies for each group in each grid cell
+/* ---------------------------------------------------------------------- */
 
-  Particle::Species *species = particle->species;
-  Particle::OnePart *particles = particle->particles;
-  int *s2g = particle->mixture[imix]->species2group;
-  int nlocal = particle->nlocal;
+void ComputeSurf::clear()
+{
   int nslocal = surf->nlocal;
   double mvv2e = update->mvv2e;
   double kbwt = 3.0*update->boltz;
@@ -151,47 +153,61 @@ void ComputeSurf::compute_per_surf()
     if (norm = norm_temp[j])
       for (i = 0; i < nslocal; i++) norm[i] = 0.0;
   }
+}
 
-  // loop over all particles, skip species not in mixture group
+/* ---------------------------------------------------------------------- */
+
+void ComputeSurf::tally(int isurf, int ispecies, double *v)
+{
+  // skip species not in mixture group
+  // NOTE: skip here or in caller?
   // tally any norm associated with group into norms
   // tally all values associated with group into array_surf
 
-  for (i = 0; i < nlocal; i++) {
-    ispecies = particles[i].ispecies;
-    igroup = s2g[ispecies];
-    if (igroup < 0) continue;
-    // NOTE: what does this become
-    //ilocal = cells[particles[i].icell].local;
-    ilocal = 0;
+  int i,j,k,m,n,igroup,ilocal;
+  double wt;
+  double *norm;
 
-    if (norm_mass[igroup]) wt = species[ispecies].mass;
-    else wt = 1.0;
-    if (norm_count[igroup]) norm_count[igroup][ilocal] += 1.0;
-    if (norm_mass[igroup]) norm_mass[igroup][ilocal] += wt;
+  int *s2g = particle->mixture[imix]->species2group;
+  igroup = s2g[ispecies];
+  if (igroup < 0) return;
 
-    v = particles[i].v;
-    k = igroup*nvalue;
+  Particle::Species *species = particle->species;
+  Particle::OnePart *particles = particle->particles;
+  int nslocal = surf->nlocal;
+  double mvv2e = update->mvv2e;
+  double kbwt = 3.0*update->boltz;
 
-    for (m = 0; m < nvalue; m++) {
-      switch (which[m]) {
-      case NUM:
-        array_surf[ilocal][k++] += 1.0;
-        break;
-      case U:
-        array_surf[ilocal][k++] += wt*v[0];
-        break;
-      case V:
-        array_surf[ilocal][k++] += wt*v[1];
-        break;
-      case W:
-        array_surf[ilocal][k++] += wt*v[2];
-        break;
-      case KE:
-        array_surf[ilocal][k++] += 
-          0.5 * mvv2e * species[ispecies].mass * 
-          (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-        break;
-      }
+  // NOTE: what does this become
+  //ilocal = cells[particles[i].icell].local;
+  ilocal = 0;
+
+  if (norm_mass[igroup]) wt = species[ispecies].mass;
+  else wt = 1.0;
+  if (norm_count[igroup]) norm_count[igroup][ilocal] += 1.0;
+  if (norm_mass[igroup]) norm_mass[igroup][ilocal] += wt;
+
+  k = igroup*nvalue;
+
+  for (m = 0; m < nvalue; m++) {
+    switch (which[m]) {
+    case NUM:
+      array_surf[ilocal][k++] += 1.0;
+      break;
+    case U:
+      array_surf[ilocal][k++] += wt*v[0];
+      break;
+    case V:
+      array_surf[ilocal][k++] += wt*v[1];
+      break;
+    case W:
+      array_surf[ilocal][k++] += wt*v[2];
+      break;
+    case KE:
+      array_surf[ilocal][k++] += 
+        0.5 * mvv2e * species[ispecies].mass * 
+        (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+      break;
     }
   }
 }
