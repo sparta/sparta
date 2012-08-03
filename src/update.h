@@ -55,9 +55,6 @@ class Update : protected Pointers {
   bigint nscheck_running;
   bigint nscollide_running;
 
-  int **nbounce;
-  double **bounce;
-
   class RanMars *ranmaster;   // master random number generator
 
   Update(class SPARTA *);
@@ -77,9 +74,8 @@ class Update : protected Pointers {
   class RanPark *random;     // RNG for particle timestep moves
 
   int bounceflag;                    // 1 if surf bounces tallied on this step
-  int nblist_compute,nblist_fix;     // # of bounce computes/fixes to check
-  class Compute **blist_compute;     // lists of bounce Computes & Fixes
-  class Fix **blist_fix;
+  int nblist_compute;                // # of bounce computes to check
+  class Compute **blist_compute;     // lists of surf bounce Computes
   
   void bounce_setup();
   void bounce_set(bigint);

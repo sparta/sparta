@@ -15,8 +15,8 @@
 #include "sptype.h"
 #include "stdlib.h"
 #include "string.h"
-#include "fix_ave_grid.h"
-#include "grid.h"
+#include "fix_ave_surf.h"
+#include "surf.h"
 #include "particle.h"
 #include "update.h"
 #include "modify.h"
@@ -31,19 +31,19 @@ using namespace SPARTA_NS;
 enum{COMPUTE,FIX,VARIABLE};
 enum{ONE,RUNNING};
 
-#define INVOKED_PER_GRID 16
+#define INVOKED_PER_SURF 32
 #define DELTA 8;
 
 /* ---------------------------------------------------------------------- */
 
-FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
+FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg < 5) error->all(FLERR,"Illegal fix ave/grid command");
+  if (narg < 5) error->all(FLERR,"Illegal fix ave/surf command");
 
   nevery = atoi(arg[2]);
   nrepeat = atoi(arg[3]);
-  per_grid_freq = atoi(arg[4]);
+  per_surf_freq = atoi(arg[4]);
 
   // scan values, then read options
 
@@ -69,7 +69,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     if (strncmp(arg[iarg],"c_",2) == 0 || 
         strncmp(arg[iarg],"f_",2) == 0 || 
         strncmp(arg[iarg],"v_",2) == 0) {
-
+      
       if (nvalues == maxvalues) grow();
       if (arg[iarg][0] == 'c') which[nvalues] = COMPUTE;
       else if (arg[iarg][0] == 'f') which[nvalues] = FIX;
@@ -82,7 +82,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Illegal fix ave/grid command");
+	  error->all(FLERR,"Illegal fix ave/surf command");
 	argindex[nvalues] = atoi(ptr+1);
 	*ptr = '\0';
       } else argindex[nvalues] = 0;
@@ -97,14 +97,14 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
         if (which[nvalues] == COMPUTE) {
           int icompute = modify->find_compute(ids[nvalues]);
           if (icompute >= 0)
-            if (modify->compute[icompute]->per_grid_flag)
-              ndup = modify->compute[icompute]->size_per_grid_cols;
+            if (modify->compute[icompute]->per_surf_flag)
+              ndup = modify->compute[icompute]->size_per_surf_cols;
         }
         if (which[nvalues] == FIX) {
           int ifix = modify->find_fix(ids[nvalues]);
           if (ifix >= 0)
-            if (modify->fix[ifix]->per_grid_flag)
-              ndup = modify->fix[ifix]->size_per_grid_cols;
+            if (modify->fix[ifix]->per_surf_flag)
+              ndup = modify->fix[ifix]->size_per_surf_cols;
         }
         if (ndup > 1) {
           argindex[nvalues] = 1;
@@ -122,9 +122,6 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
         }
       }
 
-      nvalues++;
-      delete [] suffix;
-
       iarg++;
     } else break;
   }
@@ -132,76 +129,76 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   // setup and error check
   // for fix inputs, check that fix frequency is acceptable
 
-  if (nevery <= 0 || nrepeat <= 0 || per_grid_freq <= 0)
-    error->all(FLERR,"Illegal fix ave/grid command");
-  if (per_grid_freq % nevery || (nrepeat-1)*nevery >= per_grid_freq)
-    error->all(FLERR,"Illegal fix ave/grid command");
+  if (nevery <= 0 || nrepeat <= 0 || per_surf_freq <= 0)
+    error->all(FLERR,"Illegal fix ave/surf command");
+  if (per_surf_freq % nevery || (nrepeat-1)*nevery >= per_surf_freq)
+    error->all(FLERR,"Illegal fix ave/surf command");
 
   for (int i = 0; i < nvalues; i++) {
     if (which[i] == COMPUTE) {
       int icompute = modify->find_compute(ids[i]);
       if (icompute < 0)
-	error->all(FLERR,"Compute ID for fix ave/grid does not exist");
-      if (modify->compute[icompute]->per_grid_flag == 0)
+	error->all(FLERR,"Compute ID for fix ave/surf does not exist");
+      if (modify->compute[icompute]->per_surf_flag == 0)
 	error->all(FLERR,
-		   "Fix ave/grid compute does not calculate per-grid values");
+		   "Fix ave/surf compute does not calculate per-surf values");
       if (argindex[i] == 0 && 
-	  modify->compute[icompute]->size_per_grid_cols != 0)
-	error->all(FLERR,"Fix ave/grid compute does not "
-		   "calculate a per-grid vector");
-      if (argindex[i] && modify->compute[icompute]->size_per_grid_cols == 0)
-	error->all(FLERR,"Fix ave/grid compute does not "
-		   "calculate a per-grid array");
+	  modify->compute[icompute]->size_per_surf_cols != 0)
+	error->all(FLERR,"Fix ave/surf compute does not "
+		   "calculate a per-surf vector");
+      if (argindex[i] && modify->compute[icompute]->size_per_surf_cols == 0)
+	error->all(FLERR,"Fix ave/surf compute does not "
+		   "calculate a per-surf array");
       if (argindex[i] && 
-	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
-	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
+	  argindex[i] > modify->compute[icompute]->size_per_surf_cols)
+	error->all(FLERR,"Fix ave/surf compute array is accessed out-of-range");
 
     } else if (which[i] == FIX) {
       int ifix = modify->find_fix(ids[i]);
       if (ifix < 0)
-	error->all(FLERR,"Fix ID for fix ave/grid does not exist");
-      if (modify->fix[ifix]->per_grid_flag == 0)
-	error->all(FLERR,"Fix ave/grid fix does not calculate per-grid values");
-      if (argindex[i] == 0 && modify->fix[ifix]->size_per_grid_cols != 0)
+	error->all(FLERR,"Fix ID for fix ave/surf does not exist");
+      if (modify->fix[ifix]->per_surf_flag == 0)
+	error->all(FLERR,"Fix ave/surf fix does not calculate per-surf values");
+      if (argindex[i] == 0 && modify->fix[ifix]->size_per_surf_cols != 0)
 	error->all(FLERR,
-		   "Fix ave/grid fix does not calculate a per-grid vector");
-      if (argindex[i] && modify->fix[ifix]->size_per_grid_cols == 0)
+		   "Fix ave/surf fix does not calculate a per-surf vector");
+      if (argindex[i] && modify->fix[ifix]->size_per_surf_cols == 0)
 	error->all(FLERR,
-		   "Fix ave/grid fix does not calculate a per-grid array");
-      if (argindex[i] && argindex[i] > modify->fix[ifix]->size_per_grid_cols)
-	error->all(FLERR,"Fix ave/grid fix array is accessed out-of-range");
-      if (nevery % modify->fix[ifix]->per_grid_freq)
+		   "Fix ave/surf fix does not calculate a per-surf array");
+      if (argindex[i] && argindex[i] > modify->fix[ifix]->size_per_surf_cols)
+	error->all(FLERR,"Fix ave/surf fix array is accessed out-of-range");
+      if (nevery % modify->fix[ifix]->per_surf_freq)
 	error->all(FLERR,
-		   "Fix for fix ave/grid not computed at compatible time");
+		   "Fix for fix ave/surf not computed at compatible time");
 
     } else if (which[i] == VARIABLE) {
       int ivariable = input->variable->find(ids[i]);
       if (ivariable < 0)
-	error->all(FLERR,"Variable name for fix ave/grid does not exist");
-      if (input->variable->grid_style(ivariable) == 0)
-	error->all(FLERR,"Fix ave/grid variable is not grid-style variable");
+	error->all(FLERR,"Variable name for fix ave/surf does not exist");
+      if (input->variable->surf_style(ivariable) == 0)
+	error->all(FLERR,"Fix ave/surf variable is not surf-style variable");
     }
   }
 
-  // this fix produces either a per-grid vector or array
+  // this fix produces either a per-surf vector or array
 
-  per_grid_flag = 1;
-  if (nvalues == 1) size_per_grid_cols = 0;
-  else size_per_grid_cols = nvalues;
+  per_surf_flag = 1;
+  if (nvalues == 1) size_per_surf_cols = 0;
+  else size_per_surf_cols = nvalues;
 
   // allocate accumulators and norm vectors
   // if ave = RUNNING, allocate extra set of accvec/accarray
 
-  nglocal = grid->nlocal;
-  if (nvalues == 1) memory->create(vector_grid,nglocal,"ave/grid:vector_grid");
-  else memory->create(array_grid,nglocal,nvalues,"ave/grid:array_grid");
+  nslocal = surf->nlocal;
+  if (nvalues == 1) memory->create(vector_surf,nslocal,"ave/surf:vector_surf");
+  else memory->create(array_surf,nslocal,nvalues,"ave/surf:array_surf");
   
   if (ave == RUNNING) {
-    if (nvalues == 1) memory->create(accvec,nglocal,"ave/grid:accvec");
-    else memory->create(accarray,nglocal,nvalues,"ave/grid:accarray");
+    if (nvalues == 1) memory->create(accvec,nslocal,"ave/surf:accvec");
+    else memory->create(accarray,nslocal,nvalues,"ave/surf:accarray");
   } else {
-    if (nvalues == 1) accvec = vector_grid;
-    else accarray = array_grid;
+    if (nvalues == 1) accvec = vector_surf;
+    else accarray = array_surf;
   }
 
   nnorm = 0;
@@ -210,16 +207,16 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   norms = new double*[nvalues];
   cfv_norms = new double*[nvalues];
 
-  // zero accvec,accarray one time if ave = RUNNING
+  // zero mcount,accvec,accarray one time if ave = RUNNING
 
   int i,m;
 
   if (ave == RUNNING) {
     if (nvalues == 1)
-      for (i = 0; i < nglocal; i++)
+      for (i = 0; i < nslocal; i++)
 	accvec[i] = 0.0;
-    else 
-      for (i = 0; i < nglocal; i++)
+    else
+      for (i = 0; i < nslocal; i++)
 	for (m = 0; m < nvalues; m++)
 	  accarray[i][m] = 0.0;
   }
@@ -227,13 +224,14 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   // zero vector/array since dump may access it on timestep 0
   // zero vector/array since a variable may access it before first run
 
-  if (nvalues == 0)
-    for (i = 0; i < nglocal; i++)
-      vector_grid[i] = 0.0;
-  else
-    for (i = 0; i < nglocal; i++)
+  if (nvalues == 0) {
+    for (i = 0; i < nslocal; i++)
+      vector_surf[i] = 0.0;
+  } else {
+    for (i = 0; i < nslocal; i++)
       for (m = 0; m < nvalues; m++)
-	array_grid[i][m] = 0.0;
+	array_surf[i][m] = 0.0;
+  }
 
   // nvalid = next step on which end_of_step does something
   // add nvalid to all computes that store invocation times
@@ -248,7 +246,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixAveGrid::~FixAveGrid()
+FixAveSurf::~FixAveSurf()
 {
   memory->destroy(which);
   memory->destroy(argindex);
@@ -272,7 +270,7 @@ FixAveGrid::~FixAveGrid()
 
 /* ---------------------------------------------------------------------- */
 
-int FixAveGrid::setmask()
+int FixAveSurf::setmask()
 {
   int mask = 0;
   mask |= END_OF_STEP;
@@ -281,7 +279,7 @@ int FixAveGrid::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixAveGrid::init()
+void FixAveSurf::init()
 {
   // set indices and check validity of all computes,fixes,variables
 
@@ -289,28 +287,30 @@ void FixAveGrid::init()
     if (which[m] == COMPUTE) {
       int icompute = modify->find_compute(ids[m]);
       if (icompute < 0)
-	error->all(FLERR,"Compute ID for fix ave/grid does not exist");
+	error->all(FLERR,"Compute ID for fix ave/surf does not exist");
       value2index[m] = icompute;
       
     } else if (which[m] == FIX) {
       int ifix = modify->find_fix(ids[m]);
       if (ifix < 0) 
-	error->all(FLERR,"Fix ID for fix ave/grid does not exist");
+	error->all(FLERR,"Fix ID for fix ave/surf does not exist");
       value2index[m] = ifix;
 
     } else if (which[m] == VARIABLE) {
       int ivariable = input->variable->find(ids[m]);
       if (ivariable < 0) 
-	error->all(FLERR,"Variable name for fix ave/grid does not exist");
+	error->all(FLERR,"Variable name for fix ave/surf does not exist");
       value2index[m] = ivariable;
 
     } else value2index[m] = -1;
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   only does something if nvalid = current timestep
+------------------------------------------------------------------------- */
 
-void FixAveGrid::setup()
+void FixAveSurf::setup()
 {
   // ont-time setup of norm pointers and nnorm
   // must do here after computes have been initialized
@@ -341,7 +341,7 @@ void FixAveGrid::setup()
             normacc[m] = 1;
             normindex[m] = nnorm;
             cfv_norms[nnorm] = ptr;
-            memory->create(norms[nnorm],nglocal,"ave/grid:norms");
+            memory->create(norms[nnorm],nslocal,"ave/surf:norms");
             nnorm++;
           }
         }
@@ -349,14 +349,12 @@ void FixAveGrid::setup()
     }
   }
 
-  // only does something if nvalid = current timestep
-
   end_of_step();
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixAveGrid::end_of_step()
+void FixAveSurf::end_of_step()
 {
   int i,j,m,n,isp,icol;
   double *norm,*cfv_norm;
@@ -370,15 +368,15 @@ void FixAveGrid::end_of_step()
 
   if (ave == ONE && irepeat == 0) {
     if (nvalues == 1)
-      for (i = 0; i < nglocal; i++)
+      for (i = 0; i < nslocal; i++)
 	accvec[i] = 0.0;
     else
-      for (i = 0; i < nglocal; i++)
+      for (i = 0; i < nslocal; i++)
 	for (m = 0; m < nvalues; m++)
 	  accarray[i][m] = 0.0;
     for (int m = 0; m < nnorm; m++) {
       norm = norms[m];
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+      for (i = 0; i < nslocal; i++) norm[i] = 0.0;
     }
   }
 
@@ -393,33 +391,32 @@ void FixAveGrid::end_of_step()
     j = argindex[m];
 
     // invoke compute if not previously invoked
-
+    
     if (which[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
-      if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-        compute->compute_per_grid();
-        compute->invoked_flag |= INVOKED_PER_GRID;
+      if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
+        compute->compute_per_surf();
+        compute->invoked_flag |= INVOKED_PER_SURF;
       }
       
       if (j == 0) {
-        double *compute_vector = compute->vector_grid;
+        double *compute_vector = compute->vector_surf;
         if (nvalues == 1) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nslocal; i++)
             accvec[i] += compute_vector[i];
         } else {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nslocal; i++)
             accarray[i][m] += compute_vector[i];
         }
       } else {
         int jm1 = j - 1;
-        double **compute_array = compute->array_grid;
+        double **compute_array = compute->array_surf;
         if (nvalues == 1) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nslocal; i++)
             accvec[i] += compute_array[i][jm1];
         } else {
-          for (i = 0; i < nglocal; i++) {
+          for (i = 0; i < nslocal; i++)
             accarray[i][m] += compute_array[i][jm1];
-          }
         }
       }
       
@@ -427,27 +424,27 @@ void FixAveGrid::end_of_step()
       
     } else if (which[m] == FIX) {
       if (j == 0) {
-        double *fix_vector = modify->fix[n]->vector_grid;
+        double *fix_vector = modify->fix[n]->vector_surf;
         if (nvalues == 1) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nslocal; i++)
             accvec[i] += fix_vector[i];
         } else {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nslocal; i++)
             accarray[i][m] += fix_vector[i];
         }
       } else {
         int jm1 = j - 1;
-        double **fix_array = modify->fix[n]->array_grid;
+        double **fix_array = modify->fix[n]->array_surf;
         if (nvalues == 1) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nslocal; i++)
             accvec[i] += fix_array[i][jm1];
         } else {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nslocal; i++)
             accarray[i][m] += fix_array[i][jm1];
         }
       }
       
-      // evaluate grid-style variable
+      // evaluete surf-style variable
       
     } else if (which[m] == VARIABLE) {
     }
@@ -458,7 +455,7 @@ void FixAveGrid::end_of_step()
     if (normacc[m]) {
       norm = norms[normindex[m]];
       cfv_norm = cfv_norms[normindex[m]];
-      for (i = 0; i < nglocal; i++) norm[i] += cfv_norm[i];
+      for (i = 0; i < nslocal; i++) norm[i] += cfv_norm[i];
     }
   }
 
@@ -474,7 +471,7 @@ void FixAveGrid::end_of_step()
   }
 
   irepeat = 0;
-  nvalid = ntimestep+per_grid_freq - (nrepeat-1)*nevery;
+  nvalid = ntimestep+per_surf_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
 
   // normalize the accumulators for output on Nfreq timestep
@@ -487,11 +484,11 @@ void FixAveGrid::end_of_step()
       n = value2index[0];
       j = argindex[0];
       if (normindex[0] < 0) {
-        for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
+        for (i = 0; i < nslocal; i++) vector_surf[i] /= nsample;
       } else {
         norm = norms[normindex[0]];
-        for (i = 0; i < nglocal; i++)
-          if (norm[i] > 0.0) vector_grid[i] /= norm[i];
+        for (i = 0; i < nslocal; i++)
+          if (norm[i] > 0.0) vector_surf[i] /= norm[i];
       }
     } else {
       for (m = 0; m < nvalues; m++) {
@@ -499,11 +496,11 @@ void FixAveGrid::end_of_step()
         j = argindex[m];
 
         if (normindex[m] < 0) {
-          for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
+          for (i = 0; i < nslocal; i++) array_surf[i][m] /= nsample;
         } else {
           norm = norms[normindex[m]];
-          for (i = 0; i < nglocal; i++)
-            if (norm[i] > 0.0) array_grid[i][m] /= norm[i];
+          for (i = 0; i < nslocal; i++)
+            if (norm[i] > 0.0) array_surf[i][m] /= norm[i];
         }
       }
     }
@@ -513,22 +510,22 @@ void FixAveGrid::end_of_step()
       n = value2index[0];
       j = argindex[0];
       if (normindex[0] < 0) {
-        for (i = 0; i < nglocal; i++) vector_grid[i] = accvec[i]/nsample;
+        for (i = 0; i < nslocal; i++) vector_surf[i] = accvec[i]/nsample;
       } else {
         norm = norms[normindex[0]];
-        for (i = 0; i < nglocal; i++) vector_grid[i] = accvec[i]/norm[i];
+        for (i = 0; i < nslocal; i++) vector_surf[i] = accvec[i]/norm[i];
       }
     } else {
       for (m = 0; m < nvalues; m++) {
         n = value2index[m];
         j = argindex[m];
         if (normindex[m] < 0) {
-          for (i = 0; i < nglocal; i++)
-            array_grid[i][m] = accarray[i][m]/nsample;
+          for (i = 0; i < nslocal; i++)
+            array_surf[i][m] = accarray[i][m]/nsample;
         } else {
           norm = norms[normindex[m]];
-          for (i = 0; i < nglocal; i++) 
-            array_grid[i][m] = accarray[i][m]/norm[i];
+          for (i = 0; i < nslocal; i++) 
+            array_surf[i][m] = accarray[i][m]/norm[i];
         }
       }
     }
@@ -541,7 +538,7 @@ void FixAveGrid::end_of_step()
    parse optional args
 ------------------------------------------------------------------------- */
 
-void FixAveGrid::options(int narg, char **arg)
+void FixAveSurf::options(int narg, char **arg)
 {
   // option defaults
 
@@ -549,15 +546,15 @@ void FixAveGrid::options(int narg, char **arg)
 
   // optional args
 
-  int iarg = 0;
+  int iarg = 5 + nvalues;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"ave") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/grid command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/surf command");
       if (strcmp(arg[iarg+1],"one") == 0) ave = ONE;
       else if (strcmp(arg[iarg+1],"running") == 0) ave = RUNNING;
-      else error->all(FLERR,"Illegal fix ave/grid command");
+      else error->all(FLERR,"Illegal fix ave/surf command");
       iarg += 2;
-    } else error->all(FLERR,"Illegal fix ave/grid command");
+    } else error->all(FLERR,"Illegal fix ave/surf command");
   }
 }
 
@@ -565,25 +562,25 @@ void FixAveGrid::options(int narg, char **arg)
    grow vectors for each input value
 ------------------------------------------------------------------------- */
 
-void FixAveGrid::grow()
+void FixAveSurf::grow()
 {
   maxvalues += DELTA;
-  memory->grow(which,maxvalues,"ave/grid:which");
-  memory->grow(argindex,maxvalues,"ave/grid:argindex");
-  memory->grow(value2index,maxvalues,"ave/grid:value2index");
-  ids = (char **) memory->srealloc(ids,maxvalues*sizeof(char *),"ave/grid:ids");
+  memory->grow(which,maxvalues,"ave/surf:which");
+  memory->grow(argindex,maxvalues,"ave/surf:argindex");
+  memory->grow(value2index,maxvalues,"ave/surf:value2index");
+  ids = (char **) memory->srealloc(ids,maxvalues*sizeof(char *),"ave/surf:ids");
 }
 
 /* ----------------------------------------------------------------------
    memory usage of accumulators
 ------------------------------------------------------------------------- */
 
-double FixAveGrid::memory_usage()
+double FixAveSurf::memory_usage()
 {
   double bytes = 0.0;
-  bytes += nglocal*nvalues * sizeof(double);
-  if (ave == RUNNING) bytes += nglocal*nvalues * sizeof(double);
-  bytes += nglocal*nnorm * sizeof(double);
+  bytes += nslocal*nvalues * sizeof(double);
+  if (ave == RUNNING) bytes += nslocal*nvalues * sizeof(double);
+  bytes += nslocal*nnorm * sizeof(double);
   return bytes;
 }
 
@@ -593,14 +590,14 @@ double FixAveGrid::memory_usage()
    else backup from next multiple of nfreq
 ------------------------------------------------------------------------- */
 
-bigint FixAveGrid::nextvalid()
+bigint FixAveSurf::nextvalid()
 {
-  bigint nvalid = (update->ntimestep/per_grid_freq)*per_grid_freq + 
-    per_grid_freq;
-  if (nvalid-per_grid_freq == update->ntimestep && nrepeat == 1)
+  bigint nvalid = (update->ntimestep/per_surf_freq)*per_surf_freq + 
+    per_surf_freq;
+  if (nvalid-per_surf_freq == update->ntimestep && nrepeat == 1)
     nvalid = update->ntimestep;
   else
     nvalid -= (nrepeat-1)*nevery;
-  if (nvalid < update->ntimestep) nvalid += per_grid_freq;
+  if (nvalid < update->ntimestep) nvalid += per_surf_freq;
   return nvalid;
 }
