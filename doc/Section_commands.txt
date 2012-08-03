@@ -295,6 +295,7 @@ each style or click on the style itself for a full description:
 "grid"_compute_grid.html,
 "ke/molecule"_compute_ke_molecule.html,
 "sonine/grid"_compute_sonine_grid.html,
+"surf"_compute_surf.html,
 "temp"_compute_temp.html :tb(c=6,ea=c)
 
 :line
@@ -308,10 +309,11 @@ each style or click on the style itself for a full description:
 
 :line
 
-Surf collide styles :h4
+Surface collide styles :h4
 
 See the "surf_collide"_surf_collide.html command for one-line
 descriptions of each style or click on the style itself for a full
 description:
 
-"diffuse"_surf_collide_diffuse.html :tb(c=1,ea=c)
+"diffuse"_surf_collide_diffuse.html,
+"specular"_surf_collide_specular.html :tb(c=2,ea=c)
