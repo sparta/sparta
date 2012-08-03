@@ -42,6 +42,13 @@
 <PRE>compute 1 grid species n u v w usq vsq wsq
 compute 1 grid air n u v w 
 </PRE>
+<P>These commands will dump standard per grid cell averages for each
+species to a file every 1000 steps:
+</P>
+<PRE>compute 1 grid species n u v w usq vsq wsq
+fix 1 ave/grid 10 100 1000 c_1
+dump 1 grid 1000 tmp.grid id f_1 
+</PRE>
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for the
@@ -70,7 +77,7 @@ molecules in the group and time.
 normalization factor associated with it.
 </P>
 <P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the summed velocity components for
-all molecules in the group.  If the group has a multiple species, the
+all molecules in the group.  If the group has multiple species, the
 sum is mass-weighted and the normalization factor is the total mass.
 </P>
 <PRE>U = Sum_i (mass_i Vx_i) 
@@ -79,7 +86,7 @@ sum is mass-weighted and the normalization factor is the total mass.
 normalization factor is the count of molecules.
 </P>
 <P>The <I>usq</I>, <I>vsq</I>, <I>wsq</I> values compute the sum of the velocity
-component squared for all molecules in the group.  If the group has a
+component squared for all molecules in the group.  If the group has
 multiple species, the sum is mass-weighted and the normalization
 factor is the total mass.
 </P>
@@ -106,8 +113,8 @@ Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid array, with the number of columns
-is equal to the number of values times the number of gropus.  The
-ordering of columns is first by valyes, then by groups.  I.e. if the
+is equal to the number of values times the number of groups.  The
+ordering of columns is first by values, then by groups.  I.e. if the
 <I>n</I> and <I>u</I> values were specified as keywords, then the first two
 columns would be <I>n</I> and <I>u</I> for the first group, the 3rd and 4th
 columns would be <I>n</I> and <I>u</I> for the second group, etc.

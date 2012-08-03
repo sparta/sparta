@@ -32,6 +32,13 @@ values = values for specific keyword :l
 compute 1 sonine/grid species thermal a x 3 a z 3 b xy 3 b xz 3
 compute 1 sonine/grid air a x 5 b xy 5 :pre
 
+These commands will dump 10 averaged sonine moments for each species
+and each grid cell to a file every 1000 steps:
+
+compute 1 sonine/grid species a x 5 b xy 5
+fix 1 ave/grid 10 100 1000 c_1
+dump 1 grid 1000 tmp.grid id f_1 :pre
+
 [Description:]
 
 Define a computation that calculates the sonine moments of the
