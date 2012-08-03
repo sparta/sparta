@@ -14,21 +14,21 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(ave/grid,FixAveGrid)
+FixStyle(ave/grid2,FixAveGrid2)
 
 #else
 
-#ifndef LMP_FIX_AVE_GRID_H
-#define LMP_FIX_AVE_GRID_H
+#ifndef LMP_FIX_AVE_GRID2_H
+#define LMP_FIX_AVE_GRID2_H
 
 #include "fix.h"
 
 namespace SPARTA_NS {
 
-class FixAveGrid : public Fix {
+class FixAveGrid2 : public Fix {
  public:
-  FixAveGrid(class SPARTA *, int, char **);
-  ~FixAveGrid();
+  FixAveGrid2(class SPARTA *, int, char **);
+  ~FixAveGrid2();
   int setmask();
   void init();
   void setup();
@@ -36,21 +36,24 @@ class FixAveGrid : public Fix {
   double memory_usage();
 
  private:
-  int nvalues,standard,ave;
-  int nevery,nrepeat,irepeat,nsample;
+  int nvalues,maxvalues;
+  int nevery,nrepeat,irepeat,nsample,ave;
   bigint nvalid;
   int *which,*argindex,*value2index;
   char **ids;
 
-  int nspecies;
   int nglocal;
-
-  int **mcount;
   double *accvec;
   double **accarray;
 
+  int *normacc;        // 1 if Ith value triggers one-time norm accumulation
+  int *normindex;      // index of norm vector for Ith value, -1 if none
+  double **norms;      // pointers to accumulated norms
+  double **cfv_norms;  // pointers to snapshot norms by compute,fix,variable
+  int nnorm;           // # of norm pointers in norms and cfv_norms
+
   void options(int, char **);
-  void allocate_values(int);
+  void grow();
   bigint nextvalid();
 };
 
