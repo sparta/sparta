@@ -1,0 +1,121 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute grid command :h3
+
+[Syntax:]
+
+compute ID grid mix-ID value ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+grid = style name of this compute command :l
+mix-ID = mixture ID to perform calculation on :l
+one or more values may be appended :l
+values = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} :l
+  {n} = molecule count
+  {u} = x component of velocity
+  {v} = y component of velocity
+  {w} = z component of velocity
+  {usq} = x component of velocity squared
+  {vsq} = y component of velocity squared
+  {wsq} = z component of velocity squared
+  {ke} = kinetic energy
+  {temp} = temperature :pre
+:ule
+
+[Examples:]
+
+compute 1 grid species n u v w usq vsq wsq
+compute 1 grid air n u v w :pre
+
+[Description:]
+
+Define a computation that calculates one or more values for the
+molecules in each grid cell.  The values are summed for each group of
+species in the specified mixture.  See the "mixture"_mixture.html
+command for how a set of species can be partitioned into groups.
+
+Along with summing each specified value, a normalization factor is
+also computed.  If the group has a single species, the normalization
+factor is typically just the count of contributing molecules.  If the
+group has mutlipe species, the normalization factor is typically the
+total mass of the contributing molecules.  The normalization factors
+are used by other commands that process values produced by this
+compute.
+
+For example, for the {u} value, the "dump grid"_dump.html command,
+will generate the average x component of velocity for molecules in a
+grid cell, averaged over molecules in the group.  The "fix
+ave/grid"_fix_ave_grid.html command will generate the average x
+component of velocity for molecules in a grid cell, averaged both over
+molecules in the group and time.
+
+:line
+
+The {n} value counts the number of moleclues.  There is no
+normalization factor associated with it.
+
+The {u}, {v}, {w} values compute the summed velocity components for
+all molecules in the group.  If the group has a multiple species, the
+sum is mass-weighted and the normalization factor is the total mass.
+
+U = Sum_i (mass_i Vx_i) :pre
+
+If the group has a single species, no mass weighting is done and the
+normalization factor is the count of molecules.
+
+The {usq}, {vsq}, {wsq} values compute the sum of the velocity
+component squared for all molecules in the group.  If the group has a
+multiple species, the sum is mass-weighted and the normalization
+factor is the total mass.
+
+Usq = Sum_i (mass_i Vx_i Vx_i) :pre
+
+If the group has a single species, no mass weighting is done and the
+normalization factor is the count of molecules.
+
+The {ke} value computes the summed kinetic energy for all molecules in
+the group.  The normalization factor is the count of molecules.
+
+KE = Sum_i (1/2 mass_i Vsq_i)
+Vsq = Vx*Vx + Vy*Vy + Vz*Vz :pre
+
+The {temp} value also computes the summed kinetic energy for all
+molecules in the group.  The normalization factor is 3 times the
+count of molecules times the Boltzmann factor {kB}, so that
+the sum divided by the normalization factor is the temperature {T}.
+
+KE = Sum_i (1/2 mass_i Vsq_i)
+Vsq = Vx*Vx + Vy*Vy + Vz*Vz
+3/2 kB T = KE :pre
+
+[Output info:]
+
+This compute calculates a per-grid array, with the number of columns
+is equal to the number of values times the number of gropus.  The
+ordering of columns is first by valyes, then by groups.  I.e. if the
+{n} and {u} values were specified as keywords, then the first two
+columns would be {n} and {u} for the first group, the 3rd and 4th
+columns would be {n} and {u} for the second group, etc.
+
+The array can be accessed by any command that uses per-grid values
+from a compute as input.
+
+The per-grid array values will be in the "units"_units.html
+appropriate to the individual values as described above.  {U}, {v},
+and {w} are in velocity units.  {Usq}, {vsq}, and {wsq} are in
+velocity squared units.  {Ke} is in energy units.  {Temp} is in
+temperature units.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"fix ave/grid"_fix_ave_grid.html, "dump grid"_dump.html
+
+[Default:] none
