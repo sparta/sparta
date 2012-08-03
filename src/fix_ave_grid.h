@@ -31,7 +31,7 @@ class FixAveGrid : public Fix {
   ~FixAveGrid();
   int setmask();
   void init();
-  void setup(int);
+  void setup();
   void end_of_step();
   double memory_usage();
 

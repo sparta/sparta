@@ -29,6 +29,7 @@ using namespace SPARTA_NS;
 
 enum{THERMAL,AMOM,BMOM};
 enum{X,Y,Z};
+enum{NONE,COUNT,MASSWT};
 
 /* ---------------------------------------------------------------------- */
 
@@ -92,15 +93,13 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
   per_grid_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
   ntotal = ngroup*npergroup;
-  if (ntotal == 0) size_per_grid_cols = 0;
-  else size_per_grid_cols = ntotal;
+  size_per_grid_cols = ntotal;
 
   vave = NULL;
-  avave = NULL;
-  count = NULL;
-  acount = NULL;
-  sonine_vector = NULL;
-  sonine_array = NULL;
+  sonine = NULL;
+
+  memory->create(group_norm_style,ngroup,"sonine/grid:group_norm_style");
+  norms = new double*[ngroup];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -108,11 +107,12 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
 ComputeSonineGrid::~ComputeSonineGrid()
 {
   memory->destroy(vave);
-  memory->destroy(avave);
-  memory->destroy(count);
-  memory->destroy(acount);
-  memory->destroy(sonine_vector);
-  memory->destroy(sonine_array);
+  memory->destroy(sonine);
+
+  memory->destroy(group_norm_style);
+  for (int i = 0; i < ngroup; i++)
+    memory->destroy(norms[i]);
+  delete [] norms;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -122,22 +122,19 @@ void ComputeSonineGrid::init()
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute ke/grid mixture has changed");
 
-  // one-time allocation
+  // one-time allocation of accumulators and norms
+  // cannot allocate norms until now since depends on group sizes
 
-  if (ntotal == 1) {
-    if (sonine_vector == NULL) {
-      memory->create(vave,grid->nlocal,3,"sonine/grid:vave");
-      memory->create(count,grid->nlocal,"sonine/grid:count");
-      memory->create(sonine_vector,grid->nlocal,"sonine/grid:sonine_vector");
-      vector_grid = sonine_vector;
-    }
-  } else {
-    if (sonine_array == NULL) {
-      memory->create(avave,grid->nlocal,ngroup,3,"sonine/grid:vave");
-      memory->create(acount,grid->nlocal,ngroup,"sonine/grid:count");
-      memory->create(sonine_array,grid->nlocal,ntotal,
-                     "sonine/grid:sonine_array");
-      array_grid = sonine_array;
+  if (sonine == NULL) {
+    memory->create(vave,grid->nlocal,ngroup,3,"sonine/grid:vave");
+    memory->create(sonine,grid->nlocal,ntotal,"sonine/grid:sonine");
+    array_grid = sonine;
+
+    for (int i = 0; i < ngroup; i++) {
+      if (particle->mixture[imix]->groupsize[i] == 1)
+        group_norm_style[i] = COUNT; 
+      else group_norm_style[i] = MASSWT;
+      memory->create(norms[i],grid->nlocal,"sonine/grid:norms");
     }
   }
 }
@@ -161,121 +158,88 @@ void ComputeSonineGrid::compute_per_grid()
 
   int i,j,k,m,n,ispecies,igroup,ilocal;
   double prefactor,csq;
-  double *v;
+  double *norm,*v;
   double vthermal[3];
 
-  if (ntotal == 1) {
-    for (i = 0; i < nglocal; i++) {
-      sonine_vector[i] = 0.0;
-      vave[i][0] = 0.0;
-      vave[i][1] = 0.0;
-      vave[i][2] = 0.0;
-      count[i] = 0;
+  for (i = 0; i < nglocal; i++) {
+    for (j = 0; j < ntotal; j++) sonine[i][j] = 0.0;
+    for (j = 0; j < ngroup; j++) {
+      vave[i][j][0] = 0.0;
+      vave[i][j][1] = 0.0;
+      vave[i][j][2] = 0.0;
+      count[i][j] = 0.0;
     }
+  }
 
-    for (i = 0; i < nlocal; i++) {
-      ispecies = particles[i].ispecies;
-      igroup = s2g[ispecies];
-      if (igroup < 0) continue;
+  for (j = 0; j < ngroup; j++) {
+    norm = norms[j];
+    for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+  }
 
-      ilocal = cells[particles[i].icell].local;
-      v = particles[i].v;
-      vave[ilocal][0] += v[0];
-      vave[ilocal][1] += v[1];
-      vave[ilocal][2] += v[2];
-      count[ilocal]++;
+  for (i = 0; i < nlocal; i++) {
+    ispecies = particles[i].ispecies;
+    igroup = s2g[ispecies];
+    if (igroup < 0) continue;
+    norm = norms[igroup];
+
+    ilocal = cells[particles[i].icell].local;
+    v = particles[i].v;
+    vave[ilocal][igroup][0] += v[0];
+    vave[ilocal][igroup][1] += v[1];
+    vave[ilocal][igroup][2] += v[2];
+    if (group_norm_style[igroup] == COUNT) norm[ilocal] += 1.0;
+    else norm[ilocal] += species[particles[i].ispecies].mass;
+  }
+
+  for (i = 0; i < nlocal; i++)
+    for (j = 0; j < ngroup; j++) {
+      // check for div by 0.0
+      vave[i][j][0] /= norms[i][j];
+      vave[i][j][1] /= norms[i][j];
+      vave[i][j][2] /= norms[i][j];
     }
+  
+  for (i = 0; i < nlocal; i++) {
+    ispecies = particles[i].ispecies;
+    igroup = s2g[ispecies];
+    if (igroup < 0) continue;
+    
+    ilocal = cells[particles[i].icell].local;
+    v = particles[i].v;
+    
+    // apply mass weighting
 
-    for (i = 0; i < nlocal; i++) {
-      vave[ilocal][0] /= count[ilocal];
-      vave[ilocal][1] /= count[ilocal];
-      vave[ilocal][2] /= count[ilocal];
-    }
-
-    for (i = 0; i < nlocal; i++) {
-      ispecies = particles[i].ispecies;
-      igroup = s2g[ispecies];
-      if (igroup < 0) continue;
-
-      ilocal = cells[particles[i].icell].local;
-      v = particles[i].v;
-
-      vthermal[0] = v[0] - vave[ilocal][0];
-      vthermal[1] = v[1] - vave[ilocal][1];
-      vthermal[2] = v[2] - vave[ilocal][2];
-      csq = vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] + 
-        vthermal[2]*vthermal[2];
-
-      if (which[0] == THERMAL)
-        sonine_vector[ilocal] += 0.5*species[ispecies].mass*csq;
-      else if (which[0] == AMOM)
-        sonine_vector[ilocal] += vthermal[moment[0]]*csq;
-      else if (which[0] == BMOM)
-        sonine_vector[ilocal] += vthermal[moment[0] / 3] * 
-          vthermal[moment[0] % 3] * csq;  
-    }
-
-  } else {
-    for (i = 0; i < nglocal; i++) {
-      for (j = 0; j < ntotal; j++) sonine_array[i][j] = 0.0;
-      for (j = 0; j < ngroup; j++) {
-        avave[i][j][0] = 0.0;
-        avave[i][j][1] = 0.0;
-        avave[i][j][2] = 0.0;
-        acount[i][j] = 0;
-      }
-    }
-
-    for (i = 0; i < nlocal; i++) {
-      ispecies = particles[i].ispecies;
-      igroup = s2g[ispecies];
-      if (igroup < 0) continue;
-
-      ilocal = cells[particles[i].icell].local;
-      v = particles[i].v;
-      avave[ilocal][igroup][0] += v[0];
-      avave[ilocal][igroup][1] += v[1];
-      avave[ilocal][igroup][2] += v[2];
-      acount[ilocal][igroup]++;
-    }
-
-    for (i = 0; i < nlocal; i++)
-      for (j = 0; j < ngroup; j++) {
-        avave[ilocal][igroup][0] /= acount[ilocal][igroup];
-        avave[ilocal][igroup][1] /= acount[ilocal][igroup];
-        avave[ilocal][igroup][2] /= acount[ilocal][igroup];
-      }
-
-    for (i = 0; i < nlocal; i++) {
-      ispecies = particles[i].ispecies;
-      igroup = s2g[ispecies];
-      if (igroup < 0) continue;
-
-      ilocal = cells[particles[i].icell].local;
-      v = particles[i].v;
-
-      vthermal[0] = v[0] - avave[ilocal][igroup][0];
-      vthermal[1] = v[1] - avave[ilocal][igroup][1];
-      vthermal[2] = v[2] - avave[ilocal][igroup][2];
-      csq = vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] + 
-        vthermal[2]*vthermal[2];
-
-      k = igroup*npergroup;
-      for (m = 0; m < nvalue; m++) {
-        if (which[m] == THERMAL) {
-          sonine_array[ilocal][k++] += 0.5*species[ispecies].mass*csq;
-        } else if (which[m] == AMOM) {
-          prefactor = vthermal[moment[m]];
-          for (n = 0; n < order[m]; n++)
-            sonine_array[ilocal][k++] += prefactor*pow(csq,n);
-        } else if (which[m] == BMOM) {
-          prefactor = vthermal[moment[m] / 3] * vthermal[moment[m] % 3];
-          for (n = 0; n < order[m]; n++)
-            sonine_array[ilocal][k++] += prefactor*pow(csq,n);
-        }
+    vthermal[0] = v[0] - vave[ilocal][igroup][0];
+    vthermal[1] = v[1] - vave[ilocal][igroup][1];
+    vthermal[2] = v[2] - vave[ilocal][igroup][2];
+    csq = vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] + 
+      vthermal[2]*vthermal[2];
+    
+    k = igroup*npergroup;
+    for (m = 0; m < nvalue; m++) {
+      if (which[m] == THERMAL) {
+        sonine[ilocal][k++] += 0.5*species[ispecies].mass*csq;
+      } else if (which[m] == AMOM) {
+        prefactor = vthermal[moment[m]];
+        for (n = 0; n < order[m]; n++)
+          sonine[ilocal][k++] += prefactor*pow(csq,n);
+      } else if (which[m] == BMOM) {
+        prefactor = vthermal[moment[m] / 3] * vthermal[moment[m] % 3];
+        for (n = 0; n < order[m]; n++)
+          sonine[ilocal][k++] += prefactor*pow(csq,n);
       }
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   return ptr to norm vector used by column N
+------------------------------------------------------------------------- */
+
+double *ComputeSonineGrid::normptr(int n)
+{
+  int igroup = n / nvalue;
+  return norms[igroup];
 }
 
 /* ----------------------------------------------------------------------
@@ -285,14 +249,8 @@ void ComputeSonineGrid::compute_per_grid()
 bigint ComputeSonineGrid::memory_usage()
 {
   bigint bytes = 0;
-  if (ntotal == 1) {
-    bytes += grid->nlocal*3 * sizeof(double);
-    bytes += grid->nlocal * sizeof(int);
-    bytes += grid->nlocal * sizeof(double);
-  } else {
-    bytes += grid->nlocal*ngroup*3 * sizeof(double);
-    bytes += grid->nlocal*ngroup * sizeof(int);
-    bytes += grid->nlocal*ntotal * sizeof(double);
-  }
+  bytes += grid->nlocal*ngroup*3 * sizeof(double);
+  bytes += grid->nlocal*ngroup * sizeof(int);
+  bytes += grid->nlocal*ntotal * sizeof(double);
   return bytes;
 }

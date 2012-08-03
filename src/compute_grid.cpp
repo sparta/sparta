@@ -25,6 +25,7 @@
 using namespace SPARTA_NS;
 
 enum{NUM,U,V,W,USQ,VSQ,WSQ,KE,TEMP};
+enum{NONE,COUNT,MASSWT};
 
 /* ---------------------------------------------------------------------- */
 
@@ -52,16 +53,19 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"ke") == 0) which[nvalue++] = KE;
     else if (strcmp(arg[iarg],"temp") == 0) which[nvalue++] = TEMP;
     else error->all(FLERR,"Illegal compute grid command");
+    iarg++;
   }
 
   per_grid_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
   ntotal = ngroup*nvalue;
-  if (ntotal == 0) size_per_grid_cols = 0;
-  else size_per_grid_cols = ntotal;
+  size_per_grid_cols = ntotal;
 
-  vector_grid = NULL;
   array_grid = NULL;
+
+  memory->create(value_norm_style,ngroup,nvalue,"grid:value_norm_style");
+  norm_count = new double*[ngroup];
+  norm_mass = new double*[ngroup];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -69,8 +73,15 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 ComputeGrid::~ComputeGrid()
 {
   delete [] which;
-  memory->destroy(vector_grid);
   memory->destroy(array_grid);
+
+  memory->destroy(value_norm_style);
+  for (int i = 0; i < ngroup; i++) {
+    memory->destroy(norm_count[i]);
+    memory->destroy(norm_mass[i]);
+  }
+  delete [] norm_count;
+  delete [] norm_mass;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -80,14 +91,30 @@ void ComputeGrid::init()
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute grid mixture has changed");
 
-  // one-time allocation
+  // one-time allocation of accumulators and norms
+  // cannot allocate norms until now since depends on group sizes
 
-  if (ntotal == 1) {
-    if (vector_grid == NULL)
-      memory->create(vector_grid,grid->nlocal,"grid:vector_grid");
-  } else {
-    if (array_grid == NULL)
-      memory->create(array_grid,grid->nlocal,ntotal,"grid:array_grid");
+  if (array_grid == NULL) {
+    memory->create(array_grid,grid->nlocal,ntotal,"grid:array_grid");
+
+    for (int i = 0; i < ngroup; i++)
+      for (int j = 0; j < nvalue; j++) {
+        if (which[j] == NUM) value_norm_style[i][j] = NONE;
+        else if (particle->mixture[imix]->groupsize[i] == 1)
+          value_norm_style[i][j] = COUNT; 
+        else value_norm_style[i][j] = MASSWT;
+      }
+
+    for (int i = 0; i < ngroup; i++) {
+      norm_count[i] = norm_mass[i] = NULL;
+      for (int j = 0; j < nvalue; j++) {
+        if (value_norm_style[i][j] == NONE) continue;
+        if (value_norm_style[i][j] == COUNT && norm_count[i] == NULL)
+          memory->create(norm_count[i],grid->nlocal,"grid:norm_count");
+        if (value_norm_style[i][j] == MASSWT && norm_mass[i] == NULL)
+          memory->create(norm_mass[i],grid->nlocal,"grid:norm_mass");
+      }
+    }
   }
 }
 
@@ -108,103 +135,86 @@ void ComputeGrid::compute_per_grid()
   double mvv2e = update->mvv2e;
 
   int i,j,k,m,n,ispecies,igroup,ilocal;
-  double *v;
+  double wt;
+  double *norm,*v;
 
-  if (ntotal == 1) {
-    for (i = 0; i < nglocal; i++) vector_grid[i] = 0.0;
-  
-    for (i = 0; i < nlocal; i++) {
-      ispecies = particles[i].ispecies;
-      if (s2g[ispecies] < 0) continue;
+  for (i = 0; i < nglocal; i++)
+    for (j = 0; j < ntotal; j++) array_grid[i][j] = 0.0;
 
-      ilocal = cells[particles[i].icell].local;
-      v = particles[i].v;
+  for (j = 0; j < ngroup; j++) {
+    if (norm = norm_count[j])
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+    if (norm = norm_mass[j])
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+  }
 
-      switch (which[0]) {
+  // loop over all particles, skip species not in mixture group
+  // tally any norm associated with group into norms
+  // tally all values associated with group into array_grid
+
+  for (i = 0; i < nlocal; i++) {
+    ispecies = particles[i].ispecies;
+    igroup = s2g[ispecies];
+    if (igroup < 0) continue;
+    if (norm_mass[igroup]) wt = species[ispecies].mass;
+    else wt = 1.0;
+    ilocal = cells[particles[i].icell].local;
+
+    if (norm_count[igroup]) norm_count[igroup][ilocal] += 1.0;
+    if (norm_mass[igroup]) norm_mass[igroup][ilocal] += wt;
+
+    v = particles[i].v;
+    k = igroup*nvalue;
+
+    for (m = 0; m < nvalue; m++) {
+      switch (which[m]) {
       case NUM:
-        vector_grid[ilocal] += 1.0;
+        array_grid[ilocal][k++] += 1.0;
         break;
       case U:
-        vector_grid[ilocal] += v[0];
+        array_grid[ilocal][k++] += wt*v[0];
         break;
       case V:
-        vector_grid[ilocal] += v[1];
+        array_grid[ilocal][k++] += wt*v[1];
         break;
       case W:
-        vector_grid[ilocal] += v[2];
+        array_grid[ilocal][k++] += wt*v[2];
         break;
       case USQ:
-        vector_grid[ilocal] += v[0]*v[0];
+        array_grid[ilocal][k++] += wt*v[0]*v[0];
         break;
       case VSQ:
-        vector_grid[ilocal] += v[1]*v[1];
+        array_grid[ilocal][k++] += wt*v[1]*v[1];
         break;
       case WSQ:
-        vector_grid[ilocal] += v[2]*v[2];
+        array_grid[ilocal][k++] += wt*v[2]*v[2];
         break;
       case KE:
-        vector_grid[ilocal] += 
+        array_grid[ilocal][k++] += 
           0.5 * mvv2e * species[ispecies].mass * 
           (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
         break;
       case TEMP:
-        vector_grid[ilocal] += 
+        array_grid[ilocal][k++] += 
           0.5 * mvv2e * species[ispecies].mass * 
           (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
         break;
       }
     }
-
-  } else {
-    for (i = 0; i < nglocal; i++)
-      for (j = 0; j < ntotal; j++) array_grid[i][j] = 0.0;
-  
-    for (i = 0; i < nlocal; i++) {
-      ispecies = particles[i].ispecies;
-      igroup = s2g[ispecies];
-      if (igroup < 0) continue;
-
-      ilocal = cells[particles[i].icell].local;
-      v = particles[i].v;
-      k = igroup*nvalue;
-
-      for (m = 0; m < nvalue; m++) {
-        switch (which[m]) {
-        case NUM:
-          array_grid[ilocal][k++] += 1.0;
-          break;
-        case U:
-          array_grid[ilocal][k++] += v[0];
-          break;
-        case V:
-          array_grid[ilocal][k++] += v[1];
-          break;
-        case W:
-          array_grid[ilocal][k++] += v[2];
-          break;
-        case USQ:
-          array_grid[ilocal][k++] += v[0]*v[0];
-          break;
-        case VSQ:
-          array_grid[ilocal][k++] += v[1]*v[1];
-          break;
-        case WSQ:
-          array_grid[ilocal][k++] += v[2]*v[2];
-          break;
-        case KE:
-          array_grid[ilocal][k++] += 
-            0.5 * mvv2e * species[ispecies].mass * 
-            (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-          break;
-        case TEMP:
-          array_grid[ilocal][k++] += 
-            0.5 * mvv2e * species[ispecies].mass * 
-            (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-          break;
-        }
-      }
-    }
   }
+}
+
+/* ----------------------------------------------------------------------
+   return ptr to norm vector used by column N
+------------------------------------------------------------------------- */
+
+double *ComputeGrid::normptr(int n)
+{
+  int igroup = n / nvalue;
+  int ivalue = n % nvalue;
+  if (value_norm_style[igroup][ivalue] == COUNT) return norm_count[igroup];
+  if (value_norm_style[igroup][ivalue] == MASSWT) return norm_mass[igroup];
+  return NULL;
 }
 
 /* ----------------------------------------------------------------------
@@ -214,8 +224,10 @@ void ComputeGrid::compute_per_grid()
 bigint ComputeGrid::memory_usage()
 {
   bigint bytes;
-  if (ntotal == 1) bytes = grid->nlocal * sizeof(double);
-  else bytes = ntotal*grid->nlocal * sizeof(double);
-  // extra mem for norm factors
+  bytes = ntotal*grid->nlocal * sizeof(double);
+  for (int i = 0; i < ngroup; i++) {
+    if (norm_count[i]) bytes += grid->nlocal * sizeof(double);
+    if (norm_mass[i]) bytes += grid->nlocal * sizeof(double);
+  }
   return bytes;
 }

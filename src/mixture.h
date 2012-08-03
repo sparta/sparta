@@ -44,6 +44,7 @@ class Mixture : protected Pointers {
 
   int ngroup;                 // # of defined groups
   char **groups;              // group IDs
+  int *groupsize;             // # of species in each group
   int *mix2group;             // m2g[i] = group that mixture species I is in
   int *species2group;         // s2g[i] = group that Particle species I is in
                               // -1 if species I not in mixture

@@ -61,7 +61,7 @@ class Fix : protected Pointers {
   virtual int setmask() = 0;
 
   virtual void init() {}
-  virtual void setup(int) {}
+  virtual void setup() {}
 
   virtual void start_of_step() {}
   virtual void end_of_step() {}

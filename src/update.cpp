@@ -156,6 +156,8 @@ void Update::setup()
 
   if (surf->surf_exist) bounce_setup();
 
+  modify->setup();
+
   // initial output
 
   output->setup(1);

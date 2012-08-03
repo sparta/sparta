@@ -271,11 +271,6 @@ int FixAveGrid::setmask()
 
 void FixAveGrid::init()
 {
-  // nspecies cannot have changed since constructor
-
-  if (standard && particle->nspecies != nspecies)
-	error->all(FLERR,"Species count changed for fix ave/grid");
-
   // set indices and check validity of all computes,fixes,variables
 
   for (int m = 0; m < nvalues; m++) {
@@ -305,7 +300,7 @@ void FixAveGrid::init()
    only does something if nvalid = current timestep
 ------------------------------------------------------------------------- */
 
-void FixAveGrid::setup(int vflag)
+void FixAveGrid::setup()
 {
   end_of_step();
 }
@@ -315,6 +310,7 @@ void FixAveGrid::setup(int vflag)
 void FixAveGrid::end_of_step()
 {
   int i,j,m,n,isp,icol;
+  double *norm;
 
   // skip if not step which requires doing something
 
@@ -399,8 +395,9 @@ void FixAveGrid::end_of_step()
 	    for (i = 0; i < nglocal; i++)
 	      accvec[i] += compute_array[i][jm1];
 	  } else {
-	    for (i = 0; i < nglocal; i++)
+	    for (i = 0; i < nglocal; i++) {
 	      accarray[i][m] += compute_array[i][jm1];
+            }
 	  }
 	}
 	
@@ -454,7 +451,6 @@ void FixAveGrid::end_of_step()
   // molecule count is normalized by nsample
   // molecule properties are normalized by molecule count
   // reset nsample if ave = ONE
-  // NOTE: have to decide how to do averaging for non-standard case
 
   if (ave == ONE) {
     if (standard) {
@@ -473,7 +469,17 @@ void FixAveGrid::end_of_step()
       for (i = 0; i < nglocal; i++)
 	for (isp = 0; isp < nspecies; isp++)
 	  array_grid[i][isp*7] = 1.0*mcount[isp][i] / nsample;
+
+    } else if (nvalues == 1) {
+      n = value2index[0];
+      j = argindex[0];
+    } else {
+      for (m = 0; m < nvalues; m++) {
+        n = value2index[m];
+        j = argindex[m];
+      }
     }
+
   } else {
     if (standard) {
       for (i = 0; i < nglocal; i++)

@@ -408,7 +408,7 @@ void FixAveTime::init()
    only does something if nvalid = current timestep
 ------------------------------------------------------------------------- */
 
-void FixAveTime::setup(int vflag)
+void FixAveTime::setup()
 {
   end_of_step();
 }

@@ -429,6 +429,7 @@ void SPARTA::init()
   surf->init();
   if (collide) collide->init();
   modify->init();              // after grid, so that csurfs/cflags is set
+                               // after grid, so mixture is init
   output->init();
   timer->init();
 }

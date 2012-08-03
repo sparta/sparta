@@ -33,6 +33,7 @@ class Modify : protected Pointers {
   Modify(class SPARTA *);
   ~Modify();
   void init();
+  void setup();
   void start_of_step();
   void end_of_step();
 

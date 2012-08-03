@@ -32,7 +32,7 @@ class FixAveTime : public Fix {
   ~FixAveTime();
   int setmask();
   void init();
-  void setup(int);
+  void setup();
   void end_of_step();
   double compute_scalar();
   double compute_vector(int);

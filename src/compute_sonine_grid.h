@@ -31,17 +31,19 @@ class ComputeSonineGrid : public Compute {
   ~ComputeSonineGrid();
   void init();
   void compute_per_grid();
+  double *normptr(int);
   bigint memory_usage();
 
  private:
   int imix,nvalue,ngroup,npergroup,ntotal;
   int *which,*moment,*order;
 
-  double **vave,***avave;
-  int *count,**acount;
+  double ***vave;
+  double **sonine;
 
-  double *sonine_vector;
-  double **sonine_array;
+  int *group_norm_style;      // norm style of all values in Ith group
+  double **norms;             // per-group ptr to norm vector by count or mass
+  double **count;
 };
 
 }

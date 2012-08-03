@@ -112,6 +112,15 @@ void Modify::init()
   addstep_compute_all(update->ntimestep);
 }
 
+/* ---------------------------------------------------------------------- */
+
+void Modify::setup()
+{
+  // setup each fix
+
+  for (int i = 0; i < nfix; i++) fix[i]->setup();
+}
+
 /* ----------------------------------------------------------------------
    start-of-timestep call, only for relevant fixes
 ------------------------------------------------------------------------- */
@@ -373,9 +382,7 @@ void Modify::list_init_compute()
 bigint Modify::memory_usage()
 {
   bigint bytes = 0;
-  for (int i = 0; i < nfix; i++) 
-    bytes += static_cast<bigint> (fix[i]->memory_usage());
-  for (int i = 0; i < ncompute; i++) 
-    bytes += static_cast<bigint> (compute[i]->memory_usage());
+  for (int i = 0; i < nfix; i++) bytes += fix[i]->memory_usage();
+  for (int i = 0; i < ncompute; i++) bytes += compute[i]->memory_usage();
   return bytes;
 }
