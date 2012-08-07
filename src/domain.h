@@ -30,6 +30,7 @@ class Domain : protected Pointers {
   double prd[3];                    // array form of dimensions
 
   int bflag[6];                     // boundary flags
+  double norm[6][3];                // boundary normals
 
   Domain(class SPARTA *);
   ~Domain() {}
@@ -42,7 +43,6 @@ class Domain : protected Pointers {
   void print_box(const char *);
 
  private:
-  double norm[6][3];
   int surf_collide[6];              // index of SurfCollide model
                                     // for each bflag = SURFACE boundary
 };

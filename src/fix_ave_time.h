@@ -39,7 +39,7 @@ class FixAveTime : public Fix {
   double compute_array(int,int);
 
  private:
-  int me,nvalues;
+  int me,nvalues,maxvalues;
   int nevery,nrepeat,nfreq,irepeat;
   bigint nvalid;
   int *which,*argindex,*value2index,*offcol;
@@ -64,7 +64,7 @@ class FixAveTime : public Fix {
   void invoke_scalar(bigint);
   void invoke_vector(bigint);
   void options(int, char **);
-  void allocate_values(int);
+  void grow();
   bigint nextvalid();
 };
 

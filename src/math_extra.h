@@ -34,6 +34,7 @@ namespace MathExtra {
   inline void snormalize3(const double, const double *v, double *ans);
   inline void negate3(double *v);
   inline void scale3(double s, double *v);
+  inline void scale3(double s, const double *v, double *ans);
   inline void add3(const double *v1, const double *v2, double *ans);
   inline void sub3(const double *v1, const double *v2, double *ans);
   inline double len3(const double *v);
@@ -132,7 +133,7 @@ void MathExtra::snormalize3(const double length, const double *v, double *ans)
 }
 
 /* ----------------------------------------------------------------------
-   negate vector v
+   negate vector v in place
 ------------------------------------------------------------------------- */
 
 void MathExtra::negate3(double *v)
@@ -143,7 +144,7 @@ void MathExtra::negate3(double *v)
 }
 
 /* ----------------------------------------------------------------------
-   scale vector v by s
+   scale vector v by s in place
 ------------------------------------------------------------------------- */
 
 void MathExtra::scale3(double s, double *v)
@@ -151,6 +152,17 @@ void MathExtra::scale3(double s, double *v)
   v[0] *= s;
   v[1] *= s;
   v[2] *= s;
+}
+
+/* ----------------------------------------------------------------------
+   scale vector v by s, return in ans
+------------------------------------------------------------------------- */
+
+void MathExtra::scale3(double s, const double *v, double *ans)
+{
+  ans[0] = s*v[0];
+  ans[1] = s*v[1];
+  ans[2] = s*v[2];
 }
 
 /* ----------------------------------------------------------------------

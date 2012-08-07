@@ -16,6 +16,7 @@
 #define SPARTA_COMPUTE_H
 
 #include "pointers.h"
+#include "particle.h"
 
 namespace SPARTA_NS {
 
@@ -76,8 +77,8 @@ class Compute : protected Pointers {
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
   virtual void clear() {}
-  virtual void stally(int, int, double *) {}
-  virtual void btally(int, int, int, double *) {}
+  virtual void surf_tally(int, double *, Particle::OnePart *) {}
+  virtual void boundary_tally(int, int, double *, Particle::OnePart *) {}
 
   virtual double *normptr(int) {return NULL;}
 

@@ -33,19 +33,20 @@ enum{SCALAR,VECTOR};
 #define INVOKED_SCALAR 1
 #define INVOKED_VECTOR 2
 #define INVOKED_ARRAY 4
+#define DELTA 8;
 
 /* ---------------------------------------------------------------------- */
 
 FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg < 7) error->all(FLERR,"Illegal fix ave/time command");
+  if (narg < 6) error->all(FLERR,"Illegal fix ave/time command");
 
   MPI_Comm_rank(world,&me);
 
-  nevery = atoi(arg[3]);
-  nrepeat = atoi(arg[4]);
-  nfreq = atoi(arg[5]);
+  nevery = atoi(arg[2]);
+  nrepeat = atoi(arg[3]);
+  nfreq = atoi(arg[4]);
 
   global_freq = nfreq;
 
@@ -54,7 +55,7 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
 
   nvalues = 0;
 
-  int iarg = 6;
+  int iarg = 5;
   while (iarg < narg) {
     if ((strncmp(arg[iarg],"c_",2) == 0) || 
 	(strncmp(arg[iarg],"f_",2) == 0) || 
@@ -64,24 +65,23 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
     } else break;
   }
 
-  options(narg,arg);
+  options(narg-iarg,&arg[iarg]);
 
   // parse values until one isn't recognized
   // if mode = VECTOR and value is a global array:
-  //   expand it as if columns listed one by one
-  //   adjust nvalues accordingly via maxvalues
+  // expand compute or fix array into full set of columns
 
   which = argindex = value2index = offcol = NULL;
   ids = NULL;
-  int maxvalues = nvalues;
-  allocate_values(maxvalues);
-  nvalues = 0;
+  nvalues = maxvalues = 0;
 
-  iarg = 6;
+  iarg = 5;
   while (iarg < narg) {
     if (strncmp(arg[iarg],"c_",2) == 0 || 
 	strncmp(arg[iarg],"f_",2) == 0 || 
 	strncmp(arg[iarg],"v_",2) == 0) {
+
+      if (nvalues == maxvalues) grow();
       if (arg[iarg][0] == 'c') which[nvalues] = COMPUTE;
       else if (arg[iarg][0] == 'f') which[nvalues] = FIX;
       else if (arg[iarg][0] == 'v') which[nvalues] = VARIABLE;
@@ -101,50 +101,42 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
       n = strlen(suffix) + 1;
       ids[nvalues] = new char[n];
       strcpy(ids[nvalues],suffix);
-      delete [] suffix;
 
-      if (mode == VECTOR && which[nvalues] == COMPUTE && 
+      if (mode == VECTOR && 
+          (which[nvalues] == COMPUTE || which[nvalues] == FIX) && 
 	  argindex[nvalues] == 0) {
-	int icompute = modify->find_compute(ids[nvalues]);
-	if (icompute < 0)
-	  error->all(FLERR,"Compute ID for fix ave/time does not exist");
-	if (modify->compute[icompute]->array_flag) {
-	  int ncols = modify->compute[icompute]->size_array_cols;
-	  maxvalues += ncols-1;
-	  allocate_values(maxvalues);
-	  argindex[nvalues] = 1;
-	  for (int icol = 1; icol < ncols; icol++) {
-	    which[nvalues+icol] = which[nvalues];
-	    argindex[nvalues+icol] = icol+1;
-	    n = strlen(ids[nvalues]) + 1;
-	    ids[nvalues+icol] = new char[n];
-	    strcpy(ids[nvalues+icol],ids[nvalues]);
-	  }
-	  nvalues += ncols-1;
-	}
-
-      } else if (mode == VECTOR && which[nvalues] == FIX && 
-		 argindex[nvalues] == 0) {
-	int ifix = modify->find_fix(ids[nvalues]);
-	if (ifix < 0)
-	  error->all(FLERR,"Fix ID for fix ave/time does not exist");
-	if (modify->fix[ifix]->array_flag) {
-	  int ncols = modify->fix[ifix]->size_array_cols;
-	  maxvalues += ncols-1;
-	  allocate_values(maxvalues);
-	  argindex[nvalues] = 1;
-	  for (int icol = 1; icol < ncols; icol++) {
-	    which[nvalues+icol] = which[nvalues];
-	    argindex[nvalues+icol] = icol+1;
-	    n = strlen(ids[nvalues]) + 1;
-	    ids[nvalues+icol] = new char[n];
-	    strcpy(ids[nvalues+icol],ids[nvalues]);
-	  }
-	  nvalues += ncols-1;
-	}
+        int ndup = 1;
+        if (which[nvalues] == COMPUTE) {
+          int icompute = modify->find_compute(ids[nvalues]);
+          if (icompute >= 0)
+            if (modify->compute[icompute]->array_flag)
+              ndup = modify->compute[icompute]->size_array_cols;
+        }
+        if (which[nvalues] == FIX) {
+          int ifix = modify->find_fix(ids[nvalues]);
+          if (ifix >= 0)
+            if (modify->fix[ifix]->array_flag)
+              ndup = modify->fix[ifix]->size_array_cols;
+        }
+        if (ndup > 1) {
+          argindex[nvalues] = 1;
+          nvalues++;
+          for (int icol = 2; icol <= ndup; icol++) {
+            if (nvalues == maxvalues) grow();
+            which[nvalues] = which[nvalues-1];
+            argindex[nvalues] = icol;
+            n = strlen(suffix) + 1;
+            ids[nvalues] = new char[n];
+            strcpy(ids[nvalues],suffix);
+            nvalues++;
+          }
+          nvalues--;
+        }
       }
 
       nvalues++;
+      delete [] suffix;
+
       iarg++;
     } else break;
   }
@@ -620,15 +612,18 @@ void FixAveTime::invoke_vector(bigint ntimestep)
   // done if irepeat < nrepeat
   // else reset irepeat and nvalid
   
+
   irepeat++;
   if (irepeat < nrepeat) {
     nvalid += nevery;
+    modify->addstep_compute(nvalid);
     return;
   }
-  
+
   irepeat = 0;
-  nvalid = ntimestep+nfreq - (nrepeat-1)*nevery;
-  
+  nvalid = ntimestep + nfreq - (nrepeat-1)*nevery;
+  modify->addstep_compute(nvalid);
+
   // average the final result for the Nfreq timestep
   
   double repeat = nrepeat;
@@ -739,7 +734,7 @@ void FixAveTime::options(int narg, char **arg)
 
   // optional args
 
-  int iarg = 6 + nvalues;
+  int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"file") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/time command");
@@ -809,13 +804,14 @@ void FixAveTime::options(int narg, char **arg)
    reallocate vectors for each input value, of length N
 ------------------------------------------------------------------------- */
 
-void FixAveTime::allocate_values(int n)
+void FixAveTime::grow()
 {
-  memory->grow(which,n,"ave/time:which");
-  memory->grow(argindex,n,"ave/time:argindex");
-  memory->grow(value2index,n,"ave/time:value2index");
-  memory->grow(offcol,n,"ave/time:offcol");
-  ids = (char **) memory->srealloc(ids,n*sizeof(char *),"ave/time:ids");
+  maxvalues += DELTA;
+  memory->grow(which,maxvalues,"ave/time:which");
+  memory->grow(argindex,maxvalues,"ave/time:argindex");
+  memory->grow(value2index,maxvalues,"ave/time:value2index");
+  memory->grow(offcol,maxvalues,"ave/time:offcol");
+  ids = (char **) memory->srealloc(ids,maxvalues*sizeof(char *),"ave/time:ids");
 }
 
 /* ----------------------------------------------------------------------

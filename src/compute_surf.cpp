@@ -164,7 +164,7 @@ void ComputeSurf::clear()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeSurf::stally(int isurf, int ispecies, double *v)
+void ComputeSurf::surf_tally(int isurf, double *v, Particle::OnePart *p)
 {
   nbounce++;
   if (nbounce >= 0) return;
@@ -174,32 +174,28 @@ void ComputeSurf::stally(int isurf, int ispecies, double *v)
   // tally any norm associated with group into norms
   // tally all values associated with group into array_surf
 
-  int i,j,k,m,n,igroup,ilocal;
-  double wt;
-  double *norm;
-
-  int *s2g = particle->mixture[imix]->species2group;
-  igroup = s2g[ispecies];
+  int ispecies = p->ispecies;
+  int igroup = particle->mixture[imix]->species2group[ispecies];
   if (igroup < 0) return;
 
-  Particle::Species *species = particle->species;
-  Particle::OnePart *particles = particle->particles;
-  int nslocal = surf->nlocal;
-  double mvv2e = update->mvv2e;
-  double kbwt = 3.0*update->boltz;
 
   // NOTE: what does this become
   //ilocal = cells[particles[i].icell].local;
-  ilocal = 0;
+  int ilocal = 0;
 
-  if (norm_mass[igroup]) wt = species[ispecies].mass;
+  double mass = particle->species[ispecies].mass;
+  double mvv2e = update->mvv2e;
+  double kbwt = 3.0*update->boltz;
+
+  double wt;
+  if (norm_mass[igroup]) wt = mass;
   else wt = 1.0;
   if (norm_count[igroup]) norm_count[igroup][ilocal] += 1.0;
   if (norm_mass[igroup]) norm_mass[igroup][ilocal] += wt;
 
-  k = igroup*nvalue;
+  int k = igroup*nvalue;
 
-  for (m = 0; m < nvalue; m++) {
+  for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
     case NUM:
       array_surf[ilocal][k++] += 1.0;
@@ -215,8 +211,7 @@ void ComputeSurf::stally(int isurf, int ispecies, double *v)
       break;
     case KE:
       array_surf[ilocal][k++] += 
-        0.5 * mvv2e * species[ispecies].mass * 
-        (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        0.5 * mvv2e * mass * (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
       break;
     }
   }

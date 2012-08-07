@@ -67,8 +67,8 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   maxmigrate = 0;
   mlist = NULL;
 
-  nblist_compute = 0;
-  blist_compute = NULL;
+  nslist_compute = nblist_compute = 0;
+  slist_compute = blist_compute = NULL;
 
   ranmaster = new RanMars(sparta);
   random = NULL;
@@ -87,6 +87,7 @@ Update::~Update()
 {
   delete [] unit_style;
   memory->destroy(mlist);
+  delete [] slist_compute;
   delete [] blist_compute;
   delete ranmaster;
   delete random;
@@ -151,7 +152,7 @@ void Update::setup()
   nboundary_running = nexit_running = 0;
   nscheck_running = nscollide_running = 0;
 
-  if (surf->surf_exist) bounce_tally = bounce_setup();
+  bounce_tally = bounce_setup();
   modify->setup();
   output->setup(1);
 }
@@ -229,8 +230,7 @@ void Update::move3d_surface()
   double dtremain,dtfrac,frac,newfrac,param,minparam;
   double *x,*v,*lo,*hi;
   Surf::Tri *tri;
-  double xnew[3],xc[3];      
-  double xhold[3],minxc[3];
+  double xnew[3],xc[3],xhold[3],minxc[3],vold[3];
 
   // extend migration list if necessary
 
@@ -422,15 +422,19 @@ void Update::move3d_surface()
 	  x[1] = minxc[1];
 	  x[2] = minxc[2];
 	  tri = &tris[minsurf];
-	  surf->sc[tri->isc]->collide(&particles[i],tri->norm);
+
+	  if (surf_tally_flag) {
+            vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
+            surf->sc[tri->isc]->collide(&particles[i],tri->norm);
+            for (m = 0; m < nslist_compute; m++)
+              slist_compute[m]->surf_tally(minsurf,vold,&particles[i]);
+	  } else 
+            surf->sc[tri->isc]->collide(&particles[i],tri->norm);
+
 	  dtremain *= 1.0 - minparam*frac;
 	  xnew[0] = x[0] + dtremain*v[0];
 	  xnew[1] = x[1] + dtremain*v[1];
 	  xnew[2] = x[2] + dtremain*v[2];
-	  if (surf_tally_flag) {
-            for (m = 0; m < nslist_compute; m++)
-              slist_compute[m]->stally(minsurf,particles[i].ispecies,v);
-	  }
 	  exclude = minsurf;
 	  nscollide_one++;
 
@@ -483,11 +487,15 @@ void Update::move3d_surface()
 	ntouch_one++;
  
       } else {
-        outflag = domain->collide(&particles[i],outface,icell,xnew);
         if (boundary_tally_flag) {
+          vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
+          outflag = domain->collide(&particles[i],outface,icell,xnew);
           for (m = 0; m < nblist_compute; m++)
-            blist_compute[m]->btally(outface,outflag,particles[i].ispecies,v);
-        }
+            blist_compute[m]->
+              boundary_tally(outface,outflag,vold,&particles[i]);
+        } else 
+          outflag = domain->collide(&particles[i],outface,icell,xnew);
+
 	if (outflag == OUTFLOW) {
 	  nexit_one++;
 	  break;
@@ -544,7 +552,7 @@ void Update::move3d_surface()
 void Update::move3d()
 {
   int m,icell,inface,outface,outflag;
-  double xnew[3];
+  double xnew[3],vold[3];
   double *x,*v,*lo,*hi;
   int *neigh;
   double dtfrac,frac,newfrac;
@@ -679,11 +687,15 @@ void Update::move3d()
 	ntouch_one++;
 
       } else {
-        outflag = domain->collide(&particles[i],outface,icell,xnew);
         if (boundary_tally_flag) {
+          vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
+          outflag = domain->collide(&particles[i],outface,icell,xnew);
           for (m = 0; m < nblist_compute; m++)
-            blist_compute[m]->btally(outface,outflag,particles[i].ispecies,v);
-        }
+            blist_compute[m]->
+              boundary_tally(outface,outflag,vold,&particles[i]);
+        } else
+          outflag = domain->collide(&particles[i],outface,icell,xnew);
+
 	if (outflag == OUTFLOW) {
 	  nexit_one++;
 	  break;
@@ -745,12 +757,12 @@ void Update::move2d_surface()
   double dtremain,dtfrac,frac,newfrac,param,minparam;
   double *x,*v,*lo,*hi;
   Surf::Line *line;
+  double vold[3];
 
   // xnew,xc passed to geometry routines which use or set 3rd component
   // xhold,minxc used locally w/out 3rd component
 
-  double xnew[3],xc[3];      
-  double xhold[2],minxc[2];
+  double xnew[3],xc[3],xhold[2],minxc[2];
   xnew[2] = 0.0;
 
   // extend migration list if necessary
@@ -917,14 +929,18 @@ void Update::move2d_surface()
 	  x[0] = minxc[0];
 	  x[1] = minxc[1];
 	  line = &lines[minsurf];
-	  surf->sc[line->isc]->collide(&particles[i],line->norm);
+
+	  if (surf_tally_flag) {
+            vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
+            surf->sc[line->isc]->collide(&particles[i],line->norm);
+            for (m = 0; m < nslist_compute; m++)
+              slist_compute[m]->surf_tally(minsurf,vold,&particles[i]);
+	  } else 
+            surf->sc[line->isc]->collide(&particles[i],line->norm);
+
 	  dtremain *= 1.0 - minparam*frac;
 	  xnew[0] = x[0] + dtremain*v[0];
 	  xnew[1] = x[1] + dtremain*v[1];
-	  if (surf_tally_flag) {
-            for (m = 0; m < nslist_compute; m++)
-              slist_compute[m]->stally(minsurf,particles[i].ispecies,v);
-	  }
 	  exclude = minsurf;
 	  nscollide_one++;
 
@@ -974,11 +990,15 @@ void Update::move2d_surface()
 	ntouch_one++;
  
       } else {
-        outflag = domain->collide(&particles[i],outface,icell,xnew);
         if (boundary_tally_flag) {
+          vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
+          outflag = domain->collide(&particles[i],outface,icell,xnew);
           for (m = 0; m < nblist_compute; m++)
-            blist_compute[m]->btally(outface,outflag,particles[i].ispecies,v);
-        }
+            blist_compute[m]->
+              boundary_tally(outface,outflag,vold,&particles[i]);
+        } else
+          outflag = domain->collide(&particles[i],outface,icell,xnew);
+
 	if (outflag == OUTFLOW) {
 	  nexit_one++;
 	  break;
@@ -1034,7 +1054,7 @@ void Update::move2d_surface()
 void Update::move2d()
 {
   int m,icell,inface,outface,outflag;
-  double xnew[3];
+  double xnew[3],vold[3];
   double *x,*v,*lo,*hi;
   int *neigh;
   double dtfrac,frac,newfrac;
@@ -1150,11 +1170,15 @@ void Update::move2d()
 	ntouch_one++;
  
       } else {
-        outflag = domain->collide(&particles[i],outface,icell,xnew);
         if (boundary_tally_flag) {
+          vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
+          outflag = domain->collide(&particles[i],outface,icell,xnew);
           for (m = 0; m < nblist_compute; m++)
-            blist_compute[m]->btally(outface,outflag,particles[i].ispecies,v);
-        }
+            blist_compute[m]->
+              boundary_tally(outface,outflag,vold,&particles[i]);
+        } else
+          outflag = domain->collide(&particles[i],outface,icell,xnew);
+
 	if (outflag == OUTFLOW) {
 	  nexit_one++;
 	  break;
@@ -1241,16 +1265,16 @@ void Update::bounce_set(bigint ntimestep)
   // clear accumulators in computes that will be invoked this step
 
   surf_tally_flag = boundary_tally_flag = 0;
-  for (i = 0; i < nblist_compute; i++) {
+  for (i = 0; i < nslist_compute; i++)
     if (slist_compute[i]->matchstep(ntimestep)) {
       surf_tally_flag = 1;
       slist_compute[i]->clear();
     }
+  for (i = 0; i < nblist_compute; i++)
     if (blist_compute[i]->matchstep(ntimestep)) {
       boundary_tally_flag = 1;
       blist_compute[i]->clear();
     }
-  }
 }
 
 /* ----------------------------------------------------------------------
