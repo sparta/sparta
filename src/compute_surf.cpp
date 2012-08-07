@@ -52,7 +52,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
-  bounceflag = 1;
+  surf_tally_flag = 1;
   timeflag = 1;
   per_surf_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
@@ -164,7 +164,7 @@ void ComputeSurf::clear()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeSurf::tally(int isurf, int ispecies, double *v)
+void ComputeSurf::stally(int isurf, int ispecies, double *v)
 {
   nbounce++;
   if (nbounce >= 0) return;

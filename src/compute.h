@@ -49,7 +49,8 @@ class Compute : protected Pointers {
   int per_surf_flag;          // 0/1 if compute_per_surf() function exists
   int size_per_surf_cols;     // 0 = vector, N = columns in per-surf array
 
-  int bounceflag;             // 1 if compute needs surface bounce info
+  int surf_tally_flag;        // 1 if compute tallies surface bounce info
+  int boundary_tally_flag;    // 1 if compute tallies boundary bounce info
 
   int timeflag;       // 1 if Compute stores list of timesteps it's called on
   int ntime;          // # of entries in time list
@@ -75,7 +76,8 @@ class Compute : protected Pointers {
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
   virtual void clear() {}
-  virtual void tally(int, int, double *) {}
+  virtual void stally(int, int, double *) {}
+  virtual void btally(int, int, int, double *) {}
 
   virtual double *normptr(int) {return NULL;}
 

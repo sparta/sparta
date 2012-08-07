@@ -49,7 +49,7 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   scalar_flag = vector_flag = array_flag = 0;
   per_molecule_flag = per_grid_flag = per_surf_flag = 0;
-  bounceflag = 0;
+  surf_tally_flag = boundary_tally_flag = 0;
 
   timeflag = 0;
   ntime = maxtime = 0;

@@ -32,7 +32,7 @@ class ComputeSurf : public Compute {
   void init();
   void compute_per_surf();
   void clear();
-  void tally(int isurf, int ispecies, double *v);
+  void stally(int isurf, int ispecies, double *v);
   double *normptr(int);
   bigint memory_usage();
 
