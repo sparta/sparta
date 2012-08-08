@@ -328,7 +328,8 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
     for (int i = 0; i < nvalues; i++) vector_total[i] = 0.0;
   else
     for (int i = 0; i < nrows; i++)
-      for (int j = 0; j < nvalues; j++) array_total[i][j] = 0.0;
+      for (int j = 0; j < nvalues; j++)
+        array_total[i][j] = 0.0;
 
   // nvalid = next step on which end_of_step does something
   // add nvalid to all computes that store invocation times
@@ -623,13 +624,12 @@ void FixAveTime::invoke_vector(bigint ntimestep)
     
     // add columns of values to array or just set directly if offcol is set
     
-    if (offcol[j]) {
+    if (offcol[j])
       for (i = 0; i < nrows; i++)
 	array[i][j] = column[i];
-    } else {
+    else
       for (i = 0; i < nrows; i++)
 	array[i][j] += column[i];
-    }
   }
   
   // done if irepeat < nrepeat
@@ -693,13 +693,13 @@ void FixAveTime::invoke_vector(bigint ntimestep)
   }
   
   // insure any columns with offcol set are effectively set to last value
-  
+
   for (i = 0; i < nrows; i++)
     for (j = 0; j < nvalues; j++)
       if (offcol[j]) array_total[i][j] = norm*array[i][j];
   
   // output result to file
-      
+
   if (fp && me == 0) {
     fprintf(fp,BIGINT_FORMAT " %d\n",ntimestep,nrows);
     for (i = 0; i < nrows; i++) {
