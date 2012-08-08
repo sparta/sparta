@@ -292,6 +292,7 @@ Compute styles :h4
 See the "compute"_compute.html command for one-line descriptions of
 each style or click on the style itself for a full description:
 
+"boundary"_compute_boundary.html,
 "grid"_compute_grid.html,
 "ke/molecule"_compute_ke_molecule.html,
 "sonine/grid"_compute_sonine_grid.html,
