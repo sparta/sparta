@@ -237,7 +237,7 @@ double *ComputeSurf::normptr(int n)
 
 bigint ComputeSurf::memory_usage()
 {
-  bigint bytes;
+  bigint bytes = 0;
   // NOTE: these need to tally on local or global surfs
   //bytes = ntotal*surf->nlocal * sizeof(double);
   //for (int i = 0; i < ngroup; i++) {
