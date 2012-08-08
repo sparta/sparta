@@ -73,14 +73,17 @@ class Update : protected Pointers {
 
   class RanPark *random;     // RNG for particle timestep moves
 
-  int bounce_tally;                  // 1 if any bounces tallied on this step
-  int surf_tally_flag;               // 1 if tally surf bounces on this step
-  int boundary_tally_flag;           // 1 if tally boundary bounces on this step
+  int bounce_tally;          // 1 if any bounces are ever tallied
 
-  int nslist_compute;                // # of surf bounce computes to check
-  int nblist_compute;                // # of boundary bounce computes to check
-  class Compute **slist_compute;     // list of surf bounce Computes
-  class Compute **blist_compute;     // list of boundary bounce Computes
+  int nslist_compute;             // # of computes that tally surf bounces
+  int nblist_compute;             // # of computes that tally boundary bounces
+  class Compute **slist_compute;  // list of all surf bounce Computes
+  class Compute **blist_compute;  // list of all boundary bounce Computes
+
+  int nsurf_tally;         // # of Cmp tallying surf bounce info this step
+  int nboundary_tally;     // # of Cmp tallying boundary bounce info this step
+  class Compute **slist_active;   // list of active surf Computes this step
+  class Compute **blist_active;   // list of active boundary Computes this step
   
   int bounce_setup();
   void bounce_set(bigint);

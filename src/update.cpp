@@ -69,6 +69,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
 
   nslist_compute = nblist_compute = 0;
   slist_compute = blist_compute = NULL;
+  slist_active = blist_active = NULL;
 
   ranmaster = new RanMars(sparta);
   random = NULL;
@@ -89,6 +90,8 @@ Update::~Update()
   memory->destroy(mlist);
   delete [] slist_compute;
   delete [] blist_compute;
+  delete [] slist_active;
+  delete [] blist_active;
   delete ranmaster;
   delete random;
 }
@@ -423,11 +426,11 @@ void Update::move3d_surface()
 	  x[2] = minxc[2];
 	  tri = &tris[minsurf];
 
-	  if (surf_tally_flag) {
+	  if (nsurf_tally) {
             vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
             surf->sc[tri->isc]->collide(&particles[i],tri->norm);
-            for (m = 0; m < nslist_compute; m++)
-              slist_compute[m]->surf_tally(minsurf,vold,&particles[i]);
+            for (m = 0; m < nsurf_tally; m++)
+              slist_active[m]->surf_tally(minsurf,vold,&particles[i]);
 	  } else 
             surf->sc[tri->isc]->collide(&particles[i],tri->norm);
 
@@ -487,11 +490,11 @@ void Update::move3d_surface()
 	ntouch_one++;
  
       } else {
-        if (boundary_tally_flag) {
+        if (nboundary_tally) {
           vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
           outflag = domain->collide(&particles[i],outface,icell,xnew);
-          for (m = 0; m < nblist_compute; m++)
-            blist_compute[m]->
+          for (m = 0; m < nboundary_tally; m++)
+            blist_active[m]->
               boundary_tally(outface,outflag,vold,&particles[i]);
         } else 
           outflag = domain->collide(&particles[i],outface,icell,xnew);
@@ -687,11 +690,11 @@ void Update::move3d()
 	ntouch_one++;
 
       } else {
-        if (boundary_tally_flag) {
+        if (nboundary_tally) {
           vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
           outflag = domain->collide(&particles[i],outface,icell,xnew);
-          for (m = 0; m < nblist_compute; m++)
-            blist_compute[m]->
+          for (m = 0; m < nboundary_tally; m++)
+            blist_active[m]->
               boundary_tally(outface,outflag,vold,&particles[i]);
         } else
           outflag = domain->collide(&particles[i],outface,icell,xnew);
@@ -930,11 +933,11 @@ void Update::move2d_surface()
 	  x[1] = minxc[1];
 	  line = &lines[minsurf];
 
-	  if (surf_tally_flag) {
+	  if (nsurf_tally) {
             vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
             surf->sc[line->isc]->collide(&particles[i],line->norm);
-            for (m = 0; m < nslist_compute; m++)
-              slist_compute[m]->surf_tally(minsurf,vold,&particles[i]);
+            for (m = 0; m < nsurf_tally; m++)
+              slist_active[m]->surf_tally(minsurf,vold,&particles[i]);
 	  } else 
             surf->sc[line->isc]->collide(&particles[i],line->norm);
 
@@ -990,11 +993,11 @@ void Update::move2d_surface()
 	ntouch_one++;
  
       } else {
-        if (boundary_tally_flag) {
+        if (nboundary_tally) {
           vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
           outflag = domain->collide(&particles[i],outface,icell,xnew);
-          for (m = 0; m < nblist_compute; m++)
-            blist_compute[m]->
+          for (m = 0; m < nboundary_tally; m++)
+            blist_active[m]->
               boundary_tally(outface,outflag,vold,&particles[i]);
         } else
           outflag = domain->collide(&particles[i],outface,icell,xnew);
@@ -1170,11 +1173,11 @@ void Update::move2d()
 	ntouch_one++;
  
       } else {
-        if (boundary_tally_flag) {
+        if (nboundary_tally) {
           vold[0] = v[0]; vold[1] = v[1]; vold[2] = v[2];
           outflag = domain->collide(&particles[i],outface,icell,xnew);
-          for (m = 0; m < nblist_compute; m++)
-            blist_compute[m]->
+          for (m = 0; m < nboundary_tally; m++)
+            blist_active[m]->
               boundary_tally(outface,outflag,vold,&particles[i]);
         } else
           outflag = domain->collide(&particles[i],outface,icell,xnew);
@@ -1226,7 +1229,8 @@ void Update::move2d()
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of computes that tally surface and boundary bounce info
+   setup lists of all computes that tally surface and boundary bounce info
+   return 1 if there are any or either, 0 if not
 ------------------------------------------------------------------------- */
 
 int Update::bounce_setup()
@@ -1239,8 +1243,12 @@ int Update::bounce_setup()
     if (modify->compute[i]->surf_tally_flag) nslist_compute++;
     if (modify->compute[i]->boundary_tally_flag) nblist_compute++;
   }
+
   if (nslist_compute) slist_compute = new Compute*[nslist_compute];
   if (nblist_compute) blist_compute = new Compute*[nblist_compute];
+  if (nslist_compute) slist_active = new Compute*[nslist_compute];
+  if (nblist_compute) blist_active = new Compute*[nblist_compute];
+
   nslist_compute = nblist_compute = 0;
   for (int i = 0; i < modify->ncompute; i++) {
     if (modify->compute[i]->surf_tally_flag)
@@ -1255,24 +1263,25 @@ int Update::bounce_setup()
 
 /* ----------------------------------------------------------------------
    set bounce tally flags for current timestep
-   tally flag = 1 if any compute needs bounce info on this step
+   tally flag = # of computes needing bounce info on this step
+   clear accumulators in computes that will be invoked this step
 ------------------------------------------------------------------------- */
 
 void Update::bounce_set(bigint ntimestep)
 {
   int i,j;
 
-  // clear accumulators in computes that will be invoked this step
-
-  surf_tally_flag = boundary_tally_flag = 0;
+  nsurf_tally = 0;
   for (i = 0; i < nslist_compute; i++)
     if (slist_compute[i]->matchstep(ntimestep)) {
-      surf_tally_flag = 1;
+      slist_active[nsurf_tally++] = slist_compute[i];
       slist_compute[i]->clear();
     }
+
+  nboundary_tally = 0;
   for (i = 0; i < nblist_compute; i++)
     if (blist_compute[i]->matchstep(ntimestep)) {
-      boundary_tally_flag = 1;
+      blist_active[nboundary_tally++] = blist_compute[i];
       blist_compute[i]->clear();
     }
 }
