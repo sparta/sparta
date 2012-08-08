@@ -27,7 +27,6 @@
 #include "memory.h"
 
 using namespace SPARTA_NS;
-using namespace MathExtra;
 
 /* ---------------------------------------------------------------------- */
 

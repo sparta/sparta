@@ -95,7 +95,7 @@ void ComputeBoundary::init()
     normflux[ZLO] = normflux[ZHI] = domain->xprd*domain->yprd * dt;
   }
 
-  // initialize tally array in case accessed without a timestep of tallying
+  // initialize tally array in case accessed without a tally timestep
 
   clear();
 }

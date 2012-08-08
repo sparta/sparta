@@ -22,6 +22,7 @@ ComputeStyle(surf,ComputeSurf)
 #define SPARTA_COMPUTE_SURF_H
 
 #include "compute.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -40,19 +41,22 @@ class ComputeSurf : public Compute {
   int imix,nvalue,ngroup,ntotal;
   int *which;
 
+  int nlocal;              // # of local surfs
+  int maxlocal;            // # of local surfs currently allocated
+  double **array;          // tally values for local surfs
+  int *glob2loc;           // glob2loc[I] = local index of Ith global surf
+  int *loc2glob;           // loc2glob[I] = global index of Ith local surf
 
-
-  int nbounce;
-
-
-
-
-
+  int dimension;
+  Surf::Line *lines;
+  Surf::Tri *tris;
 
   int **value_norm_style;       // I,J = norm style of Jth value in Ith group
   double **norm_count;          // per-group ptr to norm vector, by count
   double **norm_mass;           // per-group ptr to norm vector, by mass
   double **norm_temp;           // per-group ptr to norm vector, by temperature
+
+  void grow();
 };
 
 }
