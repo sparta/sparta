@@ -733,6 +733,7 @@ int Stats::evaluate_keyword(char *word, double *answer)
 
 /* ----------------------------------------------------------------------
    extraction of Compute, Fix, Variable results
+   apply normalization factor as needed
 ------------------------------------------------------------------------- */
 
 void Stats::compute_compute()
@@ -744,8 +745,13 @@ void Stats::compute_compute()
     dvalue = compute->scalar;
   else if (compute_which[m] == VECTOR)
     dvalue = compute->vector[argindex1[ifield]-1];
-  else
-    dvalue = compute->array[argindex1[ifield]-1][argindex2[ifield]-1];
+  else {
+    double *norm = compute->normptr(argindex2[ifield]-1);
+    if (norm)
+      dvalue = compute->array[argindex1[ifield]-1][argindex2[ifield]-1] /
+        norm[argindex1[ifield]-1];
+    else dvalue = compute->array[argindex1[ifield]-1][argindex2[ifield]-1];
+  }
 }
 
 /* ---------------------------------------------------------------------- */
