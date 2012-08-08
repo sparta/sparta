@@ -318,6 +318,9 @@ void FixAveGrid::setup()
   // zero norm vectors one time if ave = RUNNING
   // NOTE: need to add logic for fixes and variables if enable them
 
+  // NOTE: if nnorm = 0 a good test if no norms are ever created
+  // NOTE: need to add normindex = -1 if not a compute?
+
   if (nnorm == 0) {
     double *ptr;
     int j,n,iptr;
@@ -489,8 +492,6 @@ void FixAveGrid::end_of_step()
 
   if (ave == ONE) {
     if (nvalues == 1) {
-      n = value2index[0];
-      j = argindex[0];
       if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
       } else {
@@ -500,9 +501,6 @@ void FixAveGrid::end_of_step()
       }
     } else {
       for (m = 0; m < nvalues; m++) {
-        n = value2index[m];
-        j = argindex[m];
-
         if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
         } else {
@@ -515,8 +513,6 @@ void FixAveGrid::end_of_step()
 
   } else {
     if (nvalues == 1) {
-      n = value2index[0];
-      j = argindex[0];
       if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] = accvec[i]/nsample;
       } else {
@@ -525,8 +521,6 @@ void FixAveGrid::end_of_step()
       }
     } else {
       for (m = 0; m < nvalues; m++) {
-        n = value2index[m];
-        j = argindex[m];
         if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++)
             array_grid[i][m] = accarray[i][m]/nsample;

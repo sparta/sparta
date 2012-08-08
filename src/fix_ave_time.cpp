@@ -276,13 +276,14 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
   delete [] title2;
   delete [] title3;
 
-  // allocate memory for averaging
+  // allocate accumulators
 
   vector = vector_total = NULL;
   vector_list = NULL;
   array = array_total = NULL;
   array_list = NULL;
-  
+  norms = NULL;
+
   if (mode == SCALAR) {
     vector = new double[nvalues];
     vector_total = new double[nvalues];
@@ -357,6 +358,7 @@ FixAveTime::~FixAveTime()
   memory->destroy(array);
   memory->destroy(array_total);
   memory->destroy(array_list);
+  delete [] norms;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -396,12 +398,31 @@ void FixAveTime::init()
   }
 }
 
-/* ----------------------------------------------------------------------
-   only does something if nvalid = current timestep
-------------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */
 
 void FixAveTime::setup()
 {
+  // ont-time setup of norm pointers for VECTOR mode
+  // must do here after computes have been initialized
+  // NOTE: need to add logic for fixes and variables if enable them
+  
+  if (mode == VECTOR && norms == NULL) {
+    norms = new double*[nvalues];
+    int j,n;
+
+    for (int m = 0; m < nvalues; m++) {
+      n = value2index[m];
+      j = argindex[m];
+      
+      if (which[m] == COMPUTE) {
+        Compute *compute = modify->compute[n];
+        norms[m] = compute->normptr(j-1);
+      } else norms[m] = NULL;
+    }
+  }
+
+  // only does something if nvalid = current timestep
+
   end_of_step();
 }
 
@@ -491,6 +512,7 @@ void FixAveTime::invoke_scalar(bigint ntimestep)
   modify->addstep_compute(nvalid);
 
   // average the final result for the Nfreq timestep
+  // no other normalization factor used
 
   double repeat = nrepeat;
   for (i = 0; i < nvalues; i++)
@@ -544,7 +566,8 @@ void FixAveTime::invoke_scalar(bigint ntimestep)
 void FixAveTime::invoke_vector(bigint ntimestep)
 {
   int i,j,m;
-  
+  double *onenorm;
+
   // zero if first step
 
   if (irepeat == 0)
@@ -611,7 +634,6 @@ void FixAveTime::invoke_vector(bigint ntimestep)
   
   // done if irepeat < nrepeat
   // else reset irepeat and nvalid
-  
 
   irepeat++;
   if (irepeat < nrepeat) {
@@ -625,11 +647,19 @@ void FixAveTime::invoke_vector(bigint ntimestep)
   modify->addstep_compute(nvalid);
 
   // average the final result for the Nfreq timestep
+  // include normalization factor if defined
   
   double repeat = nrepeat;
-  for (i = 0; i < nrows; i++)
-    for (j = 0; j < nvalues; j++)
-      if (offcol[j] == 0) array[i][j] /= repeat;
+
+  for (m = 0; m < nvalues; m++) {
+    if (offcol[m]) continue;
+    if (norms[m]) {
+      onenorm = norms[m];
+      for (i = 0; i < nrows; i++)
+        if (onenorm[i] > 0.0) array[i][m] /= repeat*onenorm[i];
+    } else
+      for (i = 0; i < nrows; i++) array[i][m] /= repeat;
+  }
   
   // if ave = ONE, only single Nfreq timestep value is needed
   // if ave = RUNNING, combine with all previous Nfreq timestep values

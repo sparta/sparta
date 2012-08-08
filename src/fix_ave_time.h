@@ -60,6 +60,7 @@ class FixAveTime : public Fix {
   double **array;
   double **array_total;
   double ***array_list;
+  double **norms;
 
   void invoke_scalar(bigint);
   void invoke_vector(bigint);
