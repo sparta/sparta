@@ -282,7 +282,6 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
   vector_list = NULL;
   array = array_total = NULL;
   array_list = NULL;
-  norms = NULL;
 
   if (mode == SCALAR) {
     vector = new double[nvalues];
@@ -359,7 +358,6 @@ FixAveTime::~FixAveTime()
   memory->destroy(array);
   memory->destroy(array_total);
   memory->destroy(array_list);
-  delete [] norms;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -403,25 +401,6 @@ void FixAveTime::init()
 
 void FixAveTime::setup()
 {
-  // ont-time setup of norm pointers for VECTOR mode
-  // must do here after computes have been initialized
-  // NOTE: need to add logic for fixes and variables if enable them
-  
-  if (mode == VECTOR && norms == NULL) {
-    norms = new double*[nvalues];
-    int j,n;
-
-    for (int m = 0; m < nvalues; m++) {
-      n = value2index[m];
-      j = argindex[m];
-      
-      if (which[m] == COMPUTE) {
-        Compute *compute = modify->compute[n];
-        norms[m] = compute->normptr(j-1);
-      } else norms[m] = NULL;
-    }
-  }
-
   // only does something if nvalid = current timestep
 
   end_of_step();
@@ -647,19 +626,12 @@ void FixAveTime::invoke_vector(bigint ntimestep)
   modify->addstep_compute(nvalid);
 
   // average the final result for the Nfreq timestep
-  // include normalization factor if defined
   
   double repeat = nrepeat;
 
-  for (m = 0; m < nvalues; m++) {
-    if (offcol[m]) continue;
-    if (norms[m]) {
-      onenorm = norms[m];
-      for (i = 0; i < nrows; i++)
-        if (onenorm[i] > 0.0) array[i][m] /= repeat*onenorm[i];
-    } else
+  for (m = 0; m < nvalues; m++) 
+    if (offcol[m] = 0)
       for (i = 0; i < nrows; i++) array[i][m] /= repeat;
-  }
   
   // if ave = ONE, only single Nfreq timestep value is needed
   // if ave = RUNNING, combine with all previous Nfreq timestep values
