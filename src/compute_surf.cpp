@@ -141,14 +141,12 @@ void ComputeSurf::init()
 
   // allocate and initialize glob2loc indices
 
+  if (dimension == 2) nsurf = surf->nline;
+  else nsurf = surf->ntri;
+
   memory->destroy(glob2loc);
-  if (dimension == 2) {
-    memory->create(glob2loc,surf->nline,"surf:glob2loc");
-    for (int i = 0; i < surf->nline; i++) glob2loc[i] = -1;
-  } else {
-    memory->create(glob2loc,surf->ntri,"surf:glob2loc");
-    for (int i = 0; i < surf->ntri; i++) glob2loc[i] = -1;
-  }
+  memory->create(glob2loc,nsurf,"surf:glob2loc");
+  for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
 
   // initialize tally array in case accessed without a tally timestep
 
@@ -334,12 +332,15 @@ void ComputeSurf::grow()
 bigint ComputeSurf::memory_usage()
 {
   bigint bytes = 0;
-  // NOTE: these need to tally on local or global surfs
-  //bytes = ntotal*surf->nlocal * sizeof(double);
-  //for (int i = 0; i < ngroup; i++) {
-  //if (norm_count[i]) bytes += surf->nlocal * sizeof(double);
-    //  if (norm_mass[i]) bytes += surf->nlocal * sizeof(double);
-  // if (norm_temp[i]) bytes += surf->nlocal * sizeof(double);
-  //}
+  bytes += ntotal*maxlocal * sizeof(double);
+  bytes += maxlocal * sizeof(int);
+  bytes += nsurf * sizeof(int);
+  /*
+  for (int i = 0; i < ngroup; i++) {
+  if (norm_count[i]) bytes += surf->nlocal * sizeof(double);
+    if (norm_mass[i]) bytes += surf->nlocal * sizeof(double);
+   if (norm_temp[i]) bytes += surf->nlocal * sizeof(double);
+  }
+  */
   return bytes;
 }

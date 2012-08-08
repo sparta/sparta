@@ -15,7 +15,7 @@
 // C or Fortran style library interface to SPARTA
 // customize by adding new SPARTA-specific functions
 
-#include "sptype.h"
+#include "spatype.h"
 #include "mpi.h"
 #include "string.h"
 #include "stdlib.h"

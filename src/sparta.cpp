@@ -326,18 +326,18 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
     }
   }
 
-  // check datatype settings in sptype.h
+  // check datatype settings in spatype.h
 
   if (sizeof(smallint) != sizeof(int))
-    error->all(FLERR,"Smallint setting in sptype.h is invalid");
+    error->all(FLERR,"Smallint setting in spatype.h is invalid");
   if (sizeof(bigint) < sizeof(smallint))
-    error->all(FLERR,"Bigint setting in sptype.h is invalid");
+    error->all(FLERR,"Bigint setting in spatype.h is invalid");
 
   int mpisize;
   MPI_Type_size(MPI_SPARTA_BIGINT,&mpisize);
   if (mpisize != sizeof(bigint))
       error->all(FLERR,
-		 "MPI_SPARTA_BIGINT and bigint in sptype.h are not compatible");
+		 "MPI_SPARTA_BIGINT and bigint in spatype.h are not compatible");
 
   if (sizeof(smallint) != 4 || sizeof(bigint) != 8)
     error->all(FLERR,"Small,big integers are not sized correctly");

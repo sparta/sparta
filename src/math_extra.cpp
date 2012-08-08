@@ -12,7 +12,7 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "sptype.h"
+#include "spatype.h"
 #include "stdio.h"
 #include "string.h"
 #include "stdlib.h"

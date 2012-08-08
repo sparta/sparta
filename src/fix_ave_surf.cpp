@@ -12,13 +12,15 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "sptype.h"
+#include "spatype.h"
+#include "mpi.h"
 #include "stdlib.h"
 #include "string.h"
 #include "fix_ave_surf.h"
 #include "surf.h"
 #include "particle.h"
 #include "update.h"
+#include "domain.h"
 #include "modify.h"
 #include "compute.h"
 #include "input.h"
@@ -192,7 +194,10 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   // allocate accumulators and norm vectors
   // if ave = RUNNING, allocate extra set of accvec/accarray
 
+  if (domain->dimension == 2) nsurf = surf->nline;
+  else nsurf = surf->ntri;
   nslocal = surf->nlocal;
+
   if (nvalues == 1) memory->create(vector_surf,nslocal,"ave/surf:vector_surf");
   else memory->create(array_surf,nslocal,nvalues,"ave/surf:array_surf");
 
@@ -373,15 +378,17 @@ void FixAveSurf::end_of_step()
   if (ntimestep != nvalid) return;
 
   // zero accumulators and norms if ave = ONE and first sample
+  // mpivecone, mpiearrayone are global nsurf in length
+  // NOTE: change this when remove Allreduce
 
   if (ave == ONE && irepeat == 0) {
     if (nvalues == 1)
-      for (i = 0; i < nslocal; i++)
-	accvec[i] = 0.0;
+      for (i = 0; i < nsurf; i++)
+	mpivecone[i] = 0.0;
     else
-      for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nsurf; i++)
 	for (m = 0; m < nvalues; m++)
-	  accarray[i][m] = 0.0;
+	  mpiarrayone[i][m] = 0.0;
     for (int m = 0; m < nnorm; m++) {
       norm = norms[m];
       for (i = 0; i < nslocal; i++) norm[i] = 0.0;
@@ -408,23 +415,31 @@ void FixAveSurf::end_of_step()
       }
       
       if (j == 0) {
+        //int nlocal = compute->nlocal;
+        //int *loc2glob = compute->loc2glob;
+        int nlocal = 0;
+        int *loc2glob = NULL;
         double *compute_vector = compute->vector_surf;
         if (nvalues == 1) {
-          for (i = 0; i < nslocal; i++)
-            accvec[i] += compute_vector[i];
+          for (i = 0; i < nlocal; i++)
+            mpivecone[loc2glob[i]] += compute_vector[i];
         } else {
-          for (i = 0; i < nslocal; i++)
-            accarray[i][m] += compute_vector[i];
+          for (i = 0; i < nlocal; i++)
+            mpiarrayone[loc2glob[i]][m] += compute_vector[i];
         }
       } else {
         int jm1 = j - 1;
+        //int nlocal = compute->nlocal;
+        //int *loc2glob = compute->loc2glob;
+        int nlocal = 0;
+        int *loc2glob = NULL;
         double **compute_array = compute->array_surf;
         if (nvalues == 1) {
-          for (i = 0; i < nslocal; i++)
-            accvec[i] += compute_array[i][jm1];
+          for (i = 0; i < nlocal; i++)
+            mpivecone[loc2glob[i]] += compute_array[i][jm1];
         } else {
-          for (i = 0; i < nslocal; i++)
-            accarray[i][m] += compute_array[i][jm1];
+          for (i = 0; i < nlocal; i++)
+            mpiarrayone[loc2glob[i]][m] += compute_array[i][jm1];
         }
       }
       
@@ -481,6 +496,27 @@ void FixAveSurf::end_of_step()
   irepeat = 0;
   nvalid = ntimestep+per_surf_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
+
+  // sum mpi arrays across all procs via Allreduce
+  // copy summed value into owned-surf vec, array
+  // NOTE: remove this when use remove Allreduce
+
+  if (nvalues == 1)
+    MPI_Allreduce(mpivecone,mpivec,nsurf,MPI_DOUBLE,MPI_SUM,world);
+  else
+    MPI_Allreduce(&mpiarrayone[0][0],&mpiarray[0][0],nsurf*nvalues,
+                  MPI_DOUBLE,MPI_SUM,world);
+
+  int *mysurfs = surf->mysurfs;
+
+  if (nvalues == 1)
+    for (i = 0; i < nslocal; i++) vector_surf[i] = mpivec[mysurfs[i]];
+  else
+    for (i = 0; i < nslocal; i++) {
+      m = mysurfs[i];
+      for (j = 0; j < nvalues; j++)
+        array_surf[i][j] = mpiarray[m][j];
+    }
 
   // normalize the accumulators for output on Nfreq timestep
   // normindex = 0, just normalize by # of samples

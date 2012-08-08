@@ -42,9 +42,15 @@ class FixAveSurf : public Fix {
   int *which,*argindex,*value2index;
   char **ids;
 
-  int nslocal;
+  int nslocal;             // # of local surfs I own 
   double *accvec;
   double **accarray;
+
+  int nsurf;               // # of global surfs, lines or triangles
+  double *mpivecone;
+  double **mpiarrayone;
+  double *mpivec;
+  double **mpiarray;
 
   int *normacc;        // 1 if Ith value triggers one-time norm accumulation
   int *normindex;      // index of norm vector for Ith value, -1 if none

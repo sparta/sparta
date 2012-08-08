@@ -41,13 +41,14 @@ class ComputeSurf : public Compute {
   int imix,nvalue,ngroup,ntotal;
   int *which;
 
+  int nsurf;               // # of global surfs, lines or triangles
   int nlocal;              // # of local surfs
   int maxlocal;            // # of local surfs currently allocated
   double **array;          // tally values for local surfs
   int *glob2loc;           // glob2loc[I] = local index of Ith global surf
   int *loc2glob;           // loc2glob[I] = global index of Ith local surf
 
-  int dimension;
+  int dimension;           // local copies
   Surf::Line *lines;
   Surf::Tri *tris;
 

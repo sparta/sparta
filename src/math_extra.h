@@ -19,7 +19,7 @@
 #ifndef LMP_MATH_EXTRA_H
 #define LMP_MATH_EXTRA_H
 
-#include "sptype.h"
+#include "spatype.h"
 #include "math.h"
 #include "stdio.h"
 #include "string.h"

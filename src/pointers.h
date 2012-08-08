@@ -22,7 +22,7 @@
 #ifndef SPARTA_POINTERS_H
 #define SPARTA_POINTERS_H
 
-#include "sptype.h"
+#include "spatype.h"
 #include "mpi.h"
 #include "sparta.h"
 
