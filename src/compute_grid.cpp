@@ -163,6 +163,7 @@ void ComputeGrid::compute_per_grid()
     norm_count[igroup][ilocal] += 1.0;
 
     v = particles[i].v;
+
     vec = array_grid[ilocal];
     k = igroup*nvalue;
 

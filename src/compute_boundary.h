@@ -36,9 +36,11 @@ class ComputeBoundary : public Compute {
   void boundary_tally(int, int, double *, Particle::OnePart *);
 
  private:
-  int imix,nvalue,ngroup,ntotal;
+  int imix,nvalue,ngroup,ntotal,nrow;
   int *which;
   double normflux[6];
+
+  double **myarray;
 };
 
 }

@@ -61,10 +61,12 @@ ComputeBoundary::ComputeBoundary(SPARTA *sparta, int narg, char **arg) :
   array_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
   ntotal = ngroup*nvalue;
-  size_array_rows = 2 * domain->dimension;
+  nrow = 2 * domain->dimension;
+  size_array_rows = nrow;
   size_array_cols = ntotal;
 
   memory->create(array,size_array_rows,size_array_cols,"boundary:array");
+  memory->create(myarray,size_array_rows,size_array_cols,"boundary:array");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -73,6 +75,7 @@ ComputeBoundary::~ComputeBoundary()
 {
   delete [] which;
   memory->destroy(array);
+  memory->destroy(myarray);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -83,7 +86,7 @@ void ComputeBoundary::init()
     error->all(FLERR,
                "Number of groups in compute boundary mixture has changed");
 
-  // set normflux based on box face area and timestep
+  // set normflux based on box face area and timestep size
 
   double dt = update->dt;
   if (domain->dimension == 2) {
@@ -95,7 +98,7 @@ void ComputeBoundary::init()
     normflux[ZLO] = normflux[ZHI] = domain->xprd*domain->yprd * dt;
   }
 
-  // initialize tally array in case accessed without a tally timestep
+  // initialize tally array in case accessed before a tally timestep
 
   clear();
 }
@@ -106,7 +109,12 @@ void ComputeBoundary::compute_array()
 {
   invoked_array = update->ntimestep;
 
-  // normalize tallied values
+  // sum tally values across processors
+
+  MPI_Allreduce(&myarray[0][0],&array[0][0],nrow*ntotal,
+                MPI_DOUBLE,MPI_SUM,world);
+
+  // normalize tally values
 
   int m;
   for (int j = 0; j < ntotal; j++) {
