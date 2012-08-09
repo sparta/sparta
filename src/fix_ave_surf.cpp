@@ -207,57 +207,20 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
     else accarray = array_surf;
   }
 
-  // allocate norm vectors for owned surfaces and setup norm pointers
-  // only store unique norms by checking if returned ptr matches previous ptr
-  // NOTE: need to add logic for fixes and variables if enable them
-
-  nnorm = 0;
-  normacc = new int[nvalues];
-  normindex = new int[nvalues];
-  norms = new double*[nvalues];
-  cfv_norms = new double*[nvalues];
-
-  for (int m = 0; m < nvalues; m++) {
-    int j = argindex[m];
-    
-    normacc[m] = 0;
-    normindex[m] = -1;
-    
-    if (which[m] == COMPUTE) {
-      int icompute = modify->find_compute(ids[m]);
-      Compute *compute = modify->compute[icompute];
-      double *ptr = compute->normptr(j-1);
-      if (!ptr) continue;
-      
-      int iptr;
-      for (iptr = 0; iptr < nnorm; iptr++)
-        if (ptr == cfv_norms[iptr]) break;
-      if (iptr < nnorm) normindex[m] = iptr;
-      else {
-        normacc[m] = 1;
-        normindex[m] = nnorm;
-        cfv_norms[nnorm] = ptr;
-        memory->create(norms[nnorm],nslocal,"ave/surf:norms");
-        nnorm++;
-      }
-    }
-  }
-
-  // allocate accumulators for global surfaces, for MPI communication
-  // need 2nd copy for MPI_Allreduce()
+  // allocate accumulators for local surfaces
 
   if (domain->dimension == 2) nsurf = surf->nline;
   else nsurf = surf->ntri;
 
-  if (nvalues == 1) {
-    memory->create(mpivecone,nsurf,"ave/surf:mpivecone");
-    memory->create(mpivec,nsurf,"ave/surf:mpivec");
-  } else {
-    memory->create(mpiarrayone,nsurf,nvalues,"ave/surf:mpiarrayone");
-    memory->create(mpiarray,nsurf,nvalues,"ave/surf:mpiarray");
-  }
+  memory->create(glob2loc,nsurf,"surf:glob2loc");
+  for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
 
-  // zero accumulators and norm vectors one time if ave = RUNNING
+  nlocal = maxlocal = 0;
+  loc2glob = NULL;
+  vec_local = NULL;
+  array_local = NULL;
+
+  // zero accumulators one time if ave = RUNNING
 
   if (ave == RUNNING) {
     if (nvalues == 1)
@@ -268,11 +231,6 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
       for (int i = 0; i < nslocal; i++)
 	for (m = 0; m < nvalues; m++)
 	  accarray[i][m] = 0.0;
-    }
-
-    for (int m = 0; m < nnorm; m++) {
-      double *norm = norms[m];
-      for (int i = 0; i < nslocal; i++) norm[i] = 0.0;
     }
   }
 
@@ -288,9 +246,6 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
       for (m = 0; m < nvalues; m++)
 	array_surf[i][m] = 0.0;
   }
-
-  nlocal = maxlocal = 0;
-  glob2loc = loc2glob = NULL;
 
   // nvalid = next step on which end_of_step does something
   // add nvalid to all computes that store invocation times
@@ -320,22 +275,10 @@ FixAveSurf::~FixAveSurf()
     else memory->destroy(accarray);
   }
 
-  delete [] normacc;
-  delete [] normindex;
-  for (int i = 0; i < nnorm; i++) memory->sfree(norms[i]);
-  delete [] norms;
-  delete [] cfv_norms;
-
-  if (nvalues == 1) {
-    memory->destroy(mpivecone);
-    memory->destroy(mpivec);
-  } else {
-    memory->destroy(mpiarrayone);
-    memory->destroy(mpiarray);
-  }
-
   memory->destroy(glob2loc);
   memory->destroy(loc2glob);
+  memory->destroy(vec_local);
+  memory->destroy(array_local);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -374,13 +317,6 @@ void FixAveSurf::init()
 
     } else value2index[m] = -1;
   }
-
-  // allocate and initialize glob2loc indices
-  // NOTE: need to do this every run?
-
-  memory->destroy(glob2loc);
-  memory->create(glob2loc,nsurf,"surf:glob2loc");
-  for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
 }
 
 /* ----------------------------------------------------------------------
@@ -396,36 +332,32 @@ void FixAveSurf::setup()
 
 void FixAveSurf::end_of_step()
 {
-  int i,j,m,n,isp,icol,isurf,ilocal;
-  double *norm,*cfv_norm,*vec;
+  int i,j,k,m,n,isp,icol,isurf,ilocal;
+  double *vec;
 
   // skip if not step which requires doing something
 
   bigint ntimestep = update->ntimestep;
   if (ntimestep != nvalid) return;
 
-  // zero global accumulators and local norms if ave = ONE and first sample
+  // zero accumulators and norms if ave = ONE and first sample
 
   if (ave == ONE && irepeat == 0) {
-
-
-  // reset all set glob2loc values to -1
-
-  for (i = 0; i < nlocal; i++)
-    glob2loc[loc2glob[i]] = -1;
-  nlocal = 0;
-
     if (nvalues == 1)
-      for (i = 0; i < nsurf; i++)
-	mpivecone[i] = 0.0;
+      for (i = 0; i < nslocal; i++)
+	accvec[i] = 0.0;
     else
-      for (i = 0; i < nsurf; i++)
+      for (i = 0; i < nslocal; i++)
 	for (m = 0; m < nvalues; m++)
-	  mpiarrayone[i][m] = 0.0;
-    for (int m = 0; m < nnorm; m++) {
-      norm = norms[m];
-      for (i = 0; i < nslocal; i++) norm[i] = 0.0;
-    }
+	  accarray[i][m] = 0.0;
+  }
+
+  // reset all set glob2loc values to -1 and nlocal to 0 if first sample
+
+  if (irepeat == 0) {
+    for (i = 0; i < nlocal; i++)
+      glob2loc[loc2glob[i]] = -1;
+    nlocal = 0;
   }
 
   // accumulate results of computes,fixes,variables
@@ -447,7 +379,7 @@ void FixAveSurf::end_of_step()
         compute->invoked_flag |= INVOKED_PER_SURF;
       }
       int *loc2glob_compute;
-      int nlocal_compute = compute->surfinfo(loc2glob);
+      int nlocal_compute = compute->surfinfo(loc2glob_compute);
       
       if (j == 0) {
         double *compute_vector = compute->vector_surf;
@@ -460,9 +392,9 @@ void FixAveSurf::end_of_step()
               ilocal = nlocal++;
               loc2glob[ilocal] = isurf;
               glob2loc[isurf] = ilocal;
-              mpivecone[ilocal] = 0.0;
+              vec_local[ilocal] = 0.0;
             }
-            mpivecone[ilocal] += compute_vector[i];
+            vec_local[ilocal] += compute_vector[i];
           }
         } else {
           for (i = 0; i < nlocal_compute; i++) {
@@ -473,10 +405,10 @@ void FixAveSurf::end_of_step()
               ilocal = nlocal++;
               loc2glob[ilocal] = isurf;
               glob2loc[isurf] = ilocal;
-              vec = mpiarrayone[ilocal];
-              for (i = 0; i < nvalues; i++) vec[i] = 0.0;
+              vec = array_local[ilocal];
+              for (k = 0; k < nvalues; k++) vec[k] = 0.0;
             }
-            mpiarrayone[ilocal][m] += compute_vector[i];
+            array_local[ilocal][m] += compute_vector[i];
           }
         }
       } else {
@@ -491,9 +423,9 @@ void FixAveSurf::end_of_step()
               ilocal = nlocal++;
               loc2glob[ilocal] = isurf;
               glob2loc[isurf] = ilocal;
-              mpivecone[ilocal] = 0.0;
+              vec_local[ilocal] = 0.0;
             }
-            mpivecone[ilocal] += compute_array[i][jm1];
+            vec_local[ilocal] += compute_array[i][jm1];
           }
         } else {
           for (i = 0; i < nlocal_compute; i++) {
@@ -504,10 +436,10 @@ void FixAveSurf::end_of_step()
               ilocal = nlocal++;
               loc2glob[ilocal] = isurf;
               glob2loc[isurf] = ilocal;
-              vec = mpiarrayone[ilocal];
-              for (i = 0; i < nvalues; i++) vec[i] = 0.0;
+              vec = array_local[ilocal];
+              for (k = 0; k < nvalues; k++) vec[k] = 0.0;
             }
-            mpiarrayone[ilocal][m] += compute_array[i][jm1];
+            array_local[ilocal][m] += compute_array[i][jm1];
           }
         }
       }
@@ -540,15 +472,6 @@ void FixAveSurf::end_of_step()
       
     } else if (which[m] == VARIABLE) {
     }
-
-    // accumulate norm values if necessary
-    // only done once per unique norm
-
-    if (normacc[m]) {
-      norm = norms[normindex[m]];
-      cfv_norm = cfv_norms[normindex[m]];
-      for (i = 0; i < nslocal; i++) norm[i] += cfv_norm[i];
-    }
   }
 
   // done if irepeat < nrepeat
@@ -566,71 +489,33 @@ void FixAveSurf::end_of_step()
   nvalid = ntimestep+per_surf_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
 
-  // sum MPI arrays across all procs via Allreduce
-  // copy summed values I own into accvec and accarray
+  // sum local values across all procs
+  // returns values I own summed into accvec and accarray
 
   if (nvalues == 1)
-    MPI_Allreduce(mpivecone,mpivec,nsurf,MPI_DOUBLE,MPI_SUM,world);
+    surf->collate(nlocal,1,loc2glob,vec_local,accvec);
   else
-    MPI_Allreduce(&mpiarrayone[0][0],&mpiarray[0][0],nsurf*nvalues,
-                  MPI_DOUBLE,MPI_SUM,world);
-
-  int *mysurfs = surf->mysurfs;
-
-  if (nvalues == 1)
-    for (i = 0; i < nslocal; i++) accvec[i] = mpivec[mysurfs[i]];
-  else
-    for (i = 0; i < nslocal; i++) {
-      m = mysurfs[i];
-      for (j = 0; j < nvalues; j++)
-        accarray[i][j] = mpiarray[m][j];
-    }
+    surf->collate(nlocal,nvalues,loc2glob,&array_local[0][0],&accarray[0][0]);
 
   // normalize the accumulators for output on Nfreq timestep
   // normindex < 0, just normalize by # of samples
   // normindex >= 0, normalize by accumulated norm vector
 
   if (ave == ONE) {
-    if (nvalues == 1) {
-      if (normindex[0] < 0) {
-        for (i = 0; i < nslocal; i++) vector_surf[i] /= nsample;
-      } else {
-        norm = norms[normindex[0]];
+    if (nvalues == 1)
+      for (i = 0; i < nslocal; i++) vector_surf[i] /= nsample;
+    else
+      for (m = 0; m < nvalues; m++)
         for (i = 0; i < nslocal; i++)
-          if (norm[i] > 0.0) vector_surf[i] /= norm[i];
-      }
-    } else {
-      for (m = 0; m < nvalues; m++) {
-        if (normindex[m] < 0) {
-          for (i = 0; i < nslocal; i++) array_surf[i][m] /= nsample;
-        } else {
-          norm = norms[normindex[m]];
-          for (i = 0; i < nslocal; i++)
-            if (norm[i] > 0.0) array_surf[i][m] /= norm[i];
-        }
-      }
-    }
+          array_surf[i][m] /= nsample;
 
   } else {
-    if (nvalues == 1) {
-      if (normindex[0] < 0) {
-        for (i = 0; i < nslocal; i++) vector_surf[i] = accvec[i]/nsample;
-      } else {
-        norm = norms[normindex[0]];
-        for (i = 0; i < nslocal; i++) vector_surf[i] = accvec[i]/norm[i];
-      }
-    } else {
-      for (m = 0; m < nvalues; m++) {
-        if (normindex[m] < 0) {
-          for (i = 0; i < nslocal; i++)
-            array_surf[i][m] = accarray[i][m]/nsample;
-        } else {
-          norm = norms[normindex[m]];
-          for (i = 0; i < nslocal; i++) 
-            array_surf[i][m] = accarray[i][m]/norm[i];
-        }
-      }
-    }
+    if (nvalues == 1)
+      for (i = 0; i < nslocal; i++) vector_surf[i] = accvec[i]/nsample;
+    else
+      for (m = 0; m < nvalues; m++)
+        for (i = 0; i < nslocal; i++)
+          array_surf[i][m] = accarray[i][m]/nsample;
   }
 
   // reset nsample if ave = ONE
@@ -681,7 +566,7 @@ void FixAveSurf::grow_local()
 {
   maxlocal += DELTA;
   memory->grow(loc2glob,maxlocal,"ave/surf:loc2glob");
-  memory->grow(array_surf,maxlocal,nvalues,"ave/surf:array_surf");
+  memory->grow(array_local,maxlocal,nvalues,"ave/surf:array_surf");
 }
 
 /* ----------------------------------------------------------------------
@@ -693,7 +578,7 @@ double FixAveSurf::memory_usage()
   double bytes = 0.0;
   bytes += nslocal*nvalues * sizeof(double);
   if (ave == RUNNING) bytes += nslocal*nvalues * sizeof(double);
-  bytes += nslocal*nnorm * sizeof(double);
+  //bytes += nslocal*nnorm * sizeof(double);
   return bytes;
 }
 

@@ -639,6 +639,47 @@ int Surf::find_collide(const char *id)
   return isc;
 }
 
+/* ----------------------------------------------------------------------
+   brute force MPI Allreduce comm of local tallies across all procs
+   for vector and array
+   return out = summed tallies for surfs I own
+------------------------------------------------------------------------- */
+
+void Surf::collate(int nrow, int ncol, int *l2g, double *in, double *out)
+{
+  int i,j,m,n;
+  double *vec1,*vec2;
+
+  int nglobal;
+  if (domain->dimension == 2) nglobal = nline;
+  else nglobal = ntri;
+
+  double *one,*all;
+  memory->create(one,nglobal*ncol,"surf:one");
+  memory->create(all,nglobal*ncol,"surf:all");
+
+  for (i = 0; i < nrow*ncol; i++) one[i] = 0.0;
+
+  m = 0;
+  for (i = 0; i < nrow; i++) {
+    vec1 = &one[l2g[i]*ncol];
+    for (j = 0; j < ncol; j++) 
+      vec1[j] = in[m++];
+  }
+
+  MPI_Allreduce(one,all,nglobal*ncol,MPI_DOUBLE,MPI_SUM,world);
+
+  for (i = 0; i < nlocal; i++) {
+    vec1 = &all[mysurfs[i]*ncol];
+    vec2 = &out[i*ncol];
+    for (j = 0; j < ncol; j++) 
+      vec2[j] += vec1[j];
+  }
+
+  memory->destroy(one);
+  memory->destroy(all);
+}
+
 /* ---------------------------------------------------------------------- */
 
 bigint Surf::memory_usage()

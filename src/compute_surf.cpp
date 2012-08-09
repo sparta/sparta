@@ -107,21 +107,18 @@ void ComputeSurf::init()
 
   // normflux for each surface element I own, based on area and timestep size
   // one-time only initialization
+  // NOTE: eventually will be only for surfs I know about (local + ghost)
 
   if (normflux == NULL)  {
-    int nslocal = surf->nlocal;
-    memory->create(normflux,nslocal,"surf:normflux");
+    memory->create(normflux,nsurf,"surf:normflux");
 
-    int *mysurfs = surf->mysurfs;
     double dt = update->dt;
     int dimension = domain->dimension;
     double tmp;
-    int m;
 
-    for (int i = 0; i < nslocal; i++) {
-      m = mysurfs[i];
-      if (dimension == 2) normflux[i] = surf->line_size(m);
-      else normflux[i] = surf->tri_size(m,tmp);
+    for (int i = 0; i < nsurf; i++) {
+      if (dimension == 2) normflux[i] = surf->line_size(i);
+      else normflux[i] = surf->tri_size(i,tmp);
       normflux[i] *= dt;
     }
   }
@@ -137,11 +134,19 @@ void ComputeSurf::compute_per_surf()
 {
   invoked_per_surf = update->ntimestep;
 
-  // NOTE: could normalize values here by area*dt
-  // but am letting dump surf and fix ave/surf do it via normflux,
-  // so that can later add new surf computes that work like grid computes
-  // and need to normalize by number of molecules (count or masswt)
-  // if don't need that could remove norm logic from dump surf and fix ave/surf
+  // normalize all local tallies by normflux
+
+  int iglobal,m;
+  double norm;
+
+  for (int i = 0; i < nlocal; i++) {
+    iglobal = loc2glob[i];
+    norm = normflux[iglobal];
+    for (int j = 0; j < ntotal; j++) {
+      m = j % nvalue;
+      if (which[m] != NUM) array_surf[i][j] /= norm;
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -278,9 +283,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
 
 double *ComputeSurf::normptr(int n)
 {
-  int ivalue = n % nvalue;
-  if (which[ivalue] == NUM) return NULL;
-  return normflux;
+  return NULL;
 }
 
 /* ----------------------------------------------------------------------

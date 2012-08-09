@@ -47,21 +47,13 @@ class FixAveSurf : public Fix {
   double **accarray;         // accumulation array
 
   int nsurf;               // # of global surfs, lines or triangles
-  double *mpivecone;
-  double **mpiarrayone;
-  double *mpivec;
-  double **mpiarray;
-
-  int *normacc;        // 1 if Ith value triggers one-time norm accumulation
-  int *normindex;      // index of norm vector for Ith value, -1 if none
-  double **norms;      // pointers to accumulated norms
-  double **cfv_norms;  // pointers to snapshot norms by compute,fix,variable
-  int nnorm;           // # of norm pointers in norms and cfv_norms
-
   int nlocal;              // # of local surfs
   int maxlocal;            // # of local surfs currently allocated
   int *glob2loc;           // glob2loc[I] = local index of Ith global surf
   int *loc2glob;           // loc2glob[I] = global index of Ith local surf
+
+  double *vec_local;
+  double **array_local;
 
   void options(int, char **);
   void grow();

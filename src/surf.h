@@ -75,6 +75,8 @@ class Surf : protected Pointers {
   void add_collide(int, char **);
   int find_collide(const char *);
 
+  void collate(int nrow, int ncol, int *l2g, double *in, double *out);
+
   bigint memory_usage();
 };
 
