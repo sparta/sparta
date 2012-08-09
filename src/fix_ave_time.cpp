@@ -630,7 +630,7 @@ void FixAveTime::invoke_vector(bigint ntimestep)
   double repeat = nrepeat;
 
   for (m = 0; m < nvalues; m++) 
-    if (offcol[m] = 0)
+    if (offcol[m] == 0)
       for (i = 0; i < nrows; i++) array[i][m] /= repeat;
   
   // if ave = ONE, only single Nfreq timestep value is needed
