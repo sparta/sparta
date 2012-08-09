@@ -261,7 +261,7 @@ void ComputeSonineGrid::compute_per_grid()
         break;
       case AMOM:
         vec[k++] += mass*vthermal[moment[m]] * csq;
-        for (n = 1; n <= order[m]; n++) {
+        for (n = 1; n < order[m]; n++) {
           vec[k] += csq*vec[k-1];
           k++;
         }
@@ -269,7 +269,7 @@ void ComputeSonineGrid::compute_per_grid()
       case BMOM:
         vec[k++] += mass * vthermal[moment[m] / 3] * 
           vthermal[moment[m] % 3] * csq;
-        for (n = 1; n <= order[m]; n++) {
+        for (n = 1; n < order[m]; n++) {
           vec[k] += csq*vec[k-1];
           k++;
         }

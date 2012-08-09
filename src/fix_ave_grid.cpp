@@ -189,7 +189,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   if (nvalues == 1) size_per_grid_cols = 0;
   else size_per_grid_cols = nvalues;
 
-  // allocate accumulators and norm vectors
+  // allocate accumulators
   // if ave = RUNNING, allocate extra set of accvec/accarray
 
   nglocal = grid->nlocal;
@@ -204,9 +204,8 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     else accarray = array_grid;
   }
 
-  // setup norm pointers and nnorm
+  // allocate norm vectors and setup norm pointers
   // only store unique norms by checking if returned ptr matches previous ptr
-  // allocate my accumulating norm vectors
   // NOTE: need to add logic for fixes and variables if enable them
 
   nnorm = 0;
@@ -216,17 +215,17 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   cfv_norms = new double*[nvalues];
 
   for (int m = 0; m < nvalues; m++) {
-    int n = value2index[m];
     int j = argindex[m];
-
+    
     normacc[m] = 0;
     normindex[m] = -1;
     
     if (which[m] == COMPUTE) {
-      Compute *compute = modify->compute[n];
+      int icompute = modify->find_compute(ids[m]);
+      Compute *compute = modify->compute[icompute];
       double *ptr = compute->normptr(j-1);
       if (!ptr) continue;
-
+      
       int iptr;
       for (iptr = 0; iptr < nnorm; iptr++)
         if (ptr == cfv_norms[iptr]) break;

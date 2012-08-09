@@ -132,7 +132,7 @@ void ComputeBoundary::clear()
 {
   for (int i = 0; i < size_array_rows; i++)
     for (int j = 0; j < ntotal; j++)
-      array[i][j] = 0.0;
+      myarray[i][j] = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -163,7 +163,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
 
   if (istyle == PERIODIC) {
     for (int m = 0; m < nvalue; m++) {
-      if (which[m] == NUM) array[iface][k++] += 1.0;
+      if (which[m] == NUM) myarray[iface][k++] += 1.0;
       else k++;
     }
 
@@ -171,14 +171,14 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
     for (int m = 0; m < nvalue; m++) {
       switch (which[m]) {
       case NUM:
-        array[iface][k++] += 1.0;
+        myarray[iface][k++] += 1.0;
         break;
       case PRESS:
         if (!nflag) {
           nflag = 1;
           pre = MathExtra::dot3(vold,norm);
         }
-        array[iface][k++] -= mass * pre;
+        myarray[iface][k++] -= mass * pre;
         break;
       case XSHEAR:
         if (!tflag) {
@@ -186,7 +186,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
           MathExtra::sub3(vold,vnorm,vtang);
         }
-        array[iface][k++] += mass * vtang[0];
+        myarray[iface][k++] += mass * vtang[0];
         break;
       case YSHEAR:
         if (!tflag) {
@@ -194,7 +194,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
           MathExtra::sub3(vold,vnorm,vtang);
         }
-        array[iface][k++] += mass * vtang[1];
+        myarray[iface][k++] += mass * vtang[1];
         break;
       case ZSHEAR:
         if (!tflag) {
@@ -202,11 +202,11 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
           MathExtra::sub3(vold,vnorm,vtang);
         }
-        array[iface][k++] += mass * vtang[2];
+        myarray[iface][k++] += mass * vtang[2];
         break;
       case KE:
         vsqpre = MathExtra::lensq3(vold);
-        array[iface][k++] += 0.5 * mvv2e * mass * vsqpre;
+        myarray[iface][k++] += 0.5 * mvv2e * mass * vsqpre;
         break;
       }
     }
@@ -215,7 +215,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
     for (int m = 0; m < nvalue; m++) {
       switch (which[m]) {
       case NUM:
-        array[iface][k++] += 1.0;
+        myarray[iface][k++] += 1.0;
         break;
       case PRESS:
         if (!nflag) {
@@ -223,7 +223,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           pre = MathExtra::dot3(vold,norm);
           post = MathExtra::dot3(p->v,norm);
         }
-        array[iface][k++] += mass * (post-pre);
+        myarray[iface][k++] += mass * (post-pre);
         break;
       case XSHEAR:
         if (!tflag) {
@@ -232,7 +232,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
-        array[iface][k++] -= mass * vtang[0];
+        myarray[iface][k++] -= mass * vtang[0];
         break;
       case YSHEAR:
         if (!tflag) {
@@ -241,7 +241,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
-        array[iface][k++] -= mass * vtang[1];
+        myarray[iface][k++] -= mass * vtang[1];
         break;
       case ZSHEAR:
         if (!tflag) {
@@ -250,12 +250,12 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
-        array[iface][k++] -= mass * vtang[2];
+        myarray[iface][k++] -= mass * vtang[2];
         break;
       case KE:
         vsqpre = MathExtra::lensq3(vold);
         vsqpost = MathExtra::lensq3(p->v);
-        array[iface][k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
+        myarray[iface][k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
         break;
       }
     }
