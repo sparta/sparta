@@ -109,12 +109,12 @@ void ComputeBoundary::compute_array()
 {
   invoked_array = update->ntimestep;
 
-  // sum tally values across processors
+  // sum tallies across processors
 
   MPI_Allreduce(&myarray[0][0],&array[0][0],nrow*ntotal,
                 MPI_DOUBLE,MPI_SUM,world);
 
-  // normalize tally values
+  // normalize tallies
 
   int m;
   for (int j = 0; j < ntotal; j++) {
