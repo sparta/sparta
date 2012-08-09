@@ -1,0 +1,167 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute surf command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID surf mix-ID value1 value2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>boundary = style name of this compute command 
+
+<LI>mix-ID = mixture ID to perform calculation on 
+
+<LI>one or more values can be appended 
+
+<LI>value = <I>n</I> or <I>press</I> or <I>px</I> or <I>py</I> or <I>pz</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
+
+<PRE>  n = count of molecules hitting surface element
+  press = magnitude of normal pressure on surface element
+  px,py,pz = components of normal pressure on surface element
+  shx,shy,shz = components of shear stress on surface element
+  ke = flux of particle kinetic energy on surface element 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 surf all n press eng
+compute mine surf species press shx shy shz 
+</PRE>
+<P>These commands will dump averages for all species and each surface
+element to a file every 1000 steps:
+</P>
+<P>compute 1 boundary species n press shx shy shz
+fix 1 ave/surf 10 100 1000 c_1
+dump 1 surf 1000 tmp.surf id f_1
+</P>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that calculates one or more values for each
+surface element, based on the molecules that strike that element.  The
+values are summed for each group of species in the specified mixture.
+See the <A HREF = "mixture.html">mixture</A> command for how a set of species can be
+partitioned into groups.
+</P>
+<P>Surface elements are triangles for 3d simulations and line segments
+for 2d simulatoins.  See the <A HREF = "read_surf.html">read_surf</A> command for
+details.
+</P>
+<P>Along with summing each specified value, a normalization factor is
+also computed.  If the group has a single species, the normalization
+factor is typically just the count of contributing molecules.  If the
+group has mutlipe species, the normalization factor is typically the
+total mass of the contributing molecules.  The normalization factors
+are used by other commands that process values produced by this
+compute.
+</P>
+<P>For example, for the <I>u</I> value, the <A HREF = "dump.html">dump grid</A> command,
+will generate the average x component of velocity for molecules in a
+grid cell, averaged over molecules in the group.  The <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> command will generate the average x
+component of velocity for molecules in a grid cell, averaged both over
+molecules in the group and time.
+</P>
+<HR>
+
+<P>The <I>n</I> value counts the number of moleclues striking the surface
+element.
+</P>
+<P>The <I>press</I> value calculates the pressure <I>P</I> exerted on the surface
+element in the normal direction, such that outward pressure is
+positive.  This is computed as
+</P>
+<PRE>p_delta = mass * (V_post - V_pre)
+P = Sum_i (p_delta_i dot N) / (A * dt) 
+</PRE>
+<P>where p_delta is the change in momentum of a particle, whose velocity
+changes from V_pre to V_post when colliding with the surface element.
+The pressure exerted on the surface element is the sum over all
+contributing p_delta dotted into the outward normal N of the surface
+element, normalized by A = the area of the surface element and dt =
+the timestep.
+</P>
+<P>The <I>px</I>, <I>py</I>, <I>pz</I> values calculate the normal pressure Px, Py, Pz
+extered on the surface element in the direction of its normal, with
+respect to the x, y, z coordinate axes.  These are computed as
+</P>
+<PRE>p_delta = mass * (V_post - V_pre)
+p_delta_n = (p_delta dot N) N
+Px = - Sum_i (p_delta_n_x) / (A * dt)
+Py = - Sum_i (p_delta_n_y) / (A * dt)
+Pz = - Sum_i (p_delta_n_z) / (A * dt) 
+</PRE>
+<P>where p_delta, V_pre, V_post, N, A, and dt are defined as before.
+P_delta_n is the normal component of the change in momentum vector
+p_delta of a particle.  P_delta_n_x (and y,z) are its x, y, z
+components.
+</P>
+<P>The <I>shx</I>, <I>shy</I>, <I>shz</I> values calculate the shear pressure Sx, Sy, Sz
+extered on the surface element in the tangential direction to its
+normal, with respect to the x, y, z coordinate axes.  These are
+computed as
+</P>
+<PRE>p_delta = mass * (V_post - V_pre)
+p_delta_t = p_delta - (p_delta dot N) N
+Sx = - Sum_i (p_delta_t_x) / (A * dt)
+Sy = - Sum_i (p_delta_t_y) / (A * dt)
+Sz = - Sum_i (p_delta_t_z) / (A * dt) 
+</PRE>
+<P>where p_delta, V_pre, V_post, N, A, and dt are defined as before.
+P_delta_t is the tangential component of the change in momentum vector
+p_delta of a particle.  P_delta_t_x (and y,z) are its x, y, z
+components.
+</P>
+<P>The <I>ke</I> value calculates the kinetic energy flux <I>Eflux</I> imparted to
+the surface element, such that energy lost by a particle is a positive
+flux.  This is computed as
+</P>
+<PRE>e_delta = 1/2 mass (V_post^2 - V_pre^2)
+Eflux = - Sum_i (e_delta) / (A * dt) 
+</PRE>
+<P>where e_delta is the kinetic energy change in a particle, whose
+velocity changes from V_pre to V_post when colliding with the surface
+element.  The energy flux imparted to the surface element is the sum
+over all contributing e_delta, normalized by A = the area of the
+surface element and dt = the timestep.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>This compute calculates a per-surf array, with the number of columns
+equal to the number of values times the number of groups.  The
+ordering of columns is first by values, then by groups.  I.e. if the
+<I>n</I> and <I>u</I> values were specified as keywords, then the first two
+columns would be <I>n</I> and <I>u</I> for the first group, the 3rd and 4th
+columns would be <I>n</I> and <I>u</I> for the second group, etc.
+</P>
+<P>The array can be accessed by any command that uses per-surf values
+from a compute as input.  See <A HREF = "Section_howto.html#howto_15">this
+section</A> for an overview of SPARTA output
+options.
+</P>
+<P>The per-surf array values will be in the <A HREF = "units.html">units</A>
+appropriate to the individual values as described above.  <I>Press</I>,
+<I>px</I>, <I>py</I>, <I>pz</I>, <I>shx</I>, <I>shy</I>, <I>shz</I> are in in presure units.  <I>Ke</I>
+is in energy units.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_ave_surf.html">fix ave/surf</A>, <A HREF = "dump.html">dump surf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

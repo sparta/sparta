@@ -1,0 +1,156 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute surf command :h3
+
+[Syntax:]
+
+compute ID surf mix-ID value1 value2 ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+boundary = style name of this compute command :l
+mix-ID = mixture ID to perform calculation on :l
+one or more values can be appended :l
+value = {n} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke} :l
+  n = count of molecules hitting surface element
+  press = magnitude of normal pressure on surface element
+  px,py,pz = components of normal pressure on surface element
+  shx,shy,shz = components of shear stress on surface element
+  ke = flux of particle kinetic energy on surface element :pre
+:ule
+
+[Examples:]
+
+compute 1 surf all n press eng
+compute mine surf species press shx shy shz :pre
+
+These commands will dump averages for all species and each surface
+element to a file every 1000 steps:
+
+compute 1 boundary species n press shx shy shz
+fix 1 ave/surf 10 100 1000 c_1
+dump 1 surf 1000 tmp.surf id f_1
+
+[Description:]
+
+Define a computation that calculates one or more values for each
+surface element, based on the molecules that strike that element.  The
+values are summed for each group of species in the specified mixture.
+See the "mixture"_mixture.html command for how a set of species can be
+partitioned into groups.
+
+Surface elements are triangles for 3d simulations and line segments
+for 2d simulatoins.  See the "read_surf"_read_surf.html command for
+details.
+
+Along with summing each specified value, a normalization factor is
+also computed.  If the group has a single species, the normalization
+factor is typically just the count of contributing molecules.  If the
+group has mutlipe species, the normalization factor is typically the
+total mass of the contributing molecules.  The normalization factors
+are used by other commands that process values produced by this
+compute.
+
+For example, for the {u} value, the "dump grid"_dump.html command,
+will generate the average x component of velocity for molecules in a
+grid cell, averaged over molecules in the group.  The "fix
+ave/grid"_fix_ave_grid.html command will generate the average x
+component of velocity for molecules in a grid cell, averaged both over
+molecules in the group and time.
+
+:line
+
+The {n} value counts the number of moleclues striking the surface
+element.
+
+The {press} value calculates the pressure {P} exerted on the surface
+element in the normal direction, such that outward pressure is
+positive.  This is computed as
+
+p_delta = mass * (V_post - V_pre)
+P = Sum_i (p_delta_i dot N) / (A * dt) :pre
+
+where p_delta is the change in momentum of a particle, whose velocity
+changes from V_pre to V_post when colliding with the surface element.
+The pressure exerted on the surface element is the sum over all
+contributing p_delta dotted into the outward normal N of the surface
+element, normalized by A = the area of the surface element and dt =
+the timestep.
+
+The {px}, {py}, {pz} values calculate the normal pressure Px, Py, Pz
+extered on the surface element in the direction of its normal, with
+respect to the x, y, z coordinate axes.  These are computed as
+
+p_delta = mass * (V_post - V_pre)
+p_delta_n = (p_delta dot N) N
+Px = - Sum_i (p_delta_n_x) / (A * dt)
+Py = - Sum_i (p_delta_n_y) / (A * dt)
+Pz = - Sum_i (p_delta_n_z) / (A * dt) :pre
+
+where p_delta, V_pre, V_post, N, A, and dt are defined as before.
+P_delta_n is the normal component of the change in momentum vector
+p_delta of a particle.  P_delta_n_x (and y,z) are its x, y, z
+components.
+
+The {shx}, {shy}, {shz} values calculate the shear pressure Sx, Sy, Sz
+extered on the surface element in the tangential direction to its
+normal, with respect to the x, y, z coordinate axes.  These are
+computed as
+
+p_delta = mass * (V_post - V_pre)
+p_delta_t = p_delta - (p_delta dot N) N
+Sx = - Sum_i (p_delta_t_x) / (A * dt)
+Sy = - Sum_i (p_delta_t_y) / (A * dt)
+Sz = - Sum_i (p_delta_t_z) / (A * dt) :pre
+
+where p_delta, V_pre, V_post, N, A, and dt are defined as before.
+P_delta_t is the tangential component of the change in momentum vector
+p_delta of a particle.  P_delta_t_x (and y,z) are its x, y, z
+components.
+
+The {ke} value calculates the kinetic energy flux {Eflux} imparted to
+the surface element, such that energy lost by a particle is a positive
+flux.  This is computed as
+
+e_delta = 1/2 mass (V_post^2 - V_pre^2)
+Eflux = - Sum_i (e_delta) / (A * dt) :pre
+
+where e_delta is the kinetic energy change in a particle, whose
+velocity changes from V_pre to V_post when colliding with the surface
+element.  The energy flux imparted to the surface element is the sum
+over all contributing e_delta, normalized by A = the area of the
+surface element and dt = the timestep.
+
+:line
+
+[Output info:]
+
+This compute calculates a per-surf array, with the number of columns
+equal to the number of values times the number of groups.  The
+ordering of columns is first by values, then by groups.  I.e. if the
+{n} and {u} values were specified as keywords, then the first two
+columns would be {n} and {u} for the first group, the 3rd and 4th
+columns would be {n} and {u} for the second group, etc.
+
+The array can be accessed by any command that uses per-surf values
+from a compute as input.  See "this
+section"_Section_howto.html#howto_15 for an overview of SPARTA output
+options.
+
+The per-surf array values will be in the "units"_units.html
+appropriate to the individual values as described above.  {Press},
+{px}, {py}, {pz}, {shx}, {shy}, {shz} are in in presure units.  {Ke}
+is in energy units.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"fix ave/surf"_fix_ave_surf.html, "dump surf"_dump.html
+
+[Default:] none
