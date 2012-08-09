@@ -27,8 +27,8 @@
 
 using namespace SPARTA_NS;
 
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};     // same as Update,
-                                            // DumpMolecule, FixInflow, Compute
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};     // same as Update, Dump
+                                            // FixInflow, Compute
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow,
                                             // Grid, Compute
 

@@ -35,7 +35,7 @@ enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,
      COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE};
 
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};     // same as Domain
 
 #define INVOKED_PER_GRID 16
 #define CHUNK 8
@@ -152,14 +152,15 @@ void DumpGrid::init_style()
   int m = 0;
   for (int idim = 0; idim < 3; idim++) {
     for (int iside = 0; iside < 2; iside++) {
-      if (domain->bflag[idim*2+iside] == OUTFLOW) boundstr[m++] = 'o';
-      else if (domain->bflag[idim*2+iside] == PERIODIC) boundstr[m++] = 'p';
-      else if (domain->bflag[idim*2+iside] == SPECULAR) boundstr[m++] = 's';
+      if (domain->bflag[idim*2+iside] == PERIODIC) boundstr[m++] = 'p';
+      else if (domain->bflag[idim*2+iside] == OUTFLOW) boundstr[m++] = 'o';
+      else if (domain->bflag[idim*2+iside] == REFLECT) boundstr[m++] = 'r';
+      else if (domain->bflag[idim*2+iside] == SURFACE) boundstr[m++] = 's';
     }
     boundstr[m++] = ' ';
   }
   boundstr[8] = '\0';
-
+  
   // setup function ptrs
 
   if (binary) header_choice = &DumpGrid::header_binary;

@@ -1343,7 +1343,7 @@ void ReadSurf::smallest_tri(double &len, double &area)
   len = area = BIG;
   int m = ntri_old;
   for (int i = 0; i < ntri_new; i++) {
-    surf->tri_size(m,lenone,areaone);
+    areaone = surf->tri_size(m,lenone);
     len = MIN(len,lenone);
     area = MIN(area,areaone);
     m++;

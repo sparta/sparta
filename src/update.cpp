@@ -1258,6 +1258,7 @@ int Update::bounce_setup()
   }
 
   if (nslist_compute || nblist_compute) return 1;
+  nsurf_tally = nboundary_tally = 0;
   return 0;
 }
 

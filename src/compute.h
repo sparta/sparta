@@ -81,6 +81,7 @@ class Compute : protected Pointers {
   virtual void boundary_tally(int, int, double *, Particle::OnePart *) {}
 
   virtual double *normptr(int) {return NULL;}
+  virtual int surfinfo(int *&) {return 0;}
 
   void addstep(bigint);
   int matchstep(bigint);

@@ -876,7 +876,7 @@ void Grid::surf2grid_stats()
       }
     } else if (dimension == 3) {
       for (int i = 0; i < cells[icell].nsurf; i++) {
-	surf->tri_size(csurfs[icell][i],len,area);
+	area = surf->tri_size(csurfs[icell][i],len);
 	sratio = MIN(sratio,len/cmax);
       }
     }

@@ -27,9 +27,8 @@
 using namespace SPARTA_NS;
 
 enum{NUM,PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE};
-enum{NONE,COUNT,MASSWT,TEMPWT};
 
-#define DELTA 10
+#define DELTA 1
 
 /* ---------------------------------------------------------------------- */
 
@@ -70,11 +69,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   nlocal = maxlocal = 0;
   glob2loc = loc2glob = NULL;
   array_surf = NULL;
-
-  memory->create(value_norm_style,ngroup,nvalue,"surf:value_norm_style");
-  norm_count = new double*[ngroup];
-  norm_mass = new double*[ngroup];
-  norm_temp = new double*[ngroup];
+  normflux = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -85,16 +80,7 @@ ComputeSurf::~ComputeSurf()
   memory->destroy(glob2loc);
   memory->destroy(loc2glob);
   memory->destroy(array_surf);
-
-  memory->destroy(value_norm_style);
-  for (int i = 0; i < ngroup; i++) {
-    memory->destroy(norm_count[i]);
-    memory->destroy(norm_mass[i]);
-    memory->destroy(norm_temp[i]);
-  }
-  delete [] norm_count;
-  delete [] norm_mass;
-  delete [] norm_temp;
+  memory->destroy(normflux);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -103,35 +89,6 @@ void ComputeSurf::init()
 {
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute surf mixture has changed");
-
-  // one-time allocation of accumulators and norms
-  // cannot allocate norms until now since depends on group sizes
-
-  if (array_surf == NULL) {
-    memory->create(array_surf,surf->nlocal,ntotal,"surf:array_surf");
-
-    for (int i = 0; i < ngroup; i++)
-      for (int j = 0; j < nvalue; j++) {
-        if (which[j] == NUM) value_norm_style[i][j] = NONE;
-        else if (which[j] == KE) value_norm_style[i][j] = COUNT; 
-        else if (particle->mixture[imix]->groupsize[i] == 1)
-          value_norm_style[i][j] = COUNT; 
-        else value_norm_style[i][j] = MASSWT;
-      }
-
-    for (int i = 0; i < ngroup; i++) {
-      norm_count[i] = norm_mass[i] = norm_temp[i] = NULL;
-      for (int j = 0; j < nvalue; j++) {
-        if (value_norm_style[i][j] == NONE) continue;
-        if (value_norm_style[i][j] == COUNT && norm_count[i] == NULL)
-          memory->create(norm_count[i],surf->nlocal,"surf:norm_count");
-        if (value_norm_style[i][j] == MASSWT && norm_mass[i] == NULL)
-          memory->create(norm_mass[i],surf->nlocal,"surf:norm_mass");
-        if (value_norm_style[i][j] == TEMPWT && norm_temp[i] == NULL)
-          memory->create(norm_temp[i],surf->nlocal,"surf:norm_temp");
-      }
-    }
-  }
 
   // local copies
 
@@ -148,7 +105,28 @@ void ComputeSurf::init()
   memory->create(glob2loc,nsurf,"surf:glob2loc");
   for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
 
-  // initialize tally array in case accessed without a tally timestep
+  // normflux for each surface element I own, based on area and timestep size
+  // one-time only initialization
+
+  if (normflux == NULL)  {
+    int nslocal = surf->nlocal;
+    memory->create(normflux,nslocal,"surf:normflux");
+
+    int *mysurfs = surf->mysurfs;
+    double dt = update->dt;
+    int dimension = domain->dimension;
+    double tmp;
+    int m;
+
+    for (int i = 0; i < nslocal; i++) {
+      m = mysurfs[i];
+      if (dimension == 2) normflux[i] = surf->line_size(m);
+      else normflux[i] = surf->tri_size(m,tmp);
+      normflux[i] *= dt;
+    }
+  }
+
+  // initialize tally array in case accessed before a tally timestep
 
   clear();
 }
@@ -159,8 +137,11 @@ void ComputeSurf::compute_per_surf()
 {
   invoked_per_surf = update->ntimestep;
 
-  // maybe should normalize by area and timestep here?
-
+  // NOTE: could normalize values here by area*dt
+  // but am letting dump surf and fix ave/surf do it via normflux,
+  // so that can later add new surf computes that work like grid computes
+  // and need to normalize by number of molecules (count or masswt)
+  // if don't need that could remove norm logic from dump surf and fix ave/surf
 }
 
 /* ---------------------------------------------------------------------- */
@@ -170,26 +151,11 @@ void ComputeSurf::clear()
   int i,j;
   double *norm;
 
-  // clear out local list and tally values
   // reset all set glob2loc values to -1
 
-  for (i = 0; i < nlocal; i++) {
-    for (j = 0; j < ntotal; j++) array_surf[i][j] = 0.0;
+  for (i = 0; i < nlocal; i++)
     glob2loc[loc2glob[i]] = -1;
-  }
-
   nlocal = 0;
-
-  /*
-  for (j = 0; j < ngroup; j++) {
-    if (norm = norm_count[j])
-      for (i = 0; i < nslocal; i++) norm[i] = 0.0;
-    if (norm = norm_mass[j])
-      for (i = 0; i < nslocal; i++) norm[i] = 0.0;
-    if (norm = norm_temp[j])
-      for (i = 0; i < nslocal; i++) norm[i] = 0.0;
-  }
-  */
 }
 
 /* ---------------------------------------------------------------------- */
@@ -206,26 +172,32 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
   // if 1st particle hitting isurf, add isurf to local list
   // grow local list if needed
 
+  double *vec;
+
   int ilocal = glob2loc[isurf];
   if (ilocal < 0) {
     if (nlocal == maxlocal) grow();
     ilocal = nlocal++;
     loc2glob[ilocal] = isurf;
+    glob2loc[isurf] = ilocal;
+    vec = array_surf[ilocal];
+    for (int i = 0; i < ntotal; i++) vec[i] = 0.0;
   }
 
   // tally all values associated with group into array
-  // nflag and tflag set if normal and tangent computation already done once
+  // set nflag and tflag after normal and tangent computation is done once
 
-  double vnorm[3],vdelta[3],vtang[3];
   double pre,post,vsqpre,vsqpost;
-
+  double vnorm[3],vdelta[3],vtang[3];
   double *norm;
+
   if (dimension == 2) norm = lines[isurf].norm;
   else norm = tris[isurf].norm;
 
   double mass = particle->species[ispecies].mass;
   double mvv2e = update->mvv2e;
 
+  vec = array_surf[ilocal];
   int k = igroup*nvalue;
   int nflag = 0;
   int tflag = 0;
@@ -233,12 +205,12 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
   for (int m = 0; m < nvalue; m++) {
     switch (which[m]) {
     case NUM:
-      array_surf[ilocal][k++] += 1.0;
+      vec[k++] += 1.0;
       break;
     case PRESS:
       pre = MathExtra::dot3(vold,norm);
       post = MathExtra::dot3(p->v,norm);
-      array_surf[ilocal][k++] += mass * (post-pre);
+      vec[k++] += mass * (post-pre);
       break;
     case XPRESS:
       if (!nflag) {
@@ -246,7 +218,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
         MathExtra::sub3(p->v,vold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
       }
-      array_surf[ilocal][k++] -= mass * vnorm[0];
+      vec[k++] -= mass * vnorm[0];
       break;
     case YPRESS:
       if (!nflag) {
@@ -254,7 +226,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
         MathExtra::sub3(p->v,vold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
       }
-      array_surf[ilocal][k++] -= mass * vnorm[1];
+      vec[k++] -= mass * vnorm[1];
       break;
     case ZPRESS:
       if (!nflag) {
@@ -262,7 +234,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
         MathExtra::sub3(p->v,vold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
       }
-      array_surf[ilocal][k++] -= mass * vnorm[2];
+      vec[k++] -= mass * vnorm[2];
       break;
     case XSHEAR:
       if (!tflag) {
@@ -271,7 +243,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
         MathExtra::sub3(vdelta,vnorm,vtang);
       }
-      array_surf[ilocal][k++] -= mass * vtang[0];
+      vec[k++] -= mass * vtang[0];
       break;
     case YSHEAR:
       if (!tflag) {
@@ -280,7 +252,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
         MathExtra::sub3(vdelta,vnorm,vtang);
       }
-      array_surf[ilocal][k++] -= mass * vtang[1];
+      vec[k++] -= mass * vtang[1];
       break;
     case ZSHEAR:
       if (!tflag) {
@@ -289,12 +261,12 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
         MathExtra::sub3(vdelta,vnorm,vtang);
       }
-      array_surf[ilocal][k++] -= mass * vtang[2];
+      vec[k++] -= mass * vtang[2];
       break;
     case KE:
       vsqpre = MathExtra::lensq3(vold);
       vsqpost = MathExtra::lensq3(p->v);
-      array_surf[ilocal][k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
+      vec[k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
       break;
     }
   }
@@ -306,14 +278,19 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
 
 double *ComputeSurf::normptr(int n)
 {
-  /*
-  int igroup = n / nvalue;
   int ivalue = n % nvalue;
-  if (value_norm_style[igroup][ivalue] == COUNT) return norm_count[igroup];
-  if (value_norm_style[igroup][ivalue] == MASSWT) return norm_mass[igroup];
-  if (value_norm_style[igroup][ivalue] == TEMPWT) return norm_temp[igroup];
-  */
-  return NULL;
+  if (which[ivalue] == NUM) return NULL;
+  return normflux;
+}
+
+/* ----------------------------------------------------------------------
+   return ptr to norm vector used by column N
+------------------------------------------------------------------------- */
+
+int ComputeSurf::surfinfo(int *&locptr)
+{
+  locptr = loc2glob;
+  return nlocal;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -335,12 +312,5 @@ bigint ComputeSurf::memory_usage()
   bytes += ntotal*maxlocal * sizeof(double);
   bytes += maxlocal * sizeof(int);
   bytes += nsurf * sizeof(int);
-  /*
-  for (int i = 0; i < ngroup; i++) {
-  if (norm_count[i]) bytes += surf->nlocal * sizeof(double);
-    if (norm_mass[i]) bytes += surf->nlocal * sizeof(double);
-   if (norm_temp[i]) bytes += surf->nlocal * sizeof(double);
-  }
-  */
   return bytes;
 }

@@ -150,13 +150,15 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
   // styles PERIODIC and OUTFLOW do not have post-bounce velocity
   // nflag and tflag set if normal and tangent computation already done once
 
-  double vnorm[3],vdelta[3],vtang[3];
   double pre,post,vsqpre,vsqpost;
+  double vnorm[3],vdelta[3],vtang[3];
+  double *vec;
 
   double *norm = domain->norm[iface];
   double mass = particle->species[ispecies].mass;
   double mvv2e = update->mvv2e;
 
+  vec = myarray[iface];
   int k = igroup*nvalue;
   int nflag = 0;
   int tflag = 0;
@@ -171,14 +173,14 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
     for (int m = 0; m < nvalue; m++) {
       switch (which[m]) {
       case NUM:
-        myarray[iface][k++] += 1.0;
+        vec[k++] += 1.0;
         break;
       case PRESS:
         if (!nflag) {
           nflag = 1;
           pre = MathExtra::dot3(vold,norm);
         }
-        myarray[iface][k++] -= mass * pre;
+        vec[k++] -= mass * pre;
         break;
       case XSHEAR:
         if (!tflag) {
@@ -186,7 +188,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
           MathExtra::sub3(vold,vnorm,vtang);
         }
-        myarray[iface][k++] += mass * vtang[0];
+        vec[k++] += mass * vtang[0];
         break;
       case YSHEAR:
         if (!tflag) {
@@ -194,7 +196,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
           MathExtra::sub3(vold,vnorm,vtang);
         }
-        myarray[iface][k++] += mass * vtang[1];
+        vec[k++] += mass * vtang[1];
         break;
       case ZSHEAR:
         if (!tflag) {
@@ -202,11 +204,11 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
           MathExtra::sub3(vold,vnorm,vtang);
         }
-        myarray[iface][k++] += mass * vtang[2];
+        vec[k++] += mass * vtang[2];
         break;
       case KE:
         vsqpre = MathExtra::lensq3(vold);
-        myarray[iface][k++] += 0.5 * mvv2e * mass * vsqpre;
+        vec[k++] += 0.5 * mvv2e * mass * vsqpre;
         break;
       }
     }
@@ -215,7 +217,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
     for (int m = 0; m < nvalue; m++) {
       switch (which[m]) {
       case NUM:
-        myarray[iface][k++] += 1.0;
+        vec[k++] += 1.0;
         break;
       case PRESS:
         if (!nflag) {
@@ -223,7 +225,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           pre = MathExtra::dot3(vold,norm);
           post = MathExtra::dot3(p->v,norm);
         }
-        myarray[iface][k++] += mass * (post-pre);
+        vec[k++] += mass * (post-pre);
         break;
       case XSHEAR:
         if (!tflag) {
@@ -232,7 +234,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
-        myarray[iface][k++] -= mass * vtang[0];
+        vec[k++] -= mass * vtang[0];
         break;
       case YSHEAR:
         if (!tflag) {
@@ -241,7 +243,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
-        myarray[iface][k++] -= mass * vtang[1];
+        vec[k++] -= mass * vtang[1];
         break;
       case ZSHEAR:
         if (!tflag) {
@@ -250,12 +252,12 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
-        myarray[iface][k++] -= mass * vtang[2];
+        vec[k++] -= mass * vtang[2];
         break;
       case KE:
         vsqpre = MathExtra::lensq3(vold);
         vsqpost = MathExtra::lensq3(p->v);
-        myarray[iface][k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
+        vec[k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
         break;
       }
     }

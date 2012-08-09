@@ -6,35 +6,49 @@
 seed	    	    12345
 dimension   	    2
 
-boundary	    os rr p
-create_box  	    0 5 0 5 -0.5 0.5
-create_grid 	    5 5 1 stride x y z
+boundary	    s p p
+surf_collide        hotwall diffuse 308.15 1.0 translate 0. 50.0 0.0
+surf_collide        coldwall diffuse 238.15 1.0 translate 0. -50.0 0.0
+bound_modify        xhi surf hotwall
+bound_modify        xlo surf coldwall
+create_box  	    0.0 1.E-3 -0.5 0.5 -0.5 0.5
+create_grid 	    400 1 1
 
-species		    ../data/all.species N O
-mixture		    air N O vstream 1000.0 0 0 
-mixture		    air group species
+species		    ../data/ar.species Ar
+mixture		    ar Ar vstream 0.0 0.0 0.0 temp 273.15 
+global              nrho 7.07043E22
+global              fnum 1.47301E15
 
-global		    nrho 0.1
+create_molecules    ar n 48000
 
-collide		    vss air ../data/all.vss
+collide		    vss ar ../data/ar.vss
 
-timestep 	    0.0001
+timestep 	    7.E-9
+compute             ke ke/molecule
+compute             temp temp
 
-compute		    ke ke/molecule
-variable	    foo molecule x+y
+compute             1 sonine/grid species a x 5 b xy 5
+fix                 1 ave/grid 10 100 1000 c_1 ave one
+dump                1 grid 10000 tmp_sonine*.grid id f_1
 
-surf_collide	    1 diffuse 300.0 0.9
-bound_modify	    xhi surf 1
+stats		    20
+variable            cent equal (xhi+xlo)/2.
 
-read_surf	    data.square 1 trans 2 2 0 scale 3 3 1 invert clip
+compute             2 grid species n u v w usq vsq wsq
+fix                 2 ave/grid 10 100 10000  c_2 ave one 
+dump                2 grid 100000 tmp_flow*.grid id f_2
+stats_style         step cpu nmol nattempt ncoll c_temp 
 
-create_molecules    air n 10000
+#run 		    100000
+run 		    100
 
-dump                2 image 10 tmp.*.jpg type type adiam 0.1 &
-		    view 0 0 zoom 1.3 size 512 512
-dump_modify	    2 pad 4
+compute             3 grid species n u v w usq vsq wsq
+fix                 3 ave/grid 10 10000 100000 c_3 ave running
+dump                3 grid 100000 tmp_steadyflow*.grid id f_3
 
-fix		    check grid/check 1
-stats_style	    step nmol nscheck nscoll
+compute             4 sonine/grid ar a x 5 b xy 5
+fix                 4 ave/grid 10 10000 100000 c_4 ave running
+dump                4 grid 100000 tmp_steadysonine*.grid id f_4
 
-run 		    0
+run 		    100
+#run 		    10000000

@@ -35,6 +35,7 @@ class ComputeSurf : public Compute {
   void clear();
   void surf_tally(int, double *, Particle::OnePart *);
   double *normptr(int);
+  int surfinfo(int *&);
   bigint memory_usage();
 
  private:
@@ -52,10 +53,7 @@ class ComputeSurf : public Compute {
   Surf::Line *lines;
   Surf::Tri *tris;
 
-  int **value_norm_style;       // I,J = norm style of Jth value in Ith group
-  double **norm_count;          // per-group ptr to norm vector, by count
-  double **norm_mass;           // per-group ptr to norm vector, by mass
-  double **norm_temp;           // per-group ptr to norm vector, by temperature
+  double *normflux;
 
   void grow();
 };

@@ -35,7 +35,7 @@ enum{ID,V1X,V1Y,V1Z,V2X,V2Y,V2Z,V3X,V3Y,V3Z,
      COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE};
 
-enum{PERIODIC,OUTFLOW,SPECULAR};            // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};            // same as Domain
 
 #define INVOKED_PER_SURF 32
 #define CHUNK 8
@@ -154,7 +154,8 @@ void DumpSurf::init_style()
     for (int iside = 0; iside < 2; iside++) {
       if (domain->bflag[idim*2+iside] == OUTFLOW) boundstr[m++] = 'o';
       else if (domain->bflag[idim*2+iside] == PERIODIC) boundstr[m++] = 'p';
-      else if (domain->bflag[idim*2+iside] == SPECULAR) boundstr[m++] = 's';
+      else if (domain->bflag[idim*2+iside] == REFLECT) boundstr[m++] = 'r';
+      else if (domain->bflag[idim*2+iside] == SURFACE) boundstr[m++] = 's';
     }
     boundstr[m++] = ' ';
   }

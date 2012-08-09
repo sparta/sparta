@@ -571,7 +571,7 @@ double Surf::line_size(int m)
    return area = area of triangle M
 ------------------------------------------------------------------------- */
 
-void Surf::tri_size(int m, double &len, double &area)
+double Surf::tri_size(int m, double &len)
 {
   double delta12[3],delta13[3],delta23[3],cross[3];
 
@@ -582,7 +582,8 @@ void Surf::tri_size(int m, double &len, double &area)
   len = MIN(len,MathExtra::len3(delta23));
 
   MathExtra::cross3(delta12,delta13,cross);
-  area = 0.5 * MathExtra::len3(cross);
+  double area = 0.5 * MathExtra::len3(cross);
+  return area;
 }
 
 /* ----------------------------------------------------------------------
