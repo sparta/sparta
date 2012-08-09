@@ -159,8 +159,8 @@ void ComputeGrid::compute_per_grid()
     ilocal = cells[particles[i].icell].local;
 
     mass = species[ispecies].mass;
-    norm_mass[igroup][ilocal] += mass;
-    norm_count[igroup][ilocal] += 1.0;
+    if (norm_mass[igroup]) norm_mass[igroup][ilocal] += mass;
+    if (norm_count[igroup]) norm_count[igroup][ilocal] += 1.0;
 
     v = particles[i].v;
 
