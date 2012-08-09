@@ -57,29 +57,24 @@ partitioned into groups.
 for 2d simulatoins.  See the <A HREF = "read_surf.html">read_surf</A> command for
 details.
 </P>
-<P>Along with summing each specified value, a normalization factor is
-also computed.  If the group has a single species, the normalization
-factor is typically just the count of contributing molecules.  If the
-group has mutlipe species, the normalization factor is typically the
-total mass of the contributing molecules.  The normalization factors
-are used by other commands that process values produced by this
-compute.
-</P>
-<P>For example, for the <I>u</I> value, the <A HREF = "dump.html">dump grid</A> command,
-will generate the average x component of velocity for molecules in a
-grid cell, averaged over molecules in the group.  The <A HREF = "fix_ave_grid.html">fix
-ave/grid</A> command will generate the average x
-component of velocity for molecules in a grid cell, averaged both over
-molecules in the group and time.
+<P>The results of this compute are used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump surf</A> command.  The values over many timesteps or the
+entire simulation can be averaged together by the <A HREF = "fix_ave_surf.html">fix
+ave/surf</A> command.  In this case, it is as if the
+formulas below are sums over both molecules striking the surface
+element and over time, with the <I>dt</I> normalizing factor in the
+denominator reflecting the number of timesteps statistics were
+gathered.
 </P>
 <HR>
 
-<P>The <I>n</I> value counts the number of moleclues striking the surface
-element.
+<P>The <I>n</I> value counts the number of moleclues in the group striking the
+surface element.
 </P>
 <P>The <I>press</I> value calculates the pressure <I>P</I> exerted on the surface
-element in the normal direction, such that outward pressure is
-positive.  This is computed as
+element in the normal direction by molecules in the group, such that
+outward pressure is positive.  This is computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
 P = Sum_i (p_delta_i dot N) / (A * dt) 
@@ -92,8 +87,9 @@ element, normalized by A = the area of the surface element and dt =
 the timestep.
 </P>
 <P>The <I>px</I>, <I>py</I>, <I>pz</I> values calculate the normal pressure Px, Py, Pz
-extered on the surface element in the direction of its normal, with
-respect to the x, y, z coordinate axes.  These are computed as
+extered on the surface element in the direction of its normal by
+molecules in the group, with respect to the x, y, z coordinate axes.
+These are computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
 p_delta_n = (p_delta dot N) N
@@ -108,8 +104,8 @@ components.
 </P>
 <P>The <I>shx</I>, <I>shy</I>, <I>shz</I> values calculate the shear pressure Sx, Sy, Sz
 extered on the surface element in the tangential direction to its
-normal, with respect to the x, y, z coordinate axes.  These are
-computed as
+normal by molecules in the group, with respect to the x, y, z
+coordinate axes.  These are computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
 p_delta_t = p_delta - (p_delta dot N) N
@@ -123,8 +119,8 @@ p_delta of a particle.  P_delta_t_x (and y,z) are its x, y, z
 components.
 </P>
 <P>The <I>ke</I> value calculates the kinetic energy flux <I>Eflux</I> imparted to
-the surface element, such that energy lost by a particle is a positive
-flux.  This is computed as
+the surface element by molecules in the group, such that energy lost
+by a particle is a positive flux.  This is computed as
 </P>
 <PRE>e_delta = 1/2 mass (V_post^2 - V_pre^2)
 Eflux = - Sum_i (e_delta) / (A * dt) 

@@ -52,7 +52,7 @@ The results of this compute are used by different commands in
 different ways.  The values for a single timestep can be output by the
 "dump grid"_dump.html command.  The values over many timesteps or the
 entire simulation can be averaged together by the "fix
-ave/grid"_fix_ave_grid. command.  In this case, it is as if the
+ave/grid"_fix_ave_grid.html command.  In this case, it is as if the
 formulas below are sums over both molecules in the grid cell and over
 time, with the normalizing factor in the denominator also being summed
 over time.
