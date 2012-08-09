@@ -28,7 +28,7 @@ using namespace SPARTA_NS;
 
 enum{NUM,PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE};
 
-#define DELTA 1
+#define DELTA 10000
 
 /* ---------------------------------------------------------------------- */
 

@@ -646,17 +646,19 @@ void DumpSurf::pack_compute(int n)
   double **array = compute[field2index[n]]->array_surf;
   int index = argindex[n];
 
-  if (index == 0) {
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = vector[i];
-      n += size_one;
-    }
-  } else {
-    index--;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = array[i][index];
-      n += size_one;
-    }
+  int *loc2glob;
+  int nlocal = compute[field2index[n]]->surfinfo(loc2glob);
+  
+  if (index == 0)
+    surf->collate_vec(nlocal,loc2glob,vector,1,&buf[n],size_one,0);
+  else {
+    int istride = compute[field2index[n]]->size_per_surf_cols;
+    if (array)
+      surf->collate_vec(nlocal,loc2glob,&array[0][index-1],istride,
+                        &buf[n],size_one,0);
+    else
+      surf->collate_vec(nlocal,loc2glob,NULL,istride,
+                        &buf[n],size_one,0);
   }
 }
 

@@ -641,11 +641,13 @@ int Surf::find_collide(const char *id)
 
 /* ----------------------------------------------------------------------
    brute force MPI Allreduce comm of local tallies across all procs
+   input values
    for vector and array
    return out = summed tallies for surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate(int nrow, int ncol, int *l2g, double *in, double *out)
+void Surf::collate_vec(int nrow, int *l2g, double *in, int istride,
+                       double *out, int ostride, int sumflag)
 {
   int i,j,m,n;
   double *vec1,*vec2;
@@ -655,27 +657,69 @@ void Surf::collate(int nrow, int ncol, int *l2g, double *in, double *out)
   else nglobal = ntri;
 
   double *one,*all;
-  memory->create(one,nglobal*ncol,"surf:one");
-  memory->create(all,nglobal*ncol,"surf:all");
+  memory->create(one,nglobal,"surf:one");
+  memory->create(all,nglobal,"surf:all");
 
-  for (i = 0; i < nrow*ncol; i++) one[i] = 0.0;
+  for (i = 0; i < nglobal; i++) one[i] = 0.0;
 
   m = 0;
   for (i = 0; i < nrow; i++) {
-    vec1 = &one[l2g[i]*ncol];
-    for (j = 0; j < ncol; j++) 
-      vec1[j] = in[m++];
+    one[l2g[i]] = in[m];
+    m += istride;
   }
 
-  MPI_Allreduce(one,all,nglobal*ncol,MPI_DOUBLE,MPI_SUM,world);
+  MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
+
+  if (sumflag) {
+    m = 0;
+    for (i = 0; i < nlocal; i++) {
+      out[m] += all[mysurfs[i]];
+      m += ostride;
+    }
+  } else {
+    m = 0;
+    for (i = 0; i < nlocal; i++) {
+      out[m] = all[mysurfs[i]];
+      m += ostride;
+    }
+  }
+
+  memory->destroy(one);
+  memory->destroy(all);
+}
+
+void Surf::collate_array(int nrow, int ncol, int *l2g,
+                         double **in, double **out)
+{
+  int i,j,m,n;
+  double *vec1,*vec2;
+
+  int nglobal;
+  if (domain->dimension == 2) nglobal = nline;
+  else nglobal = ntri;
+
+  double **one,**all;
+  memory->create(one,nglobal,ncol,"surf:one");
+  memory->create(all,nglobal,ncol,"surf:all");
+
+  for (i = 0; i < nglobal; i++)
+    for (j = 0; j < ncol; j++)
+      one[i][j] = 0.0;
+
+  for (i = 0; i < nrow; i++) {
+    m = l2g[i];
+    for (j = 0; j < ncol; j++) 
+      one[m][j] = in[i][j];
+  }
+
+  MPI_Allreduce(&one[0][0],&all[0][0],nglobal*ncol,MPI_DOUBLE,MPI_SUM,world);
 
   for (i = 0; i < nlocal; i++) {
-    vec1 = &all[mysurfs[i]*ncol];
-    vec2 = &out[i*ncol];
+    m = mysurfs[i];
     for (j = 0; j < ncol; j++) 
-      vec2[j] += vec1[j];
+      out[i][j] += all[m][j];
   }
-
+  
   memory->destroy(one);
   memory->destroy(all);
 }

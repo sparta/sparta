@@ -493,9 +493,9 @@ void FixAveSurf::end_of_step()
   // returns values I own summed into accvec and accarray
 
   if (nvalues == 1)
-    surf->collate(nlocal,1,loc2glob,vec_local,accvec);
+    surf->collate_vec(nlocal,loc2glob,vec_local,1,accvec,1,1);
   else
-    surf->collate(nlocal,nvalues,loc2glob,&array_local[0][0],&accarray[0][0]);
+    surf->collate_array(nlocal,nvalues,loc2glob,array_local,accarray);
 
   // normalize the accumulators for output on Nfreq timestep
   // normindex < 0, just normalize by # of samples
