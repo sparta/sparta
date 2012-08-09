@@ -273,14 +273,19 @@ void ComputeSonineGrid::compute_per_grid()
         norm_temp[igroup][ilocal] += kbwt;
         break;
       case AMOM:
-        prefactor = wt * vthermal[moment[m]];
-        for (n = 0; n < order[m]; n++)
-          sonine[ilocal][k++] += prefactor*pow(csq,n);
+        sonine[ilocal][k++] = wt * vthermal[moment[m]];
+        for (n = 1; n < order[m]; n++) {
+          sonine[ilocal][k] = csq*sonine[ilocal][k-1];
+          k++;
+        }
         break;
       case BMOM:
-        prefactor = wt * vthermal[moment[m] / 3] * vthermal[moment[m] % 3];
-        for (n = 0; n < order[m]; n++)
-          sonine[ilocal][k++] += prefactor*pow(csq,n);
+        sonine[ilocal][k++] = wt * vthermal[moment[m] / 3] * 
+          vthermal[moment[m] % 3];
+        for (n = 1; n < order[m]; n++) {
+          sonine[ilocal][k] = csq*sonine[ilocal][k-1];
+          k++;
+        }
         break;
       }
     }
