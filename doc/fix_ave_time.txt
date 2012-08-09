@@ -19,9 +19,9 @@ Nrepeat = # of times to use input values for calculating averages :l
 Nfreq = calculate averages every this many timesteps :l
 one or more input values can be listed :l
 value = c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :l
-  c_ID = global scalar or vector calculated by a compute with ID
+  c_ID = global scalar or vector or array calculated by a compute with ID
   c_ID\[I\] = Ith component of global vector or Ith column of global array calculated by a compute with ID
-  f_ID = global scalar or vector calculated by a fix with ID
+  f_ID = global scalar or vector or array calculated by a fix with ID
   f_ID\[I\] = Ith component of global vector or Ith column of global array calculated by a fix with ID
   v_name = global value calculated by an equal-style variable with name :pre
 
@@ -94,13 +94,13 @@ If {mode} = vector, then the input values may either be vectors or
 arrays and all must be the same "length", which is the length of the
 vector or number of rows in the array.  If a global array is listed,
 then it is the same as if the individual columns of the array had been
-listed one by one.  E.g. these 2 fix ave/time commands are equivalent,
-since the "compute rdf"_compute_rdf.html command creates, in this
-case, a global array with 3 columns, each of length 50:
+listed one by one.  E.g. these two fix ave/time commands are
+equivalent, since the compute grid command in this case produces 3
+columns of output.
 
-compute myRDF all rdf 50 1 2
-fix 1 all ave/time 100 1 100 c_myRDF file tmp1.rdf mode vector
-fix 2 all ave/time 100 1 100 c_myRDF\[1\] c_myRDF\[2\] c_myRDF\[3\] file tmp2.rdf mode vector :pre
+compute 1 grid all n u usq
+fix 1 ave/time 100 1 100 c_1 file tmp.grid mode vector
+fix 1 ave/time 100 1 100 c_1\[1\] c_1\[2\] c_1\[3\] file tmp.grid mode vector :pre
 
 :line
 
@@ -135,15 +135,9 @@ been specified as individual vectors (see description above).  If a
 bracketed term is appended, the Ith column of the global array
 calculated by the compute is used.
 
-Note that there is a "compute reduce"_compute_reduce.html command
-which can sum per-atom quantities into a global scalar or vector which
-can thus be accessed by fix ave/time.  Or it can be a compute defined
-not in your input script, but by "thermodynamic
-output"_thermo_style.html or other fixes such as "fix
-nvt"_fix_nh.html or "fix temp/rescale"_fix_temp_rescale.html.  See
-the doc pages for these commands which give the IDs of these computes.
-Users can also write code for their own compute styles and "add them
-to SPARTA"_Section_modify.html.
+Note that users can also write code for their own compute styles and
+"add them to SPARTA"_Section_modify.html; their output can then
+be processed by this fix.
 
 If a value begins with "f_", a fix ID must follow which has been
 previously defined in the input script.  If {mode} = scalar, then if
@@ -166,10 +160,10 @@ been previously defined in the input script.  Variables can only be
 used as input for {mode} = scalar.  Only equal-style variables can be
 referenced.  See the "variable"_variable.html command for details.
 Note that variables of style {equal} define a formula which can
-reference individual atom properties or thermodynamic keywords, or
-they can invoke other computes, fixes, or variables when they are
-evaluated, so this is a very general means of specifying quantities to
-time average.
+reference individual atom properties or "stats_style"_stats_style.html
+keywords, or they can invoke other computes, fixes, or variables when
+they are evaluated, so this is a very general means of specifying
+quantities to time average.
 
 :line
 
@@ -284,9 +278,8 @@ inputs.
 
 [Related commands:]
 
-"compute"_compute.html, "fix ave/atom"_fix_ave_atom.html, "fix
-ave/spatial"_fix_ave_spatial.html, "fix ave/histo"_fix_ave_histo.html,
-"variable"_variable.html
+"compute"_compute.html, fix ave/grid"_fix_ave_grid.html, "fix
+ave/surf"_fix_ave_surf.html, "variable"_variable.html
 
 [Default:] none
 

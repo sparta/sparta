@@ -125,9 +125,9 @@ SPARTA"_Section_modify.html.
 If a value begins with "v_", a variable name must follow which has
 been previously defined in the input script as a "grid-style
 variable"_variable.html Variables of style {grid} can reference
-thermodynamic keywords, or invoke other computes, fixes, or variables
-when they are evaluated, so this is a very general means of generating
-per-grid quantities to time average.
+"stats_style"_stats_style.html keywords, or invoke other computes,
+fixes, or variables when they are evaluated, so this is a very general
+means of generating per-grid quantities to time average.
 
 :line
 

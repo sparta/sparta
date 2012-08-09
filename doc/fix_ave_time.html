@@ -29,9 +29,9 @@
 
 <LI>value = c_ID, c_ID[N], f_ID, f_ID[N], v_name 
 
-<PRE>  c_ID = global scalar or vector calculated by a compute with ID
+<PRE>  c_ID = global scalar or vector or array calculated by a compute with ID
   c_ID[I] = Ith component of global vector or Ith column of global array calculated by a compute with ID
-  f_ID = global scalar or vector calculated by a fix with ID
+  f_ID = global scalar or vector or array calculated by a fix with ID
   f_ID[I] = Ith component of global vector or Ith column of global array calculated by a fix with ID
   v_name = global value calculated by an equal-style variable with name 
 </PRE>
@@ -107,13 +107,13 @@ each input vector (or array) is averaged independently.
 arrays and all must be the same "length", which is the length of the
 vector or number of rows in the array.  If a global array is listed,
 then it is the same as if the individual columns of the array had been
-listed one by one.  E.g. these 2 fix ave/time commands are equivalent,
-since the <A HREF = "compute_rdf.html">compute rdf</A> command creates, in this
-case, a global array with 3 columns, each of length 50:
+listed one by one.  E.g. these two fix ave/time commands are
+equivalent, since the compute grid command in this case produces 3
+columns of output.
 </P>
-<PRE>compute myRDF all rdf 50 1 2
-fix 1 all ave/time 100 1 100 c_myRDF file tmp1.rdf mode vector
-fix 2 all ave/time 100 1 100 c_myRDF[1] c_myRDF[2] c_myRDF[3] file tmp2.rdf mode vector 
+<PRE>compute 1 grid all n u usq
+fix 1 ave/time 100 1 100 c_1 file tmp.grid mode vector
+fix 1 ave/time 100 1 100 c_1[1] c_1[2] c_1[3] file tmp.grid mode vector 
 </PRE>
 <HR>
 
@@ -148,15 +148,9 @@ been specified as individual vectors (see description above).  If a
 bracketed term is appended, the Ith column of the global array
 calculated by the compute is used.
 </P>
-<P>Note that there is a <A HREF = "compute_reduce.html">compute reduce</A> command
-which can sum per-atom quantities into a global scalar or vector which
-can thus be accessed by fix ave/time.  Or it can be a compute defined
-not in your input script, but by <A HREF = "thermo_style.html">thermodynamic
-output</A> or other fixes such as <A HREF = "fix_nh.html">fix
-nvt</A> or <A HREF = "fix_temp_rescale.html">fix temp/rescale</A>.  See
-the doc pages for these commands which give the IDs of these computes.
-Users can also write code for their own compute styles and <A HREF = "Section_modify.html">add them
-to SPARTA</A>.
+<P>Note that users can also write code for their own compute styles and
+<A HREF = "Section_modify.html">add them to SPARTA</A>; their output can then
+be processed by this fix.
 </P>
 <P>If a value begins with "f_", a fix ID must follow which has been
 previously defined in the input script.  If <I>mode</I> = scalar, then if
@@ -179,10 +173,10 @@ been previously defined in the input script.  Variables can only be
 used as input for <I>mode</I> = scalar.  Only equal-style variables can be
 referenced.  See the <A HREF = "variable.html">variable</A> command for details.
 Note that variables of style <I>equal</I> define a formula which can
-reference individual atom properties or thermodynamic keywords, or
-they can invoke other computes, fixes, or variables when they are
-evaluated, so this is a very general means of specifying quantities to
-time average.
+reference individual atom properties or <A HREF = "stats_style.html">stats_style</A>
+keywords, or they can invoke other computes, fixes, or variables when
+they are evaluated, so this is a very general means of specifying
+quantities to time average.
 </P>
 <HR>
 
@@ -297,9 +291,8 @@ inputs.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "compute.html">compute</A>, <A HREF = "fix_ave_atom.html">fix ave/atom</A>, <A HREF = "fix_ave_spatial.html">fix
-ave/spatial</A>, <A HREF = "fix_ave_histo.html">fix ave/histo</A>,
-<A HREF = "variable.html">variable</A>
+<P><A HREF = "compute.html<A HREF = "fix_ave_grid.html">>compute</A>, fix ave/grid</A>, <A HREF = "fix_ave_surf.html">fix
+ave/surf</A>, <A HREF = "variable.html">variable</A>
 </P>
 <P><B>Default:</B> none
 </P>
