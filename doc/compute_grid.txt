@@ -10,13 +10,13 @@ compute grid command :h3
 
 [Syntax:]
 
-compute ID grid mix-ID value ... :pre
+compute ID grid mix-ID value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 grid = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
-one or more values may be appended :l
-values = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} :l
+one or more values can be appended :l
+value = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} :l
   {n} = molecule count
   {u} = x component of velocity
   {v} = y component of velocity
@@ -33,7 +33,7 @@ values = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} :l
 compute 1 grid species n u v w usq vsq wsq
 compute 1 grid air n u v w :pre
 
-These commands will dump standard averages for each species and each
+These commands will dump averages for each species and each
 grid cell to a file every 1000 steps:
 
 compute 1 grid species n u v w usq vsq wsq
@@ -42,10 +42,11 @@ dump 1 grid 1000 tmp.grid id f_1 :pre
 
 [Description:]
 
-Define a computation that calculates one or more values for the
-molecules in each grid cell.  The values are summed for each group of
-species in the specified mixture.  See the "mixture"_mixture.html
-command for how a set of species can be partitioned into groups.
+Define a computation that calculates one or more values for each grid
+cell, based on the molecules in the cell.  The values are summed for
+each group of species in the specified mixture.  See the
+"mixture"_mixture.html command for how a set of species can be
+partitioned into groups.
 
 Along with summing each specified value, a normalization factor is
 also computed.  If the group has a single species, the normalization
@@ -111,7 +112,9 @@ columns would be {n} and {u} for the first group, the 3rd and 4th
 columns would be {n} and {u} for the second group, etc.
 
 The array can be accessed by any command that uses per-grid values
-from a compute as input.
+from a compute as input.  See "this
+section"_Section_howto.html#howto_15 for an overview of SPARTA output
+options.
 
 The per-grid array values will be in the "units"_units.html
 appropriate to the individual values as described above.  {U}, {v},
