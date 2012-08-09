@@ -57,64 +57,47 @@ each group of species in the specified mixture.  See the
 <A HREF = "mixture.html">mixture</A> command for how a set of species can be
 partitioned into groups.
 </P>
-<P>Along with summing each specified value, a normalization factor is
-also computed.  If the group has a single species, the normalization
-factor is typically just the count of contributing molecules.  If the
-group has mutlipe species, the normalization factor is typically the
-total mass of the contributing molecules.  The normalization factors
-are used by other commands that process values produced by this
-compute.
-</P>
-<P>For example, for the <I>u</I> value, the <A HREF = "dump.html">dump grid</A> command,
-will generate the average x component of velocity for molecules in a
-grid cell, averaged over molecules in the group.  The <A HREF = "fix_ave_grid.html">fix
-ave/grid</A> command will generate the average x
-component of velocity for molecules in a grid cell, averaged both over
-molecules in the group and time.
+<P>The results of this compute are used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">dump grid</A> command.  The values over many timesteps or the
+entire simulation can be averaged together by the <A HREF = "fix_ave_grid">fix
+ave/grid</A>. command.  In this case, it is as if the
+formulas below are sums over both molecules in the grid cell and over
+time, with the normalizing factor in the denominator also being summed
+over time.
 </P>
 <HR>
 
-<P>The <I>n</I> value counts the number of moleclues.  There is no
-normalization factor associated with it.
+<P>The <I>n</I> value counts the number of moleclues in the group.
 </P>
-<P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the summed velocity components for
-all molecules in the group.  If the group has multiple species, the
-sum is mass-weighted and the normalization factor is the total mass.
+<P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the average velocity components for
+all molecules in the group:
 </P>
-<PRE>U = Sum_i (mass_i Vx_i) 
+<PRE>U = Sum_i (mass_i Vx_i) / Sum_i (mass_i) 
 </PRE>
-<P>If the group has a single species, no mass weighting is done and the
-normalization factor is the count of molecules.
+<P>The <I>usq</I>, <I>vsq</I>, <I>wsq</I> values compute the average the velocity
+component squared for all molecules in the group.
 </P>
-<P>The <I>usq</I>, <I>vsq</I>, <I>wsq</I> values compute the sum of the velocity
-component squared for all molecules in the group.  If the group has
-multiple species, the sum is mass-weighted and the normalization
-factor is the total mass.
-</P>
-<PRE>Usq = Sum_i (mass_i Vx_i Vx_i) 
+<PRE>Usq = Sum_i (mass_i Vx_i Vx_i) / Sum_i (mass_i) 
 </PRE>
-<P>If the group has a single species, no mass weighting is done and the
-normalization factor is the count of molecules.
+<P>The <I>ke</I> value computes the average kinetic energy for all <I>N</I>
+molecules in the group:
 </P>
-<P>The <I>ke</I> value computes the summed kinetic energy for all molecules in
-the group.  The normalization factor is the count of molecules.
-</P>
-<PRE>KE = Sum_i (1/2 mass_i Vsq_i)
-Vsq = Vx*Vx + Vy*Vy + Vz*Vz 
+<PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
+KE = Sum_i (1/2 mass_i Vsq_i) / N 
 </PRE>
-<P>The <I>temp</I> value also computes the summed kinetic energy for all
-molecules in the group.  The normalization factor is 3 times the
-count of molecules times the Boltzmann factor <I>kB</I>, so that
-the sum divided by the normalization factor is the temperature <I>T</I>.
+<P>The <I>temp</I> value also computes the average kinetic energy for all
+molecules in the group.  This is converted to a temperature <I>T</I> by the
+following formula where <I>kB</I> is the Boltzmann factor:
 </P>
-<PRE>KE = Sum_i (1/2 mass_i Vsq_i)
-Vsq = Vx*Vx + Vy*Vy + Vz*Vz
-3/2 kB T = KE 
+<PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
+KE = Sum_i (1/2 mass_i Vsq_i) / N
+T = KE / (3/2 kB) 
 </PRE>
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid array, with the number of columns
-is equal to the number of values times the number of groups.  The
+equal to the number of values times the number of groups.  The
 ordering of columns is first by values, then by groups.  I.e. if the
 <I>n</I> and <I>u</I> values were specified as keywords, then the first two
 columns would be <I>n</I> and <I>u</I> for the first group, the 3rd and 4th
@@ -123,7 +106,7 @@ columns would be <I>n</I> and <I>u</I> for the second group, etc.
 <P>The array can be accessed by any command that uses per-grid values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_15">this
 section</A> for an overview of SPARTA output
-options.
+options. 
 </P>
 <P>The per-grid array values will be in the <A HREF = "units.html">units</A>
 appropriate to the individual values as described above.  <I>U</I>, <I>v</I>,

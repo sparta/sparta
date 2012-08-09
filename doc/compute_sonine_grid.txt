@@ -47,79 +47,66 @@ are summed for each group of species in the specified mixture.  See
 the "mixture"_mixture.html command for how a set of species can be
 partitioned into groups.
 
-Along with summing each specified value, a normalization factor is
-also computed.  If the group has a single species, the normalization
-factor is typically just the count of contributing molecules.  If the
-group has mutlipe species, the normalization factor is typically the
-total mass of the contributing molecules.  The normalization factors
-are used by other commands that process values produced by this
-compute.
-
-For example, for the {a} value, the "dump grid"_dump.html command,
-will generate the average sonine A moment for molecules in a grid
-cell, averaged over molecules in the group.  The "fix
-ave/grid"_fix_ave_grid.html command will generate the average sonine A
-moment for molecules in a grid cell, averaged both over molecules in
-the group and time.
+The results of this compute are used by different commands in
+different ways.  The values for a single timestep can be output by the
+"dump grid"_dump.html command.  The values over many timesteps or the
+entire simulation can be averaged together by the "fix
+ave/grid"_fix_ave_grid. command.  In this case, it is as if the
+formulas below are sums over both molecules in the grid cell and over
+time, with the normalizing factor in the denominator also being summed
+over time.
 
 :line
 
-The {thermal} keyword computes the summed thermal kinetic energy for
-all molecules in the group.  The normalization factor is 3 times the
-count of molecules times the Boltzmann factor {kB}, so that the sum
-divided by the normalization factor is the temperature {T}.
+The {thermal} keyword computes the average thermal kinetic energy for
+all {N} molecules in the group.  This is converted to a temperature
+{T} by the following formula where {kB} is the Boltzmann factor:
 
-thermal_KE = Sum_i (1/2 mass_i Csq_i)
-Csq = Cx*Cx + Cy*Cy + Cz*Cz
-Cx = Vx - COMx
-Cy = Vy - COMy
-Cz = Vz - COMz
 COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
 COMy = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
 COMz = Sum_i (mass_i Vz_i) / Sum_i (mass_i)
-3/2 kB T = thermal_KE :pre
+Cx = Vx - COMx
+Cy = Vy - COMy
+Cz = Vz - COMz
+Csq = Cx*Cx + Cy*Cy + Cz*Cz
+thermal_KE = Sum_i (1/2 mass_i Csq_i) / N
+T = thermal_KE / (3/2 kB) :pre
 
 Note that the thermal kinetic energy is calculated from {C} = the
 thermal velocity of each molecule, which is its velocity minus the
-center-of-mass (COM) velocity of molecules in that cell and group.
-The COM velocity is the mass-weighted sum of the velocities of
-molecules in the group divided by the total mass of the molecules.
+center-of-mass (COM) velocity of molecules in the group.  The COM
+velocity is the mass-weighted sum of the velocities of molecules in
+the group divided by the total mass of the molecules.
 
 :line
 
-The {a} keyword calculates the sum of one or more sonine A moments for
-all molecules in the group.  If the group has multiple species, the
-sum is mass-weighted and the normalization factor is the total mass.
+The {a} keyword calculates the aveage of one or more sonine A moments
+for all molecules in the group:
 
-A1 = Sum_i (mass_i * Vdim * pow(Csq,1))
-A2 = Sum_i (mass_i * Vdim * pow(Csq,2))
-A3 = Sum_i (mass_i * Vdim * pow(Csq,3))
-A4 = Sum_i (mass_i * Vdim * pow(Csq,4))
-A5 = Sum_i (mass_i * Vdim * pow(Csq,5)) :pre
-
-Vdim is Vx or Vy or Vz as specified by the {dim} value.  {Csq} is the
-squared thermal velocity of the molecule and has the same meaning as
-above in the {thermal} equations.  The number of moments computed is
-specified by the {order} value.  If the group has a single species, no
-mass weighting is done and the normalization factor is the count of
-molecules.
-
-The {b} keyword calculates the sum of one or more sonine B moments for
-all molecules in the group.  If the group has multiple species, the
-sum is mass-weighted and the normalization factor is the total mass.
-
-B1 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,1))
-B2 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,2))
-B3 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,3))
-B4 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,4))
-B5 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,5)) :pre
+A1 = Sum_i (mass_i * Vdim * pow(Csq,1)) / Sum_i (mass_i)
+A2 = Sum_i (mass_i * Vdim * pow(Csq,2)) / Sum_i (mass_i)
+A3 = Sum_i (mass_i * Vdim * pow(Csq,3)) / Sum_i (mass_i)
+A4 = Sum_i (mass_i * Vdim * pow(Csq,4)) / Sum_i (mass_i)
+A5 = Sum_i (mass_i * Vdim * pow(Csq,5)) / Sum_i (mass_i) :pre
 
 Vdim is Vx or Vy or Vz as specified by the {dim} value.  {Csq} is the
-squared thermal velocity of the molecule and has the same meaning as
-above in the {thermal} equations.  The number of moments computed is
-specified by the {order} value.  If the group has a single species, no
-mass weighting is done and the normalization factor is the count of
-molecules.
+squared thermal velocity of the molecule, as in the {thermal}
+equations above.  The number of moments computed is specified by the
+{order} value.
+
+The {b} keyword calculates the averageof one or more sonine B moments
+for all molecules in the group:
+
+B1 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,1)) / Sum_i (mass_i)
+B2 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,2)) / Sum_i (mass_i)
+B3 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,3)) / Sum_i (mass_i)
+B4 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,4)) / Sum_i (mass_i)
+B5 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,5)) / Sum_i (mass_i) :pre
+
+Vdim is Vx or Vy or Vz as specified by the {dim} value.  {Csq} is the
+squared thermal velocity of the molecule, as in the {thermal}
+equations above.  The number of moments computed is specified by the
+{order} value.
 
 :line
 
