@@ -38,9 +38,9 @@ class ComputeSonineGrid : public Compute {
   int imix,nvalue,ngroup,npergroup,ntotal;
   int *which,*moment,*order;
 
-  double ***vcom;
-  double **masstot;
-  double **sonine;
+  double ***vcom;               // COM velocity per group and per cell
+  double **masstot;             // total mass per group and per cell
+  double **sonine;              // accumulator array
 
   int **value_norm_style;       // I,J = norm style of Jth value in Ith group
   double **norm_count;          // per-group ptr to norm vector, by count

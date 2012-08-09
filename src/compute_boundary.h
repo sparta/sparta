@@ -38,9 +38,9 @@ class ComputeBoundary : public Compute {
  private:
   int imix,nvalue,ngroup,ntotal,nrow;
   int *which;
-  double normflux[6];
 
-  double **myarray;
+  double normflux[6];            // per face normalization factors
+  double **myarray;              // local accumulator array
 };
 
 }
