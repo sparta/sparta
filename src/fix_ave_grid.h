@@ -42,9 +42,9 @@ class FixAveGrid : public Fix {
   int *which,*argindex,*value2index;
   char **ids;
 
-  int nglocal;
-  double *accvec;
-  double **accarray;
+  int nglocal;               // # of grid cells I own
+  double *accvec;            // accumulation vector
+  double **accarray;         // accumulation array
 
   int *normacc;        // 1 if Ith value triggers one-time norm accumulation
   int *normindex;      // index of norm vector for Ith value, -1 if none

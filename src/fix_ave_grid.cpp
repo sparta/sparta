@@ -204,36 +204,74 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     else accarray = array_grid;
   }
 
+  // setup norm pointers and nnorm
+  // only store unique norms by checking if returned ptr matches previous ptr
+  // allocate my accumulating norm vectors
+  // NOTE: need to add logic for fixes and variables if enable them
+
   nnorm = 0;
   normacc = new int[nvalues];
   normindex = new int[nvalues];
   norms = new double*[nvalues];
   cfv_norms = new double*[nvalues];
 
-  // zero accvec,accarray one time if ave = RUNNING
+  for (int m = 0; m < nvalues; m++) {
+    int n = value2index[m];
+    int j = argindex[m];
 
-  int i,m;
+    normacc[m] = 0;
+    normindex[m] = -1;
+    
+    if (which[m] == COMPUTE) {
+      Compute *compute = modify->compute[n];
+      double *ptr = compute->normptr(j-1);
+      if (!ptr) continue;
+
+      int iptr;
+      for (iptr = 0; iptr < nnorm; iptr++)
+        if (ptr == cfv_norms[iptr]) break;
+      if (iptr < nnorm) normindex[m] = iptr;
+      else {
+        normacc[m] = 1;
+        normindex[m] = nnorm;
+        cfv_norms[nnorm] = ptr;
+        memory->create(norms[nnorm],nglocal,"ave/grid:norms");
+        nnorm++;
+      }
+    }
+  }
+
+  // zero accumulators and norm vectors one time if ave = RUNNING
 
   if (ave == RUNNING) {
     if (nvalues == 1)
-      for (i = 0; i < nglocal; i++)
+      for (int i = 0; i < nglocal; i++)
 	accvec[i] = 0.0;
-    else 
-      for (i = 0; i < nglocal; i++)
+    else {
+      int m;
+      for (int i = 0; i < nglocal; i++)
 	for (m = 0; m < nvalues; m++)
 	  accarray[i][m] = 0.0;
+    }
+
+    for (int m = 0; m < nnorm; m++) {
+      double *norm = norms[m];
+      for (int i = 0; i < nglocal; i++) norm[i] = 0.0;
+    }
   }
 
   // zero vector/array since dump may access it on timestep 0
   // zero vector/array since a variable may access it before first run
 
   if (nvalues == 0)
-    for (i = 0; i < nglocal; i++)
+    for (int i = 0; i < nglocal; i++)
       vector_grid[i] = 0.0;
-  else
-    for (i = 0; i < nglocal; i++)
+  else {
+    int m;
+    for (int i = 0; i < nglocal; i++)
       for (m = 0; m < nvalues; m++)
 	array_grid[i][m] = 0.0;
+  }
 
   // nvalid = next step on which end_of_step does something
   // add nvalid to all computes that store invocation times
@@ -308,57 +346,12 @@ void FixAveGrid::init()
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   only does something if nvalid = current timestep
+------------------------------------------------------------------------- */
 
 void FixAveGrid::setup()
 {
-  // ont-time setup of norm pointers and nnorm
-  // must do here after computes have been initialized
-  // only store unique norms by checking if returned ptr matches previous ptr
-  // zero norm vectors one time if ave = RUNNING
-  // NOTE: need to add logic for fixes and variables if enable them
-
-  // NOTE: if nnorm = 0 a good test if no norms are ever created
-  // NOTE: need to add normindex = -1 if not a compute?
-
-  if (nnorm == 0) {
-    double *ptr;
-    int j,n,iptr;
-
-    for (int m = 0; m < nvalues; m++) {
-      n = value2index[m];
-      j = argindex[m];
-      
-      if (which[m] == COMPUTE) {
-        Compute *compute = modify->compute[n];
-        ptr = compute->normptr(j-1);
-        if (ptr == NULL) {
-          normacc[m] = 0;
-          normindex[m] = -1;
-        } else {
-          for (iptr = 0; iptr < nnorm; iptr++)
-            if (ptr == cfv_norms[iptr]) break;
-          if (iptr < nnorm) {
-            normacc[m] = 0;
-            normindex[m] = iptr;
-          } else {
-            normacc[m] = 1;
-            normindex[m] = nnorm;
-            cfv_norms[nnorm] = ptr;
-            memory->create(norms[nnorm],nglocal,"ave/grid:norms");
-            if (ave == RUNNING) {
-              double *norm = norms[nnorm];
-              for (int i = 0; i < nglocal; i++) norm[i] = 0.0;
-            }
-            nnorm++;
-          }
-        }
-      }
-    }
-  }
-
-  // only does something if nvalid = current timestep
-
   end_of_step();
 }
 
@@ -392,7 +385,7 @@ void FixAveGrid::end_of_step()
 
   // accumulate results of computes,fixes,variables
   // compute/fix/variable may invoke computes so wrap with clear/add
-  // NOTE: need to add logic for fixes and variables if enable them
+  // NOTE: add logic for fixes and variables if enable them
 
   modify->clearstep_compute();
 
@@ -431,7 +424,7 @@ void FixAveGrid::end_of_step()
         }
       }
       
-      // access fix fields, guaranteed to be ready
+    // access fix fields, guaranteed to be ready
       
     } else if (which[m] == FIX) {
       if (j == 0) {
@@ -486,9 +479,8 @@ void FixAveGrid::end_of_step()
   modify->addstep_compute(nvalid);
 
   // normalize the accumulators for output on Nfreq timestep
-  // normindex = 0, just normalize by # of samples
-  // normindex = 1, normalize by accumulated norm vector
-  // reset nsample if ave = ONE
+  // normindex < 0, just normalize by # of samples
+  // normindex >= 0, normalize by accumulated norm vector
 
   if (ave == ONE) {
     if (nvalues == 1) {
@@ -532,6 +524,8 @@ void FixAveGrid::end_of_step()
       }
     }
   }
+
+  // reset nsample if ave = ONE
 
   if (ave == ONE) nsample = 0;
 }
@@ -582,7 +576,7 @@ double FixAveGrid::memory_usage()
   double bytes = 0.0;
   bytes += nglocal*nvalues * sizeof(double);
   if (ave == RUNNING) bytes += nglocal*nvalues * sizeof(double);
-  bytes += nglocal*nnorm * sizeof(double);
+  bytes += nnorm*nglocal * sizeof(double);
   return bytes;
 }
 

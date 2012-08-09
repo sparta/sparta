@@ -633,18 +633,32 @@ void DumpGrid::pack_compute(int n)
 
   if (index == 0) {
     double *norm = compute[field2index[n]]->normptr(index);
-    for (int i = 0; i < nglocal; i++) {
-      if (norm[i] > 0.0) buf[n] = vector[i] / norm[i];
-      else buf[n] = 0.0;
-      n += size_one;
+    if (norm) {
+      for (int i = 0; i < nglocal; i++) {
+        if (norm[i] > 0.0) buf[n] = vector[i] / norm[i];
+        else buf[n] = 0.0;
+        n += size_one;
+      }
+    } else {
+      for (int i = 0; i < nglocal; i++) {
+        buf[n] = vector[i];
+        n += size_one;
+      }
     }
   } else {
     index--;
     double *norm = compute[field2index[n]]->normptr(index);
-    for (int i = 0; i < nglocal; i++) {
-      if (norm[i] > 0.0) buf[n] = array[i][index] / norm[i];
-      else buf[n] = 0.0;
-      n += size_one;
+    if (norm) {
+      for (int i = 0; i < nglocal; i++) {
+        if (norm[i] > 0.0) buf[n] = array[i][index] / norm[i];
+        else buf[n] = 0.0;
+        n += size_one;
+      }
+    } else {
+      for (int i = 0; i < nglocal; i++) {
+        buf[n] = array[i][index];
+        n += size_one;
+      }
     }
   }
 }

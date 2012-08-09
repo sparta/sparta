@@ -397,12 +397,12 @@ void FixAveTime::init()
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   only does something if nvalid = current timestep
+------------------------------------------------------------------------- */
 
 void FixAveTime::setup()
 {
-  // only does something if nvalid = current timestep
-
   end_of_step();
 }
 
