@@ -182,7 +182,7 @@ void ComputeSonineGrid::compute_per_grid()
   double tprefactor = mvv2e / (3.0*update->boltz);
 
   int i,j,k,m,n,ispecies,igroup,ilocal;
-  double csq,mass;
+  double csq,mass,value;
   double *norm,*v,*vec;
   double vthermal[3];
 
@@ -260,18 +260,19 @@ void ComputeSonineGrid::compute_per_grid()
         vec[k++] += tprefactor*mass * csq;
         break;
       case AMOM:
-        vec[k++] += mass*vthermal[moment[m]] * csq;
+        value = mass*vthermal[moment[m]] * csq;
+        vec[k++] += value;
         for (n = 1; n < order[m]; n++) {
-          vec[k] += csq*vec[k-1];
-          k++;
+          value *= csq;;
+          vec[k++] += value;
         }
         break;
       case BMOM:
-        vec[k++] += mass * vthermal[moment[m] / 3] * 
-          vthermal[moment[m] % 3] * csq;
+        value = mass * vthermal[moment[m] / 3] * vthermal[moment[m] % 3] * csq;
+        vec[k++] += value;
         for (n = 1; n < order[m]; n++) {
-          vec[k] += csq*vec[k-1];
-          k++;
+          value *= csq;;
+          vec[k++] += value;
         }
         break;
       }

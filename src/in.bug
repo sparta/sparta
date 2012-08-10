@@ -27,7 +27,7 @@ timestep 	    7.E-9
 compute             ke ke/molecule
 compute             temp temp
 
-stats		    10
+stats		    100
 
 compute             1 sonine/grid species a x 5 b xy 5
 fix                 1 ave/grid 10 100 1000 c_1 ave one
@@ -39,7 +39,7 @@ dump                2 grid 1000 tmp_flow*.grid id f_2
 
 stats_style         step cpu nmol nattempt ncoll c_temp 
 
-run 		    100
+run 		    10000
 unfix               1 
 unfix               2
 undump              1 
@@ -52,4 +52,4 @@ dump                3 grid 1000 tmp_steadyflow*.grid id f_3
 compute             4 sonine/grid ar a x 5 b xy 5
 fix                 4 ave/grid 10 100 1000 c_4 ave running
 dump                4 grid 1000 tmp_steadysonine*.grid id f_4
-run 		    100
+run 		    10000
