@@ -268,7 +268,7 @@ void ComputeSonineGrid::compute_per_grid()
         }
         break;
       case BMOM:
-        value = mass * vthermal[moment[m] / 3] * vthermal[moment[m] % 3] * csq;
+        value = mass * vthermal[moment[m]/3] * vthermal[moment[m]%3] * csq;
         vec[k++] += value;
         for (n = 1; n < order[m]; n++) {
           value *= csq;
