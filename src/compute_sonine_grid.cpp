@@ -263,7 +263,7 @@ void ComputeSonineGrid::compute_per_grid()
         value = mass*vthermal[moment[m]] * csq;
         vec[k++] += value;
         for (n = 1; n < order[m]; n++) {
-          value *= csq;;
+          value *= csq;
           vec[k++] += value;
         }
         break;
@@ -271,7 +271,7 @@ void ComputeSonineGrid::compute_per_grid()
         value = mass * vthermal[moment[m] / 3] * vthermal[moment[m] % 3] * csq;
         vec[k++] += value;
         for (n = 1; n < order[m]; n++) {
-          value *= csq;;
+          value *= csq;
           vec[k++] += value;
         }
         break;
