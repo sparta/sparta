@@ -19,8 +19,8 @@ mixture		    ar Ar vstream 0.0 0.0 0.0 temp 273.15
 global              nrho 7.07043E22
 global              fnum 1.47301E15
 
-surf_collide 1 diffuse 273.15 0.9
-read_surf           data.sphere 1
+#surf_collide 1 diffuse 273.15 0.9
+#read_surf           data.sphere 1
 
 create_molecules    ar n 48000
 
@@ -46,7 +46,7 @@ dump                3 surf 1000 tmp_surf%.* id f_3
 
 stats_style         step cpu nmol nattempt ncoll c_temp 
 
-run 		    100000
+run 		    1000
 unfix               1
 undump              1
 unfix               2
@@ -54,11 +54,11 @@ undump              2
 unfix               3
 undump              3
 
-compute             3 grid species n u v w usq vsq wsq
-fix                 3 ave/grid 10 1000 10000 c_3 ave running
-dump                3 grid 10000 std_flow%.* id f_3
+#compute             3 grid species n u v w usq vsq wsq
+#fix                 3 ave/grid 10 1000 10000 c_3 ave running
+#dump                3 grid 10000 std_flow%.* id f_3
 
-compute             4 sonine/grid ar a x 5 b xy 5
-fix                 4 ave/grid 10 1000 10000 c_4 ave running
-dump                4 grid 10000 std_sonine%.* id f_4
-run 		    100000000
+#compute             4 sonine/grid ar a x 5 b xy 5
+#fix                 4 ave/grid 10 1000 10000 c_4 ave running
+#dump                4 grid 10000 std_sonine%.* id f_4
+#run 		    1000
