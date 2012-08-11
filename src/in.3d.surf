@@ -1,0 +1,51 @@
+# advect particles on uniform Cartesian grid
+# single-step moves that cross grid cell boundaries are detected
+# particle effectively moves from cell to cell
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+
+boundary	    o o o
+create_box  	    0 10 0 10 0 10
+create_grid 	    10 10 10
+#create_grid 	    100 100 100
+
+global		    nrho 0.01
+
+species		    ../data/all.species N O
+mixture		    air N O vstream 1000.0 0 0 
+
+#fix		    in inflow air xlo 
+
+collide		    vss air ../data/all.vss
+
+#surf_collide	    1 specular
+surf_collide	    1 diffuse 300.0 0.9
+
+#read_surf	    data.tri 1 trans 0 5 5 clip
+#read_surf	    data.cube 1 trans 5 5 0 scale 4 4 10 clip
+#read_surf	    data.cube 1 trans 5 5 5 scale 4 4 4 clip
+
+#read_surf	    data.sphere 1 trans 5 5 0 scale 10 10 10 clip
+#read_surf	    data.sphere 1 trans 5 5 0 scale 8 8 8 clip
+
+read_surf	    data.sphere.big 1 trans 5 5 0 scale 10 10 10 clip
+#read_surf	    data.sphere.big 1 trans 20 5 5 scale 30 30 30 clip
+
+create_molecules    air n 10000
+
+#timestep 	    0.001
+timestep 	    0.0001
+
+#dump		    1 molecule 10 tmp.dump id type x y z
+
+dump                2 image 10 tmp.*.jpg type type adiam 0.2 &
+		    view 90 -90 zoom 1.3 size 512 512
+dump_modify	    2 pad 4
+
+dump		    4 surf 100 tmp.surf id v1x v1y v1z v2x v2y v2z v3x v3y v3z
+
+stats_style	    step cpu nmol nattempt ncoll
+stats		    100
+run 		    100
