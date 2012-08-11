@@ -655,6 +655,7 @@ void Surf::collate_vec(int nrow, int *l2g, double *in, int istride,
   int nglobal;
   if (domain->dimension == 2) nglobal = nline;
   else nglobal = ntri;
+  if (nglobal == 0) return;
 
   double *one,*all;
   memory->create(one,nglobal,"surf:one");
@@ -697,6 +698,7 @@ void Surf::collate_array(int nrow, int ncol, int *l2g,
   int nglobal;
   if (domain->dimension == 2) nglobal = nline;
   else nglobal = ntri;
+  if (nglobal == 0) return;
 
   double **one,**all;
   memory->create(one,nglobal,ncol,"surf:one");
