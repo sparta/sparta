@@ -19,8 +19,8 @@ mixture		    ar Ar vstream 0.0 0.0 0.0 temp 273.15
 global              nrho 7.07043E22
 global              fnum 1.47301E15
 
-#surf_collide 1 diffuse 273.15 0.9
-#read_surf           data.sphere 1
+surf_collide 1 diffuse 273.15 0.9
+read_surf           data.sphere 1
 
 create_molecules    ar n 48000
 
@@ -34,7 +34,7 @@ compute             1 sonine/grid species a x 5 b xy 5
 fix                 1 ave/grid 10 100 1000 c_1 ave one
 dump                1 grid 10000 tmp_sonine%.* id f_1
 
-stats		    1
+stats		    100
 
 compute             2 grid species n u v w usq vsq wsq
 fix                 2 ave/grid 10 100 1000  c_2 ave one 

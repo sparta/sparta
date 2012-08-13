@@ -26,6 +26,7 @@ class Grid : protected Pointers {
   int nx,ny,nz;
   double xdelta,ydelta,zdelta;
   double xdeltainv,ydeltainv,zdeltainv;
+  double xlo,ylo,zlo;
 
   struct OneCell {
     int id;

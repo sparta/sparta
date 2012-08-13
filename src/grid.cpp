@@ -65,6 +65,10 @@ Grid::~Grid()
 
 void Grid::init()
 {
+  xlo = domain->boxlo[0];
+  ylo = domain->boxlo[1];
+  zlo = domain->boxlo[2];
+
   // allocate cflags if necessary
 
   if (cflags == NULL) {
@@ -175,6 +179,7 @@ void Grid::setup_grid()
 
 int Grid::which_cell(double x, double y, double z)
 {
+  // need to subtract off lo-corner of box to make this work
   int ix = static_cast<int> (x * xdeltainv);
   int iy = static_cast<int> (y * ydeltainv);
   int iz = static_cast<int> (z * zdeltainv);
@@ -360,12 +365,12 @@ void Grid::surf2grid()
   memory->create(count,ncell,"grid:count");
   for (m = 0; m < ncell; m++) count[m] = 0;
 
-  // NOTE: this logic is specific to regular Nx by Ny by Nz grid
   // tally count by double loop over surfs and grid cells within surf bbox
   // lo/hi = bounding box around surf
   // ijk lo/hi = grid index bounding box around surf
   // add epsilon to insure surf is counted in any cell it touches
   // icell = index of a grid cell within bounding box
+  // NOTE: this logic is specific to regular Nx by Ny by Nz grid
 
   Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
@@ -401,12 +406,12 @@ void Grid::surf2grid()
     hi[2] = MAX(x1[2],x2[2]);
     hi[2] = MAX(hi[2],x3[2]);
 
-    ilo = MAX(0,static_cast<int> ((lo[0]-epsilon)*xdeltainv));
-    ihi = MIN(nx-1,static_cast<int> ((hi[0]+epsilon)*xdeltainv));
-    jlo = MAX(0,static_cast<int> ((lo[1]-epsilon)*ydeltainv));
-    jhi = MIN(ny-1,static_cast<int> ((hi[1]+epsilon)*ydeltainv));
-    klo = MAX(0,static_cast<int> ((lo[2]-epsilon)*zdeltainv));
-    khi = MIN(nz-1,static_cast<int> ((hi[2]+epsilon)*zdeltainv));
+    ilo = MAX(0,static_cast<int> ((lo[0]-xlo-epsilon)*xdeltainv));
+    ihi = MIN(nx-1,static_cast<int> ((hi[0]-xlo+epsilon)*xdeltainv));
+    jlo = MAX(0,static_cast<int> ((lo[1]-ylo-epsilon)*ydeltainv));
+    jhi = MIN(ny-1,static_cast<int> ((hi[1]-ylo+epsilon)*ydeltainv));
+    klo = MAX(0,static_cast<int> ((lo[2]-zlo-epsilon)*zdeltainv));
+    khi = MIN(nz-1,static_cast<int> ((hi[2]-zlo+epsilon)*zdeltainv));
 
     if (dimension == 2) {
       for (i = ilo; i <= ihi; i++)
@@ -465,12 +470,12 @@ void Grid::surf2grid()
     hi[2] = MAX(x1[2],x2[2]);
     hi[2] = MAX(hi[2],x3[2]);
 
-    ilo = MAX(0,static_cast<int> ((lo[0]-epsilon)*xdeltainv));
-    ihi = MIN(nx-1,static_cast<int> ((hi[0]+epsilon)*xdeltainv));
-    jlo = MAX(0,static_cast<int> ((lo[1]-epsilon)*ydeltainv));
-    jhi = MIN(ny-1,static_cast<int> ((hi[1]+epsilon)*ydeltainv));
-    klo = MAX(0,static_cast<int> ((lo[2]-epsilon)*zdeltainv));
-    khi = MIN(nz-1,static_cast<int> ((hi[2]+epsilon)*zdeltainv));
+    ilo = MAX(0,static_cast<int> ((lo[0]-xlo-epsilon)*xdeltainv));
+    ihi = MIN(nx-1,static_cast<int> ((hi[0]-xlo+epsilon)*xdeltainv));
+    jlo = MAX(0,static_cast<int> ((lo[1]-ylo-epsilon)*ydeltainv));
+    jhi = MIN(ny-1,static_cast<int> ((hi[1]-ylo+epsilon)*ydeltainv));
+    klo = MAX(0,static_cast<int> ((lo[2]-zlo-epsilon)*zdeltainv));
+    khi = MIN(nz-1,static_cast<int> ((hi[2]-zlo+epsilon)*zdeltainv));
 
     if (dimension == 2) {
       for (i = ilo; i <= ihi; i++)
