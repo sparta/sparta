@@ -27,11 +27,11 @@ surf_collide	    1 diffuse 300.0 0.9
 #read_surf	    data.cube 1 trans 5 5 0 scale 4 4 10 clip
 #read_surf	    data.cube 1 trans 5 5 5 scale 4 4 4 clip
 
-#read_surf	    data.sphere 1 trans 5 5 0 scale 10 10 10 clip
+#read_surf	    data.sphere 1 trans 5 5 5 scale 9.9 9.5 9.5 clip
 #read_surf	    data.sphere 1 trans 5 5 0 scale 8 8 8 clip
 
-read_surf	    data.sphere.big 1 trans 5 5 0 scale 10 10 10 clip
-#read_surf	    data.sphere.big 1 trans 20 5 5 scale 30 30 30 clip
+#read_surf	    data.sphere.big 1 trans 5 5 0 scale 10 10 10 clip
+read_surf	    data.sphere.big 1 trans 20 5 5 scale 30 30 30 clip
 
 create_molecules    air n 10000
 
