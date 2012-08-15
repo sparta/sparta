@@ -41,7 +41,7 @@ help:
 	@cp -p *.cpp *.h Obj_$@
 	@cp MAKE/Makefile.$@ Obj_$@/Makefile
 	@cd Obj_$@; \
-	$(MAKE) $(MFLAGS) "OBJ = $(OBJ)" "INC = $(INC)" \
+	$(MAKE) $(MFLAGS) "OBJ = $(OBJ)" "INC = $(INC)" "SHFLAGS =" \
 	  "EXE = ../$(EXE)" ../$(EXE)
 	@if [ -d Obj_$@ ]; then cd Obj_$@; rm -f $(SRC) $(INC) Makefile*; fi
 
