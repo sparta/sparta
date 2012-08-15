@@ -1,10 +1,10 @@
-# LAMMPS library multiple-machine Makefile
+# SPARTA static library multiple-machine Makefile
 
 SHELL = /bin/sh
 
 # Definitions
 
-ROOT =	dsmc
+ROOT =	sparta
 EXE =	lib$(ROOT)_$@.a
 
 SRC =	comm.cpp create_box.cpp domain.cpp dsmc.cpp error.cpp finish.cpp grid.cpp input.cpp library.cpp  memory.cpp output.cpp particle.cpp random_mars.cpp random_park.cpp run.cpp surf.cpp timer.cpp universe.cpp update.cpp variable.cpp velocity.cpp 

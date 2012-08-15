@@ -17,8 +17,14 @@ help:
 	@echo 'make clean-all           delete all object files'
 	@echo 'make clean-machine       delete object files for one machine'
 	@echo 'make tar                 lmp_src.tar.gz of src dir and packages'
-	@echo 'make makelib             update Makefile.lib for library build'
-	@echo 'make makelist            update Makefile.list used by old makes'
+	@echo 'make makelib             create Makefile.lib for static library build'
+	@echo 'make makeshlib           create Makefile.shlib for shared library build'
+	@echo 'make makelist            create Makefile.list used by old makes'
+	@echo 'make -f Makefile.lib machine      build SPARTA as static library for machine'
+	@echo 'make -f Makefile.shlib machine    build SPARTA as shared library for machine'
+	@echo 'make -f Makefile.list machine     build SPARTA from explicit list of files'
+	@echo 'make stubs               build dummy MPI library in STUBS'
+	@echo 'make install-python      install SPARTA wrapper in Python'
 	@echo ''
 	@echo 'make machine             build SPARTA where machine is one of:'
 	@echo ''
@@ -66,12 +72,21 @@ tar:
 stubs:
 	@cd STUBS; make clean; make
 
-# Update Makefile.lib and Makefile.list
+# Create Makefile.lib, Makefile.shlib, and Makefile.list
 
 makelib:
 	@$(SHELL) Make.sh style
 	@$(SHELL) Make.sh Makefile.lib
 
+makeshlib:
+	@$(SHELL) Make.sh style
+	@$(SHELL) Make.sh Makefile.shlib
+
 makelist:
 	@$(SHELL) Make.sh style
 	@$(SHELL) Make.sh Makefile.list
+
+# install LAMMPS shared lib and Python wrapper for Python usage
+
+install-python:
+	@python ../python/install.py
