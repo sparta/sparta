@@ -5,7 +5,7 @@ SHELL = /bin/sh
 # Definitions
 
 ROOT =	sparta
-EXE =	lib$(ROOT)_$@.a
+EXE =	lib$(ROOT)_$@.so
 
 SRC =	collide.cpp collide_vss.cpp comm.cpp compute.cpp compute_boundary.cpp compute_grid.cpp compute_ke_molecule.cpp compute_sonine_grid.cpp compute_surf.cpp compute_temp.cpp create_box.cpp create_grid.cpp create_molecules.cpp domain.cpp dump.cpp dump_grid.cpp dump_image.cpp dump_molecule.cpp dump_surf.cpp error.cpp finish.cpp fix.cpp fix_ave_grid.cpp fix_ave_surf.cpp fix_ave_time.cpp fix_grid_check.cpp fix_inflow.cpp fix_print.cpp geometry.cpp grid.cpp image.cpp input.cpp irregular.cpp library.cpp  math_extra.cpp memory.cpp mixture.cpp modify.cpp output.cpp particle.cpp random_mars.cpp random_park.cpp read_surf.cpp run.cpp sparta.cpp stats.cpp surf.cpp surf_collide.cpp surf_collide_diffuse.cpp surf_collide_specular.cpp timer.cpp universe.cpp update.cpp variable.cpp write_restart.cpp 
 

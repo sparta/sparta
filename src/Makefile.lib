@@ -7,9 +7,9 @@ SHELL = /bin/sh
 ROOT =	sparta
 EXE =	lib$(ROOT)_$@.a
 
-SRC =	comm.cpp create_box.cpp domain.cpp dsmc.cpp error.cpp finish.cpp grid.cpp input.cpp library.cpp  memory.cpp output.cpp particle.cpp random_mars.cpp random_park.cpp run.cpp surf.cpp timer.cpp universe.cpp update.cpp variable.cpp velocity.cpp 
+SRC =	collide.cpp collide_vss.cpp comm.cpp compute.cpp compute_boundary.cpp compute_grid.cpp compute_ke_molecule.cpp compute_sonine_grid.cpp compute_surf.cpp compute_temp.cpp create_box.cpp create_grid.cpp create_molecules.cpp domain.cpp dump.cpp dump_grid.cpp dump_image.cpp dump_molecule.cpp dump_surf.cpp error.cpp finish.cpp fix.cpp fix_ave_grid.cpp fix_ave_surf.cpp fix_ave_time.cpp fix_grid_check.cpp fix_inflow.cpp fix_print.cpp geometry.cpp grid.cpp image.cpp input.cpp irregular.cpp library.cpp  math_extra.cpp memory.cpp mixture.cpp modify.cpp output.cpp particle.cpp random_mars.cpp random_park.cpp read_surf.cpp run.cpp sparta.cpp stats.cpp surf.cpp surf_collide.cpp surf_collide_diffuse.cpp surf_collide_specular.cpp timer.cpp universe.cpp update.cpp variable.cpp write_restart.cpp 
 
-INC =	comm.h create_box.h domain.h dsmc.h dsmctype.h error.h finish.h grid.h input.h library.h memory.h output.h particle.h pointers.h random_mars.h random_park.h run.h style_command.h surf.h timer.h universe.h update.h variable.h velocity.h version.h 
+INC =	collide.h collide_vss.h comm.h compute.h compute_boundary.h compute_grid.h compute_ke_molecule.h compute_sonine_grid.h compute_surf.h compute_temp.h create_box.h create_grid.h create_molecules.h domain.h dump.h dump_grid.h dump_image.h dump_molecule.h dump_surf.h error.h finish.h fix.h fix_ave_grid.h fix_ave_surf.h fix_ave_time.h fix_grid_check.h fix_inflow.h fix_print.h geometry.h grid.h image.h input.h irregular.h library.h math_const.h math_extra.h memory.h mixture.h modify.h output.h particle.h pointers.h random_mars.h random_park.h read_surf.h run.h sparta.h spatype.h stats.h style_collide.h style_command.h style_compute.h style_dump.h style_fix.h style_surf_collide.h surf.h surf_collide.h surf_collide_diffuse.h surf_collide_specular.h timer.h universe.h update.h variable.h version.h write_restart.h 
 
 OBJ =	$(SRC:.cpp=.o)
 
