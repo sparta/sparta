@@ -1,51 +1,67 @@
-#!/usr/bin/env python
+#!/usr/local/bin/python
 
-instructions = """copy SPARTA shared library src/libsparta.so and sparta.py to system dirs
-Syntax: python install.py [libdir] [pydir]
-    libdir = target dir for src/libsparta.so, default = /usr/local/lib, or the first
-        item in LD_LIBRARY_PATH if it doesn't exist.
-    pydir = target dir for sparta.py, default = Python site-packages, via distutils."""
+# copy SPARTA src/libsparta.so and sparta.py to system dirs
 
-import sys, shutil, os
+instructions = """
+Syntax: python install.py [-h] [libdir] [pydir]
+        libdir = target dir for src/libsparta.so, default = /usr/local/lib
+        pydir = target dir for sparta.py, default = Python site-packages dir
+"""
 
-if len(sys.argv) > 3:
+import sys,os,commands
+
+if (len(sys.argv) > 1 and sys.argv[1] == "-h") or len(sys.argv) > 3:
   print instructions
   sys.exit()
 
-# verify that our user-specified path is in LD_LIBRARY_PATH
-# since if not, the install won't work
+if len(sys.argv) >= 2: libdir = sys.argv[1]
+else: libdir = "/usr/local/lib"
+
+if len(sys.argv) == 3: pydir = sys.argv[2]
+else: pydir = ""
+
+# copy C lib to libdir if it exists
+# warn if not in LD_LIBRARY_PATH or LD_LIBRARY_PATH is undefined
+
+if not os.path.isdir(libdir):
+  print "ERROR: libdir %s does not exist" % libdir
+  sys.exit()
   
-libdir = "/usr/local/lib"
-if "LD_LIBRARY_PATH" in os.environ:
+if "LD_LIBRARY_PATH" not in os.environ:
+  print "WARNING: LD_LIBRARY_PATH undefined, cannot check libdir %s" % libdir
+else:
   libpaths = os.environ['LD_LIBRARY_PATH'].split(':')
-  if not libdir in libpaths: libdir = libpaths[0]
+  if libdir not in libpaths:
+    print "WARNING: libdir %s not in LD_LIBRARY_PATH" % libdir
 
-pydir = False
-try:
-  libdir = sys.argv[1]
-  pydir = sys.argv[2]
-except IndexError:
-  pass
+str = "cp ../src/libsparta.so %s" % libdir
+print str
+outstr = commands.getoutput(str)
+if len(outstr.strip()): print outstr
 
-# copy the C library into place
-
-shutil.copy('../src/libsparta.so', libdir)
-
-# if user-specified, copy sparta.py into directory
-# else invoke setup from Distutils to add to site-packages
+# copy sparta.py to pydir if it exists
+# if pydir not specified, install in site-packages via distutils setup()
 
 if pydir:
-  shutil.copy('../python/sparta.py', pydir)
+  if not os.path.isdir(pydir):
+    print "ERROR: pydir %s does not exist" % pydir
+    sys.exit()
+  str = "cp ../python/sparta.py %s" % pydir
+  print str
+  outstr = commands.getoutput(str)
+  if len(outstr.strip()): print outstr
   sys.exit()
+  
+print "installing sparta.py in Python site-packages dir"
+
+os.chdir('../python')                # in case invoked via make in src dir
 
 from distutils.core import setup
-
-os.chdir('../python')
-
+sys.argv = ["setup.py","install"]    # as if had run "python setup.py install"
 setup(name = "sparta",
       version = "15Aug12",
       author = "Steve Plimpton",
       author_email = "sjplimp@sandia.gov",
       url = "http://sparta.sandia.gov",
-      description = """SPARTA DSMC library""",
+      description = "SPARTA DSMC library",
       py_modules = ["sparta"])
