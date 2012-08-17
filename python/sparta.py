@@ -27,6 +27,8 @@ class sparta:
       if not name: self.lib = CDLL("libsparta.so")
       else: self.lib = CDLL("libsparta_%s.so" % name)
     except:
+      type,value,tb = sys.exc_info()
+      traceback.print_exception(type,value,tb)
       raise OSError,"Could not load SPARTA dynamic library"
 
     # create an instance of SPARTA
@@ -43,7 +45,7 @@ class sparta:
     else:
       self.spa = c_void_p()
       self.lib.sparta_open_no_mpi(0,None,byref(self.spa))
-      # could use just this if LAMMPS lib interface supported it
+      # could use just this if SPARTA lib interface supported it
       # self.lmp = self.lib.lammps_open_no_mpi(0,None)
 
   def __del__(self):
