@@ -145,7 +145,7 @@ void Update::set_units(const char *style)
 void Update::setup()
 {
   // initialize counters in case stats outputs them
-  // initialize running stats
+  // initialize running stats before each run
 
   ntouch_one = ncomm_one = 0;
   nboundary_one = nexit_one = 0;

@@ -49,6 +49,8 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   glist = NULL;
   gpair = NULL;
 
+  // initialize counters in case stats outputs them
+
   ncollide_one = nattempt_one = 0;
   ncollide_running = nattempt_running = 0;
 }
@@ -102,6 +104,10 @@ void Collide::init()
     }
     memory->create(gpair,ngroups*ngroups,3,"collide:gpair");
   }
+
+  // initialize running stats before each run
+
+  ncollide_running = nattempt_running = 0;
 }
 
 /* ----------------------------------------------------------------------
