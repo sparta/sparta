@@ -95,7 +95,6 @@ void Grid::init()
     for (int m = 0; m < nlocal; m++) {
       icell = mycells[m];
       cells[icell].inflag = SURFEXTERIOR;
-     
     }
   }
   
@@ -499,8 +498,14 @@ void Grid::surf2grid()
 
   // set per-cell surf count
 
-  for (icell = 0; icell < ncell; icell++)
+  for (icell = 0; icell < ncell; icell++) {
     cells[icell].nsurf = count[icell];
+    //int ix = icell % nx;
+    //int iy = (icell/nx) % ny;
+    //int iz = icell / (nx*ny);
+    //printf("AAA %d icell, %d %d %d ijk, %d count\n",
+    //      icell,ix+1,iy+1,iz+1,count[icell]);
+  }
 
   // clean up
     

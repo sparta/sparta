@@ -194,7 +194,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   sum += whichside(v0,norm,xhi,yhi,zhi);
   
   if (sum == 8 || sum == -8) return 0;
-	
+  
   // if any of 3 tri vertices are inside hex, intersection
   // use <= and >= so touching hex surface is same as inside it
 
@@ -527,7 +527,7 @@ int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
 /* ----------------------------------------------------------------------
    detect intersection between a directed line segment A and line segment B
    intersection is defined as any A pt (including end pts)
-     in common with any B pt (interior, vertex)
+     in common with any B pt (interior,vertex)
    one exception is if both A end pts are on infinite line B,
      then is NOT an intersection
    start,stop = end points of directed line segment A
