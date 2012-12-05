@@ -47,6 +47,13 @@ int line_quad_intersect(double *v0, double *v1, double *norm,
   ylo = lo[1];
   yhi = hi[1];
 
+  // if either of line vertices are inside quad, intersection
+  // use <= and >= so touching quad surface is same as inside it
+  // important to do this test first, b/c whichside test can be epsilon off
+
+  if (v0[0] >= xlo && v0[0] <= xhi && v0[1] >= ylo && v0[1] <= yhi) return 1;
+  if (v1[0] >= xlo && v1[0] <= xhi && v1[1] >= ylo && v1[1] <= yhi) return 1;
+
   // if all 4 quad pts are on same side of line, no intersection
 
   sum = whichside(v0,norm,xlo,ylo,0.0);
@@ -56,12 +63,6 @@ int line_quad_intersect(double *v0, double *v1, double *norm,
   
   if (sum == 4 || sum == -4) return 0;
 	
-  // if either of line vertices are inside quad, intersection
-  // use <= and >= so touching quad surface is same as inside it
-
-  if (v0[0] >= xlo && v0[0] <= xhi && v0[1] >= ylo && v0[1] <= yhi) return 1;
-  if (v1[0] >= xlo && v1[0] <= xhi && v1[1] >= ylo && v1[1] <= yhi) return 1;
-
   // test 4 quad edges for intersection with line
   // b,e = begin/end of quad edge line segment
 
@@ -182,6 +183,19 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   zlo = lo[2];
   zhi = hi[2];
 
+  // if any of 3 tri vertices are inside hex, intersection
+  // use <= and >= so touching hex surface is same as inside it
+  // important to do this test first, b/c whichside test can be epsilon off
+
+  if (v0[0] >= xlo && v0[0] <= xhi && v0[1] >= ylo && v0[1] <= yhi &&
+      v0[2] >= zlo && v0[2] <= zhi) return 1;
+
+  if (v1[0] >= xlo && v1[0] <= xhi && v1[1] >= ylo && v1[1] <= yhi &&
+      v1[2] >= zlo && v1[2] <= zhi) return 1;
+
+  if (v2[0] >= xlo && v2[0] <= xhi && v2[1] >= ylo && v2[1] <= yhi &&
+      v2[2] >= zlo && v2[2] <= zhi) return 1;
+  
   // if all 8 hex pts are on same side of tri plane, no intersection
 
   sum = whichside(v0,norm,xlo,ylo,zlo);
@@ -192,21 +206,8 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   sum += whichside(v0,norm,xhi,ylo,zhi);
   sum += whichside(v0,norm,xlo,yhi,zhi);
   sum += whichside(v0,norm,xhi,yhi,zhi);
-  
   if (sum == 8 || sum == -8) return 0;
   
-  // if any of 3 tri vertices are inside hex, intersection
-  // use <= and >= so touching hex surface is same as inside it
-
-  if (v0[0] >= xlo && v0[0] <= xhi && v0[1] >= ylo && v0[1] <= yhi &&
-      v0[2] >= zlo && v0[2] <= zhi) return 1;
-
-  if (v1[0] >= xlo && v1[0] <= xhi && v1[1] >= ylo && v1[1] <= yhi &&
-      v1[2] >= zlo && v1[2] <= zhi) return 1;
-
-  if (v2[0] >= xlo && v2[0] <= xhi && v2[1] >= ylo && v2[1] <= yhi &&
-      v2[2] >= zlo && v2[2] <= zhi) return 1;
-
   // test 12 hex edges for intersection with tri
   // b,e = begin/end of hex edge line segment
 
