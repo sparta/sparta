@@ -7,8 +7,8 @@ seed	    	    12345
 dimension   	    3
 
 boundary	    o o o
-create_box  	    0 3 0 3 0 2
-create_grid 	    3 3 2
+create_box  	    -1 1 -1 1 -1 1
+create_grid 	    10 10 10
 #create_grid 	    100 100 100
 
 global		    nrho 0.01
@@ -23,7 +23,8 @@ collide		    vss air ../data/all.vss
 #surf_collide	    1 specular
 surf_collide	    1 diffuse 300.0 0.9
 
-read_surf	    data.tri2 1
+read_surf	    data.sphere 1 
+
 #read_surf	    data.tri 1 trans 0 5 5 clip
 #read_surf	    data.cube 1 trans 5 5 0 scale 4 4 10 clip
 #read_surf	    data.cube 1 trans 5 5 5 scale 4 4 4 clip
