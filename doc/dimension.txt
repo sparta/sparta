@@ -10,18 +10,25 @@ dimension command :h3
 
 [Syntax:]
 
-dimension N :pre
+dimension N axi :pre
 
-N = 2 or 3 :ul
-
+N = 2 or 3
+axi = optional keyword for 2d axi-symmetry
+  
 [Examples:]
 
-dimension 2 :pre
+dimension 2
+dimension 3
+dimension 2 axi :pre
 
 [Description:]
 
 Set the dimensionality of the simulation.  By default SPARTA runs 3d
-simulations, but 2d simulations can also be specified.
+simulations, but 2d simulations can also be run.  A 2d simulation can
+also be axi-symmetric.
+
+Any other requirements on 2d axi-symmetry?  E.g. Y boxlo = 0.
+Y is non-periodic?
 
 [Restrictions:]
 

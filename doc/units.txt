@@ -57,7 +57,7 @@ For style {si} this is dt = 1.0 sec. :ul
 
 [Restrictions:]
 
-This command cannot be used after the simulation box is defined by the
+This command must be used before the simulation box is defined by a
 "create_box"_create_box.html command.
 
 [Related commands:] none
