@@ -15,7 +15,7 @@
 </P>
 <PRE>global keyword values 
 </PRE>
-<UL><LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> 
+<UL><LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -24,7 +24,9 @@
   <I>vstream</I> values = Vx Vy Vz
     Vx,Vy,Vz = streaming velocity of background gas (velocity units)
   <I>temp</I> values = thermal
-    thermal = temperature of background gas (temperature units) 
+    thermal = temperature of background gas (temperature units)
+  <I>gravity</I> values = acc
+    acc = acceleration due to gravity (acceleration units) 
 </PRE>
 
 </UL>
@@ -56,6 +58,11 @@ gas.
 This is a Gaussian velocity distribution superposed
 on top of the streaming velocity.
 </P>
+<P>The <I>gravity</I> keyword sets an acceleration term which is included in
+the motion of particles.  A positive value acts in the downward
+direction, i.e. -z for 3d, -y for 2d.  If the value is set to 0.0, no
+acceleration term is included, which is the default.
+</P>
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
@@ -65,6 +72,6 @@ on top of the streaming velocity.
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 300.
+0.0, temp = 300, gravity = 0.0.
 </P>
 </HTML>

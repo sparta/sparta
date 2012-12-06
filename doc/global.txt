@@ -12,7 +12,7 @@ global command :h3
 
 global keyword values :pre
 
-keyword = {fnum} or {nrho} or {vstream} or {temp} :ulb,l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} :ulb,l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -20,7 +20,9 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} :ulb,l
   {vstream} values = Vx Vy Vz
     Vx,Vy,Vz = streaming velocity of background gas (velocity units)
   {temp} values = thermal
-    thermal = temperature of background gas (temperature units) :pre
+    thermal = temperature of background gas (temperature units)
+  {gravity} values = acc
+    acc = acceleration due to gravity (acceleration units) :pre
 :ule
 
 [Examples:]
@@ -51,6 +53,11 @@ The {temp} keyword sets the thermal temperature of the background gas.
 This is a Gaussian velocity distribution superposed
 on top of the streaming velocity.
 
+The {gravity} keyword sets an acceleration term which is included in
+the motion of particles.  A positive value acts in the downward
+direction, i.e. -z for 3d, -y for 2d.  If the value is set to 0.0, no
+acceleration term is included, which is the default.
+
 [Restrictions:] none
 
 [Related commands:]
@@ -60,4 +67,4 @@ on top of the streaming velocity.
 [Default:]
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 300.
+0.0, temp = 300, gravity = 0.0.

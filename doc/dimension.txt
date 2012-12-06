@@ -27,8 +27,10 @@ Set the dimensionality of the simulation.  By default SPARTA runs 3d
 simulations, but 2d simulations can also be run.  A 2d simulation can
 also be axi-symmetric.
 
-Any other requirements on 2d axi-symmetry?  E.g. Y boxlo = 0.
-Y is non-periodic?
+NOTE: Axi-symmetry is not yet fully implemented in the code.
+
+Any other input script requirements on 2d axi-symmetry?  E.g. Y boxlo
+= 0.  Y must be non-periodic?
 
 [Restrictions:]
 
