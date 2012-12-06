@@ -36,7 +36,7 @@ class Update : protected Pointers {
   double nrho;           // number density of background gas
   double vstream[3];     // streaming velocity of background gas
   double temp_thermal;   // thermal temperature of background gas
-  double gravity;        // acceleration of gravity, 0.0 by default
+  double gravity[3];     // acceleration vector of gravity
 
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
@@ -117,15 +117,22 @@ class Update : protected Pointers {
   };
 
   inline void gravity2d(double dt, double *x, double *v) {
-    x[1] -= 0.5*dt*dt*gravity;
-    v[1] -= dt*gravity;
+    double dtsq = 0.5*dt*dt;
+    x[0] += dtsq*gravity[0];
+    x[1] += dtsq*gravity[1];
+    v[0] += dt*gravity[0];
+    v[1] += dt*gravity[1];
   };
 
   inline void gravity3d(double dt, double *x, double *v) {
-    x[2] -= 0.5*dt*dt*gravity;
-    v[2] -= dt*gravity;
+    double dtsq = 0.5*dt*dt;
+    x[0] += dtsq*gravity[0];
+    x[1] += dtsq*gravity[1];
+    x[2] += dtsq*gravity[2];
+    v[0] += dt*gravity[0];
+    v[1] += dt*gravity[1];
+    v[2] += dt*gravity[2];
   };
-
 };
 
 }

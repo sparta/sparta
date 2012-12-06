@@ -30,6 +30,7 @@
 #include "surf_collide.h"
 #include "output.h"
 #include "geometry.h"
+#include "math_extra.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "timer.h"
@@ -63,7 +64,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   nrho = 1.0;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
   temp_thermal = 300.0;
-  gravity = 0.0;
+  gravity[0] = gravity[1] = gravity[2] = 0.0;
 
   maxmigrate = 0;
   mlist = NULL;
@@ -111,13 +112,18 @@ void Update::init()
     else move = &Update::move2d;
   }
 
+  // check gravity vector
+
+  if (domain->dimension == 2 && gravity[2] != 0.0)
+    error->all(FLERR,"Gravity in z not allowed for 2d");
+
   // moveperturb method is set if particle motion is perturbed
 
   moveperturb = NULL;
   if (domain->axisymmetry) moveperturb = &Update::axisymmetry;
-  if (gravity != 0.0) {
-    if (domain->axisymmetry) 
-      error->all(FLERR,"Gravity is incompatible with axi-symmetry");
+  if (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0) {
+    if (domain->axisymmetry && gravity[1] != 0.0) 
+      error->all(FLERR,"Gravity in y not allowed for axi-symmetry");
     if (domain->dimension == 3) moveperturb = &Update::gravity3d;
     if (domain->dimension == 2) moveperturb = &Update::gravity2d;
   }
@@ -297,7 +303,7 @@ void Update::move3d_surface()
       xnew[0] = x[0] + dtfrac*v[0];
       xnew[1] = x[1] + dtfrac*v[1];
       xnew[2] = x[2] + dtfrac*v[2];
-      if (perturbflag) (this->*moveperturb)(dt,xnew,v);
+      if (perturbflag) (this->*moveperturb)(dtfrac,xnew,v);
     }
 
     icell = particles[i].icell;
@@ -624,7 +630,7 @@ void Update::move3d()
       xnew[0] = x[0] + dtfrac*v[0];
       xnew[1] = x[1] + dtfrac*v[1];
       xnew[2] = x[2] + dtfrac*v[2];
-      if (perturbflag) (this->*moveperturb)(dt,xnew,v);
+      if (perturbflag) (this->*moveperturb)(dtfrac,xnew,v);
     }
 
     icell = particles[i].icell;
@@ -832,7 +838,7 @@ void Update::move2d_surface()
       dtfrac = dt*random->uniform();
       xnew[0] = x[0] + dtfrac*v[0];
       xnew[1] = x[1] + dtfrac*v[1];
-      if (perturbflag) (this->*moveperturb)(dt,xnew,v);
+      if (perturbflag) (this->*moveperturb)(dtfrac,xnew,v);
     }
 
     icell = particles[i].icell;
@@ -1128,7 +1134,7 @@ void Update::move2d()
       dtfrac = dt*random->uniform();
       xnew[0] = x[0] + dtfrac*v[0];
       xnew[1] = x[1] + dtfrac*v[1];
-      if (perturbflag) (this->*moveperturb)(dt,xnew,v);
+      if (perturbflag) (this->*moveperturb)(dtfrac,xnew,v);
     }
 
     icell = particles[i].icell;
@@ -1340,7 +1346,16 @@ void Update::global(int narg, char **arg)
     temp_thermal = atof(arg[1]);
     if (temp_thermal <= 0.0) error->all(FLERR,"Illegal global command");
   } else if (strcmp(arg[0],"gravity") == 0) {
-    if (narg != 2) error->all(FLERR,"Illegal global command");
-    gravity = atof(arg[1]);
+    if (narg != 5) error->all(FLERR,"Illegal global command");
+    double gmag = atof(arg[1]);
+    gravity[0] = atof(arg[2]);
+    gravity[1] = atof(arg[3]);
+    gravity[2] = atof(arg[4]);
+    if (gmag < 0.0) error->all(FLERR,"Illegal global command");
+    if (gmag > 0.0 && 
+        gravity[0] == 0.0 && gravity[1] == 0.0 && gravity[2] == 0.0)
+      error->all(FLERR,"Illegal global command");
+    if (gmag > 0.0) MathExtra::snorm3(gmag,gravity);
+    else gravity[0] = gravity[1] = gravity[2] = 0.0;
   } else error->all(FLERR,"Illegal global command");
 }
