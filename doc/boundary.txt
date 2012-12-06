@@ -12,10 +12,11 @@ boundary command :h3
 
 boundary x y z :pre
 
-x,y,z = {o} or {p} or {r} or {s}, one or two letters :ulb,l
+x,y,z = {o} or {p} or {r} or {a} or {s}, one or two letters :ulb,l
   {o} is outflow
   {p} is periodic
   {r} is specular reflection
+  {a} is axi-symmetric
   {s} is treat boundary as a surface :pre
 :ule
 
@@ -48,6 +49,13 @@ Style {r} means a specularly reflecting boundary.  Particles that
 cross this boundary have their velocity reversed so as to re-enter the
 box.  The new velocity is used to advect the particle for the reminder
 of the timestep following the collision.
+
+Style {a} means an axi-symmetric boundary, which can only be used for
+the lower y-dimension boundary.  This is only a valid setting for 2d
+simulations.  The simulation box must also have a value of 0.0 for
+{ylo}; see the "create_box"_create_box.html command.  This effectively
+means that the x-axis is the axis of symmetry.  The upper y-dimension
+boundary cannot be periodic.
 
 Style {s} means the boundary is treated as a surface which allows the
 particle-surface interaction to be treated in a variety of ways via

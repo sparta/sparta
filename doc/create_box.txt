@@ -30,7 +30,11 @@ For a 2d simulation, as specifed by the "dimension"_dimension.html
 command, {zlo} < 0.0 and {zhi} > 0.0 is required.  This is so that the
 z dimensions straddle 0.0.
 
-[Restrictions:] none
+[Restrictions:]
+
+For 2d axi-symmetric simulations, as set by the
+"dimension"_dimension.html and "boundary"_boundary.html commands, the
+ylo setting must be 0.0.
 
 [Related commands:] none
 

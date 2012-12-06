@@ -15,11 +15,12 @@
 </P>
 <PRE>boundary x y z 
 </PRE>
-<UL><LI>x,y,z = <I>o</I> or <I>p</I> or <I>r</I> or <I>s</I>, one or two letters 
+<UL><LI>x,y,z = <I>o</I> or <I>p</I> or <I>r</I> or <I>a</I> or <I>s</I>, one or two letters 
 
 <PRE>  <I>o</I> is outflow
   <I>p</I> is periodic
   <I>r</I> is specular reflection
+  <I>a</I> is axi-symmetric
   <I>s</I> is treat boundary as a surface 
 </PRE>
 
@@ -53,6 +54,13 @@ applied to both faces of a dimension.
 cross this boundary have their velocity reversed so as to re-enter the
 box.  The new velocity is used to advect the particle for the reminder
 of the timestep following the collision.
+</P>
+<P>Style <I>a</I> means an axi-symmetric boundary, which can only be used for
+the lower y-dimension boundary.  This is only a valid setting for 2d
+simulations.  The simulation box must also have a value of 0.0 for
+<I>ylo</I>; see the <A HREF = "create_box.html">create_box</A> command.  This effectively
+means that the x-axis is the axis of symmetry.  The upper y-dimension
+boundary cannot be periodic.
 </P>
 <P>Style <I>s</I> means the boundary is treated as a surface which allows the
 particle-surface interaction to be treated in a variety of ways via

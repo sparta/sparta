@@ -36,6 +36,7 @@ volume = cm^3
 time = seconds
 energy = ergs
 velocity = centimeters/second
+acceleration = centimeters/second^2
 temperature = degrees K :ul
 
 For style {si}, these are the units:
@@ -47,6 +48,7 @@ volume = m^3
 time = seconds
 energy = Joules
 velocity = meters/second
+acceleration = meters/second^2
 temperature = degrees K :ul
 
 The units command also sets the timestep size for each style:
