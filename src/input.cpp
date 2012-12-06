@@ -818,6 +818,8 @@ void Input::variable_command()
 
 void Input::boundary()
 {
+  if (domain->box_exist) 
+    error->all(FLERR,"Boundary command after simulation box is defined");
   domain->set_boundary(narg,arg);
 }
 
@@ -860,12 +862,9 @@ void Input::compute()
 
 void Input::dimension()
 {
-  if (narg != 1) error->all(FLERR,"Illegal dimension command");
   if (domain->box_exist) 
     error->all(FLERR,"Dimension command after simulation box is defined");
-  domain->dimension = atoi(arg[0]);
-  if (domain->dimension != 2 && domain->dimension != 3)
-    error->all(FLERR,"Illegal dimension command");
+  domain->set_dimension(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */
