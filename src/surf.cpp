@@ -35,6 +35,7 @@ enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // same as Update
 Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
   surf_exist = 0;
+  surf_changed = 0;
 
   npoint = nline = ntri = 0;
   pts = NULL;
@@ -42,7 +43,6 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   tris = NULL;
 
   nlocal = 0;
-  ids = NULL;
   mysurfs = NULL;
 
   nsc = maxsc = 0;
@@ -57,7 +57,6 @@ Surf::~Surf()
   memory->sfree(lines);
   memory->sfree(tris);
 
-  memory->sfree(ids);
   memory->sfree(mysurfs);
 
   for (int i = 0; i < nsc; i++) delete sc[i];
@@ -95,13 +94,6 @@ void Surf::setup_surf()
   int nprocs = comm->nprocs;
 
   int n = nelement();
-
-  // set global IDs of all surf elements
-
-  memory->destroy(ids);
-  memory->create(ids,n,"surf:ids");
-  
-  for (int i = 0; i < n; i++) ids[i] = i+1;
 
   // assign every Pth surf element to this proc
 
@@ -164,6 +156,207 @@ void Surf::compute_tri_normal(int nstart, int n)
 
     m++;
   }
+}
+
+/* ----------------------------------------------------------------------
+   return coords of a corner point in a 2d quad
+   icorner pts 1 to 4 are ordered by x, then by y
+------------------------------------------------------------------------- */
+
+void Surf::quad_corner_point(int icorner, double *lo, double *hi, double *pt)
+{
+  if (icorner % 2) pt[0] = hi[0];
+  else pt[0] = lo[0];
+  if (icorner / 2) pt[1] = hi[1];
+  else pt[1] = lo[1];
+  pt[2] = 0.0;
+}
+
+/* ----------------------------------------------------------------------
+   return coords of a corner point in a 3d hex
+   icorner pts 1 to 8 are ordered by x, then by y, then by z
+------------------------------------------------------------------------- */
+
+void Surf::hex_corner_point(int icorner, double *lo, double *hi, double *pt)
+{
+  if (icorner % 2) pt[0] = hi[0];
+  else pt[0] = lo[0];
+  if ((icorner/2) % 2) pt[1] = hi[1];
+  else pt[1] = lo[1];
+  if (icorner / 4) pt[2] = hi[2];
+  else pt[2] = lo[2];
+}
+
+/* ----------------------------------------------------------------------
+   return length of line M
+------------------------------------------------------------------------- */
+
+double Surf::line_size(int m)
+{
+  double delta[3];
+  MathExtra::sub3(pts[lines[m].p2].x,pts[lines[m].p1].x,delta);
+  return MathExtra::len3(delta);
+}
+
+/* ----------------------------------------------------------------------
+   compute side length and area of a triangle
+   return len = length of shortest edge of triangle M
+   return area = area of triangle M
+------------------------------------------------------------------------- */
+
+double Surf::tri_size(int m, double &len)
+{
+  double delta12[3],delta13[3],delta23[3],cross[3];
+
+  MathExtra::sub3(pts[tris[m].p2].x,pts[tris[m].p1].x,delta12);
+  MathExtra::sub3(pts[tris[m].p3].x,pts[tris[m].p1].x,delta13);
+  MathExtra::sub3(pts[tris[m].p3].x,pts[tris[m].p2].x,delta23);
+  len = MIN(MathExtra::len3(delta12),MathExtra::len3(delta13));
+  len = MIN(len,MathExtra::len3(delta23));
+
+  MathExtra::cross3(delta12,delta13,cross);
+  double area = 0.5 * MathExtra::len3(cross);
+  return area;
+}
+
+/* ----------------------------------------------------------------------
+   add a surface collision model
+------------------------------------------------------------------------- */
+
+void Surf::add_collide(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal surf_collide command");
+
+  // error check
+
+  for (int i = 0; i < nsc; i++)
+    if (strcmp(arg[0],sc[i]->id) == 0)
+      error->all(FLERR,"Reuse of surf_collide ID");
+
+  // extend SurfCollide list if necessary
+
+  if (nsc == maxsc) {
+    maxsc += DELTA;
+    sc = (SurfCollide **)
+      memory->srealloc(sc,maxsc*sizeof(SurfCollide *),"surf:sc");
+  }
+
+  // check if ID already exists
+
+  if (0) return;
+
+#define SURF_COLLIDE_CLASS
+#define SurfCollideStyle(key,Class) \
+  else if (strcmp(arg[1],#key) == 0) \
+    sc[nsc] = new Class(sparta,narg,arg);
+#include "style_surf_collide.h"
+#undef SurfCollideStyle
+#undef SURF_COLLIDE_CLASS
+
+  else error->all(FLERR,"Invalid surf_collide style");
+
+  nsc++;
+}
+
+/* ----------------------------------------------------------------------
+   find a surface collide model by ID
+   return index of surf collide model or -1 if not found
+------------------------------------------------------------------------- */
+
+int Surf::find_collide(const char *id)
+{
+  int isc;
+  for (isc = 0; isc < nsc; isc++)
+    if (strcmp(id,sc[isc]->id) == 0) break;
+  if (isc == nsc) return -1;
+  return isc;
+}
+
+/* ----------------------------------------------------------------------
+   brute force MPI Allreduce comm of local tallies across all procs
+   input values
+   for vector and array
+   return out = summed tallies for surfs I own
+------------------------------------------------------------------------- */
+
+void Surf::collate_vec(int nrow, int *l2g, double *in, int istride,
+                       double *out, int ostride, int sumflag)
+{
+  int i,j,m,n;
+  double *vec1,*vec2;
+
+  int nglobal;
+  if (domain->dimension == 2) nglobal = nline;
+  else nglobal = ntri;
+  if (nglobal == 0) return;
+
+  double *one,*all;
+  memory->create(one,nglobal,"surf:one");
+  memory->create(all,nglobal,"surf:all");
+
+  for (i = 0; i < nglobal; i++) one[i] = 0.0;
+
+  m = 0;
+  for (i = 0; i < nrow; i++) {
+    one[l2g[i]] = in[m];
+    m += istride;
+  }
+
+  MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
+
+  if (sumflag) {
+    m = 0;
+    for (i = 0; i < nlocal; i++) {
+      out[m] += all[mysurfs[i]];
+      m += ostride;
+    }
+  } else {
+    m = 0;
+    for (i = 0; i < nlocal; i++) {
+      out[m] = all[mysurfs[i]];
+      m += ostride;
+    }
+  }
+
+  memory->destroy(one);
+  memory->destroy(all);
+}
+
+void Surf::collate_array(int nrow, int ncol, int *l2g,
+                         double **in, double **out)
+{
+  int i,j,m,n;
+  double *vec1,*vec2;
+
+  int nglobal;
+  if (domain->dimension == 2) nglobal = nline;
+  else nglobal = ntri;
+  if (nglobal == 0) return;
+
+  double **one,**all;
+  memory->create(one,nglobal,ncol,"surf:one");
+  memory->create(all,nglobal,ncol,"surf:all");
+
+  for (i = 0; i < nglobal; i++)
+    for (j = 0; j < ncol; j++)
+      one[i][j] = 0.0;
+
+  for (i = 0; i < nrow; i++) {
+    m = l2g[i];
+    for (j = 0; j < ncol; j++) 
+      one[m][j] = in[i][j];
+  }
+
+  MPI_Allreduce(&one[0][0],&all[0][0],nglobal*ncol,MPI_DOUBLE,MPI_SUM,world);
+
+  for (i = 0; i < nlocal; i++) {
+    m = mysurfs[i];
+    for (j = 0; j < ncol; j++) 
+      out[i][j] += all[m][j];
+  }
+  
+  memory->destroy(one);
+  memory->destroy(all);
 }
 
 /* ----------------------------------------------------------------------
@@ -524,206 +717,6 @@ int Surf::one_cell_corner_tri(int ic, int n, int *list,
   // no collisions at all, return unmarked
 
   return -1;
-}
-
-/* ----------------------------------------------------------------------
-   return coords of a corner point in a 2d quad
-   icorner pts 1 to 4 are ordered by x, then by y
-------------------------------------------------------------------------- */
-
-void Surf::quad_corner_point(int icorner, double *lo, double *hi, double *pt)
-{
-  if (icorner % 2) pt[0] = hi[0];
-  else pt[0] = lo[0];
-  if (icorner / 2) pt[1] = hi[1];
-  else pt[1] = lo[1];
-  pt[2] = 0.0;
-}
-
-/* ----------------------------------------------------------------------
-   return coords of a corner point in a 3d hex
-   icorner pts 1 to 8 are ordered by x, then by y, then by z
-------------------------------------------------------------------------- */
-
-void Surf::hex_corner_point(int icorner, double *lo, double *hi, double *pt)
-{
-  if (icorner % 2) pt[0] = hi[0];
-  else pt[0] = lo[0];
-  if ((icorner/2) % 2) pt[1] = hi[1];
-  else pt[1] = lo[1];
-  if (icorner / 4) pt[2] = hi[2];
-  else pt[2] = lo[2];
-}
-
-/* ----------------------------------------------------------------------
-   return length of line M
-------------------------------------------------------------------------- */
-
-double Surf::line_size(int m)
-{
-  double delta[3];
-  MathExtra::sub3(pts[lines[m].p2].x,pts[lines[m].p1].x,delta);
-  return MathExtra::len3(delta);
-}
-
-/* ----------------------------------------------------------------------
-   return len = length of shortest edge of triangle M
-   return area = area of triangle M
-------------------------------------------------------------------------- */
-
-double Surf::tri_size(int m, double &len)
-{
-  double delta12[3],delta13[3],delta23[3],cross[3];
-
-  MathExtra::sub3(pts[tris[m].p2].x,pts[tris[m].p1].x,delta12);
-  MathExtra::sub3(pts[tris[m].p3].x,pts[tris[m].p1].x,delta13);
-  MathExtra::sub3(pts[tris[m].p3].x,pts[tris[m].p2].x,delta23);
-  len = MIN(MathExtra::len3(delta12),MathExtra::len3(delta13));
-  len = MIN(len,MathExtra::len3(delta23));
-
-  MathExtra::cross3(delta12,delta13,cross);
-  double area = 0.5 * MathExtra::len3(cross);
-  return area;
-}
-
-/* ----------------------------------------------------------------------
-   add a surface collision model
-------------------------------------------------------------------------- */
-
-void Surf::add_collide(int narg, char **arg)
-{
-  if (narg < 2) error->all(FLERR,"Illegal surf_collide command");
-
-  // error check
-
-  for (int i = 0; i < nsc; i++)
-    if (strcmp(arg[0],sc[i]->id) == 0)
-      error->all(FLERR,"Reuse of surf_collide ID");
-
-  // extend SurfCollide list if necessary
-
-  if (nsc == maxsc) {
-    maxsc += DELTA;
-    sc = (SurfCollide **)
-      memory->srealloc(sc,maxsc*sizeof(SurfCollide *),"surf:sc");
-  }
-
-  // check if ID already exists
-
-  if (0) return;
-
-#define SURF_COLLIDE_CLASS
-#define SurfCollideStyle(key,Class) \
-  else if (strcmp(arg[1],#key) == 0) \
-    sc[nsc] = new Class(sparta,narg,arg);
-#include "style_surf_collide.h"
-#undef SurfCollideStyle
-#undef SURF_COLLIDE_CLASS
-
-  else error->all(FLERR,"Invalid surf_collide style");
-
-  nsc++;
-}
-
-/* ----------------------------------------------------------------------
-   find a surface collide model by ID
-   return index of surf collide model or -1 if not found
-------------------------------------------------------------------------- */
-
-int Surf::find_collide(const char *id)
-{
-  int isc;
-  for (isc = 0; isc < nsc; isc++)
-    if (strcmp(id,sc[isc]->id) == 0) break;
-  if (isc == nsc) return -1;
-  return isc;
-}
-
-/* ----------------------------------------------------------------------
-   brute force MPI Allreduce comm of local tallies across all procs
-   input values
-   for vector and array
-   return out = summed tallies for surfs I own
-------------------------------------------------------------------------- */
-
-void Surf::collate_vec(int nrow, int *l2g, double *in, int istride,
-                       double *out, int ostride, int sumflag)
-{
-  int i,j,m,n;
-  double *vec1,*vec2;
-
-  int nglobal;
-  if (domain->dimension == 2) nglobal = nline;
-  else nglobal = ntri;
-  if (nglobal == 0) return;
-
-  double *one,*all;
-  memory->create(one,nglobal,"surf:one");
-  memory->create(all,nglobal,"surf:all");
-
-  for (i = 0; i < nglobal; i++) one[i] = 0.0;
-
-  m = 0;
-  for (i = 0; i < nrow; i++) {
-    one[l2g[i]] = in[m];
-    m += istride;
-  }
-
-  MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
-
-  if (sumflag) {
-    m = 0;
-    for (i = 0; i < nlocal; i++) {
-      out[m] += all[mysurfs[i]];
-      m += ostride;
-    }
-  } else {
-    m = 0;
-    for (i = 0; i < nlocal; i++) {
-      out[m] = all[mysurfs[i]];
-      m += ostride;
-    }
-  }
-
-  memory->destroy(one);
-  memory->destroy(all);
-}
-
-void Surf::collate_array(int nrow, int ncol, int *l2g,
-                         double **in, double **out)
-{
-  int i,j,m,n;
-  double *vec1,*vec2;
-
-  int nglobal;
-  if (domain->dimension == 2) nglobal = nline;
-  else nglobal = ntri;
-  if (nglobal == 0) return;
-
-  double **one,**all;
-  memory->create(one,nglobal,ncol,"surf:one");
-  memory->create(all,nglobal,ncol,"surf:all");
-
-  for (i = 0; i < nglobal; i++)
-    for (j = 0; j < ncol; j++)
-      one[i][j] = 0.0;
-
-  for (i = 0; i < nrow; i++) {
-    m = l2g[i];
-    for (j = 0; j < ncol; j++) 
-      one[m][j] = in[i][j];
-  }
-
-  MPI_Allreduce(&one[0][0],&all[0][0],nglobal*ncol,MPI_DOUBLE,MPI_SUM,world);
-
-  for (i = 0; i < nlocal; i++) {
-    m = mysurfs[i];
-    for (j = 0; j < ncol; j++) 
-      out[i][j] += all[m][j];
-  }
-  
-  memory->destroy(one);
-  memory->destroy(all);
 }
 
 /* ---------------------------------------------------------------------- */

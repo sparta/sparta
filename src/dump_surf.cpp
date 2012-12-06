@@ -704,11 +704,10 @@ void DumpSurf::pack_variable(int n)
 
 void DumpSurf::pack_id(int n)
 {
-  int *ids = surf->ids;
   int *mysurfs = surf->mysurfs;
 
   for (int i = 0; i < nslocal; i++) {
-    buf[n] = ids[mysurfs[i]];
+    buf[n] = mysurfs[i] + 1;
     n += size_one;
   }
 }
