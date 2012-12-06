@@ -43,23 +43,31 @@ species and velocity, are determined by the mixture attributes, as
 specied by the <I>mix-ID</I>.  See the <A HREF = "mixture.html">mixture</A> command for
 more details.
 </P>
-<P>Unless the <I>n</I> keyword is used with a <I>Np</I> value > 0, the number of
-molecules created is a function of the global <I>Fnum</I> value, the
+<P>If the <I>n</I> keyword is used with a <I>Np</I> value of 0, then <I>Np</I> is
+calculated by SPARTA as a function of the global <I>Fnum</I> value, the
 mixture number density, and the volume of the simulation domain.  The
 <I>Fnum</I> value is set by the <A HREF = "global.html">global fnum</A> command.  The
 mixture <I>nrho</I> is set by the <A HREF = "mixture.html">mixture</A> command.  The
 volume of the simulation is set by the <A HREF = "create_box.html">create_box</A>
 command.
 </P>
-<P>Based on these settings, each grid cell will have a target number of
-molecules <I>M</I> to insert.  If <I>M</I> has a fractional value, e.g. 12.5,
-then 12 molecules will be inserted, and a 13th depending on the
-outcome of a random number generation.  Each molecule will be inserted
-at a random location within the grid cell.  The molecule species will
-be chosen randomly in accord with the <I>frac</I> settings of the
-collection of species in the mixture, as set by the
-<A HREF = "mixture.html">mixture</A> command.  The velocity of the molecule will be
-set to the sum of the streaming velocity of the mixture and a thermal
+<P>If the <I>n</I> keyword is used with a non-zero <I>Np</I> value, then exactly
+<I>Np</I> particles will be created, which can be useful for debugging
+or benchmarking purposes.
+</P>
+<P>Based on the value of <I>Np</I>, each grid cell will have a target number
+of molecules <I>M</I> to insert, which is a function of the cell's volume
+as compared to the total system volume.  If <I>M</I> has a fractional
+value, e.g. 12.5, then 12 molecules will be inserted, and a 13th
+depending on the outcome of a random number generation.  As grid cells
+are looped over, the remainder fraction is accumulated, so that
+exactly <I>Np</I> particles are created across all the processors.
+</P>
+<P>Each molecule is inserted at a random location within the grid cell.
+The molecule species is chosen randomly in accord with the <I>frac</I>
+settings of the collection of species in the mixture, as set by the
+<A HREF = "mixture.html">mixture</A> command.  The velocity of the molecule is set
+to the sum of the streaming velocity of the mixture and a thermal
 velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
 <A HREF = "mixture.html">mixture</A> command.
@@ -78,7 +86,7 @@ with the specified velocity.  In this case the <I>mix-ID</I> is ignored.
 </P>
 <HR>
 
-<P>NOTE: the <I>loop</I> keyword is not yet implemented.
+<P>NOTE: the <I>loop</I> keyword, discussed here, is not yet implemented.
 </P>
 <P>The <I>loop</I> keyword only applies when the <I>n</I> keyword is also used, and
 controls how the molecules are generated in parallel.
@@ -103,6 +111,10 @@ set of created molecules should be the same as with the <I>all</I> setting.
 </P>
 <P>A non-zero <I>Np</I> value for the <I>n</I> keyword cannot be used together with
 the <I>single</I> keyword.
+</P>
+<P>Particles are only inserted in grid cells which are entirely external
+to surfaces.  I.e. grid cells cut by surfaces are not eligible for
+insertion.
 </P>
 <P><B>Related commands:</B>
 </P>

@@ -36,23 +36,31 @@ species and velocity, are determined by the mixture attributes, as
 specied by the {mix-ID}.  See the "mixture"_mixture.html command for
 more details.
 
-Unless the {n} keyword is used with a {Np} value > 0, the number of
-molecules created is a function of the global {Fnum} value, the
+If the {n} keyword is used with a {Np} value of 0, then {Np} is
+calculated by SPARTA as a function of the global {Fnum} value, the
 mixture number density, and the volume of the simulation domain.  The
 {Fnum} value is set by the "global fnum"_global.html command.  The
 mixture {nrho} is set by the "mixture"_mixture.html command.  The
 volume of the simulation is set by the "create_box"_create_box.html
 command.
 
-Based on these settings, each grid cell will have a target number of
-molecules {M} to insert.  If {M} has a fractional value, e.g. 12.5,
-then 12 molecules will be inserted, and a 13th depending on the
-outcome of a random number generation.  Each molecule will be inserted
-at a random location within the grid cell.  The molecule species will
-be chosen randomly in accord with the {frac} settings of the
-collection of species in the mixture, as set by the
-"mixture"_mixture.html command.  The velocity of the molecule will be
-set to the sum of the streaming velocity of the mixture and a thermal
+If the {n} keyword is used with a non-zero {Np} value, then exactly
+{Np} particles will be created, which can be useful for debugging
+or benchmarking purposes.
+
+Based on the value of {Np}, each grid cell will have a target number
+of molecules {M} to insert, which is a function of the cell's volume
+as compared to the total system volume.  If {M} has a fractional
+value, e.g. 12.5, then 12 molecules will be inserted, and a 13th
+depending on the outcome of a random number generation.  As grid cells
+are looped over, the remainder fraction is accumulated, so that
+exactly {Np} particles are created across all the processors.
+
+Each molecule is inserted at a random location within the grid cell.
+The molecule species is chosen randomly in accord with the {frac}
+settings of the collection of species in the mixture, as set by the
+"mixture"_mixture.html command.  The velocity of the molecule is set
+to the sum of the streaming velocity of the mixture and a thermal
 velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
 "mixture"_mixture.html command.
@@ -71,7 +79,7 @@ with the specified velocity.  In this case the {mix-ID} is ignored.
 
 :line
 
-NOTE: the {loop} keyword is not yet implemented.
+NOTE: the {loop} keyword, discussed here, is not yet implemented.
 
 The {loop} keyword only applies when the {n} keyword is also used, and
 controls how the molecules are generated in parallel.
@@ -96,6 +104,10 @@ set of created molecules should be the same as with the {all} setting.
 
 A non-zero {Np} value for the {n} keyword cannot be used together with
 the {single} keyword.
+
+Particles are only inserted in grid cells which are entirely external
+to surfaces.  I.e. grid cells cut by surfaces are not eligible for
+insertion.
 
 [Related commands:]
 

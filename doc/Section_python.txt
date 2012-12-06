@@ -8,6 +8,9 @@
 
 11. Python interface to SPARTA :h3
 
+NOTE: this needs to be updated with the new, simpler mode
+of Python wrapping.
+
 The SPARTA distribution includes some Python code in its python
 directory which wraps the library interface to SPARTA.  This makes it
 is possible to run SPARTA, invoke SPARTA commands or give it an input
