@@ -101,6 +101,8 @@ Update::~Update()
 
 void Update::init()
 {
+  // choose the appropriate move method
+
   if (domain->dimension == 3) {
     if (surf->surf_exist) move = &Update::move3d_surface;
     else move = &Update::move3d;
@@ -109,7 +111,9 @@ void Update::init()
     else move = &Update::move2d;
   }
 
-  perturbflag = 0;
+  // moveperturb method is set if particle motion is perturbed
+
+  moveperturb = NULL;
   if (domain->axisymmetry) moveperturb = &Update::axisymmetry;
   if (gravity != 0.0) {
     if (domain->axisymmetry) 
@@ -117,6 +121,11 @@ void Update::init()
     if (domain->dimension == 3) moveperturb = &Update::gravity3d;
     if (domain->dimension == 2) moveperturb = &Update::gravity2d;
   }
+
+  if (moveperturb) perturbflag = 1;
+  else perturbflag = 0;
+
+  // one-time initialization of local RNG
 
   if (random == NULL) {
     random = new RanPark(ranmaster->uniform());
