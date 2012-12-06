@@ -15,6 +15,7 @@
 #ifndef SPARTA_UPDATE_H
 #define SPARTA_UPDATE_H
 
+#include "math.h"
 #include "pointers.h"
 
 namespace SPARTA_NS {
@@ -35,6 +36,7 @@ class Update : protected Pointers {
   double nrho;           // number density of background gas
   double vstream[3];     // streaming velocity of background gas
   double temp_thermal;   // thermal temperature of background gas
+  double gravity;        // acceleration of gravity, 0.0 by default
 
   int nmigrate;          // # of particles to migrate to new procs
   int *mlist;            // indices of particles to migrate
@@ -95,6 +97,35 @@ class Update : protected Pointers {
   void move3d();
   void move2d_surface();
   void move2d();
+
+  int perturbflag;
+  typedef void (Update::*FnPtr2)(double, double *, double *);
+  FnPtr2 moveperturb;        // ptr to moveperturb method
+
+  // variants of moveperturb method
+
+  inline void axisymmetry(double dt, double *x, double *v) {
+    double dz = dt*v[2];
+    double rold = x[1];
+    x[1] = sqrt(x[1]*x[1] + dz*dz);
+    double rn = rold / x[1];
+    double wn = dz / x[1];
+    double vold = v[1];
+    double wold = v[2];
+    v[1] = vold*rn + wold*wn;
+    v[2] = -vold*wn + wold*rn;
+  };
+
+  inline void gravity2d(double dt, double *x, double *v) {
+    x[1] -= 0.5*dt*dt*gravity;
+    v[1] -= dt*gravity;
+  };
+
+  inline void gravity3d(double dt, double *x, double *v) {
+    x[2] -= 0.5*dt*dt*gravity;
+    v[2] -= dt*gravity;
+  };
+
 };
 
 }
