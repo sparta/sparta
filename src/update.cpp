@@ -1230,7 +1230,7 @@ void Update::move2d()
 
 /* ----------------------------------------------------------------------
    setup lists of all computes that tally surface and boundary bounce info
-   return 1 if there are any or either, 0 if not
+   return 1 if there are any, 0 if not
 ------------------------------------------------------------------------- */
 
 int Update::bounce_setup()

@@ -103,7 +103,7 @@ void Particle::init()
 /* ----------------------------------------------------------------------
    compress particle list to remove mlist of migrating particles
    overwrite deleted particle with particle from end of nlocal list
-   j = mlist loop avoids overwrite with deleted particle at end of mlist
+   inner while loop avoids overwrite with deleted particle at end of mlist
 ------------------------------------------------------------------------- */
 
 void Particle::compress(int nmigrate, int *mlist)
@@ -150,7 +150,6 @@ void Particle::sort()
     icell = mycells[i];
     cells[icell].first = -1;
     cells[icell].count = 0;
-
     //cellcount[i] = 0;
     //first[i] = -1;
   }

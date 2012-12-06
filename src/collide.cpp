@@ -168,8 +168,7 @@ void Collide::collisions()
       for (jgroup = 0; jgroup < ngroups; jgroup++) {
 	attempt = attempt_collision(m,igroup,jgroup,volume);
 	nattempt = static_cast<int> (attempt);
-//	if (attempt-nattempt > random->uniform()) nattempt++;
-
+	// if (attempt-nattempt > random->uniform()) nattempt++;
 	//printf("NATTEMPT %d %d\n",icell, nattempt);
 
 	if (nattempt) {
