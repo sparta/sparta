@@ -51,6 +51,8 @@ void CreateBox::command(int narg, char **arg)
       error->all(FLERR,
 		 "Create_box z box bounds must straddle 0.0 for 2d simulation");
   }
+  if (domain->axisymmetric && domain->boxlo[1] != 0.0)
+    error->all(FLERR,"Box ylo must be 0.0 for axi-symmetry");
   
   // problem setup using info from header
 

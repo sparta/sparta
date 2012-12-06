@@ -120,9 +120,9 @@ void Update::init()
   // moveperturb method is set if particle motion is perturbed
 
   moveperturb = NULL;
-  if (domain->axisymmetry) moveperturb = &Update::axisymmetry;
+  if (domain->axisymmetric) moveperturb = &Update::axisymmetric;
   if (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0) {
-    if (domain->axisymmetry && gravity[1] != 0.0) 
+    if (domain->axisymmetric && gravity[1] != 0.0) 
       error->all(FLERR,"Gravity in y not allowed for axi-symmetry");
     if (domain->dimension == 3) moveperturb = &Update::gravity3d;
     if (domain->dimension == 2) moveperturb = &Update::gravity2d;

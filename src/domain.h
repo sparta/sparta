@@ -24,7 +24,7 @@ class Domain : protected Pointers {
  public:
   int box_exist;                    // 0 = not yet created, 1 = exists
   int dimension;                    // 2,3
-  int axisymmetry;                  // 1 for yes in 2d, 0 for no
+  int axisymmetric;                 // 1 for yes, 0 for no, only allowed in 2d
 
   double boxlo[3],boxhi[3];         // box global bounds
   double xprd,yprd,zprd;            // global box dimensions
@@ -36,7 +36,6 @@ class Domain : protected Pointers {
   Domain(class SPARTA *);
   ~Domain() {}
   void init();
-  void set_dimension(int, char **);
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);

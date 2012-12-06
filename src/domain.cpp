@@ -27,8 +27,8 @@
 
 using namespace SPARTA_NS;
 
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};     // same as Update, Dump
-                                            // FixInflow, Compute
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};     // same as Update, Dump
+                                                   // FixInflow, Compute
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow,
                                             // Grid, Compute
 
@@ -38,7 +38,7 @@ Domain::Domain(SPARTA *sparta) : Pointers(sparta)
 {
   box_exist = 0;
   dimension = 3;
-  axisymmetry = 0;
+  axisymmetric = 0;
 
   for (int i = 0; i < 6; i++) bflag[i] = PERIODIC;
   for (int i = 0; i < 6; i++) surf_collide[i] = -1;
@@ -57,32 +57,13 @@ Domain::Domain(SPARTA *sparta) : Pointers(sparta)
 
 void Domain::init()
 {
+  if (axisymmetric && dimension != 2)
+    error->all(FLERR,"Axi-symmetry only allowed in 2d");
+  if (dimension == 2 && (bflag[ZLO] != PERIODIC || bflag[ZHI] != PERIODIC))
+    error->all(FLERR,"Z dimension must be periodic for 2d simulation");
   for (int i = 0; i < 6; i++)
     if (bflag[i] == SURFACE && surf_collide[i] < 0)
       error->all(FLERR,"Box boundary not assigned a surf_collide ID");
-}
-
-/* ----------------------------------------------------------------------
-   set initial global box
-   assumes boxlo/hi already set
-------------------------------------------------------------------------- */
-
-void Domain::set_dimension(int narg, char **arg)
-{
-  if (narg < 1) error->all(FLERR,"Illegal dimension command");
-
-
-  dimension = atoi(arg[0]);
-  if (dimension != 2 && dimension != 3)
-    error->all(FLERR,"Illegal dimension command");
-
-  axisymmetry = 0;
-  if (narg == 2) {
-    if (strcmp(arg[1],"axi") == 0) {
-      axisymmetry = 1;
-      if (dimension != 2) error->all(FLERR,"Illegal dimension command");
-    } else error->all(FLERR,"Illegal dimension command");
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -128,6 +109,7 @@ void Domain::set_boundary(int narg, char **arg)
       else if (c == 'p') bflag[m] = PERIODIC;
       else if (c == 'r') bflag[m] = REFLECT;
       else if (c == 's') bflag[m] = SURFACE;
+      else if (c == 'a') bflag[m] = AXISYM;
       else error->all(FLERR,"Illegal boundary command");
 
       if (bflag[m] != SURFACE) surf_collide[m] = -1;
@@ -137,7 +119,17 @@ void Domain::set_boundary(int narg, char **arg)
 
   if (dimension == 2 && (bflag[ZLO] != PERIODIC || bflag[ZHI] != PERIODIC))
     error->all(FLERR,"Z dimension must be periodic for 2d simulation");
-      
+  
+  if (bflag[XLO] == AXISYM || bflag[XHI] == AXISYM || 
+      bflag[YHI] == AXISYM || bflag[ZLO] == AXISYM || bflag[ZHI] == AXISYM)
+    error->all(FLERR,"Only ylo boundary can be axi-symmetric");
+
+  if (bflag[YLO] == AXISYM) {
+    axisymmetric = 1;
+    if (bflag[YHI] == PERIODIC) 
+      error->all(FLERR,"Y cannot be periodic for axi-symmetric");
+  }
+
   for (m = 0; m < 6; m += 2)
     if (bflag[m] == PERIODIC || bflag[m+1] == PERIODIC) {
       if (bflag[m] != PERIODIC || bflag[m+1] != PERIODIC)

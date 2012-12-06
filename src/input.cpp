@@ -862,9 +862,12 @@ void Input::compute()
 
 void Input::dimension()
 {
+  if (narg != 1) error->all(FLERR,"Illegal dimension command");
   if (domain->box_exist) 
     error->all(FLERR,"Dimension command after simulation box is defined");
-  domain->set_dimension(narg,arg);
+  domain->dimension = atoi(arg[0]);
+  if (domain->dimension != 2 && domain->dimension != 3)
+    error->all(FLERR,"Illegal dimension command");
 }
 
 /* ---------------------------------------------------------------------- */

@@ -104,7 +104,7 @@ class Update : protected Pointers {
 
   // variants of moveperturb method
 
-  inline void axisymmetry(double dt, double *x, double *v) {
+  inline void axisymmetric(double dt, double *x, double *v) {
     double dz = dt*v[2];
     double rold = x[1];
     x[1] = sqrt(x[1]*x[1] + dz*dz);
