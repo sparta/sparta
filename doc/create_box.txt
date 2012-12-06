@@ -27,14 +27,14 @@ create_box 0 10.0 0 5.0 -4.0 0.0 :pre
 Set the size of the simulation box.
 
 For a 2d simulation, as specifed by the "dimension"_dimension.html
-command, {zlo} < 0.0 and {zhi} > 0.0 is required.  This is so that the
-z dimensions straddle 0.0.
-
-[Restrictions:]
+command, {zlo} < 0.0 and {zhi} > 0.0 is required.  This means the z
+dimensions straddle 0.0.
 
 For 2d axi-symmetric simulations, as set by the
 "dimension"_dimension.html and "boundary"_boundary.html commands, the
 ylo setting must be 0.0.
+
+[Restrictions:] none
 
 [Related commands:] none
 
