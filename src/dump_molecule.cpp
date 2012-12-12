@@ -36,7 +36,7 @@ enum{ID,TYPE,X,Y,Z,XS,YS,ZS,VX,VY,VZ,
 enum{LT,LE,GT,GE,EQ,NEQ};
 enum{INT,DOUBLE,STRING};
 
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};            // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 #define INVOKED_PER_MOLECULE 8
 
@@ -202,6 +202,7 @@ void DumpMolecule::init_style()
       if (domain->bflag[idim*2+iside] == OUTFLOW) boundstr[m++] = 'o';
       else if (domain->bflag[idim*2+iside] == PERIODIC) boundstr[m++] = 'p';
       else if (domain->bflag[idim*2+iside] == REFLECT) boundstr[m++] = 'r';
+      else if (domain->bflag[idim*2+iside] == AXISYM) boundstr[m++] = 'a';
       else if (domain->bflag[idim*2+iside] == SURFACE) boundstr[m++] = 's';
     }
     boundstr[m++] = ' ';

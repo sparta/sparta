@@ -35,7 +35,7 @@ enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,
      COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE};
 
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};     // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 #define INVOKED_PER_GRID 16
 #define CHUNK 8
@@ -155,6 +155,7 @@ void DumpGrid::init_style()
       if (domain->bflag[idim*2+iside] == PERIODIC) boundstr[m++] = 'p';
       else if (domain->bflag[idim*2+iside] == OUTFLOW) boundstr[m++] = 'o';
       else if (domain->bflag[idim*2+iside] == REFLECT) boundstr[m++] = 'r';
+      else if (domain->bflag[idim*2+iside] == AXISYM) boundstr[m++] = 'a';
       else if (domain->bflag[idim*2+iside] == SURFACE) boundstr[m++] = 's';
     }
     boundstr[m++] = ' ';

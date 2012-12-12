@@ -26,9 +26,9 @@
 
 using namespace SPARTA_NS;
 
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{NUM,PRESS,XSHEAR,YSHEAR,ZSHEAR,KE};
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};     // same as Domain
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Domain
 
 /* ---------------------------------------------------------------------- */
 

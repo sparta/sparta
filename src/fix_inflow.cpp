@@ -36,7 +36,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};         // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP};    // same as Grid
 enum{NO,YES};
 

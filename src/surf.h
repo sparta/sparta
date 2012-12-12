@@ -22,8 +22,8 @@ namespace SPARTA_NS {
 
 class Surf : protected Pointers {
  public:
-  int surf_exist;         // 1 if any surfaces are defined, else 0
-  int surf_changed;       // 1 surfs have changed since last run, else 0
+  int exist;         // 1 if any surfaces are defined, else 0
+  int changed;       // 1 surfs have changed since last run, else 0
 
   struct Point {
     double x[3];

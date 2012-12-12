@@ -181,10 +181,6 @@ void CreateGrid::command(int narg, char **arg)
   else if (bstyle == BLOCK) grid->assign_block(px,py,pz);
   else if (bstyle == RANDOM) grid->assign_random();
   
-  // make list of cells I own
-
-  grid->setup_grid();
-
   // stats
 
   if (comm->me == 0) {

@@ -20,6 +20,7 @@
 #include "comm.h"
 #include "irregular.h"
 #include "surf.h"
+#include "cut2d.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
@@ -78,9 +79,35 @@ void Grid::init()
       memory->create(cflags,nlocal,8,"grid:cflags");
   }
 
-  // calculate grid/surface overlaps
+  /*
+  if (domain->dimension == 2) {
+    if (surf->exist && surf->changed) {
+      Cut2d *cut = new Cut2d(sparta);
 
-  if (surf->surf_exist) {
+      memory->destroy(csurfs);
+      csurfs = cut->surf2grid();
+
+      if (comm->me == 0) {
+        if (screen) fprintf(screen,"Grid/surf-element stats:\n");
+        if (logfile) fprintf(logfile,"Grid/surf-element stats:\n");
+      }
+      surf2grid_stats();
+
+      double *areas;
+      memory->create(areas,nlocal,"grid:cellflag");
+      int *cellflag;
+      memory->create(cellflag,nlocal,"grid:cellflag");
+      cut->split(nlocal,areas,cellflag,cflags);
+      error->all(FLERR,"DONE");
+
+      memory->destroy(areas);
+      memory->destroy(cellflag);
+      delete cut;
+    }
+  }
+  */
+
+  if (surf->exist) {
     if (comm->me == 0) {
       if (screen) fprintf(screen,"Grid/surf-element stats:\n");
       if (logfile) fprintf(logfile,"Grid/surf-element stats:\n");
@@ -88,8 +115,8 @@ void Grid::init()
     surf2grid();
     surf2grid_stats();
   }
-
-  if (surf->surf_exist) grid_inout();
+  
+  if (surf->exist) grid_inout();
   else {
     int icell;
     for (int m = 0; m < nlocal; m++) {
@@ -97,8 +124,10 @@ void Grid::init()
       cells[icell].inflag = SURFEXTERIOR;
     }
   }
-  
+
   grid_inout_stats();
+
+  surf->changed = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -125,48 +154,6 @@ void Grid::add_cell(int id, double *lo, double *hi, int *neigh)
   c->nsurf = 0;
 
   ncell++;
-}
-
-/* ----------------------------------------------------------------------
-   setup owned grid cells
-   create mycells list of owned cells
-   compute local index for owned cells
-   compute volume of owned cells
-------------------------------------------------------------------------- */
-
-void Grid::setup_grid()
-{
-  // nlocal = # of cells I own
-  // mycells = indices of cells I own
-
-  int me = comm->me;
-
-  nlocal = 0;
-  for (int m = 0; m < ncell; m++)
-    if (cells[m].proc == me) nlocal++;
-
-  memory->destroy(mycells);
-  memory->create(mycells,nlocal,"grid:mycells");
-
-  nlocal = 0;
-  for (int m = 0; m < ncell; m++)
-    if (cells[m].proc == me) {
-      cells[m].local = nlocal;
-      mycells[nlocal++] = m;
-    }
-
-  // calculate volume of cells I own
-
-  int icell;
-  double dx,dy,dz;
-
-  for (int m = 0; m < nlocal; m++) {
-    icell = mycells[m];
-    dx = cells[icell].hi[0] - cells[icell].lo[0];
-    dy = cells[icell].hi[1] - cells[icell].lo[1];
-    dz = cells[icell].hi[2] - cells[icell].lo[2];
-    cells[icell].volume = dx*dy*dz;
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -209,6 +196,8 @@ void Grid::assign_stride(int order)
 
     cells[m].proc = nth % nprocs;
   }
+
+  assign_mine();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -232,6 +221,8 @@ void Grid::assign_block(int px, int py, int pz)
     iproc = ipz*px*py + ipy*px + ipx;
     cells[m].proc = iproc;
   }
+
+  assign_mine();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -246,6 +237,50 @@ void Grid::assign_random()
     cells[m].proc = nprocs * random->uniform();
 
   delete random;
+
+  assign_mine();
+}
+
+/* ----------------------------------------------------------------------
+   setup grid cells I own
+   create mycells list of owned cells
+   compute local index for owned cells
+   compute volume of owned cells w/out surfs
+------------------------------------------------------------------------- */
+
+void Grid::assign_mine()
+{
+  // nlocal = # of cells I own
+  // mycells = indices of cells I own
+
+  int me = comm->me;
+
+  nlocal = 0;
+  for (int m = 0; m < ncell; m++)
+    if (cells[m].proc == me) nlocal++;
+
+  memory->destroy(mycells);
+  memory->create(mycells,nlocal,"grid:mycells");
+
+  nlocal = 0;
+  for (int m = 0; m < ncell; m++)
+    if (cells[m].proc == me) {
+      cells[m].local = nlocal;
+      mycells[nlocal++] = m;
+    }
+
+  // calculate volume of cells I own
+
+  int icell;
+  double dx,dy,dz;
+
+  for (int m = 0; m < nlocal; m++) {
+    icell = mycells[m];
+    dx = cells[icell].hi[0] - cells[icell].lo[0];
+    dy = cells[icell].hi[1] - cells[icell].lo[1];
+    dz = cells[icell].hi[2] - cells[icell].lo[2];
+    cells[icell].volume = dx*dy*dz;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -975,7 +1010,7 @@ bigint Grid::memory_usage()
   if (domain->dimension == 3) ncorners = 8;
   bytes += nlocal*ncorners*sizeof(int);
 
-  if (surf->surf_exist) {                               // csurfs
+  if (surf->exist) {                               // csurfs
     int n = 0;
     for (int i = 0; i < ncell; i++)
       n += cells[i].nsurf;

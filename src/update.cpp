@@ -39,9 +39,9 @@
 
 using namespace SPARTA_NS;
 
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};       // same as Domain
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE};       // same as Domain
-enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Geometry,Grid
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
+enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // same as several files
 
 //#define MOVE_DEBUG 1            // un-comment to debug motion of one particle
 #define MOVE_DEBUG_PROC 0       // owning proc
@@ -105,10 +105,10 @@ void Update::init()
   // choose the appropriate move method
 
   if (domain->dimension == 3) {
-    if (surf->surf_exist) move = &Update::move3d_surface;
+    if (surf->exist) move = &Update::move3d_surface;
     else move = &Update::move3d;
   } else if (domain->dimension == 2) {
-    if (surf->surf_exist) move = &Update::move2d_surface;
+    if (surf->exist) move = &Update::move2d_surface;
     else move = &Update::move2d;
   }
 
@@ -191,7 +191,7 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
-  int surf_exist = surf->surf_exist;
+  int surf_exist = surf->exist;
   int dynamic = 0;
   
   // loop over timesteps

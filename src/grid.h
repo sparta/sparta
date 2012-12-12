@@ -60,7 +60,6 @@ class Grid : protected Pointers {
   ~Grid();
   void init();
   void add_cell(int, double *, double *, int *);
-  void setup_grid();
   int which_cell(double, double, double);
   void assign_stride(int);
   void assign_block(int, int, int);
@@ -71,8 +70,8 @@ class Grid : protected Pointers {
  private:
   int maxcell;
 
+  void assign_mine();
   void procs2grid(int &, int &, int &);
-
   void surf2grid();
   void grid_inout();
   int flood(int, int, int);

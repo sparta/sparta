@@ -34,8 +34,8 @@ enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // same as Update
 
 Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
-  surf_exist = 0;
-  surf_changed = 0;
+  exist = 0;
+  changed = 0;
 
   npoint = nline = ntri = 0;
   pts = NULL;

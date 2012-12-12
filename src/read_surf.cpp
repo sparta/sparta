@@ -61,7 +61,8 @@ void ReadSurf::command(int narg, char **arg)
   if (!grid->grid_exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
 
-  surf->surf_exist = 1;
+  surf->exist = 1;
+  surf->changed = 1;
 
   if (narg < 2) error->all(FLERR,"Illegal read_surf command");
 

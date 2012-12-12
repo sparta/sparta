@@ -27,10 +27,8 @@
 
 using namespace SPARTA_NS;
 
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};     // same as Update, Dump
-                                                   // FixInflow, Compute
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};     // same as Update, FixInflow,
-                                            // Grid, Compute
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as several files
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as several files
 
 /* ---------------------------------------------------------------------- */
 
