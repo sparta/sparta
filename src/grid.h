@@ -26,21 +26,24 @@ class Grid : protected Pointers {
   int nx,ny,nz;
   double xdelta,ydelta,zdelta;
   double xdeltainv,ydeltainv,zdeltainv;
-  double xlo,ylo,zlo;
 
   struct OneCell {
     int id;
+    int type;                 // SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP (owned)
     double lo[3],hi[3];       // opposite corner pts of cell
     int neigh[6];             // global indices of 6 neighbor cells
                               // XLO,XHI,YLO,YHI,ZLO,ZHI
                               // -1 if global boundary, including ZLO/ZHI in 2d
     int proc;                 // proc that owns this cell
-    int local;                // local index of cell (owned cells only)
-    int count;                // # of particles in this cell (owned only)
-    int first;                // index of 1st particle in this cell (owned only)
-    int inflag;               // SURFEXT,SURFINT,SURFOVERLAP (owned only)
+    int local;                // local index of cell (owned)
+    int count;                // # of particles in this cell (owned)
+    int first;                // index of 1st particle in this cell (owned)
     int nsurf;                // # of lines or triangles in this cell
-    double volume;            // volume of cell (owned only)
+    double volume;            // flow volume of cell (owned)
+                              // set for unsplit leaf or split cell child
+    int nsplit;               // 1, unsplit leaf cell
+                              // N > 1, split cell parent with N children
+                              // N <= 0, split cell child, -N = index of parent
   };
 
   OneCell *cells;             // global list of grid cells
@@ -50,6 +53,10 @@ class Grid : protected Pointers {
   int nlocal;                 // # of grid cells I own
   
   int **csurfs;      // indices of lines/tris in each cell
+                     // ncell by cells->nsurf in size (ragged array)
+
+  int **csplits;     // for split cells only
+                     // indices of which split cell each surf belongs to
                      // ncell by cells->nsurf in size (ragged array)
 
   int **cflags;      // SURFEXT,SURFINT,SURFOVERLAP for each cell corner point
@@ -74,9 +81,12 @@ class Grid : protected Pointers {
   void procs2grid(int &, int &, int &);
   void surf2grid();
   void grid_inout();
+  void grid_inout2();
   int flood(int, int, int);
+  void grid_check();
   void surf2grid_stats();
-  void grid_inout_stats();
+  void flow_stats();
+  double flow_volume();
 };
 
 }

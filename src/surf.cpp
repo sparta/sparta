@@ -27,7 +27,7 @@ using namespace SPARTA_NS;
 #define DELTA 4
 #define EPSSQ 1.0e-12
 
-enum{SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP};    // same as Grid
+enum{CORNERUNKNOWN,CORNEROUTSIDE,CORNERINSIDE,CORNEROVERLAP};  // same as Grid
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // same as Update
 
 /* ---------------------------------------------------------------------- */
@@ -360,12 +360,12 @@ void Surf::collate_array(int nrow, int ncol, int *l2g,
 }
 
 /* ----------------------------------------------------------------------
-   compute 4 corner point flags for a grid cell containing lines
+   makr 4 corner point flags for a grid cell containing lines
      by shooting a line from each corner pt to midpt of one line in cell
    n = # of lines, list = indices of lines
    lo/hi = grid cell corner pts
    attempt to return corner flags for each corner pts (ordered by x, y)
-   flag = SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP or no change if unable to mark
+   flag = CORNER OUTSIDE/INSIDE/OVERLAP or no change if unable to mark
    unable to mark any corner pts if no line midpt is inside cell
    unable to mark specific corner pt if:
      no collisions with any line
@@ -410,7 +410,7 @@ void Surf::all_cell_corner_line(int n, int *list, double *lo, double *hi,
     // simply mark corner pt as being on surface
 
     if (start[0] == stop[0] && start[1] == stop[1]) {
-      corner[icorner] = SURFOVERLAP;
+      corner[icorner] = CORNEROVERLAP;
       continue;
     }
 
@@ -461,9 +461,9 @@ void Surf::all_cell_corner_line(int n, int *list, double *lo, double *hi,
     // cflag = 0 means no intersection found, so do not mark corner pt
     
     if (!cflag) continue;
-    else if (minside == OUTSIDE) corner[icorner] = SURFEXTERIOR;
-    else if (minside == INSIDE) corner[icorner] = SURFINTERIOR;
-    else corner[icorner] = SURFOVERLAP;
+    else if (minside == OUTSIDE) corner[icorner] = CORNEROUTSIDE;
+    else if (minside == INSIDE) corner[icorner] = CORNERINSIDE;
+    else corner[icorner] = CORNEROVERLAP;
   }
 }
 
@@ -473,7 +473,7 @@ void Surf::all_cell_corner_line(int n, int *list, double *lo, double *hi,
    n = # of tris, list = indices of tris
    lo/hi = grid cell corner pts
    attempt to return corner flags for each corner pts (ordered by x, y, z)
-   flag = SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP or no change if unable to mark
+   flag = CORNER OUTSIDE/INSIDE/OVERLAP or no change if unable to mark
    unable to mark any corner pts if no tri centroid is inside cell
    unable to mark specific corner pt if:
      no collisions with any tri
@@ -519,7 +519,7 @@ void Surf::all_cell_corner_tri(int n, int *list, double *lo, double *hi,
     // simply mark corner pt as being on surface
 
     if (start[0] == stop[0] && start[1] == stop[1] && start[2] == stop[2]) {
-      corner[icorner] = SURFOVERLAP;
+      corner[icorner] = CORNEROVERLAP;
       continue;
     }
 
@@ -570,9 +570,9 @@ void Surf::all_cell_corner_tri(int n, int *list, double *lo, double *hi,
     // cflag = 0 means no intersection found, so do not mark corner pt
     
     if (!cflag) continue;
-    else if (minside == OUTSIDE) corner[icorner] = SURFEXTERIOR;
-    else if (minside == INSIDE) corner[icorner] = SURFINTERIOR;
-    else corner[icorner] = SURFOVERLAP;
+    else if (minside == OUTSIDE) corner[icorner] = CORNEROUTSIDE;
+    else if (minside == INSIDE) corner[icorner] = CORNERINSIDE;
+    else corner[icorner] = CORNEROVERLAP;
   }
 }
 
@@ -583,8 +583,8 @@ void Surf::all_cell_corner_tri(int n, int *list, double *lo, double *hi,
    n = # of lines, list = indices of lines
    lo/hi = grid cell corner pts
    corner = all corner flags for cell
-   return SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP for corner pt if can mark it
-   return -1 if cannot mark it
+   return CORNER OUTSIDE/INSIDE/OVERLAP for corner pt if can mark it
+   return CORNERUNKNOWN if cannot mark it
 ------------------------------------------------------------------------- */
 
 int Surf::one_cell_corner_line(int ic, int n, int *list, 
@@ -600,13 +600,13 @@ int Surf::one_cell_corner_line(int ic, int n, int *list,
 
   quad_corner_point(ic,lo,hi,start);
   
-  // loop over all corner pts that are EXTERIOR/INTERIOR
+  // loop over all corner pts that are OUTSIDE/INSIDE
   // shoot line from unmarked corner pt to marked corner pt
   // if no hit, return mark of marked corner pt
   // if find first collision, return marking it induces
 
   for (i = 0; i < 4; i++) {
-    if (corner[i] != SURFEXTERIOR && corner[i] != SURFINTERIOR) continue;
+    if (corner[i] != CORNEROUTSIDE && corner[i] != CORNERINSIDE) continue;
     quad_corner_point(i,lo,hi,stop);
 
     // find first parametric collision of start-to-stop with any line
@@ -636,14 +636,14 @@ int Surf::one_cell_corner_line(int ic, int n, int *list,
 
     if (!cflag) return corner[i];
     else if (cflag == 2) continue;
-    else if (minside == OUTSIDE) return SURFEXTERIOR;
-    else if (minside == INSIDE) return SURFINTERIOR;
-    else return SURFOVERLAP;
+    else if (minside == OUTSIDE) return CORNEROUTSIDE;
+    else if (minside == INSIDE) return CORNERINSIDE;
+    else return CORNEROVERLAP;
   }
 
   // no collisions at all, return unmarked
 
-  return -1;
+  return CORNERUNKNOWN;
 }
 
 /* ----------------------------------------------------------------------
@@ -653,8 +653,8 @@ int Surf::one_cell_corner_line(int ic, int n, int *list,
    n = # of tris, list = indices of tris
    lo/hi = grid cell corner pts
    corner = all corner flags for cell
-   return SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP for corner pt if can mark it
-   return -1 if cannot mark it
+   return CORNER OUTSIDE/INSIDE/OVERLAP for corner pt if can mark it
+   return CORNERUNKNOWN if cannot mark it
 ------------------------------------------------------------------------- */
 
 int Surf::one_cell_corner_tri(int ic, int n, int *list, 
@@ -673,13 +673,13 @@ int Surf::one_cell_corner_tri(int ic, int n, int *list,
 
   hex_corner_point(ic,lo,hi,start);
   
-  // loop over all corner pts that are EXTERIOR/INTERIOR
+  // loop over all corner pts that are OUTSIDE/INSIDE
   // shoot line from unmarked corner pt to marked corner pt
   // if no hit, return mark of marked corner pt
   // if find first collision, return marking it induces
 
   for (i = 0; i < 8; i++) {
-    if (corner[i] != SURFEXTERIOR && corner[i] != SURFINTERIOR) continue;
+    if (corner[i] != CORNEROUTSIDE && corner[i] != CORNERINSIDE) continue;
     hex_corner_point(i,lo,hi,stop);
 
     // find first parametric collision of start-to-stop with any tri
@@ -709,14 +709,14 @@ int Surf::one_cell_corner_tri(int ic, int n, int *list,
 
     if (!cflag) return corner[i];
     else if (cflag == 2) continue;
-    else if (minside == OUTSIDE) return SURFEXTERIOR;
-    else if (minside == INSIDE) return SURFINTERIOR;
-    else return SURFOVERLAP;
+    else if (minside == OUTSIDE) return CORNEROUTSIDE;
+    else if (minside == INSIDE) return CORNERINSIDE;
+    else return CORNEROVERLAP;
   }
 
   // no collisions at all, return unmarked
 
-  return -1;
+  return CORNERUNKNOWN;
 }
 
 /* ---------------------------------------------------------------------- */

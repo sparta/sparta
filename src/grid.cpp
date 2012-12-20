@@ -34,8 +34,14 @@ using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
-enum{SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP};    // same as CreateMolecules
-                                                // same as FixInflow, Surf
+
+// cell is entirely outside/inside surfs or has any overlap with surfs
+
+enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};   // several files
+
+// corner pt is outside/inside surfs or is on a surf
+
+enum{CORNERUNKNOWN,CORNEROUTSIDE,CORNERINSIDE,CORNEROVERLAP};  // several files
 
 /* ---------------------------------------------------------------------- */
 
@@ -49,6 +55,7 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   nlocal = 0;
   mycells = NULL;
   csurfs = NULL;
+  csplits = NULL;
   cflags = NULL;
 }
 
@@ -59,6 +66,7 @@ Grid::~Grid()
   memory->sfree(cells);
   memory->destroy(mycells);
   memory->destroy(csurfs);
+  memory->destroy(csplits);
   memory->destroy(cflags);
 }
 
@@ -66,10 +74,6 @@ Grid::~Grid()
 
 void Grid::init()
 {
-  xlo = domain->boxlo[0];
-  ylo = domain->boxlo[1];
-  zlo = domain->boxlo[2];
-
   // allocate cflags if necessary
 
   if (cflags == NULL) {
@@ -79,55 +83,90 @@ void Grid::init()
       memory->create(cflags,nlocal,8,"grid:cflags");
   }
 
-  /*
-  if (domain->dimension == 2) {
-    if (surf->exist && surf->changed) {
-      Cut2d *cut = new Cut2d(sparta);
+  // grid cell and surf geometry calculations
 
-      memory->destroy(csurfs);
-      csurfs = cut->surf2grid();
+  if (comm->me == 0) {
+    if (screen) fprintf(screen,"Grid/surf-element stats:\n");
+    if (logfile) fprintf(logfile,"Grid/surf-element stats:\n");
+  }
 
-      if (comm->me == 0) {
-        if (screen) fprintf(screen,"Grid/surf-element stats:\n");
-        if (logfile) fprintf(logfile,"Grid/surf-element stats:\n");
-      }
+  int old = 0;
+
+  if (surf->exist && surf->changed) {
+    surf->changed = 0;
+
+    if (old || domain->dimension == 3) {
+      surf2grid();
       surf2grid_stats();
 
-      double *areas;
-      memory->create(areas,nlocal,"grid:cellflag");
-      int *cellflag;
-      memory->create(cellflag,nlocal,"grid:cellflag");
-      cut->split(nlocal,areas,cellflag,cflags);
-      error->all(FLERR,"DONE");
+      // unmark all local cells and corner flags
 
-      memory->destroy(areas);
-      memory->destroy(cellflag);
+      int i,ncorner;
+      if (domain->dimension == 3) ncorner = 8;
+      else ncorner = 4;
+
+      for (int m = 0; m < nlocal; m++) {
+        cells[mycells[m]].type = CELLUNKNOWN;
+        for (i = 0; i < ncorner; i++) cflags[m][i] = CORNERUNKNOWN;
+      }
+      
+      // set type = CELLOVERLAP for cells with surfaces
+      // set cflags via all_cell_corner calls
+      // some corner pts may be left unmarked as CORNERUNKNOWN
+      
+      int icell;
+      for (int m = 0; m < nlocal; m++) {
+        icell = mycells[m];
+        if (cells[icell].nsurf) {
+          cells[icell].type = CELLOVERLAP;
+          if (domain->dimension == 2)
+            surf->all_cell_corner_line(cells[icell].nsurf,csurfs[icell],
+                                       cells[icell].lo,cells[icell].hi,
+                                       cflags[m]);
+          else if (domain->dimension == 3)
+            surf->all_cell_corner_tri(cells[icell].nsurf,csurfs[icell],
+                                      cells[icell].lo,cells[icell].hi,
+                                      cflags[m]);
+        }
+      }
+
+      grid_inout();
+      grid_check();
+
+    } else {
+      Cut2d *cut = new Cut2d(sparta);
+      cut->surf2grid();
+      surf2grid_stats();
+      cut->split();
       delete cut;
-    }
-  }
-  */
 
-  if (surf->exist) {
-    if (comm->me == 0) {
-      if (screen) fprintf(screen,"Grid/surf-element stats:\n");
-      if (logfile) fprintf(logfile,"Grid/surf-element stats:\n");
+      grid_inout2();
+      grid_check();
     }
-    surf2grid();
-    surf2grid_stats();
-  }
-  
-  if (surf->exist) grid_inout();
-  else {
+
+  // if no surfs, mark owned cells as CELLOUTSIDE and set volume
+
+  } else {
     int icell;
-    for (int m = 0; m < nlocal; m++) {
-      icell = mycells[m];
-      cells[icell].inflag = SURFEXTERIOR;
+    if (domain->dimension == 2) {
+      for (int m = 0; m < nlocal; m++) {
+        icell = mycells[m];
+        cells[icell].type = CELLOUTSIDE;
+        cells[icell].volume = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+          (cells[icell].hi[1]-cells[icell].lo[1]);
+      }
+    } else if (domain->dimension == 3) {
+      for (int m = 0; m < nlocal; m++) {
+        icell = mycells[m];
+        cells[icell].type = CELLOUTSIDE;
+        cells[icell].volume = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+          (cells[icell].hi[1]-cells[icell].lo[1]) *
+          (cells[icell].hi[2]-cells[icell].lo[2]);
+      }
     }
   }
 
-  grid_inout_stats();
-
-  surf->changed = 0;
+  flow_stats();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -409,6 +448,9 @@ void Grid::surf2grid()
   Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
+  double xlo = domain->boxlo[0];
+  double ylo = domain->boxlo[0];
+  double zlo = domain->boxlo[0];
 
   int nsurf;
   if (dimension == 2) nsurf = surf->nline;
@@ -548,10 +590,7 @@ void Grid::surf2grid()
 }
 
 /* ----------------------------------------------------------------------
-   set owned cell's inflag = SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP
-   set owned cell's cflags = SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP
-   require all inflag values be set
-   require only cflags on global boundaries be set
+   set type and cflags of all owned cells
 ------------------------------------------------------------------------- */
 
 void Grid::grid_inout()
@@ -612,30 +651,6 @@ void Grid::grid_inout()
   memory->create(sbuf,nsend+1,2+ncorner,"grid:sbuf");
   memory->create(rbuf,nrecv+1,2+ncorner,"grid:rbuf");
 
-  // unmark all local cells and corner flags
-
-  for (m = 0; m < nlocal; m++) {
-    cells[mycells[m]].inflag = -1;
-    for (i = 0; i < ncorner; i++) cflags[m][i] = -1;
-  }
-
-  // set inflag = SURFOVERLAP for cells with surfaces
-  // set cflags via all_cell_corner calls
-  // some corner pts may be left unmarked as -1
-
-  for (m = 0; m < nlocal; m++) {
-    icell = mycells[m];
-    if (cells[icell].nsurf) {
-      cells[icell].inflag = SURFOVERLAP;
-      if (dimension == 2)
-	surf->all_cell_corner_line(cells[icell].nsurf,csurfs[icell],
-				   cells[icell].lo,cells[icell].hi,cflags[m]);
-      else if (dimension == 3)
-	surf->all_cell_corner_tri(cells[icell].nsurf,csurfs[icell],
-				  cells[icell].lo,cells[icell].hi,cflags[m]);
-    }
-  }
-
   // loop until make no more progress marking corner flags
   // 3 ways of marking corner points of my cells:
   // a) from image points in other cells I own
@@ -646,21 +661,21 @@ void Grid::grid_inout()
     progress = 0;
 
     // loop over my cells and their faces
-    // skip EXTERIOR/INTERIOR cells since already fully marked
+    // skip OUTSIDE/INSIDE cells since already fully marked
     // compare each face corner pt to its image pt in owned adjacent cells
     // if neither marked, continue
     // if both marked, check consistency
     // if only one is marked, mark the other with the same value
-    // if mark a pt as EXTERIOR/INTERIOR and cell inflag is unset,
-    //   mark all pts in cell and set cell inflag
+    // if mark a pt as OUTSIDE/INSIDE and cell type is unset,
+    //   mark all pts in cell and set cell type
     // repeat until can mark no more corner points
 
     while (1) {
       mark = 0;
       for (m = 0; m < nlocal; m++) {
 	icell = mycells[m];
-	if (cells[icell].inflag == SURFEXTERIOR || 
-	    cells[icell].inflag == SURFINTERIOR) continue;
+	if (cells[icell].type == CELLOUTSIDE || 
+	    cells[icell].type == CELLINSIDE) continue;
 
 	neigh = cells[icell].neigh;
 	for (j = 0; j < 6; j++) {
@@ -673,7 +688,7 @@ void Grid::grid_inout()
 	    ivalue = cflags[m][ipt];
 	    jvalue = cflags[cells[neigh[j]].local][jpt];
 
-	    if (ivalue >= 0 && jvalue >= 0) {
+	    if (ivalue != CORNERUNKNOWN && jvalue != CORNERUNKNOWN) {
 	      if (ivalue != jvalue) {
 		char str[128];
 		sprintf(str,"Mismatched owned corner flags %d %d "
@@ -681,22 +696,28 @@ void Grid::grid_inout()
 			ivalue,jvalue,icell,neigh[j],ipt,jpt);
 		error->one(FLERR,str);
 	      }
-	    } else if (ivalue >= 0) {
+	    } else if (ivalue != CORNERUNKNOWN) {
 	      cflags[cells[neigh[j]].local][jpt] = ivalue;
-	      if (cells[neigh[j]].inflag < 0 && 
-		  (ivalue == SURFEXTERIOR || ivalue == SURFINTERIOR)) {
+	      if (cells[neigh[j]].type == CELLUNKNOWN && 
+		  (ivalue == CORNEROUTSIDE || ivalue == CORNERINSIDE)) {
 		if (flood(ivalue,ncorner,cells[neigh[j]].local))
 		  error->one(FLERR,"Mismatched corner flags within one cell");
-		cells[neigh[j]].inflag = ivalue;
+                if (ivalue == CORNEROUTSIDE)
+                  cells[neigh[j]].type = CELLOUTSIDE;
+                else if (ivalue == CORNERINSIDE)
+                  cells[neigh[j]].type = CELLINSIDE;
 	      }
 	      mark = 1;
-	    } else if (jvalue >= 0) {
+	    } else if (jvalue != CORNERUNKNOWN) {
 	      cflags[m][ipt] = jvalue;
-	      if (cells[icell].inflag < 0 && 
-		  (jvalue == SURFEXTERIOR || jvalue == SURFINTERIOR)) {
+	      if (cells[icell].type == CELLUNKNOWN && 
+		  (jvalue == CORNEROUTSIDE || jvalue == CORNERINSIDE)) {
 		if (flood(jvalue,ncorner,m)) 
 		  error->one(FLERR,"Mismatched corner flags within one cell");
-		cells[icell].inflag = jvalue;
+                if (jvalue == CORNEROUTSIDE)
+                  cells[icell].type = CELLOUTSIDE;
+                else if (jvalue == CORNERINSIDE)
+                  cells[icell].type = CELLINSIDE;
 	      }
 	      mark = 1;
 	    }
@@ -708,13 +729,14 @@ void Grid::grid_inout()
       if (!mark) break;
     }
 
-    // look for unmarked corner pts in SURFOVERLAP cells
+    // look for unmarked corner pts in CELLOVERLAP cells
     // attempt to mark them via one_cell_corner calls
 
     for (m = 0; m < nlocal; m++) {
       icell = mycells[m];
+      if (cells[icell].type != CELLOVERLAP) continue;
       for (i = 0; i < ncorner; i++) {
-	if (cflags[m][i] >= 0) continue;
+	if (cflags[m][i] != CORNERUNKNOWN) continue;
 	if (dimension == 2)
 	  cflags[m][i] = 
 	    surf->one_cell_corner_line(i,cells[icell].nsurf,csurfs[icell],
@@ -726,7 +748,7 @@ void Grid::grid_inout()
 				      cells[icell].lo,cells[icell].hi,
 				      cflags[m]);
 	}
-	if (cflags[m][i] >= 0) progress = 1;
+	if (cflags[m][i] != CORNERUNKNOWN) progress = 1;
       }
     }
 
@@ -757,8 +779,8 @@ void Grid::grid_inout()
     // use received corner pt values to update cflags of my owned cells
     // if both marked, check consistency
     // if only other is marked, mark my pt with same value
-    // if mark a pt as EXTERIOR/INTERIOR and cell inflag is unset,
-    //   mark all pts in cell and set cell inflag
+    // if mark a pt as EXTERIOR/INTERIOR and cell type is unset,
+    //   mark all pts in cell and set cell type
 
     for (m = 0; m < nrecv; m++) {
       icell = rbuf[m][0];
@@ -770,7 +792,7 @@ void Grid::grid_inout()
 	jpt = corners[faceflip[iface]][i];
 	ivalue = cflags[ilocal][ipt];
 	jvalue = rbuf[m][2+jpt];
-	if (ivalue >= 0 && jvalue >= 0) {
+	if (ivalue != CORNERUNKNOWN && jvalue != CORNERUNKNOWN) {
 	  if (ivalue != jvalue) {
 	    char str[128];
 	    sprintf(str,"Mismatched owned/ghost corner flags %d %d "
@@ -778,13 +800,16 @@ void Grid::grid_inout()
 		    icell,cells[icell].neigh[iface],ipt,jpt);
 	    error->one(FLERR,str);
 	  }
-	} else if (jvalue >= 0) {
+	} else if (jvalue != CORNERUNKNOWN) {
 	  cflags[ilocal][ipt] = jvalue;
-	  if (cells[icell].inflag < 0 && 
-	      (jvalue == SURFEXTERIOR || jvalue == SURFINTERIOR)) {
+	  if (cells[icell].type == CELLUNKNOWN && 
+	      (jvalue == CORNEROUTSIDE || jvalue == CORNERINSIDE)) {
 	    if (flood(jvalue,ncorner,ilocal))
 	      error->one(FLERR,"Mismatched corner flags within one cell");
-	    cells[icell].inflag = jvalue;
+            if (jvalue == CORNEROUTSIDE)
+              cells[icell].type = CELLOUTSIDE;
+            else if (jvalue == CORNERINSIDE)
+              cells[icell].type = CELLINSIDE;
 	  }
 	  progress = 1;
 	}
@@ -803,93 +828,318 @@ void Grid::grid_inout()
   memory->destroy(proclist);
   memory->destroy(sbuf);
   memory->destroy(rbuf);
+}
 
-  // error check that all cell inflags are set
+/* ----------------------------------------------------------------------
+   set type and cflags of all owned cells
+------------------------------------------------------------------------- */
 
-  int nmark = 0;
-  for (m = 0; m < nlocal; m++) {
-    icell = mycells[m];
-    if (cells[icell].inflag >= 0) nmark++; 
+void Grid::grid_inout2()
+{
+  int i,j,m,n,ipt,jpt,ivalue,jvalue;
+  int icell,ilocal,iface,ncorner,nface_pts;
+  int mark,progress,progress_any;
+  int *neigh;
+  int faceflip[6] = {XHI,XLO,YHI,YLO,ZHI,ZLO};
+
+  // corners[i][j] = J corner points of face I of a grid cell
+  // works for 2d quads and 3d hexes
+  
+  int corners[6][4] = {{0,2,4,6}, {1,3,5,7}, {0,1,4,5}, {2,3,6,7}, 
+		       {0,1,2,3}, {4,5,6,7}};
+
+  int me = comm->me;
+  int dimension = domain->dimension;
+  if (dimension == 3) {
+    ncorner = 8;
+    nface_pts = 4;
+  } else {
+    ncorner = 4;
+    nface_pts = 2;
   }
-  int nmarkall;
-  MPI_Allreduce(&nmark,&nmarkall,1,MPI_INT,MPI_SUM,world);
 
-  if (nmarkall != ncell) {
-    char str[128];
-    sprintf(str,"Grid cells unmarked as in/out = %d",ncell-nmarkall);
-    error->all(FLERR,str);
-  }
+  // create irregular communicator for exchanging cell corner flags
+  // allocate sbuf/rbuf one larger so can access buf[0][0] even if no send/recv
+  // NOTE: could put this logic into Comm class to allow other cell-based
+  //       comm with methods that use pack/unpack callbacks to this class
 
-  // warn if any interior cflags are not set
-  // error check that all cflags on global boundaries are set
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-  double x[3];
-
-  int nface = 2*dimension;
-  int inside = 0;
-  int outside = 0;
-
+  int nsend = 0;
   for (m = 0; m < nlocal; m++) {
     icell = mycells[m];
     neigh = cells[icell].neigh;
-    for (j = 0; j < nface; j++) {
-      for (i = 0; i < nface_pts; i++)
-	if (cflags[m][corners[j][i]] < 0) {
-	  if (corners[i][j] % 2 == 0) x[0] = cells[icell].lo[0];
-	  else x[0] = cells[icell].hi[0];
-	  if ((corners[i][j]/2) % 2 == 0) x[1] = cells[icell].lo[1];
-	  else x[1] = cells[icell].hi[1];
-	  if (dimension == 3) {
-	    if (corners[i][j]/4 == 0) x[2] = cells[icell].lo[2];
-	    else x[2] = cells[icell].hi[2];
-	  } else x[2] = 0.0;
-	  
-	  if (Geometry::point_on_hex(x,boxlo,boxhi)) outside++;
-	  else inside++;
-	}
+    for (j = 0; j < 6; j++) {
+      if (neigh[j] < 0) continue;
+      if (cells[neigh[j]].proc != me) nsend++;
     }
   }
 
-  int insideall;
-  MPI_Allreduce(&inside,&insideall,1,MPI_INT,MPI_SUM,world);
-  if (insideall % ncorner) {
-    char str[128];
-    sprintf(str,"Grid cell interior points unmarked as "
-	    "in/out inconsistently = %d",insideall);
-    error->all(FLERR,str);
-  }
-  if (insideall) {
-    char str[128];
-    sprintf(str,"Grid cell interior points unmarked as in/out = %d",
-	    insideall/ncorner);
-    if (me == 0) error->warning(FLERR,str);
+  int *proclist;
+  memory->create(proclist,nsend,"grid:proclist");
+
+  nsend = 0;
+  for (m = 0; m < nlocal; m++) {
+    icell = mycells[m];
+    neigh = cells[icell].neigh;
+    for (j = 0; j < 6; j++) {
+      if (neigh[j] < 0) continue;
+      if (cells[neigh[j]].proc != me) proclist[nsend++] = cells[neigh[j]].proc;
+    }
   }
 
-  int outsideall;
-  MPI_Allreduce(&outside,&outsideall,1,MPI_INT,MPI_SUM,world);
-  if (outsideall) {
-    char str[128];
-    sprintf(str,"Grid cell boundary points unmarked as in/out = %d",
-	    outsideall);
-    error->all(FLERR,str);
+  Irregular *irregular = new Irregular(sparta);
+  int nrecv = irregular->create(nsend,proclist);
+  int **sbuf,**rbuf;
+  memory->create(sbuf,nsend+1,2+ncorner,"grid:sbuf");
+  memory->create(rbuf,nrecv+1,2+ncorner,"grid:rbuf");
+
+  // loop until make no more progress marking corner and cell flags I own
+  // 2 ways of marking corner points of my cells:
+  // a) from image points in other cells I own
+  // b) from image points in cells owned by other procs via irregular comm
+
+  while (1) {
+    progress = 0;
+
+    // loop over my cells and their faces
+    // skip OUTSIDE/INSIDE cells since already fully marked
+    // compare each face corner pt to its image pt in owned adjacent cells
+    // if both UNKNOWN marked, continue
+    // if both marked, check consistency
+    // if only one is marked, mark the other with the same value
+    // if mark a pt as OUTSIDE/INSIDE and cell type is UNKNOWN,
+    //   mark all corner pts in cell and set cell type
+    // repeat until can mark no more corner points
+
+    while (1) {
+      mark = 0;
+      for (m = 0; m < nlocal; m++) {
+	icell = mycells[m];
+	if (cells[icell].type == CELLOUTSIDE || 
+	    cells[icell].type == CELLINSIDE) continue;
+
+	neigh = cells[icell].neigh;
+	for (j = 0; j < 6; j++) {
+	  if (neigh[j] < 0) continue;
+	  if (cells[neigh[j]].proc != me) continue;
+
+	  for (i = 0; i < nface_pts; i++) {
+	    ipt = corners[j][i];
+	    jpt = corners[faceflip[j]][i];
+	    ivalue = cflags[m][ipt];
+	    jvalue = cflags[cells[neigh[j]].local][jpt];
+
+	    if (ivalue != CORNERUNKNOWN && jvalue != CORNERUNKNOWN) {
+	      if (ivalue != jvalue) {
+		char str[128];
+		sprintf(str,"Mismatched owned corner flags %d %d "
+			"in two cells %d %d at corners %d %d\n",
+			ivalue,jvalue,icell,neigh[j],ipt,jpt);
+		error->one(FLERR,str);
+	      }
+	    } else if (ivalue != CORNERUNKNOWN) {
+	      cflags[cells[neigh[j]].local][jpt] = ivalue;
+	      if (cells[neigh[j]].type == CELLUNKNOWN && 
+		  (ivalue == CORNEROUTSIDE || ivalue == CORNERINSIDE)) {
+		if (flood(ivalue,ncorner,cells[neigh[j]].local))
+		  error->one(FLERR,"Mismatched corner flags within one cell");
+                if (ivalue == CORNEROUTSIDE)
+                  cells[neigh[j]].type = CELLOUTSIDE;
+                else if (ivalue == CORNERINSIDE)
+                  cells[neigh[j]].type = CELLINSIDE;
+	      }
+	      mark = 1;
+	    } else if (jvalue != CORNERUNKNOWN) {
+	      cflags[m][ipt] = jvalue;
+	      if (cells[icell].type == CELLUNKNOWN && 
+		  (jvalue == CORNEROUTSIDE || jvalue == CORNERINSIDE)) {
+		if (flood(jvalue,ncorner,m)) 
+		  error->one(FLERR,"Mismatched corner flags within one cell");
+                if (jvalue == CORNEROUTSIDE)
+                  cells[icell].type = CELLOUTSIDE;
+                else if (jvalue == CORNERINSIDE)
+                  cells[icell].type = CELLINSIDE;
+	      }
+	      mark = 1;
+	    }
+	  }	  
+	}
+      }
+
+      if (mark) progress = 1;
+      if (!mark) break;
+    }
+
+    // communicate cflags to neighbors of my cells owned by other procs
+    // send info = icell of neighbor, iface of neighbor, cflags for my cell
+    // NOTE: sending icell assumes all procs have global cell list
+
+    nsend = 0;
+    for (m = 0; m < nlocal; m++) {
+      neigh = cells[mycells[m]].neigh;
+      for (j = 0; j < 6; j++) {
+	if (neigh[j] < 0) continue;
+	if (cells[neigh[j]].proc != me) {
+	  sbuf[nsend][0] = neigh[j];
+	  sbuf[nsend][1] = faceflip[j];
+	  for (n = 0; n < ncorner; n++)
+	    sbuf[nsend][2+n] = cflags[m][n];
+	  nsend++;
+	}
+      }
+    }
+
+    // perform irregular comm of cflags info
+
+    irregular->exchange((char *) &sbuf[0][0],(2+ncorner)*sizeof(int),
+    			(char *) &rbuf[0][0]);
+
+    // use received corner pt values to update cflags of my owned cells
+    // if both marked, check consistency
+    // if only other is marked, mark my pt with same value
+    // if mark a pt as OUTSIDE/INSIDE and cell type is UNKNOWN,
+    //   mark all pts in cell and set cell type
+
+    for (m = 0; m < nrecv; m++) {
+      icell = rbuf[m][0];
+      iface = rbuf[m][1];
+      ilocal = cells[icell].local;
+
+      for (i = 0; i < nface_pts; i++) {
+	ipt = corners[iface][i];
+	jpt = corners[faceflip[iface]][i];
+	ivalue = cflags[ilocal][ipt];
+	jvalue = rbuf[m][2+jpt];
+	if (ivalue != CORNERUNKNOWN && jvalue != CORNERUNKNOWN) {
+	  if (ivalue != jvalue) {
+	    char str[128];
+	    sprintf(str,"Mismatched owned/ghost corner flags %d %d "
+		    "in two cells %d %d at corners %d %d\n",ivalue,jvalue,
+		    icell,cells[icell].neigh[iface],ipt,jpt);
+	    error->one(FLERR,str);
+	  }
+	} else if (jvalue != CORNERUNKNOWN) {
+	  cflags[ilocal][ipt] = jvalue;
+	  if (cells[icell].type == CELLUNKNOWN && 
+	      (jvalue == CORNEROUTSIDE || jvalue == CORNERINSIDE)) {
+	    if (flood(jvalue,ncorner,ilocal))
+	      error->one(FLERR,"Mismatched corner flags within one cell");
+            if (jvalue == CORNEROUTSIDE)
+              cells[icell].type = CELLOUTSIDE;
+            else if (jvalue == CORNERINSIDE)
+              cells[icell].type = CELLINSIDE;
+	  }
+	  progress = 1;
+	}
+      }	  
+    }
+    
+    // if no new marks made by any processor, done
+
+    MPI_Allreduce(&progress,&progress_any,1,MPI_INT,MPI_SUM,world);
+    if (!progress_any) break;
   }
+
+  // clean up
+
+  delete irregular;
+  memory->destroy(proclist);
+  memory->destroy(sbuf);
+  memory->destroy(rbuf);
 }
 
 /* ----------------------------------------------------------------------
    set all corner flags of local cell M to value
    return 1 as error if any flags are already set to a different value
    return 0 if success
-/* ---------------------------------------------------------------------- */
+------------------------------------------------------------------------- */
 
 int Grid::flood(int value, int ncorner, int m)
 {
   for (int i = 0; i < ncorner; i++) {
-    if (cflags[m][i] >= 0 && cflags[m][i] != value) return 1;
+    if (cflags[m][i] != CORNERUNKNOWN && cflags[m][i] != value) return 1;
     cflags[m][i] = value;
   }
   return 0;
+} 
+
+/* ----------------------------------------------------------------------
+   require all cell types be set
+   check corner pts of cells with surfs
+   require corner pts on global box boundary be set
+   warn if interior corner pts are not set
+------------------------------------------------------------------------- */
+
+void Grid::grid_check()
+{
+  int i,m,icell;
+
+  // check cell types
+
+  int unknown = 0;
+  for (m = 0; m < nlocal; m++) {
+    icell = mycells[m];
+    if (cells[icell].type == CELLUNKNOWN) unknown++; 
+  }
+  int unknownall;
+  MPI_Allreduce(&unknown,&unknownall,1,MPI_INT,MPI_SUM,world);
+
+  if (unknownall) {
+    char str[128];
+    sprintf(str,"Grid cells marked as unknown = %d",unknownall);
+    error->all(FLERR,str);
+  }
+
+  // check corner flags of cells that are CELLOVERLAP
+  // warn if any interior corner flags are not set
+  // error if any corner flags on global boundaries are unset
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  int dimension = domain->dimension;
+
+  int ncorner = 4;
+  if (dimension == 3) ncorner = 8;
+
+  double x[3];
+  int inside = 0;
+  int outside = 0;
+
+  for (m = 0; m < nlocal; m++) {
+    icell = mycells[m];
+    if (cells[icell].type != CELLOVERLAP) continue;
+    for (i = 0; i < ncorner; i++) {
+      if (cflags[m][i] != CORNERUNKNOWN) continue;
+      if (i % 2 == 0) x[0] = cells[icell].lo[0];
+      else x[0] = cells[icell].hi[0];
+      if ((i/2) % 2 == 0) x[1] = cells[icell].lo[1];
+      else x[1] = cells[icell].hi[1];
+      if (dimension == 3) {
+        if (i/4 == 0) x[2] = cells[icell].lo[2];
+        else x[2] = cells[icell].hi[2];
+      } else x[2] = 0.0;
+
+      if (Geometry::point_on_hex(x,boxlo,boxhi)) outside++;
+      else inside++;
+    }
+  }
+
+  int insideall;
+  MPI_Allreduce(&inside,&insideall,1,MPI_INT,MPI_SUM,world);
+  if (insideall) {
+    char str[128];
+    sprintf(str,"Grid cell interior corner points marked as unknown = %d",
+	    insideall);
+    if (comm->me == 0) error->warning(FLERR,str);
+  }
+
+  int outsideall;
+  MPI_Allreduce(&outside,&outsideall,1,MPI_INT,MPI_SUM,world);
+  if (outsideall) {
+    char str[128];
+    sprintf(str,"Grid cell boundary corner points marked as unknown = %d",
+	    outsideall);
+    error->all(FLERR,str);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -949,34 +1199,85 @@ void Grid::surf2grid_stats()
 
 /* ---------------------------------------------------------------------- */
 
-void Grid::grid_inout_stats()
+void Grid::flow_stats()
 {
   int icell;
 
   int outside = 0;
   int inside = 0;
   int overlap = 0;
+  double cellvolume = 0.0;
 
   for (int m = 0; m < nlocal; m++) {
     icell = mycells[m];
-    if (cells[icell].inflag == SURFEXTERIOR) outside++;
-    else if (cells[icell].inflag == SURFINTERIOR) inside++;
-    else if (cells[icell].inflag == SURFOVERLAP) overlap++;
+    if (cells[icell].type == CELLOUTSIDE) outside++;
+    else if (cells[icell].type == CELLINSIDE) inside++;
+    else if (cells[icell].type == CELLOVERLAP) overlap++;
+    if (cells[icell].type != CELLINSIDE) cellvolume += cells[icell].volume;
   }
 
   int outall,inall,overall;
+  double cellvolumeall;
   MPI_Allreduce(&outside,&outall,1,MPI_INT,MPI_SUM,world);
   MPI_Allreduce(&inside,&inall,1,MPI_INT,MPI_SUM,world);
   MPI_Allreduce(&overlap,&overall,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&cellvolume,&cellvolumeall,1,MPI_DOUBLE,MPI_SUM,world);
   
+  double flowvolume = flow_volume();
+
   if (comm->me == 0) {
-    if (screen)
+    if (screen) {
       fprintf(screen,"  %d %d %d = cells outside/inside/overlapping surfs\n",
 	      outall,inall,overall);
-    if (logfile)
+      fprintf(screen,"  %g %g = cell-wise and global flow volume\n",
+              cellvolumeall,flowvolume);
+    }
+    if (logfile) {
       fprintf(logfile,"  %d %d %d = cells outside/inside/overlapping surfs\n",
 	      outall,inall,overall);
+      fprintf(logfile,"  %g %g = cell-wise and global flow volume\n",
+              cellvolumeall,flowvolume);
+    }
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+double Grid::flow_volume()
+{
+  double zarea;
+  double *p1,*p2,*p3;
+
+  Surf::Point *pts = surf->pts;
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  double vol = 0.0;
+
+  if (domain->dimension == 2) {
+    for (int i = 0; i < surf->nline; i++) {
+      p1 = pts[lines[i].p1].x;
+      p2 = pts[lines[i].p2].x;
+      if (p1[0] < p2[0]) vol -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);
+      else vol += (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p1[0]-p2[0]);
+    }
+    if (vol <= 0.0) vol += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
+
+  } else {
+    for (int i = 0; i < surf->ntri; i++) {
+      p1 = pts[tris[i].p1].x;
+      p2 = pts[tris[i].p2].x;
+      p3 = pts[tris[i].p3].x;
+      zarea = 0.5 * ((p2[0]-p1[0])*(p3[1]-p1[1]) - (p2[1]-p1[1])*(p3[0]-p1[0]));
+      vol -= zarea * ((p1[2]+p2[2]+p3[2])/3.0 - boxlo[2]);
+    }
+    if (vol <= 0.0) vol += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) * 
+                      (boxhi[2]-boxlo[2]); 
+  }
+
+  return vol;
 }
 
 /* ----------------------------------------------------------------------

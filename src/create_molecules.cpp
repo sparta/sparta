@@ -31,7 +31,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP};       // same as Grid
+enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};   // same as Grid
 
 /* ---------------------------------------------------------------------- */
 
@@ -194,7 +194,7 @@ void CreateMolecules::create_local(bigint np)
   int *mycells = grid->mycells;
   int nglocal = grid->nlocal;
 
-  // volme = volume of grid cells I own that are SURFEXTERIOR
+  // volme = volume of grid cells I own that are CELLOUTSIDE
   // Nme = # of molecules I will create
   // MPI_Scan() logic insures sum of nme = Np
   // NOTE: eventually adjust for cells with cut volume
@@ -202,7 +202,7 @@ void CreateMolecules::create_local(bigint np)
   double *lo,*hi;
   double volme = 0.0;
   for (int i = 0; i < nglocal; i++) {
-    if (cells[mycells[i]].inflag != SURFEXTERIOR) continue;
+    if (cells[mycells[i]].type != CELLOUTSIDE) continue;
     lo = cells[mycells[i]].lo;
     hi = cells[mycells[i]].hi;
     if (dimension == 3) volme += (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
@@ -226,7 +226,7 @@ void CreateMolecules::create_local(bigint np)
   memory->destroy(vols);
 
   // loop over cells I own
-  // only add molecules to SURFEXTERIOR cells
+  // only add molecules to CELLOUTSIDE cells
   // ntarget = floating point # of molecules to create in one cell
   // npercell = integer # of molecules to create in one cell
   // basing ntarget on accumulated volume and nprev insures Nme total creations
@@ -248,7 +248,7 @@ void CreateMolecules::create_local(bigint np)
 
   for (int i = 0; i < nglocal; i++) {
     icell = mycells[i];
-    if (cells[icell].inflag != SURFEXTERIOR) continue;
+    if (cells[icell].type != CELLOUTSIDE) continue;
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 

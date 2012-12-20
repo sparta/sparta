@@ -37,7 +37,8 @@ using namespace MathConst;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
-enum{SURFEXTERIOR,SURFINTERIOR,SURFOVERLAP};    // same as Grid
+enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};   // same as Grid
+enum{CORNERUNKNOWN,CORNEROUTSIDE,CORNERINSIDE,CORNEROVERLAP};  // same as Grid
 enum{NO,YES};
 
 /* ---------------------------------------------------------------------- */
@@ -168,10 +169,10 @@ void FixInflow::init()
 
   // allow[I][J] = 1 if my local cell I, face J allows insertions
   // only allow if face adjoins global boundary with inflow defined
-  // if cell is SURFEXTERIOR, allow face
-  // if cell is SURFINTERIOR, disallow face
-  // if cell is SURFOVERLAP:
-  //   allow if any face corner point is SURFEXTERIOR and none is SURFINTERIOR
+  // if cell is CELLOUTSIDE, allow face
+  // if cell is CELLINSIDE, disallow face
+  // if cell is CELLOVERLAP:
+  //   allow if any face corner point is CORNEROUTSIDE and none is CORNERINSIDE
   //   disallow if any pt of any cell line/tri touches face
 
   int dimension = domain->dimension;
@@ -195,16 +196,16 @@ void FixInflow::init()
     icell = mycells[m];
     for (i = 0; i < 6; i++) {
       if (faces[i] && cells[icell].neigh[i] < 0) {
-	if (cells[icell].inflag == SURFEXTERIOR) allow[m][i] = 1;
-	else if (cells[icell].inflag == SURFINTERIOR) allow[m][i] = 0;
-	else if (cells[icell].inflag == SURFOVERLAP) {
+	if (cells[icell].type == CELLOUTSIDE) allow[m][i] = 1;
+	else if (cells[icell].type == CELLINSIDE) allow[m][i] = 0;
+	else if (cells[icell].type == CELLOVERLAP) {
 	  allow[m][i] = 1;
 	  flags = cflags[i];
 
 	  extflag = 0;
 	  for (j = 0; j < nface_pts; j++) {
-	    if (flags[corners[i][j]] == SURFEXTERIOR) extflag = 1;
-	    else if (flags[corners[i][j]] == SURFINTERIOR) allow[m][i] = 0;
+	    if (flags[corners[i][j]] == CORNEROUTSIDE) extflag = 1;
+	    else if (flags[corners[i][j]] == CORNERINSIDE) allow[m][i] = 0;
 	  }
 	  if (!extflag) allow[m][i] = 0;
 	  
