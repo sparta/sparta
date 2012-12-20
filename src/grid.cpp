@@ -1073,10 +1073,7 @@ void Grid::grid_check()
   int unknown = 0;
   for (m = 0; m < nlocal; m++) {
     icell = mycells[m];
-    if (cells[icell].type == CELLUNKNOWN) {
-      unknown++; 
-      printf("UNKNOWN %d %d %d\n",comm->me,m,icell);
-    }
+    if (cells[icell].type == CELLUNKNOWN) unknown++; 
   }
   int unknownall;
   MPI_Allreduce(&unknown,&unknownall,1,MPI_INT,MPI_SUM,world);
