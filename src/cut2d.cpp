@@ -166,9 +166,8 @@ void Cut2d::surf2grid()
 }
 
 /* ----------------------------------------------------------------------
-   calculate split area(s) of a single cell containing lines
-   for each grid cell: set type, cflags, nsplit, volume
-   for now, each proc works on all cells
+   calculate split area(s) of my grid cells that contain lines
+   for each owned grid cell: set type, cflags, nsplit, volume
 ------------------------------------------------------------------------- */
 
 void Cut2d::split()
@@ -181,34 +180,34 @@ void Cut2d::split()
   int **csplits = grid->csplits;
   int **cflags = grid->cflags;
   int ncell = grid->ncell;
+  int nglocal = grid->nlocal;
+  int *mycells = grid->mycells;
   int me = comm->me;
 
-  for (i = 0; i < ncell; i++) {
-    nsurf = cells[i].nsurf;
+  for (i = 0; i < nglocal; i++) {
+    icell = mycells[i];
+    nsurf = cells[icell].nsurf;
+
     if (nsurf) {
       if (VERBOSE) {
-        printf("\nCELL %d %g %g %g %g\n",cells[i].id,
-               cells[i].lo[0],cells[i].hi[0],cells[i].lo[1],cells[i].hi[1]);
+        printf("\nCELL %d %g %g %g %g\n",cells[icell].id,
+               cells[icell].lo[0],cells[icell].hi[0],
+               cells[icell].lo[1],cells[icell].hi[1]);
       }
-      // TEMP for VERBOSE output
-      icell = i;
-      line2pl(nsurf,csurfs[i]);
-      weiler_intersect(cells[i].lo,cells[i].hi,cornerflag);
-      weiler_walk(cells[i].lo,cells[i].hi,cornerflag);
-      loop2pg(cells[i].lo,cells[i].hi,cornerflag);
-      if (pg.n > 1) surf2pg(nsurf,csurfs[i],csplits[i]);
+      line2pl(nsurf,csurfs[icell]);
+      weiler_intersect(cells[icell].lo,cells[icell].hi,cornerflag);
+      weiler_walk(cells[icell].lo,cells[icell].hi,cornerflag);
+      loop2pg(cells[icell].lo,cells[icell].hi,cornerflag);
+      if (pg.n > 1) surf2pg(nsurf,csurfs[icell],csplits[icell]);
 
-      if (cells[i].proc == me) {
-        cells[i].type = CELLOVERLAP;
-        m = cells[i].local;
-        cflags[m][0] = cornerflag[0];
-        cflags[m][1] = cornerflag[1];
-        cflags[m][2] = cornerflag[2];
-        cflags[m][3] = cornerflag[3];
-      }
+      cells[icell].type = CELLOVERLAP;
+      cflags[i][0] = cornerflag[0];
+      cflags[i][1] = cornerflag[1];
+      cflags[i][2] = cornerflag[2];
+      cflags[i][3] = cornerflag[3];
 
       if (VERBOSE) {
-        printf("SPLIT %d %d: %d %d %d %d\n",cells[i].id,cells[i].type,
+        printf("SPLIT %d %d: %d %d %d %d\n",cells[icell].id,cells[icell].type,
                cornerflag[0],cornerflag[1],cornerflag[2],cornerflag[3]);
         printf("  AREAS:");
         for (j = 0; j < pg.n; j++)
@@ -217,7 +216,7 @@ void Cut2d::split()
         if (pg.n > 1) {
           printf("  SURFMAP:");
           for (j = 0; j < nsurf; j++)
-            printf(" %d",csplits[i][j]);
+            printf(" %d",csplits[icell][j]);
           printf("\n");
         }
       }
@@ -225,25 +224,23 @@ void Cut2d::split()
       // here is where need to create split cells with volumes
       // needs to be done for all cells, not just owned cells
 
-      cells[i].nsplit = pg.n;
-      if (pg.n == 1) cells[i].volume = pg[0].area;
+      cells[icell].nsplit = pg.n;
+      if (pg.n == 1) cells[icell].volume = pg[0].area;
       else {
-        cells[i].volume = 0.0;
+        cells[icell].volume = 0.0;
         for (j = 0; j < pg.n; j++)
-          cells[i].volume += pg[j].area;
+          cells[icell].volume += pg[j].area;
       }
 
     } else {
-      if (cells[i].proc == me) {
-        cells[i].type = CELLUNKNOWN;
-        m = cells[i].local;
-        cflags[m][0] = cflags[m][1] = cflags[m][2] = cflags[m][3] = 
-          CORNERUNKNOWN;
-      }
-      cells[i].nsplit = 1;
-      cells[i].volume = (cells[i].hi[0]-cells[i].lo[0]) * 
-        (cells[i].hi[1]-cells[i].lo[1]);
+      cells[icell].type = CELLUNKNOWN;
+      cflags[i][0] = cflags[i][1] = cflags[i][2] = cflags[i][3] = 
+        CORNERUNKNOWN;
+      cells[icell].nsplit = 1;
+      cells[icell].volume = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+        (cells[icell].hi[1]-cells[icell].lo[1]);
     }
+
   }
 
   if (VERBOSE) printf("\n");

@@ -24,15 +24,15 @@ namespace SPARTA_NS {
 
 class Cut2d : protected Pointers {
  public:
-  // TEMP for VERBOSE output
-  int icell;
-
   Cut2d(class SPARTA *);
   ~Cut2d();
   void surf2grid();
   void split();
 
  private:
+  // just for VERBOSE output
+  int icell;
+
   int nsurf;
   MyVec<int> used;
   MyVec<int> startpts;

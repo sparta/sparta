@@ -89,7 +89,8 @@ void Grid::init()
     if (screen) fprintf(screen,"Grid/surf-element stats:\n");
     if (logfile) fprintf(logfile,"Grid/surf-element stats:\n");
   }
-
+ 
+  // debug switch
   int old = 0;
 
   if (surf->exist && surf->changed) {
@@ -101,20 +102,28 @@ void Grid::init()
 
       // unmark all local cells and corner flags
 
-      int i,ncorner;
+      int i,ncorner,icell;
       if (domain->dimension == 3) ncorner = 8;
       else ncorner = 4;
 
       for (int m = 0; m < nlocal; m++) {
-        cells[mycells[m]].type = CELLUNKNOWN;
+        icell = mycells[m];
+        cells[icell].type = CELLUNKNOWN;
         for (i = 0; i < ncorner; i++) cflags[m][i] = CORNERUNKNOWN;
+        cells[icell].nsplit = 1;
+        if (domain->dimension == 2)
+          cells[icell].volume = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+            (cells[icell].hi[1]-cells[icell].lo[1]);
+        else
+          cells[icell].volume = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+            (cells[icell].hi[1]-cells[icell].lo[1]) *
+            (cells[icell].hi[2]-cells[icell].lo[2]);
       }
       
       // set type = CELLOVERLAP for cells with surfaces
       // set cflags via all_cell_corner calls
       // some corner pts may be left unmarked as CORNERUNKNOWN
       
-      int icell;
       for (int m = 0; m < nlocal; m++) {
         icell = mycells[m];
         if (cells[icell].nsurf) {
@@ -284,7 +293,6 @@ void Grid::assign_random()
    setup grid cells I own
    create mycells list of owned cells
    compute local index for owned cells
-   compute volume of owned cells w/out surfs
 ------------------------------------------------------------------------- */
 
 void Grid::assign_mine()
@@ -307,19 +315,6 @@ void Grid::assign_mine()
       cells[m].local = nlocal;
       mycells[nlocal++] = m;
     }
-
-  // calculate volume of cells I own
-
-  int icell;
-  double dx,dy,dz;
-
-  for (int m = 0; m < nlocal; m++) {
-    icell = mycells[m];
-    dx = cells[icell].hi[0] - cells[icell].lo[0];
-    dy = cells[icell].hi[1] - cells[icell].lo[1];
-    dz = cells[icell].hi[2] - cells[icell].lo[2];
-    cells[icell].volume = dx*dy*dz;
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1078,7 +1073,10 @@ void Grid::grid_check()
   int unknown = 0;
   for (m = 0; m < nlocal; m++) {
     icell = mycells[m];
-    if (cells[icell].type == CELLUNKNOWN) unknown++; 
+    if (cells[icell].type == CELLUNKNOWN) {
+      unknown++; 
+      printf("UNKNOWN %d %d %d\n",comm->me,m,icell);
+    }
   }
   int unknownall;
   MPI_Allreduce(&unknown,&unknownall,1,MPI_INT,MPI_SUM,world);
@@ -1201,11 +1199,12 @@ void Grid::surf2grid_stats()
 
 void Grid::flow_stats()
 {
-  int icell;
+  int i,icell;
 
   int outside = 0;
   int inside = 0;
   int overlap = 0;
+  int maxsplit = 0;
   double cellvolume = 0.0;
 
   for (int m = 0; m < nlocal; m++) {
@@ -1213,28 +1212,46 @@ void Grid::flow_stats()
     if (cells[icell].type == CELLOUTSIDE) outside++;
     else if (cells[icell].type == CELLINSIDE) inside++;
     else if (cells[icell].type == CELLOVERLAP) overlap++;
+    maxsplit = MAX(maxsplit,cells[icell].nsplit);
     if (cells[icell].type != CELLINSIDE) cellvolume += cells[icell].volume;
   }
 
-  int outall,inall,overall;
+  int outall,inall,overall,maxsplitall;
   double cellvolumeall;
   MPI_Allreduce(&outside,&outall,1,MPI_INT,MPI_SUM,world);
   MPI_Allreduce(&inside,&inall,1,MPI_INT,MPI_SUM,world);
   MPI_Allreduce(&overlap,&overall,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&maxsplit,&maxsplitall,1,MPI_INT,MPI_MAX,world);
   MPI_Allreduce(&cellvolume,&cellvolumeall,1,MPI_DOUBLE,MPI_SUM,world);
-  
+
   double flowvolume = flow_volume();
+
+  int *tally = new int[maxsplitall];
+  int *tallyall = new int[maxsplitall];
+  for (i = 0; i < maxsplitall; i++) tally[i] = 0;
+  for (int m = 0; m < nlocal; m++) {
+    icell = mycells[m];
+    if (cells[icell].type == CELLOVERLAP) tally[cells[icell].nsplit-1]++;
+  }
+
+  MPI_Allreduce(tally,tallyall,maxsplitall,MPI_INT,MPI_SUM,world);
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  %d %d %d = cells outside/inside/overlapping surfs\n",
 	      outall,inall,overall);
+      fprintf(screen," ");
+      for (i = 0; i < maxsplitall; i++) fprintf(screen," %d",tallyall[i]);
+      fprintf(screen," = surf cells with 1,2,...,N splits\n");
       fprintf(screen,"  %g %g = cell-wise and global flow volume\n",
               cellvolumeall,flowvolume);
     }
     if (logfile) {
       fprintf(logfile,"  %d %d %d = cells outside/inside/overlapping surfs\n",
 	      outall,inall,overall);
+      fprintf(logfile," ");
+      for (i = 0; i < maxsplitall; i++) fprintf(logfile," %d",tallyall[i]);
+      fprintf(logfile," = surf cells with 1,2,...,N splits\n");
       fprintf(logfile,"  %g %g = cell-wise and global flow volume\n",
               cellvolumeall,flowvolume);
     }
