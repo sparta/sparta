@@ -1253,6 +1253,9 @@ void Grid::flow_stats()
               cellvolumeall,flowvolume);
     }
   }
+
+  delete [] tally;
+  delete [] tallyall;
 }
 
 /* ---------------------------------------------------------------------- */
