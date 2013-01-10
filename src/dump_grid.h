@@ -60,7 +60,7 @@ class DumpGrid : public Dump {
   double **vbuf;             // local storage for variable evaluation
 
   int dimension;
-  int nglocal;               // # of grid cells on this proc
+  int nchild;                 // # of grid cells with particles on this proc
 
   // private methods
 
@@ -104,6 +104,9 @@ class DumpGrid : public Dump {
   void pack_xhi(int);
   void pack_yhi(int);
   void pack_zhi(int);
+  void pack_xc(int);
+  void pack_yc(int);
+  void pack_zc(int);
 };
 
 }

@@ -42,7 +42,7 @@ class FixAveGrid : public Fix {
   int *which,*argindex,*value2index;
   char **ids;
 
-  int nglocal;               // # of grid cells I own
+  int nchild;                // # of child grid cells
   double *accvec;            // accumulation vector
   double **accarray;         // accumulation array
 
@@ -55,6 +55,7 @@ class FixAveGrid : public Fix {
   void options(int, char **);
   void grow();
   bigint nextvalid();
+  void reset();
 };
 
 }

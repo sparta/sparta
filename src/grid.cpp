@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "string.h"
 #include "grid.h"
 #include "geometry.h"
 #include "update.h"
@@ -49,14 +50,17 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 {
   grid_exist = 0;
 
-  ncell = maxcell = 0;
+  ncell = nsplit = maxcell = 0;
   cells = NULL;
-
-  nlocal = 0;
-  mycells = NULL;
   csurfs = NULL;
   csplits = NULL;
+
+  nparent = 0;
+  myparent = NULL;
   cflags = NULL;
+
+  nchild = 0;
+  mychild = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -64,24 +68,18 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 Grid::~Grid()
 {
   memory->sfree(cells);
-  memory->destroy(mycells);
   memory->destroy(csurfs);
   memory->destroy(csplits);
+  memory->destroy(myparent);
   memory->destroy(cflags);
+  memory->destroy(mychild);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void Grid::init()
 {
-  // allocate cflags if necessary
-
-  if (cflags == NULL) {
-    if (domain->dimension == 2)
-      memory->create(cflags,nlocal,4,"grid:cflags");
-    if (domain->dimension == 3)
-      memory->create(cflags,nlocal,8,"grid:cflags");
-  }
+  int i,j,m,icell;
 
   // grid cell and surf geometry calculations
 
@@ -90,24 +88,27 @@ void Grid::init()
     if (logfile) fprintf(logfile,"Grid/surf-element stats:\n");
   }
  
+  // allocate cflags if necessary
+
+  int ncorner = 4;
+  if (domain->dimension == 3) ncorner = 8;
+
+  if (cflags == NULL) memory->create(cflags,nparent,ncorner,"grid:cflags");
+
   // debug switch
   int old = 0;
 
-  if (surf->exist && surf->changed) {
+  if (surf->changed) {
     surf->changed = 0;
 
     if (old || domain->dimension == 3) {
       surf2grid();
       surf2grid_stats();
 
-      // unmark all local cells and corner flags
+      // unmark all local parent cells and corner flags
 
-      int i,ncorner,icell;
-      if (domain->dimension == 3) ncorner = 8;
-      else ncorner = 4;
-
-      for (int m = 0; m < nlocal; m++) {
-        icell = mycells[m];
+      for (m = 0; m < nparent; m++) {
+        icell = myparent[m];
         cells[icell].type = CELLUNKNOWN;
         for (i = 0; i < ncorner; i++) cflags[m][i] = CORNERUNKNOWN;
         cells[icell].nsplit = 1;
@@ -124,8 +125,8 @@ void Grid::init()
       // set cflags via all_cell_corner calls
       // some corner pts may be left unmarked as CORNERUNKNOWN
       
-      for (int m = 0; m < nlocal; m++) {
-        icell = mycells[m];
+      for (m = 0; m < nparent; m++) {
+        icell = myparent[m];
         if (cells[icell].nsurf) {
           cells[icell].type = CELLOVERLAP;
           if (domain->dimension == 2)
@@ -149,30 +150,30 @@ void Grid::init()
       cut->split();
       delete cut;
 
+      assign_child();
       grid_inout2();
       grid_check();
     }
 
-  // if no surfs, mark owned cells as CELLOUTSIDE and set volume
+  // if no surfs, mark owned cells and corner points as OUTSIDE
+  // set volume of each cell
 
-  } else {
+  } else if (!surf->exist) {
     int icell;
-    if (domain->dimension == 2) {
-      for (int m = 0; m < nlocal; m++) {
-        icell = mycells[m];
-        cells[icell].type = CELLOUTSIDE;
+    for (m = 0; m < nparent; m++) {
+      icell = myparent[m];
+      cells[icell].type = CELLOUTSIDE;
+      if (domain->dimension == 2)
         cells[icell].volume = (cells[icell].hi[0]-cells[icell].lo[0]) * 
           (cells[icell].hi[1]-cells[icell].lo[1]);
-      }
-    } else if (domain->dimension == 3) {
-      for (int m = 0; m < nlocal; m++) {
-        icell = mycells[m];
-        cells[icell].type = CELLOUTSIDE;
+      else
         cells[icell].volume = (cells[icell].hi[0]-cells[icell].lo[0]) * 
           (cells[icell].hi[1]-cells[icell].lo[1]) *
           (cells[icell].hi[2]-cells[icell].lo[2]);
-      }
+      for (i = 0; i < ncorner; i++) cflags[m][i] = CORNEROUTSIDE;
     }
+
+    assign_child();
   }
 
   flow_stats();
@@ -200,8 +201,18 @@ void Grid::add_cell(int id, double *lo, double *hi, int *neigh)
   c->neigh[4] = neigh[4];
   c->neigh[5] = neigh[5];
   c->nsurf = 0;
+  c->nsplit = 1;
 
   ncell++;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Grid::add_split_cell(int icell)
+{
+  if (ncell+nsplit == maxcell) grow(1);
+  memcpy(&cells[ncell+nsplit],&cells[icell],sizeof(OneCell));
+  nsplit++;
 }
 
 /* ----------------------------------------------------------------------
@@ -245,7 +256,7 @@ void Grid::assign_stride(int order)
     cells[m].proc = nth % nprocs;
   }
 
-  assign_mine();
+  assign_parent();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -270,7 +281,7 @@ void Grid::assign_block(int px, int py, int pz)
     cells[m].proc = iproc;
   }
 
-  assign_mine();
+  assign_parent();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -286,34 +297,54 @@ void Grid::assign_random()
 
   delete random;
 
-  assign_mine();
+  assign_parent();
 }
 
 /* ----------------------------------------------------------------------
-   setup grid cells I own
-   create mycells list of owned cells
-   compute local index for owned cells
+   create myparent list of parent grid cells indices I own
+   also compute plocal index for owned cells
 ------------------------------------------------------------------------- */
 
-void Grid::assign_mine()
+void Grid::assign_parent()
 {
-  // nlocal = # of cells I own
-  // mycells = indices of cells I own
-
   int me = comm->me;
 
-  nlocal = 0;
+  nparent = 0;
   for (int m = 0; m < ncell; m++)
-    if (cells[m].proc == me) nlocal++;
+    if (cells[m].proc == me) nparent++;
 
-  memory->destroy(mycells);
-  memory->create(mycells,nlocal,"grid:mycells");
+  memory->destroy(myparent);
+  memory->create(myparent,nparent,"grid:myparent");
 
-  nlocal = 0;
+  nparent = 0;
   for (int m = 0; m < ncell; m++)
     if (cells[m].proc == me) {
-      cells[m].local = nlocal;
-      mycells[nlocal++] = m;
+      cells[m].plocal = nparent;
+      myparent[nparent++] = m;
+    }
+}
+
+/* ----------------------------------------------------------------------
+   create myparent list of child grid cells indices I own
+   also compute clocal index for owned cells
+------------------------------------------------------------------------- */
+
+void Grid::assign_child()
+{
+  int me = comm->me;
+
+  nchild = 0;
+  for (int m = 0; m < ncell+nsplit; m++)
+    if (cells[m].proc == me && cells[m].nsplit <= 1) nchild++;
+
+  memory->destroy(mychild);
+  memory->create(mychild,nchild,"grid:mychild");
+
+  nchild = 0;
+  for (int m = 0; m < ncell+nsplit; m++)
+    if (cells[m].proc == me && cells[m].nsplit <= 1) {
+      cells[m].clocal = nchild;
+      mychild[nchild++] = m;
     }
 }
 
@@ -618,8 +649,8 @@ void Grid::grid_inout()
   //       comm with methods that use pack/unpack callbacks to this class
 
   int nsend = 0;
-  for (m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (m = 0; m < nparent; m++) {
+    icell = myparent[m];
     neigh = cells[icell].neigh;
     for (j = 0; j < 6; j++) {
       if (neigh[j] < 0) continue;
@@ -631,8 +662,8 @@ void Grid::grid_inout()
   memory->create(proclist,nsend,"grid:proclist");
 
   nsend = 0;
-  for (m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (m = 0; m < nparent; m++) {
+    icell = myparent[m];
     neigh = cells[icell].neigh;
     for (j = 0; j < 6; j++) {
       if (neigh[j] < 0) continue;
@@ -667,8 +698,8 @@ void Grid::grid_inout()
 
     while (1) {
       mark = 0;
-      for (m = 0; m < nlocal; m++) {
-	icell = mycells[m];
+      for (m = 0; m < nparent; m++) {
+	icell = myparent[m];
 	if (cells[icell].type == CELLOUTSIDE || 
 	    cells[icell].type == CELLINSIDE) continue;
 
@@ -681,21 +712,21 @@ void Grid::grid_inout()
 	    ipt = corners[j][i];
 	    jpt = corners[faceflip[j]][i];
 	    ivalue = cflags[m][ipt];
-	    jvalue = cflags[cells[neigh[j]].local][jpt];
+	    jvalue = cflags[cells[neigh[j]].plocal][jpt];
 
 	    if (ivalue != CORNERUNKNOWN && jvalue != CORNERUNKNOWN) {
 	      if (ivalue != jvalue) {
 		char str[128];
 		sprintf(str,"Mismatched owned corner flags %d %d "
-			"in two cells %d %d at corners %d %d\n",
+			"in two cells %d %d at corners %d %d",
 			ivalue,jvalue,icell,neigh[j],ipt,jpt);
 		error->one(FLERR,str);
 	      }
 	    } else if (ivalue != CORNERUNKNOWN) {
-	      cflags[cells[neigh[j]].local][jpt] = ivalue;
+	      cflags[cells[neigh[j]].plocal][jpt] = ivalue;
 	      if (cells[neigh[j]].type == CELLUNKNOWN && 
 		  (ivalue == CORNEROUTSIDE || ivalue == CORNERINSIDE)) {
-		if (flood(ivalue,ncorner,cells[neigh[j]].local))
+		if (flood(ivalue,ncorner,cells[neigh[j]].plocal))
 		  error->one(FLERR,"Mismatched corner flags within one cell");
                 if (ivalue == CORNEROUTSIDE)
                   cells[neigh[j]].type = CELLOUTSIDE;
@@ -727,8 +758,8 @@ void Grid::grid_inout()
     // look for unmarked corner pts in CELLOVERLAP cells
     // attempt to mark them via one_cell_corner calls
 
-    for (m = 0; m < nlocal; m++) {
-      icell = mycells[m];
+    for (m = 0; m < nparent; m++) {
+      icell = myparent[m];
       if (cells[icell].type != CELLOVERLAP) continue;
       for (i = 0; i < ncorner; i++) {
 	if (cflags[m][i] != CORNERUNKNOWN) continue;
@@ -752,8 +783,8 @@ void Grid::grid_inout()
     // NOTE: sending icell assumes all procs have global cell list
 
     nsend = 0;
-    for (m = 0; m < nlocal; m++) {
-      neigh = cells[mycells[m]].neigh;
+    for (m = 0; m < nparent; m++) {
+      neigh = cells[myparent[m]].neigh;
       for (j = 0; j < 6; j++) {
 	if (neigh[j] < 0) continue;
 	if (cells[neigh[j]].proc != me) {
@@ -780,7 +811,7 @@ void Grid::grid_inout()
     for (m = 0; m < nrecv; m++) {
       icell = rbuf[m][0];
       iface = rbuf[m][1];
-      ilocal = cells[icell].local;
+      ilocal = cells[icell].plocal;
 
       for (i = 0; i < nface_pts; i++) {
 	ipt = corners[iface][i];
@@ -791,7 +822,7 @@ void Grid::grid_inout()
 	  if (ivalue != jvalue) {
 	    char str[128];
 	    sprintf(str,"Mismatched owned/ghost corner flags %d %d "
-		    "in two cells %d %d at corners %d %d\n",ivalue,jvalue,
+		    "in two cells %d %d at corners %d %d",ivalue,jvalue,
 		    icell,cells[icell].neigh[iface],ipt,jpt);
 	    error->one(FLERR,str);
 	  }
@@ -859,8 +890,8 @@ void Grid::grid_inout2()
   //       comm with methods that use pack/unpack callbacks to this class
 
   int nsend = 0;
-  for (m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (m = 0; m < nparent; m++) {
+    icell = myparent[m];
     neigh = cells[icell].neigh;
     for (j = 0; j < 6; j++) {
       if (neigh[j] < 0) continue;
@@ -872,8 +903,8 @@ void Grid::grid_inout2()
   memory->create(proclist,nsend,"grid:proclist");
 
   nsend = 0;
-  for (m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (m = 0; m < nparent; m++) {
+    icell = myparent[m];
     neigh = cells[icell].neigh;
     for (j = 0; j < 6; j++) {
       if (neigh[j] < 0) continue;
@@ -907,8 +938,8 @@ void Grid::grid_inout2()
 
     while (1) {
       mark = 0;
-      for (m = 0; m < nlocal; m++) {
-	icell = mycells[m];
+      for (m = 0; m < nparent; m++) {
+	icell = myparent[m];
 	if (cells[icell].type == CELLOUTSIDE || 
 	    cells[icell].type == CELLINSIDE) continue;
 
@@ -921,21 +952,21 @@ void Grid::grid_inout2()
 	    ipt = corners[j][i];
 	    jpt = corners[faceflip[j]][i];
 	    ivalue = cflags[m][ipt];
-	    jvalue = cflags[cells[neigh[j]].local][jpt];
+	    jvalue = cflags[cells[neigh[j]].plocal][jpt];
 
 	    if (ivalue != CORNERUNKNOWN && jvalue != CORNERUNKNOWN) {
 	      if (ivalue != jvalue) {
 		char str[128];
 		sprintf(str,"Mismatched owned corner flags %d %d "
-			"in two cells %d %d at corners %d %d\n",
+			"in two cells %d %d at corners %d %d",
 			ivalue,jvalue,icell,neigh[j],ipt,jpt);
 		error->one(FLERR,str);
 	      }
 	    } else if (ivalue != CORNERUNKNOWN) {
-	      cflags[cells[neigh[j]].local][jpt] = ivalue;
+	      cflags[cells[neigh[j]].plocal][jpt] = ivalue;
 	      if (cells[neigh[j]].type == CELLUNKNOWN && 
 		  (ivalue == CORNEROUTSIDE || ivalue == CORNERINSIDE)) {
-		if (flood(ivalue,ncorner,cells[neigh[j]].local))
+		if (flood(ivalue,ncorner,cells[neigh[j]].plocal))
 		  error->one(FLERR,"Mismatched corner flags within one cell");
                 if (ivalue == CORNEROUTSIDE)
                   cells[neigh[j]].type = CELLOUTSIDE;
@@ -969,8 +1000,8 @@ void Grid::grid_inout2()
     // NOTE: sending icell assumes all procs have global cell list
 
     nsend = 0;
-    for (m = 0; m < nlocal; m++) {
-      neigh = cells[mycells[m]].neigh;
+    for (m = 0; m < nparent; m++) {
+      neigh = cells[myparent[m]].neigh;
       for (j = 0; j < 6; j++) {
 	if (neigh[j] < 0) continue;
 	if (cells[neigh[j]].proc != me) {
@@ -997,7 +1028,7 @@ void Grid::grid_inout2()
     for (m = 0; m < nrecv; m++) {
       icell = rbuf[m][0];
       iface = rbuf[m][1];
-      ilocal = cells[icell].local;
+      ilocal = cells[icell].plocal;
 
       for (i = 0; i < nface_pts; i++) {
 	ipt = corners[iface][i];
@@ -1008,7 +1039,7 @@ void Grid::grid_inout2()
 	  if (ivalue != jvalue) {
 	    char str[128];
 	    sprintf(str,"Mismatched owned/ghost corner flags %d %d "
-		    "in two cells %d %d at corners %d %d\n",ivalue,jvalue,
+		    "in two cells %d %d at corners %d %d",ivalue,jvalue,
 		    icell,cells[icell].neigh[iface],ipt,jpt);
 	    error->one(FLERR,str);
 	  }
@@ -1071,8 +1102,8 @@ void Grid::grid_check()
   // check cell types
 
   int unknown = 0;
-  for (m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (m = 0; m < nparent; m++) {
+    icell = myparent[m];
     if (cells[icell].type == CELLUNKNOWN) unknown++; 
   }
   int unknownall;
@@ -1099,8 +1130,8 @@ void Grid::grid_check()
   int inside = 0;
   int outside = 0;
 
-  for (m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (m = 0; m < nparent; m++) {
+    icell = myparent[m];
     if (cells[icell].type != CELLOVERLAP) continue;
     for (i = 0; i < ncorner; i++) {
       if (cflags[m][i] != CORNERUNKNOWN) continue;
@@ -1149,8 +1180,8 @@ void Grid::surf2grid_stats()
   int stotal = 0;
   int smax = 0;
   double sratio = BIG;
-  for (int m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (int m = 0; m < nparent; m++) {
+    icell = myparent[m];
     stotal += cells[icell].nsurf;
     smax = MAX(smax,cells[icell].nsurf);
     
@@ -1204,12 +1235,16 @@ void Grid::flow_stats()
   int maxsplit = 0;
   double cellvolume = 0.0;
 
-  for (int m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (int m = 0; m < nparent; m++) {
+    icell = myparent[m];
     if (cells[icell].type == CELLOUTSIDE) outside++;
     else if (cells[icell].type == CELLINSIDE) inside++;
     else if (cells[icell].type == CELLOVERLAP) overlap++;
     maxsplit = MAX(maxsplit,cells[icell].nsplit);
+  }
+
+  for (int m = 0; m < nchild; m++) {
+    icell = mychild[m];
     if (cells[icell].type != CELLINSIDE) cellvolume += cells[icell].volume;
   }
 
@@ -1226,8 +1261,8 @@ void Grid::flow_stats()
   int *tally = new int[maxsplitall];
   int *tallyall = new int[maxsplitall];
   for (i = 0; i < maxsplitall; i++) tally[i] = 0;
-  for (int m = 0; m < nlocal; m++) {
-    icell = mycells[m];
+  for (int m = 0; m < nparent; m++) {
+    icell = myparent[m];
     if (cells[icell].type == CELLOVERLAP) tally[cells[icell].nsplit-1]++;
   }
 
@@ -1239,7 +1274,7 @@ void Grid::flow_stats()
 	      outall,inall,overall);
       fprintf(screen," ");
       for (i = 0; i < maxsplitall; i++) fprintf(screen," %d",tallyall[i]);
-      fprintf(screen," = surf cells with 1,2,...,N splits\n");
+      fprintf(screen," = surf cells with 1,2,etc splits\n");
       fprintf(screen,"  %g %g = cell-wise and global flow volume\n",
               cellvolumeall,flowvolume);
     }
@@ -1248,7 +1283,7 @@ void Grid::flow_stats()
 	      outall,inall,overall);
       fprintf(logfile," ");
       for (i = 0; i < maxsplitall; i++) fprintf(logfile," %d",tallyall[i]);
-      fprintf(logfile," = surf cells with 1,2,...,N splits\n");
+      fprintf(logfile," = surf cells with 1,2,etc splits\n");
       fprintf(logfile,"  %g %g = cell-wise and global flow volume\n",
               cellvolumeall,flowvolume);
     }
@@ -1303,7 +1338,7 @@ double Grid::flow_volume()
 
 void Grid::grow(int nextra)
 {
-  bigint target = (bigint) ncell + nextra;
+  bigint target = (bigint) ncell + nsplit + nextra;
   if (target <= maxcell) return;
   
   bigint newmax = maxcell;
@@ -1321,12 +1356,13 @@ void Grid::grow(int nextra)
 
 bigint Grid::memory_usage()
 {
-  bigint bytes = (bigint) ncell * sizeof(OneCell);      // cells
-  bytes += nlocal*sizeof(int);                          // mycells
+  bigint bytes = ((bigint) ncell + nsplit) * sizeof(OneCell);    // cells
+  bytes += nparent*sizeof(int);                    // myparent
+  bytes += nchild*sizeof(int);                     // mychild
 
-  int ncorners = 4;                                     // cflags
+  int ncorners = 4;                                // cflags
   if (domain->dimension == 3) ncorners = 8;
-  bytes += nlocal*ncorners*sizeof(int);
+  bytes += nparent*ncorners*sizeof(int);
 
   if (surf->exist) {                               // csurfs
     int n = 0;

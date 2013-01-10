@@ -128,6 +128,7 @@ void CreateMolecules::command(int narg, char **arg)
 /* ----------------------------------------------------------------------
    create a single molecule
    find cell it is in, and store on appropriate processor
+   NOTE: this could put particle in parent cell with surfs
 ------------------------------------------------------------------------- */
 
 void CreateMolecules::create_single()
@@ -144,12 +145,12 @@ void CreateMolecules::create_single()
 	       "for 2d simulation");
 
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
-  int nglocal = grid->nlocal;
+  int *myparent = grid->myparent;
+  int nparent = grid->nparent;
 
   int icell = -1;
-  for (i = 0; i < nglocal; i++) {
-    m = mycells[i];
+  for (i = 0; i < nparent; i++) {
+    m = myparent[i];
     lo = cells[m].lo;
     hi = cells[m].hi;
     if (x[0] >= lo[0] && x[0] < hi[0] &&
@@ -191,8 +192,8 @@ void CreateMolecules::create_local(bigint np)
   random->reset(seed,me,100);
 
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
-  int nglocal = grid->nlocal;
+  int *mychild = grid->mychild;
+  int nchild = grid->nchild;
 
   // volme = volume of grid cells I own that are CELLOUTSIDE
   // Nme = # of molecules I will create
@@ -201,10 +202,10 @@ void CreateMolecules::create_local(bigint np)
 
   double *lo,*hi;
   double volme = 0.0;
-  for (int i = 0; i < nglocal; i++) {
-    if (cells[mycells[i]].type != CELLOUTSIDE) continue;
-    lo = cells[mycells[i]].lo;
-    hi = cells[mycells[i]].hi;
+  for (int i = 0; i < nchild; i++) {
+    if (cells[mychild[i]].type != CELLOUTSIDE) continue;
+    lo = cells[mychild[i]].lo;
+    hi = cells[mychild[i]].hi;
     if (dimension == 3) volme += (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else volme += (hi[0]-lo[0]) * (hi[1]-lo[1]);
   }
@@ -246,8 +247,8 @@ void CreateMolecules::create_local(bigint np)
   double volsum = 0.0;
   bigint nprev = 0;
 
-  for (int i = 0; i < nglocal; i++) {
-    icell = mycells[i];
+  for (int i = 0; i < nchild; i++) {
+    icell = mychild[i];
     if (cells[icell].type != CELLOUTSIDE) continue;
     lo = cells[icell].lo;
     hi = cells[icell].hi;

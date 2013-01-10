@@ -127,20 +127,21 @@ void Collide::collisions()
 
   ncollide_one = nattempt_one = 0;
 
-  // loop over cells I own
+  // loop over cells I own, including split cells
 
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
-  int nglocal = grid->nlocal;
+  int *mychild = grid->mychild;
+  int nchild = grid->nchild;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
 
   int *species2group = mixture->species2group;
 
-  for (int m = 0; m < nglocal; m++) {
-    icell = mycells[m];
+  for (int m = 0; m < nchild; m++) {
+    icell = mychild[m];
     np = cells[icell].count;
+    if (np == 0) continue;
     ip = cells[icell].first;
     volume = cells[icell].volume;
 
@@ -168,8 +169,6 @@ void Collide::collisions()
       for (jgroup = 0; jgroup < ngroups; jgroup++) {
 	attempt = attempt_collision(m,igroup,jgroup,volume);
 	nattempt = static_cast<int> (attempt);
-	// if (attempt-nattempt > random->uniform()) nattempt++;
-	//printf("NATTEMPT %d %d\n",icell, nattempt);
 
 	if (nattempt) {
 	  gpair[npair][0] = igroup;

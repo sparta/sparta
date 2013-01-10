@@ -66,6 +66,8 @@ void FixGridCheck::end_of_step()
   int icell;
   double *x,*lo,*hi;
 
+  // split cell check is simply inside parent cell
+
   for (int i = 0; i < nlocal; i++) {
     x = particles[i].x;
     icell = particles[i].icell;

@@ -189,31 +189,22 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   if (nvalues == 1) size_per_grid_cols = 0;
   else size_per_grid_cols = nvalues;
 
-  // allocate accumulators
-  // if ave = RUNNING, allocate extra set of accvec/accarray
-
-  nglocal = grid->nlocal;
-  if (nvalues == 1) memory->create(vector_grid,nglocal,"ave/grid:vector_grid");
-  else memory->create(array_grid,nglocal,nvalues,"ave/grid:array_grid");
-  
-  if (ave == RUNNING) {
-    if (nvalues == 1) memory->create(accvec,nglocal,"ave/grid:accvec");
-    else memory->create(accarray,nglocal,nvalues,"ave/grid:accarray");
-  } else {
-    if (nvalues == 1) accvec = vector_grid;
-    else accarray = array_grid;
-  }
+  nchild = 0;
+  vector_grid = NULL;
+  array_grid = NULL;
+  accvec = NULL;
+  accarray = NULL;
 
   // allocate norm vectors and setup norm pointers
   // only store unique norms by checking if returned ptr matches previous ptr
   // NOTE: need to add logic for fixes and variables if enable them
 
-  nnorm = 0;
   normacc = new int[nvalues];
   normindex = new int[nvalues];
   norms = new double*[nvalues];
   cfv_norms = new double*[nvalues];
 
+  nnorm = 0;
   for (int m = 0; m < nvalues; m++) {
     int j = argindex[m];
     
@@ -233,43 +224,9 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
       else {
         normacc[m] = 1;
         normindex[m] = nnorm;
-        cfv_norms[nnorm] = ptr;
-        memory->create(norms[nnorm],nglocal,"ave/grid:norms");
-        nnorm++;
+        cfv_norms[nnorm++] = ptr;
       }
     }
-  }
-
-  // zero accumulators and norm vectors one time if ave = RUNNING
-
-  if (ave == RUNNING) {
-    if (nvalues == 1)
-      for (int i = 0; i < nglocal; i++)
-	accvec[i] = 0.0;
-    else {
-      int m;
-      for (int i = 0; i < nglocal; i++)
-	for (m = 0; m < nvalues; m++)
-	  accarray[i][m] = 0.0;
-    }
-
-    for (int m = 0; m < nnorm; m++) {
-      double *norm = norms[m];
-      for (int i = 0; i < nglocal; i++) norm[i] = 0.0;
-    }
-  }
-
-  // zero vector/array since dump may access it on timestep 0
-  // zero vector/array since a variable may access it before first run
-
-  if (nvalues == 0)
-    for (int i = 0; i < nglocal; i++)
-      vector_grid[i] = 0.0;
-  else {
-    int m;
-    for (int i = 0; i < nglocal; i++)
-      for (m = 0; m < nvalues; m++)
-	array_grid[i][m] = 0.0;
   }
 
   // nvalid = next step on which end_of_step does something
@@ -343,6 +300,8 @@ void FixAveGrid::init()
 
     } else value2index[m] = -1;
   }
+
+  reset();
 }
 
 /* ----------------------------------------------------------------------
@@ -370,15 +329,15 @@ void FixAveGrid::end_of_step()
 
   if (ave == ONE && irepeat == 0) {
     if (nvalues == 1)
-      for (i = 0; i < nglocal; i++)
+      for (i = 0; i < nchild; i++)
 	accvec[i] = 0.0;
     else
-      for (i = 0; i < nglocal; i++)
+      for (i = 0; i < nchild; i++)
 	for (m = 0; m < nvalues; m++)
 	  accarray[i][m] = 0.0;
     for (int m = 0; m < nnorm; m++) {
       norm = norms[m];
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+      for (i = 0; i < nchild; i++) norm[i] = 0.0;
     }
   }
 
@@ -404,20 +363,20 @@ void FixAveGrid::end_of_step()
       if (j == 0) {
         double *compute_vector = compute->vector_grid;
         if (nvalues == 1) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             accvec[i] += compute_vector[i];
         } else {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             accarray[i][m] += compute_vector[i];
         }
       } else {
         int jm1 = j - 1;
         double **compute_array = compute->array_grid;
         if (nvalues == 1) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             accvec[i] += compute_array[i][jm1];
         } else {
-          for (i = 0; i < nglocal; i++) {
+          for (i = 0; i < nchild; i++) {
             accarray[i][m] += compute_array[i][jm1];
           }
         }
@@ -429,20 +388,20 @@ void FixAveGrid::end_of_step()
       if (j == 0) {
         double *fix_vector = modify->fix[n]->vector_grid;
         if (nvalues == 1) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             accvec[i] += fix_vector[i];
         } else {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             accarray[i][m] += fix_vector[i];
         }
       } else {
         int jm1 = j - 1;
         double **fix_array = modify->fix[n]->array_grid;
         if (nvalues == 1) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             accvec[i] += fix_array[i][jm1];
         } else {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             accarray[i][m] += fix_array[i][jm1];
         }
       }
@@ -458,7 +417,7 @@ void FixAveGrid::end_of_step()
     if (normacc[m]) {
       norm = norms[normindex[m]];
       cfv_norm = cfv_norms[normindex[m]];
-      for (i = 0; i < nglocal; i++) norm[i] += cfv_norm[i];
+      for (i = 0; i < nchild; i++) norm[i] += cfv_norm[i];
     }
   }
 
@@ -484,19 +443,19 @@ void FixAveGrid::end_of_step()
   if (ave == ONE) {
     if (nvalues == 1) {
       if (normindex[0] < 0) {
-        for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
+        for (i = 0; i < nchild; i++) vector_grid[i] /= nsample;
       } else {
         norm = norms[normindex[0]];
-        for (i = 0; i < nglocal; i++)
+        for (i = 0; i < nchild; i++)
           if (norm[i] > 0.0) vector_grid[i] /= norm[i];
       }
     } else {
       for (m = 0; m < nvalues; m++) {
         if (normindex[m] < 0) {
-          for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
+          for (i = 0; i < nchild; i++) array_grid[i][m] /= nsample;
         } else {
           norm = norms[normindex[m]];
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             if (norm[i] > 0.0) array_grid[i][m] /= norm[i];
         }
       }
@@ -505,19 +464,19 @@ void FixAveGrid::end_of_step()
   } else {
     if (nvalues == 1) {
       if (normindex[0] < 0) {
-        for (i = 0; i < nglocal; i++) vector_grid[i] = accvec[i]/nsample;
+        for (i = 0; i < nchild; i++) vector_grid[i] = accvec[i]/nsample;
       } else {
         norm = norms[normindex[0]];
-        for (i = 0; i < nglocal; i++) vector_grid[i] = accvec[i]/norm[i];
+        for (i = 0; i < nchild; i++) vector_grid[i] = accvec[i]/norm[i];
       }
     } else {
       for (m = 0; m < nvalues; m++) {
         if (normindex[m] < 0) {
-          for (i = 0; i < nglocal; i++)
+          for (i = 0; i < nchild; i++)
             array_grid[i][m] = accarray[i][m]/nsample;
         } else {
           norm = norms[normindex[m]];
-          for (i = 0; i < nglocal; i++) 
+          for (i = 0; i < nchild; i++) 
             array_grid[i][m] = accarray[i][m]/norm[i];
         }
       }
@@ -573,9 +532,9 @@ void FixAveGrid::grow()
 double FixAveGrid::memory_usage()
 {
   double bytes = 0.0;
-  bytes += nglocal*nvalues * sizeof(double);
-  if (ave == RUNNING) bytes += nglocal*nvalues * sizeof(double);
-  bytes += nnorm*nglocal * sizeof(double);
+  bytes += nchild*nvalues * sizeof(double);
+  if (ave == RUNNING) bytes += nchild*nvalues * sizeof(double);
+  bytes += nnorm*nchild * sizeof(double);
   return bytes;
 }
 
@@ -595,4 +554,78 @@ bigint FixAveGrid::nextvalid()
     nvalid -= (nrepeat-1)*nevery;
   if (nvalid < update->ntimestep) nvalid += per_grid_freq;
   return nvalid;
+}
+
+/* ----------------------------------------------------------------------
+   reallocate arrays if nchild has changed
+   zero arrays whether nchild has changed or not
+------------------------------------------------------------------------- */
+
+void FixAveGrid::reset()
+{
+  if (grid->nchild != nchild) {
+
+    // allocate accumulators
+    // if ave = RUNNING, allocate extra set of accvec/accarray
+
+    nchild = grid->nchild;
+
+    if (nvalues == 1) {
+      memory->destroy(vector_grid);
+      memory->create(vector_grid,nchild,"ave/grid:vector_grid");
+    } else {
+      memory->destroy(array_grid);
+      memory->create(array_grid,nchild,nvalues,"ave/grid:array_grid");
+    }
+
+    if (ave == RUNNING) {
+      if (nvalues == 1) {
+        memory->destroy(accvec);
+        memory->create(accvec,nchild,"ave/grid:accvec");
+      } else {
+        memory->destroy(accarray);
+        memory->create(accarray,nchild,nvalues,"ave/grid:accarray");
+      }
+    } else {
+      if (nvalues == 1) accvec = vector_grid;
+      else accarray = array_grid;
+    }
+
+    for (int i = 0; i < nnorm; i++) {
+      memory->sfree(norms[i]);
+      memory->create(norms[nnorm],nchild,"ave/grid:norms");
+    }
+  }
+
+  // zero accumulators and norm vectors one time if ave = RUNNING
+
+  if (ave == RUNNING) {
+    if (nvalues == 1)
+      for (int i = 0; i < nchild; i++)
+	accvec[i] = 0.0;
+    else {
+      int m;
+      for (int i = 0; i < nchild; i++)
+	for (m = 0; m < nvalues; m++)
+	  accarray[i][m] = 0.0;
+    }
+
+    for (int m = 0; m < nnorm; m++) {
+      double *norm = norms[m];
+      for (int i = 0; i < nchild; i++) norm[i] = 0.0;
+    }
+  }
+
+  // zero vector/array since dump may access it on timestep 0
+  // zero vector/array since a variable may access it before first run
+
+  if (nvalues == 0)
+    for (int i = 0; i < nchild; i++)
+      vector_grid[i] = 0.0;
+  else {
+    int m;
+    for (int i = 0; i < nchild; i++)
+      for (m = 0; m < nvalues; m++)
+	array_grid[i][m] = 0.0;
+  }
 }

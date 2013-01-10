@@ -49,7 +49,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   species = NULL;
 
 
-  maxgrid = 0;
+  //maxgrid = 0;
   //cellcount = NULL;
   //first = NULL;
   maxsort = 0;
@@ -91,13 +91,13 @@ void Particle::init()
   // reallocate cellcount and first lists as needed
   // NOTE: when grid becomes dynamic, will need to do this in sort()
 
-  if (maxgrid < grid->nlocal) {
-    maxgrid = grid->nlocal;
+  //if (maxgrid < grid->nlocal) {
+  //  maxgrid = grid->nlocal;
     //    memory->destroy(cellcount);
     //memory->destroy(first);
     //memory->create(first,maxgrid,"particle:first");
     //memory->create(cellcount,maxgrid,"particle:cellcount");
-  }
+  // }
 }
 
 /* ----------------------------------------------------------------------
@@ -140,14 +140,14 @@ void Particle::sort()
     memory->create(next,maxsort,"particle:next");
   }
 
-  // initialize linked list of particles in cells I own
+  // initialize linked list of particles in cells I own, including split cells
 
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
-  int nglocal = grid->nlocal;
+  int *mychild = grid->mychild;
+  int nchild = grid->nchild;
 
-  for (i = 0; i < nglocal; i++) {
-    icell = mycells[i];
+  for (i = 0; i < nchild; i++) {
+    icell = mychild[i];
     cells[icell].first = -1;
     cells[icell].count = 0;
     //cellcount[i] = 0;

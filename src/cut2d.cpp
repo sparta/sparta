@@ -24,7 +24,7 @@
 using namespace SPARTA_NS;
 
 enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};   // same as Grid
-enum{CORNERUNKNOWN,CORNEROUTSIDE,CORNERINSIDE,CORNEROVERLAP};  // samde as Grid
+enum{CORNERUNKNOWN,CORNEROUTSIDE,CORNERINSIDE,CORNEROVERLAP};  // same as Grid
 
 enum{POINTINSIDE,POINTBORDER,POINTOUTSIDE};
 enum{LOOPINSIDE,LOOPBORDER};
@@ -166,13 +166,14 @@ void Cut2d::surf2grid()
 }
 
 /* ----------------------------------------------------------------------
-   calculate split area(s) of my grid cells that contain lines
-   for each owned grid cell: set type, cflags, nsplit, volume
+   calculate split areas of all grid cells that contain lines
+   for all grid cells: set nsplit, csurfs, csplits
+   for owned grid cells: set type, cflags, volume
 ------------------------------------------------------------------------- */
 
 void Cut2d::split()
 {
-  int i,j,m;
+  int i,j,m,ilocal,icell,scell,nsurf;
   int cornerflag[4];
 
   Grid::OneCell *cells = grid->cells;
@@ -180,34 +181,33 @@ void Cut2d::split()
   int **csplits = grid->csplits;
   int **cflags = grid->cflags;
   int ncell = grid->ncell;
-  int nglocal = grid->nlocal;
-  int *mycells = grid->mycells;
   int me = comm->me;
 
-  for (i = 0; i < nglocal; i++) {
-    icell = mycells[i];
-    nsurf = cells[icell].nsurf;
+  grid->nsplit = 0;
+
+  for (i = 0; i < ncell; i++) {
+    nsurf = cells[i].nsurf;
 
     if (nsurf) {
       if (VERBOSE) {
-        printf("\nCELL %d %g %g %g %g\n",cells[icell].id,
-               cells[icell].lo[0],cells[icell].hi[0],
-               cells[icell].lo[1],cells[icell].hi[1]);
+        printf("\nCELL %d %g %g %g %g\n",cells[i].id,
+               cells[i].lo[0],cells[i].hi[0],
+               cells[i].lo[1],cells[i].hi[1]);
       }
-      line2pl(nsurf,csurfs[icell]);
-      weiler_intersect(cells[icell].lo,cells[icell].hi,cornerflag);
-      weiler_walk(cells[icell].lo,cells[icell].hi,cornerflag);
-      loop2pg(cells[icell].lo,cells[icell].hi,cornerflag);
-      if (pg.n > 1) surf2pg(nsurf,csurfs[icell],csplits[icell]);
+      line2pl(nsurf,csurfs[i]);
+      weiler_intersect(cells[i].lo,cells[i].hi,cornerflag);
+      weiler_walk(nsurf,cells[i].lo,cells[i].hi,cornerflag);
+      loop2pg(nsurf,cells[i].lo,cells[i].hi,cornerflag);
+      if (pg.n > 1) surf2pg(nsurf,csurfs[i],csplits[i]);
 
-      cells[icell].type = CELLOVERLAP;
-      cflags[i][0] = cornerflag[0];
-      cflags[i][1] = cornerflag[1];
-      cflags[i][2] = cornerflag[2];
-      cflags[i][3] = cornerflag[3];
+      if (cells[i].proc == me) {
+        cells[i].type = CELLOVERLAP;
+        ilocal = cells[i].plocal;
+        for (j = 0; j < 4; j++) cflags[ilocal][j] = cornerflag[j];
+      }
 
       if (VERBOSE) {
-        printf("SPLIT %d %d: %d %d %d %d\n",cells[icell].id,cells[icell].type,
+        printf("SPLIT %d %d: %d %d %d %d\n",cells[i].id,CELLOVERLAP,
                cornerflag[0],cornerflag[1],cornerflag[2],cornerflag[3]);
         printf("  AREAS:");
         for (j = 0; j < pg.n; j++)
@@ -216,29 +216,47 @@ void Cut2d::split()
         if (pg.n > 1) {
           printf("  SURFMAP:");
           for (j = 0; j < nsurf; j++)
-            printf(" %d",csplits[icell][j]);
+            printf(" %d",csplits[i][j]);
           printf("\n");
         }
       }
 
-      // here is where need to create split cells with volumes
-      // needs to be done for all cells, not just owned cells
+      // if cell is not split, volume = cut volume on single polygon
+      // if cell is split:
+      //   reset csplits to indices of new split cells, or leave as -1
+      //   set xsplit and xindex for parent cell
+      //     by picking line end pt that is inside cell
+      //     if none exist, clip a line that is part of a polygon to cell
+      //   create N split cells with respective volumes via add_split_cell()
+      //   add their scell indices to grid->mycells via add_split_local()
 
-      cells[icell].nsplit = pg.n;
-      if (pg.n == 1) cells[icell].volume = pg[0].area;
+      cells[i].nsplit = pg.n;
+      if (pg.n == 1) cells[i].volume = pg[0].area;
       else {
-        cells[icell].volume = 0.0;
-        for (j = 0; j < pg.n; j++)
-          cells[icell].volume += pg[j].area;
+        scell = ncell + grid->nsplit;
+        for (j = 0; j < nsurf; j++) 
+          if (csplits[i][j] >= 0) csplits[i][j] += scell;
+        cells[i].xchild = split_point(cells[i].lo,cells[i].hi,nsurf,csurfs[i],
+                                      csplits[i],cells[i].xsplit);
+        for (j = 0; j < pg.n; j++) {
+          grid->add_split_cell(i);
+          cells[scell].nsplit = -i;
+          cells[scell].volume = pg[j].area;
+          scell++;
+        }
       }
 
+    // cell with no surfs, could be inside or outside
+
     } else {
-      cells[icell].type = CELLUNKNOWN;
-      cflags[i][0] = cflags[i][1] = cflags[i][2] = cflags[i][3] = 
-        CORNERUNKNOWN;
-      cells[icell].nsplit = 1;
-      cells[icell].volume = (cells[icell].hi[0]-cells[icell].lo[0]) * 
-        (cells[icell].hi[1]-cells[icell].lo[1]);
+      cells[i].nsplit = 1;
+      if (cells[i].proc == me) {
+        cells[i].type = CELLUNKNOWN;
+        ilocal = cells[i].plocal;
+        for (j = 0; j < 4; j++) cflags[ilocal][j] = CORNERUNKNOWN;
+        cells[i].volume = (cells[i].hi[0]-cells[i].lo[0]) * 
+          (cells[i].hi[1]-cells[i].lo[1]);
+      }
     }
 
   }
@@ -307,7 +325,6 @@ void Cut2d::line2pl(int n, int *list)
       one->prepend(datum);
     }
     npl++;
-
 
     for (usedzero = 0; usedzero < n; usedzero++)
       if (used[usedzero] == 0) break;
@@ -625,9 +642,9 @@ void Cut2d::interleave(double *pt, double *norm, double *lo, double *hi,
    loop = LOOPINSIDE/LOOPBORDER, area, list of line indices in loop
 ------------------------------------------------------------------------- */
 
-void Cut2d::weiler_walk(double *lo, double *hi, int *cornerflag)
+void Cut2d::weiler_walk(int nsurf, double *lo, double *hi, int *cornerflag)
 {
-  int i,ifirst,iopt,ioptfirst;
+  int i,iprev,ifirst,iopt,ioptfirst;
   int nlist,done,noexit,ic;
   double area;
   Entrypt *entry,*last,*ept;
@@ -662,12 +679,7 @@ void Cut2d::weiler_walk(double *lo, double *hi, int *cornerflag)
     i = ifirst = entrypts.first->index;
 
     // toggle walk between OPTS and CPTS until return to start pt
-    // circular walk within OPTS until reach an exit pt or start pt
-    // circular walk within CPTS until reach an entry pt
-    // OPTS or CPTS edge contributes to area
-    // only OPTS edge is added to list
-    // if walk corner pt in CPTS:
-    //   mark it CORNEROUTSIDE, if not already CORNEROVERLAP
+    // both OPTS or CPTS edges contribute to area
 
     nloop++;
     loops.grow(nloop);
@@ -691,8 +703,11 @@ void Cut2d::weiler_walk(double *lo, double *hi, int *cornerflag)
       }
       entrypts.remove(ept);
 
+      // circular walk within OPTS until reach an exit pt or start pt
+      // add OPTS edge to lines list
+      
       while (1) {
-        i++;
+        iprev = i++;
         if (i == opts[iopt].n) i = 0;
         if (i == ifirst && iopt == ioptfirst) {
           done = 1;
@@ -700,7 +715,7 @@ void Cut2d::weiler_walk(double *lo, double *hi, int *cornerflag)
         }
         opt = &opts[iopt][i];
         
-        p0 = opts[iopt][i-1].x;
+        p0 = opts[iopt][iprev].x;
         p1 = opt->x;
         if (p0[0] < p1[0])
           area -= (0.5*(p0[1]+p1[1]) - lo[1]) * (p1[0]-p0[0]);
@@ -719,6 +734,10 @@ void Cut2d::weiler_walk(double *lo, double *hi, int *cornerflag)
 
       for (cpt = cpts.first; cpt; cpt = cpt->next)
         if (iopt == cpt->ipl && i == cpt->oindex) break;
+
+      // circular walk within CPTS until reach an entry pt
+      // if walk corner pt in CPTS:
+      //   mark it CORNEROUTSIDE, if not already CORNEROVERLAP
 
       while (1) {
         cptprev = cpt;
@@ -751,7 +770,7 @@ void Cut2d::weiler_walk(double *lo, double *hi, int *cornerflag)
     else loop.flag = LOOPBORDER;
     loop.area = area;
   }
-  
+
   loops.n = nloop;
 
   if (VERBOSE) {
@@ -771,7 +790,7 @@ void Cut2d::weiler_walk(double *lo, double *hi, int *cornerflag)
    treat zero-area loop as a negative area (unique to 2d)
 ------------------------------------------------------------------------- */
 
-void Cut2d::loop2pg(double *lo, double *hi, int *cornerflag)
+void Cut2d::loop2pg(int nsurf, double *lo, double *hi, int *cornerflag)
 {
   int i,j,unknown,nlines;
 
@@ -875,6 +894,9 @@ void Cut2d::surf2pg(int n, int *list, int *smap)
 {
   int i,j,k,m;
   
+  // NOTE: could do this more efficiently if stored list index
+  // in PG, rather than original line index
+
   for (i = 0; i < n; i++) smap[i] = -1;
   for (i = 0; i < pg.n; i++) {
     MyVec<int> &lines = pg[i].lines;
@@ -886,9 +908,53 @@ void Cut2d::surf2pg(int n, int *list, int *smap)
       smap[k] = i;
     }
   }
+}
 
-  // NOTE: could do this more efficiently if stored list index
-  // in PG, rather than original line index
+/* ----------------------------------------------------------------------
+   assign each line index in list to one of the split cells in PG
+------------------------------------------------------------------------- */
+
+int Cut2d::split_point(double *lo, double *hi,
+                       int n, int *list, int *smap, double *x)
+{
+  int iline;
+  double *x1,*x2;
+  double a[3],b[3];
+
+  Surf::Point *pts = surf->pts;
+  Surf::Line *lines = surf->lines;
+
+  // if end pt of any line with non-negative smap is in/on cell, return
+
+  for (int i = 0; i < n; i++) {
+    if (smap[i] < 0) continue;
+    iline = list[i];
+    x1 = pts[lines[iline].p1].x;
+    x2 = pts[lines[iline].p2].x;
+    if (ptflag(x1,lo,hi) != POINTOUTSIDE) {
+      x[0] = x1[0]; x[1] = x1[1]; x[2] = 0.0;
+      return smap[i];
+    }
+    if (ptflag(x2,lo,hi) != POINTOUTSIDE) {
+      x[0] = x2[0]; x[1] = x2[1]; x[2] = 0.0;
+      return smap[i];
+    }
+  }
+
+  // clip 1st line with non-negative smap to cell, and return clip point
+
+  for (int i = 0; i < n; i++) {
+    if (smap[i] < 0) continue;
+    iline = list[i];
+    x1 = pts[lines[iline].p1].x;
+    x2 = pts[lines[iline].p2].x;
+    clip(x1,x2,lo,hi,a,b);
+    x[0] = a[0]; x[1] = a[1]; x[2] = 0.0;
+    return smap[i];
+  }
+
+  error->one(FLERR,"Could not find split point in split cell");
+  return -1;
 }
 
 /* ----------------------------------------------------------------------

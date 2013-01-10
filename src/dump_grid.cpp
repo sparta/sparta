@@ -266,14 +266,14 @@ int DumpGrid::count()
     for (int i = 0; i < nvariable; i++)
       input->variable->compute_grid(variable[i],vbuf[i],1,0);
 
-  return grid->nlocal;
+  return grid->nchild;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void DumpGrid::pack()
 {
-  nglocal = grid->nlocal;
+  nchild = grid->nchild;
   for (int n = 0; n < size_one; n++) (this->*pack_choice[n])(n);
 }
 
@@ -391,6 +391,23 @@ int DumpGrid::parse_fields(int narg, char **arg)
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump grid field for 2d simulation");
       pack_choice[nfield] = &DumpGrid::pack_zhi;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"xc") == 0) {
+      pack_choice[nfield] = &DumpGrid::pack_xc;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"yc") == 0) {
+      pack_choice[nfield] = &DumpGrid::pack_yc;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"zc") == 0) {
+      if (dimension == 2) 
+	error->all(FLERR,"Invalid dump grid field for 2d simulation");
+      pack_choice[nfield] = &DumpGrid::pack_zc;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
@@ -636,13 +653,13 @@ void DumpGrid::pack_compute(int n)
   if (index == 0) {
     double *norm = compute[field2index[n]]->normptr(index);
     if (norm) {
-      for (int i = 0; i < nglocal; i++) {
+      for (int i = 0; i < nchild; i++) {
         if (norm[i] > 0.0) buf[n] = vector[i] / norm[i];
         else buf[n] = 0.0;
         n += size_one;
       }
     } else {
-      for (int i = 0; i < nglocal; i++) {
+      for (int i = 0; i < nchild; i++) {
         buf[n] = vector[i];
         n += size_one;
       }
@@ -651,13 +668,13 @@ void DumpGrid::pack_compute(int n)
     index--;
     double *norm = compute[field2index[n]]->normptr(index);
     if (norm) {
-      for (int i = 0; i < nglocal; i++) {
+      for (int i = 0; i < nchild; i++) {
         if (norm[i] > 0.0) buf[n] = array[i][index] / norm[i];
         else buf[n] = 0.0;
         n += size_one;
       }
     } else {
-      for (int i = 0; i < nglocal; i++) {
+      for (int i = 0; i < nchild; i++) {
         buf[n] = array[i][index];
         n += size_one;
       }
@@ -674,13 +691,13 @@ void DumpGrid::pack_fix(int n)
   int index = argindex[n];
 
   if (index == 0) {
-    for (int i = 0; i < nglocal; i++) {
+    for (int i = 0; i < nchild; i++) {
       buf[n] = vector[i];
       n += size_one;
     }
   } else {
     index--;
-    for (int i = 0; i < nglocal; i++) {
+    for (int i = 0; i < nchild; i++) {
       buf[n] = array[i][index];
       n += size_one;
     }
@@ -693,7 +710,7 @@ void DumpGrid::pack_variable(int n)
 {
   double *vector = vbuf[field2index[n]];
 
-  for (int i = 0; i < nglocal; i++) {
+  for (int i = 0; i < nchild; i++) {
     buf[n] = vector[i];
     n += size_one;
   }
@@ -708,10 +725,10 @@ void DumpGrid::pack_variable(int n)
 void DumpGrid::pack_id(int n)
 {
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *mychild = grid->mychild;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].id;
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = cells[mychild[i]].id;
     n += size_one;
   }
 }
@@ -721,10 +738,10 @@ void DumpGrid::pack_id(int n)
 void DumpGrid::pack_proc(int n)
 {
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *mychild = grid->mychild;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].proc;
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = cells[mychild[i]].proc;
     n += size_one;
   }
 }
@@ -734,10 +751,10 @@ void DumpGrid::pack_proc(int n)
 void DumpGrid::pack_xlo(int n)
 {
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *mychild = grid->mychild;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].lo[0];
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = cells[mychild[i]].lo[0];
     n += size_one;
   }
 }
@@ -747,10 +764,10 @@ void DumpGrid::pack_xlo(int n)
 void DumpGrid::pack_ylo(int n)
 {
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *mychild = grid->mychild;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].lo[1];
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = cells[mychild[i]].lo[1];
     n += size_one;
   }
 }
@@ -760,10 +777,10 @@ void DumpGrid::pack_ylo(int n)
 void DumpGrid::pack_zlo(int n)
 {
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *mychild = grid->mychild;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].lo[2];
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = cells[mychild[i]].lo[2];
     n += size_one;
   }
 }
@@ -773,10 +790,10 @@ void DumpGrid::pack_zlo(int n)
 void DumpGrid::pack_xhi(int n)
 {
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *mychild = grid->mychild;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].hi[0];
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = cells[mychild[i]].hi[0];
     n += size_one;
   }
 }
@@ -786,10 +803,10 @@ void DumpGrid::pack_xhi(int n)
 void DumpGrid::pack_yhi(int n)
 {
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *mychild = grid->mychild;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].hi[1];
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = cells[mychild[i]].hi[1];
     n += size_one;
   }
 }
@@ -799,10 +816,50 @@ void DumpGrid::pack_yhi(int n)
 void DumpGrid::pack_zhi(int n)
 {
   Grid::OneCell *cells = grid->cells;
-  int *mycells = grid->mycells;
+  int *mychild = grid->mychild;
 
-  for (int i = 0; i < nglocal; i++) {
-    buf[n] = cells[mycells[i]].hi[2];
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = cells[mychild[i]].hi[2];
     n += size_one;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+
+void DumpGrid::pack_xc(int n)
+{
+  Grid::OneCell *cells = grid->cells;
+  int *mychild = grid->mychild;
+
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = 0.5 * (cells[mychild[i]].lo[0] + cells[mychild[i]].hi[0]);
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpGrid::pack_yc(int n)
+{
+  Grid::OneCell *cells = grid->cells;
+  int *mychild = grid->mychild;
+
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = 0.5 * (cells[mychild[i]].lo[1] + cells[mychild[i]].hi[1]);
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpGrid::pack_zc(int n)
+{
+  Grid::OneCell *cells = grid->cells;
+  int *mychild = grid->mychild;
+
+  for (int i = 0; i < nchild; i++) {
+    buf[n] = 0.5 * (cells[mychild[i]].lo[2] + cells[mychild[i]].hi[2]);
+    n += size_one;
+  }
+}
+

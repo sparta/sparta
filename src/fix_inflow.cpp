@@ -151,6 +151,7 @@ int FixInflow::setmask()
 void FixInflow::init()
 {
   int i,j,m,n,isp;
+  double xface[3];
 
   // corners[i][j] = J corner points of face I of a grid cell
   // works for 2d quads and 3d hexes
@@ -167,7 +168,7 @@ void FixInflow::init()
     if (faces[i] && domain->bflag[i] == PERIODIC)
       error->all(FLERR,"Cannot use fix inflow on periodic boundary");
 
-  // allow[I][J] = 1 if my local cell I, face J allows insertions
+  // allow[I][J] = 1 if my local parent cell I, face J allows insertions
   // only allow if face adjoins global boundary with inflow defined
   // if cell is CELLOUTSIDE, allow face
   // if cell is CELLINSIDE, disallow face
@@ -182,25 +183,25 @@ void FixInflow::init()
   Grid::OneCell *cells = grid->cells;
   int **csurfs = grid->csurfs;
   int **cflags = grid->cflags;
-  int *mycells = grid->mycells;
-  int nglocal = grid->nlocal;
+  int *myparent = grid->myparent;
+  int nparent = grid->nparent;
 
   int **allow;
-  memory->create(allow,nglocal,6,"inflow:allow");
+  memory->create(allow,nparent,6,"inflow:allow");
 
   int *flags;
   int icell,dim,extflag;
   double value;
 
-  for (int m = 0; m < nglocal; m++) {
-    icell = mycells[m];
+  for (int m = 0; m < nparent; m++) {
+    icell = myparent[m];
     for (i = 0; i < 6; i++) {
       if (faces[i] && cells[icell].neigh[i] < 0) {
 	if (cells[icell].type == CELLOUTSIDE) allow[m][i] = 1;
 	else if (cells[icell].type == CELLINSIDE) allow[m][i] = 0;
 	else if (cells[icell].type == CELLOVERLAP) {
 	  allow[m][i] = 1;
-	  flags = cflags[i];
+	  flags = cflags[m];
 
 	  extflag = 0;
 	  for (j = 0; j < nface_pts; j++) {
@@ -208,7 +209,7 @@ void FixInflow::init()
 	    else if (flags[corners[i][j]] == CORNERINSIDE) allow[m][i] = 0;
 	  }
 	  if (!extflag) allow[m][i] = 0;
-	  
+
 	  if (allow[m][i]) {
 	    if (dimension == 2) {
 	      for (j = 0; j < cells[icell].nsurf; j++) {
@@ -244,8 +245,8 @@ void FixInflow::init()
   // some may be eliminated later if no particles are actually inserted
 
   ncf = 0;
-  for (m = 0; m < nglocal; m++) {
-    icell = mycells[m];
+  for (m = 0; m < nparent; m++) {
+    icell = myparent[m];
     if (allow[m][XLO]) ncf++;
     if (allow[m][XHI]) ncf++;
     if (allow[m][YLO]) ncf++;
@@ -279,10 +280,12 @@ void FixInflow::init()
   double area,indot;
 
   ncf = 0;
-  for (m = 0; m < nglocal; m++) {
-    icell = mycells[m];
+  for (m = 0; m < nparent; m++) {
+    icell = myparent[m];
+
     if (allow[m][XLO]) {
-      cellface[ncf].icell = icell;
+      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,XLO);
+      else cellface[ncf].icell = icell;
       cellface[ncf].ndim = 0;
       cellface[ncf].pdim1 = 1;
       cellface[ncf].pdim2 = 2;
@@ -320,7 +323,8 @@ void FixInflow::init()
     }
     
     if (allow[m][XHI]) {
-      cellface[ncf].icell = icell;
+      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,XHI);
+      else cellface[ncf].icell = icell;
       cellface[ncf].ndim = 0;
       cellface[ncf].pdim1 = 1;
       cellface[ncf].pdim2 = 2;
@@ -358,7 +362,8 @@ void FixInflow::init()
     }
 
     if (allow[m][YLO]) {
-      cellface[ncf].icell = icell;
+      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,YLO);
+      else cellface[ncf].icell = icell;
       cellface[ncf].ndim = 1;
       cellface[ncf].pdim1 = 0;
       cellface[ncf].pdim2 = 2;
@@ -396,7 +401,8 @@ void FixInflow::init()
     }
 
     if (allow[m][YHI]) {
-      cellface[ncf].icell = icell;
+      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,YHI);
+      else cellface[ncf].icell = icell;
       cellface[ncf].ndim = 1;
       cellface[ncf].pdim1 = 0;
       cellface[ncf].pdim2 = 2;
@@ -434,7 +440,8 @@ void FixInflow::init()
     }
 
     if (allow[m][ZLO]) {
-      cellface[ncf].icell = icell;
+      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,ZLO);
+      else cellface[ncf].icell = icell;
       cellface[ncf].ndim = 2;
       cellface[ncf].pdim1 = 0;
       cellface[ncf].pdim2 = 1;
@@ -466,7 +473,8 @@ void FixInflow::init()
     }
 
     if (allow[m][ZHI]) {
-      cellface[ncf].icell = icell;
+      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,ZHI);
+      else cellface[ncf].icell = icell;
       cellface[ncf].ndim = 2;
       cellface[ncf].pdim1 = 0;
       cellface[ncf].pdim2 = 1;
@@ -576,8 +584,6 @@ void FixInflow::start_of_step()
 	ninsert = static_cast<int> (ntarget);
 	if (random->uniform() < ntarget-ninsert) ninsert++;
 
-	//printf("AAA %d %d %g\n",icell,ninsert,ntarget);
-
 	for (int m = 0; m < ninsert; m++) {
 	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
 	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
@@ -615,8 +621,6 @@ void FixInflow::start_of_step()
 	if (i >= nthresh) ninsert++;
       }
 
-      //printf("AAA %d %d\n",icell,ninsert);
-
       for (int m = 0; m < ninsert; m++) {
 	rn = random->uniform();
 	isp = 0;
@@ -629,13 +633,11 @@ void FixInflow::start_of_step()
 	do {
 	  do {
 	    beta_un = (6.0*random->gaussian() - 3.0);
-	    //printf("CCC %g %g\n",beta_un,indot);
 	  } while (beta_un + indot < 0.0);
 	  normalized_distbn_fn = 2.0 * (beta_un + indot) / 
 	    (indot + sqrt(indot*indot + 2.0)) *
 	    exp(0.5 + (0.5*indot)*(indot-sqrt(indot*indot + 2.0)) - 
 		beta_un*beta_un);
-	  //printf("BBB %g\n",normalized_distbn_fn);
 	} while (normalized_distbn_fn < random->uniform());
 	
 	v[ndim] = beta_un*vscale[isp] + vstream[0];
@@ -677,6 +679,39 @@ double FixInflow::mol_inflow(int isp, double indot)
   }
 
   return inward_number_flux;
+}
+
+
+/* ----------------------------------------------------------------------
+   inserting into split cell parent ICELL on face FLAG
+   determine which child split cell the face is part of
+   face cannot be touched by surfs, so entire face is part of one split cell
+   compute which via update->split() and return it
+------------------------------------------------------------------------- */
+
+int FixInflow::split(int icell, int flag)
+{
+  double x[3];
+
+  Grid::OneCell *cells = grid->cells;
+
+  // x = center point on face
+
+  x[0] = 0.5 * (cells[icell].lo[0] + cells[icell].hi[0]);
+  x[1] = 0.5 * (cells[icell].lo[1] + cells[icell].hi[1]);
+  x[2] = 0.5 * (cells[icell].lo[2] + cells[icell].hi[2]);
+  if (flag == XLO) x[0] = cells[icell].lo[0];
+  if (flag == XHI) x[0] = cells[icell].hi[0];
+  if (flag == YLO) x[1] = cells[icell].lo[1];
+  if (flag == YHI) x[1] = cells[icell].hi[1];
+  if (flag == ZLO) x[2] = cells[icell].lo[2];
+  if (flag == ZHI) x[2] = cells[icell].hi[2];
+  if (domain->dimension == 2) x[2] = 0.0;
+
+  int splitcell;
+  if (domain->dimension == 2) splitcell = update->split2d(icell,x);
+  else splitcell = update->split3d(icell,x);
+  return splitcell;
 }
 
 /* ----------------------------------------------------------------------

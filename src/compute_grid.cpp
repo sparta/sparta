@@ -61,29 +61,24 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   ntotal = ngroup*nvalue;
   size_per_grid_cols = ntotal;
 
+  nchild = 0;
   array_grid = NULL;
 
-  // allocate norm vectors
+  // norm vectors
 
   memory->create(value_norm_style,ngroup,nvalue,"grid:value_norm_style");
-  norm_count = new double*[ngroup];
-  norm_mass = new double*[ngroup];
-
-  for (int i = 0; i < ngroup; i++) {
-    norm_count[i] = norm_mass[i] = NULL;
+  for (int i = 0; i < ngroup; i++)
     for (int j = 0; j < nvalue; j++) {
       if (which[j] == NUM) value_norm_style[i][j] = NONE;
-      else if (which[j] == KE || which[j] == TEMPERATURE) {
+      else if (which[j] == KE || which[j] == TEMPERATURE)
         value_norm_style[i][j] = COUNT; 
-        if (norm_count[i] == NULL)
-          memory->create(norm_count[i],grid->nlocal,"grid:norm_count");
-      } else {
-        value_norm_style[i][j] = MASSWT;
-        if (norm_mass[i] == NULL)
-          memory->create(norm_mass[i],grid->nlocal,"grid:norm_mass");
-      }
+      else value_norm_style[i][j] = MASSWT;
     }
-  }
+
+  norm_count = new double*[ngroup];
+  norm_mass = new double*[ngroup];
+  for (int i = 0; i < ngroup; i++)
+    norm_count[i] = norm_mass[i] = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -91,9 +86,11 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 ComputeGrid::~ComputeGrid()
 {
   delete [] which;
+
   memory->destroy(array_grid);
 
   memory->destroy(value_norm_style);
+
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
     memory->destroy(norm_mass[i]);
@@ -109,10 +106,7 @@ void ComputeGrid::init()
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute grid mixture has changed");
 
-  // one-time allocation of array_grid
-
-  if (array_grid == NULL)
-    memory->create(array_grid,grid->nlocal,ntotal,"grid:array_grid");
+  reset();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -128,7 +122,7 @@ void ComputeGrid::compute_per_grid()
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
-  int nglocal = grid->nlocal;
+  int nchild = grid->nchild;
   double mvv2e = update->mvv2e;
   double tprefactor = mvv2e / (3.0*update->boltz);
 
@@ -138,14 +132,14 @@ void ComputeGrid::compute_per_grid()
 
   // zero accumulator array and norm vectors
 
-  for (i = 0; i < nglocal; i++)
+  for (i = 0; i < nchild; i++)
     for (j = 0; j < ntotal; j++) array_grid[i][j] = 0.0;
 
   for (j = 0; j < ngroup; j++) {
     if (norm = norm_count[j])
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+      for (i = 0; i < nchild; i++) norm[i] = 0.0;
     if (norm = norm_mass[j])
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+      for (i = 0; i < nchild; i++) norm[i] = 0.0;
   }
 
   // loop over all particles, skip species not in mixture group
@@ -156,7 +150,7 @@ void ComputeGrid::compute_per_grid()
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
-    ilocal = cells[particles[i].icell].local;
+    ilocal = cells[particles[i].icell].clocal;
 
     mass = species[ispecies].mass;
     if (norm_mass[igroup]) norm_mass[igroup][ilocal] += mass;
@@ -202,6 +196,35 @@ void ComputeGrid::compute_per_grid()
 }
 
 /* ----------------------------------------------------------------------
+   reallocate arrays if nchild has changed
+------------------------------------------------------------------------- */
+
+void ComputeGrid::reset()
+{
+  if (grid->nchild == nchild) return;
+
+  nchild = grid->nchild;
+
+  memory->destroy(array_grid);
+  memory->create(array_grid,nchild,ntotal,"grid:array_grid");
+
+  for (int i = 0; i < ngroup; i++) {
+    memory->destroy(norm_count[i]);
+    memory->destroy(norm_mass[i]);
+    norm_count[i] = norm_mass[i] = NULL;
+    for (int j = 0; j < nvalue; j++) {
+      if (which[j] == KE || which[j] == TEMPERATURE) {
+        if (norm_count[i] == NULL)
+          memory->create(norm_count[i],nchild,"grid:norm_count");
+      } else {
+        if (norm_mass[i] == NULL)
+          memory->create(norm_mass[i],nchild,"grid:norm_mass");
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
    return ptr to norm vector used by column N
 ------------------------------------------------------------------------- */
 
@@ -221,10 +244,10 @@ double *ComputeGrid::normptr(int n)
 bigint ComputeGrid::memory_usage()
 {
   bigint bytes;
-  bytes = ntotal*grid->nlocal * sizeof(double);
+  bytes = ntotal*nchild * sizeof(double);
   for (int i = 0; i < ngroup; i++) {
-    if (norm_count[i]) bytes += grid->nlocal * sizeof(double);
-    if (norm_mass[i]) bytes += grid->nlocal * sizeof(double);
+    if (norm_count[i]) bytes += nchild * sizeof(double);
+    if (norm_mass[i]) bytes += nchild * sizeof(double);
   }
   return bytes;
 }

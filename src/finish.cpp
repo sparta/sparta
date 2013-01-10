@@ -109,10 +109,11 @@ void Finish::end()
 		  MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 
-  double pms,ctps,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
+  double pms,pmsp,ctps,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
   pms = ctps = pfc = pfcwb = pfeb = schps = sclps = caps = cps = 0.0;
   if (update->nsteps) pms = 1.0*nmove_total/update->nsteps;
   if (nmove_total) {
+    pmsp = 1.0*nmove_total/time_loop/nprocs;
     ctps = 1.0*ntouch_total/nmove_total;
     pfc = 1.0*ncomm_total/nmove_total;
     pfcwb = 1.0*nboundary_total/nmove_total;
@@ -147,6 +148,7 @@ void Finish::end()
       fprintf(screen,"Collide occurs = " BIGINT_FORMAT " %s\n",
 	      ncollide_total,MathExtra::num2str(ncollide_total,str));
       fprintf(screen,"\n");
+      fprintf(screen,"Particle-moves/CPUsec/proc: %g\n",pmsp);
       fprintf(screen,"Particle-moves/step: %g\n",pms);
       fprintf(screen,"Cell-touches/particle/step: %g\n",ctps);
       fprintf(screen,"Particle fraction communicated: %g\n",pfc);
@@ -178,6 +180,7 @@ void Finish::end()
       fprintf(logfile,"Collide occurs = " BIGINT_FORMAT " %s\n",
 	      ncollide_total,MathExtra::num2str(ncollide_total,str));
       fprintf(logfile,"\n");
+      fprintf(logfile,"Particle-moves/CPUsec/proc: %g\n",pmsp);
       fprintf(logfile,"Particle-moves/step: %g\n",pms);
       fprintf(logfile,"Cell-touches/particle/step: %g\n",ctps);
       fprintf(logfile,"Particle fraction communicated: %g\n",pfc);

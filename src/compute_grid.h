@@ -38,9 +38,12 @@ class ComputeGrid : public Compute {
   int imix,nvalue,ngroup,ntotal;
   int *which;
 
+  int nchild;
   int **value_norm_style;       // I,J = norm style of Jth value in Ith group
   double **norm_count;          // per-group ptr to norm vector, by count
   double **norm_mass;           // per-group ptr to norm vector, by mass
+
+  void reset();
 };
 
 }

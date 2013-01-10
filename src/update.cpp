@@ -252,7 +252,7 @@ void Update::run(int nsteps)
 void Update::move3d_surface()
 {
   bool hitflag;
-  int i,m,isp,icell,inface,outface,outflag,isurf,exclude;
+  int i,m,isp,icell,icellsurf,inface,outface,outflag,isurf,exclude;
   int side,minside,minsurf,nsurf,cflag;
   int *neigh;
   double dtremain,dtfrac,frac,newfrac,param,minparam;
@@ -307,7 +307,10 @@ void Update::move3d_surface()
     }
 
     icell = particles[i].icell;
-    nsurf = cells[icell].nsurf;
+    if (cells[icell].nsplit == 1) icellsurf = icell;
+    else if (cells[icell].nsplit <= 0) icellsurf = -cells[icell].nsplit;
+    else error->one(FLERR,"Particle in split parent cell");
+
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     neigh = cells[icell].neigh;
@@ -324,7 +327,8 @@ void Update::move3d_surface()
 #ifdef MOVE_DEBUG
       if (i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC) 
 	printf("PARTICLE %d: %d %d: %g %g %g: %g %g %g\n",MOVE_DEBUG_PARTICLE,
-	       update->ntimestep,nsurf,x[0],x[1],x[2],xnew[0],xnew[1],xnew[2]);
+	       update->ntimestep,cells[icellsurf].nsurf,
+               x[0],x[1],x[2],xnew[0],xnew[1],xnew[2]);
 #endif
 
       // check if particle crosses any cell face
@@ -398,11 +402,13 @@ void Update::move3d_surface()
       // if collision occurs, perform collision with surface model
       // reset x,v,xnew,dtremain and continue particle trajectory
 
+      nsurf = cells[icellsurf].nsurf;
+
       if (nsurf) {
 	cflag = 0;
 	minparam = 2.0;
 	for (m = 0; m < nsurf; m++) {
-	  isurf = csurfs[icell][m];
+	  isurf = csurfs[icellsurf][m];
 	  if (isurf == exclude) continue;
 	  tri = &tris[isurf];
 	  hitflag = Geometry::
@@ -505,11 +511,13 @@ void Update::move3d_surface()
       else if (outface == ZHI) x[2] = hi[2]; 
       
       // if cell has neighbor cell, move into that cell
+      // in new cell is split, reset icell to child split cell
+      // icellsurf remains as parent cell, so can access csurfs
       // else enforce global boundary conditions
 
       if (neigh[outface] >= 0) {
-	icell = neigh[outface];
-	nsurf = cells[icell].nsurf;
+	icell = icellsurf = neigh[outface];
+        if (cells[icell].nsplit > 1) icell = split3d(icell,x);
 	lo = cells[icell].lo;
 	hi = cells[icell].hi;
 	neigh = cells[icell].neigh;
@@ -530,7 +538,6 @@ void Update::move3d_surface()
 	  nexit_one++;
 	  break;
 	} else if (outflag == PERIODIC) {
-	  nsurf = cells[icell].nsurf;
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
@@ -783,7 +790,7 @@ void Update::move3d()
 void Update::move2d_surface()
 {
   bool hitflag;
-  int i,m,isp,icell,inface,outface,outflag,isurf,exclude;
+  int i,m,isp,icell,icellsurf,inface,outface,outflag,isurf,exclude;
   int side,minside,minsurf,nsurf,cflag;
   int *neigh;
   double dtremain,dtfrac,frac,newfrac,param,minparam;
@@ -842,7 +849,10 @@ void Update::move2d_surface()
     }
 
     icell = particles[i].icell;
-    nsurf = cells[icell].nsurf;
+    if (cells[icell].nsplit == 1) icellsurf = icell;
+    else if (cells[icell].nsplit <= 0) icellsurf = -cells[icell].nsplit;
+    else error->one(FLERR,"Particle in split parent cell");
+
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     neigh = cells[icell].neigh;
@@ -859,7 +869,8 @@ void Update::move2d_surface()
 #ifdef MOVE_DEBUG
       if (i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC) 
 	printf("PARTICLE %d: %d %d: %g %g: %g %g\n",MOVE_DEBUG_PARTICLE,
-	       update->ntimestep,nsurf,x[0],x[1],xnew[0],xnew[1]);
+	       update->ntimestep,cells[icellsurf].nsurf,
+               x[0],x[1],xnew[0],xnew[1]);
 #endif
 
       // check if particle crosses any cell face
@@ -915,11 +926,13 @@ void Update::move2d_surface()
       // if collision occurs, perform collision with surface model
       // reset x,v,xnew,dtremain and continue particle trajectory
 
+      nsurf = cells[icellsurf].nsurf;
+
       if (nsurf) {
 	cflag = 0;
 	minparam = 2.0;
 	for (m = 0; m < nsurf; m++) {
-	  isurf = csurfs[icell][m];
+	  isurf = csurfs[icellsurf][m];
 	  if (isurf == exclude) continue;
 	  line = &lines[isurf];
 	  hitflag = Geometry::
@@ -1012,11 +1025,13 @@ void Update::move2d_surface()
       else if (outface == YHI) x[1] = hi[1]; 
       
       // if cell has neighbor cell, move into that cell
+      // in new cell is split, reset icell to child split cell
+      // icellsurf remains as parent cell, so can access csurfs
       // else enforce global boundary conditions
 
       if (neigh[outface] >= 0) {
-	icell = neigh[outface];
-	nsurf = cells[icell].nsurf;
+	icell = icellsurf = neigh[outface];
+        if (cells[icell].nsplit > 1) icell = split2d(icell,x);
 	lo = cells[icell].lo;
 	hi = cells[icell].hi;
 	neigh = cells[icell].neigh;
@@ -1037,7 +1052,6 @@ void Update::move2d_surface()
 	  nexit_one++;
 	  break;
 	} else if (outflag == PERIODIC) {
-	  nsurf = cells[icell].nsurf;
 	  lo = cells[icell].lo;
 	  hi = cells[icell].hi;
 	  neigh = cells[icell].neigh;
@@ -1259,6 +1273,126 @@ void Update::move2d()
   nexit_running += nexit_one;
   nscheck_running += nscheck_one;
   nscollide_running += nscollide_one;
+}
+
+/* ----------------------------------------------------------------------
+   particle is entering split parent icell at x
+   determine which split child cell it is in
+   return ccell = global index of child cell
+------------------------------------------------------------------------- */
+
+int Update::split3d(int icell, double *x)
+{
+  int m,cflag,isurf,hitflag,side,minside,minsurfindex;
+  double param,minparam;
+  double xc[3];
+  Surf::Tri *tri;
+
+  Grid::OneCell *cells = grid->cells;
+  int **csurfs = grid->csurfs;
+  int **csplits = grid->csplits;
+  Surf::Tri *tris = surf->tris;
+  Surf::Point *pts = surf->pts;
+
+  // check for collisions with lines in cell
+  // find 1st surface hit via minparam
+  // not considered a collision if particles starts on surf, moving out
+  // not considered a collision if 2 params are tied and one is INSIDE surf
+
+  int nsurf = cells[icell].nsurf;
+  double *xnew = cells[icell].xsplit;
+
+  cflag = 0;
+  minparam = 2.0;
+  for (m = 0; m < nsurf; m++) {
+    isurf = csurfs[icell][m];
+    tri = &tris[isurf];
+    hitflag = Geometry::
+      line_tri_intersect(x,xnew,
+                         pts[tri->p1].x,pts[tri->p2].x,pts[tri->p3].x,
+                         tri->norm,xc,param,side);
+    
+    if (hitflag && side != INSIDE && param < minparam) {
+      cflag = 1;
+      minparam = param;
+      minside = side;
+      minsurfindex = m;
+    }
+  }
+
+  if (!cflag) return cells[icell].xchild;
+
+  int index = csplits[icell][minsurfindex];
+  if (index < 0) {
+    char str[128];
+    sprintf(str,
+            "Split particle on proc %d found unmapped "
+            "surf %d on step " BIGINT_FORMAT,
+            me,csurfs[icell][minsurfindex],update->ntimestep);
+    error->one(FLERR,str);
+  }
+
+  return index;
+}
+
+/* ----------------------------------------------------------------------
+   particle is entering split parent icell at x
+   determine which split child cell it is in
+   return ccell = global index of child cell
+------------------------------------------------------------------------- */
+
+int Update::split2d(int icell, double *x)
+{
+  int m,cflag,isurf,hitflag,side,minside,minsurfindex;
+  double param,minparam;
+  double xc[3];
+  Surf::Line *line;
+
+  Grid::OneCell *cells = grid->cells;
+  int **csurfs = grid->csurfs;
+  int **csplits = grid->csplits;
+  Surf::Line *lines = surf->lines;
+  Surf::Point *pts = surf->pts;
+
+  // check for collisions with lines in cell
+  // find 1st surface hit via minparam
+  // not considered a collision if particles starts on surf, moving out
+  // not considered a collision if 2 params are tied and one is INSIDE surf
+
+  int nsurf = cells[icell].nsurf;
+  double *xnew = cells[icell].xsplit;
+
+  cflag = 0;
+  minparam = 2.0;
+  for (m = 0; m < nsurf; m++) {
+    isurf = csurfs[icell][m];
+    line = &lines[isurf];
+    hitflag = Geometry::
+      line_line_intersect(x,xnew,
+                          pts[line->p1].x,pts[line->p2].x,line->norm,
+                          xc,param,side);
+    
+    if (hitflag && side != INSIDE && param < minparam) {
+      cflag = 1;
+      minparam = param;
+      minside = side;
+      minsurfindex = m;
+    }
+  }
+
+  if (!cflag) return cells[icell].xchild;
+
+  int index = csplits[icell][minsurfindex];
+  if (index < 0) {
+    char str[128];
+    sprintf(str,
+            "Split particle on proc %d found unmapped "
+            "surf %d on step " BIGINT_FORMAT,
+            me,csurfs[icell][minsurfindex],update->ntimestep);
+    error->one(FLERR,str);
+  }
+
+  return index;
 }
 
 /* ----------------------------------------------------------------------

@@ -49,7 +49,7 @@ class FixInflow : public Fix {
     double normal[3];           // inward normal from external boundary
     double ntarget;             // # of mols to insert for all species
     double *ntargetsp;          // # of mols to insert for each species
-    int icell;                  // associated cell index
+    int icell;                  // associated cell index, may be split cell
     int ndim;                   // dim (0,1,2) normal to face
     int pdim1,pdim2;            // 2 dims (0,1,2) parallel to face
   };
@@ -62,6 +62,7 @@ class FixInflow : public Fix {
   class CreateMolecules;
 
   double mol_inflow(int, double);
+  int split(int, int);
 };
 
 }

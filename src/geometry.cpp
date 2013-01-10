@@ -557,6 +557,9 @@ bool line_line_intersect(double *start, double *stop,
   MathExtra::sub3(stop,v0,vec);
   double dotstop = MathExtra::dot3(norm,vec);
 
+  //printf("  LINE %g %g: %g %g\n",v0[0],v0[1],v1[0],v1[1]);
+  //printf("  DOT %g %g\n",dotstart,dotstop);
+
   if (dotstart < 0.0 && dotstop < 0.0) return false;
   if (dotstart > 0.0 && dotstop > 0.0) return false;
   if (dotstart == 0.0 && dotstop == 0.0) return false;
@@ -568,6 +571,7 @@ bool line_line_intersect(double *start, double *stop,
   MathExtra::sub3(v0,start,vec);
   MathExtra::sub3(stop,start,start2stop);
   param = MathExtra::dot3(norm,vec) / MathExtra::dot3(norm,start2stop);
+  //printf("  PARAM %20.15g %d\n",param,param>1.0);
   if (param < 0.0 || param > 1.0) return false;
 
   // point = intersection pt with line B
@@ -589,14 +593,19 @@ bool line_line_intersect(double *start, double *stop,
   //   this can lead to dot3() being negative espilon^2 for both lines,
   //     depending on direction of 2 lines
   //   thus this can lead to no collision with either line
-  //   haven't observed this in 2d, but did in 3d
   //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
-  if (MathExtra::dot3(edge,pvec) < EPSSQNEG) return false;
+  if (MathExtra::dot3(edge,pvec) < EPSSQNEG) {
+    //printf("  FALSE1 %g %g\n",MathExtra::dot3(edge,pvec),EPSSQNEG);
+    return false;
+  }
   MathExtra::sub3(point,v1,pvec);
-  if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
+  if (MathExtra::dot3(edge,pvec) > EPSSQ) {
+    //printf("  FALSE2 %g %g\n",MathExtra::dot3(edge,pvec),EPSSQ);
+    return false;
+  }
 
   // there is a valid intersection with line B
   // set side to ONSUFR, OUTSIDE, or INSIDE

@@ -66,6 +66,8 @@ class Update : protected Pointers {
   void setup();
   void run(int);
   void global(int, char **);
+  int split3d(int, double *);
+  int split2d(int, double *);
 
  private:
   int me,nprocs;

@@ -33,7 +33,6 @@ class Cut2d : protected Pointers {
   // just for VERBOSE output
   int icell;
 
-  int nsurf;
   MyVec<int> used;
   MyVec<int> startpts;
   MyVec<int> endpts;
@@ -92,9 +91,10 @@ class Cut2d : protected Pointers {
   void line2pl(int, int *);
   void weiler_intersect(double *, double *, int *);
   void interleave(double *, double *, double *, double *, int, int, int);
-  void weiler_walk(double *, double *, int *);
-  void loop2pg(double *, double *, int *);
+  void weiler_walk(int, double *, double *, int *);
+  void loop2pg(int, double *, double *, int *);
   void surf2pg(int, int *, int *);
+  int split_point(double *, double *, int, int *, int *, double *);
 
   int cliptest(double *, double *, double *, double *);
   void clip(double *, double *, double *, double *, double *, double *);
