@@ -140,6 +140,7 @@ void Grid::init()
         }
       }
 
+      assign_child();
       grid_inout();
       grid_check();
 

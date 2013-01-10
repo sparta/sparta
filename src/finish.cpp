@@ -110,7 +110,7 @@ void Finish::end()
   }
 
   double pms,pmsp,ctps,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
-  pms = ctps = pfc = pfcwb = pfeb = schps = sclps = caps = cps = 0.0;
+  pms = pmsp = ctps = pfc = pfcwb = pfeb = schps = sclps = caps = cps = 0.0;
   if (update->nsteps) pms = 1.0*nmove_total/update->nsteps;
   if (nmove_total) {
     pmsp = 1.0*nmove_total/time_loop/nprocs;

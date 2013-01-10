@@ -35,7 +35,7 @@ read_surf	    data.sphere 1
 #read_surf	    data.sphere.big 1 trans 5 5 0 scale 10 10 10 clip
 #read_surf	    data.sphere.big 1 trans 20 5 5 scale 30 30 30 clip
 
-#create_molecules    air n 10000
+create_molecules    air n 10000
 
 #timestep 	    0.001
 timestep 	    0.0001
@@ -50,4 +50,4 @@ dump		    4 surf 100 tmp.surf id v1x v1y v1z v2x v2y v2z v3x v3y v3z
 
 stats_style	    step cpu nmol nattempt ncoll
 stats		    100
-run 		    0
+run 		    100
