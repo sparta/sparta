@@ -277,7 +277,7 @@ void CreateMolecules::create_local(bigint np)
       theta2 = MY_2PI * random->uniform();
 	
       v[0] = vstream[0] + vn*cos(theta1);
-      v[1] = vstream[1] + vr*sin(theta2);
+      v[1] = vstream[1] + vr*cos(theta2);
       v[2] = vstream[2] + vr*sin(theta2);
 
       erot = particle->erot(ispecies,random);
