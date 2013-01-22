@@ -306,6 +306,27 @@ void Update::move3d_surface()
       if (perturbflag) (this->*moveperturb)(dtfrac,xnew,v);
     }
 
+     int axisym = 1.; // This flag must be set in the in.file 
+
+     double dz;
+
+     if (axisym > 0 ) {
+
+       if (i < ncurrent)
+          dz  = v[2]* dt;
+       else
+          dz  = v[2]* dtfrac;
+
+       double rold = xnew[1];
+       xnew[1] = sqrt( xnew[1]*xnew[1] + dz*dz );
+       double rn   = rold / xnew[1];
+       double wn      = dz / xnew[1];
+       double vold    = v[1];
+       double wold    = v[2];
+       v[1] =  vold*rn + wold*wn;
+       v[2] = -vold*wn + wold*rn;
+     }
+
     icell = particles[i].icell;
     if (cells[icell].nsplit == 1) icellsurf = icell;
     else if (cells[icell].nsplit <= 0) icellsurf = -cells[icell].nsplit;
