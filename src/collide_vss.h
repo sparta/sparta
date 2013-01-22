@@ -44,6 +44,7 @@ class CollideVSS : public Collide {
   double **vrm;       // static portion of max collision frequency
   double **prefactor; // static portion of collision attempt frequency
   double ***vremax;   // max relative velocity, per cell, per species pair
+  double ***remain;   // collision number remainder per cell & per species pair
 
   struct State {      // two-particle state
     double vr2;
