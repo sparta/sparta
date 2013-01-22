@@ -59,6 +59,7 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
 
   prefactor = NULL;
   vremax = NULL;
+  remain = NULL;
   vrm = NULL;
 }
 
@@ -69,6 +70,7 @@ CollideVSS::~CollideVSS()
   delete [] params;
   memory->destroy(prefactor);
   memory->destroy(vremax);
+  memory->destroy(remain);
   memory->destroy(vrm);
 }
 
@@ -92,10 +94,12 @@ void CollideVSS::init()
 
   memory->destroy(prefactor);
   memory->destroy(vremax);
+  memory->destroy(remain);
   memory->destroy(vrm);
 
   memory->create(prefactor,nspecies,nspecies,"collide:prefactor");
-  memory->create(vremax,grid->nchild,nspecies,nspecies,"collide:vremax");
+  memory->create(vremax,grid->nlocal,nspecies,nspecies,"collide:vremax");
+  memory->create(remain,grid->nlocal,nspecies,nspecies,"collide:remain");
   memory->create(vrm,nspecies,nspecies,"collide:vrm");
 
   // prefactor = static contributions to collision attempt frequencies
@@ -113,27 +117,25 @@ void CollideVSS::init()
       cxs = diam*diam*MY_PI;
       prefactor[isp][jsp] = cxs *
 	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
-      //printf(" Prefactor %e %e %e \n", cxs, omega, tgamma(2.5-omega));
       double beta = MIN(vscale[isp],vscale[jsp]);
-      double max_thermal_velocity = 10.0*beta;
-//      printf(" Max thermal velocity= %e \n", beta*3) ;
+      double max_thermal_velocity = 1.0*beta;
       vrm[isp][jsp] = cxs * pow(max_thermal_velocity*max_thermal_velocity,1-omega);
     }
 
   // vremax = max relative velocity factors on per-grid, per-species basis
   // vremax value assignment should be done at a group level.
-  // each group should get the maximum vremax of all species involved
+  // each group should get the maximum vremax of all species involved.
   
-  int nchild = grid->nchild;
+  int nglocal = grid->nlocal;
 
-  for (int icell = 0; icell < nchild; icell++)
+  for (int icell = 0; icell < nglocal; icell++)
     for (int isp = 0; isp < nspecies; isp++)
       for (int jsp = 0; jsp < nspecies; jsp++) {
         int igroup = mix2group[isp];
         int jgroup = mix2group[jsp];
 // set the maximum vre of each species as the vre for the group
-           vremax[icell][igroup][jgroup] = vrm[isp][jsp];
-//	vremax[icell][igroup][jgroup] = MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
+	vremax[icell][igroup][jgroup] = MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
+        remain[icell][igroup][jgroup] = 0;
       }
 }
 
@@ -146,12 +148,12 @@ double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup,
  double dt = update->dt;
 
 // double rannum = random->uniform();
-// printf("Random Number = %e \n", rannum);
 
  double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
-//   vremax[ilocal][igroup][jgroup] * dt * fnum / volume + rannum;
    vremax[ilocal][igroup][jgroup] * dt * fnum / volume + random->uniform();
-//   printf("Attemps = %e %d %d %e \n", nattempt,ngroup[igroup],ngroup[jgroup],vremax[ilocal][igroup][jgroup]);
+
+//   vremax[ilocal][igroup][jgroup] * dt * fnum / volume + remain[ilocal][igroup][jgroup];
+//  remain[ilocal][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
   return nattempt;
 }
 
@@ -185,10 +187,7 @@ int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
 
   double vre = vro*prefactor[ispecies][jspecies];
 
-//  printf("INSIDE-1 %e %e \n", vre,vremax[ilocal][igroup][jgroup]);
   vremax[ilocal][igroup][jgroup] = MAX(vre,vremax[ilocal][igroup][jgroup]);
-//  printf("INSIDE-2 %e %e \n", vre,vremax[ilocal][igroup][jgroup]);
-
   if (vre/vremax[ilocal][igroup][jgroup] < random->uniform()) return 0;
   return 1;
 }
@@ -267,6 +266,7 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   int jsp = jp->ispecies;
   double mass_i = species[isp].mass;
   double mass_j = species[jsp].mass;
+  double vrc[3], ua, vb, wc;
 
   double alpha = 0.5 * (params[isp].alpha + params[jsp].alpha);
   double mr = species[isp].mass * species[jsp].mass /
@@ -281,9 +281,22 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   double eps = random->uniform() * 2*MY_PI;
   double vr = sqrt(2.0 * postcoln.etrans / mr);
 
-  double ua = vr*cosX;
-  double vb = vr*sinX*cos(eps);
-  double wc = vr*sinX*sin(eps);
+  if (alpha - 1 < 0.001) { 
+    ua = vr*cosX;
+    vb = vr*sinX*cos(eps);
+    wc = vr*sinX*sin(eps);
+
+  } else {
+    vrc[0]=vi[0]-vj[0];
+    vrc[1]=vi[1]-vj[1];
+    vrc[2]=vi[2]-vj[2];
+ 
+    double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
+
+    ua = cosX*vrc[0] + sinX*d*sin(eps);
+    vb = cosX*vrc[1] + sinX*(vr*vrc[2]*cos(eps) - vrc[0]*vrc[1]*sin(eps))/d;
+    wc = cosX*vrc[2] - sinX*(vr*vrc[1]*cos(eps) + vrc[0]*vrc[2]*sin(eps))/d;
+  }
 
   // centre_of_mass velocity calculated using reactant masses
 
@@ -294,7 +307,6 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 
   // new velocities for the products
 
-  // printf("In Scatter Pre %e %e %e \n", vi[0], vi[1], vi[2]);
   divisor = mass_i + mass_j;
   vi[0] = ucmf - (mass_j/divisor)*ua;
   vi[1] = vcmf - (mass_j/divisor)*vb;
@@ -302,7 +314,6 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   vj[0] = ucmf + (mass_i/divisor)*ua;
   vj[1] = vcmf + (mass_i/divisor)*vb;
   vj[2] = wcmf + (mass_i/divisor)*wc;
-  // printf("In Scatter aft %e %e %e \n", vi[0], vi[1], vi[2]);
 
   return;
 }
