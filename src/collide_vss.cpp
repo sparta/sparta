@@ -98,8 +98,8 @@ void CollideVSS::init()
   memory->destroy(vrm);
 
   memory->create(prefactor,nspecies,nspecies,"collide:prefactor");
-  memory->create(vremax,grid->nlocal,nspecies,nspecies,"collide:vremax");
-  memory->create(remain,grid->nlocal,nspecies,nspecies,"collide:remain");
+  memory->create(vremax,grid->nchild,nspecies,nspecies,"collide:vremax");
+  memory->create(remain,grid->nchild,nspecies,nspecies,"collide:remain");
   memory->create(vrm,nspecies,nspecies,"collide:vrm");
 
   // prefactor = static contributions to collision attempt frequencies
@@ -119,22 +119,24 @@ void CollideVSS::init()
 	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
       double beta = MIN(vscale[isp],vscale[jsp]);
       double max_thermal_velocity = 1.0*beta;
-      vrm[isp][jsp] = cxs * pow(max_thermal_velocity*max_thermal_velocity,1-omega);
+      vrm[isp][jsp] = cxs * 
+        pow(max_thermal_velocity*max_thermal_velocity,1-omega);
     }
 
   // vremax = max relative velocity factors on per-grid, per-species basis
   // vremax value assignment should be done at a group level.
   // each group should get the maximum vremax of all species involved.
   
-  int nglocal = grid->nlocal;
+  int nchild = grid->nchild;
 
-  for (int icell = 0; icell < nglocal; icell++)
+  for (int icell = 0; icell < nchild; icell++)
     for (int isp = 0; isp < nspecies; isp++)
       for (int jsp = 0; jsp < nspecies; jsp++) {
         int igroup = mix2group[isp];
         int jgroup = mix2group[jsp];
-// set the maximum vre of each species as the vre for the group
-	vremax[icell][igroup][jgroup] = MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
+        // set the maximum vre of each species as the vre for the group
+	vremax[icell][igroup][jgroup] = 
+          MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
         remain[icell][igroup][jgroup] = 0;
       }
 }
@@ -147,14 +149,13 @@ double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup,
  double fnum = update->fnum;
  double dt = update->dt;
 
-// double rannum = random->uniform();
+ // double rannum = random->uniform();
 
  double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
    vremax[ilocal][igroup][jgroup] * dt * fnum / volume + random->uniform();
-
-//   vremax[ilocal][igroup][jgroup] * dt * fnum / volume + remain[ilocal][igroup][jgroup];
-//  remain[ilocal][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
-  return nattempt;
+ // vremax[ilocal][igroup][jgroup] * dt * fnum / volume + remain[ilocal][igroup][jgroup];
+ // remain[ilocal][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
+ return nattempt;
 }
 
 /* ----------------------------------------------------------------------
@@ -285,14 +286,11 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
     wc = vr*sinX*sin(eps);
-
   } else {
     vrc[0]=vi[0]-vj[0];
     vrc[1]=vi[1]-vj[1];
     vrc[2]=vi[2]-vj[2];
- 
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
-
     ua = cosX*vrc[0] + sinX*d*sin(eps);
     vb = cosX*vrc[1] + sinX*(vr*vrc[2]*cos(eps) - vrc[0]*vrc[1]*sin(eps))/d;
     wc = cosX*vrc[2] - sinX*(vr*vrc[1]*cos(eps) + vrc[0]*vrc[2]*sin(eps))/d;

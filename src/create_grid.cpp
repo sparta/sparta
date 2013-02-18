@@ -85,9 +85,9 @@ void CreateGrid::command(int narg, char **arg)
       bstyle = BLOCK;
       if (strcmp(arg[iarg+1],"*") == 0) px = 0;
       else px = atoi(arg[iarg+1]);
-      if (strcmp(arg[iarg+1],"*") == 0) py = 0;
+      if (strcmp(arg[iarg+2],"*") == 0) py = 0;
       else py = atoi(arg[iarg+2]);
-      if (strcmp(arg[iarg+1],"*") == 0) pz = 0;
+      if (strcmp(arg[iarg+3],"*") == 0) pz = 0;
       else pz = atoi(arg[iarg+3]);
       iarg += 4;
 
