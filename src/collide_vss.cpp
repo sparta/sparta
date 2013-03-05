@@ -98,9 +98,18 @@ void CollideVSS::init()
   memory->destroy(vrm);
 
   memory->create(prefactor,nspecies,nspecies,"collide:prefactor");
-  memory->create(vremax,grid->nchild,nspecies,nspecies,"collide:vremax");
-  memory->create(remain,grid->nchild,nspecies,nspecies,"collide:remain");
+  memory->create(vremax,grid->nchild,ngroups,ngroups,"collide:vremax");
+  memory->create(remain,grid->nchild,ngroups,ngroups,"collide:remain");
   memory->create(vrm,nspecies,nspecies,"collide:vrm");
+
+  int nchild = grid->nchild;
+
+  for (int icell = 0; icell < nchild; icell++)
+    for (int igroup = 0; igroup < ngroups; igroup++)
+      for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+        vremax[icell][igroup][jgroup] = 0.0;
+        remain[icell][igroup][jgroup] = 0.0;
+      }
 
   // prefactor = static contributions to collision attempt frequencies
 
@@ -124,20 +133,16 @@ void CollideVSS::init()
     }
 
   // vremax = max relative velocity factors on per-grid, per-species basis
-  // vremax value assignment should be done at a group level.
-  // each group should get the maximum vremax of all species involved.
+  // vremax value assignment should be done at a group level
+  // each group gets maximum vremax of all species involved
   
-  int nchild = grid->nchild;
-
   for (int icell = 0; icell < nchild; icell++)
     for (int isp = 0; isp < nspecies; isp++)
       for (int jsp = 0; jsp < nspecies; jsp++) {
         int igroup = mix2group[isp];
         int jgroup = mix2group[jsp];
-        // set the maximum vre of each species as the vre for the group
 	vremax[icell][igroup][jgroup] = 
           MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
-        remain[icell][igroup][jgroup] = 0;
       }
 }
 
@@ -153,8 +158,10 @@ double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup,
 
  double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
    vremax[ilocal][igroup][jgroup] * dt * fnum / volume + random->uniform();
+
  // vremax[ilocal][igroup][jgroup] * dt * fnum / volume + remain[ilocal][igroup][jgroup];
  // remain[ilocal][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
+
  return nattempt;
 }
 

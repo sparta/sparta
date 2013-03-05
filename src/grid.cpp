@@ -137,6 +137,12 @@ void Grid::init()
             surf->all_cell_corner_tri(cells[icell].nsurf,csurfs[icell],
                                       cells[icell].lo,cells[icell].hi,
                                       cflags[m]);
+          /*
+          printf("CORFLAG %d %d: %d %d %d %d: %d %d %d %d\n",
+                 cells[icell].id,cells[icell].nsurf,
+                 cflags[m][0],cflags[m][1],cflags[m][2],cflags[m][3],
+                 cflags[m][4],cflags[m][5],cflags[m][6],cflags[m][7]);
+          */
         }
       }
 
@@ -178,6 +184,11 @@ void Grid::init()
   }
 
   flow_stats();
+
+  // DEBUG
+
+  //for (i = 0; i < grid->nchild; i++)
+  // printf("GRID %d: %d\n",comm->me,grid->cells[grid->mychild[i]].id);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -255,6 +266,33 @@ void Grid::assign_stride(int order)
     else if (order == ZYX) nth = ix*nz*ny + iy*nz + iz;
 
     cells[m].proc = nth % nprocs;
+  }
+
+  assign_parent();
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Grid::assign_clump(int order)
+{
+  int ix,iy,iz,nth;
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+  
+  for (int m = 0; m < ncell; m++) {
+    ix = m % nx;
+    iy = (m / nx) % ny;
+    iz = m / (nx*ny);
+    
+    if (order == XYZ) nth = iz*nx*ny + iy*nx + ix;
+    else if (order == XZY) nth = iy*nx*nz + iz*nx + ix;
+    else if (order == YXZ) nth = iz*ny*nx + ix*ny + iy;
+    else if (order == YZX) nth = ix*ny*nz + iz*ny + iy;
+    else if (order == ZXY) nth = iy*nz*nx + ix*nz + iz;
+    else if (order == ZYX) nth = ix*nz*ny + iy*nz + iz;
+
+    cells[m].proc = static_cast<int> (1.0*nth/ncell * nprocs);
   }
 
   assign_parent();
@@ -595,8 +633,8 @@ void Grid::surf2grid()
 	    icell = k*nx*ny + j*nx + i;
 	    if (Geometry::tri_hex_intersect(x1,x2,x3,tris[m].norm,
 					    cells[icell].lo,cells[icell].hi))
-	      csurfs[icell][count[icell]++] = m;
-	  }
+              csurfs[icell][count[icell]++] = m;
+          }
     }
   }
 

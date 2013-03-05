@@ -85,6 +85,7 @@ class Grid : protected Pointers {
   void add_split_cell(int);
   int which_cell(double, double, double);
   void assign_stride(int);
+  void assign_clump(int);
   void assign_block(int, int, int);
   void assign_random();
   void grow(int);

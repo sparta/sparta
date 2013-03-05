@@ -273,7 +273,7 @@ void Cut2d::line2pl(int n, int *list)
 {
   int i,m,pt;
   PLone *datum;
-  MyList<PLone*> *one;
+  MyDoubleLinkedList<PLone*> *one;
 
   Surf::Line *lines = surf->lines;
 
@@ -340,7 +340,7 @@ void Cut2d::line2pl(int n, int *list)
     printf("PL %d\n",npl);
     for (i = 0; i < npl; i++) {
       one = &pl[i];
-      printf("  ONE %d:",one->n);
+      printf("  ONE %d:",one->nlist);
       for (PLone *p = one->first; p; p = p->next)
         printf(" %d",p->iline);
       printf("\n");
@@ -366,7 +366,7 @@ void Cut2d::weiler_intersect(double *lo, double *hi, int *cornerflag)
   double *p,*q,*norm;
   Opt *opt;
   Cpt *cpt;
-  MyList<PLone*> *polyline;
+  MyDoubleLinkedList<PLone*> *polyline;
   PLone *poly;
 
   Surf::Line *lines = surf->lines;
@@ -429,7 +429,7 @@ void Cut2d::weiler_intersect(double *lo, double *hi, int *cornerflag)
   for (int ipl = 0; ipl < pl.n; ipl++) {
     polyline = &pl[ipl];
     MyVec<Opt> &one = opts[ipl];
-    one.grow(3*polyline->n + 1);
+    one.grow(3*polyline->nlist + 1);
     nopt = 0;
     
     iline = polyline->first->iline;
@@ -533,7 +533,7 @@ void Cut2d::weiler_intersect(double *lo, double *hi, int *cornerflag)
   if (VERBOSE) {
     printf("CORNER FLAGS %d: %d %d %d %d\n",grid->cells[icell].id,
            cornerflag[0],cornerflag[1],cornerflag[2],cornerflag[3]);
-    printf("CPTS %d\n",cpts.n);
+    printf("CPTS %d\n",cpts.nlist);
     int nn = 0;
     for (Cpt *c = cpts.first; c; c = c->next) {
       printf("  %d: %d %g %g %g %d %d\n",nn,c->flag,c->x[0],c->x[1],

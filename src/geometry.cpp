@@ -207,7 +207,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   sum += whichside(v0,norm,xlo,yhi,zhi);
   sum += whichside(v0,norm,xhi,yhi,zhi);
   if (sum == 8 || sum == -8) return 0;
-  
+
   // test 12 hex edges for intersection with tri
   // b,e = begin/end of hex edge line segment
 

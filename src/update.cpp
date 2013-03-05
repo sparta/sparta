@@ -44,8 +44,9 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // same as several files
 
 //#define MOVE_DEBUG 1            // un-comment to debug motion of one particle
-#define MOVE_DEBUG_PROC 0       // owning proc
+#define MOVE_DEBUG_PROC 1       // owning proc
 #define MOVE_DEBUG_PARTICLE 0   // particle index on owning proc
+#define MOVE_DEBUG_STEP 26      // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -305,27 +306,6 @@ void Update::move3d_surface()
       xnew[2] = x[2] + dtfrac*v[2];
       if (perturbflag) (this->*moveperturb)(dtfrac,xnew,v);
     }
-
-     int axisym = 1.; // This flag must be set in the in.file 
-
-     double dz;
-
-     if (axisym > 0 ) {
-
-       if (i < ncurrent)
-          dz  = v[2]* dt;
-       else
-          dz  = v[2]* dtfrac;
-
-       double rold = xnew[1];
-       xnew[1] = sqrt( xnew[1]*xnew[1] + dz*dz );
-       double rn   = rold / xnew[1];
-       double wn      = dz / xnew[1];
-       double vold    = v[1];
-       double wold    = v[2];
-       v[1] =  vold*rn + wold*wn;
-       v[2] = -vold*wn + wold*rn;
-     }
 
     icell = particles[i].icell;
     if (cells[icell].nsplit == 1) icellsurf = icell;
@@ -923,7 +903,7 @@ void Update::move2d_surface()
 	  outface = YHI;
 	}
       }
-      
+
       // particle crosses cell face
       // reset xnew exactly on face of cell
 
@@ -1184,6 +1164,16 @@ void Update::move2d()
 
     while (1) {
 
+#ifdef MOVE_DEBUG
+      if (ntimestep == MOVE_DEBUG_STEP && 
+          i >= MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC) 
+	printf("PARTICLE %d %ld: %d %d: %g %g: %g %g: %d %d: %g %g %g %g\n",
+               MOVE_DEBUG_PARTICLE,
+	       update->ntimestep,i,cells[icell].nsurf,
+               x[0],x[1],xnew[0],xnew[1],icell,cells[icell].id,
+               lo[0],hi[0],lo[1],hi[1]);
+#endif
+
       // check if particle crosses any cell face
       // frac = fraction of move completed before hitting cell face
       // this section should be as efficient as possible,
@@ -1215,6 +1205,12 @@ void Update::move2d()
       }
       
       // particle stays interior to cell
+
+#ifdef MOVE_DEBUG
+      if (ntimestep == MOVE_DEBUG_STEP && 
+          i >= MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC)
+        printf("  INTCHECK %d %d\n",outface,INTERIOR);
+#endif
 
       if (outface == INTERIOR) break;
 

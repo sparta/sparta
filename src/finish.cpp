@@ -20,6 +20,7 @@
 #include "finish.h"
 #include "update.h"
 #include "particle.h"
+#include "grid.h"
 #include "collide.h"
 #include "comm.h"
 #include "math_extra.h"
@@ -286,13 +287,30 @@ void Finish::end()
     stats(1,&tmp,&ave,&max,&min,10,histo);
     if (me == 0) {
       if (screen) {
-	fprintf(screen,"Nlocal:    %g ave %g max %g min\n",ave,max,min);
+	fprintf(screen,"Particles: %g ave %g max %g min\n",ave,max,min);
 	fprintf(screen,"Histogram:");
 	for (i = 0; i < 10; i++) fprintf(screen," %d",histo[i]);
 	fprintf(screen,"\n");
       }
       if (logfile) {
-	fprintf(logfile,"Nlocal:    %g ave %g max %g min\n",ave,max,min);
+	fprintf(logfile,"Particles: %g ave %g max %g min\n",ave,max,min);
+	fprintf(logfile,"Histogram:");
+	for (i = 0; i < 10; i++) fprintf(logfile," %d",histo[i]);
+	fprintf(logfile,"\n");
+      }
+    }
+
+    tmp = grid->nparent;
+    stats(1,&tmp,&ave,&max,&min,10,histo);
+    if (me == 0) {
+      if (screen) {
+	fprintf(screen,"Cells:     %g ave %g max %g min\n",ave,max,min);
+	fprintf(screen,"Histogram:");
+	for (i = 0; i < 10; i++) fprintf(screen," %d",histo[i]);
+	fprintf(screen,"\n");
+      }
+      if (logfile) {
+	fprintf(logfile,"Cells:      %g ave %g max %g min\n",ave,max,min);
 	fprintf(logfile,"Histogram:");
 	for (i = 0; i < 10; i++) fprintf(logfile," %d",histo[i]);
 	fprintf(logfile,"\n");

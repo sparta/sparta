@@ -190,7 +190,6 @@ void CreateMolecules::create_local(bigint np)
   RanPark *random = new RanPark(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
-  printf("SEED %g\n",seed);
 
   Grid::OneCell *cells = grid->cells;
   int *mychild = grid->mychild;
@@ -262,6 +261,9 @@ void CreateMolecules::create_local(bigint np)
     npercell = static_cast<int> (ntarget);
     if (random->uniform() < ntarget-npercell) npercell++;
 
+    //if (comm->me == 0) printf("TARG %d %g %d: %g %g\n",i,ntarget,npercell,
+    //                          volsum,volme);
+
     for (int m = 0; m < npercell; m++) {
       rn = random->uniform();
       ispecies = 0;
@@ -281,9 +283,10 @@ void CreateMolecules::create_local(bigint np)
       v[1] = vstream[1] + vr*cos(theta2);
       v[2] = vstream[2] + vr*sin(theta2);
 
-      printf("AAA %g %g %g: %g %g %g\n",x[0],x[1],x[2],v[0],v[1],v[2]);
       erot = particle->erot(ispecies,random);
       ivib = particle->evib(ispecies,random);
+      //if (comm->me == 0) printf("PPP %d %d: %d %d: %g %g\n",i,m,
+      //                         icell,cells[icell].id,x[0],x[1]);
       particle->add_particle(0,ispecies,icell,x,v,erot,ivib);
     }
 

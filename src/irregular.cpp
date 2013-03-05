@@ -77,9 +77,10 @@ Irregular::~Irregular()
    n = # of datums to send
    proclist = proc to send each datum to (including self)
    return total # of datums I will recv (including self)
+   sort = 1 if receives should be ordered by proc, default = 0
 ------------------------------------------------------------------------- */
 
-int Irregular::create(int n, int *proclist)
+int Irregular::create(int n, int *proclist, int sort)
 {
   int i,m;
 
@@ -181,6 +182,23 @@ int Irregular::create(int n, int *proclist)
     nrecvdatum += num_recv[i];
   }
   nrecvdatum += num_self;
+
+  // sort receives by proc if requested
+  // useful for debugging to insure reproducible behavior
+
+  if (sort) {
+    int tmp;
+    for (int ncompare = nrecv-1; ncompare > 0; ncompare--)
+      for (i = 0; i < ncompare; i++)
+        if (proc_recv[i] > proc_recv[i+1]) {
+          tmp = proc_recv[i];
+          proc_recv[i] = proc_recv[i+1];
+          proc_recv[i+1] = tmp;
+          tmp = num_recv[i];
+          num_recv[i] = num_recv[i+1];
+          num_recv[i+1] = tmp;
+        }
+  }
 
   // barrier to insure all MPI_ANY_SOURCE messages are received
   // else another proc could proceed to exchange_data() and send to me

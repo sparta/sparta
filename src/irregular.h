@@ -23,7 +23,7 @@ class Irregular : protected Pointers {
  public:
   Irregular(class SPARTA *);
   ~Irregular();
-  int create(int, int *);
+  int create(int, int *, int sort = 0);
   void exchange(char *, int, char *);
 
  private:

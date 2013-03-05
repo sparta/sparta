@@ -22,7 +22,7 @@
 
 using namespace SPARTA_NS;
 
-enum{STRIDE,BLOCK,RANDOM};
+enum{STRIDE,CLUMP,BLOCK,RANDOM};
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
 
 /* ---------------------------------------------------------------------- */
@@ -62,23 +62,28 @@ void CreateGrid::command(int narg, char **arg)
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"stride") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Illegal create_grid command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
       bstyle = STRIDE;
-      if (strlen(arg[iarg+1]) + strlen(arg[iarg+2]) + strlen(arg[iarg+3]) != 3)
-	error->all(FLERR,"Illegal create_grid command");
-      char str[4];
-      str[0] = arg[iarg+1][0];
-      str[1] = arg[iarg+2][0];
-      str[2] = arg[iarg+3][0];
-      str[3] = 0;
-      if (strcmp(str,"xyz") == 0) order = XYZ;
-      else if (strcmp(str,"xzy") == 0) order = XZY;
-      else if (strcmp(str,"yxz") == 0) order = YXZ;
-      else if (strcmp(str,"yzx") == 0) order = YZX;
-      else if (strcmp(str,"zxy") == 0) order = ZXY;
-      else if (strcmp(str,"zyx") == 0) order = ZYX;
+      if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
+      else if (strcmp(arg[iarg+1],"xzy") == 0) order = XZY;
+      else if (strcmp(arg[iarg+1],"yxz") == 0) order = YXZ;
+      else if (strcmp(arg[iarg+1],"yzx") == 0) order = YZX;
+      else if (strcmp(arg[iarg+1],"zxy") == 0) order = ZXY;
+      else if (strcmp(arg[iarg+1],"zyx") == 0) order = ZYX;
       else error->all(FLERR,"Illegal create_grid command");
-      iarg += 4;
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"clump") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
+      bstyle = CLUMP;
+      if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
+      else if (strcmp(arg[iarg+1],"xzy") == 0) order = XZY;
+      else if (strcmp(arg[iarg+1],"yxz") == 0) order = YXZ;
+      else if (strcmp(arg[iarg+1],"yzx") == 0) order = YZX;
+      else if (strcmp(arg[iarg+1],"zxy") == 0) order = ZXY;
+      else if (strcmp(arg[iarg+1],"zyx") == 0) order = ZYX;
+      else error->all(FLERR,"Illegal create_grid command");
+      iarg += 2;
 
     } else if (strcmp(arg[3],"block") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal create_grid command");
@@ -178,9 +183,10 @@ void CreateGrid::command(int narg, char **arg)
   // assign cells to processors based on bstyle
 
   if (bstyle == STRIDE) grid->assign_stride(order);
+  else if (bstyle == CLUMP) grid->assign_clump(order);
   else if (bstyle == BLOCK) grid->assign_block(px,py,pz);
   else if (bstyle == RANDOM) grid->assign_random();
-  
+
   // stats
 
   if (comm->me == 0) {

@@ -94,8 +94,9 @@ void Comm::migrate(int nmigrate, int *mlist)
 
   // create irregular communication plan, perform comm, destroy plan
   // returned nrecv = size of buffer needed for incoming atoms
+  // DEBUG: append a sort=1 arg
 
-  int nrecv = irregular->create(nsend,proclist);
+  int nrecv = irregular->create(nsend,proclist,1);
 
   // extend particle list if necessary
 

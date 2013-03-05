@@ -16,9 +16,9 @@
 #define SPARTA_CUT2D_H
 
 #include "pointers.h"
-#include "myvec.h"
-#include "mylist.h"
-#include "pool.h"
+#include "my_vec.h"
+#include "my_double_linked_list.h"
+#include "my_page.h"
 
 namespace SPARTA_NS {
 
@@ -73,17 +73,17 @@ class Cut2d : protected Pointers {
     MyVec<int> lines;
   };
 
-  Pool<PLone> ppool;
-  MyVec< MyList<PLone*> > pl;
+  MyPage<PLone> ppool;
+  MyVec< MyDoubleLinkedList<PLone*> > pl;
 
   MyVec< MyVec<Opt> > opts;
 
-  Pool<Cpt> cpool;
-  MyList<Cpt*> cpts;
+  MyPage<Cpt> cpool;
+  MyDoubleLinkedList<Cpt*> cpts;
   Cpt *cindex[5];
 
-  Pool<Entrypt> epool;
-  MyList<Entrypt*> entrypts;
+  MyPage<Entrypt> epool;
+  MyDoubleLinkedList<Entrypt*> entrypts;
 
   MyVec<Loop> loops;
   MyVec<PG> pg;
