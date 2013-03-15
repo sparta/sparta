@@ -24,6 +24,12 @@
 
 using namespace SPARTA_NS;
 
+// allocate space for static class variable
+// prototype for non-class function
+
+int *Irregular::proc_recv_copy;
+int compare_standalone(const void *, const void *);
+
 #define BUFFACTOR 1.5
 #define BUFMIN 1000
 #define BUFEXTRA 1000
@@ -183,21 +189,30 @@ int Irregular::create(int n, int *proclist, int sort)
   }
   nrecvdatum += num_self;
 
-  // sort receives by proc if requested
+  // sort proc_recv and num_recv by proc ID if requested
   // useful for debugging to insure reproducible behavior
 
   if (sort) {
-    int tmp;
-    for (int ncompare = nrecv-1; ncompare > 0; ncompare--)
-      for (i = 0; i < ncompare; i++)
-        if (proc_recv[i] > proc_recv[i+1]) {
-          tmp = proc_recv[i];
-          proc_recv[i] = proc_recv[i+1];
-          proc_recv[i+1] = tmp;
-          tmp = num_recv[i];
-          num_recv[i] = num_recv[i+1];
-          num_recv[i+1] = tmp;
-        }
+    int *order = new int[nrecv];
+    int *proc_recv_ordered = new int[nrecv];
+    int *num_recv_ordered = new int[nrecv];
+
+    for (i = 0; i < nrecv; i++) order[i] = i;
+    proc_recv_copy = proc_recv;
+    qsort(order,nrecv,sizeof(int),compare_standalone);
+
+    int j;
+    for (i = 0; i < nrecv; i++) {
+      j = order[i];
+      proc_recv_ordered[i] = proc_recv[j];
+      num_recv_ordered[i] = num_recv[j];
+    }
+
+    memcpy(proc_recv,proc_recv_ordered,nrecv*sizeof(int));
+    memcpy(num_recv,num_recv_ordered,nrecv*sizeof(int));
+    delete [] order;
+    delete [] proc_recv_ordered;
+    delete [] num_recv_ordered;
   }
 
   // barrier to insure all MPI_ANY_SOURCE messages are received
@@ -208,6 +223,21 @@ int Irregular::create(int n, int *proclist, int sort)
   // return # of datums I will receive
 
   return nrecvdatum;
+}
+
+/* ----------------------------------------------------------------------
+   comparison function invoked by qsort()
+   accesses static class member proc_recv_copy, set before call to qsort()
+------------------------------------------------------------------------- */
+
+int compare_standalone(const void *iptr, const void *jptr)
+{
+  int i = *((int *) iptr);
+  int j = *((int *) jptr);
+  int *proc_recv = Irregular::proc_recv_copy;
+  if (proc_recv[i] < proc_recv[j]) return -1;
+  if (proc_recv[i] > proc_recv[j]) return 1;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

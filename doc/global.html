@@ -13,9 +13,11 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>global keyword values 
+<PRE>global keyword values ... 
 </PRE>
-<UL><LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> 
+<UL><LI>one or more keyword/value pairs 
+
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfmax</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -26,7 +28,9 @@
   <I>temp</I> values = thermal
     thermal = temperature of background gas (temperature units)
   <I>gravity</I> values = acc
-    acc = acceleration due to gravity (acceleration units) 
+    acc = acceleration due to gravity (acceleration units)
+  <I>surfmax</I> value = Nsurf
+    Nsurf = max # of surface elements allowed in single grid cell 
 </PRE>
 
 </UL>
@@ -63,7 +67,16 @@ the motion of particles.  A positive value acts in the downward
 direction, i.e. -z for 3d, -y for 2d.  If the value is set to 0.0, no
 acceleration term is included, which is the default.
 </P>
-<P><B>Restrictions:</B> none
+<P>The <I>surfmax</I> keyword determines the maximum number of surface
+elements (lines in 2d, triangles in 3d) can overlap a single grid
+cell.  The default is 100, which should be large enough for most
+simulations, unless you define very coarse grid cells (relative to the
+size of surface elements).  
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>The global surfmax command must be used before surface elements are
+defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 </P>
 <P><B>Related commands:</B>
 </P>
@@ -72,6 +85,6 @@ acceleration term is included, which is the default.
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 300, gravity = 0.0.
+0.0, temp = 300, gravity = 0.0, surfmax = 100.
 </P>
 </HTML>

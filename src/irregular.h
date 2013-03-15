@@ -21,6 +21,11 @@ namespace SPARTA_NS {
 
 class Irregular : protected Pointers {
  public:
+
+  // static variable across all Irregular objects, for qsort callback
+
+  static int *proc_recv_copy;
+
   Irregular(class SPARTA *);
   ~Irregular();
   int create(int, int *, int sort = 0);
@@ -30,6 +35,7 @@ class Irregular : protected Pointers {
   int me,nprocs;
 
   // plan for irregular communication of datums
+  // also proc_recv which needs to be public for sorting
 
   int nsend;                 // # of messages to send
   int nrecv;                 // # of messages to recv
@@ -41,8 +47,8 @@ class Irregular : protected Pointers {
   int bufmax;                // current size of buf in bytes
   int *proc_send;            // procs to send to
   int *num_send;             // # of datums to send to each proc
-  int *proc_recv;            // procs to recv from
   int *num_recv;             // # of datums to recv from each proc
+  int *proc_recv;            // procs to recv from
   int *index_send;           // list of which datums to send to each proc
   int *index_self;           // list of which datums to copy to self
   int *wlist;                // work vector

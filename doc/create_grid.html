@@ -21,12 +21,10 @@
 </UL>
 <LI>zero or more keyword/arg pairs may be appended 
 
-<LI>keyword = <I>stride</I> or <I>block</I> or <I>random</I> 
+<LI>keyword = <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> 
 
-<PRE>  <I>stride</I> args = d1 d2 d3
-    d1 = <I>x</I> or <I>y</I> or <I>z</I>
-    d2 = <I>x</I> or <I>y</I> or <I>z</I>, not same as d1
-    d3 = <I>x</I> or <I>y</I> or <I>z</I>, not same as d1 or d2
+<PRE>  <I>stride</I> args = xyz or xzy or yxz or yzx or zxy or zyx
+  <I>clump</I> args = xyz or xzy or yxz or yzx or zxy or zyx
   <I>block</I> args = Px Py Pz
     Px,Py,Pz = # of processors in each dimension
   <I>random</I> args = none 
@@ -37,7 +35,7 @@
 </P>
 <PRE>create_grid 10 10 10
 create_grid 10 10 10 block 2 * *
-create_grid 100 100 1 stride y x z 
+create_grid 100 100 1 stride yxz 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -46,10 +44,9 @@ domain defined by the <A HREF = "create_box.html">create_box</A> command.
 </P>
 <P>For 2d simulations, <I>Nz</I> must be set to 1.
 </P>
-<P>The optional <I>stride</I> and <I>block</I> and <I>random</I> keywords
-determine how grid cells are assigned to processors.
-If none are specified, then the default <I>block</I> setting
-is used, as listed below.
+<P>The optional <I>stride</I> and <I>clump</I> and <I>block</I> and <I>random</I> keywords
+determine how grid cells are assigned to processors.  If none are
+specified, then the default <I>block</I> setting is used, as listed below.
 </P>
 <P>The <I>stride</I> keyword means that every Pth cell is assigned to the same
 processor, where P is the number of processors.  E.g. if there are 100
@@ -58,12 +55,19 @@ assigned cells 1,11,21, ..., 91.  The 2nd processor (proc 1) will be
 assigned cells 2,12,22 ..., 92.  And The 10th processor (proc 9) will
 be assigned cells 10,20,30, ..., 100.
 </P>
-<P>The arguments <I>d1</I>, <I>d2</I>, <I>d3</I> are some permutation of <I>x</I>, <I>y</I>, and
-<I>z</I> and determine how the N grid cells are ordered.  Each of the N
-cells has 3 indices (I,J,K) to describe its location in the 3d grid.
-If <I>d1</I> <I>d2</I> <I>d3</I> = <I>x</I> <I>z</I> <I>y</I>, then the cells will be ordered from 1
-to N with the I index varying fastest, the K index next, and the J
-index slowest.
+<P>The <I>clump</I> keyword means that the Pth clump of cells is assigned to
+the same processor, where P is the number of processors.  E.g. if
+there are N = 100 cells and 10 processors, then the 1st processor
+(proc 0) will be assigned cells 1 to 10.  The 2nd processor (proc 1)
+will be assigned cells 11 to 20.  And The 10th processor (proc 9) will
+be assigned cells 91 to 100.
+</P>
+<P>The argument for <I>stride</I> and <I>clump</I> determines how the N grid cells
+are ordered and is some permutation of <I>x</I>, <I>y</I>, and <I>z</I>.  Each of the
+N cells has 3 indices (I,J,K) to describe its location in the 3d grid.
+If the stride argument is yxz, then the cells will be ordered from 1
+to N with the y dimension (J index) varying fastest, the x dimension
+next (I index), and the z dimension slowest (K index).
 </P>
 <P>The <I>block</I> keyword maps the P processors to a <I>Px</I> by <I>Py</I> by <I>Pz</I>
 logical grid that overlays the actual <I>Nx</I> by <I>Ny</I> by <I>Nz</I> grid.  This

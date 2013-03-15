@@ -10,9 +10,10 @@ global command :h3
 
 [Syntax:]
 
-global keyword values :pre
+global keyword values ... :pre
 
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} :ulb,l
+one or more keyword/value pairs :ulb,l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -22,7 +23,9 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} :ulb,l
   {temp} values = thermal
     thermal = temperature of background gas (temperature units)
   {gravity} values = acc
-    acc = acceleration due to gravity (acceleration units) :pre
+    acc = acceleration due to gravity (acceleration units)
+  {surfmax} value = Nsurf
+    Nsurf = max # of surface elements allowed in single grid cell :pre
 :ule
 
 [Examples:]
@@ -58,7 +61,16 @@ the motion of particles.  A positive value acts in the downward
 direction, i.e. -z for 3d, -y for 2d.  If the value is set to 0.0, no
 acceleration term is included, which is the default.
 
-[Restrictions:] none
+The {surfmax} keyword determines the maximum number of surface
+elements (lines in 2d, triangles in 3d) can overlap a single grid
+cell.  The default is 100, which should be large enough for most
+simulations, unless you define very coarse grid cells (relative to the
+size of surface elements).  
+
+[Restrictions:]
+
+The global surfmax command must be used before surface elements are
+defined, e.g. via the "read_surf"_read_surf.html command.
 
 [Related commands:]
 
@@ -67,4 +79,4 @@ acceleration term is included, which is the default.
 [Default:]
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 300, gravity = 0.0.
+0.0, temp = 300, gravity = 0.0, surfmax = 100.

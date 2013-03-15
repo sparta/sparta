@@ -73,8 +73,8 @@ command.  The assignment of boundary to model is done via the
 
 [Restrictions:]
 
-This command must be used before the simulation box is defined by a
-"create_box"_create_box.html command.
+This command must be used before the grid is defined, e.g. by a
+"create_grid"_create_grid.html command.
 
 For 2d simulations, the z dimension must be periodic.
 
