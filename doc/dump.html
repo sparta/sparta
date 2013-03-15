@@ -28,11 +28,12 @@
 <LI>args = list of arguments for a particular style 
 
 <PRE>  <I>molecule</I> args = list of molecule attributes
-    possible attributes = id, type, x, y, z, xs, ys, zs, vx, vy, vz,
+    possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name 
 </PRE>
 <PRE>      id = molecule ID
       type = molecule species
+      proc = ID of owning processor
       x,y,z = unscaled molecule coordinates
       xs,ys,zs = scaled molecule coordinates
       vx,vy,vz = molecule velocities
@@ -188,7 +189,8 @@ to write.
 part of the <I>molecule</I> style.
 </P>
 <P><I>Id</I> is the molecule ID.  <I>Type</I> is an integer index representing the
-molecule species.
+molecule species.  <I>Proc</I> is the ID of the processor which owns the
+grid cell.
 </P>
 <P>The <I>x</I>, <I>y</I>, <I>z</I> attributes write molecule coordinates "unscaled", in
 the appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> if
@@ -237,9 +239,8 @@ per-molecule quantities which could then be output into dump files.
 <P>This section explains the grid cell attributes that can be specified
 as part of the <I>grid</I> style.
 </P>
-<P><I>Id</I> is the grid cell ID. 
-</P>
-<P><I>Proc</I> is the ID of the processor which owns the grid cell.
+<P><I>Id</I> is the grid cell ID.  <I>Proc</I> is the ID of the processor which
+owns the grid cell.
 </P>
 <P>The <I>xlo</I>, <I>ylo</I>, <I>zlo</I> attributes write the coordinates of the
 lower-left corner of the grid cell in the appropriate distance

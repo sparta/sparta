@@ -229,6 +229,7 @@ included when SPARTA was built.  Not all packages are included in a
 default SPARTA build.  These dependencies are listed as Restrictions
 in the command's documentation.
 
+"balance_grid"_balance_grid.html,
 "boundary"_boundary.html,
 "bound_modify"_bound_modify.html,
 "clear"_clear.html,

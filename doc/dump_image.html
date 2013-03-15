@@ -17,22 +17,24 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
-<LI>image = style of dump command (other styles <I>particle</I> are discussed on the <A HREF = "dump.html">dump</A> doc page) 
+<LI>image = style of dump command (other styles are discussed on the <A HREF = "dump.html">dump</A> doc page) 
 
 <LI>N = dump every this many timesteps 
 
 <LI>file = name of file to write image to 
 
-<LI>color = atom attribute that determines color of each atom 
+<LI>color = molecule attribute that determines color of each molecule 
 
-<LI>diameter = atom attribute that determines size of each atom 
+<LI>diameter = molecule attribute that determines size of each molecule 
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>adiam</I> or <I>atom</I> or <I>size</I> or <I>view</I> or <I>center</I> or <I>up</I> or <I>zoom</I> or <I>persp</I> or <I>box</I> or <I>axes</I> or <I>shiny</I> or <I>ssao</I> 
+<LI>keyword = <I>adiam</I> or <I>atom</I> or <I>cell</I> or <I>size</I> or <I>view</I> or <I>center</I> or <I>up</I> or <I>zoom</I> or <I>persp</I> or <I>box</I> or <I>grid</I> or <I>axes</I> or <I>shiny</I> or <I>ssao</I> 
 
-<PRE>  <I>adiam</I> value = number = numeric value for atom diameter (distance units)
-  <I>atom</I> = yes/no = do or do not draw atoms
+<PRE>  <I>adiam</I> value = number = numeric value for molecule diameter (distance units)
+  <I>atom</I> = yes/no = do or do not draw molecules
+  <I>cell</I> values = color
+    color = <I>proc</I> or attribute
   <I>size</I> values = width height = size of images
     width = width of image in # of pixels
     height = height of image in # of pixels
@@ -56,6 +58,9 @@
   <I>box</I> values = yes/no diam = draw outline of simulation box
     yes/no = do or do not draw simulation box lines
     diam = diameter of box lines as fraction of shortest box length
+  <I>grid</I> values = yes/no diam = draw outline of simulation box
+    yes/no = do or do not draw grid cell outlines
+    diam = diameter of cell outlines as fraction of shortest box length
   <I>axes</I> values = yes/no length diam = draw xyz axes
     yes/no = do or do not draw xyz axes lines next to simulation box
     length = length of axes lines as fraction of respective box lengths
@@ -72,7 +77,7 @@
 </P>
 <PRE>dump myDump all image 100 dump.*.jpg type type 
 </PRE>
-<P>These commands will dump shapshot images of all particles to a file
+<P>These commands will dump shapshot images of all molecules to a file
 every 100 steps.  The last two shell command will make a movie (once
 the run has finished) and play it in the Firefox browser:
 </P>
@@ -87,8 +92,8 @@ dump_modify	    4 pad 4
 timesteps as either a JPG or PPM file.  A series of such images can
 easily be converted into an animated movie of your simulation; see
 further details below.  Other dump styles store snapshots of numerical
-data asociated with particles in various formats, as discussed on the
-<A HREF = "dump.html">dump</A> doc page.
+data asociated with molecules, grid cells, and surfaces in various
+formats, as discussed on the <A HREF = "dump.html">dump</A> doc page.
 </P>
 <P>Here are two sample images, rendered as 1024x1024 JPG files.  Click to
 see the full-size images:
@@ -132,14 +137,14 @@ correct ordering.
 <HR>
 
 <P>The <I>color</I> and <I>diameter</I> settings determine the color and size of
-particles rendered in the image.  They can be any particle attribute
+molecules rendered in the image.  They can be any molecule attribute
 defined for the <A HREF = "dump.html">dump paticle</A> command, including <I>type</I>.
 Note that the <I>diameter</I> setting can be overridden with a numeric
 value by the optional <I>adiam</I> keyword, in which case you can specify
-the <I>diameter</I> setting with any valid particle attribute.
+the <I>diameter</I> setting with any valid molecule attribute.
 </P>
 <P>If <I>type</I> is specified for the <I>color</I> setting, then the color of each
-particle is determined by its type = species index.  By default the
+molecule is determined by its type = species index.  By default the
 mapping of types to colors is as follows:
 </P>
 <UL><LI>type 1 = red
@@ -147,33 +152,43 @@ mapping of types to colors is as follows:
 <LI>type 3 = blue
 <LI>type 4 = yellow
 <LI>type 5 = aqua
-<LI>type 6 = cyan 
+<LI>type 6 = purple 
 </UL>
 <P>and repeats itself for types > 6.  This mapping can be changed by the
 <A HREF = "dump_modify.html">dump_modify acolor</A> command.
 </P>
+<P>If <I>proc</I> is specified for the <I>color</I> setting, then the color of each
+molecule is determined by the ID of the owning processor.  The default
+mapping of proc IDs to colors is that same as in the list above,
+except that proc P corresponds to type P+1.
+</P>
 <P>If <I>type</I> is specified for the <I>diameter</I> setting then the diameter of
-each particle is determined by its type = species index.  By default
+each molecule is determined by its type = species index.  By default
 all types have diameter 1.0.  This mapping can be changed by the
 <A HREF = "dump_modify.html">dump_modify adiam</A> command.
 </P>
-<P>If other particle attributes are used for the <I>color</I> or <I>diameter</I>
+<P>If <I>proc</I> is specified for the <I>diameter</I> setting then the diameter of
+each molecule will be the proc ID (0 up to Nprocs-1) in whatever
+<A HREF = "units.html">units</A> you are using, which is undoubtably not what you
+want.
+</P>
+<P>If other molecule attributes are used for the <I>color</I> or <I>diameter</I>
 settings, they are interpreted in the following way.
 </P>
 <P>If "vx", for example, is used as the <I>color</I> setting, then the color
-of the particle will depend on the x-component of its velocity.  The
+of the molecule will depend on the x-component of its velocity.  The
 association of a per-molecule value with a specific color is
 determined by a "color map", which can be specified via the
 <A HREF = "dump_modify.html">dump_modify</A> command.  The basic idea is that the
-particle-attribute will be within a range of values, and every value
+molecule-attribute will be within a range of values, and every value
 within the range is mapped to a specific color.  Depending on how the
 color map is defined, that mapping can take place via interpolation so
 that a value of -3.2 is halfway between "red" and "blue", or
 discretely so that the value of -3.2 is "orange".
 </P>
 <P>If "vx", for example, is used as the <I>diameter</I> setting, then the
-particle will be rendered using the x-component of its velocity as the
-diameter.  If the per-molecule value <= 0.0, them the atom will not be
+molecule will be rendered using the x-component of its velocity as the
+diameter.  If the per-molecule value <= 0.0, them the molecule will not be
 drawn. 
 </P>
 <HR>
@@ -182,17 +197,50 @@ drawn.
 As listed below, all of the keywords have defaults, most of which you
 will likely not need to change.  The <A HREF = "dump_modify.html">dump modify</A>
 also has options specific to the dump image style, particularly for
-assigning colors to particles and other image features.
+assigning colors to molecules and other image features.
 </P>
 <HR>
 
 <P>The <I>adiam</I> keyword allows you to override the <I>diameter</I> setting to a
-per-atom attribute with a specified numeric value.  All particles will
+per-molecule attribute with a specified numeric value.  All molecules will
 be drawn with that diameter, e.g. 1.5, which is in whatever distance
 <A HREF = "units.html">units</A> the input script defines.
 </P>
-<P>The <I>atom</I> keyword allow you to turn off the drawing of all particles,
+<HR>
+
+<P>The <I>atom</I> keyword allow you to turn off the drawing of all molecules,
 if the specified value is <I>no</I>.
+</P>
+<HR>
+
+<P>The <I>cell</I> keyword turns on the drawing of grid cells with the
+specified color attribute.  For 2d, the grid cell is shaded with an
+rectangle that is infinitely thin in the z dimension, which allows you
+to still see the particles in the grid cell.  For 3d, the grid cell is
+drawn as a solid brick, which will obscure the molecules inside it.
+</P>
+<P>If <I>proc</I> is specified for the <I>color</I> setting, then the color of each
+grid cell is determined by its owning processor ID.  This is useful
+for visualizing the result of a load balancing of the grid cells,
+e.g. by the <A HREF = "balance_grid.html">balance_grid</A> or <A HREF = "fix_balance.html">fix
+balance</A> commands.  By default the mapping of proc
+IDs to colors is as follows:
+</P>
+<UL><LI>proc ID 1 = red
+<LI>proc ID 2 = green
+<LI>proc ID 3 = blue
+<LI>proc ID 4 = yellow
+<LI>proc ID 5 = aqua
+<LI>proc ID 6 = purple 
+</UL>
+<P>and repeats itself for IDs > 6.  Note that for this command, processor
+IDs range from 1 to Nprocs inclusive, instead of the more customary 0
+to Nprocs-1.  This mapping can be changed by the <A HREF = "dump_modify.html">dump_modify
+ccolor</A> command, which has not yet been added to
+SPARTA.
+</P>
+<P>At some point, we will also allow other grid-based values to be used
+to color grid cells.  This has not yet been implemented in SPARTA.
 </P>
 <HR>
 
@@ -253,7 +301,7 @@ it cannot be parallel to the <I>view</I> vector, implied by the <I>theta</I> and
 </P>
 <P>The <I>zoom</I> keyword scales the size of the simulation box as it appears
 in the image.  The default <I>zfactor</I> value of 1 should display an
-image mostly filled by the atoms in the simulation box.  A <I>zfactor</I> >
+image mostly filled by the molecules in the simulation box.  A <I>zfactor</I> >
 1 will make the simulation box larger; a <I>zfactor</I> < 1 will make it
 smaller.  <I>Zfactor</I> must be a value > 0.0.
 </P>
@@ -278,6 +326,14 @@ fraction of the shortest box length in x,y,z (for 3d) or x,y (for 2d).
 The color of the box boundaries can be set with the <A HREF = "dump_modify.html">dump_modify
 boxcolor</A> command.
 </P>
+<P>The <I>grid</I> keyword determines how the outlines of grid cells are
+rendered as thin cylinders in the image.  If <I>no</I> is set, then the
+cell outlines are not drawn and the <I>diam</I> setting is ignored.  If
+<I>yes</I> is set, the 12 edges of each grid cell are drawn, with a
+diameter that is a fraction of the shortest box length in x,y,z (for
+3d) or x,y (for 2d).  The color of the grid cell outlines can be set
+with the <A HREF = "dump_modify.html">dump_modify gridcolor</A> command.
+</P>
 <P>The <I>axes</I> keyword determines how the coordinate axes are rendered as
 thin cylinders in the image.  If <I>no</I> is set, then the axes are not
 drawn and the <I>length</I> and <I>diam</I> settings are ignored.  If <I>yes</I> is
@@ -296,7 +352,7 @@ image will appear.  The <I>sfactor</I> value must be a value 0.0 <=
 and <I>sfactor</I> = 0 is a rough non-shiny surface.
 </P>
 <P>The <I>ssao</I> keyword turns on/off a screen space ambient occlusion
-(SSAO) model for depth shading.  If <I>yes</I> is set, then particles
+(SSAO) model for depth shading.  If <I>yes</I> is set, then molecules
 further away from the viewer are darkened via a randomized process,
 which is perceived as depth.  The calculation of this effect can
 increase the cost of computing the image by roughly 2x.  The strength
@@ -367,6 +423,7 @@ details.
 </P>
 <UL><LI>adiam = not specified (use diameter setting)
 <LI>atom = yes
+<LI>cell = not specified (no drawing of grid cells)
 <LI>size = 512 512
 <LI>view = 60 30 (for 3d)
 <LI>view = 0 0 (for 2d)
@@ -376,6 +433,7 @@ details.
 <LI>zoom = 1.0
 <LI>persp = 0.0
 <LI>box = yes 0.02
+<LI>grid = no 0.0
 <LI>axes = no 0.0 0.0
 <LI>shiny = 1.0
 <LI>ssao = no 

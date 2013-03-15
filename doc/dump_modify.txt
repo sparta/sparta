@@ -16,11 +16,11 @@ dump-ID = ID of dump to modify :ulb,l
 one or more keyword/value pairs may be appended :l
 keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {color} or {every} or {first} or {flush} or {format} or {thresh} :l
   {acolor} args = type color
-    type = atom type or range of types (see below)
+    type = molecule type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
   {adiam} args = type diam
-    type = atom type or range of types (see below)
-    diam = diameter of atoms of that type (distance units)
+    type = molecule type or range of types (see below)
+    diam = diameter of molecules of that type (distance units)
   {amap} args = lo hi style delta N entry1 entry2 ... entryN
     lo = number or {min} = lower bound of range of color map
     hi = number or {max} = upper bound of range of color map
@@ -55,6 +55,8 @@ keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {b
   {first} arg = {yes} or {no}
   {format} arg = C-style format string for one line of output
   {flush} arg = {yes} or {no}
+  {gridcolor} arg = color
+    color = name of color for grid cell outlines
   {pad} arg = Nchar = # of characters to convert timestep to
   {thresh} args = attribute operation value
     attribute = same attributes (x,fy,etotal,sxx,etc) used by dump custom style
@@ -80,51 +82,60 @@ parameters are relevant to all dump styles.
 
 The {acolor} keyword applies only to the dump {image} style.  It can
 be used with the "dump image"_dump_image.html command, when its atom
-color setting is {type}, to set the color that atoms of each type will
-be drawn in the image.
+color setting is {type} or {procs}, to set the color that molecules of
+each type or owning processor will be drawn in the image.
 
-The specified {type} should be an integer from 1 to Ntypes = the
-number of atom types.  A wildcard asterisk can be used in place of or
-in conjunction with the {type} argument to specify a range of atom
+If the atom color setting is {type}, then the specified {type} for the
+{acolor} keyword should be an integer from 1 to Ntypes = the number of
+molecule types.  A wildcard asterisk can be used in place of or in
+conjunction with the {type} argument to specify a range of molecule
 types.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
-number of atom types, then an asterisk with no numeric values means
-all types from 1 to N.  A leading asterisk means all types from 1 to n
-(inclusive).  A trailing asterisk means all types from n to N
+number of molecule types, then an asterisk with no numeric values
+means all types from 1 to N.  A leading asterisk means all types from
+1 to n (inclusive).  A trailing asterisk means all types from n to N
 (inclusive).  A middle asterisk means all types from m to n
 (inclusive).
+
+If the atom color setting is {proc}, then the specified {type} for the
+{acolor} keyword should be an integer from 1 to Nprocs = the number of
+processors.  A wildcard asterisk can be used in place of or in
+conjunction with the {type} argument to specify a range of processor
+IDs, just as described above for molecule types.  Note that for this
+command, processor IDs range from 1 to Nprocs inclusive, instead of
+the more customary 0 to Nprocs-1.
 
 The specified {color} can be a single color which is any of the 140
 pre-defined colors (see below) or a color name defined by the
 dump_modify color option.  Or it can be two or more colors separated
 by a "/" character, e.g. red/green/blue.  In the former case, that
-color is assigned to all the specified atom types.  In the latter
+color is assigned to all the specified molecule types.  In the latter
 case, the list of colors are assigned in a round-robin fashion to each
-of the specified atom types.
+of the specified molecule types.
 
 :line
 
 The {adiam} keyword applies only to the dump {image} style.  It can be
 used with the "dump image"_dump_image.html command, when its atom
-diameter setting is {type}, to set the size that atoms of each type
-will be drawn in the image.  The specified {type} should be an integer
-from 1 to Ntypes.  As with the {acolor} keyword, a wildcard asterisk
-can be used as part of the {type} argument to specify a range of atomt
-types.  The specified {diam} is the size in whatever distance
-"units"_units.html the input script is using, e.g. Angstroms.
+diameter setting is {type}, to set the size that molecules of each
+type will be drawn in the image.  The specified {type} should be an
+integer from 1 to Ntypes.  As with the {acolor} keyword, a wildcard
+asterisk can be used as part of the {type} argument to specify a range
+of molecule types.  The specified {diam} is the size in whatever
+distance "units"_units.html the input script is using, e.g. Angstroms.
 
 :line
 
 The {amap} keyword applies only to the dump {image} style.  It can be
 used with the "dump image"_dump_image.html command, with its {atom}
-keyword, when its atom setting is an atom-attribute, to setup a color
-map.  The color map is used to assign a specific RGB (red/green/blue)
-color value to an individual atom when it is drawn, based on the
-atom's attribute, which is a numeric value, e.g. its x-component of
-velocity if the atom-attribute "vx" was specified.
+keyword, when its atom setting is an molecule-attribute, to setup a
+color map.  The color map is used to assign a specific RGB
+(red/green/blue) color value to an individual molecule when it is drawn,
+based on the molecule's attribute, which is a numeric value, e.g. its
+x-component of velocity if the molecule-attribute "vx" was specified.
 
 The basic idea of a color map is that the atom-attribute will be
 within a range of values, and that range is associated with a a series
-of colors (e.g. red, blue, green).  An atom's specific value (vx =
+of colors (e.g. red, blue, green).  An molecule's specific value (vx =
 -3.2) can then mapped to the series of colors (e.g. halfway between
 red and blue), and a specific color is determined via an interpolation
 procedure.
@@ -133,12 +144,12 @@ There are many possible options for the color map, enabled by the
 {amap} keyword.  Here are the details.
 
 The {lo} and {hi} settings determine the range of values allowed for
-the atom attribute.  If numeric values are used for {lo} and/or {hi},
-then values that are lower/higher than that value are set to the
+the molecule attribute.  If numeric values are used for {lo} and/or
+{hi}, then values that are lower/higher than that value are set to the
 value.  I.e. the range is static.  If {lo} is specified as {min} or
-{hi} as {max} then the range is dynamic, and the lower and/or
-upper bound will be calculated each time an image is drawn, based
-on the set of atoms being visualized.
+{hi} as {max} then the range is dynamic, and the lower and/or upper
+bound will be calculated each time an image is drawn, based on the set
+of molecules being visualized.
 
 The {style} setting is two letters, such as "ca".  The first letter is
 either "c" for continuous, "d" for discrete, or "s" for sequential.
@@ -156,9 +167,10 @@ assigned are specified explicitly as values within the range.  A
 fractional color map is one in which the values to which colors are
 assigned are specified as a fractional portion of the range.  For
 example if the range is from -10.0 to 10.0, and the color red is to be
-assigned to atoms with a value of 5.0, then for an absolute color map
-the number 5.0 would be used.  But for a fractional map, the number
-0.75 would be used since 5.0 is 3/4 of the way from -10.0 to 10.0.
+assigned to molecules with a value of 5.0, then for an absolute color
+map the number 5.0 would be used.  But for a fractional map, the
+number 0.75 would be used since 5.0 is 3/4 of the way from -10.0 to
+10.0.
 
 The {delta} setting is only specified if the style is sequential.  It
 specifies the bin size to use within the range for assigning
@@ -182,13 +194,13 @@ as absolute numbers or as fractions (0.0 to 1.0) of the range,
 depending on the "a" or "f" in the style setting for the color map.
 
 Here is how the entries are used to determine the color of an
-individual atom, given the value X of its atom attribute.  X will fall
-between 2 of the entry values.  The color of the atom is linearly
-interpolated (in each of the RGB values) between the 2 colors
+individual molecule, given the value X of its molecule attribute.  X
+will fall between 2 of the entry values.  The color of the molecule is
+linearly interpolated (in each of the RGB values) between the 2 colors
 associated with those entries.  For example, if X = -5.0 and the 2
 surrounding entries are "red" at -10.0 and "blue" at 0.0, then the
-atom's color will be halfway between "red" and "blue", which happens
-to be "purple".
+molecule's color will be halfway between "red" and "blue", which
+happens to be "purple".
 
 For discrete color maps, each entry has a {lo} and {hi} value and a
 {color}.  The {lo} and {hi} settings are either numbers within the
@@ -201,27 +213,28 @@ can be specified either as absolute numbers or as fractions (0.0 to
 for the color map.
 
 Here is how the entries are used to determine the color of an
-individual atom, given the value X of its atom attribute.  The entries
-are scanned from first to last.  The first time that {lo} <= X <=
-{hi}, X is assigned the color associated with that entry.  You can
+individual molecule, given the value X of its molecule attribute.  The
+entries are scanned from first to last.  The first time that {lo} <= X
+<= {hi}, X is assigned the color associated with that entry.  You can
 think of the last entry as assigning a default color (since it will
 always be matched by X), and the earlier entries as colors that
 override the default.  Also note that no interpolation of a color RGB
-is done.  All atoms will be drawn with one of the colors in the list
-of entries.
+is done.  All molecules will be drawn with one of the colors in the
+list of entries.
 
 For sequential color maps, each entry has only a {color}.  Here is how
-the entries are used to determine the color of an individual atom,
-given the value X of its atom attribute.  The range is partitioned
+the entries are used to determine the color of an individual molecule,
+given the value X of its molecule attribute.  The range is partitioned
 into N bins of width {binsize}.  Thus X will fall in a specific bin
 from 1 to N, say the Mth bin.  If it falls on a boundary between 2
 bins, it is considered to be in the higher of the 2 bins.  Each bin is
 assigned a color from the E entries.  If E < N, then the colors are
 repeated.  For example if 2 entries with colors red and green are
 specified, then the odd numbered bins will be red and the even bins
-green.  The color of the atom is the color of its bin.  Note that the
-sequential color map is really a shorthand way of defining a discrete
-color map without having to specify where all the bin boundaries are.
+green.  The color of the molecule is the color of its bin.  Note that
+the sequential color map is really a shorthand way of defining a
+discrete color map without having to specify where all the bin
+boundaries are.
 
 :line
 
@@ -246,10 +259,11 @@ dump_modify color option.
 :line
 
 The {boxcolor} keyword applies only to the dump {image} style.  It
-sets the color of the simulation box drawn around the atoms in each
-image.  See the "dump image box" command for how to specify that a box
-be drawn.  The color name can be any of the 140 pre-defined colors
-(see below) or a color name defined by the dump_modify color option.
+sets the color of the simulation box drawn around the molecules in
+each image.  See the "dump image box" command for how to specify that
+a box be drawn.  The color name can be any of the 140 pre-defined
+colors (see below) or a color name defined by the dump_modify color
+option.
 
 :line
 
@@ -290,7 +304,7 @@ For example, the following commands will
 write snapshots at timesteps 0,10,20,30,100,200,300,1000,2000,etc:
 
 variable	s equal logfreq(10,3,10)
-dump		1 all atom 100 tmp.dump
+dump		1 all molecule 100 tmp.dump
 dump_modify	1 every v_s first yes :pre
 
 :line
@@ -319,6 +333,15 @@ format string.
 
 :line
 
+The {gridcolor} keyword applies only to the dump {image} style.  It
+sets the color of the grid cell outlines drawn around the grid cells
+in each image.  See the "dump image grid" command for how to specify
+that cell outlines be drawn.  The color name can be any of the 140
+pre-defined colors (see below) or a color name defined by the
+dump_modify color option.
+
+:line
+
 The {pad} keyword only applies when the dump filename is specified
 with a wildcard "*" character which becomes the timestep.  If {pad} is
 0, which is the default, the timestep is converted into a string of
@@ -334,13 +357,13 @@ timestep order.
 The {thresh} keyword only applies to the dump {custom} and {image}
 styles.  Multiple thresholds can be specified.  Specifying "none"
 turns off all threshold criteria.  If thresholds are specified, only
-atoms whose attributes meet all the threshold criteria are written to
-the dump file or included in the image.  The possible attributes that
-can be tested for are the same as those that can be specified in the
-"dump particle"_dump.html command.  Note that different attributes can
-be output by the dump particle command than are used as threshold
+molecules whose attributes meet all the threshold criteria are written
+to the dump file or included in the image.  The possible attributes
+that can be tested for are the same as those that can be specified in
+the "dump particle"_dump.html command.  Note that different attributes
+can be output by the dump particle command than are used as threshold
 criteria by the dump_modify command.  E.g. you can output the
-coordinates of atoms whose velocity components are above some
+coordinates of molecules whose velocity components are above some
 threshold.
 
 :line

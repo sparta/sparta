@@ -19,11 +19,12 @@ N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
   {molecule} args = list of molecule attributes
-    possible attributes = id, type, x, y, z, xs, ys, zs, vx, vy, vz,
+    possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = molecule ID
       type = molecule species
+      proc = ID of owning processor
       x,y,z = unscaled molecule coordinates
       xs,ys,zs = scaled molecule coordinates
       vx,vy,vz = molecule velocities
@@ -178,7 +179,8 @@ This section explains the molecule attributes that can be specified as
 part of the {molecule} style.
 
 {Id} is the molecule ID.  {Type} is an integer index representing the
-molecule species.
+molecule species.  {Proc} is the ID of the processor which owns the
+grid cell.
 
 The {x}, {y}, {z} attributes write molecule coordinates "unscaled", in
 the appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} if
@@ -227,9 +229,8 @@ per-molecule quantities which could then be output into dump files.
 This section explains the grid cell attributes that can be specified
 as part of the {grid} style.
 
-{Id} is the grid cell ID. 
-
-{Proc} is the ID of the processor which owns the grid cell.
+{Id} is the grid cell ID.  {Proc} is the ID of the processor which
+owns the grid cell.
 
 The {xlo}, {ylo}, {zlo} attributes write the coordinates of the
 lower-left corner of the grid cell in the appropriate distance

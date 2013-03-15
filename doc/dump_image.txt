@@ -13,15 +13,17 @@ dump image command :h3
 dump ID image N file color diameter keyword value ... :pre
 
 ID = user-assigned name for the dump :ulb,l
-image = style of dump command (other styles {particle} are discussed on the "dump"_dump.html doc page) :l
+image = style of dump command (other styles are discussed on the "dump"_dump.html doc page) :l
 N = dump every this many timesteps :l
 file = name of file to write image to :l
-color = atom attribute that determines color of each atom :l
-diameter = atom attribute that determines size of each atom :l
+color = molecule attribute that determines color of each molecule :l
+diameter = molecule attribute that determines size of each molecule :l
 zero or more keyword/value pairs may be appended :l
-keyword = {adiam} or {atom} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {axes} or {shiny} or {ssao} :l
-  {adiam} value = number = numeric value for atom diameter (distance units)
-  {atom} = yes/no = do or do not draw atoms
+keyword = {adiam} or {atom} or {cell} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {grid} or {axes} or {shiny} or {ssao} :l
+  {adiam} value = number = numeric value for molecule diameter (distance units)
+  {atom} = yes/no = do or do not draw molecules
+  {cell} values = color
+    color = {proc} or attribute
   {size} values = width height = size of images
     width = width of image in # of pixels
     height = height of image in # of pixels
@@ -45,6 +47,9 @@ keyword = {adiam} or {atom} or {size} or {view} or {center} or {up} or {zoom} or
   {box} values = yes/no diam = draw outline of simulation box
     yes/no = do or do not draw simulation box lines
     diam = diameter of box lines as fraction of shortest box length
+  {grid} values = yes/no diam = draw outline of simulation box
+    yes/no = do or do not draw grid cell outlines
+    diam = diameter of cell outlines as fraction of shortest box length
   {axes} values = yes/no length diam = draw xyz axes
     yes/no = do or do not draw xyz axes lines next to simulation box
     length = length of axes lines as fraction of respective box lengths
@@ -60,7 +65,7 @@ keyword = {adiam} or {atom} or {size} or {view} or {center} or {up} or {zoom} or
 
 dump myDump all image 100 dump.*.jpg type type :pre
 
-These commands will dump shapshot images of all particles to a file
+These commands will dump shapshot images of all molecules to a file
 every 100 steps.  The last two shell command will make a movie (once
 the run has finished) and play it in the Firefox browser:
 
@@ -75,8 +80,8 @@ Dump a high-quality ray-traced image of the simulation every N
 timesteps as either a JPG or PPM file.  A series of such images can
 easily be converted into an animated movie of your simulation; see
 further details below.  Other dump styles store snapshots of numerical
-data asociated with particles in various formats, as discussed on the
-"dump"_dump.html doc page.
+data asociated with molecules, grid cells, and surfaces in various
+formats, as discussed on the "dump"_dump.html doc page.
 
 Here are two sample images, rendered as 1024x1024 JPG files.  Click to
 see the full-size images:
@@ -119,14 +124,14 @@ correct ordering.
 :line
 
 The {color} and {diameter} settings determine the color and size of
-particles rendered in the image.  They can be any particle attribute
+molecules rendered in the image.  They can be any molecule attribute
 defined for the "dump paticle"_dump.html command, including {type}.
 Note that the {diameter} setting can be overridden with a numeric
 value by the optional {adiam} keyword, in which case you can specify
-the {diameter} setting with any valid particle attribute.
+the {diameter} setting with any valid molecule attribute.
 
 If {type} is specified for the {color} setting, then the color of each
-particle is determined by its type = species index.  By default the
+molecule is determined by its type = species index.  By default the
 mapping of types to colors is as follows:
 
 type 1 = red
@@ -134,33 +139,43 @@ type 2 = green
 type 3 = blue
 type 4 = yellow
 type 5 = aqua
-type 6 = cyan :ul
+type 6 = purple :ul
 
 and repeats itself for types > 6.  This mapping can be changed by the
 "dump_modify acolor"_dump_modify.html command.
 
+If {proc} is specified for the {color} setting, then the color of each
+molecule is determined by the ID of the owning processor.  The default
+mapping of proc IDs to colors is that same as in the list above,
+except that proc P corresponds to type P+1.
+
 If {type} is specified for the {diameter} setting then the diameter of
-each particle is determined by its type = species index.  By default
+each molecule is determined by its type = species index.  By default
 all types have diameter 1.0.  This mapping can be changed by the
 "dump_modify adiam"_dump_modify.html command.
 
-If other particle attributes are used for the {color} or {diameter}
+If {proc} is specified for the {diameter} setting then the diameter of
+each molecule will be the proc ID (0 up to Nprocs-1) in whatever
+"units"_units.html you are using, which is undoubtably not what you
+want.
+
+If other molecule attributes are used for the {color} or {diameter}
 settings, they are interpreted in the following way.
 
 If "vx", for example, is used as the {color} setting, then the color
-of the particle will depend on the x-component of its velocity.  The
+of the molecule will depend on the x-component of its velocity.  The
 association of a per-molecule value with a specific color is
 determined by a "color map", which can be specified via the
 "dump_modify"_dump_modify.html command.  The basic idea is that the
-particle-attribute will be within a range of values, and every value
+molecule-attribute will be within a range of values, and every value
 within the range is mapped to a specific color.  Depending on how the
 color map is defined, that mapping can take place via interpolation so
 that a value of -3.2 is halfway between "red" and "blue", or
 discretely so that the value of -3.2 is "orange".
 
 If "vx", for example, is used as the {diameter} setting, then the
-particle will be rendered using the x-component of its velocity as the
-diameter.  If the per-molecule value <= 0.0, them the atom will not be
+molecule will be rendered using the x-component of its velocity as the
+diameter.  If the per-molecule value <= 0.0, them the molecule will not be
 drawn. 
 
 :line
@@ -169,17 +184,50 @@ The various kewords listed above control how the image is rendered.
 As listed below, all of the keywords have defaults, most of which you
 will likely not need to change.  The "dump modify"_dump_modify.html
 also has options specific to the dump image style, particularly for
-assigning colors to particles and other image features.
+assigning colors to molecules and other image features.
 
 :line
 
 The {adiam} keyword allows you to override the {diameter} setting to a
-per-atom attribute with a specified numeric value.  All particles will
+per-molecule attribute with a specified numeric value.  All molecules will
 be drawn with that diameter, e.g. 1.5, which is in whatever distance
 "units"_units.html the input script defines.
 
-The {atom} keyword allow you to turn off the drawing of all particles,
+:line
+
+The {atom} keyword allow you to turn off the drawing of all molecules,
 if the specified value is {no}.
+
+:line
+
+The {cell} keyword turns on the drawing of grid cells with the
+specified color attribute.  For 2d, the grid cell is shaded with an
+rectangle that is infinitely thin in the z dimension, which allows you
+to still see the particles in the grid cell.  For 3d, the grid cell is
+drawn as a solid brick, which will obscure the molecules inside it.
+
+If {proc} is specified for the {color} setting, then the color of each
+grid cell is determined by its owning processor ID.  This is useful
+for visualizing the result of a load balancing of the grid cells,
+e.g. by the "balance_grid"_balance_grid.html or "fix
+balance"_fix_balance.html commands.  By default the mapping of proc
+IDs to colors is as follows:
+
+proc ID 1 = red
+proc ID 2 = green
+proc ID 3 = blue
+proc ID 4 = yellow
+proc ID 5 = aqua
+proc ID 6 = purple :ul
+
+and repeats itself for IDs > 6.  Note that for this command, processor
+IDs range from 1 to Nprocs inclusive, instead of the more customary 0
+to Nprocs-1.  This mapping can be changed by the "dump_modify
+ccolor"_dump_modify.html command, which has not yet been added to
+SPARTA.
+
+At some point, we will also allow other grid-based values to be used
+to color grid cells.  This has not yet been implemented in SPARTA.
 
 :line
 
@@ -240,7 +288,7 @@ it cannot be parallel to the {view} vector, implied by the {theta} and
 
 The {zoom} keyword scales the size of the simulation box as it appears
 in the image.  The default {zfactor} value of 1 should display an
-image mostly filled by the atoms in the simulation box.  A {zfactor} >
+image mostly filled by the molecules in the simulation box.  A {zfactor} >
 1 will make the simulation box larger; a {zfactor} < 1 will make it
 smaller.  {Zfactor} must be a value > 0.0.
 
@@ -265,6 +313,14 @@ fraction of the shortest box length in x,y,z (for 3d) or x,y (for 2d).
 The color of the box boundaries can be set with the "dump_modify
 boxcolor"_dump_modify.html command.
 
+The {grid} keyword determines how the outlines of grid cells are
+rendered as thin cylinders in the image.  If {no} is set, then the
+cell outlines are not drawn and the {diam} setting is ignored.  If
+{yes} is set, the 12 edges of each grid cell are drawn, with a
+diameter that is a fraction of the shortest box length in x,y,z (for
+3d) or x,y (for 2d).  The color of the grid cell outlines can be set
+with the "dump_modify gridcolor"_dump_modify.html command.
+
 The {axes} keyword determines how the coordinate axes are rendered as
 thin cylinders in the image.  If {no} is set, then the axes are not
 drawn and the {length} and {diam} settings are ignored.  If {yes} is
@@ -283,7 +339,7 @@ image will appear.  The {sfactor} value must be a value 0.0 <=
 and {sfactor} = 0 is a rough non-shiny surface.
 
 The {ssao} keyword turns on/off a screen space ambient occlusion
-(SSAO) model for depth shading.  If {yes} is set, then particles
+(SSAO) model for depth shading.  If {yes} is set, then molecules
 further away from the viewer are darkened via a randomized process,
 which is perceived as depth.  The calculation of this effect can
 increase the cost of computing the image by roughly 2x.  The strength
@@ -354,6 +410,7 @@ The defaults for the keywords are as follows:
 
 adiam = not specified (use diameter setting)
 atom = yes
+cell = not specified (no drawing of grid cells)
 size = 512 512
 view = 60 30 (for 3d)
 view = 0 0 (for 2d)
@@ -363,6 +420,7 @@ up = 0 1 0 (for 2d)
 zoom = 1.0
 persp = 0.0
 box = yes 0.02
+grid = no 0.0
 axes = no 0.0 0.0
 shiny = 1.0
 ssao = no :ul
