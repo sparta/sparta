@@ -10,37 +10,50 @@ balance_grid command :h3
 
 [Syntax:]
 
-create_grid Nx Ny Nz keyword args ... :pre
+balance_grid keyword args ... :pre
 
-NOTE: should add option to specify dx dy dz
-
-Nx,Ny,Nz = size of grid in each dimension :ul
-
-zero or more keyword/arg pairs may be appended :l
-keyword = {stride} or {clump} or {block} or {random} :l
-  {stride} args = xyz or xzy or yxz or yzx or zxy or zyx
-  {clump} args = xyz or xzy or yxz or yzx or zxy or zyx
+keyword = {stride} or {clump} or {block} or {random} or {rcb} :ulb,l
+  {stride} args = {xyz} or {xzy} or {yxz} or {yzx} or {zxy} or {zyx}
+  {clump} args = {xyz} or {xzy} or {yxz} or {yzx} or {zxy} or {zyx}
   {block} args = Px Py Pz
     Px,Py,Pz = # of processors in each dimension
-  {random} args = none :pre
+  {random} args = none 
+  {rcb} args = weight
+    weight = {cell} or {mol} :pre
 :ule
 
 [Examples:]
 
-create_grid 10 10 10
-create_grid 10 10 10 block 2 * *
-create_grid 100 100 1 stride yxz :pre
+balance_grid block * * *
+balance_grid block * 4 *
+balance_grid clump yxz
+balance_grid random
+balance_grid rcb mol :pre
 
 [Description:]
 
-Overlay a regular {Nx} by {Ny} by {Nz} grid over the simulation
-domain defined by the "create_box"_create_box.html command.
+Perform static balancing of the grid cells and their particles, by
+re-assigning them to processors in one of several ways.  Dynamic
+balancing can also be performed as a simulation runs via the "fix
+balance"_fix_balance.htm command.  NOTE: the dynamic option is not yet
+implemented.
 
-For 2d simulations, {Nz} must be set to 1.
+After the grid cells have been assigned, they migrate to the new
+owning processors, along with any particles they own or other per-cell
+attributes stored by fixes.  The internal data structures within
+SPPARKS for grid cells and particles are re-initialized with the new
+decomposition.
 
-The optional {stride} and {clump} and {block} and {random} keywords
-determine how grid cells are assigned to processors.  If none are
-specified, then the default {block} setting is used, as listed below.
+This command is useful to use immediately after the grid is created,
+via the "create_grid"_create_grid.html command, to partition the grid
+in a more desirable manner than the default creation allows for.
+
+It is also useful to use once molecules have been created, or a
+simulation has come to equilibrium with a spatially varying molecule
+distribution, so that the computational load can be more evenly
+balanced across processors.
+
+:line
 
 The {stride} keyword means that every Pth cell is assigned to the same
 processor, where P is the number of processors.  E.g. if there are 100
@@ -89,15 +102,33 @@ randomly to one of the processors.  Note that in this case every
 processor will typically not be assigned exactly the same number of
 cells.
 
+The {rcb} keyword used a recurvise coordinate bisectioning (RCB)
+algorithm to assign spatially-compact clumps of grid cells to
+processors.  Each grid cell has a "weight" in this algorithm so that
+eacn processor is assigned an equal total weight of grid cells, as
+nearly as possible.  If the {weight} argument is specified as {cell},
+than the weight for each grid cell is 1.0, so that each processor will
+end up with an equal number of grid cells.  If the {weight} argument
+is specified as {mol}, than the weight for each grid cell is the
+number of molecules it currently owns, so that each processor will end
+up with an equal number of molecules.
+
+Here are 2 example pictures, for a 2d simulation, of the partioning
+provided by the RCB algorithm for a simulation on P processors of
+100x100 or 10000 grid cells.  The one on the left is for an initially
+uniform distribution of particles.  The one on the right is at a later
+time when the particle density is larger on the right side of the
+simulation box.
+
+NOTE: include images
+
 [Restrictions:]
 
-This command can only be used after the simulation box is defined by
-the "create_box"_create_box.html command.
+This command can only be used after the grid has been created by the
+"create_grid"_create_grid.html command.
 
 [Related commands:]
 
-"create_box"_create_box.html
+"create_grid"_create_grid.html, "fix balance"_fix_balance.html
 
-[Default:]
-
-The option defaults are "block * * *",
+[Default:] none

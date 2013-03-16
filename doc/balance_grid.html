@@ -13,41 +13,53 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>create_grid Nx Ny Nz keyword args ... 
+<PRE>balance_grid keyword args ... 
 </PRE>
-<P>NOTE: should add option to specify dx dy dz
-</P>
-<UL><LI>Nx,Ny,Nz = size of grid in each dimension 
-</UL>
-<LI>zero or more keyword/arg pairs may be appended 
+<UL><LI>keyword = <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> or <I>rcb</I> 
 
-<LI>keyword = <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> 
-
-<PRE>  <I>stride</I> args = xyz or xzy or yxz or yzx or zxy or zyx
-  <I>clump</I> args = xyz or xzy or yxz or yzx or zxy or zyx
+<PRE>  <I>stride</I> args = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
+  <I>clump</I> args = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
   <I>block</I> args = Px Py Pz
     Px,Py,Pz = # of processors in each dimension
   <I>random</I> args = none 
+  <I>rcb</I> args = weight
+    weight = <I>cell</I> or <I>mol</I> 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>create_grid 10 10 10
-create_grid 10 10 10 block 2 * *
-create_grid 100 100 1 stride yxz 
+<PRE>balance_grid block * * *
+balance_grid block * 4 *
+balance_grid clump yxz
+balance_grid random
+balance_grid rcb mol 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Overlay a regular <I>Nx</I> by <I>Ny</I> by <I>Nz</I> grid over the simulation
-domain defined by the <A HREF = "create_box.html">create_box</A> command.
+<P>Perform static balancing of the grid cells and their particles, by
+re-assigning them to processors in one of several ways.  Dynamic
+balancing can also be performed as a simulation runs via the <A HREF = "fix_balance.htm">fix
+balance</A> command.  NOTE: the dynamic option is not yet
+implemented.
 </P>
-<P>For 2d simulations, <I>Nz</I> must be set to 1.
+<P>After the grid cells have been assigned, they migrate to the new
+owning processors, along with any particles they own or other per-cell
+attributes stored by fixes.  The internal data structures within
+SPPARKS for grid cells and particles are re-initialized with the new
+decomposition.
 </P>
-<P>The optional <I>stride</I> and <I>clump</I> and <I>block</I> and <I>random</I> keywords
-determine how grid cells are assigned to processors.  If none are
-specified, then the default <I>block</I> setting is used, as listed below.
+<P>This command is useful to use immediately after the grid is created,
+via the <A HREF = "create_grid.html">create_grid</A> command, to partition the grid
+in a more desirable manner than the default creation allows for.
 </P>
+<P>It is also useful to use once molecules have been created, or a
+simulation has come to equilibrium with a spatially varying molecule
+distribution, so that the computational load can be more evenly
+balanced across processors.
+</P>
+<HR>
+
 <P>The <I>stride</I> keyword means that every Pth cell is assigned to the same
 processor, where P is the number of processors.  E.g. if there are 100
 cells and 10 processors, then the 1st processor (proc 0) will be
@@ -95,17 +107,35 @@ randomly to one of the processors.  Note that in this case every
 processor will typically not be assigned exactly the same number of
 cells.
 </P>
+<P>The <I>rcb</I> keyword used a recurvise coordinate bisectioning (RCB)
+algorithm to assign spatially-compact clumps of grid cells to
+processors.  Each grid cell has a "weight" in this algorithm so that
+eacn processor is assigned an equal total weight of grid cells, as
+nearly as possible.  If the <I>weight</I> argument is specified as <I>cell</I>,
+than the weight for each grid cell is 1.0, so that each processor will
+end up with an equal number of grid cells.  If the <I>weight</I> argument
+is specified as <I>mol</I>, than the weight for each grid cell is the
+number of molecules it currently owns, so that each processor will end
+up with an equal number of molecules.
+</P>
+<P>Here are 2 example pictures, for a 2d simulation, of the partioning
+provided by the RCB algorithm for a simulation on P processors of
+100x100 or 10000 grid cells.  The one on the left is for an initially
+uniform distribution of particles.  The one on the right is at a later
+time when the particle density is larger on the right side of the
+simulation box.
+</P>
+<P>NOTE: include images
+</P>
 <P><B>Restrictions:</B>
 </P>
-<P>This command can only be used after the simulation box is defined by
-the <A HREF = "create_box.html">create_box</A> command.
+<P>This command can only be used after the grid has been created by the
+<A HREF = "create_grid.html">create_grid</A> command.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "create_box.html">create_box</A>
+<P><A HREF = "create_grid.html">create_grid</A>, <A HREF = "fix_balance.html">fix balance</A>
 </P>
-<P><B>Default:</B>
-</P>
-<P>The option defaults are "block * * *",
+<P><B>Default:</B> none
 </P>
 </HTML>
