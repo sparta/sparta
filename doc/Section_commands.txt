@@ -282,6 +282,7 @@ of each style or click on the style itself for a full description:
 "ave/grid"_fix_ave_grid.html,
 "ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
+"balance"_fix_balance.html,
 "grid/check"_fix_grid_check.html,
 "inflow"_fix_inflow.html,
 "print"_fix_print.html :tb(c=6,ea=c)

@@ -40,10 +40,9 @@ balance_grid rcb mol
 <P>Perform static balancing of the grid cells and their particles, by
 re-assigning them to processors in one of several ways.  Dynamic
 balancing can also be performed as a simulation runs via the <A HREF = "fix_balance.htm">fix
-balance</A> command.  NOTE: the dynamic option is not yet
-implemented.
+balance</A> command.
 </P>
-<P>After the grid cells have been assigned, they migrate to the new
+<P>After the grid cells have been assigned, they are migrated to new
 owning processors, along with any particles they own or other per-cell
 attributes stored by fixes.  The internal data structures within
 SPPARKS for grid cells and particles are re-initialized with the new
@@ -64,8 +63,8 @@ balanced across processors.
 processor, where P is the number of processors.  E.g. if there are 100
 cells and 10 processors, then the 1st processor (proc 0) will be
 assigned cells 1,11,21, ..., 91.  The 2nd processor (proc 1) will be
-assigned cells 2,12,22 ..., 92.  And The 10th processor (proc 9) will
-be assigned cells 10,20,30, ..., 100.
+assigned cells 2,12,22 ..., 92.  The 10th processor (proc 9) will be
+assigned cells 10,20,30, ..., 100.
 </P>
 <P>The <I>clump</I> keyword means that the Pth clump of cells is assigned to
 the same processor, where P is the number of processors.  E.g. if
@@ -102,12 +101,12 @@ explanation of the -partition command-line switch.
 grid such as 1 x P x 1 will be required, which may incur extra
 communication costs.
 </P>
-<P>The <I>random</I> keyword means that eacn grid cell will be assigned
+<P>The <I>random</I> keyword means that each grid cell will be assigned
 randomly to one of the processors.  Note that in this case every
 processor will typically not be assigned exactly the same number of
 cells.
 </P>
-<P>The <I>rcb</I> keyword used a recurvise coordinate bisectioning (RCB)
+<P>The <I>rcb</I> keyword uses a recurvise coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to
 processors.  Each grid cell has a "weight" in this algorithm so that
 eacn processor is assigned an equal total weight of grid cells, as
