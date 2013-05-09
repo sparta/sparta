@@ -1,0 +1,135 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix balance command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID balance Nfreq thresh bstyle args 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>balance = style name of this fix command 
+
+<LI>Nfreq = perform dynamic load balancing every this many steps 
+
+<LI>thresh = rebalance if imbalance factor is above this threshhold
+bstyle = <I>random</I> or <I>rcb</I> 
+
+<PRE>  <I>random</I> args = none 
+  <I>rcb</I> args = weight
+    weight = <I>cell</I> or <I>mol</I> 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 balance 1000 1.1 rcb cell
+fix 2 balance 10000 1.0 random 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command dynamically adjusts the assignment of grid cells and
+their particles to processors as a simulation runs, to attempt to
+balance the computational cost (load) evenly across processors.  The
+load balancing is "dynamic" in the sense that rebalancing is performed
+periodically during the simulation. To perform "static" balancing,
+before or between runs, see the <A HREF = "balance_grid.html">balance_grid</A>
+command.
+</P>
+<P>After grid cells have been assigned, they are migrated to new owning
+processors, along with any particles they own or other per-cell
+attributes stored by fixes.  The internal data structures within
+SPPARKS for grid cells and particles are re-initialized with the new
+decomposition.
+</P>
+<P>This command is useful to use during simulations where the spatial
+distribution of particles varies with time, leading to load imbalance.
+</P>
+<HR>
+
+<P>Rebalancing is attempted once every <I>Nfreq</I> timesteps, but only if the
+current imbalance factor exceeds the specified <I>thresh</I>.  This factor
+is defined as the maximum number of molecules owned by any processor,
+divided by the average number of molecules per processor.  Thus an
+imbalance factor of 1.0 is perfect balance.  For 10000 molecules
+running on 10 processors, if the most heavily loaded processor has
+1200 particles, then the factor is 1.2, meaning there is a 20%
+imbalance. 
+</P>
+<P>IMPORTANT NOTE: This command attempts to minimize the imbalance
+factor, as defined above.  But computational cost is not strictly
+proportional to particle count, and changing the assignment of grid
+cells and molecules to processors may lead to additional computational
+and communication overheads, e.g. in the per grid cell collision and
+chemistry calculations or when migrating molecules between processors.
+Thus you should benchmark the run times of your simulation to judge
+how often balancing should be performed, and how aggressively to set
+the <I>thresh</I> value.
+</P>
+<HR>
+
+<P>The <I>random</I> keyword means that each grid cell will be assigned
+randomly to one of the processors.  Note that in this case every
+processor will typically not be assigned exactly the same number of
+cells.
+</P>
+<P>The <I>rcb</I> keyword uses a recurvise coordinate bisectioning (RCB)
+algorithm to assign spatially-compact clumps of grid cells to
+processors.  Each grid cell has a "weight" in this algorithm so that
+eacn processor is assigned an equal total weight of grid cells, as
+nearly as possible.  If the <I>weight</I> argument is specified as <I>cell</I>,
+than the weight for each grid cell is 1.0, so that each processor will
+end up with an equal number of grid cells.  If the <I>weight</I> argument
+is specified as <I>mol</I>, than the weight for each grid cell is the
+number of molecules it currently owns, so that each processor will end
+up with an equal number of molecules.
+</P>
+<P>Here are 2 example pictures, for a 2d simulation, of the partioning
+provided by the RCB algorithm for a simulation on P processors of
+100x100 or 10000 grid cells.  The one on the left is for an initially
+uniform distribution of particles.  The one on the right is at a later
+time when the particle density is larger on the right side of the
+simulation box.
+</P>
+<P>NOTE: include images
+</P>
+<HR>
+
+<P><B>Restart, fix_modify, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
+are relevant to this fix.
+</P>
+<P>This fix computes a global scalar which is the imbalance factor after
+the most recent rebalance and a global vector of length 2 with
+additional information about the most recent rebalancing. The 2 values
+in the vector are as follows:
+</P>
+<P>    1 = max # of molecules per processor
+    3 = imbalance factor right before the last rebalance was performed 
+</P>
+<P>As explained above, the imbalance factor is the ratio of the maximum
+number of molecules on any processor to the average number of
+molecules per processor.
+</P>
+<P>These quantities can be accessed by various output commands.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "create_grid.html">create_grid</A>, <A HREF = "balance_grid.html">balance_grid</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

@@ -1,0 +1,125 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix balance command :h3
+
+[Syntax:]
+
+fix ID balance Nfreq thresh bstyle args :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+balance = style name of this fix command :l
+Nfreq = perform dynamic load balancing every this many steps :l
+thresh = rebalance if imbalance factor is above this threshhold
+bstyle = {random} or {rcb} :l
+  {random} args = none 
+  {rcb} args = weight
+    weight = {cell} or {mol} :pre
+:ule
+
+[Examples:]
+
+fix 1 balance 1000 1.1 rcb cell
+fix 2 balance 10000 1.0 random :pre
+
+[Description:]
+
+This command dynamically adjusts the assignment of grid cells and
+their particles to processors as a simulation runs, to attempt to
+balance the computational cost (load) evenly across processors.  The
+load balancing is "dynamic" in the sense that rebalancing is performed
+periodically during the simulation. To perform "static" balancing,
+before or between runs, see the "balance_grid"_balance_grid.html
+command.
+
+After grid cells have been assigned, they are migrated to new owning
+processors, along with any particles they own or other per-cell
+attributes stored by fixes.  The internal data structures within
+SPPARKS for grid cells and particles are re-initialized with the new
+decomposition.
+
+This command is useful to use during simulations where the spatial
+distribution of particles varies with time, leading to load imbalance.
+
+:line
+
+Rebalancing is attempted once every {Nfreq} timesteps, but only if the
+current imbalance factor exceeds the specified {thresh}.  This factor
+is defined as the maximum number of molecules owned by any processor,
+divided by the average number of molecules per processor.  Thus an
+imbalance factor of 1.0 is perfect balance.  For 10000 molecules
+running on 10 processors, if the most heavily loaded processor has
+1200 particles, then the factor is 1.2, meaning there is a 20%
+imbalance. 
+
+IMPORTANT NOTE: This command attempts to minimize the imbalance
+factor, as defined above.  But computational cost is not strictly
+proportional to particle count, and changing the assignment of grid
+cells and molecules to processors may lead to additional computational
+and communication overheads, e.g. in the per grid cell collision and
+chemistry calculations or when migrating molecules between processors.
+Thus you should benchmark the run times of your simulation to judge
+how often balancing should be performed, and how aggressively to set
+the {thresh} value.
+
+:line
+
+The {random} keyword means that each grid cell will be assigned
+randomly to one of the processors.  Note that in this case every
+processor will typically not be assigned exactly the same number of
+cells.
+
+The {rcb} keyword uses a recurvise coordinate bisectioning (RCB)
+algorithm to assign spatially-compact clumps of grid cells to
+processors.  Each grid cell has a "weight" in this algorithm so that
+eacn processor is assigned an equal total weight of grid cells, as
+nearly as possible.  If the {weight} argument is specified as {cell},
+than the weight for each grid cell is 1.0, so that each processor will
+end up with an equal number of grid cells.  If the {weight} argument
+is specified as {mol}, than the weight for each grid cell is the
+number of molecules it currently owns, so that each processor will end
+up with an equal number of molecules.
+
+Here are 2 example pictures, for a 2d simulation, of the partioning
+provided by the RCB algorithm for a simulation on P processors of
+100x100 or 10000 grid cells.  The one on the left is for an initially
+uniform distribution of particles.  The one on the right is at a later
+time when the particle density is larger on the right side of the
+simulation box.
+
+NOTE: include images
+
+:line
+
+[Restart, fix_modify, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.  None of the "fix_modify"_fix_modify.html options
+are relevant to this fix.
+
+This fix computes a global scalar which is the imbalance factor after
+the most recent rebalance and a global vector of length 2 with
+additional information about the most recent rebalancing. The 2 values
+in the vector are as follows:
+
+    1 = max # of molecules per processor
+    3 = imbalance factor right before the last rebalance was performed 
+
+As explained above, the imbalance factor is the ratio of the maximum
+number of molecules on any processor to the average number of
+molecules per processor.
+
+These quantities can be accessed by various output commands.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"create_grid"_create_grid.html, "balance_grid"_balance_grid.html
+
+[Default:] none
