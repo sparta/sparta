@@ -84,7 +84,7 @@ Note that if you run on a large, prime number of processors P, then a
 grid such as 1 x P x 1 will be required, which may incur extra
 communication costs.
 
-The {random} keyword means that eacn grid cell will be assigned
+The {random} keyword means that each grid cell will be assigned
 randomly to one of the processors.  Note that in this case every
 processor will typically not be assigned exactly the same number of
 cells.
