@@ -256,6 +256,7 @@ in the command's documentation.
 "print"_print.html,
 "read_surf"_read_surf.html,
 "restart"_restart,
+"quit"_quit.html,
 "run"_run.html,
 "seed"_seed.html,
 "shell"_shell.html,
