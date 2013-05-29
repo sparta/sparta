@@ -135,6 +135,12 @@ simulation box.
 <P>This command can only be used after the grid has been created by the
 <A HREF = "create_grid.html">create_grid</A> command.
 </P>
+<P>This command also initializes various options in SPARTA before
+performing the balancing.  This is so that grid cells are ready to
+migrate to new processors.  Thus is you get an error like a simulation
+box boundary condition has not been assigned, you will need to do that
+operation in your input script before balancing can be performed.
+</P>
 <P><B>Related commands:</B>
 </P>
 <P><A HREF = "create_grid.html">create_grid</A>, <A HREF = "fix_balance.html">fix balance</A>

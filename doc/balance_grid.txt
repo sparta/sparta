@@ -130,6 +130,12 @@ NOTE: include images
 This command can only be used after the grid has been created by the
 "create_grid"_create_grid.html command.
 
+This command also initializes various options in SPARTA before
+performing the balancing.  This is so that grid cells are ready to
+migrate to new processors.  Thus is you get an error like a simulation
+box boundary condition has not been assigned, you will need to do that
+operation in your input script before balancing can be performed.
+
 [Related commands:]
 
 "create_grid"_create_grid.html, "fix balance"_fix_balance.html
