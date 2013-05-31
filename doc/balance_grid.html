@@ -15,13 +15,14 @@
 </P>
 <PRE>balance_grid keyword args ... 
 </PRE>
-<UL><LI>keyword = <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> or <I>rcb</I> 
+<UL><LI>keyword = <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> or <I>proc</I> or <I>rcb</I> 
 
 <PRE>  <I>stride</I> args = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
   <I>clump</I> args = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
   <I>block</I> args = Px Py Pz
     Px,Py,Pz = # of processors in each dimension
   <I>random</I> args = none 
+  <I>proc</I> args = none
   <I>rcb</I> args = weight
     weight = <I>cell</I> or <I>mol</I> 
 </PRE>
@@ -109,6 +110,13 @@ communication costs.
 randomly to one of the processors.  Note that in this case every
 processor will typically not be assigned exactly the same number of
 cells.
+</P>
+<P>The <I>proc</I> keyword means that each processor will choose a random
+processor to assign its first grid cell to.  It will then loop over
+its grid cells and assign each to consecutive processors, wrapping
+around the collection of processors if necessary.  Note that in this
+case every processor will typically not be assigned exactly the same
+number of cells.
 </P>
 <P>The <I>rcb</I> keyword uses a recurvise coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to

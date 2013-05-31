@@ -22,9 +22,10 @@
 <LI>Nfreq = perform dynamic load balancing every this many steps 
 
 <LI>thresh = rebalance if imbalance factor is above this threshhold
-bstyle = <I>random</I> or <I>rcb</I> 
+bstyle = <I>random</I> or <I>proc</I> or <I>rcb</I> 
 
 <PRE>  <I>random</I> args = none 
+  <I>proc</I> args = none 
   <I>rcb</I> args = weight
     weight = <I>cell</I> or <I>mol</I> 
 </PRE>
@@ -81,6 +82,13 @@ the <I>thresh</I> value.
 randomly to one of the processors.  Note that in this case every
 processor will typically not be assigned exactly the same number of
 cells.
+</P>
+<P>The <I>proc</I> keyword means that each processor will choose a random
+processor to assign its first grid cell to.  It will then loop over
+its grid cells and assign each to consecutive processors, wrapping
+around the collection of processors if necessary.  Note that in this
+case every processor will typically not be assigned exactly the same
+number of cells.
 </P>
 <P>The <I>rcb</I> keyword uses a recurvise coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to

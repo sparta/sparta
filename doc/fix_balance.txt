@@ -16,8 +16,9 @@ ID is documented in "fix"_fix.html command :ulb,l
 balance = style name of this fix command :l
 Nfreq = perform dynamic load balancing every this many steps :l
 thresh = rebalance if imbalance factor is above this threshhold
-bstyle = {random} or {rcb} :l
+bstyle = {random} or {proc} or {rcb} :l
   {random} args = none 
+  {proc} args = none 
   {rcb} args = weight
     weight = {cell} or {mol} :pre
 :ule
@@ -73,6 +74,13 @@ The {random} keyword means that each grid cell will be assigned
 randomly to one of the processors.  Note that in this case every
 processor will typically not be assigned exactly the same number of
 cells.
+
+The {proc} keyword means that each processor will choose a random
+processor to assign its first grid cell to.  It will then loop over
+its grid cells and assign each to consecutive processors, wrapping
+around the collection of processors if necessary.  Note that in this
+case every processor will typically not be assigned exactly the same
+number of cells.
 
 The {rcb} keyword uses a recurvise coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to
