@@ -1,0 +1,39 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+write_grid command :h3
+
+[Syntax:]
+
+write_grid file :pre
+
+file = name of file to write grid info to :ul
+
+[Examples:]
+
+write_grid data.grid :pre
+
+[Description:]
+
+Write a grid file in text format that lists all the parent cells in
+the currently defined hierarchical grid.  This file is in the same
+format used by the "read_grid"_read_grid.html" command.  Thus the file
+can be used to start a subsequent simulation using the same grid
+topology.
+
+See the "read_grid"_read_grid.html and "create_grid"_create_grid.html
+commands for a definition of hierarchical grids and parent/child
+cells.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"read_grid"_read_grid.html, "create_grid"_create_grid.html
+
+[Default:] none

@@ -273,6 +273,7 @@ in the command's documentation.
 "unfix"_unfix.html,
 "units"_units.html,
 "variable"_variable.html,
+"write_grid"_write_grid.html,
 "write_restart"_write_restart.html :tb(c=6,ea=c)
 
 :line
