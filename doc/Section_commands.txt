@@ -257,6 +257,7 @@ in the command's documentation.
 "read_surf"_read_surf.html,
 "restart"_restart,
 "quit"_quit.html,
+"react"_react.html,
 "run"_run.html,
 "seed"_seed.html,
 "shell"_shell.html,

@@ -1,30 +1,16 @@
 /* ----------------------------------------------------------------------
-   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
-   http://sparta.sandia.gov
-   Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
-   Sandia National Laboratories
-
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
-   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
-   the GNU General Public License.
-
-   See the README file in the top-level SPARTA directory.
-------------------------------------------------------------------------- */
-
-/* ----------------------------------------------------------------------
 MyDoubleLinkedList = templated class for a doubly linked list of datums
-  T should be a ptr to a Struct that has prev/next fields
+  datum must be a ptr to a Struct with prev/next fields
   allocates/frees no memory, that is done by caller, so can reuse
   caller can iterate over list using first,last and prev/next fields
-  NOTE: could provide an iterator so prev/next could be stored internally, like FIFO
+  NOTE: could provide an iterator so prev/next could be stored internally, 
+        like FIFO
 usage:
   use MyPool to provide pool of objects
-  build and use a doubly linked list of object ptrs
-  reset()
-  repeat, size of list can vary each time
+  insert/remove and use a doubly linked list of object ptrs
+  reset(), repeat, size of list can vary each time
 inputs:
-  template T = ptr to a Struct
+  template T = ptr to a datum = Struct with prev/next fields
 methods:
   all methods are O(1) operations
   void reset() = reset list to be empty
@@ -34,22 +20,20 @@ methods:
     either/both of which can be NULL
   void remove(T entry) = remove entry from list
 public variables:
-  ndatum = total # of datums in list
+  nlist = total # of datums in list
   first,last = ptrs to first/last elements, NULL if empty
 ------------------------------------------------------------------------- */
 
-#ifndef SPARTA_MYLIST_H
-#define SPARTA_MYLIST_H
+#ifndef MY_DOUBLE_LINKED_LIST_H
+#define MY_DOUBLE_LINKED_LIST_H
 
 #include "stdlib.h"
-
-namespace SPARTA_NS {
 
 template<class T>
 class MyDoubleLinkedList {
  public:
-  int nlist;       // # of entries in list
-  T first,last;    // ptr to first and last entry of list, NULL if empty
+  int nlist;       // # of datums in list
+  T first,last;    // ptr to first and last datum in list
 
   MyDoubleLinkedList() {reset();}
 
@@ -60,52 +44,100 @@ class MyDoubleLinkedList {
     nlist = 0;
   }
 
-  // append entry to end of list
+  // append new datum to end of list
 
-  void append(T entry) {
-    if (last) last->next = entry;
-    entry->prev = last;
-    entry->next = NULL;
-    if (!first) first = entry;
-    last = entry;
+  void append(T datum) {
+    if (last) last->next = datum;
+    datum->prev = last;
+    datum->next = NULL;
+    if (!first) first = datum;
+    last = datum;
     nlist++;
   }
 
-  // prepend entry to beginning of list
+  // prepend new datum to beginning of list
 
-  void prepend(T entry) {
-    if (first) first->prev = entry;
-    entry->prev = NULL;
-    entry->next = first;
-    if (!last) last = entry;
-    first = entry;
+  void prepend(T datum) {
+    if (first) first->prev = datum;
+    datum->prev = NULL;
+    datum->next = first;
+    if (!last) last = datum;
+    first = datum;
     nlist++;
   }
 
-  // insert entry between prev and next
+  // insert new datum between prev and next
   // prev and/or next can be NULL
 
-  void insert(T entry, T prev, T next) {
-    if (prev) prev->next = entry;
-    else first = entry;
-    if (next) next->prev = entry;
-    else last = entry;
-    entry->prev = prev;
-    entry->next = next;
+  void insert(T datum, T prev, T next) {
+    if (prev) prev->next = datum;
+    else first = datum;
+    if (next) next->prev = datum;
+    else last = datum;
+    datum->prev = prev;
+    datum->next = next;
     nlist++;
   }
 
-  // remove entry from list
+  // move existing datum to front of list
 
-  void remove(T entry) {
-    if (entry->prev) entry->prev->next = entry->next;
-    else first = entry->next;
-    if (entry->next) entry->next->prev = entry->prev;
-    else last = entry->prev;
+  void move2front(T datum) {
+    if (first == datum) return;
+    datum->prev->next = datum->next;
+    if (datum->next) datum->next->prev = datum->prev;
+    else last = datum->prev;
+    datum->prev = NULL;
+    datum->next = first;
+    first->prev = datum;
+    first = datum;
+  }
+
+  // remove existing datum from list
+
+  void remove(T datum) {
+    if (datum->prev) datum->prev->next = datum->next;
+    else first = datum->next;
+    if (datum->next) datum->next->prev = datum->prev;
+    else last = datum->prev;
     nlist--;
   }
-};
 
-}
+  // debug check if list structure is consistent
+  // walk in both directions, check all pointers
+
+  int check() {
+    if (first == NULL || last == NULL) {
+      if (first || last || nlist) return 1;
+      return 0;
+    }
+
+    int count = 0;
+    T ptr = first;
+    while (ptr) {
+      count++;
+      ptr = ptr->next;
+    }
+    if (count != nlist) return 2;
+
+    count = 0;
+    ptr = last;
+    while (ptr) {
+      count++;
+      ptr = ptr->prev;
+    }
+    if (count != nlist) return 3;
+
+    if (first->prev || last->next) return 4;
+
+    ptr = first;
+    while (ptr) {
+      if (ptr != first && ptr->prev == NULL) return 5;
+      if (ptr != last && ptr->next == NULL) return 6;
+      ptr = ptr->next;
+    }
+
+    return 0;
+  }
+};
 
 #endif
