@@ -258,6 +258,7 @@ in the command's documentation.
 "restart"_restart,
 "quit"_quit.html,
 "react"_react.html,
+"read_grid"_read_grid.html,
 "run"_run.html,
 "seed"_seed.html,
 "shell"_shell.html,

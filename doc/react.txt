@@ -1,0 +1,136 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "DSMSPARTAmmands"_sc :c
+
+:link(sws,http://dsmc.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+react command :h3
+
+[Syntax:]
+
+react style args :pre
+
+style = {none} or {tce} or {qk} :ulb,l
+args = arguments for that style :l
+  {none} args = none
+  {tce} args = infile
+    infile = file with list of chemical reactions
+  {qk} args = infile
+    infile = file with list of chemical reactions :pre
+:ule
+
+[Examples:]
+
+react none
+react tce air.tce :pre
+
+[Description:]
+
+Define chemical reactions to perform when particle-particle collisions
+occur.
+
+The {none} style means that no chemsistry will be performed.
+performed, which is the default.
+
+For other styles, a file is specified which contains a list of
+chemical reactions, with their associated parameters.  The reactions
+are read in to SPARTA and stored in a list.  Each time a simulation is
+run via the "run"_run.html command, the list is scanned.  Only
+reactions for which all the reactants and all the products are
+currently defined as species-IDs will be active for the simulation.
+See the "species"_species.html command for how species IDs are
+defined.
+
+The reaction models for the various styles and the corresponding input
+file format are described below.
+
+:line
+
+The {tce} style is the ??? model.  
+
+NOTE: TCE model needs to be described and cited.
+
+The format of the input file is as follows.  Comments or blank lines
+are allowed in the file.  Comment lines start with a "#" character.
+All other entries must come in 2-line pairs with values separated by
+whitespace in the following format
+
+R1 + R2 + ... --> P1 + P2 + ...
+type style C1 C2 ... :pre
+
+The first line is a text-based description of a single reaction.  R1,
+R2, ... are one or more reactants, listed as "species"_species.html
+IDs.  P1, P2, ... are one or more products, also listed as
+"species"_species.html IDs.  The number of allowed reactants and
+products depends on the reaction type, as discussed below.  Individual
+reactants and products must be separated by whitespace and a "+" sign.
+The left-hand and right-hand sides of the equation must be separated
+by whitespace and "-->".
+
+The {type} of each reaction is a single character (upper or lower
+case) with the following meaning.  The type determines how many
+reactants and products can be specified in the first line.
+
+D = dissociation = 2 reactants and 3 products
+I = ionization = 2 reactants and 2 or 3 products
+E = exchange = 2 reactants and 2 products
+R = recombination = 3 reactants and ? products : ul
+
+A dissociation reaction means that R1 dissociates into P1 and P2 when
+it collides with R2.  R2 is preserved in the collision, so
+R2 = P3 is required.
+
+An ionization reaction with 2 products is typically a collision
+between R1 and R2 that results in a positively charged ion and an
+election.  However, SPARTA does not check that this is the case, so
+there is no restriction on the species involved in the reaction.
+
+An ionization reaction with 3 products is typically a collision
+between a neutral R1 and an electon R2 which ejects an electron from
+the neutral species.  R2 is preserved in the collision, so R2 = P3 is
+required.
+
+An exchange reaction is typically a collision between R1 and R2 that
+results in new products P1 and P2.  There is no restriction on the
+species involved in the reaction.
+
+A recombination reaction ...
+
+The {style} of each reaction is a single character (upper or lower
+case) with the following meaning:
+
+A = Arrhenius :ul
+
+The style determines how many reaction coefficients are listed as C1,
+C2, ..., and how they are interpreted by SPARTA.
+
+For the A = Arrhenius style, there are 5 coefficients:
+
+C1 = 
+C2 = 
+C3 = 
+C4 = 
+C5 = :ul
+
+:line
+
+The {qk} style is the ??? model.  
+
+NOTE: QK model needs to be described and cited.
+
+The format of the input file is the same as for the TCE model,
+described above.
+
+:line
+
+[Restrictions:] none
+
+[Related commands:]
+
+"collide"_collide.html
+
+[Default:]
+
+style = none
