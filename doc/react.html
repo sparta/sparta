@@ -1,0 +1,144 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">DSMSPARTAmmands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>react command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>react style args 
+</PRE>
+<UL><LI>style = <I>none</I> or <I>tce</I> or <I>qk</I> 
+
+<LI>args = arguments for that style 
+
+<PRE>  <I>none</I> args = none
+  <I>tce</I> args = infile
+    infile = file with list of chemical reactions
+  <I>qk</I> args = infile
+    infile = file with list of chemical reactions 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>react none
+react tce air.tce 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define chemical reactions to perform when particle-particle collisions
+occur.
+</P>
+<P>The <I>none</I> style means that no chemsistry will be performed.
+performed, which is the default.
+</P>
+<P>For other styles, a file is specified which contains a list of
+chemical reactions, with their associated parameters.  The reactions
+are read in to SPARTA and stored in a list.  Each time a simulation is
+run via the <A HREF = "run.html">run</A> command, the list is scanned.  Only
+reactions for which all the reactants and all the products are
+currently defined as species-IDs will be active for the simulation.
+See the <A HREF = "species.html">species</A> command for how species IDs are
+defined.
+</P>
+<P>The reaction models for the various styles and the corresponding input
+file format are described below.
+</P>
+<HR>
+
+<P>The <I>tce</I> style is the ??? model.  
+</P>
+<P>NOTE: TCE model needs to be described and cited.
+</P>
+<P>The format of the input file is as follows.  Comments or blank lines
+are allowed in the file.  Comment lines start with a "#" character.
+All other entries must come in 2-line pairs with values separated by
+whitespace in the following format
+</P>
+<PRE>R1 + R2 + ... --> P1 + P2 + ...
+type style C1 C2 ... 
+</PRE>
+<P>The first line is a text-based description of a single reaction.  R1,
+R2, ... are one or more reactants, listed as <A HREF = "species.html">species</A>
+IDs.  P1, P2, ... are one or more products, also listed as
+<A HREF = "species.html">species</A> IDs.  The number of allowed reactants and
+products depends on the reaction type, as discussed below.  Individual
+reactants and products must be separated by whitespace and a "+" sign.
+The left-hand and right-hand sides of the equation must be separated
+by whitespace and "-->".
+</P>
+<P>The <I>type</I> of each reaction is a single character (upper or lower
+case) with the following meaning.  The type determines how many
+reactants and products can be specified in the first line.
+</P>
+<P>D = dissociation = 2 reactants and 3 products
+I = ionization = 2 reactants and 2 or 3 products
+E = exchange = 2 reactants and 2 products
+R = recombination = 3 reactants and ? products : ul
+</P>
+<P>A dissociation reaction means that R1 dissociates into P1 and P2 when
+it collides with R2.  R2 is preserved in the collision, so
+R2 = P3 is required.
+</P>
+<P>An ionization reaction with 2 products is typically a collision
+between R1 and R2 that results in a positively charged ion and an
+election.  However, SPARTA does not check that this is the case, so
+there is no restriction on the species involved in the reaction.
+</P>
+<P>An ionization reaction with 3 products is typically a collision
+between a neutral R1 and an electon R2 which ejects an electron from
+the neutral species.  R2 is preserved in the collision, so R2 = P3 is
+required.
+</P>
+<P>An exchange reaction is typically a collision between R1 and R2 that
+results in new products P1 and P2.  There is no restriction on the
+species involved in the reaction.
+</P>
+<P>A recombination reaction ...
+</P>
+<P>The <I>style</I> of each reaction is a single character (upper or lower
+case) with the following meaning:
+</P>
+<UL><LI>A = Arrhenius 
+</UL>
+<P>The style determines how many reaction coefficients are listed as C1,
+C2, ..., and how they are interpreted by SPARTA.
+</P>
+<P>For the A = Arrhenius style, there are 5 coefficients:
+</P>
+<UL><LI>C1 = 
+<LI>C2 = 
+<LI>C3 = 
+<LI>C4 = 
+<LI>C5 = 
+</UL>
+<HR>
+
+<P>The <I>qk</I> style is the ??? model.  
+</P>
+<P>NOTE: QK model needs to be described and cited.
+</P>
+<P>The format of the input file is the same as for the TCE model,
+described above.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "collide.html">collide</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>style = none
+</P>
+</HTML>
