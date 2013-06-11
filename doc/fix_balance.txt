@@ -115,8 +115,8 @@ the most recent rebalance and a global vector of length 2 with
 additional information about the most recent rebalancing. The 2 values
 in the vector are as follows:
 
-    1 = max # of molecules per processor
-    3 = imbalance factor right before the last rebalance was performed 
+1 = max # of molecules per processor
+2 = imbalance factor right before the last rebalance was performed :ul
 
 As explained above, the imbalance factor is the ratio of the maximum
 number of molecules on any processor to the average number of
