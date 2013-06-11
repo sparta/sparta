@@ -29,14 +29,14 @@ class DumpImage : public DumpMolecule {
  public:
   DumpImage(class SPARTA *, int, char**);
   ~DumpImage();
-  int pack_comm(int, int *, double *, int, int *);
-  void unpack_comm(int, int, double *);
 
  private:
   int filetype;
   int acolor,adiam;                // what determines color/diam of atoms
+  int gcolor;                      // what determines color of grid cells
   double adiamvalue;               // atom diameter value
   int atomflag;                    // 0/1 for draw atoms
+  int cellflag;                    // 0/1 for draw cells
   char *thetastr,*phistr;          // variables for view theta,phi
   int thetavar,phivar;             // index to theta,phi vars
   int cflag;                       // static/dynamic box center
@@ -48,17 +48,18 @@ class DumpImage : public DumpMolecule {
   char *zoomstr,*perspstr;         // view zoom and perspective variables
   int zoomvar,perspvar;            // index to zoom,persp vars
   int boxflag,axesflag;            // 0/1 for draw box and axes
+  int gridflag;                    // 0/1 for draw grid cell outline
   double boxdiam,axeslen,axesdiam; // params for drawing box and axes
+  double griddiam;                 // param for drawing grid
+  double *boxcolor,*gridcolor;     // colors for drawing box and grid
 
   int viewflag;                    // overall view is static or dynamic
 
-  double *diamtype,*diamelement;           // per-type diameters
-  double **colortype,**colorelement;       // per-type colors
+  double **colortype;              // per-type colors
+  double **colorproc;              // per-proc colors
+  double *diamtype;                // per-type diameters
 
   class Image *image;              // class that renders each image
-
-  double **bufcopy;                // buffer for communicating bond/atom info
-  int maxbufcopy;
 
   void init_style();
   int modify_param(int, char **);

@@ -33,6 +33,7 @@ class Image : protected Pointers {
   int ssao;                     // SSAO on or off
   double ssaoint;               // strength of shading from 0 to 1
   double *boxcolor;             // color to draw box outline with
+  double *gridcolor;            // color to draw grid lines with
   int background[3];            // RGB values of background
 
   Image(class SPARTA *);
@@ -47,9 +48,10 @@ class Image : protected Pointers {
   void color_minmax(int, double *, int);
   void draw_sphere(double *, double *, double);
   void draw_cube(double *, double *, double);
+  void draw_brick(double *, double *, double *);
   void draw_cylinder(double *, double *, double *, double, int);
   void draw_triangle(double *, double *, double *, double *);
-  void draw_box(double (*)[3], double);
+  void draw_box(double (*)[3], double *, double);
   void draw_axes(double (*)[3], double);
 
   int colormap(int, char **);

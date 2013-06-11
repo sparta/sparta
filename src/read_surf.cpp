@@ -306,7 +306,7 @@ void ReadSurf::command(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   read free-format header of data file
+   read free-format header of surf file
    1st line and blank lines are skipped
    non-blank lines are checked for header keywords and leading value is read
    header ends with non-blank line containing no header keyword (or EOF)
@@ -322,7 +322,7 @@ void ReadSurf::header()
 
   if (me == 0) {
     char *eof = fgets(line,MAXLINE,fp);
-    if (eof == NULL) error->one(FLERR,"Unexpected end of data file");
+    if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
   }
 
   npoint_new = nline_new = ntri_new = 0;
@@ -369,11 +369,11 @@ void ReadSurf::header()
     } else break;
   }
 
-  if (npoint_new == 0) error->all(FLERR,"Surf files does not contain points");
+  if (npoint_new == 0) error->all(FLERR,"Surf file does not contain points");
   if (dimension == 2 && nline_new == 0) 
-    error->all(FLERR,"Surf files does not contain lines");
+    error->all(FLERR,"Surf file does not contain lines");
   if (dimension == 3 && ntri_new == 0) 
-    error->all(FLERR,"Surf files does not contain triangles");
+    error->all(FLERR,"Surf file does not contain triangles");
 }
 
 /* ----------------------------------------------------------------------
@@ -401,6 +401,7 @@ void ReadSurf::read_points()
 	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
 	m += strlen(&buffer[m]);
       }
+      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
       m++;
     }
     MPI_Bcast(&m,1,MPI_INT,0,world);
@@ -463,6 +464,7 @@ void ReadSurf::read_lines()
 	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
 	m += strlen(&buffer[m]);
       }
+      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
       m++;
     }
     MPI_Bcast(&m,1,MPI_INT,0,world);
@@ -526,6 +528,7 @@ void ReadSurf::read_tris()
 	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
 	m += strlen(&buffer[m]);
       }
+      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
       m++;
     }
     MPI_Bcast(&m,1,MPI_INT,0,world);
@@ -1352,7 +1355,7 @@ void ReadSurf::smallest_tri(double &len, double &area)
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 opens data file
+   proc 0 opens surf file
    test if gzipped
 ------------------------------------------------------------------------- */
 

@@ -20,6 +20,7 @@
 #include "image.h"
 #include "domain.h"
 #include "particle.h"
+#include "grid.h"
 #include "input.h"
 #include "variable.h"
 #include "math_extra.h"
@@ -35,7 +36,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{PPM,JPG};
-enum{NUMERIC,ATOM,TYPE,ELEMENT,ATTRIBUTE};
+enum{NUMERIC,ATOM,TYPE,PROC,ATTRIBUTE};
 enum{STATIC,DYNAMIC};
 enum{NO,YES};
 
@@ -64,20 +65,22 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   if (nfield != 2) error->all(FLERR,"Illegal dump image command");
 
   acolor = ATTRIBUTE;
-  if (strcmp(arg[5],"type") == 0) acolor = TYPE;
-  else if (strcmp(arg[5],"element") == 0) acolor = ELEMENT;
+  if (strcmp(arg[4],"type") == 0) acolor = TYPE;
+  else if (strcmp(arg[4],"proc") == 0) acolor = PROC;
 
   adiam = ATTRIBUTE;
-  if (strcmp(arg[6],"type") == 0) adiam = TYPE;
-  else if (strcmp(arg[6],"element") == 0) adiam = ELEMENT;
+  if (strcmp(arg[5],"type") == 0) adiam = TYPE;
 
   // create Image class
 
   image = new Image(sparta);
+  boxcolor = image->color2rgb("yellow");
+  gridcolor = image->color2rgb("white");
 
   // set defaults for optional args
 
   atomflag = YES;
+  cellflag = NO;
   thetastr = phistr = NULL;
   cflag = STATIC;
   cx = cy = cz = 0.5;
@@ -94,6 +97,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   perspstr = NULL;
   boxflag = YES;
   boxdiam = 0.02;
+  gridflag = NO;
   axesflag = NO;
 
   // parse optional args
@@ -112,6 +116,13 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+1],"yes") == 0) atomflag = YES;
       else if (strcmp(arg[iarg+1],"no") == 0) atomflag = NO;
       else error->all(FLERR,"Illegal dump image command");
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"cell") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
+      cellflag = 1;
+      if (strcmp(arg[iarg+1],"proc") == 0) gcolor = PROC;
+      else gcolor = ATTRIBUTE;
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"size") == 0) {
@@ -228,6 +239,15 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (boxdiam < 0.0) error->all(FLERR,"Illegal dump image command");
       iarg += 3;
 
+    } else if (strcmp(arg[iarg],"grid") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
+      if (strcmp(arg[iarg+1],"yes") == 0) gridflag = YES;
+      else if (strcmp(arg[iarg+1],"no") == 0) gridflag = NO;
+      else error->all(FLERR,"Illegal dump image command");
+      griddiam = atof(arg[iarg+2]);
+      if (griddiam < 0.0) error->all(FLERR,"Illegal dump image command");
+      iarg += 3;
+
     } else if (strcmp(arg[iarg],"axes") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
       if (strcmp(arg[iarg+1],"yes") == 0) axesflag = YES;
@@ -267,10 +287,8 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   // additional defaults for dump_modify options
 
-  diamtype = new double[ntypes+1];
-  diamelement = new double[ntypes+1];
   colortype = new double*[ntypes+1];
-  colorelement = new double*[ntypes+1];
+  diamtype = new double[ntypes+1];
 
   for (int i = 1; i <= ntypes; i++) {
     diamtype[i] = 1.0;
@@ -279,7 +297,17 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
     else if (i % 6 == 3) colortype[i] = image->color2rgb("blue");
     else if (i % 6 == 4) colortype[i] = image->color2rgb("yellow");
     else if (i % 6 == 5) colortype[i] = image->color2rgb("aqua");
-    else if (i % 6 == 0) colortype[i] = image->color2rgb("cyan");
+    else if (i % 6 == 0) colortype[i] = image->color2rgb("purple");
+  }
+
+  colorproc = new double*[nprocs];
+  for (int i = 0; i < nprocs; i++) {
+    if (i % 6 == 0) colorproc[i] = image->color2rgb("red");
+    else if (i % 6 == 1) colorproc[i] = image->color2rgb("green");
+    else if (i % 6 == 2) colorproc[i] = image->color2rgb("blue");
+    else if (i % 6 == 3) colorproc[i] = image->color2rgb("yellow");
+    else if (i % 6 == 4) colorproc[i] = image->color2rgb("aqua");
+    else if (i % 6 == 5) colorproc[i] = image->color2rgb("purple");
   }
 
   // viewflag = DYNAMIC if any view parameter is dynamic
@@ -290,11 +318,6 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   if (cflag == STATIC) box_center();
   if (viewflag == STATIC) view_params();
-
-  // local data
-
-  maxbufcopy = 0;
-  bufcopy = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -303,10 +326,9 @@ DumpImage::~DumpImage()
 {
   delete image;
 
-  delete [] diamtype;
-  delete [] diamelement;
   delete [] colortype;
-  delete [] colorelement;
+  delete [] colorproc;
+  delete [] diamtype;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -389,24 +411,6 @@ void DumpImage::init_style()
       error->all(FLERR,"Variable name for dump image persp does not exist");
     if (!input->variable->equal_style(perspvar))
       error->all(FLERR,"Variable for dump image persp is invalid style");
-  }
-
-  // set up type -> element mapping
-
-  if (atomflag && acolor == ELEMENT) {
-    for (int i = 1; i <= ntypes; i++) {
-      colorelement[i] = image->element2color(typenames[i]);
-      if (colorelement[i] == NULL)
-	error->all(FLERR,"Invalid dump image element name");
-    }
-  }
-
-  if (atomflag && adiam == ELEMENT) {
-    for (int i = 1; i <= ntypes; i++) {
-      diamelement[i] = image->element2diam(typenames[i]);
-      if (diamelement[i] == 0.0)
-	error->all(FLERR,"Invalid dump image element name");
-    }
   }
 }
 
@@ -540,7 +544,7 @@ void DumpImage::view_params()
 
 void DumpImage::create_image()
 {
-  int i,j,m,itype,atom1,atom2;
+  int i,j,m,itype,iproc,atom1,atom2;
   double diameter,delx,dely,delz;
   double *color,*color1,*color2;
   double xmid[3];
@@ -557,9 +561,9 @@ void DumpImage::create_image()
       if (acolor == TYPE) {
 	itype = static_cast<int> (buf[m]);
 	color = colortype[itype];
-      } else if (acolor == ELEMENT) {
-	itype = static_cast<int> (buf[m]);
-	color = colorelement[itype];
+      } else if (acolor == PROC) {
+	iproc = static_cast<int> (buf[m]);
+	color = colorproc[iproc];
       } else if (acolor == ATTRIBUTE) {
 	color = image->value2color(buf[m]);
       }
@@ -569,15 +573,95 @@ void DumpImage::create_image()
       } else if (adiam == TYPE) {
 	itype = static_cast<int> (buf[m+1]);
 	diameter = diamtype[itype];
-      } else if (adiam == ELEMENT) {
-	itype = static_cast<int> (buf[m+1]);
-	diameter = diamelement[itype];
       } else if (adiam == ATTRIBUTE) {
 	diameter = buf[m+1];
       }
 
       image->draw_sphere(particles[j].x,color,diameter);
       m += size_one;
+    }
+  }
+
+  // render my grid cells
+
+  if (cellflag) {
+    int m;
+    double x[3],y[3],z[3],diam[3];
+    double *lo,*hi;
+
+    int dimension = domain->dimension;
+    Grid::OneCell *cells = grid->cells;
+    int *mychild = grid->mychild;
+    int nchild = grid->nchild;
+
+    for (int icell = 0; icell < nchild; icell++) {
+      m = mychild[icell];
+
+      if (gcolor == PROC) {
+	color = colorproc[me];
+      } else if (gcolor == ATTRIBUTE) {
+        // NOTE: this will not work, b/c buf is filled with particles
+        // question is how to get grid cell values when this
+        // class is derived from dump particle?
+        // cell setting needs to define the attibute and have to extract
+        // it and store it somehow
+        // also need to build a color map for it
+
+	//color = image->value2color(buf[m]);
+      }
+
+      lo = cells[m].lo;
+      hi = cells[m].hi;
+
+      // for 2d, draw as rectangle, so particles and grid lines show up
+      // for 3d, draw as brick, so particles will be hidden inside
+      // NOTE: would be good to be able to do this for a 2d slice of 3d model
+
+      diam[0] = hi[0]-lo[0];
+      diam[1] = hi[1]-lo[1];
+      diam[2] = hi[2]-lo[2];
+      x[0] = 0.5*(lo[0]+hi[0]);
+      x[1] = 0.5*(lo[1]+hi[1]);
+      x[2] = 0.5*(lo[2]+hi[2]);
+      if (dimension == 2) diam[2] = x[2] = 0.0;
+
+      image->draw_brick(x,color,diam);
+    }
+  }
+
+  // render outline of grid cells
+
+  if (gridflag) {
+    int m;
+    double x[3],y[3],z[3];
+    double *lo,*hi;
+
+    double diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+    if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
+    diameter *= griddiam;
+
+    Grid::OneCell *cells = grid->cells;
+    int *mychild = grid->mychild;
+    int nchild = grid->nchild;
+
+    double (*boxcorners)[3];
+    double box[8][3];
+
+    for (int icell = 0; icell < nchild; icell++) {
+      m = mychild[icell];
+      lo = cells[m].lo;
+      hi = cells[m].hi;
+
+      box[0][0] = lo[0]; box[0][1] = lo[1]; box[0][2] = lo[2];
+      box[1][0] = hi[0]; box[1][1] = lo[1]; box[1][2] = lo[2];
+      box[2][0] = lo[0]; box[2][1] = hi[1]; box[2][2] = lo[2];
+      box[3][0] = hi[0]; box[3][1] = hi[1]; box[3][2] = lo[2];
+      box[4][0] = lo[0]; box[4][1] = lo[1]; box[4][2] = hi[2];
+      box[5][0] = hi[0]; box[5][1] = lo[1]; box[5][2] = hi[2];
+      box[6][0] = lo[0]; box[6][1] = hi[1]; box[6][2] = hi[2];
+      box[7][0] = hi[0]; box[7][1] = hi[1]; box[7][2] = hi[2];
+      boxcorners = box;
+      image->draw_box(box,gridcolor,diameter);
     }
   }
 
@@ -600,7 +684,7 @@ void DumpImage::create_image()
     box[7][0] = boxxhi; box[7][1] = boxyhi; box[7][2] = boxzhi;
     boxcorners = box;
 
-    image->draw_box(box,diameter);
+    image->draw_box(box,boxcolor,diameter);
   }
 
   // render XYZ axes in red/green/blue
@@ -641,51 +725,6 @@ void DumpImage::create_image()
 
 /* ---------------------------------------------------------------------- */
 
-int DumpImage::pack_comm(int n, int *list, double *buf, int pbc_flag, int *pbc)
-{
-  int i,j,m;
-
-  m = 0;
-
-  if (comm_forward == 1) {
-    for (i = 0; i < n; i++) {
-      j = list[i];
-      buf[m++] = choose[j];
-    }
-  } else {
-    for (i = 0; i < n; i++) {
-      j = list[i];
-      buf[m++] = choose[j];
-      buf[m++] = bufcopy[j][0];
-      buf[m++] = bufcopy[j][1];
-    }
-  }
-
-  return comm_forward;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void DumpImage::unpack_comm(int n, int first, double *buf)
-{
-  int i,m,last;
-
-  m = 0;
-  last = first + n;
-
-  if (comm_forward == 1)
-    for (i = first; i < last; i++) choose[i] = static_cast<int> (buf[m++]);
-  else {
-    for (i = first; i < last; i++) {
-      choose[i] = static_cast<int> (buf[m++]);
-      bufcopy[i][0] = buf[m++];
-      bufcopy[i][1] = buf[m++];
-    }
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
 int DumpImage::modify_param(int narg, char **arg)
 {
   int n = DumpMolecule::modify_param(narg,arg);
@@ -693,8 +732,12 @@ int DumpImage::modify_param(int narg, char **arg)
 
   if (strcmp(arg[0],"acolor") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
-    int nlo,nhi;
-    MathExtra::bounds(arg[1],particle->nspecies,nlo,nhi);
+    int err,nlo,nhi;
+    if (acolor == TYPE)
+      err = MathExtra::bounds(arg[1],particle->nspecies,nlo,nhi);
+    else if (acolor == PROC)
+      err = MathExtra::bounds(arg[1],nprocs,nlo,nhi);
+    if (err) error->all(FLERR,"Illegal dump_modify command");
 
     // ptrs = list of ncount colornames separated by '/'
 
@@ -711,14 +754,26 @@ int DumpImage::modify_param(int narg, char **arg)
     while (ptrs[ncount++] = strtok(NULL,"/"));
     ncount--;
 
-    // assign each of ncount colors in round-robin fashion to types
+    // assign each of ncount colors in round-robin fashion to types or procs
+    // for PROC case, assign Ith color to I-1 value in colorproc
+    // this is so can use bounds() above from 1 to Nprocs inclusive
 
-    int m = 0;
-    for (int i = nlo; i <= nhi; i++) {
-      colortype[i] = image->color2rgb(ptrs[m%ncount]);
-      if (colortype[i] == NULL)
-	error->all(FLERR,"Invalid color in dump_modify command");
-      m++;
+    if (acolor == TYPE) {
+      int m = 0;
+      for (int i = nlo; i <= nhi; i++) {
+        colortype[i] = image->color2rgb(ptrs[m%ncount]);
+        if (colortype[i] == NULL)
+          error->all(FLERR,"Invalid color in dump_modify command");
+        m++;
+      }
+    } else if (acolor == PROC) {
+      int m = 0;
+      for (int i = nlo; i <= nhi; i++) {
+        colorproc[i-1] = image->color2rgb(ptrs[m%ncount]);
+        if (colorproc[i-1] == NULL)
+          error->all(FLERR,"Invalid color in dump_modify command");
+        m++;
+      }
     }
 
     delete [] ptrs;
@@ -761,8 +816,16 @@ int DumpImage::modify_param(int narg, char **arg)
 
   if (strcmp(arg[0],"boxcolor") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
-    image->boxcolor = image->color2rgb(arg[1]);
-    if (image->boxcolor == NULL) 
+    boxcolor = image->color2rgb(arg[1]);
+    if (boxcolor == NULL) 
+      error->all(FLERR,"Invalid color in dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"gridcolor") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    gridcolor = image->color2rgb(arg[1]);
+    if (gridcolor == NULL) 
       error->all(FLERR,"Invalid color in dump_modify command");
     return 2;
   }

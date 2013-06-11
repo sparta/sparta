@@ -24,6 +24,7 @@ collide		    vss air ../data/all.vss
 surf_collide	    1 diffuse 300.0 0.9
 
 read_surf	    data.sphere 1 
+#read_surf	    data.sphere.big 1 
 
 #read_surf	    data.tri 1 trans 0 5 5 clip
 #read_surf	    data.cube 1 trans 5 5 0 scale 4 4 10 clip
@@ -43,7 +44,8 @@ timestep 	    0.0001
 #dump		    1 molecule 10 tmp.dump id type x y z
 
 dump                2 image 100 tmp.*.jpg type type adiam 0.2 &
-		    view 90 -90 zoom 1.3 size 512 512
+		    view 60 30 zoom 1.3 size 512 512 &
+                    atom no grid yes 0.01 cell proc
 dump_modify	    2 pad 4
 
 dump		    4 surf 100 tmp.surf id v1x v1y v1z v2x v2y v2z v3x v3y v3z
