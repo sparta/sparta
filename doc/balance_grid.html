@@ -67,13 +67,9 @@ balanced across processors.
 <P>The <I>stride</I>, <I>clump</I>, and <I>block</I> keywords can only be used if the
 grid is "uniform".  The grid in SPARTA is hierarchical with one or
 more levels, as defined by the <A HREF = "create_grid.html">create_grid</A> or
-<A HREF = "read_grid.html">read_grid</A> commands.  The grid cells being balanced by
-this command are "child" cells at the finest level of the hierarchy.
-Each has a parent at the next lower level, who in turn has a parent,
-and so forth down to the root level, which is the entire simulation
-box.  The grid is "uniform" if the all the parent cells at each level
-are split into the same Nx by Ny by Nz sub-grid of child cells.  This
-means that the collection of grid cells are effectively a uniform fine
+<A HREF = "read_grid.html">read_grid</A> commands.  If the parent cell of every grid
+cell is at the same level of the hierarchy, then the grid is uniform,
+meaning the collection of grid cells effectively form a uniform fine
 grid overlaying the entire simulation domain.
 </P>
 <P>The <I>stride</I> keyword means that every Pth cell is assigned to the same
