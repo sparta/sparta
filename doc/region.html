@@ -1,0 +1,114 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>region command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>region ID style args keyword value ... 
+</PRE>
+<UL><LI>ID = user-assigned name for the region 
+
+<LI>style = <I>block</I> or <I>cylinder</I> or <I>plane</I> or <I>sphere</I> or <I>union</I> or <I>intersect</I> 
+
+<PRE>  <I>block</I> args = xlo xhi ylo yhi zlo zhi
+    xlo,xhi,ylo,yhi,zlo,zhi = bounds of block in all dimensions (distance units)
+  <I>cylinder</I> args = dim c1 c2 radius lo hi
+    dim = <I>x</I> or <I>y</I> or <I>z</I> = axis of cylinder
+    c1,c2 = coords of cylinder axis in other 2 dimensions (distance units)
+    radius = cylinder radius (distance units)
+    lo,hi = bounds of cylinder in dim (distance units)
+  <I>plane</I> args = px py pz nx ny nz
+    px,py,pz = point on the plane (distance units)
+    nx,ny,nz = direction normal to plane (distance units)
+  <I>sphere</I> args = x y z radius
+    x,y,z = center of sphere (distance units)
+    radius = radius of sphere (distance units)
+  <I>union</I> args = N reg-ID1 reg-ID2 ...
+    N = # of regions to follow, must be 2 or greater
+    reg-ID1,reg-ID2, ... = IDs of regions to join together
+  <I>intersect</I> args = N reg-ID1 reg-ID2 ...
+    N = # of regions to follow, must be 2 or greater
+    reg-ID1,reg-ID2, ... = IDs of regions to intersect 
+</PRE>
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>side</I> 
+
+<PRE>  <I>side</I> value = <I>in</I> or <I>out</I>
+    <I>in</I> = the region is inside the specified geometry
+    <I>out</I> = the region is outside the specified geometry 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>region 1 block -3.0 5.0 INF 10.0 INF INF
+region 2 sphere 0.0 0.0 0.0 5 side out
+region void cylinder y 2 3 5 -5.0 INF
+region outside union 4 side1 side2 side3 side4 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command defines a geometric region of space.  Various other
+commands use regions.  For example, the <A HREF = "dump_modify.html">dump_modify</A>
+command can use a region to limit its output.
+</P>
+<P>Commands which use regions typically test whether a point is contained
+in the region or not.  For this purpose, coordinates exactly on the
+region boundary are considered to be interior to the region.  This
+means, for example, for a spherical region, a point on the sphere
+surface would be part of the region if the sphere were defined with
+the <I>side in</I> keyword, but would not be part of the region if it were
+defined using the <I>side out</I> keyword.  See more details on the <I>side</I>
+keyword below.
+</P>
+<P>The lo/hi values for the <I>block</I> or <I>cylinder</I> styles can be specified
+as INF which means a large negative or positive number (1.0e20).
+</P>
+<P>For style <I>cylinder</I>, the c1,c2 params are coordinates in the 2 other
+dimensions besides the cylinder axis dimension.  For dim = x, c1/c2 =
+y/z; for dim = y, c1/c2 = x/z; for dim = z, c1/c2 = x/y.  Thus the
+third example above specifies a cylinder with its axis in the
+y-direction located at x = 2.0 and z = 3.0, with a radius of 5.0, and
+extending in the y-direction from -5.0 to the upper box boundary.
+</P>
+<P>The <I>union</I> style creates a region consisting of the volume of all the
+listed regions combined.  The <I>intersect</I> style creates a region
+consisting of the volume that is common to all the listed regions.
+</P>
+<P>IMPORTANT NOTE: Regions in SPARTA are always 3d geometric objects,
+regardless of whether the <A HREF = "dimension.html">dimension</A> of the simulation
+2d or 3d.  Thus when using regions in a 2d simulation, for exapmle,
+you should be careful to define the region so that its intersection
+with the 2d x-y plane of the simulation has the 2d geometric extent
+you want.
+</P>
+<P>The <I>side</I> keyword determines whether the region is considered to be
+inside or outside of the specified geometry.  Using this keyword in
+conjunction with <I>union</I> and <I>intersect</I> regions, complex geometries
+can be built up.  For example, if the interior of two spheres were
+each defined as regions, and a <I>union</I> style with <I>side</I> = out was
+constructed listing the region-IDs of the 2 spheres, the resulting
+region would be all the volume in the simulation box that was outside
+both of the spheres.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump_modify.html">dump_modify</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are side = in.
+</P>
+</HTML>
