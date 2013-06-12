@@ -51,6 +51,7 @@
       proc = processor that owns grid cell
       xlo,ylo,zlo = coords of lower left corner of grid cell
       xhi,yhi,zhi = coords of lower left corner of grid cell
+      xc,yc,zc = coords of center of grid cell
       c_ID = per-grid vector (or array) calculated by a compute with ID
       c_ID[N] = Nth column of per-grid array calculated by a compute with ID
       f_ID = per-grid vector (or array) calculated by a fix with ID
@@ -245,8 +246,10 @@ owns the grid cell.
 <P>The <I>xlo</I>, <I>ylo</I>, <I>zlo</I> attributes write the coordinates of the
 lower-left corner of the grid cell in the appropriate distance
 <A HREF = "units.html">units</A>.  The <I>xhi</I>, <I>yhi</I>, <I>zhi</I> attributes write the
-coordinates of the upper-right corner of the grid cell.
-The <I>zlo</I> and <I>zhi</I> attributes cannot be used for a 2d simulation.
+coordinates of the upper-right corner of the grid cell.  The <I>xc</I>,
+<I>yc</I>, <I>zc</I> attributes write the coordinates of the center point of the
+grid cell.  The <I>zlo</I>, <I>zhi</I>, <I>zc</I> attributes cannot be used for a 2d
+simulation.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-grid vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
