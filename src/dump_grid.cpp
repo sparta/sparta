@@ -31,7 +31,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,
+enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,
      COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE};
 
