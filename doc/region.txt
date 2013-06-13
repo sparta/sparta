@@ -70,7 +70,7 @@ dimensions besides the cylinder axis dimension.  For dim = x, c1/c2 =
 y/z; for dim = y, c1/c2 = x/z; for dim = z, c1/c2 = x/y.  Thus the
 third example above specifies a cylinder with its axis in the
 y-direction located at x = 2.0 and z = 3.0, with a radius of 5.0, and
-extending in the y-direction from -5.0 to the upper box boundary.
+extending in the y-direction from -5.0 to infinity.
 
 The {union} style creates a region consisting of the volume of all the
 listed regions combined.  The {intersect} style creates a region
@@ -100,4 +100,4 @@ both of the spheres.
 
 [Default:]
 
-The option defaults are side = in.
+The option default is side = in.

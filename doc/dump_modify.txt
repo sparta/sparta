@@ -14,7 +14,7 @@ dump_modify dump-ID keyword values ... :pre
 
 dump-ID = ID of dump to modify :ulb,l
 one or more keyword/value pairs may be appended :l
-keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {color} or {every} or {first} or {flush} or {format} or {thresh} :l
+keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {color} or {every} or {first} or {flush} or {format} or (region} or {thresh} :l
   {acolor} args = type color
     type = molecule type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
@@ -58,6 +58,7 @@ keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {b
   {gridcolor} arg = color
     color = name of color for grid cell outlines
   {pad} arg = Nchar = # of characters to convert timestep to
+  {region} arg = region-ID or "none"
   {thresh} args = attribute operation value
     attribute = same attributes (x,fy,etotal,sxx,etc) used by dump custom style
     operation = "<" or "<=" or ">" or ">=" or "==" or "!="
@@ -354,6 +355,16 @@ timestep order.
 
 :line
 
+The {region} keyword only applies to the dump {molecule} and {image}
+styles.  If specified, only molecules in the region will be written to
+the dump file or included in the image.  Only one region can be
+applied as a filter (the last one specified).  See the
+"region"_region.html command for more details.  Note that a region can
+be defined as the "inside" or "outside" of a geometric shape, and it
+can be the "union" or "intersection" of a series of simpler regions.
+
+:line
+
 The {thresh} keyword only applies to the dump {custom} and {image}
 styles.  Multiple thresholds can be specified.  Specifying "none"
 turns off all threshold criteria.  If thresholds are specified, only
@@ -392,6 +403,7 @@ first = no
 flush = yes
 format = %d and %g for each integer or floating point value
 pad = 0
+region = none
 thresh = none :ul
 
 :line
