@@ -14,7 +14,7 @@ dump_modify dump-ID keyword values ... :pre
 
 dump-ID = ID of dump to modify :ulb,l
 one or more keyword/value pairs may be appended :l
-keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {color} or {every} or {first} or {flush} or {format} or (region} or {thresh} :l
+keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {color} or {every} or {first} or {flush} or {glinecolor} or {slinecolor} or {format} or (region} or {thresh} :l
   {acolor} args = type color
     type = molecule type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
@@ -55,8 +55,10 @@ keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {b
   {first} arg = {yes} or {no}
   {format} arg = C-style format string for one line of output
   {flush} arg = {yes} or {no}
-  {gridcolor} arg = color
+  {glinecolor} arg = color
     color = name of color for grid cell outlines
+  {slinecolor} arg = color
+    color = name of color for surface element outlines
   {pad} arg = Nchar = # of characters to convert timestep to
   {region} arg = region-ID or "none"
   {thresh} args = attribute operation value
@@ -334,12 +336,21 @@ format string.
 
 :line
 
-The {gridcolor} keyword applies only to the dump {image} style.  It
+The {glinecolor} keyword applies only to the dump {image} style.  It
 sets the color of the grid cell outlines drawn around the grid cells
-in each image.  See the "dump image grid" command for how to specify
+in each image.  See the "dump image gline" command for how to specify
 that cell outlines be drawn.  The color name can be any of the 140
 pre-defined colors (see below) or a color name defined by the
 dump_modify color option.
+
+:line
+
+The {slinecolor} keyword applies only to the dump {image} style.  It
+sets the color of the surface element outlines drawn around the
+surface elements in each image.  See the "dump image sline" command
+for how to specify that surface element outlines be drawn.  The color
+name can be any of the 140 pre-defined colors (see below) or a color
+name defined by the dump_modify color option.
 
 :line
 

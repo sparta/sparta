@@ -29,12 +29,15 @@
 
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>adiam</I> or <I>atom</I> or <I>cell</I> or <I>size</I> or <I>view</I> or <I>center</I> or <I>up</I> or <I>zoom</I> or <I>persp</I> or <I>box</I> or <I>grid</I> or <I>axes</I> or <I>shiny</I> or <I>ssao</I> 
+<LI>keyword = <I>adiam</I> or <I>atom</I> or <I>grid</I> or <I>surf</I> or <I>size</I> or <I>view</I> or <I>center</I> or <I>up</I> or <I>zoom</I> or <I>persp</I> or <I>box</I> or <I>grid</I> or <I>axes</I> or <I>shiny</I> or <I>ssao</I> 
 
 <PRE>  <I>adiam</I> value = number = numeric value for molecule diameter (distance units)
   <I>atom</I> = yes/no = do or do not draw molecules
-  <I>cell</I> values = color
+  <I>grid</I> values = color
     color = <I>proc</I> or attribute
+  <I>surf</I> values = color diam
+    color = <I>proc</I> or attribute
+    diam = diameter of line as fraction of shortest box length for 2d, ignored for 3d
   <I>size</I> values = width height = size of images
     width = width of image in # of pixels
     height = height of image in # of pixels
@@ -58,9 +61,12 @@
   <I>box</I> values = yes/no diam = draw outline of simulation box
     yes/no = do or do not draw simulation box lines
     diam = diameter of box lines as fraction of shortest box length
-  <I>grid</I> values = yes/no diam = draw outline of simulation box
+  <I>gline</I> values = yes/no diam = draw outline of each grid cell
     yes/no = do or do not draw grid cell outlines
-    diam = diameter of cell outlines as fraction of shortest box length
+    diam = diameter of grid outlines as fraction of shortest box length
+  <I>sline</I> values = yes/no diam = draw outline of each surface element
+    yes/no = do or do not draw surf element outlines
+    diam = diameter of surf element outlines as fraction of shortest box length
   <I>axes</I> values = yes/no length diam = draw xyz axes
     yes/no = do or do not draw xyz axes lines next to simulation box
     length = length of axes lines as fraction of respective box lengths
@@ -213,7 +219,7 @@ if the specified value is <I>no</I>.
 </P>
 <HR>
 
-<P>The <I>cell</I> keyword turns on the drawing of grid cells with the
+<P>The <I>grid</I> keyword turns on the drawing of grid cells with the
 specified color attribute.  For 2d, the grid cell is shaded with an
 rectangle that is infinitely thin in the z dimension, which allows you
 to still see the particles in the grid cell.  For 3d, the grid cell is
@@ -241,6 +247,36 @@ SPARTA.
 </P>
 <P>At some point, we will also allow other grid-based values to be used
 to color grid cells.  This has not yet been implemented in SPARTA.
+</P>
+<HR>
+
+<P>The <I>surf</I> keyword turns on the drawing of surface elements with the
+specified color attribute.  For 2d, the surface element is a line.
+For 3d it is a triangle.  The entire surface is rendered, which in 3d
+will hide any grid cells (or fractions of a grid cell) that are inside
+the surface.
+</P>
+<P>If <I>proc</I> is specified for the <I>color</I> setting, then the color of each
+surface element is determined by its owning processor ID.  Surface
+elements are assigned to owning processors in a round-robin fashion.
+By default the mapping of proc IDs to colors is as follows:
+</P>
+<UL><LI>proc ID 1 = red
+<LI>proc ID 2 = green
+<LI>proc ID 3 = blue
+<LI>proc ID 4 = yellow
+<LI>proc ID 5 = aqua
+<LI>proc ID 6 = purple 
+</UL>
+<P>and repeats itself for IDs > 6.  Note that for this command, processor
+IDs range from 1 to Nprocs inclusive, instead of the more customary 0
+to Nprocs-1.  This mapping can be changed by the <A HREF = "dump_modify.html">dump_modify
+scolor</A> command, which has not yet been added to
+SPARTA.
+</P>
+<P>At some point, we will also allow other surface-based values to be
+used to color surface elements.  This has not yet been implemented in
+SPARTA.
 </P>
 <HR>
 
@@ -326,13 +362,22 @@ fraction of the shortest box length in x,y,z (for 3d) or x,y (for 2d).
 The color of the box boundaries can be set with the <A HREF = "dump_modify.html">dump_modify
 boxcolor</A> command.
 </P>
-<P>The <I>grid</I> keyword determines how the outlines of grid cells are
+<P>The <I>gline</I> keyword determines how the outlines of grid cells are
 rendered as thin cylinders in the image.  If <I>no</I> is set, then the
-cell outlines are not drawn and the <I>diam</I> setting is ignored.  If
+grid outlines are not drawn and the <I>diam</I> setting is ignored.  If
 <I>yes</I> is set, the 12 edges of each grid cell are drawn, with a
 diameter that is a fraction of the shortest box length in x,y,z (for
 3d) or x,y (for 2d).  The color of the grid cell outlines can be set
-with the <A HREF = "dump_modify.html">dump_modify gridcolor</A> command.
+with the <A HREF = "dump_modify.html">dump_modify glinecolor</A> command.
+</P>
+<P>The <I>sline</I> keyword determines how the outlines of surface elements
+are rendered as thin cylinders in the image.  If <I>no</I> is set, then the
+surface element outlines are not drawn and the <I>diam</I> setting is
+ignored.  If <I>yes</I> is set, a line is drawn for 2d and a triangle
+outline for 3d surface elements, with a diameter that is a fraction of
+the shortest box length in x,y,z (for 3d) or x,y (for 2d).  The color
+of the surface element outlines can be set with the <A HREF = "dump_modify.html">dump_modify
+slinecolor</A> command.
 </P>
 <P>The <I>axes</I> keyword determines how the coordinate axes are rendered as
 thin cylinders in the image.  If <I>no</I> is set, then the axes are not

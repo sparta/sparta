@@ -19,7 +19,7 @@
 
 <LI>one or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>acolor</I> or <I>adiam</I> or <I>amap</I> or <I>append</I> or <I>bcolor</I> or <I>bdiam</I> or <I>backcolor</I> or <I>boxcolor</I> or <I>color</I> or <I>every</I> or <I>first</I> or <I>flush</I> or <I>format</I> or (region</I> or <I>thresh</I> 
+<LI>keyword = <I>acolor</I> or <I>adiam</I> or <I>amap</I> or <I>append</I> or <I>bcolor</I> or <I>bdiam</I> or <I>backcolor</I> or <I>boxcolor</I> or <I>color</I> or <I>every</I> or <I>first</I> or <I>flush</I> or <I>glinecolor</I> or <I>slinecolor</I> or <I>format</I> or (region</I> or <I>thresh</I> 
 
 <PRE>  <I>acolor</I> args = type color
     type = molecule type or range of types or proc ID or range of IDs (see below)
@@ -61,8 +61,10 @@
   <I>first</I> arg = <I>yes</I> or <I>no</I>
   <I>format</I> arg = C-style format string for one line of output
   <I>flush</I> arg = <I>yes</I> or <I>no</I>
-  <I>gridcolor</I> arg = color
+  <I>glinecolor</I> arg = color
     color = name of color for grid cell outlines
+  <I>slinecolor</I> arg = color
+    color = name of color for surface element outlines
   <I>pad</I> arg = Nchar = # of characters to convert timestep to
   <I>region</I> arg = region-ID or "none"
   <I>thresh</I> args = attribute operation value
@@ -341,12 +343,21 @@ format string.
 </P>
 <HR>
 
-<P>The <I>gridcolor</I> keyword applies only to the dump <I>image</I> style.  It
+<P>The <I>glinecolor</I> keyword applies only to the dump <I>image</I> style.  It
 sets the color of the grid cell outlines drawn around the grid cells
-in each image.  See the "dump image grid" command for how to specify
+in each image.  See the "dump image gline" command for how to specify
 that cell outlines be drawn.  The color name can be any of the 140
 pre-defined colors (see below) or a color name defined by the
 dump_modify color option.
+</P>
+<HR>
+
+<P>The <I>slinecolor</I> keyword applies only to the dump <I>image</I> style.  It
+sets the color of the surface element outlines drawn around the
+surface elements in each image.  See the "dump image sline" command
+for how to specify that surface element outlines be drawn.  The color
+name can be any of the 140 pre-defined colors (see below) or a color
+name defined by the dump_modify color option.
 </P>
 <HR>
 
