@@ -35,10 +35,11 @@ args = list of arguments for a particular style :l
       v_name = per-molecule vector calculated by a molecule-style variable with name :pre
 
   {grid} args = list of grid attributes
-    possible attributes = id, proc, xlo, ylo, zlo, xhi, yhi, zhi,
+    possible attributes = id, idstr, proc, xlo, ylo, zlo, xhi, yhi, zhi,
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
-      id = grid cell ID
+      id = integer form of grid cell ID
+      idstr = string form of grid cell ID
       proc = processor that owns grid cell
       xlo,ylo,zlo = coords of lower left corner of grid cell
       xhi,yhi,zhi = coords of lower left corner of grid cell
@@ -230,8 +231,19 @@ per-molecule quantities which could then be output into dump files.
 This section explains the grid cell attributes that can be specified
 as part of the {grid} style.
 
-{Id} is the grid cell ID.  {Proc} is the ID of the processor which
-owns the grid cell.
+{Id} and {idstr} are two different forms of the grid cell ID.  In
+SPARTA each grid cell is assigned a unique ID which represents its
+location, in a topological sense, within the hierarchical grid.  This
+ID is stored as an integer such as 5774983, but can also be decoded
+into a string such as 33-4-6, which makes it easier to understand the
+grid hierarchy.  In this case it means the grid cell is at the 3rd
+level of the hierarchy.  Its grandparent cell was 33 at the 1st level,
+its parent was cell 4 within cell 33, and the cell itself is cell 6
+within cell 4 within cell 33.  If you specify {id}, the ID is printed
+directly as an integer.  If you specify {idstr}, it is printed as a
+string.
+
+{Proc} is the ID of the processor which owns the grid cell.
 
 The {xlo}, {ylo}, {zlo} attributes write the coordinates of the
 lower-left corner of the grid cell in the appropriate distance
