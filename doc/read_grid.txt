@@ -79,40 +79,30 @@ of parents, each of this form:
 index parent-ID Nx Ny Nz :pre
 
 The index is ignored; it is only added to assist in examining the
-file.  The indices should run consecutively from 1 to N.
+file.  Typically, the indices should run consecutively from 1 to N.
 
 The parent-ID is a string of numbers (one per level) separated by the
-dash character, e.g. 12-352-65.  The first number is a level 1 cell
-(from 1 to N1), the second number is a level 2 cell (from 1 to N2),
-etc.  N1 is the total number of cells the parent of the parent-ID was
-partitioned into.
+dash character, e.g. 12-352-65.  The first number is which level 1
+cell (from 1 to N1) this cell descends from, the second number is
+which level 2 cell (from 1 to N2) this cell descends from, etc.  The
+final number (after the final dash) is which cell (from 1 to N) this
+cell is within its own level.
 
-Examples, and the definition of N1,N2,etc are discussed below.
-
-Nx,Ny,Nz are the number of cells to partition the parent cell into.
-
-
+As an example, the ID 12-352-65 means the following ...
 
 The lines in the {Parents} section must be ordered such that no parent
 cell is listed before its own parent cell appears.  A simple way to
 insure this is to list the single level 0 cell first, all level 1
 parent cells next, then level 2 parent cells, etc.
 
-
-
-
 A parent-ID of 0 is a special case; it is used to define the level 1
 grid for the entire simulation box, i.e. the parent cell of the level
 1 grid has an ID = 0.  Thus the first line of the {Parents} section
 should be something like
 
-1 0 Nx Ny Nz :pre
+1 0 10 10 20 :pre
 
-which means the level 1 grid has 10x10x10 cells.
-
-
-
-
+which means the level 1 grid has 10x10x20 cells.
 
 The level parameter is the level of the parent cell.  This is 0 for
 the entire simulation box, 1 for cells in the level 1 grid that are
@@ -120,7 +110,6 @@ parents (i.e. will be partitioned into level 2 cells), 2 for cells in
 the level 2 grid that are parents, etc.
 
 Px,Py,Pz are
-
 
 For 2d simulations, {Pz} and {Cz} must both equal 1, in every parent
 cell line in the file.

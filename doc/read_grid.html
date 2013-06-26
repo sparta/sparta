@@ -82,17 +82,16 @@ of parents, each of this form:
 <PRE>index parent-ID Nx Ny Nz 
 </PRE>
 <P>The index is ignored; it is only added to assist in examining the
-file.  The indices should run consecutively from 1 to N.
+file.  Typically, the indices should run consecutively from 1 to N.
 </P>
 <P>The parent-ID is a string of numbers (one per level) separated by the
-dash character, e.g. 12-352-65.  The first number is a level 1 cell
-(from 1 to N1), the second number is a level 2 cell (from 1 to N2),
-etc.  N1 is the total number of cells the parent of the parent-ID was
-partitioned into.
+dash character, e.g. 12-352-65.  The first number is which level 1
+cell (from 1 to N1) this cell descends from, the second number is
+which level 2 cell (from 1 to N2) this cell descends from, etc.  The
+final number (after the final dash) is which cell (from 1 to N) this
+cell is within its own level.
 </P>
-<P>Examples, and the definition of N1,N2,etc are discussed below.
-</P>
-<P>Nx,Ny,Nz are the number of cells to partition the parent cell into.
+<P>As an example, the ID 12-352-65 means the following ...
 </P>
 <P>The lines in the <I>Parents</I> section must be ordered such that no parent
 cell is listed before its own parent cell appears.  A simple way to
@@ -104,9 +103,9 @@ grid for the entire simulation box, i.e. the parent cell of the level
 1 grid has an ID = 0.  Thus the first line of the <I>Parents</I> section
 should be something like
 </P>
-<PRE>1 0 Nx Ny Nz 
+<PRE>1 0 10 10 20 
 </PRE>
-<P>which means the level 1 grid has 10x10x10 cells.
+<P>which means the level 1 grid has 10x10x20 cells.
 </P>
 <P>The level parameter is the level of the parent cell.  This is 0 for
 the entire simulation box, 1 for cells in the level 1 grid that are
