@@ -84,38 +84,51 @@ of parents, each of this form:
 <P>The index is ignored; it is only added to assist in examining the
 file.  Typically, the indices should run consecutively from 1 to N.
 </P>
-<P>The parent-ID is a string of numbers (one per level) separated by the
-dash character, e.g. 12-352-65.  The first number is which level 1
-cell (from 1 to N1) this cell descends from, the second number is
-which level 2 cell (from 1 to N2) this cell descends from, etc.  The
-final number (after the final dash) is which cell (from 1 to N) this
-cell is within its own level.
+<P>The parent-ID is a string of numbers (one per level) separated by
+dashes, e.g. 12-352-65, where level 1 is the coarsest grid overlaying
+the simulation domain, level 2 is the refined grid within a level 1
+cell, etc.
 </P>
-<P>As an example, the ID 12-352-65 means the following ...
+<P>The first number in the ID string is which level 1 cell (from 1 to N1)
+this parent cell descends from, the second number is which level 2
+cell (from 1 to N2) this parent cell descends from, etc.  The final
+number is which cell this cell is within its own parent.
 </P>
-<P>The lines in the <I>Parents</I> section must be ordered such that no parent
-cell is listed before its own parent cell appears.  A simple way to
-insure this is to list the single level 0 cell first, all level 1
-parent cells next, then level 2 parent cells, etc.
+<P>As an example, consider the parent ID 12-352-65.  Assume the
+simulation box was partitioned with a 10x10x10 level 1 grid, or 1000
+level 1 grid cells.  These are numbered from 1 to 1000, with x varying
+fastest, then y, finally z.  The parent cell with ID 12-352-65 is
+inside the 12th of those level 1 cells.  If that cell were sub-divided
+into 8x6x10 cells, there would be 480 level 2 cells within the 12th
+level 1 cell.  The parent cell with ID 12-352-65 is inside the 352nd
+of those level 2 cells.  Likewise it is within the 65th of the level 3
+cells inside the 352nd level 2 cell.  Finally, if the entry in the
+grid file for this parent cell is
 </P>
-<P>A parent-ID of 0 is a special case; it is used to define the level 1
-grid for the entire simulation box, i.e. the parent cell of the level
-1 grid has an ID = 0.  Thus the first line of the <I>Parents</I> section
-should be something like
+<PRE>index 12-352-65 2 2 2 
+</PRE>
+<P>then it means the parent cell is further sub-divided into 2x2x2 level
+4 cells, Each of those cells could be a child cell or yet another
+parent cell.  The IDs of the 8 new cells will be 12-352-65-1,
+12-352-65-2, ..., 12-352-65-8.
+</P>
+<P>Note that the lines in the <I>Parents</I> section must be ordered such that
+no parent cell is listed before its own parent cell appears.  A simple
+way to insure this is to list the single level 0 cell first, all level
+1 parent cells next, then level 2 parent cells, etc.
+</P>
+<P>The parent cell with ID = 0 is a special case.  It can be thought of
+as the "root" cell, or the single level 0 cell, which represents the
+entire simulation domain.  Its specification in the grid file defines
+the level 1 grid that overlays the simulation domain.  Thus the first
+line of the <I>Parents</I> section should be something like
 </P>
 <PRE>1 0 10 10 20 
 </PRE>
 <P>which means the level 1 grid has 10x10x20 cells.
 </P>
-<P>The level parameter is the level of the parent cell.  This is 0 for
-the entire simulation box, 1 for cells in the level 1 grid that are
-parents (i.e. will be partitioned into level 2 cells), 2 for cells in
-the level 2 grid that are parents, etc.
-</P>
-<P>Px,Py,Pz are
-</P>
-<P>For 2d simulations, <I>Pz</I> and <I>Cz</I> must both equal 1, in every parent
-cell line in the file.
+<P>For 2d simulations, <I>Pz</I> and <I>Cz</I> must both equal 1, for every parent
+cell listed in the file.
 </P>
 <P><B>Restrictions:</B>
 </P>
@@ -123,9 +136,11 @@ cell line in the file.
 the <A HREF = "create_box.html">create_box</A> command.
 </P>
 <P>In principle, the hierarchical grid used by SPARTA can have as many
-levels as you wish.  Internally, the hierarchy corresponding to each
-grid cell is converted into a 64-bit integer ID.  Explain it further.
-Practically speaking this means you are limited to about 8 levels.
+levels as you wish.  Internally, each grid cell's location in the
+hierarchical grid is converted into a 32-bit integer ID.  At some
+point it may become a 64-bit integer ID.  SPARTA will generate an
+error if you try to define a grid with too many levels, so that the
+internally stored ID overflows.
 </P>
 <P><B>Related commands:</B>
 </P>
