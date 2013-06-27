@@ -13,15 +13,16 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>fix ID grid/check N 
+<PRE>fix ID grid/check N outflag 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
 <LI>grid/check = style name of this fix command
-<LI>N = check every N timesteps 
+<LI>N = check every N timesteps
+<LI>outflag = <I>error</I> or <I>warn</I> or <I>silent</I> 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>fix 1 grid/check 100 
+<PRE>fix 1 grid/check 100 error 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -34,6 +35,12 @@ grid cell during the particle move stage of the SPARTA algorithm.
 correct grid cell are counted and the value of the count can be
 monitored (see below).  A value of 0 is "correct", meaning that no
 particle was found to be outside its assigned grid cell.
+</P>
+<P>If the outflag setting is <I>error</I>, SPARTA will print an error and stop
+if it finds a particle in an incorrect grid cell.  For <I>warn</I>, it will
+print a warning message and continue.  For <I>silent</I>, it will print no
+message, but the count of such occurrences can be monitored with the
+<A HREF = "stats.html">stats</A> output, as described below.
 </P>
 <HR>
 

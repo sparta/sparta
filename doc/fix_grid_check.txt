@@ -10,15 +10,16 @@ fix grid/check command :h3
 
 [Syntax:]
 
-fix ID grid/check N :pre
+fix ID grid/check N outflag :pre
 
 ID is documented in "fix"_fix.html command
 grid/check = style name of this fix command
-N = check every N timesteps :ul
+N = check every N timesteps
+outflag = {error} or {warn} or {silent} :ul
 
 [Examples:]
 
-fix 1 grid/check 100 :pre
+fix 1 grid/check 100 error :pre
 
 [Description:]
 
@@ -31,6 +32,12 @@ The check is performed every {N} timesteps.  Particles not inside the
 correct grid cell are counted and the value of the count can be
 monitored (see below).  A value of 0 is "correct", meaning that no
 particle was found to be outside its assigned grid cell.
+
+If the outflag setting is {error}, SPARTA will print an error and stop
+if it finds a particle in an incorrect grid cell.  For {warn}, it will
+print a warning message and continue.  For {silent}, it will print no
+message, but the count of such occurrences can be monitored with the
+"stats"_stats.html output, as described below.
 
 :line
 
