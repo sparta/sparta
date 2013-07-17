@@ -79,4 +79,4 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 [Default:]
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 300, gravity = 0.0, surfmax = 100.
+0.0, temp = 273.15, gravity = 0.0, surfmax = 100.

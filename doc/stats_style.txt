@@ -53,8 +53,8 @@ arg1,arg2,... = list of statistical attributes :ulb,l
 
 [Examples:]
 
-stats_style step cpu nmol temp
-stats_style step temp cpu spcpu nmol xlo xhi c_myTemp :pre
+stats_style step cpu nmol
+stats_style step cpu spcpu nmol xlo xhi c_myTemp :pre
 
 [Description:]
 

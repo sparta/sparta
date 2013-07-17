@@ -16,7 +16,7 @@ ID is documented in "compute"_compute.html command :ulb,l
 grid = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} :l
+value = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {mass} or {temp}:l
   {n} = molecule count
   {u} = x component of velocity
   {v} = y component of velocity
@@ -25,6 +25,7 @@ value = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} :l
   {vsq} = y component of velocity squared
   {wsq} = z component of velocity squared
   {ke} = kinetic energy
+  {mass} = mass
   {temp} = temperature :pre
 :ule
 
@@ -61,13 +62,13 @@ over time.
 
 The {n} value counts the number of moleclues in the group.
 
-The {u}, {v}, {w} values compute the average velocity components for
-all molecules in the group:
+The {u}, {v}, {w} values computes the components of the average
+velocity for all molecules in the group:
 
 U = Sum_i (mass_i Vx_i) / Sum_i (mass_i) :pre
 
-The {usq}, {vsq}, {wsq} values compute the average the velocity
-component squared for all molecules in the group.
+The {usq}, {vsq}, {wsq} values compute the squared component of
+the average velocity for all molecules in the group.
 
 Usq = Sum_i (mass_i Vx_i Vx_i) / Sum_i (mass_i) :pre
 
@@ -77,13 +78,25 @@ molecules in the group:
 Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 KE = Sum_i (1/2 mass_i Vsq_i) / N :pre
 
-The {temp} value also computes the average kinetic energy for all
-molecules in the group.  This is converted to a temperature {T} by the
-following formula where {kB} is the Boltzmann factor:
+The {mass} value computes the average mass for all {N} molecules in
+the group:
+
+KE = Sum_i (mass_i) / N :pre
+
+The {temp} value first computes the average kinetic energy for all
+molecules in the group, as for the {ke} value.  This is then converted
+to a temperature {T} by the following formula where {kB} is the
+Boltzmann factor:
 
 Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 KE = Sum_i (1/2 mass_i Vsq_i) / N
 T = KE / (3/2 kB) :pre
+
+Note that this definition of temperature does not subtract out a net
+streaming velocity for molecules in the grid cell, so it is not a
+thermal temperature in a streaming context.  See the "compute
+???/grid"_compute_???_grid.html command for calculating thermal
+temperatures in the presence of streaming.
 
 [Output info:]
 
@@ -102,8 +115,8 @@ options.
 The per-grid array values will be in the "units"_units.html
 appropriate to the individual values as described above.  {U}, {v},
 and {w} are in velocity units.  {Usq}, {vsq}, and {wsq} are in
-velocity squared units.  {Ke} is in energy units.  {Temp} is in
-temperature units.
+velocity squared units.  {Ke} is in energy units.  {Mass} is in mass
+units. {Temp} is in temperature units.
 
 [Restrictions:] none
 
