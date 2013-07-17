@@ -43,6 +43,7 @@
       nscheck,nscheckave = # of surface checks (this step, per-step)
       ncoll,ncollave = # of molecule/molecule collisions (this step, per-step)
       nattempt,nattemptave = # of attempted collisions (this step, per-step)
+      nreact,nreactave = # of chemical reactions (this step, per-step)
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
@@ -94,14 +95,14 @@ continually output the time and timestep rate for the last 100 steps.
 <HR>
 
 <P>The <I>nmol</I>, <I>ntouch</I>, <I>ncomm</I>, <I>nbound</I>, <I>nexit</I>, <I>nscoll</I>, <I>nscheck</I>,
-<I>ncoll</I>, and <I>nattempt</I> keywords all generate counts for the current
-timestep.
+<I>ncoll</I>, <I>nattempt</I>, and <I>nreact</I> keywords all generate counts for the
+current timestep.
 </P>
 <P>The <I>nmolave</I>, <I>ntouchave</I>, <I>ncommave</I>, <I>nboundave</I>, <I>nexitave</I>,
-<I>nscollave</I>, <I>nscheckave</I>, <I>ncollave</I>, and <I>nattemptave</I> keywords all
-generate values that are the cummulative total of the corresponding
-count divided by <I>elapsed</I> = the number of timesteps since the start
-of the run.
+<I>nscollave</I>, <I>nscheckave</I>, <I>ncollave</I>, <I>nattemptave</I>, and <I>nreactave</I>
+keywords all generate values that are the cummulative total of the
+corresponding count divided by <I>elapsed</I> = the number of timesteps
+since the start of the run.
 </P>
 <P>The <I>nmol</I> keyword is the number of molecules.
 </P>
@@ -120,7 +121,7 @@ boundary is not counted.
 simulation box through an outflow boundary.
 </P>
 <P>The <I>nscoll</I> keyword is the number of molecule/surface collisions that
-occured, where a molecule collided with a geometric surface.
+occurred, where a molecule collided with a geometric surface.
 </P>
 <P>The <I>nscheck</I> keyword is the number of molecule/surface collisions
 that were checked for.  If a cell is overlapped by N surface elements,
@@ -128,10 +129,13 @@ all N must be checked for collisions each time a molecule in that cell
 moves.
 </P>
 <P>The <I>ncoll</I> keyword is the number of molecule/molecule collisions that
-occured.
+occurred.
 </P>
 <P>The <I>nattempt</I> keyword is the number of molecule/molecule collisions
 that were attempted.
+</P>
+<P>The <I>nreact</I> keyword is the number of chemical reactions that
+occurred.
 </P>
 <P>The <I>vol</I> keyword is the volume (or area in 2d) of the simulation box.
 </P>

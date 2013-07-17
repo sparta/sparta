@@ -53,6 +53,8 @@
       xlo,ylo,zlo = coords of lower left corner of grid cell
       xhi,yhi,zhi = coords of lower left corner of grid cell
       xc,yc,zc = coords of center of grid cell
+      vol = flow volume of grid cell (area in 2d)
+      svol = ???
       c_ID = per-grid vector (or array) calculated by a compute with ID
       c_ID[N] = Nth column of per-grid array calculated by a compute with ID
       f_ID = per-grid vector (or array) calculated by a fix with ID
@@ -262,6 +264,15 @@ coordinates of the upper-right corner of the grid cell.  The <I>xc</I>,
 <I>yc</I>, <I>zc</I> attributes write the coordinates of the center point of the
 grid cell.  The <I>zlo</I>, <I>zhi</I>, <I>zc</I> attributes cannot be used for a 2d
 simulation.
+</P>
+<P>The <I>vol</I> attribute is the flow volume of the grid cell (or area in 2d).
+Flow volume is the portion of the grid cell that is accessible to
+moleclues, i.e. outside any closed surface that may intersect
+the cell.
+</P>
+<P>NOTE: what is it for split cells, or sub cells?
+</P>
+<P>NOTE: what is svol?
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-grid vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the

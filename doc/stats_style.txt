@@ -39,6 +39,7 @@ arg1,arg2,... = list of statistical attributes :ulb,l
       nscheck,nscheckave = # of surface checks (this step, per-step)
       ncoll,ncollave = # of molecule/molecule collisions (this step, per-step)
       nattempt,nattemptave = # of attempted collisions (this step, per-step)
+      nreact,nreactave = # of chemical reactions (this step, per-step)
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
@@ -89,14 +90,14 @@ continually output the time and timestep rate for the last 100 steps.
 :line
 
 The {nmol}, {ntouch}, {ncomm}, {nbound}, {nexit}, {nscoll}, {nscheck},
-{ncoll}, and {nattempt} keywords all generate counts for the current
-timestep.
+{ncoll}, {nattempt}, and {nreact} keywords all generate counts for the
+current timestep.
 
 The {nmolave}, {ntouchave}, {ncommave}, {nboundave}, {nexitave},
-{nscollave}, {nscheckave}, {ncollave}, and {nattemptave} keywords all
-generate values that are the cummulative total of the corresponding
-count divided by {elapsed} = the number of timesteps since the start
-of the run.
+{nscollave}, {nscheckave}, {ncollave}, {nattemptave}, and {nreactave}
+keywords all generate values that are the cummulative total of the
+corresponding count divided by {elapsed} = the number of timesteps
+since the start of the run.
 
 The {nmol} keyword is the number of molecules.
 
@@ -115,7 +116,7 @@ The {nexit} keyword is the number of molecules that exited the
 simulation box through an outflow boundary.
 
 The {nscoll} keyword is the number of molecule/surface collisions that
-occured, where a molecule collided with a geometric surface.
+occurred, where a molecule collided with a geometric surface.
 
 The {nscheck} keyword is the number of molecule/surface collisions
 that were checked for.  If a cell is overlapped by N surface elements,
@@ -123,10 +124,13 @@ all N must be checked for collisions each time a molecule in that cell
 moves.
 
 The {ncoll} keyword is the number of molecule/molecule collisions that
-occured.
+occurred.
 
 The {nattempt} keyword is the number of molecule/molecule collisions
 that were attempted.
+
+The {nreact} keyword is the number of chemical reactions that
+occurred.
 
 The {vol} keyword is the volume (or area in 2d) of the simulation box.
 
