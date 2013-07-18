@@ -95,8 +95,8 @@ T = KE / (3/2 kB) :pre
 Note that this definition of temperature does not subtract out a net
 streaming velocity for molecules in the grid cell, so it is not a
 thermal temperature in a streaming context.  See the "compute
-???/grid"_compute_???_grid.html command for calculating thermal
-temperatures in the presence of streaming.
+sonine/grid"_compute_sonine_grid.html command to calculate thermal
+temperatures after subtracting out streaming components of velocity.
 
 [Output info:]
 
