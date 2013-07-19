@@ -186,10 +186,10 @@ within the SPARTA code.  The options that are currently recogized are:
 </P>
 <UL><LI>-DSPARTA_GZIP
 <LI>-DSPARTA_JPEG
-<LI>-DSPARTA_XDR
-<LI>-DSPARTA_SMALLBIG
+<LI>-DSPARTA_MAP
+<LI>-DSPARTA_SMALL
+<LI>-DSPARTA_BIG
 <LI>-DSPARTA_BIGBIG
-<LI>-DSPARTA_SMALLSMALL
 <LI>-DSPARTA_LONGLONG_TO_LONG
 <LI>-DPACK_ARRAY
 <LI>-DPACK_POINTER
@@ -204,18 +204,19 @@ able to write out JPEG image files.  If not, it will only be able to
 write out text-based PPM image files.  For JPEG files, you must also
 link SPARTA with a JPEG library, as described below.
 </P>
-<P>If you use -DSPARTA_XDR, the build will include XDR compatibility
-files for doing particle dumps in XTC format.  This is only necessary
-if your platform does have its own XDR files available.  See the
-Restrictions section of the <A HREF = "dump.html">dump</A> command for details.
+<P>If you use -DSPARTA_MAP, SPARTA will use the STL map class for as hash
+tables.  This is less efficient than the STL unordered map class which
+is not yet supported by all C++ compilers.  The default is to use the
+unordered map class, so only set -DSPARTA_MAP if the build complains
+that unordered maps are not recognized.
 </P>
-<P>Use at most one of the -DSPARTA_SMALLBIG, -DSPARTA_BIGBIG,
--D-DSPARTA_SMALLSMALL settings.  The default is -DSPARTA_SMALLBIG.
-These refer to use of 4-byte (small) vs 8-byte (big) integers within
-SPARTA, as described in src/lmptype.h.  The only reason to use the
-BIGBIG setting is to enable simulation of huge molecular systems with
-more than 2 billion atoms.  The only reason to use the SMALLSMALL
-setting is if your machine does not support 64-bit integers.
+<P>Use at most one of the -DSPARTA_SMALL, -DSPARTA_BIG, -D-DSPARTA_BIGBIG
+settings.  The default is -DSPARTA_BIG.  These refer to use of 4-byte
+(small) vs 8-byte (big) integers within SPARTA, as described in
+src/spatype.h.  The only reason to use the BIGBIG setting is to enable
+simulation of large models with more than 2 billion grid cells.  The
+only reason to use the SMALL setting is if your machine does not
+support 64-bit integers.
 </P>
 <P>The -DSPARTA_LONGLONG_TO_LONG setting may be needed if your system or
 MPI version does not recognize "long long" data types.  In this case a
