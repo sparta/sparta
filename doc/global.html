@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs 
 
-<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfmax</I> 
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfmax</I> or <I>gridcut</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -27,10 +27,13 @@
     Vx,Vy,Vz = streaming velocity of background gas (velocity units)
   <I>temp</I> values = thermal
     thermal = temperature of background gas (temperature units)
-  <I>gravity</I> values = acc
-    acc = acceleration due to gravity (acceleration units)
+  <I>gravity</I> values = mag ex ey ez
+    mag = magnitude of acceleration due to gravity (acceleration units)
+    ex,ey,ez = direction vector that gravity acts in
   <I>surfmax</I> value = Nsurf
-    Nsurf = max # of surface elements allowed in single grid cell 
+    Nsurf = max # of surface elements allowed in single grid cell
+  <I>gridcut</I> value = cutoff
+    cutoff = acquire ghost cells up to this far away (distance units) 
 </PRE>
 
 </UL>
@@ -63,8 +66,10 @@ This is a Gaussian velocity distribution superposed
 on top of the streaming velocity.
 </P>
 <P>The <I>gravity</I> keyword sets an acceleration term which is included in
-the motion of particles.  A positive value acts in the downward
-direction, i.e. -z for 3d, -y for 2d.  If the value is set to 0.0, no
+the motion of particles.  The magnitude of gravity is set by the <I>mag</I>
+keyword.  Its direction of action is set as (ex,ex,ez).  The direction
+does not have to be a unit vector, since the code renormlizes the
+direction vector by the magnitude.  If the magnitude is set to 0.0, no
 acceleration term is included, which is the default.
 </P>
 <P>The <I>surfmax</I> keyword determines the maximum number of surface
@@ -73,10 +78,28 @@ cell.  The default is 100, which should be large enough for most
 simulations, unless you define very coarse grid cells (relative to the
 size of surface elements).  
 </P>
+<P>The <I>gridcut</I> keyword determines the distance at which ghost grid
+cells will be stored by each processor.  Assuming the processor owns a
+compact clump of grid cells, it will also store ghost cell information
+from nearby grid cells, up to this distance away.  If the setting is <
+0.0 (the default) then each processor owns a copy of ghost cells for
+all grid cells in the simulation.  This can require too much memory
+for large models.  If the cutoff is too short, more communication of
+particles may be needed to complete particle moves each timestep.
+</P>
+<P>NOTE: doc more about trade-off in comm/comp for this gridcut setting.
+</P>
 <P><B>Restrictions:</B>
 </P>
 <P>The global surfmax command must be used before surface elements are
 defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
+</P>
+<P>The global gridcut command with a cutoff >= 0.0 will only be active if
+the grid cells owned by each processor are "clumped" by the time a
+simulation is performed.  This will be the case if the RCB option of
+the <A HREF = "balance_grid.html">balance_grid</A> or <A HREF = "fix_balance.html">fix balance</A>
+command is used.  If they are not clumped, a cutoff setting >= 0.0
+will generate an error.
 </P>
 <P><B>Related commands:</B>
 </P>
@@ -85,6 +108,7 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0, surfmax = 100.
+0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, gridcut
+= -1.0.
 </P>
 </HTML>
