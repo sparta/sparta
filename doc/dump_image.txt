@@ -62,8 +62,9 @@ keyword = {adiam} or {atom} or {grid} or {surf} or {size} or {view} or {center} 
     diam = diameter of axes lines as fraction of shortest box length
   {shiny} value = sfactor = shinyness of spheres and cylinders
     sfactor = shinyness of spheres and cylinders from 0.0 to 1.0
-  {ssao} value = yes/no dfactor = SSAO depth shading
+  {ssao} value = yes/no seed dfactor = SSAO depth shading
     yes/no = turn depth shading on/off
+    seed = random # seed (positive integer)
     dfactor = strength of shading from 0.0 to 1.0 :pre
 :ule
 

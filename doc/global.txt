@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {gridcut} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {gridcut} or {comm/sort} or {comm/style} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -28,7 +28,12 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
   {surfmax} value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
   {gridcut} value = cutoff
-    cutoff = acquire ghost cells up to this far away (distance units) :pre
+    cutoff = acquire ghost cells up to this far away (distance units)
+  {comm/sort} value = yes or no
+    yes/no = sort incoming messages by proc ID if yes, else no sort
+  {comm/style} value = neigh or all
+    neigh = setup particle comm with subset of near-neighbor processor
+    all = allow particle comm with potentially any processor :pre
 :ule
 
 [Examples:]
@@ -83,6 +88,35 @@ particles may be needed to complete particle moves each timestep.
 
 NOTE: doc more about trade-off in comm/comp for this gridcut setting.
 
+The {comm/sort} keyword determines whether the messages a proc
+receives for migrating particles (every step) and ghost grid cells (at
+setup and after re-balance) are sorted by processor ID.  Doing this
+requires a bit of overhead, but can make it easier to debug in
+parallel, because simulations should be reproducible when run on the
+same number of processors.  Without sorting, messages can arrive in a
+randomized order, which means lists of particles and grid cells can be
+in a different order and lead to statistical differences between runs.
+
+The {comm/style} keyword determines the style of particle
+communication that is performed to migrate particles every step.  The
+most efficient method for this is typically for each processor to
+exchange messages with only the processors it has ghost cells for,
+which is the method used by the {neigh} setting.  The {all} setting
+performs a relatively cheap, but global communication operation to
+determine the exact set of neighbors that need to be communicated with
+at each step.  For small processor counts there is typically little
+difference.  On large processor counts the {neigh} setting can be
+significantly faster.  However, if the flow is streaming in one
+dominant direction, there may be no particle migration needed to
+upwind processors, so the {all} method could generate smaller counts
+of neighboring processors.
+
+Note that the {neigh} style will only have an effect (at run time)
+when the grid is decomposed by the {rcb} (recursive coordinate
+bisectioning) option of the "balance"_balance.html or "fix
+balance"_fix_balance.html commands.  If that is not the case, it is
+as-if the {all} setting were being used.
+
 [Restrictions:]
 
 The global surfmax command must be used before surface elements are
@@ -103,4 +137,4 @@ will generate an error.
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, gridcut
-= -1.0.
+= -1.0, comm/sort = no, comm/style = neigh.
