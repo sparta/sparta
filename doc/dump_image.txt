@@ -19,14 +19,23 @@ file = name of file to write image to :l
 color = molecule attribute that determines color of each molecule :l
 diameter = molecule attribute that determines size of each molecule :l
 zero or more keyword/value pairs may be appended :l
-keyword = {adiam} or {atom} or {grid} or {surf} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {grid} or {axes} or {shiny} or {ssao} :l
+keyword = {adiam} or {atom} or {grid} or {gridx} or {gridy} or {gridz} or {surf} or {size} or {view} or {center} or {up} or {zoom} or {persp} or {box} or {grid} or {axes} or {shiny} or {ssao} :l
   {adiam} value = number = numeric value for molecule diameter (distance units)
   {atom} = yes/no = do or do not draw molecules
   {grid} values = color
-    color = {proc} or attribute
+    color = {proc} or per-grid compute or fix
+  {gridx} values = xcoord color
+    xcoord = x value to dray yz plane of grid cells at
+    color = {proc} or per-grid compute or fix
+  {gridy} values = ycoord color
+    ycoord = y value to dray xz plane of grid cells at
+    color = {proc} or per-grid compute or fix
+  {gridz} values = zcoord color
+    zcoord = z value to dray xy plane of grid cells at
+    color = {proc} or per-grid compute or fix
   {surf} values = color diam
-    color = {proc} or attribute
-    diam = diameter of line as fraction of shortest box length for 2d, ignored for 3d
+    color = {one} or {proc} or per-surf compute or fix
+    diam = diameter of 2d lines as fraction of shortest box length
   {size} values = width height = size of images
     width = width of image in # of pixels
     height = height of image in # of pixels
@@ -84,7 +93,9 @@ dump_modify	    4 pad 4
 [Description:]
 
 Dump a high-quality ray-traced image of the simulation every N
-timesteps as either a JPG or PPM file.  A series of such images can
+timesteps as either a JPG or PPM file.  The options for this command
+as well as the "dump_modify"_dump_modify.html command control what is
+included in the image and how it appears.  A series of such images can
 easily be converted into an animated movie of your simulation; see
 further details below.  Other dump styles store snapshots of numerical
 data asociated with molecules, grid cells, and surfaces in various
@@ -130,12 +141,34 @@ correct ordering.
 
 :line
 
+Several of the keywords determine what objects are rendered in the
+image, namely molecules, grid cells, or surface elements.  There are
+additional optional kewords which control how the image is rendered.
+As listed below, all of the keywords have defaults, most of which you
+will likely not need to change.  The "dump modify"_dump_modify.html
+also has options specific to the dump image style, particularly for
+assigning colors to molecules and other image features.
+
+:line
+
+Rendering of molecules :h4
+
+Molecules are drawn by default using the {color} and {diameter}
+settings.  The {atom} keyword allow you to turn off the drawing of all
+molecules, if the specified value is {no}.  Only molecules in a
+geometric region can be drawn using the "dump_modify
+region"_dump_modify.html command.
+
 The {color} and {diameter} settings determine the color and size of
 molecules rendered in the image.  They can be any molecule attribute
-defined for the "dump paticle"_dump.html command, including {type}.
-Note that the {diameter} setting can be overridden with a numeric
-value by the optional {adiam} keyword, in which case you can specify
-the {diameter} setting with any valid molecule attribute.
+defined for the "dump molecule"_dump.html command, including {type}.
+
+The {diameter} setting can be overridden with a numeric value by the
+optional {adiam} keyword, in which case you can specify the {diameter}
+setting with any valid molecule attribute.  The {adiam} keyword
+overrides the {diameter} setting with a specified numeric value.  All
+molecules will be drawn with that diameter, e.g. 1.5, which is in
+whatever distance "units"_units.html the input script defines.
 
 If {type} is specified for the {color} setting, then the color of each
 molecule is determined by its type = species index.  By default the
@@ -166,19 +199,20 @@ each molecule will be the proc ID (0 up to Nprocs-1) in whatever
 "units"_units.html you are using, which is undoubtably not what you
 want.
 
-If other molecule attributes are used for the {color} or {diameter}
-settings, they are interpreted in the following way.
+Any of the molecule attributes listed in the "dump custom"_dump.html
+command can also be used for the {color} or {diameter} settings.  They
+are interpreted in the following way.
 
 If "vx", for example, is used as the {color} setting, then the color
 of the molecule will depend on the x-component of its velocity.  The
 association of a per-molecule value with a specific color is
 determined by a "color map", which can be specified via the
-"dump_modify"_dump_modify.html command.  The basic idea is that the
-molecule-attribute will be within a range of values, and every value
-within the range is mapped to a specific color.  Depending on how the
-color map is defined, that mapping can take place via interpolation so
-that a value of -3.2 is halfway between "red" and "blue", or
-discretely so that the value of -3.2 is "orange".
+"dump_modify cmap"_dump_modify.html command.  The basic idea is that
+the molecule-attribute will be within a range of values, and every
+value within the range is mapped to a specific color.  Depending on
+how the color map is defined, that mapping can take place via
+interpolation so that a value of -3.2 is halfway between "red" and
+"blue", or discretely so that the value of -3.2 is "orange".
 
 If "vx", for example, is used as the {diameter} setting, then the
 molecule will be rendered using the x-component of its velocity as the
@@ -187,31 +221,23 @@ drawn.
 
 :line
 
-The various kewords listed above control how the image is rendered.
-As listed below, all of the keywords have defaults, most of which you
-will likely not need to change.  The "dump modify"_dump_modify.html
-also has options specific to the dump image style, particularly for
-assigning colors to molecules and other image features.
-
-:line
-
-The {adiam} keyword allows you to override the {diameter} setting to a
-per-molecule attribute with a specified numeric value.  All molecules will
-be drawn with that diameter, e.g. 1.5, which is in whatever distance
-"units"_units.html the input script defines.
-
-:line
-
-The {atom} keyword allow you to turn off the drawing of all molecules,
-if the specified value is {no}.
-
-:line
+Rendering of grid cells :h4
 
 The {grid} keyword turns on the drawing of grid cells with the
 specified color attribute.  For 2d, the grid cell is shaded with an
 rectangle that is infinitely thin in the z dimension, which allows you
 to still see the particles in the grid cell.  For 3d, the grid cell is
 drawn as a solid brick, which will obscure the molecules inside it.
+
+Only grid cells in a geometric region can be drawn using the
+"dump_modify region"_dump_modify.html command.
+
+The {gridx} and {gridy} and {gridz} keywords turn on the drawing of of
+a 2d plane of grid cells at the specified coordinate.  This is a way
+to draw one or more slices through a 3d image.
+
+The "dump_modify region"_dump_modify.html command does not apply
+to the {gridx} and {gridy} and {gridz} plane drawing.
 
 If {proc} is specified for the {color} setting, then the color of each
 grid cell is determined by its owning processor ID.  This is useful
@@ -230,19 +256,49 @@ proc ID 6 = purple :ul
 and repeats itself for IDs > 6.  Note that for this command, processor
 IDs range from 1 to Nprocs inclusive, instead of the more customary 0
 to Nprocs-1.  This mapping can be changed by the "dump_modify
-ccolor"_dump_modify.html command, which has not yet been added to
-SPARTA.
+gcolor"_dump_modify.html command.
 
-At some point, we will also allow other grid-based values to be used
-to color grid cells.  This has not yet been implemented in SPARTA.
+The {color} setting can also be a per-grid compute or fix.  In this
+case, it is specified as {c_ID} or {c_ID\[N\]} for a compute and as
+{f_ID} and {f_ID\[N\]} for a fix.
+
+This allows per-grid cell values in a vector or array to be used to
+color the grid cells.  The ID in the attribute should be replaced by
+the actual ID of the compute or fix that has been defined previously
+in the input script.  See the "compute"_compute.html or "fix"_fix.html
+command for details.
+
+If {c_ID} is used as a attribute, then the per-grid vector calculated
+by the compute is used.  If {c_ID\[N\]} is used, then N must be in the
+range from 1-M, which will use the Nth column of the per-grid array
+calculated by the compute.
+
+If {f_ID} is used as a attribute, then the per-grid vector calculated
+by the fix is used.  If {f_ID\[N\]} is used, then N must be in the
+range from 1-M, which will use the Nth column of the per-grid array
+calculated by the fix.
+
+The manner in which values in the vector or array are mapped to color
+is determined by the "dump_modify cmap"_dump_modify.html command.
 
 :line
 
+Rendering of surface elements :h4
+
 The {surf} keyword turns on the drawing of surface elements with the
-specified color attribute.  For 2d, the surface element is a line.
-For 3d it is a triangle.  The entire surface is rendered, which in 3d
-will hide any grid cells (or fractions of a grid cell) that are inside
-the surface.
+specified color attribute.  For 2d, the surface element is a line
+whose diameter is specified by the {diam} setting as a fraction of the
+minimum simulation box length.  For 3d it is a triangle and the {diam}
+setting is ignored.  The entire surface is rendered, which in 3d will
+hide any grid cells (or fractions of a grid cell) that are inside the
+surface.
+
+The "dump_modify region"_dump_modify.html command does not apply to
+surface element drawing.
+
+If {one} is specified for the {color} setting, then the color of every
+surface element is drawn with the color specified by the "dump_modify
+scolor"_dump_modify.html keyword, which is gray by default.
 
 If {proc} is specified for the {color} setting, then the color of each
 surface element is determined by its owning processor ID.  Surface
@@ -262,10 +318,30 @@ to Nprocs-1.  This mapping can be changed by the "dump_modify
 scolor"_dump_modify.html command, which has not yet been added to
 SPARTA.
 
-At some point, we will also allow other surface-based values to be
-used to color surface elements.  This has not yet been implemented in
-SPARTA.
+The {color} setting can also be a per-surf compute or fix.  In this
+case, it is specified as {c_ID} or {c_ID\[N\]} for a compute and as
+{f_ID} and {f_ID\[N\]} for a fix.
 
+This allows per-surf values in a vector or array to be used to color
+the surface elemtns.  The ID in the attribute should be replaced by
+the actual ID of the compute or fix that has been defined previously
+in the input script.  See the "compute"_compute.html or "fix"_fix.html
+command for details.
+
+If {c_ID} is used as a attribute, then the per-surf vector calculated
+by the compute is used.  If {c_ID\[N\]} is used, then N must be in the
+range from 1-M, which will use the Nth column of the per-surf array
+calculated by the compute.
+
+If {f_ID} is used as a attribute, then the per-surf vector calculated
+by the fix is used.  If {f_ID\[N\]} is used, then N must be in the
+range from 1-M, which will use the Nth column of the per-surf array
+calculated by the fix.
+
+The manner in which values in the vector or array are mapped to color
+is determined by the "dump_modify cmap"_dump_modify.html command.
+
+:line
 :line
 
 The {size} keyword sets the width and height of the created images,
@@ -351,12 +427,20 @@ The color of the box boundaries can be set with the "dump_modify
 boxcolor"_dump_modify.html command.
 
 The {gline} keyword determines how the outlines of grid cells are
-rendered as thin cylinders in the image.  If {no} is set, then the
-grid outlines are not drawn and the {diam} setting is ignored.  If
-{yes} is set, the 12 edges of each grid cell are drawn, with a
-diameter that is a fraction of the shortest box length in x,y,z (for
-3d) or x,y (for 2d).  The color of the grid cell outlines can be set
-with the "dump_modify glinecolor"_dump_modify.html command.
+rendered as thin cylinders in the image.  If the {gridx} or {gridy} or
+{gridz} keywords are specified to draw a plane(s) of grid cells, then
+outlines of all cells in the plane(s) are drawn.  If the planar
+options are not used, then the outlines of all grid cells are drawn,
+whether the {grid} keyword is specified or not.  In this case, the
+"dump_modify region"_dump_modify.html command can be used to restrict
+which grid cells the outlines are drawn for.
+
+For the {gline} keywork, if {no} is set, then grid outlines are not
+drawn and the {diam} setting is ignored.  If {yes} is set, the 12
+edges of each grid cell are drawn, with a diameter that is a fraction
+of the shortest box length in x,y,z (for 3d) or x,y (for 2d).  The
+color of the grid cell outlines can be set with the "dump_modify
+glinecolor"_dump_modify.html command.
 
 The {sline} keyword determines how the outlines of surface elements
 are rendered as thin cylinders in the image.  If {no} is set, then the
@@ -456,7 +540,11 @@ The defaults for the keywords are as follows:
 
 adiam = not specified (use diameter setting)
 atom = yes
-cell = not specified (no drawing of grid cells)
+grid = not specified (no drawing of grid cells)
+gridx = not specified (no drawing of x-plane of grid cells)
+gridy = not specified (no drawing of y-plane of grid cells)
+gridz = not specified (no drawing of z-plane of grid cells)
+surf = not specified (no drawing of surface elements)
 size = 512 512
 view = 60 30 (for 3d)
 view = 0 0 (for 2d)
@@ -466,7 +554,8 @@ up = 0 1 0 (for 2d)
 zoom = 1.0
 persp = 0.0
 box = yes 0.02
-grid = no 0.0
+gline = no 0.0
+sline = no 0.0
 axes = no 0.0 0.0
 shiny = 1.0
 ssao = no :ul

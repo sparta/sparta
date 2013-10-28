@@ -14,14 +14,36 @@ dump_modify dump-ID keyword values ... :pre
 
 dump-ID = ID of dump to modify :ulb,l
 one or more keyword/value pairs may be appended :l
-keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {color} or {every} or {first} or {flush} or {glinecolor} or {slinecolor} or {format} or (region} or {thresh} :l
+these keywords apply to various dump styles :l
+keyword = {append} or {every} or {first} or {flush} or {format} or {region} or {thresh} :l
+  {append} arg = {yes} or {no}
+  {every} arg = N
+    N = dump every this many timesteps
+    N can be a variable (see below)
+  {first} arg = {yes} or {no}
+  {flush} arg = {yes} or {no}
+  {format} arg = C-style format string for one line of output
+  {pad} arg = Nchar = # of characters to convert timestep to
+  {region} arg = region-ID or "none"
+  {thresh} args = attribute operation value
+    attribute = same attributes (x,fy,etotal,sxx,etc) used by dump custom style
+    operation = "<" or "<=" or ">" or ">=" or "==" or "!="
+    value = numeric value to compare to
+    these 3 args can be replaced by the word "none" to turn off thresholding :pre
+these keywords apply only to the "dump image"_dump_image.html style :l
+keyword = {acolor} or {adiam} or {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {cmap} or {color} or {gcolor} or {glinecolor} or {scolor} or {slinecolor} :l
   {acolor} args = type color
     type = molecule type or range of types or proc ID or range of IDs (see below)
     color = name of color or color1/color2/...
   {adiam} args = type diam
     type = molecule type or range of types (see below)
     diam = diameter of molecules of that type (distance units)
-  {amap} args = lo hi style delta N entry1 entry2 ... entryN
+  {backcolor} arg = color
+    color = name of color for background
+  {boxcolor} arg = color
+    color = name of color for box lines
+  {cmap} args = mode lo hi style delta N entry1 entry2 ... entryN
+    mode = {mol} or {grid} or {surf} or {xplane} or {yplane} or {zplane}
     lo = number or {min} = lower bound of range of color map
     hi = number or {max} = upper bound of range of color map
     style = 2 letters = "c" or "d" or "s" plus "a" or "f"
@@ -41,31 +63,19 @@ keyword = {acolor} or {adiam} or {amap} or {append} or {bcolor} or {bdiam} or {b
       color = name of color used for that subset of values
     entry = color (for sequential style)
       color = name of color used for a bin of values
-  {append} arg = {yes} or {no}
-  {backcolor} arg = color
-    color = name of color for background
-  {boxcolor} arg = color
-    color = name of color for box lines
   {color} args = name R G B
     name = name of color
     R,G,B = red/green/blue numeric values from 0.0 to 1.0
-  {every} arg = N
-    N = dump every this many timesteps
-    N can be a variable (see below)
-  {first} arg = {yes} or {no}
-  {format} arg = C-style format string for one line of output
-  {flush} arg = {yes} or {no}
+  {gcolor} args = proc color
+    proc = proc ID or range of IDs (see below)
+    color = name of color or color1/color2/...
   {glinecolor} arg = color
     color = name of color for grid cell outlines
+  {scolor} args = proc color
+    proc = proc ID or range of IDs (see below)
+    color = name of color for surf one option
   {slinecolor} arg = color
-    color = name of color for surface element outlines
-  {pad} arg = Nchar = # of characters to convert timestep to
-  {region} arg = region-ID or "none"
-  {thresh} args = attribute operation value
-    attribute = same attributes (x,fy,etotal,sxx,etc) used by dump custom style
-    operation = "<" or "<=" or ">" or ">=" or "==" or "!="
-    value = numeric value to compare to
-    these 3 args can be replaced by the word "none" to turn off thresholding :pre
+    color = name of color for surface element outlines :pre
 :ule
 
 [Examples:]
@@ -82,162 +92,10 @@ Modify the parameters of a previously defined dump command.  Not all
 parameters are relevant to all dump styles.
 
 :line
-
-The {acolor} keyword applies only to the dump {image} style.  It can
-be used with the "dump image"_dump_image.html command, when its atom
-color setting is {type} or {procs}, to set the color that molecules of
-each type or owning processor will be drawn in the image.
-
-If the atom color setting is {type}, then the specified {type} for the
-{acolor} keyword should be an integer from 1 to Ntypes = the number of
-molecule types.  A wildcard asterisk can be used in place of or in
-conjunction with the {type} argument to specify a range of molecule
-types.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
-number of molecule types, then an asterisk with no numeric values
-means all types from 1 to N.  A leading asterisk means all types from
-1 to n (inclusive).  A trailing asterisk means all types from n to N
-(inclusive).  A middle asterisk means all types from m to n
-(inclusive).
-
-If the atom color setting is {proc}, then the specified {type} for the
-{acolor} keyword should be an integer from 1 to Nprocs = the number of
-processors.  A wildcard asterisk can be used in place of or in
-conjunction with the {type} argument to specify a range of processor
-IDs, just as described above for molecule types.  Note that for this
-command, processor IDs range from 1 to Nprocs inclusive, instead of
-the more customary 0 to Nprocs-1.
-
-The specified {color} can be a single color which is any of the 140
-pre-defined colors (see below) or a color name defined by the
-dump_modify color option.  Or it can be two or more colors separated
-by a "/" character, e.g. red/green/blue.  In the former case, that
-color is assigned to all the specified molecule types.  In the latter
-case, the list of colors are assigned in a round-robin fashion to each
-of the specified molecule types.
-
 :line
 
-The {adiam} keyword applies only to the dump {image} style.  It can be
-used with the "dump image"_dump_image.html command, when its atom
-diameter setting is {type}, to set the size that molecules of each
-type will be drawn in the image.  The specified {type} should be an
-integer from 1 to Ntypes.  As with the {acolor} keyword, a wildcard
-asterisk can be used as part of the {type} argument to specify a range
-of molecule types.  The specified {diam} is the size in whatever
-distance "units"_units.html the input script is using, e.g. Angstroms.
-
-:line
-
-The {amap} keyword applies only to the dump {image} style.  It can be
-used with the "dump image"_dump_image.html command, with its {atom}
-keyword, when its atom setting is an molecule-attribute, to setup a
-color map.  The color map is used to assign a specific RGB
-(red/green/blue) color value to an individual molecule when it is drawn,
-based on the molecule's attribute, which is a numeric value, e.g. its
-x-component of velocity if the molecule-attribute "vx" was specified.
-
-The basic idea of a color map is that the atom-attribute will be
-within a range of values, and that range is associated with a a series
-of colors (e.g. red, blue, green).  An molecule's specific value (vx =
--3.2) can then mapped to the series of colors (e.g. halfway between
-red and blue), and a specific color is determined via an interpolation
-procedure.
-
-There are many possible options for the color map, enabled by the
-{amap} keyword.  Here are the details.
-
-The {lo} and {hi} settings determine the range of values allowed for
-the molecule attribute.  If numeric values are used for {lo} and/or
-{hi}, then values that are lower/higher than that value are set to the
-value.  I.e. the range is static.  If {lo} is specified as {min} or
-{hi} as {max} then the range is dynamic, and the lower and/or upper
-bound will be calculated each time an image is drawn, based on the set
-of molecules being visualized.
-
-The {style} setting is two letters, such as "ca".  The first letter is
-either "c" for continuous, "d" for discrete, or "s" for sequential.
-The second letter is either "a" for absolute, or "f" for fractional.
-
-A continuous color map is one in which the color changes continuously
-from value to value within the range.  A discrete color map is one in
-which discrete colors are assigned to sub-ranges of values within the
-range.  A sequential color map is one in which discrete colors are
-assigned to a sequence of sub-ranges of values covering the entire
-range.
-
-An absolute color map is one in which the values to which colors are
-assigned are specified explicitly as values within the range.  A
-fractional color map is one in which the values to which colors are
-assigned are specified as a fractional portion of the range.  For
-example if the range is from -10.0 to 10.0, and the color red is to be
-assigned to molecules with a value of 5.0, then for an absolute color
-map the number 5.0 would be used.  But for a fractional map, the
-number 0.75 would be used since 5.0 is 3/4 of the way from -10.0 to
-10.0.
-
-The {delta} setting is only specified if the style is sequential.  It
-specifies the bin size to use within the range for assigning
-consecutive colors to.  For example, if the range is from -10.0 to
-10.0 and a {delta} of 1.0 is used, then 20 colors will be assigned to
-the range.  The first will be from -10.0 <= color1 < -9.0, then 2nd
-from -9.0 <= color2 < -8.0, etc.
-
-The {N} setting is how many entries follow.  The format of the entries
-depends on whether the color map style is continuous, discrete or
-sequential.  In all cases the {color} setting can be any of the 140
-pre-defined colors (see below) or a color name defined by the
-dump_modify color option.
-
-For continuous color maps, each entry has a {value} and a {color}.
-The {value} is either a number within the range of values or {min} or
-{max}.  The {value} of the first entry must be {min} and the {value}
-of the last entry must be {max}.  Any entries in between must have
-increasing values.  Note that numeric values can be specified either
-as absolute numbers or as fractions (0.0 to 1.0) of the range,
-depending on the "a" or "f" in the style setting for the color map.
-
-Here is how the entries are used to determine the color of an
-individual molecule, given the value X of its molecule attribute.  X
-will fall between 2 of the entry values.  The color of the molecule is
-linearly interpolated (in each of the RGB values) between the 2 colors
-associated with those entries.  For example, if X = -5.0 and the 2
-surrounding entries are "red" at -10.0 and "blue" at 0.0, then the
-molecule's color will be halfway between "red" and "blue", which
-happens to be "purple".
-
-For discrete color maps, each entry has a {lo} and {hi} value and a
-{color}.  The {lo} and {hi} settings are either numbers within the
-range of values or {lo} can be {min} or {hi} can be {max}.  The {lo}
-and {hi} settings of the last entry must be {min} and {max}.  Other
-entries can have any {lo} and {hi} values and the sub-ranges of
-different values can overlap.  Note that numeric {lo} and {hi} values
-can be specified either as absolute numbers or as fractions (0.0 to
-1.0) of the range, depending on the "a" or "f" in the style setting
-for the color map.
-
-Here is how the entries are used to determine the color of an
-individual molecule, given the value X of its molecule attribute.  The
-entries are scanned from first to last.  The first time that {lo} <= X
-<= {hi}, X is assigned the color associated with that entry.  You can
-think of the last entry as assigning a default color (since it will
-always be matched by X), and the earlier entries as colors that
-override the default.  Also note that no interpolation of a color RGB
-is done.  All molecules will be drawn with one of the colors in the
-list of entries.
-
-For sequential color maps, each entry has only a {color}.  Here is how
-the entries are used to determine the color of an individual molecule,
-given the value X of its molecule attribute.  The range is partitioned
-into N bins of width {binsize}.  Thus X will fall in a specific bin
-from 1 to N, say the Mth bin.  If it falls on a boundary between 2
-bins, it is considered to be in the higher of the 2 bins.  Each bin is
-assigned a color from the E entries.  If E < N, then the colors are
-repeated.  For example if 2 entries with colors red and green are
-specified, then the odd numbered bins will be red and the even bins
-green.  The color of the molecule is the color of its bin.  Note that
-the sequential color map is really a shorthand way of defining a
-discrete color map without having to specify where all the bin
-boundaries are.
+These keywords apply to various dump styles, including the "dump
+image"_dump_image.html style.  The description gives details.
 
 :line
 
@@ -251,37 +109,6 @@ command is used after the "dump"_dump.html command, but before the
 first command that causes dump snapshots to be output, e.g. a
 "run"_run.html command.  Once the dump file has been opened, this
 keyword has no further effect.
-
-:line
-
-The {backcolor} keyword applies only to the dump {image} style.  It
-sets the background color of the images.  The color name can be any of
-the 140 pre-defined colors (see below) or a color name defined by the
-dump_modify color option.
-
-:line
-
-The {boxcolor} keyword applies only to the dump {image} style.  It
-sets the color of the simulation box drawn around the molecules in
-each image.  See the "dump image box" command for how to specify that
-a box be drawn.  The color name can be any of the 140 pre-defined
-colors (see below) or a color name defined by the dump_modify color
-option.
-
-:line
-
-The {color} keyword applies only to the dump {image} style.  It allows
-definition of a new color name, in addition to the 140-predefined
-colors (see below), and associates 3 red/green/blue RGB values with
-that color name.  The color name can then be used with any other
-dump_modify keyword that takes a color name as a value.  The RGB
-values should each be floating point values between 0.0 and 1.0
-inclusive.
-
-When a color name is converted to RGB values, the user-defined color
-names are searched first, then the 140 pre-defined color names.  This
-means you can also use the {color} keyword to overwrite one of the
-pre-defined color names with new RBG values.
 
 :line
 
@@ -300,8 +127,7 @@ to use in this context.  Other similar math functions could easily be
 added as options for "equal-style variables"_variable.html.  When
 using the variable option with the {every} keyword, you also need to
 use the {first} option if you want an initial snapshot written to the
-dump file.  The {every} keyword cannot be used with the dump {dcd}
-style.
+dump file.
 
 For example, the following commands will
 write snapshots at timesteps 0,10,20,30,100,200,300,1000,2000,etc:
@@ -322,35 +148,20 @@ default, then it will not be written.
 
 :line
 
-The {flush} keyword determines whether a flush operation is invoked
-after a dump snapshot is written to the dump file.  A flush insures
-the output in that file is current (no buffering by the OS), even if
-SPARTA halts before the simulation completes.  Flushes cannot be
-performed with dump style {xtc}.
+The {flush} keyword applies to dump styles that write multiple
+successive snapshots to the same file.  It determines whether a flush
+operation is invoked after a dump snapshot is written to the dump
+file.  A flush insures the output in that file is current (no
+buffering by the OS), even if SPARTA halts before the simulation
+completes.
+
+:line
 
 The text-based dump styles have a default C-style format string which
 simply specifies %d for integers and %g for real values.  The {format}
 keyword can be used to override the default with a new C-style format
 string.  Do not include a trailing "\n" newline character in the
 format string.
-
-:line
-
-The {glinecolor} keyword applies only to the dump {image} style.  It
-sets the color of the grid cell outlines drawn around the grid cells
-in each image.  See the "dump image gline" command for how to specify
-that cell outlines be drawn.  The color name can be any of the 140
-pre-defined colors (see below) or a color name defined by the
-dump_modify color option.
-
-:line
-
-The {slinecolor} keyword applies only to the dump {image} style.  It
-sets the color of the surface element outlines drawn around the
-surface elements in each image.  See the "dump image sline" command
-for how to specify that surface element outlines be drawn.  The color
-name can be any of the 140 pre-defined colors (see below) or a color
-name defined by the dump_modify color option.
 
 :line
 
@@ -389,6 +200,281 @@ coordinates of molecules whose velocity components are above some
 threshold.
 
 :line
+:line
+
+These keywords apply only to the "dump image"_dump_image.html style.
+
+:line
+
+The {acolor} keyword can be used one or more times with the "dump
+image"_dump_image.html command, only when its atom color setting is
+{type} or {procs}, to set the color that molecules will be drawn in
+the image.
+
+If the atom color setting is {type}, then the specified {type} for the
+{acolor} keyword should be an integer from 1 to Ntypes = the number of
+molecule types.  A wildcard asterisk can be used in place of or in
+conjunction with the {type} argument to specify a range of molecule
+types.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
+number of molecule types, then an asterisk with no numeric values
+means all types from 1 to N.  A leading asterisk means all types from
+1 to n (inclusive).  A trailing asterisk means all types from n to N
+(inclusive).  A middle asterisk means all types from m to n
+(inclusive).
+
+If the atom color setting is {proc}, then the specified {type} for the
+{acolor} keyword should be an integer from 1 to Nprocs = the number of
+processors.  A wildcard asterisk can be used in place of or in
+conjunction with the {type} argument to specify a range of processor
+IDs, just as described above for molecule types.  Note that for this
+command, processor IDs range from 1 to Nprocs inclusive, instead of
+the more customary 0 to Nprocs-1.
+
+The specified {color} can be a single color which is any of the 140
+pre-defined colors (see below) or a color name defined by the
+dump_modify color option.  Or it can be two or more colors separated
+by a "/" character, e.g. red/green/blue.  In the former case, that
+color is assigned to all the specified molecule types.  In the latter
+case, the list of colors are assigned in a round-robin fashion to each
+of the specified molecule types.
+
+:line
+
+The {adiam} keyword can be used with the "dump image"_dump_image.html
+command, when its atom diameter setting is {type}, to set the size
+that molecules of each type will be drawn in the image.  The specified
+{type} should be an integer from 1 to Ntypes.  As with the {acolor}
+keyword, a wildcard asterisk can be used as part of the {type}
+argument to specify a range of molecule types.  The specified {diam}
+is the size in whatever distance "units"_units.html the input script
+is using, e.g. Angstroms.
+
+:line
+
+The {backcolor} keyword can be used with the "dump
+image"_dump_image.html command to set the background color of the
+images.  The color name can be any of the 140 pre-defined colors (see
+below) or a color name defined by the dump_modify color option.
+
+:line
+
+The {boxcolor} keyword can be used with the "dump
+image"_dump_image.html command to set the color of the simulation box
+drawn around the molecules in each image.  See the "dump image box"
+command for how to specify that a box be drawn.  The color name can be
+any of the 140 pre-defined colors (see below) or a color name defined
+by the dump_modify color option.
+
+:line
+
+The {cmap} keyword can be used with the "dump image"_dump_image.html
+command to define a color map that is used to draw "objects" which can
+be moleclues, grid cells, or surface elements.  The mode setting must
+be {atom} or {grid} or {surf} or {gridx} or {gridy} or {gridz} which
+correspond to the same keywords in the "dump image"_dump_image.html
+command.
+
+Color maps are used to assign a specific RGB (red/green/blue) color
+value to an individual object when it is drawn, based on the object's
+attribute, which is a numeric value, e.g. the x-component of velocity
+for a molecule, if the molecule-attribute "vx" was specified in the
+"dump image"_dump_image.html command.
+
+The basic idea of a color map is that the attribute will be within a
+range of values, and that range is associated with a a series of
+colors (e.g. red, blue, green).  A specific value (vx = -3.2) can then
+mapped to the series of colors (e.g. halfway between red and blue),
+and a specific color is determined via an interpolation procedure.
+
+There are many possible options for the color map, enabled by the
+{cmap} keyword.  Here are the details.
+
+The {lo} and {hi} settings determine the range of values allowed for
+the attribute.  If numeric values are used for {lo} and/or {hi}, then
+values that are lower/higher than that value are set to the value.
+I.e. the range is static.  If {lo} is specified as {min} or {hi} as
+{max} then the range is dynamic, and the lower and/or upper bound will
+be calculated each time an image is drawn, based on the set of objects
+being visualized.
+
+The {style} setting is two letters, such as "ca".  The first letter is
+either "c" for continuous, "d" for discrete, or "s" for sequential.
+The second letter is either "a" for absolute, or "f" for fractional.
+
+A continuous color map is one in which the color changes continuously
+from value to value within the range.  A discrete color map is one in
+which discrete colors are assigned to sub-ranges of values within the
+range.  A sequential color map is one in which discrete colors are
+assigned to a sequence of sub-ranges of values covering the entire
+range.
+
+An absolute color map is one in which the values to which colors are
+assigned are specified explicitly as values within the range.  A
+fractional color map is one in which the values to which colors are
+assigned are specified as a fractional portion of the range.  For
+example if the range is from -10.0 to 10.0, and the color red is to be
+assigned to objects with a value of 5.0, then for an absolute color
+map the number 5.0 would be used.  But for a fractional map, the
+number 0.75 would be used since 5.0 is 3/4 of the way from -10.0 to
+10.0.
+
+The {delta} setting is only specified if the style is sequential.  It
+specifies the bin size to use within the range for assigning
+consecutive colors to.  For example, if the range is from -10.0 to
+10.0 and a {delta} of 1.0 is used, then 20 colors will be assigned to
+the range.  The first will be from -10.0 <= color1 < -9.0, then 2nd
+from -9.0 <= color2 < -8.0, etc.
+
+The {N} setting is how many entries follow.  The format of the entries
+depends on whether the color map style is continuous, discrete or
+sequential.  In all cases the {color} setting can be any of the 140
+pre-defined colors (see below) or a color name defined by the
+dump_modify color option.
+
+For continuous color maps, each entry has a {value} and a {color}.
+The {value} is either a number within the range of values or {min} or
+{max}.  The {value} of the first entry must be {min} and the {value}
+of the last entry must be {max}.  Any entries in between must have
+increasing values.  Note that numeric values can be specified either
+as absolute numbers or as fractions (0.0 to 1.0) of the range,
+depending on the "a" or "f" in the style setting for the color map.
+
+Here is how the entries are used to determine the color of an
+individual object, given the value X of its attribute.  X will fall
+between 2 of the entry values.  The color of the object is linearly
+interpolated (in each of the RGB values) between the 2 colors
+associated with those entries.  For example, if X = -5.0 and the 2
+surrounding entries are "red" at -10.0 and "blue" at 0.0, then the
+object's color will be halfway between "red" and "blue", which happens
+to be "purple".
+
+For discrete color maps, each entry has a {lo} and {hi} value and a
+{color}.  The {lo} and {hi} settings are either numbers within the
+range of values or {lo} can be {min} or {hi} can be {max}.  The {lo}
+and {hi} settings of the last entry must be {min} and {max}.  Other
+entries can have any {lo} and {hi} values and the sub-ranges of
+different values can overlap.  Note that numeric {lo} and {hi} values
+can be specified either as absolute numbers or as fractions (0.0 to
+1.0) of the range, depending on the "a" or "f" in the style setting
+for the color map.
+
+Here is how the entries are used to determine the color of an
+individual object, given the value X of its attribute.  The entries
+are scanned from first to last.  The first time that {lo} <= X <=
+{hi}, X is assigned the color associated with that entry.  You can
+think of the last entry as assigning a default color (since it will
+always be matched by X), and the earlier entries as colors that
+override the default.  Also note that no interpolation of a color RGB
+is done.  All objects will be drawn with one of the colors in the list
+of entries.
+
+For sequential color maps, each entry has only a {color}.  Here is how
+the entries are used to determine the color of an individual object,
+given the value X of its attribute.  The range is partitioned into N
+bins of width {binsize}.  Thus X will fall in a specific bin from 1 to
+N, say the Mth bin.  If it falls on a boundary between 2 bins, it is
+considered to be in the higher of the 2 bins.  Each bin is assigned a
+color from the E entries.  If E < N, then the colors are repeated.
+For example if 2 entries with colors red and green are specified, then
+the odd numbered bins will be red and the even bins green.  The color
+of the object is the color of its bin.  Note that the sequential
+color map is really a shorthand way of defining a discrete color map
+without having to specify where all the bin boundaries are.
+
+:line
+
+The {color} keyword can be used with the "dump image"_dump_image.html
+command to define a new color name, in addition to the 140-predefined
+colors (see below), and associates 3 red/green/blue RGB values with
+that color name.  The color name can then be used with any other
+dump_modify keyword that takes a color name as a value.  The RGB
+values should each be floating point values between 0.0 and 1.0
+inclusive.
+
+When a color name is converted to RGB values, the user-defined color
+names are searched first, then the 140 pre-defined color names.  This
+means you can also use the {color} keyword to overwrite one of the
+pre-defined color names with new RBG values.
+
+:line
+
+The {gcolor} keyword can be used one or more times with the "dump
+image"_dump_image.html command, only when its grid color setting is
+{proc}, to set the color that grid cells will be drawn in the image.
+
+The {proc} setting should be an integer from 1 to Nprocs = the number
+of processors.  A wildcard asterisk can be used in place of or in
+conjunction with the {proc} argument to specify a range of processor
+IDs.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
+number of processors, then an asterisk with no numeric values means
+all procs from 1 to N.  A leading asterisk means all procs from 1 to n
+(inclusive).  A trailing asterisk means all procs from n to N
+(inclusive).  A middle asterisk means all procs from m to n
+(inclusive).  Note that for this command, processor IDs range from 1
+to Nprocs inclusive, instead of the more customary 0 to Nprocs-1.
+
+The specified {color} can be a single color which is any of the 140
+pre-defined colors (see below) or a color name defined by the
+dump_modify color option.  Or it can be two or more colors separated
+by a "/" character, e.g. red/green/blue.  In the former case, that
+color is assigned to all the specified processors.  In the latter
+case, the list of colors are assigned in a round-robin fashion to each
+of the specified processors.
+
+:line
+
+The {glinecolor} keyword can be used with the "dump
+image"_dump_image.html command to set the color of the grid cell
+outlines drawn around the grid cells in each image.  See the "dump
+image gline" command for how to specify that cell outlines be drawn.
+The color name can be any of the 140 pre-defined colors (see below) or
+a color name defined by the dump_modify color option.
+
+:line
+
+The {scolor} keyword can be used one or more times with the "dump
+image"_dump_image.html command, only when its surface element color
+setting is {one} or {proc}, to set the color that surface elements
+will be drawn in the image.
+
+When the surf color is {one}, the {proc} setting for this command
+is ignored.
+
+When the surf color is {proc}, the {proc} setting for this command
+should be an integer from 1 to Nprocs = the number of processors.  A
+wildcard asterisk can be used in place of or in conjunction with the
+{proc} argument to specify a range of processor IDs.  This takes the
+form "*" or "*n" or "n*" or "m*n".  If N = the number of processors,
+then an asterisk with no numeric values means all procs from 1 to N.
+A leading asterisk means all procs from 1 to n (inclusive).  A
+trailing asterisk means all procs from n to N (inclusive).  A middle
+asterisk means all procs from m to n (inclusive).  Note that for this
+command, processor IDs range from 1 to Nprocs inclusive, instead of
+the more customary 0 to Nprocs-1.
+
+When the surf color is {one}, the specified {color} setting for
+this command must be a single color which is any of the 140
+pre-defined colors (see below) or a color name defined by the
+dump_modify color option.  
+
+When the surf color is {proc}, the {color} setting for this command
+can be one or more colors separated by a "/" character,
+e.g. red/green/blue.  For a single color, that color is assigned to
+all the specified processors.  For two or more colors, the list of
+colors are assigned in a round-robin fashion to each of the specified
+processors.
+
+:line
+
+The {slinecolor} keyword can be used with the "dump
+image"_dump_image.html command to set the color of the surface element
+outlines drawn around the surface elements in each image.  See the
+"dump image sline" command for how to specify that surface element
+outlines be drawn.  The color name can be any of the 140 pre-defined
+colors (see below) or a color name defined by the dump_modify color
+option.
+
+:line
 
 [Restrictions:] none
 
@@ -404,17 +490,20 @@ acolor = * red/green/blue/yellow/aqua/cyan
 adiam = * 1.0
 amap = min max cf 0.0 2 min blue max red
 append = no
-bcolor = * red/green/blue/yellow/aqua/cyan
-bdiam = * 0.5
 backcolor = black
 boxcolor = yellow
+cmap = mode min max cf 0.0 2 min blue max red, for all modes
 color = 140 color names are pre-defined as listed below
 every = whatever it was set to via the "dump"_dump.html command
 first = no
 flush = yes
 format = %d and %g for each integer or floating point value
+gcolor = * red/green/blue/yellow/aqua/cyan
+glinecolor = white
 pad = 0
 region = none
+scolor = * gray
+slinecolor = white
 thresh = none :ul
 
 :line
