@@ -10,22 +10,27 @@ create_molecules command :h3
 
 [Syntax:]
 
-create_molecules mix-ID keyword value ... :pre
+create_molecules mix-ID style args keyword value ... :pre
 
 mix-ID = ID of mixture to use when creating molecules :ulb,l
-zero or more keyword/value pairs may be appended :l
-keyword = {n} or {single} :l
-  {n} value = Np = number of molecules to create
-  {single} values = species-ID x y z vx vy vz
+style = {n} or {single} :l
+  {n} args = Np
+    Np = 0 or number of molecules to create
+  {single} args = species-ID x y z vx vy vz
     species-ID = ID of species of single molecule
     x,y,z = position of molecule (distance units)
     vx,vy,vz = velocity of molecule (velocity units) :pre
+
+zero or more keyword/value pairs may be appended :l
+keyword = {global} :l
+  {global} value = {yes} or {no} :pre
 :ule
 
 [Examples:]
 
 create_molecules background
 create_molecules air n 100000
+create_molecules air n 100000 global yes
 create_molecules air single N 5 5 5 10 -1 0 :pre
 
 [Description:]
@@ -36,17 +41,16 @@ species and velocity, are determined by the mixture attributes, as
 specied by the {mix-ID}.  See the "mixture"_mixture.html command for
 more details.
 
-If the {n} keyword is used with a {Np} value of 0, then {Np} is
-calculated by SPARTA as a function of the global {Fnum} value, the
-mixture number density, and the volume of the simulation domain.  The
-{Fnum} value is set by the "global fnum"_global.html command.  The
-mixture {nrho} is set by the "mixture"_mixture.html command.  The
-volume of the simulation is set by the "create_box"_create_box.html
-command.
+If the {n} style is used with {Np} = 0, then {Np} is calculated by
+SPARTA as a function of the global {Fnum} value, the mixture number
+density, and the volume of the simulation domain.  The {Fnum} value is
+set by the "global fnum"_global.html command.  The mixture {nrho} is
+set by the "mixture"_mixture.html command.  The volume of the
+simulation is set by the "create_box"_create_box.html command.
 
-If the {n} keyword is used with a non-zero {Np} value, then exactly
-{Np} particles will be created, which can be useful for debugging
-or benchmarking purposes.
+If the {n} style is used with a non-zero {Np}, then the {Fnum} and
+{nrho} settings are ignored, and exactly {Np} particles will be
+created, which can be useful for debugging or benchmarking purposes.
 
 Based on the value of {Np}, each grid cell will have a target number
 of molecules {M} to insert, which is a function of the cell's volume
@@ -65,38 +69,30 @@ velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
 "mixture"_mixture.html command.
 
-The {n} keyword can be useful for debugging purposes.  If {Np} is set
-to 0, then the count of created particles is a function of the {Fnum}
-and {nrho} and other mixture settings, as described above.  If {Np} is
-set to a value > 0, then the {Fnum} and {nrho} settings are ignored,
-and {Np} molecules are created.  The assignment of species and
-velocity to each molecules is done the same as described above.
-
-The {single} keyword can also be useful for debugging purposes,
-e.g. to advect a single particle towards a surface.  A single particle
-of the specified species is inserted at the specified position and
-with the specified velocity.  In this case the {mix-ID} is ignored.
+The {single} style can also be useful for debugging purposes, e.g. to
+advect a single particle towards a surface.  A single particle of the
+specified species is inserted at the specified position and with the
+specified velocity.  In this case the {mix-ID} is ignored.
 
 :line
 
-NOTE: the {loop} keyword, discussed here, is not yet implemented.
-
-The {loop} keyword only applies when the {n} keyword is also used, and
+The {global} keyword only applies when the {n} style is used, and
 controls how the molecules are generated in parallel.
 
-If the setting is {all}, then every processor loops over all {N}
+If the value is {yes}, then every processor loops over all {Np}
 molecules.  As the coordinates of each is created, each processor
 checks what grid cell it is in, and only stores the molecule if it
 owns that grid cell.  Thus an identical set of molecules are created,
 no matter how many processors are running the simulation
 
-If the setting is {local}, then each of the {P} processors generates a
+If the value is {no}, then each of the {P} processors generates a
 {N/P} subset of molecules, using its own random number generation.  It
-only adds molecules to grid cells that it owns.  This is a faster way
-to generate a large number of molecules, but means that the individual
-attributes of molecules will depend on the number of processors and
-the mapping of grid cells to procesors.  Statistically, the overall
-set of created molecules should be the same as with the {all} setting.
+only adds molecules to grid cells that it owns, as described above.
+This is a faster way to generate a large number of molecules, but
+means that the individual attributes of molecules will depend on the
+number of processors and the mapping of grid cells to procesors.
+Statistically, the overall set of created molecules should be the same
+as with the {yes} setting.
 
 :line
 
@@ -115,4 +111,4 @@ insertion.
 
 [Default:]
 
-The keyword default is n = 0.
+The option default is global = no.

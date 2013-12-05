@@ -265,7 +265,7 @@ in the command's documentation.
 "shell"_shell.html,
 "species"_species.html,
 "stats"_stats.html,
-"stats_modify"_modify.html,
+"stats_modify"_stats_modify.html,
 "stats_style"_stats_style.html,
 "surf_collide"_surf_collide.html,
 "timestep"_timestep.html,
