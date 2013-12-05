@@ -136,14 +136,6 @@ class Cut3d : protected Pointers {
 
   void print_bpg(const char *);
   void print_loops();
-
-  // old methods, delete at some point
-
-  //int tri_hex_intersect(double *, double *, double *, double *);
-  //int line_tri_intersect(double *, double *, double *, double *, double *);
-  //int whichside(double *, double *, double, double, double);
-  //int tetvol(double *, double *, double *, double *);
-  //double det3(double *, double *, double *);
 };
 
 }
