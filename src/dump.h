@@ -35,6 +35,7 @@ class Dump : protected Pointers {
   virtual ~Dump();
   void init();
   virtual void write();
+  virtual void reset_grid() {}
   void modify_params(int, char **);
   virtual bigint memory_usage();
 
@@ -68,7 +69,7 @@ class Dump : protected Pointers {
   bigint ntotal;             // # of per-atom lines in snapshot
 
   int maxbuf;                // size of buf
-  double *buf;               // memory for atom quantities
+  double *buf;               // memory for dumped quantities
 
   virtual void init_style() = 0;
   virtual void openfile();

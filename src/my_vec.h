@@ -27,8 +27,9 @@ methods:
   vec[i] = inlined access to vector element for read/write
   void grow(int nnew) = resize vector to length nnew if needed
 public variables:
-  n = current # of values in vector, set by caller
+  n = current # of values in vector, set and reset by caller
 ------------------------------------------------------------------------- */
+
 
 #ifndef SPARTA_MYVEC_H
 #define SPARTA_MYVEC_H

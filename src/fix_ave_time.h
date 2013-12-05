@@ -40,7 +40,7 @@ class FixAveTime : public Fix {
 
  private:
   int me,nvalues,maxvalues;
-  int nevery,nrepeat,nfreq,irepeat;
+  int nrepeat,nfreq,irepeat;
   bigint nvalid;
   int *which,*argindex,*value2index,*offcol;
   char **ids;

@@ -172,8 +172,8 @@ void Mixture::init()
     else fraction[i] = (1.0-sum) / nimplicit;
     if (i) cummulative[i] = cummulative[i-1] + fraction[i];
     else cummulative[i] = fraction[i];
-  }  
-  cummulative[nspecies-1] = 1.0;
+  }
+  if (nspecies) cummulative[nspecies-1] = 1.0;
 
   // vscale = factor to scale Gaussian unit variance by
   //          to get thermal distribution of velocities

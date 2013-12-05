@@ -26,6 +26,7 @@
 #include "grid.h"
 #include "surf.h"
 #include "collide.h"
+#include "react.h"
 #include "output.h"
 #include "timer.h"
 #include "memory.h"
@@ -410,6 +411,7 @@ void SPARTA::create()
   grid = new Grid(this);
   surf = new Surf(this);
   collide = NULL;
+  react = NULL;
   modify = new Modify(this);
   output = new Output(this);
   timer = new Timer(this);
@@ -428,8 +430,9 @@ void SPARTA::init()
   grid->init();
   surf->init();
   if (collide) collide->init();
+  if (react) react->init();
   modify->init();              // after grid, so that csurfs/cflags is set
-                               // after grid, so mixture is init
+                               // after particle, so mixture is init
   output->init();
   timer->init();
 }
@@ -448,6 +451,7 @@ void SPARTA::destroy()
   delete grid;
   delete surf;
   delete collide;
+  delete react;
   delete modify;
   delete output;
   delete timer;
@@ -466,6 +470,13 @@ void SPARTA::print_styles()
 #define CollideStyle(key,Class) printf(" %s",#key);
 #include "style_collide.h"
 #undef COLLIDE_CLASS
+  printf("\n");
+
+  printf("React styles:");
+#define REACT_CLASS
+#define ReactStyle(key,Class) printf(" %s",#key);
+#include "style_react.h"
+#undef REACT_CLASS
   printf("\n");
 
   printf("Compute styles:");

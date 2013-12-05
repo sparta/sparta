@@ -18,6 +18,7 @@
 #include "dump_molecule.h"
 #include "update.h"
 #include "domain.h"
+#include "region.h"
 #include "particle.h"
 #include "modify.h"
 #include "compute.h"
@@ -31,7 +32,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,TYPE,X,Y,Z,XS,YS,ZS,VX,VY,VZ,
+enum{ID,TYPE,PROC,X,Y,Z,XS,YS,ZS,VX,VY,VZ,
      COMPUTE,FIX,VARIABLE};
 enum{LT,LE,GT,GE,EQ,NEQ};
 enum{INT,DOUBLE,STRING};
@@ -57,6 +58,8 @@ DumpMolecule::DumpMolecule(SPARTA *sparta, int narg, char **arg) :
   pack_choice = new FnPtrPack[nfield];
   vtype = new int[nfield];
 
+  iregion = -1;
+  idregion = NULL;
   nthresh = 0;
   thresh_array = NULL;
   thresh_op = NULL;
@@ -136,6 +139,7 @@ DumpMolecule::~DumpMolecule()
   memory->destroy(field2index);
   memory->destroy(argindex);
 
+  delete [] idregion;
   memory->destroy(thresh_array);
   memory->destroy(thresh_op);
   memory->destroy(thresh_value);
@@ -246,6 +250,14 @@ void DumpMolecule::init_style()
     variable[i] = ivariable;
   }
 
+  // set index and check validity of region
+
+  if (iregion >= 0) {
+    iregion = domain->find_region(idregion);
+    if (iregion == -1)
+      error->all(FLERR,"Region ID for dump custom does not exist");
+  }
+
   // open single file, one time only
 
   if (multifile == 0) openfile();
@@ -339,6 +351,16 @@ int DumpMolecule::count()
 
   for (i = 0; i < nlocal; i++) choose[i] = 1;
 
+  // un-choose if not in region
+
+  if (iregion >= 0) {
+    Region *region = domain->regions[iregion];
+    Particle::OnePart *particles = particle->particles;
+    int nlocal = particle->nlocal;
+    for (i = 0; i < nlocal; i++)
+      if (choose[i] && !region->match(particles[i].x)) choose[i] = 0;
+  }
+
   // un-choose if any threshhold criterion isn't met
 
   if (nthresh) {
@@ -359,6 +381,10 @@ int DumpMolecule::count()
 	nstride = 1;
       } else if (thresh_array[ithresh] == TYPE) {
 	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].ispecies + 1;
+	ptr = dchoose;
+	nstride = 1;
+      } else if (thresh_array[ithresh] == PROC) {
+	for (i = 0; i < nlocal; i++) dchoose[i] = me;
 	ptr = dchoose;
 	nstride = 1;
 
@@ -530,6 +556,9 @@ int DumpMolecule::parse_fields(int narg, char **arg)
       vtype[i] = INT;
     } else if (strcmp(arg[iarg],"type") == 0) {
       pack_choice[i] = &DumpMolecule::pack_type;
+      vtype[i] = INT;
+    } else if (strcmp(arg[iarg],"proc") == 0) {
+      pack_choice[i] = &DumpMolecule::pack_proc;
       vtype[i] = INT;
 
     } else if (strcmp(arg[iarg],"x") == 0) {
@@ -748,6 +777,20 @@ int DumpMolecule::add_variable(char *id)
 
 int DumpMolecule::modify_param(int narg, char **arg)
 {
+  if (strcmp(arg[0],"region") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (strcmp(arg[1],"none") == 0) iregion = -1;
+    else {
+      iregion = domain->find_region(arg[1]);
+      if (iregion == -1)
+        error->all(FLERR,"Dump_modify region ID does not exist");
+      int n = strlen(arg[1]) + 1;
+      idregion = new char[n];
+      strcpy(idregion,arg[1]);
+    }
+    return 2;
+  }
+
   if (strcmp(arg[0],"thresh") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
     if (strcmp(arg[1],"none") == 0) {
@@ -776,6 +819,7 @@ int DumpMolecule::modify_param(int narg, char **arg)
     
     if (strcmp(arg[1],"id") == 0) thresh_array[nthresh] = ID;
     else if (strcmp(arg[1],"type") == 0) thresh_array[nthresh] = TYPE;
+    else if (strcmp(arg[1],"proc") == 0) thresh_array[nthresh] = PROC;
 
     else if (strcmp(arg[1],"x") == 0) thresh_array[nthresh] = X;
     else if (strcmp(arg[1],"y") == 0) thresh_array[nthresh] = Y;
@@ -1012,6 +1056,16 @@ void DumpMolecule::pack_type(int n)
 
   for (int i = 0; i < nchoose; i++) {
     buf[n] = particles[clist[i]].ispecies + 1;
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpMolecule::pack_proc(int n)
+{
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = me;
     n += size_one;
   }
 }

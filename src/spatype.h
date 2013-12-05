@@ -16,9 +16,11 @@
 
 // smallint = variables for on-procesor system (nlocal, nmax, etc)
 // bigint = variables for total system (natoms, ntimestep, etc)
+// cellint = variables for cell IDs
 
 // smallint must be an int, as defined by C compiler
 // bigint can be 32-bit or 64-bit int, must be >= smallint
+// cellint can be 32-bit or 64-bit int
 
 // MPI_SPARTA_BIGINT = MPI data type corresponding to a bigint
 
@@ -40,9 +42,9 @@
 
 namespace SPARTA_NS {
 
-// default to 32-bit smallint, 64-bit bigint
+// default settings: 32-bit smallint, 64-bit bigint, 32-bit cellint
 
-#if !defined(SPARTA_SMALL)
+#if !defined(SPARTA_SMALL) && !defined(SPARTA_BIG) && !defined(SPARTA_BIGBIG)
 #define SPARTA_BIG
 #endif
 
@@ -56,35 +58,60 @@ namespace SPARTA_NS {
 #define ATOLL atol
 #endif
 
-// for problems that exceed 2 billion (2^31) particles
-// 32-bit smallint, 64-bit bigint
+// for problems with more than 2B grid cells
+// 32-bit smallint, 64-bit bigint, 64-bit cellint
 
-#ifdef SPARTA_BIG
+#ifdef SPARTA_BIGBIG
 
 typedef int smallint;
 typedef int64_t bigint;
+typedef int64_t cellint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT64_MAX
 #define MPI_SPARTA_BIGINT MPI_LL
 #define BIGINT_FORMAT "%" PRId64
+#define CELLINT_FORMAT "%" PRId64
 #define ATOBIGINT ATOLL
+#define ATOCELLINT ATOLL
+
+#endif
+
+// default, sufficient for problems with up to 2B grid cells
+// 32-bit smallint, 64-bit bigint, 32-bit cellint
+
+#ifdef SPARTA_BIG
+
+typedef int smallint;
+typedef int64_t bigint;
+typedef int cellint;
+
+#define MAXSMALLINT INT_MAX
+#define MAXBIGINT INT64_MAX
+#define MPI_SPARTA_BIGINT MPI_LL
+#define BIGINT_FORMAT "%" PRId64
+#define CELLINT_FORMAT "%d"
+#define ATOBIGINT ATOLL
+#define ATOCELLINT atoi
 
 #endif
 
 // for machines that do not support 64-bit ints
-// 32-bit smallint and bigint
+// 32-bit smallint and bigint and cellint
 
 #ifdef SPARTA_SMALL
 
 typedef int smallint;
 typedef int bigint;
+typedef int cellint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT_MAX
 #define MPI_LMP_BIGINT MPI_INT
 #define BIGINT_FORMAT "%d"
+#define CELLINT_FORMAT "%d"
 #define ATOBIGINT atoi
+#define ATOCELLINT atoi
 
 #endif
 

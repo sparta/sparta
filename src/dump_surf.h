@@ -30,7 +30,7 @@ class DumpSurf : public Dump {
   DumpSurf(class SPARTA *, int, char **);
   ~DumpSurf();
 
- protected:
+ private:
   int nevery;                // dump frequency to check Fix against
 
   int *vtype;                // type of each vector (INT, DOUBLE)
@@ -64,11 +64,11 @@ class DumpSurf : public Dump {
 
   // private methods
 
-  virtual void init_style();
-  virtual void write_header(bigint);
+  void init_style();
+  void write_header(bigint);
   int count();
   void pack();
-  virtual void write_data(int, double *);
+  void write_data(int, double *);
 
   int parse_fields(int, char **);
   int add_compute(char *);

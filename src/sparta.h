@@ -37,6 +37,7 @@ class SPARTA {
   class Grid *grid;              // volumetric grid cells
   class Surf *surf;              // surface elements
   class Collide *collide;        // collisions and chemistry
+  class React *react;            // chemistry reactions
   class Output *output;          // stats/dump/restart
   class Timer *timer;            // CPU timing info
 

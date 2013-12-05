@@ -44,6 +44,8 @@ if (test $1 = "style") then
   style COMPUTE_CLASS   compute_    compute    modify
   style DUMP_CLASS      dump_       dump       output
   style FIX_CLASS       fix_        fix        modify
+  style REACT_CLASS     react_      react      input
+  style REGION_CLASS    region_     region     domain
   style SURF_COLLIDE_CLASS surf_collide_ surf_collide surf
 
 # edit Makefile.lib

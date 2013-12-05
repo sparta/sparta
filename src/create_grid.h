@@ -29,6 +29,9 @@ class CreateGrid : protected Pointers {
  public:
   CreateGrid(class SPARTA *);
   void command(int, char **);
+
+ private:
+  void bounds(char *, int, int &, int &);
 };
 
 }

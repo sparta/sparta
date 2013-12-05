@@ -110,12 +110,14 @@ void Finish::end()
 		  MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
 
-  double pms,pmsp,ctps,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
-  pms = pmsp = ctps = pfc = pfcwb = pfeb = schps = sclps = caps = cps = 0.0;
+  double pms,pmsp,ctps,cis,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
+  pms = pmsp = ctps = cis = pfc = pfcwb = pfeb = 
+    schps = sclps = caps = cps = 0.0;
   if (update->nsteps) pms = 1.0*nmove_total/update->nsteps;
   if (nmove_total) {
     pmsp = 1.0*nmove_total/time_loop/nprocs;
     ctps = 1.0*ntouch_total/nmove_total;
+    cis = 1.0*update->niterate_running/update->nsteps;
     pfc = 1.0*ncomm_total/nmove_total;
     pfcwb = 1.0*nboundary_total/nmove_total;
     pfeb = 1.0*nexit_total/nmove_total;
@@ -152,6 +154,7 @@ void Finish::end()
       fprintf(screen,"Particle-moves/CPUsec/proc: %g\n",pmsp);
       fprintf(screen,"Particle-moves/step: %g\n",pms);
       fprintf(screen,"Cell-touches/particle/step: %g\n",ctps);
+      fprintf(screen,"Particle comm iterations/step: %g\n",cis);
       fprintf(screen,"Particle fraction communicated: %g\n",pfc);
       fprintf(screen,"Particle fraction colliding with boundary: %g\n",pfcwb);
       fprintf(screen,"Particle fraction exiting boundary: %g\n",pfeb);
@@ -184,6 +187,7 @@ void Finish::end()
       fprintf(logfile,"Particle-moves/CPUsec/proc: %g\n",pmsp);
       fprintf(logfile,"Particle-moves/step: %g\n",pms);
       fprintf(logfile,"Cell-touches/particle/step: %g\n",ctps);
+      fprintf(logfile,"Particle comm iterations/step: %g\n",cis);
       fprintf(logfile,"Particle fraction communicated: %g\n",pfc);
       fprintf(logfile,"Particle fraction colliding with boundary: %g\n",pfcwb);
       fprintf(logfile,"Particle fraction exiting boundary: %g\n",pfeb);
@@ -300,7 +304,7 @@ void Finish::end()
       }
     }
 
-    tmp = grid->nparent;
+    tmp = grid->nlocal;
     stats(1,&tmp,&ave,&max,&min,10,histo);
     if (me == 0) {
       if (screen) {
@@ -311,6 +315,40 @@ void Finish::end()
       }
       if (logfile) {
 	fprintf(logfile,"Cells:      %g ave %g max %g min\n",ave,max,min);
+	fprintf(logfile,"Histogram:");
+	for (i = 0; i < 10; i++) fprintf(logfile," %d",histo[i]);
+	fprintf(logfile,"\n");
+      }
+    }
+
+    tmp = grid->nghost;
+    stats(1,&tmp,&ave,&max,&min,10,histo);
+    if (me == 0) {
+      if (screen) {
+	fprintf(screen,"GhostCell: %g ave %g max %g min\n",ave,max,min);
+	fprintf(screen,"Histogram:");
+	for (i = 0; i < 10; i++) fprintf(screen," %d",histo[i]);
+	fprintf(screen,"\n");
+      }
+      if (logfile) {
+	fprintf(logfile,"GhostCell: %g ave %g max %g min\n",ave,max,min);
+	fprintf(logfile,"Histogram:");
+	for (i = 0; i < 10; i++) fprintf(logfile," %d",histo[i]);
+	fprintf(logfile,"\n");
+      }
+    }
+
+    tmp = grid->nempty;
+    stats(1,&tmp,&ave,&max,&min,10,histo);
+    if (me == 0) {
+      if (screen) {
+	fprintf(screen,"EmptyCell: %g ave %g max %g min\n",ave,max,min);
+	fprintf(screen,"Histogram:");
+	for (i = 0; i < 10; i++) fprintf(screen," %d",histo[i]);
+	fprintf(screen,"\n");
+      }
+      if (logfile) {
+	fprintf(logfile,"EmptyCell: %g ave %g max %g min\n",ave,max,min);
 	fprintf(logfile,"Histogram:");
 	for (i = 0; i < 10; i++) fprintf(logfile," %d",histo[i]);
 	fprintf(logfile,"\n");

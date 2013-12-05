@@ -14,943 +14,684 @@
 
 #include "math.h"
 #include "cut2d.h"
-#include "domain.h"
-#include "grid.h"
 #include "surf.h"
-#include "comm.h"
-#include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
-enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};   // same as Grid
-enum{CORNERUNKNOWN,CORNEROUTSIDE,CORNERINSIDE,CORNEROVERLAP};  // same as Grid
+enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};     // several files
+enum{EXTERIOR,INTERIOR,BORDER,INTBORD};
+enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
-enum{POINTINSIDE,POINTBORDER,POINTOUTSIDE};
-enum{LOOPINSIDE,LOOPBORDER};
-
-enum{INSIDE,OUTSIDE};
-enum{ASCEND,DESCEND};
-
-#define ENTRY -1
-#define EXIT 1
 #define EPSILON 1.0e-6
 #define TOLERANCE 1.0e-10
 
-#define VERBOSE 0
+//#define VERBOSE
+#define VERBOSE_ID 23506
 
 /* ---------------------------------------------------------------------- */
 
 Cut2d::Cut2d(SPARTA *sparta) : Pointers(sparta) {}
 
-/* ---------------------------------------------------------------------- */
-
-Cut2d::~Cut2d() {}
-
 /* ----------------------------------------------------------------------
-   compute intersections of surfs with grid cells
-   for now, each proc computes for all cells
-   done via 2 loops, one to count intersections, one to populate csurfs
-   sets nsurf,csurfs for every grid cell with indices into global surf list
-   also allocates csplits for every grid cell
+   compute intersections of a grid cell with all surfs
+   csurfs = indices into global surf list
+   return nsurf = # of surfs
+   return -1 if nsurf > max
 ------------------------------------------------------------------------- */
 
-void Cut2d::surf2grid()
+int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller, 
+                     int *surfs_caller, int max)
 {
-  int i,j,k,m,icell;
-  int ilo,ihi,jlo,jhi,klo,khi;
-  double lo[3],hi[3];
-  double *x1,*x2,*x3;
-
-  Grid::OneCell *cells = grid->cells;
-  int ncell = grid->ncell;
-  int nx = grid->nx;
-  int ny = grid->ny;
-  double xdeltainv = grid->xdeltainv;
-  double ydeltainv = grid->ydeltainv;
-
-  // epsilon = EPSILON fraction of largest box length
-
-  double bmax = MAX(domain->xprd,domain->yprd);
-  double epsilon = EPSILON * bmax;
-
-  // count[M] = # of surfs overlapping grid cell M
-
-  int *count;
-  memory->create(count,ncell,"grid:count");
-  for (m = 0; m < ncell; m++) count[m] = 0;
-
-  // tally count by double loop over surfs and grid cells within surf bbox
-  // lo/hi = bounding box around surf
-  // ijk lo/hi = grid index bounding box around surf
-  // add epsilon to insure surf is counted in any cell it touches
-  // icell = index of a grid cell within bounding box
-  // NOTE: this logic is specific to regular Nx by Ny by Nz grid
+  id = id_caller;
+  lo = lo_caller;
+  hi = hi_caller;
+  surfs = surfs_caller;
 
   Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
-  double xlo = domain->boxlo[0];
-  double ylo = domain->boxlo[0];
+  int nline = surf->nline;
 
-  int nsurf = surf->nline;
+  double *x1,*x2;
 
-  for (m = 0; m < nsurf; m++) {
+  nsurf = 0;
+  for (int m = 0; m < nline; m++) {
     x1 = pts[lines[m].p1].x;
     x2 = pts[lines[m].p2].x;
 
-    lo[0] = MIN(x1[0],x2[0]);
-    hi[0] = MAX(x1[0],x2[0]);
+    if (MAX(x1[0],x2[0]) < lo[0]) continue;
+    if (MIN(x1[0],x2[0]) > hi[0]) continue;
+    if (MAX(x1[1],x2[1]) < lo[1]) continue;
+    if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
-    lo[1] = MIN(x1[1],x2[1]);
-    hi[1] = MAX(x1[1],x2[1]);
-
-    ilo = MAX(0,static_cast<int> ((lo[0]-xlo-epsilon)*xdeltainv));
-    ihi = MIN(nx-1,static_cast<int> ((hi[0]-xlo+epsilon)*xdeltainv));
-    jlo = MAX(0,static_cast<int> ((lo[1]-ylo-epsilon)*ydeltainv));
-    jhi = MIN(ny-1,static_cast<int> ((hi[1]-ylo+epsilon)*ydeltainv));
-
-    for (i = ilo; i <= ihi; i++)
-      for (j = jlo; j <= jhi; j++) {
-        icell = j*nx + i;
-        if (cliptest(x1,x2,cells[icell].lo,cells[icell].hi))
-          count[icell]++;
-      }
+    if (cliptest(x1,x2)) {
+      if (nsurf == max) return -1;
+      surfs[nsurf++] = m;
+    }
   }
 
-  // allocate ragged csurfs and csplits array
-  // csurfs[I][J] = index of Jth surf in global cell I
-  // csplits will be setup in split()
+  return nsurf;
+}
 
-  memory->destroy(grid->csurfs);
-  memory->destroy(grid->csplits);
-  memory->create_ragged(grid->csurfs,ncell,count,"grid:csurfs");
-  memory->create_ragged(grid->csplits,ncell,count,"grid:csplits");
+/* ----------------------------------------------------------------------
+   calculate cut area of a grid cell that contains nsurf lines
+   also calculate if cell is split into distinct sub-areas by lines
+   return nsplit = # of splits, 1 for no split
+   return areas = ptr to vector of areas = one area per split
+     if nsplit = 1, cut area
+     if nsplit > 1, one area per split cell
+   if nsplit > 1, also return:
+     surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
+             = -1 if not in any sub-cell (i.e. discarded from clines)
+     xsub = which sub-cell (0 to Nsplit-1) xsplit is in
+     xsplit = coords of a point in the split cell
+------------------------------------------------------------------------- */
 
-  // NOTE: this logic is specific to regular Nx by Ny by Nz grid
-  // populate csurfs with same double loop
+int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller, 
+                 int nsurf_caller, int *surfs_caller,
+                 double *&areas_caller, int *surfmap, 
+                 int *corners, int &xsub, double *xsplit)
+{
+  id = id_caller;
+  lo = lo_caller;
+  hi = hi_caller;
+  nsurf = nsurf_caller;
+  surfs = surfs_caller;
 
-  int **csurfs = grid->csurfs;
-  for (m = 0; m < ncell; m++) count[m] = 0;
+  int grazeflag = build_clines();
+
+  if (clines.n == 0) {
+    areas.grow(1);
+    areas[0] = 0.0;
+    if (grazeflag) corners[0] = corners[1] = corners[2] = corners[3] = INSIDE;
+    areas_caller = &areas[0];
+    return 1;
+  }
+
+  weiler_build();
+  weiler_loops();
+  loop2pg();
   
-  for (m = 0; m < nsurf; m++) {
-    x1 = pts[lines[m].p1].x;
-    x2 = pts[lines[m].p2].x;
+  int nsplit = pgs.n;
+  if (nsplit > 1) {
+    create_surfmap(surfmap);
+    xsub = split_point(surfmap,xsplit);
+  }
+  
+  // set corners = OUTSIDE if corner pt is in list of points in PGs
+  // else set corners = INSIDE
 
-    lo[0] = MIN(x1[0],x2[0]);
-    hi[0] = MAX(x1[0],x2[0]);
+  corners[0] = corners[1] = corners[2] = corners[3] = INSIDE;
 
-    lo[1] = MIN(x1[1],x2[1]);
-    hi[1] = MAX(x1[1],x2[1]);
+  int iloop,nloop,mloop,ipt,npt,mpt;
 
-    ilo = MAX(0,static_cast<int> ((lo[0]-xlo-epsilon)*xdeltainv));
-    ihi = MIN(nx-1,static_cast<int> ((hi[0]-xlo+epsilon)*xdeltainv));
-    jlo = MAX(0,static_cast<int> ((lo[1]-ylo-epsilon)*ydeltainv));
-    jhi = MIN(ny-1,static_cast<int> ((hi[1]-ylo+epsilon)*ydeltainv));
-
-    for (i = ilo; i <= ihi; i++)
-      for (j = jlo; j <= jhi; j++) {
-        icell = j*nx + i;
-        if (cliptest(x1,x2,cells[icell].lo,cells[icell].hi))
-          csurfs[icell][count[icell]++] = m;
+  int npg = pgs.n;
+  for (int ipg = 0; ipg < npg; ipg++) {
+    nloop = pgs[ipg].n;
+    mloop = pgs[ipg].first;
+    for (iloop = 0; iloop < nloop; iloop++) {
+      npt = loops[mloop].n;
+      mpt = loops[mloop].first;
+      for (ipt = 0; ipt < npt; ipt++) {
+        if (points[mpt].corner >= 0)
+          corners[points[mpt].corner] = OUTSIDE;
+        mpt = points[mpt].next;
       }
+      mloop = loops[mloop].next;
+    }
   }
 
-  // set per-cell surf count
+  // store areas in vector so can return ptr to it
 
-  for (icell = 0; icell < ncell; icell++)
-    cells[icell].nsurf = count[icell];
+  areas.grow(nsplit);
+  for (int i = 0; i < nsplit; i++) areas[i] = pgs[i].area;
+  areas_caller = &areas[0];
 
-  // clean up
-    
-  memory->destroy(count);
+  return nsplit;
 }
 
 /* ----------------------------------------------------------------------
-   calculate split areas of all grid cells that contain lines
-   for all grid cells: set nsplit, csurfs, csplits
-   for owned grid cells: set type, cflags, volume
 ------------------------------------------------------------------------- */
 
-void Cut2d::split()
+void Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
 {
-  int i,j,m,ilocal,icell,scell,nsurf;
-  int cornerflag[4];
+  id = id_caller;
+  lo = onelo;
+  hi = onehi;
 
-  Grid::OneCell *cells = grid->cells;
-  int **csurfs = grid->csurfs;
-  int **csplits = grid->csplits;
-  int **cflags = grid->cflags;
-  int ncell = grid->ncell;
-  int me = comm->me;
-
-  grid->nsplit = 0;
-
-  for (i = 0; i < ncell; i++) {
-    nsurf = cells[i].nsurf;
-
-    if (nsurf) {
-      if (VERBOSE) {
-        printf("\nCELL %d %g %g %g %g\n",cells[i].id,
-               cells[i].lo[0],cells[i].hi[0],
-               cells[i].lo[1],cells[i].hi[1]);
-      }
-      line2pl(nsurf,csurfs[i]);
-      weiler_intersect(cells[i].lo,cells[i].hi,cornerflag);
-      weiler_walk(nsurf,cells[i].lo,cells[i].hi,cornerflag);
-      loop2pg(nsurf,cells[i].lo,cells[i].hi,cornerflag);
-      if (pg.n > 1) surf2pg(nsurf,csurfs[i],csplits[i]);
-
-      if (cells[i].proc == me) {
-        cells[i].type = CELLOVERLAP;
-        ilocal = cells[i].plocal;
-        for (j = 0; j < 4; j++) cflags[ilocal][j] = cornerflag[j];
-      }
-
-      if (VERBOSE) {
-        printf("SPLIT %d %d: %d %d %d %d\n",cells[i].id,CELLOVERLAP,
-               cornerflag[0],cornerflag[1],cornerflag[2],cornerflag[3]);
-        printf("  AREAS:");
-        for (j = 0; j < pg.n; j++)
-          printf(" %g",pg[j].area);
-        printf("\n");
-        if (pg.n > 1) {
-          printf("  SURFMAP:");
-          for (j = 0; j < nsurf; j++)
-            printf(" %d",csplits[i][j]);
-          printf("\n");
-        }
-      }
-
-      // if cell is not split, volume = cut volume on single polygon
-      // if cell is split:
-      //   reset csplits to indices of new split cells, or leave as -1
-      //   set xsplit and xindex for parent cell
-      //     by picking line end pt that is inside cell
-      //     if none exist, clip a line that is part of a polygon to cell
-      //   create N split cells with respective volumes via add_split_cell()
-      //   add their scell indices to grid->mycells via add_split_local()
-
-      cells[i].nsplit = pg.n;
-      if (pg.n == 1) cells[i].volume = pg[0].area;
-      else {
-        scell = ncell + grid->nsplit;
-        for (j = 0; j < nsurf; j++) 
-          if (csplits[i][j] >= 0) csplits[i][j] += scell;
-        cells[i].xchild = split_point(cells[i].lo,cells[i].hi,nsurf,csurfs[i],
-                                      csplits[i],cells[i].xsplit);
-        for (j = 0; j < pg.n; j++) {
-          grid->add_split_cell(i);
-          cells[scell].nsplit = -i;
-          cells[scell].volume = pg[j].area;
-          scell++;
-        }
-      }
-
-    // cell with no surfs, could be inside or outside
-
-    } else {
-      cells[i].nsplit = 1;
-      if (cells[i].proc == me) {
-        cells[i].type = CELLUNKNOWN;
-        ilocal = cells[i].plocal;
-        for (j = 0; j < 4; j++) cflags[ilocal][j] = CORNERUNKNOWN;
-        cells[i].volume = (cells[i].hi[0]-cells[i].lo[0]) * 
-          (cells[i].hi[1]-cells[i].lo[1]);
-      }
-    }
-
+#ifdef VERBOSE
+  if (id == VERBOSE_ID) {
+    printf("Clines for cell %d, face %d\n",id,iface);
+    print_clines();
   }
+#endif
 
-  if (VERBOSE) printf("\n");
+  weiler_build();
+
+#ifdef VERBOSE
+  if (id == VERBOSE_ID) {
+    printf("Points for cell %d, face %d\n",id,iface);
+    print_points();
+  }
+#endif
+
+  weiler_loops();
+  loop2pg();
+
+#ifdef VERBOSE
+  if (id == VERBOSE_ID) {
+    printf("Loops for cell %d, face %d\n",id,iface);
+    print_loops();
+  }
+#endif
 }
 
 /* ----------------------------------------------------------------------
-   build PL = list of polylines
-   from list of N lines that intersect one cell
+   create clines = list of lines clipped to cell
 ------------------------------------------------------------------------- */
 
-void Cut2d::line2pl(int n, int *list)
+int Cut2d::build_clines()
 {
-  int i,m,pt;
-  PLone *datum;
-  MyDoubleLinkedList<PLone*> *one;
+  int m;
+  double *p1,*p2,*x,*y,*norm;
+  Surf::Line *line;
+  Cline *cline;
 
-  Surf::Line *lines = surf->lines;
-
-  ppool.reset();
-
-  used.grow(n);
-  startpts.grow(n);
-  endpts.grow(n);
-  for (i = 0; i < n; i++) {
-    used[i] = 0;
-    startpts[i] = lines[list[i]].p1;
-    endpts[i] = lines[list[i]].p2;
-  }
-
-  int unused = 1;
-  int usedzero = 0;
-
-  int npl = 0;
-  while (unused) {
-    i = usedzero;
-    used[i] = 1;
-    pl.grow(npl+1);
-    one = &pl[npl];
-    one->reset();
-    datum = ppool.get();
-    datum->iline = list[i];
-    one->append(datum);
-
-    while (1) {
-      pt = lines[one->last->iline].p2;
-      for (i = 0; i < n; i++)
-        if (pt == startpts[i]) break;
-      if (i == n) break;
-      if (used[i]) break;
-      used[i] = 1;
-      datum = ppool.get();
-      datum->iline = list[i];
-      one->append(datum);
-    }
-    while (1) {
-      pt = lines[one->first->iline].p1;
-      for (i = 0; i < n; i++)
-        if (pt == endpts[i]) break;
-      if (i == n) break;
-      if (used[i]) break;
-      used[i] = 1;
-      datum = ppool.get();
-      datum->iline = list[i];
-      one->prepend(datum);
-    }
-    npl++;
-
-    for (usedzero = 0; usedzero < n; usedzero++)
-      if (used[usedzero] == 0) break;
-    if (usedzero == n) unused = 0;
-  }
-
-  pl.n = npl;
-
-  if (VERBOSE) {
-    printf("LIST OF LINES %d:",n);
-    for (i = 0; i < n; i++) printf(" %d",list[i]);
-    printf("\n");
-    printf("PL %d\n",npl);
-    for (i = 0; i < npl; i++) {
-      one = &pl[i];
-      printf("  ONE %d:",one->nlist);
-      for (PLone *p = one->first; p; p = p->next)
-        printf(" %d",p->iline);
-      printf("\n");
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   Weiler-Atherton algorithm for intersecting polylines with grid cell
-   build and return CPTS and OPTS
-   CPTS = 4 cell corner pts, interleaved with intersection pts
-   OPTS = one set of object pts for each polyline
-          pts in polyline, interleaved with intersection pts
-   also return cornerflags
-------------------------------------------------------------------------- */
-
-void Cut2d::weiler_intersect(double *lo, double *hi, int *cornerflag)
-{
-  int i,ipt,iline,ic,flag,bflag;
-  int nopt;
-  int nentry,nexit,lastflag;
-  double a[2],b[2];
-  double *p,*q,*norm;
-  Opt *opt;
-  Cpt *cpt;
-  MyDoubleLinkedList<PLone*> *polyline;
-  PLone *poly;
-
-  Surf::Line *lines = surf->lines;
   Surf::Point *pts = surf->pts;
+  Surf::Line *lines = surf->lines;
 
-  cornerflag[0] = cornerflag[1] = cornerflag[2] = cornerflag[3] = 
-    CORNERUNKNOWN;
+  clines.grow(nsurf);
+  clines.n = 0;
 
-  cpool.reset();
-  cpts.reset();
-  opts.grow(pl.n);
+  int grazeflag = 0;
+  int n = 0;
 
-  cpt = cpool.get();
-  cpt->flag = 0;
-  cpt->dot = 0.0;
-  cpt->ipl = -1;
-  cpt->oindex = -1;
-  cpt->x[0] = lo[0]; cpt->x[1] = lo[1];
-  cpts.append(cpt);
-  cindex[0] = cpt;
+  for (int i = 0; i < nsurf; i++) {
+    m = surfs[i];
+    line = &lines[m];
+    p1 = pts[line->p1].x;
+    p2 = pts[line->p2].x;
 
-  cpt = cpool.get();
-  cpt->flag = 0;
-  cpt->dot = 0.0;
-  cpt->ipl = -1;
-  cpt->oindex = -1;
-  cpt->x[0] = hi[0]; cpt->x[1] = lo[1];
-  cpts.append(cpt);
-  cindex[1] = cpt;
+    cline = &clines[n];
+    cline->line = i;
 
-  cpt = cpool.get();
-  cpt->flag = 0;
-  cpt->dot = 0.0;
-  cpt->ipl = -1;
-  cpt->oindex = -1;
-  cpt->x[0] = hi[0]; cpt->x[1] = hi[1];
-  cpts.append(cpt);
-  cindex[2] = cpt;
+    // clip PQ to cell and store as XY in Cline
 
-  cpt = cpool.get();
-  cpt->flag = 0;
-  cpt->dot = 0.0;
-  cpt->ipl = -1;
-  cpt->oindex = -1;
-  cpt->x[0] = lo[0]; cpt->x[1] = hi[1];
-  cpts.append(cpt);
-  cindex[3] = cpt;
+    x = cline->x;
+    y = cline->y;
+    clip(p1,p2,x,y);
 
-  cpt = cpool.get();
-  cpt->flag = 0;
-  cpt->dot = 0.0;
-  cpt->ipl = -1;
-  cpt->oindex = -1;
-  cpt->x[0] = lo[0]; cpt->x[1] = lo[1];
-  cpts.append(cpt);
-  cindex[4] = cpt;
+    // discard clipped line if only one point
 
-  int anyinterior = 0;
-
-  for (int ipl = 0; ipl < pl.n; ipl++) {
-    polyline = &pl[ipl];
-    MyVec<Opt> &one = opts[ipl];
-    one.grow(3*polyline->nlist + 1);
-    nopt = 0;
+    if (x[0] == y[0] && x[1] == y[1]) continue;
     
-    iline = polyline->first->iline;
-    ipt = lines[iline].p1;
-    opt = &one[nopt++];
-    opt->flag = 0;
-    opt->x[0] = pts[ipt].x[0];
-    opt->x[1] = pts[ipt].x[1];
-    opt->cindex = iline;
+    // discard clipped line if lies along one cell edge
+    //   and normal is not into cell
+    // leave grazeflag incremented in this case
 
-    flag = ptflag(pts[ipt].x,lo,hi);
-    if (flag == POINTINSIDE) {
-      lastflag = INSIDE;
-      anyinterior = 1;
-    } else lastflag = OUTSIDE;
-    
-    for (poly = polyline->first; poly; poly = poly->next) {
-      iline = poly->iline;
-      p = pts[lines[iline].p1].x;
-      q = pts[lines[iline].p2].x;
-      clip(p,q,lo,hi,a,b);
-      if (VERBOSE) printf("CLIP %d %g %g %g %g\n",ipl,a[0],a[1],b[0],b[1]);
+    grazeflag++;
+    if (ptflag(x) == BORDER && ptflag(y) == BORDER) {
+      int edge = sameedge(x,y);
+      if (edge) {
+        norm = line->norm;
+        if (edge == 1 and norm[0] < 0.0) continue;
+        if (edge == 2 and norm[0] > 0.0) continue;
+        if (edge == 3 and norm[1] < 0.0) continue;
+        if (edge == 4 and norm[1] > 0.0) continue;
+        grazeflag--;
+      }
+    }
 
-      ic = corner(a,lo,hi);
-      if (ic >= 0) cornerflag[ic] = CORNEROVERLAP;
-      ic = corner(b,lo,hi);
-      if (ic >= 0) cornerflag[ic] = CORNEROVERLAP;
+    n++;
+  }
 
-      bflag = ptflag(b,lo,hi);
-      
-      // starting from INSIDE, add exit pt if hit border
-      
-      if (lastflag == INSIDE) {
-        if (bflag == POINTBORDER) {
-          anyinterior = 1;
-          norm = lines[iline].norm;
-          interleave(b,norm,lo,hi,EXIT,ipl,nopt);
-          opt = &one[nopt++];
-          opt->flag = EXIT;
-          opt->x[0] = b[0];
-          opt->x[1] = b[1];
-          opt->cindex = iline;
-          lastflag = OUTSIDE;
-        }
+  clines.n = n;
+  return grazeflag;
+}
 
-      // starting from OUTSIDE, add entry pt on entry/exit
-          
-      } else {
-        if (bflag == POINTINSIDE) {
-          anyinterior = 1;
-          norm = lines[iline].norm;
-          interleave(a,norm,lo,hi,ENTRY,ipl,nopt);
-          opt = &one[nopt++];
-          opt->flag = ENTRY;
-          opt->x[0] = a[0];
-          opt->x[1] = a[1];
-          opt->cindex = iline;
-          lastflag = INSIDE;
+/* ----------------------------------------------------------------------
+   create Weiler/Atherton data structure within points
+   add each CLINE, with next walking from ENTRY pt to EXIT pt
+   check that CLINES has valid set of points
+     no pt should appear no more than once as first or more than once as last
+     every singlet pt should be on cell border
+   add 4 corner pts to points
+     new CORNER pt if doesn't exist
+     else already an ENTRY/EXIT pt (not a TWO pt)
+   create counter-clockwise linked list of cell perimeter pts
+     use cprev,cnext,side,value fields of points
+   set next field for points in linked list to complete loops
+     do not change next for ENTRY pts
+------------------------------------------------------------------------- */
+
+void Cut2d::weiler_build()
+{
+  int i,j;
+  int firstpt,lastpt,nextpt;
+  double *pt;
+
+  // insure space in points for 2 pts per cline + 4 corner pts
+
+  int nlines = clines.n;
+  points.grow(2*nlines + 4);
+  points.n = 0;
+
+  // add each cline end pt to points
+  // set x,type,next,line for each pt
+  // NOTE: could use hash to find existing pts in O(1) time
+  //   see Brian Adams code (howto/c++) for doing this on a vec of doubles
+
+  int npt = 0;
+
+  for (i = 0; i < nlines; i++) {
+
+    // 1st point in cline
+
+    pt = clines[i].x;
+    for (j = 0; j < npt; j++)
+      if (pt[0] == points[j].x[0] && pt[1] == points[j].x[1]) break;
+
+    // pt already exists
+
+    if (j < npt) {
+      if (points[j].type == ENTRY || points[j].type == TWO) 
+        error->one(FLERR,"Point appears first in more than one CLINE");
+      points[j].type = TWO;
+      points[j].line = clines[i].line;
+      firstpt = j;
+    }
+
+    // new pt
+
+    else {
+      points[npt].x[0] = pt[0];
+      points[npt].x[1] = pt[1];
+      points[npt].type = ENTRY;
+      points[npt].line = clines[i].line;
+      firstpt = npt;
+      npt++;
+    }
+
+    // 2nd point in cline
+
+    pt = clines[i].y;
+    for (j = 0; j < npt; j++)
+      if (pt[0] == points[j].x[0] && pt[1] == points[j].x[1]) break;
+
+    // pt already exists
+
+    if (j < npt) {
+      if (points[j].type == EXIT || points[j].type == TWO)
+        error->one(FLERR,"Point appears last in more than one CLINE");
+      points[j].type = TWO;
+      points[firstpt].next = j;
+    }
+
+    // new pt
+
+    else {
+      points[npt].x[0] = pt[0];
+      points[npt].x[1] = pt[1];
+      points[npt].type = EXIT;
+      points[firstpt].next = npt;
+      npt++;
+    }
+  }
+
+  // error check that every singlet point is on cell border
+
+  for (i = 0; i < npt; i++)
+    if (points[i].type != TWO && ptflag(points[i].x) != BORDER)
+      error->one(FLERR,"Singlet CLINES point not on cell border");
+
+  // add 4 cell CORNER pts to points
+  // only if corner pt is not already an ENTRY or EXIT pt
+  // if a TWO pt, still add corner pt as CORNER
+  // each corner pt is at beginning of side it is on
+  // NOTE: could use hash to find existing pts in O(1) time
+  // corner flag = 0,1,2,3 for LL,LR,UL,UR, same as in Grid::ChildInfo,
+  //   but ordering of corner pts in linked list is LL,LR,UR,UL
+  // side = 0,1,2,3 for lower,right,upper,left = traversal order in linked list
+  // value = x-coord for lower/upper sides, y-coord for left,right sides
+
+  double cpt[2];
+  int ipt1,ipt2,ipt3,ipt4;
+
+  for (i = 0; i < npt; i++) points[i].corner = -1;
+
+  cpt[0] = lo[0]; cpt[1] = lo[1];
+  for (j = 0; j < npt; j++)
+    if (cpt[0] == points[j].x[0] && cpt[1] == points[j].x[1]) break;
+  if (j == npt || points[j].type == TWO) {
+    points[npt].x[0] = cpt[0];
+    points[npt].x[1] = cpt[1];
+    points[npt].type = CORNER;
+    ipt1 = npt++;
+  } else ipt1 = j;
+  points[ipt1].corner = 0;
+  points[ipt1].side = 0;
+  points[ipt1].value = lo[0];
+
+  cpt[0] = hi[0]; cpt[1] = lo[1];
+  for (j = 0; j < npt; j++)
+    if (cpt[0] == points[j].x[0] && cpt[1] == points[j].x[1]) break;
+  if (j == npt || points[j].type == TWO) {
+    points[npt].x[0] = cpt[0];
+    points[npt].x[1] = cpt[1];
+    points[npt].type = CORNER;
+    ipt2 = npt++;
+  } else ipt2 = j;
+  points[ipt2].corner = 1;
+  points[ipt2].side = 1;
+  points[ipt2].value = lo[1];
+
+  cpt[0] = hi[0]; cpt[1] = hi[1];
+  for (j = 0; j < npt; j++)
+    if (cpt[0] == points[j].x[0] && cpt[1] == points[j].x[1]) break;
+  if (j == npt || points[j].type == TWO) {
+    points[npt].x[0] = cpt[0];
+    points[npt].x[1] = cpt[1];
+    points[npt].type = CORNER;
+    ipt3 = npt++;
+  } else ipt3 = j;
+  points[ipt3].corner = 3;
+  points[ipt3].side = 2;
+  points[ipt3].value = hi[0];
+
+  cpt[0] = lo[0]; cpt[1] = hi[1];
+  for (j = 0; j < npt; j++)
+    if (cpt[0] == points[j].x[0] && cpt[1] == points[j].x[1]) break;
+  if (j == npt || points[j].type == TWO) {
+    points[npt].x[0] = cpt[0];
+    points[npt].x[1] = cpt[1];
+    points[npt].type = CORNER;
+    ipt4 = npt++;
+  } else ipt4 = j;
+  points[ipt4].corner = 2;
+  points[ipt4].side = 3;
+  points[ipt4].value = hi[1];
+
+  // n = final # of points
+
+  points.n = npt;
+
+  // create counter-clockwise linked list of 4 pts around cell perimeter
+
+  firstpt = ipt1;
+  lastpt = ipt4;
+
+  points[ipt1].cprev = -1;
+  points[ipt1].cnext = ipt2;
+  points[ipt2].cprev = ipt1;
+  points[ipt2].cnext = ipt3;
+  points[ipt3].cprev = ipt2;
+  points[ipt3].cnext = ipt4;
+  points[ipt4].cprev = ipt3;
+  points[ipt4].cnext = -1;
+
+  // add all non-corner ENTRY/EXIT pts to counter-clockwise linked list
+  // side = 0,1,2,3 for lower,right,upper,left sides
+  // value = coord of pt along the side it is on
+
+  int ipt,iprev,side;
+  double value;
+
+  for (i = 0; i < npt; i++) {
+    if (points[i].type == TWO || points[i].type == CORNER) continue;
+    if (points[i].corner >= 0) continue;
+
+    side = whichside(points[i].x);
+    if (side % 2) value = points[i].x[1];
+    else value = points[i].x[0];
+
+    // interleave Ith point into linked list between firstpt and lastpt
+    // insertion location is between iprev and ipt
+    // special logic if inserting at end of list
+
+    ipt = firstpt;
+    while (ipt >= 0) {
+      if (side < points[ipt].side) break;
+      if (side == points[ipt].side) {
+        if (side < 2) {
+          if (value < points[ipt].value) break;
         } else {
-          if (!sameborder(a,b,lo,hi)) {
-            anyinterior = 1;
-            norm = lines[iline].norm;
-            interleave(a,norm,lo,hi,ENTRY,ipl,nopt);
-            opt = &one[nopt++];
-            opt->flag = ENTRY;
-            opt->x[0] = a[0];
-            opt->x[1] = a[1];
-            opt->cindex = iline;
-            interleave(b,norm,lo,hi,EXIT,ipl,nopt);
-            opt = &one[nopt++];
-            opt->flag = EXIT;
-            opt->x[0] = b[0];
-            opt->x[1] = b[1];
-            opt->cindex = iline;
-          }
+          if (value > points[ipt].value) break;
         }
       }
-
-      opt = &one[nopt++];
-      opt->flag = 0;
-      opt->x[0] = q[0];
-      opt->x[1] = q[1];
-      opt->cindex = iline;
+      iprev = ipt;
+      ipt = points[ipt].cnext;
     }
-    
-    one.n = nopt;
 
-    // check for matching entry/exit pts in the list
+    points[i].side = side;
+    points[i].value = value;
+    points[i].cprev = iprev;
+    points[i].cnext = ipt;
 
-    nentry = nexit = 0;
-    
-    for (i = 0; i < nopt; i++) {
-      if (one[i].flag == ENTRY) nentry++;
-      if (one[i].flag == EXIT) nexit++;
-    }
-    if (nentry != nexit) error->one(FLERR,"OPTS entry/exit mis-match");
+    points[iprev].cnext = i;
+    if (ipt >= 0) points[ipt].cprev = i;
+    else lastpt = i;
   }
-  
-  opts.n = pl.n;
 
-  if (VERBOSE) {
-    printf("CORNER FLAGS %d: %d %d %d %d\n",grid->cells[icell].id,
-           cornerflag[0],cornerflag[1],cornerflag[2],cornerflag[3]);
-    printf("CPTS %d\n",cpts.nlist);
-    int nn = 0;
-    for (Cpt *c = cpts.first; c; c = c->next) {
-      printf("  %d: %d %g %g %g %d %d\n",nn,c->flag,c->x[0],c->x[1],
-             c->dot,c->ipl,c->oindex);
-      nn++;
-    }
-    printf("OPTS %d\n",opts.n);
-    for (i = 0; i < opts.n; i++) {
-      printf("  ONE %d\n",opts[i].n);
-      int nn = 0;
-      for (int j = 0; j < opts[i].n; j++) {
-        printf("  %d: %d %g %g %d\n",nn,opts[i][j].flag,
-               opts[i][j].x[0],opts[i][j].x[1],opts[i][j].cindex);
-        nn++;
-      }
-    }
+  // set next field for cell perimeter points in linked list
+  // this completes loops for next fields already set between ENTRY/EXIT pts
+  // do not reset next for ENTRY pts
+  // after loop, explicitly connect lastpt to firstpt
+
+  ipt = firstpt;
+  while (ipt >= 0) {
+    nextpt = points[ipt].cnext;
+    if (points[ipt].type != ENTRY) points[ipt].next = nextpt;
+    ipt = nextpt;
   }
+  if (points[lastpt].type != ENTRY) points[lastpt].next = firstpt;
 }
 
 /* ----------------------------------------------------------------------
-   interleave an intersection pt into CPTS
-   flag = ENTRY/EXIT
-   ipl,oindex = which polyline and index within polyline of the new pt
 ------------------------------------------------------------------------- */
 
-void Cut2d::interleave(double *pt, double *norm, double *lo, double *hi,
-                       int flag, int ipl, int oindex)
+void Cut2d::weiler_loops()
 {
-  int dim,order;
-  double cnorm[2],cvalue;
-  Cpt *start,*stop;
-  Cpt *cpt;
+  // used = 0/1 flag for whether a point is already part of a loop
 
-  if (pt[1] == lo[1] && pt[0] < hi[0]) {
-    start = cindex[0];
-    stop = cindex[1];
-    cnorm[0] = 0.0;
-    cnorm[1] = 1.0;
-    dim = 0;
-    order = ASCEND;
-  } else if (pt[0] == hi[0] && pt[1] < hi[1]) {
-    start = cindex[1];
-    stop = cindex[2];
-    cnorm[0] = -1.0;
-    cnorm[1] = 0.0;
-    dim = 1;
-    order = ASCEND;
-  } else if (pt[1] == hi[1] && pt[0] > lo[0]) {
-    start = cindex[2];
-    stop = cindex[3];
-    cnorm[0] = 0.0;
-    cnorm[1] = -1.0;
-    dim = 0;
-    order = DESCEND;
-  } else {
-    start = cindex[3];
-    stop = cindex[4];
-    cnorm[0] = 1.0;
-    cnorm[1] = 0.0;
-    dim = 1;
-    order = DESCEND;
-  }
+  int n = points.n;
+  used.grow(n);
+  for (int i = 0; i < n; i++) used[i] = 0;
+  used.n = n;
 
-  double dot = norm[0]*cnorm[0] + norm[1]*cnorm[1];
-  if (flag == EXIT) dot = -dot;
-  double value = pt[dim];
+  // iterate over all pts
+  // start a loop at any unused pt
+  // walk loop via next field:
+  //   mark pts as used
+  //   compute area along the way
+  // stop when reach initial pt:
+  //   closed loop, add to loops data structure
+  //   loop of just 4 corner pts is a valid loop
+  // stop when reach used pt:
+  //   discard loop, just traversed non-loop corner pts
 
-  cpt = start;
-  for (cpt = start; cpt; cpt = cpt->next) {
-    cvalue = cpt->x[dim];
-    // values are different, order by ASCEND or DESCEND
-    if (order == ASCEND) {
-      if (value < cvalue-TOLERANCE) break;
-      if (value > cvalue+TOLERANCE) continue;
-    } else {
-      if (value > cvalue-TOLERANCE) break;
-      if (value < cvalue+TOLERANCE) continue;
-    }
-    // values are equal (within TOLERANCE), corner pt comes first
-    if (cpt->flag == 0) continue;
-    // values are equal, order by dot product (-1 to 1)
-    // dot = line-norm dot cell-edge-norm for entry pt, negative for exit pt
-    if (dot < cpt->dot-TOLERANCE) break;
-    if (dot > cpt->dot+TOLERANCE) continue;
-    // 2 dot products are equal (within TOLERANCE)
-    // entry pt comes before exit pt
-    if (flag == ENTRY) break;
-    // end of loop
-    if (cpt == stop) break;
-  }
-
-  Cpt *cptnew = cpool.get();
-  cptnew->flag = flag;
-  cptnew->x[0] = pt[0];
-  cptnew->x[1] = pt[1];
-  cptnew->dot = dot;
-  cptnew->ipl = ipl;
-  cptnew->oindex = oindex;
-  cpts.insert(cptnew,cpt->prev,cpt);
-}
-  
-/* ----------------------------------------------------------------------
-   walk the dual Weiler-Atherton data structures to find loops
-   startpts = list of start pts for loop walks in all OPTS
-     either an entry pt, or 1st pt of OPT that has no entry pts
-   loop = LOOPINSIDE/LOOPBORDER, area, list of line indices in loop
-------------------------------------------------------------------------- */
-
-void Cut2d::weiler_walk(int nsurf, double *lo, double *hi, int *cornerflag)
-{
-  int i,iprev,ifirst,iopt,ioptfirst;
-  int nlist,done,noexit,ic;
+  int ipt,iflag,cflag,ncount,firstpt,nextpt;
   double area;
-  Entrypt *entry,*last,*ept;
-  Opt *opt;
-  double *p0,*p1;
-  Cpt *cpt,*cptprev;
-
-  epool.reset();
-  entrypts.reset();
-  for (int iopt = 0; iopt < opts.n; iopt++) {
-    last = entrypts.last;
-    MyVec<Opt> &one = opts[iopt];
-    for (i = 0; i < one.n; i++)
-      if (one[i].flag == ENTRY) {
-        entry = epool.get();
-        entry->iopt = iopt;
-        entry->index = i;
-        entrypts.append(entry);
-      }
-    if (entrypts.last == last && ptflag(one[0].x,lo,hi) == POINTINSIDE) {
-      entry = epool.get();
-      entry->iopt = iopt;
-      entry->index = 0;
-      entrypts.append(entry);
-    }
-  }
+  double *x,*y;
 
   int nloop = 0;
 
-  while (entrypts.first) {
-    iopt = ioptfirst = entrypts.first->iopt;
-    i = ifirst = entrypts.first->index;
-
-    // toggle walk between OPTS and CPTS until return to start pt
-    // both OPTS or CPTS edges contribute to area
-
-    nloop++;
-    loops.grow(nloop);
-    Loop &loop = loops[nloop-1];
-    MyVec<int> &lines = loop.lines;
-    lines.grow(nsurf);
-    nlist = 0;
-
-    done = 0;
-    noexit = 1;
+  for (int i = 0; i < n; i++) {
+    if (used[i]) continue;
     area = 0.0;
+    iflag = cflag = 1;
+    ncount = 0;
 
-    while (1) {
-      for (ept = entrypts.first; ept; ept = ept->next)
-        if (ept->iopt == iopt && ept->index == i) break;
-      if (!ept) {
-        //print "BAD CELL:",cell[0],cell[1:]
-        //print "BAD CPTS",cpts
-        //print "BAD OPTS",opts
-        error->one(FLERR,"WA walk error");
-      }
-      entrypts.remove(ept);
+    ipt = firstpt = i;
+    x = points[ipt].x;
 
-      // circular walk within OPTS until reach an exit pt or start pt
-      // add OPTS edge to lines list
-      
-      while (1) {
-        iprev = i++;
-        if (i == opts[iopt].n) i = 0;
-        if (i == ifirst && iopt == ioptfirst) {
-          done = 1;
-          break;
-        }
-        opt = &opts[iopt][i];
-        
-        p0 = opts[iopt][iprev].x;
-        p1 = opt->x;
-        if (p0[0] < p1[0])
-          area -= (0.5*(p0[1]+p1[1]) - lo[1]) * (p1[0]-p0[0]);
-        else
-          area += (0.5*(p0[1]+p1[1]) - lo[1]) * (p0[0]-p1[0]);
-        if (!nlist || lines[nlist-1] != opt->cindex)
-          lines[nlist++] = opt->cindex;
-
-        if (opt->flag == EXIT) {
-          noexit = 0;
-          break;
-        }
-      }
-
-      if (done) break;
-
-      for (cpt = cpts.first; cpt; cpt = cpt->next)
-        if (iopt == cpt->ipl && i == cpt->oindex) break;
-
-      // circular walk within CPTS until reach an entry pt
-      // if walk corner pt in CPTS:
-      //   mark it CORNEROUTSIDE, if not already CORNEROVERLAP
-
-      while (1) {
-        cptprev = cpt;
-        cpt = cpt->next;
-        if (!cpt) cpt = cpts.first;
-
-        if (cpt->flag == 0) {
-          ic = corner(cpt->x,lo,hi);
-          if (cornerflag[ic] != CORNEROVERLAP) cornerflag[ic] = CORNEROUTSIDE;
-        }
-        p0 = cptprev->x;
-        p1 = cpt->x;
-        if (p0[0] < p1[0])
-          area -= (0.5*(p0[1]+p1[1]) - lo[1]) * (p1[0]-p0[0]);
-        else
-          area += (0.5*(p0[1]+p1[1]) - lo[1]) * (p0[0]-p1[0]);
-
-        if (cpt->flag == ENTRY) {
-          iopt = cpt->ipl;
-          i = cpt->oindex;
-          break;
-        }
-      }
-        
-      if (i == ifirst && iopt == ioptfirst) break;
+    while (!used[ipt]) {
+      used[ipt] = 1;
+      ncount++;
+      if (points[ipt].type != TWO) iflag = 0;
+      if (points[ipt].type != CORNER) cflag = 0;
+      nextpt = points[ipt].next;
+      y = points[nextpt].x;
+      if (x[0] < y[0]) area -= (0.5*(x[1]+y[1]) - lo[1]) * (y[0]-x[0]);
+      else area += (0.5*(x[1]+y[1]) - lo[1]) * (x[0]-y[0]);
+      x = y;
+      ipt = nextpt;
+      if (ipt == firstpt) break;
     }
-
-    lines.n = nlist;
-    if (noexit) loop.flag = LOOPINSIDE;
-    else loop.flag = LOOPBORDER;
-    loop.area = area;
+    if (ipt != firstpt) continue;
+    
+    loops.grow(nloop+1);
+    loops[nloop].area = area;
+    loops[nloop].active = 1;
+    if (iflag) loops[nloop].flag = INTERIOR;
+    else if (cflag) loops[nloop].flag = BORDER;
+    else loops[nloop].flag = INTBORD;
+    loops[nloop].n = ncount;
+    loops[nloop].first = firstpt;
+    nloop++;
   }
 
   loops.n = nloop;
-
-  if (VERBOSE) {
-    printf("LOOPS %d\n",loops.n);
-    for (i = 0; i < loops.n; i++) {
-      printf("  %d: %d %g:",i,loops[0].flag,loops[i].area);
-      for (int j = 0; j < loops[i].lines.n; j++)
-        printf(" %d",loops[i].lines[j]);
-      printf("\n");
-    }
-  }
 }
 
 /* ----------------------------------------------------------------------
-   convert loops into PG = split cells by combining loops if needed
-   mark CORNERUNKNOWN corner flags if possible
-   treat zero-area loop as a negative area (unique to 2d)
 ------------------------------------------------------------------------- */
 
-void Cut2d::loop2pg(int nsurf, double *lo, double *hi, int *cornerflag)
+void Cut2d::loop2pg()
 {
-  int i,j,unknown,nlines;
-
-  // if any loops are CELLBORDER, remaining CORNERUNKNOWN pts are CORNERINSIDE
-  // else if there are interior loops:
-  //   if all areas are negative, remaining CORNERUNKNOWN pts are CORNEROUTSIDE
-  //   if all areas are positive, remaining CORNERUNKNOWN pts are CORNERINSIDE
-
-  int border = 0;
-  int interior = 0;
   int positive = 0;
   int negative = 0;
 
-  for (i = 0; i < loops.n; i++) {
-    if (loops[i].flag == LOOPBORDER) border++;
-    else if (loops[i].flag == LOOPINSIDE) interior++;
+  int nloop = loops.n;
+  for (int i = 0; i < nloop; i++)
     if (loops[i].area > 0.0) positive++;
-    else if (loops[i].area <= 0.0) negative++;
-  }
-  
-  if (border) {
-    unknown = 0;
-    for (i = 0; i < 4; i++)
-      if (cornerflag[i] == CORNERUNKNOWN) unknown = 1;
-    if (unknown)
-      for (i = 0; i < 4; i++)
-        if (cornerflag[i] == CORNERUNKNOWN) cornerflag[i] = CORNERINSIDE;
-  } else if (interior) {
-    if (positive == 0)
-      for (i = 0; i < 4; i++)
-        if (cornerflag[i] == CORNERUNKNOWN) cornerflag[i] = CORNEROUTSIDE;
-    if (negative == 0)
-      for (i = 0; i < 4; i++)
-        if (cornerflag[i] == CORNERUNKNOWN) cornerflag[i] = CORNERINSIDE;
-  }  
+    else negative++;
+  if (positive == 0) error->one(FLERR,"No positive areas in cell");
+  if (positive > 1 && negative) 
+    error->one(FLERR,"More than one positive area with a negative area");
 
-  // if no positive areas:
-  //   1 split cell = cell + all loops
-  //   area = cell area + sum of all loop areas (negative)
-  // if 1 positive area:
-  //   1 split cell = positive loop + all negative loops
-  //   area = positive area + sum of all loop areas (negative)
-  // if multiple positive areas:
-  //   each positive-area loop is a PG
-  //   allow no negative areas (hard to compute which loop they are inside)
-  
-  if (positive <= 1) {
-    pg.grow(1);
-    MyVec<int> &lines = pg[0].lines;
-    lines.grow(nsurf);
-    nlines = 0;
-    pg[0].area = 0.0;
-    if (positive == 0) 
-      pg[0].area += (hi[0]-lo[0]) * (hi[1]-lo[1]);
-    for (i = 0; i < loops.n; i++) {
-      pg[0].area += loops[i].area;
-      for (j = 0; j < loops[i].lines.n; j++)
-        lines[nlines++] = loops[i].lines[j];
+  pgs.grow(positive);
+
+  // if multiple positive loops, mark BORDER loop as inactive if exists
+  // don't want entire cell border to be a loop in this case
+
+  if (positive > 1) {
+    for (int i = 0; i < nloop; i++)
+      if (loops[i].flag == BORDER) {
+        loops[i].active = 0;
+        positive--;
+      }
+  }
+
+  // positive = 1 means 1 PG with area = sum of all pos/neg loops
+  // positive > 1 means each loop is a PG
+
+  if (positive == 1) {
+    double area = 0.0;
+    int prev = -1;
+    int count = 0;
+    int first;
+
+    for (int i = 0; i < nloop; i++) {
+      if (!loops[i].active) continue;
+      area += loops[i].area;
+      count++;
+      if (prev < 0) first = i;
+      else loops[prev].next = i;
+      prev = i;
     }
-    if (pg[0].area <= 0.0)
-      error->one(FLERR,"Single area is negative, inverse donut");
-    lines.n = nlines;
-    pg.n = 1;
+    loops[prev].next = -1;
+
+    if (area < 0.0) error->one(FLERR,"Single area is negative, inverse donut");
+
+    pgs[0].area = area;
+    pgs[0].n = count;
+    pgs[0].first = first;
 
   } else {
-    if (negative) {
-      //areas = [one[1] for one in loop];
-      //print "Mixed areas",cell[0],areas;
-      error->one(FLERR,"More than one positive area with a negative area");
+    int m = 0;
+    for (int i = 0; i < nloop; i++) {
+      if (!loops[i].active) continue;
+      pgs[m].area = loops[i].area;
+      pgs[m].n = 1;
+      pgs[m].first = i;
+      m++;
+      loops[i].next = -1;
     }
-    pg.grow(loops.n);
-    for (i = 0; i < loops.n; i++) {
-      pg[i].area = loops[i].area;
-      MyVec<int> &lines = pg[i].lines;
-      lines.grow(loops[i].lines.n);
-      for (j = 0; j < loops[i].lines.n; j++)
-        lines[j] = loops[i].lines[j];
-      lines.n = loops[i].lines.n;
-    }
-    pg.n = loops.n;
   }
 
-  if (VERBOSE) {
-    printf("PG %d\n",pg.n);
-    for (i = 0; i < pg.n; i++) {
-      printf("  %d: %g:",i,pg[i].area);
-      for (j = 0; j < pg[i].lines.n; j++)
-        printf(" %d",pg[i].lines[j]);
-      printf("\n");
-    }
-  }
+  pgs.n = positive;
 }
 
 /* ----------------------------------------------------------------------
    assign each line index in list to one of the split cells in PG
-   set smap[i] = which PG the Ith line index is assigned to
-   smap[i] = -1 if the line segment did not end up in a PG
+   return surfmap[i] = which PG the Ith line index is assigned to
+   set surfmap[i] = -1 if the line did not end up in a PG
+     could have been discarded from CLINES
+     due to touching cell or lying along a cell edge
 ------------------------------------------------------------------------- */
-        
-void Cut2d::surf2pg(int n, int *list, int *smap)
+
+void Cut2d::create_surfmap(int *surfmap)
 {
-  int i,j,k,m;
-  
-  // NOTE: could do this more efficiently if stored list index
-  // in PG, rather than original line index
+  for (int i = 0; i < nsurf; i++) surfmap[i] = -1;
 
-  for (i = 0; i < n; i++) smap[i] = -1;
-  for (i = 0; i < pg.n; i++) {
-    MyVec<int> &lines = pg[i].lines;
-    for (j = 0; j < lines.n; j++) {
-      m = lines[j];
-      for (k = 0; k < n; k++)
-        if (m == list[k]) break;
-      if (k == n) error->one(FLERR,"Invalid line in PG for mapping to slist");
-      smap[k] = i;
+  int iloop,nloop,mloop,ipt,npt,mpt;
+
+  int npg = pgs.n;
+  for (int ipg = 0; ipg < npg; ipg++) {
+    nloop = pgs[ipg].n;
+    mloop = pgs[ipg].first;
+    for (iloop = 0; iloop < nloop; iloop++) {
+      npt = loops[mloop].n;
+      mpt = loops[mloop].first;
+      for (ipt = 0; ipt < npt; ipt++) {
+        if (points[mpt].type == TWO || points[mpt].type == ENTRY)
+          surfmap[points[mpt].line] = ipg;
+        mpt = points[mpt].next;
+      }
+      mloop = loops[mloop].next;
     }
   }
 }
 
 /* ----------------------------------------------------------------------
-   assign each line index in list to one of the split cells in PG
 ------------------------------------------------------------------------- */
 
-int Cut2d::split_point(double *lo, double *hi,
-                       int n, int *list, int *smap, double *x)
+int Cut2d::split_point(int *surfmap, double *xsplit)
 {
   int iline;
   double *x1,*x2;
-  double a[3],b[3];
+  double a[2],b[2];
 
   Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
 
-  // if end pt of any line with non-negative smap is in/on cell, return
+  // if end pt of any line with non-negative surfmap is in/on cell, return
 
-  for (int i = 0; i < n; i++) {
-    if (smap[i] < 0) continue;
-    iline = list[i];
+  for (int i = 0; i < nsurf; i++) {
+    if (surfmap[i] < 0) continue;
+    iline = surfs[i];
     x1 = pts[lines[iline].p1].x;
     x2 = pts[lines[iline].p2].x;
-    if (ptflag(x1,lo,hi) != POINTOUTSIDE) {
-      x[0] = x1[0]; x[1] = x1[1]; x[2] = 0.0;
-      return smap[i];
+    if (ptflag(x1) != EXTERIOR) {
+      xsplit[0] = x1[0]; xsplit[1] = x1[1];
+      return surfmap[i];
     }
-    if (ptflag(x2,lo,hi) != POINTOUTSIDE) {
-      x[0] = x2[0]; x[1] = x2[1]; x[2] = 0.0;
-      return smap[i];
+    if (ptflag(x2) != EXTERIOR) {
+      xsplit[0] = x2[0]; xsplit[1] = x2[1];
+      return surfmap[i];
     }
   }
 
-  // clip 1st line with non-negative smap to cell, and return clip point
+  // clip 1st line with non-negative surfmap to cell, and return clip point
 
-  for (int i = 0; i < n; i++) {
-    if (smap[i] < 0) continue;
-    iline = list[i];
+  for (int i = 0; i < nsurf; i++) {
+    if (surfmap[i] < 0) continue;
+    iline = surfs[i];
     x1 = pts[lines[iline].p1].x;
     x2 = pts[lines[iline].p2].x;
-    clip(x1,x2,lo,hi,a,b);
-    x[0] = a[0]; x[1] = a[1]; x[2] = 0.0;
-    return smap[i];
+    clip(x1,x2,a,b);
+    xsplit[0] = a[0]; xsplit[1] = a[1];
+    return surfmap[i];
   }
 
   error->one(FLERR,"Could not find split point in split cell");
@@ -962,14 +703,15 @@ int Cut2d::split_point(double *lo, double *hi,
    return 1 if intersects, 0 if not
 ------------------------------------------------------------------------- */
 
-int Cut2d::cliptest(double *p, double *q, double *lo, double *hi)
+int Cut2d::cliptest(double *p, double *q)
 {
+  double x,y;
+
   if (p[0] >= lo[0] && p[0] <= hi[0] &&
       p[1] >= lo[1] && p[1] <= hi[1]) return 1;
   if (q[0] >= lo[0] && q[0] <= hi[0] &&
       q[1] >= lo[1] && q[1] <= hi[1]) return 1;
 
-  double x,y;
   double a[2],b[2];
   a[0] = p[0]; a[1] = p[1];
   b[0] = q[0]; b[1] = q[1];
@@ -992,6 +734,7 @@ int Cut2d::cliptest(double *p, double *q, double *lo, double *hi)
       b[0] = hi[0]; b[1] = y;
     }
   }
+
   if (a[1] < lo[1] && b[1] < lo[1]) return 0;
   if (a[1] < lo[1] || b[1] < lo[1]) {
     x = a[0] + (lo[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
@@ -1020,8 +763,7 @@ int Cut2d::cliptest(double *p, double *q, double *lo, double *hi)
    return AB = clipped segment
 ------------------------------------------------------------------------- */
 
-void Cut2d::clip(double *p, double *q, double *lo, double *hi,
-                double *a, double *b)
+void Cut2d::clip(double *p, double *q, double *a, double *b)
 {
   double x,y;
 
@@ -1068,46 +810,110 @@ void Cut2d::clip(double *p, double *q, double *lo, double *hi,
 }
 
 /* ----------------------------------------------------------------------
-   return 1 if pt1 and pt2 are on same border of cell, 0 if not
-   assume pt1 and pt2 are both border pts
+   check if pt is inside or outside or on cell border
+   return EXTERIOR,BORDER,INTERIOR
 ------------------------------------------------------------------------- */
-  
-int Cut2d::sameborder(double *pt1, double *pt2, double *lo, double *hi)
+
+int Cut2d::ptflag(double *pt)
 {
-  if (pt1[0] == lo[0] and pt2[0] == lo[0]) return 1;
-  if (pt1[0] == hi[0] and pt2[0] == hi[0]) return 1;
-  if (pt1[1] == lo[1] and pt2[1] == lo[1]) return 1;
-  if (pt1[1] == hi[1] and pt2[1] == hi[1]) return 1;
+  double x = pt[0];
+  double y = pt[1];
+  if (x < lo[0] || x > hi[0] || y < lo[1] || y > hi[1]) return EXTERIOR;
+  if (x > lo[0] && x < hi[0] && y > lo[1] && y < hi[1]) return INTERIOR;
+  return BORDER;
+}
+
+/* ----------------------------------------------------------------------
+   check if pts A,B are on same edge of cell
+   both assumed to be on cell border
+   return 1,2,3,4 = left,right,lower,upper if they are, 0 if not
+------------------------------------------------------------------------- */
+
+int Cut2d::sameedge(double *a, double *b)
+{
+  if (a[0] == lo[0] and b[0] == lo[0]) return 1;
+  if (a[0] == hi[0] and b[0] == hi[0]) return 2;
+  if (a[1] == lo[1] and b[1] == lo[1]) return 3;
+  if (a[1] == hi[1] and b[1] == hi[1]) return 4;
   return 0;
 }
 
 /* ----------------------------------------------------------------------
-   check if pt X,Y is a corner pt of cell
-   return 0,1,2,3 = LL,LR,UL,UR if it is, -1 if not
+   check which side of cell pt is on, assumed to be on border
+   not called for corner pt, but return either side
+   return 0,1,2,3 = lower,right,upper,left if on border, -1 if not
 ------------------------------------------------------------------------- */
 
-int Cut2d::corner(double *pt, double *lo, double *hi)
+int Cut2d::whichside(double *pt)
 {
-  if (pt[1] == lo[1]) {
-    if (pt[0] == lo[0]) return 0;
-    else if (pt[0] == hi[0]) return 1;
-  } else if (pt[1] == hi[1]) {
-    if (pt[0] == lo[0]) return 2;
-    else if (pt[0] == hi[0]) return 3;
-  }
+  if (pt[0] == lo[0]) return 3;
+  if (pt[0] == hi[0]) return 1;
+  if (pt[1] == lo[1]) return 0;
+  if (pt[1] == hi[1]) return 2;
   return -1;
 }
 
 /* ----------------------------------------------------------------------
-   check if pt is inside or outside or on cell border
-   return POINTOUTSIDE,POINTINSIDE,POINTBORDER
+   debug: print out Clines list
 ------------------------------------------------------------------------- */
 
-int Cut2d::ptflag(double *pt, double *lo, double *hi) 
+void Cut2d::print_clines()
 {
-  if (pt[0] < lo[0] || pt[0] > hi[0] || pt[1] < lo[1] || pt[1] > hi[1])
-    return POINTOUTSIDE;
-  if (pt[0] > lo[0] && pt[0] < hi[0] && pt[1] > lo[1] && pt[1] < hi[1])
-    return POINTINSIDE;
-  return POINTBORDER;
+  printf("ICELL %d\n",id);
+  printf("  clines %d\n",clines.n);
+
+  for (int i = 0; i < clines.n; i++) {
+    printf("  line %d\n",i);
+    printf("    xpoint: %g %g\n",clines[i].x[0],clines[i].x[1]);
+    printf("    ypoint: %g %g\n",clines[i].y[0],clines[i].y[1]);
+    printf("    line %d\n",clines[i].line);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   debug: print out Points list
+------------------------------------------------------------------------- */
+
+void Cut2d::print_points()
+{
+  printf("ICELL %d\n",id);
+  printf("  npoints %d\n",points.n);
+
+  for (int i = 0; i < points.n; i++) {
+    printf("  point %d\n",i);
+    printf("    coord: %g %g\n",points[i].x[0],points[i].x[1]);
+    printf("    type %d, next %d\n",points[i].type,points[i].next);
+    if (points[i].type == ENTRY || points[i].type == TWO)
+      printf("    line %d\n",points[i].line);
+    else printf("    line -1\n");
+    printf("    corner %d\n",points[i].corner);
+    if (points[i].type != TWO) {
+      printf("    cprev %d, cnext %d\n",points[i].cprev,points[i].cnext);
+      printf("    side/value: %d %g\n",points[i].side,points[i].value);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   debug: print out Loops list
+------------------------------------------------------------------------- */
+
+void Cut2d::print_loops()
+{
+  printf("ICELL %d\n",id);
+  printf("  loops %d\n",loops.n);
+
+  for (int i = 0; i < loops.n; i++) {
+    printf("  loop %d\n",i);
+    printf("    active %d\n",loops[i].active);
+    printf("    flag %d\n",loops[i].flag);
+    printf("    area %g\n",loops[i].area);
+    printf("    npoints %d\n",loops[i].n);
+    printf("    points:\n");
+    int ipt = loops[i].first;
+    for (int j = 0; j < loops[i].n; j++) {
+      printf("      %d %g %g\n",ipt,points[ipt].x[0],points[ipt].x[1]);
+      ipt = points[ipt].next;
+    }
+  }
 }

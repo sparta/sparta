@@ -22,6 +22,8 @@ namespace SPARTA_NS {
 
 class Particle : protected Pointers {
  public:
+  int exist;                // 1 if particles exist
+
   struct Species {          // info on each particle species
     char id[16];
     double molwt;
@@ -45,11 +47,13 @@ class Particle : protected Pointers {
   struct OnePart {
     int id;                 // particle ID
     int ispecies;           // particle species index
-    int icell;              // global grid cell the particle is in
+    int icell;              // which Grid::cells the particle is in
     double x[3];            // particle position
     double v[3];            // particle velocity
     double erot;            // rotational energy
     int ivib;               // vibrational mode
+    int flag;               // used for migration status
+    double dtremain;        // portion of move timestep remaining
   };
 
   bigint nglobal;           // global # of particles
@@ -69,6 +73,7 @@ class Particle : protected Pointers {
   ~Particle();
   void init();
   void compress(int, int *);
+  void compress();
   void sort();
   void grow(int);
   void add_particle(int, int, int, double *, double *, double, int);

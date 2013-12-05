@@ -35,7 +35,7 @@ class FixGridCheck : public Fix {
   double compute_scalar();
 
  private:
-  int nevery,nflag;
+  int nflag,outflag;
 };
 
 }

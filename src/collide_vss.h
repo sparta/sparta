@@ -32,19 +32,29 @@ class CollideVSS : public Collide {
   ~CollideVSS();
   void init();
 
+  double attempt_collision(int, int, double);
   double attempt_collision(int, int, int, double);
   int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
   void setup_collision(Particle::OnePart *, Particle::OnePart *);
   Particle::OnePart *
     perform_collision(Particle::OnePart *, Particle::OnePart *);
 
+  double extract(int, const char *);
+
+  int pack_grid_one(int, char *, int);
+  int unpack_grid_one(int, char *);
+  void compress_grid();
+
  private:
   int eng_exchange;
   double vr_indice;
-  double **vrm;       // static portion of max collision frequency
+
   double **prefactor; // static portion of collision attempt frequency
+  double **vrm;       // static portion of max collision frequency
   double ***vremax;   // max relative velocity, per cell, per species pair
-  double ***remain;   // collision number remainder per cell & per species pair
+  double ***remain;   // collision number remainder, per cell, per species pair
+  int nglocal;        // current size of per-cell arrays
+  int nglocalmax;     // max allocated size of per-cell arrays
 
   struct State {      // two-particle state
     double vr2;
@@ -80,13 +90,20 @@ class CollideVSS : public Collide {
   Params *params;             // VSS params for each species
   int nparams;                // # of per-species params read in
 
-
   void SCATTER_TwoBodyScattering(Particle::OnePart *, 
 				 Particle::OnePart *);
   void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *, 
 				      Particle::OnePart *);
+  void SCATTER_ThreeBodyScattering(Particle::OnePart *, 
+                                   Particle::OnePart *,
+                                   Particle::OnePart *);
+  void EEXCHANGE_ReactingEDisposal(Particle::OnePart *, 
+                                   Particle::OnePart *,
+                                   Particle::OnePart *);
+
   void read_param_file(char *);
   int wordcount(char *, char **);
+  void grow_percell(int);
 };
 
 }

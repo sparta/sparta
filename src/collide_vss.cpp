@@ -21,6 +21,7 @@
 #include "particle.h"
 #include "mixture.h"
 #include "collide.h"
+#include "react.h"
 #include "comm.h"
 #include "random_park.h"
 #include "math_const.h"
@@ -31,6 +32,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 #define MAXLINE 1024
+#define DELTAGRID 1000            // must be bigger than split cells per cell
 
 /* ---------------------------------------------------------------------- */
 
@@ -58,9 +60,9 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
     }
 
   prefactor = NULL;
+  vrm = NULL;
   vremax = NULL;
   remain = NULL;
-  vrm = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -69,9 +71,9 @@ CollideVSS::~CollideVSS()
 {
   delete [] params;
   memory->destroy(prefactor);
+  memory->destroy(vrm);
   memory->destroy(vremax);
   memory->destroy(remain);
-  memory->destroy(vrm);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -92,19 +94,20 @@ void CollideVSS::init()
   double *vscale = particle->mixture[imix]->vscale;
   int *mix2group = particle->mixture[imix]->mix2group;
 
+  // deallocate and reallocate per-cell arrays
+
   memory->destroy(prefactor);
+  memory->destroy(vrm);
   memory->destroy(vremax);
   memory->destroy(remain);
-  memory->destroy(vrm);
 
+  nglocal = nglocalmax = grid->nlocal;
   memory->create(prefactor,nspecies,nspecies,"collide:prefactor");
-  memory->create(vremax,grid->nchild,ngroups,ngroups,"collide:vremax");
-  memory->create(remain,grid->nchild,ngroups,ngroups,"collide:remain");
   memory->create(vrm,nspecies,nspecies,"collide:vrm");
+  memory->create(vremax,nglocal,ngroups,ngroups,"collide:vremax");
+  memory->create(remain,nglocal,ngroups,ngroups,"collide:remain");
 
-  int nchild = grid->nchild;
-
-  for (int icell = 0; icell < nchild; icell++)
+  for (int icell = 0; icell < nglocal; icell++)
     for (int igroup = 0; igroup < ngroups; igroup++)
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
         vremax[icell][igroup][jgroup] = 0.0;
@@ -128,15 +131,15 @@ void CollideVSS::init()
 	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
       double beta = MIN(vscale[isp],vscale[jsp]);
       double max_thermal_velocity = 1.0*beta;
-      vrm[isp][jsp] = cxs * 
-        pow(max_thermal_velocity*max_thermal_velocity,1-omega);
+      vrm[isp][jsp] = 
+        cxs * pow(max_thermal_velocity*max_thermal_velocity,1-omega);
     }
 
   // vremax = max relative velocity factors on per-grid, per-species basis
   // vremax value assignment should be done at a group level
   // each group gets maximum vremax of all species involved
   
-  for (int icell = 0; icell < nchild; icell++)
+  for (int icell = 0; icell < nglocal; icell++)
     for (int isp = 0; isp < nspecies; isp++)
       for (int jsp = 0; jsp < nspecies; jsp++) {
         int igroup = mix2group[isp];
@@ -148,21 +151,27 @@ void CollideVSS::init()
 
 /* ---------------------------------------------------------------------- */
 
-double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup, 
+double CollideVSS::attempt_collision(int icell, int np, double volume)
+{
+ double fnum = update->fnum;
+ double dt = update->dt;
+
+ double nattempt = 0.5 * np * (np-1) *
+   vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+  return nattempt;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double CollideVSS::attempt_collision(int icell, int igroup, int jgroup, 
 				     double volume)
 {
  double fnum = update->fnum;
  double dt = update->dt;
 
- // double rannum = random->uniform();
-
  double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
-   vremax[ilocal][igroup][jgroup] * dt * fnum / volume + random->uniform();
-
- // vremax[ilocal][igroup][jgroup] * dt * fnum / volume + remain[ilocal][igroup][jgroup];
- // remain[ilocal][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
-
- return nattempt;
+   vremax[icell][igroup][jgroup] * dt * fnum / volume + random->uniform();
+  return nattempt;
 }
 
 /* ----------------------------------------------------------------------
@@ -171,7 +180,7 @@ double CollideVSS::attempt_collision(int ilocal, int igroup, int jgroup,
    update vremax either way
 ------------------------------------------------------------------------- */
 
-int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
+int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 			       Particle::OnePart *ip, Particle::OnePart *jp)
 {
   Particle::Species *species = particle->species;
@@ -194,9 +203,8 @@ int CollideVSS::test_collision(int ilocal, int igroup, int jgroup,
   // the individual collisions calculated species dependent vre
 
   double vre = vro*prefactor[ispecies][jspecies];
-
-  vremax[ilocal][igroup][jgroup] = MAX(vre,vremax[ilocal][igroup][jgroup]);
-  if (vre/vremax[ilocal][igroup][jgroup] < random->uniform()) return 0;
+  vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
+  if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
   return 1;
 }
 
@@ -218,6 +226,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   double dw  = vi[2] - vj[2];
 
   precoln.vr2 = du*du + dv*dv + dw*dw;
+  precoln.vr = sqrt(precoln.vr2);
 
   precoln.rotdof_i = species[isp].rotdof;
   precoln.rotdof_j = species[jsp].rotdof;
@@ -244,7 +253,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   precoln.eint   = precoln.erot + precoln.evib;
   precoln.etotal = precoln.etrans + precoln.eint;
 
-  postcoln.etrans = 0.0;
+  postcoln.etrans = precoln.etrans;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
   postcoln.eint = 0.0;
@@ -254,11 +263,38 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 /* ---------------------------------------------------------------------- */
 
 Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip, 
-						  Particle::OnePart *jp)
+                                                 Particle::OnePart *jp)
 {
-  EEXCHANGE_NonReactingEDisposal(ip,jp);
-  SCATTER_TwoBodyScattering(ip,jp);
-  return NULL;
+  int reaction,kspecies;
+
+  if (react) 
+    reaction = react->attempt(ip,jp,
+                              precoln.etrans,precoln.erot,
+                              precoln.evib,postcoln.etotal,kspecies);
+  else reaction = 0;
+ 
+  // add a 3rd particle if necessary, index = nlocal-1
+
+  Particle::OnePart *kp = NULL;
+
+  if (reaction) {
+    nreact_one++;
+    if (kspecies >= 0) {
+      int id = MAXSMALLINT*random->uniform();
+      particle->add_particle(id,kspecies,ip->icell,ip->x,ip->v,0.0,0);
+      kp = &particle->particles[particle->nlocal-1];
+      EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      SCATTER_ThreeBodyScattering(ip,jp,kp);
+    } else {
+      EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      SCATTER_TwoBodyScattering(ip,jp);
+    }
+  } else {
+    EEXCHANGE_NonReactingEDisposal(ip,jp);
+    SCATTER_TwoBodyScattering(ip,jp);
+  }
+
+  return kp;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -266,44 +302,44 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
 void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip, 
 					   Particle::OnePart *jp)
 {
-  Particle::Species *species = particle->species;
+  double ua,vb,wc;
+  double vrc[3];
 
+  Particle::Species *species = particle->species;
   double *vi = ip->v;
   double *vj = jp->v;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
   double mass_i = species[isp].mass;
   double mass_j = species[jsp].mass;
-  double vrc[3], ua, vb, wc;
 
   double alpha = 0.5 * (params[isp].alpha + params[jsp].alpha);
   double mr = species[isp].mass * species[jsp].mass /
-	     (species[isp].mass + species[jsp].mass);
+    (species[isp].mass + species[jsp].mass);
 
   postcoln.eint = ip->erot + jp->erot + 
     ip->ivib * update->boltz*species[isp].vibtemp + 
     jp->ivib * update->boltz*species[jsp].vibtemp;
 
-  double cosX = 2.0*pow(random->uniform(), alpha) - 1.0;
+  double cosX = 2.0*pow(random->uniform(),alpha) - 1.0;
   double sinX = sqrt(1.0 - cosX*cosX);
   double eps = random->uniform() * 2*MY_PI;
   double vr = sqrt(2.0 * postcoln.etrans / mr);
-
-  if (alpha - 1 < 0.001) { 
+  if (alpha - 1.0 < 0.001) { 
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
     wc = vr*sinX*sin(eps);
   } else {
-    vrc[0]=vi[0]-vj[0];
-    vrc[1]=vi[1]-vj[1];
-    vrc[2]=vi[2]-vj[2];
+    vrc[0] = vi[0]-vj[0];
+    vrc[1] = vi[1]-vj[1];
+    vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
     ua = cosX*vrc[0] + sinX*d*sin(eps);
     vb = cosX*vrc[1] + sinX*(vr*vrc[2]*cos(eps) - vrc[0]*vrc[1]*sin(eps))/d;
     wc = cosX*vrc[2] - sinX*(vr*vrc[1]*cos(eps) + vrc[0]*vrc[2]*sin(eps))/d;
   }
-
-  // centre_of_mass velocity calculated using reactant masses
+  
+  // COM velocity calculated using reactant masses
 
   double divisor = precoln.mass_i + precoln.mass_j;
   double ucmf = ((precoln.mass_i*vi[0]) + (precoln.mass_j*vj[0])) / divisor;
@@ -328,17 +364,17 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip, 
 						Particle::OnePart *jp)
 {
-  Particle::OnePart *kp;
-  Particle::Species *species = particle->species;
-
-  static double AdjustFactor = 0.99999;
-  static double rotn_phi     = 0.5;
-  static double vibn_phi     = 0.5;
   double Exp_1,Exp_2,State_prob,Fraction_Rot,evib;
   long i,Max_Level,Vib_state;
 
-  // handle each kind of energy disposal for non-reacting reactants
+  Particle::OnePart *p;
+  Particle::Species *species = particle->species;
 
+  double AdjustFactor = 0.99999;
+  double rotn_phi = 0.5;
+  double vibn_phi = 0.5;
+
+  // handle each kind of energy disposal for non-reacting reactants
 
   if (precoln.ave_dof == 0) {
     ip->erot  = 0.0;
@@ -348,48 +384,49 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
   } else {
     double E_Dispose = precoln.etrans;
-    for (i = 0; i < 2; i++) {
-     if (i == 0) kp = ip; 
-     if (i == 1) kp = jp; 
-     int ksp = kp->ispecies;
 
-     if (species[ksp].vibdof >= 2 && (vibn_phi>=random->uniform())) {
-       evib = (double) (kp->ivib*update->boltz*species[ksp].vibtemp);
-       E_Dispose += evib;
-       Max_Level = (long) (E_Dispose/(update->boltz * species[ksp].vibtemp));
-       
-       do {
-	 kp->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
-	 evib = (double) 
-	   (kp->ivib * update->boltz * species[ksp].vibtemp);
-	 State_prob = pow((1 - evib / E_Dispose),
-			  (1.5 - params[ksp].omega));
-       } while (State_prob < random->uniform());
-       
-       E_Dispose -= evib;
-     }
-     
-     if ((species[ksp].rotdof == 2) && (rotn_phi >= random->uniform())) {
-       E_Dispose += kp->erot;
-       Fraction_Rot = 
-	 1- pow(random->uniform(),(1/(2.5-params[ksp].omega)));
-       kp->erot = Fraction_Rot * E_Dispose;
-       E_Dispose -= kp->erot;
-       
-     } else if ((species[ksp].rotdof > 2) && 
-		(rotn_phi >= random->uniform())) {
-       E_Dispose += kp->erot;
-       Exp_1 = species[ksp].rotdof / 2;
-       Exp_2 = 2.5 - params[ksp].omega;
-       do {
-	 Fraction_Rot = random->uniform();
-	 State_prob = 
-	   ((Exp_1+Exp_2-2)/pow(((Exp_1-1)*Fraction_Rot),(Exp_1-1)) *
-	    ((Exp_1+Exp_2)/(Exp_2-1)*pow((1-Fraction_Rot),(Exp_2-1))));
-       } while (State_prob < random->uniform());
-       kp->erot = Fraction_Rot*E_Dispose;
-       E_Dispose -= kp->erot;
-     }
+    for (i = 0; i < 2; i++) {
+      if (i == 0) p = ip; 
+      else p = jp;
+ 
+      int sp = p->ispecies;
+
+      if (species[sp].vibdof >= 2 && vibn_phi >= random->uniform()) {
+        evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
+        E_Dispose += evib;
+        Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
+        
+        do {
+          p->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+          evib = (double) 
+            (p->ivib * update->boltz * species[sp].vibtemp);
+          State_prob = pow((1 - evib / E_Dispose),
+                           (1.5 - params[sp].omega));
+        } while (State_prob < random->uniform());
+        
+        E_Dispose -= evib;
+      }
+      
+      if (species[sp].rotdof == 2 && rotn_phi >= random->uniform()) {
+        E_Dispose += p->erot;
+        Fraction_Rot = 
+          1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
+        p->erot = Fraction_Rot * E_Dispose;
+        E_Dispose -= p->erot;
+        
+      } else if (species[sp].rotdof > 2 && rotn_phi >= random->uniform()) {
+        E_Dispose += p->erot;
+        Exp_1 = species[sp].rotdof / 2;
+        Exp_2 = 2.5 - params[sp].omega;
+        do {
+          Fraction_Rot = random->uniform();
+          State_prob = 
+            ((Exp_1+Exp_2-2)/pow(((Exp_1-1)*Fraction_Rot),(Exp_1-1)) *
+             ((Exp_1+Exp_2)/(Exp_2-1)*pow((1-Fraction_Rot),(Exp_2-1))));
+        } while (State_prob < random->uniform());
+        p->erot = Fraction_Rot*E_Dispose;
+        E_Dispose -= p->erot;
+      }
     }
   }
 
@@ -406,20 +443,178 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = precoln.etotal - postcoln.eint;
 
-/*
-  if(postcoln->etranslation<0) {
-     fprintf(stderr,
-	"NEGATIVE ETRANSLATION IN Energy Disposal! Exiting!!\n");
-     printf("NEGATIVE ETRANSLATION IN Energy Disposal! Exiting!!\n");
-     printf("ET = %e, EV = %e, ER = %e, ETOT = %e \n", 
-	    postcoln->etranslation , 
-	    postcoln->erotation , postcoln->evibration,
-	    precoln->etotal); 
-     exit(0);
-  }
-*/
-
  return;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip, 
+			  		     Particle::OnePart *jp,
+			  		     Particle::OnePart *kp)
+{
+  double vrc[3],ua,vb,wc;
+
+  Particle::Species *species = particle->species;
+  int isp = ip->ispecies;
+  int jsp = jp->ispecies;
+  double mass_i = species[isp].mass;
+  double mass_j = species[jsp].mass;
+  double *vi = ip->v;
+  double *vj = jp->v;
+  double *vk = kp->v;
+
+  double alpha = 0.5 * (params[isp].alpha + params[jsp].alpha);
+  double mr = species[isp].mass * species[jsp].mass /
+	     (species[isp].mass + species[jsp].mass);
+
+  postcoln.eint = ip->erot + jp->erot + 
+    ip->ivib * update->boltz*species[isp].vibtemp + 
+    jp->ivib * update->boltz*species[jsp].vibtemp;
+
+  double cosX = 2.0*pow(random->uniform(), alpha) - 1.0;
+  double sinX = sqrt(1.0 - cosX*cosX);
+  double eps = random->uniform() * 2*MY_PI;
+  double vr = precoln.vr * sqrt(postcoln.etrans/precoln.etrans);
+
+  if (alpha - 1.0 < 0.001) { 
+    ua = vr*cosX;
+    vb = vr*sinX*cos(eps);
+    wc = vr*sinX*sin(eps);
+  } else {
+    vrc[0] = vi[0]-vj[0];
+    vrc[1] = vi[1]-vj[1];
+    vrc[2] = vi[2]-vj[2];
+    double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
+    ua = cosX*vrc[0] + sinX*d*sin(eps);
+    vb = cosX*vrc[1] + sinX*(vr*vrc[2]*cos(eps) - vrc[0]*vrc[1]*sin(eps))/d;
+    wc = cosX*vrc[2] - sinX*(vr*vrc[1]*cos(eps) + vrc[0]*vrc[2]*sin(eps))/d;
+  }
+
+  // COM velocity calculated using reactant masses
+
+  double divisor = precoln.mass_i + precoln.mass_j;
+  double ucmf = ((precoln.mass_i*vi[0]) + (precoln.mass_j*vj[0])) / divisor;
+  double vcmf = ((precoln.mass_i*vi[1]) + (precoln.mass_j*vj[1])) / divisor;
+  double wcmf = ((precoln.mass_i*vi[2]) + (precoln.mass_j*vj[2])) / divisor;
+
+  // new velocities for the products
+
+  divisor = mass_i + mass_j;
+  vi[0] = ucmf - (mass_j/divisor)*ua;
+  vi[1] = vcmf - (mass_j/divisor)*vb;
+  vi[2] = wcmf - (mass_j/divisor)*wc;
+  vj[0] = ucmf + (mass_i/divisor)*ua;
+  vj[1] = vcmf + (mass_i/divisor)*vb;
+  vj[2] = wcmf + (mass_i/divisor)*wc;
+  vk[0] = vj[0];
+  vk[1] = vj[1];
+  vk[2] = vj[2];
+
+  return;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip, 
+                                             Particle::OnePart *jp,
+                                             Particle::OnePart *kp)
+{
+  double Exp_1,Exp_2,State_prob,Fraction_Rot,evib;
+  long i,Max_Level,Vib_state;
+  long numspecies;
+
+  Particle::OnePart *p;
+  Particle::Species *species = particle->species;
+  double AdjustFactor = 0.99999;
+
+  // handle each kind of energy disposal for non-reacting reactants
+
+  
+  // clean up memory for the products
+  
+  if (!kp) {
+    ip->erot  = 0.0;
+    jp->erot  = 0.0;
+    ip->ivib = 0;
+    jp->ivib = 0;
+    numspecies = 2;
+  } else {
+    ip->erot  = 0.0;
+    jp->erot  = 0.0;
+    kp->erot  = 0.0;
+    ip->ivib = 0;
+    jp->ivib = 0;
+    kp->ivib = 0;
+    numspecies = 3;
+  }
+
+  double E_Dispose = postcoln.etotal;
+
+  for (i = 0; i < numspecies; i++) {
+    if (i == 0) p = ip; 
+    else if (i == 1) p = jp; 
+    else p = kp;
+    int sp = p->ispecies;
+    
+    if (species[sp].vibdof >= 2 ) {
+      evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
+      E_Dispose += evib;
+      Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
+      
+      do {
+        p->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+        evib = (double) 
+          (p->ivib * update->boltz * species[sp].vibtemp);
+        State_prob = pow((1 - evib / E_Dispose),
+                         (1.5 - params[sp].omega));
+      } while (State_prob < random->uniform());
+      
+      E_Dispose -= evib;
+    }
+    
+    if ((species[sp].rotdof == 2)) {
+      E_Dispose += p->erot;
+      Fraction_Rot = 
+        1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
+      p->erot = Fraction_Rot * E_Dispose;
+      E_Dispose -= p->erot;
+      
+    } else if ((species[sp].rotdof > 2)) {
+      E_Dispose += p->erot;
+      Exp_1 = species[sp].rotdof / 2;
+      Exp_2 = 2.5 - params[sp].omega;
+      do {
+        Fraction_Rot = random->uniform();
+        State_prob = 
+          ((Exp_1+Exp_2-2.0)/pow(((Exp_1-1.0)*Fraction_Rot),(Exp_1-1.0)) *
+           ((Exp_1+Exp_2)/(Exp_2-1.0)*pow((1.0-Fraction_Rot),(Exp_2-1.0))));
+      } while (State_prob < random->uniform());
+      p->erot = Fraction_Rot*E_Dispose;
+      E_Dispose -= p->erot;
+    }
+  }
+  
+  // compute post-collision internal energies
+  
+  postcoln.erot = ip->erot + jp->erot;
+  int isp = ip->ispecies;
+  int jsp = jp->ispecies;
+  postcoln.evib = ip->ivib * update->boltz*species[isp].vibtemp +
+    jp->ivib * update->boltz*species[jsp].vibtemp;
+  postcoln.erot = ip->erot + jp->erot;
+  
+  if (kp) {
+    int ksp = kp->ispecies;
+    postcoln.evib =+ kp->ivib * update->boltz*species[ksp].vibtemp;
+    postcoln.erot =+ kp->erot;
+  }
+  
+  // compute portion of energy left over for scattering
+  
+  postcoln.eint = postcoln.erot + postcoln.evib;
+  postcoln.etrans = postcoln.etotal - postcoln.eint;
+  
+  return;
 }
 
 /* ----------------------------------------------------------------------
@@ -491,4 +686,128 @@ int CollideVSS::wordcount(char *line, char **words)
   }
 
   return nwords;
+}
+
+/* ----------------------------------------------------------------------
+   return a per-species parameter to caller
+------------------------------------------------------------------------- */
+
+double CollideVSS::extract(int isp, const char *name)
+{
+  if (strcmp(name,"diam") == 0) return params[isp].diam;
+  else if (strcmp(name,"omega") == 0) return params[isp].omega;
+  else if (strcmp(name,"tref") == 0) return params[isp].tref;
+  else error->all(FLERR,"Request for unknown param from collide");
+  return 0.0;
+}
+
+/* ----------------------------------------------------------------------
+   pack icell values for per-cell arrays into buf
+   if icell is a split cell, also pack all sub cell values 
+   return byte count of amount packed
+   if memflag, only return count, do not fill buf
+   NOTE: need to add remain values if start using it
+------------------------------------------------------------------------- */
+
+int CollideVSS::pack_grid_one(int icell, char *buf, int memflag)
+{
+  if (!vremax) return 0;
+  int nbytes = ngroups*ngroups*sizeof(double);
+
+  Grid::ChildCell *cells = grid->cells;
+
+  if (memflag) memcpy(buf,&vremax[icell][0][0],nbytes);
+  int n = nbytes;
+
+  if (cells[icell].nsplit > 1) {
+    int isplit = cells[icell].isplit;
+    int nsplit = cells[icell].nsplit;
+    for (int i = 0; i < nsplit; i++) {
+      int m = grid->sinfo[isplit].csubs[i];
+      if (memflag) memcpy(&buf[n],&vremax[m][0][0],nbytes);
+      n += nbytes;
+    }
+  }
+  
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   unpack icell values for per-cell arrays from buf
+   if icell is a split cell, also unpack all sub cell values 
+   return byte count of amount unpacked
+   NOTE: need to add remain values if start using it
+------------------------------------------------------------------------- */
+
+int CollideVSS::unpack_grid_one(int icell, char *buf)
+{
+  if (!vremax) return 0;
+  int nbytes = ngroups*ngroups*sizeof(double);
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::SplitInfo *sinfo = grid->sinfo;
+
+  grow_percell(1);
+  memcpy(&vremax[icell][0][0],buf,nbytes);
+  int n = nbytes;
+  nglocal++;
+
+  if (cells[icell].nsplit > 1) {
+    int isplit = cells[icell].isplit;
+    int nsplit = cells[icell].nsplit;
+    grow_percell(nsplit);
+    for (int i = 0; i < nsplit; i++) {
+      int m = sinfo[isplit].csubs[i];
+      memcpy(&vremax[m][0][0],&buf[n],nbytes);
+      n += nbytes;
+    }
+    nglocal += nsplit;
+  }
+  
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   compress per-cell arrays due to cells migrating to new procs
+   criteria for keeping/discarding a cell is same as in Grid::compress()
+   this keeps final ordering of per-cell arrays consistent with Grid class
+------------------------------------------------------------------------- */
+
+void CollideVSS::compress_grid()
+{
+  if (!vremax) return;
+  int nbytes = ngroups*ngroups*sizeof(double);
+
+  int me = comm->me;
+  Grid::ChildCell *cells = grid->cells;
+
+  // keep an unsplit or split cell if staying on this proc
+  // keep a sub cell if its split cell is staying on this proc
+
+  int ncurrent = nglocal;
+  nglocal = 0;
+  for (int icell = 0; icell < ncurrent; icell++) {
+    if (cells[icell].nsplit >= 1) {
+      if (cells[icell].proc != me) continue;
+    } else {
+      int isplit = cells[icell].isplit;
+      if (cells[grid->sinfo[isplit].icell].proc != me) continue;
+    }
+
+    if (nglocal != icell) 
+      memcpy(&vremax[nglocal][0][0],&vremax[icell][0][0],nbytes);
+    nglocal++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   insure per-cell arrays are allocated long enough for N new cells
+------------------------------------------------------------------------- */
+
+void CollideVSS::grow_percell(int n)
+{
+  if (nglocal+n < nglocalmax) return;
+  nglocalmax += DELTAGRID;
+  memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
+  memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 }

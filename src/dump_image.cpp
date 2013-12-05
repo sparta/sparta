@@ -19,10 +19,15 @@
 #include "dump_image.h"
 #include "image.h"
 #include "domain.h"
+#include "region.h"
 #include "particle.h"
 #include "grid.h"
+#include "surf.h"
 #include "input.h"
 #include "variable.h"
+#include "modify.h"
+#include "fix.h"
+#include "compute.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "error.h"
@@ -32,13 +37,20 @@
 #include "jpeglib.h"
 #endif
 
+//#define RCB_DEBUG 1     // un-comment to include RCB proc boxes in image
+
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+#define BIG 1.0e20
+#define INVOKED_PER_GRID 16
+#define INVOKED_PER_SURF 32
+
 enum{PPM,JPG};
-enum{NUMERIC,ATOM,TYPE,PROC,ATTRIBUTE};
+enum{NUMERIC,ATOM,TYPE,PROC,ATTRIBUTE,ONE};
 enum{STATIC,DYNAMIC};
-enum{NO,YES};
+enum{COMPUTE,FIX,VARIABLE};
+enum{MOL,GRID,SURF,XPLANE,YPLANE,ZPLANE};
 
 /* ---------------------------------------------------------------------- */
 
@@ -71,34 +83,42 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   adiam = ATTRIBUTE;
   if (strcmp(arg[5],"type") == 0) adiam = TYPE;
 
-  // create Image class
+  // create Image class with 6 colormaps
+  // colormaps for particles, grid, surf, grid xyz planes
+  // change defaults for 2d
 
-  image = new Image(sparta);
+  image = new Image(sparta,6);
+  if (domain->dimension == 2) {
+    image->theta = 0.0;
+    image->phi = 0.0;
+    image->up[0] = 0.0; image->up[1] = 1.0; image->up[2] = 0.0;
+  }
+
   boxcolor = image->color2rgb("yellow");
-  gridcolor = image->color2rgb("white");
+  surfcolorone = image->color2rgb("gray");
+  glinecolor = image->color2rgb("white");
+  slinecolor = image->color2rgb("white");
 
   // set defaults for optional args
 
-  atomflag = YES;
-  cellflag = NO;
+  atomflag = 1;
+  gridflag = 0;
+  gridxflag = gridyflag = gridzflag = 0;
+  surfflag = 0;
   thetastr = phistr = NULL;
   cflag = STATIC;
   cx = cy = cz = 0.5;
   cxstr = cystr = czstr = NULL;
-
-  if (domain->dimension == 3) {
-    image->up[0] = 0.0; image->up[1] = 0.0; image->up[2] = 1.0;
-  } else {
-    image->up[0] = 0.0; image->up[1] = 1.0; image->up[2] = 0.0;
-  }
-
   upxstr = upystr = upzstr = NULL;
   zoomstr = NULL;
   perspstr = NULL;
-  boxflag = YES;
+  boxflag = 1;
   boxdiam = 0.02;
-  gridflag = NO;
-  axesflag = NO;
+  glineflag = 0;
+  slineflag = 0;
+  axesflag = 0;
+
+  idgrid = idgridx = idgridy = idgridz = idsurf = NULL;
 
   // parse optional args
 
@@ -113,17 +133,170 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
     } else if (strcmp(arg[iarg],"atom") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
-      if (strcmp(arg[iarg+1],"yes") == 0) atomflag = YES;
-      else if (strcmp(arg[iarg+1],"no") == 0) atomflag = NO;
+      if (strcmp(arg[iarg+1],"yes") == 0) atomflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) atomflag = 0;
       else error->all(FLERR,"Illegal dump image command");
       iarg += 2;
 
-    } else if (strcmp(arg[iarg],"cell") == 0) {
+    } else if (strcmp(arg[iarg],"grid") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
-      cellflag = 1;
+      gridflag = 1;
       if (strcmp(arg[iarg+1],"proc") == 0) gcolor = PROC;
-      else gcolor = ATTRIBUTE;
+      else {
+        gcolor = ATTRIBUTE;
+        if (strncmp(arg[iarg+1],"c_",2) && strncmp(arg[iarg+1],"f_",2) && 
+            strncmp(arg[iarg+1],"v_",2))
+          error->all(FLERR,"Illegal dump image command");
+        if (arg[iarg+1][0] == 'c') gridwhich = COMPUTE;
+        else if (arg[iarg+1][0] == 'f') gridwhich = FIX;
+        else if (arg[iarg+1][0] == 'v') gridwhich = VARIABLE;
+
+        int n = strlen(arg[iarg+1]);
+        char *suffix = new char[n];
+        strcpy(suffix,&arg[iarg+1][2]);
+
+        char *ptr = strchr(suffix,'[');
+        if (ptr) {
+          if (suffix[strlen(suffix)-1] != ']')
+            error->all(FLERR,"Illegal fix ave/grid command");
+          gridcol = atoi(ptr+1);
+          *ptr = '\0';
+        } else gridcol = 0;
+        n = strlen(suffix) + 1;
+        idgrid = new char[n];
+        strcpy(idgrid,suffix);
+        delete [] suffix;
+      }
       iarg += 2;
+
+    } else if (strcmp(arg[iarg],"gridx") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
+      gridxflag = 1;
+      gridxcoord = atof(arg[iarg+1]);
+      if (strcmp(arg[iarg+2],"proc") == 0) gxcolor = PROC;
+      else {
+        gxcolor = ATTRIBUTE;
+        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) && 
+            strncmp(arg[iarg+2],"v_",2))
+          error->all(FLERR,"Illegal dump image command");
+        if (arg[iarg+2][0] == 'c') gridxwhich = COMPUTE;
+        else if (arg[iarg+2][0] == 'f') gridxwhich = FIX;
+        else if (arg[iarg+2][0] == 'v') gridxwhich = VARIABLE;
+
+        int n = strlen(arg[iarg+2]);
+        char *suffix = new char[n];
+        strcpy(suffix,&arg[iarg+2][2]);
+
+        char *ptr = strchr(suffix,'[');
+        if (ptr) {
+          if (suffix[strlen(suffix)-1] != ']')
+            error->all(FLERR,"Illegal fix ave/grid command");
+          gridxcol = atoi(ptr+1);
+          *ptr = '\0';
+        } else gridxcol = 0;
+        n = strlen(suffix) + 1;
+        idgridx = new char[n];
+        strcpy(idgridx,suffix);
+        delete [] suffix;
+      }
+      iarg += 3;
+
+    } else if (strcmp(arg[iarg],"gridy") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
+      gridyflag = 1;
+      gridycoord = atof(arg[iarg+1]);
+      if (strcmp(arg[iarg+2],"proc") == 0) gycolor = PROC;
+      else {
+        gycolor = ATTRIBUTE;
+        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) && 
+            strncmp(arg[iarg+2],"v_",2))
+          error->all(FLERR,"Illegal dump image command");
+        if (arg[iarg+2][0] == 'c') gridywhich = COMPUTE;
+        else if (arg[iarg+2][0] == 'f') gridywhich = FIX;
+        else if (arg[iarg+2][0] == 'v') gridywhich = VARIABLE;
+
+        int n = strlen(arg[iarg+2]);
+        char *suffix = new char[n];
+        strcpy(suffix,&arg[iarg+2][2]);
+
+        char *ptr = strchr(suffix,'[');
+        if (ptr) {
+          if (suffix[strlen(suffix)-1] != ']')
+            error->all(FLERR,"Illegal fix ave/grid command");
+          gridycol = atoi(ptr+1);
+          *ptr = '\0';
+        } else gridycol = 0;
+        n = strlen(suffix) + 1;
+        idgridy = new char[n];
+        strcpy(idgridy,suffix);
+        delete [] suffix;
+      }
+      iarg += 3;
+
+    } else if (strcmp(arg[iarg],"gridz") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
+      gridzflag = 1;
+      gridzcoord = atof(arg[iarg+1]);
+      if (strcmp(arg[iarg+2],"proc") == 0) gzcolor = PROC;
+      else {
+        gzcolor = ATTRIBUTE;
+        if (strncmp(arg[iarg+2],"c_",2) && strncmp(arg[iarg+2],"f_",2) && 
+            strncmp(arg[iarg+2],"v_",2))
+          error->all(FLERR,"Illegal dump image command");
+        if (arg[iarg+2][0] == 'c') gridzwhich = COMPUTE;
+        else if (arg[iarg+2][0] == 'f') gridzwhich = FIX;
+        else if (arg[iarg+2][0] == 'v') gridzwhich = VARIABLE;
+
+        int n = strlen(arg[iarg+2]);
+        char *suffix = new char[n];
+        strcpy(suffix,&arg[iarg+2][2]);
+
+        char *ptr = strchr(suffix,'[');
+        if (ptr) {
+          if (suffix[strlen(suffix)-1] != ']')
+            error->all(FLERR,"Illegal fix ave/grid command");
+          gridzcol = atoi(ptr+1);
+          *ptr = '\0';
+        } else gridzcol = 0;
+        n = strlen(suffix) + 1;
+        idgridz = new char[n];
+        strcpy(idgridz,suffix);
+        delete [] suffix;
+      }
+      iarg += 3;
+
+    } else if (strcmp(arg[iarg],"surf") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
+      surfflag = 1;
+      if (strcmp(arg[iarg+1],"one") == 0) scolor = ONE;
+      else if (strcmp(arg[iarg+1],"proc") == 0) scolor = PROC;
+      else {
+        scolor = ATTRIBUTE;
+        if (strncmp(arg[iarg+1],"c_",2) && strncmp(arg[iarg+1],"f_",2) && 
+            strncmp(arg[iarg+1],"v_",2))
+          error->all(FLERR,"Illegal dump image command");
+        if (arg[iarg+1][0] == 'c') surfwhich = COMPUTE;
+        else if (arg[iarg+1][0] == 'f') surfwhich = FIX;
+        else if (arg[iarg+1][0] == 'v') surfwhich = VARIABLE;
+
+        int n = strlen(arg[iarg+1]);
+        char *suffix = new char[n];
+        strcpy(suffix,&arg[iarg+1][2]);
+
+        char *ptr = strchr(suffix,'[');
+        if (ptr) {
+          if (suffix[strlen(suffix)-1] != ']')
+            error->all(FLERR,"Illegal fix ave/grid command");
+          surfcol = atoi(ptr+1);
+          *ptr = '\0';
+        } else surfcol = 0;
+        n = strlen(suffix) + 1;
+        idsurf = new char[n];
+        strcpy(idsurf,suffix);
+        delete [] suffix;
+      }
+      sdiamvalue = atof(arg[iarg+2]);
+      iarg += 3;
 
     } else if (strcmp(arg[iarg],"size") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
@@ -232,26 +405,35 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
     } else if (strcmp(arg[iarg],"box") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
-      if (strcmp(arg[iarg+1],"yes") == 0) boxflag = YES;
-      else if (strcmp(arg[iarg+1],"no") == 0) boxflag = NO;
+      if (strcmp(arg[iarg+1],"yes") == 0) boxflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) boxflag = 0;
       else error->all(FLERR,"Illegal dump image command");
       boxdiam = atof(arg[iarg+2]);
       if (boxdiam < 0.0) error->all(FLERR,"Illegal dump image command");
       iarg += 3;
 
-    } else if (strcmp(arg[iarg],"grid") == 0) {
+    } else if (strcmp(arg[iarg],"gline") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
-      if (strcmp(arg[iarg+1],"yes") == 0) gridflag = YES;
-      else if (strcmp(arg[iarg+1],"no") == 0) gridflag = NO;
+      if (strcmp(arg[iarg+1],"yes") == 0) glineflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) glineflag = 0;
       else error->all(FLERR,"Illegal dump image command");
-      griddiam = atof(arg[iarg+2]);
-      if (griddiam < 0.0) error->all(FLERR,"Illegal dump image command");
+      glinediam = atof(arg[iarg+2]);
+      if (glinediam < 0.0) error->all(FLERR,"Illegal dump image command");
+      iarg += 3;
+
+    } else if (strcmp(arg[iarg],"sline") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
+      if (strcmp(arg[iarg+1],"yes") == 0) slineflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) slineflag = 0;
+      else error->all(FLERR,"Illegal dump image command");
+      slinediam = atof(arg[iarg+2]);
+      if (slinediam < 0.0) error->all(FLERR,"Illegal dump image command");
       iarg += 3;
 
     } else if (strcmp(arg[iarg],"axes") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
-      if (strcmp(arg[iarg+1],"yes") == 0) axesflag = YES;
-      else if (strcmp(arg[iarg+1],"no") == 0) axesflag = NO;
+      if (iarg+4 > narg) error->all(FLERR,"Illegal dump image command");
+      if (strcmp(arg[iarg+1],"yes") == 0) axesflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) axesflag = 0;
       else error->all(FLERR,"Illegal dump image command");
       axeslen = atof(arg[iarg+2]);
       axesdiam = atof(arg[iarg+3]);
@@ -269,9 +451,12 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
     } else if (strcmp(arg[iarg],"ssao") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
-      if (strcmp(arg[iarg+1],"yes") == 0) image->ssao = YES;
-      else if (strcmp(arg[iarg+1],"no") == 0) image->ssao = NO;
+      if (strcmp(arg[iarg+1],"yes") == 0) image->ssao = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) image->ssao = 0;
       else error->all(FLERR,"Illegal dump image command");
+      int seed = atoi(arg[iarg+2]);
+      if (seed <= 0) error->all(FLERR,"Illegal dump image command");
+      image->seed = seed;
       double ssaoint = atof(arg[iarg+2]);
       if (ssaoint < 0.0 || ssaoint > 1.0)
 	error->all(FLERR,"Illegal dump image command");
@@ -280,6 +465,11 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
     } else error->all(FLERR,"Illegal dump image command");
   }
+
+  // error check
+
+  if (gridflag && (gridxflag || gridyflag || gridzflag))
+      error->all(FLERR,"Dump image cannot use grid and gridx/gridy/gridz");
 
   // allocate image buffer now that image size is known
 
@@ -300,15 +490,26 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
     else if (i % 6 == 0) colortype[i] = image->color2rgb("purple");
   }
 
-  colorproc = new double*[nprocs];
-  for (int i = 0; i < nprocs; i++) {
-    if (i % 6 == 0) colorproc[i] = image->color2rgb("red");
-    else if (i % 6 == 1) colorproc[i] = image->color2rgb("green");
-    else if (i % 6 == 2) colorproc[i] = image->color2rgb("blue");
-    else if (i % 6 == 3) colorproc[i] = image->color2rgb("yellow");
-    else if (i % 6 == 4) colorproc[i] = image->color2rgb("aqua");
-    else if (i % 6 == 5) colorproc[i] = image->color2rgb("purple");
-  }
+  if (me % 6 == 0) acolorproc = image->color2rgb("red");
+  else if (me % 6 == 1) acolorproc = image->color2rgb("green");
+  else if (me % 6 == 2) acolorproc = image->color2rgb("blue");
+  else if (me % 6 == 3) acolorproc = image->color2rgb("yellow");
+  else if (me % 6 == 4) acolorproc = image->color2rgb("aqua");
+  else if (me % 6 == 5) acolorproc = image->color2rgb("purple");
+
+  if (me % 6 == 0) gcolorproc = image->color2rgb("red");
+  else if (me % 6 == 1) gcolorproc = image->color2rgb("green");
+  else if (me % 6 == 2) gcolorproc = image->color2rgb("blue");
+  else if (me % 6 == 3) gcolorproc = image->color2rgb("yellow");
+  else if (me % 6 == 4) gcolorproc = image->color2rgb("aqua");
+  else if (me % 6 == 5) gcolorproc = image->color2rgb("purple");
+
+  if (me % 6 == 0) scolorproc = image->color2rgb("red");
+  else if (me % 6 == 1) scolorproc = image->color2rgb("green");
+  else if (me % 6 == 2) scolorproc = image->color2rgb("blue");
+  else if (me % 6 == 3) scolorproc = image->color2rgb("yellow");
+  else if (me % 6 == 4) scolorproc = image->color2rgb("aqua");
+  else if (me % 6 == 5) scolorproc = image->color2rgb("purple");
 
   // viewflag = DYNAMIC if any view parameter is dynamic
 
@@ -326,8 +527,13 @@ DumpImage::~DumpImage()
 {
   delete image;
 
+  delete [] idgrid;
+  delete [] idgridx;
+  delete [] idgridy;
+  delete [] idgridz;
+  delete [] idsurf;
+
   delete [] colortype;
-  delete [] colorproc;
   delete [] diamtype;
 }
 
@@ -412,6 +618,65 @@ void DumpImage::init_style()
     if (!input->variable->equal_style(perspvar))
       error->all(FLERR,"Variable for dump image persp is invalid style");
   }
+
+  // setup grid/surf references to computes, fixes, variables
+  // NOTE: need to add lookup for variables
+
+  if (gridflag && gcolor == ATTRIBUTE) {
+    if (gridwhich == COMPUTE) {
+      gridindex = modify->find_compute(idgrid);
+      if (gridindex < 0) 
+        error->all(FLERR,"Could not find dump image compute ID");
+    } else if (gridwhich == FIX) {
+      gridindex = modify->find_fix(idgrid);
+      if (gridindex < 0) 
+        error->all(FLERR,"Could not find dump image fix ID");
+    }
+  }
+  if (gridxflag && gxcolor == ATTRIBUTE) {
+    if (gridxwhich == COMPUTE) {
+      gridxindex = modify->find_compute(idgridx);
+      if (gridxindex < 0) 
+        error->all(FLERR,"Could not find dump image compute ID");
+    } else if (gridxwhich == FIX) {
+      gridxindex = modify->find_fix(idgridx);
+      if (gridxindex < 0) 
+        error->all(FLERR,"Could not find dump image fix ID");
+    }
+  }
+  if (gridyflag && gycolor == ATTRIBUTE) {
+    if (gridywhich == COMPUTE) {
+      gridyindex = modify->find_compute(idgridy);
+      if (gridyindex < 0) 
+        error->all(FLERR,"Could not find dump image compute ID");
+    } else if (gridywhich == FIX) {
+      gridyindex = modify->find_fix(idgridy);
+      if (gridyindex < 0) 
+        error->all(FLERR,"Could not find dump image fix ID");
+    }
+  }
+  if (gridzflag && gzcolor == ATTRIBUTE) {
+    if (gridzwhich == COMPUTE) {
+      gridzindex = modify->find_compute(idgridz);
+      if (gridzindex < 0) 
+        error->all(FLERR,"Could not find dump image compute ID");
+    } else if (gridzwhich == FIX) {
+      gridzindex = modify->find_fix(idgridz);
+      if (gridzindex < 0) 
+        error->all(FLERR,"Could not find dump image fix ID");
+    }
+  }
+  if (surfflag && scolor == ATTRIBUTE) {
+    if (surfwhich == COMPUTE) {
+      surfindex = modify->find_compute(idsurf);
+      if (surfindex < 0) 
+        error->all(FLERR,"Could not find dump image compute ID");
+    } else if (surfwhich == FIX) {
+      surfindex = modify->find_fix(idsurf);
+      if (surfindex < 0) 
+        error->all(FLERR,"Could not find dump image fix ID");
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -428,9 +693,6 @@ void DumpImage::write()
   if (viewflag == DYNAMIC) view_params();
 
   // nme = # of atoms this proc will contribute to dump
-  // pack buf with x,y,z,color,diameter
-  // set minmax color range if using color map
-  // create my portion of image for my particles
   
   nme = count();
 
@@ -440,10 +702,200 @@ void DumpImage::write()
     memory->create(buf,maxbuf*size_one,"dump:buf");
   }
 
-  pack();
-  if (acolor == ATTRIBUTE) image->color_minmax(nchoose,buf,size_one);
+  // pack buf with color,diameter
 
-  // create image on each proc, then merge them
+  pack();
+
+  // set minmax color ranges if using dynamic color maps
+
+  if (atomflag && acolor == ATTRIBUTE && image->map_dynamic(MOL)) {
+    double two[2],twoall[2];
+    double lo = BIG;
+    double hi = -BIG;
+    int m = 0;
+    for (int i = 0; i < nchoose; i++) {
+      lo = MIN(lo,buf[m]);
+      hi = MAX(hi,buf[m]);
+      m += size_one;
+    }
+    two[0] = -lo;
+    two[1] = hi;
+    MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
+    int flag = image->map_minmax(MOL,-twoall[0],twoall[1]);
+    if (flag) error->all(FLERR,"Invalid color map min/max values");
+  }
+
+  if (gridflag && gcolor == ATTRIBUTE && image->map_dynamic(GRID)) {
+    double value,two[2],twoall[2];
+    double lo = BIG;
+    double hi = -BIG;
+
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      if (gridwhich == COMPUTE) {
+        Compute *compute = modify->compute[gridindex];
+        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+          compute->compute_per_grid();
+          compute->invoked_flag |= INVOKED_PER_GRID;
+        }
+        if (gridcol == 0) value = compute->vector_grid[icell];
+        else value = compute->array_grid[icell][gridcol];
+      } else if (gridwhich == FIX) {
+        Fix *fix = modify->fix[gridindex];
+        if (gridcol == 0) value = fix->vector_grid[icell];
+        else value = fix->array_grid[icell][gridcol];
+      }
+      lo = MIN(lo,value);
+      hi = MAX(hi,value);
+    }
+    two[0] = -lo;
+    two[1] = hi;
+    MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
+    int flag = image->map_minmax(GRID,-twoall[0],twoall[1]);
+    if (flag) error->all(FLERR,"Invalid color map min/max values");
+  }
+
+  if (gridxflag && gxcolor == ATTRIBUTE && image->map_dynamic(XPLANE)) {
+    double value,two[2],twoall[2];
+    double lo = BIG;
+    double hi = -BIG;
+
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      if (gridxwhich == COMPUTE) {
+        Compute *compute = modify->compute[gridxindex];
+        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+          compute->compute_per_grid();
+          compute->invoked_flag |= INVOKED_PER_GRID;
+        }
+        if (gridxcol == 0) value = compute->vector_grid[icell];
+        else value = compute->array_grid[icell][gridxcol-1];
+      } else if (gridxwhich == FIX) {
+        Fix *fix = modify->fix[gridxindex];
+        if (gridxcol == 0) value = fix->vector_grid[icell];
+        else value = fix->array_grid[icell][gridxcol-1];
+      }
+      lo = MIN(lo,value);
+      hi = MAX(hi,value);
+    }
+    two[0] = -lo;
+    two[1] = hi;
+    MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
+    int flag = image->map_minmax(XPLANE,-twoall[0],twoall[1]);
+    if (flag) error->all(FLERR,"Invalid color map min/max values");
+  }
+
+  if (gridyflag && gycolor == ATTRIBUTE && image->map_dynamic(YPLANE)) {
+    double value,two[2],twoall[2];
+    double lo = BIG;
+    double hi = -BIG;
+
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      if (gridywhich == COMPUTE) {
+        Compute *compute = modify->compute[gridyindex];
+        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+          compute->compute_per_grid();
+          compute->invoked_flag |= INVOKED_PER_GRID;
+        }
+        if (gridycol == 0) value = compute->vector_grid[icell];
+        else value = compute->array_grid[icell][gridycol-1];
+      } else if (gridywhich == FIX) {
+        Fix *fix = modify->fix[gridyindex];
+        if (gridycol == 0) value = fix->vector_grid[icell];
+        else value = fix->array_grid[icell][gridycol-1];
+      }
+      lo = MIN(lo,value);
+      hi = MAX(hi,value);
+    }
+    two[0] = -lo;
+    two[1] = hi;
+    MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
+    int flag = image->map_minmax(YPLANE,-twoall[0],twoall[1]);
+    if (flag) error->all(FLERR,"Invalid color map min/max values");
+  }
+
+  if (gridzflag && gzcolor == ATTRIBUTE && image->map_dynamic(ZPLANE)) {
+    double value,two[2],twoall[2];
+    double lo = BIG;
+    double hi = -BIG;
+
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      if (gridzwhich == COMPUTE) {
+        Compute *compute = modify->compute[gridzindex];
+        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+          compute->compute_per_grid();
+          compute->invoked_flag |= INVOKED_PER_GRID;
+        }
+        if (gridzcol == 0) value = compute->vector_grid[icell];
+        else value = compute->array_grid[icell][gridzcol-1];
+      } else if (gridzwhich == FIX) {
+        Fix *fix = modify->fix[gridzindex];
+        if (gridzcol == 0) value = fix->vector_grid[icell];
+        else value = fix->array_grid[icell][gridzcol-1];
+      }
+      lo = MIN(lo,value);
+      hi = MAX(hi,value);
+    }
+    two[0] = -lo;
+    two[1] = hi;
+    MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
+    int flag = image->map_minmax(ZPLANE,-twoall[0],twoall[1]);
+    if (flag) error->all(FLERR,"Invalid color map min/max values");
+  }
+
+  if (surfflag && scolor == ATTRIBUTE && image->map_dynamic(SURF)) {
+    int m;
+    double value,two[2],twoall[2];
+    double lo = BIG;
+    double hi = -BIG;
+
+    Surf::Point *pts = surf->pts;
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+    int *mysurfs = surf->mysurfs;
+    int nslocal = surf->nlocal;
+
+    for (int isurf = 0; isurf < nslocal; isurf++) {
+      m = mysurfs[isurf];
+      if (surfwhich == COMPUTE) {
+        Compute *compute = modify->compute[surfindex];
+        if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
+          compute->compute_per_surf();
+          compute->invoked_flag |= INVOKED_PER_SURF;
+        }
+        if (surfcol == 0) value = compute->vector_surf[isurf];
+        else value = compute->array_surf[isurf][surfcol-1];
+      } else if (surfwhich == FIX) {
+        Fix *fix = modify->fix[surfindex];
+        if (surfcol == 0) value = fix->vector_surf[isurf];
+        else value = fix->array_surf[isurf][surfcol-1];
+      }
+      lo = MIN(lo,value);
+      hi = MAX(hi,value);
+    }
+    two[0] = -lo;
+    two[1] = hi;
+    MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
+    int flag = image->map_minmax(SURF,-twoall[0],twoall[1]);
+    if (flag) error->all(FLERR,"Invalid color map min/max values");
+  }
+
+  // create my portion of image for my particles, grid cells, surfs
+  // then merge per-proc images
 
   image->clear();
   create_image();
@@ -550,6 +1002,7 @@ void DumpImage::create_image()
   double xmid[3];
 
   // render my atoms
+  // region is used as constraint by parent class
 
   if (atomflag) {
     Particle::OnePart *particles = particle->particles;
@@ -562,10 +1015,9 @@ void DumpImage::create_image()
 	itype = static_cast<int> (buf[m]);
 	color = colortype[itype];
       } else if (acolor == PROC) {
-	iproc = static_cast<int> (buf[m]);
-	color = colorproc[iproc];
+	color = acolorproc;
       } else if (acolor == ATTRIBUTE) {
-	color = image->value2color(buf[m]);
+	color = image->map_value2color(MOL,buf[m]);
       }
 
       if (adiam == NUMERIC) {
@@ -583,39 +1035,46 @@ void DumpImage::create_image()
   }
 
   // render my grid cells
+  // for 2d, draw as rectangle, so particles and grid lines show up
+  // for 3d, draw as brick, so particles will be hidden inside
+  // use region as constraint
 
-  if (cellflag) {
-    int m;
+  if (gridflag) {
+    double value;
     double x[3],y[3],z[3],diam[3];
     double *lo,*hi;
 
-    int dimension = domain->dimension;
-    Grid::OneCell *cells = grid->cells;
-    int *mychild = grid->mychild;
-    int nchild = grid->nchild;
+    Region *region = NULL;
+    if (iregion >= 0) region = domain->regions[iregion];
 
-    for (int icell = 0; icell < nchild; icell++) {
-      m = mychild[icell];
+    int dimension = domain->dimension;
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
 
       if (gcolor == PROC) {
-	color = colorproc[me];
+	color = gcolorproc;
       } else if (gcolor == ATTRIBUTE) {
-        // NOTE: this will not work, b/c buf is filled with particles
-        // question is how to get grid cell values when this
-        // class is derived from dump particle?
-        // cell setting needs to define the attibute and have to extract
-        // it and store it somehow
-        // also need to build a color map for it
-
-	//color = image->value2color(buf[m]);
+        if (gridwhich == COMPUTE) {
+          Compute *compute = modify->compute[gridindex];
+          if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+            compute->compute_per_grid();
+            compute->invoked_flag |= INVOKED_PER_GRID;
+          }
+          if (gridcol == 0) value = compute->vector_grid[icell];
+          else value = compute->array_grid[icell][gridcol];
+        } else if (gridwhich == FIX) {
+          Fix *fix = modify->fix[gridindex];
+          if (gridcol == 0) value = fix->vector_grid[icell];
+          else value = fix->array_grid[icell][gridcol];
+        }
+        color = image->map_value2color(GRID,value);
       }
 
-      lo = cells[m].lo;
-      hi = cells[m].hi;
-
-      // for 2d, draw as rectangle, so particles and grid lines show up
-      // for 3d, draw as brick, so particles will be hidden inside
-      // NOTE: would be good to be able to do this for a 2d slice of 3d model
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
 
       diam[0] = hi[0]-lo[0];
       diam[1] = hi[1]-lo[1];
@@ -625,32 +1084,224 @@ void DumpImage::create_image()
       x[2] = 0.5*(lo[2]+hi[2]);
       if (dimension == 2) diam[2] = x[2] = 0.0;
 
+      if (region && !region->match(x)) continue;
+
       image->draw_brick(x,color,diam);
     }
   }
 
-  // render outline of grid cells
+  // render my grid plane(s)
+  // do not use region as constraint
+  // NOTE: could add this if allow for specifying different regions
 
-  if (gridflag) {
-    int m;
-    double x[3],y[3],z[3];
+  if (gridxflag || gridyflag || gridzflag) {
+    double value;
+    double x[3],y[3],z[3],diam[3];
     double *lo,*hi;
 
-    double diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+    Region *region = NULL;
+
+    int dimension = domain->dimension;
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+
+      // draw as rectangle, so grid lines show up
+
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
+
+      if (gridxflag) {
+        if (gridxcoord >= lo[0] && gridxcoord < hi[0]) {
+          if (gxcolor == PROC) {
+            color = gcolorproc;
+          } else if (gxcolor == ATTRIBUTE) {
+            if (gridxwhich == COMPUTE) {
+              Compute *compute = modify->compute[gridxindex];
+              if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+                compute->compute_per_grid();
+                compute->invoked_flag |= INVOKED_PER_GRID;
+              }
+              if (gridxcol == 0) value = compute->vector_grid[icell];
+              else value = compute->array_grid[icell][gridxcol-1];
+            } else if (gridxwhich == FIX) {
+              Fix *fix = modify->fix[gridxindex];
+              if (gridxcol == 0) value = fix->vector_grid[icell];
+              else value = fix->array_grid[icell][gridxcol-1];
+            }
+            color = image->map_value2color(XPLANE,value);
+          }
+          diam[0] = 0.0;
+          diam[1] = hi[1]-lo[1];
+          diam[2] = hi[2]-lo[2];
+          x[0] = gridxcoord;
+          x[1] = 0.5*(lo[1]+hi[1]);
+          x[2] = 0.5*(lo[2]+hi[2]);
+          if (!region || region->match(x)) image->draw_brick(x,color,diam);
+        }
+      }
+      if (gridyflag) {
+        if (gridycoord >= lo[1] && gridycoord < hi[1]) {
+          if (gycolor == PROC) {
+            color = gcolorproc;
+          } else if (gycolor == ATTRIBUTE) {
+            if (gridywhich == COMPUTE) {
+              Compute *compute = modify->compute[gridyindex];
+              if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+                compute->compute_per_grid();
+                compute->invoked_flag |= INVOKED_PER_GRID;
+              }
+              if (gridycol == 0) value = compute->vector_grid[icell];
+              else value = compute->array_grid[icell][gridycol-1];
+            } else if (gridywhich == FIX) {
+              Fix *fix = modify->fix[gridyindex];
+              if (gridycol == 0) value = fix->vector_grid[icell];
+              else value = fix->array_grid[icell][gridycol-1];
+            }
+            color = image->map_value2color(YPLANE,value);
+          }
+          diam[0] = hi[0]-lo[0];
+          diam[1] = 0.0;
+          diam[2] = hi[2]-lo[2];
+          x[0] = 0.5*(lo[0]+hi[0]);
+          x[1] = gridycoord;
+          x[2] = 0.5*(lo[2]+hi[2]);
+          if (!region || region->match(x)) image->draw_brick(x,color,diam);
+        }
+      }
+      if (gridzflag) {
+        if (gridzcoord >= lo[2] && gridzcoord < hi[2]) {
+          if (gzcolor == PROC) {
+            color = gcolorproc;
+          } else if (gzcolor == ATTRIBUTE) {
+            if (gridzwhich == COMPUTE) {
+              Compute *compute = modify->compute[gridzindex];
+              if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+                compute->compute_per_grid();
+                compute->invoked_flag |= INVOKED_PER_GRID;
+              }
+              if (gridzcol == 0) value = compute->vector_grid[icell];
+              else value = compute->array_grid[icell][gridzcol-1];
+            } else if (gridzwhich == FIX) {
+              Fix *fix = modify->fix[gridzindex];
+              if (gridzcol == 0) value = fix->vector_grid[icell];
+              else value = fix->array_grid[icell][gridzcol-1];
+            }
+            color = image->map_value2color(ZPLANE,value);
+          }
+          diam[0] = hi[0]-lo[0];
+          diam[1] = hi[1]-lo[1];
+          diam[2] = 0.0;
+          x[0] = 0.5*(lo[0]+hi[0]);
+          x[1] = 0.5*(lo[1]+hi[1]);
+          x[2] = gridzcoord;
+          if (!region || region->match(x)) image->draw_brick(x,color,diam);
+        }
+      }
+    }
+  }
+
+  // render outline of my grid plane(s)
+  // do not use region as constraint
+  // NOTE: could add this if allow for specifying different regions
+
+
+  if (glineflag && (gridxflag || gridyflag || gridzflag)) {
+    double x[3];
+    double *lo,*hi;
+
+    Region *region = NULL;
+    //if (iregion >= 0) region = domain->regions[iregion];
+
+    diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
-    diameter *= griddiam;
+    diameter *= glinediam;
 
-    Grid::OneCell *cells = grid->cells;
-    int *mychild = grid->mychild;
-    int nchild = grid->nchild;
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
 
-    double (*boxcorners)[3];
     double box[8][3];
 
-    for (int icell = 0; icell < nchild; icell++) {
-      m = mychild[icell];
-      lo = cells[m].lo;
-      hi = cells[m].hi;
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
+
+      if (gridxflag) {
+        if (gridxcoord >= lo[0] && gridxcoord < hi[0]) {
+          x[0] = gridxcoord;
+          x[1] = 0.5*(lo[1]+hi[1]);
+          x[2] = 0.5*(lo[2]+hi[2]);
+          if (!region || region->match(x)) {
+            box[0][0] = gridxcoord; box[0][1] = lo[1]; box[0][2] = lo[2];
+            box[1][0] = gridxcoord; box[1][1] = hi[1]; box[1][2] = lo[2];
+            box[2][0] = gridxcoord; box[2][1] = lo[1]; box[2][2] = hi[2];
+            box[3][0] = gridxcoord; box[3][1] = hi[1]; box[3][2] = hi[2];
+            image->draw_box2d(box,glinecolor,diameter);
+          }
+        }
+      }
+      if (gridyflag) {
+        if (gridycoord >= lo[1] && gridycoord < hi[1]) {
+          x[0] = 0.5*(lo[0]+hi[0]);
+          x[1] = gridycoord;
+          x[2] = 0.5*(lo[2]+hi[2]);
+          if (!region || region->match(x)) {
+            box[0][0] = lo[0]; box[0][1] = gridycoord; box[0][2] = lo[2];
+            box[1][0] = hi[0]; box[1][1] = gridycoord; box[1][2] = lo[2];
+            box[2][0] = lo[0]; box[2][1] = gridycoord; box[2][2] = hi[2];
+            box[3][0] = hi[0]; box[3][1] = gridycoord; box[3][2] = hi[2];
+            image->draw_box2d(box,glinecolor,diameter);
+          }
+        }
+      }
+      if (gridzflag) {
+        if (gridzcoord >= lo[2] && gridzcoord < hi[2]) {
+          x[0] = 0.5*(lo[0]+hi[0]);
+          x[1] = 0.5*(lo[1]+hi[1]);
+          x[2] = gridzcoord;
+          if (!region || region->match(x)) {
+            box[0][0] = lo[0]; box[0][1] = lo[1]; box[0][2] = gridzcoord;
+            box[1][0] = hi[0]; box[1][1] = lo[1]; box[1][2] = gridzcoord;
+            box[2][0] = lo[0]; box[2][1] = hi[1]; box[2][2] = gridzcoord;
+            box[3][0] = hi[0]; box[3][1] = hi[1]; box[3][2] = gridzcoord;
+            image->draw_box2d(box,glinecolor,diameter);
+          }
+        }
+      }
+    }
+  }
+
+  // render outline of my grid cells
+  // use region as constraint
+
+  else if (glineflag) {
+    double x[3];
+    double *lo,*hi;
+
+    Region *region = NULL;
+    if (iregion >= 0) region = domain->regions[iregion];
+
+    diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+    if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
+    diameter *= glinediam;
+
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+
+    double box[8][3];
+
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
+
+      x[0] = 0.5*(lo[0]+hi[0]);
+      x[1] = 0.5*(lo[1]+hi[1]);
+      x[2] = 0.5*(lo[2]+hi[2]);
+      if (region && !region->match(x)) continue;
 
       box[0][0] = lo[0]; box[0][1] = lo[1]; box[0][2] = lo[2];
       box[1][0] = hi[0]; box[1][1] = lo[1]; box[1][2] = lo[2];
@@ -660,19 +1311,99 @@ void DumpImage::create_image()
       box[5][0] = hi[0]; box[5][1] = lo[1]; box[5][2] = hi[2];
       box[6][0] = lo[0]; box[6][1] = hi[1]; box[6][2] = hi[2];
       box[7][0] = hi[0]; box[7][1] = hi[1]; box[7][2] = hi[2];
-      boxcorners = box;
-      image->draw_box(box,gridcolor,diameter);
+
+      image->draw_box(box,glinecolor,diameter);
+    }
+  }
+
+  // render my surf elements
+  // do not use region as constraint
+
+  if (surfflag) {
+    double value;
+
+    diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+    if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
+    diameter *= sdiamvalue;
+    Surf::Point *pts = surf->pts;
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+    int *mysurfs = surf->mysurfs;
+    int nslocal = surf->nlocal;
+
+    for (int isurf = 0; isurf < nslocal; isurf++) {
+      m = mysurfs[isurf];
+      
+      if (scolor == ONE) {
+        color = surfcolorone;
+      } else if (scolor == PROC) {
+        color = scolorproc;
+      } else if (scolor == ATTRIBUTE) {
+        if (surfwhich == COMPUTE) {
+          Compute *compute = modify->compute[surfindex];
+          if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
+            compute->compute_per_surf();
+            compute->invoked_flag |= INVOKED_PER_SURF;
+          }
+          if (surfcol == 0) value = compute->vector_surf[isurf];
+          else value = compute->array_surf[isurf][surfcol-1];
+        } else if (surfwhich == FIX) {
+          Fix *fix = modify->fix[surfindex];
+          if (surfcol == 0) value = fix->vector_surf[isurf];
+          else value = fix->array_surf[isurf][surfcol-1];
+        }
+        color = image->map_value2color(SURF,value);
+      }
+      
+      if (domain->dimension == 2)
+        image->draw_line(pts[lines[m].p1].x,pts[lines[m].p2].x,
+                         color,diameter);
+      else
+        image->draw_triangle(pts[tris[m].p1].x,pts[tris[m].p2].x,
+                             pts[tris[m].p3].x,color);
+    }
+  }
+
+  // render outline of my surf elements
+  // do not use region as constraint
+
+  if (slineflag) {
+    diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+    if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
+    diameter *= slinediam;
+
+    Surf::Point *pts = surf->pts;
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+    int *mysurfs = surf->mysurfs;
+    int nslocal = surf->nlocal;
+
+    if (domain->dimension == 2) {
+      for (int isurf = 0; isurf < nslocal; isurf++) {
+        m = mysurfs[isurf];
+        image->draw_line(pts[lines[m].p1].x,pts[lines[m].p2].x,
+                         slinecolor,diameter);
+      }
+    } else {
+      for (int isurf = 0; isurf < nslocal; isurf++) {
+        m = mysurfs[isurf];
+        image->draw_line(pts[tris[m].p1].x,pts[tris[m].p2].x,
+                         slinecolor,diameter);
+        image->draw_line(pts[tris[m].p2].x,pts[tris[m].p3].x,
+                         slinecolor,diameter);
+        image->draw_line(pts[tris[m].p3].x,pts[tris[m].p1].x,
+                         slinecolor,diameter);
+      }
     }
   }
 
   // render outline of simulation box, orthogonal or triclinic
 
   if (boxflag) {
-    double diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+    diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
     diameter *= boxdiam;
 
-    double (*boxcorners)[3];
     double box[8][3];
     box[0][0] = boxxlo; box[0][1] = boxylo; box[0][2] = boxzlo;
     box[1][0] = boxxhi; box[1][1] = boxylo; box[1][2] = boxzlo;
@@ -682,7 +1413,6 @@ void DumpImage::create_image()
     box[5][0] = boxxhi; box[5][1] = boxylo; box[5][2] = boxzhi;
     box[6][0] = boxxlo; box[6][1] = boxyhi; box[6][2] = boxzhi;
     box[7][0] = boxxhi; box[7][1] = boxyhi; box[7][2] = boxzhi;
-    boxcorners = box;
 
     image->draw_box(box,boxcolor,diameter);
   }
@@ -691,7 +1421,7 @@ void DumpImage::create_image()
   // offset by 10% of box size and scale by axeslen
 
   if (axesflag) {
-    double diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+    diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
     diameter *= axesdiam;
 
@@ -721,6 +1451,28 @@ void DumpImage::create_image()
 
     image->draw_axes(axes,diameter);
   }
+
+  // DEBUG - render each proc's RCB box
+  // need to add logic for 3d to this
+
+#ifdef RCB_DEBUG
+
+  diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
+  if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
+  diameter *= 0.5*boxdiam;
+
+  double *rcblo = update->rcblo;
+  double *rcbhi = update->rcbhi;
+
+  double box[4][3];
+  box[0][0] = rcblo[0]; box[0][1] = rcblo[1]; box[0][2] = boxzhi;
+  box[1][0] = rcbhi[0]; box[1][1] = rcblo[1]; box[1][2] = boxzhi;
+  box[2][0] = rcblo[0]; box[2][1] = rcbhi[1]; box[2][2] = boxzhi;
+  box[3][0] = rcbhi[0]; box[3][1] = rcbhi[1]; box[3][2] = boxzhi;
+  image->draw_box2d(box,boxcolor,diameter);
+
+#endif
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -737,6 +1489,7 @@ int DumpImage::modify_param(int narg, char **arg)
       err = MathExtra::bounds(arg[1],particle->nspecies,nlo,nhi);
     else if (acolor == PROC)
       err = MathExtra::bounds(arg[1],nprocs,nlo,nhi);
+    else error->all(FLERR,"Illegal dump_modify command");
     if (err) error->all(FLERR,"Illegal dump_modify command");
 
     // ptrs = list of ncount colornames separated by '/'
@@ -755,8 +1508,7 @@ int DumpImage::modify_param(int narg, char **arg)
     ncount--;
 
     // assign each of ncount colors in round-robin fashion to types or procs
-    // for PROC case, assign Ith color to I-1 value in colorproc
-    // this is so can use bounds() above from 1 to Nprocs inclusive
+    // for PROC case, map 0-Nprocs-1 proc ID to 1 to Nprocs colors
 
     if (acolor == TYPE) {
       int m = 0;
@@ -767,12 +1519,11 @@ int DumpImage::modify_param(int narg, char **arg)
         m++;
       }
     } else if (acolor == PROC) {
-      int m = 0;
-      for (int i = nlo; i <= nhi; i++) {
-        colorproc[i-1] = image->color2rgb(ptrs[m%ncount]);
-        if (colorproc[i-1] == NULL)
+      if (me+1 >= nlo && me+1 <= nhi) {
+        int m = (me+1-nlo) % ncount;
+        acolorproc = image->color2rgb(ptrs[m]);
+        if (acolorproc == NULL)
           error->all(FLERR,"Invalid color in dump_modify command");
-        m++;
       }
     }
 
@@ -788,20 +1539,6 @@ int DumpImage::modify_param(int narg, char **arg)
     if (diam <= 0.0) error->all(FLERR,"Illegal dump_modify command");
     for (int i = nlo; i <= nhi; i++) diamtype[i] = diam;
     return 3;
-  }
-
-  if (strcmp(arg[0],"amap") == 0) {
-    if (narg < 6) error->all(FLERR,"Illegal dump_modify command");
-    if (strlen(arg[3]) != 2) error->all(FLERR,"Illegal dump_modify command");
-    int factor = 2;
-    if (arg[3][0] == 's') factor = 1;
-    int nentry = atoi(arg[5]);
-    if (nentry < 1) error->all(FLERR,"Illegal dump_modify command");
-    int n = 6 + factor*nentry;
-    if (narg < n) error->all(FLERR,"Illegal dump_modify command");
-    int flag = image->colormap(n-1,&arg[1]);
-    if (flag) error->all(FLERR,"Illegal dump_modify command");
-    return n;
   }
 
   if (strcmp(arg[0],"backcolor") == 0) {
@@ -822,12 +1559,26 @@ int DumpImage::modify_param(int narg, char **arg)
     return 2;
   }
 
-  if (strcmp(arg[0],"gridcolor") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
-    gridcolor = image->color2rgb(arg[1]);
-    if (gridcolor == NULL) 
-      error->all(FLERR,"Invalid color in dump_modify command");
-    return 2;
+  if (strcmp(arg[0],"cmap") == 0) {
+    if (narg < 7) error->all(FLERR,"Illegal dump_modify command");
+    int which;
+    if (strcmp(arg[1],"atom") == 0) which = MOL;
+    else if (strcmp(arg[1],"grid") == 0) which = GRID;
+    else if (strcmp(arg[1],"surf") == 0) which = SURF;
+    else if (strcmp(arg[1],"gridx") == 0) which = XPLANE;
+    else if (strcmp(arg[1],"gridy") == 0) which = YPLANE;
+    else if (strcmp(arg[1],"gridz") == 0) which = ZPLANE;
+    else error->all(FLERR,"Illegal dump_modify command");
+    if (strlen(arg[4]) != 2) error->all(FLERR,"Illegal dump_modify command");
+    int factor = 2;
+    if (arg[4][0] == 's') factor = 1;
+    int nentry = atoi(arg[6]);
+    if (nentry < 1) error->all(FLERR,"Illegal dump_modify command");
+    int n = 7 + factor*nentry;
+    if (narg < n) error->all(FLERR,"Illegal dump_modify command");
+    int flag = image->map_reset(which,n-2,&arg[2]);
+    if (flag) error->all(FLERR,"Illegal dump_modify command");
+    return n;
   }
 
   if (strcmp(arg[0],"color") == 0) {
@@ -835,6 +1586,106 @@ int DumpImage::modify_param(int narg, char **arg)
     int flag = image->addcolor(arg[1],atof(arg[2]),atof(arg[3]),atof(arg[4]));
     if (flag) error->all(FLERR,"Illegal dump_modify command");
     return 5;
+  }
+
+  if (strcmp(arg[0],"gcolor") == 0) {
+    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    int err,nlo,nhi;
+    if (gcolor == PROC) err = MathExtra::bounds(arg[1],nprocs,nlo,nhi);
+    else error->all(FLERR,"Illegal dump_modify command");
+    if (err) error->all(FLERR,"Illegal dump_modify command");
+
+    // ptrs = list of ncount colornames separated by '/'
+
+    int ncount = 1;
+    char *nextptr;
+    char *ptr = arg[2];
+    while (nextptr = strchr(ptr,'/')) {
+      ptr = nextptr + 1;
+      ncount++;
+    }
+    char **ptrs = new char*[ncount+1];
+    ncount = 0;
+    ptrs[ncount++] = strtok(arg[2],"/");
+    while (ptrs[ncount++] = strtok(NULL,"/"));
+    ncount--;
+
+    // assign each of ncount colors in round-robin fashion to procs
+    // for PROC case, assign Ith color to I-1 value in colorproc
+    // this is so can use bounds() above from 1 to Nprocs inclusive
+
+    if (gcolor == PROC) {
+      if (me+1 >= nlo && me+1 <= nhi) {
+        int m = (me+1-nlo) % ncount;
+        gcolorproc = image->color2rgb(ptrs[m]);
+        if (gcolorproc == NULL)
+          error->all(FLERR,"Invalid color in dump_modify command");
+      }
+    }
+
+    delete [] ptrs;
+    return 3;
+  }
+
+  if (strcmp(arg[0],"glinecolor") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    glinecolor = image->color2rgb(arg[1]);
+    if (glinecolor == NULL) 
+      error->all(FLERR,"Invalid color in dump_modify command");
+    return 2;
+  }
+
+  if (strcmp(arg[0],"scolor") == 0) {
+    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    int err,nlo,nhi;
+    if (scolor == ONE) err = 0;
+    else if (scolor == PROC) err = MathExtra::bounds(arg[1],nprocs,nlo,nhi);
+    else error->all(FLERR,"Illegal dump_modify command");
+    if (err) error->all(FLERR,"Illegal dump_modify command");
+
+    // ptrs = list of ncount colornames separated by '/'
+
+    int ncount = 1;
+    char *nextptr;
+    char *ptr = arg[2];
+    while (nextptr = strchr(ptr,'/')) {
+      ptr = nextptr + 1;
+      ncount++;
+    }
+    char **ptrs = new char*[ncount+1];
+    ncount = 0;
+    ptrs[ncount++] = strtok(arg[2],"/");
+    while (ptrs[ncount++] = strtok(NULL,"/"));
+    ncount--;
+
+    // assign each of ncount colors in round-robin fashion to procs
+    // for PROC case, assign Ith color to I-1 value in colorproc
+    // this is so can use bounds() above from 1 to Nprocs inclusive
+
+    if (scolor == ONE) {
+      if (ncount > 1) error->all(FLERR,"Illegal dump_modify command");
+      surfcolorone = image->color2rgb(arg[2]);
+      if (surfcolorone == NULL)
+        error->all(FLERR,"Invalid color in dump_modify command");
+    } else if (scolor == PROC) {
+      if (me+1 >= nlo && me+1 <= nhi) {
+        int m = (me+1-nlo) % ncount;
+        scolorproc = image->color2rgb(ptrs[m]);
+        if (scolorproc == NULL)
+          error->all(FLERR,"Invalid color in dump_modify command");
+      }
+    }
+
+    delete [] ptrs;
+    return 3;
+  }
+
+  if (strcmp(arg[0],"slinecolor") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    slinecolor = image->color2rgb(arg[1]);
+    if (slinecolor == NULL) 
+      error->all(FLERR,"Invalid color in dump_modify command");
+    return 2;
   }
 
   return 0;

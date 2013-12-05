@@ -207,7 +207,7 @@ int tri_hex_intersect(double *v0, double *v1, double *v2, double *norm,
   sum += whichside(v0,norm,xlo,yhi,zhi);
   sum += whichside(v0,norm,xhi,yhi,zhi);
   if (sum == 8 || sum == -8) return 0;
-
+  
   // test 12 hex edges for intersection with tri
   // b,e = begin/end of hex edge line segment
 
@@ -626,8 +626,7 @@ bool line_line_intersect(double *start, double *stop,
      in common with any triangle pt (interior, edge, vertex)
    one exception is if both line end pts are in plane of triangle,
      then is NOT an intersection
-   start,stop = end points of directed line segment
-     line segment must have non-zero length
+   start,stop = end points of directed line segment, can have zero length
    v0,v1,v2 = 3 vertices of triangle
    norm = unit vector normal to triangle plane
      pointing OUTSIDE via right-hand rule
@@ -765,6 +764,43 @@ int point_in_hex(double *x, double *lo, double *hi)
       x[1] >= lo[1] && x[1] <= hi[1] && 
       x[2] >= lo[2] && x[2] <= hi[2]) return 1;
   return 0;
+}
+
+
+/* ----------------------------------------------------------------------
+   determine if point x lies on edge or inside of tri defined by p1,p2,p3
+   return 1 if it does, 0 if not
+------------------------------------------------------------------------- */
+
+int point_in_tri(double *x, double *p1, double *p2, double *p3, double *norm)
+{
+  // if not in plane of tri, then not inside tri
+
+  if (whichside(p1,norm,x[0],x[1],x[2])) return 0;
+
+  // enorm123 = 3 vecs normal to each edge of tri
+  // are in plane of tri, pointing towards center of tri
+  // enorms are NOT unit vectors
+
+  double enorm1[3],enorm2[3],enorm3[3];
+
+  double diff[3];
+  MathExtra::sub3(p2,p1,diff);
+  MathExtra::cross3(norm,diff,enorm1);
+  MathExtra::sub3(p3,p2,diff);
+  MathExtra::cross3(norm,diff,enorm2);
+  MathExtra::sub3(p1,p3,diff);
+  MathExtra::cross3(norm,diff,enorm3);
+
+  // if (pt - vertex) dotted into tri edge normal < 0, then outside tri
+
+  MathExtra::sub3(p1,x,diff);
+  if (MathExtra::dot3(diff,enorm1) < 0.0) return 0;
+  MathExtra::sub3(p2,x,diff);
+  if (MathExtra::dot3(diff,enorm2) < 0.0) return 0;
+  MathExtra::sub3(p3,x,diff);
+  if (MathExtra::dot3(diff,enorm3) < 0.0) return 0;
+  return 1;
 }
 
 /* ----------------------------------------------------------------------

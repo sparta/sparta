@@ -80,6 +80,7 @@ class Compute : protected Pointers {
   virtual void surf_tally(int, double *, Particle::OnePart *) {}
   virtual void boundary_tally(int, int, double *, Particle::OnePart *) {}
 
+  virtual int normflag(int) {return 0;}
   virtual double *normptr(int) {return NULL;}
   virtual int surfinfo(int *&) {return 0;}
 
@@ -87,6 +88,7 @@ class Compute : protected Pointers {
   int matchstep(bigint);
   void clearstep();
 
+  virtual void reallocate() {}
   virtual bigint memory_usage();
 };
 

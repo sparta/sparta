@@ -17,90 +17,91 @@
 
 #include "pointers.h"
 #include "my_vec.h"
-#include "my_double_linked_list.h"
-#include "my_page.h"
 
 namespace SPARTA_NS {
 
 class Cut2d : protected Pointers {
  public:
-  Cut2d(class SPARTA *);
-  ~Cut2d();
-  void surf2grid();
-  void split();
-
- private:
-  // just for VERBOSE output
-  int icell;
-
-  MyVec<int> used;
-  MyVec<int> startpts;
-  MyVec<int> endpts;
-  
-  struct PLone {
-    int iline;
-    PLone *prev,*next;
+  struct Cline {
+    double x[2],y[2];   // coords of end points of line clipped to cell
+    int line;           // index in list of lines that intersect this cell
   };
 
-  struct Cpt {
-    int flag;
-    double x[2];
-    double dot;
-    int ipl,oindex;
-    Cpt *prev,*next;
+  struct Point {
+    double x[2];        // coords of point
+    int type;           // type of pt = ENTRY,EXIT,TWO,CORNER
+                        // ENTRY/EXIT = only part of one Cline,
+                        //   could also be a geometric corner pt
+                        // TWO = part of two Clines
+                        // CORNER = part of no Cline, is a geometric corner pt
+    int next;           // index of next point when walking a loop
+                        // set for ENTRY/TWO pts between ENTRY and EXIT
+                        // set for EXIT/CORNER points around cell perimeter,
+                        //   though may not be walked
+    int line;           // original line (as stored by Cline) the pt starts,
+                        //   only set for ENTRY and TWO pts
+    int corner;         // 1,2,3,4 if x is a corner point, else 0
+                        // could be ENTRY,EXIT,CORNER pt, but not a TWO pt
+    int cprev,cnext;    // indices of pts in linked list around cell perimeter
+    int side;           // which side of cell (0,1,2,3) pt is on
+                        // only for ENTRY/EXIT/CORNER pts to make linked list
+    double value;       // coord along the side
+                        // only for ENTRY/EXIT/CORNER pts to make linked list
   };
 
-  struct Opt {
-    int flag;
-    double x[2];
-    int cindex;
-  };
-
-  struct Entrypt {
-    int iopt;
-    int index;
-    Entrypt *prev,*next;
-  };
-  
   struct Loop {
-    int flag;
-    double area;
-    MyVec<int> lines;
+    double area;        // area of loop
+    int active;         // 1/0 if active or not
+    int flag;           // INTERIOR (if all TWO points) or BORDER
+    int n;              // # of points in loop
+    int first;          // index of first point in loop
+    int next;           // index of next loop in same PG, -1 if last loop
   };
 
   struct PG {
-    double area;
-    MyVec<int> lines;
+    double area;        // summed area (over loops) of PG
+    int n;              // # of loops in PG
+    int first;          // index of first loop in PG
   };
 
-  MyPage<PLone> ppool;
-  MyVec< MyDoubleLinkedList<PLone*> > pl;
+  MyVec<Cline> clines;  // list of Clines
+  MyVec<Point> points;  // list of Points = Weiler/Atherton data structure
+  MyVec<Loop> loops;    // list of loops in Points
+  MyVec<PG> pgs;        // list of polygons = one or more loops
 
-  MyVec< MyVec<Opt> > opts;
+  Cut2d(class SPARTA *);
+  ~Cut2d() {}
+  int surf2grid(cellint, double *, double *, int *, int);
+  int split(cellint, double *, double *, int, int *,
+            double *&, int *, int *, int &, double *);
+  void split_face(int, int, double *, double *);
 
-  MyPage<Cpt> cpool;
-  MyDoubleLinkedList<Cpt*> cpts;
-  Cpt *cindex[5];
+ private:
+  cellint id;            // ID of cell being worked on
+  double *lo,*hi;        // opposite corner pts of cell
+  int nsurf;             // # of surf elements in cell
+  int *surfs;            // indices of surf elements in cell
 
-  MyPage<Entrypt> epool;
-  MyDoubleLinkedList<Entrypt*> entrypts;
+  MyVec<double> areas;   // areas of each flow polygon found
+  MyVec<int> used;       // 0/1 flag for each point when walking loops
 
-  MyVec<Loop> loops;
-  MyVec<PG> pg;
+  int build_clines();
+  void weiler_build();
+  void weiler_loops();
+  void loop2pg();
+  void create_surfmap(int *);
+  int split_point(int *, double *);
 
-  void line2pl(int, int *);
-  void weiler_intersect(double *, double *, int *);
-  void interleave(double *, double *, double *, double *, int, int, int);
-  void weiler_walk(int, double *, double *, int *);
-  void loop2pg(int, double *, double *, int *);
-  void surf2pg(int, int *, int *);
-  int split_point(double *, double *, int, int *, int *, double *);
+  int cliptest(double *, double *);
+  void clip(double *, double *, double *, double *);
 
-  int cliptest(double *, double *, double *, double *);
-  void clip(double *, double *, double *, double *, double *, double *);
-  int sameborder(double *pt1, double *pt2, double *lo, double *hi);
-  int corner(double *, double *, double *);
-  int ptflag(double *pt, double *lo, double *hi);
+  int ptflag(double *);
+  int sameedge(double *, double *);
+  int whichside(double *);
+
+  void print_clines();
+  void print_points();
+  void print_loops();
 };
 
 }

@@ -22,8 +22,8 @@ namespace SPARTA_NS {
 
 class Surf : protected Pointers {
  public:
-  int exist;         // 1 if any surfaces are defined, else 0
-  int changed;       // 1 surfs have changed since last run, else 0
+  int exist;                // 1 if any surfaces are defined, else 0
+  double bblo[3],bbhi[3];   // bounding box around surfs
 
   struct Point {
     double x[3];
@@ -53,7 +53,7 @@ class Surf : protected Pointers {
 
   class SurfCollide **sc;      // list of surface collision models
   int nsc;                     // # of surface collision models
-  int maxsc;
+  int maxsc;                   // max # of models in sc
 
   Surf(class SPARTA *);
   ~Surf();
@@ -73,11 +73,6 @@ class Surf : protected Pointers {
 
   void collate_vec(int, int *, double *, int, double *, int, int);
   void collate_array(int, int, int *, double **, double **);
-
-  void all_cell_corner_line(int, int *, double *, double *, int *);
-  void all_cell_corner_tri(int, int *, double *, double *, int *);
-  int one_cell_corner_line(int, int, int *, double *, double *, int *);
-  int one_cell_corner_tri(int, int, int *, double *, double *, int *);
 
   bigint memory_usage();
 };

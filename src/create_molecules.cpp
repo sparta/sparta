@@ -31,7 +31,9 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};   // same as Grid
+enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
+
+#define EPSZERO 1.0e-14
 
 /* ---------------------------------------------------------------------- */
 
@@ -44,6 +46,11 @@ void CreateMolecules::command(int narg, char **arg)
   if (!domain->box_exist) 
     error->all(FLERR,
 	       "Cannot create molecules before simulation box is defined");
+  if (!grid->exist)
+    error->all(FLERR,"Cannot create molecules  before grid is defined");
+
+  particle->exist = 1;
+
   if (narg < 1) error->all(FLERR,"Illegal create_molecules command");
 
   imix = particle->find_mixture(arg[0]);
@@ -94,14 +101,21 @@ void CreateMolecules::command(int narg, char **arg)
   }
 
   // perform system init() so that grid cells know about surfs
+  // NOTE: delete this after debugging
 
   sparta->init();
 
   // generate molecules
 
+  MPI_Barrier(world);
+  double time1 = MPI_Wtime();
+
   bigint nprevious = particle->nglobal;
   if (single) create_single();
   else create_local(np);
+
+  MPI_Barrier(world);
+  double time2 = MPI_Wtime();
 
   // error check
 
@@ -120,15 +134,20 @@ void CreateMolecules::command(int narg, char **arg)
   // print stats
 
   if (comm->me == 0) {
-    if (screen) fprintf(screen,"Created " BIGINT_FORMAT " molecules\n",np);
-    if (logfile) fprintf(logfile,"Created " BIGINT_FORMAT " molecules\n",np);
+    if (screen) {
+      fprintf(screen,"Created " BIGINT_FORMAT " molecules\n",np);
+      fprintf(screen,"  CPU time = %g secs\n",time2-time1);
+    }
+    if (logfile) {
+      fprintf(logfile,"Created " BIGINT_FORMAT " molecules\n",np);
+      fprintf(logfile,"  CPU time = %g secs\n",time2-time1);
+    }
   }
 }
 
 /* ----------------------------------------------------------------------
    create a single molecule
    find cell it is in, and store on appropriate processor
-   NOTE: this could put particle in parent cell with surfs
 ------------------------------------------------------------------------- */
 
 void CreateMolecules::create_single()
@@ -144,36 +163,39 @@ void CreateMolecules::create_single()
     error->all(FLERR,"Create_molecules single requires z = 0 "
 	       "for 2d simulation");
 
-  Grid::OneCell *cells = grid->cells;
-  int *myparent = grid->myparent;
-  int nparent = grid->nparent;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
 
-  int icell = -1;
-  for (i = 0; i < nparent; i++) {
-    m = myparent[i];
-    lo = cells[m].lo;
-    hi = cells[m].hi;
+  int iwhich = -1;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].type != OUTSIDE) continue;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
     if (x[0] >= lo[0] && x[0] < hi[0] &&
 	x[1] >= lo[1] && x[1] < hi[1] &&
-	x[2] >= lo[2] && x[2] < hi[2]) icell = m;
+	x[2] >= lo[2] && x[2] < hi[2]) iwhich = icell;
   }
 
-  // test that exactly one proc owns particle
+  // insure that exactly one proc found cell to insert particle into
 
   int flag,flagall;
-  if (icell < 0) flag = 0;
+  if (iwhich < 0) flag = 0;
   else flag = 1;
   MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
   if (flagall != 1) 
-    error->all(FLERR,"Create_molecules single particle is outside domain");
+    error->all(FLERR,"Could not create a single particle");
 
-  if (icell >= 0) {
-    RanPark *random = new RanPark(update->ranmaster->uniform());
+  RanPark *random = new RanPark(update->ranmaster->uniform());
+
+  if (iwhich >= 0) {
+    int id = MAXSMALLINT*random->uniform();
     double erot = particle->erot(mspecies,random);
     int ivib = particle->evib(mspecies,random);
-    particle->add_particle(0,mspecies,icell,x,v,erot,ivib);
-    delete random;
+    particle->add_particle(id,mspecies,iwhich,x,v,erot,ivib);
   }
+
+  delete random;
 }
 
 /* ----------------------------------------------------------------------
@@ -191,21 +213,22 @@ void CreateMolecules::create_local(bigint np)
   double seed = update->ranmaster->uniform();
   random->reset(seed,me,100);
 
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
-  int nchild = grid->nchild;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
 
-  // volme = volume of grid cells I own that are CELLOUTSIDE
+  // volme = volume of grid cells I own that are OUTSIDE
   // Nme = # of molecules I will create
   // MPI_Scan() logic insures sum of nme = Np
   // NOTE: eventually adjust for cells with cut volume
+  //       by over-inserting into other cells?
 
   double *lo,*hi;
   double volme = 0.0;
-  for (int i = 0; i < nchild; i++) {
-    if (cells[mychild[i]].type != CELLOUTSIDE) continue;
-    lo = cells[mychild[i]].lo;
-    hi = cells[mychild[i]].hi;
+  for (int i = 0; i < nglocal; i++) {
+    if (cinfo[i].type != OUTSIDE) continue;
+    lo = cells[i].lo;
+    hi = cells[i].hi;
     if (dimension == 3) volme += (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else volme += (hi[0]-lo[0]) * (hi[1]-lo[1]);
   }
@@ -218,16 +241,25 @@ void CreateMolecules::create_local(bigint np)
   memory->create(vols,nprocs,"create_molecules:vols");
   MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
 
+  // gathered Scan result is not guaranteed to be monotonically increasing
+  // can cause epsilon mis-counts for huge particle counts
+  // enforce that by brute force
+
+  for (int i = 1; i < nprocs; i++)
+    if (vols[i] != vols[i-1] && 
+        fabs(vols[i]-vols[i-1])/vols[nprocs-1] < EPSZERO)
+      vols[i] = vols[i-1];
+
   bigint nstart,nstop;
-  if (me > 0) nstart = static_cast<int> (np * (vols[me-1]/vols[nprocs-1]));
+  if (me > 0) nstart = static_cast<bigint> (np * (vols[me-1]/vols[nprocs-1]));
   else nstart = 0;
-  nstop = static_cast<int> (np * (vols[me]/vols[nprocs-1]));
+  nstop = static_cast<bigint> (np * (vols[me]/vols[nprocs-1]));
   bigint nme = nstop-nstart;
 
   memory->destroy(vols);
 
   // loop over cells I own
-  // only add molecules to CELLOUTSIDE cells
+  // only add molecules to OUTSIDE cells
   // ntarget = floating point # of molecules to create in one cell
   // npercell = integer # of molecules to create in one cell
   // basing ntarget on accumulated volume and nprev insures Nme total creations
@@ -240,18 +272,17 @@ void CreateMolecules::create_local(bigint np)
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
 
-  int ilocal,icell,npercell,ispecies,ivib;
+  int npercell,ispecies,ivib,id;
   double x[3],v[3];
   double vol,ntarget,rn,vn,vr,theta1,theta2,erot;
 
   double volsum = 0.0;
   bigint nprev = 0;
 
-  for (int i = 0; i < nchild; i++) {
-    icell = mychild[i];
-    if (cells[icell].type != CELLOUTSIDE) continue;
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
+  for (int i = 0; i < nglocal; i++) {
+    if (cinfo[i].type != OUTSIDE) continue;
+    lo = cells[i].lo;
+    hi = cells[i].hi;
 
     if (dimension == 3) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else vol = (hi[0]-lo[0]) * (hi[1]-lo[1]);
@@ -260,9 +291,6 @@ void CreateMolecules::create_local(bigint np)
     ntarget = nme * volsum/volme - nprev;
     npercell = static_cast<int> (ntarget);
     if (random->uniform() < ntarget-npercell) npercell++;
-
-    //if (comm->me == 0) printf("TARG %d %g %d: %g %g\n",i,ntarget,npercell,
-    //                          volsum,volme);
 
     for (int m = 0; m < npercell; m++) {
       rn = random->uniform();
@@ -285,9 +313,9 @@ void CreateMolecules::create_local(bigint np)
 
       erot = particle->erot(ispecies,random);
       ivib = particle->evib(ispecies,random);
-      //if (comm->me == 0) printf("PPP %d %d: %d %d: %g %g\n",i,m,
-      //                         icell,cells[icell].id,x[0],x[1]);
-      particle->add_particle(0,ispecies,icell,x,v,erot,ivib);
+
+      id = MAXSMALLINT*random->uniform();
+      particle->add_particle(id,ispecies,i,x,v,erot,ivib);
     }
 
     nprev += npercell;
@@ -316,7 +344,7 @@ void CreateMolecules::create_all(bigint n)
   int me = comm->me;
   RanPark *random = new RandomPark(update->ranmaster->uniform());
 
-  int icell;
+  int icell,id;
   double x,y,z;
 
   // loop over all N molecules
@@ -331,8 +359,10 @@ void CreateMolecules::create_all(bigint n)
     // if I own that grid cell, add particle
 
     icell = grid->which_cell(x,y,z);
+    id = MAXSMALLINT*random->uniform();
+
     if (grid->cells[icell].proc == me) {
-      particle->add_particle(0,1,icell,x,y,z);
+      particle->add_particle(id,1,icell,x,y,z);
     }
   }
 

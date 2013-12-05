@@ -23,6 +23,7 @@ class Modify : protected Pointers {
  public:
   int nfix,maxfix;
   int n_start_of_step,n_end_of_step;
+  int n_pergrid;
 
   class Fix **fix;           // list of fixes
   int *fmask;                // bit mask for when each fix is applied
@@ -36,6 +37,10 @@ class Modify : protected Pointers {
   void setup();
   void start_of_step();
   void end_of_step();
+
+  int pack_grid_one(int, char *, int);
+  int unpack_grid_one(int, char *);
+  void compress_grid(int);
 
   void add_fix(int, char **);
   void delete_fix(const char *);
@@ -57,11 +62,17 @@ class Modify : protected Pointers {
 
   int *list_start_of_step,*list_end_of_step;
 
+  int *end_of_step_every;
+
+  int *list_pergrid;         // list of fixes that store per grid cell info
+
   int n_timeflag;            // list of computes that store time invocation
   int *list_timeflag;
 
   void list_init(int, int &, int *&);
-  void list_init_compute();
+  void list_init_end_of_step(int, int &, int *&);
+  void list_init_pergrid();
+  void list_init_timeflag();
 };
 
 }

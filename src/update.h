@@ -42,6 +42,7 @@ class Update : protected Pointers {
   int *mlist;            // indices of particles to migrate
 
                          // current step counters
+  int niterate;          // iterations of move/comm
   int ntouch_one;        // particle-cell touches
   int ncomm_one;         // particles migrating to new procs
   int nboundary_one;     // particles colliding with global boundary
@@ -49,6 +50,7 @@ class Update : protected Pointers {
   int nscheck_one;       // surface elements checked for collisions
   int nscollide_one;     // particle/surface collisions
 
+  int niterate_running;      // running count of move/comm interations
   bigint nmove_running;      // running count of total particle moves
   bigint ntouch_running;     // running count of current step counters
   bigint ncomm_running;
@@ -58,6 +60,8 @@ class Update : protected Pointers {
   bigint nscollide_running;
 
   class RanMars *ranmaster;   // master random number generator
+
+  double rcblo[3],rcbhi[3];    // debug info from RCB for dump image
 
   Update(class SPARTA *);
   ~Update();
@@ -71,14 +75,10 @@ class Update : protected Pointers {
 
  private:
   int me,nprocs;
-  int ncurrent;              // local # of particles before insertion
   int maxmigrate;            // max # of particles in mlist
-  int faceflip[6];
-
   class RanPark *random;     // RNG for particle timestep moves
 
-  int bounce_tally;          // 1 if any bounces are ever tallied
-
+  int bounce_tally;               // 1 if any bounces are ever tallied
   int nslist_compute;             // # of computes that tally surf bounces
   int nblist_compute;             // # of computes that tally boundary bounces
   class Compute **slist_compute;  // list of all surf bounce Computes
@@ -93,12 +93,8 @@ class Update : protected Pointers {
   void bounce_set(bigint);
 
   typedef void (Update::*FnPtr)();
-  FnPtr move;                // ptr to move method
-
-  void move3d_surface();     // variants of move method
-  void move3d();
-  void move2d_surface();
-  void move2d();
+  FnPtr moveptr;             // ptr to move method
+  template < int, int > void move();
 
   int perturbflag;
   typedef void (Update::*FnPtr2)(double, double *, double *);

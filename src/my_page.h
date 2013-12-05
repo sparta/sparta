@@ -115,8 +115,9 @@ class MyPage {
     ndatum += n;
     nchunk++;
     if (index+n <= pagesize) {
+      int start = index;
       index += n;
-      return &page[index];
+      return &page[start];
     }
     ipage++;
     if (ipage == npage) {

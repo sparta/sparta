@@ -42,6 +42,7 @@
 #define MPI_Request int
 #define MPI_Datatype int
 #define MPI_Op int
+//#define MPI_User_function void (*)(void*, void*, int*, int*)
 
 #define MPI_MAX_PROCESSOR_NAME 128
 
@@ -63,7 +64,14 @@ int MPI_Abort(MPI_Comm comm, int errorcode);
 int MPI_Finalize();
 double MPI_Wtime();
 
-int MPI_Type_size(int, int *);
+int MPI_Type_size(MPI_Datatype datatype, int *size);
+int MPI_Type_contiguous(int count, MPI_Datatype oldtype, MPI_Datatype *newtype);
+int MPI_Type_commit(MPI_Datatype *datatype);
+int MPI_Type_free(MPI_Datatype *datatype);
+
+int MPI_Op_create(void (*function)(void *, void *, int *, int *), 
+                  int commute, MPI_Op *op);
+int MPI_Op_free(MPI_Op *op);
 
 int MPI_Send(void *buf, int count, MPI_Datatype datatype,
              int dest, int tag, MPI_Comm comm);

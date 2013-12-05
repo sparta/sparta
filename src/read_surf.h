@@ -68,6 +68,9 @@ class ReadSurf : protected Pointers {
   void check_watertight_2d();
   void check_watertight_3d();
 
+  // remove at some point
+  void check_watertight_3d_old();
+
   int find_edge(int, int);
   void add_edge(int, int, int);
 

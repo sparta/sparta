@@ -302,6 +302,7 @@ void Dump::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"no") == 0) append_flag = 0;
       else error->all(FLERR,"Illegal dump_modify command");
       iarg += 2;
+
     } else if (strcmp(arg[iarg],"every") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump_modify command");
       int idump;
@@ -320,18 +321,21 @@ void Dump::modify_params(int narg, char **arg)
       }
       output->every_dump[idump] = n;
       iarg += 2;
+
     } else if (strcmp(arg[iarg],"first") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump_modify command");
       if (strcmp(arg[iarg+1],"yes") == 0) first_flag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) first_flag = 0;
       else error->all(FLERR,"Illegal dump_modify command");
       iarg += 2;
+
     } else if (strcmp(arg[iarg],"flush") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump_modify command");
       if (strcmp(arg[iarg+1],"yes") == 0) flush_flag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) flush_flag = 0;
       else error->all(FLERR,"Illegal dump_modify command");
       iarg += 2;
+
     } else if (strcmp(arg[iarg],"format") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump_modify command");
       delete [] format_user;
@@ -342,11 +346,13 @@ void Dump::modify_params(int narg, char **arg)
 	strcpy(format_user,arg[iarg+1]);
       }
       iarg += 2;
+
     } else if (strcmp(arg[iarg],"pad") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump_modify command");
       padflag = atoi(arg[iarg+1]);
       if (padflag < 0) error->all(FLERR,"Illegal dump_modify command");
       iarg += 2;
+
     } else {
       int n = modify_param(narg-iarg,&arg[iarg]);
       if (n == 0) error->all(FLERR,"Illegal dump_modify command");

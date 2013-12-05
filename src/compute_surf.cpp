@@ -279,6 +279,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
 
 /* ----------------------------------------------------------------------
    return ptr to norm vector used by column N
+   input N is value from 1 to Ncols
 ------------------------------------------------------------------------- */
 
 double *ComputeSurf::normptr(int n)

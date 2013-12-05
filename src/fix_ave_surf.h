@@ -37,7 +37,7 @@ class FixAveSurf : public Fix {
 
  private:
   int nvalues,maxvalues;
-  int nevery,nrepeat,irepeat,nsample,ave;
+  int nrepeat,irepeat,nsample,ave;
   bigint nvalid;
   int *which,*argindex,*value2index;
   char **ids;

@@ -23,6 +23,8 @@ class Fix : protected Pointers {
  public:
   char *id,*style;
 
+  int nevery;                    // how often to call an end_of_step fix
+
   int scalar_flag;               // 0/1 if compute_scalar() function exists
   int vector_flag;               // 0/1 if compute_vector() function exists
   int array_flag;                // 0/1 if compute_array() function exists
@@ -50,6 +52,8 @@ class Fix : protected Pointers {
   double *vector_surf;           // computed per-surf vector
   double **array_surf;           // computed per-surf array
 
+  int gridmigrate;               // 0/1 if per grid cell info must migrate
+
   int START_OF_STEP,END_OF_STEP;    // mask settings
 
   Fix(class SPARTA *, int, char **);
@@ -62,6 +66,11 @@ class Fix : protected Pointers {
 
   virtual void start_of_step() {}
   virtual void end_of_step() {}
+
+  virtual int pack_grid_one(int, char *, int) {return 0;}
+  virtual int unpack_grid_one(int, char *) {return 0;}
+  virtual void compress_grid() {}
+  virtual void post_compress_grid() {}
 
   virtual double compute_scalar() {return 0.0;}
   virtual double compute_vector(int) {return 0.0;}

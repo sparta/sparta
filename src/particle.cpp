@@ -27,8 +27,10 @@
 
 using namespace SPARTA_NS;
 
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // same as several files
+
 #define DELTA 10000
-#define DELTASMALL 16
+#define DELTASPECIES 16
 #define MAXLINE 1024
 #define CHUNK_MIXTURE 8
 
@@ -41,13 +43,13 @@ using namespace SPARTA_NS;
 
 Particle::Particle(SPARTA *sparta) : Pointers(sparta)
 {
+  exist = 0;
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;
 
   nspecies = maxspecies  = 0;
   species = NULL;
-
 
   //maxgrid = 0;
   //cellcount = NULL;
@@ -101,9 +103,11 @@ void Particle::init()
 }
 
 /* ----------------------------------------------------------------------
-   compress particle list to remove mlist of migrating particles
+   compress particle list to remove particles with indices in mlist
+   mlist indices MUST be in ascending order
    overwrite deleted particle with particle from end of nlocal list
    inner while loop avoids overwrite with deleted particle at end of mlist
+   called from Comm::migrate_particles() when particles migrate every step
 ------------------------------------------------------------------------- */
 
 void Particle::compress(int nmigrate, int *mlist)
@@ -125,13 +129,31 @@ void Particle::compress(int nmigrate, int *mlist)
 }
 
 /* ----------------------------------------------------------------------
+   compress particle list to remove particles with icell < 0
+   all particles MUST be in owned cells
+   overwrite deleted particle with particle from end of nlocal list
+   called from Comm::migrate_cells() when cells+particles migrate on rebalance
+------------------------------------------------------------------------- */
+
+void Particle::compress()
+{
+  int nbytes = sizeof(OnePart);
+
+  int i = 0;
+  while (i < nlocal) {
+    if (particles[i].icell < 0) {
+      memcpy(&particles[i],&particles[nlocal-1],nbytes);
+      nlocal--;
+    } else i++;
+  }
+}
+
+/* ----------------------------------------------------------------------
    sort particles into grid cells
 ------------------------------------------------------------------------- */
 
 void Particle::sort()
 {
-  int i,icell;
-
   // reallocate next list as needed
 
   if (maxsort < maxlocal) {
@@ -140,16 +162,15 @@ void Particle::sort()
     memory->create(next,maxsort,"particle:next");
   }
 
-  // initialize linked list of particles in cells I own, including split cells
+  // initialize linked list of particles in cells I own
 
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
-  int nchild = grid->nchild;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
 
-  for (i = 0; i < nchild; i++) {
-    icell = mychild[i];
-    cells[icell].first = -1;
-    cells[icell].count = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    cinfo[icell].first = -1;
+    cinfo[icell].count = 0;
     //cellcount[i] = 0;
     //first[i] = -1;
   }
@@ -157,11 +178,12 @@ void Particle::sort()
   // reverse loop stores linked list in forward order
   // icell = global cell the particle is in
 
-  for (i = nlocal-1; i >= 0; i--) {
+  int icell;
+  for (int i = nlocal-1; i >= 0; i--) {
     icell = particles[i].icell;
-    next[i] = cells[icell].first;
-    cells[icell].first = i;
-    cells[icell].count++;
+    next[i] = cinfo[icell].first;
+    cinfo[icell].first = i;
+    cinfo[icell].count++;
 
     // NOTE: this method seems much slower for some reason
     // uses separate, smaller vectors for first & cellcount
@@ -181,6 +203,7 @@ void Particle::grow(int nextra)
   bigint target = (bigint) nlocal + nextra;
   if (target <= maxlocal) return;
   
+  int oldmax = maxlocal;
   bigint newmax = maxlocal;
   while (newmax < target) newmax += DELTA;
   
@@ -191,6 +214,7 @@ void Particle::grow(int nextra)
   particles = (OnePart *)
     memory->srealloc(particles,maxlocal*sizeof(OnePart),
 		     "particle:particles");
+  memset(&particles[oldmax],0,(maxlocal-oldmax)*sizeof(OnePart));
 }
 
 /* ----------------------------------------------------------------------
@@ -215,6 +239,8 @@ void Particle::add_particle(int id, int ispecies, int icell,
   p->v[2] = v[2];
   p->erot = erot;
   p->ivib = ivib;
+  p->flag = PKEEP;
+  //p->dtremain = 0.0;    not needed due to memset ??
 
   nlocal++;
 }
@@ -279,7 +305,7 @@ void Particle::add_species(int narg, char **arg)
   // extend species list if necessary
 
   if (nspecies + newspecies > maxspecies) {
-    while (nspecies+newspecies > maxspecies) maxspecies += DELTASMALL;
+    while (nspecies+newspecies > maxspecies) maxspecies += DELTASPECIES;
     species = (Species *) 
       memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
   }
@@ -397,7 +423,7 @@ double Particle::erot(int isp, RanPark *random)
 
 int Particle::evib(int isp, RanPark *random)
 {
- if (species[isp].rotdof < 2) return 0;
+  if (species[isp].rotdof < 2) return 0;
 
   // NOTE: is temp_thermal always set?
 
@@ -435,7 +461,7 @@ void Particle::read_species_file()
       error->one(FLERR,"Incorrect line format in species file");
 
     if (nfilespecies == maxfilespecies) {
-      maxfilespecies += DELTASMALL;
+      maxfilespecies += DELTASPECIES;
       filespecies = (Species *) 
 	memory->srealloc(filespecies,maxfilespecies*sizeof(Species),
 			 "particle:filespecies");

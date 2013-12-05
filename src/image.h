@@ -31,12 +31,13 @@ class Image : protected Pointers {
   double persp;                 // perspective factor
   double shiny;                 // shininess of objects
   int ssao;                     // SSAO on or off
+  int seed;                     // RN seed for SSAO
   double ssaoint;               // strength of shading from 0 to 1
   double *boxcolor;             // color to draw box outline with
   double *gridcolor;            // color to draw grid lines with
   int background[3];            // RGB values of background
 
-  Image(class SPARTA *);
+  Image(class SPARTA *, int);
   ~Image();
   void buffers();
   void clear();
@@ -45,26 +46,33 @@ class Image : protected Pointers {
   void write_PPM(FILE *);
   void view_params(double, double, double, double, double, double);
 
-  void color_minmax(int, double *, int);
+  void draw_line(double *, double *, double *, double);
+  void draw_box(double (*)[3], double *, double);
+  void draw_box2d(double (*)[3], double *, double);
+  void draw_axes(double (*)[3], double);
   void draw_sphere(double *, double *, double);
   void draw_cube(double *, double *, double);
   void draw_brick(double *, double *, double *);
   void draw_cylinder(double *, double *, double *, double, int);
   void draw_triangle(double *, double *, double *, double *);
-  void draw_box(double (*)[3], double *, double);
-  void draw_axes(double (*)[3], double);
 
-  int colormap(int, char **);
+  int map_dynamic(int);
+  int map_reset(int, int, char **);
+  int map_minmax(int, double, double);
+  double *map_value2color(int, double);
+
   int addcolor(char *, double, double, double);
   double *element2color(char *);
   double element2diam(char *);
-  double *value2color(double);
   double *color2rgb(const char *, int index=0);
   int default_colors();
 
  private:
   int me,nprocs;
   int npixels;
+
+  class ColorMap **maps;
+  int nmap;
 
   double *depthBuffer,*surfaceBuffer;
   double *depthcopy,*surfacecopy;
@@ -148,6 +156,38 @@ class Image : protected Pointers {
 		(a[1] - b[1]) * (a[1] - b[1]) + 
 		(a[2] - b[2]) * (a[2] - b[2]));
   }
+};
+
+
+// ColorMap class
+
+class ColorMap : protected Pointers {
+ public:
+  int dynamic;                     // 0/1 if lo/hi bounds are static/dynamic
+
+  ColorMap(class SPARTA *, class Image*);
+  ~ColorMap();
+  int reset(int, char **);
+  int minmax(double, double);
+  double *value2color(double);
+
+ private:
+  class Image *image;              // caller with color2rgb() method
+  int mstyle,mrange;               // 2-letter style/range of color map
+  int mlo,mhi;                     // bounds = NUMERIC or MINVALUE or MAXVALUE
+  double mlovalue,mhivalue;        // user bounds if NUMERIC
+  double locurrent,hicurrent;      // current bounds for this snapshot
+  double mbinsize,mbinsizeinv;     // bin size for sequential color map
+  double interpolate[3];           // local storage for returned RGB color
+
+  struct MapEntry {
+    int single,lo,hi;              // NUMERIC or MINVALUE or MAXVALUE
+    double svalue,lvalue,hvalue;   // actual value
+    double *color;                 // RGB values
+  };
+
+  MapEntry *mentry;
+  int nentry;
 };
 
 }

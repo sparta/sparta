@@ -22,14 +22,17 @@
 #include "input.h"
 #include "style_command.h"
 #include "style_collide.h"
+#include "style_react.h"
 #include "universe.h"
 #include "variable.h"
 #include "domain.h"
 #include "modify.h"
 #include "grid.h"
+#include "surf.h"
 #include "particle.h"
 #include "update.h"
 #include "collide.h"
+#include "react.h"
 #include "output.h"
 #include "random_mars.h"
 #include "stats.h"
@@ -412,6 +415,7 @@ int Input::execute_command()
   else if (!strcmp(command,"next")) next_command();
   else if (!strcmp(command,"partition")) partition();
   else if (!strcmp(command,"print")) print();
+  else if (!strcmp(command,"quit")) quit();
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
 
@@ -425,6 +429,8 @@ int Input::execute_command()
   else if (!strcmp(command,"fix")) fix();
   else if (!strcmp(command,"global")) global();
   else if (!strcmp(command,"mixture")) mixture();
+  else if (!strcmp(command,"react")) react_command();
+  else if (!strcmp(command,"region")) region();
   else if (!strcmp(command,"seed")) seed();
   else if (!strcmp(command,"species")) species();
   else if (!strcmp(command,"stats")) stats();
@@ -756,6 +762,14 @@ void Input::print()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::quit()
+{
+  if (narg) error->all(FLERR,"Illegal quit command");
+  error->done();
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::shell()
 {
   if (narg < 1) error->all(FLERR,"Illegal shell command");
@@ -818,8 +832,6 @@ void Input::variable_command()
 
 void Input::boundary()
 {
-  if (domain->box_exist) 
-    error->all(FLERR,"Boundary command after simulation box is defined");
   domain->set_boundary(narg,arg);
 }
 
@@ -903,6 +915,34 @@ void Input::global()
 void Input::mixture()
 {
   particle->add_mixture(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::react_command()
+{
+  if (narg < 1) error->all(FLERR,"Illegal react command");
+
+  delete react;
+
+  if (strcmp(arg[0],"none") == 0) react = NULL;
+
+#define REACT_CLASS
+#define ReactStyle(key,Class) \
+  else if (strcmp(arg[0],#key) == 0) \
+    react = new Class(sparta,narg,arg);
+#include "style_react.h"
+#undef ReactStyle
+#undef REACT_CLASS
+
+  else error->all(FLERR,"Invalid react style");
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::region()
+{
+  domain->add_region(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

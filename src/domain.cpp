@@ -16,19 +16,24 @@
 #include "string.h"
 #include "stdlib.h"
 #include "domain.h"
+#include "style_region.h"
 #include "update.h"
 #include "grid.h"
 #include "comm.h"
 #include "particle.h"
+#include "region.h"
 #include "surf.h"
 #include "surf_collide.h"
 #include "comm.h"
+#include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
-enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as several files
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as several files
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // several files
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // several files
+
+#define DELTAREGION 4
 
 /* ---------------------------------------------------------------------- */
 
@@ -49,6 +54,17 @@ Domain::Domain(SPARTA *sparta) : Pointers(sparta)
   norm[YHI][0] =  0.0; norm[YHI][1] = -1.0; norm[YHI][2] =  0.0;
   norm[ZLO][0] =  0.0; norm[ZLO][1] =  0.0; norm[ZLO][2] =  1.0;
   norm[ZHI][0] =  0.0; norm[ZHI][1] =  0.0; norm[ZHI][2] = -1.0;
+
+  nregion = maxregion = 0;
+  regions = NULL;
+}
+
+/* ---------------------------------------------------------------------- */
+
+Domain::~Domain()
+{
+  for (int i = 0; i < nregion; i++) delete regions[i];
+  memory->sfree(regions);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -62,6 +78,14 @@ void Domain::init()
   for (int i = 0; i < 6; i++)
     if (bflag[i] == SURFACE && surf_collide[i] < 0)
       error->all(FLERR,"Box boundary not assigned a surf_collide ID");
+
+  int cutflag = 0;
+  if (bflag[0] == PERIODIC && grid->cutoff > xprd) cutflag = 1;
+  if (bflag[2] == PERIODIC && grid->cutoff > yprd) cutflag = 1;
+  if (dimension == 3 && bflag[4] == PERIODIC && grid->cutoff > zprd) 
+    cutflag = 1;
+  if (cutflag) error->all(FLERR,"Grid cutoff is longer than "
+                          "box length in a periodic dimension");
 }
 
 /* ----------------------------------------------------------------------
@@ -93,6 +117,9 @@ void Domain::set_global_box()
 
 void Domain::set_boundary(int narg, char **arg)
 {
+  if (domain->box_exist) 
+    error->all(FLERR,"Boundary command after simulation box is defined");
+
   if (narg != 3) error->all(FLERR,"Illegal boundary command");
 
   char c;
@@ -175,16 +202,14 @@ void Domain::boundary_modify(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   particle P hits global boundary on face
+   particle P hits global boundary on face in icell
    called by Update::move()
-   icell = current global grid cell particle is in
    xnew = final position of particle at end of move
    return boundary type of global boundary
-   if needed, update icell and particle x,xnew,v due to collision
-   NOTE: code below depends on grid structure = Nx by Ny by Nz cells
+   if needed, update particle x,v,xnew due to collision
 ------------------------------------------------------------------------- */
 
-int Domain::collide(Particle::OnePart *p, int face, int &icell, double *xnew)
+int Domain::collide(Particle::OnePart *p, int face, int icell, double *xnew)
 {
   switch (bflag[face]) {
 
@@ -196,46 +221,40 @@ int Domain::collide(Particle::OnePart *p, int face, int &icell, double *xnew)
   // periodic boundary
   // set x to be on periodic box face
   // adjust xnew by periodic box length
-  // assign new icell on other side of box
 
   case PERIODIC:
     {
       double *x = p->x;
+
       switch (face) {
       case XLO:
 	x[0] = boxhi[0];
 	xnew[0] += xprd;
-	icell += grid->nx - 1;
 	break;
       case XHI:
 	x[0] = boxlo[0];
 	xnew[0] -= xprd;
-	icell -= grid->nx - 1;
 	break;
       case YLO:
 	x[1] = boxhi[1];
 	xnew[1] += yprd;
-	icell += (grid->ny-1) * grid->nx;
 	break;
       case YHI:
-	x[1] = boxhi[1];
+	x[1] = boxlo[1];
 	xnew[1] -= yprd;
-	icell -= (grid->ny-1) * grid->nx;
 	break;
       case ZLO:
 	x[2] = boxhi[2];
 	xnew[2] += zprd;
-	icell += (grid->nz-1) * grid->ny * grid->nx;
 	break;
       case ZHI:
 	x[2] = boxlo[2];
 	xnew[2] -= zprd;
-	icell -= (grid->nz-1) * grid->ny * grid->nx;
 	break;
       }
-    }
 
-    return PERIODIC;
+      return PERIODIC;
+    }
 
   // specular reflection boundary
   // adjust xnew and velocity
@@ -254,10 +273,10 @@ int Domain::collide(Particle::OnePart *p, int face, int &icell, double *xnew)
 	xnew[dim] = hi[dim] - (xnew[dim]-hi[dim]);
 	v[dim] = -v[dim];
       }
+
+      return REFLECT;
     }
     
-    return REFLECT;
-
   // treat global boundary as a surface
   // dtr = time remaining after collision
   // particle velocity is changed by surface collision model
@@ -286,6 +305,104 @@ int Domain::collide(Particle::OnePart *p, int face, int &icell, double *xnew)
   }
 
   return 0;
+}
+
+/* ----------------------------------------------------------------------
+   undo the periodic remapping of particle coords
+     performed by a previous call to collide()
+   called by Update::move() if unable to move particle to a new cell
+     that contains the remapped coords
+------------------------------------------------------------------------- */
+
+void Domain::uncollide(int face, double *x)
+{
+  switch (face) {
+  case XLO:
+    x[0] = boxlo[0];
+    break;
+  case XHI:
+    x[0] = boxhi[0];
+    break;
+  case YLO:
+    x[1] = boxlo[1];
+    break;
+  case YHI:
+    x[1] = boxhi[1];
+    break;
+  case ZLO:
+    x[2] = boxlo[2];
+    break;
+  case ZHI:
+    x[2] = boxhi[2];
+    break;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   create a new region
+------------------------------------------------------------------------- */
+
+void Domain::add_region(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal region command");
+
+  if (strcmp(arg[1],"delete") == 0) {
+    delete_region(narg,arg);
+    return;
+  }
+
+  if (find_region(arg[0]) >= 0) error->all(FLERR,"Reuse of region ID");
+
+  // extend Region list if necessary
+
+  if (nregion == maxregion) {
+    maxregion += DELTAREGION;
+    regions = (Region **)
+      memory->srealloc(regions,maxregion*sizeof(Region *),"domain:regions");
+  }
+
+  // create the Region
+
+  if (strcmp(arg[1],"none") == 0) error->all(FLERR,"Invalid region style");
+
+#define REGION_CLASS
+#define RegionStyle(key,Class) \
+  else if (strcmp(arg[1],#key) == 0) \
+    regions[nregion] = new Class(sparta,narg,arg);
+#include "style_region.h"
+#undef REGION_CLASS
+
+  else error->all(FLERR,"Invalid region style");
+
+  nregion++;
+}
+
+/* ----------------------------------------------------------------------
+   delete a region
+------------------------------------------------------------------------- */
+
+void Domain::delete_region(int narg, char **arg)
+{
+  if (narg != 2) error->all(FLERR,"Illegal region command");
+
+  int iregion = find_region(arg[0]);
+  if (iregion == -1) error->all(FLERR,"Delete region ID does not exist");
+
+  delete regions[iregion];
+  regions[iregion] = regions[nregion-1];
+  nregion--;
+}
+
+/* ----------------------------------------------------------------------
+   return region index if name matches existing region ID
+   return -1 if no such region
+------------------------------------------------------------------------- */
+
+int Domain::find_region(char *name)
+{
+  for (int iregion = 0; iregion < nregion; iregion++)
+    if (strcmp(name,regions[iregion]->id) == 0) return iregion;
+  return -1;
 }
 
 /* ----------------------------------------------------------------------

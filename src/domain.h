@@ -33,14 +33,22 @@ class Domain : protected Pointers {
   int bflag[6];                     // boundary flags
   double norm[6][3];                // boundary normals
 
+  int nregion;                      // # of defined Regions
+  int maxregion;                    // max # regions can hold
+  class Region **regions;           // list of defined Regions
+
   Domain(class SPARTA *);
-  ~Domain() {}
+  ~Domain();
   void init();
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);
   void boundary_modify(int, char **);
-  int collide(Particle::OnePart *, int, int &, double *);
+  int collide(Particle::OnePart *, int, int, double *);
+  void uncollide(int, double *);
+  void add_region(int, char **);
+  void delete_region(int, char **);
+  int find_region(char *);
   void print_box(const char *);
 
  private:

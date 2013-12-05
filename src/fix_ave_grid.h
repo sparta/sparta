@@ -33,29 +33,35 @@ class FixAveGrid : public Fix {
   void init();
   void setup();
   void end_of_step();
+  int pack_grid_one(int, char *, int);
+  int unpack_grid_one(int, char *);
+  void compress_grid();
   double memory_usage();
 
  private:
   int nvalues,maxvalues;
-  int nevery,nrepeat,irepeat,nsample,ave;
+  int nrepeat,irepeat,nsample,ave;
   bigint nvalid;
   int *which,*argindex,*value2index;
   char **ids;
 
-  int nchild;                // # of child grid cells
-  double *accvec;            // accumulation vector
-  double **accarray;         // accumulation array
+  int nglocal;               // # of owned grid cells
+  int nglocalmax;            // max size of per-cell vectors/arrays
+  double *vector;            // extra tally vector when ave = RUNNING
+  double **array;            // extra tally array when ave = RUNNING
 
   int *normacc;        // 1 if Ith value triggers one-time norm accumulation
   int *normindex;      // index of norm vector for Ith value, -1 if none
   double **norms;      // pointers to accumulated norms
-  double **cfv_norms;  // pointers to snapshot norms by compute,fix,variable
-  int nnorm;           // # of norm pointers in norms and cfv_norms
+  int nnorm;           // # of norm pointers in norms
 
+  int pack_one(int, char *, int);
+  int unpack_one(char *, int);
   void options(int, char **);
   void grow();
   bigint nextvalid();
-  void reset();
+  void allocate(int);
+  void grow_percell(int);
 };
 
 }

@@ -16,7 +16,6 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
-#include "create_molecules.h"
 #include "fix_inflow.h"
 #include "update.h"
 #include "particle.h"
@@ -37,9 +36,13 @@ using namespace MathConst;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
-enum{CELLUNKNOWN,CELLOUTSIDE,CELLINSIDE,CELLOVERLAP};   // same as Grid
-enum{CORNERUNKNOWN,CORNEROUTSIDE,CORNERINSIDE,CORNEROVERLAP};  // same as Grid
+enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // same as several files
+enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{NO,YES};
+
+#define DELTAFACE 10              // no smaller than 6
+#define DELTAGRID 1000            // must be bigger than split cells per cell
 
 /* ---------------------------------------------------------------------- */
 
@@ -51,6 +54,7 @@ FixInflow::FixInflow(SPARTA *sparta, int narg, char **arg) :
   vector_flag = 1;
   size_vector = 2;
   global_freq = 1;
+  gridmigrate = 1;
 
   imix = particle->find_mixture(arg[2]);
   if (imix < 0) error->all(FLERR,"Fix inflow mixture ID does not exist");
@@ -121,7 +125,9 @@ FixInflow::FixInflow(SPARTA *sparta, int narg, char **arg) :
 
   cellface = NULL;
   ncf = ncfmax = 0;
-  
+  c2f = NULL;
+  nglocal = nglocalmax = 0;
+
   // counters
 
   nsingle = ntotal = 0;
@@ -135,6 +141,7 @@ FixInflow::~FixInflow()
 
   for (int i = 0; i < ncfmax; i++) delete [] cellface[i].ntargetsp;
   memory->sfree(cellface);
+  memory->destroy(c2f);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -150,8 +157,11 @@ int FixInflow::setmask()
 
 void FixInflow::init()
 {
-  int i,j,m,n,isp;
+  int i,j,m,n,isp,icell;
   double xface[3];
+  double *vscale = particle->mixture[imix]->vscale;
+
+  particle->exist = 1;
 
   // corners[i][j] = J corner points of face I of a grid cell
   // works for 2d quads and 3d hexes
@@ -168,76 +178,82 @@ void FixInflow::init()
     if (faces[i] && domain->bflag[i] == PERIODIC)
       error->all(FLERR,"Cannot use fix inflow on periodic boundary");
 
-  // allow[I][J] = 1 if my local parent cell I, face J allows insertions
+  // c2f[I][J] = 1 if my local parent cell I, face J allows insertions
   // only allow if face adjoins global boundary with inflow defined
-  // if cell is CELLOUTSIDE, allow face
-  // if cell is CELLINSIDE, disallow face
-  // if cell is CELLOVERLAP:
-  //   allow if any face corner point is CORNEROUTSIDE and none is CORNERINSIDE
+  // if cell is OUTSIDE, allow face
+  // if cell is INSIDE, disallow face
+  // if cell is OVERLAP:
+  //   allow if any face corner point is OUTSIDE and none is INSIDE
   //   disallow if any pt of any cell line/tri touches face
 
   int dimension = domain->dimension;
   Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
-  Grid::OneCell *cells = grid->cells;
-  int **csurfs = grid->csurfs;
-  int **cflags = grid->cflags;
-  int *myparent = grid->myparent;
-  int nparent = grid->nparent;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  nglocal = grid->nlocal;
 
-  int **allow;
-  memory->create(allow,nparent,6,"inflow:allow");
+  // realloc c2f if necessary = pointers from cells/faces to cellface
+
+  if (nglocal > nglocalmax) {
+    memory->destroy(c2f);
+    nglocalmax = nglocal;
+    memory->create(c2f,nglocalmax,6,"inflow:c2f");
+  }
 
   int *flags;
-  int icell,dim,extflag;
+  int nmask,dim,extflag;
   double value;
 
-  for (int m = 0; m < nparent; m++) {
-    icell = myparent[m];
+  // set c2f to 1 if face is eligible for insertion, else 0
+
+  for (icell = 0; icell < nglocal; icell++) {
+    nmask = cells[icell].nmask;
     for (i = 0; i < 6; i++) {
-      if (faces[i] && cells[icell].neigh[i] < 0) {
-	if (cells[icell].type == CELLOUTSIDE) allow[m][i] = 1;
-	else if (cells[icell].type == CELLINSIDE) allow[m][i] = 0;
-	else if (cells[icell].type == CELLOVERLAP) {
-	  allow[m][i] = 1;
-	  flags = cflags[m];
+      if (faces[i] && grid->neigh_decode(nmask,i) == NBOUND && 
+          cells[icell].nsplit >= 1) {
+	if (cinfo[icell].type == OUTSIDE) c2f[icell][i] = 1;
+	else if (cinfo[icell].type == INSIDE) c2f[icell][i] = 0;
+	else if (cinfo[icell].type == OVERLAP) {
+	  c2f[icell][i] = 1;
+	  flags = cinfo[icell].corner;
 
 	  extflag = 0;
 	  for (j = 0; j < nface_pts; j++) {
-	    if (flags[corners[i][j]] == CORNEROUTSIDE) extflag = 1;
-	    else if (flags[corners[i][j]] == CORNERINSIDE) allow[m][i] = 0;
+	    if (flags[corners[i][j]] == OUTSIDE) extflag = 1;
+	    else if (flags[corners[i][j]] == INSIDE) c2f[icell][i] = 0;
 	  }
-	  if (!extflag) allow[m][i] = 0;
+	  if (!extflag) c2f[icell][i] = 0;
 
-	  if (allow[m][i]) {
+	  if (c2f[icell][i]) {
 	    if (dimension == 2) {
 	      for (j = 0; j < cells[icell].nsurf; j++) {
-		n = csurfs[icell][j];
+		n = cells[icell].csurfs[j];
 		if (Geometry::
 		    line_quad_face_touch(pts[lines[n].p1].x,
 					 pts[lines[n].p2].x,
 					 i,cells[icell].lo,cells[icell].hi)) {
-		  allow[m][i] = 0;
+		  c2f[icell][i] = 0;
 		  break;
 		}
 	      }
 	    } else {
 	      for (j = 0; j < cells[icell].nsurf; j++) {
-		n = csurfs[icell][j];
+		n = cells[icell].csurfs[j];
 		if (Geometry::
 		    tri_hex_face_touch(pts[tris[n].p1].x,
 				       pts[tris[n].p2].x,
 				       pts[tris[n].p3].x,
 				       i,cells[icell].lo,cells[icell].hi)) {
-		  allow[m][i] = 0;
+		  c2f[icell][i] = 0;
 		  break;
 		}
 	      }
 	    }
 	  }
 	}
-      } else allow[m][i] = 0;
+      } else c2f[icell][i] = 0;
     }
   }
 
@@ -245,29 +261,31 @@ void FixInflow::init()
   // some may be eliminated later if no particles are actually inserted
 
   ncf = 0;
-  for (m = 0; m < nparent; m++) {
-    icell = myparent[m];
-    if (allow[m][XLO]) ncf++;
-    if (allow[m][XHI]) ncf++;
-    if (allow[m][YLO]) ncf++;
-    if (allow[m][YHI]) ncf++;
-    if (allow[m][ZLO]) ncf++;
-    if (allow[m][ZHI]) ncf++;
+  for (icell = 0; icell < nglocal; icell++) {
+    if (c2f[icell][XLO]) ncf++;
+    if (c2f[icell][XHI]) ncf++;
+    if (c2f[icell][YLO]) ncf++;
+    if (c2f[icell][YHI]) ncf++;
+    if (c2f[icell][ZLO]) ncf++;
+    if (c2f[icell][ZHI]) ncf++;
   }
 
   // cellface = per-face data struct for all inserts performed on my grid cells
+  // reallocate cellface since nspecies count of mixture may have changed
   // indot = dot product of vstream with outward face normal
   // skip the cellface if indot < 0.0, since no particles will be inserted
   // 2d vs 3d adjusts lo[2],hi[2] and area
-
-  for (i = 0; i < ncfmax; i++) delete [] cellface[i].ntargetsp;
-  memory->sfree(cellface);
-  ncfmax = ncf;
-  cellface = (CellFace *) memory->smalloc(ncfmax*sizeof(CellFace),
-					  "inflow:cellface");
+  // convert c2f[I][J] = index into cellface of Jth face of cell I, -1 if none
 
   int nspecies = particle->mixture[imix]->nspecies;
   int *species = particle->mixture[imix]->species;
+
+  for (int i = 0; i < ncfmax; i++) delete [] cellface[i].ntargetsp;
+  memory->sfree(cellface);
+  ncfmax = ncf;
+  cellface = (CellFace *) memory->smalloc(ncfmax*sizeof(CellFace),
+                                          "inflow:cellface");
+  memset(cellface,0,ncfmax*sizeof(CellFace));
 
   for (i = 0; i < ncfmax; i++)
     cellface[i].ntargetsp = new double[nspecies];
@@ -280,12 +298,13 @@ void FixInflow::init()
   double area,indot;
 
   ncf = 0;
-  for (m = 0; m < nparent; m++) {
-    icell = myparent[m];
+  for (icell = 0; icell < nglocal; icell++) {
 
-    if (allow[m][XLO]) {
-      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,XLO);
-      else cellface[ncf].icell = icell;
+    if (c2f[icell][XLO]) {
+      if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,XLO);
+      else cellface[ncf].pcell = icell;
+      cellface[ncf].icell = icell;
+      cellface[ncf].iface = XLO;
       cellface[ncf].ndim = 0;
       cellface[ncf].pdim1 = 1;
       cellface[ncf].pdim2 = 2;
@@ -315,16 +334,18 @@ void FixInflow::init()
       if (indot < 0.0) continue;
 
       for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
+	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
       }
-      ncf++;
-    }
+      c2f[icell][XLO] = ncf++;
+    } else c2f[icell][XLO] = -1;
     
-    if (allow[m][XHI]) {
-      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,XHI);
-      else cellface[ncf].icell = icell;
+    if (c2f[icell][XHI]) {
+      if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,XHI);
+      else cellface[ncf].pcell = icell;
+      cellface[ncf].icell = icell;
+      cellface[ncf].iface = XHI;
       cellface[ncf].ndim = 0;
       cellface[ncf].pdim1 = 1;
       cellface[ncf].pdim2 = 2;
@@ -354,16 +375,18 @@ void FixInflow::init()
       if (indot < 0.0) continue;
 
       for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
+	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
       }
-      ncf++;
-    }
+      c2f[icell][XHI] = ncf++;
+    } else c2f[icell][XHI] = -1;
 
-    if (allow[m][YLO]) {
-      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,YLO);
-      else cellface[ncf].icell = icell;
+    if (c2f[icell][YLO]) {
+      if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,YLO);
+      else cellface[ncf].pcell = icell;
+      cellface[ncf].icell = icell;
+      cellface[ncf].iface = YLO;
       cellface[ncf].ndim = 1;
       cellface[ncf].pdim1 = 0;
       cellface[ncf].pdim2 = 2;
@@ -393,16 +416,18 @@ void FixInflow::init()
       if (indot < 0.0) continue;
 
       for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
+	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
       }
-      ncf++;
-    }
+      c2f[icell][YLO] = ncf++;
+    } else c2f[icell][YLO] = -1;
 
-    if (allow[m][YHI]) {
-      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,YHI);
-      else cellface[ncf].icell = icell;
+    if (c2f[icell][YHI]) {
+      if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,YHI);
+      else cellface[ncf].pcell = icell;
+      cellface[ncf].icell = icell;
+      cellface[ncf].iface = YHI;
       cellface[ncf].ndim = 1;
       cellface[ncf].pdim1 = 0;
       cellface[ncf].pdim2 = 2;
@@ -432,16 +457,18 @@ void FixInflow::init()
       if (indot < 0.0) continue;
 
       for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
+	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
       }
-      ncf++;
-    }
+      c2f[icell][YHI] = ncf++;
+    } else c2f[icell][YHI] = -1;
 
-    if (allow[m][ZLO]) {
-      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,ZLO);
-      else cellface[ncf].icell = icell;
+    if (c2f[icell][ZLO]) {
+      if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,ZLO);
+      else cellface[ncf].pcell = icell;
+      cellface[ncf].icell = icell;
+      cellface[ncf].iface = ZLO;
       cellface[ncf].ndim = 2;
       cellface[ncf].pdim1 = 0;
       cellface[ncf].pdim2 = 1;
@@ -465,16 +492,18 @@ void FixInflow::init()
       if (indot < 0.0) continue;
 
       for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
+	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
       }
-      ncf++;
-    }
+      c2f[icell][ZLO] = ncf++;
+    } else c2f[icell][ZLO] = -1;
 
-    if (allow[m][ZHI]) {
-      if (cells[icell].nsplit > 1) cellface[ncf].icell = split(icell,ZHI);
-      else cellface[ncf].icell = icell;
+    if (c2f[icell][ZHI]) {
+      if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,ZHI);
+      else cellface[ncf].pcell = icell;
+      cellface[ncf].icell = icell;
+      cellface[ncf].iface = ZHI;
       cellface[ncf].ndim = 2;
       cellface[ncf].pdim1 = 0;
       cellface[ncf].pdim2 = 1;
@@ -498,17 +527,13 @@ void FixInflow::init()
       if (indot < 0.0) continue;
 
       for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot);
+	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
 	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
 	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
       }
-      ncf++;
-    }
+      c2f[icell][ZHI] = ncf++;
+    } else c2f[icell][ZHI] = -1;
   }
-
-  // clean up
-
-  memory->destroy(allow);
 
   // if Np > 0, npercell = # of insertions per active cellface pair
   // set nthresh so as to achieve exactly Np insertions
@@ -534,23 +559,25 @@ void FixInflow::init()
 
 void FixInflow::start_of_step()
 {
+  int pcell,ninsert,isp,ndim,pdim1,pdim2,ivib,id;
+  double *lo,*hi,*normal;
+  double x[3],v[3];
+  double indot,rn,ntarget;
+  double beta_un,normalized_distbn_fn,theta,erot;
+  Particle::OnePart *p;
+
   if (update->ntimestep % nevery) return;
 
   int dimension = domain->dimension;
   Particle::OnePart *particles = particle->particles;
-  Grid::OneCell *cells = grid->cells;
+  Grid::ChildCell *cells = grid->cells;
+  double dt = update->dt;
 
   int nspecies = particle->mixture[imix]->nspecies;
   int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
-
-  int icell,ninsert,isp,ndim,pdim1,pdim2,ivib;
-  double *lo,*hi,*normal;
-  double x[3],v[3];
-  double indot,rn,ntarget;
-  double beta_un,normalized_distbn_fn,theta,erot;
 
   // insert molecules by cell/face pair
   // ntarget/ninsert is either perspecies or for all species
@@ -568,7 +595,7 @@ void FixInflow::start_of_step()
   nsingle = 0;
 
   for (int i = 0; i < ncf; i++) {
-    icell = cellface[i].icell;
+    pcell = cellface[i].pcell;
     ndim = cellface[i].ndim;
     pdim1 = cellface[i].pdim1;
     pdim2 = cellface[i].pdim2;
@@ -580,9 +607,9 @@ void FixInflow::start_of_step()
 
     if (perspecies == YES) {
       for (isp = 0; isp < nspecies; isp++) {
-	ntarget = cellface[i].ntargetsp[isp];
+	ntarget = cellface[i].ntargetsp[isp]+random->uniform();
 	ninsert = static_cast<int> (ntarget);
-	if (random->uniform() < ntarget-ninsert) ninsert++;
+//	if (random->uniform() < ntarget-ninsert) ninsert++;
 
 	for (int m = 0; m < ninsert; m++) {
 	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
@@ -598,14 +625,19 @@ void FixInflow::start_of_step()
 		  beta_un*beta_un);
 	  } while (normalized_distbn_fn < random->uniform());
 	  
-	  v[ndim] = beta_un + vstream[0];
-	  
-	  theta = MY_PI * random->gaussian();
-	  v[pdim1] = vscale[isp]*sin(theta) + vstream[1];
-	  v[pdim2] = vscale[isp]*cos(theta) + vstream[2]; 
+          v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+
+          theta = MY_PI * random->gaussian();
+          v[pdim1] = vscale[isp]*sin(theta) + vstream[pdim1];
+          v[pdim2] = vscale[isp]*cos(theta) + vstream[pdim2];
           erot = particle->erot(isp,random);
           ivib = particle->evib(isp,random);
-	  particle->add_particle(0,isp,icell,x,v,erot,ivib);
+          id = MAXSMALLINT*random->uniform();
+	  particle->add_particle(id,isp,pcell,x,v,erot,ivib);
+
+          p = &particle->particles[particle->nlocal-1];
+          p->flag = PINSERT;
+          p->dtremain = dt * random->uniform();
 	}
 
 	nsingle += ninsert;
@@ -613,9 +645,9 @@ void FixInflow::start_of_step()
 
     } else {
       if (np == 0) {
-	ntarget = cellface[i].ntarget;
+	ntarget = cellface[i].ntarget+random->uniform();
 	ninsert = static_cast<int> (ntarget);
-	if (random->uniform() < ntarget-ninsert) ninsert++;
+//	if (random->uniform() < ntarget-ninsert) ninsert++;
       } else {
 	ninsert = npercell;
 	if (i >= nthresh) ninsert++;
@@ -640,14 +672,20 @@ void FixInflow::start_of_step()
 		beta_un*beta_un);
 	} while (normalized_distbn_fn < random->uniform());
 	
-	v[ndim] = beta_un*vscale[isp] + vstream[0];
-	
-	theta = MY_PI * random->uniform();
-	v[pdim1] = vscale[isp]*sin(theta) + vstream[1];
-	v[pdim2] = vscale[isp]*cos(theta) + vstream[2]; 
+        v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+
+        theta = MY_PI * random->gaussian();
+        v[pdim1] = vscale[isp]*sin(theta) + vstream[pdim1];
+        v[pdim2] = vscale[isp]*cos(theta) + vstream[pdim2];
+
         erot = particle->erot(isp,random);
         ivib = particle->evib(isp,random);
-	particle->add_particle(0,isp,icell,x,v,erot,ivib);
+        id = MAXSMALLINT*random->uniform();
+	particle->add_particle(id,isp,pcell,x,v,erot,ivib);
+
+        p = &particle->particles[particle->nlocal-1];
+        p->flag = PINSERT;
+        p->dtremain = dt * random->uniform();
       }
 
       nsingle += ninsert;
@@ -674,13 +712,12 @@ double FixInflow::mol_inflow(int isp, double indot)
   double inward_number_flux = 0.0;
   if (indot >= 0.0) {
     inward_number_flux = vscale[isp] * fraction[isp] *
-      (exp(-indot*indot) + sqrt(MY_PI)*indot*(1.0 + erf(indot)));
-    inward_number_flux += random->gaussian();
+      (exp(-indot*indot) + sqrt(MY_PI)*indot*(1.0 + erf(indot)))
+      / (2*sqrt(MY_PI));
   }
 
   return inward_number_flux;
 }
-
 
 /* ----------------------------------------------------------------------
    inserting into split cell parent ICELL on face FLAG
@@ -693,7 +730,7 @@ int FixInflow::split(int icell, int flag)
 {
   double x[3];
 
-  Grid::OneCell *cells = grid->cells;
+  Grid::ChildCell *cells = grid->cells;
 
   // x = center point on face
 
@@ -712,6 +749,209 @@ int FixInflow::split(int icell, int flag)
   if (domain->dimension == 2) splitcell = update->split2d(icell,x);
   else splitcell = update->split3d(icell,x);
   return splitcell;
+}
+
+/* ----------------------------------------------------------------------
+   pack icell values for per-cell arrays into buf
+   also pack cellface data for flagged faces
+   return byte count of amount packed
+   if memflag, only return count, do not fill buf
+------------------------------------------------------------------------- */
+
+int FixInflow::pack_grid_one(int icell, char *buf, int memflag)
+{
+  char *ptr = buf;
+
+  int nspecies = particle->mixture[imix]->nspecies;
+
+  if (memflag) memcpy(ptr,c2f[icell],6*sizeof(int));
+  ptr += 6*sizeof(int);
+  ptr = ROUNDUP(ptr);
+
+  // loop over faces, pack cellface/species-info entry if exists
+
+  int nsplit = grid->cells[icell].nsplit;
+
+  for (int iface = 0; iface < 6; iface++) {
+    if (c2f[icell][iface] < 0) continue;
+    int icf = c2f[icell][iface];
+    if (memflag) memcpy(ptr,&cellface[icf],sizeof(CellFace));
+    ptr += sizeof(CellFace);
+    ptr = ROUNDUP(ptr);
+    if (memflag) memcpy(ptr,cellface[icf].ntargetsp,nspecies*sizeof(double));
+    ptr += nspecies*sizeof(double);
+  }
+
+  return ptr-buf;
+}
+
+/* ----------------------------------------------------------------------
+   unpack icell values for per-cell arrays from buf
+   also unpack cellface data for flagged faces
+   return byte count of amount unpacked
+------------------------------------------------------------------------- */
+
+int FixInflow::unpack_grid_one(int icell, char *buf)
+{
+  char *ptr = buf;
+
+  int nspecies = particle->mixture[imix]->nspecies;
+
+  grow_percell(1);
+  memcpy(c2f[icell],ptr,6*sizeof(int));
+  ptr += 6*sizeof(int);
+  ptr = ROUNDUP(ptr);
+  nglocal++;
+
+  int nsplit = grid->cells[icell].nsplit;
+
+  // unpack c2f values
+  // fill sub cells with -1
+
+  if (nsplit > 1) {
+    grow_percell(nsplit);
+    for (int i = 0; i < nsplit; i++) {
+      c2f[nglocal][0] = c2f[nglocal][1] = c2f[nglocal][2] = 
+        c2f[nglocal][3] = c2f[nglocal][4] = c2f[nglocal][5] = -1;
+      nglocal ++;
+    }
+  }
+  
+  // unpack cellface entry for each face set in c2f
+  // use ntargetsp to avoid overwriting allocated cellface.ntargetsp
+  // reset c2f pointer into cellface
+  // reset cellface.pcell and cellface.icell
+  // pcell setting based on sub cells being immediately after the split cell
+
+  for (int iface = 0; iface < 6; iface++) {
+    if (c2f[icell][iface] < 0) continue;
+    c2f[icell][iface] = ncf;
+    grow_cellface(1);
+    double *ntargetsp = cellface[ncf].ntargetsp;
+    memcpy(&cellface[ncf],ptr,sizeof(CellFace));
+    ptr += sizeof(CellFace);
+    ptr = ROUNDUP(ptr);
+    cellface[ncf].ntargetsp = ntargetsp;
+    memcpy(cellface[ncf].ntargetsp,ptr,nspecies*sizeof(double));
+    ptr += nspecies*sizeof(double);
+    if (grid->cells[icell].nsplit == 1) cellface[ncf].pcell = icell;
+    else cellface[ncf].pcell = split(icell,cellface[ncf].iface);
+    cellface[ncf].pcell = icell;
+    cellface[ncf].icell = icell;
+    ncf++;
+  }
+
+  return ptr-buf;
+}
+
+/* ----------------------------------------------------------------------
+   compress per-cell arrays due to cells migrating to new procs
+   criteria for keeping/discarding a cell is same as in Grid::compress()
+   this keeps final ordering of per-cell arrays consistent with Grid class
+------------------------------------------------------------------------- */
+
+void FixInflow::compress_grid()
+{
+  int me = comm->me;
+  Grid::ChildCell *cells = grid->cells;
+
+  // compress cellface first, preserving/copying ntargetsp vector
+  // reset c2f pointers to new cellface indices
+
+  int nspecies = particle->mixture[imix]->nspecies;
+  double *ntargetsp;
+
+  int ncurrent = ncf;
+  ncf = 0;
+  for (int icf = 0; icf < ncurrent; icf++) {
+    int icell = cellface[icf].icell;
+    if (cells[icell].proc != me) continue;
+    if (ncf != icf) {
+      ntargetsp = cellface[ncf].ntargetsp;
+      memcpy(&cellface[ncf],&cellface[icf],sizeof(CellFace));
+      cellface[ncf].ntargetsp = ntargetsp;
+      memcpy(ntargetsp,cellface[icf].ntargetsp,nspecies*sizeof(double));
+    }
+    c2f[icell][cellface[icf].iface] = ncf;
+    ncf++;
+  }
+
+  // compress c2f second
+  // keep an unsplit or split cell if staying on this proc
+  // keep a sub cell if its split cell is staying on this proc
+  // reset cellface.icell to new cell index
+  // cellface.pcell reset in post_compress(),
+  // since don't know sub cell index at this point
+
+  int nbytes = 6*sizeof(int);
+
+  ncurrent = nglocal;
+  nglocal = 0;
+  for (int icell = 0; icell < ncurrent; icell++) {
+    if (cells[icell].nsplit >= 1) {
+      if (cells[icell].proc != me) continue;
+    } else {
+      int isplit = cells[icell].isplit;
+      if (cells[grid->sinfo[isplit].icell].proc != me) continue;
+    }
+
+    if (nglocal != icell) memcpy(c2f[nglocal],c2f[icell],nbytes);
+
+    if (c2f[nglocal][XLO] >= 0) cellface[c2f[nglocal][XLO]].icell = nglocal;
+    if (c2f[nglocal][XHI] >= 0) cellface[c2f[nglocal][XHI]].icell = nglocal;
+    if (c2f[nglocal][YLO] >= 0) cellface[c2f[nglocal][YLO]].icell = nglocal;
+    if (c2f[nglocal][YHI] >= 0) cellface[c2f[nglocal][YHI]].icell = nglocal;
+    if (c2f[nglocal][ZLO] >= 0) cellface[c2f[nglocal][ZLO]].icell = nglocal;
+    if (c2f[nglocal][ZHI] >= 0) cellface[c2f[nglocal][ZHI]].icell = nglocal;
+
+    nglocal++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   reset cellface.pcell for compressed cellface entries
+   called from Grid::compress() after grid cells have been compressed
+------------------------------------------------------------------------- */
+
+void FixInflow::post_compress_grid()
+{
+  Grid::ChildCell *cells = grid->cells;
+
+  for (int icf = 0; icf < ncf; icf++) {
+    int icell = cellface[icf].icell;
+    int nsplit = cells[icell].nsplit;
+    if (nsplit == 1) cellface[icf].pcell = icell;
+    else cellface[icf].pcell = split(icell,cellface[icf].iface);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   insure c2f allocated long enough for N new cells
+------------------------------------------------------------------------- */
+
+void FixInflow::grow_percell(int n)
+{
+  if (nglocal+n < nglocalmax) return;
+  nglocalmax += DELTAGRID;
+  memory->grow(c2f,nglocalmax,6,"inflow:c2f");
+}
+
+/* ----------------------------------------------------------------------
+   insure cellface allocated long enough for N new cell/face pairs
+------------------------------------------------------------------------- */
+
+void FixInflow::grow_cellface(int n)
+{
+  if (ncf+n < ncfmax) return;
+  int oldmax = ncfmax;
+  ncfmax += DELTAFACE;
+  cellface = (CellFace *) memory->srealloc(cellface,ncfmax*sizeof(CellFace),
+                                           "inflow:cellface");
+  memset(&cellface[oldmax],0,(ncfmax-oldmax)*sizeof(CellFace));
+
+  int nspecies = particle->mixture[imix]->nspecies;
+  for (int i = oldmax; i < ncfmax; i++)
+    cellface[i].ntargetsp = new double[nspecies];
 }
 
 /* ----------------------------------------------------------------------

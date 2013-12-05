@@ -45,6 +45,7 @@ Fix::Fix(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   scalar_flag = vector_flag = array_flag = 0;
   per_molecule_flag = per_grid_flag = per_surf_flag = 0;
+  gridmigrate = 0;
 
   // mask settings - same as in modify.cpp
 

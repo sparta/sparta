@@ -27,14 +27,15 @@ class Collide : protected Pointers {
  public:
   char *style;
 
-  int ncollide_one,nattempt_one;
-  bigint ncollide_running,nattempt_running;
+  int ncollide_one,nattempt_one,nreact_one;
+  bigint ncollide_running,nattempt_running,nreact_running;
  
   Collide(class SPARTA *, int, char **);
   virtual ~Collide();
   virtual void init();
   void collisions();
 
+  virtual double attempt_collision(int, int, double) = 0;
   virtual double attempt_collision(int, int, int, double) = 0;
   virtual int test_collision(int, int, int, 
 			     Particle::OnePart *, Particle::OnePart *) = 0;
@@ -42,7 +43,16 @@ class Collide : protected Pointers {
   virtual Particle::OnePart *perform_collision(Particle::OnePart *, 
 					       Particle::OnePart *) = 0;
 
+  virtual double extract(int, const char *) {return 0.0;}
+
+  virtual int pack_grid_one(int, char *, int) {return 0;}
+  virtual int unpack_grid_one(int, char *) {return 0;}
+  virtual void compress_grid() {}
+
  protected:
+  int npmax;          // max # of particles in plist
+  int *plist;         // list of particles in a single group
+
   int ngroups;        // # of groups
   int *ngroup;        // # of particles in one cell of each group
   int *maxgroup;      // max # of glist indices allocated per group
@@ -64,6 +74,9 @@ class Collide : protected Pointers {
     }
     glist[igroup][ngroup[igroup]++] = n;
   }
+
+  void collisions_one();
+  void collisions_group();
 };
 
 }

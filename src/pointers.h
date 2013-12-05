@@ -35,6 +35,10 @@ namespace SPARTA_NS {
 #define MIN(A,B) ((A) < (B) ? (A) : (B))
 #define MAX(A,B) ((A) > (B) ? (A) : (B))
 
+// roundup a char ptr to 8-byte boundary
+
+#define ROUNDUP(A) (char *) (((uint64_t) (A) + 7) & ~7);
+
 class Pointers {
  public:
   Pointers(SPARTA *ptr) : 
@@ -51,6 +55,7 @@ class Pointers {
     grid(ptr->grid),
     surf(ptr->surf),
     collide(ptr->collide),
+    react(ptr->react),
     output(ptr->output),
     timer(ptr->timer),
     world(ptr->world),
@@ -74,6 +79,7 @@ class Pointers {
   Grid *&grid;
   Surf *&surf;
   Collide *&collide;
+  React *&react;
   Output *&output;
   Timer *&timer;
 

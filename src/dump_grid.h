@@ -29,8 +29,10 @@ class DumpGrid : public Dump {
  public:
   DumpGrid(class SPARTA *, int, char **);
   ~DumpGrid();
+  void reset_grid();
+  bigint memory_usage();
 
- protected:
+ private:
   int nevery;                // dump frequency to check Fix against
 
   int *vtype;                // type of each vector (INT, DOUBLE)
@@ -59,16 +61,17 @@ class DumpGrid : public Dump {
   int *variable;             // list of indices for the Variables
   double **vbuf;             // local storage for variable evaluation
 
+  int *cpart;                // indices in grid->cells of cells with particles
+  int ncpart;                // # of owned grid cells with particles
+  int ncpartmax;             // max size of cpart
+
   int dimension;
-  int nchild;                 // # of grid cells with particles on this proc
 
-  // private methods
-
-  virtual void init_style();
-  virtual void write_header(bigint);
+  void init_style();
+  void write_header(bigint);
   int count();
   void pack();
-  virtual void write_data(int, double *);
+  void write_data(int, double *);
 
   int parse_fields(int, char **);
   int add_compute(char *);
@@ -107,6 +110,8 @@ class DumpGrid : public Dump {
   void pack_xc(int);
   void pack_yc(int);
   void pack_zc(int);
+  void pack_vol(int);
+  void pack_svol(int);
 };
 
 }

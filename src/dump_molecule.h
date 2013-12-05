@@ -29,9 +29,12 @@ class DumpMolecule : public Dump {
  public:
   DumpMolecule(class SPARTA *, int, char **);
   virtual ~DumpMolecule();
+  bigint memory_usage();
 
  protected:
   int nevery;                // dump frequency to check Fix against
+  int iregion;               // -1 if no region, else which region
+  char *idregion;            // region ID
   int nthresh;               // # of defined threshholds
   int *thresh_array;         // array to threshhhold on for each nthresh
   int *thresh_op;            // threshhold operation for each nthresh
@@ -71,14 +74,11 @@ class DumpMolecule : public Dump {
   int ntypes;                // # of molecule types
   char **typenames;	     // array of element names for each type
 
-  // private methods
-
   virtual void init_style();
-  virtual void write_header(bigint);
+  void write_header(bigint);
   int count();
   void pack();
-  virtual void write_data(int, double *);
-  bigint memory_usage();
+  void write_data(int, double *);
 
   int parse_fields(int, char **);
   int add_compute(char *);
@@ -107,6 +107,7 @@ class DumpMolecule : public Dump {
 
   void pack_id(int);
   void pack_type(int);
+  void pack_proc(int);
 
   void pack_x(int);
   void pack_y(int);

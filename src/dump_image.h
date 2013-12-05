@@ -32,11 +32,8 @@ class DumpImage : public DumpMolecule {
 
  private:
   int filetype;
-  int acolor,adiam;                // what determines color/diam of atoms
-  int gcolor;                      // what determines color of grid cells
-  double adiamvalue;               // atom diameter value
-  int atomflag;                    // 0/1 for draw atoms
-  int cellflag;                    // 0/1 for draw cells
+  class Image *image;              // class that renders the images
+
   char *thetastr,*phistr;          // variables for view theta,phi
   int thetavar,phivar;             // index to theta,phi vars
   int cflag;                       // static/dynamic box center
@@ -48,18 +45,73 @@ class DumpImage : public DumpMolecule {
   char *zoomstr,*perspstr;         // view zoom and perspective variables
   int zoomvar,perspvar;            // index to zoom,persp vars
   int boxflag,axesflag;            // 0/1 for draw box and axes
-  int gridflag;                    // 0/1 for draw grid cell outline
   double boxdiam,axeslen,axesdiam; // params for drawing box and axes
-  double griddiam;                 // param for drawing grid
-  double *boxcolor,*gridcolor;     // colors for drawing box and grid
+  double *boxcolor;                // colors for drawing box/grid/surf lines
 
   int viewflag;                    // overall view is static or dynamic
 
-  double **colortype;              // per-type colors
-  double **colorproc;              // per-proc colors
-  double *diamtype;                // per-type diameters
+  // atom drawing
 
-  class Image *image;              // class that renders each image
+  int atomflag;                    // 0/1 for draw atoms
+  int acolor;                      // color of atoms = TYPE, PROC, ATTRIBUTE
+  int adiam;                       // diam of atoms = TYPE, ATTRIBUTE
+  double adiamvalue;               // atom diameter value
+
+  double **colortype;              // per-type atom colors
+  double *diamtype;                // per-type atom diameters
+  double *acolorproc;              // atom color for me
+
+  // grid drawing
+
+  int gridflag;                    // 0/1 for draw entire grid cells
+  int gcolor;                      // color of grid cells = PROC, ATTRIBUTE
+  int gridwhich;                   // COMPUTE, FIX, VARIABLE for ATTRIBUTE
+  char *idgrid;                    // ID of compute, fix, variable
+  int gridindex;                   // index of compute, fix, variable
+  int gridcol;                     // column of compute/fix array, 0 for vector
+
+  double *gcolorproc;              // grid color for me
+
+  // grid plane drawing
+
+  int gridxflag,gridyflag;
+  int gridzflag;                   // 0/1 for draw grid cell planes in xyz
+  double gridxcoord,gridycoord;
+  double gridzcoord;               // coordinate of plane
+  int gxcolor,gycolor,gzcolor;     // color of planes = PROC, ATTRIBUTE
+  int gridxwhich,gridywhich;
+  int gridzwhich;                  // COMPUTE, FIX, VARIABLE for ATTRIBUTE
+  char *idgridx,*idgridy,*idgridz; // ID of compute, fix, variable
+  int gridxindex,gridyindex;
+  int gridzindex;                  // index of compute, fix, variable
+  int gridxcol,gridycol,gridzcol;  // column of compute/fix array, 0 vor vector
+
+  // grid line drawing, for volume and planes
+
+  int glineflag;                   // 0/1 for draw grid cell lines
+  double glinediam;                // diameter of lines
+  double *glinecolor;              // color of lines
+
+  // surf drawing
+
+  int surfflag;                    // 0/1 for draw surf elements
+  int scolor;                      // color of surfs = ONE, PROC, ATTRIBUTE
+  double *surfcolorone;            // ONE color of surfs
+  double sdiamvalue;               // surf diameter for 2d lines
+  int surfwhich;                   // COMPUTE, FIX, VARIABLE for ATTRIBUTE
+  char *idsurf;                    // ID of compute, fix, variable
+  int surfindex;                   // index of compute, fix, variable
+  int surfcol;                     // column of compute/fix array, 0 vor vector
+
+  double *scolorproc;              // surf color for me
+
+  // surf line drawing
+
+  int slineflag;                   // 0/1 for draw surf lines
+  double slinediam;                // diameter of lines
+  double *slinecolor;              // color of lines
+
+  // methods
 
   void init_style();
   int modify_param(int, char **);

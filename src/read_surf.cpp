@@ -20,10 +20,17 @@
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
+#include "comm.h"
 #include "geometry.h"
 #include "math_const.h"
-#include "error.h"
 #include "memory.h"
+#include "error.h"
+
+#ifdef SPARTA_MAP
+#include <map>
+#else
+#include <tr1/unordered_map>
+#endif
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -58,15 +65,17 @@ ReadSurf::~ReadSurf()
 
 void ReadSurf::command(int narg, char **arg)
 {
-  if (!grid->grid_exist) 
+  if (!grid->exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
+  if (!grid->exist_ghost)
+    error->all(FLERR,"Cannot read_surf before grid ghost cells are defined");
+  if (particle->exist) 
+    error->all(FLERR,"Cannot read_surf after molecules are defined");
 
   surf->exist = 1;
-  surf->changed = 1;
+  dimension = domain->dimension;
 
   if (narg < 2) error->all(FLERR,"Illegal read_surf command");
-
-  dimension = domain->dimension;
 
   // surface collision model ID
 
@@ -79,6 +88,9 @@ void ReadSurf::command(int narg, char **arg)
     if (screen) fprintf(screen,"Reading surf file ...\n");
     open(arg[0]);
   }
+
+  MPI_Barrier(world);
+  double time1 = MPI_Wtime();
 
   header();
 
@@ -301,12 +313,60 @@ void ReadSurf::command(int narg, char **arg)
   if (dimension == 3) surf->compute_tri_normal(ntri_old,ntri_new);
 
   // make list of surf elements I own
+  // assign surfs to grid cells
+  // re-setup ghost and grid
 
   surf->setup_surf();
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  grid->unset_neighbors();
+  grid->remove_ghosts();
+  grid->clear_surf();
+
+  MPI_Barrier(world);
+  double time2 = MPI_Wtime();
+
+  grid->surf2grid();
+
+  MPI_Barrier(world);
+  double time3 = MPI_Wtime();
+
+  grid->setup_owned();
+  grid->acquire_ghosts();
+  grid->reset_neighbors();
+  comm->reset_neighbors();
+
+  MPI_Barrier(world);
+  double time4 = MPI_Wtime();
+
+  grid->set_inout();
+  grid->type_check();
+
+  MPI_Barrier(world);
+  double time5 = MPI_Wtime();
+
+  double time_total = time5-time1;
+
+  if (comm->me == 0) {
+    if (screen) {
+      fprintf(screen,"  CPU time = %g secs\n",time_total);
+      fprintf(screen,"  read/surf2grid/ghost/inout percent = %g %g %g %g\n",
+              100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
+              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total);
+    }
+    if (logfile) {
+      fprintf(logfile,"  CPU time = %g secs\n",time_total);
+      fprintf(logfile,"  read/surf2grid/ghost/inout percent = %g %g %g %g\n",
+              100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
+              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total);
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
-   read free-format header of surf file
+   read free-format header of data file
    1st line and blank lines are skipped
    non-blank lines are checked for header keywords and leading value is read
    header ends with non-blank line containing no header keyword (or EOF)
@@ -322,7 +382,7 @@ void ReadSurf::header()
 
   if (me == 0) {
     char *eof = fgets(line,MAXLINE,fp);
-    if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
+    if (eof == NULL) error->one(FLERR,"Unexpected end of data file");
   }
 
   npoint_new = nline_new = ntri_new = 0;
@@ -369,11 +429,11 @@ void ReadSurf::header()
     } else break;
   }
 
-  if (npoint_new == 0) error->all(FLERR,"Surf file does not contain points");
+  if (npoint_new == 0) error->all(FLERR,"Surf files does not contain points");
   if (dimension == 2 && nline_new == 0) 
-    error->all(FLERR,"Surf file does not contain lines");
+    error->all(FLERR,"Surf files does not contain lines");
   if (dimension == 3 && ntri_new == 0) 
-    error->all(FLERR,"Surf file does not contain triangles");
+    error->all(FLERR,"Surf files does not contain triangles");
 }
 
 /* ----------------------------------------------------------------------
@@ -401,7 +461,6 @@ void ReadSurf::read_points()
 	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
 	m += strlen(&buffer[m]);
       }
-      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
       m++;
     }
     MPI_Bcast(&m,1,MPI_INT,0,world);
@@ -464,7 +523,6 @@ void ReadSurf::read_lines()
 	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
 	m += strlen(&buffer[m]);
       }
-      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
       m++;
     }
     MPI_Bcast(&m,1,MPI_INT,0,world);
@@ -528,7 +586,6 @@ void ReadSurf::read_tris()
 	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
 	m += strlen(&buffer[m]);
       }
-      if (buffer[m-1] != '\n') strcpy(&buffer[m++],"\n");
       m++;
     }
     MPI_Bcast(&m,1,MPI_INT,0,world);
@@ -556,6 +613,7 @@ void ReadSurf::read_tris()
       tris[n].p1 = p1-1 + npoint_old;
       tris[n].p2 = p2-1 + npoint_old;
       tris[n].p3 = p3-1 + npoint_old;
+
       n++;
       buf = next + 1;
     }
@@ -1172,7 +1230,81 @@ void ReadSurf::check_watertight_2d()
 
   if (nbad) {
     char str[128];
-    sprintf(str,"%d read_surf lines are not watertight",nbad);
+    sprintf(str,"Watertight surface check failed with %d bad points",nbad);
+    error->all(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check if every new directed triangle edge is matched by an inverted edge
+   same directed edge can appear multiple times with infinitely thin surfaces
+   exception: not required of triangle edge on simulation box surface
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_watertight_3d()
+{
+  // hash directed edges of all triangles
+  // key = directed edge, value = # of times it appears in any triangle
+  // NOTE: could prealloc hash to correct size here
+
+#ifdef SPARTA_MAP
+  std::map<bigint,int> hash;
+  std::map<bigint,int>::iterator it;
+#else
+  std::tr1::unordered_map<bigint,int> hash;
+  std::tr1::unordered_map<bigint,int>::iterator it;
+#endif
+
+  // ecountmax[I] = max # of edges that vertex I is part of
+  // use lowest vertex in each edge
+
+  bigint p1,p2,p3,key;
+
+  int m = ntri_old;
+  for (int i = 0; i < ntri_new; i++) {
+    p1 = tris[m].p1 - npoint_old;
+    p2 = tris[m].p2 - npoint_old;
+    p3 = tris[m].p3 - npoint_old;
+    key = (p1 << 32) | p2;
+    if (hash.find(key) != hash.end()) hash[key]++;
+    else hash[key] = 1;
+    key = (p2 << 32) | p3;
+    if (hash.find(key) != hash.end()) hash[key]++;
+    else hash[key] = 1;
+    key = (p3 << 32) | p1;
+    if (hash.find(key) != hash.end()) hash[key]++;
+    else hash[key] = 1;
+    m++;
+  }
+
+  // check that each count matches count for inverted edge
+  // allow for exception if edge on box surface
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int ok;
+  bigint key2;
+
+  int nbad = 0;
+  for (it = hash.begin(); it != hash.end(); ++it) {
+    p1 = it->first >> 32;
+    p2 = it->first & MAXSMALLINT;
+    key = (p2 << 32) | p1;
+    ok = 1;
+    if (hash.find(key) == hash.end()) ok = 0;
+    else if (hash[key] != it->second) ok = 0;
+    if (!ok) {
+      if (!Geometry::point_on_hex(pts[p1].x,boxlo,boxhi) ||
+          !Geometry::point_on_hex(pts[p2].x,boxlo,boxhi)) nbad++;
+    }
+  }
+
+  // error messages
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"Watertight surface check failed with %d bad edges",nbad);
     error->all(FLERR,str);
   }
 }
@@ -1183,7 +1315,7 @@ void ReadSurf::check_watertight_2d()
    exception: not required of triangle edge on simulation box surface
 ------------------------------------------------------------------------- */
 
-void ReadSurf::check_watertight_3d()
+void ReadSurf::check_watertight_3d_old()
 {
   int i,j,m,p1,p2,p3,pi,pj;
 
@@ -1355,7 +1487,7 @@ void ReadSurf::smallest_tri(double &len, double &area)
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 opens surf file
+   proc 0 opens data file
    test if gzipped
 ------------------------------------------------------------------------- */
 

@@ -1,5 +1,5 @@
 /* ----------------------------------------------------------------------
-   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate alyzer
    http://sparta.sandia.gov
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
@@ -22,9 +22,12 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+#include "comm.h"
+
 using namespace SPARTA_NS;
 
-enum{NUM,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE};
+enum{NUM,U,V,W,USQ,VSQ,WSQ,KE,MASS,TEMPERATURE};
 enum{NONE,COUNT,MASSWT};
 
 /* ---------------------------------------------------------------------- */
@@ -51,6 +54,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"vsq") == 0) which[nvalue++] = VSQ;
     else if (strcmp(arg[iarg],"wsq") == 0) which[nvalue++] = WSQ;
     else if (strcmp(arg[iarg],"ke") == 0) which[nvalue++] = KE;
+    else if (strcmp(arg[iarg],"mass") == 0) which[nvalue++] = MASS;
     else if (strcmp(arg[iarg],"temp") == 0) which[nvalue++] = TEMPERATURE;
     else error->all(FLERR,"Illegal compute grid command");
     iarg++;
@@ -61,7 +65,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   ntotal = ngroup*nvalue;
   size_per_grid_cols = ntotal;
 
-  nchild = 0;
+  nglocal = 0;
   array_grid = NULL;
 
   // norm vectors
@@ -70,7 +74,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   for (int i = 0; i < ngroup; i++)
     for (int j = 0; j < nvalue; j++) {
       if (which[j] == NUM) value_norm_style[i][j] = NONE;
-      else if (which[j] == KE || which[j] == TEMPERATURE)
+      else if (which[j] == KE || which[j] == MASS || which[j] == TEMPERATURE)
         value_norm_style[i][j] = COUNT; 
       else value_norm_style[i][j] = MASSWT;
     }
@@ -106,7 +110,7 @@ void ComputeGrid::init()
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute grid mixture has changed");
 
-  reset();
+  reallocate();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -117,29 +121,29 @@ void ComputeGrid::compute_per_grid()
 
   // compute kinetic energies for each group in each grid cell
 
-  Grid::OneCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
-  int nchild = grid->nchild;
   double mvv2e = update->mvv2e;
   double tprefactor = mvv2e / (3.0*update->boltz);
 
-  int i,j,k,m,n,ispecies,igroup,ilocal;
+  int i,j,k,m,n,ispecies,igroup,icell;
   double mass;
   double *norm,*v,*vec;
+  double sum,sumv,sumu,sumw,sume;
 
   // zero accumulator array and norm vectors
 
-  for (i = 0; i < nchild; i++)
+  for (i = 0; i < nglocal; i++)
     for (j = 0; j < ntotal; j++) array_grid[i][j] = 0.0;
 
   for (j = 0; j < ngroup; j++) {
     if (norm = norm_count[j])
-      for (i = 0; i < nchild; i++) norm[i] = 0.0;
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
     if (norm = norm_mass[j])
-      for (i = 0; i < nchild; i++) norm[i] = 0.0;
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
   }
 
   // loop over all particles, skip species not in mixture group
@@ -150,15 +154,15 @@ void ComputeGrid::compute_per_grid()
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
-    ilocal = cells[particles[i].icell].clocal;
+    icell = particles[i].icell;
 
     mass = species[ispecies].mass;
-    if (norm_mass[igroup]) norm_mass[igroup][ilocal] += mass;
-    if (norm_count[igroup]) norm_count[igroup][ilocal] += 1.0;
+    if (norm_mass[igroup]) norm_mass[igroup][icell] += mass;
+    if (norm_count[igroup]) norm_count[igroup][icell] += 1.0;
 
     v = particles[i].v;
 
-    vec = array_grid[ilocal];
+    vec = array_grid[icell];
     k = igroup*nvalue;
 
     for (m = 0; m < nvalue; m++) {
@@ -187,6 +191,9 @@ void ComputeGrid::compute_per_grid()
       case KE:
         vec[k++] += 0.5*mvv2e*mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
         break;
+      case MASS:
+        vec[k++] += mass;
+        break;
       case TEMPERATURE:
         vec[k++] += tprefactor*mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
         break;
@@ -196,42 +203,58 @@ void ComputeGrid::compute_per_grid()
 }
 
 /* ----------------------------------------------------------------------
-   reallocate arrays if nchild has changed
+   reallocate arrays if nglocal has changed
+   called by init() and load balancer
 ------------------------------------------------------------------------- */
 
-void ComputeGrid::reset()
+void ComputeGrid::reallocate()
 {
-  if (grid->nchild == nchild) return;
+  if (grid->nlocal == nglocal) return;
 
-  nchild = grid->nchild;
-
+  nglocal = grid->nlocal;
   memory->destroy(array_grid);
-  memory->create(array_grid,nchild,ntotal,"grid:array_grid");
+  memory->create(array_grid,nglocal,ntotal,"grid:array_grid");
 
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
     memory->destroy(norm_mass[i]);
     norm_count[i] = norm_mass[i] = NULL;
     for (int j = 0; j < nvalue; j++) {
-      if (which[j] == KE || which[j] == TEMPERATURE) {
+      if (which[j] == KE || which[j] == MASS || which[j] == TEMPERATURE) {
         if (norm_count[i] == NULL)
-          memory->create(norm_count[i],nchild,"grid:norm_count");
+          memory->create(norm_count[i],nglocal,"grid:norm_count");
       } else {
         if (norm_mass[i] == NULL)
-          memory->create(norm_mass[i],nchild,"grid:norm_mass");
+          memory->create(norm_mass[i],nglocal,"grid:norm_mass");
       }
     }
   }
 }
 
+
+/* ----------------------------------------------------------------------
+   return flag for style of norm vector used by column N
+   input N is value from 1 to Ncols
+------------------------------------------------------------------------- */
+
+int ComputeGrid::normflag(int n)
+{
+  int igroup = (n-1) / nvalue;
+  int ivalue = (n-1) % nvalue;
+  if (value_norm_style[igroup][ivalue] == COUNT) return COUNT;
+  if (value_norm_style[igroup][ivalue] == MASSWT) return MASSWT;
+  return NONE;
+}
+
 /* ----------------------------------------------------------------------
    return ptr to norm vector used by column N
+   input N is value from 1 to Ncols
 ------------------------------------------------------------------------- */
 
 double *ComputeGrid::normptr(int n)
 {
-  int igroup = n / nvalue;
-  int ivalue = n % nvalue;
+  int igroup = (n-1) / nvalue;
+  int ivalue = (n-1) % nvalue;
   if (value_norm_style[igroup][ivalue] == COUNT) return norm_count[igroup];
   if (value_norm_style[igroup][ivalue] == MASSWT) return norm_mass[igroup];
   return NULL;
@@ -244,10 +267,10 @@ double *ComputeGrid::normptr(int n)
 bigint ComputeGrid::memory_usage()
 {
   bigint bytes;
-  bytes = ntotal*nchild * sizeof(double);
+  bytes = ntotal*nglocal * sizeof(double);
   for (int i = 0; i < ngroup; i++) {
-    if (norm_count[i]) bytes += nchild * sizeof(double);
-    if (norm_mass[i]) bytes += nchild * sizeof(double);
+    if (norm_count[i]) bytes += nglocal * sizeof(double);
+    if (norm_mass[i]) bytes += nglocal * sizeof(double);
   }
   return bytes;
 }

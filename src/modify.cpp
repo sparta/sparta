@@ -44,6 +44,8 @@ Modify::Modify(SPARTA *sparta) : Pointers(sparta)
   fmask = NULL;
   list_start_of_step = list_end_of_step = NULL;
 
+  end_of_step_every = NULL;
+  list_pergrid = NULL;
   list_timeflag = NULL;
 
   ncompute = maxcompute = 0;
@@ -69,6 +71,8 @@ Modify::~Modify()
   delete [] list_start_of_step;
   delete [] list_end_of_step;
 
+  delete [] end_of_step_every;
+  delete [] list_pergrid;
   delete [] list_timeflag;
 }
 
@@ -83,7 +87,11 @@ void Modify::init()
   // create lists of fixes to call at each stage of run
 
   list_init(START_OF_STEP,n_start_of_step,list_start_of_step);
-  list_init(END_OF_STEP,n_end_of_step,list_end_of_step);
+  list_init_end_of_step(END_OF_STEP,n_end_of_step,list_end_of_step);
+
+  // create list of fixes that store per grid cell info
+
+  list_init_pergrid();
 
   // init each fix
 
@@ -91,7 +99,7 @@ void Modify::init()
 
   // create list of computes that store invocation times
 
-  list_init_compute();
+  list_init_timeflag();
 
   // init each compute
   // set invoked_scalar,vector,etc to -1 to force new run to re-compute them
@@ -133,12 +141,55 @@ void Modify::start_of_step()
 
 /* ----------------------------------------------------------------------
    end-of-timestep call, only for relevant fixes
+   only call fix->end_of_step() on timesteps that are multiples of nevery
 ------------------------------------------------------------------------- */
 
 void Modify::end_of_step()
 {
   for (int i = 0; i < n_end_of_step; i++)
-    fix[list_end_of_step[i]]->end_of_step();
+    if (update->ntimestep % end_of_step_every[i] == 0)
+      fix[list_end_of_step[i]]->end_of_step();
+}
+
+/* ----------------------------------------------------------------------
+   pack_grid_one call, only for relevant fixes
+   invoked by load balancer when grid cells migrate
+------------------------------------------------------------------------- */
+
+int Modify::pack_grid_one(int icell, char *buf, int memflag)
+{
+  char *ptr = buf;
+  for (int i = 0; i < n_pergrid; i++)
+    ptr += fix[list_pergrid[i]]->pack_grid_one(icell,ptr,memflag);
+  return ptr-buf;
+}
+
+/* ----------------------------------------------------------------------
+   unpack_grid_one call, only for relevant fixes
+   invoked by load balancer when grid cells migrate
+------------------------------------------------------------------------- */
+
+int Modify::unpack_grid_one(int icell, char *buf)
+{
+  char *ptr = buf;
+  for (int i = 0; i < n_pergrid; i++)
+    ptr += fix[list_pergrid[i]]->unpack_grid_one(icell,ptr);
+  return ptr-buf;
+}
+
+/* ----------------------------------------------------------------------
+   compress_grid call, only for relevant fixes
+   invoked by load balancer when grid cells migrate
+------------------------------------------------------------------------- */
+
+void Modify::compress_grid(int flag)
+{
+  if (flag == 0)
+    for (int i = 0; i < n_pergrid; i++)
+      fix[list_pergrid[i]]->compress_grid();
+  else
+    for (int i = 0; i < n_pergrid; i++)
+      fix[list_pergrid[i]]->post_compress_grid();
 }
 
 /* ----------------------------------------------------------------------
@@ -358,10 +409,51 @@ void Modify::list_init(int mask, int &n, int *&list)
 }
 
 /* ----------------------------------------------------------------------
+   create list of fix indices for end_of_step fixes
+   also create end_of_step_every[]
+------------------------------------------------------------------------- */
+
+void Modify::list_init_end_of_step(int mask, int &n, int *&list)
+{
+  delete [] list;
+  delete [] end_of_step_every;
+
+  n = 0;
+  for (int i = 0; i < nfix; i++) if (fmask[i] & mask) n++;
+  list = new int[n];
+  end_of_step_every = new int[n];
+
+  n = 0;
+  for (int i = 0; i < nfix; i++)
+    if (fmask[i] & mask) {
+      list[n] = i;
+      end_of_step_every[n++] = fix[i]->nevery;
+    }
+}
+
+/* ----------------------------------------------------------------------
+   create list of fix indices for fixes which store per grid cell info
+------------------------------------------------------------------------- */
+
+void Modify::list_init_pergrid()
+{
+  delete [] list_pergrid;
+
+  n_pergrid = 0;
+  for (int i = 0; i < nfix; i++)
+    if (fix[i]->gridmigrate) n_pergrid++;
+  list_pergrid = new int[n_pergrid];
+
+  n_pergrid = 0;
+  for (int i = 0; i < nfix; i++)
+    if (fix[i]->gridmigrate) list_pergrid[n_pergrid++] = i;
+}
+
+/* ----------------------------------------------------------------------
    create list of compute indices for computes which store invocation times
 ------------------------------------------------------------------------- */
 
-void Modify::list_init_compute()
+void Modify::list_init_timeflag()
 {
   delete [] list_timeflag;
 

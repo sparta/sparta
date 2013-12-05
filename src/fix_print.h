@@ -35,7 +35,6 @@ class FixPrint : public Fix {
 
  private:
   int me,screenflag;
-  int nevery;
   FILE *fp;
   char *string,*copy,*work;
 };

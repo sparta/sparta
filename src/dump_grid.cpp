@@ -31,9 +31,9 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,
+enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,VOL,SVOL,
      COMPUTE,FIX,VARIABLE};
-enum{INT,DOUBLE};
+enum{INT,DOUBLE,CELLINT,STRING};
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
@@ -71,6 +71,8 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   for (int i = 0; i < nfield; i++) {
     if (vtype[i] == INT) strcat(format_default,"%d ");
     else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    else if (vtype[i] == CELLINT) strcat(format_default,CELLINT_FORMAT " ");
+    else if (vtype[i] == STRING) strcat(format_default,"%s ");
     vformat[i] = NULL;
   }
 
@@ -90,6 +92,9 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
     }
     strcat(columns," ");
   }
+
+  ncpart = ncpartmax = 0;
+  cpart = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -120,6 +125,8 @@ DumpGrid::~DumpGrid()
   delete [] vformat;
 
   delete [] columns;
+
+  memory->destroy(cpart);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -198,6 +205,10 @@ void DumpGrid::init_style()
     variable[i] = ivariable;
   }
 
+  // create cpart array to index owned grid cells with particles
+
+  reset_grid();
+
   // open single file, one time only
 
   if (multifile == 0) openfile();
@@ -266,14 +277,15 @@ int DumpGrid::count()
     for (int i = 0; i < nvariable; i++)
       input->variable->compute_grid(variable[i],vbuf[i],1,0);
 
-  return grid->nchild;
+  // return # of grid cells with particles
+
+  return ncpart;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void DumpGrid::pack()
 {
-  nchild = grid->nchild;
   for (int n = 0; n < size_one; n++) (this->*pack_choice[n])(n);
 }
 
@@ -298,12 +310,21 @@ void DumpGrid::write_binary(int n, double *mybuf)
 void DumpGrid::write_text(int n, double *mybuf)
 {
   int i,j;
+  char str[32];
 
   int m = 0;
   for (i = 0; i < n; i++) {
     for (j = 0; j < size_one; j++) {
-      if (vtype[j] == INT) fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE) fprintf(fp,vformat[j],mybuf[m]);
+      if (vtype[j] == INT) 
+        fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
+      else if (vtype[j] == DOUBLE) 
+        fprintf(fp,vformat[j],mybuf[m]);
+      else if (vtype[j] == CELLINT) 
+        fprintf(fp,vformat[j],static_cast<cellint> (mybuf[m]));
+      else if (vtype[j] == STRING) { 
+        grid->id_num2str(static_cast<int> (mybuf[m]),str);
+        fprintf(fp,vformat[j],str);
+      }
       m++;
     }
     fprintf(fp,"\n");
@@ -351,7 +372,12 @@ int DumpGrid::parse_fields(int narg, char **arg)
 
     if (strcmp(arg[iarg],"id") == 0) {
       pack_choice[nfield] = &DumpGrid::pack_id;
-      vtype[nfield] = INT;
+      vtype[nfield] = CELLINT;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"idstr") == 0) {
+      pack_choice[nfield] = &DumpGrid::pack_id;
+      vtype[nfield] = STRING;
       field2arg[nfield] = iarg;
       nfield++;
     } else if (strcmp(arg[iarg],"proc") == 0) {
@@ -408,6 +434,16 @@ int DumpGrid::parse_fields(int narg, char **arg)
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump grid field for 2d simulation");
       pack_choice[nfield] = &DumpGrid::pack_zc;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"vol") == 0) {
+      pack_choice[nfield] = &DumpGrid::pack_vol;
+      vtype[nfield] = DOUBLE;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"svol") == 0) {
+      pack_choice[nfield] = &DumpGrid::pack_svol;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
@@ -639,11 +675,44 @@ void DumpGrid::allocate_values(int n)
 }
 
 /* ----------------------------------------------------------------------
+   create cpart array to index owned grid cells with particles
+   called from comm->migrate_cells() due to fix_balance
+------------------------------------------------------------------------- */
+
+void DumpGrid::reset_grid()
+{
+  memory->destroy(cpart);
+  ncpartmax = grid->nlocal;
+  memory->create(cpart,ncpartmax,"dump:cpart");
+
+  Grid::ChildCell *cells = grid->cells;
+
+  ncpart = 0;
+  for (int i = 0; i < ncpartmax; i++) {
+    if (cells[i].nsplit > 1) continue;
+    cpart[ncpart++] = i;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   return # of bytes of allocated memory
+------------------------------------------------------------------------- */
+
+bigint DumpGrid::memory_usage()
+{
+  bigint bytes = Dump::memory_usage();
+  bytes += memory->usage(cpart,ncpartmax);
+  return bytes;
+}
+
+/* ----------------------------------------------------------------------
    extraction of Compute, Fix, Variable results
 ------------------------------------------------------------------------- */
 
 void DumpGrid::pack_compute(int n)
 {
+  int m;
+
   double *vector = compute[field2index[n]]->vector_grid;
   double **array = compute[field2index[n]]->array_grid;
   int index = argindex[n];
@@ -653,14 +722,15 @@ void DumpGrid::pack_compute(int n)
   if (index == 0) {
     double *norm = compute[field2index[n]]->normptr(index);
     if (norm) {
-      for (int i = 0; i < nchild; i++) {
-        if (norm[i] > 0.0) buf[n] = vector[i] / norm[i];
+      for (int i = 0; i < ncpart; i++) {
+        m = cpart[i];
+        if (norm[m] > 0.0) buf[n] = vector[m] / norm[m];
         else buf[n] = 0.0;
         n += size_one;
       }
     } else {
-      for (int i = 0; i < nchild; i++) {
-        buf[n] = vector[i];
+      for (int i = 0; i < ncpart; i++) {
+        buf[n] = vector[cpart[i]];
         n += size_one;
       }
     }
@@ -668,14 +738,15 @@ void DumpGrid::pack_compute(int n)
     index--;
     double *norm = compute[field2index[n]]->normptr(index);
     if (norm) {
-      for (int i = 0; i < nchild; i++) {
-        if (norm[i] > 0.0) buf[n] = array[i][index] / norm[i];
+      for (int i = 0; i < ncpart; i++) {
+        m = cpart[i];
+        if (norm[m] > 0.0) buf[n] = array[m][index] / norm[m];
         else buf[n] = 0.0;
         n += size_one;
       }
     } else {
-      for (int i = 0; i < nchild; i++) {
-        buf[n] = array[i][index];
+      for (int i = 0; i < ncpart; i++) {
+        buf[n] = array[cpart[i]][index];
         n += size_one;
       }
     }
@@ -691,14 +762,14 @@ void DumpGrid::pack_fix(int n)
   int index = argindex[n];
 
   if (index == 0) {
-    for (int i = 0; i < nchild; i++) {
-      buf[n] = vector[i];
+    for (int i = 0; i < ncpart; i++) {
+      buf[n] = vector[cpart[i]];
       n += size_one;
     }
   } else {
     index--;
-    for (int i = 0; i < nchild; i++) {
-      buf[n] = array[i][index];
+    for (int i = 0; i < ncpart; i++) {
+      buf[n] = array[cpart[i]][index];
       n += size_one;
     }
   }
@@ -710,8 +781,8 @@ void DumpGrid::pack_variable(int n)
 {
   double *vector = vbuf[field2index[n]];
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = vector[i];
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = vector[cpart[i]];
     n += size_one;
   }
 }
@@ -724,11 +795,12 @@ void DumpGrid::pack_variable(int n)
 
 void DumpGrid::pack_id(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = cells[mychild[i]].id;
+  // NOTE: cellint (bigint) won't fit in double in some cases
+
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cells[cpart[i]].id;
     n += size_one;
   }
 }
@@ -737,11 +809,10 @@ void DumpGrid::pack_id(int n)
 
 void DumpGrid::pack_proc(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = cells[mychild[i]].proc;
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cells[cpart[i]].proc;
     n += size_one;
   }
 }
@@ -750,11 +821,10 @@ void DumpGrid::pack_proc(int n)
 
 void DumpGrid::pack_xlo(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = cells[mychild[i]].lo[0];
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cells[cpart[i]].lo[0];
     n += size_one;
   }
 }
@@ -763,11 +833,10 @@ void DumpGrid::pack_xlo(int n)
 
 void DumpGrid::pack_ylo(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = cells[mychild[i]].lo[1];
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cells[cpart[i]].lo[1];
     n += size_one;
   }
 }
@@ -776,11 +845,10 @@ void DumpGrid::pack_ylo(int n)
 
 void DumpGrid::pack_zlo(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = cells[mychild[i]].lo[2];
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cells[cpart[i]].lo[2];
     n += size_one;
   }
 }
@@ -789,11 +857,10 @@ void DumpGrid::pack_zlo(int n)
 
 void DumpGrid::pack_xhi(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = cells[mychild[i]].hi[0];
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cells[cpart[i]].hi[0];
     n += size_one;
   }
 }
@@ -802,11 +869,10 @@ void DumpGrid::pack_xhi(int n)
 
 void DumpGrid::pack_yhi(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = cells[mychild[i]].hi[1];
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cells[cpart[i]].hi[1];
     n += size_one;
   }
 }
@@ -815,11 +881,10 @@ void DumpGrid::pack_yhi(int n)
 
 void DumpGrid::pack_zhi(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = cells[mychild[i]].hi[2];
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cells[cpart[i]].hi[2];
     n += size_one;
   }
 }
@@ -828,11 +893,10 @@ void DumpGrid::pack_zhi(int n)
 
 void DumpGrid::pack_xc(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = 0.5 * (cells[mychild[i]].lo[0] + cells[mychild[i]].hi[0]);
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = 0.5 * (cells[cpart[i]].lo[0] + cells[cpart[i]].hi[0]);
     n += size_one;
   }
 }
@@ -841,11 +905,10 @@ void DumpGrid::pack_xc(int n)
 
 void DumpGrid::pack_yc(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = 0.5 * (cells[mychild[i]].lo[1] + cells[mychild[i]].hi[1]);
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = 0.5 * (cells[cpart[i]].lo[1] + cells[cpart[i]].hi[1]);
     n += size_one;
   }
 }
@@ -854,12 +917,35 @@ void DumpGrid::pack_yc(int n)
 
 void DumpGrid::pack_zc(int n)
 {
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
+  Grid::ChildCell *cells = grid->cells;
 
-  for (int i = 0; i < nchild; i++) {
-    buf[n] = 0.5 * (cells[mychild[i]].lo[2] + cells[mychild[i]].hi[2]);
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = 0.5 * (cells[cpart[i]].lo[2] + cells[cpart[i]].hi[2]);
     n += size_one;
   }
 }
 
+/* ---------------------------------------------------------------------- */
+
+void DumpGrid::pack_vol(int n)
+{
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = cinfo[cpart[i]].volume;
+    n += size_one;
+  }
+}
+
+
+/* ---------------------------------------------------------------------- */
+
+void DumpGrid::pack_svol(int n)
+{
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (int i = 0; i < ncpart; i++) {
+    buf[n] = update->fnum/cinfo[cpart[i]].volume;
+    n += size_one;
+  }
+}

@@ -23,7 +23,6 @@ FixStyle(inflow,FixInflow)
 
 #include "stdio.h"
 #include "fix.h"
-#include "create_molecules.h"
 
 namespace SPARTA_NS {
 
@@ -34,6 +33,10 @@ class FixInflow : public Fix {
   int setmask();
   void init();
   void start_of_step();
+  int pack_grid_one(int, char *, int);
+  int unpack_grid_one(int, char *);
+  void compress_grid();
+  void post_compress_grid();
   double compute_vector(int);
 
  private:
@@ -49,20 +52,30 @@ class FixInflow : public Fix {
     double normal[3];           // inward normal from external boundary
     double ntarget;             // # of mols to insert for all species
     double *ntargetsp;          // # of mols to insert for each species
-    int icell;                  // associated cell index, may be split cell
+    int pcell;                  // associated cell index for particles
+                                // unsplit or sub cell (not split cell)
+    int icell;                  // associated cell index, unsplit or split cell
+    int iface;                  // which face of unsplit or split cell
     int ndim;                   // dim (0,1,2) normal to face
     int pdim1,pdim2;            // 2 dims (0,1,2) parallel to face
   };
 
   CellFace *cellface;           // cell/face pairs to insert particles on
   int ncf;                      // # of cell/face pairs
-  int ncfmax;                   // max # of cell/face pairs for allocation
+  int ncfmax;                   // max # of cell/face pairs allocated
+
+  int **c2f;                    // I,J = cellface index of Jth face of cell I
+                                // only for unsplit and split cells, not sub
+                                // -1 if no insertions on that face
+  int nglocal;                  // # of owned grid cells
+  int nglocalmax;               // max size of per-cell vectors/arrays
 
   class RanPark *random;
-  class CreateMolecules;
 
   double mol_inflow(int, double);
   int split(int, int);
+  void grow_percell(int);
+  void grow_cellface(int);
 };
 
 }

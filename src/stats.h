@@ -109,7 +109,8 @@ class Stats : protected Pointers {
   void compute_nscoll();
   void compute_nscheck();
   void compute_ncoll();
-  void compute_natt();
+  void compute_nattempt();
+  void compute_nreact();
 
   void compute_nmolave();
   void compute_ntouchave();
@@ -119,7 +120,8 @@ class Stats : protected Pointers {
   void compute_nscollave();
   void compute_nscheckave();
   void compute_ncollave();
-  void compute_nattave();
+  void compute_nattemptave();
+  void compute_nreactave();
 
   void compute_vol();
   void compute_lx();

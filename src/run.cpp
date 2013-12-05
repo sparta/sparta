@@ -17,6 +17,7 @@
 #include "string.h"
 #include "run.h"
 #include "domain.h"
+#include "grid.h"
 #include "update.h"
 #include "finish.h"
 #include "timer.h"
@@ -34,8 +35,10 @@ void Run::command(int narg, char **arg)
 {
   if (narg < 1) error->all(FLERR,"Illegal run command");
 
-  if (domain->box_exist == 0)
-    error->all(FLERR,"Run command before simulation box is defined");
+  if (!grid->exist)
+    error->all(FLERR,"Run command before grid is defined");
+  if (!grid->exist_ghost)
+    error->all(FLERR,"Run command before grid ghost cells are defined");
 
   bigint nsteps_input = ATOBIGINT(arg[0]);
   if (nsteps_input < 0 || nsteps_input > MAXSMALLINT)

@@ -60,6 +60,7 @@ class Input : protected Pointers {
   void next_command();
   void partition();
   void print();
+  void quit();
   void shell();
   void variable_command();
 
@@ -75,6 +76,8 @@ class Input : protected Pointers {
   void fix();
   void global();
   void mixture();
+  void react_command();
+  void region();
   void seed();
   void species();
   void stats();

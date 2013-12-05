@@ -57,8 +57,9 @@ double ComputeTemp::compute_scalar()
   MPI_Allreduce(&n,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   if (particle->nglobal == 0) return 0.0;
 
-  double factor = update->mvv2e / 
-    (domain->dimension * particle->nglobal * update->boltz);
+  // normalize with 3 instead of dim since even 2d has 3 velocity components
+
+  double factor = update->mvv2e / (3.0 * particle->nglobal * update->boltz);
   scalar *= factor;
   return scalar;
 }

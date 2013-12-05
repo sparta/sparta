@@ -19,7 +19,7 @@
 using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- 
-    Marsaglia RNG
+   Marsaglia RNG
 ------------------------------------------------------------------------ */
 
 RanMars::RanMars(SPARTA *sparta) : Pointers(sparta)

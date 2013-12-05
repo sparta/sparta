@@ -44,6 +44,10 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   random->reset(seed,comm->me,100);
 
   ngroups = 0;
+
+  npmax = 0;
+  plist = NULL;
+
   ngroup = NULL;
   maxgroup = NULL;
   glist = NULL;
@@ -51,8 +55,8 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   // initialize counters in case stats outputs them
 
-  ncollide_one = nattempt_one = 0;
-  ncollide_running = nattempt_running = 0;
+  ncollide_one = nattempt_one = nreact_one = 0;
+  ncollide_running = nattempt_running = nreact_running = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -63,11 +67,14 @@ Collide::~Collide()
   delete [] mixID;
   delete random;
 
-  delete [] ngroup;
-  delete [] maxgroup;
-  for (int i = 0; i < ngroups; i++) memory->destroy(glist[i]);
-  delete [] glist;
-  memory->destroy(gpair);
+  if (ngroups == 1) delete [] plist;
+  if (ngroups > 1) {
+    delete [] ngroup;
+    delete [] maxgroup;
+    for (int i = 0; i < ngroups; i++) memory->destroy(glist[i]);
+    delete [] glist;
+    memory->destroy(gpair);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -83,31 +90,160 @@ void Collide::init()
   if (mixture->nspecies != particle->nspecies)
     error->all(FLERR,"Collision mixture does not contain all species");
 
-  // reallocate one-cell data structs that depend on # of groups
+  // reallocate one-cell data structs for one or many groups
 
   int oldgroups = ngroups;
   ngroups = mixture->ngroup;
 
   if (ngroups != oldgroups) {
-    delete [] ngroup;
-    delete [] maxgroup;
-    for (int i = 0; i < oldgroups; i++) memory->destroy(glist[i]);
-    delete [] glist;
-    memory->destroy(gpair);
-
-    ngroup = new int[ngroups];
-    maxgroup = new int[ngroups];
-    glist = new int*[ngroups];
-    for (int i = 0; i < ngroups; i++) {
-      maxgroup[i] = DELTAPART;
-      memory->create(glist[i],DELTAPART,"collide:glist");
+    if (oldgroups == 1) {
+      delete [] plist;
+      plist = NULL;
     }
-    memory->create(gpair,ngroups*ngroups,3,"collide:gpair");
+    if (oldgroups > 1) {
+      delete [] ngroup;
+      delete [] maxgroup;
+      for (int i = 0; i < oldgroups; i++) memory->destroy(glist[i]);
+      delete [] glist;
+      memory->destroy(gpair);
+      ngroup = NULL;
+      maxgroup = NULL;
+      glist = NULL;
+      gpair = NULL;
+    }
+
+    if (ngroups == 1) {
+      npmax = DELTAPART;
+      plist = new int[npmax];
+    }
+    if (ngroups > 1) {
+      ngroup = new int[ngroups];
+      maxgroup = new int[ngroups];
+      glist = new int*[ngroups];
+      for (int i = 0; i < ngroups; i++) {
+        maxgroup[i] = DELTAPART;
+        memory->create(glist[i],DELTAPART,"collide:glist");
+      }
+      memory->create(gpair,ngroups*ngroups,3,"collide:gpair");
+    }
   }
 
   // initialize running stats before each run
 
-  ncollide_running = nattempt_running = 0;
+  ncollide_running = nattempt_running = nreact_running = 0;
+}
+
+/* ----------------------------------------------------------------------
+  NTC algorithm
+------------------------------------------------------------------------- */
+
+void Collide::collisions()
+{
+  // counters
+
+  ncollide_one = nattempt_one = nreact_one = 0;
+
+  // perform collisions
+  // one variant is optimized for a single group
+
+  if (ngroups == 1) collisions_one();
+  else collisions_group();
+
+  // accumulate running totals
+
+  nattempt_running += nattempt_one;
+  ncollide_running += ncollide_one;
+  nreact_running += nreact_one;
+}
+
+/* ----------------------------------------------------------------------
+  NTC algorithm on a single group
+------------------------------------------------------------------------- */
+
+void Collide::collisions_one()
+{
+  int i,j,k,n,ip,jp,np;
+  int nattempt;
+  double attempt,volume;
+  Particle::OnePart *ipart,*jpart,*kpart;
+
+  // loop over cells I own
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    np = cinfo[icell].count;
+    if (np <= 1) continue;
+    ip = cinfo[icell].first;
+    volume = cinfo[icell].volume;
+
+    // setup particle list for this cell
+
+    if (np > npmax) {
+      npmax = np + DELTAPART;
+      memory->destroy(plist);
+      memory->create(plist,npmax,"collide:plist");
+    }
+
+    n = 0;
+    while (ip >= 0) {
+      plist[n++] = ip;
+      ip = next[ip];
+    }
+
+    // attempt = exact collision attempt count for a pair of groups
+    // nattempt = rounded attempt with RN
+
+    attempt = attempt_collision(icell,np,volume);
+    nattempt = static_cast<int> (attempt);
+
+    if (!nattempt) continue;
+    nattempt_one += nattempt;
+
+    // perform collisions
+    // select random particles, cannot be same
+    // test if collision actually occurs
+    // if chemistry occurs, move output I,J,K particles to new group lists
+    // if chemistry occurs, exit attempt loop if group count goes to 0
+
+    for (k = 0; k < nattempt; k++) {
+      i = np * random->uniform();
+      j = np * random->uniform();
+      while (i == j) j = np * random->uniform();
+
+      ipart = &particles[plist[i]];
+      jpart = &particles[plist[j]];
+
+      if (!test_collision(icell,0,0,ipart,jpart)) continue;
+      setup_collision(ipart,jpart);
+      kpart = perform_collision(ipart,jpart);
+      ncollide_one++;
+
+      // jpart destroyed, delete from plist
+      
+      if (!jpart) {
+        plist[j] = plist[np-1];
+        np--;
+        if (np <= 1) break;
+      }
+      
+      // if kpart created, add to plist
+      // kpart was just added to particle list, so index = nlocal-1
+      
+      if (kpart) {
+        if (np == npmax) {
+          npmax = np + DELTAPART;
+          memory->grow(plist,npmax,"collide:plist");
+        }
+        plist[np++] = particle->nlocal-1;
+      }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -115,9 +251,9 @@ void Collide::init()
   pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-void Collide::collisions()
+void Collide::collisions_group()
 {
-  int i,j,k,ip,jp,np,icell,isp,ipair,igroup,jgroup,newgroup;
+  int i,j,k,ip,jp,np,isp,ipair,igroup,jgroup,newgroup;
   int nattempt;
   int *ni,*nj,*ilist,*jlist;
   double attempt,volume;
@@ -125,25 +261,24 @@ void Collide::collisions()
 
   // counters
 
-  ncollide_one = nattempt_one = 0;
+  ncollide_one = nattempt_one = nreact_one = 0;
 
-  // loop over cells I own, including split cells
+  // loop over cells I own
 
-  Grid::OneCell *cells = grid->cells;
-  int *mychild = grid->mychild;
-  int nchild = grid->nchild;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
 
   int *species2group = mixture->species2group;
 
-  for (int m = 0; m < nchild; m++) {
-    icell = mychild[m];
-    np = cells[icell].count;
-    if (np == 0) continue;
-    ip = cells[icell].first;
-    volume = cells[icell].volume;
+  for (int icell = 0; icell < nglocal; icell++) {
+    np = cinfo[icell].count;
+    if (np <= 1) continue;
+    ip = cinfo[icell].first;
+    volume = cinfo[icell].volume;
 
     // setup per-group particle lists for this cell
 
@@ -167,7 +302,7 @@ void Collide::collisions()
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
       for (jgroup = 0; jgroup < ngroups; jgroup++) {
-	attempt = attempt_collision(m,igroup,jgroup,volume);
+	attempt = attempt_collision(icell,igroup,jgroup,volume);
 	nattempt = static_cast<int> (attempt);
 
 	if (nattempt) {
@@ -210,12 +345,12 @@ void Collide::collisions()
 	ipart = &particles[ilist[i]];
 	jpart = &particles[jlist[j]];
 
-	if (!test_collision(m,igroup,jgroup,ipart,jpart)) continue;
+	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
 	setup_collision(ipart,jpart);
 	kpart = perform_collision(ipart,jpart);
 	ncollide_one++;
 
-	// ipart may be in different group
+	// ipart may now be in different group
 
 	newgroup = species2group[ipart->ispecies];
 	if (newgroup != igroup) {
@@ -228,7 +363,7 @@ void Collide::collisions()
 	  }
 	}
 
-	// jpart may not exist or may be in different group
+	// jpart may be in different group or 
 
 	if (jpart) {
 	  newgroup = species2group[jpart->ispecies];
@@ -250,7 +385,7 @@ void Collide::collisions()
 	  }
 	}
 
-	// if kpart exists, add to appropriate group
+        // if kpart created, add to group list
 	// kpart was just added to particle list, so index = nlocal-1
 
 	if (kpart) {
@@ -265,4 +400,5 @@ void Collide::collisions()
 
   nattempt_running += nattempt_one;
   ncollide_running += ncollide_one;
+  nreact_running += nreact_one;
 }
