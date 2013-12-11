@@ -45,9 +45,9 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // same as several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
 //#define MOVE_DEBUG 1            // un-comment to debug motion of one particle
-#define MOVE_DEBUG_PROC 1       // owning proc
-#define MOVE_DEBUG_PARTICLE 465   // particle index on owning proc (could use ID)
-#define MOVE_DEBUG_STEP 1      // timestep
+#define MOVE_DEBUG_PROC 0       // owning proc
+#define MOVE_DEBUG_PARTICLE 824902   // particle index on owning proc (could use ID)
+#define MOVE_DEBUG_STEP 3      // timestep
 
 /* ---------------------------------------------------------------------- */
 

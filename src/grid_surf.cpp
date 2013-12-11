@@ -77,7 +77,7 @@ void Grid::surf2grid()
   // compute overlap of surfs with each cell I own
   // info stored in nsurf,csurfs
 
-  //double t1 = MPI_Wtime();
+  double t1 = MPI_Wtime();
 
   for (int icell = 0; icell < nlocal; icell++) {
     lo = cells[icell].lo;
@@ -102,8 +102,8 @@ void Grid::surf2grid()
     }
   }
 
-  //double t2 = MPI_Wtime();
-  //printf("TIME %g\n",t2-t1);
+  double t2 = MPI_Wtime();
+  printf("TIME %g\n",t2-t1);
   
   surf2grid_stats();
 
@@ -157,8 +157,8 @@ void Grid::surf2grid()
     }
   }
 
-  //double t3 = MPI_Wtime();
-  //printf("TIME %g\n",t3-t2);
+  double t3 = MPI_Wtime();
+  printf("TIME %g\n",t3-t2);
 
   if (dim == 3) delete cut3d;
   else delete cut2d;
