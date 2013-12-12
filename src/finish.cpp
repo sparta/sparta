@@ -144,11 +144,11 @@ void Finish::end()
 	      nboundary_total,MathExtra::num2str(nboundary_total,str));
       fprintf(screen,"Boundary exits    = " BIGINT_FORMAT " %s\n",
 	      nexit_total,MathExtra::num2str(nexit_total,str));
-      fprintf(screen,"SurfColl check    = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"SurfColl checks   = " BIGINT_FORMAT " %s\n",
 	      nscheck_total,MathExtra::num2str(nscheck_total,str));
-      fprintf(screen,"SurfColl occur    = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"SurfColl occurs   = " BIGINT_FORMAT " %s\n",
 	      nscollide_total,MathExtra::num2str(nscollide_total,str));
-      fprintf(screen,"Collide attempt   = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"Collide attempts  = " BIGINT_FORMAT " %s\n",
 	      nattempt_total,MathExtra::num2str(nattempt_total,str));
       fprintf(screen,"Collide occurs    = " BIGINT_FORMAT " %s\n",
 	      ncollide_total,MathExtra::num2str(ncollide_total,str));
@@ -179,11 +179,11 @@ void Finish::end()
 	      nboundary_total,MathExtra::num2str(nboundary_total,str));
       fprintf(logfile,"Boundary exits    = " BIGINT_FORMAT " %s\n",
 	      nexit_total,MathExtra::num2str(nexit_total,str));
-      fprintf(logfile,"SurfColl check    = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"SurfColl checks   = " BIGINT_FORMAT " %s\n",
 	      nscheck_total,MathExtra::num2str(nscheck_total,str));
-      fprintf(logfile,"SurfColl occur    = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"SurfColl occurs   = " BIGINT_FORMAT " %s\n",
 	      nscollide_total,MathExtra::num2str(nscollide_total,str));
-      fprintf(logfile,"Collide attempt   = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"Collide attempts  = " BIGINT_FORMAT " %s\n",
 	      nattempt_total,MathExtra::num2str(nattempt_total,str));
       fprintf(logfile,"Collide occurs    = " BIGINT_FORMAT " %s\n",
 	      ncollide_total,MathExtra::num2str(ncollide_total,str));
