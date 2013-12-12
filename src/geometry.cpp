@@ -557,9 +557,6 @@ bool line_line_intersect(double *start, double *stop,
   MathExtra::sub3(stop,v0,vec);
   double dotstop = MathExtra::dot3(norm,vec);
 
-  //printf("  LINE %g %g: %g %g\n",v0[0],v0[1],v1[0],v1[1]);
-  //printf("  DOT %g %g\n",dotstart,dotstop);
-
   if (dotstart < 0.0 && dotstop < 0.0) return false;
   if (dotstart > 0.0 && dotstop > 0.0) return false;
   if (dotstart == 0.0 && dotstop == 0.0) return false;
@@ -571,7 +568,6 @@ bool line_line_intersect(double *start, double *stop,
   MathExtra::sub3(v0,start,vec);
   MathExtra::sub3(stop,start,start2stop);
   param = MathExtra::dot3(norm,vec) / MathExtra::dot3(norm,start2stop);
-  //printf("  PARAM %20.15g %d\n",param,param>1.0);
   if (param < 0.0 || param > 1.0) return false;
 
   // point = intersection pt with line B
@@ -597,15 +593,9 @@ bool line_line_intersect(double *start, double *stop,
 
   MathExtra::sub3(v1,v0,edge);
   MathExtra::sub3(point,v0,pvec);
-  if (MathExtra::dot3(edge,pvec) < EPSSQNEG) {
-    //printf("  FALSE1 %g %g\n",MathExtra::dot3(edge,pvec),EPSSQNEG);
-    return false;
-  }
+  if (MathExtra::dot3(edge,pvec) < EPSSQNEG) return false;
   MathExtra::sub3(point,v1,pvec);
-  if (MathExtra::dot3(edge,pvec) > EPSSQ) {
-    //printf("  FALSE2 %g %g\n",MathExtra::dot3(edge,pvec),EPSSQ);
-    return false;
-  }
+  if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
 
   // there is a valid intersection with line B
   // set side to ONSUFR, OUTSIDE, or INSIDE
@@ -801,6 +791,105 @@ int point_in_tri(double *x, double *p1, double *p2, double *p3, double *norm)
   MathExtra::sub3(p3,x,diff);
   if (MathExtra::dot3(diff,enorm3) < 0.0) return 0;
   return 1;
+}
+
+/* ----------------------------------------------------------------------
+   compute distance bewteen a point X and line segment (P1,P2)
+   distance = nearest distance to any point on line segment
+------------------------------------------------------------------------- */
+
+double distsq_point_line(double *x, double *p1, double *p2)
+{
+  // A = vector from P1 to X
+  // B = vector from P1 to P2
+
+  double a[3],b[3];
+  MathExtra::sub3(x,p1,a);
+  MathExtra::sub3(p2,p1,b);
+
+  // let P = projected point on infinite P1 to P2 line that is closest to X
+  // alpha = fraction of distance from P1 to P2 that P is at
+  // alpha can be < 0, or between 0 to 1, or > 1
+ 
+  double alpha = MathExtra::dot3(a,b)/MathExtra::lensq3(b);
+
+  // reset A = vector from point on P1P2 line to X
+  // if alpha < 0.0, point on line is P1
+  // if alpha > 1.0, point on line is P2
+  // else point on line is P1 + alpha*(P2-P1)
+
+  if (alpha >= 1.0) MathExtra::sub3(x,p2,a);
+  else if (alpha > 0.0) {
+    a[0] = p1[0] + alpha*b[0];
+    a[1] = p1[1] + alpha*b[1];
+    a[2] = p1[2] + alpha*b[2];
+  }
+
+  // return length of A
+
+  return MathExtra::lensq3(a);
+}
+
+/* ----------------------------------------------------------------------
+   compute distance bewteen a point X and triangle (P1,P2,P3) with NORM
+   distance = nearest distance to any point within 2d triangle surface
+------------------------------------------------------------------------- */
+
+double distsq_point_tri(double *x, double *p1, double *p2, double *p3,
+                        double *norm)
+{
+  double a[3],point[3],edge[3],pvec[3],xproduct[3];
+
+  // A = vector from P1 to X
+
+  MathExtra::sub3(x,p1,a);
+
+  // point = projected point on infinite triangle plane
+  // pdistsq = projected distance to plane
+
+  double alpha = MathExtra::dot3(a,norm);
+  point[0] = x[0] - alpha*norm[0];
+  point[1] = x[1] - alpha*norm[1];
+  point[2] = x[2] - alpha*norm[2];
+
+  MathExtra::sub3(x,point,a);
+  double pdistsq = MathExtra::lensq3(a);
+
+  // test if projected point is inside triangle
+  // edge = edge vector of triangle
+  // pvec = vector from triangle vertex to projected point
+  // xproduct = cross product of edge with pvec
+  // if dot product of xproduct with norm < 0.0 for any of 3 edges,
+  //   projected point is outside tri
+  // if inside, return projected distance to plane
+
+  int inside = 1;
+
+  MathExtra::sub3(p2,p1,edge);
+  MathExtra::sub3(point,p1,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  MathExtra::sub3(p3,p2,edge);
+  MathExtra::sub3(point,p2,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  MathExtra::sub3(p1,p3,edge);
+  MathExtra::sub3(point,p3,pvec);
+  MathExtra::cross3(edge,pvec,xproduct);
+  if (MathExtra::dot3(xproduct,norm) < 0.0) inside = 0;
+
+  if (inside) return pdistsq;
+
+  // projected point is outside triangle
+  // compute minimum distance to any of 3 triangle edges
+  // return sum of min distance and projected distance
+
+  double rsq = distsq_point_line(point,p1,p2);
+  rsq = MIN(rsq,distsq_point_line(point,p2,p3));
+  rsq = MIN(rsq,distsq_point_line(point,p3,p1));
+  return rsq + pdistsq;
 }
 
 /* ----------------------------------------------------------------------

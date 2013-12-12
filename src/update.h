@@ -59,6 +59,8 @@ class Update : protected Pointers {
   bigint nscheck_running;
   bigint nscollide_running;
 
+  int nstuck;                // # of particles stuck on surfs and deleted
+
   class RanMars *ranmaster;   // master random number generator
 
   double rcblo[3],rcbhi[3];    // debug info from RCB for dump image

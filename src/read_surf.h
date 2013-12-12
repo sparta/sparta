@@ -67,9 +67,13 @@ class ReadSurf : protected Pointers {
   void check_point_inside();
   void check_watertight_2d();
   void check_watertight_3d();
+  void check_neighbor_norm_2d();
+  void check_neighbor_norm_3d();
+  void check_point_near_surf_2d();
+  void check_point_near_surf_3d();
 
-  // remove at some point
-  void check_watertight_3d_old();
+  void point_line_compare(int, Surf::Line *, double, int &, int &);
+  void point_tri_compare(int, Surf::Tri *, double, int &, int &, int, int, int);
 
   int find_edge(int, int);
   void add_edge(int, int, int);

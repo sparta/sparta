@@ -39,6 +39,8 @@ enum{NEITHER,BAD,GOOD};
 
 #define MAXLINE 256
 #define CHUNK 1024
+#define EPSILON_NORM 1.0e-12
+#define EPSILON_GRID 1.0e-3
 #define BIG 1.0e20
 #define DELTA 128           // must be 2 or greater 
 
@@ -299,21 +301,19 @@ void ReadSurf::command(int narg, char **arg)
     }
   }
 
-  // error checks on new points,lines,tris
-  // all points must be inside or on surface of simulation box
-  // surface must be watertight
-
-  check_point_inside();
-  if (dimension == 2) check_watertight_2d();
-  if (dimension == 3) check_watertight_3d();
-
   // compute normals of new lines or triangles
 
   if (dimension == 2) surf->compute_line_normal(nline_old,nline_new);
   if (dimension == 3) surf->compute_tri_normal(ntri_old,ntri_new);
 
+  // error check on new points,lines,tris
+  // all points must be inside or on surface of simulation box
+
+  check_point_inside();
+
   // make list of surf elements I own
   // assign surfs to grid cells
+  // more error checks to flag bad surfs
   // re-setup ghost and grid
 
   surf->setup_surf();
@@ -333,34 +333,51 @@ void ReadSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
+  if (dimension == 2) {
+    check_watertight_2d();
+    check_neighbor_norm_2d();
+    check_point_near_surf_2d();
+  } else {
+    check_watertight_3d();
+    //check_neighbor_norm_3d();
+    //check_point_near_surf_3d();
+  }
+
+  MPI_Barrier(world);
+  double time4 = MPI_Wtime();
+
   grid->setup_owned();
   grid->acquire_ghosts();
   grid->reset_neighbors();
   comm->reset_neighbors();
 
   MPI_Barrier(world);
-  double time4 = MPI_Wtime();
+  double time5 = MPI_Wtime();
 
   grid->set_inout();
   grid->type_check();
 
   MPI_Barrier(world);
-  double time5 = MPI_Wtime();
+  double time6 = MPI_Wtime();
 
-  double time_total = time5-time1;
+  double time_total = time6-time1;
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/surf2grid/ghost/inout percent = %g %g %g %g\n",
+      fprintf(screen,"  read/surf2grid/error/ghost/inout percent = "
+              "%g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
-              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total);
+              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
+              100.0*(time6-time5)/time_total);
     }
     if (logfile) {
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/surf2grid/ghost/inout percent = %g %g %g %g\n",
+      fprintf(logfile,"  read/surf2grid/error/ghost/inout percent = "
+              "%g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
-              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total);
+              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
+              100.0*(time6-time5)/time_total);
     }
   }
 }
@@ -1185,7 +1202,7 @@ void ReadSurf::check_point_inside()
 }
 
 /* ----------------------------------------------------------------------
-   check if every new point is an end point of exactly 2 or 4 new lines
+   check that new points are each end point of exactly 2 new lines
    exception: not required of point on simulation box surface
 ------------------------------------------------------------------------- */
 
@@ -1199,45 +1216,52 @@ void ReadSurf::check_watertight_2d()
   memory->create(count,npoint_new,"readsurf:count");
   for (int i = 0; i < npoint_new; i++) count[i] = 0;
 
+  int ndup = 0;
   int m = nline_old;
   for (int i = 0; i < nline_new; i++) {
     p1 = lines[m].p1 - npoint_old;
     p2 = lines[m].p2 - npoint_old;
     count[p1]++;
     count[p2]++;
+    if (count[p1] > 2) ndup++;
+    if (count[p2] > 2) ndup++;
     m++;
   }
   
-  // check that all counts are 2 or 4
+  if (ndup) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d duplicate points",ndup);
+    error->all(FLERR,str);
+  }
+
+  // check that all counts are 2
   // allow for exception if point on box surface
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
   int nbad = 0;
-  m = nline_old;
   for (int i = 0; i < npoint_new; i++) {
-    if (count[m] != 2 && count[m] != 4)
-      if (!Geometry::point_on_hex(pts[m].x,boxlo,boxhi)) nbad++;
-    m++;
+    if (count[i] == 0) nbad++;
+    else if (count[i] == 1) {
+      if (!Geometry::point_on_hex(pts[i+npoint_old].x,boxlo,boxhi)) nbad++;
+    }
+  }
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d unmatched points",nbad);
+    error->all(FLERR,str);
   }
 
   // clean up
 
   memory->destroy(count);
-
-  // error message
-
-  if (nbad) {
-    char str[128];
-    sprintf(str,"Watertight surface check failed with %d bad points",nbad);
-    error->all(FLERR,str);
-  }
 }
 
 /* ----------------------------------------------------------------------
-   check if every new directed triangle edge is matched by an inverted edge
-   same directed edge can appear multiple times with infinitely thin surfaces
+   check new directed triangle edges
+   must be unique and match exactly one inverted edge
    exception: not required of triangle edge on simulation box surface
 ------------------------------------------------------------------------- */
 
@@ -1255,170 +1279,361 @@ void ReadSurf::check_watertight_3d()
   std::tr1::unordered_map<bigint,int>::iterator it;
 #endif
 
-  // ecountmax[I] = max # of edges that vertex I is part of
-  // use lowest vertex in each edge
+  // insert each edge into hash
+  // should appear once in each direction
+  // error if any duplicate edges
 
   bigint p1,p2,p3,key;
 
+  int ndup = 0;
   int m = ntri_old;
   for (int i = 0; i < ntri_new; i++) {
-    p1 = tris[m].p1 - npoint_old;
-    p2 = tris[m].p2 - npoint_old;
-    p3 = tris[m].p3 - npoint_old;
+    p1 = tris[m].p1;
+    p2 = tris[m].p2;
+    p3 = tris[m].p3;
     key = (p1 << 32) | p2;
-    if (hash.find(key) != hash.end()) hash[key]++;
-    else hash[key] = 1;
+    if (hash.find(key) != hash.end()) ndup++;
+    else hash[key] = 0;
     key = (p2 << 32) | p3;
-    if (hash.find(key) != hash.end()) hash[key]++;
-    else hash[key] = 1;
+    if (hash.find(key) != hash.end()) ndup++;
+    else hash[key] = 0;
     key = (p3 << 32) | p1;
-    if (hash.find(key) != hash.end()) hash[key]++;
-    else hash[key] = 1;
+    if (hash.find(key) != hash.end()) ndup++;
+    else hash[key] = 0;
     m++;
   }
 
-  // check that each count matches count for inverted edge
+  if (ndup) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d duplicate edges",ndup);
+    error->all(FLERR,str);
+  }
+
+  // check that each edge has an inverted match
   // allow for exception if edge on box surface
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
-
-  int ok;
-  bigint key2;
 
   int nbad = 0;
   for (it = hash.begin(); it != hash.end(); ++it) {
     p1 = it->first >> 32;
     p2 = it->first & MAXSMALLINT;
     key = (p2 << 32) | p1;
-    ok = 1;
-    if (hash.find(key) == hash.end()) ok = 0;
-    else if (hash[key] != it->second) ok = 0;
-    if (!ok) {
+    if (hash.find(key) == hash.end()) {
       if (!Geometry::point_on_hex(pts[p1].x,boxlo,boxhi) ||
           !Geometry::point_on_hex(pts[p2].x,boxlo,boxhi)) nbad++;
     }
   }
 
-  // error messages
-
   if (nbad) {
     char str[128];
-    sprintf(str,"Watertight surface check failed with %d bad edges",nbad);
+    sprintf(str,"Surface check failed with %d unmatched edges",nbad);
     error->all(FLERR,str);
   }
 }
 
 /* ----------------------------------------------------------------------
-   check if every new triangle edge is part of exactly 2 or 4 new triangles
-   4 triangles with 1 common edge can occur with infinitely thin surface
-   exception: not required of triangle edge on simulation box surface
+   check norms of new adjacent lines
+   error if dot product of 2 norms is -1 -> infinitely thin surf
+   warn if closer than EPSILON_NORM to -1
 ------------------------------------------------------------------------- */
 
-void ReadSurf::check_watertight_3d_old()
+void ReadSurf::check_neighbor_norm_2d()
 {
-  int i,j,m,p1,p2,p3,pi,pj;
+  int p1,p2;
 
-  // ecountmax[I] = max # of edges that vertex I is part of
-  // use lowest vertex in each edge
+  // count[I] = # of lines that vertex I is part of
 
-  int *ecountmax;
-  memory->create(ecountmax,npoint_new,"readsurf:ecountmax");
-  for (i = 0; i < npoint_new; i++) ecountmax[i] = 0;
+  int *count;
+  int **p2e;
+  memory->create(count,npoint_new,"readsurf:count");
+  memory->create(p2e,npoint_new,2,"readsurf:count");
+  for (int i = 0; i < npoint_new; i++) count[i] = 0;
 
-  m = ntri_old;
-  for (i = 0; i < ntri_new; i++) {
-    p1 = tris[m].p1 - npoint_old;
-    p2 = tris[m].p2 - npoint_old;
-    p3 = tris[m].p3 - npoint_old;
-    ecountmax[MIN(p1,p2)]++;
-    ecountmax[MIN(p2,p3)]++;
-    ecountmax[MIN(p3,p1)]++;
+  int m = nline_old;
+  for (int i = 0; i < nline_new; i++) {
+    p1 = lines[m].p1 - npoint_old;
+    p2 = lines[m].p2 - npoint_old;
+    p2e[p1][count[p1]++] = i;
+    p2e[p2][count[p2]++] = i;
     m++;
   }
+  
+  // check that norms of adjacent lines are not in opposite directions
 
-  // ecount[I] = # of edges that vertex I is part of
-  // edge[I][J] = Jth vertex connected to vertex I via an edge
-  // count[I][J] = # of times edge IJ appears in surf of triangles
-  // edge & count allocated as ragged 2d arrays using ecountmax for 2nd dim
-  // insure ecount < ecountmax
+  double dot;
+  double *norm1,*norm2;
 
-  int *ecount;
-  memory->create(ecount,npoint_new,"readsurf:ecount");
-  int **edge;
-  memory->create_ragged(edge,npoint_new,ecountmax,"readsurf:edge");
-  int **count;
-  memory->create_ragged(count,npoint_new,ecountmax,"readsurf:count");
+  int nerror = 0;
+  int nwarn = 0;
+  for (int i = 0; i < npoint_new; i++) {
+    if (count[i] == 1) continue;
+    norm1 = lines[p2e[i][0]].norm;
+    norm2 = lines[p2e[i][1]].norm;
+    dot = MathExtra::dot3(norm1,norm2);
+    if (dot <= -1.0) nerror++;
+    else if (dot < -1.0+EPSILON_NORM) nwarn++;
 
-  for (i = 0; i < npoint_new; i++) ecount[i] = 0;
-
-  m = ntri_old;
-  for (i = 0; i < ntri_new; i++) {
-    p1 = tris[m].p1 - npoint_old;
-    p2 = tris[m].p2 - npoint_old;
-    p3 = tris[m].p3 - npoint_old;
-    
-    pi = MIN(p1,p2);
-    pj = MAX(p1,p2);
-    for (j = 0; j < ecount[pi]; j++)
-      if (edge[pi][j] == pj) break;
-    if (j == ecount[pi]) {
-      edge[pi][j] = pj;
-      count[pi][j] = 1;
-      ecount[pi]++;
-    } else count[pi][j]++;
-
-    pi = MIN(p2,p3);
-    pj = MAX(p2,p3);
-    for (j = 0; j < ecount[pi]; j++)
-      if (edge[pi][j] == pj) break;
-    if (j == ecount[pi]) {
-      edge[pi][j] = pj;
-      count[pi][j] = 1;
-      ecount[pi]++;
-    } else count[pi][j]++;
-
-    pi = MIN(p3,p1);
-    pj = MAX(p3,p1);
-    for (j = 0; j < ecount[pi]; j++)
-      if (edge[pi][j] == pj) break;
-    if (j == ecount[pi]) {
-      edge[pi][j] = pj;
-      count[pi][j] = 1;
-      ecount[pi]++;
-    } else count[pi][j]++;
-
-    m++;
   }
 
-  // check that all counts are 2 or 4
-  // allow for exception if edge on box surface
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-
-  int nbad = 0;
-  for (i = 0; i < npoint_new; i++)
-    for (j = 0; j < ecount[i]; j++)
-      if (count[i][j] != 2 && count[i][j] != 4)
-	if (!Geometry::point_on_hex(pts[i].x,boxlo,boxhi) ||
-	    !Geometry::point_on_hex(pts[edge[i][j]].x,boxlo,boxhi)) nbad++;
-
+  if (nerror) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d "
+            "infinitely thin line pairs",nerror);
+    error->all(FLERR,str);
+  }
+  if (nwarn) {
+    char str[128];
+    sprintf(str,"Surface check found %d "
+            "nearly infinitely thin line pairs",nwarn);
+    if (me == 0) error->warning(FLERR,str);
+  }
 
   // clean up
 
-  memory->destroy(ecountmax);
-  memory->destroy(ecount);
-  memory->destroy(edge);
   memory->destroy(count);
+  memory->destroy(p2e);
+}
 
-  // error messages
+/* ----------------------------------------------------------------------
+   check norms of new adjacent triangles
+   error if dot product of 2 norms is -1 -> infinitely thin surf
+   warn if closer than EPSILON_NORM to -1
+------------------------------------------------------------------------- */
 
-  if (nbad) {
+void ReadSurf::check_neighbor_norm_3d()
+{
+  // hash directed edges of all triangles
+  // key = directed edge, value = triangle it is part of
+  // NOTE: could prealloc hash to correct size here
+
+#ifdef SPARTA_MAP
+  std::map<bigint,int> hash;
+  std::map<bigint,int>::iterator it;
+#else
+  std::tr1::unordered_map<bigint,int> hash;
+  std::tr1::unordered_map<bigint,int>::iterator it;
+#endif
+
+  // insert each edge into hash with triangle as value
+
+  bigint p1,p2,p3,key;
+
+  int m = ntri_old;
+  for (int i = 0; i < ntri_new; i++) {
+    p1 = tris[m].p1;
+    p2 = tris[m].p2;
+    p3 = tris[m].p3;
+    key = (p1 << 32) | p2;
+    hash[key] = m;
+    key = (p2 << 32) | p3;
+    hash[key] = m;
+    key = (p3 << 32) | p1;
+    hash[key] = m;
+    m++;
+  }
+
+  // check that norms of adjacent triangles are not in opposite directions
+
+  double dot;
+  double *norm1,*norm2;
+
+  int nerror = 0;
+  int nwarn = 0;
+  for (it = hash.begin(); it != hash.end(); ++it) {
+    p1 = it->first >> 32;
+    p2 = it->first & MAXSMALLINT;
+    key = (p2 << 32) | p1;
+    if (hash.find(key) == hash.end()) continue;
+    norm1 = tris[it->second].norm;
+    norm2 = tris[hash[key]].norm;
+    dot = MathExtra::dot3(norm1,norm2);
+    if (dot <= -1.0) {
+      //printf("BAD NORM PAIRS %d %d: %g %g %g: %g %g %g\n",
+      //       it->second+1,hash[key]+1,
+      //       norm1[0],norm1[1],norm1[2],norm2[0],norm2[1],norm2[2]);
+      nerror++;
+    }
+    else if (dot < -1.0+EPSILON_NORM) nwarn++;
+  }
+
+  if (nerror) {
     char str[128];
-    sprintf(str,"%d read_surf triangle edges are not watertight",nbad);
+    sprintf(str,"Surface check failed with %d "
+            "infinitely thin triangle pairs",nerror);
     error->all(FLERR,str);
   }
+  if (nwarn) {
+    char str[128];
+    sprintf(str,"Surface check found %d "
+            "nearly infinitely thin triangle pairs",nwarn);
+    if (me == 0) error->warning(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check nearness of all points to other lines in same cell
+   error if point is on line, including duplicate point
+   warn if closer than EPSILON_GRID = fraction of grid cell size
+   NOTE: this can miss a close point/line pair in 2 different grid cells
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_point_near_surf_2d()
+{
+  int i,j,n,p1,p2;
+  int *csurfs;
+  double side,epssq;
+  double delta[3];
+  double *lo,*hi;
+  Surf::Line *line;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  int nerror = 0;
+  int nwarn = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    n = cells[icell].nsurf;
+    if (n == 0) continue;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    side = MIN(hi[0]-lo[0],hi[1]-lo[1]);
+    epssq = (EPSILON_GRID*side) * (EPSILON_GRID*side);
+
+    csurfs = cells[icell].csurfs;
+    for (i = 0; i < n; i++) {
+      line = &lines[csurfs[i]];
+      for (j = 0; j < n; j++) {
+        if (i == j) continue;
+        p1 = lines[csurfs[j]].p1;
+        p2 = lines[csurfs[j]].p2;
+        point_line_compare(p1,line,epssq,nerror,nwarn);
+        point_line_compare(p2,line,epssq,nerror,nwarn);
+      }
+    }
+  }
+
+  int all;
+  MPI_Allreduce(&nerror,&all,1,MPI_INT,MPI_SUM,world);
+  if (all) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d points on lines",all);
+    error->all(FLERR,str);
+  }
+
+  MPI_Allreduce(&nwarn,&all,1,MPI_INT,MPI_SUM,world);
+  if (all) {
+    char str[128];
+    sprintf(str,"Surface check found %d points nearly on lines",all);
+    if (me == 0) error->warning(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check nearness of all points to other triangles in same cell
+   error if point is on triangle, including duplicate point
+   warn if closer than EPSILON_GRID = fraction of grid cell size
+   NOTE: this can miss a close point/triangle pair in 2 different grid cells
+------------------------------------------------------------------------- */
+
+void ReadSurf::check_point_near_surf_3d()
+{
+  int i,j,n,p1,p2,p3;
+  int *csurfs;
+  double side,epssq;
+  double delta[3];
+  double *lo,*hi;
+  Surf::Tri *tri;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  int nerror = 0;
+  int nwarn = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    n = cells[icell].nsurf;
+    if (n == 0) continue;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    side = MIN(hi[0]-lo[0],hi[1]-lo[1]);
+    side = MIN(side,hi[2]-lo[2]);
+    epssq = (EPSILON_GRID*side) * (EPSILON_GRID*side);
+
+    csurfs = cells[icell].csurfs;
+    for (i = 0; i < n; i++) {
+      tri = &tris[csurfs[i]];
+      for (j = 0; j < n; j++) {
+        if (i == j) continue;
+        p1 = tris[csurfs[j]].p1;
+        p2 = tris[csurfs[j]].p2;
+        p3 = tris[csurfs[j]].p3;
+        point_tri_compare(p1,tri,epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
+        point_tri_compare(p2,tri,epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
+        point_tri_compare(p3,tri,epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
+      }
+    }
+  }
+
+  int all;
+  MPI_Allreduce(&nerror,&all,1,MPI_INT,MPI_SUM,world);
+  if (all) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d points on triangles",all);
+    error->all(FLERR,str);
+  }
+
+  MPI_Allreduce(&nwarn,&all,1,MPI_INT,MPI_SUM,world);
+  if (all) {
+    char str[128];
+    sprintf(str,"Surface check found %d points nearly on triangles",all);
+    if (me == 0) error->warning(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   compute distance bewteen a point and line
+   just return if point is an endpoint of line
+   increment nerror if point on line
+   increment nwarn if point is within epssq distance of line
+------------------------------------------------------------------------- */
+
+void ReadSurf::point_line_compare(int i, Surf::Line *line, double epssq, 
+                                  int &nerror, int &nwarn)
+{
+  if (i == line->p1 || i == line->p2) return;
+  double rsq = 
+    Geometry::distsq_point_line(pts[i].x,pts[line->p1].x,pts[line->p2].x);
+  if (rsq == 0.0) nerror++;
+  else if (rsq < epssq) nwarn++;
+}
+
+/* ----------------------------------------------------------------------
+   compute distance bewteen a point and triangle
+   just return if point is an endpoint of triangle
+   increment nerror if point on triangle
+   increment nwarn if point is within epssq distance of triangle
+------------------------------------------------------------------------- */
+
+void ReadSurf::point_tri_compare(int i, Surf::Tri *tri, double epssq, 
+                                 int &nerror, int &nwarn, 
+                                 int icell, int ci, int cj)
+{
+  if (i == tri->p1 || i == tri->p2 || i == tri->p3) return;
+  double rsq = 
+    Geometry::distsq_point_tri(pts[i].x,
+                               pts[tri->p1].x,pts[tri->p2].x,pts[tri->p3].x,
+                               tri->norm);
+  if (rsq == 0.0) nerror++;
+  else if (rsq < epssq) nwarn++;
 }
 
 /* ----------------------------------------------------------------------

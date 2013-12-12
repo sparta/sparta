@@ -88,6 +88,7 @@ void Finish::end()
   bigint nscheck_total,nscollide_total;
   bigint nattempt_total = 0;
   bigint ncollide_total = 0;
+  int stuck_total;
 
   MPI_Allreduce(&update->nmove_running,&nmove_total,1,
 		MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -109,6 +110,7 @@ void Finish::end()
     MPI_Allreduce(&collide->ncollide_running,&ncollide_total,1,
 		  MPI_SPARTA_BIGINT,MPI_SUM,world);
   }
+  MPI_Allreduce(&update->nstuck,&stuck_total,1,MPI_INT,MPI_SUM,world);
 
   double pms,pmsp,ctps,cis,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
   pms = pmsp = ctps = cis = pfc = pfcwb = pfeb = 
@@ -150,6 +152,8 @@ void Finish::end()
 	      nattempt_total,MathExtra::num2str(nattempt_total,str));
       fprintf(screen,"Collide occurs = " BIGINT_FORMAT " %s\n",
 	      ncollide_total,MathExtra::num2str(ncollide_total,str));
+      fprintf(screen,"Particle stuck = %d\n",stuck_total);
+
       fprintf(screen,"\n");
       fprintf(screen,"Particle-moves/CPUsec/proc: %g\n",pmsp);
       fprintf(screen,"Particle-moves/step: %g\n",pms);
@@ -183,6 +187,8 @@ void Finish::end()
 	      nattempt_total,MathExtra::num2str(nattempt_total,str));
       fprintf(logfile,"Collide occurs = " BIGINT_FORMAT " %s\n",
 	      ncollide_total,MathExtra::num2str(ncollide_total,str));
+      fprintf(logfile,"Particle stuck = %d\n",stuck_total);
+
       fprintf(logfile,"\n");
       fprintf(logfile,"Particle-moves/CPUsec/proc: %g\n",pmsp);
       fprintf(logfile,"Particle-moves/step: %g\n",pms);

@@ -39,6 +39,9 @@ namespace Geometry {
   int point_in_hex(double *, double *, double *);
   int point_in_tri(double *, double *, double *, double *, double *);
 
+  double distsq_point_line(double *, double *, double *);
+  double distsq_point_tri(double *, double *, double *, double *, double *);
+
   double line_fraction(double *, double *, double *);
   double tri_fraction(double *, double *, double *, double *);
 }

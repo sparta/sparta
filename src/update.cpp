@@ -44,6 +44,8 @@ enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // same as several files
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // same as several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
+#define MAXSTUCK 20
+
 //#define MOVE_DEBUG 1            // un-comment to debug motion of one particle
 #define MOVE_DEBUG_PROC 0       // owning proc
 #define MOVE_DEBUG_PARTICLE 824902   // particle index on owning proc (could use ID)
@@ -165,6 +167,7 @@ void Update::setup()
   nmove_running = ntouch_running = ncomm_running = 0;
   nboundary_running = nexit_running = 0;
   nscheck_running = nscollide_running = 0;
+  nstuck = 0;
 
   bounce_tally = bounce_setup();
   modify->setup();
@@ -239,7 +242,7 @@ template < int DIM, int SURF > void Update::move()
 {
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,pexit;
-    int side,minside,minsurf,nsurf,cflag,isurf,exclude;
+  int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
   int pstart,pstop,entryexit,any_entryexit;
   int *csurfs;
   cellint *neigh;
@@ -357,6 +360,7 @@ template < int DIM, int SURF > void Update::move()
       neigh = cells[icell].neigh;
       nmask = cells[icell].nmask;
       exclude = -1;
+      stuck_iterate = 0;
       ntouch_one++;
 
       // advect particle from cell to cell until move is done
@@ -452,37 +456,37 @@ template < int DIM, int SURF > void Update::move()
 
         if (SURF) {
 
-          // particle crosses cell face, reset xnew exactly on face of cell
-          // so surface check occurs only for particle path within grid cell
-          // save xnew so can restore later if needed
-
-          if (outface != INTERIOR) {
-            xhold[0] = xnew[0];
-            xhold[1] = xnew[1];
-            if (DIM == 3) xhold[2] = xnew[2];
-          
-            xnew[0] = x[0] + frac*(xnew[0]-x[0]);
-            xnew[1] = x[1] + frac*(xnew[1]-x[1]);
-            if (DIM == 3) xnew[2] = x[2] + frac*(xnew[2]-x[2]);
-          
-            if (outface == XLO) xnew[0] = lo[0];
-            else if (outface == XHI) xnew[0] = hi[0]; 
-            else if (outface == YLO) xnew[1] = lo[1];
-            else if (outface == YHI) xnew[1] = hi[1];
-            else if (outface == ZLO) xnew[2] = lo[2];
-            else if (outface == ZHI) xnew[2] = hi[2]; 
-          }
-
-          // check for collisions with triangles or lines in cell
-          // find 1st surface hit via minparam
-          // not considered a collision if particles starts on surf, moving out
-          // not considered a collision if 2 params are tied and one INSIDE surf
-          // if collision occurs, perform collision with surface model
-          // reset x,v,xnew,dtremain and continue particle trajectory
-          
           nsurf = cells[icell].nsurf;
-        
           if (nsurf) {
+
+            // particle crosses cell face, reset xnew exactly on face of cell
+            // so surface check occurs only for particle path within grid cell
+            // save xnew so can restore later if needed
+
+            if (outface != INTERIOR) {
+              xhold[0] = xnew[0];
+              xhold[1] = xnew[1];
+              if (DIM == 3) xhold[2] = xnew[2];
+              
+              xnew[0] = x[0] + frac*(xnew[0]-x[0]);
+              xnew[1] = x[1] + frac*(xnew[1]-x[1]);
+              if (DIM == 3) xnew[2] = x[2] + frac*(xnew[2]-x[2]);
+              
+              if (outface == XLO) xnew[0] = lo[0];
+              else if (outface == XHI) xnew[0] = hi[0]; 
+              else if (outface == YLO) xnew[1] = lo[1];
+              else if (outface == YHI) xnew[1] = hi[1];
+              else if (outface == ZLO) xnew[2] = lo[2];
+              else if (outface == ZHI) xnew[2] = hi[2]; 
+            }
+
+            // check for collisions with triangles or lines in cell
+            // find 1st surface hit via minparam
+            // not considered collision if particles starts on surf, moving out
+            // not considered collision if 2 params are tied and one INSIDE surf
+            // if collision occurs, perform collision with surface model
+            // reset x,v,xnew,dtremain and continue particle trajectory
+          
             cflag = 0;
             minparam = 2.0;
             csurfs = cells[icell].csurfs;
@@ -581,6 +585,11 @@ template < int DIM, int SURF > void Update::move()
                   surf->sc[line->isc]->collide(&particles[i],line->norm);
               }
               
+              // nstuck = consective iterations particle is immobile
+
+              if (minparam == 0.0) stuck_iterate++;
+              else stuck_iterate = 0;
+
               // decrement dtremain and reset post-bounce xnew
 
               dtremain *= 1.0 - minparam*frac;
@@ -608,16 +617,21 @@ template < int DIM, int SURF > void Update::move()
                          minparam,frac,dtremain);
               }
 #endif
-              continue;
+
+              // if particle stuck on surfs, delete it, else continue
+
+              if (stuck_iterate < MAXSTUCK) continue;
+              particles[i].flag = PDISCARD;
+              nstuck++;
             }
-          }
 
-          // no collision, so restore saved xnew if changed it above
-
-          if (outface != INTERIOR) {
-            xnew[0] = xhold[0];
-            xnew[1] = xhold[1];
-            if (DIM == 3) xnew[2] = xhold[2];
+            // no collision, so restore saved xnew if changed it above
+            
+            if (outface != INTERIOR) {
+              xnew[0] = xhold[0];
+              xnew[1] = xhold[1];
+              if (DIM == 3) xnew[2] = xhold[2];
+            }
           }
         } 
 
@@ -801,7 +815,12 @@ template < int DIM, int SURF > void Update::move()
           ncomm_one++;
         }
       }
+
+      // END of while loop advecting one particle
+
     }
+
+    // END of pstart/pstop loop advecting all particles
     
     // if gridcut >= 0.0, check if another iteration of move is required
     // only the case if some particle flag = PENTRY/PEXIT
@@ -821,7 +840,12 @@ template < int DIM, int SURF > void Update::move()
         memory->create(mlist,maxmigrate,"particle:mlist");
       }
     } else break;
+
+    // END of single move/migrate iteration
+
   }
+
+  // END of all move/migrate iterations
 
   // accumulate running totals
 
