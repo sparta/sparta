@@ -339,8 +339,8 @@ void ReadSurf::command(int narg, char **arg)
     check_point_near_surf_2d();
   } else {
     check_watertight_3d();
-    //check_neighbor_norm_3d();
-    //check_point_near_surf_3d();
+    check_neighbor_norm_3d();
+    check_point_near_surf_3d();
   }
 
   MPI_Barrier(world);

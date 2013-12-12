@@ -134,25 +134,25 @@ void Finish::end()
   if (me == 0) {
     if (screen) {
       fprintf(screen,"\n");
-      fprintf(screen,"Particle moves = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"Particle moves    = " BIGINT_FORMAT " %s\n",
 	      nmove_total,MathExtra::num2str(nmove_total,str));
-      fprintf(screen,"Cells touched  = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"Cells touched     = " BIGINT_FORMAT " %s\n",
 	      ntouch_total,MathExtra::num2str(ntouch_total,str));
-      fprintf(screen,"Particle comms = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"Particle comms    = " BIGINT_FORMAT " %s\n",
 	      ncomm_total,MathExtra::num2str(ncomm_total,str));
-      fprintf(screen,"Bound collides = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"Boundary collides = " BIGINT_FORMAT " %s\n",
 	      nboundary_total,MathExtra::num2str(nboundary_total,str));
-      fprintf(screen,"Bound exits    = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"Boundary exits    = " BIGINT_FORMAT " %s\n",
 	      nexit_total,MathExtra::num2str(nexit_total,str));
-      fprintf(screen,"SurfColl check = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"SurfColl check    = " BIGINT_FORMAT " %s\n",
 	      nscheck_total,MathExtra::num2str(nscheck_total,str));
-      fprintf(screen,"SurfColl occur = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"SurfColl occur    = " BIGINT_FORMAT " %s\n",
 	      nscollide_total,MathExtra::num2str(nscollide_total,str));
-      fprintf(screen,"Collide attmpt = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"Collide attempt   = " BIGINT_FORMAT " %s\n",
 	      nattempt_total,MathExtra::num2str(nattempt_total,str));
-      fprintf(screen,"Collide occurs = " BIGINT_FORMAT " %s\n",
+      fprintf(screen,"Collide occurs    = " BIGINT_FORMAT " %s\n",
 	      ncollide_total,MathExtra::num2str(ncollide_total,str));
-      fprintf(screen,"Particle stuck = %d\n",stuck_total);
+      fprintf(screen,"Particles stuck   = %d\n",stuck_total);
 
       fprintf(screen,"\n");
       fprintf(screen,"Particle-moves/CPUsec/proc: %g\n",pmsp);
@@ -169,25 +169,25 @@ void Finish::end()
     }
     if (logfile) {
       fprintf(logfile,"\n");
-      fprintf(logfile,"Particle moves = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"Particle moves    = " BIGINT_FORMAT " %s\n",
 	      nmove_total,MathExtra::num2str(nmove_total,str));
-      fprintf(logfile,"Cells touched  = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"Cells touched     = " BIGINT_FORMAT " %s\n",
 	      ntouch_total,MathExtra::num2str(ntouch_total,str));
-      fprintf(logfile,"Particle comms = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"Particle comms    = " BIGINT_FORMAT " %s\n",
 	      ncomm_total,MathExtra::num2str(ncomm_total,str));
-      fprintf(logfile,"Bound collides = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"Boundary collides = " BIGINT_FORMAT " %s\n",
 	      nboundary_total,MathExtra::num2str(nboundary_total,str));
-      fprintf(logfile,"Bound exits    = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"Boundary exits    = " BIGINT_FORMAT " %s\n",
 	      nexit_total,MathExtra::num2str(nexit_total,str));
-      fprintf(logfile,"SurfColl check = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"SurfColl check    = " BIGINT_FORMAT " %s\n",
 	      nscheck_total,MathExtra::num2str(nscheck_total,str));
-      fprintf(logfile,"SurfColl occur = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"SurfColl occur    = " BIGINT_FORMAT " %s\n",
 	      nscollide_total,MathExtra::num2str(nscollide_total,str));
-      fprintf(logfile,"Collide attmpt = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"Collide attempt   = " BIGINT_FORMAT " %s\n",
 	      nattempt_total,MathExtra::num2str(nattempt_total,str));
-      fprintf(logfile,"Collide occurs = " BIGINT_FORMAT " %s\n",
+      fprintf(logfile,"Collide occurs    = " BIGINT_FORMAT " %s\n",
 	      ncollide_total,MathExtra::num2str(ncollide_total,str));
-      fprintf(logfile,"Particle stuck = %d\n",stuck_total);
+      fprintf(logfile,"Particles stuck   = %d\n",stuck_total);
 
       fprintf(logfile,"\n");
       fprintf(logfile,"Particle-moves/CPUsec/proc: %g\n",pmsp);
