@@ -4,9 +4,10 @@ seed	    	    12345
 dimension   	    3
 #global              gridcut 0.1
 global              gridcut 0.0
+#global              comm/sort yes
 
-#boundary	    r r r
-boundary	    p p p
+boundary	    r r r
+#boundary	    p p p
 #create_box  	    -1 1 -1 1 -1 1
 create_box  	    -10 10 -10 10 -10 10
 
@@ -44,9 +45,9 @@ read_surf           ../devel/data.spikysphere.big 1
 
 ##################
 
-create_molecules    air n 10000
+#create_molecules    air n 10000
 
-#fix		    in inflow air xlo 
+fix		    in inflow air xlo 
 
 #collide		    vss air ../data/all.vss
 
