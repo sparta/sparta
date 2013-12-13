@@ -366,7 +366,7 @@ void ReadSurf::command(int narg, char **arg)
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);
       fprintf(screen,"  read/surf2grid/error/ghost/inout percent = "
-              "%g %g %g %g\n",
+              "%g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total);
@@ -374,7 +374,7 @@ void ReadSurf::command(int narg, char **arg)
     if (logfile) {
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
       fprintf(logfile,"  read/surf2grid/error/ghost/inout percent = "
-              "%g %g %g %g\n",
+              "%g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total);

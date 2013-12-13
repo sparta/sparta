@@ -13,8 +13,8 @@ create_box  	    -10 10 -10 10 -10 10
 
 #create_grid 	    6 6 6
 #create_grid 	    2 2 2
-#create_grid         10 10 10
-create_grid         40 40 40
+create_grid         10 10 10
+#create_grid         40 40 40
 
 #create_grid        10 10 10 2 *2 * 2* 2 2 2
 #create_grid        8 8 8 2 *2 * 2* 2 2 2
@@ -40,16 +40,19 @@ surf_collide	    1 diffuse 300.0 0.0
 #read_surf           sdata.sphere 1
 #read_surf           sdata.sphere.big 1
 #read_surf           sdata.sphere.huge 1
-#read_surf           ../devel/data.spikysphere 1
-read_surf           ../devel/data.spikysphere.big 1
+read_surf           ../devel/data.spikysphere 1
+#read_surf           ../devel/data.spikysphere.big 1
 
 ##################
 
-create_molecules    air n 10000
+create_molecules    air n 100000
 
 #fix		    in inflow air xlo 
 
 #collide		    vss air ../data/all.vss
+
+collide             vss air ../data/all.vss
+#react               tce ../data/air.reactions
 
 ##################
 

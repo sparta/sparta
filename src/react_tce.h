@@ -51,6 +51,7 @@ class ReactTCE : public React {
 
   OneReaction *rlist;              // list of all reactions read from file
   int nlist;                       // # of reactions read from file
+  int maxlist;                     // max # of reactions in rlist
 
   // possible reactions a pair of reactant species is part of
 

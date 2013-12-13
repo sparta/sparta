@@ -46,15 +46,32 @@ ReactTCE::ReactTCE(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg != 2) error->all(FLERR,"Illegal react tce command");
 
+  nlist = maxlist = 0;
+  rlist = NULL;
   readfile(arg[1]);
+
   reactions = NULL;
   indices = NULL;
 }
+
 
 /* ---------------------------------------------------------------------- */
 
 ReactTCE::~ReactTCE()
 {
+  for (int i = 0; i < maxlist; i++) {
+    for (int j = 0; j < rlist[i].nreactant; j++)
+      delete [] rlist[i].id_reactants[j];
+    for (int j = 0; j < rlist[i].nproduct; j++)
+      delete [] rlist[i].id_products[j];
+    delete [] rlist[i].id_reactants;
+    delete [] rlist[i].id_products;
+    delete [] rlist[i].reactants;
+    delete [] rlist[i].products;
+    delete [] rlist[i].coeff;
+  }
+  memory->destroy(rlist);
+
   memory->destroy(reactions);
   memory->destroy(indices);
 }
@@ -307,10 +324,6 @@ void ReactTCE::readfile(char *fname)
   char line1[MAXLINE],line2[MAXLINE];
   char *word;
   OneReaction *r;
-
-  rlist = NULL;
-  nlist = 0;
-  int maxlist = 0;
 
   // proc 0 opens file
 
