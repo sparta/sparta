@@ -1449,12 +1449,7 @@ void ReadSurf::check_neighbor_norm_3d()
     norm1 = tris[it->second].norm;
     norm2 = tris[hash[key]].norm;
     dot = MathExtra::dot3(norm1,norm2);
-    if (dot <= -1.0) {
-      //printf("BAD NORM PAIRS %d %d: %g %g %g: %g %g %g\n",
-      //       it->second+1,hash[key]+1,
-      //       norm1[0],norm1[1],norm1[2],norm2[0],norm2[1],norm2[2]);
-      nerror++;
-    }
+    if (dot <= -1.0) nerror++;
     else if (dot < -1.0+EPSILON_NORM) nwarn++;
   }
 

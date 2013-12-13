@@ -67,7 +67,7 @@ Collide::~Collide()
   delete [] mixID;
   delete random;
 
-  if (ngroups == 1) delete [] plist;
+  if (ngroups == 1) memory->destroy(plist);
   if (ngroups > 1) {
     delete [] ngroup;
     delete [] maxgroup;
@@ -97,7 +97,7 @@ void Collide::init()
 
   if (ngroups != oldgroups) {
     if (oldgroups == 1) {
-      delete [] plist;
+      memory->destroy(plist);
       plist = NULL;
     }
     if (oldgroups > 1) {
@@ -114,7 +114,7 @@ void Collide::init()
 
     if (ngroups == 1) {
       npmax = DELTAPART;
-      plist = new int[npmax];
+      memory->create(plist,npmax,"collide:plist");
     }
     if (ngroups > 1) {
       ngroup = new int[ngroups];
