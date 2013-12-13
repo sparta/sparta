@@ -45,9 +45,9 @@ read_surf           ../devel/data.spikysphere.big 1
 
 ##################
 
-#create_molecules    air n 10000
+create_molecules    air n 10000
 
-fix		    in inflow air xlo 
+#fix		    in inflow air xlo 
 
 #collide		    vss air ../data/all.vss
 
