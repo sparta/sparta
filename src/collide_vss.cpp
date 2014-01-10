@@ -265,6 +265,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip, 
                                                  Particle::OnePart *jp)
 {
+  Particle::Species *species = particle->species;
   int reaction,kspecies;
 
   if (react) 
@@ -276,6 +277,10 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
   // add a 3rd particle if necessary, index = nlocal-1
 
   Particle::OnePart *kp = NULL;
+  
+  int isp = ip->ispecies;
+  int jsp = jp->ispecies;
+  double rotdof = (species[isp].rotdof + species[jsp].rotdof);
 
   if (reaction) {
     nreact_one++;
@@ -283,14 +288,15 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
       int id = MAXSMALLINT*random->uniform();
       particle->add_particle(id,kspecies,ip->icell,ip->x,ip->v,0.0,0);
       kp = &particle->particles[particle->nlocal-1];
-      EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      rotdof =+ species[kspecies].rotdof;
+      if (rotdof > 1.) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);
     } else {
-      EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      if (rotdof > 1.) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_TwoBodyScattering(ip,jp);
     }
   } else {
-    EEXCHANGE_NonReactingEDisposal(ip,jp);
+    if (rotdof > 1.) EEXCHANGE_NonReactingEDisposal(ip,jp);
     SCATTER_TwoBodyScattering(ip,jp);
   }
 
