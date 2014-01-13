@@ -289,14 +289,14 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
       particle->add_particle(id,kspecies,ip->icell,ip->x,ip->v,0.0,0);
       kp = &particle->particles[particle->nlocal-1];
       rotdof =+ species[kspecies].rotdof;
-      if (rotdof > 1.) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      if (rotdof > 1.0) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);
     } else {
-      if (rotdof > 1.) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      if (rotdof > 1.0) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_TwoBodyScattering(ip,jp);
     }
   } else {
-    if (rotdof > 1.) EEXCHANGE_NonReactingEDisposal(ip,jp);
+    if (rotdof > 1.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
     SCATTER_TwoBodyScattering(ip,jp);
   }
 
