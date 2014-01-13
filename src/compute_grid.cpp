@@ -231,7 +231,6 @@ void ComputeGrid::reallocate()
   }
 }
 
-
 /* ----------------------------------------------------------------------
    return flag for style of norm vector used by column N
    input N is value from 1 to Ncols
