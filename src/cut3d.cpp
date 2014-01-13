@@ -34,7 +34,7 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 
 Cut3d::Cut3d(SPARTA *sparta) : Pointers(sparta)
 {
-  cut2d = new Cut2d(sparta);
+  cut2d = new Cut2d(sparta,0);
   memory->create(path1,12,3,"cut3d:path1");
   memory->create(path2,12,3,"cut3d:path2");
 

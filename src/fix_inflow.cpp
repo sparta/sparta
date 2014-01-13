@@ -111,6 +111,8 @@ FixInflow::FixInflow(SPARTA *sparta, int narg, char **arg) :
 
   if (domain->dimension == 2 && (faces[ZLO] || faces[ZHI])) 
     error->all(FLERR,"Cannot use fix inflow in z dimension for 2d simulation");
+  if (domain->axisymmetric && (faces[YLO] || faces[YHI])) 
+    error->all(FLERR,"Cannot use fix inflow in y dimension for axisymmetric");
   if (np > 0 && perspecies == YES) 
     error->all(FLERR,"Cannot use fix inflow n > 0 with perspecies yes");
 

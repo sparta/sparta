@@ -15,9 +15,11 @@
 #include "math.h"
 #include "cut2d.h"
 #include "surf.h"
+#include "math_const.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
+using namespace MathConst;
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};     // several files
 enum{EXTERIOR,INTERIOR,BORDER,INTBORD};
@@ -31,7 +33,10 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
 /* ---------------------------------------------------------------------- */
 
-Cut2d::Cut2d(SPARTA *sparta) : Pointers(sparta) {}
+Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
+{
+  axisymmetric = caller_axisymmetric;
+}
 
 /* ----------------------------------------------------------------------
    compute intersections of a grid cell with all surfs
@@ -531,8 +536,9 @@ void Cut2d::weiler_loops()
       if (points[ipt].type != CORNER) cflag = 0;
       nextpt = points[ipt].next;
       y = points[nextpt].x;
-      if (x[0] < y[0]) area -= (0.5*(x[1]+y[1]) - lo[1]) * (y[0]-x[0]);
-      else area += (0.5*(x[1]+y[1]) - lo[1]) * (x[0]-y[0]);
+      if (axisymmetric)
+        area -= MY_PI3 * (x[1]*x[1] + x[1]*y[1] + y[1]*y[1]) * (y[0]-x[0]);
+      else area -= (0.5*(x[1]+y[1]) - lo[1]) * (y[0]-x[0]);
       x = y;
       ipt = nextpt;
       if (ipt == firstpt) break;

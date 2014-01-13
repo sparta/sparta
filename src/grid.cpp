@@ -18,10 +18,12 @@
 #include "domain.h"
 #include "comm.h"
 #include "irregular.h"
+#include "math_const.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
+using namespace MathConst;
 
 // NOTE: set DELTA to large value when done debugging
 
@@ -128,9 +130,9 @@ void Grid::add_child_cell(cellint id, int iparent, double *lo, double *hi)
 {
   grow_cells(1,1);
 
-  int dim = domain->dimension;
+  int dimension = domain->dimension;
   int ncorner;
-  if (dim == 3) ncorner = 8;
+  if (dimension == 3) ncorner = 8;
   else ncorner = 4;
 
   ChildCell *c = &cells[nlocal];
@@ -154,8 +156,13 @@ void Grid::add_child_cell(cellint id, int iparent, double *lo, double *hi)
   ci->first = -1;
   ci->type = OUTSIDE;
   for (int i = 0; i < ncorner; i++) ci->corner[i] = OUTSIDE;
-  ci->volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-  if (dim == 3) ci->volume *= (hi[2]-lo[2]);
+
+  if (dimension == 3) 
+    ci->volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+  else if (domain->axisymmetric)
+    ci->volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+  else
+    ci->volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
 
   // increment both since are adding an unsplit cell
 
@@ -1260,7 +1267,7 @@ void Grid::set_inout_old()
    UNKNOWN cell can be marked
    OVERLAP cell with UNKNOWN cornerflags can be marked
      all the cornerflags will be UNKNOWN, can be set to all INSIDE/OUTSIDE
-     if set to OUTSIDE, also set flow area to entire cell
+     if set to OUTSIDE, also set flow area = entire cell
    NOTE: are periodic vs non-periodic BC handled correctly?
 ------------------------------------------------------------------------- */
 
@@ -1360,8 +1367,14 @@ void Grid::set_inout_new()
                 if (marktype == OUTSIDE) {
                   double *lo = cells[jcell].lo;
                   double *hi = cells[jcell].hi;
-                  cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-                  if (dimension == 3) cinfo[jcell].volume *= (hi[2]-lo[2]);
+                  if (dimension == 3) 
+                    cinfo[jcell].volume = 
+                      (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+                  else if (domain->axisymmetric)
+                    cinfo[jcell].volume = 
+                      MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+                  else
+                    cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
                 }
                 setnew[nsetnew++] = jcell;
               } else if (marktype != jtype) {
@@ -1410,8 +1423,14 @@ void Grid::set_inout_new()
                   if (marktype == OUTSIDE) {
                     double *lo = cells[jcell].lo;
                     double *hi = cells[jcell].hi;
-                    cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-                    if (dimension == 3) cinfo[jcell].volume *= (hi[2]-lo[2]);
+                    if (dimension == 3) 
+                      cinfo[jcell].volume = 
+                        (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+                    else if (domain->axisymmetric)
+                      cinfo[jcell].volume = 
+                        MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+                    else
+                      cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
                   }
                   setnew[nsetnew++] = jcell;
                 } else if (marktype != jtype) {

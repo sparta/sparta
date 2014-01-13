@@ -19,18 +19,18 @@
 #include "surf.h"
 #include "cut2d.h"
 #include "cut3d.h"
+#include "math_const.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
+using namespace MathConst;
 
 #define BIG 1.0e20
 #define MAXSPLITPERCELL 10
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
 
-/* ----------------------------------------------------------------------
-   operations for surfaces in grid cells
-------------------------------------------------------------------------- */
+// operations for surfaces in grid cells
 
 /* ----------------------------------------------------------------------
    allocate page data structs to hold variable-length surf info
@@ -72,7 +72,7 @@ void Grid::surf2grid()
   double *shi = surf->bbhi;
 
   if (dim == 3) cut3d = new Cut3d(sparta);
-  else cut2d = new Cut2d(sparta);
+  else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
   // compute overlap of surfs with each cell I own
   // info stored in nsurf,csurfs
@@ -177,8 +177,9 @@ void Grid::clear_surf()
   // compact cells and cinfo arrays
   // set values in cells/cinfo as if no surfaces
 
+  int dimension = domain->dimension;
   int ncorner = 8;
-  if (domain->dimension == 2) ncorner = 4;
+  if (dimension == 2) ncorner = 4;
   double *lo,*hi;
 
   int icell = 0;
@@ -197,8 +198,12 @@ void Grid::clear_surf()
       for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
       lo = cells[icell].lo;
       hi = cells[icell].hi;
-      cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-      if (domain->dimension == 3) cinfo[icell].volume *= (hi[2]-lo[2]);
+      if (dimension == 3) 
+        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+      else if (domain->axisymmetric)
+        cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+      else
+        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
       icell++;
     }
   }
@@ -361,28 +366,38 @@ double Grid::flow_volume()
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
-  double vol = 0.0;
+  double volume = 0.0;
 
-  if (domain->dimension == 2) {
-    for (int i = 0; i < surf->nline; i++) {
-      p1 = pts[lines[i].p1].x;
-      p2 = pts[lines[i].p2].x;
-      if (p1[0] < p2[0]) vol -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);
-      else vol += (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p1[0]-p2[0]);
-    }
-    if (vol <= 0.0) vol += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
-
-  } else {
+  if (domain->dimension == 3) {
     for (int i = 0; i < surf->ntri; i++) {
       p1 = pts[tris[i].p1].x;
       p2 = pts[tris[i].p2].x;
       p3 = pts[tris[i].p3].x;
       zarea = 0.5 * ((p2[0]-p1[0])*(p3[1]-p1[1]) - (p2[1]-p1[1])*(p3[0]-p1[0]));
-      vol -= zarea * ((p1[2]+p2[2]+p3[2])/3.0 - boxlo[2]);
+      volume -= zarea * ((p1[2]+p2[2]+p3[2])/3.0 - boxlo[2]);
     }
-    if (vol <= 0.0) vol += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) * 
-                      (boxhi[2]-boxlo[2]); 
-  }
+    if (volume <= 0.0) 
+      volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) * 
+        (boxhi[2]-boxlo[2]); 
+ 
+  } else if (domain->axisymmetric) {
+    for (int i = 0; i < surf->nline; i++) {
+      p1 = pts[lines[i].p1].x;
+      p2 = pts[lines[i].p2].x;
+      volume -= 
+        MY_PI3 * (p1[1]*p1[1] + p1[1]*p2[1] + p2[1]*p2[1]) * (p2[0]-p1[0]);
+    }
+    if (volume <= 0.0) 
+      volume += MY_PI * boxhi[1]*boxhi[1] * (boxhi[0]-boxlo[0]);
 
-  return vol;
+  } else {
+    for (int i = 0; i < surf->nline; i++) {
+      p1 = pts[lines[i].p1].x;
+      p2 = pts[lines[i].p2].x;
+      volume -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);
+    }
+    if (volume <= 0.0) volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
+  }
+  
+  return volume;
 }

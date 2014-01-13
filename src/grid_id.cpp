@@ -17,9 +17,7 @@
 
 using namespace SPARTA_NS;
 
-/* ----------------------------------------------------------------------
-   operations with grid cell IDs
-------------------------------------------------------------------------- */
+// operations with grid cell IDs
 
 /* ----------------------------------------------------------------------
    find child cell within iparent cell that contains pt x

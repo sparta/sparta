@@ -69,7 +69,7 @@ class Cut2d : protected Pointers {
   MyVec<Loop> loops;    // list of loops in Points
   MyVec<PG> pgs;        // list of polygons = one or more loops
 
-  Cut2d(class SPARTA *);
+  Cut2d(class SPARTA *, int);
   ~Cut2d() {}
   int surf2grid(cellint, double *, double *, int *, int);
   int split(cellint, double *, double *, int, int *,
@@ -77,6 +77,7 @@ class Cut2d : protected Pointers {
   void split_face(int, int, double *, double *);
 
  private:
+  int axisymmetric;
   cellint id;            // ID of cell being worked on
   double *lo,*hi;        // opposite corner pts of cell
   int nsurf;             // # of surf elements in cell
