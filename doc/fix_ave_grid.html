@@ -108,13 +108,13 @@ per-grid array calculated by the compute.  If <I>c_ID</I> is used, and the
 compute calculates a per-grid array, then it is the same as if the
 individual columns of the array had been listed one by one.
 </P>
-<P>E.g. these 2 fix ave/grid commands are equivalent, since the compute
-grid command produces 7 columns of output using the <I>all</I> mixture-ID
-which has a single group:
+<P>E.g. these 2 fix ave/grid commands are equivalent, since the <A HREF = "compute_grid.html">compute
+grid</A> command produces 3 columns of output using the
+<I>all</I> mixture-ID which has a single group:
 </P>
-<PRE>compute 1 grid all n u v w usq vsq wsq
+<PRE>compute 1 grid all n u usq
 fix 1 ave/grid 10 100 1000 c_1
-fix 1 ave/grid 10 100 1000 c_1[1] c_1[2] c_1[3] c_1[4] c_1[5] c_1[6] c_1[7] 
+fix 1 ave/grid 10 100 1000 c_1[1] c_1[2] c_1[3] 
 </PRE>
 <P>Users can also write code for their own compute styles and <A HREF = "Section_modify.html">add them
 to SPARTA</A>.
@@ -136,10 +136,39 @@ SPARTA</A>.
 </P>
 <P>If a value begins with "v_", a variable name must follow which has
 been previously defined in the input script as a <A HREF = "variable.html">grid-style
-variable</A> Variables of style <I>grid</I> can reference
+variable</A>.  Variables of style <I>grid</I> can reference
 <A HREF = "stats_style.html">stats_style</A> keywords, or invoke other computes,
 fixes, or variables when they are evaluated, so this is a very general
 means of generating per-grid quantities to time average.
+</P>
+<P>NOTE: The <A HREF = "variable.html">variable</A> command does not yet support
+grid-style varaibles.
+</P>
+<HR>
+
+<P>For averaging of a value that comes from a compute or fix,
+normalization is performed as follows.  If the compute or fix is
+summing over particles in a grid cell to calculate a per-grid quantity
+(e.g. energy or temperature), this takes the form of a numerator
+divided by a denominator.  For example, see the formulas discussed on
+the <A HREF = "compute_grid.html">compute grid</A> doc page, where the denominator
+is 1 (for keyword n), or the number of particles (ke, mass, temp), or
+the sum of particle masses (u, usq, etc).  When this command averages
+over a series of timesteps, the numerator and denominator are summed
+separately.  This means the numerator/denominator division only takes
+place when this fix produces output, every Nfreq timesteps.
+</P>
+<P>For example, say the Nfreq output is over 2 timesteps, and the value
+produced by <A HREF = "compute_grid.html">compute grid mass</A> is being averaged.
+Say a grid cell has 10 particles on the 1st timestep with a numerator
+value of 10.0, and 100 particles on the 2nd timestep with a numerator
+value of 50.0.  The output of this fix will be (10+50) / (10+100) =
+0.54, not ((10/10) + (50/100)) / 2 = 0.75.
+</P>
+<P>For averaging of a value that comes from a grid-style variable, no
+normalization is performed; the variable value is used as-is.  This
+means you should define the variable so it performs any needed
+normalization.
 </P>
 <HR>
 
@@ -149,9 +178,9 @@ means of generating per-grid quantities to time average.
 statistics every <I>Nfreq</I> timesteps.
 </P>
 <P>If the <I>ave</I> setting is <I>one</I>, then the values produced on timesteps
-that are multiples of Nfreq are independent of each other.  Normalization
-(as described above) is performed, and all tallies are zeroed before
-accumulating over the next <I>Nfreq</I> steps.
+that are multiples of Nfreq are independent of each other.
+Normalization as described above is performed, and all tallies are
+zeroed before accumulating over the next <I>Nfreq</I> steps.
 </P>
 <P>If the <I>ave</I> setting is <I>running</I>, then tallies are never zeroed.
 Thus the output at any <I>Nfreq</I> timestep is normalized over all

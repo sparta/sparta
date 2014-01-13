@@ -52,8 +52,9 @@ fix 1 all ave/surf 10 20 1000 c_mine
 </P>
 <P>Use one or more per-surf vectors as inputs every few timesteps, and
 average them surface element by surface element by over longer
-timescales.  The resulting per-surf averages can be used by other
-output commands such as the <A HREF = "dump.html">dump surf</A> command.
+timescales, applying appropriate normalization factors. The resulting
+per-surf averages can be used by other output commands such as the
+<A HREF = "dump.html">dump surf</A> command.
 </P>
 <P>Each input value can be a standard surface element attribute or can be
 the result of a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> or the
@@ -93,31 +94,71 @@ timestep 200, etc.
 
 <P>If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  If no bracketed term is
-appended, the per-grid vector calculated by the compute is used.  If a
-bracketed term containing an index I is appended, the Ith column of
-the per-grid array calculated by the compute is used.  Users can also
-write code for their own compute styles and <A HREF = "Section_modify.html">add them to
-SPARTA</A>.
+appended, and the compute calculates a per-surf vector, then the
+per-surf vector is used.  If <I>c_ID[N]</I> is used, then N must be in
+the range from 1-M, which will use the Nth column of the M-column
+per-surf array calculated by the compute.  If <I>c_ID</I> is used, and the
+compute calculates a per-surf array, then it is the same as if the
+individual columns of the array had been listed one by one.
+</P>
+<P>E.g. these 2 fix ave/surf commands are equivalent, since the <A HREF = "compute_surf">compute
+surf</A> command produces 5 columns of output using the
+<I>all</I> mixture-ID which has a single group:
+</P>
+<PRE>compute 1 surf all n press px py pz
+fix 1 ave/surf 10 100 1000 c_1
+fix 1 ave/surf 10 100 1000 c_1[1] c_1[2] c_1[3] c_1[4] c_1[5] 
+</PRE>
+<P>Users can also write code for their own compute styles and <A HREF = "Section_modify.html">add them
+to SPARTA</A>.
 </P>
 <P>If a value begins with "f_", a fix ID must follow which has been
 previously defined in the input script.  If no bracketed term is
-appended, the per-grid vector calculated by the fix is used.  If a
-bracketed term containing an index I is appended, the Ith column of
-the per-grid array calculated by the fix is used.  Note that some
-fixes only produce their values on certain timesteps, which must be
-compatible with <I>Nevery</I>, else an error will result.  Users can also
-write code for their own fix styles and <A HREF = "Section_modify.html">add them to
+appended, and the fix calculates a per-surf vector, then the per-surf
+vector is used.  If <I>f_ID[N]</I> is used, then N must be in the range
+from 1-M, which will use the Nth column of the M-column per-surf array
+calculated by the fix.  If <I>f_ID</I> is used, and the fix calculates a
+per-surf array, then it is the same as if the individual columns of
+the array had been listed one by one.  See the example above for
+computes.
+</P>
+<P>Note that some fixes only produce their values on certain timesteps,
+which must be compatible with <I>Nevery</I>, else an error will result.
+Users can also write code for their own fix styles and <A HREF = "Section_modify.html">add them to
 SPARTA</A>.
 </P>
 <P>If a value begins with "v_", a variable name must follow which has
-been previously defined in the input script as a <A HREF = "variable.html">grid-style
-variable</A> Variables of style <I>grid</I> can reference
-thermodynamic keywords, or invoke other computes, fixes, or variables
-when they are evaluated, so this is a very general means of generating
-per-grid quantities to time average.
+been previously defined in the input script as a <A HREF = "variable.html">surf-style
+variable</A>.  Variables of style <I>surf</I> can reference
+<A HREF = "stats_style.html">stats_style</A> keywords, or invoke other computes,
+fixes, or variables when they are evaluated, so this is a very general
+means of generating per-surf quantities to time average.
 </P>
-<P>NOTE: say something about how compute, fix, variable quantities
-are normalized for output.
+<P>NOTE: The <A HREF = "variable.html">variable</A> command does not yet support
+surf-style varaibles.
+</P>
+<HR>
+
+<P>For averaging of a value that comes from a compute or fix,
+normalization is performed as follows.  If the compute or fix is
+summing over particles to calculate a per-surf quantity (e.g. pressure
+or energy flux), this takes the form of a numerator divided by a
+denominator.  For example, see the formulas discussed on the <A HREF = "compute_surf.html">compute
+surf</A> doc page, where the denominator is 1 (for
+keyword n), area times dt (timestep) for the other quantities (press,
+shx, ke, etc).  When this command averages over a series of timesteps,
+the numerator and denominator are summed separately.  This means the
+numerator/denominator division only takes place when this fix produces
+output, every Nfreq timesteps.
+</P>
+<P>NOTE: Give an example where the 2 ways of normalizing give different
+answers, like with <A HREF = "compute_grid.html">compute grid</A>.  Not currently
+the case for compute surf, since all denominators are (A*dt).
+</P>
+<P>For averaging of a value that comes from a surf-style variable, no
+normalization is performed; the variable value is used as-is.  This
+means you should define the variable so it performs any needed
+normalization.
 </P>
 <HR>
 
@@ -127,9 +168,9 @@ are normalized for output.
 statistics every <I>Nfreq</I> timesteps.
 </P>
 <P>If the <I>ave</I> setting is <I>one</I>, then the values produced on timesteps
-that are multiples of Nfreq are independent of each other.  Normalization
-(as described above) is performed, and all tallies are zeroed before
-accumulating over the next <I>Nfreq</I> steps.
+that are multiples of Nfreq are independent of each other.
+Normalization as described above is performed, and all tallies are
+zeroed before accumulating over the next <I>Nfreq</I> steps.
 </P>
 <P>If the <I>ave</I> setting is <I>running</I>, then tallies are never zeroed.
 Thus the output at any <I>Nfreq</I> timestep is normalized over all
