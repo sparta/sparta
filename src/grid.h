@@ -42,6 +42,7 @@ class Grid : protected Pointers {
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
   double cutoff;        // cutoff for ghost cells, -1.0 = infinite
   double cell_epsilon;  // half of smallest cellsize of any cell in any dim
+  int cellweightflag;   // 0/1 for no/yes usage of cellwise fnum weighting
 
   // hash for all cell IDs (owned,ghost,parent)
 
@@ -109,6 +110,7 @@ class Grid : protected Pointers {
 
     double volume;            // flow volume of cell or sub cell
                               // entire cell volume for split cell
+    double weight;            // fnum weighting for this cell
   };
 
   // additional info for owned or ghost split cell
@@ -167,6 +169,7 @@ class Grid : protected Pointers {
   void set_inout();
   void check_uniform();
   void type_check();
+  void weight(int, char **);
   bigint memory_usage();
 
   // grid_comm.cpp

@@ -42,6 +42,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
+enum{NOWEIGHT,VOLWEIGHT,RADWEIGHT};
 
 // allocate space for static class variable
 
@@ -93,6 +94,7 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   neighmask[ZHI] = 7 << neighshift[ZHI];
 
   cutoff = -1.0;
+  cellweightflag = NOWEIGHT;
 
   // allocate hash for cell IDs
 
@@ -130,9 +132,8 @@ void Grid::add_child_cell(cellint id, int iparent, double *lo, double *hi)
 {
   grow_cells(1,1);
 
-  int dimension = domain->dimension;
   int ncorner;
-  if (dimension == 3) ncorner = 8;
+  if (domain->dimension == 3) ncorner = 8;
   else ncorner = 4;
 
   ChildCell *c = &cells[nlocal];
@@ -156,8 +157,9 @@ void Grid::add_child_cell(cellint id, int iparent, double *lo, double *hi)
   ci->first = -1;
   ci->type = OUTSIDE;
   for (int i = 0; i < ncorner; i++) ci->corner[i] = OUTSIDE;
+  ci->weight = 1.0;
 
-  if (dimension == 3) 
+  if (domain->dimension == 3) 
     ci->volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
   else if (domain->axisymmetric)
     ci->volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
@@ -1737,6 +1739,81 @@ void Grid::type_check()
   }
 
   flow_stats();
+}
+
+/* ----------------------------------------------------------------------
+   set static cellwise fnum weights
+   based on uncut volumes relative to minimum uncut volumes
+   for radius, use radius of cell centroid from axisymmetric axis
+   called from input script
+------------------------------------------------------------------------- */
+
+void Grid::weight(int narg, char **arg)
+{
+  int i;
+  double one,minvol;
+  double *lo,*hi;
+
+  if (!exist) error->all(FLERR,"Cannot weight cells before grid is defined");
+  if (narg != 1) error->all(FLERR,"Illegal weight command");
+
+  int dimension = domain->dimension;
+  int axisymmetric = domain->axisymmetric;
+
+  if (strcmp(arg[0],"none") == 0) {
+    cellweightflag = NOWEIGHT;
+    for (i = 0; i < nlocal; i++) cinfo[i].weight = 1.0;
+
+  } else if (strcmp(arg[0],"volume") == 0) {
+    cellweightflag = VOLWEIGHT;
+
+    one = BIG;
+    for (int i = 0; i < nlocal; i++) {
+      lo = cells[i].lo;
+      hi = cells[i].hi;
+      if (dimension == 3) 
+        one = MIN(one,(hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]));
+      else if (axisymmetric)
+        one = MIN(one,MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]));
+      else
+        one = MIN(one,(hi[0]-lo[0]) * (hi[1]-lo[1]));
+    }
+
+    MPI_Allreduce(&one,&minvol,1,MPI_DOUBLE,MPI_MIN,world);
+
+    for (int i = 0; i < nlocal; i++) {
+      lo = cells[i].lo;
+      hi = cells[i].hi;
+      if (dimension == 3) 
+        one = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+      else if (axisymmetric)
+        one = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+      else
+        one = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+      cinfo[i].weight = one/minvol;
+    }
+
+  } else if (strcmp(arg[0],"radius") == 0) {
+    if (!axisymmetric) 
+      error->all(FLERR,"Cannot use weight cell radius unless axisymmetric");
+    cellweightflag = RADWEIGHT;
+
+    one = BIG;
+    for (int i = 0; i < nlocal; i++) {
+      lo = cells[i].lo;
+      hi = cells[i].hi;
+      one = MIN(one,0.5*(hi[1]+lo[1]) * (hi[0]-lo[0]));
+    }
+
+    MPI_Allreduce(&one,&minvol,1,MPI_DOUBLE,MPI_MIN,world);
+
+    for (int i = 0; i < nlocal; i++) {
+      lo = cells[i].lo;
+      hi = cells[i].hi;
+      cinfo[i].weight = (0.5*(hi[1]+lo[1]) * (hi[0]-lo[0])) / minvol;
+    }
+
+  } else error->all(FLERR,"Illegal weight command");
 }
 
 ///////////////////////////////////////////////////////////////////////////

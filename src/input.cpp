@@ -442,6 +442,7 @@ int Input::execute_command()
   else if (!strcmp(command,"undump")) undump();
   else if (!strcmp(command,"unfix")) unfix();
   else if (!strcmp(command,"units")) units();
+  else if (!strcmp(command,"weight")) weight();
 
   else flag = 0;
 
@@ -1037,4 +1038,13 @@ void Input::units()
   if (domain->box_exist) 
     error->all(FLERR,"Units command after simulation box is defined");
   update->set_units(arg[0]);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::weight()
+{
+  if (narg < 1) error->all(FLERR,"Illegal weight command");
+  if (strcmp(arg[0],"cell") == 0) grid->weight(narg-1,&arg[1]);
+  else error->all(FLERR,"Illegal weight command");
 }
