@@ -129,10 +129,8 @@ void CollideVSS::init()
       cxs = diam*diam*MY_PI;
       prefactor[isp][jsp] = cxs *
 	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
-      double beta = MIN(vscale[isp],vscale[jsp]);
-      double max_thermal_velocity = 1.0*beta;
-      vrm[isp][jsp] = 
-        cxs * pow(max_thermal_velocity*max_thermal_velocity,1-omega);
+      double beta = MAX(vscale[isp],vscale[jsp]);
+      vrm[isp][jsp] = 2. * cxs * beta;
     }
 
   // vremax = max relative velocity factors on per-grid, per-species basis
@@ -158,6 +156,9 @@ double CollideVSS::attempt_collision(int icell, int np, double volume)
 
  double nattempt = 0.5 * np * (np-1) *
    vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+//   vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+//   remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+//   printf(" cell = %d , %e \n", icell,nattempt);
   return nattempt;
 }
 
@@ -197,7 +198,7 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double omega1 = params[ispecies].omega;
   double omega2 = params[jspecies].omega;
   double omega = 0.5 * (omega1+omega2);
-  double vro  = pow(vr2,1-omega);
+  double vro  = pow(vr2,1.0-omega);
 
   // although the vremax is calcualted for the group,
   // the individual collisions calculated species dependent vre
@@ -205,6 +206,7 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double vre = vro*prefactor[ispecies][jspecies];
   vremax[icell][igroup][jgroup] = MAX(vre,vremax[icell][igroup][jgroup]);
   if (vre/vremax[icell][igroup][jgroup] < random->uniform()) return 0;
+  precoln.vr2 = vr2;
   return 1;
 }
 
@@ -218,6 +220,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
 
+/* 
   double *vi = ip->v;
   double *vj = jp->v;
 
@@ -227,7 +230,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   precoln.vr2 = du*du + dv*dv + dw*dw;
   precoln.vr = sqrt(precoln.vr2);
-
+*/
   precoln.rotdof_i = species[isp].rotdof;
   precoln.rotdof_j = species[jsp].rotdof;
 
@@ -244,7 +247,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   precoln.mr = species[isp].mass * species[jsp].mass /
     (species[isp].mass + species[jsp].mass);
-  
+
   precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->ivib * update->boltz*species[isp].vibtemp + 
@@ -277,10 +280,6 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
   // add a 3rd particle if necessary, index = nlocal-1
 
   Particle::OnePart *kp = NULL;
-  
-  int isp = ip->ispecies;
-  int jsp = jp->ispecies;
-  double rotdof = (species[isp].rotdof + species[jsp].rotdof);
 
   if (reaction) {
     nreact_one++;
@@ -288,16 +287,16 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
       int id = MAXSMALLINT*random->uniform();
       particle->add_particle(id,kspecies,ip->icell,ip->x,ip->v,0.0,0);
       kp = &particle->particles[particle->nlocal-1];
-      rotdof =+ species[kspecies].rotdof;
+      double rotdof = precoln.ave_dof+species[kspecies].rotdof;
       if (rotdof > 1.0) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);
     } else {
-      if (rotdof > 1.0) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      if (precoln.ave_dof > 1.0) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_TwoBodyScattering(ip,jp);
     }
-  } else {
-    if (rotdof > 1.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
-    SCATTER_TwoBodyScattering(ip,jp);
+  } else { 
+      if (precoln.ave_dof > 1.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
+      SCATTER_TwoBodyScattering(ip,jp);
   }
 
   return kp;
@@ -323,26 +322,30 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   double mr = species[isp].mass * species[jsp].mass /
     (species[isp].mass + species[jsp].mass);
 
-  postcoln.eint = ip->erot + jp->erot + 
-    ip->ivib * update->boltz*species[isp].vibtemp + 
-    jp->ivib * update->boltz*species[jsp].vibtemp;
-
-  double cosX = 2.0*pow(random->uniform(),alpha) - 1.0;
-  double sinX = sqrt(1.0 - cosX*cosX);
   double eps = random->uniform() * 2*MY_PI;
   double vr = sqrt(2.0 * postcoln.etrans / mr);
-  if (alpha - 1.0 < 0.001) { 
+  if (abs(alpha) - 1.0 < 0.001) { 
+    double cosX = 2.0*random->uniform() - 1.0;
+    double sinX = sqrt(1.0 - cosX*cosX);
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
-    wc = vr*sinX*sin(eps);
+    wc = vr*sinX*sin(eps); 
   } else {
+    double cosX = 2.0*pow(random->uniform(),alpha) - 1.0;
+    double sinX = sqrt(1.0 - cosX*cosX);
     vrc[0] = vi[0]-vj[0];
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
-    ua = cosX*vrc[0] + sinX*d*sin(eps);
-    vb = cosX*vrc[1] + sinX*(vr*vrc[2]*cos(eps) - vrc[0]*vrc[1]*sin(eps))/d;
-    wc = cosX*vrc[2] - sinX*(vr*vrc[1]*cos(eps) + vrc[0]*vrc[2]*sin(eps))/d;
+    if (d > 1.E-6 ) { 
+      ua = cosX*vrc[0] + sinX*d*sin(eps);
+      vb = cosX*vrc[1] + sinX*(vr*vrc[2]*cos(eps) - vrc[0]*vrc[1]*sin(eps))/d;
+      wc = cosX*vrc[2] - sinX*(vr*vrc[1]*cos(eps) + vrc[0]*vrc[2]*sin(eps))/d;
+    } else {
+      ua = cosX*vrc[0]; 
+      vb = sinX*vrc[1]*cos(eps); 
+      wc = sinX*vrc[2]*sin(eps);
+    }
   }
   
   // COM velocity calculated using reactant masses
@@ -491,9 +494,15 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
     double d = sqrt(vrc[1]*vrc[1]+vrc[2]*vrc[2]);
-    ua = cosX*vrc[0] + sinX*d*sin(eps);
-    vb = cosX*vrc[1] + sinX*(vr*vrc[2]*cos(eps) - vrc[0]*vrc[1]*sin(eps))/d;
-    wc = cosX*vrc[2] - sinX*(vr*vrc[1]*cos(eps) + vrc[0]*vrc[2]*sin(eps))/d;
+    if (d > 1.E-6 ) { 
+      ua = cosX*vrc[0] + sinX*d*sin(eps);
+      vb = cosX*vrc[1] + sinX*(vr*vrc[2]*cos(eps) - vrc[0]*vrc[1]*sin(eps))/d;
+      wc = cosX*vrc[2] - sinX*(vr*vrc[1]*cos(eps) + vrc[0]*vrc[2]*sin(eps))/d;
+    } else {
+      ua = cosX*vrc[0]; 
+      vb = sinX*vrc[1]*cos(eps); 
+      wc = sinX*vrc[2]*sin(eps);
+    }
   }
 
   // COM velocity calculated using reactant masses

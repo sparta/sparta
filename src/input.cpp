@@ -422,6 +422,7 @@ int Input::execute_command()
   else if (!strcmp(command,"boundary")) boundary();
   else if (!strcmp(command,"bound_modify")) bound_modify();
   else if (!strcmp(command,"collide")) collide_command();
+  else if (!strcmp(command,"collide_modify")) collide_modify();
   else if (!strcmp(command,"compute")) compute();
   else if (!strcmp(command,"dimension")) dimension();
   else if (!strcmp(command,"dump")) dump();
@@ -862,6 +863,13 @@ void Input::collide_command()
 #undef COLLIDE_CLASS
 
   else error->all(FLERR,"Invalid collide style");
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::collide_modify()
+{
+  collide->modify_params(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

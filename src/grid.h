@@ -42,7 +42,7 @@ class Grid : protected Pointers {
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
   double cutoff;        // cutoff for ghost cells, -1.0 = infinite
   double cell_epsilon;  // half of smallest cellsize of any cell in any dim
-  int cellweightflag;   // 0/1 for no/yes usage of cellwise fnum weighting
+  int cellweightflag;   // 0/1+ for no/yes usage of cellwise fnum weighting
 
   // hash for all cell IDs (owned,ghost,parent)
 

@@ -69,6 +69,7 @@ class Input : protected Pointers {
   void boundary();
   void bound_modify();
   void collide_command();
+  void collide_modify();
   void compute();
   void dimension();
   void dump();

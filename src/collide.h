@@ -33,6 +33,7 @@ class Collide : protected Pointers {
   Collide(class SPARTA *, int, char **);
   virtual ~Collide();
   virtual void init();
+  void modify_params(int, char **);
   void collisions();
 
   virtual double attempt_collision(int, int, double) = 0;
