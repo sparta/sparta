@@ -59,10 +59,9 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
       error->one(FLERR,str);
     }
 
-  prefactor = NULL;
-  vrm = NULL;
-  vremax = NULL;
-  remain = NULL;
+  // allocate per-species prefactor array
+
+  memory->create(prefactor,nparams,nparams,"collide:prefactor");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -71,80 +70,56 @@ CollideVSS::~CollideVSS()
 {
   delete [] params;
   memory->destroy(prefactor);
-  memory->destroy(vrm);
-  memory->destroy(vremax);
-  memory->destroy(remain);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void CollideVSS::init()
 {
-  Collide::init();
-
   // initially read-in per-species params must match current species list
 
   if (nparams != particle->nspecies)
     error->all(FLERR,"VSS parameters do not match current species");
 
+  Collide::init();
+}
+
+/* ----------------------------------------------------------------------
+   estimate a good value for vremax for a group pair in any grid cell
+   called by Collide parent in init()
+------------------------------------------------------------------------- */
+
+double CollideVSS::vremax_init(int igroup, int jgroup)
+{
+  // parent has set mixture ptr
+
   Particle::Species *species = particle->species;
+  double *vscale = mixture->vscale;
+  int *mix2group = mixture->mix2group;
   int nspecies = particle->nspecies;
-  int imix = particle->find_mixture(mixID);
 
-  double *vscale = particle->mixture[imix]->vscale;
-  int *mix2group = particle->mixture[imix]->mix2group;
+  double vrmgroup = 0.0;
 
-  // deallocate and reallocate per-cell arrays
-
-  memory->destroy(prefactor);
-  memory->destroy(vrm);
-  memory->destroy(vremax);
-  memory->destroy(remain);
-
-  nglocal = nglocalmax = grid->nlocal;
-  memory->create(prefactor,nspecies,nspecies,"collide:prefactor");
-  memory->create(vrm,nspecies,nspecies,"collide:vrm");
-  memory->create(vremax,nglocal,ngroups,ngroups,"collide:vremax");
-  memory->create(remain,nglocal,ngroups,ngroups,"collide:remain");
-
-  for (int icell = 0; icell < nglocal; icell++)
-    for (int igroup = 0; igroup < ngroups; igroup++)
-      for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-        vremax[icell][igroup][jgroup] = 0.0;
-        remain[icell][igroup][jgroup] = 0.0;
-      }
-
-  // prefactor = static contributions to collision attempt frequencies
-
-  double beta = 1.0;
-  double cxs = 1.0;
-
-  for (int isp = 0; isp < nspecies; isp++)
+  for (int isp = 0; isp < nspecies; isp++) {
+    if (mix2group[isp] != igroup) continue;
     for (int jsp = 0; jsp < nspecies; jsp++) {
+      if (mix2group[jsp] != jgroup) continue;
+
       double diam = 0.5 * (params[isp].diam + params[jsp].diam);
       double omega = 0.5 * (params[isp].omega + params[jsp].omega);
       double tref = 0.5 * (params[isp].tref + params[jsp].tref);
       double mr = species[isp].mass * species[jsp].mass /
 	(species[isp].mass + species[jsp].mass);
-      cxs = diam*diam*MY_PI;
+      double cxs = diam*diam*MY_PI;
       prefactor[isp][jsp] = cxs *
 	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
       double beta = MAX(vscale[isp],vscale[jsp]);
-      vrm[isp][jsp] = 2. * cxs * beta;
+      double vrm = 2.0 * cxs * beta;
+      vrmgroup = MAX(vrmgroup,vrm);
     }
+  }
 
-  // vremax = max relative velocity factors on per-grid, per-species basis
-  // vremax value assignment should be done at a group level
-  // each group gets maximum vremax of all species involved
-  
-  for (int icell = 0; icell < nglocal; icell++)
-    for (int isp = 0; isp < nspecies; isp++)
-      for (int jsp = 0; jsp < nspecies; jsp++) {
-        int igroup = mix2group[isp];
-        int jgroup = mix2group[jsp];
-	vremax[icell][igroup][jgroup] = 
-          MAX(vremax[icell][igroup][jgroup],vrm[isp][jsp]);
-      }
+  return vrmgroup;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -154,11 +129,16 @@ double CollideVSS::attempt_collision(int icell, int np, double volume)
  double fnum = update->fnum;
  double dt = update->dt;
 
- double nattempt = 0.5 * np * (np-1) *
-   vremax[icell][0][0] * dt * fnum / volume + random->uniform();
-//   vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
-//   remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
-//   printf(" cell = %d , %e \n", icell,nattempt);
+ double nattempt;
+
+ if (remainflag) {
+   nattempt = 0.5 * np * (np-1) *
+     vremax[icell][0][0] * dt * fnum / volume + remain[icell][0][0];
+   remain[icell][0][0] = nattempt - static_cast<int> (nattempt);
+ } else 
+   nattempt = 0.5 * np * (np-1) *
+     vremax[icell][0][0] * dt * fnum / volume + random->uniform();
+
   return nattempt;
 }
 
@@ -170,9 +150,18 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
  double fnum = update->fnum;
  double dt = update->dt;
 
- double nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
-   vremax[icell][igroup][jgroup] * dt * fnum / volume + random->uniform();
-  return nattempt;
+ double nattempt;
+
+ if (remainflag) {
+   nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
+     vremax[icell][igroup][jgroup] * dt * fnum / volume + 
+     remain[icell][igroup][jgroup];
+   remain[icell][igroup][jgroup] = nattempt - static_cast<int> (nattempt);
+ } else
+   nattempt = 0.5 * ngroup[igroup] * (ngroup[jgroup]-1) *
+     vremax[icell][igroup][jgroup] * dt * fnum / volume + random->uniform();
+
+ return nattempt;
 }
 
 /* ----------------------------------------------------------------------

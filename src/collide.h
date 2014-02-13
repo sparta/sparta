@@ -34,8 +34,10 @@ class Collide : protected Pointers {
   virtual ~Collide();
   virtual void init();
   void modify_params(int, char **);
+  void reset_vremax();
   void collisions();
 
+  virtual double vremax_init(int, int) = 0;
   virtual double attempt_collision(int, int, double) = 0;
   virtual double attempt_collision(int, int, int, double) = 0;
   virtual int test_collision(int, int, int, 
@@ -66,6 +68,16 @@ class Collide : protected Pointers {
   char *mixID;               // ID of mixture to use for groups
   class Mixture *mixture;    // ptr to mixture
   class RanPark *random;     // RNG for collision generation
+
+  int vre_first;      // 1 for first run after collision style is defined
+  int vre_start;      // 1 if reset vre params at start of each run
+  int vre_every;      // reset vre params every this many steps
+  bigint vre_next;    // next timestep to reset vre params on
+  int remainflag;     // 1 if remain defined, else use random fraction
+
+  double ***vremax;   // max relative velocity, per cell, per group pair
+  double ***remain;   // collision number remainder, per cell, per group pair
+  double **vremax_initial;   // initial vremax value, per group pair
 
   inline void addgroup(int igroup, int n)
   {

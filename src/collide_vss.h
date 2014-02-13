@@ -32,6 +32,7 @@ class CollideVSS : public Collide {
   ~CollideVSS();
   void init();
 
+  double vremax_init(int, int);
   double attempt_collision(int, int, double);
   double attempt_collision(int, int, int, double);
   int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
@@ -50,9 +51,6 @@ class CollideVSS : public Collide {
   double vr_indice;
 
   double **prefactor; // static portion of collision attempt frequency
-  double **vrm;       // static portion of max collision frequency
-  double ***vremax;   // max relative velocity, per cell, per species pair
-  double ***remain;   // collision number remainder, per cell, per species pair
   int nglocal;        // current size of per-cell arrays
   int nglocalmax;     // max allocated size of per-cell arrays
 

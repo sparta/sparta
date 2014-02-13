@@ -53,6 +53,14 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   glist = NULL;
   gpair = NULL;
 
+  vre_first = 1;
+  vre_start = 1;
+  vre_every = 0;
+  remainflag = 1;
+  vremax = NULL;
+  vremax_initial = NULL;
+  remain = NULL;
+
   // initialize counters in case stats outputs them
 
   ncollide_one = nattempt_one = nreact_one = 0;
@@ -75,6 +83,10 @@ Collide::~Collide()
     delete [] glist;
     memory->destroy(gpair);
   }
+
+  memory->destroy(vremax);
+  memory->destroy(vremax_initial);
+  memory->destroy(remain);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -128,6 +140,38 @@ void Collide::init()
     }
   }
 
+  // allocate vremax,remain if group count changed
+  // will always be allocated on first run since oldgroups = 0
+  // set vremax_intitial via values calculated by collide style
+
+  if (ngroups != oldgroups) {
+    memory->destroy(vremax);
+    memory->destroy(vremax_initial);
+    memory->destroy(remain);
+    int nglocal = grid->nlocal;
+    memory->create(vremax,nglocal,ngroups,ngroups,"collide:vremax");
+    memory->create(vremax_initial,ngroups,ngroups,"collide:vremax_initial");
+    if (remainflag)
+      memory->create(remain,nglocal,ngroups,ngroups,"collide:remain");
+
+    for (int igroup = 0; igroup < ngroups; igroup++)
+      for (int jgroup = 0; jgroup < ngroups; jgroup++)
+        vremax_initial[igroup][jgroup] = vremax_init(igroup,jgroup);
+  }
+
+  // vre_next = next timestep to zero vremax & remain, based on vre_every
+
+  if (vre_every) vre_next = (update->ntimestep/vre_every)*vre_every + vre_every;
+  else vre_next = update->laststep + 1;
+
+  // if requested reset vremax & remain
+  // must be after per-species vremax_initial is setup
+
+  if (vre_first || vre_start) {
+    reset_vremax();
+    vre_first = 0;
+  }
+
   // initialize running stats before each run
 
   ncollide_running = nattempt_running = nreact_running = 0;
@@ -137,6 +181,42 @@ void Collide::init()
 
 void Collide::modify_params(int narg, char **arg)
 {
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"vremax") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
+      vre_every = atoi(arg[iarg+1]);
+      if (vre_every < 0) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+2],"yes") == 0) vre_start = 1;
+      else if (strcmp(arg[iarg+2],"no") == 0) vre_start = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 3;
+    } else if (strcmp(arg[iarg],"remain") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"yes") == 0) remainflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) remainflag = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal collide_modify command");
+  }
+}
+
+/* ----------------------------------------------------------------------
+   reset vremax to initial species-based values
+   reset remain to 0.0
+------------------------------------------------------------------------- */
+
+void Collide::reset_vremax()
+{
+  int nglocal = grid->nlocal;
+  int ngroups = mixture->ngroup;
+
+  for (int icell = 0; icell < nglocal; icell++)
+    for (int igroup = 0; igroup < ngroups; igroup++)
+      for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+        vremax[icell][igroup][jgroup] = vremax_initial[igroup][jgroup];
+        if (remainflag) remain[icell][igroup][jgroup] = 0.0;
+      }
 }
 
 /* ----------------------------------------------------------------------
@@ -145,6 +225,13 @@ void Collide::modify_params(int narg, char **arg)
 
 void Collide::collisions()
 {
+  // if requested, reset vrwmax & remain
+
+  if (update->ntimestep == vre_next) {
+    reset_vremax();
+    vre_next += vre_every;
+  }
+
   // counters
 
   ncollide_one = nattempt_one = nreact_one = 0;
