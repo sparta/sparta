@@ -881,6 +881,8 @@ void Input::collide_command()
 
 void Input::collide_modify()
 {
+  if (collide == NULL) 
+    error->all(FLERR,"Cannot use collide_modify with no collisions defined");
   collide->modify_params(narg,arg);
 }
 

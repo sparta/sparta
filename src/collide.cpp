@@ -181,6 +181,8 @@ void Collide::init()
 
 void Collide::modify_params(int narg, char **arg)
 {
+  if (narg == 0) error->all(FLERR,"Illegal collide_modify command");
+
   int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"vremax") == 0) {
