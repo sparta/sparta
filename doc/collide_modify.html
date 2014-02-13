@@ -1,0 +1,83 @@
+<HTML>
+<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">DSMSPARTAmmands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>collide_modify command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>collide_modify keyword values ...  
+</PRE>
+<UL><LI>one or more keyword/value pairs may be listed 
+
+<LI>keywords = <I>vremax</I> or <I>remain</I> 
+
+<PRE>  <I>vremax</I> values = Nevery startflag
+    Nevery = zero vremax every this many timesteps
+    startflag = <I>yes</I> or <I>no</I> = zero vremax at start of every run
+  <I>remain</I> value = <I>yes</I> or <I>no</I> = hold remaining fraction of collisions over to next timestep 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>collide_modify vremax 1000 yes
+collide_modify vremax 0 no remain no 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Set parameters that affect how collisions are performed.
+</P>
+<P>The <I>vremax</I> keyword affects how often the Vremax parameter for
+collision frequency is re-zeroed during the simulation.  The value of
+Vremax affects how many events are attempted in each grid cell, and
+thus the overall time spent performing collisions.  As its name
+implies Vremax is continuously set to the largest difference in
+velocity between a pair of colliding molecules (in each grid cell) The
+larger Vremax growss, the more collisions are attempted for the grid
+cell on each timestep, though this does not affect the number of
+collisions actually performed.  Thus if Vremax grows large, collisions
+become less efficient, though still accurate.
+</P>
+<P>For non-equilibrium flows, it is typically desirable to reset Vremax
+to zero fairly frequently (e.g. every 1000 steps) so that it does not
+become large, due to anomolously fast moving particles.  In contrast,
+when a system is at equilibrium, it is typically desirable to not
+reset Vremax to zero since it will also stay roughly constant.
+</P>
+<P>If <I>Nevery</I> is specified as 0, Vremax is not zeroed during a run.
+Otherwise Vremax is zeroed on timesteps that are a multiple of
+<I>Nevery</I>.  Additionally, if <I>startflag</I> is set to <I>yes</I>, Vremax is
+zeroed at the start of every run.  If it is set to <I>no</I>, it is not.
+</P>
+<P>The <I>remain</I> keyword affects how the number of attempted collisions
+for each grid cell is calculated each timestep.  If the value is set
+to <I>yes</I>, then any fractional collision count (for each grid cell) is
+carried over to the next timestep.  E.g. if the computed collision
+count is 7.3, then 7 attempts are made on this timestep, and 0.3 are
+carried over to the next timestep, to be added to the computed
+collision count for that step.  If the value is set to <I>no</I>, then no
+carry-over is made.  Instead, in this example, 7 attempts are made and
+an 8th attempt is made conditionally with a probability of 0.3, using
+a randomly generated number.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "collide.html">collide</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option defaults are vremax = (0,yes) and remain = yes.
+</P>
+</HTML>
