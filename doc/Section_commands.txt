@@ -234,6 +234,8 @@ in the command's documentation.
 "bound_modify"_bound_modify.html,
 "clear"_clear.html,
 "collide"_collide.html,
+"collide"_collide.html,
+"collide_modify"_collide_modify.html,
 "compute"_compute.html,
 "create_molecules"_create_molecules.html,
 "create_box"_create_box.html,
