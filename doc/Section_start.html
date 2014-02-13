@@ -16,12 +16,10 @@ experienced users.
 </P>
 2.1 <A HREF = "#start_1">What's in the SPARTA distribution</A><BR>
 2.2 <A HREF = "#start_2">Making SPARTA</A><BR>
-2.3 <A HREF = "#start_3">Making SPARTA with optional packages</A><BR>
-2.4 <A HREF = "#start_4">Building SPARTA as a library</A><BR>
-2.5 <A HREF = "#start_5">Running SPARTA</A><BR>
-2.6 <A HREF = "#start_6">Command-line options</A><BR>
-2.7 <A HREF = "#start_7">Screen output</A><BR>
-2.8 <A HREF = "#start_8">Tips for users of previous versions</A> <BR>
+2.3 <A HREF = "#start_3">Building SPARTA as a library</A><BR>
+2.4 <A HREF = "#start_4">Running SPARTA</A><BR>
+2.5 <A HREF = "#start_5">Command-line options</A><BR>
+2.6 <A HREF = "#start_6">Screen output</A> <BR>
 
 <HR>
 
@@ -54,7 +52,7 @@ then you just get a single file:
 </P>
 <PRE>lmp_windows.exe 
 </PRE>
-<P>Skip to the <A HREF = "#start_5">Running SPARTA</A> sections for info on how to
+<P>Skip to the <A HREF = "#start_4">Running SPARTA</A> sections for info on how to
 launch these executables on a Windows box.
 </P>
 <P>The Windows executables for serial or parallel only include certain
@@ -84,9 +82,7 @@ as described in the next section.
 
 <P>Building SPARTA can be non-trivial.  You may need to edit a makefile,
 there are compiler options to consider, additional libraries can be
-used (MPI, FFT, JPEG), SPARTA packages may be included or excluded,
-some of these packages use auxiliary libraries which need to be
-pre-built, etc.
+used (MPI, FFT, JPEG).
 </P>
 <P>Please read this section carefully.  If you are not comfortable with
 makefiles, or building codes on a Unix platform, or running an MPI job
@@ -127,10 +123,6 @@ will build SPARTA more quickly.
 </P>
 <P>If you get no errors and an executable like lmp_linux or lmp_mac is
 produced, you're done; it's your lucky day.
-</P>
-<P>Note that by default only a few of SPARTA optional pacakges are
-installed.  To build SPARTA with optional packages, see <A HREF = "#start_3">this
-section</A> below.
 </P>
 <P><B>Step 1</B>
 </P>
@@ -279,59 +271,6 @@ timer.  Note that the ANSI-standard function clock() rolls over after
 an hour or so, and is therefore insufficient for timing long SPARTA
 simulations.
 </P>
-<P><B>Step 6</B>
-</P>
-<P>The 3 FFT variables allow you to specify an FFT library which SPARTA
-uses (for performing 1d FFTs) when running the particle-particle
-particle-mesh (PPPM) option for long-range Coulombics via the
-<A HREF = "kspace_style.html">kspace_style</A> command.
-</P>
-<P>SPARTA supports various open-source or vendor-supplied FFT libraries
-for this purpose.  If you leave these 3 variables blank, SPARTA will
-use the open-source <A HREF = "http://kissfft.sf.net">KISS FFT library</A>, which is
-included in the SPARTA distribution.  This library is portable to all
-platforms and for typical SPARTA simulations is almost as fast as FFTW
-or vendor optimized libraries.  If you are not including the KSPACE
-package in your build, you can also leave the 3 variables blank.
-</P>
-<P>Otherwise, select which kinds of FFTs to use as part of the FFT_INC
-setting by a switch of the form -DFFT_XXX.  Recommended values for XXX
-are: MKL, SCSL, FFTW2, and FFTW3.  Legacy options are: INTEL, SGI,
-ACML, and T3E.  For backward compatability, using -DFFT_FFTW will use
-the FFTW2 library.  Using -DFFT_NONE will use the KISS library
-described above.
-</P>
-<P>You may also need to set the FFT_INC, FFT_PATH, and FFT_LIB variables,
-so the compiler and linker can find the needed FFT header and library
-files.  Note that on some large parallel machines which use "modules"
-for their compile/link environements, you may simply need to include
-the correct module in your build environment.  Or the parallel machine
-may have a vendor-provided FFT library which the compiler has no
-trouble finding.
-</P>
-<P>FFTW is a fast, portable library that should also work on any
-platform.  You can download it from
-<A HREF = "http://www.fftw.org">www.fftw.org</A>.  Both the legacy version 2.1.X and
-the newer 3.X versions are supported as -DFFT_FFTW2 or -DFFT_FFTW3.
-Building FFTW for your box should be as simple as ./configure; make.
-Note that on some platforms FFTW2 has been pre-installed, and uses
-renamed files indicating the precision it was compiled with,
-e.g. sfftw.h, or dfftw.h instead of fftw.h.  In this case, you can
-specify an additional define variable for FFT_INC called -DFFTW2_SIZE,
-which will select the correct include file.  In this case, for FFT_LIB
-you must also manually specify the correct library, namely -lsfftw or
--ldfftw.
-</P>
-<P>The FFT_INC variable also allows for a -DFFT_SINGLE setting that will
-use single-precision FFTs with PPPM, which can speed-up long-range
-calulations, particularly in parallel or on GPUs.  Fourier transform
-and related PPPM operations are somewhat insensitive to floating point
-truncation errors and thus do not always need to be performed in
-double precision.  Using the -DFFT_SINGLE setting trades off a little
-accuracy for reduced memory use and parallel communication costs for
-transposing 3d FFT data.  Note that single precision FFTs have only
-been tested with the FFTW3, FFTW2, MKL, and KISS FFT options.
-</P>
 <P><B>Step 7</B>
 </P>
 <P>The 3 JPG variables allow you to specify a JPEG library which SPARTA
@@ -347,12 +286,6 @@ and JPG_LIB variables, so that the compiler and linker can find it.
 </P>
 <P>As before, if these header and library files are in the usual place on
 your machine, you may not need to set these variables.
-</P>
-<P><B>Step 8</B>
-</P>
-<P>Note that by default only a few of SPARTA optional pacakges are
-installed.  To build SPARTA with optional packages, see <A HREF = "#start_3">this
-section</A> below, before proceeding to Step 9.
 </P>
 <P><B>Step 9</B>
 </P>
@@ -496,182 +429,6 @@ included because they require NVIDIA or Fortran compilation).  The
 third includes all standard packages (with the exceptions) and some
 user packages.  The included user packages are USER-EFF, USER-CG-CMM,
 and USER-REAXC.  The fourth project includes the USER-AWPMD package.
-</P>
-<HR>
-
-<H4><A NAME = "start_3"></A>2.3 Making SPARTA with optional packages 
-</H4>
-<P>This section has the following sub-sections:
-</P>
-<UL><LI><A HREF = "#start_3_1">Package basics</A>
-<LI><A HREF = "#start_3_2">Including/excluding packages</A>
-<LI><A HREF = "#start_3_3">Packages that require extra libraries</A>
-<LI><A HREF = "#start_3_4">Additional Makefile settings for extra libraries</A> 
-</UL>
-<HR>
-
-<A NAME = "start_3_1"></A><B><I>Package basics:</I></B> 
-
-<P>The source code for SPARTA is structured as a set of core files which
-are always included, plus optional packages.  Packages are groups of
-files that enable a specific set of features.  For example, force
-fields for molecular systems or granular systems are in packages.  You
-can see the list of all packages by typing "make package" from within
-the src directory of the SPARTA distribution.
-</P>
-<P>If you use a command in a SPARTA input script that is specific to a
-particular package, you must have built SPARTA with that package, else
-you will get an error that the style is invalid or the command is
-unknown.  Every command's doc page specfies if it is part of a
-package.  You can also type
-</P>
-<PRE>lmp_machine -h 
-</PRE>
-<P>to run your executable with the optional <A HREF = "#start_6">-h command-line
-switch</A> for "help", which will list the styles and commands
-known to your executable.
-</P>
-<P>There are two kinds of packages in SPARTA, standard and user packages.
-More information about the contents of standard and user packages is
-given in <A HREF = "Section_packages.html">this section</A> of the manual.  The
-difference between standard and user packages is as follows:
-</P>
-<P>Standard packages are supported by the SPARTA developers and are
-written in a syntax and style consistent with the rest of SPARTA.
-This means we will answer questions about them, debug and fix them if
-necessary, and keep them compatible with future changes to SPARTA.
-</P>
-<P>User packages have been contributed by users, and always begin with
-the user prefix.  If they are a single command (single file), they are
-typically in the user-misc package.  Otherwise, they are a a set of
-files grouped together which add a specific functionality to the code.
-</P>
-<P>User packages don't necessarily meet the requirements of the standard
-packages.  If you have problems using a feature provided in a user
-package, you will likely need to contact the contributor directly to
-get help.  Information on how to submit additions you make to SPARTA
-as a user-contributed package is given in <A HREF = "Section_modify.html#mod_14">this
-section</A> of the documentation.
-</P>
-<HR>
-
-<A NAME = "start_3_2"></A><B><I>Including/excluding packages:</I></B> 
-
-<P>To use or not use a package you must include or exclude it before
-building SPARTA.  From the src directory, this is typically as simple
-as:
-</P>
-<PRE>make yes-colloid
-make g++ 
-</PRE>
-<P>or
-</P>
-<PRE>make no-manybody
-make g++ 
-</PRE>
-<P>Some packages have individual files that depend on other packages
-being included.  SPARTA checks for this and does the right thing.
-I.e. individual files are only included if their dependencies are
-already included.  Likewise, if a package is excluded, other files
-dependent on that package are also excluded.
-</P>
-<P>The reason to exclude packages is if you will never run certain kinds
-of simulations.  For some packages, this will keep you from having to
-build auxiliary libraries (see below), and will also produce a smaller
-executable which may run a bit faster.
-</P>
-<P>When you download a SPARTA tarball, these packages are pre-installed
-in the src directory: KSPACE, MANYBODY,MOLECULE.  When you download
-SPARTA source files from the SVN or Git repositories, no packages are
-pre-installed.
-</P>
-<P>Packages are included or excluded by typing "make yes-name" or "make
-no-name", where "name" is the name of the package in lower-case, e.g.
-name = kspace for the KSPACE package or name = user-atc for the
-USER-ATC package.  You can also type "make yes-standard", "make
-no-standard", "make yes-user", "make no-user", "make yes-all" or "make
-no-all" to include/exclude various sets of packages.  Type "make
-package" to see the all of the package-related make options.
-</P>
-<P>IMPORTANT NOTE: Inclusion/exclusion of a package works by simply
-moving files back and forth between the main src directory and
-sub-directories with the package name (e.g. src/KSPACE, src/USER-ATC),
-so that the files are seen or not seen when SPARTA is built.  After
-you have included or excluded a package, you must re-build SPARTA.
-</P>
-<P>Additional package-related make options exist to help manage SPARTA
-files that exist in both the src directory and in package
-sub-directories.  You do not normally need to use these commands
-unless you are editing SPARTA files or have downloaded a patch from
-the SPARTA WWW site.
-</P>
-<P>Typing "make package-update" will overwrite src files with files from
-the package sub-directories if the package has been included.  It
-should be used after a patch is installed, since patches only update
-the files in the package sub-directory, but not the src files.  Typing
-"make package-overwrite" will overwrite files in the package
-sub-directories with src files.
-</P>
-<P>Typing "make package-status" will show which packages are currently
-included. Of those that are included, it will list files that are
-different in the src directory and package sub-directory.  Typing
-"make package-diff" lists all differences between these files.  Again,
-type "make package" to see all of the package-related make options.
-</P>
-<HR>
-
-<A NAME = "start_3_3"></A><B><I>Packages that require extra libraries:</I></B> 
-
-<P>A few of the standard and user packages require additional auxiliary
-libraries to be compiled first.  If you get a SPARTA build error about
-a missing library, this is likely the reason.  The source code for
-these libraries is included in the SPARTA distribution under the "lib"
-directory.  Look at the lib/README file for a list of these or see
-<A HREF = "Section_packages.html">this section</A> of the doc pages.
-</P>
-<P>Each lib directory has a README file (e.g. lib/reax/README) with
-instructions on how to build that library.  Typically this is done 
-in this manner:
-</P>
-<PRE>make -f Makefile.g++ 
-</PRE>
-<P>in the appropriate directory, e.g. in lib/reax.  Some of the libraries
-do not build this way.  Again, see the libary README file for details.
-</P>
-<P>In any event, you will need to use a Makefile that is a match for your
-system.  If one of the provided Makefiles is not appropriate for your
-system you will need to edit or add one.  For example, in the case of
-Fortran-based libraries, your system must have a Fortran compiler, the
-settings for which will need to be listed in the Makefile.
-</P>
-<P>When you have built one of these libraries, there are 2 things to
-check:
-</P>
-<P>(1) The file libname.a should now exist in lib/name.
-E.g. lib/reax/libreax.a.  This is the library file SPARTA will link
-against.  One exception is the lib/cuda library which produces the
-file liblammpscuda.a, because there is already a system library
-libcuda.a.
-</P>
-<P>(2) The file Makefile.lammps should exist in lib/name.  E.g.
-lib/cuda/Makefile.lammps.  This file may be auto-generated by the
-build of the library, or you may need to make a copy of the
-appropriate provided file (e.g. lib/meam/Makefile.lammps.gfortran).
-Either way you should insure that the settings in this file are
-appropriate for your system.
-</P>
-<P>There are typically 3 settings in the Makefile.lammps file (unless
-some are blank or not needed): a SYSINC, SYSPATH, and SYSLIB setting,
-specific to this package.  These are settings the SPARTA build will
-import when compiling the SPARTA package files (not the library
-files), and linking to the auxiliary library.  They typically list any
-other system libraries needed to support the package and where to find
-them.  An example is the BLAS and LAPACK libraries needed by the
-USER-ATC package.  Or the system libraries that support calling
-Fortran from C++, as the MEAM and REAX packages do.
-</P>
-<P>Note that if these settings are not correct for your box, the SPARTA
-build will likely fail.
 </P>
 <HR>
 
@@ -1112,44 +869,5 @@ the communication and a Gflop rate is computed.  The 3d rate is with
 communication; the 1d rate is without (just the 1d FFTs).  Thus you
 can estimate what fraction of your FFT time was spent in
 communication, roughly 75% in the example above.
-</P>
-<HR>
-
-<H4><A NAME = "start_8"></A>2.8 Tips for users of previous SPARTA versions 
-</H4>
-<P>The current C++ began with a complete rewrite of SPARTA 2001, which
-was written in F90.  Features of earlier versions of SPARTA are listed
-in <A HREF = "Section_history.html">this section</A>.  The F90 and F77 versions
-(2001 and 99) are also freely distributed as open-source codes; check
-the <A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> for distribution information if you prefer
-those versions.  The 99 and 2001 versions are no longer under active
-development; they do not have all the features of C++ SPARTA.
-</P>
-<P>If you are a previous user of SPARTA 2001, these are the most
-significant changes you will notice in C++ SPARTA:
-</P>
-<P>(1) The names and arguments of many input script commands have
-changed.  All commands are now a single word (e.g. read_data instead
-of read data).
-</P>
-<P>(2) All the functionality of SPARTA 2001 is included in C++ SPARTA,
-but you may need to specify the relevant commands in different ways.
-</P>
-<P>(3) The format of the data file can be streamlined for some problems.
-See the <A HREF = "read_data.html">read_data</A> command for details.  The data file
-section "Nonbond Coeff" has been renamed to "Pair Coeff" in C++ SPARTA.
-</P>
-<P>(4) Binary restart files written by SPARTA 2001 cannot be read by C++
-SPARTA with a <A HREF = "read_restart.html">read_restart</A> command.  This is
-because they were output by F90 which writes in a different binary
-format than C or C++ writes or reads.  Use the <I>restart2data</I> tool
-provided with SPARTA 2001 to convert the 2001 restart file to a text
-data file.  Then edit the data file as necessary before using the C++
-SPARTA <A HREF = "read_data.html">read_data</A> command to read it in.
-</P>
-<P>(5) There are numerous small numerical changes in C++ SPARTA that mean
-you will not get identical answers when comparing to a 2001 run.
-However, your initial thermodynamic energy and MD trajectory should be
-close if you have setup the problem for both codes the same.
 </P>
 </HTML>

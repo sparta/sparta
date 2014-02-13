@@ -36,18 +36,22 @@ IMPORTANT NOTE: The SELF option is not guaranteed to work when the
 current input script is being read through stdin (standard input),
 e.g.
 
-lmp_g++ < in.script :pre
+spa_g++ < in.script :pre
 
 since the SELF option invokes the C-library rewind() call, which may
 not be supported for stdin on some systems.  This can be worked around
-by using the "-in command-line argument"_Section_start.html#start_6 or
-the "-var command-line argument"_Section_start.html#start_6 to pass
-the script name as a variable to the input script In the latter case,
-the "fname" "variable"_variable.html could be used in place of SELF.
-E.g.
+by using the "-in command-line argument"_Section_start.html#start_5,
+e.g.
 
-lmp_g++ -in in.script :pre
-lmp_g++ -var fname n.script < in.script :pre
+spa_g++ -in in.script :pre
+
+or by using the "-var command-line
+argument"_Section_start.html#start_5 to pass the script name as a
+variable to the input script.  In the latter case, a
+"variable"_variable.html called "fname" could be used in place of
+SELF, e.g.
+
+spa_g++ -var fname in.script < in.script :pre
 
 The 2nd argument to the jump command is optional.  If specified, it is
 treated as a label and the new file is scanned (without executing
@@ -65,7 +69,7 @@ dump 1 all atom 100 file.$a
 run 10000
 undump 1
 next a
-jump in.lj loop :pre
+jump in.flow loop :pre
 
 If the jump {file} argument is a variable, the jump command can be
 used to cause different processor partitions to run different input

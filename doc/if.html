@@ -25,7 +25,7 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>if "${steps} > 1000" then exit
+<PRE>if "${steps} > 1000" then quit
 if "$x <= $y" then "print X is smaller = $x" else "print Y is smaller = $y"
 if "(${eng} > 0.0) || ($n < 1000)" then &
   "timestep 0.005" &
@@ -59,16 +59,17 @@ Boolean expression is FALSE, then no commands are executed.
 <P>The syntax for Boolean expressions is described below.
 </P>
 <P>Each command (t1, f1, e1, etc) can be any valid SPARTA input script
-command.  If the command is more than one word, it must enclosed in
+command, except an <A HREF = "include.html">include</A> command, which is not
+allowed. If the command is more than one word, it must enclosed in
 quotes, so it will be treated as a single argument, as in the examples
 above.
 </P>
 <P>IMPORTANT NOTE: If a command itself requires a quoted argument (e.g. a
 <A HREF = "print.html">print</A> command), then double and single quotes can be used
 and nested in the usual manner, as in the examples above and below.
-See <A HREF = "Section_commands.html#cmd_2">this section</A> of the manual for more
-details on using quotes in arguments.  Only one of level of nesting is
-allowed, but that should be sufficient for most use cases.
+See <A HREF = "Section_commands.html#cmd_2">Section commands 2</A> of the manual for
+more details on using quotes in arguments.  Only one of level of
+nesting is allowed, but that should be sufficient for most use cases.
 </P>
 <P>Note that by using the line continuation character "&", the if command
 can be spread across many lines, though it is still a single command:
@@ -78,11 +79,11 @@ can be spread across many lines, though it is still a single command:
   "run 1000" &
 else &      
   'print "Minimum value = $b"' &
-  "minimize 0.001 0.001 1000 10000" 
+  "run 50000" 
 </PRE>
-<P>Note that if one of the commands to execute is an invalid SPARTA
-command, such as "exit" in the first example above, then executing the
-command will cause SPARTA to halt.
+<P>Note that if one of the commands to execute is <A HREF = "quit.html">quit</A>, as in
+the first example above, then executing the command will cause SPARTA
+to halt.
 </P>
 <P>Note that by jumping to a label in the same input script, the if
 command can be used to break out of a loop.  See the <A HREF = "variable.html">variable
