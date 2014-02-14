@@ -16,7 +16,7 @@ ID is documented in "compute"_compute.html command :ulb,l
 grid = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {mass} or {temp}:l
+value = {n} or {ndensity} or {mass} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} :l
   {n} = molecule count
   {ndensity} = number density
   {mass} = mass
