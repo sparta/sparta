@@ -76,8 +76,8 @@ group:
 Ndens = N * fnum / volume
 
 N is the number of molecules (same as the {n} keyword), fnum is the
-ratio set by the "global fnum"_global.html command, and volume is the
-flow volume of the grid cell.
+real/simulated particle ratio set by the "global fnum"_global.html
+command, and volume is the flow volume of the grid cell.
 
 The {mass} value computes the average mass of molecules in the group:
 
