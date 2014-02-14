@@ -18,6 +18,8 @@ mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
 value = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {mass} or {temp}:l
   {n} = molecule count
+  {ndensity} = number density
+  {mass} = mass
   {u} = x component of velocity
   {v} = y component of velocity
   {w} = z component of velocity
@@ -25,8 +27,9 @@ value = {n} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {mass} or
   {vsq} = y component of velocity squared
   {wsq} = z component of velocity squared
   {ke} = kinetic energy
-  {mass} = mass
-  {temp} = temperature :pre
+  {temp} = temperature
+  {erot} = rotational energy
+  {trot} = rotational temperature :pre
 :ule
 
 [Examples:]
@@ -51,39 +54,52 @@ partitioned into groups.
 
 The results of this compute are used by different commands in
 different ways.  The values for a single timestep can be output by the
-"dump grid"_dump.html command.  The values over many timesteps or the
-entire simulation can be averaged together by the "fix
-ave/grid"_fix_ave_grid.html command.  In this case, it is as if the
-formulas below are sums both over molecules in the grid cell and over
-time, with the normalizing factor in the denominator also being summed
-over time.
+"dump grid"_dump.html command.
+
+The values over many sampling timesteps can be averaged by the "fix
+ave/grid"_fix_ave_grid.html command.  It does its averaging as if the
+molecules in the cell at each sampling timestep were combined together
+into one large set to compute the formulas below.  The answer is then
+divided by the number of sampling timesteps if it is not otherwise
+normalized by the number of molecules.  Note that in most cases, this
+is a different normalization than taking the values produced by the
+formulas below for a single timestep, summing them over the sampling
+timesteps, and then dividing by the number of sampling timesteps.
 
 :line
 
 The {n} value counts the number of moleclues in the group.
 
-The {u}, {v}, {w} values computes the components of the average
-velocity for all molecules in the group:
+The {ndensity} value computes the number density of molecules in the
+group:
+
+Ndens = N * fnum / volume
+
+N is the number of molecules (same as the {n} keyword), Fnum is the
+ratio set by the "global fnum"_global.html command, and volume is the
+flow volume of the grid cell.
+
+The {mass} value computes the average mass of molecules in the group:
+
+KE = Sum_i (mass_i) / N :pre
+
+The {u}, {v}, {w} values compute the components of the average
+velocity of molecules in the group:
 
 U = Sum_i (mass_i Vx_i) / Sum_i (mass_i) :pre
 
 The {usq}, {vsq}, {wsq} values compute the squared component of
-the average velocity for all molecules in the group.
+the average velocity of molecules in the group.
 
 Usq = Sum_i (mass_i Vx_i Vx_i) / Sum_i (mass_i) :pre
 
-The {ke} value computes the average kinetic energy for all {N}
-molecules in the group:
+The {ke} value computes the average kinetic energy of molecules in the
+group:
 
 Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 KE = Sum_i (1/2 mass_i Vsq_i) / N :pre
 
-The {mass} value computes the average mass for all {N} molecules in
-the group:
-
-KE = Sum_i (mass_i) / N :pre
-
-The {temp} value first computes the average kinetic energy for all
+The {temp} value first computes the average kinetic energy of
 molecules in the group, as for the {ke} value.  This is then converted
 to a temperature {T} by the following formula where {kB} is the
 Boltzmann factor:
@@ -97,6 +113,18 @@ streaming velocity for molecules in the grid cell, so it is not a
 thermal temperature in a streaming context.  See the "compute
 sonine/grid"_compute_sonine_grid.html command to calculate thermal
 temperatures after subtracting out streaming components of velocity.
+
+The {erot} value computes the average rotational energy of molecules
+in the group:
+
+Erot = Sum_i (erot_i) / N :pre
+
+The {trot} value computes a rotational temperature by the following
+formula where {kB} is the Boltzmann factor:
+
+Trot = (2/kB) Sum_i (erot_i) / Sum_i (dof_i) :pre
+
+Dof_i is the number of rotational degrees of freedom for molecule i.
 
 [Output info:]
 
@@ -113,10 +141,11 @@ section"_Section_howto.html#howto_15 for an overview of SPARTA output
 options. 
 
 The per-grid array values will be in the "units"_units.html
-appropriate to the individual values as described above.  {U}, {v},
+appropriate to the individual values as described above.  Number
+density is in 1/distance^3 units.  {Mass} is in mass units.  {U}, {v},
 and {w} are in velocity units.  {Usq}, {vsq}, and {wsq} are in
-velocity squared units.  {Ke} is in energy units.  {Mass} is in mass
-units. {Temp} is in temperature units.
+velocity squared units.  {Ke} and {Erot} are in energy units.  {Temp}
+and {Trot} are in temperature units.
 
 [Restrictions:] none
 
