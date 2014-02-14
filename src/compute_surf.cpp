@@ -113,13 +113,14 @@ void ComputeSurf::init()
     memory->create(normflux,nsurf,"surf:normflux");
 
     double dt = update->dt;
+    double fnum = update->fnum;
     int dimension = domain->dimension;
     double tmp;
 
     for (int i = 0; i < nsurf; i++) {
       if (dimension == 2) normflux[i] = surf->line_size(i);
       else normflux[i] = surf->tri_size(i,tmp);
-      normflux[i] *= dt;
+      normflux[i] *= dt/fnum;
     }
   }
 
@@ -134,7 +135,7 @@ void ComputeSurf::compute_per_surf()
 {
   invoked_per_surf = update->ntimestep;
 
-  // normalize all local tallies by normflux
+  // normalize all local tallies (except NUM) by normflux
 
   int iglobal,m;
   double norm;
