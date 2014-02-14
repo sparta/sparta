@@ -29,7 +29,7 @@ using namespace SPARTA_NS;
 
 enum{THERMAL,AMOM,BMOM};
 enum{X,Y,Z};
-enum{NONE,COUNT,MASSWT};
+enum{NONE,COUNT,MASSWT,DOF};
 
 /* ---------------------------------------------------------------------- */
 

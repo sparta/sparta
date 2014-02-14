@@ -22,13 +22,10 @@
 #include "memory.h"
 #include "error.h"
 
-// DEBUG
-#include "comm.h"
-
 using namespace SPARTA_NS;
 
-enum{NUM,U,V,W,USQ,VSQ,WSQ,KE,MASS,TEMPERATURE};
-enum{NONE,COUNT,MASSWT};
+enum{NUM,NUMDENS,MASS,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT};
+enum{NONE,COUNT,MASSWT,DOF};
 
 /* ---------------------------------------------------------------------- */
 
@@ -42,11 +39,14 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 
   nvalue = narg - 3;
   which = new int[nvalue];
+  norm_style = new int[nvalue];
 
   nvalue = 0;
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
+    if (strcmp(arg[iarg],"ndensity") == 0) which[nvalue++] = NUMDENS;
+    else if (strcmp(arg[iarg],"mass") == 0) which[nvalue++] = MASS;
     else if (strcmp(arg[iarg],"u") == 0) which[nvalue++] = U;
     else if (strcmp(arg[iarg],"v") == 0) which[nvalue++] = V;
     else if (strcmp(arg[iarg],"w") == 0) which[nvalue++] = W;
@@ -54,8 +54,9 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"vsq") == 0) which[nvalue++] = VSQ;
     else if (strcmp(arg[iarg],"wsq") == 0) which[nvalue++] = WSQ;
     else if (strcmp(arg[iarg],"ke") == 0) which[nvalue++] = KE;
-    else if (strcmp(arg[iarg],"mass") == 0) which[nvalue++] = MASS;
     else if (strcmp(arg[iarg],"temp") == 0) which[nvalue++] = TEMPERATURE;
+    else if (strcmp(arg[iarg],"erot") == 0) which[nvalue++] = EROT;
+    else if (strcmp(arg[iarg],"trot") == 0) which[nvalue++] = TROT;
     else error->all(FLERR,"Illegal compute grid command");
     iarg++;
   }
@@ -68,21 +69,32 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   nglocal = 0;
   array_grid = NULL;
 
-  // norm vectors
+  // norm vectors<
 
-  memory->create(value_norm_style,ngroup,nvalue,"grid:value_norm_style");
-  for (int i = 0; i < ngroup; i++)
-    for (int j = 0; j < nvalue; j++) {
-      if (which[j] == NUM) value_norm_style[i][j] = NONE;
-      else if (which[j] == KE || which[j] == MASS || which[j] == TEMPERATURE)
-        value_norm_style[i][j] = COUNT; 
-      else value_norm_style[i][j] = MASSWT;
-    }
+  for (int i = 0; i < nvalue; i++) {
+    if (which[i] == NUM || which[i] == NUMDENS) 
+      norm_style[i] = NONE;
+    else if (which[i] == MASS) 
+      norm_style[i] = COUNT;
+    else if (which[i] == U || which[i] == V || which[i] == W) 
+      norm_style[i] = MASSWT;
+    else if (which[i] == USQ || which[i] == VSQ || which[i] == WSQ) 
+      norm_style[i] = MASSWT;
+    else if (which[i] == KE)
+      norm_style[i] = COUNT;
+    else if (which[i] == TEMPERATURE) 
+      norm_style[i] = COUNT;
+    else if (which[i] == EROT)
+      norm_style[i] = COUNT;
+    else if (which[i] == TROT) 
+      norm_style[i] = DOF;
+  }
 
   norm_count = new double*[ngroup];
   norm_mass = new double*[ngroup];
+  norm_dof = new double*[ngroup];
   for (int i = 0; i < ngroup; i++)
-    norm_count[i] = norm_mass[i] = NULL;
+    norm_count[i] = norm_mass[i] = norm_dof[i] = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -90,14 +102,14 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 ComputeGrid::~ComputeGrid()
 {
   delete [] which;
+  delete [] norm_style;
 
   memory->destroy(array_grid);
-
-  memory->destroy(value_norm_style);
 
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
     memory->destroy(norm_mass[i]);
+    memory->destroy(norm_dof[i]);
   }
   delete [] norm_count;
   delete [] norm_mass;
@@ -126,8 +138,11 @@ void ComputeGrid::compute_per_grid()
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
+
+  double fnum = update->fnum;
   double mvv2e = update->mvv2e;
   double tprefactor = mvv2e / (3.0*update->boltz);
+  double trotprefactor = mvv2e * 2.0 / update->boltz;
 
   int i,j,k,m,n,ispecies,igroup,icell;
   double mass;
@@ -143,6 +158,8 @@ void ComputeGrid::compute_per_grid()
     if (norm = norm_count[j])
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
     if (norm = norm_mass[j])
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+    if (norm = norm_dof[j])
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
   }
 
@@ -170,6 +187,12 @@ void ComputeGrid::compute_per_grid()
       case NUM:
         vec[k++] += 1.0;
         break;
+      case NUMDENS:
+        vec[k++] += fnum / cinfo[icell].volume;
+        break;
+      case MASS:
+        vec[k++] += mass;
+        break;
       case U:
         vec[k++] += mass*v[0];
         break;
@@ -191,11 +214,15 @@ void ComputeGrid::compute_per_grid()
       case KE:
         vec[k++] += 0.5*mvv2e*mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
         break;
-      case MASS:
-        vec[k++] += mass;
-        break;
       case TEMPERATURE:
         vec[k++] += tprefactor*mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+        break;
+      case EROT:
+        vec[k++] += particles[i].erot;
+        break;
+      case TROT:
+        vec[k++] += trotprefactor*particles[i].erot;
+        norm_dof[igroup][icell] += species[ispecies].rotdof;
         break;
       }
     }
@@ -218,15 +245,15 @@ void ComputeGrid::reallocate()
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
     memory->destroy(norm_mass[i]);
-    norm_count[i] = norm_mass[i] = NULL;
+    memory->destroy(norm_dof[i]);
+    norm_count[i] = norm_mass[i] = norm_dof[i] = NULL;
     for (int j = 0; j < nvalue; j++) {
-      if (which[j] == KE || which[j] == MASS || which[j] == TEMPERATURE) {
-        if (norm_count[i] == NULL)
-          memory->create(norm_count[i],nglocal,"grid:norm_count");
-      } else {
-        if (norm_mass[i] == NULL)
-          memory->create(norm_mass[i],nglocal,"grid:norm_mass");
-      }
+      if (norm_style[j] == COUNT && norm_count[i] == NULL)
+        memory->create(norm_count[i],nglocal,"grid:norm_count");
+      else if (norm_style[j] == MASSWT && norm_mass[i] == NULL)
+        memory->create(norm_mass[i],nglocal,"grid:norm_mass");
+      else if (norm_style[j] == DOF && norm_dof[i] == NULL)
+        memory->create(norm_dof[i],nglocal,"grid:norm_dof");
     }
   }
 }
@@ -238,10 +265,10 @@ void ComputeGrid::reallocate()
 
 int ComputeGrid::normflag(int n)
 {
-  int igroup = (n-1) / nvalue;
   int ivalue = (n-1) % nvalue;
-  if (value_norm_style[igroup][ivalue] == COUNT) return COUNT;
-  if (value_norm_style[igroup][ivalue] == MASSWT) return MASSWT;
+  if (norm_style[ivalue] == COUNT) return COUNT;
+  if (norm_style[ivalue] == MASSWT) return MASSWT;
+  if (norm_style[ivalue] == DOF) return DOF;
   return NONE;
 }
 
@@ -254,8 +281,9 @@ double *ComputeGrid::normptr(int n)
 {
   int igroup = (n-1) / nvalue;
   int ivalue = (n-1) % nvalue;
-  if (value_norm_style[igroup][ivalue] == COUNT) return norm_count[igroup];
-  if (value_norm_style[igroup][ivalue] == MASSWT) return norm_mass[igroup];
+  if (norm_style[ivalue] == COUNT) return norm_count[igroup];
+  if (norm_style[ivalue] == MASSWT) return norm_mass[igroup];
+  if (norm_style[ivalue] == DOF) return norm_dof[igroup];
   return NULL;
 }
 
@@ -270,6 +298,7 @@ bigint ComputeGrid::memory_usage()
   for (int i = 0; i < ngroup; i++) {
     if (norm_count[i]) bytes += nglocal * sizeof(double);
     if (norm_mass[i]) bytes += nglocal * sizeof(double);
+    if (norm_dof[i]) bytes += nglocal * sizeof(double);
   }
   return bytes;
 }

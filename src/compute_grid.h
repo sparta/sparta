@@ -41,9 +41,10 @@ class ComputeGrid : public Compute {
   int *which;
 
   int nglocal;               // # of owned grid cells
-  int **value_norm_style;    // I,J = norm style of Jth value in Ith group
+  int *norm_style;           // norm style for each value
   double **norm_count;       // per-group ptr to norm vector, by count
   double **norm_mass;        // per-group ptr to norm vector, by mass
+  double **norm_dof;         // per-group ptr to norm vector, by dof
 };
 
 }
