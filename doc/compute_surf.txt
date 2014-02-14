@@ -21,7 +21,7 @@ value = {n} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
   shx,shy,shz = components of shear stress on surface element
-  ke = flux of particle kinetic energy on surface element :pre
+  ke = flux of particle kinetic energy onto surface element :pre
 :ule
 
 [Examples:]
@@ -50,13 +50,19 @@ details.
 
 The results of this compute are used by different commands in
 different ways.  The values for a single timestep can be output by the
-"dump surf"_dump.html command.  The values over many timesteps or the
-entire simulation can be averaged together by the "fix
-ave/surf"_fix_ave_surf.html command.  In this case, it is as if the
-formulas below are sums over both molecules striking the surface
-element and over time, with the {dt} normalizing factor in the
-denominator reflecting the number of timesteps statistics were
-gathered.
+"dump surf"_dump.html command.  
+
+The values over many sampling timesteps can be averaged by the "fix
+ave/surf"_fix_ave_surf.html command.  It does its averaging as if the
+molecules striking the surface element at each sampling timestep were
+combined together into one large set to compute the formulas below.
+The answer is then divided by the number of sampling timesteps if it
+is not otherwise normalized by the number of molecules.  Note that
+this can be a different normalization than taking the values produced
+by the formulas below for a single timestep, summing them over the
+sampling timesteps, and then dividing by the number of sampling
+timesteps.  However, for the current values below, the two
+normalization methods are the same.
 
 :line
 
@@ -68,14 +74,15 @@ element in the normal direction by molecules in the group, such that
 outward pressure is positive.  This is computed as
 
 p_delta = mass * (V_post - V_pre)
-P = Sum_i (p_delta_i dot N) / (A * dt) :pre
+P = Sum_i (p_delta_i dot N) / (A * dt / fnum) :pre
 
 where p_delta is the change in momentum of a particle, whose velocity
 changes from V_pre to V_post when colliding with the surface element.
 The pressure exerted on the surface element is the sum over all
 contributing p_delta dotted into the outward normal N of the surface
 element, normalized by A = the area of the surface element and dt =
-the timestep.
+the timestep and fnum = the real/simulated particle ratio set by the
+"global fnum"_global.html command.
 
 The {px}, {py}, {pz} values calculate the normal pressure Px, Py, Pz
 extered on the surface element in the direction of its normal by
@@ -84,9 +91,9 @@ These are computed as
 
 p_delta = mass * (V_post - V_pre)
 p_delta_n = (p_delta dot N) N
-Px = - Sum_i (p_delta_n_x) / (A * dt)
-Py = - Sum_i (p_delta_n_y) / (A * dt)
-Pz = - Sum_i (p_delta_n_z) / (A * dt) :pre
+Px = - Sum_i (p_delta_n_x) / (A * dt / fnum)
+Py = - Sum_i (p_delta_n_y) / (A * dt / fnum)
+Pz = - Sum_i (p_delta_n_z) / (A * dt / fnum) :pre
 
 where p_delta, V_pre, V_post, N, A, and dt are defined as before.
 P_delta_n is the normal component of the change in momentum vector
@@ -100,9 +107,9 @@ coordinate axes.  These are computed as
 
 p_delta = mass * (V_post - V_pre)
 p_delta_t = p_delta - (p_delta dot N) N
-Sx = - Sum_i (p_delta_t_x) / (A * dt)
-Sy = - Sum_i (p_delta_t_y) / (A * dt)
-Sz = - Sum_i (p_delta_t_z) / (A * dt) :pre
+Sx = - Sum_i (p_delta_t_x) / (A * dt / fnum)
+Sy = - Sum_i (p_delta_t_y) / (A * dt / fnum)
+Sz = - Sum_i (p_delta_t_z) / (A * dt / fnum) :pre
 
 where p_delta, V_pre, V_post, N, A, and dt are defined as before.
 P_delta_t is the tangential component of the change in momentum vector
@@ -114,13 +121,14 @@ the surface element by molecules in the group, such that energy lost
 by a particle is a positive flux.  This is computed as
 
 e_delta = 1/2 mass (V_post^2 - V_pre^2)
-Eflux = - Sum_i (e_delta) / (A * dt) :pre
+Eflux = - Sum_i (e_delta) / (A * dt / fnum) :pre
 
 where e_delta is the kinetic energy change in a particle, whose
 velocity changes from V_pre to V_post when colliding with the surface
 element.  The energy flux imparted to the surface element is the sum
 over all contributing e_delta, normalized by A = the area of the
-surface element and dt = the timestep.
+surface element and dt = the timestep and fnum = the real/simulated
+particle ratio set by the "global fnum"_global.html command.
 
 :line
 
