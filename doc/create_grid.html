@@ -13,26 +13,33 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>create_grid Nx Ny Nz level args ... 
+<PRE>create_grid Nx Ny Nz keyword args ... 
 </PRE>
 <UL><LI>Nx,Ny,Nz = size of 1st-level grid in each dimension 
 
-<LI>zero or more level/args pairs may be appended 
+<LI>zero or more keywords/args pairs may be appended 
 
-<LI>level = 2 to Nlevel in ascending order 
+<LI>keyword = <I>level</I> or <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> 
 
-<LI>args = Px Py Pz Cx Cy Cz 
-
-<PRE>  Px Py Pz = range of parent cells in each dimension in which to create child cells
-  Cx Cy Cz = size of child grid in each dimension within parent cells 
+<PRE>  <I>level</I> args = Nlevel Px Py Pz Cx Cy Cz 
+    Nlevel = level from 2 to M, must be in ascending order
+    Px Py Pz = range of parent cells in each dimension in which to create child cells
+    Cx Cy Cz = size of child grid in each dimension within parent cells
+  <I>stride</I> arg = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
+  <I>clump</I> arg = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
+  <I>block</I> args = Px Py Pz
+    Px,Py,Pz = # of processors in each dimension
+  <I>random</I> args = none 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>create_grid 10 10 10
-create_grid 10 10 10 2 * * * 2 2 3
-create_grid 8 8 10 2 5* * * 4 4 4 3 1 2*3 3* 2 2 1 
+create_grid 10 10 10 block * * *
+create_grid 10 10 10 block 4 2 5
+create_grid 10 10 10 level 2 * * * 2 2 3
+create_grid 8 8 10 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -58,19 +65,75 @@ simulations, <I>Nz</I> must equal 1.  A uniform grid has 1 parent cell (the
 entire simulation box) and Nx*Ny*Nz child cells, e.g. 1000 child cells
 in the first example above.
 </P>
-<P>If a hierarchical grid with more levels is desired, they can be
-defined in ascending order, starting with level 2.  The Px, Py, Pz
-arguments specify which cells in the previous level are flagged as
-parents and partitioned to create cells at the new level.  Each of the
-Px, Py, Pz arguments can be a single number or be specified with a
-wildcard asterisk, as in the examples above.  For example, Px can be
-specified as "*" or "*n" or "n*" or "m*n".  If N = the number of grid
-cells in the x-direction in the previous level as defined by Nx (or
-Cx), then an asterisk with no numeric values means all cells with
-indices from 1 to N.  A leading asterisk means all indices from 1 to n
-(inclusive).  A trailing asterisk means all indices from n to N
-(inclusive).  A middle asterisk means all indices from m to n
-(inclusive).
+<P>For uniform grids, one of the other keywords <I>stride</I>, <I>clump</I>,
+<I>block</I>, or <I>random</I> can be used, to determine which processors are
+assigned which cells in the grid.
+</P>
+<P>The <I>stride</I> keyword means that every Pth cell is assigned to the same
+processor, where P is the number of processors.  E.g. if there are 100
+cells and 10 processors, then the 1st processor (proc 0) will be
+assigned cells 1,11,21, ..., 91.  The 2nd processor (proc 1) will be
+assigned cells 2,12,22 ..., 92.  The 10th processor (proc 9) will be
+assigned cells 10,20,30, ..., 100.
+</P>
+<P>The <I>clump</I> keyword means that the Pth clump of cells is assigned to
+the same processor, where P is the number of processors.  E.g. if
+there are N = 100 cells and 10 processors, then the 1st processor
+(proc 0) will be assigned cells 1 to 10.  The 2nd processor (proc 1)
+will be assigned cells 11 to 20.  And The 10th processor (proc 9) will
+be assigned cells 91 to 100.
+</P>
+<P>The argument for <I>stride</I> and <I>clump</I> determines how the N grid cells
+are ordered and is some permutation of <I>x</I>, <I>y</I>, and <I>z</I>.  Each of the
+N cells has 3 indices (I,J,K) to describe its location in the 3d grid.
+If the stride argument is yxz, then the cells will be ordered from 1
+to N with the y dimension (J index) varying fastest, the x dimension
+next (I index), and the z dimension slowest (K index).
+</P>
+<P>The <I>block</I> keyword maps the P processors to a <I>Px</I> by <I>Py</I> by <I>Pz</I>
+logical grid that overlays the actual <I>Nx</I> by <I>Ny</I> by <I>Nz</I> grid.  This
+effectively assigns a contiguous 3d sub-block of cells to each
+processor.
+</P>
+<P>Any of the <I>Px</I>, <I>Py</I>, <I>Pz</I> parameters can be specified with an
+asterisk "*", in which case SPARTA will choose the number of processors
+in that dimension.  It will do this based on the size and shape of the
+global grid so as to minimize the surface-to-volume ratio of each
+processor's sub-block of cells.
+</P>
+<P>The product of Px, Py, Pz must equal P, the total # of processors SPARTA
+is running on.  For a 2d simulation, Pz must equal 1. If multiple
+partitions are being used then P is the number of processors in this
+partition; see <A HREF = "Section_start.html#start_6">this section</A> for an
+explanation of the -partition command-line switch.
+</P>
+<P>Note that if you run on a large, prime number of processors P, then a
+grid such as 1 x P x 1 will be required, which may incur extra
+communication costs.
+</P>
+<P>The <I>random</I> keyword means that each grid cell will be assigned
+randomly to one of the processors.  Note that in this case every
+processor will typically not be assigned exactly the same number of
+cells.
+</P>
+<HR>
+
+<P>If a hierarchical grid with more than one level is desired, they can
+be defined in ascending order, using the <I>level</I> keyword one or more
+times, starting with <I>Nlevel</I> = 2.  The other keywords <I>stride</I>,
+<I>clump</I>, <I>block</I>, or <I>random</I> cannot be used with a hierarchical grid.
+</P>
+<P>The Px, Py, Pz arguments specify which cells in the previous level are
+flagged as parents and partitioned to create cells at the new level.
+Each of the Px, Py, Pz arguments can be a single number or be
+specified with a wildcard asterisk, as in the examples above.  For
+example, Px can be specified as "*" or "*n" or "n*" or "m*n".  If N =
+the number of grid cells in the x-direction in the previous level as
+defined by Nx (or Cx), then an asterisk with no numeric values means
+all cells with indices from 1 to N.  A leading asterisk means all
+indices from 1 to n (inclusive).  A trailing asterisk means all
+indices from n to N (inclusive).  A middle asterisk means all indices
+from m to n (inclusive).
 </P>
 <P>The Cx, Cy, Cz arguments are the number of new cells (in each
 dimension) to partition each parent cell into.  For 2d simulations,
@@ -79,14 +142,14 @@ exist in the previous level are partitioned further.  E.g. level 3
 cells are only added to level 2 cells that exist, since some level 1
 cells may not have been partitioned into level 2 cells.
 </P>
-<P>The 2nd example above creates a 2-level grid.  The 1st level is
-10x10x10.  Each of the 1000 level 1 cells is further partitioned into
-2x2x3 cells.  This means the total number of level 2 cells is 1000 *
-12 = 12000.  The final grid in this example thus has 1001 parent cells
-(the simulation box plus the 1000 level 1 cells), and 12000 child
-cells.
+<P>The next-to-last example above creates a 2-level grid.  The 1st level
+is 10x10x10.  Each of the 1000 level 1 cells is further partitioned
+into 2x2x3 cells.  This means the total number of level 2 cells is
+1000 * 12 = 12000.  The final grid in this example thus has 1001
+parent cells (the simulation box plus the 1000 level 1 cells), and
+12000 child cells.
 </P>
-<P>The 3rd example above creates a 3-level grid.  The 1st level is
+<P>The last example above creates a 3-level grid.  The 1st level is
 8x8x10.  The 2nd level is 4x4x4 within each 1st level cell, but only
 half or 320 of the 640 level 1 cells are partitioned, namely those
 with x indices from 5 to 8.  Those with x indices from 1 to 4 remain
@@ -96,7 +159,7 @@ the level 1 cells, only the level 2 cells with x index = 1, y index =
 2-3, and z-index = 3-4 are further partitioned into level 3 cells,
 which is just 4 of the 64 level 2 cells.
 </P>
-<P>The final grid in the 3rd example thus has 1601 parent cells: 1 for
+<P>The final grid in the last example thus has 1601 parent cells: 1 for
 the simulation box, 320 level 1 cells, and 1280 level 2 cells.  It has
 24640 child cells: 320 level 1 cells, 19200 level 2 cells, and 5120
 level 3 cells.
