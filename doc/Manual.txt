@@ -88,7 +88,7 @@ it gives quick access to documentation for all SPARTA commands.
   2.3 "Building SPARTA as a library"_start_3 :b
   2.4 "Running SPARTA"_start_4 :b
   2.5 "Command-line options"_start_5 :b
-  2.6 "Screen output"_start_6 :b
+  2.6 "Screen output"_start_6 :ule,b
 "Commands"_Section_commands.html :l
   3.1 "SPARTA input script"_cmd_1 :ulb,b
   3.2 "Parsing rules"_cmd_2 :b

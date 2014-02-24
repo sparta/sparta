@@ -96,29 +96,29 @@ Models :h4
   "3d or 2d domains"_dimension.html
   "2d-axisymmetric domains"_Section_howto.html#howto_2
   variety of "global boundary conditions"_boundary.html
-  "create particles"_create_particles.html within flow volume or at "inlet boundaries"_fix_inflow.html
+  "create particles"_create_particles.html within flow volume or at "inlet boundaries"_fix_inflow.html :ul
 
 Geometry :h4
 
   Cartesian, heirarchical grids with multiple levels of local refinement
   "create grid from input script"_create_grid.html or "read from file"_read_grid.html
   triangulated (3d) or line-segmented (2d) "surfaces from files"_read_surf.html
-  surfaces embedded in cells can create cut volumes and split cells
+  surfaces embedded in cells can create cut volumes and split cells :ul
 
 Gas-phase collision and chemistry :h4
 
   collisions between pairs of species groups
-  "VSS (variable soft-sphere) collisions"_collide_vss.html
-  "TCE chemistry"_react_tce.html :ul
+  "VSS (variable soft-sphere) collisions"_collide.html
+  "TCE chemistry"_react.html :ul
 
 Surface collisions :h4
 
-  "specular or diffuse"_surf_collide.html
+  "specular or diffuse"_surf_collide.html :ul
 
 Performance :h4
 
   "static"_balance.html load-balancing of grid cells or particles
-  "dynamic"_fix_balance.html load-balancing of grid cells or particles
+  "dynamic"_fix_balance.html load-balancing of grid cells or particles :ul
 
 Diagnostics :h4
 
@@ -146,8 +146,6 @@ Pizza.py WWW site"_pizza. :l,ule
 
 :link(pizza,http://pizza.sandia.gov)
 :link(python,http://www.python.org)
-
-Specialized features :h4
 
 :line
 

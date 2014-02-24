@@ -18,7 +18,7 @@ SPARTA.
   ref by compute.txt, and all computes in "output" section
  6.5 "Visualizing SPARTA snapshots"_#howto_5
 6.6 "Library interface to SPARTA"_#howto_6
-6.7 "Coupling SPARTA to other codes"_#howto_7
+6.7 "Coupling SPARTA to other codes"_#howto_7 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "this section"_Section_example.html of the manual also
