@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -43,39 +43,42 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>read_surf sphere surf.file
+<PRE>read_surf sphere surf.sphere
 read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Read the geometry of one or more surfaces from a file.  In SPARTA, a
-"surface" is a grid of surface elements on the surface of a physical
-object embedded in the global simulation box.  The surface elements
-are triangles in 3d or line segments in 2d.  Particles collide with
-surface elements as they advect, and optionally perform surface
-chemistry during the collision.  Collision statistics for each surface
-element are tallied, which can be ouput via the <A HREF = "dump.html">dump
+<P>Read the geometry of a surface from a file.  In SPARTA, a "surface" is
+a collection of surface elements that represent the surface of one or
+more physical objects which will be embedded in the global simulation
+box.  The surface elements are triangles in 3d or line segments in 2d.
+The surface elements for each physical object are required to be a
+complete, connected set that tile the entire surface of the object.
+See the discussion of watertight surfaces below.
+</P>
+<P>Particles collide with surface elements as they advect, and optionally
+perform surface chemistry during the collision.  Collision statistics
+for each surface element can be tallied via the <A HREF = "compute_surf.html">compute
+surf</A> command, time-averaged via the <A HREF = "fix_ave_surf.html">fix
+ave/surf</A> command, and ouput via the <A HREF = "dump.html">dump
 surface</A> command.
-</P>
-<P>The surface file contains a list of triangles or line segments; SPARTA
-does not know or care whether they represent one or more physical
-objects.
-</P>
-<P>NOTE: doc that file can be gzipped
 </P>
 <P>All of the surface elements in the file are assigned a surfcoll-ID,
 which is the ID of a surface collision model previously defined by the
 <A HREF = "surf_collide.html">surf_collide</A> command.  This model will be used to
-perform collisions when particles collide with the surface elements in
+perform collisions when particles collide with elements in
 the surface.
 </P>
 <P>The format of the surface file is discussed below.  The optional
 keywords allow the vertices in the file to be translated, scaled, and
-rotated in various ways.  These allow a single input file, e.g. for a
-unit sphere, to be used in a variety of simulations.
+rotated in various ways.  These allow a single surface file,
+e.g. containing a unit sphere, to be used in a variety of simulations.
 </P>
 <HR>
 
+<P>The specified file can be a text file or a gzipped text file (detected
+by a .gz suffix).
+</P>
 <P>A surface file has a header and a body.  The header appears first.
 The first line of the header is always skipped; it typically contains
 a description of the file.  Then lines are read one at a time.  Lines
@@ -130,7 +133,7 @@ file.  <I>P1</I> and <I>p2</I> are the point-IDs of the 2 end points of the line
 segment.  Each is a value from 1 to Npoints, as described above.
 </P>
 <P>The ordering of <I>p1</I> and <I>p2</I> is important as it defines the direction
-of the outward normal for the line segment when a molecule collides
+of the outward normal for the line segment when a particle collides
 with it.  Molecules only collide with the "outer" edge of a line
 segment.  This is defined by a right-hand rule.  The outward normal N
 = (0,0,1) x (p2-p1).  In other words, a unit z-direction vector is
@@ -147,7 +150,7 @@ of the triangle.  Each is a value from 1 to Npoints, as described
 above.
 </P>
 <P>The ordering of <I>p1</I> and <I>p2</I> and <I>p3</I> is important as it defines the
-direction of the outward normal for the triangle when a molecule
+direction of the outward normal for the triangle when a particle
 collides with it.  Molecules only collide with the "outer" face of a
 triangle. This is defined by a right-hand rule.  The outward normal N
 = (p2-p1) x (p3-p1).  In other words, the edge from <I>p1</I> to <I>p2</I> is
@@ -155,11 +158,12 @@ crossed into the edge from <I>p1</I> to <I>p3</I> to determine the normal.
 </P>
 <HR>
 
-<P>The following optional keywords can be specified.  Their geometric
-transformations are performed in the order they are listed, which
-gives flexibility in how surfaces can be manipulated.  Note that the
-order may be important; e.g. performing a <I>scale</I> followed by a
-<I>rotate</I> may not be the same as a <I>rotate</I> followed by a <I>scale</I>.
+<P>The following optional keywords can be specified.  The geometric
+transformations they describe are performed in the order they are
+listed, which gives flexibility in how surfaces can be manipulated.
+Note that the order may be important; e.g. performing an <I>origin</I>
+operation followed by a <I>rotate</I> operation may not be the same as a
+<I>rotate</I> followed by a <I>origin</I>.
 </P>
 <P>Most of the keywords perform a geometric transformation on all the
 vertices in the surface file with respect to an origin point.  By
@@ -232,6 +236,10 @@ coordinates of the initial unclipped points.
 the <A HREF = "create_box.html">create_box</A> command, and after a grid has been
 created by the <A HREF = "create_grid.html">create_grid</A> command.
 </P>
+<P>To read gzipped surface files, you must compile SPARTA with the
+-DSPARTA_GZIP option - see <A HREF = "Section_start.html#start_2">this section</A>
+section of the manual for details.
+</P>
 <P>Every vertex in the final surface (after translation, rotation,
 scaling, etc) must be inside or on the surface of the global
 simulation box.  Note that using the <I>clip</I> operation guarantees that
@@ -239,26 +247,31 @@ this will be the case.
 </P>
 <P>The surface elements in a single surface file must represent a
 "watertight" surface.  For a 2d simulation this means that every point
-is part of exactly 2 or 4 line segments.  For a 3d simulation it means
-that every triangle edge is part of exactly 2 or 4 triangles.  Thus if
-you want to model an infinitely thin object (e.g. a plane), it must be
-gridded on both sides.  If you use the same vertices on both sides,
-this is why 4 line segments or triangles can border the same point or
-triangle edge.  An exception to this rule is made in 2d if a point is
-on the global face of the simulation box.  In that case it may only be
-part of one line segment.  Likewise in 3d, a triangle edge which lies
-entirely in the global face of the simulation box, can be part of only
-one triangle.
+is part of exactly 2 line segments.  For a 3d simulation it means that
+every triangle edge is part of exactly 2 triangles.  Exceptions to
+these rules are made for triangle edges (in 3d) that lie entirely in a
+global face of the simulation box, of for line points (in 2d) that are
+on a global edge of the simulation box.  This can be the case after
+clipping.  This allows use of an object that only partially overlaps
+with the simulation box, e.g. half of a sphere.
 </P>
-<P>Note that this definition of watertight does not
-require that the surface elements in a file represent a single
-physical object; multiple objects can be represented, provided each is
-watertight.
+<P>Note that this definition of watertight does not require that the
+surface elements in a file represent a single physical object;
+multiple objects can be represented, provided each is watertight.
 </P>
-<P>When running a simulation with multiple surfaces, read from one or
-more surface files, you should insure they do not overlap/intersect
-each other.  SPARTA does not check for this, but it will typically lead
-to unphysical particle dynamics.
+<P>Another restriction on surfaces is that they do not represent an
+object that is "infinitely thin", so that two sides of the same object
+lie in the same plane (3d) or on the same line (2d).  This will not
+generate an error when the surface file is read, assuming the
+watertight rule is followed.  However when particles collide with the
+surface, errors will be generated if a particle hits the "inside" of a
+surface element before hitting the "outside" of another element.  This
+can occur for infinitely thin surfaces due to numeric round-off.
+</P>
+<P>Similarly, when running a simulation with multiple objects, read from
+one or more surface files, you should insure they do not
+overlap/intersect each other.  SPARTA does not check for this, but it
+will typically lead to unphysical particle dynamics.
 </P>
 <P><B>Related commands:</B> none
 </P>

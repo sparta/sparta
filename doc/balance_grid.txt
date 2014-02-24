@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -37,7 +37,7 @@ This command adjusts the assignment of grid cells and their particles
 to processors, to attempt to balance the computational cost (load)
 evenly across processors.  The load balancing is "static" in the sense
 that this command performs the balancing once, before or between
-simulations. The assignments will then remain static during the
+simulations. The assignments will remain static during the
 subsequent run.  To perform "dynamic" balancing, see the "fix
 balance"_fix_balance.html command, which can adjust the assignemt of
 grid cells to processors on-the-fly during a run.
@@ -48,13 +48,13 @@ attributes stored by fixes.  The internal data structures within
 SPPARKS for grid cells and particles are re-initialized with the new
 decomposition.
 
-This command is useful to use immediately after the grid is created,
+This command can be used immediately after the grid is created,
 via the "create_grid"_create_grid.html command, to partition the grid
-in a more desirable manner than the default creation allows for.
+in a more desirable manner than the default creation options allow for.
 
-It is also useful to use once molecules have been created, or a
-simulation has come to equilibrium with a spatially varying molecule
-distribution, so that the computational load can be more evenly
+It can also be used once particles have been created, or a
+simulation has come to equilibrium with a spatially varying density
+distribution or particles, so that the computational load is more evenly
 balanced across processors.
 
 :line
@@ -73,26 +73,26 @@ command.  See its doc page for details.
 
 The {random} keyword means that each grid cell will be assigned
 randomly to one of the processors.  Note that in this case every
-processor will typically not be assigned exactly the same number of
+processor will typically not be assigned the exact same number of
 cells.
 
 The {proc} keyword means that each processor will choose a random
 processor to assign its first grid cell to.  It will then loop over
 its grid cells and assign each to consecutive processors, wrapping
-around the collection of processors if necessary.  Note that in this
+around the enumeration of processors if necessary.  Note that in this
 case every processor will typically not be assigned exactly the same
 number of cells.
 
-The {rcb} keyword uses a recurvise coordinate bisectioning (RCB)
+The {rcb} keyword uses a recursive coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to
 processors.  Each grid cell has a "weight" in this algorithm so that
-eacn processor is assigned an equal total weight of grid cells, as
+each processor is assigned an equal total weight of grid cells, as
 nearly as possible.  If the {weight} argument is specified as {cell},
 than the weight for each grid cell is 1.0, so that each processor will
 end up with an equal number of grid cells.  If the {weight} argument
 is specified as {mol}, than the weight for each grid cell is the
-number of molecules it currently owns, so that each processor will end
-up with an equal number of molecules.
+number of particles it currently owns, so that each processor will end
+up with an equal number of particles.
 
 Here are 2 example pictures, for a 2d simulation, of the partioning
 provided by the RCB algorithm for a simulation on P processors of
@@ -110,9 +110,10 @@ This command can only be used after the grid has been created by the
 
 This command also initializes various options in SPARTA before
 performing the balancing.  This is so that grid cells are ready to
-migrate to new processors.  Thus is you get an error like a simulation
-box boundary condition has not been assigned, you will need to do that
-operation in your input script before balancing can be performed.
+migrate to new processors.  Thus if an error is flagged, e.g. that a
+simulation box boundary condition is not yet assigned, that operation
+needs to be performed in the input script before balancing can be
+performed.
 
 [Related commands:]
 

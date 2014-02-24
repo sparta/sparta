@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "Section_python.html">Previous Section</A> - <A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> -
+<CENTER><A HREF = "Section_python.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> -
 <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_history.html">Next
 Section</A> 
 </CENTER>
@@ -11,18 +11,18 @@ Section</A>
 
 <HR>
 
-<H3>12. Errors 
+<H3>10. Errors 
 </H3>
 <P>This section describes the various kinds of errors you can encounter
 when using SPARTA.
 </P>
-12.1 <A HREF = "#err_1">Common problems</A><BR>
-12.2 <A HREF = "#err_2">Reporting bugs</A><BR>
-12.3 <A HREF = "#err_3">Error & warning messages</A> <BR>
+10.1 <A HREF = "#err_1">Common problems</A><BR>
+10.2 <A HREF = "#err_2">Reporting bugs</A><BR>
+10.3 <A HREF = "#err_3">Error & warning messages</A> <BR>
 
 <HR>
 
-<A NAME = "err_1"></A><H4>12.1 Common problems 
+<A NAME = "err_1"></A><H4>10.1 Common problems 
 </H4>
 <P>If two SPARTA runs do not produce the same answer on different
 machines or different numbers of processors, this is typically not a
@@ -62,7 +62,7 @@ physics or numerical mistakes, like choosing too big a timestep,
 specifying erroneous force field coefficients, or putting 2 atoms on
 top of each other!  If you run into errors that SPARTA doesn't catch
 that you think it should flag, please send an email to the
-<A HREF = "http://dsmc.sandia.gov/authors.html">developers</A>.
+<A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
 </P>
 <P>If you get an error message about an invalid command in your input
 script, you can determine what command is causing the problem by
@@ -112,18 +112,18 @@ buffering or boost the sizes of messages that can be buffered.
 </P>
 <HR>
 
-<A NAME = "err_2"></A><H4>12.2 Reporting bugs 
+<A NAME = "err_2"></A><H4>10.2 Reporting bugs 
 </H4>
 <P>If you are confident that you have found a bug in SPARTA, follow these
 steps.
 </P>
-<P>Check the <A HREF = "http://dsmc.sandia.gov/bug.html">New features and bug
-fixes</A> section of the <A HREF = "http://dsmc.sandia.gov">SPARTA WWW
+<P>Check the <A HREF = "http://sparta.sandia.gov/bug.html">New features and bug
+fixes</A> section of the <A HREF = "http://sparta.sandia.gov">SPARTA WWW
 site</A> to see if the bug has already been reported or fixed or the
-<A HREF = "http://dsmc.sandia.gov/unbug.html">Unfixed bug</A> to see if a fix is
+<A HREF = "http://sparta.sandia.gov/unbug.html">Unfixed bug</A> to see if a fix is
 pending.
 </P>
-<P>Check the <A HREF = "http://dsmc.sandia.gov/mail.html">mailing list</A>
+<P>Check the <A HREF = "http://sparta.sandia.gov/mail.html">mailing list</A>
 to see if it has been discussed before.
 </P>
 <P>If not, send an email to the mailing list describing the problem with
@@ -138,11 +138,11 @@ bug and try to identify what command or combination of commands is
 causing the problem.
 </P>
 <P>As a last resort, you can send an email directly to the
-<A HREF = "http://dsmc.sandia.gov/authors.html">developers</A>.
+<A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
 </P>
 <HR>
 
-<H4><A NAME = "err_3"></A>12.3 Error & warning messages 
+<H4><A NAME = "err_3"></A>10.3 Error & warning messages 
 </H4>
 <P>These are two alphabetic lists of the <A HREF = "#error">ERROR</A> and
 <A HREF = "#warn">WARNING</A> messages SPARTA prints out and the reason why.  If the
@@ -164,504 +164,6 @@ source code or contact the author of the package.
 <H4><A NAME = "error"></A>Errors: 
 </H4>
 <DL>
-
-<DT><I></I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>%d particles are not in correct cell</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>All universe/uloop variables must have same # of values</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>All variables in next command must be same style</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Another input script is already being processed</I> 
-
-<DD>Cannot attempt to open a 2nd input script, when the original file is
-still being processed. 
-
-<DT><I>Arccos of invalid value in variable formula</I> 
-
-<DD>Argument of arccos() must be between -1 and 1. 
-
-<DT><I>Arcsin of invalid value in variable formula</I> 
-
-<DD>Argument of arcsin() must be between -1 and 1. 
-
-<DT><I>Atom vector in equal-style variable formula</I> 
-
-<DD>Atom vectors generate one value per atom which is not allowed
-in an equal-style variable. 
-
-<DT><I>Atom-style variable in equal-style variable formula</I> 
-
-<DD>Atom-style variables generate one value per atom which is not allowed
-in an equal-style variable. 
-
-<DT><I>Bad grid of processors for create_grid</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Bigint setting in dsmctype.h is invalid</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Box bounds are invalid</I> 
-
-<DD>The box boundaries specified in the read_data file are invalid.  The
-lo value must be less than the hi value for all 3 dimensions. 
-
-<DT><I>Can only use -plog with multiple partitions</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Can only use -pscreen with multiple partitions</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot create grid when grid is already defined</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot create/grow a vector/array of pointers for %s</I> 
-
-<DD>SPARTA code is making an illegal call to the templated memory
-allocaters, to create a vector or array of pointers. 
-
-<DT><I>Cannot create_box after simulation box is defined</I> 
-
-<DD>The create_box command cannot be used after a read_data, read_restart,
-or create_box command. 
-
-<DT><I>Cannot create_grid before simulation box is defined</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot create_molecules before simulation box is defined</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot open -reorder file</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot open input script %s</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Cannot open log.sparta</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot open logfile</I> 
-
-<DD>The SPARTA log file named in a command-line argument cannot be opened.
-Check that the path and name are correct. 
-
-<DT><I>Cannot open logfile %s</I> 
-
-<DD>The SPARTA log file specified in the input script cannot be opened.
-Check that the path and name are correct. 
-
-<DT><I>Cannot open screen file</I> 
-
-<DD>The screen file specified as a command-line argument cannot be
-opened.  Check that the directory you are running in allows for files
-to be created. 
-
-<DT><I>Cannot open species file %s</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot open universe log file</I> 
-
-<DD>For a multi-partition run, the master log file cannot be opened.
-Check that the directory you are running in allows for files to be
-created. 
-
-<DT><I>Cannot open universe screen file</I> 
-
-<DD>For a multi-partition run, the master screen file cannot be opened.
-Check that the directory you are running in allows for files to be
-created. 
-
-<DT><I>Cannot redefine variable as a different style</I> 
-
-<DD>An equal-style variable can be re-defined but only if it was
-originally an equal-style variable. 
-
-<DT><I>Cannot run 2d simulation with nonperiodic Z dimension</I> 
-
-<DD>Use the boundary command to make the z dimension periodic in order to
-run a 2d simulation. 
-
-<DT><I>Cannot set velocity to non-zero z value for 2d simulation</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot use -reorder after -partition</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Cannot use cwiggle in variable formula between runs</I> 
-
-<DD>This is a function of elapsed time. 
-
-<DT><I>Cannot use ramp in variable formula between runs</I> 
-
-<DD>This is because the ramp() function is time dependent. 
-
-<DT><I>Cannot use swiggle in variable formula between runs</I> 
-
-<DD>This is a function of elapsed time. 
-
-<DT><I>Cannot use vdisplace in variable formula between runs</I> 
-
-<DD>This is a function of elapsed time. 
-
-<DT><I>Compute used in variable between runs is not current</I> 
-
-<DD>Computes cannot be invoked by a variable in between runs.  Thus they
-must have been evaluated on the last timestep of the previous run in
-order for their value(s) to be accessed.  See the doc page for the
-variable command for more info. 
-
-<DT><I>Create_box z box bounds must straddle 0.0 for 2d simulation</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Create_grid nz value must be 1 for a 2d simulation</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Created incorrect # of particles = %ld</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Dimension command after simulation box is defined</I> 
-
-<DD>The dimension command cannot be used after a read_data,
-read_restart, or create_box command. 
-
-<DT><I>Divide by 0 in variable formula</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Empty brackets in variable</I> 
-
-<DD>There is no variable syntax that uses empty brackets.  Check
-the variable doc page. 
-
-<DT><I>Expected floating point parameter in variable definition</I> 
-
-<DD>The quantity being read is a non-numeric value. 
-
-<DT><I>Expected integer parameter in variable definition</I> 
-
-<DD>The quantity being read is a floating point or non-numeric value. 
-
-<DT><I>Failed to allocate %ld bytes for array %s</I> 
-
-<DD>Your SPARTA simulation has run out of memory.  You need to run a
-smaller simulation or on more processors. 
-
-<DT><I>Failed to reallocate %ld bytes for array %s</I> 
-
-<DD>Your SPARTA simulation has run out of memory.  You need to run a
-smaller simulation or on more processors. 
-
-<DT><I>Fix in variable not computed at compatible time</I> 
-
-<DD>Fixes generate their values on specific timesteps.  The variable is
-requesting the values on a non-allowed timestep. 
-
-<DT><I>Gmask function in equal-style variable formula</I> 
-
-<DD>Gmask is per-atom operation. 
-
-<DT><I>Grmask function in equal-style variable formula</I> 
-
-<DD>Grmask is per-atom operation. 
-
-<DT><I>Group ID in variable formula does not exist</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Illegal ... command</I> 
-
-<DD>Self-explanatory.  Check the input script syntax and compare to the
-documentation for the command.  You can use -echo screen as a
-command-line option when running SPARTA to see the offending line. 
-
-<DT><I>Incorrect line format in species file</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Index between variable brackets must be positive</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Indexed per-atom vector in variable formula without atom map</I> 
-
-<DD>Accessing a value from an atom vector requires the ability to lookup
-an atom index, which is provided by an atom map.  An atom map does not
-exist (by default) for non-molecular problems.  Using the atom_modify
-map command will force an atom map to be created. 
-
-<DT><I>Input line too long after variable substitution</I> 
-
-<DD>This is a hard (very large) limit defined in the input.cpp file. 
-
-<DT><I>Input line too long: %s</I> 
-
-<DD>This is a hard (very large) limit defined in the input.cpp file. 
-
-<DT><I>Invalid -reorder N value</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Invalid Boolean syntax in if command</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Invalid atom vector in variable formula</I> 
-
-<DD>The atom vector is not recognized. 
-
-<DT><I>Invalid collide style</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Invalid command-line argument</I> 
-
-<DD>One or more command-line arguments is invalid.  Check the syntax of
-the command you are using to launch SPARTA. 
-
-<DT><I>Invalid compute ID in variable formula</I> 
-
-<DD>The compute is not recognized. 
-
-<DT><I>Invalid entry in reorder file</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Invalid fix ID in variable formula</I> 
-
-<DD>The fix is not recognized. 
-
-<DT><I>Invalid group function in variable formula</I> 
-
-<DD>Group function is not recognized. 
-
-<DT><I>Invalid math function in variable formula</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Invalid math/group/special function in variable formula</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Invalid run command N value</I> 
-
-<DD>The number of timesteps must fit in a 32-bit integer.  If you want to
-run for more steps than this, perform multiple shorter runs. 
-
-<DT><I>Invalid seed for Marsaglia random # generator</I> 
-
-<DD>The initial seed for this random number generator must be a positive
-integer less than or equal to 900 million. 
-
-<DT><I>Invalid seed for Park random # generator</I> 
-
-<DD>The initial seed for this random number generator must be a positive
-integer. 
-
-<DT><I>Invalid special function in variable formula</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Invalid syntax in variable formula</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Invalid variable evaluation in variable formula</I> 
-
-<DD>A variable used in a formula could not be evaluated. 
-
-<DT><I>Invalid variable in next command</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Invalid variable name</I> 
-
-<DD>Variable name used in an input script line is invalid. 
-
-<DT><I>Invalid variable name in variable formula</I> 
-
-<DD>Variable name is not recognized. 
-
-<DT><I>Invalid variable style with next command</I> 
-
-<DD>Variable styles <I>equal</I> and <I>world</I> cannot be used in a next
-command. 
-
-<DT><I>Label wasn't found in input script</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Log of zero/negative value in variable formula</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>MPI_SPARTA_BIGINT and bigint in dsmctype.h are not compatible</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Mismatched brackets in variable</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Mismatched compute in variable formula</I> 
-
-<DD>A compute is referenced incorrectly or a compute that produces per-atom
-values is used in an equal-style variable formula. 
-
-<DT><I>Mismatched fix in variable formula</I> 
-
-<DD>A fix is referenced incorrectly or a fix that produces per-atom
-values is used in an equal-style variable formula. 
-
-<DT><I>Mismatched variable in variable formula</I> 
-
-<DD>A variable is referenced incorrectly or an atom-style variable that
-produces per-atom values is used in an equal-style variable
-formula. 
-
-<DT><I>Must use -in switch with multiple partitions</I> 
-
-<DD>A multi-partition simulation cannot read the input script from stdin.
-The -in command-line option must be used to specify a file. 
-
-<DT><I>Non digit character between brackets in variable</I> 
-
-<DD>Self-explantory. 
-
-<DT><I>Nprocs not a multiple of N for -reorder</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Partition numeric index is out of bounds</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Per-processor grid count is too big</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Power by 0 in variable formula</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Processor partitions are inconsistent</I> 
-
-<DD>The total number of processors in all partitions must match the number
-of processors SPARTA is running on. 
-
-<DT><I>Region ID in variable formula does not exist</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Rmask function in equal-style variable formula</I> 
-
-<DD>Rmask is per-atom operation. 
-
-<DT><I>Run command before simulation box is defined</I> 
-
-<DD>The run command cannot be used before a read_data, read_restart, or
-create_box command. 
-
-<DT><I>Small,big integers are not sized correctly</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Smallint setting in dsmctype.h is invalid</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Species ID does not appear in species file</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Species ID is already defined</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Sqrt of negative value in variable formula</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Substitution for illegal variable</I> 
-
-<DD>Input script line contained a variable that could not be substituted
-for. 
-
-<DT><I>Too many timesteps</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Unbalanced quotes in input line</I> 
-
-<DD>No matching end double quote was found following a leading double
-quote. 
-
-<DT><I>Unexpected end of -reorder file</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Unexpected end of reorder file</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>Universe/uloop variable count < # of partitions</I> 
-
-<DD>A universe or uloop style variable must specify a number of values >= to the
-number of processor partitions. 
-
-<DT><I>Unknown command: %s</I> 
-
-<DD>The command is not known to SPARTA.  Check the input script. 
-
-<DT><I>Variable formula compute array is accessed out-of-range</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Variable formula fix array is accessed out-of-range</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Variable name must be alphanumeric or underscore characters</I> 
-
-<DD>Self-explanatory. 
-
-<DT><I>Velocity command before simulation box is defined</I> 
-
-<DD>The velocity command cannot be used before a read_data, read_restart,
-or create_box command. 
-
-<DT><I>Velocity command with no particles existing</I> 
-
-<DD>UNDOCUMENTED 
-
-<DT><I>World variable count doesn't match # of partitions</I> 
-
-<DD>A world-style variable must specify a number of values equal to the
-number of processor partitions. 
 
 
 </DL>

@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -24,10 +24,17 @@
 <P><B>Description:</B>
 </P>
 <P>This command sets the random number seed for a master random number
-generator which is used by SPARTA to initialize auxiliary random number
-generators which in turn are used for all operations in the code
-requiring random numbers.  Thus this command is required to perform
-any simulation with SPARTA.
+generator.  This generator is used by SPARTA to initialize auxiliary
+random number generators, which in turn are used for all operations in
+the code requiring random numbers.  This means you can effectively run
+a statistically-independent simulation by simply changing this single
+seed.
+</P>
+<P>The various random number generators used in SPARTA are portable,
+which means they produce the same random number streams on any
+machine.
+</P>
+<P>This command is required to perform a SPARTA simulation.
 </P>
 <P><B>Restrictions:</B> none
 </P>

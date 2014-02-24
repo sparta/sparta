@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -19,7 +19,7 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
-<LI>style = <I>molecule</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
+<LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
 
 <LI>N = dump every this many timesteps 
 
@@ -27,21 +27,21 @@
 
 <LI>args = list of arguments for a particular style 
 
-<PRE>  <I>molecule</I> args = list of molecule attributes
+<PRE>  <I>particle</I> args = list of particle attributes
     possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name 
 </PRE>
-<PRE>      id = molecule ID
-      type = molecule species
+<PRE>      id = particle ID
+      type = particle species
       proc = ID of owning processor
-      x,y,z = unscaled molecule coordinates
-      xs,ys,zs = scaled molecule coordinates
-      vx,vy,vz = molecule velocities
-      c_ID = per-molecule vector (or array) calculated by a compute with ID
-      c_ID[N] = Nth column of per-molecule array calculated by a compute with ID
-      f_ID = per-molecule vector (or array) calculated by a fix with ID
-      f_ID[N] = Nth column of per-molecule array calculated by a fix with ID
-      v_name = per-molecule vector calculated by a molecule-style variable with name 
+      x,y,z = unscaled particle coordinates
+      xs,ys,zs = scaled particle coordinates
+      vx,vy,vz = particle velocities
+      c_ID = per-particle vector (or array) calculated by a compute with ID
+      c_ID[N] = Nth column of per-particle array calculated by a compute with ID
+      f_ID = per-particle vector (or array) calculated by a fix with ID
+      f_ID[N] = Nth column of per-particle array calculated by a fix with ID
+      v_name = per-particle vector calculated by a particle-style variable with name 
 </PRE>
 <PRE>  <I>grid</I> args = list of grid attributes
     possible attributes = id, idstr, proc, xlo, ylo, zlo, xhi, yhi, zhi,
@@ -54,7 +54,6 @@
       xhi,yhi,zhi = coords of lower left corner of grid cell
       xc,yc,zc = coords of center of grid cell
       vol = flow volume of grid cell (area in 2d)
-      svol = ???
       c_ID = per-grid vector (or array) calculated by a compute with ID
       c_ID[N] = Nth column of per-grid array calculated by a compute with ID
       f_ID = per-grid vector (or array) calculated by a fix with ID
@@ -81,8 +80,8 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>dump 1 molecule 100 dump.myforce.* id type x y vx fx
-dump 2 molecule 100 dump.%.myforce id type c_myF[3] v_ke
+<PRE>dump 1 particle 100 dump.myforce.* id type x y vx fx
+dump 2 particle 100 dump.%.myforce id type c_myF[3] v_ke
 dump 3 grid 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi 
 </PRE>
 <P><B>Description:</B>
@@ -104,7 +103,7 @@ or one per processor).
 </P>
 <HR>
 
-<P>The <I>molecule</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
+<P>The <I>particle</I> and <I>grid</I> and <I>surf</I> styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
 of the SPARTA <A HREF = "Section_tools.html">post-processing tools</A>, including
 <A HREF = "http://pizza.sandia.gov">Pizza.py</A>, work with this format.
@@ -128,15 +127,11 @@ the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the <A HREF = "doc/boundary.html">boundary</A> command for details.
 </P>
 <P>The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" line in each
-snapshot lists column descriptors for the per-molecule or per-grid or
-per-surf lines that follow.  The descriptors will be the attributes
-you specify in the dump command for the style.
-</P>
-<P>Styles <I>molecule</I> and <I>grid</I> and <I>surf</I> allow you to specify a list of
-attributes to be written to the dump file for each molecule or grid
-cell or surface.  Possible attributes are listed above and will appear
-in the order specified.  An explanation of the possible attributes is
-given below.
+snapshot lists column descriptors for the per-particle or per-grid or
+per-surf lines that follow.  The descriptors are the attributes
+specied in the dump command for the style.  Possible attributes are
+listed above and will appear in the order specified.  An explanation
+of the possible attributes is given below.
 </P>
 <HR>
 
@@ -180,7 +175,7 @@ to convert it back to text format (see the <A HREF = "Section_tools.html#binary"
 tool</A>) or write your own code to read the
 binary file.  The format of the binary file can be understood by
 looking at the tools/binary2txt.cpp file.  This option is only
-available for the <I>molecule</I> style.
+available for the <I>particle</I> style.
 </P>
 <P>If the filename ends with ".gz", the dump file (or files, if "*" or "%"
 is also used) is written in gzipped format.  A gzipped dump file will
@@ -189,54 +184,54 @@ to write.
 </P>
 <HR>
 
-<P>This section explains the molecule attributes that can be specified as
-part of the <I>molecule</I> style.
+<P>This section explains the particle attributes that can be specified as
+part of the <I>particle</I> style.
 </P>
-<P><I>Id</I> is the molecule ID.  <I>Type</I> is an integer index representing the
-molecule species.  <I>Proc</I> is the ID of the processor which owns the
-grid cell.
+<P><I>Id</I> is the particle ID.  <I>Type</I> is an integer index representing the
+particle species.  <I>Proc</I> is the ID of the processor which currently
+owns the particle.
 </P>
-<P>The <I>x</I>, <I>y</I>, <I>z</I> attributes write molecule coordinates "unscaled", in
-the appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> if
-you want the coordinates "scaled" to the box size, so that each value
-is 0.0 to 1.0.
+<P>The <I>x</I>, <I>y</I>, <I>z</I> attributes write particle coordinates "unscaled", in
+the appropriate distance <A HREF = "units.html">units</A>.  Use <I>xs</I>, <I>ys</I>, <I>zs</I> to
+"scale" the coordinates to the box size, so that each value is 0.0 to
+1.0.
 </P>
-<P><I>Vx</I>, <I>vy</I>, <I>vz</I> are components of molecule velocity.
+<P><I>Vx</I>, <I>vy</I>, <I>vz</I> are components of particle velocity.
 </P>
-<P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-molecule vectors or
+<P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-particle vectors or
 arrays calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in
 the attribute should be replaced by the actual ID of the compute that
 has been defined previously in the input script.  See the
 <A HREF = "compute.html">compute</A> command for details.
 </P>
-<P>If <I>c_ID</I> is used as a attribute, then the per-molecule vector
+<P>If <I>c_ID</I> is used as a attribute, then the per-particle vector
 calculated by the compute is printed.  If <I>c_ID[N]</I> is used, then N
 must be in the range from 1-M, which will print the Nth column of the
-M-length per-molecule array calculated by the compute.
+M-length per-particle array calculated by the compute.
 </P>
 <P>The <I>f_ID</I> and <I>f_ID[N]</I> attributes allow vector or array
-per-molecule quantities calculated by a <A HREF = "fix.html">fix</A> to be output.
+per-particle quantities calculated by a <A HREF = "fix.html">fix</A> to be output.
 The ID in the attribute should be replaced by the actual ID of the fix
 that has been defined previously in the input script.
 </P>
-<P>If <I>f_ID</I> is used as a attribute, then the per-molecule vector
+<P>If <I>f_ID</I> is used as a attribute, then the per-particle vector
 calculated by the fix is printed.  If <I>f_ID[N]</I> is used, then N must
 be in the range from 1-M, which will print the Nth column of the
-M-length per-molecule array calculated by the fix.
+M-length per-particle array calculated by the fix.
 </P>
-<P>The <I>v_name</I> attribute allows per-molecule vectors calculated by a
+<P>The <I>v_name</I> attribute allows per-particle vectors calculated by a
 <A HREF = "variable.html">variable</A> to be output.  The name in the attribute
 should be replaced by the actual name of the variable that has been
-defined previously in the input script.  Only a molecule-style
+defined previously in the input script.  Only a particle-style
 variable can be referenced, since it is the only style that generates
-per-molecule values.  Variables of style <I>molecule</I> can reference
-per-molecule attributes, stats keywords, or invoke other computes,
+per-particle values.  Variables of style <I>particle</I> can reference
+per-particle attributes, stats keywords, or invoke other computes,
 fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
 </P>
-<P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
+<P>See <A HREF = "Section_modify.html">this section</A> of the manual for information
 on how to add new compute and fix styles to SPARTA to calculate
-per-molecule quantities which could then be output into dump files.
+per-particle quantities which could then be output into dump files.
 </P>
 <HR>
 
@@ -250,12 +245,12 @@ ID is stored as an integer such as 5774983, but can also be decoded
 into a string such as 33-4-6, which makes it easier to understand the
 grid hierarchy.  In this case it means the grid cell is at the 3rd
 level of the hierarchy.  Its grandparent cell was 33 at the 1st level,
-its parent was cell 4 within cell 33, and the cell itself is cell 6
-within cell 4 within cell 33.  If you specify <I>id</I>, the ID is printed
-directly as an integer.  If you specify <I>idstr</I>, it is printed as a
-string.
+its parent was cell 4 (at level 2) within cell 33, and the cell itself
+is cell 6 (at level 3) within cell 4 within cell 33.  If you specify
+<I>id</I>, the ID is printed directly as an integer.  If you specify
+<I>idstr</I>, it is printed as a string.
 </P>
-<P><I>Proc</I> is the ID of the processor which owns the grid cell.
+<P><I>Proc</I> is the ID of the processor which currently owns the grid cell.
 </P>
 <P>The <I>xlo</I>, <I>ylo</I>, <I>zlo</I> attributes write the coordinates of the
 lower-left corner of the grid cell in the appropriate distance
@@ -267,12 +262,8 @@ simulation.
 </P>
 <P>The <I>vol</I> attribute is the flow volume of the grid cell (or area in 2d).
 Flow volume is the portion of the grid cell that is accessible to
-moleclues, i.e. outside any closed surface that may intersect
+particles, i.e. outside any closed surface that may intersect
 the cell.
-</P>
-<P>NOTE: what is it for split cells, or sub cells?
-</P>
-<P>NOTE: what is svol?
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-grid vectors or arrays
 calculated by a <A HREF = "compute.html">compute</A> to be output.  The ID in the
@@ -317,9 +308,9 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 </P>
-<P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
-on how to add new compute and fix styles to SPARTA to calculate per-grid
-quantities which could then be output into dump files.
+<P>See <A HREF = "Section_modify.html">this section</A> of the manual for information
+on how to add new compute and fix styles to SPARTA to calculate
+per-grid quantities which could then be output into dump files.
 </P>
 <HR>
 
@@ -381,9 +372,9 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 </P>
-<P>See <A HREF = "Section_modify.html">Section_modify</A> of the manual for information
-on how to add new compute and fix styles to SPARTA to calculate per-surf
-quantities which could then be output into dump files.
+<P>See <A HREF = "Section_modify.html">this section</A> of the manual for information
+on how to add new compute and fix styles to SPARTA to calculate
+per-surf quantities which could then be output into dump files.
 </P>
 <HR>
 

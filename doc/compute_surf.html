@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -25,11 +25,11 @@
 
 <LI>value = <I>n</I> or <I>press</I> or <I>px</I> or <I>py</I> or <I>pz</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
 
-<PRE>  n = count of molecules hitting surface element
+<PRE>  n = count of particles hitting surface element
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
   shx,shy,shz = components of shear stress on surface element
-  ke = flux of particle kinetic energy onto surface element 
+  ke = flux of particle kinetic energy on surface element 
 </PRE>
 
 </UL>
@@ -38,8 +38,8 @@
 <PRE>compute 1 surf all n press eng
 compute mine surf species press shx shy shz 
 </PRE>
-<P>These commands will dump averages for all species and each surface
-element to a file every 1000 steps:
+<P>These commands will dump time averages for each species and each
+surface element to a dump file every 1000 steps:
 </P>
 <P>compute 1 boundary species n press shx shy shz
 fix 1 ave/surf 10 100 1000 c_1
@@ -48,7 +48,7 @@ dump 1 surf 1000 tmp.surf id f_1
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each
-surface element, based on the molecules that strike that element.  The
+surface element, based on the particles that strike that element.  The
 values are summed for each group of species in the specified mixture.
 See the <A HREF = "mixture.html">mixture</A> command for how a set of species can be
 partitioned into groups.
@@ -63,23 +63,23 @@ different ways.  The values for a single timestep can be output by the
 </P>
 <P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_surf.html">fix
 ave/surf</A> command.  It does its averaging as if the
-molecules striking the surface element at each sampling timestep were
+particles striking the surface element at each sampling timestep were
 combined together into one large set to compute the formulas below.
 The answer is then divided by the number of sampling timesteps if it
-is not otherwise normalized by the number of molecules.  Note that
-this can be a different normalization than taking the values produced
-by the formulas below for a single timestep, summing them over the
+is not otherwise normalized by the number of particles.  Note that
+this is a different normalization than taking the values produced by
+the formulas below for a single timestep, summing them over the
 sampling timesteps, and then dividing by the number of sampling
 timesteps.  However, for the current values below, the two
 normalization methods are the same.
 </P>
 <HR>
 
-<P>The <I>n</I> value counts the number of moleclues in the group striking the
+<P>The <I>n</I> value counts the number of particles in the group striking the
 surface element.
 </P>
 <P>The <I>press</I> value calculates the pressure <I>P</I> exerted on the surface
-element in the normal direction by molecules in the group, such that
+element in the normal direction by particles in the group, such that
 outward pressure is positive.  This is computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
@@ -95,7 +95,7 @@ the timestep and fnum = the real/simulated particle ratio set by the
 </P>
 <P>The <I>px</I>, <I>py</I>, <I>pz</I> values calculate the normal pressure Px, Py, Pz
 extered on the surface element in the direction of its normal by
-molecules in the group, with respect to the x, y, z coordinate axes.
+particles in the group, with respect to the x, y, z coordinate axes.
 These are computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
@@ -111,7 +111,7 @@ components.
 </P>
 <P>The <I>shx</I>, <I>shy</I>, <I>shz</I> values calculate the shear pressure Sx, Sy, Sz
 extered on the surface element in the tangential direction to its
-normal by molecules in the group, with respect to the x, y, z
+normal by particles in the group, with respect to the x, y, z
 coordinate axes.  These are computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
@@ -126,7 +126,7 @@ p_delta of a particle.  P_delta_t_x (and y,z) are its x, y, z
 components.
 </P>
 <P>The <I>ke</I> value calculates the kinetic energy flux <I>Eflux</I> imparted to
-the surface element by molecules in the group, such that energy lost
+the surface element by particles in the group, such that energy lost
 by a particle is a positive flux.  This is computed as
 </P>
 <PRE>e_delta = 1/2 mass (V_post^2 - V_pre^2)
@@ -156,9 +156,10 @@ section</A> for an overview of SPARTA output
 options.
 </P>
 <P>The per-surf array values will be in the <A HREF = "units.html">units</A>
-appropriate to the individual values as described above.  <I>Press</I>,
-<I>px</I>, <I>py</I>, <I>pz</I>, <I>shx</I>, <I>shy</I>, <I>shz</I> are in in presure units.  <I>Ke</I>
-is in energy units.
+appropriate to the individual values as described above. <I>N</I> is
+unitless.  <I>Press</I>, <I>px</I>, <I>py</I>, <I>pz</I>, <I>shx</I>, <I>shy</I>, <I>shz</I> are in in
+presure units.  <I>Ke</I> is in energy/area-time units for 3d simulations
+and energy/length-time units for 2d simulations.
 </P>
 <P><B>Restrictions:</B> none
 </P>

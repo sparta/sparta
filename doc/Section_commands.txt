@@ -1,6 +1,6 @@
 "Previous Section"_Section_start.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_howto.html :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -164,7 +164,7 @@ These items must be setup to run a SPARTA calculation:
 
 simulation box via "create_box"_create_box.html
 grid via "create_grid"_create_grid.html
-particles via "create_molecules"_create_molecules.html :ul
+particles via "create_particles"_create_particles.html :ul
 
 (3) Settings
 
@@ -199,7 +199,7 @@ Initialization:
 Problem definition:
 
 "create_box"_create_box.html, "create_grid"_create_grid.html,
-"create_molecules"_create_molecules.html, "species"_species.html
+"create_particles"_create_particles.html, "species"_species.html
 
 Settings:
 
@@ -237,7 +237,7 @@ in the command's documentation.
 "collide"_collide.html,
 "collide_modify"_collide_modify.html,
 "compute"_compute.html,
-"create_molecules"_create_molecules.html,
+"create_particles"_create_particles.html,
 "create_box"_create_box.html,
 "create_grid"_create_grid.html,
 "dimension"_dimension.html,
@@ -303,7 +303,7 @@ each style or click on the style itself for a full description:
 
 "boundary"_compute_boundary.html,
 "grid"_compute_grid.html,
-"ke/molecule"_compute_ke_molecule.html,
+"ke/particle"_compute_ke_particle.html,
 "sonine/grid"_compute_sonine_grid.html,
 "surf"_compute_surf.html,
 "temp"_compute_temp.html :tb(c=6,ea=c)

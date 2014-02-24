@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -30,6 +30,13 @@ quantities output to the screen, log file, dump files, and other
 output files.  Typically, this command is used at the very beginning
 of an input script.
 </P>
+<P>IMPORTANT NOTE: Internally, this command simply sets the numeric
+values of conversion factors used by SPARTA, e.g. the Boltzmann
+constant used to convert temperature to energy.  It is up to you to
+insure that all input values used in the input script or other read-in
+files (surface data, species files, reaction files) contain numeric
+values consistent with the chosen units.
+</P>
 <P>For style <I>cgs</I>, these are the units:
 </P>
 <UL><LI>mass = grams
@@ -54,8 +61,7 @@ of an input script.
 <LI>acceleration = meters/second^2
 <LI>temperature = degrees K 
 </UL>
-<P>The units command also sets the timestep size for each style:
-distance to default values for each style:
+<P>The units command also sets the default timestep size for each style:
 </P>
 <UL><LI>For style <I>cgs</I> this is dt = 1.0 sec.
 <LI>For style <I>si</I> this is dt = 1.0 sec. 

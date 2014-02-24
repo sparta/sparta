@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -48,9 +48,10 @@ Each input value can be a standard surface element attribute or can be
 the result of a "compute"_compute.html or "fix"_fix.html or the
 evaluation of a surf-style "variable"_variable.html.  In the latter
 cases, the compute, fix, or variable must produce a per-surf vector,
-not a global quantity or per-molecule quantity.  If you wish to
+not a global or per-particle or per-grid quantity.  If you wish to
 time-average global quantities from a compute, fix, or variable, then
-see the "fix ave/time"_fix_ave_time.html command.
+see the "fix ave/time"_fix_ave_time.html command.  To time-average
+per-grid quantities, see the "fix ave/grid"_fix_ave_grid.html command.
 
 "Computes"_compute.html that produce per-surf vectors or arrays are
 those which have the word {surf} in their style name.  See the doc
@@ -122,9 +123,6 @@ variable"_variable.html.  Variables of style {surf} can reference
 fixes, or variables when they are evaluated, so this is a very general
 means of generating per-surf quantities to time average.
 
-NOTE: The "variable"_variable.html command does not yet support
-surf-style varaibles.
-
 :line
 
 For averaging of a value that comes from a compute or fix,
@@ -138,10 +136,6 @@ shx, ke, etc).  When this command averages over a series of timesteps,
 the numerator and denominator are summed separately.  This means the
 numerator/denominator division only takes place when this fix produces
 output, every Nfreq timesteps.
-
-NOTE: Give an example where the 2 ways of normalizing give different
-answers, like with "compute grid"_compute_grid.html.  Not currently
-the case for compute surf, since all denominators are (A*dt).
 
 For averaging of a value that comes from a surf-style variable, no
 normalization is performed; the variable value is used as-is.  This
@@ -168,11 +162,10 @@ re-defining the fix, or by re-specifying it.
 
 :line
 
-[Restart, fix_modify, output info:]
+[Restart, output info:]
 
 No information about this fix is written to "binary restart
-files"_restart.html.  None of the "fix_modify"_fix_modify.html options
-are relevant to this fix.
+files"_restart.html.
 
 This fix produces a per-surf vector or array which can be accessed by
 various output commands.  A vector is produced if only a single

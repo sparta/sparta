@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -45,10 +45,10 @@ fix extra print 100 "Coords of marker particle = $x $y $z" file coord.txt
 <P>Print a text string every N steps during a simulation run.  This can
 be used for diagnostic purposes or as a debugging tool to monitor some
 quantity during a run.  The text string must be a single argument, so
-it should be enclosed in double quotes if it is more than one word.
-If it contains variables it must be enclosed in double quotes to
-insure they are not evaluated when the input script line is read, but
-will instead be evaluated each time the string is printed.
+it should be enclosed in quotes if it is more than one word.  If it
+contains variables it must be enclosed in quotes to insure they are
+not evaluated when the input script line is read, but will instead be
+evaluated each time the string is printed.
 </P>
 <P>See the <A HREF = "variable.html">variable</A> command for a description of <I>equal</I>
 style variables which are the most useful ones to use with the fix
@@ -77,13 +77,11 @@ keyword was used.  By default, the title line is as follows:
 </P>
 <HR>
 
-<P><B>Restart, fix_modify, output info:</B>
+<P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
-files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
-are relevant to this fix.  No global or per-molecule or per-grid
-quantities are stored by this fix for access by various output
-commands.
+files</A>.  No global or per-particle or per-grid quantities
+are stored by this fix for access by various output commands.
 </P>
 <P><B>Restrictions:</B> none
 </P>

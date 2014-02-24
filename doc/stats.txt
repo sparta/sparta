@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -22,7 +22,7 @@ stats 100 :pre
 
 Compute and print statistical info (e.g. particle count, temperature)
 on timesteps that are a multiple of N and at the beginning and end of
-a simulation.  A value of 0 will only print statistics at the
+a simulation run.  A value of 0 will only print statistics at the
 beginning and end.
 
 The content and format of what is printed is controlled by the

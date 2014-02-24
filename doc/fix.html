@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -25,12 +25,11 @@
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Set a fix that will be applied to the system.  In SPARTA, a "fix" is any
-user-specified operation that is applied to the system during
-timestepping.  Examples include adding particles via inlet boundary
-conditions, enforcing boundary conditions, or computing diagnostics.
-There are dozens of fixes defined in SPARTA and new ones can be added;
-see <A HREF = "Section_modify.html">this section</A> for a discussion.
+<P>Set a fix that will be applied to the system.  In SPARTA, a "fix" is
+an operation that is applied to the system during timestepping.
+Examples include adding particles via inlet boundary conditions or
+computing diagnostics.  Code for new fixes can be added to SPARTA; see
+<A HREF = "Section_modify.html">this section</A> of the manual for details.
 </P>
 <P>Fixes perform their operations at different stages of the timestep.
 If 2 or more fixes operate at the same stage of the timestep, they are
@@ -50,11 +49,7 @@ fix, the old fix is deleted and the new one is created (presumably
 with new settings).  This is the same as if an "unfix" command were
 first performed on the old fix, except that the new fix is kept in the
 same order relative to the existing fixes as the old one originally
-was.  Note that this operation also wipes out any additional changes
-made to the old fix via the <A HREF = "fix_modify.html">fix_modify</A> command.
-</P>
-<P>The <A HREF = "fix_modify.html">fix modify</A> command allows settings for some
-fixes to be reset.  See the doc page for individual fixes for details.
+was.
 </P>
 <P>Some fixes store an internal "state" which is written to binary
 restart files via the <A HREF = "restart.html">restart</A> or
@@ -64,26 +59,40 @@ continue on with its calculations in a restarted simulation.  See the
 a fix in an input script that reads a restart file.  See the doc pages
 for individual fixes for info on which ones can be restarted.
 </P>
+<P>IMPORTANT NOTE: A restart capability for SPARTA has not yet been
+implemented.
+</P>
 <HR>
 
-<P>Some fixes calculate one of three styles of quantities: global,
-per-molecule, or per-grid, which can be used by other commands or
-output as described below.  A global quantity is one or more
-system-wide values, e.g. the energy of a wall interacting with
-particles.  A per-molecule quantity is one or more values per
-particle, e.g. the displacement vector for each particle since time 0.
-Per-cell quantities are calculated by each processor based on the grid
-cells it owns.
+<P>Each fix style has its own doc page which describes its arguments and
+what it does, as listed below.  Here is an alphabetic list of fix
+styles available in SPARTA:
 </P>
-<P>Note that a single fix may produces either global or per-atom or
-per-grid quantities (or none at all), but never more than one of
-these.
+<UL><LI><A HREF = "fix_ave_grid.html">ave/grid</A> - compute per grid cell time-averaged quantities
+<LI><A HREF = "fix_ave_surf.html">ave/surf</A> - compute per surface element time-averaged quantities
+<LI><A HREF = "fix_ave_time.html">ave/time</A> - compute/output global time-averaged quantities
+<LI><A HREF = "fix_balance.html">balance</A> - perform dynamic load-balancing
+<LI><A HREF = "fix_grid_check.html">grid/check</A> - check if particles are in the correct grid cell
+<LI><A HREF = "fix_inflow.html">inflow</A> - inject particles at global boundaries
+<LI><A HREF = "fix_print.html">print</A> - print text and variables during a simulation 
+</UL>
+<HR>
+
+<P>In addition to the operation they perform, some fixes also produce one
+of four styles of quantities: global, per-particle, per-grid, or
+per-surf.  These can be used by other commands or output as described
+below.  A global quantity is one or more system-wide values, e.g. the
+temperature of the system.  A per-particle quantity is one or more
+values per particle, e.g. the kinetic energy of each particle.  A
+per-grid quantity is one or more values per grid cell.  A per-surf
+quantity is one or more values per surface element.
 </P>
-<P>Global, per-atom, and local quantities each come in three kinds: a
-single scalar value, a vector of values, or a 2d array of values.  The
-doc page for each fix describes the style and kind of values it
-produces, e.g. a per-atom vector.  Some fixes produce more than one
-kind of a single style, e.g. a global scalar and a global vector.
+<P>Global, per-particle, per-grid, and per-surf quantities each come in
+two forms: a single scalar value or a vector of values.  Additionaly,
+global quantities can also be a 2d array of values.  The doc page for
+each fix describes the style and kind of values it produces, e.g. a
+per-particle vector.  Some fixes can produce more than one form of a
+single style, e.g. a global scalar and a global vector.
 </P>
 <P>When a fix quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -110,31 +119,19 @@ various commands explain the details.
 </P>
 <HR>
 
-<P>In SPARTA, the values generated by a fix can be used in several ways:
+<P>Any values generated by a fix can be used in several ways:
 </P>
 <UL><LI>Global values can be output via the <A HREF = "stats_style.html">stats_style</A>
 command.  Or the values can be referenced in a <A HREF = "variable.html">variable
 equal</A> or <A HREF = "variable.html">variable atom</A> command. 
 
-<LI>Per-molecule values can be output via the <A HREF = "dump.html">dump particle</A>
-command.  Or the per-molecule values can be referenced in an
-<A HREF = "variable.html">molecule-style variable</A>. 
+<LI>Per-particle values can be output via the <A HREF = "dump.html">dump particle</A>
+command.  Or the per-particle values can be referenced in an
+<A HREF = "variable.html">particle-style variable</A>. 
 
 <LI>Per-grid values can be output via the <A HREF = "dump.html">dump grid</A> command.
 Or the per-grid values can be referenced in a <A HREF = "variable.html">grid-style
 variable</A>. 
-</UL>
-<HR>
-
-<P>Each fix style has its own documentation page which describes its
-arguments and what it does, as listed below.  Here is an alphabetic
-list of fix styles available in SPARTA:
-</P>
-<UL><LI><A HREF = "fix_ave_grid.html">ave/grid</A> - compute per-grid time-averaged quantities
-<LI><A HREF = "fix_ave_time.html">ave/time</A> - compute/output global time-averaged quantities
-<LI><A HREF = "fix_grid_check.html">grid/check</A> - check if particles are in the correct grid cell
-<LI><A HREF = "fix_inflow.html">inflow</A> - inject molecules at global boundaries
-<LI><A HREF = "fix_print.html">print</A> - print text and variables during a simulation 
 </UL>
 <HR>
 

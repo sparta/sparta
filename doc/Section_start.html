@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "Section_intro.html">Previous Section</A> - <A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_commands.html">Next Section</A> 
+<CENTER><A HREF = "Section_intro.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_commands.html">Next Section</A> 
 </CENTER>
 
 
@@ -29,8 +29,8 @@ experienced users.
 downloaded file with the following commands, after placing the file in
 an appropriate directory.
 </P>
-<PRE>gunzip lammps*.tar.gz 
-tar xvf lammps*.tar 
+<PRE>gunzip sparta*.tar.gz 
+tar xvf sparta*.tar 
 </PRE>
 <P>This will create a SPARTA directory containing two files and several
 sub-directories:
@@ -39,30 +39,12 @@ sub-directories:
 <TR><TD >README</TD><TD > text file</TD></TR>
 <TR><TD >LICENSE</TD><TD > the GNU General Public License (GPL)</TD></TR>
 <TR><TD >bench</TD><TD > benchmark problems</TD></TR>
-<TR><TD >couple</TD><TD > code coupling examples, using SPARTA as a library</TD></TR>
 <TR><TD >doc</TD><TD > documentation</TD></TR>
 <TR><TD >examples</TD><TD > simple test problems</TD></TR>
-<TR><TD >potentials</TD><TD > embedded atom method (EAM) potential files</TD></TR>
 <TR><TD >src</TD><TD > source files</TD></TR>
 <TR><TD >tools</TD><TD > pre- and post-processing tools 
 </TD></TR></TABLE></DIV>
 
-<P>If you download one of the Windows executables from the download page,
-then you just get a single file:
-</P>
-<PRE>lmp_windows.exe 
-</PRE>
-<P>Skip to the <A HREF = "#start_4">Running SPARTA</A> sections for info on how to
-launch these executables on a Windows box.
-</P>
-<P>The Windows executables for serial or parallel only include certain
-packages and bug-fixes/upgrades listed on <A HREF = "http://dsmc.sandia.gov/bug.html">this
-page</A> up to a certain date, as
-stated on the download page.  If you want something with more packages
-or that is more current, you'll have to download the source tarball
-and build it yourself from source code using Microsoft Visual Studio,
-as described in the next section.
-</P>
 <HR>
 
 <H4><A NAME = "start_2"></A>2.2 Making SPARTA 
@@ -82,7 +64,7 @@ as described in the next section.
 
 <P>Building SPARTA can be non-trivial.  You may need to edit a makefile,
 there are compiler options to consider, additional libraries can be
-used (MPI, FFT, JPEG).
+used (MPI, JPEG).
 </P>
 <P>Please read this section carefully.  If you are not comfortable with
 makefiles, or building codes on a Unix platform, or running an MPI job
@@ -94,7 +76,7 @@ libraries, etc.  Such questions are better answered by a local expert.
 <P>If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
 please send an email to the
-<A HREF = "http://dsmc.sandia.gov/authors.html">developers</A>.
+<A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
 </P>
 <P>If you succeed in building SPARTA on a new kind of machine, for which
 there isn't a similar Makefile for in the src/MAKE directory, send it
@@ -121,7 +103,7 @@ gmake mac
 parallel make, by using the "-j" switch with the make command, which
 will build SPARTA more quickly.
 </P>
-<P>If you get no errors and an executable like lmp_linux or lmp_mac is
+<P>If you get no errors and an executable like spa_linux or spa_mac is
 produced, you're done; it's your lucky day.
 </P>
 <P><B>Step 1</B>
@@ -173,7 +155,7 @@ if you change any -D setting in this section, you should do a full
 re-compile, after typing "make clean" (which will describe different
 clean options).
 </P>
-<P>The LMP_INC variable is used to include options that turn on ifdefs
+<P>The SPA_INC variable is used to include options that turn on ifdefs
 within the SPARTA code.  The options that are currently recogized are:
 </P>
 <UL><LI>-DSPARTA_GZIP
@@ -299,7 +281,7 @@ something like this:
 or
 gmake foo 
 </PRE>
-<P>You should get the executable lmp_foo when the build is complete.
+<P>You should get the executable spa_foo when the build is complete.
 </P>
 <HR>
 
@@ -355,12 +337,12 @@ Obj_name where it stores the system-specific *.o files.
 files created when SPARTA is built, for either all builds or for a
 particular machine.
 </P>
-<P>(3) Changing the size limits in src/lmptype.h
+<P>(3) Changing the size limits in src/spatype.h
 </P>
 <P>If you are running a very large problem (billions of atoms or more)
 and get a run-time error about the system being too big, either on a
 per-processor basis or in total size, then you may need to change one
-or more settings in src/lmptype.h and re-compile SPARTA.
+or more settings in src/spatype.h and re-compile SPARTA.
 </P>
 <P>As the documentation in that file explains, you have basically
 two choices to make:
@@ -382,7 +364,7 @@ not support 8-byte integers, an error will be generated, and you will
 need to set "bigint" to 4-byte integers.  This restricts your total
 system size to about 2 billion atoms or timesteps (2^31).
 </P>
-<P>Note that in src/lmptype.h there are also settings for the MPI data
+<P>Note that in src/spatype.h there are also settings for the MPI data
 types associated with the integers that store atom IDs and total
 system sizes, which need to be set consistent with the associated C
 data types.
@@ -449,7 +431,7 @@ with all the file names in your src dir.  The 2nd "make" command will
 use it to build SPARTA as a library.  This requires that Makefile.foo
 have a library target (lib) and system-specific settings for ARCHIVE
 and ARFLAGS.  See Makefile.linux for an example.  The build will
-create the file liblmp_foo.a which another application can link to.
+create the file libspa_foo.a which another application can link to.
 </P>
 <P>When used from a C++ program, the library allows one or more SPARTA
 objects to be instantiated.  All of SPARTA is wrapped in a SPARTA_NS
@@ -477,7 +459,7 @@ your needs.
 
 <H4><A NAME = "start_5"></A>2.5 Running SPARTA 
 </H4>
-<P>By default, SPARTA runs by reading commands from stdin; e.g. lmp_linux
+<P>By default, SPARTA runs by reading commands from stdin; e.g. spa_linux
 < in.file.  This means you first create an input script (e.g. in.file)
 containing the desired commands.  <A HREF = "Section_commands.html">This section</A>
 describes how input scripts are structured and what commands they
@@ -493,70 +475,19 @@ Linux box, using mpirun to launch a parallel job:
 </P>
 <PRE>cd src
 make linux
-cp lmp_linux ../bench
+cp spa_linux ../bench
 cd ../bench
-mpirun -np 4 lmp_linux < in.lj 
+mpirun -np 4 spa_linux < in.lj 
 </PRE>
-<P>See <A HREF = "http://dsmc.sandia.gov/bench.html">this page</A> for timings for this and the other benchmarks
+<P>See <A HREF = "http://sparta.sandia.gov/bench.html">this page</A> for timings for this and the other benchmarks
 on various platforms.
 </P>
 
 
 <HR>
 
-<P>On a Windows box, you can skip making SPARTA and simply download an
-executable, as described above, though the pre-packaged executables
-include only certain packages.
-</P>
-<P>To run a SPARTA executable on a Windows machine, first decide whether
-you want to download the non-MPI (serial) or the MPI (parallel)
-version of the executable. Download and save the version you have
-chosen.
-</P>
-<P>For the non-MPI version, follow these steps:
-</P>
-<UL><LI>Get a command prompt by going to Start->Run... , 
-then typing "cmd". 
-
-<LI>Move to the directory where you have saved lmp_win_no-mpi.exe
-(e.g. by typing: cd "Documents"). 
-
-<LI>At the command prompt, type "lmp_win_no-mpi -in in.lj", replacing in.lj
-with the name of your SPARTA input script. 
-</UL>
-<P>For the MPI version, which allows you to run SPARTA under Windows on 
-multiple processors, follow these steps:
-</P>
-<UL><LI>Download and install 
-<A HREF = "http://www.mcs.anl.gov/research/projects/mpich2/downloads/index.php?s=downloads">MPICH2</A>
-for Windows. 
-
-<LI>You'll need to use the mpiexec.exe and smpd.exe files from the MPICH2 package. Put them in 
-same directory (or path) as the SPARTA Windows executable. 
-
-<LI>Get a command prompt by going to Start->Run... , 
-then typing "cmd". 
-
-<LI>Move to the directory where you have saved lmp_win_mpi.exe
-(e.g. by typing: cd "Documents"). 
-
-<LI>Then type something like this: "mpiexec -np 4 -localonly lmp_win_mpi -in in.lj", 
-replacing in.lj with the name of your SPARTA input script. 
-
-<LI>Note that you may need to provide smpd with a passphrase --- it doesn't matter what you 
-type. 
-
-<LI>In this mode, output may not immediately show up on the screen, so 
-if your input script takes a long time to execute, you may need to be 
-patient before the output shows up. 
-
-<LI>Alternatively, you can still use this executable to run on a single processor by
-typing something like: "lmp_win_mpi -in in.lj". 
-</UL>
-<HR>
-
 <P>The screen output from SPARTA is described in the next section.  As it
-runs, SPARTA also writes a log.lammps file with the same information.
+runs, SPARTA also writes a log.sparta file with the same information.
 </P>
 <P>Note that this sequence of commands copies the SPARTA executable
 (lmp_linux) to the directory with the input files.  This may not be
@@ -610,18 +541,6 @@ mpirun -np 16 lmp_ibm -var f tmp.out -log my.log -screen none < in.alloy
 </PRE>
 <P>Here are the details on the options:
 </P>
-<PRE>-cuda on/off 
-</PRE>
-<P>Explicitly enable or disable CUDA support, as provided by the
-USER-CUDA package.  If SPARTA is built with this package, as described
-above in <A HREF = "#start_3">Section 2.3</A>, then by default SPARTA will run in
-CUDA mode.  If this switch is set to "off", then it will not, even if
-it was built with the USER-CUDA package, which means you can run
-standard SPARTA or with the GPU package for testing or benchmarking
-purposes.  The only reason to set the switch to "on", is to check if
-SPARTA was built with the USER-CUDA package, since an error will be
-generated if it was not.
-</P>
 <PRE>-echo style 
 </PRE>
 <P>Set the style of command echoing.  The style can be <I>none</I> or <I>screen</I>
@@ -651,10 +570,10 @@ if this switch is used.
 </PRE>
 <P>Specify a log file for SPARTA to write status information to.  In
 one-partition mode, if the switch is not used, SPARTA writes to the
-file log.lammps.  If this switch is used, SPARTA writes to the
+file log.sparta.  If this switch is used, SPARTA writes to the
 specified file.  In multi-partition mode, if the switch is not used, a
-log.lammps file is created with hi-level status information.  Each
-partition also writes to a log.lammps.N file where N is the partition
+log.sparta file is created with hi-level status information.  Each
+partition also writes to a log.sparta.N file where N is the partition
 ID.  If the switch is specified in multi-partition mode, the hi-level
 logfile is named "file" and each partition also logs information to a
 file.N.  For both one-partition and multi-partition mode, if the
@@ -697,9 +616,9 @@ This overrides the
 filename specified in the -log command-line option.
 This option is useful when working with large numbers of partitions,
 allowing the partition log files to be suppressed (-plog none) or
-placed in a sub-directory (-plog replica_files/log.lammps)
+placed in a sub-directory (-plog replica_files/log.sparta)
 If this option is not used
-the log file for partition N is log.lammps.N or whatever is specified by
+the log file for partition N is log.sparta.N or whatever is specified by
 the -log command-line option. 
 </P>
 <PRE>-pscreen file 
@@ -731,30 +650,6 @@ writes screen information to a file.N.  For both one-partition and
 multi-partition mode, if the specified file is "none", then no screen
 output is performed. Option -pscreen will override the name of the 
 partition screen files file.N.
-</P>
-<PRE>-suffix style 
-</PRE>
-<P>Use variants of various styles if they exist.  The specified style can
-be <I>opt</I> or <I>gpu</I> or <I>cuda</I>.  These refer to optional packages that
-SPARTA can be built with, as described above in <A HREF = "#start_3">Section
-2.3</A>.  The "opt" style corrsponds to the OPT package, the
-"gpu" style to the GPU package, and the "cuda" style to the USER-CUDA
-package.
-</P>
-<P>As an example, all of the packages provide a <A HREF = "pair_lj.html">pair_style
-lj/cut</A> variant, with style names lj/cut/opt or
-lj/cut/gpu or lj/cut/cuda.  A variant styles can be specified
-explicitly in your input script, e.g. pair_style lj/cut/gpu.  If the
--suffix switch is used, you do not need to modify your input script.
-The specified suffix (opt,gpu,cuda) is automatically appended whenever
-your input script command creates a new <A HREF = "atom_style.html">atom</A>,
-<A HREF = "pair_style.html">pair</A>, <A HREF = "fix.html">fix</A>, <A HREF = "compute.html">compute</A>, or
-<A HREF = "run_style.html">run</A> style.  atom, pair, fix, compute, or integrate
-style.  If the variant version does not exist, the standard version is
-created.
-</P>
-<P>The <A HREF = "suffix.html">suffix</A> command can also set a suffix and it can also
-turn off/on any suffix setting made via the command line.
 </P>
 <PRE>-var name value1 value2 ... 
 </PRE>

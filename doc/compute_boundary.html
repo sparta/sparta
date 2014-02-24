@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -25,7 +25,7 @@
 
 <LI>value = <I>n</I> or <I>press</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
 
-<PRE>  n = count of molecules hitting boundary
+<PRE>  n = count of particles hitting boundary
   press = magnitude of normal pressure on boundary
   shx,shy,shz = components of shear stress on boundary
   ke = flux of kinetic energy on boundary 
@@ -37,8 +37,8 @@
 <PRE>compute 1 boundary all n press eng
 compute mine boundary species press shx shy shz 
 </PRE>
-<P>These commands will dump averages for all species and each boundary to
-a file every 1000 steps:
+<P>These commands will dump time averages for each species and each
+boundary to a file every 1000 steps:
 </P>
 <PRE>compute 1 boundary species n press shx shy shz
 fix 1 ave/time 10 100 1000 c_1 file tmp.boundary 
@@ -46,7 +46,7 @@ fix 1 ave/time 10 100 1000 c_1 file tmp.boundary
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each
-boundary (i.e. face) of the simulation box, based on the molecules
+boundary (i.e. face) of the simulation box, based on the particles
 that strike that boundary.  The values are summed for each group of
 species in the specified mixture.  See the <A HREF = "mixture.html">mixture</A>
 command for how a set of species can be partitioned into groups.
@@ -57,42 +57,42 @@ command.  For <I>outflow</I> boundaries, only the flux of particles leaving
 the simulation box contributes to the pressure, stress, and energy;
 there is no contribution from reflected particles.  For <I>periodic</I>
 boundaries, only the count <I>n</I> is tallied, since the particles exert
-no pressure or stress on the boundary.  For <I>specular</I> boundaries,
-there is a before and after pressure and stress contribution from each
-particle that collides with the boundary, but no energy contribution,
-since the collisions conserve energy.  For <I>surface</I> boundaries, each
-collision may contribute to all the values, depending on the <A HREF = "surf_collide.html">surface
-collision model</A>.
+no pressure or stress on the boundary.  For <I>specular</I> boundaries, the
+particle collisions exert pressure and stress on the boundary but no
+energy flux, since the collisions conserve energy.  For <I>surface</I>
+boundaries, each collision may contribute to all the values, depending
+on the <A HREF = "surf_collide.html">surface collision model</A>.
 </P>
 <HR>
 
-<P>The <I>n</I> value counts the number of molecules in the group striking the
+<P>The <I>n</I> value counts the number of particles in the group striking the
 boundary or passing through it.
 </P>
 <P>The <I>press</I> value calculates the pressure <I>P</I> exerted on the boundary
-in the normal direction by molecules in the group, such that outward
+in the normal direction by particles in the group, such that outward
 pressure is positive.  This is computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
-P = Sum_i (p_delta_i dot N) / (A * dt) 
+P = Sum_i (p_delta_i dot N) / (A * dt / fnum) 
 </PRE>
 <P>where p_delta is the change in momentum of a particle, whose velocity
 changes from V_pre to V_post when colliding with the boundary.  The
 pressure exerted on the boundary is the sum over all contributing
 p_delta dotted into the normal N of the boundary which is directed
 into the box, normalized by A = the area of the boundary face and dt =
-the timestep.
+the timestep and fnum = the real/simulated particle ratio set by the
+<A HREF = "global.html">global fnum</A> command.
 </P>
 <P>The <I>shx</I>, <I>shy</I>, <I>shz</I> values calculate the shear pressure components
 Sx, Sy, Sz extered on the boundary in the tangential direction to its
-normal by molecules in the group, with respect to the x, y, z
+normal by particles in the group, with respect to the x, y, z
 coordinate axes.  These are computed as
 </P>
 <PRE>p_delta = mass * (V_post - V_pre)
 p_delta_t = p_delta - (p_delta dot N) N
-Sx = - Sum_i (p_delta_t_x) / (A * dt)
-Sy = - Sum_i (p_delta_t_y) / (A * dt)
-Sz = - Sum_i (p_delta_t_z) / (A * dt) 
+Sx = - Sum_i (p_delta_t_x) / (A * dt / fnum)
+Sy = - Sum_i (p_delta_t_y) / (A * dt / fnum)
+Sz = - Sum_i (p_delta_t_z) / (A * dt / fnum) 
 </PRE>
 <P>where p_delta, V_pre, V_post, N, A, and dt are defined as before.
 P_delta_t is the tangential component of the change in momentum vector
@@ -100,17 +100,18 @@ p_delta of a particle.  P_delta_t_x (and y,z) are its x, y, z
 components.
 </P>
 <P>The <I>ke</I> value calculates the kinetic energy flux <I>Eflux</I> imparted to
-the boundary by molecules in the group, such that energy lost by a
+the boundary by particles in the group, such that energy lost by a
 particle is a positive flux.  This is computed as
 </P>
 <PRE>e_delta = 1/2 mass (V_post^2 - V_pre^2)
-Eflux = - Sum_i (e_delta) / (A * dt) 
+Eflux = - Sum_i (e_delta) / (A * dt / fnum) 
 </PRE>
 <P>where e_delta is the kinetic energy change in a particle, whose
 velocity changes from V_pre to V_post when colliding with the
 boundary.  The energy flux imparted to the boundary is the sum over
 all contributing e_delta, normalized by A = the area of the boundary
-face and dt = the timestep.
+face and dt = the timestep and fnum = the real/simulated
+particle ratio set by the <A HREF = "global.html">global fnum</A> command.
 </P>
 <HR>
 
@@ -122,8 +123,8 @@ ordering of columns is first by values, then by groups.  I.e. if the
 <I>n</I> and <I>u</I> values were specified as keywords, then the first two
 columns would be <I>n</I> and <I>u</I> for the first group, the 3rd and 4th
 columns would be <I>n</I> and <I>u</I> for the second group, etc.  The number of
-rows is 4 for a 2d simulation (xlo face, xhi, ylo, yhi) or 6 for a 3d
-simulation (xlo, xhi, ylo, yhi, zlo, zhi).
+rows is 4 for a 2d simulation for the 4 faces (xlo, xhi, ylo, yhi),
+and it is 6 for a 3d simulation (xlo, xhi, ylo, yhi, zlo, zhi).
 </P>
 <P>The array can be accessed by any command that uses global array values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_15">this
@@ -131,8 +132,10 @@ section</A> for an overview of SPARTA output
 options.
 </P>
 <P>The array values will be in the <A HREF = "units.html">units</A> appropriate to the
-individual values as described above.  <I>Press</I>, <I>shx</I>, <I>shy</I>, <I>shz</I>
-are in in presure units.  <I>Ke</I> is in energy units.
+individual values as described above.  <I>N</I> is unitless. <I>Press</I>,
+<I>shx</I>, <I>shy</I>, <I>shz</I> are in pressure units.  <I>Ke</I> is in
+energy/area-time units for 3d simulations and energy/length-time units
+for 2d simulations.
 </P>
 <P><B>Restrictions:</B> none
 </P>

@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">DSMSPARTAmmands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">DSMSPARTAmmands</A> 
 </CENTER>
 
 
@@ -37,17 +37,18 @@ react tce air.tce
 <P>Define chemical reactions to perform when particle-particle collisions
 occur.
 </P>
-<P>The <I>none</I> style means that no chemsistry will be performed.
-performed, which is the default.
+<P>The <I>none</I> style means that no chemistry will be performed, which is
+the default.
 </P>
 <P>For other styles, a file is specified which contains a list of
 chemical reactions, with their associated parameters.  The reactions
-are read in to SPARTA and stored in a list.  Each time a simulation is
+are read into SPARTA and stored in a list.  Each time a simulation is
 run via the <A HREF = "run.html">run</A> command, the list is scanned.  Only
 reactions for which all the reactants and all the products are
 currently defined as species-IDs will be active for the simulation.
-See the <A HREF = "species.html">species</A> command for how species IDs are
-defined.
+Thus the file can contain more reactions than are used in a particular
+simulation.  See the <A HREF = "species.html">species</A> command for how species
+IDs are defined.
 </P>
 <P>The reaction models for the various styles and the corresponding input
 file format are described below.

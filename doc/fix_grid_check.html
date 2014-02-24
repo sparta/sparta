@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -29,26 +29,27 @@
 <P>Check if particles are inside the grid cell they are supposed to be,
 based on their current coordinates.  This is useful as a debugging
 check to insure that no particles have been assigned to the incorrect
-grid cell during the particle move stage of the SPARTA algorithm.
+grid cell during the particle move stage of the SPARTA timestepping
+algorithm.
 </P>
-<P>The check is performed every <I>N</I> timesteps.  Particles not inside the
-correct grid cell are counted and the value of the count can be
+<P>The check is performed once every <I>N</I> timesteps.  Particles not inside
+the correct grid cell are counted and the value of the count can be
 monitored (see below).  A value of 0 is "correct", meaning that no
-particle was found to be outside its assigned grid cell.
+particle was found outside its assigned grid cell.
 </P>
 <P>If the outflag setting is <I>error</I>, SPARTA will print an error and stop
 if it finds a particle in an incorrect grid cell.  For <I>warn</I>, it will
 print a warning message and continue.  For <I>silent</I>, it will print no
-message, but the count of such occurrences can be monitored with the
-<A HREF = "stats.html">stats</A> output, as described below.
+message, but the count of such occurrences can be monitored as
+described below, e.g. by outputting the value with the
+<A HREF = "stats.html">stats</A> command.
 </P>
 <HR>
 
-<P><B>Restart, fix_modify, output info:</B>
+<P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
-files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
-are relevant to this fix.
+files</A>.
 </P>
 <P>This fix computes a global scalar which can be accessed by various
 output commands.  The scalar is the count of how many particles were

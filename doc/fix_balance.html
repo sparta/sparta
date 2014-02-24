@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -59,19 +59,19 @@ distribution of particles varies with time, leading to load imbalance.
 
 <P>Rebalancing is attempted once every <I>Nfreq</I> timesteps, but only if the
 current imbalance factor exceeds the specified <I>thresh</I>.  This factor
-is defined as the maximum number of molecules owned by any processor,
-divided by the average number of molecules per processor.  Thus an
-imbalance factor of 1.0 is perfect balance.  For 10000 molecules
+is defined as the maximum number of particles owned by any processor,
+divided by the average number of particles per processor.  Thus an
+imbalance factor of 1.0 is perfect balance.  For 10000 particles
 running on 10 processors, if the most heavily loaded processor has
 1200 particles, then the factor is 1.2, meaning there is a 20%
 imbalance. 
 </P>
 <P>IMPORTANT NOTE: This command attempts to minimize the imbalance
 factor, as defined above.  But computational cost is not strictly
-proportional to particle count, and changing the assignment of grid
-cells and molecules to processors may lead to additional computational
+proportional to particle count.  Also, changing the assignment of grid
+cells and particles to processors may lead to additional computational
 and communication overheads, e.g. in the per grid cell collision and
-chemistry calculations or when migrating molecules between processors.
+chemistry calculations or when migrating particles between processors.
 Thus you should benchmark the run times of your simulation to judge
 how often balancing should be performed, and how aggressively to set
 the <I>thresh</I> value.
@@ -79,27 +79,26 @@ the <I>thresh</I> value.
 <HR>
 
 <P>The <I>random</I> keyword means that each grid cell will be assigned
-randomly to one of the processors.  Note that in this case every
-processor will typically not be assigned exactly the same number of
-cells.
+randomly to one of the processors.  In this case every processor will
+typically not be assigned exactly the same number of grid cells.
 </P>
 <P>The <I>proc</I> keyword means that each processor will choose a random
 processor to assign its first grid cell to.  It will then loop over
 its grid cells and assign each to consecutive processors, wrapping
-around the collection of processors if necessary.  Note that in this
-case every processor will typically not be assigned exactly the same
-number of cells.
+around the collection of processors if necessary.  In this case every
+processor will typically not be assigned exactly the same number of
+grid cells.
 </P>
 <P>The <I>rcb</I> keyword uses a recurvise coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to
 processors.  Each grid cell has a "weight" in this algorithm so that
-eacn processor is assigned an equal total weight of grid cells, as
+each processor is assigned an equal total weight of grid cells, as
 nearly as possible.  If the <I>weight</I> argument is specified as <I>cell</I>,
 than the weight for each grid cell is 1.0, so that each processor will
 end up with an equal number of grid cells.  If the <I>weight</I> argument
 is specified as <I>mol</I>, than the weight for each grid cell is the
-number of molecules it currently owns, so that each processor will end
-up with an equal number of molecules.
+number of particles it currently owns, so that each processor will end
+up with an equal number of particles.
 </P>
 <P>Here are 2 example pictures, for a 2d simulation, of the partioning
 provided by the RCB algorithm for a simulation on P processors of
@@ -112,25 +111,22 @@ simulation box.
 </P>
 <HR>
 
-<P><B>Restart, fix_modify, output info:</B>
+<P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
-files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
-are relevant to this fix.
+files</A>.
 </P>
 <P>This fix computes a global scalar which is the imbalance factor after
 the most recent rebalance and a global vector of length 2 with
 additional information about the most recent rebalancing. The 2 values
 in the vector are as follows:
 </P>
-<UL><LI>1 = max # of molecules per processor
-<LI>2 = imbalance factor right before the last rebalance was performed 
+<UL><LI>1 = max # of particles per processor
+<LI>2 = imbalance factor before the last rebalance was performed 
 </UL>
 <P>As explained above, the imbalance factor is the ratio of the maximum
-number of molecules on any processor to the average number of
-molecules per processor.
-</P>
-<P>These quantities can be accessed by various output commands.
+number of particles on any processor to the average number of
+particles per processor.
 </P>
 <P><B>Restrictions:</B> none
 </P>

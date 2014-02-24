@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -40,20 +40,14 @@
 </PRE>
 <LI>these keywords apply only to the <A HREF = "dump_image.html">dump image</A> style 
 
-<LI>keyword = <I>acolor</I> or <I>adiam</I> or <I>bcolor</I> or <I>bdiam</I> or <I>backcolor</I> or <I>boxcolor</I> or <I>cmap</I> or <I>color</I> or <I>gcolor</I> or <I>glinecolor</I> or <I>scolor</I> or <I>slinecolor</I> 
+<LI>keyword = <I>bcolor</I> or <I>bdiam</I> or <I>backcolor</I> or <I>boxcolor</I> or <I>cmap</I> or <I>color</I> or <I>gcolor</I> or <I>glinecolor</I> or <I>pcolor<I> or <I>pdiam</I> or <I>scolor</I> or <I>slinecolor</I> 
 
-<PRE>  <I>acolor</I> args = type color
-    type = molecule type or range of types or proc ID or range of IDs (see below)
-    color = name of color or color1/color2/...
-  <I>adiam</I> args = type diam
-    type = molecule type or range of types (see below)
-    diam = diameter of molecules of that type (distance units)
-  <I>backcolor</I> arg = color
+<PRE>  <I>backcolor</I> arg = color
     color = name of color for background
   <I>boxcolor</I> arg = color
     color = name of color for box lines
   <I>cmap</I> args = mode lo hi style delta N entry1 entry2 ... entryN
-    mode = <I>mol</I> or <I>grid</I> or <I>surf</I> or <I>xplane</I> or <I>yplane</I> or <I>zplane</I>
+    mode = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>xplane</I> or <I>yplane</I> or <I>zplane</I>
     lo = number or <I>min</I> = lower bound of range of color map
     hi = number or <I>max</I> = upper bound of range of color map
     style = 2 letters = "c" or "d" or "s" plus "a" or "f"
@@ -81,6 +75,12 @@
     color = name of color or color1/color2/...
   <I>glinecolor</I> arg = color
     color = name of color for grid cell outlines
+  <I>pcolor</I> args = type color
+    type = particle type or range of types or proc ID or range of IDs (see below)
+    color = name of color or color1/color2/...
+  <I>pdiam</I> args = type diam
+    type = particle type or range of types (see below)
+    diam = diameter of particles of that type (distance units)
   <I>scolor</I> args = proc color
     proc = proc ID or range of IDs (see below)
     color = name of color for surf one option
@@ -95,7 +95,7 @@
 dump_modify myDump thresh x < 0.0 thresh vx >= 3.0
 dump_modify 1 every 1000
 dump_modify 1 every v_myVar
-dump_modify 1 amap min max cf 0.0 3 min green 0.5 yellow max blue boxcolor red 
+dump_modify 1 cmap particle min max cf 0.0 3 min green 0.5 yellow max blue boxcolor red 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -144,8 +144,8 @@ dump file.
 <P>For example, the following commands will
 write snapshots at timesteps 0,10,20,30,100,200,300,1000,2000,etc:
 </P>
-<PRE>variable	s equal logfreq(10,3,10)
-dump		1 all molecule 100 tmp.dump
+<PRE>variable	        s equal logfreq(10,3,10)
+dump		1 all particle 100 tmp.dump id type x y z
 dump_modify	1 every v_s first yes 
 </PRE>
 <HR>
@@ -189,8 +189,8 @@ timestep order.
 </P>
 <HR>
 
-<P>The <I>region</I> keyword only applies to the dump <I>molecule</I> and <I>image</I>
-styles.  If specified, only molecules in the region will be written to
+<P>The <I>region</I> keyword only applies to the dump <I>particle</I> and <I>image</I>
+styles.  If specified, only particles in the region will be written to
 the dump file or included in the image.  Only one region can be
 applied as a filter (the last one specified).  See the
 <A HREF = "region.html">region</A> command for more details.  Note that a region can
@@ -199,16 +199,16 @@ can be the "union" or "intersection" of a series of simpler regions.
 </P>
 <HR>
 
-<P>The <I>thresh</I> keyword only applies to the dump <I>custom</I> and <I>image</I>
+<P>The <I>thresh</I> keyword only applies to the dump <I>particle</I> and <I>image</I>
 styles.  Multiple thresholds can be specified.  Specifying "none"
 turns off all threshold criteria.  If thresholds are specified, only
-molecules whose attributes meet all the threshold criteria are written
+particles whose attributes meet all the threshold criteria are written
 to the dump file or included in the image.  The possible attributes
 that can be tested for are the same as those that can be specified in
 the <A HREF = "dump.html">dump particle</A> command.  Note that different attributes
 can be output by the dump particle command than are used as threshold
 criteria by the dump_modify command.  E.g. you can output the
-coordinates of molecules whose velocity components are above some
+coordinates of particles whose velocity components are above some
 threshold.
 </P>
 <HR>
@@ -216,51 +216,6 @@ threshold.
 <HR>
 
 <P>These keywords apply only to the <A HREF = "dump_image.html">dump image</A> style.
-</P>
-<HR>
-
-<P>The <I>acolor</I> keyword can be used one or more times with the <A HREF = "dump_image.html">dump
-image</A> command, only when its atom color setting is
-<I>type</I> or <I>procs</I>, to set the color that molecules will be drawn in
-the image.
-</P>
-<P>If the atom color setting is <I>type</I>, then the specified <I>type</I> for the
-<I>acolor</I> keyword should be an integer from 1 to Ntypes = the number of
-molecule types.  A wildcard asterisk can be used in place of or in
-conjunction with the <I>type</I> argument to specify a range of molecule
-types.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
-number of molecule types, then an asterisk with no numeric values
-means all types from 1 to N.  A leading asterisk means all types from
-1 to n (inclusive).  A trailing asterisk means all types from n to N
-(inclusive).  A middle asterisk means all types from m to n
-(inclusive).
-</P>
-<P>If the atom color setting is <I>proc</I>, then the specified <I>type</I> for the
-<I>acolor</I> keyword should be an integer from 1 to Nprocs = the number of
-processors.  A wildcard asterisk can be used in place of or in
-conjunction with the <I>type</I> argument to specify a range of processor
-IDs, just as described above for molecule types.  Note that for this
-command, processor IDs range from 1 to Nprocs inclusive, instead of
-the more customary 0 to Nprocs-1.
-</P>
-<P>The specified <I>color</I> can be a single color which is any of the 140
-pre-defined colors (see below) or a color name defined by the
-dump_modify color option.  Or it can be two or more colors separated
-by a "/" character, e.g. red/green/blue.  In the former case, that
-color is assigned to all the specified molecule types.  In the latter
-case, the list of colors are assigned in a round-robin fashion to each
-of the specified molecule types.
-</P>
-<HR>
-
-<P>The <I>adiam</I> keyword can be used with the <A HREF = "dump_image.html">dump image</A>
-command, when its atom diameter setting is <I>type</I>, to set the size
-that molecules of each type will be drawn in the image.  The specified
-<I>type</I> should be an integer from 1 to Ntypes.  As with the <I>acolor</I>
-keyword, a wildcard asterisk can be used as part of the <I>type</I>
-argument to specify a range of molecule types.  The specified <I>diam</I>
-is the size in whatever distance <A HREF = "units.html">units</A> the input script
-is using, e.g. Angstroms.
 </P>
 <HR>
 
@@ -273,7 +228,7 @@ below) or a color name defined by the dump_modify color option.
 
 <P>The <I>boxcolor</I> keyword can be used with the <A HREF = "dump_image.html">dump
 image</A> command to set the color of the simulation box
-drawn around the molecules in each image.  See the "dump image box"
+drawn around the particles in each image.  See the "dump image box"
 command for how to specify that a box be drawn.  The color name can be
 any of the 140 pre-defined colors (see below) or a color name defined
 by the dump_modify color option.
@@ -282,15 +237,15 @@ by the dump_modify color option.
 
 <P>The <I>cmap</I> keyword can be used with the <A HREF = "dump_image.html">dump image</A>
 command to define a color map that is used to draw "objects" which can
-be moleclues, grid cells, or surface elements.  The mode setting must
-be <I>atom</I> or <I>grid</I> or <I>surf</I> or <I>gridx</I> or <I>gridy</I> or <I>gridz</I> which
+be particles, grid cells, or surface elements.  The mode setting must
+be <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>gridx</I> or <I>gridy</I> or <I>gridz</I> which
 correspond to the same keywords in the <A HREF = "dump_image.html">dump image</A>
 command.
 </P>
 <P>Color maps are used to assign a specific RGB (red/green/blue) color
 value to an individual object when it is drawn, based on the object's
 attribute, which is a numeric value, e.g. the x-component of velocity
-for a molecule, if the molecule-attribute "vx" was specified in the
+for a particle, if the particle-attribute "vx" was specified in the
 <A HREF = "dump_image.html">dump image</A> command.
 </P>
 <P>The basic idea of a color map is that the attribute will be within a
@@ -445,6 +400,51 @@ a color name defined by the dump_modify color option.
 </P>
 <HR>
 
+<P>The <I>pcolor</I> keyword can be used one or more times with the <A HREF = "dump_image.html">dump
+image</A> command, only when its particle color setting is
+<I>type</I> or <I>procs</I>, to set the color that particles will be drawn in
+the image.
+</P>
+<P>If the particle color setting is <I>type</I>, then the specified <I>type</I> for the
+<I>pcolor</I> keyword should be an integer from 1 to Ntypes = the number of
+particle types.  A wildcard asterisk can be used in place of or in
+conjunction with the <I>type</I> argument to specify a range of particle
+types.  This takes the form "*" or "*n" or "n*" or "m*n".  If N = the
+number of particle types, then an asterisk with no numeric values
+means all types from 1 to N.  A leading asterisk means all types from
+1 to n (inclusive).  A trailing asterisk means all types from n to N
+(inclusive).  A middle asterisk means all types from m to n
+(inclusive).
+</P>
+<P>If the particle color setting is <I>proc</I>, then the specified <I>type</I> for the
+<I>pcolor</I> keyword should be an integer from 1 to Nprocs = the number of
+processors.  A wildcard asterisk can be used in place of or in
+conjunction with the <I>type</I> argument to specify a range of processor
+IDs, just as described above for particle types.  Note that for this
+command, processor IDs range from 1 to Nprocs inclusive, instead of
+the more customary 0 to Nprocs-1.
+</P>
+<P>The specified <I>color</I> can be a single color which is any of the 140
+pre-defined colors (see below) or a color name defined by the
+dump_modify color option.  Or it can be two or more colors separated
+by a "/" character, e.g. red/green/blue.  In the former case, that
+color is assigned to all the specified particle types.  In the latter
+case, the list of colors are assigned in a round-robin fashion to each
+of the specified particle types.
+</P>
+<HR>
+
+<P>The <I>pdiam</I> keyword can be used with the <A HREF = "dump_image.html">dump image</A>
+command, when its particle diameter setting is <I>type</I>, to set the size
+that particles of each type will be drawn in the image.  The specified
+<I>type</I> should be an integer from 1 to Ntypes.  As with the <I>pcolor</I>
+keyword, a wildcard asterisk can be used as part of the <I>type</I>
+argument to specify a range of particle types.  The specified <I>diam</I>
+is the size in whatever distance <A HREF = "units.html">units</A> the input script
+is using.
+</P>
+<HR>
+
 <P>The <I>scolor</I> keyword can be used one or more times with the <A HREF = "dump_image.html">dump
 image</A> command, only when its surface element color
 setting is <I>one</I> or <I>proc</I>, to set the color that surface elements
@@ -499,10 +499,7 @@ option.
 </P>
 <P>The option defaults are
 </P>
-<UL><LI>acolor = * red/green/blue/yellow/aqua/cyan
-<LI>adiam = * 1.0
-<LI>amap = min max cf 0.0 2 min blue max red
-<LI>append = no
+<UL><LI>append = no
 <LI>backcolor = black
 <LI>boxcolor = yellow
 <LI>cmap = mode min max cf 0.0 2 min blue max red, for all modes
@@ -514,6 +511,8 @@ option.
 <LI>gcolor = * red/green/blue/yellow/aqua/cyan
 <LI>glinecolor = white
 <LI>pad = 0
+<LI>pcolor = * red/green/blue/yellow/aqua/cyan
+<LI>pdiam = * 1.0
 <LI>region = none
 <LI>scolor = * gray
 <LI>slinecolor = white

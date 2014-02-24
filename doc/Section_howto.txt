@@ -1,6 +1,6 @@
 "Previous Section"_Section_commands.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_example.html :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -11,7 +11,15 @@
 The following sections describe how to use various options within
 SPARTA.
 
-The example input scripts included in the SPARTA distribution and
-highlighted in "this section"_Section_example.html also show how to
-setup and run various kinds of simulations.
+6.1 "2d simulations"_#howto_1
+6.2 "Axisymmetric simulations"_#howto_2
+6.3 "Running multiple simulations from one input script"_#howto_3
+6.4 "Output from SPARTA (stats, dumps, computes, fixes, variables)"_#howto_4
+  ref by compute.txt, and all computes in "output" section
+ 6.5 "Visualizing SPARTA snapshots"_#howto_5
+6.6 "Library interface to SPARTA"_#howto_6
+6.7 "Coupling SPARTA to other codes"_#howto_7
 
+The example input scripts included in the SPARTA distribution and
+highlighted in "this section"_Section_example.html of the manual also
+show how to setup and run various kinds of simulations.

@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -33,12 +33,8 @@ dimensionality of the simulation, N = number of particles, kB =
 Boltzmann constant, and T = temperature.
 </P>
 <P>Note that this definition of temperature does not subtract out a net
-streaming velocity for molecules, so it is not a thermal temperature
-in a streaming context.  See the <A HREF = "compute_???.html">compute ???</A>
-command for calculating thermal temperatures in the presence of
-streaming.
-</P>
-<P>NOTE: could add per-species output of temp as a vector.
+streaming velocity for particles, so it is not a thermal temperature
+when the particles have a non-zero streaming velocity.
 </P>
 <HR>
 

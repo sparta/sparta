@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -27,6 +27,13 @@ quantities output to the screen, log file, dump files, and other
 output files.  Typically, this command is used at the very beginning
 of an input script.
 
+IMPORTANT NOTE: Internally, this command simply sets the numeric
+values of conversion factors used by SPARTA, e.g. the Boltzmann
+constant used to convert temperature to energy.  It is up to you to
+insure that all input values used in the input script or other read-in
+files (surface data, species files, reaction files) contain numeric
+values consistent with the chosen units.
+
 For style {cgs}, these are the units:
 
 mass = grams
@@ -51,8 +58,7 @@ velocity = meters/second
 acceleration = meters/second^2
 temperature = degrees K :ul
 
-The units command also sets the timestep size for each style:
-distance to default values for each style:
+The units command also sets the default timestep size for each style:
 
 For style {cgs} this is dt = 1.0 sec.
 For style {si} this is dt = 1.0 sec. :ul

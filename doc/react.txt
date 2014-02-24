@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "DSMSPARTAmmands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -31,17 +31,18 @@ react tce air.tce :pre
 Define chemical reactions to perform when particle-particle collisions
 occur.
 
-The {none} style means that no chemsistry will be performed.
-performed, which is the default.
+The {none} style means that no chemistry will be performed, which is
+the default.
 
 For other styles, a file is specified which contains a list of
 chemical reactions, with their associated parameters.  The reactions
-are read in to SPARTA and stored in a list.  Each time a simulation is
+are read into SPARTA and stored in a list.  Each time a simulation is
 run via the "run"_run.html command, the list is scanned.  Only
 reactions for which all the reactants and all the products are
 currently defined as species-IDs will be active for the simulation.
-See the "species"_species.html command for how species IDs are
-defined.
+Thus the file can contain more reactions than are used in a particular
+simulation.  See the "species"_species.html command for how species
+IDs are defined.
 
 The reaction models for the various styles and the corresponding input
 file format are described below.

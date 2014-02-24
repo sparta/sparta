@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -52,20 +52,20 @@ value printed in each output line, e.g. the 5th column of output in
 this case.  If the format for a specific column has been set, it will
 take precedent over the <I>int</I> or <I>float</I> setting.
 </P>
-<P>IMPORTANT NOTE: The statistical output values <I>step</I> and <I>npart</I> are
-stored internally as 8-byte signed integers, rather than the usual
-4-byte signed integers.  When specifying the "format int" keyword you
-can use a "%d"-style format identifier in the format string and SPARTA
-will convert this to the corresponding "%lu" form when it is applied
-to those keywords.  However, when specifying the "format M string"
-keyword for <I>step</I> and <I>natoms</I>, you should specify a string
-appropriate for an 8-byte signed integer, e.g. one with "%ld".
+<P>IMPORTANT NOTE: The output values <I>step</I> and <I>np</I> are stored
+internally as 8-byte signed integers, rather than the usual 4-byte
+signed integers.  When specifying the "format int" keyword you can use
+a "%d"-style format identifier in the format string and SPARTA will
+convert this to the corresponding "%ld" form when it is applied to
+those keywords.  However, when specifying the "format M string"
+keyword for those keywords, you should specify a string appropriate
+for an 8-byte signed integer, e.g. one with "%ld".
 </P>
 <P>The <I>every</I> keyword allows a variable to be specified which will
-determine which timesteps statistical output is generated.  It must be
-an <A HREF = "variable.html">equal-style variable</A>, and is specified as v_name,
-where name is the variable name.  The variable is evaluated at the
-beginning of a run to determine the next timestep at which a dump
+determine the timesteps on which statistical output is generated.  It
+must be an <A HREF = "variable.html">equal-style variable</A>, and is specified as
+v_name, where name is the variable name.  The variable is evaluated at
+the beginning of a run to determine the next timestep at which a dump
 snapshot will be written out.  On that timestep, the variable will be
 evaluated again to determine the next timestep, etc.  Thus the
 variable should return timestep values.  See the stagger() and
@@ -84,7 +84,7 @@ stats_modify	1 every v_s
 <P>Note that the <I>every</I> keyword overrides the output frequency setting
 made by the <A HREF = "stats.html">stats</A> command, by setting it to 0.  If the
 <A HREF = "stats.html">stats</A> command is later used to set the output frequency
-to a non-zero value, then the var,iable setting of the stats_modify
+to a non-zero value, then the variable setting of the stats_modify
 every command will be overridden.
 </P>
 <P><B>Restrictions:</B> none

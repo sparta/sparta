@@ -2,35 +2,35 @@
 "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next
 Section"_Manual.html :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
 :line
 
-13. Future and history :h3
+11. Future and history :h3
 
 This section lists features we are planning to add to SPARTA, features
 of previous versions of SPARTA, and features of other parallel
 molecular dynamics codes I've distributed.
 
-13.1 "Coming attractions"_#hist_1
-13.2 "Past versions"_#hist_2 :all(b)
+11.1 "Coming attractions"_#hist_1
+11.2 "Past versions"_#hist_2 :all(b)
 
 :line
 
-13.1 Coming attractions :h4,link(hist_1)
+11.1 Coming attractions :h4,link(hist_1)
 
-The "Wish list link"_http://dsmc.sandia.gov/future.html on the
+The "Wish list link"_http://sparta.sandia.gov/future.html on the
 SPARTA WWW page gives a list of features we are hoping to add to
 SPARTA in the future, including contact names of individuals you can
 email if you are interested in contributing to the developement or
 would be a future user of that feature.
 
 You can also send "email to the
-developers"_http://dsmc.sandia.gov/authors.html if you want to add
+developers"_http://sparta.sandia.gov/authors.html if you want to add
 your wish to the list.
 
 :line
 
-13.2 Past versions :h4,link(hist_2)
+11.2 Past versions :h4,link(hist_2)

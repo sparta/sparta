@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -80,22 +80,18 @@ convenient way to simply output one or more global values to a file.
 <P>Each listed value can be the result of a <A HREF = "compute.html">compute</A> or
 <A HREF = "fix.html">fix</A> or the evaluation of an equal-style
 <A HREF = "variable.html">variable</A>.  In each case, the compute, fix, or variable
-must produce a global quantity, not a per-molecule or per-grid
-quantity.  If you wish to spatial- or time-average or histogram
-per-molecule quantities from a compute, fix, or variable, then see the
-<A HREF = "fix_ave_spatial.html">fix ave/spatial</A>, <A HREF = "fix_ave_atom.html">fix
-ave/atom</A>, or <A HREF = "fix_ave_histo.html">fix ave/histo</A>
-commands.  If you wish to sum a per-molecule or per-grid quantity into
-a single global quantity, see the <A HREF = "compute_reduce.html">compute reduce</A>
-command.
+must produce a global quantity, not a per-grid or per-surf quantity.
+If you wish to time-average those quantities, see the <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> and <A HREF = "fix_ave_surf.html">fix ave/surf</A>
+commands.
 </P>
 <P><A HREF = "compute.html">Computes</A> that produce global quantities are those which
-do not have the word <I>praticle</I> or <I>cell</I> in their style name.  Only a
-few <A HREF = "fix.html">fixes</A> produce global quantities.  See the doc pages for
-individual fixes for info on which ones produce such values.
-<A HREF = "variable.html">Variables</A> of style <I>equal</I> are the only ones that can
-be used with this fix.  Variables of style <I>particle</I> or <I>cell</I> cannot
-be used, since they produce per-molecule or per-grid values.
+do not have the word <I>particle</I> or <I>grid</I> or <I>surf</I> in their style
+name.  Only a few <A HREF = "fix.html">fixes</A> produce global quantities.  See the
+doc pages for individual fixes for info on which ones produce such
+values.  <A HREF = "variable.html">Variables</A> of style <I>equal</I> are the only ones
+that can be used with this fix.  Variables of style <I>particle</I> cannot
+be used, since they produce per-particle values.
 </P>
 <P>The input values must either be all scalars or all vectors (or
 arrays), depending on the setting of the <I>mode</I> keyword.  In both
@@ -173,10 +169,9 @@ been previously defined in the input script.  Variables can only be
 used as input for <I>mode</I> = scalar.  Only equal-style variables can be
 referenced.  See the <A HREF = "variable.html">variable</A> command for details.
 Note that variables of style <I>equal</I> define a formula which can
-reference individual atom properties or <A HREF = "stats_style.html">stats_style</A>
-keywords, or they can invoke other computes, fixes, or variables when
-they are evaluated, so this is a very general means of specifying
-quantities to time average.
+reference <A HREF = "stats_style.html">stats_style</A> keywords, or they can invoke
+other computes, fixes, or variables when they are evaluated, so this
+is a very general means of specifying quantities to time average.
 </P>
 <HR>
 
@@ -266,11 +261,10 @@ appropriate fields from the fix ave/time command.
 </P>
 <HR>
 
-<P><B>Restart, fix_modify, output info:</B>
+<P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
-files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
-are relevant to this fix.
+files</A>.
 </P>
 <P>This fix produces a global scalar or global vector or global array
 which can be accessed by various output commands.  The values can only

@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -39,9 +39,9 @@ e.g.
 spa_g++ < in.script :pre
 
 since the SELF option invokes the C-library rewind() call, which may
-not be supported for stdin on some systems.  This can be worked around
-by using the "-in command-line argument"_Section_start.html#start_5,
-e.g.
+not be supported for stdin on some systems or by some MPI
+implementations.  This can be worked around by using the "-in
+command-line argument"_Section_start.html#start_5, e.g.
 
 spa_g++ -in in.script :pre
 

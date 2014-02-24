@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "DSMSPARTAmmands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -28,40 +28,39 @@ collide vss all.vss background :pre
 [Description:]
 
 Define what style of particle-particle collisions will be performed by
-SPARTA.  If collisions are performed, particles are sorted into grid
-cells every timestep and the appropriate collision model is invoked on
-a per-grid-cell basis.
+SPARTA each timestep.  If collisions are performed, particles are
+sorted into grid cells every timestep and the appropriate collision
+model is invoked on a per-grid-cell basis.
 
 The {none} style means that no particle-particle collisions will be
-performed, i.e. free molecular flow.
+performed, i.e. the simulation models free-molecular flow.
 
 :line
 
-The {vss} style is the Variable Soft Sphere model.  
+The {vss} style is the Variable Soft Sphere model.
 
 NOTE: VSS model needs to be described and cited.
 
 The {mix-ID} argument is a mixture ID which must contain all the
 species defined for use by the simulation.  The group definitions in
-the mixture will be used to perform collisions between various pairs
-of groups.
+the mixture will be used to perform collisions between pairs of
+groups.
 
 The {file} argument is for a file which contains definitions of VSS
-model parameters for some number of species, not all of which need to
-used by this simulation.  Only species currently defined by the
-simulation will be extracted from the file and they must be present in
-the file.
+model parameters for some number of species.  It can contain species
+not used by this simulation.  All species currently defined by the
+simulation must be present in the file.
 
 The format of the file is as follows.  Comments or blank lines are
 allowed in the file.  Comment lines start with a "#" character.  All
-other lines must have format like this with values separated by
+other lines must have the following format with values separated by
 whitespace:
 
 species-ID prop1 prop2 prop3 prop4
 
-The species-ID is a string that will be matched against the species
-list used by the simulation, as described above.  The properties are
-as follows:
+The species-ID is a string that will be matched against one of the
+species defined by the simulation, via the "species"_species.html
+command.  The properties are as follows:
 
 prop1 = diam = diamter of particle (distance units)
 prop2 = omega = ???

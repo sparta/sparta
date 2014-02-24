@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -14,7 +14,6 @@ mixture ID species1 species2 ... keyword args ... :pre
 
 ID = user-defined name of the mixture :ulb,l
 species1, species2, ... = zero or more species IDs to include in the mixture :l
-
 zero or more keyword/arg pairs may be appended :l
 keyword = {nrho} or {vstream} or {temp} or {frac} or {group} :l
   {nrho} arg = density
@@ -43,7 +42,7 @@ mixture background N O :pre
 
 Define a gas mixture and its properties.  A mixture can be referenced
 by its ID in several other SPARTA commands such as
-"create_molecules"_create_molecules.html or "pre-grid
+"create_particles"_create_particles.html or "per-grid
 computes"_compute.html.  Any number of mixtures can be defined and
 used in a simulation.
 
@@ -59,7 +58,8 @@ default values unless they are explicitly specified.
 
 Note that the mixture command can be used multiple times with the same
 ID, to add species to the mixture, define groups within the mixture,
-or change its attributes.
+or change its attributes.  Also note that a species can belong to
+more than one mixture.
 
 There are 2 default mixtures defined by SPARTA that always exist.
 
@@ -72,7 +72,7 @@ belong to.
 The second default mixture has an ID = "species", and also contains
 all species that have been defined.  When new species are created via
 the "species" command, they are also automatically added to this
-mixture.  This mixture has one group per species, each nanmed with the
+mixture.  This mixture defines one group per species, each with the
 species name, so that each species that belongs to its own group.
 
 :line
@@ -85,7 +85,7 @@ and assigned default per-species attributes, unless the appropriate
 keywords are also specified.
 
 Species can be specified which are already part of the mixture, to
-change their group assignemnt or their per-species proerties, as
+change their group assignment or their per-species proerties, as
 disussed below.
 
 Zero species can be specified, if other keywords are used which alter
@@ -123,14 +123,14 @@ the M species is set to (1 - sum)/M, where sum is the sum of the
 
 :line
 
-Each species in the mixture is assigned to exactly one group.  The
+Each species in a mixture is assigned to exactly one group.  The
 {group} keyword can be used to set or change these assignments.
 
 As described by the "collide"_collide.html command, mixture groups are
 used when performing collisions so that collisions attempts, partners,
 and parameters can be treated on a per-group basis for accuracy and
 efficiency.  "Per-grid computes"_compute.html also use mixture groups
-to calculate grid-based quantities on subsets of particles within each
+to calculate per-grid quantities on subsets of particles within each
 grid cell.
 
 The specified group ID can be any string you choose.  Similar to the
@@ -171,7 +171,7 @@ with the species ID as the group ID.
 
 [Related commands:]
 
-"global"_global.html, "create_molecules"_create_molecules.html
+"global"_global.html, "create_particles"_create_particles.html
 
 [Default:]
 

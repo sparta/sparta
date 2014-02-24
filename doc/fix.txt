@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -22,12 +22,11 @@ fix 1 grid/check 100 :pre
 
 [Description:]
 
-Set a fix that will be applied to the system.  In SPARTA, a "fix" is any
-user-specified operation that is applied to the system during
-timestepping.  Examples include adding particles via inlet boundary
-conditions, enforcing boundary conditions, or computing diagnostics.
-There are dozens of fixes defined in SPARTA and new ones can be added;
-see "this section"_Section_modify.html for a discussion.
+Set a fix that will be applied to the system.  In SPARTA, a "fix" is
+an operation that is applied to the system during timestepping.
+Examples include adding particles via inlet boundary conditions or
+computing diagnostics.  Code for new fixes can be added to SPARTA; see
+"this section"_Section_modify.html of the manual for details.
 
 Fixes perform their operations at different stages of the timestep.
 If 2 or more fixes operate at the same stage of the timestep, they are
@@ -47,11 +46,7 @@ fix, the old fix is deleted and the new one is created (presumably
 with new settings).  This is the same as if an "unfix" command were
 first performed on the old fix, except that the new fix is kept in the
 same order relative to the existing fixes as the old one originally
-was.  Note that this operation also wipes out any additional changes
-made to the old fix via the "fix_modify"_fix_modify.html command.
-
-The "fix modify"_fix_modify.html command allows settings for some
-fixes to be reset.  See the doc page for individual fixes for details.
+was.
 
 Some fixes store an internal "state" which is written to binary
 restart files via the "restart"_restart.html or
@@ -61,26 +56,40 @@ continue on with its calculations in a restarted simulation.  See the
 a fix in an input script that reads a restart file.  See the doc pages
 for individual fixes for info on which ones can be restarted.
 
+IMPORTANT NOTE: A restart capability for SPARTA has not yet been
+implemented.
+
 :line
 
-Some fixes calculate one of three styles of quantities: global,
-per-molecule, or per-grid, which can be used by other commands or
-output as described below.  A global quantity is one or more
-system-wide values, e.g. the energy of a wall interacting with
-particles.  A per-molecule quantity is one or more values per
-particle, e.g. the displacement vector for each particle since time 0.
-Per-cell quantities are calculated by each processor based on the grid
-cells it owns.
+Each fix style has its own doc page which describes its arguments and
+what it does, as listed below.  Here is an alphabetic list of fix
+styles available in SPARTA:
 
-Note that a single fix may produces either global or per-atom or
-per-grid quantities (or none at all), but never more than one of
-these.
+"ave/grid"_fix_ave_grid.html - compute per grid cell time-averaged quantities
+"ave/surf"_fix_ave_surf.html - compute per surface element time-averaged quantities
+"ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
+"balance"_fix_balance.html - perform dynamic load-balancing
+"grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
+"inflow"_fix_inflow.html - inject particles at global boundaries
+"print"_fix_print.html - print text and variables during a simulation :ul
 
-Global, per-atom, and local quantities each come in three kinds: a
-single scalar value, a vector of values, or a 2d array of values.  The
-doc page for each fix describes the style and kind of values it
-produces, e.g. a per-atom vector.  Some fixes produce more than one
-kind of a single style, e.g. a global scalar and a global vector.
+:line
+
+In addition to the operation they perform, some fixes also produce one
+of four styles of quantities: global, per-particle, per-grid, or
+per-surf.  These can be used by other commands or output as described
+below.  A global quantity is one or more system-wide values, e.g. the
+temperature of the system.  A per-particle quantity is one or more
+values per particle, e.g. the kinetic energy of each particle.  A
+per-grid quantity is one or more values per grid cell.  A per-surf
+quantity is one or more values per surface element.
+
+Global, per-particle, per-grid, and per-surf quantities each come in
+two forms: a single scalar value or a vector of values.  Additionaly,
+global quantities can also be a 2d array of values.  The doc page for
+each fix describes the style and kind of values it produces, e.g. a
+per-particle vector.  Some fixes can produce more than one form of a
+single style, e.g. a global scalar and a global vector.
 
 When a fix quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -105,31 +114,19 @@ various commands explain the details.
 
 :line
 
-In SPARTA, the values generated by a fix can be used in several ways:
+Any values generated by a fix can be used in several ways:
 
 Global values can be output via the "stats_style"_stats_style.html
 command.  Or the values can be referenced in a "variable
 equal"_variable.html or "variable atom"_variable.html command. :ulb,l
 
-Per-molecule values can be output via the "dump particle"_dump.html
-command.  Or the per-molecule values can be referenced in an
-"molecule-style variable"_variable.html. :l
+Per-particle values can be output via the "dump particle"_dump.html
+command.  Or the per-particle values can be referenced in an
+"particle-style variable"_variable.html. :l
 
 Per-grid values can be output via the "dump grid"_dump.html command.
 Or the per-grid values can be referenced in a "grid-style
 variable"_variable.html. :l,ule
-
-:line
-
-Each fix style has its own documentation page which describes its
-arguments and what it does, as listed below.  Here is an alphabetic
-list of fix styles available in SPARTA:
-
-"ave/grid"_fix_ave_grid.html - compute per-grid time-averaged quantities
-"ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
-"grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
-"inflow"_fix_inflow.html - inject molecules at global boundaries
-"print"_fix_print.html - print text and variables during a simulation :ul
 
 :line
 

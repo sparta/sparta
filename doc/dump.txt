@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -14,25 +14,25 @@ dump command :h3
 dump ID style N file args :pre
 
 ID = user-assigned name for the dump :ulb,l
-style = {molecule} or {grid} or {surf} or {image} :l
+style = {particle} or {grid} or {surf} or {image} :l
 N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
-  {molecule} args = list of molecule attributes
+  {particle} args = list of particle attributes
     possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
                           c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
-      id = molecule ID
-      type = molecule species
+      id = particle ID
+      type = particle species
       proc = ID of owning processor
-      x,y,z = unscaled molecule coordinates
-      xs,ys,zs = scaled molecule coordinates
-      vx,vy,vz = molecule velocities
-      c_ID = per-molecule vector (or array) calculated by a compute with ID
-      c_ID\[N\] = Nth column of per-molecule array calculated by a compute with ID
-      f_ID = per-molecule vector (or array) calculated by a fix with ID
-      f_ID\[N\] = Nth column of per-molecule array calculated by a fix with ID
-      v_name = per-molecule vector calculated by a molecule-style variable with name :pre
+      x,y,z = unscaled particle coordinates
+      xs,ys,zs = scaled particle coordinates
+      vx,vy,vz = particle velocities
+      c_ID = per-particle vector (or array) calculated by a compute with ID
+      c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID
+      f_ID = per-particle vector (or array) calculated by a fix with ID
+      f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID
+      v_name = per-particle vector calculated by a particle-style variable with name :pre
 
   {grid} args = list of grid attributes
     possible attributes = id, idstr, proc, xlo, ylo, zlo, xhi, yhi, zhi,
@@ -45,7 +45,6 @@ args = list of arguments for a particular style :l
       xhi,yhi,zhi = coords of lower left corner of grid cell
       xc,yc,zc = coords of center of grid cell
       vol = flow volume of grid cell (area in 2d)
-      svol = ???
       c_ID = per-grid vector (or array) calculated by a compute with ID
       c_ID\[N\] = Nth column of per-grid array calculated by a compute with ID
       f_ID = per-grid vector (or array) calculated by a fix with ID
@@ -71,8 +70,8 @@ args = list of arguments for a particular style :l
 
 [Examples:]
 
-dump 1 molecule 100 dump.myforce.* id type x y vx fx
-dump 2 molecule 100 dump.%.myforce id type c_myF\[3\] v_ke
+dump 1 particle 100 dump.myforce.* id type x y vx fx
+dump 2 particle 100 dump.%.myforce id type c_myF\[3\] v_ke
 dump 3 grid 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi :pre
 
 [Description:]
@@ -94,7 +93,7 @@ or one per processor).
 
 :line
 
-The {molecule} and {grid} and {surf} styles create files in a simple
+The {particle} and {grid} and {surf} styles create files in a simple
 text format that is self-explanatory when viewing a dump file.  Many
 of the SPARTA "post-processing tools"_Section_tools.html, including
 "Pizza.py"_http://pizza.sandia.gov, work with this format.
@@ -118,15 +117,11 @@ the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the "boundary"_doc/boundary.html command for details.
 
 The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" line in each
-snapshot lists column descriptors for the per-molecule or per-grid or
-per-surf lines that follow.  The descriptors will be the attributes
-you specify in the dump command for the style.
-
-Styles {molecule} and {grid} and {surf} allow you to specify a list of
-attributes to be written to the dump file for each molecule or grid
-cell or surface.  Possible attributes are listed above and will appear
-in the order specified.  An explanation of the possible attributes is
-given below.
+snapshot lists column descriptors for the per-particle or per-grid or
+per-surf lines that follow.  The descriptors are the attributes
+specied in the dump command for the style.  Possible attributes are
+listed above and will appear in the order specified.  An explanation
+of the possible attributes is given below.
 
 :line
 
@@ -170,7 +165,7 @@ to convert it back to text format (see the "binary2txt
 tool"_Section_tools.html#binary) or write your own code to read the
 binary file.  The format of the binary file can be understood by
 looking at the tools/binary2txt.cpp file.  This option is only
-available for the {molecule} style.
+available for the {particle} style.
 
 If the filename ends with ".gz", the dump file (or files, if "*" or "%"
 is also used) is written in gzipped format.  A gzipped dump file will
@@ -179,54 +174,54 @@ to write.
 
 :line
 
-This section explains the molecule attributes that can be specified as
-part of the {molecule} style.
+This section explains the particle attributes that can be specified as
+part of the {particle} style.
 
-{Id} is the molecule ID.  {Type} is an integer index representing the
-molecule species.  {Proc} is the ID of the processor which owns the
-grid cell.
+{Id} is the particle ID.  {Type} is an integer index representing the
+particle species.  {Proc} is the ID of the processor which currently
+owns the particle.
 
-The {x}, {y}, {z} attributes write molecule coordinates "unscaled", in
-the appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} if
-you want the coordinates "scaled" to the box size, so that each value
-is 0.0 to 1.0.
+The {x}, {y}, {z} attributes write particle coordinates "unscaled", in
+the appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} to
+"scale" the coordinates to the box size, so that each value is 0.0 to
+1.0.
 
-{Vx}, {vy}, {vz} are components of molecule velocity.
+{Vx}, {vy}, {vz} are components of particle velocity.
 
-The {c_ID} and {c_ID\[N\]} attributes allow per-molecule vectors or
+The {c_ID} and {c_ID\[N\]} attributes allow per-particle vectors or
 arrays calculated by a "compute"_compute.html to be output.  The ID in
 the attribute should be replaced by the actual ID of the compute that
 has been defined previously in the input script.  See the
 "compute"_compute.html command for details.
 
-If {c_ID} is used as a attribute, then the per-molecule vector
+If {c_ID} is used as a attribute, then the per-particle vector
 calculated by the compute is printed.  If {c_ID\[N\]} is used, then N
 must be in the range from 1-M, which will print the Nth column of the
-M-length per-molecule array calculated by the compute.
+M-length per-particle array calculated by the compute.
 
 The {f_ID} and {f_ID\[N\]} attributes allow vector or array
-per-molecule quantities calculated by a "fix"_fix.html to be output.
+per-particle quantities calculated by a "fix"_fix.html to be output.
 The ID in the attribute should be replaced by the actual ID of the fix
 that has been defined previously in the input script.
 
-If {f_ID} is used as a attribute, then the per-molecule vector
+If {f_ID} is used as a attribute, then the per-particle vector
 calculated by the fix is printed.  If {f_ID\[N\]} is used, then N must
 be in the range from 1-M, which will print the Nth column of the
-M-length per-molecule array calculated by the fix.
+M-length per-particle array calculated by the fix.
 
-The {v_name} attribute allows per-molecule vectors calculated by a
+The {v_name} attribute allows per-particle vectors calculated by a
 "variable"_variable.html to be output.  The name in the attribute
 should be replaced by the actual name of the variable that has been
-defined previously in the input script.  Only a molecule-style
+defined previously in the input script.  Only a particle-style
 variable can be referenced, since it is the only style that generates
-per-molecule values.  Variables of style {molecule} can reference
-per-molecule attributes, stats keywords, or invoke other computes,
+per-particle values.  Variables of style {particle} can reference
+per-particle attributes, stats keywords, or invoke other computes,
 fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
 
-See "Section_modify"_Section_modify.html of the manual for information
+See "this section"_Section_modify.html of the manual for information
 on how to add new compute and fix styles to SPARTA to calculate
-per-molecule quantities which could then be output into dump files.
+per-particle quantities which could then be output into dump files.
 
 :line
 
@@ -240,12 +235,12 @@ ID is stored as an integer such as 5774983, but can also be decoded
 into a string such as 33-4-6, which makes it easier to understand the
 grid hierarchy.  In this case it means the grid cell is at the 3rd
 level of the hierarchy.  Its grandparent cell was 33 at the 1st level,
-its parent was cell 4 within cell 33, and the cell itself is cell 6
-within cell 4 within cell 33.  If you specify {id}, the ID is printed
-directly as an integer.  If you specify {idstr}, it is printed as a
-string.
+its parent was cell 4 (at level 2) within cell 33, and the cell itself
+is cell 6 (at level 3) within cell 4 within cell 33.  If you specify
+{id}, the ID is printed directly as an integer.  If you specify
+{idstr}, it is printed as a string.
 
-{Proc} is the ID of the processor which owns the grid cell.
+{Proc} is the ID of the processor which currently owns the grid cell.
 
 The {xlo}, {ylo}, {zlo} attributes write the coordinates of the
 lower-left corner of the grid cell in the appropriate distance
@@ -257,12 +252,8 @@ simulation.
 
 The {vol} attribute is the flow volume of the grid cell (or area in 2d).
 Flow volume is the portion of the grid cell that is accessible to
-moleclues, i.e. outside any closed surface that may intersect
+particles, i.e. outside any closed surface that may intersect
 the cell.
-
-NOTE: what is it for split cells, or sub cells?
-
-NOTE: what is svol?
 
 The {c_ID} and {c_ID\[N\]} attributes allow per-grid vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the
@@ -307,9 +298,9 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 
-See "Section_modify"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to SPARTA to calculate per-grid
-quantities which could then be output into dump files.
+See "this section"_Section_modify.html of the manual for information
+on how to add new compute and fix styles to SPARTA to calculate
+per-grid quantities which could then be output into dump files.
 
 :line
 
@@ -371,9 +362,9 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 
-See "Section_modify"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to SPARTA to calculate per-surf
-quantities which could then be output into dump files.
+See "this section"_Section_modify.html of the manual for information
+on how to add new compute and fix styles to SPARTA to calculate
+per-surf quantities which could then be output into dump files.
 
 :line
 

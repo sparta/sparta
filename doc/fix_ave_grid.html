@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -48,8 +48,8 @@ zero or more input values can be listed
 <PRE>fix 1 all ave/grid 10 20 1000 c_mine
 fix 1 all ave/grid 1 100 100 c_2 ave running 
 </PRE>
-<P>These commands will dump standard averages for each species and each
-grid cell to a file every 1000 steps:
+<P>These commands will dump averages for each species and each grid cell
+to a file every 1000 steps:
 </P>
 <PRE>compute 1 grid species n u v w usq vsq wsq
 fix 1 ave/grid 10 100 1000 c_1
@@ -58,18 +58,19 @@ dump 1 grid 1000 tmp.grid id f_1
 <P><B>Description:</B>
 </P>
 <P>Use one or more per-grid vectors as inputs every few timesteps, and
-average them grid cell by grid cell over longer timescales, applying
-appropriate normalization factors.  The resulting per grid cell
-averages can be used by other output commands such as the <A HREF = "dump.html">dump
-grid</A> command.
+average by grid cell over longer timescales, applying appropriate
+normalization factors.  The resulting per grid cell averages can be
+used by other output commands such as the <A HREF = "dump.html">dump grid</A>
+command.
 </P>
 <P>Each input value can be the result of a <A HREF = "compute.html">compute</A> or
 <A HREF = "fix.html">fix</A> or the evaluation of a grid-style
 <A HREF = "variable.html">variable</A>.  The compute, fix, or variable must produce
-a per-grid vector or array, not a global quantity or per-molecule
+a per-grid vector or array, not a global or per-particle or per-surf
 quantity.  If you wish to time-average global quantities from a
 compute, fix, or variable, then see the <A HREF = "fix_ave_time.html">fix
-ave/time</A> command.
+ave/time</A> command.  To time-average per-surf
+quantities, see the <A HREF = "fix_ave_surf.html">fix ave/surf</A> command.
 </P>
 <P><A HREF = "compute.html">Computes</A> that produce per-grid vectors or arrays are
 those which have the word <I>grid</I> in their style name.  See the doc
@@ -141,9 +142,6 @@ variable</A>.  Variables of style <I>grid</I> can reference
 fixes, or variables when they are evaluated, so this is a very general
 means of generating per-grid quantities to time average.
 </P>
-<P>NOTE: The <A HREF = "variable.html">variable</A> command does not yet support
-grid-style varaibles.
-</P>
 <HR>
 
 <P>For averaging of a value that comes from a compute or fix,
@@ -190,11 +188,10 @@ re-defining the fix, or by re-specifying it.
 </P>
 <HR>
 
-<P><B>Restart, fix_modify, output info:</B>
+<P><B>Restart, output info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
-files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
-are relevant to this fix.
+files</A>.
 </P>
 <P>This fix produces a per-grid vector or array which can be accessed by
 various output commands.  A vector is produced if only a single

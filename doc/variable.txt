@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -37,7 +37,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
   {equal} or {particle} args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
-    stats keywords = step, npart, vol, etc from "stats_style"_stats_style.html
+    stats keywords = step, np, vol, etc from "stats_style"_stats_style.html
     math operators = (), -x, x+y, x-y, x*y, x/y, x^y, 
                      x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x||y, !x
     math functions = sqrt(x), exp(x), ln(x), log(x),
@@ -56,9 +56,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
 variable x index run1 run2 run3 run4 run5 run6 run7 run8
 variable LoopVar loop $n
 variable beta equal temp/3.0
-variable b1 equal x\[234\]+0.5*vol
-variable b1 equal "x\[234\] + 0.5*vol"
-variable b equal xcm(mol1,x)/2.0
+variable beta equal "temp / 3.0"
 variable b equal c_myTemp
 variable b particle x*y/vol
 variable foo string myfile
@@ -97,7 +95,7 @@ different values when it is evaluated at different times during a
 simulation.
 
 IMPORTANT NOTE: When the input script line that defines a variable of
-style {equal} or {particle} that contain a formula is encountered, the
+style {equal} or {particle} that contains a formula is encountered, the
 formula is NOT immediately evaluated and the result stored.  See the
 discussion below about "Immediate Evaluation of Variables" if you want
 to do this.
@@ -108,7 +106,7 @@ is ignored.  This means variables can NOT be re-defined in an input
 script (with 2 exceptions, read further).  This is to allow an input
 script to be processed multiple times without resetting the variables;
 see the "jump"_jump.html or "include"_include.html commands.  It also
-means that using the "command-line switch"_Section_start.html#start_6
+means that using the "command-line switch"_Section_start.html#start_5
 -var will override a corresponding index variable setting in the input
 script.
 
@@ -120,8 +118,8 @@ the formula associated with an {equal} or {particle} style variable
 can change if it contains a substitution for another variable,
 e.g. $x.
 
-Second, as described below, if a variable is iterated on to the end of
-its list of strings via the "next"_next.html command, it is removed
+Second, as described below, if a variable is iterated over to the end
+of its list of strings via the "next"_next.html command, it is removed
 from the list of active variables, and is thus available to be
 re-defined in a subsequent variable command.  The {delete} style does
 the same thing.
@@ -168,7 +166,7 @@ variable.
 
 {Index} style variables with a single string value can also be set by
 using the command-line switch -var; see "this
-section"_Section_start.html#start_6 for details.
+section"_Section_start.html#start_5 for details.
 
 The {loop} style is identical to the {index} style except that the
 strings are the integers from 1 to N inclusive, if only one argument N
@@ -183,20 +181,17 @@ inclusive, and the string N1 is initially assigned to the variable.
 
 For the {world} style, one or more strings are specified.  There must
 be one string for each processor partition or "world".  See "this
-section"_Section_start.html#start_6 of the manual for information on
+section"_Section_start.html#start_5 of the manual for information on
 running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command assigns one string to each
 world.  All processors in the world are assigned the same string.  The
 next command cannot be used with {equal} style variables, since there
 is only one value per world.  This style of variable is useful when
-you wish to run different simulations on different partitions, or when
-performing a parallel tempering simulation (see the
-"temper"_temper.html command), to assign different temperatures to
-different partitions.
+you wish to run different simulations on different partitions.
 
 For the {universe} style, one or more strings are specified.  There
 must be at least as many strings as there are processor partitions or
-"worlds".  See "this page"_Section_start.html#start_6 for information
+"worlds".  See "this page"_Section_start.html#start_5 for information
 on running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command initially assigns one
 string to each world.  When a "next"_next.html command is encountered
@@ -206,7 +201,7 @@ variable strings are consumed.  Thus, this command can be used to run
 50 simulations on 8 processor partitions.  The simulations will be run
 one after the other on whatever partition becomes available, until
 they are all finished.  {Universe} style variables are incremented
-using the files "tmp.lammps.variable" and "tmp.lammps.variable.lock"
+using the files "tmp.sparta.variable" and "tmp.sparta.variable.lock"
 which you will see in your directory during such a SPARTA run.
 
 The {uloop} style is identical to the {universe} style except that the
@@ -219,11 +214,11 @@ script.
 For the {equal} and {particle} styles, a single string is specified
 which represents a formula that will be evaluated afresh each time the
 variable is used.  If you want spaces in the string, enclose it in
-double quotes so the parser will treat it as a single argument.  For
-{equal} style variables the formula computes a scalar quantity, which
-becomes the value of the variable whenever it is evaluated.  For
-{particle} style variables the formula computes one quantity for each
-particle whenever it is evaluated.
+quotes so the parser will treat it as a single argument.  For {equal}
+style variables the formula computes a scalar quantity, which becomes
+the value of the variable whenever it is evaluated.  For {particle}
+style variables the formula computes one quantity for each particle
+whenever it is evaluated.
 
 Note that {equal} and {particle} variables can produce different
 values at different stages of the input script or at different times
@@ -243,7 +238,7 @@ simple, but multiple quantities can be nested and combined in various
 ways to build up formulas of arbitrary complexity.  For example, this
 is a valid (though strange) variable formula:
 
-variable x equal "npart + c_MyTemp / vol^(1/3)" :pre
+variable x equal "np + c_MyTemp / vol^(1/3)" :pre
 
 Specifically, a formula can contain numbers, stats keywords, math
 operators, math functions, particle vectors, compute references, fix
@@ -251,7 +246,7 @@ references, and references to other variables.
 
 Number: 0.2, 100, 1.0e20, -15.4, etc
 Constant: PI
-Stats keywords: step, npart, vol, etc
+Stats keywords: step, np, vol, etc
 Math operators: (), -x, x+y, x-y, x*y, x/y, x^y, x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x||y, !x
 Math functions: sqrt(x), exp(x), ln(x), log(x), sin(x), cos(x), tan(x), \
      asin(x), acos(x), atan(x), atan2(y,x), random(x,y,z), normal(x,y,z), \
@@ -266,23 +261,23 @@ Other variables: v_name :tb(s=:)
 :line
 
 Most of the formula elements produce a scalar value.  A few produce a
-per-molecule vector of values.  These are the particle vectors,
-compute references that represent a per-molecule vector, fix
-references that represent a per-molecules vector, and variables that
+per-particle vector of values.  These are the particle vectors,
+compute references that represent a per-particle vector, fix
+references that represent a per-particles vector, and variables that
 are particle-style variables.  Math functions that operate on scalar
 values produce a scalar value; math function that operate on
-per-molecule vectors do so element-by-element and produce a
-per-molecule vector.
+per-particle vectors do so element-by-element and produce a
+per-particle vector.
 
 A formula for equal-style variables cannot use any formula element
-that produces a per-molecule vector.  A formula for an particle-style
+that produces a per-particle vector.  A formula for a particle-style
 variable can use formula elements that produce either a scalar value
-or a per-molecule vector.
+or a per-particle vector.
 
 The stats keywords allowed in a formula are those defined by the
 "stats_style custom"_stats_style.html command.  If a variable is
 evaluated directly in an input script (not during a run), then the
-values accessed by the thermo keyword must be current.  See the
+values accessed by the stats keyword must be current.  See the
 discussion below about "Variable Accuracy".
 
 :line
@@ -292,9 +287,9 @@ Math Operators :h4
 Math operators are written in the usual way, where the "x" and "y" in
 the examples can themselves be arbitrarily complex formulas, as in the
 examples above.  In this syntax, "x" and "y" can be scalar values or
-per-molecule vectors.  For example, "vol/npart" is the division of two
+per-particle vectors.  For example, "vol/np" is the division of two
 scalars, where "vy+vz" is the element-by-element sum of two
-per-molecule vectors of y and z velocities.
+per-particle vectors of y and z velocities.
 
 Operators are evaluated left to right and have the usual C-style
 precedence: unary minus and unary logical NOT operator "!" have the
@@ -320,7 +315,7 @@ returns 0.0.  The logical NOT operator returns 1.0 if its argument is
 These relational and logical operators can be used as a masking or
 selection operation in a formula.  For example, the number of
 particles whose properties satifsy one or more criteria could be
-calculated by taking the returned per-molecule vector of ones and
+calculated by taking the returned per-particle vector of ones and
 zeroes and passing it to the "compute reduce"_compute_reduce.html
 command.
 
@@ -331,14 +326,14 @@ Math Functions :h4
 Math functions are specified as keywords followed by one or more
 parenthesized arguments "x", "y", "z", each of which can themselves be
 arbitrarily complex formulas.  In this syntax, the arguments can
-represent scalar values or per-molecule vectors.  In the latter case,
+represent scalar values or per-particle vectors.  In the latter case,
 the math operation is performed on each element of the vector.  For
-example, "sqrt(npart)" is the sqrt() of a scalar, where "sqrt(y*z)"
-yields a per-molecule vector with each element being the sqrt() of the
+example, "sqrt(np)" is the sqrt() of a scalar, where "sqrt(y*z)"
+yields a per-particle vector with each element being the sqrt() of the
 product of one particle's y and z coordinates.
 
-Most of the math functions perform obvious operations.  The ln() is
-the natural log; log() is the base 10 log. 
+Most of the math functions perform obvious operations.  Ln() is the
+natural log; log() is the base 10 log.
 
 The random(x,y) function takes 2 arguments: x = lo and y = hi.  It
 generates a uniform random number between lo and hi.  The normal(x,y)
@@ -371,6 +366,10 @@ The run begins on startstep and ends on stopstep.  Startstep and
 stopstep can span multiple runs, using the {start} and {stop} keywords
 of the "run"_run.html command.  See the "run"_run.html command for
 details of how to do this.
+
+IMPORTANT NOTE: Currently, the run command does not support
+the start/stop keywords.  In the formula above startstep = 0 and
+stopstep = the number of timesteps being performed by the run.
 
 The stagger(x,y) function uses the current timestep to generate a new
 timestep.  X,y > 0 and x > y is required.  The generated timesteps
@@ -405,8 +404,7 @@ where dt = the timestep size.
 The run begins on startstep.  Startstep can span multiple runs, using
 the {start} keyword of the "run"_run.html command.  See the
 "run"_run.html command for details of how to do this.  Note that the
-"thermo_style"_thermo_style.html keyword elaplong =
-timestep-startstep.
+"stats_style"_stats_style.html keyword elaplong = timestep-startstep.
 
 The swiggle(x,y,z) and cwiggle(x,y,z) functions each take 3 arguments:
 x = coord0, y = amplitude, z = period.  They use the elapsed time to
@@ -422,8 +420,11 @@ where dt = the timestep size.
 The run begins on startstep.  Startstep can span multiple runs, using
 the {start} keyword of the "run"_run.html command.  See the
 "run"_run.html command for details of how to do this.  Note that the
-"thermo_style"_thermo_style.html keyword elaplong =
-timestep-startstep.
+"stats_style"_stats_style.html keyword elaplong = timestep-startstep.
+
+IMPORTANT NOTE: Currently, the run command does not support
+the start/stop keywords.  In the formula above startstep = 0 and
+stopstep = the number of timesteps being performed by the run.
 
 :line
 
@@ -446,7 +447,7 @@ array is being referenced.
 These functions operate on the global vector of inputs and reduce it
 to a single scalar value.  This is analagous to the operation of the
 "compute reduce"_compute_reduce.html command, which invokes the same
-functions on per-molecule vectors.
+functions on per-particle vectors.
 
 The sum() function calculates the sum of all the vector elements.  The
 min() and max() functions find the minimum and maximum element
@@ -458,10 +459,7 @@ effectively implements an integratiion via the trapezoidal rule on the
 global vector of data.  I.e. consider a set of points, equally spaced
 by 1 in their x coordinate: (1,V1), (2,V2), ..., (N,VN), where the Vi
 are the values in the global vector of length N.  The integral from 1
-to N of these points is trap().  When appropriately normalized by the
-timestep size, this function is useful for calculating integrals of
-time-series data, like that generated by the "fix
-ave/correlate"_fix_ave_correlate.html command.
+to N of these points is trap().  
 
 :line
 
@@ -479,22 +477,22 @@ Compute references access quantities calculated by a
 "compute"_compute.html.  The ID in the reference should be replaced by
 the ID of a compute defined elsewhere in the input script.  As
 discussed in the doc page for the "compute"_compute.html command,
-computes can produce global, per-molecule, or per-grid values.  Only
-global and per-molecule values can be used in a variable.  Computes
-can also produce a scalar, vector, or array.  An equal-style variable
-can only use scalar values, which means a global scalar, or an element
-of a global vector or array.  Particle-style variables can use the
-same scalar values.  They can also use per-molecule vector values.  A
-vector value can be a per-molecule vector itself, or a column of an
-per-molecule array.  See the doc pages for individual computes to see
-what kind of values they produce.
+computes can produce global, per-particle, per-grid, or per-surf
+values.  Only global and per-particle values can be used in a
+variable.  Computes can also produce a scalar, vector, or array.  An
+equal-style variable can only use scalar values, which means a global
+scalar, or an element of a global vector or array.  Particle-style
+variables can use the same scalar values.  They can also use
+per-particle vector values.  A vector value can be a per-particle
+vector itself, or a column of an per-particle array.  See the doc
+pages for individual computes to see what kind of values they produce.
 
 Examples of different kinds of compute references are as follows.
 There is no ambiguity as to what a reference means, since computes
-only produce global or per-molecule quantities, never both.
+only produce global or per-particle quantities, never both.
 
-c_ID: global scalar, or per-molecule vector
-c_ID\[I\]: Ith element of global vector, or Ith column from per-molecule array
+c_ID: global scalar, or per-particle vector
+c_ID\[I\]: Ith element of global vector, or Ith column from per-particle array
 c_ID\[I\]\[J\]: I,J element of global array :tb(s=:)
 
 If a variable containing a compute is evaluated directly in an input
@@ -508,23 +506,24 @@ Fix References :h4
 Fix references access quantities calculated by a "fix"_compute.html.
 The ID in the reference should be replaced by the ID of a fix defined
 elsewhere in the input script.  As discussed in the doc page for the
-"fix"_fix.html command, fixes can produce global, per-molecule, or
-per-grid values.  Only global and per-molecule values can be used in a
-variable.  Fixes can also produce a scalar, vector, or array.  An
-equal-style variable can only use scalar values, which means a global
-scalar, or an element of a global vector or array.  Particle-style
-variables can use the same scalar values.  They can also use
-per-molecule vector values.  A vector value can be a per-molecule
-vector itself, or a column of an per-molecule array.  See the doc
-pages for individual fixes to see what kind of values they produce.
+"fix"_fix.html command, fixes can produce global, per-particle,
+per-grid, or per-surf values.  Only global and per-particle values can
+be used in a variable.  Fixes can also produce a scalar, vector, or
+array.  An equal-style variable can only use scalar values, which
+means a global scalar, or an element of a global vector or array.
+Particle-style variables can use the same scalar values.  They can
+also use per-particle vector values.  A vector value can be a
+per-particle vector itself, or a column of an per-particle array.  See
+the doc pages for individual fixes to see what kind of values they
+produce.
 
 The different kinds of fix references are exactly the same as the
 compute references listed in the above table, where "c_" is replaced
 by "f_".  Again, there is no ambiguity as to what a reference means,
-since fixes only produce global or per-molecule quantities, never both.
+since fixes only produce global or per-particle quantities, never both.
 
-f_ID: global scalar, or per-molecule vector
-f_ID\[I\]: Ith element of global vector, or Ith column from per-molecule array
+f_ID: global scalar, or per-particle vector
+f_ID\[I\]: Ith element of global vector, or Ith column from per-particle array
 f_ID\[I\]\[J\]: I,J element of global array :tb(s=:)
 
 If a variable containing a fix is evaluated directly in an input
@@ -545,7 +544,7 @@ Variable references access quantities calulated by other variables,
 which will cause those variables to be evaluated.  The name in the
 reference should be replaced by the name of a variable defined
 elsewhere in the input script.  As discussed on this doc page,
-particle-style variables generate a per-molecule vector of values; all
+particle-style variables generate a per-particle vector of values; all
 other variable styles generate a global scalar value.  An equal-style
 variable can only use scalar values, which means another equal-style
 variable.  Particle-style variables can use either other equal-style
@@ -553,17 +552,9 @@ or particle-style variables.
 
 Examples of different kinds of variable references are as follows.
 There is no ambiguity as to what a reference means, since variables
-produce only a global scalar or a per-molecule vectors, never both.
+produce only a global scalar or a per-particle vector, never both.
 
-v_name: scalar, or per-molecule vector :tb(s=:)
-
-IMPORTANT NOTE: If you define variables in circular manner like this:
-
-variable a equal v_b
-variable b equal v_a
-print $a :pre
-
-then SPARTA may run for a while when the print statement is invoked!
+v_name: scalar, or per-atom vector :tb(s=:)
 
 :line
 
@@ -574,51 +565,50 @@ sign (e.g. $x or $\{abc\}) versus with a leading "v_" (e.g. v_x or
 v_abc).  The former can be used in any command, including a variable
 command, to force the immediate evaluation of the referenced variable
 and the substitution of its value into the command.  The latter is a
-required kind of argument to some commands (e.g. the "fix
-ave/spatial"_fix_ave_spatial.html or "dump custom"_dump.html or
-"thermo_style"_thermo_style.html commands) if you wish it to evaluate
-a variable periodically during a run.  It can also be used in a
-variable formula if you wish to reference a second variable.  The
-second variable will be evaluated whenever the first variable is
-evaluated.
+form of argument used by some commands (e.g. the "fix
+ave/time"_fix_ave_time.html or "dump particle"_dump.html commands) if
+you wish it to evaluate a variable periodically during a run.  It can
+also be used in a variable formula if you wish to reference a second
+variable.  The second variable will be evaluated whenever the first
+variable is evaluated.
 
 As an example, suppose you use this command in your input script to
-define the variable "v" as
+define the variable "n" as
 
-variable v equal vol :pre
+variable n equal np :pre
 
-before a run where the simulation box size changes.  You might think
-this will assign the initial volume to the variable "v".  That is not
-the case.  Rather it assigns a formula which evaluates the volume
-(using the thermo_style keyword "vol") to the variable "v".  If you
-use the variable "v" in some other command like "fix
-ave/time"_fix_ave_time.html then the current volume of the box will be
+before a run where the particle count changes.  You might think this
+will assign the initial count to the variable "n".  That is not the
+case.  Rather it assigns a formula which evaluates the count (using
+the stats_style keyword "np") to the variable "n".  If you use the
+variable "n" in some other command like "fix
+ave/time"_fix_ave_time.html then the current particle count will be
 evaluated continuously during the run.
 
-If you want to store the initial volume of the system, you can do it
-this way:
+If you want to store the initial particle count of the system, it
+can be done in this manner:
 
-variable v equal vol
-variable v0 equal $v :pre
+variable n equal np
+variable n0 equal $n :pre
 
-The second command will force "v" to be evaluated (yielding the
-initial volume) and assign that value to the variable "v0".  Thus the
+The second command will force "n" to be evaluated (yielding the
+initial count) and assign that value to the variable "n0".  Thus the
 command
 
-thermo_style custom step v_v v_v0 :pre
+stats_style custom step v_n v_n0 :pre
 
-would print out both the current and initial volume periodically
-during the run.
+would print out both the current and initial particle count
+periodically during the run.
 
-Note that it is a mistake to enclose a variable formula in double
-quotes if it contains variables preceeded by $ signs.  For example,
+Also note that it is a mistake to enclose a variable formula in quotes
+if it contains variables preceeded by $ signs.  For example,
 
-variable vratio equal "$\{vfinal\}/$\{v0\}" :pre
+variable nratio equal "$\{nfinal\}/$\{n0\}" :pre
 
 This is because the quotes prevent variable substitution (see "this
-section"_Section_commands.html#cmd_2 on parsing input script
-commands), and thus an error will occur when the formula for "vratio"
-is evaluated later.
+section"_Section_commands.html#cmd_2 of the manual on parsing input
+script commands), and thus an error will occur when the formula for
+"nratio" is evaluated later.
 
 :line
 
@@ -627,19 +617,22 @@ is evaluated later.
 Obviously, SPARTA attempts to evaluate variables containing formulas
 ({equal} and {particle} style variables) accurately whenever the
 evaluation is performed.  Depending on what is included in the
-formula, this may require invoking a "compute"_compute.html, either
-directly or indirectly via a thermo keyword, or accessing a value
-previously calculated by a compute, or accessing a value calculated
-and stored by a "fix"_fix.html.
+formula, this may require invoking a "compute"_compute.html, or
+accessing a value previously calculated by a compute, or accessing a
+value calculated and stored by a "fix"_fix.html.  If the compute is
+one that calculates certain properties of the system such as the
+pressure induced on a global boundary due to collisions, then these
+quantities need to be tallied during the timesteps that the variable
+will need the values.
 
-SPARTA keeps track of all of this during a "run"_run.html or "energy
-minimization"_minimize.html.  An error will be generated if you
-attempt to evaluate a variable on timesteps when it cannot produce
-accurate values.  For example, if a "thermo_style
-custom"_thermo_style.html command prints a variable which accesses
-values stored by a "fix ave/time"_fix_ave_time.html command and the
-timesteps on which thermo output is generated are not multiples of the
-averaging frequency used in the fix command, then an error will occur.
+SPARTA keeps track of all of this during a "run"_run.html.  An error
+will be generated if you attempt to evaluate a variable on timesteps
+when it cannot produce accurate values.  For example, if a
+"stats_style custom"_stats_style.html command prints a variable which
+accesses values stored by a "fix ave/time"_fix_ave_time.html command
+and the timesteps on which stats output is generated are not multiples
+of the averaging frequency used in the fix command, then an error will
+occur.
 
 An input script can also request variables be evaluated before or
 after or in between runs, e.g. by including them in a
@@ -661,11 +654,12 @@ error.  For example, if the variable requires a quantity from a
 error.  This means, for example, that such a variable cannot be
 evaluated before the first run has occurred.  Likewise, in between
 runs, such a variable cannot be accessed unless it was evaluated on
-the last timestep of the preceding run, e.g. by thermodynamic output.
+the last timestep of the preceding run, e.g. by stats output.
 
 One way to get around this problem is to perform a 0-timestep run
 before using the variable.  For example, these commands
 
+compute 
 variable t equal temp
 print "Initial temperature = $t"
 run 1000 :pre
@@ -687,12 +681,12 @@ can be accessed by the variable "t" after the run has completed.  Note
 that a 0-timestep run does not alter the state of the system, so it
 does not change the input state for the 1000-timestep run that
 follows.  Also note that the 0-timestep run must actually use and
-invoke the compute in question (e.g. via "thermo"_thermo_style.html or
+invoke the compute in question (e.g. via "stats"_stats_style.html or
 "dump"_dump.html output) in order for it to enable the compute to be
 used in a variable after the run.  Thus if you are trying to print a
 variable that uses a compute you have defined, you could insure it was
 invoked on the last timestep of the preceding run by including it in
-thermodynamic output.
+stats output.
 
 Unlike computes, "fixes"_fix.html will never generate an error if
 their values are accessed by a variable in between runs.  They always
@@ -719,7 +713,7 @@ potential defined by the "pair_style"_pair_style.html and
 "pair_coeff"_pair_coeff.html commands.  The potential energy is
 evaluated on the final timestep and stored by the "compute
 pe"_compute_pe.html compute (this is done by the
-"thermo_style"_thermo_style.html command).  Then a pair coefficient is
+"stats_style"_stats_style.html command).  Then a pair coefficient is
 changed, altering the potential energy of the system.  When the
 potential energy is printed via the "e" variable, SPARTA will use the
 potential energy value stored by the "compute pe"_compute_pe.html
@@ -749,7 +743,7 @@ must have the same number of values.
 
 [Related commands:]
 
-"next"_next.html, "jump"_jump.html, "include"_include.html,
-"temper"_temper.html, "fix print"_fix_print.html, "print"_print.html
+"next"_next.html, "jump"_jump.html, "include"_include.html, "fix
+print"_fix_print.html, "print"_print.html
 
 [Default:] none

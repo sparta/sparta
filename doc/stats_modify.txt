@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -46,20 +46,20 @@ value printed in each output line, e.g. the 5th column of output in
 this case.  If the format for a specific column has been set, it will
 take precedent over the {int} or {float} setting.
 
-IMPORTANT NOTE: The statistical output values {step} and {npart} are
-stored internally as 8-byte signed integers, rather than the usual
-4-byte signed integers.  When specifying the "format int" keyword you
-can use a "%d"-style format identifier in the format string and SPARTA
-will convert this to the corresponding "%lu" form when it is applied
-to those keywords.  However, when specifying the "format M string"
-keyword for {step} and {natoms}, you should specify a string
-appropriate for an 8-byte signed integer, e.g. one with "%ld".
+IMPORTANT NOTE: The output values {step} and {np} are stored
+internally as 8-byte signed integers, rather than the usual 4-byte
+signed integers.  When specifying the "format int" keyword you can use
+a "%d"-style format identifier in the format string and SPARTA will
+convert this to the corresponding "%ld" form when it is applied to
+those keywords.  However, when specifying the "format M string"
+keyword for those keywords, you should specify a string appropriate
+for an 8-byte signed integer, e.g. one with "%ld".
 
 The {every} keyword allows a variable to be specified which will
-determine which timesteps statistical output is generated.  It must be
-an "equal-style variable"_variable.html, and is specified as v_name,
-where name is the variable name.  The variable is evaluated at the
-beginning of a run to determine the next timestep at which a dump
+determine the timesteps on which statistical output is generated.  It
+must be an "equal-style variable"_variable.html, and is specified as
+v_name, where name is the variable name.  The variable is evaluated at
+the beginning of a run to determine the next timestep at which a dump
 snapshot will be written out.  On that timestep, the variable will be
 evaluated again to determine the next timestep, etc.  Thus the
 variable should return timestep values.  See the stagger() and
@@ -78,7 +78,7 @@ stats_modify	1 every v_s :pre
 Note that the {every} keyword overrides the output frequency setting
 made by the "stats"_stats.html command, by setting it to 0.  If the
 "stats"_stats.html command is later used to set the output frequency
-to a non-zero value, then the var,iable setting of the stats_modify
+to a non-zero value, then the variable setting of the stats_modify
 every command will be overridden.
 
 [Restrictions:] none

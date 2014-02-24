@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -36,31 +36,42 @@ create_grid 8 8 10 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1 :pre
 
 [Description:]
 
-Overlay a uniform or hierarchical grid over the simulation domain
-defined by the "create_box"_create_box.html command.  The grid can
-also be defined by the "read_grid"_read_grid.html command.
+Overlay a grid over the simulation domain defined by the
+"create_box"_create_box.html command.  The grid can also be defined by
+the "read_grid"_read_grid.html command.
 
-When a uniform or hierarchical grid is created it contains 1 or more
-parent cells, and some number of child cells.  Parent cells have
-children; child cells do not.  In the current SPARTA implementation,
-all processors own a copy of all parent cells.  The child cells are
-each owned by a unique processor; they are assigned by this command to
-processors in a round-robin fashion, as they are created.  The
-"balance_grid"_balance_grid.html command can be used after the grid is
-defined, to assign them to processors in a more structured manner.
+The grid in SPARTA is hierarchical.  The entire simulation box is a
+single parent grid cell at level 0.  It is subdivided into Nx by Ny by
+Nz cells at level 1.  Each of those cells can be a child cell (no
+further sub-division) or can be a parent cell which is further
+subdivided into Nx by Ny by Nz cells as level 2.  This can recurse to
+as many levels as desired.  Different cells can stop recursing at
+different levels.  Each parent cell can define its own unique Nx, Ny,
+Nz values for subdivision.  Note that a uniform grid is simply a
+hierarchical grid with a single level 0 parent cell and Nx by Ny by Nz
+child cells at level 1.
+
+In the current SPARTA implementation, all processors own a copy of all
+parent cells.  Each child cell is owned by a unique processor.  The
+assignment of child cells to processors by this command is described
+below.  The "balance_grid"_balance_grid.html command can be used after
+the grid is defined, to assign them to processors in different ways.
+The "fix balance" command can be used to re-assign them in a
+load-balanced manner periodically during a running simulation.
 
 :line
 
-A uniform grid is a hierarchical grid with a single level.  It is
-defined by specifying only the arguments {Nx}, {Ny}, {Nz}, with no
-additional levels.  This will create a Nx by Ny by Nz grid.  For 2d
-simulations, {Nz} must equal 1.  A uniform grid has 1 parent cell (the
-entire simulation box) and Nx*Ny*Nz child cells, e.g. 1000 child cells
-in the first example above.
+As mentioned above, a uniform grid is defined by specifying only the
+arguments {Nx}, {Ny}, {Nz}, with no additional levels.  This will
+create a Nx by Ny by Nz grid of child cells.  For 2d simulations, {Nz}
+must equal 1.
 
-For uniform grids, one of the other keywords {stride}, {clump},
-{block}, or {random} can be used, to determine which processors are
-assigned which cells in the grid.
+For uniform grids, one of the keywords {stride}, {clump}, {block}, or
+{random} can be used to determine which processors are assigned which
+cells in the grid.  If no keyword is used, the cells are assigned in
+round-robin fashion, so that each processor is assigned every Pth grid
+cell, where P = the number of processors.  This is the same as "stride
+xyz" in the discussion below.
 
 The {stride} keyword means that every Pth cell is assigned to the same
 processor, where P is the number of processors.  E.g. if there are 100
@@ -77,11 +88,11 @@ will be assigned cells 11 to 20.  And The 10th processor (proc 9) will
 be assigned cells 91 to 100.
 
 The argument for {stride} and {clump} determines how the N grid cells
-are ordered and is some permutation of {x}, {y}, and {z}.  Each of the
-N cells has 3 indices (I,J,K) to describe its location in the 3d grid.
-If the stride argument is yxz, then the cells will be ordered from 1
-to N with the y dimension (J index) varying fastest, the x dimension
-next (I index), and the z dimension slowest (K index).
+are ordered and is some permutation of the letters {x}, {y}, and {z}.
+Each of the N cells has 3 indices (I,J,K) to describe its location in
+the 3d grid.  If the stride argument is yxz, then the cells will be
+ordered from 1 to N with the y dimension (J index) varying fastest,
+the x dimension next (I index), and the z dimension slowest (K index).
 
 The {block} keyword maps the P processors to a {Px} by {Py} by {Pz}
 logical grid that overlays the actual {Nx} by {Ny} by {Nz} grid.  This
@@ -97,7 +108,7 @@ processor's sub-block of cells.
 The product of Px, Py, Pz must equal P, the total # of processors SPARTA
 is running on.  For a 2d simulation, Pz must equal 1. If multiple
 partitions are being used then P is the number of processors in this
-partition; see "this section"_Section_start.html#start_6 for an
+partition; see "this section"_Section_start.html#start_5 for an
 explanation of the -partition command-line switch.
 
 Note that if you run on a large, prime number of processors P, then a
@@ -105,16 +116,19 @@ grid such as 1 x P x 1 will be required, which may incur extra
 communication costs.
 
 The {random} keyword means that each grid cell will be assigned
-randomly to one of the processors.  Note that in this case every
-processor will typically not be assigned exactly the same number of
+randomly to one of the processors.  Note that in this case different
+processors will typically not be assigned exactly the same number of
 cells.
 
 :line
 
-If a hierarchical grid with more than one level is desired, they can
-be defined in ascending order, using the {level} keyword one or more
-times, starting with {Nlevel} = 2.  The other keywords {stride},
-{clump}, {block}, or {random} cannot be used with a hierarchical grid.
+If a hierarchical grid with more than one level is desired, it can be
+defined using the {level} keyword one or more times with {Nlevel} in
+ascending order, starting with {Nlevel} = 2.  The other keywords
+{stride}, {clump}, {block}, or {random} cannot be used with a
+hierarchical grid.  Child cells (at any level) are assigned to
+processors in round-robin fashion, so that each processor is assigned
+every Pth grid cell, where P = the number of processors.
 
 The Px, Py, Pz arguments specify which cells in the previous level are
 flagged as parents and partitioned to create cells at the new level.
@@ -161,14 +175,18 @@ level 3 cells.
 
 This command can only be used after the simulation box is defined by
 the "create_box"_create_box.html command.
-
-In principle, the hierarchical grid used by SPARTA can have as many
-levels as you wish.  Internally, the hierarchy corresponding to each
-grid cell is converted into a 64-bit integer ID.  Explain it further.
-Practically speaking this means you are limited to about 8 levels.
+ 
+The hierarchical grid used by SPARTA is encoded in a 32-bit or 64-bit
+integer ID.  The precision is set by the -DSPARTA_BIG or
+-DSPARTA_SMALL or -DSPARTA_BIGBIG compiler switch, as described in
+"this section"_Section_start.html#start2_2.  The number of grid levels
+that can be used depends on the resolution of the grid at each level.
+For a minimal refinement of 2x2x2, a level uses 4 bits of the integer
+ID.  Thus a maximum of 7 levels can be used for 32-bit IDs and 15
+levels for 64-bit IDs.
 
 [Related commands:]
 
 "create_box"_create_box.html, "read_grid"_read_grid.html
 
-[Default:] none
+[Default:]

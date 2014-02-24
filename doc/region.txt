@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -78,7 +78,7 @@ consisting of the volume that is common to all the listed regions.
 
 IMPORTANT NOTE: Regions in SPARTA are always 3d geometric objects,
 regardless of whether the "dimension"_dimension.html of the simulation
-2d or 3d.  Thus when using regions in a 2d simulation, for exapmle,
+2d or 3d.  Thus when using regions in a 2d simulation, for example,
 you should be careful to define the region so that its intersection
 with the 2d x-y plane of the simulation has the 2d geometric extent
 you want.

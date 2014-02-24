@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -42,7 +42,7 @@ balance_grid rcb mol
 to processors, to attempt to balance the computational cost (load)
 evenly across processors.  The load balancing is "static" in the sense
 that this command performs the balancing once, before or between
-simulations. The assignments will then remain static during the
+simulations. The assignments will remain static during the
 subsequent run.  To perform "dynamic" balancing, see the <A HREF = "fix_balance.html">fix
 balance</A> command, which can adjust the assignemt of
 grid cells to processors on-the-fly during a run.
@@ -53,13 +53,13 @@ attributes stored by fixes.  The internal data structures within
 SPPARKS for grid cells and particles are re-initialized with the new
 decomposition.
 </P>
-<P>This command is useful to use immediately after the grid is created,
+<P>This command can be used immediately after the grid is created,
 via the <A HREF = "create_grid.html">create_grid</A> command, to partition the grid
-in a more desirable manner than the default creation allows for.
+in a more desirable manner than the default creation options allow for.
 </P>
-<P>It is also useful to use once molecules have been created, or a
-simulation has come to equilibrium with a spatially varying molecule
-distribution, so that the computational load can be more evenly
+<P>It can also be used once particles have been created, or a
+simulation has come to equilibrium with a spatially varying density
+distribution or particles, so that the computational load is more evenly
 balanced across processors.
 </P>
 <HR>
@@ -78,26 +78,26 @@ command.  See its doc page for details.
 </P>
 <P>The <I>random</I> keyword means that each grid cell will be assigned
 randomly to one of the processors.  Note that in this case every
-processor will typically not be assigned exactly the same number of
+processor will typically not be assigned the exact same number of
 cells.
 </P>
 <P>The <I>proc</I> keyword means that each processor will choose a random
 processor to assign its first grid cell to.  It will then loop over
 its grid cells and assign each to consecutive processors, wrapping
-around the collection of processors if necessary.  Note that in this
+around the enumeration of processors if necessary.  Note that in this
 case every processor will typically not be assigned exactly the same
 number of cells.
 </P>
-<P>The <I>rcb</I> keyword uses a recurvise coordinate bisectioning (RCB)
+<P>The <I>rcb</I> keyword uses a recursive coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to
 processors.  Each grid cell has a "weight" in this algorithm so that
-eacn processor is assigned an equal total weight of grid cells, as
+each processor is assigned an equal total weight of grid cells, as
 nearly as possible.  If the <I>weight</I> argument is specified as <I>cell</I>,
 than the weight for each grid cell is 1.0, so that each processor will
 end up with an equal number of grid cells.  If the <I>weight</I> argument
 is specified as <I>mol</I>, than the weight for each grid cell is the
-number of molecules it currently owns, so that each processor will end
-up with an equal number of molecules.
+number of particles it currently owns, so that each processor will end
+up with an equal number of particles.
 </P>
 <P>Here are 2 example pictures, for a 2d simulation, of the partioning
 provided by the RCB algorithm for a simulation on P processors of
@@ -115,9 +115,10 @@ simulation box.
 </P>
 <P>This command also initializes various options in SPARTA before
 performing the balancing.  This is so that grid cells are ready to
-migrate to new processors.  Thus is you get an error like a simulation
-box boundary condition has not been assigned, you will need to do that
-operation in your input script before balancing can be performed.
+migrate to new processors.  Thus if an error is flagged, e.g. that a
+simulation box boundary condition is not yet assigned, that operation
+needs to be performed in the input script before balancing can be
+performed.
 </P>
 <P><B>Related commands:</B>
 </P>

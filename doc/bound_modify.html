@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -33,20 +33,22 @@ bound_modify zlo surf hotwall
 <P><B>Description:</B>
 </P>
 <P>Set parameters for one of the boundaries of the global simulation box.
-</P>
-<P>Any of the 6 faces can be selected via the <I>wall</I> setting.
+Any of the 6 faces can be selected via the <I>wall</I> setting. 
 </P>
 <P>The <I>surf</I> keyword can only be used when the boundary is of type "s",
 for surface, as set by the <A HREF = "boundary.html">boundary</A> command.  This
 keyword assigns a surface collision model to the boundary, as defined
-by the <A HREF = "surf_collide.html">surf_collide</A> command.  When that command is
-used, a surface collision ID is defined, which is specified with this
-command as <I>sc-ID</I>.
+by the <A HREF = "surf_collide.html">surf_collide</A> command.  The ID of the
+surface collision model is specified as <I>sc-ID</I>, which is the ID used
+in the <A HREF = "surf_collide.html">surf_collide</A> command.
 </P>
 <P>The effect of this keyword is that particle collisions with this
 boundary will be computed by the specified surface collision model.
 </P>
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>For 2d simulations, the <I>zlo</I> and <I>zhi</I> boundaries cannot be modified
+by this command, since they are always periodic.
 </P>
 <P><B>Related commands:</B>
 </P>

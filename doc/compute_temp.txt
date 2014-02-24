@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -30,12 +30,8 @@ dimensionality of the simulation, N = number of particles, kB =
 Boltzmann constant, and T = temperature.
 
 Note that this definition of temperature does not subtract out a net
-streaming velocity for molecules, so it is not a thermal temperature
-in a streaming context.  See the "compute ???"_compute_???.html
-command for calculating thermal temperatures in the presence of
-streaming.
-
-NOTE: could add per-species output of temp as a vector.
+streaming velocity for particles, so it is not a thermal temperature
+when the particles have a non-zero streaming velocity.
 
 :line
 

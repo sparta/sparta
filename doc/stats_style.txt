@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -14,9 +14,9 @@ stats_style arg1 arg2 ... :pre
 
 arg1,arg2,... = list of statistical attributes :ulb,l
   possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
-                        nmol, ntouch, ncomm, nbound, nexit,
+                        np, ntouch, ncomm, nbound, nexit,
 			nscoll, nscheck, ncoll, nattempt,
-                        nmolave, ntouchave, ncommave, nboundave, nexitave,
+                        npave, ntouchave, ncommave, nboundave, nexitave,
 			nscollave, nscheckave, ncollave, nattemptave,
 			vol, lx, ly, lz,
 			xlo, xhi, ylo, yhi, zlo, zhi,
@@ -30,14 +30,14 @@ arg1,arg2,... = list of statistical attributes :ulb,l
       cpu = elapsed CPU time in seconds
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second
-      nmol,nmolave = # of molecules (this step, per-step)
-      ntouch,ntouchave = # of cell touches by molecules (this step, per-step)
-      ncomm,ncommave = # of molecules communicated (this step, per-step)
+      np,npave = # of particles (this step, per-step)
+      ntouch,ntouchave = # of cell touches by particles (this step, per-step)
+      ncomm,ncommave = # of particles communicated (this step, per-step)
       nbound,nboundave = # of boundary collisions (this step, per-step)
       nexit,nexitave = # of boundary exits (this step, per-step)
       nscoll,nscollave = # of surface collisions (this step, per-step)
       nscheck,nscheckave = # of surface checks (this step, per-step)
-      ncoll,ncollave = # of molecule/molecule collisions (this step, per-step)
+      ncoll,ncollave = # of particle/particle collisions (this step, per-step)
       nattempt,nattemptave = # of attempted collisions (this step, per-step)
       nreact,nreactave = # of chemical reactions (this step, per-step)
       vol = volume of simulation box
@@ -54,8 +54,8 @@ arg1,arg2,... = list of statistical attributes :ulb,l
 
 [Examples:]
 
-stats_style step cpu nmol
-stats_style step cpu spcpu nmol xlo xhi c_myTemp :pre
+stats_style step cpu np
+stats_style step cpu spcpu np xlo xhi c_myTemp :pre
 
 [Description:]
 
@@ -89,44 +89,44 @@ continually output the time and timestep rate for the last 100 steps.
 
 :line
 
-The {nmol}, {ntouch}, {ncomm}, {nbound}, {nexit}, {nscoll}, {nscheck},
+The {np}, {ntouch}, {ncomm}, {nbound}, {nexit}, {nscoll}, {nscheck},
 {ncoll}, {nattempt}, and {nreact} keywords all generate counts for the
 current timestep.
 
-The {nmolave}, {ntouchave}, {ncommave}, {nboundave}, {nexitave},
+The {npave}, {ntouchave}, {ncommave}, {nboundave}, {nexitave},
 {nscollave}, {nscheckave}, {ncollave}, {nattemptave}, and {nreactave}
 keywords all generate values that are the cummulative total of the
 corresponding count divided by {elapsed} = the number of timesteps
 since the start of the run.
 
-The {nmol} keyword is the number of molecules.
+The {np} keyword is the number of particles.
 
-The {ntouch} keyword is the number of cells touched by the molecules
-during the move portion of the timestep.  E.g. if a molecule moves
+The {ntouch} keyword is the number of cells touched by the particles
+during the move portion of the timestep.  E.g. if a particle moves
 from cell A to adjacent cell B, it touches 2 cells.
 
-The {ncomm} keyword is the number of molecules communicated
+The {ncomm} keyword is the number of particles communicated
 to other processors.
 
-The {nbound} keyword is the number of molecules that collided with a
+The {nbound} keyword is the number of particles that collided with a
 global boundary.  Crossing a periodic boundary or exiting an outflow
 boundary is not counted.
 
-The {nexit} keyword is the number of molecules that exited the
+The {nexit} keyword is the number of particles that exited the
 simulation box through an outflow boundary.
 
-The {nscoll} keyword is the number of molecule/surface collisions that
-occurred, where a molecule collided with a geometric surface.
+The {nscoll} keyword is the number of particle/surface collisions that
+occurred, where a particle collided with a geometric surface.
 
-The {nscheck} keyword is the number of molecule/surface collisions
+The {nscheck} keyword is the number of particle/surface collisions
 that were checked for.  If a cell is overlapped by N surface elements,
-all N must be checked for collisions each time a molecule in that cell
+all N must be checked for collisions each time a particle in that cell
 moves.
 
-The {ncoll} keyword is the number of molecule/molecule collisions that
+The {ncoll} keyword is the number of particle/particle collisions that
 occurred.
 
-The {nattempt} keyword is the number of molecule/molecule collisions
+The {nattempt} keyword is the number of particle/particle collisions
 that were attempted.
 
 The {nreact} keyword is the number of chemical reactions that
@@ -145,10 +145,11 @@ boundaries of the simulation box.
 The {c_ID} and {c_ID\[I\]} and {c_ID\[I\]\[J\]} keywords allow global
 values calculated by a compute to be output.  As discussed on the
 "compute"_compute.html doc page, computes can calculate global,
-per-molecule, or per-grid values.  Only global values can be
-referenced by this command.  However, per-molecule or per-grid compute
-values can be referenced in a "variable"_variable.html and the
-variable referenced, as discussed below.
+per-particle, per-grid, or per-surf values.  Only global values can be
+referenced by this command.  However, per-particle, per-grid, or
+per-surf compute values can be referenced in a
+"variable"_variable.html and the variable referenced, as discussed
+below.
 
 The ID in the keyword should be replaced by the actual ID of a compute
 that has been defined elsewhere in the input script.  See the
@@ -158,11 +159,11 @@ or 2 brackets will reference a scalar value from the compute.
 
 The {f_ID} and {f_ID\[I\]} and {f_ID\[I\]\[J\]} keywords allow global
 values calculated by a fix to be output.  As discussed on the
-"fix"_fix.html doc page, fixes can calculate global, per-molecule, or
-per-grid values.  Only global values can be referenced by this
-command.  However, per-molecule or per-grid fix values can be
-referenced in a "variable"_variable.html and the variable referenced,
-as discussed below.
+"fix"_fix.html doc page, fixes can calculate global, per-particle,
+per-grid, or per-surf values.  Only global values can be referenced by
+this command.  However, per-particle or per-grid or per-surf fix
+values can be referenced in a "variable"_variable.html and the
+variable referenced, as discussed below.
 
 The ID in the keyword should be replaced by the actual ID of a fix
 that has been defined elsewhere in the input script.  See the
@@ -175,10 +176,10 @@ output.  The name in the keyword should be replaced by the variable
 name that has been defined elsewhere in the input script.  Only
 equal-style variables can be referenced.  See the
 "variable"_variable.html command for details.  Variables of style
-{equal} can reference per-molecule or per-grid properties or stats
-keywords, or they can invoke other computes, fixes, or variables when
-evaluated, so this is a very general means of creating statistical
-output.
+{equal} can reference per-particle or per-grid or per-surf properties
+or stats keywords, or they can invoke other computes, fixes, or
+variables when evaluated, so this is a very general means of creating
+statistical output.
 
 See "Section_modify"_Section_modify.html for information on how to add
 new compute and fix styles to SPARTA to calculate quantities that can
@@ -194,4 +195,4 @@ then be referenced with these keywords to generate statistical output.
 
 [Default:]
 
-stats_style step cpu nmol :pre
+stats_style step cpu np :pre

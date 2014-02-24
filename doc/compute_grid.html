@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -25,7 +25,7 @@
 
 <LI>value = <I>n</I> or <I>ndensity</I> or <I>mass</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> 
 
-<PRE>  <I>n</I> = molecule count
+<PRE>  <I>n</I> = particle count
   <I>ndensity</I> = number density
   <I>mass</I> = mass
   <I>u</I> = x component of velocity
@@ -46,8 +46,8 @@
 <PRE>compute 1 grid species n u v w usq vsq wsq
 compute 1 grid air n u v w 
 </PRE>
-<P>These commands will dump averages for each species and each
-grid cell to a file every 1000 steps:
+<P>These commands will dump time averages for each species and each grid
+cell to a dump file every 1000 steps:
 </P>
 <PRE>compute 1 grid species n u v w usq vsq wsq
 fix 1 ave/grid 10 100 1000 c_1
@@ -56,60 +56,62 @@ dump 1 grid 1000 tmp.grid id f_1
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each grid
-cell, based on the molecules in the cell.  The values are summed for
+cell, based on the particles in the cell.  The values are summed for
 each group of species in the specified mixture.  See the
 <A HREF = "mixture.html">mixture</A> command for how a set of species can be
 partitioned into groups.
 </P>
-<P>The results of this compute are used by different commands in
+<P>The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
 <A HREF = "dump.html">dump grid</A> command.
 </P>
 <P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix
 ave/grid</A> command.  It does its averaging as if the
-molecules in the cell at each sampling timestep were combined together
+particles in the cell at each sampling timestep were combined together
 into one large set to compute the formulas below.  The answer is then
 divided by the number of sampling timesteps if it is not otherwise
-normalized by the number of molecules.  Note that in most cases, this
-is a different normalization than taking the values produced by the
-formulas below for a single timestep, summing them over the sampling
-timesteps, and then dividing by the number of sampling timesteps.
+normalized by the number of particles.  Note that this is a different
+normalization than taking the values produced by the formulas below
+for a single timestep, summing them over the sampling timesteps, and
+then dividing by the number of sampling timesteps.
 </P>
 <HR>
 
-<P>The <I>n</I> value counts the number of moleclues in the group.
+<P>The <I>n</I> value counts the number of particles in the group.
 </P>
-<P>The <I>ndensity</I> value computes the number density of molecules in the
+<P>The <I>ndensity</I> value computes the number density of particles in the
 group:
 </P>
-<P>Ndens = N * fnum / volume
+<P>Ndensity = N * fnum / volume
 </P>
-<P>N is the number of molecules (same as the <I>n</I> keyword), fnum is the
+<P>N is the number of particles (same as the <I>n</I> keyword), fnum is the
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
 command, and volume is the flow volume of the grid cell.
 </P>
-<P>The <I>mass</I> value computes the average mass of molecules in the group:
+<P>The <I>mass</I> value computes the average mass of particles in the group:
 </P>
-<PRE>KE = Sum_i (mass_i) / N 
+<PRE>Mass = Sum_i (mass_i) / N 
 </PRE>
+<P>where Sum_i is a sum over particles in the grid cell and in the group.
+</P>
 <P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the components of the average
-velocity of molecules in the group:
+velocity of particles in the group:
 </P>
 <PRE>U = Sum_i (mass_i Vx_i) / Sum_i (mass_i) 
 </PRE>
 <P>The <I>usq</I>, <I>vsq</I>, <I>wsq</I> values compute the squared component of
-the average velocity of molecules in the group.
+the average velocity of particles in the group.
 </P>
 <PRE>Usq = Sum_i (mass_i Vx_i Vx_i) / Sum_i (mass_i) 
 </PRE>
-<P>The <I>ke</I> value computes the average kinetic energy of molecules in the
+<P>The <I>ke</I> value computes the average kinetic energy of particles in the
 group:
 </P>
 <PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 KE = Sum_i (1/2 mass_i Vsq_i) / N 
 </PRE>
 <P>The <I>temp</I> value first computes the average kinetic energy of
-molecules in the group, as for the <I>ke</I> value.  This is then converted
+particles in the group, as for the <I>ke</I> value.  This is then converted
 to a temperature <I>T</I> by the following formula where <I>kB</I> is the
 Boltzmann factor:
 </P>
@@ -118,12 +120,13 @@ KE = Sum_i (1/2 mass_i Vsq_i) / N
 T = KE / (3/2 kB) 
 </PRE>
 <P>Note that this definition of temperature does not subtract out a net
-streaming velocity for molecules in the grid cell, so it is not a
-thermal temperature in a streaming context.  See the <A HREF = "compute_sonine_grid.html">compute
-sonine/grid</A> command to calculate thermal
-temperatures after subtracting out streaming components of velocity.
+streaming velocity for particles in the grid cell, so it is not a
+thermal temperature when the particles have a non-zero streaming
+velocity.  See the <A HREF = "compute_sonine_grid.html">compute sonine/grid</A>
+command to calculate thermal temperatures after subtracting out
+streaming components of velocity.
 </P>
-<P>The <I>erot</I> value computes the average rotational energy of molecules
+<P>The <I>erot</I> value computes the average rotational energy of particles
 in the group:
 </P>
 <PRE>Erot = Sum_i (erot_i) / N 
@@ -133,7 +136,7 @@ formula where <I>kB</I> is the Boltzmann factor:
 </P>
 <PRE>Trot = (2/kB) Sum_i (erot_i) / Sum_i (dof_i) 
 </PRE>
-<P>Dof_i is the number of rotational degrees of freedom for molecule i.
+<P>Dof_i is the number of rotational degrees of freedom for particle i.
 </P>
 <P><B>Output info:</B>
 </P>
@@ -142,19 +145,23 @@ equal to the number of values times the number of groups.  The
 ordering of columns is first by values, then by groups.  I.e. if the
 <I>n</I> and <I>u</I> values were specified as keywords, then the first two
 columns would be <I>n</I> and <I>u</I> for the first group, the 3rd and 4th
-columns would be <I>n</I> and <I>u</I> for the second group, etc.
+columns would be <I>n</I> and <I>u</I> for the second group, etc.  The number of
+rows is equal to the number of grid cells in the simulation.
+</P>
+<P>NOTE: which kind of grid cells?
 </P>
 <P>The array can be accessed by any command that uses per-grid values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_15">this
 section</A> for an overview of SPARTA output
-options. 
+options.
 </P>
 <P>The per-grid array values will be in the <A HREF = "units.html">units</A>
-appropriate to the individual values as described above.  Number
-density is in 1/distance^3 units.  <I>Mass</I> is in mass units.  <I>U</I>, <I>v</I>,
-and <I>w</I> are in velocity units.  <I>Usq</I>, <I>vsq</I>, and <I>wsq</I> are in
-velocity squared units.  <I>Ke</I> and <I>Erot</I> are in energy units.  <I>Temp</I>
-and <I>Trot</I> are in temperature units.
+appropriate to the individual values as described above.  <I>N</I> is
+unitless.  <I>Ndensity) is in 1/distance^3 units for 3d simulations and
+1/distance^2 units for 2d simulations..  <I>Mass</I> is in mass units.
+<I>U</I>, <I>v</I>, and <I>w</I> are in velocity units.  <I>Usq</I>, <I>vsq</I>, and <I>wsq</I> are
+in velocity squared units.  <I>Ke</I> and <I>Erot</I> are in energy units.
+<I>Temp</I> and <I>Trot</I> are in temperature units.
 </P>
 <P><B>Restrictions:</B> none
 </P>

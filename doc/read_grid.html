@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -19,27 +19,40 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>read_grid grid.sphere 
+<PRE>read_grid grid.overlay 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Read in a description of a uniform or hierarchical grid from a file,
-which will overlay the simulation domain defined by the
-<A HREF = "create_box.html">create_box</A> command.  The grid can also be defined by
-the <A HREF = "create_grid.html">create_grid</A> command.
+<P>Read in a grid description from a file, which will overlay the
+simulation domain defined by the <A HREF = "create_box.html">create_box</A> command.
+The grid can also be defined by the <A HREF = "create_grid.html">create_grid</A>
+command.
 </P>
-<P>When a uniform or hierarchical grid is defined in a file, it contains
-1 or more parent cells, and some number of child cells.  Parent cells
-have children; child cells do not.  In the current SPARTA
-implementation, all processors own a copy of all parent cells.  The
-child cells are each owned by a unique processor; they are assigned by
-this command to processors in a round-robin fashion, as they are
-created when the file is read.  The <A HREF = "balance_grid.html">balance_grid</A>
-command can be used after the grid is defined, to assign them to
-processors in a more structured manner.
+<P>The grid in SPARTA is hierarchical.  The entire simulation box is a
+single parent grid cell at level 0.  It is subdivided into Nx by Ny by
+Nz cells at level 1.  Each of those cells can be a child cell (no
+further sub-division) or can be a parent cell which is further
+subdivided into Nx by Ny by Nz cells as level 2.  This can recurse to
+as many levels as desired.  Different cells can stop recursing at
+different levels.  Each parent cell can define its own unique Nx, Ny,
+Nz values for subdivision.  Note that a uniform grid is simply a
+hierarchical grid with a single level 0 parent cell and Nx by Ny by Nz
+child cells at level 1.
+</P>
+<P>In the current SPARTA implementation, all processors own a copy of all
+parent cells.  Each child cell is owned by a unique processor.  They
+are assigned by this command to processors in a round-robin fashion,
+as they are created at each level when the file is read.  The
+<A HREF = "balance_grid.html">balance_grid</A> command can be used after the grid is
+defined, to assign them to processors in different ways.  The "fix
+balance" command can be used to re-assign them in a load-balanced
+manner periodically during a running simulation.
 </P>
 <HR>
 
+<P>The specified file can be a text file or a gzipped text file (detected
+by a .gz suffix).
+</P>
 <P>A grid file contains only a listing of parent cells.  Child cells are
 inferred from the parent cell definitions.
 </P>
@@ -112,16 +125,16 @@ grid file for this parent cell is
 parent cell.  The IDs of the 8 new cells will be 12-352-65-1,
 12-352-65-2, ..., 12-352-65-8.
 </P>
-<P>Note that the lines in the <I>Parents</I> section must be ordered such that
-no parent cell is listed before its own parent cell appears.  A simple
-way to insure this is to list the single level 0 cell first, all level
-1 parent cells next, then level 2 parent cells, etc.
+<P>The lines in the <I>Parents</I> section must be ordered such that no parent
+cell is listed before its own parent cell appears.  A simple way to
+insure this is to list the single level 0 cell first, all level 1
+parent cells next, then level 2 parent cells, etc.
 </P>
 <P>The parent cell with ID = 0 is a special case.  It can be thought of
 as the "root" cell, or the single level 0 cell, which represents the
 entire simulation domain.  Its specification in the grid file defines
 the level 1 grid that overlays the simulation domain.  Thus the first
-line of the <I>Parents</I> section should be something like
+line of the <I>Parents</I> section should be formatted something like this:
 </P>
 <PRE>1 0 10 10 20 
 </PRE>
@@ -135,12 +148,18 @@ cell listed in the file.
 <P>This command can only be used after the simulation box is defined by
 the <A HREF = "create_box.html">create_box</A> command.
 </P>
-<P>In principle, the hierarchical grid used by SPARTA can have as many
-levels as you wish.  Internally, each grid cell's location in the
-hierarchical grid is converted into a 32-bit integer ID.  At some
-point it may become a 64-bit integer ID.  SPARTA will generate an
-error if you try to define a grid with too many levels, so that the
-internally stored ID overflows.
+<P>To read gzipped grid files, you must compile SPARTA with the
+-DSPARTA_GZIP option - see <A HREF = "Section_start.html#start_2">this section</A>
+section of the manual for details.
+</P>
+<P>The hierarchical grid used by SPARTA is encoded in a 32-bit or 64-bit
+integer ID.  The precision is set by the -DSPARTA_BIG or
+-DSPARTA_SMALL or -DSPARTA_BIGBIG compiler switch, as described in
+<A HREF = "Section_start.html#start2_2">this section</A>.  The number of grid levels
+that can be used depends on the resolution of the grid at each level.
+For a minimal refinement of 2x2x2, a level uses 4 bits of the integer
+ID.  Thus a maximum of 7 levels can be used for 32-bit IDs and 15
+levels for 64-bit IDs.
 </P>
 <P><B>Related commands:</B>
 </P>

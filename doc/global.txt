@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -39,83 +39,89 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
 [Examples:]
 
 background fnum 1.0e20
-background vstream 100.0 0 0
+background vstream 100.0 0 0 fnum 5.0e18
 background temp 1000 :pre
 
 [Description:]
 
 Define global properties of the system.
 
-The {fnum} keyword sets the ratio of real, physical particles
-(i.e. molecules) to simulation particles.
+The {fnum} keyword sets the ratio of real, physical molecules to
+simulation particles.  E.g. a value of 1.0e20 means that one particle
+in the simulation represents 1.0e20 molecules of the particle species.
 
-The {nrho} keyword sets the number density of the background gas.
-For 3d simulations the units are #/volume.  For 2d, the units are
-effectively #/area.
+The {nrho} keyword sets the number density of the background gas.  For
+3d simulations the units are #/volume.  For 2d, the units are
+effectively #/area since the z dimension is treated as having a length
+of 1.0.
 
-Assuming your simulation is populated by particles from the
-background gas, the {fnum} and {nrho} settings determine
-how many particles will be present in your simulation.
+Assuming your simulation is populated by particles from the background
+gas, the {fnum} and {nrho} settings can determine how many particles
+will be present in your simulation, when using the
+"create_particles"_create_particles.html or "fix
+inflow"_fix_inflow.html commands.
 
 The {vstream} keyword sets the streaming velocity of the background
 gas.
 
 The {temp} keyword sets the thermal temperature of the background gas.
-This is a Gaussian velocity distribution superposed
-on top of the streaming velocity.
+This is a Gaussian velocity distribution superposed on top of the
+streaming velocity.
 
 The {gravity} keyword sets an acceleration term which is included in
 the motion of particles.  The magnitude of gravity is set by the {mag}
 keyword.  Its direction of action is set as (ex,ex,ez).  The direction
-does not have to be a unit vector, since the code renormlizes the
-direction vector by the magnitude.  If the magnitude is set to 0.0, no
+does not have to be a unit vector.  If the magnitude is set to 0.0, no
 acceleration term is included, which is the default.
 
 The {surfmax} keyword determines the maximum number of surface
-elements (lines in 2d, triangles in 3d) can overlap a single grid
-cell.  The default is 100, which should be large enough for most
-simulations, unless you define very coarse grid cells (relative to the
-size of surface elements).  
+elements (lines in 2d, triangles in 3d) that can overlap a single grid
+cell.  The default is 100, which should be large enough for any
+simulation, unless you define very coarse grid cells (relative to the
+size of surface elements).
 
-The {gridcut} keyword determines the distance at which ghost grid
-cells will be stored by each processor.  Assuming the processor owns a
-compact clump of grid cells, it will also store ghost cell information
-from nearby grid cells, up to this distance away.  If the setting is <
-0.0 (the default) then each processor owns a copy of ghost cells for
-all grid cells in the simulation.  This can require too much memory
-for large models.  If the cutoff is too short, more communication of
-particles may be needed to complete particle moves each timestep.
-
-NOTE: doc more about trade-off in comm/comp for this gridcut setting.
+The {gridcut} keyword determines the cutoff distance at which ghost
+grid cells will be stored by each processor.  Assuming the processor
+owns a compact clump of grid cells, it will also store ghost cell
+information from nearby grid cells, up to this distance away.  If the
+setting is < 0.0 (the default) then each processor owns a copy of
+ghost cells for all grid cells in the simulation.  This can require
+too much memory for large models.  If the cutoff is 0.0, processors
+own a minimal number of ghost cells. This saves memory but may require
+multiple cutoff is too short, multiple passes of communication may be
+required each timestep to move all the particles and migrate them to
+new owning processors.  Typically a cutoff the size of 2-3 grid cell
+diameters is a good balance that requires only modest memory to store
+ghost cells and allows all particle moves to complete in only one pass
+of communication.
 
 The {comm/sort} keyword determines whether the messages a proc
 receives for migrating particles (every step) and ghost grid cells (at
 setup and after re-balance) are sorted by processor ID.  Doing this
 requires a bit of overhead, but can make it easier to debug in
 parallel, because simulations should be reproducible when run on the
-same number of processors.  Without sorting, messages can arrive in a
-randomized order, which means lists of particles and grid cells can be
-in a different order and lead to statistical differences between runs.
+same number of processors.  Without sorting, messages may arrive in a
+randomized order, which means lists of particles and grid cells end up
+in a different order leading to statistical differences between runs.
 
 The {comm/style} keyword determines the style of particle
 communication that is performed to migrate particles every step.  The
-most efficient method for this is typically for each processor to
-exchange messages with only the processors it has ghost cells for,
-which is the method used by the {neigh} setting.  The {all} setting
-performs a relatively cheap, but global communication operation to
-determine the exact set of neighbors that need to be communicated with
-at each step.  For small processor counts there is typically little
-difference.  On large processor counts the {neigh} setting can be
-significantly faster.  However, if the flow is streaming in one
-dominant direction, there may be no particle migration needed to
-upwind processors, so the {all} method could generate smaller counts
-of neighboring processors.
+most efficient method is typically for each processor to exchange
+messages with only the processors it has ghost cells for, which is the
+method used by the {neigh} setting.  The {all} setting performs a
+relatively cheap, but global communication operation to determine the
+exact set of neighbors that need to be communicated with at each step.
+For small processor counts there is typically little difference.  On
+large processor counts the {neigh} setting can be significantly
+faster.  However, if the flow is streaming in one dominant direction,
+there may be no particle migration needed to upwind processors, so the
+{all} method can generate smaller counts of neighboring processors.
 
-Note that the {neigh} style will only have an effect (at run time)
-when the grid is decomposed by the {rcb} (recursive coordinate
-bisectioning) option of the "balance"_balance.html or "fix
-balance"_fix_balance.html commands.  If that is not the case, it is
-as-if the {all} setting were being used.
+Note that the {neigh} style only has an effect (at run time) when the
+grid is decomposed by the RCB option of the "balance"_balance.html or
+"fix balance"_fix_balance.html commands.  If that is not the case,
+SPARTA performs the particle communication as if the {all} setting
+were in place.
 
 [Restrictions:]
 

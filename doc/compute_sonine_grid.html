@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -42,8 +42,8 @@
 <PRE>compute 1 sonine/grid species thermal a x 3 a z 3 b xy 3 b xz 3
 compute 1 sonine/grid air a x 5 b xy 5 
 </PRE>
-<P>These commands will dump 10 averaged sonine moments for each species
-and each grid cell to a file every 1000 steps:
+<P>These commands will dump 10 time averaged sonine moments for each
+species and each grid cell to a dump file every 1000 steps:
 </P>
 <PRE>compute 1 sonine/grid species a x 5 b xy 5
 fix 1 ave/grid 10 100 1000 c_1
@@ -52,24 +52,29 @@ dump 1 grid 1000 tmp.grid id f_1
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates the sonine moments of the
-velocity distribution of the molecules in each grid cell.  The moments
+velocity distribution of the particles in each grid cell.  The moments
 are summed for each group of species in the specified mixture.  See
 the <A HREF = "mixture.html">mixture</A> command for how a set of species can be
 partitioned into groups.
 </P>
 <P>The results of this compute are used by different commands in
 different ways.  The values for a single timestep can be output by the
-<A HREF = "dump.html">dump grid</A> command.  The values over many timesteps or the
-entire simulation can be averaged together by the <A HREF = "fix_ave_grid.html">fix
-ave/grid</A> command.  In this case, it is as if the
-formulas below are sums over both molecules in the grid cell and over
-time, with the normalizing factor in the denominator also being summed
-over time.
+<A HREF = "dump.html">dump grid</A> command.
+</P>
+<P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> command.  It does its averaging as if the
+particles in the cell at each sampling timestep were combined together
+into one large set to compute the formulas below.  The answer is then
+divided by the number of sampling timesteps if it is not otherwise
+normalized by the number of particles.  Note that this is a different
+normalization than taking the values produced by the formulas below
+for a single timestep, summing them over the sampling timesteps, and
+then dividing by the number of sampling timesteps.
 </P>
 <HR>
 
 <P>The <I>thermal</I> keyword computes the average thermal kinetic energy for
-all <I>N</I> molecules in the group.  This is converted to a temperature
+all <I>N</I> particles in the group.  This is converted to a temperature
 <I>T</I> by the following formula where <I>kB</I> is the Boltzmann factor:
 </P>
 <PRE>COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
@@ -83,15 +88,15 @@ thermal_KE = Sum_i (1/2 mass_i Csq_i) / N
 T = thermal_KE / (3/2 kB) 
 </PRE>
 <P>Note that the thermal kinetic energy is calculated from <I>C</I> = the
-thermal velocity of each molecule, which is its velocity minus the
-center-of-mass (COM) velocity of molecules in the group.  The COM
-velocity is the mass-weighted sum of the velocities of molecules in
-the group divided by the total mass of the molecules.
+thermal velocity of each particle, which is its velocity minus the
+center-of-mass (COM) velocity of particles in the group.  The COM
+velocity is the mass-weighted sum of the velocities of particles in
+the group divided by the total mass of the particles.
 </P>
 <HR>
 
 <P>The <I>a</I> keyword calculates the aveage of one or more sonine A moments
-for all molecules in the group:
+for all particles in the group:
 </P>
 <PRE>A1 = Sum_i (mass_i * Vdim * pow(Csq,1)) / Sum_i (mass_i)
 A2 = Sum_i (mass_i * Vdim * pow(Csq,2)) / Sum_i (mass_i)
@@ -100,12 +105,12 @@ A4 = Sum_i (mass_i * Vdim * pow(Csq,4)) / Sum_i (mass_i)
 A5 = Sum_i (mass_i * Vdim * pow(Csq,5)) / Sum_i (mass_i) 
 </PRE>
 <P>Vdim is Vx or Vy or Vz as specified by the <I>dim</I> value.  <I>Csq</I> is the
-squared thermal velocity of the molecule, as in the <I>thermal</I>
+squared thermal velocity of the particle, as in the <I>thermal</I>
 equations above.  The number of moments computed is specified by the
-<I>order</I> value.
+<I>order</I> value, e.g. for order = 3, the first 3 moments are computed.
 </P>
 <P>The <I>b</I> keyword calculates the averageof one or more sonine B moments
-for all molecules in the group:
+for all particles in the group:
 </P>
 <PRE>B1 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,1)) / Sum_i (mass_i)
 B2 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,2)) / Sum_i (mass_i)
@@ -114,9 +119,9 @@ B4 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,4)) / Sum_i (mass_i)
 B5 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,5)) / Sum_i (mass_i) 
 </PRE>
 <P>Vdim is Vx or Vy or Vz as specified by the <I>dim</I> value.  <I>Csq</I> is the
-squared thermal velocity of the molecule, as in the <I>thermal</I>
+squared thermal velocity of the particle, as in the <I>thermal</I>
 equations above.  The number of moments computed is specified by the
-<I>order</I> value.
+<I>order</I> value, , e.g. for order = 3, the first 3 moments are computed.
 </P>
 <HR>
 
@@ -128,10 +133,15 @@ ordering of columns is first by values, then by groups.  I.e. if the
 <I>thermal</I> and <I>b xy 2</I> moments were specified as keywords, then the
 1st thru 3rd columns would be the <I>thermal</I> and B1 and B2 moments of
 the first group, the 4th thru 6th columns would be the <I>thermal</I> and
-B1 and B2 moments of the second group, etc.
+B1 and B2 moments of the second group, etc.  The number of rows is
+equal to the number of grid cells in the simulation.
+</P>
+<P>NOTE: which kind of grid cells?
 </P>
 <P>The array can be accessed by any command that uses per-grid values
-from a compute as input.
+from a compute as input.  See <A HREF = "Section_howto.html#howto_15">this
+section</A> for an overview of SPARTA output
+options.
 </P>
 <P>The per-grid array values will be in the <A HREF = "units.html">units</A>
 appropriate to the individual values as described above.  <I>Thermal</I> is

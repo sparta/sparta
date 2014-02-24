@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -27,20 +27,22 @@ bound_modify zlo surf hotwall :pre
 [Description:]
 
 Set parameters for one of the boundaries of the global simulation box.
-
-Any of the 6 faces can be selected via the {wall} setting.
+Any of the 6 faces can be selected via the {wall} setting. 
 
 The {surf} keyword can only be used when the boundary is of type "s",
 for surface, as set by the "boundary"_boundary.html command.  This
 keyword assigns a surface collision model to the boundary, as defined
-by the "surf_collide"_surf_collide.html command.  When that command is
-used, a surface collision ID is defined, which is specified with this
-command as {sc-ID}.
+by the "surf_collide"_surf_collide.html command.  The ID of the
+surface collision model is specified as {sc-ID}, which is the ID used
+in the "surf_collide"_surf_collide.html command.
 
 The effect of this keyword is that particle collisions with this
 boundary will be computed by the specified surface collision model.
 
-[Restrictions:] none
+[Restrictions:]
+
+For 2d simulations, the {zlo} and {zhi} boundaries cannot be modified
+by this command, since they are always periodic.
 
 [Related commands:]
 

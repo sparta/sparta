@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -39,10 +39,10 @@ surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 :pre
 
 [Description:]
 
-Define a style of particle-surface collisions to be performed by SPARTA.
+Define a style for particle-surface collisions performed by SPARTA.
 One or more styles can be defined and assigned to different surfaces
-or simulation box boundaries via the "surface"_surface.html or
-"bound_modify"_bound_modify.html commands.  See the
+or simulation box boundaries via the "read_surf"_read_surf.html or
+"bound_modify"_bound_modify.html commands.  Also see the
 "read_surf"_read_surf.html command for a description of how SPARTA
 defines surfaces as collections of geometric elements, triangles in 3d
 and line segments in 2d.
@@ -63,11 +63,11 @@ The model has 2 parameters set by the {Tsurf} and {acc} arguments.
 {Tsurf} is the temperature of the surface.  {Acc} is an accommodation
 coefficient.
 
-Diffuse reflection is where the particle is emitted from the surface
-with no dependence on its incident velocity.  A new velocity is
-assigned to the particle, sampled from a Gaussian distribution
-consistent with the surface temperature.  The new velocity will have a
-component in the direction of the outward surface normal given by:
+Diffuse reflection emits the particle from the surface with no
+dependence on its incident velocity.  A new velocity is assigned to
+the particle, sampled from a Gaussian distribution consistent with the
+surface temperature.  The new velocity will have a component in the
+direction of the outward surface normal given by:
 
 :c,image(Eqs/diffuse_normal.jpg)
 
@@ -95,10 +95,10 @@ velocity, specified by the vector (Vx,Vy,Vz).  This velocity is added
 to the final post-collisional velocity of each particle that collides
 with the surface.
 
-Note that you should define the velocity vector to be tangential to
-the surface.  Normally this keyword should only be used for flat
-surfaces, such as the simulation box wall.  SPARTA does not check for
-these conditions.
+Note that this keyword is designed for use with flat surfaces, such as
+the simulation box wall.  You should define the velocity vector to be
+tangential to the surface, with no normal component.  SPARTA does not
+check for these conditions.
 
 :line
 
@@ -112,10 +112,10 @@ post-collisional velocity of the particle.
 
 This keyword can be used to model a rotating wall, e.g. the end cap of
 a cylinder.  Or to model a rotating object consisting of surface
-elements, e.g. a sphere.  In either case, the surface itself does not
-move or rotate, e.g. the surface elements do not change position.
-They are simply modeled as having a tangential velocity, as if the
-entire object were rotating.
+elements, e.g. a sphere.  In either case, the surface elements
+themselves do not change position due to rotation.  They are simply
+modeled as having a tangential velocity, as if the entire object were
+rotating.
 
 :line
 

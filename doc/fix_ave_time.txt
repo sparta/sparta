@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -67,22 +67,18 @@ convenient way to simply output one or more global values to a file.
 Each listed value can be the result of a "compute"_compute.html or
 "fix"_fix.html or the evaluation of an equal-style
 "variable"_variable.html.  In each case, the compute, fix, or variable
-must produce a global quantity, not a per-molecule or per-grid
-quantity.  If you wish to spatial- or time-average or histogram
-per-molecule quantities from a compute, fix, or variable, then see the
-"fix ave/spatial"_fix_ave_spatial.html, "fix
-ave/atom"_fix_ave_atom.html, or "fix ave/histo"_fix_ave_histo.html
-commands.  If you wish to sum a per-molecule or per-grid quantity into
-a single global quantity, see the "compute reduce"_compute_reduce.html
-command.
+must produce a global quantity, not a per-grid or per-surf quantity.
+If you wish to time-average those quantities, see the "fix
+ave/grid"_fix_ave_grid.html and "fix ave/surf"_fix_ave_surf.html
+commands.
 
 "Computes"_compute.html that produce global quantities are those which
-do not have the word {praticle} or {cell} in their style name.  Only a
-few "fixes"_fix.html produce global quantities.  See the doc pages for
-individual fixes for info on which ones produce such values.
-"Variables"_variable.html of style {equal} are the only ones that can
-be used with this fix.  Variables of style {particle} or {cell} cannot
-be used, since they produce per-molecule or per-grid values.
+do not have the word {particle} or {grid} or {surf} in their style
+name.  Only a few "fixes"_fix.html produce global quantities.  See the
+doc pages for individual fixes for info on which ones produce such
+values.  "Variables"_variable.html of style {equal} are the only ones
+that can be used with this fix.  Variables of style {particle} cannot
+be used, since they produce per-particle values.
 
 The input values must either be all scalars or all vectors (or
 arrays), depending on the setting of the {mode} keyword.  In both
@@ -160,10 +156,9 @@ been previously defined in the input script.  Variables can only be
 used as input for {mode} = scalar.  Only equal-style variables can be
 referenced.  See the "variable"_variable.html command for details.
 Note that variables of style {equal} define a formula which can
-reference individual atom properties or "stats_style"_stats_style.html
-keywords, or they can invoke other computes, fixes, or variables when
-they are evaluated, so this is a very general means of specifying
-quantities to time average.
+reference "stats_style"_stats_style.html keywords, or they can invoke
+other computes, fixes, or variables when they are evaluated, so this
+is a very general means of specifying quantities to time average.
 
 :line
 
@@ -253,11 +248,10 @@ appropriate fields from the fix ave/time command.
 
 :line
 
-[Restart, fix_modify, output info:]
+[Restart, output info:]
 
 No information about this fix is written to "binary restart
-files"_restart.html.  None of the "fix_modify"_fix_modify.html options
-are relevant to this fix.
+files"_restart.html.
 
 This fix produces a global scalar or global vector or global array
 which can be accessed by various output commands.  The values can only

@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "DSMSPARTAmmands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -34,9 +34,9 @@ collision frequency is re-zeroed during the simulation.  The value of
 Vremax affects how many events are attempted in each grid cell, and
 thus the overall time spent performing collisions.  As its name
 implies Vremax is continuously set to the largest difference in
-velocity between a pair of colliding molecules (in each grid cell) The
-larger Vremax growss, the more collisions are attempted for the grid
-cell on each timestep, though this does not affect the number of
+velocity between a pair of colliding particles (in each grid cell).
+The larger Vremax grows, the more collisions are attempted for the
+grid cell on each timestep, though this does not affect the number of
 collisions actually performed.  Thus if Vremax grows large, collisions
 become less efficient, though still accurate.
 

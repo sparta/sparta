@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -18,9 +18,9 @@
 <UL><LI>arg1,arg2,... = list of statistical attributes 
 
 <PRE>  possible attributes = step, elapsed, dt, cpu, tpcpu, spcpu,
-                        nmol, ntouch, ncomm, nbound, nexit,
+                        np, ntouch, ncomm, nbound, nexit,
 			nscoll, nscheck, ncoll, nattempt,
-                        nmolave, ntouchave, ncommave, nboundave, nexitave,
+                        npave, ntouchave, ncommave, nboundave, nexitave,
 			nscollave, nscheckave, ncollave, nattemptave,
 			vol, lx, ly, lz,
 			xlo, xhi, ylo, yhi, zlo, zhi,
@@ -34,14 +34,14 @@
       cpu = elapsed CPU time in seconds
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second
-      nmol,nmolave = # of molecules (this step, per-step)
-      ntouch,ntouchave = # of cell touches by molecules (this step, per-step)
-      ncomm,ncommave = # of molecules communicated (this step, per-step)
+      np,npave = # of particles (this step, per-step)
+      ntouch,ntouchave = # of cell touches by particles (this step, per-step)
+      ncomm,ncommave = # of particles communicated (this step, per-step)
       nbound,nboundave = # of boundary collisions (this step, per-step)
       nexit,nexitave = # of boundary exits (this step, per-step)
       nscoll,nscollave = # of surface collisions (this step, per-step)
       nscheck,nscheckave = # of surface checks (this step, per-step)
-      ncoll,ncollave = # of molecule/molecule collisions (this step, per-step)
+      ncoll,ncollave = # of particle/particle collisions (this step, per-step)
       nattempt,nattemptave = # of attempted collisions (this step, per-step)
       nreact,nreactave = # of chemical reactions (this step, per-step)
       vol = volume of simulation box
@@ -59,8 +59,8 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>stats_style step cpu nmol
-stats_style step cpu spcpu nmol xlo xhi c_myTemp 
+<PRE>stats_style step cpu np
+stats_style step cpu spcpu np xlo xhi c_myTemp 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -94,44 +94,44 @@ continually output the time and timestep rate for the last 100 steps.
 </P>
 <HR>
 
-<P>The <I>nmol</I>, <I>ntouch</I>, <I>ncomm</I>, <I>nbound</I>, <I>nexit</I>, <I>nscoll</I>, <I>nscheck</I>,
+<P>The <I>np</I>, <I>ntouch</I>, <I>ncomm</I>, <I>nbound</I>, <I>nexit</I>, <I>nscoll</I>, <I>nscheck</I>,
 <I>ncoll</I>, <I>nattempt</I>, and <I>nreact</I> keywords all generate counts for the
 current timestep.
 </P>
-<P>The <I>nmolave</I>, <I>ntouchave</I>, <I>ncommave</I>, <I>nboundave</I>, <I>nexitave</I>,
+<P>The <I>npave</I>, <I>ntouchave</I>, <I>ncommave</I>, <I>nboundave</I>, <I>nexitave</I>,
 <I>nscollave</I>, <I>nscheckave</I>, <I>ncollave</I>, <I>nattemptave</I>, and <I>nreactave</I>
 keywords all generate values that are the cummulative total of the
 corresponding count divided by <I>elapsed</I> = the number of timesteps
 since the start of the run.
 </P>
-<P>The <I>nmol</I> keyword is the number of molecules.
+<P>The <I>np</I> keyword is the number of particles.
 </P>
-<P>The <I>ntouch</I> keyword is the number of cells touched by the molecules
-during the move portion of the timestep.  E.g. if a molecule moves
+<P>The <I>ntouch</I> keyword is the number of cells touched by the particles
+during the move portion of the timestep.  E.g. if a particle moves
 from cell A to adjacent cell B, it touches 2 cells.
 </P>
-<P>The <I>ncomm</I> keyword is the number of molecules communicated
+<P>The <I>ncomm</I> keyword is the number of particles communicated
 to other processors.
 </P>
-<P>The <I>nbound</I> keyword is the number of molecules that collided with a
+<P>The <I>nbound</I> keyword is the number of particles that collided with a
 global boundary.  Crossing a periodic boundary or exiting an outflow
 boundary is not counted.
 </P>
-<P>The <I>nexit</I> keyword is the number of molecules that exited the
+<P>The <I>nexit</I> keyword is the number of particles that exited the
 simulation box through an outflow boundary.
 </P>
-<P>The <I>nscoll</I> keyword is the number of molecule/surface collisions that
-occurred, where a molecule collided with a geometric surface.
+<P>The <I>nscoll</I> keyword is the number of particle/surface collisions that
+occurred, where a particle collided with a geometric surface.
 </P>
-<P>The <I>nscheck</I> keyword is the number of molecule/surface collisions
+<P>The <I>nscheck</I> keyword is the number of particle/surface collisions
 that were checked for.  If a cell is overlapped by N surface elements,
-all N must be checked for collisions each time a molecule in that cell
+all N must be checked for collisions each time a particle in that cell
 moves.
 </P>
-<P>The <I>ncoll</I> keyword is the number of molecule/molecule collisions that
+<P>The <I>ncoll</I> keyword is the number of particle/particle collisions that
 occurred.
 </P>
-<P>The <I>nattempt</I> keyword is the number of molecule/molecule collisions
+<P>The <I>nattempt</I> keyword is the number of particle/particle collisions
 that were attempted.
 </P>
 <P>The <I>nreact</I> keyword is the number of chemical reactions that
@@ -150,10 +150,11 @@ boundaries of the simulation box.
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> and <I>c_ID[I][J]</I> keywords allow global
 values calculated by a compute to be output.  As discussed on the
 <A HREF = "compute.html">compute</A> doc page, computes can calculate global,
-per-molecule, or per-grid values.  Only global values can be
-referenced by this command.  However, per-molecule or per-grid compute
-values can be referenced in a <A HREF = "variable.html">variable</A> and the
-variable referenced, as discussed below.
+per-particle, per-grid, or per-surf values.  Only global values can be
+referenced by this command.  However, per-particle, per-grid, or
+per-surf compute values can be referenced in a
+<A HREF = "variable.html">variable</A> and the variable referenced, as discussed
+below.
 </P>
 <P>The ID in the keyword should be replaced by the actual ID of a compute
 that has been defined elsewhere in the input script.  See the
@@ -163,11 +164,11 @@ or 2 brackets will reference a scalar value from the compute.
 </P>
 <P>The <I>f_ID</I> and <I>f_ID[I]</I> and <I>f_ID[I][J]</I> keywords allow global
 values calculated by a fix to be output.  As discussed on the
-<A HREF = "fix.html">fix</A> doc page, fixes can calculate global, per-molecule, or
-per-grid values.  Only global values can be referenced by this
-command.  However, per-molecule or per-grid fix values can be
-referenced in a <A HREF = "variable.html">variable</A> and the variable referenced,
-as discussed below.
+<A HREF = "fix.html">fix</A> doc page, fixes can calculate global, per-particle,
+per-grid, or per-surf values.  Only global values can be referenced by
+this command.  However, per-particle or per-grid or per-surf fix
+values can be referenced in a <A HREF = "variable.html">variable</A> and the
+variable referenced, as discussed below.
 </P>
 <P>The ID in the keyword should be replaced by the actual ID of a fix
 that has been defined elsewhere in the input script.  See the
@@ -180,10 +181,10 @@ output.  The name in the keyword should be replaced by the variable
 name that has been defined elsewhere in the input script.  Only
 equal-style variables can be referenced.  See the
 <A HREF = "variable.html">variable</A> command for details.  Variables of style
-<I>equal</I> can reference per-molecule or per-grid properties or stats
-keywords, or they can invoke other computes, fixes, or variables when
-evaluated, so this is a very general means of creating statistical
-output.
+<I>equal</I> can reference per-particle or per-grid or per-surf properties
+or stats keywords, or they can invoke other computes, fixes, or
+variables when evaluated, so this is a very general means of creating
+statistical output.
 </P>
 <P>See <A HREF = "Section_modify.html">Section_modify</A> for information on how to add
 new compute and fix styles to SPARTA to calculate quantities that can
@@ -199,6 +200,6 @@ then be referenced with these keywords to generate statistical output.
 </P>
 <P><B>Default:</B>
 </P>
-<PRE>stats_style step cpu nmol 
+<PRE>stats_style step cpu np 
 </PRE>
 </HTML>

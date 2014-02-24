@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -21,8 +21,8 @@ undump 2 :pre
 
 [Description:]
 
-Turn off a previously defined dump so that it is no longer active.
-This closes the file associated with the dump.
+Delete a dump that was previously defined with a "dump"_fix.html
+command.  This also closes the file associated with the dump.
 
 [Restrictions:] none
 

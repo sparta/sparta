@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -36,8 +36,8 @@ keyword = {ave}
 fix 1 all ave/grid 10 20 1000 c_mine
 fix 1 all ave/grid 1 100 100 c_2 ave running :pre
 
-These commands will dump standard averages for each species and each
-grid cell to a file every 1000 steps:
+These commands will dump averages for each species and each grid cell
+to a file every 1000 steps:
 
 compute 1 grid species n u v w usq vsq wsq
 fix 1 ave/grid 10 100 1000 c_1
@@ -46,18 +46,19 @@ dump 1 grid 1000 tmp.grid id f_1 :pre
 [Description:]
 
 Use one or more per-grid vectors as inputs every few timesteps, and
-average them grid cell by grid cell over longer timescales, applying
-appropriate normalization factors.  The resulting per grid cell
-averages can be used by other output commands such as the "dump
-grid"_dump.html command.
+average by grid cell over longer timescales, applying appropriate
+normalization factors.  The resulting per grid cell averages can be
+used by other output commands such as the "dump grid"_dump.html
+command.
 
 Each input value can be the result of a "compute"_compute.html or
 "fix"_fix.html or the evaluation of a grid-style
 "variable"_variable.html.  The compute, fix, or variable must produce
-a per-grid vector or array, not a global quantity or per-molecule
+a per-grid vector or array, not a global or per-particle or per-surf
 quantity.  If you wish to time-average global quantities from a
 compute, fix, or variable, then see the "fix
-ave/time"_fix_ave_time.html command.
+ave/time"_fix_ave_time.html command.  To time-average per-surf
+quantities, see the "fix ave/surf"_fix_ave_surf.html command.
 
 "Computes"_compute.html that produce per-grid vectors or arrays are
 those which have the word {grid} in their style name.  See the doc
@@ -129,9 +130,6 @@ variable"_variable.html.  Variables of style {grid} can reference
 fixes, or variables when they are evaluated, so this is a very general
 means of generating per-grid quantities to time average.
 
-NOTE: The "variable"_variable.html command does not yet support
-grid-style varaibles.
-
 :line
 
 For averaging of a value that comes from a compute or fix,
@@ -178,11 +176,10 @@ re-defining the fix, or by re-specifying it.
 
 :line
 
-[Restart, fix_modify, output info:]
+[Restart, output info:]
 
 No information about this fix is written to "binary restart
-files"_restart.html.  None of the "fix_modify"_fix_modify.html options
-are relevant to this fix.
+files"_restart.html.
 
 This fix produces a per-grid vector or array which can be accessed by
 various output commands.  A vector is produced if only a single

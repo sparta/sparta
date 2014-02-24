@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -26,26 +26,27 @@ fix 1 grid/check 100 error :pre
 Check if particles are inside the grid cell they are supposed to be,
 based on their current coordinates.  This is useful as a debugging
 check to insure that no particles have been assigned to the incorrect
-grid cell during the particle move stage of the SPARTA algorithm.
+grid cell during the particle move stage of the SPARTA timestepping
+algorithm.
 
-The check is performed every {N} timesteps.  Particles not inside the
-correct grid cell are counted and the value of the count can be
+The check is performed once every {N} timesteps.  Particles not inside
+the correct grid cell are counted and the value of the count can be
 monitored (see below).  A value of 0 is "correct", meaning that no
-particle was found to be outside its assigned grid cell.
+particle was found outside its assigned grid cell.
 
 If the outflag setting is {error}, SPARTA will print an error and stop
 if it finds a particle in an incorrect grid cell.  For {warn}, it will
 print a warning message and continue.  For {silent}, it will print no
-message, but the count of such occurrences can be monitored with the
-"stats"_stats.html output, as described below.
+message, but the count of such occurrences can be monitored as
+described below, e.g. by outputting the value with the
+"stats"_stats.html command.
 
 :line
 
-[Restart, fix_modify, output info:]
+[Restart, output info:]
 
 No information about this fix is written to "binary restart
-files"_restart.html.  None of the "fix_modify"_fix_modify.html options
-are relevant to this fix.
+files"_restart.html.
 
 This fix computes a global scalar which can be accessed by various
 output commands.  The scalar is the count of how many particles were

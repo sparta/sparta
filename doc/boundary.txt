@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -30,9 +30,9 @@ boundary r p rs :pre
 
 Set the style of boundaries for the global simulation box in each of
 the x, y, z dimensions.  A single letter assigns the same style to
-both the lower and upper face of the box.  Two letters assigns the
-first style to the lower face and the second style to the upper face.
-The size of the simulation box is set by the
+both the lower and upper face of the box in that dimension.  Two
+letters assigns the first style to the lower face and the second style
+to the upper face.  The size of the simulation box is set by the
 "create_box"_create_box.html command.
 
 The boundary style determines how particles exiting the box
@@ -51,13 +51,11 @@ box.  The new velocity is used to advect the particle for the reminder
 of the timestep following the collision.
 
 Style {a} means an axi-symmetric boundary, which can only be used for
-the lower y-dimension boundary.  This is only a valid setting for 2d
-simulations.  The simulation box must also have a value of 0.0 for
-{ylo}; see the "create_box"_create_box.html command.  This effectively
-means that the x-axis is the axis of symmetry.  The upper y-dimension
-boundary cannot be periodic.
-
-NOTE: Axi-symmetry is not yet fully implemented in the code.
+the lower y-dimension boundary in a 2d simulation.  The simulation box
+must also have a value of 0.0 for {ylo}; see the
+"create_box"_create_box.html command.  This effectively means that the
+x-axis is the axis of symmetry.  The upper y-dimension boundary cannot
+be periodic.
 
 Style {s} means the boundary is treated as a surface which allows the
 particle-surface interaction to be treated in a variety of ways via
@@ -68,7 +66,7 @@ triangulated surface read in and setup by the
 
 For style {s}, the boundary face must also be assigned to a surface
 collision model defined by the "surf_collide"_surf_collide.html
-command.  The assignment of boundary to model is done via the
+command.  The assignment of the boundary to the model is done via the
 "bound_modify"_bound_modify.html command.
 
 [Restrictions:]

@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "http://dsmc.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
 </CENTER>
 
 
@@ -42,9 +42,9 @@ e.g.
 <PRE>spa_g++ < in.script 
 </PRE>
 <P>since the SELF option invokes the C-library rewind() call, which may
-not be supported for stdin on some systems.  This can be worked around
-by using the <A HREF = "Section_start.html#start_5">-in command-line argument</A>,
-e.g.
+not be supported for stdin on some systems or by some MPI
+implementations.  This can be worked around by using the <A HREF = "Section_start.html#start_5">-in
+command-line argument</A>, e.g.
 </P>
 <PRE>spa_g++ -in in.script 
 </PRE>

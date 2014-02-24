@@ -1,6 +1,6 @@
 "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
-:link(sws,http://dsmc.sandia.gov)
+:link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
 :link(sc,Section_commands.html#comm)
 
@@ -18,55 +18,59 @@ args = arguments used by a particular style :ul
 
 [Examples:]
 
-compute 1 temp :pre
+compute 1 ke/particle 
+compute myGrid all n mass u usq temp :pre
 
 [Description:]
 
 Define a computation that will be performed on a collection of
 particles or grid cells or surface elements.  Quantities calculated by
 a compute are instantaneous values, meaning they are calculated from
-information about the current timestep or iteration, though a compute
-may internally store some information about a previous state of the
-system.  Defining a compute does not perform a computation.  Instead
+information about the current timestep.  Examples include calculation
+of the system temperature or counting collisions of particles with
+surface elements.  Code for new computes can be added to SPARTA; see
+"this section"_Section_modify.html of the manual for details.
+
+Note that defining a compute does not perform a computation.  Instead
 computes are invoked by other SPARTA commands as needed, e.g. to
-generate thermodynamic or dump file output.
+generate statistics or dump file output.  See this "howto
+section"_Section_howto.html#howto_15 for a summary of various SPARTA
+output options, many of which involve computes.
 
 The ID of a compute can only contain alphanumeric characters and
 underscores.
 
 Computes can be deleted with the "uncompute"_uncompute.html command.
 
-Code for new computes can be added to SPARTA (see "this
-section"_Section_modify.html of the manual) and the results of their
-calculations accessed in the various ways described above.
+:line
+
+Each compute style has its own doc page which describes its arguments
+and what it does.  Here is an alphabetic list of compute styles
+available in SPARTA:
+
+"boundary"_compute_boundary.html - various quantities on each global boundary 
+"grid"_compute_grid.html - various per grid cell quantities
+"ke/particle"_compute_ke_particle.html - temperature per particle
+"sonine/grid"_compute_sonine_grid.html - Sonine moments per grid cell
+"surf"_compute_surf.html - various per surface element quantities
+"temp"_compute_temp.html - temperature of all particles :ul
 
 :line
 
 Computes calculate one of four styles of quantities: global,
-per-molecule, per-grid, or per-surf.  A global quantity is one or more
+per-particle, per-grid, or per-surf.  A global quantity is one or more
 system-wide values, e.g. the temperature of the system.  A
-per-molecule quantity is one or more values per molecule, e.g. the
-kinetic energy of each molecule.  A per-grid quantity is one or more
+per-particle quantity is one or more values per particle, e.g. the
+kinetic energy of each particle.  A per-grid quantity is one or more
 values per grid cell.  A per-surf quantity is one or more values per
 surface element.
 
-Computes that produce per-molecule quantities have the word "molecule"
-in their style name, e.g. {ke/molecule}.  Computes that produce
-per-grid quantities have the word "grid" in their style name,
-e.g. {ke/grid}.  Computes that produce per-surf quantities have the
-word "surf" in their style name, e.g. {ke/surf}.  Styles with neither
-"molecule" or "grid" or "surf" in their style nameproduce global
-quantities.
-
-Note that a single compute produces either global or per-molecule or
-per-grid or per-surf quantities, but never more than one of these.
-
-Global, per-molecule, per-grid, and per-surf quantities each come in
-three kinds: a single scalar value, a vector of values, or a 2d array
-of values.  The doc page for each compute describes the style and kind
-of values it produces, e.g. a per-molecule vector.  Some computes
-produce more than one kind of a single style, e.g. a global scalar and
-a global vector.
+Global, per-particle, per-grid, and per-surf quantities each come in
+two forms: a single scalar value or a vector of values.  Additionaly,
+global quantities can also be a 2d array of values.  The doc page for
+each compute describes the style and kind of values it produces,
+e.g. a per-particle vector.  Some computes can produce more than one
+form of a single style, e.g. a global scalar and a global vector.
 
 When a compute quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -85,48 +89,29 @@ vector or array.
 Note that commands and "variables"_variable.html which use compute
 quantities typically do not allow for all kinds, e.g. a command may
 require a vector of values, not a scalar.  This means there is no
-ambiguity about referring to a compute quantity as c_ID even if it
+ambiguity about referring to a compute quantity as f_ID even if it
 produces, for example, both a scalar and vector.  The doc pages for
 various commands explain the details.
 
 :line
 
-In SPARTA, the values generated by a compute can be used in several
-ways:
+The values generated by a compute can be used in several ways:
 
 Global values can be output via the "stats_style"_stats_style.html
-command.  They can be time-averaged via the "fix
-ave/time"_fix_ave_time.html command.  Or the values can be referenced
-in a "variable equal"_variable.html or "variable atom"_variable.html
-command. :ulb,l
+command.  Or the values can be referenced in a "variable
+equal"_variable.html or "variable atom"_variable.html command. :ulb,l
 
-Per-molecule values can be output via the "dump particle"_dump.html
-command.  They can be reduced to global values via the "compute
-reduce"_doc/compute_reduce.html command.  Or the per-molecule values
-can be referenced in an "molecule-style variable"_variable.html. :l
+Per-particle values can be output via the "dump particle"_dump.html
+command.  Or the values can be referenced in a "particle-style
+variable"_variable.html. :l
 
 Per-grid values can be output via the "dump grid"_dump.html command.
 They can be time-averaged via the "fix ave/grid"_fix_ave_grid.html
-command.  They can be reduced to global values via the "compute
-reduce"_doc/compute_reduce.html command.  Or the per-grid values can
-be referenced in a "grid-style variable"_variable.html. :l,ule
+command.  :l
 
 Per-surf values can be output via the "dump surf"_dump.html command.
 They can be time-averaged via the "fix ave/surf"_fix_ave_surf.html
-command.  They can be reduced to global values via the "compute
-reduce"_doc/compute_reduce.html command.  Or the per-surf values can
-be referenced in a "surf-style variable"_variable.html. :l,ule
-
-:line
-
-Each compute style has its own doc page which describes its arguments
-and what it does.  Here is an alphabetic list of compute styles
-available in SPARTA:
-
-"grid"_compute_grid.html - varioud per grid cell quantities
-"ke/molecule"_compute_ke_molecule.html - temperature per molecule
-"sonine/grid"_compute_sonine_grid.html - Sonine moments per grid cell
-"temp"_compute_temp.html - temperature of all molecules :ul
+command.  :l,ule
 
 :line
 
