@@ -13,14 +13,25 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>print str 
+<P>print string keyword value:pre
+</P>
+<UL><LI>string = text string to print, which may contain variables 
+
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>file</I> or <I>append</I> or <I>screen</I> 
+
+<PRE>  <I>file</I> value = filename
+  <I>append</I> value = filename
+  <I>screen</I> value = <I>yes</I> or <I>no</I> 
 </PRE>
-<UL><LI>str = text string to print, which may contain variables 
+
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>print "Done with equilibration"
 print 'Done with equilibration'
+print "Done with equilibration" file info.dat
 print Temp=$t 
 </PRE>
 <PRE>compute myTemp temp
@@ -30,16 +41,24 @@ print "The system temperature is now $t"
 <P><B>Description:</B>
 </P>
 <P>Print a text string to the screen and logfile.  One line of output is
-generated.  If the string has white space in it (spaces, tabs, etc),
-then you must enclose it in quotes so that it is treated as a single
-argument.  If variables are included in the string, they will be
-evaluated and their current values printed.
+generated.  The text string must be a single argument, so it should be
+enclosed in quotes if it is more than one word.  If it contains
+variables, they will be evaluated and their current values printed.
+</P>
+<P>If the <I>file</I> or <I>append</I> keyword is used, a filename is specified to
+which the output will be written.  If <I>file</I> is used, then the
+filename is overwritten if it already exists.  If <I>append</I> is used,
+then the filename is appended to if it already exists, or created if
+it does not exist.
+</P>
+<P>If the <I>screen</I> keyword is used, output to the screen and logfile can
+be turned on or off as desired.
 </P>
 <P>If you want the print command to be executed multiple times (e.g. with
 changing variable values), there are 3 options.  First, consider using
 the <A HREF = "fix_print.html">fix print</A> command, which will print a string
 periodically during a simulation.  Second, the print command can be
-used as an argument to the <I>every</I> option of the <A HREF = "run.html">run</A>
+used as an argument to the <I>every</I>option of the <A HREF = "run.html">run</A>
 command.  Third, the print command could appear in a section of the
 input script that is looped over (see the <A HREF = "jump.html">jump</A> and
 <A HREF = "next.html">next</A> commands).

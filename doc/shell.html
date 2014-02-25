@@ -15,7 +15,7 @@
 </P>
 <PRE>shell cmd args 
 </PRE>
-<UL><LI>cmd = <I>cd</I> or <I>mkdir</I> or <I>mv</I> or <I>rm</I> or <I>rmdir</I> or arbitrary command 
+<UL><LI>cmd = <I>cd</I> or <I>mkdir</I> or <I>mv</I> or <I>rm</I> or <I>rmdir</I> or <I>putenv</I> or arbitrary command 
 
 <PRE>  <I>cd</I> arg = dir
     dir = directory to change to
@@ -28,6 +28,8 @@
     file1,file2 = one or more filenames to delete
   <I>rmdir</I> args = dir1 dir2 ...
     dir1,dir2 = one or more directories to delete
+  <I>putenv</I> args = var1=value1 var2=value2
+    var=value = one of more definitions of environment variables
   anything else is passed as a command to the shell for direct execution 
 </PRE>
 
@@ -38,8 +40,9 @@
 shell cd ..
 shell mkdir tmp1 tmp2 tmp3
 shell rmdir tmp1
-shell mv log.lammps hold/log.1
+shell mv log.sparta hold/log.1
 shell rm TMP/file1 TMP/file2
+shell putenv SPARTA_DATA=../../data
 shell my_setup file1 10 file2
 shell my_post_process 100 dump.out 
 </PRE>
@@ -50,11 +53,11 @@ supported directly, in Unix-style syntax.  Any command not listed
 above is passed as-is to the C-library system() call, which invokes
 the command in a shell.
 </P>
-<P>This command is a means to invoke other commands from your input
-script.  For example, you can move files around in preparation for the
-next section of the input script.  Or you can run a program that
-pre-processes data for input into SPARTA.  Or you can run a program
-that post-processes SPARTA output data.
+<P>This is means to invoke other commands from your input script.  For
+example, you can move files around in preparation for the next section
+of the input script.  Or you can run a program that pre-processes data
+for input into SPARTA.  Or you can run a program that post-processes
+SPARTA output data.
 </P>
 <P>With the exception of <I>cd</I>, all commands, including ones invoked via a
 system() call, are executed by only a single processor, so that
@@ -76,6 +79,12 @@ files.
 <P>The <I>rmdir</I> cmd executes the Unix "rmdir" command to remove one or
 more directories.  A directory must be empty to be successfully
 removed.
+</P>
+<P>The <I>putenv</I> cmd defines or updates an environment variable directly.
+Since this command does not pass through the shell, no shell variable
+expansion or globbing is performed, only the usual substitution for
+SPARTA variables defined with the <A HREF = "variable.html">variable</A> command is
+performed.  The resulting string is then used literally.
 </P>
 <P>Any other cmd is passed as-is to the shell along with its arguments as
 one string, invoked by the C-library system() call.  For example,
