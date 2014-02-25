@@ -45,7 +45,7 @@ read_surf           ../devel/data.spikysphere 1
 
 ##################
 
-create_molecules    air n 100000
+create_particles    air n 100000
 
 #fix		    in inflow air xlo 
 
@@ -61,7 +61,7 @@ timestep 	    0.0001
 
 fix		    check grid/check 1 error
 
-#dump		    1 molecule 10 tmp.dump id type x y z
+#dump		    1 particle 10 tmp.dump id type x y z
 
 compute             1 grid all n u v w usq vsq wsq
 fix                 gave ave/grid 10 100 1000 c_1 ave running
@@ -90,12 +90,12 @@ stats		    100
 
 #balance_grid        rcb cell
 
-stats_style	    step cpu nmol nattempt ncoll nscoll nscheck
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
 
 run 		    100
 
 fix                 1 balance 50 1.0 rcb mol
 
-#stats_style	    step cpu nmol nattempt ncoll nscoll nscheck f_1
+#stats_style	    step cpu np nattempt ncoll nscoll nscheck f_1
 
 run 		    1000

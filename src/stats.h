@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -50,8 +50,6 @@ class Stats : protected Pointers {
   double last_tpcpu,last_spcpu;
   double last_time;
   bigint last_step;
-
-  bigint nmol;
                          // data used by routines that compute single values
   int ivalue;            // integer value to print
   double dvalue;         // double value to print
@@ -101,7 +99,7 @@ class Stats : protected Pointers {
   void compute_tpcpu();
   void compute_spcpu();
 
-  void compute_nmol();
+  void compute_np();
   void compute_ntouch();
   void compute_ncomm();
   void compute_nbound();
@@ -112,7 +110,7 @@ class Stats : protected Pointers {
   void compute_nattempt();
   void compute_nreact();
 
-  void compute_nmolave();
+  void compute_npave();
   void compute_ntouchave();
   void compute_ncommave();
   void compute_nboundave();

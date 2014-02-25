@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -14,23 +14,23 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(ke/molecule,ComputeKEMolecule)
+ComputeStyle(ke/particle,ComputeKEParticle)
 
 #else
 
-#ifndef SPARTA_COMPUTE_KE_MOLECULE_H
-#define SPARTA_COMPUTE_KE_MOLECULE_H
+#ifndef SPARTA_COMPUTE_KE_PARTICLE_H
+#define SPARTA_COMPUTE_KE_PARTICLE_H
 
 #include "compute.h"
 
 namespace SPARTA_NS {
 
-class ComputeKEMolecule : public Compute {
+class ComputeKEParticle : public Compute {
  public:
-  ComputeKEMolecule(class SPARTA *, int, char **);
-  ~ComputeKEMolecule();
+  ComputeKEParticle(class SPARTA *, int, char **);
+  ~ComputeKEParticle();
   void init();
-  void compute_per_molecule();
+  void compute_per_particle();
   bigint memory_usage();
 
  private:

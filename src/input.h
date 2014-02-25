@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -31,13 +31,15 @@ class Input : protected Pointers {
   void file();                   // process all input
   void file(const char *);       // process an input script
   char *one(const char *);       // process a single command
-  void substitute(char *, int);  // substitute for variables in a string
+  void substitute(char *&, char *&, int &, int &, int);  
+                                 // substitute for variables in a string
 
  private:
   int me;                      // proc ID
   char *command;               // ptr to current command
   int maxarg;                  // max # of args in arg
-  char *line,*copy,*work;      // input line & copy of it
+  char *line,*copy,*work;      // input line & copy and work string
+  int maxline,maxcopy,maxwork; // max lengths of char strings
   int echo_screen;             // 0 = no, 1 = yes
   int echo_log;                // 0 = no, 1 = yes
   int nfile,maxfile;           // current # and max # of open input files
@@ -48,8 +50,10 @@ class Input : protected Pointers {
 
   FILE **infiles;              // list of open input files
 
-  void parse();                // parse an input text line
-  int execute_command();       // execute a single command
+  void parse();                          // parse an input text line
+  char *nextword(char *, char **);       // find next word in string with quotes
+  void reallocate(char *&, int &, int);  // reallocate a char string
+  int execute_command();                 // execute a single command
 
   void clear();                // input script commands
   void echo();
@@ -99,68 +103,5 @@ class Input : protected Pointers {
 #endif
 
 /* ERROR/WARNING messages:
-
-E: Label wasn't found in input script
-
-Self-explanatory.
-
-E: Input line too long: %s
-
-This is a hard (very large) limit defined in the input.cpp file.
-
-E: Unknown command: %s
-
-The command is not known to SPARTA.  Check the input script.
-
-E: Another input script is already being processed
-
-Cannot attempt to open a 2nd input script, when the original file is
-still being processed.
-
-E: Cannot open input script %s
-
-Self-explanatory.
-
-E: Unbalanced quotes in input line
-
-No matching end double quote was found following a leading double
-quote.
-
-E: Invalid variable name
-
-Variable name used in an input script line is invalid.
-
-E: Substitution for illegal variable
-
-Input script line contained a variable that could not be substituted
-for.
-
-E: Input line too long after variable substitution
-
-This is a hard (very large) limit defined in the input.cpp file.
-
-E: Illegal ... command
-
-Self-explanatory.  Check the input script syntax and compare to the
-documentation for the command.  You can use -echo screen as a
-command-line option when running SPARTA to see the offending line.
-
-E: Cannot open logfile %s
-
-The SPARTA log file specified in the input script cannot be opened.
-Check that the path and name are correct.
-
-E: Partition numeric index is out of bounds
-
-UNDOCUMENTED
-
-E: Invalid collide style
-
-UNDOCUMENTED
-
-E: Dimension command after simulation box is defined
-
-The dimension command cannot be used after a read_data,
-read_restart, or create_box command.
 
 */

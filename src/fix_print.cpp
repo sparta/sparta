@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -19,6 +19,7 @@
 #include "input.h"
 #include "modify.h"
 #include "variable.h"
+#include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -40,13 +41,17 @@ FixPrint::FixPrint(SPARTA *sparta, int narg, char **arg) :
   string = new char[n];
   strcpy(string,arg[3]);
 
+  copy = (char *) memory->smalloc(n*sizeof(char),"fix/print:copy");
+  work = (char *) memory->smalloc(n*sizeof(char),"fix/print:work");
+  maxcopy = maxwork = n;
+
   // parse optional args
 
   fp = NULL;
   screenflag = 1;
   char *title = NULL;
 
-  int iarg = 5;
+  int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"file") == 0 || strcmp(arg[iarg],"append") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix print command");
@@ -84,9 +89,6 @@ FixPrint::FixPrint(SPARTA *sparta, int narg, char **arg) :
   }
 
   delete [] title;
-
-  copy = new char[MAXLINE];
-  work = new char[MAXLINE];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -94,8 +96,8 @@ FixPrint::FixPrint(SPARTA *sparta, int narg, char **arg) :
 FixPrint::~FixPrint()
 {
   delete [] string;
-  delete [] copy;
-  delete [] work;
+  memory->sfree(copy);
+  memory->sfree(work);
 
   if (fp && me == 0) fclose(fp);
 }
@@ -121,14 +123,15 @@ void FixPrint::end_of_step()
   modify->clearstep_compute();
 
   strcpy(copy,string);
-  input->substitute(copy,0);
-  strcat(copy,"\n");
+  input->substitute(copy,work,maxcopy,maxwork,0);
+
+  modify->addstep_compute(update->ntimestep + nevery);
 
   if (me == 0) {
-    if (screenflag && screen) fprintf(screen,copy);
-    if (screenflag && logfile) fprintf(logfile,copy);
+    if (screenflag && screen) fprintf(screen,"%s\n",copy);
+    if (screenflag && logfile) fprintf(logfile,"%s\n",copy);
     if (fp) {
-      fprintf(fp,copy);
+      fprintf(fp,"%s\n",copy);
       fflush(fp);
     }
   }

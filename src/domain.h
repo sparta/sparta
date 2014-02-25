@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -61,10 +61,5 @@ class Domain : protected Pointers {
 #endif
 
 /* ERROR/WARNING messages:
-
-E: Box bounds are invalid
-
-The box boundaries specified in the read_data file are invalid.  The
-lo value must be less than the hi value for all 3 dimensions.
 
 */

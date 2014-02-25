@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -52,34 +52,5 @@ class Universe : protected Pointers {
 #endif
 
 /* ERROR/WARNING messages:
-
-E: Invalid -reorder N value
-
-UNDOCUMENTED
-
-E: Nprocs not a multiple of N for -reorder
-
-UNDOCUMENTED
-
-E: Cannot open -reorder file
-
-UNDOCUMENTED
-
-E: Unexpected end of -reorder file
-
-UNDOCUMENTED
-
-E: Invalid entry in reorder file
-
-UNDOCUMENTED
-
-E: Unexpected end of reorder file
-
-UNDOCUMENTED
-
-E: Invalid command-line argument
-
-One or more command-line arguments is invalid.  Check the syntax of
-the command you are using to launch SPARTA.
 
 */

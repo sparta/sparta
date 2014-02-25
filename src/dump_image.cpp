@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -55,7 +55,7 @@ enum{MOL,GRID,SURF,XPLANE,YPLANE,ZPLANE};
 /* ---------------------------------------------------------------------- */
 
 DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) : 
-  DumpMolecule(sparta, narg, arg)
+  DumpParticle(sparta, narg, arg)
 {
   if (binary || multiproc) error->all(FLERR,"Invalid dump image filename");
 
@@ -544,7 +544,7 @@ void DumpImage::init_style()
   if (multifile == 0) 
     error->all(FLERR,"Dump image requires one snapshot per file");
 
-  DumpMolecule::init_style();
+  DumpParticle::init_style();
 
   // check variables
 
@@ -1479,7 +1479,7 @@ void DumpImage::create_image()
 
 int DumpImage::modify_param(int narg, char **arg)
 {
-  int n = DumpMolecule::modify_param(narg,arg);
+  int n = DumpParticle::modify_param(narg,arg);
   if (n) return n;
 
   if (strcmp(arg[0],"acolor") == 0) {

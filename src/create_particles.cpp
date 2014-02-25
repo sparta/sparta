@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -15,7 +15,7 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
-#include "create_molecules.h"
+#include "create_particles.h"
 #include "particle.h"
 #include "update.h"
 #include "grid.h"
@@ -37,24 +37,24 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
 /* ---------------------------------------------------------------------- */
 
-CreateMolecules::CreateMolecules(SPARTA *sparta) : Pointers(sparta) {}
+CreateParticles::CreateParticles(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
-void CreateMolecules::command(int narg, char **arg)
+void CreateParticles::command(int narg, char **arg)
 {
   if (!domain->box_exist) 
     error->all(FLERR,
-	       "Cannot create molecules before simulation box is defined");
+	       "Cannot create particles before simulation box is defined");
   if (!grid->exist)
-    error->all(FLERR,"Cannot create molecules  before grid is defined");
+    error->all(FLERR,"Cannot create particles  before grid is defined");
 
   particle->exist = 1;
 
-  if (narg < 1) error->all(FLERR,"Illegal create_molecules command");
+  if (narg < 1) error->all(FLERR,"Illegal create_particles command");
 
   imix = particle->find_mixture(arg[0]);
-  if (imix < 0) error->all(FLERR,"Create_molecules mixture ID does not exist");
+  if (imix < 0) error->all(FLERR,"Create_particles mixture ID does not exist");
   particle->mixture[imix]->init();
 
   // optional args
@@ -65,16 +65,16 @@ void CreateMolecules::command(int narg, char **arg)
   int iarg = 1;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal create_molecules command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
       np = ATOBIGINT(arg[iarg+1]);
-      if (np <= 0) error->all(FLERR,"Illegal create_molecules command");
+      if (np <= 0) error->all(FLERR,"Illegal create_particles command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"single") == 0) {
-      if (iarg+8 > narg) error->all(FLERR,"Illegal create_molecules command");
+      if (iarg+8 > narg) error->all(FLERR,"Illegal create_particles command");
       single = 1;
       mspecies = particle->find_species(arg[iarg+1]);
       if (mspecies < 0) 
-	error->all(FLERR,"Create_molecules species ID does not exist");
+	error->all(FLERR,"Create_particles species ID does not exist");
       xp = atof(arg[iarg+2]);
       yp = atof(arg[iarg+3]);
       zp = atof(arg[iarg+4]);
@@ -82,11 +82,11 @@ void CreateMolecules::command(int narg, char **arg)
       vy = atof(arg[iarg+6]);
       vz = atof(arg[iarg+7]);
       iarg += 8;
-    } else error->all(FLERR,"Illegal create_molecules command");
+    } else error->all(FLERR,"Illegal create_particles command");
   }
 
   if (np > 0 && single)
-    error->all(FLERR,"Cannot use n and single in create_molecules command");
+    error->all(FLERR,"Cannot use n and single in create_particles command");
 
   // calculate Np if not set explicitly
   // NOTE: eventually adjust for cells with cut volume
@@ -105,7 +105,7 @@ void CreateMolecules::command(int narg, char **arg)
 
   sparta->init();
 
-  // generate molecules
+  // generate particles
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
@@ -124,7 +124,7 @@ void CreateMolecules::command(int narg, char **arg)
   MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   if (nglobal - nprevious != np) {
     char str[128];
-    sprintf(str,"Created incorrect # of molecules: " 
+    sprintf(str,"Created incorrect # of particles: " 
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
 	    nglobal-nprevious,np);
     error->all(FLERR,str);
@@ -135,22 +135,22 @@ void CreateMolecules::command(int narg, char **arg)
 
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"Created " BIGINT_FORMAT " molecules\n",np);
+      fprintf(screen,"Created " BIGINT_FORMAT " particles\n",np);
       fprintf(screen,"  CPU time = %g secs\n",time2-time1);
     }
     if (logfile) {
-      fprintf(logfile,"Created " BIGINT_FORMAT " molecules\n",np);
+      fprintf(logfile,"Created " BIGINT_FORMAT " particles\n",np);
       fprintf(logfile,"  CPU time = %g secs\n",time2-time1);
     }
   }
 }
 
 /* ----------------------------------------------------------------------
-   create a single molecule
+   create a single particle
    find cell it is in, and store on appropriate processor
 ------------------------------------------------------------------------- */
 
-void CreateMolecules::create_single()
+void CreateParticles::create_single()
 {
   int i,m;
   double x[3],v[3];
@@ -160,7 +160,7 @@ void CreateMolecules::create_single()
   v[0] = vx;  v[1] = vy;  v[2] = vz;
 
   if (domain->dimension == 2 && x[2] != 0.0)
-    error->all(FLERR,"Create_molecules single requires z = 0 "
+    error->all(FLERR,"Create_particles single requires z = 0 "
 	       "for 2d simulation");
 
   Grid::ChildCell *cells = grid->cells;
@@ -199,12 +199,12 @@ void CreateMolecules::create_single()
 }
 
 /* ----------------------------------------------------------------------
-   create Np molecules in parallel
+   create Np particles in parallel
    every proc creates fraction of Np for cells it owns
    attributes of created particle depend on number of procs
 ------------------------------------------------------------------------- */
 
-void CreateMolecules::create_local(bigint np)
+void CreateParticles::create_local(bigint np)
 {
   int dimension = domain->dimension;
 
@@ -218,7 +218,7 @@ void CreateMolecules::create_local(bigint np)
   int nglocal = grid->nlocal;
 
   // volme = volume of grid cells I own that are OUTSIDE
-  // Nme = # of molecules I will create
+  // Nme = # of particles I will create
   // MPI_Scan() logic insures sum of nme = Np
   // NOTE: eventually adjust for cells with cut volume
   //       by over-inserting into other cells?
@@ -238,7 +238,7 @@ void CreateMolecules::create_local(bigint np)
 
   double *vols;
   int nprocs = comm->nprocs;
-  memory->create(vols,nprocs,"create_molecules:vols");
+  memory->create(vols,nprocs,"create_particles:vols");
   MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
 
   // gathered Scan result is not guaranteed to be monotonically increasing
@@ -259,9 +259,9 @@ void CreateMolecules::create_local(bigint np)
   memory->destroy(vols);
 
   // loop over cells I own
-  // only add molecules to OUTSIDE cells
-  // ntarget = floating point # of molecules to create in one cell
-  // npercell = integer # of molecules to create in one cell
+  // only add particles to OUTSIDE cells
+  // ntarget = floating point # of particles to create in one cell
+  // npercell = integer # of particles to create in one cell
   // basing ntarget on accumulated volume and nprev insures Nme total creations
   // particle species = random value based on mixture fractions
   // particle velocity = stream velocity + thermal velocity
@@ -325,13 +325,13 @@ void CreateMolecules::create_local(bigint np)
 }
 
 /* ----------------------------------------------------------------------
-   create Np molecules in serial
+   create Np particles in serial
    every proc generates all Np coords, only keeps those in cells it owns
    created particle attributes should be independent of number of procs
 ------------------------------------------------------------------------- */
 
 /*
-void CreateMolecules::create_all(bigint n)
+void CreateParticles::create_all(bigint n)
 {
   int dimension = domain->dimension;
   double xlo = domain->boxlo[0];
@@ -347,7 +347,7 @@ void CreateMolecules::create_all(bigint n)
   int icell,id;
   double x,y,z;
 
-  // loop over all N molecules
+  // loop over all N particles
 
   for (bigint m = 0; m < n; m++) {
     x = xlo + random->uniform()*xprd;

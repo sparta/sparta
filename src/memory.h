@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -482,20 +482,5 @@ class Memory : protected Pointers {
 #endif
 
 /* ERROR/WARNING messages:
-
-E: Failed to allocate %ld bytes for array %s
-
-Your SPARTA simulation has run out of memory.  You need to run a
-smaller simulation or on more processors.
-
-E: Failed to reallocate %ld bytes for array %s
-
-Your SPARTA simulation has run out of memory.  You need to run a
-smaller simulation or on more processors.
-
-E: Cannot create/grow a vector/array of pointers for %s
-
-SPARTA code is making an illegal call to the templated memory
-allocaters, to create a vector or array of pointers.
 
 */

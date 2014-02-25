@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -21,11 +21,11 @@ DumpStyle(image,DumpImage)
 #ifndef SPARTA_DUMP_IMAGE_H
 #define SPARTA_DUMP_IMAGE_H
 
-#include "dump_molecule.h"
+#include "dump_particle.h"
 
 namespace SPARTA_NS {
 
-class DumpImage : public DumpMolecule {
+class DumpImage : public DumpParticle {
  public:
   DumpImage(class SPARTA *, int, char**);
   ~DumpImage();

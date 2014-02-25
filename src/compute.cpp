@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -48,7 +48,7 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   // set child class defaults
 
   scalar_flag = vector_flag = array_flag = 0;
-  per_molecule_flag = per_grid_flag = per_surf_flag = 0;
+  per_particle_flag = per_grid_flag = per_surf_flag = 0;
   surf_tally_flag = boundary_tally_flag = 0;
 
   timeflag = 0;
@@ -56,7 +56,7 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   tlist = NULL;
 
   invoked_scalar = invoked_vector = invoked_array = -1;
-  invoked_per_molecule = invoked_per_grid = invoked_per_surf = -1;
+  invoked_per_particle = invoked_per_grid = invoked_per_surf = -1;
 }
 
 /* ---------------------------------------------------------------------- */

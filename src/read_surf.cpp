@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -72,7 +72,7 @@ void ReadSurf::command(int narg, char **arg)
   if (!grid->exist_ghost)
     error->all(FLERR,"Cannot read_surf before grid ghost cells are defined");
   if (particle->exist) 
-    error->all(FLERR,"Cannot read_surf after molecules are defined");
+    error->all(FLERR,"Cannot read_surf after particles are defined");
 
   surf->exist = 1;
   dimension = domain->dimension;

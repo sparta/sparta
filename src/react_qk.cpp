@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -146,7 +146,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         }
         //double omega = 0.5 * (params[asp].omega + params[jsp].omega);
 
-        // pre-collision molecule that splits is of species asp
+        // pre-collision particle that splits is of species asp
 
         int reac_vmode = 1;
 
@@ -183,7 +183,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         //double omega = 0.5 * (params[asp].omega + params[jsp].omega);
         double ecc = pre_etrans + ap->ivib*update->boltz*species[asp].vibtemp;
         
-        // the potential post-collision species of the molecule
+        // the potential post-collision species of the particle
         int mspec = reaction->product_C; 
         // the potential post-collision species of the atom
         int nspec = reaction->product_D; 

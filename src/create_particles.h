@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -14,21 +14,21 @@
 
 #ifdef COMMAND_CLASS
 
-CommandStyle(create_molecules,CreateMolecules)
+CommandStyle(create_particles,CreateParticles)
 
 #else
 
-#ifndef SPARTA_CREATE_MOLECULES_H
-#define SPARTA_CREATE_MOLECULES_H
+#ifndef SPARTA_CREATE_PARTICLES_H
+#define SPARTA_CREATE_PARTICLES_H
 
 #include "pointers.h"
 
 namespace SPARTA_NS {
 
-class CreateMolecules : protected Pointers {
+class CreateParticles : protected Pointers {
 
  public:
-  CreateMolecules(class SPARTA *);
+  CreateParticles(class SPARTA *);
   void command(int, char **);
   int evib(int);
   double erot(int);

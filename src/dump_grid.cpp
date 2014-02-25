@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -31,7 +31,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,VOL,SVOL,
+enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,VOL,
      COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE,CELLINT,STRING};
 
@@ -439,11 +439,6 @@ int DumpGrid::parse_fields(int narg, char **arg)
       nfield++;
     } else if (strcmp(arg[iarg],"vol") == 0) {
       pack_choice[nfield] = &DumpGrid::pack_vol;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
-    } else if (strcmp(arg[iarg],"svol") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_svol;
       vtype[nfield] = DOUBLE;
       field2arg[nfield] = iarg;
       nfield++;
@@ -933,19 +928,6 @@ void DumpGrid::pack_vol(int n)
 
   for (int i = 0; i < ncpart; i++) {
     buf[n] = cinfo[cpart[i]].volume;
-    n += size_one;
-  }
-}
-
-
-/* ---------------------------------------------------------------------- */
-
-void DumpGrid::pack_svol(int n)
-{
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
-  for (int i = 0; i < ncpart; i++) {
-    buf[n] = update->fnum/cinfo[cpart[i]].volume;
     n += size_one;
   }
 }

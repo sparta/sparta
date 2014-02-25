@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -40,27 +40,5 @@ class BalanceGrid : protected Pointers {
 #endif
 
 /* ERROR/WARNING messages:
-
-E: Cannot create_grid before simulation box is defined
-
-UNDOCUMENTED
-
-E: Cannot create grid when grid is already defined
-
-UNDOCUMENTED
-
-E: Illegal ... command
-
-Self-explanatory.  Check the input script syntax and compare to the
-documentation for the command.  You can use -echo screen as a
-command-line option when running SPARTA to see the offending line.
-
-E: Create_grid nz value must be 1 for a 2d simulation
-
-UNDOCUMENTED
-
-E: Per-processor grid count is too big
-
-UNDOCUMENTED
 
 */

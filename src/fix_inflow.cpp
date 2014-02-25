@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -581,9 +581,9 @@ void FixInflow::start_of_step()
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
 
-  // insert molecules by cell/face pair
+  // insert particles by cell/face pair
   // ntarget/ninsert is either perspecies or for all species
-  // for one molecule:
+  // for one particle:
   //   x = random position on face
   //   v = randomized thermal velocity + vstream
   //       first stage: normal dimension (ndim)

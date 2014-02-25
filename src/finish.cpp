@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -73,11 +73,11 @@ void Finish::end()
   if (me == 0) {
     if (screen) fprintf(screen,
 			"Loop time of %g on %d procs for %d steps with " 
-			BIGINT_FORMAT " molecules\n",
+			BIGINT_FORMAT " particles\n",
 			time_loop,nprocs,update->nsteps,particle->nglobal);
     if (logfile) fprintf(logfile,
 			 "Loop time of %g on %d procs for %d steps with " 
-			 BIGINT_FORMAT " molecules\n",
+			 BIGINT_FORMAT " particles\n",
 			 time_loop,nprocs,update->nsteps,particle->nglobal);
   }
 

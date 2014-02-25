@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -14,21 +14,21 @@
 
 #ifdef DUMP_CLASS
 
-DumpStyle(molecule,DumpMolecule)
+DumpStyle(particle,DumpParticle)
 
 #else
 
-#ifndef SPARTA_DUMP_MOLECULE_H
-#define SPARTA_DUMP_MOLECULE_H
+#ifndef SPARTA_DUMP_PARTICLE_H
+#define SPARTA_DUMP_PARTICLE_H
 
 #include "dump.h"
 
 namespace SPARTA_NS {
 
-class DumpMolecule : public Dump {
+class DumpParticle : public Dump {
  public:
-  DumpMolecule(class SPARTA *, int, char **);
-  virtual ~DumpMolecule();
+  DumpParticle(class SPARTA *, int, char **);
+  virtual ~DumpParticle();
   bigint memory_usage();
 
  protected:
@@ -71,7 +71,7 @@ class DumpMolecule : public Dump {
   int *variable;             // list of indices for the Variables
   double **vbuf;             // local storage for variable evaluation
 
-  int ntypes;                // # of molecule types
+  int ntypes;                // # of particle types
   char **typenames;	     // array of element names for each type
 
   virtual void init_style();
@@ -86,19 +86,19 @@ class DumpMolecule : public Dump {
   int add_variable(char *);
   virtual int modify_param(int, char **);
 
-  typedef void (DumpMolecule::*FnPtrHeader)(bigint);
+  typedef void (DumpParticle::*FnPtrHeader)(bigint);
   FnPtrHeader header_choice;           // ptr to write header functions
   void header_binary(bigint);
   void header_item(bigint);
 
-  typedef void (DumpMolecule::*FnPtrData)(int, double *);
+  typedef void (DumpParticle::*FnPtrData)(int, double *);
   FnPtrData write_choice;              // ptr to write data functions
   void write_binary(int, double *);
   void write_text(int, double *);
 
   // customize by adding a method prototype
 
-  typedef void (DumpMolecule::*FnPtrPack)(int);
+  typedef void (DumpParticle::*FnPtrPack)(int);
   FnPtrPack *pack_choice;              // ptrs to pack functions
 
   void pack_compute(int);

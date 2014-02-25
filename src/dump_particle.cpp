@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -15,7 +15,7 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
-#include "dump_molecule.h"
+#include "dump_particle.h"
 #include "update.h"
 #include "domain.h"
 #include "region.h"
@@ -39,14 +39,14 @@ enum{INT,DOUBLE,STRING};
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
-#define INVOKED_PER_MOLECULE 8
+#define INVOKED_PER_PARTICLE 8
 
 /* ---------------------------------------------------------------------- */
 
-DumpMolecule::DumpMolecule(SPARTA *sparta, int narg, char **arg) :
+DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   Dump(sparta, narg, arg)
 {
-  if (narg == 4) error->all(FLERR,"No dump molecule arguments specified");
+  if (narg == 4) error->all(FLERR,"No dump particle arguments specified");
 
   clearstep = 1;
 
@@ -89,10 +89,10 @@ DumpMolecule::DumpMolecule(SPARTA *sparta, int narg, char **arg) :
 
   ioptional = parse_fields(narg,arg);
   if (ioptional < narg && strcmp(style,"image") != 0)
-    error->all(FLERR,"Invalid attribute in dump molecule command");
+    error->all(FLERR,"Invalid attribute in dump particle command");
   size_one = nfield = ioptional - 4;
 
-  // molecule selection arrays
+  // particle selection arrays
 
   maxlocal = 0;
   choose = NULL;
@@ -132,7 +132,7 @@ DumpMolecule::DumpMolecule(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-DumpMolecule::~DumpMolecule()
+DumpParticle::~DumpParticle()
 {
   delete [] pack_choice;
   delete [] vtype;
@@ -175,7 +175,7 @@ DumpMolecule::~DumpMolecule()
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::init_style()
+void DumpParticle::init_style()
 {
   delete [] format;
   char *str;
@@ -215,11 +215,11 @@ void DumpMolecule::init_style()
 
   // setup function ptrs
 
-  if (binary) header_choice = &DumpMolecule::header_binary;
-  else header_choice = &DumpMolecule::header_item;
+  if (binary) header_choice = &DumpParticle::header_binary;
+  else header_choice = &DumpParticle::header_item;
 
-  if (binary) write_choice = &DumpMolecule::write_binary;
-  else write_choice = &DumpMolecule::write_text;
+  if (binary) write_choice = &DumpParticle::write_binary;
+  else write_choice = &DumpParticle::write_text;
 
   // find current ptr for each compute,fix,variable
   // check that fix frequency is acceptable
@@ -228,25 +228,25 @@ void DumpMolecule::init_style()
   for (int i = 0; i < ncompute; i++) {
     icompute = modify->find_compute(id_compute[i]);
     if (icompute < 0) 
-      error->all(FLERR,"Could not find dump molecule compute ID");
+      error->all(FLERR,"Could not find dump particle compute ID");
     compute[i] = modify->compute[icompute];
   }
 
   int ifix;
   for (int i = 0; i < nfix; i++) {
     ifix = modify->find_fix(id_fix[i]);
-    if (ifix < 0) error->all(FLERR,"Could not find dump molecule fix ID");
+    if (ifix < 0) error->all(FLERR,"Could not find dump particle fix ID");
     fix[i] = modify->fix[ifix];
-    if (nevery % modify->fix[ifix]->per_molecule_freq)
+    if (nevery % modify->fix[ifix]->per_particle_freq)
       error->all(FLERR,
-		 "Dump molecule and fix not computed at compatible times");
+		 "Dump particle and fix not computed at compatible times");
   }
 
   int ivariable;
   for (int i = 0; i < nvariable; i++) {
     ivariable = input->variable->find(id_variable[i]);
     if (ivariable < 0) 
-      error->all(FLERR,"Could not find dump molecule variable name");
+      error->all(FLERR,"Could not find dump particle variable name");
     variable[i] = ivariable;
   }
 
@@ -265,7 +265,7 @@ void DumpMolecule::init_style()
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::write_header(bigint ndump)
+void DumpParticle::write_header(bigint ndump)
 {
   if (multiproc) (this->*header_choice)(ndump);
   else if (me == 0) (this->*header_choice)(ndump);
@@ -273,7 +273,7 @@ void DumpMolecule::write_header(bigint ndump)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::header_binary(bigint ndump)
+void DumpParticle::header_binary(bigint ndump)
 {
   fwrite(&update->ntimestep,sizeof(bigint),1,fp);
   fwrite(&ndump,sizeof(bigint),1,fp);
@@ -293,7 +293,7 @@ void DumpMolecule::header_binary(bigint ndump)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::header_item(bigint ndump)
+void DumpParticle::header_item(bigint ndump)
 {
   fprintf(fp,"ITEM: TIMESTEP\n");
   fprintf(fp,BIGINT_FORMAT "\n",update->ntimestep);
@@ -308,7 +308,7 @@ void DumpMolecule::header_item(bigint ndump)
 
 /* ---------------------------------------------------------------------- */
 
-int DumpMolecule::count()
+int DumpParticle::count()
 {
   int i;
 
@@ -331,21 +331,21 @@ int DumpMolecule::count()
     }
   }
 
-  // invoke Computes for per-molecule quantities
+  // invoke Computes for per-particle quantities
 
   if (ncompute) {
     for (i = 0; i < ncompute; i++)
-      if (!(compute[i]->invoked_flag & INVOKED_PER_MOLECULE)) {
-	compute[i]->compute_per_molecule();
-	compute[i]->invoked_flag |= INVOKED_PER_MOLECULE;
+      if (!(compute[i]->invoked_flag & INVOKED_PER_PARTICLE)) {
+	compute[i]->compute_per_particle();
+	compute[i]->invoked_flag |= INVOKED_PER_PARTICLE;
       }
   }
 
-  // evaluate molecule-style Variables for per-molecule quantities
+  // evaluate particle-style Variables for per-particle quantities
 
   if (nvariable)
     for (i = 0; i < nvariable; i++)
-      input->variable->compute_molecule(variable[i],vbuf[i],1,0);
+      input->variable->compute_particle(variable[i],vbuf[i],1,0);
 
   // choose all local particles for output
 
@@ -439,21 +439,21 @@ int DumpMolecule::count()
       } else if (thresh_array[ithresh] == COMPUTE) {
 	i = nfield + ithresh;
 	if (argindex[i] == 0) {
-	  ptr = compute[field2index[i]]->vector_molecule;
+	  ptr = compute[field2index[i]]->vector_particle;
 	  nstride = 1;
 	} else {
-	  ptr = &compute[field2index[i]]->array_molecule[0][argindex[i]-1];
-	  nstride = compute[field2index[i]]->size_per_molecule_cols;
+	  ptr = &compute[field2index[i]]->array_particle[0][argindex[i]-1];
+	  nstride = compute[field2index[i]]->size_per_particle_cols;
 	}
 
       } else if (thresh_array[ithresh] == FIX) {
 	i = nfield + ithresh;
 	if (argindex[i] == 0) {
-	  ptr = fix[field2index[i]]->vector_molecule;
+	  ptr = fix[field2index[i]]->vector_particle;
 	  nstride = 1;
 	} else {
-	  ptr = &fix[field2index[i]]->array_molecule[0][argindex[i]-1];
-	  nstride = fix[field2index[i]]->size_per_molecule_cols;
+	  ptr = &fix[field2index[i]]->array_particle[0][argindex[i]-1];
+	  nstride = fix[field2index[i]]->size_per_particle_cols;
 	}
 
       } else if (thresh_array[ithresh] == VARIABLE) {
@@ -462,7 +462,7 @@ int DumpMolecule::count()
 	nstride = 1;
       }
 
-      // unselect molecules that don't meet threshhold criterion
+      // unselect particles that don't meet threshhold criterion
 
       value = thresh_value[ithresh];
 
@@ -489,8 +489,8 @@ int DumpMolecule::count()
   }
 
   // compress choose flags into clist
-  // nchoose = # of selected molecules
-  // clist[i] = local index of each selected molecules
+  // nchoose = # of selected particles
+  // clist[i] = local index of each selected particles
 
   nchoose = 0;
   for (i = 0; i < nlocal; i++)
@@ -501,21 +501,21 @@ int DumpMolecule::count()
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack()
+void DumpParticle::pack()
 {
   for (int n = 0; n < size_one; n++) (this->*pack_choice[n])(n);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::write_data(int n, double *mybuf)
+void DumpParticle::write_data(int n, double *mybuf)
 {
   (this->*write_choice)(n,mybuf);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::write_binary(int n, double *mybuf)
+void DumpParticle::write_binary(int n, double *mybuf)
 {
   n *= size_one;
   fwrite(&n,sizeof(int),1,fp);
@@ -524,7 +524,7 @@ void DumpMolecule::write_binary(int n, double *mybuf)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::write_text(int n, double *mybuf)
+void DumpParticle::write_text(int n, double *mybuf)
 {
   int i,j;
 
@@ -543,7 +543,7 @@ void DumpMolecule::write_text(int n, double *mybuf)
 
 /* ---------------------------------------------------------------------- */
 
-int DumpMolecule::parse_fields(int narg, char **arg)
+int DumpParticle::parse_fields(int narg, char **arg)
 {
   // customize by adding to if statement
 
@@ -552,49 +552,49 @@ int DumpMolecule::parse_fields(int narg, char **arg)
     i = iarg-4;
 
     if (strcmp(arg[iarg],"id") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_id;
+      pack_choice[i] = &DumpParticle::pack_id;
       vtype[i] = INT;
     } else if (strcmp(arg[iarg],"type") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_type;
+      pack_choice[i] = &DumpParticle::pack_type;
       vtype[i] = INT;
     } else if (strcmp(arg[iarg],"proc") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_proc;
+      pack_choice[i] = &DumpParticle::pack_proc;
       vtype[i] = INT;
 
     } else if (strcmp(arg[iarg],"x") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_x;
+      pack_choice[i] = &DumpParticle::pack_x;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"y") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_y;
+      pack_choice[i] = &DumpParticle::pack_y;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"z") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_z;
+      pack_choice[i] = &DumpParticle::pack_z;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"xs") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_xs;
+      pack_choice[i] = &DumpParticle::pack_xs;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"ys") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_ys;
+      pack_choice[i] = &DumpParticle::pack_ys;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"zs") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_zs;
+      pack_choice[i] = &DumpParticle::pack_zs;
       vtype[i] = DOUBLE;
 
     } else if (strcmp(arg[iarg],"vx") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_vx;
+      pack_choice[i] = &DumpParticle::pack_vx;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"vy") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_vy;
+      pack_choice[i] = &DumpParticle::pack_vy;
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"vz") == 0) {
-      pack_choice[i] = &DumpMolecule::pack_vz;
+      pack_choice[i] = &DumpParticle::pack_vz;
       vtype[i] = DOUBLE;
 
     // compute value = c_ID
     // if no trailing [], then arg is set to 0, else arg is int between []
 
     } else if (strncmp(arg[iarg],"c_",2) == 0) {
-      pack_choice[i] = &DumpMolecule::pack_compute;
+      pack_choice[i] = &DumpParticle::pack_compute;
       vtype[i] = DOUBLE;
 
       int n = strlen(arg[iarg]);
@@ -604,28 +604,28 @@ int DumpMolecule::parse_fields(int narg, char **arg)
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump molecule command");
+	  error->all(FLERR,"Invalid attribute in dump particle command");
 	argindex[i] = atoi(ptr+1);
 	*ptr = '\0';
       } else argindex[i] = 0;
 
       n = modify->find_compute(suffix);
-      if (n < 0) error->all(FLERR,"Could not find dump molecule compute ID");
-      if (modify->compute[n]->per_molecule_flag == 0)
+      if (n < 0) error->all(FLERR,"Could not find dump particle compute ID");
+      if (modify->compute[n]->per_particle_flag == 0)
 	error->all(FLERR,
-		   "Dump molecule compute does not compute per-molecule info");
-      if (argindex[i] == 0 && modify->compute[n]->size_per_molecule_cols > 0)
+		   "Dump particle compute does not compute per-particle info");
+      if (argindex[i] == 0 && modify->compute[n]->size_per_particle_cols > 0)
 	error->all(FLERR,
-		   "Dump molecule compute does not calculate "
-		   "per-molecule vector");
-      if (argindex[i] > 0 && modify->compute[n]->size_per_molecule_cols == 0)
+		   "Dump particle compute does not calculate "
+		   "per-particle vector");
+      if (argindex[i] > 0 && modify->compute[n]->size_per_particle_cols == 0)
 	error->all(FLERR,
-		   "Dump molecule compute does not calculate "
-		   "per-molecule array");
+		   "Dump particle compute does not calculate "
+		   "per-particle array");
       if (argindex[i] > 0 && 
-	  argindex[i] > modify->compute[n]->size_per_molecule_cols)
+	  argindex[i] > modify->compute[n]->size_per_particle_cols)
 	error->all(FLERR,
-		   "Dump molecule compute vector is accessed out-of-range");
+		   "Dump particle compute vector is accessed out-of-range");
 
       field2index[i] = add_compute(suffix);
       delete [] suffix;
@@ -634,7 +634,7 @@ int DumpMolecule::parse_fields(int narg, char **arg)
     // if no trailing [], then arg is set to 0, else arg is between []
 
     } else if (strncmp(arg[iarg],"f_",2) == 0) {
-      pack_choice[i] = &DumpMolecule::pack_fix;
+      pack_choice[i] = &DumpParticle::pack_fix;
       vtype[i] = DOUBLE;
 
       int n = strlen(arg[iarg]);
@@ -644,25 +644,25 @@ int DumpMolecule::parse_fields(int narg, char **arg)
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Invalid attribute in dump molecule command");
+	  error->all(FLERR,"Invalid attribute in dump particle command");
 	argindex[i] = atoi(ptr+1);
 	*ptr = '\0';
       } else argindex[i] = 0;
 
       n = modify->find_fix(suffix);
-      if (n < 0) error->all(FLERR,"Could not find dump molecule fix ID");
-      if (modify->fix[n]->per_molecule_flag == 0)
-	error->all(FLERR,"Dump molecule fix does not compute "
-		   "per-molecule info");
-      if (argindex[i] == 0 && modify->fix[n]->size_per_molecule_cols > 0)
-	error->all(FLERR,"Dump molecule fix does not compute "
-		   "per-molecule vector");
-      if (argindex[i] > 0 && modify->fix[n]->size_per_molecule_cols == 0)
-	error->all(FLERR,"Dump molecule fix does not compute "
-		   "per-molecule array");
+      if (n < 0) error->all(FLERR,"Could not find dump particle fix ID");
+      if (modify->fix[n]->per_particle_flag == 0)
+	error->all(FLERR,"Dump particle fix does not compute "
+		   "per-particle info");
+      if (argindex[i] == 0 && modify->fix[n]->size_per_particle_cols > 0)
+	error->all(FLERR,"Dump particle fix does not compute "
+		   "per-particle vector");
+      if (argindex[i] > 0 && modify->fix[n]->size_per_particle_cols == 0)
+	error->all(FLERR,"Dump particle fix does not compute "
+		   "per-particle array");
       if (argindex[i] > 0 && 
-	  argindex[i] > modify->fix[n]->size_per_molecule_cols)
-	error->all(FLERR,"Dump molecule fix vector is accessed out-of-range");
+	  argindex[i] > modify->fix[n]->size_per_particle_cols)
+	error->all(FLERR,"Dump particle fix vector is accessed out-of-range");
 
       field2index[i] = add_fix(suffix);
       delete [] suffix;
@@ -670,7 +670,7 @@ int DumpMolecule::parse_fields(int narg, char **arg)
     // variable value = v_name
 
     } else if (strncmp(arg[iarg],"v_",2) == 0) {
-      pack_choice[i] = &DumpMolecule::pack_variable;
+      pack_choice[i] = &DumpParticle::pack_variable;
       vtype[i] = DOUBLE;
 
       int n = strlen(arg[iarg]);
@@ -680,10 +680,10 @@ int DumpMolecule::parse_fields(int narg, char **arg)
       argindex[i] = 0;
 
       n = input->variable->find(suffix);
-      if (n < 0) error->all(FLERR,"Could not find dump molecule variable name");
-      if (input->variable->molecule_style(n) == 0)
-	error->all(FLERR,"Dump molecule variable is not "
-		   "molecule-style variable");
+      if (n < 0) error->all(FLERR,"Could not find dump particle variable name");
+      if (input->variable->particle_style(n) == 0)
+	error->all(FLERR,"Dump particle variable is not "
+		   "particle-style variable");
 
       field2index[i] = add_variable(suffix);
       delete [] suffix;
@@ -700,7 +700,7 @@ int DumpMolecule::parse_fields(int narg, char **arg)
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
 
-int DumpMolecule::add_compute(char *id)
+int DumpParticle::add_compute(char *id)
 {
   int icompute;
   for (icompute = 0; icompute < ncompute; icompute++)
@@ -725,7 +725,7 @@ int DumpMolecule::add_compute(char *id)
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
 
-int DumpMolecule::add_fix(char *id)
+int DumpParticle::add_fix(char *id)
 {
   int ifix;
   for (ifix = 0; ifix < nfix; ifix++)
@@ -750,7 +750,7 @@ int DumpMolecule::add_fix(char *id)
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
 
-int DumpMolecule::add_variable(char *id)
+int DumpParticle::add_variable(char *id)
 {
   int ivariable;
   for (ivariable = 0; ivariable < nvariable; ivariable++)
@@ -775,7 +775,7 @@ int DumpMolecule::add_variable(char *id)
 
 /* ---------------------------------------------------------------------- */
 
-int DumpMolecule::modify_param(int narg, char **arg)
+int DumpParticle::modify_param(int narg, char **arg)
 {
   if (strcmp(arg[0],"region") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
@@ -856,21 +856,21 @@ int DumpMolecule::modify_param(int narg, char **arg)
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify compute ID");
 
-      if (modify->compute[n]->per_molecule_flag == 0)
+      if (modify->compute[n]->per_particle_flag == 0)
 	error->all(FLERR,
-		   "Dump modify compute ID does not compute per-molecule info");
+		   "Dump modify compute ID does not compute per-particle info");
       if (argindex[nfield+nthresh] == 0 && 
-	  modify->compute[n]->size_per_molecule_cols > 0)
+	  modify->compute[n]->size_per_particle_cols > 0)
 	error->all(FLERR,
 		   "Dump modify compute ID does not compute "
-		   "per-molecule vector");
+		   "per-particle vector");
       if (argindex[nfield+nthresh] > 0 && 
-	  modify->compute[n]->size_per_molecule_cols == 0)
+	  modify->compute[n]->size_per_particle_cols == 0)
 	error->all(FLERR,
 		   "Dump modify compute ID does not compute "
-		   "per-molecule array");
+		   "per-particle array");
       if (argindex[nfield+nthresh] > 0 && 
-	  argindex[nfield+nthresh] > modify->compute[n]->size_per_molecule_cols)
+	  argindex[nfield+nthresh] > modify->compute[n]->size_per_particle_cols)
 	error->all(FLERR,"Dump modify compute ID vector is not large enough");
 
       field2index[nfield+nthresh] = add_compute(suffix);
@@ -899,19 +899,19 @@ int DumpMolecule::modify_param(int narg, char **arg)
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify fix ID");
 
-      if (modify->fix[n]->per_molecule_flag == 0)
+      if (modify->fix[n]->per_particle_flag == 0)
 	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-molecule info");
+		   "per-particle info");
       if (argindex[nfield+nthresh] == 0 && 
-	  modify->fix[n]->size_per_molecule_cols > 0)
+	  modify->fix[n]->size_per_particle_cols > 0)
 	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-molecule vector");
+		   "per-particle vector");
       if (argindex[nfield+nthresh] > 0 && 
-	  modify->fix[n]->size_per_molecule_cols == 0)
+	  modify->fix[n]->size_per_particle_cols == 0)
 	error->all(FLERR,"Dump modify fix ID does not compute "
-		   "per-molecule array");
+		   "per-particle array");
       if (argindex[nfield+nthresh] > 0 && 
-	  argindex[nfield+nthresh] > modify->fix[n]->size_per_molecule_cols)
+	  argindex[nfield+nthresh] > modify->fix[n]->size_per_particle_cols)
 	error->all(FLERR,"Dump modify fix ID vector is not large enough");
 
       field2index[nfield+nthresh] = add_fix(suffix);
@@ -932,8 +932,8 @@ int DumpMolecule::modify_param(int narg, char **arg)
       
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump modify variable name");
-      if (input->variable->molecule_style(n) == 0)
-	error->all(FLERR,"Dump modify variable is not molecule-style variable");
+      if (input->variable->particle_style(n) == 0)
+	error->all(FLERR,"Dump modify variable is not particle-style variable");
 
       field2index[nfield+nthresh] = add_variable(suffix);
       delete [] suffix;
@@ -965,7 +965,7 @@ int DumpMolecule::modify_param(int narg, char **arg)
    return # of bytes of allocated memory in buf, choose, variable arrays
 ------------------------------------------------------------------------- */
 
-bigint DumpMolecule::memory_usage()
+bigint DumpParticle::memory_usage()
 {
   bigint bytes = Dump::memory_usage();
   bytes += memory->usage(choose,maxlocal);
@@ -978,10 +978,10 @@ bigint DumpMolecule::memory_usage()
    extraction of Compute, Fix, Variable results
 ------------------------------------------------------------------------- */
 
-void DumpMolecule::pack_compute(int n)
+void DumpParticle::pack_compute(int n)
 {
-  double *vector = compute[field2index[n]]->vector_molecule;
-  double **array = compute[field2index[n]]->array_molecule;
+  double *vector = compute[field2index[n]]->vector_particle;
+  double **array = compute[field2index[n]]->array_particle;
   int index = argindex[n];
 
   if (index == 0) {
@@ -1000,10 +1000,10 @@ void DumpMolecule::pack_compute(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_fix(int n)
+void DumpParticle::pack_fix(int n)
 {
-  double *vector = fix[field2index[n]]->vector_molecule;
-  double **array = fix[field2index[n]]->array_molecule;
+  double *vector = fix[field2index[n]]->vector_particle;
+  double **array = fix[field2index[n]]->array_particle;
   int index = argindex[n];
 
   if (index == 0) {
@@ -1022,7 +1022,7 @@ void DumpMolecule::pack_fix(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_variable(int n)
+void DumpParticle::pack_variable(int n)
 {
   double *vector = vbuf[field2index[n]];
 
@@ -1033,12 +1033,12 @@ void DumpMolecule::pack_variable(int n)
 }
 
 /* ----------------------------------------------------------------------
-   one method for every attribute dump molecule can output
-   the molecule property is packed into buf starting at n with stride size_one
+   one method for every attribute dump particle can output
+   the particle property is packed into buf starting at n with stride size_one
    customize a new attribute by adding a method
 ------------------------------------------------------------------------- */
 
-void DumpMolecule::pack_id(int n)
+void DumpParticle::pack_id(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1050,7 +1050,7 @@ void DumpMolecule::pack_id(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_type(int n)
+void DumpParticle::pack_type(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1062,7 +1062,7 @@ void DumpMolecule::pack_type(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_proc(int n)
+void DumpParticle::pack_proc(int n)
 {
   for (int i = 0; i < nchoose; i++) {
     buf[n] = me;
@@ -1072,7 +1072,7 @@ void DumpMolecule::pack_proc(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_x(int n)
+void DumpParticle::pack_x(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1084,7 +1084,7 @@ void DumpMolecule::pack_x(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_y(int n)
+void DumpParticle::pack_y(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1096,7 +1096,7 @@ void DumpMolecule::pack_y(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_z(int n)
+void DumpParticle::pack_z(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1108,7 +1108,7 @@ void DumpMolecule::pack_z(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_xs(int n)
+void DumpParticle::pack_xs(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1123,7 +1123,7 @@ void DumpMolecule::pack_xs(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_ys(int n)
+void DumpParticle::pack_ys(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1138,7 +1138,7 @@ void DumpMolecule::pack_ys(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_zs(int n)
+void DumpParticle::pack_zs(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1153,7 +1153,7 @@ void DumpMolecule::pack_zs(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_vx(int n)
+void DumpParticle::pack_vx(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1165,7 +1165,7 @@ void DumpMolecule::pack_vx(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_vy(int n)
+void DumpParticle::pack_vy(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
@@ -1177,7 +1177,7 @@ void DumpMolecule::pack_vy(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpMolecule::pack_vz(int n)
+void DumpParticle::pack_vz(int n)
 {
   Particle::OnePart *particles = particle->particles;
 

@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -41,13 +41,9 @@
 #include "error.h"
 #include "memory.h"
 
-#ifdef _OPENMP
-#include "omp.h"
-#endif
-
 using namespace SPARTA_NS;
 
-#define MAXLINE 2048
+#define DELTALINE 256
 #define DELTA 4
 
 /* ---------------------------------------------------------------------- */
@@ -56,9 +52,8 @@ Input::Input(SPARTA *sparta, int argc, char **argv) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
 
-  line = new char[MAXLINE];
-  copy = new char[MAXLINE];
-  work = new char[MAXLINE];
+  maxline = maxcopy = maxwork = 0;
+  line = copy = work = NULL;
   narg = maxarg = 0;
   arg = NULL;
 
@@ -85,19 +80,19 @@ Input::Input(SPARTA *sparta, int argc, char **argv) : Pointers(sparta)
   int iarg = 0;
   while (iarg < argc) {
     if (strcmp(argv[iarg],"-var") == 0 || strcmp(argv[iarg],"-v") == 0) {
-      int jarg = iarg+2;
+      int jarg = iarg+3;
       while (jarg < argc && argv[jarg][0] != '-') jarg++;
       variable->set(argv[iarg+1],jarg-iarg-2,&argv[iarg+2]);
       iarg = jarg;
-    } else if (strcmp(argv[iarg],"-echo") == 0 || 
-	       strcmp(argv[iarg],"-e") == 0) {
+    } else if (strcmp(argv[iarg],"-echo") == 0 ||
+               strcmp(argv[iarg],"-e") == 0) {
       narg = 1;
       char **tmp = arg;        // trick echo() into using argv instead of arg
       arg = &argv[iarg+1];
       echo();
       arg = tmp;
       iarg += 2;
-    } else iarg++;
+     } else iarg++;
   }
 }
 
@@ -108,13 +103,13 @@ Input::~Input()
   // don't free command and arg strings
   // they just point to other allocated memory
 
-  delete variable;
-  delete [] line;
-  delete [] copy;
-  delete [] work;
+  memory->sfree(line);
+  memory->sfree(copy);
+  memory->sfree(work);
   if (labelstr) delete [] labelstr;
   memory->sfree(arg);
   memory->sfree(infiles);
+  delete variable;
 }
 
 /* ----------------------------------------------------------------------
@@ -125,76 +120,78 @@ Input::~Input()
 void Input::file()
 {
   int m,n;
-
+  
   while (1) {
     
     // read a line from input script
-    // if line ends in continuation char '&', concatenate next line(s)
     // n = length of line including str terminator, 0 if end of file
-    // m = position of last printable char in line or -1 if blank line
-
+    // if line ends in continuation char '&', concatenate next line
+    
     if (me == 0) {
       m = 0;
       while (1) {
-	if (fgets(&line[m],MAXLINE-m,infile) == NULL) n = 0;
-	else n = strlen(line) + 1;
-	if (n == 0) break;
-	m = n-2;
-	while (m >= 0 && isspace(line[m])) m--;
-	if (m < 0 || line[m] != '&') break;
+        if (maxline-m < 2) reallocate(line,maxline,0);
+        if (fgets(&line[m],maxline-m,infile) == NULL) {
+          if (m) n = strlen(line) + 1;
+          else n = 0;
+          break;
+        }
+        m = strlen(line);
+        if (line[m-1] != '\n') continue;
+        
+        m--;
+        while (m >= 0 && isspace(line[m])) m--;
+        if (m < 0 || line[m] != '&') {
+          line[m+1] = '\0';
+          n = m+2;
+          break;
+        }
       }
     }
-
+    
     // bcast the line
     // if n = 0, end-of-file
     // error if label_active is set, since label wasn't encountered
     // if original input file, code is done
     // else go back to previous input file
-
+    
     MPI_Bcast(&n,1,MPI_INT,0,world);
     if (n == 0) {
       if (label_active) error->all(FLERR,"Label wasn't found in input script");
       if (me == 0) {
-	if (infile != stdin) fclose(infile);
-	nfile--;
+        if (infile != stdin) fclose(infile);
+        nfile--;
       }
       MPI_Bcast(&nfile,1,MPI_INT,0,world);
       if (nfile == 0) break;
       if (me == 0) infile = infiles[nfile-1];
       continue;
     }
-
+    
+    if (n > maxline) reallocate(line,maxline,n);
     MPI_Bcast(line,n,MPI_CHAR,0,world);
-
-    // if n = MAXLINE, line is too long
-
-    if (n == MAXLINE) {
-      char str[MAXLINE+32];
-      sprintf(str,"Input line too long: %s",line);
-      error->all(FLERR,str);
-    }
-
+    
     // echo the command unless scanning for label
-
+    
     if (me == 0 && label_active == 0) {
-      if (echo_screen && screen) fprintf(screen,"%s",line); 
-      if (echo_log && logfile) fprintf(logfile,"%s",line);
+      if (echo_screen && screen) fprintf(screen,"%s\n",line);
+      if (echo_log && logfile) fprintf(logfile,"%s\n",line);
     }
-
+    
     // parse the line
     // if no command, skip to next line in input script
-
+    
     parse();
     if (command == NULL) continue;
-
+    
     // if scanning for label, skip command unless it's a label command
-
+    
     if (label_active && strcmp(command,"label") != 0) continue;
-
+    
     // execute the command
-
+    
     if (execute_command()) {
-      char str[MAXLINE];
+      char *str = new char[maxline+32];
       sprintf(str,"Unknown command: %s",line);
       error->all(FLERR,str);
     }
@@ -203,18 +200,19 @@ void Input::file()
 
 /* ----------------------------------------------------------------------
    process all input from filename
+   called from library interface
 ------------------------------------------------------------------------- */
 
 void Input::file(const char *filename)
 {
-  // error if another nested file still open
-  // if single open file is not stdin, close it
-  // open new filename and set infile, infiles[0]
-
+  // error if another nested file still open, should not be possible
+  // open new filename and set infile, infiles[0], nfile
+  // call to file() will close filename and decrement nfile
+  
   if (me == 0) {
     if (nfile > 1)
-      error->one(FLERR,"Another input script is already being processed");
-    if (infile != stdin) fclose(infile);
+      error->one(FLERR,"Invalid use of library file() function");
+    
     infile = fopen(filename,"r");
     if (infile == NULL) {
       char str[128];
@@ -222,50 +220,53 @@ void Input::file(const char *filename)
       error->one(FLERR,str);
     }
     infiles[0] = infile;
-  } else infile = NULL;
-
+    nfile = 1;
+  }
+  
   file();
 }
 
 /* ----------------------------------------------------------------------
-   parse the command in single and execute it
+   copy command in single to line, parse and execute it
    return command name to caller
 ------------------------------------------------------------------------- */
 
 char *Input::one(const char *single)
 {
+  int n = strlen(single) + 1;
+  if (n > maxline) reallocate(line,maxline,n);
   strcpy(line,single);
-
+  
   // echo the command unless scanning for label
   
   if (me == 0 && label_active == 0) {
-    if (echo_screen && screen) fprintf(screen,"%s\n",line); 
+    if (echo_screen && screen) fprintf(screen,"%s\n",line);
     if (echo_log && logfile) fprintf(logfile,"%s\n",line);
   }
-
+  
   // parse the line
   // if no command, just return NULL
-
+  
   parse();
   if (command == NULL) return NULL;
-
+  
   // if scanning for label, skip command unless it's a label command
-
+  
   if (label_active && strcmp(command,"label") != 0) return NULL;
-
+  
   // execute the command and return its name
-
+  
   if (execute_command()) {
-    char str[MAXLINE];
+    char *str = new char[maxline+32];
     sprintf(str,"Unknown command: %s",line);
     error->all(FLERR,str);
   }
-
+  
   return command;
 }
 
 /* ----------------------------------------------------------------------
-   parse copy of command line
+   parse copy of command line by inserting string terminators
    strip comment = all chars from # on
    replace all $ via variable substitution
    command = first word
@@ -276,13 +277,15 @@ char *Input::one(const char *single)
 
 void Input::parse()
 {
-  // make a copy to work on
-
+  // duplicate line into copy string to break into words
+  
+  int n = strlen(line) + 1;
+  if (n > maxcopy) reallocate(copy,maxcopy,n);
   strcpy(copy,line);
-
-  // strip any # comment by resetting string terminator
+  
+  // strip any # comment by replacing it with 0
   // do not strip # inside single/double quotes
-
+  
   char quote = '\0';
   char *ptr = copy;
   while (*ptr) {
@@ -294,107 +297,198 @@ void Input::parse()
     else if (*ptr == '"' || *ptr == '\'') quote = *ptr;
     ptr++;
   }
-
+  
   // perform $ variable substitution (print changes)
   // except if searching for a label since earlier variable may not be defined
-
-  if (!label_active) substitute(copy,1);
-
-  // command = 1st arg
-
-  command = strtok(copy," \t\n\r\f");
+  
+  if (!label_active) substitute(copy,work,maxcopy,maxwork,1);
+  
+  // command = 1st arg in copy string
+  
+  char *next;
+  command = nextword(copy,&next);
   if (command == NULL) return;
-
-  // point arg[] at each subsequent arg
-  // treat text between single/double quotes as one arg
-  // insert string terminators in copy to delimit args
-
-  quote = '\0';
-  int iarg,argstart;
-
+  
+  // point arg[] at each subsequent arg in copy string
+  // nextword() inserts string terminators into copy string to delimit args
+  // nextword() treats text between single/double quotes as one arg
+  
   narg = 0;
-  while (1) {
+  ptr = next;
+  while (ptr) {
     if (narg == maxarg) {
       maxarg += DELTA;
       arg = (char **) memory->srealloc(arg,maxarg*sizeof(char *),"input:arg");
     }
-    arg[narg] = strtok(NULL," \t\n\r\f");
+    arg[narg] = nextword(ptr,&next);
     if (!arg[narg]) break;
-    if (!quote && (arg[narg][0] == '"' || arg[narg][0] == '\'')) {
-      quote = arg[narg][0];
-      argstart = narg;
-      arg[narg] = &arg[narg][1];
-    }
-    if (quote && arg[narg][strlen(arg[narg])-1] == quote) {
-      for (iarg = argstart; iarg < narg; iarg++)
-	arg[iarg][strlen(arg[iarg])] = ' ';
-      arg[narg][strlen(arg[narg])-1] = '\0';
-      narg = argstart;
-      quote = '\0';
-    }
     narg++;
+    ptr = next;
   }
-
-  if (quote) error->all(FLERR,"Unbalanced quotes in input line");
 }
 
 /* ----------------------------------------------------------------------
-   substitute for $ variables in str and return it
-   str assumed to be long enough to hold expanded version
-   print updated string if flag is set and not searching for label
+   find next word in str
+   insert 0 at end of word
+   ignore leading whitespace
+   treat text between single/double quotes as one arg
+   matching quote must be followed by whitespace char if not end of string
+   strip quotes from returned word
+   return ptr to start of word
+   return next = ptr after word or NULL if word ended with 0
+   return NULL if no word in string
 ------------------------------------------------------------------------- */
 
-void Input::substitute(char *str, int flag)
+char *Input::nextword(char *str, char **next)
 {
-  // use work[] as scratch space to expand str, then copy back to str
+  char *start,*stop;
+  
+  start = &str[strspn(str," \t\n\v\f\r")];
+  if (*start == '\0') return NULL;
+  
+  if (*start == '"' || *start == '\'') {
+    stop = strchr(&start[1],*start);
+    if (!stop) error->all(FLERR,"Unbalanced quotes in input line");
+    if (stop[1] && !isspace(stop[1]))
+      error->all(FLERR,"Input line quote not followed by whitespace");
+    start++;
+  } else stop = &start[strcspn(start," \t\n\v\f\r")];
+  
+  if (*stop == '\0') *next = NULL;
+  else *next = stop+1;
+  *stop = '\0';
+  return start;
+}
+
+/* ----------------------------------------------------------------------
+   substitute for $ variables in str using work str2 and return it
+   reallocate str/str2 to hold expanded version if necessary & reset max/max2
+   print updated string if flag is set and not searching for label
+   label_active will be 0 if called from external class
+------------------------------------------------------------------------- */
+
+void Input::substitute(char *&str, char *&str2, int &max, int &max2, int flag)
+{
+  // use str2 as scratch space to expand str, then copy back to str
+  // reallocate str and str2 as necessary
   // do not replace $ inside single/double quotes
   // var = pts at variable name, ended by NULL
   //   if $ is followed by '{', trailing '}' becomes NULL
   //   else $x becomes x followed by NULL
-  // beyond = pts at text following variable
-
+  // beyond = points to text following variable
+  
+  int i,n,paren_count;
+  char immediate[256];
   char *var,*value,*beyond;
   char quote = '\0';
   char *ptr = str;
-
+  
+  n = strlen(str) + 1;
+  if (n > max2) reallocate(str2,max2,n);
+  *str2 = '\0';
+  char *ptr2 = str2;
+  
   while (*ptr) {
+    // variable substitution
+    
     if (*ptr == '$' && !quote) {
+      
+      // value = ptr to expanded variable
+      // variable name between curly braces, e.g. ${a}
+      
       if (*(ptr+1) == '{') {
-	var = ptr+2;
-	int i = 0;
-	while (var[i] != '\0' && var[i] != '}') i++;
-	if (var[i] == '\0') error->one(FLERR,"Invalid variable name");
-	var[i] = '\0';
-	beyond = ptr + strlen(var) + 3;
+        var = ptr+2;
+        i = 0;
+        
+        while (var[i] != '\0' && var[i] != '}') i++;
+        
+        if (var[i] == '\0') error->one(FLERR,"Invalid variable name");
+        var[i] = '\0';
+        beyond = ptr + strlen(var) + 3;
+        value = variable->retrieve(var);
+        
+        // immediate variable between parenthesis, e.g. $(1/2)
+        
+      } else if (*(ptr+1) == '(') {
+        var = ptr+2;
+        paren_count = 0;
+        i = 0;
+        
+        while (var[i] != '\0' && !(var[i] == ')' && paren_count == 0)) {
+          switch (var[i]) {
+          case '(': paren_count++; break;
+          case ')': paren_count--; break;
+          default: ;
+          }
+          i++;
+        }
+        
+        if (var[i] == '\0') error->one(FLERR,"Invalid immediate variable");
+        var[i] = '\0';
+        beyond = ptr + strlen(var) + 3;
+        sprintf(immediate,"%.20g",variable->compute_equal(var));
+        value = immediate;
+        
+        // single character variable name, e.g. $a
+        
       } else {
-	var = ptr;
-	var[0] = var[1];
-	var[1] = '\0';
-	beyond = ptr + strlen(var) + 1;
+        var = ptr;
+        var[0] = var[1];
+        var[1] = '\0';
+        beyond = ptr + 2;
+        value = variable->retrieve(var);
       }
-      value = variable->retrieve(var);
+      
       if (value == NULL) error->one(FLERR,"Substitution for illegal variable");
-
-      *ptr = '\0';
-      strcpy(work,str);
-      if (strlen(work)+strlen(value) >= MAXLINE)
-	error->one(FLERR,"Input line too long after variable substitution");
-      strcat(work,value);
-      if (strlen(work)+strlen(beyond) >= MAXLINE)
-	error->one(FLERR,"Input line too long after variable substitution");
-      strcat(work,beyond);
-      strcpy(str,work);
-      ptr += strlen(value);
+      
+      // check if storage in str2 needs to be expanded
+      // re-initialize ptr and ptr2 to the point beyond the variable.
+      
+      n = strlen(str2) + strlen(value) + strlen(beyond) + 1;
+      if (n > max2) reallocate(str2,max2,n);
+      strcat(str2,value);
+      ptr2 = str2 + strlen(str2);
+      ptr = beyond;
+      
+      // output substitution progress if requested
+      
       if (flag && me == 0 && label_active == 0) {
-	if (echo_screen && screen) fprintf(screen,"%s",str); 
-	if (echo_log && logfile) fprintf(logfile,"%s",str);
+        if (echo_screen && screen) fprintf(screen,"%s%s\n",str2,beyond);
+        if (echo_log && logfile) fprintf(logfile,"%s%s\n",str2,beyond);
       }
+      
       continue;
     }
+    
     if (*ptr == quote) quote = '\0';
     else if (*ptr == '"' || *ptr == '\'') quote = *ptr;
-    ptr++;
+    
+    // copy current character into str2
+    
+    *ptr2++ = *ptr++;
+    *ptr2 = '\0';
   }
+  
+  // set length of input str to length of work str2
+  // copy work string back to input str
+  
+  if (max2 > max) reallocate(str,max,max2);
+  strcpy(str,str2);
+}
+
+/* ----------------------------------------------------------------------
+   rellocate a string
+   if n > 0: set max >= n in increments of DELTALINE
+   if n = 0: just increment max by DELTALINE
+------------------------------------------------------------------------- */
+
+void Input::reallocate(char *&str, int &max, int n)
+{
+  if (n) {
+    while (n > max) max += DELTALINE;
+  } else max += DELTALINE;
+  
+  str = (char *) memory->srealloc(str,max*sizeof(char),"input:str");
 }
 
 /* ----------------------------------------------------------------------
@@ -405,7 +499,7 @@ void Input::substitute(char *str, int flag)
 int Input::execute_command()
 {
   int flag = 1;
-
+  
   if (!strcmp(command,"clear")) clear();
   else if (!strcmp(command,"echo")) echo();
   else if (!strcmp(command,"if")) ifthenelse();
@@ -419,7 +513,7 @@ int Input::execute_command()
   else if (!strcmp(command,"quit")) quit();
   else if (!strcmp(command,"shell")) shell();
   else if (!strcmp(command,"variable")) variable_command();
-
+  
   else if (!strcmp(command,"boundary")) boundary();
   else if (!strcmp(command,"bound_modify")) bound_modify();
   else if (!strcmp(command,"collide")) collide_command();
@@ -516,13 +610,14 @@ void Input::ifthenelse()
   // in case expression was enclosed in quotes
   // must substitute on copy of arg else will step on subsequent args
 
-  char *scopy = new char[MAXLINE];
-  strcpy(scopy,arg[0]);
-  substitute(scopy,0);
+  int n = strlen(arg[0]) + 1;
+  if (n > maxline) reallocate(line,maxline,n);
+  strcpy(line,arg[0]);
+  substitute(line,work,maxline,maxwork,0);
 
   // evaluate Boolean expression for "if"
 
-  double btest = variable->evaluate_boolean(scopy);
+  double btest = variable->evaluate_boolean(line);
 
   // bound "then" commands
 
@@ -530,8 +625,8 @@ void Input::ifthenelse()
 
   int first = 2;
   int iarg = first;
-  while (iarg < narg && 
-	 (strcmp(arg[iarg],"elif") != 0 && strcmp(arg[iarg],"else") != 0))
+  while (iarg < narg &&
+         (strcmp(arg[iarg],"elif") != 0 && strcmp(arg[iarg],"else") != 0))
     iarg++;
   int last = iarg-1;
 
@@ -552,24 +647,20 @@ void Input::ifthenelse()
       strcpy(commands[ncommands],arg[i]);
       ncommands++;
     }
-    
+
     ifthenelse_flag = 1;
-    for (int i = 0; i < ncommands; i++) input->one(commands[i]);
+    for (int i = 0; i < ncommands; i++) one(commands[i]);
     ifthenelse_flag = 0;
-    
+
     for (int i = 0; i < ncommands; i++) delete [] commands[i];
     delete [] commands;
-    delete [] scopy;
 
     return;
   }
 
   // done if no "elif" or "else"
 
-  if (iarg == narg) {
-    delete [] scopy;
-    return;
-  }
+  if (iarg == narg) return;
 
   // check "elif" or "else" until find commands to execute
   // substitute for variables and evaluate Boolean expression for "elif"
@@ -579,9 +670,11 @@ void Input::ifthenelse()
   while (1) {
     if (iarg+2 > narg) error->all(FLERR,"Illegal if command");
     if (strcmp(arg[iarg],"elif") == 0) {
-      strcpy(scopy,arg[iarg+1]);
-      substitute(scopy,0);
-      btest = variable->evaluate_boolean(scopy);
+      n = strlen(arg[iarg+1]) + 1;
+      if (n > maxline) reallocate(line,maxline,n);
+      strcpy(line,arg[iarg+1]);
+      substitute(line,work,maxline,maxwork,0);
+      btest = variable->evaluate_boolean(line);
       first = iarg+2;
     } else {
       btest = 1.0;
@@ -589,8 +682,8 @@ void Input::ifthenelse()
     }
 
     iarg = first;
-    while (iarg < narg && 
-	   (strcmp(arg[iarg],"elif") != 0 && strcmp(arg[iarg],"else") != 0))
+    while (iarg < narg &&
+           (strcmp(arg[iarg],"elif") != 0 && strcmp(arg[iarg],"else") != 0))
       iarg++;
     last = iarg-1;
 
@@ -608,18 +701,17 @@ void Input::ifthenelse()
       strcpy(commands[ncommands],arg[i]);
       ncommands++;
     }
-    
+
     // execute the list of commands
-    
+
     ifthenelse_flag = 1;
-    for (int i = 0; i < ncommands; i++) input->one(commands[i]);
+    for (int i = 0; i < ncommands; i++) one(commands[i]);
     ifthenelse_flag = 0;
-    
+
     // clean up
 
     for (int i = 0; i < ncommands; i++) delete [] commands[i];
     delete [] commands;
-    delete [] scopy;
 
     return;
   }
@@ -641,7 +733,7 @@ void Input::include()
   if (me == 0) {
     if (nfile == maxfile) {
       maxfile++;
-      infiles = (FILE **) 
+      infiles = (FILE **)
         memory->srealloc(infiles,maxfile*sizeof(FILE *),"input:infiles");
     }
     infile = fopen(arg[0],"r");
@@ -671,9 +763,9 @@ void Input::jump()
       if (infile != stdin) fclose(infile);
       infile = fopen(arg[0],"r");
       if (infile == NULL) {
-	char str[128];
-	sprintf(str,"Cannot open input script %s",arg[0]);
-	error->one(FLERR,str);
+        char str[128];
+        sprintf(str,"Cannot open input script %s",arg[0]);
+        error->one(FLERR,str);
       }
       infiles[nfile-1] = infile;
     }
@@ -700,17 +792,25 @@ void Input::label()
 
 void Input::log()
 {
-  if (narg != 1) error->all(FLERR,"Illegal log command");
+  if (narg > 2) error->all(FLERR,"Illegal log command");
+
+  int appendflag = 0;
+  if (narg == 2) {
+    if (strcmp(arg[1],"append") == 0) appendflag = 1;
+    else error->all(FLERR,"Illegal log command");
+  }
 
   if (me == 0) {
     if (logfile) fclose(logfile);
     if (strcmp(arg[0],"none") == 0) logfile = NULL;
     else {
-      logfile = fopen(arg[0],"w");
+      if (appendflag) logfile = fopen(arg[0],"a");
+      else logfile = fopen(arg[0],"w");
+
       if (logfile == NULL) {
-	char str[128];
-	sprintf(str,"Cannot open logfile %s",arg[0]);
-	error->one(FLERR,str);
+        char str[128];
+        sprintf(str,"Cannot open logfile %s",arg[0]);
+        error->one(FLERR,str);
       }
     }
     if (universe->nworlds == 1) universe->ulogfile = logfile;
@@ -743,7 +843,6 @@ void Input::partition()
   // ptr = start of 4th word
 
   strcpy(copy,line);
-  copy[strlen(copy)-1] = '\0';
   char *ptr = strtok(copy," \t\n\r\f");
   ptr = strtok(NULL," \t\n\r\f");
   ptr = strtok(NULL," \t\n\r\f");
@@ -763,14 +862,52 @@ void Input::partition()
 
 void Input::print()
 {
-  if (narg != 1) error->all(FLERR,"Illegal print command");
+  if (narg < 1) error->all(FLERR,"Illegal print command");
 
+  // copy 1st arg back into line (copy is being used)
+  // check maxline since arg[0] could have been exanded by variables
   // substitute for $ variables (no printing) and print arg
 
-  substitute(arg[0],0);
+  int n = strlen(arg[0]) + 1;
+  if (n > maxline) reallocate(line,maxline,n);
+  strcpy(line,arg[0]);
+  substitute(line,work,maxline,maxwork,0);
+
+  // parse optional args
+
+  FILE *fp = NULL;
+  int screenflag = 1;
+
+  int iarg = 1;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"file") == 0 || strcmp(arg[iarg],"append") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal print command");
+      if (me == 0) {
+        if (strcmp(arg[iarg],"file") == 0) fp = fopen(arg[iarg+1],"w");
+        else fp = fopen(arg[iarg+1],"a");
+        if (fp == NULL) {
+          char str[128];
+          sprintf(str,"Cannot open print file %s",arg[iarg+1]);
+          error->one(FLERR,str);
+        }
+      }
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"screen") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal print command");
+      if (strcmp(arg[iarg+1],"yes") == 0) screenflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) screenflag = 0;
+      else error->all(FLERR,"Illegal print command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal print command");
+  }
+
   if (me == 0) {
-    if (screen) fprintf(screen,"%s\n",arg[0]);
-    if (logfile) fprintf(logfile,"%s\n",arg[0]);
+    if (screenflag && screen) fprintf(screen,"%s\n",line);
+    if (screenflag && logfile) fprintf(logfile,"%s\n",line);
+    if (fp) {
+      fprintf(fp,"%s\n",line);
+      fclose(fp);
+    }
   }
 }
 
@@ -789,40 +926,56 @@ void Input::shell()
   if (narg < 1) error->all(FLERR,"Illegal shell command");
 
   if (strcmp(arg[0],"cd") == 0) {
-    if (narg != 2) error->all(FLERR,"Illegal shell command");
+    if (narg != 2) error->all(FLERR,"Illegal shell cd command");
     chdir(arg[1]);
 
   } else if (strcmp(arg[0],"mkdir") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal shell command");
-#if !defined(WINDOWS) && !defined(__MINGW32_VERSION) 
+    if (narg < 2) error->all(FLERR,"Illegal shell mkdir command");
+#if !defined(WINDOWS) && !defined(__MINGW32__)
     if (me == 0)
       for (int i = 1; i < narg; i++)
-	mkdir(arg[i], S_IRWXU | S_IRGRP | S_IXGRP);
+        mkdir(arg[i], S_IRWXU | S_IRGRP | S_IXGRP);
 #endif
 
   } else if (strcmp(arg[0],"mv") == 0) {
-    if (narg != 3) error->all(FLERR,"Illegal shell command");
+    if (narg != 3) error->all(FLERR,"Illegal shell mv command");
     if (me == 0) rename(arg[1],arg[2]);
 
   } else if (strcmp(arg[0],"rm") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal shell command");
+    if (narg < 2) error->all(FLERR,"Illegal shell rm command");
     if (me == 0)
       for (int i = 1; i < narg; i++) unlink(arg[i]);
 
   } else if (strcmp(arg[0],"rmdir") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal shell command");
+    if (narg < 2) error->all(FLERR,"Illegal shell rmdir command");
     if (me == 0)
       for (int i = 1; i < narg; i++) rmdir(arg[i]);
 
-  // use work to concat args back into one string separated by spaces
+  } else if (strcmp(arg[0],"putenv") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal shell putenv command");
+    for (int i = 1; i < narg; i++) {
+      char *ptr = strdup(arg[i]);
+#ifdef _WIN32 
+      if (ptr != NULL) _putenv(ptr);
+#else
+      if (ptr != NULL) putenv(ptr);
+#endif
+    }
+
+  // use work string to concat args back into one string separated by spaces
   // invoke string in shell via system()
 
   } else {
+    int n = 0;
+    for (int i = 0; i < narg; i++) n += strlen(arg[i]) + 1;
+    if (n > maxwork) reallocate(work,maxwork,n);
+
     strcpy(work,arg[0]);
     for (int i = 1; i < narg; i++) {
       strcat(work," ");
       strcat(work,arg[i]);
     }
+
     if (me == 0) system(work);
   }
 }

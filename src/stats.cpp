@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -37,8 +37,8 @@ using namespace SPARTA_NS;
 // customize a new keyword by adding to this list:
 
 // step,elapsed,dt,cpu,tpcpu,spcpu
-// nmol,ntouch,ncomm,nbound,nexit,nscoll,nscheck,ncoll,nattempt,nreact,
-// nmolave,ntouchave,ncommave,nboundave,nexitave,nscollave,nscheckave,
+// np,ntouch,ncomm,nbound,nexit,nscoll,nscheck,ncoll,nattempt,nreact,
+// npave,ntouchave,ncommave,nboundave,nexitave,nscollave,nscheckave,
 // ncollave,nattemptave,nreactave,
 // vol,lx,ly,lz,xlo,xhi,ylo,yhi,zlo,zhi
 
@@ -76,7 +76,7 @@ Stats::Stats(SPARTA *sparta) : Pointers(sparta)
   char **arg = new char*[3];
   arg[0] = (char *) "step";
   arg[1] = (char *) "cpu";
-  arg[2] = (char *) "nmol";
+  arg[2] = (char *) "np";
 
   nfield = 3;
   allocate();
@@ -413,8 +413,8 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"spcpu") == 0) {
       addfield("S/CPU",&Stats::compute_spcpu,FLOAT);
 
-    } else if (strcmp(arg[i],"nmol") == 0) {
-      addfield("Nmol",&Stats::compute_nmol,BIGINT);
+    } else if (strcmp(arg[i],"np") == 0) {
+      addfield("Np",&Stats::compute_np,BIGINT);
     } else if (strcmp(arg[i],"ntouch") == 0) {
       addfield("Ntouch",&Stats::compute_ntouch,BIGINT);
     } else if (strcmp(arg[i],"ncomm") == 0) {
@@ -434,8 +434,8 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"nreact") == 0) {
       addfield("Nreact",&Stats::compute_nreact,BIGINT);
 
-    } else if (strcmp(arg[i],"nmolave") == 0) {
-      addfield("Nmolave",&Stats::compute_nmolave,FLOAT);
+    } else if (strcmp(arg[i],"npave") == 0) {
+      addfield("Npave",&Stats::compute_npave,FLOAT);
     } else if (strcmp(arg[i],"ntouchave") == 0) {
       addfield("Ntouchave",&Stats::compute_ntouchave,FLOAT);
     } else if (strcmp(arg[i],"ncommave") == 0) {
@@ -678,8 +678,8 @@ int Stats::evaluate_keyword(char *word, double *answer)
 		 "This variable stats keyword cannot be used between runs");
     compute_spcpu();
 
-  } else if (strcmp(word,"nmol") == 0) {
-    compute_nmol();
+  } else if (strcmp(word,"np") == 0) {
+    compute_np();
     dvalue = bivalue;
   } else if (strcmp(word,"ntouch") == 0) {
     compute_ntouch();
@@ -710,7 +710,7 @@ int Stats::evaluate_keyword(char *word, double *answer)
     dvalue = bivalue;
   }
 
-  else if (strcmp(word,"nmolave") == 0) compute_nmolave();
+  else if (strcmp(word,"npave") == 0) compute_npave();
   else if (strcmp(word,"ntouchave") == 0) compute_ntouchave();
   else if (strcmp(word,"ncommave") == 0) compute_ncommave();
   else if (strcmp(word,"nboundave") == 0) compute_nboundave();
@@ -859,7 +859,7 @@ void Stats::compute_spcpu()
 
 /* ---------------------------------------------------------------------- */
 
-void Stats::compute_nmol()
+void Stats::compute_np()
 {
   bigint n = particle->nlocal;
   MPI_Allreduce(&n,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -949,7 +949,7 @@ void Stats::compute_nreact()
 
 /* ---------------------------------------------------------------------- */
 
-void Stats::compute_nmolave()
+void Stats::compute_npave()
 {
   MPI_Allreduce(&update->nmove_running,&bivalue,1,MPI_SPARTA_BIGINT,
 		MPI_SUM,world);

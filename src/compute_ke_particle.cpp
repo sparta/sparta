@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "string.h"
-#include "compute_ke_molecule.h"
+#include "compute_ke_particle.h"
 #include "particle.h"
 #include "update.h"
 #include "modify.h"
@@ -25,13 +25,13 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-ComputeKEMolecule::ComputeKEMolecule(SPARTA *sparta, int narg, char **arg) :
+ComputeKEParticle::ComputeKEParticle(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal compute ke/molecule command");
+  if (narg != 2) error->all(FLERR,"Illegal compute ke/particle command");
 
-  per_molecule_flag = 1;
-  size_per_molecule_cols = 0;
+  per_particle_flag = 1;
+  size_per_particle_cols = 0;
 
   nmax = 0;
   ke = NULL;
@@ -39,35 +39,35 @@ ComputeKEMolecule::ComputeKEMolecule(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-ComputeKEMolecule::~ComputeKEMolecule()
+ComputeKEParticle::~ComputeKEParticle()
 {
   memory->destroy(ke);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeKEMolecule::init()
+void ComputeKEParticle::init()
 {
   int count = 0;
   for (int i = 0; i < modify->ncompute; i++)
-    if (strcmp(modify->compute[i]->style,"ke/molecule") == 0) count++;
+    if (strcmp(modify->compute[i]->style,"ke/particle") == 0) count++;
   if (count > 1 && comm->me == 0)
-    error->warning(FLERR,"More than one compute ke/molecule");
+    error->warning(FLERR,"More than one compute ke/particle");
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeKEMolecule::compute_per_molecule()
+void ComputeKEParticle::compute_per_particle()
 {
-  invoked_per_molecule = update->ntimestep;
+  invoked_per_particle = update->ntimestep;
 
   // grow ke array if necessary
 
   if (particle->nlocal > nmax) {
     memory->destroy(ke);
     nmax = particle->maxlocal;
-    memory->create(ke,nmax,"ke/molecule:ke");
-    vector_molecule = ke;
+    memory->create(ke,nmax,"ke/particle:ke");
+    vector_particle = ke;
   }
 
   // compute kinetic energy for each atom in group
@@ -91,7 +91,7 @@ void ComputeKEMolecule::compute_per_molecule()
    memory usage of local atom-based array
 ------------------------------------------------------------------------- */
 
-bigint ComputeKEMolecule::memory_usage()
+bigint ComputeKEParticle::memory_usage()
 {
   bigint bytes = nmax * sizeof(double);
   return bytes;

@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -112,15 +112,14 @@ void ComputeSurf::init()
   if (normflux == NULL)  {
     memory->create(normflux,nsurf,"surf:normflux");
 
-    double dt = update->dt;
-    double fnum = update->fnum;
+    double nfactor = update->dt/update->fnum;
     int dimension = domain->dimension;
     double tmp;
 
     for (int i = 0; i < nsurf; i++) {
       if (dimension == 2) normflux[i] = surf->line_size(i);
       else normflux[i] = surf->tri_size(i,tmp);
-      normflux[i] *= dt/fnum;
+      normflux[i] *= nfactor;
     }
   }
 

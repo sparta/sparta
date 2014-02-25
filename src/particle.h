@@ -4,7 +4,7 @@
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
 
-   Copyright (2012) Sandia Corporation.  Under the terms of Contract
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
@@ -105,35 +105,5 @@ class Particle : protected Pointers {
 #endif
 
 /* ERROR/WARNING messages:
-
-E: Illegal ... command
-
-Self-explanatory.  Check the input script syntax and compare to the
-documentation for the command.  You can use -echo screen as a
-command-line option when running SPARTA to see the offending line.
-
-E: Cannot open species file %s
-
-UNDOCUMENTED
-
-E: Species ID is already defined
-
-UNDOCUMENTED
-
-E: Species ID does not appear in species file
-
-UNDOCUMENTED
-
-E: Incorrect line format in species file
-
-UNDOCUMENTED
-
-E: 
-
-UNDOCUMENTED
-
-E: Per-processor grid count is too big
-
-UNDOCUMENTED
 
 */
