@@ -48,13 +48,16 @@ class Collide : protected Pointers {
 
   virtual double extract(int, const char *) {return 0.0;}
 
-  virtual int pack_grid_one(int, char *, int) {return 0;}
-  virtual int unpack_grid_one(int, char *) {return 0;}
-  virtual void compress_grid() {}
+  int pack_grid_one(int, char *, int);
+  int unpack_grid_one(int, char *);
+  void compress_grid();
 
  protected:
   int npmax;          // max # of particles in plist
   int *plist;         // list of particles in a single group
+
+  int nglocal;        // current size of per-cell arrays
+  int nglocalmax;     // max allocated size of per-cell arrays
 
   int ngroups;        // # of groups
   int *ngroup;        // # of particles in one cell of each group
@@ -90,6 +93,7 @@ class Collide : protected Pointers {
 
   void collisions_one();
   void collisions_group();
+  void grow_percell(int);
 };
 
 }

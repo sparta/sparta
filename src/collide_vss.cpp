@@ -32,7 +32,6 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 #define MAXLINE 1024
-#define DELTAGRID 1000            // must be bigger than split cells per cell
 
 /* ---------------------------------------------------------------------- */
 
@@ -82,11 +81,6 @@ void CollideVSS::init()
     error->all(FLERR,"VSS parameters do not match current species");
 
   Collide::init();
-
-  // nglocal = # of cells that vremax and remain are storing info for
-  // arrays are allocated in Collide parent
-
-  nglocal = grid->nlocal;
 }
 
 /* ----------------------------------------------------------------------
@@ -708,144 +702,4 @@ double CollideVSS::extract(int isp, const char *name)
   else if (strcmp(name,"tref") == 0) return params[isp].tref;
   else error->all(FLERR,"Request for unknown param from collide");
   return 0.0;
-}
-
-/* ----------------------------------------------------------------------
-   pack icell values for per-cell arrays into buf
-   if icell is a split cell, also pack all sub cell values 
-   return byte count of amount packed
-   if memflag, only return count, do not fill buf
-   NOTE: why packing/unpacking parent cell if a split cell?
-------------------------------------------------------------------------- */
-
-int CollideVSS::pack_grid_one(int icell, char *buf, int memflag)
-{
-  if (!vremax) return 0;
-  int nbytes = ngroups*ngroups*sizeof(double);
-
-  Grid::ChildCell *cells = grid->cells;
-
-  int n;
-  if (remainflag) {
-    if (memflag) {
-      memcpy(buf,&vremax[icell][0][0],nbytes);
-      memcpy(&buf[nbytes],&remain[icell][0][0],nbytes);
-    }
-    n = 2*nbytes;
-  } else {
-    if (memflag) memcpy(buf,&vremax[icell][0][0],nbytes);
-    n = nbytes;
-  }
-
-  if (cells[icell].nsplit > 1) {
-    int isplit = cells[icell].isplit;
-    int nsplit = cells[icell].nsplit;
-    for (int i = 0; i < nsplit; i++) {
-      int m = grid->sinfo[isplit].csubs[i];
-      if (remainflag) {
-        if (memflag) {
-          memcpy(&buf[n],&vremax[m][0][0],nbytes);
-          n += nbytes;
-          memcpy(&buf[n],&remain[m][0][0],nbytes);
-          n += nbytes;
-        } else n += 2*nbytes;
-      } else {
-        if (memflag) memcpy(&buf[n],&vremax[m][0][0],nbytes);
-        n += nbytes;
-      }
-    }
-  }
-  
-  return n;
-}
-
-/* ----------------------------------------------------------------------
-   unpack icell values for per-cell arrays from buf
-   if icell is a split cell, also unpack all sub cell values 
-   return byte count of amount unpacked
-------------------------------------------------------------------------- */
-
-int CollideVSS::unpack_grid_one(int icell, char *buf)
-{
-  if (!vremax) return 0;
-  int nbytes = ngroups*ngroups*sizeof(double);
-
-  Grid::ChildCell *cells = grid->cells;
-  Grid::SplitInfo *sinfo = grid->sinfo;
-
-  grow_percell(1);
-  memcpy(&vremax[icell][0][0],buf,nbytes);
-  int n = nbytes;
-  if (remainflag) {
-    memcpy(&remain[icell][0][0],&buf[n],nbytes);
-    n += nbytes;
-  }
-  nglocal++;
-
-  if (cells[icell].nsplit > 1) {
-    int isplit = cells[icell].isplit;
-    int nsplit = cells[icell].nsplit;
-    grow_percell(nsplit);
-    for (int i = 0; i < nsplit; i++) {
-      int m = sinfo[isplit].csubs[i];
-      memcpy(&vremax[m][0][0],&buf[n],nbytes);
-      n += nbytes;
-      if (remainflag) {
-        memcpy(&remain[m][0][0],&buf[n],nbytes);
-        n += nbytes;
-      }
-    }
-    nglocal += nsplit;
-  }
-  
-  return n;
-}
-
-/* ----------------------------------------------------------------------
-   compress per-cell arrays due to cells migrating to new procs
-   criteria for keeping/discarding a cell is same as in Grid::compress()
-   this keeps final ordering of per-cell arrays consistent with Grid class
-------------------------------------------------------------------------- */
-
-void CollideVSS::compress_grid()
-{
-  if (!vremax) return;
-  int nbytes = ngroups*ngroups*sizeof(double);
-
-  int me = comm->me;
-  Grid::ChildCell *cells = grid->cells;
-
-  // keep an unsplit or split cell if staying on this proc
-  // keep a sub cell if its split cell is staying on this proc
-
-  int ncurrent = nglocal;
-  nglocal = 0;
-  for (int icell = 0; icell < ncurrent; icell++) {
-    if (cells[icell].nsplit >= 1) {
-      if (cells[icell].proc != me) continue;
-    } else {
-      int isplit = cells[icell].isplit;
-      if (cells[grid->sinfo[isplit].icell].proc != me) continue;
-    }
-
-    if (nglocal != icell) { 
-      memcpy(&vremax[nglocal][0][0],&vremax[icell][0][0],nbytes);
-      if (remainflag) 
-        memcpy(&remain[nglocal][0][0],&remain[icell][0][0],nbytes);
-    }
-    nglocal++;
-  }
-}
-
-/* ----------------------------------------------------------------------
-   insure per-cell arrays are allocated long enough for N new cells
-------------------------------------------------------------------------- */
-
-void CollideVSS::grow_percell(int n)
-{
-  if (nglocal+n < nglocalmax) return;
-  nglocalmax += DELTAGRID;
-  memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
-  if (remainflag) 
-    memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 }

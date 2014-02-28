@@ -42,17 +42,10 @@ class CollideVSS : public Collide {
 
   double extract(int, const char *);
 
-  int pack_grid_one(int, char *, int);
-  int unpack_grid_one(int, char *);
-  void compress_grid();
-
  private:
   int eng_exchange;
   double vr_indice;
-
   double **prefactor; // static portion of collision attempt frequency
-  int nglocal;        // current size of per-cell arrays
-  int nglocalmax;     // max allocated size of per-cell arrays
 
   struct State {      // two-particle state
     double vr2;
@@ -101,7 +94,6 @@ class CollideVSS : public Collide {
 
   void read_param_file(char *);
   int wordcount(char *, char **);
-  void grow_percell(int);
 };
 
 }

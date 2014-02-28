@@ -27,6 +27,8 @@
 
 using namespace SPARTA_NS;
 
+#define DELTAGRID 1000            // must be bigger than split cells per cell
+
 /* ---------------------------------------------------------------------- */
 
 Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
@@ -47,6 +49,8 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   npmax = 0;
   plist = NULL;
+
+  nglocal = nglocalmax = 0;
 
   ngroup = NULL;
   maxgroup = NULL;
@@ -148,11 +152,12 @@ void Collide::init()
     memory->destroy(vremax);
     memory->destroy(vremax_initial);
     memory->destroy(remain);
-    int nglocal = grid->nlocal;
-    memory->create(vremax,nglocal,ngroups,ngroups,"collide:vremax");
+    nglocal = grid->nlocal;
+    nglocalmax = nglocal;
+    memory->create(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
     memory->create(vremax_initial,ngroups,ngroups,"collide:vremax_initial");
     if (remainflag)
-      memory->create(remain,nglocal,ngroups,ngroups,"collide:remain");
+      memory->create(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 
     for (int igroup = 0; igroup < ngroups; igroup++)
       for (int jgroup = 0; jgroup < ngroups; jgroup++)
@@ -210,7 +215,6 @@ void Collide::modify_params(int narg, char **arg)
 
 void Collide::reset_vremax()
 {
-  int nglocal = grid->nlocal;
   int ngroups = mixture->ngroup;
 
   for (int icell = 0; icell < nglocal; icell++)
@@ -266,7 +270,6 @@ void Collide::collisions_one()
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-  int nglocal = grid->nlocal;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
@@ -362,7 +365,6 @@ void Collide::collisions_group()
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-  int nglocal = grid->nlocal;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
@@ -496,4 +498,144 @@ void Collide::collisions_group()
   nattempt_running += nattempt_one;
   ncollide_running += ncollide_one;
   nreact_running += nreact_one;
+}
+
+/* ----------------------------------------------------------------------
+   pack icell values for per-cell arrays into buf
+   if icell is a split cell, also pack all sub cell values 
+   return byte count of amount packed
+   if memflag, only return count, do not fill buf
+   NOTE: why packing/unpacking parent cell if a split cell?
+------------------------------------------------------------------------- */
+
+int Collide::pack_grid_one(int icell, char *buf, int memflag)
+{
+  if (!vremax) return 0;
+  int nbytes = ngroups*ngroups*sizeof(double);
+
+  Grid::ChildCell *cells = grid->cells;
+
+  int n;
+  if (remainflag) {
+    if (memflag) {
+      memcpy(buf,&vremax[icell][0][0],nbytes);
+      memcpy(&buf[nbytes],&remain[icell][0][0],nbytes);
+    }
+    n = 2*nbytes;
+  } else {
+    if (memflag) memcpy(buf,&vremax[icell][0][0],nbytes);
+    n = nbytes;
+  }
+
+  if (cells[icell].nsplit > 1) {
+    int isplit = cells[icell].isplit;
+    int nsplit = cells[icell].nsplit;
+    for (int i = 0; i < nsplit; i++) {
+      int m = grid->sinfo[isplit].csubs[i];
+      if (remainflag) {
+        if (memflag) {
+          memcpy(&buf[n],&vremax[m][0][0],nbytes);
+          n += nbytes;
+          memcpy(&buf[n],&remain[m][0][0],nbytes);
+          n += nbytes;
+        } else n += 2*nbytes;
+      } else {
+        if (memflag) memcpy(&buf[n],&vremax[m][0][0],nbytes);
+        n += nbytes;
+      }
+    }
+  }
+  
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   unpack icell values for per-cell arrays from buf
+   if icell is a split cell, also unpack all sub cell values 
+   return byte count of amount unpacked
+------------------------------------------------------------------------- */
+
+int Collide::unpack_grid_one(int icell, char *buf)
+{
+  if (!vremax) return 0;
+  int nbytes = ngroups*ngroups*sizeof(double);
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::SplitInfo *sinfo = grid->sinfo;
+
+  grow_percell(1);
+  memcpy(&vremax[icell][0][0],buf,nbytes);
+  int n = nbytes;
+  if (remainflag) {
+    memcpy(&remain[icell][0][0],&buf[n],nbytes);
+    n += nbytes;
+  }
+  nglocal++;
+
+  if (cells[icell].nsplit > 1) {
+    int isplit = cells[icell].isplit;
+    int nsplit = cells[icell].nsplit;
+    grow_percell(nsplit);
+    for (int i = 0; i < nsplit; i++) {
+      int m = sinfo[isplit].csubs[i];
+      memcpy(&vremax[m][0][0],&buf[n],nbytes);
+      n += nbytes;
+      if (remainflag) {
+        memcpy(&remain[m][0][0],&buf[n],nbytes);
+        n += nbytes;
+      }
+    }
+    nglocal += nsplit;
+  }
+  
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   compress per-cell arrays due to cells migrating to new procs
+   criteria for keeping/discarding a cell is same as in Grid::compress()
+   this keeps final ordering of per-cell arrays consistent with Grid class
+------------------------------------------------------------------------- */
+
+void Collide::compress_grid()
+{
+  if (!vremax) return;
+  int nbytes = ngroups*ngroups*sizeof(double);
+
+  int me = comm->me;
+  Grid::ChildCell *cells = grid->cells;
+
+  // keep an unsplit or split cell if staying on this proc
+  // keep a sub cell if its split cell is staying on this proc
+
+  int ncurrent = nglocal;
+  nglocal = 0;
+  for (int icell = 0; icell < ncurrent; icell++) {
+    if (cells[icell].nsplit >= 1) {
+      if (cells[icell].proc != me) continue;
+    } else {
+      int isplit = cells[icell].isplit;
+      if (cells[grid->sinfo[isplit].icell].proc != me) continue;
+    }
+
+    if (nglocal != icell) { 
+      memcpy(&vremax[nglocal][0][0],&vremax[icell][0][0],nbytes);
+      if (remainflag) 
+        memcpy(&remain[nglocal][0][0],&remain[icell][0][0],nbytes);
+    }
+    nglocal++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   insure per-cell arrays are allocated long enough for N new cells
+------------------------------------------------------------------------- */
+
+void Collide::grow_percell(int n)
+{
+  if (nglocal+n < nglocalmax) return;
+  nglocalmax += DELTAGRID;
+  memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
+  if (remainflag) 
+    memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 }
