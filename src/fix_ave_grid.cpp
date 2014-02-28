@@ -558,6 +558,7 @@ int FixAveGrid::pack_one(int icell, char *buf, int memflag)
    unpack icell values for per-cell arrays from buf
    if icell is a split cell, also unpack all sub cell values 
    return byte count of amount unpacked
+   NOTE: why packing/unpacking parent cell if a split cell?
 ------------------------------------------------------------------------- */
 
 int FixAveGrid::unpack_grid_one(int icell, char *buf)

@@ -1141,7 +1141,7 @@ void Image::write_JPG(FILE *fp)
   cinfo.in_color_space = JCS_RGB;
 
   jpeg_set_defaults(&cinfo);
-  jpeg_set_quality(&cinfo, 100, 1);
+  jpeg_set_quality(&cinfo, 100, true);
   jpeg_start_compress(&cinfo, 1);
 
   while (cinfo.next_scanline < cinfo.image_height) {

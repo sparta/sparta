@@ -82,6 +82,11 @@ void CollideVSS::init()
     error->all(FLERR,"VSS parameters do not match current species");
 
   Collide::init();
+
+  // nglocal = # of cells that vremax and remain are storing info for
+  // arrays are allocated in Collide parent
+
+  nglocal = grid->nlocal;
 }
 
 /* ----------------------------------------------------------------------
@@ -710,7 +715,7 @@ double CollideVSS::extract(int isp, const char *name)
    if icell is a split cell, also pack all sub cell values 
    return byte count of amount packed
    if memflag, only return count, do not fill buf
-   NOTE: need to add remain values if start using it
+   NOTE: why packing/unpacking parent cell if a split cell?
 ------------------------------------------------------------------------- */
 
 int CollideVSS::pack_grid_one(int icell, char *buf, int memflag)
@@ -720,16 +725,34 @@ int CollideVSS::pack_grid_one(int icell, char *buf, int memflag)
 
   Grid::ChildCell *cells = grid->cells;
 
-  if (memflag) memcpy(buf,&vremax[icell][0][0],nbytes);
-  int n = nbytes;
+  int n;
+  if (remainflag) {
+    if (memflag) {
+      memcpy(buf,&vremax[icell][0][0],nbytes);
+      memcpy(&buf[nbytes],&remain[icell][0][0],nbytes);
+    }
+    n = 2*nbytes;
+  } else {
+    if (memflag) memcpy(buf,&vremax[icell][0][0],nbytes);
+    n = nbytes;
+  }
 
   if (cells[icell].nsplit > 1) {
     int isplit = cells[icell].isplit;
     int nsplit = cells[icell].nsplit;
     for (int i = 0; i < nsplit; i++) {
       int m = grid->sinfo[isplit].csubs[i];
-      if (memflag) memcpy(&buf[n],&vremax[m][0][0],nbytes);
-      n += nbytes;
+      if (remainflag) {
+        if (memflag) {
+          memcpy(&buf[n],&vremax[m][0][0],nbytes);
+          n += nbytes;
+          memcpy(&buf[n],&remain[m][0][0],nbytes);
+          n += nbytes;
+        } else n += 2*nbytes;
+      } else {
+        if (memflag) memcpy(&buf[n],&vremax[m][0][0],nbytes);
+        n += nbytes;
+      }
     }
   }
   
@@ -740,7 +763,6 @@ int CollideVSS::pack_grid_one(int icell, char *buf, int memflag)
    unpack icell values for per-cell arrays from buf
    if icell is a split cell, also unpack all sub cell values 
    return byte count of amount unpacked
-   NOTE: need to add remain values if start using it
 ------------------------------------------------------------------------- */
 
 int CollideVSS::unpack_grid_one(int icell, char *buf)
@@ -754,6 +776,10 @@ int CollideVSS::unpack_grid_one(int icell, char *buf)
   grow_percell(1);
   memcpy(&vremax[icell][0][0],buf,nbytes);
   int n = nbytes;
+  if (remainflag) {
+    memcpy(&remain[icell][0][0],&buf[n],nbytes);
+    n += nbytes;
+  }
   nglocal++;
 
   if (cells[icell].nsplit > 1) {
@@ -764,6 +790,10 @@ int CollideVSS::unpack_grid_one(int icell, char *buf)
       int m = sinfo[isplit].csubs[i];
       memcpy(&vremax[m][0][0],&buf[n],nbytes);
       n += nbytes;
+      if (remainflag) {
+        memcpy(&remain[m][0][0],&buf[n],nbytes);
+        n += nbytes;
+      }
     }
     nglocal += nsplit;
   }
@@ -798,8 +828,11 @@ void CollideVSS::compress_grid()
       if (cells[grid->sinfo[isplit].icell].proc != me) continue;
     }
 
-    if (nglocal != icell) 
+    if (nglocal != icell) { 
       memcpy(&vremax[nglocal][0][0],&vremax[icell][0][0],nbytes);
+      if (remainflag) 
+        memcpy(&remain[nglocal][0][0],&remain[icell][0][0],nbytes);
+    }
     nglocal++;
   }
 }
@@ -813,5 +846,6 @@ void CollideVSS::grow_percell(int n)
   if (nglocal+n < nglocalmax) return;
   nglocalmax += DELTAGRID;
   memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
-  memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
+  if (remainflag) 
+    memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
 }
