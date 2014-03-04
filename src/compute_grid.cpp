@@ -113,6 +113,7 @@ ComputeGrid::~ComputeGrid()
   }
   delete [] norm_count;
   delete [] norm_mass;
+  delete [] norm_dof;
 }
 
 /* ---------------------------------------------------------------------- */
