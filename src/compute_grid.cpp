@@ -45,7 +45,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
-    if (strcmp(arg[iarg],"ndensity") == 0) which[nvalue++] = NUMDENS;
+    else if (strcmp(arg[iarg],"ndensity") == 0) which[nvalue++] = NUMDENS;
     else if (strcmp(arg[iarg],"mass") == 0) which[nvalue++] = MASS;
     else if (strcmp(arg[iarg],"u") == 0) which[nvalue++] = U;
     else if (strcmp(arg[iarg],"v") == 0) which[nvalue++] = V;
