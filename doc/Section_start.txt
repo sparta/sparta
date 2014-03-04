@@ -23,8 +23,7 @@ experienced users.
 2.1 What's in the SPARTA distribution :h4,link(start_1)
 
 When you download SPARTA you will need to unzip and untar the
-downloaded file with the following commands, after placing the file in
-an appropriate directory.
+downloaded file with the following commands:
 
 gunzip sparta*.tar.gz 
 tar xvf sparta*.tar :pre
@@ -37,6 +36,7 @@ LICENSE: the GNU General Public License (GPL)
 bench: benchmark problems
 doc: documentation
 examples: simple test problems
+python: Python wrapper
 src: source files
 tools: pre- and post-processing tools :tb(s=:)
 
@@ -63,10 +63,7 @@ used (MPI, JPEG).
 
 Please read this section carefully.  If you are not comfortable with
 makefiles, or building codes on a Unix platform, or running an MPI job
-on your machine, please find a local expert to help you.  Many
-compiling, linking, and run problems that users have are not really
-SPARTA issues - they are peculiar to the user's system, compilers,
-libraries, etc.  Such questions are better answered by a local expert.
+on your machine, please find a local expert to help you.
 
 If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
@@ -90,7 +87,7 @@ directory, type "make" or "gmake".  You should see a list of available
 choices.  If one of those is the machine and options you want, you can
 type a command like:
 
-make linux
+make g++
 or
 gmake mac :pre
 
@@ -98,15 +95,15 @@ Note that on a multi-processor or multi-core platform you can launch a
 parallel make, by using the "-j" switch with the make command, which
 will build SPARTA more quickly.
 
-If you get no errors and an executable like spa_linux or spa_mac is
+If you get no errors and an executable like spa_g++ or spa_mac is
 produced, you're done; it's your lucky day.
 
 [Step 1]
 
 If Step 0 did not work, you will need to create a low-level Makefile
-for your machine, like Makefile.foo.  You should make a copy of an
-existing src/MAKE/Makefile.* as a starting point.  The only portions
-of the file you need to edit are the first line, the "compiler/linker
+for your machine, like Makefile.foo.  Create a copy of an existing
+src/MAKE/Makefile.* as a starting point.  The only portions of the
+file you need to edit are the first line, the "compiler/linker
 settings" section, and the "SPARTA-specific settings" section.
 
 [Step 2]
@@ -135,20 +132,17 @@ The DEPFLAGS setting is what triggers the C++ compiler to create a
 dependency list for a source file.  This speeds re-compilation when
 source (*.cpp) or header (*.h) files are edited.  Some compilers do
 not support dependency file creation, or may use a different switch
-than -D.  GNU g++ works with -D.  If your compiler can't create
-dependency files, then you'll need to create a Makefile.foo patterned
-after Makefile.storm, which uses different rules that do not involve
-dependency files.  Note that when you build SPARTA for the first time
-on a new platform, a long list of *.d files will be printed out
-rapidly.  This is not an error; it is the Makefile doing its normal
-creation of dependencies.
+than -D.  GNU g++ works with -D.  Note that when you build SPARTA for
+the first time on a new platform, a long list of *.d files will be
+printed out rapidly.  This is not an error; it is the Makefile doing
+its normal creation of dependencies.
 
 [Step 4]
 
 The "system-specific settings" section has several parts.  Note that
 if you change any -D setting in this section, you should do a full
-re-compile, after typing "make clean" (which will describe different
-clean options).
+re-compile, after typing "make clean", which will describe different
+clean options.
 
 The SPA_INC variable is used to include options that turn on ifdefs
 within the SPARTA code.  The options that are currently recogized are:
@@ -159,10 +153,7 @@ within the SPARTA code.  The options that are currently recogized are:
 -DSPARTA_SMALL
 -DSPARTA_BIG
 -DSPARTA_BIGBIG
--DSPARTA_LONGLONG_TO_LONG
--DPACK_ARRAY
--DPACK_POINTER
--DPACK_MEMCPY :ul
+-DSPARTA_LONGLONG_TO_LONG :ul
 
 The read_data and dump commands will read/write gzipped files if you
 compile with -DSPARTA_GZIP.  It requires that your Unix support the
@@ -170,10 +161,10 @@ compile with -DSPARTA_GZIP.  It requires that your Unix support the
 
 If you use -DSPARTA_JPEG, the "dump image"_dump.html command will be
 able to write out JPEG image files.  If not, it will only be able to
-write out text-based PPM image files.  For JPEG files, you must also
-link SPARTA with a JPEG library, as described below.
+write out PPM image files.  For JPEG files, you must also link SPARTA
+with a JPEG library, as described below.
 
-If you use -DSPARTA_MAP, SPARTA will use the STL map class for as hash
+If you use -DSPARTA_MAP, SPARTA will use the STL map class for hash
 tables.  This is less efficient than the STL unordered map class which
 is not yet supported by all C++ compilers.  The default is to use the
 unordered map class, so only set -DSPARTA_MAP if the build complains
@@ -183,31 +174,31 @@ Use at most one of the -DSPARTA_SMALL, -DSPARTA_BIG, -D-DSPARTA_BIGBIG
 settings.  The default is -DSPARTA_BIG.  These refer to use of 4-byte
 (small) vs 8-byte (big) integers within SPARTA, as described in
 src/spatype.h.  The only reason to use the BIGBIG setting is to enable
-simulation of large models with more than 2 billion grid cells.  The
+simulation of large models with more than ~2 billion grid cells.  The
 only reason to use the SMALL setting is if your machine does not
 support 64-bit integers.
+
+In all cases, the size of problem that can be run on a per-processor
+basis is limited by 4-byte integer storage to about 2 billion
+particles per processor (2^31), which should not normally be a
+restriction since such a problem would have a huge per-processor
+memory and would run very slowly in terms of CPU secs/timestep.
 
 The -DSPARTA_LONGLONG_TO_LONG setting may be needed if your system or
 MPI version does not recognize "long long" data types.  In this case a
 "long" data type is likely already 64-bits, in which case this setting
-will convert to that data type.
-
-Using one of the -DPACK_ARRAY, -DPACK_POINTER, and -DPACK_MEMCPY
-options can make for faster parallel FFTs (in the PPPM solver) on some
-platforms.  The -DPACK_ARRAY setting is the default.  See the
-"kspace_style"_kspace_style.html command for info about PPPM.  See
-Step 6 below for info about building SPARTA with an FFT library.
+will use that data type.
 
 [Step 5]
 
 The 3 MPI variables are used to specify an MPI library to build SPARTA
 with. 
 
-SPARTA want SPARTA to run in parallel, you must have an MPI library
+If you want SPARTA to run in parallel, you must have an MPI library
 installed on your platform.  If you use an MPI-wrapped compiler, such
-as "mpicc" to build SPARTA, you should be able to leave these 3
-variables blank; the MPI wrapper knows where to find the needed files.
-If not, and MPI is installed on your system in the usual place (under
+as "mpicc" to build, you should be able to leave these 3 variables
+blank; the MPI wrapper knows where to find the needed files.  If not,
+and MPI is installed on your system in the usual place (under
 /usr/local), you also may not need to specify these 3 variables.  On
 some large parallel machines which use "modules" for their
 compile/link environements, you may simply need to include the correct
@@ -216,30 +207,30 @@ vendor-provided MPI which the compiler has no trouble finding.
 
 Failing this, with these 3 variables you can specify where the mpi.h
 file (MPI_INC) and the MPI library file (MPI_PATH) are found and the
-name of the library file (MPI_LIB).
+name of the library file (MPI_LIB).  See Makefile.serial for an
+example of how this can be done.
 
 If you are installing MPI yourself, we recommend Argonne's MPICH 1.2
 or 2.0 or OpenMPI.  MPICH can be downloaded from the "Argonne MPI
 site"_http://www-unix.mcs.anl.gov/mpi.  OpenMPI can be downloaded the
 "OpenMPI site"_http://www.open-mpi.org.  LAM MPI should also work.  If
-you are running on a big parallel platform, your system people or the
+you are running on a big parallel platform, your system admins or the
 vendor should have already installed a version of MPI, which will be
 faster than MPICH or OpenMPI or LAM, so find out how to build and link
 with it.  If you use MPICH or OpenMPI or LAM, you will have to
 configure and build it for your platform.  The MPI configure script
 should have compiler options to enable you to use the same compiler
-you are using for the SPARTA build, which can avoid problems that can
-arise when linking SPARTA to the MPI library.
+you use for the SPARTA build, which can avoid problems that can arise
+when linking SPARTA to the MPI library.
 
 If you just want to run SPARTA on a single processor, you can use the
 dummy MPI library provided in src/STUBS, since you don't need a true
-MPI library installed on your system.  See the
-src/MAKE/Makefile.serial file for how to specify the 3 MPI variables
-in this case.  You will also need to build the STUBS library for your
-platform before making SPARTA itself.  From the src directory, type
-"make stubs", or from the STUBS dir, type "make" and it should create
-a libmpi.a suitable for linking to SPARTA.  If this build fails, you
-will need to edit the STUBS/Makefile for your platform.
+MPI library installed on your system.  You will also need to build the
+STUBS library for your platform before making SPARTA itself.  From the
+src directory, type "make stubs", or from the STUBS dir, type "make"
+and it should create a libmpi.a suitable for linking to SPARTA.  If
+this build fails, you will need to edit the STUBS/Makefile for your
+platform.
 
 The file STUBS/mpi.cpp provides a CPU timer function called
 MPI_Wtime() that calls gettimeofday() .  If your system doesn't
@@ -248,7 +239,7 @@ timer.  Note that the ANSI-standard function clock() rolls over after
 an hour or so, and is therefore insufficient for timing long SPARTA
 simulations.
 
-[Step 7]
+[Step 6]
 
 The 3 JPG variables allow you to specify a JPEG library which SPARTA
 uses when writing out JPEG files via the "dump image"_dump_image.html
@@ -260,17 +251,17 @@ A standard JPEG library usually goes by the name libjpeg.a and has an
 associated header file jpeglib.h.  Whichever JPEG library you have on
 your platform, you'll need to set the appropriate JPG_INC, JPG_PATH,
 and JPG_LIB variables, so that the compiler and linker can find it.
+See Makefile.g++ for an example.
 
 As before, if these header and library files are in the usual place on
 your machine, you may not need to set these variables.
 
-[Step 9]
+[Step 7]
 
 That's it.  Once you have a correct Makefile.foo, you have installed
 the optional SPARTA packages you want to include in your build, and
-you have pre-built any other needed libraries (e.g. MPI, FFT, package
-libraries), all you need to do from the src directory is type
-something like this:
+you have pre-built any other needed libraries (e.g. MPI), all you need
+to do from the src directory is type this:
 
 make foo
 or
@@ -302,14 +293,12 @@ a -f switch with your make command to use a pre-generated
 Makefile.list which explicitly lists all the needed files, e.g.
 
 make makelist
-make -f Makefile.list linux
+make -f Makefile.list g++
 gmake -f Makefile.list mac :pre
 
 The first "make" command will create a current Makefile.list with all
 the file names in your src dir.  The 2nd "make" command (make or
-gmake) will use it to build SPARTA.  Note that you should
-include/exclude any desired optional packages before using the "make
-makelist" command.
+gmake) will use it to build SPARTA.
 
 (2) If you get an error that says something like 'identifier "atoll"
 is undefined', then your machine does not support "long long"
@@ -332,45 +321,6 @@ Typing "make clean-all" or "make clean-foo" will delete *.o object
 files created when SPARTA is built, for either all builds or for a
 particular machine.
 
-(3) Changing the size limits in src/spatype.h
-
-If you are running a very large problem (billions of atoms or more)
-and get a run-time error about the system being too big, either on a
-per-processor basis or in total size, then you may need to change one
-or more settings in src/spatype.h and re-compile SPARTA.
-
-As the documentation in that file explains, you have basically
-two choices to make:
-
-set the data type size of integer atom IDs to 4 or 8 bytes
-set the data type size of integers that store the total system size to 4 or 8 bytes :ul
-
-The default for atom IDs is 4-byte integers since there is a memory
-and communication cost for 8-byte integers.  Non-molecular problems do
-not need atom IDs so this does not restrict their size.  Molecular
-problems (which use IDs to define molecular topology), are limited to
-about 2 billion atoms (2^31) with 4-byte IDs.  With 8-byte IDs they
-are effectively unlimited in size (2^63).
-
-The default for total system size quantities (like the number of atoms
-or timesteps) is 8-byte integers by default which is effectively
-unlimited in size (2^63).  If your system or MPI implementation does
-not support 8-byte integers, an error will be generated, and you will
-need to set "bigint" to 4-byte integers.  This restricts your total
-system size to about 2 billion atoms or timesteps (2^31).
-
-Note that in src/spatype.h there are also settings for the MPI data
-types associated with the integers that store atom IDs and total
-system sizes, which need to be set consistent with the associated C
-data types.
-
-In all cases, the size of problem that can be run on a per-processor
-basis is limited by 4-byte integer storage to about 2 billion atoms
-per processor (2^31), which should not normally be a restriction since
-such a problem would have a huge per-processor memory footprint due to
-neighbor lists and would run very slowly in terms of CPU
-secs/timestep.
-
 :line
 
 [{Building for a Mac:}] :link(start_2_5)
@@ -381,52 +331,38 @@ OS X is BSD Unix, so it should just work.  See the Makefile.mac file.
 
 [{Building for Windows:}] :link(start_2_6)
 
-The SPARTA download page has an option to download both a serial and
-parallel pre-built Windows exeutable.  See the "Running
-SPARTA"_#start_5 section for instructions for running these
-executables on a Windows box.
+At some point we may provide a pre-built Windows executable
+for SPARTA.  Until then you will need to build an executable from 
+source files.
 
-If the pre-built executable doesn't have the options you want, then
-you can build SPARTA from its source files on a Windows box.  One way
-to do this is install and use cygwin to build SPARTA with a standard
-Linus make, just as you would on any Linux box; see
-src/MAKE/Makefile.cygwin.
+One way to do this is install and use cygwin to build SPARTA with a
+standard Linus make, just as you would on any Linux box.
 
-There is a also a src/WINDOWS directory that contains project files
-for Microsoft Visual Studio 2005, which should also work with later
-versions of VS.  That directory contains a README.txt file which
-provides instructions for building SPARTA from source code using
-Visual Studio that are hopefully easy to follow for Windows and VS
-users.
-
-Four VS project options are provided.  The first includes the default
-packages (MANYBODY, MOLECULE, and KSPACE).  The second includes all
-standard packages (except GPU, MEAM, and REAX which are not yet
-included because they require NVIDIA or Fortran compilation).  The
-third includes all standard packages (with the exceptions) and some
-user packages.  The included user packages are USER-EFF, USER-CG-CMM,
-and USER-REAXC.  The fourth project includes the USER-AWPMD package.
+You can also import the *.cpp and *.h files into Microsoft Visual
+Studio.  If someone does this and wants to provide project files
+or other Windows build tips, please send them to the developers
+and we will include them in the distribution.
 
 :line
 
 2.4 Building SPARTA as a library :h4,link(start_4)
 
-SPARTA itself can be built as a library, which can then be called from
+SPARTA can be built as a library, which can then be called from
 another application or a scripting language.  See "this
-SPARTAion"_Section_howto.html#howto_10 for more info on coupling SPARTA
+section"_Section_howto.html#howto_7 for more info on coupling SPARTA
 to other codes.  Building SPARTA as a library is done by typing
 
 make makelib
-make -f Makefile.lib foo :pre
+make -f Makefile.lib foo
+gmake -f Makefile.lib foo :pre
 
-where foo is the machine name.  Note that inclusion or exclusion of
-any desired optional packages should be done before typing "make
-makelib".  The first "make" command will create a current Makefile.lib
-with all the file names in your src dir.  The 2nd "make" command will
-use it to build SPARTA as a library.  This requires that Makefile.foo
-have a library target (lib) and system-specific settings for ARCHIVE
-and ARFLAGS.  See Makefile.linux for an example.  The build will
-create the file libspa_foo.a which another application can link to.
+where foo is the machine name.  The first "make" command will create a
+current Makefile.lib with all the file names in your src dir.  The 2nd
+"make" or "gmake" command will use it to build SPARTA as a library.  This
+requires that Makefile.foo have a library target (lib) and
+system-specific settings for ARCHIVE and ARFLAGS.  See Makefile.g++
+for an example.  The build will create the file libspa_foo.a which
+another application can link to.
 
 When used from a C++ program, the library allows one or more SPARTA
 objects to be instantiated.  All of SPARTA is wrapped in a SPARTA_NS
@@ -437,16 +373,16 @@ When used from a C or Fortran program or a scripting language, the
 library has a simple function-style interface, provided in
 src/library.cpp and src/library.h.
 
-See the sample codes couple/simple/simple.cpp and simple.c as examples
-of C++ and C codes that invoke SPARTA thru its library interface.
-There are other examples as well in the couple directory which are
-discussed in "this section"_Section_howto.html#howto_10 of the manual.
-See "this section"_Section_python.html of the manual for a description
-of the Python wrapper provided with SPARTA that operates through the
-SPARTA library interface.
+See the sample codes examples/COUPLE/simple.cpp and simple.c as
+examples of C++ and C codes that invoke SPARTA thru its library
+interface.  There are other examples as well in the couple directory
+which are discussed in examples/COUPLE/README.   See "this
+section"_Section_python.html of the manual for a description of the
+Python wrapper provided with SPARTA that operates through the SPARTA
+library interface.
 
 The files src/library.cpp and library.h contain the C-style interface
-to SPARTA.  See "this section"_Section_howto.html#howto_19 of the
+to SPARTA.  See "this section"_Section_howto.html#howto_6 of the
 manual for a description of the interface and how to extend it for
 your needs.
 
@@ -454,30 +390,25 @@ your needs.
 
 2.5 Running SPARTA :h4,link(start_5)
 
-By default, SPARTA runs by reading commands from stdin; e.g. spa_linux
-< in.file.  This means you first create an input script (e.g. in.file)
+By default, SPARTA runs by reading commands from stdin; e.g. spa_g++ <
+in.file.  This means you first create an input script (e.g. in.file)
 containing the desired commands.  "This section"_Section_commands.html
-describes how input scripts are structured and what commands they
-contain.
+of the manual describes how input scripts are structured and what
+commands they contain.
 
 You can test SPARTA on any of the sample inputs provided in the
 examples or bench directory.  Input scripts are named in.* and sample
 outputs are named log.*.name.P where name is a machine and P is the
 number of processors it was run on.
 
-Here is how you might run a standard Lennard-Jones benchmark on a
-Linux box, using mpirun to launch a parallel job:
+Here is how you might run one of the benchmarks using mpirun to launch
+a parallel job:
 
 cd src
-make linux
-cp spa_linux ../bench
+make g++
+cp spa_g++ ../bench
 cd ../bench
-mpirun -np 4 spa_linux < in.lj :pre
-
-See "this page"_bench for timings for this and the other benchmarks
-on various platforms.
-
-:link(bench,http://sparta.sandia.gov/bench.html)
+mpirun -np 4 spa_g++ < in.free :pre
 
 :line
 
@@ -485,13 +416,13 @@ The screen output from SPARTA is described in the next section.  As it
 runs, SPARTA also writes a log.sparta file with the same information.
 
 Note that this sequence of commands copies the SPARTA executable
-(lmp_linux) to the directory with the input files.  This may not be
+(spa_g++) to the directory with the input files.  This may not be
 necessary, but some versions of MPI reset the working directory to
 where the executable is, rather than leave it as the directory where
-you launch mpirun from (if you launch lmp_linux on its own and not
-under mpirun).  If that happens, SPARTA will look for additional input
-files and write its output files to the executable directory, rather
-than your working directory, which is probably not what you want.
+you launch mpirun from (if you launch spa_g++ on its own and not under
+mpirun).  If that happens, SPARTA will look for additional input files
+and write its output files to the executable directory, rather than
+your working directory, which is probably not what you want.
 
 If SPARTA encounters errors in the input script or while running a
 simulation it will print an ERROR message and stop or a WARNING
@@ -500,10 +431,9 @@ discussion of the various kinds of errors SPARTA can or can't detect,
 a list of all ERROR and WARNING messages, and what to do about them.
 
 SPARTA can run a problem on any number of processors, including a
-single processor.  In theory you should get identical answers on any
-number of processors and on any machine.  In practice, numerical
-round-off can cause slight differences and eventual divergence of
-molecular dynamics phase space trajectories.
+single processor.  The random numbers used by each processor
+will be different so you should only expect statistical consistency
+if the same problem is run on varying numbers of processors.
 
 SPARTA can run as large a problem as will fit in the physical memory
 of one or more processors.  If you run out of memory, you must run on
@@ -517,7 +447,6 @@ At run time, SPARTA recognizes several optional command-line switches
 which may be used in any order.  Either the full word or a one-or-two
 letter abbreviation can be used:
 
--c or -cuda
 -e or -echo
 -i or -in
 -h or -help
@@ -526,13 +455,12 @@ letter abbreviation can be used:
 -pl or -plog
 -ps or -pscreen
 -sc or -screen
--sf or -suffix
 -v or -var :ul
 
-For example, lmp_ibm might be launched as follows:
+For example, spa_g++ might be launched as follows:
 
-mpirun -np 16 lmp_ibm -v f tmp.out -l my.log -sc none < in.alloy
-mpirun -np 16 lmp_ibm -var f tmp.out -log my.log -screen none < in.alloy :pre
+mpirun -np 16 spa_g++ -v f tmp.out -l my.log -sc none < in.sphere
+mpirun -np 16 spa_g++ -var f tmp.out -log my.log -screen none < in.sphere :pre
 
 Here are the details on the options:
 
@@ -549,17 +477,15 @@ set by using the "echo"_echo.html command in the input script itself.
 
 Specify a file to use as an input script.  This is an optional switch
 when running SPARTA in one-partition mode.  If it is not specified,
-SPARTA reads its input script from stdin - e.g. lmp_linux < in.run.
+SPARTA reads its input script from stdin - e.g. spa_g++ < in.run.
 This is a required switch when running SPARTA in multi-partition mode,
 since multiple processors cannot all read from stdin.
 
 -help :pre
 
 Print a list of options compiled into this executable for each SPARTA
-style (atom_style, fix, compute, pair_style, bond_style, etc).  This
-can help you know if the command you want to use was included via the
-appropriate package.  SPARTA will print the info and immediately exit
-if this switch is used.
+style (fix, compute, collide, etc).  SPARTA will print the info and
+immediately exit if this switch is used.
 
 -log file :pre
 
@@ -590,46 +516,34 @@ processors in all partitions must equal P.  Thus the command
 "-partition 8x2 4 5" has 10 partitions and runs on a total of 25
 processors.
 
-Note that with MPI installed on a machine (e.g. your desktop), you can
-run on more (virtual) processors than you have physical processors.
-This can be useful for running "multi-replica
-simulations"_Section_howto.html#howto_5, on one or a few processors.
-
 The input script specifies what simulation is run on which partition;
-see the "variable"_variable.html and "next"_next.html commands.  This
-"howto section"_Section_howto.html#howto_4 gives examples of how to
-use these commands in this way.  Simulations running on different
-partitions can also communicate with each other; see the
-"temper"_temper.html command.
+see the "variable"_variable.html and "next"_next.html commands. "This
+section"_Section_howto.html#howto_3 gives examples of how to use these
+commands in this way.
 
 -plog file :pre
  
-Specify the base name for the partition log files, 
-so partition N writes log information to file.N. If file is 
-none, then no partition log files are created. 
-This overrides the
-filename specified in the -log command-line option.
-This option is useful when working with large numbers of partitions,
-allowing the partition log files to be suppressed (-plog none) or
-placed in a sub-directory (-plog replica_files/log.sparta)
-If this option is not used
-the log file for partition N is log.sparta.N or whatever is specified by
-the -log command-line option. 
+Specify the base name for the partition log files, so partition N
+writes log information to file.N. If file is none, then no partition
+log files are created.  This overrides the filename specified in the
+-log command-line option.  This option is useful when working with
+large numbers of partitions, allowing the partition log files to be
+suppressed (-plog none) or placed in a sub-directory (-plog
+replica_files/log.sparta) If this option is not used the log file for
+partition N is log.sparta.N or whatever is specified by the -log
+command-line option.
 
 -pscreen file :pre 
 
-Specify the base name for the 
-partition screen file, so partition N writes 
-screen information to file.N. If file is 
-none, then no partition screen files are created. 
-This overrides the
-filename specified in the -screen command-line option.
-This option is useful when working with large numbers of partitions,
-allowing the partition screen files to be suppressed (-pscreen none) or
-placed in a sub-directory (-pscreen replica_files/screen)
-If this option is not used
-the screen file for partition N is screen.N or whatever is specified by
-the -screen command-line option. 
+Specify the base name for the partition screen file, so partition N
+writes screen information to file.N. If file is none, then no
+partition screen files are created.  This overrides the filename
+specified in the -screen command-line option.  This option is useful
+when working with large numbers of partitions, allowing the partition
+screen files to be suppressed (-pscreen none) or placed in a
+sub-directory (-pscreen replica_files/screen) If this option is not
+used the screen file for partition N is screen.N or whatever is
+specified by the -screen command-line option.
 
 -screen file :pre
 
@@ -672,35 +586,14 @@ screen and a log file about significant actions it takes to setup a
 simulation.  When the simulation is ready to begin, SPARTA performs
 various initializations and prints the amount of memory (in MBytes per
 processor) that the simulation requires.  It also prints details of
-the initial thermodynamic state of the system.  During the run itself,
-thermodynamic information is printed periodically, every few
-timesteps.  When the run concludes, SPARTA prints the final
-thermodynamic state and a total run time for the simulation.  It then
-appends statistics about the CPU time and storage requirements for the
-simulation.  An example set of statistics is shown here:
+the initial state of the system.  During the run itself, statistical
+information is printed periodically, every few timesteps.  When the
+run concludes, SPARTA prints the final statistical state and a total
+run time for the simulation.  It then appends statistics about the CPU
+time and storage requirements for the simulation.  An example set of
+statistics is shown here:
 
 Loop time of 49.002 on 2 procs for 2004 atoms :pre
-
-Pair   time (%) = 35.0495 (71.5267)
-Bond   time (%) = 0.092046 (0.187841)
-Kspce  time (%) = 6.42073 (13.103)
-Neigh  time (%) = 2.73485 (5.5811)
-Comm   time (%) = 1.50291 (3.06703)
-Outpt  time (%) = 0.013799 (0.0281601)
-Other  time (%) = 2.13669 (4.36041) :pre
-
-Nlocal:    1002 ave, 1015 max, 989 min
-Histogram: 1 0 0 0 0 0 0 0 0 1 
-Nghost:    8720 ave, 8724 max, 8716 min 
-Histogram: 1 0 0 0 0 0 0 0 0 1
-Neighs:    354141 ave, 361422 max, 346860 min 
-Histogram: 1 0 0 0 0 0 0 0 0 1 :pre
-
-Total # of neighbors = 708282
-Ave neighs/atom = 353.434
-Ave special neighs/atom = 2.34032
-Number of reneighborings = 42
-Dangerous reneighborings = 2 :pre
 
 The first section gives the breakdown of the CPU run time (in seconds)
 into major categories.  The second section lists the number of owned
@@ -709,53 +602,3 @@ per processor.  The max and min values give the spread of these values
 across processors with a 10-bin histogram showing the distribution.
 The total number of histogram counts is equal to the number of
 processors.
-
-The last section gives aggregate statistics for pair-wise neighbors
-and special neighbors that SPARTA keeps track of (see the
-"special_bonds"_special_bonds.html command).  The number of times
-neighbor lists were rebuilt during the run is given as well as the
-number of potentially "dangerous" rebuilds.  If atom movement
-triggered neighbor list rebuilding (see the
-"neigh_modify"_neigh_modify.html command), then dangerous
-reneighborings are those that were triggered on the first timestep
-atom movement was checked for.  If this count is non-zero you may wish
-to reduce the delay factor to insure no force interactions are missed
-by atoms moving beyond the neighbor skin distance before a rebuild
-takes place.
-
-If an energy minimization was performed via the
-"minimize"_minimize.html command, additional information is printed,
-e.g.
-
-Minimization stats:
-  E initial, next-to-last, final = -0.895962 -2.94193 -2.94342
-  Gradient 2-norm init/final= 1920.78 20.9992
-  Gradient inf-norm init/final= 304.283 9.61216
-  Iterations = 36
-  Force evaluations = 177 :pre
-
-The first line lists the initial and final energy, as well as the
-energy on the next-to-last iteration.  The next 2 lines give a measure
-of the gradient of the energy (force on all atoms).  The 2-norm is the
-"length" of this force vector; the inf-norm is the largest component.
-The last 2 lines are statistics on how many iterations and
-force-evaluations the minimizer required.  Multiple force evaluations
-are typically done at each iteration to perform a 1d line minimization
-in the search direction.
-
-If a "kspace_style"_kspace_style.html long-range Coulombics solve was
-performed during the run (PPPM, Ewald), then additional information is
-printed, e.g.
-
-FFT time (% of Kspce) = 0.200313 (8.34477)
-FFT Gflps 3d 1d-only = 2.31074 9.19989 :pre
-
-The first line gives the time spent doing 3d FFTs (4 per timestep) and
-the fraction it represents of the total KSpace time (listed above).
-Each 3d FFT requires computation (3 sets of 1d FFTs) and communication
-(transposes).  The total flops performed is 5Nlog_2(N), where N is the
-number of points in the 3d grid.  The FFTs are timed with and without
-the communication and a Gflop rate is computed.  The 3d rate is with
-communication; the 1d rate is without (just the 1d FFTs).  Thus you
-can estimate what fraction of your FFT time was spent in
-communication, roughly 75% in the example above.

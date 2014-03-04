@@ -6,20 +6,542 @@
 
 :line 
 
-6. How-to discussions :h3
+4. How-to discussions :h3
 
 The following sections describe how to use various options within
 SPARTA.
 
-6.1 "2d simulations"_#howto_1
-6.2 "Axisymmetric simulations"_#howto_2
-6.3 "Running multiple simulations from one input script"_#howto_3
-6.4 "Output from SPARTA (stats, dumps, computes, fixes, variables)"_#howto_4
-  ref by compute.txt, and all computes in "output" section
- 6.5 "Visualizing SPARTA snapshots"_#howto_5
-6.6 "Library interface to SPARTA"_#howto_6
-6.7 "Coupling SPARTA to other codes"_#howto_7 :all(b)
+4.1 "2d simulations"_#howto_1
+4.2 "Axisymmetric simulations"_#howto_2
+4.3 "Running multiple simulations from one input script"_#howto_3
+4.4 "Output from SPARTA (stats, dumps, computes, fixes, variables)"_#howto_4
+4.5 "Visualizing SPARTA snapshots"_#howto_5
+4.6 "Library interface to SPARTA"_#howto_6
+4.7 "Coupling SPARTA to other codes"_#howto_7 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "this section"_Section_example.html of the manual also
 show how to setup and run various kinds of simulations.
+
+:line
+:line
+
+6.1 2d simulations :link(howto_1),h4
+
+Use the "dimension"_dimension.html command to specify a 2d simulation.
+
+Make the simulation box periodic in z via the "boundary"_boundary.html
+command.  This is the default.
+
+Using the "create box"_create_box.html command, set the z boundaries
+of the box zlo = -0.5 to and zhi = 0.5, so that the z-dimension box
+length is 1.0 (in whatever "units"_units.html are defined) and it
+straddles the z = 0.0 plane.  This insures that input and output
+densities, e.g. via the "global nrho"_global.html command, are the
+same in 1/length^2 and 1/length^3 units.  Thus if the
+"create_particles"_create_particles.html command is used to create
+particles in a 3d grid cell whose z-dimension is 1.0, the same number
+of particles will be created in a 2d grid cell with the same x and y
+dimensions.
+
+Many of the example input scripts included in the SPARTA distribution
+are for 2d models.
+
+:line
+
+4.2 Axisymmetric simulations :link(howto_2),h4
+
+:line
+
+4.3 Running multiple simulations from one input script :link(howto_3),h4
+
+This can be done in several ways.  See the documentation for
+individual commands for more details on how these examples work.
+
+If "multiple simulations" means continue a previous simulation for
+more timesteps, then you simply use the "run"_run.html command
+multiple times.  For example, this script
+
+read_grid data.grid
+create_particles 1000000
+run 10000
+run 10000
+run 10000
+run 10000
+run 10000 :pre
+
+would run 5 successive simulations of the same system for a total of
+50,000 timesteps.
+
+If you wish to run totally different simulations, one after the other,
+the "clear"_clear.html command can be used in between them to
+re-initialize SPARTA.  For example, this script
+
+read_grid data.grid
+create_particles 1000000
+run 10000
+clear
+read_grid data.grid2
+create_particles 500000
+run 10000 :pre
+
+would run 2 independent simulations, one after the other.
+
+For large numbers of independent simulations, you can use
+"variables"_variable.html and the "next"_next.html and
+"jump"_jump.html commands to loop over the same input script
+multiple times with different settings.  For example, this
+script, named in.flow
+
+variable d index run1 run2 run3 run4 run5 run6 run7 run8
+shell cd $d
+read_grid data.grid
+create_particles 1000000
+run 10000
+shell cd ..
+clear
+next d
+jump in.flow :pre
+
+would run 8 simulations in different directories, using a data.grid
+file in each directory.  The same concept could be used to run the
+same system at 8 different gas densities, using a density variable
+and storing the output in different log and dump files, for example
+
+variable a loop 8
+variable rho index 1.0e18 4.0e18 1.0e19 4.0e19 1.0e20 4.0e20 1.0e21 4.0e21
+log log.$a
+read data.grid
+global nrho $\{rho\}
+compute myGrid grid all n temp
+dump 1 all grid 1000 dump.$a id c_myGrid
+run 100000
+next rho
+next a
+jump in.flow :pre
+
+All of the above examples work whether you are running on 1 or
+multiple processors, but assumed you are running SPARTA on a single
+partition of processors.  SPARTA can be run on multiple partitions via
+the "-partition" command-line switch as described in "this
+section"_Section_start.html#start_5 of the manual.
+
+In the last 2 examples, if SPARTA were run on 3 partitions, the same
+scripts could be used if the "index" and "loop" variables were
+replaced with {universe}-style variables, as described in the
+"variable"_variable.html command.  Also, the "next rho" and "next a"
+commands would need to be replaced with a single "next a rho" command.
+With these modifications, the 8 simulations of each script would run
+on the 3 partitions one after the other until all were finished.
+Initially, 3 simulations would be started simultaneously, one on each
+partition.  When one finished, that partition would then start the 4th
+simulation, and so forth, until all 8 were completed.
+
+:line
+
+4.4 Output from SPARTA (stats, dumps, computes, fixes, variables) :link(howto_4),h4
+
+There are four basic kinds of SPARTA output:
+
+"Statistical output"_stats_style.html, which is a list of quantities
+printed every few timesteps to the screen and logfile. :ulb,l
+
+"Dump files"_dump.html, which contain snapshots of particle, grid
+cell, or surface element quantities and are written at a specified
+frequency. :l
+
+Certain fixes can output user-specified quantities directly to files:
+"fix ave/time"_fix_ave_time.html for time averaging and ing, and "fix
+print"_fix_print.html for single-line output of
+"variables"_variable.html.  Fix print can also output to the
+screen. :l
+
+"Restart files"_restart.html. :l,ule
+
+A simulation prints one set of statistical output and (optionally)
+restart files.  It can generate any number of dump files and fix
+output files, depending on what "dump"_dump.html and "fix"_fix.html
+commands you specify.
+
+As discussed below, SPARTA gives you a variety of ways to determine
+what quantities are computed and printed when the statistics, dump, or
+fix commands listed above perform output.  Throughout this discussion,
+note that users can also "add their own computes and fixes to
+SPARTA"_Section_modify.html which can generate values that can then be
+output with these commands.
+
+The following sub-sections discuss different SPARTA commands related
+to output and the kind of data they operate on and produce:
+
+"Global/per-particle/per-grid/per-surf data"_#global
+"Scalar/vector/array data"_#scalar
+"Statistical output"_#stat
+"Dump file output"_#dump
+"Fixes that write output files"_#fixoutput
+"Computes that generate values to output"_#compute
+"Fixes that generate values to output"_#fix
+"Variables that generate values to output"_#variable
+"Summary table of output options and data flow between commands"_#table :ul
+
+Global/per-particle/per-grid/per-surf data :h5,link(global)
+
+Various output-related commands work with four different styles of
+data: global, per-particle, per-grid, or per-surfl.  A global datum is
+one or more system-wide values, e.g. the temperature of the system.  A
+per-partile datum is one or more values per partice, e.g. the kinetic
+energy of each particle.  A per-grid datum is one or more values per
+grid cell, e.g. the temperature of the particles in the grid cell.  A
+per-surf datum is one or more values per surface element, e.g. the
+count of particles that collided with the surface element.
+
+Scalar/vector/array data :h5,link(scalar)
+
+Global, per-particle, per-grid, and per-surf datums can each come in
+three kinds: a single scalar value, a vector of values, or a 2d array
+of values.  The doc page for a "compute" or "fix" or "variable" that
+generates data will specify both the style and kind of data it
+produces, e.g. a per-grid vector.
+
+When a quantity is accessed, as in many of the output commands
+discussed below, it can be referenced via the following bracket
+notation, where ID in this case is the ID of a compute.  The leading
+"c_" would be replaced by "f_" for a fix, or "v_" for a variable:
+
+c_ID | entire scalar, vector, or array
+c_ID\[I\] | one element of vector, one column of array
+c_ID\[I\]\[J\] | one element of array :tb(s=|)
+
+In other words, using one bracket reduces the dimension of the data
+once (vector -> scalar, array -> vector).  Using two brackets reduces
+the dimension twice (array -> scalar).  Thus a command that uses
+scalar values as input can typically also process elements of a vector
+or array.
+
+Statistical output :h5,link(stats)
+
+The frequency and format of statistical output is set by the
+"stats"_stats.html, "stats_style"_stats_style.html, and
+"stats_modify"_stats_modify.html commands.  The
+"stats_style"_stats_style.html command also specifies what values are
+calculated and written out.  Pre-defined keywords can be specified
+(e.g. np, ncoll, etc).  Three additional kinds of keywords can also be
+specified (c_ID, f_ID, v_name), where a "compute"_compute.html or
+"fix"_fix.html or "variable"_variable.html provides the value to be
+output.  In each case, the compute, fix, or variable must generate
+global values for input to the "stats_style custom"_stats_style.html
+command.
+
+Dump file output :h5,link(dump)
+
+Dump file output is specified by the "dump"_dump.html and
+"dump_modify"_dump_modify.html commands.  There are several
+pre-defined formats: dump particle, dump grid, dump surf, etc.
+
+Each of these allows specification of what values are output with each
+particle, grid cell, or surface element.  Pre-defined atom attributes
+can be specified (id, x, y, z, vol, etc).  Three additional kinds of
+keywords can also be specified (c_ID, f_ID, v_name), where a
+"compute"_compute.html or "fix"_fix.html or "variable"_variable.html
+provides the values to be output.  In each case, the compute, fix, or
+variable must generate per-particle, per-grid, or per-surf values for
+input to the corresponding "dump"_dump.html command.
+
+Fixes that write output files :h5,link(fixoutput)
+
+Two fixes take various quantities as input and can write output files:
+"fix ave/time"_fix_ave_time.html and "fix print"_fix_print.html.
+
+The "fix ave/time"_fix_ave_time.html command enables direct output to
+a file and/or time-averaging of global scalars or vectors.  The user
+specifies one or more quantities as input.  These can be global
+"compute"_compute.html values, global "fix"_fix.html values, or
+"variables"_variable.html of any style except the particle, grid, surf
+styles which do not produce single values.  Since a variable can refer
+to keywords used by the "stats_style"_stats_style.html command (like
+particle count), a wide variety of quantities can be time averaged
+and/or output in this way.  If the inputs are one or more scalar
+values, then the fix generates a global scalar or vector of output.
+If the inputs are one or more vector values, then the fix generates a
+global vector or array of output.  The time-averaged output of this
+fix can also be used as input to other output commands.
+
+The "fix print"_fix_print.html command can generate a line of output
+written to the screen and log file or to a separate file, periodically
+during a running simulation.  The line can contain one or more
+"variable"_variable.html values for any style variable except the atom
+style).  As explained above, variables themselves can contain
+references to global values generated by "thermodynamic
+keywords"_thermo_style.html, "computes"_compute.html,
+"fixes"_fix.html, or other "variables"_variable.html, or to per-atom
+values for a specific atom.  Thus the "fix print"_fix_print.html
+command is a means to output a wide variety of quantities separate
+from normal thermodynamic or dump file output.
+
+Computes that generate values to output :h5,link(compute)
+
+Every "compute"_compute.html in SPARTA produces either global or
+per-atom or local values.  The values can be scalars or vectors or
+arrays of data.  These values can be output using the other commands
+described in this section.  The doc page for each compute command
+describes what it produces.  Computes that produce per-atom or local
+values have the word "atom" or "local" in their style name.  Computes
+without the word "atom" or "local" produce global values.
+
+Fixes that generate values to output :h5,link(fix)
+
+Some "fixes"_fix.html in SPARTA produces either global or per-atom or
+local values which can be accessed by other commands.  The values can
+be scalars or vectors or arrays of data.  These values can be output
+using the other commands described in this section.  The doc page for
+each fix command tells whether it produces any output quantities and
+describes them.
+
+Variables that generate values to output :h5,link(variable)
+
+Every "variables"_variable.html defined in an input script generates
+either a global scalar value or a per-atom vector (only atom-style
+variables) when it is accessed.  The formulas used to define equal-
+and atom-style variables can contain references to the thermodynamic
+keywords and to global and per-atom data generated by computes, fixes,
+and other variables.  The values generated by variables can be output
+using the other commands described in this section.
+
+Summary table of output options and data flow between commands :h5,link(table)
+
+This table summarizes the various commands that can be used for
+generating output from SPARTA.  Each command produces output data of
+some kind and/or writes data to a file.  Most of the commands can take
+data from other commands as input.  Thus you can link many of these
+commands together in pipeline form, where data produced by one command
+is used as input to another command and eventually written to the
+screen or to a file.  Note that to hook two commands together the
+output and input data types must match, e.g. global/per-atom/local
+data and scalar/vector/array data.
+
+Also note that, as described above, when a command takes a scalar as
+input, that could be an element of a vector or array.  Likewise a
+vector input could be a column of an array.
+
+Command: Input: Output:
+"stats_style"_stats_style.html: global scalars: screen, log file:
+"dump particle"_dump.html: per-atom vectors: dump file:
+"dump grid"_dump.html: per-atom vectors: dump file:
+"dump surf"_dump.html: per-atom vectors: dump file:
+"fix ave/time"_fix_ave_time.html: global scalars/vectors: global scalar/vector/array, file:
+"fix ave/grid"_fix_print.html: global scalar from variable: per-grid vector, array:
+"fix ave/surf"_fix_print.html: global scalar from variable: per-surf vector, array:
+"fix print"_fix_print.html: global scalar from variable: screen, file:
+"print"_print.html: global scalar from variable: screen:
+"computes"_compute.html: N/A: global/per-atom/local scalar/vector/array:
+"fixes"_fix.html: N/A: global/per-atom/local scalar/vector/array:
+"variables"_variable.html: global scalars, per-atom vectors: global scalar, per-atom vector:
+:tb(s=:)
+
+:line
+
+4.5 Visualizing SPARTA snapshots :link(howto_5),h4
+
+SPARTA itself does not do visualization, but snapshots from SPARTA
+simulations can be visualized (and analyzed) in a variety of ways.
+
+SPARTA snapshots are created by the "dump"_dump.html command which can
+create files in several formats.  The native SPARTA dump format is a
+text file (see "dump atom" or "dump custom") which can be visualized
+by the "xmovie"_Section_tools.html#xmovie program, included with the
+SPARTA package.  This produces simple, fast 2d projections of 3d
+systems, and can be useful for rapid debugging of simulation geometry
+and atom trajectories.
+
+Several programs included with SPARTA as auxiliary tools can convert
+native SPARTA dump files to other formats.  See the
+"Section_tools"_Section_tools.html doc page for details.  The first is
+the "ch2lmp tool"_Section_tools.html#charmm, which contains a
+sparta2pdb Perl script which converts SPARTA dump files into PDB
+files.  The second is the "lmp2arc tool"_Section_tools.html#arc which
+converts SPARTA dump files into Accelrys' Insight MD program files.
+The third is the "lmp2cfg tool"_Section_tools.html#cfg which converts
+SPARTA dump files into CFG files which can be read into the
+"AtomEye"_atomeye visualizer.
+
+A Python-based toolkit distributed by our group can read native SPARTA
+dump files, including custom dump files with additional columns of
+user-specified atom information, and convert them to various formats
+or pipe them into visualization software directly.  See the "Pizza.py
+WWW site"_pizza for details.  Specifically, Pizza.py can convert
+SPARTA dump files into PDB, XYZ, "Ensight"_ensight, and VTK formats.
+Pizza.py can pipe SPARTA dump files directly into the Raster3d and
+RasMol visualization programs.  Pizza.py has tools that do interactive
+3d OpenGL visualization and one that creates SVG images of dump file
+snapshots.
+
+:link(pizza,http://www.sandia.gov/~sjplimp/pizza.html)
+:link(vmd,http://www.ks.uiuc.edu/Research/vmd)
+:link(ensight,http://www.ensight.com)
+
+:line
+
+4.6 Library interface to SPARTA :link(howto_6),h4
+
+As described in "this section"_Section_start.html#start_5, SPARTA
+can be built as a library, so that it can be called by another code,
+used in a "coupled manner"_Section_howto.html#howto_10 with other
+codes, or driven through a "Python interface"_Section_python.html.
+
+All of these methodologies use a C-style interface to SPARTA that is
+provided in the files src/library.cpp and src/library.h.  The
+functions therein have a C-style argument list, but contain C++ code
+you could write yourself in a C++ application that was invoking SPARTA
+directly.  The C++ code in the functions illustrates how to invoke
+internal SPARTA operations.  Note that SPARTA classes are defined
+within a SPARTA namespace (SPARTA_NS) if you use them from another C++
+application.
+
+Library.cpp contains these 4 functions:
+
+void sparta_open(int, char **, MPI_Comm, void **);
+void sparta_close(void *);
+void sparta_file(void *, char *);
+char *sparta_command(void *, char *); :pre
+
+The sparta_open() function is used to initialize SPARTA, passing in a
+list of strings as if they were "command-line
+arguments"_Section_start.html#start_7 when SPARTA is run in
+stand-alone mode from the command line, and a MPI communicator for
+SPARTA to run under.  It returns a ptr to the SPARTA object that is
+created, and which is used in subsequent library calls.  The
+sparta_open() function can be called multiple times, to create
+multiple instances of SPARTA.
+
+SPARTA will run on the set of processors in the communicator.  This
+means the calling code can run SPARTA on all or a subset of
+processors.  For example, a wrapper script might decide to alternate
+between SPARTA and another code, allowing them both to run on all the
+processors.  Or it might allocate half the processors to SPARTA and
+half to the other code and run both codes simultaneously before
+syncing them up periodically.  Or it might instantiate multiple
+instances of SPARTA to perform different calculations.
+
+The sparta_close() function is used to shut down an instance of SPARTA
+and free all its memory.
+
+The sparta_file() and sparta_command() functions are used to pass a
+file or string to SPARTA as if it were an input script or single
+command in an input script.  Thus the calling code can read or
+generate a series of SPARTA commands one line at a time and pass it
+thru the library interface to setup a problem and then run it,
+interleaving the sparta_command() calls with other calls to extract
+information from SPARTA, perform its own operations, or call another
+code's library.
+
+Other functions may be added to the library interface as needed to
+allow reading from or writing to internal SPARTA data structures. 
+
+The key idea of the library interface is that you can write any
+functions you wish to define how your code talks to SPARTA and add
+them to src/library.cpp and src/library.h, as well as to the "Python
+interface"_Section_python.html.  The routines you add can in principle
+access or change any SPARTA data you wish.  The examples/COUPLE and
+python directories have example C++ and C and Python codes which show
+how a driver code can link to SPARTA as a library, run SPARTA on a
+subset of processors, grab data from SPARTA, change it, and put it
+back into SPARTA.
+
+:line
+
+4.7 Coupling SPARTA to other codes :link(howto_7),h4
+
+SPARTA is designed to allow it to be coupled to other codes.  For
+example, a quantum mechanics code might compute forces on a subset of
+atoms and pass those forces to SPARTA.  Or a continuum finite element
+(FE) simulation might use atom positions as boundary conditions on FE
+nodal points, compute a FE solution, and return interpolated forces on
+MD atoms.
+
+SPARTA can be coupled to other codes in at least 3 ways.  Each has
+advantages and disadvantages, which you'll have to think about in the
+context of your application.
+
+(1) Define a new "fix"_fix.html command that calls the other code.  In
+this scenario, SPARTA is the driver code.  During its timestepping,
+the fix is invoked, and can make library calls to the other code,
+which has been linked to SPARTA as a library.  This is the way the
+"POEMS"_poems package that performs constrained rigid-body motion on
+groups of atoms is hooked to SPARTA.  See the
+"fix_poems"_fix_poems.html command for more details.  See "this
+section"_Section_modify.html of the documentation for info on how to add
+a new fix to SPARTA.
+
+:link(poems,http://www.rpi.edu/~anderk5/lab)
+
+(2) Define a new SPARTA command that calls the other code.  This is
+conceptually similar to method (1), but in this case SPARTA and the
+other code are on a more equal footing.  Note that now the other code
+is not called during the timestepping of a SPARTA run, but between
+runs.  The SPARTA input script can be used to alternate SPARTA runs
+with calls to the other code, invoked via the new command.  The
+"run"_run.html command facilitates this with its {every} option, which
+makes it easy to run a few steps, invoke the command, run a few steps,
+invoke the command, etc.
+
+In this scenario, the other code can be called as a library, as in
+(1), or it could be a stand-alone code, invoked by a system() call
+made by the command (assuming your parallel machine allows one or more
+processors to start up another program).  In the latter case the
+stand-alone code could communicate with SPARTA thru files that the
+command writes and reads.
+
+See "Section_modify"_Section_modify.html of the documentation for how
+to add a new command to SPARTA.
+
+(3) Use SPARTA as a library called by another code.  In this case the
+other code is the driver and calls SPARTA as needed.  Or a wrapper
+code could link and call both SPARTA and another code as libraries.
+Again, the "run"_run.html command has options that allow it to be
+invoked with minimal overhead (no setup or clean-up) if you wish to do
+multiple short runs, driven by another program.
+
+Examples of driver codes that call SPARTA as a library are included in
+the examples/COUPLE directory of the SPARTA distribution; see
+examples/COUPLE/README for more details:
+
+simple: simple driver programs in C++ and C which invoke SPARTA as a
+library :ulb,l
+
+sparta_quest: coupling of SPARTA and "Quest"_quest, to run classical
+MD with quantum forces calculated by a density functional code :l
+
+sparta_spparks: coupling of SPARTA and "SPPARKS"_spparks, to couple
+a kinetic Monte Carlo model for grain growth using MD to calculate
+strain induced across grain boundaries :l,ule
+
+:link(quest,http://dft.sandia.gov/Quest)
+:link(spparks,http://www.sandia.gov/~sjplimp/spparks.html)
+
+"This section"_Section_start.html#start_5 of the documentation
+describes how to build SPARTA as a library.  Once this is done, you
+can interface with SPARTA either via C++, C, Fortran, or Python (or
+any other language that supports a vanilla C-like interface).  For
+example, from C++ you could create one (or more) "instances" of
+SPARTA, pass it an input script to process, or execute individual
+commands, all by invoking the correct class methods in SPARTA.  From C
+or Fortran you can make function calls to do the same things.  See
+"Section_python"_Section_python.html of the manual for a description
+of the Python wrapper provided with SPARTA that operates through the
+SPARTA library interface.
+
+The files src/library.cpp and library.h contain the C-style interface
+to SPARTA.  See "Section_howto 19"_Section_howto.html#howto_19 of the
+manual for a description of the interface and how to extend it for
+your needs.
+
+Note that the sparta_open() function that creates an instance of
+SPARTA takes an MPI communicator as an argument.  This means that
+instance of SPARTA will run on the set of processors in the
+communicator.  Thus the calling code can run SPARTA on all or a subset
+of processors.  For example, a wrapper script might decide to
+alternate between SPARTA and another code, allowing them both to run
+on all the processors.  Or it might allocate half the processors to
+SPARTA and half to the other code and run both codes simultaneously
+before syncing them up periodically.  Or it might instantiate multiple
+instances of SPARTA to perform different calculations.
+

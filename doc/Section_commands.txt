@@ -46,24 +46,15 @@ run      100
 timestep 0.5 
 run      100 :pre
 
-In the first case, the specified timestep (0.5 fmsec) is used for two
+In the first case, the specified timestep (0.5 secs) is used for two
 simulations of 100 timesteps each.  In the 2nd case, the default
-timestep (1.0 fmsec) is used for the 1st 100 step simulation and a 0.5
+timestep (1.0 sec is used for the 1st 100 step simulation and a 0.5
 fmsec timestep is used for the 2nd one.
 
 (2) Some commands are only valid when they follow other commands.  For
-example you cannot set the temperature of a group of atoms until atoms
-have been defined and a group command is used to define which atoms
-belong to the group.
-
-(3) Sometimes command B will use values that can be set by command A.
-This means command A must precede command B in the input script if it
-is to have the desired effect.  For example, the
-"read_data"_read_data.html command initializes the system by setting
-up the simulation box and assigning atoms to processors.  If default
-values are not desired, the "processors"_processors.html and
-"boundary"_boundary.html commands need to be used before read_data to
-tell SPARTA how to map processors to the simulation box.
+example you cannot define the grid overlaying the simulation box until
+the box itself has been defined.  Likewise you cannot read in
+triangulated surfaces until a grid has been defined to store them.
 
 Many input script errors are detected by SPARTA and an ERROR or
 WARNING message is printed.  "This section"_Section_errors.html gives
@@ -117,7 +108,7 @@ print "Volume = $v"
 print 'Volume = $v' :pre
 
 The quotes are removed when the single argument is stored internally.
-See the "dump modify format"_dump_modify.html or "if"_if.html commands
+See the "dump_modify format"_dump_modify.html or "if"_if.html commands
 for examples.  A "#" or "$" character that is between quotes will not
 be treated as a comment indicator in (2) or substituted for as a
 variable in (3).
@@ -134,9 +125,9 @@ allowed, but that should be sufficient for most use cases.
 3.3 Input script structure :h4,link(cmd_3)
 
 This section describes the structure of a typical SPARTA input script.
-The "examples" directory in the SPARTA distribution contains many
-sample input scripts; the corresponding problems are discussed in
-"this section"_Section_example.html, and animated on the "SPARTA WWW
+The "examples" directory in the SPARTA distribution contains sample
+input scripts; the corresponding problems are discussed in "this
+section"_Section_example.html, and animated on the "SPARTA WWW
 Site"_sws.
 
 A SPARTA input script typically has 4 parts:
@@ -148,33 +139,53 @@ Run a simulation :ol
 
 The last 2 parts can be repeated as many times as desired.  I.e. run a
 simulation, change some settings, run some more, etc.  Each of the 4
-parts is now described in more detail.  Remember that almost all the
+parts is now described in more detail.  Remember that most of the
 commands need only be used if a non-default value is desired.
 
 (1) Initialization
 
-Set parameters that need to be defined before atoms are created or
-read-in from a file.
+Set parameters that need to be defined before the simulation domain,
+particles, grid cells, surfaces are defined.
 
-The relevant commands are "dimension"_dimension.html
+Relevant commands include "dimension"_dimension.html,
+"units"_units.html, and "seed"_seed.html.
 
 (2) Problem definition
 
-These items must be setup to run a SPARTA calculation:
+These items must be defined before running a SPARTA calculation, and
+typically in this order:
 
-simulation box via "create_box"_create_box.html
-grid via "create_grid"_create_grid.html
-particles via "create_particles"_create_particles.html :ul
+"create_box"_create_box.html for the simulation box
+"create_grid"_create_grid.html or "read_grid"_read_grid.html for grid cells
+"read_surf"_read_surf.html for surfaces
+"species"_species.html for particle species properties
+"create_particles"_create_particles.html for particles :ul
+
+The first 2 are required.  Surfaces are optional.  Particles are also
+optional in the setup stage, since they can be added as the simulation
+runs.
+
+The system can also be load-balanced after the grid and/or particles
+are defined in the setup stage using the
+"balance_grid"_balance_grid.html command.
 
 (3) Settings
 
-Once particles and the grid are defined, a variety of settings can be
-specified: simulation parameters, output options, etc.
+Once the problem geometry, grid cells, surfaces, and particles are
+defined, a variety of settings can be specified: simulation
+parameters, output options, etc.
 
-Various simulation parameters are set by these commands:
+Commands that do this include 
+
+"global"_global.html
 "timestep"_timestep.html
-
-Output is set by these commands:
+"collide"_collide.html for a collision model
+"react"_react.html for a chemical reaction model
+"fix"_fix.html for boundary conditions, time-averaging, load-balancing, etc
+"compute"_compute.html for diagnostic computations
+"stats_style"_stats_style.html for screen output
+"dump"_dump.html for snapshots of particle, grid, and surface info
+"dump image"_dump.html for on-the-fly images of the simulation
 
 (4) Run a simulation
 
@@ -184,9 +195,9 @@ A simulation is run using the "run"_run.html command.
 
 3.4 Commands listed by category :link(cmd_4),h4
 
-This section lists all SPARTA commands, grouped by category.  The
-"next section"_#cmd_5 lists the same commands alphabetically.  Note
-that some style options for some commands are part of specific SPARTA
+This section lists SPARTA commands, grouped by category.  The "next
+section"_#cmd_5 lists the same commands alphabetically.  Note that
+some style options for some commands are part of specific SPARTA
 packages, which means they cannot be used unless the package was
 included when SPARTA was built.  Not all packages are included in a
 default SPARTA build.  These dependencies are listed as Restrictions
@@ -194,27 +205,41 @@ in the command's documentation.
 
 Initialization:
 
-"dimension"_dimension.html
+"dimension"_dimension.html, "seed"_seed.html, "units"_units.html
 
 Problem definition:
 
+"boundary"_boundary.html, "bound_modify"_bound_modify.html,
 "create_box"_create_box.html, "create_grid"_create_grid.html,
-"create_particles"_create_particles.html, "species"_species.html
+"create_particles"_create_particles.html, "mixture"_mixture.html,
+"read_grid"_read_grid.html, "read_surf"_read_surf.html,
+"species"_species.html, "surf_collide"_surf_collide.html
 
 Settings:
 
-"timestep"_timestep.html, "velocity"_velocity.html
+"collide"_collide.html, "collide_modify"_collide_modify.html,
+"compute"_compute.html, "fix"_fix.html, "global"_global.html,
+"react"_react.html, "region"_region.html, "timestep"_timestep.html,
+"uncompute"_uncompute.html, "unfix"_unfix.html
+
+Output:
+
+"dump"_dump.html, "dump_image"_dump_image.html,
+"dump_modify"_dump_modify.html, "stats"_stats.html,
+"stats_modify"_stats_modify.html, "stats_style"_stats_style.html,
+"undump"_undump.html, "write_grid"_write_grid.html
 
 Actions:
 
-"run"_run.html
+"balance_grid"_balance_grid.html,  "run"_run.html
 
 Miscellaneous:
 
 "clear"_clear.html, "echo"_echo.html, "if"_if.html,
 "include"_include.html, "jump"_jump.html, "label"_label.html,
-"log"_log.html, "next"_next.html, "print"_print.html,
-"shell"_shell.html, "variable"_variable.html
+"log"_log.html, "next"_next.html, "partition"_partition,html,
+"print"_print.html, "quit"_quit.html, "shell"_shell.html,
+"variable"_variable.html
 
 :line
 
@@ -222,12 +247,7 @@ Miscellaneous:
 
 This section lists all SPARTA commands alphabetically, with a separate
 listing below of styles within certain commands.  The "previous
-section"_#cmd_4 lists the same commands, grouped by category.  Note
-that some style options for some commands are part of specific SPARTA
-packages, which means they cannot be used unless the package was
-included when SPARTA was built.  Not all packages are included in a
-default SPARTA build.  These dependencies are listed as Restrictions
-in the command's documentation.
+section"_#cmd_4 lists the same commands, grouped by category.
 
 "balance_grid"_balance_grid.html,
 "boundary"_boundary.html,

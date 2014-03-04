@@ -49,24 +49,15 @@ run      100
 timestep 0.5 
 run      100 
 </PRE>
-<P>In the first case, the specified timestep (0.5 fmsec) is used for two
+<P>In the first case, the specified timestep (0.5 secs) is used for two
 simulations of 100 timesteps each.  In the 2nd case, the default
-timestep (1.0 fmsec) is used for the 1st 100 step simulation and a 0.5
+timestep (1.0 sec is used for the 1st 100 step simulation and a 0.5
 fmsec timestep is used for the 2nd one.
 </P>
 <P>(2) Some commands are only valid when they follow other commands.  For
-example you cannot set the temperature of a group of atoms until atoms
-have been defined and a group command is used to define which atoms
-belong to the group.
-</P>
-<P>(3) Sometimes command B will use values that can be set by command A.
-This means command A must precede command B in the input script if it
-is to have the desired effect.  For example, the
-<A HREF = "read_data.html">read_data</A> command initializes the system by setting
-up the simulation box and assigning atoms to processors.  If default
-values are not desired, the <A HREF = "processors.html">processors</A> and
-<A HREF = "boundary.html">boundary</A> commands need to be used before read_data to
-tell SPARTA how to map processors to the simulation box.
+example you cannot define the grid overlaying the simulation box until
+the box itself has been defined.  Likewise you cannot read in
+triangulated surfaces until a grid has been defined to store them.
 </P>
 <P>Many input script errors are detected by SPARTA and an ERROR or
 WARNING message is printed.  <A HREF = "Section_errors.html">This section</A> gives
@@ -120,7 +111,7 @@ it can be enclosed in either double or single quotes.  E.g.
 print 'Volume = $v' 
 </PRE>
 <P>The quotes are removed when the single argument is stored internally.
-See the <A HREF = "dump_modify.html">dump modify format</A> or <A HREF = "if.html">if</A> commands
+See the <A HREF = "dump_modify.html">dump_modify format</A> or <A HREF = "if.html">if</A> commands
 for examples.  A "#" or "$" character that is between quotes will not
 be treated as a comment indicator in (2) or substituted for as a
 variable in (3).
@@ -137,9 +128,9 @@ allowed, but that should be sufficient for most use cases.
 <H4><A NAME = "cmd_3"></A>3.3 Input script structure 
 </H4>
 <P>This section describes the structure of a typical SPARTA input script.
-The "examples" directory in the SPARTA distribution contains many
-sample input scripts; the corresponding problems are discussed in
-<A HREF = "Section_example.html">this section</A>, and animated on the <A HREF = "http://sparta.sandia.gov">SPARTA WWW
+The "examples" directory in the SPARTA distribution contains sample
+input scripts; the corresponding problems are discussed in <A HREF = "Section_example.html">this
+section</A>, and animated on the <A HREF = "http://sparta.sandia.gov">SPARTA WWW
 Site</A>.
 </P>
 <P>A SPARTA input script typically has 4 parts:
@@ -151,33 +142,53 @@ Site</A>.
 </OL>
 <P>The last 2 parts can be repeated as many times as desired.  I.e. run a
 simulation, change some settings, run some more, etc.  Each of the 4
-parts is now described in more detail.  Remember that almost all the
+parts is now described in more detail.  Remember that most of the
 commands need only be used if a non-default value is desired.
 </P>
 <P>(1) Initialization
 </P>
-<P>Set parameters that need to be defined before atoms are created or
-read-in from a file.
+<P>Set parameters that need to be defined before the simulation domain,
+particles, grid cells, surfaces are defined.
 </P>
-<P>The relevant commands are <A HREF = "dimension.html">dimension</A>
+<P>Relevant commands include <A HREF = "dimension.html">dimension</A>,
+<A HREF = "units.html">units</A>, and <A HREF = "seed.html">seed</A>.
 </P>
 <P>(2) Problem definition
 </P>
-<P>These items must be setup to run a SPARTA calculation:
+<P>These items must be defined before running a SPARTA calculation, and
+typically in this order:
 </P>
-<UL><LI>simulation box via <A HREF = "create_box.html">create_box</A>
-<LI>grid via <A HREF = "create_grid.html">create_grid</A>
-<LI>particles via <A HREF = "create_particles.html">create_particles</A> 
+<UL><LI><A HREF = "create_box.html">create_box</A> for the simulation box
+<LI><A HREF = "create_grid.html">create_grid</A> or <A HREF = "read_grid.html">read_grid</A> for grid cells
+<LI><A HREF = "read_surf.html">read_surf</A> for surfaces
+<LI><A HREF = "species.html">species</A> for particle species properties
+<LI><A HREF = "create_particles.html">create_particles</A> for particles 
 </UL>
+<P>The first 2 are required.  Surfaces are optional.  Particles are also
+optional in the setup stage, since they can be added as the simulation
+runs.
+</P>
+<P>The system can also be load-balanced after the grid and/or particles
+are defined in the setup stage using the
+<A HREF = "balance_grid.html">balance_grid</A> command.
+</P>
 <P>(3) Settings
 </P>
-<P>Once particles and the grid are defined, a variety of settings can be
-specified: simulation parameters, output options, etc.
+<P>Once the problem geometry, grid cells, surfaces, and particles are
+defined, a variety of settings can be specified: simulation
+parameters, output options, etc.
 </P>
-<P>Various simulation parameters are set by these commands:
+<P>Commands that do this include 
+</P>
+<P><A HREF = "global.html">global</A>
 <A HREF = "timestep.html">timestep</A>
-</P>
-<P>Output is set by these commands:
+<A HREF = "collide.html">collide</A> for a collision model
+<A HREF = "react.html">react</A> for a chemical reaction model
+<A HREF = "fix.html">fix</A> for boundary conditions, time-averaging, load-balancing, etc
+<A HREF = "compute.html">compute</A> for diagnostic computations
+<A HREF = "stats_style.html">stats_style</A> for screen output
+<A HREF = "dump.html">dump</A> for snapshots of particle, grid, and surface info
+<A HREF = "dump.html">dump image</A> for on-the-fly images of the simulation
 </P>
 <P>(4) Run a simulation
 </P>
@@ -187,9 +198,9 @@ specified: simulation parameters, output options, etc.
 
 <A NAME = "cmd_4"></A><H4>3.4 Commands listed by category 
 </H4>
-<P>This section lists all SPARTA commands, grouped by category.  The
-<A HREF = "#cmd_5">next section</A> lists the same commands alphabetically.  Note
-that some style options for some commands are part of specific SPARTA
+<P>This section lists SPARTA commands, grouped by category.  The <A HREF = "#cmd_5">next
+section</A> lists the same commands alphabetically.  Note that
+some style options for some commands are part of specific SPARTA
 packages, which means they cannot be used unless the package was
 included when SPARTA was built.  Not all packages are included in a
 default SPARTA build.  These dependencies are listed as Restrictions
@@ -197,27 +208,41 @@ in the command's documentation.
 </P>
 <P>Initialization:
 </P>
-<P><A HREF = "dimension.html">dimension</A>
+<P><A HREF = "dimension.html">dimension</A>, <A HREF = "seed.html">seed</A>, <A HREF = "units.html">units</A>
 </P>
 <P>Problem definition:
 </P>
-<P><A HREF = "create_box.html">create_box</A>, <A HREF = "create_grid.html">create_grid</A>,
-<A HREF = "create_particles.html">create_particles</A>, <A HREF = "species.html">species</A>
+<P><A HREF = "boundary.html">boundary</A>, <A HREF = "bound_modify.html">bound_modify</A>,
+<A HREF = "create_box.html">create_box</A>, <A HREF = "create_grid.html">create_grid</A>,
+<A HREF = "create_particles.html">create_particles</A>, <A HREF = "mixture.html">mixture</A>,
+<A HREF = "read_grid.html">read_grid</A>, <A HREF = "read_surf.html">read_surf</A>,
+<A HREF = "species.html">species</A>, <A HREF = "surf_collide.html">surf_collide</A>
 </P>
 <P>Settings:
 </P>
-<P><A HREF = "timestep.html">timestep</A>, <A HREF = "velocity.html">velocity</A>
+<P><A HREF = "collide.html">collide</A>, <A HREF = "collide_modify.html">collide_modify</A>,
+<A HREF = "compute.html">compute</A>, <A HREF = "fix.html">fix</A>, <A HREF = "global.html">global</A>,
+<A HREF = "react.html">react</A>, <A HREF = "region.html">region</A>, <A HREF = "timestep.html">timestep</A>,
+<A HREF = "uncompute.html">uncompute</A>, <A HREF = "unfix.html">unfix</A>
+</P>
+<P>Output:
+</P>
+<P><A HREF = "dump.html">dump</A>, <A HREF = "dump_image.html">dump_image</A>,
+<A HREF = "dump_modify.html">dump_modify</A>, <A HREF = "stats.html">stats</A>,
+<A HREF = "stats_modify.html">stats_modify</A>, <A HREF = "stats_style.html">stats_style</A>,
+<A HREF = "undump.html">undump</A>, <A HREF = "write_grid.html">write_grid</A>
 </P>
 <P>Actions:
 </P>
-<P><A HREF = "run.html">run</A>
+<P><A HREF = "balance_grid.html">balance_grid</A>,  <A HREF = "run.html">run</A>
 </P>
 <P>Miscellaneous:
 </P>
 <P><A HREF = "clear.html">clear</A>, <A HREF = "echo.html">echo</A>, <A HREF = "if.html">if</A>,
 <A HREF = "include.html">include</A>, <A HREF = "jump.html">jump</A>, <A HREF = "label.html">label</A>,
-<A HREF = "log.html">log</A>, <A HREF = "next.html">next</A>, <A HREF = "print.html">print</A>,
-<A HREF = "shell.html">shell</A>, <A HREF = "variable.html">variable</A>
+<A HREF = "log.html">log</A>, <A HREF = "next.html">next</A>, <A HREF = "partition,html">partition</A>,
+<A HREF = "print.html">print</A>, <A HREF = "quit.html">quit</A>, <A HREF = "shell.html">shell</A>,
+<A HREF = "variable.html">variable</A>
 </P>
 <HR>
 
@@ -225,12 +250,7 @@ in the command's documentation.
 </H4>
 <P>This section lists all SPARTA commands alphabetically, with a separate
 listing below of styles within certain commands.  The <A HREF = "#cmd_4">previous
-section</A> lists the same commands, grouped by category.  Note
-that some style options for some commands are part of specific SPARTA
-packages, which means they cannot be used unless the package was
-included when SPARTA was built.  Not all packages are included in a
-default SPARTA build.  These dependencies are listed as Restrictions
-in the command's documentation.
+section</A> lists the same commands, grouped by category.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR ALIGN="center"><TD ><A HREF = "balance_grid.html">balance_grid</A></TD><TD ><A HREF = "boundary.html">boundary</A></TD><TD ><A HREF = "bound_modify.html">bound_modify</A></TD><TD ><A HREF = "clear.html">clear</A></TD><TD ><A HREF = "collide.html">collide</A></TD><TD ><A HREF = "collide.html">collide</A></TD></TR>
