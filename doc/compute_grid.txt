@@ -148,11 +148,11 @@ options.
 
 The per-grid array values will be in the "units"_units.html
 appropriate to the individual values as described above.  {N} is
-unitless.  {Ndensity) is in 1/distance^3 units for 3d simulations and
-1/distance^2 units for 2d simulations..  {Mass} is in mass units.
-{U}, {v}, and {w} are in velocity units.  {Usq}, {vsq}, and {wsq} are
-in velocity squared units.  {Ke} and {Erot} are in energy units.
-{Temp} and {Trot} are in temperature units.
+unitless.  {Ndensity} is in 1/distance^3 units for 3d simulations and
+1/distance^2 units for 2d simulations.  {Mass} is in mass units.  {U},
+{v}, and {w} are in velocity units.  {Usq}, {vsq}, and {wsq} are in
+velocity squared units.  {Ke} and {Erot} are in energy units.  {Temp}
+and {Trot} are in temperature units.
 
 [Restrictions:] none
 
