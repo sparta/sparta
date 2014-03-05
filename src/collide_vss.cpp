@@ -208,17 +208,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
 
-/* 
-  double *vi = ip->v;
-  double *vj = jp->v;
-
-  double du  = vi[0] - vj[0];
-  double dv  = vi[1] - vj[1];
-  double dw  = vi[2] - vj[2];
-
-  precoln.vr2 = du*du + dv*dv + dw*dw;
   precoln.vr = sqrt(precoln.vr2);
-*/
+
   precoln.rotdof_i = species[isp].rotdof;
   precoln.rotdof_j = species[jsp].rotdof;
 

@@ -258,6 +258,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
   double react_prob = 0.0;
   double random_prob = random->uniform(); 
+
   // loop over possible reactions for these 2 species
 
   for (int i = 0; i < n; i++) {
