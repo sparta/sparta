@@ -691,7 +691,7 @@ void RCB::invert()
     (Invert *) memory->smalloc(nrecv*sizeof(Invert),"RCB:rinvert");
   irregular->exchange_uniform((char *) sinvert,sizeof(Invert),
                               (char *) rinvert);
-  
+
   // set public variables from requests to send my dots
 
   if (noriginal > maxsend) {

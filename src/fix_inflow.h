@@ -52,6 +52,7 @@ class FixInflow : public Fix {
     double normal[3];           // inward normal from external boundary
     double ntarget;             // # of mols to insert for all species
     double *ntargetsp;          // # of mols to insert for each species
+    cellint id;                 // ID of cell with insertion face
     int pcell;                  // associated cell index for particles
                                 // unsplit or sub cell (not split cell)
     int icell;                  // associated cell index, unsplit or split cell

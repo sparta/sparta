@@ -58,11 +58,10 @@ Cut3d::~Cut3d()
 }
 
 /* ----------------------------------------------------------------------
-   compute intersections of surfs with grid cells
-   for now, each proc computes for all cells
-   done via 2 loops, one to count intersections, one to populate csurfs
-   sets nsurf,csurfs for every grid cell with indices into global surf list
-   also allocates csplits for every grid cell
+   compute intersections of a grid cell with all surfs
+   csurfs = indices into global surf list
+   return nsurf = # of surfs
+   return -1 if nsurf > max
 ------------------------------------------------------------------------- */
 
 int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,

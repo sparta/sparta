@@ -46,10 +46,13 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
 #define MAXSTUCK 20
 
-//#define MOVE_DEBUG 1            // un-comment to debug motion of one particle
-#define MOVE_DEBUG_PROC 0       // owning proc
-#define MOVE_DEBUG_PARTICLE 824902   // particle index on owning proc (could use ID)
-#define MOVE_DEBUG_STEP 3      // timestep
+// either set ID or PROC/INDEX, set other to -1
+
+//#define MOVE_DEBUG 1              // un-comment to debug one particle
+#define MOVE_DEBUG_ID 1010784267  // particle ID
+#define MOVE_DEBUG_PROC -1        // owning proc
+#define MOVE_DEBUG_INDEX 13       // particle index on owning proc
+#define MOVE_DEBUG_STEP 207       // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -370,22 +373,24 @@ template < int DIM, int SURF > void Update::move()
 #ifdef MOVE_DEBUG
         if (DIM == 3) {
           if (ntimestep == MOVE_DEBUG_STEP && 
-              i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC) 
-            printf("PARTICLE %d %ld: %d %d: %g %g %g: %g %g %g: %d " 
-                   CELLINT_FORMAT ": %g %g %g: %g %g %g\n",
-                   MOVE_DEBUG_PARTICLE,
-                   update->ntimestep,i,cells[icell].nsurf,
+              (MOVE_DEBUG_ID == particles[i].id ||
+               (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
+            printf("PARTICLE %d %ld: %d %d: %d: x %g %g %g: xnew %g %g %g: %d " 
+                   CELLINT_FORMAT ": lo %g %g %g: hi %g %g %g\n",
+                   me,update->ntimestep,i,particles[i].id,
+                   cells[icell].nsurf,
                    x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
                    icell,cells[icell].id,
                    lo[0],lo[1],lo[2],hi[0],hi[1],hi[2]);
         }
         if (DIM == 2) {
           if (ntimestep == MOVE_DEBUG_STEP && 
-              i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC) 
-            printf("PARTICLE %d %ld: %d %d: %g %g: %g %g: %d "
-                   CELLINT_FORMAT ": %g %g: %g %g\n",
-                   MOVE_DEBUG_PARTICLE,
-                   update->ntimestep,i,cells[icell].nsurf,
+              (MOVE_DEBUG_ID == particles[i].id ||
+               (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
+            printf("PARTICLE %d %ld: %d %d: %d: x %g %g: xnew %g %g: %d "
+                   CELLINT_FORMAT ": lo %g %g: hi %g %g\n",
+                   me,update->ntimestep,i,particles[i].id,
+                   cells[icell].nsurf,
                    x[0],x[1],xnew[0],xnew[1],
                    icell,cells[icell].id,
                    lo[0],lo[1],hi[0],hi[1]);
@@ -444,9 +449,11 @@ template < int DIM, int SURF > void Update::move()
 
 #ifdef MOVE_DEBUG
         if (ntimestep == MOVE_DEBUG_STEP && 
-            i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC) {
+            (MOVE_DEBUG_ID == particles[i].id ||
+             (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) {
           if (outface != INTERIOR)
-            printf("  OUT CHECK %d out %d\n",outface,neigh[outface]);
+            printf("  OUT CHECK %d out: %d %d\n",
+                   outface,grid->neigh_decode(nmask,outface),neigh[outface]);
           else 
             printf("  INT CHECK %d %d\n",outface,INTERIOR);
         }
@@ -511,13 +518,14 @@ template < int DIM, int SURF > void Update::move()
 #ifdef MOVE_DEBUG
               if (DIM == 3) {
                 if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
-                    i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC)
+                    (MOVE_DEBUG_ID == particles[i].id ||
+                     (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
                   printf("SURF COLLIDE: %d %d %d %d: "
                          "P1 %g %g %g: P2 %g %g %g: "
                          "T1 %g %g %g: T2 %g %g %g: T3 %g %g %g: "
                          "TN %g %g %g: XC %g %g %g: "
                          "Param %g: Side %d: DTR %g\n",
-                         MOVE_DEBUG_PARTICLE,icell,nsurf,isurf,
+                         MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
                          pts[tri->p1].x[0],pts[tri->p1].x[1],pts[tri->p1].x[2],
                          pts[tri->p2].x[0],pts[tri->p2].x[1],pts[tri->p2].x[2],
@@ -528,12 +536,12 @@ template < int DIM, int SURF > void Update::move()
               }
               if (DIM == 2) {
                 if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
-                    i == MOVE_DEBUG_PARTICLE &&
-                    me == MOVE_DEBUG_PROC)
+                    (MOVE_DEBUG_ID == particles[i].id ||
+                     (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
                   printf("SURF COLLIDE: %d %d %d %d: P1 %g %g: P2 %g %g: "
                          "L1 %g %g: L2 %g %g: LN %g %g: XC %g %g: "
                          "Param %g: Side %d: DTR %g\n",
-                         MOVE_DEBUG_PARTICLE,icell,nsurf,isurf,
+                         MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],xnew[0],xnew[1],
                          pts[line->p1].x[0],pts[line->p1].x[1],
                          pts[line->p2].x[0],pts[line->p2].x[1],
@@ -602,17 +610,19 @@ template < int DIM, int SURF > void Update::move()
 #ifdef MOVE_DEBUG
               if (DIM == 3) {
                 if (ntimestep == MOVE_DEBUG_STEP && 
-                    i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC)
+                    (MOVE_DEBUG_ID == particles[i].id ||
+                     (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
                   printf("POST COLLISION %d: %g %g %g: %g %g %g: %g %g %g\n",
-                         MOVE_DEBUG_PARTICLE,
+                         MOVE_DEBUG_INDEX,
                          x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
                          minparam,frac,dtremain);
               }
               if (DIM == 2) {
                 if (ntimestep == MOVE_DEBUG_STEP && 
-                    i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC)
+                    (MOVE_DEBUG_ID == particles[i].id ||
+                     (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
                   printf("POST COLLISION %d: %g %g: %g %g: %g %g %g\n",
-                         MOVE_DEBUG_PARTICLE,
+                         MOVE_DEBUG_INDEX,
                          x[0],x[1],xnew[0],xnew[1],
                          minparam,frac,dtremain);
               }
@@ -794,9 +804,10 @@ template < int DIM, int SURF > void Update::move()
 
 #ifdef MOVE_DEBUG
       if (ntimestep == MOVE_DEBUG_STEP && 
-          i == MOVE_DEBUG_PARTICLE && me == MOVE_DEBUG_PROC)
+          (MOVE_DEBUG_ID == particles[i].id ||
+           (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
         printf("MOVE DONE %d %d %d: %g %g %g: %g\n",
-               MOVE_DEBUG_PARTICLE,particles[i].flag,icell,
+               MOVE_DEBUG_INDEX,particles[i].flag,icell,
                x[0],x[1],x[2],particles[i].dtremain);
 #endif
 

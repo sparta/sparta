@@ -303,6 +303,7 @@ void FixInflow::init()
   for (icell = 0; icell < nglocal; icell++) {
 
     if (c2f[icell][XLO]) {
+      cellface[ncf].id = cells[icell].id;
       if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,XLO);
       else cellface[ncf].pcell = icell;
       cellface[ncf].icell = icell;
@@ -333,17 +334,18 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
-      if (indot < 0.0) continue;
-
-      for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
-	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
-      }
-      c2f[icell][XLO] = ncf++;
+      if (indot >= 0.0) {
+        for (isp = 0; isp < nspecies; isp++) {
+          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
+        }
+        c2f[icell][XLO] = ncf++;
+      } else c2f[icell][XLO] = -1;
     } else c2f[icell][XLO] = -1;
     
     if (c2f[icell][XHI]) {
+      cellface[ncf].id = cells[icell].id;
       if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,XHI);
       else cellface[ncf].pcell = icell;
       cellface[ncf].icell = icell;
@@ -374,17 +376,18 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
-      if (indot < 0.0) continue;
-
-      for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
-	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
-      }
-      c2f[icell][XHI] = ncf++;
+      if (indot >= 0.0) {
+        for (isp = 0; isp < nspecies; isp++) {
+          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
+        }
+        c2f[icell][XHI] = ncf++;
+      } else c2f[icell][XHI] = -1;
     } else c2f[icell][XHI] = -1;
 
     if (c2f[icell][YLO]) {
+      cellface[ncf].id = cells[icell].id;
       if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,YLO);
       else cellface[ncf].pcell = icell;
       cellface[ncf].icell = icell;
@@ -415,17 +418,18 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
-      if (indot < 0.0) continue;
-
-      for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
-	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
-      }
-      c2f[icell][YLO] = ncf++;
+      if (indot >= 0.0) {
+        for (isp = 0; isp < nspecies; isp++) {
+          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
+        }
+        c2f[icell][YLO] = ncf++;
+      } else c2f[icell][YLO] = -1;
     } else c2f[icell][YLO] = -1;
 
     if (c2f[icell][YHI]) {
+      cellface[ncf].id = cells[icell].id;
       if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,YHI);
       else cellface[ncf].pcell = icell;
       cellface[ncf].icell = icell;
@@ -456,17 +460,18 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
-      if (indot < 0.0) continue;
-
-      for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
-	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
-      }
-      c2f[icell][YHI] = ncf++;
+      if (indot >= 0.0) {
+        for (isp = 0; isp < nspecies; isp++) {
+          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
+        }
+        c2f[icell][YHI] = ncf++;
+      } else c2f[icell][YHI] = -1;
     } else c2f[icell][YHI] = -1;
 
     if (c2f[icell][ZLO]) {
+      cellface[ncf].id = cells[icell].id;
       if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,ZLO);
       else cellface[ncf].pcell = icell;
       cellface[ncf].icell = icell;
@@ -491,17 +496,18 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
-      if (indot < 0.0) continue;
-
-      for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
-	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
-      }
-      c2f[icell][ZLO] = ncf++;
+      if (indot >= 0.0) {
+        for (isp = 0; isp < nspecies; isp++) {
+          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
+        }
+        c2f[icell][ZLO] = ncf++;
+      } else c2f[icell][ZLO] = -1;
     } else c2f[icell][ZLO] = -1;
 
     if (c2f[icell][ZHI]) {
+      cellface[ncf].id = cells[icell].id;
       if (cells[icell].nsplit > 1) cellface[ncf].pcell = split(icell,ZHI);
       else cellface[ncf].pcell = icell;
       cellface[ncf].icell = icell;
@@ -526,16 +532,17 @@ void FixInflow::init()
       indot = vstream[0]*cellface[ncf].normal[0] +
 	vstream[1]*cellface[ncf].normal[1] +
 	vstream[2]*cellface[ncf].normal[2];
-      if (indot < 0.0) continue;
-
-      for (isp = 0; isp < nspecies; isp++) {
-	cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
-	cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-	cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
-      }
-      c2f[icell][ZHI] = ncf++;
+      if (indot >= 0.0) {
+        for (isp = 0; isp < nspecies; isp++) {
+          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
+        }
+        c2f[icell][ZHI] = ncf++;
+      } else c2f[icell][ZHI] = -1;
     } else c2f[icell][ZHI] = -1;
   }
+
 
   // if Np > 0, npercell = # of insertions per active cellface pair
   // set nthresh so as to achieve exactly Np insertions
@@ -815,7 +822,7 @@ int FixInflow::unpack_grid_one(int icell, char *buf)
     for (int i = 0; i < nsplit; i++) {
       c2f[nglocal][0] = c2f[nglocal][1] = c2f[nglocal][2] = 
         c2f[nglocal][3] = c2f[nglocal][4] = c2f[nglocal][5] = -1;
-      nglocal ++;
+      nglocal++;
     }
   }
   
@@ -838,7 +845,6 @@ int FixInflow::unpack_grid_one(int icell, char *buf)
     ptr += nspecies*sizeof(double);
     if (grid->cells[icell].nsplit == 1) cellface[ncf].pcell = icell;
     else cellface[ncf].pcell = split(icell,cellface[ncf].iface);
-    cellface[ncf].pcell = icell;
     cellface[ncf].icell = icell;
     ncf++;
   }
@@ -883,7 +889,7 @@ void FixInflow::compress_grid()
   // keep a sub cell if its split cell is staying on this proc
   // reset cellface.icell to new cell index
   // cellface.pcell reset in post_compress(),
-  // since don't know sub cell index at this point
+  //   since don't know sub cell index at this point
 
   int nbytes = 6*sizeof(int);
 

@@ -85,9 +85,9 @@ void FixGridCheck::end_of_step()
       if (outflag == ERROR) {
         char str[128];
         sprintf(str,
-                "Particle %d on proc %d is in invalid cell " CELLINT_FORMAT
+                "Particle %d,%d on proc %d is in invalid cell " CELLINT_FORMAT
                 " on timestep " BIGINT_FORMAT,
-                particles[i].id,comm->me,cells[icell].id,update->ntimestep);
+                i,particles[i].id,comm->me,cells[icell].id,update->ntimestep);
         error->one(FLERR,str);
       }
       nflag++;
@@ -97,9 +97,9 @@ void FixGridCheck::end_of_step()
       if (outflag == ERROR) {
         char str[128];
         sprintf(str,
-                "Particle %d on proc %d is in split cell " CELLINT_FORMAT 
+                "Particle %d,%d on proc %d is in split cell " CELLINT_FORMAT 
                 " on timestep " BIGINT_FORMAT,
-                particles[i].id,comm->me,cells[icell].id,
+                i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);
         error->one(FLERR,str);
       }
@@ -117,9 +117,9 @@ void FixGridCheck::end_of_step()
         //       i,icell,cells[icell].id,x[0],x[1],lo[0],hi[0],lo[1],hi[1]);
         char str[128];
         sprintf(str,
-                "Particle %d on proc %d is outside cell " CELLINT_FORMAT 
+                "Particle %d,%d on proc %d is outside cell " CELLINT_FORMAT 
                 " on timestep " BIGINT_FORMAT,
-                particles[i].id,comm->me,cells[icell].id,
+                i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);
         error->one(FLERR,str);
       }
