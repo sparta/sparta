@@ -307,9 +307,10 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
      ip->ispecies = r->products[0];
      jp->ispecies = r->products[1];
      
-     post_etotal  =  pre_etotal + r->coeff[4];
+     post_etotal = pre_etotal + r->coeff[4];
      if (r->nproduct > 2) kspecies = r->products[2];
      else kspecies = -1;
+
      return 1;
    }
   }

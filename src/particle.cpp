@@ -221,13 +221,17 @@ void Particle::grow(int nextra)
    add a particle to particle list
 ------------------------------------------------------------------------- */
 
-void Particle::add_particle(int id, int ispecies, int icell,
-			    double *x, double *v, double erot, int ivib)
+int Particle::add_particle(int id, int ispecies, int icell,
+                           double *x, double *v, double erot, int ivib)
 {
-  if (nlocal == maxlocal) grow(1);
+  int reallocflag = 0;
+  if (nlocal == maxlocal) {
+    grow(1);
+    reallocflag = 1;
+  }
 
   OnePart *p = &particles[nlocal];
-
+  
   p->id = id;
   p->ispecies = ispecies;
   p->icell = icell;
@@ -243,6 +247,7 @@ void Particle::add_particle(int id, int ispecies, int icell,
   //p->dtremain = 0.0;    not needed due to memset ??
 
   nlocal++;
+  return reallocflag;
 }
 
 /* ----------------------------------------------------------------------

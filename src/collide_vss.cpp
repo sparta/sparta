@@ -247,6 +247,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip, 
                                                  Particle::OnePart *jp)
 {
+  double x[3],v[3];
+
   Particle::Species *species = particle->species;
   int reaction,kspecies;
 
@@ -257,6 +259,9 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
   else reaction = 0;
  
   // add a 3rd particle if necessary, index = nlocal-1
+  // if add_particle performs a realloc:
+  //   make copy of particle ptr and x,v
+  //   repoint ip,jp to new particles
 
   Particle::OnePart *kp = NULL;
 
@@ -264,15 +269,32 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
     nreact_one++;
     if (kspecies >= 0) {
       int id = MAXSMALLINT*random->uniform();
-      particle->add_particle(id,kspecies,ip->icell,ip->x,ip->v,0.0,0);
+
+      Particle::OnePart *particles = particle->particles;
+      memcpy(x,ip->x,3*sizeof(double));
+      memcpy(v,ip->v,3*sizeof(double));
+      if (id == 1060981944) printf("AAA %p %p %p\n",ip,jp,particles);
+      int reallocflag = particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0);
+      if (id == 1060981944) printf("BBB %p %p %p\n",ip,jp,particles);
+      if (reallocflag) {
+        ip = particle->particles + (ip - particles);
+        jp = particle->particles + (jp - particles);
+      }
+
       kp = &particle->particles[particle->nlocal-1];
+      if (id == 1060981944) 
+        printf("BBB %p %p %p %p\n",ip,jp,kp,particle->particles);
       double rotdof = precoln.ave_dof+species[kspecies].rotdof;
       if (rotdof > 1.0) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);
+      if (id == 1060981944) 
+        printf("BBB %p %p %p %p\n",ip,jp,kp,particle->particles);
+
     } else {
       if (precoln.ave_dof > 1.0) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_TwoBodyScattering(ip,jp);
     }
+
   } else { 
       if (precoln.ave_dof > 1.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
       SCATTER_TwoBodyScattering(ip,jp);

@@ -331,6 +331,7 @@ void Collide::collisions_one()
       }
       
       // if kpart created, add to plist
+      // particles may have been realloced
       // kpart was just added to particle list, so index = nlocal-1
       
       if (kpart) {
@@ -338,6 +339,7 @@ void Collide::collisions_one()
           npmax = np + DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
         }
+        particles = particle->particles;
         plist[np++] = particle->nlocal-1;
       }
     }

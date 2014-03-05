@@ -76,7 +76,7 @@ class Particle : protected Pointers {
   void compress();
   void sort();
   void grow(int);
-  void add_particle(int, int, int, double *, double *, double, int);
+  int add_particle(int, int, int, double *, double *, double, int);
   void add_species(int, char **);
   void add_mixture(int, char **);
   int find_species(char *);
