@@ -323,7 +323,9 @@ void Collide::collisions_one()
       ncollide_one++;
 
       // jpart destroyed, delete from plist
-      
+      // NOTE: cannot test jpart for NULL
+      //       need to do something different when add this reaction
+
       if (!jpart) {
         plist[j] = plist[np-1];
         np--;
@@ -331,16 +333,16 @@ void Collide::collisions_one()
       }
       
       // if kpart created, add to plist
-      // particles may have been realloced
       // kpart was just added to particle list, so index = nlocal-1
+      // particles data struct may have been realloced
       
       if (kpart) {
         if (np == npmax) {
           npmax = np + DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
         }
-        particles = particle->particles;
         plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
       }
     }
   }
