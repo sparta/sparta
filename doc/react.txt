@@ -49,9 +49,15 @@ file format are described below.
 
 :line
 
-The {tce} style is the ??? model.  
-
-NOTE: TCE model needs to be described and cited.
+The {tce} style is Bird's Total Collision Energy Model.
+This model using kinetic theory argument, allows for reaction 
+probabilities to be defined based on known, measured, reaction rates.
+The model is described in detail Bird 1994 (chapter 6). The required
+input is an arrhenius-type rate for each reaction, i.e.:
+(NOTE:Introduce Arrhenius Rate from Equations)
+where $k_f$ is the forward reaction rate
+$ T$ is the Temperature
+$k$ the Boltzman constant
 
 The format of the input file is as follows.  Comments or blank lines
 are allowed in the file.  Comment lines start with a "#" character.
@@ -97,7 +103,7 @@ An exchange reaction is typically a collision between R1 and R2 that
 results in new products P1 and P2.  There is no restriction on the
 species involved in the reaction.
 
-A recombination reaction ...
+Recombination reactions have not been implemented yet.
 
 The {style} of each reaction is a single character (upper or lower
 case) with the following meaning:
@@ -109,15 +115,15 @@ C2, ..., and how they are interpreted by SPARTA.
 
 For the A = Arrhenius style, there are 5 coefficients:
 
-C1 = 
-C2 = 
-C3 = 
-C4 = 
-C5 = :ul
+C1 = number of internal degrees of freedom (As defined by the TCE model)
+C2 = Activation Energy $E_a$ 
+C3 = Arrhenius Rate A
+C4 = Arrhenius rate b
+C5 = Reaction energy (positive for exothermic) :ul
 
 :line
 
-The {qk} style is the ??? model.  
+The {qk} style is Bird's Quantum-Kinetic mode (QK)
 
 NOTE: QK model needs to be described and cited.
 
