@@ -54,10 +54,11 @@ This model using kinetic theory argument, allows for reaction
 probabilities to be defined based on known, measured, reaction rates.
 The model is described in detail Bird 1994 (chapter 6). The required
 input is an arrhenius-type rate for each reaction, i.e.:
-(NOTE:Introduce Arrhenius Rate from Equations)
-where $k_f$ is the forward reaction rate
-$ T$ is the Temperature
-$k$ the Boltzman constant
+
+:c,image(Eqs/arrhenius.jpg)
+
+where k_f is the forward reaction rate, T is the Temperature and k 
+the Boltzman constant.
 
 The format of the input file is as follows.  Comments or blank lines
 are allowed in the file.  Comment lines start with a "#" character.
