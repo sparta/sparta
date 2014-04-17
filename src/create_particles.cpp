@@ -96,7 +96,8 @@ void CreateParticles::command(int narg, char **arg)
     double voltotal;
     if (domain->dimension == 3)
       voltotal = domain->xprd * domain->yprd * domain->zprd;
-    else if (domain->axisymmetric) voltotal = domain->xprd * MY_PI*domain->yprd*domain->yprd;
+    else if (domain->axisymmetric) 
+      voltotal = domain->xprd * MY_PI*domain->yprd*domain->yprd;
     else voltotal = domain->xprd * domain->yprd;
     np = particle->mixture[imix]->nrho * voltotal / update->fnum;
   }
@@ -231,7 +232,8 @@ void CreateParticles::create_local(bigint np)
     lo = cells[i].lo;
     hi = cells[i].hi;
     if (dimension == 3) volme += (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else if (domain->axisymmetric) volme += (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
+    else if (domain->axisymmetric) 
+      volme += (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
     else volme += (hi[0]-lo[0]) * (hi[1]-lo[1]);
   }
   
@@ -287,7 +289,8 @@ void CreateParticles::create_local(bigint np)
     hi = cells[i].hi;
 
     if (dimension == 3) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else if (domain->axisymmetric)  vol = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
+    else if (domain->axisymmetric)
+      vol = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
     else vol = (hi[0]-lo[0]) * (hi[1]-lo[1]);
     volsum += vol;
 
@@ -300,10 +303,11 @@ void CreateParticles::create_local(bigint np)
       ispecies = 0;
       while (cummulative[ispecies] < rn) ispecies++;
 
-//      double boundary = 1.5E-3-1.E-4*sin((x[0]/0.5E-3)*2.*MY_PI+MY_PI*0.5);
-//            double boundary = 1.5E-3-1.E-4*sin(x[2]/0.5E-3*2.*MY_PI+MY_PI*0.5)*sin(x[0]/0.5E-3*2.*MY_PI+MY_PI*0.5);
-//       if (x[1]>=boundary) ispecies = 1;
-//       if (x[1]<boundary) ispecies = 0;
+      // double boundary = 1.5E-3-1.E-4*sin((x[0]/0.5E-3)*2.*MY_PI+MY_PI*0.5);
+      // double boundary = 1.5E-3-1.E-4*sin(x[2]/0.5E-3*2.*MY_PI+MY_PI*0.5)*
+      //                   sin(x[0]/0.5E-3*2.*MY_PI+MY_PI*0.5);
+      // if (x[1]>=boundary) ispecies = 1;
+      // if (x[1]<boundary) ispecies = 0;
 
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
       x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
