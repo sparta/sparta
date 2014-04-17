@@ -43,9 +43,25 @@ performed, i.e. the simulation models free-molecular flow.
 </P>
 <HR>
 
+<P>A molecular interaction must be specified for a collisional DSMC 
+calcualtion.
+</P>
 <P>The <I>vss</I> style is the Variable Soft Sphere model.
 </P>
-<P>NOTE: VSS model needs to be described and cited.
+<P>In DSMC simulations, the variable-soft-sphere (VSS) interaction of 
+Koura and Matsumoto and the variable-hard-sphere (VHS) interaction 
+of Bird are used to approximate molecular interactions.
+Both these interactions yield transport properties proportional 
+to a power (omega) of the gas temperature. This temperature 
+ dependence of the trasnport properties is similar to the one of 
+the Inverse Power Law model (IPL) for which Chapman-Enskog theory 
+provides closed form solutions for the trainsport properties.
+</P>
+<P>The VSS and VHS interactions use a molecular diameter (d) which is 
+a function of the molecular speed, a the angular-scattering parameter,
+ which relates the scattering angle to the impact parameter. 
+Since a = 1 produces isotropic (Hard Sphere) interactions this 
+value can be used for the VSS model to reproduce the VHS model.  
 </P>
 <P>The <I>mix-ID</I> argument is a mixture ID which must contain all the
 species defined for use by the simulation.  The group definitions in
@@ -68,13 +84,17 @@ whitespace:
 species defined by the simulation, via the <A HREF = "species.html">species</A>
 command.  The properties are as follows:
 </P>
-<UL><LI>prop1 = diam = diamter of particle (distance units)
-<LI>prop2 = omega = ???
-<LI>prop3 = tref = reference temperature (temperature units)
-<LI>prop4 = alpha = ??? 
-</UL>
-<P>NOTE: give correct definitions and their units
+<P>The methodolgy to calculate the values for the  VSS/VHS parameters 
+is given in Chapter 3 of Bird 1994. Values for the most common gases are
+also given in Appendix A of Bird 1994. These values are based on the
+first order approximation of the Chapman-Enskog theory. The infinite-
+order parameters are given by Gallis et al.
 </P>
+<UL><LI>prop1 = diam = VHS or VSS defined diameter of particle (distance units)
+<LI>prop2 = omega = Temperature dependence of viscosity 
+<LI>prop3 = tref = reference temperature (temperature units)
+<LI>prop4 = alpha = angular scattering parameter (pure) 
+</UL>
 <HR>
 
 <P><B>Restrictions:</B> none
@@ -86,5 +106,14 @@ command.  The properties are as follows:
 <P><B>Default:</B>
 </P>
 <P>style = none
+</P>
+<P>References
+G. A. Bird, Molecular Gas Dynamics and the Direct Simulation of Gas
+Flows (Clarendon Press, Oxford, 1994). 
+K. Koura and H. Matsumoto, "Variable soft sphere molecular model for
+air species," Phys. Fluids A 4, 1083 (1992). 
+M. A. Gallis, J. R. Torczynski, and D. J. Rader, "Molecular gas
+dynamics observations of Chapman-Enskog behavior and departures therefrom in
+nonequilibrium gases," Phys. Rev. E 69, 042201 (2004).
 </P>
 </HTML>
