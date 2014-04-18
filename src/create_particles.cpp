@@ -303,16 +303,16 @@ void CreateParticles::create_local(bigint np)
       ispecies = 0;
       while (cummulative[ispecies] < rn) ispecies++;
 
+      x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+      x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+      x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+      if (dimension == 2) x[2] = 0.0;
+
       // double boundary = 1.5E-3-1.E-4*sin((x[0]/0.5E-3)*2.*MY_PI+MY_PI*0.5);
       // double boundary = 1.5E-3-1.E-4*sin(x[2]/0.5E-3*2.*MY_PI+MY_PI*0.5)*
       //                   sin(x[0]/0.5E-3*2.*MY_PI+MY_PI*0.5);
       // if (x[1]>=boundary) ispecies = 1;
       // if (x[1]<boundary) ispecies = 0;
-
-      x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-      x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-      x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
-      if (dimension == 2) x[2] = 0.0;
 
       vn = vscale[ispecies] * sqrt(-log(random->uniform()));
       vr = vscale[ispecies] * sqrt(-log(random->uniform()));
