@@ -21,6 +21,7 @@
 #include "domain.h"
 #include "comm.h"
 #include "memory.h"
+#include "error.h"
 
 using namespace SPARTA_NS;
 
@@ -464,13 +465,17 @@ int Irregular::create_data_variable(int n, int *proclist, int *sizes,
   // nrecvdatum = total # of datums I recv
 
   int nbytes;
-  recvsize = 0;
+  bigint brecvsize = 0;
   for (i = 0; i < nrecv; i++) {
     MPI_Recv(&nbytes,1,MPI_INT,MPI_ANY_SOURCE,1,world,status);
     size_recv[proc2recv[status->MPI_SOURCE]] = nbytes;
-    recvsize += nbytes;
+    brecvsize += nbytes;
   }
-  recvsize += size_self;
+  brecvsize += size_self;
+
+  if (brecvsize > MAXSMALLINT) 
+    error->one(FLERR,"Irregular comm recv buffer exceeds 2 GB\n");
+  recvsize = brecvsize;
 
   // return # of datums I will receive
 

@@ -199,15 +199,19 @@ void Comm::migrate_cells(int nmigrate)
   // compute byte count needed to pack cells
 
   int nsend = 0;
-  int offset = 0;
+  bigint boffset = 0;
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
     gproc[nsend] = cells[icell].proc;
     n = grid->pack_one(icell,NULL,1,1,0);
     gsize[nsend++] = n;
-    offset += n;
+    boffset += n;
   }
+
+  if (boffset > MAXSMALLINT) 
+    error->one(FLERR,"Migrate cells send buffer exceeds 2 GB");
+  int offset = boffset;
 
   // reallocate sbuf as needed
 
