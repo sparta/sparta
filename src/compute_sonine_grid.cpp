@@ -306,17 +306,19 @@ void ComputeSonineGrid::reallocate()
 }
 
 /* ----------------------------------------------------------------------
-   return flag for style of norm vector used by column N
+   return info for norm vector used by column N
    input N is value from 1 to Ncols
+   output: istyle = NONE, COUNT, etc
+   output: igroup = which group within style
 ------------------------------------------------------------------------- */
 
-int ComputeSonineGrid::normflag(int n)
+void ComputeSonineGrid::normwhich(int n, int &istyle, int &igroup)
 {
-  int igroup = (n-1) / npergroup;
+  igroup = (n-1) / npergroup;
   int ivalue = (n-1) % npergroup;
-  if (value_norm_style[igroup][ivalue] == COUNT) return COUNT;
-  if (value_norm_style[igroup][ivalue] == MASSWT) return MASSWT;
-  return NONE;
+  if (value_norm_style[igroup][ivalue] == COUNT) istyle = COUNT;
+  else if (value_norm_style[igroup][ivalue] == MASSWT) istyle = MASSWT;
+  else istyle = NONE;
 }
 
 /* ----------------------------------------------------------------------

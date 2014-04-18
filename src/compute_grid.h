@@ -31,7 +31,7 @@ class ComputeGrid : public Compute {
   ~ComputeGrid();
   void init();
   void compute_per_grid();
-  int normflag(int);
+  void normwhich(int, int &, int &);
   double *normptr(int);
   void reallocate();
   bigint memory_usage();

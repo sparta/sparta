@@ -205,7 +205,10 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   normindex = new int[nvalues];
   norms = new double*[nvalues];
   int *list_compute = new int[nvalues];
-  int *list_flag = new int[nvalues];
+  int *list_style = new int[nvalues];
+  int *list_group = new int[nvalues];
+
+  int istyle,igroup;
 
   nnorm = 0;
   for (int m = 0; m < nvalues; m++) {
@@ -217,26 +220,29 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     if (which[m] == COMPUTE) {
       int icompute = modify->find_compute(ids[m]);
       Compute *compute = modify->compute[icompute];
-      int flag = compute->normflag(j);
-      if (!flag) continue;
+      compute->normwhich(j,istyle,igroup);
+      if (!istyle) continue;
       
       int i;
       for (i = 0; i < nnorm; i++)
-        if (icompute == list_compute[i] && flag == list_flag[i]) break;
+        if (icompute == list_compute[i] && 
+            istyle == list_style[i] && igroup == list_group[i]) break;
       if (i < nnorm) normindex[m] = i;
       else {
         normacc[m] = 1;
         normindex[m] = nnorm;
         norms[nnorm] = NULL;
         list_compute[nnorm] = icompute;
-        list_flag[nnorm] = flag;
+        list_style[nnorm] = istyle;
+        list_group[nnorm] = igroup;
         nnorm++;
       }
     }
   }
 
   delete [] list_compute;
-  delete [] list_flag;
+  delete [] list_style;
+  delete [] list_group;
 
   // allocate per-grid cell memory for vectors/arrays and norms
 

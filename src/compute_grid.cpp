@@ -260,17 +260,20 @@ void ComputeGrid::reallocate()
 }
 
 /* ----------------------------------------------------------------------
-   return flag for style of norm vector used by column N
+   return info for norm vector used by column N
    input N is value from 1 to Ncols
+   output: istyle = NONE, COUNT, etc
+   output: igroup = which group within style
 ------------------------------------------------------------------------- */
 
-int ComputeGrid::normflag(int n)
+void ComputeGrid::normwhich(int n, int &istyle, int &igroup)
 {
+  igroup = (n-1) / nvalue;
   int ivalue = (n-1) % nvalue;
-  if (norm_style[ivalue] == COUNT) return COUNT;
-  if (norm_style[ivalue] == MASSWT) return MASSWT;
-  if (norm_style[ivalue] == DOF) return DOF;
-  return NONE;
+  if (norm_style[ivalue] == COUNT) istyle = COUNT;
+  else if (norm_style[ivalue] == MASSWT) istyle = MASSWT;
+  else if (norm_style[ivalue] == DOF) istyle = DOF;
+  else istyle = NONE;
 }
 
 /* ----------------------------------------------------------------------
