@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {gridcut} or {comm/sort} or {comm/style} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {gridcut} or {comm/sort} or {comm/style} or {weight} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -33,14 +33,19 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
     yes/no = sort incoming messages by proc ID if yes, else no sort
   {comm/style} value = neigh or all
     neigh = setup particle comm with subset of near-neighbor processor
-    all = allow particle comm with potentially any processor :pre
+    all = allow particle comm with potentially any processor
+  {weight} value = {wstyle} {mode}
+    wstyle = {grid}
+    mode = {none} or {volume} or {radius} :pre
 :ule
 
 [Examples:]
 
-background fnum 1.0e20
-background vstream 100.0 0 0 fnum 5.0e18
-background temp 1000 :pre
+global fnum 1.0e20
+global vstream 100.0 0 0 fnum 5.0e18
+global temp 1000
+global weight cell radius :pre
+
 
 [Description:]
 
@@ -122,6 +127,31 @@ grid is decomposed by the RCB option of the "balance"_balance.html or
 "fix balance"_fix_balance.html commands.  If that is not the case,
 SPARTA performs the particle communication as if the {all} setting
 were in place.
+
+The {weight} keyword determines whether particle weighting is used.
+Currently the only style allowed, as specified by wstyle = {grid}, is
+grid-based weighting.  This is a mechanism for inducing every grid
+cell to contain roughly the same number of particles (even if cells
+are of varying size), so as to minimize the total number of particles
+used in a simulation while preserving accurate time and spatial
+averages of flow quantities.
+
+If grid-based particle weighting is enabled, two computations occur.
+First, each grid cell stores a "weight" which is pre-computed based
+either on the cell {volume} or {radius}, as specified by the {mode}
+setting.  The {radius} setting is only allowed for axisymmetric
+systems; see "Section 4.2"_Section_howto.html#howto_2 for details.
+The radius in this case is the distance the cell's midpoint is from
+the axis of symmetry.
+
+Second, when a particle moves from an initial cell to a final cell,
+the initial/final ratio of the two cell weights is calculated.  If the
+ratio > 1, then additional particles may be created in the final cell,
+by cloning the attributes of the incoming particle.  E.g. if the ratio
+= 3.4, then two extra particle are created, and a 3rd is created with
+probability 0.4.  If the ratio < 1, then the incoming particle may be
+deleted.  E.g. if the ratio is 0.7, then the incoming particle is
+deleted with probability 0.3.
 
 [Restrictions:]
 

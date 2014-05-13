@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs 
 
-<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfmax</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> 
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfmax</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -38,15 +38,19 @@
     yes/no = sort incoming messages by proc ID if yes, else no sort
   <I>comm/style</I> value = neigh or all
     neigh = setup particle comm with subset of near-neighbor processor
-    all = allow particle comm with potentially any processor 
+    all = allow particle comm with potentially any processor
+  <I>weight</I> value = <I>wstyle</I> <I>mode</I>
+    wstyle = <I>grid</I>
+    mode = <I>none</I> or <I>volume</I> or <I>radius</I> 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>background fnum 1.0e20
-background vstream 100.0 0 0 fnum 5.0e18
-background temp 1000 
+<PRE>global fnum 1.0e20
+global vstream 100.0 0 0 fnum 5.0e18
+global temp 1000
+global weight cell radius 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -128,6 +132,31 @@ grid is decomposed by the RCB option of the <A HREF = "balance.html">balance</A>
 <A HREF = "fix_balance.html">fix balance</A> commands.  If that is not the case,
 SPARTA performs the particle communication as if the <I>all</I> setting
 were in place.
+</P>
+<P>The <I>weight</I> keyword determines whether particle weighting is used.
+Currently the only style allowed, as specified by wstyle = <I>grid</I>, is
+grid-based weighting.  This is a mechanism for inducing every grid
+cell to contain roughly the same number of particles (even if cells
+are of varying size), so as to minimize the total number of particles
+used in a simulation while preserving accurate time and spatial
+averages of flow quantities.
+</P>
+<P>If grid-based particle weighting is enabled, two computations occur.
+First, each grid cell stores a "weight" which is pre-computed based
+either on the cell <I>volume</I> or <I>radius</I>, as specified by the <I>mode</I>
+setting.  The <I>radius</I> setting is only allowed for axisymmetric
+systems; see <A HREF = "Section_howto.html#howto_2">Section 4.2</A> for details.
+The radius in this case is the distance the cell's midpoint is from
+the axis of symmetry.
+</P>
+<P>Second, when a particle moves from an initial cell to a final cell,
+the initial/final ratio of the two cell weights is calculated.  If the
+ratio > 1, then additional particles may be created in the final cell,
+by cloning the attributes of the incoming particle.  E.g. if the ratio
+= 3.4, then two extra particle are created, and a 3rd is created with
+probability 0.4.  If the ratio < 1, then the incoming particle may be
+deleted.  E.g. if the ratio is 0.7, then the incoming particle is
+deleted with probability 0.3.
 </P>
 <P><B>Restrictions:</B>
 </P>
