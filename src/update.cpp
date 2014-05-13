@@ -1118,6 +1118,13 @@ void Update::global(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"all") == 0) comm->commpartstyle = 0;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"weight") == 0) {
+      // for now assume just one arg after "cell"
+      // may need to generalize later
+      if (iarg+3 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"cell") == 0) grid->weight(1,&arg[iarg+2]);
+      else error->all(FLERR,"Illegal weight command");
+      iarg += 3;
     } else error->all(FLERR,"Illegal global command");
   }
 }
