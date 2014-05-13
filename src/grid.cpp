@@ -1742,8 +1742,8 @@ void Grid::type_check()
 }
 
 /* ----------------------------------------------------------------------
-   set static cellwise fnum weights
-   based on uncut volumes relative to minimum uncut volumes
+   set static cellwise fnum weights based on uncut volumes
+   for volume, use volume of cell, whether axisymmetric or not
    for radius, use radius of cell centroid from axisymmetric axis
    called from input script
 ------------------------------------------------------------------------- */
@@ -1751,7 +1751,6 @@ void Grid::type_check()
 void Grid::weight(int narg, char **arg)
 {
   int i;
-  double one,minvol;
   double *lo,*hi;
 
   if (!exist) error->all(FLERR,"Cannot weight cells before grid is defined");
@@ -1767,30 +1766,15 @@ void Grid::weight(int narg, char **arg)
   } else if (strcmp(arg[0],"volume") == 0) {
     cellweightflag = VOLWEIGHT;
 
-    one = BIG;
     for (int i = 0; i < nlocal; i++) {
       lo = cells[i].lo;
       hi = cells[i].hi;
       if (dimension == 3) 
-        one = MIN(one,(hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]));
+        cinfo[i].weight = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
       else if (axisymmetric)
-        one = MIN(one,MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]));
+        cinfo[i].weight = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
       else
-        one = MIN(one,(hi[0]-lo[0]) * (hi[1]-lo[1]));
-    }
-
-    MPI_Allreduce(&one,&minvol,1,MPI_DOUBLE,MPI_MIN,world);
-
-    for (int i = 0; i < nlocal; i++) {
-      lo = cells[i].lo;
-      hi = cells[i].hi;
-      if (dimension == 3) 
-        one = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-      else if (axisymmetric)
-        one = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
-      else
-        one = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-      cinfo[i].weight = one/minvol;
+        cinfo[i].weight = (hi[0]-lo[0]) * (hi[1]-lo[1]);
     }
 
   } else if (strcmp(arg[0],"radius") == 0) {
@@ -1798,19 +1782,10 @@ void Grid::weight(int narg, char **arg)
       error->all(FLERR,"Cannot use weight cell radius unless axisymmetric");
     cellweightflag = RADWEIGHT;
 
-    one = BIG;
     for (int i = 0; i < nlocal; i++) {
       lo = cells[i].lo;
       hi = cells[i].hi;
-      one = MIN(one,0.5*(hi[1]+lo[1]) * (hi[0]-lo[0]));
-    }
-
-    MPI_Allreduce(&one,&minvol,1,MPI_DOUBLE,MPI_MIN,world);
-
-    for (int i = 0; i < nlocal; i++) {
-      lo = cells[i].lo;
-      hi = cells[i].hi;
-      cinfo[i].weight = (0.5*(hi[1]+lo[1]) * (hi[0]-lo[0])) / minvol;
+      cinfo[i].weight = 0.5*(hi[1]+lo[1]) * (hi[0]-lo[0]);
     }
 
   } else error->all(FLERR,"Illegal weight command");

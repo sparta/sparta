@@ -338,6 +338,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][XLO] = ncf++;
@@ -380,6 +381,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][XHI] = ncf++;
@@ -422,6 +424,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][YLO] = ncf++;
@@ -464,6 +467,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][YHI] = ncf++;
@@ -500,6 +504,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][ZLO] = ncf++;
@@ -536,6 +541,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
+          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][ZHI] = ncf++;
@@ -721,8 +727,8 @@ double FixInflow::mol_inflow(int isp, double indot)
   double inward_number_flux = 0.0;
   if (indot >= 0.0) {
     inward_number_flux = vscale[isp] * fraction[isp] *
-      (exp(-indot*indot) + sqrt(MY_PI)*indot*(1.0 + erf(indot)))
-      / (2*sqrt(MY_PI));
+      (exp(-indot*indot) + sqrt(MY_PI)*indot*(1.0 + erf(indot))) /
+      (2*sqrt(MY_PI));
   }
 
   return inward_number_flux;

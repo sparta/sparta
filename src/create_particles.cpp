@@ -89,23 +89,23 @@ void CreateParticles::command(int narg, char **arg)
     error->all(FLERR,"Cannot use n and single in create_particles command");
 
   // calculate Np if not set explicitly
-  // NOTE: eventually adjust for cells with cut volume
 
   if (single) np = 1;
   else if (np == 0) {
-    double voltotal;
-    if (domain->dimension == 3)
-      voltotal = domain->xprd * domain->yprd * domain->zprd;
-    else if (domain->axisymmetric) 
-      voltotal = domain->xprd * MY_PI*domain->yprd*domain->yprd;
-    else voltotal = domain->xprd * domain->yprd;
-    np = particle->mixture[imix]->nrho * voltotal / update->fnum;
+    Grid::ChildCell *cells = grid->cells;
+    Grid::ChildInfo *cinfo = grid->cinfo;
+    int nglocal = grid->nlocal;
+
+    double flowvolme = 0.0;
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cells[icell].nsplit > 1) continue;
+      if (cinfo[icell].type != INSIDE) 
+        flowvolme += cinfo[icell].volume * cinfo[icell].weight;
+    }
+    double flowvol;
+    MPI_Allreduce(&flowvolme,&flowvol,1,MPI_DOUBLE,MPI_SUM,world);
+    np = particle->mixture[imix]->nrho * flowvol / update->fnum;
   }
-
-  // perform system init() so that grid cells know about surfs
-  // NOTE: delete this after debugging
-
-  sparta->init();
 
   // generate particles
 
@@ -203,6 +203,8 @@ void CreateParticles::create_single()
 /* ----------------------------------------------------------------------
    create Np particles in parallel
    every proc creates fraction of Np for cells it owns
+   only insert in cells uncut by surfs
+   account for cell weighting
    attributes of created particle depend on number of procs
 ------------------------------------------------------------------------- */
 
@@ -219,22 +221,23 @@ void CreateParticles::create_local(bigint np)
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
-  // volme = volume of grid cells I own that are OUTSIDE
+  // volme = volume of grid cells I own that are OUTSIDE surfs
   // Nme = # of particles I will create
   // MPI_Scan() logic insures sum of nme = Np
-  // NOTE: eventually adjust for cells with cut volume
-  //       by over-inserting into other cells?
 
   double *lo,*hi;
+  double volone;
+
   double volme = 0.0;
   for (int i = 0; i < nglocal; i++) {
     if (cinfo[i].type != OUTSIDE) continue;
     lo = cells[i].lo;
     hi = cells[i].hi;
-    if (dimension == 3) volme += (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else if (domain->axisymmetric) 
-      volme += (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
-    else volme += (hi[0]-lo[0]) * (hi[1]-lo[1]);
+      volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
+    else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+    volme += volone * cinfo[i].weight;
   }
   
   double volupto;
@@ -245,7 +248,8 @@ void CreateParticles::create_local(bigint np)
   memory->create(vols,nprocs,"create_particles:vols");
   MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
 
-  // gathered Scan result is not guaranteed to be monotonically increasing
+  // nme = # of particles for me to create
+  // gathered Scan results not guaranteed to be monotonically increasing
   // can cause epsilon mis-counts for huge particle counts
   // enforce that by brute force
 
@@ -278,7 +282,7 @@ void CreateParticles::create_local(bigint np)
 
   int npercell,ispecies,ivib,id;
   double x[3],v[3];
-  double vol,ntarget,rn,vn,vr,theta1,theta2,erot;
+  double ntarget,rn,vn,vr,theta1,theta2,erot;
 
   double volsum = 0.0;
   bigint nprev = 0;
@@ -288,11 +292,11 @@ void CreateParticles::create_local(bigint np)
     lo = cells[i].lo;
     hi = cells[i].hi;
 
-    if (dimension == 3) vol = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else if (domain->axisymmetric)
-      vol = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
-    else vol = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-    volsum += vol;
+      volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
+    else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+    volsum += volone * cinfo[i].weight;
 
     ntarget = nme * volsum/volme - nprev;
     npercell = static_cast<int> (ntarget);
