@@ -54,6 +54,7 @@ class Particle : protected Pointers {
     int ivib;               // vibrational mode
     int flag;               // used for migration status
     double dtremain;        // portion of move timestep remaining
+    double weight;          // particle or cell weight, if weighting enabled
   };
 
   bigint nglobal;           // global # of particles
@@ -76,7 +77,11 @@ class Particle : protected Pointers {
   void compress();
   void sort();
   void grow(int);
+  void pre_weight();
+  void post_weight();
+
   int add_particle(int, int, int, double *, double *, double, int);
+  int clone_particle(int);
   void add_species(int, char **);
   void add_mixture(int, char **);
   int find_species(char *);
@@ -95,6 +100,8 @@ class Particle : protected Pointers {
   int nfilespecies;         // # of species read from file
   int maxfilespecies;       // max size of filespecies list
   FILE *fp;                 // species file pointer
+
+  class RanPark *wrandom;   // RNG for particle weighting
 
   void read_species_file();
   int wordcount(char *, char **);

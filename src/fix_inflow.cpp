@@ -37,7 +37,7 @@ using namespace MathConst;
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // same as several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PCLONE};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{NO,YES};
 

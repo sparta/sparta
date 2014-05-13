@@ -40,8 +40,8 @@ using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
-enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // same as several files
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // same as several files
+enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PCLONE};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
 #define MAXSTUCK 20
@@ -185,6 +185,11 @@ void Update::run(int nsteps)
   int n_end_of_step = modify->n_end_of_step;
   int dynamic = 0;
 
+  // cellweightflag = 1 if grid-based particle weighting is ON
+
+  int cellweightflag = 0;
+  if (grid->cellweightflag) cellweightflag = 1;
+
   // loop over timesteps
 
   for (int i = 0; i < nsteps; i++) {
@@ -201,6 +206,7 @@ void Update::run(int nsteps)
     // move particles
 
     timer->stamp();
+    if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();
     timer->stamp(TIME_MOVE);
 
@@ -208,6 +214,7 @@ void Update::run(int nsteps)
 
     timer->stamp();
     comm->migrate_particles(nmigrate,mlist);
+    if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
 
     if (collide) {
@@ -308,7 +315,7 @@ template < int DIM, int SURF > void Update::move()
       pflag = particles[i].flag;
 
       // received from another proc and move is done
-      // if first iteration, PDONE is for previous step,
+      // if first iteration, PDONE is from a previous step,
       //   set pflag to PKEEP so move the particle on this step
       // else do nothing
 
@@ -835,7 +842,7 @@ template < int DIM, int SURF > void Update::move()
     
     // if gridcut >= 0.0, check if another iteration of move is required
     // only the case if some particle flag = PENTRY/PEXIT
-    // in which case perform praticle migration
+    //   in which case perform particle migration
     // if not, move is done and final particle comm will occur in run()
     // if iterating, reset pstart/pstop and extend migration list if necessary
 

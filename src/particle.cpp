@@ -21,13 +21,14 @@
 #include "update.h"
 #include "comm.h"
 #include "mixture.h"
+#include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // same as several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PCLONE};  // several files
 
 #define DELTA 10000
 #define DELTASPECIES 16
@@ -68,6 +69,13 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   newarg[0] = (char *) "species";
   add_mixture(1,newarg);
   delete [] newarg;
+
+  // RNG for particle weighting
+
+  int me = comm->me;
+  wrandom = new RanPark(update->ranmaster->uniform());
+  double seed = update->ranmaster->uniform();
+  wrandom->reset(seed,me,100);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -195,6 +203,87 @@ void Particle::sort()
 }
 
 /* ----------------------------------------------------------------------
+   set the initial weight of each particle
+   called by Update before particle move
+   only called if particle weighting is enabled
+   only grid-based weighting is currently implemented
+------------------------------------------------------------------------- */
+
+void Particle::pre_weight()
+{
+  int icell;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (int i = 0; i < nlocal; i++) {
+    icell = particles[i].icell;
+    particles[i].weight = cinfo[icell].weight;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   clone/delete each particle based on ratio of its initial/final weights
+   called by Update after particle move and migration
+   only called if particle weighting is enabled
+   only grid-based weighting is currently implemented
+------------------------------------------------------------------------- */
+
+void Particle::post_weight()
+{
+  int m,icell,nclone;
+  double ratio,fraction;
+
+  int nbytes = sizeof(OnePart);
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  // nlocal_original-1 = index of last original particle
+
+  int nlocal_original = nlocal;
+  int i = 0;
+
+  while (i < nlocal_original) {
+    icell = particles[i].icell;
+
+    // next particle will be an original particle
+    // skip it if no weight change
+
+    if (particles[i].weight == cinfo[icell].weight) {
+      i++;
+      continue;
+    }
+
+    // ratio < 1.0 is candidate for deletion
+    // if deleted and particle that takes its place is cloned (Nloc > Norig)
+    //   then skip it via i++, else will examine it on next iteration
+
+    ratio = particles[i].weight / cinfo[icell].weight;
+
+    if (ratio < 1.0) {
+      if (wrandom->uniform() > ratio) {
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        if (nlocal > nlocal_original) i++;
+        else nlocal_original--;
+        nlocal--;
+      } else i++;
+      continue;
+    }
+
+    // ratio > 1.0 is candidate for cloning
+    // create Nclone new particles each with unique ID 
+
+    nclone = static_cast<int> (ratio);
+    fraction = ratio - nclone;
+    nclone--;
+    if (wrandom->uniform() < fraction) nclone++;
+
+    for (m = 0; m < nclone; m++) {
+      clone_particle(i);
+      particles[nlocal-1].id = MAXSMALLINT*wrandom->uniform();
+    }
+    i++;
+  }
+}
+
+/* ----------------------------------------------------------------------
    insure particle list can hold nextra new particles
 ------------------------------------------------------------------------- */
 
@@ -219,6 +308,7 @@ void Particle::grow(int nextra)
 
 /* ----------------------------------------------------------------------
    add a particle to particle list
+   return 1 if particle array was reallocated, else 0
 ------------------------------------------------------------------------- */
 
 int Particle::add_particle(int id, int ispecies, int icell,
@@ -244,7 +334,28 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->erot = erot;
   p->ivib = ivib;
   p->flag = PKEEP;
-  //p->dtremain = 0.0;    not needed due to memset ??
+
+  //p->dtremain = 0.0;    not needed due to memset in grow() ??
+  //p->weight = 1.0;      not needed due to memset in grow() ??
+
+  nlocal++;
+  return reallocflag;
+}
+
+/* ----------------------------------------------------------------------
+   clone particle Index and add to end of particle list
+   return 1 if particle array was reallocated, else 0
+------------------------------------------------------------------------- */
+
+int Particle::clone_particle(int index)
+{
+  int reallocflag = 0;
+  if (nlocal == maxlocal) {
+    grow(1);
+    reallocflag = 1;
+  }
+
+  memcpy(&particles[nlocal],&particles[index],sizeof(OnePart));
 
   nlocal++;
   return reallocflag;
@@ -398,21 +509,21 @@ int Particle::find_mixture(char *id)
    only a function of species index and species properties
 ------------------------------------------------------------------------- */
 
-double Particle::erot(int isp, RanPark *random)
+double Particle::erot(int isp, RanPark *erandom)
 {
  double eng,a,erm,b;
 
  if (species[isp].rotdof < 2) return 0.0;
 
  if (species[isp].rotdof == 2)
-   eng = -log(random->uniform()) * update->boltz * update->temp_thermal;
+   eng = -log(erandom->uniform()) * update->boltz * update->temp_thermal;
  else {
    a = 0.5*particle->species[isp].rotdof-1.;
    while (1) {
      // energy cut-off at 10 kT
-     erm = 10.0*random->uniform();
+     erm = 10.0*erandom->uniform();
      b = pow(erm/a,a) * exp(a-erm);
-     if (b > random->uniform()) break;
+     if (b > erandom->uniform()) break;
    }
    // NOTE: is temp_thermal always set?
    eng = erm * update->boltz * update->temp_thermal;
@@ -426,13 +537,13 @@ double Particle::erot(int isp, RanPark *random)
    only a function of species index and species properties
 ------------------------------------------------------------------------- */
 
-int Particle::evib(int isp, RanPark *random)
+int Particle::evib(int isp, RanPark *erandom)
 {
   if (species[isp].rotdof < 2) return 0;
 
   // NOTE: is temp_thermal always set?
 
-  int ivib = -log(random->uniform()) * update->temp_thermal /
+  int ivib = -log(erandom->uniform()) * update->temp_thermal /
     particle->species[isp].vibtemp;
   return ivib;
 }
