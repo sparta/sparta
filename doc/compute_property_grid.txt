@@ -1,0 +1,62 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute property/grid command :h3
+
+[Syntax:]
+
+compute ID property/grid input1 input2 ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+property/grid = style name of this compute command :l
+input = one or more grid attributes :l
+  possible attributes = id, proc, xlo, ylo, zlo, xhi, yhi, zhi, xc, yc, zc :pre
+
+  id = integer form of grid cell ID
+  proc = processor that owns grid cell
+  xlo,ylo,zlo = coords of lower left corner of grid cell
+  xhi,yhi,zhi = coords of lower left corner of grid cell
+  xc,yc,zc = coords of center of grid cell :pre
+:ule
+
+[Examples:]
+
+compute 1 all property/grid id xc yc zc :pre
+
+[Description:]
+
+Define a computation that simply stores grid attributes for each grid
+cell.  This is useful so that the values can be used by other "output
+commands"_Section_howto.html#howto_15 that take computes as inputs.
+See for example, the "compute reduce"_compute_reduce.html, "fix
+ave/grid"_fix_ave_atom.html, and "dump grid"_dump_grid.html commands.
+
+The values are stored in a per-grid vector or array as discussed
+below. 
+
+
+This compute calculates a per-grid vector or per-grid array depending
+on the number of input values.  If a single input is specified, a
+per-grid vector is produced.  If two or more inputs are specified, a
+per-grid array is produced where the number of columns = the number of
+inputs.  The vector or array can be accessed by any command that uses
+per-atom values from a compute as input.  See "this
+section"_Section_howto.html#howto_15 for an overview of SPARTA output
+options.
+
+The vector or array values will be in whatever "units"_units.html the
+corresponding attribute is in, e.g. distance units for xlo or xc.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"dump grid"_dump.html, "compute reduce"_compute_reduce.html, "fix
+ave/grid"_fix_ave_grid.html
+
+[Default:] none
