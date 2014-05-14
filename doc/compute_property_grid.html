@@ -46,6 +46,31 @@ ave/grid</A>, and <A HREF = "dump_grid.html">dump grid</A> commands.
 <P>The values are stored in a per-grid vector or array as discussed
 below. 
 </P>
+<P><I>Id</I> is the grid cell ID.  In SPARTA each grid cell is assigned a
+unique ID which represents its location, in a topological sense,
+within the hierarchical grid.  This ID is stored as an integer such as
+5774983, but can also be decoded into a string such as 33-4-6, which
+makes it easier to understand the grid hierarchy.  In this case it
+means the grid cell is at the 3rd level of the hierarchy.  Its
+grandparent cell was 33 at the 1st level, its parent was cell 4 (at
+level 2) within cell 33, and the cell itself is cell 6 (at level 3)
+within cell 4 within cell 33.  If you specify <I>id</I>, the ID is printed
+directly as an integer.  The ID in string format can be accessed by
+the <A HREF = "dump.html">dump grid</A> command and its <I>idstr</I> argument.
+</P>
+<P><I>Proc</I> is the ID of the processor which currently owns the grid cell.
+</P>
+<P>The <I>xlo</I>, <I>ylo</I>, <I>zlo</I> attributes are the coordinates of the
+lower-left corner of the grid cell in the appropriate distance
+<A HREF = "units.html">units</A>.  The <I>xhi</I>, <I>yhi</I>, <I>zhi</I> are the coordinates of
+the upper-right corner of the grid cell.  The <I>xc</I>, <I>yc</I>, <I>zc</I>
+attributes are the coordinates of the center point of the grid cell.
+The <I>zlo</I>, <I>zhi</I>, <I>zc</I> attributes cannot be used for a 2d simulation.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
 <P>This compute calculates a per-grid vector or per-grid array depending
 on the number of input values.  If a single input is specified, a
 per-grid vector is produced.  If two or more inputs are specified, a

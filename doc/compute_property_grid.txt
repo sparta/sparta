@@ -39,6 +39,30 @@ ave/grid"_fix_ave_atom.html, and "dump grid"_dump_grid.html commands.
 The values are stored in a per-grid vector or array as discussed
 below. 
 
+{Id} is the grid cell ID.  In SPARTA each grid cell is assigned a
+unique ID which represents its location, in a topological sense,
+within the hierarchical grid.  This ID is stored as an integer such as
+5774983, but can also be decoded into a string such as 33-4-6, which
+makes it easier to understand the grid hierarchy.  In this case it
+means the grid cell is at the 3rd level of the hierarchy.  Its
+grandparent cell was 33 at the 1st level, its parent was cell 4 (at
+level 2) within cell 33, and the cell itself is cell 6 (at level 3)
+within cell 4 within cell 33.  If you specify {id}, the ID is printed
+directly as an integer.  The ID in string format can be accessed by
+the "dump grid"_dump.html command and its {idstr} argument.
+
+{Proc} is the ID of the processor which currently owns the grid cell.
+
+The {xlo}, {ylo}, {zlo} attributes are the coordinates of the
+lower-left corner of the grid cell in the appropriate distance
+"units"_units.html.  The {xhi}, {yhi}, {zhi} are the coordinates of
+the upper-right corner of the grid cell.  The {xc}, {yc}, {zc}
+attributes are the coordinates of the center point of the grid cell.
+The {zlo}, {zhi}, {zc} attributes cannot be used for a 2d simulation.
+
+:line
+
+[Output info:]
 
 This compute calculates a per-grid vector or per-grid array depending
 on the number of input values.  If a single input is specified, a
