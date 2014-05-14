@@ -34,8 +34,10 @@ class WriteGrid : protected Pointers {
  private:
   FILE *fp;
 
-  void header();
+  void header_parents();
   void write_parents();
+  void header_geometry();
+  void write_geometry();
 };
 
 }

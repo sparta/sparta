@@ -28,6 +28,7 @@
 
 using namespace SPARTA_NS;
 
+enum{PARENT,GEOM};
 #define MAXLINE 256
 
 /* ---------------------------------------------------------------------- */
@@ -41,7 +42,12 @@ void WriteGrid::command(int narg, char **arg)
   if (!grid->exist)
     error->all(FLERR,"Cannot write grid when grid is not defined");
 
-  if (narg != 1) error->all(FLERR,"Illegal write_grid command");
+  if (narg != 2) error->all(FLERR,"Illegal write_grid command");
+
+  int mode;
+  if (strcmp(arg[0],"parent") == 0) mode = PARENT;
+  else if (strcmp(arg[0],"geom") == 0) mode = GEOM;
+  else error->all(FLERR,"Illegal write_grid command");
 
   // write file, create parent cells and then child cells
 
@@ -51,19 +57,23 @@ void WriteGrid::command(int narg, char **arg)
   int me = comm->me;
   if (me == 0) {
     if (screen) fprintf(screen,"Writing grid file ...\n");
-    fp = fopen(arg[0],"w");
+    fp = fopen(arg[1],"w");
     if (!fp) {
       char str[128];
-      sprintf(str,"Cannot open file %s",arg[0]);
+      sprintf(str,"Cannot open file %s",arg[1]);
       error->one(FLERR,str);
     }
   }
 
-  if (me == 0) header();
-
   // write Parents section
 
-  if (me == 0) write_parents();
+  if (mode == PARENT) {
+    if (me == 0) header_parents();
+    if (me == 0) write_parents();
+  } else if (mode == GEOM) {
+    header_geometry();
+    write_geometry();
+  }
 
   // close file
 
@@ -90,13 +100,13 @@ void WriteGrid::command(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   write header of grid file
+   write header of parent grid file
    only called by proc 0
 ------------------------------------------------------------------------- */
 
-void WriteGrid::header()
+void WriteGrid::header_parents()
 {
-  fprintf(fp,"# grid file written by SPARTA\n\n");
+  fprintf(fp,"# Parent grid file written by SPARTA\n\n");
   fprintf(fp,"%d nparents\n",grid->nparent);
 }
 
@@ -145,3 +155,24 @@ void WriteGrid::write_parents()
 
   if (!grid->hashfilled) grid->hash->clear();
 }
+
+/* ----------------------------------------------------------------------
+   write header of geometry grid file
+------------------------------------------------------------------------- */
+
+void WriteGrid::header_geometry()
+{
+  int me = comm->me;
+
+  if (me == 0) fprintf(fp,"# Geometry grid file written by SPARTA\n\n");
+  fprintf(fp,"%d nparents\n",grid->nparent);
+}
+
+/* ----------------------------------------------------------------------
+   write Points,Cells section of geometry grid file
+------------------------------------------------------------------------- */
+
+void WriteGrid::write_geometry()
+{
+}
+
