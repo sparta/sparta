@@ -323,6 +323,7 @@ each style or click on the style itself for a full description:
 "boundary"_compute_boundary.html,
 "grid"_compute_grid.html,
 "ke/particle"_compute_ke_particle.html,
+"property/grid"_compute_property_grid.html,
 "reduce"_compute_reduce.html,
 "sonine/grid"_compute_sonine_grid.html,
 "surf"_compute_surf.html,
