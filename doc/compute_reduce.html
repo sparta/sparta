@@ -128,16 +128,16 @@ stored index is used to select the Nth element of the <I>vec1</I> vector.
 of particles for the grid cell with the maximum number of particles:
 </P>
 <PRE>compute 1 property/grid id
-compute	2 grid n
-compute	3 reduce max c_1 c_2 replace 1 2
-stats_style step temp c_3[1] c_3[2] 
+compute	2 grid all n
+compute	3 reduce max c_1 c_2[1] replace 1 2
+stats_style step c_temp c_3[1] c_3[2] 
 </PRE>
 <P>The first two input values in the compute reduce command are vectors
 with the ID and particle count of each grid cell.  Instead of taking
 the max of the ID vector, which does not yield useful information in
 this context, the <I>replace</I> keyword will extract the ID for the grid
-cell which has the maximum number of particles.  This ID and the cell's
-particle count will be printed with the statistical output.
+cell which has the maximum number of particles.  This ID and the
+cell's particle count will be printed with the statistical output.
 </P>
 <HR>
 
