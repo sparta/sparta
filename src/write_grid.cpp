@@ -12,10 +12,12 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include "mpi.h"
 #include "spatype.h"
 #include "string.h"
 #include "write_grid.h"
 #include "grid.h"
+#include "domain.h"
 #include "comm.h"
 #include "memory.h"
 #include "error.h"
@@ -71,7 +73,7 @@ void WriteGrid::command(int narg, char **arg)
     if (me == 0) header_parents();
     if (me == 0) write_parents();
   } else if (mode == GEOM) {
-    header_geometry();
+    if (me == 0) header_geometry();
     write_geometry();
   }
 
@@ -158,21 +160,161 @@ void WriteGrid::write_parents()
 
 /* ----------------------------------------------------------------------
    write header of geometry grid file
+   only called by proc 0
 ------------------------------------------------------------------------- */
 
 void WriteGrid::header_geometry()
 {
-  int me = comm->me;
+  fprintf(fp,"# Geometry grid file written by SPARTA\n\n");
 
-  if (me == 0) fprintf(fp,"# Geometry grid file written by SPARTA\n\n");
-  fprintf(fp,"%d nparents\n",grid->nparent);
+  if (domain->dimension == 2) 
+    fprintf(fp,BIGINT_FORMAT " points\n",4*grid->ncell);
+  else fprintf(fp,BIGINT_FORMAT " points\n",8*grid->ncell);
+  fprintf(fp,BIGINT_FORMAT " cells\n",grid->ncell);
 }
 
 /* ----------------------------------------------------------------------
-   write Points,Cells section of geometry grid file
+   write Points,Cells sections of geometry grid file
+   proc 0 pings other procs for info and writes entire file
 ------------------------------------------------------------------------- */
 
 void WriteGrid::write_geometry()
 {
-}
+  int i,tmp,nlines;
+  double *buf;
+  MPI_Status status;
+  MPI_Request request;
 
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+  int dimension = domain->dimension;
+
+  // nme = # of points this proc will contribute
+  // NOTE: need to worry about 8*ncells overflowing
+
+  int nme = grid->nunsplitlocal + grid->nsplitlocal;
+  if (dimension == 2) nme *= 4;
+  else nme *= 8;
+
+  // nmax = max # of points on any proc
+
+  int nmax;
+  MPI_Allreduce(&nme,&nmax,1,MPI_INT,MPI_MAX,world);
+
+  // allocate memory for max # of points
+
+  double **pt;
+  memory->create(pt,nmax,3,"write_grid:pt");
+  if (pt) buf = &pt[0][0];
+  else buf = NULL;
+
+  // pack corner points of each cell into pt, skipping sub cells
+
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  int m = 0;
+  for (i = 0; i < nglocal; i++) {
+    if (cells[i].nsplit <= 0) continue;
+
+    pt[m][0] = cells[i].lo[0];
+    pt[m][1] = cells[i].lo[1];
+    pt[m][2] = cells[i].lo[2];
+    m++;
+
+    pt[m][0] = cells[i].hi[0];
+    pt[m][1] = cells[i].lo[1];
+    pt[m][2] = cells[i].lo[2];
+    m++;
+
+    pt[m][0] = cells[i].hi[0];
+    pt[m][1] = cells[i].hi[1];
+    pt[m][2] = cells[i].lo[2];
+    m++;
+
+    pt[m][0] = cells[i].lo[0];
+    pt[m][1] = cells[i].hi[1];
+    pt[m][2] = cells[i].lo[2];
+    m++;
+
+    if (dimension == 2) continue;
+
+    pt[m][0] = cells[i].lo[0];
+    pt[m][1] = cells[i].lo[1];
+    pt[m][2] = cells[i].hi[2];
+    m++;
+
+    pt[m][0] = cells[i].hi[0];
+    pt[m][1] = cells[i].lo[1];
+    pt[m][2] = cells[i].hi[2];
+    m++;
+
+    pt[m][0] = cells[i].hi[0];
+    pt[m][1] = cells[i].hi[1];
+    pt[m][2] = cells[i].hi[2];
+    m++;
+
+    pt[m][0] = cells[i].lo[0];
+    pt[m][1] = cells[i].hi[1];
+    pt[m][2] = cells[i].hi[2];
+    m++;
+  }
+
+  // write out points from all procs
+
+  if (me == 0) {
+    fprintf(fp,"\nPoints\n\n");
+    bigint index = 0;
+    for (int iproc = 0; iproc < nprocs; iproc++) {
+      if (iproc) {
+        MPI_Irecv(buf,nmax*3,MPI_DOUBLE,iproc,0,world,&request);
+        MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
+        MPI_Wait(&request,&status);
+        MPI_Get_count(&status,MPI_DOUBLE,&nlines);
+        nlines /= 3;
+      } else nlines = nme;
+      
+      for (i = 0; i < nme; i++) {
+        index++;
+        fprintf(fp,BIGINT_FORMAT " %g %g %g\n",
+                index,pt[i][0],pt[i][1],pt[i][2]);
+      }
+    }
+    
+  } else {
+    MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
+    MPI_Rsend(buf,nme*3,MPI_DOUBLE,0,0,world);
+  }
+
+  // dellocate point memory
+
+  memory->destroy(pt);
+
+  // proc 0 write Cells section
+  // trivial monotonically increasing indexing b/c Points are not unique
+
+  if (me != 0) return;
+
+  bigint ncell = grid->ncell;
+  bigint np = 0;
+
+  fprintf(fp,"\nCells\n\n");
+
+  if (dimension == 2) {
+    for (bigint n = 0; n < ncell; n++) {
+      fprintf(fp,BIGINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT 
+              " " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
+              n+1,np+1,np+2,np+3,np+4);
+      np += 4;
+    }
+  } else {
+    for (bigint n = 0; n < ncell; n++) {
+      fprintf(fp,BIGINT_FORMAT " " BIGINT_FORMAT " " BIGINT_FORMAT 
+              " " BIGINT_FORMAT " " BIGINT_FORMAT
+              " " BIGINT_FORMAT " " BIGINT_FORMAT
+              " " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
+              n+1,np+1,np+2,np+3,np+4,np+5,np+6,np+7,np+8);
+      np += 8;
+    }
+  }
+}
