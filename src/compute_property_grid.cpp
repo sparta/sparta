@@ -103,6 +103,13 @@ ComputePropertyGrid::~ComputePropertyGrid()
 
 /* ---------------------------------------------------------------------- */
 
+void ComputePropertyGrid::init()
+{
+  reallocate();
+}
+
+/* ---------------------------------------------------------------------- */
+
 void ComputePropertyGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;

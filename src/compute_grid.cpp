@@ -292,7 +292,7 @@ double *ComputeGrid::normptr(int n)
 }
 
 /* ----------------------------------------------------------------------
-   memory usage of local atom-based array
+   memory usage of local grid-based array
 ------------------------------------------------------------------------- */
 
 bigint ComputeGrid::memory_usage()

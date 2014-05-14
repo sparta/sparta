@@ -405,7 +405,6 @@ void ComputeReduce::compute_vector()
    calculate reduced value for one input M and return it
    if flag = -1:
      sum/min/max/ave all values in vector
-     for per-atom quantities, limit to atoms in group
      if mode = MIN or MAX, also set index to which vector value wins
    if flag >= 0: simply return vector[flag]
 ------------------------------------------------------------------------- */

@@ -29,6 +29,7 @@ class ComputePropertyGrid : public Compute {
  public:
   ComputePropertyGrid(class SPARTA *, int, char **);
   ~ComputePropertyGrid();
+  void init();
   void compute_per_grid();
   void reallocate();
   bigint memory_usage();
