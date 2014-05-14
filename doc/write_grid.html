@@ -13,25 +13,68 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>write_grid file 
+<PRE>write_grid mode file 
 </PRE>
-<UL><LI>file = name of file to write grid info to 
+<UL><LI>mode = <I>parent</I> or <I>geom</I>
+<LI>file = name of file to write grid info to 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>write_grid data.grid 
+<PRE>write_grid parent data.grid
+write_grid geom viz.out 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Write a grid file in text format that lists all the parent cells in
-the currently defined hierarchical grid.  See the
-<A HREF = "read_grid.html">read_grid</A> and <A HREF = "create_grid.html">create_grid</A> commands
-for a definition of hierarchical grids and parent/child cells as used
-by SPARTA.
+<P>Write a grid file in text format describing the currently defined
+hierarchical grid.  See the <A HREF = "read_grid.html">read_grid</A> and
+<A HREF = "create_grid.html">create_grid</A> commands for a definition of
+hierarchical grids and parent/child cells as used by SPARTA.
 </P>
-<P>The output file is in the same format as the input file used by the
-<A HREF = "read_grid.html"">read_grid</A> command.  Thus the file can be used to
-start a subsequent simulation using the same grid topology.
+<P>The file is written in text format in one of two modes.
+</P>
+<P>If <I>mode</I> is <I>parent</I> then a list of parent cells is written in the
+same format as the input file used by the <A HREF = "read_grid.html"">read_grid</A>
+command.  Thus the file can be used to start a subsequent simulation
+using the same grid topology.
+</P>
+<P>If <I>mode</I> is <I>geom</I> then the geometric description of all the child
+cells is written in the following format.  This file can be used in
+conjunction with snapshot files of per-grid properties, written by the
+<A HREF = "dump.html">dump grid</A> command, to visualize various properties on the
+grid.
+</P>
+<PRE>Description line 
+</PRE>
+<PRE>N points
+M cells 
+</PRE>
+<PRE>Points 
+</PRE>
+<PRE>1 x y z
+2 x y z
+...
+N x y z 
+</PRE>
+<PRE>Cells 
+</PRE>
+<PRE>1 p1 p2 p3 p4 ...
+2 p1 p2 p3 p4 ...
+...
+M p1 p2 p3 p4 ... 
+</PRE>
+<P>The file will have N points and M grid cells.  For each point the
+x,y,z coordinates are output.  For each grid cell, the indices of the
+4 (in 2d) or 8 (in 3d) points comprising the corners of the grid cell
+are output.  Each point index is an integer from 1 to N.  The ordering
+of the point indices is (LL,LR,UR,UL) or counter-clockwise for 2d grid
+cells.  For 3d grid cells it is the same where the first 4 indices are
+the lower-Z indices, and the next 4 are the upper-Z indices.
+</P>
+<P>IMPORTANT NOTE: The points in the output file will not be unique.
+Instead there will be 4 or 8 for each grid cell, with some (x,y,z)
+coordinates being duplicated since they are shared by multiple grid
+cells.  Converting the output file to one with a unique list of points
+is currently a post-processing task.
 </P>
 <P><B>Restrictions:</B> none
 </P>

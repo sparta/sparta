@@ -10,25 +10,68 @@ write_grid command :h3
 
 [Syntax:]
 
-write_grid file :pre
+write_grid mode file :pre
 
+mode = {parent} or {geom}
 file = name of file to write grid info to :ul
 
 [Examples:]
 
-write_grid data.grid :pre
+write_grid parent data.grid
+write_grid geom viz.out :pre
 
 [Description:]
 
-Write a grid file in text format that lists all the parent cells in
-the currently defined hierarchical grid.  See the
-"read_grid"_read_grid.html and "create_grid"_create_grid.html commands
-for a definition of hierarchical grids and parent/child cells as used
-by SPARTA.
+Write a grid file in text format describing the currently defined
+hierarchical grid.  See the "read_grid"_read_grid.html and
+"create_grid"_create_grid.html commands for a definition of
+hierarchical grids and parent/child cells as used by SPARTA.
 
-The output file is in the same format as the input file used by the
-"read_grid"_read_grid.html" command.  Thus the file can be used to
-start a subsequent simulation using the same grid topology.
+The file is written in text format in one of two modes.
+
+If {mode} is {parent} then a list of parent cells is written in the
+same format as the input file used by the "read_grid"_read_grid.html"
+command.  Thus the file can be used to start a subsequent simulation
+using the same grid topology.
+
+If {mode} is {geom} then the geometric description of all the child
+cells is written in the following format.  This file can be used in
+conjunction with snapshot files of per-grid properties, written by the
+"dump grid"_dump.html command, to visualize various properties on the
+grid.
+
+Description line :pre
+
+N points
+M cells :pre
+
+Points :pre
+
+1 x y z
+2 x y z
+...
+N x y z :pre
+
+Cells :pre
+
+1 p1 p2 p3 p4 ...
+2 p1 p2 p3 p4 ...
+...
+M p1 p2 p3 p4 ... :pre
+
+The file will have N points and M grid cells.  For each point the
+x,y,z coordinates are output.  For each grid cell, the indices of the
+4 (in 2d) or 8 (in 3d) points comprising the corners of the grid cell
+are output.  Each point index is an integer from 1 to N.  The ordering
+of the point indices is (LL,LR,UR,UL) or counter-clockwise for 2d grid
+cells.  For 3d grid cells it is the same where the first 4 indices are
+the lower-Z indices, and the next 4 are the upper-Z indices.
+
+IMPORTANT NOTE: The points in the output file will not be unique.
+Instead there will be 4 or 8 for each grid cell, with some (x,y,z)
+coordinates being duplicated since they are shared by multiple grid
+cells.  Converting the output file to one with a unique list of points
+is currently a post-processing task.
 
 [Restrictions:] none
 
