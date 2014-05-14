@@ -27,7 +27,7 @@
 
 using namespace SPARTA_NS;
 
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PCLONE};   // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // several files
 
 /* ---------------------------------------------------------------------- */
 

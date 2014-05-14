@@ -69,7 +69,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   nglocal = 0;
   array_grid = NULL;
 
-  // norm vectors<
+  // norm vectors
 
   for (int i = 0; i < nvalue; i++) {
     if (which[i] == NUM || which[i] == NUMDENS) 

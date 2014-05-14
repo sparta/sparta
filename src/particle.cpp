@@ -28,7 +28,7 @@
 
 using namespace SPARTA_NS;
 
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PCLONE};  // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};  // several files
 
 #define DELTA 10000
 #define DELTASPECIES 16
@@ -70,12 +70,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   add_mixture(1,newarg);
   delete [] newarg;
 
-  // RNG for particle weighting
-
-  int me = comm->me;
-  wrandom = new RanPark(update->ranmaster->uniform());
-  double seed = update->ranmaster->uniform();
-  wrandom->reset(seed,me,100);
+  wrandom = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -90,6 +85,8 @@ Particle::~Particle()
   //memory->destroy(cellcount);
   //memory->destroy(first);
   memory->destroy(next);
+
+  delete wrandom;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -97,6 +94,15 @@ Particle::~Particle()
 void Particle::init()
 {
   for (int i = 0; i < nmixture; i++) mixture[i]->init();
+
+  // RNG for particle weighting
+
+  if (!wrandom) {
+    int me = comm->me;
+    wrandom = new RanPark(update->ranmaster->uniform());
+    double seed = update->ranmaster->uniform();
+    wrandom->reset(seed,me,100);
+  }
 
   // reallocate cellcount and first lists as needed
   // NOTE: when grid becomes dynamic, will need to do this in sort()
