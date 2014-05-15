@@ -159,7 +159,6 @@ class Image : protected Pointers {
   }
 };
 
-
 // ColorMap class
 
 class ColorMap : protected Pointers {

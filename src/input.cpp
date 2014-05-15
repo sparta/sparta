@@ -159,7 +159,10 @@ void Input::file()
     if (n == 0) {
       if (label_active) error->all(FLERR,"Label wasn't found in input script");
       if (me == 0) {
-        if (infile != stdin) fclose(infile);
+        if (infile != stdin) {
+          fclose(infile);
+          infile = NULL;
+        }
         nfile--;
       }
       MPI_Bcast(&nfile,1,MPI_INT,0,world);
@@ -212,7 +215,8 @@ void Input::file(const char *filename)
   if (me == 0) {
     if (nfile > 1)
       error->one(FLERR,"Invalid use of library file() function");
-    
+
+    if (infile && infile != stdin) fclose(infile); 
     infile = fopen(filename,"r");
     if (infile == NULL) {
       char str[128];
@@ -759,7 +763,7 @@ void Input::jump()
   if (me == 0) {
     if (strcmp(arg[0],"SELF") == 0) rewind(infile);
     else {
-      if (infile != stdin) fclose(infile);
+      if (infile && infile != stdin) fclose(infile);
       infile = fopen(arg[0],"r");
       if (infile == NULL) {
         char str[128];
@@ -930,11 +934,14 @@ void Input::shell()
 
   } else if (strcmp(arg[0],"mkdir") == 0) {
     if (narg < 2) error->all(FLERR,"Illegal shell mkdir command");
-#if !defined(WINDOWS) && !defined(__MINGW32__)
     if (me == 0)
-      for (int i = 1; i < narg; i++)
+      for (int i = 1; i < narg; i++) {
+#if defined(_WIN32)
+        _mkdir(arg[i]);
+#else
         mkdir(arg[i], S_IRWXU | S_IRGRP | S_IXGRP);
 #endif
+      }
 
   } else if (strcmp(arg[0],"mv") == 0) {
     if (narg != 3) error->all(FLERR,"Illegal shell mv command");
