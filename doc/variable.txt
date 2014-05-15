@@ -13,7 +13,7 @@ variable command :h3
 variable name style args ... :pre
 
 name = name of variable to define :ulb,l
-style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {equal} or {particle} :l
+style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {equal} or {particle} :l
   {delete} = no args
   {index} args = one or more strings
   {loop} args = N
@@ -34,17 +34,22 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
     N = integer size of loop
     pad = all values will be same length, e.g. 001, 002, ..., 100
   {string} arg = one string
+  {format} args = vname fstr
+    vname = name of equal-style variable to evaluate
+    fstr = C-style format string
+  {getenv} arg = one string
+  {file} arg = filename
   {equal} or {particle} args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
     stats keywords = step, np, vol, etc from "stats_style"_stats_style.html
     math operators = (), -x, x+y, x-y, x*y, x/y, x^y, 
                      x==y, x!=y, x<y, x<=y, x>y, x>=y, x&&y, x||y, !x
-    math functions = sqrt(x), exp(x), ln(x), log(x),
+    math functions = sqrt(x), exp(x), ln(x), log(x), abs(x),
                      sin(x), cos(x), tan(x), asin(x), acos(x), atan(x), atan2(y,x),
                      random(x,y), normal(x,y), ceil(x), floor(x), round(x)
-                     ramp(x,y), stagger(x,y), logfreq(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
-    special functions = sum(x), min(x), max(x), ave(x), trap(x)
+                     ramp(x,y), stagger(x,y), logfreq(x,y,z), stride(x,y,z), vdisplace(x,y), swiggle(x,y,z), cwiggle(x,y,z)
+    special functions = sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
     particle vector = mass, type, x, y, z, vx, vy, vz
     compute references = c_ID, c_ID\[i\], c_ID\[i\]\[j\]
     fix references = f_ID, f_ID\[i\], f_ID\[i\]\[j\]
@@ -60,9 +65,11 @@ variable beta equal "temp / 3.0"
 variable b equal c_myTemp
 variable b particle x*y/vol
 variable foo string myfile
+variable f file values.txt
 variable temp world 300.0 310.0 320.0 $\{Tfinal\}
 variable x universe 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
 variable x uloop 15 pad
+variable str format x %.6g
 variable x delete :pre
 
 [Description:]
@@ -70,18 +77,20 @@ variable x delete :pre
 This command assigns one or more strings to a variable name for
 evaluation later in the input script or during a simulation.
 
-Variables can be used in several ways in SPARTA.  A variable can be
-referenced elsewhere in an input script to become part of a new input
-command.  For variable styles that store multiple strings, the
-"next"_next.html command can be used to increment which string is
-assigned to the variable.  Variables of style {equal} store a formula
-which when evaluated produces a single numeric value which can be
-output either directly (see the "print"_print.html, "fix
+Variables can thus be useful in several contexts.  A variable can be
+defined and then referenced elsewhere in an input script to become
+part of a new input command.  For variable styles that store multiple
+strings, the "next"_next.html command can be used to increment which
+string is assigned to the variable.  Variables of style {equal} store
+a formula which when evaluated produces a single numeric value which
+can be output either directly (see the "print"_print.html, "fix
 print"_fix_print.html, and "run every"_run.html commands) or as part
 of statistical output (see the "stats_style"_stats_style.html
-command).  Variables of style {particle} store a formula which when
-evaluated produces one numeric value per particle which can be output
-to a dump file (see the "dump custom"_dump.html command).
+command), or used as input to an averaging fix (see the "fix
+ave/time"_fix_ave_time.html command).  Variables of style {particle}
+store a formula which when evaluated produces one numeric value per
+particle which can be output to a dump file (see the "dump
+particle"_dump.html command).
 
 In the discussion that follows, the "name" of the variable is the
 arbitrary string that is the 1st argument in the variable command.
@@ -94,11 +103,12 @@ evaluation of the string.  Note that the same string can generate
 different values when it is evaluated at different times during a
 simulation.
 
-IMPORTANT NOTE: When the input script line that defines a variable of
-style {equal} or {particle} that contains a formula is encountered, the
+IMPORTANT NOTE: When the input script line is encountered that defines
+a variable of style {equal} or {particle} that contains a formula, the
 formula is NOT immediately evaluated and the result stored.  See the
 discussion below about "Immediate Evaluation of Variables" if you want
-to do this.
+to do this.  This is also true of the {format} style variable since it
+evaluates another variable when it is invoked.
 
 IMPORTANT NOTE: When a variable command is encountered in the input
 script and the variable name has already been specified, the command
@@ -111,15 +121,15 @@ means that using the "command-line switch"_Section_start.html#start_5
 script.
 
 There are two exceptions to this rule.  First, variables of style
-{string} and {equal} and {particle} ARE redefined each time the
+{string}, {getenv}, {equal} and {particle} ARE redefined each time the
 command is encountered.  This allows these style of variables to be
 redefined multiple times in an input script.  In a loop, this means
 the formula associated with an {equal} or {particle} style variable
-can change if it contains a substitution for another variable,
-e.g. $x.
+can change if it contains a substitution for another variable, e.g. $x
+or v_x.
 
-Second, as described below, if a variable is iterated over to the end
-of its list of strings via the "next"_next.html command, it is removed
+Second, as described below, if a variable is iterated on to the end of
+its list of strings via the "next"_next.html command, it is removed
 from the list of active variables, and is thus available to be
 re-defined in a subsequent variable command.  The {delete} style does
 the same thing.
@@ -158,6 +168,14 @@ variable    a delete :pre
 
 :line
 
+This section describes how various variable styles are defined and
+what they store.  Many of the styles store one or more strings.  Note
+that a single string can contain spaces (multiple words), if it is
+enclosed in quotes in the variable command.  When the variable is
+substituted for in another input script command, its returned string
+will then be interpreted as multiple arguments in the expanded
+command.
+
 For the {index} style, one or more strings are specified.  Initially,
 the 1st string is assigned to the variable.  Each time a
 "next"_next.html command is used with the variable name, the next
@@ -178,6 +196,7 @@ string ("2", "3", etc) is assigned.  All processors assign the same
 string to the variable.  The {loop} style can also be specified with
 two arguments N1 and N2.  In this case the loop runs from N1 to N2
 inclusive, and the string N1 is initially assigned to the variable.
+N1 <= N2 and N2 >= 0 is required.
 
 For the {world} style, one or more strings are specified.  There must
 be one string for each processor partition or "world".  See "this
@@ -209,16 +228,59 @@ strings are the integers from 1 to N.  This allows generation of long
 list of runs (e.g. 1000) without having to list N strings in the input
 script.
 
+For the {string} style, a single string is assigned to the variable.
+The only difference between this and using the {index} style with a
+single string is that a variable with {string} style can be redefined.
+E.g. by another command later in the input script, or if the script is
+read again in a loop.
+
+For the {format} style, an equal-style variable is specified along
+with a C-style format string, e.g. "%f" or "%.10g", which must be
+appropriate for formatting a double-precision floating-point value.
+This allows an equal-style variable to be formatted specifically for
+output as a string, e.g. by the "print"_print.html command, if the
+default format "%.15g" has too much precision.
+
+For the {getenv} style, a single string is assigned to the variable
+which should be the name of an environment variable.  When the
+variable is evaluated, it returns the value of the environment
+variable, or an empty string if it not defined.  This style of
+variable can be used to adapt the behavior of LAMMPS input scripts via
+environment variable settings, or to retrieve information that has
+been previously stored with the "shell putenv"_shell.html command.
+Note that because environment variable settings are stored by the
+operating systems, they persist beyond a "clear"_clear.html command.
+
+For the {file} style, a filename is provided which contains a list of
+strings to assign to the variable, one per line.  The strings can be
+numeric values if desired.  See the discussion of the next() function
+below for equal-style variables, which will convert the string of a
+file-style variable into a numeric value in a formula.
+
+When a file-style variable is defined, the file is opened and the
+string on the first line is read and stored with the variable.  This
+means the variable can then be evaluated as many times as desired and
+will return that string.  There are two ways to cause the next string
+from the file to be read: use the "next"_next.html command or the
+next() function in an equal- or atom-style variable, as discussed
+below.
+
+The rules for formatting the file are as follows.  A comment character
+"#" can be used anywhere on a line; text starting with the comment
+character is stripped.  Blank lines are skipped.  The first "word" of
+a non-blank line, delimited by white space, is the "string" assigned
+to the variable.
+
 :line
 
 For the {equal} and {particle} styles, a single string is specified
 which represents a formula that will be evaluated afresh each time the
 variable is used.  If you want spaces in the string, enclose it in
-quotes so the parser will treat it as a single argument.  For {equal}
-style variables the formula computes a scalar quantity, which becomes
-the value of the variable whenever it is evaluated.  For {particle}
-style variables the formula computes one quantity for each particle
-whenever it is evaluated.
+double quotes so the parser will treat it as a single argument.  For
+{equal} style variables the formula computes a scalar quantity, which
+becomes the value of the variable whenever it is evaluated.  For
+{particle} style variables the formula computes one quantity for each
+particle whenever it is evaluated.
 
 Note that {equal} and {particle} variables can produce different
 values at different stages of the input script or at different times
