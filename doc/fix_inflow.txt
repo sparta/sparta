@@ -31,60 +31,65 @@ fix in inflow mymix xlo yhi n 1000 nevery 10 :pre
 [Description:]
 
 Insert particles into the simulation box continuously during a
-simulation.  The particles are inserted on the specified faces using
-properties of the specified mixture.  If done every timestep, this has
-the effect of a continuous influx of particles thru the face(s).
+simulation.  The particles are inserted on the specified faces of the
+box using properties of the specified mixture.  If done every
+timestep, this induces a continuous influx of particles thru the
+face(s).
 
 The properties of the inserted particles are from the mixture with ID
-{mix-ID}.  This determines what particle species are in the mixture at
-what relative fractions, and its number density, streaming velocity,
-and temperature.  See the "mixture"_mixture.html command for details.
+{mix-ID}.  This determines the species of the particles added at what
+relative fractions, and the overall number density, streaming
+velocity, and temperature.  See the "mixture"_mixture.html command for
+details.
 
 One or more faces of the simulation box can be specified via the
-{face1}, {face2}, etc arguments.  There are 6 individual faces that
-can be specified as {xlo}, {xhi}, {ylo}, {yhi}, {zlo}, or {zhi}.
-Specifying {all} is the same as specifying all 6 individual faces.
+{face1}, {face2}, etc arguments.  The 6 possible faces can be
+specified as {xlo}, {xhi}, {ylo}, {yhi}, {zlo}, or {zhi}.  Specifying
+{all} is the same as specifying all 6 individual faces.
 
 On each insertion timestep, each grid cell with a face(s) on an inflow
 boundary performs the following computation at the beginning of the
 SPARTA timestep.
 
 The molecular flux across a surface element per unit time is given by
-equation 4.22 of Bird 1994.  Based on that, the number of particles
-{M} to insert on the face is based on the number of molecules
-enetring, the global {fnum} ratio (specified by the
-"global"_global.html" command, the mixture number density, the mixture
-streaming velocity and thermal temperature, the area of the face, and
-its orientation relative to the streaming velocity.
+equation 4.22 of "(Bird94)"_#Bird94.  The number of particles {M} to
+insert on a particular grid cell face is based on the flux, the global
+{fnum} ratio (specified by the "global"_global.html" command, the
+mixture number density, the mixture streaming velocity and thermal
+temperature, the area of the face, and its orientation relative to the
+streaming velocity.
 
 If {M} has a fractional value, e.g. 12.5, then 12 particles are
-inserted, and a 13th depending on the outcome of a random number
-generation.  Each particle is inserted at a random location on the
-face.  The particle species is chosen randomly in accord with the
-{frac} settings of the collection of species in the mixture, as set by
-the "mixture"_mixture.html command.  The velocity of the particle is
-set to the sum of the streaming velocity of the mixture and a thermal
-velocity sampled from the thermal temperature of the mixture.  Both
-the streaming velocity and thermal temperature are also set by the
+inserted, and a 13th depending on the value of a random number.  Each
+particle is inserted at a random location on the face.  The particle
+species is chosen randomly in accord with the {frac} settings of the
+collection of species in the mixture, as set by the
+"mixture"_mixture.html command.  The velocity of the particle is set
+to the sum of the mixture's streaming velocity and a thermal velocity
+sampled from the thermal temperature of the mixture.  Both the
+streaming velocity and thermal temperature are also set by the
 "mixture"_mixture.html command.
 
 If the final particle velocity is not directed "into" the grid cell,
-then the velocity sampling is repeated until it is.  This insures that
-all inserted particles enter the simulation domain, as desired.
+then the velocity sampling procedure is repeated until it is.  This
+insures that all inserted particles enter the simulation domain, as
+desired.
 
 The first timestep that inserted particles are advected, they move for
 a random fraction of the timestep.  This insures a continuous flow
-field of particles entering the simulation box through the box face.
+field of particles entering the simulation box.
 
 :line
 
-The {n} keyword can be useful for debugging purposes.  If {Np} is set
-to 0, then the number of inserted particles is a function of {fnum},
-{nrho}, and other mixture settings, as described above.  If {Np} is set
-to a value > 0, then the {fnum} and {nrho} settings are ignored, and
-{Np} particles are inserted.  This is done by dividing {Np} by the
-total number of grid cells that are adjacent to the specified box
-faces and inserting an equal number of particles per grid cell.
+The {n} keyword can alter how many particles are inserted, which can
+be useful for debugging purposes.  If {Np} is set to 0, then the
+number of inserted particles is a function of {fnum}, {nrho}, and
+other mixture settings, as described above.  If {Np} is set to a value
+> 0, then the {fnum} and {nrho} settings are ignored, and exactly {Np}
+particles are inserted on each insertion timestep.  This is done by
+dividing {Np} by the total number of grid cells that are adjacent to
+the specified box faces and inserting an equal number of particles per
+grid cell.
 
 The {nevery} keyword determines how often particles are inserted.  If
 {Nstep} > 1, this may give a non-continuous, clumpy distribution in
@@ -94,26 +99,26 @@ The {perspecies} keyword determines how the species of each inserted
 particle is randomly determined.  This has an effect on the
 statistical properties of the inserted particles.
 
-If {perspecies} is set to {yes}, then a target insertion number {M} is
-calculated for each species in a grid cell, which is a function of the
+If {perspecies} is set to {yes}, then a target insertion number {M} in
+a grid cell is calculated for each species, which is a function of the
 relative number fraction of the species, as set by the "mixture
 nfrac"_mixture.html command.  If {M} has a fractional value,
 e.g. 12.5, then 12 particles of that species will always be inserted,
-and a 13th depending on the outcome of a randomly generated number.
+and a 13th depending on the value of a random number.
 
 If {perspecies} is set to {no}, then a single target insertion number
-{M} is calculated for all the species in a grid cell.  Each time a
+{M} in a grid cell is calculated for all the species.  Each time a
 particle is inserted, a random number is used to choose the species of
 the particle, based on the relative number fractions of all the
 species in the mixture.  As before, if {M} has a fractional value,
 e.g. 12.5, then 12 particles will always be inserted, and a 13th
-depending on the outcome of a randomly generated number.
+depending on the value of a random number.
 
-Here is a simple example, illustrating the difference between the two
-options.  Assume a mixture with 2 species, each with a relative number
-fraction of 0.5.  Assume a particular grid cell inserts 10 particles
-from that mixture.  If {perspecies} is set to {yes}, then exactly 5
-particles of each species will be inserted on every timestep
+Here is a simple example that illustrates the difference between the
+two options.  Assume a mixture with 2 species, each with a relative
+number fraction of 0.5.  Assume a particular grid cell inserts 10
+particles from that mixture.  If {perspecies} is set to {yes}, then
+exactly 5 particles of each species will be inserted on every timestep
 insertions take place.  If {perspecies} is set to {no}, then exactly
 10 particles will be inserted every time and on average the insertion
 will be 5 particles of each of the two species.  But on one timestep
@@ -150,3 +155,9 @@ of {no}.
 [Default:]
 
 The keyword defaults are n = 0, nevery = 1, perspecies = yes.
+
+:line
+
+:link(Bird94)
+[(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).

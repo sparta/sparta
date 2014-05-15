@@ -126,11 +126,11 @@ the first group, the 4th thru 6th columns would be the {thermal} and
 B1 and B2 moments of the second group, etc.  The number of rows is
 equal to the number of grid cells in the simulation.
 
-NOTE: which kind of grid cells?
+TODO: which kind of grid cells?
 
 The array can be accessed by any command that uses per-grid values
 from a compute as input.  See "this
-section"_Section_howto.html#howto_15 for an overview of SPARTA output
+section"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
 The per-grid array values will be in the "units"_units.html

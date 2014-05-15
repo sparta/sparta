@@ -29,23 +29,24 @@ species myfile H+ Cl- HCl
 <P><B>Description:</B>
 </P>
 <P>Define one or more particle species to use in the simulation.  This
-command can be used as many times as desired to add species to an
-internal list of species that the simulation recognizes and has
-parameters for.
+command can be used as many times as desired to add species to the
+list of species that the simulation recognizes.
 </P>
 <P>The specified <I>file</I> is the name of a file containing definitions for
 some number of species, not all of which need to used by this
 simulation.  Only those requested by ID will be extracted from the
 file and they must be present in the file.  The format of the species
-file is discussed below.
+file is discussed below.  The data directory in the SPARTA
+distribution contains several species files, all with the suffix
+".species".
 </P>
 <P>Each <I>ID</I> is a character string used to identify the species, such as
-N or O2 or NO or D or Fe-, which can be any combination of
+N or O2 or NO or D or Fe-.  The string can be any combination of
 alphanumeric characters, or "=", "-", or underscore.
 </P>
-<P>Instead of listing single-species IDs, one of several pre-defined
-multi-species names can be used, each of which expands into a list of
-several individual species IDs.  The list of recognized
+<P>Instead of specifying IDs for single species, one of several
+pre-defined multi-species names can be used, each of which is expanded
+into a list of several individual species IDs.  The list of recognized
 abbreviations is as follows:
 </P>
 <UL><LI>air = N, O, NO 
@@ -55,9 +56,9 @@ as in the 2nd example above.
 </P>
 <HR>
 
-<P>The format of the species file is as follows.  Comments or blank lines
+<P>The format of a species file is as follows.  Comments or blank lines
 are allowed in the file.  Comment lines start with a "#" character.
-All other lines must have format like this with values separated
+All other lines must have the following format with values separated
 by whitespace:
 </P>
 <P>species-ID prop1 prop2 ... prop9
@@ -65,17 +66,17 @@ by whitespace:
 <P>The species-ID is a string that will be matched against the requested
 species-ID, as described above.  The properties are as follows:
 </P>
-<UL><LI>prop1 = molwt = molecular weight
-<LI>prop2 = mass = mass (mass units)
-<LI>prop3 = rotdof = rotational degrees of freedom
-<LI>prop4 = rotrel = rotational ???
-<LI>prop5 = vibdof = vibrational degrees of freedom
-<LI>prop6 = vibrel = vibrational ??
-<LI>prop7 = vibtemp = vibrational temperature (temperature units)
-<LI>prop8 = specwt = ???
-<LI>prop9 = charge = ??? 
+<UL><LI>prop1 = = molecular weight (atomic mass units, e.g. 16 for oxygen)
+<LI>prop2 = = molecular mass (mass units)
+<LI>prop3 = rotational degrees of freedom (integer)
+<LI>prop4 = rotational ??? ()
+<LI>prop5 = vibrational degrees of freedom (integer)
+<LI>prop6 = vibrational ??? ()
+<LI>prop7 = vibrational temperature (temperature units)
+<LI>prop8 = species weight ()
+<LI>prop9 = multiple of electon charge (1 for a proton) 
 </UL>
-<P>NOTE: give correct definitions and their units
+<P>TODO: need to fill in ??? and empty units (), also what is species wt?
 </P>
 <HR>
 

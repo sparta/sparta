@@ -33,7 +33,7 @@ compute 1 all property/grid id xc yc zc :pre
 
 Define a computation that simply stores grid attributes for each grid
 cell.  This is useful so that the values can be used by other "output
-commands"_Section_howto.html#howto_15 that take computes as inputs.
+commands"_Section_howto.html#howto_4 that take computes as inputs.
 See for example, the "compute reduce"_compute_reduce.html, "fix
 ave/grid"_fix_ave_atom.html, and "dump grid"_dump_grid.html commands.
 
@@ -76,7 +76,7 @@ per-grid vector is produced.  If two or more inputs are specified, a
 per-grid array is produced where the number of columns = the number of
 inputs.  The vector or array can be accessed by any command that uses
 per-atom values from a compute as input.  See "this
-section"_Section_howto.html#howto_15 for an overview of SPARTA output
+section"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
 The vector or array values will be in whatever "units"_units.html the
