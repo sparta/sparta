@@ -280,7 +280,6 @@ section"_#cmd_4 lists the same commands, grouped by category.
 "read_grid"_read_grid.html,
 "read_surf"_read_surf.html,
 "region"_region.html,
-"restart"_restart,
 "run"_run.html,
 "seed"_seed.html,
 "shell"_shell.html,
@@ -295,8 +294,7 @@ section"_#cmd_4 lists the same commands, grouped by category.
 "unfix"_unfix.html,
 "units"_units.html,
 "variable"_variable.html,
-"write_grid"_write_grid.html,
-"write_restart"_write_restart.html :tb(c=6,ea=c)
+"write_grid"_write_grid.html :tb(c=6,ea=c)
 
 :line
 
