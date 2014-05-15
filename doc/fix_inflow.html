@@ -58,13 +58,13 @@ Specifying <I>all</I> is the same as specifying all 6 individual faces.
 boundary performs the following computation at the beginning of the
 SPARTA timestep.
 </P>
-<P>The molecular flux across a surface element per unit time is 
-given by equation 4.22 of Bird 1994.
-Based on that, the number of particles <I>M</I> to insert on the face is based on 
-the number of molecules enetring, the global <I>fnum</I> ratio (specified by the
+<P>The molecular flux across a surface element per unit time is given by
+equation 4.22 of Bird 1994.  Based on that, the number of particles
+<I>M</I> to insert on the face is based on the number of molecules
+enetring, the global <I>fnum</I> ratio (specified by the
 <A HREF = "global.html"">global</A> command, the mixture number density, the mixture
 streaming velocity and thermal temperature, the area of the face, and
-its orientation relative to the streaming velocity. 
+its orientation relative to the streaming velocity.
 </P>
 <P>If <I>M</I> has a fractional value, e.g. 12.5, then 12 particles are
 inserted, and a 13th depending on the outcome of a random number
