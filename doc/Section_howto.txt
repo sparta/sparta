@@ -17,7 +17,9 @@ SPARTA.
 4.4 "Output from SPARTA (stats, dumps, computes, fixes, variables)"_#howto_4
 4.5 "Visualizing SPARTA snapshots"_#howto_5
 4.6 "Library interface to SPARTA"_#howto_6
-4.7 "Coupling SPARTA to other codes"_#howto_7 :all(b)
+4.7 "Coupling SPARTA to other codes"_#howto_7 
+4.9 "Grid cells as defined by SPARTA"_#howto_9
+4.10 "Surfaces as defined by SPARTA"_howto_10 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "this section"_Section_example.html of the manual also

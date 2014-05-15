@@ -269,7 +269,7 @@ The {color} setting can also be a per-grid compute or fix.  In this
 case, it is specified as {c_ID} or {c_ID\[N\]} for a compute and as
 {f_ID} and {f_ID\[N\]} for a fix.
 
-This allows per-grid cell values in a vector or array to be used to
+This allows per grid cell values in a vector or array to be used to
 color the grid cells.  The ID in the attribute should be replaced by
 the actual ID of the compute or fix that has been defined previously
 in the input script.  See the "compute"_compute.html or "fix"_fix.html

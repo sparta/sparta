@@ -189,6 +189,11 @@ columns is the number of quantities averaged.  The per-grid values can
 only be accessed on timesteps that are multiples of {Nfreq} since that
 is when averaging is performed.
 
+This fix performs calculations for all child grid cells in the
+simulation, which includes unsplit, split, and sub cells.  "Section
+4.9"_Section_howto.html#howto_9 of the manual describes how SPARTA
+defines child, unsplit, split, and sub cells.
+
 [Restrictions:] none
 
 [Related commands:]

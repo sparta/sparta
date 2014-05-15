@@ -102,7 +102,7 @@ For post-processing purposes the text files are self-describing in the
 following sense.
 
 The dimensions of the simulation box are included in each snapshot.
-This information is is formatted as:
+This information is formatted as:
 
 ITEM: BOX BOUNDS xx yy zz
 xlo xhi
@@ -116,7 +116,11 @@ simulation box boundaries (xlo,xhi and ylo,yhi and zlo,zhi).  Each of
 the 6 characters is either o = outflow, p = periodic, or s = specular.
 See the "boundary"_doc/boundary.html command for details.
 
-The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" line in each
+The "ITEM: NUMBER OF ATOMS" or "ITEM: NUMBER OF CELLS" or "ITEM:
+NUMBER OF SURFS" entry in each snapshot gives the number of particles,
+grid cells, surfaces to follow.
+
+The "ITEM: ATOMS" or "ITEM: CELLS" or "ITEM: SURFS" entry in each
 snapshot lists column descriptors for the per-particle or per-grid or
 per-surf lines that follow.  The descriptors are the attributes
 specied in the dump command for the style.  Possible attributes are
@@ -228,6 +232,17 @@ per-particle quantities which could then be output into dump files.
 This section explains the grid cell attributes that can be specified
 as part of the {grid} style.
 
+Note that dump grid will output one line (per snapshot) for each child
+cell in the simulation, excluding split cells.  I.e. only info for
+unsplit and sub cells is output.  "Section
+4.9"_Section_howto.html#howto_9 of the manual describes how SPARTA
+defines child, unsplit, split, and sub cells.  This is different than
+"compute"_compute.html or "fix"_fix.html commands that produce per
+grid information, which also include split cells in their output.  The
+dump grid command discards that output since the sub cells of a split
+cell provide the needed information for further processing and
+visualization.
+
 {Id} and {idstr} are two different forms of the grid cell ID.  In
 SPARTA each grid cell is assigned a unique ID which represents its
 location, in a topological sense, within the hierarchical grid.  This
@@ -250,10 +265,12 @@ coordinates of the upper-right corner of the grid cell.  The {xc},
 grid cell.  The {zlo}, {zhi}, {zc} attributes cannot be used for a 2d
 simulation.
 
-The {vol} attribute is the flow volume of the grid cell (or area in 2d).
-Flow volume is the portion of the grid cell that is accessible to
-particles, i.e. outside any closed surface that may intersect
-the cell.
+The {vol} attribute is the flow volume of the grid cell (or area in
+2d) for unsplit or sub cells.  "Section
+4.9"_Section_howto.html#howto_9 of the manual describes how SPARTA
+defines unsplit and sub cells.  Flow volume is the portion of the grid
+cell that is accessible to particles, i.e. outside any closed surface
+that may intersect the cell.
 
 The {c_ID} and {c_ID\[N\]} attributes allow per-grid vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the

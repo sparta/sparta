@@ -51,9 +51,11 @@ available in SPARTA:
 "boundary"_compute_boundary.html - various quantities on each global boundary 
 "grid"_compute_grid.html - various per grid cell quantities
 "ke/particle"_compute_ke_particle.html - temperature per particle
+"property/grid"_compute_property_grid.html - per grid cell properties
+"reduce"_compute_reduce.html - reduce vectors to scalars
 "sonine/grid"_compute_sonine_grid.html - Sonine moments per grid cell
 "surf"_compute_surf.html - various per surface element quantities
-"temp"_compute_temp.html - temperature of all particles :ul
+"temp"_compute_temp.html - temperature of particles :ul
 
 :line
 

@@ -133,10 +133,14 @@ ordering of columns is first by values, then by groups.  I.e. if the
 <I>thermal</I> and <I>b xy 2</I> moments were specified as keywords, then the
 1st thru 3rd columns would be the <I>thermal</I> and B1 and B2 moments of
 the first group, the 4th thru 6th columns would be the <I>thermal</I> and
-B1 and B2 moments of the second group, etc.  The number of rows is
-equal to the number of grid cells in the simulation.
+B1 and B2 moments of the second group, etc.
 </P>
-<P>TODO: which kind of grid cells?
+<P>This compute performs calculations for all child grid cells in the
+simulation, which includes unsplit, split, and sub cells.  <A HREF = "Section_howto.html#howto_9">Section
+4.9</A> of the manual describes how SPARTA
+defines child, unsplit, split, and sub cells.  Note that split cells
+and unsplit cells inside closed surfaces will contain no particles.
+Thus their computed result for all the individual values will be 0.0.
 </P>
 <P>The array can be accessed by any command that uses per-grid values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_4">this

@@ -74,8 +74,19 @@ This compute calculates a per-grid vector or per-grid array depending
 on the number of input values.  If a single input is specified, a
 per-grid vector is produced.  If two or more inputs are specified, a
 per-grid array is produced where the number of columns = the number of
-inputs.  The vector or array can be accessed by any command that uses
-per-atom values from a compute as input.  See "this
+inputs.
+
+This compute performs calculations for all child grid cells in the
+simulation, which includes unsplit, split, and sub cells.  "Section
+4.9"_Section_howto.html#howto_9 of the manual describes how SPARTA
+defines child, unsplit, split, and sub cells.  The {id} and
+{xlo,ylo,zlo} and {xhi,yhi,zhi} values for a split cell and its sub
+cells are all the same.  The {vol} of a split cell is the same as if
+it were unsplit.  The {vol} of each sub cell in a split cell is its
+individual flow volume.
+
+The vector or array can be accessed by any command that uses per-atom
+values from a compute as input.  See "this
 section"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 

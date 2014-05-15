@@ -130,7 +130,7 @@ Diagnostics :h4
 Output :h4
 
   "log file of statistical info"_stats_style.html
-  "dump files"_dump.html (text or binary) of per particle, per-grid cell, per surface element values
+  "dump files"_dump.html (text or binary) of per particle, per grid cell, per surface element values
   on-the-fly "rendered images"_dump_image.html of particles, grid cells, surface elements :ul
 
 Pre- and post-processing :h4
