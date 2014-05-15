@@ -383,7 +383,7 @@ void Variable::set(int narg, char **arg)
   } else error->all(FLERR,"Illegal variable command");
 
   // set name of variable
-  // must come at end, since STRING/EQUAL/ATOM reset may have removed name
+  // must come at end, since STRING/EQUAL/PARTICLE reset may have removed name
   // name must be all alphanumeric chars or underscores
 
   int n = strlen(arg[0]) + 1;
@@ -789,7 +789,7 @@ void Variable::copy(int narg, char **from, char **to)
 
 /* ----------------------------------------------------------------------
    recursive evaluation of a string str
-   str is an equal-style or atom-style formula containing one or more items:
+   str is an equal-style or particle-style formula containing one or more items:
      number = 0.0, -5.45, 2.8e-4, ...
      constant = PI
      stats keyword = step, np, vol, ...
@@ -798,7 +798,7 @@ void Variable::copy(int narg, char **from, char **to)
                       sqrt(x),exp(x),ln(x),log(x),abs(x),
 		      sin(x),cos(x),tan(x),asin(x),atan2(y,x),...
      special function = sum(x),min(x), ...
-     atom vector = x, y, vx, ...
+     particle vector = x, y, vx, ...
      compute = c_ID, c_ID[i], c_ID[i][j]
      fix = f_ID, f_ID[i], f_ID[i][j]
      variable = v_name
@@ -1270,7 +1270,8 @@ double Variable::evaluate(char *str, Tree **tree)
 
 	  if (tree == NULL)
 	    error->all(FLERR,
-		       "Atom-style variable in equal-style variable formula");
+		       "Particle-style variable in "
+                       "equal-style variable formula");
 	  Tree *newtree;
 	  evaluate(data[ivar][0],&newtree);
 	  treestack[ntreestack++] = newtree;
@@ -1280,7 +1281,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	delete [] id;
 
       // ----------------
-      // math/special function or atom vector or constant or stats keyword
+      // math/special function or particle vector or constant or stats keyword
       // ----------------
 
       } else {
@@ -1303,7 +1304,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	  delete [] contents;
 
 	// ----------------
-	// atom vector
+	// particle vector
 	// ----------------
 
 	} else if (is_particle_vector(word)) {
@@ -1515,7 +1516,7 @@ double Variable::evaluate(char *str, Tree **tree)
    tree was created by one-time parsing of formula string via evaulate()
    only keep tree nodes that depend on ARRAYs
    remainder is converted to single VALUE
-   this enables optimal eval_tree loop over atoms
+   this enables optimal eval_tree loop over particles
    customize by adding a function:
      sqrt(),exp(),ln(),log(),abs(),sin(),cos(),tan(),asin(),acos(),atan(),
      atan2(y,x),random(x,y),normal(x,y),ceil(),floor(),round(),

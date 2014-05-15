@@ -563,7 +563,7 @@ double ComputeReduce::compute_one(int m, int flag)
       }
     }
 
-  // evaluate atom-style variable
+  // evaluate particle-style variable
 
   } else if (which[m] == VARIABLE) {
     int n = particle->nlocal;
