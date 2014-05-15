@@ -53,8 +53,8 @@ class Variable : protected Pointers {
 
   int *eval_in_progress;   // flag if evaluation of variable is in progress
 
-  class RanPark *randomequal; // random number generator for equal-style vars
-  class RanPark *randompart;  // random number generator for particle-style vars
+  class RanPark *randomequal;     // RNG for equal-style vars
+  class RanPark *randomparticle;  // RNG for particle-style vars
 
   int precedence[17];      // precedence level of math operators
                            // set length to include up to OR in enum
@@ -86,8 +86,6 @@ class Variable : protected Pointers {
   void particle_vector(char *, Tree **, Tree **, int &);
   int is_constant(char *);
   double constant(char *);
-  double numeric(char *);
-  int inumeric(char *);
   char *find_next_comma(char *);
   void print_tree(Tree *, int);
 };

@@ -90,7 +90,7 @@ Variable::Variable(SPARTA *sparta) : Pointers(sparta)
   eval_in_progress = NULL;
 
   randomequal = NULL;
-  randompart = NULL;
+  randomparticle = NULL;
 
   precedence[DONE] = 0;
   precedence[OR] = 1;
@@ -125,7 +125,7 @@ Variable::~Variable()
   memory->destroy(eval_in_progress);
 
   delete randomequal;
-  delete randompart;
+  delete randomparticle;
 }
 
 /* ----------------------------------------------------------------------
@@ -1800,10 +1800,10 @@ double Variable::collapse_tree(Tree *tree)
   if (tree->type == RANDOM) {
     collapse_tree(tree->left);
     collapse_tree(tree->right);
-    if (randompart == NULL) {
-      randompart = new RanPark(update->ranmaster->uniform());
+    if (randomparticle == NULL) {
+      randomparticle = new RanPark(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
-      randompart->reset(seed,me,100);
+      randomparticle->reset(seed,me,100);
     }
     return 0.0;
   }
@@ -1813,10 +1813,10 @@ double Variable::collapse_tree(Tree *tree)
     double sigma = collapse_tree(tree->right);
     if (sigma < 0.0)
       error->one(FLERR,"Invalid math function in variable formula");
-    if (randompart == NULL) {
-      randompart = new RanPark(update->ranmaster->uniform());
+    if (randomparticle == NULL) {
+      randomparticle = new RanPark(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
-      randompart->reset(seed,me,100);
+      randomparticle->reset(seed,me,100);
     }
     return 0.0;
   }
@@ -2087,24 +2087,24 @@ double Variable::eval_tree(Tree *tree, int i)
   if (tree->type == RANDOM) {
     double lower = eval_tree(tree->left,i);
     double upper = eval_tree(tree->right,i);
-    if (randompart == NULL) {
-      randompart = new RanPark(update->ranmaster->uniform());
+    if (randomparticle == NULL) {
+      randomparticle = new RanPark(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
-      randompart->reset(seed,me,100);
+      randomparticle->reset(seed,me,100);
     }
-    return randompart->uniform()*(upper-lower)+lower;
+    return randomparticle->uniform()*(upper-lower)+lower;
   }
   if (tree->type == NORMAL) {
     double mu = eval_tree(tree->left,i);
     double sigma = eval_tree(tree->right,i);
     if (sigma < 0.0) 
       error->one(FLERR,"Invalid math function in variable formula");
-    if (randompart == NULL) {
-      randompart = new RanPark(update->ranmaster->uniform());
+    if (randomparticle == NULL) {
+      randomparticle = new RanPark(update->ranmaster->uniform());
       double seed = update->ranmaster->uniform();
-      randompart->reset(seed,me,100);
+      randomparticle->reset(seed,me,100);
     }
-    return mu + sigma*randompart->gaussian();
+    return mu + sigma*randomparticle->gaussian();
   }
 
   if (tree->type == CEIL)
@@ -2968,41 +2968,6 @@ double Variable::constant(char *word)
 {
   if (strcmp(word,"PI") == 0) return MY_PI;
   return 0.0;
-}
-
-/* ----------------------------------------------------------------------
-   read a floating point value from a string
-   generate an error if not a legitimate floating point value
-------------------------------------------------------------------------- */
-
-double Variable::numeric(char *str)
-{
-  int n = strlen(str);
-  for (int i = 0; i < n; i++) {
-    if (isdigit(str[i])) continue;
-    if (str[i] == '-' || str[i] == '+' || str[i] == '.') continue;
-    if (str[i] == 'e' || str[i] == 'E') continue;
-    error->all(FLERR,
-	       "Expected floating point parameter in variable definition");
-  }
-
-  return atof(str);
-}
-
-/* ----------------------------------------------------------------------
-   read an integer value from a string
-   generate an error if not a legitimate integer value
-------------------------------------------------------------------------- */
-
-int Variable::inumeric(char *str)
-{
-  int n = strlen(str);
-  for (int i = 0; i < n; i++) {
-    if (isdigit(str[i]) || str[i] == '-' || str[i] == '+') continue;
-    error->all(FLERR,"Expected integer parameter in variable definition");
-  }
-
-  return atoi(str);
 }
 
 /* ----------------------------------------------------------------------
