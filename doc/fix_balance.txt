@@ -92,7 +92,7 @@ is specified as {mol}, than the weight for each grid cell is the
 number of particles it currently owns, so that each processor will end
 up with an equal number of particles.
 
-Here are 2 example pictures, for a 2d simulation, of the partioning
+Here are 2 example pictures, for a 2d simulation, of the partitioning
 provided by the RCB algorithm for a simulation on P processors of
 100x100 or 10000 grid cells.  The one on the left is for an initially
 uniform distribution of particles.  The one on the right is at a later
