@@ -46,7 +46,7 @@ using namespace MathConst;
 #define INVOKED_PER_GRID 16
 #define INVOKED_PER_SURF 32
 
-enum{PPM,JPG};
+enum{PPM,JPG,PNG};
 enum{NUMERIC,ATOM,TYPE,PROC,ATTRIBUTE,ONE};
 enum{STATIC,DYNAMIC};
 enum{COMPUTE,FIX,VARIABLE};
@@ -64,12 +64,25 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   int n = strlen(filename);
   if (strlen(filename) > 4 && strcmp(&filename[n-4],".jpg") == 0)
     filetype = JPG;
+  else if (strlen(filename) > 4 && strcmp(&filename[n-4],".JPG") == 0)
+    filetype = JPG;
   else if (strlen(filename) > 5 && strcmp(&filename[n-5],".jpeg") == 0)
     filetype = JPG;
+  else if (strlen(filename) > 5 && strcmp(&filename[n-5],".JPEG") == 0)
+    filetype = JPG;
+  else if (strlen(filename) > 4 && strcmp(&filename[n-4],".png") == 0)
+    filetype = PNG;
+  else if (strlen(filename) > 4 && strcmp(&filename[n-4],".PNG") == 0)
+    filetype = PNG;
   else filetype = PPM;
 
 #ifndef SPARTA_JPEG
-  if (filetype == JPG) error->all(FLERR,"Cannot dump JPG file");
+  if (filetype == JPG)
+    error->all(FLERR,"Support for writing images in JPEG format not included");
+#endif
+#ifndef SPARTA_PNG
+  if (filetype == PNG)
+    error->all(FLERR,"Support for writing images in PNG format not included");
 #endif
 
   // atom color,diameter settings
@@ -905,6 +918,7 @@ void DumpImage::write()
 
   if (me == 0) {
     if (filetype == JPG) image->write_JPG(fp);
+    else if (filetype == PNG) image->write_PNG(fp);
     else image->write_PPM(fp);
     fclose(fp);
   }

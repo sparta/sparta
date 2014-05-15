@@ -34,6 +34,13 @@
 #include "jpeglib.h"
 #endif
 
+#ifdef SPARTA_PNG
+#include <png.h>
+#include <zlib.h>
+#include <setjmp.h>
+#include "version.h"
+#endif
+
 using namespace SPARTA_NS;
 using namespace MathConst;
 
@@ -1125,7 +1132,7 @@ void Image::compute_SSAO()
 
 /* ---------------------------------------------------------------------- */
 
-void Image::write_JPG(FILE *fp) 
+void Image::write_JPG(FILE *fp)
 {
 #ifdef SPARTA_JPEG
   struct jpeg_compress_struct cinfo;
@@ -1141,11 +1148,11 @@ void Image::write_JPG(FILE *fp)
   cinfo.in_color_space = JCS_RGB;
 
   jpeg_set_defaults(&cinfo);
-  jpeg_set_quality(&cinfo, 100, true);
-  jpeg_start_compress(&cinfo, 1);
+  jpeg_set_quality(&cinfo,85,true);
+  jpeg_start_compress(&cinfo,true);
 
   while (cinfo.next_scanline < cinfo.image_height) {
-    row_pointer = (JSAMPROW) 
+    row_pointer = (JSAMPROW)
       &writeBuffer[(cinfo.image_height - 1 - cinfo.next_scanline) * 3 * width];
     jpeg_write_scanlines(&cinfo,&row_pointer,1);
   }
@@ -1157,17 +1164,69 @@ void Image::write_JPG(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-void Image::write_PPM(FILE *fp) 
+void Image::write_PNG(FILE *fp)
+{
+#ifdef SPARTA_PNG
+  png_structp png_ptr;
+  png_infop info_ptr;
+
+  png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+
+  if (!png_ptr) return;
+
+  info_ptr = png_create_info_struct(png_ptr);
+  if (!info_ptr) {
+    png_destroy_write_struct(&png_ptr, NULL);
+    return;
+  }
+
+  if (setjmp(png_jmpbuf(png_ptr))) {
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    return;
+  }
+
+  png_init_io(png_ptr, fp);
+  png_set_compression_level(png_ptr,Z_BEST_COMPRESSION);
+  png_set_IHDR(png_ptr,info_ptr,width,height,8,PNG_COLOR_TYPE_RGB,
+    PNG_INTERLACE_NONE,PNG_COMPRESSION_TYPE_DEFAULT,PNG_FILTER_TYPE_DEFAULT);
+
+  png_text text_ptr[2];
+  memset(text_ptr,0,2*sizeof(png_text));
+
+  char key0[]  = "Software";
+  char text0[] = "SPARTA " LAMMPS_VERSION;
+  char key1[]  = "Description";
+  char text1[] = "Dump image snapshot";
+  text_ptr[0].key = key0;
+  text_ptr[0].text = text0;
+  text_ptr[1].key = key1;
+  text_ptr[1].text = text1;
+  text_ptr[0].compression = PNG_TEXT_COMPRESSION_NONE;
+  text_ptr[1].compression = PNG_TEXT_COMPRESSION_NONE;
+
+  png_set_text(png_ptr,info_ptr,text_ptr,1);
+  png_write_info(png_ptr,info_ptr);
+
+  png_bytep row_pointers[height];
+  for (int i=0; i < height; ++i)
+    row_pointers[i] = (png_bytep) &writeBuffer[(height-i-1)*3*width];
+
+  png_write_image(png_ptr, row_pointers);
+  png_write_end(png_ptr, info_ptr);
+
+  png_destroy_write_struct(&png_ptr, &info_ptr);
+#endif
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Image::write_PPM(FILE *fp)
 {
   fprintf (fp,"P6\n%d %d\n255\n",width,height);
 
-  int x,y;
+  int y;
   for (y = height-1; y >= 0; y --)
-    for (x = 0; x < width; x ++)
-      fprintf(fp,"%c%c%c",
-	      writeBuffer[0 + x*3 + y*width*3],
-	      writeBuffer[1 + x*3 + y*width*3],
-	      writeBuffer[2 + x*3 + y*width*3]);
+    fwrite(&writeBuffer[y*width*3],3,width,fp);
 }
 
 /* ----------------------------------------------------------------------
