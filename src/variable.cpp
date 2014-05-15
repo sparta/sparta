@@ -620,11 +620,13 @@ char *Variable::retrieve(char *name)
 
 double Variable::compute_equal(int ivar)
 {
-  // eval_in_progress used to detect circle dependencies
-  // could extend this later to check v_a = c_b + v_a constructs?
+  if (eval_in_progress[ivar]) 
+    error->all(FLERR,"Variable has circular dependency");
 
   eval_in_progress[ivar] = 1;
+
   double value = evaluate(data[ivar][0],NULL);
+
   eval_in_progress[ivar] = 0;
   return value;
 }
@@ -649,6 +651,11 @@ void Variable::compute_particle(int ivar, double *result,
 				int stride, int sumflag)
 {
   Tree *tree;
+
+  if (eval_in_progress[ivar]) 
+    error->all(FLERR,"Variable has circular dependency");
+  eval_in_progress[ivar] = 1;
+
   double tmp = evaluate(data[ivar][0],&tree);
   tmp = collapse_tree(tree);
 
@@ -670,6 +677,8 @@ void Variable::compute_particle(int ivar, double *result,
   }
 
   free_tree(tree);
+
+  eval_in_progress[ivar] = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -1355,7 +1364,7 @@ double Variable::evaluate(char *str, Tree **tree)
     // math operator, including end-of-string
     // ----------------
 
-    } else if (strchr("+-*/^<>=!&|\0",onechar)) {
+    } else if (strchr("+-*/^<>=!&|%\0",onechar)) {
       if (onechar == '+') op = ADD;
       else if (onechar == '-') op = SUBTRACT;
       else if (onechar == '*') op = MULTIPLY;
