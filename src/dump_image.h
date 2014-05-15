@@ -50,16 +50,16 @@ class DumpImage : public DumpParticle {
 
   int viewflag;                    // overall view is static or dynamic
 
-  // atom drawing
+  // particle drawing
 
-  int atomflag;                    // 0/1 for draw atoms
-  int acolor;                      // color of atoms = TYPE, PROC, ATTRIBUTE
-  int adiam;                       // diam of atoms = TYPE, ATTRIBUTE
-  double adiamvalue;               // atom diameter value
+  int particleflag;                // 0/1 for draw particles
+  int pcolor;                      // color of parts = TYPE, PROC, ATTRIBUTE
+  int pdiam;                       // diam of partciles = TYPE, ATTRIBUTE
+  double pdiamvalue;               // particle diameter value
 
-  double **colortype;              // per-type atom colors
-  double *diamtype;                // per-type atom diameters
-  double *acolorproc;              // atom color for me
+  double **pcolortype;             // per-type particle colors
+  double *pdiamtype;               // per-type particle diameters
+  double *pcolorproc;              // particle color for me
 
   // grid drawing
 

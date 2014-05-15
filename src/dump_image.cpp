@@ -47,10 +47,10 @@ using namespace MathConst;
 #define INVOKED_PER_SURF 32
 
 enum{PPM,JPG,PNG};
-enum{NUMERIC,ATOM,TYPE,PROC,ATTRIBUTE,ONE};
+enum{NUMERIC,TYPE,PROC,ATTRIBUTE,ONE};
 enum{STATIC,DYNAMIC};
 enum{COMPUTE,FIX,VARIABLE};
-enum{MOL,GRID,SURF,XPLANE,YPLANE,ZPLANE};
+enum{PARTICLE,GRID,SURF,XPLANE,YPLANE,ZPLANE};
 
 /* ---------------------------------------------------------------------- */
 
@@ -85,16 +85,16 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Support for writing images in PNG format not included");
 #endif
 
-  // atom color,diameter settings
+  // particle color,diameter settings
 
   if (nfield != 2) error->all(FLERR,"Illegal dump image command");
 
-  acolor = ATTRIBUTE;
-  if (strcmp(arg[4],"type") == 0) acolor = TYPE;
-  else if (strcmp(arg[4],"proc") == 0) acolor = PROC;
+  pcolor = ATTRIBUTE;
+  if (strcmp(arg[4],"type") == 0) pcolor = TYPE;
+  else if (strcmp(arg[4],"proc") == 0) pcolor = PROC;
 
-  adiam = ATTRIBUTE;
-  if (strcmp(arg[5],"type") == 0) adiam = TYPE;
+  pdiam = ATTRIBUTE;
+  if (strcmp(arg[5],"type") == 0) pdiam = TYPE;
 
   // create Image class with 6 colormaps
   // colormaps for particles, grid, surf, grid xyz planes
@@ -114,7 +114,7 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   // set defaults for optional args
 
-  atomflag = 1;
+  particleflag = 1;
   gridflag = 0;
   gridxflag = gridyflag = gridzflag = 0;
   surfflag = 0;
@@ -137,17 +137,17 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   int iarg = ioptional;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"adiam") == 0) {
+    if (strcmp(arg[iarg],"pdiam") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
-      adiam = NUMERIC;
-      adiamvalue = atof(arg[iarg+1]);
-      if (adiamvalue <= 0.0) error->all(FLERR,"Illegal dump image command");
+      pdiam = NUMERIC;
+      pdiamvalue = atof(arg[iarg+1]);
+      if (pdiamvalue <= 0.0) error->all(FLERR,"Illegal dump image command");
       iarg += 2;
 
-    } else if (strcmp(arg[iarg],"atom") == 0) {
+    } else if (strcmp(arg[iarg],"particle") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump image command");
-      if (strcmp(arg[iarg+1],"yes") == 0) atomflag = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) atomflag = 0;
+      if (strcmp(arg[iarg+1],"yes") == 0) particleflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) particleflag = 0;
       else error->all(FLERR,"Illegal dump image command");
       iarg += 2;
 
@@ -490,25 +490,25 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
 
   // additional defaults for dump_modify options
 
-  colortype = new double*[ntypes+1];
-  diamtype = new double[ntypes+1];
+  pcolortype = new double*[ntypes+1];
+  pdiamtype = new double[ntypes+1];
 
   for (int i = 1; i <= ntypes; i++) {
-    diamtype[i] = 1.0;
-    if (i % 6 == 1) colortype[i] = image->color2rgb("red");
-    else if (i % 6 == 2) colortype[i] = image->color2rgb("green");
-    else if (i % 6 == 3) colortype[i] = image->color2rgb("blue");
-    else if (i % 6 == 4) colortype[i] = image->color2rgb("yellow");
-    else if (i % 6 == 5) colortype[i] = image->color2rgb("aqua");
-    else if (i % 6 == 0) colortype[i] = image->color2rgb("purple");
+    pdiamtype[i] = 1.0;
+    if (i % 6 == 1) pcolortype[i] = image->color2rgb("red");
+    else if (i % 6 == 2) pcolortype[i] = image->color2rgb("green");
+    else if (i % 6 == 3) pcolortype[i] = image->color2rgb("blue");
+    else if (i % 6 == 4) pcolortype[i] = image->color2rgb("yellow");
+    else if (i % 6 == 5) pcolortype[i] = image->color2rgb("aqua");
+    else if (i % 6 == 0) pcolortype[i] = image->color2rgb("purple");
   }
 
-  if (me % 6 == 0) acolorproc = image->color2rgb("red");
-  else if (me % 6 == 1) acolorproc = image->color2rgb("green");
-  else if (me % 6 == 2) acolorproc = image->color2rgb("blue");
-  else if (me % 6 == 3) acolorproc = image->color2rgb("yellow");
-  else if (me % 6 == 4) acolorproc = image->color2rgb("aqua");
-  else if (me % 6 == 5) acolorproc = image->color2rgb("purple");
+  if (me % 6 == 0) pcolorproc = image->color2rgb("red");
+  else if (me % 6 == 1) pcolorproc = image->color2rgb("green");
+  else if (me % 6 == 2) pcolorproc = image->color2rgb("blue");
+  else if (me % 6 == 3) pcolorproc = image->color2rgb("yellow");
+  else if (me % 6 == 4) pcolorproc = image->color2rgb("aqua");
+  else if (me % 6 == 5) pcolorproc = image->color2rgb("purple");
 
   if (me % 6 == 0) gcolorproc = image->color2rgb("red");
   else if (me % 6 == 1) gcolorproc = image->color2rgb("green");
@@ -546,8 +546,8 @@ DumpImage::~DumpImage()
   delete [] idgridz;
   delete [] idsurf;
 
-  delete [] colortype;
-  delete [] diamtype;
+  delete [] pcolortype;
+  delete [] pdiamtype;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -705,7 +705,7 @@ void DumpImage::write()
   if (cflag == DYNAMIC) box_center();
   if (viewflag == DYNAMIC) view_params();
 
-  // nme = # of atoms this proc will contribute to dump
+  // nme = # of particles this proc will contribute to dump
   
   nme = count();
 
@@ -721,7 +721,7 @@ void DumpImage::write()
 
   // set minmax color ranges if using dynamic color maps
 
-  if (atomflag && acolor == ATTRIBUTE && image->map_dynamic(MOL)) {
+  if (particleflag && pcolor == ATTRIBUTE && image->map_dynamic(PARTICLE)) {
     double two[2],twoall[2];
     double lo = BIG;
     double hi = -BIG;
@@ -734,7 +734,7 @@ void DumpImage::write()
     two[0] = -lo;
     two[1] = hi;
     MPI_Allreduce(two,twoall,2,MPI_DOUBLE,MPI_MAX,world);
-    int flag = image->map_minmax(MOL,-twoall[0],twoall[1]);
+    int flag = image->map_minmax(PARTICLE,-twoall[0],twoall[1]);
     if (flag) error->all(FLERR,"Invalid color map min/max values");
   }
 
@@ -1004,42 +1004,42 @@ void DumpImage::view_params()
 }
 
 /* ----------------------------------------------------------------------
-   create image for atoms on this proc
+   create image for particles on this proc
    every pixel has depth 
 ------------------------------------------------------------------------- */
 
 void DumpImage::create_image()
 {
-  int i,j,m,itype,iproc,atom1,atom2;
+  int i,j,m,itype,iproc;
   double diameter,delx,dely,delz;
   double *color,*color1,*color2;
   double xmid[3];
 
-  // render my atoms
+  // render my partiless
   // region is used as constraint by parent class
 
-  if (atomflag) {
+  if (particleflag) {
     Particle::OnePart *particles = particle->particles;
 
     m = 0;
     for (i = 0; i < nchoose; i++) {
       j = clist[i];
       
-      if (acolor == TYPE) {
+      if (pcolor == TYPE) {
 	itype = static_cast<int> (buf[m]);
-	color = colortype[itype];
-      } else if (acolor == PROC) {
-	color = acolorproc;
-      } else if (acolor == ATTRIBUTE) {
-	color = image->map_value2color(MOL,buf[m]);
+	color = pcolortype[itype];
+      } else if (pcolor == PROC) {
+	color = pcolorproc;
+      } else if (pcolor == ATTRIBUTE) {
+	color = image->map_value2color(PARTICLE,buf[m]);
       }
 
-      if (adiam == NUMERIC) {
-	diameter = adiamvalue;
-      } else if (adiam == TYPE) {
+      if (pdiam == NUMERIC) {
+	diameter = pdiamvalue;
+      } else if (pdiam == TYPE) {
 	itype = static_cast<int> (buf[m+1]);
-	diameter = diamtype[itype];
-      } else if (adiam == ATTRIBUTE) {
+	diameter = pdiamtype[itype];
+      } else if (pdiam == ATTRIBUTE) {
 	diameter = buf[m+1];
       }
 
@@ -1496,12 +1496,12 @@ int DumpImage::modify_param(int narg, char **arg)
   int n = DumpParticle::modify_param(narg,arg);
   if (n) return n;
 
-  if (strcmp(arg[0],"acolor") == 0) {
+  if (strcmp(arg[0],"pcolor") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
     int err,nlo,nhi;
-    if (acolor == TYPE)
+    if (pcolor == TYPE)
       err = MathExtra::bounds(arg[1],particle->nspecies,nlo,nhi);
-    else if (acolor == PROC)
+    else if (pcolor == PROC)
       err = MathExtra::bounds(arg[1],nprocs,nlo,nhi);
     else error->all(FLERR,"Illegal dump_modify command");
     if (err) error->all(FLERR,"Illegal dump_modify command");
@@ -1524,19 +1524,19 @@ int DumpImage::modify_param(int narg, char **arg)
     // assign each of ncount colors in round-robin fashion to types or procs
     // for PROC case, map 0-Nprocs-1 proc ID to 1 to Nprocs colors
 
-    if (acolor == TYPE) {
+    if (pcolor == TYPE) {
       int m = 0;
       for (int i = nlo; i <= nhi; i++) {
-        colortype[i] = image->color2rgb(ptrs[m%ncount]);
-        if (colortype[i] == NULL)
+        pcolortype[i] = image->color2rgb(ptrs[m%ncount]);
+        if (pcolortype[i] == NULL)
           error->all(FLERR,"Invalid color in dump_modify command");
         m++;
       }
-    } else if (acolor == PROC) {
+    } else if (pcolor == PROC) {
       if (me+1 >= nlo && me+1 <= nhi) {
         int m = (me+1-nlo) % ncount;
-        acolorproc = image->color2rgb(ptrs[m]);
-        if (acolorproc == NULL)
+        pcolorproc = image->color2rgb(ptrs[m]);
+        if (pcolorproc == NULL)
           error->all(FLERR,"Invalid color in dump_modify command");
       }
     }
@@ -1545,13 +1545,13 @@ int DumpImage::modify_param(int narg, char **arg)
     return 3;
   }
 
-  if (strcmp(arg[0],"adiam") == 0) {
+  if (strcmp(arg[0],"pdiam") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
     int nlo,nhi;
     MathExtra::bounds(arg[1],particle->nspecies,nlo,nhi);
     double diam = atof(arg[2]);
     if (diam <= 0.0) error->all(FLERR,"Illegal dump_modify command");
-    for (int i = nlo; i <= nhi; i++) diamtype[i] = diam;
+    for (int i = nlo; i <= nhi; i++) pdiamtype[i] = diam;
     return 3;
   }
 
@@ -1576,7 +1576,7 @@ int DumpImage::modify_param(int narg, char **arg)
   if (strcmp(arg[0],"cmap") == 0) {
     if (narg < 7) error->all(FLERR,"Illegal dump_modify command");
     int which;
-    if (strcmp(arg[1],"atom") == 0) which = MOL;
+    if (strcmp(arg[1],"particle") == 0) which = PARTICLE;
     else if (strcmp(arg[1],"grid") == 0) which = GRID;
     else if (strcmp(arg[1],"surf") == 0) which = SURF;
     else if (strcmp(arg[1],"gridx") == 0) which = XPLANE;
