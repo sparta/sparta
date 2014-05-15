@@ -499,10 +499,10 @@ void Stats::set_fields(int narg, char **arg)
       if (ptr == NULL) argindex1[nfield] = 0;
       else {
 	*ptr = '\0';
-	argindex1[nfield] = input->variable->int_between_brackets(ptr);
+	argindex1[nfield] = input->variable->int_between_brackets(ptr,0);
 	ptr++;
 	if (*ptr == '[') {
-	  argindex2[nfield] = input->variable->int_between_brackets(ptr);
+	  argindex2[nfield] = input->variable->int_between_brackets(ptr,0);
 	  ptr++;
 	} else argindex2[nfield] = 0;
       }

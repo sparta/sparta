@@ -37,7 +37,7 @@ class Variable : protected Pointers {
   void compute_particle(int, double *, int, int);
   void compute_grid(int, double *, int, int) {}
   void compute_surf(int, double *, int, int) {}
-  int int_between_brackets(char *&);
+  int int_between_brackets(char *&, int);
   double evaluate_boolean(char *);
 
  private:

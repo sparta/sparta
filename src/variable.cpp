@@ -948,12 +948,12 @@ double Variable::evaluate(char *str, Tree **tree)
 	else {
 	  nbracket = 1;
 	  ptr = &str[i];
-	  index1 = int_between_brackets(ptr);
+	  index1 = int_between_brackets(ptr,1);
 	  i = ptr-str+1;
 	  if (str[i] == '[') {
 	    nbracket = 2;
 	    ptr = &str[i];
-	    index2 = int_between_brackets(ptr);
+	    index2 = int_between_brackets(ptr,1);
 	    i = ptr-str+1;
 	  }
 	}
@@ -1116,12 +1116,12 @@ double Variable::evaluate(char *str, Tree **tree)
 	else {
 	  nbracket = 1;
 	  ptr = &str[i];
-	  index1 = int_between_brackets(ptr);
+	  index1 = int_between_brackets(ptr,1);
 	  i = ptr-str+1;
 	  if (str[i] == '[') {
 	    nbracket = 2;
 	    ptr = &str[i];
-	    index2 = int_between_brackets(ptr);
+	    index2 = int_between_brackets(ptr,1);
 	    i = ptr-str+1;
 	  }
 	}
@@ -1253,7 +1253,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	else {
 	  nbracket = 1;
 	  ptr = &str[i];
-	  index = int_between_brackets(ptr);
+	  index = int_between_brackets(ptr,1);
 	  i = ptr-str+1;
 	}
 
@@ -2255,28 +2255,62 @@ int Variable::find_matching_paren(char *str, int i,char *&contents)
    find int between brackets and return it
    ptr initially points to left bracket
    return it pointing to right bracket
-   error if no right bracket or brackets are empty
-   error if any between-bracket chars are non-digits or value == 0
+   error if no right bracket or brackets are empty or index = 0
+   if varallow = 0: error if any between-bracket chars are non-digits
+   if varallow = 1: also allow for v_name, where name is variable name
 ------------------------------------------------------------------------- */
 
-int Variable::int_between_brackets(char *&ptr)
+int Variable::int_between_brackets(char *&ptr, int varallow)
 {
+  int varflag,index;
+
   char *start = ++ptr;
 
-  while (*ptr && *ptr != ']') {
-    if (!isdigit(*ptr)) 
-      error->all(FLERR,"Non digit character between brackets in variable");
-    ptr++;
+  if (varallow && strstr(ptr,"v_") == ptr) {
+    varflag = 1;
+    while (*ptr && *ptr != ']') {
+      if (!isalnum(*ptr) && *ptr != '_')
+        error->all(FLERR,"Variable name between brackets must be "
+                   "alphanumeric or underscore characters");
+      ptr++;
+    }
+
+  } else {
+    varflag = 0;
+    while (*ptr && *ptr != ']') {
+      if (!isdigit(*ptr))
+        error->all(FLERR,"Non digit character between brackets in variable");
+      ptr++;
+    }
   }
 
   if (*ptr != ']') error->all(FLERR,"Mismatched brackets in variable");
   if (ptr == start) error->all(FLERR,"Empty brackets in variable");
 
   *ptr = '\0';
-  int index = atoi(start);
+
+  // evaluate index as variable or as simple integer via atoi()
+
+  if (varflag) {
+    char *id = start+2;
+    int ivar = find(id);
+    if (ivar < 0)
+      error->all(FLERR,"Invalid variable name in variable formula");
+    if (eval_in_progress[ivar])
+      error->all(FLERR,"Variable has circular dependency");
+
+    char *var = retrieve(id);
+    if (var == NULL)
+      error->all(FLERR,"Invalid variable evaluation in variable formula");
+    index = static_cast<int> (atof(var));
+
+  } else {
+    index = atoi(start);
+  }
+
   *ptr = ']';
 
-  if (index == 0) 
+  if (index == 0)
     error->all(FLERR,"Index between variable brackets must be positive");
   return index;
 }
@@ -2290,7 +2324,7 @@ int Variable::int_between_brackets(char *&ptr)
    customize by adding a math function:
      sqrt(),exp(),ln(),log(),abs(),sin(),cos(),tan(),asin(),acos(),atan(),
      atan2(y,x),random(x,y),normal(x,y),ceil(),floor(),round(),
-     ramp(x,y),stagger(x,y),logfreq(x,y,z),
+     ramp(x,y),stagger(x,y),logfreq(x,y,z),stride(x,y,z),
      vdisplace(x,y),swiggle(x,y,z),cwiggle(x,y,z)
 ------------------------------------------------------------------------- */
 
@@ -2301,7 +2335,8 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
   // word not a match to any math function
 
   if (strcmp(word,"sqrt") && strcmp(word,"exp") && 
-      strcmp(word,"ln") && strcmp(word,"log") && strcmp(word,"abs") && 
+      strcmp(word,"ln") && strcmp(word,"log") && 
+      strcmp(word,"abs") && 
       strcmp(word,"sin") && strcmp(word,"cos") &&
       strcmp(word,"tan") && strcmp(word,"asin") &&
       strcmp(word,"acos") && strcmp(word,"atan") && 
@@ -2347,27 +2382,27 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
   // evaluate args
     
   Tree *newtree;
-  double tmp,value1,value2,value3;
+  double value1,value2,value3;
 
   if (tree) {
     newtree = new Tree();
     Tree *argtree;
     if (narg == 1) {
-      tmp = evaluate(arg1,&argtree);
+      evaluate(arg1,&argtree);
       newtree->left = argtree;
       newtree->middle = newtree->right = NULL;
     } else if (narg == 2) {
-      tmp = evaluate(arg1,&argtree);
+      evaluate(arg1,&argtree);
       newtree->left = argtree;
       newtree->middle = NULL;
-      tmp = evaluate(arg2,&argtree);
+      evaluate(arg2,&argtree);
       newtree->right = argtree;
     } else if (narg == 3) {
-      tmp = evaluate(arg1,&argtree);
+      evaluate(arg1,&argtree);
       newtree->left = argtree;
-      tmp = evaluate(arg2,&argtree);
+      evaluate(arg2,&argtree);
       newtree->middle = argtree;
-      tmp = evaluate(arg3,&argtree);
+      evaluate(arg3,&argtree);
       newtree->right = argtree;
     }
     treestack[ntreestack++] = newtree;
@@ -2713,7 +2748,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
       ptr1 = strchr(arg1,'[');
       if (ptr1) {
 	ptr2 = ptr1;
-	index = int_between_brackets(ptr2);
+	index = int_between_brackets(ptr2,0);
 	*ptr1 = '\0';
       } else index = 0;
 
@@ -2752,7 +2787,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
       ptr1 = strchr(arg1,'[');
       if (ptr1) {
 	ptr2 = ptr1;
-	index = int_between_brackets(ptr2);
+	index = int_between_brackets(ptr2,0);
 	*ptr1 = '\0';
       } else index = 0;
       
@@ -2783,8 +2818,10 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
     
     if (compute) {
       double *vec;
-      if (index) vec = &compute->array[0][index-1];
-      else vec = compute->vector; 
+      if (index) {
+        if (compute->array) vec = &compute->array[0][index-1];
+        else vec = NULL;
+      } else vec = compute->vector;
       
       int j = 0;
       for (int i = 0; i < nvec; i++) {
@@ -2842,10 +2879,6 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
       else value = BIG;
     }
 
-    delete [] arg1;
-    delete [] arg2;
-    delete [] arg3;
-    
     // save value in tree or on argstack
     
     if (tree) {
@@ -2884,6 +2917,10 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
 
     } else error->all(FLERR,"Invalid variable style in special function next");
   }
+
+  delete [] arg1;
+  delete [] arg2;
+  delete [] arg3;
 
   return 1;
 }
