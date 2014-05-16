@@ -11,8 +11,9 @@
 
 <H3>4. How-to discussions 
 </H3>
-<P>The following sections describe how to use various options within
-SPARTA.
+<P>The following sections describe how to perform common tasks using
+SPARTA, as well as provide some techinical details about how
+SPARTA works.
 </P>
 4.1 <A HREF = "#howto_1">2d simulations</A><BR>
 4.2 <A HREF = "#howto_2">Axisymmetric simulations</A><BR>
@@ -50,6 +51,11 @@ particles in a 3d grid cell whose z-dimension is 1.0, the same number
 of particles will be created in a 2d grid cell with the same x and y
 dimensions.
 </P>
+<P>TODO: is -0.5 and 0.5 required or OK not to do this?
+</P>
+<P>TODO: how does SPARTA really do a 2d simulation?  continues to
+treat velocity as 3d, so collisions, etc don't change
+</P>
 <P>Many of the example input scripts included in the SPARTA distribution
 are for 2d models.
 </P>
@@ -57,6 +63,12 @@ are for 2d models.
 
 <A NAME = "howto_2"></A><H4>4.2 Axisymmetric simulations 
 </H4>
+<P>TODO: describe commands when have a working example
+</P>
+<UL><LI>create box with ylo = 0.0 and zlo/zhi = 0.5
+<LI>boundary a
+<LI>cell weighting 
+</UL>
 <HR>
 
 <A NAME = "howto_3"></A><H4>4.3 Running multiple simulations from one input script 
@@ -95,9 +107,9 @@ run 10000
 </P>
 <P>For large numbers of independent simulations, you can use
 <A HREF = "variable.html">variables</A> and the <A HREF = "next.html">next</A> and
-<A HREF = "jump.html">jump</A> commands to loop over the same input script
-multiple times with different settings.  For example, this
-script, named in.flow
+<A HREF = "jump.html">jump</A> commands to loop over the same input script multiple
+times with different settings.  For example, this script, named
+in.flow
 </P>
 <PRE>variable d index run1 run2 run3 run4 run5 run6 run7 run8
 shell cd $d
@@ -111,8 +123,8 @@ jump in.flow
 </PRE>
 <P>would run 8 simulations in different directories, using a data.grid
 file in each directory.  The same concept could be used to run the
-same system at 8 different gas densities, using a density variable
-and storing the output in different log and dump files, for example
+same system at 8 different gas densities, using a density variable and
+storing the output in different log and dump files, for example
 </P>
 <PRE>variable a loop 8
 variable rho index 1.0e18 4.0e18 1.0e19 4.0e19 1.0e20 4.0e20 1.0e21 4.0e21
@@ -122,6 +134,7 @@ global nrho ${rho}
 compute myGrid grid all n temp
 dump 1 all grid 1000 dump.$a id c_myGrid
 run 100000
+clear
 next rho
 next a
 jump in.flow 
@@ -157,13 +170,15 @@ cell, or surface element quantities and are written at a specified
 frequency. 
 
 <LI>Certain fixes can output user-specified quantities directly to files:
-<A HREF = "fix_ave_time.html">fix ave/time</A> for time averaging and ing, and <A HREF = "fix_print.html">fix
+<A HREF = "fix_ave_time.html">fix ave/time</A> for time averaging, and <A HREF = "fix_print.html">fix
 print</A> for single-line output of
 <A HREF = "variable.html">variables</A>.  Fix print can also output to the
 screen. 
 
 <LI><A HREF = "restart.html">Restart files</A>. 
 </UL>
+<P>IMPORTANT NOTE: Restart files are not yet implemented in SPARTA.
+</P>
 <P>A simulation prints one set of statistical output and (optionally)
 restart files.  It can generate any number of dump files and fix
 output files, depending on what <A HREF = "dump.html">dump</A> and <A HREF = "fix.html">fix</A>
@@ -172,9 +187,9 @@ commands you specify.
 <P>As discussed below, SPARTA gives you a variety of ways to determine
 what quantities are computed and printed when the statistics, dump, or
 fix commands listed above perform output.  Throughout this discussion,
-note that users can also <A HREF = "Section_modify.html">add their own computes and fixes to
-SPARTA</A> which can generate values that can then be
-output with these commands.
+note that users can also add their own computes and fixes to SPARTA
+(see <A HREF = "Section_modify.html">Section 10</A>) which can generate values that
+can then be output with these commands.
 </P>
 <P>The following sub-sections discuss different SPARTA commands related
 to output and the kind of data they operate on and produce:
@@ -184,6 +199,7 @@ to output and the kind of data they operate on and produce:
 <LI><A HREF = "#stat">Statistical output</A>
 <LI><A HREF = "#dump">Dump file output</A>
 <LI><A HREF = "#fixoutput">Fixes that write output files</A>
+<LI><A HREF = "#computeoutput">Computes that process output quantities</A>
 <LI><A HREF = "#compute">Computes that generate values to output</A>
 <LI><A HREF = "#fix">Fixes that generate values to output</A>
 <LI><A HREF = "#variable">Variables that generate values to output</A>
@@ -192,21 +208,21 @@ to output and the kind of data they operate on and produce:
 <H5><A NAME = "global"></A>Global/per-particle/per-grid/per-surf data 
 </H5>
 <P>Various output-related commands work with four different styles of
-data: global, per-particle, per-grid, or per-surfl.  A global datum is
+data: global, per particle, per grid, or per surf.  A global datum is
 one or more system-wide values, e.g. the temperature of the system.  A
-per-partile datum is one or more values per partice, e.g. the kinetic
-energy of each particle.  A per-grid datum is one or more values per
+per particle datum is one or more values per partice, e.g. the kinetic
+energy of each particle.  A per grid datum is one or more values per
 grid cell, e.g. the temperature of the particles in the grid cell.  A
-per-surf datum is one or more values per surface element, e.g. the
+per surf datum is one or more values per surface element, e.g. the
 count of particles that collided with the surface element.
 </P>
 <H5><A NAME = "scalar"></A>Scalar/vector/array data 
 </H5>
-<P>Global, per-particle, per-grid, and per-surf datums can each come in
+<P>Global, per particle, per grid, and per surf datums can each come in
 three kinds: a single scalar value, a vector of values, or a 2d array
 of values.  The doc page for a "compute" or "fix" or "variable" that
 generates data will specify both the style and kind of data it
-produces, e.g. a per-grid vector.
+produces, e.g. a per grid vector.
 </P>
 <P>When a quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -236,8 +252,8 @@ calculated and written out.  Pre-defined keywords can be specified
 specified (c_ID, f_ID, v_name), where a <A HREF = "compute.html">compute</A> or
 <A HREF = "fix.html">fix</A> or <A HREF = "variable.html">variable</A> provides the value to be
 output.  In each case, the compute, fix, or variable must generate
-global values for input to the <A HREF = "stats_style.html">stats_style custom</A>
-command.
+global values to be used as an argument of the
+<A HREF = "stats_style.html">stats_style</A> command.
 </P>
 <H5><A NAME = "dump"></A>Dump file output 
 </H5>
@@ -246,13 +262,14 @@ command.
 pre-defined formats: dump particle, dump grid, dump surf, etc.
 </P>
 <P>Each of these allows specification of what values are output with each
-particle, grid cell, or surface element.  Pre-defined atom attributes
-can be specified (id, x, y, z, vol, etc).  Three additional kinds of
-keywords can also be specified (c_ID, f_ID, v_name), where a
-<A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> or <A HREF = "variable.html">variable</A>
-provides the values to be output.  In each case, the compute, fix, or
-variable must generate per-particle, per-grid, or per-surf values for
-input to the corresponding <A HREF = "dump.html">dump</A> command.
+particle, grid cell, or surface element.  Pre-defined attributes can
+be specified (e.g. id, x, y, z for particles or id, vol for grid
+cells, etc).  Three additional kinds of keywords can also be specified
+(c_ID, f_ID, v_name), where a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A>
+or <A HREF = "variable.html">variable</A> provides the values to be output.  In each
+case, the compute, fix, or variable must generate per particle, per
+grid, or per surf values for input to the corresponding
+<A HREF = "dump.html">dump</A> command.
 </P>
 <H5><A NAME = "fixoutput"></A>Fixes that write output files 
 </H5>
@@ -263,9 +280,9 @@ input to the corresponding <A HREF = "dump.html">dump</A> command.
 a file and/or time-averaging of global scalars or vectors.  The user
 specifies one or more quantities as input.  These can be global
 <A HREF = "compute.html">compute</A> values, global <A HREF = "fix.html">fix</A> values, or
-<A HREF = "variable.html">variables</A> of any style except the particle, grid, surf
-styles which do not produce single values.  Since a variable can refer
-to keywords used by the <A HREF = "stats_style.html">stats_style</A> command (like
+<A HREF = "variable.html">variables</A> of any style except the particle style which
+does not produce single values.  Since a variable can refer to
+keywords used by the <A HREF = "stats_style.html">stats_style</A> command (like
 particle count), a wide variety of quantities can be time averaged
 and/or output in this way.  If the inputs are one or more scalar
 values, then the fix generates a global scalar or vector of output.
@@ -276,43 +293,72 @@ fix can also be used as input to other output commands.
 <P>The <A HREF = "fix_print.html">fix print</A> command can generate a line of output
 written to the screen and log file or to a separate file, periodically
 during a running simulation.  The line can contain one or more
-<A HREF = "variable.html">variable</A> values for any style variable except the atom
-style).  As explained above, variables themselves can contain
-references to global values generated by <A HREF = "thermo_style.html">thermodynamic
-keywords</A>, <A HREF = "compute.html">computes</A>,
-<A HREF = "fix.html">fixes</A>, or other <A HREF = "variable.html">variables</A>, or to per-atom
-values for a specific atom.  Thus the <A HREF = "fix_print.html">fix print</A>
-command is a means to output a wide variety of quantities separate
-from normal thermodynamic or dump file output.
+<A HREF = "variable.html">variable</A> values for any style variable except the
+particle style.  As explained above, variables themselves can contain
+references to global values generated by <A HREF = "stats_style.html">stats
+keywords</A>, <A HREF = "compute.html">computes</A>, <A HREF = "fix.html">fixes</A>,
+or other <A HREF = "variable.html">variables</A>.  Thus the <A HREF = "fix_print.html">fix
+print</A> command is a means to output a wide variety of
+quantities separate from normal statistical or dump file output.
+</P>
+<H5><A NAME = "computeoutput"></A>Computes that process output quantities 
+</H5>
+<P>The <A HREF = "compute_reduce.html">compute reduce</A> command takes one or more per
+particle or per grid or per surf vector quantities as inputs and
+"reduces" them (sum, min, max, ave) to scalar quantities.  These are
+produced as output values which can be used as input to other output
+commands.
 </P>
 <H5><A NAME = "compute"></A>Computes that generate values to output 
 </H5>
-<P>Every <A HREF = "compute.html">compute</A> in SPARTA produces either global or
-per-atom or local values.  The values can be scalars or vectors or
-arrays of data.  These values can be output using the other commands
-described in this section.  The doc page for each compute command
-describes what it produces.  Computes that produce per-atom or local
-values have the word "atom" or "local" in their style name.  Computes
-without the word "atom" or "local" produce global values.
+<P>Every <A HREF = "compute.html">compute</A> in SPARTA produces either global or per
+particle or per grid or per surf values.  The values can be scalars or
+vectors or arrays of data.  These values can be output using the other
+commands described in this section.  The doc page for each compute
+command describes what it produces.  Computes that produce per
+particle or per grid or per surf values have the word "particle" or
+"grid" or "surf" in their style name.  Computes without those words
+produce global values.
 </P>
 <H5><A NAME = "fix"></A>Fixes that generate values to output 
 </H5>
-<P>Some <A HREF = "fix.html">fixes</A> in SPARTA produces either global or per-atom or
-local values which can be accessed by other commands.  The values can
-be scalars or vectors or arrays of data.  These values can be output
-using the other commands described in this section.  The doc page for
-each fix command tells whether it produces any output quantities and
-describes them.
+<P>Some <A HREF = "fix.html">fixes</A> in SPARTA produces either global or per particle
+or per grid or per surf values which can be accessed by other
+commands.  The values can be scalars or vectors or arrays of data.
+These values can be output using the other commands described in this
+section.  The doc page for each fix command tells whether it produces
+any output quantities and describes them.
+</P>
+<P>Two fixes of particular interest for output are the <A HREF = "fix_ave_grid.html">fix
+ave/grid</A> and <A HREF = "fix_ave_surf.html">fix ave/surf</A>
+commands.
+</P>
+<P>The <A HREF = "fix_ave_grid.html">fix ave/grid</A> command enables time-averaging of
+per grid vectors.  The user specifies one or more quantities as input.
+These can be per grid vectors or ararys from <A HREF = "compute.html">compute</A> or
+<A HREF = "fix.html">fix</A> commands.  If the input is a single vector, then the
+fix generates a per grid vector.  If the input is multiple vectors or
+array, the fix generates a per grid array.  The time-averaged output
+of this fix can also be used as input to other output commands.
+</P>
+<P>The <A HREF = "fix_ave_surf.html">fix ave/surf</A> command enables time-averaging of
+per surf vectors.  The user specifies one or more quantities as input.
+These can be per surf vectors or ararys from <A HREF = "compute.html">compute</A> or
+<A HREF = "fix.html">fix</A> commands.  If the input is a single vector, then the
+fix generates a per surf vector.  If the input is multiple vectors or
+array, the fix generates a per surf array.  The time-averaged output
+of this fix can also be used as input to other output commands.
 </P>
 <H5><A NAME = "variable"></A>Variables that generate values to output 
 </H5>
-<P>Every <A HREF = "variable.html">variables</A> defined in an input script generates
-either a global scalar value or a per-atom vector (only atom-style
+<P><A HREF = "variable.html">Variables</A> defined in an input script generate either a
+global scalar value or a per particle vector (only particle-style
 variables) when it is accessed.  The formulas used to define equal-
-and atom-style variables can contain references to the thermodynamic
-keywords and to global and per-atom data generated by computes, fixes,
-and other variables.  The values generated by variables can be output
-using the other commands described in this section.
+and particle-style variables can contain references to the
+<A HREF = "stats_style.html">stats_style</A> keywords and to global and per particle
+data generated by computes, fixes, and other variables.  The values
+generated by variables can be output using the other commands
+described in this section.
 </P>
 <H5><A NAME = "table"></A>Summary table of output options and data flow between commands 
 </H5>
@@ -323,7 +369,7 @@ data from other commands as input.  Thus you can link many of these
 commands together in pipeline form, where data produced by one command
 is used as input to another command and eventually written to the
 screen or to a file.  Note that to hook two commands together the
-output and input data types must match, e.g. global/per-atom/local
+output and input data types must match, e.g. global/per atom/local
 data and scalar/vector/array data.
 </P>
 <P>Also note that, as described above, when a command takes a scalar as
@@ -333,17 +379,18 @@ vector input could be a column of an array.
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >Command</TD><TD > Input</TD><TD > Output</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "stats_style.html">stats_style</A></TD><TD > global scalars</TD><TD > screen, log file</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "dump.html">dump particle</A></TD><TD > per-atom vectors</TD><TD > dump file</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "dump.html">dump grid</A></TD><TD > per-atom vectors</TD><TD > dump file</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "dump.html">dump surf</A></TD><TD > per-atom vectors</TD><TD > dump file</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "fix_ave_time.html">fix ave/time</A></TD><TD > global scalars/vectors</TD><TD > global scalar/vector/array, file</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "fix_print.html">fix ave/grid</A></TD><TD > global scalar from variable</TD><TD > per-grid vector, array</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "fix_print.html">fix ave/surf</A></TD><TD > global scalar from variable</TD><TD > per-surf vector, array</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "dump.html">dump particle</A></TD><TD > per particle vectors</TD><TD > dump file</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "dump.html">dump grid</A></TD><TD > per grid vectors</TD><TD > dump file</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "dump.html">dump surf</A></TD><TD > per surf vectors</TD><TD > dump file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "fix_print.html">fix print</A></TD><TD > global scalar from variable</TD><TD > screen, file</TD><TD ></TD></TR>
 <TR><TD ><A HREF = "print.html">print</A></TD><TD > global scalar from variable</TD><TD > screen</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "compute.html">computes</A></TD><TD > N/A</TD><TD > global/per-atom/local scalar/vector/array</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "fix.html">fixes</A></TD><TD > N/A</TD><TD > global/per-atom/local scalar/vector/array</TD><TD ></TD></TR>
-<TR><TD ><A HREF = "variable.html">variables</A></TD><TD > global scalars, per-atom vectors</TD><TD > global scalar, per-atom vector</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "compute.html">computes</A></TD><TD > N/A</TD><TD > global or per particle/grid/surf scalar/vector/array</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "fix.html">fixes</A></TD><TD > N/A</TD><TD > global or per particle/grid/surf scalar/vector/array</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "variable.html">variables</A></TD><TD > global scalars, per particle vectors</TD><TD > global scalar, per particle vector</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "compute_reduce.html">compute reduce</A></TD><TD > per particle/grid/surf vectors</TD><TD > global scalar/vector</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "fix_ave_time.html">fix ave/time</A></TD><TD > global scalars/vectors</TD><TD > global scalar/vector/array, file</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "fix_ave_grid.html">fix ave/grid</A></TD><TD > per grid vectors/arrays</TD><TD > per grid vector/array</TD><TD ></TD></TR>
+<TR><TD ><A HREF = "fix_ave_surf.html">fix ave/surf</A></TD><TD > per surf vectors/arrays</TD><TD > per surf vector/array</TD><TD ></TD></TR>
 <TR><TD >
 </TD></TR></TABLE></DIV>
 
@@ -356,22 +403,7 @@ simulations can be visualized (and analyzed) in a variety of ways.
 </P>
 <P>SPARTA snapshots are created by the <A HREF = "dump.html">dump</A> command which can
 create files in several formats.  The native SPARTA dump format is a
-text file (see "dump atom" or "dump custom") which can be visualized
-by the <A HREF = "Section_tools.html#xmovie">xmovie</A> program, included with the
-SPARTA package.  This produces simple, fast 2d projections of 3d
-systems, and can be useful for rapid debugging of simulation geometry
-and atom trajectories.
-</P>
-<P>Several programs included with SPARTA as auxiliary tools can convert
-native SPARTA dump files to other formats.  See the
-<A HREF = "Section_tools.html">Section_tools</A> doc page for details.  The first is
-the <A HREF = "Section_tools.html#charmm">ch2lmp tool</A>, which contains a
-sparta2pdb Perl script which converts SPARTA dump files into PDB
-files.  The second is the <A HREF = "Section_tools.html#arc">lmp2arc tool</A> which
-converts SPARTA dump files into Accelrys' Insight MD program files.
-The third is the <A HREF = "Section_tools.html#cfg">lmp2cfg tool</A> which converts
-SPARTA dump files into CFG files which can be read into the
-<A HREF = "atomeye">AtomEye</A> visualizer.
+text file (see "dump atom" or "dump custom").
 </P>
 <P>A Python-based toolkit distributed by our group can read native SPARTA
 dump files, including custom dump files with additional columns of
@@ -562,8 +594,23 @@ instances of SPARTA to perform different calculations.
 
 <A NAME = "howto_8"></A><H4>4.8 Details of grid geometry in SPARTA 
 </H4>
+<P>TODO: describe parent, child, unsplit, split, sub cells
+</P>
+<P>describe cell IDs
+</P>
 <HR>
 
 <A NAME = "howto_9"></A><H4>4.9 Details of surfaces in SPARTA 
 </H4>
+<P>TODO: describe watertight rule, surf IDs
+</P>
+<P>how you can have multiple objects in one simulation
+</P>
+<P>how to assign different collision models to different surfs
+</P>
+<P>how to clip surf to simulation box, what to watch out for
+</P>
+<P>kinds of surfs that are illegal:
+  infininitly thin, duplicate points, touching, etc
+</P>
 </HTML>

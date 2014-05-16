@@ -22,8 +22,7 @@ value = c_ID, c_ID\[i\], f_ID, f_ID\[i\], v_name :l
   c_ID = per-surf vector (or array) calculated by a compute with ID
   c_ID\[I\] = Ith column of per-surf array calculated by a compute with ID
   f_ID = per-surf vector (or array) calculated by a fix with ID
-  f_ID\[I\] = Ith column of per-surf array calculated by a fix with ID
-  v_name = per-surf vector calculated by a surf-style variable with name :pre
+  f_ID\[I\] = Ith column of per-surf array calculated by a fix with ID :pre
 zero or more keyword/arg pairs may be appended :l
 keyword = {ave}
   {ave} args = one or running
@@ -44,21 +43,17 @@ timescales, applying appropriate normalization factors. The resulting
 per-surf averages can be used by other output commands such as the
 "dump surf"_dump.html command.
 
-Each input value can be a standard surface element attribute or can be
-the result of a "compute"_compute.html or "fix"_fix.html or the
-evaluation of a surf-style "variable"_variable.html.  In the latter
-cases, the compute, fix, or variable must produce a per-surf vector,
-not a global or per-particle or per-grid quantity.  If you wish to
-time-average global quantities from a compute, fix, or variable, then
-see the "fix ave/time"_fix_ave_time.html command.  To time-average
-per-grid quantities, see the "fix ave/grid"_fix_ave_grid.html command.
+Each input value can be the result of a "compute"_compute.html or
+"fix"_fix.html.  The compute or fix must produce a per-surf vector or
+array, not a global or per-particle or per-grid quantity.  If you wish
+to time-average global quantities from a compute or fix then see the
+"fix ave/time"_fix_ave_time.html command.  To time-average per-grid
+quantities, see the "fix ave/grid"_fix_ave_grid.html command.
 
 "Computes"_compute.html that produce per-surf vectors or arrays are
 those which have the word {surf} in their style name.  See the doc
 pages for individual "fixes"_fix.html to determine which ones produce
-per-surf vectors or arrays.  "Variables"_variable.html of style {surf}
-are the only ones that can be used with this fix since they produce
-per-surf vectors.
+per-surf vectors or arrays.
 
 Each per-surf value of each input vector is averaged independently.
 
@@ -116,13 +111,6 @@ which must be compatible with {Nevery}, else an error will result.
 Users can also write code for their own fix styles and "add them to
 SPARTA"_Section_modify.html.
 
-If a value begins with "v_", a variable name must follow which has
-been previously defined in the input script as a "surf-style
-variable"_variable.html.  Variables of style {surf} can reference
-"stats_style"_stats_style.html keywords, or invoke other computes,
-fixes, or variables when they are evaluated, so this is a very general
-means of generating per-surf quantities to time average.
-
 :line
 
 For averaging of a value that comes from a compute or fix,
@@ -136,11 +124,6 @@ shx, ke, etc).  When this command averages over a series of timesteps,
 the numerator and denominator are summed separately.  This means the
 numerator/denominator division only takes place when this fix produces
 output, every Nfreq timesteps.
-
-For averaging of a value that comes from a surf-style variable, no
-normalization is performed; the variable value is used as-is.  This
-means you should define the variable so it performs any needed
-normalization.
 
 :line
 
@@ -179,8 +162,7 @@ is when averaging is performed.
 
 [Related commands:]
 
-"compute"_compute.html, ""fix ave/time"_fix_ave_time.html,
-"variable"_variable.html
+"compute"_compute.html, ""fix ave/time"_fix_ave_time.html
 
 [Default:]
 

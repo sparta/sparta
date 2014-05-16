@@ -22,8 +22,7 @@ value = c_ID, c_ID\[i\], f_ID, f_ID\[i\], v_name :l
   c_ID = per-grid vector (or array) calculated by a compute with ID
   c_ID\[I\] = Ith column of per-grid array calculated by a compute with ID
   f_ID = per-grid vector (or array) calculated by a fix with ID
-  f_ID\[I\] = Ith column of per-grid array calculated by a fix with ID
-  v_name = per-grid vector calculated by an grid-style variable with name :pre
+  f_ID\[I\] = Ith column of per-grid array calculated by a fix with ID :pre
 zero or more keyword/arg pairs may be appended :l
 keyword = {ave}
   {ave} args = one or running
@@ -52,20 +51,17 @@ used by other output commands such as the "dump grid"_dump.html
 command.
 
 Each input value can be the result of a "compute"_compute.html or
-"fix"_fix.html or the evaluation of a grid-style
-"variable"_variable.html.  The compute, fix, or variable must produce
-a per-grid vector or array, not a global or per-particle or per-surf
-quantity.  If you wish to time-average global quantities from a
-compute, fix, or variable, then see the "fix
-ave/time"_fix_ave_time.html command.  To time-average per-surf
-quantities, see the "fix ave/surf"_fix_ave_surf.html command.
+"fix"_fix.html.  The compute or fix must produce a per-grid vector or
+array, not a global or per-particle or per-surf quantity.  If you wish
+to time-average global quantities from a compute, fix, or variable,
+then see the "fix ave/time"_fix_ave_time.html command.  To
+time-average per-surf quantities, see the "fix
+ave/surf"_fix_ave_surf.html command.
 
 "Computes"_compute.html that produce per-grid vectors or arrays are
 those which have the word {grid} in their style name.  See the doc
 pages for individual "fixes"_fix.html to determine which ones produce
-per-grid vectors or arrays.  "Variables"_variable.html of style {grid}
-are the only ones that can be used with this fix since they produce
-per-grid vectors.
+per-grid vectors or arrays. 
 
 Each per-grid value of each input vector is averaged independently.
 
@@ -123,13 +119,6 @@ which must be compatible with {Nevery}, else an error will result.
 Users can also write code for their own fix styles and "add them to
 SPARTA"_Section_modify.html.
 
-If a value begins with "v_", a variable name must follow which has
-been previously defined in the input script as a "grid-style
-variable"_variable.html.  Variables of style {grid} can reference
-"stats_style"_stats_style.html keywords, or invoke other computes,
-fixes, or variables when they are evaluated, so this is a very general
-means of generating per-grid quantities to time average.
-
 :line
 
 For averaging of a value that comes from a compute or fix,
@@ -150,11 +139,6 @@ Say a grid cell has 10 particles on the 1st timestep with a numerator
 value of 10.0, and 100 particles on the 2nd timestep with a numerator
 value of 50.0.  The output of this fix will be (10+50) / (10+100) =
 0.54, not ((10/10) + (50/100)) / 2 = 0.75.
-
-For averaging of a value that comes from a grid-style variable, no
-normalization is performed; the variable value is used as-is.  This
-means you should define the variable so it performs any needed
-normalization.
 
 :line
 
@@ -198,8 +182,7 @@ SPARTA defines child, unsplit, split, and sub cells.
 
 [Related commands:]
 
-"compute"_compute.html, "fix ave/time"_fix_ave_time.html,
-"variable"_variable.html
+"compute"_compute.html, "fix ave/time"_fix_ave_time.html
 
 [Default:]
 

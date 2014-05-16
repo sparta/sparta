@@ -8,8 +8,9 @@
 
 4. How-to discussions :h3
 
-The following sections describe how to use various options within
-SPARTA.
+The following sections describe how to perform common tasks using
+SPARTA, as well as provide some techinical details about how
+SPARTA works.
 
 4.1 "2d simulations"_#howto_1
 4.2 "Axisymmetric simulations"_#howto_2
@@ -46,12 +47,23 @@ particles in a 3d grid cell whose z-dimension is 1.0, the same number
 of particles will be created in a 2d grid cell with the same x and y
 dimensions.
 
+TODO: is -0.5 and 0.5 required or OK not to do this?
+
+TODO: how does SPARTA really do a 2d simulation?  continues to
+treat velocity as 3d, so collisions, etc don't change
+
 Many of the example input scripts included in the SPARTA distribution
 are for 2d models.
 
 :line
 
 4.2 Axisymmetric simulations :link(howto_2),h4
+
+TODO: describe commands when have a working example
+
+create box with ylo = 0.0 and zlo/zhi = 0.5
+boundary a
+cell weighting :ul
 
 :line
 
@@ -91,9 +103,9 @@ would run 2 independent simulations, one after the other.
 
 For large numbers of independent simulations, you can use
 "variables"_variable.html and the "next"_next.html and
-"jump"_jump.html commands to loop over the same input script
-multiple times with different settings.  For example, this
-script, named in.flow
+"jump"_jump.html commands to loop over the same input script multiple
+times with different settings.  For example, this script, named
+in.flow
 
 variable d index run1 run2 run3 run4 run5 run6 run7 run8
 shell cd $d
@@ -107,8 +119,8 @@ jump in.flow :pre
 
 would run 8 simulations in different directories, using a data.grid
 file in each directory.  The same concept could be used to run the
-same system at 8 different gas densities, using a density variable
-and storing the output in different log and dump files, for example
+same system at 8 different gas densities, using a density variable and
+storing the output in different log and dump files, for example
 
 variable a loop 8
 variable rho index 1.0e18 4.0e18 1.0e19 4.0e19 1.0e20 4.0e20 1.0e21 4.0e21
@@ -118,6 +130,7 @@ global nrho $\{rho\}
 compute myGrid grid all n temp
 dump 1 all grid 1000 dump.$a id c_myGrid
 run 100000
+clear
 next rho
 next a
 jump in.flow :pre
@@ -153,12 +166,14 @@ cell, or surface element quantities and are written at a specified
 frequency. :l
 
 Certain fixes can output user-specified quantities directly to files:
-"fix ave/time"_fix_ave_time.html for time averaging and ing, and "fix
+"fix ave/time"_fix_ave_time.html for time averaging, and "fix
 print"_fix_print.html for single-line output of
 "variables"_variable.html.  Fix print can also output to the
 screen. :l
 
 "Restart files"_restart.html. :l,ule
+
+IMPORTANT NOTE: Restart files are not yet implemented in SPARTA.
 
 A simulation prints one set of statistical output and (optionally)
 restart files.  It can generate any number of dump files and fix
@@ -168,9 +183,9 @@ commands you specify.
 As discussed below, SPARTA gives you a variety of ways to determine
 what quantities are computed and printed when the statistics, dump, or
 fix commands listed above perform output.  Throughout this discussion,
-note that users can also "add their own computes and fixes to
-SPARTA"_Section_modify.html which can generate values that can then be
-output with these commands.
+note that users can also add their own computes and fixes to SPARTA
+(see "Section 10"_Section_modify.html) which can generate values that
+can then be output with these commands.
 
 The following sub-sections discuss different SPARTA commands related
 to output and the kind of data they operate on and produce:
@@ -180,6 +195,7 @@ to output and the kind of data they operate on and produce:
 "Statistical output"_#stat
 "Dump file output"_#dump
 "Fixes that write output files"_#fixoutput
+"Computes that process output quantities"_#computeoutput
 "Computes that generate values to output"_#compute
 "Fixes that generate values to output"_#fix
 "Variables that generate values to output"_#variable
@@ -188,21 +204,21 @@ to output and the kind of data they operate on and produce:
 Global/per-particle/per-grid/per-surf data :h5,link(global)
 
 Various output-related commands work with four different styles of
-data: global, per-particle, per-grid, or per-surfl.  A global datum is
+data: global, per particle, per grid, or per surf.  A global datum is
 one or more system-wide values, e.g. the temperature of the system.  A
-per-partile datum is one or more values per partice, e.g. the kinetic
-energy of each particle.  A per-grid datum is one or more values per
+per particle datum is one or more values per partice, e.g. the kinetic
+energy of each particle.  A per grid datum is one or more values per
 grid cell, e.g. the temperature of the particles in the grid cell.  A
-per-surf datum is one or more values per surface element, e.g. the
+per surf datum is one or more values per surface element, e.g. the
 count of particles that collided with the surface element.
 
 Scalar/vector/array data :h5,link(scalar)
 
-Global, per-particle, per-grid, and per-surf datums can each come in
+Global, per particle, per grid, and per surf datums can each come in
 three kinds: a single scalar value, a vector of values, or a 2d array
 of values.  The doc page for a "compute" or "fix" or "variable" that
 generates data will specify both the style and kind of data it
-produces, e.g. a per-grid vector.
+produces, e.g. a per grid vector.
 
 When a quantity is accessed, as in many of the output commands
 discussed below, it can be referenced via the following bracket
@@ -230,8 +246,8 @@ calculated and written out.  Pre-defined keywords can be specified
 specified (c_ID, f_ID, v_name), where a "compute"_compute.html or
 "fix"_fix.html or "variable"_variable.html provides the value to be
 output.  In each case, the compute, fix, or variable must generate
-global values for input to the "stats_style custom"_stats_style.html
-command.
+global values to be used as an argument of the
+"stats_style"_stats_style.html command.
 
 Dump file output :h5,link(dump)
 
@@ -240,13 +256,14 @@ Dump file output is specified by the "dump"_dump.html and
 pre-defined formats: dump particle, dump grid, dump surf, etc.
 
 Each of these allows specification of what values are output with each
-particle, grid cell, or surface element.  Pre-defined atom attributes
-can be specified (id, x, y, z, vol, etc).  Three additional kinds of
-keywords can also be specified (c_ID, f_ID, v_name), where a
-"compute"_compute.html or "fix"_fix.html or "variable"_variable.html
-provides the values to be output.  In each case, the compute, fix, or
-variable must generate per-particle, per-grid, or per-surf values for
-input to the corresponding "dump"_dump.html command.
+particle, grid cell, or surface element.  Pre-defined attributes can
+be specified (e.g. id, x, y, z for particles or id, vol for grid
+cells, etc).  Three additional kinds of keywords can also be specified
+(c_ID, f_ID, v_name), where a "compute"_compute.html or "fix"_fix.html
+or "variable"_variable.html provides the values to be output.  In each
+case, the compute, fix, or variable must generate per particle, per
+grid, or per surf values for input to the corresponding
+"dump"_dump.html command.
 
 Fixes that write output files :h5,link(fixoutput)
 
@@ -257,9 +274,9 @@ The "fix ave/time"_fix_ave_time.html command enables direct output to
 a file and/or time-averaging of global scalars or vectors.  The user
 specifies one or more quantities as input.  These can be global
 "compute"_compute.html values, global "fix"_fix.html values, or
-"variables"_variable.html of any style except the particle, grid, surf
-styles which do not produce single values.  Since a variable can refer
-to keywords used by the "stats_style"_stats_style.html command (like
+"variables"_variable.html of any style except the particle style which
+does not produce single values.  Since a variable can refer to
+keywords used by the "stats_style"_stats_style.html command (like
 particle count), a wide variety of quantities can be time averaged
 and/or output in this way.  If the inputs are one or more scalar
 values, then the fix generates a global scalar or vector of output.
@@ -270,43 +287,72 @@ fix can also be used as input to other output commands.
 The "fix print"_fix_print.html command can generate a line of output
 written to the screen and log file or to a separate file, periodically
 during a running simulation.  The line can contain one or more
-"variable"_variable.html values for any style variable except the atom
-style).  As explained above, variables themselves can contain
-references to global values generated by "thermodynamic
-keywords"_thermo_style.html, "computes"_compute.html,
-"fixes"_fix.html, or other "variables"_variable.html, or to per-atom
-values for a specific atom.  Thus the "fix print"_fix_print.html
-command is a means to output a wide variety of quantities separate
-from normal thermodynamic or dump file output.
+"variable"_variable.html values for any style variable except the
+particle style.  As explained above, variables themselves can contain
+references to global values generated by "stats
+keywords"_stats_style.html, "computes"_compute.html, "fixes"_fix.html,
+or other "variables"_variable.html.  Thus the "fix
+print"_fix_print.html command is a means to output a wide variety of
+quantities separate from normal statistical or dump file output.
+
+Computes that process output quantities :h5,link(computeoutput)
+
+The "compute reduce"_compute_reduce.html command takes one or more per
+particle or per grid or per surf vector quantities as inputs and
+"reduces" them (sum, min, max, ave) to scalar quantities.  These are
+produced as output values which can be used as input to other output
+commands.
 
 Computes that generate values to output :h5,link(compute)
 
-Every "compute"_compute.html in SPARTA produces either global or
-per-atom or local values.  The values can be scalars or vectors or
-arrays of data.  These values can be output using the other commands
-described in this section.  The doc page for each compute command
-describes what it produces.  Computes that produce per-atom or local
-values have the word "atom" or "local" in their style name.  Computes
-without the word "atom" or "local" produce global values.
+Every "compute"_compute.html in SPARTA produces either global or per
+particle or per grid or per surf values.  The values can be scalars or
+vectors or arrays of data.  These values can be output using the other
+commands described in this section.  The doc page for each compute
+command describes what it produces.  Computes that produce per
+particle or per grid or per surf values have the word "particle" or
+"grid" or "surf" in their style name.  Computes without those words
+produce global values.
 
 Fixes that generate values to output :h5,link(fix)
 
-Some "fixes"_fix.html in SPARTA produces either global or per-atom or
-local values which can be accessed by other commands.  The values can
-be scalars or vectors or arrays of data.  These values can be output
-using the other commands described in this section.  The doc page for
-each fix command tells whether it produces any output quantities and
-describes them.
+Some "fixes"_fix.html in SPARTA produces either global or per particle
+or per grid or per surf values which can be accessed by other
+commands.  The values can be scalars or vectors or arrays of data.
+These values can be output using the other commands described in this
+section.  The doc page for each fix command tells whether it produces
+any output quantities and describes them.
+
+Two fixes of particular interest for output are the "fix
+ave/grid"_fix_ave_grid.html and "fix ave/surf"_fix_ave_surf.html
+commands.
+
+The "fix ave/grid"_fix_ave_grid.html command enables time-averaging of
+per grid vectors.  The user specifies one or more quantities as input.
+These can be per grid vectors or ararys from "compute"_compute.html or
+"fix"_fix.html commands.  If the input is a single vector, then the
+fix generates a per grid vector.  If the input is multiple vectors or
+array, the fix generates a per grid array.  The time-averaged output
+of this fix can also be used as input to other output commands.
+
+The "fix ave/surf"_fix_ave_surf.html command enables time-averaging of
+per surf vectors.  The user specifies one or more quantities as input.
+These can be per surf vectors or ararys from "compute"_compute.html or
+"fix"_fix.html commands.  If the input is a single vector, then the
+fix generates a per surf vector.  If the input is multiple vectors or
+array, the fix generates a per surf array.  The time-averaged output
+of this fix can also be used as input to other output commands.
 
 Variables that generate values to output :h5,link(variable)
 
-Every "variables"_variable.html defined in an input script generates
-either a global scalar value or a per-atom vector (only atom-style
+"Variables"_variable.html defined in an input script generate either a
+global scalar value or a per particle vector (only particle-style
 variables) when it is accessed.  The formulas used to define equal-
-and atom-style variables can contain references to the thermodynamic
-keywords and to global and per-atom data generated by computes, fixes,
-and other variables.  The values generated by variables can be output
-using the other commands described in this section.
+and particle-style variables can contain references to the
+"stats_style"_stats_style.html keywords and to global and per particle
+data generated by computes, fixes, and other variables.  The values
+generated by variables can be output using the other commands
+described in this section.
 
 Summary table of output options and data flow between commands :h5,link(table)
 
@@ -317,7 +363,7 @@ data from other commands as input.  Thus you can link many of these
 commands together in pipeline form, where data produced by one command
 is used as input to another command and eventually written to the
 screen or to a file.  Note that to hook two commands together the
-output and input data types must match, e.g. global/per-atom/local
+output and input data types must match, e.g. global/per atom/local
 data and scalar/vector/array data.
 
 Also note that, as described above, when a command takes a scalar as
@@ -326,17 +372,18 @@ vector input could be a column of an array.
 
 Command: Input: Output:
 "stats_style"_stats_style.html: global scalars: screen, log file:
-"dump particle"_dump.html: per-atom vectors: dump file:
-"dump grid"_dump.html: per-atom vectors: dump file:
-"dump surf"_dump.html: per-atom vectors: dump file:
-"fix ave/time"_fix_ave_time.html: global scalars/vectors: global scalar/vector/array, file:
-"fix ave/grid"_fix_print.html: global scalar from variable: per-grid vector, array:
-"fix ave/surf"_fix_print.html: global scalar from variable: per-surf vector, array:
+"dump particle"_dump.html: per particle vectors: dump file:
+"dump grid"_dump.html: per grid vectors: dump file:
+"dump surf"_dump.html: per surf vectors: dump file:
 "fix print"_fix_print.html: global scalar from variable: screen, file:
 "print"_print.html: global scalar from variable: screen:
-"computes"_compute.html: N/A: global/per-atom/local scalar/vector/array:
-"fixes"_fix.html: N/A: global/per-atom/local scalar/vector/array:
-"variables"_variable.html: global scalars, per-atom vectors: global scalar, per-atom vector:
+"computes"_compute.html: N/A: global or per particle/grid/surf scalar/vector/array:
+"fixes"_fix.html: N/A: global or per particle/grid/surf scalar/vector/array:
+"variables"_variable.html: global scalars, per particle vectors: global scalar, per particle vector:
+"compute reduce"_compute_reduce.html: per particle/grid/surf vectors: global scalar/vector:
+"fix ave/time"_fix_ave_time.html: global scalars/vectors: global scalar/vector/array, file:
+"fix ave/grid"_fix_ave_grid.html: per grid vectors/arrays: per grid vector/array:
+"fix ave/surf"_fix_ave_surf.html: per surf vectors/arrays: per surf vector/array:
 :tb(s=:)
 
 :line
@@ -348,22 +395,7 @@ simulations can be visualized (and analyzed) in a variety of ways.
 
 SPARTA snapshots are created by the "dump"_dump.html command which can
 create files in several formats.  The native SPARTA dump format is a
-text file (see "dump atom" or "dump custom") which can be visualized
-by the "xmovie"_Section_tools.html#xmovie program, included with the
-SPARTA package.  This produces simple, fast 2d projections of 3d
-systems, and can be useful for rapid debugging of simulation geometry
-and atom trajectories.
-
-Several programs included with SPARTA as auxiliary tools can convert
-native SPARTA dump files to other formats.  See the
-"Section_tools"_Section_tools.html doc page for details.  The first is
-the "ch2lmp tool"_Section_tools.html#charmm, which contains a
-sparta2pdb Perl script which converts SPARTA dump files into PDB
-files.  The second is the "lmp2arc tool"_Section_tools.html#arc which
-converts SPARTA dump files into Accelrys' Insight MD program files.
-The third is the "lmp2cfg tool"_Section_tools.html#cfg which converts
-SPARTA dump files into CFG files which can be read into the
-"AtomEye"_atomeye visualizer.
+text file (see "dump atom" or "dump custom").
 
 A Python-based toolkit distributed by our group can read native SPARTA
 dump files, including custom dump files with additional columns of
@@ -551,6 +583,21 @@ instances of SPARTA to perform different calculations.
 
 4.8 Details of grid geometry in SPARTA :link(howto_8),h4
 
+TODO: describe parent, child, unsplit, split, sub cells
+
+describe cell IDs
+
 :line
 
 4.9 Details of surfaces in SPARTA :link(howto_9),h4
+
+TODO: describe watertight rule, surf IDs
+
+how you can have multiple objects in one simulation
+
+how to assign different collision models to different surfs
+
+how to clip surf to simulation box, what to watch out for
+
+kinds of surfs that are illegal:
+  infininitly thin, duplicate points, touching, etc
