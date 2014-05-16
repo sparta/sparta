@@ -33,7 +33,11 @@ create_box 0 10.0 0 5.0 -4.0 0.0
 command, <I>zlo</I> < 0.0 and <I>zhi</I> > 0.0 is required.  This means the z
 dimensions straddle 0.0.
 </P>
-<P>For 2d axi-symmetric simulations, as set by the
+<P>TODO: For 2d, should we require that zlo = -0.5 and zhi = 0.5 or
+zhi-zlo = 1.0?  Is this necessary for cell volumes to effectively
+equal area when running a 2d simulation?
+</P>
+<P>For 2d axisymmetric simulations, as set by the
 <A HREF = "dimension.html">dimension</A> and <A HREF = "boundary.html">boundary</A> commands, the
 ylo setting must be 0.0.
 </P>

@@ -49,19 +49,22 @@ surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Define a style for particle-surface collisions performed by SPARTA.
-One or more styles can be defined and assigned to different surfaces
-or simulation box boundaries via the <A HREF = "read_surf.html">read_surf</A> or
-<A HREF = "bound_modify.html">bound_modify</A> commands.  Also see the
-<A HREF = "read_surf.html">read_surf</A> command for a description of how SPARTA
+<P>Define a style for particle-surface collisions.  One or more styles
+can be defined and assigned to different surfaces or simulation box
+boundaries via the <A HREF = "read_surf.html">read_surf</A> or
+<A HREF = "bound_modify.html">bound_modify</A> commands.  See <A HREF = "Section_howto.html#howto_10">Section
+4.10</A> for a description of how SPARTA
 defines surfaces as collections of geometric elements, triangles in 3d
 and line segments in 2d.
+</P>
+<P>The ID of a surface collision model can only contain alphanumeric
+characters and underscores.
 </P>
 <HR>
 
 <P>The <I>specular</I> style computes a simple specular reflection model.  It
 requires no arguments.  Specular reflection means that a particle
-reflects off the surrace element with its incident velocity vector
+reflects off a surface element with its incident velocity vector
 reversed with respect to the outward normal of the surface element.
 The particle's speed is unchanged.
 </P>
@@ -79,6 +82,8 @@ the particle, sampled from a Gaussian distribution consistent with the
 surface temperature.  The new velocity will have a component in the
 direction of the outward surface normal given by:
 </P>
+<P>TODO: need to provide these 2 eqs as LaTeX files in the Eqs dir
+</P>
 <CENTER><IMG SRC = "Eqs/diffuse_normal.jpg">
 </CENTER>
 <P>and 2 components in the plane tangent to the surface normal
@@ -86,14 +91,14 @@ given by:
 </P>
 <CENTER><IMG SRC = "Eqs/diffuse_tangential.jpg">
 </CENTER>
-<P>The <I>Twall</I> value can be specified as an equal-style
+<P>The <I>Tsurf</I> value can be specified as an equal-style
 <A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
 specified as v_name, where name is the variable name.  In this case,
 the variable will be evaluated each timestep, and its value used to
 determine the current surface temperature.
 </P>
 <P>Equal-style variables can specify formulas with various mathematical
-functions, and include <A HREF = "thermo_style.html">thermo_style</A> command
+functions, and include <A HREF = "status_style.html">stats_style</A> command
 keywords for the simulation box parameters and timestep and elapsed
 time.  Thus it is easy to specify a time-dependent temperature.
 </P>
@@ -120,12 +125,12 @@ point X = (x,y,z), the collision point has a velocity given by V =
 (Vx,Vy,Vz) = W cross (X-P).  This velocity is added to the final
 post-collisional velocity of the particle.
 </P>
-<P>This keyword can be used to model a rotating wall, e.g. the end cap of
-a cylinder.  Or to model a rotating object consisting of surface
-elements, e.g. a sphere.  In either case, the surface elements
-themselves do not change position due to rotation.  They are simply
-modeled as having a tangential velocity, as if the entire object were
-rotating.
+<P>This keyword can be used to treat a simulation box boundary as a
+rotating wall, e.g. the end cap of an axisymmetric cylinder.  Or to
+model a rotating object consisting of surface elements, e.g. a sphere.
+In either case, the wall or surface elements themselves do not change
+position due to rotation.  They are simply modeled as having a
+tangential velocity, as if the entire object were rotating.
 </P>
 <HR>
 
