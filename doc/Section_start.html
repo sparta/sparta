@@ -38,6 +38,7 @@ sub-directories:
 <TR><TD >README</TD><TD > text file</TD></TR>
 <TR><TD >LICENSE</TD><TD > the GNU General Public License (GPL)</TD></TR>
 <TR><TD >bench</TD><TD > benchmark problems</TD></TR>
+<TR><TD >data</TD><TD > files with species, collision, and reaction parameters</TD></TR>
 <TR><TD >doc</TD><TD > documentation</TD></TR>
 <TR><TD >examples</TD><TD > simple test problems</TD></TR>
 <TR><TD >python</TD><TD > Python wrapper</TD></TR>
@@ -67,8 +68,8 @@ there are compiler options to consider, additional libraries can be
 used (MPI, JPEG).
 </P>
 <P>Please read this section carefully.  If you are not comfortable with
-makefiles, or building codes on a Unix platform, or running an MPI job
-on your machine, please find a local expert to help you.
+makefiles, or building codes on a Linux platform, or running an MPI
+job on your machine, please find a local expert to help you.
 </P>
 <P>If you have a build problem that you are convinced is a SPARTA issue
 (e.g. the compiler complains about a line of SPARTA source code), then
@@ -76,8 +77,8 @@ please send an email to the
 <A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
 </P>
 <P>If you succeed in building SPARTA on a new kind of machine, for which
-there isn't a similar Makefile for in the src/MAKE directory, send it
-to the developers and we'll include it in future SPARTA releases.
+there isn't a similar Makefile in the src/MAKE directory, send it to
+the developers and we'll include it in future SPARTA releases.
 </P>
 <HR>
 
@@ -96,9 +97,9 @@ type a command like:
 or
 gmake mac 
 </PRE>
-<P>Note that on a multi-processor or multi-core platform you can launch a
-parallel make, by using the "-j" switch with the make command, which
-will build SPARTA more quickly.
+<P>Note that on a multi-core platform you can launch a parallel make, by
+using the "-j" switch with the make command, which will build SPARTA
+more quickly.
 </P>
 <P>If you get no errors and an executable like spa_g++ or spa_mac is
 produced, you're done; it's your lucky day.
@@ -106,7 +107,7 @@ produced, you're done; it's your lucky day.
 <P><B>Step 1</B>
 </P>
 <P>If Step 0 did not work, you will need to create a low-level Makefile
-for your machine, like Makefile.foo.  Create a copy of an existing
+for your machine, like Makefile.foo.  Copy an existing
 src/MAKE/Makefile.* as a starting point.  The only portions of the
 file you need to edit are the first line, the "compiler/linker
 settings" section, and the "SPARTA-specific settings" section.
@@ -121,7 +122,7 @@ line you will see if you just type "make".
 </P>
 <P>The "compiler/linker settings" section lists compiler and linker
 settings for your C++ compiler, including optimization flags.  You can
-use g++, the open-source GNU compiler, which is available on all Unix
+use g++, the open-source GNU compiler, which is available on all Linux
 systems.  You can also use mpicc which will typically be available if
 MPI is installed on your system, though you should check which actual
 compiler it wraps.  Vendor compilers often produce faster code.  On
@@ -162,7 +163,7 @@ within the SPARTA code.  The options that are currently recogized are:
 <LI>-DSPARTA_LONGLONG_TO_LONG 
 </UL>
 <P>The read_data and dump commands will read/write gzipped files if you
-compile with -DSPARTA_GZIP.  It requires that your Unix support the
+compile with -DSPARTA_GZIP.  It requires that your Linux support the
 "popen" command.
 </P>
 <P>If you use -DSPARTA_JPEG and/or -DSPARTA_PNG, the <A HREF = "dump.html">dump
@@ -214,38 +215,37 @@ module in your build environment.  Or the parallel machine may have a
 vendor-provided MPI which the compiler has no trouble finding.
 </P>
 <P>Failing this, with these 3 variables you can specify where the mpi.h
-file (MPI_INC) and the MPI library file (MPI_PATH) are found and the
-name of the library file (MPI_LIB).  See Makefile.serial for an
-example of how this can be done.
+file is found (via MPI_INC), and the MPI library file is found (via
+MPI_PATH), and the name of the library file (via MPI_LIB).  See
+Makefile.serial for an example of how this can be done.
 </P>
-<P>If you are installing MPI yourself, we recommend Argonne's MPICH 1.2
-or 2.0 or OpenMPI.  MPICH can be downloaded from the <A HREF = "http://www-unix.mcs.anl.gov/mpi">Argonne MPI
+<P>If you are installing MPI yourself, we recommend MPICH 1.2 or 2.0 or
+OpenMPI.  MPICH can be downloaded from the <A HREF = "http://www-unix.mcs.anl.gov/mpi">Argonne MPI
 site</A>.  OpenMPI can be downloaded the
-<A HREF = "http://www.open-mpi.org">OpenMPI site</A>.  LAM MPI should also work.  If
-you are running on a big parallel platform, your system admins or the
-vendor should have already installed a version of MPI, which will be
-faster than MPICH or OpenMPI or LAM, so find out how to build and link
-with it.  If you use MPICH or OpenMPI or LAM, you will have to
-configure and build it for your platform.  The MPI configure script
-should have compiler options to enable you to use the same compiler
-you use for the SPARTA build, which can avoid problems that can arise
-when linking SPARTA to the MPI library.
+<A HREF = "http://www.open-mpi.org">OpenMPI site</A>.  If you are running on a big
+parallel platform, your system admins or the vendor should have
+already installed a version of MPI, which will be faster than MPICH or
+OpenMPI, so find out how to build and link with it.  If you use MPICH
+or OpenMPI, you will have to configure and build it for your platform.
+The MPI configure script should have compiler options to enable you to
+use the same compiler you use for the SPARTA build, which can avoid
+problems that can arise when linking SPARTA to the MPI library.
 </P>
 <P>If you just want to run SPARTA on a single processor, you can use the
 dummy MPI library provided in src/STUBS, since you don't need a true
 MPI library installed on your system.  You will also need to build the
 STUBS library for your platform before making SPARTA itself.  From the
-src directory, type "make stubs", or from the STUBS dir, type "make"
-and it should create a libmpi.a suitable for linking to SPARTA.  If
-this build fails, you will need to edit the STUBS/Makefile for your
+src directory, type "make stubs", or from within the STUBS dir, type
+"make" and it should create a libmpi.a suitable for linking to SPARTA.
+If this build fails, you will need to edit the STUBS/Makefile for your
 platform.
 </P>
 <P>The file STUBS/mpi.cpp provides a CPU timer function called
 MPI_Wtime() that calls gettimeofday() .  If your system doesn't
 support gettimeofday() , you'll need to insert code to call another
-timer.  Note that the ANSI-standard function clock() rolls over after
-an hour or so, and is therefore insufficient for timing long SPARTA
-simulations.
+timer.  Note that the ANSI-standard function clock() function rolls
+over after an hour or so, and is therefore insufficient for timing
+long SPARTA simulations.
 </P>
 <P><B>Step 6</B>
 </P>
@@ -272,10 +272,9 @@ your machine, you may not need to set these variables.
 </P>
 <P><B>Step 7</B>
 </P>
-<P>That's it.  Once you have a correct Makefile.foo, you have installed
-the optional SPARTA packages you want to include in your build, and
-you have pre-built any other needed libraries (e.g. MPI), all you need
-to do from the src directory is type this:
+<P>That's it.  Once you have a correct Makefile.foo, and you have
+pre-built any other needed libraries (e.g. MPI), all you need to do
+from the src directory is type this:
 </P>
 <PRE>make foo
 or
@@ -361,62 +360,116 @@ and we will include them in the distribution.
 
 <H4><A NAME = "start_4"></A>2.4 Building SPARTA as a library 
 </H4>
-<P>SPARTA can be built as a library, which can then be called from
-another application or a scripting language.  See <A HREF = "Section_howto.html#howto_7">Section
-4.7</A> for more info on coupling SPARTA to
-other codes.  Building SPARTA as a library is done by typing
+<P>SPARTA can be built as either a static or shared library, which can
+then be called from another application or a scripting language.  See
+<A HREF = "Section_howto.html#howto_7">Section 4.7</A> for more info on coupling
+SPARTA to other codes.  See <A HREF = "Section_python.html">Section 9</A> for more
+info on wrapping and running SPARTA from Python.
+</P>
+<H5><B>Static library:</B> 
+</H5>
+<P>To build SPARTA as a static library (*.a file on Linux), type
 </P>
 <PRE>make makelib
-make -f Makefile.lib foo
-gmake -f Makefile.lib foo 
+make -f Makefile.lib foo 
 </PRE>
-<P>where foo is the machine name.  The first "make" command will create a
-current Makefile.lib with all the file names in your src dir.  The 2nd
-"make" or "gmake" command will use it to build SPARTA as a library.  This
-requires that Makefile.foo have a library target (lib) and
-system-specific settings for ARCHIVE and ARFLAGS.  See Makefile.g++
-for an example.  The build will create the file libspa_foo.a which
-another application can link to.
+<P>where foo is the machine name.  This kind of library is typically used
+to statically link SPARTA to a driver application, so that you can
+insure all dependencies are satisfied at compile time.  The first
+"make" command will create a current Makefile.lib with all the file
+names in your src dir.  The second "make" command will use it to build
+SPARTA as a static library, using the ARCHIVE and ARFLAGS settings in
+src/MAKE/Makefile.foo.  The build will create the file libsparta_foo.a
+which another application can link to.
 </P>
-<P>When used from a C++ program, the library allows one or more SPARTA
-objects to be instantiated.  All of SPARTA is wrapped in a SPARTA_NS
-namespace; you can safely use any of its classes and methods from
-within your application code, as needed. 
+<H5><B>Shared library:</B> 
+</H5>
+<P>To build SPARTA as a shared library (*.so file on Linux), which can be
+dynamically loaded, e.g. from Python, type
 </P>
-<P>When used from a C or Fortran program or a scripting language, the
-library has a simple function-style interface, provided in
-src/library.cpp and src/library.h.
+<PRE>make makeshlib
+make -f Makefile.shlib foo 
+</PRE>
+<P>where foo is the machine name.  This kind of library is required when
+wrapping SPARTA with Python; see <A HREF = "Section_python.html">Section_python</A>
+for details.  The first "make" command will create a current
+Makefile.shlib with all the file names in your src dir.  The second
+"make" command will use it to build SPARTA as a shared library, using
+the SHFLAGS and SHLIBFLAGS settings in src/MAKE/Makefile.foo.  The
+build will create the file libsparta_foo.so which another application
+can link to dyamically.  It will also create a soft link libsparta.so,
+which the Python wrapper uses by default.
 </P>
-<P>See the sample codes examples/COUPLE/simple.cpp and simple.c as
-examples of C++ and C codes that invoke SPARTA thru its library
-interface.  There are other examples as well in the couple directory
-which are discussed in examples/COUPLE/README.  See <A HREF = "Section_python.html">Section
-9</A> of the manual for a description of the Python
-wrapper provided with SPARTA that operates through the SPARTA library
-interface.
+<P>Note that for a shared library to be usable by a calling program, all
+the auxiliary libraries it depends on must also exist as shared
+libraries.  This will be the case for libraries included with SPARTA,
+such as the dummy MPI library in src/STUBS, since they are always
+built as shared libraries with the -fPIC switch.  However, if a
+library like MPI does not exist as a shared library, the second make
+command will generate an error.  This means you will need to install a
+shared library version of the package.  The build instructions for the
+library should tell you how to do this.
 </P>
-<P>The files src/library.cpp and library.h contain the C-style interface
-to SPARTA.  See <A HREF = "Section_howto.html#howto_6">Section 4.6</A> of the manual
-for a description of the interface and how to extend it for your
-needs.
+<P>As an example, here is how to build and install the <A HREF = "http://www-unix.mcs.anl.gov/mpi">MPICH
+library</A>, a popular open-source version of MPI, distributed by
+Argonne National Labs, as a shared library in the default
+/usr/local/lib location:
 </P>
+
+
+<PRE>./configure --enable-shared
+make
+make install 
+</PRE>
+<P>You may need to use "sudo make install" in place of the last line if
+you do not have write privileges for /usr/local/lib.  The end result
+should be the file /usr/local/lib/libmpich.so.
+</P>
+<H5><B>Additional requirement for using a shared library:</B> 
+</H5>
+<P>The operating system finds shared libraries to load at run-time using
+the environment variable LD_LIBRARY_PATH.  So you may wish to copy the
+file src/libsparta.so or src/libsparta_g++.so (for example) to a place
+the system can find it by default, such as /usr/local/lib, or you may
+wish to add the SPARTA src directory to LD_LIBRARY_PATH, so that the
+current version of the shared library is always available to programs
+that use it.
+</P>
+<P>For the csh or tcsh shells, you would add something like this to your
+~/.cshrc file:
+</P>
+<PRE>setenv LD_LIBRARY_PATH $<I>LD_LIBRARY_PATH</I>:/home/sjplimp/sparta/src 
+</PRE>
 <HR>
 
 <H4><A NAME = "start_5"></A>2.5 Running SPARTA 
 </H4>
-<P>By default, SPARTA runs by reading commands from stdin; e.g. spa_g++ <
-in.file.  This means you first create an input script (e.g. in.file)
-containing the desired commands.  <A HREF = "Section_commands.html">Section 3</A> of
-the manual describes how input scripts are structured and what
-commands they contain.
+<P>By default, SPARTA runs by reading commands from standard input.  Thus
+if you run the SPARTA executable by itself, e.g.
+</P>
+<PRE>spa_g++ 
+</PRE>
+<P>it will simply wait, expecting commands from the keyboard.  Typically
+you should put commands in an input script and use I/O redirection,
+e.g.
+</P>
+<PRE>spa_g++ < in.file 
+</PRE>
+<P>For parallel environments this should also work.  If it does not, use
+the '-in' command-line switch, e.g.
+</P>
+<PRE>spa_g++ -in in.file 
+</PRE>
+<P><A HREF = "Section_commands.html">Section 3</A> describes how input scripts are
+structured and what commands they contain.
 </P>
 <P>You can test SPARTA on any of the sample inputs provided in the
 examples or bench directory.  Input scripts are named in.* and sample
 outputs are named log.*.name.P where name is a machine and P is the
 number of processors it was run on.
 </P>
-<P>Here is how you might run one of the benchmarks using mpirun to launch
-a parallel job:
+<P>Here is how you might run one of the benchmarks on a
+Linux box, using mpirun to launch a parallel job:
 </P>
 <PRE>cd src
 make g++
@@ -424,7 +477,10 @@ cp spa_g++ ../bench
 cd ../bench
 mpirun -np 4 spa_g++ < in.free 
 </PRE>
-<HR>
+<P>See <A HREF = "http://sparta.sandia.gov/bench.html">this page</A> for timings for this and the other benchmarks on
+various platforms.
+</P>
+
 
 <P>The screen output from SPARTA is described in the next section.  As it
 runs, SPARTA also writes a log.sparta file with the same information.
@@ -445,9 +501,9 @@ discussion of the various kinds of errors SPARTA can or can't detect,
 a list of all ERROR and WARNING messages, and what to do about them.
 </P>
 <P>SPARTA can run a problem on any number of processors, including a
-single processor.  The random numbers used by each processor
-will be different so you should only expect statistical consistency
-if the same problem is run on varying numbers of processors.
+single processor.  The random numbers used by each processor will be
+different so you should only expect statistical consistency if the
+same problem is run on different numbers of processors.
 </P>
 <P>SPARTA can run as large a problem as will fit in the physical memory
 of one or more processors.  If you run out of memory, you must run on
@@ -528,12 +584,14 @@ form MxN mean M partitions, each with N processors.  Arguments of the
 form N mean a single partition with N processors.  The sum of
 processors in all partitions must equal P.  Thus the command
 "-partition 8x2 4 5" has 10 partitions and runs on a total of 25
-processors.
+processors.  Note that with MPI installed on a machine (e.g. your
+desktop), you can run on more (virtual) processors than you have
+physical processors.
 </P>
-<P>The input script specifies what simulation is run on which partition;
-see the <A HREF = "variable.html">variable</A> and <A HREF = "next.html">next</A>
-commands. <A HREF = "Section_howto.html#howto_3">Section 4.3</A> gives examples of
-how to use these commands in this way.
+<P>To run multiple independent simulatoins from one input script, using
+multiple partitions, see <A HREF = "Section_howto.html#howto_3">Section 4.3</A> of
+the manual.  World- and universe-style variables are useful in this
+context.
 </P>
 <PRE>-plog file 
 </PRE>
@@ -591,6 +649,12 @@ defining index and other kinds of variables and <A HREF = "Section_commands.html
 3.2</A> for more info on using variables in
 input scripts.
 </P>
+<P>IMPORTANT NOTE: Currently, the command-line parser looks for arguments
+that start with "-" to indicate new switches. Thus you cannot specify
+multiple variable values if any of they start with a "-", e.g. a
+negative numeric value. It is OK if the first value1 starts with a
+"-", since it is automatically skipped.
+</P>
 <HR>
 
 <H4><A NAME = "start_7"></A>2.7 SPARTA screen output 
@@ -602,10 +666,13 @@ various initializations and prints the amount of memory (in MBytes per
 processor) that the simulation requires.  It also prints details of
 the initial state of the system.  During the run itself, statistical
 information is printed periodically, every few timesteps.  When the
-run concludes, SPARTA prints the final statistical state and a total
-run time for the simulation.  It then appends statistics about the CPU
-time and storage requirements for the simulation.  An example set of
+run concludes, SPARTA prints the final state and a total run time for
+the simulation.  It then appends statistics about the CPU time and
+size of information stored for the simulation.  An example set of
 statistics is shown here:
+</P>
+<P>TODO: need to paste example output from in.free benchmark (see above)
+and discuss it briefly
 </P>
 <PRE>Loop time of 49.002 on 2 procs for 2004 atoms 
 </PRE>
