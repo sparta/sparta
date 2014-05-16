@@ -38,82 +38,126 @@ SPARTA each timestep.  If collisions are performed, particles are
 sorted into grid cells every timestep and the appropriate collision
 model is invoked on a per-grid-cell basis.
 </P>
+<P>The collision style determines how many pairs of particles are
+considered for collisions, the criteria for which collisions actually
+occurs, and the outcome of individual collision, which alters the
+velocities of the two particles.  If chemistry is enabled, via the
+<A HREF = "react.html">react</A> command, the particles in the collisions may also
+change species, or a particle may be deleted, or a new particle
+created.  The <A HREF = "collide_modify.html">collide_modify</A> command can also be
+used to alter aspects of how collisions are performed.
+</P>
+<P>A <I>mix-ID</I> argument is specified for each collision style.  It must
+contain all the specied defined for use by the simulation, via the
+<A HREF = "species.html">species</A> command.  The group definitions in the mixture
+assign one or more particle species to each group.  These groupings
+are used to determine how pairs of particles are chosen to collide
+with each other, in the following manner.
+</P>
+<P>Consider a cell with N particles and a mixture with M groups.  Based
+on its species, each particle is assigned to one of the M groups.
+Each unique pair of groups is considered, including each group paired
+with itself.  For each pair of groups a value <I>Nattempt</I> is calculated
+which is the number of collisions to attempt.  This is a function of
+N1 and N2 (the number of particles in each group), the grid cell
+volume, and other parameters of the collision style.
+</P>
+<P>TODO: do we want an equation for Nattempt or a cite to Bird?
+</P>
+<P>For each collision attempt, a random pair of particles is selected,
+with one particle from each group.  Whether the collision occurs or
+not is a function of the relative velocities of the two particles,
+their respectives species, and other parameters of the collision
+style.
+</P>
+<P>TODO: do we want an equation for collision yes/no or a cite to Bird?
+</P>
+<HR>
+
 <P>The <I>none</I> style means that no particle-particle collisions will be
 performed, i.e. the simulation models free-molecular flow.
 </P>
 <HR>
 
-<P>A molecular interaction must be specified for a collisional DSMC 
-calcualtion.
+<P>The <I>vss</I> style implements the Variable Soft Sphere (VSS) model for
+collisions.  As discussed below, with appropriate parameter choices,
+it can also compute the Variable Hard Sphere (VHS) model.
 </P>
-<P>The <I>vss</I> style is the Variable Soft Sphere model.
+<P>TODO: do we need an equation or two to describe the VSS model?
 </P>
-<P>In DSMC simulations, the variable-soft-sphere (VSS) interaction of 
-Koura and Matsumoto and the variable-hard-sphere (VHS) interaction 
-of Bird are used to approximate molecular interactions.
-Both these interactions yield transport properties proportional 
-to a power (omega) of the gas temperature. This temperature 
- dependence of the trasnport properties is similar to the one of 
-the Inverse Power Law model (IPL) for which Chapman-Enskog theory 
-provides closed form solutions for the trainsport properties.
+<P>In DSMC, the variable-soft-sphere (VSS) interaction of <A HREF = "#Koura92">Koura and
+Matsumoto</A> and the variable-hard-sphere (VHS) interaction of
+<A HREF = "#Bird94">Bird</A> are used to approximate molecular interactions.  Both
+models yield transport properties proportional to a power (omega) of
+the gas temperature.  This temperature dependence of the transport
+properties is similar to the Inverse Power Law model (IPL) for which
+Chapman-Enskog theory provides closed form solutions for the transport
+properties.
 </P>
-<P>The VSS and VHS interactions use a molecular diameter (d) which is 
-a function of the molecular speed, a the angular-scattering parameter,
- which relates the scattering angle to the impact parameter. 
-Since a = 1 produces isotropic (Hard Sphere) interactions this 
-value can be used for the VSS model to reproduce the VHS model.  
-</P>
-<P>The <I>mix-ID</I> argument is a mixture ID which must contain all the
-species defined for use by the simulation.  The group definitions in
-the mixture will be used to perform collisions between pairs of
-groups.
+<P>Both VSS and VHS interactions define parameters <I>diam</I> = molecular
+diameter, which is a function of the molecular speed, and <I>alpha</I> =
+angular-scattering parameter, which relates the scattering angle to
+the impact parameter.  Setting <I>alpha</I> = 1 produces isotropic (hard
+sphere) interactions, which converts the VSS model into a VHS model.
 </P>
 <P>The <I>file</I> argument is for a file which contains definitions of VSS
 model parameters for some number of species.  It can contain species
-not used by this simulation.  All species currently defined by the
-simulation must be present in the file.
+not used by this simulation; they will simply be ignored.  All species
+currently defined by the simulation must be present in the file.
 </P>
 <P>The format of the file is as follows.  Comments or blank lines are
 allowed in the file.  Comment lines start with a "#" character.  All
-other lines must have the following format with values separated by
-whitespace:
+other lines must have the following format with properties separated
+by whitespace:
 </P>
-<P>species-ID prop1 prop2 prop3 prop4
+<PRE>species-ID diam omega tref alpha 
+</PRE>
+<P>The species-ID is a string that will be matched to one of the species
+defined by the simulation, via the <A HREF = "species.html">species</A> command.
+The meaning of the properties is as follows:
 </P>
-<P>The species-ID is a string that will be matched against one of the
-species defined by the simulation, via the <A HREF = "species.html">species</A>
-command.  The properties are as follows:
-</P>
-<P>The methodolgy to calculate the values for the  VSS/VHS parameters 
-is given in Chapter 3 of Bird 1994. Values for the most common gases are
-also given in Appendix A of Bird 1994. These values are based on the
-first order approximation of the Chapman-Enskog theory. The infinite-
-order parameters are given by Gallis et al.
-</P>
-<UL><LI>prop1 = diam = VHS or VSS defined diameter of particle (distance units)
-<LI>prop2 = omega = Temperature dependence of viscosity 
-<LI>prop3 = tref = reference temperature (temperature units)
-<LI>prop4 = alpha = angular scattering parameter (pure) 
+<UL><LI>diam = VHS or VSS diameter of particle (distance units)
+<LI>omega = temperature-dependence of viscosity (unitless)
+<LI>tref = reference temperature (temperature units)
+<LI>alpha = angular scattering parameter (unitless) 
 </UL>
+<P>The methodolgy for deriving VSS/VHS parameters from these properties
+is explained in Chapter 3 of <A HREF = "#Bird94">(Bird94)</A>.  Parameter values for
+the most common gases are given in Appendix A of the same book.  These
+values are based on the first-order approximation of the
+Chapman-Enskog theory.  Infinite-order parameters are described in
+<A HREF = "#Gallis04">(Gallis04)</A>.
+</P>
 <HR>
 
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "mixture.html">mixture</A>
+<P><A HREF = "collide_modify.html">collide_modify</A>, <A HREF = "mixture.html">mixture</A>,
+<A HREF = "react.html">react</A>
 </P>
 <P><B>Default:</B>
 </P>
 <P>style = none
 </P>
-<P>References
-G. A. Bird, Molecular Gas Dynamics and the Direct Simulation of Gas
-Flows (Clarendon Press, Oxford, 1994). 
-K. Koura and H. Matsumoto, "Variable soft sphere molecular model for
-air species," Phys. Fluids A 4, 1083 (1992). 
-M. A. Gallis, J. R. Torczynski, and D. J. Rader, "Molecular gas
-dynamics observations of Chapman-Enskog behavior and departures therefrom in
-nonequilibrium gases," Phys. Rev. E 69, 042201 (2004).
+<HR>
+
+<A NAME = "Koura92"></A>
+
+<P><B>(Koura92)</B> K. Koura and H. Matsumoto, "Variable soft sphere molecular
+model for air species," Phys Fluids A, 4, 1083 (1992).
+</P>
+<A NAME = "Bird94"></A>
+
+<P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+</P>
+<A NAME = "Gallis04"></A>
+
+<P><B>(Gallis04)</B> M. A. Gallis, J. R. Torczynski, and D. J. Rader,
+"Molecular gas dynamics observations of Chapman-Enskog behavior and
+departures therefrom in nonequilibrium gases," Phys Rev E, 69, 042201
+(2004).
 </P>
 </HTML>

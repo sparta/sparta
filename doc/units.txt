@@ -30,7 +30,7 @@ of an input script.
 IMPORTANT NOTE: Internally, this command simply sets the numeric
 values of conversion factors used by SPARTA, e.g. the Boltzmann
 constant used to convert temperature to energy.  It is up to you to
-insure that all input values used in the input script or other read-in
+insure that all input values used in the input script and other input
 files (surface data, species files, reaction files) contain numeric
 values consistent with the chosen units.
 
@@ -58,7 +58,8 @@ velocity = meters/second
 acceleration = meters/second^2
 temperature = degrees K :ul
 
-The units command also sets the default timestep size for each style:
+The units command also sets a default timestep size; see the
+"timestep"_timestep.html command to change this value.
 
 For style {cgs} this is dt = 1.0 sec.
 For style {si} this is dt = 1.0 sec. :ul
