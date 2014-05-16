@@ -43,9 +43,9 @@ Define a style for particle-surface collisions.  One or more styles
 can be defined and assigned to different surfaces or simulation box
 boundaries via the "read_surf"_read_surf.html or
 "bound_modify"_bound_modify.html commands.  See "Section
-4.10"_Section_howto.html#howto_10 for a description of how SPARTA
-defines surfaces as collections of geometric elements, triangles in 3d
-and line segments in 2d.
+4.9"_Section_howto.html#howto_9 for more details of how SPARTA defines
+surfaces as collections of geometric elements, triangles in 3d and
+line segments in 2d.
 
 The ID of a surface collision model can only contain alphanumeric
 characters and underscores.
