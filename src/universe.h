@@ -42,7 +42,6 @@ class Universe : protected Pointers {
 
   Universe(class SPARTA *, MPI_Comm);
   ~Universe();
-  void reorder(char *, char *);
   void add_world(char *);
   int consistent();
 };
