@@ -103,7 +103,9 @@ it gives quick access to documentation for all SPARTA commands.
   4.4 "Output from SPARTA"_howto_4 :b
   4.5 "Visualizing SPARTA snapshots"_howto_5 :b
   4.6 "Library interface to SPARTA"_howto_6 :b
-  4.7 "Coupling SPARTA to other codes"_howto_7 :ule,b
+  4.7 "Coupling SPARTA to other codes"_howto_7 :b
+  4.8 "Details of grid geometry in SPARTA"_howto_8 :b
+  4.9 "Details of surfaces in SPARTA"_howto_9 :ule,b
 "Example problems"_Section_example.html :l
 "Performance & scalability"_Section_perf.html :l
 "Additional tools"_Section_tools.html :l
