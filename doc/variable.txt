@@ -136,7 +136,7 @@ the same thing.
 
 :line
 
-"This section"_Section_commands.html#cmd_2 of the manual explains how
+"Section 3.2"_Section_commands.html#cmd_2 of the manual explains how
 occurrences of a variable name in an input script line are replaced by
 the variable's string.  The variable name can be referenced as $x if
 the name "x" is a single character, or as $\{LoopVar\} if the name
@@ -183,8 +183,8 @@ string is assigned.  All processors assign the same string to the
 variable.
 
 {Index} style variables with a single string value can also be set by
-using the command-line switch -var; see "this
-section"_Section_start.html#start_5 for details.
+using the command-line switch -var; see "Section
+2.5"_Section_start.html#start_5 of the manual for details.
 
 The {loop} style is identical to the {index} style except that the
 strings are the integers from 1 to N inclusive, if only one argument N
@@ -199,8 +199,8 @@ inclusive, and the string N1 is initially assigned to the variable.
 N1 <= N2 and N2 >= 0 is required.
 
 For the {world} style, one or more strings are specified.  There must
-be one string for each processor partition or "world".  See "this
-section"_Section_start.html#start_5 of the manual for information on
+be one string for each processor partition or "world".  See "Section
+2.5"_Section_start.html#start_5 of the manual for information on
 running SPARTA with multiple partitions via the "-partition"
 command-line switch.  This variable command assigns one string to each
 world.  All processors in the world are assigned the same string.  The
@@ -739,10 +739,10 @@ if it contains variables preceeded by $ signs.  For example,
 
 variable nratio equal "$\{nfinal\}/$\{n0\}" :pre
 
-This is because the quotes prevent variable substitution (see "this
-section"_Section_commands.html#cmd_2 of the manual on parsing input
-script commands), and thus an error will occur when the formula for
-"nratio" is evaluated later.
+This is because the quotes prevent variable substitution (see "Section
+2.2"_Section_commands.html#cmd_2 of the manual on parsing input script
+commands), and thus an error will occur when the formula for "nratio"
+is evaluated later.
 
 :line
 

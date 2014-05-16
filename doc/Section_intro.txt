@@ -61,9 +61,9 @@ computations use simple data structures and C-like code for effciency.
 So SPARTA is really written in an object-oriented C style.
 
 SPARTA was developed with internal funding at "Sandia National
-Laboratories"_snl, a US Department of Energy lab.  See "this
-section"_#intro_5 for more information on SPARTA funding and individuals
-who have contributed to SPARTA.
+Laboratories"_snl, a US Department of Energy lab.  See "Section
+1.5"_#intro_5 below for more information on SPARTA funding and
+individuals who have contributed to SPARTA.
 
 :link(snl,http://www.sandia.gov)
 

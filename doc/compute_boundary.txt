@@ -104,7 +104,6 @@ all contributing e_delta, normalized by A = the area of the boundary
 face and dt = the timestep and fnum = the real/simulated
 particle ratio set by the "global fnum"_global.html command.
 
-
 :line
 
 [Output info:]
@@ -119,9 +118,8 @@ rows is 4 for a 2d simulation for the 4 faces (xlo, xhi, ylo, yhi),
 and it is 6 for a 3d simulation (xlo, xhi, ylo, yhi, zlo, zhi).
 
 The array can be accessed by any command that uses global array values
-from a compute as input.  See "this
-section"_Section_howto.html#howto_4 for an overview of SPARTA output
-options.
+from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
 
 The array values will be in the "units"_units.html appropriate to the
 individual values as described above.  {N} is unitless. {Press},

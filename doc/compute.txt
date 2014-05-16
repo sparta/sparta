@@ -29,13 +29,13 @@ a compute are instantaneous values, meaning they are calculated from
 information about the current timestep.  Examples include calculation
 of the system temperature or counting collisions of particles with
 surface elements.  Code for new computes can be added to SPARTA; see
-"this section"_Section_modify.html of the manual for details.
+"Section 8"_Section_modify.html of the manual for details.
 
 Note that defining a compute does not perform a computation.  Instead
 computes are invoked by other SPARTA commands as needed, e.g. to
-generate statistics or dump file output.  See this "howto
-section"_Section_howto.html#howto_4 for a summary of various SPARTA
-output options, many of which involve computes.
+generate statistics or dump file output.  See "Section
+4.4"_Section_howto.html#howto_4 for a summary of various SPARTA output
+options, many of which involve computes.
 
 The ID of a compute can only contain alphanumeric characters and
 underscores.

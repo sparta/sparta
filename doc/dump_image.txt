@@ -123,8 +123,8 @@ be compressed with gzip, if SPARTA has been compiled with
 -DLAMMPS_GZIP and a ".gz" suffix is used.
 
 To write out JPEG and PNG format files, you must build LAMMPS with
-support for the corresponding JPEG or PNG library.  See "this
-section"_Section_start.html#start_2_2 of the manual for instructions
+support for the corresponding JPEG or PNG library.  See "Section
+2.2"_Section_start.html#start_2 of the manual for instructions
 on how to do this.
 
 :line

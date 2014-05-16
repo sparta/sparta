@@ -57,7 +57,7 @@ the box itself has been defined.  Likewise you cannot read in
 triangulated surfaces until a grid has been defined to store them.
 
 Many input script errors are detected by SPARTA and an ERROR or
-WARNING message is printed.  "This section"_Section_errors.html gives
+WARNING message is printed.  "Section 10"_Section_errors.html gives
 more information on what errors mean.  The documentation for each
 command lists restrictions on how the command can be used.
 
@@ -126,9 +126,8 @@ allowed, but that should be sufficient for most use cases.
 
 This section describes the structure of a typical SPARTA input script.
 The "examples" directory in the SPARTA distribution contains sample
-input scripts; the corresponding problems are discussed in "this
-section"_Section_example.html, and animated on the "SPARTA WWW
-Site"_sws.
+input scripts; the corresponding problems are discussed in "Section
+5"_Section_example.html, and animated on the "SPARTA WWW Site"_sws.
 
 A SPARTA input script typically has 4 parts:
 

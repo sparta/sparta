@@ -357,9 +357,9 @@ and we will include them in the distribution.
 2.4 Building SPARTA as a library :h4,link(start_4)
 
 SPARTA can be built as a library, which can then be called from
-another application or a scripting language.  See "this
-section"_Section_howto.html#howto_7 for more info on coupling SPARTA
-to other codes.  Building SPARTA as a library is done by typing
+another application or a scripting language.  See "Section
+4.7"_Section_howto.html#howto_7 for more info on coupling SPARTA to
+other codes.  Building SPARTA as a library is done by typing
 
 make makelib
 make -f Makefile.lib foo
@@ -385,10 +385,10 @@ src/library.cpp and src/library.h.
 See the sample codes examples/COUPLE/simple.cpp and simple.c as
 examples of C++ and C codes that invoke SPARTA thru its library
 interface.  There are other examples as well in the couple directory
-which are discussed in examples/COUPLE/README.   See "this
-section"_Section_python.html of the manual for a description of the
-Python wrapper provided with SPARTA that operates through the SPARTA
-library interface.
+which are discussed in examples/COUPLE/README.  See "Section
+9"_Section_python.html of the manual for a description of the Python
+wrapper provided with SPARTA that operates through the SPARTA library
+interface.
 
 The files src/library.cpp and library.h contain the C-style interface
 to SPARTA.  See "Section 4.6"_Section_howto.html#howto_6 of the manual
@@ -526,9 +526,9 @@ processors in all partitions must equal P.  Thus the command
 processors.
 
 The input script specifies what simulation is run on which partition;
-see the "variable"_variable.html and "next"_next.html commands. "This
-section"_Section_howto.html#howto_3 gives examples of how to use these
-commands in this way.
+see the "variable"_variable.html and "next"_next.html
+commands. "Section 4.3"_Section_howto.html#howto_3 gives examples of
+how to use these commands in this way.
 
 -plog file :pre
  
