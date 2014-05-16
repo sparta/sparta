@@ -39,8 +39,8 @@ when the particles have a non-zero streaming velocity.
 
 This compute calculates a global scalar (the temperature).  This value
 can be used by any command that uses global scalar values from a
-compute as input.  See "this section"_Section_howto.html#howto_4 for
-an overview of SPARTA output options.
+compute as input.  See "Section 4.4"_Section_howto.html#howto_4 for an
+overview of SPARTA output options.
 
 The scalar value will be in temperature "units"_units.html.
 

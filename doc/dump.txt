@@ -223,8 +223,8 @@ per-particle attributes, stats keywords, or invoke other computes,
 fixes, or variables when they are evaluated, so this is a very general
 means of creating quantities to output to a dump file.
 
-See "this section"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to SPARTA to calculate
+See "Section 8"_Section_modify.html of the manual for information on
+how to add new compute and fix styles to SPARTA to calculate
 per-particle quantities which could then be output into dump files.
 
 :line
@@ -235,13 +235,13 @@ as part of the {grid} style.
 Note that dump grid will output one line (per snapshot) for each child
 cell in the simulation, excluding split cells.  I.e. only info for
 unsplit and sub cells is output.  "Section
-4.9"_Section_howto.html#howto_9 of the manual describes how SPARTA
-defines child, unsplit, split, and sub cells.  This is different than
-"compute"_compute.html or "fix"_fix.html commands that produce per
-grid information, which also include split cells in their output.  The
-dump grid command discards that output since the sub cells of a split
-cell provide the needed information for further processing and
-visualization.
+4.8"_Section_howto.html#howto_8 of the manual gives details of how
+SPARTA defines child, unsplit, split, and sub cells.  This is
+different than "compute"_compute.html or "fix"_fix.html commands that
+produce per grid information, which also include split cells in their
+output.  The dump grid command discards that output since the sub
+cells of a split cell provide the needed information for further
+processing and visualization.
 
 {Id} and {idstr} are two different forms of the grid cell ID.  In
 SPARTA each grid cell is assigned a unique ID which represents its
@@ -267,10 +267,10 @@ simulation.
 
 The {vol} attribute is the flow volume of the grid cell (or area in
 2d) for unsplit or sub cells.  "Section
-4.9"_Section_howto.html#howto_9 of the manual describes how SPARTA
-defines unsplit and sub cells.  Flow volume is the portion of the grid
-cell that is accessible to particles, i.e. outside any closed surface
-that may intersect the cell.
+4.8"_Section_howto.html#howto_8 of the manual gives details of how
+SPARTA defines unsplit and sub cells.  Flow volume is the portion of
+the grid cell that is accessible to particles, i.e. outside any closed
+surface that may intersect the cell.
 
 The {c_ID} and {c_ID\[N\]} attributes allow per-grid vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the
@@ -315,9 +315,9 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 
-See "this section"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to SPARTA to calculate
-per-grid quantities which could then be output into dump files.
+See "Section 8"_Section_modify.html of the manual for information on
+how to add new compute and fix styles to SPARTA to calculate per-grid
+quantities which could then be output into dump files.
 
 :line
 
@@ -379,9 +379,9 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 
-See "this section"_Section_modify.html of the manual for information
-on how to add new compute and fix styles to SPARTA to calculate
-per-surf quantities which could then be output into dump files.
+See "Section 8"_Section_modify.html of the manual for information on
+how to add new compute and fix styles to SPARTA to calculate per-surf
+quantities which could then be output into dump files.
 
 :line
 

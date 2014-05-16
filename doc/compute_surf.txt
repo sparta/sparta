@@ -142,9 +142,8 @@ columns would be {n} and {u} for the first group, the 3rd and 4th
 columns would be {n} and {u} for the second group, etc.
 
 The array can be accessed by any command that uses per-surf values
-from a compute as input.  See "this
-section"_Section_howto.html#howto_4 for an overview of SPARTA output
-options.
+from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
 
 The per-surf array values will be in the "units"_units.html
 appropriate to the individual values as described above. {N} is

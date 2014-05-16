@@ -154,6 +154,7 @@ within the SPARTA code.  The options that are currently recogized are:
 </P>
 <UL><LI>-DSPARTA_GZIP
 <LI>-DSPARTA_JPEG
+<LI>-DSPARTA_PNG
 <LI>-DSPARTA_MAP
 <LI>-DSPARTA_SMALL
 <LI>-DSPARTA_BIG
@@ -164,10 +165,12 @@ within the SPARTA code.  The options that are currently recogized are:
 compile with -DSPARTA_GZIP.  It requires that your Unix support the
 "popen" command.
 </P>
-<P>If you use -DSPARTA_JPEG, the <A HREF = "dump.html">dump image</A> command will be
-able to write out JPEG image files.  If not, it will only be able to
-write out PPM image files.  For JPEG files, you must also link SPARTA
-with a JPEG library, as described below.
+<P>If you use -DSPARTA_JPEG and/or -DSPARTA_PNG, the <A HREF = "dump.html">dump
+image</A> command will be able to write out JPEG and/or PNG
+image files respectively. If not, it will only be able to write out
+PPM image files.  For JPEG files, you must also link SPARTA with a
+JPEG library, as described below.  For PNG files, you must also link
+SPARTA with a PNG library, as described below.
 </P>
 <P>If you use -DSPARTA_MAP, SPARTA will use the STL map class for hash
 tables.  This is less efficient than the STL unordered map class which
@@ -246,17 +249,23 @@ simulations.
 </P>
 <P><B>Step 6</B>
 </P>
-<P>The 3 JPG variables allow you to specify a JPEG library which SPARTA
-uses when writing out JPEG files via the <A HREF = "dump_image.html">dump image</A>
-command.  These can be left blank if you do not use the -DSPARTA_JPEG
-switch discussed above in Step 4, since in that case JPEG output will
-be disabled.
+<P>The 3 JPG variables allow you to specify a JPEG and/or PNG library
+which LAMMPS uses when writing out JPEG or PNG files via the <A HREF = "dump_image.html">dump
+image</A> command. These can be left blank if you do not
+use the -DLAMMPS_JPEG or -DLAMMPS_PNG switches discussed above in Step
+4, since in that case JPEG/PNG output will be disabled.
 </P>
-<P>A standard JPEG library usually goes by the name libjpeg.a and has an
-associated header file jpeglib.h.  Whichever JPEG library you have on
-your platform, you'll need to set the appropriate JPG_INC, JPG_PATH,
-and JPG_LIB variables, so that the compiler and linker can find it.
-See Makefile.g++ for an example.
+<P>A standard JPEG library usually goes by the name libjpeg.a or
+libjpeg.so and has an associated header file jpeglib.h. Whichever JPEG
+library you have on your platform, you'll need to set the appropriate
+JPG_INC, JPG_PATH, and JPG_LIB variables, so that the compiler and
+linker can find it.
+</P>
+<P>A standard PNG library usually goes by the name libpng.a or libpng.so
+and has an associated header file png.h. Whichever PNG library you
+have on your platform, you'll need to set the appropriate JPG_INC,
+JPG_PATH, and JPG_LIB variables, so that the compiler and linker can
+find it.
 </P>
 <P>As before, if these header and library files are in the usual place on
 your machine, you may not need to set these variables.
@@ -341,7 +350,7 @@ for SPARTA.  Until then you will need to build an executable from
 source files.
 </P>
 <P>One way to do this is install and use cygwin to build SPARTA with a
-standard Linus make, just as you would on any Linux box.
+standard Linux make, just as you would on any Linux box.
 </P>
 <P>You can also import the *.cpp and *.h files into Microsoft Visual
 Studio.  If someone does this and wants to provide project files
@@ -387,9 +396,9 @@ Python wrapper provided with SPARTA that operates through the SPARTA
 library interface.
 </P>
 <P>The files src/library.cpp and library.h contain the C-style interface
-to SPARTA.  See <A HREF = "Section_howto.html#howto_6">this section</A> of the
-manual for a description of the interface and how to extend it for
-your needs.
+to SPARTA.  See <A HREF = "Section_howto.html#howto_6">Section 4.6</A> of the manual
+for a description of the interface and how to extend it for your
+needs.
 </P>
 <HR>
 
@@ -397,8 +406,8 @@ your needs.
 </H4>
 <P>By default, SPARTA runs by reading commands from stdin; e.g. spa_g++ <
 in.file.  This means you first create an input script (e.g. in.file)
-containing the desired commands.  <A HREF = "Section_commands.html">This section</A>
-of the manual describes how input scripts are structured and what
+containing the desired commands.  <A HREF = "Section_commands.html">Section 3</A> of
+the manual describes how input scripts are structured and what
 commands they contain.
 </P>
 <P>You can test SPARTA on any of the sample inputs provided in the
@@ -431,7 +440,7 @@ your working directory, which is probably not what you want.
 </P>
 <P>If SPARTA encounters errors in the input script or while running a
 simulation it will print an ERROR message and stop or a WARNING
-message and continue.  See <A HREF = "Section_errors.html">this section</A> for a
+message and continue.  See <A HREF = "Section_errors.html">Section 10</A> for a
 discussion of the various kinds of errors SPARTA can or can't detect,
 a list of all ERROR and WARNING messages, and what to do about them.
 </P>
@@ -578,9 +587,9 @@ value2 ..."  at the beginning of the input script.  Defining an index
 variable as a command-line argument overrides any setting for the same
 index variable in the input script, since index variables cannot be
 re-defined.  See the <A HREF = "variable.html">variable</A> command for more info on
-defining index and other kinds of variables and <A HREF = "Section_commands.html#cmd_2">this
-section</A> for more info on using variables
-in input scripts.
+defining index and other kinds of variables and <A HREF = "Section_commands.html#cmd_2">Section
+3.2</A> for more info on using variables in
+input scripts.
 </P>
 <HR>
 

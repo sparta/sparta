@@ -21,11 +21,11 @@ SPARTA.
 4.5 <A HREF = "#howto_5">Visualizing SPARTA snapshots</A><BR>
 4.6 <A HREF = "#howto_6">Library interface to SPARTA</A><BR>
 4.7 <A HREF = "#howto_7">Coupling SPARTA to other codes</A> <BR>
-4.9 <A HREF = "#howto_9">Grid cells as defined by SPARTA</A><BR>
-4.10 <A HREF = "howto_10">Surfaces as defined by SPARTA</A> <BR>
+4.8 <A HREF = "#howto_8">Details of grid geometry in SPARTA</A><BR>
+4.9 <A HREF = "#howto_9">Details of surfaces in SPARTA</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
-highlighted in <A HREF = "Section_example.html">this section</A> of the manual also
+highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
 show how to setup and run various kinds of simulations.
 </P>
 <HR>
@@ -394,10 +394,10 @@ snapshots.
 
 <A NAME = "howto_6"></A><H4>4.6 Library interface to SPARTA 
 </H4>
-<P>As described in <A HREF = "Section_start.html#start_5">this section</A>, SPARTA
-can be built as a library, so that it can be called by another code,
-used in a <A HREF = "Section_howto.html#howto_10">coupled manner</A> with other
-codes, or driven through a <A HREF = "Section_python.html">Python interface</A>.
+<P>As described in <A HREF = "Section_start.html#start_4">Section 2.4</A>, SPARTA can
+be built as a library, so that it can be called by another code, used
+in a <A HREF = "Section_howto.html#howto_7">coupled manner</A> with other codes, or
+driven through a <A HREF = "Section_python.html">Python interface</A>.
 </P>
 <P>All of these methodologies use a C-style interface to SPARTA that is
 provided in the files src/library.cpp and src/library.h.  The
@@ -530,14 +530,14 @@ strain induced across grain boundaries
 
 
 
-<P><A HREF = "Section_start.html#start_5">This section</A> of the documentation
-describes how to build SPARTA as a library.  Once this is done, you
-can interface with SPARTA either via C++, C, Fortran, or Python (or
-any other language that supports a vanilla C-like interface).  For
-example, from C++ you could create one (or more) "instances" of
-SPARTA, pass it an input script to process, or execute individual
-commands, all by invoking the correct class methods in SPARTA.  From C
-or Fortran you can make function calls to do the same things.  See
+<P><A HREF = "Section_start.html#start4">Section 2.4</A> of the manual describes how
+to build SPARTA as a library.  Once this is done, you can interface
+with SPARTA either via C++, C, Fortran, or Python (or any other
+language that supports a vanilla C-like interface).  For example, from
+C++ you could create one (or more) "instances" of SPARTA, pass it an
+input script to process, or execute individual commands, all by
+invoking the correct class methods in SPARTA.  From C or Fortran you
+can make function calls to do the same things.  See
 <A HREF = "Section_python.html">Section_python</A> of the manual for a description
 of the Python wrapper provided with SPARTA that operates through the
 SPARTA library interface.

@@ -229,8 +229,8 @@ the "create_box"_create_box.html command, and after a grid has been
 created by the "create_grid"_create_grid.html command.
 
 To read gzipped surface files, you must compile SPARTA with the
--DSPARTA_GZIP option - see "this section"_Section_start.html#start_2
-section of the manual for details.
+-DSPARTA_GZIP option - see "Section 2.2"_Section_start.html#start_2 of
+the manual for details.
 
 Every vertex in the final surface (after translation, rotation,
 scaling, etc) must be inside or on the surface of the global

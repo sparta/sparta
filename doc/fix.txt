@@ -26,7 +26,7 @@ Set a fix that will be applied to the system.  In SPARTA, a "fix" is
 an operation that is applied to the system during timestepping.
 Examples include adding particles via inlet boundary conditions or
 computing diagnostics.  Code for new fixes can be added to SPARTA; see
-"this section"_Section_modify.html of the manual for details.
+"Section 8"_Section_modify.html of the manual for details.
 
 Fixes perform their operations at different stages of the timestep.
 If 2 or more fixes operate at the same stage of the timestep, they are

@@ -562,7 +562,7 @@ building SPARTA and link with a JPEG library. To write PNG images, you
 must use the -DSPARTA_PNG switch when building SPARTA and link with a
 PNG library.
 
-See the "this section"_Section_start.html#start_2_2 section of the
+See the "Section 2.2.2"_Section_start.html#start_2_2 section of the
 documentation for details.
 
 [Related commands:]

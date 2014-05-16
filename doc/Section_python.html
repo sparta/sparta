@@ -23,12 +23,12 @@ either from a Python script or interactively from a Python prompt.
 <P><A HREF = "http://www.python.org">Python</A> is a powerful scripting and programming
 language which can be used to wrap software like SPARTA and other
 packages.  It can be used to glue multiple pieces of software
-together, e.g. to run a coupled or multiscale model.  See <A HREF = "Section_howto.html#howto_10">this
-section</A> of the manual and the couple
-directory of the distribution for more ideas about coupling SPARTA to
-other codes.  See <A HREF = "Section_start.html#start_4">this section</A> about how
-to build SPARTA as a library, and <A HREF = "Section_howto.html#howto_19">this
-section</A> for a description of the library
+together, e.g. to run a coupled or multiscale model.  See <A HREF = "Section_howto.html#howto_7">Section
+4.7</A> of the manual and the couple directory
+of the distribution for more ideas about coupling SPARTA to other
+codes.  See <A HREF = "Section_start.html#start_4">Section 2.4</A> about how to
+build SPARTA as a library, and <A HREF = "Section_howto.html#howto_6">Section
+4.6</A> for a description of the library
 interface provided in src/library.cpp and src/library.h and how to
 extend it for your needs.  As described below, that interface is what
 is exposed to Python.  It is designed to be easy to add functions to.
@@ -502,7 +502,7 @@ subscripting.  The one exception is that for a fix that calculates a
 global vector or array, a single double value from the vector or array
 is returned, indexed by I (vector) or I and J (array).  I,J are
 zero-based indices.  The I,J arguments can be left out if not needed.
-See <A HREF = "Section_howto.html#howto_4">this section</A> of the manual for a
+See <A HREF = "Section_howto.html#howto_4">Section 4.4</A> of the manual for a
 discussion of global, per-grid, and per-surf data, and of scalar,
 vector, and array data types.  See the doc pages for individual
 <A HREF = "compute.html">computes</A> and <A HREF = "fix.html">fixes</A> for a description of what
@@ -582,7 +582,7 @@ following steps:
 src/library.h. 
 
 <LI>Verify the new function is syntactically correct by building SPARTA as
-a library - see <A HREF = "Section_start.html#start_4">this section</A> of the
+a library - see <A HREF = "Section_start.html#start_3">Section 2.3</A> of the
 manual. 
 
 <LI>Add a wrapper method in the Python SPARTA module to python/lammps.py

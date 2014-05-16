@@ -149,6 +149,7 @@ within the SPARTA code.  The options that are currently recogized are:
 
 -DSPARTA_GZIP
 -DSPARTA_JPEG
+-DSPARTA_PNG
 -DSPARTA_MAP
 -DSPARTA_SMALL
 -DSPARTA_BIG
@@ -159,10 +160,12 @@ The read_data and dump commands will read/write gzipped files if you
 compile with -DSPARTA_GZIP.  It requires that your Unix support the
 "popen" command.
 
-If you use -DSPARTA_JPEG, the "dump image"_dump.html command will be
-able to write out JPEG image files.  If not, it will only be able to
-write out PPM image files.  For JPEG files, you must also link SPARTA
-with a JPEG library, as described below.
+If you use -DSPARTA_JPEG and/or -DSPARTA_PNG, the "dump
+image"_dump.html command will be able to write out JPEG and/or PNG
+image files respectively. If not, it will only be able to write out
+PPM image files.  For JPEG files, you must also link SPARTA with a
+JPEG library, as described below.  For PNG files, you must also link
+SPARTA with a PNG library, as described below.
 
 If you use -DSPARTA_MAP, SPARTA will use the STL map class for hash
 tables.  This is less efficient than the STL unordered map class which
@@ -241,17 +244,23 @@ simulations.
 
 [Step 6]
 
-The 3 JPG variables allow you to specify a JPEG library which SPARTA
-uses when writing out JPEG files via the "dump image"_dump_image.html
-command.  These can be left blank if you do not use the -DSPARTA_JPEG
-switch discussed above in Step 4, since in that case JPEG output will
-be disabled.
+The 3 JPG variables allow you to specify a JPEG and/or PNG library
+which LAMMPS uses when writing out JPEG or PNG files via the "dump
+image"_dump_image.html command. These can be left blank if you do not
+use the -DLAMMPS_JPEG or -DLAMMPS_PNG switches discussed above in Step
+4, since in that case JPEG/PNG output will be disabled.
 
-A standard JPEG library usually goes by the name libjpeg.a and has an
-associated header file jpeglib.h.  Whichever JPEG library you have on
-your platform, you'll need to set the appropriate JPG_INC, JPG_PATH,
-and JPG_LIB variables, so that the compiler and linker can find it.
-See Makefile.g++ for an example.
+A standard JPEG library usually goes by the name libjpeg.a or
+libjpeg.so and has an associated header file jpeglib.h. Whichever JPEG
+library you have on your platform, you'll need to set the appropriate
+JPG_INC, JPG_PATH, and JPG_LIB variables, so that the compiler and
+linker can find it.
+
+A standard PNG library usually goes by the name libpng.a or libpng.so
+and has an associated header file png.h. Whichever PNG library you
+have on your platform, you'll need to set the appropriate JPG_INC,
+JPG_PATH, and JPG_LIB variables, so that the compiler and linker can
+find it.
 
 As before, if these header and library files are in the usual place on
 your machine, you may not need to set these variables.
@@ -336,7 +345,7 @@ for SPARTA.  Until then you will need to build an executable from
 source files.
 
 One way to do this is install and use cygwin to build SPARTA with a
-standard Linus make, just as you would on any Linux box.
+standard Linux make, just as you would on any Linux box.
 
 You can also import the *.cpp and *.h files into Microsoft Visual
 Studio.  If someone does this and wants to provide project files
@@ -382,9 +391,9 @@ Python wrapper provided with SPARTA that operates through the SPARTA
 library interface.
 
 The files src/library.cpp and library.h contain the C-style interface
-to SPARTA.  See "this section"_Section_howto.html#howto_6 of the
-manual for a description of the interface and how to extend it for
-your needs.
+to SPARTA.  See "Section 4.6"_Section_howto.html#howto_6 of the manual
+for a description of the interface and how to extend it for your
+needs.
 
 :line
 
@@ -392,8 +401,8 @@ your needs.
 
 By default, SPARTA runs by reading commands from stdin; e.g. spa_g++ <
 in.file.  This means you first create an input script (e.g. in.file)
-containing the desired commands.  "This section"_Section_commands.html
-of the manual describes how input scripts are structured and what
+containing the desired commands.  "Section 3"_Section_commands.html of
+the manual describes how input scripts are structured and what
 commands they contain.
 
 You can test SPARTA on any of the sample inputs provided in the
@@ -426,7 +435,7 @@ your working directory, which is probably not what you want.
 
 If SPARTA encounters errors in the input script or while running a
 simulation it will print an ERROR message and stop or a WARNING
-message and continue.  See "this section"_Section_errors.html for a
+message and continue.  See "Section 10"_Section_errors.html for a
 discussion of the various kinds of errors SPARTA can or can't detect,
 a list of all ERROR and WARNING messages, and what to do about them.
 
@@ -573,9 +582,9 @@ value2 ..."  at the beginning of the input script.  Defining an index
 variable as a command-line argument overrides any setting for the same
 index variable in the input script, since index variables cannot be
 re-defined.  See the "variable"_variable.html command for more info on
-defining index and other kinds of variables and "this
-section"_Section_commands.html#cmd_2 for more info on using variables
-in input scripts.
+defining index and other kinds of variables and "Section
+3.2"_Section_commands.html#cmd_2 for more info on using variables in
+input scripts.
 
 :line
 

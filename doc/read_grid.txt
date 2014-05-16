@@ -146,13 +146,13 @@ This command can only be used after the simulation box is defined by
 the "create_box"_create_box.html command.
 
 To read gzipped grid files, you must compile SPARTA with the
--DSPARTA_GZIP option - see "this section"_Section_start.html#start_2
-section of the manual for details.
+-DSPARTA_GZIP option - see "Section 2.2"_Section_start.html#start_2 of
+the manual for details.
 
 The hierarchical grid used by SPARTA is encoded in a 32-bit or 64-bit
 integer ID.  The precision is set by the -DSPARTA_BIG or
 -DSPARTA_SMALL or -DSPARTA_BIGBIG compiler switch, as described in
-"this section"_Section_start.html#start2_2.  The number of grid levels
+"Section 2.2"_Section_start.html#start2_2.  The number of grid levels
 that can be used depends on the resolution of the grid at each level.
 For a minimal refinement of 2x2x2, a level uses 4 bits of the integer
 ID.  Thus a maximum of 7 levels can be used for 32-bit IDs and 15

@@ -18,11 +18,11 @@ SPARTA.
 4.5 "Visualizing SPARTA snapshots"_#howto_5
 4.6 "Library interface to SPARTA"_#howto_6
 4.7 "Coupling SPARTA to other codes"_#howto_7 
-4.9 "Grid cells as defined by SPARTA"_#howto_9
-4.10 "Surfaces as defined by SPARTA"_howto_10 :all(b)
+4.8 "Details of grid geometry in SPARTA"_#howto_8
+4.9 "Details of surfaces in SPARTA"_#howto_9 :all(b)
 
 The example input scripts included in the SPARTA distribution and
-highlighted in "this section"_Section_example.html of the manual also
+highlighted in "Section 5"_Section_example.html of the manual also
 show how to setup and run various kinds of simulations.
 
 :line
@@ -384,10 +384,10 @@ snapshots.
 
 4.6 Library interface to SPARTA :link(howto_6),h4
 
-As described in "this section"_Section_start.html#start_5, SPARTA
-can be built as a library, so that it can be called by another code,
-used in a "coupled manner"_Section_howto.html#howto_10 with other
-codes, or driven through a "Python interface"_Section_python.html.
+As described in "Section 2.4"_Section_start.html#start_4, SPARTA can
+be built as a library, so that it can be called by another code, used
+in a "coupled manner"_Section_howto.html#howto_7 with other codes, or
+driven through a "Python interface"_Section_python.html.
 
 All of these methodologies use a C-style interface to SPARTA that is
 provided in the files src/library.cpp and src/library.h.  The
@@ -519,14 +519,14 @@ strain induced across grain boundaries :l,ule
 :link(quest,http://dft.sandia.gov/Quest)
 :link(spparks,http://www.sandia.gov/~sjplimp/spparks.html)
 
-"This section"_Section_start.html#start_5 of the documentation
-describes how to build SPARTA as a library.  Once this is done, you
-can interface with SPARTA either via C++, C, Fortran, or Python (or
-any other language that supports a vanilla C-like interface).  For
-example, from C++ you could create one (or more) "instances" of
-SPARTA, pass it an input script to process, or execute individual
-commands, all by invoking the correct class methods in SPARTA.  From C
-or Fortran you can make function calls to do the same things.  See
+"Section 2.4"_Section_start.html#start4 of the manual describes how
+to build SPARTA as a library.  Once this is done, you can interface
+with SPARTA either via C++, C, Fortran, or Python (or any other
+language that supports a vanilla C-like interface).  For example, from
+C++ you could create one (or more) "instances" of SPARTA, pass it an
+input script to process, or execute individual commands, all by
+invoking the correct class methods in SPARTA.  From C or Fortran you
+can make function calls to do the same things.  See
 "Section_python"_Section_python.html of the manual for a description
 of the Python wrapper provided with SPARTA that operates through the
 SPARTA library interface.
