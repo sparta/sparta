@@ -46,13 +46,7 @@ class SPARTA {
   FILE *screen;                  // screen output
   FILE *logfile;                 // logfile
 
-  char *suffix;                  // suffix to add to input script style names
-  int suffix_enable;             // 1 if suffix enabled, 0 if disabled
-  class Cuda *cuda;              // CUDA accelerator class
-
   // other top-level SPARTA classes and variables
-
-  //class RanMars *ranmaster;      // master RN generator
 
   SPARTA(int, char **, MPI_Comm);
   ~SPARTA();

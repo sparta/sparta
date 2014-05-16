@@ -59,10 +59,7 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
   int logflag = 0;
   int partscreenflag = 0;
   int partlogflag = 0;
-  int cudaflag = -1;
   int helpflag = 0;
-  suffix = NULL;
-  suffix_enable = 0;
 
   int iarg = 1;
   while (iarg < narg) {
@@ -117,32 +114,6 @@ SPARTA::SPARTA(int narg, char **arg, MPI_Comm communicator)
        error->universe_all(FLERR,"Invalid command-line argument");
       partlogflag = iarg + 1;
       iarg += 2;
-    } else if (strcmp(arg[iarg],"-cuda") == 0 || 
-	       strcmp(arg[iarg],"-c") == 0) {
-      if (iarg+2 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
-      if (strcmp(arg[iarg+1],"on") == 0) cudaflag = 1;
-      else if (strcmp(arg[iarg+1],"off") == 0) cudaflag = 0;
-      else error->universe_all(FLERR,"Invalid command-line argument");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"-suffix") == 0 || 
-	       strcmp(arg[iarg],"-sf") == 0) {
-      if (iarg+2 > narg)
-	error->universe_all(FLERR,"Invalid command-line argument");
-      delete [] suffix;
-      int n = strlen(arg[iarg+1]) + 1;
-      suffix = new char[n];
-      strcpy(suffix,arg[iarg+1]);
-      suffix_enable = 1;
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"-reorder") == 0 || 
-	       strcmp(arg[iarg],"-r") == 0) {
-      if (iarg+3 > narg) 
-	error->universe_all(FLERR,"Invalid command-line argument");
-      if (universe->existflag)
-	error->universe_all(FLERR,"Cannot use -reorder after -partition");
-      universe->reorder(arg[iarg+1],arg[iarg+2]);
-      iarg += 3;
     } else if (strcmp(arg[iarg],"-help") == 0 || 
 	       strcmp(arg[iarg],"-h") == 0) {
       if (iarg+1 > narg)
@@ -382,8 +353,6 @@ SPARTA::~SPARTA()
   }
 
   if (world != universe->uworld) MPI_Comm_free(&world);
-
-  delete [] suffix;
 
   delete input;
   delete universe;
