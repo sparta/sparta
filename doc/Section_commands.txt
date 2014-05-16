@@ -86,13 +86,53 @@ single leading "#" will comment out the entire command.
 
 (3) The line is searched repeatedly for $ characters, which indicate
 variables that are replaced with a text string.  See an exception in
-(6).  If the $ is followed by curly brackets, then the variable name
-is the text inside the curly brackets.  If no curly brackets follow
-the $, then the variable name is the single character immediately
-following the $.  Thus $\{myTemp\} and $x refer to variable names
-"myTemp" and "x".  See the "variable"_variable.html command for
-details of how strings are assigned to variables and how they are
-substituted for in input script commands.
+(6).  
+
+If the $ is followed by curly brackets, then the variable name is the
+text inside the curly brackets.  If no curly brackets follow the $,
+then the variable name is the single character immediately following
+the $.  Thus $\{myTemp\} and $x refer to variable names "myTemp" and
+"x".
+
+How the variable is converted to a text string depends on what style
+of variable it is; see the "variable"_variable doc page for details.
+It can be a variable that stores multiple text strings, and return one
+of them.  The returned text string can be multiple "words" (space
+separated) which will then be interpreted as multiple arguments in the
+input command.  The variable can also store a numeric formula which
+will be evaluated and its numeric result returned as a string.
+
+As a special case, if the $ is followed by parenthesis, then the text
+inside the parenthesis is treated as an "immediate" variable and
+evaluated as an "equal-style variable"_variable.html.  This is a way
+to use numeric formulas in an input script without having to assign
+them to variable names.  For example, these 3 input script lines:
+
+variable X equal (xlo+xhi)/2+sqrt(v_area)
+region 1 block $X 2 INF INF EDGE EDGE
+variable X delete :pre
+
+can be replaced by 
+
+region 1 block $((xlo+xhi)/2+sqrt(v_area)) 2 INF INF EDGE EDGE :pre
+
+so that you do not have to define (or discard) a temporary variable X.
+
+Note that neither the curly-bracket or immediate form of variables can
+contain nested $ characters for other variables to substitute for.
+Thus you cannot do this:
+
+variable        a equal 2
+variable        b2 equal 4
+print           "B2 = $\{b$a\}" :pre
+
+Nor can you specify this $($x-1.0) for an immediate variable, but
+you could use $(v_x-1.0), since the latter is valid syntax for an
+"equal-style variable"_variable.html.
+
+See the "variable"_variable.html command for more details of how
+strings are assigned to variables and evaluated, and how they can be
+used in input script commands.
 
 (4) The line is broken into "words" separated by whitespace (tabs,
 spaces).  Note that words can thus contain letters, digits,
@@ -102,16 +142,22 @@ underscores, or punctuation characters.
 line are arguments.
 
 (6) If you want text with spaces to be treated as a single argument,
-it can be enclosed in either double or single quotes.  E.g.
+it can be enclosed in either double or single quotes.  A long single
+argument enclosed in quotes can even span multiple lines if the "&"
+character is used, as described above.  E.g.
 
 print "Volume = $v"
-print 'Volume = $v' :pre
+print 'Volume = $v'
+variable a string "red green blue &
+                   purple orange cyan"
+if "${steps} > 1000" then quit :pre
 
 The quotes are removed when the single argument is stored internally.
-See the "dump_modify format"_dump_modify.html or "if"_if.html commands
-for examples.  A "#" or "$" character that is between quotes will not
-be treated as a comment indicator in (2) or substituted for as a
-variable in (3).
+
+See the "dump modify format"_dump_modify.html or "print"_print.html or
+"if"_if.html commands for examples.  A "#" or "$" character that is
+between quotes will not be treated as a comment indicator in (2) or
+substituted for as a variable in (3).
 
 IMPORTANT NOTE: If the argument is itself a command that requires a
 quoted argument (e.g. using a "print"_print.html command as part of an
@@ -138,13 +184,13 @@ Run a simulation :ol
 
 The last 2 parts can be repeated as many times as desired.  I.e. run a
 simulation, change some settings, run some more, etc.  Each of the 4
-parts is now described in more detail.  Remember that most of the
+parts is now described in more detail.  Remember that almost all the
 commands need only be used if a non-default value is desired.
 
 (1) Initialization
 
 Set parameters that need to be defined before the simulation domain,
-particles, grid cells, surfaces are defined.
+particles, grid cells, and surfaces are defined.
 
 Relevant commands include "dimension"_dimension.html,
 "units"_units.html, and "seed"_seed.html.
@@ -160,7 +206,7 @@ typically in this order:
 "species"_species.html for particle species properties
 "create_particles"_create_particles.html for particles :ul
 
-The first 2 are required.  Surfaces are optional.  Particles are also
+The first two are required.  Surfaces are optional.  Particles are also
 optional in the setup stage, since they can be added as the simulation
 runs.
 
@@ -171,15 +217,15 @@ are defined in the setup stage using the
 (3) Settings
 
 Once the problem geometry, grid cells, surfaces, and particles are
-defined, a variety of settings can be specified: simulation
-parameters, output options, etc.
+defined, a variety of settings can be specified, which include
+simulation parameters, output options, etc.
 
 Commands that do this include 
 
 "global"_global.html
 "timestep"_timestep.html
 "collide"_collide.html for a collision model
-"react"_react.html for a chemical reaction model
+"react"_react.html for a chemisty model
 "fix"_fix.html for boundary conditions, time-averaging, load-balancing, etc
 "compute"_compute.html for diagnostic computations
 "stats_style"_stats_style.html for screen output
@@ -194,13 +240,8 @@ A simulation is run using the "run"_run.html command.
 
 3.4 Commands listed by category :link(cmd_4),h4
 
-This section lists SPARTA commands, grouped by category.  The "next
-section"_#cmd_5 lists the same commands alphabetically.  Note that
-some style options for some commands are part of specific SPARTA
-packages, which means they cannot be used unless the package was
-included when SPARTA was built.  Not all packages are included in a
-default SPARTA build.  These dependencies are listed as Restrictions
-in the command's documentation.
+This section lists many SPARTA commands, grouped by category.  The
+"next section"_#cmd_5 lists all commands alphabetically.
 
 Initialization:
 
@@ -212,13 +253,14 @@ Problem definition:
 "create_box"_create_box.html, "create_grid"_create_grid.html,
 "create_particles"_create_particles.html, "mixture"_mixture.html,
 "read_grid"_read_grid.html, "read_surf"_read_surf.html,
-"species"_species.html, "surf_collide"_surf_collide.html
+"species"_species.html,
 
 Settings:
 
 "collide"_collide.html, "collide_modify"_collide_modify.html,
 "compute"_compute.html, "fix"_fix.html, "global"_global.html,
-"react"_react.html, "region"_region.html, "timestep"_timestep.html,
+"react"_react.html, "region"_region.html,
+"surf_collide"_surf_collide.html, "timestep"_timestep.html,
 "uncompute"_uncompute.html, "unfix"_unfix.html
 
 Output:
@@ -230,7 +272,7 @@ Output:
 
 Actions:
 
-"balance_grid"_balance_grid.html,  "run"_run.html
+"balance_grid"_balance_grid.html, "run"_run.html
 
 Miscellaneous:
 
@@ -246,7 +288,7 @@ Miscellaneous:
 
 This section lists all SPARTA commands alphabetically, with a separate
 listing below of styles within certain commands.  The "previous
-section"_#cmd_4 lists the same commands, grouped by category.
+section"_#cmd_4 lists many of the same commands, grouped by category.
 
 "balance_grid"_balance_grid.html,
 "boundary"_boundary.html,
