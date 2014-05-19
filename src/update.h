@@ -138,3 +138,37 @@ class Update : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Gravity in z not allowed for 2d
+
+UNDOCUMENTED
+
+E: Gravity in y not allowed for axi-symmetry
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Particle %d on proc %d hit inside of surf %d on step %ld
+
+UNDOCUMENTED
+
+E: Sending particle to self
+
+UNDOCUMENTED
+
+E: Cannot set global surfmax when surfaces already exist
+
+UNDOCUMENTED
+
+E: Cannot set global gridcut when grid already exists
+
+UNDOCUMENTED
+
+*/

@@ -55,4 +55,65 @@ class ReadGrid : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Cannot read grid before simulation box is defined
+
+UNDOCUMENTED
+
+E: Cannot read grid when grid is already defined
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Grid file cannot parse Parents section
+
+UNDOCUMENTED
+
+E: Incorrect parents format in grid file
+
+UNDOCUMENTED
+
+E: Invalid cell ID in read_grid file
+
+UNDOCUMENTED
+
+E: Duplicate cell ID in read_grid
+
+UNDOCUMENTED
+
+E: Parent cell's parent does not exist in read_grid
+
+UNDOCUMENTED
+
+E: 
+
+UNDOCUMENTED
+
+E: Nz value in read_grid file must be 1 for a 2d simulation
+
+UNDOCUMENTED
+
+E: Cannot open gzipped file
+
+SPARTA was compiled without support for reading and writing gzipped
+files through a pipeline to the gzip program with -DSPARTA_GZIP.
+
+E: Cannot open file %s
+
+The specified file cannot be opened.  Check that the path and name are
+correct. If the file is a compressed file, also check that the gzip
+executable can be found and run.
+
+E: Unexpected end of grid file
+
+UNDOCUMENTED
+
+E: Grid file does not contain parents
+
+UNDOCUMENTED
+
 */

@@ -137,3 +137,89 @@ class Stats : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Could not find stats compute ID
+
+UNDOCUMENTED
+
+E: Could not find stats fix ID
+
+UNDOCUMENTED
+
+E: Stats and fix not computed at compatible times
+
+UNDOCUMENTED
+
+E: Could not find stats variable name
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Stats_modify int format does not contain d character
+
+UNDOCUMENTED
+
+E: Stats compute does not compute scalar
+
+UNDOCUMENTED
+
+E: Stats compute does not compute vector
+
+UNDOCUMENTED
+
+E: Stats compute vector is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Stats compute does not compute array
+
+UNDOCUMENTED
+
+E: Stats compute array is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Stats fix does not compute scalar
+
+UNDOCUMENTED
+
+E: Stats fix does not compute vector
+
+UNDOCUMENTED
+
+E: Stats fix vector is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Stats fix does not compute array
+
+UNDOCUMENTED
+
+E: Stats fix array is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Stats variable is not equal-style variable
+
+UNDOCUMENTED
+
+E: Stats variable cannot be indexed
+
+UNDOCUMENTED
+
+E: Invalid keyword in stats_style command
+
+UNDOCUMENTED
+
+E: This variable stats keyword cannot be used between runs
+
+UNDOCUMENTED
+
+*/

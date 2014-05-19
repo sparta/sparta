@@ -69,3 +69,57 @@ class Output : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Variable name for stats every does not exist
+
+UNDOCUMENTED
+
+E: Variable for stats every is invalid style
+
+UNDOCUMENTED
+
+E: Variable name for dump every does not exist
+
+Self-explanatory.
+
+E: Variable for dump every is invalid style
+
+Only equal-style variables can be used.
+
+E: Dump every variable returned a bad timestep
+
+The variable must return a timestep greater than the current timestep.
+
+E: stats every variable returned a bad timestep
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Reuse of dump ID
+
+A dump ID cannot be used twice.
+
+E: Invalid dump frequency
+
+Dump frequency must be 1 or greater.
+
+E: Invalid dump style
+
+The choice of dump style is unknown.
+
+E: Cound not find dump_modify ID
+
+Self-explanatory.
+
+E: Could not find undump ID
+
+A dump ID used in the undump command does not exist.
+
+*/

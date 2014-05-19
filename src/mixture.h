@@ -77,3 +77,37 @@ class Mixture : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Mixture ID must be alphanumeric or underscore characters
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Mixture %s fractions exceed 1.0
+
+UNDOCUMENTED
+
+E: Mixture species is not defined
+
+UNDOCUMENTED
+
+E: Cannot add new species to mixture all or species
+
+UNDOCUMENTED
+
+E: Mixture group ID must be alphanumeric or underscore characters
+
+UNDOCUMENTED
+
+E: Cannot use group keyword with mixture all or species
+
+UNDOCUMENTED
+
+*/

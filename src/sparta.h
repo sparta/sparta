@@ -63,4 +63,74 @@ class SPARTA {
 
 /* ERROR/WARNING messages:
 
+E: Invalid command-line argument
+
+One or more command-line arguments is invalid.  Check the syntax of
+the command you are using to launch SPARTA.
+
+E: Processor partitions are inconsistent
+
+The total number of processors in all partitions must match the number
+of processors SPARTA is running on.
+
+E: Must use -in switch with multiple partitions
+
+A multi-partition simulation cannot read the input script from stdin.
+The -in command-line option must be used to specify a file.
+
+E: Can only use -pscreen with multiple partitions
+
+Self-explanatory.  See doc page discussion of command-line switches.
+
+E: Can only use -plog with multiple partitions
+
+Self-explanatory.  See doc page discussion of command-line switches.
+
+E: Cannot open universe screen file
+
+For a multi-partition run, the master screen file cannot be opened.
+Check that the directory you are running in allows for files to be
+created.
+
+E: Cannot open log.sparta
+
+UNDOCUMENTED
+
+E: Cannot open universe log file
+
+For a multi-partition run, the master log file cannot be opened.
+Check that the directory you are running in allows for files to be
+created.
+
+E: Cannot open input script %s
+
+Self-explanatory.
+
+E: Cannot open screen file
+
+The screen file specified as a command-line argument cannot be
+opened.  Check that the directory you are running in allows for files
+to be created.
+
+E: Cannot open logfile
+
+The SPARTA log file named in a command-line argument cannot be opened.
+Check that the path and name are correct.
+
+E: Smallint setting in spatype.h is invalid
+
+UNDOCUMENTED
+
+E: Bigint setting in spatype.h is invalid
+
+UNDOCUMENTED
+
+E: MPI_SPARTA_BIGINT and bigint in spatype.h are not compatible
+
+UNDOCUMENTED
+
+E: Small,big integers are not sized correctly
+
+UNDOCUMENTED
+
 */

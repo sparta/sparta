@@ -44,3 +44,23 @@ class WriteGrid : protected Pointers {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Cannot write grid when grid is not defined
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Cannot open file %s
+
+The specified file cannot be opened.  Check that the path and name are
+correct. If the file is a compressed file, also check that the gzip
+executable can be found and run.
+
+*/

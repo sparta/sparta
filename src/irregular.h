@@ -74,3 +74,11 @@ class Irregular : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Irregular comm recv buffer exceeds 2 GB\n
+
+UNDOCUMENTED
+
+*/

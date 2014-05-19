@@ -104,4 +104,88 @@ class Input : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Label wasn't found in input script
+
+Self-explanatory.
+
+E: Unknown command: %s
+
+The command is not known to SPARTA.  Check the input script.
+
+E: Invalid use of library file() function
+
+This function is called thru the library interface.  This
+error should not occur.  Contact the developers if it does.
+
+E: Cannot open input script %s
+
+Self-explanatory.
+
+E: Unbalanced quotes in input line
+
+No matching end double quote was found following a leading double
+quote.
+
+E: Input line quote not followed by whitespace
+
+An end quote must be followed by whitespace.
+
+E: Invalid variable name
+
+Variable name used in an input script line is invalid.
+
+E: Invalid immediate variable
+
+Syntax of immediate value is incorrect.
+
+E: Substitution for illegal variable
+
+Input script line contained a variable that could not be substituted
+for.
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Cannot use include command within an if command
+
+Self-explanatory.
+
+E: Cannot open logfile %s
+
+The SPARTA log file specified in the input script cannot be opened.
+Check that the path and name are correct.
+
+E: Partition numeric index is out of bounds
+
+UNDOCUMENTED
+
+E: Cannot open print file %s
+
+Self-explanatory.
+
+E: Invalid collide style
+
+UNDOCUMENTED
+
+E: Cannot use collide_modify with no collisions defined
+
+UNDOCUMENTED
+
+E: Dimension command after simulation box is defined
+
+The dimension command cannot be used after a read_data,
+read_restart, or create_box command.
+
+E: Invalid react style
+
+UNDOCUMENTED
+
+E: Units command after simulation box is defined
+
+The units command cannot be used after a read_data, read_restart, or
+create_box command.
+
 */

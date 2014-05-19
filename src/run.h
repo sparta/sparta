@@ -38,4 +38,27 @@ class Run : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Run command before grid is defined
+
+UNDOCUMENTED
+
+E: Run command before grid ghost cells are defined
+
+UNDOCUMENTED
+
+E: Invalid run command N value
+
+The number of timesteps must fit in a 32-bit integer.  If you want to
+run for more steps than this, perform multiple shorter runs.
+
+E: Too many timesteps
+
+The cummulative timesteps must fit in a 64-bit integer.
+
 */

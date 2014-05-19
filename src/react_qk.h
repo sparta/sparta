@@ -64,3 +64,17 @@ class ReactQK : public React {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Unknown outcome in reaction
+
+UNDOCUMENTED
+
+*/

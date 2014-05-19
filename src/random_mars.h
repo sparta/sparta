@@ -41,4 +41,8 @@ class RanMars : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Seed command has not been used
+
+UNDOCUMENTED
+
 */

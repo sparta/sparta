@@ -78,3 +78,45 @@ class Modify : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Fix command before simulation box is defined
+
+The fix command cannot be used before a read_data, read_restart, or
+create_box command.
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Replacing a fix, but new style != old style
+
+A fix ID can be used a 2nd time, but only if the style matches the
+previous fix.  In this case it is assumed you with to reset a fix's
+parameters.  This error may mean you are mistakenly re-using a fix ID
+when you do not intend to.
+
+E: Invalid fix style
+
+The choice of fix style is unknown.
+
+E: Could not find fix ID to delete
+
+Self-explanatory.
+
+E: Reuse of compute ID
+
+A compute ID cannot be used twice.
+
+E: Invalid compute style
+
+Self-explanatory.
+
+E: Could not find compute ID to delete
+
+Self-explanatory.
+
+*/

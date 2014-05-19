@@ -113,4 +113,34 @@ class Particle : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Per-processor grid count is too big
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: Cannot open species file %s
+
+UNDOCUMENTED
+
+E: Species ID is already defined
+
+UNDOCUMENTED
+
+E: Species ID does not appear in species file
+
+UNDOCUMENTED
+
+E: Incorrect line format in species file
+
+UNDOCUMENTED
+
+E: Invalid species ID in species file
+
+UNDOCUMENTED
+
 */

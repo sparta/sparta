@@ -71,3 +71,41 @@ class ReactTCE : public React {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
+E: React tce can only be used with collide vss
+
+UNDOCUMENTED
+
+E: Unknown outcome in reaction
+
+UNDOCUMENTED
+
+E: Cannot open reaction file %s
+
+UNDOCUMENTED
+
+E: Invalid reaction formula in file
+
+UNDOCUMENTED
+
+E: Invalid reaction type in file
+
+UNDOCUMENTED
+
+E: Invalid reaction style in file
+
+UNDOCUMENTED
+
+E: Invalid reaction coefficients in file
+
+UNDOCUMENTED
+
+*/
