@@ -11,203 +11,181 @@ Section</A>
 
 <HR>
 
-<H3>10. Modifying & extending SPARTA 
+<H3>8. Modifying & extending SPARTA 
 </H3>
+<P>This section describes how to extend SPARTA by modifying its source code.
+</P>
+8.1 <A HREF = "#mod_1">Compute styles</A><BR>
+8.2 <A HREF = "#mod_2">Fix styles</A><BR>
+8.3 <A HREF = "#mod_3">Region styles</A><BR>
+8.4 <A HREF = "#mod_4">Collision styles</A><BR>
+8.5 <A HREF = "#mod_5">Surface collision styles</A><BR>
+8.6 <A HREF = "#mod_6">Chemistry styles</A><BR>
+8.7 <A HREF = "#mod_7">Dump styles</A><BR>
+8.8 <A HREF = "#mod_8">Input script commands</A> <BR>
+
 <P>SPARTA is designed in a modular fashion so as to be easy to modify and
-extend with new functionality.  In fact, about 75% of its source code
-is files added in this fashion.
+extend with new functionality.
 </P>
 <P>In this section, changes and additions users can make are listed along
 with minimal instructions.  If you add a new feature to SPARTA and
-think it will be of interest to general users, we encourage you to
-submit it to the developers for inclusion in the released version of
-SPARTA.  Information about how to do this is provided
-<A HREF = "#mod_14">below</A>.
+think it will be of general interest to users, please submit it to the
+developers for inclusion in the released version of SPARTA.
 </P>
 <P>The best way to add a new feature is to find a similar feature in
 SPARTA and look at the corresponding source and header files to figure
-out what it does.  You will need some knowledge of C++ to be able to
+out what it does. You will need some knowledge of C++ to be able to
 understand the hi-level structure of SPARTA and its class
 organization, but functions (class methods) that do actual
 computations are written in vanilla C-style code and operate on simple
-C-style data structures (vectors and arrays).
+C-style data structures (vectors, arrays, structs).
 </P>
-<P>Most of the new features described in this section require you to
-write a new C++ derived class (except for exceptions described below,
-where you can make small edits to existing files).  Creating a new
-class requires 2 files, a source code file (*.cpp) and a header file
-(*.h).  The derived class must provide certain methods to work as a
-new option.  Depending on how different your new feature is compared
-to existing features, you can either derive from the base class
-itself, or from a derived class that already exists.  Enabling SPARTA
-to invoke the new class is as simple as putting the two source
-files in the src dir and re-building SPARTA.
+<P>The new features described in this section require you to write a new
+C++ derived class. Creating a new class requires 2 files, a source
+code file (*.cpp) and a header file (*.h).  The derived class must
+provide certain methods to work as a new option.  Depending on how
+different your new feature is compared to existing features, you can
+either derive from the base class itself, or from a derived class that
+already exists.  Enabling SPARTA to invoke the new class is as simple
+as putting the two source files in the src dir and re-building SPARTA.
 </P>
 <P>The advantage of C++ and its object-orientation is that all the code
 and variables needed to define the new feature are in the 2 files you
 write, and thus shouldn't make the rest of SPARTA more complex or
 cause side-effect bugs.
 </P>
-<P>Here is a concrete example.  Suppose you write 2 files pair_foo.cpp
-and pair_foo.h that define a new class PairFoo that computes pairwise
-potentials described in the classic 1997 <A HREF = "#Foo">paper</A> by Foo, et al.
-If you wish to invoke those potentials in a SPARTA input script with a
-command like
+<P>Here is a concrete example. Suppose you write 2 files collide_foo.cpp
+and collide_foo.h that define a new class CollideFoo that computes
+inter-particle collisions described in the classic 1997 paper by Foo,
+et al. If you wish to invoke those potentials in a SPARTA input script
+with a command like
 </P>
-<PRE>pair_style foo 0.1 3.5 
-</PRE>
-<P>then your pair_foo.h file should be structured as follows:
+<P>collide foo mix-ID params.foo 3.0
 </P>
-<PRE>#ifdef PAIR_CLASS
-PairStyle(foo,PairFoo)
+<P>then your collide_foo.h file should be structured as follows:
+</P>
+<P>#ifdef COLLIDE_CLASS
+CollideStyle(foo,CollideFoo)
 #else
 ...
-(class definition for PairFoo)
+(class definition for CollideFoo)
 ...
 #endif 
-</PRE>
-<P>where "foo" is the style keyword in the pair_style command, and
-PairFoo is the class name defined in your pair_foo.cpp and pair_foo.h
+</P>
+<P>where "foo" is the style keyword in the collid command, and CollideFoo
+is the class name defined in your collide_foo.cpp and collide_foo.h
 files.
 </P>
-<P>When you re-build SPARTA, your new pairwise potential becomes part of
-the executable and can be invoked with a pair_style command like the
-example above.  Arguments like 0.1 and 3.5 can be defined and
-processed by your new class.
+<P>When you re-build SPARTA, your new collision model becomes part of the
+executable and can be invoked with a <A HREF = "collide.html">collide</A> command
+like the example above.  Arguments like a mixture ID, params.foo (a
+file with collision parameters), and 3.0 can be defined and processed
+by your new class.
 </P>
-<P>As illustrated by this pairwise example, many kinds of options are
-referred to in the SPARTA documentation as the "style" of a particular
-command.
+<P>As illustrated by this example, many kinds of options are referred to
+in the SPARTA documentation as the "style" of a particular command.
 </P>
 <P>The instructions below give the header file for the base class that
 these styles are derived from.  Public variables in that file are ones
 used and set by the derived classes which are also used by the base
 class.  Sometimes they are also used by the rest of SPARTA.  Virtual
-functions in the base class header file which are set = 0 are ones you
-must define in your new derived class to give it the functionality
-SPARTA expects.  Virtual functions that are not set to 0 are functions
-you can optionally define.
+functions in the base class header file which are set = 0 are ones
+that must be defined in the new derived class to give it the
+functionality SPARTA expects.  Virtual functions that are not set to 0
+are functions that can be optionally defined.
 </P>
-<P>Additionally, new output options can be added directly to the
-thermo.cpp, dump_custom.cpp, and variable.cpp files as explained
-below.
-</P>
-<HR>
-
 <P>Here are additional guidelines for modifying SPARTA and adding new
 functionality:
 </P>
 <UL><LI>Think about whether what you want to do would be better as a pre- or
-post-processing step.  Many computations are more easily and more
+post-processing step. Many computations are more easily and more
 quickly done that way. 
 
 <LI>Don't do anything within the timestepping of a run that isn't
-parallel.  E.g. don't accumulate a bunch of data on a single processor
-and analyze it.  You run the risk of seriously degrading the parallel
-efficiency. 
+parallel.  E.g. don't accumulate a large volume of data on a single
+processor and analyze it.  This runs the risk of seriously degrading
+the parallel efficiency. 
 
-<LI>If your new feature reads arguments or writes output, make sure you
-follow the unit conventions discussed by the <A HREF = "units.html">units</A>
-command. 
-
-<LI>If you add something you think is truly useful and doesn't impact
-SPARTA performance when it isn't used, send an email to the
-<A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.  We might be
-interested in adding it to the SPARTA distribution.  See further
-details on this at the bottom of this page.  
+<P>If you have a question about how to compute something or about
+internal SPARTA data structures or algorithms, feel free to
+send an email to the developers.
+</P>
+<LI>If you add something you think is generally useful, also send an email
+to the developers. We might be interested in adding it to the SPARTA
+distribution. 
 </UL>
 <HR>
 
-<P>Here are the subsequent topics discussed below, most of which are new
-features that can be added in the manner just described:
-</P>
-10.14 <A HREF = "#mod_14">Submitting new features for inclusion in SPARTA</A> <BR>
-
 <HR>
 
-<HR>
-
-<A NAME = "mod_14"></A><H4>10.14 Submitting new features for inclusion in SPARTA 
+<A NAME = "mod_1"></A><H4>8.1 Compute styles 
 </H4>
-<P>We encourage users to submit new features that they add to SPARTA to
-<A HREF = "http://sparta.sandia.gov/authors.html">the developers</A>, especially if
-you think the features will be of interest to other users.  If they
-are broadly useful we may add them as core files to SPARTA or as part
-of a <A HREF = "Section_start.html#start_3">standard package</A>.  Else we will add
-them as a user-contributed package or file.  Examples of user packages
-are in src sub-directories that start with USER.  The USER-MISC
-package is simply a collection of (mostly) unrelated single files,
-which is the simplest way to have your contribution quickly added to
-the SPARTA distribution.  You can see a list of the both standard and
-user packages by typing "make package" in the SPARTA src directory.
-</P>
-<P>With user packages and files, all we are really providing (aside from
-the fame and fortune that accompanies having your name in the source
-code and on the <A HREF = "http://sparta.sandia.gov/authors.html">Authors page</A>
-of the <A HREF = "http://sparta.sandia.gov">SPARTA WWW site</A>), is a means for you to distribute your
-SPARTA to the SPARTA user community and a mechanism for others to easily
-try out your new feature.  This may help you find bugs or make contact
-with new collaborators.  Note that you're also implicitly agreeing to
-support your code which means answer questions, fix bugs, and maintain
-it if SPARTA changes.
-</P>
-<P>The previous sections of this doc page describe how to add new
-features of various kinds to SPARTA.  Packages are simply collections
-of one or more new class files which are invoked as a new "style"
-within a SPARTA input script.  If designed correctly, these additions
-do not require changes to the main core of SPARTA; they are simply
-add-on files.  If you think your new feature requires non-trivial
-changes in core SPARTA files, you'll need to <A HREF = "http://sparta.sandia.gov/authors.html">communicate with the
-developers</A>, since we may or may
-not want to make those changes.  An example of a trivial change is
-making a parent-class method "virtual" when you derive a new child
-class from it.
-</P>
-<P>Here is what you need to do to submit a user package or single file
-for our consideration.  Following these steps will save time for both
-you and us.  See existing package files for examples.
-</P>
-<UL><LI>All source files you provide must compile with the most current
-version of SPARTA. 
+<HR>
 
-<LI>If your contribution is a single file (actually a *.cpp and *.h file)
-it can most rapidly be added to the USER-MISC directory.  Send us the
-one-line entry to add to the USER-MISC/README file in that dir, along
-with the 2 source files.  You can do this multiple times if you wish
-to contribute several individual features.  
-
-<LI>If your contribution is several related featues, it is probably best
-to make it a user package directory with a name like USER-FOO.  In
-addition to your new files, the directory should contain a README, and
-Install.csh file.  The README text file should contain your name and
-contact information and a brief description of what your new package
-does.  The Install.csh file enables SPARTA to include and exclude your
-package.  See other README and Install.sh files in other USER
-directories as examples.  Send us a tarball of this USER-FOO
-directory. 
-
-<LI>Your new source files need to have the SPARTA copyright, GPL notice,
-and your name at the top, like other SPARTA source files.  They need
-to create a class that is inside the SPARTA namespace.  Other than
-that, your files can do whatever is necessary to implement the new
-features.  They don't have to be written in the same stylistic format
-and syntax as other SPARTA files, though that would be nice. 
-
-<LI>Finally, you must also send a documentation file for each new command
-or style you are adding to SPARTA.  This will be one file for a
-single-file feature.  For a package, it might be several files.  These
-are simple text files which we will convert to HTML.  They must be in
-the same format as other *.txt files in the lammps/doc directory for
-similar commands and styles.  The "Restrictions" section of the doc
-page should indicate that your command is only available if SPARTA is
-built with the appropriate USER-MISC or USER-FOO package.  See other
-user package doc files for an example of how to do this.  The txt2html
-tool we use to do the conversion can be downloaded from <A HREF = "http://www.sandia.gov/~sjplimp/download.html">this
-site</A>, so you can perform
-the HTML conversion yourself to proofread your doc page.  
-</UL>
-<P>Note that the more clear and self-explanatory you make your doc and
-README files, the more likely it is that users will try out your new
-feature.
+<P><A HREF = "compute.html">Compute style commands</A> calculate instantaneous
+properties of the simulated system.  They can be global properties, or
+per particle or per grid cell or per surface element properties.  The
+result can be single value or multiple values (global or per particle
+or per grid or per surf).
 </P>
+<P>Here is a brief description of methods to define in a new derived
+class.  See compute.h for details.  All of these methods are optional.
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >init</TD><TD > initialization before a run</TD></TR>
+<TR><TD >compute_scalar</TD><TD > compute a global scalar quantity</TD></TR>
+<TR><TD >compute_vector</TD><TD > compute a global vector of quantities</TD></TR>
+<TR><TD >compute_per_particle</TD><TD > compute one or more quantities per particle</TD></TR>
+<TR><TD >compute_per_grid</TD><TD > compute one or more quantities per grid cell</TD></TR>
+<TR><TD >compute_per_surf</TD><TD > compute one or more quantities per surface element</TD></TR>
+<TR><TD >surf_tally</TD><TD > call when a particle hits a surface element</TD></TR>
+<TR><TD >boundary_tally</TD><TD > call when a particle hits a simulation box boundary</TD></TR>
+<TR><TD >memory_usage</TD><TD > tally memory usage 
+</TD></TR></TABLE></DIV>
+
+<A NAME = "mod_2"></A><H4>8.2 Fix styles 
+</H4>
+<P><A HREF = "fix.html">Fix style commands</A> perform operations during the
+timestepping loop of a simulation.  They define methods which are
+invoked at different points within the timestep.  They can be used to
+insert particles, perform load-balancing, or perform time-averaging of
+various quantities.  They can also produce output of various kinds,
+similar to <A HREF = "compute.html">compute</A> commands.
+</P>
+<P>Here is a brief description of methods to define in a new derived
+class.  See compute.h for details.  All of these methods, except
+setmask(), are optional.
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >setmask</TD><TD > set flags that determine when the fix is called within a timestep</TD></TR>
+<TR><TD >init</TD><TD > initialization before a run</TD></TR>
+<TR><TD >start_of_step</TD><TD > called at beginning of timestep</TD></TR>
+<TR><TD >end_of_step</TD><TD > called at end of timestep</TD></TR>
+<TR><TD >memory_usage</TD><TD > tally memory usage 
+</TD></TR></TABLE></DIV>
+
+<HR>
+
+<A NAME = "mod_3"></A><H4>8.3 Region styles 
+</H4>
+<HR>
+
+<A NAME = "mod_4"></A><H4>8.4 Collision styles 
+</H4>
+<HR>
+
+<A NAME = "mod_5"></A><H4>8.5 Surface collision styles 
+</H4>
+<HR>
+
+<A NAME = "mod_6"></A><H4>8.6 Chemistry styles 
+</H4>
+<HR>
+
+<A NAME = "mod_7"></A><H4>8.7 Dump styles 
+</H4>
+<HR>
+
+<A NAME = "mod_8"></A><H4>8.8 Input script commands 
+</H4>
 </HTML>

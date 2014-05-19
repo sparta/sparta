@@ -11,13 +11,15 @@ Section</A>
 
 <HR>
 
-<H3>9. Additional tools 
+<H3>7. Additional tools 
 </H3>
-<P>SPARTA is designed to be a computational kernel for performing
-molecular dynamics computations.  Additional pre- and post-processing
-steps are often necessary to setup and analyze a simulation.  A few
-additional tools are provided with the SPARTA distribution and are
-described in this section.
+<P>SPARTA is designed to be a computational kernel for performing DSMC
+computations.  Additional pre- and post-processing steps are often
+necessary to setup and analyze a simulation.  A few additional tools
+are provided with the SPARTA distribution in the tools directory and
+are described briefly below.
+</P>
+<P>TODO: be specific about what Pizza.py tools can work with SPARTA data 
 </P>
 <P>Our group has also written and released a separate toolkit called
 <A HREF = "http://pizza.sandia.gov">Pizza.py</A> which provides tools for doing setup, analysis,
@@ -29,18 +31,25 @@ Pizza.py WWW site</A>.
 
 
 
-<P>Note that many users write their own setup or analysis tools or use
-other existing codes and convert their output to a SPARTA input format
-or vice versa.  The tools listed here are included in the SPARTA
-distribution as examples of auxiliary tools.  Some of them are not
-actively supported by Sandia, as they were contributed by SPARTA
-users.  If you have problems using them, we can direct you to the
-authors.
+<P>TODO: any other tools
 </P>
-<P>The source code for each of these codes is in the tools sub-directory
-of the SPARTA distribution.  There is a Makefile (which you may need
-to edit for your platform) which will build several of the tools which
-reside in that directory.  Some of them are larger packages in their
-own sub-directories with their own Makefiles.
+<UL><LI><A HREF = "#binary">binary2txt</A> 
+</UL>
+<HR>
+
+<HR>
+
+<H4><A NAME = "binary"></A>binary2txt tool 
+</H4>
+<P>TODO: need to create this tool?  different options for particle/grid/surf
+</P>
+<P>The file binary2txt.cpp converts one or more binary SPARTA dump files
+into ASCII text files.  The syntax for running the tool is
+</P>
+<PRE>binary2txt file1 file2 ... 
+</PRE>
+<P>which creates file1.txt, file2.txt, etc.  This tool should be compiled
+on a platform that can read the binary files created by a SPARTA run,
+since binary files are not always compatible across all platforms.
 </P>
 </HTML>

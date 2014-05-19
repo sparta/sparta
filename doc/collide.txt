@@ -1,4 +1,4 @@
-"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "DSMSPARTAmmands"_sc :c
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
 :link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)

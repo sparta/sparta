@@ -31,7 +31,7 @@ keyword = {append} or {every} or {first} or {flush} or {format} or {region} or {
     value = numeric value to compare to
     these 3 args can be replaced by the word "none" to turn off thresholding :pre
 these keywords apply only to the "dump image"_dump_image.html style :l
-keyword = {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {cmap} or {color} or {gcolor} or {glinecolor} or {pcolor{ or {pdiam} or {scolor} or {slinecolor} :l
+keyword = {bcolor} or {bdiam} or {backcolor} or {boxcolor} or {cmap} or {color} or {gcolor} or {glinecolor} or {pcolor} or {pdiam} or {scolor} or {slinecolor} :l
   {backcolor} arg = color
     color = name of color for background
   {boxcolor} arg = color
