@@ -48,9 +48,3 @@ SurfCollide::~SurfCollide()
   delete [] id;
   delete [] style;
 }
-
-/* ---------------------------------------------------------------------- */
-
-void SurfCollide::init()
-{
-}
