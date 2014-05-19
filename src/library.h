@@ -33,6 +33,8 @@ char *sparta_command(void *, char *);
 void sparta_free(void *);
 
 void *sparta_extract_global(void *, char *);
+void *sparta_extract_compute(void *, char *, int, int);
+void *sparta_extract_variable(void *, char *);
 
 #ifdef __cplusplus
 }
