@@ -49,7 +49,7 @@ the "developers"_http://sparta.sandia.gov/authors.html.
 If you get an error message about an invalid command in your input
 script, you can determine what command is causing the problem by
 looking in the log.sparta file, or using the "echo command"_echo.html
-in your script or "-echo command-line
+in your script or "-echo screen" as a "command-line
 argument"_Section_start.html#start_5 to see it on the screen.  For a
 given command, SPARTA expects certain arguments in a specified order.
 If you mess this up, SPARTA will often flag the error, but it may read
