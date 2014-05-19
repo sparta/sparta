@@ -138,17 +138,17 @@ be for a single processor.
 
 E: Support for writing images in JPEG format not included
 
-LAMMPS was not built with the -DLAMMPS_JPEG switch in the Makefile.
+SPARTA was not built with the -DSPARTA_JPEG switch in the Makefile.
 
 E: Support for writing images in PNG format not included
 
-LAMMPS was not built with the -DLAMMPS_PNG switch in the Makefile.
+SPARTA was not built with the -DSPARTA_PNG switch in the Makefile.
 
 E: Illegal ... command
 
 Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
-command-line option when running LAMMPS to see the offending line.
+command-line option when running SPARTA to see the offending line.
 
 E: Invalid dump image theta value
 

@@ -4,7 +4,7 @@
 #endif
 #include "direct.h"
 #include "math.h"
-// LAMMPS uses usleep with 100 ms arguments, no microsecond precision needed
+// SPARTA uses usleep with 100 ms arguments, no microsecond precision needed
 #if !defined(__MINGW32__)
 #include "sleep.h"
 #endif

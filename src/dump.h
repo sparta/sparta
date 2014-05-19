@@ -93,8 +93,8 @@ integer for dump.
 
 E: Cannot open gzipped file
 
-LAMMPS was compiled without support for reading and writing gzipped
-files through a pipeline to the gzip program with -DLAMMPS_GZIP.
+SPARTA was compiled without support for reading and writing gzipped
+files through a pipeline to the gzip program with -DSPARTA_GZIP.
 
 E: Cannot open dump file
 
@@ -105,6 +105,6 @@ E: Illegal ... command
 
 Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
-command-line option when running LAMMPS to see the offending line.
+command-line option when running SPARTA to see the offending line.
 
 */
