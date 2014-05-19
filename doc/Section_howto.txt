@@ -390,8 +390,21 @@ Command: Input: Output:
 
 4.5 Visualizing SPARTA snapshots :link(howto_5),h4
 
-SPARTA itself does not do visualization, but snapshots from SPARTA
-simulations can be visualized (and analyzed) in a variety of ways.
+The "dump image"_dump_image.html command can be used to do on-the-fly
+visualization as a simulation proceeds.  It works by creating a series
+of JPG or PNG or PPM files on specified timesteps.  The images can
+include particles, grid cell quantities, and/or surface element
+quantities.  This is not a substitute for using an interactive
+visualization package in post-processing mode, but on-the-fly
+visualization can be useful for debugging or making a high-quality
+image of a particular snapshot of the simulation.
+
+The "dump"_dump.html command can be used to create snapshots of
+particle, grid cell, or surface element data as a simulation runs.
+These can be post-processed and read in to other visualization
+packages.
+
+TODO: describe post-processing tools and viz packages
 
 SPARTA snapshots are created by the "dump"_dump.html command which can
 create files in several formats.  The native SPARTA dump format is a
@@ -416,7 +429,7 @@ snapshots.
 
 4.6 Library interface to SPARTA :link(howto_6),h4
 
-As described in "Section 2.4"_Section_start.html#start_4, SPARTA can
+As described in "Section 2.3"_Section_start.html#start_3, SPARTA can
 be built as a library, so that it can be called by another code, used
 in a "coupled manner"_Section_howto.html#howto_7 with other codes, or
 driven through a "Python interface"_Section_python.html.
@@ -439,7 +452,7 @@ char *sparta_command(void *, char *); :pre
 
 The sparta_open() function is used to initialize SPARTA, passing in a
 list of strings as if they were "command-line
-arguments"_Section_start.html#start_7 when SPARTA is run in
+arguments"_Section_start.html#start_5 when SPARTA is run in
 stand-alone mode from the command line, and a MPI communicator for
 SPARTA to run under.  It returns a ptr to the SPARTA object that is
 created, and which is used in subsequent library calls.  The
@@ -467,6 +480,16 @@ interleaving the sparta_command() calls with other calls to extract
 information from SPARTA, perform its own operations, or call another
 code's library.
 
+Other useful functions are also included in library.cpp. For example:
+
+void *sparta_extract_global(void *, char *)
+void *sparta_extract_compute(void *, char *, int, int)
+void *sparta_extract_variable(void *, char *, char *) :pre
+
+This can extract various global quantities from SPARTA as well as
+values calculated by a compute or variable.  See the library.cpp file
+and its associated header file library.h for details.
+
 Other functions may be added to the library interface as needed to
 allow reading from or writing to internal SPARTA data structures. 
 
@@ -485,11 +508,10 @@ back into SPARTA.
 4.7 Coupling SPARTA to other codes :link(howto_7),h4
 
 SPARTA is designed to allow it to be coupled to other codes.  For
-example, a quantum mechanics code might compute forces on a subset of
-atoms and pass those forces to SPARTA.  Or a continuum finite element
-(FE) simulation might use atom positions as boundary conditions on FE
-nodal points, compute a FE solution, and return interpolated forces on
-MD atoms.
+example, a continuum finite element (FE) simulation might use SPARTA
+grid cell quantities as boundary conditions on FE nodal points,
+compute a FE solution, and return continuum flow conditions as
+boundary conditions for SPARTA to use.
 
 SPARTA can be coupled to other codes in at least 3 ways.  Each has
 advantages and disadvantages, which you'll have to think about in the
@@ -498,14 +520,9 @@ context of your application.
 (1) Define a new "fix"_fix.html command that calls the other code.  In
 this scenario, SPARTA is the driver code.  During its timestepping,
 the fix is invoked, and can make library calls to the other code,
-which has been linked to SPARTA as a library.  This is the way the
-"POEMS"_poems package that performs constrained rigid-body motion on
-groups of atoms is hooked to SPARTA.  See the
-"fix_poems"_fix_poems.html command for more details.  See "Section
+which has been linked to SPARTA as a library.  See "Section
 8"_Section_modify.html of the documentation for info on how to add a
 new fix to SPARTA.
-
-:link(poems,http://www.rpi.edu/~anderk5/lab)
 
 (2) Define a new SPARTA command that calls the other code.  This is
 conceptually similar to method (1), but in this case SPARTA and the
@@ -538,35 +555,21 @@ Examples of driver codes that call SPARTA as a library are included in
 the examples/COUPLE directory of the SPARTA distribution; see
 examples/COUPLE/README for more details:
 
-simple: simple driver programs in C++ and C which invoke SPARTA as a
-library :ulb,l
-
-sparta_quest: coupling of SPARTA and "Quest"_quest, to run classical
-MD with quantum forces calculated by a density functional code :l
-
-sparta_spparks: coupling of SPARTA and "SPPARKS"_spparks, to couple
-a kinetic Monte Carlo model for grain growth using MD to calculate
-strain induced across grain boundaries :l,ule
-
-:link(quest,http://dft.sandia.gov/Quest)
-:link(spparks,http://www.sandia.gov/~sjplimp/spparks.html)
-
-"Section 2.4"_Section_start.html#start4 of the manual describes how
-to build SPARTA as a library.  Once this is done, you can interface
-with SPARTA either via C++, C, Fortran, or Python (or any other
-language that supports a vanilla C-like interface).  For example, from
-C++ you could create one (or more) "instances" of SPARTA, pass it an
-input script to process, or execute individual commands, all by
-invoking the correct class methods in SPARTA.  From C or Fortran you
-can make function calls to do the same things.  See
-"Section_python"_Section_python.html of the manual for a description
-of the Python wrapper provided with SPARTA that operates through the
-SPARTA library interface.
+"Section 2.3"_Section_start.html#start3 of the manual describes how to
+build SPARTA as a library.  Once this is done, you can interface with
+SPARTA either via C++, C, Fortran, or Python (or any other language
+that supports a vanilla C-like interface).  For example, from C++ you
+could create one (or more) "instances" of SPARTA, pass it an input
+script to process, or execute individual commands, all by invoking the
+correct class methods in SPARTA.  From C or Fortran you can make
+function calls to do the same things.  See
+"Section_9"_Section_python.html of the manual for a description of the
+Python wrapper provided with SPARTA that operates through the SPARTA
+library interface.
 
 The files src/library.cpp and library.h contain the C-style interface
-to SPARTA.  See "Section_howto 19"_Section_howto.html#howto_19 of the
-manual for a description of the interface and how to extend it for
-your needs.
+to SPARTA.  See "Section 4.6"_#howto_6 of the manual for a description
+of the interface and how to extend it for your needs.
 
 Note that the sparta_open() function that creates an instance of
 SPARTA takes an MPI communicator as an argument.  This means that

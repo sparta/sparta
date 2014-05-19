@@ -10,36 +10,46 @@
 
 The SPARTA distribution includes an examples sub-directory with
 several sample problems.  Each problem is in a sub-directory of its
-own.  Most are 2d models so that they run quickly, requiring at most a
-couple of minutes to run on a desktop machine.  Each problem has an
-input script (in.*) and produces a log file (log.*) and dump file
-(dump.*) when it runs.  Some use a data file (data.*) of initial
-coordinates as additional input.  A few sample log file outputs on
-different machines and different numbers of processors are included in
-the directories to compare your answers to.  E.g. a log file like
-log.crack.foo.P means it ran on P processors of machine "foo".
+own.  They are all small problems that run quickly, requiring at most
+a couple of minutes to run on a desktop machine.  Each problem has an
+input script (in.*) and produces a log file (log.*) when it runs.
+Some use data files of surface geometry as additional input.  Files
+with species and collision and chemistry paramters are also included
+(copied from the data dir) so the problems are self-contained.
 
-The dump files produced by the example runs can be animated using the
-xmovie tool described in the "Additional Tools"_Section_tools.html
-section of the SPARTA documentation.  Animations of many of these
-examples can be viewed on the Movies section of the "SPARTA WWW
-Site"_sws.
+Sample log file outputs on different machines and different numbers of
+processors are included in the directories to compare your answers to.
+E.g. a log file like log.free.foo.P means it ran on P processors of
+machine "foo".
+
+If the "dump image" lines in each script are uncommented, a series of
+JPG snapshots will be produced.  Animations of several of the examples
+can be viewed on the Movies section of the "SPARTA WWW Site"_sws.
 
 These are the sample problems in the examples sub-directories:
 
-colloid:  big colloid particles in a small particle solvent, 2d system
-srd:      stochastic rotation dynamics (SRD) particles as solvent :tb(s=:)
+TODO: put final list here
+
+free:      free molecular flow in a box
+collide:   collisional flow in a box
 
 Here is how you might run and visualize one of the sample problems:
 
-cd indent
-cp ../../src/lmp_linux .           # copy SPARTA executable to this dir
-lmp_linux < in.indent              # run the problem :pre
+cd free
+cp ../../src/spa_g++ .           # copy SPARTA executable to this dir
+spa_g++ < in.free                # run the problem :pre
 
-Running the simulation produces the files {dump.indent} and
-{log.lammps}.  You can visualize the dump file as follows:
+Running the simulation produces the files {image.*.jpg} and
+{log.sparta}.  If you have the freely available ImageMagick toolkit on
+your machine, you can run its "convert" command to create an animated
+GIF, and visualize it from the FireFox browser as:
 
-../../tools/xmovie/xmovie -scale dump.indent :pre
+convert image*jpg movie.gif
+firefox ./movie.gif
+
+A similar command should work with other browsers.  Or you can select
+"Open File" under the File menu of your browser and load the animated
+GIF file directly.
 
 :line
 

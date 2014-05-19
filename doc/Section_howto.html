@@ -398,8 +398,21 @@ vector input could be a column of an array.
 
 <A NAME = "howto_5"></A><H4>4.5 Visualizing SPARTA snapshots 
 </H4>
-<P>SPARTA itself does not do visualization, but snapshots from SPARTA
-simulations can be visualized (and analyzed) in a variety of ways.
+<P>The <A HREF = "dump_image.html">dump image</A> command can be used to do on-the-fly
+visualization as a simulation proceeds.  It works by creating a series
+of JPG or PNG or PPM files on specified timesteps.  The images can
+include particles, grid cell quantities, and/or surface element
+quantities.  This is not a substitute for using an interactive
+visualization package in post-processing mode, but on-the-fly
+visualization can be useful for debugging or making a high-quality
+image of a particular snapshot of the simulation.
+</P>
+<P>The <A HREF = "dump.html">dump</A> command can be used to create snapshots of
+particle, grid cell, or surface element data as a simulation runs.
+These can be post-processed and read in to other visualization
+packages.
+</P>
+<P>TODO: describe post-processing tools and viz packages
 </P>
 <P>SPARTA snapshots are created by the <A HREF = "dump.html">dump</A> command which can
 create files in several formats.  The native SPARTA dump format is a
@@ -426,7 +439,7 @@ snapshots.
 
 <A NAME = "howto_6"></A><H4>4.6 Library interface to SPARTA 
 </H4>
-<P>As described in <A HREF = "Section_start.html#start_4">Section 2.4</A>, SPARTA can
+<P>As described in <A HREF = "Section_start.html#start_3">Section 2.3</A>, SPARTA can
 be built as a library, so that it can be called by another code, used
 in a <A HREF = "Section_howto.html#howto_7">coupled manner</A> with other codes, or
 driven through a <A HREF = "Section_python.html">Python interface</A>.
@@ -448,7 +461,7 @@ void sparta_file(void *, char *);
 char *sparta_command(void *, char *); 
 </PRE>
 <P>The sparta_open() function is used to initialize SPARTA, passing in a
-list of strings as if they were <A HREF = "Section_start.html#start_7">command-line
+list of strings as if they were <A HREF = "Section_start.html#start_5">command-line
 arguments</A> when SPARTA is run in
 stand-alone mode from the command line, and a MPI communicator for
 SPARTA to run under.  It returns a ptr to the SPARTA object that is
@@ -477,6 +490,16 @@ interleaving the sparta_command() calls with other calls to extract
 information from SPARTA, perform its own operations, or call another
 code's library.
 </P>
+<P>Other useful functions are also included in library.cpp. For example:
+</P>
+<PRE>void *sparta_extract_global(void *, char *)
+void *sparta_extract_compute(void *, char *, int, int)
+void *sparta_extract_variable(void *, char *, char *) 
+</PRE>
+<P>This can extract various global quantities from SPARTA as well as
+values calculated by a compute or variable.  See the library.cpp file
+and its associated header file library.h for details.
+</P>
 <P>Other functions may be added to the library interface as needed to
 allow reading from or writing to internal SPARTA data structures. 
 </P>
@@ -495,11 +518,10 @@ back into SPARTA.
 <A NAME = "howto_7"></A><H4>4.7 Coupling SPARTA to other codes 
 </H4>
 <P>SPARTA is designed to allow it to be coupled to other codes.  For
-example, a quantum mechanics code might compute forces on a subset of
-atoms and pass those forces to SPARTA.  Or a continuum finite element
-(FE) simulation might use atom positions as boundary conditions on FE
-nodal points, compute a FE solution, and return interpolated forces on
-MD atoms.
+example, a continuum finite element (FE) simulation might use SPARTA
+grid cell quantities as boundary conditions on FE nodal points,
+compute a FE solution, and return continuum flow conditions as
+boundary conditions for SPARTA to use.
 </P>
 <P>SPARTA can be coupled to other codes in at least 3 ways.  Each has
 advantages and disadvantages, which you'll have to think about in the
@@ -508,15 +530,10 @@ context of your application.
 <P>(1) Define a new <A HREF = "fix.html">fix</A> command that calls the other code.  In
 this scenario, SPARTA is the driver code.  During its timestepping,
 the fix is invoked, and can make library calls to the other code,
-which has been linked to SPARTA as a library.  This is the way the
-<A HREF = "http://www.rpi.edu/~anderk5/lab">POEMS</A> package that performs constrained rigid-body motion on
-groups of atoms is hooked to SPARTA.  See the
-<A HREF = "fix_poems.html">fix_poems</A> command for more details.  See <A HREF = "Section_modify.html">Section
+which has been linked to SPARTA as a library.  See <A HREF = "Section_modify.html">Section
 8</A> of the documentation for info on how to add a
 new fix to SPARTA.
 </P>
-
-
 <P>(2) Define a new SPARTA command that calls the other code.  This is
 conceptually similar to method (1), but in this case SPARTA and the
 other code are on a more equal footing.  Note that now the other code
@@ -548,36 +565,21 @@ multiple short runs, driven by another program.
 the examples/COUPLE directory of the SPARTA distribution; see
 examples/COUPLE/README for more details:
 </P>
-<UL><LI>simple: simple driver programs in C++ and C which invoke SPARTA as a
-library 
-
-<LI>sparta_quest: coupling of SPARTA and <A HREF = "http://dft.sandia.gov/Quest">Quest</A>, to run classical
-MD with quantum forces calculated by a density functional code 
-
-<LI>sparta_spparks: coupling of SPARTA and <A HREF = "http://www.sandia.gov/~sjplimp/spparks.html">SPPARKS</A>, to couple
-a kinetic Monte Carlo model for grain growth using MD to calculate
-strain induced across grain boundaries 
-</UL>
-
-
-
-
-<P><A HREF = "Section_start.html#start4">Section 2.4</A> of the manual describes how
-to build SPARTA as a library.  Once this is done, you can interface
-with SPARTA either via C++, C, Fortran, or Python (or any other
-language that supports a vanilla C-like interface).  For example, from
-C++ you could create one (or more) "instances" of SPARTA, pass it an
-input script to process, or execute individual commands, all by
-invoking the correct class methods in SPARTA.  From C or Fortran you
-can make function calls to do the same things.  See
-<A HREF = "Section_python.html">Section_python</A> of the manual for a description
-of the Python wrapper provided with SPARTA that operates through the
-SPARTA library interface.
+<P><A HREF = "Section_start.html#start3">Section 2.3</A> of the manual describes how to
+build SPARTA as a library.  Once this is done, you can interface with
+SPARTA either via C++, C, Fortran, or Python (or any other language
+that supports a vanilla C-like interface).  For example, from C++ you
+could create one (or more) "instances" of SPARTA, pass it an input
+script to process, or execute individual commands, all by invoking the
+correct class methods in SPARTA.  From C or Fortran you can make
+function calls to do the same things.  See
+<A HREF = "Section_python.html">Section_9</A> of the manual for a description of the
+Python wrapper provided with SPARTA that operates through the SPARTA
+library interface.
 </P>
 <P>The files src/library.cpp and library.h contain the C-style interface
-to SPARTA.  See <A HREF = "Section_howto.html#howto_19">Section_howto 19</A> of the
-manual for a description of the interface and how to extend it for
-your needs.
+to SPARTA.  See <A HREF = "#howto_6">Section 4.6</A> of the manual for a description
+of the interface and how to extend it for your needs.
 </P>
 <P>Note that the sparta_open() function that creates an instance of
 SPARTA takes an MPI communicator as an argument.  This means that

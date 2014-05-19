@@ -8,31 +8,28 @@
 
 8. Performance & scalability :h3
 
+The SPARTA distribution includes a bench sub-directory with several
+sample problems:
+
+TODO: put final list here
+
+Free = free molecular flow in a box :olb,l
+
+Collide = collisional molecular flow in a box :l
+
+Sphere = flow around a sphere :ole,l
+
+For each problem there is an input script and
+
+
 SPARTA performance on several prototypical benchmarks and machines is
 discussed on the Benchmarks page of the "SPARTA WWW Site"_sws where
 CPU timings and parallel efficiencies are listed.  Here, the
 benchmarks are described briefly and some useful rules of thumb about
 their performance are highlighted.
 
-These are the 5 benchmark problems:
 
-LJ = atomic fluid, Lennard-Jones potential with 2.5 sigma cutoff (55
-neighbors per atom), NVE integration :olb,l
 
-Chain = bead-spring polymer melt of 100-mer chains, FENE bonds and LJ
-pairwise interactions with a 2^(1/6) sigma cutoff (5 neighbors per
-atom), NVE integration :l
-
-EAM = metallic solid, Cu EAM potential with 4.95 Angstrom cutoff (45
-neighbors per atom), NVE integration :l
-
-Chute = granular chute flow, frictional history potential with 1.1
-sigma cutoff (7 neighbors per atom), NVE integration :l
-
-Rhodo = rhodopsin protein in solvated lipid bilayer, CHARMM force
-field with a 10 Angstrom LJ cutoff (440 neighbors per atom),
-particle-particle particle-mesh (PPPM) for long-range Coulombics, NPT
-integration :ole,l
 
 The input files for running the benchmarks are included in the SPARTA
 distribution, as are sample output files.  Each of the 5 problems has
