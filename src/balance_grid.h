@@ -41,4 +41,22 @@ class BalanceGrid : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Cannot balance grid before grid is defined
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Invalid balance_grid style for non-uniform grid
+
+UNDOCUMENTED
+
+E: Bad grid of processors for balance_grid block
+
+UNDOCUMENTED
+
 */

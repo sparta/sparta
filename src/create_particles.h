@@ -45,3 +45,45 @@ class CreateParticles : protected Pointers {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Cannot create particles before simulation box is defined
+
+UNDOCUMENTED
+
+E: Cannot create particles  before grid is defined
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Create_particles mixture ID does not exist
+
+UNDOCUMENTED
+
+E: Create_particles species ID does not exist
+
+UNDOCUMENTED
+
+E: Cannot use n and single in create_particles command
+
+UNDOCUMENTED
+
+E: Created incorrect # of particles: %ld versus %ld
+
+UNDOCUMENTED
+
+E: Create_particles single requires z = 0 for 2d simulation
+
+UNDOCUMENTED
+
+E: Could not create a single particle
+
+UNDOCUMENTED
+
+*/

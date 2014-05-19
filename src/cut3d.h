@@ -144,4 +144,64 @@ class Cut3d : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Singlet BPG edge not on cell face
+
+UNDOCUMENTED
+
+E: BPG edge on more than 2 faces
+
+UNDOCUMENTED
+
+E: Vertex has less than 3 edges
+
+UNDOCUMENTED
+
+E: Vertex contains invalid edge
+
+UNDOCUMENTED
+
+E: Vertex contains edge that doesn't point to it
+
+UNDOCUMENTED
+
+E: Vertex contains duplicate edge
+
+UNDOCUMENTED
+
+E: Vertex pointers to last edge are invalid
+
+UNDOCUMENTED
+
+E: Edge not part of 2 vertices
+
+UNDOCUMENTED
+
+E: Edge part of same vertex twice
+
+UNDOCUMENTED
+
+E: Edge part of invalid vertex
+
+UNDOCUMENTED
+
+E: No positive volumes in cell
+
+UNDOCUMENTED
+
+E: More than one positive volume with a negative volume
+
+UNDOCUMENTED
+
+E: Single volume is negative, inverse donut
+
+UNDOCUMENTED
+
+E: Could not find split point in split cell
+
+UNDOCUMENTED
+
+E: Found edge in same direction
+
+UNDOCUMENTED
+
 */

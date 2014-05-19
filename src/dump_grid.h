@@ -118,3 +118,63 @@ class DumpGrid : public Dump {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: No dump grid arguments specified
+
+UNDOCUMENTED
+
+E: Invalid attribute in dump grid command
+
+UNDOCUMENTED
+
+E: Could not find dump grid compute ID
+
+UNDOCUMENTED
+
+E: Could not find dump grid fix ID
+
+UNDOCUMENTED
+
+E: Dump grid and fix not computed at compatible times
+
+UNDOCUMENTED
+
+E: Could not find dump grid variable name
+
+UNDOCUMENTED
+
+E: Invalid dump grid field for 2d simulation
+
+UNDOCUMENTED
+
+E: Dump grid compute does not compute per-grid info
+
+UNDOCUMENTED
+
+E: Dump grid compute does not calculate per-grid array
+
+UNDOCUMENTED
+
+E: Dump grid compute vector is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Dump grid fix does not compute per-grid info
+
+UNDOCUMENTED
+
+E: Dump grid fix does not compute per-grid array
+
+UNDOCUMENTED
+
+E: Dump grid fix vector is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Dump grid variable is not grid-style variable
+
+UNDOCUMENTED
+
+*/

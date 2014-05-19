@@ -62,4 +62,73 @@ class Domain : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Axi-symmetry only allowed in 2d
+
+UNDOCUMENTED
+
+E: Z dimension must be periodic for 2d simulation
+
+UNDOCUMENTED
+
+E: Box boundary not assigned a surf_collide ID
+
+UNDOCUMENTED
+
+E: Grid cutoff is longer than box length in a periodic dimension
+
+UNDOCUMENTED
+
+E: Box bounds are invalid
+
+The box boundaries specified in the read_data file are invalid.  The
+lo value must be less than the hi value for all 3 dimensions.
+
+E: Boundary command after simulation box is defined
+
+The boundary command cannot be used after a read_data, read_restart,
+or create_box command.
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Only ylo boundary can be axi-symmetric
+
+UNDOCUMENTED
+
+E: Y cannot be periodic for axi-symmetric
+
+UNDOCUMENTED
+
+E: Both sides of boundary must be periodic
+
+Cannot specify a boundary as periodic only on the lo or hi side.  Must
+be periodic on both sides.
+
+E: Cannot use bound_modify command on Z dimension for 2d simulation
+
+UNDOCUMENTED
+
+E: Bound_modify surf requires boundary be a surface
+
+UNDOCUMENTED
+
+E: Bound_modify surf_collide ID is unknown
+
+UNDOCUMENTED
+
+E: Reuse of region ID
+
+A region ID cannot be used twice.
+
+E: Invalid region style
+
+The choice of region style is unknown.
+
+E: Delete region ID does not exist
+
+Self-explanatory.
+
 */

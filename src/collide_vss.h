@@ -103,4 +103,30 @@ class CollideVSS : public Collide {
 
 /* ERROR/WARNING messages:
 
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Species %s did not appear in VSS parameter file
+
+UNDOCUMENTED
+
+E: VSS parameters do not match current species
+
+UNDOCUMENTED
+
+E: Cannot open VSS parameter file %s
+
+UNDOCUMENTED
+
+E: Incorrect line format in VSS parameter file
+
+UNDOCUMENTED
+
+E: Request for unknown param from collide
+
+UNDOCUMENTED
+
 */

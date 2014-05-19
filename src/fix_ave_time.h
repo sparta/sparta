@@ -76,4 +76,88 @@ class FixAveTime : public Fix {
 
 /* ERROR/WARNING messages:
 
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Invalid fix ave/time off column
+
+Self-explantory.
+
+E: Compute ID for fix ave/time does not exist
+
+Self-explanatory.
+
+E: Fix ave/time compute does not calculate a scalar
+
+Self-explantory.
+
+E: Fix ave/time compute does not calculate a vector
+
+Self-explantory.
+
+E: Fix ave/time compute vector is accessed out-of-range
+
+The index for the vector is out of bounds.
+
+E: Fix ave/time compute does not calculate an array
+
+Self-explanatory.
+
+E: Fix ave/time compute array is accessed out-of-range
+
+An index for the array is out of bounds.
+
+E: Fix ID for fix ave/time does not exist
+
+Self-explanatory.
+
+E: Fix ave/time fix does not calculate a scalar
+
+Self-explanatory.
+
+E: Fix ave/time fix does not calculate a vector
+
+Self-explanatory.
+
+E: Fix ave/time fix vector is accessed out-of-range
+
+The index for the vector is out of bounds.
+
+E: Fix for fix ave/time not computed at compatible time
+
+Fixes generate their values on specific timesteps.  Fix ave/time
+is requesting a value on a non-allowed timestep.
+
+E: Fix ave/time fix does not calculate an array
+
+Self-explanatory.
+
+E: Fix ave/time fix array is accessed out-of-range
+
+An index for the array is out of bounds.
+
+E: Variable name for fix ave/time does not exist
+
+Self-explanatory.
+
+E: Fix ave/time variable is not equal-style variable
+
+Self-explanatory.
+
+E: Fix ave/time cannot use variable with vector mode
+
+Variables produce scalar values.
+
+E: Fix ave/time columns are inconsistent lengths
+
+Self-explanatory.
+
+E: Cannot open fix ave/time file %s
+
+The specified file cannot be opened.  Check that the path and name are
+correct.
+
 */

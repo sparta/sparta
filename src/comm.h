@@ -56,3 +56,11 @@ class Comm : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Migrate cells send buffer exceeds 2 GB
+
+UNDOCUMENTED
+
+*/

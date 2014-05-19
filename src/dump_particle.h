@@ -125,3 +125,137 @@ class DumpParticle : public Dump {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: No dump particle arguments specified
+
+UNDOCUMENTED
+
+E: Invalid attribute in dump particle command
+
+UNDOCUMENTED
+
+E: Could not find dump particle compute ID
+
+UNDOCUMENTED
+
+E: Could not find dump particle fix ID
+
+UNDOCUMENTED
+
+E: Dump particle and fix not computed at compatible times
+
+UNDOCUMENTED
+
+E: Could not find dump particle variable name
+
+UNDOCUMENTED
+
+E: Region ID for dump custom does not exist
+
+Self-explanatory.
+
+E: Dump particle compute does not compute per-particle info
+
+UNDOCUMENTED
+
+E: Dump particle compute does not calculate per-particle vector
+
+UNDOCUMENTED
+
+E: Dump particle compute does not calculate per-particle array
+
+UNDOCUMENTED
+
+E: Dump particle compute vector is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Dump particle fix does not compute per-particle info
+
+UNDOCUMENTED
+
+E: Dump particle fix does not compute per-particle vector
+
+UNDOCUMENTED
+
+E: Dump particle fix does not compute per-particle array
+
+UNDOCUMENTED
+
+E: Dump particle fix vector is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Dump particle variable is not particle-style variable
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Dump_modify region ID does not exist
+
+Self-explanatory.
+
+E: Invalid attribute in dump modify command
+
+Self-explantory.
+
+E: Could not find dump modify compute ID
+
+Self-explanatory.
+
+E: Dump modify compute ID does not compute per-particle info
+
+UNDOCUMENTED
+
+E: Dump modify compute ID does not compute per-particle vector
+
+UNDOCUMENTED
+
+E: Dump modify compute ID does not compute per-particle array
+
+UNDOCUMENTED
+
+E: Dump modify compute ID vector is not large enough
+
+Self-explanatory.
+
+E: Could not find dump modify fix ID
+
+Self-explanatory.
+
+E: Dump modify fix ID does not compute per-particle info
+
+UNDOCUMENTED
+
+E: Dump modify fix ID does not compute per-particle vector
+
+UNDOCUMENTED
+
+E: Dump modify fix ID does not compute per-particle array
+
+UNDOCUMENTED
+
+E: Dump modify fix ID vector is not large enough
+
+Self-explanatory.
+
+E: Could not find dump modify variable name
+
+Self-explanatory.
+
+E: Dump modify variable is not particle-style variable
+
+UNDOCUMENTED
+
+E: Invalid dump_modify threshhold operator
+
+Operator keyword used for threshold specification in not recognized.
+
+*/

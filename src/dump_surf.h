@@ -112,3 +112,63 @@ class DumpSurf : public Dump {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: No dump surf arguments specified
+
+UNDOCUMENTED
+
+E: Invalid attribute in dump surf command
+
+UNDOCUMENTED
+
+E: Could not find dump surf compute ID
+
+UNDOCUMENTED
+
+E: Could not find dump surf fix ID
+
+UNDOCUMENTED
+
+E: Dump surf and fix not computed at compatible times
+
+UNDOCUMENTED
+
+E: Could not find dump surf variable name
+
+UNDOCUMENTED
+
+E: Invalid dump surf field for 2d simulation
+
+UNDOCUMENTED
+
+E: Dump surf compute does not compute per-surf info
+
+UNDOCUMENTED
+
+E: Dump surf compute does not calculate per-surf array
+
+UNDOCUMENTED
+
+E: Dump surf compute vector is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Dump surf fix does not compute per-surf info
+
+UNDOCUMENTED
+
+E: Dump surf fix does not compute per-surf array
+
+UNDOCUMENTED
+
+E: Dump surf fix vector is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Dump surf variable is not surf-style variable
+
+UNDOCUMENTED
+
+*/

@@ -111,4 +111,32 @@ class Cut2d : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Point appears first in more than one CLINE
+
+UNDOCUMENTED
+
+E: Point appears last in more than one CLINE
+
+UNDOCUMENTED
+
+E: Singlet CLINES point not on cell border
+
+UNDOCUMENTED
+
+E: No positive areas in cell
+
+UNDOCUMENTED
+
+E: More than one positive area with a negative area
+
+UNDOCUMENTED
+
+E: Single area is negative, inverse donut
+
+UNDOCUMENTED
+
+E: Could not find split point in split cell
+
+UNDOCUMENTED
+
 */

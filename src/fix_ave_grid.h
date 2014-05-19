@@ -68,3 +68,65 @@ class FixAveGrid : public Fix {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Compute ID for fix ave/grid does not exist
+
+UNDOCUMENTED
+
+E: Fix ave/grid compute does not calculate per-grid values
+
+UNDOCUMENTED
+
+E: Fix ave/grid compute does not calculate a per-grid vector
+
+UNDOCUMENTED
+
+E: Fix ave/grid compute does not calculate a per-grid array
+
+UNDOCUMENTED
+
+E: Fix ave/grid compute array is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Fix ID for fix ave/grid does not exist
+
+UNDOCUMENTED
+
+E: Fix ave/grid fix does not calculate per-grid values
+
+UNDOCUMENTED
+
+E: Fix ave/grid fix does not calculate a per-grid vector
+
+UNDOCUMENTED
+
+E: Fix ave/grid fix does not calculate a per-grid array
+
+UNDOCUMENTED
+
+E: Fix ave/grid fix array is accessed out-of-range
+
+UNDOCUMENTED
+
+E: Fix for fix ave/grid not computed at compatible time
+
+UNDOCUMENTED
+
+E: Variable name for fix ave/grid does not exist
+
+UNDOCUMENTED
+
+E: Fix ave/grid variable is not grid-style variable
+
+UNDOCUMENTED
+
+*/

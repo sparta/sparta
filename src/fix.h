@@ -82,3 +82,11 @@ class Fix : protected Pointers {
 }
 
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Fix ID must be alphanumeric or underscore characters
+
+Self-explanatory.
+
+*/

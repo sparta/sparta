@@ -83,3 +83,37 @@ class FixInflow : public Fix {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Fix inflow mixture ID does not exist
+
+UNDOCUMENTED
+
+E: Cannot use fix inflow in z dimension for 2d simulation
+
+UNDOCUMENTED
+
+E: Cannot use fix inflow in y dimension for axisymmetric
+
+UNDOCUMENTED
+
+E: Cannot use fix inflow n > 0 with perspecies yes
+
+UNDOCUMENTED
+
+E: Cannot use fix inflow on periodic boundary
+
+UNDOCUMENTED
+
+E: Fix inflow used on outflow boundary
+
+UNDOCUMENTED
+
+*/

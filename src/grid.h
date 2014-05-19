@@ -292,4 +292,62 @@ class Grid : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Cell ID has too many bits
+
+UNDOCUMENTED
+
+E: Owned cells with unknown neighbors = %d
+
+UNDOCUMENTED
+
+E: Grid in/out self-mark error %d for icell %d, icorner %d, connect %d %d, other cell %d, other corner %d, values %d %d\n
+
+UNDOCUMENTED
+
+E: Grid in/out other-mark error %d\n
+
+UNDOCUMENTED
+
+E: Cell type mis-match when marking on self
+
+UNDOCUMENTED
+
+E: Parent cell child missing
+
+UNDOCUMENTED
+
+E: Cell type mis-match when marking on neigh proc
+
+UNDOCUMENTED
+
+E: Grid cells marked as unknown = %d
+
+UNDOCUMENTED
+
+W: Grid cells marked as unknown = %d
+
+UNDOCUMENTED
+
+W: Grid cell interior corner points marked as unknown = %d
+
+UNDOCUMENTED
+
+E: Grid cell corner points on boundary marked as unknown = %d
+
+UNDOCUMENTED
+
+E: Cannot weight cells before grid is defined
+
+UNDOCUMENTED
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Cannot use weight cell radius unless axisymmetric
+
+UNDOCUMENTED
+
 */

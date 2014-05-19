@@ -128,3 +128,108 @@ class DumpImage : public DumpParticle {
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Invalid dump image filename
+
+The file produced by dump image cannot be binary and must
+be for a single processor.
+
+E: Support for writing images in JPEG format not included
+
+LAMMPS was not built with the -DLAMMPS_JPEG switch in the Makefile.
+
+E: Support for writing images in PNG format not included
+
+LAMMPS was not built with the -DLAMMPS_PNG switch in the Makefile.
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+E: Invalid dump image theta value
+
+Theta must be between 0.0 and 180.0 inclusive.
+
+E: Dump image persp option is not yet supported
+
+Self-explanatory.
+
+E: Dump image cannot use grid and gridx/gridy/gridz
+
+UNDOCUMENTED
+
+E: Dump image requires one snapshot per file
+
+Use a "*" in the filename.
+
+E: Variable name for dump image theta does not exist
+
+Self-explanatory.
+
+E: Variable for dump image theta is invalid style
+
+Must be an equal-style variable.
+
+E: Variable name for dump image phi does not exist
+
+Self-explanatory.
+
+E: Variable for dump image phi is invalid style
+
+Must be an equal-style variable.
+
+E: Variable name for dump image center does not exist
+
+Self-explanatory.
+
+E: Variable for dump image center is invalid style
+
+Must be an equal-style variable.
+
+E: Variable name for dump image zoom does not exist
+
+Self-explanatory.
+
+E: Variable for dump image zoom is invalid style
+
+Must be an equal-style variable.
+
+E: Variable name for dump image persp does not exist
+
+Self-explanatory.
+
+E: Variable for dump image persp is invalid style
+
+Must be an equal-style variable.
+
+E: Could not find dump image compute ID
+
+UNDOCUMENTED
+
+E: Could not find dump image fix ID
+
+UNDOCUMENTED
+
+E: Invalid color map min/max values
+
+The min/max values are not consistent with either each other or
+with values in the color map.
+
+E: Invalid dump image zoom value
+
+Zoom value must be > 0.0.
+
+E: Invalid dump image persp value
+
+Persp value must be >= 0.0.
+
+E: Invalid color in dump_modify command
+
+The specified color name was not in the list of recognized colors.
+See the dump_modify doc page.
+
+*/
