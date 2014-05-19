@@ -73,7 +73,7 @@ prop7 = vibrational temperature (temperature units)
 prop8 = species weight ()
 prop9 = multiple of electon charge (1 for a proton) :ul
 
-TODO: need to fill in ??? and empty units (), also what is species wt?
+TODO: GALLIS need to fill in ??? and empty units (), also what is species wt?
 
 :line
 
