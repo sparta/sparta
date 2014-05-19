@@ -1194,7 +1194,7 @@ void Image::write_PNG(FILE *fp)
   memset(text_ptr,0,2*sizeof(png_text));
 
   char key0[]  = "Software";
-  char text0[] = "SPARTA " LAMMPS_VERSION;
+  char text0[] = "SPARTA " SPARTA_VERSION;
   char key1[]  = "Description";
   char text1[] = "Dump image snapshot";
   text_ptr[0].key = key0;
