@@ -68,13 +68,13 @@ imbalance.
 </P>
 <P>IMPORTANT NOTE: This command attempts to minimize the imbalance
 factor, as defined above.  But computational cost is not strictly
-proportional to particle count.  Also, changing the assignment of grid
-cells and particles to processors may lead to additional computational
-and communication overheads, e.g. in the per grid cell collision and
-chemistry calculations or when migrating particles between processors.
-Thus you should benchmark the run times of your simulation to judge
-how often balancing should be performed, and how aggressively to set
-the <I>thresh</I> value.
+proportional to particle count, depending on the
+<A HREF = "collide.html">collision</A> and <A HREF = "react.html">chemistry</A> models being used.
+Also, changing the assignment of grid cells and particles to
+processors may lead to additional communication overheads, e.g.  when
+migrating particles between processors.  Thus you should benchmark the
+run times of your simulation to judge how often balancing should be
+performed, and how aggressively to set the <I>thresh</I> value.
 </P>
 <HR>
 

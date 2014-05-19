@@ -353,7 +353,7 @@ and we will include them in the distribution.
 
 :line
 
-2.4 Building SPARTA as a library :h4,link(start_4)
+2.3 Building SPARTA as a library :h4,link(start_3)
 
 SPARTA can be built as either a static or shared library, which can
 then be called from another application or a scripting language.  See
@@ -437,7 +437,7 @@ setenv LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:/home/sjplimp/sparta/src :pre
 
 :line
 
-2.5 Running SPARTA :h4,link(start_5)
+2.4 Running SPARTA :h4,link(start_4)
 
 By default, SPARTA runs by reading commands from standard input.  Thus
 if you run the SPARTA executable by itself, e.g.
@@ -506,7 +506,7 @@ more processors or setup a smaller problem.
 
 :line
 
-2.6 Command-line options :h4,link(start_6)
+2.5 Command-line options :h4,link(start_5)
 
 At run time, SPARTA recognizes several optional command-line switches
 which may be used in any order.  Either the full word or a one-or-two
@@ -652,7 +652,7 @@ negative numeric value. It is OK if the first value1 starts with a
 
 :line
 
-2.7 SPARTA screen output :h4,link(start_7)
+2.6 SPARTA screen output :h4,link(start_6)
 
 As SPARTA reads an input script, it prints information to both the
 screen and a log file about significant actions it takes to setup a

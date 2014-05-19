@@ -55,6 +55,9 @@ surf"_compute_surf.html command, time-averaged via the "fix
 ave/surf"_fix_ave_surf.html command, and ouput via the "dump
 surface"_dump.html command.
 
+IMPORTANT NOTE: Surface chemistry models have not yet been implemented
+in SPARTA.
+
 All of the surface elements in the file are assigned a surfcoll-ID,
 which is the ID of a surface collision model previously defined by the
 "surf_collide"_surf_collide.html command.  This model will be used to

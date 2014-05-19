@@ -120,8 +120,6 @@ distribution.
 
 <A NAME = "mod_1"></A><H4>8.1 Compute styles 
 </H4>
-<HR>
-
 <P><A HREF = "compute.html">Compute style commands</A> calculate instantaneous
 properties of the simulated system.  They can be global properties, or
 per particle or per grid cell or per surface element properties.  The
@@ -143,6 +141,8 @@ class.  See compute.h for details.  All of these methods are optional.
 <TR><TD >memory_usage</TD><TD > tally memory usage 
 </TD></TR></TABLE></DIV>
 
+<HR>
+
 <A NAME = "mod_2"></A><H4>8.2 Fix styles 
 </H4>
 <P><A HREF = "fix.html">Fix style commands</A> perform operations during the
@@ -153,8 +153,8 @@ various quantities.  They can also produce output of various kinds,
 similar to <A HREF = "compute.html">compute</A> commands.
 </P>
 <P>Here is a brief description of methods to define in a new derived
-class.  See compute.h for details.  All of these methods, except
-setmask(), are optional.
+class.  See fix.h for details.  All of these methods are optional,
+except setmask().
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
 <TR><TD >setmask</TD><TD > set flags that determine when the fix is called within a timestep</TD></TR>
@@ -168,24 +168,115 @@ setmask(), are optional.
 
 <A NAME = "mod_3"></A><H4>8.3 Region styles 
 </H4>
+<P><A HREF = "region.html">Region style commands</A> define geometric regions
+within the simulation box.  Other commands use regions
+to limit their computational scope.
+</P>
+<P>Here is a brief description of methods to define in a new derived
+class.  See region.h for details.  The inside() method is required.
+</P>
+<P>inside: determine whether a point is inside/outside the region 
+</P>
 <HR>
 
 <A NAME = "mod_4"></A><H4>8.4 Collision styles 
 </H4>
+<P><A HREF = "collide.html">Collision style commands</A> define collision models that
+calculate interactions between particles in the same grid cell.
+</P>
+<P>Here is a brief description of methods to define in a new derived
+class.  See collide.h for details.  All of these methods are required
+except init() and modify_params().
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >init</TD><TD > initialization before a run</TD></TR>
+<TR><TD >modify_params</TD><TD > process style-specific options of the <A HREF = "collide_modify.html">collide_modify</A> command</TD></TR>
+<TR><TD >vremax_init</TD><TD > estimate VREmax settings</TD></TR>
+<TR><TD >attempt_collision</TD><TD > compute # of collisions to attempt for entire cell</TD></TR>
+<TR><TD >attempt_collision</TD><TD > compute # of collisions to attempt between 2 species groups</TD></TR>
+<TR><TD >test_collision</TD><TD > determine if a collision bewteen 2 particles occurs</TD></TR>
+<TR><TD >setup_collision</TD><TD > pre-computation before a 2-particle collision</TD></TR>
+<TR><TD >perform_collision</TD><TD > calculate the outcome of a 2-particle collision 
+</TD></TR></TABLE></DIV>
+
 <HR>
 
 <A NAME = "mod_5"></A><H4>8.5 Surface collision styles 
 </H4>
+<P><A HREF = "collide.html">Surface collision style commands</A> define collision
+models that calculate interactions between a particle and surface
+element.
+</P>
+<P>Here is a brief description of methods to define in a new derived
+class.  See surf_collide.h for details.  All of these methods are
+required except dynamic().
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >init</TD><TD > initialization before a run</TD></TR>
+<TR><TD >collide</TD><TD > perform a particle/surface-element collision</TD></TR>
+<TR><TD >dynamic</TD><TD > allow surface property to change during a simulation 
+</TD></TR></TABLE></DIV>
+
 <HR>
 
 <A NAME = "mod_6"></A><H4>8.6 Chemistry styles 
 </H4>
+<P>Particle/particle chemistry models in SPARTA are specified by
+<A HREF = "react.html">reaction style commands</A> which define lists of possible
+reactions and their parameters.
+</P>
+<P>Here is a brief description of methods to define in a new derived
+class.  See react.h for details.  The init() method is optional;
+the attempt() method is required.
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >init</TD><TD > initialization before a run</TD></TR>
+<TR><TD >attempt</TD><TD > attempt a chemical reaction between two particles 
+</TD></TR></TABLE></DIV>
+
 <HR>
 
 <A NAME = "mod_7"></A><H4>8.7 Dump styles 
 </H4>
+<P><A HREF = "dump.html">Dump commands</A> output snapshots of simulation data to a
+file periodically during a simulation, in a particular file format.
+Per particle, per grid cell, or per surface element data can be
+output.
+</P>
+<P>Here is a brief description of methods to define in a new derived
+class.  See dump.h for details.  The init_style(), modify_param(), and
+memory_usage() methods are optional; all the others are required.
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >init_style</TD><TD > style-specific initialization before a run</TD></TR>
+<TR><TD >modify_param</TD><TD > process style-specific options of the <A HREF = "dump_modify.html">dump_modify</A> command</TD></TR>
+<TR><TD >write_header</TD><TD > write the header of a snapshot to a file</TD></TR>
+<TR><TD >count</TD><TD > # of entities this processor will output</TD></TR>
+<TR><TD >pack</TD><TD > pack a processor's data into a buffer</TD></TR>
+<TR><TD >write_data</TD><TD > write a buffer of data to a file</TD></TR>
+<TR><TD >memory_usage</TD><TD > tally memory usage 
+</TD></TR></TABLE></DIV>
+
 <HR>
 
 <A NAME = "mod_8"></A><H4>8.8 Input script commands 
 </H4>
+<P>New commands can be added to SPARTA that will be recognized in input
+scripts.  For example, the <A HREF = "create_particles.html">create_particles</A>,
+<A HREF = "read_surf.html">read_surf</A>, and <A HREF = "run.html">run</A> commands are all
+implemented in this fashion.  When such a command is encountered in an
+input script, SPARTA simply creates a class with the corresponding
+name, invokes the "command" method of the class, and passes it the
+arguments from the input script.  The command() method can perform
+whatever operations it wishes on SPARTA data structures.
+</P>
+<P>The single method the new class must define is as follows:
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >command</TD><TD > operations performed by the input script command 
+</TD></TR></TABLE></DIV>
+
+<P>Of course, the new class can define other methods and variables as
+needed.
+</P>
 </HTML>
