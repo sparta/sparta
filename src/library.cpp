@@ -23,6 +23,7 @@
 #include "sparta.h"
 #include "input.h"
 #include "update.h"
+#include "particle.h"
 #include "modify.h"
 #include "compute.h"
 #include "variable.h"
@@ -110,7 +111,7 @@ void sparta_free(void *ptr)
 
 /* ----------------------------------------------------------------------
    extract a pointer to an internal SPARTA global entity
-   name = desired quantity, e.g. dt or fnum or nrho
+   name = desired quantity, e.g. dt or fnum, etc
    returns a void pointer to the entity
      which the caller can cast to the proper data type
    returns a NULL if name not listed below
@@ -124,6 +125,7 @@ void *sparta_extract_global(void *ptr, char *name)
   if (strcmp(name,"dt") == 0) return (void *) &sparta->update->dt;
   if (strcmp(name,"fnum") == 0) return (void *) &sparta->update->fnum;
   if (strcmp(name,"nrho") == 0) return (void *) &sparta->update->nrho;
+  if (strcmp(name,"nplocal") == 0) return (void *) &sparta->particle->nlocal;
   return NULL;
 }
 
