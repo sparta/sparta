@@ -73,7 +73,8 @@ please send an email to the
 
 If you succeed in building SPARTA on a new kind of machine, for which
 there isn't a similar Makefile in the src/MAKE directory, send it to
-the developers and we'll include it in future SPARTA releases.
+the "developers"_http://sparta.sandia.gov/authors.html and we'll
+include it in future SPARTA releases.
 
 :line
 
@@ -347,9 +348,10 @@ One way to do this is install and use cygwin to build SPARTA with a
 standard Linux make, just as you would on any Linux box.
 
 You can also import the *.cpp and *.h files into Microsoft Visual
-Studio.  If someone does this and wants to provide project files
-or other Windows build tips, please send them to the developers
-and we will include them in the distribution.
+Studio.  If someone does this and wants to provide project files or
+other Windows build tips, please send them to the
+"developers"_http://sparta.sandia.gov/authors.html and we will include
+them in the distribution.
 
 :line
 

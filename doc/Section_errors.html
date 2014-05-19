@@ -26,83 +26,66 @@ when using SPARTA.
 </H4>
 <P>If two SPARTA runs do not produce the same answer on different
 machines or different numbers of processors, this is typically not a
-bug.  In theory you should get identical answers on any number of
-processors and on any machine.  In practice, numerical round-off can
-cause slight differences and eventual divergence of molecular dynamics
-phase space trajectories within a few 100s or few 1000s of timesteps.
-However, the statistical properties of the two runs (e.g. average
-energy or temperature) should still be the same.
-</P>
-<P>If the <A HREF = "velocity.html">velocity</A> command is used to set initial atom
-velocities, a particular atom can be assigned a different velocity
-when the problem is run on a different number of processors or on
-different machines.  If this happens, the phase space trajectories of
-the two simulations will rapidly diverge.  See the discussion of the
-<I>loop</I> option in the <A HREF = "velocity.html">velocity</A> command for details and
-options that avoid this issue.
-</P>
-<P>Similarly, the <A HREF = "create_atoms.html">create_atoms</A> command generates a
-lattice of atoms.  For the same physical system, the ordering and
-numbering of atoms by atom ID may be different depending on the number
-of processors.
-</P>
-<P>Some commands use random number generators which may be setup to
-produce different random number streams on each processor and hence
-will produce different effects when run on different numbers of
-processors.  A commonly-used example is the <A HREF = "fix_langevin.html">fix
-langevin</A> command for thermostatting.
+bug.  On different machines, there can be numerical round-off in the
+computations which causes slight differences in particle trajectories
+or the number of particles, which will lead to numerical divergence of
+the particle trajectores and averaged statistical quantities within a
+few 100s or few 1000s of timesteps.  When running on different numbers
+of processors, random numbers are used in different ways, so two
+simulations can be immediately different.  However, the statistical
+properties (e.g. overall particle temperature or per grid cell
+temperature or surface energy flux) for the two runs on different
+machines or on different numbers of processors should still be
+similar.
 </P>
 <P>A SPARTA simulation typically has two stages, setup and run.  Most
-SPARTA errors are detected at setup time; others like a bond
-stretching too far may not occur until the middle of a run.
+SPARTA errors are detected at setup time; others like running out of
+memory may not occur until the middle of a run.
 </P>
 <P>SPARTA tries to flag errors and print informative error messages so
-you can fix the problem.  Of course, SPARTA cannot figure out your
-physics or numerical mistakes, like choosing too big a timestep,
-specifying erroneous force field coefficients, or putting 2 atoms on
-top of each other!  If you run into errors that SPARTA doesn't catch
-that you think it should flag, please send an email to the
-<A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
+you can fix the problem.  Of course, SPARTA cannot figure out physics
+or numerical mistakes, like choosing too big a timestep or specifying
+erroneous collision parameters.  If you run into errors that SPARTA
+doesn't catch that you think it should flag, please send an email to
+the <A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
 </P>
 <P>If you get an error message about an invalid command in your input
 script, you can determine what command is causing the problem by
-looking in the log.lammps file or using the <A HREF = "echo.html">echo command</A>
+looking in the log.sparta file or using the <A HREF = "echo.html">echo command</A>
 to see it on the screen.  For a given command, SPARTA expects certain
 arguments in a specified order.  If you mess this up, SPARTA will
 often flag the error, but it may read a bogus argument and assign a
-value that is valid, but not what you wanted.  E.g. trying to read the
-string "abc" as an integer value and assigning the associated variable
-a value of 0.
+value that is valid, but not what you wanted.
 </P>
 <P>Generally, SPARTA will print a message to the screen and logfile and
 exit gracefully when it encounters a fatal error.  Sometimes it will
 print a WARNING to the screen and logfile and continue on; you can
 decide if the WARNING is important or not.  A WARNING message that is
 generated in the middle of a run is only printed to the screen, not to
-the logfile, to avoid cluttering up thermodynamic output.  If SPARTA
+the logfile, to avoid cluttering up statistical output.  If SPARTA
 crashes or hangs without spitting out an error message first then it
 could be a bug (see the <A HREF = "#err_2">next section</A>) or one of the following
 cases:
 </P>
 <P>SPARTA runs in the available memory a processor allows to be
-allocated.  Most reasonable MD runs are compute limited, not memory
+allocated.  Most reasonable runs are compute limited, not memory
 limited, so this shouldn't be a bottleneck on most platforms.  Almost
 all large memory allocations in the code are done via C-style malloc's
 which will generate an error message if you run out of memory.
 Smaller chunks of memory are allocated via C++ "new" statements.  If
-you are unlucky you could run out of memory just when one of these
+you are unlucky, you could run out of memory just when one of these
 small requests is made, in which case the code will crash or hang (in
 parallel), since SPARTA doesn't trap on those errors.
 </P>
 <P>Illegal arithmetic can cause SPARTA to run slow or crash.  This is
 typically due to invalid physics and numerics that your simulation is
-computing.  If you see wild thermodynamic values or NaN values in your
+computing.  If you see wild statistical values or NaN values in your
 SPARTA output, something is wrong with your simulation.  If you
-suspect this is happening, it is a good idea to print out
-thermodynamic info frequently (e.g. every timestep) via the
-<A HREF = "thermo.html">thermo</A> so you can monitor what is happening.
-Visualizing the atom movement is also a good idea to insure your model
-is behaving as you expect.
+suspect this is happening, it is a good idea to print out statistical
+info frequently (e.g. every timestep) via the <A HREF = "stats.html">stats</A>
+command so you can monitor what is happening.  Visualizing the
+particle motion is also a good idea to insure your model is behaving
+as you expect.
 </P>
 <P>In parallel, one way SPARTA can hang is due to how different MPI
 implementations handle buffering of messages.  If the code hangs
@@ -114,8 +97,8 @@ buffering or boost the sizes of messages that can be buffered.
 
 <A NAME = "err_2"></A><H4>10.2 Reporting bugs 
 </H4>
-<P>If you are confident that you have found a bug in SPARTA, follow these
-steps.
+<P>If you are confident that you have found a bug in SPARTA, please
+follow these steps.
 </P>
 <P>Check the <A HREF = "http://sparta.sandia.gov/bug.html">New features and bug
 fixes</A> section of the <A HREF = "http://sparta.sandia.gov">SPARTA WWW
@@ -123,22 +106,15 @@ site</A> to see if the bug has already been reported or fixed or the
 <A HREF = "http://sparta.sandia.gov/unbug.html">Unfixed bug</A> to see if a fix is
 pending.
 </P>
-<P>Check the <A HREF = "http://sparta.sandia.gov/mail.html">mailing list</A>
-to see if it has been discussed before.
-</P>
-<P>If not, send an email to the mailing list describing the problem with
-any ideas you have as to what is causing it or where in the code the
-problem might be.  The developers will ask for more info if needed,
-such as an input script or data files.
+<P>If not, please email a description of the problem to the
+<A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
 </P>
 <P>The most useful thing you can do to help us fix the bug is to isolate
-the problem.  Run it on the smallest number of atoms and fewest number
-of processors and with the simplest input script that reproduces the
-bug and try to identify what command or combination of commands is
-causing the problem.
-</P>
-<P>As a last resort, you can send an email directly to the
-<A HREF = "http://sparta.sandia.gov/authors.html">developers</A>.
+the problem.  Run it on the smallest number of particles and grid
+cells and fewest number of processors and with the simplest and
+quick-to-run input script that reproduces the bug.  And try to
+identify what command or combination of commands is causing the
+problem.
 </P>
 <HR>
 
@@ -147,19 +123,15 @@ causing the problem.
 <P>These are two alphabetic lists of the <A HREF = "#error">ERROR</A> and
 <A HREF = "#warn">WARNING</A> messages SPARTA prints out and the reason why.  If the
 explanation here is not sufficient, the documentation for the
-offending command may help.  
-Error and warning messages also list the source file and line number
-where the error was generated.  For example, this message
+offending command may help.  Error and warning messages also list the
+source file and line number where the error was generated.  For
+example, this message
 </P>
-<P>ERROR: Illegal velocity command (velocity.cpp:78)
+<P>ERROR: Illegal create_particles command (create_particles.cpp:68)
 </P>
-<P>means that line #78 in the file src/velocity.cpp generated the error.
-Looking in the source code may help you figure out what went wrong.
-</P>
-<P>Note that error messages from <A HREF = "Section_start.html#start_3">user-contributed
-packages</A> are not listed here.  If such an
-error occurs and is not self-explanatory, you'll need to look in the
-source code or contact the author of the package.
+<P>means that line #68 in the file src/create_particles.cpp generated the
+error.  Looking in the source code may help you figure out what went
+wrong.
 </P>
 <H4><A NAME = "error"></A>Errors: 
 </H4>

@@ -27,7 +27,8 @@ extend with new functionality.
 In this section, changes and additions users can make are listed along
 with minimal instructions.  If you add a new feature to SPARTA and
 think it will be of general interest to users, please submit it to the
-developers for inclusion in the released version of SPARTA.
+"developers"_http://sparta.sandia.gov/authors.html for inclusion in
+the released version of SPARTA.
 
 The best way to add a new feature is to find a similar feature in
 SPARTA and look at the corresponding source and header files to figure
@@ -104,12 +105,12 @@ processor and analyze it.  This runs the risk of seriously degrading
 the parallel efficiency. :l
 
 If you have a question about how to compute something or about
-internal SPARTA data structures or algorithms, feel free to
-send an email to the developers.
+internal SPARTA data structures or algorithms, feel free to send an
+email to the "developers"_http://sparta.sandia.gov/authors.html.
 
 If you add something you think is generally useful, also send an email
-to the developers. We might be interested in adding it to the SPARTA
-distribution. :ule,l
+to the "developers"_http://sparta.sandia.gov/authors.html so we can
+consider adding it to the SPARTA distribution. :ule,l
 
 :line
 :line
