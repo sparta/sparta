@@ -14,7 +14,7 @@
 
 # Python wrapper on SPARTA library via ctypes
 
-import types
+import types,sys
 from ctypes import *
 
 class sparta:
