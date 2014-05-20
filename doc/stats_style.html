@@ -31,6 +31,7 @@
 </PRE>
 <PRE>      step = timestep
       elapsed = timesteps since start of this run
+      elaplong = timesteps since start of initial run in a series of runs
       dt = timestep size
       cpu = elapsed CPU time in seconds
       tpcpu = time per CPU second
@@ -79,9 +80,13 @@ other attributes of the statistics.
 <HR>
 
 <P>The <I>step</I> and <I>elapsed</I> keywords refer to timestep count.  <I>Step</I> is
-the current timestep, or iteration count when a
-<A HREF = "minimize.html">minimization</A> is being performed.  <I>Elapsed</I> is the
-number of timesteps elapsed since the beginning of this run.
+the current timestep.  <I>Elapsed</I> is the number of timesteps elapsed
+since the beginning of this run.  <I>Elaplong</I> is the number of
+timesteps elapsed since the beginning of an initial run in a series of
+runs.  See the <I>start</I> and <I>stop</I> keywords for the <A HREF = "run.html">run</A>
+command for info on how to invoke a series of runs that keep track of
+an initial starting time. If these keywords are not used, then
+<I>elapsed</I> and <I>elaplong</I> are the same value.
 </P>
 <P>The <I>cpu</I> keyword is elapsed CPU seconds since the beginning of this
 run.  The <I>tpcpu</I> and <I>spcpu</I> keywords are measures of how fast your

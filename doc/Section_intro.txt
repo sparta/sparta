@@ -108,7 +108,7 @@ Geometry :h4
   "create grid from input script"_create_grid.html or "read from file"_read_grid.html
   embed :triangulated (3d) or line-segmented (2d) surfaces"_#intro_3 in grid, "read in from file"_read_surf.html :ul
 
-Gas-phase collision and chemistry :h4
+Gas-phase collisions and chemistry :h4
 
   collisions between pairs of species groups
   "VSS (variable soft sphere) or VHS (variable hard sphere) collisions"_collide.html
@@ -120,6 +120,7 @@ Surface collisions :h4
 
 Performance :h4
 
+  "grid cell weighting"_global.html of particles
   "static"_balance.html load-balancing of grid cells or particles
   "dynamic"_fix_balance.html load-balancing of grid cells or particles :ul
 
@@ -134,7 +135,7 @@ Output :h4
 
   "log file of statistical info"_stats_style.html
   "dump files"_dump.html (text or binary) of per particle, per grid cell, per surface element values
-  on-the-fly "rendered images"_dump_image.html of particles, grid cells, surface elements :ul
+  on-the-fly "rendered images and movies"_dump_image.html of particles, grid cells, surface elements :ul
 
 Pre- and post-processing :h4
 

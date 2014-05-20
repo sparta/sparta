@@ -27,6 +27,7 @@ arg1,arg2,... = list of keywords :ulb,l
 
       step = timestep
       elapsed = timesteps since start of this run
+      elaplong = timesteps since start of initial run in a series of runs
       dt = timestep size
       cpu = elapsed CPU time in seconds
       tpcpu = time per CPU second
@@ -74,9 +75,13 @@ other attributes of the statistics.
 :line
 
 The {step} and {elapsed} keywords refer to timestep count.  {Step} is
-the current timestep, or iteration count when a
-"minimization"_minimize.html is being performed.  {Elapsed} is the
-number of timesteps elapsed since the beginning of this run.
+the current timestep.  {Elapsed} is the number of timesteps elapsed
+since the beginning of this run.  {Elaplong} is the number of
+timesteps elapsed since the beginning of an initial run in a series of
+runs.  See the {start} and {stop} keywords for the "run"_run.html
+command for info on how to invoke a series of runs that keep track of
+an initial starting time. If these keywords are not used, then
+{elapsed} and {elaplong} are the same value.
 
 The {cpu} keyword is elapsed CPU seconds since the beginning of this
 run.  The {tpcpu} and {spcpu} keywords are measures of how fast your

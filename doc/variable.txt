@@ -484,7 +484,8 @@ where dt = the timestep size.
 The run begins on startstep.  Startstep can span multiple runs, using
 the {start} keyword of the "run"_run.html command.  See the
 "run"_run.html command for details of how to do this.  Note that the
-"stats_style"_stats_style.html keyword elaplong = timestep-startstep.
+"stats_style"_stats_style.html keyword {elaplong} =
+timestep-startstep.
 
 The swiggle(x,y,z) and cwiggle(x,y,z) functions each take 3 arguments:
 x = value0, y = amplitude, z = period.  They use the elapsed time to
@@ -499,11 +500,8 @@ where dt = the timestep size.
 The run begins on startstep.  Startstep can span multiple runs, using
 the {start} keyword of the "run"_run.html command.  See the
 "run"_run.html command for details of how to do this.  Note that the
-"stats_style"_stats_style.html keyword elaplong = timestep-startstep.
-
-IMPORTANT NOTE: Currently, the run command does not currently support
-the start/stop keywords.  In the formula above startstep = 0 and
-stopstep = the number of timesteps being performed by the run.
+"stats_style"_stats_style.html keyword {elaplong} =
+timestep-startstep.
 
 :line
 

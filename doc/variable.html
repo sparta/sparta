@@ -489,7 +489,8 @@ according to this formula:
 <P>The run begins on startstep.  Startstep can span multiple runs, using
 the <I>start</I> keyword of the <A HREF = "run.html">run</A> command.  See the
 <A HREF = "run.html">run</A> command for details of how to do this.  Note that the
-<A HREF = "stats_style.html">stats_style</A> keyword elaplong = timestep-startstep.
+<A HREF = "stats_style.html">stats_style</A> keyword <I>elaplong</I> =
+timestep-startstep.
 </P>
 <P>The swiggle(x,y,z) and cwiggle(x,y,z) functions each take 3 arguments:
 x = value0, y = amplitude, z = period.  They use the elapsed time to
@@ -504,11 +505,8 @@ value = value0 + Amplitude * (1 - cos(omega*(timestep-startstep)*dt))
 <P>The run begins on startstep.  Startstep can span multiple runs, using
 the <I>start</I> keyword of the <A HREF = "run.html">run</A> command.  See the
 <A HREF = "run.html">run</A> command for details of how to do this.  Note that the
-<A HREF = "stats_style.html">stats_style</A> keyword elaplong = timestep-startstep.
-</P>
-<P>IMPORTANT NOTE: Currently, the run command does not currently support
-the start/stop keywords.  In the formula above startstep = 0 and
-stopstep = the number of timesteps being performed by the run.
+<A HREF = "stats_style.html">stats_style</A> keyword <I>elaplong</I> =
+timestep-startstep.
 </P>
 <HR>
 
