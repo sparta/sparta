@@ -157,6 +157,7 @@ within the SPARTA code.  The options that are currently recogized are:
 <UL><LI>-DSPARTA_GZIP
 <LI>-DSPARTA_JPEG
 <LI>-DSPARTA_PNG
+<LI>-DLAMMPS_FFMPEG
 <LI>-DSPARTA_MAP
 <LI>-DSPARTA_SMALL
 <LI>-DSPARTA_BIG
@@ -173,6 +174,12 @@ image files respectively. If not, it will only be able to write out
 PPM image files.  For JPEG files, you must also link SPARTA with a
 JPEG library, as described below.  For PNG files, you must also link
 SPARTA with a PNG library, as described below.
+</P>
+<P>If you use -DSPARTA_FFMPEG, the <A HREF = "dump_image.html">dump movie</A> command
+will be available to support on-the-fly generation of rendered movies
+the need to store intermediate image files.  It requires that your
+machines supports the "popen" function in the standard runtime library
+and that an FFmpeg executable can be found by SPARTA during the run.
 </P>
 <P>If you use -DSPARTA_MAP, SPARTA will use the STL map class for hash
 tables.  This is less efficient than the STL unordered map class which
