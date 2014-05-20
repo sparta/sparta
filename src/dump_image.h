@@ -30,7 +30,7 @@ class DumpImage : public DumpParticle {
   DumpImage(class SPARTA *, int, char**);
   ~DumpImage();
 
- private:
+ protected:
   int filetype;
   class Image *image;              // class that renders the images
 

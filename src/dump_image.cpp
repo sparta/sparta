@@ -46,7 +46,7 @@ using namespace MathConst;
 #define INVOKED_PER_GRID 16
 #define INVOKED_PER_SURF 32
 
-enum{PPM,JPG,PNG};
+enum{PPM,JPG,PNG};        // multiple files
 enum{NUMERIC,TYPE,PROC,ATTRIBUTE,ONE};
 enum{STATIC,DYNAMIC};
 enum{COMPUTE,FIX,VARIABLE};
