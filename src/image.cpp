@@ -828,7 +828,6 @@ void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
 {
   double d1[3], d1len, d2[3], d2len, normal[3], invndotd;
   double xlocal[3], ylocal[3], zlocal[3];
-  double center[3], bounds[6];
   double surface[3];
   double depth;
 
@@ -858,10 +857,6 @@ void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
   if (invndotd == 0) return;
 
   double r[3],u[3];
-
-  center[0] = (xlocal[0] + ylocal[0] + zlocal[0]) / 3;
-  center[1] = (xlocal[1] + ylocal[1] + zlocal[1]) / 3;
-  center[2] = (xlocal[2] + ylocal[2] + zlocal[2]) / 3;
 
   r[0] = MathExtra::dot3(camRight,xlocal);
   r[1] = MathExtra::dot3(camRight,ylocal);
@@ -1300,9 +1295,11 @@ int Image::addcolor(char *name, double r, double g, double b)
 }
 
 /* ----------------------------------------------------------------------
-   search the list of color names for the string color
-   return a pointer to the 3 floating point RGB values
+   if index > 0, return ptr to index-1 color from rgb
+   if index < 0, return ptr to -index-1 color from userrgb
+   if index = 0, search the 2 lists of color names for the string color
    search user-defined color names first, then the list of NCOLORS names
+   return a pointer to the 3 floating point RGB values or NULL if didn't find
 ------------------------------------------------------------------------- */
 
 double *Image::color2rgb(const char *color, int index)
@@ -1593,7 +1590,14 @@ double *Image::color2rgb(const char *color, int index)
     {154/255.0, 205/255.0, 50/255.0}
   };
 
-  if (index) return rgb[index-1];
+  if (index > 0) {
+    if (index > NCOLORS) return NULL;
+    return rgb[index-1];
+  }
+  if (index < 0) {
+    if (-index > ncolors) return NULL;
+    return userrgb[-index-1];
+  }
 
   for (int i = 0; i < ncolors; i++)
     if (strcmp(color,username[i]) == 0) return userrgb[i];
