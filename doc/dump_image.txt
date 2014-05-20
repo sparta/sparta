@@ -584,7 +584,8 @@ PNG library.
 
 To write {movie} files, you must use the -SPARTA_FFMPEG switch when
 building SPARTA.  The FFmpeg executable must also be available on the
-machine where SPARTA is being run.
+machine where SPARTA is being run.  Typically it's name is lowercase,
+i.e. ffmpeg.
 
 See the "Section 2.2.2"_Section_start.html#start_2_2 section of the
 documentation for details.
