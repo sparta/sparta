@@ -920,7 +920,10 @@ void DumpImage::write()
     if (filetype == JPG) image->write_JPG(fp);
     else if (filetype == PNG) image->write_PNG(fp);
     else image->write_PPM(fp);
-    fclose(fp);
+    if (multifile) {
+      fclose(fp);
+      fp = NULL;
+    }
   }
 }
 
