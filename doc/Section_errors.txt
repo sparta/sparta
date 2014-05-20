@@ -100,10 +100,8 @@ If you are confident that you have found a bug in SPARTA, please
 follow these steps.
 
 Check the "New features and bug
-fixes"_http://sparta.sandia.gov/bug.html section of the "SPARTA WWW
-site"_sws to see if the bug has already been reported or fixed or the
-"Unfixed bug"_http://sparta.sandia.gov/unbug.html to see if a fix is
-pending.
+fixes"_http://sparta.sandia.gov/bug.html section of the "SPARTA web
+site"_sws to see if the bug has already been fixed.
 
 If not, please email a description of the problem to the
 "developers"_http://sparta.sandia.gov/authors.html.

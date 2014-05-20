@@ -7,13 +7,14 @@
 :line
 
 dump image command :h3
+dump movie command :h3
 
 [Syntax:]
 
-dump ID image N file color diameter keyword value ... :pre
+dump ID style N file color diameter keyword value ... :pre
 
 ID = user-assigned name for the dump :ulb,l
-image = style of dump command (other styles are discussed on the "dump"_dump.html doc page) :l
+style = {image} or {movie} = style of dump command (other styles {particle} or {grid} or {surf} are discussed on the "dump"_dump.html doc page) :l
 N = dump every this many timesteps :l
 file = name of file to write image to :l
 color = particle attribute that determines color of each particle :l
@@ -79,11 +80,13 @@ keyword = {particle} or {pdiam} or {grid} or {gridx} or {gridy} or {gridz} or {s
 
 [Examples:]
 
-dump myDump all image 100 dump.*.jpg type type :pre
+dump myDump all image 100 dump.*.jpg type type
+dump myDump all movie 100 movie.mpg type type :pre
 
 These commands will dump shapshot images of all particles to a file
-every 100 steps.  The last two shell command will make a movie (once
-the run has finished) and play it in the Firefox browser:
+every 100 steps.  The last two shell command will make a movie from
+the JPG files (once the run has finished) and play it in the Firefox
+browser:
 
 dump                4 image 100 tmp.*.jpg type type pdiam 0.2 view 90 -90 
 dump_modify	    4 pad 4
@@ -93,14 +96,16 @@ dump_modify	    4 pad 4
 [Description:]
 
 Dump a high-quality ray-traced image of the simulation every N
-timesteps as either a JPEG or PNG or PPM file.  The options for this
-command as well as the "dump_modify"_dump_modify.html command control
-what is included in the image and how it appears.  A series of such
-images can easily be converted into an animated movie of your
-simulation; see further details below.  Other dump styles store
-snapshots of numerical data asociated with particles, grid cells, and
-surfaces in various formats, as discussed on the "dump"_dump.html doc
-page.
+timesteps and save the images either as a sequence of JPEG or PNG or
+PPM files, or as a single movie file.  The options for this command as
+well as the "dump_modify"_dump_modify.html command control what is
+included in the image and how it appears.  A series of such images can
+easily be converted into an animated movie of your simulation (see
+further details below), or the process can be automated without
+writing the intermediate files using the dump movie command.  Other
+dump styles store snapshots of numerical data asociated with
+particles, grid cells, and surfaces in various formats, as discussed
+on the "dump"_dump.html doc page.
 
 Here are two sample images, rendered as 1024x1024 JPEG files.  Click
 to see the full-size images:
@@ -120,12 +125,21 @@ created.  The JPEG and PNG files are binary; PPM has a text mode
 header followed by binary data.  JPEG images have lossy compression;
 PNG has lossless compression; and PPM files are uncompressed but can
 be compressed with gzip, if SPARTA has been compiled with
--DLAMMPS_GZIP and a ".gz" suffix is used.
+-DSPARTA_GZIP and a ".gz" suffix is used.
 
-To write out JPEG and PNG format files, you must build LAMMPS with
-support for the corresponding JPEG or PNG library.  See "Section
-2.2"_Section_start.html#start_2 of the manual for instructions on how
-to do this.
+Similarly, the format of the resulting movie is chosen with the
+{movie} dump style.  This is handled by the underlying FFmpeg
+converter program, which must be available on your machine, and thus
+details have to be looked up in the FFmpeg documentation.  Typical
+examples are: .avi, .mpg, .m4v, .mp4, .mkv, .flv, .mov, .gif
+Additional settings of the movie compression like bitrate and
+framerate can be set using the "dump_modify"_dump_modify.html command.
+
+To write out JPEG and PNG format files, you must build SPARTA with
+support for the corresponding JPEG or PNG library.  To convert images
+into movies, SPARTA has to be compiled with the -DSPARTA_FFMPEG flag.
+See "Section 2.2"_Section_start.html#start_2 of the manual for
+instructions on how to do this.
 
 :line
 
@@ -137,7 +151,7 @@ timestep is not a multiple of N.  This behavior can be changed via the
 between runs by using the "dump_modify every"_dump_modify.html
 command.
 
-Dump image filenames must contain a wildcard character "*", so that
+Dump {image} filenames must contain a wildcard character "*", so that
 one image file per snapshot is written.  The "*" character is replaced
 with the timestep value.  For example, tmp.dump.*.jpg becomes
 tmp.dump.0.jpg, tmp.dump.10000.jpg, tmp.dump.20000.jpg, etc.  Note
@@ -145,6 +159,10 @@ that the "dump_modify pad"_dump_modify.html command can be used to
 insure all timestep numbers are the same length (e.g. 00010), which
 can make it easier to convert a series of images into a movie in the
 correct ordering.
+
+Dump {movie} filenames on the other hand, must not have any wildcard
+character since only one file combining all images into a single movie
+will be written by the movie encoder.
 
 :line
 
@@ -486,7 +504,9 @@ set, no depth shading is performed.
 :line
 
 A series of JPEG, PNG, or PPM images can be converted into a movie
-file and then played as a movie using commonly available tools.
+file and then played as a movie using commonly available tools.  Using
+dump style {movie} automates this step and avoids the intermediate
+step of writing (many) image snapshot file.
 
 To manually convert JPEG, PNG or PPM files into an animated GIF or
 MPEG or other movie file you can:
@@ -561,6 +581,10 @@ To write JPEG images, you must use the -DSPARTA_JPEG switch when
 building SPARTA and link with a JPEG library. To write PNG images, you
 must use the -DSPARTA_PNG switch when building SPARTA and link with a
 PNG library.
+
+To write {movie} files, you must use the -SPARTA_FFMPEG switch when
+building SPARTA.  The FFmpeg executable must also be available on the
+machine where SPARTA is being run.
 
 See the "Section 2.2.2"_Section_start.html#start_2_2 section of the
 documentation for details.

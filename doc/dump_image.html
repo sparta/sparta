@@ -11,13 +11,15 @@
 
 <H3>dump image command 
 </H3>
+<H3>dump movie command 
+</H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>dump ID image N file color diameter keyword value ... 
+<PRE>dump ID style N file color diameter keyword value ... 
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
-<LI>image = style of dump command (other styles are discussed on the <A HREF = "dump.html">dump</A> doc page) 
+<LI>style = <I>image</I> or <I>movie</I> = style of dump command (other styles <I>particle</I> or <I>grid</I> or <I>surf</I> are discussed on the <A HREF = "dump.html">dump</A> doc page) 
 
 <LI>N = dump every this many timesteps 
 
@@ -91,11 +93,13 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>dump myDump all image 100 dump.*.jpg type type 
+<PRE>dump myDump all image 100 dump.*.jpg type type
+dump myDump all movie 100 movie.mpg type type 
 </PRE>
 <P>These commands will dump shapshot images of all particles to a file
-every 100 steps.  The last two shell command will make a movie (once
-the run has finished) and play it in the Firefox browser:
+every 100 steps.  The last two shell command will make a movie from
+the JPG files (once the run has finished) and play it in the Firefox
+browser:
 </P>
 <PRE>dump                4 image 100 tmp.*.jpg type type pdiam 0.2 view 90 -90 
 dump_modify	    4 pad 4
@@ -105,14 +109,16 @@ dump_modify	    4 pad 4
 <P><B>Description:</B>
 </P>
 <P>Dump a high-quality ray-traced image of the simulation every N
-timesteps as either a JPEG or PNG or PPM file.  The options for this
-command as well as the <A HREF = "dump_modify.html">dump_modify</A> command control
-what is included in the image and how it appears.  A series of such
-images can easily be converted into an animated movie of your
-simulation; see further details below.  Other dump styles store
-snapshots of numerical data asociated with particles, grid cells, and
-surfaces in various formats, as discussed on the <A HREF = "dump.html">dump</A> doc
-page.
+timesteps and save the images either as a sequence of JPEG or PNG or
+PPM files, or as a single movie file.  The options for this command as
+well as the <A HREF = "dump_modify.html">dump_modify</A> command control what is
+included in the image and how it appears.  A series of such images can
+easily be converted into an animated movie of your simulation (see
+further details below), or the process can be automated without
+writing the intermediate files using the dump movie command.  Other
+dump styles store snapshots of numerical data asociated with
+particles, grid cells, and surfaces in various formats, as discussed
+on the <A HREF = "dump.html">dump</A> doc page.
 </P>
 <P>Here are two sample images, rendered as 1024x1024 JPEG files.  Click
 to see the full-size images:
@@ -133,12 +139,21 @@ created.  The JPEG and PNG files are binary; PPM has a text mode
 header followed by binary data.  JPEG images have lossy compression;
 PNG has lossless compression; and PPM files are uncompressed but can
 be compressed with gzip, if SPARTA has been compiled with
--DLAMMPS_GZIP and a ".gz" suffix is used.
+-DSPARTA_GZIP and a ".gz" suffix is used.
 </P>
-<P>To write out JPEG and PNG format files, you must build LAMMPS with
-support for the corresponding JPEG or PNG library.  See <A HREF = "Section_start.html#start_2">Section
-2.2</A> of the manual for instructions on how
-to do this.
+<P>Similarly, the format of the resulting movie is chosen with the
+<I>movie</I> dump style.  This is handled by the underlying FFmpeg
+converter program, which must be available on your machine, and thus
+details have to be looked up in the FFmpeg documentation.  Typical
+examples are: .avi, .mpg, .m4v, .mp4, .mkv, .flv, .mov, .gif
+Additional settings of the movie compression like bitrate and
+framerate can be set using the <A HREF = "dump_modify.html">dump_modify</A> command.
+</P>
+<P>To write out JPEG and PNG format files, you must build SPARTA with
+support for the corresponding JPEG or PNG library.  To convert images
+into movies, SPARTA has to be compiled with the -DSPARTA_FFMPEG flag.
+See <A HREF = "Section_start.html#start_2">Section 2.2</A> of the manual for
+instructions on how to do this.
 </P>
 <HR>
 
@@ -150,7 +165,7 @@ timestep is not a multiple of N.  This behavior can be changed via the
 between runs by using the <A HREF = "dump_modify.html">dump_modify every</A>
 command.
 </P>
-<P>Dump image filenames must contain a wildcard character "*", so that
+<P>Dump <I>image</I> filenames must contain a wildcard character "*", so that
 one image file per snapshot is written.  The "*" character is replaced
 with the timestep value.  For example, tmp.dump.*.jpg becomes
 tmp.dump.0.jpg, tmp.dump.10000.jpg, tmp.dump.20000.jpg, etc.  Note
@@ -158,6 +173,10 @@ that the <A HREF = "dump_modify.html">dump_modify pad</A> command can be used to
 insure all timestep numbers are the same length (e.g. 00010), which
 can make it easier to convert a series of images into a movie in the
 correct ordering.
+</P>
+<P>Dump <I>movie</I> filenames on the other hand, must not have any wildcard
+character since only one file combining all images into a single movie
+will be written by the movie encoder.
 </P>
 <HR>
 
@@ -500,7 +519,9 @@ set, no depth shading is performed.
 <HR>
 
 <P>A series of JPEG, PNG, or PPM images can be converted into a movie
-file and then played as a movie using commonly available tools.
+file and then played as a movie using commonly available tools.  Using
+dump style <I>movie</I> automates this step and avoids the intermediate
+step of writing (many) image snapshot file.
 </P>
 <P>To manually convert JPEG, PNG or PPM files into an animated GIF or
 MPEG or other movie file you can:
@@ -575,6 +596,10 @@ supported.
 building SPARTA and link with a JPEG library. To write PNG images, you
 must use the -DSPARTA_PNG switch when building SPARTA and link with a
 PNG library.
+</P>
+<P>To write <I>movie</I> files, you must use the -SPARTA_FFMPEG switch when
+building SPARTA.  The FFmpeg executable must also be available on the
+machine where SPARTA is being run.
 </P>
 <P>See the <A HREF = "Section_start.html#start_2_2">Section 2.2.2</A> section of the
 documentation for details.
