@@ -31,8 +31,7 @@
 </P>
 <PRE>print "Done with equilibration"
 print 'Done with equilibration'
-print "Done with equilibration" file info.dat
-print Temp=$t 
+print "Done with equilibration" file info.dat 
 </PRE>
 <PRE>compute myTemp temp
 variable t equal c_myTemp
@@ -58,13 +57,10 @@ be turned on or off as desired.
 changing variable values), there are 3 options.  First, consider using
 the <A HREF = "fix_print.html">fix print</A> command, which will print a string
 periodically during a simulation.  Second, the print command can be
-used as an argument to the <I>every</I>option of the <A HREF = "run.html">run</A>
+used as an argument to the <I>every</I> option of the <A HREF = "run.html">run</A>
 command.  Third, the print command could appear in a section of the
 input script that is looped over (see the <A HREF = "jump.html">jump</A> and
 <A HREF = "next.html">next</A> commands).
-</P>
-<P>IMPORTANT NOTE: The <I>every</I> option for the <A HREF = "run.html">run</A> command has
-not yet been implemented.
 </P>
 <P>See the <A HREF = "variable.html">variable</A> command for a description of <I>equal</I>
 style variables which are typically the most useful ones to use with
@@ -79,6 +75,8 @@ involving mathematical operations, global values calculated by a
 </P>
 <P><A HREF = "fix_print.html">fix print</A>, <A HREF = "variable.html">variable</A>
 </P>
-<P><B>Default:</B> none
+<P><B>Default:</B>
+</P>
+<P>The option defaults are no file output and screen = yes.
 </P>
 </HTML>
