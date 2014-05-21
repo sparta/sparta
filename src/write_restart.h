@@ -30,17 +30,33 @@ class WriteRestart : protected Pointers {
  public:
   WriteRestart(class SPARTA *);
   void command(int, char **);
-  void multiproc_options(int, int, char **) {}
+  void multiproc_options(int, int, char **);
   void write(char *);
 
  private:
   int me,nprocs;
   FILE *fp;
 
+  int multiproc;             // 0 = proc 0 writes for all
+                             // else # of procs writing files
+  int nclusterprocs;         // # of procs in my cluster that write to one file
+  int filewriter;            // 1 if this proc writes a file, else 0
+  int fileproc;              // ID of proc in my cluster who writes to file
+  int icluster;              // which cluster I am in
+
+  void header();
+  void file_layout(int);
+
+  void magic_string();
+  void endian();
+  void version_numeric();
+
   void write_int(int, int);
-  void write_double(int, double);
-  void write_char(int, char *);
   void write_bigint(int, bigint);
+  void write_double(int, double);
+  void write_string(int, char *);
+  void write_int_vec(int, int, int *);
+  void write_double_vec(int, int, double *);
 };
 
 }

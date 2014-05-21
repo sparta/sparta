@@ -58,24 +58,6 @@ namespace SPARTA_NS {
 #define ATOLL atol
 #endif
 
-// for problems with more than 2B grid cells
-// 32-bit smallint, 64-bit bigint, 64-bit cellint
-
-#ifdef SPARTA_BIGBIG
-
-typedef int smallint;
-typedef int64_t bigint;
-typedef int64_t cellint;
-
-#define MAXSMALLINT INT_MAX
-#define MAXBIGINT INT64_MAX
-#define MPI_SPARTA_BIGINT MPI_LL
-#define BIGINT_FORMAT "%" PRId64
-#define CELLINT_FORMAT "%" PRId64
-#define ATOBIGINT ATOLL
-#define ATOCELLINT ATOLL
-
-#endif
 
 // default, sufficient for problems with up to 2B grid cells
 // 32-bit smallint, 64-bit bigint, 32-bit cellint
@@ -83,16 +65,35 @@ typedef int64_t cellint;
 #ifdef SPARTA_BIG
 
 typedef int smallint;
-typedef int64_t bigint;
 typedef int cellint;
+typedef int64_t bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT64_MAX
 #define MPI_SPARTA_BIGINT MPI_LL
-#define BIGINT_FORMAT "%" PRId64
 #define CELLINT_FORMAT "%d"
-#define ATOBIGINT ATOLL
+#define BIGINT_FORMAT "%" PRId64
 #define ATOCELLINT atoi
+#define ATOBIGINT ATOLL
+
+#endif
+
+// for problems with more than 2B grid cells
+// 32-bit smallint, 64-bit bigint, 64-bit cellint
+
+#ifdef SPARTA_BIGBIG
+
+typedef int smallint;
+typedef int64_t cellint;
+typedef int64_t bigint;
+
+#define MAXSMALLINT INT_MAX
+#define MAXBIGINT INT64_MAX
+#define MPI_SPARTA_BIGINT MPI_LL
+#define CELLINT_FORMAT "%" PRId64
+#define BIGINT_FORMAT "%" PRId64
+#define ATOCELLINT ATOLL
+#define ATOBIGINT ATOLL
 
 #endif
 
@@ -102,16 +103,16 @@ typedef int cellint;
 #ifdef SPARTA_SMALL
 
 typedef int smallint;
-typedef int bigint;
 typedef int cellint;
+typedef int bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT_MAX
 #define MPI_LMP_BIGINT MPI_INT
-#define BIGINT_FORMAT "%d"
 #define CELLINT_FORMAT "%d"
-#define ATOBIGINT atoi
+#define BIGINT_FORMAT "%d"
 #define ATOCELLINT atoi
+#define ATOBIGINT atoi
 
 #endif
 
