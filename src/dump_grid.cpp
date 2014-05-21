@@ -33,7 +33,7 @@ using namespace SPARTA_NS;
 
 enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,VOL,
      COMPUTE,FIX,VARIABLE};
-enum{INT,DOUBLE,CELLINT,STRING};
+enum{INT,DOUBLE,CELLINT,STRING};    // many files
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
@@ -48,6 +48,9 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   if (narg == 4) error->all(FLERR,"No dump grid arguments specified");
 
   clearstep = 1;
+  buffer_allow = 1;
+  buffer_flag = 1;
+
   dimension = domain->dimension;
 
   nevery = atoi(arg[3]);
@@ -175,6 +178,7 @@ void DumpGrid::init_style()
   else header_choice = &DumpGrid::header_item;
 
   if (binary) write_choice = &DumpGrid::write_binary;
+  else if (buffer_flag == 1) write_choice = &DumpGrid::write_string;
   else write_choice = &DumpGrid::write_text;
 
   // find current ptr for each compute,fix,variable
@@ -236,10 +240,8 @@ void DumpGrid::header_binary(bigint ndump)
   fwrite(&boxzlo,sizeof(double),1,fp);
   fwrite(&boxzhi,sizeof(double),1,fp);
   fwrite(&nfield,sizeof(int),1,fp);
-  if (multiproc) {
-    int one = 1;
-    fwrite(&one,sizeof(int),1,fp);
-  } else fwrite(&nprocs,sizeof(int),1,fp);
+  if (multiproc) fwrite(&nclusterprocs,sizeof(int),1,fp);
+  else fwrite(&nprocs,sizeof(int),1,fp);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -303,6 +305,13 @@ void DumpGrid::write_binary(int n, double *mybuf)
   n *= size_one;
   fwrite(&n,sizeof(int),1,fp);
   fwrite(mybuf,sizeof(double),n,fp);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpGrid::write_string(int n, double *mybuf)
+{
+  fwrite(mybuf,sizeof(char),n,fp);
 }
 
 /* ---------------------------------------------------------------------- */

@@ -40,9 +40,6 @@ class DumpParticle : public Dump {
   int *thresh_op;            // threshhold operation for each nthresh
   double *thresh_value;      // threshhold value for each nthresh
 
-  int *vtype;                // type of each vector (INT, DOUBLE)
-  char **vformat;            // format string for each vector element
-
   char *columns;             // column labels
 
   int nchoose;               // # of selected atoms
@@ -94,6 +91,7 @@ class DumpParticle : public Dump {
   typedef void (DumpParticle::*FnPtrData)(int, double *);
   FnPtrData write_choice;              // ptr to write data functions
   void write_binary(int, double *);
+  void write_string(int, double *);
   void write_text(int, double *);
 
   // customize by adding a method prototype

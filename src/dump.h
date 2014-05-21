@@ -47,10 +47,18 @@ class Dump : protected Pointers {
   int binary;                // 1 if dump file is written binary, 0 no
   int multifile;             // 0 = one big file, 1 = one file per timestep
   int multiproc;             // 0 = proc 0 writes for all, 1 = one file/proc
+                             // else # of procs writing files
+  int nclusterprocs;         // # of procs in my cluster that write to one file
+  int filewriter;            // 1 if this proc writes a file, else 0
+  int fileproc;              // ID of proc in my cluster who writes to file
+  char *multiname;           // filename with % converted to cluster ID
+  MPI_Comm clustercomm;      // MPI communicator within my cluster of procs
 
   int header_flag;           // 0 = item, 2 = xyz
   int flush_flag;            // 0 if no flush, 1 if flush every dump
   int append_flag;           // 1 if open file in append mode, 0 if not
+  int buffer_allow;          // 1 if style allows for buffer_flag, 0 if not
+  int buffer_flag;           // 1 if buffer output as one big string, 0 if not
   int padflag;               // timestep padding in filename
   int singlefile_opened;     // 1 = one big file, already opened, else 0
 
@@ -61,6 +69,7 @@ class Dump : protected Pointers {
   FILE *fp;                  // file to write dump to
   int size_one;              // # of quantities for one entity
   int nme;                   // # of entities in this dump from me
+  int nsme;                  // # of chars in string output from me
 
   double boxxlo,boxxhi;      // local copies of domain values
   double boxylo,boxyhi;
@@ -70,6 +79,13 @@ class Dump : protected Pointers {
 
   int maxbuf;                // size of buf
   double *buf;               // memory for dumped quantities
+  int maxsbuf;               // size of sbuf
+  char *sbuf;                // memory for atom quantities in string format
+
+  int *vtype;                // type of each field (INT, DOUBLE, etc)
+  char **vformat;            // format string for each field
+
+  int convert_string(int, double *);
 
   virtual void init_style() = 0;
   virtual void openfile();

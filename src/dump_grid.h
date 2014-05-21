@@ -35,9 +35,6 @@ class DumpGrid : public Dump {
  private:
   int nevery;                // dump frequency to check Fix against
 
-  int *vtype;                // type of each vector (INT, DOUBLE)
-  char **vformat;            // format string for each vector element
-
   char *columns;             // column labels
 
   int nfield;                // # of keywords listed by user
@@ -87,6 +84,7 @@ class DumpGrid : public Dump {
   typedef void (DumpGrid::*FnPtrData)(int, double *);
   FnPtrData write_choice;              // ptr to write data functions
   void write_binary(int, double *);
+  void write_string(int, double *);
   void write_text(int, double *);
 
   // customize by adding a method prototype
