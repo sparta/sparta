@@ -21,15 +21,19 @@
 
 <LI>these keywords apply to various dump styles 
 
-<LI>keyword = <I>append</I> or <I>every</I> or <I>first</I> or <I>flush</I> or <I>format</I> or <I>region</I> or <I>thresh</I> 
+<LI>keyword = <I>append</I> or <I>every</I> or <I>fileper</I> or <I>first</I> or <I>flush</I> or <I>format</I> or <I>nfile</I> or <I>pad</I> or <I>region</I> or <I>thresh</I> 
 
 <PRE>  <I>append</I> arg = <I>yes</I> or <I>no</I>
   <I>every</I> arg = N
     N = dump every this many timesteps
     N can be a variable (see below)
+  <I>fileper</I> arg = Np
+    Np = write one file for every this many processors
   <I>first</I> arg = <I>yes</I> or <I>no</I>
   <I>flush</I> arg = <I>yes</I> or <I>no</I>
   <I>format</I> arg = C-style format string for one line of output
+  <I>nfile</I> arg = Nf
+    Nf = write this many files, one from each of Nf processors
   <I>pad</I> arg = Nchar = # of characters to convert timestep to
   <I>region</I> arg = region-ID or "none"
   <I>thresh</I> args = attribute operation value
@@ -154,6 +158,10 @@ dump_modify	1 every v_s first yes
 </PRE>
 <HR>
 
+<P>The <I>fileper</I> keyword is documented below with the <I>nfile</I> keyword.
+</P>
+<HR>
+
 <P>The <I>first</I> keyword determines whether a dump snapshot is written on
 the very first timestep after the dump command is invoked.  This will
 always occur if the current timestep is a multiple of N, the frequency
@@ -178,6 +186,28 @@ simply specifies %d for integers and %g for real values.  The <I>format</I>
 keyword can be used to override the default with a new C-style format
 string.  Do not include a trailing "\n" newline character in the
 format string.
+</P>
+<HR>
+
+<P>The <I>nfile</I> or <I>fileper</I> keywords can be used in conjunction with the
+"%" wildcard character in the specified dump file name, for all dump
+styles except <I>image</I>, for which "%" is not allowed.  As explained on
+the <A HREF = "dump.html">dump</A> command doc page, the "%" character causes the
+dump file to be written in pieces, one piece for each of P processors.
+By default P = the number of processors the simulation is running on.
+The <I>nfile</I> or <I>fileper</I> keyword can be used to set P to a smaller
+value, which can be more efficient when running on a large number of
+processors.
+</P>
+<P>The <I>nfile</I> keyword sets P to the specified Nf value.  For example, if
+Nf = 4, and the simulation is running on 100 processors, 4 files will
+be written, by processors 0,25,50,75.  Each will collect information
+from itself and the next 24 processors and write it to a dump file.
+</P>
+<P>For the <I>fileper</I> keyword, the specified value of Np means write one
+file for every Np processors.  For example, if Np = 4, every 4th
+processor (0,4,8,12,etc) will collect information from itself and the
+next 3 processors and write it to a dump file.
 </P>
 <HR>
 

@@ -15,14 +15,18 @@ dump_modify dump-ID keyword values ... :pre
 dump-ID = ID of dump to modify :ulb,l
 one or more keyword/value pairs may be appended :l
 these keywords apply to various dump styles :l
-keyword = {append} or {every} or {first} or {flush} or {format} or {region} or {thresh} :l
+keyword = {append} or {every} or {fileper} or {first} or {flush} or {format} or {nfile} or {pad} or {region} or {thresh} :l
   {append} arg = {yes} or {no}
   {every} arg = N
     N = dump every this many timesteps
     N can be a variable (see below)
+  {fileper} arg = Np
+    Np = write one file for every this many processors
   {first} arg = {yes} or {no}
   {flush} arg = {yes} or {no}
   {format} arg = C-style format string for one line of output
+  {nfile} arg = Nf
+    Nf = write this many files, one from each of Nf processors
   {pad} arg = Nchar = # of characters to convert timestep to
   {region} arg = region-ID or "none"
   {thresh} args = attribute operation value
@@ -142,6 +146,10 @@ dump_modify	1 every v_s first yes :pre
 
 :line
 
+The {fileper} keyword is documented below with the {nfile} keyword.
+
+:line
+
 The {first} keyword determines whether a dump snapshot is written on
 the very first timestep after the dump command is invoked.  This will
 always occur if the current timestep is a multiple of N, the frequency
@@ -166,6 +174,28 @@ simply specifies %d for integers and %g for real values.  The {format}
 keyword can be used to override the default with a new C-style format
 string.  Do not include a trailing "\n" newline character in the
 format string.
+
+:line
+
+The {nfile} or {fileper} keywords can be used in conjunction with the
+"%" wildcard character in the specified dump file name, for all dump
+styles except {image}, for which "%" is not allowed.  As explained on
+the "dump"_dump.html command doc page, the "%" character causes the
+dump file to be written in pieces, one piece for each of P processors.
+By default P = the number of processors the simulation is running on.
+The {nfile} or {fileper} keyword can be used to set P to a smaller
+value, which can be more efficient when running on a large number of
+processors.
+
+The {nfile} keyword sets P to the specified Nf value.  For example, if
+Nf = 4, and the simulation is running on 100 processors, 4 files will
+be written, by processors 0,25,50,75.  Each will collect information
+from itself and the next 24 processors and write it to a dump file.
+
+For the {fileper} keyword, the specified value of Np means write one
+file for every Np processors.  For example, if Np = 4, every 4th
+processor (0,4,8,12,etc) will collect information from itself and the
+next 3 processors and write it to a dump file.
 
 :line
 
