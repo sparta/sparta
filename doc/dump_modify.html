@@ -114,21 +114,21 @@ parameters are relevant to all dump styles.
 
 <HR>
 
-<P>These keywords apply to various dump styles, including the <A HREF = "dump_image.html">dump
-image</A> style.  The description gives details.
+<P>These keywords apply to all dump styles unless otherwise noted.  The
+descriptions give details.
 </P>
 <HR>
 
-<P>The <I>append</I> keyword applies to all dump styles except <I>image</I>.  It
-also applies only to text output files, not to binary or gzipped
-files.  If specified as <I>yes</I>, then dump snapshots are appended to the
-end of an existing dump file.  If specified as <I>no</I>, then a new dump
-file will be created which will overwrite an existing file with the
-same name.  This keyword can only take effect if the dump_modify
-command is used after the <A HREF = "dump.html">dump</A> command, but before the
-first command that causes dump snapshots to be output, e.g. a
-<A HREF = "run.html">run</A> command.  Once the dump file has been opened, this
-keyword has no further effect.
+<P>The <I>append</I> keyword applies to all dump styles except <I>image</I> and
+<I>movie</I>.  It also applies only to text output files, not to binary or
+gzipped files.  If specified as <I>yes</I>, then dump snapshots are
+appended to the end of an existing dump file.  If specified as <I>no</I>,
+then a new dump file will be created which will overwrite an existing
+file with the same name.  This keyword can only take effect if the
+dump_modify command is used after the <A HREF = "dump.html">dump</A> command, but
+before the first command that causes dump snapshots to be output,
+e.g. a <A HREF = "run.html">run</A> command.  Once the dump file has been opened,
+this keyword has no further effect.
 </P>
 <HR>
 
@@ -172,26 +172,30 @@ default, then it will not be written.
 </P>
 <HR>
 
-<P>The <I>flush</I> keyword applies to dump styles that write multiple
-successive snapshots to the same file.  It determines whether a flush
-operation is invoked after a dump snapshot is written to the dump
-file.  A flush insures the output in that file is current (no
+<P>The <I>flush</I> keyword applies to all dump styles except <I>image</I> and
+<I>movie</I>.  It also applies only when the styles are used to write
+multiple successive snapshots to the same file.  It determines whether
+a flush operation is invoked after a dump snapshot is written to the
+dump file.  A flush insures the output in that file is current (no
 buffering by the OS), even if SPARTA halts before the simulation
 completes.
 </P>
 <HR>
 
 <P>The text-based dump styles have a default C-style format string which
-simply specifies %d for integers and %g for real values.  The <I>format</I>
-keyword can be used to override the default with a new C-style format
-string.  Do not include a trailing "\n" newline character in the
-format string.
+simply specifies %d for integers and %g for real values, when per
+particle or per grid cell or per surface element info is written to
+the dump file.  The <I>format</I> keyword can be used to override the
+default with a new C-style format string.  The number of fields it
+specifies should match the number of entities being printed on each
+line.  Do not include a trailing "\n" newline character in the format
+string.
 </P>
 <HR>
 
-<P>The <I>nfile</I> or <I>fileper</I> keywords can be used in conjunction with the
-"%" wildcard character in the specified dump file name, for all dump
-styles except <I>image</I>, for which "%" is not allowed.  As explained on
+<P>The <I>nfile</I> or <I>fileper</I> keywords apply to all dump styles except
+<I>image</I> and <I>movie</I>.  They can be used in conjunction with the "%"
+wildcard character in the specified dump file name.  As explained on
 the <A HREF = "dump.html">dump</A> command doc page, the "%" character causes the
 dump file to be written in pieces, one piece for each of P processors.
 By default P = the number of processors the simulation is running on.

@@ -102,21 +102,21 @@ parameters are relevant to all dump styles.
 :line
 :line
 
-These keywords apply to various dump styles, including the "dump
-image"_dump_image.html style.  The description gives details.
+These keywords apply to all dump styles unless otherwise noted.  The
+descriptions give details.
 
 :line
 
-The {append} keyword applies to all dump styles except {image}.  It
-also applies only to text output files, not to binary or gzipped
-files.  If specified as {yes}, then dump snapshots are appended to the
-end of an existing dump file.  If specified as {no}, then a new dump
-file will be created which will overwrite an existing file with the
-same name.  This keyword can only take effect if the dump_modify
-command is used after the "dump"_dump.html command, but before the
-first command that causes dump snapshots to be output, e.g. a
-"run"_run.html command.  Once the dump file has been opened, this
-keyword has no further effect.
+The {append} keyword applies to all dump styles except {image} and
+{movie}.  It also applies only to text output files, not to binary or
+gzipped files.  If specified as {yes}, then dump snapshots are
+appended to the end of an existing dump file.  If specified as {no},
+then a new dump file will be created which will overwrite an existing
+file with the same name.  This keyword can only take effect if the
+dump_modify command is used after the "dump"_dump.html command, but
+before the first command that causes dump snapshots to be output,
+e.g. a "run"_run.html command.  Once the dump file has been opened,
+this keyword has no further effect.
 
 :line
 
@@ -160,26 +160,30 @@ default, then it will not be written.
 
 :line
 
-The {flush} keyword applies to dump styles that write multiple
-successive snapshots to the same file.  It determines whether a flush
-operation is invoked after a dump snapshot is written to the dump
-file.  A flush insures the output in that file is current (no
+The {flush} keyword applies to all dump styles except {image} and
+{movie}.  It also applies only when the styles are used to write
+multiple successive snapshots to the same file.  It determines whether
+a flush operation is invoked after a dump snapshot is written to the
+dump file.  A flush insures the output in that file is current (no
 buffering by the OS), even if SPARTA halts before the simulation
 completes.
 
 :line
 
 The text-based dump styles have a default C-style format string which
-simply specifies %d for integers and %g for real values.  The {format}
-keyword can be used to override the default with a new C-style format
-string.  Do not include a trailing "\n" newline character in the
-format string.
+simply specifies %d for integers and %g for real values, when per
+particle or per grid cell or per surface element info is written to
+the dump file.  The {format} keyword can be used to override the
+default with a new C-style format string.  The number of fields it
+specifies should match the number of entities being printed on each
+line.  Do not include a trailing "\n" newline character in the format
+string.
 
 :line
 
-The {nfile} or {fileper} keywords can be used in conjunction with the
-"%" wildcard character in the specified dump file name, for all dump
-styles except {image}, for which "%" is not allowed.  As explained on
+The {nfile} or {fileper} keywords apply to all dump styles except
+{image} and {movie}.  They can be used in conjunction with the "%"
+wildcard character in the specified dump file name.  As explained on
 the "dump"_dump.html command doc page, the "%" character causes the
 dump file to be written in pieces, one piece for each of P processors.
 By default P = the number of processors the simulation is running on.
