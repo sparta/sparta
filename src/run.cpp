@@ -177,7 +177,7 @@ void Run::command(int narg, char **arg)
     timer->barrier_stop(TIME_LOOP);
 
     Finish finish(sparta);
-    finish.end(postflag);
+    finish.end(postflag,0.0);
 
   // perform multiple runs optionally interleaved with invocation command(s)
   // use start/stop to set begin/end step
@@ -188,6 +188,8 @@ void Run::command(int narg, char **arg)
   } else {
     int iter = 0;
     int nleft = nsteps;
+    double time_multiple_runs = 0.0;
+
     while (nleft > 0 || iter == 0) {
       nsteps = MIN(nleft,nevery);
 
@@ -211,10 +213,13 @@ void Run::command(int narg, char **arg)
       timer->barrier_start(TIME_LOOP);
       update->run(nsteps);
       timer->barrier_stop(TIME_LOOP);
+      time_multiple_runs += timer->array[TIME_LOOP];
 
       Finish finish(sparta);
-      if (postflag || nleft <= nsteps) finish.end(1);
-      else finish.end(0);
+      if (postflag || nleft <= nsteps) {
+        if (preflag) finish.end(1,0.0);
+        else finish.end(1,time_multiple_runs);
+      } else finish.end(0,0.0);
 
       // wrap command invocation with clearstep/addstep
       // since a command may invoke computes via variables

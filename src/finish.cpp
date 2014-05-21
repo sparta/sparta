@@ -35,7 +35,7 @@ Finish::Finish(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
-void Finish::end(int flag)
+void Finish::end(int flag, double time_multiple_runs)
 {
   int i,m;
   int histo[10];
@@ -56,6 +56,7 @@ void Finish::end(int flag)
   if (flag == 1) statsflag = timeflag = histoflag = 1;
 
   // loop stats
+  // time_multiple_runs used for moves/CPU/proc statistic below
 
   if (loopflag) {
     time_other = timer->array[TIME_LOOP] -
@@ -66,6 +67,13 @@ void Finish::end(int flag)
     time_loop = timer->array[TIME_LOOP];
     MPI_Allreduce(&time_loop,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
     time_loop = tmp/nprocs;
+
+    if (time_multiple_runs == 0.0) time_multiple_runs = time_loop;
+    else {
+      tmp = time_multiple_runs;
+      MPI_Allreduce(&tmp,&time_multiple_runs,1,MPI_DOUBLE,MPI_SUM,world);
+      time_multiple_runs /= nprocs;
+    }
   }
 
   // recalculate nglobal
@@ -121,11 +129,14 @@ void Finish::end(int flag)
     double pms,pmsp,ctps,cis,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
     pms = pmsp = ctps = cis = pfc = pfcwb = pfeb = 
       schps = sclps = caps = cps = 0.0;
-    if (update->nsteps) pms = 1.0*nmove_total/update->nsteps;
+
+    bigint elapsed = update->ntimestep - update->first_running_step;
+    if (elapsed) pms = 1.0*nmove_total/elapsed;
+
     if (nmove_total) {
-      pmsp = 1.0*nmove_total/time_loop/nprocs;
+      pmsp = 1.0*nmove_total/time_multiple_runs/nprocs;
       ctps = 1.0*ntouch_total/nmove_total;
-      cis = 1.0*update->niterate_running/update->nsteps;
+      cis = 1.0*update->niterate_running/elapsed;
       pfc = 1.0*ncomm_total/nmove_total;
       pfcwb = 1.0*nboundary_total/nmove_total;
       pfeb = 1.0*nexit_total/nmove_total;

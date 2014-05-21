@@ -174,6 +174,7 @@ void Update::setup()
   nboundary_one = nexit_one = 0;
   nscheck_one = nscollide_one = 0;
 
+  first_running_step = update->ntimestep;
   niterate_running = 0;
   nmove_running = ntouch_running = ncomm_running = 0;
   nboundary_running = nexit_running = 0;
@@ -181,6 +182,7 @@ void Update::setup()
   nstuck = 0;
 
   bounce_tally = bounce_setup();
+
   modify->setup();
   output->setup(1);
 }

@@ -52,6 +52,7 @@ class Update : protected Pointers {
   int nscheck_one;       // surface elements checked for collisions
   int nscollide_one;     // particle/surface collisions
 
+  bigint first_running_step; // timestep running counts start on
   int niterate_running;      // running count of move/comm interations
   bigint nmove_running;      // running count of total particle moves
   bigint ntouch_running;     // running count of current step counters
