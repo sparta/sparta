@@ -46,6 +46,7 @@ class WriteRestart : protected Pointers {
 
   void header();
   void file_layout(int);
+
   void magic_string();
   void endian();
   void version_numeric();
