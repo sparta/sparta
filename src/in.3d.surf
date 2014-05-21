@@ -77,13 +77,13 @@ dump                2 image 50 tmp.*.ppm type type pdiam 0.2 &
                     #gridy 0.0 proc gridz 0.0 proc &
                     #surf f_save[1] 0.0 &
 
-dump                10 movie 50 tmp.mpg type type pdiam 0.2 &
-                    surf proc 0.0 &
-		    view 60 -30 size 512 512 axes yes 0.9 0.02 particle yes &
-                    gridx 0.0 f_gave[1] &
-                    gline yes 0.005 &
-                    #gridy 0.0 proc gridz 0.0 proc &
-                    #surf f_save[1] 0.0 &
+#dump                10 movie 50 tmp.mpg type type pdiam 0.2 &
+#                    surf proc 0.0 &
+#		    view 60 -30 size 512 512 axes yes 0.9 0.02 particle yes &
+#                    gridx 0.0 f_gave[1] &
+#                    gline yes 0.005 &
+#                    #gridy 0.0 proc gridz 0.0 proc &
+#                    #surf f_save[1] 0.0 &
 
 #dump_modify	    2 pad 4 #scolor * green
 #dump_modify         2 cmap xplane min max cf 0.0 2 min blue max red 

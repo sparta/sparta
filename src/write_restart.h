@@ -30,6 +30,7 @@ class WriteRestart : protected Pointers {
  public:
   WriteRestart(class SPARTA *);
   void command(int, char **);
+  void multiproc_options(int, int, char **) {}
   void write(char *);
 
  private:

@@ -531,6 +531,7 @@ int Input::execute_command()
   else if (!strcmp(command,"mixture")) mixture();
   else if (!strcmp(command,"react")) react_command();
   else if (!strcmp(command,"region")) region();
+  else if (!strcmp(command,"restart")) restart();
   else if (!strcmp(command,"seed")) seed();
   else if (!strcmp(command,"species")) species();
   else if (!strcmp(command,"stats")) stats();
@@ -1129,6 +1130,13 @@ void Input::region()
 
 /* ---------------------------------------------------------------------- */
 
+void Input::restart()
+{
+  output->create_restart(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Input::seed()
 {
   if (narg != 1) error->all(FLERR,"Illegal seed command");
@@ -1150,10 +1158,7 @@ void Input::species()
 
 void Input::stats()
 {
-  if (narg != 1) error->all(FLERR,"Illegal stats command");
-  int n = atoi(arg[0]);
-  if (n < 0) error->all(FLERR,"Illegal stats command");
-  output->stats_every = n;
+  output->set_stats(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

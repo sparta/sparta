@@ -84,6 +84,7 @@ class Input : protected Pointers {
   void mixture();
   void react_command();
   void region();
+  void restart();
   void seed();
   void species();
   void stats();
