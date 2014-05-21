@@ -323,7 +323,7 @@ void Dump::openfile()
 
   if (filewriter) {
     if (compressed) {
-#ifdef LAMMPS_GZIP
+#ifdef SPARTA_GZIP
       char gzip[128];
       sprintf(gzip,"gzip -6 > %s",filecurrent);
 #ifdef _WIN32
