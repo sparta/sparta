@@ -520,7 +520,7 @@ void Output::set_stats(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   new stats style 
+   new Stats style 
 ------------------------------------------------------------------------- */
 
 void Output::create_stats(int narg, char **arg)
