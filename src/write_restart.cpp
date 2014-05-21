@@ -35,7 +35,7 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,DIMENSION,NPROCS,
-     MULTIPROC,MPIIO,PROCSPERFILE,PERPROC};
+     MULTIPROC,PROCSPERFILE,PERPROC};
 
 /* ---------------------------------------------------------------------- */
 
@@ -92,7 +92,8 @@ void WriteRestart::command(int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-void WriteRestart::multiproc_options(int multiproc_caller, int narg, char **arg)
+void WriteRestart::multiproc_options(int multiproc_caller,
+                                     int narg, char **arg)
 {
   multiproc = multiproc_caller;
 
@@ -363,7 +364,6 @@ void WriteRestart::write_int(int flag, int value)
   fwrite(&flag,sizeof(int),1,fp);
   fwrite(&value,sizeof(int),1,fp);
 }
-
 
 /* ----------------------------------------------------------------------
    write a flag and a bigint into restart file 
