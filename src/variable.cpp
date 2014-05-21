@@ -1859,8 +1859,8 @@ double Variable::collapse_tree(Tree *tree)
     arg2 = collapse_tree(tree->right);
     if (tree->left->type != VALUE || tree->right->type != VALUE) return 0.0;
     tree->type = VALUE;
-    double delta = update->ntimestep - update->firststep;
-    if (delta != 0.0) delta /= update->laststep - update->firststep;
+    double delta = update->ntimestep - update->beginstep;
+    if (delta != 0.0) delta /= update->endstep - update->beginstep;
     tree->value = arg1 + delta*(arg2-arg1);
     return tree->value;
   }
@@ -1922,7 +1922,7 @@ double Variable::collapse_tree(Tree *tree)
     double arg2 = collapse_tree(tree->right);
     if (tree->left->type != VALUE || tree->right->type != VALUE) return 0.0;
     tree->type = VALUE;
-    double delta = update->ntimestep - update->firststep;
+    double delta = update->ntimestep - update->beginstep;
     tree->value = arg1 + arg2*delta*update->dt;
     return tree->value;
   }
@@ -1936,7 +1936,7 @@ double Variable::collapse_tree(Tree *tree)
     tree->type = VALUE;
     if (arg3 == 0.0)
       error->one(FLERR,"Invalid math function in variable formula");
-    double delta = update->ntimestep - update->firststep;
+    double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
     tree->value = arg1 + arg2*sin(omega*delta*update->dt);
     return tree->value;
@@ -1951,7 +1951,7 @@ double Variable::collapse_tree(Tree *tree)
     tree->type = VALUE;
     if (arg3 == 0.0)
       error->one(FLERR,"Invalid math function in variable formula");
-    double delta = update->ntimestep - update->firststep;
+    double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
     tree->value = arg1 + arg2*(1.0-cos(omega*delta*update->dt));
     return tree->value;
@@ -2126,8 +2126,8 @@ double Variable::eval_tree(Tree *tree, int i)
   if (tree->type == RAMP) {
     arg1 = eval_tree(tree->left,i);
     arg2 = eval_tree(tree->right,i);
-    double delta = update->ntimestep - update->firststep;
-    if (delta != 0.0) delta /= update->laststep - update->firststep;
+    double delta = update->ntimestep - update->beginstep;
+    if (delta != 0.0) delta /= update->endstep - update->beginstep;
     arg = arg1 + delta*(arg2-arg1);
     return arg;
   }
@@ -2179,7 +2179,7 @@ double Variable::eval_tree(Tree *tree, int i)
   if (tree->type == VDISPLACE) {
     arg1 = eval_tree(tree->left,i);
     arg2 = eval_tree(tree->right,i);
-    double delta = update->ntimestep - update->firststep;
+    double delta = update->ntimestep - update->beginstep;
     arg = arg1 + arg2*delta*update->dt;
     return arg;
   }
@@ -2190,7 +2190,7 @@ double Variable::eval_tree(Tree *tree, int i)
     arg3 = eval_tree(tree->right,i);
     if (arg3 == 0.0)
       error->one(FLERR,"Invalid math function in variable formula");
-    double delta = update->ntimestep - update->firststep;
+    double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
     arg = arg1 + arg2*sin(omega*delta*update->dt);
     return arg;
@@ -2202,7 +2202,7 @@ double Variable::eval_tree(Tree *tree, int i)
     arg3 = eval_tree(tree->right,i);
     if (arg3 == 0.0)
       error->one(FLERR,"Invalid math function in variable formula");
-    double delta = update->ntimestep - update->firststep;
+    double delta = update->ntimestep - update->beginstep;
     double omega = 2.0*MY_PI/arg3;
     arg = arg1 + arg2*(1.0-cos(omega*delta*update->dt));
     return arg;
@@ -2555,8 +2555,8 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       error->all(FLERR,"Cannot use ramp in variable formula between runs");
     if (tree) newtree->type = RAMP;
     else {
-      double delta = update->ntimestep - update->firststep;
-      if (delta != 0.0) delta /= update->laststep - update->firststep;
+      double delta = update->ntimestep - update->beginstep;
+      if (delta != 0.0) delta /= update->endstep - update->beginstep;
       double value = value1 + delta*(value2-value1);
       argstack[nargstack++] = value;
     }
@@ -2627,7 +2627,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
       error->all(FLERR,"Cannot use vdisplace in variable formula between runs");
     if (tree) newtree->type = VDISPLACE;
     else {
-      double delta = update->ntimestep - update->firststep;
+      double delta = update->ntimestep - update->beginstep;
       double value = value1 + value2*delta*update->dt;
       argstack[nargstack++] = value;
     }
@@ -2641,7 +2641,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     else {
       if (value3 == 0.0)
         error->all(FLERR,"Invalid math function in variable formula");
-      double delta = update->ntimestep - update->firststep;
+      double delta = update->ntimestep - update->beginstep;
       double omega = 2.0*MY_PI/value3;
       double value = value1 + value2*sin(omega*delta*update->dt);
       argstack[nargstack++] = value;
@@ -2656,7 +2656,7 @@ int Variable::math_function(char *word, char *contents, Tree **tree,
     else {
       if (value3 == 0.0)
         error->all(FLERR,"Invalid math function in variable formula");
-      double delta = update->ntimestep - update->firststep;
+      double delta = update->ntimestep - update->beginstep;
       double omega = 2.0*MY_PI/value3;
       double value = value1 + value2*(1.0-cos(omega*delta*update->dt));
       argstack[nargstack++] = value;

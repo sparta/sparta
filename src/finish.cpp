@@ -35,11 +35,11 @@ Finish::Finish(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
-void Finish::end()
+void Finish::end(int flag)
 {
   int i,m;
   int histo[10];
-  int loopflag,timeflag,histoflag;
+  int loopflag,statsflag,timeflag,histoflag;
   double time,tmp,ave,max,min;
   double time_loop,time_other;
 
@@ -47,8 +47,13 @@ void Finish::end()
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
 
+  // choose flavors of statistical output
+  // flag = 0 = just loop summary
+  // flag = 1 = dynamics or minimization
+
   loopflag = 1;
-  timeflag = histoflag = 1;
+  statsflag = timeflag = histoflag = 0;
+  if (flag == 1) statsflag = timeflag = histoflag = 1;
 
   // loop stats
 
@@ -83,127 +88,130 @@ void Finish::end()
 
   // cummulative stats over entire run
 
-  bigint nmove_total,ntouch_total,ncomm_total;
-  bigint nboundary_total,nexit_total;
-  bigint nscheck_total,nscollide_total;
-  bigint nattempt_total = 0;
-  bigint ncollide_total = 0;
-  int stuck_total;
+  if (statsflag) {
+    bigint nmove_total,ntouch_total,ncomm_total;
+    bigint nboundary_total,nexit_total;
+    bigint nscheck_total,nscollide_total;
+    bigint nattempt_total = 0;
+    bigint ncollide_total = 0;
+    int stuck_total;
 
-  MPI_Allreduce(&update->nmove_running,&nmove_total,1,
-		MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&update->ntouch_running,&ntouch_total,1,
-		MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&update->ncomm_running,&ncomm_total,1,
-		MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&update->nboundary_running,&nboundary_total,1,
-		MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&update->nexit_running,&nexit_total,1,
-		MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&update->nscheck_running,&nscheck_total,1,
-		MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&update->nscollide_running,&nscollide_total,1,
-		MPI_SPARTA_BIGINT,MPI_SUM,world);
-  if (collide) {
-    MPI_Allreduce(&collide->nattempt_running,&nattempt_total,1,
-		  MPI_SPARTA_BIGINT,MPI_SUM,world);
-    MPI_Allreduce(&collide->ncollide_running,&ncollide_total,1,
-		  MPI_SPARTA_BIGINT,MPI_SUM,world);
-  }
-  MPI_Allreduce(&update->nstuck,&stuck_total,1,MPI_INT,MPI_SUM,world);
-
-  double pms,pmsp,ctps,cis,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
-  pms = pmsp = ctps = cis = pfc = pfcwb = pfeb = 
-    schps = sclps = caps = cps = 0.0;
-  if (update->nsteps) pms = 1.0*nmove_total/update->nsteps;
-  if (nmove_total) {
-    pmsp = 1.0*nmove_total/time_loop/nprocs;
-    ctps = 1.0*ntouch_total/nmove_total;
-    cis = 1.0*update->niterate_running/update->nsteps;
-    pfc = 1.0*ncomm_total/nmove_total;
-    pfcwb = 1.0*nboundary_total/nmove_total;
-    pfeb = 1.0*nexit_total/nmove_total;
-    schps = 1.0*nscheck_total/nmove_total;
-    sclps = 1.0*nscollide_total/nmove_total;
-    caps = 1.0*nattempt_total/nmove_total;
-    cps = 1.0*ncollide_total/nmove_total;
-  }
-
-  char str[32];
-
-  if (me == 0) {
-    if (screen) {
-      fprintf(screen,"\n");
-      fprintf(screen,"Particle moves    = " BIGINT_FORMAT " %s\n",
-	      nmove_total,MathExtra::num2str(nmove_total,str));
-      fprintf(screen,"Cells touched     = " BIGINT_FORMAT " %s\n",
-	      ntouch_total,MathExtra::num2str(ntouch_total,str));
-      fprintf(screen,"Particle comms    = " BIGINT_FORMAT " %s\n",
-	      ncomm_total,MathExtra::num2str(ncomm_total,str));
-      fprintf(screen,"Boundary collides = " BIGINT_FORMAT " %s\n",
-	      nboundary_total,MathExtra::num2str(nboundary_total,str));
-      fprintf(screen,"Boundary exits    = " BIGINT_FORMAT " %s\n",
-	      nexit_total,MathExtra::num2str(nexit_total,str));
-      fprintf(screen,"SurfColl checks   = " BIGINT_FORMAT " %s\n",
-	      nscheck_total,MathExtra::num2str(nscheck_total,str));
-      fprintf(screen,"SurfColl occurs   = " BIGINT_FORMAT " %s\n",
-	      nscollide_total,MathExtra::num2str(nscollide_total,str));
-      fprintf(screen,"Collide attempts  = " BIGINT_FORMAT " %s\n",
-	      nattempt_total,MathExtra::num2str(nattempt_total,str));
-      fprintf(screen,"Collide occurs    = " BIGINT_FORMAT " %s\n",
-	      ncollide_total,MathExtra::num2str(ncollide_total,str));
-      fprintf(screen,"Particles stuck   = %d\n",stuck_total);
-
-      fprintf(screen,"\n");
-      fprintf(screen,"Particle-moves/CPUsec/proc: %g\n",pmsp);
-      fprintf(screen,"Particle-moves/step: %g\n",pms);
-      fprintf(screen,"Cell-touches/particle/step: %g\n",ctps);
-      fprintf(screen,"Particle comm iterations/step: %g\n",cis);
-      fprintf(screen,"Particle fraction communicated: %g\n",pfc);
-      fprintf(screen,"Particle fraction colliding with boundary: %g\n",pfcwb);
-      fprintf(screen,"Particle fraction exiting boundary: %g\n",pfeb);
-      fprintf(screen,"Surface-checks/particle/step: %g\n",schps);
-      fprintf(screen,"Surface-collisions/particle/step: %g\n",sclps);
-      fprintf(screen,"Collision-attempts/particle/step: %g\n",caps);
-      fprintf(screen,"Collisions/particle/step: %g\n",cps);
+    MPI_Allreduce(&update->nmove_running,&nmove_total,1,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&update->ntouch_running,&ntouch_total,1,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&update->ncomm_running,&ncomm_total,1,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&update->nboundary_running,&nboundary_total,1,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&update->nexit_running,&nexit_total,1,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&update->nscheck_running,&nscheck_total,1,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&update->nscollide_running,&nscollide_total,1,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
+    if (collide) {
+      MPI_Allreduce(&collide->nattempt_running,&nattempt_total,1,
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
+      MPI_Allreduce(&collide->ncollide_running,&ncollide_total,1,
+                    MPI_SPARTA_BIGINT,MPI_SUM,world);
     }
-    if (logfile) {
-      fprintf(logfile,"\n");
-      fprintf(logfile,"Particle moves    = " BIGINT_FORMAT " %s\n",
-	      nmove_total,MathExtra::num2str(nmove_total,str));
-      fprintf(logfile,"Cells touched     = " BIGINT_FORMAT " %s\n",
-	      ntouch_total,MathExtra::num2str(ntouch_total,str));
-      fprintf(logfile,"Particle comms    = " BIGINT_FORMAT " %s\n",
-	      ncomm_total,MathExtra::num2str(ncomm_total,str));
-      fprintf(logfile,"Boundary collides = " BIGINT_FORMAT " %s\n",
-	      nboundary_total,MathExtra::num2str(nboundary_total,str));
-      fprintf(logfile,"Boundary exits    = " BIGINT_FORMAT " %s\n",
-	      nexit_total,MathExtra::num2str(nexit_total,str));
-      fprintf(logfile,"SurfColl checks   = " BIGINT_FORMAT " %s\n",
-	      nscheck_total,MathExtra::num2str(nscheck_total,str));
-      fprintf(logfile,"SurfColl occurs   = " BIGINT_FORMAT " %s\n",
-	      nscollide_total,MathExtra::num2str(nscollide_total,str));
-      fprintf(logfile,"Collide attempts  = " BIGINT_FORMAT " %s\n",
-	      nattempt_total,MathExtra::num2str(nattempt_total,str));
-      fprintf(logfile,"Collide occurs    = " BIGINT_FORMAT " %s\n",
-	      ncollide_total,MathExtra::num2str(ncollide_total,str));
-      fprintf(logfile,"Particles stuck   = %d\n",stuck_total);
+    MPI_Allreduce(&update->nstuck,&stuck_total,1,MPI_INT,MPI_SUM,world);
+    
+    double pms,pmsp,ctps,cis,pfc,pfcwb,pfeb,schps,sclps,caps,cps;
+    pms = pmsp = ctps = cis = pfc = pfcwb = pfeb = 
+      schps = sclps = caps = cps = 0.0;
+    if (update->nsteps) pms = 1.0*nmove_total/update->nsteps;
+    if (nmove_total) {
+      pmsp = 1.0*nmove_total/time_loop/nprocs;
+      ctps = 1.0*ntouch_total/nmove_total;
+      cis = 1.0*update->niterate_running/update->nsteps;
+      pfc = 1.0*ncomm_total/nmove_total;
+      pfcwb = 1.0*nboundary_total/nmove_total;
+      pfeb = 1.0*nexit_total/nmove_total;
+      schps = 1.0*nscheck_total/nmove_total;
+      sclps = 1.0*nscollide_total/nmove_total;
+      caps = 1.0*nattempt_total/nmove_total;
+      cps = 1.0*ncollide_total/nmove_total;
+    }
 
-      fprintf(logfile,"\n");
-      fprintf(logfile,"Particle-moves/CPUsec/proc: %g\n",pmsp);
-      fprintf(logfile,"Particle-moves/step: %g\n",pms);
-      fprintf(logfile,"Cell-touches/particle/step: %g\n",ctps);
-      fprintf(logfile,"Particle comm iterations/step: %g\n",cis);
-      fprintf(logfile,"Particle fraction communicated: %g\n",pfc);
-      fprintf(logfile,"Particle fraction colliding with boundary: %g\n",pfcwb);
-      fprintf(logfile,"Particle fraction exiting boundary: %g\n",pfeb);
-      fprintf(logfile,"Surface-checks/particle/step: %g\n",schps);
-      fprintf(logfile,"Surface-collisions/particle/step: %g\n",sclps);
-      fprintf(logfile,"Collision-attempts/particle/step: %g\n",caps);
-      fprintf(logfile,"Collisions/particle/step: %g\n",cps);
+    char str[32];
+
+    if (me == 0) {
+      if (screen) {
+        fprintf(screen,"\n");
+        fprintf(screen,"Particle moves    = " BIGINT_FORMAT " %s\n",
+                nmove_total,MathExtra::num2str(nmove_total,str));
+        fprintf(screen,"Cells touched     = " BIGINT_FORMAT " %s\n",
+                ntouch_total,MathExtra::num2str(ntouch_total,str));
+        fprintf(screen,"Particle comms    = " BIGINT_FORMAT " %s\n",
+                ncomm_total,MathExtra::num2str(ncomm_total,str));
+        fprintf(screen,"Boundary collides = " BIGINT_FORMAT " %s\n",
+                nboundary_total,MathExtra::num2str(nboundary_total,str));
+        fprintf(screen,"Boundary exits    = " BIGINT_FORMAT " %s\n",
+                nexit_total,MathExtra::num2str(nexit_total,str));
+        fprintf(screen,"SurfColl checks   = " BIGINT_FORMAT " %s\n",
+                nscheck_total,MathExtra::num2str(nscheck_total,str));
+        fprintf(screen,"SurfColl occurs   = " BIGINT_FORMAT " %s\n",
+                nscollide_total,MathExtra::num2str(nscollide_total,str));
+        fprintf(screen,"Collide attempts  = " BIGINT_FORMAT " %s\n",
+                nattempt_total,MathExtra::num2str(nattempt_total,str));
+        fprintf(screen,"Collide occurs    = " BIGINT_FORMAT " %s\n",
+                ncollide_total,MathExtra::num2str(ncollide_total,str));
+        fprintf(screen,"Particles stuck   = %d\n",stuck_total);
+
+        fprintf(screen,"\n");
+        fprintf(screen,"Particle-moves/CPUsec/proc: %g\n",pmsp);
+        fprintf(screen,"Particle-moves/step: %g\n",pms);
+        fprintf(screen,"Cell-touches/particle/step: %g\n",ctps);
+        fprintf(screen,"Particle comm iterations/step: %g\n",cis);
+        fprintf(screen,"Particle fraction communicated: %g\n",pfc);
+        fprintf(screen,"Particle fraction colliding with boundary: %g\n",pfcwb);
+        fprintf(screen,"Particle fraction exiting boundary: %g\n",pfeb);
+        fprintf(screen,"Surface-checks/particle/step: %g\n",schps);
+        fprintf(screen,"Surface-collisions/particle/step: %g\n",sclps);
+        fprintf(screen,"Collision-attempts/particle/step: %g\n",caps);
+        fprintf(screen,"Collisions/particle/step: %g\n",cps);
+      }
+      if (logfile) {
+        fprintf(logfile,"\n");
+        fprintf(logfile,"Particle moves    = " BIGINT_FORMAT " %s\n",
+                nmove_total,MathExtra::num2str(nmove_total,str));
+        fprintf(logfile,"Cells touched     = " BIGINT_FORMAT " %s\n",
+                ntouch_total,MathExtra::num2str(ntouch_total,str));
+        fprintf(logfile,"Particle comms    = " BIGINT_FORMAT " %s\n",
+                ncomm_total,MathExtra::num2str(ncomm_total,str));
+        fprintf(logfile,"Boundary collides = " BIGINT_FORMAT " %s\n",
+                nboundary_total,MathExtra::num2str(nboundary_total,str));
+        fprintf(logfile,"Boundary exits    = " BIGINT_FORMAT " %s\n",
+                nexit_total,MathExtra::num2str(nexit_total,str));
+        fprintf(logfile,"SurfColl checks   = " BIGINT_FORMAT " %s\n",
+                nscheck_total,MathExtra::num2str(nscheck_total,str));
+        fprintf(logfile,"SurfColl occurs   = " BIGINT_FORMAT " %s\n",
+                nscollide_total,MathExtra::num2str(nscollide_total,str));
+        fprintf(logfile,"Collide attempts  = " BIGINT_FORMAT " %s\n",
+                nattempt_total,MathExtra::num2str(nattempt_total,str));
+        fprintf(logfile,"Collide occurs    = " BIGINT_FORMAT " %s\n",
+                ncollide_total,MathExtra::num2str(ncollide_total,str));
+        fprintf(logfile,"Particles stuck   = %d\n",stuck_total);
+
+        fprintf(logfile,"\n");
+        fprintf(logfile,"Particle-moves/CPUsec/proc: %g\n",pmsp);
+        fprintf(logfile,"Particle-moves/step: %g\n",pms);
+        fprintf(logfile,"Cell-touches/particle/step: %g\n",ctps);
+        fprintf(logfile,"Particle comm iterations/step: %g\n",cis);
+        fprintf(logfile,"Particle fraction communicated: %g\n",pfc);
+        fprintf(logfile,"Particle fraction colliding with boundary: %g\n",
+                pfcwb);
+        fprintf(logfile,"Particle fraction exiting boundary: %g\n",pfeb);
+        fprintf(logfile,"Surface-checks/particle/step: %g\n",schps);
+        fprintf(logfile,"Surface-collisions/particle/step: %g\n",sclps);
+        fprintf(logfile,"Collision-attempts/particle/step: %g\n",caps);
+        fprintf(logfile,"Collisions/particle/step: %g\n",cps);
+      }
     }
   }
-  
+
   // timing breakdowns
 
   if (timeflag) {

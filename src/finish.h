@@ -22,7 +22,7 @@ namespace SPARTA_NS {
 class Finish : protected Pointers {
  public:
   Finish(class SPARTA *);
-  void end();
+  void end(int);
 
  private:
   void stats(int, double *, double *, double *, double *, int, int *);

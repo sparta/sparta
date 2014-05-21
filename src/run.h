@@ -57,6 +57,22 @@ E: Invalid run command N value
 The number of timesteps must fit in a 32-bit integer.  If you want to
 run for more steps than this, perform multiple shorter runs.
 
+E: Invalid run command upto value
+
+Self-explanatory.
+
+E: Invalid run command start/stop value
+
+Self-explanatory.
+
+E: Run command start value is after start of run
+
+Self-explanatory.
+
+E: Run command stop value is before end of run
+
+Self-explanatory.
+
 E: Too many timesteps
 
 The cummulative timesteps must fit in a 64-bit integer.

@@ -62,6 +62,8 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_size(world,&nprocs);
 
   ntimestep = 0;
+  firststep = laststep = 0;
+  beginstep = endstep = 0;
   runflag = 0;
 
   unit_style = NULL;
@@ -98,8 +100,39 @@ Update::~Update()
 
 /* ---------------------------------------------------------------------- */
 
+void Update::set_units(const char *style)
+{
+  // physical constants from:
+  // http://physics.nist.gov/cuu/Constants/Table/allascii.txt
+  
+  if (strcmp(style,"cgs") == 0) {
+    boltz = 1.3806488e-16;
+    mvv2e = 1.0;
+    dt = 1.0;
+
+  } else if (strcmp(style,"si") == 0) {
+    boltz = 1.3806488e-23;
+    mvv2e = 1.0;
+    dt = 1.0;
+    
+  } else error->all(FLERR,"Illegal units command");
+
+  delete [] unit_style;
+  int n = strlen(style) + 1;
+  unit_style = new char[n];
+  strcpy(unit_style,style);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Update::init()
 {
+  // init the Update class if performing a run, else just return
+  // only set first_update if a run is being performed
+
+  if (runflag == 0) return;
+  first_update = 1;
+
   // choose the appropriate move method
 
   if (domain->dimension == 3) {
@@ -128,31 +161,6 @@ void Update::init()
 
   if (moveperturb) perturbflag = 1;
   else perturbflag = 0;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void Update::set_units(const char *style)
-{
-  // physical constants from:
-  // http://physics.nist.gov/cuu/Constants/Table/allascii.txt
-  
-  if (strcmp(style,"cgs") == 0) {
-    boltz = 1.3806488e-16;
-    mvv2e = 1.0;
-    dt = 1.0;
-
-  } else if (strcmp(style,"si") == 0) {
-    boltz = 1.3806488e-23;
-    mvv2e = 1.0;
-    dt = 1.0;
-    
-  } else error->all(FLERR,"Illegal units command");
-
-  delete [] unit_style;
-  int n = strlen(style) + 1;
-  unit_style = new char[n];
-  strcpy(unit_style,style);
 }
 
 /* ---------------------------------------------------------------------- */

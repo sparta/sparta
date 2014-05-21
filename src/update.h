@@ -24,8 +24,10 @@ class Update : protected Pointers {
  public:
   bigint ntimestep;               // current timestep
   int nsteps;                     // # of steps to run
-  bigint firststep,laststep;      // 1st & last step of this run
   int runflag;                    // 0 for unset, 1 for run
+  bigint firststep,laststep;      // 1st & last step of this run
+  bigint beginstep,endstep;       // 1st and last step of multiple runs
+  int first_update;               // 0 before initial update, 1 after
   double dt;                      // timestep size
 
   char *unit_style;      // style of units used throughout simulation
@@ -67,8 +69,8 @@ class Update : protected Pointers {
 
   Update(class SPARTA *);
   ~Update();
-  void init();
   void set_units(const char *);
+  void init();
   void setup();
   void run(int);
   void global(int, char **);

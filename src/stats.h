@@ -94,6 +94,7 @@ class Stats : protected Pointers {
 
   void compute_step();
   void compute_elapsed();
+  void compute_elaplong();
   void compute_dt();
   void compute_cpu();
   void compute_tpcpu();

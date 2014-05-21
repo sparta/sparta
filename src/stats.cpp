@@ -36,7 +36,7 @@ using namespace SPARTA_NS;
 
 // customize a new keyword by adding to this list:
 
-// step,elapsed,dt,cpu,tpcpu,spcpu
+// step,elapsed,elaplong,dt,cpu,tpcpu,spcpu
 // np,ntouch,ncomm,nbound,nexit,nscoll,nscheck,ncoll,nattempt,nreact,
 // npave,ntouchave,ncommave,nboundave,nexitave,nscollave,nscheckave,
 // ncollave,nattemptave,nreactave,
@@ -404,6 +404,8 @@ void Stats::set_fields(int narg, char **arg)
       addfield("Step",&Stats::compute_step,BIGINT);
     } else if (strcmp(arg[i],"elapsed") == 0) {
       addfield("Elapsed",&Stats::compute_elapsed,BIGINT);
+    } else if (strcmp(arg[i],"elaplong") == 0) {
+      addfield("Elapsed",&Stats::compute_elaplong,BIGINT);
     } else if (strcmp(arg[i],"dt") == 0) {
       addfield("Dt",&Stats::compute_dt,FLOAT);
     } else if (strcmp(arg[i],"cpu") == 0) {
@@ -657,6 +659,13 @@ int Stats::evaluate_keyword(char *word, double *answer)
     compute_elapsed();
     dvalue = bivalue;
 
+  } else if (strcmp(word,"elaplong") == 0) {
+    if (update->runflag == 0) 
+      error->all(FLERR,
+		 "This variable stats keyword cannot be used between runs");
+    compute_elaplong();
+    dvalue = bivalue;
+
   } else if (strcmp(word,"dt") == 0) {
     compute_dt();
 
@@ -796,6 +805,13 @@ void Stats::compute_step()
 void Stats::compute_elapsed()
 {
   bivalue = update->ntimestep - update->firststep;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_elaplong()
+{
+  bivalue = update->ntimestep - update->beginstep;
 }
 
 /* ---------------------------------------------------------------------- */
