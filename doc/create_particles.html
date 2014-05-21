@@ -1,0 +1,135 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>create_particles command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>create_particles mix-ID style args keyword value ... 
+</PRE>
+<UL><LI>mix-ID = ID of mixture to use when creating particles 
+
+<LI>style = <I>n</I> or <I>single</I> 
+
+<PRE>  <I>n</I> args = Np
+    Np = 0 or number of particles to create
+  <I>single</I> args = species-ID x y z vx vy vz
+    species-ID = ID of species of single particle
+    x,y,z = position of particle (distance units)
+    vx,vy,vz = velocity of particle (velocity units) 
+</PRE>
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>global</I> 
+
+<PRE>  <I>global</I> value = <I>yes</I> or <I>no</I> 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>create_particles background
+create_particles air n 100000
+create_particles air n 100000 global yes
+create_particles air single N 5.0 6.0 5.4 10.0 -1.0 0.0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Create particles and add them to the simulation domain.  The
+attributes of individual particles, such as species and velocity, are
+determined by the mixture attributes, as specied by the <I>mix-ID</I>.  See
+the <A HREF = "mixture.html">mixture</A> command for more details.  Note
+that this command can be used multiple times to add more and
+more particles.
+</P>
+<P>Particles are only created in grid cells which are entirely external
+to surfaces.  Particles are not created in grid cells cut by surfaces.
+</P>
+<P>If the <I>n</I> style is used with <I>Np</I> = 0, then the number of created
+particles is calculated by SPARTA as a function of the global <I>fnum</I>
+value, the mixture number density, and the flow volume of the
+simulation domain.
+</P>
+<P>The <I>fnum</I> value is set by the <A HREF = "global.html">global fnum</A> command.  The
+mixture <I>nrho</I> is set by the <A HREF = "mixture.html">mixture</A> command.  The flow
+volume of the simulation is the total volume of the simulation domain
+as specified by the <A HREF = "create_box.html">create_box</A> command, minus any
+volume that is interior to surfaces defined by the
+<A HREF = "read_surf.html">read_surf</A> command.  Note that the flow volume
+includes volume contributions from grid cells cut by surfaces.
+However particles are only created in grid cells entirely external to
+surfaces.  This means that particles may be created in external cells
+at a (slightly) higher density to compensate for no particles being
+created in cut cells that still contribute to the overall flow volume.
+</P>
+<P>If the <I>n</I> style is used with a non-zero <I>Np</I>, then exactly <I>Np</I>
+particles are created, which can be useful for debugging or
+benchmarking purposes.
+</P>
+<P>Based on the value of <I>Np</I>, each grid cell will have a target number
+of particles <I>M</I> to insert, which is a function of the cell's volume
+as compared to the total system flow volume.  If <I>M</I> has a fractional
+value, e.g. 12.5, then 12 particles will be inserted, and a 13th
+depending on the outcome of a random number generation.  As grid cells
+are looped over, the remainder fraction is accumulated, so that
+exactly <I>Np</I> particles are created across all the processors.
+</P>
+<P>Each particle is inserted at a random location within the grid cell.
+The particle species is chosen randomly in accord with the <I>frac</I>
+settings of the collection of species in the mixture, as set by the
+<A HREF = "mixture.html">mixture</A> command.  The velocity of the particle is set
+to the sum of the streaming velocity of the mixture and a thermal
+velocity sampled from the thermal temperature of the mixture.  Both
+the streaming velocity and thermal temperature are also set by the
+<A HREF = "mixture.html">mixture</A> command.
+</P>
+<P>The <I>single</I> style creates a single particle.  This can be useful for
+debugging purposes, e.g. to advect a single particle towards a
+surface.  A single particle of the specified species is inserted at
+the specified position and with the specified velocity.  In this case
+the <I>mix-ID</I> is ignored.
+</P>
+<HR>
+
+<P>The <I>global</I> keyword only applies when the <I>n</I> style is used, and
+controls how particles are generated in parallel.
+</P>
+<P>If the value is <I>yes</I>, then every processor loops over all <I>Np</I>
+particles.  As the coordinates of each is generated, each processor
+checks what grid cell it is in, and only stores the particle if it
+owns that grid cell.  Thus an identical set of particles are created,
+no matter how many processors are running the simulation
+</P>
+<P>If the value is <I>no</I>, then each of the <I>P</I> processors generates a
+<I>N/P</I> subset of particles, using its own random number generation.  It
+only adds particles to grid cells that it owns, as described above.
+This is a faster way to generate a large number of particles, but
+means that the individual attributes of particles will depend on the
+number of processors and the mapping of grid cells to procesors.  The
+overall set of created particles should have the same statistical
+properties as with the <I>yes</I> setting.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>A non-zero <I>Np</I> value for the <I>n</I> keyword cannot be used together with
+the <I>single</I> keyword.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "mixture.html">mixture</A>, <A HREF = "fix_inflow.html">fix inflow</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The option default is global = no.
+</P>
+</HTML>

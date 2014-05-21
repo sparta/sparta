@@ -1,0 +1,124 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+create_particles command :h3
+
+[Syntax:]
+
+create_particles mix-ID style args keyword value ... :pre
+
+mix-ID = ID of mixture to use when creating particles :ulb,l
+style = {n} or {single} :l
+  {n} args = Np
+    Np = 0 or number of particles to create
+  {single} args = species-ID x y z vx vy vz
+    species-ID = ID of species of single particle
+    x,y,z = position of particle (distance units)
+    vx,vy,vz = velocity of particle (velocity units) :pre
+zero or more keyword/value pairs may be appended :l
+keyword = {global} :l
+  {global} value = {yes} or {no} :pre
+:ule
+
+[Examples:]
+
+create_particles background
+create_particles air n 100000
+create_particles air n 100000 global yes
+create_particles air single N 5.0 6.0 5.4 10.0 -1.0 0.0 :pre
+
+[Description:]
+
+Create particles and add them to the simulation domain.  The
+attributes of individual particles, such as species and velocity, are
+determined by the mixture attributes, as specied by the {mix-ID}.  See
+the "mixture"_mixture.html command for more details.  Note
+that this command can be used multiple times to add more and
+more particles.
+
+Particles are only created in grid cells which are entirely external
+to surfaces.  Particles are not created in grid cells cut by surfaces.
+
+If the {n} style is used with {Np} = 0, then the number of created
+particles is calculated by SPARTA as a function of the global {fnum}
+value, the mixture number density, and the flow volume of the
+simulation domain.
+
+The {fnum} value is set by the "global fnum"_global.html command.  The
+mixture {nrho} is set by the "mixture"_mixture.html command.  The flow
+volume of the simulation is the total volume of the simulation domain
+as specified by the "create_box"_create_box.html command, minus any
+volume that is interior to surfaces defined by the
+"read_surf"_read_surf.html command.  Note that the flow volume
+includes volume contributions from grid cells cut by surfaces.
+However particles are only created in grid cells entirely external to
+surfaces.  This means that particles may be created in external cells
+at a (slightly) higher density to compensate for no particles being
+created in cut cells that still contribute to the overall flow volume.
+
+If the {n} style is used with a non-zero {Np}, then exactly {Np}
+particles are created, which can be useful for debugging or
+benchmarking purposes.
+
+Based on the value of {Np}, each grid cell will have a target number
+of particles {M} to insert, which is a function of the cell's volume
+as compared to the total system flow volume.  If {M} has a fractional
+value, e.g. 12.5, then 12 particles will be inserted, and a 13th
+depending on the outcome of a random number generation.  As grid cells
+are looped over, the remainder fraction is accumulated, so that
+exactly {Np} particles are created across all the processors.
+
+Each particle is inserted at a random location within the grid cell.
+The particle species is chosen randomly in accord with the {frac}
+settings of the collection of species in the mixture, as set by the
+"mixture"_mixture.html command.  The velocity of the particle is set
+to the sum of the streaming velocity of the mixture and a thermal
+velocity sampled from the thermal temperature of the mixture.  Both
+the streaming velocity and thermal temperature are also set by the
+"mixture"_mixture.html command.
+
+The {single} style creates a single particle.  This can be useful for
+debugging purposes, e.g. to advect a single particle towards a
+surface.  A single particle of the specified species is inserted at
+the specified position and with the specified velocity.  In this case
+the {mix-ID} is ignored.
+
+:line
+
+The {global} keyword only applies when the {n} style is used, and
+controls how particles are generated in parallel.
+
+If the value is {yes}, then every processor loops over all {Np}
+particles.  As the coordinates of each is generated, each processor
+checks what grid cell it is in, and only stores the particle if it
+owns that grid cell.  Thus an identical set of particles are created,
+no matter how many processors are running the simulation
+
+If the value is {no}, then each of the {P} processors generates a
+{N/P} subset of particles, using its own random number generation.  It
+only adds particles to grid cells that it owns, as described above.
+This is a faster way to generate a large number of particles, but
+means that the individual attributes of particles will depend on the
+number of processors and the mapping of grid cells to procesors.  The
+overall set of created particles should have the same statistical
+properties as with the {yes} setting.
+
+:line
+
+[Restrictions:]
+
+A non-zero {Np} value for the {n} keyword cannot be used together with
+the {single} keyword.
+
+[Related commands:]
+
+"mixture"_mixture.html, "fix inflow"_fix_inflow.html
+
+[Default:]
+
+The option default is global = no.

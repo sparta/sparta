@@ -1,0 +1,120 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>read_restart command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>read_restart file 
+</PRE>
+<UL><LI>file = name of binary restart file to read in 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>read_restart save.10000
+read_restart restart.*
+read_restart flow.*.% 
+</PRE>
+<PRE>
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>NOTE: Restart files and their associated commands are not yet
+fully implemented in SPARTA.
+</P>
+<P>Read in a previously saved simulation from a restart file.  This
+allows continuation of a previous run on the same or different number
+of processors.  Information about what is stored in a restart file is
+given below.  Basically this operation will re-create the simulation
+box with all its particles, the hierarchical grid used to track
+particles, and surface elements embedded in the grid, all with their
+attributes at the point in time the information was written to the
+restart file by a previous simluation.
+</P>
+<P>Although restart files are saved in binary format to allow exact
+regeneration of information, the random numbers used in the continued
+run will not be identical to those used if the run had been continued.
+Hence the new run should be statistically similar to the prevous run,
+but not identical.
+</P>
+<P>NOTE: discuss what happens on same or different # of procs, whether
+should change partitioning via the <A HREF = "balance.html">balance</A> or <A HREF = "fix_balance.html">fix
+balance</A> commands.
+</P>
+<P>IMPORTANT NOTE: Because restart files are binary, they may not be
+portable to other machines.
+</P>
+<P>Similar to how restart files are written (see the
+<A HREF = "write_restart.html">write_restart</A> and <A HREF = "restart.html">restart</A>
+commands), the restart filename can contain two wild-card characters.
+If a "*" appears in the filename, the directory is searched for all
+filenames that match the pattern where "*" is replaced with a timestep
+value.  The file with the largest timestep value is read in.  Thus,
+this effectively means, read the latest restart file.  It's useful if
+you want your script to continue a run from where it left off.  See
+the <A HREF = "run.html">run</A> command and its "upto" option for how to specify
+the run command so it doesn't need to be changed either.
+</P>
+<P>If a "%" character appears in the restart filename, SPARTA expects a
+set of multiple files to exist.  The <A HREF = "restart.html">restart</A> and
+<A HREF = "write_restart.html">write_restart</A> commands explain how such sets are
+created.  Read_restart will first read a filename where "%" is
+replaced by "base".  This file tells SPARTA how many processors
+created the set and how many files are in it.  Read_restart then reads
+the additional files.  For example, if the restart file was specified
+as save.% when it was written, then read_restart reads the files
+save.base, save.0, save.1, ... save.P-1, where P is the number of
+processors that created the restart file.
+</P>
+<P>Note that P could be the total number of processors in the previous
+simulation, or some subset of those processors, if the <I>fileper</I> or
+<I>nfile</I> options were used when the restart file was written; see the
+<A HREF = "restart.html">restart</A> and <A HREF = "write_restart.html">write_restart</A> commands
+for details.  The processors in the current SPARTA simulation share
+the work of reading these files; each reads a roughly equal subset of
+the files.  The number of processors which created the set can be
+different the number of processors in the current SPARTA simulation.
+This can be a fast mode of input on parallel machines that support
+parallel I/O.
+</P>
+<HR>
+
+<P>A restart file stores the following information about a simulation:
+</P>
+<P>NOTE: Need to be specific about this:
+</P>
+<P>all particles with their attributes
+species and mixture info
+timestep count and size
+all global settings
+not vremax
+grid topology
+surfaces
+status of time-average fixes?
+what about fixes and computes?
+</P>
+<P>IMPORTANT NOTE: No other information is stored in the restart file.
+</P>
+<P>what specific settings need to be reset?
+e.g. regions, variables
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_grid.html">read_grid</A>, <A HREF = "read_surf.html">read_surf</A>,
+<A HREF = "write_restart.html">write_restart</A>, <A HREF = "restart.html">restart</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

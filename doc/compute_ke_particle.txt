@@ -1,0 +1,57 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute ke/particle command :h3
+
+[Syntax:]
+
+compute ID ke/particle :pre
+
+ID is documented in "compute"_compute.html command
+ke/particle = style name of this compute command :ul
+
+[Examples:]
+
+compute 1 ke/particle :pre
+
+[Description:]
+
+Define a computation that calculates the per-atom translational
+kinetic energy for each particle.
+
+The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+"dump particle"_dump.html command.
+
+The kinetic energy is
+
+Vsq = Vx*Vx + Vy*Vy + Vz*Vz
+KE = 1/2 m Vsq
+
+where m is the mass and (Vx,Vy,Vz) are the velocity components of the
+particle.
+
+[Output info:]
+
+This compute calculates a per-particle vector, which can be accessed
+by any command that uses per-particle values from a compute as input.
+
+The vector can be accessed by any command that uses per-particle
+values from a compute as input.  See "Section
+4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+options.
+
+The per-particle vector values will be in energy "units"_units.html.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"dump particle"_dump.html
+
+[Default:] none
