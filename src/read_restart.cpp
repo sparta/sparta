@@ -100,6 +100,10 @@ void ReadRestart::command(int narg, char **arg)
   int incompatible = version_numeric();
 
   // read header info which creates simulation box
+  // also defines species, mixtures, grid, surfs
+  // NOTE: what about collision, chem, surf collisoin models?
+  //       would like to avoid that info if possible
+  //       how to setup global boundary w/ surf/collide w/out it?
 
   header(incompatible);
   domain->box_exist = 1;
