@@ -135,6 +135,7 @@ Output :h4
 
   "log file of statistical info"_stats_style.html
   "dump files"_dump.html (text or binary) of per particle, per grid cell, per surface element values
+  binary "restart files"_restart.html
   on-the-fly "rendered images and movies"_dump_image.html of particles, grid cells, surface elements :ul
 
 Pre- and post-processing :h4

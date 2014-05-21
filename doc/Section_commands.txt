@@ -253,7 +253,7 @@ Problem definition:
 "create_box"_create_box.html, "create_grid"_create_grid.html,
 "create_particles"_create_particles.html, "mixture"_mixture.html,
 "read_grid"_read_grid.html, "read_surf"_read_surf.html,
-"species"_species.html,
+"read_restart"_read_restart.html, "species"_species.html,
 
 Settings:
 
@@ -266,9 +266,10 @@ Settings:
 Output:
 
 "dump"_dump.html, "dump_image"_dump_image.html,
-"dump_modify"_dump_modify.html, "stats"_stats.html,
-"stats_modify"_stats_modify.html, "stats_style"_stats_style.html,
-"undump"_undump.html, "write_grid"_write_grid.html
+"dump_modify"_dump_modify.html, "restart"_restart.html,
+"stats"_stats.html, "stats_modify"_stats_modify.html,
+"stats_style"_stats_style.html, "undump"_undump.html,
+"write_grid"_write_grid.html, "write_restart"_write_restart.html
 
 Actions:
 
@@ -320,8 +321,10 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "quit"_quit.html,
 "react"_react.html,
 "read_grid"_read_grid.html,
+"read_restat"_read_restart.html,
 "read_surf"_read_surf.html,
 "region"_region.html,
+"restart"_restart.html,
 "run"_run.html,
 "seed"_seed.html,
 "shell"_shell.html,
@@ -336,7 +339,8 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "unfix"_unfix.html,
 "units"_units.html,
 "variable"_variable.html,
-"write_grid"_write_grid.html :tb(c=6,ea=c)
+"write_grid"_write_grid.html,
+"write_restart"_write_restart.html :tb(c=6,ea=c)
 
 :line
 
