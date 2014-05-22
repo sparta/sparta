@@ -503,13 +503,34 @@ void Surf::read_restart(FILE *fp)
   if (me == 0) fread(pts,sizeof(Point),npoint,fp);
   MPI_Bcast(pts,npoint*sizeof(Point),MPI_CHAR,0,world);
 
-
   if (domain->dimension == 2) {
     if (me == 0) fread(&nline,sizeof(int),1,fp);
     MPI_Bcast(&nline,1,MPI_INT,0,world);
     lines = (Line *) memory->smalloc(nline*sizeof(Line),"surf:lines");
+
     if (me == 0) {
+      for (int i = 0; i < nline; i++) {
+        lines[i].isc = -1;
+        fread(&lines[i].p1,sizeof(int),2,fp);
+        lines[i].norm[0] = lines[i].norm[2] = lines[i].norm[2] = 0.0;
+      }
     }
+    MPI_Bcast(lines,nline*sizeof(Line),MPI_CHAR,0,world);
+  }
+
+  if (domain->dimension == 3) {
+    if (me == 0) fread(&ntri,sizeof(int),1,fp);
+    MPI_Bcast(&ntri,1,MPI_INT,0,world);
+    tris = (Tri *) memory->smalloc(ntri*sizeof(Tri),"surf:tris");
+
+    if (me == 0) {
+      for (int i = 0; i < ntri; i++) {
+        tris[i].isc = -1;
+        fread(&tris[i].p1,sizeof(int),3,fp);
+        tris[i].norm[0] = tris[i].norm[2] = tris[i].norm[2] = 0.0;
+      }
+    }
+    MPI_Bcast(tris,ntri*sizeof(Tri),MPI_CHAR,0,world);
   }
 }
 
