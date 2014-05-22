@@ -115,9 +115,10 @@ void ReadRestart::command(int narg, char **arg)
   grid_params();
   surf_params();
 
+  // NOTE: when to set these
   domain->box_exist = 1;
   grid->exist = 1;
-  surf->exist = 1;
+  //surf->exist = 1;
 
   // read file layout info
 
@@ -127,8 +128,13 @@ void ReadRestart::command(int narg, char **arg)
 
   if (multiproc && me == 0) fclose(fp);
 
+  // NOTE: when do I
+  // follow read_grid ops: create child cells from parents,
+  //   assign to procs, all other grid setup
+  // follow read_surf ops: assign surfs to cells, etc
+
   // read per-proc info
-  // NOTE: what needs to go here
+  // NOTE: what needs to go here - grid cell IDs and particle info
 
   int maxbuf = 0;
   double *buf = NULL;

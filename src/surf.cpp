@@ -489,7 +489,7 @@ void Surf::write_restart(FILE *fp)
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 reads parent grid info from restart file
+   proc 0 reads surf geometry from restart file
    bcast to other procs
 ------------------------------------------------------------------------- */
 
