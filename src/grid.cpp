@@ -1844,6 +1844,18 @@ void Grid::grow_sinfo(int n)
   }
 }
 
+/* ----------------------------------------------------------------------
+   proc 0 writes parent grid info to restart file
+------------------------------------------------------------------------- */
+
+void Grid::write_restart(FILE *fp)
+{
+  int nbytes = nparent * sizeof(Grid::ParentCell);
+  fwrite(&nparent,sizeof(int),1,fp);
+  fwrite(&nbytes,sizeof(int),1,fp);
+  fwrite(pcells,sizeof(char),nbytes,fp);
+}
+
 /* ---------------------------------------------------------------------- */
 
 bigint Grid::memory_usage()

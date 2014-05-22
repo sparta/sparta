@@ -340,13 +340,12 @@ void WriteRestart::box_params()
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes out species and mixture info
+   proc 0 writes out species info
 ------------------------------------------------------------------------- */
 
 void WriteRestart::particle_params()
 {
-  particle->write_restart_species(fp);
-  particle->write_restart_mixture(fp);
+  particle->write_restart(fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -355,6 +354,8 @@ void WriteRestart::particle_params()
 
 void WriteRestart::grid_params()
 {
+  grid->write_restart(fp);
+
   int nparent = grid->nparent;
   Grid::ParentCell *pcells = grid->pcells;
   int nbytes = nparent * sizeof(Grid::ParentCell);

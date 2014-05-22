@@ -106,7 +106,7 @@ void ReadRestart::command(int narg, char **arg)
   int incompatible = version_numeric();
 
   // read header info which creates simulation box
-  // also defines species, mixtures, grid, surfs
+  // also defines species, grid, surfs
 
   header(incompatible);
 
@@ -589,8 +589,10 @@ void ReadRestart::box_params()
 
 void ReadRestart::particle_params()
 {
-  particle->read_restart_species(fp);
-  particle->read_restart_mixture(fp);
+  if (particle->nspecies)
+    error->all(FLERR,
+               "Cannot read restart with particle species already defined");
+  particle->read_restart(fp);
 }
 
 /* ---------------------------------------------------------------------- */
