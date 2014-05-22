@@ -467,6 +467,52 @@ void Surf::collate_array(int nrow, int ncol, int *l2g,
   memory->destroy(all);
 }
 
+/* ----------------------------------------------------------------------
+   proc 0 writes surf geometry to restart file
+------------------------------------------------------------------------- */
+
+void Surf::write_restart(FILE *fp)
+{
+  // need ID info
+
+  fwrite(&npoint,sizeof(int),1,fp);
+  fwrite(pts,sizeof(Point),npoint,fp);
+
+  if (domain->dimension == 2) {
+    for (int i = 0; i < nline; i++)
+      fwrite(&lines[i].p1,sizeof(int),2,fp);
+  }
+  if (domain->dimension == 3) {
+    for (int i = 0; i < ntri; i++)
+      fwrite(&tris[i].p1,sizeof(int),3,fp);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 reads parent grid info from restart file
+   bcast to other procs
+------------------------------------------------------------------------- */
+
+void Surf::read_restart(FILE *fp)
+{
+  int me = comm->me;
+
+  if (me == 0) fread(&npoint,sizeof(int),1,fp);
+  MPI_Bcast(&npoint,1,MPI_INT,0,world);
+  pts = (Point *) memory->smalloc(npoint*sizeof(Point),"surf:pts");
+  if (me == 0) fread(pts,sizeof(Point),npoint,fp);
+  MPI_Bcast(pts,npoint*sizeof(Point),MPI_CHAR,0,world);
+
+
+  if (domain->dimension == 2) {
+    if (me == 0) fread(&nline,sizeof(int),1,fp);
+    MPI_Bcast(&nline,1,MPI_INT,0,world);
+    lines = (Line *) memory->smalloc(nline*sizeof(Line),"surf:lines");
+    if (me == 0) {
+    }
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
 bigint Surf::memory_usage()

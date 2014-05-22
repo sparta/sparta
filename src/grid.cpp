@@ -1850,10 +1850,23 @@ void Grid::grow_sinfo(int n)
 
 void Grid::write_restart(FILE *fp)
 {
-  int nbytes = nparent * sizeof(Grid::ParentCell);
   fwrite(&nparent,sizeof(int),1,fp);
-  fwrite(&nbytes,sizeof(int),1,fp);
-  fwrite(pcells,sizeof(char),nbytes,fp);
+  fwrite(pcells,sizeof(ParentCell),nparent,fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 reads parent grid info from restart file
+   bcast to other procs
+------------------------------------------------------------------------- */
+
+void Grid::read_restart(FILE *fp)
+{
+  if (me == 0) fread(&nparent,sizeof(int),1,fp);
+  MPI_Bcast(&nparent,1,MPI_INT,0,world);
+  grow_pcells(nparent);
+
+  if (me == 0) fread(pcells,sizeof(ParentCell),nparent,fp);
+  MPI_Bcast(pcells,nparent*sizeof(ParentCell),MPI_CHAR,0,world);
 }
 
 /* ---------------------------------------------------------------------- */

@@ -39,7 +39,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
-     GRIDPARENT,SURFFLAG,NPOINT,NLINE,NTRI,
+     PARTICLE,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};
 
 /* ---------------------------------------------------------------------- */
@@ -201,15 +201,15 @@ void WriteRestart::write(char *file)
   }
 
   // proc 0 writes header info
+  // also simulation box, particle species, parent grid cells, surf info
 
   if (me == 0) {
     header();
     box_params();
     particle_params();
+    grid_params();
+    surf_params();
   }
-
-  grid_params();
-  surf_params();
 
   // communication buffer for my info
   // max_size = largest buffer needed by any proc
@@ -256,8 +256,6 @@ void WriteRestart::write(char *file)
 
   // pack my atom data into buf
   // NOTE: need to add this
-
-
 
   // output of one or more native files
   // filewriter = 1 = this proc writes to file
@@ -345,6 +343,7 @@ void WriteRestart::box_params()
 
 void WriteRestart::particle_params()
 {
+  write_int(PARTICLE,0);
   particle->write_restart(fp);
 }
 
@@ -354,15 +353,8 @@ void WriteRestart::particle_params()
 
 void WriteRestart::grid_params()
 {
+  write_int(GRID,0);
   grid->write_restart(fp);
-
-  int nparent = grid->nparent;
-  Grid::ParentCell *pcells = grid->pcells;
-  int nbytes = nparent * sizeof(Grid::ParentCell);
-
-  write_int(GRIDPARENT,grid->nparent);
-  fwrite(&nbytes,sizeof(int),1,fp);
-  fwrite(pcells,sizeof(char),nbytes,fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -371,36 +363,13 @@ void WriteRestart::grid_params()
 
 void WriteRestart::surf_params()
 {
-  if (surf->exist) {
-    write_int(SURFFLAG,1);
+  if (!surf->exist) {
+    write_int(SURF,0);
+    return;
+  }
 
-    int npoint = surf->npoint;
-    Surf::Point *pts = surf->pts;
-
-    write_int(NPOINT,npoint);
-    int nbytes = npoint * sizeof(Surf::Point);
-    fwrite(&nbytes,sizeof(int),1,fp);
-    fwrite(pts,sizeof(char),nbytes,fp);
-
-    if (domain->dimension == 2) {
-      int nline = surf->nline;
-      Surf::Line *lines = surf->lines;
-
-      write_int(NLINE,nline);
-      for (int i = 0; i < nline; i++)
-        fwrite(&lines[i].p1,sizeof(int),2,fp);
-    }
-
-    if (domain->dimension == 3) {
-      int ntri = surf->ntri;
-      Surf::Tri *tris = surf->tris;
-
-      write_int(NTRI,ntri);
-      for (int i = 0; i < ntri; i++)
-        fwrite(&tris[i].p1,sizeof(int),3,fp);
-    }
-
-  } else write_int(SURFFLAG,0);
+  write_int(SURF,1);
+  surf->write_restart(fp);
 }
 
 /* ----------------------------------------------------------------------

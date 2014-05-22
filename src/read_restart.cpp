@@ -41,7 +41,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
-     GRIDPARENT,SURFFLAG,NPOINT,NLINE,NTRI,
+     PARTICLE,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};
 
 /* ---------------------------------------------------------------------- */
@@ -111,11 +111,12 @@ void ReadRestart::command(int narg, char **arg)
   header(incompatible);
 
   box_params();
-  domain->box_exist = 1;
   particle_params();
   grid_params();
-  grid->exist = 1;
   surf_params();
+
+  domain->box_exist = 1;
+  grid->exist = 1;
   surf->exist = 1;
 
   // read file layout info
@@ -589,9 +590,9 @@ void ReadRestart::box_params()
 
 void ReadRestart::particle_params()
 {
-  if (particle->nspecies)
-    error->all(FLERR,
-               "Cannot read restart with particle species already defined");
+  int flag = read_int();
+  if (flag != PARTICLE) 
+    error->all(FLERR,"Invalid flag in particle section of restart file");
   particle->read_restart(fp);
 }
 
@@ -599,12 +600,21 @@ void ReadRestart::particle_params()
 
 void ReadRestart::grid_params()
 {
+  int flag = read_int();
+  if (flag != GRID) 
+    error->all(FLERR,"Invalid flag in grid section of restart file");
+  grid->read_restart(fp);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ReadRestart::surf_params()
 {
+  int flag = read_int();
+  if (flag != SURF) 
+    error->all(FLERR,"Invalid flag in surf section of restart file");
+  int surfexist = read_int();
+  if (surfexist) surf->read_restart(fp);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -619,7 +629,9 @@ void ReadRestart::file_layout()
         error->all(FLERR,"Restart file is not a multi-proc file");
       if (multiproc && multiproc_file == 0)
         error->all(FLERR,"Restart file is a multi-proc file");
-    }
+
+    } else error->all(FLERR,"Invalid flag in layout section of restart file");
+
     flag = read_int();
   }
 }
