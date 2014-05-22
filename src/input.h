@@ -91,6 +91,7 @@ class Input : protected Pointers {
   void stats_modify();
   void stats_style();
   void surf_collide();
+  void surf_modify();
   void timestep();
   void uncompute();
   void undump();

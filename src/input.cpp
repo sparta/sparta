@@ -538,6 +538,7 @@ int Input::execute_command()
   else if (!strcmp(command,"stats_modify")) stats_modify();
   else if (!strcmp(command,"stats_style")) stats_style();
   else if (!strcmp(command,"surf_collide")) surf_collide();
+  else if (!strcmp(command,"surf_modify")) surf_modify();
   else if (!strcmp(command,"timestep")) timestep();
   else if (!strcmp(command,"uncompute")) uncompute();
   else if (!strcmp(command,"undump")) undump();
@@ -1180,6 +1181,13 @@ void Input::stats_style()
 void Input::surf_collide()
 {
   surf->add_collide(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::surf_modify()
+{
+  surf->modify_params(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

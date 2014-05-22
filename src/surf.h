@@ -25,12 +25,17 @@ class Surf : protected Pointers {
   int exist;                // 1 if any surfaces are defined, else 0
   double bblo[3],bbhi[3];   // bounding box around surfs
 
+  int nid;                  // # of unique surface IDs
+  char **ids;               // list of IDs
+  int *idlo,*idhi;          // range of consecutive surfs assigned to each ID
+
   struct Point {
     double x[3];
   };
 
   struct Line {
     int isc;                // index of surface collision model it belongs to
+                            // -1 if unassigned
     int p1,p2;              // indices of points in line segment
                             // rhand rule: Z x (p2-p1) = outward normal
     double norm[3];         // outward normal to line segment
@@ -38,6 +43,7 @@ class Surf : protected Pointers {
 
   struct Tri {
     int isc;                // index of surface collision model it belongs to
+                            // -1 if unassigned
     int p1,p2,p3;           // indices of points in triangle
                             // rhand rule: (p2-p1) x (p3-p1) = outward normal
     double norm[3];         // outward normal to triangle
@@ -57,9 +63,10 @@ class Surf : protected Pointers {
 
   Surf(class SPARTA *);
   ~Surf();
+  void modify_params(int, char **);
   void init();
-  void setup_surf();
   int nelement();
+  void setup_surf();
 
   void compute_line_normal(int, int);
   void compute_tri_normal(int, int);
@@ -68,6 +75,8 @@ class Surf : protected Pointers {
   double line_size(int);
   double tri_size(int, double &);
 
+  int add_surf(const char *);
+  int find_surf(const char *);
   void add_collide(int, char **);
   int find_collide(const char *);
 

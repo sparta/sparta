@@ -45,6 +45,9 @@ class WriteRestart : protected Pointers {
   int icluster;              // which cluster I am in
 
   void header();
+  void box_params();
+  void grid_params();
+  void surf_params();
   void file_layout(int);
 
   void magic_string();

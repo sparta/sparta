@@ -35,6 +35,10 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
   exist = 0;
 
+  nid = 0;
+  ids = NULL;
+  idlo = idhi = NULL;
+
   npoint = nline = ntri = 0;
   pts = NULL;
   lines = NULL;
@@ -51,6 +55,11 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
 Surf::~Surf()
 {
+  for (int i = 0; i < nid; i++) delete [] ids[i];
+  memory->sfree(ids);
+  memory->sfree(idlo);
+  memory->sfree(idhi);
+
   memory->sfree(pts);
   memory->sfree(lines);
   memory->sfree(tris);
@@ -61,9 +70,56 @@ Surf::~Surf()
 
 /* ---------------------------------------------------------------------- */
 
+void Surf::modify_params(int narg, char **arg)
+{
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"collide") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal surf_modify command");
+      
+      int isurf = find_surf(arg[iarg+1]);
+      if (isurf < 0) error->all(FLERR,"Could not find surf_modify surf-ID");
+      int isc = find_collide(arg[iarg+2]);
+      if (isc < 0) error->all(FLERR,"Could not find surf_modify sc-ID");
+
+      // set surf collision model for each surf in range assigned to surf-ID
+
+      if (domain->dimension == 2) {
+        for (int i = idlo[isurf]; i <= idhi[isurf]; i++)
+          lines[i].isc = isc;
+      }
+      if (domain->dimension == 3) {
+        for (int i = idlo[isurf]; i <= idhi[isurf]; i++)
+          tris[i].isc = isc;
+      }
+
+      iarg += 3;
+    } else error->all(FLERR,"Illegal surf_modify command");
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Surf::init()
 {
-  // initialize surface collision models
+  // check that every element is assigned to a surf collision model
+
+  int flag = 0;
+  if (domain->dimension == 2) {
+    for (int i = 0; i < nline; i++)
+      if (lines[i].isc < 0) flag++;
+  } 
+  if (domain->dimension == 3) {
+    for (int i = 0; i < ntri; i++)
+      if (tris[i].isc < 0) flag++;
+  }
+  if (flag) {
+    char str[64];
+    sprintf(str,"%d surface elements not assigned to a collision model",flag);
+    error->all(FLERR,str);
+  }
+
+  // initialize surf collision models
 
   for (int i = 0; i < nsc; i++) sc[i]->init();
 }
@@ -235,6 +291,34 @@ double Surf::tri_size(int m, double &len)
   MathExtra::cross3(delta12,delta13,cross);
   double area = 0.5 * MathExtra::len3(cross);
   return area;
+}
+
+/* ----------------------------------------------------------------------
+   add a new surface ID, assumed to be unique
+   caller will set idlo and idhi
+------------------------------------------------------------------------- */
+
+int Surf::add_surf(const char *id)
+{
+  nid++;
+  memory->srealloc(ids,nid*sizeof(char *),"surf:ids");
+  memory->srealloc(idlo,nid*sizeof(int),"surf:idlo");
+  memory->srealloc(idhi,nid*sizeof(int),"surf:idhi");
+  return nid-1;
+}
+
+/* ----------------------------------------------------------------------
+   find a surface ID
+   return index of surface or -1 if not found
+------------------------------------------------------------------------- */
+
+int Surf::find_surf(const char *id)
+{
+  int isurf;
+  for (isurf = 0; isurf < nid; isurf++)
+    if (strcmp(id,ids[isurf]) == 0) break;
+  if (isurf == nid) return -1;
+  return isurf;
 }
 
 /* ----------------------------------------------------------------------

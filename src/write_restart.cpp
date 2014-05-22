@@ -21,6 +21,7 @@
 #include "domain.h"
 #include "comm.h"
 #include "grid.h"
+#include "surf.h"
 #include "memory.h"
 #include "error.h"
 
@@ -34,7 +35,11 @@ using namespace SPARTA_NS;
 #define VERSION_NUMERIC 0
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
-     UNITS,NTIMESTEP,DIMENSION,NPROCS,
+     UNITS,NTIMESTEP,NPROCS,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,
+     COMM_SORT,COMM_STYLE,
+     DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
+     GRIDPARENT,SURFFLAG,NPOINT,NLINE,NTRI,
      MULTIPROC,PROCSPERFILE,PERPROC};
 
 /* ---------------------------------------------------------------------- */
@@ -199,6 +204,9 @@ void WriteRestart::write(char *file)
 
   if (me == 0) {
     header();
+    box_params();
+    grid_params();
+    surf_params();
   }
 
   // communication buffer for my info
@@ -293,10 +301,100 @@ void WriteRestart::header()
   write_int(BIGINT,sizeof(bigint));
   write_string(UNITS,update->unit_style);
   write_bigint(NTIMESTEP,update->ntimestep);
-  write_int(DIMENSION,domain->dimension);
   write_int(NPROCS,nprocs);
 
+  write_double(FNUM,update->fnum);
+  write_double(NRHO,update->nrho);
+  write_double_vec(VSTREAM,3,update->vstream);
+  write_double(TEMP_THERMAL,update->temp_thermal);
+  write_double_vec(GRAVITY,3,update->gravity);
+  write_int(SURFMAX,grid->maxsurfpercell);
+  write_double(GRIDCUT,grid->cutoff);
+  write_int(COMM_SORT,comm->commsortflag);
+  write_int(COMM_STYLE,comm->commpartstyle);
+
   // -1 flag signals end of header
+
+  int flag = -1;
+  fwrite(&flag,sizeof(int),1,fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes out simulation box info
+------------------------------------------------------------------------- */
+
+void WriteRestart::box_params()
+{
+  write_int(DIMENSION,domain->dimension);
+  write_int(AXISYMMETRIC,domain->axisymmetric);
+  write_double_vec(BOXLO,3,domain->boxlo);
+  write_double_vec(BOXHI,3,domain->boxhi);
+  write_int_vec(BFLAG,6,domain->bflag);
+
+  // -1 flag signals end of box info
+
+  int flag = -1;
+  fwrite(&flag,sizeof(int),1,fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes out parent grid info
+------------------------------------------------------------------------- */
+
+void WriteRestart::grid_params()
+{
+  int nparent = grid->nparent;
+  Grid::ParentCell *pcells = grid->pcells;
+  int nbytes = nparent * sizeof(Grid::ParentCell);
+
+  write_int(GRIDPARENT,grid->nparent);
+  fwrite(&nbytes,sizeof(int),1,fp);
+  fwrite(pcells,sizeof(char),nbytes,fp);
+
+  // -1 flag signals end of parent grid info
+
+  int flag = -1;
+  fwrite(&flag,sizeof(int),1,fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes out surface element into
+------------------------------------------------------------------------- */
+
+void WriteRestart::surf_params()
+{
+  if (surf->exist) {
+    write_int(SURFFLAG,1);
+
+    int npoint = surf->npoint;
+    Surf::Point *pts = surf->pts;
+
+    write_int(NPOINT,npoint);
+    int nbytes = npoint * sizeof(Surf::Point);
+    fwrite(&nbytes,sizeof(int),1,fp);
+    fwrite(pts,sizeof(char),nbytes,fp);
+
+    if (domain->dimension == 2) {
+      int nline = surf->nline;
+      Surf::Line *lines = surf->lines;
+
+      write_int(NLINE,nline);
+      for (int i = 0; i < nline; i++)
+        fwrite(&lines[i].p1,sizeof(int),2,fp);
+    }
+
+    if (domain->dimension == 3) {
+      int ntri = surf->ntri;
+      Surf::Tri *tris = surf->tris;
+
+      write_int(NTRI,ntri);
+      for (int i = 0; i < ntri; i++)
+        fwrite(&tris[i].p1,sizeof(int),3,fp);
+    }
+
+  } else write_int(SURFFLAG,0);
+
+  // -1 flag signals end of surface element into
 
   int flag = -1;
   fwrite(&flag,sizeof(int),1,fp);
@@ -309,10 +407,7 @@ void WriteRestart::header()
 
 void WriteRestart::file_layout(int send_size)
 {
-  if (me == 0) {
-    write_int(MULTIPROC,multiproc);
-    //write_int(MPIIO,mpiioflag);
-  }
+  if (me == 0) write_int(MULTIPROC,multiproc);
 
   // -1 flag signals end of file layout info
 
