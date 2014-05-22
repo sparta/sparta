@@ -301,9 +301,14 @@ double Surf::tri_size(int m, double &len)
 int Surf::add_surf(const char *id)
 {
   nid++;
-  memory->srealloc(ids,nid*sizeof(char *),"surf:ids");
-  memory->srealloc(idlo,nid*sizeof(int),"surf:idlo");
-  memory->srealloc(idhi,nid*sizeof(int),"surf:idhi");
+  ids = (char **) memory->srealloc(ids,nid*sizeof(char *),"surf:ids");
+  idlo = (int *) memory->srealloc(idlo,nid*sizeof(int),"surf:idlo");
+  idhi = (int *) memory->srealloc(idhi,nid*sizeof(int),"surf:idhi");
+
+  int n = strlen(id) + 1;
+  ids[nid-1] = new char[n];
+  strcpy(ids[nid-1],id);
+
   return nid-1;
 }
 

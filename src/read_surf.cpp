@@ -84,17 +84,17 @@ void ReadSurf::command(int narg, char **arg)
   // newsurf = 0 for most recent ID
 
   int newsurf;
-  int isurf = surf->find_surf(arg[1]);
+  int isurf = surf->find_surf(arg[0]);
   if (isurf < 0) newsurf = 1;
   else if (isurf == surf->nid-1) newsurf = 0;
   else error->all(FLERR,"Invalid reuse of surface ID in read_surf command");
-  if (newsurf) isurf = surf->add_surf(arg[1]);
+  if (newsurf) isurf = surf->add_surf(arg[0]);
 
   // read header info
 
   if (me == 0) {
     if (screen) fprintf(screen,"Reading surf file ...\n");
-    open(arg[0]);
+    open(arg[1]);
   }
 
   MPI_Barrier(world);
@@ -147,15 +147,6 @@ void ReadSurf::command(int narg, char **arg)
     if (compressed) pclose(fp);
     else fclose(fp);
   }
-
-  // update range of surface elements assigned to new/old surface ID
-
-  if (!newsurf) {
-    if (dimension == 2) surf->idlo[isurf] = nline_old;
-    else surf->idlo[isurf] = ntri_old;
-  }
-  if (dimension == 2) surf->idhi[isurf] = surf->nline-1;
-  else surf->idhi[isurf] = surf->ntri-1;
 
   // apply optional keywords for geometric transformations
 
@@ -268,6 +259,13 @@ void ReadSurf::command(int narg, char **arg)
   surf->npoint = npoint_old + npoint_new;
   surf->nline = nline_old + nline_new;
   surf->ntri = ntri_old + ntri_new;
+
+  if (newsurf) {
+    if (dimension == 2) surf->idlo[isurf] = nline_old;
+    else surf->idlo[isurf] = ntri_old;
+  }
+  if (dimension == 2) surf->idhi[isurf] = surf->nline-1;
+  else surf->idhi[isurf] = surf->ntri-1;
 
   // extent of surf after geometric transformations
   // compute sizes of smallest surface elements

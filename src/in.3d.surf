@@ -33,15 +33,17 @@ mixture		    air N O vstream 1000.0 0 0
 
 ##################
 
+#read_surf           1 sdata.cube
+#read_surf           1 sdata.sphere
+#read_surf           1 sdata.sphere.big
+#read_surf           1 sdata.sphere.huge
+read_surf           1 ../devel/data.spikysphere
+#read_surf           1 ../devel/data.spikysphere.big
+
 surf_collide	    1 diffuse 300.0 0.0
 #surf_collide	    1 diffuse 300.0 0.9
 
-#read_surf           sdata.cube 1
-#read_surf           sdata.sphere 1
-#read_surf           sdata.sphere.big 1
-#read_surf           sdata.sphere.huge 1
-read_surf           ../devel/data.spikysphere 1
-#read_surf           ../devel/data.spikysphere.big 1
+surf_modify         collide 1 1
 
 ##################
 
