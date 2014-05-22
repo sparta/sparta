@@ -22,6 +22,8 @@
 #include "update.h"
 #include "domain.h"
 #include "comm.h"
+#include "grid.h"
+#include "surf.h"
 #include "memory.h"
 #include "error.h"
 
@@ -105,17 +107,16 @@ void ReadRestart::command(int narg, char **arg)
 
   // read header info which creates simulation box
   // also defines species, mixtures, grid, surfs
-  // NOTE: what about collision, chem, surf collisoin models?
-  //       would like to avoid that info if possible
-  //       how to setup global boundary w/ surf/collide w/out it?
 
   header(incompatible);
+
+  box_params();
   domain->box_exist = 1;
-
-  // problem setup using info from header
-  // NOTE: what needs to go here
-
-
+  particle_params();
+  grid_params();
+  grid->exist = 1;
+  surf_params();
+  surf->exist = 1;
 
   // read file layout info
 
@@ -511,7 +512,7 @@ void ReadRestart::header(int incompatible)
         error->all(FLERR,"Bigint setting in spatype.h is not compatible");
 
     // reset unit_style only if different
-    // so that timestep,neighbor-skin are not changed
+    // so that timestep is not changed
 
     } else if (flag == UNITS) {
       char *style = read_string();
@@ -520,15 +521,6 @@ void ReadRestart::header(int incompatible)
 
     } else if (flag == NTIMESTEP) {
       update->ntimestep = read_bigint();
-
-    // set dimension from restart file
-
-    } else if (flag == DIMENSION) {
-      int dimension = read_int();
-      domain->dimension = dimension;
-      //if (domain->dimension == 2 && domain->zperiodic == 0)
-      // error->all(FLERR,
-      //            "Cannot run 2d simulation with nonperiodic Z dimension");
 
     // read nprocs from restart file, warn if different
 
@@ -541,6 +533,30 @@ void ReadRestart::header(int incompatible)
 
     flag = read_int();
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ReadRestart::box_params()
+{
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ReadRestart::particle_params()
+{
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ReadRestart::grid_params()
+{
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ReadRestart::surf_params()
+{
 }
 
 /* ---------------------------------------------------------------------- */

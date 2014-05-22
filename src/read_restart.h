@@ -41,6 +41,10 @@ class ReadRestart : protected Pointers {
 
   void file_search(char *, char *);
   void header(int);
+  void box_params();
+  void particle_params();
+  void grid_params();
+  void surf_params();
   void file_layout();
 
   void magic_string();

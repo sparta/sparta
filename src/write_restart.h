@@ -46,6 +46,7 @@ class WriteRestart : protected Pointers {
 
   void header();
   void box_params();
+  void particle_params();
   void grid_params();
   void surf_params();
   void file_layout(int);

@@ -205,9 +205,11 @@ void WriteRestart::write(char *file)
   if (me == 0) {
     header();
     box_params();
-    grid_params();
-    surf_params();
+    particle_params();
   }
+
+  grid_params();
+  surf_params();
 
   // communication buffer for my info
   // max_size = largest buffer needed by any proc
@@ -335,6 +337,14 @@ void WriteRestart::box_params()
 
   int flag = -1;
   fwrite(&flag,sizeof(int),1,fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes out species and mixture info
+------------------------------------------------------------------------- */
+
+void WriteRestart::particle_params()
+{
 }
 
 /* ----------------------------------------------------------------------
