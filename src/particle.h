@@ -97,6 +97,7 @@ class Particle : protected Pointers {
   bigint memory_usage();
 
  private:
+  int me;
   int maxgrid;              // max # of indices first can hold
   int maxsort;              // max # of particles next can hold
   int maxspecies;           // max size of species list

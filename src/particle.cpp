@@ -44,6 +44,8 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};  // several files
 
 Particle::Particle(SPARTA *sparta) : Pointers(sparta)
 {
+  MPI_Comm_rank(world,&me);
+
   exist = 0;
   nglobal = 0;
   nlocal = maxlocal = 0;
@@ -98,7 +100,6 @@ void Particle::init()
   // RNG for particle weighting
 
   if (!wrandom) {
-    int me = comm->me;
     wrandom = new RanPark(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     wrandom->reset(seed,me,100);
@@ -375,7 +376,7 @@ void Particle::add_species(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR,"Illegal species command");
 
-  if (comm->me == 0) {
+  if (me == 0) {
     fp = fopen(arg[0],"r");
     if (fp == NULL) {
       char str[128];
@@ -389,7 +390,7 @@ void Particle::add_species(int narg, char **arg)
   nfilespecies = maxfilespecies = 0;
   filespecies = NULL;
 
-  if (comm->me == 0) read_species_file();
+  if (me == 0) read_species_file();
   MPI_Bcast(&nfilespecies,1,MPI_INT,0,world);
   if (nfilespecies >= maxfilespecies) {
     memory->destroy(filespecies);
@@ -640,6 +641,8 @@ int Particle::wordcount(char *line, char **words)
 
 void Particle::write_restart_species(FILE *fp)
 {
+  fwrite(&nspecies,sizeof(int),1,fp);
+  fwrite(species,sizeof(Species),nspecies,fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -649,6 +652,17 @@ void Particle::write_restart_species(FILE *fp)
 
 void Particle::read_restart_species(FILE *fp)
 {
+  if (me == 0) fread(&nspecies,sizeof(int),1,fp);
+  MPI_Bcast(&nspecies,1,MPI_INT,0,world);
+
+  if (nspecies > maxspecies) {
+    while (nspecies > maxspecies) maxspecies += DELTASPECIES;
+    species = (Species *) 
+      memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+  }
+
+  if (me == 0) fread(species,sizeof(Species),nspecies,fp);
+  MPI_Bcast(species,nspecies*sizeof(char),MPI_CHAR,0,world);
 }
 
 /* ----------------------------------------------------------------------
