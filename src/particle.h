@@ -89,6 +89,11 @@ class Particle : protected Pointers {
   double erot(int, class RanPark *);
   int evib(int, class RanPark *);
 
+  void write_restart_species(FILE *fp);
+  void read_restart_species(FILE *fp);
+  void write_restart_mixture(FILE *fp);
+  void read_restart_mixture(FILE *fp);
+
   bigint memory_usage();
 
  private:

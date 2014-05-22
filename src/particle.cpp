@@ -634,6 +634,40 @@ int Particle::wordcount(char *line, char **words)
   return nwords;
 }
 
+/* ----------------------------------------------------------------------
+   proc 0 write species info to restart file
+------------------------------------------------------------------------- */
+
+void Particle::write_restart_species(FILE *fp)
+{
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 reads species info from restart file
+   bcast to other procs
+------------------------------------------------------------------------- */
+
+void Particle::read_restart_species(FILE *fp)
+{
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 write mixture info to restart file
+------------------------------------------------------------------------- */
+
+void Particle::write_restart_mixture(FILE *fp)
+{
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 reads species info from restart file
+   bcast to other procs
+------------------------------------------------------------------------- */
+
+void Particle::read_restart_mixture(FILE *fp)
+{
+}
+
 /* ---------------------------------------------------------------------- */
 
 bigint Particle::memory_usage()

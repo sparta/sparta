@@ -345,6 +345,8 @@ void WriteRestart::box_params()
 
 void WriteRestart::particle_params()
 {
+  particle->write_restart_species(fp);
+  particle->write_restart_mixture(fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -360,11 +362,6 @@ void WriteRestart::grid_params()
   write_int(GRIDPARENT,grid->nparent);
   fwrite(&nbytes,sizeof(int),1,fp);
   fwrite(pcells,sizeof(char),nbytes,fp);
-
-  // -1 flag signals end of parent grid info
-
-  int flag = -1;
-  fwrite(&flag,sizeof(int),1,fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -403,11 +400,6 @@ void WriteRestart::surf_params()
     }
 
   } else write_int(SURFFLAG,0);
-
-  // -1 flag signals end of surface element into
-
-  int flag = -1;
-  fwrite(&flag,sizeof(int),1,fp);
 }
 
 /* ----------------------------------------------------------------------

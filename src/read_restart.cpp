@@ -560,12 +560,37 @@ void ReadRestart::header(int incompatible)
 
 void ReadRestart::box_params()
 {
+  // read flags and fields until flag = -1
+
+  int flag = read_int();
+  while (flag >= 0) {
+
+    if (flag == DIMENSION) {
+      domain->dimension = read_int();
+    } else if (flag == AXISYMMETRIC) {
+      domain->axisymmetric = read_int();
+    } else if (flag == BOXLO) {
+      read_double_vec(3,domain->boxlo);
+    } else if (flag == BOXHI) {
+      read_double_vec(3,domain->boxhi);
+    } else if (flag == BFLAG) {
+      read_int_vec(6,domain->bflag);
+
+    } else error->all(FLERR,"Invalid flag in header section of restart file");
+
+    flag = read_int();
+  }
+
+  domain->print_box("Read ");
+  domain->set_global_box();
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ReadRestart::particle_params()
 {
+  particle->read_restart_species(fp);
+  particle->read_restart_mixture(fp);
 }
 
 /* ---------------------------------------------------------------------- */
