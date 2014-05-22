@@ -32,10 +32,12 @@ Fixes perform their operations at different stages of the timestep.
 If 2 or more fixes operate at the same stage of the timestep, they are
 invoked in the order they were specified in the input script.
 
-The ID of a fix can only contain alphanumeric characters and
-underscores.
-
-Fixes can be deleted with the "unfix"_unfix.html command.
+The ID for a fix is used to identify the fix in other commands.  Each
+fix ID must be unique; see an exception below.  The ID can only
+contain alphanumeric characters and underscores.  You can specify
+multiple fixes of the same style so long as they have different IDs.
+A fix can be deleted with the "unfix"_unfix.html command, after which
+case its ID can be re-used.
 
 IMPORTANT NOTE: The "unfix"_unfix.html command is the only way to turn
 off a fix; simply specifying a new fix with a similar style will not

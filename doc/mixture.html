@@ -53,9 +53,6 @@ by its ID in several other SPARTA commands such as
 computes</A>.  Any number of mixtures can be defined and
 used in a simulation.
 </P>
-<P>The ID of a mixture can only contain alphanumeric characters and
-underscores.
-</P>
 <P>A mixture is a collection of one or more particle species as defined
 by the <A HREF = "species.html">species</A> command.  Each species belongs to a
 named group within the mixture so that particles of all species in the
@@ -63,10 +60,14 @@ group can be acted on together by other commands.  The mixture has
 global attributes and per-species attributes.  All attributes have
 default values unless they are explicitly specified.
 </P>
+<P>The ID for a mixture is used to identify the mixture in other
+commands.  Each mixture ID must be unique.  The ID can only contain
+alphanumeric characters and underscores.
+</P>
 <P>Note that the mixture command can be used multiple times with the same
 ID, to add species to the mixture, define groups within the mixture,
-or change its attributes.  Also note that a species can belong to
-more than one mixture.
+or change its attributes.  Also note that a species can belong to more
+than one mixture.
 </P>
 <P>There are 2 default mixtures defined by SPARTA that always exist.
 </P>

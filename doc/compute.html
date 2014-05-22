@@ -40,10 +40,12 @@ generate statistics or dump file output.  See <A HREF = "Section_howto.html#howt
 4.4</A> for a summary of various SPARTA output
 options, many of which involve computes.
 </P>
-<P>The ID of a compute can only contain alphanumeric characters and
-underscores.
-</P>
-<P>Computes can be deleted with the <A HREF = "uncompute.html">uncompute</A> command.
+<P>The ID for a compute is used to identify the compute in other
+commands.  Each compute ID must be unique.  The ID can only contain
+alphanumeric characters and underscores.  You can specify multiple
+computees of the same style so long as they have different IDs.  A
+compute can be deleted with the <A HREF = "uncompute.html">uncompute</A> command,
+after which its ID can be re-used.
 </P>
 <HR>
 

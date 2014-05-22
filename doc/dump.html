@@ -92,6 +92,13 @@ exception; it creates a JPG or PPM image file of the simulation
 configuration every N timesteps, as discussed on the <A HREF = "dump_image.html">dump
 image</A> doc page.
 </P>
+<P>The ID for a dump is used to identify the dump in other commands.
+Each dump ID must be unique.  The ID can only contain alphanumeric
+characters and underscores.  You can specify multiple dumpes of the
+same style so long as they have different IDs.  A dump can be deleted
+with the <A HREF = "undump.html">undump</A> command, after which its ID can be
+re-used.
+</P>
 <P>The <I>style</I> keyword determines what quantities are written to the file
 and in what format.  Settings made via the
 <A HREF = "dump_modify.html">dump_modify</A> command can also alter what info is

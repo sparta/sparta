@@ -37,10 +37,12 @@ generate statistics or dump file output.  See "Section
 4.4"_Section_howto.html#howto_4 for a summary of various SPARTA output
 options, many of which involve computes.
 
-The ID of a compute can only contain alphanumeric characters and
-underscores.
-
-Computes can be deleted with the "uncompute"_uncompute.html command.
+The ID for a compute is used to identify the compute in other
+commands.  Each compute ID must be unique.  The ID can only contain
+alphanumeric characters and underscores.  You can specify multiple
+computees of the same style so long as they have different IDs.  A
+compute can be deleted with the "uncompute"_uncompute.html command,
+after which its ID can be re-used.
 
 :line
 

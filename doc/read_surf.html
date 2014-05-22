@@ -13,11 +13,11 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>read_surf filename ID keyword args ... 
+<PRE>read_surf ID filename keyword args ... 
 </PRE>
-<UL><LI>filename = name of surface file 
+<UL><LI>ID = ID for all surface elements in the file 
 
-<LI>ID = ID for all surface elements in the file 
+<LI>filename = name of surface file 
 
 <LI>zero or more keyword/args pairs may be appended 
 
@@ -43,18 +43,19 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>read_surf sphere surf.sphere
+<PRE>read_surf 1 surf.sphere
 read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Read the geometry of a surface from a file.  In SPARTA, a "surface" is
-a collection of surface elements that represent the surface of one or
-more physical objects which will be embedded in the global simulation
-box.  The surface elements are triangles in 3d or line segments in 2d.
-The surface elements for each physical object are required to be a
-complete, connected set that tile the entire surface of the object.
-See the discussion of watertight surfaces below.
+<P>Read the geometry of a surface from the specified file.  In SPARTA, a
+"surface" is a collection of surface elements that represent the
+surface of one or more physical objects which will be embedded in the
+global simulation box.  The surface elements are triangles in 3d or
+line segments in 2d.  The surface elements for each physical object
+are required to be a complete, connected set that tile the entire
+surface of the object.  See the discussion of watertight surfaces
+below.
 </P>
 <P>Particles collide with surface elements as they advect, and optionally
 perform surface chemistry during the collision.  Collision statistics
@@ -66,14 +67,19 @@ surface</A> command.
 <P>IMPORTANT NOTE: Surface chemistry models have not yet been implemented
 in SPARTA.
 </P>
-<P>All of the surface elements in the file are assigned the specified
-<I>ID</I>.  The <I>ID</I> can only contain alphanumeric characters and
-underscores.  The <I>ID</I> can be the same or different for each file if
-the read_surf command is used multiple times to read in different
-objects.  The <I>ID</I> can be referenced in other commands; see the
-<A HREF = "surf_collide.html">surf_collide</A> command as an example, which defines
-what model is used to perform collisions when particles collide with
-elements in the surface.
+<P>The ID assigned to the surfaces read by the command is used to
+identify them in other commands.  The ID can only contain alphanumeric
+characters and underscores.  See the <A HREF = "surf_collide.html">surf_collide</A>
+command as an example, which defines what model is used to perform
+collisions when particles collide with elements in the surface.
+</P>
+<P>Note that the read_surf command can be used multiple times to read
+multiple objects from multiple files.  The surfaces in each file can
+be assigned to a new unique ID.  Or the ID can be the same as the ID
+used in the last read_surf command, so that surface elements from
+multiple (successive) files are all assigned to the same ID.  You
+cannot re-use an ID from a read_surf command older than the previous
+read_surf command.
 </P>
 <P>The format of the surface file is discussed below.  The optional
 keywords allow the vertices in the file to be translated, scaled, and
