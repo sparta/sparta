@@ -47,6 +47,6 @@ by this command, since they are always periodic.
 
 [Related commands:]
 
-"boundary"_boundary.html
+"boundary"_boundary.html, "surf_modify"_surf_modify.html
 
 [Default:] none

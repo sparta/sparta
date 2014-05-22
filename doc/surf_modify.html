@@ -32,27 +32,34 @@ surf_modify collide sphere bounce
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Set parameters for one of the boundaries of the global simulation box.
-Any of the 6 faces can be selected via the <I>wall</I> setting. 
+<P>Set parameters for surface elements that have been read in by the
+<A HREF = "read_surf.html">read_surf</A> command.  For each file of objects read by
+a <A HREF = "read_surf.html">read_surf</A> command, a surface ID is assigned.  This
+is the <I>surf-ID</I> argument described above as an argument of various
+keywords.
 </P>
-<P>The <I>surf</I> keyword can only be used when the boundary is of type "s",
-for surface, as set by the <A HREF = "boundary.html">boundary</A> command.  This
-keyword assigns a surface collision model to the boundary, as defined
-by the <A HREF = "surf_collide.html">surf_collide</A> command.  The ID of the
-surface collision model is specified as <I>sc-ID</I>, which is the ID used
-in the <A HREF = "surf_collide.html">surf_collide</A> command.
+<P>The <I>collide</I> keyword is used to assign a surface collision model to a
+set of surface elements.  The set of surface elements is specified by
+<I>surf-ID</I>.  The surface collision model is defined by the
+<A HREF = "surf_collide.html">surf_collide</A> command.  Which collision model to
+use is specified as <I>sc-ID</I>, which is the ID used in the
+<A HREF = "surf_collide.html">surf_collide</A> command.
 </P>
-<P>The effect of this keyword is that particle collisions with this
-boundary will be computed by the specified surface collision model.
+<P>The effect of this keyword is that particle collisions with these
+surface elements will be computed by the specified surface collision
+model.
 </P>
 <P><B>Restrictions:</B>
 </P>
 <P>For 2d simulations, the <I>zlo</I> and <I>zhi</I> boundaries cannot be modified
 by this command, since they are always periodic.
 </P>
+<P>All surface elements must be assigned to a surface collision model via
+the <I>collide</I> keyword before a simlulation can be performed.
+</P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "boundary.html">boundary</A>
+<P><A HREF = "bound_modify.html">bound_modify</A>
 </P>
 <P><B>Default:</B> none
 </P>
