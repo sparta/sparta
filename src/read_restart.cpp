@@ -529,6 +529,27 @@ void ReadRestart::header(int incompatible)
       if (nprocs_file != comm->nprocs && me == 0)
         error->warning(FLERR,"Restart file used different # of processors");
 
+    // global settings
+
+    } else if (flag == FNUM) {
+      update->fnum = read_double();
+    } else if (flag == NRHO) {
+      update->nrho = read_double();
+    } else if (flag == VSTREAM) {
+      read_double_vec(3,update->vstream);
+    } else if (flag == TEMP_THERMAL) {
+      update->temp_thermal = read_double();
+    } else if (flag == GRAVITY) {
+      read_double_vec(3,update->gravity);
+    } else if (flag == SURFMAX) {
+      grid->maxsurfpercell = read_int();
+    } else if (flag == GRIDCUT) {
+      grid->cutoff = read_double();
+    } else if (flag == COMM_SORT) {
+      comm->commsortflag = read_int();
+    } else if (flag == COMM_STYLE) {
+      comm->commpartstyle = read_int();
+
     } else error->all(FLERR,"Invalid flag in header section of restart file");
 
     flag = read_int();
