@@ -260,8 +260,9 @@ Settings:
 "collide"_collide.html, "collide_modify"_collide_modify.html,
 "compute"_compute.html, "fix"_fix.html, "global"_global.html,
 "react"_react.html, "region"_region.html,
-"surf_collide"_surf_collide.html, "timestep"_timestep.html,
-"uncompute"_uncompute.html, "unfix"_unfix.html
+"surf_collide"_surf_collide.html, "surf_modify"_surf_modify.html,
+"timestep"_timestep.html, "uncompute"_uncompute.html,
+"unfix"_unfix.html
 
 Output:
 
@@ -333,6 +334,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "stats_modify"_stats_modify.html,
 "stats_style"_stats_style.html,
 "surf_collide"_surf_collide.html,
+"surf_modify"_surf_modify.html,
 "timestep"_timestep.html,
 "uncompute"_uncompute.html,
 "undump"_undump.html,

@@ -6,23 +6,23 @@
 
 :line
 
-bound_modify command :h3
+surf_modify command :h3
 
 [Syntax:]
 
-bound_modify wall keyword value ... :pre
+surf_modify keyword args ... :pre
 
-wall = {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :ulb,l
-one or more keyword/value pairs may be listed :l
-keywords = {surf}
-  {surf} value = sc-ID
+one or more keyword/arg pairs may be listed :ulb,l
+keyword = {collide} :l
+  {collide} args = surf-ID sc-ID
+    surf-ID = ID of a surface
     sc-ID = ID of a surface collision model :pre
 :ule
 
 [Examples:]
 
-bound_modify yhi surf 1
-bound_modify zlo surf hotwall :pre
+surf_modify collide 1 2
+surf_modify collide sphere bounce :pre
 
 [Description:]
 
@@ -36,9 +36,8 @@ by the "surf_collide"_surf_collide.html command.  The ID of the
 surface collision model is specified as {sc-ID}, which is the ID used
 in the "surf_collide"_surf_collide.html command.
 
-The effect of this keyword is that particle collisions with the
-specified boundaries will be computed by the specified surface
-collision model.
+The effect of this keyword is that particle collisions with this
+boundary will be computed by the specified surface collision model.
 
 [Restrictions:]
 

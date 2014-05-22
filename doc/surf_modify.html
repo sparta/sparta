@@ -9,26 +9,26 @@
 
 <HR>
 
-<H3>bound_modify command 
+<H3>surf_modify command 
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>bound_modify wall keyword value ... 
+<PRE>surf_modify keyword args ... 
 </PRE>
-<UL><LI>wall = <I>xlo</I> or <I>xhi</I> or <I>ylo</I> or <I>yhi</I> or <I>zlo</I> or <I>zhi</I> 
+<UL><LI>one or more keyword/arg pairs may be listed 
 
-<LI>one or more keyword/value pairs may be listed 
+<LI>keyword = <I>collide</I> 
 
-<PRE>keywords = <I>surf</I>
-  <I>surf</I> value = sc-ID
+<PRE>  <I>collide</I> args = surf-ID sc-ID
+    surf-ID = ID of a surface
     sc-ID = ID of a surface collision model 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>bound_modify yhi surf 1
-bound_modify zlo surf hotwall 
+<PRE>surf_modify collide 1 2
+surf_modify collide sphere bounce 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -42,9 +42,8 @@ by the <A HREF = "surf_collide.html">surf_collide</A> command.  The ID of the
 surface collision model is specified as <I>sc-ID</I>, which is the ID used
 in the <A HREF = "surf_collide.html">surf_collide</A> command.
 </P>
-<P>The effect of this keyword is that particle collisions with the
-specified boundaries will be computed by the specified surface
-collision model.
+<P>The effect of this keyword is that particle collisions with this
+boundary will be computed by the specified surface collision model.
 </P>
 <P><B>Restrictions:</B>
 </P>

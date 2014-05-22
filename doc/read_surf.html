@@ -13,11 +13,11 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>read_surf filename surfcoll-ID keyword args ... 
+<PRE>read_surf filename ID keyword args ... 
 </PRE>
 <UL><LI>filename = name of surface file 
 
-<LI>surfcoll-ID = ID of surface collision model 
+<LI>ID = ID for all surface elements in the file 
 
 <LI>zero or more keyword/args pairs may be appended 
 
@@ -66,11 +66,14 @@ surface</A> command.
 <P>IMPORTANT NOTE: Surface chemistry models have not yet been implemented
 in SPARTA.
 </P>
-<P>All of the surface elements in the file are assigned a surfcoll-ID,
-which is the ID of a surface collision model previously defined by the
-<A HREF = "surf_collide.html">surf_collide</A> command.  This model will be used to
-perform collisions when particles collide with elements in
-the surface.
+<P>All of the surface elements in the file are assigned the specified
+<I>ID</I>.  The <I>ID</I> can only contain alphanumeric characters and
+underscores.  The <I>ID</I> can be the same or different for each file if
+the read_surf command is used multiple times to read in different
+objects.  The <I>ID</I> can be referenced in other commands; see the
+<A HREF = "surf_collide.html">surf_collide</A> command as an example, which defines
+what model is used to perform collisions when particles collide with
+elements in the surface.
 </P>
 <P>The format of the surface file is discussed below.  The optional
 keywords allow the vertices in the file to be translated, scaled, and
