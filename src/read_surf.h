@@ -111,7 +111,7 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
 
-E: Read_surf collision model ID does not exist
+E: Invalid reuse of surface ID in read_surf command
 
 UNDOCUMENTED
 

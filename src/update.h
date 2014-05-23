@@ -144,6 +144,12 @@ class Update : protected Pointers {
 
 /* ERROR/WARNING messages:
 
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running SPARTA to see the offending line.
+
 E: Gravity in z not allowed for 2d
 
 UNDOCUMENTED
@@ -151,12 +157,6 @@ UNDOCUMENTED
 E: Gravity in y not allowed for axi-symmetry
 
 UNDOCUMENTED
-
-E: Illegal ... command
-
-Self-explanatory.  Check the input script syntax and compare to the
-documentation for the command.  You can use -echo screen as a
-command-line option when running SPARTA to see the offending line.
 
 E: Particle %d on proc %d hit inside of surf %d on step %ld
 

@@ -100,6 +100,18 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
 
+E: Could not find surf_modify surf-ID
+
+UNDOCUMENTED
+
+E: Could not find surf_modify sc-ID
+
+UNDOCUMENTED
+
+E: %d surface elements not assigned to a collision model
+
+UNDOCUMENTED
+
 E: Reuse of surf_collide ID
 
 UNDOCUMENTED

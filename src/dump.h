@@ -107,6 +107,10 @@ E: Too much per-proc info for dump
 Number of local atoms times number of columns must fit in a 32-bit
 integer for dump.
 
+E: Too much buffered per-proc info for dump
+
+UNDOCUMENTED
+
 E: Cannot open gzipped file
 
 SPARTA was compiled without support for reading and writing gzipped
@@ -122,5 +126,17 @@ E: Illegal ... command
 Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
+
+E: Dump_modify buffer yes not allowed for this style
+
+UNDOCUMENTED
+
+E: Cannot use dump_modify fileper without % in dump file name
+
+UNDOCUMENTED
+
+E: Cannot use dump_modify nfile without % in dump file name
+
+UNDOCUMENTED
 
 */
