@@ -18,7 +18,8 @@ args = arguments used by a particular style :ul
 
 [Examples:]
 
-fix 1 grid/check 100 :pre
+fix 1 grid/check 100 warn
+fix 1 all ave/time 100 5 1000 c_myTemp c_thermo_temp file temp.profile :pre
 
 [Description:]
 
@@ -37,11 +38,11 @@ fix ID must be unique; see an exception below.  The ID can only
 contain alphanumeric characters and underscores.  You can specify
 multiple fixes of the same style so long as they have different IDs.
 A fix can be deleted with the "unfix"_unfix.html command, after which
-case its ID can be re-used.
+its ID can be re-used.
 
 IMPORTANT NOTE: The "unfix"_unfix.html command is the only way to turn
-off a fix; simply specifying a new fix with a similar style will not
-turn off the first one.
+off a fix; simply specifying a new fix with the same style and a
+different ID will not turn off the first one.
 
 If you specify a new fix with the same ID and style as an existing
 fix, the old fix is deleted and the new one is created (presumably
