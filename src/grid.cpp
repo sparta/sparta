@@ -1889,7 +1889,7 @@ int Grid::size_restart()
 
 int Grid::pack_restart(char *buf)
 {
-  int *cbuf = (cellint *) buf;
+  cellint *cbuf = (cellint *) buf;
 
   int m = 0;
   for (int i = 0; i < nlocal; i++) {

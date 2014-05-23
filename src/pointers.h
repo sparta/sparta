@@ -39,7 +39,7 @@ namespace SPARTA_NS {
 // roundup an int to multiple of 8
 
 #define ROUNDUP(A) (char *) (((uint64_t) (A) + 7) & ~7);
-#define IROUNDUP(A) (((int) (A) + 7) % 8);
+#define IROUNDUP(A) ((((int) (A) + 7) / 8) * 8);
 
 class Pointers {
  public:

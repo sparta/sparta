@@ -679,6 +679,7 @@ int Particle::size_restart()
 
 /* ----------------------------------------------------------------------
    pack my particle info into buf
+   use OnePartRestart data struct for permanent info and to encode cell ID
 ------------------------------------------------------------------------- */
 
 int Particle::pack_restart(char *buf)
