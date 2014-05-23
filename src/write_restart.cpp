@@ -211,16 +211,16 @@ void WriteRestart::write(char *file)
     surf_params();
   }
 
-  // communication buffer for my info
+  // communication buffer for my per-proc info = child grid cells and particles
   // max_size = largest buffer needed by any proc
-  // NOTE: do this for grid, surf, particles, need to decide
+
+  int send_size = grid->size_restart();
+  send_size += particle->size_restart();
 
   int max_size;
-  int send_size = 0;
-  //int send_size = atom->avec->size_restart();
   MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
 
-  double *buf;
+  char *buf;
   memory->create(buf,max_size,"write_restart:buf");
 
   // all procs write file layout info which may include per-proc sizes
@@ -254,8 +254,10 @@ void WriteRestart::write(char *file)
     delete [] multiname;
   }
 
-  // pack my atom data into buf
-  // NOTE: need to add this
+  // pack my child grid and particle data into buf
+
+  int n = grid->pack_restart(buf);
+  n += particle->pack_restart(&buf[n]);
 
   // output of one or more native files
   // filewriter = 1 = this proc writes to file
@@ -269,19 +271,19 @@ void WriteRestart::write(char *file)
   if (filewriter) {
     for (int iproc = 0; iproc < nclusterprocs; iproc++) {
       if (iproc) {
-        MPI_Irecv(buf,max_size,MPI_DOUBLE,me+iproc,0,world,&request);
+        MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
         MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
         MPI_Wait(&request,&status);
-        MPI_Get_count(&status,MPI_DOUBLE,&recv_size);
+        MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = send_size;
       
-      write_double_vec(PERPROC,recv_size,buf);
+      write_char_vec(PERPROC,recv_size,buf);
     }
     fclose(fp);
 
   } else {
     MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
-    MPI_Rsend(buf,send_size,MPI_DOUBLE,fileproc,0,world);
+    MPI_Rsend(buf,send_size,MPI_CHAR,fileproc,0,world);
   }
 
   // clean up
@@ -484,4 +486,15 @@ void WriteRestart::write_double_vec(int flag, int n, double *vec)
   fwrite(&flag,sizeof(int),1,fp);
   fwrite(&n,sizeof(int),1,fp);
   fwrite(vec,sizeof(double),n,fp);
+}
+
+/* ----------------------------------------------------------------------
+   write a flag and vector of N chars into restart file
+------------------------------------------------------------------------- */
+
+void WriteRestart::write_char_vec(int flag, int n, char *vec)
+{
+  fwrite(&flag,sizeof(int),1,fp);
+  fwrite(&n,sizeof(int),1,fp);
+  fwrite(vec,sizeof(char),n,fp);
 }

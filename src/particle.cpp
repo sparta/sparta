@@ -665,6 +665,49 @@ void Particle::read_restart(FILE *fp)
   MPI_Bcast(species,nspecies*sizeof(char),MPI_CHAR,0,world);
 }
 
+/* ----------------------------------------------------------------------
+   return size of particle restart info for this proc
+------------------------------------------------------------------------- */
+
+int Particle::size_restart()
+{
+  // NOTE: worry about N overflowing int, and in IROUNDUP ???
+  int n = nlocal * sizeof(OnePartRestart);
+  n = IROUNDUP(n);
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   pack my particle info into buf
+------------------------------------------------------------------------- */
+
+int Particle::pack_restart(char *buf)
+{
+  Grid::ChildCell *cells = grid->cells;
+  OnePartRestart cell;
+
+  int m = 0;
+  for (int i = 0; i < nlocal; i++) {
+    cell.id = particles[i].id;
+    cell.ispecies = particles[i].ispecies;
+    cell.icell = cells[particles[i].icell].id;
+    cell.x[0] = particles[i].x[0];
+    cell.x[1] = particles[i].x[1];
+    cell.x[2] = particles[i].x[2];
+    cell.v[0] = particles[i].v[0];
+    cell.v[1] = particles[i].v[1];
+    cell.v[2] = particles[i].v[2];
+    cell.erot = particles[i].erot;
+    cell.ivib = particles[i].ivib;
+    memcpy(&buf[m],&cell,sizeof(OnePartRestart));
+    m += sizeof(OnePartRestart);
+  }
+
+  int n = nlocal * sizeof(OnePartRestart);
+  n = IROUNDUP(n);
+  return n;
+}
+
 /* ---------------------------------------------------------------------- */
 
 bigint Particle::memory_usage()

@@ -57,6 +57,16 @@ class Particle : protected Pointers {
     double weight;          // particle or cell weight, if weighting enabled
   };
 
+  struct OnePartRestart {
+    int id;                 // particle ID
+    int ispecies;           // particle species index
+    cellint icell;          // cell ID the particle is in
+    double x[3];            // particle position
+    double v[3];            // particle velocity
+    double erot;            // rotational energy
+    int ivib;               // vibrational mode
+  };
+
   bigint nglobal;           // global # of particles
   int nlocal;               // # of particles I own
   int maxlocal;             // max # particles list can hold
@@ -91,6 +101,8 @@ class Particle : protected Pointers {
 
   void write_restart(FILE *fp);
   void read_restart(FILE *fp);
+  int size_restart();
+  int pack_restart(char *);
 
   bigint memory_usage();
 

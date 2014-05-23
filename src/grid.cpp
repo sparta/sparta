@@ -1869,6 +1869,40 @@ void Grid::read_restart(FILE *fp)
   MPI_Bcast(pcells,nparent*sizeof(ParentCell),MPI_CHAR,0,world);
 }
 
+/* ----------------------------------------------------------------------
+   return size of child grid restart info for this proc
+   count of unsplit and split cells, not sub cells
+------------------------------------------------------------------------- */
+
+int Grid::size_restart()
+{
+  // NOTE: worry about N overflowing int, and in IROUNDUP ???
+  int n = (nunsplitlocal + nsplitlocal) * sizeof(cellint);
+  n = IROUNDUP(n);
+  return n;
+}
+
+/* ----------------------------------------------------------------------
+   pack my child grid info into buf
+   just IDs of unsplit and split cells
+------------------------------------------------------------------------- */
+
+int Grid::pack_restart(char *buf)
+{
+  int *cbuf = (cellint *) buf;
+
+  int m = 0;
+  for (int i = 0; i < nlocal; i++) {
+    if (cells[i].nsplit <= 0) continue;
+    cbuf[m++] = cells[i].id;
+  }
+
+  // NOTE: worry about N overflowing int, and in IROUNDUP ???
+  int n = m * sizeof(cellint);
+  n = IROUNDUP(n);
+  return n;
+}
+
 /* ---------------------------------------------------------------------- */
 
 bigint Grid::memory_usage()

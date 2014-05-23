@@ -172,6 +172,8 @@ class Grid : protected Pointers {
   void weight(int, char **);
   void write_restart(FILE *);
   void read_restart(FILE *);
+  int size_restart();
+  int pack_restart(char *);
   bigint memory_usage();
 
   // grid_comm.cpp
