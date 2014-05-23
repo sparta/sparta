@@ -110,6 +110,5 @@ fix                 1 balance 50 1.0 rcb mol
 
 run 		    1000
 
-write_restart       tmp.foo
 
 

@@ -487,10 +487,12 @@ void Surf::write_restart(FILE *fp)
   fwrite(pts,sizeof(Point),npoint,fp);
 
   if (domain->dimension == 2) {
+    fwrite(&nline,sizeof(int),1,fp);
     for (int i = 0; i < nline; i++)
       fwrite(&lines[i].p1,sizeof(int),2,fp);
   }
   if (domain->dimension == 3) {
+    fwrite(&ntri,sizeof(int),1,fp);
     for (int i = 0; i < ntri; i++)
       fwrite(&tris[i].p1,sizeof(int),3,fp);
   }
