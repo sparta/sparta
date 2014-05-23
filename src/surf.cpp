@@ -473,7 +473,15 @@ void Surf::collate_array(int nrow, int ncol, int *l2g,
 
 void Surf::write_restart(FILE *fp)
 {
-  // need ID info
+  fwrite(&nid,sizeof(int),1,fp);
+  int n;
+  for (int i = 0; i < nid; i++) {
+    n = strlen(ids[i]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ids[i],sizeof(char),n,fp);
+    fwrite(&idlo[i],sizeof(int),1,fp);
+    fwrite(&idhi[i],sizeof(int),1,fp);
+  }
 
   fwrite(&npoint,sizeof(int),1,fp);
   fwrite(pts,sizeof(Point),npoint,fp);
@@ -496,6 +504,25 @@ void Surf::write_restart(FILE *fp)
 void Surf::read_restart(FILE *fp)
 {
   int me = comm->me;
+
+  if (me == 0) fread(&nid,sizeof(int),1,fp);
+  MPI_Bcast(&nid,1,MPI_INT,0,world);
+  ids = (char **) memory->smalloc(nid*sizeof(char *),"surf:ids");
+  idlo = (int *) memory->smalloc(nid*sizeof(int),"surf:idlo");
+  idhi = (int *) memory->smalloc(nid*sizeof(int),"surf:idhi");
+
+  int n;
+  for (int i = 0; i < nid; i++) {
+    if (me == 0) fread(&n,sizeof(int),1,fp);
+    MPI_Bcast(&n,1,MPI_INT,0,world);
+    ids[i] = new char[n];
+    if (me == 0) fread(ids[i],sizeof(char),n,fp);
+    MPI_Bcast(ids[i],n,MPI_CHAR,0,world);
+    if (me == 0) fread(&idlo[i],sizeof(int),1,fp);
+    MPI_Bcast(&idlo[i],1,MPI_INT,0,world);
+    if (me == 0) fread(&idhi[i],sizeof(int),1,fp);
+    MPI_Bcast(&idhi[i],1,MPI_INT,0,world);
+  }
 
   if (me == 0) fread(&npoint,sizeof(int),1,fp);
   MPI_Bcast(&npoint,1,MPI_INT,0,world);
