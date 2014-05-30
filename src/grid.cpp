@@ -1871,20 +1871,22 @@ void Grid::read_restart(FILE *fp)
 
 /* ----------------------------------------------------------------------
    return size of child grid restart info for this proc
-   count of unsplit and split cells, not sub cells
+   count of all owned cells
 ------------------------------------------------------------------------- */
 
 int Grid::size_restart()
 {
   // NOTE: worry about N overflowing int, and in IROUNDUP ???
-  int n = (nunsplitlocal + nsplitlocal) * sizeof(cellint);
+  int n = nlocal * sizeof(cellint);
+  n = IROUNDUP(n);
+  n += nlocal * sizeof(int);
   n = IROUNDUP(n);
   return n;
 }
 
 /* ----------------------------------------------------------------------
    pack my child grid info into buf
-   just IDs of unsplit and split cells
+   IDs of all owned cells
 ------------------------------------------------------------------------- */
 
 int Grid::pack_restart(char *buf)
@@ -1892,15 +1894,29 @@ int Grid::pack_restart(char *buf)
   cellint *cbuf = (cellint *) buf;
 
   int m = 0;
-  for (int i = 0; i < nlocal; i++) {
-    if (cells[i].nsplit <= 0) continue;
+  for (int i = 0; i < nlocal; i++)
     cbuf[m++] = cells[i].id;
-  }
 
   // NOTE: worry about N overflowing int, and in IROUNDUP ???
   int n = m * sizeof(cellint);
   n = IROUNDUP(n);
+
+  int *ibuf = (int *) &buf[n];
+
+  m = 0;
+  for (int i = 0; i < nlocal; i++)
+    ibuf[m++] = cells[i].nsplit;
+
+  n += m * sizeof(int);
+  n = IROUNDUP(n);
   return n;
+}
+
+/* ----------------------------------------------------------------------
+------------------------------------------------------------------------- */
+
+int Grid::unpack_restart(char *buf)
+{
 }
 
 /* ---------------------------------------------------------------------- */

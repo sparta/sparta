@@ -103,9 +103,9 @@ class Grid : protected Pointers {
 
     int type;                 // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
     int corner[8];            // corner flags, 4/8 in 2d/3d
-                              // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
+                              // OUTSIDE,INSIDE,OVERLAP,UN KNOWN
                               // ordered x first, y next, z last
-                              // for sub cells, type/corner
+                              // for sub t cells, type/corner
                               //   are same as in split cell containing them
 
     double volume;            // flow volume of cell or sub cell
@@ -114,7 +114,7 @@ class Grid : protected Pointers {
   };
 
   // additional info for owned or ghost split cell
-  // ghost split cell info is appended to owned split cell info
+  // ghost split cell info is appended to owned split c yell info
 
   struct SplitInfo {
     int icell;                // index of split cell in cells this belongs to
@@ -174,6 +174,8 @@ class Grid : protected Pointers {
   void read_restart(FILE *);
   int size_restart();
   int pack_restart(char *);
+  int unpack_restart(char *);
+
   bigint memory_usage();
 
   // grid_comm.cpp

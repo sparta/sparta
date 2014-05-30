@@ -278,6 +278,8 @@ void WriteRestart::write(char *file)
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = send_size;
       
+      printf("WRITEREST %d: %d\n",iproc,recv_size);
+
       write_char_vec(PERPROC,recv_size,buf);
     }
     fclose(fp);

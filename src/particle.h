@@ -47,7 +47,7 @@ class Particle : protected Pointers {
   struct OnePart {
     int id;                 // particle ID
     int ispecies;           // particle species index
-    int icell;              // which Grid::cells the particle is in
+    int icell;              // which local Grid::cells the particle is in
     double x[3];            // particle position
     double v[3];            // particle velocity
     double erot;            // rotational energy
@@ -103,6 +103,7 @@ class Particle : protected Pointers {
   void read_restart(FILE *fp);
   int size_restart();
   int pack_restart(char *);
+  int unpack_restart(char *);
 
   bigint memory_usage();
 

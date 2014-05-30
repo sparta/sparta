@@ -111,14 +111,11 @@ void ReadRestart::command(int narg, char **arg)
   header(incompatible);
 
   box_params();
+  domain->box_exist = 1;
   particle_params();
   grid_params();
-  surf_params();
-
-  // NOTE: when to set these
-  domain->box_exist = 1;
   grid->exist = 1;
-  //surf->exist = 1;
+  surf->exist = surf_params();
 
   // read file layout info
 
@@ -128,66 +125,110 @@ void ReadRestart::command(int narg, char **arg)
 
   if (multiproc && me == 0) fclose(fp);
 
-  // NOTE: when do I
-  // follow read_grid ops: create child cells from parents,
-  //   assign to procs, all other grid setup
-  // follow read_surf ops: assign surfs to cells, etc
+  // read per-proc info, grid cells and particles
 
-  // read per-proc info
-  // NOTE: what needs to go here - grid cell IDs and particle info
+  int m,n,flag,value,tmp;
+  long filepos;
+  MPI_Status status;
+  MPI_Request request;
 
   int maxbuf = 0;
-  double *buf = NULL;
-  int m,flag;
+  char *buf = NULL;
 
   // input of single native file
-  // nprocs_file = # of chunks in file
-  // proc 0 reads a chunk and bcasts it to other procs
-  // each proc unpacks the atoms, saving ones in it's sub-domain
-  // check for atom in sub-domain differs for orthogonal vs triclinic box
+  // same proc count in file and current simulation
+  // each proc will own exactly what it owned in previous run
+  // proc 0 reads a chunk and sends it to owning proc
+  // except skips its own chunk, then reads it at end
+  // each proc:
+  //   creates its grid cells from cell IDs
+  //   assigns all particles to its cells
 
-  int n;
+  if (multiproc == 0 && nprocs_file == nprocs) {
 
-  if (multiproc == 0) {
+    if (me == 0) {
+      for (int iproc = 0; iproc < nprocs_file; iproc++) {
+        fread(&value,sizeof(int),1,fp);
+        if (value != PERPROC)
+          error->one(FLERR,"Invalid flag in peratom section of restart file");
+
+        if (iproc == 0) filepos = ftell(fp);
+
+        fread(&n,sizeof(int),1,fp);
+        if (n > maxbuf) {
+          maxbuf = n;
+          memory->destroy(buf);
+          memory->create(buf,maxbuf,"read_restart:buf");
+        }
+
+        if (iproc > 0) {
+          fread(buf,sizeof(char),n,fp);
+          MPI_Send(&n,1,MPI_INT,iproc,0,world);
+          MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
+          MPI_Send(buf,n,MPI_CHAR,iproc,0,world);
+        } else fseek(fp,filepos+sizeof(int)+n,SEEK_SET);
+      }
+
+      // rewind and read my chunk
+
+      fseek(fp,filepos,SEEK_SET);
+      fread(&n,sizeof(int),1,fp);
+      fread(buf,sizeof(char),n,fp);
+
+      fclose(fp);
+
+    } else {
+      MPI_Recv(&n,1,MPI_INT,0,0,world,&status);
+      if (n > maxbuf) {
+        maxbuf = n;
+        memory->destroy(buf);
+        memory->create(buf,maxbuf,"read_restart:buf");
+      }
+      MPI_Irecv(buf,n,MPI_CHAR,0,0,world,&request);
+      MPI_Send(&tmp,0,MPI_INT,0,0,world);
+      MPI_Wait(&request,&status);
+    }
+
+    n = grid->unpack_restart(buf);
+    //grid->create_cells();
+    n += particle->unpack_restart(&buf[n]);
+    //particle->assign_parts();
+  }
+
+  // input of single native file
+  // different proc count in file and current simulation
+  // proc 0 reads a chunk and bcasts it to all other procs
+  // each proc:
+  //   creates 1/P fraction of grid cells from cell IDs
+  //   assigns all particles to cells it owns
+
+  else if (multiproc == 0) {
 
     for (int iproc = 0; iproc < nprocs_file; iproc++) {
-      if (read_int() != PERPROC) 
-        error->all(FLERR,"Invalid flag in peratom section of restart file");
+      value = read_int();
+      if (value != PERPROC)
+        error->one(FLERR,"Invalid flag in peratom section of restart file");
 
-      /*
       n = read_int();
       if (n > maxbuf) {
         maxbuf = n;
         memory->destroy(buf);
         memory->create(buf,maxbuf,"read_restart:buf");
       }
-      read_double_vec(n,buf);
 
-      m = 0;
-      while (m < n) {
-        x = &buf[m+1];
-        if (triclinic) {
-          domain->x2lamda(x,lamda);
-          coord = lamda;
-        } else coord = x;
+      read_char_vec(n,buf);
 
-        if (coord[0] >= sublo[0] && coord[0] < subhi[0] &&
-            coord[1] >= sublo[1] && coord[1] < subhi[1] &&
-            coord[2] >= sublo[2] && coord[2] < subhi[2]) {
-          m += avec->unpack_restart(&buf[m]);
-        } else m += static_cast<int> (buf[m]);
-      }
-      */
-
+      n = grid->unpack_restart(buf);
+      //grid->create_cells_fraction();
+      n += particle->unpack_restart(&buf[n]);
+      //particle->assign_parts();
     }
-
-    if (me == 0) fclose(fp);
   }
 
   // input of multiple native files with procs <= files
   // # of files = multiproc_file
   // each proc reads a subset of files, striding by nprocs
-  // each proc keeps all atoms in all perproc chunks in its files
+  // each proc keeps all cells/particles in all perproc chunks in its files
 
   else if (nprocs <= multiproc_file) {
 
@@ -224,8 +265,10 @@ void ReadRestart::command(int narg, char **arg)
         }
         fread(buf,sizeof(double),n,fp);
 
-        m = 0;
-        //while (m < n) m += avec->unpack_restart(&buf[m]);
+        n = grid->unpack_restart(buf);
+        //grid->create_cells_fraction();
+        n += particle->unpack_restart(&buf[n]);
+        //particle->assign_parts();
       }
 
       fclose(fp);
@@ -239,7 +282,7 @@ void ReadRestart::command(int narg, char **arg)
   // cluster procs based on # of files
   // 1st proc in each cluster reads per-proc chunks from file
   // sends chunks round-robin to other procs in its cluster
-  // each proc keeps all atoms in its perproc chunks in file
+  // each proc keeps all cells/particles in its perproc chunks in file
 
   else {
 
@@ -326,8 +369,10 @@ void ReadRestart::command(int narg, char **arg)
       }
 
       if (i % nclusterprocs == me - fileproc) {
-        m = 0;
-        //while (m < n) m += avec->unpack_restart(&buf[m]);
+        n = grid->unpack_restart(buf);
+        //grid->create_cells_fraction();
+        n += particle->unpack_restart(&buf[n]);
+        //particle->assign_parts();
       }
     }
 
@@ -340,14 +385,9 @@ void ReadRestart::command(int narg, char **arg)
   delete [] file;
   memory->destroy(buf);
 
-  // for multiproc files:
-  // perform irregular comm to migrate atoms to correct procs
 
-  if (multiproc) {
 
-    // create a temporary fix to hold and migrate extra atom info
-    // necessary b/c irregular will migrate atoms
-  }
+
 
   // check that all particles were assigned to procs
 
@@ -543,10 +583,12 @@ void ReadRestart::header(int incompatible)
     } else if (flag == NRHO) {
       update->nrho = read_double();
     } else if (flag == VSTREAM) {
+      read_int();
       read_double_vec(3,update->vstream);
     } else if (flag == TEMP_THERMAL) {
       update->temp_thermal = read_double();
     } else if (flag == GRAVITY) {
+      read_int();
       read_double_vec(3,update->gravity);
     } else if (flag == SURFMAX) {
       grid->maxsurfpercell = read_int();
@@ -577,10 +619,13 @@ void ReadRestart::box_params()
     } else if (flag == AXISYMMETRIC) {
       domain->axisymmetric = read_int();
     } else if (flag == BOXLO) {
+      read_int();
       read_double_vec(3,domain->boxlo);
     } else if (flag == BOXHI) {
+      read_int();
       read_double_vec(3,domain->boxhi);
     } else if (flag == BFLAG) {
+      read_int();
       read_int_vec(6,domain->bflag);
 
     } else error->all(FLERR,"Invalid flag in header section of restart file");
@@ -599,6 +644,7 @@ void ReadRestart::particle_params()
   int flag = read_int();
   if (flag != PARTICLE) 
     error->all(FLERR,"Invalid flag in particle section of restart file");
+  read_int();
   particle->read_restart(fp);
 }
 
@@ -609,18 +655,20 @@ void ReadRestart::grid_params()
   int flag = read_int();
   if (flag != GRID) 
     error->all(FLERR,"Invalid flag in grid section of restart file");
+  read_int();
   grid->read_restart(fp);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ReadRestart::surf_params()
+int ReadRestart::surf_params()
 {
   int flag = read_int();
   if (flag != SURF) 
     error->all(FLERR,"Invalid flag in surf section of restart file");
   int surfexist = read_int();
   if (surfexist) surf->read_restart(fp);
+  return surfexist;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -744,7 +792,6 @@ char *ReadRestart::read_string()
 
 /* ----------------------------------------------------------------------
    read vector of N ints from restart file and bcast them
-   do not bcast them, caller does that if required
 ------------------------------------------------------------------------- */
 
 void ReadRestart::read_int_vec(int n, int *vec)
@@ -755,11 +802,20 @@ void ReadRestart::read_int_vec(int n, int *vec)
 
 /* ----------------------------------------------------------------------
    read vector of N doubles from restart file and bcast them
-   do not bcast them, caller does that if required
 ------------------------------------------------------------------------- */
 
 void ReadRestart::read_double_vec(int n, double *vec)
 {
   if (me == 0) fread(vec,sizeof(double),n,fp);
   MPI_Bcast(vec,n,MPI_DOUBLE,0,world);
+}
+
+/* ----------------------------------------------------------------------
+   read vector of N chars from restart file and bcast them
+------------------------------------------------------------------------- */
+
+void ReadRestart::read_char_vec(int n, char *vec)
+{
+  if (me == 0) fread(vec,sizeof(char),n,fp);
+  MPI_Bcast(vec,n,MPI_CHAR,0,world);
 }

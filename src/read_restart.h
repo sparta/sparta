@@ -44,7 +44,7 @@ class ReadRestart : protected Pointers {
   void box_params();
   void particle_params();
   void grid_params();
-  void surf_params();
+  int surf_params();
   void file_layout();
 
   void magic_string();
@@ -57,6 +57,7 @@ class ReadRestart : protected Pointers {
   char *read_string();
   void read_int_vec(int, int *);
   void read_double_vec(int, double *);
+  void read_char_vec(int, char *);
 };
 
 }
