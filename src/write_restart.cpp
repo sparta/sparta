@@ -39,6 +39,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
+     NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      PARTICLE,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};
 
@@ -278,8 +279,6 @@ void WriteRestart::write(char *file)
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = send_size;
       
-      printf("WRITEREST %d: %d\n",iproc,recv_size);
-
       write_char_vec(PERPROC,recv_size,buf);
     }
     fclose(fp);
@@ -317,6 +316,16 @@ void WriteRestart::header()
   write_double(GRIDCUT,grid->cutoff);
   write_int(COMM_SORT,comm->commsortflag);
   write_int(COMM_STYLE,comm->commpartstyle);
+
+  MPI_Allreduce(&particle->nlocal,&particle->nglobal,1,
+                MPI_SPARTA_BIGINT,MPI_SUM,world);
+  write_bigint(NPARTICLE,particle->nglobal);
+  write_int(NUNSPLIT,grid->nunsplit);
+  write_int(NSPLIT,grid->nsplit);
+  write_int(NSUB,grid->nsub);
+  write_int(NPOINT,surf->npoint);
+  if (domain->dimension == 2) write_int(NSURF,surf->nline);
+  else write_int(NSURF,surf->ntri);
 
   // -1 flag signals end of header
 

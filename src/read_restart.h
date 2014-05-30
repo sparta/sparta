@@ -39,6 +39,10 @@ class ReadRestart : protected Pointers {
   int multiproc;             // 0 = proc 0 writes for all
                              // else # of procs writing files
 
+  bigint nparticle_file;
+  int nunsplit_file,nsplit_file,nsub_file;
+  int npoint_file,nsurf_file;
+
   void file_search(char *, char *);
   void header(int);
   void box_params();

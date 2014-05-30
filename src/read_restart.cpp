@@ -41,6 +41,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
+     NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      PARTICLE,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};
 
@@ -385,50 +386,57 @@ void ReadRestart::command(int narg, char **arg)
   delete [] file;
   memory->destroy(buf);
 
-
-
-
-
-  // check that all particles were assigned to procs
-
-  /*
-  bigint natoms;
-  bigint nblocal = atom->nlocal;
-  MPI_Allreduce(&nblocal,&natoms,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  // check that all grid cells and particles were assigned to procs
+  // print stats on grid cells, particles, surfs
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  " BIGINT_FORMAT " atoms\n",natoms);
-    if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " atoms\n",natoms);
+    if (screen) fprintf(screen,"  " BIGINT_FORMAT " grid cells\n",
+                        grid->ncell);
+    if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " grid cells\n",
+                        grid->ncell);
   }
 
-  if (natoms != atom->natoms)
-    error->all(FLERR,"Did not assign all restart atoms correctly");
+  if (grid->nunsplit != nunsplit_file) 
+    error->all(FLERR,"Did not assign all restart unsplit grid cells correctly");
+  if (grid->nsplit != nsplit_file) 
+    error->all(FLERR,"Did not assign all restart split grid cells correctly");
+  if (grid->nsub != nsub_file) 
+    error->all(FLERR,"Did not assign all restart sub grid cells correctly");
+
+  MPI_Allreduce(&particle->nlocal,&particle->nglobal,1,
+                MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (me == 0) {
-    if (atom->nbonds) {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " bonds\n",atom->nbonds);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " bonds\n",atom->nbonds);
-    }
-    if (atom->nangles) {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " angles\n",
-                          atom->nangles);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " angles\n",
-                           atom->nangles);
-    }
-    if (atom->ndihedrals) {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " dihedrals\n",
-                          atom->ndihedrals);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " dihedrals\n",
-                           atom->ndihedrals);
-    }
-    if (atom->nimpropers) {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " impropers\n",
-                          atom->nimpropers);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " impropers\n",
-                           atom->nimpropers);
+    if (screen) fprintf(screen,"  " BIGINT_FORMAT " particles\n",
+                        particle->nglobal);
+    if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " particles\n",
+                         particle->nglobal);
+  }
+
+  if (particle->nglobal != nparticle_file) 
+    error->all(FLERR,"Did not assign all restart particles correctly");
+
+  if (me == 0 && surf->exist) {
+    if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf points\n",
+                        surf->npoint);
+    if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf points\n",
+                         surf->npoint);
+    if (domain->dimension == 2) {
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf lines\n",
+                          surf->nline);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf lines\n",
+                           surf->nline);
+    } else {
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf triangles\n",
+                          surf->ntri);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf triangles\n",
+                           surf->ntri);
     }
   }
-  */
+
+  // map surfs to grid
+  // setup grid neighbors
+  // etc
 }
 
 /* ----------------------------------------------------------------------
@@ -598,6 +606,19 @@ void ReadRestart::header(int incompatible)
       comm->commsortflag = read_int();
     } else if (flag == COMM_STYLE) {
       comm->commpartstyle = read_int();
+
+    } else if (flag == NPARTICLE) {
+      nparticle_file = read_bigint();
+    } else if (flag == NSPLIT) {
+      nsplit_file = read_int();
+    } else if (flag == NUNSPLIT) {
+      nunsplit_file = read_int();
+    } else if (flag == NSUB) {
+      nsub_file = read_int();
+    } else if (flag == NPOINT) {
+      npoint_file = read_int();
+    } else if (flag == NSURF) {
+      nsurf_file = read_int();
 
     } else error->all(FLERR,"Invalid flag in header section of restart file");
 
