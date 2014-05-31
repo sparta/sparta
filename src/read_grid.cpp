@@ -76,7 +76,7 @@ void ReadGrid::command(int narg, char **arg)
 
   header();
 
-  // clear hash in Grid before re-populating it
+  // clear Grid::hash before re-populating it
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
@@ -105,7 +105,7 @@ void ReadGrid::command(int narg, char **arg)
 
   create_children();
 
-  // clear hash in Grid since done using it
+  // clear Grid::hash since done using it
 
   hash->clear();
   grid->hashfilled = 0;

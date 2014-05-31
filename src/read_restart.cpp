@@ -126,6 +126,21 @@ void ReadRestart::command(int narg, char **arg)
 
   if (multiproc && me == 0) fclose(fp);
 
+  // add parent cells to Grid::hash
+
+#ifdef SPARTA_MAP
+  std::map<cellint,int> *hash = grid->hash;
+#else
+  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
+#endif
+
+  Grid::ParentCell *pcells = grid->pcells;
+  int nparent = grid->nparent;
+
+  hash->clear();
+  for (int icell = 0; icell < nparent; icell++)
+    (*hash)[pcells[icell].id] = -(icell+1);
+
   // read per-proc info, grid cells and particles
 
   int m,n,flag,value,tmp;
@@ -191,7 +206,7 @@ void ReadRestart::command(int narg, char **arg)
     }
 
     n = grid->unpack_restart(buf);
-    //grid->create_cells();
+    create_child_cells(0);
     n += particle->unpack_restart(&buf[n]);
     //particle->assign_parts();
   }
@@ -220,7 +235,7 @@ void ReadRestart::command(int narg, char **arg)
       read_char_vec(n,buf);
 
       n = grid->unpack_restart(buf);
-      //grid->create_cells_fraction();
+      create_child_cells(1);
       n += particle->unpack_restart(&buf[n]);
       //particle->assign_parts();
     }
@@ -267,7 +282,7 @@ void ReadRestart::command(int narg, char **arg)
         fread(buf,sizeof(double),n,fp);
 
         n = grid->unpack_restart(buf);
-        //grid->create_cells_fraction();
+        create_child_cells(0);
         n += particle->unpack_restart(&buf[n]);
         //particle->assign_parts();
       }
@@ -371,7 +386,7 @@ void ReadRestart::command(int narg, char **arg)
 
       if (i % nclusterprocs == me - fileproc) {
         n = grid->unpack_restart(buf);
-        //grid->create_cells_fraction();
+        create_child_cells(0);
         n += particle->unpack_restart(&buf[n]);
         //particle->assign_parts();
       }
@@ -385,6 +400,18 @@ void ReadRestart::command(int narg, char **arg)
 
   delete [] file;
   memory->destroy(buf);
+
+  // clear Grid::hash since done using it
+
+  hash->clear();
+  grid->hashfilled = 0;
+
+  // invoke grid methods to complete grid setup
+
+  grid->setup_owned();
+  // map surfs to grid
+  // setup grid neighbors
+  // etc
 
   // check that all grid cells and particles were assigned to procs
   // print stats on grid cells, particles, surfs
@@ -433,10 +460,6 @@ void ReadRestart::command(int narg, char **arg)
                            surf->ntri);
     }
   }
-
-  // map surfs to grid
-  // setup grid neighbors
-  // etc
 }
 
 /* ----------------------------------------------------------------------
@@ -612,7 +635,7 @@ void ReadRestart::header(int incompatible)
     } else if (flag == NSPLIT) {
       nsplit_file = read_int();
     } else if (flag == NUNSPLIT) {
-      nunsplit_file = read_int();
+      nunsplit_file = read_bigint();
     } else if (flag == NSUB) {
       nsub_file = read_int();
     } else if (flag == NPOINT) {
@@ -709,6 +732,78 @@ void ReadRestart::file_layout()
 
     flag = read_int();
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ReadRestart::create_child_cells(int skipflag)
+{
+  int nlocal = grid->nlocal_restart;
+  cellint *ids = grid->id_restart;
+  int *nsplits = grid->nsplit_restart;
+
+  int nprocs = comm->nprocs;
+
+  Grid::ParentCell *pcells = grid->pcells;
+  int ix,iy,iz,nsplit,iparent,icell,isplit,index;
+  cellint id,ichild;
+  double lo[3],hi[3];
+
+  // for skipflag = 0, add all child cells in Grid restart to my Grid::cells
+  // for skipflag = 1, only add every Pth cell in list
+
+#ifdef SPARTA_MAP
+  std::map<cellint,int> *hash = grid->hash;
+#else
+  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
+#endif
+
+  for (int i = 0; i < nlocal; i++) {
+    id = ids[i];
+    nsplit = nsplits[i];
+
+    // NOTE: need more doc of this method
+
+    // unsplit or split cell
+    // add child cells to my Grid::hash as create them
+
+    if (nsplit > 0) {
+      if (skipflag && (i % nprocs != me)) continue;
+      iparent = grid->id_child2parent(id,ichild);
+      ichild = pcells[iparent].nx*pcells[iparent].ny*iz +
+        pcells[iparent].nx*iy + ix + 1;
+      grid->id_child_lohi(iparent,ichild,lo,hi);
+      grid->add_child_cell(id,iparent,lo,hi);
+      icell = grid->nlocal - 1;
+      (*hash)[id] = icell;
+      grid->cells[icell].nsplit = nsplit;
+      if (nsplit > 1) {
+        grid->nunsplitlocal--;
+        grid->add_split_cell(1);
+        isplit = grid->nsplitlocal - 1;
+        grid->sinfo[isplit].icell = icell;
+        grid->cells[icell].isplit = isplit;
+        // need to setup csubs in SplitInfo
+      }
+
+    // sub cell
+    // for skipflag, add only if I also own the corresponding split cell
+
+    } else {
+      if (skipflag && hash->find(id) == hash->end()) continue;
+      index = (*hash)[id];
+      grid->add_sub_cell(index,1);
+      icell = grid->nlocal - 1;
+      grid->cells[icell].nsplit = nsplit;
+      isplit = grid->cells[icell].isplit;
+      //grid->sinfo[isplit].csubs[-nsplit] = icell;
+    }
+  }
+
+  // deallocate memory in Grid
+
+  memory->destroy(grid->id_restart);
+  memory->destroy(grid->nsplit_restart);
 }
 
 // ----------------------------------------------------------------------

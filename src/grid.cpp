@@ -1872,12 +1872,14 @@ void Grid::read_restart(FILE *fp)
 /* ----------------------------------------------------------------------
    return size of child grid restart info for this proc
    count of all owned cells
+  // NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Grid::size_restart()
 {
-  // NOTE: worry about N overflowing int, and in IROUNDUP ???
-  int n = nlocal * sizeof(cellint);
+  int n = sizeof(int);
+  n = IROUNDUP(n);
+  n = nlocal * sizeof(cellint);
   n = IROUNDUP(n);
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);
@@ -1886,37 +1888,69 @@ int Grid::size_restart()
 
 /* ----------------------------------------------------------------------
    pack my child grid info into buf
-   IDs of all owned cells
+   ID, nsplit for all owned cells
+   // NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Grid::pack_restart(char *buf)
 {
-  cellint *cbuf = (cellint *) buf;
+  int n;
+  int *ibuf;
+  cellint *cbuf;
 
-  int m = 0;
-  for (int i = 0; i < nlocal; i++)
-    cbuf[m++] = cells[i].id;
-
-  // NOTE: worry about N overflowing int, and in IROUNDUP ???
-  int n = m * sizeof(cellint);
+  ibuf = (int *) buf;
+  *ibuf = nlocal;
+  n = sizeof(int);
   n = IROUNDUP(n);
 
-  int *ibuf = (int *) &buf[n];
-
-  m = 0;
+  cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal; i++)
-    ibuf[m++] = cells[i].nsplit;
-
-  n += m * sizeof(int);
+    cbuf[i] = cells[i].id;
+  n += nlocal * sizeof(cellint);
   n = IROUNDUP(n);
+
+  ibuf = (int *) &buf[n];
+  for (int i = 0; i < nlocal; i++)
+    ibuf[i] = cells[i].nsplit;
+  n += nlocal * sizeof(int);
+  n = IROUNDUP(n);
+
   return n;
 }
 
 /* ----------------------------------------------------------------------
+   unpack child grid info into restart storage
+   nlocal_restart, id_restart, nsplit_restart
+   allocate vectors here, will be deallocated by ReadRestart
 ------------------------------------------------------------------------- */
 
 int Grid::unpack_restart(char *buf)
 {
+  int n;
+  int *ibuf;
+  cellint *cbuf;
+
+  ibuf = (int *) buf;
+  nlocal_restart = *ibuf;
+  n = sizeof(int);
+  n = IROUNDUP(n);
+
+  memory->create(id_restart,nlocal_restart,"grid:id_restart");
+  memory->create(nsplit_restart,nlocal_restart,"grid:nsplit_restart");
+
+  cbuf = (cellint *) &buf[n];
+  for (int i = 0; i < nlocal_restart; i++)
+    id_restart[i] = cbuf[i];
+  n += nlocal_restart * sizeof(cellint);
+  n = IROUNDUP(n);
+
+  ibuf = (int *) &buf[n];
+  for (int i = 0; i < nlocal_restart; i++)
+    nsplit_restart[i] = ibuf[i];
+  n += nlocal_restart * sizeof(int);
+  n = IROUNDUP(n);
+
+  return n;
 }
 
 /* ---------------------------------------------------------------------- */

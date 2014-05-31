@@ -204,6 +204,9 @@ void WriteRestart::write(char *file)
   // proc 0 writes header info
   // also simulation box, particle species, parent grid cells, surf info
 
+  MPI_Allreduce(&particle->nlocal,&particle->nglobal,1,
+                MPI_SPARTA_BIGINT,MPI_SUM,world);
+
   if (me == 0) {
     header();
     box_params();
@@ -317,10 +320,8 @@ void WriteRestart::header()
   write_int(COMM_SORT,comm->commsortflag);
   write_int(COMM_STYLE,comm->commpartstyle);
 
-  MPI_Allreduce(&particle->nlocal,&particle->nglobal,1,
-                MPI_SPARTA_BIGINT,MPI_SUM,world);
   write_bigint(NPARTICLE,particle->nglobal);
-  write_int(NUNSPLIT,grid->nunsplit);
+  write_bigint(NUNSPLIT,grid->nunsplit);
   write_int(NSPLIT,grid->nsplit);
   write_int(NSUB,grid->nsub);
   write_int(NPOINT,surf->npoint);

@@ -51,6 +51,8 @@ class ReadRestart : protected Pointers {
   int surf_params();
   void file_layout();
 
+  void create_child_cells(int);
+
   void magic_string();
   void endian();
   int version_numeric();
@@ -90,7 +92,19 @@ E: Invalid flag in peratom section of restart file
 
 The format of this section of the file is not correct.
 
-E: Did not assign all restart atoms correctly
+E: Did not assign all restart unsplit grid cells correctly
+
+UNDOCUMENTED
+
+E: Did not assign all restart split grid cells correctly
+
+UNDOCUMENTED
+
+E: Did not assign all restart sub grid cells correctly
+
+UNDOCUMENTED
+
+E: Did not assign all restart particles correctly
 
 UNDOCUMENTED
 

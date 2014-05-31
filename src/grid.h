@@ -33,7 +33,7 @@ class Grid : protected Pointers {
                         // if not, some operations are not allowed
 
   bigint ncell;         // global count of child cells (unsplit+split, no sub)
-  int nunsplit;         // global count of unsplit cells
+  bigint nunsplit;      // global count of unsplit cells
   int nsplit;           // global count of split cells
   int nsub;             // global count of split sub cells
   int maxsurfpercell;   // max surf elements in one child cell
@@ -114,7 +114,7 @@ class Grid : protected Pointers {
   };
 
   // additional info for owned or ghost split cell
-  // ghost split cell info is appended to owned split c yell info
+  // ghost split cell info is appended to owned split cell info
 
   struct SplitInfo {
     int icell;                // index of split cell in cells this belongs to
@@ -178,6 +178,12 @@ class Grid : protected Pointers {
 
   bigint memory_usage();
 
+  // restart buffers, filled by read_restart
+
+  int nlocal_restart;
+  cellint *id_restart;
+  int *nsplit_restart;
+
   // grid_comm.cpp
 
   int pack_one(int, char *, int, int, int);
@@ -195,6 +201,7 @@ class Grid : protected Pointers {
   // grid_id.cpp
 
   int id_find_child(int, double *);
+  int id_child2parent(cellint, cellint &);
   cellint id_str2num(char *);
   void id_num2str(int, char *);
   void id_pc_split(char *, char *, char *);

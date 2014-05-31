@@ -52,6 +52,41 @@ int Grid::id_find_child(int iparent, double *x)
 }
 
 /* ----------------------------------------------------------------------
+   find parent of a child ID
+   loop from root thru parents until match the child cell ID
+   return local index of parent cell
+   also return ichild = 1 to Nx*Ny*Nz for index of child within parent
+------------------------------------------------------------------------- */
+
+int Grid::id_child2parent(cellint idchild, cellint &ichild)
+{
+  int nbits,newbits,nx,ny,nz,mask;
+  cellint m,idparent,idnew;
+  ParentCell *p;
+
+  int iparent = 0;
+  while (1) {
+    p = &pcells[iparent];
+    idparent = p->id;
+    nbits = p->nbits;
+    newbits = p->newbits;
+    nx = p->nx;
+    ny = p->ny;
+    nz = p->nz;
+
+    // ichild = the newbits above nbits in idchild
+
+    mask = (1 << newbits) - 1;
+    ichild = (idchild >> nbits) & mask;
+    idnew = idparent | (ichild << nbits);
+    if (idnew == idchild) break;
+    iparent = (*hash)[idnew];
+  }
+
+  return iparent;
+}
+
+/* ----------------------------------------------------------------------
    convert cell ID from string to number and return it
    idstr = "0" is special case, return 0
    otherwise, walk hierarchy from root to child so can shift bits correctly
