@@ -1879,7 +1879,7 @@ int Grid::size_restart()
 {
   int n = sizeof(int);
   n = IROUNDUP(n);
-  n = nlocal * sizeof(cellint);
+  n += nlocal * sizeof(cellint);
   n = IROUNDUP(n);
   n += nlocal * sizeof(int);
   n = IROUNDUP(n);

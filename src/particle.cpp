@@ -588,6 +588,8 @@ void Particle::read_species_file()
       filespecies = (Species *) 
 	memory->srealloc(filespecies,maxfilespecies*sizeof(Species),
 			 "particle:filespecies");
+      memset(&filespecies[nfilespecies],0,
+             (maxfilespecies-nfilespecies)*sizeof(Species));
     }
 
     nwords = wordcount(line,words);
@@ -667,12 +669,14 @@ void Particle::read_restart(FILE *fp)
 
 /* ----------------------------------------------------------------------
    return size of particle restart info for this proc
+   // NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Particle::size_restart()
 {
-  // NOTE: worry about N overflowing int, and in IROUNDUP ???
-  int n = nlocal * sizeof(OnePartRestart);
+  int n = sizeof(int);
+  n = IROUNDUP(n);
+  n += nlocal * sizeof(OnePartRestart);
   n = IROUNDUP(n);
   return n;
 }
@@ -680,6 +684,7 @@ int Particle::size_restart()
 /* ----------------------------------------------------------------------
    pack my particle info into buf
    use OnePartRestart data struct for permanent info and to encode cell ID
+   // NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Particle::pack_restart(char *buf)
@@ -697,7 +702,6 @@ int Particle::pack_restart(char *buf)
 
   OnePartRestart *pbuf = (OnePartRestart *) &buf[n];
 
-  int m = 0;
   for (int i = 0; i < nlocal; i++) {
     p = &particles[i];
     pr = &pbuf[i];

@@ -204,8 +204,8 @@ void WriteRestart::write(char *file)
   // proc 0 writes header info
   // also simulation box, particle species, parent grid cells, surf info
 
-  MPI_Allreduce(&particle->nlocal,&particle->nglobal,1,
-                MPI_SPARTA_BIGINT,MPI_SUM,world);
+  bigint btmp = particle->nlocal;
+  MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (me == 0) {
     header();

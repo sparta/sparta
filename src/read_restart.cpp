@@ -430,8 +430,8 @@ void ReadRestart::command(int narg, char **arg)
   if (grid->nsub != nsub_file) 
     error->all(FLERR,"Did not assign all restart sub grid cells correctly");
 
-  MPI_Allreduce(&particle->nlocal,&particle->nglobal,1,
-                MPI_SPARTA_BIGINT,MPI_SUM,world);
+  bigint btmp = particle->nlocal;
+  MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (me == 0) {
     if (screen) fprintf(screen,"  " BIGINT_FORMAT " particles\n",
@@ -632,10 +632,10 @@ void ReadRestart::header(int incompatible)
 
     } else if (flag == NPARTICLE) {
       nparticle_file = read_bigint();
-    } else if (flag == NSPLIT) {
-      nsplit_file = read_int();
     } else if (flag == NUNSPLIT) {
       nunsplit_file = read_bigint();
+    } else if (flag == NSPLIT) {
+      nsplit_file = read_int();
     } else if (flag == NSUB) {
       nsub_file = read_int();
     } else if (flag == NPOINT) {
