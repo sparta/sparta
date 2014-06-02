@@ -61,6 +61,8 @@ class Particle : protected Pointers {
     int id;                 // particle ID
     int ispecies;           // particle species index
     cellint icell;          // cell ID the particle is in
+    int nsplit;             // 1 for unsplit cell
+                            // else neg of sub cell index (0 to Nsplit-1)
     double x[3];            // particle position
     double v[3];            // particle velocity
     double erot;            // rotational energy
@@ -79,6 +81,13 @@ class Particle : protected Pointers {
   //int *first;               // index of first particle in each grid cell
 
   int *next;                // index of next particle in each grid cell
+
+  // restart buffers, filled by read_restart
+
+  int nlocal_restart;
+  OnePartRestart *particle_restart;
+
+  // methods
 
   Particle(class SPARTA *);
   ~Particle();

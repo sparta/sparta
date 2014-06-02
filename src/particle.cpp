@@ -684,36 +684,68 @@ int Particle::size_restart()
 
 int Particle::pack_restart(char *buf)
 {
+  int n,nsplit;
+
   Grid::ChildCell *cells = grid->cells;
-  OnePartRestart cell;
+  OnePart *p;
+  OnePartRestart *pr;
+
+  int *ibuf = (int *) buf;
+  *ibuf = nlocal;
+  n = sizeof(int);
+  n = IROUNDUP(n);
+
+  OnePartRestart *pbuf = (OnePartRestart *) &buf[n];
 
   int m = 0;
   for (int i = 0; i < nlocal; i++) {
-    cell.id = particles[i].id;
-    cell.ispecies = particles[i].ispecies;
-    cell.icell = cells[particles[i].icell].id;
-    cell.x[0] = particles[i].x[0];
-    cell.x[1] = particles[i].x[1];
-    cell.x[2] = particles[i].x[2];
-    cell.v[0] = particles[i].v[0];
-    cell.v[1] = particles[i].v[1];
-    cell.v[2] = particles[i].v[2];
-    cell.erot = particles[i].erot;
-    cell.ivib = particles[i].ivib;
-    memcpy(&buf[m],&cell,sizeof(OnePartRestart));
-    m += sizeof(OnePartRestart);
+    p = &particles[i];
+    pr = &pbuf[i];
+    pr->id = p->id;
+    pr->ispecies = p->ispecies;
+    pr->icell = cells[p->icell].id;
+    pr->nsplit = cells[p->icell].nsplit;
+    pr->x[0] = p->x[0];
+    pr->x[1] = p->x[1];
+    pr->x[2] = p->x[2];
+    pr->v[0] = p->v[0];
+    pr->v[1] = p->v[1];
+    pr->v[2] = p->v[2];
+    pr->erot = p->erot;
+    pr->ivib = p->ivib;
   }
 
-  int n = nlocal * sizeof(OnePartRestart);
+  n += nlocal * sizeof(OnePartRestart);
   n = IROUNDUP(n);
+
   return n;
 }
 
 /* ----------------------------------------------------------------------
+   unpack particle info into restart storage
+   allocate data structure here, will be deallocated by ReadRestart
 ------------------------------------------------------------------------- */
 
 int Particle::unpack_restart(char *buf)
 {
+  int n;
+  Grid::ChildCell *cells = grid->cells;
+  OnePartRestart *p;
+
+  int *ibuf = (int *) buf;
+  nlocal_restart = *ibuf;
+  n = sizeof(int);
+  n = IROUNDUP(n);
+
+  particle_restart = (OnePartRestart *) 
+    memory->smalloc(nlocal_restart*sizeof(OnePartRestart),
+                    "grid:particle_restart");
+
+  memcpy(particle_restart,&buf[n],nlocal_restart*sizeof(OnePartRestart));
+  n += nlocal_restart * sizeof(OnePartRestart);
+  n = IROUNDUP(n);
+
+  return n;
 }
 
 /* ---------------------------------------------------------------------- */

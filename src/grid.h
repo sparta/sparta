@@ -153,6 +153,14 @@ class Grid : protected Pointers {
   SplitInfo *sinfo;           // extra info for owned and ghost split cells
   ParentCell *pcells;         // global list of parent cells
 
+  // restart buffers, filled by read_restart
+
+  int nlocal_restart;
+  cellint *id_restart;
+  int *nsplit_restart;
+
+  // methods
+
   Grid(class SPARTA *);
   ~Grid();
   void init() {}
@@ -177,12 +185,6 @@ class Grid : protected Pointers {
   int unpack_restart(char *);
 
   bigint memory_usage();
-
-  // restart buffers, filled by read_restart
-
-  int nlocal_restart;
-  cellint *id_restart;
-  int *nsplit_restart;
 
   // grid_comm.cpp
 

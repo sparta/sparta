@@ -208,7 +208,7 @@ void ReadRestart::command(int narg, char **arg)
     n = grid->unpack_restart(buf);
     create_child_cells(0);
     n += particle->unpack_restart(&buf[n]);
-    //particle->assign_parts();
+    assign_particles(0);
   }
 
   // input of single native file
@@ -237,7 +237,7 @@ void ReadRestart::command(int narg, char **arg)
       n = grid->unpack_restart(buf);
       create_child_cells(1);
       n += particle->unpack_restart(&buf[n]);
-      //particle->assign_parts();
+      assign_particles(1);
     }
   }
 
@@ -284,7 +284,7 @@ void ReadRestart::command(int narg, char **arg)
         n = grid->unpack_restart(buf);
         create_child_cells(0);
         n += particle->unpack_restart(&buf[n]);
-        //particle->assign_parts();
+        assign_particles(0);
       }
 
       fclose(fp);
@@ -388,7 +388,7 @@ void ReadRestart::command(int narg, char **arg)
         n = grid->unpack_restart(buf);
         create_child_cells(0);
         n += particle->unpack_restart(&buf[n]);
-        //particle->assign_parts();
+        assign_particles(0);
       }
     }
 
@@ -734,14 +734,16 @@ void ReadRestart::file_layout()
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   create child cells that I own
+   called after Grid has stored chunk of grid cells in its restart bufs
+   if skipflag = 0, all cells in restart bufs are mine
+   if skipflag = 1, every Pth cell in restart bufs is mine
+   cells in restart bufs are unsplit or split or sub cells
+------------------------------------------------------------------------- */
 
 void ReadRestart::create_child_cells(int skipflag)
 {
-  int nlocal = grid->nlocal_restart;
-  cellint *ids = grid->id_restart;
-  int *nsplits = grid->nsplit_restart;
-
   int nprocs = comm->nprocs;
 
   Grid::ParentCell *pcells = grid->pcells;
@@ -758,6 +760,10 @@ void ReadRestart::create_child_cells(int skipflag)
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
 #endif
 
+  int nlocal = grid->nlocal_restart;
+  cellint *ids = grid->id_restart;
+  int *nsplits = grid->nsplit_restart;
+
   for (int i = 0; i < nlocal; i++) {
     id = ids[i];
     nsplit = nsplits[i];
@@ -765,7 +771,7 @@ void ReadRestart::create_child_cells(int skipflag)
     // NOTE: need more doc of this method
 
     // unsplit or split cell
-    // add child cells to my Grid::hash as create them
+    // add unsplit/split cells (not sub cells) to Grid::hash as create them
 
     if (nsplit > 0) {
       if (skipflag && (i % nprocs != me)) continue;
@@ -783,7 +789,7 @@ void ReadRestart::create_child_cells(int skipflag)
         isplit = grid->nsplitlocal - 1;
         grid->sinfo[isplit].icell = icell;
         grid->cells[icell].isplit = isplit;
-        // need to setup csubs in SplitInfo
+        // NOTE: need to setup csubs in SplitInfo
       }
 
     // sub cell
@@ -796,7 +802,7 @@ void ReadRestart::create_child_cells(int skipflag)
       icell = grid->nlocal - 1;
       grid->cells[icell].nsplit = nsplit;
       isplit = grid->cells[icell].isplit;
-      //grid->sinfo[isplit].csubs[-nsplit] = icell;
+      // NOTE: grid->sinfo[isplit].csubs[-nsplit] = icell;
     }
   }
 
@@ -804,6 +810,44 @@ void ReadRestart::create_child_cells(int skipflag)
 
   memory->destroy(grid->id_restart);
   memory->destroy(grid->nsplit_restart);
+}
+
+/* ----------------------------------------------------------------------
+   store particles that I own
+   called after Particle has stored chunk of particle in its restart buf
+   if skipflag = 0, all particles in restart buf are mine
+   if skipflag = 1, only some particles in restart buf are mine
+   use cell ID hash to convert global cell ID to local index
+------------------------------------------------------------------------- */
+
+void ReadRestart::assign_particles(int skipflag)
+{
+  int icell,nsplit;
+
+#ifdef SPARTA_MAP
+  std::map<cellint,int> *hash = grid->hash;
+#else
+  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
+#endif
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::SplitInfo *sinfo = grid->sinfo;
+
+  int nlocal = particle->nlocal_restart;
+  Particle::OnePartRestart *pr = particle->particle_restart;
+
+  for (int i = 0; i < nlocal; i++) {
+    if (skipflag && hash->find(pr->icell) == hash->end()) continue;
+    icell = (*hash)[pr->icell];
+    if (pr->nsplit <= 0) 
+      icell = sinfo[cells[icell].isplit].csubs[-pr->nsplit];
+    particle->add_particle(pr->id,pr->ispecies,icell,pr->x,pr->v,
+                           pr->erot,pr->ivib);
+  }
+
+  // deallocate memory in Particle
+
+  memory->sfree(particle->particle_restart);
 }
 
 // ----------------------------------------------------------------------

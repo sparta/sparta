@@ -1895,15 +1895,13 @@ int Grid::size_restart()
 int Grid::pack_restart(char *buf)
 {
   int n;
-  int *ibuf;
-  cellint *cbuf;
 
-  ibuf = (int *) buf;
+  int *ibuf = (int *) buf;
   *ibuf = nlocal;
   n = sizeof(int);
   n = IROUNDUP(n);
 
-  cbuf = (cellint *) &buf[n];
+  cellint *cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal; i++)
     cbuf[i] = cells[i].id;
   n += nlocal * sizeof(cellint);
@@ -1927,10 +1925,8 @@ int Grid::pack_restart(char *buf)
 int Grid::unpack_restart(char *buf)
 {
   int n;
-  int *ibuf;
-  cellint *cbuf;
 
-  ibuf = (int *) buf;
+  int *ibuf = (int *) buf;
   nlocal_restart = *ibuf;
   n = sizeof(int);
   n = IROUNDUP(n);
@@ -1938,7 +1934,7 @@ int Grid::unpack_restart(char *buf)
   memory->create(id_restart,nlocal_restart,"grid:id_restart");
   memory->create(nsplit_restart,nlocal_restart,"grid:nsplit_restart");
 
-  cbuf = (cellint *) &buf[n];
+  cellint *cbuf = (cellint *) &buf[n];
   for (int i = 0; i < nlocal_restart; i++)
     id_restart[i] = cbuf[i];
   n += nlocal_restart * sizeof(cellint);

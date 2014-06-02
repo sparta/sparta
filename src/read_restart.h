@@ -52,6 +52,7 @@ class ReadRestart : protected Pointers {
   void file_layout();
 
   void create_child_cells(int);
+  void assign_particles(int);
 
   void magic_string();
   void endian();
