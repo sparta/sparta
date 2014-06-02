@@ -341,7 +341,7 @@ void ReadSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
-  grid->surf2grid(0);
+  grid->surf2grid(1);
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();

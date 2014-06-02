@@ -49,9 +49,9 @@ void Grid::allocate_surf_arrays()
 
 /* ----------------------------------------------------------------------
    map surf elements into owned grid cells
-   if subflag = 0, create new owned split and sub cells as needed
+   if subflag = 1, create new owned split and sub cells as needed
      called from ReadSurf
-   if subflag = 1, split/sub cells already exist
+   if subflag = 0, split/sub cells already exist
      called from ReadRestart
    in cells: set nsurf, csurfs, nsplit, isplit
    in cinfo: set type, corner, volume
@@ -66,6 +66,7 @@ void Grid::surf2grid(int subflag)
   double *lo,*hi,*vols;
   double xsplit[3];
   ChildCell *c;
+  SplitInfo *s;
   Cut2d *cut2d;
   Cut3d *cut3d;
 
@@ -83,6 +84,8 @@ void Grid::surf2grid(int subflag)
   //double t1 = MPI_Wtime();
 
   for (int icell = 0; icell < nlocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     if (!box_overlap(lo,hi,slo,shi)) continue;
@@ -116,10 +119,12 @@ void Grid::surf2grid(int subflag)
 
   int ncurrent = nlocal;
   for (int icell = 0; icell < ncurrent; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].nsurf == 0) continue;
-    surfmap = csplits->vget();
 
+    surfmap = csplits->vget();
     c = &cells[icell];
+
     if (dim == 3)
       nsplit = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
                             vols,surfmap,cinfo[icell].corner,xsub,xsplit);
@@ -128,13 +133,14 @@ void Grid::surf2grid(int subflag)
                             vols,surfmap,cinfo[icell].corner,xsub,xsplit);
 
     if (nsplit == 1) cinfo[icell].volume = vols[0];
-    else {
+
+    else if (subflag) {
       cells[icell].nsplit = nsplit;
       nunsplitlocal--;
       
       cells[icell].isplit = nsplitlocal;
       add_split_cell(1);
-      SplitInfo *s = &sinfo[nsplitlocal-1];
+      s = &sinfo[nsplitlocal-1];
       s->icell = icell;
       s->csplits = surfmap;
       s->xsub = xsub;
@@ -145,18 +151,35 @@ void Grid::surf2grid(int subflag)
 
       ptr = s->csubs = csubs->vget();
 
-      double volume = 0.0;
       for (i = 0; i < nsplit; i++) {
         isub = nlocal;
         add_sub_cell(icell,1);
         cells[isub].nsplit = -i;
         cinfo[isub].volume = vols[i];
-        volume += vols[i];
         ptr[i] = isub;
       }
       
       csplits->vgot(cells[icell].nsurf);
       csubs->vgot(nsplit);
+
+    } else {
+      if (cells[icell].nsplit != nsplit) error->one(FLERR,"");
+      
+      s = &sinfo[cells[icell].isplit];
+      s->csplits = surfmap;
+      s->xsub = xsub;
+      s->xsplit[0] = xsplit[0];
+      s->xsplit[1] = xsplit[1];
+      if (dim == 3) s->xsplit[2] = xsplit[2];
+      else s->xsplit[2] = 0.0;
+
+      ptr = s->csubs;
+      for (i = 0; i < nsplit; i++) {
+        isub = ptr[i];
+        cinfo[isub].volume = vols[i];
+      }
+      
+      csplits->vgot(cells[icell].nsurf);
     }
   }
 

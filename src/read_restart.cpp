@@ -416,7 +416,7 @@ void ReadRestart::command(int narg, char **arg)
 
   if (surf->exist) {
     surf->setup_surf();
-    grid->surf2grid(1);
+    grid->surf2grid(0);
   }
 
   grid->setup_owned();
