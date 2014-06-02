@@ -49,13 +49,16 @@ void Grid::allocate_surf_arrays()
 
 /* ----------------------------------------------------------------------
    map surf elements into owned grid cells
-   may create new owned split and sub cells
+   if subflag = 0, create new owned split and sub cells as needed
+     called from ReadSurf
+   if subflag = 1, split/sub cells already exist
+     called from ReadRestart
    in cells: set nsurf, csurfs, nsplit, isplit
    in cinfo: set type, corner, volume
    initialize sinfo as needed
 ------------------------------------------------------------------------- */
 
-void Grid::surf2grid()
+void Grid::surf2grid(int subflag)
 {
   int i,isub,nsurf,nsplit,xsub;
   int *surfmap,*ptr;

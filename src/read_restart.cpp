@@ -279,7 +279,7 @@ void ReadRestart::command(int narg, char **arg)
           memory->destroy(buf);
           memory->create(buf,maxbuf,"read_restart:buf");
         }
-        fread(buf,sizeof(double),n,fp);
+        fread(buf,sizeof(char),n,fp);
 
         n = grid->unpack_restart(buf);
         create_child_cells(0);
@@ -363,13 +363,13 @@ void ReadRestart::command(int narg, char **arg)
           memory->destroy(buf);
           memory->create(buf,maxbuf,"read_restart:buf");
         }
-        fread(buf,sizeof(double),n,fp);
+        fread(buf,sizeof(char),n,fp);
 
         if (i % nclusterprocs) {
           iproc = me + (i % nclusterprocs);
           MPI_Send(&n,1,MPI_INT,iproc,0,world);
           MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
-          MPI_Rsend(buf,n,MPI_DOUBLE,iproc,0,world);
+          MPI_Rsend(buf,n,MPI_CHAR,iproc,0,world);
         }
 
       } else if (i % nclusterprocs == me - fileproc) {
@@ -379,7 +379,7 @@ void ReadRestart::command(int narg, char **arg)
           memory->destroy(buf);
           memory->create(buf,maxbuf,"read_restart:buf");
         }
-        MPI_Irecv(buf,n,MPI_DOUBLE,fileproc,0,world,&request);
+        MPI_Irecv(buf,n,MPI_CHAR,fileproc,0,world,&request);
         MPI_Send(&tmp,0,MPI_INT,fileproc,0,world);
         MPI_Wait(&request,&status);
       }
@@ -406,15 +406,17 @@ void ReadRestart::command(int narg, char **arg)
   hash->clear();
   grid->hashfilled = 0;
 
-  // grid is no longer clumped unless reading single file on same # of procs
+  // grid is no longer clumped unless reading on same # of procs
+  // clumped decomposition is maintained (assuiming original file had it)
+  //   for all reading methods above where nprocs_file = current nprocs
 
-  if (multiproc || nprocs_file != nprocs) grid->clumped = 0;
+  if (nprocs_file != nprocs) grid->clumped = 0;
 
   // invoke surf and grid methods to complete grid setup
 
   if (surf->exist) {
     surf->setup_surf();
-    grid->surf2grid();
+    grid->surf2grid(1);
   }
 
   grid->setup_owned();

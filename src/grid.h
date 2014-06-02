@@ -196,7 +196,7 @@ class Grid : protected Pointers {
 
   // grid_surf.cpp
 
-  void surf2grid();
+  void surf2grid(int);
   void clear_surf();
   void allocate_surf_arrays();
 
