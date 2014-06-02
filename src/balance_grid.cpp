@@ -30,7 +30,7 @@ using namespace SPARTA_NS;
 
 //#define RCB_DEBUG 1     // un-comment to include RCB proc boxes in image
 
-enum{STRIDE,CLUMP,BLOCK,RANDOM,PROC,BISECTION};
+enum{NONE,STRIDE,CLUMP,BLOCK,RANDOM,PROC,BISECTION};
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
 enum{CELL,PARTICLE};
 
@@ -53,7 +53,11 @@ void BalanceGrid::command(int narg, char **arg)
   int px,py,pz;
   int rcbwt;
 
-  if (strcmp(arg[0],"stride") == 0) {
+  if (strcmp(arg[0],"none") == 0) {
+    if (narg != 1) error->all(FLERR,"Illegal balance_grid command");
+    bstyle = NONE;
+
+  } else if (strcmp(arg[0],"stride") == 0) {
     if (narg != 2) error->all(FLERR,"Illegal balance_grid command");
     bstyle = STRIDE;
     if (strcmp(arg[1],"xyz") == 0) order = XYZ;
@@ -113,7 +117,7 @@ void BalanceGrid::command(int narg, char **arg)
   // do not assign sub-cells since they migrate with their split cell
   // set nmigrate = # of cells that will migrate to a new proc
   // reset proc field in cells for migrating cells
-
+  // style NONE does nothing
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
@@ -305,9 +309,9 @@ void BalanceGrid::command(int narg, char **arg)
     memory->destroy(wt);
   }
 
-  if (bstyle == BISECTION) grid->clumped = 1;
+  if (bstyle == CLUMP || bstyle == BLOCK || bstyle == BISECTION) 
+    grid->clumped = 1;
   else grid->clumped = 0;
-  grid->clumped = 1;
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();

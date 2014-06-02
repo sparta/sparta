@@ -1119,12 +1119,11 @@ void Update::global(int narg, char **arg)
       iarg += 2;
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (grid->exist) 
-        error->all(FLERR,
-                   "Cannot set global gridcut when grid already exists");
       grid->cutoff = atof(arg[iarg+1]);
       if (grid->cutoff < 0.0 && grid->cutoff != -1.0)
         error->all(FLERR,"Illegal global command");
+      // force ghost info to be regenerated with new cutoff
+      grid->remove_ghosts();
       iarg += 2;
     } else if (strcmp(arg[iarg],"comm/sort") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");

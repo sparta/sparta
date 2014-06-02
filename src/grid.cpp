@@ -1877,7 +1877,7 @@ void Grid::read_restart(FILE *fp)
 
 int Grid::size_restart()
 {
-  int n = sizeof(int);
+  int n = 2*sizeof(int);
   n = IROUNDUP(n);
   n += nlocal * sizeof(cellint);
   n = IROUNDUP(n);
@@ -1888,7 +1888,8 @@ int Grid::size_restart()
 
 /* ----------------------------------------------------------------------
    pack my child grid info into buf
-   ID, nsplit for all owned cells
+   nlocal, clumped as scalars
+   ID, nsplit as vectors for all owned cells
    // NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
@@ -1897,8 +1898,9 @@ int Grid::pack_restart(char *buf)
   int n;
 
   int *ibuf = (int *) buf;
-  *ibuf = nlocal;
-  n = sizeof(int);
+  ibuf[0] = nlocal;
+  ibuf[1] = clumped;
+  n = 2*sizeof(int);
   n = IROUNDUP(n);
 
   cellint *cbuf = (cellint *) &buf[n];
@@ -1918,7 +1920,8 @@ int Grid::pack_restart(char *buf)
 
 /* ----------------------------------------------------------------------
    unpack child grid info into restart storage
-   nlocal_restart, id_restart, nsplit_restart
+   nlocal_restart, clumped as scalars
+   id_restart, nsplit_restart as vectors
    allocate vectors here, will be deallocated by ReadRestart
 ------------------------------------------------------------------------- */
 
@@ -1927,8 +1930,9 @@ int Grid::unpack_restart(char *buf)
   int n;
 
   int *ibuf = (int *) buf;
-  nlocal_restart = *ibuf;
-  n = sizeof(int);
+  nlocal_restart = ibuf[0];
+  clumped = ibuf[1];
+  n = 2*sizeof(int);
   n = IROUNDUP(n);
 
   memory->create(id_restart,nlocal_restart,"grid:id_restart");

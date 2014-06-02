@@ -406,6 +406,10 @@ void ReadRestart::command(int narg, char **arg)
   hash->clear();
   grid->hashfilled = 0;
 
+  // grid is no longer clumped unless reading single file on same # of procs
+
+  if (multiproc || nprocs_file != nprocs) grid->clumped = 0;
+
   // invoke surf and grid methods to complete grid setup
 
   if (surf->exist) {

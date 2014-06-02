@@ -664,7 +664,7 @@ void Particle::read_restart(FILE *fp)
   }
 
   if (me == 0) fread(species,sizeof(Species),nspecies,fp);
-  MPI_Bcast(species,nspecies*sizeof(char),MPI_CHAR,0,world);
+  MPI_Bcast(species,nspecies*sizeof(Species),MPI_CHAR,0,world);
 }
 
 /* ----------------------------------------------------------------------
