@@ -307,6 +307,7 @@ void BalanceGrid::command(int narg, char **arg)
 
   if (bstyle == BISECTION) grid->clumped = 1;
   else grid->clumped = 0;
+  grid->clumped = 1;
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();

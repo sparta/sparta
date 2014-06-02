@@ -406,12 +406,23 @@ void ReadRestart::command(int narg, char **arg)
   hash->clear();
   grid->hashfilled = 0;
 
-  // invoke grid methods to complete grid setup
+  // invoke surf and grid methods to complete grid setup
+
+  if (surf->exist) {
+    surf->setup_surf();
+    grid->surf2grid();
+  }
 
   grid->setup_owned();
-  // map surfs to grid
-  // setup grid neighbors
-  // etc
+  grid->acquire_ghosts();
+  grid->find_neighbors();
+  grid->check_uniform();
+  comm->reset_neighbors();
+
+  if (surf->exist) {
+    grid->set_inout();
+    grid->type_check();
+  }
 
   // check that all grid cells and particles were assigned to procs
   // print stats on grid cells, particles, surfs
@@ -747,7 +758,7 @@ void ReadRestart::create_child_cells(int skipflag)
   int nprocs = comm->nprocs;
 
   Grid::ParentCell *pcells = grid->pcells;
-  int ix,iy,iz,nsplit,iparent,icell,isplit,index;
+  int nsplit,iparent,icell,isplit,index;
   cellint id,ichild;
   double lo[3],hi[3];
 
@@ -776,8 +787,6 @@ void ReadRestart::create_child_cells(int skipflag)
     if (nsplit > 0) {
       if (skipflag && (i % nprocs != me)) continue;
       iparent = grid->id_child2parent(id,ichild);
-      ichild = pcells[iparent].nx*pcells[iparent].ny*iz +
-        pcells[iparent].nx*iy + ix + 1;
       grid->id_child_lohi(iparent,ichild,lo,hi);
       grid->add_child_cell(id,iparent,lo,hi);
       icell = grid->nlocal - 1;
@@ -835,14 +844,15 @@ void ReadRestart::assign_particles(int skipflag)
 
   int nlocal = particle->nlocal_restart;
   Particle::OnePartRestart *pr = particle->particle_restart;
+  Particle::OnePartRestart *p;
 
   for (int i = 0; i < nlocal; i++) {
-    if (skipflag && hash->find(pr->icell) == hash->end()) continue;
-    icell = (*hash)[pr->icell];
-    if (pr->nsplit <= 0) 
-      icell = sinfo[cells[icell].isplit].csubs[-pr->nsplit];
-    particle->add_particle(pr->id,pr->ispecies,icell,pr->x,pr->v,
-                           pr->erot,pr->ivib);
+    p = &pr[i];
+    if (skipflag && hash->find(p->icell) == hash->end()) continue;
+    icell = (*hash)[p->icell];
+    if (p->nsplit <= 0) 
+      icell = sinfo[cells[icell].isplit].csubs[-p->nsplit];
+    particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->ivib);
   }
 
   // deallocate memory in Particle

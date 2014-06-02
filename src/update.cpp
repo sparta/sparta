@@ -202,6 +202,9 @@ void Update::run(int nsteps)
 
   // loop over timesteps
 
+  // DEBUG
+  if (n_end_of_step) modify->end_of_step();
+
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
