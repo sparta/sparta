@@ -278,7 +278,7 @@ void Collide::collisions_one()
     np = cinfo[icell].count;
     if (np <= 1) continue;
     ip = cinfo[icell].first;
-    volume = cinfo[icell].volume;
+    volume = cinfo[icell].volume * cinfo[icell].weight;
 
     // setup particle list for this cell
 
@@ -379,7 +379,7 @@ void Collide::collisions_group()
     np = cinfo[icell].count;
     if (np <= 1) continue;
     ip = cinfo[icell].first;
-    volume = cinfo[icell].volume;
+    volume = cinfo[icell].volume * cinfo[icell].weight;
 
     // setup per-group particle lists for this cell
 
