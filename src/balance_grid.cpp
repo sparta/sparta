@@ -117,7 +117,8 @@ void BalanceGrid::command(int narg, char **arg)
   // do not assign sub-cells since they migrate with their split cell
   // set nmigrate = # of cells that will migrate to a new proc
   // reset proc field in cells for migrating cells
-  // style NONE does nothing
+  // style NONE performs no re-assignment
+
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
