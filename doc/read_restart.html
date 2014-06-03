@@ -23,8 +23,6 @@
 read_restart restart.*
 read_restart flow.*.% 
 </PRE>
-<PRE>
-</PRE>
 <P><B>Description:</B>
 </P>
 <P>Read in a previously saved simulation from a restart file.  This
@@ -42,42 +40,44 @@ run will not be identical to those used if the run had been continued.
 Hence the new run will not be identical to the continued original run,
 but should be statistically similar.
 </P>
+<P>IMPORTANT NOTE: Because restart files are binary, they may not be
+portable to other machines.  SPARTA will print an error message if
+this is the case.
+</P>
 <P>If a restarted run is performed on the same number of processors as
 the original run, then the assignment of grid cells (and their
 particles) to processors will be the same as in the original
-simulation.
+simulation.  If the processor count changes, then the assignment will
+necessarily be different.  In particular, even if the original
+assignment was "clumped", meaning each processor's cells were
+geometrically compact, the new assignment will not be, but will be
+"dispersed".
 </P>
-<P>IMPORTANT NOTE: Using the <I>gridcut</I> keyword with a cutoff >= 0.0 is
-only possible if the grid cells owned by each processor are "clumped"
-(by the time the next simulation is performed).  This will be the case
-if the <I>clump</I>, <I>block</I>, or <I>rcb</I> option of the
-<A HREF = "balance_grid.html">balance_grid</A>, or the <I>rcb</I> option of the <A HREF = "fix_balance.html">fix
-balance</A> command is used.  If grid cells are not
-clumped, then ghost cells cannot be stored for a <I>gridcut</I> cutoff >=
-0.0.  This will generate an error when a simulation is performed.
+<P>IMPORTANT NOTE: See <A HREF = "Section_howto.html#howto_8">Section 5.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.  The
+<A HREF = "balance_grid.html">balance_grid</A> command can be used after the restart
+file is read, to assign child cells to processors in different ways.
+The "fix balance" command can be used to re-assign them in a
+load-balanced manner periodically during a running simulation.
 </P>
-<P>IMPORTANT NOTE: The <I>gridcut</I> keyword can be specified at any time,
-but if the grid already exists, it erases ghost cell information that
-is currently stored.  Thus if the grid already exists, a
-<A HREF = "balance.html">balance</A> command must be invoked to regenerate ghost
-cell information before a simulation is performed.
+<P>IMPORTANT NOTE: As explained below, the restart file contains the
+setting for the <A HREF = "global.html">global gridcut</A> command.  If you restart
+on a different number of processors, and the gridcut setting from the
+original script is >= 0.0, then SPARTA will be unable to generate
+ghost cell information when setting up the grid.  This is because the
+assignment of grid cells to processors will not be clumped.  This will
+generate an error when a simulation is performed.  The solution is to
+use the <A HREF = "balance_grid.html">balance_grid</A> command after reading the
+restart file.  Optionally, the <A HREF = "global.html">global gridcut</A> command
+can be used before the <A HREF = "balance_grid.html">balance_grid</A> command, to
+change the cutoff setting.  If the cutoff is set to -1.0, then the
+<A HREF = "balance_grid.html">balance_grid none</A> command can be used, which will
+not change the grid cell assignments, but will generate the needed
+ghost cell information.
 </P>
-<P>NOTE: discuss what happens on same or different # of procs, whether
-should change partitioning via the <A HREF = "balance.html">balance</A> or <A HREF = "fix_balance.html">fix
-balance</A> commands.
-</P>
-<P>IMPORTANT NOTE: Because restart files are binary, they may not be
-portable to other machines.
-</P>
-<P>IMPORTANT NOTE: If restart on different # of procs, probalby
-want to use balance command.
-</P>
-<P>If you restart on a different number of processors, with a gridcut
-setting >= 0.0, then SPARTA will be unable to generate ghost cell
-information when reformulating the grid. This is because decomposition
-will be unclumped.  Using balance command will remedy this.  Can
-also change the gridcut setting before doing this if desired.
-</P>
+<HR>
+
 <P>Similar to how restart files are written (see the
 <A HREF = "write_restart.html">write_restart</A> and <A HREF = "restart.html">restart</A>
 commands), the restart filename can contain two wild-card characters.
@@ -125,25 +125,25 @@ simulation:
 <LI>geometry of all derined surface elements
 <LI>current timestep number 
 </UL>
-<P>Basically, this means the information specified in the original input
-script by these commands is saved in the restart file:
+<P>Basically, this means the information from the original input script
+specified by these commands is saved in the restart file:
 </P>
-<UL><LI>units
-<LI>dimension
-<LI>create_box
-<LI>boundary
-<LI>species
-<LI>create_grid or read_grid
-<LI>read_surf 
+<UL><LI><A HREF = "units.html">units</A>
+<LI><A HREF = "dimension.html">dimension</A>
+<LI><A HREF = "create_box.html">create_box</A>
+<LI><A HREF = "boundary.html">boundary</A>
+<LI><A HREF = "species.html">species</A>
+<LI><A HREF = "create_grid.html">create_grid</A> or <A HREF = "read_grid.html">read_grid</A>
+<LI><A HREF = "read_surf.html">read_surf</A> 
 </UL>
 <P>No other information is stored in the restart file.  Specifically,
-information about these simulation entities is NOT stored:
+information about these simulation parameters is NOT stored:
 </P>
 <UL><LI>mixtures
 <LI>computes
 <LI>fixes
 <LI>collision model
-<LI>chemistry model  (or reaction model?)
+<LI>chemistry (reaction) model
 <LI>surface collision models
 <LI>variables
 <LI>regions
@@ -151,9 +151,8 @@ information about these simulation entities is NOT stored:
 <LI>timestep size 
 </UL>
 <P>Basically, this means any information specified in the original input
-script by these commands needs to be re-specified in the new input
-script that reads the restart file, assuming the continued simulation
-needs the information:
+script by these commands needs to be re-specified in the restart input
+script, assuming the continued simulation needs the information:
 </P>
 <UL><LI><A HREF = "mixture.html">mixture</A>
 <LI><A HREF = "compute.html">compute</A>
@@ -169,17 +168,33 @@ needs the information:
 <LI><A HREF = "restart.html">restart</A>
 <LI><A HREF = "timestep.html">timestep</A> 
 </UL>
-<P>Things of note:
-not vremax
-IMPORTANT NOTE: status of time-average fixes?
-assign surf collision model to global boundary or surfs
+<P>In particular, take note of these issues:
 </P>
-<P>Note that many commands can be used after a restart file is read, to
-re-specify a setting that was stored in the restart file.  file is
+<UL><LI>The status of time-averaging fixes, such as <A HREF = "fix_ave_time.html">fix
+ave/time</A>, <A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "fix_ave_surf.html">fix
+ave/surf</A>, does not carry over into the restarted
+run.  E.g. if the <I>ave running</I> option is used with those commands in
+the original script and again specified in the restart script, the
+running averaged quantities do not persist into the new run. 
+
+<LI>The <A HREF = "surf_modify.html">surf_modify</A> command must be used in the restart
+script to assign surface collision models, specified by the
+<A HREF = "surf_collide.html">surf_collide</A> command, to all <A HREF = "boundary.html">global
+boundaries</A> of type "s", and to any surfaces contained
+in the restart file.  The latter would have been setup in the original
+script via the <A HREF = "read_surf.html">read_surf</A> command. 
+
+<LI>Even if a collision model is specified in the restart script, and the
+<A HREF = "collide_modify.html">collide_modify vremax or remain</A> command is used
+to enable Vremax and fractional collision count to persist for many
+timesteps, no information about these quantities persists from the
+original simulation to the restarted simulation.  The initial run in
+the restart script will re-initialize these data structures. 
+</UL>
+<P>Also note that many commands can be used after a restart file is read,
+to re-specify a setting that was stored in the restart file.  file is
 read.  For example, the <A HREF = "global.html">global</A> command can be used to
 reset the values of its specified keywords.
-</P>
-<P>NOTE: how about boundary?
 </P>
 <HR>
 

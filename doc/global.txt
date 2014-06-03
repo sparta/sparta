@@ -89,30 +89,38 @@ The {gridcut} keyword determines the cutoff distance at which ghost
 grid cells will be stored by each processor.  Assuming the processor
 owns a compact clump of grid cells (see below), it will also store
 ghost cell information from nearby grid cells, up to this distance
-away.  If the setting is < 0.0 (the default) then each processor owns
-a copy of ghost cells for all grid cells in the simulation.  This can
+away.  If the setting is -1.0 (the default) then each processor owns a
+copy of ghost cells for all grid cells in the simulation.  This can
 require too much memory for large models.  If the cutoff is 0.0,
-processors own a minimal number of ghost cells. This saves memory but
-may require multiple cutoff is too short, multiple passes of
-communication may be required each timestep to move all the particles
-and migrate them to new owning processors.  Typically a cutoff the
-size of 2-3 grid cell diameters is a good balance that requires only
-modest memory to store ghost cells and allows all particle moves to
-complete in only one pass of communication.
+processors own a minimal number of ghost cells.  This saves memory but
+may require multiple passes of communication each timestep to move all
+the particles and migrate them to new owning processors.  Typically a
+cutoff the size of 2-3 grid cell diameters is a good compromise that
+requires only modest memory to store ghost cells and allows all
+particle moves to complete in only one pass of communication.
 
 IMPORTANT NOTE: Using the {gridcut} keyword with a cutoff >= 0.0 is
 only possible if the grid cells owned by each processor are "clumped"
 (by the time the next simulation is performed).  If each processor's
 grid cells are "dispersed", then ghost cells cannot be stored for a
 {gridcut} cutoff >= 0.0.  This will generate an error when a
-simulation is performed.  See the "balance_grid"_balance_grid.html doc
-page for a discussion of clumped and dispersed grid cell assignments.
+simulation is performed.  The solution is to use the
+"balance_grid"_balance_grid.html command to change to a clumped grid
+cell assignment.  See "Section 5.8"_Section_howto.html#howto_8 of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.
 
-IMPORTANT NOTE: The {gridcut} keyword can be specified at any time,
-but if the grid already exists, it erases ghost cell information that
-is currently stored.  Thus if the grid already exists, a
-"balance"_balance.html command must be invoked to regenerate ghost
-cell information before a simulation is performed.
+IMPORTANT NOTE: If grid cells have already been defined via the
+"create_grid"_create_grid.html, "read_grid"_read_grid.html, or
+"read_restart"_read_restart.html commands, when the {gridcut} cutoff
+is specified, then all ghost cell information that is currently stored
+will be erased.  In this case, a "balance_grid"_balance_grid.html
+command must then be invoked to regenerate ghost cell information
+before a simulation is performed.  Note that the previous note applies
+in this scenario.  If the "balance_grid" option selects a dispersed
+grid cell assignment and the {gridcut} cutoff = -1.0, then no ghost
+information will be generated, resulting in an error when a simulation
+is run.
 
 The {comm/sort} keyword determines whether the messages a proc
 receives for migrating particles (every step) and ghost grid cells (at
