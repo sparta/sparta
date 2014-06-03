@@ -44,7 +44,7 @@ distribution of particles varies with time, leading to load imbalance.
 After grid cells have been assigned, they are migrated to new owning
 processors, along with any particles they own or other per-cell
 attributes stored by fixes.  The internal data structures within
-SPPARKS for grid cells and particles are re-initialized with the new
+SPARTA for grid cells and particles are re-initialized with the new
 decomposition.
 
 The details of how child cells are assigned to processors by the
