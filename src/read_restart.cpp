@@ -810,9 +810,9 @@ void ReadRestart::create_child_cells(int skipflag)
         grid->nunsplitlocal--;
         grid->add_split_cell(1);
         isplit = grid->nsplitlocal - 1;
-        grid->sinfo[isplit].icell = icell;
         grid->cells[icell].isplit = isplit;
-        // NOTE: need to setup csubs in SplitInfo
+        grid->sinfo[isplit].icell = icell;
+        grid->sinfo[isplit].csubs = grid->csubs_request(nsplit);
       }
 
     // sub cell
@@ -825,7 +825,7 @@ void ReadRestart::create_child_cells(int skipflag)
       icell = grid->nlocal - 1;
       grid->cells[icell].nsplit = nsplit;
       isplit = grid->cells[icell].isplit;
-      // NOTE: grid->sinfo[isplit].csubs[-nsplit] = icell;
+      grid->sinfo[isplit].csubs[-nsplit] = icell;
     }
   }
 

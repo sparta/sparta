@@ -202,6 +202,7 @@ class Grid : protected Pointers {
   void clear_surf();
   void clear_surf_restart();
   void allocate_surf_arrays();
+  int *csubs_request(int);
 
   // grid_id.cpp
 

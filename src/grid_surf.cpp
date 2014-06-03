@@ -48,6 +48,18 @@ void Grid::allocate_surf_arrays()
 }
 
 /* ----------------------------------------------------------------------
+   request N-length vector from csubs
+   called by ReadRestart
+------------------------------------------------------------------------- */
+
+int *Grid::csubs_request(int n)
+{
+  int *ptr = csubs->vget();
+  csubs->vgot(n);
+  return ptr;
+}
+
+/* ----------------------------------------------------------------------
    map surf elements into owned grid cells
    if subflag = 1, create new owned split and sub cells as needed
      called from ReadSurf
