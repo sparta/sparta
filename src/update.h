@@ -75,6 +75,8 @@ class Update : protected Pointers {
   void setup();
   void run(int);
   void global(int, char **);
+  void reset_timestep(int, char **);
+
   int split3d(int, double *);
   int split2d(int, double *);
 
@@ -96,6 +98,7 @@ class Update : protected Pointers {
   
   int bounce_setup();
   void bounce_set(bigint);
+  void reset_timestep(bigint);
 
   typedef void (Update::*FnPtr)();
   FnPtr moveptr;             // ptr to move method

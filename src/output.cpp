@@ -406,6 +406,97 @@ void Output::write_restart(bigint ntimestep)
 }
 
 /* ----------------------------------------------------------------------
+   timestep is being changed, called by update->reset_timestep()
+   reset next timestep values for dumps, restart, thermo output
+   reset to smallest value >= new timestep
+   if next timestep set by variable evaluation,
+     eval for ntimestep-1, so current ntimestep can be returned if needed
+     no guarantee that variable can be evaluated for ntimestep-1
+       if it depends on computes, but live with that rare case for now
+------------------------------------------------------------------------- */
+
+void Output::reset_timestep(bigint ntimestep)
+{
+  next_dump_any = MAXBIGINT;
+  for (int idump = 0; idump < ndump; idump++) {
+    if (every_dump[idump]) {
+      next_dump[idump] = (ntimestep/every_dump[idump])*every_dump[idump];
+      if (next_dump[idump] < ntimestep) next_dump[idump] += every_dump[idump];
+    } else {
+      modify->clearstep_compute();
+      update->ntimestep--;
+      bigint nextdump = static_cast<bigint>
+        (input->variable->compute_equal(ivar_dump[idump]));
+      if (nextdump < ntimestep)
+        error->all(FLERR,"Dump every variable returned a bad timestep");
+      update->ntimestep++;
+      next_dump[idump] = nextdump;
+      modify->addstep_compute(next_dump[idump]);
+    }
+    next_dump_any = MIN(next_dump_any,next_dump[idump]);
+  }
+
+  if (restart_flag_single) {
+    if (restart_every_single) {
+      next_restart_single =
+        (ntimestep/restart_every_single)*restart_every_single;
+      if (next_restart_single < ntimestep)
+        next_restart_single += restart_every_single;
+    } else {
+      modify->clearstep_compute();
+      update->ntimestep--;
+      bigint nextrestart = static_cast<bigint>
+        (input->variable->compute_equal(ivar_restart_single));
+      if (nextrestart < ntimestep)
+        error->all(FLERR,"Restart variable returned a bad timestep");
+      update->ntimestep++;
+      next_restart_single = nextrestart;
+      modify->addstep_compute(next_restart_single);
+    }
+  } else next_restart_single = update->laststep + 1;
+
+  if (restart_flag_double) {
+    if (restart_every_double) {
+      next_restart_double =
+        (ntimestep/restart_every_double)*restart_every_double;
+      if (next_restart_double < ntimestep)
+        next_restart_double += restart_every_double;
+    } else {
+      modify->clearstep_compute();
+      update->ntimestep--;
+      bigint nextrestart = static_cast<bigint>
+        (input->variable->compute_equal(ivar_restart_double));
+      if (nextrestart < ntimestep)
+        error->all(FLERR,"Restart variable returned a bad timestep");
+      update->ntimestep++;
+      next_restart_double = nextrestart;
+      modify->addstep_compute(next_restart_double);
+    }
+  } else next_restart_double = update->laststep + 1;
+
+  next_restart = MIN(next_restart_single,next_restart_double);
+
+  if (var_stats) {
+    modify->clearstep_compute();
+    update->ntimestep--;
+    next_stats = static_cast<bigint>
+      (input->variable->compute_equal(ivar_stats));
+    if (next_stats < ntimestep)
+      error->all(FLERR,"Stats_modify every variable returned a bad timestep");
+    update->ntimestep++;
+    next_stats = MIN(next_stats,update->laststep);
+    modify->addstep_compute(next_stats);
+  } else if (stats_every) {
+    next_stats = (ntimestep/stats_every)*stats_every;
+    if (next_stats < ntimestep) next_stats += stats_every;
+    next_stats = MIN(next_stats,update->laststep);
+  } else next_stats = update->laststep;
+
+  next = MIN(next_dump_any,next_restart);
+  next = MIN(next,next_stats);
+}
+
+/* ----------------------------------------------------------------------
    add a Dump to list of Dumps 
 ------------------------------------------------------------------------- */
 

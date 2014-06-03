@@ -47,6 +47,8 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   nrepeat = atoi(arg[3]);
   per_surf_freq = atoi(arg[4]);
 
+  time_depend = 1;
+
   // scan values, then read options
 
   int iarg = 5;

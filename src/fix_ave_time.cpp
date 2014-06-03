@@ -48,6 +48,7 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
   nrepeat = atoi(arg[3]);
   nfreq = atoi(arg[4]);
 
+  time_depend = 1;
   global_freq = nfreq;
 
   // scan values to count them

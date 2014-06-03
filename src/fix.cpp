@@ -43,9 +43,11 @@ Fix::Fix(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   // set child class defaults
 
+  time_depend = 0;
+  gridmigrate = 0;
+
   scalar_flag = vector_flag = array_flag = 0;
   per_particle_flag = per_grid_flag = per_surf_flag = 0;
-  gridmigrate = 0;
 
   // mask settings - same as in modify.cpp
 

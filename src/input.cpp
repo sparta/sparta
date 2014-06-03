@@ -531,6 +531,7 @@ int Input::execute_command()
   else if (!strcmp(command,"mixture")) mixture();
   else if (!strcmp(command,"react")) react_command();
   else if (!strcmp(command,"region")) region();
+  else if (!strcmp(command,"reset_timestep")) reset_timestep();
   else if (!strcmp(command,"restart")) restart();
   else if (!strcmp(command,"seed")) seed();
   else if (!strcmp(command,"species")) species();
@@ -1127,6 +1128,13 @@ void Input::react_command()
 void Input::region()
 {
   domain->add_region(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::reset_timestep()
+{
+  update->reset_timestep(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

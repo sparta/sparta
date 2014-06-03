@@ -24,6 +24,8 @@ class Fix : protected Pointers {
   char *id,*style;
 
   int nevery;                    // how often to call an end_of_step fix
+  int time_depend;               // 1 if requires continuous timestepping
+  int gridmigrate;               // 0/1 if per grid cell info must migrate
 
   int scalar_flag;               // 0/1 if compute_scalar() function exists
   int vector_flag;               // 0/1 if compute_vector() function exists
@@ -51,8 +53,6 @@ class Fix : protected Pointers {
   double **array_grid;           // computed per-grid array
   double *vector_surf;           // computed per-surf vector
   double **array_surf;           // computed per-surf array
-
-  int gridmigrate;               // 0/1 if per grid cell info must migrate
 
   int START_OF_STEP,END_OF_STEP;    // mask settings
 

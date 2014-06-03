@@ -48,6 +48,8 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   nevery = atoi(arg[2]);
   nrepeat = atoi(arg[3]);
   per_grid_freq = atoi(arg[4]);
+
+  time_depend = 1;
   gridmigrate = 1;
 
   // scan values, then read options

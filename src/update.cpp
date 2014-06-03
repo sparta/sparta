@@ -1148,3 +1148,54 @@ void Update::global(int narg, char **arg)
     } else error->all(FLERR,"Illegal global command");
   }
 }
+
+/* ----------------------------------------------------------------------
+   reset timestep as called from input script
+------------------------------------------------------------------------- */
+
+void Update::reset_timestep(int narg, char **arg)
+{
+  if (narg != 1) error->all(FLERR,"Illegal reset_timestep command");
+  bigint newstep = ATOBIGINT(arg[0]);
+  reset_timestep(newstep);
+}
+
+/* ----------------------------------------------------------------------
+   reset timestep
+   set atimestep to new timestep, so future update_time() calls will be correct
+   trigger reset of timestep for output and for fixes that require it
+   do not allow any timestep-dependent fixes to be defined
+   reset eflag/vflag global so nothing will think eng/virial are current
+   reset invoked flags of computes,
+     so nothing will think they are current between runs
+   clear timestep list of computes that store future invocation times
+   called from rerun command and input script (indirectly)
+------------------------------------------------------------------------- */
+
+void Update::reset_timestep(bigint newstep)
+{
+  ntimestep = newstep;
+  if (ntimestep < 0) error->all(FLERR,"Timestep must be >= 0");
+  if (ntimestep > MAXBIGINT) error->all(FLERR,"Too big a timestep");
+
+  output->reset_timestep(ntimestep);
+
+  for (int i = 0; i < modify->nfix; i++) {
+    if (modify->fix[i]->time_depend)
+      error->all(FLERR,
+                 "Cannot reset timestep with a time-dependent fix defined");
+    //modify->fix[i]->reset_timestep(ntimestep);
+  }
+
+  for (int i = 0; i < modify->ncompute; i++) {
+    modify->compute[i]->invoked_scalar = -1;
+    modify->compute[i]->invoked_vector = -1;
+    modify->compute[i]->invoked_array = -1;
+    modify->compute[i]->invoked_per_particle = -1;
+    modify->compute[i]->invoked_per_grid = -1;
+    modify->compute[i]->invoked_per_surf = -1;
+  }
+
+  for (int i = 0; i < modify->ncompute; i++)
+    if (modify->compute[i]->timeflag) modify->compute[i]->clearstep();
+}
