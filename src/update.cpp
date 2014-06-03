@@ -600,7 +600,10 @@ template < int DIM, int SURF > void Update::move()
                 vold[0] = v[0];
                 vold[1] = v[1];
                 if (DIM == 3) vold[2] = v[2];
-                surf->sc[tri->isc]->collide(&particles[i],tri->norm);
+                if (DIM == 3)
+                  surf->sc[tri->isc]->collide(&particles[i],tri->norm);
+                if (DIM == 2)
+                  surf->sc[line->isc]->collide(&particles[i],line->norm);
                 for (m = 0; m < nsurf_tally; m++)
                   slist_active[m]->surf_tally(minsurf,vold,&particles[i]);
               } else {
@@ -1112,6 +1115,7 @@ void Update::global(int narg, char **arg)
                    "Cannot set global surfmax when surfaces already exist");
       grid->maxsurfpercell = atoi(arg[iarg+1]);
       if (grid->maxsurfpercell <= 0) error->all(FLERR,"Illegal global command");
+      // reallocate paged data structs for variable-length surf into
       grid->allocate_surf_arrays();
       iarg += 2;
     } else if (strcmp(arg[iarg],"gridcut") == 0) {

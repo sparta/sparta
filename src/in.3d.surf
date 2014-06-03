@@ -2,12 +2,14 @@
 
 seed	    	    12345
 dimension   	    3
+
 #global              gridcut 0.1
 global              gridcut 0.0
 #global              comm/sort yes
 
 boundary	    r r r
 #boundary	    p p p
+
 #create_box  	    -1 1 -1 1 -1 1
 create_box  	    -10 10 -10 10 -10 10
 
@@ -73,7 +75,7 @@ fix                 save ave/surf 10 100 1000 c_2 ave running
 
 dump                2 image 50 tmp.*.ppm type type pdiam 0.2 &
                     surf proc 0.0 &
-		    view 60 -30 size 1024 1024 axes yes 0.9 0.02 particle yes &
+		    view 60 -30 size 512 512 axes yes 0.9 0.02 particle yes &
                     gridx 0.0 f_gave[1] &
                     gline yes 0.005 &
                     #gridy 0.0 proc gridz 0.0 proc &
@@ -109,6 +111,3 @@ fix                 1 balance 50 1.0 rcb mol
 #stats_style	    step cpu np nattempt ncoll nscoll nscheck f_1
 
 run 		    1000
-
-
-

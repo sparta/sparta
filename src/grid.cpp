@@ -1966,3 +1966,31 @@ bigint Grid::memory_usage()
 
   return bytes;
 }
+
+/* ---------------------------------------------------------------------- */
+
+void Grid::debug()
+{
+  for (int i = 0; i < nlocal; i++) {
+    printf("GRID %d " CELLINT_FORMAT ": \n",i,cells[i].id);
+    printf("  neigh " CELLINT_FORMAT " " CELLINT_FORMAT " "
+           CELLINT_FORMAT " " CELLINT_FORMAT " "
+           CELLINT_FORMAT " " CELLINT_FORMAT "\n",
+           cells[i].neigh[0],cells[i].neigh[1],cells[i].neigh[2],
+           cells[i].neigh[3],cells[i].neigh[4],cells[i].neigh[5]);
+    printf("  lohi %g %g %g: %g %g %g\n",
+           cells[i].lo[0],cells[i].lo[1],cells[i].lo[2],
+           cells[i].hi[0],cells[i].hi[1],cells[i].hi[2]);
+    printf("  nsurf %d:",cells[i].nsurf);
+    for (int j = 0; j < cells[i].nsurf; j++)
+      printf(" %d",cells[i].csurfs[j]);
+    printf("\n");
+    printf("  nsplit %d isplit %d\n",cells[i].nsplit,cells[i].isplit);
+    printf("  type %d corner %d %d %d %d %d %d %d %d\n",
+           cinfo[i].type,
+           cinfo[i].corner[0],cinfo[i].corner[1],cinfo[i].corner[2],
+           cinfo[i].corner[3],cinfo[i].corner[4],cinfo[i].corner[5],
+           cinfo[i].corner[6],cinfo[i].corner[7]);
+    printf("  volume %g\n",cinfo[i].volume);
+  }
+}

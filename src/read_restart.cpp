@@ -406,29 +406,13 @@ void ReadRestart::command(int narg, char **arg)
   hash->clear();
   grid->hashfilled = 0;
 
+  grid->setup_owned();
+
   // grid is no longer clumped unless reading on same # of procs
   // clumped decomposition is maintained (assuiming original file had it)
   //   for all reading methods above where nprocs_file = current nprocs
 
   if (nprocs_file != nprocs) grid->clumped = 0;
-
-  // invoke surf and grid methods to complete grid setup
-
-  if (surf->exist) {
-    surf->setup_surf();
-    grid->surf2grid(0);
-  }
-
-  grid->setup_owned();
-  grid->acquire_ghosts();
-  grid->find_neighbors();
-  grid->check_uniform();
-  comm->reset_neighbors();
-
-  if (surf->exist) {
-    grid->set_inout();
-    grid->type_check();
-  }
 
   // check that all grid cells and particles were assigned to procs
   // print stats on grid cells, particles, surfs
@@ -476,6 +460,30 @@ void ReadRestart::command(int narg, char **arg)
       if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf triangles\n",
                            surf->ntri);
     }
+  }
+
+  // invoke surf and grid methods to complete surf & grid setup
+  // compute normals of lines or triangles
+
+  if (surf->exist) {
+    if (domain->dimension == 2) surf->compute_line_normal(0,surf->nline);
+    if (domain->dimension == 3) surf->compute_tri_normal(0,surf->ntri);
+    surf->setup_surf();
+    grid->clear_surf();
+    grid->surf2grid(0);
+  }
+
+  grid->acquire_ghosts();
+  grid->find_neighbors();
+  grid->check_uniform();
+  comm->reset_neighbors();
+
+  // DEBUG
+  grid->debug();
+
+  if (surf->exist) {
+    grid->set_inout();
+    grid->type_check();
   }
 }
 
@@ -694,7 +702,7 @@ void ReadRestart::box_params()
     flag = read_int();
   }
 
-  domain->print_box("Read ");
+  domain->print_box("  ");
   domain->set_global_box();
 }
 

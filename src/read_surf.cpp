@@ -364,6 +364,10 @@ void ReadSurf::command(int narg, char **arg)
   grid->reset_neighbors();
   comm->reset_neighbors();
 
+  // DEBUG
+  grid->debug();
+
+
   MPI_Barrier(world);
   double time5 = MPI_Wtime();
 

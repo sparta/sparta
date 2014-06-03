@@ -241,11 +241,43 @@ void Grid::clear_surf()
   csubs->reset();
 
   // reset all cell counters
-
+  
   nunsplitlocal = nlocal;
   nsplitlocal = nsublocal = 0;
 }
 
+/* ----------------------------------------------------------------------
+   remove all surf info from owned grid cells
+   called before reassigning surfs to grid cells
+   changes cells data structure since sub cells are removed
+------------------------------------------------------------------------- */
+
+void Grid::clear_surf_restart()
+{
+  // reset current grid cells as if no surfs existed
+  // discard sub cells
+  // compact cells and cinfo arrays
+  // set values in cells/cinfo as if no surfaces
+
+  int dimension = domain->dimension;
+  int ncorner = 8;
+  if (dimension == 2) ncorner = 4;
+  double *lo,*hi;
+
+  for (int icell = 0; icell < nlocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    cinfo[icell].type = UNKNOWN;
+    for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    if (dimension == 3) 
+      cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    else if (domain->axisymmetric)
+      cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+    else
+      cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+  }
+}
 
 /* ----------------------------------------------------------------------
    new surf-based methods

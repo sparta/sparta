@@ -103,9 +103,9 @@ class Grid : protected Pointers {
 
     int type;                 // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
     int corner[8];            // corner flags, 4/8 in 2d/3d
-                              // OUTSIDE,INSIDE,OVERLAP,UN KNOWN
+                              // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
                               // ordered x first, y next, z last
-                              // for sub t cells, type/corner
+                              // for sub cells, type/corner
                               //   are same as in split cell containing them
 
     double volume;            // flow volume of cell or sub cell
@@ -186,6 +186,8 @@ class Grid : protected Pointers {
 
   bigint memory_usage();
 
+  void debug();
+
   // grid_comm.cpp
 
   int pack_one(int, char *, int, int, int);
@@ -198,6 +200,7 @@ class Grid : protected Pointers {
 
   void surf2grid(int);
   void clear_surf();
+  void clear_surf_restart();
   void allocate_surf_arrays();
 
   // grid_id.cpp
