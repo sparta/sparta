@@ -48,16 +48,17 @@ SPPARKS for grid cells and particles are re-initialized with the new
 decomposition.
 
 The details of how child cells are assigned to processors by the
-various options of this command is described below.  The cells
+various options of this command are described below.  The cells
 assigned to each processor will either be "clumped" or "dispersed".
+
 The {rcb} keyword will produce clumped assignments of child cells to
 each processor.  This means each processor's cells will be
 geometrically compact.  The {random} and {proc} keywords will produce
 dispersed assignments of child cells to each processor.
 
-IMPORTANT NOTE: See the "balance_grid"_balance_grid.html doc page for
-a discussion of clumped and dispersed grid cell assignments and their
-respective performance trade-offs.
+IMPORTANT NOTE: See "Section 5.8"_Section_howto.html#howto_8 of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.
 
 :line
 

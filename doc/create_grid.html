@@ -61,7 +61,7 @@ child cells at level 1.
 <P>In the current SPARTA implementation, all processors own a copy of all
 parent cells.  Each child cell is owned by a unique processor.  The
 details of how child cells are assigned to processors by the various
-options of this command is described below.  The cells assigned to
+options of this command are described below.  The cells assigned to
 each processor will either be "clumped" or "dispersed".
 </P>
 <P>The <I>clump</I> and <I>block</I> keywords will produce clumped assignments of
@@ -71,8 +71,9 @@ as the round-robin assignment scheme for grids with multiple levels
 (described below), will produce dispersed assignments of child cells
 to each processor.
 </P>
-<P>IMPORTANT NOTE: See the <A HREF = "balance_grid.html">balance_grid</A> doc page for
-a discussion of clumped and dispersed grid cell assignments.  The
+<P>IMPORTANT NOTE: See <A HREF = "Section_howto.html#howto_8">Section 5.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.  The
 <A HREF = "balance_grid.html">balance_grid</A> command can be used after the grid is
 created, to assign child cells to processors in different ways.  The
 "fix balance" command can be used to re-assign them in a load-balanced

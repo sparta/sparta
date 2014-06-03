@@ -588,6 +588,41 @@ instances of SPARTA to perform different calculations.
 
 TODO: describe parent, child, unsplit, split, sub cells
 
+
+Depending on the specified keyword, the grid cells assigned to each
+processor by this command will either be "clumped" or "dispersed".
+
+Clumped means each processor's cells will be geometrically compact.
+Dispersed means the processor's cells will be geometrically dispersed
+across the simulation domain and so they cannot be enclosed in a small
+bounding box.
+
+Various commands have similar effects on grid cell assignment, so it
+is important to understand the difference between the two cases and
+the effects they can have on performance of a simulation.  For example
+the create_grid and read_grid commands may produce dispersed
+assignments, depending on the options used, which can be converted to
+a clumped assignment by the balance_grid command.
+
+Simulation typically run faster with clumped grid cell assignments.
+This is because the cost of communicating particles is reduced if
+particles that move to a neighboring grid cell often stay
+on-processor.  Similarly, some stages of simulation setup may run
+faster with a clumped assignment.  For example the finding of nearby
+ghost grid cells and the computation of surface element intersections
+with grid cells.  The latter operation is invoked when the
+"read_surf"_read_surf.html command is used.
+
+If the spatial distribution of particles is highly irregular and/or
+dynamically changing, or if the computational work per grid cell is
+otherwise highly imbalanced, a clumped assignment of grid cells to
+processors may not lead to optimal balancing.  In these scenarios a
+dispersed assignment of grid cells to processsors may run faster even
+with the overhead of increased particle communication.  This is
+because (somewhat) randomly assigning grid cells to processors can
+balance the computational load in a statistical sense.
+
+
 describe cell IDs
 
 :line

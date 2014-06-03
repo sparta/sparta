@@ -144,7 +144,6 @@ read_surf :ul
 No other information is stored in the restart file.  Specifically,
 information about these simulation entities is NOT stored:
 
-regions
 mixtures
 computes
 fixes
@@ -152,6 +151,7 @@ collision model
 chemistry model  (or reaction model?)
 surface collision models
 variables
+regions
 output options for stats, dump, restart files
 timestep size :ul
 
@@ -160,18 +160,19 @@ script by these commands needs to be re-specified in the new input
 script that reads the restart file, assuming the continued simulation
 needs the information:
 
-region
-mixture
-compute
-fix
-collide
-react
-surf_collide
-variable
-stats_style
-dump
-restart
-timestep :ul
+"mixture"_mixture.html
+"compute"_compute.html
+"fix"_fix.html
+"collide"_collide.html
+"react"_react.html
+"surf_collide"_surf_collide.html
+"surf_modify"_surf_modify.html
+"variable"_variable.html
+"region"_region.html
+"stats_style"_stats_style.html
+"dump"_dump.html
+"restart"_restart.html
+"timestep"_timestep.html :ul
 
 Things of note:
 not vremax
@@ -182,6 +183,8 @@ Note that many commands can be used after a restart file is read, to
 re-specify a setting that was stored in the restart file.  file is
 read.  For example, the "global"_global.html command can be used to
 reset the values of its specified keywords.
+
+NOTE: how about boundary?
 
 :line
 

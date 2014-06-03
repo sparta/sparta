@@ -139,14 +139,14 @@ script by these commands is saved in the restart file:
 <P>No other information is stored in the restart file.  Specifically,
 information about these simulation entities is NOT stored:
 </P>
-<UL><LI>regions
-<LI>mixtures
+<UL><LI>mixtures
 <LI>computes
 <LI>fixes
 <LI>collision model
 <LI>chemistry model  (or reaction model?)
 <LI>surface collision models
 <LI>variables
+<LI>regions
 <LI>output options for stats, dump, restart files
 <LI>timestep size 
 </UL>
@@ -155,18 +155,19 @@ script by these commands needs to be re-specified in the new input
 script that reads the restart file, assuming the continued simulation
 needs the information:
 </P>
-<UL><LI>region
-<LI>mixture
-<LI>compute
-<LI>fix
-<LI>collide
-<LI>react
-<LI>surf_collide
-<LI>variable
-<LI>stats_style
-<LI>dump
-<LI>restart
-<LI>timestep 
+<UL><LI><A HREF = "mixture.html">mixture</A>
+<LI><A HREF = "compute.html">compute</A>
+<LI><A HREF = "fix.html">fix</A>
+<LI><A HREF = "collide.html">collide</A>
+<LI><A HREF = "react.html">react</A>
+<LI><A HREF = "surf_collide.html">surf_collide</A>
+<LI><A HREF = "surf_modify.html">surf_modify</A>
+<LI><A HREF = "variable.html">variable</A>
+<LI><A HREF = "region.html">region</A>
+<LI><A HREF = "stats_style.html">stats_style</A>
+<LI><A HREF = "dump.html">dump</A>
+<LI><A HREF = "restart.html">restart</A>
+<LI><A HREF = "timestep.html">timestep</A> 
 </UL>
 <P>Things of note:
 not vremax
@@ -177,6 +178,8 @@ assign surf collision model to global boundary or surfs
 re-specify a setting that was stored in the restart file.  file is
 read.  For example, the <A HREF = "global.html">global</A> command can be used to
 reset the values of its specified keywords.
+</P>
+<P>NOTE: how about boundary?
 </P>
 <HR>
 

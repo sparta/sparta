@@ -68,44 +68,19 @@ simulation has come to equilibrium with a spatially varying density
 distribution of particles, so that the computational load is more
 evenly balanced across processors.
 </P>
-<HR>
-
-<P>Depending on the specified keyword, the grid cells assigned to each
-processor by this command will either be "clumped" or "dispersed".
+<P>The details of how child cells are assigned to processors by the
+various options of this command are described below.  The cells
+assigned to each processor will either be "clumped" or "dispersed".
 </P>
-<P>The <I>clump</I> and <I>block</I> keywords will produce clumped assignments of
-child cells to each processor.  This means each processor's cells will
-be geometrically compact.  The <I>stride</I> and <I>random</I> keywords, as well
-as the round-robin assignment scheme for grids with multiple levels
-(described below), will produce dispersed assignments of child cells
-to each processor.  This means the processor's cells will be
-geometrically dispersed across the simulation domain and so they
-cannot be enclosed in a small bounding box.
+<P>The <I>clump</I> and <I>block</I> and <I>rcb</I> keywords will produce clumped
+assignments of child cells to each processor.  This means each
+processor's cells will be geometrically compact.  The <I>stride</I> and
+<I>random</I> and <I>proc</I> keywords will produce dispersed assignments of
+child cells to each processor.
 </P>
-<P>Other commands have similar effects on grid cell assignment, so it is
-important to understand the difference between the two cases and the
-effects they can have on performance of a simulation.  For example the
-create_grid and read_grid commands may produce dispersed assignments,
-depending on the options used, which can be converted to a clumped
-assignment by the balance_grid command.
-</P>
-<P>Simulation typically run faster with clumped grid cell assignments.
-This is because the cost of communicating particles is reduced if
-particles that move to a neighboring grid cell often stay
-on-processor.  Similarly, some stages of simulation setup may run
-faster with a clumped assignment.  For example the finding of nearby
-ghost grid cells and the computation of surface element intersections
-with grid cells.  The latter operation is invoked when the
-<A HREF = "read_surf.html">read_surf</A> command is used.
-</P>
-<P>If the spatial distribution of particles is highly irregular and/or
-dynamically changing, or if the computational work per grid cell is
-otherwise highly imbalanced, a clumped assignment of grid cells to
-processors may not lead to optimal balancing.  In these scenarios a
-dispersed assignment of grid cells to processsors may run faster even
-with the overhead of increased particle communication.  This is
-because (somewhat) randomly assigning grid cells to processors can
-balance the computational load in a statistical sense.
+<P>IMPORTANT NOTE: See <A HREF = "Section_howto.html#howto_8">Section 5.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.
 </P>
 <HR>
 
