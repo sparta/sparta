@@ -59,9 +59,6 @@ continue on with its calculations in a restarted simulation.  See the
 a fix in an input script that reads a restart file.  See the doc pages
 for individual fixes for info on which ones can be restarted.
 
-IMPORTANT NOTE: A restart capability for SPARTA has not yet been
-implemented.
-
 :line
 
 Each fix style has its own doc page which describes its arguments and

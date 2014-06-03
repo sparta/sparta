@@ -92,18 +92,32 @@ size of surface elements).
 </P>
 <P>The <I>gridcut</I> keyword determines the cutoff distance at which ghost
 grid cells will be stored by each processor.  Assuming the processor
-owns a compact clump of grid cells, it will also store ghost cell
-information from nearby grid cells, up to this distance away.  If the
-setting is < 0.0 (the default) then each processor owns a copy of
-ghost cells for all grid cells in the simulation.  This can require
-too much memory for large models.  If the cutoff is 0.0, processors
-own a minimal number of ghost cells. This saves memory but may require
-multiple cutoff is too short, multiple passes of communication may be
-required each timestep to move all the particles and migrate them to
-new owning processors.  Typically a cutoff the size of 2-3 grid cell
-diameters is a good balance that requires only modest memory to store
-ghost cells and allows all particle moves to complete in only one pass
-of communication.
+owns a compact clump of grid cells (see below), it will also store
+ghost cell information from nearby grid cells, up to this distance
+away.  If the setting is < 0.0 (the default) then each processor owns
+a copy of ghost cells for all grid cells in the simulation.  This can
+require too much memory for large models.  If the cutoff is 0.0,
+processors own a minimal number of ghost cells. This saves memory but
+may require multiple cutoff is too short, multiple passes of
+communication may be required each timestep to move all the particles
+and migrate them to new owning processors.  Typically a cutoff the
+size of 2-3 grid cell diameters is a good balance that requires only
+modest memory to store ghost cells and allows all particle moves to
+complete in only one pass of communication.
+</P>
+<P>IMPORTANT NOTE: Using the <I>gridcut</I> keyword with a cutoff >= 0.0 is
+only possible if the grid cells owned by each processor are "clumped"
+(by the time the next simulation is performed).  If each processor's
+grid cells are "dispersed", then ghost cells cannot be stored for a
+<I>gridcut</I> cutoff >= 0.0.  This will generate an error when a
+simulation is performed.  See the <A HREF = "balance_grid.html">balance_grid</A> doc
+page for a discussion of clumped and dispersed grid cell assignments.
+</P>
+<P>IMPORTANT NOTE: The <I>gridcut</I> keyword can be specified at any time,
+but if the grid already exists, it erases ghost cell information that
+is currently stored.  Thus if the grid already exists, a
+<A HREF = "balance.html">balance</A> command must be invoked to regenerate ghost
+cell information before a simulation is performed.
 </P>
 <P>The <I>comm/sort</I> keyword determines whether the messages a proc
 receives for migrating particles (every step) and ghost grid cells (at
@@ -162,13 +176,6 @@ deleted with probability 0.3.
 </P>
 <P>The global surfmax command must be used before surface elements are
 defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
-</P>
-<P>The global gridcut command with a cutoff >= 0.0 will only be active if
-the grid cells owned by each processor are "clumped" by the time a
-simulation is performed.  This will be the case if the RCB option of
-the <A HREF = "balance_grid.html">balance_grid</A> or <A HREF = "fix_balance.html">fix balance</A>
-command is used.  If they are not clumped, a cutoff setting >= 0.0
-will generate an error.
 </P>
 <P><B>Related commands:</B>
 </P>

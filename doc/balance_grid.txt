@@ -12,7 +12,8 @@ balance_grid command :h3
 
 balance_grid keyword args ... :pre
 
-keyword = {stride} or {clump} or {block} or {random} or {proc} or {rcb} :ulb,l
+keyword = {none} or {stride} or {clump} or {block} or {random} or {proc} or {rcb} :ulb,l
+  {none} args = none
   {stride} args = {xyz} or {xzy} or {yxz} or {yzx} or {zxy} or {zyx}
   {clump} args = {xyz} or {xzy} or {yxz} or {yzx} or {zxy} or {zyx}
   {block} args = Px Py Pz
@@ -45,19 +46,73 @@ grid cells to processors on-the-fly during a run.
 After grid cells have been assigned, they are migrated to new owning
 processors, along with any particles they own or other per-cell
 attributes stored by fixes.  The internal data structures within
-SPPARKS for grid cells and particles are re-initialized with the new
+SPARTA for grid cells and particles are re-initialized with the new
 decomposition.
 
-This command can be used immediately after the grid is created,
-via the "create_grid"_create_grid.html command, to partition the grid
-in a more desirable manner than the default creation options allow for.
+This command can be used immediately after the grid is created, via
+the "create_grid"_create_grid.html or "read_restart"_read_restart.html
+commands.  In the former case balance_grid can be used to partition
+the grid in a more desirable manner than the default creation options
+allow for.  In the latter case, balance grid can be used to change the
+somewhat random assignment of grid cells to processors that will be
+made if the restart file is read by a different number of processors
+than it was written by.
 
-It can also be used once particles have been created, or a
+This command can also be used once particles have been created, or a
 simulation has come to equilibrium with a spatially varying density
-distribution or particles, so that the computational load is more evenly
-balanced across processors.
+distribution of particles, so that the computational load is more
+evenly balanced across processors.
 
 :line
+
+Depending on the specified keyword, the grid cells assigned to each
+processor by this command will either be "clumped" or "dispersed".
+
+The {clump} and {block} keywords will produce clumped assignments of
+child cells to each processor.  This means each processor's cells will
+be geometrically compact.  The {stride} and {random} keywords, as well
+as the round-robin assignment scheme for grids with multiple levels
+(described below), will produce dispersed assignments of child cells
+to each processor.  This means the processor's cells will be
+geometrically dispersed across the simulation domain and so they
+cannot be enclosed in a small bounding box.
+
+Other commands have similar effects on grid cell assignment, so it is
+important to understand the difference between the two cases and the
+effects they can have on performance of a simulation.  For example the
+create_grid and read_grid commands may produce dispersed assignments,
+depending on the options used, which can be converted to a clumped
+assignment by the balance_grid command.
+
+Simulation typically run faster with clumped grid cell assignments.
+This is because the cost of communicating particles is reduced if
+particles that move to a neighboring grid cell often stay
+on-processor.  Similarly, some stages of simulation setup may run
+faster with a clumped assignment.  For example the finding of nearby
+ghost grid cells and the computation of surface element intersections
+with grid cells.  The latter operation is invoked when the
+"read_surf"_read_surf.html command is used.
+
+If the spatial distribution of particles is highly irregular and/or
+dynamically changing, or if the computational work per grid cell is
+otherwise highly imbalanced, a clumped assignment of grid cells to
+processors may not lead to optimal balancing.  In these scenarios a
+dispersed assignment of grid cells to processsors may run faster even
+with the overhead of increased particle communication.  This is
+because (somewhat) randomly assigning grid cells to processors can
+balance the computational load in a statistical sense.
+
+:line
+
+The {none} keyword will not change the assignment of grid cells to
+processors.  However it will update the internal data structures
+within SPARTA that store ghost cell information on each processor for
+cells owned by other processors.  This is useful if the "global
+gridcut"_global.html command was used after grid cells were already
+defined.  That command erases ghost cell information stored by
+processors, which then needs to be re-generated before a simulation is
+run.  Using the balance_grid none command will re-generate the ghost
+cell information.
 
 The {stride}, {clump}, and {block} keywords can only be used if the
 grid is "uniform".  The grid in SPARTA is hierarchical with one or
@@ -106,7 +161,8 @@ TODO: include images
 [Restrictions:]
 
 This command can only be used after the grid has been created by the
-"create_grid"_create_grid.html command.
+"create_grid"_create_grid.html, "read_grid"_read_grid, or
+"read_restart"_read_restart.html commands.
 
 This command also initializes various options in SPARTA before
 performing the balancing.  This is so that grid cells are ready to
@@ -117,6 +173,6 @@ performed.
 
 [Related commands:]
 
-"create_grid"_create_grid.html, "fix balance"_fix_balance.html
+"fix balance"_fix_balance.html
 
 [Default:] none

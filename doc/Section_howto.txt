@@ -12,6 +12,8 @@ The following sections describe how to perform common tasks using
 SPARTA, as well as provide some techinical details about how
 SPARTA works.
 
+NOTE: add restarting a simultion, like in LAMMPS
+
 4.1 "2d simulations"_#howto_1
 4.2 "Axisymmetric simulations"_#howto_2
 4.3 "Running multiple simulations from one input script"_#howto_3
@@ -172,8 +174,6 @@ print"_fix_print.html for single-line output of
 screen. :l
 
 "Restart files"_restart.html. :l,ule
-
-IMPORTANT NOTE: Restart files are not yet implemented in SPARTA.
 
 A simulation prints one set of statistical output and (optionally)
 restart files.  It can generate any number of dump files and fix

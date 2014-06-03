@@ -21,7 +21,8 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>fix 1 grid/check 100 
+<PRE>fix 1 grid/check 100 warn
+fix 1 all ave/time 100 5 1000 c_myTemp c_thermo_temp file temp.profile 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -60,9 +61,6 @@ continue on with its calculations in a restarted simulation.  See the
 <A HREF = "read_restart.html">read_restart</A> command for info on how to re-specify
 a fix in an input script that reads a restart file.  See the doc pages
 for individual fixes for info on which ones can be restarted.
-</P>
-<P>IMPORTANT NOTE: A restart capability for SPARTA has not yet been
-implemented.
 </P>
 <HR>
 

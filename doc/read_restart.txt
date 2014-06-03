@@ -24,9 +24,6 @@ read_restart flow.*.% :pre
 
 [Description:]
 
-NOTE: Restart files and their associated commands are not yet
-fully implemented in SPARTA.
-
 Read in a previously saved simulation from a restart file.  This
 allows continuation of a previous run on the same or different number
 of processors.  Information about what is stored in a restart file is
@@ -39,8 +36,33 @@ restart file by a previous simluation.
 Although restart files are saved in binary format to allow exact
 regeneration of information, the random numbers used in the continued
 run will not be identical to those used if the run had been continued.
-Hence the new run should be statistically similar to the prevous run,
-but not identical.
+Hence the new run will not be identical to the continued original run,
+but should be statistically similar.
+
+If a restarted run is performed on the same number of processors as
+the original run, then the assignment of grid cells (and their
+particles) to processors will be the same as in the original
+simulation.
+
+
+
+
+IMPORTANT NOTE: Using the {gridcut} keyword with a cutoff >= 0.0 is
+only possible if the grid cells owned by each processor are "clumped"
+(by the time the next simulation is performed).  This will be the case
+if the {clump}, {block}, or {rcb} option of the
+"balance_grid"_balance_grid.html, or the {rcb} option of the "fix
+balance"_fix_balance.html command is used.  If grid cells are not
+clumped, then ghost cells cannot be stored for a {gridcut} cutoff >=
+0.0.  This will generate an error when a simulation is performed.
+
+IMPORTANT NOTE: The {gridcut} keyword can be specified at any time,
+but if the grid already exists, it erases ghost cell information that
+is currently stored.  Thus if the grid already exists, a
+"balance"_balance.html command must be invoked to regenerate ghost
+cell information before a simulation is performed.
+
+
 
 NOTE: discuss what happens on same or different # of procs, whether
 should change partitioning via the "balance"_balance.html or "fix
@@ -48,6 +70,18 @@ balance"_fix_balance.html commands.
 
 IMPORTANT NOTE: Because restart files are binary, they may not be
 portable to other machines.
+
+
+IMPORTANT NOTE: If restart on different # of procs, probalby
+want to use balance command.
+
+If you restart on a different number of processors, with a gridcut
+setting >= 0.0, then SPARTA will be unable to generate ghost cell
+information when reformulating the grid. This is because decomposition
+will be unclumped.  Using balance command will remedy this.  Can
+also change the gridcut setting before doing this if desired.
+
+
 
 Similar to how restart files are written (see the
 "write_restart"_write_restart.html and "restart"_restart.html
@@ -84,24 +118,70 @@ parallel I/O.
 
 :line
 
-A restart file stores the following information about a simulation:
+A restart file stores only the following information about a
+simulation:
 
-NOTE: Need to be specific about this:
+units
+simulation box size and boundary conditions
+all settings of the global command
+particles with their individual attributes
+particle species info
+geometry of the hierarchical grid that overlays the simulation domain
+geometry of all derined surface elements
+current timestep number :ul
 
-all particles with their attributes
-species and mixture info
-timestep count and size
-all global settings
+Basically, this means the information specified in the original input
+script by these commands is saved in the restart file:
+
+units
+dimension
+create_box
+boundary
+species
+create_grid or read_grid
+read_surf :ul
+
+No other information is stored in the restart file.  Specifically,
+information about these simulation entities is NOT stored:
+
+regions
+mixtures
+computes
+fixes
+collision model
+chemistry model  (or reaction model?)
+surface collision models
+variables
+output options for stats, dump, restart files
+timestep size :ul
+
+Basically, this means any information specified in the original input
+script by these commands needs to be re-specified in the new input
+script that reads the restart file, assuming the continued simulation
+needs the information:
+
+region
+mixture
+compute
+fix
+collide
+react
+surf_collide
+variable
+stats_style
+dump
+restart
+timestep :ul
+
+Things of note:
 not vremax
-grid topology
-surfaces
-status of time-average fixes?
-what about fixes and computes?
+IMPORTANT NOTE: status of time-average fixes?
+assign surf collision model to global boundary or surfs
 
-IMPORTANT NOTE: No other information is stored in the restart file.
-
-what specific settings need to be reset?
-e.g. regions, variables
+Note that many commands can be used after a restart file is read, to
+re-specify a setting that was stored in the restart file.  file is
+read.  For example, the "global"_global.html command can be used to
+reset the values of its specified keywords.
 
 :line
 

@@ -325,6 +325,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "read_restat"_read_restart.html,
 "read_surf"_read_surf.html,
 "region"_region.html,
+"reset_timestep"_reset_timestep.html,
 "restart"_restart.html,
 "run"_run.html,
 "seed"_seed.html,

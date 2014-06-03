@@ -36,10 +36,7 @@ write_restart flow.%.* nfile 10
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>NOTE: Restart files and their associated commands are not yet
-fully implemented in SPARTA.
-</P>
-<P>Write a binary restart file of the current state of the simulation.
+<P>Write a binary restart file with the current state of the simulation.
 </P>
 <P>During a long simulation, the <A HREF = "restart.html">restart</A> command is
 typically used to output restart files periodically.  The
@@ -61,19 +58,15 @@ alter the number of files written.
 </P>
 <P>Restart files can be read by a <A HREF = "read_restart.html">read_restart</A>
 command to restart a simulation from a particular state.  Because the
-file is binary (to enable exact restarts), it may not be readable on
-another machine.
+file is binary, it may not be readable on another machine.
 </P>
 <P>IMPORTANT NOTE: Although the purpose of restart files is to enable
 restarting a simulation from where it left off, not all information
 about a simulation is stored in the file.  For example, the list of
 fixes that were specified during the initial run is not stored, which
 means the new input script must specify any fixes you want to use.
-Even when restart information is stored in the file, as it is for some
-fixes, commands may need to be re-specified in the new input script,
-in order to re-use that information.  See the
-<A HREF = "read_restart.html">read_restart</A> command for information about what is
-stored in a restart file.
+See the <A HREF = "read_restart.html">read_restart</A> command for details about
+what is stored in a restart file.
 </P>
 <HR>
 

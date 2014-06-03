@@ -39,10 +39,14 @@ child cells at level 1.
 In the current SPARTA implementation, all processors own a copy of all
 parent cells.  Each child cell is owned by a unique processor.  They
 are assigned by this command to processors in a round-robin fashion,
-as they are created at each level when the file is read.  The
+as they are created at each level when the file is read.  This is a
+"dispersed" assignment of child cells to each processor.
+
+IMPORTANT NOTE: See the "balance_grid"_balance_grid.html doc page for
+a discussion of clumped and dispersed grid cell assignments.  The
 "balance_grid"_balance_grid.html command can be used after the grid is
-defined, to assign them to processors in different ways.  The "fix
-balance" command can be used to re-assign them in a load-balanced
+created, to assign child cells to processors in different ways.  The
+"fix balance" command can be used to re-assign them in a load-balanced
 manner periodically during a running simulation.
 
 :line
