@@ -175,8 +175,13 @@ void Grid::surf2grid(int subflag)
       csubs->vgot(nsplit);
 
     } else {
-      if (cells[icell].nsplit != nsplit) error->one(FLERR,"");
-      
+      if (cells[icell].nsplit != nsplit) {
+        printf("BAD %d %d: %d %d\n",icell,cells[icell].id,
+               nsplit,cells[icell].nsplit);
+        error->one(FLERR,
+                   "Inconsistent surface to grid mapping in read_restart");
+      }
+
       s = &sinfo[cells[icell].isplit];
       s->csplits = surfmap;
       s->xsub = xsub;
@@ -188,6 +193,8 @@ void Grid::surf2grid(int subflag)
       ptr = s->csubs;
       for (i = 0; i < nsplit; i++) {
         isub = ptr[i];
+        cells[isub].nsurf = cells[icell].nsurf;
+        cells[isub].csurfs = cells[icell].csurfs;
         cinfo[isub].volume = vols[i];
       }
       

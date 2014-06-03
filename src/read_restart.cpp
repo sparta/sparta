@@ -100,6 +100,9 @@ void ReadRestart::command(int narg, char **arg)
     if (multiproc) delete [] hfile;
   }
 
+  MPI_Barrier(world);
+  double time1 = MPI_Wtime();
+
   // read magic string, endian flag, numeric version
 
   magic_string();
@@ -117,6 +120,11 @@ void ReadRestart::command(int narg, char **arg)
   grid_params();
   grid->exist = 1;
   surf->exist = surf_params();
+  
+  if (surf->exist) {
+    if (domain->dimension == 2) surf->compute_line_normal(0,surf->nline);
+    if (domain->dimension == 3) surf->compute_tri_normal(0,surf->ntri);
+  }
 
   // read file layout info
 
@@ -465,25 +473,52 @@ void ReadRestart::command(int narg, char **arg)
   // invoke surf and grid methods to complete surf & grid setup
   // compute normals of lines or triangles
 
+  MPI_Barrier(world);
+  double time2 = MPI_Wtime();
+
   if (surf->exist) {
-    if (domain->dimension == 2) surf->compute_line_normal(0,surf->nline);
-    if (domain->dimension == 3) surf->compute_tri_normal(0,surf->ntri);
     surf->setup_surf();
-    grid->clear_surf();
+    grid->clear_surf_restart();
     grid->surf2grid(0);
   }
+
+  MPI_Barrier(world);
+  double time3 = MPI_Wtime();
 
   grid->acquire_ghosts();
   grid->find_neighbors();
   grid->check_uniform();
   comm->reset_neighbors();
 
-  // DEBUG
-  grid->debug();
+  MPI_Barrier(world);
+  double time4 = MPI_Wtime();
 
   if (surf->exist) {
     grid->set_inout();
     grid->type_check();
+  }
+
+  // DEBUG
+  //grid->debug();
+
+  MPI_Barrier(world);
+  double time5 = MPI_Wtime();
+
+  double time_total = time5-time1;
+
+  if (comm->me == 0) {
+    if (screen) {
+      fprintf(screen,"  CPU time = %g secs\n",time_total);
+      fprintf(screen,"  read/surf2grid/ghost/inout percent = %g %g %g %g\n",
+              100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
+              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total);
+    }
+    if (logfile) {
+      fprintf(logfile,"  CPU time = %g secs\n",time_total);
+      fprintf(logfile,"  read/surf2grid/ghost/inout percent = %g %g %g %g\n",
+              100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
+              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total);
+    }
   }
 }
 
