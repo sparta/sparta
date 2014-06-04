@@ -21,7 +21,6 @@ FixStyle(balance,FixBalance)
 #ifndef SPARTA_FIX_BALANCE_H
 #define SPARTA_FIX_BALANCE_H
 
-#include "stdio.h"
 #include "fix.h"
 
 namespace SPARTA_NS {

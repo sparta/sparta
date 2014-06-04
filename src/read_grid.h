@@ -21,6 +21,7 @@ CommandStyle(read_grid,ReadGrid)
 #ifndef SPARTA_READ_GRID_H
 #define SPARTA_READ_GRID_H
 
+#include "stdio.h"
 #include "pointers.h"
 
 namespace SPARTA_NS {

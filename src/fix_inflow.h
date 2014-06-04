@@ -21,7 +21,6 @@ FixStyle(inflow,FixInflow)
 #ifndef SPARTA_FIX_INFLOW_H
 #define SPARTA_FIX_INFLOW_H
 
-#include "stdio.h"
 #include "fix.h"
 
 namespace SPARTA_NS {

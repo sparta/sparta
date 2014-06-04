@@ -473,3 +473,11 @@ int Mixture::find_group(const char *idgroup)
     if (strcmp(groups[i],idgroup) == 0) return i;
   return -1;
 }
+
+/* ----------------------------------------------------------------------
+   proc 0 writes mixture info to restart file
+------------------------------------------------------------------------- */
+
+void Mixture::write_restart(FILE *fp)
+{
+}

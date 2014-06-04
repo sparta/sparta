@@ -15,6 +15,7 @@
 #ifndef SPARTA_VARIABLE_H
 #define SPARTA_VARIABLE_H
 
+#include "stdio.h"
 #include "pointers.h"
 
 namespace SPARTA_NS {

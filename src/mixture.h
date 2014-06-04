@@ -15,6 +15,7 @@
 #ifndef SPARTA_MIXTURE_H
 #define SPARTA_MIXTURE_H
 
+#include "stdio.h"
 #include "pointers.h"
 
 namespace SPARTA_NS {
@@ -56,7 +57,8 @@ class Mixture : protected Pointers {
   void command(int, char **);
   void init();
   void add_species_default(char *);
-  
+  void write_restart(FILE *fp);
+
  private:
   int maxspecies,maxgroup;
 

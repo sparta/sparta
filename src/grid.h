@@ -15,7 +15,9 @@
 #ifndef SPARTA_GRID_H
 #define SPARTA_GRID_H
 
+#include "stdio.h"
 #include "pointers.h"
+
 #ifdef SPARTA_MAP
 #include <map>
 #else

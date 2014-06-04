@@ -21,6 +21,7 @@ ReactStyle(tce,ReactTCE)
 #ifndef SPARTA_REACT_TCE_H
 #define SPARTA_REACT_TCE_H
 
+#include "stdio.h"
 #include "react.h"
 #include "particle.h"
 

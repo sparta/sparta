@@ -16,6 +16,7 @@
 #ifndef SPARTA_SURF_H
 #define SPARTA_SURF_H
 
+#include "stdio.h"
 #include "pointers.h"
 
 namespace SPARTA_NS {

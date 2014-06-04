@@ -24,6 +24,7 @@
 
 #include "spatype.h"
 #include "mpi.h"
+#include "stdio.h"
 #include "sparta.h"
 
 namespace SPARTA_NS {

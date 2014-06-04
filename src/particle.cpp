@@ -673,8 +673,9 @@ void Particle::read_restart_species(FILE *fp)
 
 void Particle::write_restart_mixture(FILE *fp)
 {
-  fwrite(&nspecies,sizeof(int),1,fp);
-  fwrite(species,sizeof(Species),nspecies,fp);
+  fwrite(&nmixture,sizeof(int),1,fp);
+  for (int i = 0; i < nmixture; i++)
+    mixture[i]->write_restart(fp);
 }
 
 /* ----------------------------------------------------------------------
