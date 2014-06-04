@@ -58,6 +58,7 @@ class Mixture : protected Pointers {
   void init();
   void add_species_default(char *);
   void write_restart(FILE *fp);
+  void read_restart(FILE *fp);
 
  private:
   int maxspecies,maxgroup;

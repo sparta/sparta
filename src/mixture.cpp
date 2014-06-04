@@ -406,7 +406,10 @@ void Mixture::allocate()
   memory->grow(vscale,maxspecies,"mixture:vscale");
   memory->grow(active,maxspecies,"mixture:active");
 
-  for (int i = old; i < maxspecies; i++) fraction_flag[i] = 0;
+  for (int i = old; i < maxspecies; i++) {
+    fraction_flag[i] = 0;
+    fraction_user[i] = 0.0;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -479,5 +482,34 @@ int Mixture::find_group(const char *idgroup)
 ------------------------------------------------------------------------- */
 
 void Mixture::write_restart(FILE *fp)
+{
+  fwrite(&nspecies,sizeof(int),1,fp);
+  fwrite(species,sizeof(int),nspecies,fp);
+
+  fwrite(&nrho_flag,sizeof(int),1,fp);
+  if (nrho_flag) fwrite(&nrho_user,sizeof(double),1,fp);
+  fwrite(&vstream_flag,sizeof(int),1,fp);
+  if (vstream_flag) fwrite(vstream_user,sizeof(double),3,fp);
+  fwrite(&temp_thermal_flag,sizeof(int),1,fp);
+  if (temp_thermal_flag) fwrite(&temp_thermal_user,sizeof(double),1,fp);
+
+  fwrite(fraction_flag,sizeof(int),nspecies,fp);
+  fwrite(fraction_user,sizeof(double),nspecies,fp);
+
+  fwrite(&ngroup,sizeof(int),1,fp);
+  for (int i = 0; i < ngroup; i++) {
+    int n = strlen(groups[i]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(groups[i],sizeof(char),n,fp);
+  }
+  fwrite(mix2group,sizeof(int),nspecies,fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 reads mixture info from restart file
+   bcast to other procs and all procs populate mixture with info
+------------------------------------------------------------------------- */
+
+void Mixture::read_restart(FILE *fp)
 {
 }

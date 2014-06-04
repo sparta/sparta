@@ -32,8 +32,8 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};  // several files
 
 #define DELTA 10000
 #define DELTASPECIES 16
+#define DELTAMIXTURE 8
 #define MAXLINE 1024
-#define CHUNK_MIXTURE 8
 
 // customize by adding an abbreviation string
 // also add a check for the keyword in 2 places in add_species()
@@ -475,7 +475,7 @@ void Particle::add_mixture(int narg, char **arg)
 
   if (imix < 0) {
     if (nmixture == maxmixture) {
-      maxmixture += CHUNK_MIXTURE;
+      maxmixture += DELTAMIXTURE;
       mixture = (Mixture **) memory->srealloc(mixture,
                                               maxmixture*sizeof(Mixture *),
                                               "particle:mixture");
@@ -674,18 +674,43 @@ void Particle::read_restart_species(FILE *fp)
 void Particle::write_restart_mixture(FILE *fp)
 {
   fwrite(&nmixture,sizeof(int),1,fp);
-  for (int i = 0; i < nmixture; i++)
+  for (int i = 0; i < nmixture; i++) {
+    int n = strlen(mixture[i]->id) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(mixture[i]->id,sizeof(char),n,fp);
     mixture[i]->write_restart(fp);
+  }
 }
 
 /* ----------------------------------------------------------------------
    proc 0 reads mixture info from restart file
-   bcast to other procs
-   instantiate series of Mixtures and populate with restart info
+   bcast to other procs and all procs instantiate series of Mixtures
 ------------------------------------------------------------------------- */
 
 void Particle::read_restart_mixture(FILE *fp)
 {
+  if (me == 0) fread(&nmixture,sizeof(int),1,fp);
+  MPI_Bcast(&nmixture,1,MPI_INT,0,world);
+
+  if (nmixture > maxmixture) {
+    while (nmixture > maxmixture) maxmixture += DELTAMIXTURE;
+    mixture = (Mixture **) 
+      memory->srealloc(mixture,maxmixture*sizeof(Mixture *),"particle:mixture");
+  }
+
+  int n;
+  char *id;
+
+  for (int i = 0; i < nmixture; i++) {
+    if (me == 0) fread(&n,sizeof(int),1,fp);
+    MPI_Bcast(&n,1,MPI_INT,0,world);
+    id = new char[n];
+    if (me == 0) fread(id,sizeof(char),n,fp);
+    MPI_Bcast(id,n,MPI_CHAR,0,world);
+    mixture[i] = new Mixture(sparta,id);
+    mixture[i]->read_restart(fp);
+    delete [] id;
+  }
 }
 
 /* ----------------------------------------------------------------------
