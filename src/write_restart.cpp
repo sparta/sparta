@@ -40,7 +40,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
-     PARTICLE,GRID,SURF,
+     SPECIES,MIXTURE,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};
 
 /* ---------------------------------------------------------------------- */
@@ -358,8 +358,10 @@ void WriteRestart::box_params()
 
 void WriteRestart::particle_params()
 {
-  write_int(PARTICLE,0);
-  particle->write_restart(fp);
+  write_int(SPECIES,0);
+  particle->write_restart_species(fp);
+  write_int(MIXTURE,0);
+  particle->write_restart_mixture(fp);
 }
 
 /* ----------------------------------------------------------------------

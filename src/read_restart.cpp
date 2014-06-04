@@ -42,7 +42,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
-     PARTICLE,GRID,SURF,
+     SPECIES,MIXTURE,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};
 
 /* ---------------------------------------------------------------------- */
@@ -746,10 +746,16 @@ void ReadRestart::box_params()
 void ReadRestart::particle_params()
 {
   int flag = read_int();
-  if (flag != PARTICLE) 
+  if (flag != SPECIES) 
     error->all(FLERR,"Invalid flag in particle section of restart file");
   read_int();
-  particle->read_restart(fp);
+  particle->read_restart_species(fp);
+
+  flag = read_int();
+  if (flag != MIXTURE) 
+    error->all(FLERR,"Invalid flag in particle section of restart file");
+  read_int();
+  particle->read_restart_mixture(fp);
 }
 
 /* ---------------------------------------------------------------------- */

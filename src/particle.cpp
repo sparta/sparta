@@ -641,7 +641,7 @@ int Particle::wordcount(char *line, char **words)
    proc 0 writes species info to restart file
 ------------------------------------------------------------------------- */
 
-void Particle::write_restart(FILE *fp)
+void Particle::write_restart_species(FILE *fp)
 {
   fwrite(&nspecies,sizeof(int),1,fp);
   fwrite(species,sizeof(Species),nspecies,fp);
@@ -652,7 +652,7 @@ void Particle::write_restart(FILE *fp)
    bcast to other procs
 ------------------------------------------------------------------------- */
 
-void Particle::read_restart(FILE *fp)
+void Particle::read_restart_species(FILE *fp)
 {
   if (me == 0) fread(&nspecies,sizeof(int),1,fp);
   MPI_Bcast(&nspecies,1,MPI_INT,0,world);
@@ -665,6 +665,26 @@ void Particle::read_restart(FILE *fp)
 
   if (me == 0) fread(species,sizeof(Species),nspecies,fp);
   MPI_Bcast(species,nspecies*sizeof(Species),MPI_CHAR,0,world);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes mixture info to restart file
+------------------------------------------------------------------------- */
+
+void Particle::write_restart_mixture(FILE *fp)
+{
+  fwrite(&nspecies,sizeof(int),1,fp);
+  fwrite(species,sizeof(Species),nspecies,fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 reads mixture info from restart file
+   bcast to other procs
+   instantiate series of Mixtures and populate with restart info
+------------------------------------------------------------------------- */
+
+void Particle::read_restart_mixture(FILE *fp)
+{
 }
 
 /* ----------------------------------------------------------------------
