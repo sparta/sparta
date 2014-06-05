@@ -12,7 +12,7 @@ The following sections describe how to perform common tasks using
 SPARTA, as well as provide some techinical details about how
 SPARTA works.
 
-NOTE: add restarting a simultion, like in LAMMPS
+NOTE: add restarting a simulation, like in LAMMPS
 
 4.1 "2d simulations"_#howto_1
 4.2 "Axisymmetric simulations"_#howto_2

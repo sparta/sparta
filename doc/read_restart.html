@@ -121,6 +121,7 @@ simulation:
 <LI>all settings of the global command
 <LI>particles with their individual attributes
 <LI>particle species info
+<LI>mixtures
 <LI>geometry of the hierarchical grid that overlays the simulation domain
 <LI>geometry of all derined surface elements
 <LI>current timestep number 
@@ -133,14 +134,14 @@ specified by these commands is saved in the restart file:
 <LI><A HREF = "create_box.html">create_box</A>
 <LI><A HREF = "boundary.html">boundary</A>
 <LI><A HREF = "species.html">species</A>
+<LI><A HREF = "mixture.html">mixture</A>
 <LI><A HREF = "create_grid.html">create_grid</A> or <A HREF = "read_grid.html">read_grid</A>
 <LI><A HREF = "read_surf.html">read_surf</A> 
 </UL>
 <P>No other information is stored in the restart file.  Specifically,
 information about these simulation parameters is NOT stored:
 </P>
-<UL><LI>mixtures
-<LI>computes
+<UL><LI>computes
 <LI>fixes
 <LI>collision model
 <LI>chemistry (reaction) model
@@ -154,8 +155,7 @@ information about these simulation parameters is NOT stored:
 script by these commands needs to be re-specified in the restart input
 script, assuming the continued simulation needs the information:
 </P>
-<UL><LI><A HREF = "mixture.html">mixture</A>
-<LI><A HREF = "compute.html">compute</A>
+<UL><LI><A HREF = "compute.html">compute</A>
 <LI><A HREF = "fix.html">fix</A>
 <LI><A HREF = "collide.html">collide</A>
 <LI><A HREF = "react.html">react</A>

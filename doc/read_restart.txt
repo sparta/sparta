@@ -118,6 +118,7 @@ simulation box size and boundary conditions
 all settings of the global command
 particles with their individual attributes
 particle species info
+mixtures
 geometry of the hierarchical grid that overlays the simulation domain
 geometry of all derined surface elements
 current timestep number :ul
@@ -130,13 +131,13 @@ specified by these commands is saved in the restart file:
 "create_box"_create_box.html
 "boundary"_boundary.html
 "species"_species.html
+"mixture"_mixture.html
 "create_grid"_create_grid.html or "read_grid"_read_grid.html
 "read_surf"_read_surf.html :ul
 
 No other information is stored in the restart file.  Specifically,
 information about these simulation parameters is NOT stored:
 
-mixtures
 computes
 fixes
 collision model
@@ -151,7 +152,6 @@ Basically, this means any information specified in the original input
 script by these commands needs to be re-specified in the restart input
 script, assuming the continued simulation needs the information:
 
-"mixture"_mixture.html
 "compute"_compute.html
 "fix"_fix.html
 "collide"_collide.html
