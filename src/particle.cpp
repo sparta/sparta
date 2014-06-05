@@ -689,6 +689,13 @@ void Particle::write_restart_mixture(FILE *fp)
 
 void Particle::read_restart_mixture(FILE *fp)
 {
+  // must first clear existing default mixtures
+
+  for (int i = 0; i < nmixture; i++) delete mixture[i];
+  nmixture = 0;
+
+  // now process restart file data
+
   if (me == 0) fread(&nmixture,sizeof(int),1,fp);
   MPI_Bcast(&nmixture,1,MPI_INT,0,world);
 

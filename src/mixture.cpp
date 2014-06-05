@@ -519,6 +519,9 @@ void Mixture::read_restart(FILE *fp)
 
   while (nspecies > maxspecies) allocate();
 
+  if (me == 0) fread(species,sizeof(int),nspecies,fp);
+  MPI_Bcast(species,nspecies,MPI_INT,0,world);
+
   if (me == 0) fread(&nrho_flag,sizeof(int),1,fp);
   MPI_Bcast(&nrho_flag,1,MPI_INT,0,world);
   if (nrho_flag) {
@@ -543,13 +546,14 @@ void Mixture::read_restart(FILE *fp)
   if (me == 0) fread(fraction_user,sizeof(double),nspecies,fp);
   MPI_Bcast(fraction_user,nspecies,MPI_DOUBLE,0,world);
   
-  if (me == 0) fread(&ngroup,sizeof(int),1,fp);
-  MPI_Bcast(&ngroup,1,MPI_INT,0,world);
+  int ngroup_file;
+  if (me == 0) fread(&ngroup_file,sizeof(int),1,fp);
+  MPI_Bcast(&ngroup_file,1,MPI_INT,0,world);
 
   int n;
   char *id;
 
-  for (int i = 0; i < ngroup; i++) {
+  for (int i = 0; i < ngroup_file; i++) {
     if (me == 0) fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
     id = new char[n];
