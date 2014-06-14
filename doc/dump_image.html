@@ -112,13 +112,28 @@ dump_modify	    4 pad 4
 timesteps and save the images either as a sequence of JPEG or PNG or
 PPM files, or as a single movie file.  The options for this command as
 well as the <A HREF = "dump_modify.html">dump_modify</A> command control what is
-included in the image and how it appears.  A series of such images can
-easily be converted into an animated movie of your simulation (see
-further details below), or the process can be automated without
-writing the intermediate files using the dump movie command.  Other
-dump styles store snapshots of numerical data asociated with
-particles, grid cells, and surfaces in various formats, as discussed
-on the <A HREF = "dump.html">dump</A> doc page.
+included in the image and how it appears.
+</P>
+<P>Any or all of these entities can be included in the images:
+</P>
+<UL><LI>particles (all or limited to a <A HREF = "region.html">region</A>)
+<LI>grid cells (all or limited to a <A HREF = "region.html">region</A>)
+<LI>x,y,z planes cutting through the grid
+<LI>surface elements 
+</UL>
+<P>Particles can be colored by any attribute allowed by the <A HREF = "dump.html">dump
+particle</A> command.  Grid cells and the x,y,z cutting planes
+can be colored by any per-grid attribute calculated by a
+<A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A>.  Surface elements can be
+colored by any per-surf attribute calculated by a
+<A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A>.
+</P>
+<P>A series of images can easily be converted into an animated movie of
+your simulation (see further details below), or the process can be
+automated without writing the intermediate files using the dump movie
+command.  Other dump styles store snapshots of numerical data
+asociated with particles, grid cells, and surfaces in various formats,
+as discussed on the <A HREF = "dump.html">dump</A> doc page.
 </P>
 <P>Here are two sample images, rendered as 1024x1024 JPEG files.  Click
 to see the full-size images:
