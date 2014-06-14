@@ -73,7 +73,7 @@ fix                 gave ave/grid 10 100 1000 c_1 ave running
 compute             2 surf all n press ke
 fix                 save ave/surf 10 100 1000 c_2 ave running
 
-dump                2 image 50 tmp.*.ppm type type pdiam 0.2 &
+dump                2 image 1000 tmp.*.ppm type type pdiam 0.2 &
 		    view 60 -30 size 512 512 axes yes 0.9 0.02 &
                     gridx 0.0 f_gave[1] &
                     gridy 0.0 proc &
@@ -94,8 +94,8 @@ dump_modify	    2 pad 4 #scolor * green
 dump_modify         2 cmap gridx min max cf 0.0 2 min blue max red 
 dump_modify         2 cmap surf min max cf 0.0 2 min orange max green
 
-dump                3 grid 100 tmp.grid id f_gave[1] f_gave[1]
-dump                4 surf 100 tmp.surf id f_save[1] f_save[2] f_save[3]
+dump                3 grid 1000 tmp.grid id f_gave[1] f_gave[1]
+dump                4 surf 1000 tmp.surf id f_save[1] f_save[2] f_save[3]
 
 ##################
 
