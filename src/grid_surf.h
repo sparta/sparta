@@ -18,4 +18,8 @@ E: Too many surfs in one cell
 
 UNDOCUMENTED
 
+E: Inconsistent surface to grid mapping in read_restart
+
+UNDOCUMENTED
+
 */

@@ -173,7 +173,15 @@ E: Cannot set global surfmax when surfaces already exist
 
 UNDOCUMENTED
 
-E: Cannot set global gridcut when grid already exists
+E: Timestep must be >= 0
+
+UNDOCUMENTED
+
+E: Too big a timestep
+
+UNDOCUMENTED
+
+E: Cannot reset timestep with a time-dependent fix defined
 
 UNDOCUMENTED
 

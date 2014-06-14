@@ -120,6 +120,10 @@ E: Stats every variable returned a bad timestep
 
 UNDOCUMENTED
 
+E: Stats_modify every variable returned a bad timestep
+
+UNDOCUMENTED
+
 E: Illegal ... command
 
 Self-explanatory.  Check the input script syntax and compare to the

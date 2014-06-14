@@ -640,54 +640,138 @@ void DumpImage::init_style()
       gridindex = modify->find_compute(idgrid);
       if (gridindex < 0) 
         error->all(FLERR,"Could not find dump image compute ID");
+      Compute *compute = modify->compute[gridindex];
+      if (!compute->per_grid_flag) 
+        error->all(FLERR,"Dump image compute is not a per-grid compute");
+      if (gridcol == 0 && compute->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image compute does not produce a vector");
+      if (gridcol > 0 && compute->size_per_grid_cols < gridcol)
+        error->all(FLERR,"Dump image compute does not have requested column");
     } else if (gridwhich == FIX) {
       gridindex = modify->find_fix(idgrid);
       if (gridindex < 0) 
         error->all(FLERR,"Could not find dump image fix ID");
+      Fix *fix = modify->fix[gridindex];
+      if (!fix->per_grid_flag) 
+        error->all(FLERR,"Dump image fix does not produce per-grid values");
+      if (gridcol == 0 && fix->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image fix does not produce a vector");
+      if (gridcol > 0 && fix->size_per_grid_cols < gridcol)
+        error->all(FLERR,"Dump image fix does not have requested column");
+      if (nevery % fix->per_grid_freq)
+        error->all(FLERR,"Dump image and fix not computed at compatible times");
     }
   }
+
   if (gridxflag && gxcolor == ATTRIBUTE) {
     if (gridxwhich == COMPUTE) {
       gridxindex = modify->find_compute(idgridx);
       if (gridxindex < 0) 
         error->all(FLERR,"Could not find dump image compute ID");
+      Compute *compute = modify->compute[gridxindex];
+      if (!compute->per_grid_flag) 
+        error->all(FLERR,"Dump image compute is not a per-grid compute");
+      if (gridxcol == 0 && compute->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image compute does not produce a vector");
+      if (gridxcol > 0 && compute->size_per_grid_cols < gridxcol)
+        error->all(FLERR,"Dump image compute does not have requested column");
     } else if (gridxwhich == FIX) {
       gridxindex = modify->find_fix(idgridx);
       if (gridxindex < 0) 
         error->all(FLERR,"Could not find dump image fix ID");
+      Fix *fix = modify->fix[gridxindex];
+      if (!fix->per_grid_flag) 
+        error->all(FLERR,"Dump image fix does not produce per-grid values");
+      if (gridxcol == 0 && fix->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image fix does not produce a vector");
+      if (gridxcol > 0 && fix->size_per_grid_cols < gridxcol)
+        error->all(FLERR,"Dump image fix does not have requested column");
+      if (nevery % fix->per_grid_freq)
+        error->all(FLERR,"Dump image and fix not computed at compatible times");
     }
   }
+
   if (gridyflag && gycolor == ATTRIBUTE) {
     if (gridywhich == COMPUTE) {
       gridyindex = modify->find_compute(idgridy);
       if (gridyindex < 0) 
         error->all(FLERR,"Could not find dump image compute ID");
+      Compute *compute = modify->compute[gridxindex];
+      if (!compute->per_grid_flag) 
+        error->all(FLERR,"Dump image compute is not a per-grid compute");
+      if (gridycol == 0 && compute->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image compute does not produce a vector");
+      if (gridycol > 0 && compute->size_per_grid_cols < gridycol)
+        error->all(FLERR,"Dump image compute does not have requested column");
     } else if (gridywhich == FIX) {
       gridyindex = modify->find_fix(idgridy);
       if (gridyindex < 0) 
         error->all(FLERR,"Could not find dump image fix ID");
+      Fix *fix = modify->fix[gridyindex];
+      if (!fix->per_grid_flag) 
+        error->all(FLERR,"Dump image fix does not produce per-grid values");
+      if (gridycol == 0 && fix->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image fix does not produce a vector");
+      if (gridycol > 0 && fix->size_per_grid_cols < gridycol)
+        error->all(FLERR,"Dump image fix does not have requested column");
+      if (nevery % fix->per_grid_freq)
+        error->all(FLERR,"Dump image and fix not computed at compatible times");
     }
   }
+
   if (gridzflag && gzcolor == ATTRIBUTE) {
     if (gridzwhich == COMPUTE) {
       gridzindex = modify->find_compute(idgridz);
       if (gridzindex < 0) 
         error->all(FLERR,"Could not find dump image compute ID");
+      Compute *compute = modify->compute[gridxindex];
+      if (!compute->per_grid_flag) 
+        error->all(FLERR,"Dump image compute is not a per-grid compute");
+      if (gridzcol == 0 && compute->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image compute does not produce a vector");
+      if (gridzcol > 0 && compute->size_per_grid_cols < gridzcol)
+        error->all(FLERR,"Dump image compute does not have requested column");
     } else if (gridzwhich == FIX) {
       gridzindex = modify->find_fix(idgridz);
       if (gridzindex < 0) 
         error->all(FLERR,"Could not find dump image fix ID");
+      Fix *fix = modify->fix[gridzindex];
+      if (!fix->per_grid_flag) 
+        error->all(FLERR,"Dump image fix does not produce per-grid values");
+      if (gridzcol == 0 && fix->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image fix does not produce a vector");
+      if (gridzcol > 0 && fix->size_per_grid_cols < gridzcol)
+        error->all(FLERR,"Dump image fix does not have requested column");
+      if (nevery % fix->per_grid_freq)
+        error->all(FLERR,"Dump image and fix not computed at compatible times");
     }
   }
+
   if (surfflag && scolor == ATTRIBUTE) {
     if (surfwhich == COMPUTE) {
       surfindex = modify->find_compute(idsurf);
       if (surfindex < 0) 
         error->all(FLERR,"Could not find dump image compute ID");
+      Compute *compute = modify->compute[surfindex];
+      if (!compute->per_surf_flag) 
+        error->all(FLERR,"Dump image compute is not a per-surf compute");
+      if (surfcol == 0 && compute->size_per_surf_cols != 0)
+        error->all(FLERR,"Dump image compute does not produce a vector");
+      if (surfcol > 0 && compute->size_per_surf_cols < surfcol)
+        error->all(FLERR,"Dump image compute does not have requested column");
     } else if (surfwhich == FIX) {
       surfindex = modify->find_fix(idsurf);
       if (surfindex < 0) 
         error->all(FLERR,"Could not find dump image fix ID");
+      Fix *fix = modify->fix[surfindex];
+      if (!fix->per_grid_flag) 
+        error->all(FLERR,"Dump image fix does not produce per-surf values");
+      if (surfcol == 0 && fix->size_per_grid_cols != 0)
+        error->all(FLERR,"Dump image fix does not produce a vector");
+      if (surfcol > 0 && fix->size_per_grid_cols < surfcol)
+        error->all(FLERR,"Dump image fix does not have requested column");
+      if (nevery % fix->per_grid_freq)
+        error->all(FLERR,"Dump image and fix not computed at compatible times");
     }
   }
 }

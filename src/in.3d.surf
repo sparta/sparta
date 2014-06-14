@@ -10,8 +10,8 @@ global              gridcut 0.0
 boundary	    r r r
 #boundary	    p p p
 
-#create_box  	    -1 1 -1 1 -1 1
-create_box  	    -10 10 -10 10 -10 10
+create_box  	    -1 1 -1 1 -1 1
+#create_box  	    -10 10 -10 10 -10 10
 
 #create_grid 	    6 6 6
 #create_grid 	    2 2 2
@@ -36,10 +36,10 @@ mixture		    air N O vstream 1000.0 0 0
 ##################
 
 #read_surf           1 sdata.cube
-#read_surf           1 sdata.sphere
+read_surf           1 ../tools/sdata.sphere
 #read_surf           1 sdata.sphere.big
 #read_surf           1 sdata.sphere.huge
-read_surf           1 ../devel/data.spikysphere
+#read_surf           1 ../devel/data.spikysphere
 #read_surf           1 ../devel/data.spikysphere.big
 
 surf_collide	    1 diffuse 300.0 0.0
@@ -74,24 +74,25 @@ compute             2 surf all n press ke
 fix                 save ave/surf 10 100 1000 c_2 ave running
 
 dump                2 image 50 tmp.*.ppm type type pdiam 0.2 &
-                    surf proc 0.0 &
-		    view 60 -30 size 512 512 axes yes 0.9 0.02 particle yes &
-                    gridx 0.0 f_gave[1] &
+		    view 60 -30 size 512 512 axes yes 0.9 0.02 &
+                    gridx 0.0 c_1 &
+                    gridy 0.0 proc &
+                    gridz 0.0 proc &
                     gline yes 0.005 &
-                    #gridy 0.0 proc gridz 0.0 proc &
-                    #surf f_save[1] 0.0 &
+                    surf f_save[1] 0.0 &
+                    particle no
 
 #dump                10 movie 50 tmp.mpg type type pdiam 0.2 &
 #                    surf proc 0.0 &
-#		    view 60 -30 size 512 512 axes yes 0.9 0.02 particle yes &
+#		    view 60 -30 size 512 512 axes yes 0.9 0.02 &
 #                    gridx 0.0 f_gave[1] &
 #                    gline yes 0.005 &
 #                    #gridy 0.0 proc gridz 0.0 proc &
 #                    #surf f_save[1] 0.0 &
 
-#dump_modify	    2 pad 4 #scolor * green
-#dump_modify         2 cmap xplane min max cf 0.0 2 min blue max red 
-#dump_modify         2 cmap surf min max cf 0.0 2 min orange max green
+dump_modify	    2 pad 4 #scolor * green
+dump_modify         2 cmap gridx min max cf 0.0 2 min blue max red 
+dump_modify         2 cmap surf min max cf 0.0 2 min orange max green
 
 dump                3 grid 1000 tmp.grid id f_gave[1] f_gave[1]
 dump                4 surf 1000 tmp.surf id f_save[1] f_save[2] f_save[3]
