@@ -52,7 +52,7 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   buffer_allow = 1;
   buffer_flag = 1;
 
-  nevery = atoi(arg[3]);
+  nevery = atoi(arg[2]);
 
   // size_one may be shrunk below if additional optional args exist
 

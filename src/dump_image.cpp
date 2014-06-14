@@ -686,6 +686,7 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image fix does not produce a vector");
       if (gridxcol > 0 && fix->size_per_grid_cols < gridxcol)
         error->all(FLERR,"Dump image fix does not have requested column");
+      printf("NEVERY %d %d\n",nevery,fix->per_grid_freq);
       if (nevery % fix->per_grid_freq)
         error->all(FLERR,"Dump image and fix not computed at compatible times");
     }
@@ -764,13 +765,13 @@ void DumpImage::init_style()
       if (surfindex < 0) 
         error->all(FLERR,"Could not find dump image fix ID");
       Fix *fix = modify->fix[surfindex];
-      if (!fix->per_grid_flag) 
+      if (!fix->per_surf_flag) 
         error->all(FLERR,"Dump image fix does not produce per-surf values");
-      if (surfcol == 0 && fix->size_per_grid_cols != 0)
+      if (surfcol == 0 && fix->size_per_surf_cols != 0)
         error->all(FLERR,"Dump image fix does not produce a vector");
-      if (surfcol > 0 && fix->size_per_grid_cols < surfcol)
+      if (surfcol > 0 && fix->size_per_surf_cols < surfcol)
         error->all(FLERR,"Dump image fix does not have requested column");
-      if (nevery % fix->per_grid_freq)
+      if (nevery % fix->per_surf_freq)
         error->all(FLERR,"Dump image and fix not computed at compatible times");
     }
   }

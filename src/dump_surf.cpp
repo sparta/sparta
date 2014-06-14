@@ -53,7 +53,7 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
 
   dimension = domain->dimension;
 
-  nevery = atoi(arg[3]);
+  nevery = atoi(arg[2]);
 
   // scan values and set size_one
   // array entries may expand into multiple fields
