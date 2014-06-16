@@ -210,7 +210,43 @@ E: Could not find dump image compute ID
 
 UNDOCUMENTED
 
+E: Dump image compute is not a per-grid compute
+
+UNDOCUMENTED
+
+E: Dump image compute does not produce a vector
+
+UNDOCUMENTED
+
+E: Dump image compute does not have requested column
+
+UNDOCUMENTED
+
 E: Could not find dump image fix ID
+
+UNDOCUMENTED
+
+E: Dump image fix does not produce per-grid values
+
+UNDOCUMENTED
+
+E: Dump image fix does not produce a vector
+
+UNDOCUMENTED
+
+E: Dump image fix does not have requested column
+
+UNDOCUMENTED
+
+E: Dump image and fix not computed at compatible times
+
+UNDOCUMENTED
+
+E: Dump image compute is not a per-surf compute
+
+UNDOCUMENTED
+
+E: Dump image fix does not produce per-surf values
 
 UNDOCUMENTED
 
