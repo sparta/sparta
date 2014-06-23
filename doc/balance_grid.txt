@@ -92,10 +92,11 @@ cell information.
 The {stride}, {clump}, and {block} keywords can only be used if the
 grid is "uniform".  The grid in SPARTA is hierarchical with one or
 more levels, as defined by the "create_grid"_create_grid.html or
-"read_grid"_read_grid.html commands.  If the parent cell of every grid
-cell is at the same level of the hierarchy, then the grid is uniform,
-meaning the collection of grid cells effectively form a uniform fine
-grid overlaying the entire simulation domain.
+"read_grid"_read_grid.html commlands.  If the parent cell of every
+grid cell is at the same level of the hierarchy, then for puposed os
+this command the grid is uniform, meaning the collection of grid cells
+effectively form a uniform fine grid overlaying the entire simulation
+domain.
 
 The meaning of the {stride}, {clump}, and {block} keywords is exactly
 the same as when they are used with the "create_grid"_create_grid.html

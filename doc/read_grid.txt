@@ -29,12 +29,11 @@ The grid in SPARTA is hierarchical.  The entire simulation box is a
 single parent grid cell at level 0.  It is subdivided into Nx by Ny by
 Nz cells at level 1.  Each of those cells can be a child cell (no
 further sub-division) or can be a parent cell which is further
-subdivided into Nx by Ny by Nz cells as level 2.  This can recurse to
+subdivided into Nx by Ny by Nz cells at level 2.  This can recurse to
 as many levels as desired.  Different cells can stop recursing at
 different levels.  Each parent cell can define its own unique Nx, Ny,
-Nz values for subdivision.  Note that a uniform grid is simply a
-hierarchical grid with a single level 0 parent cell and Nx by Ny by Nz
-child cells at level 1.
+Nz values for subdivision.  Note that a grid with a single level is
+simply a uniform grid with Nx by Ny by Nz cells in each dimension.
 
 In the current SPARTA implementation, all processors own a copy of all
 parent cells.  Each child cell is owned by a unique processor.  They

@@ -108,12 +108,11 @@ number of processors and the mapping of grid cells to procesors.  The
 overall set of created particles should have the same statistical
 properties as with the {yes} setting.
 
+IMPORTANT NOTE: The {global} yes option is not yet implemented.
+
 :line
 
-[Restrictions:]
-
-A non-zero {Np} value for the {n} keyword cannot be used together with
-the {single} keyword.
+[Restrictions:] none
 
 [Related commands:]
 
