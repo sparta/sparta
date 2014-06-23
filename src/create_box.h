@@ -53,7 +53,7 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
 
-E: Create_box z box bounds must straddle 0.0 for 2d simulation
+E: Create_box z box bounds must straddle 0.0 for 2d simulations
 
 Self-explanatory.
 

@@ -353,7 +353,7 @@ E: Cell type mis-match when marking on neigh proc
 Grid cell marking as inside, outside, or overlapping with surface
 elements failed.  Please report the issue to the SPARTA developers.
 
-W: Grid cells marked as unknown = %d
+E: Grid cells marked as unknown = %d
 
 Grid cell marking as inside, outside, or overlapping with surface
 elements did not successfully mark all cells.  Please report the issue

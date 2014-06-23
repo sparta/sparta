@@ -76,8 +76,6 @@ command-line option when running SPARTA to see the offending line.
 
 E: Compute ID for fix ave/surf does not exist
 
-E: Illegal ... command
-
 Self-explanatory.  
 
 E: Fix ave/surf compute does not calculate per-surf values
@@ -127,6 +125,6 @@ Self-explanatory.
 
 E: Fix ave/surf variable is not surf-style variable
 
-Self-explanatory.  
+Self-explanatory.
 
 */

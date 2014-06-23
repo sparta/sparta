@@ -154,11 +154,11 @@ E: Surf file does not contain points
 
 Self-explanatory.
 
-E: Surf files does not contain lines
+E: Surf file does not contain lines
 
 Required for a 2d simulation.
 
-E: Surf files does not contain triangles
+E: Surf file does not contain triangles
 
 Required for a 3d simulation.
 

@@ -206,19 +206,26 @@ issue to the SPARTA developers.
 
 E: No positive volumes in cell
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: More than one positive volume with a negative volume
 
-UNDOCUMENTED
+SPARTA cannot determine which positive volume the negative volume is
+inside of, if a cell is so large that it includes both positive and
+negative volumes.
 
 E: Single volume is negative, inverse donut
 
-UNDOCUMENTED
+An inverse donut is a surface with a flow region interior to the donut
+hole and also exterior to the entire donut.  This means the flow
+regions are disconnected.  SPARTA cannot correctly compute the flow
+volume of this kind of object.
 
 E: Could not find split point in split cell
 
-This is an error when calculating how a 3d grid is cut or split by
+This is an error when calculating how a grid cell is cut or split by
 surface elements.  It should not normally occur.  Please report the
 issue to the SPARTA developers.
 

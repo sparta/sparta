@@ -92,7 +92,7 @@ Self-explanatory.
 E: Cannot open restart file %s
 
 The specified file cannot be opened.  Check that the path and name are
-correct. If the file is a compressed file, also check that the gzip
+correct.  If the file is a compressed file, also check that the gzip
 executable can be found and run.
 
 */

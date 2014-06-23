@@ -52,7 +52,7 @@ E: Cannot create particles before simulation box is defined
 
 Self-explanatory.
 
-E: Cannot create particles  before grid is defined
+E: Cannot create particles before grid is defined
 
 Self-explanatory.
 
