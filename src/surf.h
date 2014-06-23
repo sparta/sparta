@@ -103,22 +103,23 @@ command-line option when running SPARTA to see the offending line.
 
 E: Could not find surf_modify surf-ID
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Could not find surf_modify sc-ID
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: %d surface elements not assigned to a collision model
 
-UNDOCUMENTED
+All surface elements must be assigned to a surface collision model via
+the surf_modify command before a simulation is perforemd.
 
 E: Reuse of surf_collide ID
 
-UNDOCUMENTED
+A surface collision model ID cannot be used more than once.
 
 E: Invalid surf_collide style
 
-UNDOCUMENTED
+Self-explanatory.
 
 */

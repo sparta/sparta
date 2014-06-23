@@ -86,11 +86,11 @@ class Output : protected Pointers {
 
 E: Variable name for stats every does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Variable for stats every is invalid style
 
-UNDOCUMENTED
+It must be an equal-style variable.
 
 E: Variable name for dump every does not exist
 
@@ -102,11 +102,11 @@ Only equal-style variables can be used.
 
 E: Variable name for restart does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Variable for restart is invalid style
 
-UNDOCUMENTED
+It must be an equal-style variable.
 
 E: Dump every variable returned a bad timestep
 
@@ -114,15 +114,15 @@ The variable must return a timestep greater than the current timestep.
 
 E: Restart variable returned a bad timestep
 
-UNDOCUMENTED
+The variable must return a timestep greater than the current timestep.
 
 E: Stats every variable returned a bad timestep
 
-UNDOCUMENTED
+The variable must return a timestep greater than the current timestep.
 
 E: Stats_modify every variable returned a bad timestep
 
-UNDOCUMENTED
+The variable must return a timestep greater than the current timestep.
 
 E: Illegal ... command
 
@@ -152,6 +152,6 @@ A dump ID used in the undump command does not exist.
 
 E: Both restart files must use % or neither
 
-UNDOCUMENTED
+Self-explanatory.
 
 */

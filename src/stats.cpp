@@ -655,14 +655,14 @@ int Stats::evaluate_keyword(char *word, double *answer)
   } else if (strcmp(word,"elapsed") == 0) {
     if (update->runflag == 0) 
       error->all(FLERR,
-		 "This variable stats keyword cannot be used between runs");
+		 "Variable stats keyword cannot be used between runs");
     compute_elapsed();
     dvalue = bivalue;
 
   } else if (strcmp(word,"elaplong") == 0) {
     if (update->runflag == 0) 
       error->all(FLERR,
-		 "This variable stats keyword cannot be used between runs");
+		 "Variable stats keyword cannot be used between runs");
     compute_elaplong();
     dvalue = bivalue;
 
@@ -672,19 +672,19 @@ int Stats::evaluate_keyword(char *word, double *answer)
   } else if (strcmp(word,"cpu") == 0) {
     if (update->runflag == 0) 
       error->all(FLERR,
-		 "This variable stats keyword cannot be used between runs");
+		 "Variable stats keyword cannot be used between runs");
     compute_cpu();
 
   } else if (strcmp(word,"tpcpu") == 0) {
     if (update->runflag == 0) 
       error->all(FLERR,
-		 "This variable stats keyword cannot be used between runs");
+		 "Variable stats keyword cannot be used between runs");
     compute_tpcpu();
 
   } else if (strcmp(word,"spcpu") == 0) {
     if (update->runflag == 0) 
       error->all(FLERR,
-		 "This variable stats keyword cannot be used between runs");
+		 "Variable stats keyword cannot be used between runs");
     compute_spcpu();
 
   } else if (strcmp(word,"np") == 0) {

@@ -75,6 +75,7 @@ command-line option when running SPARTA to see the offending line.
 
 E: Unknown outcome in reaction
 
-UNDOCUMENTED
+The specified type of the reaction is not encoded in the reaction
+style.
 
 */

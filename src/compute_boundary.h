@@ -58,10 +58,11 @@ command-line option when running SPARTA to see the offending line.
 
 E: Compute boundary mixture ID does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Number of groups in compute boundary mixture has changed
 
-UNDOCUMENTED
+This mixture property cannot be changed after this compute command is
+issued.
 
 */

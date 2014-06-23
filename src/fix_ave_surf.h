@@ -76,54 +76,57 @@ command-line option when running SPARTA to see the offending line.
 
 E: Compute ID for fix ave/surf does not exist
 
-UNDOCUMENTED
+E: Illegal ... command
+
+Self-explanatory.  
 
 E: Fix ave/surf compute does not calculate per-surf values
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ave/surf compute does not calculate a per-surf vector
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ave/surf compute does not calculate a per-surf array
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ave/surf compute array is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ID for fix ave/surf does not exist
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ave/surf fix does not calculate per-surf values
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ave/surf fix does not calculate a per-surf vector
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ave/surf fix does not calculate a per-surf array
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ave/surf fix array is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix for fix ave/surf not computed at compatible time
 
-UNDOCUMENTED
+Fixes generate their values on specific timesteps.  Fix ave/surf is
+requesting a value on a non-allowed timestep.
 
 E: Variable name for fix ave/surf does not exist
 
-UNDOCUMENTED
+Self-explanatory.  
 
 E: Fix ave/surf variable is not surf-style variable
 
-UNDOCUMENTED
+Self-explanatory.  
 
 */

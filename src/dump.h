@@ -109,7 +109,8 @@ integer for dump.
 
 E: Too much buffered per-proc info for dump
 
-UNDOCUMENTED
+Number of dumped values per processor cannot exceed a small integer
+(~2 billion values).
 
 E: Cannot open gzipped file
 
@@ -129,14 +130,15 @@ command-line option when running SPARTA to see the offending line.
 
 E: Dump_modify buffer yes not allowed for this style
 
-UNDOCUMENTED
+Not all dump styles allow dump_modify buffer yes.  See the dump_modify
+doc page.
 
 E: Cannot use dump_modify fileper without % in dump file name
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot use dump_modify nfile without % in dump file name
 
-UNDOCUMENTED
+Self-explanatory.
 
 */

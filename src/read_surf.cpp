@@ -69,8 +69,9 @@ void ReadSurf::command(int narg, char **arg)
 {
   if (!grid->exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
-  if (!grid->exist_ghost)
-    error->all(FLERR,"Cannot read_surf before grid ghost cells are defined");
+  // NOTE: is this error check necessary?
+  //if (!grid->exist_ghost)
+  //  error->all(FLERR,"Cannot read_surf before grid ghost cells are defined");
   if (particle->exist) 
     error->all(FLERR,"Cannot read_surf after particles are defined");
 
@@ -127,17 +128,20 @@ void ReadSurf::command(int narg, char **arg)
 
   parse_keyword(1);
   if (strcmp(keyword,"Points") != 0)
-    error->all(FLERR,"Surf file cannot parse Points section");
+    error->all(FLERR,
+	       "Read_surf did not find points section of surf file");
   read_points();
 
   parse_keyword(0);
   if (dimension == 2) {
     if (strcmp(keyword,"Lines") != 0)
-      error->all(FLERR,"Surf file cannot parse Lines section");
+      error->all(FLERR,
+	       "Read_surf did not find lines section of surf file");
     read_lines();
   } else {
     if (strcmp(keyword,"Triangles") != 0)
-    error->all(FLERR,"Surf file cannot parse Triangles section");
+    error->all(FLERR,
+	       "Read_surf did not find triangles section of surf file");
     read_tris();
   }
 
@@ -462,11 +466,11 @@ void ReadSurf::header()
     } else break;
   }
 
-  if (npoint_new == 0) error->all(FLERR,"Surf files does not contain points");
+  if (npoint_new == 0) error->all(FLERR,"Surf file does not contain points");
   if (dimension == 2 && nline_new == 0) 
-    error->all(FLERR,"Surf files does not contain lines");
+    error->all(FLERR,"Surf file does not contain lines");
   if (dimension == 3 && ntri_new == 0) 
-    error->all(FLERR,"Surf files does not contain triangles");
+    error->all(FLERR,"Surf file does not contain triangles");
 }
 
 /* ----------------------------------------------------------------------

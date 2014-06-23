@@ -474,7 +474,7 @@ int Irregular::create_data_variable(int n, int *proclist, int *sizes,
   brecvsize += size_self;
 
   if (brecvsize > MAXSMALLINT) 
-    error->one(FLERR,"Irregular comm recv buffer exceeds 2 GB\n");
+    error->one(FLERR,"Irregular comm recv buffer exceeds 2 GB");
   recvsize = brecvsize;
 
   // return # of datums I will receive

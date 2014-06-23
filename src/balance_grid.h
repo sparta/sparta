@@ -43,7 +43,7 @@ class BalanceGrid : protected Pointers {
 
 E: Cannot balance grid before grid is defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -53,10 +53,11 @@ command-line option when running SPARTA to see the offending line.
 
 E: Invalid balance_grid style for non-uniform grid
 
-UNDOCUMENTED
+Some balance styles can only be used when the grid is uniform.  See
+the command doc page for details.
 
 E: Bad grid of processors for balance_grid block
 
-UNDOCUMENTED
+Product of Px,Py,Pz must equal total number of processors.
 
 */

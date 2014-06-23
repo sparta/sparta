@@ -46,7 +46,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   Dump(sparta, narg, arg)
 {
-  if (narg == 4) error->all(FLERR,"No dump particle arguments specified");
+  if (narg == 4) error->all(FLERR,"No dump particle attributes specified");
 
   clearstep = 1;
   buffer_allow = 1;

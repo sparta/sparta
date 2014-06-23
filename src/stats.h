@@ -143,19 +143,20 @@ class Stats : protected Pointers {
 
 E: Could not find stats compute ID
 
-UNDOCUMENTED
+Compute ID specified in stats_style command does not exist.
 
 E: Could not find stats fix ID
 
-UNDOCUMENTED
+Fix ID specified in stats_style command does not exist.
 
 E: Stats and fix not computed at compatible times
 
-UNDOCUMENTED
+Fixes generate values on specific timesteps.  The stats output
+does not match these timesteps.
 
 E: Could not find stats variable name
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -165,62 +166,65 @@ command-line option when running SPARTA to see the offending line.
 
 E: Stats_modify int format does not contain d character
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats compute does not compute scalar
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats compute does not compute vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats compute vector is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats compute does not compute array
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats compute array is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats fix does not compute scalar
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats fix does not compute vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats fix vector is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats fix does not compute array
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats fix array is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Stats variable is not equal-style variable
 
-UNDOCUMENTED
+Only equal-style variables can be output with stats output, not
+particle-style or grid-style or surf-style variables.
 
 E: Stats variable cannot be indexed
 
-UNDOCUMENTED
+A variable used as a stats keyword cannot be indexed.
+E.g. v_foo must be used, not v_foo[100].
 
 E: Invalid keyword in stats_style command
 
-UNDOCUMENTED
+One or more specified keywords are not recognized.
 
-E: This variable stats keyword cannot be used between runs
+E: Variable stats keyword cannot be used between runs
 
-UNDOCUMENTED
+Stats keywords that refer to time (such as cpu, elapsed) do not make
+sense in between runs.
 
 */

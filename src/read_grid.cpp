@@ -91,7 +91,8 @@ void ReadGrid::command(int narg, char **arg)
 
   parse_keyword(1);
   if (strcmp(keyword,"Parents") != 0)
-    error->all(FLERR,"Grid file cannot parse Parents section");
+    error->all(FLERR,
+	       "Read_grid did not find parents section of grid file");
   read_parents();
 
   // close file
@@ -160,7 +161,7 @@ void ReadGrid::create_parents(int n, char *buf)
   *next = '\n';
 
   if (nwords != 5)
-    error->all(FLERR,"Incorrect parents format in grid file");
+    error->all(FLERR,"Incorrect format of parent cell in grid file");
 
   char **values = new char*[nwords];
 
@@ -199,24 +200,24 @@ void ReadGrid::create_parents(int n, char *buf)
     // NOTE: add more error checks on values[1]
 
     id = grid->id_str2num(values[1]);
-    if (id < 0) error->all(FLERR,"Invalid cell ID in read_grid file");
+    if (id < 0) error->all(FLERR,"Invalid cell ID in grid file");
 
     if (id) {
       if (hash->find(id) != hash->end()) 
-        error->all(FLERR,"Duplicate cell ID in read_grid");
+        error->all(FLERR,"Duplicate cell ID in grid file");
       grid->id_pc_split(values[1],pstr,cstr);
       idparent = grid->id_str2num(pstr);
       ichild = ATOCELLINT(cstr);
       iparent = (*hash)[idparent];
       if (iparent < 0) 
-        error->all(FLERR,"Parent cell's parent does not exist in read_grid");
+        error->all(FLERR,"Parent cell's parent does not exist in grid file");
     } else iparent = -1;
 
     nx = atoi(values[2]);
     ny = atoi(values[3]);
     nz = atoi(values[4]);
-    if (nx < 0 || ny < 0 || nz < 0)
-      error->all(FLERR,"");
+    if (nx <= 0 || ny <= 0 || nz <= 0)
+      error->all(FLERR,"Invalid Nx,Ny,Nz values in grid file");
     if (dimension == 2 && nz != 1) 
       error->all(FLERR,"Nz value in read_grid file must be 1 "
                  "for a 2d simulation");

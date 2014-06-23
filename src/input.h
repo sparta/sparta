@@ -163,7 +163,7 @@ Check that the path and name are correct.
 
 E: Partition numeric index is out of bounds
 
-UNDOCUMENTED
+It must be an integer from 1 to the number of partitions.
 
 E: Cannot open print file %s
 
@@ -171,11 +171,11 @@ Self-explanatory.
 
 E: Invalid collide style
 
-UNDOCUMENTED
+The choice of collision style is unknown.
 
 E: Cannot use collide_modify with no collisions defined
 
-UNDOCUMENTED
+A collision style must be specified first.
 
 E: Dimension command after simulation box is defined
 
@@ -184,7 +184,7 @@ read_restart, or create_box command.
 
 E: Invalid react style
 
-UNDOCUMENTED
+The choice of reaction style is unknown.
 
 E: Units command after simulation box is defined
 

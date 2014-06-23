@@ -49,7 +49,7 @@ class WriteGrid : protected Pointers {
 
 E: Cannot write grid when grid is not defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 

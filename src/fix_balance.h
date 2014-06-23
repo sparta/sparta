@@ -67,6 +67,8 @@ command-line option when running SPARTA to see the offending line.
 
 E: Cannot use non-rcb fix balance with a grid cutoff
 
-UNDOCUMENTED
+This is because the load-balancing will generate a partitioning
+of cells to processors that is dispersed and which will not work
+with a grid cutoff >= 0.0.
 
 */

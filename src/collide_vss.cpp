@@ -706,6 +706,6 @@ double CollideVSS::extract(int isp, const char *name)
   if (strcmp(name,"diam") == 0) return params[isp].diam;
   else if (strcmp(name,"omega") == 0) return params[isp].omega;
   else if (strcmp(name,"tref") == 0) return params[isp].tref;
-  else error->all(FLERR,"Request for unknown param from collide");
+  else error->all(FLERR,"Request for unknown parameter from collide");
   return 0.0;
 }

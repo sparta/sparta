@@ -16,10 +16,14 @@
 
 E: Too many surfs in one cell
 
-UNDOCUMENTED
+Use the global surfmax command to increase this max allowed number of
+surfs per grid cell.
 
 E: Inconsistent surface to grid mapping in read_restart
 
-UNDOCUMENTED
+When surface elements were mapped to grid cells after reading a
+restart file, an inconsitent count of elements in a grid cell was
+found, as compared to the original simulation, which should not
+happen.  Please report the issue to the SPARTA developers.
 
 */

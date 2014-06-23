@@ -55,10 +55,10 @@ command-line option when running SPARTA to see the offending line.
 
 E: Create_box z box bounds must straddle 0.0 for 2d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
-E: Box ylo must be 0.0 for axi-symmetry
+E: Box ylo must be 0.0 for axi-symmetric model
 
-UNDOCUMENTED
+Self-explanatory.
 
 */

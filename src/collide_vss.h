@@ -111,22 +111,22 @@ command-line option when running SPARTA to see the offending line.
 
 E: Species %s did not appear in VSS parameter file
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: VSS parameters do not match current species
 
-UNDOCUMENTED
+Species cannot be added after VSS colision file is read.
 
 E: Cannot open VSS parameter file %s
 
-UNDOCUMENTED
+Self-explantory.
 
 E: Incorrect line format in VSS parameter file
 
-UNDOCUMENTED
+Number of parameters in a line read from file is not valid.
 
-E: Request for unknown param from collide
+E: Request for unknown parameter from collide
 
-UNDOCUMENTED
+VSS model does not have the parameter being requested.
 
 */

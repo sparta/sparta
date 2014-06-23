@@ -155,34 +155,41 @@ command-line option when running SPARTA to see the offending line.
 
 E: Gravity in z not allowed for 2d
 
-UNDOCUMENTED
+Self-explanatory.
 
-E: Gravity in y not allowed for axi-symmetry
+E: Gravity in y not allowed for axi-symmetric model
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Particle %d on proc %d hit inside of surf %d on step %ld
 
-UNDOCUMENTED
+This error should not happen if particles start outside of physical
+objects.  Please report the issue to the SPARTA developers.
 
 E: Sending particle to self
 
-UNDOCUMENTED
+This error should not occur.  Please report the issue to the SPARTA
+developers.
 
 E: Cannot set global surfmax when surfaces already exist
 
-UNDOCUMENTED
+This setting must be made before any surfac elements are
+read via the read_surf command.
 
 E: Timestep must be >= 0
 
-UNDOCUMENTED
+Reset_timestep cannot be used to set a negative timestep.
 
 E: Too big a timestep
 
-UNDOCUMENTED
+Reset_timestep timestep value must fit in a SPARTA big integer, as
+specified by the -DSPARTA_SMALL, -DSPARTA_BIG, or -DSPARTA_BIGBIG
+options in the low-level Makefile used to build SPARTA.  See
+Section 2.2 of the manual for details.
 
 E: Cannot reset timestep with a time-dependent fix defined
 
-UNDOCUMENTED
+The timestep cannot be reset when a fix that keeps track of elapsed
+time is in place.
 
 */

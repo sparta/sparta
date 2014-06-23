@@ -45,7 +45,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   Dump(sparta, narg, arg)
 {
-  if (narg == 4) error->all(FLERR,"No dump grid arguments specified");
+  if (narg == 4) error->all(FLERR,"No dump grid attributes specified");
 
   clearstep = 1;
   buffer_allow = 1;

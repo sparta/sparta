@@ -139,11 +139,11 @@ Check the file assigned to the variable.
 
 E: Grid-style variables are not yet implemented
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Surf-style variables are not yet implemented
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Variable name must be alphanumeric or underscore characters
 
@@ -202,7 +202,7 @@ Self-explanatory.
 
 E: Per-particle compute in equal-style variable formula
 
-UNDOCUMENTED
+Equal-style variables cannot use per-particle quantities.
 
 E: Mismatched compute in variable formula
 
@@ -228,7 +228,7 @@ Self-explanatory.
 
 E: Per-particle fix in equal-style variable formula
 
-UNDOCUMENTED
+Equal-style variables cannot use per-particle quantities.
 
 E: Mismatched fix in variable formula
 
@@ -245,7 +245,7 @@ A variable used in a formula could not be evaluated.
 
 E: Particle-style variable in equal-style variable formula
 
-UNDOCUMENTED
+Equal-style variables cannot use per-particle quantities.
 
 E: Mismatched variable in variable formula
 
@@ -255,11 +255,11 @@ formula.
 
 E: Invalid math/special function in variable formula
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid stats keyword in variable formula
 
-UNDOCUMENTED
+The keyword is not recognized.
 
 E: Divide by 0 in variable formula
 
@@ -295,7 +295,7 @@ Self-explanatory.
 
 E: Variable name between brackets must be alphanumeric or underscore characters
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Non digit character between brackets in variable
 
@@ -344,7 +344,7 @@ Only file-style or atomfile-style variables can be used with next().
 
 E: Particle vector in equal-style variable formula
 
-UNDOCUMENTED
+Equal-style variables cannot use per-particle quantities.
 
 E: Invalid Boolean syntax in if command
 

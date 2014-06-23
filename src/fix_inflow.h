@@ -93,26 +93,28 @@ command-line option when running SPARTA to see the offending line.
 
 E: Fix inflow mixture ID does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot use fix inflow in z dimension for 2d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot use fix inflow in y dimension for axisymmetric
 
-UNDOCUMENTED
+This is because the y dimension boundaries cannot be
+inflow boundaries for an axisymmetric model.
 
 E: Cannot use fix inflow n > 0 with perspecies yes
 
-UNDOCUMENTED
+This is because the perspecies option calculates the
+number of particles to insert itself.
 
 E: Cannot use fix inflow on periodic boundary
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix inflow used on outflow boundary
 
-UNDOCUMENTED
+Self-explanatory.
 
 */

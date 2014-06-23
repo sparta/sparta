@@ -43,6 +43,6 @@ class SurfCollide : protected Pointers {
 
 E: Surf_collide ID must be alphanumeric or underscore characters
 
-UNDOCUMENTED
+Self-explanatory.
 
 */

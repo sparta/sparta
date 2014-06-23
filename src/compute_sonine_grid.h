@@ -65,10 +65,11 @@ command-line option when running SPARTA to see the offending line.
 
 E: Compute sonine/grid mixture ID does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Number of groups in compute sonine/grid mixture has changed
 
-UNDOCUMENTED
+This mixture property cannot be changed after this compute command is
+issued.
 
 */

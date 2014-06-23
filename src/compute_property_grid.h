@@ -72,10 +72,11 @@ command-line option when running SPARTA to see the offending line.
 
 E: Invalid compute property/grid field for 2d simulation
 
-UNDOCUMENTED
+Fields that reference z-dimension properties cannot be used
+in a 2d simulation.
 
 E: Invalid keyword in compute property/grid command
 
-UNDOCUMENTED
+Self-explantory.
 
 */

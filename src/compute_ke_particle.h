@@ -53,6 +53,7 @@ command-line option when running SPARTA to see the offending line.
 
 W: More than one compute ke/particle
 
-UNDOCUMENTED
+This may be inefficient since each such compute stores a vector
+of length equal to the number of particles.
 
 */

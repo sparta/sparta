@@ -58,11 +58,11 @@ class ReadGrid : protected Pointers {
 
 E: Cannot read grid before simulation box is defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot read grid when grid is already defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -70,33 +70,34 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
 
-E: Grid file cannot parse Parents section
+E: Read_grid did not find parents section of grid file
 
-UNDOCUMENTED
+Expected Parents section but did not find keyword.
 
-E: Incorrect parents format in grid file
+E: Incorrect format of parent cell in grid file
 
-UNDOCUMENTED
+Number of words in a parent cell line was not the expected number.
 
-E: Invalid cell ID in read_grid file
+E: Invalid cell ID in grid file
 
-UNDOCUMENTED
+A cell ID could not be converted into numeric format.
 
-E: Duplicate cell ID in read_grid
+E: Duplicate cell ID in grid file
 
-UNDOCUMENTED
+Parent cell IDs must be unique.
 
-E: Parent cell's parent does not exist in read_grid
+E: Parent cell's parent does not exist in grid file
 
-UNDOCUMENTED
+Parent cells must be listed in order such that
+each cell's parents have already appeared in the list.
 
-E: 
+E: Invalid Nx,Ny,Nz values in grid file
 
-UNDOCUMENTED
+A Nx or Ny or Nz value for a parent cell is <= 0.
 
 E: Nz value in read_grid file must be 1 for a 2d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot open gzipped file
 
@@ -111,10 +112,10 @@ executable can be found and run.
 
 E: Unexpected end of grid file
 
-UNDOCUMENTED
+Self-explantory.
 
 E: Grid file does not contain parents
 
-UNDOCUMENTED
+No parent cells appeared in the grid file.
 
 */

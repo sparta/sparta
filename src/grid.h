@@ -315,51 +315,67 @@ class Grid : protected Pointers {
 
 E: Cell ID has too many bits
 
-UNDOCUMENTED
+Cell IDs must fit in 32 bits (SPARTA small integer) or 64 bits (SPARTA
+big integer), as specified by the -DSPARTA_SMALL, -DSPARTA_BIG, or
+-DSPARTA_BIGBIG options in the low-level Makefile used to build
+SPARTA.  See Section 2.2 of the manual for details.  And see Section
+4.8 for details on how cell IDs are formatted.
 
 E: Owned cells with unknown neighbors = %d
 
-UNDOCUMENTED
+One or more grid cells have unknown neighbors which will prevent
+particles from moving correctly.  Please report the issue to the
+SPARTA developers.
 
 E: Grid in/out self-mark error %d for icell %d, icorner %d, connect %d %d, other cell %d, other corner %d, values %d %d\n
 
-UNDOCUMENTED
+A grid cell was incorrectly marked as inside, outside, or overlapping
+with surface elements.  Please report the issue to the SPARTA
+developers.
 
 E: Grid in/out other-mark error %d\n
 
-UNDOCUMENTED
+Grid cell marking as inside, outside, or overlapping with surface
+elements failed.  Please report the issue to the SPARTA developers.
 
 E: Cell type mis-match when marking on self
 
-UNDOCUMENTED
+Grid cell marking as inside, outside, or overlapping with surface
+elements failed.  Please report the issue to the SPARTA developers.
 
 E: Parent cell child missing
 
-UNDOCUMENTED
+Hierarchical grid traversal failed.  Please report the issue to the
+SPARTA developers.
 
 E: Cell type mis-match when marking on neigh proc
 
-UNDOCUMENTED
-
-E: Grid cells marked as unknown = %d
-
-UNDOCUMENTED
+Grid cell marking as inside, outside, or overlapping with surface
+elements failed.  Please report the issue to the SPARTA developers.
 
 W: Grid cells marked as unknown = %d
 
-UNDOCUMENTED
+Grid cell marking as inside, outside, or overlapping with surface
+elements did not successfully mark all cells.  Please report the issue
+to the SPARTA developers.
 
 W: Grid cell interior corner points marked as unknown = %d
 
-UNDOCUMENTED
+Corner points of grid cells interior to the simulation domain were not
+all marked successfully as inside, outside, or overlapping with
+surface elements.  This should normally not happen, but does
+not affect simulations.
 
 E: Grid cell corner points on boundary marked as unknown = %d
 
-UNDOCUMENTED
+Corner points of grid cells on the boundary of the simulation domain
+were not all marked successfully as inside, outside, or overlapping
+with surface elements.  Please report the issue to the SPARTA
+developers.
 
 E: Cannot weight cells before grid is defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -369,6 +385,6 @@ command-line option when running SPARTA to see the offending line.
 
 E: Cannot use weight cell radius unless axisymmetric
 
-UNDOCUMENTED
+An axisymmetric model is required for this style of cell weighting.
 
 */

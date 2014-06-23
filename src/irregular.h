@@ -77,8 +77,9 @@ class Irregular : protected Pointers {
 
 /* ERROR/WARNING messages:
 
-E: Irregular comm recv buffer exceeds 2 GB\n
+E: Irregular comm recv buffer exceeds 2 GB
 
-UNDOCUMENTED
+MPI does not support a communication buffer that exceeds a 4-byte
+integer in size.
 
 */

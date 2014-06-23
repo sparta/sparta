@@ -83,30 +83,31 @@ command-line option when running SPARTA to see the offending line.
 
 E: React tce can only be used with collide vss
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Unknown outcome in reaction
 
-UNDOCUMENTED
+The specified type of the reaction is not encoded in the reaction
+style.
 
 E: Cannot open reaction file %s
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid reaction formula in file
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid reaction type in file
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid reaction style in file
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid reaction coefficients in file
 
-UNDOCUMENTED
+Self-explanatory.
 
 */

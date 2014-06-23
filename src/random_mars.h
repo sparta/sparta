@@ -43,6 +43,7 @@ class RanMars : protected Pointers {
 
 E: Seed command has not been used
 
-UNDOCUMENTED
+This command should appear near the beginning of your input script,
+before any random numbers are needed by other commands.
 
 */

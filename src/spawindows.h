@@ -49,4 +49,3 @@ inline double trunc(double x) {
 inline int mkdir(const char *path, int){
   return _mkdir(path);
 }
-

@@ -53,18 +53,22 @@ command-line option when running SPARTA to see the offending line.
 
 E: Particle %d,%d on proc %d is in invalid cell  on timestep %ld
 
-UNDOCUMENTED
+The particle is in a cell indexed by a value that is out-of-bounds for
+the cells owned by this processor.
 
 E: Particle %d,%d on proc %d is in split cell  on timestep %ld
 
-UNDOCUMENTED
+This should not happend.  The particle should be in one
+of the sub-cells of the split cell.
 
 E: Particle %d,%d on proc %d is outside cell  on timestep %ld
 
-UNDOCUMENTED
+The particle's coordinates are not within the grid cell
+it is supposed to be in.
 
 W: %d particles were in wrong cells on timestep %ld
 
-UNDOCUMENTED
+This is the total number of particles that are incorrectly
+matched to their grid cell.
 
 */

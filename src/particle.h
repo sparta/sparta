@@ -141,9 +141,10 @@ class Particle : protected Pointers {
 
 /* ERROR/WARNING messages:
 
-E: Per-processor grid count is too big
+E: Per-processor particle count is too big
 
-UNDOCUMENTED
+No processor can have more particle than fit in a 32-bit integer,
+approximately 2 billion.
 
 E: Illegal ... command
 
@@ -153,22 +154,22 @@ command-line option when running SPARTA to see the offending line.
 
 E: Cannot open species file %s
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Species ID is already defined
 
-UNDOCUMENTED
+Species IDs must be unique.
 
 E: Species ID does not appear in species file
 
-UNDOCUMENTED
+Could not find the requested species in the specified file.
 
 E: Incorrect line format in species file
 
-UNDOCUMENTED
+Line read did not have expected number of fields.
 
 E: Invalid species ID in species file
 
-UNDOCUMENTED
+Species IDs are limited to 15 characters.
 
 */

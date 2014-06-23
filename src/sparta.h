@@ -94,7 +94,8 @@ created.
 
 E: Cannot open log.sparta
 
-UNDOCUMENTED
+The default SPARTA log file cannot be opened.  Check that the
+directory you are running in allows for files to be created.
 
 E: Cannot open universe log file
 
@@ -119,18 +120,20 @@ Check that the path and name are correct.
 
 E: Smallint setting in spatype.h is invalid
 
-UNDOCUMENTED
+It has to be the size of an integer.
 
 E: Bigint setting in spatype.h is invalid
 
-UNDOCUMENTED
+Size of bigint is less than size of smallint.
 
 E: MPI_SPARTA_BIGINT and bigint in spatype.h are not compatible
 
-UNDOCUMENTED
+The size of the MPI datatype does not match the size of a bigint.
 
 E: Small,big integers are not sized correctly
 
-UNDOCUMENTED
+This error occurs whenthe sizes of smallint and bigint as defined in
+src/spatype.h are not what is expected.  Please report the issue
+to the SPARTA developers.
 
 */

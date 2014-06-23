@@ -61,6 +61,7 @@ class Comm : protected Pointers {
 
 E: Migrate cells send buffer exceeds 2 GB
 
-UNDOCUMENTED
+MPI does not support a communication buffer that exceeds a 4-byte
+integer in size.
 
 */

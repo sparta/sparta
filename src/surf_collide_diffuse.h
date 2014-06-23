@@ -64,14 +64,14 @@ command-line option when running SPARTA to see the offending line.
 
 E: Surf_collide diffuse rotation invalid for 2d
 
-UNDOCUMENTED
+Specified rotation vector must be in z-direction.
 
 E: Surf_collide diffuse variable name does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Surf_collide diffuse variable is invalid style
 
-UNDOCUMENTED
+It must be an equal-style variable.
 
 */

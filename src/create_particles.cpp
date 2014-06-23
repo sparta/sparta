@@ -47,7 +47,7 @@ void CreateParticles::command(int narg, char **arg)
     error->all(FLERR,
 	       "Cannot create particles before simulation box is defined");
   if (!grid->exist)
-    error->all(FLERR,"Cannot create particles  before grid is defined");
+    error->all(FLERR,"Cannot create particles before grid is defined");
 
   particle->exist = 1;
 
@@ -57,36 +57,48 @@ void CreateParticles::command(int narg, char **arg)
   if (imix < 0) error->all(FLERR,"Create_particles mixture ID does not exist");
   particle->mixture[imix]->init();
 
-  // optional args
+  // style arg
 
   bigint np = 0;
   single = 0;
 
   int iarg = 1;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"n") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
-      np = ATOBIGINT(arg[iarg+1]);
+  if (strcmp(arg[iarg],"n") == 0) {
+    if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+    np = ATOBIGINT(arg[iarg+1]);
       if (np <= 0) error->all(FLERR,"Illegal create_particles command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"single") == 0) {
-      if (iarg+8 > narg) error->all(FLERR,"Illegal create_particles command");
-      single = 1;
-      mspecies = particle->find_species(arg[iarg+1]);
-      if (mspecies < 0) 
-	error->all(FLERR,"Create_particles species ID does not exist");
-      xp = atof(arg[iarg+2]);
-      yp = atof(arg[iarg+3]);
-      zp = atof(arg[iarg+4]);
-      vx = atof(arg[iarg+5]);
-      vy = atof(arg[iarg+6]);
-      vz = atof(arg[iarg+7]);
-      iarg += 8;
+  } else if (strcmp(arg[iarg],"single") == 0) {
+    if (iarg+8 > narg) error->all(FLERR,"Illegal create_particles command");
+    single = 1;
+    mspecies = particle->find_species(arg[iarg+1]);
+    if (mspecies < 0) 
+      error->all(FLERR,"Create_particles species ID does not exist");
+    xp = atof(arg[iarg+2]);
+    yp = atof(arg[iarg+3]);
+    zp = atof(arg[iarg+4]);
+    vx = atof(arg[iarg+5]);
+    vy = atof(arg[iarg+6]);
+    vz = atof(arg[iarg+7]);
+    iarg += 8;
+  } else error->all(FLERR,"Illegal create_particles command");
+
+  // optional args
+
+  int globalflag = 0;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"global") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      if (strcmp(arg[iarg+1],"no") == 0) globalflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) globalflag = 1;
+      else error->all(FLERR,"Illegal create_particles command");
+      iarg == 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
-  if (np > 0 && single)
-    error->all(FLERR,"Cannot use n and single in create_particles command");
+  if (globalflag) 
+    error->all(FLERR,"Create_particles global option not yet implemented");
 
   // calculate Np if not set explicitly
 
@@ -108,13 +120,15 @@ void CreateParticles::command(int narg, char **arg)
   }
 
   // generate particles
+  // NOTE: invoke local or global option here
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
   bigint nprevious = particle->nglobal;
   if (single) create_single();
-  else create_local(np);
+  else if (!globalflag) create_local(np);
+  //else create_global(np);
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();

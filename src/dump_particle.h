@@ -126,29 +126,30 @@ class DumpParticle : public Dump {
 
 /* ERROR/WARNING messages:
 
-E: No dump particle arguments specified
+E: No dump particle attributes specified
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid attribute in dump particle command
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Could not find dump particle compute ID
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Could not find dump particle fix ID
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle and fix not computed at compatible times
 
-UNDOCUMENTED
+Fixes generate values on specific timesteps.  The dump particle output
+does not match these timesteps.
 
 E: Could not find dump particle variable name
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Region ID for dump custom does not exist
 
@@ -156,39 +157,39 @@ Self-explanatory.
 
 E: Dump particle compute does not compute per-particle info
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle compute does not calculate per-particle vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle compute does not calculate per-particle array
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle compute vector is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle fix does not compute per-particle info
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle fix does not compute per-particle vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle fix does not compute per-particle array
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle fix vector is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump particle variable is not particle-style variable
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -210,15 +211,15 @@ Self-explanatory.
 
 E: Dump modify compute ID does not compute per-particle info
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump modify compute ID does not compute per-particle vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump modify compute ID does not compute per-particle array
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump modify compute ID vector is not large enough
 
@@ -230,15 +231,15 @@ Self-explanatory.
 
 E: Dump modify fix ID does not compute per-particle info
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump modify fix ID does not compute per-particle vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump modify fix ID does not compute per-particle array
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump modify fix ID vector is not large enough
 
@@ -250,7 +251,7 @@ Self-explanatory.
 
 E: Dump modify variable is not particle-style variable
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid dump_modify threshhold operator
 

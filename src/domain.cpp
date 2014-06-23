@@ -72,7 +72,7 @@ Domain::~Domain()
 void Domain::init()
 {
   if (axisymmetric && dimension != 2)
-    error->all(FLERR,"Axi-symmetry only allowed in 2d");
+    error->all(FLERR,"Axi-symmetry only allowed for 2d simulation");
   if (dimension == 2 && (bflag[ZLO] != PERIODIC || bflag[ZHI] != PERIODIC))
     error->all(FLERR,"Z dimension must be periodic for 2d simulation");
   for (int i = 0; i < 6; i++)
@@ -179,11 +179,6 @@ void Domain::boundary_modify(int narg, char **arg)
   else if (strcmp(arg[0],"zhi") == 0) face = ZHI;
   else error->all(FLERR,"Illegal bound_modify command");
 
-  if (dimension == 2 && (face == ZLO || face == ZHI))
-    error->all(FLERR,
-	       "Cannot use bound_modify command "
-	       "on Z dimension for 2d simulation");
-
   // setting surf_collide[] index here vs init()
   // assumes SurfCollide styles are static (never deleted)
 
@@ -192,7 +187,7 @@ void Domain::boundary_modify(int narg, char **arg)
     if (strcmp(arg[iarg],"surf") == 0) {
       if (iarg + 2 > narg) error->all(FLERR,"Illegal bound_modify command");
       if (bflag[face] != SURFACE)
-	error->all(FLERR,"Bound_modify surf requires boundary be a surface");
+	error->all(FLERR,"Bound_modify surf requires wall be a surface");
       surf_collide[face] = surf->find_collide(arg[iarg+1]);
       if (surf_collide[face] < 0) 
 	error->all(FLERR,"Bound_modify surf_collide ID is unknown");

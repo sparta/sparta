@@ -18,7 +18,6 @@
 #include "stdio.h"
 #include "universe.h"
 #include "version.h"
-#include "error.h"
 #include "memory.h"
 
 using namespace SPARTA_NS;

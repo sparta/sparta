@@ -44,11 +44,11 @@ class CreateGrid : protected Pointers {
 
 E: Cannot create grid before simulation box is defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot create grid when grid is already defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -58,15 +58,19 @@ command-line option when running SPARTA to see the offending line.
 
 E: Create_grid nz value must be 1 for a 2d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot use specified create_grid options with more than one level
 
-UNDOCUMENTED
+When defining a grid with more than one level, the other create_grid
+keywords (stride, clump, block, etc) cannot be used.  The child grid
+cells will be assigned to processors in round-robin order as explained
+on the create_grid doc page.
 
 E: Bad grid of processors for create_grid
 
-UNDOCUMENTED
+For block style, product of Px,Py,Pz must equal total number of
+processors.
 
 E: Numeric index is out of bounds
 

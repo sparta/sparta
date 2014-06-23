@@ -49,7 +49,3 @@ class Universe : protected Pointers {
 }
 
 #endif
-
-/* ERROR/WARNING messages:
-
-*/

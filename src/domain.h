@@ -62,21 +62,23 @@ class Domain : protected Pointers {
 
 /* ERROR/WARNING messages:
 
-E: Axi-symmetry only allowed in 2d
+E: Axi-symmetry only allowed for 2d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Z dimension must be periodic for 2d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Box boundary not assigned a surf_collide ID
 
-UNDOCUMENTED
+Any box boundary of style "s" must be assigned to a surface collision
+model via the bound_modify command, before a simulation is performed.
 
 E: Grid cutoff is longer than box length in a periodic dimension
 
-UNDOCUMENTED
+This is not allowed.  Reduce the size of the cutoff specified by the
+global gridcut command.
 
 E: Box bounds are invalid
 
@@ -96,28 +98,25 @@ command-line option when running SPARTA to see the offending line.
 
 E: Only ylo boundary can be axi-symmetric
 
-UNDOCUMENTED
+Self-explanatory.  See the boundary doc page for more details.
 
 E: Y cannot be periodic for axi-symmetric
 
-UNDOCUMENTED
+Self-explanatory.  See the boundary doc page for more details.
 
 E: Both sides of boundary must be periodic
 
 Cannot specify a boundary as periodic only on the lo or hi side.  Must
 be periodic on both sides.
 
-E: Cannot use bound_modify command on Z dimension for 2d simulation
+E: Bound_modify surf requires wall be a surface
 
-UNDOCUMENTED
-
-E: Bound_modify surf requires boundary be a surface
-
-UNDOCUMENTED
+The box boundary must be of style "s" to be assigned a surface
+collision model.
 
 E: Bound_modify surf_collide ID is unknown
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Reuse of region ID
 

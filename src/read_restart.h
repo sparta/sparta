@@ -95,19 +95,23 @@ The format of this section of the file is not correct.
 
 E: Did not assign all restart unsplit grid cells correctly
 
-UNDOCUMENTED
+One or more unsplit grid cells in the restart file were not assigned
+to a processor.  Please report the issue to the SPARTA developers.
 
 E: Did not assign all restart split grid cells correctly
 
-UNDOCUMENTED
+One or more split grid cells in the restart file were not assigned
+to a processor.  Please report the issue to the SPARTA developers.
 
 E: Did not assign all restart sub grid cells correctly
 
-UNDOCUMENTED
+One or more sub grid cells in the restart file were not assigned to a
+processor.  Please report the issue to the SPARTA developers.
 
 E: Did not assign all restart particles correctly
 
-UNDOCUMENTED
+One or more particles in the restart file were not assigned to a
+processor.  Please report the issue to the SPARTA developers.
 
 E: Cannot open dir to search for restart file
 
@@ -122,27 +126,28 @@ E: Restart file incompatible with current version
 
 This is probably because you are trying to read a file created with a
 version of SPARTA that is too old compared to the current version.
-Use your older version of SPARTA and convert the restart file
-to a data file.
 
 E: Smallint setting in spatype.h is not compatible
 
-UNDOCUMENTED
+Smallint size stored in restart file is not consistent with SPARTA
+version you are running.
 
 E: Cellint setting in spatype.h is not compatible
 
-UNDOCUMENTED
+Cellint size stored in restart file is not consistent with SPARTA
+version you are running.
 
 E: Bigint setting in spatype.h is not compatible
 
-UNDOCUMENTED
+Bigint size stored in restart file is not consistent with SPARTA
+version you are running.
 
 W: Restart file used different # of processors
 
 The restart file was written out by a SPARTA simulation running on a
-different number of processors.  Due to round-off, the trajectories of
-your restarted simulation may diverge a little more quickly than if
-you ran on the same # of processors.
+different number of processors.  This means you will likely want to
+re-balance the grid cells and particles across processors.  This can
+be done using the balance or fix balance commands.
 
 E: Invalid flag in header section of restart file
 
@@ -150,41 +155,41 @@ Unrecognized entry in restart file.
 
 E: Invalid flag in particle section of restart file
 
-UNDOCUMENTED
+Unrecognized entry in restart file.
 
 E: Invalid flag in grid section of restart file
 
-UNDOCUMENTED
+Unrecognized entry in restart file.
 
 E: Invalid flag in surf section of restart file
 
-UNDOCUMENTED
+Unrecognized entry in restart file.
 
 E: Restart file is not a multi-proc file
 
-The file is inconsistent with the filename you specified for it.
+The file is inconsistent with the filename specified for it.
 
 E: Restart file is a multi-proc file
 
-The file is inconsistent with the filename you specified for it.
+The file is inconsistent with the filename specified for it.
 
 E: Invalid flag in layout section of restart file
 
-UNDOCUMENTED
+Unrecognized entry in restart file.
 
 E: Invalid SPARTA restart file
 
-UNDOCUMENTED
+The file does not appear to be a SPARTA restart file since it does not
+have the expected magic string at the beginning.
 
 E: Restart file byte ordering is swapped
 
 The file was written on a machine with different byte-ordering than
-the machine you are reading it on.  Convert it to a text data file
-instead, on the machine you wrote it on.
+the machine you are reading it on.
 
 E: Restart file byte ordering is not recognized
 
 The file does not appear to be a SPARTA restart file since it doesn't
-contain a recognized byte-orderomg flag at the beginning.
+contain a recognized byte-ordering flag at the beginning.
 
 */

@@ -73,7 +73,7 @@ class WriteRestart : protected Pointers {
 
 E: Cannot write restart file before grid is defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -83,14 +83,16 @@ command-line option when running SPARTA to see the offending line.
 
 E: Cannot use write_restart fileper without % in restart file name
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot use write_restart nfile without % in restart file name
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot open restart file %s
 
-Self-explanatory.
+The specified file cannot be opened.  Check that the path and name are
+correct. If the file is a compressed file, also check that the gzip
+executable can be found and run.
 
 */

@@ -1682,8 +1682,8 @@ void Grid::type_check()
   if (unknownall) {
     char str[128];
     sprintf(str,"Grid cells marked as unknown = %d",unknownall);
-    //error->all(FLERR,str);
-    if (me == 0) error->warning(FLERR,str);
+    error->all(FLERR,str);
+    //if (me == 0) error->/warning(FLERR,str);
   }
 
   // check corner flags of cells that are OVERLAP

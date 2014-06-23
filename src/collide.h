@@ -104,11 +104,12 @@ class Collide : protected Pointers {
 
 E: Collision mixture does not exist
 
-UNDOCUMENTED
+Self-explantory.
 
 E: Collision mixture does not contain all species
 
-UNDOCUMENTED
+The specified mixture must contain all species in the simulation so
+that they can be assigned to collision groups.
 
 E: Illegal ... command
 

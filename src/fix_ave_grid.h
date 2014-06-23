@@ -79,54 +79,55 @@ command-line option when running SPARTA to see the offending line.
 
 E: Compute ID for fix ave/grid does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid compute does not calculate per-grid values
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid compute does not calculate a per-grid vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid compute does not calculate a per-grid array
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid compute array is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ID for fix ave/grid does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid fix does not calculate per-grid values
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid fix does not calculate a per-grid vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid fix does not calculate a per-grid array
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid fix array is accessed out-of-range
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix for fix ave/grid not computed at compatible time
 
-UNDOCUMENTED
+Fixes generate values on specific timesteps.  Fix ave/grid is
+requesting a value on a non-allowed timestep.
 
 E: Variable name for fix ave/grid does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Fix ave/grid variable is not grid-style variable
 
-UNDOCUMENTED
+Self-explanatory.
 
 */

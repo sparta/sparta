@@ -96,15 +96,15 @@ class ReadSurf : protected Pointers {
 
 E: Cannot read_surf before grid is defined
 
-UNDOCUMENTED
+Self-explantory.
 
 E: Cannot read_surf before grid ghost cells are defined
 
-UNDOCUMENTED
+This needs to be documented if keep this restriction.
 
 E: Cannot read_surf after particles are defined
 
-UNDOCUMENTED
+This is because the newly read surface objects may enclose particles.
 
 E: Illegal ... command
 
@@ -114,27 +114,28 @@ command-line option when running SPARTA to see the offending line.
 
 E: Invalid reuse of surface ID in read_surf command
 
-UNDOCUMENTED
+Surface IDs must be unique.
 
-E: Surf file cannot parse Points section
+E: Read_surf did not find points section of surf file
 
-UNDOCUMENTED
+Expected Parents section but did not find keyword.
 
-E: Surf file cannot parse Lines section
+E: Read_surf did not find lines section of surf file
 
-UNDOCUMENTED
+Expected Lines section but did not find keyword.
 
-E: Surf file cannot parse Triangles section
+E: Read_surf did not find triangles section of surf file
 
-UNDOCUMENTED
+Expected Triangles section but did not find keyword.
 
 E: Invalid read_surf command
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid read_surf geometry transformation for 2d simulation
 
-UNDOCUMENTED
+Cannot perform a transformation that changes z cooridinates of points
+for a 2d simulation.
 
 E: Unexpected end of data file
 
@@ -143,99 +144,110 @@ section.  Something is wrong with the format of the data file.
 
 E: Surf file cannot contain lines for 3d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Surf file cannot contain triangles for 2d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
-E: Surf files does not contain points
+E: Surf file does not contain points
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Surf files does not contain lines
 
-UNDOCUMENTED
+Required for a 2d simulation.
 
 E: Surf files does not contain triangles
 
-UNDOCUMENTED
+Required for a 3d simulation.
 
 E: Unexpected end of surf file
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Incorrect point format in surf file
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Incorrect line format in surf file
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid point index in line
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Incorrect triangle format in surf file
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid point index in triangle
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: %d read_surf points are not inside simulation box
 
-UNDOCUMENTED
+If clipping was not performed, all points in surf file
+must be inside (or on surface of) simulation box.
 
 E: Surface check failed with %d duplicate points
 
-UNDOCUMENTED
+One or more points appeared in more than 2 lines.
 
 E: Surface check failed with %d unmatched points
 
-UNDOCUMENTED
+One or more points did not appear in a line, or appeared only once and
+point is not on surface of simulation box.
 
 E: Surface check failed with %d duplicate edges
 
-UNDOCUMENTED
+One or more edges appeared in more than 2 triangles.
 
 E: Surface check failed with %d unmatched edges
 
-UNDOCUMENTED
+One or more edges did not appear in a triangle, or appeared only once
+and edge is not on surface of simulation box.
 
 E: Surface check failed with %d infinitely thin line pairs
 
-UNDOCUMENTED
+Two adjacent lines have normals in opposite directions
+indicating the lines overlay each other.
 
 W: Surface check found %d nearly infinitely thin line pairs
 
-UNDOCUMENTED
+Two adjacent lines have normals in nearly opposite directions
+indicating the lines nearly overlay each other.
 
 E: Surface check failed with %d infinitely thin triangle pairs
 
-UNDOCUMENTED
+Two adjacent triangles have normals in opposite directions indicating
+the triangles overlay each other.
 
 W: Surface check found %d nearly infinitely thin triangle pairs
 
-UNDOCUMENTED
+Two adjacent triangles have normals in nearly opposite directions
+indicating the triangles nearly overlay each other.
 
 E: Surface check failed with %d points on lines
 
-UNDOCUMENTED
+One or more points are on a line they are not an end point of, which
+indicates an ill-formed surface.
 
 W: Surface check found %d points nearly on lines
 
-UNDOCUMENTED
+One or more points are nearly on a line they are not an end point of,
+which indicates an ill-formed surface.
 
 E: Surface check failed with %d points on triangles
 
-UNDOCUMENTED
+One or more points are on a triangle they are not an end point of,
+which indicates an ill-formed surface.
 
 W: Surface check found %d points nearly on triangles
 
-UNDOCUMENTED
+One or more points are nearly on a triangle they are not an end point
+of, which indicates an ill-formed surface.
 
 E: Cannot open gzipped file
 
@@ -250,6 +262,7 @@ executable can be found and run.
 
 E: %d read_surf point pairs are too close
 
-UNDOCUMENTED
+A pair of points is very close together, relative to grid size,
+inidicating the grid is too large, or an ill-formed surface.
 
 */

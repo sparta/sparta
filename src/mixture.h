@@ -85,7 +85,7 @@ class Mixture : protected Pointers {
 
 E: Mixture ID must be alphanumeric or underscore characters
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -95,22 +95,24 @@ command-line option when running SPARTA to see the offending line.
 
 E: Mixture %s fractions exceed 1.0
 
-UNDOCUMENTED
+The sum of fractions must not be > 1.0.
 
 E: Mixture species is not defined
 
-UNDOCUMENTED
+One or more of the species ID is unknown.
 
 E: Cannot add new species to mixture all or species
 
-UNDOCUMENTED
+This is done automatically for these 2 mixtures when
+each species is defined by the species command.
 
 E: Mixture group ID must be alphanumeric or underscore characters
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot use group keyword with mixture all or species
 
-UNDOCUMENTED
+This is because the groups for these 2 mixtures are
+pre-defined.
 
 */

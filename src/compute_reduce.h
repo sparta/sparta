@@ -85,11 +85,11 @@ Self-explanatory.
 
 E: Compute reduce compute does not calculate a per-particle vector
 
-UNDOCUMENTED
+This is necessary if no column index is used to specify the compute.
 
 E: Compute reduce compute does not calculate a per-particle array
 
-UNDOCUMENTED
+This is necessary if a column index is used to specify the compute.
 
 E: Compute reduce compute array is accessed out-of-range
 
@@ -97,15 +97,17 @@ An index for the array is out of bounds.
 
 E: Compute reduce compute does not calculate a per-grid vector
 
-UNDOCUMENTED
+This is necessary if no column index is used to specify the compute.
 
 E: Compute reduce compute does not calculate a per-grid array
 
-UNDOCUMENTED
+This is necessary if a column index is used to specify the compute.
 
 E: Compute reduce compute calculates global or surf values
 
-UNDOCUMENTED
+The compute reduce command does not operate on this kind of values.
+The variable command has special functions that can reduce global
+values.
 
 E: Fix ID for compute reduce does not exist
 
@@ -113,11 +115,11 @@ Self-explanatory.
 
 E: Compute reduce fix does not calculate a per-particle vector
 
-UNDOCUMENTED
+This is necessary if no column index is used to specify the fix.
 
 E: Compute reduce fix does not calculate a per-particle array
 
-UNDOCUMENTED
+This is necessary if a column index is used to specify the fix.
 
 E: Compute reduce fix array is accessed out-of-range
 
@@ -125,19 +127,19 @@ An index for the array is out of bounds.
 
 E: Compute reduce fix does not calculate a per-grid vector
 
-UNDOCUMENTED
+This is necessary if no column index is used to specify the fix.
 
 E: Compute reduce fix does not calculate a per-grid array
 
-UNDOCUMENTED
+This is necessary if a column index is used to specify the fix.
 
 E: Compute reduce fix does not calculate a per-surf vector
 
-UNDOCUMENTED
+This is necessary if no column index is used to specify the fix.
 
 E: Compute reduce fix does not calculate a per-surf array
 
-UNDOCUMENTED
+This is necessary if a column index is used to specify the fix.
 
 E: Compute reduce fix calculates global values
 
@@ -149,7 +151,7 @@ Self-explanatory.
 
 E: Compute reduce variable is not particle-style variable
 
-UNDOCUMENTED
+This is the only style of variable that can be reduced.
 
 E: Fix used in compute reduce not computed at compatible time
 

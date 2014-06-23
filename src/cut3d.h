@@ -146,43 +146,63 @@ class Cut3d : protected Pointers {
 
 E: Singlet BPG edge not on cell face
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: BPG edge on more than 2 faces
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Vertex has less than 3 edges
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Vertex contains invalid edge
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Vertex contains edge that doesn't point to it
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Vertex contains duplicate edge
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Vertex pointers to last edge are invalid
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Edge not part of 2 vertices
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Edge part of same vertex twice
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Edge part of invalid vertex
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: No positive volumes in cell
 
@@ -198,10 +218,14 @@ UNDOCUMENTED
 
 E: Could not find split point in split cell
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Found edge in same direction
 
-UNDOCUMENTED
+This is an error when calculating how a 3d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 */

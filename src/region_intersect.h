@@ -52,6 +52,7 @@ command-line option when running SPARTA to see the offending line.
 
 E: Region intersect region ID does not exist
 
-Self-explanatory.
+One or more of the region IDs specified by the region intersect
+command does not exist.
 
 */

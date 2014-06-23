@@ -160,7 +160,8 @@ Self-explanatory.
 
 E: Dump image cannot use grid and gridx/gridy/gridz
 
-UNDOCUMENTED
+Can only use grid option or one or more of grid x,y,z options
+by themselves, not together.
 
 E: Dump image requires one snapshot per file
 
@@ -208,47 +209,48 @@ Must be an equal-style variable.
 
 E: Could not find dump image compute ID
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump image compute is not a per-grid compute
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump image compute does not produce a vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump image compute does not have requested column
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Could not find dump image fix ID
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump image fix does not produce per-grid values
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump image fix does not produce a vector
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump image fix does not have requested column
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump image and fix not computed at compatible times
 
-UNDOCUMENTED
+Fixes generate values on specific timesteps.  The dump image output
+does not match these timesteps.
 
 E: Dump image compute is not a per-surf compute
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Dump image fix does not produce per-surf values
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Invalid color map min/max values
 

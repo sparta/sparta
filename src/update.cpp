@@ -154,7 +154,7 @@ void Update::init()
   if (domain->axisymmetric) moveperturb = &Update::axisymmetric;
   if (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0) {
     if (domain->axisymmetric && gravity[1] != 0.0) 
-      error->all(FLERR,"Gravity in y not allowed for axi-symmetry");
+      error->all(FLERR,"Gravity in y not allowed for axi-symmetric model");
     if (domain->dimension == 3) moveperturb = &Update::gravity3d;
     if (domain->dimension == 2) moveperturb = &Update::gravity2d;
   }

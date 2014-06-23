@@ -50,11 +50,11 @@ class CreateParticles : protected Pointers {
 
 E: Cannot create particles before simulation box is defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Cannot create particles  before grid is defined
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Illegal ... command
 
@@ -64,26 +64,29 @@ command-line option when running SPARTA to see the offending line.
 
 E: Create_particles mixture ID does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Create_particles species ID does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
-E: Cannot use n and single in create_particles command
+E: Create_particles global option not yet implemented
 
-UNDOCUMENTED
+Self-explantory.
 
 E: Created incorrect # of particles: %ld versus %ld
 
-UNDOCUMENTED
+The create_particles command did not function
+properly.
 
 E: Create_particles single requires z = 0 for 2d simulation
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Could not create a single particle
 
-UNDOCUMENTED
+The specified position was either not inside the simulation domain or
+not inside a grid cell with no intersections with any defined surface
+elements.
 
 */

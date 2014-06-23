@@ -113,15 +113,21 @@ class Cut2d : protected Pointers {
 
 E: Point appears first in more than one CLINE
 
-UNDOCUMENTED
+This is an error when calculating how a 2d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Point appears last in more than one CLINE
 
-UNDOCUMENTED
+This is an error when calculating how a 2d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Singlet CLINES point not on cell border
 
-UNDOCUMENTED
+This is an error when calculating how a 2d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: No positive areas in cell
 
@@ -137,6 +143,8 @@ UNDOCUMENTED
 
 E: Could not find split point in split cell
 
-UNDOCUMENTED
+This is an error when calculating how a 2d grid is cut or split by
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 */

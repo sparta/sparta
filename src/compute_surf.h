@@ -73,10 +73,11 @@ command-line option when running SPARTA to see the offending line.
 
 E: Compute surf mixture ID does not exist
 
-UNDOCUMENTED
+Self-explanatory.
 
 E: Number of groups in compute surf mixture has changed
 
-UNDOCUMENTED
+This mixture property cannot be changed after this compute command is
+issued.
 
 */
