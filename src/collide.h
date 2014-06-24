@@ -82,6 +82,8 @@ class Collide : protected Pointers {
   double ***remain;   // collision number remainder, per cell, per group pair
   double **vremax_initial;   // initial vremax value, per group pair
 
+  int vibstyle;       // discrete vs continuous treatment of vibrational modes
+
   inline void addgroup(int igroup, int n)
   {
     if (ngroup[igroup] == maxgroup[igroup]) {
