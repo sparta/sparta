@@ -29,7 +29,8 @@ value = {n} or {ndensity} or {mass} or {u} or {v} or {w} or {usq} or {vsq} or {w
   {ke} = kinetic energy
   {temp} = temperature
   {erot} = rotational energy
-  {trot} = rotational temperature :pre
+  {trot} = rotational temperature
+  {evib} = vibrational energy :pre
 :ule
 
 [Examples:]
@@ -129,6 +130,11 @@ Trot = (2/kB) Sum_i (erot_i) / Sum_i (dof_i) :pre
 
 Dof_i is the number of rotational degrees of freedom for particle i.
 
+The {evib} value computes the average vibrational energy of particles
+in the group:
+
+Erot = Sum_i (evib_i) / N :pre
+
 [Output info:]
 
 This compute calculates a per-grid array, with the number of columns
@@ -155,8 +161,8 @@ appropriate to the individual values as described above.  {N} is
 unitless.  {Ndensity} is in 1/distance^3 units for 3d simulations and
 1/distance^2 units for 2d simulations.  {Mass} is in mass units.  {U},
 {v}, and {w} are in velocity units.  {Usq}, {vsq}, and {wsq} are in
-velocity squared units.  {Ke} and {Erot} are in energy units.  {Temp}
-and {Trot} are in temperature units.
+velocity squared units.  {Ke}, {erot}, and {evib} are in energy units.
+{Temp} and {Trot} are in temperature units.
 
 [Restrictions:] none
 

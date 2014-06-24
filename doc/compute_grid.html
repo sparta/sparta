@@ -37,7 +37,8 @@
   <I>ke</I> = kinetic energy
   <I>temp</I> = temperature
   <I>erot</I> = rotational energy
-  <I>trot</I> = rotational temperature 
+  <I>trot</I> = rotational temperature
+  <I>evib</I> = vibrational energy 
 </PRE>
 
 </UL>
@@ -138,6 +139,11 @@ formula where <I>kB</I> is the Boltzmann factor:
 </PRE>
 <P>Dof_i is the number of rotational degrees of freedom for particle i.
 </P>
+<P>The <I>evib</I> value computes the average vibrational energy of particles
+in the group:
+</P>
+<PRE>Erot = Sum_i (evib_i) / N 
+</PRE>
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid array, with the number of columns
@@ -164,8 +170,8 @@ appropriate to the individual values as described above.  <I>N</I> is
 unitless.  <I>Ndensity</I> is in 1/distance^3 units for 3d simulations and
 1/distance^2 units for 2d simulations.  <I>Mass</I> is in mass units.  <I>U</I>,
 <I>v</I>, and <I>w</I> are in velocity units.  <I>Usq</I>, <I>vsq</I>, and <I>wsq</I> are in
-velocity squared units.  <I>Ke</I> and <I>Erot</I> are in energy units.  <I>Temp</I>
-and <I>Trot</I> are in temperature units.
+velocity squared units.  <I>Ke</I>, <I>erot</I>, and <I>evib</I> are in energy units.
+<I>Temp</I> and <I>Trot</I> are in temperature units.
 </P>
 <P><B>Restrictions:</B> none
 </P>

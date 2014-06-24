@@ -29,7 +29,10 @@
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
   shx,shy,shz = components of shear stress on surface element
-  ke = flux of particle kinetic energy on surface element 
+  ke = flux of particle kinetic energy on surface element
+  erot = flux of particle rotational energy on surface element
+  evib = flux of particle vibrational energy on surface element
+  etot = flux of particle total energy on surface element 
 </PRE>
 
 </UL>
@@ -139,6 +142,36 @@ over all contributing e_delta, normalized by A = the area of the
 surface element and dt = the timestep and fnum = the real/simulated
 particle ratio set by the <A HREF = "global.html">global fnum</A> command.
 </P>
+<P>The <I>erot</I> value calculates the rotational energy flux <I>Eflux</I>
+imparted to the surface element by particles in the group, such that
+energy lost by a particle is a positive flux.  This is computed as
+</P>
+<PRE>e_delta = Erot_post - Erot_pre
+Eflux = - Sum_i (e_delta) / (A * dt / fnum) 
+</PRE>
+<P>where e_delta is the rotational energy change in a particle, whose
+internal rotational energy changes from Erot_pre to Erot_post when
+colliding with the surface element.  The flux equation is the same as
+for the <I>ke</I> value.
+</P>
+<P>The <I>evib</I> value calculates the vibrational energy flux <I>Eflux</I>
+imparted to the surface element by particles in the group, such that
+energy lost by a particle is a positive flux.  This is computed as
+</P>
+<PRE>e_delta = Evib_post - Evib_pre
+Eflux = - Sum_i (e_delta) / (A * dt / fnum) 
+</PRE>
+<P>where e_delta is the vibrational energy change in a particle, whose
+internal vibrational energy changes from Evib_pre to Evib_post when
+colliding with the surface element.  The flux equation is the same as
+for the <I>ke</I> value.
+</P>
+<P>The <I>etot</I> value calculates the total energy flux imparted to the
+surface element by particles in the group, such that energy lost by a
+particle is a positive flux.  This is simply the sum of kinetic,
+rotational, and vibrational energies.  Thus the total energy flux is
+the sum of what is computed by the <I>ke</I>, <I>erot</I>, and <I>evib</I> values.
+</P>
 <HR>
 
 <P><B>Output info:</B>
@@ -157,8 +190,9 @@ for an overview of SPARTA output options.
 <P>The per-surf array values will be in the <A HREF = "units.html">units</A>
 appropriate to the individual values as described above. <I>N</I> is
 unitless.  <I>Press</I>, <I>px</I>, <I>py</I>, <I>pz</I>, <I>shx</I>, <I>shy</I>, <I>shz</I> are in in
-presure units.  <I>Ke</I> is in energy/area-time units for 3d simulations
-and energy/length-time units for 2d simulations.
+presure units.  <I>Ke</I>, <I>erot</I>, <I>evib</I>, and <I>etot</I> are in
+energy/area-time units for 3d simulations and energy/length-time units
+for 2d simulations.
 </P>
 <P><B>Restrictions:</B> none
 </P>
