@@ -24,7 +24,7 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NUMDENS,MASS,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT};
+enum{NUM,NUMDENS,MASS,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
 enum{NONE,COUNT,MASSWT,DOF};
 
 /* ---------------------------------------------------------------------- */
@@ -57,6 +57,8 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"temp") == 0) which[nvalue++] = TEMPERATURE;
     else if (strcmp(arg[iarg],"erot") == 0) which[nvalue++] = EROT;
     else if (strcmp(arg[iarg],"trot") == 0) which[nvalue++] = TROT;
+    else if (strcmp(arg[iarg],"evib") == 0) which[nvalue++] = EVIB;
+    else if (strcmp(arg[iarg],"tvib") == 0) which[nvalue++] = TVIB;
     else error->all(FLERR,"Illegal compute grid command");
     iarg++;
   }
@@ -87,6 +89,10 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     else if (which[i] == EROT)
       norm_style[i] = COUNT;
     else if (which[i] == TROT) 
+      norm_style[i] = DOF;
+    else if (which[i] == EVIB)
+      norm_style[i] = COUNT;
+    else if (which[i] == TVIB) 
       norm_style[i] = DOF;
   }
 
@@ -222,6 +228,13 @@ void ComputeGrid::compute_per_grid()
         vec[k++] += particles[i].erot;
         break;
       case TROT:
+        vec[k++] += trotprefactor*particles[i].erot;
+        norm_dof[igroup][icell] += species[ispecies].rotdof;
+        break;
+      case EVIB:
+        vec[k++] += particles[i].evib;
+        break;
+      case TVIB:
         vec[k++] += trotprefactor*particles[i].erot;
         norm_dof[igroup][icell] += species[ispecies].rotdof;
         break;

@@ -267,7 +267,7 @@ template < int DIM, int SURF > void Update::move()
   int *csurfs;
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam;
-  double xnew[3],vold[3],xc[3],xhold[3],minxc[3];
+  double xnew[3],eold[5],xc[3],xhold[3],minxc[3];
   double *x,*v,*lo,*hi;
   Surf::Tri *tri;
   Surf::Line *line;
@@ -597,15 +597,17 @@ template < int DIM, int SURF > void Update::move()
               if (DIM == 2) line = &lines[minsurf];
               
               if (nsurf_tally) {
-                vold[0] = v[0];
-                vold[1] = v[1];
-                if (DIM == 3) vold[2] = v[2];
+                eold[0] = v[0];
+                eold[1] = v[1];
+                eold[2] = v[2];
+                eold[3] = particles[i].erot;
+                eold[4] = particles[i].evib;
                 if (DIM == 3)
                   surf->sc[tri->isc]->collide(&particles[i],tri->norm);
                 if (DIM == 2)
                   surf->sc[line->isc]->collide(&particles[i],line->norm);
                 for (m = 0; m < nsurf_tally; m++)
-                  slist_active[m]->surf_tally(minsurf,vold,&particles[i]);
+                  slist_active[m]->surf_tally(minsurf,eold,&particles[i]);
               } else {
                 if (DIM == 3)
                   surf->sc[tri->isc]->collide(&particles[i],tri->norm);
@@ -742,13 +744,15 @@ template < int DIM, int SURF > void Update::move()
 
         else {
           if (nboundary_tally) {
-            vold[0] = v[0]; 
-            vold[1] = v[1]; 
-            if (DIM == 3) vold[2] = v[2];
+            eold[0] = v[0]; 
+            eold[1] = v[1]; 
+            eold[2] = v[2];
+            eold[3] = particles[i].erot;
+            eold[4] = particles[i].evib;
             bflag = domain->collide(&particles[i],outface,icell,xnew);
             for (m = 0; m < nboundary_tally; m++)
               blist_active[m]->
-                boundary_tally(outface,bflag,vold,&particles[i]);
+                boundary_tally(outface,bflag,eold,&particles[i]);
           } else
             bflag = domain->collide(&particles[i],outface,icell,xnew);
 

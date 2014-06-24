@@ -26,7 +26,7 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE};
+enum{NUM,PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 #define DELTA 10000
 
@@ -55,6 +55,9 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"shy") == 0) which[nvalue++] = YSHEAR;
     else if (strcmp(arg[iarg],"shz") == 0) which[nvalue++] = ZSHEAR;
     else if (strcmp(arg[iarg],"ke") == 0) which[nvalue++] = KE;
+    else if (strcmp(arg[iarg],"erot") == 0) which[nvalue++] = EROT;
+    else if (strcmp(arg[iarg],"evib") == 0) which[nvalue++] = EVIB;
+    else if (strcmp(arg[iarg],"etot") == 0) which[nvalue++] = ETOT;
     else error->all(FLERR,"Illegal compute surf command");
     iarg++;
   }
@@ -163,9 +166,14 @@ void ComputeSurf::clear()
   nlocal = 0;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   tally values for a single particle colliding with Isurf
+   eold = vector of velocity/energy values before collision
+        = 0,1,2 = velocity components, 3 = rotational eng, 4 = vibrational eng
+   p = particle ptr with velocity/energy values after collision
+------------------------------------------------------------------------- */
 
-void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
+void ComputeSurf::surf_tally(int isurf, double *eold, Particle::OnePart *p)
 {
   // skip species not in mixture group
 
@@ -213,14 +221,14 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
       vec[k++] += 1.0;
       break;
     case PRESS:
-      pre = MathExtra::dot3(vold,norm);
+      pre = MathExtra::dot3(eold,norm);
       post = MathExtra::dot3(p->v,norm);
       vec[k++] += mass * (post-pre);
       break;
     case XPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::sub3(p->v,vold,vdelta);
+        MathExtra::sub3(p->v,eold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
       }
       vec[k++] -= mass * vnorm[0];
@@ -228,7 +236,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
     case YPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::sub3(p->v,vold,vdelta);
+        MathExtra::sub3(p->v,eold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
       }
       vec[k++] -= mass * vnorm[1];
@@ -236,7 +244,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
     case ZPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::sub3(p->v,vold,vdelta);
+        MathExtra::sub3(p->v,eold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
       }
       vec[k++] -= mass * vnorm[2];
@@ -244,7 +252,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
     case XSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::sub3(p->v,vold,vdelta);
+        MathExtra::sub3(p->v,eold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
         MathExtra::sub3(vdelta,vnorm,vtang);
       }
@@ -253,7 +261,7 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
     case YSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::sub3(p->v,vold,vdelta);
+        MathExtra::sub3(p->v,eold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
         MathExtra::sub3(vdelta,vnorm,vtang);
       }
@@ -262,16 +270,28 @@ void ComputeSurf::surf_tally(int isurf, double *vold, Particle::OnePart *p)
     case ZSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::sub3(p->v,vold,vdelta);
+        MathExtra::sub3(p->v,eold,vdelta);
         MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
         MathExtra::sub3(vdelta,vnorm,vtang);
       }
       vec[k++] -= mass * vtang[2];
       break;
     case KE:
-      vsqpre = MathExtra::lensq3(vold);
+      vsqpre = MathExtra::lensq3(eold);
       vsqpost = MathExtra::lensq3(p->v);
       vec[k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
+      break;
+    case EROT:
+      vec[k++] -= p->erot - eold[3];
+      break;
+    case EVIB:
+      vec[k++] -= p->evib - eold[4];
+      break;
+    case ETOT:
+      vsqpre = MathExtra::lensq3(eold);
+      vsqpost = MathExtra::lensq3(p->v);
+      vec[k++] -= 0.5*mvv2e*mass*(vsqpost-vsqpre) + 
+        (p->erot-eold[3]) + (p->evib-eold[4]);
       break;
     }
   }
