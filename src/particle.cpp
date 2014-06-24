@@ -319,7 +319,7 @@ void Particle::grow(int nextra)
 ------------------------------------------------------------------------- */
 
 int Particle::add_particle(int id, int ispecies, int icell,
-                           double *x, double *v, double erot, int ivib)
+                           double *x, double *v, double erot, double evib)
 {
   int reallocflag = 0;
   if (nlocal == maxlocal) {
@@ -339,7 +339,7 @@ int Particle::add_particle(int id, int ispecies, int icell,
   p->v[1] = v[1];
   p->v[2] = v[2];
   p->erot = erot;
-  p->ivib = ivib;
+  p->evib = evib;
   p->flag = PKEEP;
 
   //p->dtremain = 0.0;    not needed due to memset in grow() ??
@@ -544,15 +544,18 @@ double Particle::erot(int isp, RanPark *erandom)
    only a function of species index and species properties
 ------------------------------------------------------------------------- */
 
-int Particle::evib(int isp, RanPark *erandom)
+double Particle::evib(int isp, RanPark *erandom)
 {
   if (species[isp].rotdof < 2) return 0;
 
   // NOTE: is temp_thermal always set?
 
-  int ivib = -log(erandom->uniform()) * update->temp_thermal /
-    particle->species[isp].vibtemp;
-  return ivib;
+  double eng = 0.0;
+  //int ivib = -log(erandom->uniform()) * update->temp_thermal /
+  //  particle->species[isp].vibtemp;
+  //return ivib;
+
+  return eng;
 }
 
 /* ----------------------------------------------------------------------
@@ -769,7 +772,7 @@ int Particle::pack_restart(char *buf)
     pr->v[1] = p->v[1];
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
-    pr->ivib = p->ivib;
+    pr->evib = p->evib;
   }
 
   n += nlocal * sizeof(OnePartRestart);

@@ -117,7 +117,8 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     case DISSOCIATION:
       {
-        double ecc = pre_etrans + ip->ivib*update->boltz*species[isp].vibtemp;
+        double ecc = pre_etrans + ip->evib;
+        // NOTE: this line needs to change?
         int maxlev = (int) (ecc/update->boltz*species[isp].vibtemp); 
         /*
         int limlev = update->boltz*species[isp].distemp /

@@ -229,8 +229,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
-  precoln.evib = ip->ivib * update->boltz*species[isp].vibtemp + 
-    jp->ivib * update->boltz*species[jsp].vibtemp;
+  precoln.evib = ip->evib * jp->evib;
 
   precoln.eint   = precoln.erot + precoln.evib;
   precoln.etotal = precoln.etrans + precoln.eint;
@@ -272,7 +271,8 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
       Particle::OnePart *particles = particle->particles;
       memcpy(x,ip->x,3*sizeof(double));
       memcpy(v,ip->v,3*sizeof(double));
-      int reallocflag = particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0);
+      int reallocflag = 
+        particle->add_particle(id,kspecies,ip->icell,x,v,0.0,0.0);
       if (reallocflag) {
         ip = particle->particles + (ip - particles);
         jp = particle->particles + (jp - particles);
@@ -382,8 +382,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   if (precoln.ave_dof == 0) {
     ip->erot  = 0.0;
     jp->erot  = 0.0;
-    ip->ivib = 0;
-    jp->ivib = 0;
+    ip->evib = 0.0;
+    jp->evib = 0.0;
 
   } else {
     double E_Dispose = precoln.etrans;
@@ -395,14 +395,14 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       int sp = p->ispecies;
 
       if (species[sp].vibdof >= 2 && vibn_phi >= random->uniform()) {
-        evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
+        //evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
         E_Dispose += evib;
         Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
         
         do {
-          p->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
-          evib = (double) 
-            (p->ivib * update->boltz * species[sp].vibtemp);
+          //p->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+          //evib = (double) 
+          //  (p->ivib * update->boltz * species[sp].vibtemp);
           State_prob = pow((1 - evib / E_Dispose),
                            (1.5 - params[sp].omega));
         } while (State_prob < random->uniform());
@@ -436,10 +436,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   // compute post-collision internal energies
 
   postcoln.erot = ip->erot + jp->erot;
-  int isp = ip->ispecies;
-  int jsp = jp->ispecies;
-  postcoln.evib = ip->ivib * update->boltz*species[isp].vibtemp +
-    jp->ivib * update->boltz*species[jsp].vibtemp;
+  postcoln.evib = ip->evib + jp->evib;
   
   // compute portion of energy left over for scattering
 
@@ -470,9 +467,7 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   double mr = species[isp].mass * species[jsp].mass /
 	     (species[isp].mass + species[jsp].mass);
 
-  postcoln.eint = ip->erot + jp->erot + 
-    ip->ivib * update->boltz*species[isp].vibtemp + 
-    jp->ivib * update->boltz*species[jsp].vibtemp;
+  postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib;
 
   double cosX = 2.0*pow(random->uniform(), alpha) - 1.0;
   double sinX = sqrt(1.0 - cosX*cosX);
@@ -544,16 +539,16 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   if (!kp) {
     ip->erot  = 0.0;
     jp->erot  = 0.0;
-    ip->ivib = 0;
-    jp->ivib = 0;
+    ip->evib = 0.0;
+    jp->evib = 0.0;
     numspecies = 2;
   } else {
     ip->erot  = 0.0;
     jp->erot  = 0.0;
     kp->erot  = 0.0;
-    ip->ivib = 0;
-    jp->ivib = 0;
-    kp->ivib = 0;
+    ip->evib  = 0.0;
+    jp->evib  = 0.0;
+    kp->evib  = 0.0;
     numspecies = 3;
   }
 
@@ -566,14 +561,14 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     int sp = p->ispecies;
     
     if (species[sp].vibdof >= 2 ) {
-      evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
+      //evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
       E_Dispose += evib;
       Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
       
       do {
-        p->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
-        evib = (double) 
-          (p->ivib * update->boltz * species[sp].vibtemp);
+        //p->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+        //evib = (double) 
+        //  (p->ivib * update->boltz * species[sp].vibtemp);
         State_prob = pow((1 - evib / E_Dispose),
                          (1.5 - params[sp].omega));
       } while (State_prob < random->uniform());
@@ -606,16 +601,11 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   // compute post-collision internal energies
   
   postcoln.erot = ip->erot + jp->erot;
-  int isp = ip->ispecies;
-  int jsp = jp->ispecies;
-  postcoln.evib = ip->ivib * update->boltz*species[isp].vibtemp +
-    jp->ivib * update->boltz*species[jsp].vibtemp;
-  postcoln.erot = ip->erot + jp->erot;
+  postcoln.evib = ip->evib + jp->evib;
   
   if (kp) {
-    int ksp = kp->ispecies;
-    postcoln.evib =+ kp->ivib * update->boltz*species[ksp].vibtemp;
-    postcoln.erot =+ kp->erot;
+    postcoln.erot += kp->erot;
+    postcoln.evib += kp->evib;
   }
   
   // compute portion of energy left over for scattering

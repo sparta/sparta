@@ -51,7 +51,7 @@ class Particle : protected Pointers {
     double x[3];            // particle position
     double v[3];            // particle velocity
     double erot;            // rotational energy
-    int ivib;               // vibrational mode
+    double evib;            // vibrational energy
     int flag;               // used for migration status
     double dtremain;        // portion of move timestep remaining
     double weight;          // particle or cell weight, if weighting enabled
@@ -66,7 +66,7 @@ class Particle : protected Pointers {
     double x[3];            // particle position
     double v[3];            // particle velocity
     double erot;            // rotational energy
-    int ivib;               // vibrational mode
+    double evib;            // vibrational energy
   };
 
   bigint nglobal;           // global # of particles
@@ -99,14 +99,14 @@ class Particle : protected Pointers {
   void pre_weight();
   void post_weight();
 
-  int add_particle(int, int, int, double *, double *, double, int);
+  int add_particle(int, int, int, double *, double *, double, double);
   int clone_particle(int);
   void add_species(int, char **);
   void add_mixture(int, char **);
   int find_species(char *);
   int find_mixture(char *);
   double erot(int, class RanPark *);
-  int evib(int, class RanPark *);
+  double evib(int, class RanPark *);
 
   void write_restart_species(FILE *fp);
   void read_restart_species(FILE *fp);

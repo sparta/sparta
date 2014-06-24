@@ -574,11 +574,11 @@ void FixInflow::init()
 
 void FixInflow::start_of_step()
 {
-  int pcell,ninsert,isp,ndim,pdim1,pdim2,ivib,id;
+  int pcell,ninsert,isp,ndim,pdim1,pdim2,id;
   double *lo,*hi,*normal;
   double x[3],v[3];
   double indot,rn,ntarget;
-  double beta_un,normalized_distbn_fn,theta,erot;
+  double beta_un,normalized_distbn_fn,theta,erot,evib;
   Particle::OnePart *p;
 
   if (update->ntimestep % nevery) return;
@@ -646,9 +646,9 @@ void FixInflow::start_of_step()
           v[pdim1] = vscale[isp]*sin(theta) + vstream[pdim1];
           v[pdim2] = vscale[isp]*cos(theta) + vstream[pdim2];
           erot = particle->erot(isp,random);
-          ivib = particle->evib(isp,random);
+          evib = particle->evib(isp,random);
           id = MAXSMALLINT*random->uniform();
-	  particle->add_particle(id,isp,pcell,x,v,erot,ivib);
+	  particle->add_particle(id,isp,pcell,x,v,erot,evib);
 
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
@@ -694,9 +694,9 @@ void FixInflow::start_of_step()
         v[pdim2] = vscale[isp]*cos(theta) + vstream[pdim2];
 
         erot = particle->erot(isp,random);
-        ivib = particle->evib(isp,random);
+        evib = particle->evib(isp,random);
         id = MAXSMALLINT*random->uniform();
-	particle->add_particle(id,isp,pcell,x,v,erot,ivib);
+	particle->add_particle(id,isp,pcell,x,v,erot,evib);
 
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;

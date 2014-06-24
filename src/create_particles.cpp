@@ -207,8 +207,8 @@ void CreateParticles::create_single()
   if (iwhich >= 0) {
     int id = MAXSMALLINT*random->uniform();
     double erot = particle->erot(mspecies,random);
-    int ivib = particle->evib(mspecies,random);
-    particle->add_particle(id,mspecies,iwhich,x,v,erot,ivib);
+    double evib = particle->evib(mspecies,random);
+    particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
   }
 
   delete random;
@@ -294,9 +294,9 @@ void CreateParticles::create_local(bigint np)
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
 
-  int npercell,ispecies,ivib,id;
+  int npercell,ispecies,id;
   double x[3],v[3];
-  double ntarget,rn,vn,vr,theta1,theta2,erot;
+  double ntarget,rn,vn,vr,theta1,theta2,erot,evib;
 
   double volsum = 0.0;
   bigint nprev = 0;
@@ -342,10 +342,10 @@ void CreateParticles::create_local(bigint np)
       v[2] = vstream[2] + vr*sin(theta2);
 
       erot = particle->erot(ispecies,random);
-      ivib = particle->evib(ispecies,random);
+      evib = particle->evib(ispecies,random);
 
       id = MAXSMALLINT*random->uniform();
-      particle->add_particle(id,ispecies,i,x,v,erot,ivib);
+      particle->add_particle(id,ispecies,i,x,v,erot,evib);
     }
 
     nprev += npercell;

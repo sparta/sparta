@@ -907,7 +907,7 @@ void ReadRestart::assign_particles(int skipflag)
     icell = (*hash)[p->icell];
     if (p->nsplit <= 0) 
       icell = sinfo[cells[icell].isplit].csubs[-p->nsplit];
-    particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->ivib);
+    particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->evib);
   }
 
   // deallocate memory in Particle

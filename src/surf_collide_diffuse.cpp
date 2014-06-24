@@ -129,7 +129,7 @@ void SurfCollideDiffuse::init()
    norm = surface normal unit vector
    reset p->v to post-collision outward velocity
      with optional translation and rotation
-   reset erot and ivib of particle to random new values
+   reset erot and evib of particle to random new values
 ------------------------------------------------------------------------- */
 
 void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
@@ -202,7 +202,7 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
     }
 
     p->erot = particle->erot(ispecies,random);
-    p->ivib = particle->evib(ispecies,random);
+    p->evib = particle->evib(ispecies,random);
   }
 }
 
