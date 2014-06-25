@@ -50,6 +50,8 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 
   norm_count_extra = new double*[nspecies];
   for (int i = 0; i < nspecies; i++) norm_count_extra[i] = NULL;
+
+  double *tspecies = new double[nspecies];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -63,6 +65,8 @@ ComputeTvibGrid::~ComputeTvibGrid()
   delete [] norm_count;
   for (int i = 0; i < nspecies; i++) memory->destroy(norm_count_extra[i]);
   delete [] norm_count_extra;
+
+  delete [] tspecies;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -85,24 +89,21 @@ void ComputeTvibGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;
 
-  Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
   int *s2s = particle->mixture[imix]->species2species;
   int nlocal = particle->nlocal;
 
-  double tvibprefactor = update->mvv2e * 2.0 / update->boltz;
-
   int i,j,ispecies,mixspecies,igroup,icell;
   double *norm;
 
-  // zero accumulator array and norm vectors
+  // zero extra accumulator array and norm vectors
 
   for (i = 0; i < nglocal; i++)
     for (j = 0; j < nspecies; j++) array_grid_extra[i][j] = 0.0;
 
-  for (j = 0; j < ngroup; j++) {
+  for (j = 0; j < nspecies; j++) {
     norm = norm_count_extra[j];
     for (i = 0; i < nglocal; i++) norm[i] = 0.0;
   }
@@ -118,30 +119,77 @@ void ComputeTvibGrid::compute_per_grid()
     mixspecies = s2s[ispecies];
     icell = particles[i].icell;
 
-    array_grid_extra[mixspecies][icell] += tvibprefactor*particles[i].evib;
+    array_grid_extra[mixspecies][icell] += particles[i].evib;
     norm_count_extra[mixspecies][icell] += 1.0;
   }
 }
 
 /* ----------------------------------------------------------------------
-   user tallied per-species info to prouduce per-group temperatures
-   called by dump with NULL arrays, so use own
-   called by fix ave/grid with arrays it accumulated
+   user tallied per-species info to compute per-group vibrational temps
+   called by dump with NULL arrays, so use internal arrays
+   called by fix ave/grid with arrays it accumulated over many timesteps
 ------------------------------------------------------------------------- */
 
 void ComputeTvibGrid::post_process_grid(double **one, double **onenorm)
 {
-  double **numerator,**denom;
+  // setup ptrs for operation
+
+  double **innumer,**indenom,**outnumer,**outdenom;
 
   if (one == NULL) {
-    numerator = array_grid_extra;
-    denom = norm_count_extra;
+    innumer = array_grid_extra;
+    indenom = norm_count_extra;
+    outnumer = array_grid;
+    outdenom = norm_count;
   } else {
-    numerator = one;
-    denom = onenorm;
+    innumer = one;
+    indenom = onenorm;
   }
 
+  Particle::Species *species = particle->species;
+  int *mixspecies = particle->mixture[imix]->species;
+  int *m2g = particle->mixture[imix]->mix2group;
 
+  int i,j,igroup;
+  double theta,ibar,denom;
+  double *norm;
+
+  // zero output array and norm vectors
+
+  for (i = 0; i < nglocal; i++)
+    for (j = 0; j < ngroup; j++) outnumer[i][j] = 0.0;
+
+  for (j = 0; j < ngroup; j++) {
+    norm = outdenom[j];
+    for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+  }
+
+  // for each grid cell, compute per-species temperatures
+  // then combine per-species temperatures into groups as weighted averages
+
+  for (i = 0; i < nglocal; i++) {
+    for (j = 0; j < nspecies; j++) {
+      theta = species[mixspecies[j]].vibtemp;
+      if (theta == 0.0 || indenom[i][j] == 0.0) {
+        tspecies[j] = 0.0;
+        continue;
+      }
+      ibar = innumer[i][j] / indenom[i][j];
+      ibar /= update->boltz * theta;
+      if (ibar == 0.0) {
+        tspecies[j] = 0.0;
+        continue;
+      }
+      denom = update->boltz * indenom[i][j] * ibar * log(1.0 + 1.0/ibar);
+      tspecies[j] = innumer[i][j] / denom;
+    }
+
+    for (j = 0; j < nspecies; j++) {
+      igroup = m2g[j];
+      outnumer[i][igroup] += tspecies[j]*norm_count_extra[i][j];
+      outdenom[i][igroup] += norm_count_extra[i][j];
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------

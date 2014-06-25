@@ -43,6 +43,7 @@ class ComputeTvibGrid : public Compute {
   int nglocal;               // # of owned grid cells
   double **norm_count;       // per-group ptr to norm vector
   double **norm_count_extra; // per-species ptr to norm vector
+  double *tspecies;          // per-species vibrational temperature
 };
 
 }
