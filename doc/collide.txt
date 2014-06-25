@@ -30,19 +30,25 @@ collide vss all.vss background :pre
 Define what style of particle-particle collisions will be performed by
 SPARTA each timestep.  If collisions are performed, particles are
 sorted into grid cells every timestep and the appropriate collision
-model is invoked on a per-grid-cell basis.
+model is invoked on a per-grid-cell basis.  Collisions alter the
+velocity of participating particles as well as their rotational and
+vibrational energies.  The rotational and vibrational properties of
+each species are set in the file read by the "species"_species.html
+command.
 
 The collision style determines how many pairs of particles are
 considered for collisions, the criteria for which collisions actually
 occurs, and the outcome of individual collision, which alters the
 velocities of the two particles.  If chemistry is enabled, via the
-"react"_react.html command, the particles in the collisions may also
+"react"_react.html command, particles involved in collisions may also
 change species, or a particle may be deleted, or a new particle
 created.  The "collide_modify"_collide_modify.html command can also be
-used to alter aspects of how collisions are performed.
+used to alter aspects of how collisions are performed.  For example,
+it can be used to turn on/off the tracking of vibrational energy and
+its exchange in collisions.
 
 A {mix-ID} argument is specified for each collision style.  It must
-contain all the specied defined for use by the simulation, via the
+contain all the species defined for use by the simulation, via the
 "species"_species.html command.  The group definitions in the mixture
 assign one or more particle species to each group.  These groupings
 are used to determine how pairs of particles are chosen to collide
