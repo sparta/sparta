@@ -842,11 +842,11 @@ void DumpImage::write()
           //  compute->post_process_grid(NULL,NULL);
         }
         if (gridcol == 0) value = compute->vector_grid[icell];
-        else value = compute->array_grid[icell][gridcol];
+        else value = compute->array_grid[icell][gridcol-1];
       } else if (gridwhich == FIX) {
         Fix *fix = modify->fix[gridindex];
         if (gridcol == 0) value = fix->vector_grid[icell];
-        else value = fix->array_grid[icell][gridcol];
+        else value = fix->array_grid[icell][gridcol-1];
       }
       lo = MIN(lo,value);
       hi = MAX(hi,value);
@@ -1176,11 +1176,11 @@ void DumpImage::create_image()
             //  compute->post_process_grid(NULL,NULL);
           }
           if (gridcol == 0) value = compute->vector_grid[icell];
-          else value = compute->array_grid[icell][gridcol];
+          else value = compute->array_grid[icell][gridcol-1];
         } else if (gridwhich == FIX) {
           Fix *fix = modify->fix[gridindex];
           if (gridcol == 0) value = fix->vector_grid[icell];
-          else value = fix->array_grid[icell][gridcol];
+          else value = fix->array_grid[icell][gridcol-1];
         }
         color = image->map_value2color(GRID,value);
       }

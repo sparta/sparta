@@ -122,7 +122,10 @@ void ComputeTvibGrid::compute_per_grid()
 
 /* ----------------------------------------------------------------------
    use tallied per-species info to compute a group vibrational temperature
-   called by dump with NULL arrays, so use internal array/norm as input
+   one temperature for each grid cell, stored in strided out vector
+   index = which column of this compute's output is requested
+     0 = vector, 1-N = columns of array
+   called by dump with NULL input arrays, so use internal array/norm as input
    called by fix ave/grid with arrays it accumulated over many timesteps
 ------------------------------------------------------------------------- */
 
