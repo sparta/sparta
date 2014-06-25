@@ -19,11 +19,11 @@
 
 <LI>keywords = <I>vremax</I> or <I>remain</I> 
 
-<PRE>  <I>vremax</I> values = Nevery startflag
+  <I>vremax</I> values = Nevery startflag
     Nevery = zero vremax every this many timesteps
     startflag = <I>yes</I> or <I>no</I> = zero vremax at start of every run
-  <I>remain</I> value = <I>yes</I> or <I>no</I> = hold remaining fraction of collisions over to next timestep 
-</PRE>
+  <I>remain</I> value = <I>yes</I> or <I>no</I> = hold remaining fraction of collisions over to next timestep
+  <I>vibstyle</I> value = <I>none</I> or <I>discrete</I> or <I>smooth</I>
 
 </UL>
 <P><B>Examples:</B>
@@ -71,6 +71,20 @@ to the computed collision count for that step.  If the value is set to
 attempts are made and an 8th attempt is made conditionally with a
 probability of 0.3, using a random number.
 </P>
+<P>The <I>vibstyle</I> keyword determines how vibrational energy is treated in
+particle collisions.  If the value is set to <I>none</I>, then vibrational
+energy is not tracked; every particle's vibrational energy is 0.0.  If
+the value is set to <I>discrete</I>, a particle's vibrational energy is set
+to discrete values, namely multiples of kT where k = the Boltzmann
+constant and T is the characteristic vibrational temperature set for
+the species in the file read by the <A HREF = "species.html">species</A> command.
+If the value is set to <I>smooth</I>, a particle's vibrational energy is a
+continuous value.  Note that the <I>discrete</I> setting is only observed
+if the vibrational degrees of freedom for the species is 2, as set in
+the file read by the <A HREF = "species.html">species</A> command, i.e. for species
+that are dimer molecules.  Species with more degrees of freedom
+(4,6,etc) are always treated as if the setting were <I>smooth</I>.
+</P>
 <HR>
 
 <P><B>Restrictions:</B> none
@@ -81,6 +95,6 @@ probability of 0.3, using a random number.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The option defaults are vremax = (0,yes) and remain = yes.
+<P>The option defaults are vremax = (0,yes), remain = yes, vibstyle = none.
 </P>
 </HTML>

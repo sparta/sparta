@@ -17,7 +17,8 @@ keywords = {vremax} or {remain} :l
   {vremax} values = Nevery startflag
     Nevery = zero vremax every this many timesteps
     startflag = {yes} or {no} = zero vremax at start of every run
-  {remain} value = {yes} or {no} = hold remaining fraction of collisions over to next timestep :pre
+  {remain} value = {yes} or {no} = hold remaining fraction of collisions over to next timestep
+  {vibstyle} value = {none} or {discrete} or {smooth}
 :ule
 
 [Examples:]
@@ -65,6 +66,20 @@ to the computed collision count for that step.  If the value is set to
 attempts are made and an 8th attempt is made conditionally with a
 probability of 0.3, using a random number.
 
+The {vibstyle} keyword determines how vibrational energy is treated in
+particle collisions.  If the value is set to {none}, then vibrational
+energy is not tracked; every particle's vibrational energy is 0.0.  If
+the value is set to {discrete}, a particle's vibrational energy is set
+to discrete values, namely multiples of kT where k = the Boltzmann
+constant and T is the characteristic vibrational temperature set for
+the species in the file read by the "species"_species.html command.
+If the value is set to {smooth}, a particle's vibrational energy is a
+continuous value.  Note that the {discrete} setting is only observed
+if the vibrational degrees of freedom for the species is 2, as set in
+the file read by the "species"_species.html command, i.e. for species
+that are dimer molecules.  Species with more degrees of freedom
+(4,6,etc) are always treated as if the setting were {smooth}.
+
 :line
 
 [Restrictions:] none
@@ -75,5 +90,5 @@ probability of 0.3, using a random number.
 
 [Default:]
 
-The option defaults are vremax = (0,yes) and remain = yes.
+The option defaults are vremax = (0,yes), remain = yes, vibstyle = none.
 
