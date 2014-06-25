@@ -471,6 +471,12 @@ void FixAveGrid::end_of_step()
   // normindex >= 0, normalize by accumulated norm vector
 
   if (ave == ONE) {
+
+      // compute values are in vector/array grid and norm vector
+
+    //      if (compute->size_per_grid_extra_cols == 0) {
+    // }
+
     if (nvalues == 1) {
       if (normindex[0] < 0)
         for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
