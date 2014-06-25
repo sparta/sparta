@@ -416,6 +416,8 @@ void FixAveGrid::end_of_step()
         double **array_grid_extra = compute->array_grid_extra;
         double **norm_grid_extra = compute->norm_grid_extra;
 
+        // NOTE: this will copy multiple times for each column in fix ave/grid
+
         for (i = 0; i < nglocal; i++)
           for (j = 0; j < n; j++) {
             array_extra[i][j] += array_grid_extra[i][j];
@@ -469,27 +471,33 @@ void FixAveGrid::end_of_step()
   // normalize for output on Nfreq timestep
   // normindex < 0, just normalize by # of samples
   // normindex >= 0, normalize by accumulated norm vector
+  // perform post-processing for computes that require additional computation
 
   if (ave == ONE) {
-
-      // compute values are in vector/array grid and norm vector
-
-    //      if (compute->size_per_grid_extra_cols == 0) {
-    // }
-
     if (nvalues == 1) {
-      if (normindex[0] < 0)
+      if (postflag[0]) {
+        n = value2index[0];
+        j = argindex[0];
+        Compute *compute = modify->compute[n];
+        compute->post_process_grid(array_extra,norm_extra,j,vector_grid,1);
+      } else if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
-      else {
+      } else {
         norm = norms[normindex[0]];
         for (i = 0; i < nglocal; i++)
           if (norm[i] > 0.0) vector_grid[i] /= norm[i];
       }
     } else {
       for (m = 0; m < nvalues; m++) {
-        if (normindex[m] < 0)
+        if (postflag[m]) {
+          n = value2index[m];
+          j = argindex[m];
+          Compute *compute = modify->compute[n];
+          compute->post_process_grid(array_extra,norm_extra,j,
+                                     &array_grid[0][m],nvalues);
+        } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
-        else {
+        } else {
           norm = norms[normindex[m]];
           for (i = 0; i < nglocal; i++)
             if (norm[i] > 0.0) array_grid[i][m] /= norm[i];
@@ -499,19 +507,30 @@ void FixAveGrid::end_of_step()
 
   } else {
     if (nvalues == 1) {
-      if (normindex[0] < 0)
+      if (postflag[0]) {
+        n = value2index[0];
+        j = argindex[0];
+        Compute *compute = modify->compute[n];
+        compute->post_process_grid(array_extra,norm_extra,j,vector_grid,1);
+      } if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] = vector[i]/nsample;
-      else {
+      } else {
         norm = norms[normindex[0]];
         for (i = 0; i < nglocal; i++) 
           if (norm[i] > 0.0) vector_grid[i] = vector[i]/norm[i];
       }
     } else {
       for (m = 0; m < nvalues; m++) {
-        if (normindex[m] < 0)
+        if (postflag[m]) {
+          n = value2index[m];
+          j = argindex[m];
+          Compute *compute = modify->compute[n];
+          compute->post_process_grid(array_extra,norm_extra,j,
+                                     &array_grid[0][m],nvalues);
+        } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++)
             array_grid[i][m] = array[i][m]/nsample;
-        else {
+        } else {
           norm = norms[normindex[m]];
           for (i = 0; i < nglocal; i++) 
             if (norm[i] > 0.0) array_grid[i][m] = array[i][m]/norm[i];

@@ -86,7 +86,7 @@ class Compute : protected Pointers {
   virtual void surf_tally(int, double *, Particle::OnePart *) {}
   virtual void boundary_tally(int, int, double *, Particle::OnePart *) {}
 
-  virtual void post_process_grid(double **, double **) {}
+  virtual void post_process_grid(double **, double **, int, double *, int) {}
 
   virtual void normwhich(int, int &, int &) {}
   virtual double *normptr(int) {return NULL;}

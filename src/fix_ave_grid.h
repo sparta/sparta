@@ -42,20 +42,22 @@ class FixAveGrid : public Fix {
   int nvalues,maxvalues;
   int nrepeat,irepeat,nsample,ave;
   bigint nvalid;
-  int *which,*argindex,*value2index;
+  int *which,*argindex,*value2index,*postflag;
   char **ids;
 
   int nglocal;               // # of owned grid cells
   int nglocalmax;            // max size of per-cell vectors/arrays
   double *vector;            // tally vector when ave = RUNNING
   double **array;            // tally array when ave = RUNNING
-  double **array_extra;      // extra tally array for computes that need it
-  double **norm_extra;       // extra norm array for computes that need it
+
 
   int *normacc;        // 1 if Ith value triggers one-time norm accumulation
   int *normindex;      // index of norm vector for Ith value, -1 if none
   double **norms;      // pointers to accumulated norms
   int nnorm;           // # of norm pointers in norms
+
+  double **array_extra;
+  double **norm_extra;
 
   int pack_one(int, char *, int);
   int unpack_one(char *, int);

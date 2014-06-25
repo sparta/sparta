@@ -47,13 +47,11 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
   nglocal = 0;
   array_grid = NULL;
 
-  norm_count = new double*[ngroup];
-  for (int i = 0; i < ngroup; i++) norm_count[i] = NULL;
-
   array_grid_extra = NULL;
   norm_grid_extra = NULL;
 
   double *tspecies = new double[nspecies];
+  double *g2s = new double[nspecies];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -62,13 +60,11 @@ ComputeTvibGrid::~ComputeTvibGrid()
 {
   memory->destroy(array_grid);
 
-  for (int i = 0; i < ngroup; i++) memory->destroy(norm_count[i]);
-  delete [] norm_count;
-
   memory->destroy(array_grid_extra);
   memory->destroy(norm_grid_extra);
 
   delete [] tspecies;
+  delete [] g2s;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -125,70 +121,73 @@ void ComputeTvibGrid::compute_per_grid()
 }
 
 /* ----------------------------------------------------------------------
-   user tallied per-species info to compute per-group vibrational temps
-   called by dump with NULL arrays, so use internal arrays
+   use tallied per-species info to compute a group vibrational temperature
+   called by dump with NULL arrays, so use internal array/norm as input
    called by fix ave/grid with arrays it accumulated over many timesteps
 ------------------------------------------------------------------------- */
 
-void ComputeTvibGrid::post_process_grid(double **one, double **onenorm)
+void ComputeTvibGrid::post_process_grid(double **inarray, double **innorm,
+                                        int index, double *out, int nstride)
 {
-  // setup ptrs for operation
+  // use internal storage for input
 
-  double **innumer,**indenom,**outnumer,**outdenom;
-
-  if (one == NULL) {
-    innumer = array_grid_extra;
-    indenom = norm_grid_extra;
-    outnumer = array_grid;
-    outdenom = norm_count;
-  } else {
-    innumer = one;
-    indenom = onenorm;
+  if (inarray == NULL) {
+    inarray = array_grid_extra;
+    innorm = norm_grid_extra;
   }
 
   Particle::Species *species = particle->species;
   int *mixspecies = particle->mixture[imix]->species;
   int *m2g = particle->mixture[imix]->mix2group;
 
-  int i,j,igroup;
-  double theta,ibar,denom;
-  double *norm;
+  // zero output vector
 
-  // zero output array and norm vectors
-
-  for (i = 0; i < nglocal; i++)
-    for (j = 0; j < ngroup; j++) outnumer[i][j] = 0.0;
-
-  for (j = 0; j < ngroup; j++) {
-    norm = outdenom[j];
-    for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+  int m = 0;
+  for (int i = 0; i < nglocal; i++) {
+    out[m] = 0.0;
+    m += nstride;
   }
 
-  // for each grid cell, compute per-species temperatures
-  // then combine per-species temperatures into groups as weighted averages
+  // for each grid cell, compute per-species temperatures for species in group
+  // then combine them into requested group temp as weighted average
 
+  int i,j,k;
+  double theta,ibar,numer,denom;
+
+  index--;
+  int gspecies = 0;
+  for (i = 0; i < nspecies; i++)
+    if (m2g[i] == index) g2s[gspecies++] = i;
+
+  m = 0;
   for (i = 0; i < nglocal; i++) {
-    for (j = 0; j < nspecies; j++) {
-      theta = species[mixspecies[j]].vibtemp;
-      if (theta == 0.0 || indenom[i][j] == 0.0) {
+    for (j = 0; j < gspecies; j++) {
+      k = g2s[j];
+      theta = species[mixspecies[k]].vibtemp;
+      if (theta == 0.0 || innorm[i][k] == 0.0) {
         tspecies[j] = 0.0;
         continue;
       }
-      ibar = innumer[i][j] / indenom[i][j];
+      ibar = inarray[i][k] / innorm[i][k];
       ibar /= update->boltz * theta;
       if (ibar == 0.0) {
         tspecies[j] = 0.0;
         continue;
       }
-      denom = update->boltz * indenom[i][j] * ibar * log(1.0 + 1.0/ibar);
-      tspecies[j] = innumer[i][j] / denom;
+      denom = update->boltz * innorm[i][k] * ibar * log(1.0 + 1.0/ibar);
+      tspecies[j] = inarray[i][k] / denom;
     }
 
-    for (j = 0; j < nspecies; j++) {
-      igroup = m2g[j];
-      outnumer[i][igroup] += tspecies[j]*indenom[i][j];
-      outdenom[igroup][i] += indenom[i][j];
+    numer = denom = 0.0;
+    for (j = 0; j < gspecies; j++) {
+      k = g2s[j];
+      numer += tspecies[j]*innorm[i][k];
+      denom += innorm[i][k];
     }
+
+    if (denom == 0.0) out[m] = 0.0;
+    else out[m] = numer/denom;
+    m += nstride;
   }
 }
 
@@ -205,11 +204,6 @@ void ComputeTvibGrid::reallocate()
   memory->destroy(array_grid);
   memory->create(array_grid,nglocal,ngroup,"grid:array_grid");
 
-  for (int i = 0; i < ngroup; i++) {
-    memory->destroy(norm_count[i]);
-    memory->create(norm_count[i],nglocal,"grid:norm_count");
-  }
-
   memory->destroy(array_grid_extra);
   memory->create(array_grid_extra,nglocal,nspecies,"grid:array_grid_extra");
   memory->destroy(norm_grid_extra);
@@ -225,8 +219,8 @@ void ComputeTvibGrid::reallocate()
 
 void ComputeTvibGrid::normwhich(int n, int &istyle, int &igroup)
 {
-  istyle = COUNT;
   igroup = n-1;
+  istyle = NONE;
 }
 
 /* ----------------------------------------------------------------------
@@ -236,7 +230,7 @@ void ComputeTvibGrid::normwhich(int n, int &istyle, int &igroup)
 
 double *ComputeTvibGrid::normptr(int n)
 {
-  return norm_count[n-1];
+  return NULL;
 }
 
 /* ----------------------------------------------------------------------
