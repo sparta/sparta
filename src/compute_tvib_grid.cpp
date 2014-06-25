@@ -38,13 +38,18 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 
   per_grid_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
+  nspecies = particle->mixture[imix]->nspecies;
   size_per_grid_cols = ngroup;
 
   nglocal = 0;
   array_grid = NULL;
+  array_grid_extra = NULL;
 
   norm_count = new double*[ngroup];
   for (int i = 0; i < ngroup; i++) norm_count[i] = NULL;
+
+  norm_count_extra = new double*[nspecies];
+  for (int i = 0; i < nspecies; i++) norm_count_extra[i] = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -52,9 +57,12 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 ComputeTvibGrid::~ComputeTvibGrid()
 {
   memory->destroy(array_grid);
+  memory->destroy(array_grid_extra);
 
   for (int i = 0; i < ngroup; i++) memory->destroy(norm_count[i]);
   delete [] norm_count;
+  for (int i = 0; i < nspecies; i++) memory->destroy(norm_count_extra[i]);
+  delete [] norm_count_extra;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -63,6 +71,9 @@ void ComputeTvibGrid::init()
 {
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute tvib/grid "
+               "mixture has changed");
+  if (nspecies != particle->mixture[imix]->nspecies)
+    error->all(FLERR,"Number of species in compute tvib/grid "
                "mixture has changed");
 
   reallocate();
@@ -78,41 +89,59 @@ void ComputeTvibGrid::compute_per_grid()
   Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
+  int *s2s = particle->mixture[imix]->species2species;
   int nlocal = particle->nlocal;
 
-  double fnum = update->fnum;
-  double mvv2e = update->mvv2e;
-  double tprefactor = mvv2e / (3.0*update->boltz);
-  double trotprefactor = mvv2e * 2.0 / update->boltz;
+  double tvibprefactor = update->mvv2e * 2.0 / update->boltz;
 
-  int i,j,k,ispecies,igroup,icell;
-  double *norm,*v,*vec;
+  int i,j,ispecies,mixspecies,igroup,icell;
+  double *norm;
 
   // zero accumulator array and norm vectors
 
   for (i = 0; i < nglocal; i++)
-    for (j = 0; j < ngroup; j++) array_grid[i][j] = 0.0;
+    for (j = 0; j < nspecies; j++) array_grid_extra[i][j] = 0.0;
 
   for (j = 0; j < ngroup; j++) {
-    norm = norm_count[j];
+    norm = norm_count_extra[j];
     for (i = 0; i < nglocal; i++) norm[i] = 0.0;
   }
 
   // loop over all particles, skip species not in mixture group
-  // tally any norm associated with group into norms
-  // tally all values associated with group into array_grid
+  // tally vibrational energy into array
+  // tally particle count into norm
 
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
+    mixspecies = s2s[ispecies];
     icell = particles[i].icell;
 
-    vec = array_grid[icell];
-
-    vec[k++] += trotprefactor*particles[i].evib;
-    norm_count[igroup][icell] += 1.0;
+    array_grid_extra[mixspecies][icell] += tvibprefactor*particles[i].evib;
+    norm_count_extra[mixspecies][icell] += 1.0;
   }
+}
+
+/* ----------------------------------------------------------------------
+   user tallied per-species info to prouduce per-group temperatures
+   called by dump with NULL arrays, so use own
+   called by fix ave/grid with arrays it accumulated
+------------------------------------------------------------------------- */
+
+void ComputeTvibGrid::post_process_grid(double **one, double **onenorm)
+{
+  double **numerator,**denom;
+
+  if (one == NULL) {
+    numerator = array_grid_extra;
+    denom = norm_count_extra;
+  } else {
+    numerator = one;
+    denom = onenorm;
+  }
+
+
 }
 
 /* ----------------------------------------------------------------------
@@ -127,11 +156,16 @@ void ComputeTvibGrid::reallocate()
   nglocal = grid->nlocal;
   memory->destroy(array_grid);
   memory->create(array_grid,nglocal,ngroup,"grid:array_grid");
+  memory->destroy(array_grid_extra);
+  memory->create(array_grid_extra,nglocal,nspecies,"grid:array_grid_extra");
 
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
-    for (int j = 0; j < ngroup; j++)
-      memory->create(norm_count[i],nglocal,"grid:norm_count");
+    memory->create(norm_count[i],nglocal,"grid:norm_count");
+  }
+  for (int i = 0; i < nspecies; i++) {
+    memory->destroy(norm_count_extra[i]);
+    memory->create(norm_count_extra[i],nglocal,"grid:norm_count_extra");
   }
 }
 
@@ -159,14 +193,15 @@ double *ComputeTvibGrid::normptr(int n)
 }
 
 /* ----------------------------------------------------------------------
-   memory usage of local grid-based array
+   memory usage of local grid-based arrays
 ------------------------------------------------------------------------- */
 
 bigint ComputeTvibGrid::memory_usage()
 {
   bigint bytes;
   bytes = ngroup*nglocal * sizeof(double);
-  for (int i = 0; i < ngroup; i++)
-    bytes += nglocal * sizeof(double);
+  bytes = nspecies*nglocal * sizeof(double);
+  for (int i = 0; i < ngroup; i++) bytes += nglocal * sizeof(double);
+  for (int i = 0; i < nspecies; i++) bytes += nglocal * sizeof(double);
   return bytes;
 }

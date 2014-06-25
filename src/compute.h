@@ -34,6 +34,8 @@ class Compute : protected Pointers {
   double *vector_surf;      // computed per-surf vector
   double **array_surf;      // computed per-surf array
 
+  double **array_grid_extra;   // extra per-grid array
+
   int scalar_flag;          // 0/1 if compute_scalar() function exists
   int vector_flag;          // 0/1 if compute_vector() function exists
   int array_flag;           // 0/1 if compute_array() function exists
@@ -46,6 +48,8 @@ class Compute : protected Pointers {
 
   int per_grid_flag;          // 0/1 if compute_per_grid() function exists
   int size_per_grid_cols;     // 0 = vector, N = columns in per-grid array
+
+  int post_process_grid_flag; // 1 if requires post_processing for output
 
   int per_surf_flag;          // 0/1 if compute_per_surf() function exists
   int size_per_surf_cols;     // 0 = vector, N = columns in per-surf array
@@ -79,6 +83,8 @@ class Compute : protected Pointers {
   virtual void clear() {}
   virtual void surf_tally(int, double *, Particle::OnePart *) {}
   virtual void boundary_tally(int, int, double *, Particle::OnePart *) {}
+
+  virtual void post_process_grid(double **, double **) {}
 
   virtual void normwhich(int, int &, int &) {}
   virtual double *normptr(int) {return NULL;}

@@ -264,12 +264,15 @@ void DumpGrid::header_item(bigint ndump)
 int DumpGrid::count()
 {
   // invoke Computes for per-grid quantities
+  // also invoke post-processing within Compute if required
 
   if (ncompute) {
     for (int i = 0; i < ncompute; i++)
       if (!(compute[i]->invoked_flag & INVOKED_PER_GRID)) {
 	compute[i]->compute_per_grid();
 	compute[i]->invoked_flag |= INVOKED_PER_GRID;
+        if (compute[i]->post_process_grid_flag)
+          compute[i]->post_process_grid(NULL,NULL);
       }
   }
 
@@ -717,11 +720,11 @@ void DumpGrid::pack_compute(int n)
 {
   int m;
 
+  // apply normalization to each per-grid value
+
   double *vector = compute[field2index[n]]->vector_grid;
   double **array = compute[field2index[n]]->array_grid;
   int index = argindex[n];
-
-  // apply normalization to each per-grid value
 
   if (index == 0) {
     double *norm = compute[field2index[n]]->normptr(index);

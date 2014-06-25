@@ -67,6 +67,7 @@ Mixture::Mixture(SPARTA *sparta, char *userid) : Pointers(sparta)
   groupsize = NULL;
   mix2group = NULL;
   species2group = NULL;
+  species2species = NULL;
 
   vscale = NULL;
   active = NULL;
@@ -91,6 +92,7 @@ Mixture::~Mixture()
   delete [] groupsize;
   memory->destroy(mix2group);
   memory->destroy(species2group);
+  memory->destroy(species2species);
 
   memory->destroy(vscale);
   memory->destroy(active);
@@ -185,12 +187,17 @@ void Mixture::init()
 		     particle->species[index].mass);
   }
 
-  // setup species2group
+  // setup species2group and species2species
 
   memory->destroy(species2group);
   memory->create(species2group,particle->nspecies,"mixture:species2group");
   for (int i = 0; i < particle->nspecies; i++) species2group[i] = -1;
   for (int i = 0; i < nspecies; i++) species2group[species[i]] = mix2group[i];
+
+  memory->destroy(species2species);
+  memory->create(species2species,particle->nspecies,"mixture:species2group");
+  for (int i = 0; i < particle->nspecies; i++) species2species[i] = -1;
+  for (int i = 0; i < nspecies; i++) species2species[species[i]] = i;
 
   // setup groupsize
 

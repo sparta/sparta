@@ -838,6 +838,8 @@ void DumpImage::write()
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
           compute->compute_per_grid();
           compute->invoked_flag |= INVOKED_PER_GRID;
+          if (compute->post_process_grid_flag)
+            compute->post_process_grid(NULL,NULL);
         }
         if (gridcol == 0) value = compute->vector_grid[icell];
         else value = compute->array_grid[icell][gridcol];
@@ -871,6 +873,8 @@ void DumpImage::write()
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
           compute->compute_per_grid();
           compute->invoked_flag |= INVOKED_PER_GRID;
+          if (compute->post_process_grid_flag)
+            compute->post_process_grid(NULL,NULL);
         }
         if (gridxcol == 0) value = compute->vector_grid[icell];
         else value = compute->array_grid[icell][gridxcol-1];
@@ -904,6 +908,8 @@ void DumpImage::write()
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
           compute->compute_per_grid();
           compute->invoked_flag |= INVOKED_PER_GRID;
+          if (compute->post_process_grid_flag)
+            compute->post_process_grid(NULL,NULL);
         }
         if (gridycol == 0) value = compute->vector_grid[icell];
         else value = compute->array_grid[icell][gridycol-1];
@@ -937,6 +943,8 @@ void DumpImage::write()
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
           compute->compute_per_grid();
           compute->invoked_flag |= INVOKED_PER_GRID;
+          if (compute->post_process_grid_flag)
+            compute->post_process_grid(NULL,NULL);
         }
         if (gridzcol == 0) value = compute->vector_grid[icell];
         else value = compute->array_grid[icell][gridzcol-1];
@@ -1164,6 +1172,8 @@ void DumpImage::create_image()
           if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
             compute->compute_per_grid();
             compute->invoked_flag |= INVOKED_PER_GRID;
+            if (compute->post_process_grid_flag)
+              compute->post_process_grid(NULL,NULL);
           }
           if (gridcol == 0) value = compute->vector_grid[icell];
           else value = compute->array_grid[icell][gridcol];
@@ -1225,6 +1235,8 @@ void DumpImage::create_image()
               if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
                 compute->compute_per_grid();
                 compute->invoked_flag |= INVOKED_PER_GRID;
+                if (compute->post_process_grid_flag)
+                  compute->post_process_grid(NULL,NULL);
               }
               if (gridxcol == 0) value = compute->vector_grid[icell];
               else value = compute->array_grid[icell][gridxcol-1];
@@ -1254,6 +1266,8 @@ void DumpImage::create_image()
               if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
                 compute->compute_per_grid();
                 compute->invoked_flag |= INVOKED_PER_GRID;
+                if (compute->post_process_grid_flag)
+                  compute->post_process_grid(NULL,NULL);
               }
               if (gridycol == 0) value = compute->vector_grid[icell];
               else value = compute->array_grid[icell][gridycol-1];
@@ -1283,6 +1297,8 @@ void DumpImage::create_image()
               if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
                 compute->compute_per_grid();
                 compute->invoked_flag |= INVOKED_PER_GRID;
+                if (compute->post_process_grid_flag)
+                  compute->post_process_grid(NULL,NULL);
               }
               if (gridzcol == 0) value = compute->vector_grid[icell];
               else value = compute->array_grid[icell][gridzcol-1];

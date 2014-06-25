@@ -31,17 +31,18 @@ class ComputeTvibGrid : public Compute {
   ~ComputeTvibGrid();
   void init();
   void compute_per_grid();
+  void post_process_grid(double **, double **);
   void normwhich(int, int &, int &);
   double *normptr(int);
   void reallocate();
   bigint memory_usage();
 
  private:
-  int imix,ngroup;
-  int *which;
+  int imix,ngroup,nspecies;
 
   int nglocal;               // # of owned grid cells
-  double **norm_count;       // per-group ptr to norm vector, by count
+  double **norm_count;       // per-group ptr to norm vector
+  double **norm_count_extra; // per-species ptr to norm vector
 };
 
 }

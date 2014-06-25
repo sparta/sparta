@@ -49,6 +49,9 @@ class Mixture : protected Pointers {
   int *mix2group;             // m2g[i] = group that mixture species I is in
   int *species2group;         // s2g[i] = group that Particle species I is in
                               // -1 if species I not in mixture
+  int *species2species;       // s2s[i] = mixture species that 
+                              //   Particle species I is
+                              // -1 if species I not in mixture
 
   double *vscale;             // pre-computed velocity scale factor
 
