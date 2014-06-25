@@ -35,6 +35,7 @@ class Compute : protected Pointers {
   double **array_surf;      // computed per-surf array
 
   double **array_grid_extra;   // extra per-grid array
+  double **norm_grid_extra;    // extra per-grid normalizations
 
   int scalar_flag;          // 0/1 if compute_scalar() function exists
   int vector_flag;          // 0/1 if compute_vector() function exists
@@ -49,7 +50,8 @@ class Compute : protected Pointers {
   int per_grid_flag;          // 0/1 if compute_per_grid() function exists
   int size_per_grid_cols;     // 0 = vector, N = columns in per-grid array
 
-  int post_process_grid_flag; // 1 if requires post_processing for output
+  int post_process_grid_flag;   // 1 if requires post_processing for output
+  int size_per_grid_extra_cols; // 0 = none, N = columns in extra per-grid array
 
   int per_surf_flag;          // 0/1 if compute_per_surf() function exists
   int size_per_surf_cols;     // 0 = vector, N = columns in per-surf array

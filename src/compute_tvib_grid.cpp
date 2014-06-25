@@ -36,20 +36,22 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
   imix = particle->find_mixture(arg[2]);
   if (imix < 0) error->all(FLERR,"Compute grid mixture ID does not exist");
 
-  per_grid_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
   nspecies = particle->mixture[imix]->nspecies;
+
+  per_grid_flag = 1;
   size_per_grid_cols = ngroup;
+  post_process_grid_flag = 1;
+  size_per_grid_extra_cols = nspecies;
 
   nglocal = 0;
   array_grid = NULL;
-  array_grid_extra = NULL;
 
   norm_count = new double*[ngroup];
   for (int i = 0; i < ngroup; i++) norm_count[i] = NULL;
 
-  norm_count_extra = new double*[nspecies];
-  for (int i = 0; i < nspecies; i++) norm_count_extra[i] = NULL;
+  array_grid_extra = NULL;
+  norm_grid_extra = NULL;
 
   double *tspecies = new double[nspecies];
 }
@@ -59,12 +61,12 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 ComputeTvibGrid::~ComputeTvibGrid()
 {
   memory->destroy(array_grid);
-  memory->destroy(array_grid_extra);
 
   for (int i = 0; i < ngroup; i++) memory->destroy(norm_count[i]);
   delete [] norm_count;
-  for (int i = 0; i < nspecies; i++) memory->destroy(norm_count_extra[i]);
-  delete [] norm_count_extra;
+
+  memory->destroy(array_grid_extra);
+  memory->destroy(norm_grid_extra);
 
   delete [] tspecies;
 }
@@ -101,12 +103,10 @@ void ComputeTvibGrid::compute_per_grid()
   // zero extra accumulator array and norm vectors
 
   for (i = 0; i < nglocal; i++)
-    for (j = 0; j < nspecies; j++) array_grid_extra[i][j] = 0.0;
-
-  for (j = 0; j < nspecies; j++) {
-    norm = norm_count_extra[j];
-    for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-  }
+    for (j = 0; j < nspecies; j++) {
+      array_grid_extra[i][j] = 0.0;
+      norm_grid_extra[i][j] = 0.0;
+    }
 
   // loop over all particles, skip species not in mixture group
   // tally vibrational energy into array
@@ -119,8 +119,8 @@ void ComputeTvibGrid::compute_per_grid()
     mixspecies = s2s[ispecies];
     icell = particles[i].icell;
 
-    array_grid_extra[mixspecies][icell] += particles[i].evib;
-    norm_count_extra[mixspecies][icell] += 1.0;
+    array_grid_extra[icell][mixspecies] += particles[i].evib;
+    norm_grid_extra[icell][mixspecies] += 1.0;
   }
 }
 
@@ -138,7 +138,7 @@ void ComputeTvibGrid::post_process_grid(double **one, double **onenorm)
 
   if (one == NULL) {
     innumer = array_grid_extra;
-    indenom = norm_count_extra;
+    indenom = norm_grid_extra;
     outnumer = array_grid;
     outdenom = norm_count;
   } else {
@@ -186,8 +186,8 @@ void ComputeTvibGrid::post_process_grid(double **one, double **onenorm)
 
     for (j = 0; j < nspecies; j++) {
       igroup = m2g[j];
-      outnumer[i][igroup] += tspecies[j]*norm_count_extra[i][j];
-      outdenom[i][igroup] += norm_count_extra[i][j];
+      outnumer[i][igroup] += tspecies[j]*indenom[i][j];
+      outdenom[igroup][i] += indenom[i][j];
     }
   }
 }
@@ -204,17 +204,16 @@ void ComputeTvibGrid::reallocate()
   nglocal = grid->nlocal;
   memory->destroy(array_grid);
   memory->create(array_grid,nglocal,ngroup,"grid:array_grid");
-  memory->destroy(array_grid_extra);
-  memory->create(array_grid_extra,nglocal,nspecies,"grid:array_grid_extra");
 
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
     memory->create(norm_count[i],nglocal,"grid:norm_count");
   }
-  for (int i = 0; i < nspecies; i++) {
-    memory->destroy(norm_count_extra[i]);
-    memory->create(norm_count_extra[i],nglocal,"grid:norm_count_extra");
-  }
+
+  memory->destroy(array_grid_extra);
+  memory->create(array_grid_extra,nglocal,nspecies,"grid:array_grid_extra");
+  memory->destroy(norm_grid_extra);
+  memory->create(norm_grid_extra,nglocal,nspecies,"grid:norm_grid_extra");
 }
 
 /* ----------------------------------------------------------------------
@@ -248,8 +247,7 @@ bigint ComputeTvibGrid::memory_usage()
 {
   bigint bytes;
   bytes = ngroup*nglocal * sizeof(double);
-  bytes = nspecies*nglocal * sizeof(double);
   for (int i = 0; i < ngroup; i++) bytes += nglocal * sizeof(double);
-  for (int i = 0; i < nspecies; i++) bytes += nglocal * sizeof(double);
+  bytes += 2*nglocal*nspecies * sizeof(double);
   return bytes;
 }

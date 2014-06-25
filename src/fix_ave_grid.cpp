@@ -36,7 +36,7 @@ enum{ONE,RUNNING};
 
 #define INVOKED_PER_GRID 16
 #define DELTAINPUT 8
-#define DELTAGRID 10              // must be bigger than split cells per cell
+#define DELTAGRID 1024            // must be bigger than split cells per cell
 
 /* ---------------------------------------------------------------------- */
 
@@ -380,31 +380,49 @@ void FixAveGrid::end_of_step()
         compute->invoked_flag |= INVOKED_PER_GRID;
       }
       
-      if (j == 0) {
-        double *compute_vector = compute->vector_grid;
-        if (nvalues == 1)
-          for (i = 0; i < nglocal; i++)
-            vector[i] += compute_vector[i];
-        else
-          for (i = 0; i < nglocal; i++)
-            array[i][m] += compute_vector[i];
+      // compute values are in vector/array grid and norm vector
+
+      if (compute->size_per_grid_extra_cols == 0) {
+        if (j == 0) {
+          double *compute_vector = compute->vector_grid;
+          if (nvalues == 1)
+            for (i = 0; i < nglocal; i++)
+              vector[i] += compute_vector[i];
+          else
+            for (i = 0; i < nglocal; i++)
+              array[i][m] += compute_vector[i];
+        } else {
+          int jm1 = j - 1;
+          double **compute_array = compute->array_grid;
+          if (nvalues == 1)
+            for (i = 0; i < nglocal; i++)
+              vector[i] += compute_array[i][jm1];
+          else
+            for (i = 0; i < nglocal; i++)
+              array[i][m] += compute_array[i][jm1];
+        }
+
+        if (normacc[m]) {
+          cfv_norm = compute->normptr(j);
+          norm = norms[normindex[m]];
+          for (i = 0; i < nglocal; i++) norm[i] += cfv_norm[i];
+        }
+
+      // compute values are in array_grid_extra and norm_grid_extra
+      // accumulate results in local extra array grid
+
       } else {
-        int jm1 = j - 1;
-        double **compute_array = compute->array_grid;
-        if (nvalues == 1)
-          for (i = 0; i < nglocal; i++)
-            vector[i] += compute_array[i][jm1];
-        else
-          for (i = 0; i < nglocal; i++)
-            array[i][m] += compute_array[i][jm1];
+        int n = compute->size_per_grid_extra_cols;
+        double **compute_array = compute->array_grid_extra;
+        double **compute_array_norm = compute->norm_grid_extra;
+
+        for (i = 0; i < nglocal; i++)
+          for (j = 0; j < n; j++) {
+            array_extra[i][j] += compute_array[i][j];
+            norm_extra[i][j] += compute_array_norm[i][j];
+          }
       }
 
-      if (normacc[m]) {
-        cfv_norm = compute->normptr(j);
-        norm = norms[normindex[m]];
-        for (i = 0; i < nglocal; i++) norm[i] += cfv_norm[i];
-      }
-      
     // access fix fields, guaranteed to be ready
       
     } else if (which[m] == FIX) {

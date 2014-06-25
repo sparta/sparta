@@ -50,6 +50,9 @@ class FixAveGrid : public Fix {
   double *vector;            // extra tally vector when ave = RUNNING
   double **array;            // extra tally array when ave = RUNNING
 
+  double **array_extra;
+  double **norm_extra;
+
   int *normacc;        // 1 if Ith value triggers one-time norm accumulation
   int *normindex;      // index of norm vector for Ith value, -1 if none
   double **norms;      // pointers to accumulated norms
