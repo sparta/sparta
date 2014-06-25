@@ -47,11 +47,10 @@ class FixAveGrid : public Fix {
 
   int nglocal;               // # of owned grid cells
   int nglocalmax;            // max size of per-cell vectors/arrays
-  double *vector;            // extra tally vector when ave = RUNNING
-  double **array;            // extra tally array when ave = RUNNING
-
-  double **array_extra;
-  double **norm_extra;
+  double *vector;            // tally vector when ave = RUNNING
+  double **array;            // tally array when ave = RUNNING
+  double **array_extra;      // extra tally array for computes that need it
+  double **norm_extra;       // extra norm array for computes that need it
 
   int *normacc;        // 1 if Ith value triggers one-time norm accumulation
   int *normindex;      // index of norm vector for Ith value, -1 if none

@@ -31,7 +31,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{DISCRETE,SMOOTH};            // several files
+enum{NONE,DISCRETE,SMOOTH};            // several files
 
 #define MAXLINE 1024
 
@@ -427,7 +427,9 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
       if (vibdof) {
         if (vibn_phi >= random->uniform()) {
-          if (vibdof == 2 && vibstyle == SMOOTH) {
+          if (vibstyle == NONE) {
+            // CODE for vibrational energy = 0.0
+          } else if (vibdof == 2 && vibstyle == SMOOTH) {
             // CODE for dof = 2 and continuous vibrational energy
             //evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
             E_Dispose += evib;
@@ -608,7 +610,9 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     vibdof = species[sp].vibdof;
     
     if (vibdof) {
-      if (vibdof == 2 && vibstyle == SMOOTH) {
+      if (vibstyle == NONE) {
+        // CODE for vibrational energy = 0.0
+      } else if (vibdof == 2 && vibstyle == SMOOTH) {
         // CODE for dof = 2 and continuous vibrational energy
         //evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
         E_Dispose += evib;

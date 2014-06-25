@@ -21,6 +21,7 @@
 #include "update.h"
 #include "comm.h"
 #include "mixture.h"
+#include "collide.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
@@ -29,6 +30,7 @@
 using namespace SPARTA_NS;
 
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};  // several files
+enum{NONE,DISCRETE,SMOOTH};            // several files
 
 #define DELTA 10000
 #define DELTASPECIES 16
@@ -551,6 +553,15 @@ double Particle::evib(int isp, RanPark *erandom)
   // NOTE: is temp_thermal always set?
 
   double eng = 0.0;
+
+  int vibstyle = NONE;
+  if (collide) vibstyle = collide->vibstyle;
+
+  if (vibstyle == NONE) eng = 0.0;
+  else if (vibstyle == DISCRETE) {
+  } else if (vibstyle == SMOOTH) {
+  }
+
   //int ivib = -log(erandom->uniform()) * update->temp_thermal /
   //  particle->species[isp].vibtemp;
   //return ivib;

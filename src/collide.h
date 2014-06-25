@@ -26,6 +26,7 @@ namespace SPARTA_NS {
 class Collide : protected Pointers {
  public:
   char *style;
+  int vibstyle;       // none/discrete/continuous vibrational modes
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
@@ -81,8 +82,6 @@ class Collide : protected Pointers {
   double ***vremax;   // max relative velocity, per cell, per group pair
   double ***remain;   // collision number remainder, per cell, per group pair
   double **vremax_initial;   // initial vremax value, per group pair
-
-  int vibstyle;       // discrete vs continuous treatment of vibrational modes
 
   inline void addgroup(int igroup, int n)
   {

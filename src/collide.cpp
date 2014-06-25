@@ -27,7 +27,7 @@
 
 using namespace SPARTA_NS;
 
-enum{DISCRETE,SMOOTH};            // several files
+enum{NONE,DISCRETE,SMOOTH};       // several files
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
 
@@ -66,6 +66,7 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   vremax = NULL;
   vremax_initial = NULL;
   remain = NULL;
+  vibstyle = NONE;
 
   // initialize counters in case stats outputs them
 
@@ -208,7 +209,8 @@ void Collide::modify_params(int narg, char **arg)
       iarg += 2;
     } else if (strcmp(arg[iarg],"vib") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
+      if (strcmp(arg[iarg+1],"none") == 0) vibstyle = NONE;
+      else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
       else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;

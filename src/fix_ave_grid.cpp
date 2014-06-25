@@ -409,17 +409,17 @@ void FixAveGrid::end_of_step()
         }
 
       // compute values are in array_grid_extra and norm_grid_extra
-      // accumulate results in local extra array grid
+      // accumulate results in local extra arrays
 
       } else {
         int n = compute->size_per_grid_extra_cols;
-        double **compute_array = compute->array_grid_extra;
-        double **compute_array_norm = compute->norm_grid_extra;
+        double **array_grid_extra = compute->array_grid_extra;
+        double **norm_grid_extra = compute->norm_grid_extra;
 
         for (i = 0; i < nglocal; i++)
           for (j = 0; j < n; j++) {
-            array_extra[i][j] += compute_array[i][j];
-            norm_extra[i][j] += compute_array_norm[i][j];
+            array_extra[i][j] += array_grid_extra[i][j];
+            norm_extra[i][j] += norm_grid_extra[i][j];
           }
       }
 
