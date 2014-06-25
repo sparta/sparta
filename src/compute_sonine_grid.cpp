@@ -160,9 +160,6 @@ void ComputeSonineGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;
 
-  // compute average velocity for each group in each grid cell
-  // then thermal temperature and/or sonine moments
-
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
