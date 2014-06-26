@@ -47,13 +47,12 @@ class FixAveGrid : public Fix {
   int *which;                // COMPUTE or FIX or VARIABLE
   int *argindex;             // which column from compute or fix to access
   int *value2index;          // index of compute,fix,variable
-  int *postflag;             // 1 if need to invoke post_process_grid()
+  int *extraflag;            // 1 if need to invoke post_process_grid()
 
   int nglocal;               // # of owned grid cells
   int nglocalmax;            // max size of per-cell vectors/arrays
   double *vector;            // tally vector when ave = RUNNING
   double **array;            // tally array when ave = RUNNING
-
 
   int *normacc;        // 1 if Ith value triggers one-time norm accumulation
   int *normindex;      // index of norm vector for Ith value, -1 if none

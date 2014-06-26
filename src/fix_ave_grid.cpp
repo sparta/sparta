@@ -67,7 +67,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   // parse values until one isn't recognized
   // expand compute or fix array into full set of columns
 
-  which = argindex = value2index = NULL;
+  which = argindex = value2index = extraflag = NULL;
   ids = NULL;
   nvalues = maxvalues = 0;
 
@@ -161,6 +161,9 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
       if (argindex[i] && 
 	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
+      if (modify->compute[icompute]->size_per_grid_extra_cols > 0)
+        extraflag[i] = 1;
+      else extraflag[i] = 0;
 
     } else if (which[i] == FIX) {
       int ifix = modify->find_fix(ids[i]);
@@ -336,7 +339,7 @@ void FixAveGrid::setup()
 
 void FixAveGrid::end_of_step()
 {
-  int i,j,m,n,isp,icol,ncol;
+  int i,j,m,n,isp,icol,ncol,iextra;
   double *norm,*cfv_norm;
   double **array_extra,**norm_extra;
 
@@ -394,10 +397,11 @@ void FixAveGrid::end_of_step()
         compute->compute_per_grid();
         compute->invoked_flag |= INVOKED_PER_GRID;
 
-        if (compute->size_per_grid_extra_cols) {
-          array_extra = extras[0].array_extra;
-          norm_extra = extras[0].norm_extra;
-          ncol = extras[0].ncol;
+        if (extraflag[m] >= 0) {
+          iextra = extraflag[m];
+          array_extra = extras[iextra].array_extra;
+          norm_extra = extras[iextra].norm_extra;
+          ncol = extras[iextra].ncol;
           double **array_grid_extra = compute->array_grid_extra;
           double **norm_grid_extra = compute->norm_grid_extra;
           for (i = 0; i < nglocal; i++)
@@ -410,7 +414,7 @@ void FixAveGrid::end_of_step()
 
       // insure copying from compute extra arrays is only done once
 
-      if (compute->size_per_grid_extra_cols) continue;
+      if (extraflag[m] >= 0) continue;
       
       // compute values are in vector/array grid and norm vector
 
@@ -490,11 +494,13 @@ void FixAveGrid::end_of_step()
 
   if (ave == ONE) {
     if (nvalues == 1) {
-      if (postflag[0]) {
+      if (extraflag[0] >= 0) {
+        iextra = extraflag[0];
         n = value2index[0];
         j = argindex[0];
         Compute *compute = modify->compute[n];
-        compute->post_process_grid(extras[0].array_extra,extras[0].norm_extra,
+        compute->post_process_grid(extras[iextra].array_extra,
+                                   extras[iextra].norm_extra,
                                    -1,j,vector_grid,1);
       } else if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
@@ -505,11 +511,13 @@ void FixAveGrid::end_of_step()
       }
     } else {
       for (m = 0; m < nvalues; m++) {
-        if (postflag[m]) {
+        if (extraflag[m] >= 0) {
+          iextra = extraflag[m];
           n = value2index[m];
           j = argindex[m];
           Compute *compute = modify->compute[n];
-          compute->post_process_grid(extras[0].array_extra,extras[0].norm_extra,
+          compute->post_process_grid(extras[iextra].array_extra,
+                                     extras[iextra].norm_extra,
                                      -1,j,vector_grid,1);
         } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
@@ -523,11 +531,13 @@ void FixAveGrid::end_of_step()
 
   } else {
     if (nvalues == 1) {
-      if (postflag[0]) {
+      if (extraflag[0] >= 0) {
+        iextra = extraflag[0];
         n = value2index[0];
         j = argindex[0];
         Compute *compute = modify->compute[n];
-        compute->post_process_grid(extras[0].array_extra,extras[0].norm_extra,
+        compute->post_process_grid(extras[iextra].array_extra,
+                                   extras[iextra].norm_extra,
                                    -1,j,vector_grid,1);
       } if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] = vector[i]/nsample;
@@ -538,11 +548,13 @@ void FixAveGrid::end_of_step()
       }
     } else {
       for (m = 0; m < nvalues; m++) {
-        if (postflag[m]) {
+        if (extraflag[m] >= 0) {
+          iextra = extraflag[m];
           n = value2index[m];
           j = argindex[m];
           Compute *compute = modify->compute[n];
-          compute->post_process_grid(extras[0].array_extra,extras[0].norm_extra,
+          compute->post_process_grid(extras[iextra].array_extra,
+                                     extras[iextra].norm_extra,
                                      -1,j,vector_grid,1);
         } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++)
@@ -799,6 +811,7 @@ void FixAveGrid::grow()
   memory->grow(which,maxvalues,"ave/grid:which");
   memory->grow(argindex,maxvalues,"ave/grid:argindex");
   memory->grow(value2index,maxvalues,"ave/grid:value2index");
+  memory->grow(extraflag,maxvalues,"ave/grid:extraflag");
   ids = (char **) memory->srealloc(ids,maxvalues*sizeof(char *),"ave/grid:ids");
 }
 
