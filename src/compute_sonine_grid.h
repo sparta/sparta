@@ -31,6 +31,7 @@ class ComputeSonineGrid : public Compute {
   ~ComputeSonineGrid();
   void init();
   void compute_per_grid();
+  void post_process_grid(void *, void *, int, int, double *, int);
   void normwhich(int, int &, int &);
   double *normptr(int);
   void reallocate();

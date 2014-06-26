@@ -90,10 +90,12 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
     } else error->all(FLERR,"Illegal compute sonine/grid command");
   }
 
-  per_grid_flag = 1;
   ngroup = particle->mixture[imix]->ngroup;
   ntotal = ngroup*npergroup;
+
+  per_grid_flag = 1;
   size_per_grid_cols = ntotal;
+  post_process_grid_flag = 1;
 
   nglocal = 0;
   vcom = NULL;
@@ -266,6 +268,50 @@ void ComputeSonineGrid::compute_per_grid()
     }
   }
 }
+
+/* ----------------------------------------------------------------------
+   use tallied info to compute a normalized value
+   icell = -1, return values for entire group = index
+     store them in out vector with nstride
+   icell >= 0, return value for single icell in group = index
+     store it in out[0]
+   index = which column of this compute's output is requested
+     0 = vector, 1-N = columns of array
+   called by dumps with NULL input arrays, so use internal array/norm as input
+------------------------------------------------------------------------- */
+
+void ComputeSonineGrid::post_process_grid(void *innumer, void *indenom,
+                                          int icell, int index,
+                                          double *out, int nstride)
+{
+  // use internal storage for input
+  // should never be called with non-NULL inputs
+  // fix ave/grid does its own normalization for this compute
+
+  double **array,*norm;
+
+  if (innumer == NULL) {
+    array = array_grid;
+    norm = normptr(index);
+  } else error->all(FLERR,"Invalid call to "
+                    "ComputeSonineGrid::post_process_grid()");
+
+  // request for either a single value or entire column of values
+  // for single value, iterate thru outer loop just once
+
+  index--;
+  int istart = icell;
+  if (icell < 0) istart = 0;
+
+  int m = 0;
+  for (int i = istart; i < nglocal; i++) {
+    if (norm[i] == 0.0) out[m] = 0.0;
+    else out[m] = array[i][index]/norm[i];
+    m += nstride;
+    if (icell >= 0) return;
+  }
+}
+
 
 /* ----------------------------------------------------------------------
    reallocate arrays if nglocal has changed
