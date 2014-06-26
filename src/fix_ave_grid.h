@@ -42,8 +42,12 @@ class FixAveGrid : public Fix {
   int nvalues,maxvalues;
   int nrepeat,irepeat,nsample,ave;
   bigint nvalid;
-  int *which,*argindex,*value2index,*postflag;
-  char **ids;
+
+  char **ids;                // ID/name of compute,fix,variable to access   
+  int *which;                // COMPUTE or FIX or VARIABLE
+  int *argindex;             // which column from compute or fix to access
+  int *value2index;          // index of compute,fix,variable
+  int *postflag;             // 1 if need to invoke post_process_grid()
 
   int nglocal;               // # of owned grid cells
   int nglocalmax;            // max size of per-cell vectors/arrays
@@ -53,11 +57,17 @@ class FixAveGrid : public Fix {
 
   int *normacc;        // 1 if Ith value triggers one-time norm accumulation
   int *normindex;      // index of norm vector for Ith value, -1 if none
-  double **norms;      // pointers to accumulated norms
+  double **norms;      // pointers to locally-stored accumulated norms
   int nnorm;           // # of norm pointers in norms
 
-  double **array_extra;
-  double **norm_extra;
+  struct Extra {
+    int ncol;
+    double **array_extra;
+    double **norm_extra;
+  };
+
+  Extra *extras;
+  int nextra;
 
   int pack_one(int, char *, int);
   int unpack_one(char *, int);

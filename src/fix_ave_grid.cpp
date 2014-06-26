@@ -336,8 +336,9 @@ void FixAveGrid::setup()
 
 void FixAveGrid::end_of_step()
 {
-  int i,j,m,n,isp,icol;
+  int i,j,m,n,isp,icol,ncol;
   double *norm,*cfv_norm;
+  double **array_extra,**norm_extra;
 
   // skip if not step which requires doing something
 
@@ -358,6 +359,19 @@ void FixAveGrid::end_of_step()
       norm = norms[m];
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
     }
+
+    if (nextra) {
+      for (int m = 0; m < nextra; m++) {
+        array_extra = extras[m].array_extra;
+        norm_extra = extras[m].norm_extra;
+        ncol = extras[m].ncol;
+        for (i = 0; i < nglocal; i++)
+          for (j = 0; j < ncol; i++) {
+            array_extra[i][j] = 0.0;
+            norm_extra[i][j] = 0.0;
+          }
+      }
+    }
   }
 
   // accumulate results of computes,fixes,variables
@@ -372,57 +386,57 @@ void FixAveGrid::end_of_step()
     j = argindex[m];
 
     // invoke compute if not previously invoked
+    // if compute stores values in its extra arrays, accumulate to local Extra
 
     if (which[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
       if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
         compute->compute_per_grid();
         compute->invoked_flag |= INVOKED_PER_GRID;
+
+        if (compute->size_per_grid_extra_cols) {
+          array_extra = extras[0].array_extra;
+          norm_extra = extras[0].norm_extra;
+          ncol = extras[0].ncol;
+          double **array_grid_extra = compute->array_grid_extra;
+          double **norm_grid_extra = compute->norm_grid_extra;
+          for (i = 0; i < nglocal; i++)
+            for (j = 0; j < n; j++) {
+              array_extra[i][j] += array_grid_extra[i][j];
+              norm_extra[i][j] += norm_grid_extra[i][j];
+            }
+        }
       }
+
+      // insure copying from compute extra arrays is only done once
+
+      if (compute->size_per_grid_extra_cols) continue;
       
       // compute values are in vector/array grid and norm vector
 
-      if (compute->size_per_grid_extra_cols == 0) {
-        if (j == 0) {
-          double *compute_vector = compute->vector_grid;
-          if (nvalues == 1)
-            for (i = 0; i < nglocal; i++)
-              vector[i] += compute_vector[i];
-          else
-            for (i = 0; i < nglocal; i++)
-              array[i][m] += compute_vector[i];
-        } else {
-          int jm1 = j - 1;
-          double **compute_array = compute->array_grid;
-          if (nvalues == 1)
-            for (i = 0; i < nglocal; i++)
-              vector[i] += compute_array[i][jm1];
-          else
-            for (i = 0; i < nglocal; i++)
-              array[i][m] += compute_array[i][jm1];
-        }
-
-        if (normacc[m]) {
-          cfv_norm = compute->normptr(j);
-          norm = norms[normindex[m]];
-          for (i = 0; i < nglocal; i++) norm[i] += cfv_norm[i];
-        }
-
-      // compute values are in array_grid_extra and norm_grid_extra
-      // accumulate results in local extra arrays
-
+      if (j == 0) {
+        double *compute_vector = compute->vector_grid;
+        if (nvalues == 1)
+          for (i = 0; i < nglocal; i++)
+            vector[i] += compute_vector[i];
+        else
+          for (i = 0; i < nglocal; i++)
+            array[i][m] += compute_vector[i];
       } else {
-        int n = compute->size_per_grid_extra_cols;
-        double **array_grid_extra = compute->array_grid_extra;
-        double **norm_grid_extra = compute->norm_grid_extra;
-
-        // NOTE: this will copy multiple times for each column in fix ave/grid
-
-        for (i = 0; i < nglocal; i++)
-          for (j = 0; j < n; j++) {
-            array_extra[i][j] += array_grid_extra[i][j];
-            norm_extra[i][j] += norm_grid_extra[i][j];
-          }
+        int jm1 = j - 1;
+        double **compute_array = compute->array_grid;
+        if (nvalues == 1)
+          for (i = 0; i < nglocal; i++)
+            vector[i] += compute_array[i][jm1];
+        else
+          for (i = 0; i < nglocal; i++)
+            array[i][m] += compute_array[i][jm1];
+      }
+      
+      if (normacc[m]) {
+        cfv_norm = compute->normptr(j);
+        norm = norms[normindex[m]];
+        for (i = 0; i < nglocal; i++) norm[i] += cfv_norm[i];
       }
 
     // access fix fields, guaranteed to be ready
@@ -471,7 +485,8 @@ void FixAveGrid::end_of_step()
   // normalize for output on Nfreq timestep
   // normindex < 0, just normalize by # of samples
   // normindex >= 0, normalize by accumulated norm vector
-  // perform post-processing for computes that require additional computation
+  // perform post-processing for computes that store extra arrays
+  //   not those that just have post_process flag set
 
   if (ave == ONE) {
     if (nvalues == 1) {
@@ -479,7 +494,8 @@ void FixAveGrid::end_of_step()
         n = value2index[0];
         j = argindex[0];
         Compute *compute = modify->compute[n];
-        compute->post_process_grid(array_extra,norm_extra,-1,j,vector_grid,1);
+        compute->post_process_grid(extras[0].array_extra,extras[0].norm_extra,
+                                   -1,j,vector_grid,1);
       } else if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
       } else {
@@ -493,8 +509,8 @@ void FixAveGrid::end_of_step()
           n = value2index[m];
           j = argindex[m];
           Compute *compute = modify->compute[n];
-          compute->post_process_grid(array_extra,norm_extra,-1,j,
-                                     &array_grid[0][m],nvalues);
+          compute->post_process_grid(extras[0].array_extra,extras[0].norm_extra,
+                                     -1,j,vector_grid,1);
         } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
         } else {
@@ -511,7 +527,8 @@ void FixAveGrid::end_of_step()
         n = value2index[0];
         j = argindex[0];
         Compute *compute = modify->compute[n];
-        compute->post_process_grid(array_extra,norm_extra,-1,j,vector_grid,1);
+        compute->post_process_grid(extras[0].array_extra,extras[0].norm_extra,
+                                   -1,j,vector_grid,1);
       } if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] = vector[i]/nsample;
       } else {
@@ -525,8 +542,8 @@ void FixAveGrid::end_of_step()
           n = value2index[m];
           j = argindex[m];
           Compute *compute = modify->compute[n];
-          compute->post_process_grid(array_extra,norm_extra,-1,j,
-                                     &array_grid[0][m],nvalues);
+          compute->post_process_grid(extras[0].array_extra,extras[0].norm_extra,
+                                     -1,j,vector_grid,1);
         } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++)
             array_grid[i][m] = array[i][m]/nsample;
@@ -556,7 +573,6 @@ int FixAveGrid::pack_grid_one(int icell, char *buf, int memflag)
   char *ptr = buf;
 
   Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
 
   ptr += pack_one(icell,ptr,memflag);
@@ -601,6 +617,19 @@ int FixAveGrid::pack_one(int icell, char *buf, int memflag)
     }
   }
   ptr += nnorm*sizeof(double);
+
+  if (nextra) {
+    for (int m = 0; m < nextra; m++) {
+      int ncol = extras[m].ncol;
+      if (memflag) {
+        double *dptr = (double *) ptr;
+        memcpy(dptr,extras[m].array_extra[icell],ncol*sizeof(double));
+        dptr += ncol;
+        memcpy(dptr,extras[m].norm_extra[icell],ncol*sizeof(double));
+      }
+      ptr += 2*ncol*sizeof(double);
+    }
+  }
 
   return ptr-buf;
 }
@@ -660,6 +689,17 @@ int FixAveGrid::unpack_one(char *buf, int icell)
   }
   ptr += nnorm*sizeof(double);
 
+  if (nextra) {
+    for (int m = 0; m < nextra; m++) {
+      int ncol = extras[m].ncol;
+      double *dptr = (double *) ptr;
+      memcpy(extras[m].array_extra[icell],dptr,ncol*sizeof(double));
+      dptr += ncol;
+      memcpy(extras[m].norm_extra[icell],dptr,ncol*sizeof(double));
+      ptr += 2*ncol*sizeof(double);
+    }
+  }
+
   return ptr-buf;
 }
 
@@ -695,6 +735,16 @@ void FixAveGrid::compress_grid()
         else memcpy(array[nglocal],array[icell],nvalues*sizeof(double));
       }
       for (int m = 0; m < nnorm; m++) norms[m][nglocal] = norms[m][icell];
+
+      if (nextra) {
+        for (int m = 0; m < nextra; m++) {
+          int ncol = extras[m].ncol;
+          memcpy(extras[m].array_extra[nglocal],extras[m].array_extra[icell],
+                 ncol*sizeof(double));
+          memcpy(extras[m].norm_extra[nglocal],extras[m].norm_extra[icell],
+                 ncol*sizeof(double));
+        }
+      }
     }
     nglocal++;
   }
@@ -710,6 +760,8 @@ double FixAveGrid::memory_usage()
   bytes += nglocalmax*nvalues * sizeof(double);
   if (ave == RUNNING) bytes += nglocalmax*nvalues * sizeof(double);
   bytes += nnorm*nglocalmax * sizeof(double);
+  for (int m = 0; m < nextra; m++)
+    bytes += 2*nglocalmax*extras[m].ncol * sizeof(double);
   return bytes;
 }
 
@@ -808,6 +860,21 @@ void FixAveGrid::allocate(int n)
     double *norm = norms[m];
     for (int i = 0; i < n; i++) norm[i] = 0.0;
   }
+
+  if (nextra) {
+    for (int m = 0; m < nextra; m++) {
+      int ncol = extras[m].ncol;
+      memory->grow(extras[m].array_extra,n,ncol,"ave/grid:array_extra");
+      memory->grow(extras[m].norm_extra,n,ncol,"ave/grid:norm_extra");
+      double **array_extra = extras[m].array_extra;
+      double **norm_extra = extras[m].norm_extra;
+      for (int i = 0; i < n; i++)
+        for (m = 0; m < nvalues; m++) {
+          array_extra[i][m] = 0.0;
+          norm_extra[i][m] = 0.0;
+        }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -833,4 +900,12 @@ void FixAveGrid::grow_percell(int nnew)
   
   for (int m = 0; m < nnorm; m++)
     memory->grow(norms[m],n,"ave/grid:norms");
+
+  if (nextra) {
+    for (int m = 0; m < nextra; m++) {
+      int ncol = extras[m].ncol;
+      memory->grow(extras[m].array_extra,n,ncol,"ave/grid:array_extra");
+      memory->grow(extras[m].norm_extra,n,ncol,"ave/grid:norm_extra");
+    }
+  }
 }
