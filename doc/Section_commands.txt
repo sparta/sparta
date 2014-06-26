@@ -374,7 +374,8 @@ each style or click on the style itself for a full description:
 "reduce"_compute_reduce.html,
 "sonine/grid"_compute_sonine_grid.html,
 "surf"_compute_surf.html,
-"temp"_compute_temp.html :tb(c=6,ea=c)
+"temp"_compute_temp.html,
+"tvib/grid"_compute_tvib_grid.html :tb(c=6,ea=c)
 
 :line
 

@@ -1,0 +1,112 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute tvib/grid command :h3
+
+[Syntax:]
+
+compute ID tvib/grid mix-ID :pre
+
+ID is documented in "compute"_compute.html command
+grid = style name of this compute command
+mix-ID = mixture ID to perform calculation on :ul
+
+[Examples:]
+
+compute 1 tvib/grid species
+
+[Description:]
+
+Define a computation that calculates the vibrational temperature for
+each grid cell, based on the particles in the cell.  A temperature is
+calculated for each group of species in the specified mixture.  See
+the "mixture"_mixture.html command for how a set of species can be
+partitioned into groups.  See the "compute grid"_compute_grid.html
+command for other energy and temperature related values that can be
+calculated on a per-grid-cell basis.
+
+The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+"dump grid"_dump.html command.
+
+The values over many sampling timesteps can be averaged by the "fix
+ave/grid"_fix_ave_grid.html command.  It does its averaging as if the
+particles in the cell at each sampling timestep were combined together
+into one large set to compute the formulas below.  The answer is then
+divided by the number of sampling timesteps if it is not otherwise
+normalized by the number of particles.  Note that this is a different
+normalization than taking the values produced by the formulas below
+for a single timestep, summing them over the sampling timesteps, and
+then dividing by the number of sampling timesteps.
+
+:line
+
+The vibrational temperature for a group of particles comprised of
+different species is defined as a weighted average as follows:
+
+T_group = (T1*N1 + T2*N2 + ...) / (N1 + N2 + ...) :pre
+
+The sums in the numerator and denominator are over the different
+species in the group.  T1, T2, ... are the vibrational temperatures of
+each species.  N1, N2, ... are the counts of particles of each
+species.
+
+The vibrational temperature Tsp for a single species is
+defined as follows:
+
+Tsp = (2/kB) Sum_i (evib_i) / N (2 Ibar ln(1 + 1/Ibar)) :pre
+
+NOTE: need more doc info here ...
+
+vibstyle option of global command
+
+NOTE: ERASE this next part when done
+
+The {erot} value computes the average rotational energy of particles
+in the group:
+
+Erot = Sum_i (erot_i) / N :pre
+
+The {trot} value computes a rotational temperature by the following
+formula where {kB} is the Boltzmann factor:
+
+Trot = (2/kB) Sum_i (erot_i) / Sum_i (dof_i) :pre
+
+Dof_i is the number of rotational degrees of freedom for particle i.
+
+The {evib} value computes the average vibrational energy of particles
+in the group:
+
+Erot = Sum_i (evib_i) / N :pre
+
+[Output info:]
+
+This compute calculates a per-grid array, with the number of columns
+equal to the number of groups in the specified mixture.
+
+This compute performs calculations for all child grid cells in the
+simulation, which includes unsplit, split, and sub cells.  "Section
+4.8"_Section_howto.html#howto_8 of the manual gives details of how
+SPARTA defines child, unsplit, split, and sub cells.  Note that split
+cells and unsplit cells inside closed surfaces will contain no
+particles.  Thus their computed result for all the individual values
+will be 0.0.
+
+The array can be accessed by any command that uses per-grid values
+from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
+
+The per-grid array values will be in temperature "units"_units.html.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"compute grid"_compute_grid.html
+
+[Default:] none
