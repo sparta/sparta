@@ -686,7 +686,6 @@ void DumpImage::init_style()
         error->all(FLERR,"Dump image fix does not produce a vector");
       if (gridxcol > 0 && fix->size_per_grid_cols < gridxcol)
         error->all(FLERR,"Dump image fix does not have requested column");
-      printf("NEVERY %d %d\n",nevery,fix->per_grid_freq);
       if (nevery % fix->per_grid_freq)
         error->all(FLERR,"Dump image and fix not computed at compatible times");
     }
