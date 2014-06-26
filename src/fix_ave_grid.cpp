@@ -70,6 +70,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   which = argindex = value2index = extraflag = NULL;
   ids = NULL;
   nvalues = maxvalues = 0;
+  nextra = 0;
 
   iarg = 5;
   while (iarg < narg) {
@@ -162,8 +163,8 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
       if (modify->compute[icompute]->size_per_grid_extra_cols > 0)
-        extraflag[i] = 1;
-      else extraflag[i] = 0;
+        extraflag[i] = nextra++;
+      else extraflag[i] = -1;
 
     } else if (which[i] == FIX) {
       int ifix = modify->find_fix(ids[i]);
@@ -249,6 +250,19 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   delete [] list_style;
   delete [] list_group;
 
+  // setup Extra data structs
+
+  if (nextra) extras = new Extra[nextra];
+  else extras = NULL;
+
+  for (int m = 0; m < nvalues; m++) {
+    if (extraflag[m] < 0) continue;
+    int iextra = extraflag[m];
+    int icompute = modify->find_compute(ids[m]);
+    extras[iextra].ncol = modify->compute[icompute]->size_per_grid_extra_cols;
+    extras[m].array_extra = extras[m].norm_extra = NULL;
+  }
+
   // allocate per-grid cell memory for vectors/arrays and norms
 
   nglocal = nglocalmax = grid->nlocal;
@@ -286,6 +300,12 @@ FixAveGrid::~FixAveGrid()
   delete [] normindex;
   for (int i = 0; i < nnorm; i++) memory->destroy(norms[i]);
   delete [] norms;
+
+  for (int i = 0; i < nextra; i++) {
+    memory->destroy(extras[i].array_extra);
+    memory->destroy(extras[i].norm_extra);
+  }
+  delete [] extras;
 }
 
 /* ---------------------------------------------------------------------- */
