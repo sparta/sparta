@@ -50,8 +50,8 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
   array_grid_extra = NULL;
   norm_grid_extra = NULL;
 
-  double *tspecies = new double[nspecies];
-  double *g2s = new double[nspecies];
+  tspecies = new double[nspecies];
+  g2s = new int[nspecies];
   previndex = -1;
 }
 
@@ -165,6 +165,7 @@ void ComputeTvibGrid::post_process_grid(void *innumer, void *indenom,
     gspecies = 0;
     for (i = 0; i < nspecies; i++)
       if (m2g[i] == index) g2s[gspecies++] = i;
+    previndex = index;
   }
 
   // request for either a single value or entire column of values

@@ -32,7 +32,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,TYPE,PROC,X,Y,Z,XS,YS,ZS,VX,VY,VZ,
+enum{ID,TYPE,PROC,X,Y,Z,XS,YS,ZS,VX,VY,VZ,EROT,EVIB,
      COMPUTE,FIX,VARIABLE};
 enum{LT,LE,GT,GE,EQ,NEQ};
 enum{INT,DOUBLE,CELLINT,STRING};    // many files
@@ -438,6 +438,15 @@ int DumpParticle::count()
 	ptr = dchoose;
 	nstride = 1;
 
+      } else if (thresh_array[ithresh] == EROT) {
+	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].erot;
+	ptr = dchoose;
+	nstride = 1;
+      } else if (thresh_array[ithresh] == EVIB) {
+	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].evib;
+	ptr = dchoose;
+	nstride = 1;
+
       } else if (thresh_array[ithresh] == COMPUTE) {
 	i = nfield + ithresh;
 	if (argindex[i] == 0) {
@@ -597,6 +606,13 @@ int DumpParticle::parse_fields(int narg, char **arg)
       vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"vz") == 0) {
       pack_choice[i] = &DumpParticle::pack_vz;
+      vtype[i] = DOUBLE;
+
+    } else if (strcmp(arg[iarg],"erot") == 0) {
+      pack_choice[i] = &DumpParticle::pack_erot;
+      vtype[i] = DOUBLE;
+    } else if (strcmp(arg[iarg],"evib") == 0) {
+      pack_choice[i] = &DumpParticle::pack_evib;
       vtype[i] = DOUBLE;
 
     // compute value = c_ID
@@ -1192,6 +1208,30 @@ void DumpParticle::pack_vz(int n)
 
   for (int i = 0; i < nchoose; i++) {
     buf[n] = particles[clist[i]].v[2];
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_erot(int n)
+{
+  Particle::OnePart *particles = particle->particles;
+
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = particles[clist[i]].erot;
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_evib(int n)
+{
+  Particle::OnePart *particles = particle->particles;
+
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = particles[clist[i]].evib;
     n += size_one;
   }
 }

@@ -100,7 +100,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 
       if ((which[nvalues] == COMPUTE || which[nvalues] == FIX) && 
           argindex[nvalues] == 0) {
-        int ndup = 1;
+        int ndup = 0;
         if (which[nvalues] == COMPUTE) {
           int icompute = modify->find_compute(ids[nvalues]);
           if (icompute >= 0)
@@ -113,7 +113,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
             if (modify->fix[ifix]->per_grid_flag)
               ndup = modify->fix[ifix]->size_per_grid_cols;
         }
-        if (ndup > 1) {
+        if (ndup) {
           argindex[nvalues] = 1;
           nvalues++;
           for (int icol = 2; icol <= ndup; icol++) {
@@ -260,7 +260,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
     int iextra = extraflag[m];
     int icompute = modify->find_compute(ids[m]);
     extras[iextra].ncol = modify->compute[icompute]->size_per_grid_extra_cols;
-    extras[m].array_extra = extras[m].norm_extra = NULL;
+    extras[iextra].array_extra = extras[iextra].norm_extra = NULL;
   }
 
   // allocate per-grid cell memory for vectors/arrays and norms
@@ -538,7 +538,7 @@ void FixAveGrid::end_of_step()
           Compute *compute = modify->compute[n];
           compute->post_process_grid(extras[iextra].array_extra,
                                      extras[iextra].norm_extra,
-                                     -1,j,vector_grid,1);
+                                     -1,j,&array_grid[0][m],nvalues);
         } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
         } else {
@@ -575,7 +575,7 @@ void FixAveGrid::end_of_step()
           Compute *compute = modify->compute[n];
           compute->post_process_grid(extras[iextra].array_extra,
                                      extras[iextra].norm_extra,
-                                     -1,j,vector_grid,1);
+                                     -1,j,&array_grid[0][m],nvalues);
         } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++)
             array_grid[i][m] = array[i][m]/nsample;
@@ -902,7 +902,7 @@ void FixAveGrid::allocate(int n)
       double **array_extra = extras[m].array_extra;
       double **norm_extra = extras[m].norm_extra;
       for (int i = 0; i < n; i++)
-        for (m = 0; m < nvalues; m++) {
+        for (m = 0; m < ncol; m++) {
           array_extra[i][m] = 0.0;
           norm_extra[i][m] = 0.0;
         }

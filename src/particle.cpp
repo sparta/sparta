@@ -548,8 +548,6 @@ double Particle::erot(int isp, RanPark *erandom)
 
 double Particle::evib(int isp, RanPark *erandom)
 {
-  if (species[isp].rotdof < 2) return 0;
-
   // NOTE: is temp_thermal always set?
 
   double eng = 0.0;
@@ -557,7 +555,7 @@ double Particle::evib(int isp, RanPark *erandom)
   int vibstyle = NONE;
   if (collide) vibstyle = collide->vibstyle;
 
-  if (vibstyle == NONE) eng = 0.0;
+  if (vibstyle == NONE) eng = 1.0;
   else if (vibstyle == DISCRETE) {
   } else if (vibstyle == SMOOTH) {
   }

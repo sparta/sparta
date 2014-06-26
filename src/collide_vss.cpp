@@ -459,7 +459,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
   postcoln.erot = ip->erot + jp->erot;
   postcoln.evib = ip->evib + jp->evib;
-  
+
   // compute portion of energy left over for scattering
 
   postcoln.eint = postcoln.erot + postcoln.evib;
