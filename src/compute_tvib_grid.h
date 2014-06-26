@@ -31,7 +31,7 @@ class ComputeTvibGrid : public Compute {
   ~ComputeTvibGrid();
   void init();
   void compute_per_grid();
-  void post_process_grid(double **, double **, int, double *, int);
+  void post_process_grid(void *, void *, int, int, double *, int);
   void normwhich(int, int &, int &);
   double *normptr(int);
   void reallocate();
@@ -43,6 +43,8 @@ class ComputeTvibGrid : public Compute {
   int nglocal;               // # of owned grid cells
   double *tspecies;          // per-species vibrational temperature
   int *g2s;                  // list of mixture species in requested group
+  int gspecies;              // # of species in requested group
+  int previndex;             // index of previously requested group
 };
 
 }

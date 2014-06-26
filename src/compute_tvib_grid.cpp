@@ -52,6 +52,7 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 
   double *tspecies = new double[nspecies];
   double *g2s = new double[nspecies];
+  previndex = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -122,75 +123,91 @@ void ComputeTvibGrid::compute_per_grid()
 
 /* ----------------------------------------------------------------------
    use tallied per-species info to compute a group vibrational temperature
-   one temperature for each grid cell, stored in strided out vector
+   icell = -1, return temps for entire group = index
+     store them in out vector with nstride
+   icell >= 0, return temp for single icell in group = index
+     store it in out[0]
    index = which column of this compute's output is requested
      0 = vector, 1-N = columns of array
-   called by dump with NULL input arrays, so use internal array/norm as input
+   called by dumps with NULL input arrays, so use internal array/norm as input
    called by fix ave/grid with arrays it accumulated over many timesteps
 ------------------------------------------------------------------------- */
 
-void ComputeTvibGrid::post_process_grid(double **inarray, double **innorm,
-                                        int index, double *out, int nstride)
+void ComputeTvibGrid::post_process_grid(void *innumer, void *indenom,
+                                        int icell, int index,
+                                        double *out, int nstride)
 {
-  // use internal storage for input
+  int i,j,k,m;
+  double theta,ibar,numer,denom;
 
-  if (inarray == NULL) {
-    inarray = array_grid_extra;
-    innorm = norm_grid_extra;
+  // use internal storage for input
+  // or re-cast input ptrs to array ptrs
+
+  double **array,**norm;
+
+  if (innumer == NULL) {
+    array = array_grid_extra;
+    norm = norm_grid_extra;
+  } else {
+    array = (double **) innumer;
+    norm = (double **) indenom;
   }
 
   Particle::Species *species = particle->species;
   int *mixspecies = particle->mixture[imix]->species;
   int *m2g = particle->mixture[imix]->mix2group;
 
-  // zero output vector
+  // setup g2s & gspecies for requested column
+  // only if changed from prevous request
 
-  int m = 0;
-  for (int i = 0; i < nglocal; i++) {
-    out[m] = 0.0;
-    m += nstride;
+  index--;
+  if (index != previndex) {
+    gspecies = 0;
+    for (i = 0; i < nspecies; i++)
+      if (m2g[i] == index) g2s[gspecies++] = i;
   }
 
+  // request for either a single value or entire column of values
+  // for single value, iterate thru outer loop just once
   // for each grid cell, compute per-species temperatures for species in group
   // then combine them into requested group temp as weighted average
 
-  int i,j,k;
-  double theta,ibar,numer,denom;
-
-  index--;
-  int gspecies = 0;
-  for (i = 0; i < nspecies; i++)
-    if (m2g[i] == index) g2s[gspecies++] = i;
+  int istart = icell;
+  if (icell < 0) istart = 0;
 
   m = 0;
-  for (i = 0; i < nglocal; i++) {
+  for (i = istart; i < nglocal; i++) {
     for (j = 0; j < gspecies; j++) {
       k = g2s[j];
       theta = species[mixspecies[k]].vibtemp;
-      if (theta == 0.0 || innorm[i][k] == 0.0) {
+      if (theta == 0.0 || norm[i][k] == 0.0) {
         tspecies[j] = 0.0;
         continue;
       }
-      ibar = inarray[i][k] / innorm[i][k];
+      ibar = array[i][k] / norm[i][k];
       ibar /= update->boltz * theta;
       if (ibar == 0.0) {
         tspecies[j] = 0.0;
         continue;
       }
-      denom = update->boltz * innorm[i][k] * ibar * log(1.0 + 1.0/ibar);
-      tspecies[j] = inarray[i][k] / denom;
+      denom = update->boltz * norm[i][k] * ibar * log(1.0 + 1.0/ibar);
+      tspecies[j] = array[i][k] / denom;
     }
 
     numer = denom = 0.0;
     for (j = 0; j < gspecies; j++) {
       k = g2s[j];
-      numer += tspecies[j]*innorm[i][k];
-      denom += innorm[i][k];
+      numer += tspecies[j]*norm[i][k];
+      denom += norm[i][k];
     }
 
     if (denom == 0.0) out[m] = 0.0;
     else out[m] = numer/denom;
     m += nstride;
+
+    // return if single value request
+
+    if (icell >= 0) return;
   }
 }
 

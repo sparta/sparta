@@ -719,41 +719,23 @@ void DumpGrid::pack_compute(int n)
   
   int index = argindex[n];
   Compute *c = compute[field2index[n]];
-  double *vector = c->vector_grid;
-  double **array = c->array_grid;
-  double *norm = c->normptr(index);
-
-  // apply normalization to each per-grid value
 
   if (index == 0) {
-    if (c->post_process_grid_flag) {
-      c->post_process_grid(NULL,NULL,0,&buf[n],size_one);
-    } else if (norm) {
-      for (int i = 0; i < ncpart; i++) {
-        m = cpart[i];
-        if (norm[m] > 0.0) buf[n] = vector[m] / norm[m];
-        else buf[n] = 0.0;
-        n += size_one;
-      }
-    } else {
+    if (c->post_process_grid_flag)
+      c->post_process_grid(NULL,NULL,-1,0,&buf[n],size_one);
+    else {
+      double *vector = c->vector_grid;
       for (int i = 0; i < ncpart; i++) {
         buf[n] = vector[cpart[i]];
         n += size_one;
       }
     }
-
   } else {
     index--;
-    if (c->post_process_grid_flag) {
-      c->post_process_grid(NULL,NULL,index+1,&buf[n],size_one);
-    } else if (norm) {
-      for (int i = 0; i < ncpart; i++) {
-        m = cpart[i];
-        if (norm[m] > 0.0) buf[n] = array[m][index] / norm[m];
-        else buf[n] = 0.0;
-        n += size_one;
-      }
-    } else {
+    if (c->post_process_grid_flag)
+      c->post_process_grid(NULL,NULL,-1,index+1,&buf[n],size_one);
+    else {
+      double **array = c->array_grid;
       for (int i = 0; i < ncpart; i++) {
         buf[n] = array[cpart[i]][index];
         n += size_one;

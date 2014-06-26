@@ -93,7 +93,7 @@ void CreateParticles::command(int narg, char **arg)
       if (strcmp(arg[iarg+1],"no") == 0) globalflag = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) globalflag = 1;
       else error->all(FLERR,"Illegal create_particles command");
-      iarg == 2;
+      iarg += 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 

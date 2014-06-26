@@ -479,7 +479,7 @@ void FixAveGrid::end_of_step()
         n = value2index[0];
         j = argindex[0];
         Compute *compute = modify->compute[n];
-        compute->post_process_grid(array_extra,norm_extra,j,vector_grid,1);
+        compute->post_process_grid(array_extra,norm_extra,-1,j,vector_grid,1);
       } else if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
       } else {
@@ -493,7 +493,7 @@ void FixAveGrid::end_of_step()
           n = value2index[m];
           j = argindex[m];
           Compute *compute = modify->compute[n];
-          compute->post_process_grid(array_extra,norm_extra,j,
+          compute->post_process_grid(array_extra,norm_extra,-1,j,
                                      &array_grid[0][m],nvalues);
         } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
@@ -511,7 +511,7 @@ void FixAveGrid::end_of_step()
         n = value2index[0];
         j = argindex[0];
         Compute *compute = modify->compute[n];
-        compute->post_process_grid(array_extra,norm_extra,j,vector_grid,1);
+        compute->post_process_grid(array_extra,norm_extra,-1,j,vector_grid,1);
       } if (normindex[0] < 0) {
         for (i = 0; i < nglocal; i++) vector_grid[i] = vector[i]/nsample;
       } else {
@@ -525,7 +525,7 @@ void FixAveGrid::end_of_step()
           n = value2index[m];
           j = argindex[m];
           Compute *compute = modify->compute[n];
-          compute->post_process_grid(array_extra,norm_extra,j,
+          compute->post_process_grid(array_extra,norm_extra,-1,j,
                                      &array_grid[0][m],nvalues);
         } else if (normindex[m] < 0) {
           for (i = 0; i < nglocal; i++)
