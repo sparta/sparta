@@ -449,7 +449,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             E_Dispose += p->evib;
             Fraction_Vib = 
               1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
-            p->erot = Fraction_Vib * E_Dispose;
+            p->evib= Fraction_Vib * E_Dispose;
             E_Dispose -= p->evib;
 
           } else {
