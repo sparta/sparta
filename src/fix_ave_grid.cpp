@@ -94,6 +94,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 	argindex[nvalues] = atoi(ptr+1);
 	*ptr = '\0';
       } else argindex[nvalues] = 0;
+      extraflag[nvalues] = -1;
       n = strlen(suffix) + 1;
       ids[nvalues] = new char[n];
       strcpy(ids[nvalues],suffix);
@@ -103,23 +104,30 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
         int ndup = 0;
         if (which[nvalues] == COMPUTE) {
           int icompute = modify->find_compute(ids[nvalues]);
-          if (icompute >= 0)
-            if (modify->compute[icompute]->per_grid_flag)
-              ndup = modify->compute[icompute]->size_per_grid_cols;
+          if (icompute < 0)
+            error->all(FLERR,"Compute ID for fix ave/grid does not exist");
+          if (modify->compute[icompute]->per_grid_flag) {
+            ndup = modify->compute[icompute]->size_per_grid_cols;
+            if (modify->compute[icompute]->size_per_grid_extra_cols > 0)
+              extraflag[nvalues] = nextra++;
+          }
         }
         if (which[nvalues] == FIX) {
           int ifix = modify->find_fix(ids[nvalues]);
-          if (ifix >= 0)
-            if (modify->fix[ifix]->per_grid_flag)
-              ndup = modify->fix[ifix]->size_per_grid_cols;
+          if (ifix < 0)
+            error->all(FLERR,"Fix ID for fix ave/grid does not exist");
+          if (modify->fix[ifix]->per_grid_flag)
+            ndup = modify->fix[ifix]->size_per_grid_cols;
         }
         if (ndup) {
+          int eflag = extraflag[nvalues];
           argindex[nvalues] = 1;
           nvalues++;
           for (int icol = 2; icol <= ndup; icol++) {
             if (nvalues == maxvalues) grow();
             which[nvalues] = which[nvalues-1];
             argindex[nvalues] = icol;
+            extraflag[nvalues] = eflag;
             n = strlen(suffix) + 1;
             ids[nvalues] = new char[n];
             strcpy(ids[nvalues],suffix);
@@ -162,9 +170,6 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
       if (argindex[i] && 
 	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
-      if (modify->compute[icompute]->size_per_grid_extra_cols > 0)
-        extraflag[i] = nextra++;
-      else extraflag[i] = -1;
 
     } else if (which[i] == FIX) {
       int ifix = modify->find_fix(ids[i]);
@@ -423,7 +428,6 @@ void FixAveGrid::end_of_step()
           array_extra = extras[iextra].array_extra;
           norm_extra = extras[iextra].norm_extra;
           ncol = extras[iextra].ncol;
-          printf("EXTRA %d %d %d %d\n",m,iextra,ncol,nextra);
           double **array_grid_extra = compute->array_grid_extra;
           double **norm_grid_extra = compute->norm_grid_extra;
           for (i = 0; i < nglocal; i++)
@@ -897,12 +901,12 @@ void FixAveGrid::allocate(int n)
   }
 
   if (nextra) {
-    for (int m = 0; m < nextra; m++) {
-      int ncol = extras[m].ncol;
-      memory->grow(extras[m].array_extra,n,ncol,"ave/grid:array_extra");
-      memory->grow(extras[m].norm_extra,n,ncol,"ave/grid:norm_extra");
-      double **array_extra = extras[m].array_extra;
-      double **norm_extra = extras[m].norm_extra;
+    for (int iextra = 0; iextra < nextra; iextra++) {
+      int ncol = extras[iextra].ncol;
+      memory->grow(extras[iextra].array_extra,n,ncol,"ave/grid:array_extra");
+      memory->grow(extras[iextra].norm_extra,n,ncol,"ave/grid:norm_extra");
+      double **array_extra = extras[iextra].array_extra;
+      double **norm_extra = extras[iextra].norm_extra;
       for (int i = 0; i < n; i++)
         for (m = 0; m < ncol; m++) {
           array_extra[i][m] = 0.0;
