@@ -18,7 +18,8 @@ keywords = {vremax} or {remain} :l
     Nevery = zero vremax every this many timesteps
     startflag = {yes} or {no} = zero vremax at start of every run
   {remain} value = {yes} or {no} = hold remaining fraction of collisions over to next timestep
-  {vibrate} value = {none} or {discrete} or {smooth}
+  {rotate} value = {no} or {yes}
+  {vibrate} value = {no} or {discrete} or {smooth}
 :ule
 
 [Examples:]
@@ -66,9 +67,15 @@ to the computed collision count for that step.  If the value is set to
 attempts are made and an 8th attempt is made conditionally with a
 probability of 0.3, using a random number.
 
+The {rotate} keyword determines how vibrational energy is treated in
+particle collisions and stored by particles.  If the value is set to
+{no}, then rotational energy is not tracked; every particle's
+rotational energy is 0.0.  If the value is set to {yes}, a particle's
+rotational energy is a continuous value.
+
 The {vibrate} keyword determines how vibrational energy is treated in
 particle collisions and stored by particles.  If the value is set to
-{none}, then vibrational energy is not tracked; every particle's
+{no}, then vibrational energy is not tracked; every particle's
 vibrational energy is 0.0.  If the value is set to {discrete}, each
 particle's vibrational energy is set to discrete values, namely
 multiples of kT where k = the Boltzmann constant and T is the

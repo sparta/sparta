@@ -201,9 +201,9 @@ the appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} to
 {Vx}, {vy}, {vz} are components of particle velocity.  The {ke},
 {erot}, and {evib} attributes are the kinetic, rotational, and
 vibrational energies of the particle.  A particle's kinetic energy is
-given by 1/2 m (vx^2 + vy^2 + vz^2).  The way that vibrational energy
-is treated in collisions and stored by particles is affected by the
-"collide_modify vibrate"_collid_modify.html command.
+given by 1/2 m (vx^2 + vy^2 + vz^2).  The way that rotational and
+vibrational energy is treated in collisions and stored by particles is
+affected by the "collide_modify"_collid_modify.html command.
 
 The {c_ID} and {c_ID\[N\]} attributes allow per-particle vectors or
 arrays calculated by a "compute"_compute.html to be output.  The ID in
