@@ -1233,18 +1233,6 @@ void DumpParticle::pack_vz(int n)
 void DumpParticle::pack_ke(int n)
 {
   Particle::OnePart *particles = particle->particles;
-
-  for (int i = 0; i < nchoose; i++) {
-    buf[n] = particles[clist[i]].erot;
-    n += size_one;
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void DumpParticle::pack_erot(int n)
-{
-  Particle::OnePart *particles = particle->particles;
   Particle::Species *species = particle->species;
   Particle::OnePart *p;
   double *v;
@@ -1255,6 +1243,18 @@ void DumpParticle::pack_erot(int n)
     v = p->v;
     buf[n] = mvv2e * 0.5 * species[p->ispecies].mass *
       (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_erot(int n)
+{
+  Particle::OnePart *particles = particle->particles;
+
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = particles[clist[i]].erot;
     n += size_one;
   }
 }
