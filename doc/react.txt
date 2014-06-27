@@ -68,8 +68,8 @@ whitespace in the following format
 R1 + R2 + ... --> P1 + P2 + ...
 type style C1 C2 ... :pre
 
-The data directory in the SPARTA distribution contains reaction files,
-all with the suffix ".tce".
+The data directory in the SPARTA distribution contains reaction files
+for the TCE model, all with the suffix ".tce".
 
 The first line is a text-based description of a single reaction.  R1,
 R2, etc are one or more reactants, listed as "species"_species.html
@@ -85,12 +85,17 @@ case) with the following meaning.  The type determines how many
 reactants and products can be specified in the first line.
 
 D = dissociation = 2 reactants and 3 products
+E = exchange = 2 reactants and 2 products
 I = ionization = 2 reactants and 2 or 3 products
-E = exchange = 2 reactants and 2 products :ul
+R = recombination :pre
 
 A dissociation reaction means that R1 dissociates into P1 and P2 when
 it collides with R2.  R2 is preserved in the collision, so P3 = R2 is
 required.
+
+An exchange reaction is a collision between R1 and R2 that results in
+new products P1 and P2.  There is no restriction on the species
+involved in the reaction.
 
 An ionization reaction with 2 products is typically a collision
 between R1 and R2 that results in a positively charged ion and an
@@ -99,14 +104,11 @@ restriction on the species involved in the reaction.
 
 An ionization reaction with 3 products is typically a collision
 between a neutral R1 and an electon R2 which ejects an electron from
-the neutral species.  R2 is preserved in the collision, so P3 = R2 is
-required.
+the neutral species, resulting in P1 and P2.  R2 is preserved in the
+collision, so P3 = R2 is required.
 
-An exchange reaction is typically a collision between R1 and R2 that
-results in new products P1 and P2.  There is no restriction on the
-species involved in the reaction.
-
-IMPORTANT NOTE: Recombination reactions have not yet been implemented.
+IMPORTANT NOTE: Ionization and recombination reactions have not yet
+been implemented in SPARTA.
 
 The {style} of each reaction is a single character (upper or lower
 case) with the following meaning:
@@ -126,7 +128,7 @@ C5 = reaction energy (positive for exothermic) :ul
 
 :line
 
-The {qk} style is Bird's Quantum-Kinetic mode (QK)
+The {qk} style is Bird's Quantum-Kinetic model (QK).
 
 IMPORTANT NOTE: The QK model has not yet been implemented in SPARTA.
 

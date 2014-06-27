@@ -67,10 +67,10 @@ total # of particles of that species, and {kB} is the Boltzmann factor.
 Theta is the characteristic vibrational temperature for the species,
 as defined in the file read by the "species"_species.html command.
 
-Note that the "collide_modify vibstyle"_collide_modify.html can
-be used to choose how vibrational energy is treated in particle
-collisions.  The setting for that option affects the vibrational
-temperature measured by this command.
+Note that the "collide_modify vibrate"_collide_modify.html command
+affects how vibrational energy is treated in particle collisions and
+stored by particles.  It thus also affects the vibrational temperature
+calculated by this compute.
 
 [Output info:]
 

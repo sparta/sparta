@@ -16,8 +16,9 @@ ID is documented in "compute"_compute.html command :ulb,l
 reduce = style name of this compute command :l
 mode = {sum} or {min} or {max} or {ave} :l
 one or more inputs can be listed :l
-input = x, y, z, vx, vy, vz, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :l
-  x,y,z,vx,vy,vz = particle attribute (position or velocity component)
+input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :l
+  x,y,z,vx,vy,vz = particle position or velocity component
+  ke,erot,evib = particle energy component
   c_ID = per-particle or per-grid vector calculated by a compute with ID
   c_ID\[I\] = Ith column of per-particle or per-grid array calculated by a compute with ID
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
@@ -58,12 +59,13 @@ then divides by the number of values in the vector.
 
 Each listed input is operated on independently.
 
-Each listed input can be a particle attribute (position or velocity
-component) or can be the result of a "compute"_compute.html or
-"fix"_fix.html or the evaluation of a particle-style
-"variable"_variable.html.
+Each listed input can be a particle attribute or can be the result of
+a "compute"_compute.html or "fix"_fix.html or the evaluation of a
+particle-style "variable"_variable.html.
 
-The particle attribute values (x,y,z,vx,vy,vz) are self-explanatory.
+The particle attributes x,y,z,vx,vy,vz are position and velocity
+components.  The ke,erot,evib attributes are for kinetic, rotational,
+and vibrational energy of the particles.
 
 If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  Computes can generate

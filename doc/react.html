@@ -74,8 +74,8 @@ whitespace in the following format
 <PRE>R1 + R2 + ... --> P1 + P2 + ...
 type style C1 C2 ... 
 </PRE>
-<P>The data directory in the SPARTA distribution contains reaction files,
-all with the suffix ".tce".
+<P>The data directory in the SPARTA distribution contains reaction files
+for the TCE model, all with the suffix ".tce".
 </P>
 <P>The first line is a text-based description of a single reaction.  R1,
 R2, etc are one or more reactants, listed as <A HREF = "species.html">species</A>
@@ -90,13 +90,18 @@ by whitespace and "-->".
 case) with the following meaning.  The type determines how many
 reactants and products can be specified in the first line.
 </P>
-<UL><LI>D = dissociation = 2 reactants and 3 products
-<LI>I = ionization = 2 reactants and 2 or 3 products
-<LI>E = exchange = 2 reactants and 2 products 
-</UL>
+<PRE>D = dissociation = 2 reactants and 3 products
+E = exchange = 2 reactants and 2 products
+I = ionization = 2 reactants and 2 or 3 products
+R = recombination 
+</PRE>
 <P>A dissociation reaction means that R1 dissociates into P1 and P2 when
 it collides with R2.  R2 is preserved in the collision, so P3 = R2 is
 required.
+</P>
+<P>An exchange reaction is a collision between R1 and R2 that results in
+new products P1 and P2.  There is no restriction on the species
+involved in the reaction.
 </P>
 <P>An ionization reaction with 2 products is typically a collision
 between R1 and R2 that results in a positively charged ion and an
@@ -105,14 +110,11 @@ restriction on the species involved in the reaction.
 </P>
 <P>An ionization reaction with 3 products is typically a collision
 between a neutral R1 and an electon R2 which ejects an electron from
-the neutral species.  R2 is preserved in the collision, so P3 = R2 is
-required.
+the neutral species, resulting in P1 and P2.  R2 is preserved in the
+collision, so P3 = R2 is required.
 </P>
-<P>An exchange reaction is typically a collision between R1 and R2 that
-results in new products P1 and P2.  There is no restriction on the
-species involved in the reaction.
-</P>
-<P>IMPORTANT NOTE: Recombination reactions have not yet been implemented.
+<P>IMPORTANT NOTE: Ionization and recombination reactions have not yet
+been implemented in SPARTA.
 </P>
 <P>The <I>style</I> of each reaction is a single character (upper or lower
 case) with the following meaning:
@@ -132,7 +134,7 @@ C2, ..., and how they are interpreted by SPARTA.
 </UL>
 <HR>
 
-<P>The <I>qk</I> style is Bird's Quantum-Kinetic mode (QK)
+<P>The <I>qk</I> style is Bird's Quantum-Kinetic model (QK).
 </P>
 <P>IMPORTANT NOTE: The QK model has not yet been implemented in SPARTA.
 </P>

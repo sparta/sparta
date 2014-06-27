@@ -23,9 +23,10 @@
 
 <LI>one or more inputs can be listed 
 
-<LI>input = x, y, z, vx, vy, vz, c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+<LI>input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID[N], f_ID, f_ID[N], v_name 
 
-<PRE>  x,y,z,vx,vy,vz = particle attribute (position or velocity component)
+<PRE>  x,y,z,vx,vy,vz = particle position or velocity component
+  ke,erot,evib = particle energy component
   c_ID = per-particle or per-grid vector calculated by a compute with ID
   c_ID[I] = Ith column of per-particle or per-grid array calculated by a compute with ID
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
@@ -69,12 +70,13 @@ then divides by the number of values in the vector.
 </P>
 <P>Each listed input is operated on independently.
 </P>
-<P>Each listed input can be a particle attribute (position or velocity
-component) or can be the result of a <A HREF = "compute.html">compute</A> or
-<A HREF = "fix.html">fix</A> or the evaluation of a particle-style
-<A HREF = "variable.html">variable</A>.
+<P>Each listed input can be a particle attribute or can be the result of
+a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> or the evaluation of a
+particle-style <A HREF = "variable.html">variable</A>.
 </P>
-<P>The particle attribute values (x,y,z,vx,vy,vz) are self-explanatory.
+<P>The particle attributes x,y,z,vx,vy,vz are position and velocity
+components.  The ke,erot,evib attributes are for kinetic, rotational,
+and vibrational energy of the particles.
 </P>
 <P>If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  Computes can generate
