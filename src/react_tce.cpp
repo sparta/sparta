@@ -277,16 +277,6 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     // compute probability of reaction
         
     switch (r->type) {
-    case IONIZATION:
-      {
-        rprobability = 0.0;
-        if (rprobability > 1.0) {
-          printf("rprobability > 1.0 in polyatomic test reaction!\n");
-          printf("(rprob = %f)\n", rprobability);
-        }
-        break;
-      }
-        
     case DISSOCIATION:
     case EXCHANGE:
       {
@@ -408,8 +398,8 @@ void ReactTCE::readfile(char *fname)
     word = strtok(line2," \t\n");
     if (!word) error->all(FLERR,"Invalid reaction type in file");
     if (word[0] == 'D' || word[0] == 'd') r->type = DISSOCIATION;
-    else if (word[0] == 'I' || word[0] == 'i') r->type = IONIZATION;
     else if (word[0] == 'E' || word[0] == 'e') r->type = EXCHANGE;
+    else if (word[0] == 'I' || word[0] == 'i') r->type = IONIZATION;
     else if (word[0] == 'R' || word[0] == 'r') r->type = RECOMBINATION;
     else error->all(FLERR,"Invalid reaction type in file");
 
@@ -431,6 +421,13 @@ void ReactTCE::readfile(char *fname)
     
     nlist++;
   }
+
+  // check for ionizatoin and recombitation reactions, not yet supported
+
+  for (int i = 0; i < nlist; i++)
+    if (rlist[i].type == IONIZATION || rlist[i].type == RECOMBINATION)
+      error->all(FLERR,"Ionization and recombination reactions are "
+                 "not yet implemented");
 }
 
 /* ----------------------------------------------------------------------
