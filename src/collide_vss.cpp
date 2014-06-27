@@ -400,7 +400,9 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
       if (rotdof) {
         if (rotn_phi >= random->uniform()) {
-          if (rotdof == 2) {
+          if (rotstyle == NONE) {
+            // CODE for rotational energy = 0.0
+          } if (rotdof == 2) {
             E_Dispose += p->erot;
             Fraction_Rot = 
               1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
@@ -585,7 +587,9 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     rotdof = species[sp].rotdof;
 
     if (rotdof) {
-      if (rotdof == 2) {
+      if (rotstyle == NONE) {
+        // CODE for rotational energy = 0.0
+      } else if (rotdof == 2) {
         E_Dispose += p->erot;
         Fraction_Rot = 
           1- pow(random->uniform(),(1/(2.5-params[sp].omega)));

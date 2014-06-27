@@ -522,6 +522,10 @@ double Particle::erot(int isp, RanPark *erandom)
 {
  double eng,a,erm,b;
 
+  int rotstyle = NONE;
+  if (collide) rotstyle = collide->rotstyle;
+
+ if (rotstyle == NONE) return 0.0;
  if (species[isp].rotdof < 2) return 0.0;
 
  if (species[isp].rotdof == 2)

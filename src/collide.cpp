@@ -66,6 +66,7 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   vremax = NULL;
   vremax_initial = NULL;
   remain = NULL;
+  rotstyle = SMOOTH;
   vibstyle = NONE;
 
   // initialize counters in case stats outputs them
@@ -207,9 +208,15 @@ void Collide::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"no") == 0) remainflag = 0;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"rotate") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"no") == 0) rotstyle = NONE;
+      else if (strcmp(arg[iarg+1],"yes") == 0) rotstyle = SMOOTH;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 2;
     } else if (strcmp(arg[iarg],"vibrate") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"none") == 0) vibstyle = NONE;
+      if (strcmp(arg[iarg+1],"no") == 0) vibstyle = NONE;
       else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;
       else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
       else error->all(FLERR,"Illegal collide_modify command");

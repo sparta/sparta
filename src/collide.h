@@ -26,7 +26,8 @@ namespace SPARTA_NS {
 class Collide : protected Pointers {
  public:
   char *style;
-  int vibstyle;       // none/discrete/continuous vibrational modes
+  int rotstyle;       // none/smooth rotational modes
+  int vibstyle;       // none/discrete/smooth vibrational modes
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;

@@ -286,6 +286,7 @@ FixAveGrid::~FixAveGrid()
   memory->destroy(which);
   memory->destroy(argindex);
   memory->destroy(value2index);
+  memory->destroy(extraflag);
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
   memory->sfree(ids);
 
@@ -422,6 +423,7 @@ void FixAveGrid::end_of_step()
           array_extra = extras[iextra].array_extra;
           norm_extra = extras[iextra].norm_extra;
           ncol = extras[iextra].ncol;
+          printf("EXTRA %d %d %d %d\n",m,iextra,ncol,nextra);
           double **array_grid_extra = compute->array_grid_extra;
           double **norm_grid_extra = compute->norm_grid_extra;
           for (i = 0; i < nglocal; i++)
