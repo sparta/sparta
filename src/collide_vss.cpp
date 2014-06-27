@@ -369,7 +369,7 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip, 
 						Particle::OnePart *jp)
 {
-  double Exp_1,Exp_2,State_prob,Fraction_Rot,evib;
+  double Exp_1,Exp_2,State_prob,Fraction_Rot,Fraction_Vib;
   int i,rotdof,vibdof;
   long Max_Level;
 
@@ -401,7 +401,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       if (rotdof) {
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
-            // CODE for rotational energy = 0.0
+            p->erot = 0.0 ; 
           } if (rotdof == 2) {
             E_Dispose += p->erot;
             Fraction_Rot = 
@@ -430,27 +430,40 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       if (vibdof) {
         if (vibn_phi >= random->uniform()) {
           if (vibstyle == NONE) {
-            // CODE for vibrational energy = 0.0
-          } else if (vibdof == 2 && vibstyle == SMOOTH) {
-            // CODE for dof = 2 and continuous vibrational energy
-            //evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
-            E_Dispose += evib;
-            Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
-        
-            do {
-              //p->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
-              //evib = (double) 
-              //  (p->ivib * update->boltz * species[sp].vibtemp);
-              State_prob = pow((1 - evib / E_Dispose),
-                               (1.5 - params[sp].omega));
-            } while (State_prob < random->uniform());
-            
-            E_Dispose -= evib;
-
+            p->evib =0.0 ; 
           } else if (vibdof == 2 && vibstyle == DISCRETE) {
-            // CODE for dof = 2 and discrete levels of vibrational energy
+        
+          E_Dispose += p->evib;
+          Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
+          do {
+            int ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+            p->evib = (double)
+            (ivib * update->boltz * species[sp].vibtemp);
+            State_prob = pow((1 - p->evib / E_Dispose),
+                           (1.5 - params[sp].omega));
+          } while (State_prob < random->uniform());
+          E_Dispose -= p->evib;
+
+          } else if (vibdof == 2 && vibstyle == SMOOTH) {
+
+            E_Dispose += p->evib;
+            Fraction_Vib = 
+              1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
+            p->erot = Fraction_Vib * E_Dispose;
+            E_Dispose -= p->evib;
+
           } else {
-            // CODE for dof > 2
+            E_Dispose += p->evib;
+            Exp_1 = species[sp].vibdof / 2;
+            Exp_2 = 2.5 - params[sp].omega;
+            do {
+              Fraction_Vib = random->uniform();
+              State_prob = 
+                ((Exp_1+Exp_2-2)/pow(((Exp_1-1)*Fraction_Vib),(Exp_1-1)) *
+                 ((Exp_1+Exp_2)/(Exp_2-1)*pow((1-Fraction_Vib),(Exp_2-1))));
+            } while (State_prob < random->uniform());
+            p->evib = Fraction_Vib*E_Dispose;
+            E_Dispose -= p->evib;
           }
         }
       }
@@ -547,7 +560,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                                              Particle::OnePart *jp,
                                              Particle::OnePart *kp)
 {
-  double Exp_1,Exp_2,State_prob,Fraction_Rot,evib;
+  double Exp_1,Exp_2,State_prob,Fraction_Rot,Fraction_Vib;
   int i,numspecies,rotdof,vibdof;
   long Max_Level;
 
@@ -586,58 +599,72 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     int sp = p->ispecies;
     rotdof = species[sp].rotdof;
 
-    if (rotdof) {
-      if (rotstyle == NONE) {
-        // CODE for rotational energy = 0.0
-      } else if (rotdof == 2) {
-        E_Dispose += p->erot;
-        Fraction_Rot = 
-          1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
-        p->erot = Fraction_Rot * E_Dispose;
-        E_Dispose -= p->erot;
-        
-      } else {
-        E_Dispose += p->erot;
-        Exp_1 = species[sp].rotdof / 2;
-        Exp_2 = 2.5 - params[sp].omega;
-        do {
-          Fraction_Rot = random->uniform();
-          State_prob = 
-            ((Exp_1+Exp_2-2.0)/pow(((Exp_1-1.0)*Fraction_Rot),(Exp_1-1.0)) *
-             ((Exp_1+Exp_2)/(Exp_2-1.0)*pow((1.0-Fraction_Rot),(Exp_2-1.0))));
-        } while (State_prob < random->uniform());
-        p->erot = Fraction_Rot*E_Dispose;
-        E_Dispose -= p->erot;
-      }
-    }
 
-    vibdof = species[sp].vibdof;
-    
-    if (vibdof) {
-      if (vibstyle == NONE) {
-        // CODE for vibrational energy = 0.0
-      } else if (vibdof == 2 && vibstyle == SMOOTH) {
-        // CODE for dof = 2 and continuous vibrational energy
-        //evib = (double) (p->ivib*update->boltz*species[sp].vibtemp);
-        E_Dispose += evib;
-        Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
-      
-        do {
-          //p->ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
-          //evib = (double) 
-          //  (p->ivib * update->boltz * species[sp].vibtemp);
-          State_prob = pow((1 - evib / E_Dispose),
+     if (rotdof) {
+          if (rotstyle == NONE) {
+            p->erot = 0.0 ;
+          } if (rotdof == 2) {
+            E_Dispose += p->erot;
+            Fraction_Rot =
+              1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
+            p->erot = Fraction_Rot * E_Dispose;
+            E_Dispose -= p->erot;
+
+          } else {
+            E_Dispose += p->erot;
+            Exp_1 = species[sp].rotdof / 2;
+            Exp_2 = 2.5 - params[sp].omega;
+            do {
+              Fraction_Rot = random->uniform();
+              State_prob =
+                ((Exp_1+Exp_2-2)/pow(((Exp_1-1)*Fraction_Rot),(Exp_1-1)) *
+                 ((Exp_1+Exp_2)/(Exp_2-1)*pow((1-Fraction_Rot),(Exp_2-1))));
+            } while (State_prob < random->uniform());
+            p->erot = Fraction_Rot*E_Dispose;
+            E_Dispose -= p->erot;
+          }
+      }
+
+      vibdof = species[sp].vibdof;
+
+      if (vibdof) {
+          if (vibstyle == NONE) {
+            p->evib =0.0 ;
+          } else if (vibdof == 2 && vibstyle == DISCRETE) {
+
+          E_Dispose += p->evib;
+          Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
+          do {
+            int ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+            p->evib = (double)
+            (ivib * update->boltz * species[sp].vibtemp);
+            State_prob = pow((1 - p->evib / E_Dispose),
                            (1.5 - params[sp].omega));
-        } while (State_prob < random->uniform());
-        
-        E_Dispose -= evib;
+          } while (State_prob < random->uniform());
+          E_Dispose -= p->evib;
 
-      } else if (vibdof == 2 && vibstyle == DISCRETE) {
-        // CODE for dof = 2 and discrete levels of vibrational energy
-      } else {
-        // CODE for dof > 2
+          } else if (vibdof == 2 && vibstyle == SMOOTH) {
+
+            E_Dispose += p->evib;
+            Fraction_Vib =
+              1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
+            p->erot = Fraction_Vib * E_Dispose;
+            E_Dispose -= p->evib;
+
+          } else {
+            E_Dispose += p->evib;
+            Exp_1 = species[sp].vibdof / 2;
+            Exp_2 = 2.5 - params[sp].omega;
+            do {
+              Fraction_Vib = random->uniform();
+              State_prob =
+                ((Exp_1+Exp_2-2)/pow(((Exp_1-1)*Fraction_Vib),(Exp_1-1)) *
+                 ((Exp_1+Exp_2)/(Exp_2-1)*pow((1-Fraction_Vib),(Exp_2-1))));
+            } while (State_prob < random->uniform());
+            p->evib = Fraction_Vib*E_Dispose;
+            E_Dispose -= p->evib;
+          }
       }
-    }
   }
   
   // compute post-collision internal energies
