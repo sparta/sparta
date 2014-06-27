@@ -207,7 +207,7 @@ void Collide::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"no") == 0) remainflag = 0;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"vib") == 0) {
+    } else if (strcmp(arg[iarg],"vibrate") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"none") == 0) vibstyle = NONE;
       else if (strcmp(arg[iarg+1],"discrete") == 0) vibstyle = DISCRETE;

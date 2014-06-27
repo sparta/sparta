@@ -32,7 +32,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,TYPE,PROC,X,Y,Z,XS,YS,ZS,VX,VY,VZ,EROT,EVIB,
+enum{ID,TYPE,PROC,X,Y,Z,XS,YS,ZS,VX,VY,VZ,KE,EROT,EVIB,
      COMPUTE,FIX,VARIABLE};
 enum{LT,LE,GT,GE,EQ,NEQ};
 enum{INT,DOUBLE,CELLINT,STRING};    // many files
@@ -438,6 +438,19 @@ int DumpParticle::count()
 	ptr = dchoose;
 	nstride = 1;
 
+      } else if (thresh_array[ithresh] == KE) {
+        Particle::Species *species = particle->species;
+        Particle::OnePart *p;
+        double *v;
+        double mvv2e = update->mvv2e;
+	for (i = 0; i < nlocal; i++) {
+          p = &particles[i];
+          v = p->v;
+          dchoose[i] = mvv2e * 0.5 * species[p->ispecies].mass *
+            (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        }
+	ptr = dchoose;
+	nstride = 1;
       } else if (thresh_array[ithresh] == EROT) {
 	for (i = 0; i < nlocal; i++) dchoose[i] = particles[i].erot;
 	ptr = dchoose;
@@ -608,6 +621,9 @@ int DumpParticle::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpParticle::pack_vz;
       vtype[i] = DOUBLE;
 
+    } else if (strcmp(arg[iarg],"ke") == 0) {
+      pack_choice[i] = &DumpParticle::pack_ke;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"erot") == 0) {
       pack_choice[i] = &DumpParticle::pack_erot;
       vtype[i] = DOUBLE;
@@ -1214,12 +1230,31 @@ void DumpParticle::pack_vz(int n)
 
 /* ---------------------------------------------------------------------- */
 
-void DumpParticle::pack_erot(int n)
+void DumpParticle::pack_ke(int n)
 {
   Particle::OnePart *particles = particle->particles;
 
   for (int i = 0; i < nchoose; i++) {
     buf[n] = particles[clist[i]].erot;
+    n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpParticle::pack_erot(int n)
+{
+  Particle::OnePart *particles = particle->particles;
+  Particle::Species *species = particle->species;
+  Particle::OnePart *p;
+  double *v;
+  double mvv2e = update->mvv2e;
+
+  for (int i = 0; i < nchoose; i++) {
+    p = &particles[clist[i]];
+    v = p->v;
+    buf[n] = mvv2e * 0.5 * species[p->ispecies].mass *
+      (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
     n += size_one;
   }
 }

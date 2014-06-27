@@ -118,6 +118,7 @@ class DumpParticle : public Dump {
   void pack_vy(int);
   void pack_vz(int);
 
+  void pack_ke(int);
   void pack_erot(int);
   void pack_evib(int);
 };
