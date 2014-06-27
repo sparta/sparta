@@ -65,7 +65,7 @@ particle-style "variable"_variable.html.
 
 The particle attributes x,y,z,vx,vy,vz are position and velocity
 components.  The ke,erot,evib attributes are for kinetic, rotational,
-and vibrational energy of the particles.
+and vibrational energy of particles.
 
 If a value begins with "c_", a compute ID must follow which has been
 previously defined in the input script.  Computes can generate
