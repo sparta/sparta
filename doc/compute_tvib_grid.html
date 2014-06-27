@@ -59,34 +59,22 @@ species in the group.  T1, T2, ... are the vibrational temperatures of
 each species.  N1, N2, ... are the counts of particles of each
 species.
 </P>
-<P>The vibrational temperature Tsp for a single species is
-defined as follows:
+<P>The vibrational temperature Tsp for particles of a single species in
+the group is defined as follows
 </P>
-<PRE>Tsp = (2/kB) Sum_i (evib_i) / N (2 Ibar ln(1 + 1/Ibar)) 
+<PRE>Tsp = (2/kB) Sum_i (evib_i) / N (2 Ibar ln(1 + 1/Ibar))
+Ibar = Sum_i (e_vib_i) / (N kB Theta) 
 </PRE>
-<P>NOTE: need more doc info here ...
+<P>where e_vib is the vibrational energy of a single particle I, N is the
+total # of particles of that species, and <I>kB</I> is the Boltzmann factor.
+Theta is the characteristic vibrational temperature for the species,
+as defined in the file read by the <A HREF = "species.html">species</A> command.
 </P>
-<P>vibstyle option of global command
+<P>Note that the <A HREF = "collide_modify.html">collide_modify vibstyle</A> can
+be used to choose how vibrational energy is treated in particle
+collisions.  The setting for that option affects the vibrational
+temperature measured by this command.
 </P>
-<P>NOTE: ERASE this next part when done
-</P>
-<P>The <I>erot</I> value computes the average rotational energy of particles
-in the group:
-</P>
-<PRE>Erot = Sum_i (erot_i) / N 
-</PRE>
-<P>The <I>trot</I> value computes a rotational temperature by the following
-formula where <I>kB</I> is the Boltzmann factor:
-</P>
-<PRE>Trot = (2/kB) Sum_i (erot_i) / Sum_i (dof_i) 
-</PRE>
-<P>Dof_i is the number of rotational degrees of freedom for particle i.
-</P>
-<P>The <I>evib</I> value computes the average vibrational energy of particles
-in the group:
-</P>
-<PRE>Erot = Sum_i (evib_i) / N 
-</PRE>
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid array, with the number of columns

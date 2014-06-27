@@ -56,33 +56,21 @@ species in the group.  T1, T2, ... are the vibrational temperatures of
 each species.  N1, N2, ... are the counts of particles of each
 species.
 
-The vibrational temperature Tsp for a single species is
-defined as follows:
+The vibrational temperature Tsp for particles of a single species in
+the group is defined as follows
 
-Tsp = (2/kB) Sum_i (evib_i) / N (2 Ibar ln(1 + 1/Ibar)) :pre
+Tsp = (2/kB) Sum_i (evib_i) / N (2 Ibar ln(1 + 1/Ibar))
+Ibar = Sum_i (e_vib_i) / (N kB Theta) :pre
 
-NOTE: need more doc info here ...
+where e_vib is the vibrational energy of a single particle I, N is the
+total # of particles of that species, and {kB} is the Boltzmann factor.
+Theta is the characteristic vibrational temperature for the species,
+as defined in the file read by the "species"_species.html command.
 
-vibstyle option of global command
-
-NOTE: ERASE this next part when done
-
-The {erot} value computes the average rotational energy of particles
-in the group:
-
-Erot = Sum_i (erot_i) / N :pre
-
-The {trot} value computes a rotational temperature by the following
-formula where {kB} is the Boltzmann factor:
-
-Trot = (2/kB) Sum_i (erot_i) / Sum_i (dof_i) :pre
-
-Dof_i is the number of rotational degrees of freedom for particle i.
-
-The {evib} value computes the average vibrational energy of particles
-in the group:
-
-Erot = Sum_i (evib_i) / N :pre
+Note that the "collide_modify vibstyle"_collide_modify.html can
+be used to choose how vibrational energy is treated in particle
+collisions.  The setting for that option affects the vibrational
+temperature measured by this command.
 
 [Output info:]
 
