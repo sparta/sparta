@@ -29,7 +29,7 @@
 using namespace SPARTA_NS;
 
 enum{SUM,MINN,MAXX,AVE};
-enum{X,V,COMPUTE,FIX,VARIABLE};
+enum{X,V,KE,EROT,EVIB,COMPUTE,FIX,VARIABLE};
 enum{PARTICLE,GRID,SURF};
 
 #define INVOKED_PER_PARTICLE 8
@@ -85,6 +85,16 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"vz") == 0) {
       which[nvalues] = V;
       argindex[nvalues++] = 2;
+
+    } else if (strcmp(arg[iarg],"ke") == 0) {
+      which[nvalues] = KE;
+      argindex[nvalues++] = 0;
+    } else if (strcmp(arg[iarg],"erot") == 0) {
+      which[nvalues] = EROT;
+      argindex[nvalues++] = 0;
+    } else if (strcmp(arg[iarg],"evib") == 0) {
+      which[nvalues] = EVIB;
+      argindex[nvalues++] = 0;
 
     } else if (strncmp(arg[iarg],"c_",2) == 0 ||
                strncmp(arg[iarg],"f_",2) == 0 ||
@@ -442,6 +452,43 @@ double ComputeReduce::compute_one(int m, int flag)
         combine(one,particles[i].v[aidx],i);
     } else one = particles[flag].v[aidx];
 
+  } else if (which[m] == KE) {
+    Particle::OnePart *particles = particle->particles;
+    Particle::Species *species = particle->species;
+    double mvv2e = update->mvv2e;
+    int n = particle->nlocal;
+    Particle::OnePart *p;
+    double *v;
+    double ke;
+    if (flag < 0) {
+      for (i = 0; i < n; i++) {
+        p = &particles[i];
+        v = p->v;
+        ke = mvv2e * 0.5 * species[p->ispecies].mass *
+          (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        combine(one,ke,i);
+      }
+    } else {
+      p = &particles[flag];
+      v = p->v;
+      one = mvv2e * 0.5 * species[p->ispecies].mass *
+        (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+    }
+  } else if (which[m] == EROT) {
+    Particle::OnePart *particles = particle->particles;
+    int n = particle->nlocal;
+    if (flag < 0) {
+      for (i = 0; i < n; i++)
+        combine(one,particles[i].erot,i);
+    } else one = particles[flag].erot;
+  } else if (which[m] == EVIB) {
+    Particle::OnePart *particles = particle->particles;
+    int n = particle->nlocal;
+    if (flag < 0) {
+      for (i = 0; i < n; i++)
+        combine(one,particles[i].evib,i);
+    } else one = particles[flag].evib;
+
   // invoke compute if not previously invoked
 
   } else if (which[m] == COMPUTE) {
@@ -592,6 +639,9 @@ bigint ComputeReduce::count(int m)
   int vidx = value2index[m];
 
   if (which[m] == X || which[m] == V) {
+    ncount = particle->nlocal;
+    MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  } else if (which[m] == KE || which[m] == EROT || which[m] == EVIB) {
     ncount = particle->nlocal;
     MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   } else if (which[m] == COMPUTE) {
