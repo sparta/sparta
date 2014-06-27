@@ -160,6 +160,9 @@ void Domain::set_boundary(int narg, char **arg)
       if (bflag[m] != PERIODIC || bflag[m+1] != PERIODIC)
 	error->all(FLERR,"Both sides of boundary must be periodic");
     }
+
+  if (bflag[YLO] == AXISYM)
+    error->all(FLERR,"Axi-symmetry is not yet supported in SPARTA");
 }
 
 /* ----------------------------------------------------------------------
