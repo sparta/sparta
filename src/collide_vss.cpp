@@ -231,7 +231,7 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
-  precoln.evib = ip->evib * jp->evib;
+  precoln.evib = ip->evib + jp->evib;
 
   precoln.eint   = precoln.erot + precoln.evib;
   precoln.etotal = precoln.etrans + precoln.eint;
@@ -369,16 +369,18 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip, 
 						Particle::OnePart *jp)
 {
-  double Exp_1,Exp_2,State_prob,Fraction_Rot,Fraction_Vib;
+  double Exp_1,Exp_2,State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
   int i,rotdof,vibdof;
-  long Max_Level;
+  long Max_Level, ivib;
 
   Particle::OnePart *p;
   Particle::Species *species = particle->species;
 
   double AdjustFactor = 0.99999;
-  double rotn_phi = 0.5;
-  double vibn_phi = 0.5;
+  double rotn_phi = 1.0;
+  double vibn_phi = 1.0;
+  postcoln.erot = 0.0;
+  postcoln.evib = 0.0;
 
   // handle each kind of energy disposal for non-reacting reactants
 
@@ -389,7 +391,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
     jp->evib = 0.0;
 
   } else {
-    double E_Dispose = precoln.etrans;
+//    double E_Dispose = precoln.etrans;
+    E_Dispose = precoln.etrans;
 
     for (i = 0; i < 2; i++) {
       if (i == 0) p = ip; 
@@ -402,12 +405,14 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
             p->erot = 0.0 ; 
-          } if (rotdof == 2) {
+
+          } else if (rotstyle != NONE && rotdof == 2) {
             E_Dispose += p->erot;
             Fraction_Rot = 
               1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
             p->erot = Fraction_Rot * E_Dispose;
             E_Dispose -= p->erot;
+            postcoln.erot += p->erot;
           
           } else {
             E_Dispose += p->erot;
@@ -421,6 +426,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             } while (State_prob < random->uniform());
             p->erot = Fraction_Rot*E_Dispose;
             E_Dispose -= p->erot;
+            postcoln.erot += p->erot;
           }
         }
       }
@@ -436,23 +442,24 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
           E_Dispose += p->evib;
           Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
           do {
-            int ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+            ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
             p->evib = (double)
             (ivib * update->boltz * species[sp].vibtemp);
             State_prob = pow((1 - p->evib / E_Dispose),
                            (1.5 - params[sp].omega));
           } while (State_prob < random->uniform());
           E_Dispose -= p->evib;
+          postcoln.evib += p->evib;
 
           } else if (vibdof == 2 && vibstyle == SMOOTH) {
-
             E_Dispose += p->evib;
             Fraction_Vib = 
               1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
             p->evib= Fraction_Vib * E_Dispose;
             E_Dispose -= p->evib;
+            postcoln.evib += p->evib;
 
-          } else {
+          } else if (vibdof > 2) {
             E_Dispose += p->evib;
             Exp_1 = species[sp].vibdof / 2;
             Exp_2 = 2.5 - params[sp].omega;
@@ -464,21 +471,16 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             } while (State_prob < random->uniform());
             p->evib = Fraction_Vib*E_Dispose;
             E_Dispose -= p->evib;
+            postcoln.evib += p->evib;
           }
         }
       }
     }
   }
 
-  // compute post-collision internal energies
-
-  postcoln.erot = ip->erot + jp->erot;
-  postcoln.evib = ip->evib + jp->evib;
-
   // compute portion of energy left over for scattering
-
   postcoln.eint = postcoln.erot + postcoln.evib;
-  postcoln.etrans = precoln.etotal - postcoln.eint;
+  postcoln.etrans = E_Dispose;
 
  return;
 }
@@ -562,7 +564,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 {
   double Exp_1,Exp_2,State_prob,Fraction_Rot,Fraction_Vib;
   int i,numspecies,rotdof,vibdof;
-  long Max_Level;
+  long Max_Level,ivib;
 
   Particle::OnePart *p;
   Particle::Species *species = particle->species;
@@ -635,7 +637,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           E_Dispose += p->evib;
           Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
           do {
-            int ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
+            ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
             p->evib = (double)
             (ivib * update->boltz * species[sp].vibtemp);
             State_prob = pow((1 - p->evib / E_Dispose),
