@@ -522,11 +522,10 @@ double Particle::erot(int isp, RanPark *erandom)
 {
  double eng,a,erm,b;
 
-  int rotstyle = NONE;
-  if (collide) rotstyle = collide->rotstyle;
-
- if (rotstyle == NONE) return 0.0;
+ if (!collide || collide->rotstyle == NONE) return 0.0;
  if (species[isp].rotdof < 2) return 0.0;
+
+ // NOTE: is temp_thermal always set?
 
  if (species[isp].rotdof == 2)
    eng = -log(erandom->uniform()) * update->boltz * update->temp_thermal;
@@ -538,7 +537,6 @@ double Particle::erot(int isp, RanPark *erandom)
      b = pow(erm/a,a) * exp(a-erm);
      if (b > erandom->uniform()) break;
    }
-   // NOTE: is temp_thermal always set?
    eng = erm * update->boltz * update->temp_thermal;
  }
 
@@ -552,17 +550,17 @@ double Particle::erot(int isp, RanPark *erandom)
 
 double Particle::evib(int isp, RanPark *erandom)
 {
-  // NOTE: is temp_thermal always set?
-
   double eng,a,erm,b;
 
   int vibstyle = NONE;
   if (collide) vibstyle = collide->vibstyle;
 
-  if (vibstyle == NONE) eng = 1.0;
+  // NOTE: is temp_thermal always set?
+  
+  if (vibstyle == NONE) eng = 0.0;
   else if (vibstyle == DISCRETE && species[isp].vibdof==2) {
-  int ivib = -log(erandom->uniform()) * update->temp_thermal /
-   particle->species[isp].vibtemp;
+  int ivib = -log(erandom->uniform()) * 
+    update->temp_thermal / particle->species[isp].vibtemp;
   eng = ivib * update->boltz * particle->species[isp].vibtemp;
 
   } else if (vibstyle == SMOOTH || species[isp].vibdof > 2) {
@@ -571,19 +569,14 @@ double Particle::evib(int isp, RanPark *erandom)
     else {
       a = 0.5*particle->species[isp].vibdof-1.;
       while (1) {
-     // energy cut-off at 10 kT
-       erm = 10.0*erandom->uniform();
-       b = pow(erm/a,a) * exp(a-erm);
-       if (b > erandom->uniform()) break;
+        // energy cut-off at 10 kT
+        erm = 10.0*erandom->uniform();
+        b = pow(erm/a,a) * exp(a-erm);
+        if (b > erandom->uniform()) break;
       }
-   // NOTE: is temp_thermal always set?
       eng = erm * update->boltz * update->temp_thermal;
     }
   }
-
-  //int ivib = -log(erandom->uniform()) * update->temp_thermal /
-  //  particle->species[isp].vibtemp;
-  //return ivib;
 
   return eng;
 }
