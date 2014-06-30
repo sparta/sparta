@@ -33,26 +33,30 @@ show how to setup and run various kinds of simulations.
 
 6.1 2d simulations :link(howto_1),h4
 
-Use the "dimension"_dimension.html command to specify a 2d simulation.
+In SPARTA, as in other DSMC codes, a 2d simulation means that
+particles move only in the xy plane, but still have all 3 xyz
+components of velocity.  Only the xy components of velocity are used
+to advect the particles, so that they stay in the xy plane, but all 3
+components are used to compute collision parameters, temperatures,
+etc.  Here are the steps to take in an input script to setup a 2d
+model.
+
+Use the "dimension"_dimension.html command to specify a 2d simulation. :ulb,l
 
 Make the simulation box periodic in z via the "boundary"_boundary.html
-command.  This is the default.
+command.  This is the default. :l
 
 Using the "create box"_create_box.html command, set the z boundaries
-of the box zlo = -0.5 to and zhi = 0.5, so that the z-dimension box
-length is 1.0 (in whatever "units"_units.html are defined) and it
-straddles the z = 0.0 plane.  This insures that input and output
-densities, e.g. via the "global nrho"_global.html command, are the
-same in 1/length^2 and 1/length^3 units.  Thus if the
-"create_particles"_create_particles.html command is used to create
-particles in a 3d grid cell whose z-dimension is 1.0, the same number
-of particles will be created in a 2d grid cell with the same x and y
-dimensions.
+of the box to values that straddle the z = 0.0 plane.  I.e. zlo < 0.0
+and zhi > 0.0.  Typical values are -0.5 and 0.5, but regardless of the
+actual values, SPARTA computes the "volume" of 2d grid cells as if
+their z-dimension length is 1.0, in whatever "units"_units.html are
+defined.  This volume is used with the "global nrho"_global.html
+setting to calculate numbers of particles to create or insert.  It is
+also used to compute collision frequencies. :l
 
-TODO: is -0.5 and 0.5 required or OK not to do this?
-
-TODO: how does SPARTA really do a 2d simulation?  continues to
-treat velocity as 3d, so collisions, etc don't change
+If surfaces are defined via the "read_surf"_read_surf.html command,
+use 2d objects defined by line segements. :l,ule
 
 Many of the example input scripts included in the SPARTA distribution
 are for 2d models.
@@ -61,11 +65,12 @@ are for 2d models.
 
 4.2 Axisymmetric simulations :link(howto_2),h4
 
-TODO: describe commands when have a working example
+This section will be filled in when axisymmetry is fully implemented
+in SPARTA.
 
 create box with ylo = 0.0 and zlo/zhi = 0.5
-boundary a
-cell weighting :ul
+ylo boundary with "a" setting
+cell weighting options :ul
 
 :line
 
@@ -588,7 +593,6 @@ instances of SPARTA to perform different calculations.
 
 TODO: describe parent, child, unsplit, split, sub cells
 
-
 Depending on the specified keyword, the grid cells assigned to each
 processor by this command will either be "clumped" or "dispersed".
 
@@ -621,7 +625,6 @@ dispersed assignment of grid cells to processsors may run faster even
 with the overhead of increased particle communication.  This is
 because (somewhat) randomly assigning grid cells to processors can
 balance the computational load in a statistical sense.
-
 
 describe cell IDs
 

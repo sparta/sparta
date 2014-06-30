@@ -28,15 +28,14 @@ Set the size of the simulation box.
 
 For a 2d simulation, as specifed by the "dimension"_dimension.html
 command, {zlo} < 0.0 and {zhi} > 0.0 is required.  This means the z
-dimensions straddle 0.0.
-
-TODO: For 2d, should we require that zlo = -0.5 and zhi = 0.5 or
-zhi-zlo = 1.0?  Is this necessary for cell volumes to effectively
-equal area when running a 2d simulation?
+dimensions straddle 0.0.  Typical values are -0.5 and 0.5, but this is
+not required.  See "Section 6.1"_Section_howto.html#howto_1 of the
+manual for more information about 2d simulations.
 
 For 2d axisymmetric simulations, as set by the
 "dimension"_dimension.html and "boundary"_boundary.html commands, the
-ylo setting must be 0.0.
+ylo setting must be 0.0.  See "Section 6.2"_Section_howto.html#howto_2
+of the manual for more information about axisymmetric simulations.
 
 [Restrictions:] none
 

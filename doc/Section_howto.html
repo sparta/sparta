@@ -37,27 +37,31 @@ show how to setup and run various kinds of simulations.
 
 <A NAME = "howto_1"></A><H4>6.1 2d simulations 
 </H4>
-<P>Use the <A HREF = "dimension.html">dimension</A> command to specify a 2d simulation.
+<P>In SPARTA, as in other DSMC codes, a 2d simulation means that
+particles move only in the xy plane, but still have all 3 xyz
+components of velocity.  Only the xy components of velocity are used
+to advect the particles, so that they stay in the xy plane, but all 3
+components are used to compute collision parameters, temperatures,
+etc.  Here are the steps to take in an input script to setup a 2d
+model.
 </P>
-<P>Make the simulation box periodic in z via the <A HREF = "boundary.html">boundary</A>
-command.  This is the default.
-</P>
-<P>Using the <A HREF = "create_box.html">create box</A> command, set the z boundaries
-of the box zlo = -0.5 to and zhi = 0.5, so that the z-dimension box
-length is 1.0 (in whatever <A HREF = "units.html">units</A> are defined) and it
-straddles the z = 0.0 plane.  This insures that input and output
-densities, e.g. via the <A HREF = "global.html">global nrho</A> command, are the
-same in 1/length^2 and 1/length^3 units.  Thus if the
-<A HREF = "create_particles.html">create_particles</A> command is used to create
-particles in a 3d grid cell whose z-dimension is 1.0, the same number
-of particles will be created in a 2d grid cell with the same x and y
-dimensions.
-</P>
-<P>TODO: is -0.5 and 0.5 required or OK not to do this?
-</P>
-<P>TODO: how does SPARTA really do a 2d simulation?  continues to
-treat velocity as 3d, so collisions, etc don't change
-</P>
+<UL><LI>Use the <A HREF = "dimension.html">dimension</A> command to specify a 2d simulation. 
+
+<LI>Make the simulation box periodic in z via the <A HREF = "boundary.html">boundary</A>
+command.  This is the default. 
+
+<LI>Using the <A HREF = "create_box.html">create box</A> command, set the z boundaries
+of the box to values that straddle the z = 0.0 plane.  I.e. zlo < 0.0
+and zhi > 0.0.  Typical values are -0.5 and 0.5, but regardless of the
+actual values, SPARTA computes the "volume" of 2d grid cells as if
+their z-dimension length is 1.0, in whatever <A HREF = "units.html">units</A> are
+defined.  This volume is used with the <A HREF = "global.html">global nrho</A>
+setting to calculate numbers of particles to create or insert.  It is
+also used to compute collision frequencies. 
+
+<LI>If surfaces are defined via the <A HREF = "read_surf.html">read_surf</A> command,
+use 2d objects defined by line segements. 
+</UL>
 <P>Many of the example input scripts included in the SPARTA distribution
 are for 2d models.
 </P>
@@ -65,11 +69,12 @@ are for 2d models.
 
 <A NAME = "howto_2"></A><H4>4.2 Axisymmetric simulations 
 </H4>
-<P>TODO: describe commands when have a working example
+<P>This section will be filled in when axisymmetry is fully implemented
+in SPARTA.
 </P>
 <UL><LI>create box with ylo = 0.0 and zlo/zhi = 0.5
-<LI>boundary a
-<LI>cell weighting 
+<LI>ylo boundary with "a" setting
+<LI>cell weighting options 
 </UL>
 <HR>
 
