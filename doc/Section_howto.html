@@ -405,9 +405,9 @@ vector input could be a column of an array.
 </H4>
 <P>The <A HREF = "dump_image.html">dump image</A> command can be used to do on-the-fly
 visualization as a simulation proceeds.  It works by creating a series
-of JPG or PNG or PPM files on specified timesteps.  The images can
-include particles, grid cell quantities, and/or surface element
-quantities.  This is not a substitute for using an interactive
+of JPG or PNG or PPM files on specified timesteps, as well as movies.
+The images can include particles, grid cell quantities, and/or surface
+element quantities.  This is not a substitute for using an interactive
 visualization package in post-processing mode, but on-the-fly
 visualization can be useful for debugging or making a high-quality
 image of a particular snapshot of the simulation.
@@ -417,22 +417,19 @@ particle, grid cell, or surface element data as a simulation runs.
 These can be post-processed and read in to other visualization
 packages.
 </P>
-<P>TODO: describe post-processing tools and viz packages
-</P>
-<P>SPARTA snapshots are created by the <A HREF = "dump.html">dump</A> command which can
-create files in several formats.  The native SPARTA dump format is a
-text file (see "dump atom" or "dump custom").
-</P>
-<P>A Python-based toolkit distributed by our group can read native SPARTA
-dump files, including custom dump files with additional columns of
-user-specified atom information, and convert them to various formats
-or pipe them into visualization software directly.  See the <A HREF = "http://www.sandia.gov/~sjplimp/pizza.html">Pizza.py
-WWW site</A> for details.  Specifically, Pizza.py can convert
-SPARTA dump files into PDB, XYZ, <A HREF = "http://www.ensight.com">Ensight</A>, and VTK formats.
-Pizza.py can pipe SPARTA dump files directly into the Raster3d and
-RasMol visualization programs.  Pizza.py has tools that do interactive
-3d OpenGL visualization and one that creates SVG images of dump file
+<P>A Python-based toolkit distributed by our group can read SPARTA
+particle dump files with columns of user-specified particle
+information, and convert them to various formats or pipe them into
+visualization software directly.  See the <A HREF = "http://www.sandia.gov/~sjplimp/pizza.html">Pizza.py WWW site</A>
+for details.  Specifically, Pizza.py can convert SPARTA particle dump
+files into PDB, XYZ, <A HREF = "http://www.ensight.com">Ensight</A>, and VTK formats.  Pizza.py can
+pipe SPARTA dump files directly into the Raster3d and RasMol
+visualization programs.  Pizza.py has tools that do interactive 3d
+OpenGL visualization and one that creates SVG images of dump file
 snapshots.
+</P>
+<P>Additional Pizza.py tools may be added that allow visualization of
+surface and grid cell information as output by SPARTA.
 </P>
 
 
@@ -601,7 +598,78 @@ instances of SPARTA to perform different calculations.
 
 <A NAME = "howto_8"></A><H4>4.8 Details of grid geometry in SPARTA 
 </H4>
-<P>TODO: describe parent, child, unsplit, split, sub cells
+<P>SPARTA overlays a grid over the simulation domain which is used to
+track particles and to co-locate particles in the same grid cell for
+performing collision and chemistry operations.  Surface elements are
+also assigned to grid cells they intersect with, so that
+particle/surface collisions can be efficiently computed.
+</P>
+<P>SPARTA uses a Cartesian hierarchical grid, which is defined in the
+following manner.  Cartesian means that the faces of a grid cell, at
+any level of the hierarchy, are aligned with the Cartesian xyz axes.
+I.e. each grid cell is an axis-aligned pallelpiped or rectangular box.
+The entire simulation box is the single "root" grid cell at level 0 of
+the hierarchy.  It is sub-divided into a regular Nx by Ny by Nz grid
+of cells, all at level 1 of the hierarchy.  Regular means all the
+Nx*Ny*Nz sub-divided cells within a single parent cell are the same
+size.  Each Nx,Ny,Nz value >= 1 (although if Nx = Ny = Nz = 1 then
+there is no sub-division).  Any or all of the cells at level 1 can be
+further sub-divided in the same manner to create cells at level 2, and
+recursively for level 3,4,etc.  The Nx,Ny,Nz values for sub-dividing
+an individual parent cell can be uniquely chosen.  For example all
+level 2 cells, do not need to be sub-divided using the same Nx,Ny,Nz
+values.  Grids for 2d and 3d simulations (see the
+<A HREF = "dimension.html">dimension</A>) follow the same rules, except that Nz = 1
+is required at every level for 2d grids.
+</P>
+<P>Note that a 3d oct-tree (quad-tree in 2d) is a special case of the
+SPARTA hierarchical grid, where Nx = Ny = Nz = 2 is always used to
+sub-divide grid cells.
+</P>
+<P>In the rest of the SPARTA manual, the following terminology is used to
+refer to the hierarchical grid.  The flow region is the portion of the
+simulation domain that is "outside" any surface objects and is
+typically filled with particles.
+</P>
+<UL><LI>root cell = the simulation box itself
+<LI>parent cell = a grid cell at any level that is sub-divided further
+<LI>child cell = a grid cell that is not sub-divided further
+<LI>unsplit cell = a child cell not intersected by any surface elements
+<LI>cut cell = a child cell intersected by one or more surface elements so that one portion of the cell is in the flow region
+<LI>split cell = a child cell that is intersected by two or more surface elemments so that two or more disjoint portions of the cell are in the flow region
+<LI>sub cell = one disjoint portion of a split cell in the flow region 
+</UL>
+<P>The list of parent cells in a simulation is stored by every processor
+and is read in by the <A HREF = "read_grid.html">read_grid</A> command, or defined
+by the <A HREF = "create_grid.html">create_grid</A> command.  The list of child
+cells is inferred by the same 2 commands and the union of all child
+cells is the entire simulation domain.  Child cells are distributed
+across processors, so that each child cell is owned by exactly one
+processor, as discussed below.
+</P>
+<P>When surface objects are defined via the <A HREF = "read_surf.html">read_surf</A>
+command, they intersect with child cells.  Child cells that are not
+intersected by any surface elements are unsplit cells.  If a child
+cell is intersected in such a manner that it is partitioned into two
+contiguous volumes, one in the flow region, the other inside a surface
+object, then it is a cut cell.  SPARTA calculates the volume of the
+flow region for the cell.  This is the usual case.  Sometimes a cell
+can be partitioned by surface elements such that more than one
+contiguous flow region is created.  Then it is a split cell and the
+two or more contiguous flow regions are each sub cells of the split
+cell.
+</P>
+<P>The union of (1) unsplit cells that are in the flow region (not
+entirely interior to a surface object) and (2) flow region portions of
+cut cells and (3) sub cells is the entire flow region of the
+simulation domain.
+</P>
+<P>describe cell
+IDs
+</P>
+<P>The <A HREF = "create_grid.html">create_grid</A> and
+<A HREF = "balance.html">balance</A> and <A HREF = "fix_balance.html">fix balance</A> commands
+affect the assignment of child cells to processors.
 </P>
 <P>Depending on the specified keyword, the grid cells assigned to each
 processor by this command will either be "clumped" or "dispersed".
@@ -635,8 +703,6 @@ dispersed assignment of grid cells to processsors may run faster even
 with the overhead of increased particle communication.  This is
 because (somewhat) randomly assigning grid cells to processors can
 balance the computational load in a statistical sense.
-</P>
-<P>describe cell IDs
 </P>
 <HR>
 
