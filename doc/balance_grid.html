@@ -25,7 +25,7 @@
   <I>random</I> args = none 
   <I>proc</I> args = none
   <I>rcb</I> args = weight
-    weight = <I>cell</I> or <I>mol</I> 
+    weight = <I>cell</I> or <I>part</I> 
 </PRE>
 
 </UL>
@@ -35,7 +35,7 @@
 balance_grid block * 4 *
 balance_grid clump yxz
 balance_grid random
-balance_grid rcb mol 
+balance_grid rcb part 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -126,19 +126,23 @@ each processor is assigned an equal total weight of grid cells, as
 nearly as possible.  If the <I>weight</I> argument is specified as <I>cell</I>,
 than the weight for each grid cell is 1.0, so that each processor will
 end up with an equal number of grid cells.  If the <I>weight</I> argument
-is specified as <I>mol</I>, than the weight for each grid cell is the
+is specified as <I>part</I>, than the weight for each grid cell is the
 number of particles it currently owns, so that each processor will end
 up with an equal number of particles.
 </P>
-<P>Here are 2 example pictures, for a 2d simulation, of the partitioning
-provided by the RCB algorithm for a simulation on P processors of
-100x100 or 10000 grid cells.  The one on the left is for an initially
-uniform distribution of particles.  The one on the right is at a later
-time when the particle density is larger on the right side of the
-simulation box.
+<P>Here is an example of an RCB partitioning for 24 processors, of a 2d
+hierarchical grid with 5 levels, refined around a tilted ellipsoidal
+surface object (outlined in pink).  This is for a <I>weight cell</I>
+setting, yielding an equal number of grid cells per processor.  Each
+processor is assigned a different color of grid cells.  (Note that
+less colors than processors were used, so the disjoint yellow cells
+actually belong to three different processors).  This is an example of
+a clumped distribution where each processor's assigned cells can be
+compactly bounded by a rectangle.  Click for a larger version of the
+image.
 </P>
-<P>TODO: include images
-</P>
+<CENTER><A HREF = "JPG/partition.jpg"><IMG SRC = "JPG/partition_small.jpg"></A>
+</CENTER>
 <P><B>Restrictions:</B>
 </P>
 <P>This command can only be used after the grid has been created by the

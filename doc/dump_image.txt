@@ -122,15 +122,26 @@ command.  Other dump styles store snapshots of numerical data
 asociated with particles, grid cells, and surfaces in various formats,
 as discussed on the "dump"_dump.html doc page.
 
-Here are two sample images, rendered as 1024x1024 JPEG files.  Click
-to see the full-size images:
+Here are two sample images, rendered as JPG files.  
+Click to see the full-size images.
 
 <DIV ALIGN=center>
 
-:image(JPG/dump1_small.jpg,JPG/dump1.jpg)
-:image(JPG/dump2_small.jpg,JPG/dump2.jpg)
+:image(JPG/sphere_image_small.jpg,JPG/sphere_image.jpg)
+:image(JPG/mix_sine_small.jpg,JPG/mix_sine.jpg)
 
 </DIV>
+
+The left image is flow around a sphere with visualization of
+triangular surface elements on the sphere surface (colored by surface
+presssure), a vertical plane of grid cells (colored by particle
+density), and a horizontal plane of particles (colored by chemical
+species).  The right image is the initial condition for a 2d
+simulation of Rayleigh-Taylor mixing as a relatively dense heavy gas
+(red) mixes with a light gas (green), driven by gravity in the
+downward direction.
+
+:line
 
 The filename suffix determines whether a JPEG, PNG, or PPM file is
 created with the {image} dump style.  If the suffix is ".jpg" or

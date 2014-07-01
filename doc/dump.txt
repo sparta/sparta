@@ -245,9 +245,8 @@ per-particle quantities which could then be output into dump files.
 This section explains the grid cell attributes that can be specified
 as part of the {grid} style.
 
-Note that dump grid will output one line (per snapshot) for each child
-cell in the simulation, excluding split cells.  I.e. only info for
-unsplit and sub cells is output.  "Section
+Note that dump grid will output one line (per snapshot) for two kinds
+of child cells: unsplit cells and sub cells of split cells.  "Section
 4.8"_Section_howto.html#howto_8 of the manual gives details of how
 SPARTA defines child, unsplit, split, and sub cells.  This is
 different than "compute"_compute.html or "fix"_fix.html commands that

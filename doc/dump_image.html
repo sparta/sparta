@@ -135,16 +135,27 @@ command.  Other dump styles store snapshots of numerical data
 asociated with particles, grid cells, and surfaces in various formats,
 as discussed on the <A HREF = "dump.html">dump</A> doc page.
 </P>
-<P>Here are two sample images, rendered as 1024x1024 JPEG files.  Click
-to see the full-size images:
+<P>Here are two sample images, rendered as JPG files.  
+Click to see the full-size images.
 </P>
 <DIV ALIGN=center>
 
-<A HREF = "JPG/dump1.jpg"><IMG SRC = "JPG/dump1_small.jpg"></A>
+<A HREF = "JPG/sphere_image.jpg"><IMG SRC = "JPG/sphere_image_small.jpg"></A>
 
-<A HREF = "JPG/dump2.jpg"><IMG SRC = "JPG/dump2_small.jpg"></A>
+<A HREF = "JPG/mix_sine.jpg"><IMG SRC = "JPG/mix_sine_small.jpg"></A>
 
 </DIV>
+
+<P>The left image is flow around a sphere with visualization of
+triangular surface elements on the sphere surface (colored by surface
+presssure), a vertical plane of grid cells (colored by particle
+density), and a horizontal plane of particles (colored by chemical
+species).  The right image is the initial condition for a 2d
+simulation of Rayleigh-Taylor mixing as a relatively dense heavy gas
+(red) mixes with a light gas (green), driven by gravity in the
+downward direction.
+</P>
+<HR>
 
 <P>The filename suffix determines whether a JPEG, PNG, or PPM file is
 created with the <I>image</I> dump style.  If the suffix is ".jpg" or

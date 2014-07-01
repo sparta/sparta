@@ -77,13 +77,13 @@ calculated by this compute.
 This compute calculates a per-grid array, with the number of columns
 equal to the number of groups in the specified mixture.
 
-This compute performs calculations for all child grid cells in the
-simulation, which includes unsplit, split, and sub cells.  "Section
-4.8"_Section_howto.html#howto_8 of the manual gives details of how
-SPARTA defines child, unsplit, split, and sub cells.  Note that split
-cells and unsplit cells inside closed surfaces will contain no
-particles.  Thus their computed result for all the individual values
-will be 0.0.
+This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See "Section 4.8"_Section_howto.html#howto_8 of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that split cells and unsplit cells inside closed surfaces contain
+no particles.  Thus they will compute a zero result for all the
+individual values.
 
 The array can be accessed by any command that uses per-grid values
 from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4

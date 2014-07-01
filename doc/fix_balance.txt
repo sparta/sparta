@@ -20,7 +20,7 @@ bstyle = {random} or {proc} or {rcb} :l
   {random} args = none 
   {proc} args = none 
   {rcb} args = weight
-    weight = {cell} or {mol} :pre
+    weight = {cell} or {part} :pre
 :ule
 
 [Examples:]
@@ -101,18 +101,22 @@ each processor is assigned an equal total weight of grid cells, as
 nearly as possible.  If the {weight} argument is specified as {cell},
 than the weight for each grid cell is 1.0, so that each processor will
 end up with an equal number of grid cells.  If the {weight} argument
-is specified as {mol}, than the weight for each grid cell is the
+is specified as {part}, than the weight for each grid cell is the
 number of particles it currently owns, so that each processor will end
 up with an equal number of particles.
 
-Here are 2 example pictures, for a 2d simulation, of the partitioning
-provided by the RCB algorithm for a simulation on P processors of
-100x100 or 10000 grid cells.  The one on the left is for an initially
-uniform distribution of particles.  The one on the right is at a later
-time when the particle density is larger on the right side of the
-simulation box.
+Here is an example of an RCB partitioning for 24 processors, of a 2d
+hierarchical grid with 5 levels, refined around a tilted ellipsoidal
+surface object (outlined in pink).  This is for a {weight cell}
+setting, yielding an equal number of grid cells per processor.  Each
+processor is assigned a different color of grid cells.  (Note that
+less colors than processors were used, so the disjoint yellow cells
+actually belong to three different processors).  This is an example of
+a clumped distribution where each processor's assigned cells can be
+compactly bounded by a rectangle.  Click for a larger version of the
+image.
 
-TODO: include images
+:c,image(JPG/partition_small.jpg,JPG/partition.jpg)
 
 :line
 
