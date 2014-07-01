@@ -144,12 +144,12 @@ ordering of columns is first by values, then by groups.  I.e. if the
 columns would be {n} and {u} for the first group, the 3rd and 4th
 columns would be {n} and {u} for the second group, etc.
 
-This compute performs calculations for all child grid cells in the
-simulation, which includes unsplit, cut, split, and sub cells.  See
-"Section 4.8"_Section_howto.html#howto_8 of the manual gives details
-of how SPARTA defines child, unsplit, split, and sub cells.  Note that
-split cells and unsplit cells inside closed surfaces contain no
-particles.  Thus they will compute a zero result for all the
+This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See "Section 4.8"_Section_howto.html#howto_8 of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that split cells and unsplit cells inside closed surfaces contain
+no particles.  Thus they will compute a zero result for all the
 individual values.
 
 The array can be accessed by any command that uses per-grid values

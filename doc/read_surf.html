@@ -238,10 +238,12 @@ clip edges represented by the edges of the global simulation box.
 <P>If you use the <I>clip</I> keyword, you should check the resulting
 statistics of the clipped surface printed out by this command,
 including the minimum size of line and triangle edge lengths.  It is
-possible that very short lines or very small triangles will result
-near the box surface due to the clipping opertion, depending on the
+possible that very short lines or very small triangles will be created
+near the box surface due to the clipping operation, depending on the
 coordinates of the initial unclipped points.
 </P>
+<HR>
+
 <P><B>Restrictions:</B>
 </P>
 <P>This command can only be used after the simulation box is defined by
@@ -261,15 +263,17 @@ this will be the case.
 "watertight" surface.  For a 2d simulation this means that every point
 is part of exactly 2 line segments.  For a 3d simulation it means that
 every triangle edge is part of exactly 2 triangles.  Exceptions to
-these rules are made for triangle edges (in 3d) that lie entirely in a
-global face of the simulation box, of for line points (in 2d) that are
+these rules allow for triangle edges (in 3d) that lie entirely in a
+global face of the simulation box, or for line points (in 2d) that are
 on a global edge of the simulation box.  This can be the case after
-clipping.  This allows use of an object that only partially overlaps
-with the simulation box, e.g. half of a sphere.
+clipping, which allows for use of watertight surface object (e.g. a
+sphere) that is only partially inside the simulation box, but which
+when clipped to the box becomes non-watertight, e.g. half of a sphere.
 </P>
 <P>Note that this definition of watertight does not require that the
 surface elements in a file represent a single physical object;
-multiple objects can be represented, provided each is watertight.
+multiple objects (e.g. spheres) can be represented, provided each is
+watertight.
 </P>
 <P>Another restriction on surfaces is that they do not represent an
 object that is "infinitely thin", so that two sides of the same object
@@ -280,10 +284,10 @@ surface, errors will be generated if a particle hits the "inside" of a
 surface element before hitting the "outside" of another element.  This
 can occur for infinitely thin surfaces due to numeric round-off.
 </P>
-<P>Similarly, when running a simulation with multiple objects, read from
-one or more surface files, you should insure they do not
-overlap/intersect each other.  SPARTA does not check for this, but it
-will typically lead to unphysical particle dynamics.
+<P>When running a simulation with multiple objects, read from one or more
+surface files, you should insure they do not touch or overlap with
+each other.  SPARTA does not check for this, but it will typically
+lead to unphysical particle dynamics.
 </P>
 <P><B>Related commands:</B> none
 </P>
