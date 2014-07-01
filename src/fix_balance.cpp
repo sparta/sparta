@@ -62,7 +62,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
     if (narg != 6) error->all(FLERR,"Illegal fix balance command");
     bstyle = BISECTION;
     if (strcmp(arg[5],"cell") == 0) rcbwt = CELL;
-    else if (strcmp(arg[5],"mol") == 0) rcbwt = PARTICLE;
+    else if (strcmp(arg[5],"part") == 0) rcbwt = PARTICLE;
   } else error->all(FLERR,"Illegal fix balance command");
 
   // error check

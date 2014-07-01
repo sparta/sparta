@@ -101,7 +101,7 @@ void BalanceGrid::command(int narg, char **arg)
     if (narg != 2) error->all(FLERR,"Illegal balance_grid command");
     bstyle = BISECTION;
     if (strcmp(arg[1],"cell") == 0) rcbwt = CELL;
-    else if (strcmp(arg[1],"mol") == 0) rcbwt = PARTICLE;
+    else if (strcmp(arg[1],"part") == 0) rcbwt = PARTICLE;
     else error->all(FLERR,"Illegal balance_grid command");
 
   } else error->all(FLERR,"Illegal balance_grid command");
