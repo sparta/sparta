@@ -627,7 +627,7 @@ grid is 18x10.  2nd level grid cells are defined in a subset of those
 cells with a 3x3 sub-division.  A subset of the 2nd level cells
 contain 3rd level grid cells via a further 3x3 sub-division.
 
-:image(JPG/refine_grid.jpg)
+:c,image(JPG/refine_grid.jpg)
 
 In the rest of the SPARTA manual, the following terminology is used to
 refer to the cells of the hierarchical grid.  The flow region is the
@@ -665,7 +665,7 @@ Additionally, each of the two or more contiguous flow regions is a sub
 cell of the split cell.  The right side of the diagram shows a split
 cell with 3 sub cells.
 
-:image(JPG/split.jpg)
+:c,image(JPG/split.jpg)
 
 The union of (1) unsplit cells that are in the flow region (not
 entirely interior to a surface object) and (2) flow region portions of
@@ -723,11 +723,21 @@ Dispersed means the processor's cells will be geometrically dispersed
 across the simulation domain and so they cannot be enclosed in a small
 bounding box.
 
-It is important to understand the difference between the two cases and
-the effects they can have on performance of a simulation.  For example
-the create_grid and read_grid commands may produce dispersed
-assignments, depending on the options used, which can be converted to
-a clumped assignment by the balance_grid command.
+An example of a clumped assignment is shown in this zoom-in of a 2d
+hierarchical grid with 5 levels, refined around a tilted ellipsoidal
+surface object (outlined in pink).  One processor owns the grid cells
+colored orange.  A compact bounding rectangle can be drawn around the
+orange cells which will contain only a few grid cells owned by other
+processors.  By contrast a dispersed assignment could scatter orange
+grid cells throughout the entire simulation domain.
+
+:c,image(JPG/partition_zoom.jpg)
+
+It is important to understand the difference between the two kinds of
+assignments and the effects they can have on performance of a
+simulation.  For example the create_grid and read_grid commands may
+produce dispersed assignments, depending on the options used, which
+can be converted to a clumped assignment by the balance_grid command.
 
 Simulations typically run faster with clumped grid cell assignments.
 This is because the cost of communicating particles is reduced if

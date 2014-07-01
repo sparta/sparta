@@ -110,6 +110,16 @@ cell assignment.  See "Section 5.8"_Section_howto.html#howto_8 of the
 manual for an explanation of clumped and dispersed grid cell
 assignments and their relative performance trade-offs.
 
+An example of the {gridcut} cutoff applied to a clumped assignment is
+shown in this zoom-in of a 2d hierarchical grid with 5 levels, refined
+around a tilted ellipsoidal surface object (outlined in pink).  One
+processor owns the grid cells colored orange.  A bounding rectangle
+around the orange cells, extended by a short cutoff distance, is drawn
+as a purple rectangle.  The rectangle contains only a few ghost grid
+cells owned by other processors.
+
+:c,image(JPG/partition_zoom_cutoff.jpg)
+
 IMPORTANT NOTE: If grid cells have already been defined via the
 "create_grid"_create_grid.html, "read_grid"_read_grid.html, or
 "read_restart"_read_restart.html commands, when the {gridcut} cutoff
