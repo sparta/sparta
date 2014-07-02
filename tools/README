@@ -1,10 +1,98 @@
-DSMC pre- and post-processing tools
+This directory contains various tools for SPARTA pre- and
+post-processing tasks.
 
-This directory contains stand-alone tools for creating DSMC input
-files and massaging DSMC output data.
+If you have suggestions or contributions for additional scripts or
+functionality that could be added, send email to Steve Plimpton
+(sjplimp at sandia.gov) or Michael Gallis (magalli at sandia.gov).
 
-See the comments at the top of the tool file for instructions on their
-usage.
+For all of the tools, see the top of the file for detailed
+instructions on how to run it and the allowed options.  Or
+just run it with no arguments to get a syntax message.
 
-These are the included tools:
+Some of these tools are Python scripts and some of them use Python
+modules from the Pizza.py toolkit, provided in the pizza dir.  See
+more info below on how to run a Python script and insure that Python
+can find the needed modules.
 
+Here is a list of the tools:
+
+dump2cfg.py	convert a particle SPARTA dump file to CFG format
+dump2xyz.py	convert a SPARTA particle dump file to XYZ format
+dumpsort.py	sort snapshots in a SPARTA particle dump file by particle ID
+log2txt.py	convert stats info in a SPARTA log file to columns of numbers
+logplot.py	plot 2 columns of stats info from a SPARTA log file
+
+------------------------------
+General info on Python scripts:
+
+Some of the Python scripts use additional Python modules that are part
+of the Pizza.py toolkit.  These scripts are very simple.  They load
+thos Python modules (e.g. from the pizza sub-directory), which do the
+heavy lifting.
+
+To use these scripts you must set the environment variable
+SPARTA_PYTHON_TOOLS in your shell to point to the Pizza.py modules
+that the scripts use.  This can either be a) the pizza sub-directory
+in this directory, or b) the src directory in the Pizza.py package if
+you have installed Pizza.py on your machine.
+
+For example, on my box, either of these lines in my .cshrc works:
+
+setenv SPARTA_PYTHON_TOOLS /home/sjplimp/sparta/tools/pizza
+setenv SPARTA_PYTHON_TOOLS /home/sjplimp/pizza/src
+
+The modules themselves have a lot more functionality than these
+scripts expose, so if you want to do something beyond what these
+scripts perform, you should learn about Pizza.py.  See this WWW page
+for details and download info:
+
+http://pizza.sandia.gov
+
+The tools in the Pizza.py src directory are identical to those in the
+pizza sub-directory.  The header section of each tool file lists all
+the functionality that tool supports.
+
+To use all the features of Pizza.py modules, you need to be familiar
+with Python syntax.  You can then modify the scripts to invoke
+additional Pizza.py functionality or use the Python interpreter itself
+to drive the Pizza.py modules.
+
+------------------------------
+Running the Python scripts:
+
+As with any Python script, you can run these scripts in one of two
+ways.  You may want to setup aliases so that you can run them from the
+directory where your data files are.
+
+% python log2txt.py args ...
+% log2txt.py args ...
+
+The latter requires 2 things:
+
+1) that the script be made "executable", e.g. type "chmod +x log2txt.py"
+2) that the 1st line of the script is the path of the Python installed 
+   on your machine, e.g. /usr/local/bin/python
+
+IMPORTANT NOTE: If you run the logplot.py script using the 1st method
+above, you should type
+
+% python -i logplot.py args ...
+
+so that the plot produced by GnuPlot stays visible before Python
+exits.
+
+------------------------------
+Python dependencies:
+
+To use the logplot.py script you need to have GnuPlot installed on
+your system and its executable "gnuplot" in your path.
+
+To use any of the scripts which load the dump module to read SPARTA
+particle dump files, you must either the Python package Numpy or the
+older Numeric installed in your Python.  See http://www.numpy.org.
+
+If Numpy or Numeric is already installed in your Python, you should be
+able to type one of the following without getting an error:
+
+>>> import numpy
+>>> import Numeric
