@@ -16,8 +16,8 @@ parallel.  In parallel, it can be run repeatedly in strong or weak
 scaling mode.  For strong scaling, the same problem size is run on
 various numbers of processors.  For weak scaling, the problem size is
 increased proportional to the the number of processors.  E.g. on 2
-processors, a 100,000 grid cell problem is run; on 8 processors,
-400,000 grid cell problem is run.
+processors, a 100K grid cell problem is run; on 8 processors a 400K
+grid cell problem is run.
 
 Each script equilibrates for a small number of steps with a large
 timestep to disorder the particles.  A benchmark run is then made for

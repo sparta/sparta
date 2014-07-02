@@ -1,4 +1,4 @@
-# advect particles on uniform 3d Cartesian grid
+# advect particles via free molecular flow on a uniform grid
 # particles reflect off global box boundaries
 
 variable            x index 10
