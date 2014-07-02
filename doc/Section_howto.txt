@@ -621,7 +621,7 @@ the SPARTA hierarchical grid, where Nx = Ny = Nz = 2 is always used to
 sub-divide a grid cell.
 
 An example 2d hierarchical grid is shown in the diagram, for a
-circular surface object (in red) with a grid refined on the upwind
+circular surface object (in red) with the grid refined on the upwind
 side of the object (flow from left to right).  The first level coarse
 grid is 18x10.  2nd level grid cells are defined in a subset of those
 cells with a 3x3 sub-division.  A subset of the 2nd level cells

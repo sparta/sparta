@@ -9,46 +9,43 @@
 5. Performance & scalability :h3
 
 The SPARTA distribution includes a bench sub-directory with several
-sample problems.  The benchmark data on the Benchmarks page of the
-"SPARTA WWW Site"_sws gives timing data for these problems being run
-on different machines.
+sample problems.  The Benchmarks page of the "SPARTA WWW Site"_sws
+gives timing data for these problems run on different machines,
+for both strong and weak scaling scenarioes:
 
-TODO: put final list here
-
-Free = free molecular flow in a box :olb,l
-
-Collide = collisional molecular flow in a box :l
-
-Sphere = flow around a sphere :ole,l
+free = free molecular flow in a box
+collide = collisional molecular flow in a box
+sphere = flow around a sphere :ul
 
 For each problem there is an input script and sample log file outputs
 on different machines and different numbers of processors.  E.g. a log
-file like log.free.foo.P means it ran on P processors of machine
-"foo".
+file like log.free.foo.1M.P means the the free molecular problem with
+1 million grid cells ran on P processors of machine "foo".
 
 Each can be run as a serial benchmark (on one processor) or in
 parallel.  In parallel, all the benchmarks can be run as a fixed-size
 problem, meaning the same problem is run on various numbers of
-processors.  Some can be run as scaled-size problem, if the problem
-size is increased with the number of processors.
+processors (strong scaling).  They can also be run as scaled-size
+problem, if the problem size is increased with the number of
+processors (weak scaling).
 
-Here is how to run each of the benchmarks:
-
-TODO: put full list here
+Here is an example of how to run the benchmark problems.  See the
+bench/README file for more details.  
 
 1-processor runs:
 
 spa_g++ -v x 100 -v y 100 -v z 100 < in.free
 spa_g++ -v x 100 -v y 100 -v z 100 < in.collide
-spa_g++ < in.sphere :pre
+spa_g++ -v x 50 -v y 50 -v z 50 < in.sphere :pre
 
 32-processor runs:
 
-mpirun -np 32 spa_g++ -v x 100 -v y 100 -v z 100 < in.free
-mpirun -np 32 -v x 100 -v y 100 -v z 100 < in.collide
-mpirun -np 32 spa_g++ < in.sphere :pre
+mpirun -np 32 spa_g++ -v x 100 -v y 100 -v z 100 -n 10000000 < in.free
+mpirun -np 32 -v x 100 -v y 100 -v z 100 -n 10000000 < in.collide
+mpirun -np 32 -v x 50 -v y 50 -v z 50 -n 2500000 spa_g++ < in.sphere :pre
 
-Note that the free and collide benchmarks have variable settings that
-determine the size of problem that is run.  These can be set from the
-command line.  Each grid cell will have 10 particles, so that a run
-with 1 million grid cells will have 10 million particles.
+Note that the benchmark scripts define variables that can be set from
+the command line that determine the size of problem that is run.
+Specifically, the x,y,z variables specify the grid size
+(e.g. 100x100x100) that is used, and variable n specifies the number
+of particles (10 per grid cell in this case).

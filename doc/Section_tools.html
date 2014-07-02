@@ -19,8 +19,6 @@ necessary to setup and analyze a simulation.  A few additional tools
 are provided with the SPARTA distribution in the tools directory and
 are described briefly below.
 </P>
-<P>TODO: be specific about what Pizza.py tools can work with SPARTA data 
-</P>
 <P>Our group has also written and released a separate toolkit called
 <A HREF = "http://pizza.sandia.gov">Pizza.py</A> which provides tools for doing setup, analysis,
 plotting, and visualization for SPARTA simulations.  Pizza.py is
@@ -31,25 +29,121 @@ Pizza.py WWW site</A>.
 
 
 
-<P>TODO: any other tools
+<P>Some of the Pizza.py tools relevant to SPARTA are as follows:
 </P>
-<UL><LI><A HREF = "#binary">binary2txt</A> 
+<UL><LI>dump - read, write, manipulate particle dump files
+<LI>gl - 3d interactive visualization via OpenGL of dump or surface files
+<LI>sdata - read, write, manipulate surface files
+<LI>slog - read log files and extract columns of data
+<LI>vcr - VCR-style GUI for 3d interactive OpenGL visualization of dump or surface files 
+</UL>
+<P>The sdata and slog tools are included in the SPARTA distribution, as
+discussed below, in the <A HREF = "#pizzatools">pizza</A> section, so that they
+can be used by other provided Python scripts.
+</P>
+<P>This is the list of tools included in the tools directory of the
+SPARTA distribution.  Each is described below.
+</P>
+<UL><LI><A HREF = "#dump2cfg">dump2cfg</A> - convert a particle dump file to CFG format
+<LI><A HREF = "#dump2xyz">dump2xyz</A> - convert a particle dump file to XYZ format
+<LI><A HREF = "#log2txt">log2txt</A> - extract columns of info from a log file
+<LI><A HREF = "#logplot">logplot</A> - plot columns of info from a log file via GnuPlot
+<LI><A HREF = "#pizzatools">pizza</A> - Pizza.py tools used by other tools 
 </UL>
 <HR>
 
 <HR>
 
-<H4><A NAME = "binary"></A>binary2txt tool 
+<H4><A NAME = "dump2cfg"></A>dump2cfg tool 
 </H4>
-<P>TODO: need to create this tool?  different options for particle/grid/surf
+<P>This is a Python script that converts a SPARTA particle dump file into
+extended CFG format so that it can be visualized by the
+<A HREF = "http://mt.seas.upenn.edu/Archive/Graphics/A">AtomEye</A> visualization
+program.  AtomEye is a very fast particle visualizer, capable of
+interactive visualizations of millions of particles on a desktop
+machine.  It is commonly used in the materials modeling community.
 </P>
-<P>The file binary2txt.cpp converts one or more binary SPARTA dump files
-into ASCII text files.  The syntax for running the tool is
+<P>See the header of the script for the syntax used to run it.
 </P>
-<PRE>binary2txt file1 file2 ... 
-</PRE>
-<P>which creates file1.txt, file2.txt, etc.  This tool should be compiled
-on a platform that can read the binary files created by a SPARTA run,
-since binary files are not always compatible across all platforms.
+<P>This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+</P>
+<HR>
+
+<H4><A NAME = "dump2xyz"></A>dump2xyz tool 
+</H4>
+<P>This is a Python script that converts a SPARTA particle dump file into
+XYZ format so that it can be visualized by various visualization
+packages that read XYZ formatted files.  An example is
+<A HREF = "http://www.ks.uiuc.edu/Research/vmd">VMD</A> package, commonly used in
+the molecular dynamics modeling community.
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<P>This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+</P>
+<HR>
+
+<H4><A NAME = "log2txt"></A>log2txt tool 
+</H4>
+<P>This is a Python script that reads a SPARTA log file, extracts
+selected columns of statistical output, and writes them to a text
+file.  It knows how to concatenate log file info across multiple
+successive runs.  The columnar output can then be read by various
+plotting packages.
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<P>This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+</P>
+<HR>
+
+<H4><A NAME = "logplot"></A>logplot tool 
+</H4>
+<P>This is a Python script that reads a SPARTA log file, extracts the
+selected columns of statistical output, and plots them via the GnuPlot
+program.  It knows how to concatenate log file info across multiple
+successive runs.
+</P>
+<P>See the header of the script for the syntax used to run it.  You must
+have GnuPlot installed on your system to use this script.  If you can
+type "gnuplot" from the command line to start GnuPlot, it should work.
+If not (e.g. because you need a path name), then edit these 2 lines as
+needed in pizza/gnu.py:
+</P>
+<P>except: PIZZA_GNUPLOT = "gnuplot"
+except: PIZZA_GNUTERM = "x11"
+</P>
+<P>For example, the first could become "/home/smith/bin/gnuplot".  The
+second should only need changing if GnuPlot requires a different
+setting to plot to your screen.
+</P>
+<P>This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+</P>
+<HR>
+
+<H4><A NAME = "pizzatools"></A>pizza tool 
+</H4>
+<P>The pizza sub-directory contains several of the tools available
+in the <A HREF = "http://pizza.sandia.gov">Pizza.py</A> toolkit.  This is so that other
+Python scripts in the tools directory can use them directly.
+</P>
+<P>See the tools/README file for info on how to set an environment
+variable so that the Python scripts can find the Pizza.py tool files.
 </P>
 </HTML>

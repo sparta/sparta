@@ -160,16 +160,36 @@ Pizza.py WWW site</A>.
 
 <A NAME = "intro_3"></A><H4>1.3 Grids and surfaces in SPARTA 
 </H4>
-<P>TODO: text and pics in this section
+<P>SPARTA overlays a grid over the simulation domain which is used to
+track particles and to co-locate particles in the same grid cell for
+performing collision and chemistry operations.  SPARTA uses a
+Cartesian hierarchical grid.  Cartesian means that the faces of a grid
+cell are aligned with the Cartesian xyz axes.  Hierarchical means that
+individual grid cells can be sub-divided into smaller cells,
+recursively.  This allows for flexible grid cell refinement in any
+region of the simulation domain.  E.g. around a surface, or in a
+high-density region of the gas flow.
 </P>
-<P>Grids: what is hierarchical grid, pics in 2d
+<P>An example 2d hierarchical grid is shown in the diagram, for a
+circular surface object (in red) with the grid refined on the upwind
+side of the object (flow from left to right).
 </P>
-<P>Surfs: one or more closed surfs, can be clipped to box,
-external flow vol and inside
+<CENTER><IMG SRC = "JPG/refine_grid.jpg">
+</CENTER>
+<P>Objects represented with a surface triangulation (line segments in 2d)
+can also be read in to define objects which particles flow around.
+Individual surface elements are assigned to grid cells they intersect
+with, so that particle/surface collisions can be efficiently computed.
 </P>
-<P>cut/split cells
+<P>As an example, here is coarsely triangulated representation of the
+space shuttle (only 616 triangles!), which could be embedded in a
+simulation box.  Click on the image for a larger picture.
 </P>
-<P>ptr to Section 4.9 and 4.10 on more details
+<CENTER><A HREF = "JPG/shuttle.jpg"><IMG SRC = "JPG/shuttle_small.jpg"></A>
+</CENTER>
+<P>See <A HREF = "Section_howto.html#howto_9">Sections 4.9</A> and
+<A HREF = "Section_howto.html#">4.10</A> for more details of both the grids and
+surface objects that SPARTA supports and how to define them.
 </P>
 <HR>
 

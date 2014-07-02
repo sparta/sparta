@@ -16,8 +16,6 @@ necessary to setup and analyze a simulation.  A few additional tools
 are provided with the SPARTA distribution in the tools directory and
 are described briefly below.
 
-TODO: be specific about what Pizza.py tools can work with SPARTA data 
-
 Our group has also written and released a separate toolkit called
 "Pizza.py"_pizza which provides tools for doing setup, analysis,
 plotting, and visualization for SPARTA simulations.  Pizza.py is
@@ -27,22 +25,119 @@ Pizza.py WWW site"_pizza.
 :link(pizza,http://pizza.sandia.gov)
 :link(python,http://www.python.org)
 
-TODO: any other tools
+Some of the Pizza.py tools relevant to SPARTA are as follows:
 
-"binary2txt"_#binary :ul
+dump - read, write, manipulate particle dump files
+gl - 3d interactive visualization via OpenGL of dump or surface files
+sdata - read, write, manipulate surface files
+slog - read log files and extract columns of data
+vcr - VCR-style GUI for 3d interactive OpenGL visualization of dump or surface files :ul
+
+The sdata and slog tools are included in the SPARTA distribution, as
+discussed below, in the "pizza"_#pizzatools section, so that they
+can be used by other provided Python scripts.
+
+This is the list of tools included in the tools directory of the
+SPARTA distribution.  Each is described below.
+
+"dump2cfg"_#dump2cfg - convert a particle dump file to CFG format
+"dump2xyz"_#dump2xyz - convert a particle dump file to XYZ format
+"log2txt"_#log2txt - extract columns of info from a log file
+"logplot"_#logplot - plot columns of info from a log file via GnuPlot
+"pizza"_#pizzatools - Pizza.py tools used by other tools :ul
 
 :line
 :line
 
-binary2txt tool :h4,link(binary)
+dump2cfg tool :h4,link(dump2cfg)
 
-TODO: need to create this tool?  different options for particle/grid/surf
+This is a Python script that converts a SPARTA particle dump file into
+extended CFG format so that it can be visualized by the
+"AtomEye"_http://mt.seas.upenn.edu/Archive/Graphics/A visualization
+program.  AtomEye is a very fast particle visualizer, capable of
+interactive visualizations of millions of particles on a desktop
+machine.  It is commonly used in the materials modeling community.
 
-The file binary2txt.cpp converts one or more binary SPARTA dump files
-into ASCII text files.  The syntax for running the tool is
+See the header of the script for the syntax used to run it.
 
-binary2txt file1 file2 ... :pre
+This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
 
-which creates file1.txt, file2.txt, etc.  This tool should be compiled
-on a platform that can read the binary files created by a SPARTA run,
-since binary files are not always compatible across all platforms.
+:line
+
+dump2xyz tool :h4,link(dump2xyz)
+
+This is a Python script that converts a SPARTA particle dump file into
+XYZ format so that it can be visualized by various visualization
+packages that read XYZ formatted files.  An example is
+"VMD"_http://www.ks.uiuc.edu/Research/vmd package, commonly used in
+the molecular dynamics modeling community.
+
+See the header of the script for the syntax used to run it.
+
+This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+
+:line
+
+log2txt tool :h4,link(log2txt)
+
+This is a Python script that reads a SPARTA log file, extracts
+selected columns of statistical output, and writes them to a text
+file.  It knows how to concatenate log file info across multiple
+successive runs.  The columnar output can then be read by various
+plotting packages.
+
+See the header of the script for the syntax used to run it.
+
+This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+
+:line
+
+logplot tool :h4,link(logplot)
+
+This is a Python script that reads a SPARTA log file, extracts the
+selected columns of statistical output, and plots them via the GnuPlot
+program.  It knows how to concatenate log file info across multiple
+successive runs.
+
+See the header of the script for the syntax used to run it.  You must
+have GnuPlot installed on your system to use this script.  If you can
+type "gnuplot" from the command line to start GnuPlot, it should work.
+If not (e.g. because you need a path name), then edit these 2 lines as
+needed in pizza/gnu.py:
+
+except: PIZZA_GNUPLOT = "gnuplot"
+except: PIZZA_GNUTERM = "x11"
+
+For example, the first could become "/home/smith/bin/gnuplot".  The
+second should only need changing if GnuPlot requires a different
+setting to plot to your screen.
+
+This script uses one or more of the "Pizza.py" tools provided in the
+tools/pizza directory.  See the tools/README file for info on how to
+set an environment variable so that the Pizza.py tool files can be
+found by Python, as well as instructions on various ways to run a
+Python script.
+
+:line
+
+pizza tool :h4,link(pizzatools)
+
+The pizza sub-directory contains several of the tools available
+in the "Pizza.py"_pizza toolkit.  This is so that other
+Python scripts in the tools directory can use them directly.
+
+See the tools/README file for info on how to set an environment
+variable so that the Python scripts can find the Pizza.py tool files.
+

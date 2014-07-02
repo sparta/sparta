@@ -14,11 +14,11 @@
 <P>The SPARTA distribution includes an examples sub-directory with
 several sample problems.  Each problem is in a sub-directory of its
 own.  They are all small problems that run quickly, requiring at most
-a couple of minutes to run on a desktop machine.  Each problem has an
-input script (in.*) and produces a log file (log.*) when it runs.
-Some use data files of surface geometry as additional input.  Files
-with species and collision and chemistry paramters are also included
-(copied from the data dir) so the problems are self-contained.
+a couple of minutes to run on a desktop machine.  Many are 2d so that
+they run more quickly and can be easily visualized.  Each problem has
+an input script (in.*) and produces a log file (log.*) when it runs.
+The data files they use for chemical species or reaction parameters
+are copied from the data directory so the problems are self-contained.
 </P>
 <P>Sample log file outputs on different machines and different numbers of
 processors are included in the directories to compare your answers to.
@@ -29,12 +29,14 @@ machine "foo".
 JPG snapshots will be produced.  Animations of several of the examples
 can be viewed on the Movies section of the <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A>.
 </P>
-<P>These are the sample problems in the examples sub-directories:
-</P>
-<P>TODO: put final list here
+<P>These are the sample problems in the examples sub-directories.  See
+the examples/README file for more details.
 </P>
 <P>free:      free molecular flow in a box
 collide:   collisional flow in a box
+step:      flow around a step
+circle     flow around a sphere
+spiky:     flow around a spiky circle
 </P>
 <P>Here is how you might run and visualize one of the sample problems:
 </P>
@@ -42,22 +44,16 @@ collide:   collisional flow in a box
 cp ../../src/spa_g++ .           # copy SPARTA executable to this dir
 spa_g++ < in.free                # run the problem 
 </PRE>
-<P>Running the simulation produces the files <I>image.*.jpg</I> and
-<I>log.sparta</I>.  If you have the freely available ImageMagick toolkit on
+<P>Running the simulation produces the file log.sparta and optionall
+image.*.jpg.  If you have the freely available ImageMagick toolkit on
 your machine, you can run its "convert" command to create an animated
-GIF, and visualize it from the FireFox browser as:
+GIF, and visualize it from the FireFox browser as follows:
 </P>
-<P>convert image*jpg movie.gif
-firefox ./movie.gif
-</P>
+<PRE>convert image*jpg movie.gif
+firefox ./movie.gif 
+</PRE>
 <P>A similar command should work with other browsers.  Or you can select
 "Open File" under the File menu of your browser and load the animated
 GIF file directly.
-</P>
-<HR>
-
-<P>There is also a COUPLE directory with examples of how to use SPARTA as
-a library, either by itself or in tandem with another code or library.
-See the COUPLE/README file to get started.
 </P>
 </HTML>
