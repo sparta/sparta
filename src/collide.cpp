@@ -223,8 +223,6 @@ void Collide::modify_params(int narg, char **arg)
       iarg += 2;
     } else error->all(FLERR,"Illegal collide_modify command");
   }
-
-  printf("AAA %d\n",vibstyle);
 }
 
 /* ----------------------------------------------------------------------

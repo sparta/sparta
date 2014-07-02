@@ -66,7 +66,7 @@ void CreateParticles::command(int narg, char **arg)
   if (strcmp(arg[iarg],"n") == 0) {
     if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
     np = ATOBIGINT(arg[iarg+1]);
-      if (np <= 0) error->all(FLERR,"Illegal create_particles command");
+      if (np < 0) error->all(FLERR,"Illegal create_particles command");
       iarg += 2;
   } else if (strcmp(arg[iarg],"single") == 0) {
     if (iarg+8 > narg) error->all(FLERR,"Illegal create_particles command");
