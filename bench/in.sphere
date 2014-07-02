@@ -14,7 +14,7 @@ global              nrho 7.03E18
 global              fnum ${fnum}
 timestep 	    1.E-5
 global              gridcut 0.1
-global              surfmax 500
+global              surfmax 300
 
 boundary	    o o o
 create_box          -5.0 5.0 -5.0 5.0 -5.0 5.0
