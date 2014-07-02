@@ -26,7 +26,7 @@ The SPARTA distribution includes the following files and directories:
 README			   this file
 LICENSE			   the GNU General Public License (GPL)
 bench                      benchmark problems
-data                       files with species/collision/reaction parameters
+data                       files with species/reaction params, surface files
 doc                        documentation
 examples                   simple test problems
 python                     Python wrapper on SPARTA as a library
