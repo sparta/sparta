@@ -66,14 +66,13 @@ species-ID, as described above.  The properties are as follows:
 prop1 = = molecular weight (atomic mass units, e.g. 16 for oxygen)
 prop2 = = molecular mass (mass units)
 prop3 = rotational degrees of freedom (integer)
-prop4 = rotational ??? ()
+prop4 = rotational relaxtion number (pure)
 prop5 = vibrational degrees of freedom (integer)
-prop6 = vibrational ??? ()
+prop6 = vibrational relaxation number (pure)
 prop7 = vibrational temperature (temperature units)
-prop8 = species weight ()
+prop8 = species weight (pure)
 prop9 = multiple of electon charge (1 for a proton) :ul
 
-TODO: GALLIS need to fill in ??? and empty units (), also what is species wt?
 
 :line
 
