@@ -43,9 +43,9 @@ spa_g++ -v x 50 -v y 50 -v z 50 < in.sphere
 </PRE>
 <P>32-processor runs:
 </P>
-<PRE>mpirun -np 32 spa_g++ -v x 100 -v y 100 -v z 100 -n 10000000 < in.free
-mpirun -np 32 -v x 100 -v y 100 -v z 100 -n 10000000 < in.collide
-mpirun -np 32 -v x 50 -v y 50 -v z 50 -n 2500000 spa_g++ < in.sphere 
+<PRE>mpirun -np 32 spa_g++ -v x 100 -v y 100 -v z 100 < in.free
+mpirun -np 32 spa_g++ -v x 100 -v y 100 -v z 100 < in.collide
+mpirun -np 32 spa_g++ -v x 50 -v y 50 -v z 50 < in.sphere 
 </PRE>
 <P>Note that the benchmark scripts define variables that can be set from
 the command line that determine the size of problem that is run.
