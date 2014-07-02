@@ -59,7 +59,7 @@ os.chdir('../python')                # in case invoked via make in src dir
 from distutils.core import setup
 sys.argv = ["setup.py","install"]    # as if had run "python setup.py install"
 setup(name = "sparta",
-      version = "15Aug12",
+      version = "2Jul14",
       author = "Steve Plimpton",
       author_email = "sjplimp@sandia.gov",
       url = "http://sparta.sandia.gov",

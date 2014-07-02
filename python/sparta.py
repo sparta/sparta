@@ -46,7 +46,7 @@ class sparta:
       self.spa = c_void_p()
       self.lib.sparta_open_no_mpi(0,None,byref(self.spa))
       # could use just this if SPARTA lib interface supported it
-      # self.lmp = self.lib.lammps_open_no_mpi(0,None)
+      # self.spa = self.lib.sparta_open_no_mpi(0,None)
 
   def __del__(self):
     if self.spa: self.lib.sparta_close(self.spa)
@@ -67,22 +67,22 @@ class sparta:
     elif type == 1:
       self.lib.sparta_extract_global.restype = POINTER(c_double)
     else: return None
-    ptr = self.lib.sparta_extract_global(self.lmp,name)
+    ptr = self.lib.sparta_extract_global(self.spa,name)
     return ptr[0]
 
   def extract_compute(self,id,style,type):
     if type == 0:
       if style > 0: return None
       self.lib.sparta_extract_compute.restype = POINTER(c_double)
-      ptr = self.lib.sparta_extract_compute(self.lmp,id,style,type)
+      ptr = self.lib.sparta_extract_compute(self.spa,id,style,type)
       return ptr[0]
     if type == 1:
       self.lib.sparta_extract_compute.restype = POINTER(c_double)
-      ptr = self.lib.sparta_extract_compute(self.lmp,id,style,type)
+      ptr = self.lib.sparta_extract_compute(self.spa,id,style,type)
       return ptr
     if type == 2:
       self.lib.sparta_extract_compute.restype = POINTER(POINTER(c_double))
-      ptr = self.lib.sparta_extract_compute(self.lmp,id,style,type)
+      ptr = self.lib.sparta_extract_compute(self.spa,id,style,type)
       return ptr
     return None
 
@@ -93,17 +93,17 @@ class sparta:
   def extract_variable(self,name,type):
     if type == 0:
       self.lib.sparta_extract_variable.restype = POINTER(c_double)
-      ptr = self.lib.sparta_extract_variable(self.lmp,name)
+      ptr = self.lib.sparta_extract_variable(self.spa,name)
       result = ptr[0]
       self.lib.sparta_free(ptr)
       return result
     if type == 1:
       self.lib.sparta_extract_global.restype = POINTER(c_int)
-      nlocalptr = self.lib.sparta_extract_global(self.lmp,"nplocal")
+      nlocalptr = self.lib.sparta_extract_global(self.spa,"nplocal")
       nlocal = nlocalptr[0]
       result = (c_double*nlocal)()
       self.lib.sparta_extract_variable.restype = POINTER(c_double)
-      ptr = self.lib.sparta_extract_variable(self.lmp,name)
+      ptr = self.lib.sparta_extract_variable(self.spa,name)
       for i in xrange(nlocal): result[i] = ptr[i]
       self.lib.sparta_free(ptr)
       return result
