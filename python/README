@@ -34,40 +34,6 @@ scripts in the examples sub-directory:
 
 trivial.py          read/run a SPARTA input script thru Python
 demo.py	  	    invoke various SPARTA library interface routines
-simple.py	    mimic operation of couple/simple/simple.cpp in Python
-gui.py		    GUI go/stop/temperature-slider to control SPARTA
-plot.py		    real-time temeperature plot with GnuPlot via Pizza.py
-viz_tool.py	    real-time viz via some viz package
-vizplotgui_tool.py  combination of viz.py and plot.py and gui.py
-
-For the viz_tool.py and vizplotgui_tool.py commands, replace "tool"
-with "gl" or "atomeye" or "pymol", depending on what visualization
-package you have installed.  We hope to add a VMD option soon.
-
-Note that for GL, you need to be able to run the Pizza.py GL tool,
-which is included in the pizza sub-directory.  See the Pizza.py doc
-pages for more info:
-
-http://www.sandia.gov/~sjplimp/pizza.html
-
-Note that for AtomEye, you need version 3, and their is a line in the
-scripts that specifies the path and name of the executable.  See
-the AtomEye WWW pages for more details:
-
-http://mt.seas.upenn.edu/Archive/Graphics/A
-http://mt.seas.upenn.edu/Archive/Graphics/A3/A3.html
-
-The latter link is to AtomEye 3 which has the scriping
-capability needed by these Python scripts.
-
-Note that for PyMol, you need to have built and installed the
-open-source version of PyMol in your Python, so that you can import it
-from a Python script.  See the PyMol WWW pages for more details:
-
-http://www.pymol.org
-http://sourceforge.net/scm/?type=svn&group_id=4546
-
-The latter link is to the open-source version.
 
 -------------------------------------------------------------------
 
@@ -84,11 +50,6 @@ arguments:
 
 trivial.py in.trivial
 demo.py
-simple.py in.simple
-gui.py in.gui 100
-plot.py in.plot 10 1000 thermo_temp
-viz_tool.py in.viz 100 5000
-vizplotgui_tool.py in.viz 100 thermo_temp
 
 You can un-comment the Pypar calls if you want to run these in
 parallel.
