@@ -20,7 +20,7 @@ Our group has also written and released a separate toolkit called
 "Pizza.py"_pizza which provides tools for doing setup, analysis,
 plotting, and visualization for SPARTA simulations.  Pizza.py is
 written in "Python"_python and is available for download from "the
-Pizza.py WWW site"_pizza.
+Pizza.py web site"_pizza.
 
 :link(pizza,http://pizza.sandia.gov)
 :link(python,http://www.python.org)
@@ -118,7 +118,7 @@ If not (e.g. because you need a path name), then edit these 2 lines as
 needed in pizza/gnu.py:
 
 except: PIZZA_GNUPLOT = "gnuplot"
-except: PIZZA_GNUTERM = "x11"
+except: PIZZA_GNUTERM = "x11" :pre
 
 For example, the first could become "/home/smith/bin/gnuplot".  The
 second should only need changing if GnuPlot requires a different

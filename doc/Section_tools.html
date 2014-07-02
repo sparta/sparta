@@ -23,7 +23,7 @@ are described briefly below.
 <A HREF = "http://pizza.sandia.gov">Pizza.py</A> which provides tools for doing setup, analysis,
 plotting, and visualization for SPARTA simulations.  Pizza.py is
 written in <A HREF = "http://www.python.org">Python</A> and is available for download from <A HREF = "http://pizza.sandia.gov">the
-Pizza.py WWW site</A>.
+Pizza.py web site</A>.
 </P>
 
 
@@ -122,9 +122,9 @@ type "gnuplot" from the command line to start GnuPlot, it should work.
 If not (e.g. because you need a path name), then edit these 2 lines as
 needed in pizza/gnu.py:
 </P>
-<P>except: PIZZA_GNUPLOT = "gnuplot"
-except: PIZZA_GNUTERM = "x11"
-</P>
+<PRE>except: PIZZA_GNUPLOT = "gnuplot"
+except: PIZZA_GNUTERM = "x11" 
+</PRE>
 <P>For example, the first could become "/home/smith/bin/gnuplot".  The
 second should only need changing if GnuPlot requires a different
 setting to plot to your screen.
