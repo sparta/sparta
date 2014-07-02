@@ -282,12 +282,17 @@ your machine, you may not need to set these variables.
 </P>
 <P>That's it.  Once you have a correct Makefile.foo, and you have
 pre-built any other needed libraries (e.g. MPI), all you need to do
-from the src directory is type this:
+from the src directory is type one of the following:
 </P>
 <PRE>make foo
-or
-gmake foo 
+make -j N foo
+gmake foo
+gmake -j N foo 
 </PRE>
+<P>The -j or -j N switches perform a parallel build which can be much
+faster, depending on how many cores your compilation machine has.  N
+is the number of cores the build runs on.
+</P>
 <P>You should get the executable spa_foo when the build is complete.
 </P>
 <HR>

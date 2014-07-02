@@ -19,7 +19,7 @@ keywords = {vremax} or {remain} :l
     startflag = {yes} or {no} = zero vremax at start of every run
   {remain} value = {yes} or {no} = hold remaining fraction of collisions over to next timestep
   {rotate} value = {no} or {yes}
-  {vibrate} value = {no} or {discrete} or {smooth}
+  {vibrate} value = {no} or {discrete} or {smooth} :pre
 :ule
 
 [Examples:]

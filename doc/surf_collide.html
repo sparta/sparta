@@ -80,17 +80,11 @@ coefficient.
 <P>Diffuse reflection emits the particle from the surface with no
 dependence on its incident velocity.  A new velocity is assigned to
 the particle, sampled from a Gaussian distribution consistent with the
-surface temperature.  The new velocity will have a component in the
-direction of the outward surface normal given by:
-</P>
-<P>TODO: GALLIS need to provide these 2 eqs as LaTeX files in the Eqs dir
+surface temperature.  The new velocity will have thermal components in the
+direction of the outward surface normal and the plane tangent to 
+the surface given by:
 </P>
 <CENTER><IMG SRC = "Eqs/diffuse_normal.jpg">
-</CENTER>
-<P>and 2 components in the plane tangent to the surface normal
-given by:
-</P>
-<CENTER><IMG SRC = "Eqs/diffuse_tangential.jpg">
 </CENTER>
 <P>The <I>Tsurf</I> value can be specified as an equal-style
 <A HREF = "variable.html">variable</A>.  If the value is a variable, it should be
