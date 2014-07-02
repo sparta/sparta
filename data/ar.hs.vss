@@ -1,8 +1,0 @@
-# VHS hard-sphere collision model parameters for each species
-
-# diameter (m)
-# omega
-# tref
-# alpha
-
-Ar  3.657896777921330E-010 0.50D0  273.15D0  1.D0

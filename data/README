@@ -6,20 +6,21 @@ similar data files into the directory you run SPARTA from.
 Files that end in "species" contain thermophysical properties of
 chemical species and are read by the species command.
 
-Files that end in "vss" or "vhs" contain collision model parameters
-that can be for the variable soft sphere (VSS) or variable hard sphere (vhs)
-or hard-sphere models.
- read by the collide command.
+Files that end in "vss" or "vhs" or "hs" contain collision model
+parameters that can be for the variable soft sphere (VSS) or variable
+hard sphere (vhs) or hard-sphere (HS) models.  These are read by the
+collide command.
 
-Files that end with "tce" list reactions for the TCE model.
+Files that end with "tce" list reactions for the Total Collision
+Energy (TCE) model and are read by the react command.
 
-Files that start with "sdata"
+Files that start with "sdata" contain lists of surface elements and
+are read by the read_surf command.
 
 See the doc pages for the following commands which
 describe the format of the corresponding files:
 
 species = doc/species.html
-vss/vhs = doc/collide.html
+vss/vhs/hs = doc/collide.html
 tce = doc/react.html
 sdata = doc/read_surf.html
-
