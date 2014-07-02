@@ -21,6 +21,10 @@ dump2xyz.py	convert a SPARTA particle dump file to XYZ format
 dumpsort.py	sort snapshots in a SPARTA particle dump file by particle ID
 log2txt.py	convert stats info in a SPARTA log file to columns of numbers
 logplot.py	plot 2 columns of stats info from a SPARTA log file
+surf_create.py  create a surface file with one or more objects in it
+                3d objects are triangulated, 2d objects are line-segmented
+surf_transform.py  transform objects in a surface file via same operations
+                   available in read_surf command (translate,scale,rotate,etc)
 
 ------------------------------
 General info on Python scripts:
