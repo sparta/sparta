@@ -253,10 +253,12 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip,
   Particle::Species *species = particle->species;
   int reaction,kspecies;
 
-  if (react) 
+  if (react) { 
+//    printf (" Station 0 %e %e %e \n", precoln.etotal, precoln.evib, precoln.erot);
     reaction = react->attempt(ip,jp,
                               precoln.etrans,precoln.erot,
                               precoln.evib,postcoln.etotal,kspecies);
+  }
   else reaction = 0;
  
   // add a 3rd particle if necessary, index = nlocal-1
@@ -377,8 +379,6 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   Particle::Species *species = particle->species;
 
   double AdjustFactor = 0.99999;
-  double rotn_phi = 1.0;
-  double vibn_phi = 1.0;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
 
@@ -400,6 +400,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
       int sp = p->ispecies;
       rotdof = species[sp].rotdof;
+      double rotn_phi = species[sp].rotrel; 
 
       if (rotdof) {
         if (rotn_phi >= random->uniform()) {
@@ -432,6 +433,9 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       }
  
       vibdof = species[sp].vibdof;
+      double vibn_phi = 1./species[sp].vibrel; 
+
+//      printf(" Exchage %d %d \n", vibstyle, vibdof);
 
       if (vibdof) {
         if (vibn_phi >= random->uniform()) {
