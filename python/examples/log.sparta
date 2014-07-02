@@ -1,70 +1,120 @@
 SPARTA (5 Dec 2013)
 # advect particles on uniform 3d Cartesian grid
+
 # particles reflect off global box boundaries
 
+
+
 variable            x index 10
+
 variable            y index 10
+
 variable            z index 10
 
+
+
 variable            lx equal $x*1.0e-5
+
 variable            lx equal 10*1.0e-5
+
 variable            ly equal $y*1.0e-5
+
 variable            ly equal 10*1.0e-5
+
 variable            lz equal $z*1.0e-5
+
 variable            lz equal 10*1.0e-5
 
+
+
 variable            n equal 10*$x*$y*$z
+
 variable            n equal 10*10*$y*$z
+
 variable            n equal 10*10*10*$z
+
 variable            n equal 10*10*10*10
 
+
+
 seed	    	    12345
+
 dimension   	    3
+
 global              gridcut 1.0e-5
+
+
 
 boundary	    rr rr rr
 
+
+
 create_box  	    0 ${lx} 0 ${ly} 0 ${lz}
+
 create_box  	    0 0.0001 0 ${ly} 0 ${lz}
+
 create_box  	    0 0.0001 0 0.0001 0 ${lz}
+
 create_box  	    0 0.0001 0 0.0001 0 0.0001
+
 Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
 create_grid 	    $x $y $z
+
 create_grid 	    10 $y $z
+
 create_grid 	    10 10 $z
+
 create_grid 	    10 10 10
+
 Created 1000 child grid cells
   parent cells = 1
-  CPU time = 0.00100207 secs
-  create/ghost percent = 97.1925 2.80752
+  CPU time = 0.00103307 secs
+  create/ghost percent = 97.2767 2.72329
+
 
 balance_grid        rcb part
+
 Balance grid migrated 0 cells
-  CPU time = 0.000738144 secs
-  reassign/sort/migrate/ghost percent = 15.73 0.387597 2.03488 81.8475
+  CPU time = 0.00075388 secs
+  reassign/sort/migrate/ghost percent = 15.623 0.28463 2.24541 81.8469
+
 
 species		    ar.species Ar
+
 mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
 
+
+
 global              nrho 7.07043E22
+
 global              fnum 7.07043E6
+
+
 
 collide		    vss air ar.vss
 
+
+
 create_particles    air n $n
+
 create_particles    air n 10000
+
 Created 10000 particles
-  CPU time = 0.00288296 secs
+  CPU time = 0.00285697 secs
+
 
 stats		    10
+
 compute             temp temp
+
 stats_style	    step cpu np nattempt ncoll c_temp
 
-variable            xc particle x
-variable            vy particle vy
+
 
 timestep 	    7.00E-9
+
 run 		    100
+
 Memory usage per proc in Mbytes:
   particles (ave,min,max) = 1.02997 1.02997 1.02997
   grid      (ave,min,max) = 1.83113 1.83113 1.83113
@@ -72,17 +122,17 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 2.8611 2.8611 2.8611
 Step CPU Np Natt Ncoll temp 
        0            0    10000        0        0    274.40561 
-      10 0.0059440136    10000      895      693    274.40561 
-      20  0.011885881    10000      881      671    274.40561 
-      30  0.017920017    10000      934      687    274.40561 
-      40  0.024004936    10000      947      723    274.40561 
-      50  0.030195951    10000      925      700    274.40561 
-      60  0.036354065    10000      959      695    274.40561 
-      70  0.042531013    10000      950      706    274.40561 
-      80  0.048753977    10000      942      686    274.40561 
-      90  0.054965973    10000      973      702    274.40561 
-     100  0.061203957    10000      968      709    274.40561 
-Loop time of 0.0612111 on 1 procs for 100 steps with 10000 particles
+      10 0.0057201385    10000      895      693    274.40561 
+      20  0.011600971    10000      881      671    274.40561 
+      30  0.017625093    10000      934      687    274.40561 
+      40  0.023797035    10000      947      723    274.40561 
+      50  0.030436993    10000      925      700    274.40561 
+      60  0.036593914    10000      959      695    274.40561 
+      70  0.042770147    10000      950      706    274.40561 
+      80   0.04893899    10000      942      686    274.40561 
+      90  0.055122137    10000      973      702    274.40561 
+     100  0.061322927    10000      968      709    274.40561 
+Loop time of 0.0613301 on 1 procs for 100 steps with 10000 particles
 
 Particle moves    = 1000000 (1M)
 Cells touched     = 1360593 (1.36M)
@@ -95,7 +145,7 @@ Collide attempts  = 93363 (93.4K)
 Collide occurs    = 70080 (70.1K)
 Particles stuck   = 0
 
-Particle-moves/CPUsec/proc: 1.63369e+07
+Particle-moves/CPUsec/proc: 1.63052e+07
 Particle-moves/step: 10000
 Cell-touches/particle/step: 1.36059
 Particle comm iterations/step: 1
@@ -107,12 +157,12 @@ Surface-collisions/particle/step: 0
 Collision-attempts/particle/step: 0.093363
 Collisions/particle/step: 0.07008
 
-Move  time (%) = 0.0283144 (46.2569)
-Coll  time (%) = 0.0278587 (45.5125)
-Sort  time (%) = 0.00445938 (7.28525)
-Comm  time (%) = 5.17368e-05 (0.084522)
-Outpt time (%) = 0.000497818 (0.81328)
-Other time (%) = 2.90871e-05 (0.0475193)
+Move  time (%) = 0.0283756 (46.2671)
+Coll  time (%) = 0.0276103 (45.0192)
+Sort  time (%) = 0.00474238 (7.73256)
+Comm  time (%) = 6.86646e-05 (0.111959)
+Outpt time (%) = 0.000505209 (0.823754)
+Other time (%) = 2.7895e-05 (0.0454833)
 
 Particles: 10000 ave 10000 max 10000 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
