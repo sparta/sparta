@@ -557,8 +557,8 @@ double Particle::evib(int isp, RanPark *erandom)
 
   // NOTE: is temp_thermal always set?
   
-  if (vibstyle == NONE) eng = 0.0;
-  else if (vibstyle == DISCRETE && species[isp].vibdof == 2) {
+  eng = 0.0;
+  if (vibstyle == DISCRETE && species[isp].vibdof == 2) {
     int ivib = -log(erandom->uniform()) * 
       update->temp_thermal / particle->species[isp].vibtemp;
     eng = ivib * update->boltz * particle->species[isp].vibtemp;
