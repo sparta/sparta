@@ -66,9 +66,8 @@ volume, and other parameters of the collision style.
 For each collision attempt, a random pair of particles is selected,
 with one particle from each group.  Whether the collision occurs or
 not is a function of the relative velocities of the two particles,
-their respectives species, and other parameters of the collision
-style  (see equation 11.4 in "(Bird94)"_#Bird94). 
-
+their respectives species, and other parameters of the collision style
+(see equation 11.4 in "(Bird94)"_#Bird94).
 
 :line
 

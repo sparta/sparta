@@ -70,8 +70,8 @@ coefficient.
 Diffuse reflection emits the particle from the surface with no
 dependence on its incident velocity.  A new velocity is assigned to
 the particle, sampled from a Gaussian distribution consistent with the
-surface temperature.  The new velocity will have thermal components in the
-direction of the outward surface normal and the plane tangent to 
+surface temperature.  The new velocity will have thermal components in
+the direction of the outward surface normal and the plane tangent to
 the surface given by:
 
 :c,image(Eqs/diffuse_normal.jpg)
