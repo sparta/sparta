@@ -57,20 +57,18 @@ with each other, in the following manner.
 Consider a cell with N particles and a mixture with M groups.  Based
 on its species, each particle is assigned to one of the M groups.
 Each unique pair of groups is considered, including each group paired
-with itself.  For each pair of groups a value {Nattempt} is calculated
+with itself.  For each pair of groups a value {Nattempt} 
+(see equation 11.3 in "(Bird94)"_#Bird94) is calcualted  
 which is the number of collisions to attempt.  This is a function of
 N1 and N2 (the number of particles in each group), the grid cell
 volume, and other parameters of the collision style.
-
-TODO: GALLIS do we want an equation for Nattempt or a cite to Bird?
 
 For each collision attempt, a random pair of particles is selected,
 with one particle from each group.  Whether the collision occurs or
 not is a function of the relative velocities of the two particles,
 their respectives species, and other parameters of the collision
-style.
+style  (see equation 11.4 in "(Bird94)"_#Bird94). 
 
-TODO: GALLIS do we want an equation for collision yes/no or a cite to Bird?
 
 :line
 
@@ -81,9 +79,8 @@ performed, i.e. the simulation models free-molecular flow.
 
 The {vss} style implements the Variable Soft Sphere (VSS) model for
 collisions.  As discussed below, with appropriate parameter choices,
-it can also compute the Variable Hard Sphere (VHS) model.
-
-TODO: GALLIS do we need an equation or two to describe the VSS model?
+it can also compute the Variable Hard Sphere (VHS) model. 
+(see chapter 2.6 and 2.7  in "(Bird94)"_#Bird94). 
 
 In DSMC, the variable-soft-sphere (VSS) interaction of "Koura and
 Matsumoto"_#Koura92 and the variable-hard-sphere (VHS) interaction of
