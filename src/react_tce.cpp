@@ -161,6 +161,18 @@ void ReactTCE::init()
     reactions[j][i].list[reactions[j][i].n++] = m;
   }
 
+  // check for ionizatoin and recombitation reactions, not yet supported
+
+  for (int i = 0; i < nspecies; i++)
+    for (int j = 0; j < nspecies; j++) {
+      int *list = reactions[i][j].list;
+      for (int n = 0; n < reactions[i][j].n; n++)
+        if (rlist[list[n]].type == IONIZATION || 
+            rlist[list[n]].type == RECOMBINATION)
+          error->all(FLERR,"Ionization and recombination reactions are "
+                     "not yet implemented");
+    }
+
   // modify Arrhenius coefficients for TCE model
   // C1,C2 Bird 94, p 127
   // initflag logic insures only done once per reaction
@@ -421,13 +433,6 @@ void ReactTCE::readfile(char *fname)
     
     nlist++;
   }
-
-  // check for ionizatoin and recombitation reactions, not yet supported
-
-  for (int i = 0; i < nlist; i++)
-    if (rlist[i].type == IONIZATION || rlist[i].type == RECOMBINATION)
-      error->all(FLERR,"Ionization and recombination reactions are "
-                 "not yet implemented");
 }
 
 /* ----------------------------------------------------------------------
