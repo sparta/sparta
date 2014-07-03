@@ -433,6 +433,8 @@ void ReactTCE::readfile(char *fname)
     
     nlist++;
   }
+
+  if (comm->me == 0) fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
