@@ -1,0 +1,115 @@
+SPARTA (5 Dec 2013)
+# 2d test with surfaces, just for volume check
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
+create_grid 	    20 20 1
+Created 400 child grid cells
+  parent cells = 1
+  CPU time = 0.000696898 secs
+  create/ghost percent = 97.1262 2.87376
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.000382185 secs
+  reassign/sort/migrate/ghost percent = 20.1497 0.561447 4.92826 74.3606
+
+global		    nrho 1.0 fnum 0.001
+
+species		    ../../data/air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+read_surf           1 sdata.spiky trans 5 5 0 scale 0.4 0.4 1
+  53 points
+  53 lines
+  1.30334 8.69492 xlo xhi
+  1.50769 8.9232 ylo yhi
+  0 0 zlo zhi
+  0.0984942 min line length
+  127 = cells with surfs
+  244 = total surfs in all grid cells
+  5 = max surfs in one grid cell
+  0.196988 = min surf-size/cell-size ratio
+  268 5 127 = cells outside/inside/overlapping surfs
+  86 40 1 = surf cells with 1,2,etc splits
+  85.4883 85.4883 = cell-wise and global flow volume
+  CPU time = 0.000496864 secs
+  read/surf2grid/error/ghost/inout percent = 16.6987 35.4127 3.02303 34.6449 10.2207
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         collide 1 1
+
+collide             vss air ../../data/air.vss
+
+fix		    in inflow air xlo
+
+timestep 	    0.0001
+
+#dump                2 image 50 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 axes yes 0.9 0.02 #                    gline yes 0.005
+#dump_modify	    2 pad 4
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 2.28889 2.28889 2.28889
+  surf      (ave,min,max) = 0.00343704 0.00343704 0.00343704
+  total     (ave,min,max) = 2.29233 2.29233 2.29233
+Step CPU Np Natt Ncoll Nscoll Nscheck 
+       0            0        0        0        0        0        0 
+     100  0.037896872    12083        0        0      153     4384 
+     200   0.12541795    21499        0        0      337    10295 
+     300   0.25193882    27950        0        0      419    13617 
+     400   0.40707183    32506        0        0      458    15648 
+     500   0.58168197    35597        0        0      456    16866 
+     600   0.77148104    38230        0        0      491    17935 
+     700   0.97537494    40373        0        0      541    19145 
+     800      1.18893    41925        0        0      495    19430 
+     900    1.4101958    43094        0        0      542    19715 
+    1000    1.6370649    44023        0        0      525    20259 
+Loop time of 1.63707 on 1 procs for 1000 steps with 44023 particles
+
+Particle moves    = 31810232 (31.8M)
+Cells touched     = 35257012 (35.3M)
+Particle comms    = 0 (0K)
+Boundary collides = 118662 (0.119M)
+Boundary exits    = 166720 (0.167M)
+SurfColl checks   = 14669080 (14.7M)
+SurfColl occurs   = 417365 (0.417M)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 1.94312e+07
+Particle-moves/step: 31810.2
+Cell-touches/particle/step: 1.10835
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.00373031
+Particle fraction exiting boundary: 0.00524108
+Surface-checks/particle/step: 0.461143
+Surface-collisions/particle/step: 0.0131205
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+
+Move  time (%) = 0.833283 (50.9008)
+Coll  time (%) = 0.524388 (32.0321)
+Sort  time (%) = 0.123703 (7.55635)
+Comm  time (%) = 0.00309467 (0.189037)
+Outpt time (%) = 9.5129e-05 (0.00581092)
+Other time (%) = 0.152509 (9.31595)
+
+Particles: 44023 ave 44023 max 44023 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      483 ave 483 max 483 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+

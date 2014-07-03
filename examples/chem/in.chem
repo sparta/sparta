@@ -1,0 +1,37 @@
+# thermal gas in a 3d box with collisions and chemistry
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+create_grid 	    10 10 10
+
+balance_grid        rcb part
+
+species		    ../../data/air.species N2 N
+mixture		    air N2 N vstream 0.0 0.0 0.0 temp 20000.0 group one
+mixture             air N2 frac 1.0
+mixture             air N frac 0.0
+
+global              nrho 7.07043E22
+global              fnum 7.07043E5
+
+create_particles    air n 10000
+
+collide		    vss air ../../data/air.vss
+react               tce ../../data/air.tce
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll nreact c_temp
+
+#dump                2 image 100 image.*.ppm type type pdiam 3.0e-6 &
+#		    size 512 512 gline yes 0.005
+#dump_modify	    2 pad 4
+
+timestep 	    7.00E-9
+run 		    1000
