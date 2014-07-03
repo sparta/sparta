@@ -16,6 +16,7 @@
 #include "math.h"
 #include "string.h"
 #include "stdlib.h"
+#include "ctype.h"
 #include "particle.h"
 #include "grid.h"
 #include "update.h"
@@ -376,6 +377,8 @@ int Particle::clone_particle(int index)
 
 void Particle::add_species(int narg, char **arg)
 {
+  int i,j,n;;
+
   if (narg < 2) error->all(FLERR,"Illegal species command");
 
   if (me == 0) {
@@ -427,6 +430,16 @@ void Particle::add_species(int narg, char **arg)
     } else names[newspecies++] = arg[iarg];
   }
 
+  // species ID must be all alphanumeric chars, underscore, plus/minus
+
+  for (i = 0; i < newspecies; i++) {
+    n = strlen(names[i]);
+    for (j = 0; j < n-1; j++)
+      if (!isalnum(names[i][j]) && names[i][j] != '_' && 
+          names[i][j] != '+' && names[i][j] != '-')
+        error->all(FLERR,"Invalid character in species ID");
+  }
+
   // extend species list if necessary
 
   if (nspecies + newspecies > maxspecies) {
@@ -441,9 +454,7 @@ void Particle::add_species(int narg, char **arg)
   int imix_all = find_mixture((char *) "all");
   int imix_species = find_mixture((char *) "species");
 
-  int j;
-
-  for (int i = 0; i < newspecies; i++) {
+  for (i = 0; i < newspecies; i++) {
     for (j = 0; j < nspecies; j++)
       if (strcmp(names[i],species[j].id) == 0) break;
     if (j < nspecies) error->all(FLERR,"Species ID is already defined");
