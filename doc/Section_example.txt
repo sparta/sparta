@@ -19,21 +19,24 @@ are copied from the data directory so the problems are self-contained.
 
 Sample log file outputs on different machines and different numbers of
 processors are included in the directories to compare your answers to.
-E.g. a log file like log.free.foo.P means it ran on P processors of
-machine "foo".
+E.g. a log file like log.free.date.foo.P means it ran on P processors
+of machine "foo", using the dated SPARTA version.
 
 If the "dump image" lines in each script are uncommented, a series of
-JPG snapshots will be produced.  Animations of several of the examples
-can be viewed on the Movies section of the "SPARTA WWW Site"_sws.
+image snapshots will be produced.  Animations of several of the
+examples can be viewed on the Movies section of the "SPARTA WWW
+Site"_sws.
 
 These are the sample problems in the examples sub-directories.  See
 the examples/README file for more details.
 
-free:      free molecular flow in a box
-collide:   collisional flow in a box
-step:      flow around a step
-circle     flow around a sphere
-spiky:     flow around a spiky circle
+chem = chemistry in a 3d box
+circle = 2d flow around a circular object
+collide = collisional motion in a 3d box
+free = free molecular motion in a 3d box
+sphere = 3d flow around a sphere
+spiky = 2d flow around a spiky circle
+step = 2d flow around a staircase of steps :ul
 
 Here is how you might run and visualize one of the sample problems:
 
@@ -46,7 +49,7 @@ image.*.jpg.  If you have the freely available ImageMagick toolkit on
 your machine, you can run its "convert" command to create an animated
 GIF, and visualize it from the FireFox browser as follows:
 
-convert image*jpg movie.gif
+convert image*ppm movie.gif
 firefox ./movie.gif :pre
 
 A similar command should work with other browsers.  Or you can select

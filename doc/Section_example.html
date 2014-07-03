@@ -22,22 +22,25 @@ are copied from the data directory so the problems are self-contained.
 </P>
 <P>Sample log file outputs on different machines and different numbers of
 processors are included in the directories to compare your answers to.
-E.g. a log file like log.free.foo.P means it ran on P processors of
-machine "foo".
+E.g. a log file like log.free.date.foo.P means it ran on P processors
+of machine "foo", using the dated SPARTA version.
 </P>
 <P>If the "dump image" lines in each script are uncommented, a series of
-JPG snapshots will be produced.  Animations of several of the examples
-can be viewed on the Movies section of the <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A>.
+image snapshots will be produced.  Animations of several of the
+examples can be viewed on the Movies section of the <A HREF = "http://sparta.sandia.gov">SPARTA WWW
+Site</A>.
 </P>
 <P>These are the sample problems in the examples sub-directories.  See
 the examples/README file for more details.
 </P>
-<P>free:      free molecular flow in a box
-collide:   collisional flow in a box
-step:      flow around a step
-circle     flow around a sphere
-spiky:     flow around a spiky circle
-</P>
+<UL><LI>chem = chemistry in a 3d box
+<LI>circle = 2d flow around a circular object
+<LI>collide = collisional motion in a 3d box
+<LI>free = free molecular motion in a 3d box
+<LI>sphere = 3d flow around a sphere
+<LI>spiky = 2d flow around a spiky circle
+<LI>step = 2d flow around a staircase of steps 
+</UL>
 <P>Here is how you might run and visualize one of the sample problems:
 </P>
 <PRE>cd free
@@ -49,7 +52,7 @@ image.*.jpg.  If you have the freely available ImageMagick toolkit on
 your machine, you can run its "convert" command to create an animated
 GIF, and visualize it from the FireFox browser as follows:
 </P>
-<PRE>convert image*jpg movie.gif
+<PRE>convert image*ppm movie.gif
 firefox ./movie.gif 
 </PRE>
 <P>A similar command should work with other browsers.  Or you can select
