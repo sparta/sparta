@@ -271,7 +271,8 @@ void ComputeGrid::post_process_grid(void *innumer, void *indenom,
 
   int m = 0;
   for (int i = istart; i < nglocal; i++) {
-    if (norm[i] == 0.0) out[m] = 0.0;
+    if (!norm) out[m] = array[i][index];
+    else if (norm[i] == 0.0) out[m] = 0.0;
     else out[m] = array[i][index]/norm[i];
     m += nstride;
     if (icell >= 0) return;
