@@ -509,6 +509,7 @@ void Collide::collisions_group()
 	if (kpart) {
 	  newgroup = species2group[kpart->ispecies];
 	  addgroup(newgroup,particle->nlocal-1);
+          particles = particle->particles;
 	}
       }
     }

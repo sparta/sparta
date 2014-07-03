@@ -45,8 +45,8 @@ class Collide : protected Pointers {
   virtual int test_collision(int, int, int, 
 			     Particle::OnePart *, Particle::OnePart *) = 0;
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
-  virtual Particle::OnePart *perform_collision(Particle::OnePart *, 
-					       Particle::OnePart *) = 0;
+  virtual Particle::OnePart *perform_collision(Particle::OnePart *&, 
+					       Particle::OnePart *&) = 0;
 
   virtual double extract(int, const char *) {return 0.0;}
 

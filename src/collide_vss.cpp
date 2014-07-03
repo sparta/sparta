@@ -245,8 +245,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
 /* ---------------------------------------------------------------------- */
 
-Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *ip, 
-                                                 Particle::OnePart *jp)
+Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *&ip, 
+                                                 Particle::OnePart *&jp)
 {
   double x[3],v[3];
 

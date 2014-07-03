@@ -38,7 +38,7 @@ class CollideVSS : public Collide {
   int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
   void setup_collision(Particle::OnePart *, Particle::OnePart *);
   Particle::OnePart *
-    perform_collision(Particle::OnePart *, Particle::OnePart *);
+    perform_collision(Particle::OnePart *&, Particle::OnePart *&);
 
   double extract(int, const char *);
 
