@@ -341,7 +341,7 @@ void Mixture::params(int narg, char **arg)
   //   no listed species: delete groups, assign all species to group-ID
   //   listed species: assign listed species to group-ID
   // else if group keyword not specified:
-  //   assign listed species that are new each to own group
+  //   assign any listed species that are new each to group "default"
 
   if (groupflag) {
     if (strcmp(arg[grouparg],"SELF") == 0) {
@@ -382,9 +382,9 @@ void Mixture::params(int narg, char **arg)
   } else if (nactive) {
     for (int i = 0; i < nspecies; i++) {
       if (active[i] != 2) continue;
-      int igroup = find_group(particle->species[species[i]].id);
+      int igroup = find_group("default");
       if (igroup < 0) {
-        add_group(particle->species[species[i]].id);
+        add_group("default");
         igroup = ngroup-1;
       }
       mix2group[i] = igroup;
