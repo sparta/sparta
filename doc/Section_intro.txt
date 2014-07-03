@@ -111,7 +111,7 @@ Geometry :h4
 Gas-phase collisions and chemistry :h4
 
   collisions between pairs of species groups
-  "VSS (variable soft sphere) or VHS (variable hard sphere) collisions"_collide.html
+  "VSS (variable soft sphere) or VHS (variable hard sphere) or HS (hard sphere) collisions"_collide.html
   "TCE chemistry model"_react.html :ul
 
 Surface collisions :h4
@@ -121,12 +121,12 @@ Surface collisions :h4
 Performance :h4
 
   "grid cell weighting"_global.html of particles
-  "static"_balance.html load-balancing of grid cells or particles
+  "static"_balance_grid.html load-balancing of grid cells or particles
   "dynamic"_fix_balance.html load-balancing of grid cells or particles :ul
 
 Diagnostics :h4
 
-  "global boundary statistics"_compute_bound.html
+  "global boundary statistics"_compute_boundary.html
   "per grid cell statistics"_compute_grid.html
   "per surface element statistics"_compute_surf.html
   time-averaging of "global"_fix_ave_time.html, "grid"_fix_ave_grid.html, "surface"_fix_ave_surf.html statistics :ul
