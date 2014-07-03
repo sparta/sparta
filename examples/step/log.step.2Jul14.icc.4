@@ -1,5 +1,5 @@
-SPARTA (5 Dec 2013)
-# 2d test with surfaces, just for volume check
+SPARTA (7 Jul 2014)
+# 2d flow around a staircase of steps
 
 seed	    	    12345
 dimension   	    2
@@ -12,12 +12,12 @@ Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 Created 400 child grid cells
   parent cells = 1
-  CPU time = 0.000925064 secs
-  create/ghost percent = 92.3196 7.68041
+  CPU time = 0.00198984 secs
+  create/ghost percent = 88.1979 11.8021
 balance_grid        rcb cell
 Balance grid migrated 280 cells
-  CPU time = 0.000482082 secs
-  reassign/sort/migrate/ghost percent = 47.725 0.642928 17.2107 34.4214
+  CPU time = 0.000626087 secs
+  reassign/sort/migrate/ghost percent = 61.0434 0.456969 12.9474 25.5522
 
 global		    nrho 1.0 fnum 0.001
 
@@ -38,8 +38,8 @@ read_surf	    1 sdata.step trans 5 5 0 scale 0.75 0.75 1                     rot
   312 44 44 = cells outside/inside/overlapping surfs
   44 = surf cells with 1,2,etc splits
   85.375 85.375 = cell-wise and global flow volume
-  CPU time = 0.000262976 secs
-  read/surf2grid/error/ghost/inout percent = 23.2094 15.9565 4.17044 32.7289 23.9347
+  CPU time = 0.000301123 secs
+  read/surf2grid/error/ghost/inout percent = 21.6152 15.9145 3.64212 37.213 21.6152
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         collide 1 1
 
@@ -49,8 +49,8 @@ fix		    in inflow air xlo
 
 timestep 	    0.0001
 
-dump                2 image 50 image.*.ppm type type pdiam 0.1                     surf proc 0.01 size 512 512 axes yes 0.9 0.02
-dump_modify	    2 pad 4
+#dump                2 image 50 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 axes yes 0.9 0.02
+#dump_modify	    2 pad 4
 
 stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck
@@ -62,17 +62,17 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 1.83212 1.83212 1.83212
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.039264917    11962        0        0       54     1076 
-     200  0.097502947    21808        0        0       87     2432 
-     300   0.16904998    28692        0        0       96     3339 
-     400   0.25042701    33527        0        0       93     3967 
-     500   0.34012008    37703        0        0      129     4566 
-     600   0.43706107    41150        0        0      129     4942 
-     700   0.53970194    43950        0        0      135     5280 
-     800   0.64647388    46527        0        0      144     5514 
-     900   0.75888395    48544        0        0      147     5861 
-    1000   0.88197207    50556        0        0      155     6127 
-Loop time of 0.882005 on 4 procs for 1000 steps with 50556 particles
+     100  0.017815113    11962        0        0       54     1076 
+     200  0.048117161    21808        0        0       87     2432 
+     300  0.088185072    28692        0        0       96     3339 
+     400   0.13255119    33527        0        0       93     3967 
+     500   0.18242502    37703        0        0      129     4566 
+     600   0.23661613    41150        0        0      129     4942 
+     700   0.29435301    43950        0        0      135     5280 
+     800   0.35465002    46527        0        0      144     5514 
+     900     0.417835    48544        0        0      147     5861 
+    1000   0.48326302    50556        0        0      155     6127 
+Loop time of 0.483347 on 4 procs for 1000 steps with 50556 particles
 
 Particle moves    = 34190125 (34.2M)
 Cells touched     = 37867623 (37.9M)
@@ -85,7 +85,7 @@ Collide attempts  = 0 (0K)
 Collide occurs    = 0 (0K)
 Particles stuck   = 0
 
-Particle-moves/CPUsec/proc: 9.69103e+06
+Particle-moves/CPUsec/proc: 1.7684e+07
 Particle-moves/step: 34190.1
 Cell-touches/particle/step: 1.10756
 Particle comm iterations/step: 1.997
@@ -97,12 +97,12 @@ Surface-collisions/particle/step: 0.00322821
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
 
-Move  time (%) = 0.475873 (53.9536)
-Coll  time (%) = 0.0933765 (10.5868)
-Sort  time (%) = 0.0325955 (3.69561)
-Comm  time (%) = 0.00535613 (0.607268)
-Outpt time (%) = 0.234959 (26.6392)
-Other time (%) = 0.0398445 (4.51749)
+Move  time (%) = 0.387277 (80.124)
+Coll  time (%) = 0.0214887 (4.44581)
+Sort  time (%) = 0.0327751 (6.78086)
+Comm  time (%) = 0.00555468 (1.14921)
+Outpt time (%) = 0.00077486 (0.160311)
+Other time (%) = 0.0354769 (7.33983)
 
 Particles: 12639 ave 23256 max 4461 min
 Histogram: 2 0 0 0 0 0 1 0 0 1

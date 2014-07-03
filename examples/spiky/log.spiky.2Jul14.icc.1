@@ -1,5 +1,6 @@
-SPARTA (5 Dec 2013)
-# 2d test with surfaces, just for volume check
+SPARTA (7 Jul 2014)
+# 2d flow around a spiky circle
+# good test of cut and split cells
 
 seed	    	    12345
 dimension   	    2
@@ -12,12 +13,12 @@ Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 Created 400 child grid cells
   parent cells = 1
-  CPU time = 0.000696898 secs
-  create/ghost percent = 97.1262 2.87376
+  CPU time = 0.00072813 secs
+  create/ghost percent = 97.2495 2.75049
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.000382185 secs
-  reassign/sort/migrate/ghost percent = 20.1497 0.561447 4.92826 74.3606
+  CPU time = 0.00037694 secs
+  reassign/sort/migrate/ghost percent = 18.7856 0.56926 6.07211 74.5731
 
 global		    nrho 1.0 fnum 0.001
 
@@ -38,8 +39,8 @@ read_surf           1 sdata.spiky trans 5 5 0 scale 0.4 0.4 1
   268 5 127 = cells outside/inside/overlapping surfs
   86 40 1 = surf cells with 1,2,etc splits
   85.4883 85.4883 = cell-wise and global flow volume
-  CPU time = 0.000496864 secs
-  read/surf2grid/error/ghost/inout percent = 16.6987 35.4127 3.02303 34.6449 10.2207
+  CPU time = 0.000498056 secs
+  read/surf2grid/error/ghost/inout percent = 16.898 35.1364 3.0158 34.1312 10.8186
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         collide 1 1
 
@@ -62,17 +63,17 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 2.29233 2.29233 2.29233
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.037896872    12083        0        0      153     4384 
-     200   0.12541795    21499        0        0      337    10295 
-     300   0.25193882    27950        0        0      419    13617 
-     400   0.40707183    32506        0        0      458    15648 
-     500   0.58168197    35597        0        0      456    16866 
-     600   0.77148104    38230        0        0      491    17935 
-     700   0.97537494    40373        0        0      541    19145 
-     800      1.18893    41925        0        0      495    19430 
-     900    1.4101958    43094        0        0      542    19715 
-    1000    1.6370649    44023        0        0      525    20259 
-Loop time of 1.63707 on 1 procs for 1000 steps with 44023 particles
+     100  0.031795979    12083        0        0      153     4384 
+     200   0.10338187    21499        0        0      337    10295 
+     300   0.20282888    27950        0        0      419    13617 
+     400   0.32132387    32506        0        0      458    15648 
+     500    0.4518981    35597        0        0      456    16866 
+     600   0.59137797    38230        0        0      491    17935 
+     700   0.74005008    40373        0        0      541    19145 
+     800   0.89420605    41925        0        0      495    19430 
+     900    1.0527029    43094        0        0      542    19715 
+    1000    1.2143109    44023        0        0      525    20259 
+Loop time of 1.21432 on 1 procs for 1000 steps with 44023 particles
 
 Particle moves    = 31810232 (31.8M)
 Cells touched     = 35257012 (35.3M)
@@ -85,7 +86,7 @@ Collide attempts  = 0 (0K)
 Collide occurs    = 0 (0K)
 Particles stuck   = 0
 
-Particle-moves/CPUsec/proc: 1.94312e+07
+Particle-moves/CPUsec/proc: 2.61959e+07
 Particle-moves/step: 31810.2
 Cell-touches/particle/step: 1.10835
 Particle comm iterations/step: 1
@@ -97,12 +98,12 @@ Surface-collisions/particle/step: 0.0131205
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
 
-Move  time (%) = 0.833283 (50.9008)
-Coll  time (%) = 0.524388 (32.0321)
-Sort  time (%) = 0.123703 (7.55635)
-Comm  time (%) = 0.00309467 (0.189037)
-Outpt time (%) = 9.5129e-05 (0.00581092)
-Other time (%) = 0.152509 (9.31595)
+Move  time (%) = 0.837522 (68.9705)
+Coll  time (%) = 0.111866 (9.21222)
+Sort  time (%) = 0.123784 (10.1937)
+Comm  time (%) = 0.00312185 (0.257087)
+Outpt time (%) = 9.10759e-05 (0.00750016)
+Other time (%) = 0.137935 (11.359)
 
 Particles: 44023 ave 44023 max 44023 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
