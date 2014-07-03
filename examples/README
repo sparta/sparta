@@ -1,26 +1,43 @@
-DSMC example problems
+SPARTA example problems
 
 Each of these sub-directories contains a sample problem you can run
-with DSMC.  They should all run quickly in a few seconds on a desktop
-machine.  Each problem has an input script (in.*) and produces a log
-file (log.*).  Some produce dump files (dump.*) when they run.
+with SPARTA.  They should all run quickly in a minute or less on a
+desktop machine.  Each problem has an input script (in.*) and produces
+a log file (log.*).  Most have dump commands that can be un-commented
+to produce a series of image files that animate the simulation.
 
 A few sample log file outputs on different machines and different
 numbers of processors are included in the directories to compare your
-answers to.  E.g. a log file like log.test.date.foo.P means it ran on
-P processors of machine "foo" with the dated version of DSMC.  Note
-that these problems should get statistically similar answers when run
-on different machines or different numbers of processors, but not
-identical answers to those in the log of dump files included here.
+answers to.  E.g. a log file like log.test.date.machine.P means it ran
+on P processors of machine "machine" with the dated version of SPARTA>
+Note that these problems should get statistically similar answers when
+run on different machines or different numbers of processors, but not
+identical answers to those in the included log files.
 
-These are the sample problems in the various sub-directories:
+These are the sample problems in the various sub-directories.
+Most are 2d problems so that they run quickly and can be easily
+visualized.  The sphere problem is 3d.
 
-Here is how you might run and visualize one of the sample problems:
+chem = chemistry in a box
+circle = 2d flow around a circular object
+collide = collisional motion in a box
+free = free molecular motion in a box
+sphere = 3d flow around a sphere
+spiky = 2d flow around a spiky circle
+step = 2d flow around a jagged step
 
-cd foo
-cp ../../src/dsmc_linux .          # copy DSMC executable to this dir
-spk_dsmc < in.foo                  # run the problem
+Here is an example of how one of the sample problems can be run and
+visualized:
 
-Running the simulation produces the files dump.foo and log.dsmc.
+cd spiky
+cp ../../src/spa_g++ .          # copy DSMC executable to this dir
+spa_g++ < in.spiky              # run the problem
 
-How to animate dump files or view image files:
+Running the simulation produces the files log.sparta and image.*.ppm
+(if the dump lines in the input script are uncommented).
+
+View or animate the image files as follows:
+
+display image.0100.ppm         # ImageMagick display program
+convert image*ppm movie.gif    # ImageMagick convert -> to animated GIF
+firefox ./movie.gif            # run the animated GIF in a browser
