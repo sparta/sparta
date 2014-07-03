@@ -14,17 +14,16 @@ Note that these problems should get statistically similar answers when
 run on different machines or different numbers of processors, but not
 identical answers to those in the included log files.
 
-These are the sample problems in the various sub-directories.
-Most are 2d problems so that they run quickly and can be easily
-visualized.  The sphere problem is 3d.
+These are the sample problems in the various sub-directories.  Many
+are 2d problems so that they run quickly and can be easily visualized.
 
-chem = chemistry in a box
+chem = chemistry in a 3d box
 circle = 2d flow around a circular object
-collide = collisional motion in a box
-free = free molecular motion in a box
+collide = collisional motion in a 3d box
+free = free molecular motion in a 3d box
 sphere = 3d flow around a sphere
 spiky = 2d flow around a spiky circle
-step = 2d flow around a jagged step
+step = 2d flow around a staircase of steps
 
 Here is an example of how one of the sample problems can be run and
 visualized:

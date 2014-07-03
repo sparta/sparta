@@ -57,8 +57,8 @@ used in a simulation.
 by the <A HREF = "species.html">species</A> command.  Each species belongs to a
 named group within the mixture so that particles of all species in the
 group can be acted on together by other commands.  The mixture has
-global attributes and per-species attributes.  All attributes have
-default values unless they are explicitly specified.
+both global attributes and per-species attributes.  All attributes
+have default values unless they are explicitly specified.
 </P>
 <P>The ID for a mixture is used to identify the mixture in other
 commands.  Each mixture ID must be unique.  The ID can only contain
@@ -132,35 +132,46 @@ the M species is set to (1 - sum)/M, where sum is the sum of the
 <HR>
 
 <P>Each species in a mixture is assigned to exactly one group.  The
-<I>group</I> keyword can be used to set or change these assignments.
+<I>group</I> keyword can be used to set or change these assignments.  Every
+mixture has one or more named groups.
 </P>
 <P>As described by the <A HREF = "collide.html">collide</A> command, mixture groups are
 used when performing collisions so that collisions attempts, partners,
 and parameters can be treated on a per-group basis for accuracy and
 efficiency.  <A HREF = "compute.html">Per-grid computes</A> also use mixture groups
-to calculate per-grid quantities on subsets of particles within each
-grid cell.
+to calculate per-grid quantities on a per-grid-cell, per-group basis,
+i.e. on subsets of particles within each grid cell.
 </P>
-<P>The specified group ID can be any string you choose.  Similar to the
-mixture ID, it can only contain alphanumeric characters and
-underscores.  Using SELF for the group ID has a special meaning as
-discussed below.
+<P>If the <I>group</I> keyword is not used in a mixture command, no changes to
+group assignements are made for species that are already in the
+mixture.  If one or more new species are specified, then all of them
+are assigned to a group with "default" as the group ID.  Note that
+this means that mixtures defined with mixture commands that never use
+the <I>group</I> keyword will have just a single group.
 </P>
-<P>The operation of the <I>group</I> keyword depends on whether zero species
-or some species are specified explicitly in the mixture command.  It
-also depends on whether the group ID is SELF or a user-defined name.
-In each case, after the operation is done, any group IDs for the
-mixture that have no species assigned to them are deleted.
+<P>If the <I>group</I> keyword is used, the group ID can be any string you
+choose.  Similar to the mixture ID, it can only contain alphanumeric
+characters and underscores.  Using SELF for the group ID has a special
+meaning as discussed below.
 </P>
-<UL><LI>If zero species are listed and the group ID is SELF, then each species
-already in the mixture is assigned to a group with its species ID as
-the group ID.  I.e. there will now be one species per group. 
+<P>The operation of the <I>group</I> keyword depends on whether no species or
+some species are specified explicitly in the mixture command.  It also
+depends on whether the group ID is SELF or a user-defined name.  In
+each case, after the operation is done, any group IDs for the mixture
+that have no species assigned to them are deleted.  This includes the
+"default" group if it was implicitly created by a previous mixture
+command.
+</P>
+<UL><LI>If no species are listed in the mixture command and the group ID is
+SELF, then every species already in the mixture is assigned to a group
+with its species ID as the group ID.  I.e. there will now be one
+species per group. 
 
 <LI>If one or more species are listed and the group ID is SELF, then each
 listed species is assigned to a group with its species ID as the group
 ID. 
 
-<LI>If zero species are listed and the group ID is not SELF, then all
+<LI>If no species are listed and the group ID is not SELF, then all
 species already in the mixture are assigned to a group with the
 specified ID. 
 
@@ -168,11 +179,6 @@ specified ID.
 the listed species are all assigned to a group with the specified
 ID. 
 </UL>
-<P>Note that if the <I>group</I> keyword is not used, no changes to group
-assignements are made.  If one or more new species are specified,
-which are not already in the mixture, then each is assigned to a group
-with the species ID as the group ID.
-</P>
 <HR>
 
 <P><B>Restrictions:</B> none
@@ -187,6 +193,6 @@ with the species ID as the group ID.
 background gas density, as set by the <A HREF = "global.html">global</A> command.
 The <I>frac</I> default is described above.  The <I>group</I> keyword has no
 default; if it is not used, new species not already in the mixture are
-each assigned to a group with the species ID as the group ID.
+assigned to a group with a group ID = "default".
 </P>
 </HTML>
