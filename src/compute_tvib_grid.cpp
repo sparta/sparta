@@ -178,6 +178,7 @@ void ComputeTvibGrid::post_process_grid(void *innumer, void *indenom,
 
   m = 0;
   for (i = istart; i < nglocal; i++) {
+    if (i < 1) printf("AAA %d %d %d\n",i,gspecies,g2s[0]);
     for (j = 0; j < gspecies; j++) {
       k = g2s[j];
       theta = species[mixspecies[k]].vibtemp;

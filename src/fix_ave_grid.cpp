@@ -395,7 +395,7 @@ void FixAveGrid::end_of_step()
         norm_extra = extras[m].norm_extra;
         ncol = extras[m].ncol;
         for (i = 0; i < nglocal; i++)
-          for (j = 0; j < ncol; i++) {
+          for (j = 0; j < ncol; j++) {
             array_extra[i][j] = 0.0;
             norm_extra[i][j] = 0.0;
           }
