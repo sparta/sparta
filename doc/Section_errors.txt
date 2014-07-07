@@ -165,6 +165,11 @@ Argument of arccos() must be between -1 and 1. :dd
 
 Argument of arcsin() must be between -1 and 1. :dd
 
+{Axi-symmetry is not yet supported in SPARTA} :dt
+
+This error condition will be removed after axi-symmetry is
+fully implemented. :dd
+
 {Axi-symmetry only allowed for 2d simulation} :dt
 
 Self-explanatory. :dd
@@ -1378,9 +1383,24 @@ Self-explanatory. :dd
 Some balance styles can only be used when the grid is uniform.  See
 the command doc page for details. :dd
 
+{Invalid call to ComputeGrid::post_process_grid()} :dt
+
+This indicates a coding error.  Please report the issue to the SPARTA
+developers. :dd
+
+{Invalid call to ComputeSonineGrid::post_process_grid()} :dt
+
+This indicates a coding error.  Please report the issue to the SPARTA
+developers. :dd
+
 {Invalid cell ID in grid file} :dt
 
 A cell ID could not be converted into numeric format. :dd
+
+{Invalid character in species ID} :dt
+
+The only allowed characters are alphanumeric, an underscore, a plus
+sign, or a minus sign. :dd
 
 {Invalid collide style} :dt
 
@@ -1628,6 +1648,11 @@ Only file-style or atomfile-style variables can be used with next(). :dd
 Variable styles {equal} and {world} cannot be used in a next
 command. :dd
 
+{Ionization and recombination reactions are not yet implemented} :dt
+
+This error conditions will be removed after those reaction styles are
+fully implemented. :dd
+
 {Irregular comm recv buffer exceeds 2 GB} :dt
 
 MPI does not support a communication buffer that exceeds a 4-byte
@@ -1755,6 +1780,16 @@ This mixture property cannot be changed after this compute command is
 issued. :dd
 
 {Number of groups in compute surf mixture has changed} :dt
+
+This mixture property cannot be changed after this compute command is
+issued. :dd
+
+{Number of groups in compute tvib/grid mixture has changed} :dt
+
+This mixture property cannot be changed after this compute command is
+issued. :dd
+
+{Number of species in compute tvib/grid mixture has changed} :dt
 
 This mixture property cannot be changed after this compute command is
 issued. :dd

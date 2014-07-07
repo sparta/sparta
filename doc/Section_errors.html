@@ -168,6 +168,11 @@ the surf_modify command before a simulation is perforemd.
 
 <DD>Argument of arcsin() must be between -1 and 1. 
 
+<DT><I>Axi-symmetry is not yet supported in SPARTA</I> 
+
+<DD>This error condition will be removed after axi-symmetry is
+fully implemented. 
+
 <DT><I>Axi-symmetry only allowed for 2d simulation</I> 
 
 <DD>Self-explanatory. 
@@ -1381,9 +1386,24 @@ have the expected magic string at the beginning.
 <DD>Some balance styles can only be used when the grid is uniform.  See
 the command doc page for details. 
 
+<DT><I>Invalid call to ComputeGrid::post_process_grid()</I> 
+
+<DD>This indicates a coding error.  Please report the issue to the SPARTA
+developers. 
+
+<DT><I>Invalid call to ComputeSonineGrid::post_process_grid()</I> 
+
+<DD>This indicates a coding error.  Please report the issue to the SPARTA
+developers. 
+
 <DT><I>Invalid cell ID in grid file</I> 
 
 <DD>A cell ID could not be converted into numeric format. 
+
+<DT><I>Invalid character in species ID</I> 
+
+<DD>The only allowed characters are alphanumeric, an underscore, a plus
+sign, or a minus sign. 
 
 <DT><I>Invalid collide style</I> 
 
@@ -1631,6 +1651,11 @@ error should not occur.  Contact the developers if it does.
 <DD>Variable styles <I>equal</I> and <I>world</I> cannot be used in a next
 command. 
 
+<DT><I>Ionization and recombination reactions are not yet implemented</I> 
+
+<DD>This error conditions will be removed after those reaction styles are
+fully implemented. 
+
 <DT><I>Irregular comm recv buffer exceeds 2 GB</I> 
 
 <DD>MPI does not support a communication buffer that exceeds a 4-byte
@@ -1758,6 +1783,16 @@ issued.
 issued. 
 
 <DT><I>Number of groups in compute surf mixture has changed</I> 
+
+<DD>This mixture property cannot be changed after this compute command is
+issued. 
+
+<DT><I>Number of groups in compute tvib/grid mixture has changed</I> 
+
+<DD>This mixture property cannot be changed after this compute command is
+issued. 
+
+<DT><I>Number of species in compute tvib/grid mixture has changed</I> 
 
 <DD>This mixture property cannot be changed after this compute command is
 issued. 
