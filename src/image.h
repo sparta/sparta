@@ -117,13 +117,7 @@ class Image : protected Pointers {
   char **username;
   double **userrgb;
 
-  // color map
-
-  int mstyle,mrange;               // 2-letter style/range of color map
-  int mlo,mhi;                     // bounds = NUMERIC or MINVALUE or MAXVALUE
-  double mlovalue,mhivalue;        // user bounds if NUMERIC
-  double locurrent,hicurrent;      // current bounds for this snapshot
-  double mbinsize,mbinsizeinv;     // bin size for sequential color map
+  // color maps
 
   struct MapEntry {
     int single,lo,hi;              // NUMERIC or MINVALUE or MAXVALUE

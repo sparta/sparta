@@ -85,6 +85,11 @@ E: React tce can only be used with collide vss
 
 Self-explanatory.
 
+E: Ionization and recombination reactions are not yet implemented
+
+This error conditions will be removed after those reaction styles are
+fully implemented.
+
 E: Unknown outcome in reaction
 
 The specified type of the reaction is not encoded in the reaction

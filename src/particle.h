@@ -156,6 +156,11 @@ E: Cannot open species file %s
 
 Self-explanatory.
 
+E: Invalid character in species ID
+
+The only allowed characters are alphanumeric, an underscore, a plus
+sign, or a minus sign.
+
 E: Species ID is already defined
 
 Species IDs must be unique.

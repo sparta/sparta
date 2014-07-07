@@ -109,6 +109,11 @@ E: Both sides of boundary must be periodic
 Cannot specify a boundary as periodic only on the lo or hi side.  Must
 be periodic on both sides.
 
+E: Axi-symmetry is not yet supported in SPARTA
+
+This error condition will be removed after axi-symmetry is
+fully implemented.
+
 E: Bound_modify surf requires wall be a surface
 
 The box boundary must be of style "s" to be assigned a surface

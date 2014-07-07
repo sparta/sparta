@@ -64,7 +64,12 @@ E: Compute grid mixture ID does not exist
 
 Self-explanatory.
 
-E: Number of groups in compute grid mixture has changed
+E: Number of groups in compute tvib/grid mixture has changed
+
+This mixture property cannot be changed after this compute command is
+issued.
+
+E: Number of species in compute tvib/grid mixture has changed
 
 This mixture property cannot be changed after this compute command is
 issued.

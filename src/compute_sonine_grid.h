@@ -73,4 +73,9 @@ E: Number of groups in compute sonine/grid mixture has changed
 This mixture property cannot be changed after this compute command is
 issued.
 
+E: Invalid call to ComputeSonineGrid::post_process_grid()
+
+This indicates a coding error.  Please report the issue to the SPARTA
+developers.
+
 */

@@ -94,6 +94,10 @@ E: Compute ID for fix ave/grid does not exist
 
 Self-explanatory.
 
+E: Fix ID for fix ave/grid does not exist
+
+Self-explanatory.
+
 E: Fix ave/grid compute does not calculate per-grid values
 
 Self-explanatory.
@@ -107,10 +111,6 @@ E: Fix ave/grid compute does not calculate a per-grid array
 Self-explanatory.
 
 E: Fix ave/grid compute array is accessed out-of-range
-
-Self-explanatory.
-
-E: Fix ID for fix ave/grid does not exist
 
 Self-explanatory.
 
