@@ -29,9 +29,9 @@ class Particle : protected Pointers {
     double molwt;
     double mass;
     int rotdof;
-    int rotrel;
+    double rotrel;
     int vibdof;
-    int vibrel;
+    double vibrel;
     double vibtemp;
     double specwt;
     double charge;
