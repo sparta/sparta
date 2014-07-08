@@ -638,9 +638,9 @@ void Particle::read_species_file()
     fsp->molwt = atof(words[1]);
     fsp->mass = atof(words[2]);
     fsp->rotdof = atoi(words[3]);
-    fsp->rotrel = atoi(words[4]);
+    fsp->rotrel = atof(words[4]);
     fsp->vibdof = atoi(words[5]);
-    fsp->vibrel = atoi(words[6]);
+    fsp->vibrel = atof(words[6]);
     fsp->vibtemp = atof(words[7]);
     fsp->specwt = atof(words[8]);
     fsp->charge = atof(words[9]);
