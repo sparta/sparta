@@ -52,7 +52,6 @@ class Image : protected Pointers {
   void draw_box2d(double (*)[3], double *, double);
   void draw_axes(double (*)[3], double);
   void draw_sphere(double *, double *, double);
-  void draw_cube(double *, double *, double);
   void draw_brick(double *, double *, double *);
   void draw_cylinder(double *, double *, double *, double, int);
   void draw_triangle(double *, double *, double *, double *);
