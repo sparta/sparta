@@ -15,7 +15,7 @@ fix ID inflow mix-ID face1 face2 ... keyword value ... :pre
 ID is documented in "fix"_fix.html command :ulb,l
 inflow = style name of this fix command :l
 mix-ID = ID of mixture to use when creating particles :l
-face1,face2,... = one or more of {all} or {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi}
+face1,face2,... = one or more of {all} or {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :l
 zero or more keyword/value pairs may be appended :l
 keyword = {n} or {nevery} or {perspecies} :l
   {n} value = Np = number of particles to create
