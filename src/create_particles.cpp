@@ -174,6 +174,7 @@ void CreateParticles::create_single()
 
   x[0] = xp;  x[1] = yp;  x[2] = zp;
   v[0] = vx;  v[1] = vy;  v[2] = vz;
+  double temp_thermal = particle->mixture[imix]->temp_thermal;
 
   if (domain->dimension == 2 && x[2] != 0.0)
     error->all(FLERR,"Create_particles single requires z = 0 "
@@ -206,8 +207,8 @@ void CreateParticles::create_single()
 
   if (iwhich >= 0) {
     int id = MAXSMALLINT*random->uniform();
-    double erot = particle->erot(mspecies,random);
-    double evib = particle->evib(mspecies,random);
+    double erot = particle->erot(mspecies,temp_thermal,random);
+    double evib = particle->evib(mspecies,temp_thermal,random);
     particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
   }
 
@@ -293,6 +294,7 @@ void CreateParticles::create_local(bigint np)
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
+  double temp_thermal = particle->mixture[imix]->temp_thermal;
 
   int npercell,ispecies,id;
   double x[3],v[3];
@@ -341,8 +343,8 @@ void CreateParticles::create_local(bigint np)
       v[1] = vstream[1] + vr*cos(theta2);
       v[2] = vstream[2] + vr*sin(theta2);
 
-      erot = particle->erot(ispecies,random);
-      evib = particle->evib(ispecies,random);
+      erot = particle->erot(ispecies,temp_thermal,random);
+      evib = particle->evib(ispecies,temp_thermal,random);
 
       id = MAXSMALLINT*random->uniform();
       particle->add_particle(id,ispecies,i,x,v,erot,evib);

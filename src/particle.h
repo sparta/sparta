@@ -105,8 +105,8 @@ class Particle : protected Pointers {
   void add_mixture(int, char **);
   int find_species(char *);
   int find_mixture(char *);
-  double erot(int, class RanPark *);
-  double evib(int, class RanPark *);
+  double erot(int, double, class RanPark *);
+  double evib(int, double, class RanPark *);
 
   void write_restart_species(FILE *fp);
   void read_restart_species(FILE *fp);

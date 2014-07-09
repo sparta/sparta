@@ -529,17 +529,15 @@ int Particle::find_mixture(char *id)
    only a function of species index and species properties
 ------------------------------------------------------------------------- */
 
-double Particle::erot(int isp, RanPark *erandom)
+double Particle::erot(int isp, double temp_thermal, RanPark *erandom)
 {
  double eng,a,erm,b;
 
  if (!collide || collide->rotstyle == NONE) return 0.0;
  if (species[isp].rotdof < 2) return 0.0;
 
- // NOTE: is temp_thermal always set?
-
  if (species[isp].rotdof == 2)
-   eng = -log(erandom->uniform()) * update->boltz * update->temp_thermal;
+   eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
  else {
    a = 0.5*particle->species[isp].rotdof-1.;
    while (1) {
@@ -548,7 +546,7 @@ double Particle::erot(int isp, RanPark *erandom)
      b = pow(erm/a,a) * exp(a-erm);
      if (b > erandom->uniform()) break;
    }
-   eng = erm * update->boltz * update->temp_thermal;
+   eng = erm * update->boltz * temp_thermal;
  }
 
  return eng;
@@ -559,23 +557,21 @@ double Particle::erot(int isp, RanPark *erandom)
    only a function of species index and species properties
 ------------------------------------------------------------------------- */
 
-double Particle::evib(int isp, RanPark *erandom)
+double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
 {
   double eng,a,erm,b;
 
   int vibstyle = NONE;
   if (collide) vibstyle = collide->vibstyle;
 
-  // NOTE: is temp_thermal always set?
-  
   eng = 0.0;
   if (vibstyle == DISCRETE && species[isp].vibdof == 2) {
-    int ivib = -log(erandom->uniform()) * 
-      update->temp_thermal / particle->species[isp].vibtemp;
+    int ivib = -log(erandom->uniform()) * temp_thermal / 
+      particle->species[isp].vibtemp;
     eng = ivib * update->boltz * particle->species[isp].vibtemp;
   } else if (vibstyle == SMOOTH || species[isp].vibdof >= 2) {
     if (species[isp].vibdof == 2)
-      eng = -log(erandom->uniform()) * update->boltz * update->temp_thermal;
+      eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
     else {
       a = 0.5*particle->species[isp].vibdof-1.;
       while (1) {
@@ -584,7 +580,7 @@ double Particle::evib(int isp, RanPark *erandom)
         b = pow(erm/a,a) * exp(a-erm);
         if (b > erandom->uniform()) break;
       }
-      eng = erm * update->boltz * update->temp_thermal;
+      eng = erm * update->boltz * temp_thermal;
     }
   }
 

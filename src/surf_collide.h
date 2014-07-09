@@ -31,8 +31,6 @@ class SurfCollide : protected Pointers {
   virtual void collide(Particle::OnePart *, double *) = 0;
 
   virtual void dynamic() {}
-
- protected:
 };
 
 }

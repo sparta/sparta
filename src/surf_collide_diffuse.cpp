@@ -154,7 +154,7 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
     Particle::Species *species = particle->species;
     int ispecies = p->ispecies;
 
-    double vrm = sqrt(2.0*update->boltz*twall/species[ispecies].mass);
+    double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
     double vperp = vrm * sqrt(-log(random->uniform()));
 
     double theta = MY_2PI * random->uniform();
@@ -201,8 +201,8 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
       v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
     }
 
-    p->erot = particle->erot(ispecies,random);
-    p->evib = particle->evib(ispecies,random);
+    p->erot = particle->erot(ispecies,twall,random);
+    p->evib = particle->evib(ispecies,twall,random);
   }
 }
 

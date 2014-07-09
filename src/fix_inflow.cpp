@@ -593,6 +593,7 @@ void FixInflow::start_of_step()
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
+  double temp_thermal = particle->mixture[imix]->temp_thermal;
 
   // insert particles by cell/face pair
   // ntarget/ninsert is either perspecies or for all species
@@ -645,8 +646,8 @@ void FixInflow::start_of_step()
           theta = MY_PI * random->gaussian();
           v[pdim1] = vscale[isp]*sin(theta) + vstream[pdim1];
           v[pdim2] = vscale[isp]*cos(theta) + vstream[pdim2];
-          erot = particle->erot(isp,random);
-          evib = particle->evib(isp,random);
+          erot = particle->erot(isp,temp_thermal,random);
+          evib = particle->evib(isp,temp_thermal,random);
           id = MAXSMALLINT*random->uniform();
 	  particle->add_particle(id,isp,pcell,x,v,erot,evib);
 
@@ -693,8 +694,8 @@ void FixInflow::start_of_step()
         v[pdim1] = vscale[isp]*sin(theta) + vstream[pdim1];
         v[pdim2] = vscale[isp]*cos(theta) + vstream[pdim2];
 
-        erot = particle->erot(isp,random);
-        evib = particle->evib(isp,random);
+        erot = particle->erot(isp,temp_thermal,random);
+        evib = particle->evib(isp,temp_thermal,random);
         id = MAXSMALLINT*random->uniform();
 	particle->add_particle(id,isp,pcell,x,v,erot,evib);
 
