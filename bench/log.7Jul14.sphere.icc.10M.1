@@ -1,0 +1,76 @@
+SPARTA (7 Jul 2014)
+# flow around a sphere on a uniform grid
+# particles are created initially and input at boundaries at stream velocity
+
+variable            x index 10
+variable            y index 10
+variable            z index 10
+
+variable            n equal 10*$x*$y*$z
+variable            n equal 10*100*$y*$z
+variable            n equal 10*100*100*$z
+variable            n equal 10*100*100*100
+variable            fnum equal 7.33e+21/v_n
+
+seed	    	    12345
+dimension   	    3
+global              nrho 7.03E18
+global              fnum ${fnum}
+global              fnum 733000000000000
+timestep 	    1.E-5
+global              gridcut 0.1
+global              surfmax 300
+
+boundary	    o o o
+create_box          -5.0 5.0 -5.0 5.0 -5.0 5.0
+Created orthogonal box = (-5 -5 -5) to (5 5 5)
+create_grid         $x $y $z
+create_grid         100 $y $z
+create_grid         100 100 $z
+create_grid         100 100 100
+Created 1000000 child grid cells
+  parent cells = 1
+  CPU time = 0.172299 secs
+  create/ghost percent = 79.8043 20.1957
+
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 3.39472 secs
+  reassign/sort/migrate/ghost percent = 2.11608 0.245145 0.613717 97.0251
+
+species		    ar.species Ar
+
+mixture             air Ar frac 1.0
+mixture 	    air group species
+mixture             air Ar vstream 2500.0 0.0 0.0 temp 300.00
+
+fix		    in inflow air all
+
+collide		    vss air ar.vss
+
+read_surf	    1 sdata.sphere
+  602 points
+  1200 triangles
+  -1 1 xlo xhi
+  -1 1 ylo yhi
+  -1 1 zlo zhi
+  0.100631 min triangle edge length
+  0.00439601 min triangle area
+  1856 = cells with surfs
+  8088 = total surfs in all grid cells
+  10 = max surfs in one grid cell
+  1.00631 = min surf-size/cell-size ratio
+  994888 3256 1856 = cells outside/inside/overlapping surfs
+  1856 = surf cells with 1,2,etc splits
+  995.862 995.862 = cell-wise and global flow volume
+  CPU time = 2.15063 secs
+  read/surf2grid/error/ghost/inout percent = 2.3229 4.83133 0.73448 80.0242 12.0871
+surf_collide	    1 diffuse 300.0 1.0
+surf_modify         collide 1 1
+
+create_particles    air n 0
+Created 9551033 particles
+  CPU time = 1.7887 secs
+
+fix                 3 balance 100 1.1 rcb mol
+ERROR: Illegal fix balance command (../fix_balance.cpp:66)
