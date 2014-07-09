@@ -22,7 +22,7 @@ create_grid 	    $x $y $z
 
 balance_grid        rcb part
 
-species		    ../data/ar.species Ar
+species		    ar.species Ar
 mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
 
 global              nrho 7.07043E22

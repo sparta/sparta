@@ -22,7 +22,7 @@ create_grid         $x $y $z
 
 balance_grid        rcb cell
 
-species		    ../data/ar.species Ar
+species		    ar.species Ar
 
 mixture             air Ar frac 1.0
 mixture 	    air group species
@@ -30,7 +30,7 @@ mixture             air Ar vstream 2500.0 0.0 0.0 temp 300.00
 
 fix		    in inflow air all
 
-collide		    vss air ../data/ar.vss
+collide		    vss air ar.vss
 
 read_surf	    1 sdata.sphere
 surf_collide	    1 diffuse 300.0 1.0
