@@ -45,13 +45,26 @@ create_particles air single N 5.0 6.0 5.4 10.0 -1.0 0.0
 </P>
 <P>Create particles and add them to the simulation domain.  The
 attributes of individual particles, such as species and velocity, are
-determined by the mixture attributes, as specied by the <I>mix-ID</I>.  See
-the <A HREF = "mixture.html">mixture</A> command for more details.  Note
-that this command can be used multiple times to add more and
-more particles.
+determined by the mixture attributes, as specied by the <I>mix-ID</I>.  In
+particular the <I>temp</I> and <I>vstream</I> attributes of the mixture affect
+create particle velocities and internal energy modes.  See the
+<A HREF = "mixture.html">mixture</A> command for more details.  Note that this
+command can be used multiple times to add more and more particles.
 </P>
 <P>Particles are only created in grid cells which are entirely external
 to surfaces.  Particles are not created in grid cells cut by surfaces.
+</P>
+<P>IMPORTANT NOTE: When a particle is created at a specified temperature
+(as set by the <A HREF = "mixture.html">mixture</A> command), it's rotational and
+vibrational energy will also be initialized, consistent with the
+temperature.  The <I>rotate</I> and <I>vibrate</I> options of the
+<A HREF = "collide_modify.html">collide_modify</A> command determine how internal
+energy modes are initialized.  If the <A HREF = "collide.html">collide</A> command
+has not yet been specified, then no rotational or vibrational energy
+will be assigned to created particles.  Thus if you wish created
+particles to have non-zero internal energy, the <A HREF = "collide.html">collide</A>
+and (optionally) <A HREF = "collide_modify.html">collide_modify</A> commands should
+be used before this command.
 </P>
 <P>If the <I>n</I> style is used with <I>Np</I> = 0, then the number of created
 particles is calculated by SPARTA as a function of the global <I>fnum</I>
@@ -108,6 +121,8 @@ checks what grid cell it is in, and only stores the particle if it
 owns that grid cell.  Thus an identical set of particles are created,
 no matter how many processors are running the simulation
 </P>
+<P>IMPORTANT NOTE: The <I>global</I> yes option is not yet implemented.
+</P>
 <P>If the value is <I>no</I>, then each of the <I>P</I> processors generates a
 <I>N/P</I> subset of particles, using its own random number generation.  It
 only adds particles to grid cells that it owns, as described above.
@@ -116,8 +131,6 @@ means that the individual attributes of particles will depend on the
 number of processors and the mapping of grid cells to procesors.  The
 overall set of created particles should have the same statistical
 properties as with the <I>yes</I> setting.
-</P>
-<P>IMPORTANT NOTE: The <I>global</I> yes option is not yet implemented.
 </P>
 <HR>
 

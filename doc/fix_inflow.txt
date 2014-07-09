@@ -37,10 +37,15 @@ timestep, this induces a continuous influx of particles thru the
 face(s).
 
 The properties of the inserted particles are from the mixture with ID
-{mix-ID}.  This determines the species of the particles added at what
-relative fractions, and the overall number density, streaming
-velocity, and temperature.  See the "mixture"_mixture.html command for
-details.
+{mix-ID}.  This determines the number and species of added particles,
+as well as their streaming velocity, temperature, and internal energy
+modes.  See the "mixture"_mixture.html command for details.  Also see
+the {rotate} and {vibrate} options of the
+"collide_modify"_collide_modify.html command which determine how
+internal energy modes are initialized.  If the "collide"_collide.html
+command has not been specified (free molecular flow), then no
+rotational or vibrational energy will be assigned to created
+particles.
 
 One or more faces of the simulation box can be specified via the
 {face1}, {face2}, etc arguments.  The 6 possible faces can be
