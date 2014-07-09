@@ -12,7 +12,7 @@ create_grid 	    10 10 10
 
 balance_grid        rcb part
 
-species		    ../../data/air.species N2 N
+species		    air.species N2 N
 mixture		    air N2 N vstream 0.0 0.0 0.0 temp 20000.0
 mixture             air N2 frac 1.0
 mixture             air N frac 0.0
@@ -22,8 +22,8 @@ global              fnum 7.07043E5
 
 create_particles    air n 10000
 
-collide		    vss air ../../data/air.vss
-react               tce ../../data/air.tce
+collide		    vss air air.vss
+react               tce air.tce
 
 stats		    100
 compute             temp temp

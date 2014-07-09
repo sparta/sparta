@@ -12,7 +12,7 @@ balance_grid        rcb cell
 
 global		    nrho 1.0 fnum 0.001
 
-species		    ../../data/air.species N O
+species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
 
 read_surf	    1 sdata.step trans 5 5 0 scale 0.75 0.75 1 &
@@ -20,7 +20,7 @@ read_surf	    1 sdata.step trans 5 5 0 scale 0.75 0.75 1 &
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         collide 1 1
 
-collide             vss air ../../data/air.vss
+collide             vss air air.vss
 
 fix		    in inflow air xlo 
 

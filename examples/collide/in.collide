@@ -12,7 +12,7 @@ create_grid 	    10 10 10
 
 balance_grid        rcb part
 
-species		    ../../data/ar.species Ar
+species		    ar.species Ar
 mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
 
 global              nrho 7.07043E22
@@ -20,7 +20,7 @@ global              fnum 7.07043E6
 
 create_particles    air n 10000
 
-collide		    vss air ../../data/ar.vss
+collide		    vss air ar.vss
 
 stats		    100
 compute             temp temp
