@@ -20,10 +20,10 @@ mixture             air N frac 0.0
 global              nrho 7.07043E22
 global              fnum 7.07043E5
 
-create_particles    air n 10000
-
 collide		    vss air air.vss
 react               tce air.tce
+
+create_particles    air n 10000
 
 stats		    100
 compute             temp temp
