@@ -1,0 +1,115 @@
+SPARTA (7 Jul 2014)
+# 2d flow around a staircase of steps
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
+create_grid 	    20 20 1
+Created 400 child grid cells
+  parent cells = 1
+  CPU time = 0.000682116 secs
+  create/ghost percent = 97.2038 2.79623
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.000370979 secs
+  reassign/sort/migrate/ghost percent = 19.4087 0.514139 4.04884 76.0283
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+read_surf	    1 sdata.step trans 5 5 0 scale 0.75 0.75 1                     rotate 45 0 0 1 invert
+  16 points
+  16 lines
+  2.34835 7.65165 xlo xhi
+  2.34835 7.65165 ylo yhi
+  0 0 zlo zhi
+  1.06066 min line length
+  44 = cells with surfs
+  60 = total surfs in all grid cells
+  2 = max surfs in one grid cell
+  2.12132 = min surf-size/cell-size ratio
+  312 44 44 = cells outside/inside/overlapping surfs
+  44 = surf cells with 1,2,etc splits
+  85.375 85.375 = cell-wise and global flow volume
+  CPU time = 0.000333071 secs
+  read/surf2grid/error/ghost/inout percent = 17.1081 16.8218 1.50322 50.7516 13.8153
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         collide 1 1
+
+collide             vss air air.vss
+
+fix		    in inflow air xlo
+
+timestep 	    0.0001
+
+#dump                2 image 50 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 axes yes 0.9 0.02
+#dump_modify	    2 pad 4
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.83113 1.83113 1.83113
+  surf      (ave,min,max) = 0.0010376 0.0010376 0.0010376
+  total     (ave,min,max) = 1.83217 1.83217 1.83217
+Step CPU Np Natt Ncoll Nscoll Nscheck 
+       0            0        0        0        0        0        0 
+     100  0.029242992    12060        0        0       38     1066 
+     200  0.086336851    21630        0        0       79     2399 
+     300   0.16486502    28593        0        0      105     3345 
+     400   0.25915504    33833        0        0      107     4091 
+     500   0.36475086    37719        0        0      117     4446 
+     600   0.48154402    41292        0        0      133     4889 
+     700   0.60883307    44252        0        0      139     5464 
+     800   0.74349809    46674        0        0      148     5686 
+     900   0.88491702    48949        0        0      157     5927 
+    1000     1.030514    50792        0        0      171     6171 
+Loop time of 1.03052 on 1 procs for 1000 steps with 50792 particles
+
+Particle moves    = 34315967 (34.3M)
+Cells touched     = 38007438 (38M)
+Particle comms    = 0 (0K)
+Boundary collides = 135255 (0.135M)
+Boundary exits    = 159951 (0.16M)
+SurfColl checks   = 4033596 (4.03M)
+SurfColl occurs   = 110937 (0.111M)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 3.32996e+07
+Particle-moves/step: 34316
+Cell-touches/particle/step: 1.10757
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.00394146
+Particle fraction exiting boundary: 0.00466112
+Surface-checks/particle/step: 0.117543
+Surface-collisions/particle/step: 0.00323281
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+
+Move  time (%) = 0.614577 (59.6374)
+Coll  time (%) = 0.132574 (12.8647)
+Sort  time (%) = 0.135755 (13.1735)
+Comm  time (%) = 0.00297046 (0.288248)
+Outpt time (%) = 9.48906e-05 (0.00920801)
+Other time (%) = 0.144551 (14.027)
+
+Particles: 50792 ave 50792 max 50792 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      400 ave 400 max 400 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+

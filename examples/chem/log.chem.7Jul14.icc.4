@@ -1,0 +1,104 @@
+SPARTA (7 Jul 2014)
+# thermal gas in a 3d box with collisions and chemistry
+# particles reflect off global box boundaries
+
+seed	    	    12345
+dimension   	    3
+global              gridcut 1.0e-5
+
+boundary	    rr rr rr
+
+create_box  	    0 0.0001 0 0.0001 0 0.0001
+Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
+create_grid 	    10 10 10
+Created 1000 child grid cells
+  parent cells = 1
+  CPU time = 0.000967026 secs
+  create/ghost percent = 94.1075 5.8925
+
+balance_grid        rcb part
+Balance grid migrated 740 cells
+  CPU time = 0.00116301 secs
+  reassign/sort/migrate/ghost percent = 24.7642 0.266503 12.6486 62.3206
+
+species		    air.species N2 N
+mixture		    air N2 N vstream 0.0 0.0 0.0 temp 20000.0
+mixture             air N2 frac 1.0
+mixture             air N frac 0.0
+
+global              nrho 7.07043E22
+global              fnum 7.07043E5
+
+collide		    vss air air.vss
+react               tce air.tce
+
+create_particles    air n 10000
+Created 10000 particles
+  CPU time = 0.00101399 secs
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll nreact c_temp
+
+#dump                2 image 100 image.*.ppm type type pdiam 3.0e-6 #		    size 512 512 gline yes 0.005
+#dump_modify	    2 pad 4
+
+timestep 	    7.00E-9
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.02997 1.02997 1.02997
+  grid      (ave,min,max) = 1.83113 1.83113 1.83113
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 2.8611 2.8611 2.8611
+Step CPU Np Natt Ncoll Nreact temp 
+       0            0    10000        0        0        0    20100.599 
+     100  0.057703972    10229     1015      254        2    18890.989 
+     200   0.11550093    10421     1018      248        1    18230.636 
+     300   0.17422104    10657     1078      287        5    17340.484 
+     400   0.23391485    10907     1121      275        2    16785.617 
+     500   0.29467487    11146     1171      246        2    16013.582 
+     600   0.35671806    11430     1242      294        4    15794.412 
+     700   0.42101288    11758     1320      287        1    15305.819 
+     800   0.48741007    12111     1374      344        4    14823.789 
+     900   0.55565691    12430     1453      300        4    14371.398 
+    1000   0.62532401    12735     1534      322        1    14017.404 
+Loop time of 0.625342 on 4 procs for 1000 steps with 12735 particles
+
+Particle moves    = 11242223 (11.2M)
+Cells touched     = 51506347 (51.5M)
+Particle comms    = 2778147 (2.78M)
+Boundary collides = 4402684 (4.4M)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Collide attempts  = 1205507 (1.21M)
+Collide occurs    = 279232 (0.279M)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 4.49443e+06
+Particle-moves/step: 11242.2
+Cell-touches/particle/step: 4.58151
+Particle comm iterations/step: 2.952
+Particle fraction communicated: 0.247117
+Particle fraction colliding with boundary: 0.39162
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Collision-attempts/particle/step: 0.10723
+Collisions/particle/step: 0.0248378
+
+Move  time (%) = 0.561781 (89.8357)
+Coll  time (%) = 0.0459443 (7.34706)
+Sort  time (%) = 0.0116612 (1.86477)
+Comm  time (%) = 0.0053367 (0.853405)
+Outpt time (%) = 0.000333369 (0.0533098)
+Other time (%) = 0.000285983 (0.0457322)
+
+Particles: 3183.75 ave 3231 max 3114 min
+Histogram: 1 0 0 0 0 1 0 0 1 1
+Cells:      250 ave 250 max 250 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 172.5 ave 240 max 110 min
+Histogram: 1 0 0 0 2 0 0 0 0 1
+EmptyCell: 62.5 ave 130 max 0 min
+Histogram: 1 0 0 0 2 0 0 0 0 1
