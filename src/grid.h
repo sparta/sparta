@@ -85,6 +85,7 @@ class Grid : protected Pointers {
 
     double lo[3],hi[3];       // opposite corner pts of cell
     int nsurf;                // # of surf elements in cell
+                              // -1 = empty ghost cell
     int *csurfs;              // indices of surf elements in cell
                               // for sub cells, lo/hi/nsurf/csurfs
                               //   are same as in split cell containing them
