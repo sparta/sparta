@@ -71,7 +71,7 @@ void CreateGrid::command(int narg, char **arg)
         error->all(FLERR,"Illegal create_grid command");
       nlevels++;
       iarg += 8;
-    } if (strcmp(arg[iarg],"stride") == 0) {
+    } else if (strcmp(arg[iarg],"stride") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
       bstyle = STRIDE;
       if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
