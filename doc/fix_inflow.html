@@ -42,48 +42,52 @@ fix in inflow mymix xlo yhi n 1000 nevery 10
 </P>
 <P>Insert particles into the simulation box continuously during a
 simulation.  The particles are inserted on the specified faces of the
-box using properties of the specified mixture.  If done every
-timestep, this induces a continuous influx of particles thru the
+box using properties of the specified mixture.  If invoked every
+timestep, this fix induces a continuous influx of particles thru the
 face(s).
 </P>
 <P>The properties of the inserted particles are from the mixture with ID
 <I>mix-ID</I>.  This determines the number and species of added particles,
-as well as their streaming velocity, temperature, and internal energy
-modes.  See the <A HREF = "mixture.html">mixture</A> command for details.  Also see
-the <I>rotate</I> and <I>vibrate</I> options of the
-<A HREF = "collide_modify.html">collide_modify</A> command which determine how
-internal energy modes are initialized.  If the <A HREF = "collide.html">collide</A>
-command has not been specified (free molecular flow), then no
-rotational or vibrational energy will be assigned to created
-particles.
+as well as their streaming velocity, thermal temperature, and internal
+energy modes.  The details are explained below.
 </P>
 <P>One or more faces of the simulation box can be specified via the
 <I>face1</I>, <I>face2</I>, etc arguments.  The 6 possible faces can be
 specified as <I>xlo</I>, <I>xhi</I>, <I>ylo</I>, <I>yhi</I>, <I>zlo</I>, or <I>zhi</I>.  Specifying
 <I>all</I> is the same as specifying all 6 individual faces.
 </P>
-<P>On each insertion timestep, each grid cell with a face(s) on an inflow
-boundary performs the following computation at the beginning of the
-SPARTA timestep.
+<P>On each insertion timestep, each grid cell with one or more faces
+touching an inflow boundary performs the following computations to
+insert particles.  The insertion occus at the beginning of the SPARTA
+timestep.
 </P>
-<P>The molecular flux across a surface element per unit time is given by
+<P>The molecular flux across a grid cell face per unit time is given by
 equation 4.22 of <A HREF = "#Bird94">(Bird94)</A>.  The number of particles <I>M</I> to
-insert on a particular grid cell face is based on the flux, the global
-<I>fnum</I> ratio (specified by the <A HREF = "global.html"">global</A> command, the
-mixture number density, the mixture streaming velocity and thermal
-temperature, the area of the face, and its orientation relative to the
-streaming velocity.
+insert on a particular grid cell face is based on this flux and
+additional global, flow, and cell face properties:
+</P>
+<UL><LI>global property: <I>fnum</I> ratio as specified by the <A HREF = "global.html"">global</A> command
+<LI>flow properties: number density, streaming velocity, and thermal temperature
+<LI>cell face properties: area of face and its orientation relative to the streaming velocity 
+</UL>
+<P>The flow properties are defined for the specified mixture via the
+<A HREF = "mixture.html">mixture</A> command.
 </P>
 <P>If <I>M</I> has a fractional value, e.g. 12.5, then 12 particles are
 inserted, and a 13th depending on the value of a random number.  Each
-particle is inserted at a random location on the face.  The particle
-species is chosen randomly in accord with the <I>frac</I> settings of the
-collection of species in the mixture, as set by the
-<A HREF = "mixture.html">mixture</A> command.  The velocity of the particle is set
-to the sum of the mixture's streaming velocity and a thermal velocity
-sampled from the thermal temperature of the mixture.  Both the
-streaming velocity and thermal temperature are also set by the
+particle is inserted at a random location on the grid cell face.  The
+particle species is chosen randomly in accord with the <I>frac</I> settings
+of the collection of species in the mixture, as set by the
 <A HREF = "mixture.html">mixture</A> command.
+</P>
+<P>The velocity of the particle is set to the sum of the streaming
+velocity and a thermal velocity sampled from the thermal temperature.
+The internal energy modes of the particle are determined by the
+thermal temperature and the <I>rotate</I> and <I>vibrate</I> options of the
+<A HREF = "collide_modify.html">collide_modify</A> command.  Note that if the
+<A HREF = "collide.html">collide</A> command has not been specified (free molecular
+flow), then no rotational or vibrational energy will be assigned to
+created particles.
 </P>
 <P>If the final particle velocity is not directed "into" the grid cell,
 then the velocity sampling procedure is repeated until it is.  This
@@ -112,7 +116,7 @@ the inlet flow field.
 </P>
 <P>The <I>perspecies</I> keyword determines how the species of each inserted
 particle is randomly determined.  This has an effect on the
-statistical properties of the inserted particles.
+statistical properties of inserted particles.
 </P>
 <P>If <I>perspecies</I> is set to <I>yes</I>, then a target insertion number <I>M</I> in
 a grid cell is calculated for each species, which is a function of the
