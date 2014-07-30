@@ -786,8 +786,6 @@ int FixInflow::pack_grid_one(int icell, char *buf, int memflag)
 
   // loop over faces, pack cellface/species-info entry if exists
 
-  int nsplit = grid->cells[icell].nsplit;
-
   for (int iface = 0; iface < 6; iface++) {
     if (c2f[icell][iface] < 0) continue;
     int icf = c2f[icell][iface];
