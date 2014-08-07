@@ -589,7 +589,6 @@ void FixInflow::start_of_step()
   double dt = update->dt;
 
   int nspecies = particle->mixture[imix]->nspecies;
-  int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
