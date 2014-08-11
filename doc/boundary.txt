@@ -57,9 +57,6 @@ must also have a value of 0.0 for {ylo}; see the
 x-axis is the axis of symmetry.  The upper y-dimension boundary cannot
 be periodic.
 
-IMPORTANT NOTE: Axi-symmetry is not yet fully implemented in SPARTA,
-so style {a} cannot yet be used.
-
 Style {s} means the boundary is treated as a surface which allows the
 particle-surface interaction to be treated in a variety of ways via
 the options provided by the "surf_collide"_surf_collide.html command.
