@@ -42,7 +42,7 @@ but should be statistically similar.
 </P>
 <P>IMPORTANT NOTE: Because restart files are binary, they may not be
 portable to other machines.  SPARTA will print an error message if
-this is the case.
+it cannot read a restart file for this reason.
 </P>
 <P>If a restarted run is performed on the same number of processors as
 the original run, then the assignment of grid cells (and their
@@ -114,60 +114,43 @@ parallel I/O.
 <HR>
 
 <P>A restart file stores only the following information about a
-simulation:
-</P>
-<UL><LI>units
-<LI>simulation box size and boundary conditions
-<LI>all settings of the global command
-<LI>particles with their individual attributes
-<LI>particle species info
-<LI>mixtures
-<LI>geometry of the hierarchical grid that overlays the simulation domain
-<LI>geometry of all derined surface elements
-<LI>current timestep number 
-</UL>
-<P>Basically, this means the information from the original input script
-specified by these commands is saved in the restart file:
+simulation, as specified by the associated commands:
 </P>
 <UL><LI><A HREF = "units.html">units</A>
 <LI><A HREF = "dimension.html">dimension</A>
-<LI><A HREF = "create_box.html">create_box</A>
-<LI><A HREF = "boundary.html">boundary</A>
-<LI><A HREF = "species.html">species</A>
-<LI><A HREF = "mixture.html">mixture</A>
-<LI><A HREF = "create_grid.html">create_grid</A> or <A HREF = "read_grid.html">read_grid</A>
-<LI><A HREF = "read_surf.html">read_surf</A> 
+<LI><A HREF = "create_box.html">simulation box size</A> and <A HREF = "boundary.html">boundary conditions</A>
+<LI><A HREF = "global.html">global settings</A>
+<LI>particles with their individual attributes
+<LI><A HREF = "species.html">particle species info</A>
+<LI><A HREF = "mixture.html">mixtures</A>
+<LI>geometry of the hierarchical grid that overlays the simulation domain as <A HREF = "create_grid.html">created</A> or <A HREF = "read_grid.html">read from a file</A>
+<LI>geometry of all defined <A HREF = "read_surf.html">surface elements</A>
+<LI>current timestep number 
 </UL>
 <P>No other information is stored in the restart file.  Specifically,
-information about these simulation parameters is NOT stored:
+information about these simulation entities and their associated
+commands is NOT stored:
 </P>
-<UL><LI>computes
-<LI>fixes
-<LI>collision model
-<LI>chemistry (reaction) model
-<LI>surface collision models
-<LI>variables
-<LI>regions
-<LI>output options for stats, dump, restart files
-<LI>timestep size 
+<UL><LI><A HREF = "compute.html">computes</A>
+<LI><A HREF = "fix.html">fixes</A>
+<LI><A HREF = "collide.html">collision model</A>
+<LI><A HREF = "react.html">chemistry (reaction) model</A>
+<LI><A HREF = "surf_collide.html">surface collision model</A>
+<LI><A HREF = "surf_modify.html">surface modifications</A>
+<LI><A HREF = "variable.html">variables</A>
+<LI><A HREF = "region.html">regions</A>
+<LI>output options for <A HREF = "stats_style.html">stats</A>, <A HREF = "dump.html">dump</A>, <A HREF = "restart.html">restart</A> files
+<LI><A HREF = "timestep.html">timestep size</A> 
 </UL>
-<P>Basically, this means any information specified in the original input
-script by these commands needs to be re-specified in the restart input
-script, assuming the continued simulation needs the information:
+<P>This means any information specified in the original input script by
+these commands needs to be re-specified in the restart input script,
+assuming the continued simulation needs the information.
 </P>
-<UL><LI><A HREF = "compute.html">compute</A>
-<LI><A HREF = "fix.html">fix</A>
-<LI><A HREF = "collide.html">collide</A>
-<LI><A HREF = "react.html">react</A>
-<LI><A HREF = "surf_collide.html">surf_collide</A>
-<LI><A HREF = "surf_modify.html">surf_modify</A>
-<LI><A HREF = "variable.html">variable</A>
-<LI><A HREF = "region.html">region</A>
-<LI><A HREF = "stats_style.html">stats_style</A>
-<LI><A HREF = "dump.html">dump</A>
-<LI><A HREF = "restart.html">restart</A>
-<LI><A HREF = "timestep.html">timestep</A> 
-</UL>
+<P>Also note that many commands can be used after a restart file is read,
+to override a setting that was stored in the restart file.  For
+example, the <A HREF = "global.html">global</A> command can be used to reset the
+values of its specified keywords.
+</P>
 <P>In particular, take note of these issues:
 </P>
 <UL><LI>The status of time-averaging fixes, such as <A HREF = "fix_ave_time.html">fix
@@ -181,21 +164,16 @@ running averaged quantities do not persist into the new run.
 script to assign surface collision models, specified by the
 <A HREF = "surf_collide.html">surf_collide</A> command, to all <A HREF = "boundary.html">global
 boundaries</A> of type "s", and to any surfaces contained
-in the restart file.  The latter would have been setup in the original
-script via the <A HREF = "read_surf.html">read_surf</A> command. 
+in the restart file, as read in by the <A HREF = "read_surf.html">read_surf</A>
+command.  
 
-<LI>Even if a collision model is specified in the restart script, and the
+<LI>If a collision model is specified in the restart script, and the
 <A HREF = "collide_modify.html">collide_modify vremax or remain</A> command is used
 to enable Vremax and fractional collision count to persist for many
 timesteps, no information about these quantities persists from the
 original simulation to the restarted simulation.  The initial run in
 the restart script will re-initialize these data structures. 
 </UL>
-<P>Also note that many commands can be used after a restart file is read,
-to re-specify a setting that was stored in the restart file.  file is
-read.  For example, the <A HREF = "global.html">global</A> command can be used to
-reset the values of its specified keywords.
-</P>
 <HR>
 
 <P><B>Restrictions:</B> none

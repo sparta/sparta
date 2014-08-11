@@ -15,8 +15,6 @@
 SPARTA, as well as provide some techinical details about how
 SPARTA works.
 </P>
-<P>NOTE: add restarting a simulation, like in LAMMPS
-</P>
 4.1 <A HREF = "#howto_1">2d simulations</A><BR>
 4.2 <A HREF = "#howto_2">Axisymmetric simulations</A><BR>
 4.3 <A HREF = "#howto_3">Running multiple simulations from one input script</A><BR>
@@ -25,7 +23,8 @@ SPARTA works.
 4.6 <A HREF = "#howto_6">Library interface to SPARTA</A><BR>
 4.7 <A HREF = "#howto_7">Coupling SPARTA to other codes</A> <BR>
 4.8 <A HREF = "#howto_8">Details of grid geometry in SPARTA</A><BR>
-4.9 <A HREF = "#howto_9">Details of surfaces in SPARTA</A> <BR>
+4.9 <A HREF = "#howto_9">Details of surfaces in SPARTA</A><BR>
+4.10 <A HREF = "#howto_10">Restarting a simulation</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -806,10 +805,10 @@ forms for use in different simulations.
 portion of the object in a simulation, e.g. a half sphere instead of a
 full sphere. 
 
-<P>The kinds of surface objects that are illegal, including infinitely
+<LI>The kinds of surface objects that are illegal, including infinitely
 thin objects, ones with duplicate points, or multiple surface or
-physical objects that touch or overlap.
-</P>
+physical objects that touch or overlap. 
+</UL>
 <P>The <A HREF = "read_surf.html">read_surf</A> command assigns an ID to the surface
 object in a file.  This can be used to reference the surface elements
 in the object in other commands.  For example, every surface object
@@ -837,5 +836,65 @@ is also printed when the surface file is read.  Values this large or
 larger may cause particle moves to become expensive, since each time a
 particle moves within that grid cell, possible collisions with all its
 overlapping surface elements must be computed.
+</P>
+<HR>
+
+<A NAME = "howto_10"></A><H4>4.10 Restarting a simulation 
+</H4>
+<P>There are two ways to continue a long SPARTA simulation.  Multiple
+<A HREF = "run.html">run</A> commands can be used in the same input script.  Each
+run will continue from where the previous run left off.  Or binary
+restart files can be saved to disk using the <A HREF = "restart.html">restart</A>
+command.  At a later time, these binary files can be read via a
+<A HREF = "read_restart.html">read_restart</A> command in a new script.
+</P>
+<P>Here is an example of a script that reads a binary restart file and
+then issues a new run command to continue where the previous run left
+off.  It illustrates what settings must be made in the new script.
+Details are discussed in the documentation for the
+<A HREF = "read_restart.html">read_restart</A> and
+<A HREF = "write_restart.html">write_restart</A> commands.
+</P>
+<P>Look at the <I>in.collide</I> input script provided in the <I>bench</I>
+directory of the SPARTA distribution to see the original script that
+this script is based on.  If that script had the line
+</P>
+<PRE>restart	        50 tmp.restart 
+</PRE>
+<P>added to it, it would produce 2 binary restart files (tmp.restart.50
+and tmp.restart.100) as it ran for 130 steps, one at step 50, and one
+at step 100.
+</P>
+<P>This script could be used to read the first restart file and re-run
+the last 80 timesteps:
+</P>
+<PRE>read_restart	    tmp.restart.50 
+</PRE>
+<PRE>seed	    	    12345
+collide		    vss air ar.vss 
+</PRE>
+<PRE>stats		    10
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp 
+</PRE>
+<PRE>timestep 	    7.00E-9
+run 		    80 
+</PRE>
+<P>Note that the following commands do not need to be repeated because
+their settings are included in the restart file: <I>dimension, global,
+boundary, create_box, create_grid, species, mixture</I>.  However these
+commands do need to be used, since their settings are not in the
+restart file: <I>seed, collide, compute, fix, stats_style, timestep</I>.
+The <A HREF = "read_restart.html">read_restart</A> doc page gives details.
+</P>
+<P>If you actually use this script to perform a restarted run, you will
+notice that the statistics output does not match exactly.  On step 50,
+the collision counts are 0 in the restarted run, because the line is
+printed before the restarted simulation begins.  The collision counts
+in subsequent steps are similar but not identical.  This is because
+new random numbers are used for collisions in the restarted run.  This
+affects all the randomized operations in a simulation, so in general
+you should only expect a restarted run to be statistically similar to
+the original run.
 </P>
 </HTML>

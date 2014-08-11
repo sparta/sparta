@@ -12,8 +12,6 @@ The following sections describe how to perform common tasks using
 SPARTA, as well as provide some techinical details about how
 SPARTA works.
 
-NOTE: add restarting a simulation, like in LAMMPS
-
 4.1 "2d simulations"_#howto_1
 4.2 "Axisymmetric simulations"_#howto_2
 4.3 "Running multiple simulations from one input script"_#howto_3
@@ -22,7 +20,8 @@ NOTE: add restarting a simulation, like in LAMMPS
 4.6 "Library interface to SPARTA"_#howto_6
 4.7 "Coupling SPARTA to other codes"_#howto_7 
 4.8 "Details of grid geometry in SPARTA"_#howto_8
-4.9 "Details of surfaces in SPARTA"_#howto_9 :all(b)
+4.9 "Details of surfaces in SPARTA"_#howto_9
+4.10 "Restarting a simulation"_#howto_10 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
@@ -798,7 +797,7 @@ full sphere. :l
 
 The kinds of surface objects that are illegal, including infinitely
 thin objects, ones with duplicate points, or multiple surface or
-physical objects that touch or overlap.
+physical objects that touch or overlap. :l,ule
 
 The "read_surf"_read_surf.html command assigns an ID to the surface
 object in a file.  This can be used to reference the surface elements
@@ -827,3 +826,63 @@ is also printed when the surface file is read.  Values this large or
 larger may cause particle moves to become expensive, since each time a
 particle moves within that grid cell, possible collisions with all its
 overlapping surface elements must be computed.
+
+:line
+
+4.10 Restarting a simulation :link(howto_10),h4
+
+There are two ways to continue a long SPARTA simulation.  Multiple
+"run"_run.html commands can be used in the same input script.  Each
+run will continue from where the previous run left off.  Or binary
+restart files can be saved to disk using the "restart"_restart.html
+command.  At a later time, these binary files can be read via a
+"read_restart"_read_restart.html command in a new script.
+
+Here is an example of a script that reads a binary restart file and
+then issues a new run command to continue where the previous run left
+off.  It illustrates what settings must be made in the new script.
+Details are discussed in the documentation for the
+"read_restart"_read_restart.html and
+"write_restart"_write_restart.html commands.
+
+Look at the {in.collide} input script provided in the {bench}
+directory of the SPARTA distribution to see the original script that
+this script is based on.  If that script had the line
+
+restart	        50 tmp.restart :pre
+
+added to it, it would produce 2 binary restart files (tmp.restart.50
+and tmp.restart.100) as it ran for 130 steps, one at step 50, and one
+at step 100.
+
+This script could be used to read the first restart file and re-run
+the last 80 timesteps:
+
+read_restart	    tmp.restart.50 :pre
+
+seed	    	    12345
+collide		    vss air ar.vss :pre
+
+stats		    10
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp :pre
+
+timestep 	    7.00E-9
+run 		    80 :pre
+
+Note that the following commands do not need to be repeated because
+their settings are included in the restart file: {dimension, global,
+boundary, create_box, create_grid, species, mixture}.  However these
+commands do need to be used, since their settings are not in the
+restart file: {seed, collide, compute, fix, stats_style, timestep}.
+The "read_restart"_read_restart.html doc page gives details.
+
+If you actually use this script to perform a restarted run, you will
+notice that the statistics output does not match exactly.  On step 50,
+the collision counts are 0 in the restarted run, because the line is
+printed before the restarted simulation begins.  The collision counts
+in subsequent steps are similar but not identical.  This is because
+new random numbers are used for collisions in the restarted run.  This
+affects all the randomized operations in a simulation, so in general
+you should only expect a restarted run to be statistically similar to
+the original run.
