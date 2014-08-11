@@ -1,17 +1,18 @@
 #!/usr/local/bin/python
 
-# surf_transform.py = morph a surf file into another surf file
-#                with same transformations as read_surf command
-
-# Syntax: surf_transform.py infile outfile keyword args ...
-#         infile,outfile = input and output surf files
-#         keywords = origin, trans, atrans, scale, rotate, invert
-#         origin Ox Oy Oz
-#         trans Dx Dy Dz
-#         atrans Ax Ay Az
-#         scale Sx Sy Sz
-#         rotate theta Rx Ry Rz
-#         invert (no args)
+# Script:  surf_transform.py
+# Purpose: morph a surf file into another surf file
+#          with same transformation options as read_surf command
+# Syntax:  surf_transform.py infile outfile keyword args ...
+#          infile,outfile = input and output surf files
+#          keywords = origin, trans, atrans, scale, rotate, invert
+#          origin Ox Oy Oz
+#          trans Dx Dy Dz
+#          atrans Ax Ay Az
+#          scale Sx Sy Sz
+#          rotate theta Rx Ry Rz
+#          invert (no args)
+# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 
 import os,sys,math
 path = os.environ["PIZZA_PYTHON_TOOLS"]

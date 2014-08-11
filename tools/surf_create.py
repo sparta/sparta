@@ -32,16 +32,21 @@
 #              x2,y2 = second point of triangle
 #              x3,y3 = third point of triangle
 #              N1,N2,N3 = # of line segments for each side of triangle
-#            spikysphere args = x y rmin rmax N
+#            spikycircle args = x y rmin rmax N
 #              x,y = center point
 #              rmin,rmax = lo/hi bounds of random radius of each circle surf pt
 #              N = # of line segements around circumference of circle
 #          NOTE: cannot mix 2d and 3d objects
 # Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 
+# error message
+
 def error():
-  raise StandardError, "Syntax: surf_create.py sfile style args style args ..."
-  
+  raise StandardError, "Syntax: surf_create.py sfile style argsx style args ..."
+
+# ---------------------------------------------------------------------
+# main program
+
 import sys,os
 path = os.environ["SPARTA_PYTHON_TOOLS"]
 sys.path.append(path)
