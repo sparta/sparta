@@ -70,6 +70,10 @@ particle species is chosen randomly in accord with the {frac} settings
 of the collection of species in the mixture, as set by the
 "mixture"_mixture.html command.
 
+IMPORTANT NOTE: The preceeding calculation is actually done using face
+areas associated with {weighted} cell volumes.  Grid cells can be
+weighted using the "global weight"_global.html command.
+
 The velocity of the particle is set to the sum of the streaming
 velocity and a thermal velocity sampled from the thermal temperature.
 The internal energy modes of the particle are determined by the

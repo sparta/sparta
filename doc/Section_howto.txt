@@ -64,12 +64,31 @@ are for 2d models.
 
 4.2 Axisymmetric simulations :link(howto_2),h4
 
-This section will be filled in when axisymmetry is fully implemented
-in SPARTA.
+In SPARTA, an axi-symmetric model is a 2d model.  An example input
+script is provided in the examples/axisymm directory.
 
-create box with ylo = 0.0 and zlo/zhi = 0.5
-ylo boundary with "a" setting
-cell weighting options :ul
+An axi-symmetric problem can be setup using the following commands:
+
+Set dimension = 2 via the "dimension"_dimension.html command.
+Set the y-dimension lower boundary to "a" via the "boundary"_boundary.html command.
+The y-dimension upper boundary can be anything except "a" or "p" for periodic.
+Use the "create_box"_create_box.html command to define a 2d simulation box with ylo = 0.0. :ul
+
+If desired, grid cell weighting can be enabled via the "global
+weight"_global.html command.  The {volume} or {radial} setting can be
+used for axi-symmetric models.
+
+Grid cell weighting affects how many particles per grid cell are
+created when using the "create_particles"_create_particles.html and
+"fix inflow"_fix_inflow.html commands.
+
+During a run, it also triggers particle cloning and destruction as
+particles move from grid cell to grid cell.  This can be important for
+inducing every grid cell to contain roughly the same number of
+particles, even if cells are of varying volume, as they often are in
+axi-symmetric models.  Note that the effective volume of an
+axi-symmetric grid cell is the volume its 2d area sweeps out when
+rotated around the y=0 axis of symmetry.
 
 :line
 

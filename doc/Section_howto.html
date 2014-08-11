@@ -68,13 +68,32 @@ are for 2d models.
 
 <A NAME = "howto_2"></A><H4>4.2 Axisymmetric simulations 
 </H4>
-<P>This section will be filled in when axisymmetry is fully implemented
-in SPARTA.
+<P>In SPARTA, an axi-symmetric model is a 2d model.  An example input
+script is provided in the examples/axisymm directory.
 </P>
-<UL><LI>create box with ylo = 0.0 and zlo/zhi = 0.5
-<LI>ylo boundary with "a" setting
-<LI>cell weighting options 
+<P>An axi-symmetric problem can be setup using the following commands:
+</P>
+<UL><LI>Set dimension = 2 via the <A HREF = "dimension.html">dimension</A> command.
+<LI>Set the y-dimension lower boundary to "a" via the <A HREF = "boundary.html">boundary</A> command.
+<LI>The y-dimension upper boundary can be anything except "a" or "p" for periodic.
+<LI>Use the <A HREF = "create_box.html">create_box</A> command to define a 2d simulation box with ylo = 0.0. 
 </UL>
+<P>If desired, grid cell weighting can be enabled via the <A HREF = "global.html">global
+weight</A> command.  The <I>volume</I> or <I>radial</I> setting can be
+used for axi-symmetric models.
+</P>
+<P>Grid cell weighting affects how many particles per grid cell are
+created when using the <A HREF = "create_particles.html">create_particles</A> and
+<A HREF = "fix_inflow.html">fix inflow</A> commands.
+</P>
+<P>During a run, it also triggers particle cloning and destruction as
+particles move from grid cell to grid cell.  This can be important for
+inducing every grid cell to contain roughly the same number of
+particles, even if cells are of varying volume, as they often are in
+axi-symmetric models.  Note that the effective volume of an
+axi-symmetric grid cell is the volume its 2d area sweeps out when
+rotated around the y=0 axis of symmetry.
+</P>
 <HR>
 
 <A NAME = "howto_3"></A><H4>4.3 Running multiple simulations from one input script 

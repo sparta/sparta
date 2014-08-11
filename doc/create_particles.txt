@@ -86,6 +86,10 @@ depending on the outcome of a random number generation.  As grid cells
 are looped over, the remainder fraction is accumulated, so that
 exactly {Np} particles are created across all the processors.
 
+IMPORTANT NOTE: The preceeding calcualation is actually done using
+{weighted} cell volumes.  Cell volumes can be weighted using the
+"global weight"_global.html command.
+
 Each particle is inserted at a random location within the grid cell.
 The particle species is chosen randomly in accord with the {frac}
 settings of the collection of species in the mixture, as set by the
