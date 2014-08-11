@@ -322,7 +322,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "quit"_quit.html,
 "react"_react.html,
 "read_grid"_read_grid.html,
-"read_restat"_read_restart.html,
+"read_restart"_read_restart.html,
 "read_surf"_read_surf.html,
 "region"_region.html,
 "reset_timestep"_reset_timestep.html,
