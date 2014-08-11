@@ -168,6 +168,8 @@ void ReadRestart::command(int narg, char **arg)
   //   creates its grid cells from cell IDs
   //   assigns all particles to its cells
 
+  particle->exist = 1;
+
   if (multiproc == 0 && nprocs_file == nprocs) {
 
     if (me == 0) {

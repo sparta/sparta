@@ -43,9 +43,6 @@ CreateParticles::CreateParticles(SPARTA *sparta) : Pointers(sparta) {}
 
 void CreateParticles::command(int narg, char **arg)
 {
-  if (!domain->box_exist) 
-    error->all(FLERR,
-	       "Cannot create particles before simulation box is defined");
   if (!grid->exist)
     error->all(FLERR,"Cannot create particles before grid is defined");
 
