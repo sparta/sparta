@@ -253,7 +253,6 @@ void CreateParticles::create_local(bigint np)
       volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
     else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
     volme += volone / cinfo[i].weight;
-//    printf (" vol weight %d %e  %e \n", i, volone, cinfo[i].weight);
   }
   
   double volupto;
@@ -329,12 +328,12 @@ void CreateParticles::create_local(bigint np)
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
-/*      double boundary = 1.5E-3-1.E-4*sin((x[0]/0.5E-3)*2.*MY_PI+MY_PI*0.5);
+      // double boundary = 1.5E-3-1.E-4*sin((x[0]/0.5E-3)*2.*MY_PI+MY_PI*0.5);
       // double boundary = 1.5E-3-1.E-4*sin(x[2]/0.5E-3*2.*MY_PI+MY_PI*0.5)*
       //                   sin(x[0]/0.5E-3*2.*MY_PI+MY_PI*0.5);
-      if (x[1]>=boundary) ispecies = 1;
-      if (x[1]<boundary) ispecies = 0;
-*/
+      // if (x[1]>=boundary) ispecies = 1;
+      // if (x[1]<boundary) ispecies = 0;
+
       vn = vscale[ispecies] * sqrt(-log(random->uniform()));
       vr = vscale[ispecies] * sqrt(-log(random->uniform()));
       theta1 = MY_2PI * random->uniform();

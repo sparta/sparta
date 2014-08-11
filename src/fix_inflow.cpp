@@ -107,12 +107,13 @@ FixInflow::FixInflow(SPARTA *sparta, int narg, char **arg) :
     } else error->all(FLERR,"Illegal fix inflow command");
   }
 
-  // error check
+  // error checks
 
   if (domain->dimension == 2 && (faces[ZLO] || faces[ZHI])) 
     error->all(FLERR,"Cannot use fix inflow in z dimension for 2d simulation");
-  if (domain->axisymmetric && (faces[YLO] || faces[YHI])) 
-    error->all(FLERR,"Cannot use fix inflow in y dimension for axisymmetric");
+  if (domain->axisymmetric && faces[YLO]) 
+    error->all(FLERR,"Cannot use fix inflow on ylo face for "
+               "axisymmetric model");
   if (np > 0 && perspecies == YES) 
     error->all(FLERR,"Cannot use fix inflow n > 0 with perspecies yes");
 
@@ -161,9 +162,20 @@ void FixInflow::init()
 {
   int i,j,m,n,isp,icell;
   double xface[3];
+
   double *vscale = particle->mixture[imix]->vscale;
+  double *vstream = particle->mixture[imix]->vstream;
+  double nrho = particle->mixture[imix]->nrho;
+  double fnum = update->fnum;
+  double dt = update->dt;
 
   particle->exist = 1;
+
+  // run-time error check
+
+  if (domain->axisymmetric && faces[YHI] & vstream[1] != 0.0)
+    error->all(FLERR,"Cannot use fix inflow on yhi for axisymmetric model "
+               "if streaming velocity has a y-component");
 
   // corners[i][j] = J corner points of face I of a grid cell
   // works for 2d quads and 3d hexes
@@ -292,11 +304,6 @@ void FixInflow::init()
   for (i = 0; i < ncfmax; i++)
     cellface[i].ntargetsp = new double[nspecies];
 
-  double nrho = particle->mixture[imix]->nrho;
-  double *vstream = particle->mixture[imix]->vstream;
-  double fnum = update->fnum;
-  double dt = update->dt;
-
   double area,indot;
 
   ncf = 0;
@@ -321,10 +328,13 @@ void FixInflow::init()
       cellface[ncf].normal[1] = 0.0;
       cellface[ncf].normal[2] = 0.0;
       
-      area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
-	(cells[icell].hi[2]-cells[icell].lo[2]);
-
-      if (dimension == 2) {
+      if (dimension == 3) 
+        area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
+          (cells[icell].hi[2]-cells[icell].lo[2]);
+      else if (domain->axisymmetric)
+        area = (cells[icell].hi[1]*cells[icell].hi[1] -
+                cells[icell].lo[1]*cells[icell].lo[1])*MY_PI;
+      else {
 	cellface[ncf].lo[2] = 0.0;
 	cellface[ncf].hi[2] = 0.0;
 	area = (cells[icell].hi[1]-cells[icell].lo[1]);
@@ -338,7 +348,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
+          cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][XLO] = ncf++;
@@ -364,10 +374,13 @@ void FixInflow::init()
       cellface[ncf].normal[1] = 0.0;
       cellface[ncf].normal[2] = 0.0;
       
-      area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
-	(cells[icell].hi[2]-cells[icell].lo[2]);
-
-      if (dimension == 2) {
+      if (dimension == 3) 
+        area = (cells[icell].hi[1]-cells[icell].lo[1]) * 
+          (cells[icell].hi[2]-cells[icell].lo[2]);
+      else if (domain->axisymmetric)
+        area = (cells[icell].hi[1]*cells[icell].hi[1] -
+                cells[icell].lo[1]*cells[icell].lo[1])*MY_PI;
+      else {
 	cellface[ncf].lo[2] = 0.0;
 	cellface[ncf].hi[2] = 0.0;
 	area = (cells[icell].hi[1]-cells[icell].lo[1]);
@@ -381,7 +394,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
+          cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][XHI] = ncf++;
@@ -407,10 +420,12 @@ void FixInflow::init()
       cellface[ncf].normal[1] = 1.0;
       cellface[ncf].normal[2] = 0.0;
       
-      area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
-	(cells[icell].hi[2]-cells[icell].lo[2]);
+      // no axi-symmetry allowed
 
-      if (dimension == 2) {
+      if (dimension == 3) 
+        area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+          (cells[icell].hi[2]-cells[icell].lo[2]);
+      else if (dimension == 2) {
 	cellface[ncf].lo[2] = 0.0;
 	cellface[ncf].hi[2] = 0.0;
 	area = (cells[icell].hi[0]-cells[icell].lo[0]);
@@ -424,7 +439,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
+          cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][YLO] = ncf++;
@@ -450,10 +465,13 @@ void FixInflow::init()
       cellface[ncf].normal[1] = -1.0;
       cellface[ncf].normal[2] = 0.0;
       
-      area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
-	(cells[icell].hi[2]-cells[icell].lo[2]);
-
-      if (dimension == 2) {
+      if (dimension == 3)
+        area = (cells[icell].hi[0]-cells[icell].lo[0]) * 
+          (cells[icell].hi[2]-cells[icell].lo[2]);
+      else if (domain->axisymmetric)
+         area = (cells[icell].hi[0]*cells[icell].hi[0] -
+                 cells[icell].lo[0]*cells[icell].lo[0])*MY_PI;
+      else {
 	cellface[ncf].lo[2] = 0.0;
 	cellface[ncf].hi[2] = 0.0;
 	area = (cells[icell].hi[0]-cells[icell].lo[0]);
@@ -467,7 +485,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
+          cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][YHI] = ncf++;
@@ -504,7 +522,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
+          cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][ZLO] = ncf++;
@@ -541,7 +559,7 @@ void FixInflow::init()
         for (isp = 0; isp < nspecies; isp++) {
           cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
-          cellface[ncf].ntargetsp[isp] *= cinfo[icell].weight;
+          cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
         }
         c2f[icell][ZHI] = ncf++;
