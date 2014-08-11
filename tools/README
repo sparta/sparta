@@ -9,12 +9,16 @@ For all of the tools, see the top of the file for detailed
 instructions on how to run it and the allowed options.  Or
 just run it with no arguments to get a syntax message.
 
-Some of these tools are Python scripts and some of them use Python
-modules from the Pizza.py toolkit, provided in the pizza dir.  See
-more info below on how to run a Python script and insure that Python
-can find the needed modules.
+Some of these tools are stand-alone Python scripts and some of them
+use Python modules from the Pizza.py toolkit, provided in the pizza
+dir.  See more info below on how to run a Python script and insure
+that Python can find the needed modules.
 
-Here is a list of the tools:
+Stand-alone tools:
+
+stl2surf.py     convert an ASCII STL file to a SPARTA surface file
+
+Tools that use Pizza.py modules: 
 
 dump2cfg.py	convert a particle SPARTA dump file to CFG format
 dump2xyz.py	convert a SPARTA particle dump file to XYZ format
@@ -27,11 +31,35 @@ surf_transform.py  transform objects in a surface file via same operations
                    available in read_surf command (translate,scale,rotate,etc)
 
 ------------------------------
-General info on Python scripts:
+Running a Python tool:
+
+As with any Python script, you can run these scripts in one of two
+ways.  You may want to setup aliases so that you can run them from the
+directory where your data files are.
+
+% python log2txt.py args ...
+% log2txt.py args ...
+
+The latter requires 2 things:
+
+1) that the script be made "executable", e.g. type "chmod +x log2txt.py"
+2) that the 1st line of the script is the path of the Python installed 
+   on your machine, e.g. /usr/local/bin/python
+
+IMPORTANT NOTE: If you run the logplot.py script using the 1st method
+above, you should type
+
+% python -i logplot.py args ...
+
+so that the plot produced by GnuPlot stays visible before Python
+exits.
+
+------------------------------
+Python tools that use Pizza.py modules:
 
 Some of the Python scripts use additional Python modules that are part
 of the Pizza.py toolkit.  These scripts are very simple.  They load
-thos Python modules (e.g. from the pizza sub-directory), which do the
+those Python modules (e.g. from the pizza sub-directory), which do the
 heavy lifting.
 
 To use these scripts you must set the environment variable
@@ -60,30 +88,6 @@ To use all the features of Pizza.py modules, you need to be familiar
 with Python syntax.  You can then modify the scripts to invoke
 additional Pizza.py functionality or use the Python interpreter itself
 to drive the Pizza.py modules.
-
-------------------------------
-Running the Python scripts:
-
-As with any Python script, you can run these scripts in one of two
-ways.  You may want to setup aliases so that you can run them from the
-directory where your data files are.
-
-% python log2txt.py args ...
-% log2txt.py args ...
-
-The latter requires 2 things:
-
-1) that the script be made "executable", e.g. type "chmod +x log2txt.py"
-2) that the 1st line of the script is the path of the Python installed 
-   on your machine, e.g. /usr/local/bin/python
-
-IMPORTANT NOTE: If you run the logplot.py script using the 1st method
-above, you should type
-
-% python -i logplot.py args ...
-
-so that the plot produced by GnuPlot stays visible before Python
-exits.
 
 ------------------------------
 Python dependencies:
