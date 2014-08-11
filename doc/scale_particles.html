@@ -1,0 +1,61 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>scale_particles command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>scale_particles mix-ID factor 
+</PRE>
+<UL><LI>mix-ID = ID of mixture to use when scaling particles
+<LI>factor = scalr factor 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>scale_particles air 0.5
+scale_particles air 4.0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Scale the number of particles in the simulation by cloning or deleting
+individual particles.  This can be useful between runs, or after
+reading a restart file, to increase or decrease the particle count
+before a new <A HREF = "run.html">run</A> command is issued, as if the <A HREF = "global.html">global
+fnum</A> value had been changed.  For example, an initial
+coarse simulation can be performed, followed by a simulation at
+higher resolution.
+</P>
+<P>Only particles of species in the specified mixture are considered for
+cloning/deleting.  See the <A HREF = "mixture.html">mixture</A> command for how it
+defines a collection of species.
+</P>
+<P>The specified <I>factor</I> can be any value >= 0.0.
+</P>
+<P>If <I>factor</I> < 1.0, then for each particle, a random number <I>R</I> is
+generated.  If R > factor, the particle is deleted.
+</P>
+<P>If <I>factor</I> > 1.0, then for each particle additional particles may be
+created, by cloning all attributes of the original particle, except
+for a new random particle ID assigned to each new particle.  E.g. if
+<I>factor</I> = 3.4, then two extra particles are created, and a 3rd is
+created with probability 0.4.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "create_particles.html">create_particles</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

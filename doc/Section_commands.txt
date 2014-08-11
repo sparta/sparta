@@ -274,7 +274,8 @@ Output:
 
 Actions:
 
-"balance_grid"_balance_grid.html, "run"_run.html
+"balance_grid"_balance_grid.html, "run"_run.html,
+"scale_particles"_scale_particles.html
 
 Miscellaneous:
 
@@ -328,6 +329,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "reset_timestep"_reset_timestep.html,
 "restart"_restart.html,
 "run"_run.html,
+"scale_particles"_scale_particles.html,
 "seed"_seed.html,
 "shell"_shell.html,
 "species"_species.html,
