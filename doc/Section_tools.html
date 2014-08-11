@@ -34,21 +34,23 @@ Pizza.py web site</A>.
 <UL><LI>dump - read, write, manipulate particle dump files
 <LI>gl - 3d interactive visualization via OpenGL of dump or surface files
 <LI>sdata - read, write, manipulate surface files
-<LI>slog - read log files and extract columns of data
+<LI>olog - read log files and extract columns of data
 <LI>vcr - VCR-style GUI for 3d interactive OpenGL visualization of dump or surface files 
 </UL>
-<P>The sdata and slog tools are included in the SPARTA distribution, as
-discussed below, in the <A HREF = "#pizzatools">pizza</A> section, so that they
-can be used by other provided Python scripts.
+<P>The dump, sdata, and olog tools are included in the SPARTA
+distribution in the tools/pizza directory, and are used by some of the
+scripts discussed below.
 </P>
 <P>This is the list of tools included in the tools directory of the
-SPARTA distribution.  Each is described below.
+SPARTA distribution.  Each is described in more detail below.
 </P>
 <UL><LI><A HREF = "#dump2cfg">dump2cfg</A> - convert a particle dump file to CFG format
 <LI><A HREF = "#dump2xyz">dump2xyz</A> - convert a particle dump file to XYZ format
 <LI><A HREF = "#log2txt">log2txt</A> - extract columns of info from a log file
 <LI><A HREF = "#logplot">logplot</A> - plot columns of info from a log file via GnuPlot
-<LI><A HREF = "#pizzatools">pizza</A> - Pizza.py tools used by other tools 
+<LI><A HREF = "#stl2surf">stl2surf</A> - convert an STL text file into a SPARTA surface file
+<LI><A HREF = "#surfcreate">surf_create</A> - create a surface file with simple objects
+<LI><A HREF = "#surftransform">surf_transform</A> - transform surface via tranlate/scale/rotate operations 
 </UL>
 <HR>
 
@@ -137,13 +139,47 @@ Python script.
 </P>
 <HR>
 
-<H4><A NAME = "pizzatools"></A>pizza tool 
+<H4><A NAME = "stl2surf"></A>stl2surf tool 
 </H4>
-<P>The pizza sub-directory contains several of the tools available
-in the <A HREF = "http://pizza.sandia.gov">Pizza.py</A> toolkit.  This is so that other
-Python scripts in the tools directory can use them directly.
+<P>This is a Python script that reads a stereolithography (STL) text file
+and converts it to a SPARTA surface file.  STL files contain a
+collection of triangles and can be created by various mesh-generation
+programs.  The format for SPARTA surface files is described on the
+<A HREF = "read_surf.html">read_surf</A> command doc page.
 </P>
-<P>See the tools/README file for info on how to set an environment
-variable so that the Python scripts can find the Pizza.py tool files.
+<P>See the header of the script for the syntax used to run it, e.g.
+</P>
+<PRE>% python stl2surf.py stlfile surffile 
+</PRE>
+<P>The script also checks the triangulated object to see if it is
+"watertight" and issues a warning if it is not, since SPARTA will
+perform the same check.  The <A HREF = "read_surf.html">read_surf</A> command doc
+page explains what watertight means for 3d objects.
+</P>
+<HR>
+
+<H4><A NAME = "surfcreate"></A>surf_create tool 
+</H4>
+<P>This is a Python script that creates a SPARTA surface file containing
+one or more simple objects whose surface is represented as triangules
+(3d) or line segments (2d).  Such files can be read by the
+<A HREF = "read_surf.html">read_surf</A> command.  The 3d objects it supports are a
+sphere, box, and spikysphere (randomized radius at each point).  The
+2d objects it supports are a circle, rectangle, triangle, and
+spikycircly (randomized radius at each point).
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<HR>
+
+<H4><A NAME = "surftransform"></A>surf_transform tool 
+</H4>
+<P>This is a Python script that transforms a SPARTA surface file into a
+new surface file using various operations supported by the
+<A HREF = "read_surf.html">read_surf</A> command.  These operations include
+translation, scaling, rotation, and inversion (changing which side of
+the surface is inside vs outside).
+</P>
+<P>See the header of the script for the syntax used to run it.
 </P>
 </HTML>

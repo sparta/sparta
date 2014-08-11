@@ -30,21 +30,23 @@ Some of the Pizza.py tools relevant to SPARTA are as follows:
 dump - read, write, manipulate particle dump files
 gl - 3d interactive visualization via OpenGL of dump or surface files
 sdata - read, write, manipulate surface files
-slog - read log files and extract columns of data
+olog - read log files and extract columns of data
 vcr - VCR-style GUI for 3d interactive OpenGL visualization of dump or surface files :ul
 
-The sdata and slog tools are included in the SPARTA distribution, as
-discussed below, in the "pizza"_#pizzatools section, so that they
-can be used by other provided Python scripts.
+The dump, sdata, and olog tools are included in the SPARTA
+distribution in the tools/pizza directory, and are used by some of the
+scripts discussed below.
 
 This is the list of tools included in the tools directory of the
-SPARTA distribution.  Each is described below.
+SPARTA distribution.  Each is described in more detail below.
 
 "dump2cfg"_#dump2cfg - convert a particle dump file to CFG format
 "dump2xyz"_#dump2xyz - convert a particle dump file to XYZ format
 "log2txt"_#log2txt - extract columns of info from a log file
 "logplot"_#logplot - plot columns of info from a log file via GnuPlot
-"pizza"_#pizzatools - Pizza.py tools used by other tools :ul
+"stl2surf"_#stl2surf - convert an STL text file into a SPARTA surface file
+"surf_create"_#surfcreate - create a surface file with simple objects
+"surf_transform"_#surftransform - transform surface via tranlate/scale/rotate operations :ul
 
 :line
 :line
@@ -132,12 +134,45 @@ Python script.
 
 :line
 
-pizza tool :h4,link(pizzatools)
+stl2surf tool :h4,link(stl2surf)
 
-The pizza sub-directory contains several of the tools available
-in the "Pizza.py"_pizza toolkit.  This is so that other
-Python scripts in the tools directory can use them directly.
+This is a Python script that reads a stereolithography (STL) text file
+and converts it to a SPARTA surface file.  STL files contain a
+collection of triangles and can be created by various mesh-generation
+programs.  The format for SPARTA surface files is described on the
+"read_surf"_read_surf.html command doc page.
 
-See the tools/README file for info on how to set an environment
-variable so that the Python scripts can find the Pizza.py tool files.
+See the header of the script for the syntax used to run it, e.g.
 
+% python stl2surf.py stlfile surffile :pre
+
+The script also checks the triangulated object to see if it is
+"watertight" and issues a warning if it is not, since SPARTA will
+perform the same check.  The "read_surf"_read_surf.html command doc
+page explains what watertight means for 3d objects.
+
+:line
+
+surf_create tool :h4,link(surfcreate)
+
+This is a Python script that creates a SPARTA surface file containing
+one or more simple objects whose surface is represented as triangules
+(3d) or line segments (2d).  Such files can be read by the
+"read_surf"_read_surf.html command.  The 3d objects it supports are a
+sphere, box, and spikysphere (randomized radius at each point).  The
+2d objects it supports are a circle, rectangle, triangle, and
+spikycircly (randomized radius at each point).
+
+See the header of the script for the syntax used to run it.
+
+:line
+
+surf_transform tool :h4,link(surftransform)
+
+This is a Python script that transforms a SPARTA surface file into a
+new surface file using various operations supported by the
+"read_surf"_read_surf.html command.  These operations include
+translation, scaling, rotation, and inversion (changing which side of
+the surface is inside vs outside).
+
+See the header of the script for the syntax used to run it.
