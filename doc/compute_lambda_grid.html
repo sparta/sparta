@@ -37,15 +37,15 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>compute 1 lambda/grid c_GR<B>1</B> NULL Ar
-compute 1 lambda/grid f_ave<B>2</B> f_ave<B>3</B> N2 kall 
+<PRE>compute 1 lambda/grid c_GR[1] NULL Ar
+compute 1 lambda/grid f_ave[2] f_ave[3] N2 kall 
 </PRE>
 <P>These commands will dump time averages for the mean free path for each
 grid cell to a dump file every 1000 steps:
 </P>
 <PRE>compute 1 grid species n temp
 fix 1 ave/grid 10 100 1000 c_1
-compute 2 lambda/grid f_1<B>1</B> f_1<B>2</B> Ar 
+compute 2 lambda/grid f_1[1] f_1[2] Ar 
 </PRE>
 <PRE>dump 1 grid 1000 tmp.grid id c_2 
 </PRE>
@@ -85,7 +85,7 @@ suitable for estimating optimal grid cell sizes as explained above.
 It is a simplied version of formulas 4.76 and 4.77 from the same
 reference.
 </P>
-<P>Dref and Tref and omega and collision properties for a reference
+<P>Dref and Tref and omega are collision properties for a reference
 species in the flow.  The reference species is specified by the
 <I>species</I> argument.  It must be a species defined by the
 <A HREF = "species.html">species</A> command and listed in the file of per-species
@@ -101,11 +101,11 @@ calculate these quantities itself; instead it uses another compute or
 fix to perform the calculation.  This is done by specifying the <I>nrho</I>
 and <I>temp</I> arguments as either
 </P>
-<UL><LI>c_ID<B>m</B> = compute with ID that calculates nrho/temp as its Mth column of output
-<LI>f_ID<B>m</B> = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output 
+<UL><LI>c_ID[m] = compute with ID that calculates nrho/temp as its Mth column of output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output 
 </UL>
 <P>The <I>temp</I> arguement can also be specified as NULL, which drops the
-(T/Tref) ratio term from the formula above.  That is also the case if
+(Tref/T) ratio term from the formula above.  That is also the case if
 the reference species defines omega = 1/2.  In that case, the <I>temp</I>
 argument is ignored, whether it is NULL or not.
 </P>

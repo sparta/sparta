@@ -27,15 +27,15 @@ keyword = {kall} or {kx} or {ky} or {kz} :l
 
 [Examples:]
 
-compute 1 lambda/grid c_GR[1] NULL Ar
-compute 1 lambda/grid f_ave[2] f_ave[3] N2 kall :pre
+compute 1 lambda/grid c_GR\[1\] NULL Ar
+compute 1 lambda/grid f_ave\[2\] f_ave\[3\] N2 kall :pre
 
 These commands will dump time averages for the mean free path for each
 grid cell to a dump file every 1000 steps:
 
 compute 1 grid species n temp
 fix 1 ave/grid 10 100 1000 c_1
-compute 2 lambda/grid f_1[1] f_1[2] Ar :pre
+compute 2 lambda/grid f_1\[1\] f_1\[2\] Ar :pre
 dump 1 grid 1000 tmp.grid id c_2 :pre
 
 [Description:]
@@ -74,7 +74,7 @@ suitable for estimating optimal grid cell sizes as explained above.
 It is a simplied version of formulas 4.76 and 4.77 from the same
 reference.
 
-Dref and Tref and omega and collision properties for a reference
+Dref and Tref and omega are collision properties for a reference
 species in the flow.  The reference species is specified by the
 {species} argument.  It must be a species defined by the
 "species"_species.html command and listed in the file of per-species
@@ -90,11 +90,11 @@ calculate these quantities itself; instead it uses another compute or
 fix to perform the calculation.  This is done by specifying the {nrho}
 and {temp} arguments as either
 
-c_ID[m] = compute with ID that calculates nrho/temp as its Mth column of output
-f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output :ul
+c_ID\[m\] = compute with ID that calculates nrho/temp as its Mth column of output
+f_ID\[m\] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output :ul
 
 The {temp} arguement can also be specified as NULL, which drops the
-(T/Tref) ratio term from the formula above.  That is also the case if
+(Tref/T) ratio term from the formula above.  That is also the case if
 the reference species defines omega = 1/2.  In that case, the {temp}
 argument is ignored, whether it is NULL or not.
 
