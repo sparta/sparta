@@ -192,7 +192,7 @@ void ComputeGrid::compute_per_grid()
         vec[k++] += 1.0;
         break;
       case NUMDENS:
-        vec[k++] += fnum / cinfo[icell].volume;
+        vec[k++] += fnum * cinfo[icell].weight / cinfo[icell].volume;
         break;
       case MASS:
         vec[k++] += mass;

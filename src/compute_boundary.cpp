@@ -123,9 +123,8 @@ void ComputeBoundary::compute_array()
   for (int j = 0; j < ntotal; j++) {
     m = j % nvalue;
     if (which[m] != NUM) 
-      for (int i = 0; i < size_array_rows; i++) {
+      for (int i = 0; i < size_array_rows; i++)
         array[i][j] /= normflux[i];
-      }
   }
 }
 
