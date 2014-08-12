@@ -476,9 +476,9 @@ int DumpGrid::parse_fields(int narg, char **arg)
 	error->all(FLERR,"Dump grid compute does not compute per-grid info");
       if (index > 0 && modify->compute[n]->size_per_grid_cols == 0)
 	error->all(FLERR,
-		   "Dump grid compute does not calculate per-grid array");
+		   "Dump grid compute does not compute  per-grid array");
       if (index > 0 && index > modify->compute[n]->size_per_grid_cols)
-	error->all(FLERR,"Dump grid compute vector is accessed out-of-range");
+	error->all(FLERR,"Dump grid compute array is accessed out-of-range");
 
       if (index == 0 && modify->compute[n]->size_per_grid_cols > 0) {
 	int ncol = modify->compute[n]->size_per_grid_cols;
@@ -530,7 +530,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
       if (index > 0 && modify->fix[n]->size_per_grid_cols == 0)
 	error->all(FLERR,"Dump grid fix does not compute per-grid array");
       if (index > 0 && index > modify->fix[n]->size_per_grid_cols)
-	error->all(FLERR,"Dump grid fix vector is accessed out-of-range");
+	error->all(FLERR,"Dump grid fix array is accessed out-of-range");
 
       if (index == 0 && modify->fix[n]->size_per_grid_cols > 0) {
 	int ncol = modify->fix[n]->size_per_grid_cols;

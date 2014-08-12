@@ -446,7 +446,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
 	error->all(FLERR,
 		   "Dump surf compute does not calculate per-surf array");
       if (index > 0 && index > modify->compute[n]->size_per_surf_cols)
-	error->all(FLERR,"Dump surf compute vector is accessed out-of-range");
+	error->all(FLERR,"Dump surf compute array is accessed out-of-range");
 
       if (index == 0 && modify->compute[n]->size_per_surf_cols > 0) {
 	int ncol = modify->compute[n]->size_per_surf_cols;
@@ -498,7 +498,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
       if (index > 0 && modify->fix[n]->size_per_surf_cols == 0)
 	error->all(FLERR,"Dump surf fix does not compute per-surf array");
       if (index > 0 && index > modify->fix[n]->size_per_surf_cols)
-	error->all(FLERR,"Dump surf fix vector is accessed out-of-range");
+	error->all(FLERR,"Dump surf fix array is accessed out-of-range");
 
       if (index == 0 && modify->fix[n]->size_per_surf_cols > 0) {
 	int ncol = modify->fix[n]->size_per_surf_cols;

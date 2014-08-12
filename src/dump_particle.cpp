@@ -666,7 +666,7 @@ int DumpParticle::parse_fields(int narg, char **arg)
       if (argindex[i] > 0 && 
 	  argindex[i] > modify->compute[n]->size_per_particle_cols)
 	error->all(FLERR,
-		   "Dump particle compute vector is accessed out-of-range");
+		   "Dump particle compute array is accessed out-of-range");
 
       field2index[i] = add_compute(suffix);
       delete [] suffix;
@@ -703,7 +703,7 @@ int DumpParticle::parse_fields(int narg, char **arg)
 		   "per-particle array");
       if (argindex[i] > 0 && 
 	  argindex[i] > modify->fix[n]->size_per_particle_cols)
-	error->all(FLERR,"Dump particle fix vector is accessed out-of-range");
+	error->all(FLERR,"Dump particle fix array is accessed out-of-range");
 
       field2index[i] = add_fix(suffix);
       delete [] suffix;
