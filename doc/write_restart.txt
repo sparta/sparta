@@ -31,10 +31,10 @@ write_restart flow.%.* nfile 10 :pre
 
 Write a binary restart file with the current state of the simulation.
 
-During a long simulation, the "restart"_restart.html command is
-typically used to output restart files periodically.  The
-write_restart command is useful at the end of a run or between two
-runs, whenever you wish to write out a single current restart file.
+During a long simulation, the "restart"_restart.html command can be
+used to output restart files periodically.  The write_restart command
+is useful at the end of a run or between two runs, whenever you wish
+to write out a single current restart file.
 
 Similar to "dump"_dump.html files, the restart filename can contain
 two wild-card characters.  If a "*" appears in the filename, it is

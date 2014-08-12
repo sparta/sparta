@@ -10,19 +10,18 @@ compute lambda/grid command :h3
 
 [Syntax:]
 
-compute ID lambda/grid nrho temp species keyword ... :pre
+compute ID lambda/grid nrho temp species extra :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 lambda/grid = style name of this compute command :l
 nrho = compute or fix column for number density, prefaced by "c_" or "f_" :l
 temp = NULL or compute or fix column for temperature, prefaced by "c_" or "f_" :l
 species = species name used for reference properties :l
-zero or one of the keywords can be appended :l
-keyword = {kall} or {kx} or {ky} or {kz} :l
+extra = {kall} or {kx} or {ky} or {kz} (optional) :l
   {kall} = also calculate Knudsen number based on cell size in all dimensions
   {kx} = also calculate Knudsen number based on cell size in x dimension
   {ky} = also calculate Knudsen number based on cell size in y dimension
-  {kz} = also calculate Knudsen number based on cell size in z dimension
+  {kz} = also calculate Knudsen number based on cell size in z dimension :pre
 :ule
 
 [Examples:]
@@ -33,9 +32,9 @@ compute 1 lambda/grid f_ave\[2\] f_ave\[3\] N2 kall :pre
 These commands will dump time averages for the mean free path for each
 grid cell to a dump file every 1000 steps:
 
-compute 1 grid species n temp
+compute 1 grid species nrho temp
 fix 1 ave/grid 10 100 1000 c_1
-compute 2 lambda/grid f_1\[1\] f_1\[2\] Ar :pre
+compute 2 lambda/grid f_1\[1\] f_1\[2\] Ar
 dump 1 grid 1000 tmp.grid id c_2 :pre
 
 [Description:]
@@ -93,7 +92,7 @@ and {temp} arguments as either
 c_ID\[m\] = compute with ID that calculates nrho/temp as its Mth column of output
 f_ID\[m\] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output :ul
 
-The {temp} arguement can also be specified as NULL, which drops the
+The {temp} argument can also be specified as NULL, which drops the
 (Tref/T) ratio term from the formula above.  That is also the case if
 the reference species defines omega = 1/2.  In that case, the {temp}
 argument is ignored, whether it is NULL or not.
@@ -129,21 +128,22 @@ a "dump grid"_dump.html command invokes this compute to write values
 to a dump file, it must do so on timesteps that are multiples of
 {Nfreq}.
 
-One of the {kall} or {kx} or {ky} or {kz} keywords can be optionally
-appended.  If specified, this calculates an additional value per grid
-cell, namely the dimensionless Knudsen number which is the ratio of
-the mean free path to the cell size.  For {kall}, the cell size is
-taken to be the average of the three grid cell side lengths (or two
-cell lengths for a 2d simulation).  For {kx}, {ky}, or {kz}, the cell
-size is the single cell side length in the corresponding x,y,z
-dimension.
+One of the {kall} or {kx} or {ky} or {kz} extra arguments can be
+optionally appended.  If specified, this calculates an additional
+value per grid cell, namely the dimensionless Knudsen number which is
+the ratio of the mean free path to the cell size.  For {kall}, the
+cell size is taken to be the average of the three grid cell side
+lengths (or two cell lengths for a 2d simulation).  For {kx}, {ky}, or
+{kz}, the cell size is the single cell side length in the
+corresponding x,y,z dimension.
 
 [Output info:]
 
-This compute calculates a per-grid array.  The number of columns is
-one if {kall}, {kx}, {ky}, or {kz} is not specified, and two if one of
-those keywords is specified.  The first column is the mean free path;
-the second column is the Knudsen number.
+This compute calculates a per-grid vector or array.  If one of {kall},
+{kx}, {ky}, or {kz} is not specified, then it is a vector.  If one
+extra argument is specified, it is an array with two columns.  The
+vector or first column of the array is the mean free path; the second
+column is the Knudsen number.
 
 This compute performs calculations for all flavors of child grid cells
 in the simulation, which includes unsplit, cut, split, and sub cells.
@@ -153,12 +153,14 @@ Note that split cells and unsplit cells inside closed surfaces contain
 no particles.  Thus they will compute a zero result for all the
 individual values.
 
-The array can be accessed by any command that uses per-grid values
-from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
-for an overview of SPARTA output options.
+The vector or array can be accessed by any command that uses per-grid
+values from a compute as input.  See "Section
+4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+options.
 
-The per-grid array values for the first column will be in distance
-"units"_units.html.  The second column will be dimensionless.
+The per-grid array values for the vector or first column of the array
+will be in distance "units"_units.html.  The second column of the
+array will be dimensionless.
 
 [Restrictions:]
 

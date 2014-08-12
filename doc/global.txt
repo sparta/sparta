@@ -166,8 +166,9 @@ grid-based weighting.  This is a mechanism for inducing every grid
 cell to contain roughly the same number of particles (even if cells
 are of varying size), so as to minimize the total number of particles
 used in a simulation while preserving accurate time and spatial
-averages of flow quantities.  The cell weights also affect particles
-created by the "create_particles"_create_particles.html and "fix
+averages of flow quantities.  The cell weights also affect how many
+particles per cell are created by the
+"create_particles"_create_particles.html and "fix
 inflow"_fix_inflow.html commands.
 
 If grid-based particle weighting is enabled, two computations occur.

@@ -13,7 +13,7 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>compute ID lambda/grid nrho temp species keyword ... 
+<PRE>compute ID lambda/grid nrho temp species extra 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
@@ -25,14 +25,13 @@
 
 <LI>species = species name used for reference properties 
 
-<LI>zero or one of the keywords can be appended 
+<LI>extra = <I>kall</I> or <I>kx</I> or <I>ky</I> or <I>kz</I> (optional) 
 
-<LI>keyword = <I>kall</I> or <I>kx</I> or <I>ky</I> or <I>kz</I> 
-
-  <I>kall</I> = also calculate Knudsen number based on cell size in all dimensions
+<PRE>  <I>kall</I> = also calculate Knudsen number based on cell size in all dimensions
   <I>kx</I> = also calculate Knudsen number based on cell size in x dimension
   <I>ky</I> = also calculate Knudsen number based on cell size in y dimension
-  <I>kz</I> = also calculate Knudsen number based on cell size in z dimension
+  <I>kz</I> = also calculate Knudsen number based on cell size in z dimension 
+</PRE>
 
 </UL>
 <P><B>Examples:</B>
@@ -43,11 +42,10 @@ compute 1 lambda/grid f_ave[2] f_ave[3] N2 kall
 <P>These commands will dump time averages for the mean free path for each
 grid cell to a dump file every 1000 steps:
 </P>
-<PRE>compute 1 grid species n temp
+<PRE>compute 1 grid species nrho temp
 fix 1 ave/grid 10 100 1000 c_1
-compute 2 lambda/grid f_1[1] f_1[2] Ar 
-</PRE>
-<PRE>dump 1 grid 1000 tmp.grid id c_2 
+compute 2 lambda/grid f_1[1] f_1[2] Ar
+dump 1 grid 1000 tmp.grid id c_2 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -104,7 +102,7 @@ and <I>temp</I> arguments as either
 <UL><LI>c_ID[m] = compute with ID that calculates nrho/temp as its Mth column of output
 <LI>f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output 
 </UL>
-<P>The <I>temp</I> arguement can also be specified as NULL, which drops the
+<P>The <I>temp</I> argument can also be specified as NULL, which drops the
 (Tref/T) ratio term from the formula above.  That is also the case if
 the reference species defines omega = 1/2.  In that case, the <I>temp</I>
 argument is ignored, whether it is NULL or not.
@@ -140,21 +138,22 @@ a <A HREF = "dump.html">dump grid</A> command invokes this compute to write valu
 to a dump file, it must do so on timesteps that are multiples of
 <I>Nfreq</I>.
 </P>
-<P>One of the <I>kall</I> or <I>kx</I> or <I>ky</I> or <I>kz</I> keywords can be optionally
-appended.  If specified, this calculates an additional value per grid
-cell, namely the dimensionless Knudsen number which is the ratio of
-the mean free path to the cell size.  For <I>kall</I>, the cell size is
-taken to be the average of the three grid cell side lengths (or two
-cell lengths for a 2d simulation).  For <I>kx</I>, <I>ky</I>, or <I>kz</I>, the cell
-size is the single cell side length in the corresponding x,y,z
-dimension.
+<P>One of the <I>kall</I> or <I>kx</I> or <I>ky</I> or <I>kz</I> extra arguments can be
+optionally appended.  If specified, this calculates an additional
+value per grid cell, namely the dimensionless Knudsen number which is
+the ratio of the mean free path to the cell size.  For <I>kall</I>, the
+cell size is taken to be the average of the three grid cell side
+lengths (or two cell lengths for a 2d simulation).  For <I>kx</I>, <I>ky</I>, or
+<I>kz</I>, the cell size is the single cell side length in the
+corresponding x,y,z dimension.
 </P>
 <P><B>Output info:</B>
 </P>
-<P>This compute calculates a per-grid array.  The number of columns is
-one if <I>kall</I>, <I>kx</I>, <I>ky</I>, or <I>kz</I> is not specified, and two if one of
-those keywords is specified.  The first column is the mean free path;
-the second column is the Knudsen number.
+<P>This compute calculates a per-grid vector or array.  If one of <I>kall</I>,
+<I>kx</I>, <I>ky</I>, or <I>kz</I> is not specified, then it is a vector.  If one
+extra argument is specified, it is an array with two columns.  The
+vector or first column of the array is the mean free path; the second
+column is the Knudsen number.
 </P>
 <P>This compute performs calculations for all flavors of child grid cells
 in the simulation, which includes unsplit, cut, split, and sub cells.
@@ -164,12 +163,14 @@ Note that split cells and unsplit cells inside closed surfaces contain
 no particles.  Thus they will compute a zero result for all the
 individual values.
 </P>
-<P>The array can be accessed by any command that uses per-grid values
-from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4</A>
-for an overview of SPARTA output options.
+<P>The vector or array can be accessed by any command that uses per-grid
+values from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section
+4.4</A> for an overview of SPARTA output
+options.
 </P>
-<P>The per-grid array values for the first column will be in distance
-<A HREF = "units.html">units</A>.  The second column will be dimensionless.
+<P>The per-grid array values for the vector or first column of the array
+will be in distance <A HREF = "units.html">units</A>.  The second column of the
+array will be dimensionless.
 </P>
 <P><B>Restrictions:</B>
 </P>
