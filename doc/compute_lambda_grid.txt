@@ -1,0 +1,186 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute lambda/grid command :h3
+
+[Syntax:]
+
+compute ID lambda/grid nrho temp species keyword ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+lambda/grid = style name of this compute command :l
+nrho = compute or fix column for number density, prefaced by "c_" or "f_" :l
+temp = NULL or compute or fix column for temperature, prefaced by "c_" or "f_" :l
+species = species name used for reference properties :l
+zero or one of the keywords can be appended :l
+keyword = {kall} or {kx} or {ky} or {kz} :l
+  {kall} = also calculate Knudsen number based on cell size in all dimensions
+  {kx} = also calculate Knudsen number based on cell size in x dimension
+  {ky} = also calculate Knudsen number based on cell size in y dimension
+  {kz} = also calculate Knudsen number based on cell size in z dimension
+:ule
+
+[Examples:]
+
+compute 1 lambda/grid c_GR[1] NULL Ar
+compute 1 lambda/grid f_ave[2] f_ave[3] N2 kall :pre
+
+These commands will dump time averages for the mean free path for each
+grid cell to a dump file every 1000 steps:
+
+compute 1 grid species n temp
+fix 1 ave/grid 10 100 1000 c_1
+compute 2 lambda/grid f_1[1] f_1[2] Ar :pre
+dump 1 grid 1000 tmp.grid id c_2 :pre
+
+[Description:]
+
+Define a computation that calculates the mean free path (lambda)
+between molecular collisions for each grid cell, based on the
+particles in the cell.  It has an option to also compute the Knudsen
+number for each cell which is the mean free path divided by the cell
+size.  These quantities can be useful for estimating the optimal grid
+cell size and using it to adapt the grid, e.g. via the
+"adapt_grid"_adapt_grid.html or "fix adapt/grid"_fix_adapt_grid.html
+commands.
+
+IMPORTANT NOTE: The adapt_grid and fix adapt/grid commands are not yet
+implemnted in SPARTA.
+
+Unlike other computes that calculate per grid cell values, this
+compute does not take a "mixture"_mixture.html ID as an argument.
+This is because it uses the number density and temperature calculated
+by another compute or fix as input, and that compute or fix uses a
+"mixture"_mixture.html ID as its own argument.
+
+The results of this compute can be used by different commands in
+different ways.  For example, the values can be output by the
+"dump grid"_dump.html command.
+
+:line
+
+The formula used to calculate the mean free path (lambda) is given in
+"(Bird94)"_#Bird94 as equation 4.65:
+
+:c,image(Eqs/lambda.jpg)
+
+This is an approximate mean free path for a multi-species mixture,
+suitable for estimating optimal grid cell sizes as explained above.
+It is a simplied version of formulas 4.76 and 4.77 from the same
+reference.
+
+Dref and Tref and omega and collision properties for a reference
+species in the flow.  The reference species is specified by the
+{species} argument.  It must be a species defined by the
+"species"_species.html command and listed in the file of per-species
+collision properties read in by the "collide"_collide.html command.
+
+Specifically, Dref is the diameter of molecules of the species, Tref
+is the reference temperature, and omega is its viscosity
+temperature-dependence.
+
+In the formula above, {n} is the number density and {T} is the thermal
+temperature of particles in a grid cell.  This compute does not
+calculate these quantities itself; instead it uses another compute or
+fix to perform the calculation.  This is done by specifying the {nrho}
+and {temp} arguments as either
+
+c_ID[m] = compute with ID that calculates nrho/temp as its Mth column of output
+f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output :ul
+
+The {temp} arguement can also be specified as NULL, which drops the
+(T/Tref) ratio term from the formula above.  That is also the case if
+the reference species defines omega = 1/2.  In that case, the {temp}
+argument is ignored, whether it is NULL or not.
+
+The "compute_grid"_compute_grid.html command can calculate a number
+density, using its {nrho} value.  It can also calculate a temperature
+using its {temp} value.  Note that this temperature is inferred from
+the translational kinetic energy of the particles, which is only
+appopriate for the mean free path calculation for systems with zero or
+small streaming velocities.  For systems with streaming flow, the
+temperature can be calculated by the {thermal} keyword of the "compute
+sonine/grid"_compute_sonine_grid.html command.  The formulas on its
+doc page show that the the center-of-mass velocity from the particles
+is subtracted, leaving their translational thermal velocity, from
+which a thermal temperature is inferred.
+
+The "fix ave/grid"_fix_ave_grid.html command can calculate the same
+values in a time-averaged sense, assuming it uses these same computes
+as its input.  Using this fix as input to this compute will thus yield
+less noisy values, due to the time averaging.
+
+Note that the compute or fix (via the compute(s) it uses as input) can
+perform its number density or temperature calculation for a subset of
+the particles based on the "mixture" it uses.  See the
+"mixture"_mixture.html command for how a set of species can be
+partitioned into groups.
+
+IMPORTANT NOTE: If the ID of a "fix ave/grid"_fix_ave_grid.html
+command is used as the {nrho} or {temp} argument, it only produces
+output on timesteps that are multiples of its {Nfreq} argument.  Thus
+this compute can only be invoked on those timesteps.  For example, if
+a "dump grid"_dump.html command invokes this compute to write values
+to a dump file, it must do so on timesteps that are multiples of
+{Nfreq}.
+
+One of the {kall} or {kx} or {ky} or {kz} keywords can be optionally
+appended.  If specified, this calculates an additional value per grid
+cell, namely the dimensionless Knudsen number which is the ratio of
+the mean free path to the cell size.  For {kall}, the cell size is
+taken to be the average of the three grid cell side lengths (or two
+cell lengths for a 2d simulation).  For {kx}, {ky}, or {kz}, the cell
+size is the single cell side length in the corresponding x,y,z
+dimension.
+
+[Output info:]
+
+This compute calculates a per-grid array.  The number of columns is
+one if {kall}, {kx}, {ky}, or {kz} is not specified, and two if one of
+those keywords is specified.  The first column is the mean free path;
+the second column is the Knudsen number.
+
+This compute performs calculations for all flavors of child grid cells
+in the simulation, which includes unsplit, cut, split, and sub cells.
+See "Section 4.8"_Section_howto.html#howto_8 of the manual gives
+details of how SPARTA defines child, unsplit, split, and sub cells.
+Note that split cells and unsplit cells inside closed surfaces contain
+no particles.  Thus they will compute a zero result for all the
+individual values.
+
+The array can be accessed by any command that uses per-grid values
+from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
+for an overview of SPARTA output options.
+
+The per-grid array values for the first column will be in distance
+"units"_units.html.  The second column will be dimensionless.
+
+[Restrictions:]
+
+To use this compute, a collision style must be defined via the
+"collide"_collide.html command, which defines properties for the
+reference {species}.
+
+As explained above, to use this compute with {nrho} or {temp} defined
+as input from a "fix ave/grid"_fix_ave_grid.html command, this compute
+must only be invoked on timesteps that are multiples of the {Nfreq}
+argument used by the fix, since those are the steps when it produces
+output.
+
+[Related commands:]
+
+"compute grid"_compute_grid.html, "fix ave/grid"_fix_ave_grid.html,
+"dump grid"_dump.html
+
+[Default:] none
+
+:line
+
+:link(Bird94)
+[(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
