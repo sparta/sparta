@@ -41,7 +41,7 @@ create_particles    air n 0
 fix                 3 balance 100 1.1 rcb part
 collide_modify      vremax 100 yes
 
-#compute             1 grid all ndensity mass u v w 
+#compute             1 grid all nrho mass u v w 
 #fix                 1 ave/grid 10 100 1000 c_1 ave running
 #dump                1 grid 1000 tmp_flow.* id xc yc zc f_1 
 

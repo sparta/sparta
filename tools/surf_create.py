@@ -64,7 +64,6 @@ id = "a"
 
 iarg = 2
 while iarg < narg:
-  print "AAA",args[iarg]
   if args[iarg] == "sphere":
     if iarg+6 > narg: error()
     s.sphere(id,float(args[iarg+1]),float(args[iarg+2]),float(args[iarg+3]),float(args[iarg+4]),
