@@ -262,8 +262,6 @@ void WriteGrid::write_geometry()
 
   // write out points from all procs
 
-  printf("Ncells %d %d\n",me,nme);
-
   if (me == 0) {
     fprintf(fp,"\nPoints\n\n");
     bigint index = 0;
