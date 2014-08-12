@@ -16,9 +16,9 @@ ID is documented in "compute"_compute.html command :ulb,l
 grid = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {ndensity} or {mass} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} :l
+value = {n} or {nrho} or {mass} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} :l
   {n} = particle count
-  {ndensity} = number density
+  {nrho} = number density
   {mass} = mass
   {u} = x component of velocity
   {v} = y component of velocity
@@ -71,10 +71,10 @@ then dividing by the number of sampling timesteps.
 
 The {n} value counts the number of particles in the group.
 
-The {ndensity} value computes the number density of particles in the
+The {nrho} value computes the number density of particles in the
 group:
 
-Ndensity = N * fnum / volume
+Nrho = N * fnum / volume
 
 N is the number of particles (same as the {n} keyword), fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
@@ -158,7 +158,7 @@ for an overview of SPARTA output options.
 
 The per-grid array values will be in the "units"_units.html
 appropriate to the individual values as described above.  {N} is
-unitless.  {Ndensity} is in 1/distance^3 units for 3d simulations and
+unitless.  {Nrho} is in 1/distance^3 units for 3d simulations and
 1/distance^2 units for 2d simulations.  {Mass} is in mass units.  {U},
 {v}, and {w} are in velocity units.  {Usq}, {vsq}, and {wsq} are in
 velocity squared units.  {Ke}, {erot}, and {evib} are in energy units.
