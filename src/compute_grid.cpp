@@ -24,7 +24,7 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NUMDENS,MASS,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB};
+enum{NUM,NRHO,MASS,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB};
 enum{NONE,COUNT,MASSWT,DOF};
 
 /* ---------------------------------------------------------------------- */
@@ -45,7 +45,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
-    else if (strcmp(arg[iarg],"ndensity") == 0) which[nvalue++] = NUMDENS;
+    else if (strcmp(arg[iarg],"nrho") == 0) which[nvalue++] = NRHO;
     else if (strcmp(arg[iarg],"mass") == 0) which[nvalue++] = MASS;
     else if (strcmp(arg[iarg],"u") == 0) which[nvalue++] = U;
     else if (strcmp(arg[iarg],"v") == 0) which[nvalue++] = V;
@@ -75,7 +75,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   // norm vectors
 
   for (int i = 0; i < nvalue; i++) {
-    if (which[i] == NUM || which[i] == NUMDENS) 
+    if (which[i] == NUM || which[i] == NRHO) 
       norm_style[i] = NONE;
     else if (which[i] == MASS) 
       norm_style[i] = COUNT;
@@ -191,7 +191,7 @@ void ComputeGrid::compute_per_grid()
       case NUM:
         vec[k++] += 1.0;
         break;
-      case NUMDENS:
+      case NRHO:
         vec[k++] += fnum * cinfo[icell].weight / cinfo[icell].volume;
         break;
       case MASS:
