@@ -166,6 +166,7 @@ class Grid : protected Pointers {
 
   Grid(class SPARTA *);
   ~Grid();
+  void remove();
   void init() {}
   void add_child_cell(cellint, int, double *, double *);
   void add_parent_cell(cellint, int, int, int, int, double *, double *);

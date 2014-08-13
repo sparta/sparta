@@ -50,7 +50,9 @@ ReadGrid::~ReadGrid()
   delete [] buffer;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   called as read_grid command in input script
+------------------------------------------------------------------------- */
 
 void ReadGrid::command(int narg, char **arg)
 {
@@ -63,6 +65,15 @@ void ReadGrid::command(int narg, char **arg)
 
   if (narg != 1) error->all(FLERR,"Illegal read_grid command");
 
+  read(arg[0],0);
+}
+
+/* ----------------------------------------------------------------------
+   called from command() and directly from AdaptGrid
+------------------------------------------------------------------------- */
+
+void ReadGrid::read(char *filename, int external)
+{
   // read file, create parent cells and then child cells
 
   MPI_Barrier(world);
@@ -70,8 +81,9 @@ void ReadGrid::command(int narg, char **arg)
 
   me = comm->me;
   if (me == 0) {
-    if (screen) fprintf(screen,"Reading grid file ...\n");
-    open(arg[0]);
+    if (!external && screen) 
+      fprintf(screen,"Reading grid file ... %s\n",filename);
+    open(filename);
   }
 
   header();
@@ -126,6 +138,8 @@ void ReadGrid::command(int narg, char **arg)
   double time3 = MPI_Wtime();
 
   // stats
+
+  if (external) return;
 
   double time_total = time3-time1;
 

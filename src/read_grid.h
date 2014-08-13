@@ -31,6 +31,7 @@ class ReadGrid : protected Pointers {
   ReadGrid(class SPARTA *);
   ~ReadGrid();
   void command(int, char **);
+  void read(char *, int);
 
  private:
   int me;

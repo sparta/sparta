@@ -123,6 +123,43 @@ Grid::~Grid()
 }
 
 /* ----------------------------------------------------------------------
+   remove existing grid
+   called by AdaptGrid when it reads a new grid from file
+------------------------------------------------------------------------- */
+
+void Grid::remove()
+{
+  memory->sfree(cells);
+  memory->sfree(cinfo);
+  memory->sfree(sinfo);
+  memory->sfree(pcells);
+
+  delete csurfs;
+  delete csplits;
+  delete csubs;
+
+  exist_ghost = clumped = 0;
+  ncell = nunsplit = nsplit = nsub = 0;
+  nlocal = nghost = maxlocal = maxcell = 0;
+  nsplitlocal = nsplitghost = maxsplit = 0;
+  nsublocal = nsubghost = 0;
+  nparent = maxparent = 0;
+
+  hash->clear();
+  hashfilled = 0;
+
+  cells = NULL;
+  cinfo = NULL;
+  sinfo = NULL;
+  pcells = NULL;
+
+  csurfs = NULL; csplits = NULL; csubs = NULL;
+  allocate_surf_arrays();
+
+  // what about cutoff and cellweightflag
+}
+
+/* ----------------------------------------------------------------------
    add a single owned child cell to cells and cinfo
    assume no surfs at this point, so cell and corners are OUTSIDE
    neighs and nmask will be set later
