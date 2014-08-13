@@ -58,13 +58,16 @@ file format are described below.
 <P>The <I>tce</I> style is Bird's Total Collision Energy Model.  Using kinetic
 theory, it allows for reaction probabilities to be defined based on
 known, measured, reaction rates.  The model is described in detail in
-<A HREF = "#Bird94">(Bird94)</A>; see chapter 6. The required input is an
-Arrhenius-type rate for each reaction
+<A HREF = "#Bird94">(Bird94)</A>; see chapter 6. The required input parameters for
+each reaction (discussed below) are values that permit its effective
+Arrhenius rate to be calculated, namely
 </P>
 <CENTER><IMG SRC = "Eqs/arrhenius.jpg">
 </CENTER>
-<P>where k_f is the forward reaction rate, T is the Temperature and k 
-the Boltzman constant.
+<P>where K(T) is the forward reaction rate, T is the temperature of the
+participating molecules which is a function of their velocities and
+internal energy states, k the Boltzmann constant, and A,b,Ea are input
+parameters discussed below.
 </P>
 <P>The format of the input file is as follows.  Comments or blank lines
 are allowed in the file.  Comment lines start with a "#" character.
@@ -122,16 +125,21 @@ case) with the following meaning:
 <UL><LI>A = Arrhenius 
 </UL>
 <P>The style determines how many reaction coefficients are listed as C1,
-C2, ..., and how they are interpreted by SPARTA.
+C2, etc, and how they are interpreted by SPARTA.
 </P>
 <P>For the A = Arrhenius style, there are 5 coefficients:
 </P>
 <UL><LI>C1 = number of internal degrees of freedom (as defined by the TCE model)
-<LI>C2 = activation Energy $E_a$ 
-<LI>C3 = Arrhenius Rate A
-<LI>C4 = Arrhenius rate b
-<LI>C5 = reaction energy (positive for exothermic) 
+<LI>C2 = Arrhenius activation energy Ea
+<LI>C3 = Arrhenius prefactor A
+<LI>C4 = Arrhenius exponent b
+<LI>C5 = overall reaction energy (positive for exothermic) 
 </UL>
+<P>These are used to calculate terms in equation 6.10 of
+<A HREF = "#Bird94">(Bird94)</A> for the probability that a reaction takes place.
+Note that effect of C2, C3, C4 on the overall reaction rate is given
+by the Arrhenius formula above.
+</P>
 <HR>
 
 <P>The <I>qk</I> style is Bird's Quantum-Kinetic model (QK).

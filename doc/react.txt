@@ -52,13 +52,16 @@ file format are described below.
 The {tce} style is Bird's Total Collision Energy Model.  Using kinetic
 theory, it allows for reaction probabilities to be defined based on
 known, measured, reaction rates.  The model is described in detail in
-"(Bird94)"_#Bird94; see chapter 6. The required input is an
-Arrhenius-type rate for each reaction
+"(Bird94)"_#Bird94; see chapter 6. The required input parameters for
+each reaction (discussed below) are values that permit its effective
+Arrhenius rate to be calculated, namely
 
 :c,image(Eqs/arrhenius.jpg)
 
-where k_f is the forward reaction rate, T is the Temperature and k 
-the Boltzman constant.
+where K(T) is the forward reaction rate, T is the temperature of the
+participating molecules which is a function of their velocities and
+internal energy states, k the Boltzmann constant, and A,b,Ea are input
+parameters discussed below.
 
 The format of the input file is as follows.  Comments or blank lines
 are allowed in the file.  Comment lines start with a "#" character.
@@ -116,15 +119,20 @@ case) with the following meaning:
 A = Arrhenius :ul
 
 The style determines how many reaction coefficients are listed as C1,
-C2, ..., and how they are interpreted by SPARTA.
+C2, etc, and how they are interpreted by SPARTA.
 
 For the A = Arrhenius style, there are 5 coefficients:
 
 C1 = number of internal degrees of freedom (as defined by the TCE model)
-C2 = activation Energy $E_a$ 
-C3 = Arrhenius Rate A
-C4 = Arrhenius rate b
-C5 = reaction energy (positive for exothermic) :ul
+C2 = Arrhenius activation energy Ea
+C3 = Arrhenius prefactor A
+C4 = Arrhenius exponent b
+C5 = overall reaction energy (positive for exothermic) :ul
+
+These are used to calculate terms in equation 6.10 of
+"(Bird94)"_#Bird94 for the probability that a reaction takes place.
+Note that effect of C2, C3, C4 on the overall reaction rate is given
+by the Arrhenius formula above.
 
 :line
 
