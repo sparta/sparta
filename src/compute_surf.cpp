@@ -17,6 +17,7 @@
 #include "particle.h"
 #include "mixture.h"
 #include "surf.h"
+#include "grid.h"
 #include "update.h"
 #include "modify.h"
 #include "domain.h"
@@ -126,6 +127,13 @@ void ComputeSurf::init()
     }
   }
 
+  // set weightflag if cell weighting is enabled
+  // else weight = 1.0 for all particles
+
+  weight = 1.0;
+  if (grid->cellweightflag) weightflag = 1;
+  else weightflag = 0;
+
   // initialize tally array in case accessed before a tally timestep
 
   clear();
@@ -199,6 +207,7 @@ void ComputeSurf::surf_tally(int isurf, double *eold, Particle::OnePart *p)
 
   // tally all values associated with group into array
   // set nflag and tflag after normal and tangent computation is done once
+  // particle weight used for all keywords except NUM
 
   double pre,post,vsqpre,vsqpost;
   double vnorm[3],vdelta[3],vtang[3];
@@ -207,7 +216,8 @@ void ComputeSurf::surf_tally(int isurf, double *eold, Particle::OnePart *p)
   if (dimension == 2) norm = lines[isurf].norm;
   else norm = tris[isurf].norm;
 
-  double mass = particle->species[ispecies].mass;
+  if (weightflag) weight = p->weight;
+  double mass = particle->species[ispecies].mass * weight;
   double mvv2e = update->mvv2e;
 
   vec = array_surf[ilocal];
@@ -282,16 +292,16 @@ void ComputeSurf::surf_tally(int isurf, double *eold, Particle::OnePart *p)
       vec[k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
       break;
     case EROT:
-      vec[k++] -= p->erot - eold[3];
+      vec[k++] -= weight * (p->erot - eold[3]);
       break;
     case EVIB:
-      vec[k++] -= p->evib - eold[4];
+      vec[k++] -= weight * (p->evib - eold[4]);
       break;
     case ETOT:
       vsqpre = MathExtra::lensq3(eold);
       vsqpost = MathExtra::lensq3(p->v);
       vec[k++] -= 0.5*mvv2e*mass*(vsqpost-vsqpre) + 
-        (p->erot-eold[3]) + (p->evib-eold[4]);
+        weight * ((p->erot-eold[3]) + (p->evib-eold[4]));
       break;
     }
   }

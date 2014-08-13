@@ -53,6 +53,8 @@ class ComputeSurf : public Compute {
   Surf::Line *lines;
   Surf::Tri *tris;
 
+  int weightflag;          // 1 if cell weighting is enabled
+  double weight;           // particle weight, based on initial cell
   double *normflux;
 
   void grow();

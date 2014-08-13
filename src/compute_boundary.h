@@ -39,6 +39,9 @@ class ComputeBoundary : public Compute {
   int imix,nvalue,ngroup,ntotal,nrow;
   int *which;
 
+  int weightflag;                // 1 if cell weighting is enabled
+  double weight;                 // particle weight, based on initial cell
+
   double normflux[6];            // per face normalization factors
   double **myarray;              // local accumulator array
 };

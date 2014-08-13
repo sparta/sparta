@@ -16,6 +16,7 @@
 #include "compute_boundary.h"
 #include "particle.h"
 #include "mixture.h"
+#include "grid.h"
 #include "surf.h"
 #include "update.h"
 #include "domain.h"
@@ -101,6 +102,13 @@ void ComputeBoundary::init()
     normflux[ZLO] = normflux[ZHI] = domain->xprd*domain->yprd * nfactor;
   }
 
+  // set weightflag if cell weighting is enabled
+  // else weight = 1.0 for all particles
+
+  weight = 1.0;
+  if (grid->cellweightflag) weightflag = 1;
+  else weightflag = 0;
+
   // initialize tally array in case accessed before a tally timestep
 
   clear();
@@ -156,13 +164,15 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
   // tally all values associated with group into array
   // styles PERIODIC and OUTFLOW do not have post-bounce velocity
   // nflag and tflag set if normal and tangent computation already done once
+  // particle weight used for all keywords except NUM
 
   double pre,post,vsqpre,vsqpost;
   double vnorm[3],vdelta[3],vtang[3];
   double *vec;
 
+  if (weightflag) weight = p->weight;
   double *norm = domain->norm[iface];
-  double mass = particle->species[ispecies].mass;
+  double mass = particle->species[ispecies].mass * weight;
   double mvv2e = update->mvv2e;
 
   vec = myarray[iface];
@@ -218,14 +228,14 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
         vec[k++] += 0.5 * mvv2e * mass * vsqpre;
         break;
       case EROT:
-        vec[k++] += eold[3];
+        vec[k++] += weight * eold[3];
         break;
       case EVIB:
-        vec[k++] += eold[4];
+        vec[k++] += weight * eold[4];
         break;
       case ETOT:
         vsqpre = MathExtra::lensq3(eold);
-        vec[k++] += 0.5*mvv2e*mass*vsqpre + eold[3] + eold[4];
+        vec[k++] += 0.5*mvv2e*mass*vsqpre + weight*(eold[3]+eold[4]);
         break;
       }
     }
@@ -277,16 +287,16 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
         vec[k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
         break;
       case EROT:
-        vec[k++] -= p->erot - eold[3];
+        vec[k++] -= weight * (p->erot - eold[3]);
         break;
       case EVIB:
-        vec[k++] -= p->evib - eold[4];
+        vec[k++] -= weight * (p->evib - eold[4]);
         break;
       case ETOT:
         vsqpre = MathExtra::lensq3(eold);
         vsqpost = MathExtra::lensq3(p->v);
         vec[k++] -= 0.5*mvv2e*mass*(vsqpost-vsqpre) + 
-          (p->erot-eold[3]) + (p->evib-eold[4]);
+          weight * ((p->erot-eold[3]) + (p->evib-eold[4]));
         break;
       }
     }
