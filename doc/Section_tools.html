@@ -46,6 +46,7 @@ SPARTA distribution.  Each is described in more detail below.
 </P>
 <UL><LI><A HREF = "#dump2cfg">dump2cfg</A> - convert a particle dump file to CFG format
 <LI><A HREF = "#dump2xyz">dump2xyz</A> - convert a particle dump file to XYZ format
+<LI><A HREF = "#gridrefine">grid_refine</A> - refine a grid around a surface
 <LI><A HREF = "#log2txt">log2txt</A> - extract columns of info from a log file
 <LI><A HREF = "#logplot">logplot</A> - plot columns of info from a log file via GnuPlot
 <LI><A HREF = "#stl2surf">stl2surf</A> - convert an STL text file into a SPARTA surface file
@@ -90,6 +91,18 @@ tools/pizza directory.  See the tools/README file for info on how to
 set an environment variable so that the Pizza.py tool files can be
 found by Python, as well as instructions on various ways to run a
 Python script.
+</P>
+<HR>
+
+<H4><A NAME = "gridrefine"></A>grid_refine tool 
+</H4>
+<P>This is a Python script that creates a SPARTA grid file adapted
+around the lines or triangles in a SPARTA surface file.  The resulting
+grid file can be read by the <A HREF = "read_grid.html">read_grid</A> command.
+The surface file can be read by the <A HREF = "read_surf.html">read_surf</A> command.
+</P>
+<P>See the header of the script for the various adaptivity options that
+are supported, and the syntax used to run it.
 </P>
 <HR>
 
