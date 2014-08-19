@@ -2,11 +2,11 @@
 
 # Script:  dumpsort.py
 # Purpose: sort the snapshots in a SPARTA particle dump file by particle ID
+# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 # Syntax:  dumpsort.py oldfile N newfile
 #          oldfile = old SPARTA dump file
 #          N = column # for atom ID (usually 1)
 #          newfile = new sorted SPARTA dump file
-# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 
 import sys,os
 path = os.environ["SPARTA_PYTHON_TOOLS"]

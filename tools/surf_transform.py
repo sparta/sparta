@@ -1,8 +1,9 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 
 # Script:  surf_transform.py
 # Purpose: morph a surf file into another surf file
 #          with same transformation options as read_surf command
+# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 # Syntax:  surf_transform.py infile outfile keyword args ...
 #          infile,outfile = input and output surf files
 #          keywords = origin, trans, atrans, scale, rotate, invert
@@ -12,10 +13,9 @@
 #          scale Sx Sy Sz
 #          rotate theta Rx Ry Rz
 #          invert (no args)
-# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 
 import os,sys,math
-path = os.environ["PIZZA_PYTHON_TOOLS"]
+path = os.environ["SPARTA_PYTHON_TOOLS"]
 sys.path.append(path)
 from sdata import sdata
 

@@ -3,12 +3,12 @@
 # Script:  log2txt.py
 # Purpose: extract stats info from SPARTA log file
 #          create a text file of numbers in columns, suitable for plotting
+# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 # Syntax:  log2txt.py log.sparta data.txt X Y ...
 #          log.sparta = SPARTA log file
 #          data.txt = text file to create
 #          X Y ... = columns to include (optional), X,Y are stats keywords
 #                    if no columns listed, all columns are included
-# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 
 import sys,os
 path = os.environ["SPARTA_PYTHON_TOOLS"]

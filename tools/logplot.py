@@ -2,11 +2,11 @@
 
 # Script:  logplot.py
 # Purpose: use GnuPlot to plot two columns from a SPARTA log file
+# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 # Syntax:  logplot.py log.sparta X Y
 #          log.sparta = SPARTA log file
 #          X,Y = plot Y versus X where X,Y are stats keywords
 #          once plot appears, you are in Python interpreter, type C-D to exit
-# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 
 import sys,os
 path = os.environ["SPARTA_PYTHON_TOOLS"]

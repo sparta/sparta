@@ -2,12 +2,12 @@
 
 # Script:  dump2xyz.py
 # Purpose: convert a SPARTA particle dump file to XYZ format
+# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 # Syntax:  dump2xyz.py dumpfile Nid Ntype Nx Ny Nz xyzfile
 #          dumpfile = SPARTA particle dump file
 #          Nid,Ntype,Nx,Ny,Nz = columns #s for ID,type,x,y,z
 #                               (usually 1,2,3,4,5)
 #          xyzfile = new XYZ file
-# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 
 import sys,os
 path = os.environ["SPARTA_PYTHON_TOOLS"]

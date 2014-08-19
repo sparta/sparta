@@ -2,12 +2,12 @@
 
 # Script:  dump2cfg.py
 # Purpose: convert a SPARTA particle dump file to CFG format
+# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 # Syntax:  dump2cfg.py dumpfile Nid Ntype Nx Ny Nz cfgfile
 #          dumpfile = SPARTA particle dump file
 #          Nid,Ntype,Nx,Ny,Nz = columns #s for ID,type,x,y,z
 #                               (usually 1,2,3,4,5)
 #          cfgfile = new CFG file
-# Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
 
 import sys,os
 path = os.environ["SPARTA_PYTHON_TOOLS"]
