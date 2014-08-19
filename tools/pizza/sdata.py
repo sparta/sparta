@@ -71,8 +71,12 @@ s.unselect()                       unselect all surfs
 s.write("file")			   write all selected surfs to SPARTA file
 s.write("file",id1,id2,...)	   write only listed & selected surfs to file
 
-s.grid(xlo,xhi,ylo,yhi,ny,ny)      for viz only, output box and Nx by Ny grid 
-s.grid(xlo,xhi,ylo,yhi,zlo,zhi,ny,ny,nz)   for viz only, 3d analog
+  for viz only, superpose a grid
+
+s.grid(xlo,xhi,ylo,yhi,ny,ny)      bounding box and Nx by Ny grid
+s.grid(xlo,xhi,ylo,yhi,zlo,zhi,ny,ny,nz)   ditto for 3d
+s.gridfile(xlo,xhi,ylo,yhi,file)   bbox and SPARTA-formatted parent grid file
+s.gridfile(xlo,xhi,ylo,yhi,zlo,zhi,file)   ditto for 3d
 
 index,time,flag = s.iterator(0/1)          loop over single snapshot
 time,box,atoms,bonds,tris,lines = s.viz(index)   return list of viz objects
@@ -126,7 +130,7 @@ class sdata:
     self.dim = 0
     self.nselect = 1
     self.seed = 12345
-    self.boxflag = 0
+    self.gridflag = 0
     self.ids = {}
     self.surfs = []
     self.plist = []
@@ -728,7 +732,7 @@ class sdata:
     fp.close()
 
   # --------------------------------------------------------------------
-  # iterator called from other tools
+  # overlay a top-level grid over surf for viz only
 
   def grid(self,*args):
     if self.dim == 0: raise StandardError, "dimension must be defined for grid"
@@ -737,17 +741,59 @@ class sdata:
     if self.dim == 3 and len(args) != 9:
       raise StandardError, "bad arguments for sdata.grid()"
 
-    self.boxflag = 1
+    self.gridflag = 1
+    self.idparents = ["0"]
+    self.parents = {}
     if self.dim == 2:
-      self.xlo = args[0]; self.xhi = args[1]
-      self.ylo = args[2]; self.yhi = args[3]
-      self.nxgrid = args[4]; self.nygrid = args[5]
-    if self.dim == 3:
-      self.xlo = args[0]; self.xhi = args[1]
-      self.ylo = args[2]; self.yhi = args[3]
-      self.zlo = args[4]; self.zhi = args[5]
-      self.nxgrid = args[6]; self.nygrid = args[7]; self.nzgrid = args[8]
+      self.parents["0"] = [(args[0],args[1],args[2],args[3]),
+                           (args[4],args[5],1)]
+      if self.dim == 3:
+        self.parents["0"] = [(args[0],args[1],args[2],args[3],args[4],args[5]),
+                             (args[6],args[7],args[8])]
+        
+  # --------------------------------------------------------------------
+  # overlay a hierarchical grid over surf for viz only
+  # grid comes from SPARTA parent grid file
+
+  def gridfile(self,*args):
+    if self.dim == 0: raise StandardError, \
+          "dimension must be defined for gridfile"
+    if self.dim == 2 and len(args) != 5:
+      raise StandardError, "bad arguments for sdata.gridfile()"
+    if self.dim == 3 and len(args) != 7:
+      raise StandardError, "bad arguments for sdata.gridfile()"
+
+    # read parent file, parent entries should start on line 7
+
+    lines = open(args[4],"r").readlines()
+    lines = lines[6:]
     
+    self.gridflag = 1
+    self.idparents = []
+    self.parents = {}
+    if self.dim == 2:
+      for line in lines:
+        words = line.split()
+        self.idparents.append(words[1])
+        if words[1] == "0":
+          self.parents[words[1]] = [(args[0],args[1],args[2],args[3]),
+                                    (int(words[2]),int(words[3]),1)]
+        else:
+          self.parents[words[1]] = [(),(int(words[2]),int(words[3]),1)]
+          
+    if self.dim == 3:
+      for line in lines:
+        words = line.split()
+        self.idparents.append(words[1])
+        if words[1] == "0":
+          self.parents[words[1]] = [(args[0],args[1],args[2],args[3],
+                                     args[4],args[5]),
+                                    (int(words[2]),int(words[3]),int(words[4]))]
+        else:
+          self.parents[words[1]] = [(args[0],args[1],args[2],args[3],
+                                     args[4],args[5]),
+                                    (int(words[2]),int(words[3]),int(words[4]))]
+
   # --------------------------------------------------------------------
   # iterator called from other tools
 
@@ -792,9 +838,9 @@ class sdata:
     id = itype = 0
     lines = []
     if self.dim == 2:
+      itype = 1
       for surf in self.surfs:
         if not surf.select: continue
-        itype += 1
         points = surf.points
         segments = surf.lines
         for segment in segments:
@@ -802,78 +848,99 @@ class sdata:
           lines.append([id,itype] + points[segment[0]] + points[segment[1]])
 
     # add overlayed grid with new type
+    # for each parent, draw its Nx by Ny by Nz sub-lines in 2d or 3d
+    # use box stored with parents or compute box from ID
+    # grandparent box will always exist due to loop over idparents
+    #   which requires a parent cell's grandparent to be earlier in list
           
-    if self.boxflag and self.dim == 2:
-      xlo = self.xlo
-      xhi = self.xhi
-      ylo = self.ylo
-      yhi = self.yhi
-      nx = self.nxgrid
-      ny = self.nygrid
-      
-      itype += 1
-      lines.append([id+1,itype] + [xlo,ylo,0.0,xhi,ylo,0.0])
-      lines.append([id+2,itype] + [xhi,ylo,0.0,xhi,yhi,0.0])
-      lines.append([id+3,itype] + [xhi,yhi,0.0,xlo,yhi,0.0])
-      lines.append([id+4,itype] + [xlo,yhi,0.0,xlo,ylo,0.0])
-      id += 4
-      for i in range(1,nx):
-        x = xlo + float(i)*(xhi-xlo)/nx
-        lines.append([id+i,itype] + [x,ylo,0.0,x,yhi,0.0])
-      id += nx-1
-      for i in range(1,ny):
-        y = ylo + float(i)*(yhi-ylo)/ny
-        lines.append([id+i,itype] + [xlo,y,0.0,xhi,y,0.0])
-      id += ny-1
+    if self.gridflag and self.dim == 2:
+      for idparent in self.idparents:
+        box,subgrid = self.parents[idparent]
+        levels = idparent.split('-')
+        nlevel = len(levels)
+        if idparent == "0": nlevel = 0
+        
+        if not box:
+          if nlevel <= 1:
+            idchild = int(idparent)
+            idgrandparent = "0"
+          else:
+            idchild = int(levels[-1])
+            idgrandparent = "-".join(levels[:-1])
+          gbox,gsubgrid = self.parents[idgrandparent]
+          # compute parent box from grandparent box and store in parents hash
+          xlo = gbox[0]; xhi = gbox[1]; 
+          ylo = gbox[2]; yhi = gbox[3]; 
+          nx = gsubgrid[0]; ny = gsubgrid[1]
+          ix = (idchild-1) % nx
+          iy = (idchild-1) / nx
+          box = (xlo + float(ix)*(xhi-xlo)/nx, xlo + float(ix+1)*(xhi-xlo)/nx,
+                 ylo + float(iy)*(yhi-ylo)/ny, ylo + float(iy+1)*(yhi-ylo)/ny)
+          self.parents[idparent] = [box,subgrid]
+          
+        xlo = box[0]; xhi = box[1]; 
+        ylo = box[2]; yhi = box[3]; 
+        nx = subgrid[0]; ny = subgrid[1]
 
-    if self.boxflag and self.dim == 3:
-      xlo = self.xlo
-      xhi = self.xhi
-      ylo = self.ylo
-      yhi = self.yhi
-      zlo = self.zlo
-      zhi = self.zhi
-      nx = self.nxgrid
-      ny = self.nygrid
-      nz = self.nzgrid
-      lines = []
-      itype = 1
+        for i in range(nx+1):
+          x = xlo + float(i)*(xhi-xlo)/nx
+          lines.append([id+i,itype+nlevel+1] + [x,ylo,0.0,x,yhi,0.0])
+        id += nx+1
+        for i in range(ny+1):
+          y = ylo + float(i)*(yhi-ylo)/ny
+          lines.append([id+i,itype+nlevel+1] + [xlo,y,0.0,xhi,y,0.0])
+        id += ny+1
 
-      id = 0
-      lines.append([id+1,itype] + [xlo,ylo,zlo,xhi,ylo,zlo])
-      lines.append([id+2,itype] + [xlo,yhi,zlo,xhi,yhi,zlo])
-      lines.append([id+3,itype] + [xlo,ylo,zhi,xhi,ylo,zhi])
-      lines.append([id+4,itype] + [xlo,yhi,zhi,xhi,yhi,zhi])
+    if self.gridflag and self.dim == 3:
+      for idparent in self.idparents:
+        box,subgrid = self.parents[idparent]
+        levels = idparent.split('-')
+        nlevel = len(levels)
+        if idparent == "0": nlevel = 0
 
-      lines.append([id+5,itype] + [xlo,ylo,zlo,xlo,yhi,zlo])
-      lines.append([id+6,itype] + [xhi,ylo,zlo,xhi,yhi,zlo])
-      lines.append([id+7,itype] + [xlo,ylo,zhi,xlo,yhi,zhi])
-      lines.append([id+8,itype] + [xhi,ylo,zhi,xhi,yhi,zhi])
+        if not box:
+          if nlevel <= 1:
+            idchild = int(idparent)
+            idgrandparent = "0"
+          else:
+            idchild = int(levels[-1])
+            idgrandparent = "-".join(levels[:-1])
+          gbox,gsubgrid = self.parents[idgrandparent]
+          # compute parent box from grandparent box and store in parents hash
+          xlo = gbox[0]; xhi = gbox[1]; 
+          ylo = gbox[2]; yhi = gbox[3]; 
+          zlo = gbox[4]; zhi = gbox[5]; 
+          nx = gsubgrid[0]; ny = gsubgrid[1]; nz = gsubgrid[2]
+          ix = (idchild-1) % nx
+          iy = ((idchild-1)/nx) % ny
+          iz = (idchild-1) / (nx*ny)
+          box = (xlo + float(ix)*(xhi-xlo)/nx, xlo + float(ix+1)*(xhi-xlo)/nx,
+                 ylo + float(iy)*(yhi-ylo)/ny, ylo + float(iy+1)*(yhi-ylo)/ny,
+                 zlo + float(iz)*(zhi-zlo)/nz, zlo + float(iz+1)*(zhi-zlo)/nz)
+          self.parents[idparent] = [box,subgrid]
+          
+        xlo = box[0]; xhi = box[1]; 
+        ylo = box[2]; yhi = box[3]; 
+        zlo = box[4]; zhi = box[5]; 
+        nx = subgrid[0]; ny = subgrid[1]; nz = subgrid[2]
 
-      lines.append([id+9,itype] + [xlo,ylo,zlo,xlo,ylo,zhi])
-      lines.append([id+10,itype] + [xhi,ylo,zlo,xhi,ylo,zhi])
-      lines.append([id+11,itype] + [xlo,yhi,zlo,xlo,yhi,zhi])
-      lines.append([id+12,itype] + [xhi,yhi,zlo,xhi,yhi,zhi])
-      id += 12
-      
-      for i in range(ny+1):
-        y = ylo + float(i)*(yhi-ylo)/ny
-        for j in range(nz+1):
-          z = zlo + float(j)*(zhi-zlo)/nz
-          lines.append([id+i,itype] + [xlo,y,z,xhi,y,z])
-      id += (ny+1)*(nz+1)
-      for i in range(nx+1):
-        x = xlo + float(i)*(xhi-xlo)/nx
-        for j in range(nz+1):
-          z = zlo + float(j)*(zhi-zlo)/nz
-          lines.append([id+i,itype] + [x,ylo,z,x,yhi,z])
-      id += (nx+1)*(nz+1)
-      for i in range(nx+1):
-        x = xlo + float(i)*(xhi-xlo)/nx
-        for j in range(ny+1):
-          y = ylo + float(j)*(yhi-ylo)/ny
-          lines.append([id+i,itype] + [x,y,zlo,x,y,zhi])
-      id += (nx+1)*(ny+1)
+        for i in range(ny+1):
+          y = ylo + float(i)*(yhi-ylo)/ny
+          for j in range(nz+1):
+            z = zlo + float(j)*(zhi-zlo)/nz
+            lines.append([id+i,itype+nlevel+1] + [xlo,y,z,xhi,y,z])
+        id += (ny+1)*(nz+1)
+        for i in range(nx+1):
+          x = xlo + float(i)*(xhi-xlo)/nx
+          for j in range(nz+1):
+            z = zlo + float(j)*(zhi-zlo)/nz
+        id += (nx+1)*(nz+1)
+        for i in range(nx+1):
+          x = xlo + float(i)*(xhi-xlo)/nx
+          for j in range(ny+1):
+            y = ylo + float(j)*(yhi-ylo)/ny
+            lines.append([id+i,itype+nlevel+1] + [x,y,zlo,x,y,zhi])
+        id += (nx+1)*(ny+1)
 
     return 0,self.bbox(),atoms,bonds,tris,lines
 
