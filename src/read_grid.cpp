@@ -278,6 +278,7 @@ void ReadGrid::create_children()
   // assign child cells to procs in round-robin fashion via count
 
   // NOTE: change this to assign child to proc based on mod of cell ID
+  //       could do this only when adapt grid invokes it
 
   int ix,iy,iz,nx,ny,nz,nbits;
   cellint m,idparent,idchild;
