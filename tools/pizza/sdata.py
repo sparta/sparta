@@ -71,12 +71,13 @@ s.unselect()                       unselect all surfs
 s.write("file")			   write all selected surfs to SPARTA file
 s.write("file",id1,id2,...)	   write only listed & selected surfs to file
 
-  for viz only, superpose a grid
-
 s.grid(xlo,xhi,ylo,yhi,ny,ny)      bounding box and Nx by Ny grid
 s.grid(xlo,xhi,ylo,yhi,zlo,zhi,ny,ny,nz)   ditto for 3d
 s.gridfile(xlo,xhi,ylo,yhi,file)   bbox and SPARTA-formatted parent grid file
 s.gridfile(xlo,xhi,ylo,yhi,zlo,zhi,file)   ditto for 3d
+
+  grid command superpose a grid, for viz only
+  also changes bounding box to xyzlo to xyzhi
 
 index,time,flag = s.iterator(0/1)          loop over single snapshot
 time,box,atoms,bonds,tris,lines = s.viz(index)   return list of viz objects
@@ -747,9 +748,9 @@ class sdata:
     if self.dim == 2:
       self.parents["0"] = [(args[0],args[1],args[2],args[3]),
                            (args[4],args[5],1)]
-      if self.dim == 3:
-        self.parents["0"] = [(args[0],args[1],args[2],args[3],args[4],args[5]),
-                             (args[6],args[7],args[8])]
+    if self.dim == 3:
+      self.parents["0"] = [(args[0],args[1],args[2],args[3],args[4],args[5]),
+                           (args[6],args[7],args[8])]
         
   # --------------------------------------------------------------------
   # overlay a hierarchical grid over surf for viz only
@@ -780,7 +781,6 @@ class sdata:
                                     (int(words[2]),int(words[3]),1)]
         else:
           self.parents[words[1]] = [(),(int(words[2]),int(words[3]),1)]
-          
     if self.dim == 3:
       for line in lines:
         words = line.split()
@@ -959,7 +959,8 @@ class sdata:
 
   # --------------------------------------------------------------------
   # return box that bounds all selected objects
-
+  # use grid box if defined
+  
   def bbox(self):
     xlo = ylo = zlo = BIG
     xhi = yhi = zhi = -BIG
@@ -972,6 +973,17 @@ class sdata:
       xhi = max(xhi,box[3])
       yhi = max(yhi,box[4])
       zhi = max(zhi,box[5])
+      
+    if self.gridflag:
+      root = self.parents["0"]
+      box = root[0]
+      if self.dim == 2:
+        xlo = box[0]; xhi = box[1]
+        ylo = box[2]; yhi = box[3]
+      if self.dim == 3:
+        xlo = box[0]; xhi = box[1]
+        ylo = box[2]; yhi = box[3]
+        zlo = box[4]; zhi = box[5]
 
     return (xlo,ylo,zlo,xhi,yhi,zhi)
 
