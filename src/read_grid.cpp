@@ -277,6 +277,8 @@ void ReadGrid::create_children()
   // if a child does not exist as a parent, create it as a child cell
   // assign child cells to procs in round-robin fashion via count
 
+  // NOTE: change this to assign child to proc based on mod of cell ID
+
   int ix,iy,iz,nx,ny,nz,nbits;
   cellint m,idparent,idchild;
   double lo[3],hi[3];
