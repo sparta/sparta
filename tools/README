@@ -20,11 +20,12 @@ stl2surf.py     convert an ASCII STL file to a SPARTA surface file
 
 Tools that use Pizza.py modules: 
 
-dump2cfg.py	convert a particle SPARTA dump file to CFG format
-dump2xyz.py	convert a SPARTA particle dump file to XYZ format
-dumpsort.py	sort snapshots in a SPARTA particle dump file by particle ID
-log2txt.py	convert stats info in a SPARTA log file to columns of numbers
-logplot.py	plot 2 columns of stats info from a SPARTA log file
+dump2cfg.py	convert a particle dump file to CFG format
+dump2xyz.py	convert a particle dump file to XYZ format
+dumpsort.py	sort snapshots in a particle dump file by particle ID
+grid_refine.py  refine a grid around a surface
+log2txt.py	convert stats info in a log file to columns of numbers
+logplot.py	plot 2 columns of stats info from a log file
 surf_create.py  create a surface file with one or more objects in it
                 3d objects are triangulated, 2d objects are line-segmented
 surf_transform.py  transform objects in a surface file via same operations
