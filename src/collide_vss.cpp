@@ -254,7 +254,6 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *&ip,
   int reaction,kspecies;
 
   if (react) { 
-//    printf (" Station 0 %e %e %e \n", precoln.etotal, precoln.evib, precoln.erot);
     reaction = react->attempt(ip,jp,
                               precoln.etrans,precoln.erot,
                               precoln.evib,postcoln.etotal,kspecies);
@@ -378,7 +377,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   Particle::OnePart *p;
   Particle::Species *species = particle->species;
 
-  double AdjustFactor = 0.99999;
+  double AdjustFactor = 0.99999999;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
 
@@ -433,9 +432,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       }
  
       vibdof = species[sp].vibdof;
-      double vibn_phi = 1./species[sp].vibrel; 
-
-//      printf(" Exchage %d %d \n", vibstyle, vibdof);
+      double vibn_phi = species[sp].vibrel; 
 
       if (vibdof) {
         if (vibn_phi >= random->uniform()) {
@@ -572,7 +569,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
   Particle::OnePart *p;
   Particle::Species *species = particle->species;
-  double AdjustFactor = 0.99999;
+  double AdjustFactor = 0.99999999;
 
   // handle each kind of energy disposal for non-reacting reactants
 
@@ -610,14 +607,12 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           if (rotstyle == NONE) {
             p->erot = 0.0 ;
           } if (rotdof == 2) {
-            E_Dispose += p->erot;
             Fraction_Rot =
               1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
             p->erot = Fraction_Rot * E_Dispose;
             E_Dispose -= p->erot;
 
           } else {
-            E_Dispose += p->erot;
             Exp_1 = species[sp].rotdof / 2;
             Exp_2 = 2.5 - params[sp].omega;
             do {
@@ -638,7 +633,6 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
             p->evib =0.0 ;
           } else if (vibdof == 2 && vibstyle == DISCRETE) {
 
-          E_Dispose += p->evib;
           Max_Level = (long) (E_Dispose/(update->boltz * species[sp].vibtemp));
           do {
             ivib = (int) (random->uniform()*(Max_Level+AdjustFactor));
@@ -651,14 +645,12 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
 
           } else if (vibdof == 2 && vibstyle == SMOOTH) {
 
-            E_Dispose += p->evib;
             Fraction_Vib =
               1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
-            p->erot = Fraction_Vib * E_Dispose;
+            p->evib = Fraction_Vib * E_Dispose;
             E_Dispose -= p->evib;
 
           } else {
-            E_Dispose += p->evib;
             Exp_1 = species[sp].vibdof / 2;
             Exp_2 = 2.5 - params[sp].omega;
             do {
