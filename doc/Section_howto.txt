@@ -708,16 +708,16 @@ Here is how the grid cell ID is computed and stored by SPARTA.  Say
 the 1st level grid is a 10x10x20 sub-division (2000 cells) of the root
 cell.  The 1st level cells are numbered from 1 to 2000 with the
 x-dimension varying fastest, then y, and finally the z-dimension
-slowest.  Now say the 374th (out of 2000) 1st-level cells has a 2x2x2
-sub-division (8 cells), and consider the 4th 2nd-level cell (2 in x, 2
-in y, 1 in z) within the 374th cell.  It could be a parent cell if it
-is further sub-divided, or a child cell if not.  In either case its ID
-is the same.  The rightmost 11 bits of the integer ID are encoded with
-374.  This is because it requires 11 bits to represent 2000 cells (1
-to 1000) at level 1.  The next 4 bits are used to encode 1 to 8,
-specifically 4 in the case of this cell.  Thus the cell ID in integer
-format is 4*2048 + 374 = 33142.  In string format it will be printed
-as 4-374, with dashes separating the levels.
+slowest.  Now say the 374th (out of 2000, 14 in x, 19 in y, 1 in z)
+1st-level cell has a 2x2x2 sub-division (8 cells), and consider the
+4th 2nd-level cell (2 in x, 2 in y, 1 in z) within the 374th cell.  It
+could be a parent cell if it is further sub-divided, or a child cell
+if not.  In either case its ID is the same.  The rightmost 11 bits of
+the integer ID are encoded with 374.  This is because it requires 11
+bits to represent 2000 cells (1 to 2000) at level 1.  The next 4 bits
+are used to encode 1 to 8, specifically 4 in the case of this cell.
+Thus the cell ID in integer format is 4*2048 + 374 = 8566.  In string
+format it will be printed as 4-374, with dashes separating the levels.
 
 Note that a child cell has the same ID whether it is unsplit, cut, or
 split.  Currently, sub cells of a split cell also have the same ID,
