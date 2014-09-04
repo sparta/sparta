@@ -24,8 +24,8 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NRHO,MASS,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB};
-enum{NONE,COUNT,MASSWT,DOF};
+enum{NUM,NRHO,MASS,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
+enum{NONE,COUNT,MASSWT,RDOF,VDOF};
 
 /* ---------------------------------------------------------------------- */
 
@@ -58,6 +58,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"erot") == 0) which[nvalue++] = EROT;
     else if (strcmp(arg[iarg],"trot") == 0) which[nvalue++] = TROT;
     else if (strcmp(arg[iarg],"evib") == 0) which[nvalue++] = EVIB;
+    else if (strcmp(arg[iarg],"tvib") == 0) which[nvalue++] = TVIB;
     else error->all(FLERR,"Illegal compute grid command");
     iarg++;
   }
@@ -90,16 +91,19 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     else if (which[i] == EROT)
       norm_style[i] = COUNT;
     else if (which[i] == TROT) 
-      norm_style[i] = DOF;
+      norm_style[i] = RDOF;
     else if (which[i] == EVIB)
       norm_style[i] = COUNT;
+    else if (which[i] == TVIB) 
+      norm_style[i] = VDOF;
   }
 
   norm_count = new double*[ngroup];
   norm_mass = new double*[ngroup];
-  norm_dof = new double*[ngroup];
+  norm_rdof = new double*[ngroup];
+  norm_vdof = new double*[ngroup];
   for (int i = 0; i < ngroup; i++)
-    norm_count[i] = norm_mass[i] = norm_dof[i] = NULL;
+    norm_count[i] = norm_mass[i] = norm_rdof[i] = norm_vdof[i] = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -114,11 +118,13 @@ ComputeGrid::~ComputeGrid()
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
     memory->destroy(norm_mass[i]);
-    memory->destroy(norm_dof[i]);
+    memory->destroy(norm_rdof[i]);
+    memory->destroy(norm_vdof[i]);
   }
   delete [] norm_count;
   delete [] norm_mass;
-  delete [] norm_dof;
+  delete [] norm_rdof;
+  delete [] norm_vdof;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -147,6 +153,7 @@ void ComputeGrid::compute_per_grid()
   double mvv2e = update->mvv2e;
   double tprefactor = mvv2e / (3.0*update->boltz);
   double trotprefactor = mvv2e * 2.0 / update->boltz;
+  double tvibprefactor = mvv2e * 2.0 / update->boltz;
 
   int i,j,k,m,n,ispecies,igroup,icell;
   double mass;
@@ -163,8 +170,11 @@ void ComputeGrid::compute_per_grid()
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
     if (norm = norm_mass[j])
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    if (norm = norm_dof[j])
+    if (norm = norm_rdof[j])
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+    if (norm = norm_vdof[j])
+      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
+
   }
 
   // loop over all particles, skip species not in mixture group
@@ -226,10 +236,14 @@ void ComputeGrid::compute_per_grid()
         break;
       case TROT:
         vec[k++] += trotprefactor*particles[i].erot;
-        norm_dof[igroup][icell] += species[ispecies].rotdof;
+        norm_rdof[igroup][icell] += species[ispecies].rotdof;
         break;
       case EVIB:
         vec[k++] += particles[i].evib;
+        break;
+      case TVIB:
+        vec[k++] += tvibprefactor*particles[i].evib;
+        norm_vdof[igroup][icell] += species[ispecies].vibdof;
         break;
       }
     }
@@ -295,15 +309,18 @@ void ComputeGrid::reallocate()
   for (int i = 0; i < ngroup; i++) {
     memory->destroy(norm_count[i]);
     memory->destroy(norm_mass[i]);
-    memory->destroy(norm_dof[i]);
-    norm_count[i] = norm_mass[i] = norm_dof[i] = NULL;
+    memory->destroy(norm_rdof[i]);
+    memory->destroy(norm_vdof[i]);
+    norm_count[i] = norm_mass[i] = norm_rdof[i] = norm_vdof[i] = NULL;
     for (int j = 0; j < nvalue; j++) {
       if (norm_style[j] == COUNT && norm_count[i] == NULL)
         memory->create(norm_count[i],nglocal,"grid:norm_count");
       else if (norm_style[j] == MASSWT && norm_mass[i] == NULL)
         memory->create(norm_mass[i],nglocal,"grid:norm_mass");
-      else if (norm_style[j] == DOF && norm_dof[i] == NULL)
-        memory->create(norm_dof[i],nglocal,"grid:norm_dof");
+      else if (norm_style[j] == RDOF && norm_rdof[i] == NULL)
+        memory->create(norm_rdof[i],nglocal,"grid:norm_dof");
+      else if (norm_style[j] == VDOF && norm_vdof[i] == NULL)
+        memory->create(norm_vdof[i],nglocal,"grid:norm_dof");
     }
   }
 }
@@ -321,7 +338,8 @@ void ComputeGrid::normwhich(int n, int &istyle, int &igroup)
   int ivalue = (n-1) % nvalue;
   if (norm_style[ivalue] == COUNT) istyle = COUNT;
   else if (norm_style[ivalue] == MASSWT) istyle = MASSWT;
-  else if (norm_style[ivalue] == DOF) istyle = DOF;
+  else if (norm_style[ivalue] == RDOF) istyle = RDOF;
+  else if (norm_style[ivalue] == VDOF) istyle = VDOF;
   else istyle = NONE;
 }
 
@@ -336,7 +354,8 @@ double *ComputeGrid::normptr(int n)
   int ivalue = (n-1) % nvalue;
   if (norm_style[ivalue] == COUNT) return norm_count[igroup];
   if (norm_style[ivalue] == MASSWT) return norm_mass[igroup];
-  if (norm_style[ivalue] == DOF) return norm_dof[igroup];
+  if (norm_style[ivalue] == RDOF) return norm_rdof[igroup];
+  if (norm_style[ivalue] == VDOF) return norm_vdof[igroup];
   return NULL;
 }
 
@@ -351,7 +370,8 @@ bigint ComputeGrid::memory_usage()
   for (int i = 0; i < ngroup; i++) {
     if (norm_count[i]) bytes += nglocal * sizeof(double);
     if (norm_mass[i]) bytes += nglocal * sizeof(double);
-    if (norm_dof[i]) bytes += nglocal * sizeof(double);
+    if (norm_vdof[i]) bytes += nglocal * sizeof(double);
+    if (norm_rdof[i]) bytes += nglocal * sizeof(double);
   }
   return bytes;
 }
