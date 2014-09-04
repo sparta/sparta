@@ -30,7 +30,8 @@ value = {n} or {nrho} or {mass} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} 
   {temp} = temperature
   {erot} = rotational energy
   {trot} = rotational temperature
-  {evib} = vibrational energy :pre
+  {evib} = vibrational energy 
+  {tvib} = classical description of vibrational temperature (for continously distributed vibrational energy) :pre
 :ule
 
 [Examples:]
@@ -133,7 +134,17 @@ Dof_i is the number of rotational degrees of freedom for particle i.
 The {evib} value computes the average vibrational energy of particles
 in the group:
 
-Erot = Sum_i (evib_i) / N :pre
+Evib = Sum_i (evib_i) / N 
+
+The {tvib} value computes a vibrational temperature, for continous
+distribution of vibrational energy, by the following
+formula where {kB} is the Boltzmann factor:
+
+Tvib = (2/kB) Sum_i (evib_i) / Sum_i (dof_i) :pre
+
+Dof_i is the number of vibrational degrees of freedom for particle i.
+
+:pre
 
 [Output info:]
 
