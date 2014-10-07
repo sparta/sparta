@@ -16,7 +16,7 @@ ID is documented in "compute"_compute.html command :ulb,l
 grid = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {nrho} or {mass} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} :l
+value = {n} or {nrho} or {mass} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} or {evib} or {tvib} :l
   {n} = particle count
   {nrho} = number density
   {mass} = mass
@@ -31,7 +31,7 @@ value = {n} or {nrho} or {mass} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} 
   {erot} = rotational energy
   {trot} = rotational temperature
   {evib} = vibrational energy 
-  {tvib} = classical description of vibrational temperature (for continously distributed vibrational energy) :pre
+  {tvib} = vibrational temperature (classical definition) :pre
 :ule
 
 [Examples:]
@@ -134,17 +134,15 @@ Dof_i is the number of rotational degrees of freedom for particle i.
 The {evib} value computes the average vibrational energy of particles
 in the group:
 
-Evib = Sum_i (evib_i) / N 
+Evib = Sum_i (evib_i) / N :pre
 
-The {tvib} value computes a vibrational temperature, for continous
-distribution of vibrational energy, by the following
-formula where {kB} is the Boltzmann factor:
+The {tvib} value computes a classical definition of vibrational
+temperature, valid for continous distributions of vibrational energy,
+by the following formula where {kB} is the Boltzmann factor:
 
 Tvib = (2/kB) Sum_i (evib_i) / Sum_i (dof_i) :pre
 
 Dof_i is the number of vibrational degrees of freedom for particle i.
-
-:pre
 
 [Output info:]
 
@@ -173,7 +171,7 @@ unitless.  {Nrho} is in 1/distance^3 units for 3d simulations and
 1/distance^2 units for 2d simulations.  {Mass} is in mass units.  {U},
 {v}, and {w} are in velocity units.  {Usq}, {vsq}, and {wsq} are in
 velocity squared units.  {Ke}, {erot}, and {evib} are in energy units.
-{Temp} and {Trot} are in temperature units.
+{Temp} and {trot} and {tvib} are in temperature units.
 
 [Restrictions:] none
 

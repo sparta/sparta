@@ -23,7 +23,7 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>nrho</I> or <I>mass</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> 
+<LI>value = <I>n</I> or <I>nrho</I> or <I>mass</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> 
 
 <PRE>  <I>n</I> = particle count
   <I>nrho</I> = number density
@@ -39,6 +39,7 @@
   <I>erot</I> = rotational energy
   <I>trot</I> = rotational temperature
   <I>evib</I> = vibrational energy 
+  <I>tvib</I> = vibrational temperature (classical definition) 
 </PRE>
 
 </UL>
@@ -142,8 +143,16 @@ formula where <I>kB</I> is the Boltzmann factor:
 <P>The <I>evib</I> value computes the average vibrational energy of particles
 in the group:
 </P>
-<PRE>Erot = Sum_i (evib_i) / N 
+<PRE>Evib = Sum_i (evib_i) / N 
 </PRE>
+<P>The <I>tvib</I> value computes a classical definition of vibrational
+temperature, valid for continous distributions of vibrational energy,
+by the following formula where <I>kB</I> is the Boltzmann factor:
+</P>
+<PRE>Tvib = (2/kB) Sum_i (evib_i) / Sum_i (dof_i) 
+</PRE>
+<P>Dof_i is the number of vibrational degrees of freedom for particle i.
+</P>
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid array, with the number of columns
@@ -171,7 +180,7 @@ unitless.  <I>Nrho</I> is in 1/distance^3 units for 3d simulations and
 1/distance^2 units for 2d simulations.  <I>Mass</I> is in mass units.  <I>U</I>,
 <I>v</I>, and <I>w</I> are in velocity units.  <I>Usq</I>, <I>vsq</I>, and <I>wsq</I> are in
 velocity squared units.  <I>Ke</I>, <I>erot</I>, and <I>evib</I> are in energy units.
-<I>Temp</I> and <I>Trot</I> are in temperature units.
+<I>Temp</I> and <I>trot</I> and <I>tvib</I> are in temperature units.
 </P>
 <P><B>Restrictions:</B> none
 </P>
