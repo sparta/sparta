@@ -45,8 +45,8 @@ class ComputeGrid : public Compute {
   int *norm_style;           // norm style for each value
   double **norm_count;       // per-group ptr to norm vector, by count
   double **norm_mass;        // per-group ptr to norm vector, by mass
-  double **norm_rdof;         // per-group ptr to norm vector, by dof
-  double **norm_vdof;         // per-group ptr to norm vector, by dof
+  double **norm_rdof;         // per-group ptr to norm vec, by rotational dof
+  double **norm_vdof;         // per-group ptr to norm vec, by vibrational dof
 };
 
 }
