@@ -74,6 +74,7 @@ class Surf : protected Pointers {
   void quad_corner_point(int, double *, double *, double *);
   void hex_corner_point(int, double *, double *, double *);
   double line_size(int);
+  double axi_line_size(int);
   double tri_size(int, double &);
 
   int add_surf(const char *);

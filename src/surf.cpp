@@ -20,10 +20,12 @@
 #include "comm.h"
 #include "cut3d.h"
 #include "geometry.h"
+#include "math_const.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
+using namespace MathConst;
 
 #define DELTA 4
 #define EPSSQ 1.0e-12
@@ -270,6 +272,19 @@ double Surf::line_size(int m)
   double delta[3];
   MathExtra::sub3(pts[lines[m].p2].x,pts[lines[m].p1].x,delta);
   return MathExtra::len3(delta);
+}
+
+/* ----------------------------------------------------------------------
+   return swept-out area associated with axisymmetric line M
+------------------------------------------------------------------------- */
+
+double Surf::axi_line_size(int m)
+{
+  double *x1 = pts[lines[m].p1].x;
+  double *x2 = pts[lines[m].p2].x;
+  double area = MY_PI * fabs(x1[1]*sqrt(x1[0]*x1[0]+x1[1]*x1[1]) + 
+                             x2[1]*sqrt(x2[0]*x2[0]+x2[1]*x2[1]));
+  return area;
 }
 
 /* ----------------------------------------------------------------------

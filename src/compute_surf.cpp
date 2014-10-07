@@ -118,11 +118,13 @@ void ComputeSurf::init()
 
     double nfactor = update->dt/update->fnum;
     int dimension = domain->dimension;
+    int axisymmetric = domain->axisymmetric;
     double tmp;
 
     for (int i = 0; i < nsurf; i++) {
-      if (dimension == 2) normflux[i] = surf->line_size(i);
-      else normflux[i] = surf->tri_size(i,tmp);
+      if (dimension == 3) normflux[i] = surf->tri_size(i,tmp);
+      else if (axisymmetric) normflux[i] = surf->axi_line_size(i);
+      else normflux[i] = surf->line_size(i);
       normflux[i] *= nfactor;
     }
   }
