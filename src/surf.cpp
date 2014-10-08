@@ -275,7 +275,7 @@ double Surf::line_size(int m)
 }
 
 /* ----------------------------------------------------------------------
-   return swept-out area associated with axisymmetric line M
+   return area associated with rotating axisymmetric line M around y=0 axis
 ------------------------------------------------------------------------- */
 
 double Surf::axi_line_size(int m)
