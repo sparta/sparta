@@ -51,9 +51,9 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
 #define MOVE_DEBUG_ID 1010784267  // particle ID
-#define MOVE_DEBUG_PROC -1        // owning proc
-#define MOVE_DEBUG_INDEX 13       // particle index on owning proc
-#define MOVE_DEBUG_STEP 207       // timestep
+#define MOVE_DEBUG_PROC 0        // owning proc
+#define MOVE_DEBUG_INDEX 37930       // particle index on owning proc
+#define MOVE_DEBUG_STEP 2       // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -339,6 +339,9 @@ template < int DIM, int SURF > void Update::move()
       v = particles[i].v;
       pexit = 0;
 
+      // apply moveperturb() to PKEEP and PINSERT since are computing xnew
+      // PENTRY is just re-computing an xnew computed previously by sender
+
       if (pflag == PKEEP) {
         dtremain = dt;
         xnew[0] = x[0] + dtremain*v[0];
@@ -622,11 +625,14 @@ template < int DIM, int SURF > void Update::move()
               else stuck_iterate = 0;
 
               // decrement dtremain and reset post-bounce xnew
+              // must apply moveperturb() again since re-computing xnew
+              // otherwise for axisymmetric, ynew < 0 could result
 
               dtremain *= 1.0 - minparam*frac;
               xnew[0] = x[0] + dtremain*v[0];
               xnew[1] = x[1] + dtremain*v[1];
               if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
+              if (perturbflag) (this->*moveperturb)(dtremain,xnew,v);
               exclude = minsurf;
               nscollide_one++;
               
