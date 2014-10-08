@@ -282,8 +282,9 @@ double Surf::axi_line_size(int m)
 {
   double *x1 = pts[lines[m].p1].x;
   double *x2 = pts[lines[m].p2].x;
-  double area = MY_PI * fabs(x1[1]*sqrt(x1[0]*x1[0]+x1[1]*x1[1]) + 
-                             x2[1]*sqrt(x2[0]*x2[0]+x2[1]*x2[1]));
+  double h = x2[0]-x1[0];
+  double r = x2[1]-x1[1];
+  double area = MY_PI*(x1[1]+x2[1])*sqrt(r*r+h*h);
   return area;
 }
 
