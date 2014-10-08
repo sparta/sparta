@@ -625,14 +625,38 @@ template < int DIM, int SURF > void Update::move()
               else stuck_iterate = 0;
 
               // decrement dtremain and reset post-bounce xnew
-              // must apply moveperturb() again since re-computing xnew
-              // otherwise for axisymmetric, ynew < 0 could result
+              // apply moveperturb() again since re-computing xnew
+              //   otherwise ynew < 0.0 could result for axisymmetric
+              //   also check post-perturb that (vnew dot norm) > 0.0,
+              //   else will be moving into surf on next iteration
 
               dtremain *= 1.0 - minparam*frac;
               xnew[0] = x[0] + dtremain*v[0];
               xnew[1] = x[1] + dtremain*v[1];
               if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
-              if (perturbflag) (this->*moveperturb)(dtremain,xnew,v);
+              if (perturbflag) {
+                (this->*moveperturb)(dtremain,xnew,v);
+                if (DIM == 3) {
+                  if (MathExtra::dot3(v,tri->norm) < 0.0) {
+                    char str[128];
+                    sprintf(str,
+                            "Particle %d on proc %d made bad perturbed bounce "
+                            "off surf %d on step " BIGINT_FORMAT,
+                            i,me,minsurf,update->ntimestep);
+                    error->one(FLERR,str);
+                  }
+                }
+                if (DIM == 2) {
+                  if (MathExtra::dot3(v,line->norm) < 0.0) {
+                    char str[128];
+                    sprintf(str,
+                            "Particle %d on proc %d made bad perturbed bounce "
+                            "off surf %d on step " BIGINT_FORMAT,
+                            i,me,minsurf,update->ntimestep);
+                    error->one(FLERR,str);
+                  }
+                }
+              }
               exclude = minsurf;
               nscollide_one++;
               
