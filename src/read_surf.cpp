@@ -69,9 +69,8 @@ void ReadSurf::command(int narg, char **arg)
 {
   if (!grid->exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
-  // NOTE: is this error check necessary?
-  //if (!grid->exist_ghost)
-  //  error->all(FLERR,"Cannot read_surf before grid ghost cells are defined");
+  if (!grid->exist_ghost)
+    error->all(FLERR,"Cannot read_surf before grid ghost cells are defined");
   if (particle->exist) 
     error->all(FLERR,"Cannot read_surf after particles are defined");
 
