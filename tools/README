@@ -14,9 +14,16 @@ use Python modules from the Pizza.py toolkit, provided in the pizza
 dir.  See more info below on how to run a Python script and insure
 that Python can find the needed modules.
 
+Tools in their own directory, have README files in that directory.
+
 Stand-alone tools:
 
 stl2surf.py     convert an ASCII STL file to a SPARTA surface file
+
+Tools that use the ParaView visualization package:
+
+paraview/grid2paraview.py     convert grid data to ParaView format
+paraview/surf2paraview.py     convert surface data to ParaView format
 
 Tools that use Pizza.py modules: 
 
