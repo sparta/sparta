@@ -104,17 +104,6 @@ cutoff the size of 2-3 grid cell diameters is a good compromise that
 requires only modest memory to store ghost cells and allows all
 particle moves to complete in only one pass of communication.
 </P>
-<P>IMPORTANT NOTE: Using the <I>gridcut</I> keyword with a cutoff >= 0.0 is
-only possible if the grid cells owned by each processor are "clumped"
-(by the time the next simulation is performed).  If each processor's
-grid cells are "dispersed", then ghost cells cannot be stored for a
-<I>gridcut</I> cutoff >= 0.0.  This will generate an error when a
-simulation is performed.  The solution is to use the
-<A HREF = "balance_grid.html">balance_grid</A> command to change to a clumped grid
-cell assignment.  See <A HREF = "Section_howto.html#howto_8">Section 5.8</A> of the
-manual for an explanation of clumped and dispersed grid cell
-assignments and their relative performance trade-offs.
-</P>
 <P>An example of the <I>gridcut</I> cutoff applied to a clumped assignment is
 shown in this zoom-in of a 2d hierarchical grid with 5 levels, refined
 around a tilted ellipsoidal surface object (outlined in pink).  One
@@ -125,17 +114,28 @@ cells owned by other processors.
 </P>
 <CENTER><IMG SRC = "JPG/partition_zoom_cutoff.jpg">
 </CENTER>
+<P>IMPORTANT NOTE: Using the <I>gridcut</I> keyword with a cutoff >= 0.0 is
+only possible if the grid cells owned by each processor are "clumped"
+If each processor's grid cells are "dispersed", then ghost cells
+cannot be created for a <I>gridcut</I> cutoff >= 0.0.  This will generate
+an error stating ghost cells are undefined when surfaces are read in
+or a simulation is performed.  The solution is to use the
+<A HREF = "balance_grid.html">balance_grid</A> command to change to a clumped grid
+cell assignment.  See <A HREF = "Section_howto.html#howto_8">Section 5.8</A> of the
+manual for an explanation of clumped and dispersed grid cell
+assignments and their relative performance trade-offs.
+</P>
 <P>IMPORTANT NOTE: If grid cells have already been defined via the
 <A HREF = "create_grid.html">create_grid</A>, <A HREF = "read_grid.html">read_grid</A>, or
 <A HREF = "read_restart.html">read_restart</A> commands, when the <I>gridcut</I> cutoff
-is specified, then all ghost cell information that is currently stored
+is specified, then any ghost cell information that is currently stored
 will be erased.  In this case, a <A HREF = "balance_grid.html">balance_grid</A>
 command must then be invoked to regenerate ghost cell information
-before a simulation is performed.  Note that the previous note applies
-in this scenario.  If the "balance_grid" option selects a dispersed
-grid cell assignment and the <I>gridcut</I> cutoff = -1.0, then no ghost
-information will be generated, resulting in an error when a simulation
-is run.
+before surfaces are read in or a simulation is performed.  Note that
+the previous note applies in this scenario.  If the "balance_grid"
+option selects a dispersed grid cell assignment and the <I>gridcut</I>
+cutoff >= 0.0, then no ghost information will be generated, resulting
+in an error when surfaces are read in or a simulation is run.
 </P>
 <P>The <I>comm/sort</I> keyword determines whether the messages a proc
 receives for migrating particles (every step) and ghost grid cells (at
