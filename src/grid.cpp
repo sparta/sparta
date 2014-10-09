@@ -1088,6 +1088,7 @@ void Grid::reset_neighbors()
 
 /* ----------------------------------------------------------------------
    set type and corner flags of all owned cells
+   will not be called before grid ghost cells and neighbors are defined
 ------------------------------------------------------------------------- */
 
 void Grid::set_inout()
