@@ -49,10 +49,13 @@ SPARTA distribution.  Each is described in more detail below.
 <LI><A HREF = "#gridrefine">grid_refine</A> - refine a grid around a surface
 <LI><A HREF = "#log2txt">log2txt</A> - extract columns of info from a log file
 <LI><A HREF = "#logplot">logplot</A> - plot columns of info from a log file via GnuPlot
+<LI><A HREF = "#paraview">paraview</A> - converters of SPARTA data to <A HREF = "http://www.paraview.org">ParaView</A> format
 <LI><A HREF = "#stl2surf">stl2surf</A> - convert an STL text file into a SPARTA surface file
 <LI><A HREF = "#surfcreate">surf_create</A> - create a surface file with simple objects
 <LI><A HREF = "#surftransform">surf_transform</A> - transform surface via tranlate/scale/rotate operations 
 </UL>
+
+
 <HR>
 
 <HR>
@@ -149,6 +152,19 @@ tools/pizza directory.  See the tools/README file for info on how to
 set an environment variable so that the Pizza.py tool files can be
 found by Python, as well as instructions on various ways to run a
 Python script.
+</P>
+<HR>
+
+<H4><A NAME = "paraview"></A>paraview tools 
+</H4>
+<P>The tools/paraview directory has scripts which convert
+SPARTA grid and surface data (input and output) to ParaView format.
+</P>
+<P><A HREF = "http://www.paraview.org">ParaView</A> is a popular, powerful, freely-available
+visualization package.  You must have ParaView installed to use the
+Python scripts.  See tools/paraview/README for more details.
+</P>
+<P>The scripts were developed by Tom Otahal (Sandia).
 </P>
 <HR>
 
