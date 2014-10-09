@@ -109,12 +109,9 @@ class Update : protected Pointers {
   FnPtr2 moveperturb;        // ptr to moveperturb method
 
   // variants of moveperturb method
-  // adjust end-of-move x,v due to advection perturbation
+  // adjust end-of-move x,v due to perturbation on straight-line advection
 
   inline void axisymmetric(double dt, double *x, double *v) {
-    double yold = x[1] - dt*v[1];
-    double yzeng = v[1]*v[1] + v[2]*v[2];
-
     double dz = dt*v[2];
     double rold = x[1];
     x[1] = sqrt(x[1]*x[1] + dz*dz);
@@ -124,15 +121,6 @@ class Update : protected Pointers {
     double wold = v[2];
     v[1] = vold*rn + wold*wn;
     v[2] = -vold*wn + wold*rn;
-
-    // force vy to be consistent with straight-line move from yold to ynew
-    // adjust vz so that kinetic energy of y,z components is conserved
-    // arg of sqrt() should not ever be negative
-    // NOTE: should do same thing for gravity methods?
-    // NOTE: if this works, make code more efficient?
-
-    v[1] = (x[1]-yold)/dt;
-    v[2] = sqrt(yzeng - v[1]*v[1]);
   };
 
   inline void gravity2d(double dt, double *x, double *v) {

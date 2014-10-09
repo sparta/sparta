@@ -357,12 +357,8 @@ template < int DIM, int SURF > void Update::move()
       } else if (pflag == PENTRY) {
         icell = particles[i].icell;
         if (cells[icell].nsplit > 1) {
-          if (DIM == 3 && SURF) {
-            icell = split3d(icell,x);
-          }
-          if (DIM == 2 && SURF) {
-            icell = split2d(icell,x);
-          }
+          if (DIM == 3 && SURF) icell = split3d(icell,x);
+          if (DIM == 2 && SURF) icell = split2d(icell,x);
           particles[i].icell = icell;
         }
         dtremain = particles[i].dtremain;
@@ -387,7 +383,7 @@ template < int DIM, int SURF > void Update::move()
       stuck_iterate = 0;
       ntouch_one++;
 
-      // advect particle from cell to cell until move is done
+      // advect one particle from cell to cell and thru surf colls until done
 
       while (1) {
 
@@ -528,7 +524,7 @@ template < int DIM, int SURF > void Update::move()
                                      pts[tri->p1].x,pts[tri->p2].x,
                                      pts[tri->p3].x,tri->norm,xc,param,side);
               }
-              if (DIM == 2) {line = &lines[isurf];
+              if (DIM == 2) {
                 line = &lines[isurf];
                 hitflag = Geometry::
                   line_line_intersect(x,xnew,
@@ -583,6 +579,9 @@ template < int DIM, int SURF > void Update::move()
                 if (DIM == 3) minxc[2] = xc[2];
               }
             }
+
+            // END of for loop over surfs
+
             nscheck_one += nsurf;
             
             if (cflag) {
@@ -594,12 +593,23 @@ template < int DIM, int SURF > void Update::move()
                         i,me,minsurf,update->ntimestep);
                 error->one(FLERR,str);
               }
+
+              if (DIM == 3) tri = &tris[minsurf];
+              if (DIM == 2) line = &lines[minsurf];
+
+              // insure incoming v is consistent with x -> minxc
+              // vnew that was computed by moveperturb() is not
+              // if don't do this, change to v by surface bounce can be bad
+              // do this by re-pointing v along x -> minxc and conserving eng
+
+              // NOTE: this code needs to change
+
+              if (perturbflag) {}
+              
               x[0] = minxc[0];
               x[1] = minxc[1];
               if (DIM == 3) x[2] = minxc[2];
-              if (DIM == 3) tri = &tris[minsurf];
-              if (DIM == 2) line = &lines[minsurf];
-              
+
               if (nsurf_tally) {
                 eold[0] = v[0];
                 eold[1] = v[1];
@@ -634,6 +644,9 @@ template < int DIM, int SURF > void Update::move()
               xnew[0] = x[0] + dtremain*v[0];
               xnew[1] = x[1] + dtremain*v[1];
               if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
+
+              // NOTE: this code needs to change
+
               if (perturbflag) {
                 (this->*moveperturb)(dtremain,xnew,v);
                 if (DIM == 3) {
@@ -657,6 +670,7 @@ template < int DIM, int SURF > void Update::move()
                   }
                 }
               }
+
               exclude = minsurf;
               nscollide_one++;
               
@@ -681,12 +695,16 @@ template < int DIM, int SURF > void Update::move()
               }
 #endif
 
-              // if particle stuck on surfs, delete it, else continue
+              
+              // if particle not stuck on surfs, continue advection while loop
+              // if stuck, mark it for DISCARD, and drop out of SURF code
 
               if (stuck_iterate < MAXSTUCK) continue;
               particles[i].flag = PDISCARD;
               nstuck++;
             }
+
+            // END of cflag if section that performed collision
 
             // no collision, so restore saved xnew if changed it above
             
@@ -856,6 +874,8 @@ template < int DIM, int SURF > void Update::move()
         nmask = cells[icell].nmask;
         ntouch_one++;
       }
+
+      // END of while loop over advection of single particle
 
 #ifdef MOVE_DEBUG
       if (ntimestep == MOVE_DEBUG_STEP && 

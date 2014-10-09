@@ -696,7 +696,7 @@ void DumpImage::init_style()
       gridyindex = modify->find_compute(idgridy);
       if (gridyindex < 0) 
         error->all(FLERR,"Could not find dump image compute ID");
-      Compute *compute = modify->compute[gridxindex];
+      Compute *compute = modify->compute[gridyindex];
       if (!compute->per_grid_flag) 
         error->all(FLERR,"Dump image compute is not a per-grid compute");
       if (gridycol == 0 && compute->size_per_grid_cols != 0)
@@ -724,7 +724,7 @@ void DumpImage::init_style()
       gridzindex = modify->find_compute(idgridz);
       if (gridzindex < 0) 
         error->all(FLERR,"Could not find dump image compute ID");
-      Compute *compute = modify->compute[gridxindex];
+      Compute *compute = modify->compute[gridzindex];
       if (!compute->per_grid_flag) 
         error->all(FLERR,"Dump image compute is not a per-grid compute");
       if (gridzcol == 0 && compute->size_per_grid_cols != 0)
