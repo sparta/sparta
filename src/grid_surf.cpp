@@ -211,6 +211,7 @@ void Grid::surf2grid(int subflag)
 
 /* ----------------------------------------------------------------------
    remove all surf info from owned grid cells
+   set cell type and corner flags to UNKNOWN
    called before reassigning surfs to grid cells
    changes cells data structure since sub cells are removed
 ------------------------------------------------------------------------- */
