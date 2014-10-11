@@ -59,8 +59,9 @@ class DumpGrid : public Dump {
   double **vbuf;             // local storage for variable evaluation
 
   int *cpart;                // indices in grid->cells of cells with particles
+  double *cpartmax;          // value vector for all owned grid cells
   int ncpart;                // # of owned grid cells with particles
-  int ncpartmax;             // max size of cpart
+  int ncpartmax;             // max size of cpart = total # of owned grid cells
 
   int dimension;
 

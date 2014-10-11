@@ -98,6 +98,7 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
 
   ncpart = ncpartmax = 0;
   cpart = NULL;
+  cpartmax = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -130,6 +131,7 @@ DumpGrid::~DumpGrid()
   delete [] columns;
 
   memory->destroy(cpart);
+  memory->destroy(cpartmax);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -209,7 +211,8 @@ void DumpGrid::init_style()
     variable[i] = ivariable;
   }
 
-  // create cpart array to index owned grid cells with particles
+  // create cpart,cpartmax arrays to index owned grid cells
+  // with and without particles
 
   reset_grid();
 
@@ -680,14 +683,17 @@ void DumpGrid::allocate_values(int n)
 
 /* ----------------------------------------------------------------------
    create cpart array to index owned grid cells with particles
+   create cpartmax array to store values from all owned grid cells
    called from comm->migrate_cells() due to fix_balance
 ------------------------------------------------------------------------- */
 
 void DumpGrid::reset_grid()
 {
   memory->destroy(cpart);
+  memory->destroy(cpartmax);
   ncpartmax = grid->nlocal;
   memory->create(cpart,ncpartmax,"dump:cpart");
+  memory->create(cpartmax,ncpartmax,"dump:cpartmax");
 
   Grid::ChildCell *cells = grid->cells;
 
@@ -706,12 +712,16 @@ bigint DumpGrid::memory_usage()
 {
   bigint bytes = Dump::memory_usage();
   bytes += memory->usage(cpart,ncpartmax);
+  bytes += memory->usage(cpartmax,ncpartmax);
   return bytes;
 }
 
 /* ----------------------------------------------------------------------
    extraction of Compute, Fix, Variable results
 ------------------------------------------------------------------------- */
+
+// post_process_grid_flag() returns a value for every owned grid cell
+// dump buf only stores values for owned grid cells with particles
 
 void DumpGrid::pack_compute(int n)
 {
@@ -721,25 +731,31 @@ void DumpGrid::pack_compute(int n)
   Compute *c = compute[field2index[n]];
 
   if (index == 0) {
-    if (c->post_process_grid_flag)
-      c->post_process_grid(NULL,NULL,-1,0,&buf[n],size_one);
-    else {
-      double *vector = c->vector_grid;
-      for (int i = 0; i < ncpart; i++) {
-        buf[n] = vector[cpart[i]];
-        n += size_one;
-      }
+    double *vector;
+    if (c->post_process_grid_flag) {
+      c->post_process_grid(NULL,NULL,-1,0,cpartmax,1);
+      vector = cpartmax;
+    } else vector = c->vector_grid;
+
+    for (int i = 0; i < ncpart; i++) {
+      buf[n] = vector[cpart[i]];
+      n += size_one;
     }
+
+  } else if (c->post_process_grid_flag) {
+    index--;
+    c->post_process_grid(NULL,NULL,-1,index+1,cpartmax,1);
+    for (int i = 0; i < ncpart; i++) {
+      buf[n] = cpartmax[cpart[i]];
+      n += size_one;
+    }
+
   } else {
     index--;
-    if (c->post_process_grid_flag)
-      c->post_process_grid(NULL,NULL,-1,index+1,&buf[n],size_one);
-    else {
-      double **array = c->array_grid;
-      for (int i = 0; i < ncpart; i++) {
-        buf[n] = array[cpart[i]][index];
-        n += size_one;
-      }
+    double **array = c->array_grid;
+    for (int i = 0; i < ncpart; i++) {
+      buf[n] = array[cpart[i]][index];
+      n += size_one;
     }
   }
 }

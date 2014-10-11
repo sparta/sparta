@@ -50,9 +50,9 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 1010784267  // particle ID
-#define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 37930       // particle index on owning proc
+#define MOVE_DEBUG_ID 1721414848  // particle ID
+#define MOVE_DEBUG_PROC 1        // owning proc
+#define MOVE_DEBUG_INDEX -1       // particle index on owning proc
 #define MOVE_DEBUG_STEP 2       // timestep
 
 /* ---------------------------------------------------------------------- */
@@ -262,7 +262,7 @@ void Update::run(int nsteps)
 template < int DIM, int SURF > void Update::move()
 {
   bool hitflag;
-  int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,pexit;
+  int m,icell,icell_original,nmask,outface,bflag,nflag,pflag;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
   int pstart,pstop,entryexit,any_entryexit;
   int *csurfs;
@@ -337,10 +337,9 @@ template < int DIM, int SURF > void Update::move()
 
       x = particles[i].x;
       v = particles[i].v;
-      pexit = 0;
 
       // apply moveperturb() to PKEEP and PINSERT since are computing xnew
-      // PENTRY is just re-computing an xnew computed previously by sender
+      // not to PENTRY,PEXIT since are just re-computing xnew of sender
 
       if (pflag == PKEEP) {
         dtremain = dt;
@@ -366,11 +365,10 @@ template < int DIM, int SURF > void Update::move()
         xnew[1] = x[1] + dtremain*v[1];
         if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
       } else if (pflag == PEXIT) {
-        pexit = 1;
         dtremain = particles[i].dtremain;
-        xnew[0] = x[0];
-        xnew[1] = x[1];
-        if (DIM == 3) xnew[2] = x[2];
+        xnew[0] = x[0] + dtremain*v[0];
+        xnew[1] = x[1] + dtremain*v[1];
+        if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
       }
 
       particles[i].flag = PKEEP;
@@ -393,30 +391,29 @@ template < int DIM, int SURF > void Update::move()
               (MOVE_DEBUG_ID == particles[i].id ||
                (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
             printf("PARTICLE %d %ld: %d %d: %d: x %g %g %g: xnew %g %g %g: %d " 
-                   CELLINT_FORMAT ": lo %g %g %g: hi %g %g %g\n",
+                   CELLINT_FORMAT ": lo %g %g %g: hi %g %g %g: DTR %g\n",
                    me,update->ntimestep,i,particles[i].id,
                    cells[icell].nsurf,
                    x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
                    icell,cells[icell].id,
-                   lo[0],lo[1],lo[2],hi[0],hi[1],hi[2]);
+                   lo[0],lo[1],lo[2],hi[0],hi[1],hi[2],dtremain);
         }
         if (DIM == 2) {
           if (ntimestep == MOVE_DEBUG_STEP && 
               (MOVE_DEBUG_ID == particles[i].id ||
                (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
             printf("PARTICLE %d %ld: %d %d: %d: x %g %g: xnew %g %g: %d "
-                   CELLINT_FORMAT ": lo %g %g: hi %g %g\n",
+                   CELLINT_FORMAT ": lo %g %g: hi %g %g: DTR: %g\n",
                    me,update->ntimestep,i,particles[i].id,
                    cells[icell].nsurf,
                    x[0],x[1],xnew[0],xnew[1],
                    icell,cells[icell].id,
-                   lo[0],lo[1],hi[0],hi[1]);
+                   lo[0],lo[1],hi[0],hi[1],dtremain);
         }
 #endif
 
         // check if particle crosses any cell face
         // frac = fraction of move completed before hitting cell face
-        // check pexit to avoid divide by 0.0
         // this section should be as efficient as possible,
         // since most particles won't do anything else
 
@@ -427,8 +424,7 @@ template < int DIM, int SURF > void Update::move()
           frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
           outface = XLO;
         } else if (xnew[0] >= hi[0]) {
-          if (pexit) frac = 0.0;
-          else frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
+          frac = (hi[0]-x[0]) / (xnew[0]-x[0]);
           outface = XHI;
         }
         
@@ -439,8 +435,7 @@ template < int DIM, int SURF > void Update::move()
             outface = YLO;
           }
         } else if (xnew[1] >= hi[1]) {
-          if (pexit) newfrac = 0.0;
-          else newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+          newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
           if (newfrac < frac) {
             frac = newfrac;
             outface = YHI;
@@ -455,8 +450,7 @@ template < int DIM, int SURF > void Update::move()
               outface = ZLO;
             }
           } else if (xnew[2] >= hi[2]) {
-            if (pexit) newfrac = 0.0;
-            else newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
+            newfrac = (hi[2]-x[2]) / (xnew[2]-x[2]);
             if (newfrac < frac) {
               frac = newfrac;
               outface = ZHI;
@@ -541,15 +535,14 @@ template < int DIM, int SURF > void Update::move()
                          "P1 %g %g %g: P2 %g %g %g: "
                          "T1 %g %g %g: T2 %g %g %g: T3 %g %g %g: "
                          "TN %g %g %g: XC %g %g %g: "
-                         "Param %g: Side %d: DTR %g\n",
+                         "Param %g: Side %d\n",
                          MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
                          pts[tri->p1].x[0],pts[tri->p1].x[1],pts[tri->p1].x[2],
                          pts[tri->p2].x[0],pts[tri->p2].x[1],pts[tri->p2].x[2],
                          pts[tri->p3].x[0],pts[tri->p3].x[1],pts[tri->p3].x[2],
                          tri->norm[0],tri->norm[1],tri->norm[2],
-                         xc[0],xc[1],xc[2],param,side,
-                         dtremain);
+                         xc[0],xc[1],xc[2],param,side);
               }
               if (DIM == 2) {
                 if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
@@ -557,14 +550,13 @@ template < int DIM, int SURF > void Update::move()
                      (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
                   printf("SURF COLLIDE: %d %d %d %d: P1 %g %g: P2 %g %g: "
                          "L1 %g %g: L2 %g %g: LN %g %g: XC %g %g: "
-                         "Param %g: Side %d: DTR %g\n",
+                         "Param %g: Side %d\n",
                          MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],xnew[0],xnew[1],
                          pts[line->p1].x[0],pts[line->p1].x[1],
                          pts[line->p2].x[0],pts[line->p2].x[1],
                          line->norm[0],line->norm[1],
-                         xc[0],xc[1],param,side,
-                         dtremain);
+                         xc[0],xc[1],param,side);
               }
 #endif
               
@@ -881,9 +873,9 @@ template < int DIM, int SURF > void Update::move()
       if (ntimestep == MOVE_DEBUG_STEP && 
           (MOVE_DEBUG_ID == particles[i].id ||
            (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
-        printf("MOVE DONE %d %d %d: %g %g %g: %g\n",
+        printf("MOVE DONE %d %d %d: %g %g %g: DTR %g\n",
                MOVE_DEBUG_INDEX,particles[i].flag,icell,
-               x[0],x[1],x[2],particles[i].dtremain);
+               x[0],x[1],x[2],dtremain);
 #endif
 
       // move is complete, or as much as can be done on this proc

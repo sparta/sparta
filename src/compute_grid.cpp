@@ -163,7 +163,8 @@ void ComputeGrid::compute_per_grid()
   // zero accumulator array and norm vectors
 
   for (i = 0; i < nglocal; i++)
-    for (j = 0; j < ntotal; j++) array_grid[i][j] = 0.0;
+    for (j = 0; j < ntotal; j++)
+      array_grid[i][j] = 0.0;
 
   for (j = 0; j < ngroup; j++) {
     if (norm = norm_count[j])
@@ -284,6 +285,7 @@ void ComputeGrid::post_process_grid(void *innumer, void *indenom,
   if (icell < 0) istart = 0;
 
   int m = 0;
+
   for (int i = istart; i < nglocal; i++) {
     if (!norm) out[m] = array[i][index];
     else if (norm[i] == 0.0) out[m] = 0.0;
