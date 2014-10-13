@@ -122,10 +122,10 @@ void ComputeTvibGrid::compute_per_grid()
 }
 
 /* ----------------------------------------------------------------------
-   use tallied per-species info to compute a group vibrational temperature
-   icell = -1, return temps for entire group = index
+   use tallied info to compute normalized values
+   icell = -1, return values for entire group = index
      store them in out vector with nstride
-   icell >= 0, return temp for single icell in group = index
+   icell >= 0, return value for single icell in group = index
      store it in out[0]
    index = which column of this compute's output is requested
      0 = vector, 1-N = columns of array
