@@ -252,7 +252,7 @@ void ComputeGrid::compute_per_grid()
 }
 
 /* ----------------------------------------------------------------------
-   use tallied info to compute a normalized value
+   use tallied info to compute normalized values
    icell = -1, return values for entire group = index
      store them in out vector with nstride
    icell >= 0, return value for single icell in group = index
@@ -260,6 +260,7 @@ void ComputeGrid::compute_per_grid()
    index = which column of this compute's output is requested
      0 = vector, 1-N = columns of array
    called by dumps with NULL input arrays, so use internal array/norm as input
+   called by fix ave/grid with arrays it accumulated over many timesteps
 ------------------------------------------------------------------------- */
 
 void ComputeGrid::post_process_grid(void *innumer, void *indenom,
