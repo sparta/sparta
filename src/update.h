@@ -100,6 +100,27 @@ class Update : protected Pointers {
   void bounce_set(bigint);
   void reset_timestep(bigint);
 
+  //int axi_vertical_line(double, double *, double *, double, double, double,
+  //                     double &);
+
+  // remap x and v components into axisymmetric plane
+  // input x at end of linear move (x = xold + dt*v)
+  // change x[1] = sqrt(x[1]^2 + x[2]^2), x[2] = 0.0
+  // change vy,vz by rotation into axisymmetric plane
+
+  inline void axi_remap(double *x, double *v) {
+    double ynew = x[1];
+    double znew = x[2];
+    x[1] = sqrt(ynew*ynew + znew*znew);
+    x[2] = 0.0;
+    double rn = ynew / x[1];
+    double wn = znew / x[1];
+    double vy = v[1];
+    double vz = v[2];
+    v[1] = vy*rn + vz*wn;
+    v[2] = -vy*wn + vz*rn;
+  };
+
   typedef void (Update::*FnPtr)();
   FnPtr moveptr;             // ptr to move method
   template < int, int > void move();
@@ -110,18 +131,6 @@ class Update : protected Pointers {
 
   // variants of moveperturb method
   // adjust end-of-move x,v due to perturbation on straight-line advection
-
-  inline void axisymmetric(double dt, double *x, double *v) {
-    double dz = dt*v[2];
-    double rold = x[1];
-    x[1] = sqrt(x[1]*x[1] + dz*dz);
-    double rn = rold / x[1];
-    double wn = dz / x[1];
-    double vold = v[1];
-    double wold = v[2];
-    v[1] = vold*rn + wold*wn;
-    v[2] = -vold*wn + wold*rn;
-  };
 
   inline void gravity2d(double dt, double *x, double *v) {
     double dtsq = 0.5*dt*dt;

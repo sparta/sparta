@@ -50,10 +50,10 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 1721414848  // particle ID
-#define MOVE_DEBUG_PROC 1        // owning proc
-#define MOVE_DEBUG_INDEX -1       // particle index on owning proc
-#define MOVE_DEBUG_STEP 2       // timestep
+#define MOVE_DEBUG_ID 2078229679 // particle ID
+#define MOVE_DEBUG_PROC 0        // owning proc
+#define MOVE_DEBUG_INDEX 1       // particle index on owning proc
+#define MOVE_DEBUG_STEP 1       // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -139,6 +139,9 @@ void Update::init()
   if (domain->dimension == 3) {
     if (surf->exist) moveptr = &Update::move<3,1>;
     else moveptr = &Update::move<3,0>;
+  } else if (domain->axisymmetric) {
+    if (surf->exist) moveptr = &Update::move<1,1>;
+    else moveptr = &Update::move<1,0>;
   } else if (domain->dimension == 2) {
     if (surf->exist) moveptr = &Update::move<2,1>;
     else moveptr = &Update::move<2,0>;
@@ -148,14 +151,13 @@ void Update::init()
 
   if (domain->dimension == 2 && gravity[2] != 0.0)
     error->all(FLERR,"Gravity in z not allowed for 2d");
+  if (domain->axisymmetric && gravity[1] != 0.0) 
+    error->all(FLERR,"Gravity in y not allowed for axi-symmetric model");
 
   // moveperturb method is set if particle motion is perturbed
 
   moveperturb = NULL;
-  if (domain->axisymmetric) moveperturb = &Update::axisymmetric;
   if (gravity[0] != 0.0 || gravity[1] != 0.0 || gravity[2] != 0.0) {
-    if (domain->axisymmetric && gravity[1] != 0.0) 
-      error->all(FLERR,"Gravity in y not allowed for axi-symmetric model");
     if (domain->dimension == 3) moveperturb = &Update::gravity3d;
     if (domain->dimension == 2) moveperturb = &Update::gravity2d;
   }
@@ -267,16 +269,16 @@ template < int DIM, int SURF > void Update::move()
   int pstart,pstop,entryexit,any_entryexit;
   int *csurfs;
   cellint *neigh;
-  double dtremain,frac,newfrac,param,minparam;
-  double xnew[3],eold[5],xc[3],xhold[3],minxc[3];
+  double dtremain,frac,newfrac,param,minparam,rnew,dtsurf;
+  double xnew[3],eold[5],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
   double *x,*v,*lo,*hi;
   Surf::Tri *tri;
   Surf::Line *line;
 
-  // for 2d only
-  // xnew,xc passed to geometry routines which use or set 3rd component
+  // for 2d and axisymmetry only
+  // xnew,xc passed to geometry routines which use or set z component
 
-  if (DIM == 2) xnew[2] = xc[2] = 0.0;
+  if (DIM < 3) xnew[2] = xc[2] = 0.0;
 
   // extend migration list if necessary
 
@@ -340,35 +342,36 @@ template < int DIM, int SURF > void Update::move()
 
       // apply moveperturb() to PKEEP and PINSERT since are computing xnew
       // not to PENTRY,PEXIT since are just re-computing xnew of sender
+      // set xnew[2] to linear move for axisymmetry, will be remapped later
 
       if (pflag == PKEEP) {
         dtremain = dt;
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
-        if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
+        if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
         if (perturbflag) (this->*moveperturb)(dtremain,xnew,v);
       } else if (pflag == PINSERT) {
         dtremain = particles[i].dtremain;
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
-        if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
+        if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
         if (perturbflag) (this->*moveperturb)(dtremain,xnew,v);
       } else if (pflag == PENTRY) {
         icell = particles[i].icell;
         if (cells[icell].nsplit > 1) {
           if (DIM == 3 && SURF) icell = split3d(icell,x);
-          if (DIM == 2 && SURF) icell = split2d(icell,x);
+          if (DIM < 3 && SURF) icell = split2d(icell,x);
           particles[i].icell = icell;
         }
         dtremain = particles[i].dtremain;
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
-        if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
+        if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
       } else if (pflag == PEXIT) {
         dtremain = particles[i].dtremain;
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
-        if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
+        if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
       }
 
       particles[i].flag = PKEEP;
@@ -381,7 +384,9 @@ template < int DIM, int SURF > void Update::move()
       stuck_iterate = 0;
       ntouch_one++;
 
-      // advect one particle from cell to cell and thru surf colls until done
+      // advect one particle from cell to cell and thru surf collides til done
+
+      //int iterate = 0;
 
       while (1) {
 
@@ -410,16 +415,29 @@ template < int DIM, int SURF > void Update::move()
                    icell,cells[icell].id,
                    lo[0],lo[1],hi[0],hi[1],dtremain);
         }
+        if (DIM == 1) {
+          if (ntimestep == MOVE_DEBUG_STEP && 
+              (MOVE_DEBUG_ID == particles[i].id ||
+               (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
+            printf("PARTICLE %d %ld: %d %d: %d: x %g %g: xnew %g %g: %d "
+                   CELLINT_FORMAT ": lo %g %g: hi %g %g: DTR: %g\n",
+                   me,update->ntimestep,i,particles[i].id,
+                   cells[icell].nsurf,
+                   x[0],x[1],xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
+                   icell,cells[icell].id,
+                   lo[0],lo[1],hi[0],hi[1],dtremain);
+        }
 #endif
 
         // check if particle crosses any cell face
         // frac = fraction of move completed before hitting cell face
         // this section should be as efficient as possible,
-        // since most particles won't do anything else
+        //   since most particles won't do anything else
+        // this section is for 2d/3d, axisymmetric cell logic is different
 
         outface = INTERIOR;
         frac = 1.0;
-        
+
         if (xnew[0] < lo[0]) {
           frac = (lo[0]-x[0]) / (xnew[0]-x[0]);
           outface = XLO;
@@ -428,20 +446,40 @@ template < int DIM, int SURF > void Update::move()
           outface = XHI;
         }
         
-        if (xnew[1] < lo[1]) {
-          newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
-          if (newfrac < frac) {
-            frac = newfrac;
-            outface = YLO;
-          }
-        } else if (xnew[1] >= hi[1]) {
-          newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
-          if (newfrac < frac) {
-            frac = newfrac;
-            outface = YHI;
+        if (DIM != 1) {
+          if (xnew[1] < lo[1]) {
+            newfrac = (lo[1]-x[1]) / (xnew[1]-x[1]);
+            if (newfrac < frac) {
+              frac = newfrac;
+              outface = YLO;
+            }
+          } else if (xnew[1] >= hi[1]) {
+            newfrac = (hi[1]-x[1]) / (xnew[1]-x[1]);
+            if (newfrac < frac) {
+              frac = newfrac;
+              outface = YHI;
+            }
           }
         }
-        
+
+        if (DIM == 1) {
+          if (Geometry::axi_horizontal_line(dtremain,x,v,lo[1],newfrac)) {
+            if (newfrac < frac) {
+              frac = newfrac;
+              outface = YLO;
+            }
+          }
+
+          rnew = sqrt(xnew[1]*xnew[1] + xnew[2]*xnew[2]);
+          if (rnew >= hi[1]) {
+            if (Geometry::axi_horizontal_line(dtremain,x,v,hi[1],newfrac))
+              if (newfrac < frac) {
+                frac = newfrac;
+                outface = YHI;
+              }
+          }
+        }
+          
         if (DIM == 3) {
           if (xnew[2] < lo[2]) {
             newfrac = (lo[2]-x[2]) / (xnew[2]-x[2]);
@@ -458,15 +496,22 @@ template < int DIM, int SURF > void Update::move()
           }
         }
 
+        // axisymmetric cell face crossing
+        // uses linear xnew to check vertical lines and compute remapped rnew
+        // must always check move against curved lower y face of cell
+
+        //if (iterate == 20) exit(1);
+        //iterate++;
+
 #ifdef MOVE_DEBUG
         if (ntimestep == MOVE_DEBUG_STEP && 
             (MOVE_DEBUG_ID == particles[i].id ||
              (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) {
           if (outface != INTERIOR)
-            printf("  OUT CHECK %d out: %d %d\n",
+            printf("  OUTFACE %d out: %d %d\n",
                    outface,grid->neigh_decode(nmask,outface),neigh[outface]);
-          else 
-            printf("  INT CHECK %d %d\n",outface,INTERIOR);
+          else
+            printf("  INTERIOR %d %d\n",outface,INTERIOR);
         }
 #endif
 
@@ -479,23 +524,31 @@ template < int DIM, int SURF > void Update::move()
 
             // particle crosses cell face, reset xnew exactly on face of cell
             // so surface check occurs only for particle path within grid cell
-            // save xnew so can restore later if needed
+            // xhold = saved xnew so can restore below if no surf collision
 
             if (outface != INTERIOR) {
               xhold[0] = xnew[0];
               xhold[1] = xnew[1];
-              if (DIM == 3) xhold[2] = xnew[2];
+              if (DIM != 2) xhold[2] = xnew[2];
               
               xnew[0] = x[0] + frac*(xnew[0]-x[0]);
               xnew[1] = x[1] + frac*(xnew[1]-x[1]);
-              if (DIM == 3) xnew[2] = x[2] + frac*(xnew[2]-x[2]);
-              
+              if (DIM != 2) xnew[2] = x[2] + frac*(xnew[2]-x[2]);
+
               if (outface == XLO) xnew[0] = lo[0];
               else if (outface == XHI) xnew[0] = hi[0]; 
               else if (outface == YLO) xnew[1] = lo[1];
               else if (outface == YHI) xnew[1] = hi[1];
               else if (outface == ZLO) xnew[2] = lo[2];
-              else if (outface == ZHI) xnew[2] = hi[2]; 
+              else if (outface == ZHI) xnew[2] = hi[2];
+            }
+
+            // for axisymmetric, dtsurf = time that particle stays in cell
+            // used as arg to axi_line_intersect()
+
+            if (DIM == 1) {
+              if (outface == INTERIOR) dtsurf = dtremain;
+              else dtsurf = dtremain * (1.0-frac);
             }
 
             // check for collisions with triangles or lines in cell
@@ -503,7 +556,7 @@ template < int DIM, int SURF > void Update::move()
             // not considered collision if particles starts on surf, moving out
             // not considered collision if 2 params are tied and one INSIDE surf
             // if collision occurs, perform collision with surface model
-            // reset x,v,xnew,dtremain and continue particle trajectory
+            // reset x,v,xnew,dtremain and continue single particle trajectory
           
             cflag = 0;
             minparam = 2.0;
@@ -524,6 +577,13 @@ template < int DIM, int SURF > void Update::move()
                   line_line_intersect(x,xnew,
                                       pts[line->p1].x,pts[line->p2].x,
                                       line->norm,xc,param,side);
+              }
+              if (DIM == 1) {
+                line = &lines[isurf];
+                hitflag = Geometry::
+                  axi_line_intersect(dtsurf,x,v,
+                                     pts[line->p1].x,pts[line->p2].x,
+                                     line->norm,xc,vc,param,side);
               }
               
 #ifdef MOVE_DEBUG
@@ -558,6 +618,21 @@ template < int DIM, int SURF > void Update::move()
                          line->norm[0],line->norm[1],
                          xc[0],xc[1],param,side);
               }
+              if (DIM == 1) {
+                if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
+                    (MOVE_DEBUG_ID == particles[i].id ||
+                     (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+                  printf("SURF COLLIDE: %d %d %d %d: P1 %g %g: P2 %g %g: "
+                         "L1 %g %g: L2 %g %g: LN %g %g: XC %g %g: "
+                         "VC %g %g: Param %g: Side %d\n",
+                         MOVE_DEBUG_INDEX,icell,nsurf,isurf,
+                         x[0],x[1],
+                         xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
+                         pts[line->p1].x[0],pts[line->p1].x[1],
+                         pts[line->p2].x[0],pts[line->p2].x[1],
+                         line->norm[0],line->norm[1],
+                         xc[0],xc[1],vc[1],vc[2],param,side);
+              }
 #endif
               
               if (hitflag && side != ONSURF2OUT && param <= minparam) {
@@ -569,10 +644,13 @@ template < int DIM, int SURF > void Update::move()
                 minxc[0] = xc[0];
                 minxc[1] = xc[1];
                 if (DIM == 3) minxc[2] = xc[2];
+                if (DIM == 1) {
+                  minvc[1] = vc[1];
+                  minvc[2] = vc[2];
+                }
               }
-            }
 
-            // END of for loop over surfs
+            } // END of for loop over surfs
 
             nscheck_one += nsurf;
             
@@ -587,20 +665,18 @@ template < int DIM, int SURF > void Update::move()
               }
 
               if (DIM == 3) tri = &tris[minsurf];
-              if (DIM == 2) line = &lines[minsurf];
+              if (DIM != 3) line = &lines[minsurf];
 
-              // insure incoming v is consistent with x -> minxc
-              // vnew that was computed by moveperturb() is not
-              // if don't do this, change to v by surface bounce can be bad
-              // do this by re-pointing v along x -> minxc and conserving eng
+              // set x to collision point
+              // if axisymmetric, set v to remapped velocity at collision pt
 
-              // NOTE: this code needs to change
-
-              if (perturbflag) {}
-              
               x[0] = minxc[0];
               x[1] = minxc[1];
               if (DIM == 3) x[2] = minxc[2];
+              if (DIM == 1) {
+                v[1] = minvc[1];
+                v[2] = minvc[2];
+              }
 
               if (nsurf_tally) {
                 eold[0] = v[0];
@@ -610,14 +686,14 @@ template < int DIM, int SURF > void Update::move()
                 eold[4] = particles[i].evib;
                 if (DIM == 3)
                   surf->sc[tri->isc]->collide(&particles[i],tri->norm);
-                if (DIM == 2)
+                if (DIM != 3)
                   surf->sc[line->isc]->collide(&particles[i],line->norm);
                 for (m = 0; m < nsurf_tally; m++)
                   slist_active[m]->surf_tally(minsurf,eold,&particles[i]);
               } else {
                 if (DIM == 3)
                   surf->sc[tri->isc]->collide(&particles[i],tri->norm);
-                if (DIM == 2)
+                if (DIM != 3)
                   surf->sc[line->isc]->collide(&particles[i],line->norm);
               }
               
@@ -627,41 +703,11 @@ template < int DIM, int SURF > void Update::move()
               else stuck_iterate = 0;
 
               // decrement dtremain and reset post-bounce xnew
-              // apply moveperturb() again since re-computing xnew
-              //   otherwise ynew < 0.0 could result for axisymmetric
-              //   also check post-perturb that (vnew dot norm) > 0.0,
-              //   else will be moving into surf on next iteration
 
               dtremain *= 1.0 - minparam*frac;
               xnew[0] = x[0] + dtremain*v[0];
               xnew[1] = x[1] + dtremain*v[1];
-              if (DIM == 3) xnew[2] = x[2] + dtremain*v[2];
-
-              // NOTE: this code needs to change
-
-              if (perturbflag) {
-                (this->*moveperturb)(dtremain,xnew,v);
-                if (DIM == 3) {
-                  if (MathExtra::dot3(v,tri->norm) < 0.0) {
-                    char str[128];
-                    sprintf(str,
-                            "Particle %d on proc %d made bad perturbed bounce "
-                            "off surf %d on step " BIGINT_FORMAT,
-                            i,me,minsurf,update->ntimestep);
-                    error->one(FLERR,str);
-                  }
-                }
-                if (DIM == 2) {
-                  if (MathExtra::dot3(v,line->norm) < 0.0) {
-                    char str[128];
-                    sprintf(str,
-                            "Particle %d on proc %d made bad perturbed bounce "
-                            "off surf %d on step " BIGINT_FORMAT,
-                            i,me,minsurf,update->ntimestep);
-                    error->one(FLERR,str);
-                  }
-                }
-              }
+              if (DIM != 2) xnew[2] = x[2] + dtremain*v[2];
 
               exclude = minsurf;
               nscollide_one++;
@@ -685,37 +731,50 @@ template < int DIM, int SURF > void Update::move()
                          x[0],x[1],xnew[0],xnew[1],
                          minparam,frac,dtremain);
               }
+              if (DIM == 1) {
+                if (ntimestep == MOVE_DEBUG_STEP && 
+                    (MOVE_DEBUG_ID == particles[i].id ||
+                     (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
+                  printf("POST COLLISION %d: %g %g: %g %g: %g %g %g\n",
+                         MOVE_DEBUG_INDEX,
+                         x[0],x[1],
+                         xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
+                         minparam,frac,dtremain);
+              }
 #endif
 
-              
               // if particle not stuck on surfs, continue advection while loop
               // if stuck, mark it for DISCARD, and drop out of SURF code
 
               if (stuck_iterate < MAXSTUCK) continue;
               particles[i].flag = PDISCARD;
               nstuck++;
-            }
 
-            // END of cflag if section that performed collision
+            } // END of cflag if section that performed collision
 
             // no collision, so restore saved xnew if changed it above
             
             if (outface != INTERIOR) {
               xnew[0] = xhold[0];
               xnew[1] = xhold[1];
-              if (DIM == 3) xnew[2] = xhold[2];
+              if (DIM != 2) xnew[2] = xhold[2];
             }
-          }
-        } 
 
-        // END of code specific to surfaces
+          } // END of if test for any surfs in this cell
+        } // END of code specific to surfaces
+
+        // break from advection loop if discarding particle
+
+        if (particles[i].flag == PDISCARD) break;
 
         // no cell crossing and no surface collision
-        // set final particle position to xnew
-        // if migrating to another proc, 
+        // set final particle position to xnew, then break from advection loop
+        // for axisymmetry, must first remap linear xnew and v
+        // if migrating to another proc,
         //   flag as PDONE so new proc won't move it more on this step
         
         if (outface == INTERIOR) {
+          if (DIM == 1) axi_remap(xnew,v);
           x[0] = xnew[0];
           x[1] = xnew[1];
           if (DIM == 3) x[2] = xnew[2];
@@ -725,21 +784,30 @@ template < int DIM, int SURF > void Update::move()
           
         // particle crosses cell face
         // decrement dtremain in case particle is passed to another proc
-        // reset particle position exactly on cell face
-          
-        exclude = -1;
+        // for axisymmetry, must then remap linear x and v
+        // reset particle x to be exactly on cell face
+        // for axisymmetry, must reset xnew for next iteration since v changed
+
         dtremain *= 1.0-frac;
-          
+        exclude = -1;
+
         x[0] += frac * (xnew[0]-x[0]);
         x[1] += frac * (xnew[1]-x[1]);
-        if (DIM == 3) x[2] += frac * (xnew[2]-x[2]);
-          
+        if (DIM != 2) x[2] += frac * (xnew[2]-x[2]);
+        if (DIM == 1) axi_remap(x,v);
+
         if (outface == XLO) x[0] = lo[0];
         else if (outface == XHI) x[0] = hi[0]; 
         else if (outface == YLO) x[1] = lo[1];
         else if (outface == YHI) x[1] = hi[1];
         else if (outface == ZLO) x[2] = lo[2];
         else if (outface == ZHI) x[2] = hi[2]; 
+
+        if (DIM == 1) {
+          xnew[0] = x[0] + dtremain*v[0];
+          xnew[1] = x[1] + dtremain*v[1];
+          xnew[2] = x[2] + dtremain*v[2];
+        }
 
         // nflag = type of neighbor cell: child, parent, unknown, boundary
         // if parent, use id_find_child to identify child cell
@@ -758,7 +826,7 @@ template < int DIM, int SURF > void Update::move()
             if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
               icell = split3d(icell,x);
           }
-          if (DIM == 2 && SURF) {
+          if (DIM < 3 && SURF) {
             if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
               icell = split2d(icell,x);
           }
@@ -769,7 +837,7 @@ template < int DIM, int SURF > void Update::move()
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
                 icell = split3d(icell,x);
             }
-            if (DIM == 2 && SURF) {
+            if (DIM < 3 && SURF) {
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
                 icell = split2d(icell,x);
             }
@@ -779,6 +847,7 @@ template < int DIM, int SURF > void Update::move()
         // neighbor cell is global boundary
         // tally boundary stats if requested
         // collide() updates x,v,xnew as needed due to boundary interaction
+        // for axisymmetric, must then recalculate xnew since v may have changed
         // OUTFLOW: exit with particle flag = PDISCARD
         // PERIODIC: new cell via same logic as above for child/parent/unknown
         // other = reflected particle stays in same grid cell
@@ -797,6 +866,12 @@ template < int DIM, int SURF > void Update::move()
           } else
             bflag = domain->collide(&particles[i],outface,icell,xnew);
 
+          if (DIM == 1) {
+            xnew[0] = x[0] + dtremain*v[0];
+            xnew[1] = x[1] + dtremain*v[1];
+            xnew[2] = x[2] + dtremain*v[2];
+          }
+
           if (bflag == OUTFLOW) {
             particles[i].flag = PDISCARD;
             nexit_one++;
@@ -809,7 +884,7 @@ template < int DIM, int SURF > void Update::move()
                 if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
                   icell = split3d(icell,x);
               }
-              if (DIM == 2 && SURF) {
+              if (DIM < 3 && SURF) {
                 if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
                   icell = split2d(icell,x);
               }
@@ -820,7 +895,7 @@ template < int DIM, int SURF > void Update::move()
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
                     icell = split3d(icell,x);
                 }
-                if (DIM == 2 && SURF) {
+                if (DIM < 3 && SURF) {
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
                     icell = split2d(icell,x);
                 }
@@ -893,9 +968,6 @@ template < int DIM, int SURF > void Update::move()
           ncomm_one++;
         }
       }
-
-      // END of while loop advecting one particle
-
     }
 
     // END of pstart/pstop loop advecting all particles
@@ -936,6 +1008,33 @@ template < int DIM, int SURF > void Update::move()
   nscheck_running += nscheck_one;
   nscollide_running += nscollide_one;
 }
+
+/* ----------------------------------------------------------------------
+   NOTE: can get rid of this?
+   check for axisymmetric move crossing vertical line in (x,r) space
+   vertical line is at xvert between ylo and yhi
+   move starting at x with v for tdelta
+   return 1 if crosses, 0 if not
+   if crosses, also return frac = fraction of tdelta at crossing
+------------------------------------------------------------------------- */
+
+/*
+int Update::axi_vertical_line(double tdelta, double *x, double *v,
+                              double xvert, double ylo, double yhi,
+                              double &frac)
+{
+  // method would not have been called if v[0] = 0.0 or tc < 0 or tc > tdelta
+
+  double tc = (xvert - x[0]) / v[0];
+
+  double ynew = x[1] + tc*v[1];
+  double znew = x[2] + tc*v[2];
+  double yc = sqrt(ynew*ynew + znew*znew);
+  if (yc < ylo || yc > yhi) return 0;
+  frac = tc/tdelta;
+  return 1;
+}
+*/
 
 /* ----------------------------------------------------------------------
    particle is entering split parent icell at x

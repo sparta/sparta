@@ -647,7 +647,8 @@ void FixInflow::start_of_step()
 	for (int m = 0; m < ninsert; m++) {
 	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
 	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	  x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+	  if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+          else x[2] = 0.0;
 
 	  do {
 	    do beta_un = (6.0*random->gaussian() - 3.0);
@@ -693,7 +694,8 @@ void FixInflow::start_of_step()
 
 	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
 	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        else x[2] = 0.0;
 
 	do {
 	  do {

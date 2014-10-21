@@ -18,6 +18,7 @@
 #define MIN(A,B) ((A) < (B)) ? (A) : (B)
 #define MAX(A,B) ((A) > (B)) ? (A) : (B)
 
+#define EPS 1.0e-8
 #define EPSSQ 1.0e-16
 #define EPSSQNEG -1.0e-16
 
@@ -607,6 +608,136 @@ bool line_line_intersect(double *start, double *stop,
   else if (dotstop > 0.0) side = ONSURF2OUT;
   else side = ONSURF2IN;
 
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+   check for axisymmetric move crossing general line segment in (x,r) space
+   line segment from v1 to v2 in axisymmetry plane
+   3d move starting at x with v for tdelta
+   solve quadratic eq to determine if non-linear trajectory intersects line seg
+   return 1 if yes, 0 if no
+   if yes, also return:
+     param = fraction of tdelta at collision pt
+     xc = x,y position of collision pt in axisymmetry plane
+     vc = vy,vz velocity at collision pt in axisymmetry plane
+     side = side of line that was hit = OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN
+------------------------------------------------------------------------- */
+
+bool axi_line_intersect(double tdelta, double *x, double *v,
+                       double *v1, double *v2, double *norm,
+                       double *xc, double *vc, 
+                       double &param, int &side)
+{
+  double edge[3],pvec[3];
+
+  double x21 = v2[0] - v1[0];
+  double y21 = v2[1] - v1[1];
+  double x21sq = x21*x21;
+  double y21sq = y21*y21;
+  double dconst = x21*v1[1] - y21*v1[0];
+
+  double a = x21sq*(v[1]*v[1] + v[2]*v[2]) - y21sq*v[1]*v[1];
+  double b = x21sq*x[1]*v[1] - y21sq*x[0]*v[0] - y21*v[0]*dconst;
+  double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] - 2.0*y21*x[0]*dconst;
+
+  double arg = b*b - a*c;
+  if (arg < 0.0) return false;
+  double sarg = sqrt(arg);
+
+  double t1 = (-b + sarg) / a;
+  double t2 = (-b - sarg) / a;
+  double tc = MIN(t1,t2);
+  if (tc < 0.0) tc = MAX(t1,t2);
+  if (tc < 0.0) return false;
+  if (tc > tdelta) return false;
+
+  // set xc[0,1] and vc[1,2] to values in axisymmetric plane
+
+  xc[0] = x[0] + tc*v[0];
+  double ynew = x[1] + tc*v[1];
+  double znew = x[2] + tc*v[2];
+  xc[1] = sqrt(ynew*ynew + znew*znew);
+  xc[2] = 0.0;
+
+  double rn = ynew / xc[1];
+  double wn = znew / xc[1];
+  vc[0] = v[0];
+  vc[1] = v[1]*rn + v[2]*wn;
+  vc[2] = -v[1]*wn + v[2]*rn;
+
+  // test if intersection pt is inside line segment
+  // edge = line vector from v1 to v2
+  // pvec = vector from either line vertex to intersection point
+  // if dot product of edge with pvec < or > 0.0 for each pvec,
+  //   intersection point is outside line segment
+  // use EPSSQ and EPSSQNEG instead of 0.0 for following case:
+  //   intersection pt is on line end pt where 2 lines come together
+  //   want it to detect collision with at least one of lines
+  //   point can be epsilon away from end pt
+  //   this leads to pvec being epsilon vec in opposite dirs for 2 lines
+  //   this can lead to dot3() being negative espilon^2 for both lines,
+  //     depending on direction of 2 lines
+  //   thus this can lead to no collision with either line
+  //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
+
+  MathExtra::sub3(v2,v1,edge);
+  MathExtra::sub3(xc,v1,pvec);
+  if (MathExtra::dot3(edge,pvec) < EPSSQNEG) return false;
+  MathExtra::sub3(xc,v2,pvec);
+  if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
+
+  // there is a valid intersection with line segment
+  // set side to ONSUFR, OUTSIDE, or INSIDE
+  // in axisymmetric plane, particle path is curved
+  // regardless of where particle starts, it can hit front or back or surf
+  // use velocity vector at collision pt to determine side
+
+  // NOTE: need to allow for all 4 options of side
+  // NOTE: need to have no collision if particle starts and stops on line
+  // see line_line collision for similar
+
+  side = OUTSIDE;
+
+  param = tc/tdelta;
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+   check for axisymmetric move crossing horizontal line in (x,r) space
+   horizontal line is at yhoriz
+   move starting at x with v for tdelta
+   return 1 if crosses, 0 if not
+   if crosses, also return frac = fraction of tdelta at crossing
+------------------------------------------------------------------------- */
+
+bool axi_horizontal_line(double tdelta, double *x, double *v, 
+                         double yhoriz, double &frac)
+{
+  double numer = -v[1]*x[1];
+  double denom = v[1]*v[1] + v[2]*v[2];
+  double arg = yhoriz*yhoriz*denom - v[2]*v[2]*x[1]*x[1];
+  if (arg < 0.0) return false;
+  double sarg = sqrt(arg);
+
+  double t1 = (numer + sarg) / denom;
+  double t2 = (numer - sarg) / denom;
+  double tc;
+
+  // if particle starts on line (due to cell crossing)
+  // discard crossing at time = 0.0 or epsilon (due to round-off)
+
+  if (x[1] == yhoriz) {
+    if (fabs(t1/tdelta) < fabs(t2/tdelta)) tc = t2;
+    else tc = t1;
+  } else {
+    tc = MIN(t1,t2);
+    if (tc < 0.0) tc = MAX(t1,t2);
+  }
+
+  if (tc < 0.0 || tc > tdelta) return false;
+
+  frac = tc/tdelta;
   return true;
 }
 

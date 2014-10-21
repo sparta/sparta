@@ -114,9 +114,9 @@ void FixGridCheck::end_of_step()
 	x[2] < lo[2] || x[2] > hi[2]) {
       if (outflag == ERROR) {
         //printf("BAD %d %d " CELLINT_FORMAT ": "
-        //       "%g %g %g: %g %g: %g %g: %g %g\n",
+        //       "x %g %g %g: lo %g %g %g hi: %g %g %g\n",
         //       i,icell,cells[icell].id,x[0],x[1],x[2],
-        //       lo[0],hi[0],lo[1],hi[1],lo[2],hi[2]);
+        //       lo[0],lo[1],lo[2],hi[0],hi[1],hi[2]);
         char str[128];
         sprintf(str,
                 "Particle %d,%d on proc %d is outside cell " CELLINT_FORMAT 
