@@ -50,10 +50,10 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 2078229679 // particle ID
+#define MOVE_DEBUG_ID 1839563626   // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 1       // particle index on owning proc
-#define MOVE_DEBUG_STEP 1       // timestep
+#define MOVE_DEBUG_INDEX 1147       // particle index on owning proc
+#define MOVE_DEBUG_STEP 2       // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -508,8 +508,9 @@ template < int DIM, int SURF > void Update::move()
             (MOVE_DEBUG_ID == particles[i].id ||
              (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) {
           if (outface != INTERIOR)
-            printf("  OUTFACE %d out: %d %d\n",
-                   outface,grid->neigh_decode(nmask,outface),neigh[outface]);
+            printf("  OUTFACE %d out: %d %d, frac %g\n",
+                   outface,grid->neigh_decode(nmask,outface),
+                   neigh[outface],frac);
           else
             printf("  INTERIOR %d %d\n",outface,INTERIOR);
         }
@@ -548,7 +549,7 @@ template < int DIM, int SURF > void Update::move()
 
             if (DIM == 1) {
               if (outface == INTERIOR) dtsurf = dtremain;
-              else dtsurf = dtremain * (1.0-frac);
+              else dtsurf = dtremain * frac;
             }
 
             // check for collisions with triangles or lines in cell
@@ -576,14 +577,15 @@ template < int DIM, int SURF > void Update::move()
                 hitflag = Geometry::
                   line_line_intersect(x,xnew,
                                       pts[line->p1].x,pts[line->p2].x,
-                                      line->norm,xc,param,side);
+                                      line->norm,xc,param,side,particles[i].id);
               }
               if (DIM == 1) {
                 line = &lines[isurf];
                 hitflag = Geometry::
                   axi_line_intersect(dtsurf,x,v,
                                      pts[line->p1].x,pts[line->p2].x,
-                                     line->norm,xc,vc,param,side);
+                                     line->norm,xc,vc,param,side,particles[i].id);
+                if (particles[i].id == 1839563626) printf("HIT %d\n",hitflag);
               }
               
 #ifdef MOVE_DEBUG

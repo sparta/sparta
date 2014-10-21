@@ -546,7 +546,7 @@ int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
 
 bool line_line_intersect(double *start, double *stop,
 			 double *v0, double *v1, double *norm, 
-			 double *point, double &param, int &side)
+			 double *point, double &param, int &side, int id)
 {
   double vec[3],start2stop[3],edge[3],pvec[3];
 
@@ -569,6 +569,10 @@ bool line_line_intersect(double *start, double *stop,
   MathExtra::sub3(v0,start,vec);
   MathExtra::sub3(stop,start,start2stop);
   param = MathExtra::dot3(norm,vec) / MathExtra::dot3(norm,start2stop);
+
+  if (id == 1839563626) 
+    printf("PARAM %g %d\n",param,param > 1.0);
+
   if (param < 0.0 || param > 1.0) return false;
 
   // point = intersection pt with line B
@@ -627,7 +631,7 @@ bool line_line_intersect(double *start, double *stop,
 bool axi_line_intersect(double tdelta, double *x, double *v,
                        double *v1, double *v2, double *norm,
                        double *xc, double *vc, 
-                       double &param, int &side)
+                        double &param, int &side, int id)
 {
   double edge[3],pvec[3];
 
@@ -637,11 +641,15 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   double y21sq = y21*y21;
   double dconst = x21*v1[1] - y21*v1[0];
 
-  double a = x21sq*(v[1]*v[1] + v[2]*v[2]) - y21sq*v[1]*v[1];
+  double a = x21sq*(v[1]*v[1] + v[2]*v[2]) - y21sq*v[0]*v[0];
   double b = x21sq*x[1]*v[1] - y21sq*x[0]*v[0] - y21*v[0]*dconst;
-  double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] - 2.0*y21*x[0]*dconst;
+  double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] - 
+    2.0*y21*x[0]*dconst - dconst*dconst;
 
   double arg = b*b - a*c;
+  if (v1[0] == v2[0]) arg = 0.0;    // avoids round-off issue with vertical line
+  //if (id == 577002578) 
+  //printf("LINE %g\n",arg);
   if (arg < 0.0) return false;
   double sarg = sqrt(arg);
 
@@ -649,6 +657,10 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   double t2 = (-b - sarg) / a;
   double tc = MIN(t1,t2);
   if (tc < 0.0) tc = MAX(t1,t2);
+  //if (id == 577002578) 
+  //printf("T1T2 %g %g: sarg %g: tc %15.12g tdelta %15.12g %d\n",
+  //        t1,t2,sarg,tc,tdelta,
+  //        tc > tdelta);
   if (tc < 0.0) return false;
   if (tc > tdelta) return false;
 
@@ -658,6 +670,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   double ynew = x[1] + tc*v[1];
   double znew = x[2] + tc*v[2];
   xc[1] = sqrt(ynew*ynew + znew*znew);
+  //if (id == 577002578) printf("COLPT %g %g %g: %g %g: tc %g\n",x[0],x[1],x[2],xc[0],xc[1],tc);
   xc[2] = 0.0;
 
   double rn = ynew / xc[1];
@@ -688,16 +701,20 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
 
   // there is a valid intersection with line segment
-  // set side to ONSUFR, OUTSIDE, or INSIDE
+  // set side to OUTSIDE or INSIDE
+  // no ONSURF case b/c surface is curved
+  //  what if tc = param = 0.0 ??
+  //  don't think particle should start on surf
   // in axisymmetric plane, particle path is curved
   // regardless of where particle starts, it can hit front or back or surf
   // use velocity vector at collision pt to determine side
 
-  // NOTE: need to allow for all 4 options of side
-  // NOTE: need to have no collision if particle starts and stops on line
-  // see line_line collision for similar
+  double dot = MathExtra::dot3(norm,vc);
+  if (dot < 0.0) side = OUTSIDE;
+  else side = INSIDE;
 
-  side = OUTSIDE;
+  //  if (side == INSIDE) printf("INSIDE ID %d: norm %g %g %g, vc %g %g %g, vel %g %g %g\n",
+  //                             id,norm[0],norm[1],norm[2],vc[0],vc[1],vc[2],v[0],v[1],v[2]);
 
   param = tc/tdelta;
   return true;
