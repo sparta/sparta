@@ -188,6 +188,13 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
         vxdelta = wy*(x[2]-pz) - wz*(x[1]-py);
         vydelta = wz*(x[0]-px) - wx*(x[2]-pz);
         vzdelta = wx*(x[1]-py) - wy*(x[0]-px);
+
+    // correction for difference in slope between true sphere/cylinder and faceted surface
+    
+        double correction = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
+        vxdelta = vxdelta - correction * norm[0];
+        vydelta = vydelta - correction * norm[1];
+        vzdelta = vzdelta - correction * norm[2];
       }
       v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0] + vxdelta;
       v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1] + vydelta;
