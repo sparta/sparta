@@ -30,13 +30,15 @@ keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or 
     theta = rotate surface by this angle in counter-clockwise direction (degrees)
     Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
   invert args = none
-  clip args = none :pre
+  clip args = none or fraction
+    fraction = push points close to the box boundary to the boundary (optional) :pre
 :ule
 
 [Examples:]
 
 read_surf 1 surf.sphere
 read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip :pre
+read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6 :pre
 
 [Description:]
 
@@ -237,7 +239,18 @@ statistics of the clipped surface printed out by this command,
 including the minimum size of line and triangle edge lengths.  It is
 possible that very short lines or very small triangles will be created
 near the box surface due to the clipping operation, depending on the
-coordinates of the initial unclipped points.
+coordinates of the initial unclipped points. 
+
+If this is the case, an optional {fraction} argument can be appended
+to the {clip} keyword.  {Fraction} is a unitless value which is
+converted to a distance {delta} in each dimension where delta =
+fraction * (boxhi - boxlo).  If a point is nearer than delta to the lo
+or hi boundary in a dimension, the point is moved to be on the
+boundary, before the clipping operation takes place.  This can prevent
+tiny surface elements from being created due to clipping.  If
+{fraction} is not specified, the default value is 0.0, which means
+points are not moved.  If specified, {fraction} must be a value
+between 0.0 and 0.5.
 
 :line
 
