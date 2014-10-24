@@ -1241,3 +1241,59 @@ void Input::units()
     error->all(FLERR,"Units command after simulation box is defined");
   update->set_units(arg[0]);
 }
+
+/* ---------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------- */
+
+/* ----------------------------------------------------------------------
+   read a floating point value from a string
+   generate an error if not a legitimate floating point value
+   called by various commands to check validity of their arguments
+------------------------------------------------------------------------- */
+
+double Input::numeric(const char *file, int line, char *str)
+{
+  if (!str)
+    error->all(file,line,"Expected floating point parameter "
+               "in input script or data file");
+  int n = strlen(str);
+  if (n == 0)
+    error->all(file,line,"Expected floating point parameter "
+               "in input script or data file");
+
+  for (int i = 0; i < n; i++) {
+    if (isdigit(str[i])) continue;
+    if (str[i] == '-' || str[i] == '+' || str[i] == '.') continue;
+    if (str[i] == 'e' || str[i] == 'E') continue;
+    error->all(file,line,"Expected floating point parameter "
+               "in input script or data file");
+  }
+
+  return atof(str);
+}
+
+/* ----------------------------------------------------------------------
+   read an integer value from a string
+   generate an error if not a legitimate integer value
+   called by various commands to check validity of their arguments
+------------------------------------------------------------------------- */
+
+int Input::inumeric(const char *file, int line, char *str)
+{
+  if (!str) 
+    error->all(file,line,
+               "Expected integer parameter in input script or data file");
+  int n = strlen(str);
+  if (n == 0) 
+    error->all(file,line,
+               "Expected integer parameter in input script or data file");
+
+  for (int i = 0; i < n; i++) {
+    if (isdigit(str[i]) || str[i] == '-' || str[i] == '+') continue;
+    error->all(file,line,
+               "Expected integer parameter in input script or data file");
+  }
+
+  return atoi(str);
+}

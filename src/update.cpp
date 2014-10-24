@@ -50,10 +50,10 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 1839563626   // particle ID
+#define MOVE_DEBUG_ID -1   // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 1147       // particle index on owning proc
-#define MOVE_DEBUG_STEP 2       // timestep
+#define MOVE_DEBUG_INDEX 3622       // particle index on owning proc
+#define MOVE_DEBUG_STEP 26       // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -472,11 +472,12 @@ template < int DIM, int SURF > void Update::move()
 
           rnew = sqrt(xnew[1]*xnew[1] + xnew[2]*xnew[2]);
           if (rnew >= hi[1]) {
-            if (Geometry::axi_horizontal_line(dtremain,x,v,hi[1],newfrac))
+            if (Geometry::axi_horizontal_line(dtremain,x,v,hi[1],newfrac)) {
               if (newfrac < frac) {
                 frac = newfrac;
                 outface = YHI;
               }
+            }
           }
         }
           
@@ -577,15 +578,14 @@ template < int DIM, int SURF > void Update::move()
                 hitflag = Geometry::
                   line_line_intersect(x,xnew,
                                       pts[line->p1].x,pts[line->p2].x,
-                                      line->norm,xc,param,side,particles[i].id);
+                                      line->norm,xc,param,side);
               }
               if (DIM == 1) {
                 line = &lines[isurf];
                 hitflag = Geometry::
-                  axi_line_intersect(dtsurf,x,v,
+                  axi_line_intersect(dtsurf,x,v,outface,lo,hi,
                                      pts[line->p1].x,pts[line->p2].x,
-                                     line->norm,xc,vc,param,side,particles[i].id);
-                if (particles[i].id == 1839563626) printf("HIT %d\n",hitflag);
+                                     line->norm,xc,vc,param,side);
               }
               
 #ifdef MOVE_DEBUG

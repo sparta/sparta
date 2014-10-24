@@ -31,9 +31,9 @@ namespace Geometry {
   bool line_line_intersect(double *, double *, 
 			   double *, double *, double *,
 			   double *, double &param, int &, int=0);
-  bool axi_line_intersect(double, double *, double *, 
+  bool axi_line_intersect(double, double *, double *, int, double *, double *, 
                           double *, double *, double *,
-                          double *, double *, double &, int &, int);
+                          double *, double *, double &, int &);
   bool axi_horizontal_line(double, double *, double *, double, double &);
   bool line_tri_intersect(double *, double *, 
 			  double *, double *, double *, double *,

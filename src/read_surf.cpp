@@ -15,6 +15,7 @@
 #include "mpi.h"
 #include "string.h"
 #include "stdlib.h"
+#include "ctype.h"
 #include "read_surf.h"
 #include "math_extra.h"
 #include "surf.h"
@@ -247,6 +248,17 @@ void ReadSurf::command(int narg, char **arg)
       invert();
       iarg += 1;
     } else if (strcmp(arg[iarg],"clip") == 0) {
+      double frac = 0.0;
+      if (iarg+1 < narg) {
+        char c = arg[iarg+1][0];
+        if (isdigit(c) || c == '-' || c == '+' || c == '.') {
+          frac = atof(arg[iarg+1]);
+          if (frac < 0.0 || frac >= 0.5) 
+            error->all(FLERR,"Invalid read_surf command");
+          iarg++;
+        }
+      }
+      if (frac > 0.0) push_points_to_boundary(frac);
       if (dimension == 2) clip2d();
       else clip3d();
       iarg += 1;
@@ -1187,6 +1199,42 @@ void ReadSurf::clip3d()
     if (logfile) {
       fprintf(logfile,"  clipped to %d points\n",npoint_new);
       fprintf(logfile,"  clipped to %d tris\n",ntri_new);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   push all points to box boundary that are just inside
+   delta = user-specified frac * (hi-lo)
+   this avoids tiny clipped surf elements
+------------------------------------------------------------------------- */
+
+void ReadSurf::push_points_to_boundary(double frac)
+{
+  double *x;
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  double xdelta = frac * (boxhi[0]-boxlo[0]);
+  double ydelta = frac * (boxhi[1]-boxlo[1]);
+  double zdelta = frac * (boxhi[2]-boxlo[2]);
+
+  int n = npoint_old + npoint_new;
+  for (int i = npoint_old; i < n; i++) {
+    x = pts[i].x;
+    if (x[0] >= boxlo[0] && x[0] <= boxhi[0]) {
+      if (x[0]-boxlo[0] < xdelta) x[0] = boxlo[0];
+      else if (boxhi[0]-x[0] < xdelta) x[0] = boxhi[0];
+    }
+    if (x[1] >= boxlo[1] && x[1] <= boxhi[1]) {
+      if (x[1]-boxlo[1] < ydelta) x[1] = boxlo[1];
+      else if (boxhi[1]-x[1] < ydelta) x[1] = boxhi[1];
+    }
+    if (dimension == 2) continue;
+    if (x[2] >= boxlo[2] && x[2] <= boxhi[2]) {
+      if (x[2]-boxlo[2] < zdelta) x[2] = boxlo[2];
+      else if (boxhi[2]-x[2] < zdelta) x[2] = boxhi[2];
     }
   }
 }

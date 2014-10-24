@@ -99,6 +99,11 @@ class Input : protected Pointers {
   void unfix();
   void units();
   void weight();
+
+  // arg checking
+
+  double numeric(const char *, int, char *);
+  int inumeric(const char *, int, char *);
 };
 
 }

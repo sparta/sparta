@@ -570,9 +570,6 @@ bool line_line_intersect(double *start, double *stop,
   MathExtra::sub3(stop,start,start2stop);
   param = MathExtra::dot3(norm,vec) / MathExtra::dot3(norm,start2stop);
 
-  if (id == 1839563626) 
-    printf("PARAM %g %d\n",param,param > 1.0);
-
   if (param < 0.0 || param > 1.0) return false;
 
   // point = intersection pt with line B
@@ -629,48 +626,64 @@ bool line_line_intersect(double *start, double *stop,
 ------------------------------------------------------------------------- */
 
 bool axi_line_intersect(double tdelta, double *x, double *v,
-                       double *v1, double *v2, double *norm,
-                       double *xc, double *vc, 
-                        double &param, int &side, int id)
+                        int outface, double *lo, double *hi,
+                        double *v1, double *v2, double *norm,
+                        double *xc, double *vc, 
+                        double &param, int &side)
 {
   double edge[3],pvec[3];
+  double tc,frac;
+        
+  if (v1[0] == v2[0]) {    // vertical line segment
+    if (outface == 0 && v1[0] == lo[0]) tc = tdelta;
+    else if (outface == 1 && v1[0] == hi[0]) tc = tdelta;
+    else {
+      if (v[0] == 0.0) return false;
+      tc = (v1[0] - x[0]) / v[0];
+    }
 
-  double x21 = v2[0] - v1[0];
-  double y21 = v2[1] - v1[1];
-  double x21sq = x21*x21;
-  double y21sq = y21*y21;
-  double dconst = x21*v1[1] - y21*v1[0];
+  } else if (v1[1] == v2[1]) {    // horizontal line segment
+    if (outface == 2 && v1[1] == lo[1]) tc = tdelta;
+    else if (outface == 3 && v1[1] == hi[1]) tc = tdelta;
+    else {
+      if (axi_horizontal_line(tdelta,x,v,v1[1],frac)) tc = frac*tdelta;
+      else return false;
+    }
 
-  double a = x21sq*(v[1]*v[1] + v[2]*v[2]) - y21sq*v[0]*v[0];
-  double b = x21sq*x[1]*v[1] - y21sq*x[0]*v[0] - y21*v[0]*dconst;
-  double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] - 
-    2.0*y21*x[0]*dconst - dconst*dconst;
+  } else {
+    double x21 = v2[0] - v1[0];
+    double y21 = v2[1] - v1[1];
+    double x21sq = x21*x21;
+    double y21sq = y21*y21;
+    double dconst = x21*v1[1] - y21*v1[0];
 
-  double arg = b*b - a*c;
-  if (v1[0] == v2[0]) arg = 0.0;    // avoids round-off issue with vertical line
-  //if (id == 577002578) 
-  //printf("LINE %g\n",arg);
-  if (arg < 0.0) return false;
-  double sarg = sqrt(arg);
+    double a = x21sq*(v[1]*v[1] + v[2]*v[2]) - y21sq*v[0]*v[0];
+    double b = x21sq*x[1]*v[1] - y21sq*x[0]*v[0] - y21*v[0]*dconst;
+    double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] - 
+      2.0*y21*x[0]*dconst - dconst*dconst;
 
-  double t1 = (-b + sarg) / a;
-  double t2 = (-b - sarg) / a;
-  double tc = MIN(t1,t2);
-  if (tc < 0.0) tc = MAX(t1,t2);
-  //if (id == 577002578) 
-  //printf("T1T2 %g %g: sarg %g: tc %15.12g tdelta %15.12g %d\n",
-  //        t1,t2,sarg,tc,tdelta,
-  //        tc > tdelta);
+    double arg = b*b - a*c;
+    if (arg < 0.0) return false;
+    double sarg = sqrt(arg);
+
+    double t1 = (-b + sarg) / a;
+    double t2 = (-b - sarg) / a;
+    tc = MIN(t1,t2);
+    if (tc < 0.0) tc = MAX(t1,t2);
+  }
+
   if (tc < 0.0) return false;
   if (tc > tdelta) return false;
 
   // set xc[0,1] and vc[1,2] to values in axisymmetric plane
+  // insure xc is on vertical or horizontal surf
 
   xc[0] = x[0] + tc*v[0];
+  if (v1[0] == v2[0]) xc[0] = v1[0];
   double ynew = x[1] + tc*v[1];
   double znew = x[2] + tc*v[2];
   xc[1] = sqrt(ynew*ynew + znew*znew);
-  //if (id == 577002578) printf("COLPT %g %g %g: %g %g: tc %g\n",x[0],x[1],x[2],xc[0],xc[1],tc);
+  if (v1[1] == v2[1]) xc[1] = v1[1];
   xc[2] = 0.0;
 
   double rn = ynew / xc[1];
@@ -696,6 +709,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 
   MathExtra::sub3(v2,v1,edge);
   MathExtra::sub3(xc,v1,pvec);
+
   if (MathExtra::dot3(edge,pvec) < EPSSQNEG) return false;
   MathExtra::sub3(xc,v2,pvec);
   if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
@@ -712,9 +726,6 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   double dot = MathExtra::dot3(norm,vc);
   if (dot < 0.0) side = OUTSIDE;
   else side = INSIDE;
-
-  //  if (side == INSIDE) printf("INSIDE ID %d: norm %g %g %g, vc %g %g %g, vel %g %g %g\n",
-  //                             id,norm[0],norm[1],norm[2],vc[0],vc[1],vc[2],v[0],v[1],v[2]);
 
   param = tc/tdelta;
   return true;
@@ -741,11 +752,12 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
   double t2 = (numer - sarg) / denom;
   double tc;
 
-  // if particle starts on line (due to cell crossing)
-  // discard crossing at time = 0.0 or epsilon (due to round-off)
+  // if particle starts on line (e.g. due to cell crossing)
+  //   discard crossing at time = 0.0 or epsilon (due to round-off)
+  //   i.e. set tc to other solution
 
   if (x[1] == yhoriz) {
-    if (fabs(t1/tdelta) < fabs(t2/tdelta)) tc = t2;
+    if (fabs(t1) < fabs(t2)) tc = t2;
     else tc = t1;
   } else {
     tc = MIN(t1,t2);
