@@ -658,6 +658,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
     double dconst = x21*v1[1] - y21*v1[0];
 
     double a = x21sq*(v[1]*v[1] + v[2]*v[2]) - y21sq*v[0]*v[0];
+    if (a == 0.0) return false;
     double b = x21sq*x[1]*v[1] - y21sq*x[0]*v[0] - y21*v[0]*dconst;
     double c = x21sq*x[1]*x[1] - y21sq*x[0]*x[0] - 
       2.0*y21*x[0]*dconst - dconst*dconst;
@@ -742,20 +743,21 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 bool axi_horizontal_line(double tdelta, double *x, double *v, 
                          double yhoriz, double &frac)
 {
-  double numer = -v[1]*x[1];
-  double denom = v[1]*v[1] + v[2]*v[2];
-  double arg = yhoriz*yhoriz*denom - v[2]*v[2]*x[1]*x[1];
+  double a = v[1]*v[1] + v[2]*v[2];
+  if (a == 0.0) return false;
+  double b = -v[1]*x[1];
+  double arg = yhoriz*yhoriz*a - v[2]*v[2]*x[1]*x[1];
   if (arg < 0.0) return false;
   double sarg = sqrt(arg);
 
-  double t1 = (numer + sarg) / denom;
-  double t2 = (numer - sarg) / denom;
-  double tc;
+  double t1 = (b + sarg) / a;
+  double t2 = (b - sarg) / a;
 
   // if particle starts on line (e.g. due to cell crossing)
   //   discard crossing at time = 0.0 or epsilon (due to round-off)
   //   i.e. set tc to other solution
 
+  double tc;
   if (x[1] == yhoriz) {
     if (fabs(t1) < fabs(t2)) tc = t2;
     else tc = t1;
