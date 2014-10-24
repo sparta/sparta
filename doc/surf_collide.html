@@ -105,27 +105,34 @@ velocity, specified by the vector (Vx,Vy,Vz).  This velocity is added
 to the final post-collisional velocity of each particle that collides
 with the surface.
 </P>
-<P>Note that this keyword is designed for use with flat surfaces, such as
-the simulation box wall.  You should define the velocity vector to be
-tangential to the surface, with no normal component.  SPARTA does not
-check for these conditions.
-</P>
-<HR>
-
 <P>The keyword <I>rotate</I> can only be applied to the <I>diffuse</I> style.  It
 models the surface as if it were rotating with a constant angular
 velocity, specified by the vector W = (Wx,Wy,Wz), around the specified
-point P = (Px,Py,Pz).  When a particle collides with the surface at a
-point X = (x,y,z), the collision point has a velocity given by V =
-(Vx,Vy,Vz) = W cross (X-P).  This velocity is added to the final
-post-collisional velocity of the particle.
+point P = (Px,Py,Pz).  Note that W and P define the rotation axis.
+The magnitude of W defines the speed of rotation.  I.e. if the length
+of W = 2*pi then the surface is rotating at one revolution per time
+unit, where time units are defined by the <A HREF = "units.html">units</A> command.
 </P>
-<P>This keyword can be used to treat a simulation box boundary as a
-rotating wall, e.g. the end cap of an axisymmetric cylinder.  Or to
+<P>When a particle collides with the surface at a point X = (x,y,z), the
+collision point has a velocity given by V = (Vx,Vy,Vz) = W cross
+(X-P).  This velocity is added to the final post-collisional velocity
+of the particle.
+</P>
+<P>The <I>rotate</I> keyword can be used to treat a simulation box boundary as
+a rotating wall, e.g. the end cap of an axisymmetric cylinder.  Or to
 model a rotating object consisting of surface elements, e.g. a sphere.
 In either case, the wall or surface elements themselves do not change
 position due to rotation.  They are simply modeled as having a
 tangential velocity, as if the entire object were rotating.
+</P>
+<P>IMPORTANT NOTE: For both the <I>translate</I> and <I>rotate</I> keywords the
+added velocity can only be tangential to the surface, with no normal
+component since the surface is not actually moving in the normal
+direction.  SPARTA does not check that the specified translation or
+rotation produces a tangential velocity.  However if does enforce the
+condition by subtracting off any component of the added velocity that
+is normal to the simulation box boundary or individual surface
+element.
 </P>
 <HR>
 
