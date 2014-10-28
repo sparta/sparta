@@ -92,6 +92,7 @@ class CollideVSS : public Collide {
                                    Particle::OnePart *,
                                    Particle::OnePart *);
 
+  double sample_bl(RanPark *, double, double);
   void read_param_file(char *);
   int wordcount(char *, char **);
 };
