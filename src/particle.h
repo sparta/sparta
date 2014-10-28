@@ -28,13 +28,13 @@ class Particle : protected Pointers {
     char id[16];
     double molwt;
     double mass;
-    int rotdof;
     double rotrel;
-    int vibdof;
     double vibrel;
     double vibtemp;
     double specwt;
     double charge;
+    int rotdof,vibdof;
+    int internaldof;
   };
 
   Species *species;         // list of particle species info

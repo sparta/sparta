@@ -284,18 +284,15 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *&ip,
       }
 
       kp = &particle->particles[particle->nlocal-1];
-      bool has_int = 
-        species[ip->ispecies].rotdof > 0 || species[ip->ispecies].vibdof > 0 ||
-        species[jp->ispecies].rotdof > 0 || species[jp->ispecies].vibdof > 0 ||
-        species[kspecies].rotdof > 0 || species[kspecies].vibdof > 0;
-      if (has_int) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      if (species[ip->ispecies].internaldof || 
+          species[jp->ispecies].internaldof || species[kspecies].internaldof) 
+        EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);
 
     } else {
-      bool has_int = 
-        species[ip->ispecies].rotdof > 0 || species[ip->ispecies].vibdof > 0 ||
-        species[jp->ispecies].rotdof > 0 || species[jp->ispecies].vibdof > 0;
-      if (has_int) EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      if (species[ip->ispecies].internaldof || 
+          species[jp->ispecies].internaldof) 
+        EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_TwoBodyScattering(ip,jp);
     }
 

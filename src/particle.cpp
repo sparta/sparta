@@ -539,7 +539,7 @@ double Particle::erot(int isp, double temp_thermal, RanPark *erandom)
  if (species[isp].rotdof == 2)
    eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
  else {
-   a = 0.5*particle->species[isp].rotdof-1.;
+   a = 0.5*particle->species[isp].rotdof-1.0;
    while (1) {
      // energy cut-off at 10 kT
      erm = 10.0*erandom->uniform();
@@ -640,6 +640,9 @@ void Particle::read_species_file()
     fsp->vibtemp = atof(words[7]);
     fsp->specwt = atof(words[8]);
     fsp->charge = atof(words[9]);
+
+    if (fsp->rotdof > 0 || fsp->vibdof > 0) fsp->internaldof = 1;
+    else fsp->internaldof = 0;
 
     nfilespecies++;
   }
