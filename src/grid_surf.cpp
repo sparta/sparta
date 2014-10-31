@@ -217,7 +217,10 @@ void Grid::surf2grid(int subflag)
   if (surf->pushflag) {
     int npushall;
     MPI_Allreduce(&npush,&npushall,1,MPI_INT,MPI_SUM,world);
-    printf("  %d = number of pushed points\n",npushall);
+    if (comm->me == 0) {
+      if (screen) fprintf(screen,"  %d = number of pushed points\n",npushall);
+      if (logfile) fprintf(logfile,"  %d = number of pushed points\n",npushall);
+    }
   }
 }
 
