@@ -205,8 +205,20 @@ void Grid::surf2grid(int subflag)
   //double t3 = MPI_Wtime();
   //printf("TIME %g\n",t3-t2);
 
-  if (dim == 3) delete cut3d;
-  else delete cut2d;
+  int npush;
+  if (dim == 3) {
+    npush = cut3d->npush;
+    delete cut3d;
+  } else {
+    npush = cut2d->npush;
+    delete cut2d;
+  }
+
+  if (surf->pushflag) {
+    int npushall;
+    MPI_Allreduce(&npush,&npushall,1,MPI_INT,MPI_SUM,world);
+    printf("  %d = number of pushed points\n",npushall);
+  }
 }
 
 /* ----------------------------------------------------------------------
