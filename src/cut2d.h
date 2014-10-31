@@ -22,6 +22,9 @@ namespace SPARTA_NS {
 
 class Cut2d : protected Pointers {
  public:
+  int pushflag;          // set to 1 to push surf pts to cell surface
+  int npush;             // tally of points that are pushed
+
   struct Cline {
     double x[2],y[2];   // coords of end points of line clipped to cell
     int line;           // index in list of lines that intersect this cell
@@ -97,6 +100,7 @@ class Cut2d : protected Pointers {
   void clip(double *, double *, double *, double *);
 
   int ptflag(double *);
+  int push_to_cell(double *);
   int sameedge(double *, double *);
   int whichside(double *);
 

@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "string.h"
 #include "cut2d.h"
 #include "surf.h"
 #include "math_const.h"
@@ -25,17 +26,19 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};     // several files
 enum{EXTERIOR,INTERIOR,BORDER,INTBORD};
 enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
-#define EPSILON 1.0e-6
-#define TOLERANCE 1.0e-10
+#define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
 
 //#define VERBOSE
-#define VERBOSE_ID 23506
+#define VERBOSE_ID 2086
 
 /* ---------------------------------------------------------------------- */
 
 Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
 {
   axisymmetric = caller_axisymmetric;
+
+  pushflag = surf->pushflag;
+  npush = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -198,7 +201,8 @@ void Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
 int Cut2d::build_clines()
 {
   int m;
-  double *p1,*p2,*x,*y,*norm;
+  double p1[2],p2[2];
+  double *x,*y,*norm;
   Surf::Line *line;
   Cline *cline;
 
@@ -214,8 +218,13 @@ int Cut2d::build_clines()
   for (int i = 0; i < nsurf; i++) {
     m = surfs[i];
     line = &lines[m];
-    p1 = pts[line->p1].x;
-    p2 = pts[line->p2].x;
+    memcpy(p1,pts[line->p1].x,2*sizeof(double));
+    memcpy(p2,pts[line->p2].x,2*sizeof(double));
+
+    if (pushflag) {
+      npush += push_to_cell(p1);
+      npush += push_to_cell(p2);
+    }
 
     cline = &clines[n];
     cline->line = i;
@@ -827,6 +836,37 @@ int Cut2d::ptflag(double *pt)
   if (x < lo[0] || x > hi[0] || y < lo[1] || y > hi[1]) return EXTERIOR;
   if (x > lo[0] && x < hi[0] && y > lo[1] && y < hi[1]) return INTERIOR;
   return BORDER;
+}
+
+/* ----------------------------------------------------------------------
+   check if pt is inside cell and within EPSCELL of cell surface
+   if so, push to cell surface
+------------------------------------------------------------------------- */
+
+int Cut2d::push_to_cell(double *pt)
+{
+  double x = pt[0];
+  double y = pt[1];
+  double epsx = EPSCELL * (hi[0]-lo[0]);
+  double epsy = EPSCELL * (hi[1]-lo[1]);
+
+  int flag = 0;
+  if ((x >= lo[0] && x-lo[0] < epsx) || (x <= hi[0] && hi[0]-x < epsx)) {
+    if (y >= lo[1] && y <= hi[1]) {
+      flag = 1;
+      if (x-lo[0] < epsx) pt[0] = lo[0];
+      else pt[0] = hi[0];
+    }
+  }
+  if ((y >= lo[1] && y-lo[1] < epsy) || (y <= hi[1] && hi[1]-y < epsy)) {
+    if (x >= lo[0] && x <= hi[0]) {
+      flag = 1;
+      if (y-lo[1] < epsy) pt[1] = lo[1];
+      else pt[1] = hi[1];
+    }
+  }
+
+  return flag;
 }
 
 /* ----------------------------------------------------------------------
