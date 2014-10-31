@@ -13,6 +13,7 @@
 ------------------------------------------------------------------------- */
 
 #include "math.h"
+#include "string.h"
 #include "math_extra.h"
 #include "cut3d.h"
 #include "cut2d.h"
@@ -27,8 +28,10 @@ enum{CTRI,CTRIFACE,FACEPGON,FACE};
 enum{EXTERIOR,INTERIOR,BORDER};
 enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 
+#define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
+
 //#define VERBOSE
-#define VERBOSE_ID 23506
+#define VERBOSE_ID 2086
 
 /* ---------------------------------------------------------------------- */
 
@@ -37,6 +40,9 @@ Cut3d::Cut3d(SPARTA *sparta) : Pointers(sparta)
   cut2d = new Cut2d(sparta,0);
   memory->create(path1,12,3,"cut3d:path1");
   memory->create(path2,12,3,"cut3d:path2");
+
+  pushflag = surf->pushflag;
+  npush = 0;
 
   // DEBUG
   //totcell = totsurf = totvert = totedge = 0;
@@ -311,7 +317,7 @@ void Cut3d::add_tris()
 {
   int i,m;
   int e1,e2,e3,dir1,dir2,dir3;
-  double *p1,*p2,*p3;
+  double p1[3],p2[3],p3[3];
   Surf::Tri *tri;
   Vertex *vert;
   Edge *edge;
@@ -328,9 +334,15 @@ void Cut3d::add_tris()
   for (i = 0; i < nsurf; i++) {
     m = surfs[i];
     tri = &tris[m];
-    p1 = pts[tri->p1].x;
-    p2 = pts[tri->p2].x;
-    p3 = pts[tri->p3].x;
+    memcpy(p1,pts[tri->p1].x,3*sizeof(double));
+    memcpy(p2,pts[tri->p2].x,3*sizeof(double));
+    memcpy(p3,pts[tri->p3].x,3*sizeof(double));
+
+    if (pushflag) {
+      npush += push_to_cell(p1);
+      npush += push_to_cell(p2);
+      npush += push_to_cell(p3);
+    }
 
     vert = &verts[nvert];
     vert->active = 1;
@@ -696,7 +708,7 @@ void Cut3d::edge2face()
       iface = faces[0];
       norm_inward[0] = norm_inward[1] = norm_inward[2] = 0.0;
       if (iface % 2) norm_inward[iface/2] = -1.0;
-      norm_inward[iface/2] = 1.0;
+      else norm_inward[iface/2] = 1.0;
       if (edge->nvert == 1) ivert = edge->verts[0];
       else ivert = edge->verts[1];
       trinorm = verts[ivert].norm;
@@ -1686,6 +1698,46 @@ int Cut3d::ptflag(double *pt)
   if (x > lo[0] && x < hi[0] && y > lo[1] && y < hi[1] &&
       z > lo[2] && z < hi[2]) return INTERIOR;
   return BORDER;
+}
+
+/* ----------------------------------------------------------------------
+   check if pt is inside cell and within EPSCELL of cell surface
+   if so, push to cell surface
+------------------------------------------------------------------------- */
+
+int Cut3d::push_to_cell(double *pt)
+{
+  double x = pt[0];
+  double y = pt[1];
+  double z = pt[2];
+  double epsx = EPSCELL * (hi[0]-lo[0]);
+  double epsy = EPSCELL * (hi[1]-lo[1]);
+  double epsz = EPSCELL * (hi[2]-lo[2]);
+
+  int flag = 0;
+  if ((x >= lo[0] && x-lo[0] < epsx) || (x <= hi[0] && hi[0]-x < epsx)) {
+    if (y >= lo[1] && y <= hi[1] && z >= lo[2] && z <= hi[2]) {
+      flag = 1;
+      if (x-lo[0] < epsx) pt[0] = lo[0];
+      else pt[0] = hi[0];
+    }
+  }
+  if ((y >= lo[1] && y-lo[1] < epsy) || (y <= hi[1] && hi[1]-y < epsy)) {
+    if (x >= lo[0] && x <= hi[0] && z >= lo[2] && z <= hi[2]) {
+      flag = 1;
+      if (y-lo[1] < epsy) pt[1] = lo[1];
+      else pt[1] = hi[1];
+    }
+  }
+  if ((z >= lo[2] && z-lo[2] < epsz) || (z <= hi[2] && hi[2]-z < epsz)) {
+    if (x >= lo[0] && x <= hi[0] && y >= lo[1] && y <= hi[1]) {
+      flag = 1;
+      if (z-lo[2] < epsz) pt[2] = lo[2];
+      else pt[2] = hi[2];
+    }
+  }
+
+  return flag;
 }
 
 /* ----------------------------------------------------------------------
