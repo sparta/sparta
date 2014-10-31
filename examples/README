@@ -17,8 +17,9 @@ identical answers to those in the included log files.
 These are the sample problems in the various sub-directories.  Many
 are 2d problems so that they run quickly and can be easily visualized.
 
+axi = axisymmetric flow around a sphere
 chem = chemistry in a 3d box
-circle = 2d flow around a circular object
+circle = 2d flow around a circle
 collide = collisional motion in a 3d box
 free = free molecular motion in a 3d box
 sphere = 3d flow around a sphere
