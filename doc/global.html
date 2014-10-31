@@ -32,6 +32,9 @@
     ex,ey,ez = direction vector that gravity acts in
   <I>surfmax</I> value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
+  <I>surfpush</I> value = yes or no
+    yes = push surface element points near cell surface to the surface
+    no = do not push points to cell surface
   <I>gridcut</I> value = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   <I>comm/sort</I> value = yes or no
@@ -89,6 +92,20 @@ elements (lines in 2d, triangles in 3d) that can overlap a single grid
 cell.  The default is 100, which should be large enough for any
 simulation, unless you define very coarse grid cells (relative to the
 size of surface elements).
+</P>
+<P>The <I>surfpush</I> keyword enables a numerical round-off issue to be
+addressed when surface elements and intersected with grid cells to
+determine the cut-cell volume and splitting.  This is a one time
+operation that occurs when surface elements are defined via the
+<A HREF = "read_surf.html">read_surf</A> command.  In rare cases, if a surface
+element point is inside a grid cell, but within an epsilon distance
+from the surface of the grid cell, a numerical error can occur when
+computing the cut volume.  The error can be avoided if such points are
+shifted by epsilon to be on the cell surface (only during the
+computation of the cut volumes).  Setting <I>surfpush</I> to <I>yes</I> will
+perform this operation.  The default setting is <I>no</I>, which will not
+perform the shift.  Thus you should only need to use this keyword if
+an error occurs for the <A HREF = "read_surf.html">read_surf</A> command.
 </P>
 <P>The <I>gridcut</I> keyword determines the cutoff distance at which ghost
 grid cells will be stored by each processor.  Assuming the processor
@@ -215,7 +232,7 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, gridcut
-= -1.0, comm/sort = no, comm/style = neigh.
+0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, surfpush
+= no, gridcut = -1.0, comm/sort = no, comm/style = neigh.
 </P>
 </HTML>
