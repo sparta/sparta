@@ -1266,6 +1266,12 @@ void Update::global(int narg, char **arg)
       // reallocate paged data structs for variable-length surf into
       grid->allocate_surf_arrays();
       iarg += 2;
+    } else if (strcmp(arg[iarg],"surfpush") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"yes") == 0) surf->pushflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) surf->pushflag = 0;
+      else error->all(FLERR,"Illegal global command");
+      iarg += 2;
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       grid->cutoff = atof(arg[iarg+1]);
