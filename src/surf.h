@@ -58,10 +58,12 @@ class Surf : protected Pointers {
   int *mysurfs;             // indices of surf elements I own
   int nlocal;               // # of surf elements I own
 
-  class SurfCollide **sc;      // list of surface collision models
-  int nsc;                     // # of surface collision models
-  int maxsc;                   // max # of models in sc
+  class SurfCollide **sc;   // list of surface collision models
+  int nsc;                  // # of surface collision models
+  int maxsc;                // max # of models in sc
 
+  int pushflag;             // 1 if push surf pts to cell surface, 0 if not
+   
   Surf(class SPARTA *);
   ~Surf();
   void modify_params(int, char **);
