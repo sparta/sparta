@@ -18,7 +18,7 @@
 <H1></H1>
 
 SPARTA Documentation :c,h3
-31 Oct 2014 version :c,h4
+3 Nov 2014 version :c,h4
 
 Version info: :h4
 
