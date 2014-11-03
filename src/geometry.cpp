@@ -708,6 +708,16 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   //     depending on direction of 2 lines
   //   thus this can lead to no collision with either line
   //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
+  // however, for axisymm the EPSSQ/EPSSQNEG is not the only problem
+  //   the quadratic eq solution can give a tc solution that
+  //   is for hitting the surf at a negative r, i.e. the line
+  //   segment reflected as it goes below the axisymmetric y=0 line
+  //   which is unphysical (since r is never less than 0.0)
+  // better test for this is whether xc[0] is between v1[0] and v2[0]
+  //   since it will not be for reflected line segment, 
+  //   even when EPSSQ/EPSSQNEG test would pass
+  // not totally happy with this, b/c EPSSQ/EPSSQNEG test could
+  //   still be necessary, but maybe this won't happen for 2d axisymm problem?
 
   if (v1[0] <= v2[0]) {
     if (xc[0] < v1[0] || xc[0] > v2[0]) return false;
