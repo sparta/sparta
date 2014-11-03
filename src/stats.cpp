@@ -36,7 +36,7 @@ using namespace SPARTA_NS;
 
 // customize a new keyword by adding to this list:
 
-// step,elapsed,elaplong,dt,cpu,tpcpu,spcpu
+// step,elapsed,elaplong,dt,cpu,tpcpu,spcpu,wall,
 // np,ntouch,ncomm,nbound,nexit,nscoll,nscheck,ncoll,nattempt,nreact,
 // npave,ntouchave,ncommave,nboundave,nexitave,nscollave,nscheckave,
 // ncollave,nattemptave,nreactave,
@@ -57,6 +57,9 @@ enum{SCALAR,VECTOR,ARRAY};
 Stats::Stats(SPARTA *sparta) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
+
+  MPI_Barrier(world);
+  wall0 = MPI_Wtime();
 
   line = new char[MAXLINE];
 
@@ -414,6 +417,8 @@ void Stats::set_fields(int narg, char **arg)
       addfield("T/CPU",&Stats::compute_tpcpu,FLOAT);
     } else if (strcmp(arg[i],"spcpu") == 0) {
       addfield("S/CPU",&Stats::compute_spcpu,FLOAT);
+    } else if (strcmp(arg[i],"wall") == 0) {
+      addfield("WALL",&Stats::compute_wall,FLOAT);
 
     } else if (strcmp(arg[i],"np") == 0) {
       addfield("Np",&Stats::compute_np,BIGINT);
@@ -687,6 +692,9 @@ int Stats::evaluate_keyword(char *word, double *answer)
 		 "Variable stats keyword cannot be used between runs");
     compute_spcpu();
 
+  } else if (strcmp(word,"wall") == 0) {
+    compute_wall();
+
   } else if (strcmp(word,"np") == 0) {
     compute_np();
     dvalue = bivalue;
@@ -871,6 +879,13 @@ void Stats::compute_spcpu()
 
   last_step = new_step;
   last_spcpu = new_cpu;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_wall()
+{
+  dvalue = MPI_Wtime() - wall0;
 }
 
 /* ---------------------------------------------------------------------- */

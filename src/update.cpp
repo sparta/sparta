@@ -52,8 +52,8 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
 #define MOVE_DEBUG_ID -1   // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 3622       // particle index on owning proc
-#define MOVE_DEBUG_STEP 26       // timestep
+#define MOVE_DEBUG_INDEX 46       // particle index on owning proc
+#define MOVE_DEBUG_STEP 22       // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -626,14 +626,14 @@ template < int DIM, int SURF > void Update::move()
                      (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
                   printf("SURF COLLIDE: %d %d %d %d: P1 %g %g: P2 %g %g: "
                          "L1 %g %g: L2 %g %g: LN %g %g: XC %g %g: "
-                         "VC %g %g: Param %g: Side %d\n",
+                         "VC %g %g %g: Param %g: Side %d\n",
                          MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],
                          xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
                          pts[line->p1].x[0],pts[line->p1].x[1],
                          pts[line->p2].x[0],pts[line->p2].x[1],
                          line->norm[0],line->norm[1],
-                         xc[0],xc[1],vc[1],vc[2],param,side);
+                         xc[0],xc[1],vc[0],vc[1],vc[2],param,side);
               }
 #endif
               

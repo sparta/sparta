@@ -47,6 +47,7 @@ class Stats : protected Pointers {
   int firststep;
   int flushflag,lineflag;
 
+  double wall0;
   double last_tpcpu,last_spcpu;
   double last_time;
   bigint last_step;
@@ -99,6 +100,7 @@ class Stats : protected Pointers {
   void compute_cpu();
   void compute_tpcpu();
   void compute_spcpu();
+  void compute_wall();
 
   void compute_np();
   void compute_ntouch();

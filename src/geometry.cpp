@@ -669,6 +669,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
 
     double t1 = (-b + sarg) / a;
     double t2 = (-b - sarg) / a;
+
     tc = MIN(t1,t2);
     if (tc < 0.0) tc = MAX(t1,t2);
   }
@@ -708,12 +709,20 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   //   thus this can lead to no collision with either line
   //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
 
+  if (v1[0] <= v2[0]) {
+    if (xc[0] < v1[0] || xc[0] > v2[0]) return false;
+  } else {
+    if (xc[0] < v2[0] || xc[0] > v1[0]) return false;
+  }
+
+  /*
   MathExtra::sub3(v2,v1,edge);
   MathExtra::sub3(xc,v1,pvec);
 
   if (MathExtra::dot3(edge,pvec) < EPSSQNEG) return false;
   MathExtra::sub3(xc,v2,pvec);
   if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
+  */
 
   // there is a valid intersection with line segment
   // set side to OUTSIDE or INSIDE
@@ -753,9 +762,8 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
   double t1 = (b + sarg) / a;
   double t2 = (b - sarg) / a;
 
-  // if particle starts on line (e.g. due to cell crossing)
-  //   discard crossing at time = 0.0 or epsilon (due to round-off)
-  //   i.e. set tc to other solution
+  // if particle starts on line (e.g. due to cell crossing):
+  // discard crossing at time = 0.0 or epsilon (due to round-off)
 
   double tc;
   if (x[1] == yhoriz) {
