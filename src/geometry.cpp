@@ -719,7 +719,9 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   // not totally happy with this, b/c EPSSQ/EPSSQNEG test could
   //   still be necessary, but maybe this won't happen for 2d axisymm problem?
 
-  if (v1[0] <= v2[0]) {
+  if (v1[0] == v2[0]) {
+    if (xc[1] < v1[1] || xc[1] > v2[1]) return false;
+  } else if (v1[0] < v2[0]) {
     if (xc[0] < v1[0] || xc[0] > v2[0]) return false;
   } else {
     if (xc[0] < v2[0] || xc[0] > v1[0]) return false;

@@ -50,10 +50,10 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID -1   // particle ID
+#define MOVE_DEBUG_ID 286083930   // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 46       // particle index on owning proc
-#define MOVE_DEBUG_STEP 22       // timestep
+#define MOVE_DEBUG_INDEX -1       // particle index on owning proc
+#define MOVE_DEBUG_STEP 235       // timestep
 
 /* ---------------------------------------------------------------------- */
 
