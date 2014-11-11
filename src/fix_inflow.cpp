@@ -751,8 +751,6 @@ double FixInflow::mol_inflow(int isp, double indot)
     inward_number_flux = vscale[isp] * fraction[isp] *
       (exp(-indot*indot) + sqrt(MY_PI)*indot*(1.0 + erf(indot))) /
       (2*sqrt(MY_PI));
-   double cbar = 2.0 / MY_PIS * vscale[isp];
-   inward_number_flux = 2 * inward_number_flux - cbar / 2.0;
   }
 
   return inward_number_flux;
