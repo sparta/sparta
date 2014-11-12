@@ -595,7 +595,7 @@ void FixInflow::start_of_step()
   int pcell,ninsert,isp,ndim,pdim1,pdim2,id;
   double *lo,*hi,*normal;
   double x[3],v[3];
-  double indot,indotr,rn,ntarget;
+  double indot,indotr,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
   Particle::OnePart *p;
 
@@ -637,6 +637,7 @@ void FixInflow::start_of_step()
     normal = cellface[i].normal;
 
     indotr = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
+//    printf ("%f %f \n",indot, vscale[0]); 
 
     if (perspecies == YES) {
       for (isp = 0; isp < nspecies; isp++) {
@@ -662,9 +663,10 @@ void FixInflow::start_of_step()
 	  
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
-          theta = MY_PI * random->gaussian();
-          v[pdim1] = vscale[isp]*sin(theta) + vstream[pdim1];
-          v[pdim2] = vscale[isp]*cos(theta) + vstream[pdim2];
+          theta = MY_2PI * random->gaussian();
+          vr = vscale[isp] * sqrt(-log(random->uniform()));
+          v[pdim1] = vr * sin(theta) + vstream[pdim1];
+          v[pdim2] = vr * cos(theta) + vstream[pdim2];
           erot = particle->erot(isp,temp_thermal,random);
           evib = particle->evib(isp,temp_thermal,random);
           id = MAXSMALLINT*random->uniform();
@@ -711,9 +713,10 @@ void FixInflow::start_of_step()
 	
         v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
-        theta = MY_PI * random->gaussian();
-        v[pdim1] = vscale[isp]*sin(theta) + vstream[pdim1];
-        v[pdim2] = vscale[isp]*cos(theta) + vstream[pdim2];
+        theta = MY_2PI * random->gaussian();
+        vr = vscale[isp] * sqrt(-log(random->uniform()));
+        v[pdim1] = vr * sin(theta) + vstream[pdim1];
+        v[pdim2] = vr * cos(theta) + vstream[pdim2];
 
         erot = particle->erot(isp,temp_thermal,random);
         evib = particle->evib(isp,temp_thermal,random);
