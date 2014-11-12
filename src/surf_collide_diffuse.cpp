@@ -192,9 +192,6 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
         double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
      
         if (fabs(dot) > 0.001) {
-          vxdelta -= dot*norm[0];
-          vydelta -= dot*norm[1];
-          vzdelta -= dot*norm[2];
 
           dot /=  vrm;
 
