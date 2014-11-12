@@ -164,9 +164,13 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
 
     double *v = p->v;
     double dot = MathExtra::dot3(v,norm);
+
+    double beta_un,normalized_distbn_fn;
+
     tangent1[0] = v[0] - dot*norm[0];
     tangent1[1] = v[1] - dot*norm[1];
     tangent1[2] = v[2] - dot*norm[2];
+
     if (MathExtra::lensq3(tangent1) == 0.0) {
       tangent2[0] = random->uniform();
       tangent2[1] = random->uniform();
@@ -184,19 +188,42 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
       double vxdelta,vydelta,vzdelta;
       if (tflag) {
         vxdelta = vx; vydelta = vy; vzdelta = vz;
+
+        double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
+     
+        if (fabs(dot) > 0.001) {
+          vxdelta -= dot*norm[0];
+          vydelta -= dot*norm[1];
+          vzdelta -= dot*norm[2];
+
+          dot /=  vrm;
+
+          do {
+            do {
+              beta_un = (6.0*random->gaussian() - 3.0);
+            } while (beta_un + dot < 0.0);
+            normalized_distbn_fn = 2.0 * (beta_un + dot) /
+            (dot + sqrt(dot*dot + 2.0)) *
+            exp(0.5 + (0.5*dot)*(dot-sqrt(dot*dot + 2.0)) -
+                beta_un*beta_un);
+          } while (normalized_distbn_fn < random->uniform());
+
+          vperp = beta_un*vrm;
+        }
+
       } else {
         double *x = p->x;
         vxdelta = wy*(x[2]-pz) - wz*(x[1]-py);
         vydelta = wz*(x[0]-px) - wx*(x[2]-pz);
         vzdelta = wx*(x[1]-py) - wy*(x[0]-px);
 
+        double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
+        vxdelta -= dot*norm[0];
+        vydelta -= dot*norm[1];
+        vzdelta -= dot*norm[2];
+
       }
       
-      double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
-      vxdelta -= dot*norm[0];
-      vydelta -= dot*norm[1];
-      vzdelta -= dot*norm[2];
-
       v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0] + vxdelta;
       v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1] + vydelta;
       v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2] + vzdelta;
