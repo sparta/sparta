@@ -18,9 +18,9 @@
 #define MIN(A,B) ((A) < (B)) ? (A) : (B)
 #define MAX(A,B) ((A) > (B)) ? (A) : (B)
 
-#define EPS 1.0e-8
 #define EPSSQ 1.0e-16
 #define EPSSQNEG -1.0e-16
+#define EPSSELF 1.0e-6
 
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};    // same as Update
 
@@ -613,10 +613,16 @@ bool line_line_intersect(double *start, double *stop,
 }
 
 /* ----------------------------------------------------------------------
-   check for axisymmetric move crossing general line segment in (x,r) space
+   check for axisymmetric move crossing line segment in (x,r) space
    line segment from v1 to v2 in axisymmetry plane
    3d move starting at x with v for tdelta
-   solve quadratic eq to determine if non-linear trajectory intersects line seg
+   outface = exit face if particle hits no surface
+     used for special case test if vertical/horiz line segment is on exit face
+   solve quadratic eq to determine if curved trajectory intersects line seg
+     equivalent to straight trajectory intersecting cylindrical surf
+   can intersect infinite line 0,1,2 times
+     true intersection is at earliest positive time within line segment,
+     if all 3 conditions do not hold for 1st collision, can be 2nd collision
    return 1 if yes, 0 if no
    if yes, also return:
      param = fraction of tdelta at collision pt
@@ -627,28 +633,47 @@ bool line_line_intersect(double *start, double *stop,
 
 bool axi_line_intersect(double tdelta, double *x, double *v,
                         int outface, double *lo, double *hi,
-                        double *v1, double *v2, double *norm,
-                        double *xc, double *vc, 
-                        double &param, int &side)
+                        double *v1, double *v2, double *norm, int selfflag,
+                        double *xc, double *vc, double &param, int &side)
 {
-  double edge[3],pvec[3];
-  double tc,frac;
+  //double edge[3],pvec[3];
         
-  if (v1[0] == v2[0]) {    // vertical line segment
-    if (outface == 0 && v1[0] == lo[0]) tc = tdelta;
-    else if (outface == 1 && v1[0] == hi[0]) tc = tdelta;
+  // compute nc = # of collisions with infinite line
+  // if 0, return false
+  // if 1, set t1
+  // if 2, set t1 and t2 with t1 < t2
+
+  int nc;
+  double t1,t2,tmp;
+    
+  // vertical line segment
+  // no collision if starting on surface
+
+  if (v1[0] == v2[0]) {
+    nc = 1;
+    if (outface == 0 && v1[0] == lo[0]) t1 = tdelta;
+    else if (outface == 1 && v1[0] == hi[0]) t1 = tdelta;
     else {
       if (v[0] == 0.0) return false;
-      tc = (v1[0] - x[0]) / v[0];
+      t1 = (v1[0] - x[0]) / v[0];
+      if (selfflag && t1 == 0.0) return false;
     }
 
-  } else if (v1[1] == v2[1]) {    // horizontal line segment
-    if (outface == 2 && v1[1] == lo[1]) tc = tdelta;
-    else if (outface == 3 && v1[1] == hi[1]) tc = tdelta;
-    else {
-      if (axi_horizontal_line(tdelta,x,v,v1[1],frac)) tc = frac*tdelta;
-      else return false;
+  // horizontal line segment
+  // axi_horizontal_line() discards selfflag crossing
+
+  } else if (v1[1] == v2[1]) {
+    if (outface == 2 && v1[1] == lo[1]) {
+      nc = 1;
+      t1 = tdelta;
+    } else if (outface == 3 && v1[1] == hi[1]) {
+      nc = 1;
+      t1 = tdelta;
+    } else {
+      if (!axi_horizontal_line(tdelta,x,v,v1[1],nc,t1,t2)) return false;
     }
+
+  // general line segment
 
   } else {
     double x21 = v2[0] - v1[0];
@@ -667,106 +692,141 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
     if (arg < 0.0) return false;
     double sarg = sqrt(arg);
 
-    double t1 = (-b + sarg) / a;
-    double t2 = (-b - sarg) / a;
-
-    tc = MIN(t1,t2);
-    if (tc < 0.0) tc = MAX(t1,t2);
+    nc = 2;
+    double tone = (-b - sarg) / a;
+    double ttwo = (-b + sarg) / a;
+    t1 = MIN(tone,ttwo);
+    t2 = MAX(tone,ttwo);
   }
 
-  if (tc < 0.0) return false;
-  if (tc > tdelta) return false;
+  //if (id == 850133757) 
+  //  printf("T1T2 %d %d: %g %g: %g: %g %g\n",nc,selfflag,t1,t2,tdelta,x[0],x[1]);
 
-  // set xc[0,1] and vc[1,2] to values in axisymmetric plane
-  // insure xc is on vertical or horizontal surf
+  // if selfflag, particle starts on surf line segment
+  // discard crossing at time = 0.0 or +/- epsilon (due to round-off)
+  // nc=2 test b/c horizontal line has already discarded this collision pt
 
-  xc[0] = x[0] + tc*v[0];
-  if (v1[0] == v2[0]) xc[0] = v1[0];
-  double ynew = x[1] + tc*v[1];
-  double znew = x[2] + tc*v[2];
-  xc[1] = sqrt(ynew*ynew + znew*znew);
-  if (v1[1] == v2[1]) xc[1] = v1[1];
-  xc[2] = 0.0;
+  if (selfflag && nc == 2) {
+    if (fabs(t1) < fabs(t2)) t1 = t2;
+    nc = 1;
+  }
 
-  double rn = ynew / xc[1];
-  double wn = znew / xc[1];
-  vc[0] = v[0];
-  vc[1] = v[1]*rn + v[2]*wn;
-  vc[2] = -v[1]*wn + v[2]*rn;
+  // loop over 1 or 2 possible collision times
 
-  // test if intersection pt is inside line segment
-  // edge = line vector from v1 to v2
-  // pvec = vector from either line vertex to intersection point
-  // if dot product of edge with pvec < or > 0.0 for each pvec,
-  //   intersection point is outside line segment
-  // use EPSSQ and EPSSQNEG instead of 0.0 for following case:
-  //   intersection pt is on line end pt where 2 lines come together
-  //   want it to detect collision with at least one of lines
-  //   point can be epsilon away from end pt
-  //   this leads to pvec being epsilon vec in opposite dirs for 2 lines
-  //   this can lead to dot3() being negative espilon^2 for both lines,
-  //     depending on direction of 2 lines
-  //   thus this can lead to no collision with either line
-  //   typical observed dot values were 1.0e-18, so use EPSSQ = 1.0e-16
-  // however, for axisymm the EPSSQ/EPSSQNEG is not the only problem
-  //   the quadratic eq solution can give a tc solution that
-  //   is for hitting the surf at a negative r, i.e. the line
-  //   segment reflected as it goes below the axisymmetric y=0 line
-  //   which is unphysical (since r is never less than 0.0)
-  // better test for this is whether xc[0] is between v1[0] and v2[0]
-  //   since it will not be for reflected line segment, 
-  //   even when EPSSQ/EPSSQNEG test would pass
-  // not totally happy with this, b/c EPSSQ/EPSSQNEG test could
-  //   still be necessary, but maybe this won't happen for 2d axisymm problem?
+  while (1) {
 
-  if (v1[0] == v2[0]) {
-    if (v1[1] < v2[1]) {
-      if (xc[1] < v1[1] || xc[1] > v2[1]) return false;
-    } else {
-      if (xc[1] < v2[1] || xc[1] > v1[1]) return false;
+    // test for collision time >= 0.0 and <= tdelta
+
+    if (t1 > tdelta) return false;
+    if (t1 < 0.0) {
+      if (nc == 1) return false;
+      t1 = t2;
+      nc--;
+      continue;
     }
-  } else if (v1[0] < v2[0]) {
-    if (xc[0] < v1[0] || xc[0] > v2[0]) return false;
-  } else {
-    if (xc[0] < v2[0] || xc[0] > v1[0]) return false;
+
+    // NOTE: now doing this test above while loop, to avoid use of EPSSELF
+    // if selfflag, discard a collision near time = 0.0
+    // since is just a collision due to start on same surf just collided with
+    // reset selfflag = 0, so only do this for at most one of two collisions
+    // EPSSELF = 1.0e-6 seems to work, or 1.0e-4 and 1.0e-2
+    //           1.0e-8 does not unless push collision point to surf (below)
+
+    /*
+    if (selfflag && t1/tdelta < EPSSELF) {
+      if (nc == 1) return false;
+      selfflag = 0;
+      t1 = t2;
+      nc--;
+      continue;
+    }
+    */
+
+    // set xc[0,1] and vc[1,2] to values in axisymmetric plane
+    // if vertical or horizontal surf, insure xc is on it
+
+    xc[0] = x[0] + t1*v[0];
+    if (v1[0] == v2[0]) xc[0] = v1[0];
+    double ynew = x[1] + t1*v[1];
+    double znew = x[2] + t1*v[2];
+    xc[1] = sqrt(ynew*ynew + znew*znew);
+    if (v1[1] == v2[1]) xc[1] = v1[1];
+    xc[2] = 0.0;
+    
+    double rn = ynew / xc[1];
+    double wn = znew / xc[1];
+    vc[0] = v[0];
+    vc[1] = v[1]*rn + v[2]*wn;
+    vc[2] = -v[1]*wn + v[2]*rn;
+
+    // test that xc is within line segment bounds
+    // y-test for vertical line, else x-test
+
+    bool within = true;
+    if (v1[0] == v2[0]) {
+      if (v1[1] < v2[1]) {
+        if (xc[1] < v1[1] || xc[1] > v2[1]) within = false;
+      } else {
+        if (xc[1] < v2[1] || xc[1] > v1[1]) within = false;
+      }
+    } else if (v1[0] < v2[0]) {
+      if (xc[0] < v1[0] || xc[0] > v2[0]) within = false;
+    } else {
+      if (xc[0] < v2[0] || xc[0] > v1[0]) within = false;
+    }
+
+    if (within) break;
+    if (nc == 1) return false;
+    t1 = t2;
+    nc--;
   }
+
+  // could push collision point onto line segment
+  // so that selfflag test above could use smaller EPS
+  // could do this with projection operation instead
 
   /*
-  MathExtra::sub3(v2,v1,edge);
-  MathExtra::sub3(xc,v1,pvec);
-
-  if (MathExtra::dot3(edge,pvec) < EPSSQNEG) return false;
-  MathExtra::sub3(xc,v2,pvec);
-  if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
+  double vec[3];
+  MathExtra::sub3(v2,v1,vec);
+  double lenbig = MathExtra::len3(vec);
+  MathExtra::sub3(xc,v1,vec);
+  double lensmall = MathExtra::len3(vec);
+  double ratio = lensmall/lenbig;
+  xc[0] = v1[0] + ratio*(v2[0]-v1[0]);
+  xc[1] = v1[1] + ratio*(v2[1]-v1[1]);
   */
 
   // there is a valid intersection with line segment
   // set side to OUTSIDE or INSIDE
   // no ONSURF case b/c surface is curved
-  //  what if tc = param = 0.0 ??
-  //  don't think particle should start on surf
-  // in axisymmetric plane, particle path is curved
-  // regardless of where particle starts, it can hit front or back or surf
+  //   starting on surf is handled above by selfflag
+  // in axisymmetric plane, particle path is also curved
+  // regardless of where particle starts, it can hit front or back of surf
   // use velocity vector at collision pt to determine side
 
   double dot = MathExtra::dot3(norm,vc);
   if (dot < 0.0) side = OUTSIDE;
   else side = INSIDE;
 
-  param = tc/tdelta;
+  param = t1/tdelta;
   return true;
 }
 
 /* ----------------------------------------------------------------------
    check for axisymmetric move crossing horizontal line in (x,r) space
+     not line segment but infinite horizontal line
+   called from Update for cell boundary
+     just uses first collision, must be within tdelta
+   called from axi_line_intersect() for special case of horizontal surf
+     uses one or two collisions, it will discard collisions outside segment
    horizontal line is at yhoriz
    move starting at x with v for tdelta
-   return 1 if crosses, 0 if not
-   if crosses, also return frac = fraction of tdelta at crossing
+   return 1 if crosses with 0.0 <= t <= tdelta
+   if crosses, also return nc, t1, t2 (can be two collisions)
 ------------------------------------------------------------------------- */
 
 bool axi_horizontal_line(double tdelta, double *x, double *v, 
-                         double yhoriz, double &frac)
+                         double yhoriz, int &nc, double &t1, double &t2)
 {
   double a = v[1]*v[1] + v[2]*v[2];
   if (a == 0.0) return false;
@@ -775,24 +835,30 @@ bool axi_horizontal_line(double tdelta, double *x, double *v,
   if (arg < 0.0) return false;
   double sarg = sqrt(arg);
 
-  double t1 = (b + sarg) / a;
-  double t2 = (b - sarg) / a;
+  nc = 2;
+  double tone = (b - sarg) / a;
+  double ttwo = (b + sarg) / a;
+  t1 = MIN(tone,ttwo);
+  t2 = MAX(tone,ttwo);
 
-  // if particle starts on line (e.g. due to cell crossing):
-  // discard crossing at time = 0.0 or epsilon (due to round-off)
+  // if particle starts on line, 
+  // discard crossing at time = 0.0 or +/- epsilon (due to round-off)
+  // due to cell crossing or selfflag in axi_line_intersect() caller
 
-  double tc;
   if (x[1] == yhoriz) {
-    if (fabs(t1) < fabs(t2)) tc = t2;
-    else tc = t1;
-  } else {
-    tc = MIN(t1,t2);
-    if (tc < 0.0) tc = MAX(t1,t2);
+    if (fabs(t1) < fabs(t2)) t1 = t2;
+    nc = 1;
   }
 
-  if (tc < 0.0 || tc > tdelta) return false;
+  // require first collision time >= 0.0 and <= tdelta
 
-  frac = tc/tdelta;
+  if (t1 < 0.0 || t1 > tdelta) {
+    if (nc == 1) return false;
+    t1 = t2;
+    if (t1 < 0.0 || t1 > tdelta) return false;
+    nc = 1;
+  }
+
   return true;
 }
 

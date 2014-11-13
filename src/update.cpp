@@ -50,10 +50,10 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID -1   // particle ID
+#define MOVE_DEBUG_ID 850133757  // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 46       // particle index on owning proc
-#define MOVE_DEBUG_STEP 22       // timestep
+#define MOVE_DEBUG_INDEX -1       // particle index on owning proc
+#define MOVE_DEBUG_STEP 812    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -264,12 +264,12 @@ void Update::run(int nsteps)
 template < int DIM, int SURF > void Update::move()
 {
   bool hitflag;
-  int m,icell,icell_original,nmask,outface,bflag,nflag,pflag;
+  int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
   int pstart,pstop,entryexit,any_entryexit;
   int *csurfs;
   cellint *neigh;
-  double dtremain,frac,newfrac,param,minparam,rnew,dtsurf;
+  double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],eold[5],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
   double *x,*v,*lo,*hi;
   Surf::Tri *tri;
@@ -416,7 +416,7 @@ template < int DIM, int SURF > void Update::move()
                    lo[0],lo[1],hi[0],hi[1],dtremain);
         }
         if (DIM == 1) {
-          if (ntimestep == MOVE_DEBUG_STEP && 
+          if (ntimestep >= MOVE_DEBUG_STEP && 
               (MOVE_DEBUG_ID == particles[i].id ||
                (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
             printf("PARTICLE %d %ld: %d %d: %d: x %g %g: xnew %g %g: %d "
@@ -463,7 +463,8 @@ template < int DIM, int SURF > void Update::move()
         }
 
         if (DIM == 1) {
-          if (Geometry::axi_horizontal_line(dtremain,x,v,lo[1],newfrac)) {
+          if (Geometry::axi_horizontal_line(dtremain,x,v,lo[1],itmp,tc,tmp)) {
+            newfrac = tc/dtremain;
             if (newfrac < frac) {
               frac = newfrac;
               outface = YLO;
@@ -472,7 +473,8 @@ template < int DIM, int SURF > void Update::move()
 
           rnew = sqrt(xnew[1]*xnew[1] + xnew[2]*xnew[2]);
           if (rnew >= hi[1]) {
-            if (Geometry::axi_horizontal_line(dtremain,x,v,hi[1],newfrac)) {
+            if (Geometry::axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp)) {
+              newfrac = tc/dtremain;
               if (newfrac < frac) {
                 frac = newfrac;
                 outface = YHI;
@@ -555,17 +557,19 @@ template < int DIM, int SURF > void Update::move()
 
             // check for collisions with triangles or lines in cell
             // find 1st surface hit via minparam
-            // not considered collision if particles starts on surf, moving out
+            // skip collisions with previous surf, but not for axisymmetric
             // not considered collision if 2 params are tied and one INSIDE surf
             // if collision occurs, perform collision with surface model
             // reset x,v,xnew,dtremain and continue single particle trajectory
-          
+
             cflag = 0;
             minparam = 2.0;
             csurfs = cells[icell].csurfs;
             for (m = 0; m < nsurf; m++) {
               isurf = csurfs[m];
-              if (isurf == exclude) continue;
+              if (DIM > 1) {
+                if (isurf == exclude) continue;
+              }
               if (DIM == 3) {
                 tri = &tris[isurf];
                 hitflag = Geometry::
@@ -585,7 +589,8 @@ template < int DIM, int SURF > void Update::move()
                 hitflag = Geometry::
                   axi_line_intersect(dtsurf,x,v,outface,lo,hi,
                                      pts[line->p1].x,pts[line->p2].x,
-                                     line->norm,xc,vc,param,side);
+                                     line->norm,exclude == isurf,
+                                     xc,vc,param,side);
               }
               
 #ifdef MOVE_DEBUG
@@ -621,19 +626,35 @@ template < int DIM, int SURF > void Update::move()
                          xc[0],xc[1],param,side);
               }
               if (DIM == 1) {
-                if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
+                // if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
+                if (ntimestep >= MOVE_DEBUG_STEP && 
                     (MOVE_DEBUG_ID == particles[i].id ||
                      (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
-                  printf("SURF COLLIDE: %d %d %d %d: P1 %g %g: P2 %g %g: "
+                  printf("SURF COLLIDE %d %ld: %d %d %d %d: P1 %g %g: P2 %g %g: "
                          "L1 %g %g: L2 %g %g: LN %g %g: XC %g %g: "
                          "VC %g %g %g: Param %g: Side %d\n",
-                         MOVE_DEBUG_INDEX,icell,nsurf,isurf,
+                         hitflag,ntimestep,MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],
                          xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
                          pts[line->p1].x[0],pts[line->p1].x[1],
                          pts[line->p2].x[0],pts[line->p2].x[1],
                          line->norm[0],line->norm[1],
                          xc[0],xc[1],vc[0],vc[1],vc[2],param,side);
+                double edge1[3],edge2[3],xfinal[3],cross[3];
+                MathExtra::sub3(pts[line->p2].x,pts[line->p1].x,edge1);
+                MathExtra::sub3(x,pts[line->p1].x,edge2);
+                MathExtra::cross3(edge2,edge1,cross);
+                if (ntimestep == MOVE_DEBUG_STEP && 
+                    MOVE_DEBUG_ID == particles[i].id)
+                  printf("CROSSSTART %g %g %g\n",cross[0],cross[1],cross[2]);
+                xfinal[0] = xnew[0];
+                xfinal[1] = sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]);
+                xfinal[2] = 0.0;
+                MathExtra::sub3(xfinal,pts[line->p1].x,edge2);
+                MathExtra::cross3(edge2,edge1,cross);
+                if (ntimestep == MOVE_DEBUG_STEP && 
+                    MOVE_DEBUG_ID == particles[i].id)
+                  printf("CROSSFINAL %g %g %g\n",cross[0],cross[1],cross[2]);
               }
 #endif
               
@@ -737,10 +758,11 @@ template < int DIM, int SURF > void Update::move()
                 if (ntimestep == MOVE_DEBUG_STEP && 
                     (MOVE_DEBUG_ID == particles[i].id ||
                      (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
-                  printf("POST COLLISION %d: %g %g: %g %g: %g %g %g\n",
+                  printf("POST COLLISION %d: %g %g: %g %g: vel %g %g %g: %g %g %g\n",
                          MOVE_DEBUG_INDEX,
                          x[0],x[1],
                          xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
+                         v[0],v[1],v[2],
                          minparam,frac,dtremain);
               }
 #endif
@@ -1010,33 +1032,6 @@ template < int DIM, int SURF > void Update::move()
   nscheck_running += nscheck_one;
   nscollide_running += nscollide_one;
 }
-
-/* ----------------------------------------------------------------------
-   NOTE: can get rid of this?
-   check for axisymmetric move crossing vertical line in (x,r) space
-   vertical line is at xvert between ylo and yhi
-   move starting at x with v for tdelta
-   return 1 if crosses, 0 if not
-   if crosses, also return frac = fraction of tdelta at crossing
-------------------------------------------------------------------------- */
-
-/*
-int Update::axi_vertical_line(double tdelta, double *x, double *v,
-                              double xvert, double ylo, double yhi,
-                              double &frac)
-{
-  // method would not have been called if v[0] = 0.0 or tc < 0 or tc > tdelta
-
-  double tc = (xvert - x[0]) / v[0];
-
-  double ynew = x[1] + tc*v[1];
-  double znew = x[2] + tc*v[2];
-  double yc = sqrt(ynew*ynew + znew*znew);
-  if (yc < ylo || yc > yhi) return 0;
-  frac = tc/tdelta;
-  return 1;
-}
-*/
 
 /* ----------------------------------------------------------------------
    particle is entering split parent icell at x
