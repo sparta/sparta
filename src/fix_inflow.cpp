@@ -588,7 +588,10 @@ void FixInflow::init()
   ntotal = 0;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   insert particles in grid cells with faces touching inflow boundaries
+   see Bird ???, eq 12.5, for generation of inflow velocities
+------------------------------------------------------------------------- */
 
 void FixInflow::start_of_step()
 {
