@@ -188,23 +188,19 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
       double vxdelta,vydelta,vzdelta;
       if (tflag) {
         vxdelta = vx; vydelta = vy; vzdelta = vz;
-
         double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
      
         if (fabs(dot) > 0.001) {
-
-          dot /=  vrm;
-
+          dot /= vrm;
           do {
             do {
               beta_un = (6.0*random->gaussian() - 3.0);
             } while (beta_un + dot < 0.0);
             normalized_distbn_fn = 2.0 * (beta_un + dot) /
-            (dot + sqrt(dot*dot + 2.0)) *
-            exp(0.5 + (0.5*dot)*(dot-sqrt(dot*dot + 2.0)) -
-                beta_un*beta_un);
+              (dot + sqrt(dot*dot + 2.0)) *
+              exp(0.5 + (0.5*dot)*(dot-sqrt(dot*dot + 2.0)) -
+                  beta_un*beta_un);
           } while (normalized_distbn_fn < random->uniform());
-
           vperp = beta_un*vrm;
         }
 
@@ -213,12 +209,10 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
         vxdelta = wy*(x[2]-pz) - wz*(x[1]-py);
         vydelta = wz*(x[0]-px) - wx*(x[2]-pz);
         vzdelta = wx*(x[1]-py) - wy*(x[0]-px);
-
         double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
         vxdelta -= dot*norm[0];
         vydelta -= dot*norm[1];
         vzdelta -= dot*norm[2];
-
       }
       
       v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0] + vxdelta;

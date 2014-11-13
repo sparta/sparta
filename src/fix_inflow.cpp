@@ -636,8 +636,8 @@ void FixInflow::start_of_step()
     hi = cellface[i].hi;
     normal = cellface[i].normal;
 
-    indotr = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
-//    printf ("%f %f \n",indot, vscale[0]); 
+    indotr = vstream[0]*normal[0] + vstream[1]*normal[1] + 
+      vstream[2]*normal[2];
 
     if (perspecies == YES) {
       for (isp = 0; isp < nspecies; isp++) {
@@ -694,7 +694,6 @@ void FixInflow::start_of_step()
 	rn = random->uniform();
 	isp = 0;
 	while (cummulative[isp] < rn) isp++;
-
         indot = indotr / vscale[isp];
 
 	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
@@ -718,7 +717,6 @@ void FixInflow::start_of_step()
         vr = vscale[isp] * sqrt(-log(random->uniform()));
         v[pdim1] = vr * sin(theta) + vstream[pdim1];
         v[pdim2] = vr * cos(theta) + vstream[pdim2];
-
         erot = particle->erot(isp,temp_thermal,random);
         evib = particle->evib(isp,temp_thermal,random);
         id = MAXSMALLINT*random->uniform();
@@ -755,8 +753,8 @@ double FixInflow::mol_inflow(int isp, double indot)
     inward_number_flux = vscale[isp] * fraction[isp] *
       (exp(-indot*indot) + sqrt(MY_PI)*indot*(1.0 + erf(indot))) /
       (2*sqrt(MY_PI));
-      double cbar = 2.0 / MY_PIS * vscale[isp];
-      inward_number_flux = 2 * inward_number_flux - cbar / 2.0;
+    double cbar = 2.0 / MY_PIS * vscale[isp];
+    inward_number_flux = 2.0 * inward_number_flux - cbar / 2.0;
   }
 
   return inward_number_flux;
