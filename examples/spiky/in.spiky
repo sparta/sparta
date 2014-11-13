@@ -16,7 +16,7 @@ global		    nrho 1.0 fnum 0.001
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
 
-read_surf           1 sdata.spiky trans 5 5 0 scale 0.4 0.4 1
+read_surf           1 data.spiky trans 5 5 0 scale 0.4 0.4 1
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         collide 1 1
 
