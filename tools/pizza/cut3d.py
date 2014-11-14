@@ -40,3 +40,21 @@ def clip(cell,p0,p1,p2):
     if not path: return []
 
   return path
+
+# return intersection pt of line segment a,b in dim with coord value
+# guaranteed to intersect by caller
+  
+def between(a,b,dim,value):
+  if dim == 0:
+    y = a[1] + (value-a[dim])/(b[dim]-a[dim]) * (b[1]-a[1])
+    z = a[2] + (value-a[dim])/(b[dim]-a[dim]) * (b[2]-a[2])
+    pt = (value,y,z)
+  elif dim == 1:
+    x = a[0] + (value-a[dim])/(b[dim]-a[dim]) * (b[0]-a[0])
+    z = a[2] + (value-a[dim])/(b[dim]-a[dim]) * (b[2]-a[2])
+    pt = (x,value,z)
+  elif dim == 2:
+    x = a[0] + (value-a[dim])/(b[dim]-a[dim]) * (b[0]-a[0])
+    y = a[1] + (value-a[dim])/(b[dim]-a[dim]) * (b[1]-a[1])
+    pt = (x,y,value)
+  return pt

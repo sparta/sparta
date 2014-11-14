@@ -10,9 +10,9 @@
 #             (def = 0 1 0 1 0 1)
 #             zlo/zhi must be specified, but are ignored for 2d
 #          -n Nx Ny Nz = initial coarse grid (def = 2 2 2)
-#                        Nz must be 1 for 2d
+#                        Nz set to 1 for 2d
 #          -m Mx My Mz = split cells into Mx by My x Mz (def = 2 2 2)
-#                        Mz must be 1 for 2d
+#                        Mz set to 1 for 2d
 #          -x maxlevel = max # of splitting levels (def = 0)
 #                        0 = no limit (determined by d)
 #                        1 = initial coarse grid, 2 = additional level, etc
@@ -68,7 +68,7 @@ def intersect(box,slist):
       p1 = pts[tris[i][1]]
       p2 = pts[tris[i][2]]
       cell = (0,box[0],box[1],box[2],box[3],box[4],box[5])
-      if clip3d(cell,0,p0,p1,p2): newlist.append(i)
+      if clip3d(cell,p0,p1,p2): newlist.append(i)
   return newlist
 
 # convert ID list into SPARTA ID string
@@ -194,7 +194,6 @@ if delta < 0.0: error("")
 if delta == 0 and maxlevel == 0: error("Delta = 0.0 requires maxlevel > 0")
   
 # read surf file via sdata
-# set dimension and nz = 1 if 2d
   
 s = sdata(0,surffile)
 dim = s.dim
@@ -202,13 +201,14 @@ pts = s.surfs[0].points
 lines = s.surfs[0].lines
 tris = s.surfs[0].triangles
 
-if dim == 2: nz = 1
-
-# box error check
+if dim == 2: nz = mz = 1
+  
+# more error checks
 
 if boxxlo >= boxxhi or boxylo >= boxyhi: error("Bad box size")
 if dim == 3 and boxzlo >= boxzhi: error("Bad box size")
-
+if dim == 2 and fz != 0.0: error("Bad Fz value for 2d")
+  
 # compute size of each surf element
 # for tri, size = minimum edge length
 
@@ -237,6 +237,7 @@ if flowflag:
     for tri in tris:
       norms.append(norm3d(pts[tri[0]],pts[tri[1]],pts[tri[2]]))
 
+
 # initial slist = all surfs
 # unless flowflag is set, then exclude those with normals in flow direction
 
@@ -251,7 +252,7 @@ if dim == 3:
     slist = []
     for i,norm in enumerate(norms):
       if dot3d((fx,fy,fz),norms[i]) <= 0.0: slist.append(i)
-  else: slist = range(len(lines))
+  else: slist = range(len(tris))
       
 # generate grid, one level at a time
 # queue = list of parent cells to process, remove from front, add to end

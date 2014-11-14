@@ -13,7 +13,7 @@ stats_style command :h3
 stats_style arg1 arg2 ... :pre
 
 arg1,arg2,... = list of keywords :ulb,l
-  possible keywords = step, elapsed, dt, cpu, tpcpu, spcpu,
+  possible keywords = step, elapsed, dt, cpu, tpcpu, spcpu, wall,
                       np, ntouch, ncomm, nbound, nexit,
 		      nscoll, nscheck, ncoll, nattempt,
                       npave, ntouchave, ncommave, nboundave, nexitave,
@@ -29,9 +29,10 @@ arg1,arg2,... = list of keywords :ulb,l
       elapsed = timesteps since start of this run
       elaplong = timesteps since start of initial run in a series of runs
       dt = timestep size
-      cpu = elapsed CPU time in seconds
+      cpu = elapsed CPU time in seconds within a run
       tpcpu = time per CPU second
       spcpu = timesteps per CPU second
+      wall = wallclock time in seconds
       np,npave = # of particles (this step, per-step)
       ntouch,ntouchave = # of cell touches by particles (this step, per-step)
       ncomm,ncommave = # of particles communicated (this step, per-step)
@@ -92,6 +93,17 @@ per CPU second.  Both quantities are on-the-fly metrics, measured
 relative to the last time they were invoked.  Thus if you are printing
 out statistical output every 100 timesteps, the two keywords will
 continually output the time and timestep rate for the last 100 steps.
+
+The {wall} keyword is elapsed time in seconds since the beginning of
+the input script.  This can be used to time portions of the input
+script in the following manner:
+
+variable            t equal wall
+variable            t1 equal $t
+portion of input script
+variable            t2 equal $t
+variable            delta equal v_2-v_1
+print               "Delta time = ${delta}" :pre
 
 :line
 
