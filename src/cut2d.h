@@ -118,8 +118,10 @@ class Cut2d : protected Pointers {
 E: Point appears first in more than one CLINE
 
 This is an error when calculating how a 2d grid is cut or split by
-surface elements.  It should not normally occur.  Please report the
-issue to the SPARTA developers.
+surface elements.  It can occur when surface element points are too
+close but not on a grid cell edge.  Using the global surfpush yes
+command should fix the issue.  If not, please report the issue to the
+SPARTA developers.
 
 E: Point appears last in more than one CLINE
 

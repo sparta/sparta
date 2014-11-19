@@ -151,14 +151,18 @@ class Cut3d : protected Pointers {
 E: Singlet BPG edge not on cell face
 
 This is an error when calculating how a 3d grid is cut or split by
-surface elements.  It should not normally occur.  Please report the
-issue to the SPARTA developers.
+surface elements.  It can occur when surface element points are too
+close but not on a grid cell face.  Using the global surfpush yes
+command should fix the issue.  If not, please report the issue to the
+SPARTA developers.
 
 E: BPG edge on more than 2 faces
 
 This is an error when calculating how a 3d grid is cut or split by
-surface elements.  It should not normally occur.  Please report the
-issue to the SPARTA developers.
+surface elements.  It can occur when surface element points are too
+close but not on a grid cell face.  Using the global surfpush yes
+command should fix the issue.  If not, please report the issue to the
+SPARTA developers.
 
 E: Vertex has less than 3 edges
 
