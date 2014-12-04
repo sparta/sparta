@@ -569,10 +569,10 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
     int ivib = -log(erandom->uniform()) * temp_thermal / 
       particle->species[isp].vibtemp;
     eng = ivib * update->boltz * particle->species[isp].vibtemp;
-  } else if (vibstyle == SMOOTH || species[isp].vibdof >= 2) {
+  } else if (vibstyle == SMOOTH && species[isp].vibdof >= 2) {
     if (species[isp].vibdof == 2)
       eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
-    else {
+    else  {
       a = 0.5*particle->species[isp].vibdof-1.;
       while (1) {
         // energy cut-off at 10 kT
