@@ -116,7 +116,7 @@ void Irregular::create_procs(int n, int *proclist, int sort)
 
   nsend = n;
   if (work1[me]) {
-    work1[me] == 0;
+    work1[me] = 0;
     nsend--;
   }
 
