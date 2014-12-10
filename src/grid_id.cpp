@@ -60,7 +60,7 @@ int Grid::id_find_child(int iparent, double *x)
 
 int Grid::id_child2parent(cellint idchild, cellint &ichild)
 {
-  int nbits,newbits,nx,ny,nz,mask;
+  int nbits,newbits,nx,ny,nz,mask,index;
   cellint m,idparent,idnew;
   ParentCell *p;
 
@@ -80,7 +80,8 @@ int Grid::id_child2parent(cellint idchild, cellint &ichild)
     ichild = (idchild >> nbits) & mask;
     idnew = idparent | (ichild << nbits);
     if (idnew == idchild) break;
-    iparent = (*hash)[idnew];
+    index = (*hash)[idnew];
+    iparent = -index-1;
   }
 
   return iparent;
