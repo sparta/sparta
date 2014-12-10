@@ -29,6 +29,8 @@
 
 #ifdef SPARTA_MAP
 #include <map>
+#elif SPARTA_UNORDERED_MAP
+#include <unordered_map>
 #else
 #include <tr1/unordered_map>
 #endif
@@ -1341,6 +1343,9 @@ void ReadSurf::check_watertight_3d()
 #ifdef SPARTA_MAP
   std::map<bigint,int> hash;
   std::map<bigint,int>::iterator it;
+#elif SPARTA_UNORDERED_MAP
+  std::unordered_map<bigint,int> hash;
+  std::unordered_map<bigint,int>::iterator it;
 #else
   std::tr1::unordered_map<bigint,int> hash;
   std::tr1::unordered_map<bigint,int>::iterator it;
@@ -1478,6 +1483,9 @@ void ReadSurf::check_neighbor_norm_3d()
 #ifdef SPARTA_MAP
   std::map<bigint,int> hash;
   std::map<bigint,int>::iterator it;
+#elif SPARTA_UNORDERED_MAP
+  std::unordered_map<bigint,int> hash;
+  std::unordered_map<bigint,int>::iterator it;
 #else
   std::tr1::unordered_map<bigint,int> hash;
   std::tr1::unordered_map<bigint,int>::iterator it;
