@@ -100,6 +100,8 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
 #ifdef SPARTA_MAP
   hash = new std::map<cellint,int>();
+#elif SPARTA_UNORDERED_MAP
+  hash = new std::unordered_map<cellint,int>();
 #else
   hash = new std::tr1::unordered_map<cellint,int>();
 #endif
