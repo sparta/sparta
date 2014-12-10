@@ -85,7 +85,7 @@ the group divided by the total mass of the particles.
 
 :line
 
-The {a} keyword calculates the aveage of one or more sonine A moments
+The {a} keyword calculates the average of one or more sonine A moments
 for all particles in the group:
 
 A1 = Sum_i (mass_i * Vdim * pow(Csq,1)) / Sum_i (mass_i)
@@ -99,7 +99,7 @@ squared thermal velocity of the particle, as in the {thermal}
 equations above.  The number of moments computed is specified by the
 {order} value, e.g. for order = 3, the first 3 moments are computed.
 
-The {b} keyword calculates the averageof one or more sonine B moments
+The {b} keyword calculates the average of one or more sonine B moments
 for all particles in the group:
 
 B1 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,1)) / Sum_i (mass_i)
