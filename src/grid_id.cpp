@@ -25,6 +25,7 @@ using namespace SPARTA_NS;
    pt can be on any boundary of parent cell
    if I don't store child cell as owned or ghost, return -1 for unknown
    else return local index of child cell
+   NOTE: replace recursive with while loop
 ------------------------------------------------------------------------- */
 
 int Grid::id_find_child(int iparent, double *x)
