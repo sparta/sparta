@@ -21,51 +21,17 @@ ReactStyle(tce,ReactTCE)
 #ifndef SPARTA_REACT_TCE_H
 #define SPARTA_REACT_TCE_H
 
-#include "stdio.h"
-#include "react.h"
+#include "react_bird.h"
 #include "particle.h"
 
 namespace SPARTA_NS {
 
-class ReactTCE : public React {
+class ReactTCE : public ReactBird {
  public:
   ReactTCE(class SPARTA *, int, char **);
-  ~ReactTCE();
   void init();
   int attempt(Particle::OnePart *, Particle::OnePart *, 
               double, double, double, double &, int &);
-
- private:
-  FILE *fp;
-
-  struct OneReaction {
-    int active;                    // 1 if reaction is active
-    int initflag;                  // 1 if reaction params have been init
-    int type;                      // reaction type = DISSOCIATION, etc
-    int style;                     // reaction style = ARRHENIUS, etc
-    int ncoeff;                    // # of numerical coeffs
-    int nreactant,nproduct;        // # of reactants and products
-    char **id_reactants,**id_products;  // species IDs of reactants/products
-    int *reactants,*products;      // species indices of reactants/products
-    double *coeff;                 // numerical coeffs for reaction
-  };
-
-  OneReaction *rlist;              // list of all reactions read from file
-  int nlist;                       // # of reactions read from file
-  int maxlist;                     // max # of reactions in rlist
-
-  // possible reactions a pair of reactant species is part of
-
-  struct ReactionIJ {
-    int *list;           // list of indices into rlist, ptr into indices
-    int n;               // # of reactions in list
-  };
-
-  ReactionIJ **reactions;     // reactions for all IJ pairs of reactant species
-  int *indices;               // master list of indices
-
-  void readfile(char *);
-  int readone(char *, char *, int &, int &);
 };
 
 }

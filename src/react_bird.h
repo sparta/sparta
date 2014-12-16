@@ -12,31 +12,58 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifdef REACT_CLASS
+#ifndef SPARTA_REACT_BIRD_H
+#define SPARTA_REACT_BIRD_H
 
-ReactStyle(qk,ReactQK)
-
-#else
-
-#ifndef SPARTA_REACT_QK_H
-#define SPARTA_REACT_QK_H
-
-#include "react_bird.h"
+#include "stdio.h"
+#include "react.h"
 #include "particle.h"
 
 namespace SPARTA_NS {
 
-class ReactQK : public ReactBird {
+class ReactBird : public React {
  public:
-  ReactQK(class SPARTA *, int, char **);
-  void init();
+  ReactBird(class SPARTA *, int, char **);
+  virtual ~ReactBird();
+  virtual void init();
   int attempt(Particle::OnePart *, Particle::OnePart *, 
-              double, double, double, double &, int &);
+              double, double, double, double &, int &) = 0;
+
+ protected:
+  FILE *fp;
+
+  struct OneReaction {
+    int active;                    // 1 if reaction is active
+    int initflag;                  // 1 if reaction params have been init
+    int type;                      // reaction type = DISSOCIATION, etc
+    int style;                     // reaction style = ARRHENIUS, etc
+    int ncoeff;                    // # of numerical coeffs
+    int nreactant,nproduct;        // # of reactants and products
+    char **id_reactants,**id_products;  // species IDs of reactants/products
+    int *reactants,*products;      // species indices of reactants/products
+    double *coeff;                 // numerical coeffs for reaction
+  };
+
+  OneReaction *rlist;              // list of all reactions read from file
+  int nlist;                       // # of reactions read from file
+  int maxlist;                     // max # of reactions in rlist
+
+  // possible reactions a pair of reactant species is part of
+
+  struct ReactionIJ {
+    int *list;           // list of indices into rlist, ptr into indices
+    int n;               // # of reactions in list
+  };
+
+  ReactionIJ **reactions;     // reactions for all IJ pairs of reactant species
+  int *indices;               // master list of indices
+
+  void readfile(char *);
+  int readone(char *, char *, int &, int &);
 };
 
 }
 
-#endif
 #endif
 
 /* ERROR/WARNING messages:

@@ -18,59 +18,42 @@
 #include "react_qk.h"
 #include "update.h"
 #include "particle.h"
-#include "memory.h"
+#include "collide.h"
+#include "random_park.h"
+#include "math_const.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
+using namespace MathConst;
 
-enum{DISSOCIATION,EXCHANGE,IONISATION,RECOMBINATION};
+enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files
 
 /* ---------------------------------------------------------------------- */
 
 ReactQK::ReactQK(SPARTA *sparta, int narg, char **arg) :
-  React(sparta, narg, arg)
-{
-  if (narg != 2) error->all(FLERR,"Illegal react qk command");
-}
+  ReactBird(sparta, narg, arg) {}
 
 /* ---------------------------------------------------------------------- */
 
-void ReactQK::init() 
+void ReactQK::init()
 {
-  int nspecies = particle->nspecies;
-  reactions = memory->create(reactions,nspecies,nspecies,"react/qk:reactions");
-  nreactions = 0;
+  if (!collide || strcmp(collide->style,"vss") != 0)
+    error->all(FLERR,"React qk can only be used with collide vss");
 
-  /*
-  for (i = 0; i < NSPECIES; i++)
-  {
-     for (j = 0; j < NSPECIES; j++)
-     {
-        reactions[i][j].formula             = NULL;
-	reactions[i][j].outcome             = undefined;
-	reactions[i][j].nproducts           = 0;
-	reactions[i][j].product_C           = -1;
-	reactions[i][j].product_D           = -1;
-	reactions[i][j].product_E           = -1;
-	reactions[i][j].e_forward           = 0.0;
-	reactions[i][j].e_backward          = 0.0;
-     }
-  }
-  */
+  ReactBird::init();
 }
 
 /* ---------------------------------------------------------------------- */
 
 int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp, 
-                     double pre_etrans, double pre_erot,
-                     double pre_evib, double &post_etotal, int &kspecies)
+                     double pre_etrans, double pre_erot, double pre_evib,
+                     double &post_etotal, int &kspecies)
 {
-  double rprobability,pre_etotal,distbn,prior,max_distbn;
-  double fe,fc,fmax,lambda_v,cutoff,e_excess;
-  double Teff,a,b,c,d,e,sqrta;
-  double V_DoF,R_DoF,Omega_avg;
-  double Exponent_1,Exponent_2;
-  Reaction *reaction;
+  double pre_etotal,ecc,e_excess;
+  double reac_prob,prob,evib;
+  int iv,ilevel,maxlev,limlev;
+  int mspec,aspec;
+  OneReaction *r;
 
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
@@ -84,138 +67,131 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   double pre_vibdof_j = species[jsp].vibdof;
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
   double pre_ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.;
-  double pre_ave_dof = (pre_ave_rotdof  + pre_ave_vibdof)/2.;
+  double pre_ave_dof = 0.5 * (pre_ave_rotdof + pre_ave_vibdof);
 
-  // try both A+B and B+A reaction
-  // if two species identical, only try reaction once
+  double iomega = collide->extract(isp,"omega");
+  double jomega = collide->extract(jsp,"omega");
+  double omega = 0.5 * (iomega+jomega);
 
-  int nattempt = 2;
-  if (isp == jsp) nattempt = 1;
+  int n = reactions[isp][jsp].n;
+              
+  if (n == 0) return 0;
+  int *list = reactions[isp][jsp].list;
 
-  for (int iattempt = 0; iattempt < nattempt; iattempt++) {
-    if (iattempt == 0) reaction = &reactions[isp][jsp];
-    else reaction = &reactions[jsp][isp];
-    if (!reaction->formula) continue;
+  // probablity to compare to reaction probability
+
+  double react_prob = 0.0;
+  double random_prob = random->uniform(); 
+
+  // loop over possible reactions for these 2 species
+
+  for (int i = 0; i < n; i++) {
+    r = &rlist[list[i]];
+
+    // ignore energetically impossible reactions
 
     pre_etotal = pre_etrans + pre_erot + pre_evib;
-    e_excess = pre_etotal - reaction->e_forward;
-    
-    // crude test to filter out energetically impossible reactions
-    
+
+    ecc = pre_etrans; 
+    if (pre_ave_rotdof > 0.1) ecc += pre_erot*r->coeff[0]/pre_ave_rotdof;
+
+    e_excess = ecc - r->coeff[1];
     if (e_excess <= 0.0) continue;
-
+        
     // compute probability of reaction
-    
-    switch (reaction->outcome) {
-    case IONISATION:
-      rprobability = 0.0;
-      if (rprobability > 1.0) {
-        printf("rprobability > 1.0 in polyatomic test reaction!\n");
-        printf("(rprob = %f)\n", rprobability);
-      }
-      break;
-
+        
+    switch (r->type) {
     case DISSOCIATION:
       {
-        double ecc = pre_etrans + ip->evib;
-        // NOTE: this line needs to change?
-        int maxlev = (int) (ecc/update->boltz*species[isp].vibtemp); 
-        /*
-        int limlev = update->boltz*species[isp].distemp /
-          update->boltz*species[isp].vibtemp;
-        if (maxlev > limlev) { 
-          post_etotal = pre_etotal - 
-            update->boltz*species[isp].distemp*update->boltz;
-          ip->ispecies = reaction->product_C;
-          jp->ispecies = reaction->product_D;
-          kp->ispecies = reaction->product_D;
-        } 
-        */
-        break;
+        ecc = pre_etrans + ip->evib;
+        maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
+        limlev = static_cast<int> 
+          (fabs(r->coeff[1])/(update->boltz*species[isp].vibtemp));
+        if (maxlev > limlev) reac_prob = 1.0;
+        break; 
       }
-
     case EXCHANGE:
       {
-      // NOTE: what if neither case met?
-        int asp,bsp;
-        if (species[isp].vibdof > 0) {
-          asp = isp;
-          bsp = jsp;
-        } else if (species[jsp].vibdof > 0) {
-          asp = jsp;
-          bsp = isp;
-        }
-        //double omega = 0.5 * (params[asp].omega + params[jsp].omega);
+        if (r->coeff[1] > 0.0 && species[isp].rotdof > 0) {
 
-        // pre-collision particle that splits is of species asp
+          // endothermic reaction 
 
-        int reac_vmode = 1;
+          ecc = pre_etrans + ip->evib;
+          maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
+          if (ecc > r->coeff[1]) {
 
-        // endothermic reaction
+            // PROB is the probability ratio of eqn (5.61)
 
-        /*
-        if (reaction->e_forward < 0.0 && reac_vmode > 0.0) {
-          double ecc = pre_etrans + ap->ivib*update->boltz*species[asp].vibtemp;
-          int maxlev = (int) (ecc/update->boltz*species[asp].vibtemp);
-          if (ecc > abs(reaction->e_forward)) {
-            double prob = 0.0;
+            prob = 0.0;
             do {
-              iv=random->uniform()*(maxlev+0.99999999);
-              evib= (double) iv*update->boltz*species[asp].vibtemp;
-              if (evib < ecc) prob = pow(1.0-evib/ecc,1.5-omega);
-              //PROB is the probability ratio of eqn (5.61)
-            } while (random->uniform < prob);
+              iv =  static_cast<int> (random->uniform()*(maxlev+0.99999999));
+              evib = static_cast<double> 
+                (iv*update->boltz*species[isp].vibtemp);
+              if (evib < ecc) reac_prob = pow(1.0-evib/ecc,1.5-omega);
+            } while (random->uniform() < reac_prob);
+            
+            ilevel = static_cast<int> 
+              (abs(fabs(r->coeff[4]))/(update->boltz*species[isp].vibtemp));
 
-            ilevel = (int) abs(reaction->e_forward/update->boltz/
-                               species[asp].vibtemp);
-          
-            if (iv >= ilevel) { // GT MODEL
-              ip->species = reaction->product_C;
-              jp->species = reaction->product_D;
-              post_etotal = pre_etotal + reaction->e_forward;
-              ec = post_etotal;
-            }
+            // GT MODEL
+
+            if (iv >= ilevel) reac_prob = 1.0;
           }
-          // NOTE: any additional vibrational modes must be set to zero
-        } // NOTE: else for endothermic?
 
-        // exothermic reaction
-        
-        //double omega = 0.5 * (params[asp].omega + params[jsp].omega);
-        double ecc = pre_etrans + ap->ivib*update->boltz*species[asp].vibtemp;
-        
-        // the potential post-collision species of the particle
-        int mspec = reaction->product_C; 
-        // the potential post-collision species of the atom
-        int nspec = reaction->product_D; 
-        // potential post-collision energy
-        ecc += reaction->e_forward;
-        
-        do {
-          iv=random->uniform()*(maxlev+0.99999999);
-          evib= (double) iv*update->boltz*species[mspec].vibtemp;
-          if (evib < ecc) prob = pow(1.0-evib/ecc,1.5-omega);
-          //PROB is the probability ratio of eqn (5.61)
-        } while (random->uniform < prob);
-          
-        ilevel = (int) abs(reaction->e_forward/update->boltz/
-                           species[mspec].vibtemp);
+        } else if (species[isp].rotdof > 0) {
 
-        if (iv >= ilevel) { // GT MODEL
-          ip->species = reaction->product_C;
-          jp->species = reaction->product_D;
-          post_etotal = pre_etotal+reaction->e_forward;
-          ec = postcoln_etotal;
+          ecc = pre_etrans + ip->evib;
+        
+          // the potential post-collision species of the particle
+          mspec = r->products[0];
+          // the potential post-collision species of the atom
+          aspec = r->products[1];
+
+          if (species[mspec].rotdof < 2.0)  {
+            mspec = r->products[1];
+            aspec = r->products[0];
+          }
+              
+          // potential post-collision energy
+
+          ecc += r->coeff[4];
+          maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
+          do {
+            iv = random->uniform()*(maxlev+0.99999999);
+            evib = static_cast<double> 
+              (iv*update->boltz*species[mspec].vibtemp);
+            if (evib < ecc) prob = pow(1.0-evib/ecc,1.5-omega);
+          } while (random->uniform() < prob);
+
+          ilevel = static_cast<int> 
+            (fabs(r->coeff[1]/update->boltz/species[mspec].vibtemp));
+
+          // GT MODEL
+
+          if (iv >= ilevel) reac_prob = 1.0;
         }
-        */        
+        
         break;
       }
-
-    default:
-      error->one(FLERR,"Unknown outcome in reaction");
-      break;
+      
+      default:
+        error->one(FLERR,"Unknown outcome in reaction");
+        break;
+      }
+      
+    // test against random number to see if this reaction occurs
+    
+    if (react_prob > random_prob) {
+      ip->ispecies = r->products[0];
+      jp->ispecies = r->products[1];
+      
+      post_etotal = pre_etotal + r->coeff[4];
+      if (r->nproduct > 2) kspecies = r->products[2];
+      else kspecies = -1;
+      
+      return 1;
     }
   }
-
+  
   return 0;
 }
