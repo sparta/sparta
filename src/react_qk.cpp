@@ -174,11 +174,11 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         break;
       }
       
-      default:
-        error->one(FLERR,"Unknown outcome in reaction");
-        break;
-      }
-      
+    default:
+      error->one(FLERR,"Unknown outcome in reaction");
+      break;
+    }
+
     // test against random number to see if this reaction occurs
     
     if (react_prob > random_prob) {
