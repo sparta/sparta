@@ -112,15 +112,14 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       }
     case EXCHANGE:
       {
-        if (r->coeff[1] > 0.0 && species[isp].rotdof > 0) {
+       
+        if (r->coeff[4] < 0.0 && species[isp].rotdof > 0) {
 
           // endothermic reaction 
 
           ecc = pre_etrans + ip->evib;
           maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
           if (ecc > r->coeff[1]) {
-
-            // PROB is the probability ratio of eqn (5.61)
 
             prob = 0.0;
             do {
@@ -131,14 +130,12 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
             } while (random->uniform() < reac_prob);
             
             ilevel = static_cast<int> 
-              (abs(fabs(r->coeff[4]))/(update->boltz*species[isp].vibtemp));
-
-            // GT MODEL
+              (fabs(fabs(r->coeff[4]))/(update->boltz*species[isp].vibtemp));
 
             if (iv >= ilevel) reac_prob = 1.0;
           }
 
-        } else if (species[isp].rotdof > 0) {
+          } else if (r->coeff[4] > 0.0 && species[isp].rotdof > 0) {
 
           ecc = pre_etrans + ip->evib;
         
@@ -152,6 +149,10 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
             aspec = r->products[0];
           }
               
+          double momega = collide->extract(mspec,"omega");
+          double aomega = collide->extract(aspec,"omega");
+          double omega = 0.5 * (momega+aomega);
+
           // potential post-collision energy
 
           ecc += r->coeff[4];
@@ -164,10 +165,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
           } while (random->uniform() < prob);
 
           ilevel = static_cast<int> 
-            (fabs(r->coeff[1]/update->boltz/species[mspec].vibtemp));
-
-          // GT MODEL
-
+            (fabs(r->coeff[4]/update->boltz/species[mspec].vibtemp));
           if (iv >= ilevel) reac_prob = 1.0;
         }
         
