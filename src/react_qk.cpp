@@ -140,9 +140,10 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
           ecc = pre_etrans + ip->evib;
         
-          // the potential post-collision species of the particle
+          // mspec = post-collision species of the particle
+          // aspec = post-collision species of the atom
+
           mspec = r->products[0];
-          // the potential post-collision species of the atom
           aspec = r->products[1];
 
           if (species[mspec].rotdof < 2.0)  {
@@ -150,11 +151,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
             aspec = r->products[0];
           }
               
-          double momega = collide->extract(mspec,"omega");
-          double aomega = collide->extract(aspec,"omega");
-          double omega = 0.5 * (momega+aomega);
-
-          // potential post-collision energy
+          // post-collision energy
 
           ecc += r->coeff[4];
           maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
@@ -162,7 +159,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
             iv = random->uniform()*(maxlev+0.99999999);
             evib = static_cast<double> 
               (iv*update->boltz*species[mspec].vibtemp);
-            if (evib < ecc) prob = pow(1.0-evib/ecc,1.5-omega);
+            if (evib < ecc) prob = pow(1.0-evib/ecc,1.5 - r->coeff[6]);
           } while (random->uniform() < prob);
 
           ilevel = static_cast<int> 

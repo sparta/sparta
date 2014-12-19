@@ -33,7 +33,7 @@ enum{ARRHENIUS,QUANTUM};                               // other react files
 
 #define MAXREACTANT 2
 #define MAXPRODUCT 3
-#define MAXCOEFF 6
+#define MAXCOEFF 7
 
 #define MAXLINE 1024
 #define DELTALIST 16
@@ -225,7 +225,23 @@ void ReactBird::init()
 
     r->coeff[2] = c1;
     r->coeff[3] = c2;
-    r->coeff[5] = z + 1.5 - omega; 
+    r->coeff[5] = z + 1.5 - omega;
+
+    // add additional coeff for post-collision effective omega
+    // mspec = post-collision species of the particle
+    // aspec = post-collision species of the atom
+
+    int mspec = r->products[0];
+    int aspec = r->products[1];
+
+    if (species[mspec].rotdof < 2.0)  {
+      mspec = r->products[1];
+      aspec = r->products[0];
+    }
+              
+    double momega = collide->extract(mspec,"omega");
+    double aomega = collide->extract(aspec,"omega");
+    r->coeff[6] = 0.5 * (momega+aomega);
   }
 }
 
