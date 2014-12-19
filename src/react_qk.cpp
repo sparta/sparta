@@ -50,7 +50,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                      double &post_etotal, int &kspecies)
 {
   double pre_etotal,ecc,e_excess;
-  double reac_prob,prob,evib;
+  double prob,evib;
   int iv,ilevel,maxlev,limlev;
   int mspec,aspec;
   OneReaction *r;
@@ -107,7 +107,8 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
         limlev = static_cast<int> 
           (fabs(r->coeff[1])/(update->boltz*species[isp].vibtemp));
-        if (maxlev > limlev) reac_prob = 1.0;
+
+        if (maxlev > limlev) react_prob = 1.0;
         break; 
       }
     case EXCHANGE:
@@ -126,13 +127,13 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
               iv =  static_cast<int> (random->uniform()*(maxlev+0.99999999));
               evib = static_cast<double> 
                 (iv*update->boltz*species[isp].vibtemp);
-              if (evib < ecc) reac_prob = pow(1.0-evib/ecc,1.5-omega);
-            } while (random->uniform() < reac_prob);
+              if (evib < ecc) react_prob = pow(1.0-evib/ecc,1.5-omega);
+            } while (random->uniform() < react_prob);
             
             ilevel = static_cast<int> 
               (fabs(fabs(r->coeff[4]))/(update->boltz*species[isp].vibtemp));
 
-            if (iv >= ilevel) reac_prob = 1.0;
+            if (iv >= ilevel) react_prob = 1.0;
           }
 
           } else if (r->coeff[4] > 0.0 && species[isp].rotdof > 0) {
@@ -166,7 +167,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
           ilevel = static_cast<int> 
             (fabs(r->coeff[4]/update->boltz/species[mspec].vibtemp));
-          if (iv >= ilevel) reac_prob = 1.0;
+          if (iv >= ilevel) react_prob = 1.0;
         }
         
         break;
