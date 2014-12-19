@@ -12,19 +12,22 @@ react command :h3
 
 react style args :pre
 
-style = {none} or {tce} or {qk} :ulb,l
+style = {none} or {tce} or {qk} or {tce/qk} :ulb,l
 args = arguments for that style :l
   {none} args = none
   {tce} args = infile
     infile = file with list of chemical reactions
   {qk} args = infile
+    infile = file with list of chemical reactions
+  {tce/qk} args = infile
     infile = file with list of chemical reactions :pre
 :ule
 
 [Examples:]
 
 react none
-react tce air.tce :pre
+react tce air.tce
+react qk air.tce :pre
 
 [Description:]
 
@@ -44,35 +47,95 @@ Thus the file can contain more reactions than are used in a particular
 simulation.  See the "species"_species.html command for how species
 IDs are defined.
 
-The reaction models for the various styles and the corresponding input
-file format are described below.
+The reaction models for the various styles are described below.
+
+The format of the reaction file is the same for all three of the
+currently defined styles, and is also described below.  The various
+styles interpret and compute the specified reactions in different
+ways.  The data directory in the SPARTA distribution contains reaction
+files for these reaction models, all with the suffix ".tce".
 
 :line
 
-The {tce} style is Bird's Total Collision Energy Model.  Using kinetic
-theory, it allows for reaction probabilities to be defined based on
-known, measured, reaction rates.  The model is described in detail in
-"(Bird94)"_#Bird94; see chapter 6. The required input parameters for
-each reaction (discussed below) are values that permit its effective
-Arrhenius rate to be calculated, namely
+The {tce} style is Bird's Total Collision Energy Model (TCE).  When
+this style is specified, all computed reactions will use the TCE
+model.
+
+Using kinetic theory, the TCE model allows for reaction probabilities
+to be defined based on known, measured, reaction rates.  The model is
+described in detail in "(Bird94)"_#Bird94; see chapter 6. The required
+input parameters for each reaction (discussed below) are values that
+permit its effective Arrhenius rate to be calculated, namely
 
 :c,image(Eqs/arrhenius.jpg)
 
 where K(T) is the forward reaction rate, T is the temperature of the
 participating molecules which is a function of their velocities and
 internal energy states, k the Boltzmann constant, and A,b,Ea are input
-parameters discussed below.
+parameters as discussed below.
 
-The format of the input file is as follows.  Comments or blank lines
-are allowed in the file.  Comment lines start with a "#" character.
-All other entries must come in 2-line pairs with values separated by
-whitespace in the following format
+All 5 reactions coefficients read from the reaction file (described
+below) are used to calculate terms in equation 6.10 of
+"(Bird94)"_#Bird94 for the probability that a reaction takes place.
+
+The C2, C3, C4 values are the Arrhenius activation energy Ea,
+prefactor A, and exponent b, used in the rate formula above.
+
+:line
+
+The {qk} style is Bird's Quantum-Kinetic model (QK).  When this style
+is specified, all computed reactions will use the QK model.
+
+The QK model implemented is that of "(Bird09)"_#Bird09 as validated
+"(Gallis09)"_#Gallis09 and modified "(Gallis10)"_#Gallis10.
+
+The QK model depends solely on properties of the colliding molecules
+and unlike the TCE model makes no use of measured reaction rates or 
+adjustable parameters. The macroscopic properties used in the QK model 
+are the available collision energy, activation energies, and quantized
+vibrational energy levels.
+
+According to the QK model dissociation reactions take place when the 
+maximum obtainable vibrational energy after an inelastic energy exchange
+is higher than the dissociation level "(Bird09)"_#Bird09. 
+
+:c,image(Eqs/qk_dissociation.jpg)
+
+Exchange reactions take place when the vibrational energy after a trial 
+energy exchange is above the activation energy of the exchange reaction
+"(Gallis10)"_#Gallis10. 
+
+:c,image(Eqs/qk_exchange.jpg)
+
+A new version of the QK model for exchange reactions has been proposed
+by "(Bird11)"_#Bird11.  This will be implemented in future releases of
+SPARTA.
+
+For the QK model, SPARTA reads the same 5 coefficients per reaction
+from the reaction file (described below) as for the TCE model.  Three
+of the coefficients (C1,C2,C5) are used to calculate terms in equation
+6.10 of "(Bird94)"_#Bird94 for the probability that a reaction takes
+place.  The Arrhenius rate parameters C3 and C4 are ignored by the QK
+model.
+
+:line
+
+The {tce/qk} style is a hybrid model which can be used to compute
+reactions using both the TCE and QK models.  When this style is
+specified, reactions from the input file that are flagged with an A =
+Arrhenius style will be computed using the TCE model.  Reactions from
+the input file that are flagged with a Q = Quantum style will be
+computed using the QK model.
+
+:line
+
+The format of the input reaction file is as follows.  Comments or
+blank lines are allowed in the file.  Comment lines start with a "#"
+character.  All other entries must come in 2-line pairs with values
+separated by whitespace in the following format
 
 R1 + R2 + ... --> P1 + P2 + ...
 type style C1 C2 ... :pre
-
-The data directory in the SPARTA distribution contains reaction files
-for the TCE model, all with the suffix ".tce".
 
 The first line is a text-based description of a single reaction.  R1,
 R2, etc are one or more reactants, listed as "species"_species.html
@@ -116,13 +179,14 @@ been implemented in SPARTA.
 The {style} of each reaction is a single character (upper or lower
 case) with the following meaning:
 
-A = Arrhenius (TCE) :ul
-Q = Quantum-Kinetic (QK) :ul
+A = Arrhenius 
+Q = Quantum :ul
 
 The style determines how many reaction coefficients are listed as C1,
 C2, etc, and how they are interpreted by SPARTA.
 
-For the A = Arrhenius style, there are 5 coefficients:
+For both the A = Arrhenius style and Q = Quantum style, there are 5
+coefficients:
 
 C1 = number of internal degrees of freedom (as defined by the TCE model)
 C2 = Arrhenius activation energy Ea
@@ -130,51 +194,8 @@ C3 = Arrhenius prefactor A
 C4 = Arrhenius exponent b
 C5 = overall reaction energy (positive for exothermic) :ul
 
-These are used to calculate terms in equation 6.10 of
-"(Bird94)"_#Bird94 for the probability that a reaction takes place.
-Note that effect of C2, C3, C4 on the overall reaction rate is given
-by the Arrhenius formula above.
-
-:line
-
-The {qk} style is Bird's Quantum-Kinetic model (QK).
-
-The QK model implemented is that of "(Bird09)"_#Bird09 as validated
-"(Gallis09)"_#Gallis09 and modified "(Gallis10)"_#Gallis10.
-
-The QK model depends solely on properties of the colliding molecules
-and unlike the TCE model makes no use of measured reaction rates or 
-adjustable parameters. The macroscopic properties used in the QK model 
-are the available collision energy, activation energies, and quantized
-vibrational energy levels.
-
-According to the QK model dissociation reactions take place when the 
-maximum obtainable vibrational energy after an inelastic energy exchange
-is higher than the dissociation level "(Bird09)"_#Bird09. 
-
-:c,image(Eqs/qk_dissociation.jpg)
-
-Exchange reactions take place when the vibrational energy after a trial 
-energy exchange is above the activation energy of the exchange reaction
-"(Gallis10)"_#Gallis10. 
-
-:c,image(Eqs/qk_exchange.jpg)
-
-A new version of the QK model for exchange reactions has been proposed by
-"(Bird11)"_#Bird11. This will be implemented in future releases of the code.
-
-For the Q = QK style, SPARTA reads the same coefficients as the A style.
-Howerver, in this case the Arrhenius rate parameters are ignored.
-
-:line
-
-The {tce-qk} style is a hybrid between Bird's TCE and QK model.
-
-SPARTA allows the use to use both the TCE and QK models simultaneously
-by using the hybrid TCE-QK style. In this case control over which
-model to be used for each particular reaction is passed to the data
-file where the second parameter can be specified as A for Arrhenius
-(TCE) or Q for QK.
+The different reaction styles use these values in different ways, as
+explained above.
 
 :line
 
@@ -196,21 +217,19 @@ Simulation of Gas Flows, Clarendon Press, Oxford (1994).
 
 :link(Bird09)
 [(Bird09)] G. A. Bird, Chemical Reactions in DSMC Rarefied Gas
-Dynamics Ed. T Abe AIP Conference Proceedings (2009).
+Dynamics, Editor T Abe, AIP Conference Proceedings (2009).
 
 :link(Bird11)
 [(Bird11)] G. A. Bird, "The Q-K model for gas-phase chemical reaction
-rates", Physics of Fluids, 23, 106101, (2011)
+rates", Physics of Fluids, 23, 106101, (2011).
 
 :link(Gallis09)
 [(Gallis09)] M. A. Gallis, R. B. Bond, and J. R. Torczynski, "A
 Kinetic-Theory Approach for Computing Chemical-Reaction Rates in
-Upper-Atmosphere Hypersonic Flows", Journal of Chemical Physics,131,
-124311, (2009).
+Upper-Atmosphere Hypersonic Flows", J Chem Phys, 131, 124311, (2009).
 
 :link(Gallis11)
 [(Gallis10)] M. A. Gallis, R. B. Bond, and J. R.Torczynski,
 "Assessment of Collision-Energy-Based Models for Atmospheric-Species
-Reactions in Hypersonic Flows", J. Thermophysics and Heat Transfer,
+Reactions in Hypersonic Flows", J Thermophysics and Heat Transfer,
 (2010).
-
