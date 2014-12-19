@@ -15,7 +15,7 @@
 </P>
 <PRE>react style args 
 </PRE>
-<UL><LI>style = <I>none</I> or <I>tce</I> or <I>qk</I> or <I>tce/qk</I> 
+<UL><LI>style = <I>none</I> or <I>tce</I> or <I>qk</I> 
 
 <LI>args = arguments for that style 
 
@@ -23,8 +23,6 @@
   <I>tce</I> args = infile
     infile = file with list of chemical reactions
   <I>qk</I> args = infile
-    infile = file with list of chemical reactions
-  <I>tce/qk</I> args = infile
     infile = file with list of chemical reactions 
 </PRE>
 
@@ -32,8 +30,7 @@
 <P><B>Examples:</B>
 </P>
 <PRE>react none
-react tce air.tce
-react qk air.tce 
+react tce air.tce 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -53,72 +50,36 @@ Thus the file can contain more reactions than are used in a particular
 simulation.  See the <A HREF = "species.html">species</A> command for how species
 IDs are defined.
 </P>
-<P>The reaction models for the various styles are described below.
-</P>
-<P>The format of the reaction file is the same for all three of the
-currently defined styles, and is also described below.  The various
-styles interpret and compute the specified reactions in different
-ways.  The data directory in the SPARTA distribution contains reaction
-files for these reaction models, all with the suffix ".tce".
+<P>The reaction models for the various styles and the corresponding input
+file format are described below.
 </P>
 <HR>
 
-<P>The <I>tce</I> style is Bird's Total Collision Energy Model (TCE).  When
-this style is specified, all computed reactions will use the TCE
-model.
-</P>
-<P>Using kinetic theory, the TCE model allows for reaction probabilities
-to be defined based on known, measured, reaction rates.  The model is
-described in detail in <A HREF = "#Bird94">(Bird94)</A>; see chapter 6. The required
-input parameters for each reaction (discussed below) are values that
-permit its effective Arrhenius rate to be calculated, namely
+<P>The <I>tce</I> style is Bird's Total Collision Energy Model.  Using kinetic
+theory, it allows for reaction probabilities to be defined based on
+known, measured, reaction rates.  The model is described in detail in
+<A HREF = "#Bird94">(Bird94)</A>; see chapter 6. The required input parameters for
+each reaction (discussed below) are values that permit its effective
+Arrhenius rate to be calculated, namely
 </P>
 <CENTER><IMG SRC = "Eqs/arrhenius.jpg">
 </CENTER>
 <P>where K(T) is the forward reaction rate, T is the temperature of the
 participating molecules which is a function of their velocities and
 internal energy states, k the Boltzmann constant, and A,b,Ea are input
-parameters as discussed below.
+parameters discussed below.
 </P>
-<P>All 5 reactions coefficients read from the reaction file (described
-below) are used to calculate terms in equation 6.10 of
-<A HREF = "#Bird94">(Bird94)</A> for the probability that a reaction takes place.
-</P>
-<P>The C2, C3, C4 values are the Arrhenius activation energy Ea,
-prefactor A, and exponent b, used in the rate formula above.
-</P>
-<HR>
-
-<P>The <I>qk</I> style is Bird's Quantum-Kinetic model (QK).  When this style
-is specified, all computed reactions will use the QK model.
-</P>
-<P>More explanation.  Equations?
-</P>
-<P>Three of the reactions coefficients (C1,C2,C5) read from the reaction
-file (described below) are used to calculate terms in equation 6.10 of
-<A HREF = "#Bird94">(Bird94)</A> for the probability that a reaction takes place.
-</P>
-<P>The C3 and C4 values are ignored by the QK model.
-</P>
-<HR>
-
-<P>The <I>tce/qk</I> style is a hybrid model which can be used to compute
-reactions using both the TCE and QK models.  When this style is
-specified, reactions from the input file that are flagged with an A =
-Arrhenius style will be computed using the TCE model.  Reactions from
-the input file that are flagged with a Q = Quantum style will be
-computed using the QK model.
-</P>
-<HR>
-
-<P>The format of the input reaction file is as follows.  Comments or
-blank lines are allowed in the file.  Comment lines start with a "#"
-character.  All other entries must come in 2-line pairs with values
-separated by whitespace in the following format
+<P>The format of the input file is as follows.  Comments or blank lines
+are allowed in the file.  Comment lines start with a "#" character.
+All other entries must come in 2-line pairs with values separated by
+whitespace in the following format
 </P>
 <PRE>R1 + R2 + ... --> P1 + P2 + ...
 type style C1 C2 ... 
 </PRE>
+<P>The data directory in the SPARTA distribution contains reaction files
+for the TCE model, all with the suffix ".tce".
+</P>
 <P>The first line is a text-based description of a single reaction.  R1,
 R2, etc are one or more reactants, listed as <A HREF = "species.html">species</A>
 IDs.  P1, P2, etc are one or more products, also listed as
@@ -161,14 +122,14 @@ been implemented in SPARTA.
 <P>The <I>style</I> of each reaction is a single character (upper or lower
 case) with the following meaning:
 </P>
-<UL><LI>A = Arrhenius 
-<LI>Q = Quantum 
+<UL><LI>A = Arrhenius (TCE) 
+</UL>
+<UL><LI>Q = Quantum-Kinetic (QK) 
 </UL>
 <P>The style determines how many reaction coefficients are listed as C1,
 C2, etc, and how they are interpreted by SPARTA.
 </P>
-<P>For both the A = Arrhenius style and Q = Quantum style, there are 5
-coefficients:
+<P>For the A = Arrhenius style, there are 5 coefficients:
 </P>
 <UL><LI>C1 = number of internal degrees of freedom (as defined by the TCE model)
 <LI>C2 = Arrhenius activation energy Ea
@@ -176,8 +137,51 @@ coefficients:
 <LI>C4 = Arrhenius exponent b
 <LI>C5 = overall reaction energy (positive for exothermic) 
 </UL>
-<P>The different reaction styles use these values in different ways, as
-explained above.
+<P>These are used to calculate terms in equation 6.10 of
+<A HREF = "#Bird94">(Bird94)</A> for the probability that a reaction takes place.
+Note that effect of C2, C3, C4 on the overall reaction rate is given
+by the Arrhenius formula above.
+</P>
+<HR>
+
+<P>The <I>qk</I> style is Bird's Quantum-Kinetic model (QK).
+</P>
+<P>The QK model implemented is that of <A HREF = "#Bird09">(Bird09)</A> as validated
+<A HREF = "#Gallis09">(Gallis09)</A> and modified <A HREF = "#Gallis10">(Gallis10)</A>.
+</P>
+<P>The QK model depends solely on properties of the colliding molecules
+and unlike the TCE model makes no use of measured reaction rates or 
+adjustable parameters. The macroscopic properties used in the QK model 
+are the available collision energy, activation energies, and quantized
+vibrational energy levels.
+</P>
+<P>According to the QK model dissociation reactions take place when the 
+maximum obtainable vibrational energy after an inelastic energy exchange
+is higher than the dissociation level <A HREF = "#Bird09">(Bird09)</A>. 
+</P>
+<CENTER><IMG SRC = "Eqs/qk_dissociation.jpg">
+</CENTER>
+<P>Exchange reactions take place when the vibrational energy after a trial 
+energy exchange is above the activation energy of the exchange reaction
+<A HREF = "#Gallis10">(Gallis10)</A>. 
+</P>
+<CENTER><IMG SRC = "Eqs/qk_exchange.jpg">
+</CENTER>
+<P>A new version of the QK model for exchange reactions has been proposed by
+<A HREF = "#Bird11">(Bird11)</A>. This will be implemented in future releases of the code.
+</P>
+<P>For the Q = QK style, SPARTA reads the same coefficients as the A style.
+Howerver, in this case the Arrhenius rate parameters are ignored.
+</P>
+<HR>
+
+<P>The <I>tce-qk</I> style is a hybrid between Bird's TCE and QK model.
+</P>
+<P>SPARTA allows the use to use both the TCE and QK models simultaneously
+by using the hybrid TCE-QK style. In this case control over which
+model to be used for each particular reaction is passed to the data
+file where the second parameter can be specified as A for Arrhenius
+(TCE) or Q for QK.
 </P>
 <HR>
 
@@ -197,5 +201,29 @@ explained above.
 
 <P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+</P>
+<A NAME = "Bird09"></A>
+
+<P><B>(Bird09)</B> G. A. Bird, Chemical Reactions in DSMC Rarefied Gas
+Dynamics Ed. T Abe AIP Conference Proceedings (2009).
+</P>
+<A NAME = "Bird11"></A>
+
+<P><B>(Bird11)</B> G. A. Bird, "The Q-K model for gas-phase chemical reaction
+rates", Physics of Fluids, 23, 106101, (2011)
+</P>
+<A NAME = "Gallis09"></A>
+
+<P><B>(Gallis09)</B> M. A. Gallis, R. B. Bond, and J. R. Torczynski, "A
+Kinetic-Theory Approach for Computing Chemical-Reaction Rates in
+Upper-Atmosphere Hypersonic Flows", Journal of Chemical Physics,131,
+124311, (2009).
+</P>
+<A NAME = "Gallis11"></A>
+
+<P><B>(Gallis10)</B> M. A. Gallis, R. B. Bond, and J. R.Torczynski,
+"Assessment of Collision-Energy-Based Models for Atmospheric-Species
+Reactions in Hypersonic Flows", J. Thermophysics and Heat Transfer,
+(2010).
 </P>
 </HTML>
