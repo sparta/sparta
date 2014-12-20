@@ -57,7 +57,7 @@ files for these reaction models, all with the suffix ".tce".
 
 :line
 
-The {tce} style is Bird's Total Collision Energy Model (TCE).  When
+The {tce} style is Bird's Total Collision Energy (TCE) model.  When
 this style is specified, all computed reactions will use the TCE
 model.
 
