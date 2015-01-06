@@ -10,7 +10,7 @@ collide command :h3
 
 [Syntax:]
 
-collide style args :pre
+collide style args keyword value ... :pre
 
 style = {none} or {vss} :ulb,l
 args = arguments for that style :l
@@ -18,12 +18,16 @@ args = arguments for that style :l
   {vss} args = mix-ID file
     mix-ID = ID of mixture to use for group definitions
     file = filename that lists species with their VSS model parameters :pre
+zero or more keyword/value pairs may be appended :l
+keyword = {relax} :l
+  {relax} value = {constant} or {variable} :pre
 :ule
 
 [Examples:]
 
 collide none
-collide vss all.vss background :pre
+collide vss all.vss background
+collide vss all.vss background relax variable :pre
 
 [Description:]
 
@@ -97,21 +101,27 @@ angular-scattering parameter, which relates the scattering angle to
 the impact parameter.  Setting {alpha} = 1 produces isotropic (hard
 sphere) interactions, which converts the VSS model into a VHS model.
 
-The {file} argument is for a file which contains definitions of VSS
-model parameters for some number of species.  It can contain species
-not used by this simulation; they will simply be ignored.  All species
+The {file} argument is for a collision data file which contains
+definitions of VSS model parameters for some number of species.
+Example files are included in the data directory of the SPARTA
+distribution, with a "*.css" suffix.  The file can contain species not
+used by this simulation; they will simply be ignored.  All species
 currently defined by the simulation must be present in the file.
 
-The format of the file is as follows.  Comments or blank lines are
-allowed in the file.  Comment lines start with a "#" character.  All
-other lines must have the following format with properties separated
-by whitespace:
+The format of the file depends of the setting of the optional {relax}
+keyword, as explained below.  Comments or blank lines are allowed in
+the file.  Comment lines start with a "#" character.  All other lines
+must have the following format with parameters separated by
+whitespace.
+
+If the {relax} keyword is specified as {constant}, which is the
+default, then each line has 4 parameters following the species ID:
 
 species-ID diam omega tref alpha :pre
 
 The species-ID is a string that will be matched to one of the species
 defined by the simulation, via the "species"_species.html command.
-The meaning of the properties is as follows:
+The meaning of additional properties is as follows:
 
 diam = VHS or VSS diameter of particle (distance units)
 omega = temperature-dependence of viscosity (unitless)
@@ -125,6 +135,40 @@ values are based on the first-order approximation of the
 Chapman-Enskog theory.  Infinite-order parameters are described in
 "(Gallis04)"_#Gallis04.
 
+In the {constant} case rotational and vibrational relaxation during a
+collision is treated in the same constant manner for every collision,
+using the rotational and vibrational relaxation numbers from the
+species data file, as read by the "species"_species.html command.
+
+If the {relax} keyword is specified as {variable}, then each line has
+8 parameters following the species ID:
+
+species-ID diam omega tref alpha Zrotinf T* C1 C2 :pre
+
+The first 4 parameters are the same as above.  Parameters 5 and 6
+affect rotational relaxation; parameters 7 and 8 affect vibrational
+relaxation.  In this case the rotational and vibrational relaxation
+during a collision is treated as a variable and is computed for each
+collision.  This calculation is only performed for polyatomic species,
+using equations A5 and A6 on pages 413 and 414 in "(Bird94)"_#Bird94.
+Zrotinf and T* are parameters in the numerator and denominator of eq
+A5.  C1 and C2 are in eq A6.  The units of these parameters is as
+follows:
+
+Zrotinf (unitless)
+T* (temperature units)
+C1 (temperature units)
+C2 (temperature^(1/3) units) :ul
+
+Note that a collision data file with the 4 extra relaxation parameters
+(per species) can be used when the {relax} keyword is specified as
+{constant}.  In that case, the extra parameters are simply ignored.
+
+:line
+
+For the {vss} style, the optional keyword {relax} can be specified
+as {constant} or {variable}.
+
 :line
 
 [Restrictions:] none
@@ -136,7 +180,8 @@ Chapman-Enskog theory.  Infinite-order parameters are described in
 
 [Default:]
 
-style = none
+Style = none is the default (no collisions).  If the vss style is
+specified, then relax = constant is the default.
 
 :line
 

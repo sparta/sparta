@@ -13,7 +13,7 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>collide style args 
+<PRE>collide style args keyword value ... 
 </PRE>
 <UL><LI>style = <I>none</I> or <I>vss</I> 
 
@@ -24,12 +24,19 @@
     mix-ID = ID of mixture to use for group definitions
     file = filename that lists species with their VSS model parameters 
 </PRE>
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>relax</I> 
+
+<PRE>  <I>relax</I> value = <I>constant</I> or <I>variable</I> 
+</PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>collide none
-collide vss all.vss background 
+collide vss all.vss background
+collide vss all.vss background relax variable 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -103,21 +110,27 @@ angular-scattering parameter, which relates the scattering angle to
 the impact parameter.  Setting <I>alpha</I> = 1 produces isotropic (hard
 sphere) interactions, which converts the VSS model into a VHS model.
 </P>
-<P>The <I>file</I> argument is for a file which contains definitions of VSS
-model parameters for some number of species.  It can contain species
-not used by this simulation; they will simply be ignored.  All species
+<P>The <I>file</I> argument is for a collision data file which contains
+definitions of VSS model parameters for some number of species.
+Example files are included in the data directory of the SPARTA
+distribution, with a "*.css" suffix.  The file can contain species not
+used by this simulation; they will simply be ignored.  All species
 currently defined by the simulation must be present in the file.
 </P>
-<P>The format of the file is as follows.  Comments or blank lines are
-allowed in the file.  Comment lines start with a "#" character.  All
-other lines must have the following format with properties separated
-by whitespace:
+<P>The format of the file depends of the setting of the optional <I>relax</I>
+keyword, as explained below.  Comments or blank lines are allowed in
+the file.  Comment lines start with a "#" character.  All other lines
+must have the following format with parameters separated by
+whitespace.
+</P>
+<P>If the <I>relax</I> keyword is specified as <I>constant</I>, which is the
+default, then each line has 4 parameters following the species ID:
 </P>
 <PRE>species-ID diam omega tref alpha 
 </PRE>
 <P>The species-ID is a string that will be matched to one of the species
 defined by the simulation, via the <A HREF = "species.html">species</A> command.
-The meaning of the properties is as follows:
+The meaning of additional properties is as follows:
 </P>
 <UL><LI>diam = VHS or VSS diameter of particle (distance units)
 <LI>omega = temperature-dependence of viscosity (unitless)
@@ -131,6 +144,40 @@ values are based on the first-order approximation of the
 Chapman-Enskog theory.  Infinite-order parameters are described in
 <A HREF = "#Gallis04">(Gallis04)</A>.
 </P>
+<P>In the <I>constant</I> case rotational and vibrational relaxation during a
+collision is treated in the same constant manner for every collision,
+using the rotational and vibrational relaxation numbers from the
+species data file, as read by the <A HREF = "species.html">species</A> command.
+</P>
+<P>If the <I>relax</I> keyword is specified as <I>variable</I>, then each line has
+8 parameters following the species ID:
+</P>
+<PRE>species-ID diam omega tref alpha Zrotinf T* C1 C2 
+</PRE>
+<P>The first 4 parameters are the same as above.  Parameters 5 and 6
+affect rotational relaxation; parameters 7 and 8 affect vibrational
+relaxation.  In this case the rotational and vibrational relaxation
+during a collision is treated as a variable and is computed for each
+collision.  This calculation is only performed for polyatomic species,
+using equations A5 and A6 on pages 413 and 414 in <A HREF = "#Bird94">(Bird94)</A>.
+Zrotinf and T* are parameters in the numerator and denominator of eq
+A5.  C1 and C2 are in eq A6.  The units of these parameters is as
+follows:
+</P>
+<UL><LI>Zrotinf (unitless)
+<LI>T* (temperature units)
+<LI>C1 (temperature units)
+<LI>C2 (temperature^(1/3) units) 
+</UL>
+<P>Note that a collision data file with the 4 extra relaxation parameters
+(per species) can be used when the <I>relax</I> keyword is specified as
+<I>constant</I>.  In that case, the extra parameters are simply ignored.
+</P>
+<HR>
+
+<P>For the <I>vss</I> style, the optional keyword <I>relax</I> can be specified
+as <I>constant</I> or <I>variable</I>.
+</P>
 <HR>
 
 <P><B>Restrictions:</B> none
@@ -142,7 +189,8 @@ Chapman-Enskog theory.  Infinite-order parameters are described in
 </P>
 <P><B>Default:</B>
 </P>
-<P>style = none
+<P>Style = none is the default (no collisions).  If the vss style is
+specified, then relax = constant is the default.
 </P>
 <HR>
 

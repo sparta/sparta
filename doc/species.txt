@@ -63,14 +63,14 @@ species-ID prop1 prop2 ... prop9
 The species-ID is a string that will be matched against the requested
 species-ID, as described above.  The properties are as follows:
 
-prop1 = = molecular weight (atomic mass units, e.g. 16 for oxygen)
-prop2 = = molecular mass (mass units)
+prop1 = molecular weight (atomic mass units, e.g. 16 for oxygen)
+prop2 = molecular mass (mass units)
 prop3 = rotational degrees of freedom (integer)
-prop4 = rotational relaxtion number (pure)
+prop4 = rotational relaxtion number (unitless)
 prop5 = vibrational degrees of freedom (integer)
-prop6 = vibrational relaxation number (pure)
+prop6 = vibrational relaxation number (unitless)
 prop7 = vibrational temperature (temperature units)
-prop8 = species weight (pure)
+prop8 = species weight (unitless)
 prop9 = multiple of electon charge (1 for a proton) :ul
 
 
