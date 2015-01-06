@@ -166,11 +166,6 @@ Note that a collision data file with the 4 extra relaxation parameters
 
 :line
 
-For the {vss} style, the optional keyword {relax} can be specified
-as {constant} or {variable}.
-
-:line
-
 [Restrictions:] none
 
 [Related commands:]
