@@ -32,6 +32,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{NONE,DISCRETE,SMOOTH};            // several files
+enum{CONSTANT,VARIABLE};
 
 #define MAXLINE 1024
 
@@ -40,7 +41,22 @@ enum{NONE,DISCRETE,SMOOTH};            // several files
 CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
   Collide(sparta, narg, arg)
 {
-  if (narg != 3) error->all(FLERR,"Illegal collision vss command");
+  if (narg < 3) error->all(FLERR,"Illegal collide command");
+
+  // optional args
+
+  relaxflag = CONSTANT;
+
+  int iarg = 3;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"relax") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide command");
+      if (strcmp(arg[iarg+1],"constant") == 0) relaxflag = CONSTANT;
+      else if (strcmp(arg[iarg+1],"variable") == 0) relaxflag = VARIABLE;
+      else error->all(FLERR,"Illegal collide command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal collide command");
+  }
 
   // proc 0 reads file to extract params for current species
   // broadcasts params to all procs
@@ -406,6 +422,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double rotn_phi = species[sp].rotrel; 
 
       if (rotdof) {
+        if (relaxflag == VARIABLE) rotn_phi = rotrel(sp,E_Dispose);
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
             p->erot = 0.0 ; 
@@ -431,9 +448,10 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       double vibn_phi = species[sp].vibrel; 
 
       if (vibdof) {
+        if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,E_Dispose);
         if (vibn_phi >= random->uniform()) {
           if (vibstyle == NONE) {
-            p->evib =0.0 ; 
+            p->evib = 0.0; 
           } else if (vibdof == 2 && vibstyle == DISCRETE) {
 
             E_Dispose += p->evib;
@@ -561,11 +579,6 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   Particle::Species *species = particle->species;
   double AdjustFactor = 0.99999999;
 
-  // handle each kind of energy disposal for non-reacting reactants
-
-  
-  // clean up memory for the products
-  
   if (!kp) {
     ip->erot = 0.0;
     jp->erot = 0.0;
@@ -582,6 +595,9 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     numspecies = 3;
   }
 
+  // handle each kind of energy disposal for non-reacting reactants
+  // clean up memory for the products
+  
   double E_Dispose = postcoln.etotal;
 
   for (i = 0; i < numspecies; i++) {
@@ -592,55 +608,54 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     int sp = p->ispecies;
     rotdof = species[sp].rotdof;
 
-
-     if (rotdof) {
-          if (rotstyle == NONE) {
-            p->erot = 0.0 ;
-          } if (rotdof == 2) {
-            Fraction_Rot =
-              1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
-            p->erot = Fraction_Rot * E_Dispose;
-            E_Dispose -= p->erot;
-
-          } else {
-            p->erot = E_Dispose * 
-              sample_bl(random,0.5*species[sp].rotdof-1.0,
-                        1.5-params[sp].omega);
-            E_Dispose -= p->erot;
-          }
+    if (rotdof) {
+      if (rotstyle == NONE) {
+        p->erot = 0.0 ;
+      } else if (rotdof == 2) {
+        Fraction_Rot =
+          1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
+        p->erot = Fraction_Rot * E_Dispose;
+        E_Dispose -= p->erot;
+        
+      } else if (rotdof > 2) {
+        p->erot = E_Dispose * 
+          sample_bl(random,0.5*species[sp].rotdof-1.0,
+                    1.5-params[sp].omega);
+        E_Dispose -= p->erot;
       }
+    }
+    
+    vibdof = species[sp].vibdof;
 
-      vibdof = species[sp].vibdof;
-
-      if (vibdof) {
-          if (vibstyle == NONE) {
-            p->evib =0.0 ;
-          } else if (vibdof == 2 && vibstyle == DISCRETE) {
-            max_level = static_cast<int> 
-              (E_Dispose / (update->boltz * species[sp].vibtemp));
-            do {
-              ivib = static_cast<int> 
-                (random->uniform()*(max_level+AdjustFactor));
-              p->evib = (double)
-              (ivib * update->boltz * species[sp].vibtemp);
-              State_prob = pow((1.0 - p->evib / E_Dispose),
-                               (1.5 - params[sp].omega));
-            } while (State_prob < random->uniform());
-            E_Dispose -= p->evib;
-
-          } else if (vibdof == 2 && vibstyle == SMOOTH) {
-            Fraction_Vib =
-              1.0 - pow(random->uniform(),(1.0 / (2.5-params[sp].omega)));
-            p->evib = Fraction_Vib * E_Dispose;
-            E_Dispose -= p->evib;
-
-          } else {
-            p->evib = E_Dispose * 
-              sample_bl(random,0.5*species[sp].vibdof-1.0,
-                        1.5-params[sp].omega);
-            E_Dispose -= p->evib;
-          }
+    if (vibdof) {
+      if (vibstyle == NONE) {
+        p->evib = 0.0;
+      } else if (vibdof == 2 && vibstyle == DISCRETE) {
+        max_level = static_cast<int> 
+          (E_Dispose / (update->boltz * species[sp].vibtemp));
+        do {
+          ivib = static_cast<int> 
+            (random->uniform()*(max_level+AdjustFactor));
+          p->evib = (double)
+            (ivib * update->boltz * species[sp].vibtemp);
+          State_prob = pow((1.0 - p->evib / E_Dispose),
+                           (1.5 - params[sp].omega));
+        } while (State_prob < random->uniform());
+        E_Dispose -= p->evib;
+        
+      } else if (vibdof == 2 && vibstyle == SMOOTH) {
+        Fraction_Vib =
+          1.0 - pow(random->uniform(),(1.0 / (2.5-params[sp].omega)));
+        p->evib = Fraction_Vib * E_Dispose;
+        E_Dispose -= p->evib;
+        
+      } else if (vibdof > 2) {
+        p->evib = E_Dispose * 
+          sample_bl(random,0.5*species[sp].vibdof-1.0,
+                    1.5-params[sp].omega);
+        E_Dispose -= p->evib;
       }
+    }
   }
   
   // compute post-collision internal energies
@@ -656,7 +671,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   // compute portion of energy left over for scattering
   
   postcoln.eint = postcoln.erot + postcoln.evib;
-  postcoln.etrans = postcoln.etotal - postcoln.eint;
+  postcoln.etrans = E_Dispose;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -670,6 +685,31 @@ double CollideVSS::sample_bl(RanPark *random, double Exp_1, double Exp_2)
     y = pow(x*Exp_s/Exp_1, Exp_1)*pow((1.0-x)*Exp_s/Exp_2, Exp_2);
   } while (y < random->uniform());
   return x;
+}
+
+/* ----------------------------------------------------------------------
+   compute a variable rotational relaxation parameter
+------------------------------------------------------------------------- */
+
+double CollideVSS::rotrel(int isp, double Ec)
+{
+  double Tr = Ec /(update->boltz * (2.5-params[isp].omega));
+  double rotphi = params[isp].rotc1 / (1.0+params[isp].rotc2/sqrt(Tr) + 
+                                       params[isp].rotc3/Tr);
+  return rotphi;
+}
+
+/* ----------------------------------------------------------------------
+   compute a variable vibrational relaxation parameter
+------------------------------------------------------------------------- */
+
+double CollideVSS::vibrel(int isp, double Ec)
+{
+  double Tr = Ec /(update->boltz * (2.5-params[isp].omega));
+  double omega = params[isp].omega;
+  double vibphi = 1.0 / (params[isp].vibc1/pow(Tr,omega) * 
+                         exp(params[isp].vibc2/pow(Tr,1.0/3.0)));
+  return vibphi;
 }
 
 /* ----------------------------------------------------------------------
@@ -693,9 +733,10 @@ void CollideVSS::read_param_file(char *fname)
 
   // read file line by line
   // skip blank lines or comment lines starting with '#'
-  // all other lines must have NWORDS 
+  // all other lines must have at least NWORDS 
 
   int NWORDS = 5;
+  if (relaxflag == VARIABLE) NWORDS = 9;
   char **words = new char*[NWORDS];
   char line[MAXLINE],copy[MAXLINE];
   int isp;
@@ -705,10 +746,10 @@ void CollideVSS::read_param_file(char *fname)
     if (pre == strlen(line) || line[pre] == '#') continue;
 
     strcpy(copy,line);
-    int nwords = wordcount(copy,NULL);
-    if (nwords != NWORDS)
+    int nwords = wordcount(copy);
+    if (nwords < NWORDS)
       error->one(FLERR,"Incorrect line format in VSS parameter file");
-    nwords = wordcount(line,words);
+    wordparse(NWORDS,line,words);
 
     isp = particle->find_species(words[0]);
     if (isp < 0) continue;
@@ -717,6 +758,14 @@ void CollideVSS::read_param_file(char *fname)
     params[isp].omega = atof(words[2]);
     params[isp].tref = atof(words[3]);
     params[isp].alpha = atof(words[4]);
+    if (relaxflag == VARIABLE) {
+      params[isp].rotc1 = atof(words[5]);
+      params[isp].rotc2 = atof(words[6]);
+      params[isp].rotc3 =  (MY_PI+MY_PI2/4.)*params[isp].rotc2;
+      params[isp].rotc2 =  (MY_PIS/2.)*sqrt(params[isp].rotc2);
+      params[isp].vibc1 = atof(words[7]);
+      params[isp].vibc2 = atof(words[8]);
+    }
   }
 
   delete [] words;
@@ -725,22 +774,30 @@ void CollideVSS::read_param_file(char *fname)
 
 /* ----------------------------------------------------------------------
    count whitespace-delimited words in line
-   line will be modified, since strtok() inserts NULLs
-   if words is non-NULL, store ptr to each word
 ------------------------------------------------------------------------- */
 
-int CollideVSS::wordcount(char *line, char **words)
+int CollideVSS::wordcount(char *line)
 {
   int nwords = 0;
   char *word = strtok(line," \t");
-
   while (word) {
-    if (words) words[nwords] = word;
     nwords++;
     word = strtok(NULL," \t");
   }
-
   return nwords;
+}
+
+/* ----------------------------------------------------------------------
+   parse first N whitespace-delimited words in line
+   store ptr to each word in words
+------------------------------------------------------------------------- */
+
+void CollideVSS::wordparse(int n, char *line, char **words)
+{
+  for (int i = 0; i < n; i++) {
+    if (i == 0) words[i] = strtok(line," \t");
+    else words[i] = strtok(NULL," \t");
+  }
 }
 
 /* ----------------------------------------------------------------------

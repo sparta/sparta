@@ -39,11 +39,10 @@ class CollideVSS : public Collide {
   void setup_collision(Particle::OnePart *, Particle::OnePart *);
   Particle::OnePart *
     perform_collision(Particle::OnePart *&, Particle::OnePart *&);
-
   double extract(int, const char *);
 
  private:
-  int eng_exchange;
+  int relaxflag,eng_exchange;
   double vr_indice;
   double **prefactor; // static portion of collision attempt frequency
 
@@ -76,6 +75,11 @@ class CollideVSS : public Collide {
     double omega;
     double tref;
     double alpha;
+    double rotc1;
+    double rotc2;
+    double rotc3;
+    double vibc1;
+    double vibc2;
   };
   
   Params *params;             // VSS params for each species
@@ -93,8 +97,12 @@ class CollideVSS : public Collide {
                                    Particle::OnePart *);
 
   double sample_bl(RanPark *, double, double);
+  double rotrel (int, double);  
+  double vibrel (int, double);  
+
   void read_param_file(char *);
-  int wordcount(char *, char **);
+  int wordcount(char *);
+  void wordparse(int, char *, char **);
 };
 
 }
