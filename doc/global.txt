@@ -38,7 +38,7 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
     neigh = setup particle comm with subset of near-neighbor processor
     all = allow particle comm with potentially any processor
   {weight} value = {wstyle} {mode}
-    wstyle = {grid}
+    wstyle = {cell}
     mode = {none} or {volume} or {radius} :pre
 :ule
 
@@ -178,28 +178,29 @@ SPARTA performs the particle communication as if the {all} setting
 were in place.
 
 The {weight} keyword determines whether particle weighting is used.
-Currently the only style allowed, as specified by wstyle = {grid}, is
-grid-based weighting.  This is a mechanism for inducing every grid
-cell to contain roughly the same number of particles (even if cells
-are of varying size), so as to minimize the total number of particles
-used in a simulation while preserving accurate time and spatial
-averages of flow quantities.  The cell weights also affect how many
-particles per cell are created by the
-"create_particles"_create_particles.html and "fix
-inflow"_fix_inflow.html commands.
+Currently the only style allowed, as specified by wstyle = {cell}, is
+per-cell weighting.  This is a mechanism for inducing every grid cell
+to contain roughly the same number of particles (even if cells are of
+varying size), so as to minimize the total number of particles used in
+a simulation while preserving accurate time and spatial averages of
+flow quantities.  The cell weights also affect how many particles per
+cell are created by the "create_particles"_create_particles.html and
+"fix inflow"_fix_inflow.html commands.
 
-If grid-based particle weighting is enabled, two computations occur.
-First, at the time this command is issued, each grid cell is assigned
-a "weight" which is calculated based either on the cell {volume} or
-{radius}, as specified by the {mode} setting.  For the {volume}
-setting, the weight of a cell is its 3d volume for a 3d model, and the
-weight is its 2d area for a 2d model.  For an axi-symmetric model, the
-weight is the 3d volume of the 2d axi-symmetric cell, i.e. the volume
-the area sweeps out when rotated around the y=0 axis of symmetry.  The
-{radius} setting is only allowed for axisymmetric systems.  The weight
-in this case is the distance the cell's midpoint is from the y=0 axis
-of symmetry.  See "Section 4.2"_Section_howto.html#howto_2 for
-more details on axi-symmetric models.
+If the mode is set to {none}, per-cell weighting is turned off if it
+was previously enabled.  For mode = {volume} or {radius}, per-cell
+weighting is enabled, which triggers two computations.  First, at the
+time this command is issued, each grid cell is assigned a "weight"
+which is calculated based either on the cell {volume} or {radius}, as
+specified by the {mode} setting.  For the {volume} setting, the weight
+of a cell is its 3d volume for a 3d model, and the weight is its 2d
+area for a 2d model.  For an axi-symmetric model, the weight is the 3d
+volume of the 2d axi-symmetric cell, i.e. the volume the area sweeps
+out when rotated around the y=0 axis of symmetry.  The {radius}
+setting is only allowed for axisymmetric systems.  The weight in this
+case is the distance the cell's midpoint is from the y=0 axis of
+symmetry.  See "Section 4.2"_Section_howto.html#howto_2 for more
+details on axi-symmetric models.
 
 Second, when a particle moves from an initial cell to a final cell,
 the initial/final ratio of the two cell weights is calculated.  If the
@@ -228,4 +229,6 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, surfpush
-= no, gridcut = -1.0, comm/sort = no, comm/style = neigh.
+= no, gridcut = -1.0, comm/sort = no, comm/style = neigh, weight =
+cell none.
+

@@ -190,10 +190,14 @@ recognized.
 Use at most one of the -DSPARTA_SMALL, -DSPARTA_BIG, -DSPARTA_BIGBIG
 settings.  The default is -DSPARTA_BIG.  These refer to use of 4-byte
 (small) vs 8-byte (big) integers within SPARTA, as described in
-src/spatype.h.  The only reason to use the BIGBIG setting is to enable
-simulation of large models with more than ~2 billion grid cells.  The
-only reason to use the SMALL setting is if your machine does not
-support 64-bit integers.
+src/spatype.h.  The only reason to use the BIGBIG setting is if you
+have a regular grid with more than ~2 billion grid cells or a
+hierarchical grid with enough levels that grid cell IDs cannot fit in
+a 32-bit integer.  In either case, SPARTA will generate an error
+message for "Cell ID has too many bits".  See "Section
+4.8"_Section_howto.html#howto_8 of the manual for details on how cell
+IDs are formatted.  The only reason to use the SMALL setting is if
+your machine does not support 64-bit integers.
 
 In all cases, the size of problem that can be run on a per-processor
 basis is limited by 4-byte integer storage to about 2 billion
