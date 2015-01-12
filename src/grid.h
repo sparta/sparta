@@ -319,7 +319,7 @@ E: Cell ID has too many bits
 
 Cell IDs must fit in 32 bits (SPARTA small integer) or 64 bits (SPARTA
 big integer), as specified by the -DSPARTA_SMALL, -DSPARTA_BIG, or
--DSPARTA_BIGBIG options in the low-level Makefile used to build
+-DSPARTA_BIGBIG options in the machine Makefile used to build
 SPARTA.  See Section 2.2 of the manual for details.  And see Section
 4.8 for details on how cell IDs are formatted.
 
