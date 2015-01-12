@@ -50,10 +50,10 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 850133757  // particle ID
-#define MOVE_DEBUG_PROC 0        // owning proc
+#define MOVE_DEBUG_ID 14185661  // particle ID
+#define MOVE_DEBUG_PROC 3        // owning proc
 #define MOVE_DEBUG_INDEX -1       // particle index on owning proc
-#define MOVE_DEBUG_STEP 812    // timestep
+#define MOVE_DEBUG_STEP 10    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -384,6 +384,15 @@ template < int DIM, int SURF > void Update::move()
       stuck_iterate = 0;
       ntouch_one++;
 
+      // trial DEBUG
+
+      if (DIM == 1) {
+        if (pflag == PEXIT && x[1] == lo[1]) 
+          x[1] += 1.0e-6 * (hi[1]-lo[1]);
+        if (pflag == PEXIT && x[1] == hi[1]) 
+          x[1] -= 1.0e-6 * (hi[1]-lo[1]);
+      }
+
       // advect one particle from cell to cell and thru surf collides til done
 
       //int iterate = 0;
@@ -416,16 +425,17 @@ template < int DIM, int SURF > void Update::move()
                    lo[0],lo[1],hi[0],hi[1],dtremain);
         }
         if (DIM == 1) {
-          if (ntimestep >= MOVE_DEBUG_STEP && 
+          if (ntimestep == MOVE_DEBUG_STEP && 
               (MOVE_DEBUG_ID == particles[i].id ||
                (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
             printf("PARTICLE %d %ld: %d %d: %d: x %g %g: xnew %g %g: %d "
-                   CELLINT_FORMAT ": lo %g %g: hi %g %g: DTR: %g\n",
+                   CELLINT_FORMAT ": lo %g %g: hi %g %g: DTR: %g proc %d %d\n",
                    me,update->ntimestep,i,particles[i].id,
                    cells[icell].nsurf,
                    x[0],x[1],xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
                    icell,cells[icell].id,
-                   lo[0],lo[1],hi[0],hi[1],dtremain);
+                   lo[0],lo[1],hi[0],hi[1],dtremain,   // extra fields next
+                   cells[icell].proc,cells[icell].ilocal);
         }
 #endif
 
@@ -433,7 +443,10 @@ template < int DIM, int SURF > void Update::move()
         // frac = fraction of move completed before hitting cell face
         // this section should be as efficient as possible,
         //   since most particles won't do anything else
-        // this section is for 2d/3d, axisymmetric cell logic is different
+        // axisymmetric cell face crossing:
+        //   use linear xnew to check vertical lines and compute remapped rnew
+        //   must always check move against curved lower y face of cell
+
 
         outface = INTERIOR;
         frac = 1.0;
@@ -471,6 +484,17 @@ template < int DIM, int SURF > void Update::move()
             }
           }
 
+#ifdef MOVE_DEBUG
+          if (ntimestep == MOVE_DEBUG_STEP && 
+              (MOVE_DEBUG_ID == particles[i].id ||
+               (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
+            printf("AXICHECK x %g %g xnew %g %g lohi %g %g rnew %g flag %d\n",
+                   x[0],x[1],xnew[0],xnew[1],lo[1],hi[1],rnew,
+                   Geometry::
+                   axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp));
+          //axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp,1));
+#endif
+
           rnew = sqrt(xnew[1]*xnew[1] + xnew[2]*xnew[2]);
           if (rnew >= hi[1]) {
             if (Geometry::axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp)) {
@@ -498,10 +522,6 @@ template < int DIM, int SURF > void Update::move()
             }
           }
         }
-
-        // axisymmetric cell face crossing
-        // uses linear xnew to check vertical lines and compute remapped rnew
-        // must always check move against curved lower y face of cell
 
         //if (iterate == 20) exit(1);
         //iterate++;
@@ -626,8 +646,7 @@ template < int DIM, int SURF > void Update::move()
                          xc[0],xc[1],param,side);
               }
               if (DIM == 1) {
-                // if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
-                if (ntimestep >= MOVE_DEBUG_STEP && 
+                if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
                     (MOVE_DEBUG_ID == particles[i].id ||
                      (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX)))
                   printf("SURF COLLIDE %d %ld: %d %d %d %d: P1 %g %g: P2 %g %g: "
@@ -644,7 +663,7 @@ template < int DIM, int SURF > void Update::move()
                 MathExtra::sub3(pts[line->p2].x,pts[line->p1].x,edge1);
                 MathExtra::sub3(x,pts[line->p1].x,edge2);
                 MathExtra::cross3(edge2,edge1,cross);
-                if (ntimestep == MOVE_DEBUG_STEP && 
+                if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
                     MOVE_DEBUG_ID == particles[i].id)
                   printf("CROSSSTART %g %g %g\n",cross[0],cross[1],cross[2]);
                 xfinal[0] = xnew[0];
@@ -652,7 +671,7 @@ template < int DIM, int SURF > void Update::move()
                 xfinal[2] = 0.0;
                 MathExtra::sub3(xfinal,pts[line->p1].x,edge2);
                 MathExtra::cross3(edge2,edge1,cross);
-                if (ntimestep == MOVE_DEBUG_STEP && 
+                if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
                     MOVE_DEBUG_ID == particles[i].id)
                   printf("CROSSFINAL %g %g %g\n",cross[0],cross[1],cross[2]);
               }
