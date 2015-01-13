@@ -50,10 +50,10 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 14185661  // particle ID
+#define MOVE_DEBUG_ID 67521063  // particle ID
 #define MOVE_DEBUG_PROC 3        // owning proc
 #define MOVE_DEBUG_INDEX -1       // particle index on owning proc
-#define MOVE_DEBUG_STEP 10    // timestep
+#define MOVE_DEBUG_STEP 3    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -386,12 +386,14 @@ template < int DIM, int SURF > void Update::move()
 
       // trial DEBUG
 
+      /*
       if (DIM == 1) {
         if (pflag == PEXIT && x[1] == lo[1]) 
           x[1] += 1.0e-6 * (hi[1]-lo[1]);
         if (pflag == PEXIT && x[1] == hi[1]) 
           x[1] -= 1.0e-6 * (hi[1]-lo[1]);
       }
+      */
 
       // advect one particle from cell to cell and thru surf collides til done
 
@@ -476,11 +478,25 @@ template < int DIM, int SURF > void Update::move()
         }
 
         if (DIM == 1) {
-          if (Geometry::axi_horizontal_line(dtremain,x,v,lo[1],itmp,tc,tmp)) {
+
+          /*
+          if (ntimestep == MOVE_DEBUG_STEP && 
+              (MOVE_DEBUG_ID == particles[i].id ||
+               (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
+            printf("AAA id %d y %g lo %g hi %g pflag %d\n",particles[i].id,
+                   x[1],lo[1],hi[1],pflag);
+          */
+
+          if (pflag == PEXIT && x[1] == lo[1]) {
+            frac = 0.0;
+            outface = YLO;
+          } else {
+            if (Geometry::axi_horizontal_line(dtremain,x,v,lo[1],itmp,tc,tmp)) {
             newfrac = tc/dtremain;
             if (newfrac < frac) {
               frac = newfrac;
               outface = YLO;
+            }
             }
           }
 
@@ -495,6 +511,11 @@ template < int DIM, int SURF > void Update::move()
           //axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp,1));
 #endif
 
+          if (pflag == PEXIT && x[1] == hi[1]) {
+            frac = 0.0;
+            outface = YHI;
+          } else {
+
           rnew = sqrt(xnew[1]*xnew[1] + xnew[2]*xnew[2]);
           if (rnew >= hi[1]) {
             if (Geometry::axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp)) {
@@ -505,6 +526,9 @@ template < int DIM, int SURF > void Update::move()
               }
             }
           }
+          }
+
+          pflag = 0;
         }
           
         if (DIM == 3) {
