@@ -636,8 +636,6 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
                         double *v1, double *v2, double *norm, int selfflag,
                         double *xc, double *vc, double &param, int &side)
 {
-  //double edge[3],pvec[3];
-        
   // compute nc = # of collisions with infinite line
   // if 0, return false
   // if 1, set t1
@@ -817,6 +815,8 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
      not line segment but infinite horizontal line
    called from Update for cell boundary
      just uses first collision, must be within tdelta
+     can be called when particle is moving into cell from boundary
+     is not called when particle is moving out of cell from boundary (PEXIT)
    called from axi_line_intersect() for special case of horizontal surf
      uses one or two collisions, it will discard collisions outside segment
    horizontal line is at yhoriz
