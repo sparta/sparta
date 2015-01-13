@@ -343,6 +343,7 @@ template < int DIM, int SURF > void Update::move()
       // apply moveperturb() to PKEEP and PINSERT since are computing xnew
       // not to PENTRY,PEXIT since are just re-computing xnew of sender
       // set xnew[2] to linear move for axisymmetry, will be remapped later
+      // let pflag = PEXIT persist to check during axisymmetric cell crossing
 
       if (pflag == PKEEP) {
         dtremain = dt;
@@ -384,17 +385,6 @@ template < int DIM, int SURF > void Update::move()
       stuck_iterate = 0;
       ntouch_one++;
 
-      // trial DEBUG
-
-      /*
-      if (DIM == 1) {
-        if (pflag == PEXIT && x[1] == lo[1]) 
-          x[1] += 1.0e-6 * (hi[1]-lo[1]);
-        if (pflag == PEXIT && x[1] == hi[1]) 
-          x[1] -= 1.0e-6 * (hi[1]-lo[1]);
-      }
-      */
-
       // advect one particle from cell to cell and thru surf collides til done
 
       //int iterate = 0;
@@ -431,13 +421,12 @@ template < int DIM, int SURF > void Update::move()
               (MOVE_DEBUG_ID == particles[i].id ||
                (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
             printf("PARTICLE %d %ld: %d %d: %d: x %g %g: xnew %g %g: %d "
-                   CELLINT_FORMAT ": lo %g %g: hi %g %g: DTR: %g proc %d %d\n",
+                   CELLINT_FORMAT ": lo %g %g: hi %g %g: DTR: %g\n",
                    me,update->ntimestep,i,particles[i].id,
                    cells[icell].nsurf,
                    x[0],x[1],xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
                    icell,cells[icell].id,
-                   lo[0],lo[1],hi[0],hi[1],dtremain,   // extra fields next
-                   cells[icell].proc,cells[icell].ilocal);
+                   lo[0],lo[1],hi[0],hi[1],dtremain);
         }
 #endif
 
@@ -445,10 +434,15 @@ template < int DIM, int SURF > void Update::move()
         // frac = fraction of move completed before hitting cell face
         // this section should be as efficient as possible,
         //   since most particles won't do anything else
-        // axisymmetric cell face crossing:
-        //   use linear xnew to check vertical lines and compute remapped rnew
+        // axisymmetric cell face crossings:
+        //   use linear xnew to check vertical faces
         //   must always check move against curved lower y face of cell
-
+        //   use remapped rnew to check horizontal lines
+        //   for y faces, if pflag = PEXIT, particle was just received
+        //     from another proc and is exiting this cell from face:
+        //       axi_horizontal_line() will not detect correct crossing,
+        //       so set frac and outface directly to move into adjacent cell,
+        //       then unset pflag so not checked again for this particle
 
         outface = INTERIOR;
         frac = 1.0;
@@ -478,54 +472,33 @@ template < int DIM, int SURF > void Update::move()
         }
 
         if (DIM == 1) {
-
-          /*
-          if (ntimestep == MOVE_DEBUG_STEP && 
-              (MOVE_DEBUG_ID == particles[i].id ||
-               (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
-            printf("AAA id %d y %g lo %g hi %g pflag %d\n",particles[i].id,
-                   x[1],lo[1],hi[1],pflag);
-          */
-
           if (pflag == PEXIT && x[1] == lo[1]) {
             frac = 0.0;
             outface = YLO;
-          } else {
-            if (Geometry::axi_horizontal_line(dtremain,x,v,lo[1],itmp,tc,tmp)) {
+          } else if (Geometry::
+                     axi_horizontal_line(dtremain,x,v,lo[1],itmp,tc,tmp)) {
             newfrac = tc/dtremain;
             if (newfrac < frac) {
               frac = newfrac;
               outface = YLO;
             }
-            }
           }
-
-#ifdef MOVE_DEBUG
-          if (ntimestep == MOVE_DEBUG_STEP && 
-              (MOVE_DEBUG_ID == particles[i].id ||
-               (me == MOVE_DEBUG_PROC && i == MOVE_DEBUG_INDEX))) 
-            printf("AXICHECK x %g %g xnew %g %g lohi %g %g rnew %g flag %d\n",
-                   x[0],x[1],xnew[0],xnew[1],lo[1],hi[1],rnew,
-                   Geometry::
-                   axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp));
-          //axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp,1));
-#endif
 
           if (pflag == PEXIT && x[1] == hi[1]) {
             frac = 0.0;
             outface = YHI;
           } else {
-
-          rnew = sqrt(xnew[1]*xnew[1] + xnew[2]*xnew[2]);
-          if (rnew >= hi[1]) {
-            if (Geometry::axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp)) {
-              newfrac = tc/dtremain;
-              if (newfrac < frac) {
-                frac = newfrac;
-                outface = YHI;
+            rnew = sqrt(xnew[1]*xnew[1] + xnew[2]*xnew[2]);
+            if (rnew >= hi[1]) {
+              if (Geometry::
+                  axi_horizontal_line(dtremain,x,v,hi[1],itmp,tc,tmp)) {
+                newfrac = tc/dtremain;
+                if (newfrac < frac) {
+                  frac = newfrac;
+                  outface = YHI;
+                }
               }
             }
-          }
           }
 
           pflag = 0;
