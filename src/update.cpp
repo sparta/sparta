@@ -46,14 +46,15 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
 #define MAXSTUCK 20
+#define EPSPARAM 1.0e-7
 
 // either set ID or PROC/INDEX, set other to -1
 
-//#define MOVE_DEBUG 1              // un-comment to debug one particle
+#define MOVE_DEBUG 1              // un-comment to debug one particle
 #define MOVE_DEBUG_ID 67521063  // particle ID
-#define MOVE_DEBUG_PROC 3        // owning proc
-#define MOVE_DEBUG_INDEX -1       // particle index on owning proc
-#define MOVE_DEBUG_STEP 3    // timestep
+#define MOVE_DEBUG_PROC 0        // owning proc
+#define MOVE_DEBUG_INDEX 387411       // particle index on owning proc
+#define MOVE_DEBUG_STEP 1    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -675,7 +676,25 @@ template < int DIM, int SURF > void Update::move()
 #endif
               
               if (hitflag && side != ONSURF2OUT && param <= minparam) {
+
+                // this if test is to avoid case where particle
+                // previously hit 1 of 2 (or more) touching angled surfs at
+                // common edge/corner, on this iteration first surf
+                // is excluded, but others may be hit on inside:
+                // param will be epsilon and exclude must be set
+                // skip the hits of other touching surfs
+
+                if (side == INSIDE && param < EPSPARAM && exclude >= 0) 
+                    continue;
+
+                // this if test is to avoid case where particle
+                // hits 2 touching angled surfs at common edge/corner
+                // from far away:
+                // param is same, but hits one on outside, one on inside
+                // only keep surf hit on outside
+
                 if (param == minparam && side == INSIDE) continue;
+
                 cflag = 1;
                 minparam = param;
                 minside = side;
