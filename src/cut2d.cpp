@@ -28,8 +28,10 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 
 #define EPSCELL 1.0e-10    // tolerance for pushing surf pts to cell surface
 
+// cell ID for 2d or 3d cell
+
 //#define VERBOSE
-#define VERBOSE_ID 2086
+#define VERBOSE_ID 109084
 
 /* ---------------------------------------------------------------------- */
 
@@ -839,8 +841,11 @@ int Cut2d::ptflag(double *pt)
 }
 
 /* ----------------------------------------------------------------------
-   check if pt is inside cell and within EPSCELL of cell surface
+   check if pt is within EPSCELL of cell surface
    if so, push to cell surface
+   for pushflag = 1, can be inside or outside by EPSCELL
+   for pushflag = 2, only inside
+   for pushflag = 3, only outside
 ------------------------------------------------------------------------- */
 
 int Cut2d::push_to_cell(double *pt)
@@ -850,20 +855,54 @@ int Cut2d::push_to_cell(double *pt)
   double epsx = EPSCELL * (hi[0]-lo[0]);
   double epsy = EPSCELL * (hi[1]-lo[1]);
 
-  int flag = 0;
-  if ((x >= lo[0] && x-lo[0] < epsx) || (x <= hi[0] && hi[0]-x < epsx)) {
-    if (y >= lo[1] && y <= hi[1]) {
-      flag = 1;
-      if (x-lo[0] < epsx) pt[0] = lo[0];
-      else pt[0] = hi[0];
+  if (pushflag == 1) {
+    if (fabs(x-lo[0]) < epsx || fabs(x-hi[0]) < epsx) {
+      if (y > lo[1]-epsy && y < hi[1]+epsy) {
+        if (x-lo[0] < epsx) x = lo[0];
+        else x = hi[0];
+      }
+    }
+    if (fabs(y-lo[1]) < epsy || fabs(y-hi[1]) < epsy) {
+      if (x >= lo[0] && x <= hi[0]) {
+        if (y-lo[1] < epsy) y = lo[1];
+        else y = hi[1];
+      }
+    }
+
+  } else if (pushflag == 2) {
+    if ((x >= lo[0] && x-lo[0] < epsx) || (x <= hi[0] && hi[0]-x < epsx)) {
+      if (y >= lo[1]-epsy && y <= hi[1]+epsy) {
+        if (x-lo[0] < epsx) x = lo[0];
+        else x = hi[0];
+      }
+    }
+    if ((y >= lo[1] && y-lo[1] < epsy) || (y <= hi[1] && hi[1]-y < epsy)) {
+      if (x >= lo[0] && x <= hi[0]) {
+        if (y-lo[1] < epsy) y = lo[1];
+        else y = hi[1];
+      }
+    }
+
+  } else if (pushflag == 3) {
+    if ((x > lo[0]-epsx && x <= lo[0]) || (x < hi[0]+epsx && x >= hi[0])) {
+      if (y >= lo[1]-epsy && y <= hi[1]+epsy) {
+        if (x-lo[0] < epsx) x = lo[0];
+        else x = hi[0];
+      }
+    }
+    if ((y > lo[1]-epsy && y <= lo[1]) || (y < hi[1]+epsy && y >= hi[1])) {
+      if (x >= lo[0] && x <= hi[0]) {
+        if (y-lo[1] < epsy) y = lo[1];
+        else y = hi[1];
+      }
     }
   }
-  if ((y >= lo[1] && y-lo[1] < epsy) || (y <= hi[1] && hi[1]-y < epsy)) {
-    if (x >= lo[0] && x <= hi[0]) {
-      flag = 1;
-      if (y-lo[1] < epsy) pt[1] = lo[1];
-      else pt[1] = hi[1];
-    }
+
+  int flag = 0;
+  if (x != pt[0] || y != pt[1]) {
+    flag = 1;
+    pt[0] = x;
+    pt[1] = y;
   }
 
   return flag;
