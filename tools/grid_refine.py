@@ -237,7 +237,6 @@ if flowflag:
     for tri in tris:
       norms.append(norm3d(pts[tri[0]],pts[tri[1]],pts[tri[2]]))
 
-
 # initial slist = all surfs
 # unless flowflag is set, then exclude those with normals in flow direction
 
