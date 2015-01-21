@@ -685,7 +685,7 @@ template < int DIM, int SURF > void Update::move()
                 // skip the hits of other touching surfs
 
                 if (side == INSIDE && param < EPSPARAM && exclude >= 0) 
-                    continue;
+                  continue;
 
                 // this if test is to avoid case where particle
                 // hits 2 touching angled surfs at common edge/corner

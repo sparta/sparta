@@ -182,7 +182,7 @@ void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
     MathExtra::cross3(norm,tangent1,tangent2);
 
     // add in translation or rotation vector if specified
-    // only keep portion or vector tangential to surface element
+    // only keep portion of vector tangential to surface element
 
     if (trflag) {
       double vxdelta,vydelta,vzdelta;
