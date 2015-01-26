@@ -599,7 +599,6 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   // clean up memory for the products
   
   double E_Dispose = postcoln.etotal;
-  printf (" 1 E_dis = %e \n", E_Dispose); 
 
   for (i = 0; i < numspecies; i++) {
     if (i == 0) p = ip; 
@@ -617,7 +616,6 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
         p->erot = Fraction_Rot * E_Dispose;
         E_Dispose -= p->erot;
-  printf (" 2 E_dis = %e \n", E_Dispose); 
         
       } else if (rotdof > 2) {
         p->erot = E_Dispose * 
@@ -650,7 +648,6 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           1.0 - pow(random->uniform(),(1.0 / (2.5-params[sp].omega)));
         p->evib = Fraction_Vib * E_Dispose;
         E_Dispose -= p->evib;
-  printf (" 3 E_dis = %e \n", E_Dispose); 
         
       } else if (vibdof > 2) {
         p->evib = E_Dispose * 
@@ -675,7 +672,6 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = E_Dispose;
-  printf (" 5 E_dis = %e \n", E_Dispose); 
 }
 
 /* ---------------------------------------------------------------------- */
