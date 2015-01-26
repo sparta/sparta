@@ -762,7 +762,7 @@ void CollideVSS::read_param_file(char *fname)
       params[isp].rotc1 = atof(words[5]);
       params[isp].rotc2 = atof(words[6]);
       params[isp].rotc3 =  (MY_PI+MY_PI2*MY_PI2)*params[isp].rotc2;
-      params[isp].rotc2 =  (MY_PIS/2.)*sqrt(params[isp].rotc2);
+      params[isp].rotc2 =  (MY_PI*MY_PIS/2.)*sqrt(params[isp].rotc2);
       params[isp].vibc1 = atof(words[7]);
       params[isp].vibc2 = atof(words[8]);
     }
