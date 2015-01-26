@@ -599,6 +599,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   // clean up memory for the products
   
   double E_Dispose = postcoln.etotal;
+  printf (" 1 E_dis = %e \n", E_Dispose); 
 
   for (i = 0; i < numspecies; i++) {
     if (i == 0) p = ip; 
@@ -616,6 +617,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           1- pow(random->uniform(),(1/(2.5-params[sp].omega)));
         p->erot = Fraction_Rot * E_Dispose;
         E_Dispose -= p->erot;
+  printf (" 2 E_dis = %e \n", E_Dispose); 
         
       } else if (rotdof > 2) {
         p->erot = E_Dispose * 
@@ -648,6 +650,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
           1.0 - pow(random->uniform(),(1.0 / (2.5-params[sp].omega)));
         p->evib = Fraction_Vib * E_Dispose;
         E_Dispose -= p->evib;
+  printf (" 3 E_dis = %e \n", E_Dispose); 
         
       } else if (vibdof > 2) {
         p->evib = E_Dispose * 
@@ -672,6 +675,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
   
   postcoln.eint = postcoln.erot + postcoln.evib;
   postcoln.etrans = E_Dispose;
+  printf (" 5 E_dis = %e \n", E_Dispose); 
 }
 
 /* ---------------------------------------------------------------------- */
@@ -694,8 +698,8 @@ double CollideVSS::sample_bl(RanPark *random, double Exp_1, double Exp_2)
 double CollideVSS::rotrel(int isp, double Ec)
 {
   double Tr = Ec /(update->boltz * (2.5-params[isp].omega));
-  double rotphi = params[isp].rotc1 / (1.0+params[isp].rotc2/sqrt(Tr) + 
-                                       params[isp].rotc3/Tr);
+  double rotphi = (1.0+params[isp].rotc2/sqrt(Tr) + params[isp].rotc3/Tr)
+                / params[isp].rotc1; 
   return rotphi;
 }
 
@@ -761,7 +765,7 @@ void CollideVSS::read_param_file(char *fname)
     if (relaxflag == VARIABLE) {
       params[isp].rotc1 = atof(words[5]);
       params[isp].rotc2 = atof(words[6]);
-      params[isp].rotc3 =  (MY_PI+MY_PI2/4.)*params[isp].rotc2;
+      params[isp].rotc3 =  (MY_PI+MY_PI2*MY_PI2)*params[isp].rotc2;
       params[isp].rotc2 =  (MY_PIS/2.)*sqrt(params[isp].rotc2);
       params[isp].vibc1 = atof(words[7]);
       params[isp].vibc2 = atof(words[8]);
