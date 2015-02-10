@@ -300,15 +300,11 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *&ip,
       }
 
       kp = &particle->particles[particle->nlocal-1];
-      if (species[ip->ispecies].internaldof || 
-          species[jp->ispecies].internaldof || species[kspecies].internaldof) 
-        EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);
 
     } else {
-      if (species[ip->ispecies].internaldof || 
-          species[jp->ispecies].internaldof) 
-        EEXCHANGE_ReactingEDisposal(ip,jp,kp);
+      EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_TwoBodyScattering(ip,jp);
     }
 
@@ -508,14 +504,15 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   double mass_i = species[isp].mass;
   double mass_j = species[jsp].mass;
   double mass_k = species[ksp].mass;
-  double mass_jk = mass_j + mass_k;
+  double mass_ij = mass_i + mass_j;
   double *vi = ip->v;
   double *vj = jp->v;
   double *vk = kp->v;
 
   double alpha_r = 2.0 / (params[isp].alpha + params[jsp].alpha);
-  double mr = mass_i * mass_jk / (mass_i + mass_jk);
-  postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib;
+  double mr = mass_ij * mass_k / (mass_ij + mass_k);
+  postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib 
+                + kp->erot + kp->evib;
 
   double cosX = 2.0*pow(random->uniform(), alpha_r) - 1.0;
   double sinX = sqrt(1.0 - cosX*cosX);
@@ -554,16 +551,16 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
 
   // new velocities for the products
 
-  divisor = mass_i + mass_jk;
-  vi[0] = ucmf - (mass_jk/divisor)*ua;
-  vi[1] = vcmf - (mass_jk/divisor)*vb;
-  vi[2] = wcmf - (mass_jk/divisor)*wc;
-  vj[0] = ucmf + (mass_i/divisor)*ua;
-  vj[1] = vcmf + (mass_i/divisor)*vb;
-  vj[2] = wcmf + (mass_i/divisor)*wc;
-  vk[0] = vj[0];
-  vk[1] = vj[1];
-  vk[2] = vj[2];
+  divisor = mass_ij + mass_k;
+  vi[0] = ucmf - (mass_ij/divisor)*ua;
+  vi[1] = vcmf - (mass_ij/divisor)*vb;
+  vi[2] = wcmf - (mass_ij/divisor)*wc;
+  vk[0] = ucmf + (mass_k/divisor)*ua;
+  vk[1] = vcmf + (mass_k/divisor)*vb;
+  vk[2] = wcmf + (mass_k/divisor)*wc;
+  vj[0] = vi[0];
+  vj[1] = vi[1];
+  vj[2] = vi[2];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -586,12 +583,12 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     jp->evib = 0.0;
     numspecies = 2;
   } else {
-    ip->erot = 0.0;
-    jp->erot = 0.0;
-    kp->erot = 0.0;
-    ip->evib = 0.0;
-    jp->evib = 0.0;
-    kp->evib = 0.0;
+    ip->erot = 0.0E0;
+    jp->erot = 0.0E0;
+    kp->erot = 0.0E0;
+    ip->evib = 0.0E0;
+    jp->evib = 0.0E0;
+    kp->evib = 0.0E0;
     numspecies = 3;
   }
 
