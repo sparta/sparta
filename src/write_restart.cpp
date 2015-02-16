@@ -41,7 +41,8 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,GRID,SURF,
-     MULTIPROC,PROCSPERFILE,PERPROC};
+     MULTIPROC,PROCSPERFILE,PERPROC,
+     GRID_WEIGHT};              // new fields added after PERPROC
 
 /* ---------------------------------------------------------------------- */
 
@@ -319,6 +320,7 @@ void WriteRestart::header()
   write_double(GRIDCUT,grid->cutoff);
   write_int(COMM_SORT,comm->commsortflag);
   write_int(COMM_STYLE,comm->commpartstyle);
+  write_int(GRID_WEIGHT,grid->cellweightflag);
 
   write_bigint(NPARTICLE,particle->nglobal);
   write_bigint(NUNSPLIT,grid->nunsplit);

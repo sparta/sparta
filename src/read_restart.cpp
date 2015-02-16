@@ -43,7 +43,8 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,GRID,SURF,
-     MULTIPROC,PROCSPERFILE,PERPROC};
+     MULTIPROC,PROCSPERFILE,PERPROC,
+     GRID_WEIGHT};              // new fields added after PERPROC
 
 /* ---------------------------------------------------------------------- */
 
@@ -418,6 +419,7 @@ void ReadRestart::command(int narg, char **arg)
   hash->clear();
   grid->hashfilled = 0;
 
+  if (grid->cellweightflag) grid->weight(-1,NULL);
   grid->setup_owned();
 
   // grid is no longer clumped unless reading on same # of procs
@@ -693,6 +695,8 @@ void ReadRestart::header(int incompatible)
       comm->commsortflag = read_int();
     } else if (flag == COMM_STYLE) {
       comm->commpartstyle = read_int();
+    } else if (flag == GRID_WEIGHT) {
+      grid->cellweightflag = read_int();
 
     } else if (flag == NPARTICLE) {
       nparticle_file = read_bigint();

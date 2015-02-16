@@ -1785,27 +1785,37 @@ void Grid::type_check()
    set static cellwise fnum weights based on uncut volumes
    for volume, use volume of cell, whether axisymmetric or not
    for radius, use radius of cell centroid from axisymmetric axis
-   called from input script
+   called from input script and read_restart (with narg = -1)
 ------------------------------------------------------------------------- */
 
 void Grid::weight(int narg, char **arg)
 {
   int i;
   double *lo,*hi;
-
-  if (!exist) error->all(FLERR,"Cannot weight cells before grid is defined");
-  if (narg != 1) error->all(FLERR,"Illegal weight command");
-
   int dimension = domain->dimension;
   int axisymmetric = domain->axisymmetric;
 
-  if (strcmp(arg[0],"none") == 0) {
-    cellweightflag = NOWEIGHT;
+  if (!exist) error->all(FLERR,"Cannot weight cells before grid is defined");
+  if (narg > 0 && narg != 1) error->all(FLERR,"Illegal weight command");
+
+  // if called from read_restart with narg = -1, cellweightflag is already set
+
+  if (narg == 1) {
+    if (strcmp(arg[0],"none") == 0) cellweightflag = NOWEIGHT;
+    else if (strcmp(arg[0],"volume") == 0) cellweightflag = VOLWEIGHT;
+    else if (strcmp(arg[0],"radius") == 0) cellweightflag = RADWEIGHT;
+    else error->all(FLERR,"Illegal weight command");
+  }
+
+  if (cellweightflag == RADWEIGHT && !axisymmetric) 
+    error->all(FLERR,"Cannot use weight cell radius unless axisymmetric");
+
+  // set per-cell weights
+
+  if (cellweightflag == NOWEIGHT) {
     for (i = 0; i < nlocal; i++) cinfo[i].weight = 1.0;
 
-  } else if (strcmp(arg[0],"volume") == 0) {
-    cellweightflag = VOLWEIGHT;
-
+  } else if (cellweightflag == VOLWEIGHT) {
     for (int i = 0; i < nlocal; i++) {
       lo = cells[i].lo;
       hi = cells[i].hi;
@@ -1817,18 +1827,13 @@ void Grid::weight(int narg, char **arg)
         cinfo[i].weight = (hi[0]-lo[0]) * (hi[1]-lo[1]);
     }
 
-  } else if (strcmp(arg[0],"radius") == 0) {
-    if (!axisymmetric) 
-      error->all(FLERR,"Cannot use weight cell radius unless axisymmetric");
-    cellweightflag = RADWEIGHT;
-
+  } else if (cellweightflag == RADWEIGHT) {
     for (int i = 0; i < nlocal; i++) {
       lo = cells[i].lo;
       hi = cells[i].hi;
       cinfo[i].weight = 0.5*(hi[1]+lo[1]) * (hi[0]-lo[0]);
     }
-
-  } else error->all(FLERR,"Illegal weight command");
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////
