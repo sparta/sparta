@@ -583,12 +583,12 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     jp->evib = 0.0;
     numspecies = 2;
   } else {
-    ip->erot = 0.0E0;
-    jp->erot = 0.0E0;
-    kp->erot = 0.0E0;
-    ip->evib = 0.0E0;
-    jp->evib = 0.0E0;
-    kp->evib = 0.0E0;
+    ip->erot = 0.0;
+    jp->erot = 0.0;
+    kp->erot = 0.0;
+    ip->evib = 0.0;
+    jp->evib = 0.0;
+    kp->evib = 0.0;
     numspecies = 3;
   }
 
