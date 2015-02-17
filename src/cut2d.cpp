@@ -733,6 +733,16 @@ int Cut2d::cliptest(double *p, double *q)
   a[0] = p[0]; a[1] = p[1];
   b[0] = q[0]; b[1] = q[1];
 
+  // if requested, push line pts from just outside cell surface to surface
+  // must be done now so to insure a line slightly outside cell 
+  //   does not actually intersect cell when pushed in build_clines(),
+  //   else might not be added to list of lines intersecting cell
+
+  if (pushflag % 2) {
+    push_to_cell(a);
+    push_to_cell(b);
+  }
+
   if (a[0] < lo[0] && b[0] < lo[0]) return 0;
   if (a[0] < lo[0] || b[0] < lo[0]) {
     y = a[1] + (lo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
@@ -784,13 +794,23 @@ void Cut2d::clip(double *p, double *q, double *a, double *b)
 {
   double x,y;
 
-  a[0] = p[0]; a[1] = p[1];
-  b[0] = q[0]; b[1] = q[1];
-
   if (p[0] >= lo[0] && p[0] <= hi[0] &&
       p[1] >= lo[1] && p[1] <= hi[1] &&
       q[0] >= lo[0] && q[0] <= hi[0] &&
       q[1] >= lo[1] && q[1] <= hi[1]) return;
+
+  a[0] = p[0]; a[1] = p[1];
+  b[0] = q[0]; b[1] = q[1];
+
+  // if requested, push line pts from just outside cell surface to surface
+  // must be done now so to insure a line slightly outside cell 
+  //   does not actually intersect cell when pushed in build_clines(),
+  //   else might not be added to list of lines intersecting cell
+
+  if (pushflag % 2) {
+    push_to_cell(a);
+    push_to_cell(b);
+  }
 
   if (a[0] < lo[0] || b[0] < lo[0]) {
     y = a[1] + (lo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
@@ -855,16 +875,23 @@ int Cut2d::push_to_cell(double *pt)
   double epsx = EPSCELL * (hi[0]-lo[0]);
   double epsy = EPSCELL * (hi[1]-lo[1]);
 
+  if (pushflag % 2) {
+    if (x < lo[0]-epsx || x > hi[0]+epsx || 
+        y < lo[1]-epsy || y > hi[1]+epsy) return 0;
+  } else {
+    if (x < lo[0] || x > hi[0] || y < lo[1] || y > hi[1]) return 0;
+  }
+
   if (pushflag == 1) {
     if (fabs(x-lo[0]) < epsx || fabs(x-hi[0]) < epsx) {
       if (y > lo[1]-epsy && y < hi[1]+epsy) {
-        if (x-lo[0] < epsx) x = lo[0];
+        if (fabs(x-lo[0]) < epsx) x = lo[0];
         else x = hi[0];
       }
     }
     if (fabs(y-lo[1]) < epsy || fabs(y-hi[1]) < epsy) {
       if (x >= lo[0] && x <= hi[0]) {
-        if (y-lo[1] < epsy) y = lo[1];
+        if (fabs(y-lo[1]) < epsy) y = lo[1];
         else y = hi[1];
       }
     }
@@ -886,13 +913,13 @@ int Cut2d::push_to_cell(double *pt)
   } else if (pushflag == 3) {
     if ((x > lo[0]-epsx && x <= lo[0]) || (x < hi[0]+epsx && x >= hi[0])) {
       if (y >= lo[1]-epsy && y <= hi[1]+epsy) {
-        if (x-lo[0] < epsx) x = lo[0];
+        if (x <= lo[0]) x = lo[0];
         else x = hi[0];
       }
     }
     if ((y > lo[1]-epsy && y <= lo[1]) || (y < hi[1]+epsy && y >= hi[1])) {
       if (x >= lo[0] && x <= hi[0]) {
-        if (y-lo[1] < epsy) y = lo[1];
+        if (y <= lo[1]) y = lo[1];
         else y = hi[1];
       }
     }

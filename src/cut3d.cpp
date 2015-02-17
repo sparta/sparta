@@ -33,7 +33,7 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 // cell ID for 2d or 3d cell
 
 //#define VERBOSE
-#define VERBOSE_ID 109084
+#define VERBOSE_ID 35874397
 
 /* ---------------------------------------------------------------------- */
 
@@ -158,6 +158,17 @@ int Cut3d::clip(double *p0, double *p1, double *p2)
   memcpy(path1[0],p0,3*sizeof(double));
   memcpy(path1[1],p1,3*sizeof(double));
   memcpy(path1[2],p2,3*sizeof(double));
+
+  // if requested, push tri pts from just outside cell surface to surface
+  // must be done now so to insure a tri slightly outside cell 
+  //   does not actually intersect cell when pushed in add_tris(),
+  //   else might not be added to list of surfs intersecting cell
+
+  if (pushflag % 2) {
+    push_to_cell(path1[0]);
+    push_to_cell(path1[1]);
+    push_to_cell(path1[2]);
+  }
 
   // clip tri against each of 6 grid face planes
 
@@ -339,6 +350,8 @@ void Cut3d::add_tris()
     memcpy(p1,pts[tri->p1].x,3*sizeof(double));
     memcpy(p2,pts[tri->p2].x,3*sizeof(double));
     memcpy(p3,pts[tri->p3].x,3*sizeof(double));
+
+    // if requested, push tri pts near cell surface to cell surface
 
     if (pushflag) {
       npush += push_to_cell(p1);
@@ -1719,23 +1732,32 @@ int Cut3d::push_to_cell(double *pt)
   double epsy = EPSCELL * (hi[1]-lo[1]);
   double epsz = EPSCELL * (hi[2]-lo[2]);
 
+  if (pushflag % 2) {
+    if (x < lo[0]-epsx || x > hi[0]+epsx || 
+        y < lo[1]-epsy || y > hi[1]+epsy || 
+        z < lo[2]-epsz || z > hi[2]+epsz) return 0;
+  } else {
+    if (x < lo[0] || x > hi[0] || y < lo[1] || y > hi[1] || 
+        z < lo[2] || z > hi[2]) return 0;
+  }
+
   if (pushflag == 1) {
     if (fabs(x-lo[0]) < epsx || fabs(x-hi[0]) < epsx) {
       if (y > lo[1]-epsy && y < hi[1]+epsy && 
           z > lo[2]-epsz && z < hi[2]+epsz) {
-        if (x-lo[0] < epsx) x = lo[0];
+        if (fabs(x-lo[0]) < epsx) x = lo[0];
         else x = hi[0];
       }
     }
     if (fabs(y-lo[1]) < epsy || fabs(y-hi[1]) < epsy) {
       if (x >= lo[0] && x <= hi[0] && z > lo[2]-epsz && z < hi[2]+epsz) {
-        if (y-lo[1] < epsy) y = lo[1];
+        if (fabs(y-lo[1]) < epsy) y = lo[1];
         else y = hi[1];
       }
     }
     if (fabs(z-lo[2]) < epsz || fabs(z-hi[2]) < epsz) {
       if (x >= lo[0] && x <= hi[0] && y >= lo[1] && y <= hi[1]) {
-        if (z-lo[2] < epsz) z = lo[2];
+        if (fabs(z-lo[2]) < epsz) z = lo[2];
         else z = hi[2];
       }
     }
@@ -1765,19 +1787,19 @@ int Cut3d::push_to_cell(double *pt)
     if ((x > lo[0]-epsx && x <= lo[0]) || (x < hi[0]+epsx && x >= hi[0])) {
       if (y >= lo[1]-epsy && y <= hi[1]+epsy && 
           z >= lo[2]-epsz && z <= hi[2]+epsz) {
-        if (x-lo[0] < epsx) x = lo[0];
+        if (x <= lo[0]) x = lo[0];
         else x = hi[0];
       }
     }
     if ((y > lo[1]-epsy && y <= lo[1]) || (y < hi[1]+epsy && y >= hi[1])) {
       if (x >= lo[0] && x <= hi[0] && z > lo[2]-epsz && z < hi[2]+epsz) {
-        if (y-lo[1] < epsy) y = lo[1];
+        if (y <= lo[1]) y = lo[1];
         else y = hi[1];
       }
     }
     if ((z > lo[2]-epsz && z <= lo[2]) || (z < hi[2]+epsz && z >= hi[2])) {
       if (x >= lo[0] && x <= hi[0] && y >= lo[1] && y <= hi[1]) {
-        if (z-lo[2] < epsz) z = lo[2];
+        if (z <= lo[2]) z = lo[2];
         else z = hi[2];
       }
     }
