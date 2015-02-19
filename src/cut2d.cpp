@@ -794,13 +794,13 @@ void Cut2d::clip(double *p, double *q, double *a, double *b)
 {
   double x,y;
 
+  a[0] = p[0]; a[1] = p[1];
+  b[0] = q[0]; b[1] = q[1];
+
   if (p[0] >= lo[0] && p[0] <= hi[0] &&
       p[1] >= lo[1] && p[1] <= hi[1] &&
       q[0] >= lo[0] && q[0] <= hi[0] &&
       q[1] >= lo[1] && q[1] <= hi[1]) return;
-
-  a[0] = p[0]; a[1] = p[1];
-  b[0] = q[0]; b[1] = q[1];
 
   // if requested, push line pts from just outside cell surface to surface
   // must be done now so to insure a line slightly outside cell 
@@ -870,6 +870,8 @@ int Cut2d::ptflag(double *pt)
 
 int Cut2d::push_to_cell(double *pt)
 {
+  printf("AAA\n");
+
   double x = pt[0];
   double y = pt[1];
   double epsx = EPSCELL * (hi[0]-lo[0]);
