@@ -870,8 +870,6 @@ int Cut2d::ptflag(double *pt)
 
 int Cut2d::push_to_cell(double *pt)
 {
-  printf("AAA\n");
-
   double x = pt[0];
   double y = pt[1];
   double epsx = EPSCELL * (hi[0]-lo[0]);
