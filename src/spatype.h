@@ -58,7 +58,6 @@ namespace SPARTA_NS {
 #define ATOLL atol
 #endif
 
-
 // default, sufficient for problems with up to 2B grid cells
 // 32-bit smallint, 64-bit bigint, 32-bit cellint
 

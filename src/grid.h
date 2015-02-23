@@ -131,7 +131,7 @@ class Grid : protected Pointers {
   // global list of parent cells is stored by all procs
 
   struct ParentCell {
-    int id;                   // cell ID in bitwise format, 0 = root
+    cellint id;               // cell ID in bitwise format, 0 = root
     int level;                // level in hierarchical grid, 0 = root
     int nbits;                // # of bits to encode my ID, also my siblings
     int newbits;              // # of additional bits to encode my children

@@ -729,11 +729,12 @@ void Grid::find_neighbors()
   }
   for (icell = 0; icell < nparent; icell++)
     (*hash)[pcells[icell].id] = -(icell+1);
-  
+
   // set neigh flags and nmask for each owned and ghost child cell
   // sub cells have same lo/hi as split cell, so their neigh info is the same
 
   for (icell = 0; icell < nlocal+nghost; icell++) {
+
     lo = cells[icell].lo;
     hi = cells[icell].hi;
     neigh = cells[icell].neigh;
