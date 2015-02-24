@@ -1,0 +1,335 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix inflow/file command :h3
+
+[Syntax:]
+
+fix ID inflow mix-ID face filename boundary-ID keyword value ... :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+inflow = style name of this fix command :l
+mix-ID = ID of mixture to use when creating particles :l
+face = {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :l
+filename = input data file with boundary values for the inflow :l
+boundary-ID = section of data file to read :l
+zero or more keyword/value pairs may be appended :l
+keyword = {frac} or {nevery} or {perspecies} :l
+  {frac} value = fraction = 0.0 to 1.0 fraction of particles to insert
+  {nevery} value = Nstep = insert every this many timesteps
+  {perspecies} value = {yes} or {no} :pre
+:ule
+
+[Examples:]
+
+fix in inflow/file air xlo input.data XLOface
+fix in inflow/file mymix ylo file.txt oneface frac 0.1 nevery 10 :pre
+
+[Description:]
+
+Insert particles into the simulation box continuously during a
+simulation.  The particles are inserted on one face of the box using
+properties of the specified mixture and values read from an input file
+that can override those properties.  The input file can thus be used
+to create a flow that varies spatially over the face surface.  This
+can be useful, for example, to model an object inserted into a plume
+flow where the flow has spatially varying properties.  If invoked
+every timestep, this fix induces a continuous influx of particles thru
+the face.
+
+The properties of the inserted particles are derived from the mixture
+with ID {mix-ID} and the input file.  Together they determine the
+number and species of added particles, as well as their streaming
+velocity, thermal temperature, and internal energy modes.  The details
+are explained below.
+
+Only one face of the simulation box can be specified via the {face}
+argument.  The 6 possible faces are {xlo}, {xhi}, {ylo}, {yhi}, {zlo},
+or {zhi}.  This command can be used multiple times to insert particles
+on multiple faces.
+
+On each insertion timestep, each grid cell with a face touching the
+inflow boundary performs the following computations to insert
+particles.  The insertion occus at the beginning of the SPARTA
+timestep.
+
+The molecular flux across a grid cell face per unit time is given by
+equation 4.22 of "(Bird94)"_#Bird94.  The number of particles {M} to
+insert on a particular grid cell face is based on this flux and
+additional global, flow, and cell face properties:
+
+global property: {fnum} ratio as specified by the "global"_global.html" command
+flow properties: number density, streaming velocity, and thermal temperature
+cell face properties: area of face and its orientation relative to the streaming velocity :ul
+
+The flow properties are defined for the specified mixture via the
+"mixture"_mixture.html command.  Any or all them can be overridden by
+values in the input data file, which affect individual grid cells as
+described below.
+
+If {M} has a fractional value, e.g. 12.5, then 12 particles are
+inserted, and a 13th depending on the value of a random number.  Each
+particle is inserted at a random location on the grid cell face.  The
+particle species is chosen randomly in accord with the {frac} settings
+of the collection of species in the mixture, as set by the
+"mixture"_mixture.html command.  These can also be overridden by
+spatially varying number fraction values in the input data file, as
+described below.
+
+The velocity of the particle is set to the sum of the streaming
+velocity and a thermal velocity sampled from the thermal temperature.
+The internal energy modes of the particle are determined by the
+thermal temperature and the {rotate} and {vibrate} options of the
+"collide_modify"_collide_modify.html command.  Note that if the
+"collide"_collide.html command has not been specified (free molecular
+flow), then no rotational or vibrational energy will be assigned to
+created particles.
+
+If the final particle velocity is not directed "into" the grid cell,
+then the velocity sampling procedure is repeated until it is.  This
+insures that all inserted particles enter the simulation domain, as
+desired.
+
+The first timestep that inserted particles are advected, they move for
+a random fraction of the timestep.  This insures a continuous flow
+field of particles entering the simulation box.
+
+:line
+
+For 3d simulations, the input data file defines a 2d grid of data
+points which conceptually overlays some portion or all of the
+specified face of the simulation box.  For a 2d simulation, a 1d grid
+is defined.  The grid is topologically regular, but can have uniform
+or non-uniform spacing in each of its two or one dimensions (for 3d or
+2d problems).  One or more values can be defined at every grid point,
+which override any of the mixture settings defined by the
+"mixture"_mixture.html command.  These are the flow properties
+discussed above (number density, streaming velocity, and thermal
+temperature), as well as the number fraction of any species in the
+mixture.  Any value not defined in the input data file defaults to the
+mixture value.
+
+For 3d simulations, a 2d grid is defined in the file using I,J
+indices.  (The 1d grid for 2d simulations is described below).  I and
+J map to any of the simulation box faces in this manner.  A simulation
+box face has two varying dimensions (e.g. ylo face = x and z
+dimensions).  The I index in the file corresponds to the "lowest" of
+these dimensions, where x < y < z.  The J index in the file
+corresponds to the higher.  Thus for face ylo, I = x and J = z.  A low
+I or J value corresponds to a low x or z value, regardless of whether
+the mapping is to the ylo or yhi face.  A 1d grid for a 2d simulation
+is defined in an analogous manner, e.g. for face xlo, I = y.
+
+For a 3d simulation, interpolation from values on the 2d grid to any
+grid cell face that is on the corresponding simulation box face is
+done in the following manner.  There are 3 cases to consider.
+
+(a) For a grid cell face that is entirely inside the area defined by
+the file grid, the centroid (center point) of the grid cell face is
+surrounded geometrically by 4 file grid points.  The 4 values defined
+on those 4 file points are averaged in a weighted manner using
+bilinear interpolation (described below) to determine the value for
+the grid cell face.  This value is then used for the calculation
+described above for {M} = the number of particles to insert on the
+cell face as well as the properties of the inserted particles.
+
+(b) For a grid cell face that is entirely outside the area defined by
+the file grid, no particles are inserted in that grid cell.
+
+(c) For a grid cell face that partially overlaps the area defined by
+the file grid, the extent of the overlap is computed.  The centroid
+(center point) of the overlap area is surrounded geometrically by 4
+file grid points.  The values for those 4 points are used as in (a)
+above to determine properties of particles inserted in that grid cell.
+Note that the area of insertion, used to calculate {M}, is the overlap
+area, which is smaller than the grid cell face area.  Also, particles
+are only inserted within the overlap area of the grid cell face.
+
+For a 2d simulation, the 3 cases are similar, except for (a) and (c)
+the centroid is the midpoint of a line segment, the centroid is
+surrounded by 2 file grid points, and linear interpolation (described
+below) is performed to determine the value for the grid face.
+
+:line
+
+The format of the input data file is a series of one or more sections,
+defined as follows (without the parenthesized comments).  Note that
+one file can contain many sections, each with a different set of
+tabulated values.  The sections can be a mix of 2d and 3d formats.
+SPARTA reads the file section by section, skipping sections with
+non-matching boundary IDs, until it finds one that matches the
+specified boundary-ID.  The lines that follow must be in this order:
+
+# plume ABC info           (one or more comment or blank lines) :pre
+
+PLUME_ABC                  (boundary-ID is first word on line)
+NIJ 4 10                   (grid size: Ni by Nj)
+NV 3                       (Nv = number of values per grid point)
+VALUES nrho temp Ar        (list of Nv values per grid point)
+IGRID 0.0 0.3 0.9 1.0      (grid coordinates in I direction)
+JGRID ...                  (grid coordinates in J direction)
+                           (blank)
+1 1 1.0 300.0 0.5          (I, J, value1, value2, ...)
+1 2 1.02 310.0 0.5           
+...
+4 10 3.0 400.0 0.7 :pre
+
+This format is for a 3d simulation.  For a 2d simulation, there are 3
+changes:
+
+"NIJ 4 10" is replaced by "NI 6"
+JGRID line is not included
+"I,J,value1,..." is replaced by "I,value1,..." :ul
+
+A section begins with a non-blank line whose first character is not a
+"#".  Blank lines or lines starting with "#" can be used as comments
+between sections.  The first line begins with a boundary-ID which
+identifies the section.  The line can contain additional text, but the
+initial text must match the boundary-ID specified in the fix
+inflow/file command.  Otherwise the section is skipped.
+
+The VALUES line lists Nv keywords.  The list of possible keywords is
+as follows, along with the meaning of the numeric value specified for
+the grid point:
+
+nrho = number density
+vstream = 3 components of streaming velocity
+temp = thermal temperature
+species = number fraction of any species in the mixture :ul
+
+The IGRID and JGRID lines must list values that are monotonically
+increasing.
+
+Following a blank line, the next N = Ni x Nj lines (or N = Ni lines
+for a 2d simulation) list the tabulated values.  The format of each
+line is I,J followed by Nv values.  The N lines can be in any order,
+but all unique I,J (or I for 2d) indices must be listed.
+
+Note that if number fractions are specified for one or more species in
+the mixture, then they override number fraction values for the mixture
+itself, as set by the "mixture"_mixture.html command.  However, for
+each grid cell, the rule that the number fraction of all species in
+the mixture must sum to 1.0 is enforced, just as it is for the
+mixture.  This means that number fractions of species not specified in
+the file or in the mixture may be reset (for that grid cell) to insure
+the sum = 1.0, as explained on the "mixture"_mixture.html command doc
+page.  If this cannot be done, an error will be generated.
+
+:line
+
+For 3d simulations, bilinear interpolation from the 2d grid of values
+specified in the file is performed using this equation to calculate
+the value at the centroid point (i,j) in the grid cell:
+
+f(i,j) = 1/area * (f(i1,j1)*(i2-i)*(j2-j) + f(i2,j1)*(i-i1)*(j2-j) +
+                   f(i2,j2)*(i-i1)*(j-j1) + f(i1,j2)*(i2-i)*(j-j1)) :pre
+
+where the 4 surrounding file grid points are (i1,j1), (i2,j1),
+(i2,j2), and (i1,j2).  The 4 f() values on the right-hand side are the
+values defined at the file grid points.  The sum is normalized by the
+area of the overlap between the grid cell face and file grid.
+
+For 2d simulations, linear interpolation from the 1d grid of values
+specified in the file is performed using this equation to calculate
+the value at the centroid poitn (i) in the grid line:
+
+f(i) = 1/length * (f(i1)*(i2-i) + f(i2)*(i-i1)
+     = f(i1) + (i - i1)/(i2 - i1) * (f(i2) - f(i1)) :pre
+
+where the 2 surrounding file grid points are (i1) and (i2).  The 2 f()
+values on the right-hand side are the values defined at the file grid
+points.  The sum is normalized by the length of the overlap between
+the grid cell line and file line.
+
+:line
+
+The {frac} keyword can alter how many particles are inserted, which
+can be useful for debugging purposes.  If {frac} is set to 1.0 (the
+default) then the number of particles inserted is the sum of the {M}
+values computed for each grid cell that overlaps with the grid defined
+in the file, as described above.  If {frac} < 1.0 then {M} is scaled
+by frac to determine the number of particles inserted in each grid
+cell.  Thus a simulation with less particles can easily be run to test
+if it is setup correctly.
+
+The {nevery} keyword determines how often particles are inserted.  If
+{Nstep} > 1, this may give a non-continuous, clumpy distribution in
+the inlet flow field.
+
+The {perspecies} keyword determines how the species of each inserted
+particle is randomly determined.  This has an effect on the
+statistical properties of inserted particles.
+
+If {perspecies} is set to {yes}, then a target insertion number {M} in
+a grid cell is calculated for each species, which is a function of the
+relative number fraction of the species, as set by the "mixture
+nfrac"_mixture.html command.  If {M} has a fractional value,
+e.g. 12.5, then 12 particles of that species will always be inserted,
+and a 13th depending on the value of a random number.
+
+If {perspecies} is set to {no}, then a single target insertion number
+{M} in a grid cell is calculated for all the species.  Each time a
+particle is inserted, a random number is used to choose the species of
+the particle, based on the relative number fractions of all the
+species in the mixture.  As before, if {M} has a fractional value,
+e.g. 12.5, then 12 particles will always be inserted, and a 13th
+depending on the value of a random number.
+
+Here is a simple example that illustrates the difference between the
+two options.  Assume a mixture with 2 species, each with a relative
+number fraction of 0.5.  Assume a particular grid cell inserts 10
+particles from that mixture.  If {perspecies} is set to {yes}, then
+exactly 5 particles of each species will be inserted on every timestep
+insertions take place.  If {perspecies} is set to {no}, then exactly
+10 particles will be inserted every time and on average the insertion
+will be 5 particles of each of the two species.  But on one timestep
+it might be 6 of the first and 4 of the second.  On another timestep
+it might be 3 of the first and 7 of the second.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+This fix computes a global vector of length 2 which can be accessed by
+various output commands.  The first element of the vector is the total
+number of particles inserted on the most recent insertion step.  The
+second element is the cummulative total number inserted since the
+beginning of the run.  The 2nd value is initialized to zero each time
+a run is performed.
+
+[Restrictions:]
+
+Particles cannot be inserted on {z} faces of the simluation box for a
+2d simulation.  Particles cannot be inserted on periodic faces of the
+simulation box.
+
+Unlike the "fix inflow"_fix_inflow.html command, no warning is issued
+if the specified inflow face has an inward normal in a direction
+opposing the streaming velocity, as defined by the mixture.  This is
+because the streaming velocity as defined by the specified mixture may
+be overridden by values in the file.  Note that if the streaming
+velocity for a particular grid cell face does oppose the inward
+normal, no particles will be inserted in that grid cell.
+
+[Related commands:]
+
+"mixture"_mixture.html, "create_particles"_create_particles.html, "fix
+inflow"_fix_inflow.html
+
+[Default:]
+
+The keyword defaults are frac = 1.0, nevery = 1, perspecies = yes.
+
+:line
+
+:link(Bird94)
+[(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).

@@ -171,9 +171,14 @@ simulation box.
 <P>A <I>n</I> setting of <I>Np</I> > 0 can only be used with a <I>perspecies</I> setting
 of <I>no</I>.
 </P>
+<P>A warning will be issued if a specified inflow face has an inward
+normal in a direction opposing the streaming velocity.  This is
+because no particles will be inserted on that face.
+</P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "mixture.html">mixture</A>, <A HREF = "create_particles.html">create_particles</A>
+<P><A HREF = "mixture.html">mixture</A>, <A HREF = "create_particles.html">create_particles</A>, <A HREF = "fix_inflow_file.html">fix
+inflow/file</A>
 </P>
 <P><B>Default:</B>
 </P>
