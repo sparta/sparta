@@ -194,7 +194,7 @@ void FixInflow::init()
     if (faces[i] && domain->bflag[i] == PERIODIC)
       error->all(FLERR,"Cannot use fix inflow on periodic boundary");
 
-  // warn if inflow faces do not have inward normal
+  // warn if any inflow face does not have an inward normal
   //   in direction of streaming velocity
 
   double normal[3];
