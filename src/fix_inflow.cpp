@@ -163,9 +163,11 @@ void FixInflow::init()
   int i,j,m,n,isp,icell;
   double xface[3];
 
-  double *vscale = particle->mixture[imix]->vscale;
-  double *vstream = particle->mixture[imix]->vstream;
+  int nspecies = particle->mixture[imix]->nspecies;
   double nrho = particle->mixture[imix]->nrho;
+  double *vstream = particle->mixture[imix]->vstream;
+  double *vscale = particle->mixture[imix]->vscale;
+  double *fraction = particle->mixture[imix]->fraction;
   double fnum = update->fnum;
   double dt = update->dt;
 
@@ -191,6 +193,25 @@ void FixInflow::init()
   for (i = 0; i < 6; i++)
     if (faces[i] && domain->bflag[i] == PERIODIC)
       error->all(FLERR,"Cannot use fix inflow on periodic boundary");
+
+  // warn if inflow faces do not have inward normal
+  //   in direction of streaming velocity
+
+  double normal[3];
+  int flag = 0;
+
+  for (i = 0; i < 6; i++) {
+    if (!faces[i]) continue;
+    normal[0] = normal[1] = normal[2] = 0.0;
+    if (i % 2 == 0) normal[i/2] = 1.0;
+    else normal[i/2] = -1.0;
+    double indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
+      vstream[2]*normal[2];
+    if (indot < 0.0) flag = 1;
+  }
+
+  if (flag && comm->me == 0)
+    error->warning(FLERR,"Fix inflow face opposes streaming velocity");
 
   // c2f[I][J] = 1 if my local parent cell I, face J allows insertions
   // only allow if face adjoins global boundary with inflow defined
@@ -286,13 +307,10 @@ void FixInflow::init()
 
   // cellface = per-face data struct for all inserts performed on my grid cells
   // reallocate cellface since nspecies count of mixture may have changed
-  // indot = dot product of vstream with outward face normal
-  // skip the cellface if indot < 0.0, since no particles will be inserted
+  // indot = dot product of vstream with inward face normal
+  // skip cellface if indot < 0.0, to not allow any particles to be inserted
   // 2d vs 3d adjusts lo[2],hi[2] and area
   // convert c2f[I][J] = index into cellface of Jth face of cell I, -1 if none
-
-  int nspecies = particle->mixture[imix]->nspecies;
-  int *species = particle->mixture[imix]->species;
 
   for (int i = 0; i < ncfmax; i++) delete [] cellface[i].ntargetsp;
   memory->sfree(cellface);
@@ -316,8 +334,8 @@ void FixInflow::init()
       cellface[ncf].icell = icell;
       cellface[ncf].iface = XLO;
       cellface[ncf].ndim = 0;
-      cellface[ncf].pdim1 = 1;
-      cellface[ncf].pdim2 = 2;
+      cellface[ncf].pdim = 1;
+      cellface[ncf].qdim = 2;
       cellface[ncf].lo[0] = cells[icell].lo[0];
       cellface[ncf].hi[0] = cells[icell].lo[0];
       cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -346,7 +364,8 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot >= 0.0) {
         for (isp = 0; isp < nspecies; isp++) {
-          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] = 
+            mol_inflow(indot,vscale[isp],fraction[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
           cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -362,8 +381,8 @@ void FixInflow::init()
       cellface[ncf].icell = icell;
       cellface[ncf].iface = XHI;
       cellface[ncf].ndim = 0;
-      cellface[ncf].pdim1 = 1;
-      cellface[ncf].pdim2 = 2;
+      cellface[ncf].pdim = 1;
+      cellface[ncf].qdim = 2;
       cellface[ncf].lo[0] = cells[icell].hi[0];
       cellface[ncf].hi[0] = cells[icell].hi[0];
       cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -392,7 +411,8 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot >= 0.0) {
         for (isp = 0; isp < nspecies; isp++) {
-          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] =
+            mol_inflow(indot,vscale[isp],fraction[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
           cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -408,8 +428,8 @@ void FixInflow::init()
       cellface[ncf].icell = icell;
       cellface[ncf].iface = YLO;
       cellface[ncf].ndim = 1;
-      cellface[ncf].pdim1 = 0;
-      cellface[ncf].pdim2 = 2;
+      cellface[ncf].pdim = 0;
+      cellface[ncf].qdim = 2;
       cellface[ncf].lo[0] = cells[icell].lo[0];
       cellface[ncf].hi[0] = cells[icell].hi[0];
       cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -437,7 +457,8 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot >= 0.0) {
         for (isp = 0; isp < nspecies; isp++) {
-          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] =
+            mol_inflow(indot,vscale[isp],fraction[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
           cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -453,8 +474,8 @@ void FixInflow::init()
       cellface[ncf].icell = icell;
       cellface[ncf].iface = YHI;
       cellface[ncf].ndim = 1;
-      cellface[ncf].pdim1 = 0;
-      cellface[ncf].pdim2 = 2;
+      cellface[ncf].pdim = 0;
+      cellface[ncf].qdim = 2;
       cellface[ncf].lo[0] = cells[icell].lo[0];
       cellface[ncf].hi[0] = cells[icell].hi[0];
       cellface[ncf].lo[1] = cells[icell].hi[1];
@@ -483,7 +504,8 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot >= 0.0) {
         for (isp = 0; isp < nspecies; isp++) {
-          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] =
+            mol_inflow(indot,vscale[isp],fraction[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
           cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -499,8 +521,8 @@ void FixInflow::init()
       cellface[ncf].icell = icell;
       cellface[ncf].iface = ZLO;
       cellface[ncf].ndim = 2;
-      cellface[ncf].pdim1 = 0;
-      cellface[ncf].pdim2 = 1;
+      cellface[ncf].pdim = 0;
+      cellface[ncf].qdim = 1;
       cellface[ncf].lo[0] = cells[icell].lo[0];
       cellface[ncf].hi[0] = cells[icell].hi[0];
       cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -520,7 +542,8 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot >= 0.0) {
         for (isp = 0; isp < nspecies; isp++) {
-          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] =
+            mol_inflow(indot,vscale[isp],fraction[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
           cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -536,8 +559,8 @@ void FixInflow::init()
       cellface[ncf].icell = icell;
       cellface[ncf].iface = ZHI;
       cellface[ncf].ndim = 2;
-      cellface[ncf].pdim1 = 0;
-      cellface[ncf].pdim2 = 1;
+      cellface[ncf].pdim = 0;
+      cellface[ncf].qdim = 1;
       cellface[ncf].lo[0] = cells[icell].lo[0];
       cellface[ncf].hi[0] = cells[icell].hi[0];
       cellface[ncf].lo[1] = cells[icell].lo[1];
@@ -557,7 +580,8 @@ void FixInflow::init()
 	vstream[2]*cellface[ncf].normal[2];
       if (indot >= 0.0) {
         for (isp = 0; isp < nspecies; isp++) {
-          cellface[ncf].ntargetsp[isp] = mol_inflow(isp,indot/vscale[isp]);
+          cellface[ncf].ntargetsp[isp] =
+            mol_inflow(indot,vscale[isp],fraction[isp]);
           cellface[ncf].ntargetsp[isp] *= nrho*area*dt / fnum;
           cellface[ncf].ntargetsp[isp] /= cinfo[icell].weight;
           cellface[ncf].ntarget += cellface[ncf].ntargetsp[isp];
@@ -595,10 +619,10 @@ void FixInflow::init()
 
 void FixInflow::start_of_step()
 {
-  int pcell,ninsert,isp,ndim,pdim1,pdim2,id;
+  int pcell,ninsert,isp,ndim,pdim,qdim,id;
   double *lo,*hi,*normal;
   double x[3],v[3];
-  double indot,indotr,rn,ntarget,vr;
+  double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
   Particle::OnePart *p;
 
@@ -621,33 +645,41 @@ void FixInflow::start_of_step()
   //   x = random position on face
   //   v = randomized thermal velocity + vstream
   //       first stage: normal dimension (ndim)
-  //       second stage: parallel dimensions (pdim1,pdim2)
+  //       second stage: parallel dimensions (pdim,qdim)
 
-  // NOTE: if allow particle insertion on backflow boundaries
-  //       then should worry about do while loops spinning endlessly
-  //       due to difficulty of generating a valid particle to insert
-  //       may especially happen if force Np insertions on backflow boundary
+  // double while loop until randomized particle velocity meets 2 criteria
+  // inner do-while loop:
+  //   v = vstream-component + vthermal is into simulation box
+  //   see Bird 1994, p 425
+  // outer do-while loop:
+  //   shift Maxwellian distribution by stream velocity component
+  //   see Bird 1994, p 259, eq 12.5
+
+  // NOTE:
+  // currently not allowing particle insertion on backflow boundaries
+  // enforced by indot >= 0.0 check in init()
+  // could allow particle insertion on backflow boundaries
+  //   when streaming velocity is small enough
+  // need to insure two do-while loops below do not spin endlessly
 
   nsingle = 0;
 
   for (int i = 0; i < ncf; i++) {
     pcell = cellface[i].pcell;
     ndim = cellface[i].ndim;
-    pdim1 = cellface[i].pdim1;
-    pdim2 = cellface[i].pdim2;
+    pdim = cellface[i].pdim;
+    qdim = cellface[i].qdim;
     lo = cellface[i].lo;
     hi = cellface[i].hi;
     normal = cellface[i].normal;
 
-    indotr = vstream[0]*normal[0] + vstream[1]*normal[1] + 
-      vstream[2]*normal[2];
+    indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
     if (perspecies == YES) {
       for (isp = 0; isp < nspecies; isp++) {
 	ntarget = cellface[i].ntargetsp[isp]+random->uniform();
 	ninsert = static_cast<int> (ntarget);
-        indot = indotr / vscale[isp];
-//	if (random->uniform() < ntarget-ninsert) ninsert++;
+        scosine = indot / vscale[isp];
 
 	for (int m = 0; m < ninsert; m++) {
 	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
@@ -657,10 +689,10 @@ void FixInflow::start_of_step()
 
 	  do {
 	    do beta_un = (6.0*random->gaussian() - 3.0);
-	    while (beta_un + indot < 0.0);
-	    normalized_distbn_fn = 2.0 * (beta_un + indot) / 
-	      (indot + sqrt(indot*indot + 2.0)) *
-	      exp(0.5 + (0.5*indot)*(indot-sqrt(indot*indot + 2.0)) - 
+	    while (beta_un + scosine < 0.0);
+	    normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+	      (scosine + sqrt(scosine*scosine + 2.0)) *
+	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
 		  beta_un*beta_un);
 	  } while (normalized_distbn_fn < random->uniform());
 	  
@@ -668,8 +700,8 @@ void FixInflow::start_of_step()
 
           theta = MY_2PI * random->gaussian();
           vr = vscale[isp] * sqrt(-log(random->uniform()));
-          v[pdim1] = vr * sin(theta) + vstream[pdim1];
-          v[pdim2] = vr * cos(theta) + vstream[pdim2];
+          v[pdim] = vr * sin(theta) + vstream[pdim];
+          v[qdim] = vr * cos(theta) + vstream[qdim];
           erot = particle->erot(isp,temp_thermal,random);
           evib = particle->evib(isp,temp_thermal,random);
           id = MAXSMALLINT*random->uniform();
@@ -687,7 +719,6 @@ void FixInflow::start_of_step()
       if (np == 0) {
 	ntarget = cellface[i].ntarget+random->uniform();
 	ninsert = static_cast<int> (ntarget);
-//	if (random->uniform() < ntarget-ninsert) ninsert++;
       } else {
 	ninsert = npercell;
 	if (i >= nthresh) ninsert++;
@@ -697,7 +728,7 @@ void FixInflow::start_of_step()
 	rn = random->uniform();
 	isp = 0;
 	while (cummulative[isp] < rn) isp++;
-        indot = indotr / vscale[isp];
+        scosine = indot / vscale[isp];
 
 	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
 	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
@@ -707,10 +738,10 @@ void FixInflow::start_of_step()
 	do {
 	  do {
 	    beta_un = (6.0*random->gaussian() - 3.0);
-	  } while (beta_un + indot < 0.0);
-	  normalized_distbn_fn = 2.0 * (beta_un + indot) / 
-	    (indot + sqrt(indot*indot + 2.0)) *
-	    exp(0.5 + (0.5*indot)*(indot-sqrt(indot*indot + 2.0)) - 
+	  } while (beta_un + scosine < 0.0);
+	  normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+	    (scosine + sqrt(scosine*scosine + 2.0)) *
+	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
 		beta_un*beta_un);
 	} while (normalized_distbn_fn < random->uniform());
 	
@@ -718,8 +749,8 @@ void FixInflow::start_of_step()
 
         theta = MY_2PI * random->gaussian();
         vr = vscale[isp] * sqrt(-log(random->uniform()));
-        v[pdim1] = vr * sin(theta) + vstream[pdim1];
-        v[pdim2] = vr * cos(theta) + vstream[pdim2];
+        v[pdim] = vr * sin(theta) + vstream[pdim];
+        v[qdim] = vr * cos(theta) + vstream[qdim];
         erot = particle->erot(isp,temp_thermal,random);
         evib = particle->evib(isp,temp_thermal,random);
         id = MAXSMALLINT*random->uniform();
@@ -739,25 +770,17 @@ void FixInflow::start_of_step()
 
 /* ----------------------------------------------------------------------
    calculate flux of particles of species ISP entering a grid cell
+   indot = vstream dotted into face normal, assumed to be >= 0.0
+   scosine = s cos(theta) in Bird notation where vscale = 1/beta
    see Bird 1994, eq 4.22
-   NOTE: could add option to insert particles on backflow boundaries
-         when indot < 0.0
 ------------------------------------------------------------------------- */
 
-double FixInflow::mol_inflow(int isp, double indot)
+double FixInflow::mol_inflow(double indot, double vscale, double fraction)
 {
-  double *vscale = particle->mixture[imix]->vscale;
-  double *fraction = particle->mixture[imix]->fraction;
-
-  if (indot < 0.0) error->one(FLERR,"Fix inflow used on outflow boundary");
-
-  double inward_number_flux = 0.0;
-  if (indot >= 0.0) {
-    inward_number_flux = vscale[isp] * fraction[isp] *
-      (exp(-indot*indot) + sqrt(MY_PI)*indot*(1.0 + erf(indot))) /
-      (2*sqrt(MY_PI));
-  }
-
+  double scosine = indot / vscale;
+  double inward_number_flux = vscale*fraction *
+    (exp(-scosine*scosine) + sqrt(MY_PI)*scosine*(1.0 + erf(scosine))) / 
+    (2*sqrt(MY_PI));
   return inward_number_flux;
 }
 
@@ -810,7 +833,7 @@ int FixInflow::pack_grid_one(int icell, char *buf, int memflag)
   ptr += 6*sizeof(int);
   ptr = ROUNDUP(ptr);
 
-  // loop over faces, pack cellface/species-info entry if exists
+  // loop over faces, pack cellface entry if it exists plus its vectors
 
   for (int iface = 0; iface < 6; iface++) {
     if (c2f[icell][iface] < 0) continue;
@@ -843,11 +866,10 @@ int FixInflow::unpack_grid_one(int icell, char *buf)
   ptr = ROUNDUP(ptr);
   nglocal++;
 
-  int nsplit = grid->cells[icell].nsplit;
-
   // unpack c2f values
   // fill sub cells with -1
 
+  int nsplit = grid->cells[icell].nsplit;
   if (nsplit > 1) {
     grow_percell(nsplit);
     for (int i = 0; i < nsplit; i++) {
@@ -858,7 +880,7 @@ int FixInflow::unpack_grid_one(int icell, char *buf)
   }
   
   // unpack cellface entry for each face set in c2f
-  // use ntargetsp to avoid overwriting allocated cellface.ntargetsp
+  // store ntargetsp to avoid overwriting allocated cellface.ntargetsp
   // reset c2f pointer into cellface
   // reset cellface.pcell and cellface.icell
   // pcell setting based on sub cells being immediately after the split cell
@@ -977,6 +999,7 @@ void FixInflow::grow_percell(int n)
 
 /* ----------------------------------------------------------------------
    insure cellface allocated long enough for N new cell/face pairs
+   also allocate new vector within each cellface
 ------------------------------------------------------------------------- */
 
 void FixInflow::grow_cellface(int n)

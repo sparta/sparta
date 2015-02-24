@@ -57,7 +57,7 @@ class FixInflow : public Fix {
     int icell;                  // associated cell index, unsplit or split cell
     int iface;                  // which face of unsplit or split cell
     int ndim;                   // dim (0,1,2) normal to face
-    int pdim1,pdim2;            // 2 dims (0,1,2) parallel to face
+    int pdim,qdim;              // 2 dims (0,1,2) parallel to face
   };
 
   CellFace *cellface;           // cell/face pairs to insert particles on
@@ -72,7 +72,7 @@ class FixInflow : public Fix {
 
   class RanPark *random;
 
-  double mol_inflow(int, double);
+  double mol_inflow(double, double, double);
   int split(int, int);
   void grow_percell(int);
   void grow_cellface(int);

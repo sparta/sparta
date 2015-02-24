@@ -150,32 +150,16 @@ void Mixture::init()
   if (temp_thermal_flag) temp_thermal = temp_thermal_user;
   else temp_thermal = update->temp_thermal;
 
-  // sum = frac sum for species with explicity set fractions
-  // nimplicit = number of unset species
+  // initialize all per-species fraction and cummulative values
+  // account for both explicitly and implicitly set fractions
 
-  double sum = 0.0;
-  int nimplicit = 0;
-  for (int i = 0; i < nspecies; i++) {
-    if (fraction_flag[i]) sum += fraction_user[i];
-    else nimplicit++;
-  }
+  int err = init_fraction(fraction_flag,fraction_user,fraction,cummulative);
 
-  if (sum > 1.0) {
+  if (err) {
     char str[128];
     sprintf(str,"Mixture %s fractions exceed 1.0",id);
     error->all(FLERR,str);
   }
-
-  // fraction for each unset species = equal portion of unset remainder
-  // cummulative = cummulative fraction across species
-
-  for (int i = 0; i < nspecies; i++) {
-    if (fraction_flag[i]) fraction[i] = fraction_user[i];
-    else fraction[i] = (1.0-sum) / nimplicit;
-    if (i) cummulative[i] = cummulative[i-1] + fraction[i];
-    else cummulative[i] = fraction[i];
-  }
-  if (nspecies) cummulative[nspecies-1] = 1.0;
 
   // vscale = factor to scale Gaussian unit variance by
   //          to get thermal distribution of velocities
@@ -205,6 +189,44 @@ void Mixture::init()
   groupsize = new int[ngroup];
   for (int i = 0; i < ngroup; i++) groupsize[i] = 0;
   for (int i = 0; i < nspecies; i++) groupsize[mix2group[i]]++;
+}
+
+/* ----------------------------------------------------------------------
+   set f = fraction and c = cummulative fraction for each species in mixture
+   fflag[I] = 1 if species I fraction is set by fuser[I]
+   otherwise species I fraction is an implicit value
+   implicit value = 1/nimplicit of unset remainder,
+     where nimplicit = # of unset species
+   return 0 for success
+   return 1 for error if sum of specified fractions > 1.0
+   called by init() and also by FixInflowFile::interpolate()
+------------------------------------------------------------------------- */
+
+int Mixture::init_fraction(int *fflag, double *fuser, double *f, double *c)
+{
+  // sum = total frac for species with explicity set fractions
+  // nimplicit = number of unset species
+
+  double sum = 0.0;
+  int nimplicit = 0;
+  for (int i = 0; i < nspecies; i++) {
+    if (fflag[i]) sum += fuser[i];
+    else nimplicit++;
+  }
+
+  if (sum > 1.0) return 1;
+
+  // fraction for each unset species = equal portion of unset remainder
+  // cummulative = cummulative fraction across species
+
+  for (int i = 0; i < nspecies; i++) {
+    if (fflag[i]) f[i] = fuser[i];
+    else f[i] = (1.0-sum) / nimplicit;
+    if (i) c[i] = c[i-1] + f[i];
+    else c[i] = f[i];
+  }
+  if (nspecies) c[nspecies-1] = 1.0;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

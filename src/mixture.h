@@ -59,6 +59,7 @@ class Mixture : protected Pointers {
   ~Mixture();
   void command(int, char **);
   void init();
+  int init_fraction(int *, double *, double *, double *);
   void add_species_default(char *);
   void write_restart(FILE *fp);
   void read_restart(FILE *fp);
