@@ -113,12 +113,12 @@ field of particles entering the simulation box.
 </P>
 <HR>
 
-<P>For 3d simulations, the input data file defines a 2d grid of data
+<P>For 3d simulations, the input data file defines a 2d mesh of data
 points which conceptually overlays some portion or all of the
-specified face of the simulation box.  For a 2d simulation, a 1d grid
-is defined.  The grid is topologically regular, but can have uniform
+specified face of the simulation box.  For a 2d simulation, a 1d mesh
+is defined.  The mesh is topologically regular, but can have uniform
 or non-uniform spacing in each of its two or one dimensions (for 3d or
-2d problems).  One or more values can be defined at every grid point,
+2d problems).  One or more values can be defined at every mesh point,
 which override any of the mixture settings defined by the
 <A HREF = "mixture.html">mixture</A> command.  These are the flow properties
 discussed above (number density, streaming velocity, and thermal
@@ -126,24 +126,24 @@ temperature), as well as the number fraction of any species in the
 mixture.  Any value not defined in the input data file defaults to the
 mixture value.
 </P>
-<P>For 3d simulations, a 2d grid is defined in the file using I,J
-indices.  (The 1d grid for 2d simulations is described below).  I and
+<P>For 3d simulations, a 2d mesh is defined in the file using I,J
+indices.  (The 1d mesh for 2d simulations is described below).  I and
 J map to any of the simulation box faces in this manner.  A simulation
 box face has two varying dimensions (e.g. ylo face = x and z
 dimensions).  The I index in the file corresponds to the "lowest" of
 these dimensions, where x < y < z.  The J index in the file
 corresponds to the higher.  Thus for face ylo, I = x and J = z.  A low
 I or J value corresponds to a low x or z value, regardless of whether
-the mapping is to the ylo or yhi face.  A 1d grid for a 2d simulation
+the mapping is to the ylo or yhi face.  A 1d mesh for a 2d simulation
 is defined in an analogous manner, e.g. for face xlo, I = y.
 </P>
-<P>For a 3d simulation, interpolation from values on the 2d grid to any
+<P>For a 3d simulation, interpolation from values on the 2d mesh to any
 grid cell face that is on the corresponding simulation box face is
 done in the following manner.  There are 3 cases to consider.
 </P>
 <P>(a) For a grid cell face that is entirely inside the area defined by
-the file grid, the centroid (center point) of the grid cell face is
-surrounded geometrically by 4 file grid points.  The 4 values defined
+the file mesh, the centroid (center point) of the grid cell face is
+surrounded geometrically by 4 file mesh points.  The 4 values defined
 on those 4 file points are averaged in a weighted manner using
 bilinear interpolation (described below) to determine the value for
 the grid cell face.  This value is then used for the calculation
@@ -151,12 +151,12 @@ described above for <I>M</I> = the number of particles to insert on the
 cell face as well as the properties of the inserted particles.
 </P>
 <P>(b) For a grid cell face that is entirely outside the area defined by
-the file grid, no particles are inserted in that grid cell.
+the file mesh, no particles are inserted in that grid cell.
 </P>
 <P>(c) For a grid cell face that partially overlaps the area defined by
-the file grid, the extent of the overlap is computed.  The centroid
+the file mesh, the extent of the overlap is computed.  The centroid
 (center point) of the overlap area is surrounded geometrically by 4
-file grid points.  The values for those 4 points are used as in (a)
+file mesh points.  The values for those 4 points are used as in (a)
 above to determine properties of particles inserted in that grid cell.
 Note that the area of insertion, used to calculate <I>M</I>, is the overlap
 area, which is smaller than the grid cell face area.  Also, particles
@@ -164,7 +164,7 @@ are only inserted within the overlap area of the grid cell face.
 </P>
 <P>For a 2d simulation, the 3 cases are similar, except for (a) and (c)
 the centroid is the midpoint of a line segment, the centroid is
-surrounded by 2 file grid points, and linear interpolation (described
+surrounded by 2 file mesh points, and linear interpolation (described
 below) is performed to determine the value for the grid face.
 </P>
 <HR>
@@ -180,11 +180,11 @@ specified boundary-ID.  The lines that follow must be in this order:
 <PRE># plume ABC info           (one or more comment or blank lines) 
 </PRE>
 <PRE>PLUME_ABC                  (boundary-ID is first word on line)
-NIJ 4 10                   (grid size: Ni by Nj)
-NV 3                       (Nv = number of values per grid point)
-VALUES nrho temp Ar        (list of Nv values per grid point)
-IGRID 0.0 0.3 0.9 1.0      (grid coordinates in I direction)
-JGRID ...                  (grid coordinates in J direction)
+NIJ 4 10                   (mesh size: Ni by Nj)
+NV 3                       (Nv = number of values per mesh point)
+VALUES nrho temp Ar        (list of Nv values per mesh point)
+IMESH 0.0 0.3 0.9 1.0      (mesh coordinates in I direction)
+JMESH ...                  (mesh coordinates in J direction)
                            (blank)
 1 1 1.0 300.0 0.5          (I, J, value1, value2, ...)
 1 2 1.02 310.0 0.5           
@@ -195,7 +195,7 @@ JGRID ...                  (grid coordinates in J direction)
 changes:
 </P>
 <UL><LI>"NIJ 4 10" is replaced by "NI 6"
-<LI>JGRID line is not included
+<LI>JMESH line is not included
 <LI>"I,J,value1,..." is replaced by "I,value1,..." 
 </UL>
 <P>A section begins with a non-blank line whose first character is not a
@@ -207,14 +207,14 @@ inflow/file command.  Otherwise the section is skipped.
 </P>
 <P>The VALUES line lists Nv keywords.  The list of possible keywords is
 as follows, along with the meaning of the numeric value specified for
-the grid point:
+the mesh point:
 </P>
 <UL><LI>nrho = number density
 <LI>vstream = 3 components of streaming velocity
 <LI>temp = thermal temperature
 <LI>species = number fraction of any species in the mixture 
 </UL>
-<P>The IGRID and JGRID lines must list values that are monotonically
+<P>The IMESH and JMESH lines must list values that are monotonically
 increasing.
 </P>
 <P>Following a blank line, the next N = Ni x Nj lines (or N = Ni lines
@@ -234,36 +234,36 @@ page.  If this cannot be done, an error will be generated.
 </P>
 <HR>
 
-<P>For 3d simulations, bilinear interpolation from the 2d grid of values
+<P>For 3d simulations, bilinear interpolation from the 2d mesh of values
 specified in the file is performed using this equation to calculate
-the value at the centroid point (i,j) in the grid cell:
+the value at the centroid point (i,j) in the grid cell face:
 </P>
 <PRE>f(i,j) = 1/area * (f(i1,j1)*(i2-i)*(j2-j) + f(i2,j1)*(i-i1)*(j2-j) +
                    f(i2,j2)*(i-i1)*(j-j1) + f(i1,j2)*(i2-i)*(j-j1)) 
 </PRE>
-<P>where the 4 surrounding file grid points are (i1,j1), (i2,j1),
+<P>where the 4 surrounding file mesh points are (i1,j1), (i2,j1),
 (i2,j2), and (i1,j2).  The 4 f() values on the right-hand side are the
-values defined at the file grid points.  The sum is normalized by the
-area of the overlap between the grid cell face and file grid.
+values defined at the file mesh points.  The sum is normalized by the
+area of the overlap between the grid cell face and file mesh.
 </P>
-<P>For 2d simulations, linear interpolation from the 1d grid of values
+<P>For 2d simulations, linear interpolation from the 1d mesh of values
 specified in the file is performed using this equation to calculate
-the value at the centroid poitn (i) in the grid line:
+the value at the centroid poitn (i) in the grid cell line:
 </P>
 <PRE>f(i) = 1/length * (f(i1)*(i2-i) + f(i2)*(i-i1)
      = f(i1) + (i - i1)/(i2 - i1) * (f(i2) - f(i1)) 
 </PRE>
-<P>where the 2 surrounding file grid points are (i1) and (i2).  The 2 f()
-values on the right-hand side are the values defined at the file grid
+<P>where the 2 surrounding file mesh points are (i1) and (i2).  The 2 f()
+values on the right-hand side are the values defined at the file mesh
 points.  The sum is normalized by the length of the overlap between
-the grid cell line and file line.
+the grid cell line and file mesh.
 </P>
 <HR>
 
 <P>The <I>frac</I> keyword can alter how many particles are inserted, which
 can be useful for debugging purposes.  If <I>frac</I> is set to 1.0 (the
 default) then the number of particles inserted is the sum of the <I>M</I>
-values computed for each grid cell that overlaps with the grid defined
+values computed for each grid cell that overlaps with the mesh defined
 in the file, as described above.  If <I>frac</I> < 1.0 then <I>M</I> is scaled
 by frac to determine the number of particles inserted in each grid
 cell.  Thus a simulation with less particles can easily be run to test
