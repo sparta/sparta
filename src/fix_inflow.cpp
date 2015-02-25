@@ -211,7 +211,8 @@ void FixInflow::init()
   }
 
   if (flag && comm->me == 0)
-    error->warning(FLERR,"Fix inflow face opposes streaming velocity");
+    error->warning(FLERR,
+                   "One or more fix inflow faces oppose streaming velocity");
 
   // c2f[I][J] = 1 if my local parent cell I, face J allows insertions
   // only allow if face adjoins global boundary with inflow defined

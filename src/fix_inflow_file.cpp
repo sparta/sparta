@@ -161,8 +161,8 @@ FixInflowFile::~FixInflowFile()
   delete random;
 
   delete [] mesh.which;
-  delete [] mesh.igrid;
-  delete [] mesh.jgrid;
+  delete [] mesh.imesh;
+  delete [] mesh.jmesh;
   memory->destroy(mesh.values);
 
   for (int i = 0; i < ncfmax; i++) {
@@ -530,13 +530,13 @@ void FixInflowFile::read_file(char *file, char *section)
       word = strtok(NULL," \t\n\r");
       nskip *= atoi(word);
       fgets(line,MAXLINE,fp);                         // values line
-      fgets(line,MAXLINE,fp);                         // igrid line
-      fgets(line,MAXLINE,fp);                         // jgrid line
+      fgets(line,MAXLINE,fp);                         // imesh line
+      fgets(line,MAXLINE,fp);                         // jmesh line
     } else if (strcmp(word,"NI") == 0) {
       word = strtok(NULL," \t\n\r");
       nskip = atoi(word);
       fgets(line,MAXLINE,fp);                         // values line
-      fgets(line,MAXLINE,fp);                         // igrid line
+      fgets(line,MAXLINE,fp);                         // imesh line
     } else error->one(FLERR,"Misformatted section in inflow file");
 
     fgets(line,MAXLINE,fp);                               // blank line
@@ -595,38 +595,38 @@ void FixInflowFile::read_file(char *file, char *section)
     }
   }
 
-  // read IGRID,JGRID coords
+  // read IMESH,JMESH coords
 
-  mesh.igrid = new double[mesh.ni];
-  mesh.jgrid = new double[mesh.nj];
+  mesh.imesh = new double[mesh.ni];
+  mesh.jmesh = new double[mesh.nj];
 
   fgets(line,MAXLINE,fp);
   word = strtok(line," \t\n\r");
-  if (strcmp(word,"IGRID") != 0) 
+  if (strcmp(word,"IMESH") != 0) 
     error->one(FLERR,"Misformatted section in inflow file");
   for (i = 0; i < mesh.ni; i++) {
     word = strtok(NULL," \t\n\r");
-    mesh.igrid[i] = atof(word);
-    if (i && mesh.igrid[i] <= mesh.igrid[i-1])
+    mesh.imesh[i] = atof(word);
+    if (i && mesh.imesh[i] <= mesh.imesh[i-1])
       error->one(FLERR,"Misformatted section in inflow file");
   }
-  mesh.lo[0] = mesh.igrid[0];
-  mesh.hi[0] = mesh.igrid[mesh.ni-1];
+  mesh.lo[0] = mesh.imesh[0];
+  mesh.hi[0] = mesh.imesh[mesh.ni-1];
 
   if (dimension == 3) {
     fgets(line,MAXLINE,fp);
     word = strtok(line," \t\n\r");
-    if (strcmp(word,"JGRID") != 0) 
+    if (strcmp(word,"JMESH") != 0) 
       error->one(FLERR,"Misformatted section in inflow file");
     for (i = 0; i < mesh.nj; i++) {
       word = strtok(NULL," \t\n\r");
-      mesh.jgrid[i] = atof(word);
-      if (i && mesh.jgrid[i] <= mesh.jgrid[i-1])
+      mesh.jmesh[i] = atof(word);
+      if (i && mesh.jmesh[i] <= mesh.jmesh[i-1])
         error->one(FLERR,"Misformatted section in inflow file");
     }
-  } else mesh.jgrid[0] = 0.0;
-  mesh.lo[1] = mesh.jgrid[0];
-  mesh.hi[1] = mesh.jgrid[mesh.nj-1];
+  } else mesh.jmesh[0] = 0.0;
+  mesh.lo[1] = mesh.jmesh[0];
+  mesh.hi[1] = mesh.jmesh[mesh.nj-1];
 
   // N = Ni by Nj values lines, store values in mesh
   // II,JJ stored with II varying fastest in 2d
@@ -673,15 +673,15 @@ void FixInflowFile::bcast_mesh()
 
   if (me) {
     mesh.which = new int[mesh.nvalues];
-    mesh.igrid = new double[mesh.ni];
-    mesh.jgrid = new double[mesh.nj];
+    mesh.imesh = new double[mesh.ni];
+    mesh.jmesh = new double[mesh.nj];
     n = mesh.ni * mesh.nj;
     memory->create(mesh.values,n,mesh.nvalues,"inflow/file:values");
   }
 
   MPI_Bcast(mesh.which,mesh.nvalues,MPI_INT,0,world);
-  MPI_Bcast(mesh.igrid,mesh.ni,MPI_DOUBLE,0,world);
-  MPI_Bcast(mesh.jgrid,mesh.nj,MPI_DOUBLE,0,world);
+  MPI_Bcast(mesh.imesh,mesh.ni,MPI_DOUBLE,0,world);
+  MPI_Bcast(mesh.jmesh,mesh.nj,MPI_DOUBLE,0,world);
   MPI_Bcast(&mesh.values[0][0],mesh.ni*mesh.nj*mesh.nvalues,
             MPI_DOUBLE,0,world);
 }
@@ -813,13 +813,13 @@ void FixInflowFile::interpolate()
     // allow for mesh.lo <= xc <= mesh.hi
 
     for (m = 1; m < mesh.ni; m++)
-      if (xc[0] <= mesh.igrid[m]) break;
+      if (xc[0] <= mesh.imesh[m]) break;
     plo = m-1;
     phi = m;
 
     if (dimension == 3) {
       for (m = 1; m < mesh.nj; m++)
-        if (xc[1] <= mesh.jgrid[m]) break;
+        if (xc[1] <= mesh.jmesh[m]) break;
       qlo = m-1;
       qhi = m;
     }
@@ -932,10 +932,10 @@ void FixInflowFile::interpolate()
 
 double FixInflowFile::linear_interpolation(double x, int m, int plo, int phi)
 {
-  double *igrid = mesh.igrid;
+  double *imesh = mesh.imesh;
   double **values = mesh.values;
-  double value = (values[plo][m]*(igrid[phi]-x) + 
-                  values[phi][m]*(x-igrid[plo])) / (igrid[phi]-igrid[plo]);
+  double value = (values[plo][m]*(imesh[phi]-x) + 
+                  values[phi][m]*(x-imesh[plo])) / (imesh[phi]-imesh[plo]);
   return value;
 }
 
@@ -948,15 +948,15 @@ double FixInflowFile::bilinear_interpolation(double x, double y, int m,
                                              int plo, int phi, int qlo, int qhi)
 {
   int ni = mesh.ni;
-  double *igrid = mesh.igrid;
-  double *jgrid = mesh.jgrid;
+  double *imesh = mesh.imesh;
+  double *jmesh = mesh.jmesh;
   double **values = mesh.values;
 
-  double area = (igrid[phi]-igrid[plo]) * (jgrid[qhi]-jgrid[qlo]);
-  double quad1 = values[qlo*ni+plo][m] * (igrid[phi]-x) * (jgrid[qhi]-y);
-  double quad2 = values[qlo*ni+phi][m] * (x-igrid[plo]) * (jgrid[qhi]-y);
-  double quad3 = values[qhi*ni+phi][m] * (x-igrid[plo]) * (y-jgrid[qlo]);
-  double quad4 = values[qhi*ni+plo][m] * (igrid[phi]-x) * (y-jgrid[qlo]);
+  double area = (imesh[phi]-imesh[plo]) * (jmesh[qhi]-jmesh[qlo]);
+  double quad1 = values[qlo*ni+plo][m] * (imesh[phi]-x) * (jmesh[qhi]-y);
+  double quad2 = values[qlo*ni+phi][m] * (x-imesh[plo]) * (jmesh[qhi]-y);
+  double quad3 = values[qhi*ni+phi][m] * (x-imesh[plo]) * (y-jmesh[qlo]);
+  double quad4 = values[qhi*ni+plo][m] * (imesh[phi]-x) * (y-jmesh[qlo]);
   double value = (quad1 + quad2 + quad3 + quad4) / area;
 
   return value;

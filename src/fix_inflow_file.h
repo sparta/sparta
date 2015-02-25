@@ -55,8 +55,8 @@ class FixInflowFile : public Fix {
     double lo[2],hi[2];         // bounds of mesh, in 2d/3d box coords
     int *which;                 // style of each value for which >= 0
                                 // if negative, which = -(speciesIndex + 1)
-    double *igrid;              // coordinate for each Ni
-    double *jgrid;              // coordinate for each Nj
+    double *imesh;              // coordinate for each Ni
+    double *jmesh;              // coordinate for each Nj
     double **values;            // 2d N,M values, where N = Ni*Nj
                                 // I,J stored with J varying fastest in 1d N
   };
