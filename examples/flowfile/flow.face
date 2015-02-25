@@ -4,7 +4,7 @@ XLO
 NI 3
 NV 3
 VALUES vx temp N
-IGRID 2 5 8
+IMESH 2 5 8
 
 1 100.0 0.1 0.99
 2 300.0 2.0 0.0
