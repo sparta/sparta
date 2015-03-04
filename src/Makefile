@@ -23,7 +23,7 @@ help:
 	@echo 'make -f Makefile.lib machine      build SPARTA as static library for machine'
 	@echo 'make -f Makefile.shlib machine    build SPARTA as shared library for machine'
 	@echo 'make -f Makefile.list machine     build SPARTA from explicit list of files'
-	@echo 'make stubs               build dummy MPI library in STUBS'
+	@echo 'make mpi-stubs           build dummy MPI library in STUBS'
 	@echo 'make install-python      install SPARTA wrapper in Python'
 	@echo ''
 	@echo 'make machine             build SPARTA where machine is one of:'
@@ -67,8 +67,8 @@ tar:
 
 # Make MPI STUBS lib
 
-stubs:
-	@cd STUBS; make clean; make
+mpi-stubs:
+	cd STUBS; make clean; make
 
 # Create Makefile.lib, Makefile.shlib, and Makefile.list
 
