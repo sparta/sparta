@@ -184,13 +184,13 @@ and that an FFmpeg executable can be found by SPARTA during the run.
 </P>
 <P>If you use -DSPARTA_MAP, SPARTA will use the STL map class for hash
 tables.  This is less efficient than the unordered map class which is
-not yet supported by all C++ compilers.  If you use -DSPARTA_MAP,
-SPARTA will use the unordered_map class for hash tables and will
-assume it is part of the STL (e.g. this works for Clang++).  The
-default is to use the unordered map class from the "tri1" extension to
-the STL which is supported by most compilers.  So only use either of
-these options if the build complains that unordered maps are not
-recognized.
+not yet supported by all C++ compilers.  If you use
+-DSPARTA_UNORDERED_MAP, SPARTA will use the unordered_map class for
+hash tables and will assume it is part of the STL (e.g. this works for
+Clang++).  The default is to use the unordered map class from the
+"tri1" extension to the STL which is supported by most compilers.  So
+only use either of these options if the build complains that unordered
+maps are not recognized.
 </P>
 <P>Use at most one of the -DSPARTA_SMALL, -DSPARTA_BIG, -DSPARTA_BIGBIG
 settings.  The default is -DSPARTA_BIG.  These refer to use of 4-byte
@@ -252,10 +252,10 @@ problems that can arise when linking SPARTA to the MPI library.
 dummy MPI library provided in src/STUBS, since you don't need a true
 MPI library installed on your system.  You will also need to build the
 STUBS library for your platform before making SPARTA itself.  From the
-src directory, type "make stubs", or from within the STUBS dir, type
-"make" and it should create a libmpi.a suitable for linking to SPARTA.
-If this build fails, you will need to edit the STUBS/Makefile for your
-platform.
+src directory, type "make mpi-stubs", or from within the STUBS dir,
+type "make" and it should create a libmpi.a suitable for linking to
+SPARTA.  If this build fails, you will need to edit the STUBS/Makefile
+for your platform.
 </P>
 <P>The file STUBS/mpi.cpp provides a CPU timer function called
 MPI_Wtime() that calls gettimeofday() .  If your system doesn't
