@@ -527,12 +527,6 @@ void Collide::collisions_group()
       }
     }
   }
-
-  // accumulate running totals
-
-  nattempt_running += nattempt_one;
-  ncollide_running += ncollide_one;
-  nreact_running += nreact_one;
 }
 
 /* ----------------------------------------------------------------------
