@@ -549,7 +549,7 @@ void ReadSurf::read_points()
 
 /* ----------------------------------------------------------------------
    read/store all lines
-   alter p1,p2 indices with to follow previously stored points
+   alter p1,p2 indices to point to newest set of stored points
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_lines()
@@ -612,7 +612,7 @@ void ReadSurf::read_lines()
 
 /* ----------------------------------------------------------------------
    read/store all triangles
-   alter p1,p2,p3 indices with to follow previously stored points
+   alter p1,p2,p3 indices to point to newest set of stored points
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_tris()
@@ -798,6 +798,7 @@ void ReadSurf::clip2d()
 
     m = nline_old;
     n = nline_new;
+
     for (i = 0; i < n; i++) {
       x1 = pts[lines[m].p1].x;
       x2 = pts[lines[m].p2].x;
@@ -846,7 +847,7 @@ void ReadSurf::clip2d()
     // ptflag[I] = # of lines that include point I
     
     int *ptflag;
-    memory->create(ptflag,npoint_new-npoint_old,"readsurf:ptflag");
+    memory->create(ptflag,npoint_new+npoint_old,"readsurf:ptflag");
     m = npoint_old;
     for (i = 0; i < npoint_new; i++) ptflag[m++] = 0;
 
@@ -861,7 +862,7 @@ void ReadSurf::clip2d()
     // also decrement ptflag for pts in removed line
     
     int *lineflag;
-    memory->create(lineflag,nline_new-nline_old,"readsurf:lineflag");
+    memory->create(lineflag,nline_new+nline_old,"readsurf:lineflag");
     m = nline_old;
     for (i = 0; i < nline_new; i++) lineflag[m++] = 0;
 
@@ -896,8 +897,8 @@ void ReadSurf::clip2d()
     for (i = 0; i < nline_new; i++) {
       if (!lineflag[m]) {
 	memcpy(&lines[n],&lines[m],sizeof(Surf::Line));
-	lines[n].p1 = ptflag[lines[n].p1 - npoint_old] + npoint_old;
-	lines[n].p2 = ptflag[lines[n].p2 - npoint_old] + npoint_old;
+	lines[n].p1 = ptflag[lines[n].p1];
+	lines[n].p2 = ptflag[lines[n].p2];
 	n++;
       }
       m++;
@@ -1125,7 +1126,7 @@ void ReadSurf::clip3d()
     // ptflag[I] = # of tris that include point I
     
     int *ptflag;
-    memory->create(ptflag,npoint_new-npoint_old,"readsurf:ptflag");
+    memory->create(ptflag,npoint_new+npoint_old,"readsurf:ptflag");
     m = npoint_old;
     for (i = 0; i < npoint_new; i++) ptflag[m++] = 0;
 
@@ -1141,7 +1142,7 @@ void ReadSurf::clip3d()
     // also decrement ptflag for pts in removed tri
     
     int *triflag;
-    memory->create(triflag,ntri_new-ntri_old,"readsurf:triflag");
+    memory->create(triflag,ntri_new+ntri_old,"readsurf:triflag");
     m = ntri_old;
     for (i = 0; i < ntri_new; i++) triflag[m++] = 0;
 
@@ -1178,9 +1179,9 @@ void ReadSurf::clip3d()
     for (i = 0; i < ntri_new; i++) {
       if (!triflag[m]) {
 	memcpy(&tris[n],&tris[m],sizeof(Surf::Tri));
-	tris[n].p1 = ptflag[tris[n].p1 - npoint_old] + npoint_old;
-	tris[n].p2 = ptflag[tris[n].p2 - npoint_old] + npoint_old;
-	tris[n].p3 = ptflag[tris[n].p3 - npoint_old] + npoint_old;
+	tris[n].p1 = ptflag[tris[n].p1];
+	tris[n].p2 = ptflag[tris[n].p2];
+	tris[n].p3 = ptflag[tris[n].p3];
 	n++;
       }
       m++;
