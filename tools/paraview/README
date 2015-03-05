@@ -13,7 +13,7 @@ be contacted at tjotaha at sandia.gov.
 
 -------------------------------
 
-  ** Important **
+** Important **
 
 The ParaView pvpython interpreter must be used to run these Python scripts.  
 Using a standard Python interpreter will not work, since the scripts will
@@ -21,9 +21,9 @@ not have access to the required ParaView Python modules and libraries.
 
 -------------------------------
 
-  ** Important **
+** Important **
 
-  I. GETTING STARTED
+I. GETTING STARTED
 
 Download and install ParaView at www.paraview.org.
 
@@ -44,11 +44,11 @@ pvpython is in C:\Program Files (x86)\ParaView 4.1.0\bin.
 
 -------------------------------
 
-  II. USING surf2paraview.py
+II. USING surf2paraview.py
 
 The surf2paraview.py program converts 3D SPARTA surface triangulation
 files and 2D SPARTA closed polygon files into ParaView .pvd format.
-Additionally, the program can take an optional number of SPARTA
+Additionally, the program can optionally read one or more SPARTA
 surface dump files and associate the calculated results with the
 surface geometry over time.
 
@@ -65,7 +65,8 @@ directory contains a ParaView .vtu file with geometry information and
 is referred to by the mir_surf.pvd file.  Start ParaView and open the
 file mir_surf.pvd to visualize the surface.
 
-The program has one optional argument to associate time result data:
+The program has an optional argument to associate time result data
+with the surface elements:
 
 % pvpython surf2paraview.py data.mir mir_surf -r ../parent/mir/tmp_surf.*
 
@@ -91,43 +92,67 @@ grid cells from view.
 
 -------------------------------
 
-  III.  USING grid2paraview.py
+III. USING grid2paraview.py
 
-The grid2paraview.py program converts a text file description of
-a 2D or 3D SPARTA mesh into a ParaView .pvd file.  Additionally, the
-program can take an optional number of SPARTA grid dump files and
-assocaite the calculated results with the grid cells over time.
+The grid2paraview.py program converts a text file description of a 2D
+or 3D SPARTA mesh into a ParaView .pvd file.  Additionally, the
+program can optionally read one or more SPARTA grid dump files and
+associtate the calculated results with the grid cells over time.
 
 The program has two required arguments:
 
 % pvpython grid2paraview.py mir.txt mir_grid
 
 The first argument is a text file containing a description of the
-SPARTA grid.  The description uses three commands found in the SPARTA
-input deck.  These commands are dimension, create_box, and
-create_grid.  The create_grid command only uses the level subcommand
-and * character to specify cell ranges.  Other subcommands that
-specify processor assignments for cells are not understood by the
-program.  Additionally, none of the three commands can contain
-variables.  The files may contain comments given by the #
-character. All three commands must be used once and can occur in any
-order.
+SPARTA grid.  The description uses commands found in the SPARTA input
+deck.  These commands are dimension, create_box, and create_grid or
+read_grid.  The file can also contain "slice" commands which will
+define slice planes through the 3d grid and output 2d data for each
+slice plane.  The file can also contain comment lines with start
+with a "#" character.
 
-For example, the mir.txt file given above could contain the following
-grid description:
+The dimension and create_box command have exactly the same syntax as
+corresponding SPARTA input script commands.  Both of these commands
+must be used.
+
+The grid itself can be defined by either a create_grid or read_grid
+command, one of which must be used.  The create_grid command is
+similar to the SPARTA input script command with the same name, but it
+only allows for use of the "level" keyword.  The other keywords that
+specify processor assignments for cells are not allowed.  The
+read_grid command has the same syntax as the corresponding SPARTA
+input script command, and reads a SPARTA parent grid file, which can
+define a hierarchical grid with multiple levels of refinement.
+
+One or more slice commands are optional.  Each defines a 2d plane
+in the following manner
+
+slice Nx Ny Nz Px Py Pz
+
+where (Nx,Ny,Nz) is the plane normal (need not be normalized) and
+(Px,Py,Pz) is a point on the plane.
+
+Each command will output a *.pvd file with the plane normal encoded in
+the *.pvd file-name.
+
+As an example, the mir.txt file specified above could contain the
+following grid description:
 
   dimension           3
   create_box          -15.0 30.0 -20.0 15.0 -20.0 20.0
   create_grid         100 100 100 level 2 * * * 2 2 2
+  slice               1 0 0 0.0 0.0 0.0
+  slice               0 1 0 0.0 0.0 0.0
 
-The second argument gives the name of the resulting .pvd file.  The
-above command line will produce a file called mir_grid.pvd and a
-directory called mir_grid/.  The mir_grid/ directory contains all the
-ParaView .vtu files used to describe the grid cell geometry.  The
-mir_grid.pvd references the mir_grid/ directory.  Open mir_grid.pvd
-with ParaView to view the grid.
+The second argument for the grid2paraview command gives the name of
+the resulting .pvd file.  The above command line will produce a file
+called mir_grid.pvd and a directory called mir_grid/.  The mir_grid/
+directory contains all the ParaView .vtu files used to describe the
+grid cell geometry.  The mir_grid.pvd references the mir_grid/
+directory.  Open mir_grid.pvd with ParaView to view the grid.
 
-The program has an optional argument to associate time result data:
+The program has an optional argument to associate time result data
+with the grid cells:
 
 % pvpython grid2paraview.py mir.txt mir_grid -r ../parent/mir/tmp_flow.*
 
@@ -141,15 +166,21 @@ that gives the SPARTA encoded integer id for the cell.
 
 For large grids (greater than 100x100x100), the time to write out the
 .pvd file and data directory can be lengthy.  For this reason, the
-grid2paraview.py program has three options for breaking the grid into
-smaller chunks at the top level of the grid.  Each chunk will be
-written out as a seperate .vtu file in the named subdirectory the .pvd
-file refers to.  The options are: -xc (or --xchunk, default 100), -yc
-(or --ychunk, default 100), and -zc (or --zchunk, default 100).  The
-program will launch a seperate thread of computation for each grid
-chunk.  On workstation machines with lots of compute cores and memory,
-using small chunks (of about 1 million cells each) can greatly speed
-up output time. For 2d grids, the values of -zc is ignored.
+grid2paraview.py command has three additional options which can break
+the grid into smaller chunks at the top-most level of the grid.  Each
+chunk will be written out as a seperate .vtu file in the named
+subdirectory the .pvd file refers to.
+
+These additional options are:
+
+-xc (or --xchunk, default 100)
+-yc (or --ychunk, default 100)
+-zc (or --zchunk, default 100)
+
+The program will launch a seperate thread of computation for each grid
+chunk.  On workstations with many cores and sufficient memory, using
+small chunks (of about 1 million cells each) can greatly speed up
+output time. For 2d grids, the -zc option is ignored.
 
 NOTE: On Windows platforms, the grid chunking will always be executed
 serially.  This is due to how the multiprocessing module is
