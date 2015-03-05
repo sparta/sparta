@@ -417,6 +417,8 @@ void Collide::collisions_group()
     // attempt = exact collision attempt count for a pair of groups
     // nattempt = rounded attempt with RN
     // add pairing to gpair
+    // NOTE: could do jgroup = igroup to Ngroup if no chemistry?
+    //       this is b/c chemistry in non-symmetric for I,J and J,I
 
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
