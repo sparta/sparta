@@ -341,8 +341,8 @@ void Collide::collisions_one()
       ncollide_one++;
 
       // jpart destroyed, delete from plist
-      // NOTE: cannot test jpart for NULL
-      //       need to do something different when add this reaction
+      // NOTE: when add recombination reactions,
+      //       perform_collision() will have to set jpart = NULL
 
       if (!jpart) {
         plist[j] = plist[np-1];
@@ -470,10 +470,12 @@ void Collide::collisions_group()
 	ncollide_one++;
 
 	// ipart may now be in different group
+        // reset jlist after addgroup() b/c may have been realloced
 
 	newgroup = species2group[ipart->ispecies];
 	if (newgroup != igroup) {
 	  addgroup(newgroup,ilist[i]);
+          jlist = glist[jgroup];
 	  ilist[i] = ilist[*ni-1];
 	  (*ni)--;
 	  if (*ni <= 1) {
@@ -482,12 +484,16 @@ void Collide::collisions_group()
 	  }
 	}
 
-	// jpart may be in different group or 
+	// jpart may now be in different group, or destroyed
+        // NOTE: when add recombination reactions,
+        //       perform_collision() will have to set jpart = NULL
+        // reset ilist after addgroup() b/c may have been realloced
 
 	if (jpart) {
 	  newgroup = species2group[jpart->ispecies];
 	  if (newgroup != jgroup) {
 	    addgroup(newgroup,jlist[j]);
+            ilist = glist[igroup];
 	    jlist[j] = jlist[*nj-1];
 	    (*nj)--;
 	    if (*nj <= 1) {
@@ -506,10 +512,14 @@ void Collide::collisions_group()
 
         // if kpart created, add to group list
 	// kpart was just added to particle list, so index = nlocal-1
+        // reset ilist,jlist after addgroup() b/c may have been realloced
+        // particles data struct may also have been realloced
 
 	if (kpart) {
 	  newgroup = species2group[kpart->ispecies];
 	  addgroup(newgroup,particle->nlocal-1);
+          ilist = glist[igroup];
+          jlist = glist[jgroup];
           particles = particle->particles;
 	}
       }
