@@ -130,7 +130,9 @@ in the following manner
 slice Nx Ny Nz Px Py Pz
 
 where (Nx,Ny,Nz) is the plane normal (need not be normalized) and
-(Px,Py,Pz) is a point on the plane.
+(Px,Py,Pz) is a point on the plane.  Note that the plane can be at any
+orientation.  ParaView will perform a good interpolation from the 3d
+grid cells to the 2d plane.
 
 Each command will output a *.pvd file with the plane normal encoded in
 the *.pvd file-name.
