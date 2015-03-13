@@ -17,6 +17,10 @@ Energy (TCE) model and are read by the react command.
 Files that start with "sdata" contain lists of surface elements and
 are read by the read_surf command.
 
+Files that end with "stl" are STL-formatted surface files which can be
+converted to SPARTA formatted surface files via the stl2surf.py tool
+in the tools directory.
+
 See the doc pages for the following commands which
 describe the format of the corresponding files:
 
