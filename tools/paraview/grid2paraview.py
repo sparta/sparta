@@ -978,7 +978,9 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("sparta_grid_description_file", help="SPARTA grid description input file name")
   parser.add_argument("paraview_output_file", help="ParaView output file name")
-  parser.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
+  group = parser.add_mutually_exclusive_group()
+  group.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
+  group.add_argument('-rf', '--resultfile', help="Optional filename containing path names of SPARTA dump result files")
   parser.add_argument('-xc', '--xchunk', \
                       help="Optional x grid chunk size (positive integer; default 100)", \
                       default=100, type=int )
@@ -999,8 +1001,6 @@ if __name__ == "__main__":
   if os.path.isdir(args.paraview_output_file):
     print "ParaView output directory exists: ", args.paraview_output_file
     sys.exit(1)
-  else:
-    os.mkdir(args.paraview_output_file)
  
   if args.xchunk < 1:
     print "Invalid xchunk size given: ", args.xchunk
@@ -1040,6 +1040,15 @@ if __name__ == "__main__":
   if args.result:
     for f in args.result:
       time_steps_file_list.extend(glob.glob(f))
+  elif args.resultfile:
+    try:
+      rf = open(args.resultfile, "r")
+      for name in rf:
+        time_steps_file_list.append(name.rstrip()) 
+      rf.close()
+    except IOError:
+      print "Unable to open SPARTA result file input list file: ", args.result_file
+      sys.exit(1)
 
   if not time_steps_file_list:
     time_steps_dict[0] = []
@@ -1053,6 +1062,8 @@ if __name__ == "__main__":
 
   print "Processing ", len(chunking), " grid chunk(s)."
   report_chunk_complete.num_chunks = len(chunking)
+
+  os.mkdir(args.paraview_output_file)
 
   import platform
   if platform.system() == 'Linux' or platform.system() == 'Darwin':

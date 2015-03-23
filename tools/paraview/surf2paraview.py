@@ -244,7 +244,9 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser()
   parser.add_argument("sparta_surf_file", help="SPARTA surface geometry input file name")
   parser.add_argument("paraview_output_file", help="ParaView output file name")
-  parser.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
+  group = parser.add_mutually_exclusive_group()
+  group.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
+  group.add_argument('-rf', '--resultfile', help="Optional filename containing path names of SPARTA dump result files")
   args = parser.parse_args()
 
   try:
@@ -260,8 +262,6 @@ if __name__ == "__main__":
   if os.path.isdir(args.paraview_output_file):
     print "ParaView output directory exists: ", args.paraview_output_file
     sys.exit(1)
-  else:
-    os.mkdir(args.paraview_output_file)
 
   print "Processing SPARTA surface information."
 
@@ -274,12 +274,22 @@ if __name__ == "__main__":
   if args.result:
     for f in args.result:
       time_steps_file_list.extend(glob.glob(f))
-  else:
+  elif args.resultfile:
+    try:
+      rf = open(args.resultfile, "r")
+      for name in rf:
+        time_steps_file_list.append(name.rstrip())
+      rf.close()
+    except IOError:
+      print "Unable to open SPARTA result file input list file: ", args.result_file
+      sys.exit(1)
+
+  if not time_steps_file_list:
     time_steps_dict[0] = []
 
   read_time_steps(time_steps_file_list, time_steps_dict)
 
-  write_pvd_file(sorted(time_steps_dict.keys()), args.paraview_output_file)
+  os.mkdir(args.paraview_output_file)
 
   writer = vtk.vtkXMLUnstructuredGridWriter()
   writer.SetInputData(ug)
@@ -289,5 +299,7 @@ if __name__ == "__main__":
     filepath = os.path.join(args.paraview_output_file, args.paraview_output_file + '_' + str(time) + '.vtu')
     writer.SetFileName(filepath)
     writer.Write()
+
+  write_pvd_file(sorted(time_steps_dict.keys()), args.paraview_output_file)
 
   print "Done."
