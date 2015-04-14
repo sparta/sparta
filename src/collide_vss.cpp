@@ -171,7 +171,8 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
 
  double npairs;
  if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
- else npairs = 0.5 * ngroup[igroup] * ngroup[jgroup];
+// else npairs = ngroup[igroup] * (ngroup[jgroup]);
+ else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
 
  nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
 
@@ -227,6 +228,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
+  double *vi = ip->v;
+  double *vj = jp->v;
 
   precoln.vr = sqrt(precoln.vr2);
 
@@ -241,8 +244,12 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   precoln.ave_dof = (precoln.ave_rotdof  + precoln.ave_vibdof)/2.;
 
-  precoln.mass_i = species[isp].mass;
-  precoln.mass_j = species[jsp].mass;
+  // COM velocity calculated using reactant masses
+
+  double divisor = species[isp].mass + species[jsp].mass; 
+  precoln.ucmf = ((species[isp].mass*vi[0]) + (species[jsp].mass*vj[0])) / divisor;
+  precoln.vcmf = ((species[isp].mass*vi[1]) + (species[jsp].mass*vj[1])) / divisor;
+  precoln.wcmf = ((species[isp].mass*vi[2]) + (species[jsp].mass*vj[2])) / divisor;
 
   precoln.mr = species[isp].mass * species[jsp].mass /
     (species[isp].mass + species[jsp].mass);
@@ -365,22 +372,15 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
     }
   }
   
-  // COM velocity calculated using reactant masses
-
-  double divisor = precoln.mass_i + precoln.mass_j;
-  double ucmf = ((precoln.mass_i*vi[0]) + (precoln.mass_j*vj[0])) / divisor;
-  double vcmf = ((precoln.mass_i*vi[1]) + (precoln.mass_j*vj[1])) / divisor;
-  double wcmf = ((precoln.mass_i*vi[2]) + (precoln.mass_j*vj[2])) / divisor;
-
   // new velocities for the products
 
-  divisor = mass_i + mass_j;
-  vi[0] = ucmf - (mass_j/divisor)*ua;
-  vi[1] = vcmf - (mass_j/divisor)*vb;
-  vi[2] = wcmf - (mass_j/divisor)*wc;
-  vj[0] = ucmf + (mass_i/divisor)*ua;
-  vj[1] = vcmf + (mass_i/divisor)*vb;
-  vj[2] = wcmf + (mass_i/divisor)*wc;
+  double divisor = mass_i + mass_j;
+  vi[0] = precoln.ucmf - (mass_j/divisor)*ua;
+  vi[1] = precoln.vcmf - (mass_j/divisor)*vb;
+  vi[2] = precoln.wcmf - (mass_j/divisor)*wc;
+  vj[0] = precoln.ucmf + (mass_i/divisor)*ua;
+  vj[1] = precoln.vcmf + (mass_i/divisor)*vb;
+  vj[2] = precoln.wcmf + (mass_i/divisor)*wc;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -542,22 +542,15 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
     }
   }
 
-  // COM velocity calculated using reactant masses
-
-  double divisor = precoln.mass_i + precoln.mass_j;
-  double ucmf = ((precoln.mass_i*vi[0]) + (precoln.mass_j*vj[0])) / divisor;
-  double vcmf = ((precoln.mass_i*vi[1]) + (precoln.mass_j*vj[1])) / divisor;
-  double wcmf = ((precoln.mass_i*vi[2]) + (precoln.mass_j*vj[2])) / divisor;
-
   // new velocities for the products
 
-  divisor = mass_ij + mass_k;
-  vi[0] = ucmf - (mass_ij/divisor)*ua;
-  vi[1] = vcmf - (mass_ij/divisor)*vb;
-  vi[2] = wcmf - (mass_ij/divisor)*wc;
-  vk[0] = ucmf + (mass_k/divisor)*ua;
-  vk[1] = vcmf + (mass_k/divisor)*vb;
-  vk[2] = wcmf + (mass_k/divisor)*wc;
+  double divisor = mass_ij + mass_k;
+  vi[0] = precoln.ucmf - (mass_ij/divisor)*ua;
+  vi[1] = precoln.vcmf - (mass_ij/divisor)*vb;
+  vi[2] = precoln.wcmf - (mass_ij/divisor)*wc;
+  vk[0] = precoln.ucmf + (mass_k/divisor)*ua;
+  vk[1] = precoln.vcmf + (mass_k/divisor)*vb;
+  vk[2] = precoln.wcmf + (mass_k/divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];
