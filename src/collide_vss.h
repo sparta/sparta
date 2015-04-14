@@ -63,8 +63,9 @@ class CollideVSS : public Collide {
     double eexchange;
     double eint;
     double etotal;
-    double mass_i;
-    double mass_j;
+    double ucmf;
+    double vcmf;
+    double wcmf;
   };
  
   struct State precoln;       // state before collision
