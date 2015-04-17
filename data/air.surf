@@ -1,0 +1,13 @@
+# reactions on surface
+
+NO+ --> N+ + O
+D S 0.5
+
+N2 --> NULL
+R S 0.4
+
+O+ --> O
+E S 0.3
+
+N+ --> N
+E S 0.2
