@@ -221,8 +221,9 @@ void Modify::gas_react(int index)
 
 void Modify::surf_react(Particle::OnePart *iorig, int i, int j)
 {
-  for (int m = 0; m < n_surf_react; m++)
-    fix[list_surf_react[i]]->surf_react(iorig,i,j);
+  for (int m = 0; m < n_surf_react; m++) {
+    fix[list_surf_react[m]]->surf_react(iorig,i,j);
+  }
 }
 
 /* ----------------------------------------------------------------------
