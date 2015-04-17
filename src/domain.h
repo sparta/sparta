@@ -33,6 +33,8 @@ class Domain : protected Pointers {
   int bflag[6];                     // boundary flags
   double norm[6][3];                // boundary normals
 
+  int surfreactany;                 // 1 if any boundary has surf reactions
+
   int nregion;                      // # of defined Regions
   int maxregion;                    // max # regions can hold
   class Region **regions;           // list of defined Regions
@@ -44,7 +46,7 @@ class Domain : protected Pointers {
   void set_global_box();
   void set_boundary(int, char **);
   void boundary_modify(int, char **);
-  int collide(Particle::OnePart *, int, int, double *);
+  int collide(Particle::OnePart *&, int, int, double *, Particle::OnePart *&);
   void uncollide(int, double *);
   void add_region(int, char **);
   void delete_region(int, char **);
@@ -53,6 +55,7 @@ class Domain : protected Pointers {
 
  private:
   int surf_collide[6];              // index of SurfCollide model
+  int surf_react[6];                // index of SurfReact model
                                     // for each bflag = SURFACE boundary
 };
 

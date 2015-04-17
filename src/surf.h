@@ -26,6 +26,9 @@ class Surf : protected Pointers {
   int exist;                // 1 if any surfaces are defined, else 0
   double bblo[3],bbhi[3];   // bounding box around surfs
 
+  int nreact_one;           // surface reactions in current step
+  bigint nreact_running;    // running count of surface reactions
+
   int nid;                  // # of unique surface IDs
   char **ids;               // list of IDs
   int *idlo,*idhi;          // range of consecutive surfs assigned to each ID
@@ -35,7 +38,7 @@ class Surf : protected Pointers {
   };
 
   struct Line {
-    int isc;                // index of surface collision model it belongs to
+    int isc,isr;            // index of surface collision and reaction models
                             // -1 if unassigned
     int p1,p2;              // indices of points in line segment
                             // rhand rule: Z x (p2-p1) = outward normal
@@ -43,7 +46,7 @@ class Surf : protected Pointers {
   };
 
   struct Tri {
-    int isc;                // index of surface collision model it belongs to
+    int isc,isr;            // index of surface collision and reaction models
                             // -1 if unassigned
     int p1,p2,p3;           // indices of points in triangle
                             // rhand rule: (p2-p1) x (p3-p1) = outward normal
@@ -59,8 +62,7 @@ class Surf : protected Pointers {
   int nlocal;               // # of surf elements I own
 
   class SurfCollide **sc;   // list of surface collision models
-  int nsc;                  // # of surface collision models
-  int maxsc;                // max # of models in sc
+  class SurfReact **sr;     // list of surface reaction models
 
   int pushflag;             // 1 if push surf pts to cell surface, 0 if not
    
@@ -83,6 +85,8 @@ class Surf : protected Pointers {
   int find_surf(const char *);
   void add_collide(int, char **);
   int find_collide(const char *);
+  void add_react(int, char **);
+  int find_react(const char *);
 
   void collate_vec(int, int *, double *, int, double *, int, int);
   void collate_array(int, int, int *, double **, double **);
@@ -90,6 +94,12 @@ class Surf : protected Pointers {
   void write_restart(FILE *);
   void read_restart(FILE *);
   bigint memory_usage();
+
+ private:
+  int nsc;                  // # of surface collision models
+  int maxsc;                // max # of models in sc
+  int nsr;                  // # of surface reaction models
+  int maxsr;                // max # of models in sr
 };
 
 }

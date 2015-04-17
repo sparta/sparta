@@ -14,38 +14,43 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(boundary,ComputeBoundary)
+ComputeStyle(count,ComputeCount)
 
 #else
 
-#ifndef SPARTA_BOUNDARY_SURF_H
-#define SPARTA_BOUNDARY_SURF_H
+#ifndef SPARTA_COMPUTE_COUNT_H
+#define SPARTA_COMPUTE_COUNT_H
 
 #include "compute.h"
-#include "particle.h"
 
 namespace SPARTA_NS {
 
-class ComputeBoundary : public Compute {
+class ComputeCount : public Compute {
  public:
-  ComputeBoundary(class SPARTA *, int, char **);
-  ~ComputeBoundary();
+  ComputeCount(class SPARTA *, int, char **);
+  ~ComputeCount();
   void init();
-  void compute_array();
-  void clear();
-  void boundary_tally(int, int, Particle::OnePart *,
-                      Particle::OnePart *, Particle::OnePart *);
+  double compute_scalar();
+  void compute_vector();
 
  private:
-  int imix,nvalue,ngroup,ntotal,nrow;
-  int *which;
+  int nvalues,maxvalues;     // number of values to count
+  int *spmix;                // value is SPECIES or MIXTURE group
+  int *index;                // index of species or mixture
+  int *indexgroup;           // index of mixture group
+  int *mixgroups;            // # of groups in mixture at constructor time
 
-  int weightflag;                // 1 if cell weighting is enabled
-  double weight;                 // particle weight, based on initial cell
+  int maxspecies;            // size of count vector
+  int *count;                // per-species count of particles on this proc
+  bigint *onevec;            // this proc's contribution to each value
+  bigint *sumvec;            // values summed across all procs
 
-  double normflux[6];            // per face normalization factors
-  double **myarray;              // local accumulator array
+  bigint lasttally;          // last timestep particles were counted
+
+  void per_species_tally();
+  void allocate(int);
 };
+
 
 }
 
@@ -59,14 +64,5 @@ E: Illegal ... command
 Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
-
-E: Compute boundary mixture ID does not exist
-
-Self-explanatory.
-
-E: Number of groups in compute boundary mixture has changed
-
-This mixture property cannot be changed after this compute command is
-issued.
 
 */

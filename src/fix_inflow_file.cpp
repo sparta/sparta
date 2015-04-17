@@ -21,6 +21,7 @@
 #include "particle.h"
 #include "mixture.h"
 #include "domain.h"
+#include "modify.h"
 #include "grid.h"
 #include "surf.h"
 #include "comm.h"
@@ -37,7 +38,7 @@ using namespace MathConst;
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // same as Grid
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{NO,YES};
 
@@ -351,7 +352,7 @@ void FixInflowFile::init()
 
 void FixInflowFile::start_of_step()
 {
-  int pcell,ninsert,isp,ndim,pdim1,pdim2,id;
+  int pcell,ninsert,isp,ispecies,ndim,pdim1,pdim2,id;
   double *lo,*hi,*vstream,*cummulative,*vscale;
   double x[3],v[3];
   double indot,scosine,rn,ntarget,temp_thermal;
@@ -366,6 +367,7 @@ void FixInflowFile::start_of_step()
   double dt = update->dt;
 
   int nspecies = particle->mixture[imix]->nspecies;
+  int *species = particle->mixture[imix]->species;
 
   // insert particles by cell face
   // ntarget/ninsert is either perspecies or for all species
@@ -390,6 +392,7 @@ void FixInflowFile::start_of_step()
   //   when streaming velocity is small enough
   // need to insure two do-while loops below do not spin endlessly
 
+  int nfix_add_particle = modify->n_add_particle;
   nsingle = 0;
 
   for (int i = 0; i < ncf; i++) {
@@ -404,6 +407,7 @@ void FixInflowFile::start_of_step()
 
     if (perspecies == YES) {
       for (isp = 0; isp < nspecies; isp++) {
+        ispecies = species[isp];
 	ntarget = cellface[i].ntargetsp[isp]+random->uniform();
 	ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
@@ -428,14 +432,17 @@ void FixInflowFile::start_of_step()
           theta = MY_PI * random->gaussian();
           v[pdim] = vscale[isp]*sin(theta) + vstream[pdim];
           v[qdim] = vscale[isp]*cos(theta) + vstream[qdim];
-          erot = particle->erot(isp,temp_thermal,random);
-          evib = particle->evib(isp,temp_thermal,random);
+          erot = particle->erot(ispecies,temp_thermal,random);
+          evib = particle->evib(ispecies,temp_thermal,random);
           id = MAXSMALLINT*random->uniform();
-	  particle->add_particle(id,isp,pcell,x,v,erot,evib);
+	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
 
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
+
+          if (nfix_add_particle) 
+            modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
 	}
 
 	nsingle += ninsert;
@@ -450,6 +457,7 @@ void FixInflowFile::start_of_step()
 	rn = random->uniform();
 	isp = 0;
 	while (cummulative[isp] < rn) isp++;
+        ispecies = species[isp];
         scosine = indot / vscale[isp];
 
 	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
@@ -472,14 +480,17 @@ void FixInflowFile::start_of_step()
         v[pdim] = vscale[isp]*sin(theta) + vstream[pdim];
         v[qdim] = vscale[isp]*cos(theta) + vstream[qdim];
 
-        erot = particle->erot(isp,temp_thermal,random);
-        evib = particle->evib(isp,temp_thermal,random);
+        erot = particle->erot(ispecies,temp_thermal,random);
+        evib = particle->evib(ispecies,temp_thermal,random);
         id = MAXSMALLINT*random->uniform();
-	particle->add_particle(id,isp,pcell,x,v,erot,evib);
+	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
 
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
+
+        if (nfix_add_particle) 
+          modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
       }
 
       nsingle += ninsert;

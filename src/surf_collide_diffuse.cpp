@@ -16,16 +16,19 @@
 #include "stdlib.h"
 #include "string.h"
 #include "surf_collide_diffuse.h"
-#include "math_extra.h"
+#include "surf.h"
+#include "surf_react.h"
 #include "input.h"
 #include "variable.h"
 #include "particle.h"
 #include "domain.h"
 #include "update.h"
+#include "modify.h"
 #include "comm.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "math_const.h"
+#include "math_extra.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -89,7 +92,11 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
   if (tflag || rflag) trflag = 1;
   else trflag = 0;
 
-  random = NULL;
+  // initialize RNG
+
+  random = new RanPark(update->ranmaster->uniform());
+  double seed = update->ranmaster->uniform();
+  random->reset(seed,comm->me,100);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -104,14 +111,6 @@ SurfCollideDiffuse::~SurfCollideDiffuse()
 
 void SurfCollideDiffuse::init()
 {
-  // initialize RNG
-
-  if (random == NULL) {
-    random = new RanPark(update->ranmaster->uniform());
-    double seed = update->ranmaster->uniform();
-    random->reset(seed,comm->me,100);
-  }
-
   // check variable
 
   if (tstr) {
@@ -124,15 +123,56 @@ void SurfCollideDiffuse::init()
 }
 
 /* ----------------------------------------------------------------------
-   particle collision with surface
-   p = particle with current x = collision pt, current v = incident v
+   particle collision with surface with optional chemistry
+   ip = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
-   reset p->v to post-collision outward velocity
-     with optional translation and rotation
-   reset erot and evib of particle to random new values
+   ip = set to NULL if destroyed by chemsitry
+   return jp = new particle if created by chemistry
+   resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
-void SurfCollideDiffuse::collide(Particle::OnePart *p, double *norm)
+Particle::OnePart *SurfCollideDiffuse::
+collide(Particle::OnePart *&ip, double *norm, int isr)
+{
+  // if surface chemistry defined, attempt reaction
+  // reaction = 1 if reaction took place
+
+  Particle::OnePart iorig;
+  Particle::OnePart *jp = NULL;
+  int reaction = 0;
+
+  if (isr >= 0) {
+    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
+    reaction = surf->sr[isr]->react(ip,norm,jp);
+    if (reaction) surf->nreact_one++;
+  }
+
+  // diffuse reflection for each particle
+
+  if (ip) diffuse(ip,norm);
+  if (jp) diffuse(jp,norm);
+
+  if (reaction && modify->n_surf_react) {
+    int i = -1;
+    if (ip) i = (ip - particle->particles) / sizeof(Particle::OnePart);
+    int j = -1;
+    if (jp) j = (jp - particle->particles) / sizeof(Particle::OnePart);
+    modify->surf_react(&iorig,i,j);
+  }
+
+  return jp;
+}
+
+/* ----------------------------------------------------------------------
+   particle collision with surface with optional chemistry
+   ip = particle with current x = collision pt, current v = incident v
+   norm = surface normal unit vector
+   ip = set to NULL if destroyed by chemsitry
+   return jp = new particle if created by chemistry
+   resets particle(s) to post-collision outward velocity
+------------------------------------------------------------------------- */
+
+void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 {
   // specular reflection
   // reflect incident v around norm

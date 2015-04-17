@@ -38,13 +38,12 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
-     SPECIES,MIXTURE,GRID,SURF,
-     MULTIPROC,PROCSPERFILE,PERPROC,
-     GRID_WEIGHT};              // new fields added after PERPROC
+     SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
+     MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
 /* ---------------------------------------------------------------------- */
 
@@ -111,7 +110,8 @@ void ReadRestart::command(int narg, char **arg)
   int incompatible = version_numeric();
 
   // read header info which creates simulation box
-  // also defines species, grid, surfs
+  // also defines particle params: species, mixture, custom attributes
+  // also defines grid, surfs
 
   header(incompatible);
 
@@ -252,6 +252,8 @@ void ReadRestart::command(int narg, char **arg)
       n += particle->unpack_restart(&buf[n]);
       assign_particles(1);
     }
+
+    if (me == 0) fclose(fp);
   }
 
   // input of multiple native files with procs <= files
@@ -764,6 +766,11 @@ void ReadRestart::particle_params()
     error->all(FLERR,"Invalid flag in particle section of restart file");
   read_int();
   particle->read_restart_mixture(fp);
+  flag = read_int();
+  if (flag != PARTICLE_CUSTOM) 
+    error->all(FLERR,"Invalid flag in particle section of restart file");
+  read_int();
+  particle->read_restart_custom(fp);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -910,21 +917,35 @@ void ReadRestart::assign_particles(int skipflag)
   Grid::SplitInfo *sinfo = grid->sinfo;
 
   int nlocal = particle->nlocal_restart;
-  Particle::OnePartRestart *pr = particle->particle_restart;
+  char *ptr = particle->particle_restart;
+  int nbytes_particle = sizeof(Particle::OnePartRestart);
+  int nbytes_custom = particle->sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
+  int ncustom = particle->ncustom;
+
   Particle::OnePartRestart *p;
 
   for (int i = 0; i < nlocal; i++) {
-    p = &pr[i];
-    if (skipflag && hash->find(p->icell) == hash->end()) continue;
+    p = (Particle::OnePartRestart *) ptr;
+    if (skipflag && hash->find(p->icell) == hash->end()) {
+      ptr += nbytes;
+      continue;
+    }
     icell = (*hash)[p->icell];
     if (p->nsplit <= 0) 
       icell = sinfo[cells[icell].isplit].csubs[-p->nsplit];
     particle->add_particle(p->id,p->ispecies,icell,p->x,p->v,p->erot,p->evib);
+    ptr += nbytes_particle;
+    if (ncustom) {
+      particle->unpack_custom(ptr,particle->nlocal-1);
+      ptr += nbytes_custom;
+    }
   }
 
-  // deallocate memory in Particle
+  // deallocate restart memory in Particle
 
   memory->sfree(particle->particle_restart);
+  particle->nlocal_restart = 0;
 }
 
 // ----------------------------------------------------------------------

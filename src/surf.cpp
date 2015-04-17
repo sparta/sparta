@@ -15,7 +15,9 @@
 #include "surf.h"
 #include "math_extra.h"
 #include "style_surf_collide.h"
+#include "style_surf_react.h"
 #include "surf_collide.h"
+#include "surf_react.h"
 #include "domain.h"
 #include "comm.h"
 #include "cut3d.h"
@@ -52,6 +54,9 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
   nsc = maxsc = 0;
   sc = NULL;
+
+  nsr = maxsr = 0;
+  sr = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -67,8 +72,11 @@ Surf::~Surf()
   memory->sfree(lines);
   memory->sfree(tris);
   memory->sfree(mysurfs);
+
   for (int i = 0; i < nsc; i++) delete sc[i];
   memory->sfree(sc);
+  for (int i = 0; i < nsr; i++) delete sr[i];
+  memory->sfree(sr);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -97,6 +105,32 @@ void Surf::modify_params(int narg, char **arg)
       }
 
       iarg += 3;
+
+    } else if (strcmp(arg[iarg],"react") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal surf_modify command");
+      
+      int isurf = find_surf(arg[iarg+1]);
+      if (isurf < 0) error->all(FLERR,"Could not find surf_modify surf-ID");
+
+      int isr;
+      if (strcmp(arg[iarg+2],"none") == 0) isr = -1;
+      else {
+        isr = find_react(arg[iarg+2]);
+        if (isr < 0) error->all(FLERR,"Could not find surf_modify sr-ID");
+      }
+
+      // set surf reaction model for each surf in range assigned to surf-ID
+
+      if (domain->dimension == 2) {
+        for (int i = idlo[isurf]; i <= idhi[isurf]; i++)
+          lines[i].isr = isr;
+      }
+      if (domain->dimension == 3) {
+        for (int i = idlo[isurf]; i <= idhi[isurf]; i++)
+          tris[i].isr = isr;
+      }
+
+      iarg += 3;
     } else error->all(FLERR,"Illegal surf_modify command");
   }
 }
@@ -122,9 +156,10 @@ void Surf::init()
     error->all(FLERR,str);
   }
 
-  // initialize surf collision models
+  // initialize surf collision and reaction models
 
   for (int i = 0; i < nsc; i++) sc[i]->init();
+  for (int i = 0; i < nsr; i++) sr[i]->init();
 }
 
 /* ----------------------------------------------------------------------
@@ -365,7 +400,7 @@ void Surf::add_collide(int narg, char **arg)
       memory->srealloc(sc,maxsc*sizeof(SurfCollide *),"surf:sc");
   }
 
-  // check if ID already exists
+  // create new SurfCollide class
 
   if (0) return;
 
@@ -394,6 +429,59 @@ int Surf::find_collide(const char *id)
     if (strcmp(id,sc[isc]->id) == 0) break;
   if (isc == nsc) return -1;
   return isc;
+}
+
+/* ----------------------------------------------------------------------
+   add a surface reaction model
+------------------------------------------------------------------------- */
+
+void Surf::add_react(int narg, char **arg)
+{
+  if (narg < 2) error->all(FLERR,"Illegal surf_react command");
+
+  // error check
+
+  for (int i = 0; i < nsr; i++)
+    if (strcmp(arg[0],sr[i]->id) == 0)
+      error->all(FLERR,"Reuse of surf_react ID");
+
+  // extend SurfReact list if necessary
+
+  if (nsr == maxsr) {
+    maxsr += DELTA;
+    sr = (SurfReact **)
+      memory->srealloc(sr,maxsr*sizeof(SurfReact *),"surf:sr");
+  }
+
+  // create new SurfReact class
+
+  if (0) return;
+
+#define SURF_REACT_CLASS
+#define SurfReactStyle(key,Class) \
+  else if (strcmp(arg[1],#key) == 0) \
+    sr[nsr] = new Class(sparta,narg,arg);
+#include "style_surf_react.h"
+#undef SurfReactStyle
+#undef SURF_REACT_CLASS
+
+  else error->all(FLERR,"Invalid surf_react style");
+
+  nsr++;
+}
+
+/* ----------------------------------------------------------------------
+   find a surface reaction model by ID
+   return index of surf reaction model or -1 if not found
+------------------------------------------------------------------------- */
+
+int Surf::find_react(const char *id)
+{
+  int isr;
+  for (isr = 0; isr < nsr; isr++)
+    if (strcmp(id,sr[isr]->id) == 0) break;
+  if (isr == nsr) return -1;
+  return isr;
 }
 
 /* ----------------------------------------------------------------------
@@ -556,7 +644,7 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < nline; i++) {
-        lines[i].isc = -1;
+        lines[i].isc = lines[i].isr = -1;
         fread(&lines[i].p1,sizeof(int),2,fp);
         lines[i].norm[0] = lines[i].norm[2] = lines[i].norm[2] = 0.0;
       }
@@ -571,7 +659,7 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < ntri; i++) {
-        tris[i].isc = -1;
+        tris[i].isc = tris[i].isr = -1;
         fread(&tris[i].p1,sizeof(int),3,fp);
         tris[i].norm[0] = tris[i].norm[2] = tris[i].norm[2] = 0.0;
       }

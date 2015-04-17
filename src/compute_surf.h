@@ -33,7 +33,8 @@ class ComputeSurf : public Compute {
   void init();
   void compute_per_surf();
   void clear();
-  void surf_tally(int, double *, Particle::OnePart *);
+  void surf_tally(int, Particle::OnePart *, 
+                  Particle::OnePart *, Particle::OnePart *);
   double *normptr(int);
   int surfinfo(int *&);
   bigint memory_usage();

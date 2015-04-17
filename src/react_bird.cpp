@@ -16,10 +16,14 @@
 #include "string.h"
 #include "stdlib.h"
 #include "react_bird.h"
+#include "input.h"
 #include "collide.h"
 #include "update.h"
 #include "particle.h"
 #include "comm.h"
+#include "modify.h"
+#include "fix.h"
+#include "fix_ambipolar.h"
 #include "random_park.h"
 #include "math_const.h"
 #include "memory.h"
@@ -33,7 +37,7 @@ enum{ARRHENIUS,QUANTUM};                               // other react files
 
 #define MAXREACTANT 2
 #define MAXPRODUCT 3
-#define MAXCOEFF 7
+#define MAXCOEFF 7               // 5 in file, extra for pre-computation
 
 #define MAXLINE 1024
 #define DELTALIST 16
@@ -102,6 +106,7 @@ void ReactBird::init()
 
   // count possible reactions for each species pair
   // include J,I reactions in I,J list and vice versa
+  // this allows collision pair I,J to be in either order in Collide
 
   memory->destroy(reactions);
   int nspecies = particle->nspecies;
@@ -155,18 +160,6 @@ void ReactBird::init()
     if (i == j) continue;
     reactions[j][i].list[reactions[j][i].n++] = m;
   }
-
-  // check for ionizatoin and recombitation reactions, not yet supported
-
-  for (int i = 0; i < nspecies; i++)
-    for (int j = 0; j < nspecies; j++) {
-      int *list = reactions[i][j].list;
-      for (int n = 0; n < reactions[i][j].n; n++)
-        if (rlist[list[n]].type == IONIZATION || 
-            rlist[list[n]].type == RECOMBINATION)
-          error->all(FLERR,"Ionization and recombination reactions are "
-                     "not yet implemented");
-    }
 
   // modify Arrhenius coefficients for TCE model
   // C1,C2 Bird 94, p 127
@@ -245,6 +238,113 @@ void ReactBird::init()
   }
 }
 
+
+/* ----------------------------------------------------------------------
+   check active reactions that include ambi ion or electron especies
+   their format must be correct to work with ambi_reset()
+   called after init() from collide::init()
+------------------------------------------------------------------------- */
+
+void ReactBird::ambi_check()
+{
+  int flag;
+  OneReaction *r;
+
+  // fix ambipolar must exist since collide caller extracted ambi vector/array
+
+  int ifix;
+  for (ifix = 0; ifix < modify->nfix; ifix++)
+    if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
+  FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
+  int especies = afix->especies;
+  int *ions = afix->ions;
+  
+  // loop over active reactions
+
+  for (int i = 0; i < nlist; i++) {
+    r = &rlist[i];
+    if (!r->active) continue;
+
+    // skip reaction if no electrons or ambi ions as reactant or product
+
+    flag = 0;
+    for (int j = 0; j < r->nreactant; j++)
+      if (r->reactants[j] == especies || ions[r->reactants[j]]) flag = 1;
+    for (int j = 0; j < r->nproduct; j++)
+      if (r->products[j] == especies || ions[r->products[j]]) flag = 1;
+    if (!flag) continue;
+
+    // dissociation must match one of these
+    // D: AB + e -> A + e + B
+    // D: AB+ + e -> A+ + e + B
+    // D: AB+ + e -> A + e + B+
+
+    flag = 1;
+
+    if (r->type == DISSOCIATION) {
+      if (r->nreactant == 2 && r->nproduct == 3) {
+        if (ions[r->reactants[0]] == 0 && r->reactants[1] == especies &&
+            ions[r->products[0]] == 0 && r->products[1] == especies && 
+            ions[r->products[2]] == 0) flag = 0;
+        else if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
+                 ions[r->products[0]] == 1 && r->products[1] == especies && 
+                 ions[r->products[2]] == 0) flag = 0;
+        else if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
+                 ions[r->products[0]] == 0 && r->products[1] == especies && 
+                 ions[r->products[2]] == 1) flag = 0;
+      }
+    }
+
+    // ionization with 3 products must match this
+    // I: A + e -> A+ + e + e
+
+    else if (r->type == IONIZATION && r->nproduct == 3) {
+      if (r->nreactant == 2 && r->nproduct == 3) {
+        if (ions[r->reactants[0]] == 0 && r->reactants[1] == especies &&
+            ions[r->products[0]] == 1 && r->products[1] == especies && 
+            r->products[2] == especies) flag = 0;
+      }
+    }
+
+    // ionization with 2 products must match this
+    // I: A + B -> AB+ + e
+
+    else if (r->type == IONIZATION && r->nproduct == 2) {
+      if (r->nreactant == 2 && r->nproduct == 2) {
+        if (ions[r->reactants[0]] == 0 && ions[r->reactants[1]] == 0 &&
+            ions[r->products[0]] == 1 && r->products[1] == especies) flag = 0;
+      }
+    }
+
+    // exchange must match one of these
+    // E: AB+ + C -> A + BC+
+    // E: C + AB+ -> A + BC+
+
+    else if (r->type == EXCHANGE) {
+      if (r->nreactant == 2 && r->nproduct == 2) {
+        if (ions[r->reactants[0]] == 1 && ions[r->reactants[1]] == 0 &&
+            ions[r->products[0]] == 0 && ions[r->products[1]] == 1) flag = 0;
+        else if (ions[r->reactants[0]] == 0 && ions[r->reactants[1]] == 1 &&
+            ions[r->products[0]] == 0 && ions[r->products[1]] == 1) flag = 0;
+      }
+    }
+
+    // recombination must match this
+    // R: A+ + e -> A
+
+    else if (r->type == RECOMBINATION) {
+      if (r->nreactant == 2 && r->nproduct == 1) {
+        if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
+            ions[r->products[0]] == 0) flag = 0;
+      }
+    }
+
+    // flag = 1 means unrecognized reaction
+
+    if (flag) error->all(FLERR,"Invalid ambipolar reaction");
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
 void ReactBird::readfile(char *fname) 
@@ -309,11 +409,15 @@ void ReactBird::readfile(char *fname)
       if (species) {
         species = 0;
         if (side == 0) {
+          if (r->nreactant == MAXREACTANT) 
+            error->all(FLERR,"Too many reactants in a reaction formula");
           n = strlen(word) + 1;
           r->id_reactants[r->nreactant] = new char[n];
           strcpy(r->id_reactants[r->nreactant],word);
           r->nreactant++;
         } else {
+          if (r->nreactant == MAXPRODUCT) 
+            error->all(FLERR,"Too many products in a reaction formula");
           n = strlen(word) + 1;
           r->id_products[r->nproduct] = new char[n];
           strcpy(r->id_products[r->nproduct],word);
@@ -340,6 +444,22 @@ void ReactBird::readfile(char *fname)
     else if (word[0] == 'R' || word[0] == 'r') r->type = RECOMBINATION;
     else error->all(FLERR,"Invalid reaction type in file");
 
+    // check that reactant/product counts are consistent with type
+
+    if (r->type == DISSOCIATION) {
+      if (r->nreactant != 2 || r->nproduct != 3)
+        error->all(FLERR,"Invalid dissociation reaction");
+    } else if (r->type == EXCHANGE) {
+      if (r->nreactant != 2 || r->nproduct != 2)
+        error->all(FLERR,"Invalid exchange reaction");
+    } else if (r->type == IONIZATION) {
+      if (r->nreactant != 2 || (r->nproduct != 2 && r->nproduct != 3))
+        error->all(FLERR,"Invalid ionization reaction");
+    } else if (r->type == RECOMBINATION) {
+      if (r->nreactant != 2 || r->nproduct != 1)
+        error->all(FLERR,"Invalid recombination reaction");
+    }
+
     word = strtok(NULL," \t\n");
     if (!word) error->all(FLERR,"Invalid reaction style in file");
     if (word[0] == 'A' || word[0] == 'a') r->style = ARRHENIUS;
@@ -351,11 +471,11 @@ void ReactBird::readfile(char *fname)
     for (int i = 0; i < r->ncoeff; i++) {
       word = strtok(NULL," \t\n");
       if (!word) error->all(FLERR,"Invalid reaction coefficients in file");
-      r->coeff[i] = atof(word);
+      r->coeff[i] = input->numeric(FLERR,word);
     }
 
     word = strtok(NULL," \t\n");
-    if (word) error->all(FLERR,"Invalid reaction coefficients in file");
+    if (word) error->all(FLERR,"Too many coefficients in a reaction formula");
     
     nlist++;
   }

@@ -19,6 +19,7 @@
 #include "particle.h"
 #include "update.h"
 #include "grid.h"
+#include "modify.h"
 #include "comm.h"
 #include "domain.h"
 #include "mixture.h"
@@ -166,12 +167,13 @@ void CreateParticles::command(int narg, char **arg)
 void CreateParticles::create_single()
 {
   int i,m;
-  double x[3],v[3];
+  double x[3],v[3],vstream[3];
   double *lo,*hi;
 
   x[0] = xp;  x[1] = yp;  x[2] = zp;
   v[0] = vx;  v[1] = vy;  v[2] = vz;
   double temp_thermal = particle->mixture[imix]->temp_thermal;
+  vstream[0] = vstream[1] = vstream[2] = 0.0;
 
   if (domain->dimension == 2 && x[2] != 0.0)
     error->all(FLERR,"Create_particles single requires z = 0 "
@@ -200,6 +202,13 @@ void CreateParticles::create_single()
   if (flagall != 1) 
     error->all(FLERR,"Could not create a single particle");
 
+  // nfix_add_particle = # of fixes with add_particle() method
+
+  modify->list_init_fixes();
+  int nfix_add_particle = modify->n_add_particle;
+
+  // add the particle
+
   RanPark *random = new RanPark(update->ranmaster->uniform());
 
   if (iwhich >= 0) {
@@ -207,6 +216,8 @@ void CreateParticles::create_single()
     double erot = particle->erot(mspecies,temp_thermal,random);
     double evib = particle->evib(mspecies,temp_thermal,random);
     particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
+    if (nfix_add_particle) 
+      modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
   }
 
   delete random;
@@ -278,6 +289,11 @@ void CreateParticles::create_local(bigint np)
 
   memory->destroy(vols);
 
+  // nfix_add_particle = # of fixes with add_particle() method
+
+  modify->list_init_fixes();
+  int nfix_add_particle = modify->n_add_particle;
+
   // loop over cells I own
   // only add particles to OUTSIDE cells
   // ntarget = floating point # of particles to create in one cell
@@ -293,7 +309,7 @@ void CreateParticles::create_local(bigint np)
   double *vscale = particle->mixture[imix]->vscale;
   double temp_thermal = particle->mixture[imix]->temp_thermal;
 
-  int npercell,ispecies,id;
+  int npercell,isp,ispecies,id;
   double x[3],v[3];
   double ntarget,rn,vn,vr,theta1,theta2,erot,evib;
 
@@ -317,8 +333,9 @@ void CreateParticles::create_local(bigint np)
 
     for (int m = 0; m < npercell; m++) {
       rn = random->uniform();
-      ispecies = 0;
-      while (cummulative[ispecies] < rn) ispecies++;
+      isp = 0;
+      while (cummulative[isp] < rn) isp++;
+      ispecies = species[isp];
 
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
       x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
@@ -331,8 +348,8 @@ void CreateParticles::create_local(bigint np)
       // if (x[1]>=boundary) ispecies = 1;
       // if (x[1]<boundary) ispecies = 0;
 
-      vn = vscale[ispecies] * sqrt(-log(random->uniform()));
-      vr = vscale[ispecies] * sqrt(-log(random->uniform()));
+      vn = vscale[isp] * sqrt(-log(random->uniform()));
+      vr = vscale[isp] * sqrt(-log(random->uniform()));
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
 	
@@ -345,6 +362,8 @@ void CreateParticles::create_local(bigint np)
 
       id = MAXSMALLINT*random->uniform();
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
+      if (nfix_add_particle) 
+        modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
     }
 
     nprev += npercell;

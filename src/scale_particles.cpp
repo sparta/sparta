@@ -67,6 +67,7 @@ void ScaleParticles::command(int narg, char **arg)
   Particle::OnePart *particles = particle->particles;
   int nbytes = sizeof(Particle::OnePart);
   int *s2g = particle->mixture[imix]->species2group;
+  int ncustom = particle->ncustom;
 
   int m,ispecies,igroup,nclone,flag;
   double fraction;
@@ -90,6 +91,7 @@ void ScaleParticles::command(int narg, char **arg)
     if (factor < 1.0) {
       if (random->uniform() > factor) {
         memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        if (ncustom) particle->copy_custom(i,nlocal-1);
         if (nlocal > nlocal_original) i++;
         else nlocal_original--;
         particle->nlocal--;

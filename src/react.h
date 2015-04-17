@@ -27,6 +27,7 @@ class React : protected Pointers {
   React(class SPARTA *, int, char **);
   virtual ~React();
   virtual void init() {}
+  virtual void ambi_check() = 0;
   virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
                       double, double, double, double &, int &) = 0;
 

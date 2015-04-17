@@ -393,10 +393,10 @@ void SPARTA::init()
   domain->init();
   grid->init();
   surf->init();
-  if (collide) collide->init();
   if (react) react->init();
-  modify->init();              // after grid, so that csurfs/cflags is set
-                               // after particle, so mixture is init
+  if (collide) collide->init();  // after react, so can call ambi_check()
+  modify->init();                // after grid, so that csurfs/cflags is set
+                                 // after particle, so mixture is init
   output->init();
   timer->init();
 }
@@ -409,6 +409,7 @@ void SPARTA::init()
 void SPARTA::destroy()
 {
   delete update;
+  delete modify;   // before particle so can destroy custom particle attributes
   delete particle;
   delete comm;
   delete domain;
@@ -416,7 +417,6 @@ void SPARTA::destroy()
   delete surf;
   delete collide;
   delete react;
-  delete modify;
   delete output;
   delete timer;
 }

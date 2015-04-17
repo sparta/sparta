@@ -34,6 +34,9 @@ class Input : protected Pointers {
   void substitute(char *&, char *&, int &, int &, int);  
                                  // substitute for variables in a string
 
+  double numeric(const char *, int, char *);    // arg checking
+  int inumeric(const char *, int, char *);      // arg checking
+
  private:
   int me;                      // proc ID
   char *command;               // ptr to current command
@@ -93,17 +96,13 @@ class Input : protected Pointers {
   void stats_style();
   void surf_collide();
   void surf_modify();
+  void surf_react();
   void timestep();
   void uncompute();
   void undump();
   void unfix();
   void units();
   void weight();
-
-  // arg checking
-
-  double numeric(const char *, int, char *);
-  int inumeric(const char *, int, char *);
 };
 
 }

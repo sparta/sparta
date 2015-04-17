@@ -6,36 +6,35 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under
+   certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef SPARTA_REACT_BIRD_H
-#define SPARTA_REACT_BIRD_H
+#ifndef SPARTA_SURF_REACT_H
+#define SPARTA_SURF_REACT_H
 
-#include "stdio.h"
-#include "react.h"
+#include "pointers.h"
 #include "particle.h"
 
 namespace SPARTA_NS {
 
-class ReactBird : public React {
+class SurfReact : protected Pointers {
  public:
-  ReactBird(class SPARTA *, int, char **);
-  virtual ~ReactBird();
-  virtual void init();
-  virtual void ambi_check();
-  int attempt(Particle::OnePart *, Particle::OnePart *, 
-              double, double, double, double &, int &) = 0;
+  char *id;
+  char *style;
+ 
+  SurfReact(class SPARTA *, int, char **);
+  virtual ~SurfReact();
+  virtual void init() {}
+  virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&) = 0;
 
  protected:
   FILE *fp;
 
   struct OneReaction {
     int active;                    // 1 if reaction is active
-    int initflag;                  // 1 if reaction params have been init
     int type;                      // reaction type = DISSOCIATION, etc
     int style;                     // reaction style = ARRHENIUS, etc
     int ncoeff;                    // # of numerical coeffs
@@ -49,16 +48,17 @@ class ReactBird : public React {
   int nlist;                       // # of reactions read from file
   int maxlist;                     // max # of reactions in rlist
 
-  // possible reactions a pair of reactant species is part of
+  // possible reactions a reactant species is part of
 
-  struct ReactionIJ {
+  struct ReactionI {
     int *list;           // list of indices into rlist, ptr into indices
     int n;               // # of reactions in list
   };
 
-  ReactionIJ **reactions;     // reactions for all IJ pairs of species
+  ReactionI *reactions;       // reactions for all species
   int *indices;               // master list of indices
 
+  void init_reactions();
   void readfile(char *);
   int readone(char *, char *, int &, int &);
 };
@@ -69,43 +69,7 @@ class ReactBird : public React {
 
 /* ERROR/WARNING messages:
 
-E: Illegal ... command
-
-Self-explanatory.  Check the input script syntax and compare to the
-documentation for the command.  You can use -echo screen as a
-command-line option when running SPARTA to see the offending line.
-
-E: React tce can only be used with collide vss
-
-Self-explanatory.
-
-E: Ionization and recombination reactions are not yet implemented
-
-This error conditions will be removed after those reaction styles are
-fully implemented.
-
-E: Unknown outcome in reaction
-
-The specified type of the reaction is not encoded in the reaction
-style.
-
-E: Cannot open reaction file %s
-
-Self-explanatory.
-
-E: Invalid reaction formula in file
-
-Self-explanatory.
-
-E: Invalid reaction type in file
-
-Self-explanatory.
-
-E: Invalid reaction style in file
-
-Self-explanatory.
-
-E: Invalid reaction coefficients in file
+E: Surf_react ID must be alphanumeric or underscore characters
 
 Self-explanatory.
 

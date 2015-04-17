@@ -37,8 +37,8 @@ class CollideVSS : public Collide {
   double attempt_collision(int, int, int, double);
   int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
   void setup_collision(Particle::OnePart *, Particle::OnePart *);
-  Particle::OnePart *
-    perform_collision(Particle::OnePart *&, Particle::OnePart *&);
+  int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
+                        Particle::OnePart *&);
   double extract(int, const char *);
 
  private:
@@ -50,10 +50,6 @@ class CollideVSS : public Collide {
     double vr2;
     double vr;
     double mr;
-    double rotdof_i;
-    double rotdof_j;
-    double vibdof_i;
-    double vibdof_j;
     double ave_rotdof;
     double ave_vibdof;
     double ave_dof;

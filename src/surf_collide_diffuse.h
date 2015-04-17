@@ -30,7 +30,7 @@ class SurfCollideDiffuse : public SurfCollide {
   SurfCollideDiffuse(class SPARTA *, int, char **);
   ~SurfCollideDiffuse();
   void init();
-  void collide(Particle::OnePart *, double *);
+  Particle::OnePart *collide(Particle::OnePart *&, double *, int);
 
   void dynamic();
 
@@ -47,6 +47,8 @@ class SurfCollideDiffuse : public SurfCollide {
   int tvar;                  // index of equal-style variable
 
   class RanPark *random;     // RNG for particle reflection
+
+  void diffuse(Particle::OnePart *, double *);
 };
 
 }

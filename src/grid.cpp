@@ -337,6 +337,9 @@ void Grid::acquire_ghosts()
 {
   if (cutoff < 0.0) acquire_ghosts_all();
   else if (clumped) acquire_ghosts_near();
+  else if (comm->me == 0) 
+    error->warning(FLERR,"Could not acquire nearby ghost cells b/c "
+                   "grid partition is not clumped");
 }
 
 /* ----------------------------------------------------------------------

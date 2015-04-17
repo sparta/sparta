@@ -45,6 +45,7 @@ Fix::Fix(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   time_depend = 0;
   gridmigrate = 0;
+  flag_add_particle = flag_gas_react = flag_surf_react = 0;
 
   scalar_flag = vector_flag = array_flag = 0;
   per_particle_flag = per_grid_flag = per_surf_flag = 0;

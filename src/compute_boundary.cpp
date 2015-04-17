@@ -146,18 +146,19 @@ void ComputeBoundary::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle colliding with boundary Iface
-   eold = vector of velocity/energy values before collision
-        = 0,1,2 = velocity components, 3 = rotational eng, 4 = vibrational eng
-   p = particle ptr with velocity/energy values after collision
+   tally values for a single particle colliding with boundary iface/istyle
+   iorig = particle ip before collision
+   ip,jp = particles after collision
 ------------------------------------------------------------------------- */
 
 void ComputeBoundary::boundary_tally(int iface, int istyle,
-                                     double *eold, Particle::OnePart *p)
+                                     Particle::OnePart *iorig, 
+                                     Particle::OnePart *ip, 
+                                     Particle::OnePart *jp)
 {
   // skip species not in mixture group
 
-  int ispecies = p->ispecies;
+  int ispecies = ip->ispecies;
   int igroup = particle->mixture[imix]->species2group[ispecies];
   if (igroup < 0) return;
 
@@ -170,11 +171,12 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
   double vnorm[3],vdelta[3],vtang[3];
   double *vec;
 
-  if (weightflag) weight = p->weight;
+  if (weightflag) weight = ip->weight;
   double *norm = domain->norm[iface];
   double mass = particle->species[ispecies].mass * weight;
   double mvv2e = update->mvv2e;
 
+  double *vold = iorig->v;
   vec = myarray[iface];
   int k = igroup*nvalue;
   int nflag = 0;
@@ -195,47 +197,47 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
       case PRESS:
         if (!nflag) {
           nflag = 1;
-          pre = MathExtra::dot3(eold,norm);
+          pre = MathExtra::dot3(vold,norm);
         }
         vec[k++] -= mass * pre;
         break;
       case XSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::scale3(MathExtra::dot3(eold,norm),norm,vnorm);
-          MathExtra::sub3(eold,vnorm,vtang);
+          MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
+          MathExtra::sub3(vold,vnorm,vtang);
         }
         vec[k++] += mass * vtang[0];
         break;
       case YSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::scale3(MathExtra::dot3(eold,norm),norm,vnorm);
-          MathExtra::sub3(eold,vnorm,vtang);
+          MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
+          MathExtra::sub3(vold,vnorm,vtang);
         }
         vec[k++] += mass * vtang[1];
         break;
       case ZSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::scale3(MathExtra::dot3(eold,norm),norm,vnorm);
-          MathExtra::sub3(eold,vnorm,vtang);
+          MathExtra::scale3(MathExtra::dot3(vold,norm),norm,vnorm);
+          MathExtra::sub3(vold,vnorm,vtang);
         }
         vec[k++] += mass * vtang[2];
         break;
       case KE:
-        vsqpre = MathExtra::lensq3(eold);
+        vsqpre = MathExtra::lensq3(vold);
         vec[k++] += 0.5 * mvv2e * mass * vsqpre;
         break;
       case EROT:
-        vec[k++] += weight * eold[3];
+        vec[k++] += weight * iorig->erot;
         break;
       case EVIB:
-        vec[k++] += weight * eold[4];
+        vec[k++] += weight * iorig->evib;
         break;
       case ETOT:
-        vsqpre = MathExtra::lensq3(eold);
-        vec[k++] += 0.5*mvv2e*mass*vsqpre + weight*(eold[3]+eold[4]);
+        vsqpre = MathExtra::lensq3(vold);
+        vec[k++] += 0.5*mvv2e*mass*vsqpre + weight*(iorig->erot+iorig->evib);
         break;
       }
     }
@@ -249,15 +251,15 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
       case PRESS:
         if (!nflag) {
           nflag = 1;
-          pre = MathExtra::dot3(eold,norm);
-          post = MathExtra::dot3(p->v,norm);
+          pre = MathExtra::dot3(vold,norm);
+          post = MathExtra::dot3(ip->v,norm);
         }
         vec[k++] += mass * (post-pre);
         break;
       case XSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::sub3(p->v,eold,vdelta);
+          MathExtra::sub3(ip->v,vold,vdelta);
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
@@ -266,7 +268,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
       case YSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::sub3(p->v,eold,vdelta);
+          MathExtra::sub3(ip->v,vold,vdelta);
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
@@ -275,28 +277,28 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
       case ZSHEAR:
         if (!tflag) {
           tflag = 1;
-          MathExtra::sub3(p->v,eold,vdelta);
+          MathExtra::sub3(ip->v,vold,vdelta);
           MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
           MathExtra::sub3(vdelta,vnorm,vtang);
         }
         vec[k++] -= mass * vtang[2];
         break;
       case KE:
-        vsqpre = MathExtra::lensq3(eold);
-        vsqpost = MathExtra::lensq3(p->v);
+        vsqpre = MathExtra::lensq3(vold);
+        vsqpost = MathExtra::lensq3(ip->v);
         vec[k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
         break;
       case EROT:
-        vec[k++] -= weight * (p->erot - eold[3]);
+        vec[k++] -= weight * (ip->erot - iorig->erot);
         break;
       case EVIB:
-        vec[k++] -= weight * (p->evib - eold[4]);
+        vec[k++] -= weight * (ip->evib - iorig->evib);
         break;
       case ETOT:
-        vsqpre = MathExtra::lensq3(eold);
-        vsqpost = MathExtra::lensq3(p->v);
+        vsqpre = MathExtra::lensq3(vold);
+        vsqpost = MathExtra::lensq3(ip->v);
         vec[k++] -= 0.5*mvv2e*mass*(vsqpost-vsqpre) + 
-          weight * ((p->erot-eold[3]) + (p->evib-eold[4]));
+          weight * ((ip->erot-iorig->erot) + (ip->evib-iorig->evib));
         break;
       }
     }

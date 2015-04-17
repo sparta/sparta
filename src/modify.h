@@ -16,6 +16,7 @@
 #define SPARTA_MODIFY_H
 
 #include "pointers.h"
+#include "particle.h"
 
 namespace SPARTA_NS {
 
@@ -23,7 +24,7 @@ class Modify : protected Pointers {
  public:
   int nfix,maxfix;
   int n_start_of_step,n_end_of_step;
-  int n_pergrid;
+  int n_pergrid,n_add_particle,n_gas_react,n_surf_react;
 
   class Fix **fix;           // list of fixes
   int *fmask;                // bit mask for when each fix is applied
@@ -54,6 +55,13 @@ class Modify : protected Pointers {
   void addstep_compute(bigint);
   void addstep_compute_all(bigint);
 
+  void list_init_fixes();
+  void list_init_computes();
+
+  void add_particle(int, double, double *);
+  void gas_react(int);
+  void surf_react(Particle::OnePart *, int, int);
+
   bigint memory_usage();
 
  protected:
@@ -65,14 +73,15 @@ class Modify : protected Pointers {
   int *end_of_step_every;
 
   int *list_pergrid;         // list of fixes that store per grid cell info
+  int *list_add_particle;    // list of fixes with add_particle() method
+  int *list_gas_react;       // list of fixes with gas_react() method
+  int *list_surf_react;      // list of fixes with surf_react() method
 
   int n_timeflag;            // list of computes that store time invocation
   int *list_timeflag;
 
   void list_init(int, int &, int *&);
   void list_init_end_of_step(int, int &, int *&);
-  void list_init_pergrid();
-  void list_init_timeflag();
 };
 
 }

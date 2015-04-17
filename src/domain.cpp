@@ -44,7 +44,7 @@ Domain::Domain(SPARTA *sparta) : Pointers(sparta)
   axisymmetric = 0;
 
   for (int i = 0; i < 6; i++) bflag[i] = PERIODIC;
-  for (int i = 0; i < 6; i++) surf_collide[i] = -1;
+  for (int i = 0; i < 6; i++) surf_collide[i] = surf_react[i] = -1;
 
   // surface normals of 6 box faces pointed inward towards particles
 
@@ -86,6 +86,12 @@ void Domain::init()
     cutflag = 1;
   if (cutflag) error->all(FLERR,"Grid cutoff is longer than "
                           "box length in a periodic dimension");
+
+  // surfreactany = 1 if any face has surface reactions assigned to it
+
+  surfreactany = 0;
+  for (int i = 0; i < 6; i++)
+    if (surf_react[i] >= 0) surfreactany = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -137,8 +143,7 @@ void Domain::set_boundary(int narg, char **arg)
       else if (c == 'a') bflag[m] = AXISYM;
       else error->all(FLERR,"Illegal boundary command");
 
-      if (bflag[m] != SURFACE) surf_collide[m] = -1;
-
+      surf_collide[m] = surf_react[m] = -1;
       m++;
     }
 
@@ -164,49 +169,86 @@ void Domain::set_boundary(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   boundary modifications from input script 
+   boundary modifications from input script
+   apply mods to list of faces
 ------------------------------------------------------------------------- */
 
 void Domain::boundary_modify(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR,"Illegal bound_modify command");
 
-  int face;
-  if (strcmp(arg[0],"xlo") == 0) face = XLO;
-  else if (strcmp(arg[0],"xhi") == 0) face = XHI;
-  else if (strcmp(arg[0],"ylo") == 0) face = YLO;
-  else if (strcmp(arg[0],"yhi") == 0) face = YHI;
-  else if (strcmp(arg[0],"zlo") == 0) face = ZLO;
-  else if (strcmp(arg[0],"zhi") == 0) face = ZHI;
-  else error->all(FLERR,"Illegal bound_modify command");
+  int faces[6];
+  int nface = 0;
 
-  // setting surf_collide[] index here vs init()
-  // assumes SurfCollide styles are static (never deleted)
+  int iarg = 0;
+  while (iarg < 6) {
+    if (strcmp(arg[iarg],"xlo") == 0) faces[nface++] = XLO;
+    else if (strcmp(arg[iarg],"xhi") == 0) faces[nface++] = XHI;
+    else if (strcmp(arg[iarg],"ylo") == 0) faces[nface++] = YLO;
+    else if (strcmp(arg[iarg],"yhi") == 0) faces[nface++] = YHI;
+    else if (strcmp(arg[iarg],"zlo") == 0) faces[nface++] = ZLO;
+    else if (strcmp(arg[iarg],"zhi") == 0) faces[nface++] = ZHI;
+    else break;
+    iarg++;
+  }
 
-  int iarg = 1;
+  if (nface == 0 || iarg == narg)
+    error->all(FLERR,"Illegal bound_modify command");
+
+  if (dimension != 3) {
+    for (int i = 0; i < nface; i++)
+      if (faces[i] == ZLO || faces[i] == ZHI)
+        error->all(FLERR,
+                   "Bound_modify cannot alter zlo/zhi faces for 2d system");
+  }
+
+  // setting surf_collide[] and surf_react[] indices here vs init()
+  // assumes SurfCollide and SurfReact styles are static (never deleted)
+
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"surf") == 0) {
+    if (strcmp(arg[iarg],"collide") == 0) {
       if (iarg + 2 > narg) error->all(FLERR,"Illegal bound_modify command");
-      if (bflag[face] != SURFACE)
-	error->all(FLERR,"Bound_modify surf requires wall be a surface");
-      surf_collide[face] = surf->find_collide(arg[iarg+1]);
-      if (surf_collide[face] < 0) 
-	error->all(FLERR,"Bound_modify surf_collide ID is unknown");
+      int index = surf->find_collide(arg[iarg+1]);
+      if (index < 0) 
+        error->all(FLERR,"Bound_modify surf_collide ID is unknown");
+      for (int i = 0; i < nface; i++) {
+        if (bflag[faces[i]] != SURFACE)
+          error->all(FLERR,"Bound_modify surf requires boundary be a surface");
+        surf_collide[faces[i]] = index;
+      }
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"react") == 0) {
+      if (iarg + 2 > narg) error->all(FLERR,"Illegal bound_modify command");
+      int index;
+      if (strcmp(arg[iarg+1],"none") == 0) index = -1;
+      else {
+        index = surf->find_react(arg[iarg+1]);
+        if (index < 0) 
+          error->all(FLERR,"Bound_modify surf_react ID is unknown");
+      }
+      for (int i = 0; i < nface; i++) {
+        if (bflag[faces[i]] != SURFACE)
+          error->all(FLERR,"Bound_modify react requires boundary be a surface");
+        surf_react[faces[i]] = index;
+      }
       iarg += 2;
     } else error->all(FLERR,"Illegal bound_modify command");
   }
 }
 
 /* ----------------------------------------------------------------------
-   particle P hits global boundary on face in icell
+   particle ip hits global boundary on face in icell
    called by Update::move()
    xnew = final position of particle at end of move
    return boundary type of global boundary
    if needed, update particle x,v,xnew due to collision
 ------------------------------------------------------------------------- */
 
-int Domain::collide(Particle::OnePart *p, int face, int icell, double *xnew)
+int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew, 
+                    Particle::OnePart *&jp)
 {
+  jp = NULL;
+
   switch (bflag[face]) {
 
   // outflow boundary, particle deleted by caller
@@ -220,7 +262,7 @@ int Domain::collide(Particle::OnePart *p, int face, int icell, double *xnew)
 
   case PERIODIC:
     {
-      double *x = p->x;
+      double *x = ip->x;
 
       switch (face) {
       case XLO:
@@ -257,7 +299,7 @@ int Domain::collide(Particle::OnePart *p, int face, int icell, double *xnew)
 
   case REFLECT:
     {
-      double *v = p->v;
+      double *v = ip->v;
       double *lo = grid->cells[icell].lo;
       double *hi = grid->cells[icell].hi;
       int dim = face / 2;
@@ -280,19 +322,20 @@ int Domain::collide(Particle::OnePart *p, int face, int icell, double *xnew)
 
   case SURFACE: 
     {
-      double *v = p->v;
       double *lo = grid->cells[icell].lo;
       double *hi = grid->cells[icell].hi;
       int dim = face / 2;
 
       if (face % 2 == 0) {
-	double dtr = fabs((lo[dim]-xnew[dim])/v[dim]);
-	surf->sc[surf_collide[face]]->collide(p,norm[face]);
-	xnew[dim] = lo[dim] + v[dim]*dtr;
+	double dtr = fabs((lo[dim]-xnew[dim])/ip->v[dim]);
+	jp = surf->sc[surf_collide[face]]->
+          collide(ip,norm[face],surf_react[face]);
+	if (ip) xnew[dim] = lo[dim] + ip->v[dim]*dtr;
       } else {
-	double dtr = fabs((xnew[dim]-hi[dim])/v[dim]);
-	surf->sc[surf_collide[face]]->collide(p,norm[face]);
-	xnew[dim] = hi[dim] + v[dim]*dtr;
+	double dtr = fabs((xnew[dim]-hi[dim])/ip->v[dim]);
+	jp = surf->sc[surf_collide[face]]->
+          collide(ip,norm[face],surf_react[face]);
+	if (ip) xnew[dim] = hi[dim] + ip->v[dim]*dtr;
       }
       
       return SURFACE;

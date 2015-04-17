@@ -310,9 +310,12 @@ void BalanceGrid::command(int narg, char **arg)
     memory->destroy(wt);
   }
 
+  // set clumped of not, depending on style
+  // NONE style does not change clumping
+
   if (bstyle == CLUMP || bstyle == BLOCK || bstyle == BISECTION) 
     grid->clumped = 1;
-  else grid->clumped = 0;
+  else if (bstyle != NONE) grid->clumped = 0;
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();

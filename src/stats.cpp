@@ -22,6 +22,7 @@
 #include "particle.h"
 #include "collide.h"
 #include "domain.h"
+#include "surf.h"
 #include "modify.h"
 #include "fix.h"
 #include "compute.h"
@@ -37,9 +38,9 @@ using namespace SPARTA_NS;
 // customize a new keyword by adding to this list:
 
 // step,elapsed,elaplong,dt,cpu,tpcpu,spcpu,wall,
-// np,ntouch,ncomm,nbound,nexit,nscoll,nscheck,ncoll,nattempt,nreact,
+// np,ntouch,ncomm,nbound,nexit,nscoll,nscheck,ncoll,nattempt,nreact,nsreact,
 // npave,ntouchave,ncommave,nboundave,nexitave,nscollave,nscheckave,
-// ncollave,nattemptave,nreactave,
+// ncollave,nattemptave,nreactave,nsreactave,
 // vol,lx,ly,lz,xlo,xhi,ylo,yhi,zlo,zhi
 
 enum{INT,FLOAT,BIGINT};
@@ -440,6 +441,8 @@ void Stats::set_fields(int narg, char **arg)
       addfield("Natt",&Stats::compute_nattempt,BIGINT);
     } else if (strcmp(arg[i],"nreact") == 0) {
       addfield("Nreact",&Stats::compute_nreact,BIGINT);
+    } else if (strcmp(arg[i],"nsreact") == 0) {
+      addfield("Nsreact",&Stats::compute_nsreact,BIGINT);
 
     } else if (strcmp(arg[i],"npave") == 0) {
       addfield("Npave",&Stats::compute_npave,FLOAT);
@@ -460,7 +463,9 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"nattemptave") == 0) {
       addfield("Nattave",&Stats::compute_nattemptave,FLOAT);
     } else if (strcmp(arg[i],"nreactave") == 0) {
-      addfield("Nattave",&Stats::compute_nreactave,FLOAT);
+      addfield("Nreactave",&Stats::compute_nreactave,FLOAT);
+    } else if (strcmp(arg[i],"nsreactave") == 0) {
+      addfield("Nsreactave",&Stats::compute_nsreactave,FLOAT);
 
     } else if (strcmp(arg[i],"vol") == 0) {
       addfield("Volume",&Stats::compute_vol,FLOAT);
@@ -725,6 +730,9 @@ int Stats::evaluate_keyword(char *word, double *answer)
   } else if (strcmp(word,"nreact") == 0) {
     compute_nreact();
     dvalue = bivalue;
+  } else if (strcmp(word,"nsreact") == 0) {
+    compute_nsreact();
+    dvalue = bivalue;
   }
 
   else if (strcmp(word,"npave") == 0) compute_npave();
@@ -737,6 +745,7 @@ int Stats::evaluate_keyword(char *word, double *answer)
   else if (strcmp(word,"ncollave") == 0) compute_ncollave();
   else if (strcmp(word,"nattemptave") == 0) compute_nattemptave();
   else if (strcmp(word,"nreactave") == 0) compute_nreactave();
+  else if (strcmp(word,"nsreactave") == 0) compute_nsreactave();
 
   else if (strcmp(word,"vol") == 0) compute_vol();
   else if (strcmp(word,"lx") == 0) compute_lx();
@@ -980,6 +989,14 @@ void Stats::compute_nreact()
 
 /* ---------------------------------------------------------------------- */
 
+void Stats::compute_nsreact()
+{
+  bigint n = surf->nreact_one;
+  MPI_Allreduce(&n,&bivalue,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void Stats::compute_npave()
 {
   MPI_Allreduce(&update->nmove_running,&bivalue,1,MPI_SPARTA_BIGINT,
@@ -1085,6 +1102,16 @@ void Stats::compute_nreactave()
     if (update->ntimestep == update->firststep) dvalue = 0.0;
     else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nsreactave()
+{
+  MPI_Allreduce(&surf->nreact_running,&bivalue,1,MPI_SPARTA_BIGINT,
+                MPI_SUM,world);
+  if (update->ntimestep == update->firststep) dvalue = 0.0;
+  else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
 }
 
 /* ---------------------------------------------------------------------- */

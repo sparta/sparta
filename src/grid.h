@@ -278,6 +278,13 @@ class Grid : protected Pointers {
     int proc;              // proc that owns it
   };
 
+  // Particle class values used for packing/unpacking particles in grid comm
+
+  int ncustom;
+  int nbytes_particle,nbytes_custom,nbytes_total;
+
+  // private methods
+
   void acquire_ghosts_all();
   void acquire_ghosts_near();
 

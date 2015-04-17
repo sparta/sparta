@@ -30,10 +30,11 @@
 
 using namespace SPARTA_NS;
 
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};  // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // several files
 enum{NONE,DISCRETE,SMOOTH};            // several files
+enum{INT,DOUBLE};                      // several files
 
-#define DELTA 10000
+#define DELTA 16384
 #define DELTASPECIES 16
 #define DELTAMIXTURE 8
 #define MAXLINE 1024
@@ -75,6 +76,28 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   add_mixture(1,newarg);
   delete [] newarg;
 
+  // custom per-particle vectors/arrays
+
+  ncustom = 0;
+  ename = NULL;
+  etype = esize = ewhich = NULL;
+
+  ncustom_ivec = ncustom_iarray = 0;
+  icustom_ivec = icustom_iarray = NULL;
+  eivec = NULL;
+  eiarray = NULL;
+  eicol = NULL;
+
+  ncustom_dvec = ncustom_darray = 0;
+  icustom_dvec = icustom_darray = NULL;
+  edvec = NULL;
+  edarray = NULL;
+  edcol = NULL;
+
+  custom_restart_flag = NULL;
+
+  // RNG for particle weighting
+
   wrandom = NULL;
 }
 
@@ -91,6 +114,28 @@ Particle::~Particle()
   //memory->destroy(first);
   memory->destroy(next);
 
+  for (int i = 0; i < ncustom; i++) delete [] ename[i];
+  memory->sfree(ename);
+  memory->destroy(etype);
+  memory->destroy(esize);
+  memory->destroy(ewhich);
+
+  for (int i = 0; i < ncustom_ivec; i++) memory->destroy(eivec[i]);
+  for (int i = 0; i < ncustom_iarray; i++) memory->destroy(eiarray[i]);
+  for (int i = 0; i < ncustom_dvec; i++) memory->destroy(edvec[i]);
+  for (int i = 0; i < ncustom_darray; i++) memory->destroy(edarray[i]);
+
+  memory->destroy(icustom_ivec);
+  memory->destroy(icustom_iarray);
+  memory->sfree(eivec);
+  memory->sfree(eiarray);
+  memory->destroy(eicol);
+  memory->destroy(icustom_dvec);
+  memory->destroy(icustom_darray);
+  memory->sfree(edvec);
+  memory->sfree(edarray);
+  memory->destroy(edcol);
+
   delete wrandom;
 }
 
@@ -106,6 +151,18 @@ void Particle::init()
     wrandom = new RanPark(update->ranmaster->uniform());
     double seed = update->ranmaster->uniform();
     wrandom->reset(seed,me,100);
+  }
+
+  // if first run after reading a restart file,
+  // delete any custom particle attributes that have not been re-defined
+  // use nactive since remove_custom() may alter ncustom
+
+  if (custom_restart_flag) {
+    int nactive = ncustom;
+    for (int i = 0; i < nactive; i++)
+      if (custom_restart_flag[i] == 0) remove_custom(i);
+    delete [] custom_restart_flag;
+    custom_restart_flag = NULL;
   }
 
   // reallocate cellcount and first lists as needed
@@ -125,24 +182,44 @@ void Particle::init()
    mlist indices MUST be in ascending order
    overwrite deleted particle with particle from end of nlocal list
    inner while loop avoids overwrite with deleted particle at end of mlist
-   called from Comm::migrate_particles() when particles migrate every step
+   called every step from Comm::migrate_particles() when particles migrate
+   this is similar to compress_reactions(), but does not need
+     an auxiliary vector b/c indices are in ascending order
 ------------------------------------------------------------------------- */
 
-void Particle::compress(int nmigrate, int *mlist)
+void Particle::compress_migrate(int nmigrate, int *mlist)
 {
-  int j,k;
+  int i,j,k;
   int nbytes = sizeof(OnePart);
 
-  for (int i = 0; i < nmigrate; i++) {
-    j = mlist[i];
-    k = nlocal - 1;
-    while (k == mlist[nmigrate-1] && k > j) {
-      nmigrate--;
+  if (!ncustom) {
+    for (i = 0; i < nmigrate; i++) {
+      j = mlist[i];
+      k = nlocal - 1;
+      while (k == mlist[nmigrate-1] && k > j) {
+        nmigrate--;
+        nlocal--;
+        k--;
+      }
       nlocal--;
-      k--;
+      if (j == k) continue;
+      memcpy(&particles[j],&particles[k],nbytes);
     }
-    memcpy(&particles[j],&particles[k],nbytes);
-    nlocal--;
+    
+  } else {
+    for (i = 0; i < nmigrate; i++) {
+      j = mlist[i];
+      k = nlocal - 1;
+      while (k == mlist[nmigrate-1] && k > j) {
+        nmigrate--;
+        nlocal--;
+        k--;
+      }
+      nlocal--;
+      if (j == k) continue;
+      memcpy(&particles[j],&particles[k],nbytes);
+      copy_custom(j,k);
+    }
   }
 }
 
@@ -153,16 +230,82 @@ void Particle::compress(int nmigrate, int *mlist)
    called from Comm::migrate_cells() when cells+particles migrate on rebalance
 ------------------------------------------------------------------------- */
 
-void Particle::compress()
+void Particle::compress_rebalance()
 {
   int nbytes = sizeof(OnePart);
 
-  int i = 0;
-  while (i < nlocal) {
-    if (particles[i].icell < 0) {
-      memcpy(&particles[i],&particles[nlocal-1],nbytes);
+  if (!ncustom) {
+    int i = 0;
+    while (i < nlocal) {
+      if (particles[i].icell < 0) {
+	memcpy(&particles[i],&particles[nlocal-1],nbytes);
+	nlocal--;
+      } else i++;
+    }
+
+  } else {
+    int i = 0;
+    while (i < nlocal) {
+      if (particles[i].icell < 0) {
+	memcpy(&particles[i],&particles[nlocal-1],nbytes);
+	copy_custom(i,nlocal-1);
+	nlocal--;
+      } else i++;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   compress particle list to remove particles with indices in dellist
+   dellist indices can be in ANY order
+   overwrite deleted particle with particle from end of nlocal list
+   use of next vector does bookkeeping for particles
+     that are moved from their original location before they are deleted
+   called from Collide::migrate_particles() each timestep
+     if any particles were deleted by gas-phase collision reactions
+   this is similar to compress_migrate(), but needs to use
+     an auxiliary vector b/c indices are in random order
+------------------------------------------------------------------------- */
+
+void Particle::compress_reactions(int ndelete, int *dellist)
+{
+  int i,m;
+
+  int nbytes = sizeof(OnePart);
+
+  // use next as a scratch vector
+  // is always defined when performing collisions and thus gas reactions
+  // next is only used for upper locs from nlocal-ndelete to nlocal
+  // next[i] = current index of atom originally at index i, when i >= nlocal
+  // next[i] = original index of atom currently at index i, when i <= nlocal
+
+  int upper = nlocal-ndelete;
+  for (i = upper; i < nlocal; i++) next[i] = i;
+
+  // i = current index of atom to remove, even if it previously moved
+
+  if (!ncustom) {
+    for (int m = 0; m < ndelete; m++) {
+      i = dellist[m];
+      if (i >= nlocal) i = next[i];
       nlocal--;
-    } else i++;
+      if (i == nlocal) continue;
+      memcpy(&particles[i],&particles[nlocal],nbytes);
+      if (i >= upper) next[i] = next[nlocal];
+      next[next[nlocal]] = i;
+    }
+
+  } else {
+    for (int m = 0; m < ndelete; m++) {
+      i = dellist[m];
+      if (i >= nlocal) i = next[i];
+      nlocal--;
+      if (i == nlocal) continue;
+      memcpy(&particles[i],&particles[nlocal],nbytes);
+      copy_custom(i,nlocal);
+      if (i >= upper) next[i] = next[nlocal];
+      next[next[nlocal]] = i;
+    }
   }
 }
 
@@ -270,6 +413,7 @@ void Particle::post_weight()
     if (ratio < 1.0) {
       if (wrandom->uniform() > ratio) {
         memcpy(&particles[i],&particles[nlocal-1],nbytes);
+	if (ncustom) copy_custom(i,nlocal-1);
         if (nlocal > nlocal_original) i++;
         else nlocal_original--;
         nlocal--;
@@ -295,6 +439,7 @@ void Particle::post_weight()
 
 /* ----------------------------------------------------------------------
    insure particle list can hold nextra new particles
+   if defined, also grow custom particle arrays and initialize with zeroes
 ------------------------------------------------------------------------- */
 
 void Particle::grow(int nextra)
@@ -314,6 +459,13 @@ void Particle::grow(int nextra)
     memory->srealloc(particles,maxlocal*sizeof(OnePart),
 		     "particle:particles");
   memset(&particles[oldmax],0,(maxlocal-oldmax)*sizeof(OnePart));
+
+  if (ncustom == 0) return;
+
+  for (int i = 0; i < ncustom; i++) {
+    if (ename[i] == NULL) continue;
+    grow_custom(i,oldmax,maxlocal);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -366,6 +518,7 @@ int Particle::clone_particle(int index)
   }
 
   memcpy(&particles[nlocal],&particles[index],sizeof(OnePart));
+  if (ncustom) copy_custom(nlocal,index);
 
   nlocal++;
   return reallocflag;
@@ -758,7 +911,7 @@ void Particle::read_restart_mixture(FILE *fp)
 
 /* ----------------------------------------------------------------------
    return size of particle restart info for this proc
-   // NOTE: worry about N overflowing int, and in IROUNDUP ???
+   NOTE: worry about N overflowing int and IROUNDUP ???
 ------------------------------------------------------------------------- */
 
 int Particle::size_restart()
@@ -766,6 +919,7 @@ int Particle::size_restart()
   int n = sizeof(int);
   n = IROUNDUP(n);
   n += nlocal * sizeof(OnePartRestart);
+  n += nlocal * sizeof_custom();
   n = IROUNDUP(n);
   return n;
 }
@@ -773,27 +927,25 @@ int Particle::size_restart()
 /* ----------------------------------------------------------------------
    pack my particle info into buf
    use OnePartRestart data struct for permanent info and to encode cell ID
-   // NOTE: worry about N overflowing int, and in IROUNDUP ???
+   include per-particle custom attributes if defined
 ------------------------------------------------------------------------- */
 
 int Particle::pack_restart(char *buf)
 {
-  int n,nsplit;
-
   Grid::ChildCell *cells = grid->cells;
   OnePart *p;
   OnePartRestart *pr;
+  int nbytes_custom = sizeof_custom();
 
-  int *ibuf = (int *) buf;
+  char *ptr = buf;
+  int *ibuf = (int *) ptr;
   *ibuf = nlocal;
-  n = sizeof(int);
-  n = IROUNDUP(n);
-
-  OnePartRestart *pbuf = (OnePartRestart *) &buf[n];
+  ptr += sizeof(int);
+  ptr = ROUNDUP(ptr);
 
   for (int i = 0; i < nlocal; i++) {
     p = &particles[i];
-    pr = &pbuf[i];
+    pr = (OnePartRestart *) ptr;
     pr->id = p->id;
     pr->ispecies = p->ispecies;
     pr->icell = cells[p->icell].id;
@@ -806,39 +958,485 @@ int Particle::pack_restart(char *buf)
     pr->v[2] = p->v[2];
     pr->erot = p->erot;
     pr->evib = p->evib;
+
+    ptr += sizeof(OnePartRestart);
+    if (!ncustom) continue;
+
+    pack_custom(i,ptr);
+    ptr += nbytes_custom;
   }
 
-  n += nlocal * sizeof(OnePartRestart);
-  n = IROUNDUP(n);
-
-  return n;
+  ptr = ROUNDUP(ptr);
+  return ptr - buf;
 }
 
 /* ----------------------------------------------------------------------
    unpack particle info into restart storage
    allocate data structure here, will be deallocated by ReadRestart
+   include per-particle custom attributes if defined
 ------------------------------------------------------------------------- */
 
 int Particle::unpack_restart(char *buf)
 {
-  int n;
-  Grid::ChildCell *cells = grid->cells;
-  OnePartRestart *p;
+  int nbytes_particle = sizeof(OnePartRestart);
+  int nbytes_custom = sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
 
+  char *ptr = buf;
   int *ibuf = (int *) buf;
   nlocal_restart = *ibuf;
-  n = sizeof(int);
+  ptr += sizeof(int);
+  ptr = ROUNDUP(ptr);
+
+  particle_restart = (char *) 
+    memory->smalloc(nlocal_restart*nbytes,"grid:particle_restart");
+
+  memcpy(particle_restart,ptr,nlocal_restart*nbytes);
+  ptr += nlocal_restart * sizeof(OnePartRestart);
+  ptr = ROUNDUP(ptr);
+
+  return ptr - buf;
+}
+
+// ----------------------------------------------------------------------
+// methods for per-particle custom attributes
+// ----------------------------------------------------------------------
+
+/* ----------------------------------------------------------------------
+   find custom per-atom vector/array with name
+   return index if found
+   return -1 if not found
+------------------------------------------------------------------------- */
+
+int Particle::find_custom(char *name)
+{
+  for (int i = 0; i < ncustom; i++)
+    if (ename[i] && strcmp(ename[i],name) == 0) return i;
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   add a custom attribute with name
+   assumes name does not already exist, except in case of restart
+   type = 0/1 for int/double
+   size = 0 for vector, size > 0 for array with size columns
+   allocate the vector or array to current maxlocal via grow_custom()
+   return index of its location;
+------------------------------------------------------------------------- */
+
+int Particle::add_custom(char *name, int type, int size)
+{
+  int index;
+
+  // if name already exists
+  // just return index if a restart script and re-defining the name
+  // else error
+
+  index = find_custom(name);
+  if (index >= 0) {
+    if (custom_restart_flag == NULL || custom_restart_flag[index] == 1)
+      error->all(FLERR,"Custom particle attribute name already exists");
+    custom_restart_flag[index] = 1;
+    return index;
+  }
+
+  // use first available NULL entry or allocate a new one
+
+  for (index = 0; index < ncustom; index++)
+    if (ename[index] == NULL) break;
+
+  if (index == ncustom) {
+    ncustom++;
+    ename = (char **) memory->srealloc(ename,ncustom*sizeof(char *),
+                                       "particle:ename");
+    memory->grow(etype,ncustom,"particle:etype");
+    memory->grow(esize,ncustom,"particle:etype");
+    memory->grow(ewhich,ncustom,"particle:etype");
+  }
+
+  int n = strlen(name) + 1;
+  ename[index] = new char[n];
+  strcpy(ename[index],name);
+  etype[index] = type;
+  esize[index] = size;
+
+  if (type == INT) {
+    if (size == 0) {
+      ewhich[index] = ncustom_ivec++;
+      eivec = (int **) 
+        memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"particle:eivec");
+      eivec[ncustom_ivec-1] = NULL;
+      memory->grow(icustom_ivec,ncustom_ivec,"particle:icustom_ivec");
+      icustom_ivec[ncustom_ivec-1] = index;
+    } else {
+      ewhich[index] = ncustom_iarray++;
+      eiarray = (int ***) 
+        memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
+                         "particle:eivec");
+      eiarray[ncustom_iarray-1] = NULL;
+      memory->grow(icustom_iarray,ncustom_iarray,"particle:icustom_iarray");
+      icustom_iarray[ncustom_iarray-1] = index;
+      memory->grow(eicol,ncustom_iarray,"particle:eicol");
+      eicol[ncustom_iarray-1] = size;
+    }
+  } else if (type == DOUBLE) {
+    if (size == 0) {
+      ewhich[index] = ncustom_dvec++;
+      edvec = (double **) 
+        memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"particle:edvec");
+      edvec[ncustom_dvec-1] = NULL;
+      memory->grow(icustom_dvec,ncustom_dvec,"particle:icustom_dvec");
+      icustom_dvec[ncustom_dvec-1] = index;
+    } else {
+      ewhich[index] = ncustom_darray++;
+      edarray = (double ***) 
+        memory->srealloc(edarray,ncustom_darray*sizeof(double **),
+                         "particle:edvec");
+      edarray[ncustom_darray-1] = NULL;
+      memory->grow(icustom_darray,ncustom_darray,"particle:icustom_darray");
+      icustom_darray[ncustom_darray-1] = index;
+      memory->grow(edcol,ncustom_darray,"particle:edcol");
+      edcol[ncustom_darray-1] = size;
+    }
+  }
+
+  grow_custom(index,0,maxlocal);
+
+  return index;
+}
+
+/* ----------------------------------------------------------------------
+   grow the vector/array associated with custom attribute with index
+   nold = old length, nnew = new length (typically maxlocal)
+   set new values to 0 via memset()
+------------------------------------------------------------------------- */
+
+int Particle::grow_custom(int index, int nold, int nnew)
+{
+  if (etype[index] == INT) {
+    if (esize[index] == 0) {
+      int *ivector = eivec[ewhich[index]];
+      memory->grow(ivector,nnew,"particle:eivec");
+      if (ivector) memset(&ivector[nold],0,(nnew-nold)*sizeof(int));
+      eivec[ewhich[index]] = ivector;
+    } else {
+      int **iarray = eiarray[ewhich[index]];
+      memory->grow(iarray,nnew,esize[index],"particle:eiarray");
+      if (iarray) 
+        memset(&iarray[nold][0],0,(nnew-nold)*esize[index]*sizeof(int));
+      eiarray[ewhich[index]] = iarray;
+    }
+
+  } else {
+    if (esize[index] == 0) {
+      double *dvector = edvec[ewhich[index]];
+      memory->grow(dvector,nnew,"particle:edvec");
+      if (dvector) memset(&dvector[nold],0,(nnew-nold)*sizeof(double));
+      edvec[ewhich[index]] = dvector;
+    } else {
+      double **darray = edarray[ewhich[index]];
+      memory->grow(darray,nnew,esize[index],"particle:edarray");
+      if (darray)
+        memset(&darray[nold][0],0,(nnew-nold)*esize[index]*sizeof(double));
+      edarray[ewhich[index]] = darray;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   remove a custom attribute at location index
+   free memory for name and vector/array and set ptrs to NULL
+   ncustom lists never shrink, but indices stored between
+     the ncustom list and the dense vector/array lists must be reset
+------------------------------------------------------------------------- */
+
+void Particle::remove_custom(int index)
+{
+  delete [] ename[index];
+  ename[index] = NULL;
+
+  if (etype[index] == INT) {
+    if (esize[index] == 0) {
+      memory->destroy(eivec[ewhich[index]]);
+      ncustom_ivec--;
+      for (int i = ewhich[index]; i < ncustom_ivec; i++) {
+        icustom_ivec[i] = icustom_ivec[i+1];
+        ewhich[icustom_ivec[i]] = i;
+        eivec[i] = eivec[i+1];
+      }
+    } else{
+      memory->destroy(eiarray[ewhich[index]]);
+      ncustom_iarray--;
+      for (int i = ewhich[index]; i < ncustom_iarray; i++) {
+        icustom_iarray[i] = icustom_iarray[i+1];
+        ewhich[icustom_iarray[i]] = i;
+        eiarray[i] = eiarray[i+1];
+        eicol[i] = eicol[i+1];
+      }
+    }
+  } else if (etype[index] == DOUBLE) {
+    if (esize[index] == 0) {
+      memory->destroy(edvec[ewhich[index]]);
+      ncustom_dvec--;
+      for (int i = ewhich[index]; i < ncustom_dvec; i++) {
+        icustom_dvec[i] = icustom_dvec[i+1];
+        ewhich[icustom_dvec[i]] = i;
+        edvec[i] = edvec[i+1];
+      }
+    } else{
+      memory->destroy(edarray[ewhich[index]]);
+      ncustom_darray--;
+      for (int i = ewhich[index]; i < ncustom_darray; i++) {
+        icustom_darray[i] = icustom_darray[i+1];
+        ewhich[icustom_darray[i]] = i;
+        edarray[i] = edarray[i+1];
+        edcol[i] = edcol[i+1];
+      }
+    }
+  }
+
+  // set ncustom = 0 if custom list is now entirely empty
+
+  int empty = 1;
+  for (int i = 0; i < ncustom; i++) 
+    if (ename[i]) empty = 0;
+  if (empty) ncustom = 0;
+}
+
+/* ----------------------------------------------------------------------
+   copy info for one particle in custom attribute vectors/arrays
+   into location I from location J
+------------------------------------------------------------------------- */
+
+void Particle::copy_custom(int i, int j)
+{
+  int m;
+
+  // caller does not always check this
+  // shouldn't be a problem, but valgrind can complain if memcpy to self
+  // oddly memcpy(&particles[i],&particles[j],sizeof(OnePart)) seems OK
+
+  if (i == j) return;
+
+  // 4 flavors of vectors/arrays
+
+  if (ncustom_ivec) {
+    for (m = 0; m < ncustom_ivec; m++) eivec[m][i] = eivec[m][j];
+  }
+  if (ncustom_iarray) {
+    for (m = 0; m < ncustom_iarray; m++)
+      memcpy(eiarray[m][i],eiarray[m][j],eicol[m]*sizeof(int));
+  }
+  if (ncustom_dvec) {
+    for (m = 0; m < ncustom_dvec; m++) edvec[m][i] = edvec[m][j];
+  }
+  if (ncustom_darray) {
+    for (m = 0; m < ncustom_darray; m++)
+      memcpy(edarray[m][i],edarray[m][j],edcol[m]*sizeof(double));
+  }
+}
+
+/* ----------------------------------------------------------------------
+   return size of all custom attributes in bytes for one particle
+   used by callers to allocate buffer memory for particles
+   assume integer attributes can be put at start of buffer
+   only alignment needed is between integers and doubles
+------------------------------------------------------------------------- */
+
+int Particle::sizeof_custom()
+{
+  int n = 0;
+
+  n += ncustom_ivec*sizeof(int);
+  if (ncustom_iarray)
+    for (int i = 0; i < ncustom_iarray; i++)
+      n += eicol[i]*sizeof(int);
+
   n = IROUNDUP(n);
 
-  particle_restart = (OnePartRestart *) 
-    memory->smalloc(nlocal_restart*sizeof(OnePartRestart),
-                    "grid:particle_restart");
-
-  memcpy(particle_restart,&buf[n],nlocal_restart*sizeof(OnePartRestart));
-  n += nlocal_restart * sizeof(OnePartRestart);
-  n = IROUNDUP(n);
+  n += ncustom_dvec*sizeof(double);
+  if (ncustom_darray)
+    for (int i = 0; i < ncustom_darray; i++)
+      n += edcol[i]*sizeof(double);
 
   return n;
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes custom attribute definition info to restart file
+------------------------------------------------------------------------- */
+
+void Particle::write_restart_custom(FILE *fp)
+{
+  int m,index;
+
+  // nactive = # of ncustom that have active vectors/arrays
+
+  int nactive = 0;
+  for (int i = 0; i < ncustom; i++)
+    if (ename[i]) nactive++;
+
+  fwrite(&nactive,sizeof(int),1,fp);
+
+  // must write custom info in same order 
+  //   the per-particle custom values will be written into file
+  // not necessarily the same as ncustom list, due to deletions & additions
+
+  for (m = 0; m < ncustom_ivec; m++) {
+    index = icustom_ivec[m];
+    int n = strlen(ename[index]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ename[index],sizeof(char),n,fp);
+    fwrite(&etype[index],sizeof(int),1,fp);
+    fwrite(&esize[index],sizeof(int),1,fp);
+  }
+  for (m = 0; m < ncustom_iarray; m++) {
+    index = icustom_iarray[m];
+    int n = strlen(ename[index]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ename[index],sizeof(char),n,fp);
+    fwrite(&etype[index],sizeof(int),1,fp);
+    fwrite(&esize[index],sizeof(int),1,fp);
+  }
+  for (m = 0; m < ncustom_dvec; m++) {
+    index = icustom_dvec[m];
+    int n = strlen(ename[index]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ename[index],sizeof(char),n,fp);
+    fwrite(&etype[index],sizeof(int),1,fp);
+    fwrite(&esize[index],sizeof(int),1,fp);
+  }
+  for (m = 0; m < ncustom_darray; m++) {
+    index = icustom_darray[m];
+    int n = strlen(ename[index]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(ename[index],sizeof(char),n,fp);
+    fwrite(&etype[index],sizeof(int),1,fp);
+    fwrite(&esize[index],sizeof(int),1,fp);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 reads custom attribute definition info from restart file
+   bcast to other procs and all procs instantiate series of Mixtures
+------------------------------------------------------------------------- */
+
+void Particle::read_restart_custom(FILE *fp)
+{
+  // ncustom is 0 at time restart file is read
+  // will be incremented as add_custom() for each nactive
+
+  int nactive;
+  if (me == 0) fread(&nactive,sizeof(int),1,fp);
+  MPI_Bcast(&nactive,1,MPI_INT,0,world);
+  if (nactive == 0) return;
+
+  // order that custom vectors/arrays are in restart file
+  //   matches order the per-particle custom values will be read from file
+
+  int n,type,size;
+  char *name;
+
+  for (int i = 0; i < nactive; i++) {
+    if (me == 0) fread(&n,sizeof(int),1,fp);
+    MPI_Bcast(&n,1,MPI_INT,0,world);
+    name = new char[n];
+    if (me == 0) fread(name,sizeof(char),n,fp);
+    MPI_Bcast(name,n,MPI_CHAR,0,world);
+    if (me == 0) fread(&type,sizeof(int),1,fp);
+    MPI_Bcast(&type,n,MPI_CHAR,0,world);
+    if (me == 0) fread(&size,sizeof(int),1,fp);
+    MPI_Bcast(&size,n,MPI_CHAR,0,world);
+
+    // create the custom attribute
+
+    add_custom(name,type,size);
+    delete [] name;
+  }
+
+  // set flag for each newly created custom attribute to 0
+  // will be reset to 1 if restart script redefines attribute with same name
+
+  custom_restart_flag = new int[ncustom];
+  for (int i = 0; i < ncustom; i++) custom_restart_flag[i] = 0;
+}
+
+/* ----------------------------------------------------------------------
+   pack a custom attributes for a single particle N into buf
+   this is done in order of 4 styles of vectors/arrays, not in ncustom order
+------------------------------------------------------------------------- */
+
+void Particle::pack_custom(int n, char *buf)
+{
+  int i;
+  char *ptr = buf;
+
+  if (ncustom_ivec) {
+    for (i = 0; i < ncustom_ivec; i++) {
+      memcpy(ptr,&eivec[i][n],sizeof(int));
+      ptr += sizeof(int);
+    }
+  }
+  if (ncustom_iarray) {
+    for (i = 0; i < ncustom_iarray; i++) {
+      memcpy(ptr,eiarray[i][n],eicol[i]*sizeof(int));
+      ptr += eicol[i]*sizeof(int);
+    }
+  }
+
+  ptr = ROUNDUP(ptr);
+
+  if (ncustom_dvec) {
+    for (i = 0; i < ncustom_dvec; i++) {
+      memcpy(ptr,&edvec[i][n],sizeof(double));
+      ptr += sizeof(double);
+    }
+  }
+  if (ncustom_darray) {
+    for (i = 0; i < ncustom_darray; i++) {
+      memcpy(ptr,edarray[i][n],edcol[i]*sizeof(double));
+      ptr += edcol[i]*sizeof(double);
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   unpack custom attributes for a single particle N from buf
+   this is done in order of 4 styles of vectors/arrays, not in ncustom order
+------------------------------------------------------------------------- */
+
+void Particle::unpack_custom(char *buf, int n)
+{
+  int i;
+  char *ptr = buf;
+
+  if (ncustom_ivec) {
+    for (i = 0; i < ncustom_ivec; i++) {
+      memcpy(&eivec[i][n],ptr,sizeof(int));
+      ptr += sizeof(int);
+    }
+  }
+  if (ncustom_iarray) {
+    for (i = 0; i < ncustom_iarray; i++) {
+      memcpy(eiarray[i][n],ptr,eicol[i]*sizeof(int));
+      ptr += eicol[i]*sizeof(int);
+    }
+  }
+
+  ptr = ROUNDUP(ptr);
+
+  if (ncustom_dvec) {
+    for (i = 0; i < ncustom_dvec; i++) {
+      memcpy(&edvec[i][n],ptr,sizeof(double));
+      ptr += sizeof(double);
+    }
+  }
+  if (ncustom_darray) {
+    for (i = 0; i < ncustom_darray; i++) {
+      memcpy(edarray[i][n],ptr,edcol[i]*sizeof(double));
+      ptr += edcol[i]*sizeof(double);
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -847,5 +1445,13 @@ bigint Particle::memory_usage()
 {
   bigint bytes = (bigint) maxlocal * sizeof(OnePart);
   bytes += (bigint) maxlocal * sizeof(int);
+  for (int i = 0; i < ncustom_ivec; i++)
+    bytes += (bigint) maxlocal * sizeof(int);
+  for (int i = 0; i < ncustom_iarray; i++)
+    bytes += (bigint) maxlocal*eicol[i] * sizeof(int);
+  for (int i = 0; i < ncustom_dvec; i++)
+    bytes += (bigint) maxlocal * sizeof(double);
+  for (int i = 0; i < ncustom_darray; i++)
+    bytes += (bigint) maxlocal*edcol[i] * sizeof(double);
   return bytes;
 }

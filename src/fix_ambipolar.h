@@ -12,39 +12,40 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifdef SURF_COLLIDE_CLASS
+#ifdef FIX_CLASS
 
-SurfCollideStyle(specular,SurfCollideSpecular)
+FixStyle(ambipolar,FixAmbipolar)
 
 #else
 
-#ifndef SPARTA_SURF_COLLIDE_SPECULAR_H
-#define SPARTA_SURF_COLLIDE_SPECULAR_H
+#ifndef SPARTA_FIX_AMBIPOLAR_H
+#define SPARTA_FIX_AMBIPOLAR_H
 
-#include "surf_collide.h"
+#include "stdio.h"
+#include "fix.h"
 #include "particle.h"
 
 namespace SPARTA_NS {
 
-class SurfCollideSpecular : public SurfCollide {
+class FixAmbipolar : public Fix {
  public:
-  SurfCollideSpecular(class SPARTA *, int, char **);
-  ~SurfCollideSpecular() {}
-  void init() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, int);
+  int especies;               // index of electron species
+  int *ions;                  // 1 if a particle species is an ionx
+
+  FixAmbipolar(class SPARTA *, int, char **);
+  ~FixAmbipolar();
+  int setmask();
+  void init();
+  void add_particle(int, double, double *);
+  void surf_react(Particle::OnePart *, int, int);
+
+ private:
+  int maxion;                 // length of ions vector
+  int ionindex,velindex;      // indices into particle custom data structs
+  class RanPark *random;
 };
 
 }
 
 #endif
 #endif
-
-/* ERROR/WARNING messages:
-
-E: Illegal ... command
-
-Self-explanatory.  Check the input script syntax and compare to the
-documentation for the command.  You can use -echo screen as a
-command-line option when running SPARTA to see the offending line.
-
-*/

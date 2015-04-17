@@ -20,6 +20,10 @@
 #include "update.h"
 #include "grid.h"
 #include "comm.h"
+#include "react.h"
+#include "modify.h"
+#include "fix.h"
+#include "fix_ambipolar.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
@@ -28,8 +32,11 @@
 using namespace SPARTA_NS;
 
 enum{NONE,DISCRETE,SMOOTH};       // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
+#define DELTADELETE 1024
+#define DELTAELECTRON 128
 
 /* ---------------------------------------------------------------------- */
 
@@ -59,6 +66,9 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   glist = NULL;
   gpair = NULL;
 
+  maxdelete = 0;
+  dellist = NULL;
+
   vre_first = 1;
   vre_start = 1;
   vre_every = 0;
@@ -68,6 +78,10 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   remain = NULL;
   rotstyle = SMOOTH;
   vibstyle = NONE;
+
+  ambiflag = 0;
+  maxelectron = 0;
+  elist = NULL;
 
   // initialize counters in case stats outputs them
 
@@ -92,6 +106,8 @@ Collide::~Collide()
     memory->destroy(gpair);
   }
 
+  memory->destroy(dellist);
+  memory->sfree(elist);
   memory->destroy(vremax);
   memory->destroy(vremax_initial);
   memory->destroy(remain);
@@ -168,6 +184,25 @@ void Collide::init()
         vremax_initial[igroup][jgroup] = vremax_init(igroup,jgroup);
   }
 
+  // find ambipolar fix
+  // set ambipolar vector/array indices
+  // if reactions defined, check that they are valid ambipolar reactions
+
+  if (ambiflag) {
+    index_ionambi = particle->find_custom((char *) "ionambi");
+    index_velambi = particle->find_custom((char *) "velambi");
+    if (index_ionambi < 0 || index_velambi < 0) 
+      error->all(FLERR,"Collision ambipolar without fix ambipolar");
+    if (react) react->ambi_check();
+
+    int ifix;
+    for (ifix = 0; ifix < modify->nfix; ifix++)
+      if (strcmp(modify->fix[ifix]->style,"ambipolar") == 0) break;
+    FixAmbipolar *afix = (FixAmbipolar *) modify->fix[ifix];
+    ambispecies = afix->especies;
+    ions = afix->ions;
+  }
+
   // vre_next = next timestep to zero vremax & remain, based on vre_every
 
   if (vre_every) vre_next = (update->ntimestep/vre_every)*vre_every + vre_every;
@@ -221,6 +256,13 @@ void Collide::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
+
+    } else if (strcmp(arg[iarg],"ambipolar") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+1],"off") == 0) ambiflag = 0;
+      else if (strcmp(arg[iarg+1],"on") == 0) ambiflag = 1;
+      iarg += 2;
+
     } else error->all(FLERR,"Illegal collide_modify command");
   }
 }
@@ -258,12 +300,22 @@ void Collide::collisions()
   // counters
 
   ncollide_one = nattempt_one = nreact_one = 0;
+  ndelete = 0;
 
-  // perform collisions
+  // perform collisions without or with ambipolar approximation
   // one variant is optimized for a single group
 
-  if (ngroups == 1) collisions_one();
-  else collisions_group();
+  if (!ambiflag) {
+    if (ngroups == 1) collisions_one();
+    else collisions_group();
+  } else {
+    if (ngroups == 1) collisions_one_ambipolar();
+    else collisions_group_ambipolar();
+  }
+
+  // remove any particles deleted in chemistry reactions
+
+  if (ndelete) particle->compress_reactions(ndelete,dellist);
 
   // accumulate running totals
 
@@ -273,13 +325,13 @@ void Collide::collisions()
 }
 
 /* ----------------------------------------------------------------------
-  NTC algorithm on a single group
+   NTC algorithm for a single group
 ------------------------------------------------------------------------- */
 
 void Collide::collisions_one()
 {
   int i,j,k,n,ip,jp,np;
-  int nattempt;
+  int nattempt,reactflag;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
 
@@ -321,10 +373,8 @@ void Collide::collisions_one()
     nattempt_one += nattempt;
 
     // perform collisions
-    // select random particles, cannot be same
+    // select random pair of particles, cannot be same
     // test if collision actually occurs
-    // if chemistry occurs, move output I,J,K particles to new group lists
-    // if chemistry occurs, exit attempt loop if group count goes to 0
 
     for (k = 0; k < nattempt; k++) {
       i = np * random->uniform();
@@ -334,20 +384,30 @@ void Collide::collisions_one()
       ipart = &particles[plist[i]];
       jpart = &particles[plist[j]];
 
-      if (!test_collision(icell,0,0,ipart,jpart)) continue;
+      // test if collision actually occurs, then perform it
+      // ijspecies = species before collision chemistry
+      // continue to next collision if no reaction
 
+      if (!test_collision(icell,0,0,ipart,jpart)) continue;
       setup_collision(ipart,jpart);
-      kpart = perform_collision(ipart,jpart);
+      reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
+      if (reactflag) nreact_one++;
+      else continue;
 
       // jpart destroyed, delete from plist
-      // NOTE: when add recombination reactions,
-      //       perform_collision() will have to set jpart = NULL
+      // also add particle to deletion list
+      // exit attempt loop if only single particle left
 
       if (!jpart) {
+        if (ndelete == maxdelete) {
+          maxdelete += DELTADELETE;
+          memory->grow(dellist,maxdelete,"collide:dellist");
+        }
+        dellist[ndelete++] = plist[j];
         plist[j] = plist[np-1];
         np--;
-        if (np <= 1) break;
+        if (np < 2) break;
       }
       
       // if kpart created, add to plist
@@ -367,21 +427,17 @@ void Collide::collisions_one()
 }
 
 /* ----------------------------------------------------------------------
-  NTC algorithm on pairs of groups
-  pre-compute # of attempts per group pair
+   NTC algorithm for multiple groups, loop over pairs of groups
+   pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
 void Collide::collisions_group()
 {
   int i,j,k,ip,jp,np,isp,ipair,igroup,jgroup,newgroup;
-  int nattempt;
+  int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
-
-  // counters
-
-  ncollide_one = nattempt_one = nreact_one = 0;
 
   // loop over cells I own
 
@@ -390,7 +446,6 @@ void Collide::collisions_group()
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
-
   int *species2group = mixture->species2group;
 
   for (int icell = 0; icell < nglocal; icell++) {
@@ -415,14 +470,13 @@ void Collide::collisions_group()
     }
 
     // attempt = exact collision attempt count for a pair of groups
+    // double loop over N^2 / 2 pairs of groups
     // nattempt = rounded attempt with RN
-    // add pairing to gpair
-    // NOTE: could do jgroup = igroup to Ngroup if no chemistry?
-    //       this is b/c chemistry in non-symmetric for I,J and J,I
+    // add pair of groups to gpair
 
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
-      for (jgroup = 0; jgroup < ngroups; jgroup++) {
+      for (jgroup = igroup; jgroup < ngroups; jgroup++) {
 	attempt = attempt_collision(icell,igroup,jgroup,volume);
 	nattempt = static_cast<int> (attempt);
 
@@ -466,10 +520,16 @@ void Collide::collisions_group()
 	ipart = &particles[ilist[i]];
 	jpart = &particles[jlist[j]];
 
+        // test if collision actually occurs, then perform it
+        // ijspecies = species before collision chemistry
+        // continue to next collision if no reaction
+
 	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
 	setup_collision(ipart,jpart);
-	kpart = perform_collision(ipart,jpart);
+	reactflag = perform_collision(ipart,jpart,kpart);
 	ncollide_one++;
+        if (reactflag) nreact_one++;
+        else continue;
 
 	// ipart may now be in different group
         // reset jlist after addgroup() b/c may have been realloced
@@ -486,9 +546,7 @@ void Collide::collisions_group()
 	  }
 	}
 
-	// jpart may now be in different group, or destroyed
-        // NOTE: when add recombination reactions,
-        //       perform_collision() will have to set jpart = NULL
+	// jpart may now be in different group or destroyed
         // reset ilist after addgroup() b/c may have been realloced
 
 	if (jpart) {
@@ -504,6 +562,11 @@ void Collide::collisions_group()
 	    }
 	  }
 	} else {
+          if (ndelete == maxdelete) {
+            maxdelete += DELTADELETE;
+            memory->grow(dellist,maxdelete,"collide:dellist");
+          }
+          dellist[ndelete++] = jlist[j];
 	  jlist[j] = jlist[*nj-1];
 	  (*nj)--;
 	  if (*nj <= 1) {
@@ -526,6 +589,659 @@ void Collide::collisions_group()
 	}
       }
     }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   NTC algorithm for a single group with ambipolar approximation
+------------------------------------------------------------------------- */
+
+void Collide::collisions_one_ambipolar()
+{
+  int i,j,k,n,ip,jp,np,ispecies,jspecies,tmp;
+  int nattempt,reactflag;
+  double attempt,volume;
+  Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
+
+  // ambipolar vectors
+
+  int *ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+  double **velambi = particle->edarray[particle->ewhich[index_velambi]];
+
+  // loop over cells I own
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+  int nbytes = sizeof(Particle::OnePart);
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    np = cinfo[icell].count;
+    if (np <= 1) continue;
+    ip = cinfo[icell].first;
+    volume = cinfo[icell].volume / cinfo[icell].weight;
+
+    // DEBUG test that there are no electrons
+    // can remove at some point
+
+    while (ip >= 0) {
+      if (particles[ip].ispecies = ambispecies)
+        error->one(FLERR,"Pre-collision particle is ambipolar electron");
+      ip = next[ip];
+    }
+    ip = cinfo[icell].first;
+
+    // setup particle list for this cell
+    // allow for up to Np extra electrons
+
+    if (2*np > npmax) {
+      npmax = 2*np + DELTAPART;
+      memory->destroy(plist);
+      memory->create(plist,npmax,"collide:plist");
+    }
+
+    n = 0;
+    while (ip >= 0) {
+      plist[n++] = ip;
+      ip = next[ip];
+    }
+
+    // grow electron array as needed
+
+    if (np >= maxelectron) {
+      while (maxelectron < np) maxelectron += DELTAELECTRON;
+      memory->sfree(elist);
+      elist = (Particle::OnePart *) 
+        memory->smalloc(maxelectron*nbytes,"collide:elist");
+    }
+    
+    // create electrons for ambipolar ions, then increment np
+    // create them in separate array since will never become real particles
+    // plist indexes them with negative indices (-1 to -Nelectron)
+    // ion->flag stores same negative index of its matching electron
+
+    nelectron = 0;
+    for (i = 0; i < np; i++) {
+      if (ionambi[plist[i]]) {
+        p = &particles[plist[i]];
+        ep = &elist[nelectron];
+        memcpy(ep,p,nbytes);
+        memcpy(ep->v,velambi[plist[i]],3*sizeof(double));
+        ep->ispecies = ambispecies;
+        nelectron++;
+        plist[n++] = -nelectron;
+        p->flag = -nelectron;
+      }
+    }
+
+    np += nelectron;
+
+    // attempt = exact collision attempt count for a pair of groups
+    // nattempt = rounded attempt with RN
+
+    attempt = attempt_collision(icell,np,volume);
+    nattempt = static_cast<int> (attempt);
+
+    if (!nattempt) continue;
+    nattempt_one += nattempt;
+
+    // perform collisions
+    // select random pair of particles, cannot be same
+    // test if collision actually occurs
+    // if chemistry occurs, exit attempt loop if group count goes to 0
+
+    for (k = 0; k < nattempt; k++) {
+      i = np * random->uniform();
+      j = np * random->uniform();
+      while (i == j) j = np * random->uniform();
+
+      // plist index >= 0 for particles array
+      // plist index < 0 for electron array
+
+      if (plist[i] >= 0) ipart = &particles[plist[i]];
+      else ipart = &elist[-plist[i]-1];
+      if (plist[j] >= 0) jpart = &particles[plist[j]];
+      else jpart = &elist[-plist[j]-1];
+
+      // check for e/e pair
+      // count as collision, but do not perform it
+
+      if (ipart->ispecies == ambispecies && jpart->ispecies == ambispecies) {
+        ncollide_one++;
+        continue;
+      }
+
+      // if particle I is electron
+      // swap with J, since electron must be 2nd in any ambipolar reaction
+      // just need to swap i/j, ipart/jpart
+      // don't have to worry if an ambipolar ion is I or J
+
+      if (ipart->ispecies == ambispecies) {
+        tmp = i;
+        i = j;
+        j = tmp;
+        p = ipart;
+        ipart = jpart;
+        jpart = p;
+      }
+
+      // test if collision actually occurs, then perform it
+      // ijspecies = species before collision chemistry
+      // continue to next collision if no reaction
+
+      if (!test_collision(icell,0,0,ipart,jpart)) continue;
+      ispecies = ipart->ispecies;
+      jspecies = jpart->ispecies;
+      setup_collision(ipart,jpart);
+      reactflag = perform_collision(ipart,jpart,kpart);
+      ncollide_one++;
+      if (reactflag) nreact_one++;
+      else continue;
+
+      // jpart destroyed, delete from plist
+      // also add particle to deletion list
+      // exit attempt loop if only single particle left
+
+      if (!jpart) {
+        if (ndelete == maxdelete) {
+          maxdelete += DELTADELETE;
+          memory->grow(dellist,maxdelete,"collide:dellist");
+        }
+        dellist[ndelete++] = plist[j];
+        plist[j] = plist[np-1];
+        np--;
+        if (np < 2) break;
+      }
+      
+      // if kpart created, add to plist
+      // kpart was just added to particle list, so index = nlocal-1
+      // particles and custom data structs may have been realloced
+      
+      if (kpart) {
+        if (np == npmax) {
+          npmax = np + DELTAPART;
+          memory->grow(plist,npmax,"collide:plist");
+        }
+        plist[np++] = particle->nlocal-1;
+        particles = particle->particles;
+        ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+        velambi = particle->edarray[particle->ewhich[index_velambi]];
+      }
+
+      // reset ambipolar ions and ion/electron pairings due to reaction
+
+      ambi_reset(plist[i],plist[j],ispecies,jspecies,
+                 ipart,jpart,kpart,ionambi);
+    }
+
+    // DEBUG test that ions and electrons are still matched one-to-one
+    // flag each electron with -1 as find ions
+    // can remove at some point
+
+    int nelec = 0;
+    int nion = 0;
+    for (n = 0; n < np; n++) {
+      i = plist[n];
+      if (i < 0 || particles[i].ispecies == ambispecies) {
+        nelec++;
+        continue;
+      }
+      p = &particles[i];
+      if (ionambi[i]) {
+        nion++;
+        if (p->flag >= 0) ep = &particles[p->flag];
+        else ep = &elist[-(p->flag)-1];
+        if (ep->ispecies != ambispecies)
+          error->one(FLERR,"Ambipolar ion is not coupled to electron");
+        if (ep->flag < 0) 
+          error->one(FLERR,"Ambipolar electron is coupled to multiple ions");
+        ep->flag = -1;
+      }
+    }
+
+    if (nion != nelec) 
+      error->one(FLERR,"Ambipolar ion and electron counts do not match");
+
+    // done with collisions/chemistry for one grid cell
+    // recombine ambipolar ions with their matching electrons
+    //   by copying electron velocity into velambi
+    // reset all flags to PKEEP
+    // add any newly created electrons (not in elist) to delete list
+
+    for (n = 0; n < np; n++) {
+      i = plist[n];
+      if (i < 0) continue;
+      p = &particles[i];
+      p->flag = PKEEP;
+      if (ionambi[i]) {
+        if (p->flag >= 0) ep = &particles[p->flag];
+        else ep = &elist[-(p->flag)-1];
+        memcpy(velambi[i],ep->v,3*sizeof(double));
+      } else if (p->ispecies == ambispecies) {
+        if (ndelete == maxdelete) {
+          maxdelete += DELTADELETE;
+          memory->grow(dellist,maxdelete,"collide:dellist");
+        }
+        dellist[ndelete++] = i;
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   NTC algorithm for multiple groups with ambipolar approximation
+   loop over pairs of groups, pre-compute # of attempts per group pair
+------------------------------------------------------------------------- */
+
+void Collide::collisions_group_ambipolar()
+{
+  int i,j,k,n,ip,jp,np,isp,ipair,igroup,jgroup,newgroup,ispecies,jspecies,tmp;
+  int nattempt,reactflag;
+  int *ni,*nj,*ilist,*jlist,*tmpvec;
+  double attempt,volume;
+  Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
+
+  // ambipolar vectors
+
+  int *ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+  double **velambi = particle->edarray[particle->ewhich[index_velambi]];
+
+  // loop over cells I own
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+  int nbytes = sizeof(Particle::OnePart);
+  int *species2group = mixture->species2group;
+
+  int egroup = species2group[ambispecies];
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    np = cinfo[icell].count;
+    if (np <= 1) continue;
+    ip = cinfo[icell].first;
+    volume = cinfo[icell].volume / cinfo[icell].weight;
+
+    // DEBUG test that there are no electrons
+    // can remove at some point
+
+    while (ip >= 0) {
+      if (particles[ip].ispecies = ambispecies)
+        error->one(FLERR,"Pre-collision particle is ambipolar electron");
+      ip = next[ip];
+    }
+    ip = cinfo[icell].first;
+
+    // grow electron array as needed
+
+    if (np >= maxelectron) {
+      while (maxelectron < np) maxelectron += DELTAELECTRON;
+      memory->sfree(elist);
+      elist = (Particle::OnePart *) 
+        memory->smalloc(maxelectron*nbytes,"collide:elist");
+    }
+
+    // setup per-group particle lists for this cell
+    // create electrons for ambipolar ions, and put in egroup
+    // create them in separate array since will never become real particles
+    // group lists index them with negative indices (-1 to -Nelectron)
+    // ion->flag stores same negative index of its matching electron
+
+    for (i = 0; i < ngroups; i++) ngroup[i] = 0;
+    nelectron = 0;
+
+    while (ip >= 0) {
+      isp = particles[ip].ispecies;
+      igroup = species2group[isp];
+      if (ngroup[igroup] == maxgroup[igroup]) {
+	maxgroup[igroup] += DELTAPART;
+	memory->grow(glist[igroup],maxgroup[igroup],"collide:grouplist");
+      }
+      glist[igroup][ngroup[igroup]++] = ip;
+
+      if (ionambi[ip]) {
+        p = &particles[ip];
+        ep = &elist[nelectron];
+        memcpy(ep,p,nbytes);
+        memcpy(ep->v,velambi[ip],3*sizeof(double));
+        ep->ispecies = ambispecies;
+        nelectron++;
+        if (ngroup[egroup] == maxgroup[egroup]) {
+          maxgroup[egroup] += DELTAPART;
+          memory->grow(glist[egroup],maxgroup[egroup],"collide:grouplist");
+        }
+        glist[egroup][ngroup[egroup]++] = -nelectron;
+        p->flag = -nelectron;
+      }
+
+      ip = next[ip];
+    }
+
+    // attempt = exact collision attempt count for a pair of groups
+    // double loop over N^2 / 2 pairs of groups
+    // nattempt = rounded attempt with RN
+    // add pair of groups to gpair
+
+    npair = 0;
+    for (igroup = 0; igroup < ngroups; igroup++)
+      for (jgroup = igroup; jgroup < ngroups; jgroup++) {
+	attempt = attempt_collision(icell,igroup,jgroup,volume);
+	nattempt = static_cast<int> (attempt);
+
+	if (nattempt) {
+	  gpair[npair][0] = igroup;
+	  gpair[npair][1] = jgroup;
+	  gpair[npair][2] = nattempt;
+	  nattempt_one += nattempt;
+	  npair++;
+	}
+      }
+
+    // perform collisions for each pair of groups in gpair list
+    // select random particle in each group
+    // if igroup = jgroup, cannot be same particle
+    // test if collision actually occurs
+    // if chemistry occurs, move output I,J,K particles to new group lists
+    // if chemistry occurs, exit attempt loop if group count goes to 0
+    // NOTE: need to reset vremax ?
+    // NOTE: OK to use pre-computed nattempt when Ngroup may have changed?
+
+    for (ipair = 0; ipair < npair; ipair++) {
+      igroup = gpair[ipair][0];
+      jgroup = gpair[ipair][1];
+      nattempt = gpair[ipair][2];
+
+      ni = &ngroup[igroup];
+      nj = &ngroup[jgroup];
+      ilist = glist[igroup];
+      jlist = glist[jgroup];
+
+      if (*ni == 0 || *nj == 0) continue;
+      if (igroup == jgroup && *ni == 1) continue;
+
+      for (k = 0; k < nattempt; k++) {
+	i = *ni * random->uniform();
+	j = *nj * random->uniform();
+	if (igroup == jgroup)
+	  while (i == j) j = *nj * random->uniform();
+
+        // ilist/jlist indices >= 0 for particles array
+        // ilist/jlist indices < 0 for electron array
+
+        if (ilist[i] >= 0) ipart = &particles[ilist[i]];
+        else ipart = &elist[-ilist[i]-1];
+        if (jlist[j] >= 0) jpart = &particles[jlist[j]];
+        else jpart = &elist[-jlist[j]-1];
+
+        // check for e/e pair
+        // count as collision, but do not perform it
+        
+        if (ipart->ispecies == ambispecies && jpart->ispecies == ambispecies) {
+          ncollide_one++;
+          continue;
+        }
+
+        // if particle I is electron
+        // swap with J, since electron must be 2nd in any ambipolar reaction
+        // need to swap i/j, igroup/jgroup, ni/nj, ilist/jlist, ipart/jpart
+        // don't have to worry if an ambipolar ion is I or J
+
+        if (ipart->ispecies == ambispecies) {
+          tmp = i;
+          i = j;
+          j = tmp;
+          tmp = igroup;
+          igroup = jgroup;
+          jgroup = tmp;
+          tmpvec = ni;
+          ni = nj;
+          nj = tmpvec;
+          tmpvec = ilist;
+          ilist = jlist;
+          jlist = tmpvec;
+          p = ipart;
+          ipart = jpart;
+          jpart = p;
+        }
+
+        // test if collision actually occurs, then perform it
+        // ijspecies = species before collision chemistry
+        // continue to next collision if no reaction
+
+	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
+	setup_collision(ipart,jpart);
+	reactflag = perform_collision(ipart,jpart,kpart);
+	ncollide_one++;
+        if (reactflag) nreact_one++;
+        else continue;
+
+	// ipart may now be in different group
+        // reset jlist after addgroup() b/c may have been realloced
+
+	newgroup = species2group[ipart->ispecies];
+	if (newgroup != igroup) {
+	  addgroup(newgroup,ilist[i]);
+          jlist = glist[jgroup];
+	  ilist[i] = ilist[*ni-1];
+	  (*ni)--;
+	  if (*ni <= 1) {
+	    if (*ni == 0) break;
+	    if (igroup == jgroup) break;
+	  }
+	}
+
+	// jpart may now be in different group or destroyed
+        // reset ilist after addgroup() b/c may have been realloced
+
+	if (jpart) {
+	  newgroup = species2group[jpart->ispecies];
+	  if (newgroup != jgroup) {
+	    addgroup(newgroup,jlist[j]);
+            ilist = glist[igroup];
+	    jlist[j] = jlist[*nj-1];
+	    (*nj)--;
+	    if (*nj <= 1) {
+	      if (*nj == 0) break;
+	      if (igroup == jgroup) break;
+	    }
+	  }
+	} else {
+          if (ndelete == maxdelete) {
+            maxdelete += DELTADELETE;
+            memory->grow(dellist,maxdelete,"collide:dellist");
+          }
+          dellist[ndelete++] = jlist[j];
+	  jlist[j] = jlist[*nj-1];
+	  (*nj)--;
+	  if (*nj <= 1) {
+	    if (*nj == 0) break;
+	    if (igroup == jgroup) break;
+	  }
+	}
+
+        // if kpart created, add to group list
+	// kpart was just added to particle list, so index = nlocal-1
+        // reset ilist,jlist after addgroup() b/c may have been realloced
+        // particles data struct may also have been realloced
+
+	if (kpart) {
+	  newgroup = species2group[kpart->ispecies];
+	  addgroup(newgroup,particle->nlocal-1);
+          ilist = glist[igroup];
+          jlist = glist[jgroup];
+          particles = particle->particles;
+	}
+
+        // reset ambipolar ions and ion/electron pairings due to reaction
+
+        ambi_reset(ilist[i],jlist[j],ispecies,jspecies,
+                   ipart,jpart,kpart,ionambi);
+      }
+    }
+
+    // DEBUG test that ions and electrons are still matched one-to-one
+    // flag each electron with -1 as find ions
+    // can remove at some point
+
+    int nelec = 0;
+    int nion = 0;
+
+    for (k = 0; k < ngroups; k++) {
+      n = ngroup[k];
+      for (j = 0; j < k; j++) {
+        i = glist[k][j];
+        if (i < 0 || particles[i].ispecies == ambispecies) {
+          nelec++;
+          continue;
+        }
+        p = &particles[i];
+        if (ionambi[i]) {
+          nion++;
+          if (p->flag >= 0) ep = &particles[p->flag];
+          else ep = &elist[-(p->flag)-1];
+          if (ep->ispecies != ambispecies) 
+            error->one(FLERR,"Ambipolar ion is not coupled to electron");
+          if (ep->flag < 0) 
+            error->one(FLERR,"Ambipolar electron is coupled to multiple ions");
+          ep->flag = -1;
+        }
+      }
+    }
+
+    if (nion != nelec) 
+      error->one(FLERR,"Ambipolar ion and electron counts do not match");
+
+    // done with collisions/chemistry for one grid cell
+    // recombine ambipolar ions with their matching electrons
+    //   by copying electron velocity into velambi
+    // reset all flags to PKEEP
+    // add any newly created electrons (not in elist) to delete list
+
+    for (k = 0; k < ngroups; k++) {
+      n = ngroup[k];
+      for (j = 0; j < k; j++) {
+        i = glist[k][j];
+        if (i < 0) continue;
+        p = &particles[i];
+        p->flag = PKEEP;
+        if (ionambi[i]) {
+          if (p->flag >= 0) ep = &particles[p->flag];
+          else ep = &elist[-(p->flag)-1];
+          memcpy(velambi[i],ep->v,3*sizeof(double));
+        } else if (p->ispecies == ambispecies) {
+          if (ndelete == maxdelete) {
+            maxdelete += DELTADELETE;
+            memory->grow(dellist,maxdelete,"collide:dellist");
+          }
+          dellist[ndelete++] = i;
+        }
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   reset ionambi and ion/electron coupling due to reaction that occurred
+   i/j = indices of I,J reactants
+   isp/jsp = pre-reaction species of I,J
+   reactants i,j and isp/jsp will always be in order listed below
+   products ip,jp,kp will always be in order listed below
+   logic must be valid for all ambipolar AND non-ambipolar reactions
+   warning:
+     never index by i/j without checking if e, since may be negative index
+     never access ionambi for an e, since may be in elist
+   check 3 versions of 2 -> 3: dissociation or ionization
+     D: AB + e -> A + e + B
+        if AB not ion and ej = elec (r and p) and B not elec:
+        set B to not ion, A remains not ion
+     D: AB+ + e -> A+ + e + B
+     D: AB+ + e -> A + e + B+
+        if AB is ion and ej = elec (r and p):
+        set A or B to ion, couple new ion with ej
+     I: A + e -> A+ + e + e
+        if A not ion and ej = elec (r and P) and ek = elec:
+        set A+ to ion, couple A+ with ek
+     all other 2 -> 3 cases, set new particle to not ion
+   check 3 versions of 2 -> 2: ionization or exchange
+     I: A + B -> AB+ + e
+        if A not ion and B not ion and ej = elec:
+        set AB to ion and couple AB and ej
+     E: AB+ + C -> A + BC+
+        if AB is ion and C not ion:
+        set 1 of 2 products to ion and re-couple to e
+     E: C + AB+ -> A + BC+
+        if C is not ion and AB is ion:
+        set 1 of 2 products to ion and re-couple to e
+     all other 2 -> 2 cases, no changes
+   check one version of 2 -> 1: recombination
+     R: A+ + e -> A
+        if A+ = ambi and e = elec:
+        set A to not ambi
+     all other 2 -> 1 cases, no changes
+------------------------------------------------------------------------- */
+
+void Collide::ambi_reset(int i, int j, int isp, int jsp, 
+                         Particle::OnePart *ip, Particle::OnePart *jp, 
+                         Particle::OnePart *kp, int *ionambi)
+{
+  int e = ambispecies;
+
+  // 2 reactants become 3 products
+  // if 2nd reactant is electron, 2nd product will be electron
+
+  if (kp) {
+    int k = particle->nlocal-1;
+    ionambi[k] = 0;
+    if (jsp != e) return;
+
+    if (ionambi[i] == 0 && kp->ispecies != e) {
+      ionambi[k] = 0;
+    } else if (ionambi[i] == 1) {
+      if (ions[ip->ispecies]) {
+        ionambi[i] = 1;
+        ip->flag = j;         // j may be negative index
+      } else if (ions[kp->ispecies]) {
+        ionambi[i] = 0;
+        ionambi[k] = 1;
+        kp->flag = j;         // j may be negative index
+      }
+    } else if (ionambi[i] == 0 && kp->ispecies == e) {
+      ionambi[i] = 1;
+      ip->flag = k;           // k is index >= 0
+    }
+
+  // 2 reactants become 2 products
+  // neither of reactants can be an electron
+
+  } else if (jp) {
+    if (ionambi[i] == 0 && ionambi[j] == 0) {
+      if (jp->ispecies == e) {
+        ionambi[i] = 1;
+        ip->flag = j;         // j is index >= 0
+      }
+    } else if (ionambi[i]) {
+      if (ions[jp->ispecies]) {
+        ionambi[i] = 0;
+        ionambi[j] = 1;
+        jp->flag = ip->flag;
+      }
+    } else if (ionambi[j]) {
+      if (ions[ip->ispecies]) {
+        ionambi[j] = 0;
+        ionambi[i] = 1;
+        ip->flag = jp->flag;
+      }
+    }
+
+  // 2 reactants become 1 product
+  // electron is also de-coupled from ion by setting ionambi to 0
+
+  } else if (!jp) {
+    if (isp != e && ionambi[i] && jsp == e) ionambi[i] = 0;
   }
 }
 

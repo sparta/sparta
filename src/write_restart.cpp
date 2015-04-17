@@ -36,13 +36,12 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
-     SPECIES,MIXTURE,GRID,SURF,
-     MULTIPROC,PROCSPERFILE,PERPROC,
-     GRID_WEIGHT};              // new fields added after PERPROC
+     SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
+     MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
 /* ---------------------------------------------------------------------- */
 
@@ -364,6 +363,8 @@ void WriteRestart::particle_params()
   particle->write_restart_species(fp);
   write_int(MIXTURE,0);
   particle->write_restart_mixture(fp);
+  write_int(PARTICLE_CUSTOM,0);
+  particle->write_restart_custom(fp);
 }
 
 /* ----------------------------------------------------------------------

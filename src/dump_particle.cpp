@@ -33,7 +33,7 @@ using namespace SPARTA_NS;
 // customize by adding keyword
 
 enum{ID,TYPE,PROC,X,Y,Z,XS,YS,ZS,VX,VY,VZ,KE,EROT,EVIB,
-     COMPUTE,FIX,VARIABLE};
+     CUSTOM,COMPUTE,FIX,VARIABLE};
 enum{LT,LE,GT,GE,EQ,NEQ};
 enum{INT,DOUBLE,CELLINT,STRING};    // many files
 
@@ -71,6 +71,10 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
 
   memory->create(field2index,nfield,"dump:field2index");
   memory->create(argindex,nfield,"dump:argindex");
+
+  ncustom = 0;
+  id_custom = NULL;
+  custom = NULL;
 
   ncompute = 0;
   id_compute = NULL;
@@ -146,6 +150,10 @@ DumpParticle::~DumpParticle()
   memory->destroy(thresh_array);
   memory->destroy(thresh_op);
   memory->destroy(thresh_value);
+
+  for (int i = 0; i < ncustom; i++) delete [] id_custom[i];
+  memory->sfree(id_custom);
+  delete [] custom;
 
   for (int i = 0; i < ncompute; i++) delete [] id_compute[i];
   memory->sfree(id_compute);
@@ -225,6 +233,16 @@ void DumpParticle::init_style()
   else if (buffer_flag == 1) write_choice = &DumpParticle::write_string;
   else write_choice = &DumpParticle::write_text;
 
+  // check that each particle custom attribute still exists
+
+  int icustom;
+  for (int i = 0; i < ncustom; i++) {
+    icustom = particle->find_custom(id_custom[i]);
+    if (icustom < 0)
+      error->all(FLERR,"Could not find dump particle custom attribute");
+    custom[i] = icustom;
+  }
+
   // find current ptr for each compute,fix,variable
   // check that fix frequency is acceptable
 
@@ -259,7 +277,7 @@ void DumpParticle::init_style()
   if (iregion >= 0) {
     iregion = domain->find_region(idregion);
     if (iregion == -1)
-      error->all(FLERR,"Region ID for dump custom does not exist");
+      error->all(FLERR,"Region ID for dump particle does not exist");
   }
 
   // open single file, one time only
@@ -366,15 +384,17 @@ int DumpParticle::count()
   // un-choose if any threshhold criterion isn't met
 
   if (nthresh) {
+    int ptrstyle,nstride;
+    int *iptr;
     double *ptr;
     double value;
-    int nstride;
 
     Particle::OnePart *particles = particle->particles;
     int nlocal = particle->nlocal;
     
     for (int ithresh = 0; ithresh < nthresh; ithresh++) {
-
+      ptrstyle = DOUBLE;
+      
       // customize by adding to if statement
 
       if (thresh_array[ithresh] == ID) {
@@ -460,6 +480,32 @@ int DumpParticle::count()
 	ptr = dchoose;
 	nstride = 1;
 
+      } else if (thresh_array[ithresh] == CUSTOM) {
+	i = nfield + ithresh;
+        int index = custom[field2index[i]];
+        if (particle->etype[index] == INT) {
+          ptrstyle = INT;
+          if (particle->etype[index] == 0) {
+            iptr = particle->eivec[particle->ewhich[index]];
+            nstride = 1;
+          } else {
+            int **iptrtmp = particle->eiarray[particle->ewhich[index]];
+            if (iptrtmp) iptr = &iptrtmp[0][0];
+            else iptr = NULL;
+            nstride = particle->esize[index];
+          }
+        } else {
+          if (particle->etype[index] == 0) {
+            ptr = particle->edvec[particle->ewhich[index]];
+            nstride = 1;
+          } else {
+            double **ptrtmp = particle->edarray[particle->ewhich[index]];
+            if (ptrtmp) ptr = &ptrtmp[0][0];
+            else ptr = NULL;
+            nstride = particle->esize[index];
+          }
+        }
+
       } else if (thresh_array[ithresh] == COMPUTE) {
 	i = nfield + ithresh;
 	if (argindex[i] == 0) {
@@ -490,24 +536,47 @@ int DumpParticle::count()
 
       value = thresh_value[ithresh];
 
-      if (thresh_op[ithresh] == LT) {
-	for (i = 0; i < nlocal; i++, ptr += nstride)
-	  if (choose[i] && *ptr >= value) choose[i] = 0;
-      } else if (thresh_op[ithresh] == LE) {
-	for (i = 0; i < nlocal; i++, ptr += nstride)
-	  if (choose[i] && *ptr > value) choose[i] = 0;
-      } else if (thresh_op[ithresh] == GT) {
-	for (i = 0; i < nlocal; i++, ptr += nstride)
-	  if (choose[i] && *ptr <= value) choose[i] = 0;
-      } else if (thresh_op[ithresh] == GE) {
-	for (i = 0; i < nlocal; i++, ptr += nstride)
-	  if (choose[i] && *ptr < value) choose[i] = 0;
-      } else if (thresh_op[ithresh] == EQ) {
-	for (i = 0; i < nlocal; i++, ptr += nstride)
-	  if (choose[i] && *ptr != value) choose[i] = 0;
-      } else if (thresh_op[ithresh] == NEQ) {
-	for (i = 0; i < nlocal; i++, ptr += nstride)
-	  if (choose[i] && *ptr == value) choose[i] = 0;
+      if (ptrstyle == DOUBLE) {
+        if (thresh_op[ithresh] == LT) {
+          for (i = 0; i < nlocal; i++, ptr += nstride)
+            if (choose[i] && *ptr >= value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == LE) {
+          for (i = 0; i < nlocal; i++, ptr += nstride)
+            if (choose[i] && *ptr > value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == GT) {
+          for (i = 0; i < nlocal; i++, ptr += nstride)
+            if (choose[i] && *ptr <= value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == GE) {
+          for (i = 0; i < nlocal; i++, ptr += nstride)
+            if (choose[i] && *ptr < value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == EQ) {
+          for (i = 0; i < nlocal; i++, ptr += nstride)
+            if (choose[i] && *ptr != value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == NEQ) {
+          for (i = 0; i < nlocal; i++, ptr += nstride)
+            if (choose[i] && *ptr == value) choose[i] = 0;
+        }
+
+      } else if (ptrstyle == INT) {
+        if (thresh_op[ithresh] == LT) {
+          for (i = 0; i < nlocal; i++, iptr += nstride)
+            if (choose[i] && *iptr >= value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == LE) {
+          for (i = 0; i < nlocal; i++, iptr += nstride)
+            if (choose[i] && *iptr > value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == GT) {
+          for (i = 0; i < nlocal; i++, iptr += nstride)
+            if (choose[i] && *iptr <= value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == GE) {
+          for (i = 0; i < nlocal; i++, iptr += nstride)
+            if (choose[i] && *iptr < value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == EQ) {
+          for (i = 0; i < nlocal; i++, iptr += nstride)
+            if (choose[i] && *iptr != value) choose[i] = 0;
+        } else if (thresh_op[ithresh] == NEQ) {
+          for (i = 0; i < nlocal; i++, iptr += nstride)
+            if (choose[i] && *iptr == value) choose[i] = 0;
+        }
       }
     }
   }
@@ -631,6 +700,44 @@ int DumpParticle::parse_fields(int narg, char **arg)
       pack_choice[i] = &DumpParticle::pack_evib;
       vtype[i] = DOUBLE;
 
+    // custom particle vector or array
+    // if no trailing [], then arg is set to 0, else arg is int between []
+
+    } else if (strncmp(arg[iarg],"p_",2) == 0) {
+      pack_choice[i] = &DumpParticle::pack_custom;
+
+      int n = strlen(arg[iarg]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[iarg][2]);
+
+      char *ptr = strchr(suffix,'[');
+      if (ptr) {
+	if (suffix[strlen(suffix)-1] != ']')
+	  error->all(FLERR,"Invalid attribute in dump particle command");
+	argindex[i] = atoi(ptr+1);
+	*ptr = '\0';
+      } else argindex[i] = 0;
+
+      n = particle->find_custom(suffix);
+      if (n < 0) 
+        error->all(FLERR,"Could not find dump particle custom attribute");
+
+      vtype[i] = particle->etype[n];
+      if (argindex[i] == 0 && particle->esize[n] > 0)
+	error->all(FLERR,
+		   "Dump particle custom attribute does not store "
+		   "per-particle vector");
+      if (argindex[i] > 0 && particle->esize[n] == 0)
+	error->all(FLERR,
+		   "Dump particle custom attribute does not store "
+		   "per-particle array");
+      if (argindex[i] > 0 && argindex[i] > particle->esize[n])
+	error->all(FLERR,
+		   "Dump particle custom attribute is accessed out-of-range");
+
+      field2index[i] = add_custom(suffix);
+      delete [] suffix;
+
     // compute value = c_ID
     // if no trailing [], then arg is set to 0, else arg is int between []
 
@@ -736,7 +843,7 @@ int DumpParticle::parse_fields(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   add Compute to list of Compute objects used by dump
+   add Compute ID to list of Compute IDs used by dump
    return index of where this Compute is in list
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
@@ -761,7 +868,7 @@ int DumpParticle::add_compute(char *id)
 }
 
 /* ----------------------------------------------------------------------
-   add Fix to list of Fix objects used by dump
+   add Fix ID to list of Fix IDs used by dump
    return index of where this Fix is in list
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
@@ -786,7 +893,7 @@ int DumpParticle::add_fix(char *id)
 }
 
 /* ----------------------------------------------------------------------
-   add Variable to list of Variables used by dump
+   add Variable ID to list of Variable IDs used by dump
    return index of where this Variable is in list
    if already in list, do not add, just return index, else add to list
 ------------------------------------------------------------------------- */
@@ -812,6 +919,31 @@ int DumpParticle::add_variable(char *id)
   strcpy(id_variable[nvariable],id);
   nvariable++;
   return nvariable-1;
+}
+
+/* ----------------------------------------------------------------------
+   add Custom ID to list of particle custom attribute IDs used by dump
+   return index of where this custom attribute is in list
+   if already in list, do not add, just return index, else add to list
+------------------------------------------------------------------------- */
+
+int DumpParticle::add_custom(char *id)
+{
+  int icustom;
+  for (icustom = 0; icustom < ncustom; icustom++)
+    if (strcmp(id,id_custom[icustom]) == 0) break;
+  if (icustom < ncustom) return icustom;
+  
+  id_custom = (char **)
+    memory->srealloc(id_custom,(ncustom+1)*sizeof(char *),"dump:id_custom");
+  delete [] custom;
+  custom = new int[ncustom+1];
+
+  int n = strlen(id) + 1;
+  id_custom[ncustom] = new char[n];
+  strcpy(id_custom[ncustom],id);
+  ncustom++;
+  return ncustom-1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -874,11 +1006,54 @@ int DumpParticle::modify_param(int narg, char **arg)
     else if (strcmp(arg[1],"vy") == 0) thresh_array[nthresh] = VY;
     else if (strcmp(arg[1],"vz") == 0) thresh_array[nthresh] = VZ;
 
+    else if (strcmp(arg[1],"ke") == 0) thresh_array[nthresh] = KE;
+    else if (strcmp(arg[1],"erot") == 0) thresh_array[nthresh] = EROT;
+    else if (strcmp(arg[1],"evib") == 0) thresh_array[nthresh] = EVIB;
+
+    // custom particle vector or array
+    // if no trailing [], then arg is set to 0, else arg is int between []
+
+    else if (strncmp(arg[1],"p_",2) == 0) {
+      thresh_array[nthresh] = CUSTOM;
+      memory->grow(field2index,nfield+nthresh+1,"dump:field2index");
+      memory->grow(argindex,nfield+nthresh+1,"dump:argindex");
+      int n = strlen(arg[1]);
+      char *suffix = new char[n];
+      strcpy(suffix,&arg[1][2]);
+    
+      char *ptr = strchr(suffix,'[');
+      if (ptr) {
+	if (suffix[strlen(suffix)-1] != ']')
+	  error->all(FLERR,"Invalid attribute in dump modify command");
+	argindex[nfield+nthresh] = atoi(ptr+1);
+	*ptr = '\0';
+      } else argindex[nfield+nthresh] = 0;
+
+      n = particle->find_custom(suffix);
+      if (n < 0) 
+        error->all(FLERR,"Could not find dump modify custom attribute");
+
+      if (argindex[nfield+nthresh] == 0 && particle->esize[n] > 0)
+	error->all(FLERR,
+		   "Dump modify custom attribute does not store "
+		   "per-particle vector");
+      if (argindex[nfield+nthresh] > 0 && particle->esize[n] == 0)
+	error->all(FLERR,
+		   "Dump modify custom attribute does not store "
+		   "per-particle array");
+      if (argindex[nfield+nthresh] > 0 && 
+          argindex[nfield+nthresh] > particle->esize[n])
+	error->all(FLERR,
+		   "Dump modify custom attribute is accessed out-of-range");
+
+      field2index[nfield+nthresh] = add_custom(suffix);
+      delete [] suffix;
+
     // compute value = c_ID
     // if no trailing [], then arg is set to 0, else arg is between []
     // must grow field2index and argindex arrays, since access is beyond nfield
 
-    else if (strncmp(arg[1],"c_",2) == 0) {
+    } else if (strncmp(arg[1],"c_",2) == 0) {
       thresh_array[nthresh] = COMPUTE;
       memory->grow(field2index,nfield+nthresh+1,"dump:field2index");
       memory->grow(argindex,nfield+nthresh+1,"dump:argindex");
@@ -1070,6 +1245,47 @@ void DumpParticle::pack_variable(int n)
   for (int i = 0; i < nchoose; i++) {
     buf[n] = vector[clist[i]];
     n += size_one;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   extraction of particle custom attribute
+------------------------------------------------------------------------- */
+
+void DumpParticle::pack_custom(int n)
+{
+  int index = custom[field2index[n]];
+  
+  if (particle->etype[index] == INT) {
+    if (particle->esize[index] == 0) {
+      int *vector = particle->eivec[particle->ewhich[index]];
+      for (int i = 0; i < nchoose; i++) {
+        buf[n] = vector[clist[i]];
+        n += size_one;
+      }
+    } else {
+      int icol = argindex[n]-1;
+      int **array = particle->eiarray[particle->ewhich[index]];
+      for (int i = 0; i < nchoose; i++) {
+        buf[n] = array[clist[i]][icol];
+        n += size_one;
+      }
+    }
+  } else {
+    if (particle->esize[index] == 0) {
+      double *vector = particle->edvec[particle->ewhich[index]];
+      for (int i = 0; i < nchoose; i++) {
+        buf[n] = vector[clist[i]];
+        n += size_one;
+      }
+    } else {
+      int icol = argindex[n]-1;
+      double **array = particle->edarray[particle->ewhich[index]];
+      for (int i = 0; i < nchoose; i++) {
+        buf[n] = array[clist[i]][icol];
+        n += size_one;
+      }
+    }
   }
 }
 

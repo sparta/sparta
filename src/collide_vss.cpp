@@ -169,10 +169,12 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
 
  double nattempt;
 
+ // return 2x the value for igroup != jgroup, since no J,I pairing
+
  double npairs;
  if (igroup == jgroup) npairs = 0.5 * ngroup[igroup] * (ngroup[igroup]-1);
-// else npairs = ngroup[igroup] * (ngroup[jgroup]);
- else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
+ else npairs = ngroup[igroup] * (ngroup[jgroup]);
+ //else npairs = 0.5 * ngroup[igroup] * (ngroup[jgroup]);
 
  nattempt = npairs * vremax[icell][igroup][jgroup] * dt * fnum / volume;
 
@@ -228,28 +230,12 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
-  double *vi = ip->v;
-  double *vj = jp->v;
 
   precoln.vr = sqrt(precoln.vr2);
 
-  precoln.rotdof_i = species[isp].rotdof;
-  precoln.rotdof_j = species[jsp].rotdof;
-
-  precoln.vibdof_i = species[isp].vibdof;
-  precoln.vibdof_j = species[jsp].vibdof;
-
-  precoln.ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
-  precoln.ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.;
-
+  precoln.ave_rotdof = 0.5 * (species[isp].rotdof + species[jsp].rotdof);
+  precoln.ave_vibdof = 0.5 * (species[isp].vibdof + species[jsp].vibdof);
   precoln.ave_dof = (precoln.ave_rotdof  + precoln.ave_vibdof)/2.;
-
-  // COM velocity calculated using reactant masses
-
-  double divisor = species[isp].mass + species[jsp].mass; 
-  precoln.ucmf = ((species[isp].mass*vi[0]) + (species[jsp].mass*vj[0])) / divisor;
-  precoln.vcmf = ((species[isp].mass*vi[1]) + (species[jsp].mass*vj[1])) / divisor;
-  precoln.wcmf = ((species[isp].mass*vi[2]) + (species[jsp].mass*vj[2])) / divisor;
 
   precoln.mr = species[isp].mass * species[jsp].mass /
     (species[isp].mass + species[jsp].mass);
@@ -261,6 +247,15 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   precoln.eint   = precoln.erot + precoln.evib;
   precoln.etotal = precoln.etrans + precoln.eint;
 
+  // COM velocity calculated using reactant masses
+
+  double divisor = 1.0 / (species[isp].mass + species[jsp].mass);
+  double *vi = ip->v;
+  double *vj = jp->v;
+  precoln.ucmf = ((species[isp].mass*vi[0])+(species[jsp].mass*vj[0]))*divisor;
+  precoln.vcmf = ((species[isp].mass*vi[1])+(species[jsp].mass*vj[1]))*divisor;
+  precoln.wcmf = ((species[isp].mass*vi[2])+(species[jsp].mass*vj[2]))*divisor;
+
   postcoln.etrans = precoln.etrans;
   postcoln.erot = 0.0;
   postcoln.evib = 0.0;
@@ -270,29 +265,28 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
 /* ---------------------------------------------------------------------- */
 
-Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *&ip, 
-                                                 Particle::OnePart *&jp)
+int CollideVSS::perform_collision(Particle::OnePart *&ip, 
+                                  Particle::OnePart *&jp, 
+                                  Particle::OnePart *&kp)
 {
   double x[3],v[3];
+  int reactflag,kspecies;
 
-  Particle::Species *species = particle->species;
-  int reaction,kspecies;
+  // if gas-phase chemistry defined, attempt and perform reaction
+  // if a 3rd particle is created, its kspecies is returned
 
   if (react) { 
-    reaction = react->attempt(ip,jp,
-                              precoln.etrans,precoln.erot,
-                              precoln.evib,postcoln.etotal,kspecies);
+    reactflag = react->attempt(ip,jp,
+                               precoln.etrans,precoln.erot,
+                               precoln.evib,postcoln.etotal,kspecies);
   }
-  else reaction = 0;
+  else reactflag = 0;
  
   // add a 3rd particle if necessary, index = nlocal-1
-  // if add_particle performs a realloc:
+  // if add_particle() performs a realloc:
   //   make copy of x,v, then repoint ip,jp to new particles data struct
 
-  Particle::OnePart *kp = NULL;
-
-  if (reaction) {
-    nreact_one++;
+  if (reactflag) {
     if (kspecies >= 0) {
       int id = MAXSMALLINT*random->uniform();
 
@@ -311,16 +305,18 @@ Particle::OnePart *CollideVSS::perform_collision(Particle::OnePart *&ip,
       SCATTER_ThreeBodyScattering(ip,jp,kp);
 
     } else {
+      kp = NULL;
       EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_TwoBodyScattering(ip,jp);
     }
 
   } else { 
+    kp = NULL;
     if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
     SCATTER_TwoBodyScattering(ip,jp);
   }
 
-  return kp;
+  return reactflag;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -374,13 +370,13 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   
   // new velocities for the products
 
-  double divisor = mass_i + mass_j;
-  vi[0] = precoln.ucmf - (mass_j/divisor)*ua;
-  vi[1] = precoln.vcmf - (mass_j/divisor)*vb;
-  vi[2] = precoln.wcmf - (mass_j/divisor)*wc;
-  vj[0] = precoln.ucmf + (mass_i/divisor)*ua;
-  vj[1] = precoln.vcmf + (mass_i/divisor)*vb;
-  vj[2] = precoln.wcmf + (mass_i/divisor)*wc;
+  double divisor = 1.0 / (mass_i + mass_j);
+  vi[0] = precoln.ucmf - (mass_j*divisor)*ua;
+  vi[1] = precoln.vcmf - (mass_j*divisor)*vb;
+  vi[2] = precoln.wcmf - (mass_j*divisor)*wc;
+  vj[0] = precoln.ucmf + (mass_i*divisor)*ua;
+  vj[1] = precoln.vcmf + (mass_i*divisor)*vb;
+  vj[2] = precoln.wcmf + (mass_i*divisor)*wc;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -544,13 +540,13 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
 
   // new velocities for the products
 
-  double divisor = mass_ij + mass_k;
-  vi[0] = precoln.ucmf - (mass_ij/divisor)*ua;
-  vi[1] = precoln.vcmf - (mass_ij/divisor)*vb;
-  vi[2] = precoln.wcmf - (mass_ij/divisor)*wc;
-  vk[0] = precoln.ucmf + (mass_k/divisor)*ua;
-  vk[1] = precoln.vcmf + (mass_k/divisor)*vb;
-  vk[2] = precoln.wcmf + (mass_k/divisor)*wc;
+  double divisor = 1.0 / (mass_ij + mass_k);
+  vi[0] = precoln.ucmf - (mass_ij*divisor)*ua;
+  vi[1] = precoln.vcmf - (mass_ij*divisor)*vb;
+  vi[2] = precoln.wcmf - (mass_ij*divisor)*wc;
+  vk[0] = precoln.ucmf + (mass_k*divisor)*ua;
+  vk[1] = precoln.vcmf + (mass_k*divisor)*vb;
+  vk[2] = precoln.wcmf + (mass_k*divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];

@@ -68,6 +68,10 @@ class DumpParticle : public Dump {
   int *variable;             // list of indices for the Variables
   double **vbuf;             // local storage for variable evaluation
 
+  int ncustom;               // # of particle Custom attributes used by dump
+  char **id_custom;          // their IDs
+  int *custom;               // list of indices for the Custom attributes
+
   int ntypes;                // # of particle types
   char **typenames;	     // array of element names for each type
 
@@ -80,6 +84,7 @@ class DumpParticle : public Dump {
   int parse_fields(int, char **);
   int add_compute(char *);
   int add_fix(char *);
+  int add_custom(char *);
   int add_variable(char *);
   virtual int modify_param(int, char **);
 
@@ -102,6 +107,7 @@ class DumpParticle : public Dump {
   void pack_compute(int);
   void pack_fix(int);
   void pack_variable(int);
+  void pack_custom(int);
 
   void pack_id(int);
   void pack_type(int);

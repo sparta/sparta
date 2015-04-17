@@ -14,6 +14,9 @@
 
 #include "math.h"
 #include "surf_collide_specular.h"
+#include "surf.h"
+#include "surf_react.h"
+#include "modify.h"
 #include "math_extra.h"
 #include "error.h"
 
@@ -28,16 +31,43 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
 }
 
 /* ----------------------------------------------------------------------
-   particle collision with surface
-   p = particle with current x = collision pt, current v = incident v
+   particle collision with surface with optional chemistry
+   ip = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
-   resets p->v to post-collision outward velocity
+   ip = set to NULL if destroyed by chemsitry
+   return jp = new particle if created by chemistry
+   resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
-void SurfCollideSpecular::collide(Particle::OnePart *p, double *norm)
+Particle::OnePart *SurfCollideSpecular::
+collide(Particle::OnePart *&ip, double *norm, int isr)
 {
-  // specular reflection
+  // if surface chemistry defined, attempt reaction
+  // reaction = 1 if reaction took place
+
+  Particle::OnePart iorig;
+  Particle::OnePart *jp = NULL;
+  int reaction = 0;
+
+  if (isr >= 0) {
+    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
+    reaction = surf->sr[isr]->react(ip,norm,jp);
+    if (reaction) surf->nreact_one++;
+  }
+
+  // specular reflection for each particle
   // reflect incident v around norm
 
-  MathExtra::reflect3(p->v,norm);
+  if (ip) MathExtra::reflect3(ip->v,norm);
+  if (jp) MathExtra::reflect3(jp->v,norm);
+
+  if (reaction && modify->n_surf_react) {
+    int i = -1;
+    if (ip) i = (ip - particle->particles) / sizeof(Particle::OnePart);
+    int j = -1;
+    if (jp) j = (jp - particle->particles) / sizeof(Particle::OnePart);
+    modify->surf_react(&iorig,i,j);
+  }
+    
+  return jp;
 }

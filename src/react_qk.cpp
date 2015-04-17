@@ -176,6 +176,18 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     }
 
     // test against random number to see if this reaction occurs
+    // if it does, reset species of I,J and optional K to product species
+    // important NOTE:
+    //   does not matter what order I,J reactants are in compared
+    //     to order the reactants are listed in the reaction file
+    //   for two reasons:
+    //   a) list of N possible reactions above includes all reactions
+    //      that I,J species are in, regardless of order
+    //   b) properties of pre-reaction state, stored in precoln,
+    //      as computed by setup_collision(),
+    //      and used by perform_collision() after reaction has taken place,
+    //      only store combined properties of I,J,
+    //      nothing that is I-specific or J-specific
     
     if (react_prob > random_prob) {
       ip->ispecies = r->products[0];

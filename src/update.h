@@ -96,6 +96,9 @@ class Update : protected Pointers {
   class Compute **slist_active;   // list of active surf Computes this step
   class Compute **blist_active;   // list of active boundary Computes this step
   
+  int surf_pre_tally;       // 1 to log particle stats before surf collide
+  int boundary_pre_tally;   // 1 to log particle stats before boundary collide
+
   int bounce_setup();
   void bounce_set(bigint);
   void reset_timestep(bigint);

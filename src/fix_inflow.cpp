@@ -21,6 +21,7 @@
 #include "particle.h"
 #include "mixture.h"
 #include "domain.h"
+#include "modify.h"
 #include "grid.h"
 #include "surf.h"
 #include "comm.h"
@@ -37,7 +38,7 @@ using namespace MathConst;
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // same as Grid
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{NO,YES};
 
@@ -620,7 +621,7 @@ void FixInflow::init()
 
 void FixInflow::start_of_step()
 {
-  int pcell,ninsert,isp,ndim,pdim,qdim,id;
+  int pcell,ninsert,isp,ispecies,ndim,pdim,qdim,id;
   double *lo,*hi,*normal;
   double x[3],v[3];
   double indot,scosine,rn,ntarget,vr;
@@ -635,6 +636,7 @@ void FixInflow::start_of_step()
   double dt = update->dt;
 
   int nspecies = particle->mixture[imix]->nspecies;
+  int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
@@ -663,6 +665,7 @@ void FixInflow::start_of_step()
   //   when streaming velocity is small enough
   // need to insure two do-while loops below do not spin endlessly
 
+  int nfix_add_particle = modify->n_add_particle;
   nsingle = 0;
 
   for (int i = 0; i < ncf; i++) {
@@ -678,6 +681,7 @@ void FixInflow::start_of_step()
 
     if (perspecies == YES) {
       for (isp = 0; isp < nspecies; isp++) {
+        ispecies = species[isp];
 	ntarget = cellface[i].ntargetsp[isp]+random->uniform();
 	ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
@@ -703,14 +707,17 @@ void FixInflow::start_of_step()
           vr = vscale[isp] * sqrt(-log(random->uniform()));
           v[pdim] = vr * sin(theta) + vstream[pdim];
           v[qdim] = vr * cos(theta) + vstream[qdim];
-          erot = particle->erot(isp,temp_thermal,random);
-          evib = particle->evib(isp,temp_thermal,random);
+          erot = particle->erot(ispecies,temp_thermal,random);
+          evib = particle->evib(ispecies,temp_thermal,random);
           id = MAXSMALLINT*random->uniform();
-	  particle->add_particle(id,isp,pcell,x,v,erot,evib);
+	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
 
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
           p->dtremain = dt * random->uniform();
+
+          if (nfix_add_particle) 
+            modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
 	}
 
 	nsingle += ninsert;
@@ -729,6 +736,7 @@ void FixInflow::start_of_step()
 	rn = random->uniform();
 	isp = 0;
 	while (cummulative[isp] < rn) isp++;
+        ispecies = species[isp];
         scosine = indot / vscale[isp];
 
 	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
@@ -752,14 +760,17 @@ void FixInflow::start_of_step()
         vr = vscale[isp] * sqrt(-log(random->uniform()));
         v[pdim] = vr * sin(theta) + vstream[pdim];
         v[qdim] = vr * cos(theta) + vstream[qdim];
-        erot = particle->erot(isp,temp_thermal,random);
-        evib = particle->evib(isp,temp_thermal,random);
+        erot = particle->erot(ispecies,temp_thermal,random);
+        evib = particle->evib(ispecies,temp_thermal,random);
         id = MAXSMALLINT*random->uniform();
-	particle->add_particle(id,isp,pcell,x,v,erot,evib);
+	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
 
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;
         p->dtremain = dt * random->uniform();
+
+        if (nfix_add_particle) 
+          modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
       }
 
       nsingle += ninsert;
@@ -770,7 +781,8 @@ void FixInflow::start_of_step()
 }
 
 /* ----------------------------------------------------------------------
-   calculate flux of particles of species ISP entering a grid cell
+   calculate flux of particles of a species with vscale/fraction
+     entering a grid cell
    indot = vstream dotted into face normal, assumed to be >= 0.0
    scosine = s cos(theta) in Bird notation where vscale = 1/beta
    see Bird 1994, eq 4.22

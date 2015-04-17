@@ -45,8 +45,8 @@ class Collide : protected Pointers {
   virtual int test_collision(int, int, int, 
 			     Particle::OnePart *, Particle::OnePart *) = 0;
   virtual void setup_collision(Particle::OnePart *, Particle::OnePart *) = 0;
-  virtual Particle::OnePart *perform_collision(Particle::OnePart *&, 
-					       Particle::OnePart *&) = 0;
+  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
+                                Particle::OnePart *&) = 0;
 
   virtual double extract(int, const char *) {return 0.0;}
 
@@ -70,6 +70,9 @@ class Collide : protected Pointers {
   int **gpair;        // Nx3 list of species pairs to do collisions for
                       // 0 = igroup, 1 = jgroup, 2 = # of attempt collisions
 
+  int ndelete,maxdelete;      // # of particles removed by chemsitry
+  int *dellist;               // list of particle indices to delete
+
   char *mixID;               // ID of mixture to use for groups
   class Mixture *mixture;    // ptr to mixture
   class RanPark *random;     // RNG for collision generation
@@ -84,6 +87,19 @@ class Collide : protected Pointers {
   double ***remain;   // collision number remainder, per cell, per group pair
   double **vremax_initial;   // initial vremax value, per group pair
 
+  // ambipolar approximation data structs
+
+  int ambiflag;       // 1 if ambipolar option is enabled
+  int ambispecies;    // species for ambipolar electrons
+  int index_ionambi;  // 2 custom ambipolar vectors
+  int index_velambi;
+  int *ions;          // ptr to fix ambipolar list of ions
+
+  int nelectron;                // # of ambipolar electrons in elist
+  int maxelectron;              // max # elist can hold
+  Particle::OnePart *elist;     // list of ambipolar electrons
+                                // for one grid cell or pair of groups in cell
+
   inline void addgroup(int igroup, int n)
   {
     if (ngroup[igroup] == maxgroup[igroup]) {
@@ -95,6 +111,11 @@ class Collide : protected Pointers {
 
   void collisions_one();
   void collisions_group();
+  void collisions_one_ambipolar();
+  void collisions_group_ambipolar();
+  void ambi_reset(int, int, int, int, Particle::OnePart *, Particle::OnePart *, 
+                  Particle::OnePart *, int *);
+  void ambi_check();
   void grow_percell(int);
 };
 

@@ -12,26 +12,29 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifdef SURF_COLLIDE_CLASS
+#ifdef SURF_REACT_CLASS
 
-SurfCollideStyle(specular,SurfCollideSpecular)
+SurfReactStyle(global,SurfReactGlobal)
 
 #else
 
-#ifndef SPARTA_SURF_COLLIDE_SPECULAR_H
-#define SPARTA_SURF_COLLIDE_SPECULAR_H
+#ifndef SPARTA_SURF_REACT_GLOBAL_H
+#define SPARTA_SURF_REACT_GLOBAL_H
 
-#include "surf_collide.h"
-#include "particle.h"
+#include "surf_react.h"
 
 namespace SPARTA_NS {
 
-class SurfCollideSpecular : public SurfCollide {
+class SurfReactGlobal : public SurfReact {
  public:
-  SurfCollideSpecular(class SPARTA *, int, char **);
-  ~SurfCollideSpecular() {}
+  SurfReactGlobal(class SPARTA *, int, char **);
+  ~SurfReactGlobal();
   void init() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, int);
+  int react(Particle::OnePart *&, double *, Particle::OnePart *&);
+
+ private:
+  double prob_create,prob_destroy;
+  class RanPark *random;     // RNG for reaction probabilities
 };
 
 }

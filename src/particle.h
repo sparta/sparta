@@ -82,18 +82,34 @@ class Particle : protected Pointers {
 
   int *next;                // index of next particle in each grid cell
 
+  // extra custom vectors/arrays for per-particle data
+  // ncustom > 0 if there are any extra arrays
+  // custom attributes are created by various commands
+  // these varaiables are public, others below are private
+
+  int ncustom;              // # of custom attributes, some may be deleted
+  int *etype;               // type = INT/DOUBLE of each attribute
+  int *esize;               // size = 0 for vector, N for array columns
+  int *ewhich;              // index into eivec,eiarray,edvec,edarray for data
+
+  int **eivec;              // pointer to each integer vector
+  int ***eiarray;           // pointer to each integer array
+  double **edvec;           // pointer to each double vector
+  double ***edarray;        // pointer to each double array
+
   // restart buffers, filled by read_restart
 
   int nlocal_restart;
-  OnePartRestart *particle_restart;
+  char *particle_restart;
 
   // methods
 
   Particle(class SPARTA *);
   ~Particle();
   void init();
-  void compress(int, int *);
-  void compress();
+  void compress_migrate(int, int *);
+  void compress_rebalance();
+  void compress_reactions(int, int *);
   void sort();
   void grow(int);
   void pre_weight();
@@ -112,9 +128,21 @@ class Particle : protected Pointers {
   void read_restart_species(FILE *fp);
   void write_restart_mixture(FILE *fp);
   void read_restart_mixture(FILE *fp);
+
   int size_restart();
   int pack_restart(char *);
   int unpack_restart(char *);
+
+  int find_custom(char *);
+  int add_custom(char *, int, int);
+  int grow_custom(int, int, int);
+  void remove_custom(int);
+  void copy_custom(int, int);
+  int sizeof_custom();
+  void write_restart_custom(FILE *fp);
+  void read_restart_custom(FILE *fp);
+  void pack_custom(int, char *);
+  void unpack_custom(char *, int);
 
   bigint memory_usage();
 
@@ -130,6 +158,30 @@ class Particle : protected Pointers {
   FILE *fp;                 // species file pointer
 
   class RanPark *wrandom;   // RNG for particle weighting
+
+  // extra custom vectors/arrays for per-particle data
+  // ncustom > 0 if there are any extra arrays
+  // these varaiables are private, others above are public
+
+  char **ename;             // name of each attribute
+
+  int ncustom_ivec;         // # of integer vector attributes
+  int ncustom_iarray;       // # of integer array attributes
+  int *icustom_ivec;        // index into ncustom for each integer vector
+  int *icustom_iarray;      // index into ncustom for each integer array
+  int *eicol;               // # of columns in each integer array (esize)
+
+  int ncustom_dvec;         // # of double vector attributes
+  int ncustom_darray;       // # of double array attributes
+  int *icustom_dvec;        // index into ncustom for each double vector
+  int *icustom_darray;      // index into ncustom for each double array
+  int *edcol;               // # of columns in each double array (esize)
+
+  int *custom_restart_flag; // flag on each custom vec/array read from restart
+                            // used to delete them if not redefined in 
+                            // restart script
+
+  // private methods
 
   void read_species_file();
   int wordcount(char *, char **);

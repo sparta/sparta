@@ -22,6 +22,7 @@
 #include "particle.h"
 #include "grid.h"
 #include "collide.h"
+#include "surf.h"
 #include "comm.h"
 #include "math_extra.h"
 #include "timer.h"
@@ -99,7 +100,7 @@ void Finish::end(int flag, double time_multiple_runs)
   if (statsflag) {
     bigint nmove_total,ntouch_total,ncomm_total;
     bigint nboundary_total,nexit_total;
-    bigint nscheck_total,nscollide_total;
+    bigint nscheck_total,nscollide_total,nsreact_total;
     bigint nattempt_total = 0;
     bigint ncollide_total = 0;
     bigint nreact_total = 0;
@@ -119,6 +120,8 @@ void Finish::end(int flag, double time_multiple_runs)
                   MPI_SPARTA_BIGINT,MPI_SUM,world);
     MPI_Allreduce(&update->nscollide_running,&nscollide_total,1,
                   MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&surf->nreact_running,&nsreact_total,1,
+                  MPI_SPARTA_BIGINT,MPI_SUM,world);
     if (collide) {
       MPI_Allreduce(&collide->nattempt_running,&nattempt_total,1,
                     MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -129,9 +132,9 @@ void Finish::end(int flag, double time_multiple_runs)
     }
     MPI_Allreduce(&update->nstuck,&stuck_total,1,MPI_INT,MPI_SUM,world);
     
-    double pms,pmsp,ctps,cis,pfc,pfcwb,pfeb,schps,sclps,caps,cps,rps;
+    double pms,pmsp,ctps,cis,pfc,pfcwb,pfeb,schps,sclps,srps,caps,cps,rps;
     pms = pmsp = ctps = cis = pfc = pfcwb = pfeb = 
-      schps = sclps = caps = cps = rps = 0.0;
+      schps = sclps = srps = caps = cps = rps = 0.0;
 
     bigint elapsed = update->ntimestep - update->first_running_step;
     if (elapsed) pms = 1.0*nmove_total/elapsed;
@@ -145,6 +148,7 @@ void Finish::end(int flag, double time_multiple_runs)
       pfeb = 1.0*nexit_total/nmove_total;
       schps = 1.0*nscheck_total/nmove_total;
       sclps = 1.0*nscollide_total/nmove_total;
+      srps = 1.0*nsreact_total/nmove_total;
       caps = 1.0*nattempt_total/nmove_total;
       cps = 1.0*ncollide_total/nmove_total;
       rps = 1.0*nreact_total/nmove_total;
@@ -169,11 +173,13 @@ void Finish::end(int flag, double time_multiple_runs)
                 nscheck_total,MathExtra::num2str(nscheck_total,str));
         fprintf(screen,"SurfColl occurs   = " BIGINT_FORMAT " %s\n",
                 nscollide_total,MathExtra::num2str(nscollide_total,str));
+        fprintf(screen,"Surf reactions    = " BIGINT_FORMAT " %s\n",
+                nsreact_total,MathExtra::num2str(nsreact_total,str));
         fprintf(screen,"Collide attempts  = " BIGINT_FORMAT " %s\n",
                 nattempt_total,MathExtra::num2str(nattempt_total,str));
         fprintf(screen,"Collide occurs    = " BIGINT_FORMAT " %s\n",
                 ncollide_total,MathExtra::num2str(ncollide_total,str));
-        fprintf(screen,"Reactions         = " BIGINT_FORMAT " %s\n",
+        fprintf(screen,"Gas reactions     = " BIGINT_FORMAT " %s\n",
                 nreact_total,MathExtra::num2str(nreact_total,str));
         fprintf(screen,"Particles stuck   = %d\n",stuck_total);
 
@@ -187,9 +193,10 @@ void Finish::end(int flag, double time_multiple_runs)
         fprintf(screen,"Particle fraction exiting boundary: %g\n",pfeb);
         fprintf(screen,"Surface-checks/particle/step: %g\n",schps);
         fprintf(screen,"Surface-collisions/particle/step: %g\n",sclps);
+        fprintf(screen,"Surface-reactions/particle/step: %g\n",srps);
         fprintf(screen,"Collision-attempts/particle/step: %g\n",caps);
         fprintf(screen,"Collisions/particle/step: %g\n",cps);
-        fprintf(screen,"Reactions/particle/step: %g\n",rps);
+        fprintf(screen,"Gas-reactions/particle/step: %g\n",rps);
       }
       if (logfile) {
         fprintf(logfile,"\n");
@@ -207,6 +214,8 @@ void Finish::end(int flag, double time_multiple_runs)
                 nscheck_total,MathExtra::num2str(nscheck_total,str));
         fprintf(logfile,"SurfColl occurs   = " BIGINT_FORMAT " %s\n",
                 nscollide_total,MathExtra::num2str(nscollide_total,str));
+        fprintf(logfile,"Surf reactions    = " BIGINT_FORMAT " %s\n",
+                nsreact_total,MathExtra::num2str(nsreact_total,str));
         fprintf(logfile,"Collide attempts  = " BIGINT_FORMAT " %s\n",
                 nattempt_total,MathExtra::num2str(nattempt_total,str));
         fprintf(logfile,"Collide occurs    = " BIGINT_FORMAT " %s\n",
@@ -226,6 +235,7 @@ void Finish::end(int flag, double time_multiple_runs)
         fprintf(logfile,"Particle fraction exiting boundary: %g\n",pfeb);
         fprintf(logfile,"Surface-checks/particle/step: %g\n",schps);
         fprintf(logfile,"Surface-collisions/particle/step: %g\n",sclps);
+        fprintf(logfile,"Surf-reactions/particle/step: %g\n",srps);
         fprintf(logfile,"Collision-attempts/particle/step: %g\n",caps);
         fprintf(logfile,"Collisions/particle/step: %g\n",cps);
         fprintf(logfile,"Reactions/particle/step: %g\n",rps);

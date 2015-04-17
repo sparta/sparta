@@ -24,7 +24,11 @@ class Mixture : protected Pointers {
  public:
   char *id;                   // ID of mixture
   int nspecies;               // # of species in mixture
-  int *species;               // species indices in Particle species list
+  int *species;               // species indices in particle species list
+
+  int ngroup;                 // # of defined groups
+  char **groups;              // group IDs
+  int *mix2group;             // m2g[i] = group that mixture species I is in
 
                               // global attributes
   double nrho;                // number density
@@ -41,34 +45,36 @@ class Mixture : protected Pointers {
   double *fraction;           // relative fraction of each species
   int *fraction_flag;         // 1 if user set fraction for a species
   double *fraction_user;      // user fractional value
-  double *cummulative;        // cummulative fraction for each species
 
-  int ngroup;                 // # of defined groups
-  char **groups;              // group IDs
+  // set by init()
+
+  double *cummulative;        // cummulative fraction for each species
   int *groupsize;             // # of species in each group
-  int *mix2group;             // m2g[i] = group that mixture species I is in
-  int *species2group;         // s2g[i] = group that Particle species I is in
+  int **groupspecies;         // list of particle species in each group
+  int *species2group;         // s2g[i] = group that particle species I is in
                               // -1 if species I not in mixture
   int *species2species;       // s2s[i] = mixture species that 
-                              //   Particle species I is
+                              //   particle species I is
                               // -1 if species I not in mixture
-
   double *vscale;             // pre-computed velocity scale factor
 
   Mixture(class SPARTA *, char *);
   ~Mixture();
+  void copy(Mixture *);
   void command(int, char **);
   void init();
   int init_fraction(int *, double *, double *, double *);
   void add_species_default(char *);
+  int find_group(const char *);
   void write_restart(FILE *fp);
   void read_restart(FILE *fp);
 
  private:
   int maxspecies,maxgroup;
+  int copyflag,copyarg;
 
-  int *active;                // 1 if species is active for mixture command
-  int nactive;                // # of active species for command
+  int activeflag;             // 1 if species are listed in mixture command
+  int *active;                // flags for species listed in mixture command
   int all_default;            // 1 if this is default mixture "all"
   int species_default;        // 1 if this is default mixture "species"
 
@@ -78,7 +84,6 @@ class Mixture : protected Pointers {
   void delete_groups();
   void shrink_groups();
   void add_group(const char *);
-  int find_group(const char *);
 };
 
 }

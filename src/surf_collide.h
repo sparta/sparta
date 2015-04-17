@@ -28,7 +28,7 @@ class SurfCollide : protected Pointers {
   SurfCollide(class SPARTA *, int, char **);
   virtual ~SurfCollide();
   virtual void init() = 0;
-  virtual void collide(Particle::OnePart *, double *) = 0;
+  virtual Particle::OnePart *collide(Particle::OnePart *&, double *, int) = 0;
 
   virtual void dynamic() {}
 };

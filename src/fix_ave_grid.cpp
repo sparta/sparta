@@ -99,6 +99,8 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
       ids[nvalues] = new char[n];
       strcpy(ids[nvalues],suffix);
 
+      // expand an array arg into multiple vectors
+
       if ((which[nvalues] == COMPUTE || which[nvalues] == FIX) && 
           argindex[nvalues] == 0) {
         int ndup = 0;

@@ -27,7 +27,7 @@
 
 using namespace SPARTA_NS;
 
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT};   // several files
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 
 /* ---------------------------------------------------------------------- */
 
@@ -113,7 +113,11 @@ int Comm::migrate_particles(int nmigrate, int *plist)
 
   Grid::ChildCell *cells = grid->cells;
   Particle::OnePart *particles = particle->particles;
-  int nbytes = sizeof(Particle::OnePart);
+
+  int ncustom = particle->ncustom;
+  int nbytes_particle = sizeof(Particle::OnePart);
+  int nbytes_custom = particle->sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
 
   // grow pproc and sbuf if necessary
 
@@ -133,21 +137,37 @@ int Comm::migrate_particles(int nmigrate, int *plist)
   // if flag == PDISCARD, particle is deleted but not sent
   // change icell of migrated particle to owning cell on receiving proc
   // nsend = particles that actually migrate
+  // if no custom attributes, pack particles directly via memcpy()
+  // else pack_custom() performs packing into sbuf
 
   int nsend = 0;
   int offset = 0;
-  for (i = 0; i < nmigrate; i++) {
-    j = plist[i];
-    if (particles[j].flag == PDISCARD) continue;
-    pproc[nsend++] = cells[particles[j].icell].proc;
-    particles[j].icell = cells[particles[j].icell].ilocal;
-    memcpy(&sbuf[offset],&particles[j],nbytes);
-    offset += nbytes;
+
+  if (!ncustom) {
+    for (i = 0; i < nmigrate; i++) {
+      j = plist[i];
+      if (particles[j].flag == PDISCARD) continue;
+      pproc[nsend++] = cells[particles[j].icell].proc;
+      particles[j].icell = cells[particles[j].icell].ilocal;
+      memcpy(&sbuf[offset],&particles[j],nbytes_particle);
+      offset += nbytes_particle;
+    }
+  } else {
+    for (i = 0; i < nmigrate; i++) {
+      j = plist[i];
+      if (particles[j].flag == PDISCARD) continue;
+      pproc[nsend++] = cells[particles[j].icell].proc;
+      particles[j].icell = cells[particles[j].icell].ilocal;
+      memcpy(&sbuf[offset],&particles[j],nbytes_particle);
+      offset += nbytes_particle;
+      particle->pack_custom(j,&sbuf[offset]);
+      offset += nbytes_custom;
+    }
   }
 
   // compress my list of particles
 
-  particle->compress(nmigrate,plist);
+  particle->compress_migrate(nmigrate,plist);
   int ncompress = particle->nlocal;
 
   // create or augment irregular communication plan
@@ -162,12 +182,35 @@ int Comm::migrate_particles(int nmigrate, int *plist)
   particle->grow(nrecv);
 
   // perform irregular communication
-  // append received particles directly to particle list
+  // if no custom attributes, append recv particles directly to particle list
+  // else receive into rbuf, unpack particles one by one via unpack_custom()
 
-  irregular->exchange_uniform(sbuf,nbytes,
-                              (char *) &particle->particles[particle->nlocal]);
+  if (!ncustom)
+    irregular->
+      exchange_uniform(sbuf,nbytes,
+                       (char *) &particle->particles[particle->nlocal]);
+
+  else {
+    if (nrecv*nbytes > maxrecvbuf) {
+      maxrecvbuf = nrecv*nbytes;
+      memory->destroy(rbuf);
+      memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+    }
+
+    irregular->exchange_uniform(sbuf,nbytes,rbuf);
+
+    offset = 0;
+    int nlocal = particle->nlocal;
+    for (i = 0; i < nrecv; i++) {
+      memcpy(&particles[nlocal],&rbuf[offset],nbytes_particle);
+      offset += nbytes_particle;
+      particle->unpack_custom(&rbuf[offset],nlocal);
+      offset += nbytes_custom;
+      nlocal++;
+    }
+  }
+
   particle->nlocal += nrecv;
-
   ncomm += nsend;
   return ncompress;
 }
@@ -237,7 +280,7 @@ void Comm::migrate_cells(int nmigrate)
 
   if (nmigrate) {
     grid->compress();
-    particle->compress();
+    particle->compress_rebalance();
   }
 
   // create irregular communication plan with variable size datums

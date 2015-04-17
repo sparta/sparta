@@ -103,6 +103,8 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
       ids[nvalues] = new char[n];
       strcpy(ids[nvalues],suffix);
 
+      // expand an array arg into multiple vectors
+
       if (mode == VECTOR && 
           (which[nvalues] == COMPUTE || which[nvalues] == FIX) && 
 	  argindex[nvalues] == 0) {

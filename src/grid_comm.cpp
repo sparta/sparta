@@ -18,6 +18,9 @@
 #include "collide.h"
 #include "modify.h"
 
+// DEBUG
+#include "comm.h"
+
 using namespace SPARTA_NS;
 
 // grid cell communication
@@ -97,6 +100,11 @@ int Grid::pack_one(int icell, char *buf,
   // pack particles for unsplit cell or split cell
 
   if (!molflag) return ptr - buf;
+
+  ncustom = particle->ncustom;
+  nbytes_particle = sizeof(Particle::OnePart);
+  nbytes_custom = particle->sizeof_custom();
+  nbytes_total = nbytes_particle + nbytes_custom;
 
   ptr += pack_particles(icell,ptr,memflag);
 
@@ -269,20 +277,22 @@ int Grid::pack_particles(int icell, char *buf, int memflag)
   ptr = ROUNDUP(ptr);
   if (!np) return ptr-buf;
 
-  int nbytes = sizeof(Particle::OnePart);
-
   if (memflag) {
     Particle::OnePart *particles = particle->particles;
     int *next = particle->next;
     int ip = cinfo[icell].first;
 
     while (ip >= 0) {
-      if (memflag) memcpy(ptr,&particles[ip],nbytes);
+      memcpy(ptr,&particles[ip],nbytes_particle);
+      ptr += nbytes_particle;
+      if (ncustom) {
+        particle->pack_custom(ip,ptr);
+        ptr += nbytes_custom;
+      }
       particles[ip].icell = -1;
-      ptr += nbytes;
       ip = next[ip];
     }
-  } else ptr += np * nbytes;
+  } else ptr += np * nbytes_total;
 
   ptr = ROUNDUP(ptr);
   return ptr-buf;
@@ -299,6 +309,7 @@ int Grid::unpack_particles(char *buf, int icell)
   char *ptr = buf;
 
   int np = *((int *) ptr);
+
   ptr += sizeof(int);
   ptr = ROUNDUP(ptr);
   if (!np) return ptr-buf;
@@ -307,10 +318,21 @@ int Grid::unpack_particles(char *buf, int icell)
 
   Particle::OnePart *particles = particle->particles;
   int nplocal = particle->nlocal;
-  int nbytes = sizeof(Particle::OnePart);
 
-  memcpy(&particles[nplocal],ptr,np*nbytes);
-  ptr += np*nbytes;
+  if (ncustom) {
+    int n = nplocal;
+    for (int i = 0; i < np; i++) {
+      memcpy(&particles[n],ptr,nbytes_particle);
+      ptr += nbytes_particle;
+      particle->unpack_custom(ptr,n);
+      ptr += nbytes_custom;
+      n++;
+    }
+  } else {
+    memcpy(&particles[nplocal],ptr,np*nbytes_particle);
+    ptr += np*nbytes_particle;
+  }
+
   ptr = ROUNDUP(ptr);
 
   int npnew = nplocal + np;

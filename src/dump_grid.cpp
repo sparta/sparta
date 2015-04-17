@@ -473,13 +473,15 @@ int DumpGrid::parse_fields(int narg, char **arg)
 	*ptr = '\0';
       } else index = 0;
 
+
+
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid compute ID");
       if (modify->compute[n]->per_grid_flag == 0)
 	error->all(FLERR,"Dump grid compute does not compute per-grid info");
       if (index > 0 && modify->compute[n]->size_per_grid_cols == 0)
 	error->all(FLERR,
-		   "Dump grid compute does not compute  per-grid array");
+		   "Dump grid compute does not compute per-grid array");
       if (index > 0 && index > modify->compute[n]->size_per_grid_cols)
 	error->all(FLERR,"Dump grid compute array is accessed out-of-range");
 

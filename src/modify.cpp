@@ -46,6 +46,9 @@ Modify::Modify(SPARTA *sparta) : Pointers(sparta)
 
   end_of_step_every = NULL;
   list_pergrid = NULL;
+  list_add_particle = NULL;
+  list_gas_react = NULL;
+  list_surf_react = NULL;
   list_timeflag = NULL;
 
   ncompute = maxcompute = 0;
@@ -73,6 +76,9 @@ Modify::~Modify()
 
   delete [] end_of_step_every;
   delete [] list_pergrid;
+  delete [] list_add_particle;
+  delete [] list_gas_react;
+  delete [] list_surf_react;
   delete [] list_timeflag;
 }
 
@@ -84,22 +90,19 @@ void Modify::init()
 {
   int i,j;
 
-  // create lists of fixes to call at each stage of run
+  // create lists of fixes with masks for calling at each stage of run
 
   list_init(START_OF_STEP,n_start_of_step,list_start_of_step);
   list_init_end_of_step(END_OF_STEP,n_end_of_step,list_end_of_step);
 
-  // create list of fixes that store per grid cell info
+  // create other lists of fixes and computes
 
-  list_init_pergrid();
+  list_init_fixes();
+  list_init_computes();
 
   // init each fix
 
   for (i = 0; i < nfix; i++) fix[i]->init();
-
-  // create list of computes that store invocation times
-
-  list_init_timeflag();
 
   // init each compute
   // set invoked_scalar,vector,etc to -1 to force new run to re-compute them
@@ -190,6 +193,36 @@ void Modify::compress_grid(int flag)
   else
     for (int i = 0; i < n_pergrid; i++)
       fix[list_pergrid[i]]->post_compress_grid();
+}
+
+/* ----------------------------------------------------------------------
+   invoke add_particle() method, only for relevant fixes
+------------------------------------------------------------------------- */
+
+void Modify::add_particle(int index, double temp_thermal, double *vstream)
+{
+  for (int i = 0; i < n_add_particle; i++)
+    fix[list_add_particle[i]]->add_particle(index,temp_thermal,vstream);
+}
+
+/* ----------------------------------------------------------------------
+   invoke gas_react() method, only for relevant fixes
+------------------------------------------------------------------------- */
+
+void Modify::gas_react(int index)
+{
+  for (int i = 0; i < n_gas_react; i++)
+    fix[list_gas_react[i]]->gas_react(index);
+}
+
+/* ----------------------------------------------------------------------
+   invoke surf_react() method, only for relevant fixes
+------------------------------------------------------------------------- */
+
+void Modify::surf_react(Particle::OnePart *iorig, int i, int j)
+{
+  for (int m = 0; m < n_surf_react; m++)
+    fix[list_surf_react[i]]->surf_react(iorig,i,j);
 }
 
 /* ----------------------------------------------------------------------
@@ -432,28 +465,43 @@ void Modify::list_init_end_of_step(int mask, int &n, int *&list)
 }
 
 /* ----------------------------------------------------------------------
-   create list of fix indices for fixes which store per grid cell info
+   create list of indices for fixes with various attributes
 ------------------------------------------------------------------------- */
 
-void Modify::list_init_pergrid()
+void Modify::list_init_fixes()
 {
   delete [] list_pergrid;
+  delete [] list_add_particle;
+  delete [] list_gas_react;
+  delete [] list_surf_react;
 
-  n_pergrid = 0;
-  for (int i = 0; i < nfix; i++)
+  n_pergrid = n_add_particle = n_gas_react = n_surf_react = 0;
+  for (int i = 0; i < nfix; i++) {
     if (fix[i]->gridmigrate) n_pergrid++;
-  list_pergrid = new int[n_pergrid];
+    if (fix[i]->flag_add_particle) n_add_particle++;
+    if (fix[i]->flag_gas_react) n_gas_react++;
+    if (fix[i]->flag_surf_react) n_surf_react++;
+  }
 
-  n_pergrid = 0;
-  for (int i = 0; i < nfix; i++)
+  list_pergrid = new int[n_pergrid];
+  list_add_particle = new int[n_add_particle];
+  list_gas_react = new int[n_gas_react];
+  list_surf_react = new int[n_surf_react];
+
+  n_pergrid = n_add_particle = n_gas_react = n_surf_react = 0;
+  for (int i = 0; i < nfix; i++) {
     if (fix[i]->gridmigrate) list_pergrid[n_pergrid++] = i;
+    if (fix[i]->flag_add_particle) list_add_particle[n_add_particle++] = i;
+    if (fix[i]->flag_gas_react) list_gas_react[n_gas_react++] = i;
+    if (fix[i]->flag_surf_react) list_surf_react[n_surf_react++] = i;
+  }
 }
 
 /* ----------------------------------------------------------------------
-   create list of compute indices for computes which store invocation times
+   create list of indices for computes which various attributes
 ------------------------------------------------------------------------- */
 
-void Modify::list_init_timeflag()
+void Modify::list_init_computes()
 {
   delete [] list_timeflag;
 

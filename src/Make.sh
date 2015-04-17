@@ -47,6 +47,7 @@ if (test $1 = "style") then
   style REACT_CLASS     react_      react      input
   style REGION_CLASS    region_     region     domain
   style SURF_COLLIDE_CLASS surf_collide_ surf_collide surf
+  style SURF_REACT_CLASS   surf_react_   surf_react   surf
 
 # edit Makefile.lib
 # called by "make makelib"

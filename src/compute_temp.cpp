@@ -20,8 +20,6 @@
 #include "domain.h"
 #include "error.h"
 
-#include "comm.h"
-
 using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
