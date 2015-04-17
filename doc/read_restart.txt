@@ -117,7 +117,7 @@ simulation, as specified by the associated commands:
 "dimension"_dimension.html
 "simulation box size"_create_box.html and "boundary conditions"_boundary.html
 "global settings"_global.html
-particles with their individual attributes
+particles with their individual attributes and custom attributes defined by fixes
 "particle species info"_species.html
 "mixtures"_mixture.html
 geometry of the hierarchical grid that overlays the simulation domain as "created"_create_grid.html or "read from a file"_read_grid.html
@@ -170,6 +170,15 @@ to enable Vremax and fractional collision count to persist for many
 timesteps, no information about these quantities persists from the
 original simulation to the restarted simulation.  The initial run in
 the restart script will re-initialize these data structures. :ule,l
+
+If a fix is used which defines custom attributes of particles, the
+vectors or arrays for these attributes are stored in the restart file.
+See the "fix ambipolar"_fix_ambipolar command as an example; it
+creates a custom vector called "ionambi" and a custom array called
+"velambi".  However, the restart script must specify the same fix
+before the first "run"_run.html command it uses, so that the same
+custom attributes are re-created, otherwise the custom attribute info
+from the restart file will be deleted.
 
 :line
 

@@ -37,7 +37,7 @@ keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or 
 [Examples:]
 
 read_surf 1 surf.sphere
-read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip :pre
+read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip
 read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6 :pre
 
 [Description:]

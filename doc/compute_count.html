@@ -1,0 +1,85 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>compute count command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>compute ID count id1 id2 ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
+
+<LI>count = style name of this compute command 
+
+<LI>id1,id2,... = species ID or mixture ID or mixture/group 
+
+<PRE>  species ID = ID used with the <A HREF = "species.html">species</A> command
+  mixture ID = ID used with the <A HREF = "mixture.html">mixture</A> command, expands to all groups in mixture
+  mixture/group = ID of mixture followed by name of one group within mixture 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>compute 1 count species
+compute Ncounts count N N2 N+ air/O 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define a computation that counts the number of particles currently in
+the simulation for various species or groups within mixtures.  Groups
+are collections of one or more species within a mixture.  See the
+"mixture" command for an explanation of how species are added to a
+mixture and how groups of species within the mixture are defined.
+</P>
+<P>Each of the listed <I>ids</I> (id1, id2, etc) can be in one of three
+formats.  Any of the ids can be in any of the formats.
+</P>
+<P>An <I>id</I> can be a species ID, in which case the count is for particles
+of that species.
+</P>
+<P>An <I>id</I> can be a mixture ID, in which case one count is performed for
+each of the groups within the mixture.  In the first example above,
+"species" is the name of a default mixture which assigns every species
+defined for the simulation to its own group.  If there are 10 species
+in the simulation, there will thus be 10 counts calculated, the same
+as if the command had been specified with explicit names for all 10
+species, e.g.
+</P>
+<PRE>compute 1 count O2 N2 O N NO O2+ N2+ O+ N+ NO+ 
+</PRE>
+<P>An <I>id</I> can be of the form mix-ID/name where mix-ID is a mixture ID
+and name is the name of a group in that mixture.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>If there is a single count accumulated, this compute calculates a
+global scalar.  If there are multiple counts accumulated, it
+calculates a global vector with a length = number of counts.  These
+results can be used by any command that uses global scalar or vector
+values from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section
+4.4</A> for an overview of SPARTA output
+options.
+</P>
+<P>The values will all be unitless counts.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>It is an error if a listed <I>id</I> is both a species ID and a mixture ID,
+since this command cannot distinguish between them.
+</P>
+<P><B>Related commands:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

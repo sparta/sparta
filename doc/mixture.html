@@ -21,7 +21,7 @@
 
 <LI>zero or more keyword/arg pairs may be appended 
 
-<LI>keyword = <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>frac</I> or <I>group</I> 
+<LI>keyword = <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>frac</I> or <I>group</I> or <I>copy</I> or <I>delete</I> 
 
 <PRE>  <I>nrho</I> arg = density
     density = number density of entire mixture (# per length^3 units)
@@ -34,6 +34,10 @@
   <I>group</I> arg = SELF or group-ID
     SELF = put each listed species (or all species if none listed) in its own group
     group-ID = put the listed species (or all species if none listed) in a group with this ID 
+  <I>copy</I> arg = new-ID
+    new-ID = ID of new mixture to create, as a copy of this one
+  <I>delete</I> args = sp1 sp2 ...
+    sp1,sp2,... = species to delete from the mixture 
 </PRE>
 
 </UL>
@@ -42,8 +46,9 @@
 <PRE>mixture air N O NO group lite
 mixture air N O NO vstream 250.0 0.0 0.0 group species
 mixture air N frac 0.8
-mixture air O frac 0.2
+mixture air O frac 0.2 copy myAir
 mixture background N O 
+mixture air delete N NO 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -81,7 +86,8 @@ belong to.
 all species that have been defined.  When new species are created via
 the "species" command, they are also automatically added to this
 mixture.  This mixture defines one group per species, each with the
-species name, so that each species that belongs to its own group.
+species name, so that each species in the mixture belongs to its own
+group.
 </P>
 <HR>
 
@@ -102,13 +108,15 @@ discussed below.
 </P>
 <HR>
 
+<P>These keywords set global attributes of the mixture.
+</P>
 <P>The <I>nrho</I> keyword sets a global attribute of the mixture, namely its
 density.  For 3d simulations the units of the specified <I>density</I> are
 #/volume.  For 2d, the units are effectively #/area, since the
 z-dimension thickness of the simulation box = 1.0.
 </P>
 <P>The <I>vstream</I> keyword sets a global attribute of the mixture, namely
-the streaming velocity.  Particles created using the mixture will have
+the streaming velocity.  Particles created using the mixture will use
 the specified <I>Vx,Vy,Vz</I> values.
 </P>
 <P>The <I>temp</I> keyword sets a global attribute of the mixture, namely the
@@ -119,6 +127,8 @@ initialized.
 </P>
 <HR>
 
+<P>This keyword sets per-species attributes of the mixture.
+</P>
 <P>The <I>frac</I> keyword sets a per-species attribute for individual species
 in the mixture.  Each species has a relative fractional density, such
 as 0.2, meaning one out of 5 particles is that species.  The sum of
@@ -181,7 +191,32 @@ ID.
 </UL>
 <HR>
 
-<P><B>Restrictions:</B> none
+<P>These keywords operate on one or more mixtures.
+</P>
+<P>The <I>copy</I> keyword creates a new mixture with <I>new-ID</I> which is
+an identical copy of the mixture with <I>ID</I>.  Regardless of where
+the <I>copy</I> keyword appears in the command, the operation
+is delayed until all other keywords have been invoked.
+</P>
+<P>This is useful if you wish to create a new mixture which is nearly the
+same as the current mixture.  Subsequent mixture commands can be used
+to change the properties of the new mixture.
+</P>
+<P>The <I>delete</I> keyword removes one or more species from the mixture,
+specified as <I>sp1</I>, <I>sp2</I>, etc.  No other keywords can be used with
+<I>delete</I>.  All arguments that follow it are assumed to be species IDs
+that are currently in the mixture.  When using <I>delete</I>, no species
+can be defined before the keyword, i.e. <I>species1</I>, <I>species2</I>, etc
+cannot be defined in the comand syntax described above.
+</P>
+<P>After the listed species are removed, any group IDs for the mixture
+that have no species assigned to them are also deleted.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>The restrictions on use of the <I>delete</I> keyword are described above.
 </P>
 <P><B>Related commands:</B>
 </P>

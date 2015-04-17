@@ -17,12 +17,12 @@
 </PRE>
 <UL><LI>arg1,arg2,... = list of keywords 
 
-<PRE>  possible keywords = step, elapsed, dt, cpu, tpcpu, spcpu, wall,
-                      np, ntouch, ncomm, nbound, nexit,
-		      nscoll, nscheck, ncoll, nattempt,
-                      npave, ntouchave, ncommave, nboundave, nexitave,
-		      nscollave, nscheckave, ncollave, nattemptave,
-                      nreact, nreactave,
+<PRE>  possible keywords = step, elapsed, elaplong, dt, cpu, tpcpu, spcpu, wall,
+                      np, npave, ntouch, ntouchave, ncomm, ncommave,
+                      nbound, nboundave, nexit, nexitave,
+		      nscoll, nscollave, nscheck, nscheckave,
+                      ncoll, ncollave, nattempt, nattemptave,
+                      nreact, nreactave, nsreact, nsreactave,
 		      vol, lx, ly, lz,
 		      xlo, xhi, ylo, yhi, zlo, zhi,
 		      c_ID, c_ID[I], c_ID[I][J],
@@ -47,6 +47,7 @@
       ncoll,ncollave = # of particle/particle collisions (this step, per-step)
       nattempt,nattemptave = # of attempted collisions (this step, per-step)
       nreact,nreactave = # of chemical reactions (this step, per-step)
+      nsreact,nsreactave = # of chemical reactions on surfs and boundaries (this step, per-step)
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
@@ -113,14 +114,14 @@ print               "Delta time = $<I>delta</I>"
 <HR>
 
 <P>The <I>np</I>, <I>ntouch</I>, <I>ncomm</I>, <I>nbound</I>, <I>nexit</I>, <I>nscoll</I>, <I>nscheck</I>,
-<I>ncoll</I>, <I>nattempt</I>, and <I>nreact</I> keywords all generate counts for the
-current timestep.
+<I>ncoll</I>, <I>nattempt</I>, <I>nreact</I>, and <I>nsreact</I> keywords all generate
+counts for the current timestep.
 </P>
 <P>The <I>npave</I>, <I>ntouchave</I>, <I>ncommave</I>, <I>nboundave</I>, <I>nexitave</I>,
-<I>nscollave</I>, <I>nscheckave</I>, <I>ncollave</I>, <I>nattemptave</I>, and <I>nreactave</I>
-keywords all generate values that are the cummulative total of the
-corresponding count divided by <I>elapsed</I> = the number of timesteps
-since the start of the run.
+<I>nscollave</I>, <I>nscheckave</I>, <I>ncollave</I>, <I>nattemptave</I>, <I>nreactave</I>, and
+<I>nsreactave</I> keywords all generate values that are the cummulative
+total of the corresponding count divided by <I>elapsed</I> = the number of
+timesteps since the start of the run.
 </P>
 <P>The <I>np</I> keyword is the number of particles.
 </P>
@@ -153,7 +154,10 @@ occurred.
 that were attempted.
 </P>
 <P>The <I>nreact</I> keyword is the number of chemical reactions that
-occurred.
+occurred.  The <I>nsreact</I> keyword is the number of chemical reactions
+on surfaces that occurred, including the global boundaries if they are
+treated as reacting surfaces, via the <A HREF = "bound_modify.html">bound_modify</A>
+command.
 </P>
 <P>The <I>vol</I> keyword is the volume (or area in 2d) of the simulation box.
 </P>

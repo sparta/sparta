@@ -21,8 +21,9 @@
 
 <LI>Nfreq = perform dynamic load balancing every this many steps 
 
-<LI>thresh = rebalance if imbalance factor is above this threshhold
-bstyle = <I>random</I> or <I>proc</I> or <I>rcb</I> 
+<LI>thresh = rebalance if imbalance factor is above this threshhold 
+
+<LI>bstyle = <I>random</I> or <I>proc</I> or <I>rcb</I> 
 
 <PRE>  <I>random</I> args = none 
   <I>proc</I> args = none 
@@ -77,7 +78,7 @@ divided by the average number of particles per processor.  Thus an
 imbalance factor of 1.0 is perfect balance.  For 10000 particles
 running on 10 processors, if the most heavily loaded processor has
 1200 particles, then the factor is 1.2, meaning there is a 20%
-imbalance. 
+imbalance.  The <I>thresh</I> setting must be >= 1.0.
 </P>
 <P>IMPORTANT NOTE: This command attempts to minimize the imbalance
 factor, as defined above.  But computational cost is not strictly

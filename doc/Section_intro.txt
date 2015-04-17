@@ -103,7 +103,8 @@ Models :h4
 
   "3d or 2d"_dimension.html or "2d-axisymmetric"_Section_howto.html#howto_2 domains
   variety of "global boundary conditions"_boundary.html
-  "create particles"_create_particles.html within flow volume or at "inlet boundaries"_fix_inflow.html :ul
+  "create particles"_create_particles.html within flow volume or at "inlet boundaries"_fix_inflow.html 
+  "ambipolar"_Section_howto.html#howto_11 approximation for ionized plasmas :ul
 
 Geometry :h4
 
@@ -113,13 +114,15 @@ Geometry :h4
 
 Gas-phase collisions and chemistry :h4
 
-  collisions between pairs of species groups
-  "VSS (variable soft sphere) or VHS (variable hard sphere) or HS (hard sphere) collisions"_collide.html
-  "TCE chemistry model"_react.html :ul
+  collisions between all particles or pairs of species groups within grid cells
+  "collision models:"_collide.html VSS (variable soft sphere), VHS (variable hard sphere), HS (hard sphere)
+  "chemistry models:"_react.html TCE, QK :ul
 
-Surface collisions :h4
+Surface collisions and chemistry :h4
 
-  "specular or diffuse"_surf_collide.html :ul
+  for surface elements or global simulation box "boundaries"_bound_modify.html
+  "collisions:"_surf_collide.html specular or diffuse
+  "reactions"_surf_react.html :ul
 
 Performance :h4
 

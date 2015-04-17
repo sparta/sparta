@@ -21,11 +21,11 @@
 
 <PRE>  <I>none</I> args = none
   <I>tce</I> args = infile
-    infile = file with list of chemical reactions
+    infile = file with list of gas-phase chemistry reactions
   <I>qk</I> args = infile
-    infile = file with list of chemical reactions
+    infile = file with list of gas-phase chemistry reactions
   <I>tce/qk</I> args = infile
-    infile = file with list of chemical reactions 
+    infile = file with list of gas-phase chemistry reactions 
 </PRE>
 
 </UL>
@@ -37,8 +37,10 @@ react qk air.tce
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Define chemical reactions to perform when particle-particle collisions
-occur.
+<P>Define chemical reactions to perform in the gas phase when
+particle-particle collisions occur.  See the
+<A HREF = "surf_react.html">surf_react</A> command for specification of surface
+chemistry reactions.
 </P>
 <P>The <I>none</I> style means that no chemistry will be performed, which is
 the default.
@@ -159,7 +161,7 @@ reactants and products can be specified in the first line.
 <PRE>D = dissociation = 2 reactants and 3 products
 E = exchange = 2 reactants and 2 products
 I = ionization = 2 reactants and 2 or 3 products
-R = recombination 
+R = recombination = 2 reactants and 1 product 
 </PRE>
 <P>A dissociation reaction means that R1 dissociates into P1 and P2 when
 it collides with R2.  R2 is preserved in the collision, so P3 = R2 is
@@ -176,11 +178,21 @@ restriction on the species involved in the reaction.
 </P>
 <P>An ionization reaction with 3 products is typically a collision
 between a neutral R1 and an electon R2 which ejects an electron from
-the neutral species, resulting in P1 and P2.  R2 is preserved in the
-collision, so P3 = R2 is required.
+the neutral species, resulting in P1 and P2.  Again, SPARTA does not
+check for this, so there is no restriction on the species involved in
+the reaction.  R2 is preserved in the collision, so P3 = R2 is
+required.
 </P>
-<P>IMPORTANT NOTE: Ionization and recombination reactions have not yet
-been implemented in SPARTA.
+<P>A recombination reaction is a collision between R1 and R2 that results
+in P1.  There is no restriction on the species involved in the
+reaction.
+</P>
+<P>IMPORTANT NOTE: If the ambipolar approximation is being used, via the
+<A HREF = "fix_ambipolar.hmtl">fix ambipolar</A> and <A HREF = "collide_modify.html">collide_modify ambipolar
+yes</A> commands, then reactions which involve either
+ambipolar ions or the ambipolar electron have more restricitve rules
+about the ordering of reactants and products.  See the next section
+for a discussion of these requirements.
 </P>
 <P>The <I>style</I> of each reaction is a single character (upper or lower
 case) with the following meaning:
@@ -205,11 +217,52 @@ explained above.
 </P>
 <HR>
 
+<P>If the ambipolar approximation is being used, then reactions which
+involve either ambipolar ions or the ambipolar electron have more
+restricitve rules about the ordering of reactants and products, than
+those described in the preceeding section.
+</P>
+<P>Note that ambipolar collisions are turned on via the <A HREF = "collide_modify.html">collide_modify
+ambipolar yes</A> commands, which in turn requries
+that the <A HREF = "fix_ambipolar.hmtl">fix ambipolar</A> is defined in your input
+script.  This fix defines a particular species as an ambipolar
+electron, written as "e" in the reactions that follow.  It also
+defines a list of ambipolar ions, which are written as species with a
+trailing "+" sign in the rules that follow.  Other written species
+(without "+") can be any non-ambipolar species.
+</P>
+<P>These rules only apply to reactions that involve ambipolar species
+(ions or electrons) as a reactant or product.
+</P>
+<P>Ambipolar dissociation reactions must list their reactants and
+products in one of the following orders:
+</P>
+<PRE>AB + e -> A + e + B
+AB+ + e -> A+ + e + B
+AB+ + e -> A + e + B+ 
+</PRE>
+<P>Ambipolar ionization reactions with 2 or 3 products must be in one of
+the following orders:
+</P>
+<PRE>A + e -> A+ + e + e
+A + B -> AB+ + e 
+</PRE>
+<P>Ambipolar exchange reactions must be in one of the following orders:
+</P>
+<PRE>AB+ + C -> A + BC+
+C + AB+ -> A + BC+ 
+</PRE>
+<P>Ambipolar recombination reactions must be in the following order:
+</P>
+<PRE>A+ + e -> A 
+</PRE>
+<HR>
+
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "collide.html">collide</A>
+<P><A HREF = "collide.html">collide</A>, <A HREF = "surf_react.html">surf_react</A>
 </P>
 <P><B>Default:</B>
 </P>

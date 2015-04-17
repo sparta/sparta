@@ -24,7 +24,8 @@ SPARTA works.
 4.7 <A HREF = "#howto_7">Coupling SPARTA to other codes</A> <BR>
 4.8 <A HREF = "#howto_8">Details of grid geometry in SPARTA</A><BR>
 4.9 <A HREF = "#howto_9">Details of surfaces in SPARTA</A><BR>
-4.10 <A HREF = "#howto_10">Restarting a simulation</A> <BR>
+4.10 <A HREF = "#howto_10">Restarting a simulation</A><BR>
+4.11 <A HREF = "#howto_11">Using the ambipolar approximation</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -915,5 +916,130 @@ new random numbers are used for collisions in the restarted run.  This
 affects all the randomized operations in a simulation, so in general
 you should only expect a restarted run to be statistically similar to
 the original run.
+</P>
+<HR>
+
+<A NAME = "howto_11"></A><H4>4.11 Using the ambipolar approximation 
+</H4>
+<P>The ambipolar approximation is a computationally efficient way to
+model low-density plasmas which contain positively-charged ions and
+negatively-charged electrons.  In this model, electrons are not free
+particles which move independently.  This would require a simulation
+with a very small timestep due to electon's small mass and high speed
+(1000x that of an ion or neutral particle).
+</P>
+<P>Instead each ambipolar electron is assumed to stay "close" to its
+parent ion, so that the plasma gas appears macroscopically neutral.
+Each pair of particles thus moves together through the simulation
+domain, as if they were a single particle, which is how they are
+stored within SPARTA.  This means a normal timestep can be used.
+</P>
+<P>There are two stages during a timestep when the coupled particles are
+broken apart and treated as an independent ion and electron.  
+</P>
+<P>The first is during gas-phase collisions and chemistry.  The ionized
+ambipolar particles in a grid cell are each split into two particles
+(ion and electron) and each can participate in two-body collisions
+with any other particle in the cell.  Electron/electron collisions are
+actually not performed, but are tallied in the overall collision
+count.  If gas-phase chemistry is turned on, reactions involving ions
+and electrons can be specified, which include dissociation,
+ionization, exchange, and recombination reactions.  At the end of the
+collision/chemsitry operations for the grid cell, there is still a
+one-to-one pairing between ambipolar ions and electrons.  Each pair is
+recombined into a single particle.
+</P>
+<P>The second is during collisions with surface (or the boundaries of the
+simulation box) if a surface reaction model is defined for the surface
+element or boundary.  Just as with gas-phase chemistry, surface
+reactions involving ambipolar species can be defined.  For example, an
+ambipolar ion/electron pair can re-combine into a neutral species during
+the collision.
+</P>
+<P>Here are the SPARTA commands you can use to run a simulation using the
+ambipolar approximation.  See the input scripts in examples/ambi for
+an example.
+</P>
+<P>Use the <A HREF = "fix_ambipolar.html">fix ambipolar</A> command to specify which
+species is the ambipolar electron and what (multiple) species are
+ambipolar ions.  This is required for all the other options listed
+here to work.  The fix defines two custom per-particles attributes, an
+integer vector called "ionambi" which stores a 1 for a particle if it
+is an ambipolar ion, and a 0 otherwise.  And a floating-point array
+called "velambi" which stores a 3-vector with the velocity of the
+associated electron for each ambipolar ion or zeroes otherwise.  Note
+that no particles should ever exist in the simulation with a species
+matching ambipolar electrons.  Such particles are only generated (and
+destroyed) internally, as described above.
+</P>
+<P>Use the <A HREF = "collide_modify.html">collide_modify ambipolar yes</A> command if
+you want to perform gas-phase collisions using the ambipolar model.
+This is not required.  You probably also want to specify a mixture for
+the collide command which has two or more groups.  One group is for
+the ambipolar electron species, the other for ambipolar ions.
+Additional groups could exist for other species (e.g. neutrals), or
+those species could be part of the ion group.  MICHAEL: explain why
+this a good thing to do.  Is it for computational efficiency, or
+something else?
+</P>
+<P>If you want to perform gas-phase chemistry for reactions involving
+ambipolar ions and electrons, use the <A HREF = "react.html">react</A> command with
+an input file of reactions that include the ambipolar electron and ion
+species defined by the fix ambipolar commmand.  See the
+<A HREF = "react.html">react</A> command doc page for info the syntax required for
+ambipolar reactions.  Their reactants and products must be listed in
+specific order.
+</P>
+<P>When creating particles, either by the
+<A HREF = "create_particles.html">create_particles</A> or <A HREF = "fix_inflow.html">fix
+inflow</A> commands, do NOT use a mixture that includes
+the ambipolar electron species.  If you do this, you will create
+"free" electrons which are not coupled to an ambipolar ion.  You can
+include ambipolar ions in the mixture.  This will create ambipolar
+ions along with their associated electron.  The electron will be
+assigned a velocity consistent with its mass and the temperature of
+the created particles.  You can use the <A HREF = "mixture.html">mixture copy</A>
+and <A HREF = "mixture.html">mixture delete</A> commands to create a mixture that
+excludes only the ambipolar electron species, e.g.
+</P>
+<PRE>mixture all copy noElectron
+mixture noElectron delete e 
+</PRE>
+<P>If you want ambipolar ions to re-combine with their electrons when
+they collide with surfaces, use the <A HREF = "surf_react.html">surf_react</A>
+command with an input file of surface reactions that includes
+recombination reactions like:
+</P>
+<PRE>N+ + e -> N 
+</PRE>
+<P>See the <A HREF = "surf_react.html">surf_react</A> doc page for syntax details.  A
+sample surface reaction data file is provided in data/air.surf.  You
+assign the surface reaction model to surface or the simulation box
+boundaries via the <A HREF = "surf_modify.html">surf_modify</A> and
+<A HREF = "bound_modify.html">bound_modify</A> commands.
+</P>
+<P>For diagnositics and output, you can use the <A HREF = "compute_count.html">compute
+count</A> and <A HREF = "dump.html">dump particle</A> commands.  The
+<A HREF = "compute_count.html">compute count</A> command generate counts of
+individual species, entire mixtures, and groups within mixtures.  For
+example these commands will include counts of ambipolar ions in
+statistical output:
+</P>
+<P>compute myCount O+ N+ NO+ e
+stats_style step nsreact nsreactave cpu np c_myCount
+</P>
+<P>Note that the count for species "e" = ambipolar electrons should alwas
+be zero, since those particles only exist during gas and surface
+collisions.  The <A HREF = "stats_style.html">stats_style</A> <I>nsreact</I> and
+<I>nsreactave</I> keywords print tallies of surface reactions taking place.
+</P>
+<P>The <A HREF = "dump.html">dump particle</A> command can output the custom particle
+attributes defined by the <A HREF = "fix_ambipolar.html">fix ambipolar</A> command.
+E.g. this command
+</P>
+<P>dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi
+</P>
+<P>will output the ionambi flag = 1 for ambipolar ions, along with the
+vx,vy,vz of their associated ambipolar electrons.
 </P>
 </HTML>

@@ -107,6 +107,7 @@ manual, which describes how it can be added to SPARTA.
 <UL><LI>  <A HREF = "dimension.html">3d or 2d</A> or <A HREF = "Section_howto.html#howto_2">2d-axisymmetric</A> domains
 <LI>  variety of <A HREF = "boundary.html">global boundary conditions</A>
 <LI>  <A HREF = "create_particles.html">create particles</A> within flow volume or at <A HREF = "fix_inflow.html">inlet boundaries</A> 
+<LI>  <A HREF = "Section_howto.html#howto_11">ambipolar</A> approximation for ionized plasmas 
 </UL>
 <H4>Geometry 
 </H4>
@@ -116,13 +117,15 @@ manual, which describes how it can be added to SPARTA.
 </UL>
 <H4>Gas-phase collisions and chemistry 
 </H4>
-<UL><LI>  collisions between pairs of species groups
-<LI>  <A HREF = "collide.html">VSS (variable soft sphere) or VHS (variable hard sphere) or HS (hard sphere) collisions</A>
-<LI>  <A HREF = "react.html">TCE chemistry model</A> 
+<UL><LI>  collisions between all particles or pairs of species groups within grid cells
+<LI>  <A HREF = "collide.html">collision models:</A> VSS (variable soft sphere), VHS (variable hard sphere), HS (hard sphere)
+<LI>  <A HREF = "react.html">chemistry models:</A> TCE, QK 
 </UL>
-<H4>Surface collisions 
+<H4>Surface collisions and chemistry 
 </H4>
-<UL><LI>  <A HREF = "surf_collide.html">specular or diffuse</A> 
+<UL><LI>  for surface elements or global simulation box <A HREF = "bound_modify.html">boundaries</A>
+<LI>  <A HREF = "surf_collide.html">collisions:</A> specular or diffuse
+<LI>  <A HREF = "surf_react.html">reactions</A> 
 </UL>
 <H4>Performance 
 </H4>

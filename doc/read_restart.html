@@ -120,7 +120,7 @@ simulation, as specified by the associated commands:
 <LI><A HREF = "dimension.html">dimension</A>
 <LI><A HREF = "create_box.html">simulation box size</A> and <A HREF = "boundary.html">boundary conditions</A>
 <LI><A HREF = "global.html">global settings</A>
-<LI>particles with their individual attributes
+<LI>particles with their individual attributes and custom attributes defined by fixes
 <LI><A HREF = "species.html">particle species info</A>
 <LI><A HREF = "mixture.html">mixtures</A>
 <LI>geometry of the hierarchical grid that overlays the simulation domain as <A HREF = "create_grid.html">created</A> or <A HREF = "read_grid.html">read from a file</A>
@@ -174,6 +174,15 @@ timesteps, no information about these quantities persists from the
 original simulation to the restarted simulation.  The initial run in
 the restart script will re-initialize these data structures. 
 </UL>
+<P>If a fix is used which defines custom attributes of particles, the
+vectors or arrays for these attributes are stored in the restart file.
+See the <A HREF = "fix_ambipolar">fix ambipolar</A> command as an example; it
+creates a custom vector called "ionambi" and a custom array called
+"velambi".  However, the restart script must specify the same fix
+before the first <A HREF = "run.html">run</A> command it uses, so that the same
+custom attributes are re-created, otherwise the custom attribute info
+from the restart file will be deleted.
+</P>
 <HR>
 
 <P><B>Restrictions:</B> none

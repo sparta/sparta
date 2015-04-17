@@ -65,12 +65,14 @@ Each fix style has its own doc page which describes its arguments and
 what it does, as listed below.  Here is an alphabetic list of fix
 styles available in SPARTA:
 
+"ambipolar"_fix_ambipolar.html - ambipolar approximation for ionized plasmas
 "ave/grid"_fix_ave_grid.html - compute per grid cell time-averaged quantities
 "ave/surf"_fix_ave_surf.html - compute per surface element time-averaged quantities
 "ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
 "balance"_fix_balance.html - perform dynamic load-balancing
 "grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
 "inflow"_fix_inflow.html - inject particles at global boundaries
+"inflow/file"_fix_inflow.html - inject particles at global boundaries using a distribution defined in a file
 "print"_fix_print.html - print text and variables during a simulation :ul
 
 :line

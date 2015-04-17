@@ -17,12 +17,13 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs may be listed 
 
-<LI>keywords = <I>vremax</I> or <I>remain</I> 
+<LI>keywords = <I>vremax</I> or <I>remain</I> or <I>ambipolar</I> or <I>rotate</I> or <I>vibrate</I> 
 
 <PRE>  <I>vremax</I> values = Nevery startflag
     Nevery = zero vremax every this many timesteps
     startflag = <I>yes</I> or <I>no</I> = zero vremax at start of every run
   <I>remain</I> value = <I>yes</I> or <I>no</I> = hold remaining fraction of collisions over to next timestep
+  <I>ambipolor</I> value = <I>no</I> or <I>yes</I>
   <I>rotate</I> value = <I>no</I> or <I>yes</I>
   <I>vibrate</I> value = <I>no</I> or <I>discrete</I> or <I>smooth</I> 
 </PRE>
@@ -31,7 +32,8 @@
 <P><B>Examples:</B>
 </P>
 <PRE>collide_modify vremax 1000 yes
-collide_modify vremax 0 no remain no 
+collide_modify vremax 0 no remain no
+collide_modify ambipolar yes 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -73,6 +75,21 @@ to the computed collision count for that step.  If the value is set to
 attempts are made and an 8th attempt is made conditionally with a
 probability of 0.3, using a random number.
 </P>
+<P>If the <I>ambipolar</I> keyword is set to <I>yes</I>, then collisions within a
+grid cell with use the ambipolar approximation.  This requires use of
+the <A HREF = "fix_ambipolar.html<A HREF = "react.html">>fix ambipolar</A> command to define which species
+is an electron and which species are ions.  There can be many of the
+latter.  When collisions within a single grid cell are performed, each
+ambipolar ion is split into two particles, the ion and an associated
+electron.  Collisions between the augmented set of particles are
+calculated.  Ion/electron chemistry can also occur if the
+'react</A> command has been used to read a file of reactions
+that include such reactions.  See the <A HREF = "react.html">react</A> command doc
+page.  After all collisions in the grid cell have been computed, there
+is still a one-to-one correspondence between ambipolar ions and
+electron, and each pair is recombined into a single ambipolar
+particle.
+</P>
 <P>The <I>rotate</I> keyword determines how vibrational energy is treated in
 particle collisions and stored by particles.  If the value is set to
 <I>no</I>, then rotational energy is not tracked; every particle's
@@ -104,7 +121,7 @@ are always treated as if the setting were <I>smooth</I>.
 </P>
 <P><B>Default:</B>
 </P>
-<P>The option defaults are vremax = (0,yes), remain = yes, rotate yes,
-and vibrate = no.
+<P>The option defaults are vremax = (0,yes), remain = yes, ambipolar no,
+rotate yes, and vibrate = no.
 </P>
 </HTML>

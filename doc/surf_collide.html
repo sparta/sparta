@@ -15,8 +15,9 @@
 </P>
 <PRE>surf_collide ID style args keyword values ... 
 </PRE>
-<UL><LI>ID = user-assigned name for the surface collision model
-style = <I>specular</I> or <I>diffuse</I> 
+<UL><LI>ID = user-assigned name for the surface collision model 
+
+<LI>style = <I>specular</I> or <I>diffuse</I> 
 
 <LI>args = arguments for specific style 
 
@@ -51,13 +52,13 @@ surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0
 </P>
 <P>Define a style for particle-surface collisions.  One or more styles
 can be defined and assigned to different surfaces or simulation box
-boundaries via the <A HREF = "read_surf.html">read_surf</A> or
+boundaries via the <A HREF = "surf_modify.html">surf_modify</A> or
 <A HREF = "bound_modify.html">bound_modify</A> commands.  See <A HREF = "Section_howto.html#howto_9">Section
 4.9</A> for more details of how SPARTA defines
 surfaces as collections of geometric elements, triangles in 3d and
 line segments in 2d.
 </P>
-<P>The ID for a surface collisoin model is used to identify it in other
+<P>The ID for a surface collision model is used to identify it in other
 commands.  Each surface collision model ID must be unique.  The ID can
 only contain alphanumeric characters and underscores.
 </P>

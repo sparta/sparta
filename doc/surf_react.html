@@ -1,0 +1,172 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>surf_react command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>surf_react style args 
+</PRE>
+<UL><LI>style = <I>global</I> or <I>prob</I> 
+
+<LI>args = arguments for that style 
+
+<PRE>  <I>global</I> args = pdelete pcreate
+    pdelete = probability that surface collision removes the incident particle
+    pcreate = probability that surface collision clones the incident particle
+  <I>prob</I> args = infile
+    infile = file with list of surface chemistry reactions 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>surf_react global 0.2 0.15
+surf_react prob air.surf 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Define chemical reactions to perform when particles collide with
+surface elements or the global boundaries of the simulation box.  See
+the <A HREF = "react.html">react</A> command for specification of gas-phase
+chemistry reactions.
+</P>
+<P>This command defines a reaction "style" which can then be assigned to
+one or more sets of surface elements via the <A HREF = "surf_modify.html">surf_modify
+react</A> command, or to different boundaries of the
+global simulation box via the <A HREF = "bound_modify.html">bound_modify react</A>
+command.
+</P>
+<P>The surface reaction models for the various styles are described
+below.  When a a particle collides with a surface element or boundary.
+the list of all reactions with that species as the reactants is looped
+over.  A probability for each reaction is calculated, using the
+formulas discussed below, and a random number is used to decide which
+reaction (if any) takes place.  A check is made that the sum of
+probabilities for all possible reactions is <= 1.0, which should
+normally be the case if reasonable reaction coefficients are defined.
+</P>
+<HR>
+
+<P>The <I>global</I> style is a simple model that can be used to test whether
+surface reactions are occurring as expected.  There is no list of
+raactions for different species; all species are treated the same.
+</P>
+<P>The <I>global</I> style takes two paramters, <I>pdelete</I> and <I>pcreate</I>. The
+first is the probability that a "deletion" reaction takes place when a
+collision occurs.  If it does, the particle is deleted.  The second is
+the probablity that a "creation" reaction occurs, which clones the
+particle, so that one particle becomes two.  The two particles leave
+the surface according to whatever surface collision model is defined
+by the <A HREF = "surf_collide.html">surf_collide</A> command, and is assigned to
+that surface/boundary by the <A HREF = "surf_modify.html">surf_modify collide</A>
+command.
+</P>
+<P>The sum of <I>pdelete</I> and <I>pcreate</I> must be <= 1.0.
+</P>
+<HR>
+
+<P>For the <I>prob</I> style, a file is specified which contains a list of
+surface chemical reactions, with their associated parameters.  The
+reactions are read into SPARTA and stored in a list.  Each time a
+simulation is run via the <A HREF = "run.html">run</A> command, the list is scanned.
+Only reactions for which all the reactants and all the products are
+currently defined as species-IDs will be active for the simulation.
+Thus the file can contain more reactions than are used in a particular
+simulation.  See the <A HREF = "species.html">species</A> command for how species
+IDs are defined.
+</P>
+<P>As explained below each reaction has a specified probability between
+0.0 and 1.0.  That probability is used to choose which reaction (if
+any) is performed.
+</P>
+<P>The format of the input surface reaction file is as follows.  Comments
+or blank lines are allowed in the file.  Comment lines start with a
+"#" character.  All other entries must come in 2-line pairs with
+values separated by whitespace in the following format
+</P>
+<PRE>R1 --> P1 + P2
+type style C1 C2 ... 
+</PRE>
+<P>The first line is a text-based description of a single reaction.  R1
+is a single reactant for the particle that collides with the
+surface/boundary, listed as a <A HREF = "species.html">species</A> IDs.  P1 and P2
+are one or two products, also listed as <A HREF = "species.html">species</A> IDs.
+The number of reactants is always 1.  The number of allowed products
+depends on the reaction type, as discussed below.  Individual
+reactants and products must be separated by whitespace and a "+" sign.
+The left-hand and right-hand sides of the equation must be separated
+by whitespace and "-->".
+</P>
+<P>The <I>type</I> of each reaction is a single character (upper or lower
+case) with the following meaning.  The type determines how many
+reactants and products can be specified in the first line.
+</P>
+<PRE>D = dissociation = 1 reactant and 2 products
+E = exchange = 1 reactant and 1 product
+R = recombination = 1 reactant and 1 product named NULL 
+</PRE>
+<P>A dissociation reaction means that R1 dissociates into P1 and P2 when
+it collides with the surface/boundary.  There is no restriction on the
+species involved in the reaction.
+</P>
+<P>An exchange reaction is a collision where R1 becomes a new product P1.
+There is no restriction on the species involved in the reaction.
+</P>
+<P>A recombination reaction is a collision where R1 is absorbed by the
+surface, so that the particle disappears.  There are no products which
+is indicated in the file by listing a single product as NULL.
+There is no restriction on the species involved in the reaction.
+</P>
+<P>The <I>style</I> of each reaction is a single character (upper or lower
+case) with the following meaning:
+</P>
+<UL><LI>S = Surface 
+</UL>
+<P>The style determines how many reaction coefficients are listed as C1,
+C2, etc, and how they are interpreted by SPARTA.
+</P>
+<P>For S = Surface style, there is a single coefficient:
+</P>
+<UL><LI>C1 = probability that the reaction occurs (0.0 to 1.0) 
+</UL>
+<HR>
+
+<P>If the ambipolar approximation is being used, via the <A HREF = "fix_ambipolar.hmtl">fix
+ambipolar</A>, then the <I>prob</I> style can list two
+kinds of surface reactions in its file which involve the ambipolar ion
+and ambipolar electron species it defines.
+</P>
+<P>The first is an "exchange" reaction which converts an ambipolar ion
+into a neutral species.  Internally this removes the ambipolar
+electron associated with the ion.  In the file of reactions this is
+done by having the reactant be an ambipolar ion, and the product not
+be an ambipolar ion.
+</P>
+<P>The second is a "dissociation" reaction where a neutral species is
+ionized by colliding with the surface/boundary, creating an ambipolar
+ion and ambipolar electron.  In the file of reactions this is done by
+having the reactant not be an ambipolar ion, the first product be an
+ambipolar ion, and the second product be an ambipolar electron.  The
+two products must be specified in this order.
+</P>
+<HR>
+
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "react.html">react</A>, <A HREF = "surf_modify.html">surf_modify</A>,
+<A HREF = "bound_modify.html">bound_modify</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

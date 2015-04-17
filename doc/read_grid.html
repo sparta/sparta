@@ -119,14 +119,19 @@ inside the 12th of those level 1 cells.  If that cell were sub-divided
 into 8x6x10 cells, there would be 480 level 2 cells within the 12th
 level 1 cell.  The parent cell with ID 12-352-65 is inside the 352nd
 of those level 2 cells.  Likewise it is within the 65th of the level 3
-cells inside the 352nd level 2 cell.  Finally, if the entry in the
-grid file for this parent cell is
+cells inside the 352nd level 2 cell.  
+</P>
+<P>The Nx, Ny, Nz values determine how the parent cell is sub-divided
+into Nx by Ny by Nz cells at the next level.  Each of those cells
+could be a child cell or yet another parent cell.  Nz must be specified
+as 1 for 2d grids.
+</P>
+<P>For example, this entry:
 </P>
 <PRE>index 12-352-65 2 2 2 
 </PRE>
-<P>then it means the parent cell is further sub-divided into 2x2x2 level
-4 cells, Each of those cells could be a child cell or yet another
-parent cell.  The IDs of the 8 new cells will be 12-352-65-1,
+<P>means the parent cell 12-352-65 at level 3 is further sub-divided into
+2x2x2 level 4 cells. The IDs of the 8 new cells will be 12-352-65-1,
 12-352-65-2, ..., 12-352-65-8.
 </P>
 <P>The lines in the <I>Parents</I> section must be ordered such that no parent
@@ -143,9 +148,6 @@ line of the <I>Parents</I> section should be formatted something like this:
 <PRE>1 0 10 10 20 
 </PRE>
 <P>which means the level 1 grid has 10x10x20 cells.
-</P>
-<P>For 2d simulations, <I>Pz</I> and <I>Cz</I> must both equal 1, for every parent
-cell listed in the file.
 </P>
 <P><B>Restrictions:</B>
 </P>

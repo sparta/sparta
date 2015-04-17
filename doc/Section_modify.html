@@ -142,16 +142,27 @@ class.  See compute.h for details.  All of these methods are optional.
 <TR><TD >memory_usage</TD><TD > tally memory usage 
 </TD></TR></TABLE></DIV>
 
+<P>Note that computes with "/particle" in their style name calculate per
+particle quantities, with "/grid" in their name calculate per grid
+cell quantities, and with "/surf" in their name calculate per surface
+element properties.  All others calcuulate global quantities.
+</P>
+<P>Flags may also need to be set by a compute to enable specific
+properties.  See the compute.h header file for one-line descriptions.
+</P>
 <HR>
 
 <A NAME = "mod_2"></A><H4>8.2 Fix styles 
 </H4>
 <P><A HREF = "fix.html">Fix style commands</A> perform operations during the
-timestepping loop of a simulation.  They define methods which are
+timestepping loop of a simulation.  They can define methods which are
 invoked at different points within the timestep.  They can be used to
 insert particles, perform load-balancing, or perform time-averaging of
-various quantities.  They can also produce output of various kinds,
-similar to <A HREF = "compute.html">compute</A> commands.
+various quantities.  They can also define and maintain new
+per-particle vectors and arrays that define quantities that move with
+particles when they migrate from processor to processor or when the
+grid is rebalanced or adapated.  They can also produce output of
+various kinds, similar to <A HREF = "compute.html">compute</A> commands.
 </P>
 <P>Here is a brief description of methods to define in a new derived
 class.  See fix.h for details.  All of these methods are optional,
@@ -162,9 +173,29 @@ except setmask().
 <TR><TD >init</TD><TD > initialization before a run</TD></TR>
 <TR><TD >start_of_step</TD><TD > called at beginning of timestep</TD></TR>
 <TR><TD >end_of_step</TD><TD > called at end of timestep</TD></TR>
+<TR><TD >add_particle</TD><TD > called when a particle is created</TD></TR>
+<TR><TD >surf_react</TD><TD > called when a surface reaction occurs</TD></TR>
 <TR><TD >memory_usage</TD><TD > tally memory usage 
 </TD></TR></TABLE></DIV>
 
+<P>Flags may also need to be set by a fix to enable specific properties.
+See the fix.h header file for one-line descriptions.
+</P>
+<P>Fixes can interact with the Particle class to create new
+per-particle vectors and arrays and access and update their
+values.  These are the relevant Particle class methods:
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >add_custom</TD><TD > add a new custom vector or array</TD></TR>
+<TR><TD >find_custom</TD><TD > find a previously defined custom vector or array</TD></TR>
+<TR><TD >remove_custom</TD><TD > remove a custom vector or array 
+</TD></TR></TABLE></DIV>
+
+<P>See the <A HREF = "fix_ambipolar.html">fix ambipolar</A> for an example of how these
+are used.  It define an integer vector called "ionambi" to flag
+particles as ambipolar ions, and a floatin-point array called
+"velambi" to store the velocity vector for the associated electron.
+</P>
 <HR>
 
 <A NAME = "mod_3"></A><H4>8.3 Region styles 

@@ -261,8 +261,8 @@ Settings:
 "compute"_compute.html, "fix"_fix.html, "global"_global.html,
 "react"_react.html, "region"_region.html,
 "surf_collide"_surf_collide.html, "surf_modify"_surf_modify.html,
-"timestep"_timestep.html, "uncompute"_uncompute.html,
-"unfix"_unfix.html
+"surf_react"_surf_react.html, "timestep"_timestep.html,
+"uncompute"_uncompute.html, "unfix"_unfix.html
 
 Output:
 
@@ -337,6 +337,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "stats_modify"_stats_modify.html,
 "stats_style"_stats_style.html,
 "surf_collide"_surf_collide.html,
+"surf_react"_surf_react.html,
 "surf_modify"_surf_modify.html,
 "timestep"_timestep.html,
 "uncompute"_uncompute.html,
@@ -354,6 +355,7 @@ Fix styles :h4
 See the "fix"_fix.html command for one-line descriptions
 of each style or click on the style itself for a full description:
 
+"ambipolar"_fix_ambipolar.html,
 "ave/grid"_fix_ave_grid.html,
 "ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
@@ -371,9 +373,10 @@ See the "compute"_compute.html command for one-line descriptions of
 each style or click on the style itself for a full description:
 
 "boundary"_compute_boundary.html,
+"count"_compute_count.html,
 "grid"_compute_grid.html,
-"lambda/grid"_compute_lambda_grid.html,
 "ke/particle"_compute_ke_particle.html,
+"lambda/grid"_compute_lambda_grid.html,
 "property/grid"_compute_property_grid.html,
 "reduce"_compute_reduce.html,
 "sonine/grid"_compute_sonine_grid.html,

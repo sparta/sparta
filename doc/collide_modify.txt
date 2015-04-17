@@ -13,11 +13,12 @@ collide_modify command :h3
 collide_modify keyword values ...  :pre
 
 one or more keyword/value pairs may be listed :ulb,l
-keywords = {vremax} or {remain} :l
+keywords = {vremax} or {remain} or {ambipolar} or {rotate} or {vibrate} :l
   {vremax} values = Nevery startflag
     Nevery = zero vremax every this many timesteps
     startflag = {yes} or {no} = zero vremax at start of every run
   {remain} value = {yes} or {no} = hold remaining fraction of collisions over to next timestep
+  {ambipolor} value = {no} or {yes}
   {rotate} value = {no} or {yes}
   {vibrate} value = {no} or {discrete} or {smooth} :pre
 :ule
@@ -25,7 +26,8 @@ keywords = {vremax} or {remain} :l
 [Examples:]
 
 collide_modify vremax 1000 yes
-collide_modify vremax 0 no remain no :pre
+collide_modify vremax 0 no remain no
+collide_modify ambipolar yes :pre
 
 [Description:]
 
@@ -67,6 +69,21 @@ to the computed collision count for that step.  If the value is set to
 attempts are made and an 8th attempt is made conditionally with a
 probability of 0.3, using a random number.
 
+If the {ambipolar} keyword is set to {yes}, then collisions within a
+grid cell with use the ambipolar approximation.  This requires use of
+the "fix ambipolar"_fix_ambipolar.html command to define which species
+is an electron and which species are ions.  There can be many of the
+latter.  When collisions within a single grid cell are performed, each
+ambipolar ion is split into two particles, the ion and an associated
+electron.  Collisions between the augmented set of particles are
+calculated.  Ion/electron chemistry can also occur if the
+'react"_react.html command has been used to read a file of reactions
+that include such reactions.  See the "react"_react.html command doc
+page.  After all collisions in the grid cell have been computed, there
+is still a one-to-one correspondence between ambipolar ions and
+electron, and each pair is recombined into a single ambipolar
+particle.
+
 The {rotate} keyword determines how vibrational energy is treated in
 particle collisions and stored by particles.  If the value is set to
 {no}, then rotational energy is not tracked; every particle's
@@ -98,5 +115,5 @@ are always treated as if the setting were {smooth}.
 
 [Default:]
 
-The option defaults are vremax = (0,yes), remain = yes, rotate yes,
-and vibrate = no.
+The option defaults are vremax = (0,yes), remain = yes, ambipolar no,
+rotate yes, and vibrate = no.

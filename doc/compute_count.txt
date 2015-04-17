@@ -1,0 +1,76 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+compute count command :h3
+
+[Syntax:]
+
+compute ID count id1 id2 ... :pre
+
+ID is documented in "compute"_compute.html command :ulb,l
+count = style name of this compute command :l
+id1,id2,... = species ID or mixture ID or mixture/group :l
+  species ID = ID used with the "species"_species.html command
+  mixture ID = ID used with the "mixture"_mixture.html command, expands to all groups in mixture
+  mixture/group = ID of mixture followed by name of one group within mixture :pre
+:ule
+
+[Examples:]
+
+compute 1 count species
+compute Ncounts count N N2 N+ air/O :pre
+
+[Description:]
+
+Define a computation that counts the number of particles currently in
+the simulation for various species or groups within mixtures.  Groups
+are collections of one or more species within a mixture.  See the
+"mixture" command for an explanation of how species are added to a
+mixture and how groups of species within the mixture are defined.
+
+Each of the listed {ids} (id1, id2, etc) can be in one of three
+formats.  Any of the ids can be in any of the formats.
+
+An {id} can be a species ID, in which case the count is for particles
+of that species.
+
+An {id} can be a mixture ID, in which case one count is performed for
+each of the groups within the mixture.  In the first example above,
+"species" is the name of a default mixture which assigns every species
+defined for the simulation to its own group.  If there are 10 species
+in the simulation, there will thus be 10 counts calculated, the same
+as if the command had been specified with explicit names for all 10
+species, e.g.
+
+compute 1 count O2 N2 O N NO O2+ N2+ O+ N+ NO+ :pre
+
+An {id} can be of the form mix-ID/name where mix-ID is a mixture ID
+and name is the name of a group in that mixture.
+
+:line
+
+[Output info:]
+
+If there is a single count accumulated, this compute calculates a
+global scalar.  If there are multiple counts accumulated, it
+calculates a global vector with a length = number of counts.  These
+results can be used by any command that uses global scalar or vector
+values from a compute as input.  See "Section
+4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+options.
+
+The values will all be unitless counts.
+
+[Restrictions:]
+
+It is an error if a listed {id} is both a species ID and a mixture ID,
+since this command cannot distinguish between them.
+
+[Related commands:] none
+
+[Default:] none
