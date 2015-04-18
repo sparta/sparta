@@ -37,7 +37,7 @@ class FixAmbipolar : public Fix {
   int setmask();
   void init();
   void add_particle(int, double, double *);
-  void surf_react(Particle::OnePart *, int, int);
+  void surf_react(Particle::OnePart *, int &, int &);
 
  private:
   int maxion;                 // length of ions vector

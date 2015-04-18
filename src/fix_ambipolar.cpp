@@ -145,7 +145,7 @@ void FixAmbipolar::add_particle(int index,
          either can be -1, meaning particle does not exist
 ------------------------------------------------------------------------- */
 
-void FixAmbipolar::surf_react(Particle::OnePart *iorig, int i, int j)
+void FixAmbipolar::surf_react(Particle::OnePart *iorig, int &i, int &j)
 {
   int ispecies = iorig->ispecies;
 
@@ -167,6 +167,7 @@ void FixAmbipolar::surf_react(Particle::OnePart *iorig, int i, int j)
   // dissociation raection
   // if non-ion -> ion + electron, create an ambipolar ion
   // use global temp_thermal and vstream for electron creation
+  // set j = -1 to delete electron that was just created by caller
 
   else {
     if (ions[ispecies] == 1) return;
@@ -174,5 +175,6 @@ void FixAmbipolar::surf_react(Particle::OnePart *iorig, int i, int j)
     if (ions[particles[i].ispecies] == 0) return;
     if (particles[j].ispecies != especies) return;
     add_particle(i,update->temp_thermal,update->vstream);
+    j = -1;
   }
 }

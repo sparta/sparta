@@ -152,12 +152,20 @@ collide(Particle::OnePart *&ip, double *norm, int isr)
   if (ip) diffuse(ip,norm);
   if (jp) diffuse(jp,norm);
 
+  // call any fixes with a surf_react() method
+  // they may reset j to -1, e.g. fix ambipolar
+  //   in which case newly created j is deleted
+
   if (reaction && modify->n_surf_react) {
     int i = -1;
     if (ip) i = (ip - particle->particles) / sizeof(Particle::OnePart);
     int j = -1;
     if (jp) j = (jp - particle->particles) / sizeof(Particle::OnePart);
     modify->surf_react(&iorig,i,j);
+    if (jp && j < 0) {
+      jp = NULL;
+      particle->nlocal--;
+    }
   }
 
   return jp;

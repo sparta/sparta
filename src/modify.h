@@ -60,7 +60,7 @@ class Modify : protected Pointers {
 
   void add_particle(int, double, double *);
   void gas_react(int);
-  void surf_react(Particle::OnePart *, int, int);
+  void surf_react(Particle::OnePart *, int &, int &);
 
   bigint memory_usage();
 

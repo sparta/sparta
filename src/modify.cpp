@@ -219,7 +219,7 @@ void Modify::gas_react(int index)
    invoke surf_react() method, only for relevant fixes
 ------------------------------------------------------------------------- */
 
-void Modify::surf_react(Particle::OnePart *iorig, int i, int j)
+void Modify::surf_react(Particle::OnePart *iorig, int &i, int &j)
 {
   for (int m = 0; m < n_surf_react; m++) {
     fix[list_surf_react[m]]->surf_react(iorig,i,j);
