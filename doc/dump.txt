@@ -30,11 +30,11 @@ args = list of arguments for a particular style :l
       xs,ys,zs = scaled particle coordinates
       vx,vy,vz = particle velocities
       ke,erot,evib = translational, rotational, and vibrational energy
-      p_ID = custom per-particle vector (or array) with ID
+      p_ID = custom per-particle vector with ID
       p_ID\[N\] = Nth column of custom per-particle array with ID
-      c_ID = per-particle vector (or array) calculated by a compute with ID
+      c_ID = per-particle vector calculated by a compute with ID
       c_ID\[N\] = Nth column of per-particle array calculated by a compute with ID
-      f_ID = per-particle vector (or array) calculated by a fix with ID
+      f_ID = per-particle vector calculated by a fix with ID
       f_ID\[N\] = Nth column of per-particle array calculated by a fix with ID
       v_name = per-particle vector calculated by a particle-style variable with name :pre
 
@@ -208,31 +208,29 @@ vibrational energy is treated in collisions and stored by particles is
 affected by the "collide_modify"_collid_modify.html command.
 
 The {p_ID} and {p_ID\[N\]} attributes allow custom per-particle
-attributes (vectors or arrays) defined by a "fix"_fix.html command to
-be output.  The ID in the attribute should be replaced by the actual
-ID of the custom particle attribute that the fix defines.  See
-individal fix commands for details, e.g. the "fix
-ambipolar"_fix_ambipolar.html command which defines the custom vector
-"ionambi" and the custom array "velambi".
+vectors or arrays defined by a "fix"_fix.html command to be output.
+The ID in the attribute should be replaced by the actual ID of the
+custom particle attribute that the fix defines.  See individal fix
+commands for details, e.g. the "fix ambipolar"_fix_ambipolar.html
+command which defines the custom vector "ionambi" and the custom array
+"velambi".
 
-If {p_ID} is used as a attribute, and the custom attribute is a
-vector, then the vector is output.  If {p_ID\[N\]} is used, then N
-must be in the range from 1-M, which will output the Nth column of the
-M-column custom array.  If {p_ID} is used, and the custom attribute is
-an array, then it is the same as if the individual columns of the
-array had been listed one by one.  For example, these 2 dump commands
-are equivalent for a simulation using the "fix
-ambipolar"_fix_ambipolar.html command, since it defines "velambi" as a
-3-column custom per-particle array:
-
-dump 1 particle1000 tmp.dump id x y z p_velambi
-dump 1 particle1000 tmp.dump id x y z p_velambi\[1\] p_velambi\[2\] p_velambi\[3\] :pre
+If {p_ID} is used as a attribute, the custom attribute must be a
+vector, and it is output.  If {p_ID\[N\]} is used, the custom
+attribute must be an array, and N must be in the range from 1-M, which
+will output the Nth column of the M-column array.
 
 The {c_ID} and {c_ID\[N\]} attributes allow per-particle vectors or
 arrays calculated by a "compute"_compute.html to be output.  The ID in
 the attribute should be replaced by the actual ID of the compute that
 has been defined previously in the input script.  See the
 "compute"_compute.html command for details.
+
+If {c_ID} is used as a attribute, the compute must calculate a
+per-particle vector, and it is output.  If {c_ID\[N\]} is used, the
+compute must calculate a per-particle array, and N must be in the
+range from 1-M, which will output the Nth column of the M-column
+array.
 
 If {c_ID} is used as a attribute, and the compute calculates a
 per-particle vector, then the per-particle vector is output.  If
@@ -248,14 +246,10 @@ per-particle quantities calculated by a "fix"_fix.html to be output.
 The ID in the attribute should be replaced by the actual ID of the fix
 that has been defined previously in the input script.
 
-If {f_ID} is used as a attribute, and the fix calculates a
-per-particle vector, then the per-particle vector is output.  If
-{f_ID\[N\]} is used, then N must be in the range from 1-M, which will
-output the Nth column of the M-columne per-particle array calculated
-by the fix.  If {f_ID} is used, and the fix calculates a per-particle
-array, then it is the same as if the individual columns of the array
-had been listed one by one.  See the example above for custom
-attributes.
+If {f_ID} is used as a attribute, the fix must calculate a
+per-particle vector, and it is output.  If {f_ID\[N\]} is used, the
+fix must calculate a per-particle array, and N must be in the range
+from 1-M, which will output the Nth column of the M-column array.
 
 The {v_name} attribute allows per-particle vectors calculated by a
 "variable"_variable.html to be output.  The name in the attribute
