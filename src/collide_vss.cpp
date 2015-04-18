@@ -156,6 +156,9 @@ double CollideVSS::attempt_collision(int icell, int np, double volume)
    nattempt = 0.5 * np * (np-1) *
      vremax[icell][0][0] * dt * fnum / volume + random->uniform();
 
+ // DEBUG
+ //nattempt = 10;
+
   return nattempt;
 }
 
