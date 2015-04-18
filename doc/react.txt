@@ -49,7 +49,14 @@ Thus the file can contain more reactions than are used in a particular
 simulation.  See the "species"_species.html command for how species
 IDs are defined.
 
-The reaction models for the various styles are described below.
+The reaction models for the various styles are described below.  When
+a pair of particles collide, the list of all reactions with those two
+species as reactants is looped over.  A probability for each reaction
+is calculated, using the formulas discussed below, and a random number
+is used to decide which reaction (if any) takes place.  No check is
+made that the sum of probabilities for all possible reactions is <=
+1.0, but that should normally be the case if reasonable reaction
+coefficients are defined.
 
 The format of the reaction file is the same for all three of the
 currently defined styles, and is also described below.  The various
