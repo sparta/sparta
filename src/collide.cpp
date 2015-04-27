@@ -1145,43 +1145,43 @@ void Collide::collisions_group_ambipolar()
 }
 
 /* ----------------------------------------------------------------------
-   reset ionambi and ion/electron coupling due to reaction that occurred
+   reset ionambi and ion/electron coupling if ambipolar reaction occurred
    i/j = indices of I,J reactants
    isp/jsp = pre-reaction species of I,J
+     both will not be electrons, if one is electron it will be jsp
    reactants i,j and isp/jsp will always be in order listed below
    products ip,jp,kp will always be in order listed below
    logic must be valid for all ambipolar AND non-ambipolar reactions
-   warning:
-     never index by i/j without checking if e, since may be negative index
-     never access ionambi for an e, since may be in elist
-   check 3 versions of 2 -> 3: dissociation or ionization
+   check for 3 versions of 2 -> 3: dissociation or ionization
+     all have J product = electron
      D: AB + e -> A + e + B
-        if AB not ion and ej = elec (r and p) and B not elec:
-        set B to not ion, A remains not ion
+        if I reactant = neutral and K product not electron:
+        set K product = neutral
      D: AB+ + e -> A+ + e + B
-     D: AB+ + e -> A + e + B+
-        if AB is ion and ej = elec (r and p):
-        set A or B to ion, couple new ion with ej
+        if I reactant = ion:
+        set K product = neutral
      I: A + e -> A+ + e + e
-        if A not ion and ej = elec (r and P) and ek = elec:
-        set A+ to ion, couple A+ with ek
-     all other 2 -> 3 cases, set new particle to not ion
-   check 3 versions of 2 -> 2: ionization or exchange
+        if I reactant = neutral and K product = electron:
+        set I product = ion, couple I ion to K electron
+     all other 2 -> 3 cases, set K product = neutral
+   check for 3 versions of 2 -> 2: ionization or exchange
      I: A + B -> AB+ + e
-        if A not ion and B not ion and ej = elec:
-        set AB to ion and couple AB and ej
+        if J product = electron:
+        set I product to ion, couple I ion to J electron
      E: AB+ + C -> A + BC+
-        if AB is ion and C not ion:
-        set 1 of 2 products to ion and re-couple to e
+        if I reactant = ion:
+        set I/J products to neutral/ion, couple J ion to I's original electron
      E: C + AB+ -> A + BC+
-        if C is not ion and AB is ion:
-        set 1 of 2 products to ion and re-couple to e
+        if J reactant = ion:
+        nothing to change for products
      all other 2 -> 2 cases, no changes
-   check one version of 2 -> 1: recombination
+   check for one version of 2 -> 1: recombination
      R: A+ + e -> A
-        if A+ = ambi and e = elec:
-        set A to not ambi
+        if ej = elec, set I product to not ion
      all other 2 -> 1 cases, no changes
+   WARNING:
+     do not index by I,J if could be e, since may be negative I,J index
+     do not access ionambi if could be e, since e may be in elist
 ------------------------------------------------------------------------- */
 
 void Collide::ambi_reset(int i, int j, int isp, int jsp, 
@@ -1191,57 +1191,39 @@ void Collide::ambi_reset(int i, int j, int isp, int jsp,
   int e = ambispecies;
 
   // 2 reactants become 3 products
-  // if 2nd reactant is electron, 2nd product will be electron
+  // in all ambi reactions, J reactant is electron
 
   if (kp) {
     int k = particle->nlocal-1;
     ionambi[k] = 0;
     if (jsp != e) return;
 
-    if (ionambi[i] == 0 && kp->ispecies != e) {
-      ionambi[k] = 0;
-    } else if (ionambi[i] == 1) {
-      if (ions[ip->ispecies]) {
-        ionambi[i] = 1;
-        ip->flag = j;         // j may be negative index
-      } else if (ions[kp->ispecies]) {
-        ionambi[i] = 0;
-        ionambi[k] = 1;
-        kp->flag = j;         // j may be negative index
-      }
-    } else if (ionambi[i] == 0 && kp->ispecies == e) {
-      ionambi[i] = 1;
-      ip->flag = k;           // k is index >= 0
+    if (ionambi[i]) {                // nothing more to change
+    } else if (kp->ispecies == e) {
+      ionambi[i] = 1;                // 1st reactant is now ion
+      ip->flag = k;                  // couple I ion to K electron
+    } else {                         // nothing more to change
     }
 
   // 2 reactants become 2 products
-  // neither of reactants can be an electron
+  // ambi reaction if J product is electron or either reactant is ion
 
   } else if (jp) {
-    if (ionambi[i] == 0 && ionambi[j] == 0) {
-      if (jp->ispecies == e) {
-        ionambi[i] = 1;
-        ip->flag = j;         // j is index >= 0
-      }
+    if (jp->ispecies == e) {
+      ionambi[i] = 1;         // 1st reactant is now ion
+      ip->flag = j;           // couple I ion to J electron
     } else if (ionambi[i]) {
-      if (ions[jp->ispecies]) {
-        ionambi[i] = 0;
-        ionambi[j] = 1;
-        jp->flag = ip->flag;
-      }
-    } else if (ionambi[j]) {
-      if (ions[ip->ispecies]) {
-        ionambi[j] = 0;
-        ionambi[i] = 1;
-        ip->flag = jp->flag;
-      }
+      ionambi[i] = 0;         // 1st reactant is now neutral
+      ionambi[j] = 1;         // 2nd reactant is now ion
+      jp->flag = ip->flag;    // couple J ion to I reactant's electron
+    } else if (ionambi[j]) {  // nothing to change
     }
 
   // 2 reactants become 1 product
-  // electron is also de-coupled from ion by setting ionambi to 0
+  // ambi reaction if J reactant is electron
 
   } else if (!jp) {
-    if (isp != e && ionambi[i] && jsp == e) ionambi[i] = 0;
+    if (jsp == e) ionambi[i] = 0;
   }
 }
 

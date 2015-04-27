@@ -265,7 +265,7 @@ void ReactBird::ambi_check()
     r = &rlist[i];
     if (!r->active) continue;
 
-    // skip reaction if no electrons or ambi ions as reactant or product
+    // skip reaction if no ambipolar ions or electrons as reactant or product
 
     flag = 0;
     for (int j = 0; j < r->nreactant; j++)
@@ -274,10 +274,9 @@ void ReactBird::ambi_check()
       if (r->products[j] == especies || ions[r->products[j]]) flag = 1;
     if (!flag) continue;
 
-    // dissociation must match one of these
+    // dissociation must match one of these orders
     // D: AB + e -> A + e + B
     // D: AB+ + e -> A+ + e + B
-    // D: AB+ + e -> A + e + B+
 
     flag = 1;
 
@@ -289,9 +288,6 @@ void ReactBird::ambi_check()
         else if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
                  ions[r->products[0]] == 1 && r->products[1] == especies && 
                  ions[r->products[2]] == 0) flag = 0;
-        else if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
-                 ions[r->products[0]] == 0 && r->products[1] == especies && 
-                 ions[r->products[2]] == 1) flag = 0;
       }
     }
 
