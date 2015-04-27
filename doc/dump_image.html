@@ -15,11 +15,13 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>dump ID style N file color diameter keyword value ... 
+<PRE>dump ID style mix-ID N file color diameter keyword value ... 
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
 <LI>style = <I>image</I> or <I>movie</I> = style of dump command (other styles <I>particle</I> or <I>grid</I> or <I>surf</I> are discussed on the <A HREF = "dump.html">dump</A> doc page) 
+
+<LI>mix-ID = mixture ID for which particles to include in image 
 
 <LI>N = dump every this many timesteps 
 
@@ -93,13 +95,13 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>dump myDump all image 100 dump.*.jpg type type
-dump myDump all movie 100 movie.mpg type type 
+<PRE>dump myDump image all 100 dump.*.jpg type type
+dump myDump movie all 100 movie.mpg type type 
 </PRE>
-<P>These commands will dump shapshot images of all particles to a file
-every 100 steps.  The last two shell command will make a movie from
-the JPG files (once the run has finished) and play it in the Firefox
-browser:
+<P>These commands will dump shapshot images of all particles whose
+species are in the <I>mix-ID</I> to a file every 100 steps.  The last two
+shell command will make a movie from the JPG files (once the run has
+finished) and play it in the Firefox browser:
 </P>
 <PRE>dump                4 image 100 tmp.*.jpg type type pdiam 0.2 view 90 -90 
 dump_modify	    4 pad 4
@@ -116,7 +118,7 @@ included in the image and how it appears.
 </P>
 <P>Any or all of these entities can be included in the images:
 </P>
-<UL><LI>particles (all or limited to a <A HREF = "region.html">region</A>)
+<UL><LI>particles (all in mixture or limited to a <A HREF = "region.html">region</A>)
 <LI>grid cells (all or limited to a <A HREF = "region.html">region</A>)
 <LI>x,y,z planes cutting through the grid
 <LI>surface elements 

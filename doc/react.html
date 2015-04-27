@@ -224,10 +224,11 @@ explained above.
 </P>
 <HR>
 
-<P>If the ambipolar approximation is being used, then reactions which
-involve either ambipolar ions or the ambipolar electron have more
-restricitve rules about the ordering of reactants and products, than
-those described in the preceeding section.
+<P>If the ambipolar approximation is being used, via the <A HREF = "fix_ambipolar.html">fix
+ambipolar</A> command, then reactions which involve
+either ambipolar ions or the ambipolar electron have more restricitve
+rules about the ordering of reactants and products, than those
+described in the preceeding section.
 </P>
 <P>Note that ambipolar collisions are turned on via the <A HREF = "collide_modify.html">collide_modify
 ambipolar yes</A> commands, which in turn requries
@@ -245,8 +246,7 @@ trailing "+" sign in the rules that follow.  Other written species
 products in one of the following orders:
 </P>
 <PRE>AB + e -> A + e + B
-AB+ + e -> A+ + e + B
-AB+ + e -> A + e + B+ 
+AB+ + e -> A+ + e + B 
 </PRE>
 <P>Ambipolar ionization reactions with 2 or 3 products must be in one of
 the following orders:
@@ -254,7 +254,7 @@ the following orders:
 <PRE>A + e -> A+ + e + e
 A + B -> AB+ + e 
 </PRE>
-<P>Ambipolar exchange reactions must be in one of the following orders:
+<P>Ambipolar exchange reactions must be one of the following orders:
 </P>
 <PRE>AB+ + C -> A + BC+
 C + AB+ -> A + BC+ 

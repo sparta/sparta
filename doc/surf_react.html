@@ -141,9 +141,10 @@ C2, etc, and how they are interpreted by SPARTA.
 <HR>
 
 <P>If the ambipolar approximation is being used, via the <A HREF = "fix_ambipolar.hmtl">fix
-ambipolar</A>, then the <I>prob</I> style can list two
-kinds of surface reactions in its file which involve the ambipolar ion
-and ambipolar electron species it defines.
+ambipolar</A> command, then reactions which involve
+either ambipolar ions or the ambipolar electron have more restricitve
+rules about the ordering of reactants and products, than those
+described in the preceeding section for the <I>prob</I> style.
 </P>
 <P>The first is an "exchange" reaction which converts an ambipolar ion
 into a neutral species.  Internally this removes the ambipolar

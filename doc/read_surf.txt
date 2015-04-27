@@ -15,7 +15,7 @@ read_surf ID filename keyword args ... :pre
 ID = ID for all surface elements in the file :ulb,l
 filename = name of surface file :l
 zero or more keyword/args pairs may be appended :l
-keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} :l
+keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {type} or {toffset} :l
   origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   trans args = Dx Dy Dz
@@ -31,12 +31,18 @@ keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or 
     Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
   invert args = none
   clip args = none or fraction
-    fraction = push points close to the box boundary to the boundary (optional) :pre
+    fraction = push points close to the box boundary to the boundary (optional)
+  group arg = group-ID
+    group-ID = new or existing surface group to assign the surface elements to
+  type arg = yes or no
+  toffset arg = Noffset
+    Noffset = add Noffset to the type value of each element :pre
 :ule
 
 [Examples:]
 
 read_surf 1 surf.sphere
+read_surf 1 surf.sphere group sphere2 type yes toffset 1
 read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip
 read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6 :pre
 
@@ -137,11 +143,16 @@ simulations, {z} should be omitted.
 The {Lines} section is only allowed for 2d simulations and consists of
 N entries, where N = # of lines, each of this form:
 
-line-ID p1 p2 :pre
+line-ID (type) p1 p2 :pre
 
 The line-ID is ignored; it is only added to assist in examining the
-file.  {P1} and {p2} are the point-IDs of the 2 end points of the line
-segment.  Each is a value from 1 to Npoints, as described above.
+file.  {Type} is an optional integer value.  It is only allowed if the
+{type} keyword is set to {yes}.  If used, it must be a positive
+integer value.  If not specified, {type} is set to 1.  See the
+discussion below for the {type} keyword which explains why assigning
+type values can be useful.  {P1} and {p2} are the point-IDs of the 2
+end points of the line segment.  Each is a value from 1 to Npoints, as
+described above.
 
 The ordering of {p1} and {p2} is important as it defines the direction
 of the outward normal for the line segment when a particle collides
@@ -153,12 +164,16 @@ crossed into the vector from {p1} to {p2} to determine the normal.
 The {Triangles} section is only allowed for 3d simulations and
 consists of N entries, where N = # of triangles, each of this form:
 
-tri-ID p1 p2 p3 :pre
+tri-ID (type) p1 p2 p3 :pre
 
 The tri-ID is ignored; it is only added to assist in examining the
-file.  {P1} and {p2} and {p3} are the point-IDs of the 3 corner points
-of the triangle.  Each is a value from 1 to Npoints, as described
-above.
+file.  {Type} is an optional integer value.  It is only allowed if the
+{type} keyword is set to {yes}.  If used, it must be a positive
+integer value.  If not specified, {type} is set to 1.  See the
+discussion below for the {type} keyword which explains why assigning
+type values can be useful.  {P1} and {p2} and {p3} are the point-IDs
+of the 3 corner points of the triangle.  Each is a value from 1 to
+Npoints, as described above.
 
 The ordering of {p1} and {p2} and {p3} is important as it defines the
 direction of the outward normal for the triangle when a particle
@@ -169,12 +184,12 @@ crossed into the edge from {p1} to {p3} to determine the normal.
 
 :line
 
-The following optional keywords can be specified.  The geometric
-transformations they describe are performed in the order they are
-listed, which gives flexibility in how surfaces can be manipulated.
-Note that the order may be important; e.g. performing an {origin}
-operation followed by a {rotate} operation may not be the same as a
-{rotate} followed by a {origin}.
+The following optional geometric keywords can be specified.  The
+geometric transformations they describe are performed in the order
+they are listed, which gives flexibility in how surfaces can be
+manipulated.  Note that the order may be important; e.g. performing an
+{origin} operation followed by a {rotate} operation may not be the
+same as a {rotate} followed by a {origin}.
 
 Most of the keywords perform a geometric transformation on all the
 vertices in the surface file with respect to an origin point.  By
@@ -254,6 +269,41 @@ between 0.0 and 0.5.
 
 :line
 
+The following optional keywords for group and type information can be
+specified.
+
+Surface groups are collections of surface elements.  Each surface
+element belongs to one or more surface groups; all elements belong to
+the "all" group.  Surface group IDs are used by other commands to
+identify a group of suface elements to operate on.  See the
+"group"_group.html command for more details.
+
+Every surface element stores a {type} which is a positive integer.
+{Type} values are useful for flagging subsets of elements or different
+objects in the surface file.  For example, a patch of triangles on a
+sphere.  Or one sphere out of several that the file contains.  Surface
+element types can be used to define surface groups.  See the "group"
+command for details.
+
+The {group} keyword specifies an additional surface group ID to assign
+all the read-in surface elements to.  The read-in elements will be
+assigned to the "all" group and to this one.
+
+If the {type} keyword is set to {yes} then the Lines or Triangles
+section of the surface file specifies a {type} for each line or
+triangle.  If the {type} keyword is set to {no}, which is the default,
+then no {type} appears in the definition of the line or triangle; a
+type of 1 is assigned to each read-in surface element.
+
+The {toffset} keyword defines an {Noffset} value which is added to the
+type of each read-in surface element.  The default for Noffset = 0.
+Specifing a non-zero Noffset allows the same surface file to be
+read-in multiple times (e.g. with different origins, tranlations,
+rotations, etc) to define multiple objects, and the surface elements
+in each object to be assigned different types.
+
+:line
+
 [Restrictions:]
 
 This command can only be used after the simulation box is defined by
@@ -304,3 +354,4 @@ lead to unphysical particle dynamics.
 [Default:]
 
 The default origin for the vertices in the surface file is (0,0,0).
+The defaults for group = all, type = no, toffset = 0.

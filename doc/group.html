@@ -1,0 +1,106 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>group command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>group ID which style args 
+</PRE>
+<UL><LI>ID = user-defined name of the grid or surface group 
+
+<LI>which = <I>grid</I> or <I>surf</I> 
+
+<LI>style = <I>type</I> or <I>region</I> or <I>subtract</I> or <I>union</I> or <I>intersect</I> or <I>clear</I> 
+
+  <I>type</I> args = list of one or more surface types
+  <I>region</I> args = region-ID rflag
+    region-ID = ID of region which surface element must be in
+    rflag = <I>any</I> or <I>all</I> or <I>center</I>
+  <I>subtract</I> args = two or more group IDs
+  <I>union</I> args = one or more group IDs
+  <I>intersect</I> args = two or more group IDs
+  <I>clear</I> = no args
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>group sphere surf type 1 2
+group patch surf region cutout
+group boundary surf subtract all a2 a3
+group boundary surf union lower upper
+group boundary surf intersect upper leftside 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Identify a collection of surface elements as a surface group.  The
+surface group ID can then be used in other commands such as <A HREF = "dump.html<A HREF = "compute_surf.html">>dump
+surf</A>, compute surf</A>, or
+<A HREF = "surf_modify.html">surf_modify</A> to act on those surface elements
+together.
+</P>
+<P>If the group ID already exists, the specified surface elements
+are added to the group.
+</P>
+<P>A surface group with the ID <I>all</I> is predefined.  All surface elements
+belong to this group.
+</P>
+<P>The <I>type</I> style put all surface elements with the specified type into
+the group.  See the <A HREF = "read_surf.html">read_surf</A> command for details of
+how types are assigned to individual elements when they are read in
+from a file.
+</P>
+<P>The <I>region</I> style puts all surface elements in the region volume
+associated with the <I>region-ID</I> into the group.  See the
+<A HREF = "region.html">region</A> command for details of what kind of geometric
+regions can be defined.  Note that the region side" option can be used
+to define whether the inside or outside of the geometric region is
+considered "in" the region.
+</P>
+<P>The <I>rflag</I> setting determines how a surface element is judged to be
+in the region or not.  For <I>rflag</I> = <I>any</I>, it is in the region if any
+of its corner points (3 for triangle, 2 for line) is in the region.
+For <I>rflag</I> = <I>all</I>, all its corner points must be in the region.  For
+<I>rflag</I> = <I>center</I>, the center point of the line segment or median
+point of the triangle must be in the region.
+</P>
+<P>The <I>subtract</I> style takes a list of two or more existing group names
+as arguments.  All surface elements that belong to the 1st group, but
+not to any of the other groups are added to the specified group.
+</P>
+<P>The <I>union</I> style takes a list of one or more existing group names as
+arguments.  All surface elements that belong to any of the listed
+groups are added to the specified group.
+</P>
+<P>The <I>intersect</I> style takes a list of two or more existing group names
+as arguments.  Surface elements that belong to every one of the listed
+groups are added to the specified group.
+</P>
+<P>The <I>clear</I> style un-assigns all surface elements that were assigned
+to that group.  This is a way to empty a group before adding more
+surface elements to it.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>No more than 32 surface groups can be defined, including "all".
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump.html">dump</A>, <A HREF = "region.html">region</A>, <A HREF = "compute_surf.html">compute
+surf</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>All surface elements belong to the "all" group.
+</P>
+</HTML>

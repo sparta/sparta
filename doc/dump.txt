@@ -11,10 +11,14 @@ dump command :h3
 
 [Syntax:]
 
-dump ID style N file args :pre
+dump ID style group-ID N file args :pre
 
 ID = user-assigned name for the dump :ulb,l
 style = {particle} or {grid} or {surf} or {image} :l
+group-ID = which particles, grid cells, surface elements to dump :l
+  use mix-ID for dump style = particle
+  use grid-ID for style = grid
+  use surf-ID = for style = surf :pre
 N = dump every this many timesteps :l
 file = name of file to write dump info to :l
 args = list of arguments for a particular style :l
@@ -74,9 +78,9 @@ args = list of arguments for a particular style :l
 
 [Examples:]
 
-dump 1 particle 100 dump.myforce.* id type x y vx fx
-dump 2 particle 100 dump.%.myforce id type c_myF\[3\] v_ke
-dump 3 grid 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi :pre
+dump 1 particle all 100 dump.myforce.* id type x y vx fx
+dump 2 particle inflow 100 dump.%.myforce id type c_myF\[3\] v_ke
+dump 3 grid 1000 all tmp.grid id proc xlo ylo zlo xhi yhi zhi :pre
 
 [Description:]
 
@@ -94,9 +98,31 @@ with the "undump"_undump.html command, after which its ID can be
 re-used.
 
 The {style} keyword determines what quantities are written to the file
-and in what format.  Settings made via the
+and in what format.  The {particle}, {grid}, {surf} options are for
+particles, grid cells, or surface elements.  Settings made via the
 "dump_modify"_dump_modify.html command can also alter what info is
 included in the file and the format of individual values.
+
+The {group-ID} keyword can limit which particles, grid cells, or
+surface elements are output.  
+For {style} = {particle}, the group-ID is a {mix-ID} as defined
+by the "mixture"_mixture.html command.  Only particles with species
+in the defined mixture are output.
+
+For {style} = {grid},
+
+For {style} = {surf},
+
+
+
+
+
+
+
+
+
+
+
 
 As described below, the filename determines the kind of output (text
 or binary or gzipped, one big file or one per timestep, one big file

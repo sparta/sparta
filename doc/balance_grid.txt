@@ -1,4 +1,4 @@
-"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+<"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
 
 :link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
@@ -119,7 +119,7 @@ algorithm to assign spatially-compact clumps of grid cells to
 processors.  Each grid cell has a "weight" in this algorithm so that
 each processor is assigned an equal total weight of grid cells, as
 nearly as possible.  If the {weight} argument is specified as {cell},
-than the weight for each grid cell is 1.0, so that each processor will
+then the weight for each grid cell is 1.0, so that each processor will
 end up with an equal number of grid cells.  If the {weight} argument
 is specified as {part}, than the weight for each grid cell is the
 number of particles it currently owns, so that each processor will end

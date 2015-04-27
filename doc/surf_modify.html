@@ -13,62 +13,61 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>surf_modify keyword args ... 
+<PRE>surf_modify group-ID keyword args ... 
 </PRE>
+<LI>group-ID = ID of the surface group to operate on 
+
 <UL><LI>one or more keyword/arg pairs may be listed 
 
 <LI>keyword = <I>collide</I> or (react) 
 
-<PRE>  <I>collide</I> args = surf-ID sc-ID
-    surf-ID = ID of a surface
+<PRE>  <I>collide</I> args = sc-ID
     sc-ID = ID of a surface collision model
-  <I>react</I> args = surf-ID sr-ID
-    surf-ID = ID of a surface
+  <I>react</I> args = sr-ID
     sr-ID = ID of a surface reaction model or none 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>surf_modify collide 1 2
-surf_modify collide sphere bounce react sphere absorb 
+<PRE>surf_modify sphere collide 1 2
+surf_modify all collide sphere bounce react sphere absorb 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Set parameters for surface elements that have been read in by the
-<A HREF = "read_surf.html">read_surf</A> command.  For each file of objects read by
-a <A HREF = "read_surf.html">read_surf</A> command, a surface ID is assigned.  This
-is the <I>surf-ID</I> argument described above as an argument for various
-keywords.
+<P>Set parameters for a group of surface elements in the specified
+group-ID.  Surface elements are read in by the
+<A HREF = "read_surf.html">read_surf</A> command.  They can be assigned to groups by
+that command or via the <A HREF = "group.html">group</A> command.
 </P>
-<P>The <I>collide</I> keyword is used to assign a surface collision model to a
-set of surface elements.  The set of surface elements is specified by
-<I>surf-ID</I>.  The surface collision model is defined by the
-<A HREF = "surf_collide.html">surf_collide</A> command.  Which collision model to
-use is specified as <I>sc-ID</I>, which is the ID used in the
-<A HREF = "surf_collide.html">surf_collide</A> command.
+<P>The <I>collide</I> keyword is used to assign a surface collision model.
+Surface collision models are defined by the
+<A HREF = "surf_collide.html">surf_collide</A> command, which assigns each a surface
+collision ID, specified here as <I>sc-ID</I>.
 </P>
-<P>The effect of this keyword is that particle collisions with these
-surface elements will be computed by the specified surface collision
-model.
+<P>The effect of this keyword is that particle collisions with surface
+elements in group-ID will be computed by the specified surface
+collision model.
 </P>
-<P>The <I>react</I> keyword is used to assign a surface reaction model to a
-set of surface elements.  The set of surface elements is specified by
-<I>surf-ID</I>.  The surface reaction model is defined by the
-<A HREF = "surf_react.html">surf_react</A> command.  Which reaction model to use is
-specified as <I>sr-ID</I>, which is the ID used in the
-<A HREF = "surf_react.html">surf_react</A> command.  If an sr-ID of <I>none</I> is used
-then surface reactions are turned off.
+<P>The <I>react</I> keyword is used to assign a surface reaction model.
+Surface reaction models are defined by the<A HREF = "surf_react.html">surf_react</A>
+command, which assigns each a surface reaction ID, specified here as
+<I>sr-ID</I>.
 </P>
-<P>The effect of this keyword is that particle collisions with these
-surface elements will induce reactions which are computed by the
+<P>The effect of this keyword is that particle collisions with surface
+elements in group-ID will induce reactions which are computed by the
 specified surface reaction model.
+</P>
+<P>Note that if the same surface element is assigned to multiple groups,
+using this command multiple times may override the effect of a
+previous command that assigned a surface element to a different
+collision or reaction model.
 </P>
 <P><B>Restrictions:</B>
 </P>
 <P>All surface elements must be assigned to a surface collision model via
-the <I>collide</I> keyword before a simlulation can be performed.  
-Using a surface reaction model is optional.
+the <I>collide</I> keyword before a simlulation can be performed.  Using a
+surface reaction model is optional.
 </P>
 <P><B>Related commands:</B>
 </P>

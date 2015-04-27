@@ -135,9 +135,10 @@ C1 = probability that the reaction occurs (0.0 to 1.0) :ul
 :line
 
 If the ambipolar approximation is being used, via the "fix
-ambipolar"_fix_ambipolar.hmtl, then the {prob} style can list two
-kinds of surface reactions in its file which involve the ambipolar ion
-and ambipolar electron species it defines.
+ambipolar"_fix_ambipolar.hmtl command, then reactions which involve
+either ambipolar ions or the ambipolar electron have more restricitve
+rules about the ordering of reactants and products, than those
+described in the preceeding section for the {prob} style.
 
 The first is an "exchange" reaction which converts an ambipolar ion
 into a neutral species.  Internally this removes the ambipolar

@@ -1,0 +1,98 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+group command :h3
+
+[Syntax:]
+
+group ID which style args :pre
+
+ID = user-defined name of the grid or surface group :ulb,l
+which = {grid} or {surf} :l
+style = {type} or {region} or {subtract} or {union} or {intersect} or {clear} :l
+  {type} args = list of one or more surface types
+  {region} args = region-ID rflag
+    region-ID = ID of region which surface element must be in
+    rflag = {any} or {all} or {center}
+  {subtract} args = two or more group IDs
+  {union} args = one or more group IDs
+  {intersect} args = two or more group IDs
+  {clear} = no args
+:ule
+
+[Examples:]
+
+group sphere surf type 1 2
+group patch surf region cutout
+group boundary surf subtract all a2 a3
+group boundary surf union lower upper
+group boundary surf intersect upper leftside :pre
+
+[Description:]
+
+Identify a collection of surface elements as a surface group.  The
+surface group ID can then be used in other commands such as "dump
+surf"_dump.html, compute surf"_compute_surf.html, or
+"surf_modify"_surf_modify.html to act on those surface elements
+together.
+
+If the group ID already exists, the specified surface elements
+are added to the group.
+
+A surface group with the ID {all} is predefined.  All surface elements
+belong to this group.
+
+The {type} style put all surface elements with the specified type into
+the group.  See the "read_surf"_read_surf.html command for details of
+how types are assigned to individual elements when they are read in
+from a file.
+
+The {region} style puts all surface elements in the region volume
+associated with the {region-ID} into the group.  See the
+"region"_region.html command for details of what kind of geometric
+regions can be defined.  Note that the region side" option can be used
+to define whether the inside or outside of the geometric region is
+considered "in" the region.
+
+The {rflag} setting determines how a surface element is judged to be
+in the region or not.  For {rflag} = {any}, it is in the region if any
+of its corner points (3 for triangle, 2 for line) is in the region.
+For {rflag} = {all}, all its corner points must be in the region.  For
+{rflag} = {center}, the center point of the line segment or median
+point of the triangle must be in the region.
+
+The {subtract} style takes a list of two or more existing group names
+as arguments.  All surface elements that belong to the 1st group, but
+not to any of the other groups are added to the specified group.
+
+The {union} style takes a list of one or more existing group names as
+arguments.  All surface elements that belong to any of the listed
+groups are added to the specified group.
+
+The {intersect} style takes a list of two or more existing group names
+as arguments.  Surface elements that belong to every one of the listed
+groups are added to the specified group.
+
+The {clear} style un-assigns all surface elements that were assigned
+to that group.  This is a way to empty a group before adding more
+surface elements to it.
+
+:line
+
+[Restrictions:]
+
+No more than 32 surface groups can be defined, including "all".
+
+[Related commands:]
+
+"dump"_dump.html, "region"_region.html, "compute
+surf"_compute_surf.html
+
+[Default:]
+
+All surface elements belong to the "all" group.

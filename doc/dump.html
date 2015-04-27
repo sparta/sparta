@@ -15,12 +15,18 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>dump ID style N file args 
+<PRE>dump ID style group-ID N file args 
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
 <LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
 
+<LI>group-ID = which particles, grid cells, surface elements to dump 
+
+<PRE>  use mix-ID for dump style = particle
+  use grid-ID for style = grid
+  use surf-ID = for style = surf 
+</PRE>
 <LI>N = dump every this many timesteps 
 
 <LI>file = name of file to write dump info to 
@@ -84,9 +90,9 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>dump 1 particle 100 dump.myforce.* id type x y vx fx
-dump 2 particle 100 dump.%.myforce id type c_myF[3] v_ke
-dump 3 grid 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi 
+<PRE>dump 1 particle all 100 dump.myforce.* id type x y vx fx
+dump 2 particle inflow 100 dump.%.myforce id type c_myF[3] v_ke
+dump 3 grid 1000 all tmp.grid id proc xlo ylo zlo xhi yhi zhi 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -104,9 +110,20 @@ with the <A HREF = "undump.html">undump</A> command, after which its ID can be
 re-used.
 </P>
 <P>The <I>style</I> keyword determines what quantities are written to the file
-and in what format.  Settings made via the
+and in what format.  The <I>particle</I>, <I>grid</I>, <I>surf</I> options are for
+particles, grid cells, or surface elements.  Settings made via the
 <A HREF = "dump_modify.html">dump_modify</A> command can also alter what info is
 included in the file and the format of individual values.
+</P>
+<P>The <I>group-ID</I> keyword can limit which particles, grid cells, or
+surface elements are output.  
+For <I>style</I> = <I>particle</I>, the group-ID is a <I>mix-ID</I> as defined
+by the <A HREF = "mixture.html">mixture</A> command.  Only particles with species
+in the defined mixture are output.
+</P>
+<P>For <I>style</I> = <I>grid</I>,
+</P>
+<P>For <I>style</I> = <I>surf</I>,
 </P>
 <P>As described below, the filename determines the kind of output (text
 or binary or gzipped, one big file or one per timestep, one big file

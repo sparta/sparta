@@ -311,6 +311,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "echo"_echo.html,
 "fix"_fix.html,
 "global"_global.html,
+"group"_group.html,
 "if"_if.html,
 "include"_include.html,
 "jump"_jump.html,

@@ -1,5 +1,5 @@
 <HTML>
-<CENTER><A HREF = "Section_intro.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_commands.html">Next Section</A> 
+<CENTER><<A HREF = "Section_intro.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_commands.html">Next Section</A> 
 </CENTER>
 
 
@@ -157,7 +157,7 @@ within the SPARTA code.  The options that are currently recogized are:
 <UL><LI>-DSPARTA_GZIP
 <LI>-DSPARTA_JPEG
 <LI>-DSPARTA_PNG
-<LI>-DLAMMPS_FFMPEG
+<LI>-DSPARTA_FFMPEG
 <LI>-DSPARTA_MAP
 <LI>-DSPARTA_UNORDERED_MAP
 <LI>-DSPARTA_SMALL
@@ -267,9 +267,9 @@ long SPARTA simulations.
 <P><B>Step 6</B>
 </P>
 <P>The 3 JPG variables allow you to specify a JPEG and/or PNG library
-which LAMMPS uses when writing out JPEG or PNG files via the <A HREF = "dump_image.html">dump
+which SPARTA uses when writing out JPEG or PNG files via the <A HREF = "dump_image.html">dump
 image</A> command. These can be left blank if you do not
-use the -DLAMMPS_JPEG or -DLAMMPS_PNG switches discussed above in Step
+use the -DSPARTA_JPEG or -DSPARTA_PNG switches discussed above in Step
 4, since in that case JPEG/PNG output will be disabled.
 </P>
 <P>A standard JPEG library usually goes by the name libjpeg.a or

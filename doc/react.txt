@@ -218,10 +218,11 @@ explained above.
 
 :line
 
-If the ambipolar approximation is being used, then reactions which
-involve either ambipolar ions or the ambipolar electron have more
-restricitve rules about the ordering of reactants and products, than
-those described in the preceeding section.
+If the ambipolar approximation is being used, via the "fix
+ambipolar"_fix_ambipolar.html command, then reactions which involve
+either ambipolar ions or the ambipolar electron have more restricitve
+rules about the ordering of reactants and products, than those
+described in the preceeding section.
 
 Note that ambipolar collisions are turned on via the "collide_modify
 ambipolar yes"_collide_modify.html commands, which in turn requries
@@ -239,8 +240,7 @@ Ambipolar dissociation reactions must list their reactants and
 products in one of the following orders:
 
 AB + e -> A + e + B
-AB+ + e -> A+ + e + B
-AB+ + e -> A + e + B+ :pre
+AB+ + e -> A+ + e + B :pre
 
 Ambipolar ionization reactions with 2 or 3 products must be in one of
 the following orders:
@@ -248,7 +248,7 @@ the following orders:
 A + e -> A+ + e + e
 A + B -> AB+ + e :pre
 
-Ambipolar exchange reactions must be in one of the following orders:
+Ambipolar exchange reactions must be one of the following orders:
 
 AB+ + C -> A + BC+
 C + AB+ -> A + BC+ :pre
