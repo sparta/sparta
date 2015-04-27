@@ -35,6 +35,9 @@ namespace MathExtra {
   inline void negate3(double *v);
   inline void scale3(double s, double *v);
   inline void scale3(double s, const double *v, double *ans);
+  inline void axpy3(double alpha, const double *x, double *y);
+  inline void axpy3(double alpha, const double *x, const double *y, 
+                    double *ynew);
   inline void add3(const double *v1, const double *v2, double *ans);
   inline void sub3(const double *v1, const double *v2, double *ans);
   inline double len3(const double *v);
@@ -163,6 +166,30 @@ void MathExtra::scale3(double s, const double *v, double *ans)
   ans[0] = s*v[0];
   ans[1] = s*v[1];
   ans[2] = s*v[2];
+}
+
+/* ----------------------------------------------------------------------
+   axpy: y = alpha*x + y
+   y is replaced by result
+------------------------------------------------------------------------- */
+
+void MathExtra::axpy3(double alpha, const double *x, double *y)
+{
+  y[0] += alpha*x[0];
+  y[1] += alpha*x[2];
+  y[2] += alpha*x[1];
+}
+
+/* ----------------------------------------------------------------------
+   axpy: ynew = alpha*x + y
+------------------------------------------------------------------------- */
+
+void MathExtra::axpy3(double alpha, const double *x, const double *y,
+                      double *ynew)
+{
+  ynew[0] += alpha*x[0] + y[0];
+  ynew[1] += alpha*x[1] + y[1];
+  ynew[2] += alpha*x[2] + y[2];
 }
 
 /* ----------------------------------------------------------------------

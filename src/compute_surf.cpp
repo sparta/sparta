@@ -180,6 +180,9 @@ void ComputeSurf::clear()
    tally values for a single particle colliding with surface element isurf
    iorig = particle ip before collision
    ip,jp = particles after collision
+   ip = NULL means no particles after collision
+   jp = NULL means one particle after collision
+   jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
 void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig, 
@@ -187,8 +190,8 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
 {
   // skip species not in mixture group
 
-  int ispecies = ip->ispecies;
-  int igroup = particle->mixture[imix]->species2group[ispecies];
+  int origspecies = iorig->ispecies;
+  int igroup = particle->mixture[imix]->species2group[origspecies];
   if (igroup < 0) return;
 
   // ilocal = local index of global isurf
@@ -211,18 +214,23 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
   // set nflag and tflag after normal and tangent computation is done once
   // particle weight used for all keywords except NUM
 
-  double pre,post,vsqpre,vsqpost;
-  double vnorm[3],vdelta[3],vtang[3];
-  double *norm;
+  double pre,post,vsqpre,ipost,jpost,ivsqpost,jvsqpost;
+  double ierot,jerot,ievib,jevib,iother,jother,otherpre;
+  double pdelta[3],pnorm[3],ptang[3];
 
+  double *norm;
   if (dimension == 2) norm = lines[isurf].norm;
   else norm = tris[isurf].norm;
 
-  if (weightflag) weight = ip->weight;
-  double mass = particle->species[ispecies].mass * weight;
+  double origmass,imass,jmass;
+  if (weightflag) weight = iorig->weight;
+  origmass = particle->species[origspecies].mass * weight;
+  if (ip) imass = particle->species[ip->ispecies].mass * weight;
+  if (jp) jmass = particle->species[jp->ispecies].mass * weight;
+
+  double *vorig = iorig->v;
   double mvv2e = update->mvv2e;
 
-  double *vold = iorig->v;
   vec = array_surf[ilocal];
   int k = igroup*nvalue;
   int nflag = 0;
@@ -234,77 +242,109 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
       vec[k++] += 1.0;
       break;
     case PRESS:
-      pre = MathExtra::dot3(vold,norm);
-      post = MathExtra::dot3(ip->v,norm);
-      vec[k++] += mass * (post-pre);
+      MathExtra::scale3(-origmass,vorig,pdelta);
+      if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+      if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+      vec[k++] += MathExtra::dot3(pdelta,norm);
       break;
     case XPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::sub3(ip->v,vold,vdelta);
-        MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
+        MathExtra::scale3(-origmass,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
-      vec[k++] -= mass * vnorm[0];
+      vec[k++] -= pnorm[0];
       break;
     case YPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::sub3(ip->v,vold,vdelta);
-        MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
+        MathExtra::scale3(-origmass,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
-      vec[k++] -= mass * vnorm[1];
+      vec[k++] -= pnorm[1];
       break;
     case ZPRESS:
       if (!nflag) {
         nflag = 1;
-        MathExtra::sub3(ip->v,vold,vdelta);
-        MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
+        MathExtra::scale3(-origmass,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
-      vec[k++] -= mass * vnorm[2];
+      vec[k++] -= pnorm[2];
       break;
     case XSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::sub3(ip->v,vold,vdelta);
-        MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
-        MathExtra::sub3(vdelta,vnorm,vtang);
+        MathExtra::scale3(-origmass,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
+        MathExtra::sub3(pdelta,pnorm,ptang);
       }
-      vec[k++] -= mass * vtang[0];
+      vec[k++] -= ptang[0];
       break;
     case YSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::sub3(ip->v,vold,vdelta);
-        MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
-        MathExtra::sub3(vdelta,vnorm,vtang);
+        MathExtra::scale3(-origmass,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
+        MathExtra::sub3(pdelta,pnorm,ptang);
       }
-      vec[k++] -= mass * vtang[1];
+      vec[k++] -= ptang[1];
       break;
     case ZSHEAR:
       if (!tflag) {
         tflag = 1;
-        MathExtra::sub3(ip->v,vold,vdelta);
-        MathExtra::scale3(MathExtra::dot3(vdelta,norm),norm,vnorm);
-        MathExtra::sub3(vdelta,vnorm,vtang);
+        MathExtra::scale3(-origmass,vorig,pdelta);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
+        MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
+        MathExtra::sub3(pdelta,pnorm,ptang);
       }
-      vec[k++] -= mass * vtang[2];
+      vec[k++] -= ptang[2];
       break;
     case KE:
-      vsqpre = MathExtra::lensq3(vold);
-      vsqpost = MathExtra::lensq3(ip->v);
-      vec[k++] -= 0.5*mvv2e*mass * (vsqpost-vsqpre);
+      vsqpre = origmass * MathExtra::lensq3(vorig);
+      if (ip) ivsqpost = imass * MathExtra::lensq3(ip->v);
+      else ivsqpost = 0.0;
+      if (jp) jvsqpost = jmass * MathExtra::lensq3(jp->v);
+      else jvsqpost = 0.0;
+      vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre);
       break;
     case EROT:
-      vec[k++] -= weight * (ip->erot - iorig->erot);
+      if (ip) ierot = ip->erot;
+      else ierot = 0.0;
+      if (jp) jerot = jp->erot;
+      else jerot = 0.0;
+      vec[k++] -= weight * (ierot + jerot - iorig->erot);
       break;
     case EVIB:
-      vec[k++] -= weight * (ip->evib - iorig->evib);
+      if (ip) ievib = ip->evib;
+      else ievib = 0.0;
+      if (jp) jevib = jp->evib;
+      else jevib = 0.0;
+      vec[k++] -= weight * (ievib + jevib - iorig->evib);
       break;
     case ETOT:
-      vsqpre = MathExtra::lensq3(vold);
-      vsqpost = MathExtra::lensq3(ip->v);
-      vec[k++] -= 0.5*mvv2e*mass*(vsqpost-vsqpre) + 
-        weight * ((ip->erot-iorig->erot) + (ip->evib-iorig->evib));
+      vsqpre = origmass * MathExtra::lensq3(vorig);
+      otherpre = iorig->erot + iorig->evib;
+      if (ip) {
+	ivsqpost = imass * MathExtra::lensq3(ip->v);
+	iother = ip->erot + ip->evib;
+      } else ivsqpost = iother = 0.0;
+      if (jp) {
+	jvsqpost = jmass * MathExtra::lensq3(jp->v);
+	jother = jp->erot + jp->evib;
+      } else jvsqpost = jother = 0.0;
+      vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+        weight * (iother + jother - otherpre);
       break;
     }
   }
