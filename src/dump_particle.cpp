@@ -107,10 +107,10 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   // setup column string
 
   int n = 0;
-  for (int iarg = 4; iarg < narg; iarg++) n += strlen(arg[iarg]) + 2;
+  for (int iarg = 5; iarg < narg; iarg++) n += strlen(arg[iarg]) + 2;
   columns = new char[n];
   columns[0] = '\0';
-  for (int iarg = 4; iarg < narg; iarg++) {
+  for (int iarg = 5; iarg < narg; iarg++) {
     strcat(columns,arg[iarg]);
     strcat(columns," ");
   }
