@@ -19,17 +19,17 @@ mixture		    air N2 vstream 3472.0 0.0 0.0 temp 300.0
 fix                 in inflow air xlo
 collide		    vss air air.vss
 
-read_surf           1 data.circle origin 5 5 0 &
+read_surf           data.circle origin 5 5 0 &
                     trans -5 -5 0 scale 1.666666e-2 1.666666e-2 1 clip
 
 surf_collide	    1 specular
-surf_modify         collide 1 1
+surf_modify         all collide 1
 
 create_particles    air n 100000
 
 timestep 	    1e-6
 
-#dump                2 image 100 tmp.*.ppm type type pdiam 0.001 &
+#dump                2 image all 100 tmp.*.ppm type type pdiam 0.001 &
 #                    surf proc 0.0 &
 #		    size 512 512 axes yes 0.9 0.02 particle yes &
 #                    gline yes 0.005 &

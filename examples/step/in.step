@@ -15,10 +15,10 @@ global		    nrho 1.0 fnum 0.001
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
 
-read_surf	    1 data.step trans 5 5 0 scale 0.75 0.75 1 &
+read_surf	    data.step trans 5 5 0 scale 0.75 0.75 1 &
                     rotate 45 0 0 1 invert
 surf_collide	    1 diffuse 300.0 0.0
-surf_modify         collide 1 1
+surf_modify         all collide 1
 
 collide             vss air air.vss
 
@@ -26,7 +26,7 @@ fix		    in inflow air xlo
 
 timestep 	    0.0001
 
-#dump                2 image 50 image.*.ppm type type pdiam 0.1 &
+#dump                2 image all 50 image.*.ppm type type pdiam 0.1 &
 #                    surf proc 0.01 size 512 512 axes yes 0.9 0.02
 #dump_modify	    2 pad 4
 

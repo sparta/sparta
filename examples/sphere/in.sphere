@@ -18,9 +18,9 @@ global		    nrho 1.0 fnum 0.0005
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
 
-read_surf           1 data.sphere
+read_surf           data.sphere
 surf_collide	    1 diffuse 300.0 0.0
-surf_modify         collide 1 1
+surf_modify         all collide 1
 
 collide		    vss air air.vss
 
@@ -28,10 +28,10 @@ fix		    in inflow air xlo
 
 timestep 	    0.0001
 
-#compute             2 surf all n press ke
-#fix                 save ave/surf 1 50 50 c_2 ave running
+#compute             2 surf all all n press ke
+#fix                 save ave/surf all 1 50 50 c_2 ave running
 #region              slab block INF INF INF INF -0.1 0.1
-#dump                2 image 50 image.*.ppm type type pdiam 0.03 &
+#dump                2 image all 50 image.*.ppm type type pdiam 0.03 &
 #		    view 70 120 size 512 512 axes yes 0.9 0.02 &
 #                    gridz -0.8 proc gline yes 0.005 &
 #                    surf f_save[2] 0.0
