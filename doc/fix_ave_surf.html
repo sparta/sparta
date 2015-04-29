@@ -13,11 +13,13 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>fix ID ave/surf Nevery Nrepeat Nfreq value1 value2 ... keyword args ... 
+<PRE>fix ID ave/surf group-ID Nevery Nrepeat Nfreq value1 value2 ... keyword args ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
 
 <LI>ave/surf = style name of this fix command 
+
+<LI>group-ID = group ID for which surface elements to perform calculation on 
 
 <LI>Nevery = use input values every this many timesteps 
 
@@ -53,7 +55,10 @@ fix 1 all ave/surf 10 20 1000 c_mine
 average them surface element by surface element by over longer
 timescales, applying appropriate normalization factors. The resulting
 per-surf averages can be used by other output commands such as the
-<A HREF = "dump.html">dump surf</A> command.
+<A HREF = "dump.html">dump surf</A> command.  Only surface elements in the surface
+group specified by <I>group-ID</I> are included in the averaging.  See the
+<A HREF = "group.html">group surf</A> command for info on how surface elements can
+be assigned to surface groups.
 </P>
 <P>Each input value can be the result of a <A HREF = "compute.html">compute</A> or
 <A HREF = "fix.html">fix</A>.  The compute or fix must produce a per-surf vector or
@@ -169,6 +174,9 @@ averaged, then an array of values is produced, where the number of
 columns is the number of quantities averaged.  The per-surf values can
 only be accessed on timesteps that are multiples of <I>Nfreq</I> since that
 is when averaging is performed.
+</P>
+<P>Surface elements not in the specified <I>group-ID</I> will have zeroes for
+all their values.
 </P>
 <P><B>Restrictions:</B> none
 </P>

@@ -10,10 +10,11 @@ fix ave/surf command :h3
 
 [Syntax:]
 
-fix ID ave/surf Nevery Nrepeat Nfreq value1 value2 ... keyword args ... :pre
+fix ID ave/surf group-ID Nevery Nrepeat Nfreq value1 value2 ... keyword args ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 ave/surf = style name of this fix command :l
+group-ID = group ID for which surface elements to perform calculation on :l
 Nevery = use input values every this many timesteps :l
 Nrepeat = # of times to use input values for calculating averages :l
 Nfreq = calculate averages every this many timesteps
@@ -41,7 +42,10 @@ Use one or more per-surf vectors as inputs every few timesteps, and
 average them surface element by surface element by over longer
 timescales, applying appropriate normalization factors. The resulting
 per-surf averages can be used by other output commands such as the
-"dump surf"_dump.html command.
+"dump surf"_dump.html command.  Only surface elements in the surface
+group specified by {group-ID} are included in the averaging.  See the
+"group surf"_group.html command for info on how surface elements can
+be assigned to surface groups.
 
 Each input value can be the result of a "compute"_compute.html or
 "fix"_fix.html.  The compute or fix must produce a per-surf vector or
@@ -157,6 +161,9 @@ averaged, then an array of values is produced, where the number of
 columns is the number of quantities averaged.  The per-surf values can
 only be accessed on timesteps that are multiples of {Nfreq} since that
 is when averaging is performed.
+
+Surface elements not in the specified {group-ID} will have zeroes for
+all their values.
 
 [Restrictions:] none
 

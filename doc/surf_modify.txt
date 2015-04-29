@@ -14,16 +14,16 @@ surf_modify group-ID keyword args ... :pre
 group-ID = ID of the surface group to operate on :l
 one or more keyword/arg pairs may be listed :ulb,l
 keyword = {collide} or (react) :l
-  {collide} args = sc-ID
+  {collide} arg = sc-ID
     sc-ID = ID of a surface collision model
-  {react} args = sr-ID
-    sr-ID = ID of a surface reaction model or none :pre
+  {react} arg = sr-ID
+    sr-ID = ID of a surface reaction model or {none} :pre
 :ule
 
 [Examples:]
 
-surf_modify sphere collide 1 2
-surf_modify all collide sphere bounce react sphere absorb :pre
+surf_modify sphere collide 1
+surf_modify all collide sphere react sphere :pre
 
 [Description:]
 
@@ -38,22 +38,23 @@ Surface collision models are defined by the
 collision ID, specified here as {sc-ID}.
 
 The effect of this keyword is that particle collisions with surface
-elements in group-ID will be computed by the specified surface
-collision model.
+elements in group-ID will be computed by the surface collision model
+with {sc-ID}.
 
 The {react} keyword is used to assign a surface reaction model.
 Surface reaction models are defined by the"surf_react"_surf_react.html
 command, which assigns each a surface reaction ID, specified here as
-{sr-ID}.
+{sr-ID} or the word "none".  The latter means no reaction model.
 
 The effect of this keyword is that particle collisions with surface
 elements in group-ID will induce reactions which are computed by the
-specified surface reaction model.
+surface reaction model with {sr-ID}.  If "none" is used, no surface
+reactions occur.
 
 Note that if the same surface element is assigned to multiple groups,
 using this command multiple times may override the effect of a
-previous command that assigned a surface element to a different
-collision or reaction model.
+previous command that assigned a different collision or reaction model
+to a particular surface element.
 
 [Restrictions:]
 

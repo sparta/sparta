@@ -35,7 +35,7 @@ Define a computation that simply stores grid attributes for each grid
 cell.  This is useful so that the values can be used by other "output
 commands"_Section_howto.html#howto_4 that take computes as inputs.
 See for example, the "compute reduce"_compute_reduce.html, "fix
-ave/grid"_fix_ave_atom.html, and "dump grid"_dump_grid.html commands.
+ave/grid"_fix_ave_atom.html, and "dump grid"_dump.html commands.
 
 The values are stored in a per-grid vector or array as discussed
 below. 

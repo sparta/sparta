@@ -13,13 +13,15 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>compute ID surf mix-ID value1 value2 ... 
+<PRE>compute ID surf group-ID mix-ID value1 value2 ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
 <LI>boundary = style name of this compute command 
 
-<LI>mix-ID = mixture ID to perform calculation on 
+<LI>group-ID = group ID for which surface elements to perform calculation on 
+
+<LI>mix-ID = mixture ID for particles to perform calculation on 
 
 <LI>one or more values can be appended 
 
@@ -38,23 +40,26 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>compute 1 surf all n press eng
-compute mine surf species press shx shy shz 
+<PRE>compute 1 surf all all n press eng
+compute mine surf sphere species press shx shy shz 
 </PRE>
 <P>These commands will dump time averages for each species and each
 surface element to a dump file every 1000 steps:
 </P>
-<P>compute 1 boundary species n press shx shy shz
-fix 1 ave/surf 10 100 1000 c_1
-dump 1 surf 1000 tmp.surf id f_1
+<P>compute 1 surf all species n press shx shy shz
+fix 1 ave/surf all 10 100 1000 c_1
+dump 1 surf all 1000 tmp.surf id f_1
 </P>
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each
-surface element, based on the particles that strike that element.  The
-values are summed for each group of species in the specified mixture.
-See the <A HREF = "mixture.html">mixture</A> command for how a set of species can be
-partitioned into groups.
+surface element in a group of elements, based on the particles that
+strike that element.  The values are summed for each group of species
+in the specified mixture.  See the <A HREF = "mixture.html">mixture</A> command for
+how a set of species can be partitioned into groups.  Only surface
+elements in the surface group specified by <I>group-ID</I> are included in
+the calculations.  See the <A HREF = "group.html">group surf</A> command for info on
+how surface elements can be assigned to surface groups.
 </P>
 <P>Surface elements are triangles for 3d simulations and line segments
 for 2d simulatoins.  See the <A HREF = "read_surf.html">read_surf</A> command for
@@ -182,6 +187,9 @@ ordering of columns is first by values, then by groups.  I.e. if the
 <I>n</I> and <I>u</I> values were specified as keywords, then the first two
 columns would be <I>n</I> and <I>u</I> for the first group, the 3rd and 4th
 columns would be <I>n</I> and <I>u</I> for the second group, etc.
+</P>
+<P>Surface elements not in the specified <I>group-ID</I> will have zeroes for
+all their values.
 </P>
 <P>The array can be accessed by any command that uses per-surf values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4</A>

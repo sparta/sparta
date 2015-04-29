@@ -10,11 +10,12 @@ compute surf command :h3
 
 [Syntax:]
 
-compute ID surf mix-ID value1 value2 ... :pre
+compute ID surf group-ID mix-ID value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 boundary = style name of this compute command :l
-mix-ID = mixture ID to perform calculation on :l
+group-ID = group ID for which surface elements to perform calculation on :l
+mix-ID = mixture ID for particles to perform calculation on :l
 one or more values can be appended :l
 value = {n} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke} :l
   n = count of particles hitting surface element
@@ -29,23 +30,26 @@ value = {n} or {press} or {px} or {py} or {pz} or {shx} or {shy} or {shz} or {ke
 
 [Examples:]
 
-compute 1 surf all n press eng
-compute mine surf species press shx shy shz :pre
+compute 1 surf all all n press eng
+compute mine surf sphere species press shx shy shz :pre
 
 These commands will dump time averages for each species and each
 surface element to a dump file every 1000 steps:
 
-compute 1 boundary species n press shx shy shz
-fix 1 ave/surf 10 100 1000 c_1
-dump 1 surf 1000 tmp.surf id f_1
+compute 1 surf all species n press shx shy shz
+fix 1 ave/surf all 10 100 1000 c_1
+dump 1 surf all 1000 tmp.surf id f_1
 
 [Description:]
 
 Define a computation that calculates one or more values for each
-surface element, based on the particles that strike that element.  The
-values are summed for each group of species in the specified mixture.
-See the "mixture"_mixture.html command for how a set of species can be
-partitioned into groups.
+surface element in a group of elements, based on the particles that
+strike that element.  The values are summed for each group of species
+in the specified mixture.  See the "mixture"_mixture.html command for
+how a set of species can be partitioned into groups.  Only surface
+elements in the surface group specified by {group-ID} are included in
+the calculations.  See the "group surf"_group.html command for info on
+how surface elements can be assigned to surface groups.
 
 Surface elements are triangles for 3d simulations and line segments
 for 2d simulatoins.  See the "read_surf"_read_surf.html command for
@@ -173,6 +177,9 @@ ordering of columns is first by values, then by groups.  I.e. if the
 {n} and {u} values were specified as keywords, then the first two
 columns would be {n} and {u} for the first group, the 3rd and 4th
 columns would be {n} and {u} for the second group, etc.
+
+Surface elements not in the specified {group-ID} will have zeroes for
+all their values.
 
 The array can be accessed by any command that uses per-surf values
 from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
