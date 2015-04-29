@@ -29,9 +29,12 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+enum{ALLREDUCE,IRREGULAR};
+
 #define DELTA 4
 #define EPSSQ 1.0e-12
 #define BIG 1.0e20
+#define MAXGROUP 32
 
 /* ---------------------------------------------------------------------- */
 
@@ -39,9 +42,14 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
   exist = 0;
 
-  nid = 0;
-  ids = NULL;
-  idlo = idhi = NULL;
+  gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
+  bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");
+  for (int i = 0; i < MAXGROUP; i++) bitmask[i] = 1 << i;
+
+  ngroup = 1;
+  int n = strlen("all") + 1;
+  gnames[0] = new char[n];
+  strcpy(gnames[0],"all");
 
   npoint = nline = ntri = 0;
   pts = NULL;
@@ -57,16 +65,17 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
   nsr = maxsr = 0;
   sr = NULL;
+
+  tally_comm = ALLREDUCE;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Surf::~Surf()
 {
-  for (int i = 0; i < nid; i++) delete [] ids[i];
-  memory->sfree(ids);
-  memory->sfree(idlo);
-  memory->sfree(idhi);
+  for (int i = 0; i < ngroup; i++) delete [] gnames[i];
+  memory->sfree(gnames);
+  memory->sfree(bitmask);
 
   memory->sfree(pts);
   memory->sfree(lines);
@@ -83,35 +92,35 @@ Surf::~Surf()
 
 void Surf::modify_params(int narg, char **arg)
 {
-  int iarg = 0;
+  if (narg < 2) error->all(FLERR,"Illegal surf_modify command");
+  int igroup = find_group(arg[0]);
+  if (igroup < 0) error->all(FLERR,"Surf_modify surface group is not defined");
+  int groupbit = bitmask[igroup];
+
+  int iarg = 1;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"collide") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal surf_modify command");
-      
-      int isurf = find_surf(arg[iarg+1]);
-      if (isurf < 0) error->all(FLERR,"Could not find surf_modify surf-ID");
-      int isc = find_collide(arg[iarg+2]);
+      if (iarg+2 > narg) error->all(FLERR,"Illegal surf_modify command");
+
+      int isc = find_collide(arg[iarg+1]);
       if (isc < 0) error->all(FLERR,"Could not find surf_modify sc-ID");
 
-      // set surf collision model for each surf in range assigned to surf-ID
+      // set surf collision model for each surf in surface group
 
       if (domain->dimension == 2) {
-        for (int i = idlo[isurf]; i <= idhi[isurf]; i++)
-          lines[i].isc = isc;
+        for (int i = 0; i < nline; i++)
+          if (lines[i].mask & groupbit) lines[i].isc = isc;
       }
       if (domain->dimension == 3) {
-        for (int i = idlo[isurf]; i <= idhi[isurf]; i++)
-          tris[i].isc = isc;
+        for (int i = 0; i < ntri; i++)
+          if (tris[i].mask & groupbit) tris[i].isc = isc;
       }
 
-      iarg += 3;
+      iarg += 2;
 
     } else if (strcmp(arg[iarg],"react") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal surf_modify command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal surf_modify command");
       
-      int isurf = find_surf(arg[iarg+1]);
-      if (isurf < 0) error->all(FLERR,"Could not find surf_modify surf-ID");
-
       int isr;
       if (strcmp(arg[iarg+2],"none") == 0) isr = -1;
       else {
@@ -119,18 +128,19 @@ void Surf::modify_params(int narg, char **arg)
         if (isr < 0) error->all(FLERR,"Could not find surf_modify sr-ID");
       }
 
-      // set surf reaction model for each surf in range assigned to surf-ID
+      // set surf reaction model for each surf in surface group
 
       if (domain->dimension == 2) {
-        for (int i = idlo[isurf]; i <= idhi[isurf]; i++)
-          lines[i].isr = isr;
+        for (int i = 0; i <= nline; i++)
+          if (lines[i].mask & groupbit) lines[i].isr = isr;
       }
       if (domain->dimension == 3) {
-        for (int i = idlo[isurf]; i <= idhi[isurf]; i++)
-          tris[i].isr = isr;
+        for (int i = 0; i <= ntri; i++)
+          if (tris[i].mask & groupbit) tris[i].isr = isr;
       }
 
-      iarg += 3;
+      iarg += 2;
+
     } else error->all(FLERR,"Illegal surf_modify command");
   }
 }
@@ -346,36 +356,42 @@ double Surf::tri_size(int m, double &len)
 }
 
 /* ----------------------------------------------------------------------
-   add a new surface ID, assumed to be unique
-   caller will set idlo and idhi
+   group surf command called via input script
 ------------------------------------------------------------------------- */
 
-int Surf::add_surf(const char *id)
+void Surf::group(int narg, char **arg)
 {
-  nid++;
-  ids = (char **) memory->srealloc(ids,nid*sizeof(char *),"surf:ids");
-  idlo = (int *) memory->srealloc(idlo,nid*sizeof(int),"surf:idlo");
-  idhi = (int *) memory->srealloc(idhi,nid*sizeof(int),"surf:idhi");
-
-  int n = strlen(id) + 1;
-  ids[nid-1] = new char[n];
-  strcpy(ids[nid-1],id);
-
-  return nid-1;
+  if (narg < 3) error->all(FLERR,"Illegal group command");
 }
 
 /* ----------------------------------------------------------------------
-   find a surface ID
-   return index of surface or -1 if not found
+   add a new surface group ID, assumed to be unique
 ------------------------------------------------------------------------- */
 
-int Surf::find_surf(const char *id)
+int Surf::add_group(const char *id)
 {
-  int isurf;
-  for (isurf = 0; isurf < nid; isurf++)
-    if (strcmp(id,ids[isurf]) == 0) break;
-  if (isurf == nid) return -1;
-  return isurf;
+  if (ngroup == MAXGROUP) 
+    error->all(FLERR,"Cannot have more than 32 surface groups");
+
+  int n = strlen(id) + 1;
+  gnames[ngroup] = new char[n];
+  strcpy(gnames[ngroup],id);
+  ngroup++;
+  return ngroup-1;
+}
+
+/* ----------------------------------------------------------------------
+   find a surface group ID
+   return index of group or -1 if not found
+------------------------------------------------------------------------- */
+
+int Surf::find_group(const char *id)
+{
+  int igroup;
+  for (igroup = 0; igroup < ngroup; igroup++)
+    if (strcmp(id,gnames[igroup]) == 0) break;
+  if (igroup == ngroup) return -1;
+  return igroup;
 }
 
 /* ----------------------------------------------------------------------
@@ -485,15 +501,25 @@ int Surf::find_react(const char *id)
 }
 
 /* ----------------------------------------------------------------------
-   brute force MPI Allreduce comm of local tallies across all procs
-   NOTE: doc input values
-   for vector and array
-   return out = summed tallies for surfs I own
-   NOTE: need more efficient way to do this
+   comm of vector of local tallies across all procs
+   nrow = # of entries in input vector
+   l2g = global surf index of each entry in input vector
+   in = input vector
+   instride = stride between entries in input vector
+   return out = summed tallies for nlocal surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vec(int nrow, int *l2g, double *in, int istride,
-                       double *out, int ostride, int sumflag)
+void Surf::collate_vector(int nrow, int *l2g, 
+                          double *in, int instride, double *out)
+{
+  if (tally_comm == ALLREDUCE) 
+    collate_vector_allreduce(nrow,l2g,in,instride,out);
+  else
+    collate_vector_irregular(nrow,l2g,in,instride,out);
+}
+
+void Surf::collate_vector_allreduce(int nrow, int *l2g, 
+                                    double *in, int instride, double *out)
 {
   int i,j,m,n;
   double *vec1,*vec2;
@@ -512,31 +538,44 @@ void Surf::collate_vec(int nrow, int *l2g, double *in, int istride,
   m = 0;
   for (i = 0; i < nrow; i++) {
     one[l2g[i]] = in[m];
-    m += istride;
+    m += instride;
   }
 
   MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
 
-  if (sumflag) {
-    m = 0;
-    for (i = 0; i < nlocal; i++) {
-      out[m] += all[mysurfs[i]];
-      m += ostride;
-    }
-  } else {
-    m = 0;
-    for (i = 0; i < nlocal; i++) {
-      out[m] = all[mysurfs[i]];
-      m += ostride;
-    }
-  }
+  for (i = 0; i < nlocal; i++) out[i] = all[mysurfs[i]];
+
+  // NOTE: don't need to destroy them ?
 
   memory->destroy(one);
   memory->destroy(all);
 }
 
-void Surf::collate_array(int nrow, int ncol, int *l2g,
+void Surf::collate_vector_irregular(int nrow, int *l2g, 
+                                    double *in, int instride, double *out)
+{
+}
+
+/* ----------------------------------------------------------------------
+   comm of array of local tallies across all procs
+   nrow,ncol = # of entries and columns in input array
+   l2g = global surf index of each entry in input vector
+   in = input vector
+   instride = stride between entries in input vector
+   return out = summed tallies for nlocal surfs I own
+------------------------------------------------------------------------- */
+
+void Surf::collate_array(int nrow, int ncol, int *l2g, 
                          double **in, double **out)
+{
+  if (tally_comm == ALLREDUCE) 
+    collate_array_allreduce(nrow,ncol,l2g,in,out);
+  else
+    collate_array_irregular(nrow,ncol,l2g,in,out);
+}
+
+void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g, 
+                                   double **in, double **out)
 {
   int i,j,m,n;
   double *vec1,*vec2;
@@ -568,8 +607,15 @@ void Surf::collate_array(int nrow, int ncol, int *l2g,
       out[i][j] += all[m][j];
   }
   
+  // NOTE: don't need to destroy them
+
   memory->destroy(one);
   memory->destroy(all);
+}
+
+void Surf::collate_array_irregular(int nrow, int ncol, int *l2g, 
+                                   double **in, double **out)
+{
 }
 
 /* ----------------------------------------------------------------------
@@ -578,14 +624,14 @@ void Surf::collate_array(int nrow, int ncol, int *l2g,
 
 void Surf::write_restart(FILE *fp)
 {
-  fwrite(&nid,sizeof(int),1,fp);
+  fwrite(&ngroup,sizeof(int),1,fp);
+
   int n;
-  for (int i = 0; i < nid; i++) {
-    n = strlen(ids[i]) + 1;
+  for (int i = 0; i < ngroup; i++) {
+    n = strlen(gnames[i]) + 1;
     fwrite(&n,sizeof(int),1,fp);
-    fwrite(ids[i],sizeof(char),n,fp);
-    fwrite(&idlo[i],sizeof(int),1,fp);
-    fwrite(&idhi[i],sizeof(int),1,fp);
+    fwrite(gnames[i],sizeof(char),n,fp);
+    fwrite(&bitmask[i],sizeof(int),1,fp);
   }
 
   fwrite(&npoint,sizeof(int),1,fp);
@@ -593,13 +639,19 @@ void Surf::write_restart(FILE *fp)
 
   if (domain->dimension == 2) {
     fwrite(&nline,sizeof(int),1,fp);
-    for (int i = 0; i < nline; i++)
+    for (int i = 0; i < nline; i++) {
+      fwrite(&lines[i].type,sizeof(int),1,fp);
+      fwrite(&lines[i].mask,sizeof(int),1,fp);
       fwrite(&lines[i].p1,sizeof(int),2,fp);
+    }
   }
   if (domain->dimension == 3) {
     fwrite(&ntri,sizeof(int),1,fp);
-    for (int i = 0; i < ntri; i++)
+    for (int i = 0; i < ntri; i++) {
+      fwrite(&tris[i].type,sizeof(int),1,fp);
+      fwrite(&tris[i].mask,sizeof(int),1,fp);
       fwrite(&tris[i].p1,sizeof(int),3,fp);
+    }
   }
 }
 
@@ -612,23 +664,20 @@ void Surf::read_restart(FILE *fp)
 {
   int me = comm->me;
 
-  if (me == 0) fread(&nid,sizeof(int),1,fp);
-  MPI_Bcast(&nid,1,MPI_INT,0,world);
-  ids = (char **) memory->smalloc(nid*sizeof(char *),"surf:ids");
-  idlo = (int *) memory->smalloc(nid*sizeof(int),"surf:idlo");
-  idhi = (int *) memory->smalloc(nid*sizeof(int),"surf:idhi");
+  if (me == 0) fread(&ngroup,sizeof(int),1,fp);
+  MPI_Bcast(&ngroup,1,MPI_INT,0,world);
+  gnames = (char **) memory->smalloc(ngroup*sizeof(char *),"surf:gnames");
+  bitmask = (int *) memory->smalloc(ngroup*sizeof(int),"surf:bitmaxk");
 
   int n;
-  for (int i = 0; i < nid; i++) {
+  for (int i = 0; i < ngroup; i++) {
     if (me == 0) fread(&n,sizeof(int),1,fp);
     MPI_Bcast(&n,1,MPI_INT,0,world);
-    ids[i] = new char[n];
-    if (me == 0) fread(ids[i],sizeof(char),n,fp);
-    MPI_Bcast(ids[i],n,MPI_CHAR,0,world);
-    if (me == 0) fread(&idlo[i],sizeof(int),1,fp);
-    MPI_Bcast(&idlo[i],1,MPI_INT,0,world);
-    if (me == 0) fread(&idhi[i],sizeof(int),1,fp);
-    MPI_Bcast(&idhi[i],1,MPI_INT,0,world);
+    gnames[i] = new char[n];
+    if (me == 0) fread(gnames[i],sizeof(char),n,fp);
+    MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
+    if (me == 0) fread(&bitmask[i],sizeof(int),1,fp);
+    MPI_Bcast(&bitmask[i],1,MPI_INT,0,world);
   }
 
   if (me == 0) fread(&npoint,sizeof(int),1,fp);
@@ -644,6 +693,8 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < nline; i++) {
+        fread(&lines[i].type,sizeof(int),1,fp);
+        fread(&lines[i].mask,sizeof(int),1,fp);
         lines[i].isc = lines[i].isr = -1;
         fread(&lines[i].p1,sizeof(int),2,fp);
         lines[i].norm[0] = lines[i].norm[2] = lines[i].norm[2] = 0.0;
@@ -659,6 +710,8 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < ntri; i++) {
+        fread(&tris[i].type,sizeof(int),1,fp);
+        fread(&tris[i].mask,sizeof(int),1,fp);
         tris[i].isc = tris[i].isr = -1;
         fread(&tris[i].p1,sizeof(int),3,fp);
         tris[i].norm[0] = tris[i].norm[2] = tris[i].norm[2] = 0.0;

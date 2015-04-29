@@ -36,19 +36,22 @@ class FixAveSurf : public Fix {
   double memory_usage();
 
  private:
+  int groupbit;
   int nvalues,maxvalues;
   int nrepeat,irepeat,nsample,ave;
   bigint nvalid;
   int *which,*argindex,*value2index;
   char **ids;
 
-  int nslocal;               // # of surfs I own
-  double *accvec;            // accumulation vector
-  double **accarray;         // accumulation array
-
   int nsurf;               // # of global surfs, lines or triangles
-  int nlocal;              // # of local surfs
-  int maxlocal;            // # of local surfs currently allocated
+  int nslocal;             // # of surfs I own
+  double *accvec;          // accumulation vector
+  double **accarray;       // accumulation array
+  double *buflocal;        // surf collate vector for surfs I own
+  int *masks;              // surface element group masks for surfs I own
+
+  int nlocal;              // # of local surf tallies
+  int maxlocal;            // # of local surf tallies currently allocated
   int *glob2loc;           // glob2loc[I] = local index of Ith global surf
   int *loc2glob;           // loc2glob[I] = global index of Ith local surf
 

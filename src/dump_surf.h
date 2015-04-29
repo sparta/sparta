@@ -32,6 +32,7 @@ class DumpSurf : public Dump {
 
  private:
   int nevery;                // dump frequency to check Fix against
+  int groupbit;              // mask for surface group
 
   char *columns;             // column labels
 
@@ -57,7 +58,13 @@ class DumpSurf : public Dump {
   double **vbuf;             // local storage for variable evaluation
 
   int dimension;
-  int nslocal;               // # of surf elements on this proc
+  int nslocal;               // # of surf elements owned by this proc
+  int nchoose;               // # of surf elements output by this proc
+  int *cglobal;              // indices of global elements for nchoose
+  int *clocal;               // indices of local owned elements for nchoose
+  double *buflocal;          // buffer for per-surf element values
+
+  int firstflag;
 
   // private methods
 
@@ -94,7 +101,7 @@ class DumpSurf : public Dump {
   void pack_variable(int);
 
   void pack_id(int);
-
+  void pack_type(int);
   void pack_v1x(int);
   void pack_v1y(int);
   void pack_v1z(int);

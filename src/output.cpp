@@ -502,14 +502,14 @@ void Output::reset_timestep(bigint ntimestep)
 
 void Output::add_dump(int narg, char **arg)
 {
-  if (narg < 4) error->all(FLERR,"Illegal dump command");
+  if (narg < 5) error->all(FLERR,"Illegal dump command");
 
   // error checks
 
   for (int idump = 0; idump < ndump; idump++)
     if (strcmp(arg[0],dump[idump]->id) == 0) 
       error->all(FLERR,"Reuse of dump ID");
-  if (atoi(arg[2]) <= 0) error->all(FLERR,"Invalid dump frequency");
+  if (atoi(arg[3]) <= 0) error->all(FLERR,"Invalid dump frequency");
 
   // extend Dump list if necessary
 
@@ -537,7 +537,7 @@ void Output::add_dump(int narg, char **arg)
 
   else error->all(FLERR,"Invalid dump style");
 
-  every_dump[ndump] = atoi(arg[2]);
+  every_dump[ndump] = atoi(arg[3]);
   if (every_dump[ndump] <= 0) error->all(FLERR,"Illegal dump command");
   last_dump[ndump] = -1;
   var_dump[ndump] = NULL;

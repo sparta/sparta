@@ -34,6 +34,7 @@ class DumpGrid : public Dump {
 
  private:
   int nevery;                // dump frequency to check Fix against
+  int groupbit;              // mask for grid group
 
   char *columns;             // column labels
 

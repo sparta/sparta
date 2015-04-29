@@ -31,7 +31,7 @@ using namespace SPARTA_NS;
 
 // customize by adding keyword
 
-enum{ID,V1X,V1Y,V1Z,V2X,V2Y,V2Z,V3X,V3Y,V3Z,
+enum{ID,TYPE,V1X,V1Y,V1Z,V2X,V2Y,V2Z,V3X,V3Y,V3Z,
      COMPUTE,FIX,VARIABLE};
 enum{INT,DOUBLE,CELLINT,STRING};    // many files
 
@@ -45,7 +45,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   Dump(sparta, narg, arg)
 {
-  if (narg == 4) error->all(FLERR,"No dump surf attributes specified");
+  if (narg == 5) error->all(FLERR,"No dump surf attributes specified");
 
   clearstep = 1;
   buffer_allow = 1;
@@ -53,14 +53,18 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
 
   dimension = domain->dimension;
 
-  nevery = atoi(arg[2]);
+  int igroup = surf->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Dump suft group ID does not exist");
+  groupbit = surf->bitmask[igroup];
+
+  nevery = atoi(arg[3]);
 
   // scan values and set size_one
   // array entries may expand into multiple fields
   // could use ioptional to add on keyword/arg pairs
 
-  ioptional = parse_fields(narg,arg);
-  if (ioptional < narg)
+  ioptional = parse_fields(narg-5,&arg[5]);
+  if (5+ioptional < narg)
     error->all(FLERR,"Invalid attribute in dump surf command");
   size_one = nfield;
 
@@ -93,12 +97,22 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
     }
     strcat(columns," ");
   }
+
+  // trigger setup of list of owned surf elements belonging to surf group
+
+  firstflag = 1;
+  cglobal = clocal = NULL;
+  buflocal = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 DumpSurf::~DumpSurf()
 {
+  memory->destroy(cglobal);
+  memory->destroy(clocal);
+  memory->destroy(buflocal);
+
   memory->sfree(pack_choice);
   memory->destroy(vtype);
   memory->destroy(field2arg);
@@ -205,6 +219,46 @@ void DumpSurf::init_style()
   // open single file, one time only
 
   if (multifile == 0) openfile();
+
+  // one-time setup of lists of owned elements contributing to dump
+  // NOTE: will need to recalculate, if allow addition of surf elements
+  // nslocal = # of surf elements I own
+  // nchoose = # of nslocal surf elements in surface group
+  // cglobal[] = global indices for nchoose elements
+  // clocal[] = local indices for nchoose elements
+  // mysurf[clocal[i]] = cglobal[i] for all nchoose
+
+  if (!firstflag) return;
+
+  firstflag = 0;
+  int *mysurfs = surf->mysurfs;
+  nslocal = surf->nlocal;
+
+  nchoose = 0;
+  for (int i = 0; i < nslocal; i++)
+    if (dimension == 2) {
+      if (surf->lines[mysurfs[i]].mask & groupbit) nchoose++;
+    } else {
+      if (surf->tris[mysurfs[i]].mask & groupbit) nchoose++;
+    }
+
+  memory->create(cglobal,nchoose,"dump/surf:cglobal");
+  memory->create(clocal,nchoose,"dump/surf:clocal");
+  memory->create(buflocal,nslocal,"dump/surf:buflocal");
+
+  nchoose = 0;
+  for (int i = 0; i < nslocal; i++)
+    if (dimension == 2) {
+      if (surf->lines[mysurfs[i]].mask & groupbit) {
+        cglobal[nchoose] = mysurfs[i];
+        clocal[nchoose++] = i;
+      }
+    } else {
+      if (surf->tris[mysurfs[i]].mask & groupbit) {
+        cglobal[nchoose] = mysurfs[i];
+        clocal[nchoose++] = i;
+      }
+    }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -268,14 +322,15 @@ int DumpSurf::count()
     for (int i = 0; i < nvariable; i++)
       input->variable->compute_surf(variable[i],vbuf[i],1,0);
 
-  return surf->nlocal;
+  // return surfs I own that are in surface group
+
+  return nchoose;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void DumpSurf::pack()
 {
-  nslocal = surf->nlocal;
   for (int n = 0; n < size_one; n++) (this->*pack_choice[n])(n);
 }
 
@@ -331,7 +386,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
   field2index = NULL;
   argindex = NULL;
 
-  int maxfield = narg - 4;
+  int maxfield = narg;
   allocate_values(maxfield);
   nfield = 0;
 
@@ -350,7 +405,7 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
   // customize by adding to if statement
 
-  for (int iarg = 4; iarg < narg; iarg++) {
+  for (int iarg = 0; iarg < narg; iarg++) {
     if (nfield == maxfield) {
       maxfield += CHUNK;
       allocate_values(maxfield);
@@ -360,6 +415,11 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
     if (strcmp(arg[iarg],"id") == 0) {
       pack_choice[nfield] = &DumpSurf::pack_id;
+      vtype[nfield] = INT;
+      field2arg[nfield] = iarg;
+      nfield++;
+    } else if (strcmp(arg[iarg],"type") == 0) {
+      pack_choice[nfield] = &DumpSurf::pack_type;
       vtype[nfield] = INT;
       field2arg[nfield] = iarg;
       nfield++;
@@ -652,23 +712,28 @@ void DumpSurf::allocate_values(int n)
 
 void DumpSurf::pack_compute(int n)
 {
-  double *vector = compute[field2index[n]]->vector_surf;
-  double **array = compute[field2index[n]]->array_surf;
-  int index = argindex[n];
-
   int *loc2glob;
   int nlocal = compute[field2index[n]]->surfinfo(loc2glob);
   
-  if (index == 0)
-    surf->collate_vec(nlocal,loc2glob,vector,1,&buf[n],size_one,0);
-  else {
-    int istride = compute[field2index[n]]->size_per_surf_cols;
-    if (array)
-      surf->collate_vec(nlocal,loc2glob,&array[0][index-1],istride,
-                        &buf[n],size_one,0);
+  int index = argindex[n];
+  if (index == 0) {
+    double *vector = compute[field2index[n]]->vector_surf_tally;
+    surf->collate_vector(nlocal,loc2glob,vector,1,buflocal);
+  } else {
+    double **array = compute[field2index[n]]->array_surf_tally;
+    int stride = compute[field2index[n]]->size_per_surf_cols;
+
+    // array can be NULL if nlocal = 0, b/c this proc tallied no surfs
+
+    if (array) 
+      surf->collate_vector(nlocal,loc2glob,&array[0][index-1],stride,buflocal);
     else
-      surf->collate_vec(nlocal,loc2glob,NULL,istride,
-                        &buf[n],size_one,0);
+      surf->collate_vector(nlocal,loc2glob,NULL,stride,buflocal);
+  }
+
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = buflocal[clocal[i]];
+    n += size_one;
   }
 }
 
@@ -681,14 +746,14 @@ void DumpSurf::pack_fix(int n)
   int index = argindex[n];
 
   if (index == 0) {
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = vector[i];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = vector[clocal[i]];
       n += size_one;
     }
   } else {
     index--;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = array[i][index];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = array[clocal[i]][index];
       n += size_one;
     }
   }
@@ -700,8 +765,10 @@ void DumpSurf::pack_variable(int n)
 {
   double *vector = vbuf[field2index[n]];
 
-  for (int i = 0; i < nslocal; i++) {
-    buf[n] = vector[i];
+  // NOTE: when add surf variables, check this logic
+
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = vector[clocal[i]];
     n += size_one;
   }
 }
@@ -714,11 +781,28 @@ void DumpSurf::pack_variable(int n)
 
 void DumpSurf::pack_id(int n)
 {
-  int *mysurfs = surf->mysurfs;
-
-  for (int i = 0; i < nslocal; i++) {
-    buf[n] = mysurfs[i] + 1;
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = cglobal[i] + 1;
     n += size_one;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void DumpSurf::pack_type(int n)
+{
+  if (dimension == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = lines[cglobal[i]].type;
+      n += size_one;
+    }
+  } else if (dimension == 3) {
+    Surf::Tri *tris = surf->tris;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = tris[cglobal[i]].type;
+      n += size_one;
+    }
   }
 }
 
@@ -727,18 +811,17 @@ void DumpSurf::pack_id(int n)
 void DumpSurf::pack_v1x(int n)
 {
   Surf::Point *pts = surf->pts;
-  int *mysurfs = surf->mysurfs;
 
   if (dimension == 2) {
     Surf::Line *lines = surf->lines;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = pts[lines[mysurfs[i]].p1].x[0];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = pts[lines[cglobal[i]].p1].x[0];
       n += size_one;
     }
   } else if (dimension == 3) {
     Surf::Tri *tris = surf->tris;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = pts[tris[mysurfs[i]].p1].x[0];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = pts[tris[cglobal[i]].p1].x[0];
       n += size_one;
     }
   }
@@ -749,18 +832,17 @@ void DumpSurf::pack_v1x(int n)
 void DumpSurf::pack_v1y(int n)
 {
   Surf::Point *pts = surf->pts;
-  int *mysurfs = surf->mysurfs;
 
   if (dimension == 2) {
     Surf::Line *lines = surf->lines;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = pts[lines[mysurfs[i]].p1].x[1];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = pts[lines[cglobal[i]].p1].x[1];
       n += size_one;
     }
   } else if (dimension == 3) {
     Surf::Tri *tris = surf->tris;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = pts[tris[mysurfs[i]].p1].x[1];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = pts[tris[cglobal[i]].p1].x[1];
       n += size_one;
     }
   }
@@ -772,10 +854,9 @@ void DumpSurf::pack_v1z(int n)
 {
   Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nslocal; i++) {
-    buf[n] = pts[tris[mysurfs[i]].p1].x[2];
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = pts[tris[cglobal[i]].p1].x[2];
     n += size_one;
   }
 }
@@ -785,18 +866,17 @@ void DumpSurf::pack_v1z(int n)
 void DumpSurf::pack_v2x(int n)
 {
   Surf::Point *pts = surf->pts;
-  int *mysurfs = surf->mysurfs;
 
   if (dimension == 2) {
     Surf::Line *lines = surf->lines;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = pts[lines[mysurfs[i]].p2].x[0];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = pts[lines[cglobal[i]].p2].x[0];
       n += size_one;
     }
   } else if (dimension == 3) {
     Surf::Tri *tris = surf->tris;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = pts[tris[mysurfs[i]].p2].x[0];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = pts[tris[cglobal[i]].p2].x[0];
       n += size_one;
     }
   }
@@ -807,18 +887,17 @@ void DumpSurf::pack_v2x(int n)
 void DumpSurf::pack_v2y(int n)
 {
   Surf::Point *pts = surf->pts;
-  int *mysurfs = surf->mysurfs;
 
   if (dimension == 2) {
     Surf::Line *lines = surf->lines;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = pts[lines[mysurfs[i]].p2].x[1];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = pts[lines[cglobal[i]].p2].x[1];
       n += size_one;
     }
   } else if (dimension == 3) {
     Surf::Tri *tris = surf->tris;
-    for (int i = 0; i < nslocal; i++) {
-      buf[n] = pts[tris[mysurfs[i]].p2].x[1];
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = pts[tris[cglobal[i]].p2].x[1];
       n += size_one;
     }
   }
@@ -830,10 +909,9 @@ void DumpSurf::pack_v2z(int n)
 {
   Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nslocal; i++) {
-    buf[n] = pts[tris[mysurfs[i]].p2].x[2];
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = pts[tris[cglobal[i]].p2].x[2];
     n += size_one;
   }
 }
@@ -844,10 +922,9 @@ void DumpSurf::pack_v3x(int n)
 {
   Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nslocal; i++) {
-    buf[n] = pts[tris[mysurfs[i]].p3].x[0];
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = pts[tris[cglobal[i]].p3].x[0];
     n += size_one;
   }
 }
@@ -858,10 +935,9 @@ void DumpSurf::pack_v3y(int n)
 {
   Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nslocal; i++) {
-    buf[n] = pts[tris[mysurfs[i]].p3].x[1];
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = pts[tris[cglobal[i]].p3].x[1];
     n += size_one;
   }
 }
@@ -872,11 +948,9 @@ void DumpSurf::pack_v3z(int n)
 {
   Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-  int *mysurfs = surf->mysurfs;
 
-  for (int i = 0; i < nslocal; i++) {
-    buf[n] = pts[tris[mysurfs[i]].p3].x[2];
+  for (int i = 0; i < nchoose; i++) {
+    buf[n] = pts[tris[cglobal[i]].p3].x[2];
     n += size_one;
   }
 }
-

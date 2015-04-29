@@ -29,15 +29,16 @@ class Surf : protected Pointers {
   int nreact_one;           // surface reactions in current step
   bigint nreact_running;    // running count of surface reactions
 
-  int nid;                  // # of unique surface IDs
-  char **ids;               // list of IDs
-  int *idlo,*idhi;          // range of consecutive surfs assigned to each ID
+  int ngroup;               // # of defined groups
+  char **gnames;            // name of each group
+  int *bitmask;             // one-bit mask for each group
 
   struct Point {
     double x[3];
   };
 
   struct Line {
+    int type,mask;          // type and mask of the element
     int isc,isr;            // index of surface collision and reaction models
                             // -1 if unassigned
     int p1,p2;              // indices of points in line segment
@@ -46,6 +47,7 @@ class Surf : protected Pointers {
   };
 
   struct Tri {
+    int type,mask;          // type and mask of the element
     int isc,isr;            // index of surface collision and reaction models
                             // -1 if unassigned
     int p1,p2,p3;           // indices of points in triangle
@@ -81,14 +83,15 @@ class Surf : protected Pointers {
   double axi_line_size(int);
   double tri_size(int, double &);
 
-  int add_surf(const char *);
-  int find_surf(const char *);
+  void group(int, char **);
+  int add_group(const char *);
+  int find_group(const char *);
   void add_collide(int, char **);
   int find_collide(const char *);
   void add_react(int, char **);
   int find_react(const char *);
 
-  void collate_vec(int, int *, double *, int, double *, int, int);
+  void collate_vector(int, int *, double *, int, double *);
   void collate_array(int, int, int *, double **, double **);
 
   void write_restart(FILE *);
@@ -100,6 +103,13 @@ class Surf : protected Pointers {
   int maxsc;                // max # of models in sc
   int nsr;                  // # of surface reaction models
   int maxsr;                // max # of models in sr
+
+  int tally_comm;           // style of comm for surf tallies
+
+  void collate_vector_allreduce(int, int *, double *, int, double *);
+  void collate_vector_irregular(int, int *, double *, int, double *);
+  void collate_array_allreduce(int, int, int *, double **, double **);
+  void collate_array_irregular(int, int, int *, double **, double **);
 };
 
 }

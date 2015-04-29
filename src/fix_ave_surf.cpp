@@ -41,17 +41,21 @@ enum{ONE,RUNNING};
 FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg < 5) error->all(FLERR,"Illegal fix ave/surf command");
+  if (narg < 7) error->all(FLERR,"Illegal fix ave/surf command");
 
-  nevery = atoi(arg[2]);
-  nrepeat = atoi(arg[3]);
-  per_surf_freq = atoi(arg[4]);
+  int igroup = surf->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Could not find fix ave/surf group ID");
+  groupbit = surf->bitmask[igroup];
+
+  nevery = atoi(arg[3]);
+  nrepeat = atoi(arg[4]);
+  per_surf_freq = atoi(arg[5]);
 
   time_depend = 1;
 
   // scan values, then read options
 
-  int iarg = 5;
+  int iarg = 6;
   while (iarg < narg) {
     if ((strncmp(arg[iarg],"c_",2) == 0) || 
 	(strncmp(arg[iarg],"f_",2) == 0) || 
@@ -68,7 +72,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   ids = NULL;
   nvalues = maxvalues = 0;
 
-  iarg = 5;
+  iarg = 6;
   while (iarg < narg) {
     if (strncmp(arg[iarg],"c_",2) == 0 || 
         strncmp(arg[iarg],"f_",2) == 0 || 
@@ -200,6 +204,9 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
   nslocal = surf->nlocal;
 
+  memory->create(buflocal,nslocal,"ave/surf:buflocal");
+  memory->create(masks,nslocal,"ave/surf:masks");
+
   if (nvalues == 1) memory->create(vector_surf,nslocal,"ave/surf:vector_surf");
   else memory->create(array_surf,nslocal,nvalues,"ave/surf:array_surf");
 
@@ -251,6 +258,20 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 	array_surf[i][m] = 0.0;
   }
 
+  // local storage of surf element masks
+
+  int *mysurfs = surf->mysurfs;
+
+  if (domain->dimension == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int i = 0; i < nslocal; i++)
+      masks[i] = lines[mysurfs[i]].mask;
+  } else {
+    Surf::Tri *tris = surf->tris;
+    for (int i = 0; i < nslocal; i++)
+      masks[i] = tris[mysurfs[i]].mask;
+  }
+
   // nvalid = next step on which end_of_step does something
   // add nvalid to all computes that store invocation times
   // since don't know a priori which are invoked by this fix
@@ -271,6 +292,9 @@ FixAveSurf::~FixAveSurf()
   memory->destroy(value2index);
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
   memory->sfree(ids);
+
+  memory->destroy(buflocal);
+  memory->destroy(masks);
 
   if (nvalues == 1) memory->destroy(vector_surf);
   else memory->destroy(array_surf);
@@ -298,6 +322,10 @@ int FixAveSurf::setmask()
 
 void FixAveSurf::init()
 {
+  if ((domain->dimension == 2 && nsurf != surf->nline) || 
+      (domain->dimension == 3 && nsurf != surf->ntri)) 
+    error->all(FLERR,"Number of surface elements changed in dump surf");
+
   // set indices and check validity of all computes,fixes,variables
 
   for (int m = 0; m < nvalues; m++) {
@@ -359,8 +387,7 @@ void FixAveSurf::end_of_step()
   // reset all set glob2loc values to -1 and nlocal to 0 if first sample
 
   if (irepeat == 0) {
-    for (i = 0; i < nlocal; i++)
-      glob2loc[loc2glob[i]] = -1;
+    for (i = 0; i < nlocal; i++) glob2loc[loc2glob[i]] = -1;
     nlocal = 0;
   }
 
@@ -386,7 +413,7 @@ void FixAveSurf::end_of_step()
       int nlocal_compute = compute->surfinfo(loc2glob_compute);
       
       if (j == 0) {
-        double *compute_vector = compute->vector_surf;
+        double *vector = compute->vector_surf_tally;
         if (nvalues == 1) {
           for (i = 0; i < nlocal_compute; i++) {
             isurf = loc2glob_compute[i];
@@ -398,7 +425,7 @@ void FixAveSurf::end_of_step()
               glob2loc[isurf] = ilocal;
               vec_local[ilocal] = 0.0;
             }
-            vec_local[ilocal] += compute_vector[i];
+            vec_local[ilocal] += vector[i];
           }
         } else {
           for (i = 0; i < nlocal_compute; i++) {
@@ -412,12 +439,12 @@ void FixAveSurf::end_of_step()
               vec = array_local[ilocal];
               for (k = 0; k < nvalues; k++) vec[k] = 0.0;
             }
-            array_local[ilocal][m] += compute_vector[i];
+            array_local[ilocal][m] += vector[i];
           }
         }
       } else {
         int jm1 = j - 1;
-        double **compute_array = compute->array_surf;
+        double **array = compute->array_surf_tally;
         if (nvalues == 1) {
           for (i = 0; i < nlocal_compute; i++) {
             isurf = loc2glob_compute[i];
@@ -429,7 +456,7 @@ void FixAveSurf::end_of_step()
               glob2loc[isurf] = ilocal;
               vec_local[ilocal] = 0.0;
             }
-            vec_local[ilocal] += compute_array[i][jm1];
+            vec_local[ilocal] += array[i][jm1];
           }
         } else {
           for (i = 0; i < nlocal_compute; i++) {
@@ -443,36 +470,37 @@ void FixAveSurf::end_of_step()
               vec = array_local[ilocal];
               for (k = 0; k < nvalues; k++) vec[k] = 0.0;
             }
-            array_local[ilocal][m] += compute_array[i][jm1];
+            array_local[ilocal][m] += array[i][jm1];
           }
         }
       }
       
-      // access fix fields, guaranteed to be ready
-      
+    // access fix fields, guaranteed to be ready
+    // check group mask in case other fix uses a different surf group
+
     } else if (which[m] == FIX) {
       if (j == 0) {
         double *fix_vector = modify->fix[n]->vector_surf;
         if (nvalues == 1) {
           for (i = 0; i < nslocal; i++)
-            accvec[i] += fix_vector[i];
+            if (masks[i] & groupbit) accvec[i] += fix_vector[i];
         } else {
           for (i = 0; i < nslocal; i++)
-            accarray[i][m] += fix_vector[i];
+            if (masks[i] & groupbit) accarray[i][m] += fix_vector[i];
         }
       } else {
         int jm1 = j - 1;
         double **fix_array = modify->fix[n]->array_surf;
         if (nvalues == 1) {
           for (i = 0; i < nslocal; i++)
-            accvec[i] += fix_array[i][jm1];
+            if (masks[i] & groupbit) accvec[i] += fix_array[i][jm1];
         } else {
           for (i = 0; i < nslocal; i++)
-            accarray[i][m] += fix_array[i][jm1];
+            if (masks[i] & groupbit) accarray[i][m] += fix_array[i][jm1];
         }
       }
-      
-      // evaluete surf-style variable
+
+    // evaluete surf-style variable
       
     } else if (which[m] == VARIABLE) {
     }
@@ -493,13 +521,29 @@ void FixAveSurf::end_of_step()
   nvalid = ntimestep+per_surf_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
 
-  // sum local values across all procs
-  // returns values I own summed into accvec and accarray
+  // for values from computes, merge local values across all procs
+  // returns surf element values I own in buflocal
+  // then sum buflocal into accvec and accarray
+  //   do not sum for surf elements not in surf group
+  //   so those values stay 0.0 even if compute's surf group is different
+  // NOTE: could test if all values are from COMPUTE and do collate_array()
 
-  if (nvalues == 1)
-    surf->collate_vec(nlocal,loc2glob,vec_local,1,accvec,1,1);
-  else
-    surf->collate_array(nlocal,nvalues,loc2glob,array_local,accarray);
+  for (m = 0; m < nvalues; m++) {
+    if (which[m] != COMPUTE) continue;
+    if (nvalues == 1) {
+      surf->collate_vector(nlocal,loc2glob,vec_local,1,buflocal);
+      for (i = 0; i < nslocal; i++)
+        if (masks[i] & groupbit) accvec[i] += buflocal[i];
+    } else {
+      if (nlocal)
+        surf->collate_vector(nlocal,loc2glob,&array_local[0][m],
+                             nvalues,buflocal);
+      else
+        surf->collate_vector(nlocal,loc2glob,NULL,nvalues,buflocal);
+      for (i = 0; i < nslocal; i++)
+        if (masks[i] & groupbit) accarray[i][m] += buflocal[i];
+    }
+  }
 
   // normalize the accumulators for output on Nfreq timestep
   // normindex < 0, just normalize by # of samples
@@ -570,7 +614,10 @@ void FixAveSurf::grow_local()
 {
   maxlocal += DELTA;
   memory->grow(loc2glob,maxlocal,"ave/surf:loc2glob");
-  memory->grow(array_local,maxlocal,nvalues,"ave/surf:array_surf");
+  if (nvalues == 1)
+    memory->grow(vec_local,maxlocal,"ave/surf:vec_local");
+  else
+    memory->grow(array_local,maxlocal,nvalues,"ave/surf:array_local");
 }
 
 /* ----------------------------------------------------------------------

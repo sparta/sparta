@@ -29,23 +29,27 @@ using namespace SPARTA_NS;
 
 enum{NUM,PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
-#define DELTA 10000
+#define DELTA 4096
 
 /* ---------------------------------------------------------------------- */
 
 ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 4) error->all(FLERR,"Illegal compute surf command");
+  if (narg < 5) error->all(FLERR,"Illegal compute surf command");
 
-  imix = particle->find_mixture(arg[2]);
+  int igroup = surf->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Compute surf group ID does not exist");
+  groupbit = surf->bitmask[igroup];
+
+  imix = particle->find_mixture(arg[3]);
   if (imix < 0) error->all(FLERR,"Compute surf mixture ID does not exist");
 
-  nvalue = narg - 3;
+  nvalue = narg - 4;
   which = new int[nvalue];
 
   nvalue = 0;
-  int iarg = 3;
+  int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
     else if (strcmp(arg[iarg],"press") == 0) which[nvalue++] = PRESS;
@@ -63,6 +67,9 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
+  // NOTE: maybe per_surf_flag should be 0, since this compute
+  //       does not create array_surf, but only array_surf_tally
+
   surf_tally_flag = 1;
   timeflag = 1;
   per_surf_flag = 1;
@@ -72,7 +79,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
 
   nlocal = maxlocal = 0;
   glob2loc = loc2glob = NULL;
-  array_surf = NULL;
+  array_surf_tally = NULL;
   normflux = NULL;
 }
 
@@ -83,7 +90,7 @@ ComputeSurf::~ComputeSurf()
   delete [] which;
   memory->destroy(glob2loc);
   memory->destroy(loc2glob);
-  memory->destroy(array_surf);
+  memory->destroy(array_surf_tally);
   memory->destroy(normflux);
 }
 
@@ -109,9 +116,9 @@ void ComputeSurf::init()
   memory->create(glob2loc,nsurf,"surf:glob2loc");
   for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
 
-  // normflux for each surface element I own, based on area and timestep size
+  // normflux for all surface elements, based on area and timestep size
+  // store for all surf elements, b/c don't know which ones I need to normalize
   // one-time only initialization
-  // NOTE: eventually will be only for surfs I know about (local + ghost)
 
   if (normflux == NULL)  {
     memory->create(normflux,nsurf,"surf:normflux");
@@ -148,6 +155,8 @@ void ComputeSurf::compute_per_surf()
   invoked_per_surf = update->ntimestep;
 
   // normalize all local tallies (except NUM) by normflux
+  // NOTE: this does not produce vector_surf or array_surf
+  //       which might be what some callers expect
 
   int iglobal,m;
   double norm;
@@ -157,7 +166,7 @@ void ComputeSurf::compute_per_surf()
     norm = normflux[iglobal];
     for (int j = 0; j < ntotal; j++) {
       m = j % nvalue;
-      if (which[m] != NUM) array_surf[i][j] /= norm;
+      if (which[m] != NUM) array_surf_tally[i][j] /= norm;
     }
   }
 }
@@ -188,7 +197,15 @@ void ComputeSurf::clear()
 void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig, 
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
-  // skip species not in mixture group
+  // skip if isurf not in surface group
+
+  if (dimension == 2) {
+    if (!(lines[isurf].mask & groupbit)) return;
+  } else {
+    if (!(tris[isurf].mask & groupbit)) return;
+  }
+
+  // skip if species not in mixture group
 
   int origspecies = iorig->ispecies;
   int igroup = particle->mixture[imix]->species2group[origspecies];
@@ -206,7 +223,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
     ilocal = nlocal++;
     loc2glob[ilocal] = isurf;
     glob2loc[isurf] = ilocal;
-    vec = array_surf[ilocal];
+    vec = array_surf_tally[ilocal];
     for (int i = 0; i < ntotal; i++) vec[i] = 0.0;
   }
 
@@ -231,7 +248,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
   double *vorig = iorig->v;
   double mvv2e = update->mvv2e;
 
-  vec = array_surf[ilocal];
+  vec = array_surf_tally[ilocal];
   int k = igroup*nvalue;
   int nflag = 0;
   int tflag = 0;
@@ -376,7 +393,7 @@ void ComputeSurf::grow()
 {
   maxlocal += DELTA;
   memory->grow(loc2glob,maxlocal,"surf:loc2glob");
-  memory->grow(array_surf,maxlocal,ntotal,"surf:array_surf");
+  memory->grow(array_surf_tally,maxlocal,ntotal,"surf:array_surf_tally");
 }
 
 /* ----------------------------------------------------------------------

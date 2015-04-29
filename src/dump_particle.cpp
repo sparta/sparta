@@ -20,6 +20,7 @@
 #include "domain.h"
 #include "region.h"
 #include "particle.h"
+#include "mixture.h"
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
@@ -40,25 +41,35 @@ enum{INT,DOUBLE,CELLINT,STRING};    // many files
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 #define INVOKED_PER_PARTICLE 8
+#define CHUNK 8
 
 /* ---------------------------------------------------------------------- */
 
 DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   Dump(sparta, narg, arg)
 {
-  if (narg == 4) error->all(FLERR,"No dump particle attributes specified");
+  if (narg == 5) error->all(FLERR,"No dump particle attributes specified");
 
   clearstep = 1;
   buffer_allow = 1;
   buffer_flag = 1;
 
-  nevery = atoi(arg[2]);
+  imix = particle->find_mixture(arg[2]);
+  if (imix < 0) error->all(FLERR,"Dump particle mixture ID does not exist");
 
-  // size_one may be shrunk below if additional optional args exist
+  nevery = atoi(arg[3]);
 
-  size_one = nfield = narg - 4;
-  pack_choice = new FnPtrPack[nfield];
-  vtype = new int[nfield];
+  // scan values and set size_one
+  // NOTE: could add: array entries may expand into multiple fields
+  // could use ioptional to add on keyword/arg pairs
+
+  ioptional = parse_fields(narg-5,&arg[5]);
+  if (5+ioptional < narg &&
+      (strcmp(style,"image") != 0 && strcmp(style,"movie") != 0))
+    error->all(FLERR,"Invalid attribute in dump particle command");
+  size_one = nfield;
+
+  // options
 
   iregion = -1;
   idregion = NULL;
@@ -66,38 +77,6 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   thresh_array = NULL;
   thresh_op = NULL;
   thresh_value = NULL;
-
-  // computes, fixes, variables which the dump accesses
-
-  memory->create(field2index,nfield,"dump:field2index");
-  memory->create(argindex,nfield,"dump:argindex");
-
-  ncustom = 0;
-  id_custom = NULL;
-  custom = NULL;
-
-  ncompute = 0;
-  id_compute = NULL;
-  compute = NULL;
-
-  nfix = 0;
-  id_fix = NULL;
-  fix = NULL;
-
-  nvariable = 0;
-  id_variable = NULL;
-  variable = NULL;
-  vbuf = NULL;
-
-  // process attributes
-  // ioptional = start of additional optional args
-  // only dump image/movie styles process optional args
-
-  ioptional = parse_fields(narg,arg);
-  if (ioptional < narg && 
-      (strcmp(style,"image") != 0 && strcmp(style,"movie") != 0))
-    error->all(FLERR,"Invalid attribute in dump particle command");
-  size_one = nfield = ioptional - 4;
 
   // particle selection arrays
 
@@ -370,6 +349,14 @@ int DumpParticle::count()
   // choose all local particles for output
 
   for (i = 0; i < nlocal; i++) choose[i] = 1;
+
+  // un-choose if not in mixture
+
+  Particle::OnePart *particles = particle->particles;
+  int *species2species = particle->mixture[imix]->species2species;
+
+  for (i = 0; i < nlocal; i++)
+    if (species2species[particles[i].ispecies] < 0) choose[i] = 0;
 
   // un-choose if not in region
 
@@ -645,60 +632,93 @@ void DumpParticle::write_text(int n, double *mybuf)
 
 int DumpParticle::parse_fields(int narg, char **arg)
 {
+  // initialize per-field lists
+
+  pack_choice = new FnPtrPack[nfield];
+  vtype = new int[nfield];
+  field2index = NULL;
+  argindex = NULL;
+
+  int maxfield = narg;
+  allocate_values(maxfield);
+  nfield = 0;
+
+  ncustom = 0;
+  id_custom = NULL;
+  custom = NULL;
+
+  ncompute = 0;
+  id_compute = NULL;
+  compute = NULL;
+
+  nfix = 0;
+  id_fix = NULL;
+  fix = NULL;
+
+  nvariable = 0;
+  id_variable = NULL;
+  variable = NULL;
+  vbuf = NULL;
+
   // customize by adding to if statement
 
   int i;
-  for (int iarg = 4; iarg < narg; iarg++) {
-    i = iarg-4;
+  for (int iarg = 0; iarg < narg; iarg++) {
+    if (nfield == maxfield) {
+      maxfield += CHUNK;
+      allocate_values(maxfield);
+    }
+
+    argindex[nfield] = -1;
 
     if (strcmp(arg[iarg],"id") == 0) {
-      pack_choice[i] = &DumpParticle::pack_id;
-      vtype[i] = INT;
+      pack_choice[nfield] = &DumpParticle::pack_id;
+      vtype[nfield] = INT;
     } else if (strcmp(arg[iarg],"type") == 0) {
-      pack_choice[i] = &DumpParticle::pack_type;
-      vtype[i] = INT;
+      pack_choice[nfield] = &DumpParticle::pack_type;
+      vtype[nfield] = INT;
     } else if (strcmp(arg[iarg],"proc") == 0) {
-      pack_choice[i] = &DumpParticle::pack_proc;
-      vtype[i] = INT;
+      pack_choice[nfield] = &DumpParticle::pack_proc;
+      vtype[nfield] = INT;
 
     } else if (strcmp(arg[iarg],"x") == 0) {
-      pack_choice[i] = &DumpParticle::pack_x;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_x;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"y") == 0) {
-      pack_choice[i] = &DumpParticle::pack_y;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_y;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"z") == 0) {
-      pack_choice[i] = &DumpParticle::pack_z;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_z;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"xs") == 0) {
-      pack_choice[i] = &DumpParticle::pack_xs;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_xs;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"ys") == 0) {
-      pack_choice[i] = &DumpParticle::pack_ys;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_ys;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"zs") == 0) {
-      pack_choice[i] = &DumpParticle::pack_zs;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_zs;
+      vtype[nfield] = DOUBLE;
 
     } else if (strcmp(arg[iarg],"vx") == 0) {
-      pack_choice[i] = &DumpParticle::pack_vx;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_vx;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"vy") == 0) {
-      pack_choice[i] = &DumpParticle::pack_vy;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_vy;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"vz") == 0) {
-      pack_choice[i] = &DumpParticle::pack_vz;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_vz;
+      vtype[nfield] = DOUBLE;
 
     } else if (strcmp(arg[iarg],"ke") == 0) {
-      pack_choice[i] = &DumpParticle::pack_ke;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_ke;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"erot") == 0) {
-      pack_choice[i] = &DumpParticle::pack_erot;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_erot;
+      vtype[nfield] = DOUBLE;
     } else if (strcmp(arg[iarg],"evib") == 0) {
-      pack_choice[i] = &DumpParticle::pack_evib;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_evib;
+      vtype[nfield] = DOUBLE;
 
     // custom particle vector or array
     // if no trailing [], then arg is set to 0, else arg is int between []
@@ -714,36 +734,36 @@ int DumpParticle::parse_fields(int narg, char **arg)
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump particle command");
-	argindex[i] = atoi(ptr+1);
+	argindex[nfield] = atoi(ptr+1);
 	*ptr = '\0';
-      } else argindex[i] = 0;
+      } else argindex[nfield] = 0;
 
       n = particle->find_custom(suffix);
       if (n < 0) 
         error->all(FLERR,"Could not find dump particle custom attribute");
 
-      vtype[i] = particle->etype[n];
-      if (argindex[i] == 0 && particle->esize[n] > 0)
+      vtype[nfield] = particle->etype[n];
+      if (argindex[nfield] == 0 && particle->esize[n] > 0)
 	error->all(FLERR,
 		   "Dump particle custom attribute does not store "
 		   "per-particle vector");
-      if (argindex[i] > 0 && particle->esize[n] == 0)
+      if (argindex[nfield] > 0 && particle->esize[n] == 0)
 	error->all(FLERR,
 		   "Dump particle custom attribute does not store "
 		   "per-particle array");
-      if (argindex[i] > 0 && argindex[i] > particle->esize[n])
+      if (argindex[nfield] > 0 && argindex[nfield] > particle->esize[n])
 	error->all(FLERR,
 		   "Dump particle custom attribute is accessed out-of-range");
 
-      field2index[i] = add_custom(suffix);
+      field2index[nfield] = add_custom(suffix);
       delete [] suffix;
 
     // compute value = c_ID
     // if no trailing [], then arg is set to 0, else arg is int between []
 
     } else if (strncmp(arg[iarg],"c_",2) == 0) {
-      pack_choice[i] = &DumpParticle::pack_compute;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_compute;
+      vtype[nfield] = DOUBLE;
 
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
@@ -753,37 +773,39 @@ int DumpParticle::parse_fields(int narg, char **arg)
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump particle command");
-	argindex[i] = atoi(ptr+1);
+	argindex[nfield] = atoi(ptr+1);
 	*ptr = '\0';
-      } else argindex[i] = 0;
+      } else argindex[nfield] = 0;
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle compute ID");
       if (modify->compute[n]->per_particle_flag == 0)
 	error->all(FLERR,
 		   "Dump particle compute does not compute per-particle info");
-      if (argindex[i] == 0 && modify->compute[n]->size_per_particle_cols > 0)
+      if (argindex[nfield] == 0 && 
+          modify->compute[n]->size_per_particle_cols > 0)
 	error->all(FLERR,
 		   "Dump particle compute does not calculate "
 		   "per-particle vector");
-      if (argindex[i] > 0 && modify->compute[n]->size_per_particle_cols == 0)
+      if (argindex[nfield] > 0 && 
+          modify->compute[n]->size_per_particle_cols == 0)
 	error->all(FLERR,
 		   "Dump particle compute does not calculate "
 		   "per-particle array");
-      if (argindex[i] > 0 && 
-	  argindex[i] > modify->compute[n]->size_per_particle_cols)
+      if (argindex[nfield] > 0 && 
+	  argindex[nfield] > modify->compute[n]->size_per_particle_cols)
 	error->all(FLERR,
 		   "Dump particle compute array is accessed out-of-range");
 
-      field2index[i] = add_compute(suffix);
+      field2index[nfield] = add_compute(suffix);
       delete [] suffix;
       
     // fix value = f_ID
     // if no trailing [], then arg is set to 0, else arg is between []
 
     } else if (strncmp(arg[iarg],"f_",2) == 0) {
-      pack_choice[i] = &DumpParticle::pack_fix;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_fix;
+      vtype[nfield] = DOUBLE;
 
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
@@ -793,39 +815,39 @@ int DumpParticle::parse_fields(int narg, char **arg)
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump particle command");
-	argindex[i] = atoi(ptr+1);
+	argindex[nfield] = atoi(ptr+1);
 	*ptr = '\0';
-      } else argindex[i] = 0;
+      } else argindex[nfield] = 0;
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle fix ID");
       if (modify->fix[n]->per_particle_flag == 0)
 	error->all(FLERR,"Dump particle fix does not compute "
 		   "per-particle info");
-      if (argindex[i] == 0 && modify->fix[n]->size_per_particle_cols > 0)
+      if (argindex[nfield] == 0 && modify->fix[n]->size_per_particle_cols > 0)
 	error->all(FLERR,"Dump particle fix does not compute "
 		   "per-particle vector");
-      if (argindex[i] > 0 && modify->fix[n]->size_per_particle_cols == 0)
+      if (argindex[nfield] > 0 && modify->fix[n]->size_per_particle_cols == 0)
 	error->all(FLERR,"Dump particle fix does not compute "
 		   "per-particle array");
-      if (argindex[i] > 0 && 
-	  argindex[i] > modify->fix[n]->size_per_particle_cols)
+      if (argindex[nfield] > 0 && 
+	  argindex[nfield] > modify->fix[n]->size_per_particle_cols)
 	error->all(FLERR,"Dump particle fix array is accessed out-of-range");
 
-      field2index[i] = add_fix(suffix);
+      field2index[nfield] = add_fix(suffix);
       delete [] suffix;
 
     // variable value = v_name
 
     } else if (strncmp(arg[iarg],"v_",2) == 0) {
-      pack_choice[i] = &DumpParticle::pack_variable;
-      vtype[i] = DOUBLE;
+      pack_choice[nfield] = &DumpParticle::pack_variable;
+      vtype[nfield] = DOUBLE;
 
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
-      argindex[i] = 0;
+      argindex[nfield] = 0;
 
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump particle variable name");
@@ -833,13 +855,41 @@ int DumpParticle::parse_fields(int narg, char **arg)
 	error->all(FLERR,"Dump particle variable is not "
 		   "particle-style variable");
 
-      field2index[i] = add_variable(suffix);
+      field2index[nfield] = add_variable(suffix);
       delete [] suffix;
 
     } else return iarg;
+
+    nfield++;
   }
 
   return narg;
+}
+
+
+/* ----------------------------------------------------------------------
+   add Custom ID to list of particle custom attribute IDs used by dump
+   return index of where this custom attribute is in list
+   if already in list, do not add, just return index, else add to list
+------------------------------------------------------------------------- */
+
+int DumpParticle::add_custom(char *id)
+{
+  int icustom;
+  for (icustom = 0; icustom < ncustom; icustom++)
+    if (strcmp(id,id_custom[icustom]) == 0) break;
+  if (icustom < ncustom) return icustom;
+  
+  id_custom = (char **)
+    memory->srealloc(id_custom,(ncustom+1)*sizeof(char *),"dump:id_custom");
+  delete [] custom;
+  custom = new int[ncustom+1];
+
+  int n = strlen(id) + 1;
+  id_custom[ncustom] = new char[n];
+  strcpy(id_custom[ncustom],id);
+  ncustom++;
+  return ncustom-1;
 }
 
 /* ----------------------------------------------------------------------
@@ -922,28 +972,16 @@ int DumpParticle::add_variable(char *id)
 }
 
 /* ----------------------------------------------------------------------
-   add Custom ID to list of particle custom attribute IDs used by dump
-   return index of where this custom attribute is in list
-   if already in list, do not add, just return index, else add to list
+   reallocate vectors for each input value, of length N
 ------------------------------------------------------------------------- */
 
-int DumpParticle::add_custom(char *id)
+void DumpParticle::allocate_values(int n)
 {
-  int icustom;
-  for (icustom = 0; icustom < ncustom; icustom++)
-    if (strcmp(id,id_custom[icustom]) == 0) break;
-  if (icustom < ncustom) return icustom;
-  
-  id_custom = (char **)
-    memory->srealloc(id_custom,(ncustom+1)*sizeof(char *),"dump:id_custom");
-  delete [] custom;
-  custom = new int[ncustom+1];
-
-  int n = strlen(id) + 1;
-  id_custom[ncustom] = new char[n];
-  strcpy(id_custom[ncustom],id);
-  ncustom++;
-  return ncustom-1;
+  pack_choice = (FnPtrPack *) 
+    memory->srealloc(pack_choice,n*sizeof(FnPtrPack),"dump:pack_choice");
+  memory->grow(vtype,n,"dump:vtype");
+  memory->grow(field2index,n,"dump:field2index");
+  memory->grow(argindex,n,"dump:argindex");
 }
 
 /* ---------------------------------------------------------------------- */

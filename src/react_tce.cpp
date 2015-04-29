@@ -92,6 +92,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         
     switch (r->type) {
     case DISSOCIATION:
+    case IONIZATION:
     case EXCHANGE:
       {
         react_prob += r->coeff[2] * 

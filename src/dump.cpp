@@ -51,9 +51,9 @@ Dump::Dump(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   style = new char[n];
   strcpy(style,arg[1]);
 
-  n = strlen(arg[3]) + 1;
+  n = strlen(arg[4]) + 1;
   filename = new char[n];
-  strcpy(filename,arg[3]);
+  strcpy(filename,arg[4]);
 
   first_flag = 0;
   flush_flag = 1;

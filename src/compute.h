@@ -31,8 +31,15 @@ class Compute : protected Pointers {
   double **array_particle;  // computed per-particle array
   double *vector_grid;      // computed per-grid vector
   double **array_grid;      // computed per-grid array
-  double *vector_surf;      // computed per-surf vector
-  double **array_surf;      // computed per-surf array
+
+  // vec/array_surf are length nslocal = # of owned surf elements
+  // tally vec/array are length nlocal = # of unique surf elements tallied
+  // tally info is accessed by callers via surfinfo()
+
+  double *vector_surf;        // computed per-surf vector
+  double **array_surf;        // computed per-surf array
+  double *vector_surf_tally;  // computed per-surf tally vector
+  double **array_surf_tally;  // computed per-surf tally array
 
   double **array_grid_extra;   // extra per-grid array
   double **norm_grid_extra;    // extra per-grid normalizations

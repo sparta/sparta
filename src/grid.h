@@ -46,6 +46,10 @@ class Grid : protected Pointers {
   double cell_epsilon;  // half of smallest cellsize of any cell in any dim
   int cellweightflag;   // 0/1+ for no/yes usage of cellwise fnum weighting
 
+  int ngroup;               // # of defined groups
+  char **gnames;            // name of each group
+  int *bitmask;             // one-bit mask for each group
+
   // hash for all cell IDs (owned,ghost,parent)
 
 #ifdef SPARTA_MAP
@@ -167,7 +171,7 @@ class Grid : protected Pointers {
   Grid(class SPARTA *);
   ~Grid();
   void remove();
-  void init() {}
+  void init();
   void add_child_cell(cellint, int, double *, double *);
   void add_parent_cell(cellint, int, int, int, int, double *, double *);
   void add_split_cell(int);
@@ -182,6 +186,11 @@ class Grid : protected Pointers {
   void check_uniform();
   void type_check();
   void weight(int, char **);
+
+  void group(int, char **);
+  int add_group(const char *);
+  int find_group(const char *);
+
   void write_restart(FILE *);
   void read_restart(FILE *);
   int size_restart();

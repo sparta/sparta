@@ -40,11 +40,12 @@ class ComputeSurf : public Compute {
   bigint memory_usage();
 
  private:
-  int imix,nvalue,ngroup,ntotal;
+  int groupbit,imix;
+  int nvalue,ngroup,ntotal;
   int *which;
 
   int nsurf;               // # of global surfs, lines or triangles
-  int nlocal;              // # of local surfs
+  int nlocal;              // # of local surfs I have tallied for
   int maxlocal;            // # of local surfs currently allocated
   double **array;          // tally values for local surfs
   int *glob2loc;           // glob2loc[I] = local index of Ith global surf
@@ -56,7 +57,7 @@ class ComputeSurf : public Compute {
 
   int weightflag;          // 1 if cell weighting is enabled
   double weight;           // particle weight, based on initial cell
-  double *normflux;
+  double *normflux;        // normalization factor for all surf elements
 
   void grow();
 };

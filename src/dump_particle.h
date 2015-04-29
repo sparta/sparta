@@ -32,6 +32,7 @@ class DumpParticle : public Dump {
   bigint memory_usage();
 
  protected:
+  int imix;                  // index of mixture to be dumped
   int nevery;                // dump frequency to check Fix against
   int iregion;               // -1 if no region, else which region
   char *idregion;            // region ID
@@ -82,10 +83,12 @@ class DumpParticle : public Dump {
   void write_data(int, double *);
 
   int parse_fields(int, char **);
+  int add_custom(char *);
   int add_compute(char *);
   int add_fix(char *);
-  int add_custom(char *);
   int add_variable(char *);
+  void allocate_values(int);
+
   virtual int modify_param(int, char **);
 
   typedef void (DumpParticle::*FnPtrHeader)(bigint);

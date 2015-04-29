@@ -23,6 +23,7 @@
 #include "grid.h"
 #include "comm.h"
 #include "geometry.h"
+#include "input.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -80,24 +81,13 @@ void ReadSurf::command(int narg, char **arg)
   surf->exist = 1;
   dimension = domain->dimension;
 
-  if (narg < 2) error->all(FLERR,"Illegal read_surf command");
-
-  // check surface ID
-  // newsurf = 1 for a new ID
-  // newsurf = 0 for most recent ID
-
-  int newsurf;
-  int isurf = surf->find_surf(arg[0]);
-  if (isurf < 0) newsurf = 1;
-  else if (isurf == surf->nid-1) newsurf = 0;
-  else error->all(FLERR,"Invalid reuse of surface ID in read_surf command");
-  if (newsurf) isurf = surf->add_surf(arg[0]);
+  if (narg < 1) error->all(FLERR,"Illegal read_surf command");
 
   // read header info
 
   if (me == 0) {
     if (screen) fprintf(screen,"Reading surf file ...\n");
-    open(arg[1]);
+    open(arg[0]);
   }
 
   MPI_Barrier(world);
@@ -155,8 +145,11 @@ void ReadSurf::command(int narg, char **arg)
   }
 
   // apply optional keywords for geometric transformations
+  // store optional keywords for group and type information
 
   origin[0] = origin[1] = origin[2] = 0.0;
+  int grouparg = 0;
+  int typeadd = 0;
 
   int iarg = 2;
   while (iarg < narg) {
@@ -263,8 +256,42 @@ void ReadSurf::command(int narg, char **arg)
       if (frac > 0.0) push_points_to_boundary(frac);
       if (dimension == 2) clip2d();
       else clip3d();
-      iarg += 1;
+      iarg++;
+
+    } else if (strcmp(arg[iarg],"group") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      grouparg = iarg+1;
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"typeadd") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      typeadd = input->inumeric(FLERR,arg[iarg+1]);
+      if (typeadd < 0) error->all(FLERR,"Invalid read_surf command");
+      iarg += 2;
+
     } else error->all(FLERR,"Invalid read_surf command");
+  }
+
+  // if specified, apply group and typeadd keywords
+  // these reset per-element mask/type info
+
+  if (grouparg) {
+    int igroup = surf->find_group(arg[grouparg]);
+    if (igroup < 0) igroup = surf->add_group(arg[grouparg]);
+    int groupbit = surf->bitmask[igroup];
+    int n = npoint_old + npoint_new;
+    if (dimension == 2)
+      for (int i = npoint_old; i < n; i++) lines[i].mask |= groupbit;
+    else
+      for (int i = npoint_old; i < n; i++) tris[i].mask |= groupbit;
+  }
+
+  if (typeadd) {
+    int n = npoint_old + npoint_new;
+    if (dimension == 2)
+      for (int i = npoint_old; i < n; i++) lines[i].type += typeadd;
+    else 
+      for (int i = npoint_old; i < n; i++) tris[i].type += typeadd;
   }
 
   // update Surf data structures
@@ -276,13 +303,6 @@ void ReadSurf::command(int narg, char **arg)
   surf->npoint = npoint_old + npoint_new;
   surf->nline = nline_old + nline_new;
   surf->ntri = ntri_old + ntri_new;
-
-  if (newsurf) {
-    if (dimension == 2) surf->idlo[isurf] = nline_old;
-    else surf->idlo[isurf] = ntri_old;
-  }
-  if (dimension == 2) surf->idhi[isurf] = surf->nline-1;
-  else surf->idhi[isurf] = surf->ntri-1;
 
   // extent of surf after geometric transformations
   // compute sizes of smallest surface elements
@@ -554,7 +574,7 @@ void ReadSurf::read_points()
 
 void ReadSurf::read_lines()
 {
-  int i,m,nchunk,p1,p2;
+  int i,m,nchunk,type,p1,p2;
   char *next,*buf;
 
   // read and broadcast one CHUNK of lines at a time
@@ -584,16 +604,24 @@ void ReadSurf::read_lines()
     int nwords = count_words(buf);
     *next = '\n';
 
-    if (nwords != 3)
+    // allow for optional type in each line element
+
+    if (nwords != 3 && nwords != 4)
       error->all(FLERR,"Incorrect line format in surf file");
+    int typeflag = 0;
+    if (nwords == 4) typeflag = 1;
 
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
+      if (typeflag) type = atoi(strtok(NULL," \t\n\r\f"));
+      else type = 1;
       p1 = atoi(strtok(NULL," \t\n\r\f"));
       p2 = atoi(strtok(NULL," \t\n\r\f"));
       if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || p1 == p2)
 	error->all(FLERR,"Invalid point index in line");
+      lines[n].type = type;
+      lines[n].mask = 1;
       lines[n].isc = lines[n].isr = -1;
       lines[n].p1 = p1-1 + npoint_old;
       lines[n].p2 = p2-1 + npoint_old;
@@ -617,7 +645,7 @@ void ReadSurf::read_lines()
 
 void ReadSurf::read_tris()
 {
-  int i,m,nchunk,p1,p2,p3;
+  int i,m,nchunk,type,p1,p2,p3;
   char *next,*buf;
 
   // read and broadcast one CHUNK of triangles at a time
@@ -647,18 +675,26 @@ void ReadSurf::read_tris()
     int nwords = count_words(buf);
     *next = '\n';
 
-    if (nwords != 4)
-      error->all(FLERR,"Incorrect triangle format in surf file");
+    // allow for optional type in each tri element
+
+    if (nwords != 4 && nwords != 5)
+      error->all(FLERR,"Incorrect line format in surf file");
+    int typeflag = 0;
+    if (nwords == 5) typeflag = 1;
 
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
+      if (typeflag) type = atoi(strtok(NULL," \t\n\r\f"));
+      else type = 1;
       p1 = atoi(strtok(NULL," \t\n\r\f"));
       p2 = atoi(strtok(NULL," \t\n\r\f"));
       p3 = atoi(strtok(NULL," \t\n\r\f"));
       if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || 
 	  p3 < 1 || p3 > npoint_new || p1 == p2 || p2 == p3)
 	error->all(FLERR,"Invalid point index in triangle");
+      tris[n].type = type;
+      tris[n].mask = 1;
       tris[n].isc = tris[n].isr = -1;
       tris[n].p1 = p1-1 + npoint_old;
       tris[n].p2 = p2-1 + npoint_old;

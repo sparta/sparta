@@ -84,6 +84,7 @@ class Input : protected Pointers {
   void dump_modify();
   void fix();
   void global();
+  void group();
   void mixture();
   void react_command();
   void region();

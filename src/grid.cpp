@@ -29,6 +29,7 @@ using namespace MathConst;
 
 #define DELTA 10000
 #define BIG 1.0e20
+#define MAXGROUP 32
 
 // default value, can be overridden by global command
 
@@ -60,6 +61,15 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 {
   exist = exist_ghost = clumped = 0;
   MPI_Comm_rank(world,&me);
+
+  gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"grid:gnames");
+  bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"grid:bitmask");
+  for (int i = 0; i < MAXGROUP; i++) bitmask[i] = 1 << i;
+
+  ngroup = 1;
+  int n = strlen("all") + 1;
+  gnames[0] = new char[n];
+  strcpy(gnames[0],"all");
 
   ncell = nunsplit = nsplit = nsub = 0;
 
@@ -113,6 +123,10 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
 Grid::~Grid()
 {
+  for (int i = 0; i < ngroup; i++) delete [] gnames[i];
+  memory->sfree(gnames);
+  memory->sfree(bitmask);
+
   memory->sfree(cells);
   memory->sfree(cinfo);
   memory->sfree(sinfo);
@@ -159,6 +173,18 @@ void Grid::remove()
   allocate_surf_arrays();
 
   // what about cutoff and cellweightflag
+}
+
+/* ----------------------------------------------------------------------
+   store copy of Particle class settings
+------------------------------------------------------------------------- */
+
+void Grid::init()
+{
+  ncustom = particle->ncustom;
+  nbytes_particle = sizeof(Particle::OnePart);
+  nbytes_custom = particle->sizeof_custom();
+  nbytes_total = nbytes_particle + nbytes_custom;
 }
 
 /* ----------------------------------------------------------------------
@@ -1894,17 +1920,66 @@ void Grid::grow_sinfo(int n)
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes parent grid info to restart file
+   group grid command called via input script
+------------------------------------------------------------------------- */
+
+void Grid::group(int narg, char **arg)
+{
+  if (narg < 3) error->all(FLERR,"Illegal group command");
+}
+
+/* ----------------------------------------------------------------------
+   add a new grid group ID, assumed to be unique
+------------------------------------------------------------------------- */
+
+int Grid::add_group(const char *id)
+{
+  if (ngroup == MAXGROUP) 
+    error->all(FLERR,"Cannot have more than 32 surface groups");
+
+  int n = strlen(id) + 1;
+  gnames[ngroup] = new char[n];
+  strcpy(gnames[ngroup],id);
+  ngroup++;
+  return ngroup-1;
+}
+
+/* ----------------------------------------------------------------------
+   find a grid group ID
+   return index of group or -1 if not found
+------------------------------------------------------------------------- */
+
+int Grid::find_group(const char *id)
+{
+  int igroup;
+  for (igroup = 0; igroup < ngroup; igroup++)
+    if (strcmp(id,gnames[igroup]) == 0) break;
+  if (igroup == ngroup) return -1;
+  return igroup;
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes parent grid and group info to restart file
 ------------------------------------------------------------------------- */
 
 void Grid::write_restart(FILE *fp)
 {
   fwrite(&nparent,sizeof(int),1,fp);
   fwrite(pcells,sizeof(ParentCell),nparent,fp);
+
+  fwrite(&ngroup,sizeof(int),1,fp);
+
+  int n;
+  for (int i = 0; i < ngroup; i++) {
+    n = strlen(gnames[i]) + 1;
+    fwrite(&n,sizeof(int),1,fp);
+    fwrite(gnames[i],sizeof(char),n,fp);
+    fwrite(&bitmask[i],sizeof(int),1,fp);
+  }
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 reads parent grid info from restart file
+   proc 0 reads parent grid and group info from restart file
    bcast to other procs
 ------------------------------------------------------------------------- */
 
@@ -1916,6 +1991,22 @@ void Grid::read_restart(FILE *fp)
 
   if (me == 0) fread(pcells,sizeof(ParentCell),nparent,fp);
   MPI_Bcast(pcells,nparent*sizeof(ParentCell),MPI_CHAR,0,world);
+
+  if (me == 0) fread(&ngroup,sizeof(int),1,fp);
+  MPI_Bcast(&ngroup,1,MPI_INT,0,world);
+  gnames = (char **) memory->smalloc(ngroup*sizeof(char *),"surf:gnames");
+  bitmask = (int *) memory->smalloc(ngroup*sizeof(int),"surf:bitmaxk");
+
+  int n;
+  for (int i = 0; i < ngroup; i++) {
+    if (me == 0) fread(&n,sizeof(int),1,fp);
+    MPI_Bcast(&n,1,MPI_INT,0,world);
+    gnames[i] = new char[n];
+    if (me == 0) fread(gnames[i],sizeof(char),n,fp);
+    MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
+    if (me == 0) fread(&bitmask[i],sizeof(int),1,fp);
+    MPI_Bcast(&bitmask[i],1,MPI_INT,0,world);
+  }
 }
 
 /* ----------------------------------------------------------------------

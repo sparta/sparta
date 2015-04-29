@@ -528,6 +528,7 @@ int Input::execute_command()
   else if (!strcmp(command,"dump_modify")) dump_modify();
   else if (!strcmp(command,"fix")) fix();
   else if (!strcmp(command,"global")) global();
+  else if (!strcmp(command,"group")) group();
   else if (!strcmp(command,"mixture")) mixture();
   else if (!strcmp(command,"react")) react_command();
   else if (!strcmp(command,"region")) region();
@@ -1094,6 +1095,17 @@ void Input::fix()
 void Input::global()
 {
   update->global(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::group()
+{
+  if (narg < 2) error->all(FLERR,"Illegal group command");
+
+  if (strcmp(arg[1],"surf") == 0) surf->group(narg,arg);
+  //else if (strcmp(arg[1],"grid") == 0) grid->group(narg,arg);
+  else error->all(FLERR,"Illegal group command");
 }
 
 /* ---------------------------------------------------------------------- */

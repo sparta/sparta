@@ -20,6 +20,7 @@
 
 // DEBUG
 #include "comm.h"
+#include "update.h"
 
 using namespace SPARTA_NS;
 
@@ -100,11 +101,6 @@ int Grid::pack_one(int icell, char *buf,
   // pack particles for unsplit cell or split cell
 
   if (!molflag) return ptr - buf;
-
-  ncustom = particle->ncustom;
-  nbytes_particle = sizeof(Particle::OnePart);
-  nbytes_custom = particle->sizeof_custom();
-  nbytes_total = nbytes_particle + nbytes_custom;
 
   ptr += pack_particles(icell,ptr,memflag);
 
@@ -309,7 +305,6 @@ int Grid::unpack_particles(char *buf, int icell)
   char *ptr = buf;
 
   int np = *((int *) ptr);
-
   ptr += sizeof(int);
   ptr = ROUNDUP(ptr);
   if (!np) return ptr-buf;

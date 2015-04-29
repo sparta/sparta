@@ -45,7 +45,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   Dump(sparta, narg, arg)
 {
-  if (narg == 4) error->all(FLERR,"No dump grid attributes specified");
+  if (narg == 5) error->all(FLERR,"No dump grid attributes specified");
 
   clearstep = 1;
   buffer_allow = 1;
@@ -53,14 +53,18 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
 
   dimension = domain->dimension;
 
-  nevery = atoi(arg[2]);
+  int igroup = grid->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Dump grid group ID does not exist");
+  groupbit = grid->bitmask[igroup];
+
+  nevery = atoi(arg[3]);
 
   // scan values and set size_one
   // array entries may expand into multiple fields
   // could use ioptional to add on keyword/arg pairs
 
-  ioptional = parse_fields(narg,arg);
-  if (ioptional < narg)
+  ioptional = parse_fields(narg-5,&arg[5]);
+  if (5+ioptional < narg)
     error->all(FLERR,"Invalid attribute in dump grid command");
   size_one = nfield;
 
@@ -355,7 +359,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
   field2index = NULL;
   argindex = NULL;
 
-  int maxfield = narg - 4;
+  int maxfield = narg;
   allocate_values(maxfield);
   nfield = 0;
 
@@ -374,7 +378,7 @@ int DumpGrid::parse_fields(int narg, char **arg)
 
   // customize by adding to if statement
 
-  for (int iarg = 4; iarg < narg; iarg++) {
+  for (int iarg = 0; iarg < narg; iarg++) {
     if (nfield == maxfield) {
       maxfield += CHUNK;
       allocate_values(maxfield);
@@ -472,8 +476,6 @@ int DumpGrid::parse_fields(int narg, char **arg)
 	index = atoi(ptr+1);
 	*ptr = '\0';
       } else index = 0;
-
-
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid compute ID");

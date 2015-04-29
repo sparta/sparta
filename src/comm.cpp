@@ -202,7 +202,7 @@ int Comm::migrate_particles(int nmigrate, int *plist)
     offset = 0;
     int nlocal = particle->nlocal;
     for (i = 0; i < nrecv; i++) {
-      memcpy(&particles[nlocal],&rbuf[offset],nbytes_particle);
+      memcpy(&particle->particles[nlocal],&rbuf[offset],nbytes_particle);
       offset += nbytes_particle;
       particle->unpack_custom(&rbuf[offset],nlocal);
       offset += nbytes_custom;
