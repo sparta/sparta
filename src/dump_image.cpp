@@ -90,11 +90,11 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
   if (nfield != 2) error->all(FLERR,"Illegal dump image command");
 
   pcolor = ATTRIBUTE;
-  if (strcmp(arg[4],"type") == 0) pcolor = TYPE;
-  else if (strcmp(arg[4],"proc") == 0) pcolor = PROC;
+  if (strcmp(arg[5],"type") == 0) pcolor = TYPE;
+  else if (strcmp(arg[5],"proc") == 0) pcolor = PROC;
 
   pdiam = ATTRIBUTE;
-  if (strcmp(arg[5],"type") == 0) pdiam = TYPE;
+  if (strcmp(arg[6],"type") == 0) pdiam = TYPE;
 
   // create Image class with 6 colormaps
   // colormaps for particles, grid, surf, grid xyz planes

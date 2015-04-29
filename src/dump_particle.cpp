@@ -63,7 +63,7 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   // NOTE: could add: array entries may expand into multiple fields
   // could use ioptional to add on keyword/arg pairs
 
-  ioptional = parse_fields(narg-5,&arg[5]);
+  ioptional = parse_fields(narg-5,&arg[5]) + 5;
   if (5+ioptional < narg &&
       (strcmp(style,"image") != 0 && strcmp(style,"movie") != 0))
     error->all(FLERR,"Invalid attribute in dump particle command");
@@ -120,8 +120,8 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
 
 DumpParticle::~DumpParticle()
 {
-  delete [] pack_choice;
-  delete [] vtype;
+  memory->sfree(pack_choice);
+  memory->destroy(vtype);
   memory->destroy(field2index);
   memory->destroy(argindex);
 
@@ -634,8 +634,8 @@ int DumpParticle::parse_fields(int narg, char **arg)
 {
   // initialize per-field lists
 
-  pack_choice = new FnPtrPack[nfield];
-  vtype = new int[nfield];
+  pack_choice = NULL;
+  vtype = NULL;
   field2index = NULL;
   argindex = NULL;
 

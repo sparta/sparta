@@ -151,7 +151,7 @@ void ReadSurf::command(int narg, char **arg)
   int grouparg = 0;
   int typeadd = 0;
 
-  int iarg = 2;
+  int iarg = 1;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"origin") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");

@@ -63,7 +63,7 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   // array entries may expand into multiple fields
   // could use ioptional to add on keyword/arg pairs
 
-  ioptional = parse_fields(narg-5,&arg[5]);
+  ioptional = parse_fields(narg-5,&arg[5]) + 5;
   if (5+ioptional < narg)
     error->all(FLERR,"Invalid attribute in dump surf command");
   size_one = nfield;
