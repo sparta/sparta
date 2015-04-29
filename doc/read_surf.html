@@ -13,11 +13,9 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>read_surf ID filename keyword args ... 
+<PRE>read_surf filename keyword args ... 
 </PRE>
-<UL><LI>ID = ID for all surface elements in the file 
-
-<LI>filename = name of surface file 
+<UL><LI>filename = name of surface file 
 
 <LI>zero or more keyword/args pairs may be appended 
 
@@ -41,58 +39,53 @@
     fraction = push points close to the box boundary to the boundary (optional)
   group arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
-  type arg = yes or no
-  toffset arg = Noffset
+  typadd arg = Noffset
     Noffset = add Noffset to the type value of each element 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>read_surf 1 surf.sphere
-read_surf 1 surf.sphere group sphere2 type yes toffset 1
-read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip
-read_surf sphere surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6 
+<PRE>read_surf surf.sphere
+read_surf surf.sphere group sphere2 typeadd 1
+read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip
+read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6 
 </PRE>
 <P><B>Description:</B>
 </P>
 <P>Read the geometry of a surface from the specified file.  In SPARTA, a
 "surface" is a collection of surface elements that represent the
 surface of one or more physical objects which will be embedded in the
-global simulation box.  The surface elements are triangles in 3d or
-line segments in 2d.  The surface elements for each physical object
-are required to be a complete, connected set that tile the entire
-surface of the object.  See the discussion of watertight surfaces
-below.
+global simulation box.  Surface elements are triangles in 3d or line
+segments in 2d.  Surface elements for each physical object are
+required to be a complete, connected set that tile the entire surface
+of the object.  See the discussion of watertight surfaces below.
 </P>
-<P>Particles collide with surface elements as they advect, and optionally
-perform surface chemistry during the collision.  Collision statistics
-for each surface element can be tallied via the <A HREF = "compute_surf.html">compute
-surf</A> command, time-averaged via the <A HREF = "fix_ave_surf.html">fix
-ave/surf</A> command, and ouput via the <A HREF = "dump.html">dump
+<P>Particles collide with surface elements as they advect.  Each surface
+element is assigned to a collision model, specified by the
+<A HREF = "surf_collide.html">surf_collide</A> command which affects how a particle
+bounces off the surface.  Each surface elements can optionally be
+assigned to a reaction model, specified by the
+<A HREF = "surf_react.html">surf_react</A> command which determines if any surface
+chemistry occurs during a collision.  Statistics for each surface
+element due to their interactions with particles can be tallied via
+the <A HREF = "compute_surf.html">compute surf</A> command, time-averaged via the
+<A HREF = "fix_ave_surf.html">fix ave/surf</A> command, and ouput via the <A HREF = "dump.html">dump
 surface</A> command.
 </P>
-<P>IMPORTANT NOTE: Surface chemistry models have not yet been implemented
-in SPARTA.
-</P>
-<P>The ID assigned to the surfaces read by the command is used to
-identify them in other commands.  The ID can only contain alphanumeric
-characters and underscores.  See the <A HREF = "surf_collide.html">surf_collide</A>
-command as an example, which defines what model is used to perform
-collisions when particles collide with elements in the surface.
+<P>Surface elememts can be assigned to surface groups via the <A HREF = "group.html">group
+surf</A> command.  Surface group IDs are used by other
+commands to operate on selected sets of elements.  This command has
+<I>group</I> and <I>typeadd</I> keywords which can be used to help assign
+different elements or different objects to different groups.
 </P>
 <P>Note that the read_surf command can be used multiple times to read
-multiple objects from multiple files.  The surfaces in each file can
-be assigned to a new unique ID.  Or the ID can be the same as the ID
-used in the last read_surf command, so that surface elements from
-multiple (successive) files are all assigned to the same ID.  You
-cannot re-use an ID from a read_surf command older than the previous
-read_surf command.
-</P>
-<P>The format of the surface file is discussed below.  The optional
+multiple objects from multiple files and add them to the simulation
+domain.  The format of a surface file is discussed below.  Optional
 keywords allow the vertices in the file to be translated, scaled, and
-rotated in various ways.  These allow a single surface file,
-e.g. containing a unit sphere, to be used in a variety of simulations.
+rotated in various ways.  This allows a single surface file,
+e.g. containing a unit sphere, to be used multiple times in a single
+simulation or in different simulations.
 </P>
 <P>The tools directory contains tools that can create surface files with
 simple geometric objects (spheres, blocks, etc).  It also has tools
@@ -154,13 +147,14 @@ N entries, where N = # of lines, each of this form:
 <PRE>line-ID (type) p1 p2 
 </PRE>
 <P>The line-ID is ignored; it is only added to assist in examining the
-file.  <I>Type</I> is an optional integer value.  It is only allowed if the
-<I>type</I> keyword is set to <I>yes</I>.  If used, it must be a positive
-integer value.  If not specified, <I>type</I> is set to 1.  See the
-discussion below for the <I>type</I> keyword which explains why assigning
-type values can be useful.  <I>P1</I> and <I>p2</I> are the point-IDs of the 2
-end points of the line segment.  Each is a value from 1 to Npoints, as
-described above.
+file.  <I>Type</I> is an optional integer value which must be specified for
+all or none of the lines.  If used, it must be a positive integer
+value for each line.  If not specified, the type of each line is set
+to 1.  Line types can be used to assign lines to surface groups via
+the <A HREF = "group.html">group surf</A> command.
+</P>
+<P><I>P1</I> and <I>p2</I> are the point-IDs of the 2 end points of the line
+segment.  Each is a value from 1 to Npoints, as described above.
 </P>
 <P>The ordering of <I>p1</I> and <I>p2</I> is important as it defines the direction
 of the outward normal for the line segment when a particle collides
@@ -175,13 +169,14 @@ consists of N entries, where N = # of triangles, each of this form:
 <PRE>tri-ID (type) p1 p2 p3 
 </PRE>
 <P>The tri-ID is ignored; it is only added to assist in examining the
-file.  <I>Type</I> is an optional integer value.  It is only allowed if the
-<I>type</I> keyword is set to <I>yes</I>.  If used, it must be a positive
-integer value.  If not specified, <I>type</I> is set to 1.  See the
-discussion below for the <I>type</I> keyword which explains why assigning
-type values can be useful.  <I>P1</I> and <I>p2</I> and <I>p3</I> are the point-IDs
-of the 3 corner points of the triangle.  Each is a value from 1 to
-Npoints, as described above.
+file.  <I>Type</I> is an optional integer value which must be specified for
+all or none of the triangles.  If used, it must be a positive integer
+value for each triangle.  If not specified, the type of each triangle
+is set to 1.  Triangle types can be used to assign triangles to
+surface groups via the <A HREF = "group.html">group surf</A> command.
+</P>
+<P><I>P1</I> and <I>p2</I> and <I>p3</I> are the point-IDs of the 3 corner points of the
+triangle.  Each is a value from 1 to Npoints, as described above.
 </P>
 <P>The ordering of <I>p1</I> and <I>p2</I> and <I>p3</I> is important as it defines the
 direction of the outward normal for the triangle when a particle
@@ -192,12 +187,12 @@ crossed into the edge from <I>p1</I> to <I>p3</I> to determine the normal.
 </P>
 <HR>
 
-<P>The following optional geometric keywords can be specified.  The
-geometric transformations they describe are performed in the order
-they are listed, which gives flexibility in how surfaces can be
-manipulated.  Note that the order may be important; e.g. performing an
-<I>origin</I> operation followed by a <I>rotate</I> operation may not be the
-same as a <I>rotate</I> followed by a <I>origin</I>.
+<P>The following optional keywords affect the geometry of the read-in
+surface elements.  The geometric transformations they describe are
+performed in the order they are listed, which gives flexibility in how
+surfaces can be manipulated.  Note that the order may be important;
+e.g. performing an <I>origin</I> operation followed by a <I>rotate</I> operation
+may not be the same as a <I>rotate</I> followed by a <I>origin</I>.
 </P>
 <P>Most of the keywords perform a geometric transformation on all the
 vertices in the surface file with respect to an origin point.  By
@@ -277,38 +272,38 @@ between 0.0 and 0.5.
 </P>
 <HR>
 
-<P>The following optional keywords for group and type information can be
-specified.
+<P>The following optional keywords affect group and type settings of the
+read-in surface elements.
 </P>
 <P>Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
-the "all" group.  Surface group IDs are used by other commands to
-identify a group of suface elements to operate on.  See the
-<A HREF = "group.html">group</A> command for more details.
+the "all" group, which is created by default.  Surface group IDs are
+used by other commands to identify a group of suface elements to
+operate on.  See the <A HREF = "group.html">group surf</A> command for more details.
 </P>
-<P>Every surface element stores a <I>type</I> which is a positive integer.
-<I>Type</I> values are useful for flagging subsets of elements or different
-objects in the surface file.  For example, a patch of triangles on a
-sphere.  Or one sphere out of several that the file contains.  Surface
-element types can be used to define surface groups.  See the "group"
-command for details.
+<P>Every surface element also stores a <I>type</I> which is a positive
+integer.  <I>Type</I> values are useful for flagging subsets of elements or
+different objects in the surface file.  For example, a patch of
+triangles on a sphere.  Or one sphere out of several that the file
+contains.  Surface element types can be used to define surface groups.
+See the <A HREF = "group.html">group surf</A> command for details.
 </P>
-<P>The <I>group</I> keyword specifies an additional surface group ID to assign
-all the read-in surface elements to.  The read-in elements will be
-assigned to the "all" group and to this one.
+<P>The <I>group</I> keyword specifies an extra surface <I>group-ID</I> to assign
+all the read-in surface elements to.  All the read-in elements are
+assigned to the "all" group and to <I>group-ID</I>.  If <I>group-ID</I> does not
+exist, a new surface group is created.  If it does exist the read-in
+surface elements are added to that group.
 </P>
-<P>If the <I>type</I> keyword is set to <I>yes</I> then the Lines or Triangles
-section of the surface file specifies a <I>type</I> for each line or
-triangle.  If the <I>type</I> keyword is set to <I>no</I>, which is the default,
-then no <I>type</I> appears in the definition of the line or triangle; a
-type of 1 is assigned to each read-in surface element.
+<P>The <I>typeadd</I> keyword defines an <I>Noffset</I> value which is added to the
+type of each read-in surface element.  The default is Noffset = 0,
+which means the read-in type values are not altered.  If type values
+are not included in the file, they default to 1 for every element, but
+can still be altered by the <I>typeadd</I> keyword.
 </P>
-<P>The <I>toffset</I> keyword defines an <I>Noffset</I> value which is added to the
-type of each read-in surface element.  The default for Noffset = 0.
-Specifing a non-zero Noffset allows the same surface file to be
-read-in multiple times (e.g. with different origins, tranlations,
-rotations, etc) to define multiple objects, and the surface elements
-in each object to be assigned different types.
+<P>Note that use of the <I>group</I> and <I>typeadd</I> keywords allow the same
+surface file to be read multiple times (e.g. with different origins,
+tranlations, rotations, etc) to define multiple objects, and assign
+their surface elements to different groups or different type values.
 </P>
 <HR>
 
