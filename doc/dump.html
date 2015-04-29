@@ -15,17 +15,17 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>dump ID style group-ID N file args 
+<PRE>dump ID style select-ID N file args 
 </PRE>
 <UL><LI>ID = user-assigned name for the dump 
 
 <LI>style = <I>particle</I> or <I>grid</I> or <I>surf</I> or <I>image</I> 
 
-<LI>group-ID = which particles, grid cells, surface elements to dump 
+<LI>select-ID = which particles, grid cells, surface elements to dump 
 
-<PRE>  use mix-ID for dump style = particle
-  use grid-ID for style = grid
-  use surf-ID = for style = surf 
+<PRE>  for dump style = particle or image, use a mixture ID
+  for style = grid, use a grid group ID
+  for style = surf, use a surface group ID 
 </PRE>
 <LI>N = dump every this many timesteps 
 
@@ -74,7 +74,7 @@
     possible attributes = id, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z, 
                           c_ID, c_ID[N], f_ID, f_ID[N], v_name 
 </PRE>
-<PRE>      id = surf element ID
+<PRE>      id = surface element ID
       v1x,v1y,v1z = coords of 1st vertex in surface element
       v1x,v1y,v1z = coords of 2nd vertex in surface element
       v1x,v1y,v1z = coords of 3rd vertex in surface element
@@ -92,7 +92,7 @@
 </P>
 <PRE>dump 1 particle all 100 dump.myforce.* id type x y vx fx
 dump 2 particle inflow 100 dump.%.myforce id type c_myF[3] v_ke
-dump 3 grid 1000 all tmp.grid id proc xlo ylo zlo xhi yhi zhi 
+dump 3 grid all 1000 tmp.grid id proc xlo ylo zlo xhi yhi zhi 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -109,21 +109,21 @@ same style so long as they have different IDs.  A dump can be deleted
 with the <A HREF = "undump.html">undump</A> command, after which its ID can be
 re-used.
 </P>
-<P>The <I>style</I> keyword determines what quantities are written to the file
+<P>The <I>style</I> setting determines what quantities are written to the file
 and in what format.  The <I>particle</I>, <I>grid</I>, <I>surf</I> options are for
 particles, grid cells, or surface elements.  Settings made via the
 <A HREF = "dump_modify.html">dump_modify</A> command can also alter what info is
 included in the file and the format of individual values.
 </P>
-<P>The <I>group-ID</I> keyword can limit which particles, grid cells, or
-surface elements are output.  
-For <I>style</I> = <I>particle</I>, the group-ID is a <I>mix-ID</I> as defined
-by the <A HREF = "mixture.html">mixture</A> command.  Only particles with species
-in the defined mixture are output.
-</P>
-<P>For <I>style</I> = <I>grid</I>,
-</P>
-<P>For <I>style</I> = <I>surf</I>,
+<P>The <I>select-ID</I> setting determines which particles, grid cells, or
+surface elements are output.  For <I>style</I> = <I>particle</I>, the
+<I>select-ID</I> is a mixture ID as defined by the <A HREF = "mixture.html">mixture</A>
+command.  Only particles whose species are part of the mixture are
+output.  For <I>style</I> = <I>grid</I>, the <I>select-ID</I> is for a grid group, as
+defined by the <A HREF = "group.html">group grid</A> command.  Only grid cells in
+the group are output.  For <I>style</I> = <I>surf</I>, the <I>select-ID</I> is for a
+surface eleemnt group, as defined by the <A HREF = "group.html">group surf</A>
+command.  Only surface elements in the group are output.
 </P>
 <P>As described below, the filename determines the kind of output (text
 or binary or gzipped, one big file or one per timestep, one big file

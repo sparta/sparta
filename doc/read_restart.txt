@@ -122,6 +122,7 @@ particles with their individual attributes and custom attributes defined by fixe
 "mixtures"_mixture.html
 geometry of the hierarchical grid that overlays the simulation domain as "created"_create_grid.html or "read from a file"_read_grid.html
 geometry of all defined "surface elements"_read_surf.html
+"group definitions"_group.html for grid cells and surface elements
 current timestep number :ul
 
 No other information is stored in the restart file.  Specifically,
