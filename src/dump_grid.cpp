@@ -63,8 +63,9 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   // array entries may expand into multiple fields
   // could use ioptional to add on keyword/arg pairs
 
-  ioptional = parse_fields(narg-5,&arg[5]) + 5;
-  if (5+ioptional < narg)
+  int offset = 5;
+  ioptional = parse_fields(narg-offset,&arg[offset]) + offset;
+  if (offset+ioptional < narg)
     error->all(FLERR,"Invalid attribute in dump grid command");
   size_one = nfield;
 
@@ -87,12 +88,12 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   // add column subscripts to array args that were expanded
 
   int n = 0;
-  for (int i = 0; i < nfield; i++) n += strlen(arg[field2arg[i]]) + 6;
+  for (int i = 0; i < nfield; i++) n += strlen(arg[field2arg[i]+offset]) + 6;
   columns = new char[n];
   columns[0] = '\0';
   char subscript[6];
   for (int i = 0; i < nfield; i++) {
-    strcat(columns,arg[field2arg[i]]);
+    strcat(columns,arg[field2arg[i]+offset]);
     if (argindex[i] > 0 && columns[strlen(columns)-1] != ']') {
       sprintf(subscript,"[%d]",argindex[i]);
       strcat(columns,subscript);
