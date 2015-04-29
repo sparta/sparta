@@ -108,6 +108,7 @@ class Grid : protected Pointers {
     int count;                // # of particles in this cell, 0 if split cell
     int first;                // index of 1st particle in this cell, -1 if none
 
+    int mask;                 // grid group mask
     int type;                 // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
     int corner[8];            // corner flags, 4/8 in 2d/3d
                               // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
@@ -136,6 +137,7 @@ class Grid : protected Pointers {
 
   struct ParentCell {
     cellint id;               // cell ID in bitwise format, 0 = root
+    int mask;                 // grid group mask
     int level;                // level in hierarchical grid, 0 = root
     int nbits;                // # of bits to encode my ID, also my siblings
     int newbits;              // # of additional bits to encode my children

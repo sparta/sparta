@@ -16,13 +16,14 @@
 #include "stdlib.h"
 #include "string.h"
 #include "create_particles.h"
-#include "particle.h"
 #include "update.h"
+#include "particle.h"
+#include "mixture.h"
 #include "grid.h"
 #include "modify.h"
 #include "comm.h"
 #include "domain.h"
-#include "mixture.h"
+#include "region.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "math_const.h"
@@ -84,6 +85,7 @@ void CreateParticles::command(int narg, char **arg)
   // optional args
 
   int globalflag = 0;
+  region = NULL;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"global") == 0) {
@@ -91,6 +93,13 @@ void CreateParticles::command(int narg, char **arg)
       if (strcmp(arg[iarg+1],"no") == 0) globalflag = 0;
       else if (strcmp(arg[iarg+1],"yes") == 0) globalflag = 1;
       else error->all(FLERR,"Illegal create_particles command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"region") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      int iregion = domain->find_region(arg[iarg+1]);
+      if (iregion < 0) 
+        error->all(FLERR,"Create_particles region does not exist");
+      region = domain->regions[iregion];
       iarg += 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
@@ -132,28 +141,30 @@ void CreateParticles::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   // error check
+  // only if no region specified
 
   bigint nglobal;
   bigint nme = particle->nlocal;
   MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  if (nglobal - nprevious != np) {
+  if (!region && nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of particles: " 
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
 	    nglobal-nprevious,np);
     error->all(FLERR,str);
   }
+  bigint ncreated = nglobal-nprevious;
   particle->nglobal = nglobal;
 
   // print stats
 
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"Created " BIGINT_FORMAT " particles\n",np);
+      fprintf(screen,"Created " BIGINT_FORMAT " particles\n",ncreated);
       fprintf(screen,"  CPU time = %g secs\n",time2-time1);
     }
     if (logfile) {
-      fprintf(logfile,"Created " BIGINT_FORMAT " particles\n",np);
+      fprintf(logfile,"Created " BIGINT_FORMAT " particles\n",ncreated);
       fprintf(logfile,"  CPU time = %g secs\n",time2-time1);
     }
   }
@@ -342,6 +353,8 @@ void CreateParticles::create_local(bigint np)
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
       if (dimension == 2) x[2] = 0.0;
 
+      if (region && !region->match(x)) continue;
+
       // double boundary = 1.5E-3-1.E-4*sin((x[0]/0.5E-3)*2.*MY_PI+MY_PI*0.5);
       // double boundary = 1.5E-3-1.E-4*sin(x[2]/0.5E-3*2.*MY_PI+MY_PI*0.5)*
       //                   sin(x[0]/0.5E-3*2.*MY_PI+MY_PI*0.5);
@@ -361,6 +374,7 @@ void CreateParticles::create_local(bigint np)
       evib = particle->evib(ispecies,temp_thermal,random);
 
       id = MAXSMALLINT*random->uniform();
+
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
       if (nfix_add_particle) 
         modify->add_particle(particle->nlocal-1,temp_thermal,vstream);

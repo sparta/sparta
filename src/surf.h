@@ -25,6 +25,7 @@ class Surf : protected Pointers {
  public:
   int exist;                // 1 if any surfaces are defined, else 0
   double bblo[3],bbhi[3];   // bounding box around surfs
+  int tally_comm;           // style of comm for surf tallies
 
   int nreact_one;           // surface reactions in current step
   bigint nreact_running;    // running count of surface reactions
@@ -103,8 +104,6 @@ class Surf : protected Pointers {
   int maxsc;                // max # of models in sc
   int nsr;                  // # of surface reaction models
   int maxsr;                // max # of models in sr
-
-  int tally_comm;           // style of comm for surf tallies
 
   void collate_vector_allreduce(int, int *, double *, int, double *);
   void collate_vector_irregular(int, int *, double *, int, double *);

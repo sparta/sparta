@@ -44,6 +44,7 @@ class FixInflowFile : public Fix {
   int npercell,nthresh;
   int nsingle,ntotal;
   double frac_user;
+  class Region *region;
 
   double normal[3];             // inward normal from external boundary face
   int ndim;                     // dim (0,1,2) normal to face

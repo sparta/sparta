@@ -220,6 +220,7 @@ void Grid::add_child_cell(cellint id, int iparent, double *lo, double *hi)
   ChildInfo *ci = &cinfo[nlocal];
   ci->count = 0;
   ci->first = -1;
+  ci->mask = 1;
   ci->type = OUTSIDE;
   for (int i = 0; i < ncorner; i++) ci->corner[i] = OUTSIDE;
   ci->weight = 1.0;
@@ -249,6 +250,7 @@ void Grid::add_parent_cell(cellint id, int iparent,
 
   ParentCell *p = &pcells[nparent];
   p->id = id;
+  p->mask = 1;
   if (iparent >= 0) {
     p->level = pcells[iparent].level + 1;
     p->nbits = pcells[iparent].nbits + pcells[iparent].newbits;

@@ -36,6 +36,7 @@ class CreateParticles : protected Pointers {
  private:
   int imix,single,mspecies;
   double xp,yp,zp,vx,vy,vz;
+  class Region *region;
 
   void create_single();
   void create_local(bigint);

@@ -44,6 +44,7 @@ class FixInflow : public Fix {
   int np,perspecies;
   int npercell,nthresh;
   int nsingle,ntotal;
+  class Region *region;
 
   struct CellFace {
     double lo[3];               // lower-left corner of face

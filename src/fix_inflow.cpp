@@ -21,6 +21,7 @@
 #include "particle.h"
 #include "mixture.h"
 #include "domain.h"
+#include "region.h"
 #include "modify.h"
 #include "grid.h"
 #include "surf.h"
@@ -87,6 +88,7 @@ FixInflow::FixInflow(SPARTA *sparta, int narg, char **arg) :
   np = 0;
   nevery = 1;
   perspecies = YES;
+  region = NULL;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) {
@@ -104,6 +106,13 @@ FixInflow::FixInflow(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+1],"yes") == 0) perspecies = YES;
       else if (strcmp(arg[iarg+1],"no") == 0) perspecies = NO;
       else error->all(FLERR,"Illegal fix inflow command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"region") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix inflow command");
+      int iregion = domain->find_region(arg[iarg+1]);
+      if (iregion < 0) 
+        error->all(FLERR,"Fix inflow region does not exist");
+      region = domain->regions[iregion];
       iarg += 2;
     } else error->all(FLERR,"Illegal fix inflow command");
   }
@@ -621,7 +630,7 @@ void FixInflow::init()
 
 void FixInflow::start_of_step()
 {
-  int pcell,ninsert,isp,ispecies,ndim,pdim,qdim,id;
+  int pcell,ninsert,nactual,isp,ispecies,ndim,pdim,qdim,id;
   double *lo,*hi,*normal;
   double x[3],v[3];
   double indot,scosine,rn,ntarget,vr;
@@ -686,11 +695,14 @@ void FixInflow::start_of_step()
 	ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
 
+        nactual = 0;
 	for (int m = 0; m < ninsert; m++) {
 	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
 	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
 	  if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           else x[2] = 0.0;
+
+          if (region && !region->match(x)) continue;
 
 	  do {
 	    do beta_un = (6.0*random->gaussian() - 3.0);
@@ -710,7 +722,9 @@ void FixInflow::start_of_step()
           erot = particle->erot(ispecies,temp_thermal,random);
           evib = particle->evib(ispecies,temp_thermal,random);
           id = MAXSMALLINT*random->uniform();
+
 	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          nactual++;
 
           p = &particle->particles[particle->nlocal-1];
           p->flag = PINSERT;
@@ -720,7 +734,7 @@ void FixInflow::start_of_step()
             modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
 	}
 
-	nsingle += ninsert;
+	nsingle += nactual;
       }
 
     } else {
@@ -732,6 +746,7 @@ void FixInflow::start_of_step()
 	if (i >= nthresh) ninsert++;
       }
 
+      nactual = 0;
       for (int m = 0; m < ninsert; m++) {
 	rn = random->uniform();
 	isp = 0;
@@ -743,6 +758,8 @@ void FixInflow::start_of_step()
 	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
         if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
         else x[2] = 0.0;
+
+        if (region && !region->match(x)) continue;
 
 	do {
 	  do {
@@ -763,7 +780,9 @@ void FixInflow::start_of_step()
         erot = particle->erot(ispecies,temp_thermal,random);
         evib = particle->evib(ispecies,temp_thermal,random);
         id = MAXSMALLINT*random->uniform();
+
 	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        nactual++;
 
         p = &particle->particles[particle->nlocal-1];
         p->flag = PINSERT;
@@ -773,7 +792,7 @@ void FixInflow::start_of_step()
           modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
       }
 
-      nsingle += ninsert;
+      nsingle += nactual;
     }
   }
 

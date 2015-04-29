@@ -44,6 +44,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // several files
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
+enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
@@ -1374,6 +1375,13 @@ void Update::global(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"neigh") == 0) comm->commpartstyle = 1;
       else if (strcmp(arg[iarg+1],"all") == 0) comm->commpartstyle = 0;
+      else error->all(FLERR,"Illegal global command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"surf/comm") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"auto") == 0) surf->tally_comm = TALLYAUTO;
+      else if (strcmp(arg[iarg+1],"all") == 0) surf->tally_comm = TALLYREDUCE;
+      else if (strcmp(arg[iarg+1],"local") == 0) surf->tally_comm = TALLYLOCAL;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"weight") == 0) {

@@ -29,7 +29,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{ALLREDUCE,IRREGULAR};
+enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Update
 
 #define DELTA 4
 #define EPSSQ 1.0e-12
@@ -66,7 +66,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   nsr = maxsr = 0;
   sr = NULL;
 
-  tally_comm = ALLREDUCE;
+  tally_comm = TALLYAUTO;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -512,10 +512,10 @@ int Surf::find_react(const char *id)
 void Surf::collate_vector(int nrow, int *l2g, 
                           double *in, int instride, double *out)
 {
-  if (tally_comm == ALLREDUCE) 
+  //if (tally_comm == TALLYAUTO) 
     collate_vector_allreduce(nrow,l2g,in,instride,out);
-  else
-    collate_vector_irregular(nrow,l2g,in,instride,out);
+  //else
+  //  collate_vector_irregular(nrow,l2g,in,instride,out);
 }
 
 void Surf::collate_vector_allreduce(int nrow, int *l2g, 
@@ -568,10 +568,10 @@ void Surf::collate_vector_irregular(int nrow, int *l2g,
 void Surf::collate_array(int nrow, int ncol, int *l2g, 
                          double **in, double **out)
 {
-  if (tally_comm == ALLREDUCE) 
+  //if (tally_comm == TALLYAUTO) 
     collate_array_allreduce(nrow,ncol,l2g,in,out);
-  else
-    collate_array_irregular(nrow,ncol,l2g,in,out);
+    //else
+    // collate_array_irregular(nrow,ncol,l2g,in,out);
 }
 
 void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g, 
