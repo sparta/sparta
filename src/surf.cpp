@@ -122,9 +122,9 @@ void Surf::modify_params(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal surf_modify command");
       
       int isr;
-      if (strcmp(arg[iarg+2],"none") == 0) isr = -1;
+      if (strcmp(arg[iarg+1],"none") == 0) isr = -1;
       else {
-        isr = find_react(arg[iarg+2]);
+        isr = find_react(arg[iarg+1]);
         if (isr < 0) error->all(FLERR,"Could not find surf_modify sr-ID");
       }
 
