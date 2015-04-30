@@ -12,8 +12,8 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include "ctype.h"
 #include "surf.h"
-#include "math_extra.h"
 #include "style_surf_collide.h"
 #include "style_surf_react.h"
 #include "surf_collide.h"
@@ -24,6 +24,7 @@
 #include "cut3d.h"
 #include "geometry.h"
 #include "input.h"
+#include "math_extra.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -902,6 +903,12 @@ int Surf::add_group(const char *id)
   int n = strlen(id) + 1;
   gnames[ngroup] = new char[n];
   strcpy(gnames[ngroup],id);
+
+  for (int i = 0; i < n-1; i++)
+    if (!isalnum(id[i]) && id[i] != '_')
+      error->all(FLERR,"Group ID must be alphanumeric or "
+                 "underscore characters");
+
   ngroup++;
   return ngroup-1;
 }
