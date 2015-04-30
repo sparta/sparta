@@ -14,20 +14,38 @@ group ID which style args :pre
 
 ID = user-defined name of the grid or surface group :ulb,l
 which = {grid} or {surf} :l
-style = {type} or {region} or {subtract} or {union} or {intersect} or {clear} :l
-  {type} args = list of one or more surface types
+
+style options for which = grid: none yet implemented :l
+
+style options for which = surf: {type} or {id} or {region} or {subtract} or {union} or {intersect} or {clear} :l
+  {type} or {id} args
+    args = list of one or more surface element types or IDs
+      any entry in list can be a range formatted as A:B
+      A = starting index, B = ending index
+    args = logical value
+      logical = "<" or "<=" or ">" or ">=" or "==" or "!="
+      value = a surface element type or ID
+    args = logical value1 value2
+      logical = "<>"
+      value1,value2 = surface element types or IDs
   {region} args = region-ID rflag
     region-ID = ID of region which surface element must be in
-    rflag = {any} or {all} or {center}
+    rflag = {one} or {all} or {center}
+      {any} = one (or more) corner point of surface element in region
+      {all} = all corner points of surface element in region
+      {any} = center point of surface element in region
   {subtract} args = two or more group IDs
   {union} args = one or more group IDs
   {intersect} args = two or more group IDs
-  {clear} = no args
+  {clear} = no args :pre
 :ule
 
 [Examples:]
 
-group sphere surf type 1 2
+group sphere surf type 1 3
+group sphere surf id 50 100:150
+group sphere surf id <= 1000
+group sphere surf id <> 50 250
 group patch surf region cutout
 group boundary surf subtract all a2 a3
 group boundary surf union lower upper
@@ -35,58 +53,122 @@ group boundary surf intersect upper leftside :pre
 
 [Description:]
 
-Identify a collection of surface elements as a surface group.  The
-surface group ID can then be used in other commands such as "dump
-surf"_dump.html, compute surf"_compute_surf.html, or
-"surf_modify"_surf_modify.html to act on those surface elements
-together.
+Assign grid cells to grid groups or surface elements to surface
+groups.  In SPARTA, a "grid group" is a collection of one or more grid
+cells.  A "surface" group is a collection or more surface elements
+(line segements in 2d, triangles in 3d).  Other commands take group
+IDs as arguments so that they act on a set of grid cells or surface
+elements.  For example, see the "compute grid"_compute_grid.html,
+"compute surf"_compute_surf.html, "fix ave/grid"_fix_ave_grid.html,
+"fix ave/surf"_fix_ave_surf.html, "dump grid"_dump.html, or "dump
+surf"_dump.html commands.
 
-If the group ID already exists, the specified surface elements
-are added to the group.
+IMPORTANT NOTE: Grid groups are not yet fully implemented
+in SPARTA.
 
-A surface group with the ID {all} is predefined.  All surface elements
-belong to this group.
+An individual grid cell can be part of multiple grid groups.  An
+individual surface elements being part of multiple surface groups.
+Each grid or surface group has a name which is specified as the {ID}
+in this command.  Each grid group and surface group ID must be unique,
+though the same ID can be used for both a grid and surface group.  IDs
+can only contain alphanumeric characters and underscores.
 
-The {type} style put all surface elements with the specified type into
-the group.  See the "read_surf"_read_surf.html command for details of
-how types are assigned to individual elements when they are read in
-from a file.
+If the specified group ID already exists, grid cells or surface
+elements are added to the group.  Otherwise a new group is created.
+This means the group command can be used multiple times with the same
+group ID to incrementally add grid cells or surface elements to the
+group.
+
+A grid group with the ID {all} is predefined.  All grid cells belong
+to this group.  Likewise, a surface group with the ID {all} is
+predefined.  All surface elements belong to this group.
+
+:line
+
+The following styles can be used for grid groups.
+
+IMPORTANT NOTE: No grid group styles are implemented yet.  Stay tuned.
+
+:line
+
+The following styles can be used for surface groups.
+
+The {type} and {id} styles put all surface elements with the specified
+types or surface element IDs into the group. These two styles can use
+arguments specified in one of two formats.
+
+For surface elements, the "type" of each element is defined when the
+elements are read from a surface file, via the
+"read_surf"_read_surf.html command.  In the file, a positive integer
+type value can be optionally defined for each element (default = 1).
+The specified type values can also be incremented using the {typeadd}
+keyword of the "read_surf"_read_surf.html commmand.
+
+For surface elements, the "ID" of each element is simply its index
+from 1 to N, for all N surface elements that have been read in via the
+"read_surf"_read_surf.html command.  The ordering of IDs is determined
+by the order the elements appear in the read-in surface file.  If
+multiple files are read (or the same file multiple times), IDs
+increase monotonically each time new surface elements are added.
+
+The first format is a list of values (types or IDs).  For example, the
+first command in the examples above puts all surface elements of type
+1 and 3 into the group named sphere.  Each entry in the list can
+optionally be a colon-separated range A:B, as in the second axample
+above.  A "range" is a series of values (types or IDs).  The second
+example with 100:150 adds all surface elements with IDs from 100 to
+150 (inclusive) to the group named sphere, along with element 50 since
+it also appears in the list of values.
+
+The second format is a logical operator followed by one or two values
+(type or ID). The 7 valid logicals are listed above.  All the logicals
+except "<>" take a single argument. The third example above adds all
+surface elements with IDs from 1 to 1000 to the group named
+sphere. The logical "<>" means "between" and takes 2 arguments. The
+fourth example above adds all surface elements IDs from 50 to 250
+(inclusive) to the group named sphere.
 
 The {region} style puts all surface elements in the region volume
 associated with the {region-ID} into the group.  See the
 "region"_region.html command for details of what kind of geometric
-regions can be defined.  Note that the region side" option can be used
-to define whether the inside or outside of the geometric region is
-considered "in" the region.
+regions can be defined.  Note that the {side} option for the
+"region"_region.html command can be used to define whether the inside
+or outside of the geometric region is considered "in" the region.
 
 The {rflag} setting determines how a surface element is judged to be
-in the region or not.  For {rflag} = {any}, it is in the region if any
+in the region or not.  For {rflag} = {one}, it is in the region if any
 of its corner points (3 for triangle, 2 for line) is in the region.
 For {rflag} = {all}, all its corner points must be in the region.  For
-{rflag} = {center}, the center point of the line segment or median
+{rflag} = {center}, the center point of the line segment or centroid
 point of the triangle must be in the region.
 
+:line
+
+The following styles can be used for either grid or surface groups.
+
 The {subtract} style takes a list of two or more existing group names
-as arguments.  All surface elements that belong to the 1st group, but
-not to any of the other groups are added to the specified group.
+as arguments.  All grid cells or surface elements that belong to the
+1st group, but not to any of the other groups are added to the
+specified group.
 
 The {union} style takes a list of one or more existing group names as
-arguments.  All surface elements that belong to any of the listed
-groups are added to the specified group.
+arguments.  All grid cells or surface elements that belong to any of
+the listed groups are added to the specified group.
 
 The {intersect} style takes a list of two or more existing group names
-as arguments.  Surface elements that belong to every one of the listed
-groups are added to the specified group.
+as arguments.  Grid cells or surface elements that belong to every one
+of the listed groups are added to the specified group.
 
-The {clear} style un-assigns all surface elements that were assigned
-to that group.  This is a way to empty a group before adding more
-surface elements to it.
+The {clear} style un-assigns all grid cells or surface elements that
+were assigned to that group.  This is a way to empty a group before
+adding more grid cells or surface elements to it.
 
 :line
 
 [Restrictions:]
 
-No more than 32 surface groups can be defined, including "all".
+No more than 32 grid groups and no more than 32 surface groups can be
+defined, including "all".
 
 [Related commands:]
 
@@ -95,4 +177,5 @@ surf"_compute_surf.html
 
 [Default:]
 
-All surface elements belong to the "all" group.
+All grid cells belong to the "all" grid group.  All surface elements
+belong to the "all" surface group.
