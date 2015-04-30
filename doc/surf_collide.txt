@@ -39,7 +39,7 @@ surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 :pre
 
 [Description:]
 
-Define a style for particle-surface collisions.  One or more styles
+Define a model for particle-surface collisions.  One or more models
 can be defined and assigned to different surfaces or simulation box
 boundaries via the "surf_modify"_surf_modify.html or
 "bound_modify"_bound_modify.html commands.  See "Section
