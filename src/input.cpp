@@ -1104,7 +1104,7 @@ void Input::group()
   if (narg < 2) error->all(FLERR,"Illegal group command");
 
   if (strcmp(arg[1],"surf") == 0) surf->group(narg,arg);
-  //else if (strcmp(arg[1],"grid") == 0) grid->group(narg,arg);
+  else if (strcmp(arg[1],"grid") == 0) grid->group(narg,arg);
   else error->all(FLERR,"Illegal group command");
 }
 

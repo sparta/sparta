@@ -33,6 +33,7 @@ class Surf : protected Pointers {
   int ngroup;               // # of defined groups
   char **gnames;            // name of each group
   int *bitmask;             // one-bit mask for each group
+  int *inversemask;         // inverse mask for each group
 
   struct Point {
     double x[3];
@@ -84,13 +85,14 @@ class Surf : protected Pointers {
   double axi_line_size(int);
   double tri_size(int, double &);
 
-  void group(int, char **);
-  int add_group(const char *);
-  int find_group(const char *);
   void add_collide(int, char **);
   int find_collide(const char *);
   void add_react(int, char **);
   int find_react(const char *);
+
+  void group(int, char **);
+  int add_group(const char *);
+  int find_group(const char *);
 
   void collate_vector(int, int *, double *, int, double *);
   void collate_array(int, int, int *, double **, double **);

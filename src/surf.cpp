@@ -19,9 +19,11 @@
 #include "surf_collide.h"
 #include "surf_react.h"
 #include "domain.h"
+#include "region.h"
 #include "comm.h"
 #include "cut3d.h"
 #include "geometry.h"
+#include "input.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -30,6 +32,9 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Update
+enum{REGION_ALL,REGION_ONE,REGION_CENTER};
+enum{TYPE,MOLECULE,ID};
+enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 
 #define DELTA 4
 #define EPSSQ 1.0e-12
@@ -44,7 +49,11 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");
+  inversemask = (int *) memory->smalloc(MAXGROUP*sizeof(int),
+                                        "surf:inversemask");
+
   for (int i = 0; i < MAXGROUP; i++) bitmask[i] = 1 << i;
+  for (int i = 0; i < MAXGROUP; i++) inversemask[i] = bitmask[i] ^ ~0;
 
   ngroup = 1;
   int n = strlen("all") + 1;
@@ -76,6 +85,7 @@ Surf::~Surf()
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
   memory->sfree(gnames);
   memory->sfree(bitmask);
+  memory->sfree(inversemask);
 
   memory->sfree(pts);
   memory->sfree(lines);
@@ -356,45 +366,6 @@ double Surf::tri_size(int m, double &len)
 }
 
 /* ----------------------------------------------------------------------
-   group surf command called via input script
-------------------------------------------------------------------------- */
-
-void Surf::group(int narg, char **arg)
-{
-  if (narg < 3) error->all(FLERR,"Illegal group command");
-}
-
-/* ----------------------------------------------------------------------
-   add a new surface group ID, assumed to be unique
-------------------------------------------------------------------------- */
-
-int Surf::add_group(const char *id)
-{
-  if (ngroup == MAXGROUP) 
-    error->all(FLERR,"Cannot have more than 32 surface groups");
-
-  int n = strlen(id) + 1;
-  gnames[ngroup] = new char[n];
-  strcpy(gnames[ngroup],id);
-  ngroup++;
-  return ngroup-1;
-}
-
-/* ----------------------------------------------------------------------
-   find a surface group ID
-   return index of group or -1 if not found
-------------------------------------------------------------------------- */
-
-int Surf::find_group(const char *id)
-{
-  int igroup;
-  for (igroup = 0; igroup < ngroup; igroup++)
-    if (strcmp(id,gnames[igroup]) == 0) break;
-  if (igroup == ngroup) return -1;
-  return igroup;
-}
-
-/* ----------------------------------------------------------------------
    add a surface collision model
 ------------------------------------------------------------------------- */
 
@@ -501,6 +472,455 @@ int Surf::find_react(const char *id)
 }
 
 /* ----------------------------------------------------------------------
+   group surf command called via input script
+------------------------------------------------------------------------- */
+
+void Surf::group(int narg, char **arg)
+{
+  int i,flag;
+  double x[3];
+
+  if (narg < 3) error->all(FLERR,"Illegal group command");
+
+  int dimension = domain->dimension;
+
+  int igroup = find_group(arg[0]);
+  if (igroup < 0) igroup = add_group(arg[0]);
+  int bit = bitmask[igroup];
+
+  // style = type or id
+  // add surf to group if matches types/ids or condition
+
+  if (strcmp(arg[2],"type") == 0 || strcmp(arg[2],"id") == 0) {
+    if (narg < 4) error->all(FLERR,"Illegal group command");
+
+    int category;
+    if (strcmp(arg[2],"type") == 0) category = TYPE;
+    else if (strcmp(arg[1],"id") == 0) category = ID;
+
+    // args = logical condition
+    
+    if (narg > 4 &&
+        (strcmp(arg[3],"<") == 0 || strcmp(arg[3],">") == 0 ||
+         strcmp(arg[3],"<=") == 0 || strcmp(arg[3],">=") == 0 ||
+         strcmp(arg[3],"==") == 0 || strcmp(arg[3],"!=") == 0 ||
+         strcmp(arg[3],"<>") == 0)) {
+
+      int condition = -1;
+      if (strcmp(arg[3],"<") == 0) condition = LT;
+      else if (strcmp(arg[3],"<=") == 0) condition = LE;
+      else if (strcmp(arg[3],">") == 0) condition = GT;
+      else if (strcmp(arg[3],">=") == 0) condition = GE;
+      else if (strcmp(arg[3],"==") == 0) condition = EQ;
+      else if (strcmp(arg[3],"!=") == 0) condition = NEQ;
+      else if (strcmp(arg[3],"<>") == 0) condition = BETWEEN;
+      else error->all(FLERR,"Illegal group command");
+      
+      int bound1,bound2;
+      bound1 = input->inumeric(FLERR,arg[4]);
+      bound2 = -1;
+
+      if (condition == BETWEEN) {
+        if (narg != 6) error->all(FLERR,"Illegal group command");
+        bound2 = input->inumeric(FLERR,arg[5]);
+      } else if (narg != 5) error->all(FLERR,"Illegal group command");
+
+      // add surf to group if meets condition
+
+      if (category == TYPE) {
+        if (condition == LT) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (i+1 < bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (i+1 < bound1) tris[i].mask |= bit;
+          }
+        } else if (condition == LE) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (i+1 <= bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (i+1 <= bound1) tris[i].mask |= bit;
+          }
+        } else if (condition == GT) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (i+1 > bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (i+1 > bound1) tris[i].mask |= bit;
+          }
+        } else if (condition == GE) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (i+1 >= bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (i+1 >= bound1) tris[i].mask |= bit;
+          }
+        } else if (condition == EQ) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (i+1 == bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (i+1 == bound1) tris[i].mask |= bit;
+          }
+        } else if (condition == NEQ) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (i+1 != bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (i+1 != bound1) tris[i].mask |= bit;
+          }
+        } else if (condition == BETWEEN) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++)
+              if (i+1 >= bound1 && i+1 <= bound2) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++)
+              if (i+1 >= bound1 && i+1 <= bound2) tris[i].mask |= bit;
+          }
+        }
+      } else if (category == ID) {
+        if (condition == LT) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (lines[i].type < bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (tris[i].type < bound1) lines[i].mask |= bit;
+          }
+        } else if (condition == LE) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (lines[i].type <= bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (tris[i].type <= bound1) lines[i].mask |= bit;
+          }
+        } else if (condition == GT) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (lines[i].type > bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (tris[i].type > bound1) lines[i].mask |= bit;
+          }
+        } else if (condition == GE) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (lines[i].type >= bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (tris[i].type >= bound1) lines[i].mask |= bit;
+          }
+        } else if (condition == EQ) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (lines[i].type == bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (tris[i].type == bound1) lines[i].mask |= bit;
+          }
+        } else if (condition == NEQ) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++) 
+              if (lines[i].type != bound1) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++) 
+              if (tris[i].type != bound1) lines[i].mask |= bit;
+          }
+        } else if (condition == BETWEEN) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++)
+              if (lines[i].type >= bound1 && lines[i].type <= bound2) 
+                lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++)
+              if (tris[i].type >= bound1 && tris[i].type <= bound2) 
+                tris[i].mask |= bit;
+          }
+        }
+      }
+
+    // args = list of values
+      
+    } else {
+      char *ptr;
+      int start,stop,delta;
+
+      for (int iarg = 3; iarg < narg; iarg++) {
+        if (strchr(arg[iarg],':')) {
+          ptr = strchr(arg[iarg],':'); 
+          *ptr = '\0';
+          start = input->inumeric(FLERR,ptr); 
+          *ptr = ':';
+          stop = input->inumeric(FLERR,ptr+1); 
+        } else {
+          start = stop = input->inumeric(FLERR,arg[iarg]);
+        }
+
+        // add surf to group if type/id matches value or sequence
+      
+        if (category == TYPE) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++)
+              if (i+1 >= start && i+1 <= stop) lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++)
+              if (i+1 >= start && i+1 <= stop) tris[i].mask |= bit;
+          }
+        } else if (category == ID) {
+          if (dimension == 2) {
+            for (i = 0; i < nline; i++)
+              if (lines[i].type >= start && lines[i].type <= stop) 
+                lines[i].mask |= bit;
+          } else {
+            for (i = 0; i < ntri; i++)
+              if (tris[i].type >= start && tris[i].type <= stop) 
+                tris[i].mask |= bit;
+          }
+        }
+      }
+    }
+
+  // style = region
+  // add surf to group if in region
+
+  } else if (strcmp(arg[2],"region") == 0) {
+    if (narg != 5) error->all(FLERR,"Illegal group command");
+    int iregion = domain->find_region(arg[3]);
+    if (iregion == -1) error->all(FLERR,"Group region ID does not exist");
+    Region *region = domain->regions[iregion];
+
+    int rstyle;
+    if (strcmp(arg[4],"all") == 0) rstyle = REGION_ALL;
+    else if (strcmp(arg[4],"one") == 0) rstyle = REGION_ONE;
+    else if (strcmp(arg[4],"center") == 0) rstyle = REGION_CENTER;
+    else error->all(FLERR,"Illegal group command");
+
+    if (dimension == 2) {
+      if (rstyle == REGION_ALL) {
+        for (i = 0; i < nline; i++) {
+          flag = 1;
+          if (!region->match(pts[lines[i].p1].x)) flag = 0;
+          if (!region->match(pts[lines[i].p2].x)) flag = 0;
+          if (flag) lines[i].mask |= bit;
+        }
+      } else if (rstyle == REGION_ONE) {
+        for (i = 0; i < nline; i++) {
+          flag = 0;
+          if (region->match(pts[lines[i].p1].x)) flag = 1;
+          if (region->match(pts[lines[i].p2].x)) flag = 1;
+          if (flag) lines[i].mask |= bit;
+        }
+      } else if (rstyle == REGION_CENTER) {
+        for (i = 0; i < nline; i++) {
+          x[0] = 0.5 * (pts[lines[i].p1].x[0] + pts[lines[i].p2].x[0]);
+          x[1] = 0.5 * (pts[lines[i].p1].x[1] + pts[lines[i].p2].x[1]);
+          x[2] = 0.0;
+          if (region->match(x)) lines[i].mask |= bit;
+        }
+      }
+
+    } else if (dimension == 3) {
+      if (rstyle == REGION_ALL) {
+        for (i = 0; i < ntri; i++) {
+          flag = 1;
+          if (!region->match(pts[tris[i].p1].x)) flag = 0;
+          if (!region->match(pts[tris[i].p2].x)) flag = 0;
+          if (!region->match(pts[tris[i].p3].x)) flag = 0;
+          if (flag) tris[i].mask |= bit;
+        }
+      } else if (rstyle == REGION_ONE) {
+        for (i = 0; i < nline; i++) {
+          flag = 0;
+          if (region->match(pts[tris[i].p1].x)) flag = 1;
+          if (region->match(pts[tris[i].p2].x)) flag = 1;
+          if (region->match(pts[tris[i].p3].x)) flag = 1;
+          if (flag) tris[i].mask |= bit;
+        }
+      } else if (rstyle == REGION_CENTER) {
+        for (i = 0; i < nline; i++) {
+          x[0] = (pts[tris[i].p1].x[0] + pts[tris[i].p2].x[0] + 
+                  pts[tris[i].p3].x[0]) / 3.0;
+          x[1] = (pts[tris[i].p1].x[1] + pts[tris[i].p2].x[1] + 
+                  pts[tris[i].p3].x[1]) / 3.0;
+          x[2] = (pts[tris[i].p1].x[2] + pts[tris[i].p2].x[2] + 
+                  pts[tris[i].p3].x[2]) / 3.0;
+          if (region->match(x)) lines[i].mask |= bit;
+        }
+      }
+    }
+
+  // style = subtract
+
+  } else if (strcmp(arg[2],"subtract") == 0) {
+    if (narg < 5) error->all(FLERR,"Illegal group command");
+
+    int length = narg-3;
+    int *list = new int[length];
+
+    int jgroup;
+    for (int iarg = 3; iarg < narg; iarg++) {
+      jgroup = find_group(arg[iarg]);
+      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      list[iarg-3] = jgroup;
+    }
+
+    // add to group if in 1st group in list
+
+    int otherbit = bitmask[list[0]];
+
+    if (dimension == 2) {
+      for (i = 0; i < nline; i++)
+        if (lines[i].mask & otherbit) lines[i].mask |= bit;
+    } else {
+      for (i = 0; i < ntri; i++)
+        if (tris[i].mask & otherbit) tris[i].mask |= bit;
+    }
+
+    // remove surfs if they are in any of the other groups
+    // AND with inverse mask removes the surf from group
+
+    int inverse = inversemask[igroup];
+
+    for (int ilist = 1; ilist < length; ilist++) {
+      otherbit = bitmask[list[ilist]];
+      if (dimension == 2) {
+        for (i = 0; i < nline; i++)
+          if (lines[i].mask & otherbit) lines[i].mask &= inverse;
+      } else {
+        for (i = 0; i < ntri; i++)
+          if (tris[i].mask & otherbit) tris[i].mask &= inverse;
+      }
+    }
+
+    delete [] list;
+
+  // style = union
+
+  } else if (strcmp(arg[1],"union") == 0) {
+    if (narg < 4) error->all(FLERR,"Illegal group command");
+
+    int length = narg-3;
+    int *list = new int[length];
+
+    int jgroup;
+    for (int iarg = 3; iarg < narg; iarg++) {
+      jgroup = find_group(arg[iarg]);
+      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      list[iarg-3] = jgroup;
+    }
+
+    // add to group if in any other group in list
+
+    int otherbit;
+
+    for (int ilist = 0; ilist < length; ilist++) {
+      otherbit = bitmask[list[ilist]];
+      if (dimension == 2) {
+        for (i = 0; i < nline; i++)
+          if (lines[i].mask & otherbit) lines[i].mask |= bit;
+      } else {
+        for (i = 0; i < ntri; i++)
+          if (tris[i].mask & otherbit) tris[i].mask |= bit;
+      }
+    }
+
+    delete [] list;
+
+  // style = intersect
+
+  } else if (strcmp(arg[1],"intersect") == 0) {
+    if (narg < 5) error->all(FLERR,"Illegal group command");
+
+    int length = narg-3;
+    int *list = new int[length];
+
+    int jgroup;
+    for (int iarg = 3; iarg < narg; iarg++) {
+      jgroup = find_group(arg[iarg]);
+      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      list[iarg-3] = jgroup;
+    }
+
+    // add to group if in all groups in list
+
+    int otherbit,ok,ilist;
+
+    if (dimension == 2) {
+      for (i = 0; i < nline; i++) {
+        ok = 1;
+        for (ilist = 0; ilist < length; ilist++) {
+          otherbit = bitmask[list[ilist]];
+          if ((lines[i].mask & otherbit) == 0) ok = 0;
+        }
+        if (ok) lines[i].mask |= bit;
+      }
+    } else {
+      for (i = 0; i < ntri; i++) {
+        ok = 1;
+        for (ilist = 0; ilist < length; ilist++) {
+          otherbit = bitmask[list[ilist]];
+          if ((tris[i].mask & otherbit) == 0) ok = 0;
+        }
+        if (ok) tris[i].mask |= bit;
+      }
+    }
+
+    delete [] list;
+
+  // style = clear
+  // remove all surfs from group
+
+  } else if (strcmp(arg[2],"clear") == 0) {
+    if (igroup == 0) error->all(FLERR,"Cannot clear group all");
+    int inversebits = inversemask[igroup];
+
+    if (dimension == 2) {
+      for (i = 0; i < nline; i++) lines[i].mask &= inversebits;
+    } else {
+      for (i = 0; i < nline; i++) tris[i].mask &= inversebits;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   add a new surface group ID, assumed to be unique
+------------------------------------------------------------------------- */
+
+int Surf::add_group(const char *id)
+{
+  if (ngroup == MAXGROUP) 
+    error->all(FLERR,"Cannot have more than 32 surface groups");
+
+  int n = strlen(id) + 1;
+  gnames[ngroup] = new char[n];
+  strcpy(gnames[ngroup],id);
+  ngroup++;
+  return ngroup-1;
+}
+
+/* ----------------------------------------------------------------------
+   find a surface group ID
+   return index of group or -1 if not found
+------------------------------------------------------------------------- */
+
+int Surf::find_group(const char *id)
+{
+  int igroup;
+  for (igroup = 0; igroup < ngroup; igroup++)
+    if (strcmp(id,gnames[igroup]) == 0) break;
+  if (igroup == ngroup) return -1;
+  return igroup;
+}
+
+/* ----------------------------------------------------------------------
    comm of vector of local tallies across all procs
    nrow = # of entries in input vector
    l2g = global surf index of each entry in input vector
@@ -512,8 +932,10 @@ int Surf::find_react(const char *id)
 void Surf::collate_vector(int nrow, int *l2g, 
                           double *in, int instride, double *out)
 {
+  collate_vector_allreduce(nrow,l2g,in,instride,out);
+
   //if (tally_comm == TALLYAUTO) 
-    collate_vector_allreduce(nrow,l2g,in,instride,out);
+  //  collate_vector_allreduce(nrow,l2g,in,instride,out);
   //else
   //  collate_vector_irregular(nrow,l2g,in,instride,out);
 }

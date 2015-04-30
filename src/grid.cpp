@@ -1927,7 +1927,7 @@ void Grid::grow_sinfo(int n)
 
 void Grid::group(int narg, char **arg)
 {
-  if (narg < 3) error->all(FLERR,"Illegal group command");
+  error->all(FLERR,"Group grid command not yet implemented");
 }
 
 /* ----------------------------------------------------------------------
