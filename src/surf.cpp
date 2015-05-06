@@ -400,7 +400,7 @@ void Surf::add_collide(int narg, char **arg)
 #undef SurfCollideStyle
 #undef SURF_COLLIDE_CLASS
 
-  else error->all(FLERR,"Invalid surf_collide style");
+  else error->all(FLERR,"Unrecognized surf_collide style");
 
   nsc++;
 }
@@ -453,7 +453,7 @@ void Surf::add_react(int narg, char **arg)
 #undef SurfReactStyle
 #undef SURF_REACT_CLASS
 
-  else error->all(FLERR,"Invalid surf_react style");
+  else error->all(FLERR,"Unrecognized surf_react style");
 
   nsr++;
 }
