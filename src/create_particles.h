@@ -40,6 +40,7 @@ class CreateParticles : protected Pointers {
 
   void create_single();
   void create_local(bigint);
+  int outside_region(int, double *, double *);
 };
 
 }

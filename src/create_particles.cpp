@@ -256,6 +256,7 @@ void CreateParticles::create_local(bigint np)
   int nglocal = grid->nlocal;
 
   // volme = volume of grid cells I own that are OUTSIDE surfs
+  // skip cells entirely outside region
   // Nme = # of particles I will create
   // MPI_Scan() logic insures sum of nme = Np
 
@@ -267,6 +268,9 @@ void CreateParticles::create_local(bigint np)
     if (cinfo[i].type != OUTSIDE) continue;
     lo = cells[i].lo;
     hi = cells[i].hi;
+    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+      continue;
+
     if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else if (domain->axisymmetric) 
       volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
@@ -307,6 +311,7 @@ void CreateParticles::create_local(bigint np)
 
   // loop over cells I own
   // only add particles to OUTSIDE cells
+  // skip cells entirely outside region
   // ntarget = floating point # of particles to create in one cell
   // npercell = integer # of particles to create in one cell
   // basing ntarget on accumulated volume and nprev insures Nme total creations
@@ -331,6 +336,8 @@ void CreateParticles::create_local(bigint np)
     if (cinfo[i].type != OUTSIDE) continue;
     lo = cells[i].lo;
     hi = cells[i].hi;
+    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+      continue;
 
     if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
     else if (domain->axisymmetric)
@@ -384,6 +391,25 @@ void CreateParticles::create_local(bigint np)
   }
 
   delete random;
+}
+
+/* ----------------------------------------------------------------------
+   return 1 if grid cell with lo/hi is entirely outside region bounding box
+   else return 0
+------------------------------------------------------------------------- */
+
+int CreateParticles::outside_region(int dim, double *lo, double *hi)
+{
+  int flag = 1;
+  if (hi[0] > region->extent_xlo &&
+      lo[0] < region->extent_xhi) flag = 0;
+  if (hi[1] > region->extent_ylo &&
+      lo[1] < region->extent_yhi) flag = 0;
+  if (dim == 3) {
+    if (hi[2] > region->extent_zlo &&
+        lo[2] < region->extent_zhi) flag = 0;
+  }
+  return flag;
 }
 
 /* ----------------------------------------------------------------------
