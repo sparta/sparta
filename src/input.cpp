@@ -1038,7 +1038,7 @@ void Input::collide_command()
 #undef CollideStyle
 #undef COLLIDE_CLASS
 
-  else error->all(FLERR,"Invalid collide style");
+  else error->all(FLERR,"Unrecognized collide style");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1133,7 +1133,7 @@ void Input::react_command()
 #undef ReactStyle
 #undef REACT_CLASS
 
-  else error->all(FLERR,"Invalid react style");
+  else error->all(FLERR,"Unrecognized react style");
 }
 
 /* ---------------------------------------------------------------------- */
