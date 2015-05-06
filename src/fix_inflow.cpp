@@ -852,7 +852,7 @@ int FixInflow::split(int icell, int flag)
    pack icell values for per-cell arrays into buf
    also pack cellface data for flagged faces
    return byte count of amount packed
-   if memflag, only return count, do not fill buf
+   if not memflag, only return count, do not fill buf
 ------------------------------------------------------------------------- */
 
 int FixInflow::pack_grid_one(int icell, char *buf, int memflag)

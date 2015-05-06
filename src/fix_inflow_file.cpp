@@ -364,7 +364,7 @@ void FixInflowFile::start_of_step()
   int pcell,ninsert,nactual,isp,ispecies,ndim,pdim1,pdim2,id;
   double *lo,*hi,*vstream,*cummulative,*vscale;
   double x[3],v[3];
-  double indot,scosine,rn,ntarget,temp_thermal;
+  double indot,scosine,rn,ntarget,temp_thermal,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
   Particle::OnePart *p;
 
@@ -442,8 +442,9 @@ void FixInflowFile::start_of_step()
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
           theta = MY_PI * random->gaussian();
-          v[pdim] = vscale[isp]*sin(theta) + vstream[pdim];
-          v[qdim] = vscale[isp]*cos(theta) + vstream[qdim];
+          vr = vscale[isp] * sqrt(-log(random->uniform()));
+          v[pdim] = vr * sin(theta) + vstream[pdim];
+          v[qdim] = vr * cos(theta) + vstream[qdim];
           erot = particle->erot(ispecies,temp_thermal,random);
           evib = particle->evib(ispecies,temp_thermal,random);
           id = MAXSMALLINT*random->uniform();
@@ -494,9 +495,9 @@ void FixInflowFile::start_of_step()
         v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
         theta = MY_PI * random->gaussian();
-        v[pdim] = vscale[isp]*sin(theta) + vstream[pdim];
-        v[qdim] = vscale[isp]*cos(theta) + vstream[qdim];
-
+        vr = vscale[isp] * sqrt(-log(random->uniform()));
+        v[pdim] = vr * sin(theta) + vstream[pdim];
+        v[qdim] = vr * cos(theta) + vstream[qdim];
         erot = particle->erot(ispecies,temp_thermal,random);
         evib = particle->evib(ispecies,temp_thermal,random);
         id = MAXSMALLINT*random->uniform();
