@@ -54,7 +54,7 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   dimension = domain->dimension;
 
   int igroup = surf->find_group(arg[2]);
-  if (igroup < 0) error->all(FLERR,"Dump suft group ID does not exist");
+  if (igroup < 0) error->all(FLERR,"Dump surf group ID does not exist");
   groupbit = surf->bitmask[igroup];
 
   nevery = atoi(arg[3]);
