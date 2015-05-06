@@ -535,7 +535,7 @@ void Output::add_dump(int narg, char **arg)
 #include "style_dump.h"
 #undef DUMP_CLASS
 
-  else error->all(FLERR,"Invalid dump style");
+  else error->all(FLERR,"Unrecognized dump style");
 
   every_dump[ndump] = atoi(arg[3]);
   if (every_dump[ndump] <= 0) error->all(FLERR,"Illegal dump command");

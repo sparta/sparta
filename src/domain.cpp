@@ -411,7 +411,7 @@ void Domain::add_region(int narg, char **arg)
 #include "style_region.h"
 #undef REGION_CLASS
 
-  else error->all(FLERR,"Invalid region style");
+  else error->all(FLERR,"Unrecognized region style");
 
   nregion++;
 }
