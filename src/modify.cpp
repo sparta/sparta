@@ -278,7 +278,7 @@ void Modify::add_fix(int narg, char **arg)
 #undef FixStyle
 #undef FIX_CLASS
 
-  else error->all(FLERR,"Invalid fix style");
+  else error->all(FLERR,"Unrecognized fix style");
 
   // set fix mask values and increment nfix (if new)
 
@@ -352,7 +352,7 @@ void Modify::add_compute(int narg, char **arg)
 #undef ComputeStyle
 #undef COMPUTE_CLASS
 
-  else error->all(FLERR,"Invalid compute style");
+  else error->all(FLERR,"Unrecognized compute style");
 
   ncompute++;
 }
