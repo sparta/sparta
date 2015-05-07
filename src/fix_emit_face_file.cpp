@@ -967,6 +967,7 @@ int FixEmitFaceFile::unpack_task(char *buf, int icell)
   double *fraction = tasks[ntask].fraction;
   double *cummulative = tasks[ntask].cummulative;
   double *vscale = tasks[ntask].vscale;
+
   memcpy(&tasks[ntask],ptr,sizeof(Task));
   ptr += sizeof(Task);
   ptr = ROUNDUP(ptr);
@@ -1074,8 +1075,7 @@ void FixEmitFaceFile::post_compress_grid()
 
   for (int i = 0; i < ntask; i++) {
     int icell = tasks[i].icell;
-    int nsplit = cells[icell].nsplit;
-    if (nsplit == 1) tasks[i].pcell = icell;
+    if (cells[icell].nsplit == 1) tasks[i].pcell = icell;
     else tasks[i].pcell = split(icell);
   }
 }
