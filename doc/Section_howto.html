@@ -85,7 +85,7 @@ used for axi-symmetric models.
 </P>
 <P>Grid cell weighting affects how many particles per grid cell are
 created when using the <A HREF = "create_particles.html">create_particles</A> and
-<A HREF = "fix_inflow.html">fix inflow</A> commands.
+<A HREF = "fix_emit_face.html">fix emit</A> command variants.
 </P>
 <P>During a run, it also triggers particle cloning and destruction as
 particles move from grid cell to grid cell.  This can be important for
@@ -991,16 +991,16 @@ ambipolar reactions.  Their reactants and products must be listed in
 specific order.
 </P>
 <P>When creating particles, either by the
-<A HREF = "create_particles.html">create_particles</A> or <A HREF = "fix_inflow.html">fix
-inflow</A> commands, do NOT use a mixture that includes
-the ambipolar electron species.  If you do this, you will create
-"free" electrons which are not coupled to an ambipolar ion.  You can
-include ambipolar ions in the mixture.  This will create ambipolar
-ions along with their associated electron.  The electron will be
-assigned a velocity consistent with its mass and the temperature of
-the created particles.  You can use the <A HREF = "mixture.html">mixture copy</A>
-and <A HREF = "mixture.html">mixture delete</A> commands to create a mixture that
-excludes only the ambipolar electron species, e.g.
+<A HREF = "create_particles.html">create_particles</A> or <A HREF = "fix_emit.html">fix emit</A>
+command variants, do NOT use a mixture that includes the ambipolar
+electron species.  If you do this, you will create "free" electrons
+which are not coupled to an ambipolar ion.  You can include ambipolar
+ions in the mixture.  This will create ambipolar ions along with their
+associated electron.  The electron will be assigned a velocity
+consistent with its mass and the temperature of the created particles.
+You can use the <A HREF = "mixture.html">mixture copy</A> and <A HREF = "mixture.html">mixture
+delete</A> commands to create a mixture that excludes only
+the ambipolar electron species, e.g.
 </P>
 <PRE>mixture all copy noElectron
 mixture noElectron delete e 
