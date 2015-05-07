@@ -31,6 +31,7 @@ class Cut3d : protected Pointers {
   int surf2grid(cellint, double *, double *, int *, int);
   int split(cellint, double *, double *, int, int *,
             double *&, int *, int *, int &, double *);
+  int clip_external(double *, double *, double *, double *) {return 0;}
 
  private:
   cellint id;            // ID of cell being worked on
