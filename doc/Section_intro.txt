@@ -1,4 +1,4 @@
-"Previous Section"_Manual.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_start.html :c
+<"Previous Section"_Manual.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_start.html :c
 
 :link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)
@@ -103,7 +103,9 @@ Models :h4
 
   "3d or 2d"_dimension.html or "2d-axisymmetric"_Section_howto.html#howto_2 domains
   variety of "global boundary conditions"_boundary.html
-  "create particles"_create_particles.html within flow volume or at "inlet boundaries"_fix_inflow.html 
+  "create particles"_create_particles.html within flow volume
+  emit particles from simulation box faces due to "flow properties"_fix_emit_face.html
+  emit particles from simulation box faces due to "profile defined in file"_fix_emit_face_file.html
   "ambipolar"_Section_howto.html#howto_11 approximation for ionized plasmas :ul
 
 Geometry :h4

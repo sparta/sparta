@@ -81,7 +81,7 @@ used for axi-symmetric models.
 
 Grid cell weighting affects how many particles per grid cell are
 created when using the "create_particles"_create_particles.html and
-"fix inflow"_fix_inflow.html commands.
+"fix emit"_fix_emit_face.html command variants.
 
 During a run, it also triggers particle cloning and destruction as
 particles move from grid cell to grid cell.  This can be important for
@@ -981,16 +981,16 @@ ambipolar reactions.  Their reactants and products must be listed in
 specific order.
 
 When creating particles, either by the
-"create_particles"_create_particles.html or "fix
-inflow"_fix_inflow.html commands, do NOT use a mixture that includes
-the ambipolar electron species.  If you do this, you will create
-"free" electrons which are not coupled to an ambipolar ion.  You can
-include ambipolar ions in the mixture.  This will create ambipolar
-ions along with their associated electron.  The electron will be
-assigned a velocity consistent with its mass and the temperature of
-the created particles.  You can use the "mixture copy"_mixture.html
-and "mixture delete"_mixture.html commands to create a mixture that
-excludes only the ambipolar electron species, e.g.
+"create_particles"_create_particles.html or "fix emit"_fix_emit.html
+command variants, do NOT use a mixture that includes the ambipolar
+electron species.  If you do this, you will create "free" electrons
+which are not coupled to an ambipolar ion.  You can include ambipolar
+ions in the mixture.  This will create ambipolar ions along with their
+associated electron.  The electron will be assigned a velocity
+consistent with its mass and the temperature of the created particles.
+You can use the "mixture copy"_mixture.html and "mixture
+delete"_mixture.html commands to create a mixture that excludes only
+the ambipolar electron species, e.g.
 
 mixture all copy noElectron
 mixture noElectron delete e :pre

@@ -192,7 +192,7 @@ A section begins with a non-blank line whose first character is not a
 between sections.  The first line begins with a boundary-ID which
 identifies the section.  The line can contain additional text, but the
 initial text must match the boundary-ID specified in the fix
-inflow/file command.  Otherwise the section is skipped.
+emit/face/file command.  Otherwise the section is skipped.
 
 The VALUES line lists Nv keywords.  The list of possible keywords is
 as follows, along with the meaning of the numeric value specified for

@@ -67,7 +67,7 @@ Assuming your simulation is populated by particles from the background
 gas, the {fnum} and {nrho} settings can determine how many particles
 will be present in your simulation, when using the
 "create_particles"_create_particles.html or "fix
-inflow"_fix_inflow.html commands.
+emit"_fix_emit_face.html command variants.
 
 The {vstream} keyword sets the streaming velocity of the background
 gas.
@@ -185,7 +185,7 @@ varying size), so as to minimize the total number of particles used in
 a simulation while preserving accurate time and spatial averages of
 flow quantities.  The cell weights also affect how many particles per
 cell are created by the "create_particles"_create_particles.html and
-"fix inflow"_fix_inflow.html commands.
+"fix emit"_fix_emit_face.html command variants.
 
 If the mode is set to {none}, per-cell weighting is turned off if it
 was previously enabled.  For mode = {volume} or {radius}, per-cell

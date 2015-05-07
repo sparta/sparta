@@ -133,7 +133,7 @@ properties as with the {yes} setting.
 
 [Related commands:]
 
-"mixture"_mixture.html, "fix inflow"_fix_inflow.html
+"mixture"_mixture.html, "fix emit/face"_fix_emit_face.html
 
 [Default:]
 
