@@ -1,0 +1,193 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix emit/face command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID emit/face mix-ID face1 face2 ... keyword value ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>emit/face = style name of this fix command 
+
+<LI>mix-ID = ID of mixture to use when creating particles 
+
+<LI>face1,face2,... = one or more of <I>all</I> or <I>xlo</I> or <I>xhi</I> or <I>ylo</I> or <I>yhi</I> or <I>zlo</I> or <I>zhi</I> 
+
+<LI>zero or more keyword/value pairs may be appended 
+
+<LI>keyword = <I>n</I> or <I>nevery</I> or <I>perspecies</I> or <I>region</I> 
+
+<PRE>  <I>n</I> value = Np = number of particles to create
+  <I>nevery</I> value = Nstep = add particles every this many timesteps
+  <I>perspecies</I> value = <I>yes</I> or <I>no</I>
+  <I>region</I> value = region-ID 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix in emit/face air all
+fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Emit particles from one or more faces of the simulation box,
+continuously during a simulation.  If invoked every timestep, this fix
+creates a continuous influx of particles thru the face(s).
+</P>
+<P>The properties of the added particles are from the mixture with ID
+<I>mix-ID</I>.  This determines the number and species of added particles,
+as well as their streaming velocity, thermal temperature, and internal
+energy modes.  The details are explained below.
+</P>
+<P>One or more faces of the simulation box can be specified via the
+<I>face1</I>, <I>face2</I>, etc arguments.  The 6 possible faces can be
+specified as <I>xlo</I>, <I>xhi</I>, <I>ylo</I>, <I>yhi</I>, <I>zlo</I>, or <I>zhi</I>.  Specifying
+<I>all</I> is the same as specifying all 6 individual faces.
+</P>
+<P>On each insertion timestep, each grid cell with one or more of its
+faces touching a specified boundary <I>face</I> performs the following
+computations to add particles.  The particles are added at the
+beginning of the SPARTA timestep.
+</P>
+<P>The molecular flux across a grid cell face per unit time is given by
+equation 4.22 of <A HREF = "#Bird94">(Bird94)</A>.  The number of particles <I>M</I> to
+insert on a particular grid cell face is based on this flux and
+additional global, flow, and cell face properties:
+</P>
+<UL><LI>global property: <I>fnum</I> ratio as specified by the <A HREF = "global.html"">global</A> command
+<LI>flow properties: number density, streaming velocity, and thermal temperature
+<LI>cell face properties: area of face and its orientation relative to the streaming velocity 
+</UL>
+<P>The flow properties are defined for the specified mixture via the
+<A HREF = "mixture.html">mixture</A> command.
+</P>
+<P>If <I>M</I> has a fractional value, e.g. 12.5, then 12 particles are added,
+and a 13th depending on the value of a random number.  Each particle
+is added at a random location on the grid cell face.  The particle
+species is chosen randomly in accord with the <I>frac</I> settings of the
+collection of species in the mixture, as set by the
+<A HREF = "mixture.html">mixture</A> command.
+</P>
+<P>IMPORTANT NOTE: The preceeding calculation is actually done using face
+areas associated with <I>weighted</I> cell volumes.  Grid cells can be
+weighted using the <A HREF = "global.html">global weight</A> command.
+</P>
+<P>The velocity of the particle is set to the sum of the streaming
+velocity and a thermal velocity sampled from the thermal temperature.
+The internal energy modes of the particle are determined by the
+thermal temperature and the <I>rotate</I> and <I>vibrate</I> options of the
+<A HREF = "collide_modify.html">collide_modify</A> command.  Note that if the
+<A HREF = "collide.html">collide</A> command has not been specified (free molecular
+flow), then no rotational or vibrational energy will be assigned to
+created particles.
+</P>
+<P>If the final particle velocity is not directed "into" the grid cell,
+then the velocity sampling procedure is repeated until it is.  This
+insures that all added particles enter the simulation domain, as
+desired.
+</P>
+<P>The first timestep that added particles are advected, they move for a
+random fraction of the timestep.  This insures a continuous flow field
+of particles entering the simulation box.
+</P>
+<HR>
+
+<P>The <I>n</I> keyword can alter how many particles are added, which can be
+useful for debugging purposes.  If <I>Np</I> is set to 0, then the number
+of added particles is a function of <I>fnum</I>, <I>nrho</I>, and other mixture
+settings, as described above.  If <I>Np</I> is set to a value > 0, then the
+<I>fnum</I> and <I>nrho</I> settings are ignored, and exactly <I>Np</I> particles are
+added on each insertion timestep.  This is done by dividing <I>Np</I> by
+the total number of grid cells that are adjacent to the specified box
+faces and adding an equal number of particles per grid cell.
+</P>
+<P>The <I>nevery</I> keyword determines how often particles are added.  If
+<I>Nstep</I> > 1, this may give a non-continuous, clumpy distribution in
+the inlet flow field.
+</P>
+<P>The <I>perspecies</I> keyword determines how the species of each added
+particle is randomly determined.  This has an effect on the
+statistical properties of added particles.
+</P>
+<P>If <I>perspecies</I> is set to <I>yes</I>, then a target insertion number <I>M</I> in
+a grid cell is calculated for each species, which is a function of the
+relative number fraction of the species, as set by the <A HREF = "mixture.html">mixture
+nfrac</A> command.  If <I>M</I> has a fractional value,
+e.g. 12.5, then 12 particles of that species will always be added, and
+a 13th depending on the value of a random number.
+</P>
+<P>If <I>perspecies</I> is set to <I>no</I>, then a single target insertion number
+<I>M</I> in a grid cell is calculated for all the species.  Each time a
+particle is added, a random number is used to choose the species of
+the particle, based on the relative number fractions of all the
+species in the mixture.  As before, if <I>M</I> has a fractional value,
+e.g. 12.5, then 12 particles will always be added, and a 13th
+depending on the value of a random number.
+</P>
+<P>Here is a simple example that illustrates the difference between the
+two options.  Assume a mixture with 2 species, each with a relative
+number fraction of 0.5.  Assume a particular grid cell adds 10
+particles from that mixture.  If <I>perspecies</I> is set to <I>yes</I>, then
+exactly 5 particles of each species will be added on every timestep
+insertions take place.  If <I>perspecies</I> is set to <I>no</I>, then exactly
+10 particles will be added every time and on average there will be 5
+particles of each of the two species.  But on one timestep it might be
+6 of the first and 4 of the second.  On another timestep it might be 3
+of the first and 7 of the second.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix computes a global vector of length 2 which can be accessed by
+various output commands.  The first element of the vector is the total
+number of particles added on the most recent insertion step.  The
+second element is the cummulative total number added since the
+beginning of the run.  The 2nd value is initialized to zero each time
+a run is performed.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>Particles cannot be emitted from periodic faces of the simulation box.
+Particles cannot be emitted from <I>z</I> faces of the simluation box for a
+2d simulation.
+</P>
+<P>A <I>n</I> setting of <I>Np</I> > 0 can only be used with a <I>perspecies</I> setting
+of <I>no</I>.
+</P>
+<P>A warning will be issued if a specified face has an inward normal in a
+direction opposing the streaming velocity.  This is because no
+particles will be emitted from that face.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "mixture.html">mixture</A>, <A HREF = "create_particles.html">create_particles</A>, <A HREF = "fix_emit_face_file.html">fix
+emit/face//file</A>
+</P>
+<P><B>Default:</B>
+</P>
+<P>The keyword defaults are n = 0, nevery = 1, perspecies = yes, region =
+none.
+</P>
+<HR>
+
+<A NAME = "Bird94"></A>
+
+<P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+</P>
+</HTML>
