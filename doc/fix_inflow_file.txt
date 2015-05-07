@@ -27,7 +27,7 @@ keyword = {frac} or {nevery} or {perspecies} :l
 
 [Examples:]
 
-fix in inflow/file air xlo input.data XLOface
+fix in inflow/file air xlo input.data xlo
 fix in inflow/file mymix ylo file.txt oneface frac 0.1 nevery 10 :pre
 
 [Description:]
