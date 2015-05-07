@@ -304,6 +304,13 @@ particles of each of the two species.  But on one timestep it might be
 6 of the first and 4 of the second.  On another timestep it might be 3
 of the first and 7 of the second.
 </P>
+<P>If the <I>region</I> keyword is used, then a particle will only added if
+its position is within the specified <I>region-ID</I>.  This can be used to
+only allow particle insertion on a subset of the boundary face.  Note
+that the <I>side</I> option for the <A HREF = "region.html">region</A> command can be
+used to define whether the inside or outside of the geometric region
+is considered to be "in" the region.
+</P>
 <HR>
 
 <P><B>Restart, output info:</B>

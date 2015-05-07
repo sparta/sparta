@@ -133,7 +133,8 @@ associated with the {region-ID} into the group.  See the
 "region"_region.html command for details of what kind of geometric
 regions can be defined.  Note that the {side} option for the
 "region"_region.html command can be used to define whether the inside
-or outside of the geometric region is considered "in" the region.
+or outside of the geometric region is considered to be "in" the
+region.
 
 The {rflag} setting determines how a surface element is judged to be
 in the region or not.  For {rflag} = {one}, it is in the region if any

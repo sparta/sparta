@@ -21,14 +21,15 @@ style = {n} or {single} :l
     x,y,z = position of particle (distance units)
     vx,vy,vz = velocity of particle (velocity units) :pre
 zero or more keyword/value pairs may be appended :l
-keyword = {global} :l
-  {global} value = {yes} or {no} :pre
+keyword = {global} or {region} :l
+  {global} value = {yes} or {no}
+  {region} value = region-ID :pre
 :ule
 
 [Examples:]
 
 create_particles background
-create_particles air n 100000
+create_particles air n 100000 region sphere
 create_particles air n 100000 global yes
 create_particles air single N 5.0 6.0 5.4 10.0 -1.0 0.0 :pre
 
@@ -126,6 +127,21 @@ means that the individual attributes of particles will depend on the
 number of processors and the mapping of grid cells to procesors.  The
 overall set of created particles should have the same statistical
 properties as with the {yes} setting.
+
+If the {region} keyword is used, then a particle will only added if
+its position is within the specified {region-ID}.  This can be used to
+only allow particle insertion within a subset of the simulation
+domain.  Note that the {side} option for the "region"_region.html
+command can be used to define whether the inside or outside of the
+geometric region is considered to be "in" the region.
+
+IMPORTANT NOTE: If the {region} and {n} keywords are used together,
+less than N particles may be added.  This is because grid cells will
+be candidates for particle insertion, unless they are entirely outside
+the bounding box that encloses the region.  Particles those grid cells
+will attempt to add are included in the count for N, even if some or
+all of their particle insertions will be rejected due to not meeting
+the region criterion.
 
 :line
 

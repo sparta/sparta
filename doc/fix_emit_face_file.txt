@@ -292,6 +292,13 @@ particles of each of the two species.  But on one timestep it might be
 6 of the first and 4 of the second.  On another timestep it might be 3
 of the first and 7 of the second.
 
+If the {region} keyword is used, then a particle will only added if
+its position is within the specified {region-ID}.  This can be used to
+only allow particle insertion on a subset of the boundary face.  Note
+that the {side} option for the "region"_region.html command can be
+used to define whether the inside or outside of the geometric region
+is considered to be "in" the region.
+
 :line
 
 [Restart, output info:]
