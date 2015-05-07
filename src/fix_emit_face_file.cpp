@@ -74,7 +74,6 @@ FixEmitFaceFile::FixEmitFaceFile(SPARTA *sparta, int narg, char **arg) :
   check_mesh_values();
 
   // optional args
-  // NOTE: is N allowed as optional arg?
 
   frac_user = 1.0;
 
