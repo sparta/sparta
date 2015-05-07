@@ -28,7 +28,7 @@ mixture             air Ar frac 1.0
 mixture 	    air group species
 mixture             air Ar vstream 2500.0 0.0 0.0 temp 300.00 
 
-fix		    in inflow air all
+fix		    in emit/face air all
 
 collide		    vss air ar.vss
 

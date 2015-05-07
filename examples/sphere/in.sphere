@@ -24,7 +24,7 @@ surf_modify         all collide 1
 
 collide		    vss air air.vss
 
-fix		    in inflow air xlo 
+fix		    in emit/face air xlo 
 
 timestep 	    0.0001
 

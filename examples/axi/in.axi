@@ -16,7 +16,7 @@ global		    nrho 1.e20 fnum 1.e17 weight cell radius
 species		    air.species N2
 mixture		    air N2 vstream 3472.0 0.0 0.0 temp 300.0
 
-fix                 in inflow air xlo
+fix                 in emit/face air xlo
 collide		    vss air air.vss
 
 read_surf           data.circle origin 5 5 0 &

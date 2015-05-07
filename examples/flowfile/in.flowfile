@@ -16,7 +16,7 @@ global		    nrho 1.0 fnum 0.001
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
 
-fix		    in inflow/file air xlo flow.face XLO frac 0.5
+fix		    in emit/face/file air xlo flow.face XLO frac 0.5
 
 timestep 	    0.0001
 
