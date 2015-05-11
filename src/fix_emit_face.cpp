@@ -173,6 +173,25 @@ void FixEmitFace::init()
 
   ntask = 0;
   FixEmit::init();
+
+  // if Np > 0, nper = # of insertions per task
+  // set nthresh so as to achieve exactly Np insertions
+  // tasks > tasks_with_no_extra need to insert 1 extra particle
+  // NOTE: setting same # of insertions per task
+  //       should weight by cell face area
+
+  if (np > 0) {
+    int all,nupto,tasks_with_no_extra;
+    MPI_Allreduce(&ntask,&all,1,MPI_INT,MPI_SUM,world);
+    if (all) {
+      npertask = np / all;
+      tasks_with_no_extra = all - (np % all);
+    } else npertask = tasks_with_no_extra = 0;
+    MPI_Scan(&ntask,&nupto,1,MPI_INT,MPI_SUM,world);
+    if (tasks_with_no_extra < nupto-ntask) nthresh = 0;
+    else if (tasks_with_no_extra >= nupto) nthresh = ntask;
+    else nthresh = tasks_with_no_extra - (nupto-ntask);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -352,22 +371,7 @@ int FixEmitFace::create_task(int icell)
     ntask++;
   }
 
-  // if Np > 0, nper = # of insertions per task
-  // set nthresh so as to achieve exactly Np insertions
-  // tasks > tasks_with_no_extra need to insert 1 extra particle
-  // NOTE: setting same # of insertions per task
-  //       should weight by cell face area
-
-  if (np > 0) {
-    int all,nupto;
-    MPI_Allreduce(&ntask,&all,1,MPI_INT,MPI_SUM,world);
-    npertask = np / all;
-    int tasks_with_no_extra = all - (np % all);
-    MPI_Scan(&ntask,&nupto,1,MPI_INT,MPI_SUM,world);
-    if (tasks_with_no_extra < nupto-ntask) nthresh = 0;
-    else if (tasks_with_no_extra >= nupto) nthresh = ntask;
-    else nthresh = tasks_with_no_extra - (nupto-ntask);
-  }
+  // return # of tasks for this cell
 
   return ntask-ntaskorig;
 }
@@ -598,6 +602,7 @@ int FixEmitFace::unpack_task(char *buf, int icell)
 
   if (ntask == ntaskmax) grow_task();
   double *ntargetsp = tasks[ntask].ntargetsp;
+
   memcpy(&tasks[ntask],ptr,sizeof(Task));
   ptr += sizeof(Task);
   ptr = ROUNDUP(ptr);
@@ -606,6 +611,7 @@ int FixEmitFace::unpack_task(char *buf, int icell)
 
   memcpy(ntargetsp,ptr,nspecies*sizeof(double));
   ptr += nspecies*sizeof(double);
+
   tasks[ntask].ntargetsp = ntargetsp;
 
   // reset task icell and pcell
@@ -632,12 +638,16 @@ void FixEmitFace::copy_task(int icell, int n, int first, int oldfirst)
   if (first == oldfirst) {
     for (int i = 0; i < n; i++) tasks[first].icell = icell;
     first++;
+
   } else {
     for (int i = 0; i < n; i++) {
       double *ntargetsp = tasks[first].ntargetsp;
+
       memcpy(&tasks[first],&tasks[oldfirst],sizeof(Task));
       memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
+
       tasks[first].ntargetsp = ntargetsp;
+
       tasks[first].icell = icell;
       first++;
       oldfirst++;
@@ -663,7 +673,7 @@ void FixEmitFace::grow_task()
 
   memset(&tasks[oldmax],0,(ntaskmax-oldmax)*sizeof(Task));
 
-  // allocate per-species vector in each new task
+  // allocate vector in each new task
 
   for (int i = oldmax; i < ntaskmax; i++)
     tasks[i].ntargetsp = new double[nspecies];
@@ -683,8 +693,7 @@ void FixEmitFace::post_compress_grid()
 
   for (int i = 0; i < ntask; i++) {
     int icell = tasks[i].icell;
-    int nsplit = cells[icell].nsplit;
-    if (nsplit == 1) tasks[i].pcell = icell;
+    if (cells[icell].nsplit == 1) tasks[i].pcell = icell;
     else tasks[i].pcell = split(icell,tasks[i].iface);
   }
 }

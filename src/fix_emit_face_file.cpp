@@ -982,6 +982,7 @@ int FixEmitFaceFile::unpack_task(char *buf, int icell)
   ptr += nspecies*sizeof(double);
   memcpy(vscale,ptr,nspecies*sizeof(double));
   ptr += nspecies*sizeof(double);
+
   tasks[ntask].ntargetsp = ntargetsp;
   tasks[ntask].fraction = fraction;
   tasks[ntask].cummulative = cummulative;
@@ -1011,21 +1012,25 @@ void FixEmitFaceFile::copy_task(int icell, int n, int first, int oldfirst)
   if (first == oldfirst) {
     for (int i = 0; i < n; i++) tasks[first].icell = icell;
     first++;
+
   } else {
     for (int i = 0; i < n; i++) {
       double *ntargetsp = tasks[first].ntargetsp;
       double *fraction = tasks[first].fraction;
       double *cummulative = tasks[first].cummulative;
       double *vscale = tasks[first].vscale;
+
       memcpy(&tasks[first],&tasks[oldfirst],sizeof(Task));
       memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
       memcpy(fraction,tasks[oldfirst].fraction,nspecies*sizeof(double));
       memcpy(cummulative,tasks[oldfirst].cummulative,nspecies*sizeof(double));
       memcpy(vscale,tasks[oldfirst].vscale,nspecies*sizeof(double));
+
       tasks[first].ntargetsp = ntargetsp;
       tasks[first].fraction = fraction;
       tasks[first].cummulative = cummulative;
       tasks[first].vscale = vscale;
+
       tasks[first].icell = icell;
       first++;
       oldfirst++;

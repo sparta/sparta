@@ -84,6 +84,153 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 }
 
 /* ----------------------------------------------------------------------
+   clip test of line segment PQ against cell with corners LO,HI
+   return 1 if intersects, 0 if not
+------------------------------------------------------------------------- */
+
+int Cut2d::cliptest(double *p, double *q)
+{
+  double x,y;
+
+  if (p[0] >= lo[0] && p[0] <= hi[0] &&
+      p[1] >= lo[1] && p[1] <= hi[1]) return 1;
+  if (q[0] >= lo[0] && q[0] <= hi[0] &&
+      q[1] >= lo[1] && q[1] <= hi[1]) return 1;
+
+  double a[2],b[2];
+  a[0] = p[0]; a[1] = p[1];
+  b[0] = q[0]; b[1] = q[1];
+
+  // if requested, push line pts from just outside cell surface to surface
+  // must be done now so to insure a line slightly outside cell 
+  //   does not actually intersect cell when pushed in build_clines(),
+  //   else might not be added to list of lines intersecting cell
+
+  if (pushflag % 2) {
+    push_to_cell(a);
+    push_to_cell(b);
+  }
+
+  if (a[0] < lo[0] && b[0] < lo[0]) return 0;
+  if (a[0] < lo[0] || b[0] < lo[0]) {
+    y = a[1] + (lo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+    if (a[0] < lo[0]) {
+      a[0] = lo[0]; a[1] = y;
+    } else {
+      b[0] = lo[0]; b[1] = y;
+    }
+  }
+  if (a[0] > hi[0] && b[0] > hi[0]) return 0;
+  if (a[0] > hi[0] || b[0] > hi[0]) {
+    y = a[1] + (hi[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+    if (a[0] > hi[0]) {
+      a[0] = hi[0]; a[1] = y;
+    } else {
+      b[0] = hi[0]; b[1] = y;
+    }
+  }
+
+  if (a[1] < lo[1] && b[1] < lo[1]) return 0;
+  if (a[1] < lo[1] || b[1] < lo[1]) {
+    x = a[0] + (lo[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
+    if (a[1] < lo[1]) {
+      a[0] = x; a[1] = lo[1];
+    } else {
+      b[0] = x; b[1] = lo[1];
+    }
+  }
+  if (a[1] > hi[1] && b[1] > hi[1]) return 0;
+  if (a[1] > hi[1] || b[1] > hi[1]) {
+    x = a[0] + (hi[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
+    if (a[1] > hi[1]) {
+      a[0] = x; a[1] = hi[1];
+    } else {
+      b[0] = x; b[1] = hi[1];
+    }
+  }
+     
+  return 1;
+}
+
+/* ----------------------------------------------------------------------
+   clip line segment PQ against cell with corners CLO,CHI
+   line may or may not intersect cell (due to rounding)
+   return # of clipped points, can be 0,1,2
+   return clipped points in cpath as series of x,y pairs
+   called externally, depends on no class variables
+   no push of line points is done, since external caller uses true surface
+   duplicate points in cpath are deleted
+------------------------------------------------------------------------- */
+
+int Cut2d::clip_external(double *p, double *q, double *clo, double *chi, 
+                         double *cpath)
+{
+  double x,y;
+
+  // PQ is interior to cell
+
+  if (p[0] >= clo[0] && p[0] <= chi[0] &&
+      p[1] >= clo[1] && p[1] <= chi[1] &&
+      q[0] >= clo[0] && q[0] <= chi[0] &&
+      q[1] >= clo[1] && q[1] <= chi[1]) {
+    cpath[0] = p[0];
+    cpath[1] = p[1];
+    cpath[2] = q[0];
+    cpath[3] = q[1];
+    return 2;
+  }
+
+  double a[2],b[2];
+  a[0] = p[0]; a[1] = p[1];
+  b[0] = q[0]; b[1] = q[1];
+
+  if (a[0] < clo[0] && b[0] < clo[0]) return 0;
+  if (a[0] < clo[0] || b[0] < clo[0]) {
+    y = a[1] + (clo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+    if (a[0] < clo[0]) {
+      a[0] = clo[0]; a[1] = y;
+    } else {
+      b[0] = clo[0]; b[1] = y;
+    }
+  }
+  if (a[0] > chi[0] && b[0] > chi[0]) return 0;
+  if (a[0] > chi[0] || b[0] > chi[0]) {
+    y = a[1] + (chi[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
+    if (a[0] > chi[0]) {
+      a[0] = chi[0]; a[1] = y;
+    } else {
+      b[0] = chi[0]; b[1] = y;
+    }
+  }
+  if (a[1] < clo[1] && b[1] < clo[1]) return 0;
+  if (a[1] < clo[1] || b[1] < clo[1]) {
+    x = a[0] + (clo[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
+    if (a[1] < clo[1]) {
+      a[0] = x; a[1] = clo[1];
+    } else {
+      b[0] = x; b[1] = clo[1];
+    }
+  }
+  if (a[1] > chi[1] && b[1] > chi[1]) return 0;
+  if (a[1] > chi[1] || b[1] > chi[1]) {
+    x = a[0] + (chi[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
+    if (a[1] > chi[1]) {
+      a[0] = x; a[1] = chi[1];
+    } else {
+      b[0] = x; b[1] = chi[1];
+    }
+  }
+
+  cpath[0] = a[0];
+  cpath[1] = a[1];
+  cpath[2] = b[0];
+  cpath[3] = b[1];
+
+  if (a[0] == b[0] && a[1] == b[1]) return 1;
+  return 2;
+}
+
+/* ----------------------------------------------------------------------
    calculate cut area of a grid cell that contains nsurf lines
    also calculate if cell is split into distinct sub-areas by lines
    return nsplit = # of splits, 1 for no split
@@ -713,75 +860,6 @@ int Cut2d::split_point(int *surfmap, double *xsplit)
 
   error->one(FLERR,"Could not find split point in split cell");
   return -1;
-}
-
-/* ----------------------------------------------------------------------
-   clip test of line segment PQ against cell with corners LO,HI
-   return 1 if intersects, 0 if not
-------------------------------------------------------------------------- */
-
-int Cut2d::cliptest(double *p, double *q)
-{
-  double x,y;
-
-  if (p[0] >= lo[0] && p[0] <= hi[0] &&
-      p[1] >= lo[1] && p[1] <= hi[1]) return 1;
-  if (q[0] >= lo[0] && q[0] <= hi[0] &&
-      q[1] >= lo[1] && q[1] <= hi[1]) return 1;
-
-  double a[2],b[2];
-  a[0] = p[0]; a[1] = p[1];
-  b[0] = q[0]; b[1] = q[1];
-
-  // if requested, push line pts from just outside cell surface to surface
-  // must be done now so to insure a line slightly outside cell 
-  //   does not actually intersect cell when pushed in build_clines(),
-  //   else might not be added to list of lines intersecting cell
-
-  if (pushflag % 2) {
-    push_to_cell(a);
-    push_to_cell(b);
-  }
-
-  if (a[0] < lo[0] && b[0] < lo[0]) return 0;
-  if (a[0] < lo[0] || b[0] < lo[0]) {
-    y = a[1] + (lo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
-    if (a[0] < lo[0]) {
-      a[0] = lo[0]; a[1] = y;
-    } else {
-      b[0] = lo[0]; b[1] = y;
-    }
-  }
-  if (a[0] > hi[0] && b[0] > hi[0]) return 0;
-  if (a[0] > hi[0] || b[0] > hi[0]) {
-    y = a[1] + (hi[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
-    if (a[0] > hi[0]) {
-      a[0] = hi[0]; a[1] = y;
-    } else {
-      b[0] = hi[0]; b[1] = y;
-    }
-  }
-
-  if (a[1] < lo[1] && b[1] < lo[1]) return 0;
-  if (a[1] < lo[1] || b[1] < lo[1]) {
-    x = a[0] + (lo[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
-    if (a[1] < lo[1]) {
-      a[0] = x; a[1] = lo[1];
-    } else {
-      b[0] = x; b[1] = lo[1];
-    }
-  }
-  if (a[1] > hi[1] && b[1] > hi[1]) return 0;
-  if (a[1] > hi[1] || b[1] > hi[1]) {
-    x = a[0] + (hi[1]-a[1])/(b[1]-a[1])*(b[0]-a[0]);
-    if (a[1] > hi[1]) {
-      a[0] = x; a[1] = hi[1];
-    } else {
-      b[0] = x; b[1] = hi[1];
-    }
-  }
-     
-  return 1;
 }
 
 /* ----------------------------------------------------------------------

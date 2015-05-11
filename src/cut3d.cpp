@@ -140,6 +140,13 @@ int Cut3d::clip(double *p0, double *p1, double *p2)
   double *s,*e;
   double **path,**newpath;
 
+  // initial path = tri vertices
+
+  nnew = 3;
+  memcpy(path1[0],p0,3*sizeof(double));
+  memcpy(path1[1],p1,3*sizeof(double));
+  memcpy(path1[2],p2,3*sizeof(double));
+
   // intersect if any of tri vertices is within grid cell
 
   if (p0[0] >= lo[0] && p0[0] <= hi[0] &&
@@ -151,13 +158,6 @@ int Cut3d::clip(double *p0, double *p1, double *p2)
       p2[0] >= lo[0] && p2[0] <= hi[0] &&
       p2[1] >= lo[1] && p2[1] <= hi[1] &&
       p2[2] >= lo[2] && p2[2] <= hi[2]) return 1;
-
-  // initial path = tri vertices
-
-  nnew = 3;
-  memcpy(path1[0],p0,3*sizeof(double));
-  memcpy(path1[1],p1,3*sizeof(double));
-  memcpy(path1[2],p2,3*sizeof(double));
 
   // if requested, push tri pts from just outside cell surface to surface
   // must be done now so to insure a tri slightly outside cell 
@@ -212,6 +212,106 @@ int Cut3d::clip(double *p0, double *p1, double *p2)
 }
 
 /* ----------------------------------------------------------------------
+   clip triangle P0 P1 P2 against cell with corners CLO,CHI
+   tri may or may not intersect cell (due to rounding)
+   return # of clipped points, can be 0,1,2,3 up to 8 (I think)
+   return clipped points in cpath as series of x,y,z triplets
+   called externally, depends on no class variables
+   no push of tri points is done, since external caller uses true surface
+   duplicate points in cpath are deleted
+   uses Sutherland-Hodgman clipping algorithm
+------------------------------------------------------------------------- */
+
+int Cut3d::clip_external(double *p0, double *p1, double *p2,
+                         double *clo, double *chi, double *cpath)
+{
+  int i,npath,nnew;
+  double value;
+  double *s,*e;
+  double **path,**newpath;
+
+  // initial path = tri vertices
+
+  nnew = 3;
+  memcpy(path1[0],p0,3*sizeof(double));
+  memcpy(path1[1],p1,3*sizeof(double));
+  memcpy(path1[2],p2,3*sizeof(double));
+
+  // clip tri against each of 6 grid face planes
+
+  for (int dim = 0; dim < 3; dim++) {
+    path = path1;
+    newpath = path2;
+    npath = nnew;
+    nnew = 0;
+
+    value = clo[dim];
+    s = path[npath-1];
+    for (i = 0; i < npath; i++) {
+      e = path[i];
+      if (e[dim] >= value) {
+        if (s[dim] < value) between(s,e,dim,value,newpath[nnew++]);
+        memcpy(newpath[nnew++],e,3*sizeof(double));
+      } else if (s[dim] >= value) between(e,s,dim,value,newpath[nnew++]);
+      s = e;
+    }
+    if (!nnew) return 0;
+
+    path = path2;
+    newpath = path1;
+    npath = nnew;
+    nnew = 0;
+
+    value = chi[dim];
+    s = path[npath-1];
+    for (i = 0; i < npath; i++) {
+      e = path[i];
+      if (e[dim] <= value) {
+        if (s[dim] > value) between(s,e,dim,value,newpath[nnew++]);
+        memcpy(newpath[nnew++],e,3*sizeof(double));
+      } else if (s[dim] <= value) between(e,s,dim,value,newpath[nnew++]);
+      s = e;
+    }
+    if (!nnew) return 0;
+  }
+  
+  // copy path points to cpath
+  // delete any duplicate points while copying
+  // inner-loop check is to not add a point that duplicates previous point
+  // post-loop check is for duplicate due to 1st point = last point
+
+  int m = 0;
+  int n = nnew;
+  nnew = 0;
+  for (i = 0; i < n; i++) {
+    if (m) {
+      if (path1[i][0] == cpath[m-3] && path1[i][1] == cpath[m-2] && 
+          path1[i][2] == cpath[m-1]) continue;
+    }
+    cpath[m++] = path1[i][0];
+    cpath[m++] = path1[i][1];
+    cpath[m++] = path1[i][2];
+    nnew++;
+  }
+  if (nnew > 1)
+    if (cpath[0] == cpath[m-3] && cpath[1] == cpath[m-2] && 
+        cpath[2] == cpath[m-1]) nnew--;
+
+  return nnew;
+}
+
+/* ----------------------------------------------------------------------
+   calculate cut volume of a grid cell that contains nsurf tris
+   also calculate if cell is split into distinct sub-volumes by tris
+   return nsplit = # of splits, 1 for no split
+   return vols = ptr to vector of vols = one vol per split
+     if nsplit = 1, cut vol
+     if nsplit > 1, one vol per split cell
+   if nsplit > 1, also return:
+     surfmap = which sub-cell (0 to Nsurfs-1) each surf is in
+             = -1 if not in any sub-cell (i.e. discarded from clines)
+     xsub = which sub-cell (0 to Nsplit-1) xsplit is in
+     xsplit = coords of a point in the split cell
 ------------------------------------------------------------------------- */
 
 int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller, 

@@ -78,7 +78,7 @@ class Cut2d : protected Pointers {
   int split(cellint, double *, double *, int, int *,
             double *&, int *, int *, int &, double *);
   void split_face(int, int, double *, double *);
-  int clip_external(double *, double *, double *) {return 0;}
+  int clip_external(double *, double *, double *, double *, double *);
 
  private:
   int axisymmetric;
