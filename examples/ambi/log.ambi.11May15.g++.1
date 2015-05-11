@@ -1,0 +1,141 @@
+SPARTA (13 Mar 2015)
+# simple ambipolar example
+
+seed	    	    12345
+dimension   	    2
+boundary	    o o p
+global              gridcut 0.01
+create_box  	    -2.0 2.0 -2.0 2.0 -0.5 0.5
+Created orthogonal box = (-2 -2 -0.5) to (2 2 0.5)
+create_grid         50 50 1
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:369)
+Created 2500 child grid cells
+  parent cells = 1
+  CPU time = 0.00111604 secs
+  create/ghost percent = 94.9797 5.02029
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.00118995 secs
+  reassign/sort/migrate/ghost percent = 18.4131 0.921659 1.92346 78.7417
+
+global		    fnum 2.6404E16
+
+mixture		    species nrho 2.6404e20 vstream 12500.0 0 0 temp 217.63
+
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+ e
+
+mixture             species copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.8
+mixture             noelectron O2 frac 0.2
+
+fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
+collide             vss all air.vss
+collide_modify      ambipolar yes
+react               tce air.tce
+
+read_surf           data.circle invert
+  1001 points
+  1001 lines
+  -0.999995 1 xlo xhi
+  -0.999999 0.999999 ylo yhi
+  0 0 zlo zhi
+  0.0062769 min line length
+  100 = cells with surfs
+  1102 = total surfs in all grid cells
+  16 = max surfs in one grid cell
+  0.0784612 = min surf-size/cell-size ratio
+  1960 440 100 = cells outside/inside/overlapping surfs
+  100 = surf cells with 1,2,etc splits
+  12.8584 12.8584 = cell-wise and global flow volume
+  CPU time = 0.00391316 secs
+  read/surf2grid/error/ghost/inout percent = 22.3603 53.287 8.81618 10.8329 4.70359
+global              surfpush yes
+surf_collide	    1 diffuse 615.0 1.0
+surf_react          1 prob air.surf
+surf_modify         all collide 1 react 1
+
+collide		    vss species air.vss relax variable
+collide_modify      vremax 1000 yes vibrate discrete rotate yes
+collide_modify      ambipolar yes
+react               tce air.tce
+
+create_particles    noelectron n 0
+Created 128584 particles
+  CPU time = 0.0582471 secs
+
+fix                 in emit/face noelectron xlo yhi
+fix                 load balance 100 1.1 rcb part
+
+# too large a timestep, but want to induce ambipolar reactions
+
+timestep 	    1.e-7
+
+compute             10 count noelectron
+compute             temp temp
+stats_style         step cpu np nattempt ncoll nsreact c_temp                     c_10[6] c_10[7] c_10[8] c_10[9] c_10[10]
+
+stats               100
+
+run                 1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 17 17 17
+  grid      (ave,min,max) = 1.83114 1.83114 1.83114
+  surf      (ave,min,max) = 0.0725517 0.0725517 0.0725517
+  total     (ave,min,max) = 18.9037 18.9037 18.9037
+Step CPU Np Natt Ncoll Nsreact temp 10[6] 10[7] 10[8] 10[9] 10[10] 
+       0            0   128584        0        0        0    180656.78            0            0            0            0            0 
+     100   0.82124114   128552      833      599        0    178281.28            0            0            0            0            0 
+     200    1.7631311   129077     1364      890        0    173690.18            1            0            0            0            2 
+     300    2.8207581   130117     2183     1318        0    168656.91            3            1            0            2            3 
+     400     4.010119   131726     3622     2058        0    163255.17            8            1            5           11           10 
+     500     5.349061   133727     5298     3005        0    157707.74           20            6           18           30           14 
+     600    6.8391502   135818     7957     4131        0    152126.32           43           12           49           76           14 
+     700    8.5063331   138050    11350     5464        0    146607.34           75           13           91          147           15 
+     800    10.366182   140615    15772     7109        0    141170.85           86            6          176          239           19 
+     900    12.437301   144134    20095     8998        1    136127.61          115            8          270          353           25 
+    1000    14.726059   148119     5012     3897        1    131632.41          140            5          372          491           33 
+Loop time of 14.7261 on 1 procs for 1000 steps with 148119 particles
+
+Particle moves    = 135023042 (135M)
+Cells touched     = 137062066 (137M)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 48941 (48.9K)
+SurfColl checks   = 193504691 (194M)
+SurfColl occurs   = 115639 (0.116M)
+Surf reactions    = 269 (0.269K)
+Collide attempts  = 8096037 (8.1M)
+Collide occurs    = 3883280 (3.88M)
+Reactions         = 24726 (24.7K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 9.16897e+06
+Particle-moves/step: 135023
+Cell-touches/particle/step: 1.0151
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0.000362464
+Surface-checks/particle/step: 1.43312
+Surface-collisions/particle/step: 0.000856439
+Surf-reactions/particle/step: 1.99225e-06
+Collision-attempts/particle/step: 0.0599604
+Collisions/particle/step: 0.0287601
+Reactions/particle/step: 0.000183124
+
+Move  time (%) = 5.19841 (35.3007)
+Coll  time (%) = 8.41307 (57.1304)
+Sort  time (%) = 0.979853 (6.65386)
+Comm  time (%) = 0.0162628 (0.110435)
+Outpt time (%) = 0.0275571 (0.187131)
+Other time (%) = 0.0909369 (0.617522)
+
+Particles: 148119 ave 148119 max 148119 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      2500 ave 2500 max 2500 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
