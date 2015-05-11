@@ -54,8 +54,8 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
 #define MOVE_DEBUG_ID 67521063  // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 387411       // particle index on owning proc
-#define MOVE_DEBUG_STEP 1    // timestep
+#define MOVE_DEBUG_INDEX 24       // particle index on owning proc
+#define MOVE_DEBUG_STEP 3    // timestep
 
 /* ---------------------------------------------------------------------- */
 
