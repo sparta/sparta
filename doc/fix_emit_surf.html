@@ -21,7 +21,7 @@
 
 <LI>mix-ID = ID of mixture to use when creating particles 
 
-<LI>group-ID = ID of surface group for which surface elements emit particles 
+<LI>group-ID = ID of surface group that emits particles 
 
 <LI>zero or more keyword/value pairs may be appended 
 
@@ -44,12 +44,12 @@ fix in emit/face mymix myPatch region circle normal yes
 </P>
 <P>Emit particles from a group of surface elements, continuously during a
 simulation.  If invoked every timestep, this fix creates a continuous
-outflux of particles from the surface elements.
+outflux of particles from the surface elements in the group.
 </P>
-<P>The properties of the added particles are from the mixture with ID
-<I>mix-ID</I>.  This determines the number and species of added particles,
-as well as their streaming velocity, thermal temperature, and internal
-energy modes.  The details are explained below.
+<P>The properties of the added particles are determined by the mixture
+with ID <I>mix-ID</I>.  This sets the number and species of added
+particles, as well as their streaming velocity, thermal temperature,
+and internal energy modes.  The details are explained below.
 </P>
 <P>Which surface elements emit particles is specified by the <I>group-ID</I>
 for a surface group, which defines a set of surface elements.  The
@@ -204,9 +204,9 @@ a run is performed.
 <P>A <I>n</I> setting of <I>Np</I> > 0 can only be used with a <I>perspecies</I> setting
 of <I>no</I>.
 </P>
-<P>If <I>normal</I> is set to <I>no</I> (the default), then a surface element will
-not emit any particles it its outward normal is in a direction
-opposing the streaming velocity.
+<P>If <I>normal</I> is set to <I>no</I>, which is the default, then a surface
+element will not emit any particles it its outward normal is in a
+direction opposing the streaming velocity.
 </P>
 <P><B>Related commands:</B>
 </P>

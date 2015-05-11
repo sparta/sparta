@@ -43,11 +43,11 @@ plume flow where the flow has spatially varying properties.  If
 invoked every timestep, this fix creates a continuous influx of
 particles thru the face.
 
-The properties of the added particles are derived from the mixture
-with ID {mix-ID} and the input file.  Together they determine the
-number and species of added particles, as well as their streaming
-velocity, thermal temperature, and internal energy modes.  The details
-are explained below.
+The properties of the added particles are determined by the mixture
+with ID {mix-ID} and the input file.  Together they set the number and
+species of added particles, as well as their streaming velocity,
+thermal temperature, and internal energy modes.  The details are
+explained below.
 
 Only one face of the simulation box can be specified via the {face}
 argument.  The 6 possible faces are {xlo}, {xhi}, {ylo}, {yhi}, {zlo},
