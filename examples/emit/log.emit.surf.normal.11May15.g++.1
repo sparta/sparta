@@ -1,0 +1,118 @@
+SPARTA (13 Mar 2015)
+# 2d partiles emitted from a circle
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
+create_grid 	    10 10 1
+WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:369)
+Created 100 child grid cells
+  parent cells = 1
+  CPU time = 0.000897884 secs
+  create/ghost percent = 97.6633 2.3367
+balance_grid        rcb cell
+Balance grid migrated 0 cells
+  CPU time = 0.000112057 secs
+  reassign/sort/migrate/ghost percent = 39.3617 0.851064 10.6383 49.1489
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 10.0 0 0 temp 10.0
+
+read_surf           data.circle
+  50 points
+  50 lines
+  2 8 xlo xhi
+  2.00592 7.99408 ylo yhi
+  0 0 zlo zhi
+  0.376743 min line length
+  24 = cells with surfs
+  80 = total surfs in all grid cells
+  4 = max surfs in one grid cell
+  0.376743 = min surf-size/cell-size ratio
+  60 16 24 = cells outside/inside/overlapping surfs
+  24 = surf cells with 1,2,etc splits
+  71.8 71.8 = cell-wise and global flow volume
+  CPU time = 0.000174999 secs
+  read/surf2grid/error/ghost/inout percent = 45.2316 23.4332 6.26703 13.079 11.9891
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         all collide 1
+
+collide             vss air air.vss
+
+region              slit block INF INF 4.5 5.5 INF INF
+
+fix		    in emit/surf air all normal yes perspecies no #region slit
+#fix		    in emit/surf air all perspecies yes region slit
+#fix		    in emit/face air xlo region slit
+
+timestep 	    0.0001
+
+#dump                2 image all 10 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 axes yes 0.9 0.02
+#dump_modify	    2 pad 4
+
+fix                 1 balance 10 1.0 rcb part
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    300
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.83114 1.83114 1.83114
+  surf      (ave,min,max) = 0.00362396 0.00362396 0.00362396
+  total     (ave,min,max) = 1.83476 1.83476 1.83476
+Step CPU Np Natt Ncoll Nscoll Nscheck 
+       0            0        0        0        0        0        0 
+     100  0.028068781     6580        0        0        0    10658 
+     200  0.076211929    12672        0        0        0    12346 
+     300   0.13930893    17559        0        0        5    13246 
+Loop time of 0.139316 on 1 procs for 300 steps with 17559 particles
+
+Particle moves    = 2835692 (2.84M)
+Cells touched     = 2879429 (2.88M)
+Particle comms    = 0 (0K)
+Boundary collides = 2171 (2.17K)
+Boundary exits    = 2164 (2.16K)
+SurfColl checks   = 3180862 (3.18M)
+SurfColl occurs   = 138 (0.138K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 2.03544e+07
+Particle-moves/step: 9452.31
+Cell-touches/particle/step: 1.01542
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0.000765598
+Particle fraction exiting boundary: 0.000763129
+Surface-checks/particle/step: 1.12172
+Surface-collisions/particle/step: 4.86654e-05
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Move  time (%) = 0.0957077 (68.6983)
+Coll  time (%) = 0.00549459 (3.94398)
+Sort  time (%) = 0.009969 (7.15568)
+Comm  time (%) = 0.000214338 (0.153851)
+Outpt time (%) = 2.57492e-05 (0.0184826)
+Other time (%) = 0.0279045 (20.0297)
+
+Particles: 17559 ave 17559 max 17559 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      100 ave 100 max 100 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
