@@ -21,6 +21,7 @@ axi = axisymmetric flow around a sphere
 chem = chemistry in a 3d box
 circle = 2d flow around a circle
 collide = collisional motion in a 3d box
+emit = 2d particle emission from surfaces and box face
 flowfile = particle influx defined by a file of mesh points
 free = free molecular motion in a 3d box
 sphere = 3d flow around a sphere

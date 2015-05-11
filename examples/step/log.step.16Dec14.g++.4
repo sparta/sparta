@@ -1,0 +1,117 @@
+SPARTA (10 Dec 2014)
+# 2d flow around a staircase of steps
+
+seed	    	    12345
+dimension   	    2
+global              gridcut 0.0 comm/sort yes
+
+boundary	    o r p
+
+create_box  	    0 10 0 10 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
+create_grid 	    20 20 1
+Created 400 child grid cells
+  parent cells = 1
+  CPU time = 0.00306392 secs
+  create/ghost percent = 98.2725 1.72749
+balance_grid        rcb cell
+Balance grid migrated 280 cells
+  CPU time = 0.000386 secs
+  reassign/sort/migrate/ghost percent = 50.8338 0.741198 17.6035 30.8215
+
+global		    nrho 1.0 fnum 0.001
+
+species		    air.species N O
+mixture		    air N O vstream 100.0 0 0
+
+read_surf	    1 data.step trans 5 5 0 scale 0.75 0.75 1                     rotate 45 0 0 1 invert
+  16 points
+  16 lines
+  2.34835 7.65165 xlo xhi
+  2.34835 7.65165 ylo yhi
+  0 0 zlo zhi
+  1.06066 min line length
+  44 = cells with surfs
+  60 = total surfs in all grid cells
+  2 = max surfs in one grid cell
+  2.12132 = min surf-size/cell-size ratio
+  312 44 44 = cells outside/inside/overlapping surfs
+  44 = surf cells with 1,2,etc splits
+  85.375 85.375 = cell-wise and global flow volume
+  CPU time = 0.000254154 secs
+  read/surf2grid/error/ghost/inout percent = 25.2345 16.1351 4.3152 27.955 26.3602
+surf_collide	    1 diffuse 300.0 0.0
+surf_modify         collide 1 1
+
+collide             vss air air.vss
+
+fix		    in inflow air xlo
+
+timestep 	    0.0001
+
+#dump                2 image 50 image.*.ppm type type pdiam 0.1 #                    surf proc 0.01 size 512 512 axes yes 0.9 0.02
+#dump_modify	    2 pad 4
+
+stats		    100
+stats_style	    step cpu np nattempt ncoll nscoll nscheck
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 0 0 0
+  grid      (ave,min,max) = 1.83113 1.83113 1.83113
+  surf      (ave,min,max) = 0.000991821 0.000991821 0.000991821
+  total     (ave,min,max) = 1.83212 1.83212 1.83212
+Step CPU Np Natt Ncoll Nscoll Nscheck 
+       0            0        0        0        0        0        0 
+     100  0.031031132    20158        0        0      109     2608 
+     200   0.08414197    32834        0        0      177     4611 
+     300   0.14713502    39066        0        0      202     5668 
+     400   0.21563005    42375        0        0      167     5863 
+     500   0.28731012    44586        0        0      179     6165 
+     600   0.36150002    46057        0        0      191     6428 
+     700   0.43682194    47084        0        0      195     6633 
+     800   0.51305795    47839        0        0      162     6584 
+     900   0.58947015    48203        0        0      215     6924 
+    1000   0.66676593    48846        0        0      187     6648 
+Loop time of 0.666842 on 4 procs for 1000 steps with 48846 particles
+
+Particle moves    = 39621969 (39.6M)
+Cells touched     = 44830539 (44.8M)
+Particle comms    = 222398 (0.222M)
+Boundary collides = 141953 (0.142M)
+Boundary exits    = 161747 (0.162M)
+SurfColl checks   = 5441134 (5.44M)
+SurfColl occurs   = 173589 (0.174M)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 1.48543e+07
+Particle-moves/step: 39622
+Cell-touches/particle/step: 1.13146
+Particle comm iterations/step: 1.998
+Particle fraction communicated: 0.005613
+Particle fraction colliding with boundary: 0.00358268
+Particle fraction exiting boundary: 0.00408226
+Surface-checks/particle/step: 0.137326
+Surface-collisions/particle/step: 0.00438113
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Move  time (%) = 0.533925 (80.0678)
+Coll  time (%) = 0.025151 (3.77165)
+Sort  time (%) = 0.0370701 (5.55906)
+Comm  time (%) = 0.00563252 (0.844656)
+Outpt time (%) = 0.000796854 (0.119497)
+Other time (%) = 0.064266 (9.63737)
+
+Particles: 12211.5 ave 21173 max 5847 min
+Histogram: 1 1 0 0 0 1 0 0 0 1
+Cells:      100 ave 100 max 100 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 21 ave 21 max 21 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 21 ave 21 max 21 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+

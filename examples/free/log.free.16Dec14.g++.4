@@ -1,10 +1,10 @@
-SPARTA (7 Jul 2014)
+SPARTA (10 Dec 2014)
 # thermal gas in a 3d box with free molecular flow (no collisions)
 # particles reflect off global box boundaries
 
 seed	    	    12345
 dimension   	    3
-global              gridcut 1.0e-5
+global              gridcut 1.0e-5 comm/sort yes
 
 boundary	    rr rr rr
 
@@ -13,13 +13,13 @@ Created orthogonal box = (0 0 0) to (0.0001 0.0001 0.0001)
 create_grid 	    10 10 10
 Created 1000 child grid cells
   parent cells = 1
-  CPU time = 0.00142193 secs
-  create/ghost percent = 96.4789 3.52113
+  CPU time = 0.00322199 secs
+  create/ghost percent = 98.5053 1.49475
 
 balance_grid        rcb part
 Balance grid migrated 740 cells
-  CPU time = 0.00106788 secs
-  reassign/sort/migrate/ghost percent = 24.4251 0.200938 12.0786 63.2954
+  CPU time = 0.000809193 secs
+  reassign/sort/migrate/ghost percent = 30.5245 0.265174 14.5846 54.6258
 
 species		    ar.species Ar
 mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
@@ -29,7 +29,7 @@ global              fnum 7.07043E6
 
 create_particles    air n 10000
 Created 10000 particles
-  CPU time = 0.000878096 secs
+  CPU time = 0.00113106 secs
 
 stats		    100
 compute             temp temp
@@ -47,50 +47,52 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 2.8611 2.8611 2.8611
 Step CPU Np Natt Ncoll temp 
        0            0    10000        0        0    268.58491 
-     100 0.0080411434    10000        0        0    268.58491 
-     200  0.016507149    10000        0        0    268.58491 
-     300  0.024565935    10000        0        0    268.58491 
-     400  0.032325029    10000        0        0    268.58491 
-     500  0.040019989    10000        0        0    268.58491 
-     600  0.047709942    10000        0        0    268.58491 
-     700  0.055453062    10000        0        0    268.58491 
-     800  0.063249111    10000        0        0    268.58491 
-     900   0.07093215    10000        0        0    268.58491 
-    1000  0.078696966    10000        0        0    268.58491 
-Loop time of 0.0787089 on 4 procs for 1000 steps with 10000 particles
+     100 0.0085890293    10000        0        0    268.58491 
+     200  0.017533064    10000        0        0    268.58491 
+     300   0.02652812    10000        0        0    268.58491 
+     400  0.035380125    10000        0        0    268.58491 
+     500  0.044056177    10000        0        0    268.58491 
+     600  0.052787066    10000        0        0    268.58491 
+     700  0.061495066    10000        0        0    268.58491 
+     800  0.070192099    10000        0        0    268.58491 
+     900  0.078957081    10000        0        0    268.58491 
+    1000  0.087656975    10000        0        0    268.58491 
+Loop time of 0.0876701 on 4 procs for 1000 steps with 10000 particles
 
 Particle moves    = 10000000 (10M)
-Cells touched     = 13566243 (13.6M)
-Particle comms    = 263383 (0.263M)
-Boundary collides = 396289 (0.396M)
+Cells touched     = 13566278 (13.6M)
+Particle comms    = 263461 (0.263M)
+Boundary collides = 396254 (0.396M)
 Boundary exits    = 0 (0K)
 SurfColl checks   = 0 (0K)
 SurfColl occurs   = 0 (0K)
 Collide attempts  = 0 (0K)
 Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
 Particles stuck   = 0
 
-Particle-moves/CPUsec/proc: 3.17626e+07
+Particle-moves/CPUsec/proc: 2.8516e+07
 Particle-moves/step: 10000
-Cell-touches/particle/step: 1.35662
+Cell-touches/particle/step: 1.35663
 Particle comm iterations/step: 1
-Particle fraction communicated: 0.0263383
-Particle fraction colliding with boundary: 0.0396289
+Particle fraction communicated: 0.0263461
+Particle fraction colliding with boundary: 0.0396254
 Particle fraction exiting boundary: 0
 Surface-checks/particle/step: 0
 Surface-collisions/particle/step: 0
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
+Reactions/particle/step: 0
 
-Move  time (%) = 0.0670611 (85.2014)
+Move  time (%) = 0.0755045 (86.1234)
 Coll  time (%) = 0 (0)
 Sort  time (%) = 0 (0)
-Comm  time (%) = 0.0112351 (14.2743)
-Outpt time (%) = 0.000262022 (0.3329)
-Other time (%) = 0.000150681 (0.19144)
+Comm  time (%) = 0.0117272 (13.3765)
+Outpt time (%) = 0.000273943 (0.31247)
+Other time (%) = 0.000164449 (0.187577)
 
-Particles: 2500 ave 2543 max 2471 min
-Histogram: 2 0 0 0 0 1 0 0 0 1
+Particles: 2500 ave 2561 max 2465 min
+Histogram: 1 1 0 1 0 0 0 0 0 1
 Cells:      250 ave 250 max 250 min
 Histogram: 4 0 0 0 0 0 0 0 0 0
 GhostCell: 172.5 ave 240 max 110 min

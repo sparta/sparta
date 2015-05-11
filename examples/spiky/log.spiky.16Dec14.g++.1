@@ -1,10 +1,10 @@
-SPARTA (7 Jul 2014)
+SPARTA (10 Dec 2014)
 # 2d flow around a spiky circle
 # good test of cut and split cells
 
 seed	    	    12345
 dimension   	    2
-global              gridcut 0.0
+global              gridcut 0.0 comm/sort yes
 
 boundary	    o r p
 
@@ -13,12 +13,12 @@ Created orthogonal box = (0 0 -0.5) to (10 10 0.5)
 create_grid 	    20 20 1
 Created 400 child grid cells
   parent cells = 1
-  CPU time = 0.000739098 secs
-  create/ghost percent = 97.4194 2.58065
+  CPU time = 0.000921011 secs
+  create/ghost percent = 98.0326 1.96738
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.000374079 secs
-  reassign/sort/migrate/ghost percent = 19.7578 0.573614 4.27024 75.3983
+  CPU time = 0.000256062 secs
+  reassign/sort/migrate/ghost percent = 28.4916 0.372439 4.28305 66.8529
 
 global		    nrho 1.0 fnum 0.001
 
@@ -39,8 +39,8 @@ read_surf           1 data.spiky trans 5 5 0 scale 0.4 0.4 1
   268 5 127 = cells outside/inside/overlapping surfs
   86 40 1 = surf cells with 1,2,etc splits
   85.4883 85.4883 = cell-wise and global flow volume
-  CPU time = 0.000518084 secs
-  read/surf2grid/error/ghost/inout percent = 15.8306 33.5941 2.89922 36.4473 11.2287
+  CPU time = 0.000447989 secs
+  read/surf2grid/error/ghost/inout percent = 22.7249 42.6823 4.20436 17.8819 12.5067
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         collide 1 1
 
@@ -63,49 +63,51 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 2.29233 2.29233 2.29233
 Step CPU Np Natt Ncoll Nscoll Nscheck 
        0            0        0        0        0        0        0 
-     100  0.032530069    12083        0        0      153     4384 
-     200   0.10449696    21499        0        0      337    10295 
-     300   0.20441914    27950        0        0      419    13617 
-     400   0.32314706    32506        0        0      458    15648 
-     500   0.45405912    35597        0        0      456    16866 
-     600   0.59368205    38230        0        0      491    17935 
-     700   0.74250817    40373        0        0      541    19145 
-     800   0.89819813    41925        0        0      495    19430 
-     900    1.0583751    43094        0        0      542    19715 
-    1000     1.222115    44023        0        0      525    20259 
-Loop time of 1.22212 on 1 procs for 1000 steps with 44023 particles
+     100  0.065958977    20267        0        0      467    11711 
+     200   0.21143889    33370        0        0      742    19985 
+     300   0.39944792    40500        0        0      811    23763 
+     400   0.60872698    44511        0        0      862    26097 
+     500   0.83128095    47194        0        0      852    27044 
+     600    1.0629489    49114        0        0      923    28139 
+     700       1.3013    50403        0        0      917    28524 
+     800    1.5429969    51222        0        0      915    28883 
+     900    1.7868941    51885        0        0     1021    29657 
+    1000     2.033978    52539        0        0      891    29578 
+Loop time of 2.03399 on 1 procs for 1000 steps with 52539 particles
 
-Particle moves    = 31810232 (31.8M)
-Cells touched     = 35257012 (35.3M)
+Particle moves    = 41829289 (41.8M)
+Cells touched     = 47398710 (47.4M)
 Particle comms    = 0 (0K)
-Boundary collides = 118662 (0.119M)
-Boundary exits    = 166720 (0.167M)
-SurfColl checks   = 14669080 (14.7M)
-SurfColl occurs   = 417365 (0.417M)
+Boundary collides = 163583 (0.164M)
+Boundary exits    = 158218 (0.158M)
+SurfColl checks   = 23811084 (23.8M)
+SurfColl occurs   = 798136 (0.798M)
 Collide attempts  = 0 (0K)
 Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
 Particles stuck   = 0
 
-Particle-moves/CPUsec/proc: 2.60287e+07
-Particle-moves/step: 31810.2
-Cell-touches/particle/step: 1.10835
+Particle-moves/CPUsec/proc: 2.05651e+07
+Particle-moves/step: 41829.3
+Cell-touches/particle/step: 1.13315
 Particle comm iterations/step: 1
 Particle fraction communicated: 0
-Particle fraction colliding with boundary: 0.00373031
-Particle fraction exiting boundary: 0.00524108
-Surface-checks/particle/step: 0.461143
-Surface-collisions/particle/step: 0.0131205
+Particle fraction colliding with boundary: 0.00391073
+Particle fraction exiting boundary: 0.00378247
+Surface-checks/particle/step: 0.569244
+Surface-collisions/particle/step: 0.0190808
 Collision-attempts/particle/step: 0
 Collisions/particle/step: 0
+Reactions/particle/step: 0
 
-Move  time (%) = 0.835282 (68.3468)
-Coll  time (%) = 0.115916 (9.48485)
-Sort  time (%) = 0.123616 (10.1149)
-Comm  time (%) = 0.00300312 (0.24573)
-Outpt time (%) = 8.65459e-05 (0.00708161)
-Other time (%) = 0.144219 (11.8007)
+Move  time (%) = 1.45914 (71.7377)
+Coll  time (%) = 0.149346 (7.3425)
+Sort  time (%) = 0.167548 (8.2374)
+Comm  time (%) = 0.00476336 (0.234188)
+Outpt time (%) = 0.000129938 (0.00638834)
+Other time (%) = 0.253065 (12.4418)
 
-Particles: 44023 ave 44023 max 44023 min
+Particles: 52539 ave 52539 max 52539 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
 Cells:      483 ave 483 max 483 min
 Histogram: 1 0 0 0 0 0 0 0 0 0

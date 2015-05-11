@@ -1,0 +1,91 @@
+# Stardust no ablation no ions no recomb
+
+seed	    	    12345
+dimension   	    2
+boundary	    o o p
+global              gridcut 0.01
+create_box  	    -2.0 2.0 -2.0 2.0 -0.5 0.5
+create_grid         200 200 1
+balance_grid        rcb cell
+
+global		    fnum 2.6404E16 
+
+mixture		    species nrho 2.6404e20 vstream 12500. 0 0 temp 217.63 
+
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+  e
+
+mixture             species copy noelectron
+mixture             noelectron delete e
+mixture             noelectron N2 frac 0.8
+mixture             noelectron O2 frac 0.2
+
+fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
+collide             vss all air.vss
+collide_modify      ambipolar yes
+react               tce air.tce
+
+read_surf           data.circle invert
+global              surfpush yes
+surf_collide	    1 diffuse 615.0 1.0
+surf_react          1 prob air.surf
+surf_modify         all collide 1 react 1
+
+collide		    vss species air.vss relax variable 
+collide_modify      vremax 1000 yes vibrate discrete rotate yes
+collide_modify      ambipolar yes
+react               tce air.tce
+
+create_particles    noelectron n 0
+
+fix                 in emit/face noelectron xlo yhi
+#fix                 load balance 100 1.1 rcb part
+
+#fix                 check grid/check 1 error
+
+timestep 	    1.e-8
+
+compute             1 grid noelectron nrho 
+fix                 1 ave/grid 10 1000 10000 c_1 ave one 
+
+compute             3 grid all trot tvib 
+fix                 3 ave/grid 10 1000 10000 c_3 ave one
+
+compute             4 sonine/grid all thermal
+fix                 4 ave/grid 1 1000 1000 c_4 ave one
+
+dump                1 grid all 10000 tmp_flow.* id xc yc f_1 f_4 f_3
+
+compute             2 surf all all press etot
+fix                 2 ave/surf all 10 100 1000 c_2 ave one
+
+dump                2 surf all 10000 tmp_surf.* id f_2
+
+compute             g grid all n
+compute             max reduce max c_g[1]
+
+compute             10 count noelectron
+compute             temp temp
+stats_style         step cpu np nattempt ncoll nsreact c_temp &
+                    c_10[1] c_10[2] c_10[3] c_10[4] c_10[5] c_10[6]
+
+stats               100
+
+run                 50000
+
+unfix               1
+unfix               2
+unfix               3
+
+undump              1
+undump              2
+
+fix                 1 ave/grid  10 1000 10000 c_1 ave running
+fix                 2 ave/surf all 10 1000 10000 c_2 ave running
+fix                 3 ave/grid 10 1000 10000 c_3 ave running 
+
+dump                1 grid all 10000 std_flow.* id xc yc f_1 f_4 f_3
+dump                2 surf all 10000 std_surf.* id f_2
+
+collide_modify      vremax 0 yes
+
+run                 10000000
