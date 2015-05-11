@@ -291,10 +291,11 @@ void FixEmit::compress_grid()
     oldntaskfirst = clistfirst[oldlist];
 
     c2list[nglocal] = nlist;
-    clist[nlist] = nglocal++;
+    clist[nlist] = nglocal;
     clistnum[nlist] = ntaskcell;
     clistfirst[nlist] = ntaskfirst;
-    copy_task(icell,ntaskcell,ntaskfirst,oldntaskfirst);
+    copy_task(nglocal,ntaskcell,ntaskfirst,oldntaskfirst);
+    nglocal++;
     ntaskfirst += ntaskcell;
     nlist++;
   }
