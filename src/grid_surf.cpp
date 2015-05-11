@@ -473,6 +473,9 @@ double Grid::flow_volume()
       volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) * 
         (boxhi[2]-boxlo[2]); 
  
+  // axisymmetric "volume" of line segment = volume of truncated cone
+  // PI/3 (y1^2 + y1y2 + y2^2) (x2-x1)
+
   } else if (domain->axisymmetric) {
     for (int i = 0; i < surf->nline; i++) {
       p1 = pts[lines[i].p1].x;

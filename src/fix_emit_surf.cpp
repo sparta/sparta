@@ -236,10 +236,14 @@ int FixEmitSurf::create_task(int icell)
       path[4] = cpath[3];
       path[5] = 0.0;
 
-      // NOTE: axisym area is wrong
+      // axisymmetric "area" of line segment = surf area of truncated cone
+      // PI (y1+y2) sqrt( (y1-y2)^2 + (x1-x2)^2) )
 
-      if (domain->axisymmetric) area = 0.0;
-      else {
+      if (domain->axisymmetric) {
+        double sqrtarg = (path[1]-path[4])*(path[1]-path[4]) + 
+          (path[0]-path[3])*(path[0]-path[3]);
+        area = MY_PI * (path[1]+path[4]) * sqrt(sqrtarg);
+      } else {
         MathExtra::sub3(&path[0],&path[3],delta);
         area = MathExtra::len3(delta);
       }
