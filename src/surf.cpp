@@ -142,11 +142,11 @@ void Surf::modify_params(int narg, char **arg)
       // set surf reaction model for each surf in surface group
 
       if (domain->dimension == 2) {
-        for (int i = 0; i <= nline; i++)
+        for (int i = 0; i < nline; i++)
           if (lines[i].mask & groupbit) lines[i].isr = isr;
       }
       if (domain->dimension == 3) {
-        for (int i = 0; i <= ntri; i++)
+        for (int i = 0; i < ntri; i++)
           if (tris[i].mask & groupbit) tris[i].isr = isr;
       }
 
