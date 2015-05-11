@@ -12,7 +12,7 @@ global		    fnum 2.6404E16
 
 mixture		    species nrho 2.6404e20 vstream 12500. 0 0 temp 217.63 
 
-species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+  e
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+ e
 
 mixture             species copy noelectron
 mixture             noelectron delete e
@@ -38,7 +38,7 @@ react               tce air.tce
 create_particles    noelectron n 0
 
 fix                 in emit/face noelectron xlo yhi
-#fix                 load balance 100 1.1 rcb part
+fix                 load balance 100 1.1 rcb part
 
 #fix                 check grid/check 1 error
 

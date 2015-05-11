@@ -11,18 +11,18 @@ create_grid         200 200 1
 WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:369)
 Created 40000 child grid cells
   parent cells = 1
-  CPU time = 0.00651217 secs
-  create/ghost percent = 92.5496 7.45039
+  CPU time = 0.127362 secs
+  create/ghost percent = 38.0466 61.9534
 balance_grid        rcb cell
-Balance grid migrated 0 cells
-  CPU time = 0.0187421 secs
-  reassign/sort/migrate/ghost percent = 14.9828 1.37133 1.5367 82.1091
+Balance grid migrated 37400 cells
+  CPU time = 0.753108 secs
+  reassign/sort/migrate/ghost percent = 52.7176 0.534829 15.0319 31.7158
 
 global		    fnum 2.6404E16
 
 mixture		    species nrho 2.6404e20 vstream 12500. 0 0 temp 217.63
 
-species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+  e
+species             air.species N2 O2 N O NO N2+ O2+ N+ O+ NO+ e
 
 mixture             species copy noelectron
 mixture             noelectron delete e
@@ -48,8 +48,8 @@ read_surf           data.circle invert
   31974 7628 398 = cells outside/inside/overlapping surfs
   398 = surf cells with 1,2,etc splits
   12.8584 12.8584 = cell-wise and global flow volume
-  CPU time = 0.0404201 secs
-  read/surf2grid/error/ghost/inout percent = 5.99703 69.2032 0.673021 16.5341 7.59258
+  CPU time = 0.664981 secs
+  read/surf2grid/error/ghost/inout percent = 18.1945 49.0134 3.84446 13.6816 15.266
 global              surfpush yes
 surf_collide	    1 diffuse 615.0 1.0
 surf_react          1 prob air.surf
@@ -62,10 +62,10 @@ react               tce air.tce
 
 create_particles    noelectron n 0
 Created 128584 particles
-  CPU time = 0.060693 secs
+  CPU time = 0.353217 secs
 
 fix                 in emit/face noelectron xlo yhi
-#fix                 load balance 100 1.1 rcb part
+fix                 load balance 100 1.1 rcb part
 
 #fix                 check grid/check 1 error
 
@@ -98,13 +98,13 @@ stats               100
 
 run                 50000
 Memory usage per proc in Mbytes:
-  particles (ave,min,max) = 17 17 17
-  grid      (ave,min,max) = 7.09542 7.09542 7.09542
-  surf      (ave,min,max) = 0.0725517 0.0725517 0.0725517
-  total     (ave,min,max) = 35.326 35.326 35.326
+  particles (ave,min,max) = 2.125 2.125 2.125
+  grid      (ave,min,max) = 1.83114 1.83114 1.83114
+  surf      (ave,min,max) = 0.0689719 0.0689697 0.0689735
+  total     (ave,min,max) = 4.72607 4.72606 4.72607
 Step CPU Np Natt Ncoll Nsreact temp 10[1] 10[2] 10[3] 10[4] 10[5] 10[6] 
-       0            0   128584        0        0        0    180676.47       102708        25876            0            0            0            0 
-     100    3.6554811   128594        0        0        0    180602.49       102710        25884            0            0            0            0 
-     200     7.431932   128598        1        1        0    180374.64       102726        25872            0            0            0            0 
-     300    11.273784   128570        5        3        0     180046.5       102701        25867            2            0            0            0 
-     400    15.177889   128565   
+       0            0   128584        0        0        0    180633.38       102768        25816            0            0            0            0 
+     100    10.776753   128556        0        0        0    180542.44       102738        25818            0            0            0            0 
+     200    19.699119   128576        1        1        0    180318.22       102759        25813            4            0            0            0 
+     300      28.5714   128541        5        2        0    179983.31       102712        25819           10            0            0            0 
+     400     37.65624  
