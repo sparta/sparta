@@ -106,6 +106,7 @@ Models :h4
   "create particles"_create_particles.html within flow volume
   emit particles from simulation box faces due to "flow properties"_fix_emit_face.html
   emit particles from simulation box faces due to "profile defined in file"_fix_emit_face_file.html
+  emit particles from surface elements due to "normal and flow properties"_fix_emit_surf.html
   "ambipolar"_Section_howto.html#howto_11 approximation for ionized plasmas :ul
 
 Geometry :h4
