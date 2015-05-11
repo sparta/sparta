@@ -968,9 +968,9 @@ This is not required.  You probably also want to specify a mixture for
 the collide command which has two or more groups.  One group is for
 the ambipolar electron species, the other for ambipolar ions.
 Additional groups could exist for other species (e.g. neutrals), or
-those species could be part of the ion group.  MICHAEL: explain why
-this a good thing to do.  Is it for computational efficiency, or
-something else?
+those species could be part of the ion group. This is to improve the
+efficiency of the code due to the disparity of electron and ion/neutral
+velocities.
 
 If you want to perform gas-phase chemistry for reactions involving
 ambipolar ions and electrons, use the "react"_react.html command with
