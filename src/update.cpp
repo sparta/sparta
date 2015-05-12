@@ -333,6 +333,7 @@ template < int DIM, int SURF > void Update::move()
     }
 
     for (int i = pstart; i < pstop; i++) {
+
       pflag = particles[i].flag;
 
       // received from another proc and move is done
