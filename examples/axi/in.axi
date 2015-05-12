@@ -29,15 +29,14 @@ create_particles    air n 100000
 
 timestep 	    1e-6
 
-#dump                2 image all 100 tmp.*.ppm type type pdiam 0.001 &
-#                    surf proc 0.0 &
-#		    size 512 512 axes yes 0.9 0.02 particle yes &
-#                    gline yes 0.005 &
-#                    surf proc 0.005 zoom 4.0
-#dump_modify	    2 pad 4 
+dump                2 image all 50 image.*.ppm type type pdiam 0.001 &
+                    surf proc 0.0 &
+		    size 512 512 axes yes 0.9 0.02 particle yes &
+                    gline yes 0.005 &
+                    surf proc 0.005 zoom 4.0
+dump_modify	    2 pad 4 
 
 stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck
 
 run 		    1000
-
