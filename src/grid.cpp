@@ -1902,9 +1902,11 @@ void Grid::grow_cells(int n, int m)
 void Grid::grow_pcells(int n)
 {
   if (nparent+n >= maxparent) {
+    int oldmax = maxparent;
     while (maxparent < nparent+n) maxparent += DELTA;
     pcells = (ParentCell *)
       memory->srealloc(pcells,maxparent*sizeof(ParentCell),"grid:pcells");
+    memset(&pcells[oldmax],0,(maxparent-oldmax)*sizeof(ParentCell));
   }
 }
 
@@ -1915,9 +1917,11 @@ void Grid::grow_pcells(int n)
 void Grid::grow_sinfo(int n)
 {
   if (nsplitlocal+nsplitghost+n >= maxsplit) {
+    int oldmax = maxsplit;
     while (maxsplit < nsplitlocal+nsplitghost+n) maxsplit += DELTA;
     sinfo = (SplitInfo *)
       memory->srealloc(sinfo,maxsplit*sizeof(SplitInfo),"grid:sinfo");
+    memset(&sinfo[oldmax],0,(maxsplit-oldmax)*sizeof(SplitInfo));
   }
 }
 
