@@ -151,6 +151,7 @@ void FixEmitSurf::init()
       npertask = np / all;
       tasks_with_no_extra = all - (np % all);
     } else npertask = tasks_with_no_extra = 0;
+
     MPI_Scan(&ntask,&nupto,1,MPI_INT,MPI_SUM,world);
     if (tasks_with_no_extra < nupto-ntask) nthresh = 0;
     else if (tasks_with_no_extra >= nupto) nthresh = ntask;
