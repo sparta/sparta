@@ -11,12 +11,12 @@ create_grid         50 50 1
 WARNING: Could not acquire nearby ghost cells b/c grid partition is not clumped (../grid.cpp:369)
 Created 2500 child grid cells
   parent cells = 1
-  CPU time = 0.00149488 secs
-  create/ghost percent = 96.1882 3.8118
+  CPU time = 0.0013411 secs
+  create/ghost percent = 96.4089 3.59111
 balance_grid        rcb cell
 Balance grid migrated 0 cells
-  CPU time = 0.00121307 secs
-  reassign/sort/migrate/ghost percent = 18.9662 0.569969 2.16195 78.3019
+  CPU time = 0.00118303 secs
+  reassign/sort/migrate/ghost percent = 17.3317 0.584442 2.19669 79.8871
 
 global		    fnum 2.6404E16
 
@@ -43,8 +43,8 @@ read_surf           data.circle invert
   1960 440 100 = cells outside/inside/overlapping surfs
   100 = surf cells with 1,2,etc splits
   12.8584 12.8584 = cell-wise and global flow volume
-  CPU time = 0.00394201 secs
-  read/surf2grid/error/ghost/inout percent = 21.5858 53.4535 8.95125 11.1649 4.84456
+  CPU time = 0.00386381 secs
+  read/surf2grid/error/ghost/inout percent = 21.6833 53.11 9.65692 11.0206 4.52919
 global              surfpush yes
 surf_collide	    1 diffuse 615.0 1.0
 surf_react          1 prob air.surf
@@ -59,7 +59,7 @@ react               tce air.tce
 
 create_particles    noelectron n 0
 Created 128584 particles
-  CPU time = 0.056762 secs
+  CPU time = 0.056407 secs
 
 fix                 in emit/face noelectron xlo yhi
 fix                 load balance 100 1.1 rcb part
@@ -85,17 +85,17 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 18.9037 18.9037 18.9037
 Step CPU Np Natt Ncoll Nsreact temp 10[6] 10[7] 10[8] 10[9] 10[10] 10[11] 
        0            0   128584        0        0        0    180620.56            0            0            0            0            0            0 
-     100   0.93092799   128547      861      593        0    178259.18            0            0            0            0            0            0 
-     200     2.009583   129032     1385      904        0    173618.84            0            0            0            0            0            0 
-     300    3.2182541   130181     2307     1331        0    168644.18            2            0            1            1            4            0 
-     400    4.5674889   131655     3879     2007        0    163231.76            9            2            4           10            8            0 
-     500    6.0849631   133414     6838     2929        0     157778.3           19            1           21           35           10            0 
-     600    7.7709219   135359    11080     4106        0    152257.87           30            2           44           89           15            0 
-     700     9.659596   137340    17436     5487        1     146974.6           48            4           93          150           20            0 
-     800    11.759559   139565    25309     6499        1    141952.71           78            2          167          225           20            0 
-     900    14.104162   142470    34935     7906        0    137428.18           90           11          245          329           33            0 
-    1000    16.696235   146025     9368     3685        0     133381.1          112            6          334          455           28            0 
-Loop time of 16.6963 on 1 procs for 1000 steps with 146025 particles
+     100   0.92606497   128547      861      593        0    178259.18            0            0            0            0            0            0 
+     200    1.9993038   129032     1385      904        0    173618.84            0            0            0            0            0            0 
+     300    3.2046859   130181     2307     1331        0    168644.18            2            0            1            1            4            0 
+     400    4.5487089   131655     3879     2007        0    163231.76            9            2            4           10            8            0 
+     500    6.0584149   133414     6838     2929        0     157778.3           19            1           21           35           10            0 
+     600    7.7172899   135359    11080     4106        0    152257.87           30            2           44           89           15            0 
+     700    9.5142279   137340    17436     5487        1     146974.6           48            4           93          150           20            0 
+     800    11.503348   139565    25309     6499        1    141952.71           78            2          167          225           20            0 
+     900    13.719396   142470    34935     7906        0    137428.18           90           11          245          329           33            0 
+    1000    16.164649   146025     9368     3685        0     133381.1          112            6          334          455           28            0 
+Loop time of 16.1647 on 1 procs for 1000 steps with 146025 particles
 
 Particle moves    = 134492069 (134M)
 Cells touched     = 136403850 (136M)
@@ -110,7 +110,7 @@ Collide occurs    = 3611928 (3.61M)
 Reactions         = 23411 (23.4K)
 Particles stuck   = 0
 
-Particle-moves/CPUsec/proc: 8.05522e+06
+Particle-moves/CPUsec/proc: 8.32012e+06
 Particle-moves/step: 134492
 Cell-touches/particle/step: 1.01421
 Particle comm iterations/step: 1
@@ -124,12 +124,12 @@ Collision-attempts/particle/step: 0.093698
 Collisions/particle/step: 0.0268561
 Reactions/particle/step: 0.00017407
 
-Move  time (%) = 5.17117 (30.972)
-Coll  time (%) = 10.3884 (62.2199)
-Sort  time (%) = 1.00337 (6.00955)
-Comm  time (%) = 0.0163763 (0.0980834)
-Outpt time (%) = 0.0276368 (0.165527)
-Other time (%) = 0.0893171 (0.534953)
+Move  time (%) = 5.1843 (32.0718)
+Coll  time (%) = 9.89988 (61.2439)
+Sort  time (%) = 0.950405 (5.87952)
+Comm  time (%) = 0.0157344 (0.0973384)
+Outpt time (%) = 0.0247371 (0.153032)
+Other time (%) = 0.0896168 (0.554399)
 
 Particles: 146025 ave 146025 max 146025 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
