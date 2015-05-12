@@ -279,19 +279,23 @@ void ReadSurf::command(int narg, char **arg)
     int igroup = surf->find_group(arg[grouparg]);
     if (igroup < 0) igroup = surf->add_group(arg[grouparg]);
     int groupbit = surf->bitmask[igroup];
-    int n = npoint_old + npoint_new;
-    if (dimension == 2)
-      for (int i = npoint_old; i < n; i++) lines[i].mask |= groupbit;
-    else
-      for (int i = npoint_old; i < n; i++) tris[i].mask |= groupbit;
+    if (dimension == 2) {
+      int n = nline_old + nline_new;
+      for (int i = nline_old; i < n; i++) lines[i].mask |= groupbit;
+    } else {
+      int n = ntri_old + ntri_new;
+      for (int i = ntri_old; i < n; i++) tris[i].mask |= groupbit;
+    }
   }
 
   if (typeadd) {
-    int n = npoint_old + npoint_new;
-    if (dimension == 2)
-      for (int i = npoint_old; i < n; i++) lines[i].type += typeadd;
-    else 
-      for (int i = npoint_old; i < n; i++) tris[i].type += typeadd;
+    if (dimension == 2) {
+      int n = nline_old + nline_new;
+      for (int i = nline_old; i < n; i++) lines[i].type += typeadd;
+    } else {
+      int n = ntri_old + ntri_new;
+      for (int i = ntri_old; i < n; i++) tris[i].type += typeadd;
+    }
   }
 
   // update Surf data structures
