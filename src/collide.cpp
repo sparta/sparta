@@ -259,8 +259,9 @@ void Collide::modify_params(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"ambipolar") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"off") == 0) ambiflag = 0;
-      else if (strcmp(arg[iarg+1],"on") == 0) ambiflag = 1;
+      if (strcmp(arg[iarg+1],"no") == 0) ambiflag = 0;
+      else if (strcmp(arg[iarg+1],"yes") == 0) ambiflag = 1;
+      else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
 
     } else error->all(FLERR,"Illegal collide_modify command");
@@ -412,7 +413,7 @@ void Collide::collisions_one()
       
       // if kpart created, add to plist
       // kpart was just added to particle list, so index = nlocal-1
-      // particles data struct may have been realloced
+      // particle data structs may have been realloced by kpart
       
       if (kpart) {
         if (np == npmax) {
@@ -532,7 +533,7 @@ void Collide::collisions_group()
         else continue;
 
 	// ipart may now be in different group
-        // reset jlist after addgroup() b/c may have been realloced
+        // reset jlist after addgroup() b/c may have realloced if igroup=jgroup
 
 	newgroup = species2group[ipart->ispecies];
 	if (newgroup != igroup) {
@@ -540,6 +541,8 @@ void Collide::collisions_group()
           jlist = glist[jgroup];
 	  ilist[i] = ilist[*ni-1];
 	  (*ni)--;
+          // this line needed if jgroup=igroup and just moved jlist[j]
+          if (jlist == ilist && j == *ni) j = i;
 	  if (*ni <= 1) {
 	    if (*ni == 0) break;
 	    if (igroup == jgroup) break;
@@ -547,7 +550,7 @@ void Collide::collisions_group()
 	}
 
 	// jpart may now be in different group or destroyed
-        // reset ilist after addgroup() b/c may have been realloced
+        // reset ilist after addgroup() b/c may have realloced if igroup=jgroup
 
 	if (jpart) {
 	  newgroup = species2group[jpart->ispecies];
@@ -626,12 +629,14 @@ void Collide::collisions_one_ambipolar()
     // DEBUG test that there are no electrons
     // can remove at some point
 
+    /*
     while (ip >= 0) {
-      if (particles[ip].ispecies = ambispecies)
+      if (particles[ip].ispecies == ambispecies)
         error->one(FLERR,"Pre-collision particle is ambipolar electron");
       ip = next[ip];
     }
     ip = cinfo[icell].first;
+    */
 
     // setup particle list for this cell
     // allow for up to Np extra electrons
@@ -680,11 +685,17 @@ void Collide::collisions_one_ambipolar()
 
     // attempt = exact collision attempt count for a pair of groups
     // nattempt = rounded attempt with RN
+    // if no attempts, reset particle flags to PKEEP before continuing
 
     attempt = attempt_collision(icell,np,volume);
     nattempt = static_cast<int> (attempt);
 
-    if (!nattempt) continue;
+    if (!nattempt) {
+      np -= nelectron;
+      for (i = 0; i < np; i++)
+        if (ionambi[plist[i]]) particles[plist[i]].flag = PKEEP;
+      continue;
+    }
     nattempt_one += nattempt;
 
     // perform collisions
@@ -740,6 +751,15 @@ void Collide::collisions_one_ambipolar()
       if (reactflag) nreact_one++;
       else continue;
 
+
+      // reset ambipolar ions and ion/electron pairings due to reaction
+      // must do now before group reset below can break out of loop
+      // first reset ionambi if added kpart since ambi_reset uses it
+
+      if (kpart) ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+      ambi_reset(plist[i],plist[j],ispecies,jspecies,
+                 ipart,jpart,kpart,ionambi);
+
       // jpart destroyed, delete from plist
       // also add particle to deletion list
       // exit attempt loop if only single particle left
@@ -757,7 +777,7 @@ void Collide::collisions_one_ambipolar()
       
       // if kpart created, add to plist
       // kpart was just added to particle list, so index = nlocal-1
-      // particles and custom data structs may have been realloced
+      // particles and custom data structs may have been realloced by kpart
       
       if (kpart) {
         if (np == npmax) {
@@ -769,19 +789,16 @@ void Collide::collisions_one_ambipolar()
         ionambi = particle->eivec[particle->ewhich[index_ionambi]];
         velambi = particle->edarray[particle->ewhich[index_velambi]];
       }
-
-      // reset ambipolar ions and ion/electron pairings due to reaction
-
-      ambi_reset(plist[i],plist[j],ispecies,jspecies,
-                 ipart,jpart,kpart,ionambi);
     }
 
     // DEBUG test that ions and electrons are still matched one-to-one
     // flag each electron with -1 as find ions
     // can remove at some point
 
+    /*
     int nelec = 0;
     int nion = 0;
+
     for (n = 0; n < np; n++) {
       i = plist[n];
       if (i < 0 || particles[i].ispecies == ambispecies) {
@@ -801,8 +818,9 @@ void Collide::collisions_one_ambipolar()
       }
     }
 
-    if (nion != nelec) 
+    if (nion != nelec)
       error->one(FLERR,"Ambipolar ion and electron counts do not match");
+    */
 
     // done with collisions/chemistry for one grid cell
     // recombine ambipolar ions with their matching electrons
@@ -869,12 +887,14 @@ void Collide::collisions_group_ambipolar()
     // DEBUG test that there are no electrons
     // can remove at some point
 
+    /*
     while (ip >= 0) {
-      if (particles[ip].ispecies = ambispecies)
+      if (particles[ip].ispecies == ambispecies)
         error->one(FLERR,"Pre-collision particle is ambipolar electron");
       ip = next[ip];
     }
     ip = cinfo[icell].first;
+    */
 
     // grow electron array as needed
 
@@ -1013,14 +1033,24 @@ void Collide::collisions_group_ambipolar()
         // continue to next collision if no reaction
 
 	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
+        ispecies = ipart->ispecies;
+        jspecies = jpart->ispecies;
 	setup_collision(ipart,jpart);
 	reactflag = perform_collision(ipart,jpart,kpart);
 	ncollide_one++;
         if (reactflag) nreact_one++;
         else continue;
 
+        // reset ambipolar ions and ion/electron pairings due to reaction
+        // must do now before group reset below can break out of loop
+        // first reset ionambi if added kpart since ambi_reset uses it
+
+        if (kpart) ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+        ambi_reset(ilist[i],jlist[j],ispecies,jspecies,
+                   ipart,jpart,kpart,ionambi);
+
 	// ipart may now be in different group
-        // reset jlist after addgroup() b/c may have been realloced
+        // reset jlist after addgroup() b/c may have realloced if igroup=jgroup
 
 	newgroup = species2group[ipart->ispecies];
 	if (newgroup != igroup) {
@@ -1028,6 +1058,8 @@ void Collide::collisions_group_ambipolar()
           jlist = glist[jgroup];
 	  ilist[i] = ilist[*ni-1];
 	  (*ni)--;
+          // this line needed if jgroup=igroup and just moved jlist[j]
+          if (jlist == ilist && j == *ni) j = i;
 	  if (*ni <= 1) {
 	    if (*ni == 0) break;
 	    if (igroup == jgroup) break;
@@ -1035,7 +1067,7 @@ void Collide::collisions_group_ambipolar()
 	}
 
 	// jpart may now be in different group or destroyed
-        // reset ilist after addgroup() b/c may have been realloced
+        // reset ilist after addgroup() b/c may have realloced if igroup=jgroup
 
 	if (jpart) {
 	  newgroup = species2group[jpart->ispecies];
@@ -1044,11 +1076,12 @@ void Collide::collisions_group_ambipolar()
             ilist = glist[igroup];
 	    jlist[j] = jlist[*nj-1];
 	    (*nj)--;
-	    if (*nj <= 1) {
+            if (*nj <= 1) {
 	      if (*nj == 0) break;
 	      if (igroup == jgroup) break;
 	    }
 	  }
+
 	} else {
           if (ndelete == maxdelete) {
             maxdelete += DELTADELETE;
@@ -1066,7 +1099,7 @@ void Collide::collisions_group_ambipolar()
         // if kpart created, add to group list
 	// kpart was just added to particle list, so index = nlocal-1
         // reset ilist,jlist after addgroup() b/c may have been realloced
-        // particles data struct may also have been realloced
+        // particle and custom data structs may have been realloced by kpart
 
 	if (kpart) {
 	  newgroup = species2group[kpart->ispecies];
@@ -1074,12 +1107,9 @@ void Collide::collisions_group_ambipolar()
           ilist = glist[igroup];
           jlist = glist[jgroup];
           particles = particle->particles;
+          ionambi = particle->eivec[particle->ewhich[index_ionambi]];
+          velambi = particle->edarray[particle->ewhich[index_velambi]];
 	}
-
-        // reset ambipolar ions and ion/electron pairings due to reaction
-
-        ambi_reset(ilist[i],jlist[j],ispecies,jspecies,
-                   ipart,jpart,kpart,ionambi);
       }
     }
 
@@ -1087,12 +1117,13 @@ void Collide::collisions_group_ambipolar()
     // flag each electron with -1 as find ions
     // can remove at some point
 
+    /*
     int nelec = 0;
     int nion = 0;
 
     for (k = 0; k < ngroups; k++) {
       n = ngroup[k];
-      for (j = 0; j < k; j++) {
+      for (j = 0; j < n; j++) {
         i = glist[k][j];
         if (i < 0 || particles[i].ispecies == ambispecies) {
           nelec++;
@@ -1103,7 +1134,7 @@ void Collide::collisions_group_ambipolar()
           nion++;
           if (p->flag >= 0) ep = &particles[p->flag];
           else ep = &elist[-(p->flag)-1];
-          if (ep->ispecies != ambispecies) 
+          if (ep->ispecies != ambispecies)
             error->one(FLERR,"Ambipolar ion is not coupled to electron");
           if (ep->flag < 0) 
             error->one(FLERR,"Ambipolar electron is coupled to multiple ions");
@@ -1112,8 +1143,9 @@ void Collide::collisions_group_ambipolar()
       }
     }
 
-    if (nion != nelec) 
+    if (nion != nelec)
       error->one(FLERR,"Ambipolar ion and electron counts do not match");
+    */
 
     // done with collisions/chemistry for one grid cell
     // recombine ambipolar ions with their matching electrons
@@ -1123,7 +1155,7 @@ void Collide::collisions_group_ambipolar()
 
     for (k = 0; k < ngroups; k++) {
       n = ngroup[k];
-      for (j = 0; j < k; j++) {
+      for (j = 0; j < n; j++) {
         i = glist[k][j];
         if (i < 0) continue;
         p = &particles[i];
