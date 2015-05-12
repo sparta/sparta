@@ -188,6 +188,9 @@ A recombination reaction is a collision between R1 and R2 that results
 in P1.  There is no restriction on the species involved in the
 reaction.
 
+IMPORTANT NOTE: Recombination reactions are not yet supported
+in SPARTA.
+
 IMPORTANT NOTE: If the ambipolar approximation is being used, via the
 "fix ambipolar"_fix_ambipolar.hmtl and "collide_modify ambipolar
 yes"_collide_modify.html commands, then reactions which involve either
@@ -256,6 +259,9 @@ C + AB+ -> A + BC+ :pre
 Ambipolar recombination reactions must be in the following order:
 
 A+ + e -> A :pre
+
+IMPORTANT NOTE: Recombination reactions are not yet supported
+in SPARTA.
 
 :line
 
