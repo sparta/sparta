@@ -724,7 +724,7 @@ int DumpParticle::parse_fields(int narg, char **arg)
     // if no trailing [], then arg is set to 0, else arg is int between []
 
     } else if (strncmp(arg[iarg],"p_",2) == 0) {
-      pack_choice[i] = &DumpParticle::pack_custom;
+      pack_choice[nfield] = &DumpParticle::pack_custom;
 
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
@@ -1293,7 +1293,7 @@ void DumpParticle::pack_variable(int n)
 void DumpParticle::pack_custom(int n)
 {
   int index = custom[field2index[n]];
-  
+
   if (particle->etype[index] == INT) {
     if (particle->esize[index] == 0) {
       int *vector = particle->eivec[particle->ewhich[index]];
