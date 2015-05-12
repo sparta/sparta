@@ -33,7 +33,7 @@ timestep 	    1e-6
 #                    surf proc 0.0 &
 #		    size 512 512 axes yes 0.9 0.02 particle yes &
 #                    gline yes 0.005 &
-#                    surf proc 0.005 zoom 4.0
+#                    surf proc 0.005 zoom 2.0
 #dump_modify	    2 pad 4 
 
 stats		    100
