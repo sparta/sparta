@@ -61,6 +61,8 @@ class ReactBird : public React {
 
   void readfile(char *);
   int readone(char *, char *, int &, int &);
+  void print_reaction(char *, char *);
+  void print_reaction_ambipolar(OneReaction *);
 };
 
 }

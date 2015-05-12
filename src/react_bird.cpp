@@ -337,7 +337,10 @@ void ReactBird::ambi_check()
 
     // flag = 1 means unrecognized reaction
 
-    if (flag) error->all(FLERR,"Invalid ambipolar reaction");
+    if (flag) {
+      print_reaction_ambipolar(r);
+      error->all(FLERR,"Invalid ambipolar reaction");
+    }
   }
 }
 
@@ -347,6 +350,7 @@ void ReactBird::readfile(char *fname)
 {
   int n,n1,n2,eof;
   char line1[MAXLINE],line2[MAXLINE];
+  char copy1[MAXLINE],copy2[MAXLINE];
   char *word;
   OneReaction *r;
 
@@ -388,6 +392,9 @@ void ReactBird::readfile(char *fname)
       }
     }
 
+    strcpy(copy1,line1);
+    strcpy(copy2,line2);
+
     r = &rlist[nlist];
     r->initflag = 0;
 
@@ -398,22 +405,32 @@ void ReactBird::readfile(char *fname)
 
     while (1) {
       if (!word) {
-        if (side == 0) error->all(FLERR,"Invalid reaction formula in file");
-        if (species) error->all(FLERR,"Invalid reaction formula in file");
+        if (side == 0) {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Invalid reaction formula in file");
+        }
+        if (species) {
+          print_reaction(copy1,copy2);
+          error->all(FLERR,"Invalid reaction formula in file");
+        }
         break;
       }
       if (species) {
         species = 0;
         if (side == 0) {
-          if (r->nreactant == MAXREACTANT) 
+          if (r->nreactant == MAXREACTANT) {
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Too many reactants in a reaction formula");
+          }
           n = strlen(word) + 1;
           r->id_reactants[r->nreactant] = new char[n];
           strcpy(r->id_reactants[r->nreactant],word);
           r->nreactant++;
         } else {
-          if (r->nreactant == MAXPRODUCT) 
+          if (r->nreactant == MAXPRODUCT) {
+            print_reaction(copy1,copy2);
             error->all(FLERR,"Too many products in a reaction formula");
+          }
           n = strlen(word) + 1;
           r->id_products[r->nproduct] = new char[n];
           strcpy(r->id_products[r->nproduct],word);
@@ -425,53 +442,81 @@ void ReactBird::readfile(char *fname)
           word = strtok(NULL," \t\n");
           continue;
         }
-        if (strcmp(word,"-->") != 0) 
+        if (strcmp(word,"-->") != 0) {
+          print_reaction(copy1,copy2);
           error->all(FLERR,"Invalid reaction formula in file");
+        }
         side = 1;
       }
       word = strtok(NULL," \t\n");
     }
 
     word = strtok(line2," \t\n");
-    if (!word) error->all(FLERR,"Invalid reaction type in file");
+    if (!word) {
+      print_reaction(copy1,copy2);
+      error->all(FLERR,"Invalid reaction type in file");
+    }
     if (word[0] == 'D' || word[0] == 'd') r->type = DISSOCIATION;
     else if (word[0] == 'E' || word[0] == 'e') r->type = EXCHANGE;
     else if (word[0] == 'I' || word[0] == 'i') r->type = IONIZATION;
     else if (word[0] == 'R' || word[0] == 'r') r->type = RECOMBINATION;
-    else error->all(FLERR,"Invalid reaction type in file");
+    else {
+      print_reaction(copy1,copy2);
+      error->all(FLERR,"Invalid reaction type in file");
+    }
 
     // check that reactant/product counts are consistent with type
 
     if (r->type == DISSOCIATION) {
-      if (r->nreactant != 2 || r->nproduct != 3)
+      if (r->nreactant != 2 || r->nproduct != 3) {
+        print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid dissociation reaction");
+      }
     } else if (r->type == EXCHANGE) {
-      if (r->nreactant != 2 || r->nproduct != 2)
+      if (r->nreactant != 2 || r->nproduct != 2) {
+        print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid exchange reaction");
+      }
     } else if (r->type == IONIZATION) {
-      if (r->nreactant != 2 || (r->nproduct != 2 && r->nproduct != 3))
+      if (r->nreactant != 2 || (r->nproduct != 2 && r->nproduct != 3)) {
+        print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid ionization reaction");
+      }
     } else if (r->type == RECOMBINATION) {
-      if (r->nreactant != 2 || r->nproduct != 1)
+      if (r->nreactant != 2 || r->nproduct != 1) {
+        print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid recombination reaction");
+      }
     }
 
     word = strtok(NULL," \t\n");
-    if (!word) error->all(FLERR,"Invalid reaction style in file");
+    if (!word) {
+      print_reaction(copy1,copy2);
+      error->all(FLERR,"Invalid reaction style in file");
+    }
     if (word[0] == 'A' || word[0] == 'a') r->style = ARRHENIUS;
     else if (word[0] == 'Q' || word[0] == 'q') r->style = QUANTUM;
-    else error->all(FLERR,"Invalid reaction style in file");
+    else {
+      print_reaction(copy1,copy2);
+      error->all(FLERR,"Invalid reaction style in file");
+    }
 
     if (r->style == ARRHENIUS || r->style == QUANTUM) r->ncoeff = 5;
 
     for (int i = 0; i < r->ncoeff; i++) {
       word = strtok(NULL," \t\n");
-      if (!word) error->all(FLERR,"Invalid reaction coefficients in file");
+      if (!word) {
+        print_reaction(copy1,copy2);
+        error->all(FLERR,"Invalid reaction coefficients in file");
+      }
       r->coeff[i] = input->numeric(FLERR,word);
     }
 
     word = strtok(NULL," \t\n");
-    if (word) error->all(FLERR,"Too many coefficients in a reaction formula");
+    if (word) {
+      print_reaction(copy1,copy2);
+      error->all(FLERR,"Too many coefficients in a reaction formula");
+    }
     
     nlist++;
   }
@@ -500,3 +545,39 @@ int ReactBird::readone(char *line1, char *line2, int &n1, int &n2)
 
   return 1;
 }
+
+/* ----------------------------------------------------------------------
+   print reaction as read from file
+   only proc 0 performs output
+------------------------------------------------------------------------- */
+
+void ReactBird::print_reaction(char *line1, char *line2) 
+{
+  if (comm->me) return;
+  printf("Bad reaction format:\n");
+  printf("%s\n%s\n",line1,line2);
+};
+
+/* ----------------------------------------------------------------------
+   print reaction as stored in rlist
+   only proc 0 performs output
+------------------------------------------------------------------------- */
+
+void ReactBird::print_reaction_ambipolar(OneReaction *r) 
+{
+  if (comm->me) return;
+  printf("Bad ambipolar reaction format:\n");
+  printf("  type %d style %d\n",r->type,r->style);
+  printf("  nreactant %d:",r->nreactant);
+  for (int i = 0; i < r->nreactant; i++)
+    printf(" %s",r->id_reactants[i]);
+  printf("\n");
+  printf("  nproduct %d:",r->nproduct);
+  for (int i = 0; i < r->nproduct; i++)
+    printf(" %s",r->id_products[i]);
+  printf("\n");
+  printf("  ncoeff %d:",r->ncoeff);
+  for (int i = 0; i < r->ncoeff; i++)
+    printf(" %g",r->coeff[i]);
+  printf("\n");
+};
