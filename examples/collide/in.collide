@@ -3,7 +3,7 @@
 
 seed	    	    12345
 dimension   	    3
-global              gridcut 1.0e-5
+global              gridcut 1.0e-5 comm/sort yes
 
 boundary	    rr rr rr
 

@@ -1,9 +1,9 @@
-# simple ambipolar example
+# flow around a cylinder with ambipolar reactions
 
 seed	    	    12345
 dimension   	    2
 boundary	    o o p
-global              gridcut 0.01
+global              gridcut 0.01 comm/sort yes
 create_box  	    -2.0 2.0 -2.0 2.0 -0.5 0.5
 create_grid         50 50 1
 balance_grid        rcb cell
@@ -19,18 +19,15 @@ mixture             noelectron delete e
 mixture             noelectron N2 frac 0.8
 mixture             noelectron O2 frac 0.2
 
-fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
-collide             vss all air.vss
-collide_modify      ambipolar yes
-react               tce air.tce
-
 read_surf           data.circle invert
 global              surfpush yes
 surf_collide	    1 diffuse 615.0 1.0
 surf_react          1 prob air.surf
 surf_modify         all collide 1 react 1
 
-collide		    vss species air.vss relax variable 
+fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
+
+collide		    vss species air.vss relax variable
 collide_modify      vremax 1000 yes vibrate discrete rotate yes
 collide_modify      ambipolar yes
 react               tce air.tce
@@ -44,10 +41,14 @@ fix                 load balance 100 1.1 rcb part
 
 timestep 	    1.e-7
 
-compute             10 count noelectron
+compute             10 count species
 compute             temp temp
 stats_style         step cpu np nattempt ncoll nsreact c_temp &
-                    c_10[6] c_10[7] c_10[8] c_10[9] c_10[10]
+                    c_10[6] c_10[7] c_10[8] c_10[9] c_10[10] c_10[11]
+
+#dump                2 image all 50 image.*.ppm type type &
+#                    surf proc 0.01 size 512 512 axes yes 0.9 0.02
+#dump_modify	    2 pad 4 pdiam 6*10 0.2 pdiam 1*5 0.01
 
 stats               100
 
