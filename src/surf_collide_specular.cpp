@@ -67,9 +67,9 @@ collide(Particle::OnePart *&ip, double *norm, int isr)
 
   if (reaction && modify->n_surf_react) {
     int i = -1;
-    if (ip) i = (ip - particle->particles) / sizeof(Particle::OnePart);
+    if (ip) i = ip - particle->particles;
     int j = -1;
-    if (jp) j = (jp - particle->particles) / sizeof(Particle::OnePart);
+    if (jp) j = jp - particle->particles;
     modify->surf_react(&iorig,i,j);
     if (jp && j < 0) {
       jp = NULL;
