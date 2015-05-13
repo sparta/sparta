@@ -818,7 +818,7 @@ void ReadSurf::invert()
 
 void ReadSurf::clip2d()
 {
-  int i,m,n,dim,side,flag;
+  int i,m,n,nptotal,nltotal,dim,side,flag;
   double value,param;
   double *x,*x1,*x2;
 
@@ -835,9 +835,12 @@ void ReadSurf::clip2d()
     // straddle = pts on different sides (not on) clipping edge
     // create new point on edge and split line into two lines
     // reallocate pts and lines if needed and reset x1,x2
+    // nptotal,nltotal = total current count of points and lines, including old
 
     m = nline_old;
     n = nline_new;
+    nptotal = npoint_old + npoint_new;
+    nltotal = nline_old + nline_new;
 
     for (i = 0; i < n; i++) {
       x1 = pts[lines[m].p1].x;
@@ -846,33 +849,37 @@ void ReadSurf::clip2d()
       if (x1[dim] < value && x2[dim] > value) flag = 1;
       if (x1[dim] > value && x2[dim] < value) flag = 1;
       if (flag) {
-	if (npoint_new == maxpoint) {
+	if (nptotal == maxpoint) {
 	  maxpoint += DELTA;
 	  pts = (Surf::Point *) 
 	    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
 	  x1 = pts[lines[m].p1].x;
 	  x2 = pts[lines[m].p2].x;
 	}
-	if (nline_new == maxline) {
+	if (nltotal == maxline) {
 	  maxline += DELTA;
 	  lines = (Surf::Line *) 
 	    memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
 	}
 
 	param = (value-x1[dim]) / (x2[dim]-x1[dim]);
-	pts[npoint_new].x[0] = x1[0] + param*(x2[0]-x1[0]);
-	pts[npoint_new].x[1] = x1[1] + param*(x2[1]-x1[1]);
-	pts[npoint_new].x[2] = 0.0;
-	pts[npoint_new].x[dim] = value;
-	npoint_new++;
+	pts[nptotal].x[0] = x1[0] + param*(x2[0]-x1[0]);
+	pts[nptotal].x[1] = x1[1] + param*(x2[1]-x1[1]);
+	pts[nptotal].x[2] = 0.0;
+	pts[nptotal].x[dim] = value;
 
-	memcpy(&lines[nline_new],&lines[m],sizeof(Surf::Line));
-	lines[m].p2 = npoint_new-1;
-	lines[nline_new].p1 = npoint_new-1;
-	nline_new++;
+	memcpy(&lines[nltotal],&lines[m],sizeof(Surf::Line));
+	lines[m].p2 = nptotal;
+	lines[nltotal].p1 = nptotal;
+
+        nptotal++;
+        nltotal++;
       }
       m++;
     }
+
+    npoint_new = nptotal - npoint_old;
+    nline_new = nltotal - nline_old;
 
     // project all points outside clipping edge to the edge
 
@@ -972,7 +979,7 @@ void ReadSurf::clip2d()
 
 void ReadSurf::clip3d()
 {
-  int i,m,n,dim,side,flag;
+  int i,m,n,nptotal,nttotal,dim,side,flag;
   int ngood,nbad,good,bad,ipt;
   double value,param;
   int p[3],pflag[3];
@@ -995,12 +1002,16 @@ void ReadSurf::clip3d()
     //   add 2 new points on plane, tri becomes trapezoid, so split into 2 tris
     // reallocate pts and tris if needed and reset xp
     // edge stores indices of pts already added, so don't create duplicate pts
+    // nptotal,nttotal = total current count of points and tris, including old
 
     nedge = maxedge = 0;
     edge = NULL;
     
     m = ntri_old;
     n = ntri_new;
+    nptotal = npoint_old + npoint_new;
+    nttotal = ntri_old + ntri_new;
+
     for (i = 0; i < n; i++) {
       p[0] = tris[m].p1;
       p[1] = tris[m].p2;
@@ -1040,7 +1051,7 @@ void ReadSurf::clip3d()
       if (pflag[2] == GOOD) ngood++;
 
       if (nbad && ngood) {
-	if (npoint_new+2 >= maxpoint) {
+	if (nptotal+2 >= maxpoint) {
 	  maxpoint += DELTA;
 	  pts = (Surf::Point *) 
 	    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
@@ -1048,7 +1059,7 @@ void ReadSurf::clip3d()
 	  xp[1] = pts[p[1]].x;
 	  xp[2] = pts[p[2]].x;
 	}
-	if (ntri_new == maxtri) {
+	if (nttotal == maxtri) {
 	  maxtri += DELTA;
 	  tris = (Surf::Tri *) 
 	    memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
@@ -1065,12 +1076,13 @@ void ReadSurf::clip3d()
 	  ipt = find_edge(p[good],p[bad]);
 	  if (ipt < 0) {
 	    param = (value-xp[good][dim]) / (xp[bad][dim]-xp[good][dim]);
-	    pts[npoint_new].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
-	    pts[npoint_new].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
-	    pts[npoint_new].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
-	    pts[npoint_new].x[dim] = value;
-	    ipt = npoint_new++;
+	    pts[nptotal].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
+	    pts[nptotal].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
+	    pts[nptotal].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
+	    pts[nptotal].x[dim] = value;
+	    ipt = nptotal;
 	    add_edge(p[good],p[bad],ipt);
+            nptotal++;
 	  }
 
 	  if (bad == 0) tris[m].p1 = ipt;
@@ -1084,15 +1096,16 @@ void ReadSurf::clip3d()
 	    ipt = find_edge(p[good],p[bad]);
 	    if (ipt < 0) {
 	      param = (value-xp[good][dim]) / (xp[bad][dim]-xp[good][dim]);
-	      pts[npoint_new].x[0] = 
+	      pts[nptotal].x[0] = 
 		xp[good][0] + param*(xp[bad][0]-xp[good][0]);
-	      pts[npoint_new].x[1] = 
+	      pts[nptotal].x[1] = 
 		xp[good][1] + param*(xp[bad][1]-xp[good][1]);
-	      pts[npoint_new].x[2] = 
+	      pts[nptotal].x[2] = 
 		xp[good][2] + param*(xp[bad][2]-xp[good][2]);
-	      pts[npoint_new].x[dim] = value;
-	      ipt = npoint_new++;
-	      add_edge(p[good],p[bad],ipt);
+	      pts[nptotal].x[dim] = value;
+	      ipt = nptotal;
+	      add_edge(p[good],p[bad],nptotal);
+              nptotal++;
 	    }
 
 	    if (bad == 0) tris[m].p1 = ipt;
@@ -1111,22 +1124,23 @@ void ReadSurf::clip3d()
 	  ipt = find_edge(p[good],p[bad]);
 	  if (ipt < 0) {
 	    param = (value-xp[good][dim]) / (xp[bad][dim]-xp[good][dim]);
-	    pts[npoint_new].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
-	    pts[npoint_new].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
-	    pts[npoint_new].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
-	    pts[npoint_new].x[dim] = value;
-	    ipt = npoint_new++;
+	    pts[nptotal].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
+	    pts[nptotal].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
+	    pts[nptotal].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
+	    pts[nptotal].x[dim] = value;
+	    ipt = nptotal;
 	    add_edge(p[good],p[bad],ipt);
+            nptotal++;
 	  }
 
 	  if (bad == 0) tris[m].p1 = ipt;
 	  else if (bad == 1) tris[m].p2 = ipt;
 	  else if (bad == 2) tris[m].p3 = ipt;
 
-	  memcpy(&tris[ntri_new],&tris[m],sizeof(Surf::Tri));
-	  if (good == 0) tris[ntri_new].p1 = ipt;
-	  else if (good == 1) tris[ntri_new].p2 = ipt;
-	  else if (good == 2) tris[ntri_new].p3 = ipt;
+	  memcpy(&tris[nttotal],&tris[m],sizeof(Surf::Tri));
+	  if (good == 0) tris[nttotal].p1 = ipt;
+	  else if (good == 1) tris[nttotal].p2 = ipt;
+	  else if (good == 2) tris[nttotal].p3 = ipt;
 
 	  if (good == 0 && pflag[1] == GOOD) good = 1;
 	  else good = 2;
@@ -1134,24 +1148,28 @@ void ReadSurf::clip3d()
 	  ipt = find_edge(p[good],p[bad]);
 	  if (ipt < 0) {
 	    param = (value-xp[good][dim]) / (xp[bad][dim]-xp[good][dim]);
-	    pts[npoint_new].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
-	    pts[npoint_new].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
-	    pts[npoint_new].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
-	    pts[npoint_new].x[dim] = value;
-	    ipt = npoint_new++;
+	    pts[nptotal].x[0] = xp[good][0] + param*(xp[bad][0]-xp[good][0]);
+	    pts[nptotal].x[1] = xp[good][1] + param*(xp[bad][1]-xp[good][1]);
+	    pts[nptotal].x[2] = xp[good][2] + param*(xp[bad][2]-xp[good][2]);
+	    pts[nptotal].x[dim] = value;
+	    ipt = nptotal;
 	    add_edge(p[good],p[bad],ipt);
+            nptotal++;
 	  }
 
-	  if (bad == 0) tris[ntri_new].p1 = ipt;
-	  else if (bad == 1) tris[ntri_new].p2 = ipt;
-	  else if (bad == 2) tris[ntri_new].p3 = ipt;
-	  ntri_new++;
+	  if (bad == 0) tris[nttotal].p1 = ipt;
+	  else if (bad == 1) tris[nttotal].p2 = ipt;
+	  else if (bad == 2) tris[nttotal].p3 = ipt;
+	  nttotal++;
 	}
       }
       m++;
     }
 
     memory->destroy(edge);
+
+    npoint_new = nptotal - npoint_old;
+    ntri_new = nttotal - ntri_old;
 
     // project all points outside clipping plane to the plane
 
