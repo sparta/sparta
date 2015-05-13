@@ -6,7 +6,7 @@
 
 :line
 
-fix emit/face//file command :h3
+fix emit/face/file command :h3
 
 [Syntax:]
 
