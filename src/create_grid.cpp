@@ -138,7 +138,6 @@ void CreateGrid::command(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"inside") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
-      if (bstyle != LEVEL) error->all(FLERR,"Illegal create_grid command");
       if (strcmp(arg[iarg+1],"any") == 0) inside = ANY;
       else if (strcmp(arg[iarg+1],"all") == 0) inside = ALL;
       else error->all(FLERR,"Illegal create_grid command");
