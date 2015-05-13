@@ -18,6 +18,7 @@
 #include "grid.h"
 #include "update.h"
 #include "domain.h"
+#include "region.h"
 #include "comm.h"
 #include "random_mars.h"
 #include "random_park.h"
@@ -25,8 +26,9 @@
 
 using namespace SPARTA_NS;
 
-enum{NONE,STRIDE,CLUMP,BLOCK,RANDOM};
+enum{NONE,LEVEL,STRIDE,CLUMP,BLOCK,RANDOM};
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
+enum{ANY,ALL};
 
 /* ---------------------------------------------------------------------- */
 
@@ -56,23 +58,43 @@ void CreateGrid::command(int narg, char **arg)
 
   // optional args
 
+  dimension = domain->dimension;
+
   int nlevels = 1;
   int bstyle = NONE;
   int px = 0;
   int py = 0;
   int pz = 0;
   int order;
+  int inside = ANY;
 
   int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"level") == 0) {
       if (iarg+8 > narg) error->all(FLERR,"Illegal create_grid command");
+      if (bstyle != NONE && bstyle != LEVEL)
+        error->all(FLERR,"Illegal create_grid command");
+      bstyle = LEVEL;
       if (atoi(arg[iarg+1]) != nlevels+1) 
         error->all(FLERR,"Illegal create_grid command");
       nlevels++;
       iarg += 8;
+
+    } else if (strcmp(arg[iarg],"region") == 0) {
+      if (iarg+6 > narg) error->all(FLERR,"Illegal create_grid command");
+      if (bstyle != NONE && bstyle != LEVEL)
+        error->all(FLERR,"Illegal create_grid command");
+      bstyle = LEVEL;
+      if (atoi(arg[iarg+1]) != nlevels+1) 
+        error->all(FLERR,"Illegal create_grid command");
+      if (domain->find_region(arg[iarg+2]) < 0)
+        error->all(FLERR,"Create_grid region ID does not exist");
+      nlevels++;
+      iarg += 6;
+
     } else if (strcmp(arg[iarg],"stride") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
+      if (bstyle != NONE) error->all(FLERR,"Illegal create_grid command");
       bstyle = STRIDE;
       if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
       else if (strcmp(arg[iarg+1],"xzy") == 0) order = XZY;
@@ -85,6 +107,7 @@ void CreateGrid::command(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"clump") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
+      if (bstyle != NONE) error->all(FLERR,"Illegal create_grid command");
       bstyle = CLUMP;
       if (strcmp(arg[iarg+1],"xyz") == 0) order = XYZ;
       else if (strcmp(arg[iarg+1],"xzy") == 0) order = XZY;
@@ -95,8 +118,9 @@ void CreateGrid::command(int narg, char **arg)
       else error->all(FLERR,"Illegal create_grid command");
       iarg += 2;
 
-    } else if (strcmp(arg[3],"block") == 0) {
+    } else if (strcmp(arg[iarg],"block") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal create_grid command");
+      if (bstyle != NONE) error->all(FLERR,"Illegal create_grid command");
       bstyle = BLOCK;
       if (strcmp(arg[iarg+1],"*") == 0) px = 0;
       else px = atoi(arg[iarg+1]);
@@ -106,17 +130,25 @@ void CreateGrid::command(int narg, char **arg)
       else pz = atoi(arg[iarg+3]);
       iarg += 4;
 
-    } else if (strcmp(arg[3],"random") == 0) {
+    } else if (strcmp(arg[iarg],"random") == 0) {
       if (iarg+1 > narg) error->all(FLERR,"Illegal create_grid command");
+      if (bstyle != NONE) error->all(FLERR,"Illegal create_grid command");
       bstyle = RANDOM;
       iarg += 1;
+
+    } else if (strcmp(arg[iarg],"inside") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_grid command");
+      if (bstyle != LEVEL) error->all(FLERR,"Illegal create_grid command");
+      if (strcmp(arg[iarg+1],"any") == 0) inside = ANY;
+      else if (strcmp(arg[iarg+1],"all") == 0) inside = ALL;
+      else error->all(FLERR,"Illegal create_grid command");
+      iarg += 2;
 
     } else error->all(FLERR,"Illegal create_grid command");
   }
   
-  if (nlevels > 1 && bstyle != NONE) 
-    error->all(FLERR,"Cannot use specified create_grid options "
-               "with more than one level");
+  // partition domain across procs, only for BLOCK style
+
   if (bstyle == BLOCK) {
     procs2grid(nx,ny,nz,px,py,pz);
     if (px*py*pz != comm->nprocs)
@@ -133,6 +165,8 @@ void CreateGrid::command(int narg, char **arg)
   int level = 1;
   int xlo,xhi,ylo,yhi,zlo,zhi;
   xlo = xhi = ylo = yhi = zlo = zhi = 1;
+  iarg = 3;
+  Region *region = NULL;
 
   // loop over levels
   // new level determines assignment of previous-level cells
@@ -158,9 +192,11 @@ void CreateGrid::command(int narg, char **arg)
     // use their info to generate parent or child cells at previous level
     // decision on parent vs child in previous level depends on 
     //   pxyz lo/hi bounds in this level
+    //   or on whether parent is in/out of region
 
     if (level == 1) {
       grid->add_parent_cell(0,-1,nx,ny,nz,domain->boxlo,domain->boxhi);
+
     } else {
       int nparent = grid->nparent;
       int prevlevel = level-2;
@@ -168,6 +204,7 @@ void CreateGrid::command(int narg, char **arg)
       for (int igrandparent = 0; igrandparent < nparent; igrandparent++) {
         if (grid->pcells[igrandparent].level != prevlevel) continue;
         p = &grid->pcells[igrandparent];
+
         idgrandparent = p->id;
         nbits = p->nbits;
         pnx = p->nx;
@@ -181,11 +218,14 @@ void CreateGrid::command(int narg, char **arg)
               m++;
               idparent = idgrandparent | (m << nbits);
               grid->id_child_lohi(igrandparent,m,lo,hi);
-              pflag = 1;
-              if (ix+1 < xlo || ix+1 > xhi) pflag = 0;
-              if (iy+1 < ylo || iy+1 > yhi) pflag = 0;
-              if (iz+1 < zlo || iz+1 > zhi) pflag = 0;
-              if (pflag) 
+              if (region) pflag = cell_in_region(lo,hi,region,inside);
+              else {
+                pflag = 1;
+                if (ix+1 < xlo || ix+1 > xhi) pflag = 0;
+                if (iy+1 < ylo || iy+1 > yhi) pflag = 0;
+                if (iz+1 < zlo || iz+1 > zhi) pflag = 0;
+              }
+              if (pflag)
                 grid->add_parent_cell(idparent,igrandparent,nx,ny,nz,lo,hi);
               else {
                 if (count % nprocs == me)
@@ -215,7 +255,7 @@ void CreateGrid::command(int narg, char **arg)
         ny = p->ny;
         nz = p->nz;
 
-        if (bstyle == NONE) {
+        if (bstyle == LEVEL) {
           cellint ntotal = (cellint) nx * ny * nz;
           int firstproc = count % nprocs;
           cellint ifirst = me - firstproc + 1;
@@ -302,19 +342,30 @@ void CreateGrid::command(int narg, char **arg)
     if (level == nlevels) break;
 
     // args for next level
-    // assumes levels are in ascending order in arg list with no other keywords
+    // levels must be in ascending order starting at beginning of arg list
 
     level++;
-    iarg = 8*(level-2) + 4;
-    bounds(arg[iarg+1],nx,xlo,xhi);
-    bounds(arg[iarg+2],ny,ylo,yhi);
-    bounds(arg[iarg+3],nz,zlo,zhi);
-    nx = atoi(arg[iarg+4]);
-    ny = atoi(arg[iarg+5]);
-    nz = atoi(arg[iarg+6]);
+
+    if (strcmp(arg[iarg],"level") == 0) {
+      bounds(arg[iarg+2],nx,xlo,xhi);
+      bounds(arg[iarg+3],ny,ylo,yhi);
+      bounds(arg[iarg+4],nz,zlo,zhi);
+      nx = atoi(arg[iarg+5]);
+      ny = atoi(arg[iarg+6]);
+      nz = atoi(arg[iarg+7]);
+      iarg += 8;
+    } else if (strcmp(arg[iarg],"region") == 0) {
+      int iregion = domain->find_region(arg[iarg+2]);
+      region = domain->regions[iregion];
+      nx = atoi(arg[iarg+3]);
+      ny = atoi(arg[iarg+4]);
+      nz = atoi(arg[iarg+5]);
+      iarg += 6;
+    } else error->all(FLERR,"Illegal create_grid command");
+
     if (nx < 1 || ny < 1 || nz < 1)
       error->all(FLERR,"Illegal create_grid command");
-    if (domain->dimension == 2) {
+    if (dimension == 2) {
       if (zlo != 1 || zhi != 1 || nz != 1) 
         error->all(FLERR,"Illegal create_grid command");
     }
@@ -395,6 +446,50 @@ void CreateGrid::bounds(char *str, int nmax, int &nlo, int &nhi)
 }
 
 /* ----------------------------------------------------------------------
+   test if grid cell is inside region
+   one corner point inside is enough for inside = ANY
+   all corner points must be inside for inside = ALL
+   return 1 if inside, 0 if not
+------------------------------------------------------------------------- */
+
+int CreateGrid::cell_in_region(double *lo, double *hi, 
+                               Region *region, int inside)
+{
+  double x[3];
+
+  int n = 0;
+  
+  x[0] = lo[0]; x[1] = lo[1]; x[2] = lo[2];
+  n += region->match(x);
+  x[0] = hi[0]; x[1] = lo[1]; x[2] = lo[2];
+  n += region->match(x);
+  x[0] = lo[0]; x[1] = hi[1]; x[2] = lo[2];
+  n += region->match(x);
+  x[0] = hi[0]; x[1] = hi[1]; x[2] = lo[2];
+  n += region->match(x);
+
+  if (dimension == 3) {
+    x[0] = lo[0]; x[1] = lo[1]; x[2] = hi[2];
+    n += region->match(x);
+    x[0] = hi[0]; x[1] = lo[1]; x[2] = hi[2];
+    n += region->match(x);
+    x[0] = lo[0]; x[1] = hi[1]; x[2] = hi[2];
+    n += region->match(x);
+    x[0] = hi[0]; x[1] = hi[1]; x[2] = hi[2];
+    n += region->match(x);
+  }
+
+  if (inside == ANY) {
+    if (n) return 1;
+  } else if (inside == ALL) {
+    if (dimension == 2 && n == 4) return 1;
+    if (dimension == 3 && n == 8) return 1;
+  }
+
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
    assign nprocs to 3d grid so as to minimize surface area 
    area = surface area of each of 3 faces of simulation box
 ------------------------------------------------------------------------- */
@@ -464,7 +559,7 @@ void CreateGrid::procs2grid(int nx, int ny, int nz, int &px, int &py, int &pz)
       ipz = nprocs/ipx/ipy;
       valid = 1;
       if (upz && ipz != upz) valid = 0;
-      if (domain->dimension == 2 && ipz != 1) valid = 0;
+      if (dimension == 2 && ipz != 1) valid = 0;
       if (!valid) {
 	ipy++;
 	continue;
@@ -483,3 +578,4 @@ void CreateGrid::procs2grid(int nx, int ny, int nz, int &px, int &py, int &pz)
     ipx++;
   }
 }
+

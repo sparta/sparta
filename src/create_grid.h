@@ -31,7 +31,10 @@ class CreateGrid : protected Pointers {
   void command(int, char **);
 
  private:
+  int dimension;
+
   void bounds(char *, int, int &, int &);
+  int cell_in_region(double *, double *, class Region *, int);
   void procs2grid(int, int, int, int &, int &, int &);
 };
 
