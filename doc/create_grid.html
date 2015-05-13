@@ -19,17 +19,22 @@
 
 <LI>zero or more keywords/args pairs may be appended 
 
-<LI>keyword = <I>level</I> or <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> 
+<LI>keyword = <I>level</I> or <I>region</I> or <I>stride</I> or <I>clump</I> or <I>block</I> or <I>random</I> or <I>inside</I> 
 
 <PRE>  <I>level</I> args = Nlevel Px Py Pz Cx Cy Cz 
     Nlevel = level from 2 to M, must be in ascending order
     Px Py Pz = range of parent cells in each dimension in which to create child cells
     Cx Cy Cz = size of child grid in each dimension within parent cells
+  <I>region</I> args = Nlevel reg-ID Cx Cy Cz 
+    Nlevel = level from 2 to M, must be in ascending order
+    reg-ID = ID of region which parent cells must be in to create child cells
+    Cx Cy Cz = size of child grid in each dimension within parent cells
   <I>stride</I> arg = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
   <I>clump</I> arg = <I>xyz</I> or <I>xzy</I> or <I>yxz</I> or <I>yzx</I> or <I>zxy</I> or <I>zyx</I>
   <I>block</I> args = Px Py Pz
     Px,Py,Pz = # of processors in each dimension
-  <I>random</I> args = none 
+  <I>random</I> args = none
+  <I>inside</I> args = <I>any</I> or <I>all</I> 
 </PRE>
 
 </UL>
@@ -39,6 +44,9 @@
 create_grid 10 10 10 block * * *
 create_grid 10 10 10 block 4 2 5
 create_grid 10 10 10 level 2 * * * 2 2 3
+create_grid 20 10 1 level 2 10*15 3*7 1 2 2 1
+create_grid 20 10 1 region 2 b2 2 2 1 region 3 b3 2 3 1 inside any
+create_grid 20 10 1 level 2 10*15 3*7 1 2 2 1 region 3 b3 2 3 1
 create_grid 8 8 10 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1 
 </PRE>
 <P><B>Description:</B>
@@ -80,17 +88,18 @@ manner periodically during a running simulation.
 </P>
 <HR>
 
-<P>As mentioned above, a single-level grid is defined by specifying only
-the arguments <I>Nx</I>, <I>Ny</I>, <I>Nz</I>, with no additional levels.  This will
-create a uniform Nx by Ny by Nz grid of child cells.  For 2d
+<P>A single-level grid is defined by specifying only the arguments <I>Nx</I>,
+<I>Ny</I>, <I>Nz</I>, with no additional <I>level</I> or <I>region</I> keywords.  This
+will create a uniform Nx by Ny by Nz grid of child cells.  For 2d
 simulations, <I>Nz</I> must equal 1.
 </P>
 <P>For single-level grids, one of the keywords <I>stride</I>, <I>clump</I>,
 <I>block</I>, or <I>random</I> can be used to determine which processors are
-assigned which cells in the grid.  If no keyword is used, the cells
-are assigned in round-robin fashion, so that each processor is
-assigned every Pth grid cell, where P = the number of processors.
-This is the same as "stride xyz" in the discussion below.
+assigned which cells in the grid.  The <I>inside</I> keyword is ignored for
+single-level grids.  If no keyword is used, the cells are assigned in
+round-robin fashion, so that each processor is assigned every Pth grid
+cell, where P = the number of processors.  This is the same as "stride
+xyz" in the discussion below.
 </P>
 <P>The <I>stride</I> keyword means that every Pth cell is assigned to the same
 processor, where P is the number of processors.  E.g. if there are 100
@@ -141,17 +150,28 @@ cells.
 </P>
 <HR>
 
-<P>If a hierarchical grid with more than one level is desired, it can be
-defined using the <I>level</I> keyword one or more times with <I>Nlevel</I> in
-ascending order, starting with <I>Nlevel</I> = 2.  The other keywords
-<I>stride</I>, <I>clump</I>, <I>block</I>, or <I>random</I> cannot be used with a
-hierarchical grid.  Child cells (at any level) are assigned to
-processors in round-robin fashion, so that each processor is assigned
-every Pth grid cell, where P = the number of processors.
+<P>A hierarchical grid with more than one level can be defined using the
+<I>level</I> or <I>region</I> keywords one or more times with <I>Nlevel</I> in
+ascending order, starting with <I>Nlevel</I> = 2.  At each level the
+<I>level</I> or <I>region</I> keyword can be used interchangeably.  Child cells
+(at any level) are assigned to processors in round-robin fashion, so
+that each processor is assigned every Pth grid cell, where P = the
+number of processors.
 </P>
-<P>The Px, Py, Pz arguments specify which cells in the previous level are
-flagged as parents and partitioned to create cells at the new level.
-Each of the Px, Py, Pz arguments can be a single number or be
+<P>Note that the keywords <I>stride</I>, <I>clump</I>, <I>block</I>, or <I>random</I> cannot
+be used with a hierarchical grid.  The keyword <I>inside</I> can be used,
+but it must come after all the <I>level</I> or <I>region</I> keywords.
+</P>
+<P>For the <I>level</I> keyword, the Px, Py, Pz arguments specify which cells
+in the previous level are flagged as parents and sub-divided to create
+cells at the new level.  For example, if the level 1 grid is
+100x100x100, then Px, Py, Pz for level 2 could select any contiguous
+range of cells from 1 to 100 in x, y, or z.  If the level 2 grid is
+4x4x2 within any level 1 cell (as set by Cx, Cy, Cz), then Px, Py, Pz
+for level 3 could select any contiguous range of cells from 1 to 4 in
+x, y and 1 to 2 in z.
+</P>
+<P>Each of the Px, Py, Pz arguments can be a single number or be
 specified with a wildcard asterisk, as in the examples above.  For
 example, Px can be specified as "*" or "*n" or "n*" or "m*n".  If N =
 the number of grid cells in the x-direction in the previous level as
@@ -162,34 +182,66 @@ indices from n to N (inclusive).  A middle asterisk means all indices
 from m to n (inclusive).
 </P>
 <P>The Cx, Cy, Cz arguments are the number of new cells (in each
-dimension) to partition each parent cell into.  For 2d simulations,
-<I>Cz</I> must equal 1.  Note that for each new level, only grid cells that
-exist in the previous level are partitioned further.  E.g. level 3
-cells are only added to level 2 cells that exist, since some level 1
-cells may not have been partitioned into level 2 cells.
+dimension) to partition each selected parent cell into.  For 2d
+simulations, <I>Cz</I> must equal 1.  Note that for each new level, only
+grid cells that exist in the previous level are partitioned further.
+E.g. level 3 cells are only added to level 2 cells that exist, since
+some level 1 cells may not have been partitioned into level 2 cells.
 </P>
-<P>The next-to-last example above creates a 2-level grid.  The 1st level
-is 10x10x10.  Each of the 1000 level 1 cells is further partitioned
-into 2x2x3 cells.  This means the total number of level 2 cells is
-1000 * 12 = 12000.  The final grid in this example thus has 1001
-parent cells (the simulation box plus the 1000 level 1 cells), and
-12000 child cells.
+<P>This command creates a two-level grid:
 </P>
-<P>The last example above creates a 3-level grid.  The 1st level is
-8x8x10.  The 2nd level is 4x4x4 within each 1st level cell, but only
-half or 320 of the 640 level 1 cells are partitioned, namely those
-with x indices from 5 to 8.  Those with x indices from 1 to 4 remain
-as level 1 cells.  Some of the level 2 cells are further partitioned
-into 2x2x1 level 3 cells.  For the 4x4x4 level 2 grid within 320 or
-the level 1 cells, only the level 2 cells with x index = 1, y index =
-2-3, and z-index = 3-4 are further partitioned into level 3 cells,
-which is just 4 of the 64 level 2 cells.
+<PRE>create_grid 10 10 10 level 2 * * * 2 2 3 
+</PRE>
+<P>The 1st level is 10x10x10.  Each of the 1000 level 1 cells is further
+partitioned into 2x2x3 cells.  This means the total number of level 2
+cells is 1000 * 12 = 12000.  The resulting grid thus has 1001 parent
+cells (the simulation box plus the 1000 level 1 cells), and 12000
+child cells.
 </P>
-<P>The final grid in the last example thus has 1601 parent cells: 1 for
-the simulation box, 320 level 1 cells, and 1280 level 2 cells.  It has
-24640 child cells: 320 level 1 cells, 19200 level 2 cells, and 5120
-level 3 cells.
+<P>This command creates a 3-level grid:
 </P>
+<PRE>create_grid 8 8 10 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1 
+</PRE>
+<P>The last example above creates a 3-level grid.  The first level is
+8x8x10.  The second level is 4x4x4 within each 1st level cell, but
+only half or 320 of the 640 level 1 cells are partitioned, namely
+those with x indices from 5 to 8.  Those with x indices from 1 to 4
+remain as level 1 cells.  Some of the level 2 cells are further
+partitioned into 2x2x1 level 3 cells.  For the 4x4x4 level 2 grid
+within 320 or the level 1 cells, only the level 2 cells with x index =
+1, y index = 2-3, and z-index = 3-4 are further partitioned into level
+3 cells, which is just 4 of the 64 level 2 cells.
+</P>
+<P>The resulting grid thus has 1601 parent cells: 1 for the simulation
+box, 320 level 1 cells, and 1280 level 2 cells.  It has 24640 child
+cells: 320 level 1 cells, 19200 level 2 cells, and 5120 level 3 cells.
+</P>
+<P>For the <I>region</I> keyword, the subset of cells in the previous level
+which are flagged as parents and sub-divided is determined by which of
+them are in the geometric region specified by <I>reg-ID</I>.
+</P>
+<P>The <A HREF = "region.html">region</A> command can define volumes for simple
+geometric objects such as a sphere or rectangular block.  It can also
+define unions or intersections of simple objects or other union or
+intersection objects.  by defining an appropriate region, a complex
+portion of the simulation domain can be refined to a new level.
+</P>
+<P>Each grid cell at the previous level is tested to see whether it is
+"in" the region.  The <I>inside</I> keyword determines how this is done.
+If <I>inside</I> is set to <I>any</I> which is the default, then the grid cell
+is in the region if any of its corner points (4 in 2d, 8 in 3d) is in
+the region.  If <I>inside</I> is set to <I>all</I>, then all 4 or 8 corner
+points must be in the region for the grid cell itself to be in the
+region.  Note that the <I>side</I> option for the <A HREF = "region.html">region</A>
+command can be used to define whether the inside or outside of the
+geometric region is considered to be "in" the region.
+</P>
+<P>If the grid cell is in the region, then it is refined using the Cx,
+Cy, Cz arguments in the same manner that the <I>level</I> keyword uses
+them.  Examples for the use of the <I>region</I> keyword are given above.
+</P>
+<HR>
+
 <P><B>Restrictions:</B>
 </P>
 <P>This command can only be used after the simulation box is defined by
