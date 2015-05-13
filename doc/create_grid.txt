@@ -254,3 +254,5 @@ levels for 64-bit IDs.
 "create_box"_create_box.html, "read_grid"_read_grid.html
 
 [Default:]
+
+The only keyword with a default setting is inside = any.
