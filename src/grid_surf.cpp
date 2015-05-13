@@ -474,7 +474,6 @@ double Grid::flow_volume()
       p3 = pts[tris[i].p3].x;
       zarea = 0.5 * ((p2[0]-p1[0])*(p3[1]-p1[1]) - (p2[1]-p1[1])*(p3[0]-p1[0]));
       volume -= zarea * ((p1[2]+p2[2]+p3[2])/3.0 - boxlo[2]);
-      printf("Vol %d %g %g\n",i,volume,zarea);
     }
     if (volume <= 0.0) 
       volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) * 
@@ -498,7 +497,6 @@ double Grid::flow_volume()
       p1 = pts[lines[i].p1].x;
       p2 = pts[lines[i].p2].x;
       volume -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);
-      printf("Vol %d %g\n",i,volume);
     }
     if (volume <= 0.0) volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
   }
