@@ -372,9 +372,6 @@ void ReadSurf::command(int narg, char **arg)
 
   surf->setup_surf();
 
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-
   grid->unset_neighbors();
   grid->remove_ghosts();
   grid->clear_surf();
