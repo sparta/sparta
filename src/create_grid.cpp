@@ -146,6 +146,8 @@ void CreateGrid::command(int narg, char **arg)
     } else error->all(FLERR,"Illegal create_grid command");
   }
   
+  if (bstyle == NONE) bstyle = LEVEL;
+
   // partition domain across procs, only for BLOCK style
 
   if (bstyle == BLOCK) {
