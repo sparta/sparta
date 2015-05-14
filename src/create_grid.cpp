@@ -155,11 +155,10 @@ void CreateGrid::command(int narg, char **arg)
   }
 
   // create root parent cell
+  // treat first 3 args as if specified as "level 1 * * * Nx Ny Nz"
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
-
-  // treat first 3 args as if specified as "level 1 * * * Nx Ny Nz"
 
   int level = 1;
   int xlo,xhi,ylo,yhi,zlo,zhi;
@@ -445,7 +444,7 @@ void CreateGrid::bounds(char *str, int nmax, int &nlo, int &nhi)
 }
 
 /* ----------------------------------------------------------------------
-   test if grid cell is inside region
+   test if grid cell defined by lo/hi is inside region
    one corner point inside is enough for inside = ANY
    all corner points must be inside for inside = ALL
    return 1 if inside, 0 if not
