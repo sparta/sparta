@@ -321,6 +321,7 @@ void BalanceGrid::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   // sort particles
+  // NOTE: not needed again if rcbwt = PARTICLE for bstyle = BISECTION ??
 
   particle->sort();
 
