@@ -488,7 +488,7 @@ void Grid::compress()
 
   // repoint particles in all grid cells to new icell index
   // particles are still sorted and have not yet been compressed
-  // so count/first values in compressed cinfo are still valid
+  // so count/first values in compressed cinfo data struct are still valid
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
