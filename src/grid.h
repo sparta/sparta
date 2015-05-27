@@ -20,9 +20,12 @@
 
 #ifdef SPARTA_MAP
 #include <map>
+#elif SPARTA_UNORDERED_MAP
+#include <unordered_map>
 #else
 #include <tr1/unordered_map>
 #endif
+
 #include "my_page.h"
 
 namespace SPARTA_NS {
@@ -54,6 +57,8 @@ class Grid : protected Pointers {
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash;
+#elif SPARTA_UNORDERED_MAP
+  std::unordered_map<cellint,int> *hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash;
 #endif
@@ -181,6 +186,7 @@ class Grid : protected Pointers {
   void remove_ghosts();
   void setup_owned();
   void acquire_ghosts();
+  void rehash();
   void find_neighbors();
   void unset_neighbors();
   void reset_neighbors();
@@ -192,6 +198,8 @@ class Grid : protected Pointers {
   void group(int, char **);
   int add_group(const char *);
   int find_group(const char *);
+
+  void grow_pcells(int);
 
   void write_restart(FILE *);
   void read_restart(FILE *);
@@ -309,7 +317,6 @@ class Grid : protected Pointers {
   int mark_corner(int, int, int);
 
   void grow_cells(int, int);
-  void grow_pcells(int);
   void grow_sinfo(int);
 
   void surf2grid_stats();

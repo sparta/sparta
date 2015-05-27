@@ -495,8 +495,7 @@ void Grid::acquire_ghosts_near()
   for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
 
   Box *boxall = new Box[nboxall];
-  MPI_Allgatherv(box,nbox*sizeof(Box),MPI_CHAR,
-                 boxall,recvcounts,displs,MPI_CHAR,world);
+  MPI_Allgatherv(box,nsend,MPI_CHAR,boxall,recvcounts,displs,MPI_CHAR,world);
 
   memory->destroy(recvcounts);
   memory->destroy(displs);
@@ -724,6 +723,27 @@ int Grid::box_periodic(double *lo, double *hi, Box *box)
       }
 
   return n;
+}
+
+/* ----------------------------------------------------------------------
+   hash all my child (owned and ghost} and parent cells
+------------------------------------------------------------------------- */
+
+void Grid::rehash()
+{
+  // hash all child and parent cell IDs
+  // key = ID, value = index+1 for child cells, value = -(index+1) for parents
+  // skip sub cells
+
+  hash->clear();
+  hashfilled = 1;
+
+  for (int icell = 0; icell < nlocal+nghost; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    (*hash)[cells[icell].id] = icell+1;
+  }
+  for (int icell = 0; icell < nparent; icell++)
+    (*hash)[pcells[icell].id] = -(icell+1);
 }
 
 /* ----------------------------------------------------------------------
