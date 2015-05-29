@@ -189,7 +189,7 @@ void Grid::init()
 
 /* ----------------------------------------------------------------------
    add a single owned child cell to cells and cinfo
-   assume no surfs at this point, so cell and corners are OUTSIDE
+   assume no surfs at this point, so cell is OUTSIDE, corners are ignored
    neighs and nmask will be set later
 ------------------------------------------------------------------------- */
 
@@ -222,7 +222,7 @@ void Grid::add_child_cell(cellint id, int iparent, double *lo, double *hi)
   ci->first = -1;
   ci->mask = 1;
   ci->type = OUTSIDE;
-  for (int i = 0; i < ncorner; i++) ci->corner[i] = OUTSIDE;
+  for (int i = 0; i < ncorner; i++) ci->corner[i] = UNKNOWN;
   ci->weight = 1.0;
 
   if (domain->dimension == 3) 
@@ -1141,231 +1141,18 @@ void Grid::reset_neighbors()
 }
 
 /* ----------------------------------------------------------------------
-   set type and corner flags of all owned cells
-   will not be called before grid ghost cells and neighbors are defined
+   set type in/out for all owned cells
+   also set corner points of OVERLAP cells if not already set
+   only UNKNOWN cells are marked
+   only UNKNOWN corner flags of OVERLAP cells are marekd
+     all (not some) of the cornerflags must be UNKNOWN 
+       due to Cut2d/Cut3d split() failing to mark them
+       b/c surf(s) only touch cell at single point(s) on cell surface
+     set cornerflags to either all INSIDE or all OUTSIDE
+     if set to OUTSIDE, also set flow area = entire cell
 ------------------------------------------------------------------------- */
 
 void Grid::set_inout()
-{
-  //set_inout_old();
-  set_inout_new();
-}
-
-/* ----------------------------------------------------------------------
-   set type and corner flags of all owned cells
-------------------------------------------------------------------------- */
-
-void Grid::set_inout_old()
-{
-  int i,m,n,icell,icorner,iface,ineigh,jcorner,jcell,ivalue,offset,iconnect;
-  int nflag,ncorner,nface,nface_pts;
-  int flag,mark,progress;
-  double *ilo,*ihi,*jlo,*jhi;
-
-  int faceflip[6] = {XHI,XLO,YHI,YLO,ZHI,ZLO};
-
-  int me = comm->me;
-  int dimension = domain->dimension;
-  if (dimension == 3) {
-    ncorner = 8;
-    nface = 6;
-    nface_pts = 4;
-  } else {
-    ncorner = 4;
-    nface = 4;
-    nface_pts = 2;
-  }
-
-  // enumerate connections for each corner point of each owned cell
-
-  int **firstconnect,**nvalues;
-  memory->create(firstconnect,nlocal,ncorner,"grid:firstconnect");
-  memory->create(nvalues,nlocal,ncorner,"grid:nvalues");
-  
-  // 3d = 3 possible connections per corner per cell 
-  // 2d = 2 possible connections per corner per cell 
-
-  int maxconnect = dimension*ncorner*nlocal;
-  Connect *connect = 
-    (Connect *) memory->smalloc(maxconnect*sizeof(Connect),"grid:connect");
-  int nconnect = 0;
-
-  for (icell = 0; icell < nlocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    ilo = cells[icell].lo;
-    ihi = cells[icell].hi;
-
-    for (icorner = 0; icorner < ncorner; icorner++) {
-      firstconnect[icell][icorner] = nconnect;
-
-      for (iface = 0; iface < nface; iface++) {
-        for (m = 0; m < nface_pts; m++) {
-          if (corners[iface][m] != icorner) continue;
-
-          // neigh cell must be child or parent that I know
-          // if a parent cell find the child cell owning the matching jcorner pt
-
-          nflag = neigh_decode(cells[icell].nmask,iface);
-          
-          if (nflag == NCHILD || nflag == NPBCHILD) {
-            jcell = cells[icell].neigh[iface];
-            jlo = cells[jcell].lo;
-            jhi = cells[jcell].hi;
-            jcorner = corner_compare(icorner,ilo,ihi,faceflip[iface],jlo,jhi);
-            if (jcorner < 0) continue;
-          } else if (nflag == NPARENT || nflag == NPBPARENT) {
-            jcell = cells[icell].neigh[iface];
-            jlo = pcells[jcell].lo;
-            jhi = pcells[jcell].hi;
-            jcorner = corner_compare(icorner,ilo,ihi,faceflip[iface],jlo,jhi);
-            if (jcorner < 0) continue;
-            jcell = id_child_from_parent_corner(jcell,jcorner);
-            if (jcell < 0) continue;
-          } else continue;
-
-          connect[nconnect].icorner = jcorner;
-          connect[nconnect].icell = cells[jcell].ilocal;
-          connect[nconnect].proc = cells[jcell].proc;
-          nconnect++;
-        }
-      }
-
-      nvalues[icell][icorner] = nconnect - firstconnect[icell][icorner];
-    }
-  }
-
-  // create irregular communicator for exchanging off-proc corner connections
-
-  int nsend = 0;
-  for (i = 0; i < nconnect; i++)
-    if (connect[i].proc != me) nsend++;
-
-  int *proclist;
-  memory->create(proclist,nsend,"grid:proclist");
-
-  nsend = 0;
-  for (i = 0; i < nconnect; i++)
-    if (connect[i].proc != me) proclist[nsend++] = connect[i].proc;
-
-  Irregular *irregular = new Irregular(sparta);
-  int nrecv = irregular->create_data_uniform(nsend,proclist,comm->commsortflag);
-  Connect *sbuf,*rbuf;
-  sbuf = (Connect *) memory->smalloc(nsend*sizeof(Connect),"grid:sbuf");
-  rbuf = (Connect *) memory->smalloc(nrecv*sizeof(Connect),"grid:rbuf");
-
-  // loop until no more progress marking corner and cell flags I own
-
-  while (1) {
-    progress = 0;
-
-    // mark connected corner points with my corner point value
-    // repeat until loop produces no changes
-
-    while (1) {
-      mark = 0;
-
-      for (icell = 0; icell < nlocal; icell++) {
-        if (cells[icell].nsplit <= 0) continue;
-        for (icorner = 0; icorner < ncorner; icorner++) {
-          ivalue = cinfo[icell].corner[icorner];
-          
-          offset = firstconnect[icell][icorner];
-          n = nvalues[icell][icorner];
-          for (m = 0; m < n; m++) {
-            iconnect = m + offset;
-            if (connect[iconnect].proc != me) {
-              connect[iconnect].newvalue = ivalue;
-              continue;
-            } else {
-              flag = mark_corner(ivalue,connect[iconnect].icell,
-                                 connect[iconnect].icorner);
-              if (flag < 0) {
-                int jcell = connect[iconnect].icell;
-                int jcorner = connect[iconnect].icorner;
-                char str[128];
-                sprintf(str,"Grid in/out self-mark error %d for "
-                        "icell %d, icorner %d, connect %d %d, other cell %d, "
-                        "other corner %d, values %d %d\n",
-                        flag,icell,icorner,m,iconnect,jcell,jcorner,
-                        ivalue,cinfo[jcell].corner[jcorner]);
-                error->one(FLERR,str);
-              }
-              if (flag) mark = 1;
-            }
-          }
-        }
-      }
-      
-      if (mark) progress = 1;
-      if (!mark) break;
-    }
-
-    // communicate off-proc connections
-
-    nsend = 0;
-    for (i = 0; i < nconnect; i++)
-      if (connect[i].proc != me)
-        memcpy(&sbuf[nsend++],&connect[i],sizeof(Connect));
-
-    // perform irregular comm
-
-    irregular->exchange_uniform((char *) sbuf,sizeof(Connect),(char *) rbuf);
-
-    // use received connection to update cornerflags of my cells
-    // set progress if updates change any of my cells
-
-    for (m = 0; m < nrecv; m++) {
-      flag = mark_corner(rbuf[m].newvalue,rbuf[m].icell,rbuf[m].icorner);
-      if (flag < 0) {
-        char str[128];
-        sprintf(str,"Grid in/out other-mark error %d\n",flag);
-        error->one(FLERR,str);
-      }
-      if (flag) progress = 1;
-    }
-    
-    // if no progress made by any processor, done
-
-    int progress_any;
-    MPI_Allreduce(&progress,&progress_any,1,MPI_INT,MPI_SUM,world);
-    if (!progress_any) break;
-  }
-
-  // set type and cflags for all sub cells from split cell it belongs to
-
-  int j,splitcell;
-
-  for (icell = 0; icell < nlocal; icell++) {
-    if (cells[icell].nsplit > 0) continue;
-    splitcell = sinfo[cells[icell].isplit].icell;
-    cinfo[icell].type = cinfo[splitcell].type;
-    for (j = 0; j < ncorner; j++)
-      cinfo[icell].corner[j] = cinfo[splitcell].corner[j];
-  }
-
-  // clean up
-
-  delete irregular;
-  memory->destroy(proclist);
-  memory->sfree(sbuf);
-  memory->sfree(rbuf);
-
-  memory->destroy(firstconnect);
-  memory->destroy(nvalues);
-  memory->sfree(connect);
-}
-
-/* ----------------------------------------------------------------------
-   set type in/out for all owned cells
-   mark cell and corner flags of the 4 neighbors of each cell
-   UNKNOWN cell can be marked
-   OVERLAP cell with UNKNOWN cornerflags can be marked
-     all the cornerflags will be UNKNOWN, can be set to all INSIDE/OUTSIDE
-     if set to OUTSIDE, also set flow area = entire cell
-   NOTE: are periodic vs non-periodic BC handled correctly?
-------------------------------------------------------------------------- */
-
-void Grid::set_inout_new()
 {
   int i,j,m,icell,jcell,pcell,itype,jtype,marktype;
   int nflag,iface,icorner,ctype,ic;
@@ -1376,6 +1163,26 @@ void Grid::set_inout_new()
   int *proclist;
   double xcorner[3];
   Connect2 *sbuf,*rbuf;
+
+  /*
+  printf("PRE INOUT %d: %d\n",comm->me,grid->nlocal);
+  for (int i = 0; i < grid->nlocal; i++) {
+    Grid::ChildCell *g = &grid->cells[i];
+    //if (g->id == 59 || g->id == 187)
+    printf("ICELL %d: %d id %d pid %d lo %g %g "
+           "hi %g %g type %d corners %d %d %d %d vol %g\n",
+           comm->me,i,g->id,pcells[g->iparent].id,
+           g->lo[0],
+           g->lo[1],
+           g->hi[0],
+           g->hi[1],
+           grid->cinfo[i].type,
+           grid->cinfo[i].corner[0],
+           grid->cinfo[i].corner[1],
+           grid->cinfo[i].corner[2],
+           grid->cinfo[i].corner[3],grid->cinfo[i].volume);
+  }
+  */
 
   int faceflip[6] = {XHI,XLO,YHI,YLO,ZHI,ZLO};
 
@@ -1458,6 +1265,7 @@ void Grid::set_inout_new()
                 if (jcorner[0] != UNKNOWN) continue;
                 for (icorner = 0; icorner < ncorner; icorner++)
                   jcorner[icorner] = marktype;
+                /*
                 if (marktype == OUTSIDE) {
                   double *lo = cells[jcell].lo;
                   double *hi = cells[jcell].hi;
@@ -1470,8 +1278,13 @@ void Grid::set_inout_new()
                   else
                     cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
                 }
+                */
                 setnew[nsetnew++] = jcell;
               } else if (marktype != jtype) {
+                //printf("AAA icell %d id %d iface %d jcell %d id %d "
+                //       "marktype %d jtype %d\n",
+                //       icell,cells[icell].id,iface,jcell,cells[jcell].id,
+                //      marktype,jtype);
                 error->one(FLERR,"Cell type mis-match when marking on self");
               }
             } else {
@@ -1514,6 +1327,7 @@ void Grid::set_inout_new()
                   if (jcorner[0] != UNKNOWN) continue;
                   for (icorner = 0; icorner < ncorner; icorner++)
                     jcorner[icorner] = marktype;
+                  /*
                   if (marktype == OUTSIDE) {
                     double *lo = cells[jcell].lo;
                     double *hi = cells[jcell].hi;
@@ -1526,6 +1340,7 @@ void Grid::set_inout_new()
                     else
                       cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
                   }
+                  */
                   setnew[nsetnew++] = jcell;
                 } else if (marktype != jtype) {
                   error->one(FLERR,"Cell type mis-match when marking on self");
@@ -1605,6 +1420,28 @@ void Grid::set_inout_new()
     for (j = 0; j < ncorner; j++)
       cinfo[icell].corner[j] = cinfo[splitcell].corner[j];
   }
+
+
+  /*
+  printf("POST INOUT %d: %d\n",comm->me,grid->nlocal);
+  for (int i = 0; i < grid->nlocal; i++) {
+    Grid::ChildCell *g = &grid->cells[i];
+    if (g->id == 59 || g->id == 187)
+    printf("ICELL %d: %d id %d pid %d lo %g %g "
+           "hi %g %g type %d corners %d %d %d %d vol %g\n",
+           comm->me,i,g->id,pcells[g->iparent].id,
+           g->lo[0],
+           g->lo[1],
+           g->hi[0],
+           g->hi[1],
+           grid->cinfo[i].type,
+           grid->cinfo[i].corner[0],
+           grid->cinfo[i].corner[1],
+           grid->cinfo[i].corner[2],
+           grid->cinfo[i].corner[3],grid->cinfo[i].volume);
+  }
+  */
+
 
   // clean up
 
@@ -1752,9 +1589,9 @@ void Grid::check_uniform()
 
 /* ----------------------------------------------------------------------
    require all cell types be set
-   check corner pts of cells with surfs
-   require corner pts on global box boundary be set
-   warn if interior corner pts are not set
+   require all corner pts of OVERLAP cells be set
+     error if corner pts on global box boundary are not set
+     warning if interior corner pts are not set
 ------------------------------------------------------------------------- */
 
 void Grid::type_check()
@@ -1775,7 +1612,6 @@ void Grid::type_check()
     char str[128];
     sprintf(str,"Grid cells marked as unknown = %d",unknownall);
     error->all(FLERR,str);
-    //if (me == 0) error->/warning(FLERR,str);
   }
 
   // check corner flags of cells that are OVERLAP
