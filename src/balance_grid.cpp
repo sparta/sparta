@@ -350,7 +350,8 @@ void BalanceGrid::command(int narg, char **arg)
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
-  // invoke init() so all grid cell info, including fixes, is ready to migrate
+  // invoke init() so all grid cell info, including collide & fixes,
+  //   is ready to migrate
   // migrate grid cells and their particles to new owners
   // invoke grid methods to complete grid setup
 
