@@ -66,7 +66,7 @@ int Grid::pack_one(int icell, char *buf,
   }
 
   // if split cell, pack sinfo and sinfo.csplits and sinfo.csubs
-  // but not sub cells themselves
+  // if ownflag, also pack volumes from sub cells themselves
 
   if (cells[icell].nsplit > 1) {
     int isplit = cells[icell].isplit;
@@ -83,6 +83,14 @@ int Grid::pack_one(int icell, char *buf,
     if (memflag) memcpy(ptr,sinfo[isplit].csubs,nsplit*sizeof(int));
     ptr += nsplit*sizeof(int);
     ptr = ROUNDUP(ptr);
+
+    if (ownflag) {
+      int *csubs = sinfo[isplit].csubs;
+      double *dptr = (double *) ptr;
+      if (memflag)
+        for (int i = 0; i < nsplit; i++) dptr[i] = cinfo[csubs[i]].volume;
+      ptr += nsplit*sizeof(double);
+    }
   }
 
   // pack collision and fix info for migrating cell
@@ -120,7 +128,7 @@ int Grid::pack_one(int icell, char *buf,
 
 /* ----------------------------------------------------------------------
    static callback function for ring communication
-   uppack received ghost cells into cell lists
+   unpack received ghost cells into cell lists
 ------------------------------------------------------------------------- */
 
 void Grid::unpack_ghosts(int nsize, char *buf)
@@ -182,6 +190,7 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag)
   // create Nsplit sub cells
   // use sinfo.csubs to set cells.ilocal for new sub cells
   // create new csub for new sub cell indices
+  // if ownflag, also unpack volumes from sub cells themselves
 
   if (cells[icell].nsplit > 1) {
     int isplit;
@@ -208,6 +217,12 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag)
     ptr += nsplit*sizeof(int);
     ptr = ROUNDUP(ptr);
 
+    double *dptr;
+    if (ownflag) {
+      dptr = (double *) ptr;
+      ptr += nsplit*sizeof(double);
+    }
+
     int isub;
     for (int i = 0; i < nsplit; i++) {
       if (ownflag) isub = nlocal;
@@ -215,6 +230,7 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag)
       add_sub_cell(icell,ownflag);
       cells[isub].ilocal = sinfo[isplit].csubs[i];
       cells[isub].nsplit = -i;
+      if (ownflag) cinfo[isub].volume = dptr[i];
       sinfo[isplit].csubs[i] = isub;
     }
 
@@ -378,6 +394,7 @@ void Grid::compress()
   //   reset cells.isplit, ditto for sub cells
   //   increment nlocal, nsplitlocal
   // relies on sub cells appearing in cells array after their split cell
+  //   no need for sub cells of one split cell to be contiguous before or after
 
   int ncurrent = nlocal;
   nlocal = nunsplitlocal = nsplitlocal = nsublocal = 0;
