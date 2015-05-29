@@ -275,8 +275,6 @@ void Collide::modify_params(int narg, char **arg)
 
 void Collide::reset_vremax()
 {
-  int ngroups = mixture->ngroup;
-
   for (int icell = 0; icell < nglocal; icell++)
     for (int igroup = 0; igroup < ngroups; igroup++)
       for (int jgroup = 0; jgroup < ngroups; jgroup++) {
@@ -1384,6 +1382,34 @@ void Collide::compress_grid()
     }
     nglocal++;
   }
+}
+
+/* ----------------------------------------------------------------------
+   reinitialize per-cell arrays due to grid cell adaptation
+   count of owned grid cells has changed
+   called from adapt_grid
+------------------------------------------------------------------------- */
+
+void Collide::adapt_grid()
+{
+  int nglocal_old = nglocal;
+  nglocal = grid->nlocal;
+
+  // reallocate vremax and remain
+  // initialize only new added locations
+  // this leaves vremax/remain for non-adapted cells the same
+
+  nglocalmax = nglocal;
+  memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
+  if (remainflag)
+    memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
+
+  for (int icell = nglocal_old; icell < nglocal; icell++)
+    for (int igroup = 0; igroup < ngroups; igroup++)
+      for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+        vremax[icell][igroup][jgroup] = vremax_initial[igroup][jgroup];
+        if (remainflag) remain[icell][igroup][jgroup] = 0.0;
+      }
 }
 
 /* ----------------------------------------------------------------------

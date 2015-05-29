@@ -53,6 +53,7 @@ class Collide : protected Pointers {
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
   void compress_grid();
+  void adapt_grid();
 
  protected:
   int npmax;          // max # of particles in plist
