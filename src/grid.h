@@ -65,6 +65,15 @@ class Grid : protected Pointers {
 
   int hashfilled;             // 1 if hash is filled with parent/child IDs
 
+  // list data structs
+
+  MyPage<int> *csurfs;        // lists of surf indices for
+                              // owned + ghost child cells with surfs
+  MyPage<int> *csplits;       // lists of sub cell offsets for
+                              // owned + ghost split info
+  MyPage<int> *csubs;         // lists of sub cell indices for
+                              // owned + ghost split info
+
   // owned or ghost child cell
   // includes unsplit cells, split cells, sub cells in any order
   // ghost cells are appended to owned
@@ -268,13 +277,6 @@ class Grid : protected Pointers {
   int neighmask[6];        // bit-masks for each face in nmask
   int neighshift[6];       // bit-shifts for each face in nmask
 
-  MyPage<int> *csurfs;        // lists of surf indices for
-                              // owned + ghost child cells with surfs
-  MyPage<int> *csplits;       // lists of sub cell offsets for
-                              // owned + ghost split info
-  MyPage<int> *csubs;         // lists of sub cell indices for
-                              // owned + ghost split info
-
   // connection between one of my child cell corner pts
   // and a corner point in another child cell owned by me or another proc
 
@@ -322,9 +324,6 @@ class Grid : protected Pointers {
   void surf2grid_stats();
   void flow_stats();
   double flow_volume();
-
-  void set_inout_old();
-  void set_inout_new();
 
   // grid_comm.cpp
   // static variable for ring communication callback to access class data
