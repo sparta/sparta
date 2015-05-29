@@ -144,9 +144,17 @@ void Grid::surf2grid(int subflag)
       nsplit = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
                             vols,surfmap,cinfo[icell].corner,xsub,xsplit);
 
-    if (nsplit == 1) cinfo[icell].volume = vols[0];
+    if (nsplit == 1) {
 
-    else if (subflag) {
+      // if corner pts are UNKNOWN, surfs just touch cell border:
+      // vols[0] is 0.0, so don't overwrite original volume
+      // the cell will later be marked OUTSIDE or INSIDE
+      // if OUTSIDE, will need full original volume
+
+      if (cinfo[icell].corner[0] != UNKNOWN)
+        cinfo[icell].volume = vols[0];
+
+    } else if (subflag) {
       cells[icell].nsplit = nsplit;
       nunsplitlocal--;
       
@@ -225,7 +233,7 @@ void Grid::surf2grid(int subflag)
 }
 
 /* ----------------------------------------------------------------------
-   remove all surf info from owned grid cells
+   remove all surf info from owned grid cells, including sub cells
    set cell type and corner flags to UNKNOWN
    called before reassigning surfs to grid cells
    changes cells data structure since sub cells are removed
@@ -233,10 +241,6 @@ void Grid::surf2grid(int subflag)
 
 void Grid::clear_surf()
 {
-  // reset current grid cells as if no surfs existed
-  // discard sub cells
-  // compact cells and cinfo arrays
-  // set values in cells/cinfo as if no surfaces
 
   int dimension = domain->dimension;
   int ncorner = 8;
@@ -282,17 +286,16 @@ void Grid::clear_surf()
 }
 
 /* ----------------------------------------------------------------------
-   remove all surf info from owned grid cells
-   called before reassigning surfs to grid cells
-   changes cells data structure since sub cells are removed
+   remove all surf info from owned grid cells, NOT including sub cells
+   called from read_restart before reassigning surfs to grid cells
+   sub cells already exist from restart file
 ------------------------------------------------------------------------- */
 
 void Grid::clear_surf_restart()
 {
   // reset current grid cells as if no surfs existed
-  // discard sub cells
-  // compact cells and cinfo arrays
-  // set values in cells/cinfo as if no surfaces
+  // just skip sub cells
+  // set values in cells/cinfo as if no surfaces, including volume
 
   int dimension = domain->dimension;
   int ncorner = 8;
@@ -394,6 +397,9 @@ void Grid::flow_stats()
     else if (cinfo[icell].type == OVERLAP) overlap++;
     maxsplitone = MAX(maxsplitone,cells[icell].nsplit);
   }
+
+  // sum volume for unsplit and sub cells
+  // skip split cells and INSIDE cells
 
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit > 1) continue;
