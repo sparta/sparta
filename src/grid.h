@@ -156,6 +156,7 @@ class Grid : protected Pointers {
     int nbits;                // # of bits to encode my ID, also my siblings
     int newbits;              // # of additional bits to encode my children
     int iparent;              // index of parent, -1 if id=root
+    int grandparent;          // 1 if this cell is a grandparent, 0 if not
     int nx,ny,nz;             // sub grid within cell
     double lo[3],hi[3];       // opposite corner pts of cell
   };
@@ -239,7 +240,7 @@ class Grid : protected Pointers {
   // grid_id.cpp
 
   int id_find_child(int, double *);
-  int id_child2parent(cellint, cellint &);
+  int id_find_parent(cellint, cellint &);
   cellint id_str2num(char *);
   void id_num2str(int, char *);
   void id_pc_split(char *, char *, char *);

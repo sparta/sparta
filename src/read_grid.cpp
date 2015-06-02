@@ -202,7 +202,6 @@ void ReadGrid::create_parents(int n, char *buf)
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
 #endif
 
-  Grid::ParentCell *pcells = grid->pcells;
   int dimension = domain->dimension;
 
   for (int i = 0; i < n; i++) {
@@ -252,6 +251,7 @@ void ReadGrid::create_parents(int n, char *buf)
 
     grid->add_parent_cell(id,iparent,nx,ny,nz,lo,hi);
     (*hash)[id] = grid->nparent - 1;
+    if (iparent >= 0) grid->pcells[iparent].grandparent = 1;
 
     buf = next + 1;
   }

@@ -858,7 +858,7 @@ void ReadRestart::create_child_cells(int skipflag)
 
     if (nsplit > 0) {
       if (skipflag && (i % nprocs != me)) continue;
-      iparent = grid->id_child2parent(id,ichild);
+      iparent = grid->id_find_parent(id,ichild);
       grid->id_child_lohi(iparent,ichild,lo,hi);
       grid->add_child_cell(id,iparent,lo,hi);
       icell = grid->nlocal - 1;

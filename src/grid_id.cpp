@@ -53,13 +53,14 @@ int Grid::id_find_child(int iparent, double *x)
 }
 
 /* ----------------------------------------------------------------------
-   find parent of a child ID
-   loop from root thru parents until match the child cell ID
+   find parent of a child or parent ID
+   loop from root thru parents until match the input ID
    return local index of parent cell
    also return ichild = 1 to Nx*Ny*Nz for index of child within parent
+   ichild is cellint in case Nx*Ny*Nz exceeds 32-bit int
 ------------------------------------------------------------------------- */
 
-int Grid::id_child2parent(cellint idchild, cellint &ichild)
+int Grid::id_find_parent(cellint id, cellint &ichild)
 {
   int nbits,newbits,nx,ny,nz,mask,index;
   cellint m,idparent,idnew;
@@ -75,12 +76,12 @@ int Grid::id_child2parent(cellint idchild, cellint &ichild)
     ny = p->ny;
     nz = p->nz;
 
-    // ichild = the newbits above nbits in idchild
+    // ichild = the newbits above nbits in id
 
     mask = (1 << newbits) - 1;
-    ichild = (idchild >> nbits) & mask;
+    ichild = (id >> nbits) & mask;
     idnew = idparent | (ichild << nbits);
-    if (idnew == idchild) break;
+    if (idnew == id) break;
     index = (*hash)[idnew];
     iparent = -index-1;
   }

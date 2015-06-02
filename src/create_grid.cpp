@@ -371,6 +371,14 @@ void CreateGrid::command(int narg, char **arg)
     }
   }
 
+  // set grandparent flag for all parent cells
+  
+  Grid::ParentCell *pcells = grid->pcells;
+  int nparent = grid->nparent;
+
+  for (int i = 1; i < nparent; i++)
+    pcells[pcells[i].iparent].grandparent = 1;
+
   // invoke grid methods to complete grid setup
 
   if (bstyle == CLUMP || bstyle == BLOCK) grid->clumped = 1;
