@@ -1072,8 +1072,14 @@ template < int DIM, int SURF > void Update::move()
       if (particles[i].flag != PKEEP) {
         mlist[nmigrate++] = i;
         if (particles[i].flag != PDISCARD) {
-          if (cells[icell].proc == me)
-            error->one(FLERR,"Sending particle to self");
+          if (cells[icell].proc == me) {
+            char str[128];
+            sprintf(str,
+                    "Particle %d on proc %d being sent to self "
+                    "on step " BIGINT_FORMAT,
+                    i,me,update->ntimestep);
+            error->one(FLERR,str);
+          }
           ncomm_one++;
         }
       }

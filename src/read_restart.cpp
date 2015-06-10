@@ -429,6 +429,7 @@ void ReadRestart::command(int narg, char **arg)
   //   for all reading methods above where nprocs_file = current nprocs
 
   if (nprocs_file != nprocs) grid->clumped = 0;
+  if (nprocs == 1) grid->clumped = 0;
 
   // check that all grid cells and particles were assigned to procs
   // print stats on grid cells, particles, surfs

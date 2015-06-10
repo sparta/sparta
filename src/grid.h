@@ -27,6 +27,7 @@
 #endif
 
 #include "my_page.h"
+#include "adapt_grid.h"
 
 namespace SPARTA_NS {
 
@@ -225,8 +226,10 @@ class Grid : protected Pointers {
 
   int pack_one(int, char *, int, int, int);
   int unpack_one(char *, int, int);
+  int pack_one_adapt(AdaptGrid::SendAdapt *, char *, int);
   int pack_particles(int, char *, int);
   int unpack_particles(char *, int);
+  void unpack_particles_adapt(int, char *);
   void compress();
 
   // grid_surf.cpp

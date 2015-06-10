@@ -228,6 +228,8 @@ void Particle::compress_migrate(int nmigrate, int *mlist)
    all particles MUST be in owned cells
    overwrite deleted particle with particle from end of nlocal list
    called from Comm::migrate_cells() when cells+particles migrate on rebalance
+     also called from AdaptGrid when particles are sent to other procs
+   this does NOT preserve particle sorting
 ------------------------------------------------------------------------- */
 
 void Particle::compress_rebalance()

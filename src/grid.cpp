@@ -768,19 +768,9 @@ void Grid::find_neighbors()
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
-  // hash all child and parent cell IDs
-  // key = ID, value = index+1 for child cells, value = -(index+1) for parents
-  // skip sub cells, since want neighbors to be the split cell
+  // insure all cell IDs (owned, ghost, parent) are hashed
 
-  hash->clear();
-  hashfilled = 1;
-
-  for (icell = 0; icell < nlocal+nghost; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    (*hash)[cells[icell].id] = icell+1;
-  }
-  for (icell = 0; icell < nparent; icell++)
-    (*hash)[pcells[icell].id] = -(icell+1);
+  rehash();
 
   // set neigh flags and nmask for each owned and ghost child cell
   // sub cells have same lo/hi as split cell, so their neigh info is the same
@@ -1092,19 +1082,9 @@ void Grid::reset_neighbors()
 {
   if (!exist_ghost) return;
 
-  // hash all child and parent cell IDs
-  // key = ID, value = index+1 for child cells, value = -(index+1) for parents
-  // skip sub cells, since want neighbors to be the split cell
+  // insure all cell IDs (owned, ghost, parent) are hashed
 
-  hash->clear();
-  hashfilled = 1;
-
-  for (int icell = 0; icell < nlocal+nghost; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    (*hash)[cells[icell].id] = icell+1;
-  }
-  for (int icell = 0; icell < nparent; icell++)
-    (*hash)[pcells[icell].id] = -(icell+1);
+  rehash();
 
   // set neigh[] and nmask of each owned and ghost child cell
   // hash lookup can reset nmask to CHILD or UNKNOWN
@@ -1164,6 +1144,10 @@ void Grid::set_inout()
   int *proclist;
   double xcorner[3];
   Connect2 *sbuf,*rbuf;
+
+  if (!exist_ghost) 
+    error->all(FLERR,"Cannot mark grid cells as inside/outside surfs because "
+               "ghost cells do not exist");
 
   /*
   printf("PRE INOUT %d: %d\n",comm->me,grid->nlocal);

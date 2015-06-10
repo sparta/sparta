@@ -203,7 +203,7 @@ void FixBalance::end_of_step()
     memory->destroy(wt);
   }
 
-  if (bstyle == BISECTION) grid->clumped = 1;
+  if (nprocs == 1 || bstyle == BISECTION) grid->clumped = 1;
   else grid->clumped = 0;
 
   // sort particles

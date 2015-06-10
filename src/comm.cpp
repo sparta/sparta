@@ -321,6 +321,123 @@ void Comm::migrate_cells(int nmigrate)
 }
 
 /* ----------------------------------------------------------------------
+   send grid cell info with their particles needed for possible grid adaptation
+   return # of received cells and buf = ptr to received cell info
+   called from AdaptGrid
+------------------------------------------------------------------------- */
+
+int Comm::send_cells_adapt(int nsend, int *procsend,
+                           AdaptGrid::SendAdapt *sadapt, char **buf)
+{
+  int i,n;
+
+  // grow size list if needed
+  // don't use gproc, but needs to stay same size as gsize
+
+  if (nsend > maxgproc) {
+    maxgproc = nsend;
+    memory->destroy(gproc);
+    memory->destroy(gsize);
+    memory->create(gproc,maxgproc,"comm:gproc");
+    memory->create(gsize,maxgproc,"comm:gsize");
+  }
+
+  // compute byte count needed to pack cells
+
+  bigint boffset = 0;
+  for (i = 0; i < nsend; i++) {
+    n = grid->pack_one_adapt(&sadapt[i],NULL,0);
+    gsize[i] = n;
+    boffset += n;
+  }
+
+  if (boffset > MAXSMALLINT) 
+    error->one(FLERR,"Adapt grid send buffer exceeds 2 GB");
+  int offset = boffset;
+
+  // reallocate sbuf as needed
+
+  if (offset > maxsendbuf) {
+    memory->destroy(sbuf);
+    maxsendbuf = offset;
+    memory->create(sbuf,maxsendbuf,"comm:sbuf");
+    memset(sbuf,0,maxsendbuf);
+  }
+
+  // pack cell info into sbuf
+  // only called for unsplit and split cells I no longer own
+
+  offset = 0;
+  for (i = 0; i < nsend; i++)
+    offset += grid->pack_one_adapt(&sadapt[i],&sbuf[offset],1);
+
+  // create irregular communication plan with variable size datums
+  // nrecv = # of incoming grid cells
+  // recvsize = total byte size of incoming grid + particle info
+  // DEBUG: append a sort=1 arg so that messages from other procs
+  //        are received in repeatable order, thus grid cells stay in order
+
+  if (!irregular_grid) irregular_grid = new Irregular(sparta);
+  int recvsize;
+  int nrecv = 
+    irregular_grid->create_data_variable(nsend,procsend,gsize,
+                                         recvsize,commsortflag);
+
+  // reallocate rbuf as needed
+
+  if (recvsize > maxrecvbuf) {
+    memory->destroy(rbuf);
+    maxrecvbuf = recvsize;
+    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+    memset(rbuf,0,maxrecvbuf);
+  }
+
+  // perform irregular communication
+
+  irregular_grid->exchange_variable(sbuf,gsize,rbuf);
+
+  // return rbuf and grid cell count
+
+  *buf = rbuf;
+  return nrecv;
+}
+
+/* ----------------------------------------------------------------------
+   reply with info on cells deleted due to coarsening during grid adaptation
+   return # of received cells and buf = ptr to received cell list
+   called from AdaptGrid
+------------------------------------------------------------------------- */
+
+int Comm::reply_cells_adapt(int nsend, int *procsend, int *cellsend, char **buf)
+{
+  // create irregular communication plan with constant size datums
+  // nrecv = # of incoming grid cells
+  // DEBUG: append a sort=1 arg so that messages from other procs
+  //        are received in repeatable order, thus grid cells stay in order
+
+  if (!irregular) irregular = new Irregular(sparta);
+  int nrecv = irregular->create_data_uniform(nsend,procsend,commsortflag);
+
+  // reallocate rbuf as needed
+
+  if (nrecv*sizeof(int) > maxrecvbuf) {
+    memory->destroy(rbuf);
+    maxrecvbuf = nrecv*sizeof(int);
+    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+    memset(rbuf,0,maxrecvbuf);
+  }
+
+  // perform irregular communication
+
+  irregular->exchange_uniform((char *) cellsend,sizeof(int),rbuf);
+
+  // return rbuf and grid cell count
+
+  *buf = rbuf;
+  return nrecv;
+}
+
+/* ----------------------------------------------------------------------
    communicate inbuf around full ring of processors with messtag
    nbytes = size of inbuf = n datums * nper bytes
    callback() is invoked to allow caller to process/update each proc's inbuf

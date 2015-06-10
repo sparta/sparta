@@ -381,7 +381,7 @@ void CreateGrid::command(int narg, char **arg)
 
   // invoke grid methods to complete grid setup
 
-  if (bstyle == CLUMP || bstyle == BLOCK) grid->clumped = 1;
+  if (nprocs == 1 || bstyle == CLUMP || bstyle == BLOCK) grid->clumped = 1;
   else grid->clumped = 0;
 
   MPI_Barrier(world);
