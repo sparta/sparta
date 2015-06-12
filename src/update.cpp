@@ -200,7 +200,7 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
-  int dynamic = 0;
+  //int dynamic = 0;
 
   // cellweightflag = 1 if grid-based particle weighting is ON
 
@@ -1283,7 +1283,7 @@ int Update::bounce_setup()
 
 void Update::bounce_set(bigint ntimestep)
 {
-  int i,j;
+  int i;
 
   nsurf_tally = 0;
   if (nslist_compute) {

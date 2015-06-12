@@ -16,7 +16,6 @@
 #define SPARTA_COMM_H
 
 #include "pointers.h"
-#include "adapt_grid.h"
 
 namespace SPARTA_NS {
 
@@ -38,8 +37,8 @@ class Comm : protected Pointers {
   void reset_neighbors();
   int migrate_particles(int, int *);
   void migrate_cells(int);
-  int send_cells_adapt(int, int *, AdaptGrid::SendAdapt *, char **);
-  int reply_cells_adapt(int, int *, int *, char **);
+  int send_cells_adapt(int, int *, char *, char **);
+  int reply_cells_adapt(int, int *, char *, int, char **);
   void ring(int, int, void *, int, void (*)(int, char *), 
             void *, int self = 1);
 

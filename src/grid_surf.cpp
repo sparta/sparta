@@ -408,6 +408,41 @@ void Grid::clear_surf_restart()
   }
 }
 
+
+/* ----------------------------------------------------------------------
+// particle re-assign below can just loops over particles in each child cell
+------------------------------------------------------------------------- */
+
+void Grid::combine_split_cell_particles(int icell)
+{
+  int ip,iplast,jcell;
+
+  int nsplit = cells[icell].nsplit;
+  int *mycsubs = sinfo[cells[icell].isplit].csubs;
+  int count = 0;
+  int first = -1;
+
+  int *next = particle->next;
+
+  for (int i = 0; i < nsplit; i++) {
+    jcell = mycsubs[i];
+    count += cinfo[jcell].count;
+    if (cinfo[jcell].first < 0) continue;
+    
+    if (first < 0) first = cinfo[jcell].first;
+    else next[iplast] = cinfo[jcell].first;
+    
+    ip = cinfo[jcell].first;
+    while (ip >= 0) {
+      iplast = ip;
+      ip = next[ip];
+    }
+  }
+
+  cinfo[icell].count = count;
+  cinfo[icell].first = first;
+}
+
 /* ----------------------------------------------------------------------
    new surf-based methods
 ------------------------------------------------------------------------- */

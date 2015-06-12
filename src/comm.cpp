@@ -22,6 +22,7 @@
 #include "update.h"
 #include "output.h"
 #include "dump.h"
+#include "adapt_grid.h"
 #include "memory.h"
 #include "error.h"
 
@@ -326,10 +327,11 @@ void Comm::migrate_cells(int nmigrate)
    called from AdaptGrid
 ------------------------------------------------------------------------- */
 
-int Comm::send_cells_adapt(int nsend, int *procsend,
-                           AdaptGrid::SendAdapt *sadapt, char **buf)
+int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 {
   int i,n;
+
+  AdaptGrid::SendAdapt *sadapt = (AdaptGrid::SendAdapt *) inbuf;
 
   // grow size list if needed
   // don't use gproc, but needs to stay same size as gsize
@@ -346,7 +348,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend,
 
   bigint boffset = 0;
   for (i = 0; i < nsend; i++) {
-    n = grid->pack_one_adapt(&sadapt[i],NULL,0);
+    n = grid->pack_one_adapt((char *) &sadapt[i],NULL,0);
     gsize[i] = n;
     boffset += n;
   }
@@ -369,7 +371,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend,
 
   offset = 0;
   for (i = 0; i < nsend; i++)
-    offset += grid->pack_one_adapt(&sadapt[i],&sbuf[offset],1);
+    offset += grid->pack_one_adapt((char *) &sadapt[i],&sbuf[offset],1);
 
   // create irregular communication plan with variable size datums
   // nrecv = # of incoming grid cells
@@ -398,7 +400,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend,
 
   // return rbuf and grid cell count
 
-  *buf = rbuf;
+  *outbuf = rbuf;
   return nrecv;
 }
 
@@ -408,7 +410,8 @@ int Comm::send_cells_adapt(int nsend, int *procsend,
    called from AdaptGrid
 ------------------------------------------------------------------------- */
 
-int Comm::reply_cells_adapt(int nsend, int *procsend, int *cellsend, char **buf)
+int Comm::reply_cells_adapt(int nsend, int *procsend, 
+                            char *inbuf, int nsize, char **outbuf)
 {
   // create irregular communication plan with constant size datums
   // nrecv = # of incoming grid cells
@@ -420,20 +423,20 @@ int Comm::reply_cells_adapt(int nsend, int *procsend, int *cellsend, char **buf)
 
   // reallocate rbuf as needed
 
-  if (nrecv*sizeof(int) > maxrecvbuf) {
+  if (nrecv*nsize > maxrecvbuf) {
     memory->destroy(rbuf);
-    maxrecvbuf = nrecv*sizeof(int);
+    maxrecvbuf = nrecv*nsize;
     memory->create(rbuf,maxrecvbuf,"comm:rbuf");
     memset(rbuf,0,maxrecvbuf);
   }
 
   // perform irregular communication
 
-  irregular->exchange_uniform((char *) cellsend,sizeof(int),rbuf);
+  irregular->exchange_uniform(inbuf,nsize,rbuf);
 
   // return rbuf and grid cell count
 
-  *buf = rbuf;
+  *outbuf = rbuf;
   return nrecv;
 }
 

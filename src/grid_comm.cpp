@@ -17,10 +17,7 @@
 #include "particle.h"
 #include "collide.h"
 #include "modify.h"
-
-// DEBUG
-#include "comm.h"
-#include "update.h"
+#include "adapt_grid.h"
 
 using namespace SPARTA_NS;
 
@@ -278,9 +275,11 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag)
    return length of packing in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::pack_one_adapt(AdaptGrid::SendAdapt *s, char *buf, int memflag)
+int Grid::pack_one_adapt(char *inbuf, char *buf, int memflag)
 {
   int isub;
+
+  AdaptGrid::SendAdapt *s = (AdaptGrid::SendAdapt *) inbuf;
   char *ptr = buf;
 
   // pack SendAdapt data struct
