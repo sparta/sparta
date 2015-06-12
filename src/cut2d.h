@@ -75,6 +75,7 @@ class Cut2d : protected Pointers {
   Cut2d(class SPARTA *, int);
   ~Cut2d() {}
   int surf2grid(cellint, double *, double *, int *, int);
+  int surf2grid_list(cellint, double *, double *, int, int *, int *, int);
   int split(cellint, double *, double *, int, int *,
             double *&, int *, int *, int &, double *);
   void split_face(int, int, double *, double *);

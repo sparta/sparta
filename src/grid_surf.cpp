@@ -233,6 +233,97 @@ void Grid::surf2grid(int subflag)
 }
 
 /* ----------------------------------------------------------------------
+   map surf elements into a single grid cell = icell
+   flag = 0 for grid refinement, check
+   in cells: set nsurf, csurfs, nsplit, isplit
+   in cinfo: set type, corner, volume
+   initialize sinfo as needed
+------------------------------------------------------------------------- */
+
+void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
+                         Cut3d *cut3d, Cut2d *cut2d)
+{
+  int nsurf,isub,xsub;
+  int *ptr;
+  double xsplit[3];
+  double *vols;
+
+  int dim = domain->dimension;
+
+  // identify surfs in new cell only for grid refinement
+
+  if (flag == 0) {
+    ptr = csurfs->vget();
+    if (dim == 3)
+      nsurf = cut3d->surf2grid_list(cells[icell].id,
+                                    cells[icell].lo,cells[icell].hi,
+                                    cells[iparent].nsurf,cells[iparent].csurfs,
+                                    ptr,maxsurfpercell);
+    else
+      nsurf = cut2d->surf2grid_list(cells[icell].id,
+                                    cells[icell].lo,cells[icell].hi,
+                                    cells[iparent].nsurf,cells[iparent].csurfs,
+                                    ptr,maxsurfpercell);
+    
+    if (nsurf == 0) return;
+    if (nsurf < 0) error->one(FLERR,"Too many surfs in one refined cell");
+
+    cinfo[icell].type = OVERLAP;
+    cells[icell].nsurf = nsurf;
+    cells[icell].csurfs = ptr;
+    csurfs->vgot(nsurf);
+
+  } else nsurf = nsurf_caller;
+  
+  // split check done for both refinement and coarsening
+  
+  int *surfmap = csplits->vget();
+  ChildCell *c = &cells[icell];
+  
+  if (dim == 3)
+    nsplit = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                          vols,surfmap,cinfo[icell].corner,
+                          xsub,xsplit);
+  else
+    nsplit = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                          vols,surfmap,cinfo[icell].corner,
+                          xsub,xsplit);
+  
+  if (nsplit == 1) {
+    if (cinfo[icell].corner[0] != UNKNOWN)
+      cinfo[icell].volume = vols[0];
+    
+  } else {
+    c->nsplit = nsplit;
+    nunsplitlocal--;
+    
+    c->isplit = grid->nsplitlocal;
+    add_split_cell(1);
+    SplitInfo *s = &sinfo[nsplitlocal-1];
+    s->icell = icell;
+    s->csplits = surfmap;
+    s->xsub = xsub;
+    s->xsplit[0] = xsplit[0];
+    s->xsplit[1] = xsplit[1];
+    if (dim == 3) s->xsplit[2] = xsplit[2];
+    else s->xsplit[2] = 0.0;
+    
+    ptr = s->csubs = csubs->vget();
+    
+    for (int i = 0; i < nsplit; i++) {
+      isub = nlocal;
+      add_sub_cell(icell,1);
+      cells[isub].nsplit = -i;
+      cinfo[isub].volume = vols[i];
+      ptr[i] = isub;
+    }
+    
+    csplits->vgot(nsurf);
+    csubs->vgot(nsplit);
+  }
+}
+
+/* ----------------------------------------------------------------------
    remove all surf info from owned grid cells, including sub cells
    set cell type and corner flags to UNKNOWN
    called before reassigning surfs to grid cells

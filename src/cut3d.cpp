@@ -129,6 +129,75 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 }
 
 /* ----------------------------------------------------------------------
+   compute intersections of a grid cell with a provided list of surfs
+   csurfs = indices into global surf list
+   nlist, list = vector of surf indices of length nlist
+   return nsurf = # of surfs
+   return -1 if nsurf > max
+   called by AdaptGrid via Grid::surf2grid_one
+------------------------------------------------------------------------- */
+
+int Cut3d::surf2grid_list(cellint id_caller, 
+                          double *lo_caller, double *hi_caller,
+                          int nlist, int *list,
+                          int *surfs_caller, int max)
+{
+  id = id_caller;
+  lo = lo_caller;
+  hi = hi_caller;
+  surfs = surfs_caller;
+
+  Surf::Point *pts = surf->pts;
+  Surf::Tri *tris = surf->tris;
+  int ntri = surf->ntri;
+
+  int m;
+  double value;
+  double *x1,*x2,*x3;
+
+  nsurf = 0;
+  for (int i = 0; i < nlist; i++) {
+    m = list[i];
+    x1 = pts[tris[m].p1].x;
+    x2 = pts[tris[m].p2].x;
+    x3 = pts[tris[m].p3].x;
+
+    value = MAX(x1[0],x2[0]);
+    if (MAX(value,x3[0]) < lo[0]) continue;
+    value = MIN(x1[0],x2[0]);
+    if (MIN(value,x3[0]) > hi[0]) continue;
+
+    value = MAX(x1[1],x2[1]);
+    if (MAX(value,x3[1]) < lo[1]) continue;
+    value = MIN(x1[1],x2[1]);
+    if (MIN(value,x3[1]) > hi[1]) continue;
+
+    value = MAX(x1[2],x2[2]);
+    if (MAX(value,x3[2]) < lo[2]) continue;
+    value = MIN(x1[2],x2[2]);
+    if (MIN(value,x3[2]) > hi[2]) continue;
+
+    // 3 versions of this:
+    // 1 = tri_hex_intersect with geometric line_tri_intersect,
+    //     devel/cut3d.old1.py
+    // 2 = tri_hex_intersect with tetvol line_tri_intersect, here
+    // 3 = Sutherland-Hodgman clip algorithm, here and in devel/cut3d.py
+
+    //if (tri_hex_intersect(x1,x2,x3,tris[m].norm)) {
+    //  if (nsurf == max) return -1;
+    //  surfs[nsurf++] = m;
+    // }
+
+    if (clip(x1,x2,x3)) {
+      if (nsurf == max) return -1;
+      surfs[nsurf++] = m;
+    }
+  }
+
+  return nsurf;
+}
+
+/* ----------------------------------------------------------------------
    Sutherland-Hodgman clipping algorithm
    don't need to delete duplicate points since touching counts as intersection
 ------------------------------------------------------------------------- */
