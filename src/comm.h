@@ -38,7 +38,7 @@ class Comm : protected Pointers {
   int migrate_particles(int, int *);
   void migrate_cells(int);
   int send_cells_adapt(int, int *, char *, char **);
-  int reply_cells_adapt(int, int *, char *, int, char **);
+  int irregular_uniform(int, int *, char *, int, char **);
   void ring(int, int, void *, int, void (*)(int, char *), 
             void *, int self = 1);
 

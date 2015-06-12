@@ -405,12 +405,11 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 }
 
 /* ----------------------------------------------------------------------
-   reply with info on cells deleted due to coarsening during grid adaptation
-   return # of received cells and buf = ptr to received cell list
+   wrapper on irregular comm of datums on uniform size
    called from AdaptGrid
 ------------------------------------------------------------------------- */
 
-int Comm::reply_cells_adapt(int nsend, int *procsend, 
+int Comm::irregular_uniform(int nsend, int *procsend, 
                             char *inbuf, int nsize, char **outbuf)
 {
   // create irregular communication plan with constant size datums
