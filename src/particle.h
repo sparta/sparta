@@ -23,6 +23,7 @@ namespace SPARTA_NS {
 class Particle : protected Pointers {
  public:
   int exist;                // 1 if particles exist
+  int sorted;               // 1 if particles are sorted by grid cell
 
   struct Species {          // info on each particle species
     char id[16];

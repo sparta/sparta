@@ -50,7 +50,7 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
 
-  exist = 0;
+  exist = sorted = 0;
   nglobal = 0;
   nlocal = maxlocal = 0;
   particles = NULL;
@@ -221,6 +221,8 @@ void Particle::compress_migrate(int nmigrate, int *mlist)
       copy_custom(j,k);
     }
   }
+
+  sorted = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -255,6 +257,8 @@ void Particle::compress_rebalance()
       } else i++;
     }
   }
+
+  sorted = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -317,6 +321,8 @@ void Particle::compress_reactions(int ndelete, int *dellist)
 
 void Particle::sort()
 {
+  sorted = 1;
+
   // reallocate next list as needed
 
   if (maxsort < maxlocal) {

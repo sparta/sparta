@@ -123,7 +123,7 @@ void WriteGrid::write_parents()
 {
   char str[32];
 
-  // fill hash with parent IDs if necessary
+  // fill hash with parent IDs if necessary so can call grid->id_num2str()
 
   if (!grid->hashfilled) {
 
@@ -159,7 +159,10 @@ void WriteGrid::write_parents()
 
   // clear hash if filled it
 
-  if (!grid->hashfilled) grid->hash->clear();
+  if (!grid->hashfilled) {
+    grid->hash->clear();
+    grid->hashfilled = 0;
+  }
 }
 
 /* ----------------------------------------------------------------------

@@ -313,8 +313,12 @@ void Collide::collisions()
   }
 
   // remove any particles deleted in chemistry reactions
+  // if particles deleted/created by chemistry, particles are no longer sorted
+  // NOTE: not sure if this is the case, need to check
+  //       important if grid adapt will happen at end of timsestepx
 
   if (ndelete) particle->compress_reactions(ndelete,dellist);
+  if (react) particle->sorted = 0;
 
   // accumulate running totals
 

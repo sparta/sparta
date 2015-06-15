@@ -604,6 +604,8 @@ void Grid::compress()
     }
   }
 
+  hashfilled = 0;
+
   // delete old integer lists
 
   delete csurfs_old;

@@ -202,7 +202,7 @@ class Grid : protected Pointers {
   void reset_neighbors();
   void set_inout();
   void check_uniform();
-  void type_check();
+  void type_check(int flag=1);
   void weight(int, char **);
 
   void group(int, char **);

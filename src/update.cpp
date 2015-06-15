@@ -1112,6 +1112,8 @@ template < int DIM, int SURF > void Update::move()
 
   // END of all move/migrate iterations
 
+  particle->sorted = 0;
+
   // accumulate running totals
 
   niterate_running += niterate;

@@ -122,7 +122,7 @@ void ReadGrid::read(char *filename, int external)
 
   create_children();
 
-  // clear Grid::hash since done using it
+  // clear Grid::hash since overwrote it and now done using it
 
   hash->clear();
   grid->hashfilled = 0;

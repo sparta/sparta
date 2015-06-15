@@ -416,7 +416,7 @@ void ReadRestart::command(int narg, char **arg)
   delete [] file;
   memory->destroy(buf);
 
-  // clear Grid::hash since done using it
+  // clear Grid::hash since overwrote it and now done using it
 
   hash->clear();
   grid->hashfilled = 0;

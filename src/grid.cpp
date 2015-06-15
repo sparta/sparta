@@ -737,7 +737,6 @@ void Grid::rehash()
   // skip sub cells
 
   hash->clear();
-  hashfilled = 1;
 
   for (int icell = 0; icell < nlocal+nghost; icell++) {
     if (cells[icell].nsplit <= 0) continue;
@@ -745,6 +744,8 @@ void Grid::rehash()
   }
   for (int icell = 0; icell < nparent; icell++)
     (*hash)[pcells[icell].id] = -(icell+1);
+
+  hashfilled = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -1406,7 +1407,6 @@ void Grid::set_inout()
       cinfo[icell].corner[j] = cinfo[splitcell].corner[j];
   }
 
-
   /*
   printf("POST INOUT %d: %d\n",comm->me,grid->nlocal);
   for (int i = 0; i < grid->nlocal; i++) {
@@ -1426,7 +1426,6 @@ void Grid::set_inout()
            grid->cinfo[i].corner[3],grid->cinfo[i].volume);
   }
   */
-
 
   // clean up
 
@@ -1577,9 +1576,10 @@ void Grid::check_uniform()
    require all corner pts of OVERLAP cells be set
      error if corner pts on global box boundary are not set
      warning if interior corner pts are not set
+   flag = 1 (default) to output stats
 ------------------------------------------------------------------------- */
 
-void Grid::type_check()
+void Grid::type_check(int flag)
 {
   int i,m,icell;
 
@@ -1651,7 +1651,7 @@ void Grid::type_check()
     error->all(FLERR,str);
   }
 
-  flow_stats();
+  if (flag) flow_stats();
 }
 
 /* ----------------------------------------------------------------------
