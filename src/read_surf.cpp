@@ -370,7 +370,7 @@ void ReadSurf::command(int narg, char **arg)
 
   // make list of surf elements I own
   // assign surfs to grid cells
-  // more error checks to flag bad surfs
+  // error checks to flag bad surfs
   // re-setup ghost and grid
 
   surf->setup_surf();
@@ -382,20 +382,26 @@ void ReadSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
-  grid->surf2grid(1);
-
-  MPI_Barrier(world);
-  double time3 = MPI_Wtime();
+  // error checks that can be done before surfs are mapped to grid cells
 
   if (dimension == 2) {
     check_watertight_2d();
     check_neighbor_norm_2d();
-    check_point_near_surf_2d();
   } else {
     check_watertight_3d();
     check_neighbor_norm_3d();
-    check_point_near_surf_3d();
   }
+
+  MPI_Barrier(world);
+  double time3 = MPI_Wtime();
+
+  grid->surf2grid(1);
+
+  // error check after surfs are mapped to grid cells
+  // done on per-grid-cell basis, too expensive to do for global surfs
+
+  if (dimension == 2) check_point_near_surf_2d();
+  else check_point_near_surf_3d();
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
@@ -422,7 +428,7 @@ void ReadSurf::command(int narg, char **arg)
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/surf2grid/error/ghost/inout percent = "
+      fprintf(screen,"  read/error/surf2grid/ghost/inout percent = "
               "%g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
@@ -430,7 +436,7 @@ void ReadSurf::command(int narg, char **arg)
     }
     if (logfile) {
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/surf2grid/error/ghost/inout percent = "
+      fprintf(logfile,"  read/error/surf2grid/ghost/inout percent = "
               "%g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
