@@ -637,8 +637,10 @@ void FixEmitFace::copy_task(int icell, int n, int first, int oldfirst)
   // copy task vector
 
   if (first == oldfirst) {
-    for (int i = 0; i < n; i++) tasks[first].icell = icell;
-    first++;
+    for (int i = 0; i < n; i++) {
+      tasks[first].icell = icell;
+      first++;
+    }
 
   } else {
     for (int i = 0; i < n; i++) {
