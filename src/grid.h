@@ -319,10 +319,6 @@ class Grid : protected Pointers {
   int box_overlap(double *, double *, double *, double *);
   int box_periodic(double *, double *, Box *);
 
-  int corner_compare(int, double *, double *, int, double *, double *);
-  void corner2point(int, double *, double *, double*);
-  int mark_corner(int, int, int);
-
   void grow_cells(int, int);
   void grow_sinfo(int);
 

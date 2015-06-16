@@ -1,4 +1,4 @@
- /* ----------------------------------------------------------------------
+/* ----------------------------------------------------------------------
    SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
    http://sparta.sandia.gov
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
@@ -1435,88 +1435,6 @@ void Grid::set_inout()
   memory->destroy(proclist);
   memory->sfree(sbuf);
   memory->sfree(rbuf);
-}
-
-/* ----------------------------------------------------------------------
-   look for matching corner pt on jface
-------------------------------------------------------------------------- */
-
-int Grid::corner_compare(int icorner, double *ilo, double *ihi, 
-                         int jface, double *jlo, double *jhi)
-{
-  double x[3],y[3];
-
-  int nface_pts = 4;
-  if (domain->dimension == 2) nface_pts = 2;
-
-  corner2point(icorner,ilo,ihi,x);
-  for (int i = 0; i < nface_pts; i++) {
-    corner2point(corners[jface][i],jlo,jhi,y);
-    if (x[0] == y[0] && x[1] == y[1] && x[2] == y[2]) return corners[jface][i];
-  }
-
-  return -1;
-}
-
-/* ----------------------------------------------------------------------
-   look for matching corner pt on jface
-------------------------------------------------------------------------- */
-
-void Grid::corner2point(int icorner, double *lo, double *hi, double *pt)
-{
-  if (icorner % 2 == 0) pt[0] = lo[0];
-  else pt[0] = hi[0];
-  if ((icorner/2) % 2 == 0) pt[1] = lo[1];
-  else pt[1] = hi[1];
-  if (icorner < 4) pt[2] = lo[2];
-  else pt[2] = hi[2];
-}
-
-/* ----------------------------------------------------------------------
-   mark icorner of icell with value
-   possibly update cell type and other corner flags
-   return 0 if nothing changed
-   return 1 if anything changed
-   return < 0 if error condition
-   error -1 = corner already has a different value
-   error -2 = some other corner already has a different value
-   error -3 = cell was already marked INSIDE or OUTSIDE
-              which means all its corners should have already been marked
-------------------------------------------------------------------------- */
-
-int Grid::mark_corner(int value, int icell, int icorner)
-{
-  if (value == UNKNOWN) return 0;
-
-  int *corner = cinfo[icell].corner;
-  if (corner[icorner] == value) return 0;
-  if (corner[icorner] != UNKNOWN) return -1;
-  corner[icorner] = value;
-
-  // mark no further if icell has surfs
-
-  if (cells[icell].nsurf) return 1;
-
-  // value = INSIDE or OUTSIDE
-  // mark all corners and cell type with value
-
-  int ncorner = 8;
-  if (domain->dimension == 2) ncorner = 4;
-
-  for (int i = 0; i < ncorner; i++) {
-    if (corner[i] == OVERLAP) continue;
-    if (corner[i] == UNKNOWN) corner[i] = value;
-    else if (corner[i] != value) return -2;
-    else corner[i] = value;
-  }
-
-  // check and set cell type
-
-  if (cinfo[icell].type == OVERLAP) return 1;
-  if (cinfo[icell].type != UNKNOWN) return -3;
-  if (value == INSIDE) cinfo[icell].type = INSIDE;
-  else cinfo[icell].type = OUTSIDE;
-  return 1;
 }
 
 /* ----------------------------------------------------------------------

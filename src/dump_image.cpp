@@ -1650,8 +1650,9 @@ int DumpImage::modify_param(int narg, char **arg)
 
   if (strcmp(arg[0],"pdiam") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
-    int nlo,nhi;
-    MathExtra::bounds(arg[1],particle->nspecies,nlo,nhi);
+    int err,nlo,nhi;
+    err = MathExtra::bounds(arg[1],particle->nspecies,nlo,nhi);
+    if (err) error->all(FLERR,"Illegal dump_modify command");
     double diam = atof(arg[2]);
     if (diam <= 0.0) error->all(FLERR,"Illegal dump_modify command");
     for (int i = nlo; i <= nhi; i++) pdiamtype[i] = diam;
