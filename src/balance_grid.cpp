@@ -21,6 +21,8 @@
 #include "modify.h"
 #include "comm.h"
 #include "rcb.h"
+#include "output.h"
+#include "dump.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
@@ -370,6 +372,11 @@ void BalanceGrid::command(int narg, char **arg)
   if (ghost_previous) grid->reset_neighbors();
   else grid->find_neighbors();
   comm->reset_neighbors();
+
+  // reallocate per grid arrays in per grid dumps
+
+  for (int i = 0; i < output->ndump; i++)
+    output->dump[i]->reset_grid();
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();

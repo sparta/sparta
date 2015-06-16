@@ -35,6 +35,7 @@ namespace SPARTA_NS {
 
 class AdaptGrid : protected Pointers {
  public:
+  int mode;                 // 0 = adapt_grid command, 1 = fix adapt command
   int action1,action2;      // adaptation actions, so FixAdapt can access
 
   struct SendAdapt {
@@ -69,7 +70,9 @@ class AdaptGrid : protected Pointers {
   int rstyle;
   char *valueID;
   int valuewhich,valueindex;
-  int icompute,ifix,argindex;
+  int icompute,ifix,valindex;
+  class Compute *compute;
+  class Fix *fix;
 
   int *newcell;
   class RanPark *random;
@@ -139,6 +142,9 @@ class AdaptGrid : protected Pointers {
   void coarsen_random();
   int perform_coarsen();
   void gather_parents_coarsen(int, int);
+
+  double value_compute(int);
+  double value_fix(int);
 
   int region_check(double *, double *);
 };
