@@ -20,8 +20,6 @@
 #include "particle.h"
 #include "grid.h"
 #include "update.h"
-#include "output.h"
-#include "dump.h"
 #include "adapt_grid.h"
 #include "memory.h"
 #include "error.h"
@@ -314,11 +312,6 @@ void Comm::migrate_cells(int nmigrate)
   offset = 0;
   for (i = 0; i < nrecv; i++)
     offset += grid->unpack_one(&rbuf[offset],1,1);
-
-  // signal any dump grid classes to resize their per-cell arrays
-
-  for (i = 0; i < output->ndump; i++)
-    output->dump[i]->reset_grid();
 }
 
 /* ----------------------------------------------------------------------

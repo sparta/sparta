@@ -23,6 +23,8 @@
 #include "rcb.h"
 #include "modify.h"
 #include "compute.h"
+#include "output.h"
+#include "dump.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "memory.h"
@@ -222,12 +224,16 @@ void FixBalance::end_of_step()
   grid->reset_neighbors();
   comm->reset_neighbors();
 
-  // reallocate per grid cell arrays in any relevant computes
+  // reallocate per grid cell arrays in per grid computes
 
   Compute **compute = modify->compute;
   for (int i = 0; i < modify->ncompute; i++)
-    if (compute[i]->per_grid_flag)
-      compute[i]->reallocate();
+    if (compute[i]->per_grid_flag) compute[i]->reallocate();
+
+  // reallocate per grid arrays in per grid dumps
+
+  for (int i = 0; i < output->ndump; i++)
+    output->dump[i]->reset_grid();
 
   // final imbalance factor
 
