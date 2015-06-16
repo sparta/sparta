@@ -175,7 +175,6 @@ void ComputeGrid::compute_per_grid()
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
     if (norm = norm_vdof[j])
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-
   }
 
   // loop over all particles, skip species not in mixture group
