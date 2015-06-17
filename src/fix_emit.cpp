@@ -32,6 +32,7 @@ using namespace MathConst;
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // same as Grid
 
 #define DELTAGRID 1024
+#define DELTACELL 1024
 
 /* ---------------------------------------------------------------------- */
 
@@ -162,6 +163,60 @@ void FixEmit::start_of_step()
   nsingle = 0;
   perform_task();
   ntotal += nsingle;
+}
+
+/* ----------------------------------------------------------------------
+   add tasks for a new child cell added by adapt_grid or fix adapt
+   similar logic to init()
+------------------------------------------------------------------------- */
+
+void FixEmit::add_grid_one(int icell, int flag)
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  if (flag == 0) {
+    if (nglocal == nglocalmax) {
+      nglocalmax += DELTACELL;
+      memory->grow(c2list,nglocalmax,"emit:c2list");
+    }
+    nglocal++;
+
+    c2list[icell] = -1;
+  }
+
+  if (flag == 1) {
+    if (cells[icell].nsplit <= 0) return;
+    if (cinfo[icell].type == INSIDE) return;
+    if (region && region->bboxflag) {
+      int rflag = 1;
+      if (cells[icell].hi[0] > region->extent_xlo &&
+          cells[icell].lo[0] < region->extent_xhi) rflag = 0;
+      if (cells[icell].hi[1] > region->extent_ylo &&
+          cells[icell].lo[1] < region->extent_yhi) rflag = 0;
+      if (domain->dimension == 3) {
+        if (cells[icell].hi[2] > region->extent_zlo &&
+            cells[icell].lo[2] < region->extent_zhi) rflag = 0;
+      }
+      if (rflag) return;
+    }
+    
+    int ntaskcell = create_task(icell);
+    
+    if (ntaskcell) {
+      if (nlist == nlistmax) {
+        nlistmax += DELTAGRID;
+        memory->grow(clist,nlistmax,"emit:clist");
+        memory->grow(clistnum,nlistmax,"emit:clistnum");
+        memory->grow(clistfirst,nlistmax,"emit:clistfirst");
+      }
+      c2list[icell] = nlist;
+      clist[nlist] = icell;
+      clistnum[nlist] = ntaskcell;
+      clistfirst[nlist] = ntask - ntaskcell;
+      nlist++;
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------

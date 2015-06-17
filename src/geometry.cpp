@@ -1055,7 +1055,7 @@ double distsq_point_line(double *x, double *p1, double *p2)
   // A = vector from P1 to X
   // B = vector from P1 to P2
 
-  double a[3],b[3];
+  double a[3],b[3],c[3];
   MathExtra::sub3(x,p1,a);
   MathExtra::sub3(p2,p1,b);
 
@@ -1065,21 +1065,22 @@ double distsq_point_line(double *x, double *p1, double *p2)
  
   double alpha = MathExtra::dot3(a,b)/MathExtra::lensq3(b);
 
-  // reset A = vector from point on P1P2 line to X
+  // C = vector from point on P1P2 line to X
   // if alpha < 0.0, point on line is P1
   // if alpha > 1.0, point on line is P2
   // else point on line is P1 + alpha*(P2-P1)
 
-  if (alpha >= 1.0) MathExtra::sub3(x,p2,a);
+  if (alpha >= 1.0) MathExtra::sub3(x,p2,c);
   else if (alpha > 0.0) {
     a[0] = p1[0] + alpha*b[0];
     a[1] = p1[1] + alpha*b[1];
     a[2] = p1[2] + alpha*b[2];
-  }
+    MathExtra::sub3(x,a,c);
+  } else MathExtra::sub3(x,p1,c);
 
-  // return length of A
+  // return length of C
 
-  return MathExtra::lensq3(a);
+  return MathExtra::lensq3(c);
 }
 
 /* ----------------------------------------------------------------------
@@ -1142,6 +1143,134 @@ double distsq_point_tri(double *x, double *p1, double *p2, double *p3,
   rsq = MIN(rsq,distsq_point_line(point,p2,p3));
   rsq = MIN(rsq,distsq_point_line(point,p3,p1));
   return rsq + pdistsq;
+}
+
+/* ----------------------------------------------------------------------
+   compute distance bewteen a line segmeht XY and 2d quad lo/hi
+------------------------------------------------------------------------- */
+
+double dist_line_quad(double *x, double *y, double *lo, double *hi)
+{
+  double distsq;
+  double pt[3],e1[3],e2[3];
+
+  pt[2] = e1[2] = e2[2] = 0.0;
+
+  // distance between 4 corner pts of quad and line segment
+
+  pt[0] = lo[0]; pt[1] = lo[1];
+  distsq = distsq_point_line(pt,x,y);
+  pt[0] = hi[0]; pt[1] = lo[1];
+  distsq = MIN(distsq,distsq_point_line(pt,x,y));
+  pt[0] = lo[0]; pt[1] = hi[1];
+  distsq = MIN(distsq,distsq_point_line(pt,x,y));
+  pt[0] = hi[0]; pt[1] = hi[1];
+  distsq = MIN(distsq,distsq_point_line(pt,x,y));
+
+  // distance between line segment end pts and 4 quad edges
+
+  e1[0] = lo[0]; e1[1] = lo[1]; e2[0] = lo[0]; e2[1] = hi[1];
+  distsq = MIN(distsq,distsq_point_line(x,e1,e2));
+  distsq = MIN(distsq,distsq_point_line(y,e1,e2));
+
+  e1[0] = lo[0]; e1[1] = hi[1]; e2[0] = hi[0]; e2[1] = hi[1];
+  distsq = MIN(distsq,distsq_point_line(x,e1,e2));
+  distsq = MIN(distsq,distsq_point_line(y,e1,e2));
+
+  e1[0] = hi[0]; e1[1] = hi[1]; e2[0] = hi[0]; e2[1] = lo[1];
+  distsq = MIN(distsq,distsq_point_line(x,e1,e2));
+  distsq = MIN(distsq,distsq_point_line(y,e1,e2));
+
+  e1[0] = hi[0]; e1[1] = lo[1]; e2[0] = lo[0]; e2[1] = lo[1];
+  distsq = MIN(distsq,distsq_point_line(x,e1,e2));
+  distsq = MIN(distsq,distsq_point_line(y,e1,e2));
+
+  return sqrt(distsq);
+}
+
+/* ----------------------------------------------------------------------
+   compute distance bewteen a triangle XYZ with norm and 3d hex lo/hi
+------------------------------------------------------------------------- */
+
+double dist_tri_hex(double *x, double *y, double *z, double *norm,
+                    double *lo, double *hi)
+{
+  double distsq;
+  double pt[8][3],face[3];
+
+  // convert lo/hi to 8 corner pts
+  
+  pt[0][0] = lo[0]; pt[0][1] = lo[1]; pt[0][2] = lo[2];
+  pt[1][0] = hi[0]; pt[1][1] = lo[1]; pt[1][2] = lo[2];
+  pt[2][0] = lo[0]; pt[2][1] = hi[1]; pt[2][2] = lo[2];
+  pt[3][0] = hi[0]; pt[3][1] = hi[1]; pt[3][2] = lo[2];
+  pt[4][0] = lo[0]; pt[4][1] = lo[1]; pt[4][2] = hi[2];
+  pt[5][0] = hi[0]; pt[5][1] = lo[1]; pt[5][2] = hi[2];
+  pt[6][0] = lo[0]; pt[6][1] = hi[1]; pt[6][2] = hi[2];
+  pt[7][0] = hi[0]; pt[7][1] = hi[1]; pt[7][2] = hi[2];
+
+  // distance between 8 corner pts of hex and tri
+
+  distsq = distsq_point_tri(pt[0],x,y,z,norm);
+  distsq = MIN(distsq,distsq_point_tri(pt[1],x,y,z,norm));
+  distsq = MIN(distsq,distsq_point_tri(pt[2],x,y,z,norm));
+  distsq = MIN(distsq,distsq_point_tri(pt[3],x,y,z,norm));
+  distsq = MIN(distsq,distsq_point_tri(pt[4],x,y,z,norm));
+  distsq = MIN(distsq,distsq_point_tri(pt[5],x,y,z,norm));
+  distsq = MIN(distsq,distsq_point_tri(pt[6],x,y,z,norm));
+  distsq = MIN(distsq,distsq_point_tri(pt[7],x,y,z,norm));
+
+  // distance between tri corner pts and 6 hex faces (2 tris per face)
+
+  face[0] = -1.0; face[1] = 0.0; face[2] = 0.0;
+  distsq = MIN(distsq,distsq_point_tri(x,pt[0],pt[4],pt[6],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[0],pt[4],pt[6],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[0],pt[4],pt[6],face));
+  distsq = MIN(distsq,distsq_point_tri(x,pt[0],pt[6],pt[2],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[0],pt[6],pt[2],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[0],pt[6],pt[2],face));
+
+  face[0] = 1.0; face[1] = 0.0; face[2] = 0.0;
+  distsq = MIN(distsq,distsq_point_tri(x,pt[1],pt[3],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[1],pt[3],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[1],pt[3],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(x,pt[1],pt[7],pt[5],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[1],pt[7],pt[5],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[1],pt[7],pt[5],face));
+
+  face[0] = 0.0; face[1] = -1.0; face[2] = 0.0;
+  distsq = MIN(distsq,distsq_point_tri(x,pt[0],pt[1],pt[5],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[0],pt[1],pt[5],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[0],pt[1],pt[5],face));
+  distsq = MIN(distsq,distsq_point_tri(x,pt[0],pt[5],pt[4],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[0],pt[5],pt[4],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[0],pt[5],pt[4],face));
+
+  face[0] = 0.0; face[1] = 1.0; face[2] = 0.0;
+  distsq = MIN(distsq,distsq_point_tri(x,pt[2],pt[6],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[2],pt[6],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[2],pt[6],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(x,pt[2],pt[7],pt[3],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[2],pt[7],pt[3],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[2],pt[7],pt[3],face));
+
+  face[0] = 0.0; face[1] = 0.0; face[2] = -1.0;
+  distsq = MIN(distsq,distsq_point_tri(x,pt[0],pt[2],pt[3],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[0],pt[2],pt[3],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[0],pt[2],pt[3],face));
+  distsq = MIN(distsq,distsq_point_tri(x,pt[0],pt[3],pt[1],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[0],pt[3],pt[1],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[0],pt[3],pt[1],face));
+
+  face[0] = 0.0; face[1] = 0.0; face[2] = 1.0;
+  distsq = MIN(distsq,distsq_point_tri(x,pt[4],pt[5],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[4],pt[5],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[4],pt[5],pt[7],face));
+  distsq = MIN(distsq,distsq_point_tri(x,pt[4],pt[7],pt[6],face));
+  distsq = MIN(distsq,distsq_point_tri(y,pt[4],pt[7],pt[6],face));
+  distsq = MIN(distsq,distsq_point_tri(z,pt[4],pt[7],pt[6],face));
+
+  return sqrt(distsq);
 }
 
 /* ----------------------------------------------------------------------

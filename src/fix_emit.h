@@ -28,6 +28,7 @@ class FixEmit : public Fix {
   void start_of_step();
   double compute_vector(int);
 
+  void add_grid_one(int, int);
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
   void compress_grid();
@@ -43,7 +44,7 @@ class FixEmit : public Fix {
   int nglocalmax;      // max size of c2list
   int *c2list;         // index into clist for each owned cell
                        // -1 if no tasks for the cell
-                       // NOTE: only for unsplit and split cells, not sub cells?
+                       // only for unsplit and split cells
 
   int nlist;           // # of owned cells with insert tasks
   int nlistmax;        // max size of clist,clistnum,clistfirst

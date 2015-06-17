@@ -155,6 +155,17 @@ void Modify::end_of_step()
 }
 
 /* ----------------------------------------------------------------------
+   add_grid_one call, only for relevant fixes
+   invoked by adapt_grid and fix adapt when new child cells are created
+------------------------------------------------------------------------- */
+
+void Modify::add_grid_one(int icell, int flag)
+{
+  for (int i = 0; i < n_pergrid; i++)
+    fix[list_pergrid[i]]->add_grid_one(icell,flag);
+}
+
+/* ----------------------------------------------------------------------
    pack_grid_one call, only for relevant fixes
    invoked by load balancer when grid cells migrate
 ------------------------------------------------------------------------- */

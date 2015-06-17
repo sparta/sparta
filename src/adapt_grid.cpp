@@ -25,12 +25,13 @@
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
-#include "random_mars.h"
-#include "random_park.h"
+#include "fix_ave_grid.h"
 #include "cut3d.h"
 #include "cut2d.h"
 #include "output.h"
 #include "dump.h"
+#include "random_mars.h"
+#include "random_park.h"
 #include "my_page.h"
 #include "math_const.h"
 #include "math_extra.h"
@@ -47,8 +48,10 @@ enum{REGION_ALL,REGION_ONE,REGION_CENTER};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
 enum{LESS,MORE};
 enum{SUM,MINIMUM,MAXIMUM};
+enum{ONE,RUNNING};                      // also in FixAveGrid
 
 #define INVOKED_PER_GRID 16
+#define DELTA_NEW 1024
 #define DELTA_SEND 1024
 #define BIG 1.0e20
 
@@ -58,6 +61,10 @@ AdaptGrid::AdaptGrid(SPARTA *sparta) : Pointers(sparta)
 {
   me = comm->me;
   nprocs = comm->nprocs;
+
+  valueID = NULL;
+  newcells = NULL;
+  nnew = maxnew = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -65,6 +72,7 @@ AdaptGrid::AdaptGrid(SPARTA *sparta) : Pointers(sparta)
 AdaptGrid::~AdaptGrid()
 {
   delete [] valueID;
+  memory->destroy(newcells);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -79,8 +87,8 @@ void AdaptGrid::command(int narg, char **arg)
   // process command-line args
 
   mode = 0;
-  process_args(0,narg,arg);
-  check_args(0,-1);
+  process_args(narg,arg);
+  check_args(-1);
 
   // perform adaptation
 
@@ -145,16 +153,8 @@ void AdaptGrid::command(int narg, char **arg)
     if (action1 == REFINE) nrefine = refine();
     else if (action1 == COARSEN) ncoarsen = coarsen(pstop);
 
-    if (action2 != NONE) {
-      // reallocate per grid cell arrays in per grid computes
-
-      Compute **compute = modify->compute;
-      for (int i = 0; i < modify->ncompute; i++)
-        if (compute[i]->per_grid_flag) compute[i]->reallocate();
-
-      if (action2 == REFINE) nrefine = refine();
-      else if (action2 == COARSEN) ncoarsen = coarsen(pstop);
-    }
+    if (action2 == REFINE) nrefine = refine();
+    else if (action2 == COARSEN) ncoarsen = coarsen(pstop);
 
     if (nrefine == 0 && ncoarsen == 0) break;
     nrefine_total += nrefine;
@@ -269,6 +269,10 @@ void AdaptGrid::command(int narg, char **arg)
     grid->type_check();
   }
 
+  // final update of any per grid fixes for all new child cells
+  
+  if (modify->n_pergrid) add_grid_fixes();
+
   // reallocate per grid arrays in per grid dumps
 
   for (int i = 0; i < output->ndump; i++)
@@ -325,12 +329,10 @@ void AdaptGrid::command(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   process command args
-   flag = 0 for adapt_grid command
-   flag = 1 for fix adapt command
+   process command args for both adapt_grid and fix adapt
 ------------------------------------------------------------------------- */
 
-void AdaptGrid::process_args(int flag, int narg, char **arg)
+void AdaptGrid::process_args(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR,"Illegal adapt command");
 
@@ -352,8 +354,6 @@ void AdaptGrid::process_args(int flag, int narg, char **arg)
   if (action1 == action2) error->all(FLERR,"Illegal adapt command");
 
   // define style
-
-  valueID = NULL;
 
   if (strcmp(arg[iarg],"particle") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal adapt command");
@@ -417,13 +417,13 @@ void AdaptGrid::process_args(int flag, int narg, char **arg)
   nx = ny = nz = 2;
   if (domain->dimension == 2) nz = 1;
   region = NULL;
-  snorm[0] = snorm[1] = snorm[2] = 0.0;
+  sdir[0] = sdir[1] = sdir[2] = 0.0;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"iterate") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal adapt command");
       niterate = input->inumeric(FLERR,arg[iarg+1]);
-      if (flag) error->all(FLERR,"Illegal adapt command");
+      if (mode) error->all(FLERR,"Illegal adapt command");
       if (niterate <= 0) error->all(FLERR,"Illegal adapt command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"maxlevel") == 0) {
@@ -476,12 +476,12 @@ void AdaptGrid::process_args(int flag, int narg, char **arg)
       else error->all(FLERR,"Illegal group command");
       iarg += 3;
 
-    } else if (strcmp(arg[iarg],"surfnorm") == 0) {
+    } else if (strcmp(arg[iarg],"dir") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal adapt command");
-      snorm[0] = input->numeric(FLERR,arg[iarg+1]);
-      snorm[1] = input->numeric(FLERR,arg[iarg+2]);
-      snorm[2] = input->numeric(FLERR,arg[iarg+3]);
-      if (domain->dimension == 2 && snorm[2] != 0.0) 
+      sdir[0] = input->numeric(FLERR,arg[iarg+1]);
+      sdir[1] = input->numeric(FLERR,arg[iarg+2]);
+      sdir[2] = input->numeric(FLERR,arg[iarg+3]);
+      if (domain->dimension == 2 && sdir[2] != 0.0) 
         error->all(FLERR,"Illegal adapt command");
       iarg += 4;
 
@@ -491,12 +491,28 @@ void AdaptGrid::process_args(int flag, int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    error check on value compute/fix for both adapt_grid and fix adapt
-   flag = 0 for adapt_grid
-   flag = 1 for fix adapt
+   nevery is passed only from fix adapt (mode = 1)
 ------------------------------------------------------------------------- */
 
-void AdaptGrid::check_args(int flag, int nevery)
+void AdaptGrid::check_args(int nevery)
 {
+  // for every fix ave/grid defined, require that:
+  // (1) fix adapt Nevery is multiple of fix ave Nfreq
+  // (2) fix ave/grid is not a running ave
+  // (3) fix ave/grid is defined before this fix (checked in fix adapt)
+  // this insures fix ave/grid values will be up-to-date before
+  //   this adaptation changes the grid
+  // NOTE: at some point could make fix ave/grid do full interpolation
+  //       for new grid cells so this restriction is not needed
+
+  for (int i = 0; i < modify->nfix; i++) {
+    if (strcmp(modify->fix[i]->style,"ave/grid") == 0) {
+      if (((FixAveGrid *) modify->fix[i])->ave == RUNNING)
+        error->all(FLERR,"Adapt command does not yet allow use of "
+                   "fix ave/grid ave running");
+    }
+  }
+
   if (style != VALUE) return;
 
   if (valuewhich == COMPUTE) {
@@ -526,9 +542,18 @@ void AdaptGrid::check_args(int flag, int nevery)
     if (valindex && valindex > modify->fix[ifix]->size_per_grid_cols)
       error->all(FLERR,"Adapt fix array is accessed out-of-range");
 
-    if (flag == 0) {
+    // do not allow adapt_grid to use niterate > 1 with fix ave/grid
+    // this is b/c the fix's values will not be valid on 2nd iteration
+    // OK on 1st iteration, b/c altered cells are not eligble for action2
+    // NOTE: at some point could make fix ave/grid do full interpolation
+    //       for new grid cells so this restriction is not needed
+
+    if (mode == 0) {
       if (update->ntimestep % modify->fix[ifix]->per_grid_freq)
         error->all(FLERR,"Fix for adapt not computed at compatible time");
+      if (niterate > 1) 
+        error->all(FLERR,"Adapt can not perform multiple iterations "
+                   "if using fix as a value");
     } else {
       if (nevery % modify->fix[ifix]->per_grid_freq)
         error->all(FLERR,"Fix for adapt not computed at compatible time");
@@ -587,6 +612,10 @@ void AdaptGrid::setup()
 
 int AdaptGrid::refine()
 {
+  // NOTE: WHY is grid not really hashed at this point even though it says so?
+  // WHEN done with adapt, do I need to mark it hashed or unhashed?
+  // NOTE: does fix balance always do a sort?  yes it does
+
   //if (!grid->hashfilled) grid->rehash();
   //if (particle->exist && !particle->sorted) particle->sort();      
 
@@ -611,6 +640,7 @@ int AdaptGrid::refine()
     gather_parents_refine(delta,nrefine);
     if (collide) collide->adapt_grid();
     grid->compress();
+
   }
 
   return nrefine;
@@ -622,22 +652,15 @@ int AdaptGrid::refine()
 
 int AdaptGrid::coarsen(int pstop)
 {
-  //printf("AAA %d: %d %d\n",me,grid->hashfilled,particle->sorted);
-
-  if (!grid->hashfilled) grid->rehash();
-  if (particle->exist && !particle->sorted) particle->sort();      
-
   // NOTE: WHY is grid not really hashed at this point even though it says so?
   // WHEN done with adapt, do I need to mark it hashed or unhashed?
-  // NOTE: does fix balance always do a sort?  yes!
+  // NOTE: does fix balance always do a sort?  yes it does
+
+  //if (!grid->hashfilled) grid->rehash();
+  //if (particle->exist && !particle->sorted) particle->sort();      
 
   grid->rehash();
-  //particle->sort();      
-
-  //if (update->ntimestep == 200) {
-    //printf("DELTA %d\n",delta);
-    //return 0;
-    //}
+  particle->sort();      
 
   assign_parents_coarsen(pstop);
   candidates_coarsen(pstop);
@@ -659,6 +682,12 @@ int AdaptGrid::coarsen(int pstop)
     if (collide) collide->adapt_grid();
     grid->compress();
     if (particle->exist && replyany) particle->compress_rebalance();
+
+    // reallocate per grid cell arrays in per grid computes
+
+    Compute **compute = modify->compute;
+    for (int i = 0; i < modify->ncompute; i++)
+      if (compute[i]->per_grid_flag) compute[i]->reallocate();
   }
 
   return ncoarsen;
@@ -729,7 +758,7 @@ void AdaptGrid::refine_particle()
 /* ----------------------------------------------------------------------
    refine based on surfs in cell
    do not create cells smaller in any dimension than surfsize
-   only use surfs with normals opposing snorm
+   only use surfs with normals opposing sdir
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::refine_surf()
@@ -752,7 +781,7 @@ void AdaptGrid::refine_surf()
     for (m = 0; m < nsurf; m++) {
       if (dim == 2) norm = lines[csurfs[m]].norm;
       else norm = tris[csurfs[m]].norm;
-      if (MathExtra::dot3(norm,snorm) < 0.0) break;
+      if (MathExtra::dot3(norm,sdir) < 0.0) break;
     }
     if (m == nsurf) continue;
 
@@ -762,10 +791,7 @@ void AdaptGrid::refine_surf()
     if (fabs(hi[0]-lo[0])/nx < surfsize) flag = 0;
     if (fabs(hi[1]-lo[1])/ny < surfsize) flag = 0;
     if (dim == 3 && fabs(hi[2]-lo[2])/nz < surfsize) flag = 0;
-    if (flag) {
-      printf("REFINE %g\n", fabs(hi[0]-lo[0])/nx);
-      rlist[n++] = icell;
-    }
+    if (flag) rlist[n++] = icell;
   }
   rnum = n;
 
@@ -783,14 +809,12 @@ void AdaptGrid::refine_value()
   double value;
   int *csubs;
 
+  // NOTE: always invoke compute - is there someway to check more carefully?
+  // needed if iterating, needed if refine follows coarsen
+  
   if (valuewhich == COMPUTE) {
     compute = modify->compute[icompute];
-    if (mode == 0) compute->compute_per_grid();
-    if (mode == 1) {
-      if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-        compute->invoked_flag |= INVOKED_PER_GRID;
-      }
-    }
+    compute->compute_per_grid();
   } else if (valuewhich == FIX) fix = modify->fix[ifix];
 
   Grid::ChildCell *cells = grid->cells;
@@ -864,6 +888,34 @@ void AdaptGrid::refine_random()
 }
 
 /* ----------------------------------------------------------------------
+   final add of new child cells to fixes
+   allow for each cell ID to no longer exist or be for a parent cell
+     due to subsequent iterations
+   NOTE: first stage must happen earlier so fix memory for new cell is valid
+------------------------------------------------------------------------- */
+
+void AdaptGrid::add_grid_fixes()
+{
+#ifdef SPARTA_MAP
+  std::map<cellint,int> *hash = grid->hash;
+#elif SPARTA_UNORDERED_MAP
+  std::unordered_map<cellint,int> *hash = grid->hash;
+#else
+  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
+#endif
+
+  grid->rehash();
+
+  int icell;
+  for (int i = 0; i < nnew; i++) {
+    if (hash->find(newcells[i]) == hash->end()) continue;
+    icell = (*hash)[newcells[i]];
+    if (icell < 0) continue;
+    modify->add_grid_one(icell-1,1);
+  }
+}
+
+/* ----------------------------------------------------------------------
    perform refinement of child cells in rlist
 ------------------------------------------------------------------------- */
 
@@ -931,6 +983,18 @@ int AdaptGrid::perform_refine()
           cells = grid->cells;
           cinfo = grid->cinfo;
 
+          // update any per grid fixes for the new child cell
+          // add new child cell to newcells for later processing
+
+          if (modify->n_pergrid) {
+            modify->add_grid_one(grid->nlocal-1,0);
+            if (nnew == maxnew) {
+              maxnew += DELTA_NEW;
+              memory->grow(newcells,maxnew,"adapt_grid:newcells");
+            }
+            newcells[nnew++] = id;
+          }
+
           // if surfs in parent cell, intersect them with child cell
           // add_child_cell marked child type as OUTSIDE
           //   correct only if no surfs in parent
@@ -946,6 +1010,12 @@ int AdaptGrid::perform_refine()
             cells = grid->cells;
             cinfo = grid->cinfo;
             sinfo = grid->sinfo;
+
+            // update any per grid fixes for the newly created sub cells
+
+            if (modify->n_pergrid)
+              for (i = ichild+1; i < grid->nlocal; i++)
+                modify->add_grid_one(i,0);
           }
         }
 
@@ -968,12 +1038,11 @@ int AdaptGrid::perform_refine()
 
         if (cinfo[m].type == OVERLAP) continue;
 
+        // parent corner pt could be UNKNOWN if iterating
+        // and have not yet re-marked all new grid cells via set_inout()
+
         mark = cinfo[icell].corner[i];
-        if (mark == UNKNOWN) {
-          printf("BAD: Parent cell corner is UNKNOWN: %d %d\n",
-                 cells[icell].id,i);
-          continue;   // NOTE: should never be the case?
-        }
+        if (mark == UNKNOWN) continue;
         cinfo[m].type = mark;
       }
     }
@@ -1333,19 +1402,13 @@ void AdaptGrid::candidates_coarsen(int pstop)
 #endif
 
   // for style = VALUE, setup compute or fix values
-  // NOTE: should I always reinvoke compute for mode == 0 ?
-  //       need to worry about iteration
-  //       maybe should unset invoked_flag once per iteration
+  // NOTE: always invoke compute - is there someway to check more carefully?
+  // needed if iterating, needed if refine follows coarsen
 
   if (style == VALUE) {
     if (valuewhich == COMPUTE) {
       compute = modify->compute[icompute];
-      if (mode == 0) compute->compute_per_grid();
-      if (mode == 1) {
-        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-          compute->invoked_flag |= INVOKED_PER_GRID;
-      }
-      }
+      compute->compute_per_grid();
     } else if (valuewhich == FIX) fix = modify->fix[ifix];
   }
 
@@ -1503,8 +1566,6 @@ void AdaptGrid::candidates_coarsen(int pstop)
 
     return;
   }
-
-  printf("NSEND %d\n",nsend);
 
   // perform irregular comm to rendezvous procs
   // scan received buf with nrecv grid cells to fill in ctask fields
@@ -1688,7 +1749,7 @@ void AdaptGrid::coarsen_surf()
         for (j = 0; j < nsurf; j++) {
           if (dim == 2) norm = lines[csurfs[j]].norm;
           else norm = tris[csurfs[j]].norm;
-          if (MathExtra::dot3(norm,snorm) < 0.0) break;
+          if (MathExtra::dot3(norm,sdir) < 0.0) break;
         }
         if (j < nsurf) {
           flag = 1;
@@ -1701,7 +1762,7 @@ void AdaptGrid::coarsen_surf()
         for (j = 0; j < nsurf; j++) {
           if (dim == 2) norm = lines[csurfs[j]].norm;
           else norm = tris[csurfs[j]].norm;
-          if (MathExtra::dot3(norm,snorm) < 0.0) break;
+          if (MathExtra::dot3(norm,sdir) < 0.0) break;
         }
         if (j < nsurf) {
           flag = 1;
@@ -1710,10 +1771,7 @@ void AdaptGrid::coarsen_surf()
       }
     }
 
-    if (flag) {
-      ctask[i].flag = 1;
-      printf("COARSE %g\n", fabs(hi[0]-lo[0])/pcells[iparent].nx);
-    }
+    if (flag) ctask[i].flag = 1;
   }
 }
 
@@ -1924,6 +1982,18 @@ int AdaptGrid::perform_coarsen()
     cells = grid->cells;
     cinfo = grid->cinfo;
     inew = grid->nlocal - 1;
+    
+    // update any per grid fixes for the new child cell
+    // add new child cell to newcells for later processing
+
+    if (modify->n_pergrid) {
+      modify->add_grid_one(grid->nlocal-1,0);
+      if (nnew == maxnew) {
+        maxnew += DELTA_NEW;
+        memory->grow(newcells,maxnew,"adapt_grid:newcells");
+      }
+      newcells[nnew++] = ctask[i].id;
+    }
 
     // if any children have surfs, add union to new child cell
     // NOTE: any way to avoid N^2 loop for unique surfs
@@ -1965,6 +2035,12 @@ int AdaptGrid::perform_coarsen()
       cells = grid->cells;
       cinfo = grid->cinfo;
       sinfo = grid->sinfo;
+
+      // update any per grid fixes for newly created sub cells
+      
+      if (modify->n_pergrid)
+        for (i = inew+1; i < grid->nlocal; i++)
+          modify->add_grid_one(i,0);
 
     } else {
       if (proc[0] == me) {
@@ -2069,8 +2145,6 @@ int AdaptGrid::perform_coarsen()
     }
   }
 
-  printf("REPLY %d: %d\n",me,nreply);
-
   // return if no one has any child cell info to reply to another proc
 
   MPI_Allreduce(&nreply,&replyany,1,MPI_INT,MPI_SUM,world);
@@ -2101,7 +2175,6 @@ int AdaptGrid::perform_coarsen()
 
   for (i = 0; i < nrecv; i++) {
     icell = ibuf[i];
-    //printf("RECV REPLY %d %d: %d\n",me,i,icell);
     cells[icell].proc = -1;
     hash->erase(cells[icell].id);
 

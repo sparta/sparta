@@ -27,12 +27,16 @@ namespace SPARTA_NS {
 
 class FixAveGrid : public Fix {
  public:
+  int ave;                   // public so FixAdapt can check it
+
   FixAveGrid(class SPARTA *, int, char **);
   ~FixAveGrid();
   int setmask();
   void init();
   void setup();
   void end_of_step();
+
+  void add_grid_one(int, int);
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
   void compress_grid();
@@ -40,7 +44,7 @@ class FixAveGrid : public Fix {
 
  private:
   int nvalues,maxvalues;
-  int nrepeat,irepeat,nsample,ave;
+  int nrepeat,irepeat,nsample;
   bigint nvalid;
 
   char **ids;                // ID/name of compute,fix,variable to access   

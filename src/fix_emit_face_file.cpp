@@ -55,7 +55,6 @@ FixEmitFaceFile::FixEmitFaceFile(SPARTA *sparta, int narg, char **arg) :
   vector_flag = 1;
   size_vector = 2;
   global_freq = 1;
-  gridmigrate = 1;
 
   imix = particle->find_mixture(arg[2]);
   if (imix < 0) 

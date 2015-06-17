@@ -39,6 +39,7 @@ class Modify : protected Pointers {
   void start_of_step();
   void end_of_step();
 
+  void add_grid_one(int, int);
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
   void compress_grid(int);

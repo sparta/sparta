@@ -52,11 +52,12 @@ class AdaptGrid : protected Pointers {
   AdaptGrid(class SPARTA *);
   ~AdaptGrid();
   void command(int, char **);
-  void process_args(int, int, char **);
-  void check_args(int, int);
+  void process_args(int, char **);
+  void check_args(int);
   void setup();
   int refine();
   int coarsen(int);
+  void add_grid_fixes();
   void cleanup();
 
  private:
@@ -65,7 +66,7 @@ class AdaptGrid : protected Pointers {
   char *computeID;
   double rthresh,cthresh,cvalue,rfrac,cfrac;
   double surfsize;
-  double snorm[3];
+  double sdir[3];
   int rdecide,cdecide,combine;
   int minlevel,maxlevel;
   int nx,ny,nz;
@@ -82,7 +83,7 @@ class AdaptGrid : protected Pointers {
   class Cut3d *cut3d;
   class Cut2d *cut2d;
 
-  // rlist = list of child cells I will refine
+  // rlist = list of child cells I may refine
 
   int *rlist;
   int rnum;
@@ -106,6 +107,11 @@ class AdaptGrid : protected Pointers {
 
   struct CTask *ctask;
   int cnum,cnummax;
+
+  // newcells = IDs of new child cells I create, either via refine or coarsen
+
+  cellint *newcells;
+  int nnew,maxnew;
 
   // sadapt = list of child cell info to send to other procs for coarsening
 

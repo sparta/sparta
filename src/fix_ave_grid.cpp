@@ -30,9 +30,7 @@
 using namespace SPARTA_NS;
 
 enum{COMPUTE,FIX,VARIABLE};
-enum{ONE,RUNNING};
-
-// NOTE: set DELTAGRID to big value when done debugging
+enum{ONE,RUNNING};                // multiple files
 
 #define INVOKED_PER_GRID 16
 #define DELTAINPUT 8
@@ -672,6 +670,45 @@ int FixAveGrid::pack_one(int icell, char *buf, int memflag)
   }
 
   return ptr-buf;
+}
+
+/* ----------------------------------------------------------------------
+   realloc and initialize arrays with 0.0
+     for a new child cell added by adapt_grid or fix adapt
+   NOTE: do nothing for now if flag = 1
+         could add logic to interpolate new values for created cell
+------------------------------------------------------------------------- */
+
+void FixAveGrid::add_grid_one(int icell, int flag)
+{
+  if (flag) return;
+
+  //printf("AVEGRID %d %d %d: %d %g\n",icell,grid->cells[icell].id,
+  //       grid->pcells[grid->cells[icell].iparent].id);
+
+  grow_percell(1);
+
+  if (nvalues == 1) vector_grid[nglocal] = 0.0;
+  else 
+    for (int i = 0; i < nvalues; i++) array_grid[nglocal][i] = 0.0;
+
+  if (ave == RUNNING) {
+    if (nvalues == 1) vector[nglocal] = 0.0;
+    else 
+      for (int i = 0; i < nvalues; i++) array[nglocal][i] = 0.0;
+  }
+
+  for (int m = 0; m < nnorm; m++) norms[m][nglocal] = 0.0;
+
+  if (nextra) {
+    for (int m = 0; m < nextra; m++) {
+      int ncol = extras[m].ncol;
+      for (int i = 0; i < ncol; i++) extras[m].array_extra[nglocal][i] = 0.0;
+      for (int i = 0; i < ncol; i++) extras[m].norm_extra[nglocal][i] = 0.0;
+    }
+  }
+
+  nglocal++;
 }
 
 /* ----------------------------------------------------------------------
