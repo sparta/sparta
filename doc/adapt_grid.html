@@ -67,9 +67,11 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>adapt_grid refine particle
-adapt_grid coarsen particle
-adapt_grid refine coarsen value iterate 2 
+<P>NOTE: need some better examples
+</P>
+<PRE>adapt_grid refine particle 10 50
+adapt_grid coarsen particle 10 50
+adapt_grid refine coarsen value c_1<B>1</B> 5.0 10.0 iterate 2 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -119,6 +121,11 @@ is described in the next section.  Note that for refinement, the
 number of new child cells created withing a single cell is set by the
 <I>cells</I> keyword which defaults to 2x2x2 for 3d models and 2x2x1 for 2d
 models.
+</P>
+<P>Note that many of the style take an argument for both refinement and
+coarsening, e.g. <I>rcount</I> and <I>ccount</I> for style <I>particle</I>.  Both
+arguments must be specified, though one or the other will be ignored
+if the specified actions do not include refinement or coarsening.
 </P>
 <HR>
 
@@ -176,8 +183,10 @@ of the parent cells are coarsened.
 <P>The <I>iterate</I> keyword determines how many times the <I>action1</I> and
 <I>action2</I> operations are looped over.  The default is once.  If
 multiple iterations are used, cells can be recursively refined or
-coarsened.  Note that the compute used with style <I>value</I> will be
-recalculated at each iteration.
+coarsened.  If no further refinement or coarsening occurs on an
+iteration, the loop ends.  Note that the compute used with style
+<I>value</I> will be recalculated at each iteration to accurately reflect
+per grid values for the current grid.
 </P>
 <P>The <I>maxlevel</I> keyword limits how far a grid cell can be refined.  See
 <A HREF = "Section_howto.html#howto_8">Section howto 4.8</A> for a definition of the

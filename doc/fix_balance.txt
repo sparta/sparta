@@ -62,14 +62,14 @@ assignments and their relative performance trade-offs.
 
 :line
 
-Rebalancing is attempted once every {Nfreq} timesteps, but only if the
-current imbalance factor exceeds the specified {thresh}.  This factor
-is defined as the maximum number of particles owned by any processor,
-divided by the average number of particles per processor.  Thus an
-imbalance factor of 1.0 is perfect balance.  For 10000 particles
-running on 10 processors, if the most heavily loaded processor has
-1200 particles, then the factor is 1.2, meaning there is a 20%
-imbalance.  The {thresh} setting must be >= 1.0.
+Rebalancing is attempted by this command once every {Nfreq} timesteps,
+but only if the current imbalance factor exceeds the specified
+{thresh}.  This factor is defined as the maximum number of particles
+owned by any processor, divided by the average number of particles per
+processor.  Thus an imbalance factor of 1.0 is perfect balance.  For
+10000 particles running on 10 processors, if the most heavily loaded
+processor has 1200 particles, then the factor is 1.2, meaning there is
+a 20% imbalance.  The {thresh} setting must be >= 1.0.
 
 IMPORTANT NOTE: This command attempts to minimize the imbalance
 factor, as defined above.  But computational cost is not strictly
