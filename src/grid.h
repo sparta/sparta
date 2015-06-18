@@ -204,6 +204,11 @@ class Grid : protected Pointers {
   void check_uniform();
   void type_check(int flag=1);
   void weight(int, char **);
+  
+  void refine_cell(int, int, int, int, int, int *, 
+                   class Cut2d *, class Cut3d *);
+  void coarsen_cell(int, int, int *, int *, int *, class AdaptGrid *,
+                    class Cut2d *, class Cut3d *);
 
   void group(int, char **);
   int add_group(const char *);

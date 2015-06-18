@@ -50,6 +50,10 @@ class AdaptGrid : protected Pointers {
     double value;           // per-cell value to coarsen on
   };
 
+  SendAdapt **sa_header;    // communicated coarsening info, so Grid can access
+  int **sa_csurfs;
+  char **sa_particles;
+
   AdaptGrid(class SPARTA *);
   ~AdaptGrid();
   void command(int, char **);
@@ -79,7 +83,7 @@ class AdaptGrid : protected Pointers {
   class Compute *compute;
   class Fix *fix;
 
-  int *newcell;
+  int *childlist;
   class RanPark *random;
   int *delparent;
   class Cut3d *cut3d;
@@ -119,10 +123,6 @@ class AdaptGrid : protected Pointers {
 
   struct SendAdapt *sadapt;
   int nsend,nrecv,replyany;
-
-  SendAdapt **sa_header;
-  int **sa_csurfs;
-  char **sa_particles;
 
   // hash for child cell IDs created by converting a coarsened parent cell
 
