@@ -365,15 +365,19 @@ void AdaptGrid::process_args(int narg, char **arg)
   if (strcmp(arg[iarg],"particle") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal adapt command");
       style = PARTICLE;
-      rthresh = input->inumeric(FLERR,arg[iarg+1]);
-      cthresh = input->inumeric(FLERR,arg[iarg+2]);
+      rcount = input->numeric(FLERR,arg[iarg+1]);
+      ccount = input->numeric(FLERR,arg[iarg+2]);
       iarg += 3;
 
   } else if (strcmp(arg[iarg],"surf") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal adapt command");
+      if (iarg+3 > narg) error->all(FLERR,"Illegal adapt command");
       style = SURF;
-      surfsize = input->numeric(FLERR,arg[iarg+1]);
-      iarg += 2;
+      int igroup = surf->find_group(arg[iarg+1]);
+      if (igroup < 0)
+        error->all(FLERR,"Adapt command surface group does not exist");
+      sgroupbit = surf->bitmask[igroup];
+      surfsize = input->numeric(FLERR,arg[iarg+2]);
+      iarg += 3;
 
   } else if (strcmp(arg[iarg],"value") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal adapt command");
@@ -398,8 +402,8 @@ void AdaptGrid::process_args(int narg, char **arg)
       strcpy(valueID,suffix);
       delete [] suffix;
 
-      rthresh = input->numeric(FLERR,arg[iarg+2]);
-      cthresh = input->numeric(FLERR,arg[iarg+3]);
+      rvalue = input->numeric(FLERR,arg[iarg+2]);
+      cvalue = input->numeric(FLERR,arg[iarg+3]);
       iarg += 4;
 
   } else if (strcmp(arg[iarg],"random") == 0) {
@@ -478,9 +482,9 @@ void AdaptGrid::process_args(int narg, char **arg)
       if (iregion == -1) 
         error->all(FLERR,"Adapt region ID does not exist");
       region = domain->regions[iregion];
-      if (strcmp(arg[iarg+2],"all") == 0) rstyle = REGION_ALL;
-      else if (strcmp(arg[iarg+2],"one") == 0) rstyle = REGION_ONE;
-      else if (strcmp(arg[iarg+2],"center") == 0) rstyle = REGION_CENTER;
+      if (strcmp(arg[iarg+2],"all") == 0) regstyle = REGION_ALL;
+      else if (strcmp(arg[iarg+2],"one") == 0) regstyle = REGION_ONE;
+      else if (strcmp(arg[iarg+2],"center") == 0) regstyle = REGION_CENTER;
       else error->all(FLERR,"Illegal group command");
       iarg += 3;
 
@@ -764,16 +768,16 @@ void AdaptGrid::refine_particle()
       }
     }
 
-    if (np > rthresh) rlist[n++] = icell;
+    if (np > rcount) rlist[n++] = icell;
   }
 
   rnum = n;
 }
 
 /* ----------------------------------------------------------------------
-   refine based on surfs in cell
+   refine if cell contains eligible surfs
+   eligible = part of sgroup and norm opposed to sdir (or sdir = 0,0,0)
    do not create cells smaller in any dimension than surfsize
-   only use surfs with normals opposing sdir
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::refine_surf()
@@ -794,6 +798,11 @@ void AdaptGrid::refine_surf()
     nsurf = cells[icell].nsurf;
     csurfs = cells[icell].csurfs;
     for (m = 0; m < nsurf; m++) {
+      if (dim == 2) {
+        if (!(lines[m].mask & sgroupbit)) continue;
+      } else {
+        if (!(tris[m].mask & sgroupbit)) continue;
+      }
       if (dim == 2) norm = lines[csurfs[m]].norm;
       else norm = tris[csurfs[m]].norm;
       if (MathExtra::dot3(norm,sdir) < 0.0) break;
@@ -868,13 +877,13 @@ void AdaptGrid::refine_value()
     }
 
     //printf("AAA %d %d: %g %g\n",
-    //       icell,cells[icell].id,value,rthresh);
+    //       icell,cells[icell].id,value,rvalue);
 
     if (rdecide == LESS) {
-      if (value < rthresh) rlist[n++] = icell;
+      if (value < rvalue) rlist[n++] = icell;
     } else {
       //printf("AAA %d %d: %g %g\n",icell,cells[icell].id,value,rthresh);
-      if (value > rthresh) rlist[n++] = icell;
+      if (value > rvalue) rlist[n++] = icell;
     }
   }
 
@@ -1577,7 +1586,7 @@ void AdaptGrid::coarsen_particle()
       } else np += sa_header[recv[m]]->np;
     }
 
-    if (np < cthresh) ctask[i].flag = 1;
+    if (np < ccount) ctask[i].flag = 1;
   }
 }
 
@@ -1625,6 +1634,11 @@ void AdaptGrid::coarsen_surf()
         nsurf = cells[icell].nsurf;
         csurfs = cells[icell].csurfs;
         for (j = 0; j < nsurf; j++) {
+          if (dim == 2) {
+            if (!(lines[j].mask & sgroupbit)) continue;
+          } else {
+            if (!(tris[j].mask & sgroupbit)) continue;
+          }
           if (dim == 2) norm = lines[csurfs[j]].norm;
           else norm = tris[csurfs[j]].norm;
           if (MathExtra::dot3(norm,sdir) < 0.0) break;
@@ -1638,6 +1652,11 @@ void AdaptGrid::coarsen_surf()
         if (!nsurf) continue;
 	csurfs = sa_csurfs[recv[m]];
         for (j = 0; j < nsurf; j++) {
+          if (dim == 2) {
+            if (!(lines[j].mask & sgroupbit)) continue;
+          } else {
+            if (!(tris[j].mask & sgroupbit)) continue;
+          }
           if (dim == 2) norm = lines[csurfs[j]].norm;
           else norm = tris[csurfs[j]].norm;
           if (MathExtra::dot3(norm,sdir) < 0.0) break;
@@ -1731,12 +1750,12 @@ void AdaptGrid::coarsen_value()
     }
     
     //printf("BBB %d %d: %g %g\n",
-    //      i,grid->pcells[iparent].id,value,cthresh);
+    //      i,grid->pcells[iparent].id,value,cvalue);
 
     if (cdecide == LESS) {
-      if (value < cthresh) ctask[i].flag = 1;
+      if (value < cvalue) ctask[i].flag = 1;
     } else {
-      if (value > cthresh) ctask[i].flag = 1;
+      if (value > cvalue) ctask[i].flag = 1;
     }
   }
 }
@@ -2131,7 +2150,7 @@ int AdaptGrid::region_check(double *lo, double *hi)
   double pt[3];
 
   if (domain->dimension == 2) {
-    if (rstyle == REGION_ALL) {
+    if (regstyle == REGION_ALL) {
       pt[0] = lo[0]; pt[1] = lo[1]; pt[2] = 0.0;
       if (!region->match(pt)) return 0;
       pt[0] = hi[0]; pt[1] = lo[1]; pt[2] = 0.0;
@@ -2141,7 +2160,7 @@ int AdaptGrid::region_check(double *lo, double *hi)
       pt[0] = hi[0]; pt[1] = hi[1]; pt[2] = 0.0;
       if (!region->match(pt)) return 0;
       return 1;
-    } else if (rstyle == REGION_ONE) {
+    } else if (regstyle == REGION_ONE) {
       pt[0] = lo[0]; pt[1] = lo[1]; pt[2] = 0.0;
       if (region->match(pt)) return 1;
       pt[0] = hi[0]; pt[1] = lo[1]; pt[2] = 0.0;
@@ -2151,7 +2170,7 @@ int AdaptGrid::region_check(double *lo, double *hi)
       pt[0] = hi[0]; pt[1] = hi[1]; pt[2] = 0.0;
       if (region->match(pt)) return 1;
       return 0;
-    } else if (rstyle == REGION_CENTER) {
+    } else if (regstyle == REGION_CENTER) {
       pt[0] = 0.5 * (lo[0] + hi[0]);
       pt[1] = 0.5 * (lo[1] + hi[1]);
       pt[2] = 0.0;
@@ -2161,7 +2180,7 @@ int AdaptGrid::region_check(double *lo, double *hi)
   }
 
   if (domain->dimension == 3) {
-    if (rstyle == REGION_ALL) {
+    if (regstyle == REGION_ALL) {
       pt[0] = lo[0]; pt[1] = lo[1]; pt[2] = lo[2];
       if (!region->match(pt)) return 0;
       pt[0] = hi[0]; pt[1] = lo[1]; pt[2] = lo[2];
@@ -2179,7 +2198,7 @@ int AdaptGrid::region_check(double *lo, double *hi)
       pt[0] = hi[0]; pt[1] = hi[1]; pt[2] = hi[2];
       if (!region->match(pt)) return 0;
       return 1;
-    } else if (rstyle == REGION_ONE) {
+    } else if (regstyle == REGION_ONE) {
       pt[0] = lo[0]; pt[1] = lo[1]; pt[2] = lo[2];
       if (region->match(pt)) return 1;
       pt[0] = hi[0]; pt[1] = lo[1]; pt[2] = lo[2];
@@ -2197,7 +2216,7 @@ int AdaptGrid::region_check(double *lo, double *hi)
       pt[0] = hi[0]; pt[1] = hi[1]; pt[2] = hi[2];
       if (region->match(pt)) return 1;
       return 0;
-    } else if (rstyle == REGION_CENTER) {
+    } else if (regstyle == REGION_CENTER) {
       pt[0] = 0.5 * (lo[0] + hi[0]);
       pt[1] = 0.5 * (lo[1] + hi[1]);
       pt[2] = 0.5 * (lo[2] + hi[2]);

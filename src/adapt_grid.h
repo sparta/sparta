@@ -68,18 +68,15 @@ class AdaptGrid : protected Pointers {
 
  private:
   int me,nprocs;
-  int style,niterate;
-  char *computeID;
-  double rthresh,cthresh,cvalue,rfrac,cfrac;
+  int style,niterate,sgroupbit,regstyle;
+  int rdecide,cdecide,combine,minlevel,maxlevel;
+  int nx,ny,nz;
+  int valuewhich,valindex,icompute,ifix;
+  double rcount,ccount,rvalue,cvalue,rfrac,cfrac;
   double surfsize;
   double sdir[3];
-  int rdecide,cdecide,combine;
-  int minlevel,maxlevel;
-  int nx,ny,nz;
+  char *computeID,*valueID;
   class Region *region;
-  int rstyle;
-  char *valueID;
-  int valuewhich,valindex,icompute,ifix;
   class Compute *compute;
   class Fix *fix;
 
