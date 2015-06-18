@@ -28,6 +28,8 @@ namespace SPARTA_NS {
 
 class WriteGrid : protected Pointers {
  public:
+  int silent;
+
   WriteGrid(class SPARTA *);
   void command(int, char **);
 

@@ -59,6 +59,9 @@ FixAdapt::FixAdapt(SPARTA *sparta, int narg, char **arg) :
 
   action1 = adapt->action1;
   action2 = adapt->action2;
+  file = adapt->file;
+
+  // NOTE: check that file has * char in it
 
   // compute initial outputs
 
@@ -166,6 +169,10 @@ void FixAdapt::end_of_step()
 
   for (int i = 0; i < output->ndump; i++)
     output->dump[i]->reset_grid();
+
+  // write out new parent grid file
+
+  if (file) adapt->write_file();
 
   // outputs
 

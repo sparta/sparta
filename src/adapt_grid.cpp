@@ -30,6 +30,7 @@
 #include "cut2d.h"
 #include "output.h"
 #include "dump.h"
+#include "write_grid.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "my_page.h"
@@ -65,6 +66,7 @@ AdaptGrid::AdaptGrid(SPARTA *sparta) : Pointers(sparta)
   valueID = NULL;
   newcells = NULL;
   nnew = maxnew = 0;
+  file = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -73,6 +75,7 @@ AdaptGrid::~AdaptGrid()
 {
   delete [] valueID;
   memory->destroy(newcells);
+  delete [] file;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -278,6 +281,10 @@ void AdaptGrid::command(int narg, char **arg)
   for (int i = 0; i < output->ndump; i++)
     output->dump[i]->reset_grid();
 
+  // write out new parent grid file
+
+  if (file) write_file();
+
   /*
   printf("POST INOUT %d: %d\n",comm->me,grid->nlocal);
   Grid::ParentCell *pcells = grid->pcells;
@@ -418,6 +425,7 @@ void AdaptGrid::process_args(int narg, char **arg)
   if (domain->dimension == 2) nz = 1;
   region = NULL;
   sdir[0] = sdir[1] = sdir[2] = 0.0;
+  file = NULL;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"iterate") == 0) {
@@ -484,6 +492,13 @@ void AdaptGrid::process_args(int narg, char **arg)
       if (domain->dimension == 2 && sdir[2] != 0.0) 
         error->all(FLERR,"Illegal adapt command");
       iarg += 4;
+
+    } else if (strcmp(arg[iarg],"file") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal adapt command");
+      int n = strlen(arg[iarg+1]) + 1;
+      file = new char[n];
+      strcpy(file,arg[iarg+1]);
+      iarg += 2;
 
     } else error->all(FLERR,"Illegal adapt command");
   }
@@ -2519,4 +2534,36 @@ void AdaptGrid::cleanup()
   memory->sfree(delparent);
 
   delete chash;
+}
+
+/* ----------------------------------------------------------------------
+   write out new parent grid file via WriteGrid
+------------------------------------------------------------------------- */
+
+void AdaptGrid::write_file()
+{
+  WriteGrid *wg = new WriteGrid(sparta);
+  wg->silent = 1;
+
+  int narg = 2;
+  char **args = new char*[narg];
+  args[0] = (char *) "parent";
+
+  char *expandfile = NULL;
+  if (strchr(file,'*')) {
+    expandfile = new char[strlen(file) + 16];
+    char *ptr = strchr(file,'*');
+    *ptr = '\0';
+    sprintf(expandfile,"%s" BIGINT_FORMAT "%s",file,update->ntimestep,ptr+1);
+    *ptr = '*';
+    args[1] = expandfile;
+  } else args[1] = file;
+
+  wg->command(narg,args);
+
+  // NOTE: could persist wg for fix adapt
+
+  delete [] expandfile;
+  delete [] args;
+  delete wg;
 }

@@ -39,6 +39,7 @@ class FixAdapt : public Fix {
   int me,nprocs;
   int action1,action2,last_adapt;
   int nrefine,ncoarsen;
+  char *file;
 
   class AdaptGrid *adapt;
 };

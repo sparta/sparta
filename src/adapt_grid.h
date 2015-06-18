@@ -37,6 +37,7 @@ class AdaptGrid : protected Pointers {
  public:
   int mode;                 // 0 = adapt_grid command, 1 = fix adapt command
   int action1,action2;      // adaptation actions, so FixAdapt can access
+  char *file;               // output file name, so FixAdapt can access
 
   struct SendAdapt {
     int proc;               // proc that is sending
@@ -59,6 +60,7 @@ class AdaptGrid : protected Pointers {
   int coarsen(int);
   void add_grid_fixes();
   void cleanup();
+  void write_file();
 
  private:
   int me,nprocs;

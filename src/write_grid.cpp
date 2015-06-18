@@ -37,7 +37,10 @@ enum{PARENT,GEOM};
 
 /* ---------------------------------------------------------------------- */
 
-WriteGrid::WriteGrid(SPARTA *sparta) : Pointers(sparta) {}
+WriteGrid::WriteGrid(SPARTA *sparta) : Pointers(sparta)
+{
+  silent = 0;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -60,7 +63,7 @@ void WriteGrid::command(int narg, char **arg)
 
   int me = comm->me;
   if (me == 0) {
-    if (screen) fprintf(screen,"Writing grid file ...\n");
+    if (screen && !silent) fprintf(screen,"Writing grid file ...\n");
     fp = fopen(arg[1],"w");
     if (!fp) {
       char str[128];
@@ -90,7 +93,7 @@ void WriteGrid::command(int narg, char **arg)
 
   double time_total = time2-time1;
 
-  if (comm->me == 0) {
+  if (comm->me == 0 && !silent) {
     if (screen) {
       fprintf(screen,"  parent cells = %d\n",grid->nparent);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
