@@ -13,7 +13,7 @@ scale_particles command :h3
 scale_particles mix-ID factor :pre
 
 mix-ID = ID of mixture to use when scaling particles
-factor = scalr factor :ul
+factor = scale factor :ul
 
 [Examples:]
 

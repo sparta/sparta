@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {gridcut} or {comm/sort} or {comm/style} or {weight} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density

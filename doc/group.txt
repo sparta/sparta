@@ -130,7 +130,7 @@ fourth example above adds all surface elements IDs from 50 to 250
 
 The {region} style puts all surface elements in the region volume
 associated with the {region-ID} into the group.  See the
-"region"_region.html command for details of what kind of geometric
+"region"_region.html command for details on what kind of geometric
 regions can be defined.  Note that the {side} option for the
 "region"_region.html command can be used to define whether the inside
 or outside of the geometric region is considered to be "in" the
