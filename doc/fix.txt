@@ -65,6 +65,7 @@ Each fix style has its own doc page which describes its arguments and
 what it does, as listed below.  Here is an alphabetic list of fix
 styles available in SPARTA:
 
+"adapt"_fix_adapt.html - on-the-fly grid adaptation
 "ambipolar"_fix_ambipolar.html - ambipolar approximation for ionized plasmas
 "ave/grid"_fix_ave_grid.html - compute per grid cell time-averaged quantities
 "ave/surf"_fix_ave_surf.html - compute per surface element time-averaged quantities
