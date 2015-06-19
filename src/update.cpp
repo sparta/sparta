@@ -689,7 +689,9 @@ template < int DIM, int SURF > void Update::move()
               }
 #endif
               
-              if (hitflag && side != ONSURF2OUT && param <= minparam) {
+              if (hitflag && param < minparam && side == OUTSIDE) {
+
+              //if (hitflag && side != ONSURF2OUT && param <= minparam) {
 
                 // this if test is to avoid case where particle
                 // previously hit 1 of 2 (or more) touching angled surfs at
@@ -698,8 +700,8 @@ template < int DIM, int SURF > void Update::move()
                 // param will be epsilon and exclude must be set
                 // skip the hits of other touching surfs
 
-                if (side == INSIDE && param < EPSPARAM && exclude >= 0) 
-                  continue;
+                //if (side == INSIDE && param < EPSPARAM && exclude >= 0) 
+                // continue;
 
                 // this if test is to avoid case where particle
                 // hits 2 touching angled surfs at common edge/corner
@@ -707,7 +709,7 @@ template < int DIM, int SURF > void Update::move()
                 // param is same, but hits one on outside, one on inside
                 // only keep surf hit on outside
 
-                if (param == minparam && side == INSIDE) continue;
+                //if (param == minparam && side == INSIDE) continue;
 
                 cflag = 1;
                 minparam = param;

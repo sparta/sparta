@@ -25,6 +25,7 @@
 using namespace SPARTA_NS;
 
 enum{ERROR,WARNING,SILENT};
+enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 
 /* ---------------------------------------------------------------------- */
 
@@ -58,7 +59,7 @@ int FixGridCheck::setmask()
 
 void FixGridCheck::init()
 {
-  nflag = 0;
+  ntotal = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -68,6 +69,7 @@ void FixGridCheck::end_of_step()
   if (update->ntimestep % nevery) return;
 
   Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
   int nglocal = grid->nlocal;
   int nlocal = particle->nlocal;
@@ -78,8 +80,12 @@ void FixGridCheck::end_of_step()
   // check if icell is a valid cell for owning particles
   // check for split cell is whether particle is inside parent cell
 
+  int nflag = 0;
+
   for (int i = 0; i < nlocal; i++) {
     icell = particles[i].icell;
+
+    // is icell a valid index
 
     if (icell < 0 || icell >= nglocal) {
       if (outflag == ERROR) {
@@ -93,18 +99,7 @@ void FixGridCheck::end_of_step()
       nflag++;
     }
 
-    if (cells[icell].nsplit > 1) {
-      if (outflag == ERROR) {
-        char str[128];
-        sprintf(str,
-                "Particle %d,%d on proc %d is in split cell " CELLINT_FORMAT 
-                " on timestep " BIGINT_FORMAT,
-                i,particles[i].id,comm->me,cells[icell].id,
-                update->ntimestep);
-        error->one(FLERR,str);
-      }
-      nflag++;
-    }
+    // does particle coord matches icell bounds
 
     lo = cells[icell].lo;
     hi = cells[icell].hi;
@@ -127,9 +122,38 @@ void FixGridCheck::end_of_step()
       }
       nflag++;
     }
+
+    // is icell a split cell, since should be a sub cell
+
+    if (cells[icell].nsplit > 1) {
+      if (outflag == ERROR) {
+        char str[128];
+        sprintf(str,
+                "Particle %d,%d on proc %d is in split cell " CELLINT_FORMAT 
+                " on timestep " BIGINT_FORMAT,
+                i,particles[i].id,comm->me,cells[icell].id,
+                update->ntimestep);
+        error->one(FLERR,str);
+      }
+      nflag++;
+    }
+
+    // is icell an interior cell, then particle is inside surfs
+
+    if (cinfo[icell].type == INSIDE) {
+      if (outflag == ERROR) {
+        char str[128];
+        sprintf(str,
+                "Particle %d,%d on proc %d is in interior cell " CELLINT_FORMAT
+                " on timestep " BIGINT_FORMAT,
+                i,particles[i].id,comm->me,cells[icell].id,update->ntimestep);
+        error->one(FLERR,str);
+      }
+      nflag++;
+    }
   }
 
-  // warning message
+  // warning message instead of error
 
   if (outflag == WARNING) {
     int all;
@@ -141,15 +165,17 @@ void FixGridCheck::end_of_step()
       error->warning(FLERR,str);
     }
   }
+
+  ntotal += nflag;
 }
 
 /* ----------------------------------------------------------------------
-   return total count of out-of-cell particles across all procs
+   return cummulative total count of out-of-cell particles across all procs
 ------------------------------------------------------------------------- */
 
 double FixGridCheck::compute_scalar()
 {
-  double one = nflag;
+  double one = ntotal;
   double all;
   MPI_Allreduce(&one,&all,1,MPI_DOUBLE,MPI_SUM,world);
   return all;
