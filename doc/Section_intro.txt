@@ -130,6 +130,8 @@ Surface collisions and chemistry :h4
 Performance :h4
 
   "grid cell weighting"_global.html of particles
+  "adaptation"_adapt_grid.html of the grid cells between runs
+  "on-the-fly adaptation"_fix_adapt.html of the grid cells
   "static"_balance_grid.html load-balancing of grid cells or particles
   "dynamic"_fix_balance.html load-balancing of grid cells or particles :ul
 

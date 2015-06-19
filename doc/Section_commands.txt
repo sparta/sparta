@@ -212,7 +212,9 @@ runs.
 
 The system can also be load-balanced after the grid and/or particles
 are defined in the setup stage using the
-"balance_grid"_balance_grid.html command.
+"balance_grid"_balance_grid.html command.  The grid can also be
+adapted before or betwee simulations using the
+"adapt_grid"_adapt_grid.html command.
 
 (3) Settings
 
@@ -274,8 +276,8 @@ Output:
 
 Actions:
 
-"balance_grid"_balance_grid.html, "run"_run.html,
-"scale_particles"_scale_particles.html
+"adapt_grid"_adapt_grid.html, "balance_grid"_balance_grid.html,
+"run"_run.html, "scale_particles"_scale_particles.html
 
 Miscellaneous:
 
@@ -293,6 +295,7 @@ This section lists all SPARTA commands alphabetically, with a separate
 listing below of styles within certain commands.  The "previous
 section"_#cmd_4 lists many of the same commands, grouped by category.
 
+"adapt_grid"_adapt_grid.html,
 "balance_grid"_balance_grid.html,
 "boundary"_boundary.html,
 "bound_modify"_bound_modify.html,
@@ -356,6 +359,7 @@ Fix styles :h4
 See the "fix"_fix.html command for one-line descriptions
 of each style or click on the style itself for a full description:
 
+"adapt"_fix_adapt.html,
 "ambipolar"_fix_ambipolar.html,
 "ave/grid"_fix_ave_grid.html,
 "ave/surf"_fix_ave_surf.html,
@@ -376,6 +380,7 @@ each style or click on the style itself for a full description:
 
 "boundary"_compute_boundary.html,
 "count"_compute_count.html,
+"distsurf/grid"_compute_distsurf_grid.html,
 "grid"_compute_grid.html,
 "ke/particle"_compute_ke_particle.html,
 "lambda/grid"_compute_lambda_grid.html,

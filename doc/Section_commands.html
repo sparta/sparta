@@ -215,7 +215,9 @@ runs.
 </P>
 <P>The system can also be load-balanced after the grid and/or particles
 are defined in the setup stage using the
-<A HREF = "balance_grid.html">balance_grid</A> command.
+<A HREF = "balance_grid.html">balance_grid</A> command.  The grid can also be
+adapted before or betwee simulations using the
+<A HREF = "adapt_grid.html">adapt_grid</A> command.
 </P>
 <P>(3) Settings
 </P>
@@ -277,8 +279,8 @@ simulation parameters, output options, etc.
 </P>
 <P>Actions:
 </P>
-<P><A HREF = "balance_grid.html">balance_grid</A>, <A HREF = "run.html">run</A>,
-<A HREF = "scale_particles.html">scale_particles</A>
+<P><A HREF = "adapt_grid.html">adapt_grid</A>, <A HREF = "balance_grid.html">balance_grid</A>,
+<A HREF = "run.html">run</A>, <A HREF = "scale_particles.html">scale_particles</A>
 </P>
 <P>Miscellaneous:
 </P>
@@ -297,16 +299,16 @@ listing below of styles within certain commands.  The <A HREF = "#cmd_4">previou
 section</A> lists many of the same commands, grouped by category.
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
-<TR ALIGN="center"><TD ><A HREF = "balance_grid.html">balance_grid</A></TD><TD ><A HREF = "boundary.html">boundary</A></TD><TD ><A HREF = "bound_modify.html">bound_modify</A></TD><TD ><A HREF = "clear.html">clear</A></TD><TD ><A HREF = "collide.html">collide</A></TD><TD ><A HREF = "collide_modify.html">collide_modify</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "compute.html">compute</A></TD><TD ><A HREF = "create_box.html">create_box</A></TD><TD ><A HREF = "create_grid.html">create_grid</A></TD><TD ><A HREF = "create_particles.html">create_particles</A></TD><TD ><A HREF = "dimension.html">dimension</A></TD><TD ><A HREF = "dump.html">dump</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "dump_image.html">dump image</A></TD><TD ><A HREF = "dump_modify.html">dump_modify</A></TD><TD ><A HREF = "dump_image.html">dump movie</A></TD><TD ><A HREF = "echo.html">echo</A></TD><TD ><A HREF = "fix.html">fix</A></TD><TD ><A HREF = "global.html">global</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "group.html">group</A></TD><TD ><A HREF = "if.html">if</A></TD><TD ><A HREF = "include.html">include</A></TD><TD ><A HREF = "jump.html">jump</A></TD><TD ><A HREF = "label.html">label</A></TD><TD ><A HREF = "log.html">log</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "mixture.html">mixture</A></TD><TD ><A HREF = "next.html">next</A></TD><TD ><A HREF = "partition.html">partition</A></TD><TD ><A HREF = "print.html">print</A></TD><TD ><A HREF = "quit.html">quit</A></TD><TD ><A HREF = "react.html">react</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "read_grid.html">read_grid</A></TD><TD ><A HREF = "read_restart.html">read_restart</A></TD><TD ><A HREF = "read_surf.html">read_surf</A></TD><TD ><A HREF = "region.html">region</A></TD><TD ><A HREF = "reset_timestep.html">reset_timestep</A></TD><TD ><A HREF = "restart.html">restart</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "run.html">run</A></TD><TD ><A HREF = "scale_particles.html">scale_particles</A></TD><TD ><A HREF = "seed.html">seed</A></TD><TD ><A HREF = "shell.html">shell</A></TD><TD ><A HREF = "species.html">species</A></TD><TD ><A HREF = "stats.html">stats</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "stats_modify.html">stats_modify</A></TD><TD ><A HREF = "stats_style.html">stats_style</A></TD><TD ><A HREF = "surf_collide.html">surf_collide</A></TD><TD ><A HREF = "surf_react.html">surf_react</A></TD><TD ><A HREF = "surf_modify.html">surf_modify</A></TD><TD ><A HREF = "timestep.html">timestep</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "uncompute.html">uncompute</A></TD><TD ><A HREF = "undump.html">undump</A></TD><TD ><A HREF = "unfix.html">unfix</A></TD><TD ><A HREF = "units.html">units</A></TD><TD ><A HREF = "variable.html">variable</A></TD><TD ><A HREF = "write_grid.html">write_grid</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "write_restart.html">write_restart</A> 
+<TR ALIGN="center"><TD ><A HREF = "adapt_grid.html">adapt_grid</A></TD><TD ><A HREF = "balance_grid.html">balance_grid</A></TD><TD ><A HREF = "boundary.html">boundary</A></TD><TD ><A HREF = "bound_modify.html">bound_modify</A></TD><TD ><A HREF = "clear.html">clear</A></TD><TD ><A HREF = "collide.html">collide</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "collide_modify.html">collide_modify</A></TD><TD ><A HREF = "compute.html">compute</A></TD><TD ><A HREF = "create_box.html">create_box</A></TD><TD ><A HREF = "create_grid.html">create_grid</A></TD><TD ><A HREF = "create_particles.html">create_particles</A></TD><TD ><A HREF = "dimension.html">dimension</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "dump.html">dump</A></TD><TD ><A HREF = "dump_image.html">dump image</A></TD><TD ><A HREF = "dump_modify.html">dump_modify</A></TD><TD ><A HREF = "dump_image.html">dump movie</A></TD><TD ><A HREF = "echo.html">echo</A></TD><TD ><A HREF = "fix.html">fix</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "global.html">global</A></TD><TD ><A HREF = "group.html">group</A></TD><TD ><A HREF = "if.html">if</A></TD><TD ><A HREF = "include.html">include</A></TD><TD ><A HREF = "jump.html">jump</A></TD><TD ><A HREF = "label.html">label</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "log.html">log</A></TD><TD ><A HREF = "mixture.html">mixture</A></TD><TD ><A HREF = "next.html">next</A></TD><TD ><A HREF = "partition.html">partition</A></TD><TD ><A HREF = "print.html">print</A></TD><TD ><A HREF = "quit.html">quit</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "react.html">react</A></TD><TD ><A HREF = "read_grid.html">read_grid</A></TD><TD ><A HREF = "read_restart.html">read_restart</A></TD><TD ><A HREF = "read_surf.html">read_surf</A></TD><TD ><A HREF = "region.html">region</A></TD><TD ><A HREF = "reset_timestep.html">reset_timestep</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "restart.html">restart</A></TD><TD ><A HREF = "run.html">run</A></TD><TD ><A HREF = "scale_particles.html">scale_particles</A></TD><TD ><A HREF = "seed.html">seed</A></TD><TD ><A HREF = "shell.html">shell</A></TD><TD ><A HREF = "species.html">species</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "stats.html">stats</A></TD><TD ><A HREF = "stats_modify.html">stats_modify</A></TD><TD ><A HREF = "stats_style.html">stats_style</A></TD><TD ><A HREF = "surf_collide.html">surf_collide</A></TD><TD ><A HREF = "surf_react.html">surf_react</A></TD><TD ><A HREF = "surf_modify.html">surf_modify</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "timestep.html">timestep</A></TD><TD ><A HREF = "uncompute.html">uncompute</A></TD><TD ><A HREF = "undump.html">undump</A></TD><TD ><A HREF = "unfix.html">unfix</A></TD><TD ><A HREF = "units.html">units</A></TD><TD ><A HREF = "variable.html">variable</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "write_grid.html">write_grid</A></TD><TD ><A HREF = "write_restart.html">write_restart</A> 
 </TD></TR></TABLE></DIV>
 
 <HR>
@@ -317,8 +319,8 @@ section</A> lists many of the same commands, grouped by category.
 of each style or click on the style itself for a full description:
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
-<TR ALIGN="center"><TD ><A HREF = "fix_ambipolar.html">ambipolar</A></TD><TD ><A HREF = "fix_ave_grid.html">ave/grid</A></TD><TD ><A HREF = "fix_ave_surf.html">ave/surf</A></TD><TD ><A HREF = "fix_ave_time.html">ave/time</A></TD><TD ><A HREF = "fix_balance.html">balance</A></TD><TD ><A HREF = "fix_emit_face.html">emit/face</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "fix_emit_face_file.html">emit/face/file</A></TD><TD ><A HREF = "fix_emit_surf.html">emit/surf</A></TD><TD ><A HREF = "fix_grid_check.html">grid/check</A></TD><TD ><A HREF = "fix_print.html">print</A> 
+<TR ALIGN="center"><TD ><A HREF = "fix_adapt.html">adapt</A></TD><TD ><A HREF = "fix_ambipolar.html">ambipolar</A></TD><TD ><A HREF = "fix_ave_grid.html">ave/grid</A></TD><TD ><A HREF = "fix_ave_surf.html">ave/surf</A></TD><TD ><A HREF = "fix_ave_time.html">ave/time</A></TD><TD ><A HREF = "fix_balance.html">balance</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "fix_emit_face.html">emit/face</A></TD><TD ><A HREF = "fix_emit_face_file.html">emit/face/file</A></TD><TD ><A HREF = "fix_emit_surf.html">emit/surf</A></TD><TD ><A HREF = "fix_grid_check.html">grid/check</A></TD><TD ><A HREF = "fix_print.html">print</A> 
 </TD></TR></TABLE></DIV>
 
 <HR>
@@ -329,8 +331,8 @@ of each style or click on the style itself for a full description:
 each style or click on the style itself for a full description:
 </P>
 <DIV ALIGN=center><TABLE  BORDER=1 >
-<TR ALIGN="center"><TD ><A HREF = "compute_boundary.html">boundary</A></TD><TD ><A HREF = "compute_count.html">count</A></TD><TD ><A HREF = "compute_grid.html">grid</A></TD><TD ><A HREF = "compute_ke_particle.html">ke/particle</A></TD><TD ><A HREF = "compute_lambda_grid.html">lambda/grid</A></TD><TD ><A HREF = "compute_property_grid.html">property/grid</A></TD></TR>
-<TR ALIGN="center"><TD ><A HREF = "compute_reduce.html">reduce</A></TD><TD ><A HREF = "compute_sonine_grid.html">sonine/grid</A></TD><TD ><A HREF = "compute_surf.html">surf</A></TD><TD ><A HREF = "compute_temp.html">temp</A></TD><TD ><A HREF = "compute_tvib_grid.html">tvib/grid</A> 
+<TR ALIGN="center"><TD ><A HREF = "compute_boundary.html">boundary</A></TD><TD ><A HREF = "compute_count.html">count</A></TD><TD ><A HREF = "compute_distsurf_grid.html">distsurf/grid</A></TD><TD ><A HREF = "compute_grid.html">grid</A></TD><TD ><A HREF = "compute_ke_particle.html">ke/particle</A></TD><TD ><A HREF = "compute_lambda_grid.html">lambda/grid</A></TD></TR>
+<TR ALIGN="center"><TD ><A HREF = "compute_property_grid.html">property/grid</A></TD><TD ><A HREF = "compute_reduce.html">reduce</A></TD><TD ><A HREF = "compute_sonine_grid.html">sonine/grid</A></TD><TD ><A HREF = "compute_surf.html">surf</A></TD><TD ><A HREF = "compute_temp.html">temp</A></TD><TD ><A HREF = "compute_tvib_grid.html">tvib/grid</A> 
 </TD></TR></TABLE></DIV>
 
 <HR>
