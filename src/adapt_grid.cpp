@@ -631,7 +631,7 @@ void AdaptGrid::setup()
 
 int AdaptGrid::refine()
 {
-  // NOTE: WHY is grid not really hashed at this point even though it says so?
+  // NOTE: why is grid not really hashed at this point even though it says so?
   // WHEN done with adapt, do I need to mark it hashed or unhashed?
   // NOTE: does fix balance always do a sort?  yes it does
 
@@ -660,6 +660,11 @@ int AdaptGrid::refine()
     if (collide) collide->adapt_grid();
     grid->compress();
 
+    // reallocate per grid cell arrays in per grid computes
+
+    Compute **compute = modify->compute;
+    for (int i = 0; i < modify->ncompute; i++)
+      if (compute[i]->per_grid_flag) compute[i]->reallocate();
   }
 
   return nrefine;
@@ -671,7 +676,7 @@ int AdaptGrid::refine()
 
 int AdaptGrid::coarsen(int pstop)
 {
-  // NOTE: WHY is grid not really hashed at this point even though it says so?
+  // NOTE: why is grid not really hashed at this point even though it says so?
   // WHEN done with adapt, do I need to mark it hashed or unhashed?
   // NOTE: does fix balance always do a sort?  yes it does
 

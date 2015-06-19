@@ -34,16 +34,22 @@ ComputeDistSurfGrid::
 ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 2) error->all(FLERR,"Illegal compute distsurf/grid command");
+  if (narg < 3) error->all(FLERR,"Illegal compute distsurf/grid command");
 
   per_grid_flag = 1;
   size_per_grid_cols = 0;
+
+  int igroup = surf->find_group(arg[2]);
+  if (igroup < 0)
+    error->all(FLERR,"Compute distsurf/grid command surface group "
+               "does not exist");
+  sgroupbit = surf->bitmask[igroup];
 
   // optional args
 
   sdir[0] = sdir[1] = sdir[2] = 0.0;
 
-  int iarg = 2;
+  int iarg = 3;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"dir") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal distsurf/grid command");
@@ -106,6 +112,7 @@ void ComputeDistSurfGrid::compute_per_grid()
     memory->create(slist,nline,"distsurf/grid:slist");
     for (i = 0; i < nline; i++) {
       eflag[i] = 0;
+      if (!(lines[i].mask & sgroupbit)) continue;
       if (MathExtra::dot3(lines[i].norm,sdir) <= 0.0) {
         eflag[i] = 1;
         slist[nsurf++] = i;
@@ -116,6 +123,7 @@ void ComputeDistSurfGrid::compute_per_grid()
     memory->create(slist,ntri,"distsurf/grid:slist");
     for (i = 0; i < ntri; i++) {
       eflag[i] = 0;
+      if (!(tris[i].mask & sgroupbit)) continue;
       if (MathExtra::dot3(tris[i].norm,sdir) <= 0.0) {
         eflag[i] = 1;
         slist[nsurf++] = i;
@@ -132,12 +140,14 @@ void ComputeDistSurfGrid::compute_per_grid()
   for (i = 0; i < nsurf; i++) {
     m = slist[i];
     if (dim == 2) {
+      if (!(lines[i].mask & sgroupbit)) continue;
       p1 = lines[m].p1;
       p2 = lines[m].p2;
       sctr[i][0] = 0.5 * (pts[p1].x[0] + pts[p2].x[0]);
       sctr[i][1] = 0.5 * (pts[p1].x[1] + pts[p2].x[1]);
       sctr[i][2] = 0.0;
     } else {
+      if (!(tris[i].mask & sgroupbit)) continue;
       p1 = tris[m].p1;
       p2 = tris[m].p2;
       p2 = tris[m].p3;

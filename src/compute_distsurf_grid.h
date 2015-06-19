@@ -35,7 +35,7 @@ class ComputeDistSurfGrid : public Compute {
   bigint memory_usage();
 
  private:
-  int nglocal;
+  int nglocal,sgroupbit;
   double sdir[3];
 };
 
