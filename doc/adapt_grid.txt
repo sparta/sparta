@@ -69,7 +69,7 @@ This command perform a one-time adaptation of grid cells, either by
 refinement or coarsening or both.  This command can be invoked as many
 times as desired, before or between simulation runs.  Grid adaptation
 can also be performed on-the-fly during a simulation by using the "fix
-adapt""_fix_adapt.html command.
+adapt"_fix_adapt.html command.
 
 Refinement means splitting one child cell into multiple new child
 cells; the original child cell becomes a parent cell.  Coarsening
@@ -77,6 +77,12 @@ means combining all the child cells of a parent cell into a single new
 child cell.  See "Section howto 4.8"_Section_howto.html#howto_8 for a
 description of the hierarchical grid used by SPARTA and a defintion of
 child and parent cells.
+
+Grid adaptation can be useful for adjusting the grid cell sizes to the
+current density distribution or mean-free-path of particles or to
+other simulation attributes such as the presence of surface elements.
+A well-adapted grid can improve accuracy of the simulation and reduce
+its computational cost.
 
 The {action1} and {action2} parameters determine whether refinement or
 coarsening is performed and in what order.  {Action2} is optional.  If

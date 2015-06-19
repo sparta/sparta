@@ -48,9 +48,6 @@ cell size and using it to adapt the grid, e.g. via the
 "adapt_grid"_adapt_grid.html or "fix adapt/grid"_fix_adapt_grid.html
 commands.
 
-IMPORTANT NOTE: The adapt_grid and fix adapt/grid commands are not yet
-implemnted in SPARTA.
-
 Unlike other computes that calculate per grid cell values, this
 compute does not take a "mixture"_mixture.html ID as an argument.
 This is because it uses the number density and temperature calculated
