@@ -12,7 +12,7 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifndef SPARTAMATH_CONST_H
+#ifndef SPARTA_MATH_CONST_H
 #define SPARTA_MATH_CONST_H
 
 namespace SPARTA_NS {

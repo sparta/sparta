@@ -691,6 +691,10 @@ template < int DIM, int SURF > void Update::move()
               
               if (hitflag && param < minparam && side == OUTSIDE) {
 
+                // NOTE: these were the old checks
+                //       think it is now sufficient to test for particle
+                //       in an INSIDE cell in fix grid/check
+
               //if (hitflag && side != ONSURF2OUT && param <= minparam) {
 
                 // this if test is to avoid case where particle
@@ -729,6 +733,7 @@ template < int DIM, int SURF > void Update::move()
             nscheck_one += nsurf;
             
             if (cflag) {
+              // NOTE: this check is no longer needed?
               if (minside == INSIDE) {
                 char str[128];
                 sprintf(str,

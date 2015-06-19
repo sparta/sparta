@@ -23,7 +23,7 @@
 
 #ifdef SPARTA_MAP
 #include <map>
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
 #include <unordered_map>
 #else
 #include <tr1/unordered_map>
@@ -94,7 +94,7 @@ void ReadGrid::read(char *filename, int external)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
@@ -198,6 +198,8 @@ void ReadGrid::create_parents(int n, char *buf)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
 #endif
@@ -270,6 +272,8 @@ void ReadGrid::create_children()
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
 #endif

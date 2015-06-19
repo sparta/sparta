@@ -314,7 +314,7 @@ void ComputeLambdaGrid::compute_per_grid()
   Grid::ChildCell *cells = grid->cells;
   int dimension = domain->dimension;
 
-  if (kflag = KALL) {
+  if (kflag == KALL) {
     double size;
     for (int i = 0; i < nglocal; i++) {
       size = (cells[i].hi[0] - cells[i].lo[0]);
@@ -326,13 +326,13 @@ void ComputeLambdaGrid::compute_per_grid()
       }
       array_grid[i][1] = array_grid[i][0] / size;
     }
-  } else if (kflag = KX) {
+  } else if (kflag == KX) {
     for (int i = 0; i < nglocal; i++)
       array_grid[i][1] = array_grid[i][0] / (cells[i].hi[0] - cells[i].lo[0]);
-  } else if (kflag = KY) {
+  } else if (kflag == KY) {
     for (int i = 0; i < nglocal; i++)
       array_grid[i][1] = array_grid[i][0] / (cells[i].hi[1] - cells[i].lo[1]);
-  } else if (kflag = KZ) {
+  } else if (kflag == KZ) {
     for (int i = 0; i < nglocal; i++)
       array_grid[i][1] = array_grid[i][0] / (cells[i].hi[2] - cells[i].lo[2]);
   }

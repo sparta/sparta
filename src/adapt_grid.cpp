@@ -618,7 +618,7 @@ void AdaptGrid::setup()
 
 #ifdef SPARTA_MAP
   chash = new std::map<cellint,int>();
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   chash = new std::unordered_map<cellint,int>();
 #else
   chash = new std::tr1::unordered_map<cellint,int>();
@@ -927,7 +927,7 @@ void AdaptGrid::add_grid_fixes()
 {
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
@@ -1057,7 +1057,7 @@ void AdaptGrid::gather_parents_refine(int delta, int nrefine)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
@@ -1171,7 +1171,7 @@ void AdaptGrid::assign_parents_coarsen(int pstop)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
@@ -1287,7 +1287,7 @@ void AdaptGrid::candidates_coarsen(int pstop)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
@@ -1806,7 +1806,7 @@ int AdaptGrid::perform_coarsen()
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
@@ -1968,7 +1968,7 @@ void AdaptGrid::gather_parents_coarsen(int delta, int nrefine)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;

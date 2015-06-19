@@ -24,7 +24,7 @@
 
 #ifdef SPARTA_MAP
 #include <map>
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
 #include <unordered_map>
 #else
 #include <tr1/unordered_map>
@@ -132,7 +132,7 @@ void WriteGrid::write_parents()
 
 #ifdef SPARTA_MAP
     std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
     std::unordered_map<cellint,int> *hash = grid->hash;
 #else
     std::tr1::unordered_map<cellint,int> *hash = grid->hash;

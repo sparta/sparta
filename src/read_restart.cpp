@@ -139,7 +139,7 @@ void ReadRestart::command(int narg, char **arg)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
@@ -838,7 +838,7 @@ void ReadRestart::create_child_cells(int skipflag)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
@@ -908,7 +908,7 @@ void ReadRestart::assign_particles(int skipflag)
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
-#elif SPARTA_UNORDERED_MAP
+#elif defined SPARTA_UNORDERED_MAP
   std::unordered_map<cellint,int> *hash = grid->hash;
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
