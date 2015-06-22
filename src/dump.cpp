@@ -92,7 +92,7 @@ Dump::Dump(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   multiname = NULL;
 
   char *ptr;
-  if (ptr = strchr(filename,'%')) {
+  if ((ptr = strchr(filename,'%'))) {
     multiproc = 1;
     nclusterprocs = 1;
     filewriter = 1;

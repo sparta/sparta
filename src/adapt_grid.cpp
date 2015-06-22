@@ -834,7 +834,7 @@ void AdaptGrid::refine_surf()
 
 void AdaptGrid::refine_value()
 {
-  int icell,np,nsplit,jcell;
+  int icell,nsplit,jcell;
   double value;
   int *csubs;
 
@@ -1122,7 +1122,7 @@ void AdaptGrid::gather_parents_refine(int delta, int nrefine)
 
 void AdaptGrid::assign_parents_coarsen(int pstop)
 {
-  int i,m,n,icell,iparent,nxyz,proc;
+  int i,m,n,icell,iparent,nxyz;
   cellint id;
 
   Grid::ParentCell *pcells = grid->pcells;
@@ -1308,7 +1308,6 @@ void AdaptGrid::candidates_coarsen(int pstop)
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
-  int nglocal = grid->nlocal;
 
   // create ctask entries = list of parents I will possibly coarsen
   // create sadapt = list of child cells I will send to other procs
@@ -1790,19 +1789,16 @@ void AdaptGrid::coarsen_random()
 
 int AdaptGrid::perform_coarsen()
 {
-  int i,j,k,m,icell,inew,iparent,nchild,ichild,nsurf,ns;
-  int nsplit,jcell,ip,ipnew;
-  int *proc,*index,*recv,*cs,*ptr,*csubs;
-  Particle::OnePart *p;
+  int i,m,icell,iparent,nchild;
+  int nsplit,jcell,ip;
+  int *proc,*index,*recv,*csubs;
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   
-  Grid::ParentCell *pcells = grid->pcells;
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
-  MyPage<int> *csurfs = grid->csurfs;
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
@@ -1811,9 +1807,6 @@ int AdaptGrid::perform_coarsen()
 #else
   std::tr1::unordered_map<cellint,int> *hash = grid->hash;
 #endif
-
-  int dim = domain->dimension;
-  int maxsurfpercell = grid->maxsurfpercell;
 
   // loop over coarsening tasks
 

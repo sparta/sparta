@@ -405,7 +405,7 @@ int compare_standalone(const void *iptr, const void *jptr)
 int Irregular::create_data_variable(int n, int *proclist, int *sizes,
                                     int &recvsize, int sort)
 {
-  int i,m;
+  int i;
 
   int nrecvdatum = create_data_uniform(n,proclist,sort);
 

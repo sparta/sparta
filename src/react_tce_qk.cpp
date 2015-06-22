@@ -48,37 +48,18 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
                         double pre_etrans, double pre_erot, double pre_evib,
                         double &post_etotal, int &kspecies)
 {
-  double rprobability,pre_etotal,distbn,prior,max_distbn;
-  double fe,fc,fmax,lambda_v,cutoff,e_excess;
-  double Teff,a,b,c,d,e,sqrta,ecc;
-  double V_DoF,R_DoF,Omega_avg;
-  double Exponent_1,Exponent_2;
-  double x[3],v[3];
+  double pre_etotal;
+  double e_excess;
+  double ecc;
   int reaction;
 
-  Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
-  double mass_i = species[isp].mass;
-  double mass_j = species[jsp].mass;
-
-  double pre_rotdof_i = species[isp].rotdof;
-  double pre_rotdof_j = species[jsp].rotdof;
-  double pre_vibdof_i = species[isp].vibdof;
-  double pre_vibdof_j = species[jsp].vibdof;
-  double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
-  double pre_ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.;
-  double pre_ave_dof = 0.5 * (pre_ave_rotdof + pre_ave_vibdof);
 
   int n = reactions[isp][jsp].n;
               
   if (n == 0) return 0;
   int *list = reactions[isp][jsp].list;
-
-  // probablity to compare to reaction probability
-
-  double react_prob = 0.0;
-  double random_prob = random->uniform(); 
 
   // loop over possible reactions for these 2 species
 
@@ -119,16 +100,8 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
-  double mass_i = species[isp].mass;
-  double mass_j = species[jsp].mass;
 
-  double pre_rotdof_i = species[isp].rotdof;
-  double pre_rotdof_j = species[jsp].rotdof;
-  double pre_vibdof_i = species[isp].vibdof;
-  double pre_vibdof_j = species[jsp].vibdof;
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
-  double pre_ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.;
-  double pre_ave_dof = 0.5 * (pre_ave_rotdof + pre_ave_vibdof);
 
   // probablity to compare to reaction probability
 
@@ -190,16 +163,8 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
-  double mass_i = species[isp].mass;
-  double mass_j = species[jsp].mass;
 
-  double pre_rotdof_i = species[isp].rotdof;
-  double pre_rotdof_j = species[jsp].rotdof;
-  double pre_vibdof_i = species[isp].vibdof;
-  double pre_vibdof_j = species[jsp].vibdof;
-  double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
-  double pre_ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.;
-  double pre_ave_dof = 0.5 * (pre_ave_rotdof + pre_ave_vibdof);
+  double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.0;
 
   double iomega = collide->extract(isp,"omega");
   double jomega = collide->extract(jsp,"omega");

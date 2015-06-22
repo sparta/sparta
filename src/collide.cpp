@@ -333,14 +333,13 @@ void Collide::collisions()
 
 void Collide::collisions_one()
 {
-  int i,j,k,n,ip,jp,np;
+  int i,j,k,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
 
   // loop over cells I own
 
-  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   Particle::OnePart *particles = particle->particles;
@@ -436,7 +435,7 @@ void Collide::collisions_one()
 
 void Collide::collisions_group()
 {
-  int i,j,k,ip,jp,np,isp,ipair,igroup,jgroup,newgroup;
+  int i,j,k,ip,np,isp,ipair,igroup,jgroup,newgroup;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   double attempt,volume;
@@ -444,7 +443,6 @@ void Collide::collisions_group()
 
   // loop over cells I own
 
-  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   Particle::OnePart *particles = particle->particles;
@@ -603,7 +601,7 @@ void Collide::collisions_group()
 
 void Collide::collisions_one_ambipolar()
 {
-  int i,j,k,n,ip,jp,np,ispecies,jspecies,tmp;
+  int i,j,k,n,ip,np,ispecies,jspecies,tmp;
   int nattempt,reactflag;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart,*p,*ep;
@@ -615,7 +613,6 @@ void Collide::collisions_one_ambipolar()
 
   // loop over cells I own
 
-  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   Particle::OnePart *particles = particle->particles;
@@ -857,7 +854,7 @@ void Collide::collisions_one_ambipolar()
 
 void Collide::collisions_group_ambipolar()
 {
-  int i,j,k,n,ip,jp,np,isp,ipair,igroup,jgroup,newgroup,ispecies,jspecies,tmp;
+  int i,j,k,n,ip,np,isp,ipair,igroup,jgroup,newgroup,ispecies,jspecies,tmp;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist,*tmpvec;
   double attempt,volume;
@@ -870,7 +867,6 @@ void Collide::collisions_group_ambipolar()
 
   // loop over cells I own
 
-  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   Particle::OnePart *particles = particle->particles;

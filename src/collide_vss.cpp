@@ -198,9 +198,6 @@ double CollideVSS::attempt_collision(int icell, int igroup, int jgroup,
 int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 			       Particle::OnePart *ip, Particle::OnePart *jp)
 {
-  Particle::Species *species = particle->species;
-  Particle::OnePart *particles = particle->particles;
-
   double *vi = ip->v;
   double *vj = jp->v;
   int ispecies = ip->ispecies;
@@ -229,7 +226,6 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
 void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 {
   Particle::Species *species = particle->species;
-  Particle::OnePart *particles = particle->particles;
 
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
@@ -387,7 +383,7 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
 void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip, 
 						Particle::OnePart *jp)
 {
-  double Exp_1,Exp_2,State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
+  double State_prob,Fraction_Rot,Fraction_Vib,E_Dispose;
   int i,rotdof,vibdof,max_level,ivib;
 
   Particle::OnePart *p;
@@ -561,7 +557,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
                                              Particle::OnePart *jp,
                                              Particle::OnePart *kp)
 {
-  double Exp_1,Exp_2,State_prob,Fraction_Rot,Fraction_Vib;
+  double State_prob,Fraction_Rot,Fraction_Vib;
   int i,numspecies,rotdof,vibdof,max_level,ivib;
 
   Particle::OnePart *p;

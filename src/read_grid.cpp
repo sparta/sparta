@@ -170,7 +170,7 @@ void ReadGrid::read(char *filename, int external)
 
 void ReadGrid::create_parents(int n, char *buf)
 {
-  int j,m;
+  int j;
   char *next;
 
   next = strchr(buf,'\n');
@@ -191,7 +191,6 @@ void ReadGrid::create_parents(int n, char *buf)
   int iparent,nx,ny,nz;
   char pstr[32],cstr[32];
   double lo[3],hi[3];
-  Grid::ParentCell *p;
 
   // use Grid hash to store key = parent ID, value = index in pcells
   // NOTE: could prealloc hash to size nparents here
@@ -392,7 +391,7 @@ void ReadGrid::header()
     // trim anything from '#' onward
     // if line is blank, continue
 
-    if (ptr = strchr(line,'#')) *ptr = '\0';
+    if ((ptr = strchr(line,'#'))) *ptr = '\0';
     if (strspn(line," \t\n\r") == strlen(line)) continue;
 
     // search line for header keyword and set corresponding variable
@@ -468,7 +467,7 @@ int ReadGrid::count_words(char *line)
   strcpy(copy,line);
 
   char *ptr;
-  if (ptr = strchr(copy,'#')) *ptr = '\0';
+  if ((ptr = strchr(copy,'#'))) *ptr = '\0';
 
   if (strtok(copy," \t\n\r\f") == NULL) {
     memory->sfree(copy);
@@ -488,11 +487,9 @@ int ReadGrid::count_words(char *line)
 void ReadGrid::read_parents()
 {
   int i,m,nchunk;
-  char *next,*buf;
 
   // read and broadcast one CHUNK of lines at a time
 
-  int n = 0;
   int nread = 0;
   
   while (nread < nparents) {

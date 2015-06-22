@@ -88,14 +88,12 @@ void ComputeTvibGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;
 
-  Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
   int *s2s = particle->mixture[imix]->species2species;
   int nlocal = particle->nlocal;
 
   int i,j,ispecies,mixspecies,igroup,icell;
-  double *norm;
 
   // zero extra accumulator array and norm vectors
 

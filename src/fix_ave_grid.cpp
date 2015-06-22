@@ -365,7 +365,7 @@ void FixAveGrid::setup()
 
 void FixAveGrid::end_of_step()
 {
-  int i,j,m,n,isp,icol,ncol,iextra;
+  int i,j,m,n,ncol,iextra;
   double *norm,*cfv_norm;
   double **array_extra,**norm_extra;
 

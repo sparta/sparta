@@ -968,9 +968,6 @@ void DumpImage::write()
     double lo = BIG;
     double hi = -BIG;
 
-    Surf::Point *pts = surf->pts;
-    Surf::Line *lines = surf->lines;
-    Surf::Tri *tris = surf->tris;
     int *mysurfs = surf->mysurfs;
     int nslocal = surf->nlocal;
 
@@ -1105,10 +1102,9 @@ void DumpImage::view_params()
 
 void DumpImage::create_image()
 {
-  int i,j,m,itype,iproc;
-  double diameter,delx,dely,delz;
-  double *color,*color1,*color2;
-  double xmid[3];
+  int i,j,m,itype;
+  double diameter;
+  double *color;
 
   // render my partiless
   // region is used as constraint by parent class
@@ -1150,7 +1146,7 @@ void DumpImage::create_image()
 
   if (gridflag) {
     double value;
-    double x[3],y[3],z[3],diam[3];
+    double x[3],diam[3];
     double *lo,*hi;
 
     Region *region = NULL;
@@ -1207,12 +1203,11 @@ void DumpImage::create_image()
 
   if (gridxflag || gridyflag || gridzflag) {
     double value;
-    double x[3],y[3],z[3],diam[3];
+    double x[3],diam[3];
     double *lo,*hi;
 
     Region *region = NULL;
 
-    int dimension = domain->dimension;
     Grid::ChildCell *cells = grid->cells;
     int nglocal = grid->nlocal;
 
@@ -1614,14 +1609,14 @@ int DumpImage::modify_param(int narg, char **arg)
     int ncount = 1;
     char *nextptr;
     char *ptr = arg[2];
-    while (nextptr = strchr(ptr,'/')) {
+    while ((nextptr = strchr(ptr,'/'))) {
       ptr = nextptr + 1;
       ncount++;
     }
     char **ptrs = new char*[ncount+1];
     ncount = 0;
     ptrs[ncount++] = strtok(arg[2],"/");
-    while (ptrs[ncount++] = strtok(NULL,"/"));
+    while ((ptrs[ncount++] = strtok(NULL,"/")));
     ncount--;
 
     // assign each of ncount colors in round-robin fashion to types or procs
@@ -1718,14 +1713,14 @@ int DumpImage::modify_param(int narg, char **arg)
     int ncount = 1;
     char *nextptr;
     char *ptr = arg[2];
-    while (nextptr = strchr(ptr,'/')) {
+    while ((nextptr = strchr(ptr,'/'))) {
       ptr = nextptr + 1;
       ncount++;
     }
     char **ptrs = new char*[ncount+1];
     ncount = 0;
     ptrs[ncount++] = strtok(arg[2],"/");
-    while (ptrs[ncount++] = strtok(NULL,"/"));
+    while ((ptrs[ncount++] = strtok(NULL,"/")));
     ncount--;
 
     // assign each of ncount colors in round-robin fashion to procs
@@ -1766,14 +1761,14 @@ int DumpImage::modify_param(int narg, char **arg)
     int ncount = 1;
     char *nextptr;
     char *ptr = arg[2];
-    while (nextptr = strchr(ptr,'/')) {
+    while ((nextptr = strchr(ptr,'/'))) {
       ptr = nextptr + 1;
       ncount++;
     }
     char **ptrs = new char*[ncount+1];
     ncount = 0;
     ptrs[ncount++] = strtok(arg[2],"/");
-    while (ptrs[ncount++] = strtok(NULL,"/"));
+    while ((ptrs[ncount++] = strtok(NULL,"/")));
     ncount--;
 
     // assign each of ncount colors in round-robin fashion to procs

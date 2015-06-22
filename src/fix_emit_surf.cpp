@@ -347,8 +347,6 @@ void FixEmitSurf::perform_task()
 
   double dt = update->dt;
   int *species = particle->mixture[imix]->species;
-  Particle::OnePart *particles = particle->particles;
-  Grid::ChildCell *cells = grid->cells;
 
   // insert particles for each task = cell/surf pair
   // ntarget/ninsert is either perspecies or for all species

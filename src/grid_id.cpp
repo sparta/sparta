@@ -63,7 +63,7 @@ int Grid::id_find_child(int iparent, double *x)
 int Grid::id_find_parent(cellint id, cellint &ichild)
 {
   int nbits,newbits,nx,ny,nz,mask,index;
-  cellint m,idparent,idnew;
+  cellint idparent,idnew;
   ParentCell *p;
 
   int iparent = 0;
@@ -103,7 +103,6 @@ cellint Grid::id_str2num(char *idstr)
   if (idstr[0] == '0') return 0;
 
   cellint id = 0;
-  int level = 0;
   char *word = idstr;
   char *ptr = strchr(word,'-');
 
@@ -251,7 +250,6 @@ cellint Grid::id_find_face(double *x, int icell, int dim,
   ParentCell *p = &pcells[icell];
   double *lo = p->lo;
   double *hi = p->hi;
-  int iparent = p->iparent;
 
   // go down a level to find (ix,iy,iz) of new cell that contains pt x
 
@@ -308,10 +306,6 @@ cellint Grid::id_find_face(double *x, int icell, int dim,
 int Grid::id_child_from_parent_corner(int iparent, int icorner)
 {
   ParentCell *p = &pcells[iparent];
-
-  int nx = p->nx;
-  int ny = p->ny;
-  int nz = p->nz;
 
   int ix = (icorner % 2) ? p->nx-1 : 0;
   int iy = ((icorner/2) % 2) ? p->ny-1 : 0;

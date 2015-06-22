@@ -181,7 +181,6 @@ void RCB::compute(int n, double **x, double *wt)
   // procmid = 1st proc in upper half of partition
 
   int procpartner,procpartner2;
-  int readnumber;                   
 
   int procmid;
   int proclower = 0;
@@ -660,8 +659,6 @@ void median_merge(void *in, void *inout, int *len, MPI_Datatype *dptr)
 
 void RCB::invert()
 {
-  Invert *sbuf,*rbuf;
-
   if (!irregular) irregular = new Irregular(sparta);
 
   // nsend = # of dots to request from other procs
@@ -786,9 +783,8 @@ void RCB::check()
 
 void RCB::stats(int flag)
 {
-  int i,iflag,sum,min,max;
-  double ave,rsum,rmin,rmax;
-  double weight,wttot,wtmin,wtmax;
+  int i,sum,min,max;
+  double ave,weight,wttot,wtmin,wtmax;
 
   if (me == 0) printf("RCB Statistics:\n");
 

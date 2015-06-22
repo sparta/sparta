@@ -74,7 +74,6 @@ void Grid::surf2grid(int subflag)
 {
   int i,isub,nsurf,nsplit,xsub;
   int *surfmap,*ptr;
-  int corner[8];
   double *lo,*hi,*vols;
   double xsplit[3];
   ChildCell *c;
@@ -449,7 +448,6 @@ void Grid::combine_split_cell_particles(int icell)
 
 void Grid::surf2grid_stats()
 {
-  int i,m;
   double cmax,len,area;
   int dimension = domain->dimension;
 
@@ -508,7 +506,7 @@ void Grid::surf2grid_stats()
 
 void Grid::flow_stats()
 {
-  int i,icell;
+  int i;
 
   int outside = 0;
   int inside = 0;

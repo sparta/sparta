@@ -154,7 +154,7 @@ void ReadRestart::command(int narg, char **arg)
 
   // read per-proc info, grid cells and particles
 
-  int m,n,flag,value,tmp;
+  int n,flag,value,tmp;
   long filepos;
   MPI_Status status;
   MPI_Request request;
@@ -462,20 +462,14 @@ void ReadRestart::command(int narg, char **arg)
     error->all(FLERR,"Did not assign all restart particles correctly");
 
   if (me == 0 && surf->exist) {
-    if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf points\n",
-                        surf->npoint);
-    if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf points\n",
-                         surf->npoint);
+    if (screen) fprintf(screen,"  %d surf points\n",surf->npoint);
+    if (logfile) fprintf(logfile,"  %d surf points\n",surf->npoint);
     if (domain->dimension == 2) {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf lines\n",
-                          surf->nline);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf lines\n",
-                           surf->nline);
+      if (screen) fprintf(screen,"  %d surf lines\n",surf->nline);
+      if (logfile) fprintf(logfile,"  %d surf lines\n",surf->nline);
     } else {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf triangles\n",
-                          surf->ntri);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf triangles\n",
-                           surf->ntri);
+      if (screen) fprintf(screen,"  %d surf triangles\n",surf->ntri);
+      if (logfile) fprintf(logfile,"  %d surf triangles\n",surf->ntri);
     }
   }
 
@@ -828,7 +822,6 @@ void ReadRestart::create_child_cells(int skipflag)
 {
   int nprocs = comm->nprocs;
 
-  Grid::ParentCell *pcells = grid->pcells;
   int nsplit,iparent,icell,isplit,index;
   cellint id,ichild;
   double lo[3],hi[3];
@@ -904,7 +897,7 @@ void ReadRestart::create_child_cells(int skipflag)
 
 void ReadRestart::assign_particles(int skipflag)
 {
-  int icell,nsplit;
+  int icell;
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;

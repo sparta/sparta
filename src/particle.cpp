@@ -275,7 +275,7 @@ void Particle::compress_rebalance()
 
 void Particle::compress_reactions(int ndelete, int *dellist)
 {
-  int i,m;
+  int i;
 
   int nbytes = sizeof(OnePart);
 
@@ -333,7 +333,6 @@ void Particle::sort()
 
   // initialize linked list of particles in cells I own
 
-  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
@@ -1119,7 +1118,7 @@ int Particle::add_custom(char *name, int type, int size)
    set new values to 0 via memset()
 ------------------------------------------------------------------------- */
 
-int Particle::grow_custom(int index, int nold, int nnew)
+void Particle::grow_custom(int index, int nold, int nnew)
 {
   if (etype[index] == INT) {
     if (esize[index] == 0) {

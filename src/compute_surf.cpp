@@ -175,12 +175,9 @@ void ComputeSurf::compute_per_surf()
 
 void ComputeSurf::clear()
 {
-  int i,j;
-  double *norm;
-
   // reset all set glob2loc values to -1
 
-  for (i = 0; i < nlocal; i++)
+  for (int i = 0; i < nlocal; i++)
     glob2loc[loc2glob[i]] = -1;
   nlocal = 0;
 }
@@ -231,7 +228,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
   // set nflag and tflag after normal and tangent computation is done once
   // particle weight used for all keywords except NUM
 
-  double pre,post,vsqpre,ipost,jpost,ivsqpost,jvsqpost;
+  double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre;
   double pdelta[3],pnorm[3],ptang[3];
 

@@ -457,7 +457,6 @@ void Grid::acquire_ghosts_near()
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
-  double *prd = domain->prd;
   int *bflag = domain->bflag;
 
   double ebblo[3],ebbhi[3];
@@ -1049,8 +1048,6 @@ void Grid::unset_neighbors()
 {
   if (!exist_ghost) return;
 
-  int dimension = domain->dimension;
-
   // no change in neigh[] needed if nflag = NUNKNOWN, NPBUNKNOWN, or NBOUND
 
   int i,index,nmask,nflag;
@@ -1499,7 +1496,7 @@ void Grid::check_uniform()
 
 void Grid::type_check(int flag)
 {
-  int i,m,icell;
+  int i;
 
   // check cell types
 

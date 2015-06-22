@@ -364,7 +364,7 @@ void FixAveSurf::setup()
 
 void FixAveSurf::end_of_step()
 {
-  int i,j,k,m,n,isp,icol,isurf,ilocal;
+  int i,j,k,m,n,isurf,ilocal;
   double *vec;
 
   // skip if not step which requires doing something

@@ -217,7 +217,6 @@ void BalanceGrid::command(int narg, char **arg)
 
   } else if (bstyle == RANDOM) {
     int newproc;
-    int me = comm->me;
     RanPark *random = new RanPark(update->ranmaster->uniform());
 
     for (int icell = 0; icell < nglocal; icell++) {
@@ -231,7 +230,6 @@ void BalanceGrid::command(int narg, char **arg)
 
   } else if (bstyle == PROC) {
     int newproc;
-    int me = comm->me;
     RanPark *random = new RanPark(update->ranmaster->uniform());
     newproc = nprocs * random->uniform();
 

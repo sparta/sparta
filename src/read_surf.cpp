@@ -491,7 +491,7 @@ void ReadSurf::header()
     // trim anything from '#' onward
     // if line is blank, continue
 
-    if (ptr = strchr(line,'#')) *ptr = '\0';
+    if ((ptr = strchr(line,'#'))) *ptr = '\0';
     if (strspn(line," \t\n\r") == strlen(line)) continue;
 
     // search line for header keyword and set corresponding variable
@@ -985,7 +985,7 @@ void ReadSurf::clip2d()
 
 void ReadSurf::clip3d()
 {
-  int i,m,n,nptotal,nttotal,dim,side,flag;
+  int i,m,n,nptotal,nttotal,dim,side;
   int ngood,nbad,good,bad,ipt;
   double value,param;
   int p[3],pflag[3];
@@ -1619,12 +1619,10 @@ void ReadSurf::check_point_near_surf_2d()
   int i,j,n,p1,p2;
   int *csurfs;
   double side,epssq;
-  double delta[3];
   double *lo,*hi;
   Surf::Line *line;
 
   Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
   int nerror = 0;
@@ -1681,12 +1679,10 @@ void ReadSurf::check_point_near_surf_3d()
   int i,j,n,p1,p2,p3;
   int *csurfs;
   double side,epssq;
-  double delta[3];
   double *lo,*hi;
   Surf::Tri *tri;
 
   Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
   int nerror = 0;
@@ -1928,7 +1924,7 @@ int ReadSurf::count_words(char *line)
   strcpy(copy,line);
 
   char *ptr;
-  if (ptr = strchr(copy,'#')) *ptr = '\0';
+  if ((ptr = strchr(copy,'#'))) *ptr = '\0';
 
   if (strtok(copy," \t\n\r\f") == NULL) {
     memory->sfree(copy);

@@ -136,7 +136,7 @@ class Particle : protected Pointers {
 
   int find_custom(char *);
   int add_custom(char *, int, int);
-  int grow_custom(int, int, int);
+  void grow_custom(int, int, int);
   void remove_custom(int);
   void copy_custom(int, int);
   int sizeof_custom();

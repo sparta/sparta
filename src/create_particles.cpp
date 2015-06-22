@@ -177,7 +177,6 @@ void CreateParticles::command(int narg, char **arg)
 
 void CreateParticles::create_single()
 {
-  int i,m;
   double x[3],v[3],vstream[3];
   double *lo,*hi;
 
@@ -318,7 +317,6 @@ void CreateParticles::create_local(bigint np)
   // particle species = random value based on mixture fractions
   // particle velocity = stream velocity + thermal velocity
 
-  int nspecies = particle->mixture[imix]->nspecies;
   int *species = particle->mixture[imix]->species;
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;

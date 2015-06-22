@@ -52,16 +52,8 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
-  double mass_i = species[isp].mass;
-  double mass_j = species[jsp].mass;
 
-  double pre_rotdof_i = species[isp].rotdof;
-  double pre_rotdof_j = species[jsp].rotdof;
-  double pre_vibdof_i = species[isp].vibdof;
-  double pre_vibdof_j = species[jsp].vibdof;
-  double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
-  double pre_ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.;
-  double pre_ave_dof = 0.5 * (pre_ave_rotdof + pre_ave_vibdof);
+  double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.0;
 
   int n = reactions[isp][jsp].n;
 

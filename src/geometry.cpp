@@ -642,7 +642,7 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
   // if 2, set t1 and t2 with t1 < t2
 
   int nc;
-  double t1,t2,tmp;
+  double t1,t2;
     
   // vertical line segment
   // no collision if starting on surface

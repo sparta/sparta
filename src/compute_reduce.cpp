@@ -636,8 +636,6 @@ bigint ComputeReduce::count(int m)
 {
   bigint ncount,ncountall;
 
-  int vidx = value2index[m];
-
   if (which[m] == X || which[m] == V) {
     ncount = particle->nlocal;
     MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -645,7 +643,6 @@ bigint ComputeReduce::count(int m)
     ncount = particle->nlocal;
     MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   } else if (which[m] == COMPUTE) {
-    Compute *compute = modify->compute[vidx];
     if (flavor[m] == PARTICLE) {
       ncount = particle->nlocal;
       MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
@@ -654,7 +651,6 @@ bigint ComputeReduce::count(int m)
       MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
     }
   } else if (which[m] == FIX) {
-    Fix *fix = modify->fix[vidx];
     if (flavor[m] == PARTICLE) {
       ncount = particle->nlocal;
       MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);

@@ -88,7 +88,7 @@ Modify::~Modify()
 
 void Modify::init()
 {
-  int i,j;
+  int i;
 
   // create lists of fixes with masks for calling at each stage of run
 

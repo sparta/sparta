@@ -652,7 +652,7 @@ void Surf::group(int narg, char **arg)
       
     } else {
       char *ptr;
-      int start,stop,delta;
+      int start,stop;
 
       for (int iarg = 3; iarg < narg; iarg++) {
         if (strchr(arg[iarg],':')) {
@@ -950,8 +950,7 @@ void Surf::collate_vector(int nrow, int *l2g,
 void Surf::collate_vector_allreduce(int nrow, int *l2g, 
                                     double *in, int instride, double *out)
 {
-  int i,j,m,n;
-  double *vec1,*vec2;
+  int i,m;
 
   int nglobal;
   if (domain->dimension == 2) nglobal = nline;
@@ -1006,8 +1005,7 @@ void Surf::collate_array(int nrow, int ncol, int *l2g,
 void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g, 
                                    double **in, double **out)
 {
-  int i,j,m,n;
-  double *vec1,*vec2;
+  int i,j,m;
 
   int nglobal;
   if (domain->dimension == 2) nglobal = nline;

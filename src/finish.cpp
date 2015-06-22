@@ -38,7 +38,7 @@ Finish::Finish(SPARTA *sparta) : Pointers(sparta) {}
 
 void Finish::end(int flag, double time_multiple_runs)
 {
-  int i,m;
+  int i;
   int histo[10];
   int loopflag,statsflag,timeflag,histoflag;
   double time,tmp,ave,max,min;

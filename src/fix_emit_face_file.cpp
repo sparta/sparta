@@ -314,7 +314,7 @@ int FixEmitFaceFile::create_task(int icell)
 
 void FixEmitFaceFile::perform_task()
 {
-  int pcell,ninsert,nactual,isp,ispecies,ndim,pdim1,pdim2,id;
+  int pcell,ninsert,nactual,isp,ispecies,ndim,id;
   double *lo,*hi,*vstream,*cummulative,*vscale;
   double x[3],v[3];
   double indot,scosine,rn,ntarget,temp_thermal,vr;
@@ -323,8 +323,6 @@ void FixEmitFaceFile::perform_task()
 
   double dt = update->dt;
   int *species = particle->mixture[imix]->species;
-  Particle::OnePart *particles = particle->particles;
-  Grid::ChildCell *cells = grid->cells;
 
   // insert particles for each task = cell
   // ntarget/ninsert is either perspecies or for all species

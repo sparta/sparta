@@ -149,7 +149,6 @@ int Cut3d::surf2grid_list(cellint id_caller,
 
   Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-  int ntri = surf->ntri;
 
   int m;
   double value;
@@ -587,11 +586,11 @@ void Cut3d::add_tris()
 
 int Cut3d::clip_tris()
 {
-  int i,n,dim,lohi,ivert,iedge,jedge,idir,jdir,dirprev,nedge;
+  int i,n,dim,lohi,ivert,iedge,jedge,idir,jdir,nedge;
   int p1flag,p2flag;
   double value;
   double *p1,*p2;
-  Edge *edge,*nextedge,*newedge;
+  Edge *edge,*newedge;
 
   // loop over all 6 faces of cell
   
@@ -1304,7 +1303,7 @@ void Cut3d::check()
 
 void Cut3d::walk()
 {
-  int i,flag,ncount,ivert,firstvert,iedge,dir,nedge,prev;
+  int flag,ncount,ivert,firstvert,iedge,dir,nedge,prev;
   double volume;
   Vertex *vert;
   Edge *edge;
@@ -1472,7 +1471,6 @@ int Cut3d::split_point(int *surfmap, double *xsplit)
 {
   int itri;
   double *x1,*x2,*x3;
-  double a[3],b[3],c[3];
 
   Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;

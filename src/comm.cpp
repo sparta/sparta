@@ -224,7 +224,6 @@ void Comm::migrate_cells(int nmigrate)
   int i,n;
 
   Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
   // grow proc and size lists if needed

@@ -176,9 +176,6 @@ void ReactBird::init()
     int isp = r->reactants[0];
     int jsp = r->reactants[1];
 
-    double mass_i = species[isp].mass;
-    double mass_j = species[jsp].mass;
-
     // symmetry parameter
 
     double epsilon = 1.0;         
@@ -191,9 +188,7 @@ void ReactBird::init()
     double itref = collide->extract(isp,"tref");
     double jtref = collide->extract(jsp,"tref");
 
-    double pre_vibdof_i = species[isp].vibdof;
-    double pre_vibdof_j = species[jsp].vibdof;
-    double pre_ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.;
+    // double pre_ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.0;
     double diam = 0.5 * (idiam+jdiam);
     double omega = 0.5 * (iomega+jomega);
     double tref = 0.5 * (itref+jtref);
@@ -533,7 +528,7 @@ void ReactBird::readfile(char *fname)
 int ReactBird::readone(char *line1, char *line2, int &n1, int &n2) 
 {
   char *eof;
-  while (eof = fgets(line1,MAXLINE,fp)) {
+  while ((eof = fgets(line1,MAXLINE,fp))) {
     int pre = strspn(line1," \t\n");
     if (pre == strlen(line1) || line1[pre] == '#') continue;
     eof = fgets(line2,MAXLINE,fp);

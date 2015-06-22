@@ -136,7 +136,7 @@ void FixEmitFace::init()
 
   // cannot have inflow on yhi if axisymmetric
 
-  if (domain->axisymmetric && faces[YHI] & vstream[1] != 0.0)
+  if (domain->axisymmetric && faces[YHI] && vstream[1] != 0.0)
     error->all(FLERR,"Cannot use fix emit on axisymmetric yhi "
                "if streaming velocity has a y-component");
 
@@ -399,7 +399,6 @@ void FixEmitFace::perform_task()
   dt = update->dt;
   cells = grid->cells;
   int *species = particle->mixture[imix]->species;
-  Particle::OnePart *particles = particle->particles;
 
   // insert particles for each task = cell/face pair
   // ntarget/ninsert is either perspecies or for all species

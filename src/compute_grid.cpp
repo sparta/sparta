@@ -155,10 +155,9 @@ void ComputeGrid::compute_per_grid()
   double trotprefactor = mvv2e * 2.0 / update->boltz;
   double tvibprefactor = mvv2e * 2.0 / update->boltz;
 
-  int i,j,k,m,n,ispecies,igroup,icell;
+  int i,j,k,m,ispecies,igroup,icell;
   double mass;
   double *norm,*v,*vec;
-  double sum,sumv,sumu,sumw,sume;
 
   // zero accumulator array and norm vectors
 
@@ -167,13 +166,13 @@ void ComputeGrid::compute_per_grid()
       array_grid[i][j] = 0.0;
 
   for (j = 0; j < ngroup; j++) {
-    if (norm = norm_count[j])
+    if ((norm = norm_count[j]))
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    if (norm = norm_mass[j])
+    if ((norm = norm_mass[j]))
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    if (norm = norm_rdof[j])
+    if ((norm = norm_rdof[j]))
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    if (norm = norm_vdof[j])
+    if ((norm = norm_vdof[j]))
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
   }
 

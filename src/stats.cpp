@@ -202,7 +202,6 @@ void Stats::compute(int flag)
   int i;
 
   firststep = flag;
-  bigint ntimestep = update->ntimestep;
 
   // invoke Compute methods needed for stats keywords
 

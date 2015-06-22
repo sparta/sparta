@@ -730,8 +730,6 @@ bigint DumpGrid::memory_usage()
 
 void DumpGrid::pack_compute(int n)
 {
-  int m;
-  
   int index = argindex[n];
   Compute *c = compute[field2index[n]];
 

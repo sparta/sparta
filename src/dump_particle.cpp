@@ -662,7 +662,6 @@ int DumpParticle::parse_fields(int narg, char **arg)
 
   // customize by adding to if statement
 
-  int i;
   for (int iarg = 0; iarg < narg; iarg++) {
     if (nfield == maxfield) {
       maxfield += CHUNK;

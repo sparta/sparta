@@ -549,7 +549,6 @@ void FixAveTime::invoke_scalar(bigint ntimestep)
 void FixAveTime::invoke_vector(bigint ntimestep)
 {
   int i,j,m;
-  double *onenorm;
 
   // zero if first step
 

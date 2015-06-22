@@ -162,7 +162,6 @@ void ComputeSonineGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;
 
-  Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
@@ -215,9 +214,9 @@ void ComputeSonineGrid::compute_per_grid()
     for (j = 0; j < ntotal; j++) sonine[i][j] = 0.0;
 
   for (j = 0; j < ngroup; j++) {
-    if (norm = norm_count[j])
+    if ((norm = norm_count[j]))
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    if (norm = norm_mass[j])
+    if ((norm = norm_mass[j]))
       for (i = 0; i < nglocal; i++) norm[i] = 0.0;
   }
 
