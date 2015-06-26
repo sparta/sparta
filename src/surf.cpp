@@ -557,6 +557,36 @@ void Surf::add_collide(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
+   check if all points are inside or on surface of global simulation box
+------------------------------------------------------------------------- */
+
+void Surf::check_point_inside(int npoint_old, int npoint_new)
+{
+  double *x;
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int m = npoint_old;
+  int nbad = 0;
+  for (int i = 0; i < npoint_new; i++) {
+    x = pts[m].x;
+    if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+    m++;
+  }
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"%d surface points are not inside simulation box",
+	    nbad);
+    error->all(FLERR,str);
+  }
+}
+
+
+/* ----------------------------------------------------------------------
    find a surface collide model by ID
    return index of surf collide model or -1 if not found
 ------------------------------------------------------------------------- */

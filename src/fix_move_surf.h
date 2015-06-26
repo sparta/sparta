@@ -35,6 +35,8 @@ class FixMoveSurf : public Fix {
 
  private:
   int me,nprocs;
+  int nlarge,action;
+  double fraction;
 
   class MoveSurf *movesurf;
 };

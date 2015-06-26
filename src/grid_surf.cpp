@@ -72,7 +72,7 @@ int *Grid::csubs_request(int n)
    initialize sinfo as needed
 ------------------------------------------------------------------------- */
 
-void Grid::surf2grid(int subflag)
+void Grid::surf2grid(int subflag, int outflag)
 {
   int i,isub,nsurf,nsplit,xsub;
   int *surfmap,*ptr;
@@ -124,7 +124,7 @@ void Grid::surf2grid(int subflag)
   //double t2 = MPI_Wtime();
   //printf("TIME %g\n",t2-t1);
   
-  surf2grid_stats();
+  if (outflag) surf2grid_stats();
 
   // compute cut volume and possible split of each grid cell by surfs
   // decrement nunsplitlocal if convert an unsplit cell to split cell

@@ -65,7 +65,6 @@ class ReadSurf : protected Pointers {
   void clip3d();
 
   void push_points_to_boundary(double);
-  void check_point_inside();
   void check_neighbor_norm_2d();
   void check_neighbor_norm_3d();
   void check_point_near_surf_2d();

@@ -29,16 +29,27 @@ namespace SPARTA_NS {
 
 class MoveSurf : protected Pointers {
  public:
+  int mode;                 // 0 = move_surf command, 1 = fix move/surf command
+  int groupbit;             // values FixMoveSurf needs to access
+  int action;
+  int *pflags;
+
   MoveSurf(class SPARTA *);
   ~MoveSurf();
   void command(int, char **);
+  void process_args(int, char **);
+  void move_points(double);
 
  private:
-  int *pflags;
-  class RanPark *random;
+  int me,nprocs;
+  char *file;
+  double theta;
+  double delta[3],rvec[3],origin[3];
 
-  void move_2d();
-  void move_3d();
+  void translate_2d(double);
+  void translate_3d(double);
+  void rotate_2d(double);
+  void rotate_3d(double);
 };
 
 }

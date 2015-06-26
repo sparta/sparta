@@ -34,14 +34,14 @@
 #include "random_mars.h"
 #include "random_park.h"
 #include "my_page.h"
-#include "math_const.h"
 #include "math_extra.h"
+#include "math_const.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
-using namespace MathConst;
 using namespace MathExtra;
+using namespace MathConst;
 
 enum{NONE,REFINE,COARSEN};              // also in FixAdapt
 enum{PARTICLE,SURF,VALUE,COMPUTE,FIX,RANDOM};

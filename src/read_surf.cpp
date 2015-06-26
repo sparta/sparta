@@ -367,7 +367,7 @@ void ReadSurf::command(int narg, char **arg)
   // error check on new points,lines,tris
   // all points must be inside or on surface of simulation box
 
-  check_point_inside();
+  surf->check_point_inside(npoint_old,npoint_new);
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
@@ -1382,35 +1382,6 @@ void ReadSurf::push_points_to_boundary(double frac)
       if (x[2]-boxlo[2] < zdelta) x[2] = boxlo[2];
       else if (boxhi[2]-x[2] < zdelta) x[2] = boxhi[2];
     }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   check if all new points are inside or on surface of global simulation box
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_point_inside()
-{
-  double *x;
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-
-  int m = npoint_old;
-  int nbad = 0;
-  for (int i = 0; i < npoint_new; i++) {
-    x = pts[m].x;
-    if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
-	x[1] < boxlo[1] || x[1] > boxhi[1] ||
-	x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
-    m++;
-  }
-
-  if (nbad) {
-    char str[128];
-    sprintf(str,"%d read_surf points are not inside simulation box",
-	    nbad);
-    error->all(FLERR,str);
   }
 }
 
