@@ -14,7 +14,7 @@ read_surf filename keyword args ... :pre
 
 filename = name of surface file :ulb,l
 zero or more keyword/args pairs may be appended :l
-keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {type} or {toffset} :l
+keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {type} or {toffset} or {particle} :l
   origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   trans args = Dx Dy Dz
@@ -34,7 +34,11 @@ keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or 
   group arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
   typadd arg = Noffset
-    Noffset = add Noffset to the type value of each element :pre
+    Noffset = add Noffset to the type value of each element
+  particle args = {none} or {check} or {keep}
+    none = allow no particles in simulation when read surfs
+    check = delete particles inside surfs or in cells intersected by surfs
+    keep = keep all particles :pre
 :ule
 
 [Examples:]
@@ -263,6 +267,13 @@ tiny surface elements from being created due to clipping.  If
 points are not moved.  If specified, {fraction} must be a value
 between 0.0 and 0.5.
 
+Note that the {clip} operation may delete some surface elements and
+create new ones.  Likewise for the points that define the end points
+or corner points of surface element lines (2d) or triangles (3d).  The
+resulting altered set of surface elements can be written out to a file
+by the "write_surf"_write_surf.html command, which can then be used an
+input to a new simulation or for post-processing and visualization.
+
 :line
 
 The following optional keywords affect group and type settings of the
@@ -298,13 +309,31 @@ surface file to be read multiple times (e.g. with different origins,
 tranlations, rotations, etc) to define multiple objects, and assign
 their surface elements to different groups or different type values.
 
+The {particle} keyword determines how particles in the simulation are
+affected by the new surface elements.  If the setting is {none}, which
+is the default, then no particles can exist in the simulation.  If the
+setting is {check, then particles in grid cells that are inside the
+new watertight surface object(s) or in grid cells intersected by the
+new surface elements are deleted.  This is to insure no particles will
+end up inside a surface object, which will typically generate errors
+when particles move.  If the setting is {keep} then no particles are
+deleted.  It is up to you to insure that no particles are inside
+surface object(s), else an error may occur later.  This setting can
+be useful if a "remove_surf"_remove_surf.html was used to remove
+a surface object, and a new object is being read in, and you know
+the new object is smaller than the one it replaced.  E.g. for a model
+of a shrinking or ablating object.
+
 :line
 
 [Restrictions:]
 
 This command can only be used after the simulation box is defined by
 the "create_box"_create_box.html command, and after a grid has been
-created by the "create_grid"_create_grid.html command.
+created by the "create_grid"_create_grid.html command.  If particles
+already exist in the simulation, you must insure particles do not
+end up inside the added surfaces.  See the {particle} keyword
+for options with regard to particles.
 
 To read gzipped surface files, you must compile SPARTA with the
 -DSPARTA_GZIP option - see "Section 2.2"_Section_start.html#start_2 of
@@ -345,9 +374,11 @@ surface files, you should insure they do not touch or overlap with
 each other.  SPARTA does not check for this, but it will typically
 lead to unphysical particle dynamics.
 
-[Related commands:] none
+[Related commands:]
+
+"write_surf"_write_surf.html
 
 [Default:]
 
 The default origin for the vertices in the surface file is (0,0,0).
-The defaults for group = all, type = no, toffset = 0.
+The defaults for group = all, type = no, toffset = 0, particle = none.

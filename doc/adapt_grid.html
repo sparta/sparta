@@ -58,9 +58,9 @@
   <I>region</I> args = regID rflag
     regID = ID of region that cells must be inside to be eligible for adaptation
     rflag = <I>all</I> or <I>one</I> or <I>center</I> = what portion of grid cell must be inside
-  <I>dir</I> = Sx Sy Sz
+  <I>dir</I> args = Sx Sy Sz
     Sx,Sy,Sz = vector components used with style <I>surf</I> to test surf elements
-  <I>file</I> = filename
+  <I>file</I> arg = filename
     filename = name of file to write out with new parent grid info 
 </PRE>
 
@@ -248,13 +248,13 @@ corner points (4 for 2d, 8 for 3d) is in the region.  For <I>rflag</I> =
 <P>The <I>dir</I> keyword is only used by the style <I>surf</I>.  The Sx,Sy,Sz
 settings are components of a vector.  It's length does not matter,
 just its direction.  Only surface elements whose normal is opposed to
-the vector direction (in a dot product sense) are considered eligible
-surfaces for the adapation procedure described above for the <I>surf</I>
-style.  This can be useful to exclude refinement around surface
-elements that are not facing "upwind" with respect to the flow
-direction of the particles.  This would be accomplished by setting
-Sx,Sy,Sz to the flow direction.  If Sy,Sy,Sz = (0,0,0), which is the
-default, then no surface elements are excluded.
+the vector direction (in a dot product sense) are eligible surfaces
+for the adapation procedure described above for the <I>surf</I> style.
+This can be useful to exclude refinement around surface elements that
+are not facing "upwind" with respect to the flow direction of the
+particles.  This is accomplished by setting Sx,Sy,Sz to the flow
+direction.  If Sy,Sy,Sz = (0,0,0), which is the default, then no
+surface elements are excluded.
 </P>
 <P>The <I>file</I> keyword triggers output of the adapted grid to the
 specified <I>filename</I>.  The format of the file is the same as that

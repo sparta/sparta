@@ -1,0 +1,46 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+remove_surf command :h3
+
+[Syntax:]
+
+remove_surf surfID :pre
+
+surfID = group ID for which surface elements to remove :ul
+
+[Examples:]
+
+remove_surf topsurf :pre
+
+[Description:]
+
+Remove a group of surface elements that have previously been read-in
+via the "read_surf"_read_surf.html command.  The "group
+surf"_group.html or "read_surf"_read_surf.html can be used to assign
+each surface element to one or more groups.  This command removes
+all surface elements in the specified {surfID} group.
+
+Note that the remaining surface elements must still constitute a
+"watertight" surface or an error will be generated.  The definition of
+watertight is explained in the Restrictions section of the
+"read_surf"_read_surf.html doc page.
+
+After surface elements have been deleted, any surface points that are
+no longer part of a surface element are also deleted.  The remaining
+surface points and elements are renumbered to create compressed,
+contiguous lists.  The new list of surface elements can be output via
+the "write_surf"_write_surf.html command.
+
+[Restrictions:] none
+
+[Related commands:]
+
+"read_surf"_read_surf.html
+
+[Default:] none

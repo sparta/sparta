@@ -1,0 +1,53 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>write_surf command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>write_surf file 
+</PRE>
+<UL><LI>file = name of file to write surface element info to 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>write_surf data.surf 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Write a surface file in text format describing the currently defined
+surface elements.  See the <A HREF = "read_surf.html">read_surf</A> command for a
+definition of surface elements and how they are defined and used be
+SPARTA.  The surface file can be used for later input to a new
+simulation or for post-processing and visualization.
+</P>
+<P>Note that if surface objects were clipped when read in by the
+<A HREF = "read_surf.html">read_surf</A> command then some surface elements may have
+been deleted and new ones created.  Likewise for the points that
+define the end points or corner points of surface element lines (2d)
+or triangles (3d).  Similarly, if surface elements have been removed
+by the <A HREF = "remove_surf.html">remove_surf</A> command, then points may have
+also been deleted.  In either case, surface points and elements are
+renumbered by these operations to create compressed, contiguous lists.
+These lists are what is output by this command.
+</P>
+<P>The file is written in as text file in the same format as the
+<A HREF = "read_surf.html">read_surf</A> command raeds.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_surf.html">read_surf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

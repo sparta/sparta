@@ -1,0 +1,51 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>remove_surf command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>remove_surf surfID 
+</PRE>
+<UL><LI>surfID = group ID for which surface elements to remove 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>remove_surf topsurf 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Remove a group of surface elements that have previously been read-in
+via the <A HREF = "read_surf.html">read_surf</A> command.  The <A HREF = "group.html">group
+surf</A> or <A HREF = "read_surf.html">read_surf</A> can be used to assign
+each surface element to one or more groups.  This command removes
+all surface elements in the specified <I>surfID</I> group.
+</P>
+<P>Note that the remaining surface elements must still constitute a
+"watertight" surface or an error will be generated.  The definition of
+watertight is explained in the Restrictions section of the
+<A HREF = "read_surf.html">read_surf</A> doc page.
+</P>
+<P>After surface elements have been deleted, any surface points that are
+no longer part of a surface element are also deleted.  The remaining
+surface points and elements are renumbered to create compressed,
+contiguous lists.  The new list of surface elements can be output via
+the <A HREF = "write_surf.html">write_surf</A> command.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_surf.html">read_surf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

@@ -19,7 +19,7 @@
 
 <LI>zero or more keyword/args pairs may be appended 
 
-<LI>keyword = <I>origin</I> or <I>trans</I> or <I>atrans</I> or <I>ftrans</I> or <I>scale</I> or <I>rotate</I> or <I>invert</I> or <I>clip</I> or <I>group</I> or <I>type</I> or <I>toffset</I> 
+<LI>keyword = <I>origin</I> or <I>trans</I> or <I>atrans</I> or <I>ftrans</I> or <I>scale</I> or <I>rotate</I> or <I>invert</I> or <I>clip</I> or <I>group</I> or <I>type</I> or <I>toffset</I> or <I>particle</I> 
 
 <PRE>  origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
@@ -40,7 +40,11 @@
   group arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
   typadd arg = Noffset
-    Noffset = add Noffset to the type value of each element 
+    Noffset = add Noffset to the type value of each element
+  particle args = <I>none</I> or <I>check</I> or <I>keep</I>
+    none = allow no particles in simulation when read surfs
+    check = delete particles inside surfs or in cells intersected by surfs
+    keep = keep all particles 
 </PRE>
 
 </UL>
@@ -270,6 +274,13 @@ tiny surface elements from being created due to clipping.  If
 points are not moved.  If specified, <I>fraction</I> must be a value
 between 0.0 and 0.5.
 </P>
+<P>Note that the <I>clip</I> operation may delete some surface elements and
+create new ones.  Likewise for the points that define the end points
+or corner points of surface element lines (2d) or triangles (3d).  The
+resulting altered set of surface elements can be written out to a file
+by the <A HREF = "write_surf.html">write_surf</A> command, which can then be used an
+input to a new simulation or for post-processing and visualization.
+</P>
 <HR>
 
 <P>The following optional keywords affect group and type settings of the
@@ -305,13 +316,31 @@ surface file to be read multiple times (e.g. with different origins,
 tranlations, rotations, etc) to define multiple objects, and assign
 their surface elements to different groups or different type values.
 </P>
+<P>The <I>particle</I> keyword determines how particles in the simulation are
+affected by the new surface elements.  If the setting is <I>none</I>, which
+is the default, then no particles can exist in the simulation.  If the
+setting is <I>check, then particles in grid cells that are inside the
+new watertight surface object(s) or in grid cells intersected by the
+new surface elements are deleted.  This is to insure no particles will
+end up inside a surface object, which will typically generate errors
+when particles move.  If the setting is <I>keep</I> then no particles are
+deleted.  It is up to you to insure that no particles are inside
+surface object(s), else an error may occur later.  This setting can
+be useful if a <A HREF = "remove_surf.html">remove_surf</A> was used to remove
+a surface object, and a new object is being read in, and you know
+the new object is smaller than the one it replaced.  E.g. for a model
+of a shrinking or ablating object.
+</P>
 <HR>
 
 <P><B>Restrictions:</B>
 </P>
 <P>This command can only be used after the simulation box is defined by
 the <A HREF = "create_box.html">create_box</A> command, and after a grid has been
-created by the <A HREF = "create_grid.html">create_grid</A> command.
+created by the <A HREF = "create_grid.html">create_grid</A> command.  If particles
+already exist in the simulation, you must insure particles do not
+end up inside the added surfaces.  See the <I>particle</I> keyword
+for options with regard to particles.
 </P>
 <P>To read gzipped surface files, you must compile SPARTA with the
 -DSPARTA_GZIP option - see <A HREF = "Section_start.html#start_2">Section 2.2</A> of
@@ -352,11 +381,13 @@ surface files, you should insure they do not touch or overlap with
 each other.  SPARTA does not check for this, but it will typically
 lead to unphysical particle dynamics.
 </P>
-<P><B>Related commands:</B> none
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "write_surf.html">write_surf</A>
 </P>
 <P><B>Default:</B>
 </P>
 <P>The default origin for the vertices in the surface file is (0,0,0).
-The defaults for group = all, type = no, toffset = 0.
+The defaults for group = all, type = no, toffset = 0, particle = none.
 </P>
 </HTML>
