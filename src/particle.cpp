@@ -230,7 +230,8 @@ void Particle::compress_migrate(int nmigrate, int *mlist)
    all particles MUST be in owned cells
    overwrite deleted particle with particle from end of nlocal list
    called from Comm::migrate_cells() when cells+particles migrate on rebalance
-     also called from AdaptGrid when particles are sent to other procs
+   called from AdaptGrid when particles are sent to other procs
+   called from ReadSurf to remove particles from cells with surfs
    this does NOT preserve particle sorting
 ------------------------------------------------------------------------- */
 
@@ -317,6 +318,9 @@ void Particle::compress_reactions(int ndelete, int *dellist)
 
 /* ----------------------------------------------------------------------
    sort particles into grid cells
+   set cinfo.first = index of first particle in cell
+   set cinfo.count = # of particles in cell
+   next[] = index of next particle in same cell, -1 for no more
 ------------------------------------------------------------------------- */
 
 void Particle::sort()
@@ -359,6 +363,21 @@ void Particle::sort()
     //next[i] = first[icell];
     //first[icell] = i;
     //cellcount[icell]++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   mark all particles in a grid cell, stating with index ip, with icell = -1
+   so can be deleted by compress_rebalance()
+   assume particles are already sorted
+   called from ReadSurf to remove particles from a grid cell with surfaces
+------------------------------------------------------------------------- */
+
+void Particle::remove_all_from_cell(int ip)
+{
+  while (ip >= 0) {
+    particles[ip].icell = -1;
+    ip = next[ip];
   }
 }
 

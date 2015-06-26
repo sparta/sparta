@@ -85,6 +85,9 @@ class Surf : protected Pointers {
   double axi_line_size(int);
   double tri_size(int, double &);
 
+  void check_watertight_2d(int, int);
+  void check_watertight_3d(int, int);
+
   void add_collide(int, char **);
   int find_collide(const char *);
   void add_react(int, char **);

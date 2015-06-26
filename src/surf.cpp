@@ -29,6 +29,14 @@
 #include "memory.h"
 #include "error.h"
 
+#ifdef SPARTA_MAP
+#include <map>
+#elif defined SPARTA_UNORDERED_MAP
+#include <unordered_map>
+#else
+#include <tr1/unordered_map>
+#endif
+
 using namespace SPARTA_NS;
 using namespace MathConst;
 
@@ -364,6 +372,149 @@ double Surf::tri_size(int m, double &len)
   MathExtra::cross3(delta12,delta13,cross);
   double area = 0.5 * MathExtra::len3(cross);
   return area;
+}
+
+/* ----------------------------------------------------------------------
+   check that points are each end point of exactly 2 new lines
+   exception: not required of point on simulation box surface
+   only check points and lines newer than old indices
+------------------------------------------------------------------------- */
+
+void Surf::check_watertight_2d(int npoint_old, int nline_old)
+{
+  int p1,p2;
+
+  int npoint_new = npoint - npoint_old;
+  int nline_new = nline - nline_old;
+
+  // count[I] = # of lines that vertex I is part of
+
+  int *count;
+  memory->create(count,npoint_new,"readsurf:count");
+  for (int i = 0; i < npoint_new; i++) count[i] = 0;
+
+  int ndup = 0;
+  int m = nline_old;
+  for (int i = 0; i < nline_new; i++) {
+    p1 = lines[m].p1 - npoint_old;
+    p2 = lines[m].p2 - npoint_old;
+    count[p1]++;
+    count[p2]++;
+    if (count[p1] > 2) ndup++;
+    if (count[p2] > 2) ndup++;
+    m++;
+  }
+  
+  if (ndup) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d duplicate points",ndup);
+    error->all(FLERR,str);
+  }
+
+  // check that all counts are 2
+  // allow for exception if point on box surface
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int nbad = 0;
+  for (int i = 0; i < npoint_new; i++) {
+    if (count[i] == 0) nbad++;
+    else if (count[i] == 1) {
+      if (!Geometry::point_on_hex(pts[i+npoint_old].x,boxlo,boxhi)) nbad++;
+    }
+  }
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d unmatched points",nbad);
+    error->all(FLERR,str);
+  }
+
+  // clean up
+
+  memory->destroy(count);
+}
+
+/* ----------------------------------------------------------------------
+   check directed triangle edges
+   must be unique and match exactly one inverted edge
+   exception: not required of triangle edge on simulation box surface
+   only check points and lines newer than old indices
+------------------------------------------------------------------------- */
+
+void Surf::check_watertight_3d(int npoint_old, int ntri_old)
+{
+  int npoint_new = npoint - npoint_old;
+  int ntri_new = ntri - ntri_old;
+
+  // hash directed edges of all triangles
+  // key = directed edge, value = # of times it appears in any triangle
+  // NOTE: could prealloc hash to correct size here
+
+#ifdef SPARTA_MAP
+  std::map<bigint,int> hash;
+  std::map<bigint,int>::iterator it;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<bigint,int> hash;
+  std::unordered_map<bigint,int>::iterator it;
+#else
+  std::tr1::unordered_map<bigint,int> hash;
+  std::tr1::unordered_map<bigint,int>::iterator it;
+#endif
+
+  // insert each edge into hash
+  // should appear once in each direction
+  // error if any duplicate edges
+
+  bigint p1,p2,p3,key;
+
+  int ndup = 0;
+  int m = ntri_old;
+  for (int i = 0; i < ntri_new; i++) {
+    p1 = tris[m].p1;
+    p2 = tris[m].p2;
+    p3 = tris[m].p3;
+    key = (p1 << 32) | p2;
+    if (hash.find(key) != hash.end()) ndup++;
+    else hash[key] = 0;
+    key = (p2 << 32) | p3;
+    if (hash.find(key) != hash.end()) ndup++;
+    else hash[key] = 0;
+    key = (p3 << 32) | p1;
+    if (hash.find(key) != hash.end()) ndup++;
+    else hash[key] = 0;
+    m++;
+  }
+
+  if (ndup) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d duplicate edges",ndup);
+    error->all(FLERR,str);
+  }
+
+  // check that each edge has an inverted match
+  // allow for exception if edge on box surface
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  int nbad = 0;
+  for (it = hash.begin(); it != hash.end(); ++it) {
+    p1 = it->first >> 32;
+    p2 = it->first & MAXSMALLINT;
+    key = (p2 << 32) | p1;
+    if (hash.find(key) == hash.end()) {
+      if (!Geometry::point_on_hex(pts[p1].x,boxlo,boxhi) ||
+          !Geometry::point_on_hex(pts[p2].x,boxlo,boxhi)) nbad++;
+    }
+  }
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d unmatched edges",nbad);
+    error->all(FLERR,str);
+  }
 }
 
 /* ----------------------------------------------------------------------

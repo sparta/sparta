@@ -464,6 +464,7 @@ void Grid::unpack_particles_adapt(int np, char *buf)
    removed cells are marked with proc != me, could be another proc or -1
    operates on cells, cinfo, sinfo
    integer lists (csurfs,csplits,csubs) are re-created from scratch
+     copy old info from kept cells into new data structs
 ------------------------------------------------------------------------- */
 
 void Grid::compress()
@@ -612,9 +613,10 @@ void Grid::compress()
   delete csplits_old;
   delete csubs_old;
 
-  // repoint particles in all remaiining grid cells to new icell index
-  // particles are still sorted and have not yet been compressed
-  // so count/first values in compressed cinfo data struct are still valid
+  // repoint particles in all remaining grid cells to new icell indices
+  // assumes particles are sorted and have not yet been compressed,
+  //   so count/first values in compressed cinfo data struct are still valid
+  // when done, particles are still sorted
 
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;

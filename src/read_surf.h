@@ -39,8 +39,7 @@ class ReadSurf : protected Pointers {
   FILE *fp;
   int compressed;
 
-  int dimension;
-  int isc;
+  int dim,isc;
   double origin[3];
 
   Surf::Point *pts;
@@ -67,8 +66,6 @@ class ReadSurf : protected Pointers {
 
   void push_points_to_boundary(double);
   void check_point_inside();
-  void check_watertight_2d();
-  void check_watertight_3d();
   void check_neighbor_norm_2d();
   void check_neighbor_norm_3d();
   void check_point_near_surf_2d();

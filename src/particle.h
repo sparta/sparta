@@ -112,6 +112,7 @@ class Particle : protected Pointers {
   void compress_rebalance();
   void compress_reactions(int, int *);
   void sort();
+  void remove_all_from_cell(int);
   void grow(int);
   void pre_weight();
   void post_weight();

@@ -28,18 +28,12 @@
 #include "memory.h"
 #include "error.h"
 
-#ifdef SPARTA_MAP
-#include <map>
-#elif defined SPARTA_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
-
 using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{NEITHER,BAD,GOOD};
+enum{NONE,CHECK,KEEP};
+enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
 #define MAXLINE 256
 #define CHUNK 1024
@@ -74,15 +68,8 @@ void ReadSurf::command(int narg, char **arg)
   if (!grid->exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
 
-  // don't think this restriction is needed
-  //if (!grid->exist_ghost)
-  //  error->all(FLERR,"Cannot read_surf before grid ghost cells are defined");
-
-  if (particle->exist) 
-    error->all(FLERR,"Cannot read_surf after particles are defined");
-
   surf->exist = 1;
-  dimension = domain->dimension;
+  dim = domain->dimension;
 
   if (narg < 1) error->all(FLERR,"Illegal read_surf command");
 
@@ -128,7 +115,7 @@ void ReadSurf::command(int narg, char **arg)
   read_points();
 
   parse_keyword(0);
-  if (dimension == 2) {
+  if (dim == 2) {
     if (strcmp(keyword,"Lines") != 0)
       error->all(FLERR,
 	       "Read_surf did not find lines section of surf file");
@@ -153,6 +140,7 @@ void ReadSurf::command(int narg, char **arg)
   origin[0] = origin[1] = origin[2] = 0.0;
   int grouparg = 0;
   int typeadd = 0;
+  int partflag = NONE;
 
   int iarg = 1;
   while (iarg < narg) {
@@ -161,7 +149,7 @@ void ReadSurf::command(int narg, char **arg)
       double ox = atof(arg[iarg+1]);
       double oy = atof(arg[iarg+2]);
       double oz = atof(arg[iarg+3]);
-      if (dimension == 2 && oz != 0.0) 
+      if (dim == 2 && oz != 0.0) 
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       origin[0] = ox;
@@ -170,10 +158,10 @@ void ReadSurf::command(int narg, char **arg)
       iarg += 4;
     } else if (strcmp(arg[iarg],"trans") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double dx = atof(arg[iarg+1]);
-      double dy = atof(arg[iarg+2]);
-      double dz = atof(arg[iarg+3]);
-      if (dimension == 2 && dz != 0.0) 
+      double dx = input->numeric(FLERR,arg[iarg+1]);
+      double dy = input->numeric(FLERR,arg[iarg+2]);
+      double dz = input->numeric(FLERR,arg[iarg+3]);
+      if (dim == 2 && dz != 0.0) 
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       origin[0] += dx;
@@ -183,10 +171,10 @@ void ReadSurf::command(int narg, char **arg)
       iarg += 4;
     } else if (strcmp(arg[iarg],"atrans") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double ax = atof(arg[iarg+1]);
-      double ay = atof(arg[iarg+2]);
-      double az = atof(arg[iarg+3]);
-      if (dimension == 2 && az != 0.0) 
+      double ax = input->numeric(FLERR,arg[iarg+1]);
+      double ay = input->numeric(FLERR,arg[iarg+2]);
+      double az = input->numeric(FLERR,arg[iarg+3]);
+      if (dim == 2 && az != 0.0) 
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       double dx = ax - origin[0];
@@ -199,16 +187,16 @@ void ReadSurf::command(int narg, char **arg)
       iarg += 4;
     } else if (strcmp(arg[iarg],"ftrans") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double fx = atof(arg[iarg+1]);
-      double fy = atof(arg[iarg+2]);
-      double fz = atof(arg[iarg+3]);
-      if (dimension == 2 && fz != 0.5) 
+      double fx = input->numeric(FLERR,arg[iarg+1]);
+      double fy = input->numeric(FLERR,arg[iarg+2]);
+      double fz = input->numeric(FLERR,arg[iarg+3]);
+      if (dim == 2 && fz != 0.5) 
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       double ax = domain->boxlo[0] + fx*domain->xprd;
       double ay = domain->boxlo[1] + fy*domain->yprd;
       double az;
-      if (dimension == 3) az = domain->boxlo[2] + fz*domain->zprd;
+      if (dim == 3) az = domain->boxlo[2] + fz*domain->zprd;
       else az = 0.0;
       double dx = ax - origin[0];
       double dy = ay - origin[1];
@@ -220,21 +208,21 @@ void ReadSurf::command(int narg, char **arg)
       iarg += 4;
     } else if (strcmp(arg[iarg],"scale") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double sx = atof(arg[iarg+1]);
-      double sy = atof(arg[iarg+2]);
-      double sz = atof(arg[iarg+3]);
-      if (dimension == 2 && sz != 1.0) 
+      double sx = input->numeric(FLERR,arg[iarg+1]);
+      double sy = input->numeric(FLERR,arg[iarg+2]);
+      double sz = input->numeric(FLERR,arg[iarg+3]);
+      if (dim == 2 && sz != 1.0) 
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       scale(sx,sy,sz);
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Invalid read_surf command");
-      double theta = atof(arg[iarg+1]);
-      double rx = atof(arg[iarg+2]);
-      double ry = atof(arg[iarg+3]);
-      double rz = atof(arg[iarg+4]);
-      if (dimension == 2 && (rx != 0.0 || ry != 0.0 || rz != 1.0))
+      double theta = input->numeric(FLERR,arg[iarg+1]);
+      double rx = input->numeric(FLERR,arg[iarg+2]);
+      double ry = input->numeric(FLERR,arg[iarg+3]);
+      double rz = input->numeric(FLERR,arg[iarg+4]);
+      if (dim == 2 && (rx != 0.0 || ry != 0.0 || rz != 1.0))
 	error->all(FLERR,"Invalid read_surf geometry transformation "
 		   "for 2d simulation");
       if (rx == 0.0 && ry == 0.0 && rz == 0.0)
@@ -250,14 +238,14 @@ void ReadSurf::command(int narg, char **arg)
       if (iarg+1 < narg) {
         char c = arg[iarg+1][0];
         if (isdigit(c) || c == '-' || c == '+' || c == '.') {
-          frac = atof(arg[iarg+1]);
+          frac = input->numeric(FLERR,arg[iarg+1]);
           if (frac < 0.0 || frac >= 0.5) 
             error->all(FLERR,"Invalid read_surf command");
           iarg++;
         }
       }
       if (frac > 0.0) push_points_to_boundary(frac);
-      if (dimension == 2) clip2d();
+      if (dim == 2) clip2d();
       else clip3d();
       iarg++;
 
@@ -272,8 +260,21 @@ void ReadSurf::command(int narg, char **arg)
       if (typeadd < 0) error->all(FLERR,"Invalid read_surf command");
       iarg += 2;
 
+    } else if (strcmp(arg[iarg],"particle") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      if (strcmp(arg[iarg+1],"none") == 0) partflag = NONE;
+      else if (strcmp(arg[iarg+1],"check") == 0) partflag = CHECK;
+      else if (strcmp(arg[iarg+1],"keep") == 0) partflag = KEEP;
+      else error->all(FLERR,"Invalid read_surf command");
+      iarg += 2;
+
     } else error->all(FLERR,"Invalid read_surf command");
   }
+
+  // error test on particles
+
+  if (particle->exist && partflag == NONE)
+    error->all(FLERR,"Using read_surf particle none when particles exist");
 
   // if specified, apply group and typeadd keywords
   // these reset per-element mask/type info
@@ -282,7 +283,7 @@ void ReadSurf::command(int narg, char **arg)
     int igroup = surf->find_group(arg[grouparg]);
     if (igroup < 0) igroup = surf->add_group(arg[grouparg]);
     int groupbit = surf->bitmask[igroup];
-    if (dimension == 2) {
+    if (dim == 2) {
       int n = nline_old + nline_new;
       for (int i = nline_old; i < n; i++) lines[i].mask |= groupbit;
     } else {
@@ -292,7 +293,7 @@ void ReadSurf::command(int narg, char **arg)
   }
 
   if (typeadd) {
-    if (dimension == 2) {
+    if (dim == 2) {
       int n = nline_old + nline_new;
       for (int i = nline_old; i < n; i++) lines[i].type += typeadd;
     } else {
@@ -330,17 +331,17 @@ void ReadSurf::command(int narg, char **arg)
   }
 
   double minlen,minarea;
-  if (dimension == 2) minlen = shortest_line();
-  if (dimension == 3) smallest_tri(minlen,minarea);
+  if (dim == 2) minlen = shortest_line();
+  if (dim == 3) smallest_tri(minlen,minarea);
 
   if (me == 0) {
     if (screen) {
       fprintf(screen,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
       fprintf(screen,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
       fprintf(screen,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
-      if (dimension == 2)
+      if (dim == 2)
 	fprintf(screen,"  %g min line length\n",minlen);
-      if (dimension == 3) {
+      if (dim == 3) {
 	fprintf(screen,"  %g min triangle edge length\n",minlen);
 	fprintf(screen,"  %g min triangle area\n",minarea);
       }
@@ -349,9 +350,9 @@ void ReadSurf::command(int narg, char **arg)
       fprintf(logfile,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
       fprintf(logfile,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
       fprintf(logfile,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
-      if (dimension == 2)
+      if (dim == 2)
 	fprintf(logfile,"  %g min line length\n",minlen);
-      if (dimension == 3) {
+      if (dim == 3) {
 	fprintf(logfile,"  %g min triangle edge length\n",minlen);
 	fprintf(logfile,"  %g min triangle area\n",minarea);
       }
@@ -360,51 +361,68 @@ void ReadSurf::command(int narg, char **arg)
 
   // compute normals of new lines or triangles
 
-  if (dimension == 2) surf->compute_line_normal(nline_old,nline_new);
-  if (dimension == 3) surf->compute_tri_normal(ntri_old,ntri_new);
+  if (dim == 2) surf->compute_line_normal(nline_old,nline_new);
+  else surf->compute_tri_normal(ntri_old,ntri_new);
 
   // error check on new points,lines,tris
   // all points must be inside or on surface of simulation box
 
   check_point_inside();
 
+  MPI_Barrier(world);
+  double time2 = MPI_Wtime();
+
+  // sort particles
+
+  if (particle->exist) particle->sort();
+
   // make list of surf elements I own
   // assign surfs to grid cells
   // error checks to flag bad surfs
-  // re-setup ghost and grid
 
   surf->setup_surf();
 
   grid->unset_neighbors();
   grid->remove_ghosts();
-  grid->clear_surf();
 
-  MPI_Barrier(world);
-  double time2 = MPI_Wtime();
-
-  // error checks that can be done before surfs are mapped to grid cells
-
-  if (dimension == 2) {
-    check_watertight_2d();
-    check_neighbor_norm_2d();
-  } else {
-    check_watertight_3d();
-    check_neighbor_norm_3d();
+  if (particle->exist && grid->nsplitlocal) {
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+    for (int icell = 0; icell < nglocal; icell++)
+      if (cells[icell].nsplit > 1)
+	grid->combine_split_cell_particles(icell,1);
   }
+
+  grid->clear_surf();
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
-  grid->surf2grid(1);
+  // error checks that can be done before surfs are mapped to grid cells
 
-  // error check after surfs are mapped to grid cells
-  // done on per-grid-cell basis, too expensive to do for global surfs
-
-  if (dimension == 2) check_point_near_surf_2d();
-  else check_point_near_surf_3d();
+  if (dim == 2) {
+    surf->check_watertight_2d(npoint_old, nline_old);
+    check_neighbor_norm_2d();
+  } else {
+    surf->check_watertight_3d(npoint_old, ntri_old);
+    check_neighbor_norm_3d();
+  }
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
+
+  // map surfs to grid cells then error check
+  // check done on per-grid-cell basis, too expensive to do globally
+
+  grid->surf2grid(1);
+
+  if (dim == 2) check_point_near_surf_2d();
+  else check_point_near_surf_3d();
+
+  MPI_Barrier(world);
+  double time5 = MPI_Wtime();
+
+  // re-setup grid ghosts and neighbors
 
   grid->setup_owned();
   grid->acquire_ghosts();
@@ -412,7 +430,9 @@ void ReadSurf::command(int narg, char **arg)
   comm->reset_neighbors();
 
   MPI_Barrier(world);
-  double time5 = MPI_Wtime();
+  double time6 = MPI_Wtime();
+
+  // flag cells and corners as OUTSIDE or INSIDE
 
   grid->set_inout();
   grid->type_check();
@@ -421,26 +441,84 @@ void ReadSurf::command(int narg, char **arg)
   //grid->debug();
 
   MPI_Barrier(world);
-  double time6 = MPI_Wtime();
+  double time7 = MPI_Wtime();
+
+  // remove particles in any cell that is now INSIDE or has new surfs
+  // reassign particles in split cells to sub cell owner
+  // compress particles if any flagged for deletion
+
+  bigint ndeleted;
+  if (particle->exist) {
+    Grid::ChildCell *cells = grid->cells;
+    Grid::ChildInfo *cinfo = grid->cinfo;
+    int nglocal = grid->nlocal;
+    int delflag = 0;
+
+    for (int icell = 0; icell < nglocal; icell++) {
+      if (cinfo[icell].type == INSIDE) {
+	if (partflag == KEEP) error->one(FLERR,"Particles are inside new surfaces");
+	if (cinfo[icell].count) delflag = 1;
+	particle->remove_all_from_cell(cinfo[icell].first);
+	cinfo[icell].count = 0;
+	cinfo[icell].first = -1;
+	continue;
+      }
+      if (cells[icell].nsurf && cells[icell].nsplit >= 1) {
+	int nsurf = cells[icell].nsurf;
+	int *csurfs = cells[icell].csurfs;
+	int m;
+	if (dim == 2) {
+	  for (m = 0; m < nsurf; m++) {
+	    if (csurfs[m] >= nline_old) break;
+	  }
+	} else {
+	  for (m = 0; m < nsurf; m++) {
+	    if (csurfs[m] >= ntri_old) break;
+	  }
+	}
+	if (m < nsurf && partflag == CHECK) {
+	  if (cinfo[icell].count) delflag = 1;
+	  particle->remove_all_from_cell(cinfo[icell].first);
+	  cinfo[icell].count = 0;
+	  cinfo[icell].first = -1;
+	}
+      }
+      if (cells[icell].nsplit > 1)
+	grid->assign_split_cell_particles(icell);
+    }
+    int nlocal_old = particle->nlocal;
+    if (delflag) particle->compress_rebalance();
+    bigint delta = nlocal_old - particle->nlocal;
+    MPI_Allreduce(&delta,&ndeleted,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  }
+
+  MPI_Barrier(world);
+  double time8 = MPI_Wtime();
 
   double time_total = time6-time1;
 
   if (comm->me == 0) {
     if (screen) {
+      if (particle->exist)
+	fprintf(screen,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/error/surf2grid/ghost/inout percent = "
-              "%g %g %g %g %g\n",
+      fprintf(screen,"  read/sort/check/surf2grid/ghost/inout/particle percent = "
+              "%g %g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
-              100.0*(time6-time5)/time_total);
+              100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
+              100.0*(time8-time7)/time_total);
     }
     if (logfile) {
+      if (particle->exist)
+	fprintf(logfile,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/error/surf2grid/ghost/inout percent = "
-              "%g %g %g %g %g\n",
+      fprintf(logfile,"  read/sort/check/surf2grid/ghost/inout/particle percent = "
+              "%g %g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
-              100.0*(time6-time5)/time_total);
+              100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
+              100.0*(time8-time7)/time_total);
     }
   }
 }
@@ -498,11 +576,11 @@ void ReadSurf::header()
 
     if (strstr(line,"points")) sscanf(line,"%d",&npoint_new);
     else if (strstr(line,"lines")) {
-      if (dimension == 3) 
+      if (dim == 3) 
 	error->all(FLERR,"Surf file cannot contain lines for 3d simulation");
       sscanf(line,"%d",&nline_new);
     } else if (strstr(line,"triangles")) {
-      if (dimension == 2) 
+      if (dim == 2) 
 	error->all(FLERR,
 		   "Surf file cannot contain triangles for 2d simulation");
       sscanf(line,"%d",&ntri_new);
@@ -510,9 +588,9 @@ void ReadSurf::header()
   }
 
   if (npoint_new == 0) error->all(FLERR,"Surf file does not contain points");
-  if (dimension == 2 && nline_new == 0) 
+  if (dim == 2 && nline_new == 0) 
     error->all(FLERR,"Surf file does not contain lines");
-  if (dimension == 3 && ntri_new == 0) 
+  if (dim == 3 && ntri_new == 0) 
     error->all(FLERR,"Surf file does not contain triangles");
 }
 
@@ -552,17 +630,18 @@ void ReadSurf::read_points()
     int nwords = count_words(buf);
     *next = '\n';
 
-    if (dimension == 2 && nwords != 3)
+    if (dim == 2 && nwords != 3)
       error->all(FLERR,"Incorrect point format in surf file");
-    if (dimension == 3 && nwords != 4)
+    if (dim == 3 && nwords != 4)
       error->all(FLERR,"Incorrect point format in surf file");
 
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
-      pts[n].x[0] = atof(strtok(NULL," \t\n\r\f"));
-      pts[n].x[1] = atof(strtok(NULL," \t\n\r\f"));
-      if (dimension == 3) pts[n].x[2] = atof(strtok(NULL," \t\n\r\f"));
+      pts[n].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      pts[n].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      if (dim == 3) 
+        pts[n].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
       else pts[n].x[2] = 0.0;
       n++;
       buf = next + 1;
@@ -624,10 +703,10 @@ void ReadSurf::read_lines()
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
-      if (typeflag) type = atoi(strtok(NULL," \t\n\r\f"));
+      if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
       else type = 1;
-      p1 = atoi(strtok(NULL," \t\n\r\f"));
-      p2 = atoi(strtok(NULL," \t\n\r\f"));
+      p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+      p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
       if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || p1 == p2)
 	error->all(FLERR,"Invalid point index in line");
       lines[n].type = type;
@@ -695,11 +774,11 @@ void ReadSurf::read_tris()
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
-      if (typeflag) type = atoi(strtok(NULL," \t\n\r\f"));
+      if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
       else type = 1;
-      p1 = atoi(strtok(NULL," \t\n\r\f"));
-      p2 = atoi(strtok(NULL," \t\n\r\f"));
-      p3 = atoi(strtok(NULL," \t\n\r\f"));
+      p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+      p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+      p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
       if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || 
 	  p3 < 1 || p3 > npoint_new || p1 == p2 || p2 == p3)
 	error->all(FLERR,"Invalid point index in triangle");
@@ -750,7 +829,7 @@ void ReadSurf::scale(double sx, double sy, double sz)
   for (int i = 0; i < npoint_new; i++) {
     pts[m].x[0] = sx*(pts[m].x[0]-origin[0]) + origin[0];
     pts[m].x[1] = sy*(pts[m].x[1]-origin[1]) + origin[1];
-    if (dimension == 3) pts[m].x[2] = sz*(pts[m].x[2]-origin[2]) + origin[2];
+    if (dim == 3) pts[m].x[2] = sz*(pts[m].x[2]-origin[2]) + origin[2];
     m++;
   }
 }
@@ -780,7 +859,7 @@ void ReadSurf::rotate(double theta, double rx, double ry, double rz)
     MathExtra::matvec(rotmat,d,dnew);
     pts[m].x[0] = dnew[0] + origin[0];
     pts[m].x[1] = dnew[1] + origin[1];
-    if (dimension == 3) pts[m].x[2] = dnew[2] + origin[2];
+    if (dim == 3) pts[m].x[2] = dnew[2] + origin[2];
     m++;
   }
 }
@@ -794,7 +873,7 @@ void ReadSurf::invert()
 {
   int tmp;
 
-  if (dimension == 2) {
+  if (dim == 2) {
     int m = nline_old;
     for (int i = 0; i < nline_new; i++) {
       tmp = lines[m].p1;
@@ -804,7 +883,7 @@ void ReadSurf::invert()
     }
   }
 
-  if (dimension == 3) {
+  if (dim == 3) {
     int m = ntri_old;
     for (int i = 0; i < ntri_new; i++) {
       tmp = tris[m].p2;
@@ -1298,7 +1377,7 @@ void ReadSurf::push_points_to_boundary(double frac)
       if (x[1]-boxlo[1] < ydelta) x[1] = boxlo[1];
       else if (boxhi[1]-x[1] < ydelta) x[1] = boxhi[1];
     }
-    if (dimension == 2) continue;
+    if (dim == 2) continue;
     if (x[2] >= boxlo[2] && x[2] <= boxhi[2]) {
       if (x[2]-boxlo[2] < zdelta) x[2] = boxlo[2];
       else if (boxhi[2]-x[2] < zdelta) x[2] = boxhi[2];
@@ -1331,141 +1410,6 @@ void ReadSurf::check_point_inside()
     char str[128];
     sprintf(str,"%d read_surf points are not inside simulation box",
 	    nbad);
-    error->all(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   check that new points are each end point of exactly 2 new lines
-   exception: not required of point on simulation box surface
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_watertight_2d()
-{
-  int p1,p2;
-
-  // count[I] = # of lines that vertex I is part of
-
-  int *count;
-  memory->create(count,npoint_new,"readsurf:count");
-  for (int i = 0; i < npoint_new; i++) count[i] = 0;
-
-  int ndup = 0;
-  int m = nline_old;
-  for (int i = 0; i < nline_new; i++) {
-    p1 = lines[m].p1 - npoint_old;
-    p2 = lines[m].p2 - npoint_old;
-    count[p1]++;
-    count[p2]++;
-    if (count[p1] > 2) ndup++;
-    if (count[p2] > 2) ndup++;
-    m++;
-  }
-  
-  if (ndup) {
-    char str[128];
-    sprintf(str,"Surface check failed with %d duplicate points",ndup);
-    error->all(FLERR,str);
-  }
-
-  // check that all counts are 2
-  // allow for exception if point on box surface
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-
-  int nbad = 0;
-  for (int i = 0; i < npoint_new; i++) {
-    if (count[i] == 0) nbad++;
-    else if (count[i] == 1) {
-      if (!Geometry::point_on_hex(pts[i+npoint_old].x,boxlo,boxhi)) nbad++;
-    }
-  }
-
-  if (nbad) {
-    char str[128];
-    sprintf(str,"Surface check failed with %d unmatched points",nbad);
-    error->all(FLERR,str);
-  }
-
-  // clean up
-
-  memory->destroy(count);
-}
-
-/* ----------------------------------------------------------------------
-   check new directed triangle edges
-   must be unique and match exactly one inverted edge
-   exception: not required of triangle edge on simulation box surface
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_watertight_3d()
-{
-  // hash directed edges of all triangles
-  // key = directed edge, value = # of times it appears in any triangle
-  // NOTE: could prealloc hash to correct size here
-
-#ifdef SPARTA_MAP
-  std::map<bigint,int> hash;
-  std::map<bigint,int>::iterator it;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<bigint,int> hash;
-  std::unordered_map<bigint,int>::iterator it;
-#else
-  std::tr1::unordered_map<bigint,int> hash;
-  std::tr1::unordered_map<bigint,int>::iterator it;
-#endif
-
-  // insert each edge into hash
-  // should appear once in each direction
-  // error if any duplicate edges
-
-  bigint p1,p2,p3,key;
-
-  int ndup = 0;
-  int m = ntri_old;
-  for (int i = 0; i < ntri_new; i++) {
-    p1 = tris[m].p1;
-    p2 = tris[m].p2;
-    p3 = tris[m].p3;
-    key = (p1 << 32) | p2;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
-    key = (p2 << 32) | p3;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
-    key = (p3 << 32) | p1;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
-    m++;
-  }
-
-  if (ndup) {
-    char str[128];
-    sprintf(str,"Surface check failed with %d duplicate edges",ndup);
-    error->all(FLERR,str);
-  }
-
-  // check that each edge has an inverted match
-  // allow for exception if edge on box surface
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-
-  int nbad = 0;
-  for (it = hash.begin(); it != hash.end(); ++it) {
-    p1 = it->first >> 32;
-    p2 = it->first & MAXSMALLINT;
-    key = (p2 << 32) | p1;
-    if (hash.find(key) == hash.end()) {
-      if (!Geometry::point_on_hex(pts[p1].x,boxlo,boxhi) ||
-          !Geometry::point_on_hex(pts[p2].x,boxlo,boxhi)) nbad++;
-    }
-  }
-
-  if (nbad) {
-    char str[128];
-    sprintf(str,"Surface check failed with %d unmatched edges",nbad);
     error->all(FLERR,str);
   }
 }
@@ -1511,7 +1455,6 @@ void ReadSurf::check_neighbor_norm_2d()
     dot = MathExtra::dot3(norm1,norm2);
     if (dot <= -1.0) nerror++;
     else if (dot < -1.0+EPSILON_NORM) nwarn++;
-
   }
 
   if (nerror) {
@@ -1964,13 +1907,13 @@ void ReadSurf::check_point_pairs()
   // epssq = epsilon squared
 
   double epsilon = MIN(domain->xprd,domain->yprd);
-  if (dimension == 3) epsilon = MIN(epsilon,domain->zprd);
+  if (dim == 3) epsilon = MIN(epsilon,domain->zprd);
   epsilon *= EPSILON;
   double epssq = epsilon * epsilon;
 
   // goal: N roughly cubic bins where N = # of new points
-  // nbinxyz = # of bins in each dimension
-  // xyzbin = bin size in each dimension
+  // nbinxyz = # of bins in each dim
+  // xyzbin = bin size in each dim
   // for 2d, nbinz = 1
   // after setting bin size, add 1 to nbinxyz
   // this allows for 2nd binning via offset origin
@@ -1979,7 +1922,7 @@ void ReadSurf::check_point_pairs()
   double xbin,ybin,zbin;
   double xbininv,ybininv,zbininv;
   
-  if (dimension == 2) {
+  if (dim == 2) {
     double vol_per_point = domain->xprd * domain->yprd / npoint_new;
     xbin = ybin = sqrt(vol_per_point);
     nbinx = static_cast<int> (domain->xprd / xbin);
@@ -2068,7 +2011,7 @@ void ReadSurf::check_point_pairs()
   }
 
   // 2nd binning = bins offset by 1/2 binsize wrt global box boundaries
-  // do not offset bin origin in a dimension with only 1 bin
+  // do not offset bin origin in a dim with only 1 bin
 
   for (i = 0; i < nbinx; i++)
     for (j = 0; j < nbiny; j++)

@@ -25,9 +25,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-// NOTE: set DELTA to large value when done debugging
-
-#define DELTA 10000
+#define DELTA 8192
 #define BIG 1.0e20
 #define MAXGROUP 32
 
@@ -41,7 +39,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 // cell is entirely outside/inside surfs or has any overlap with surfs
 // corner pt is outside/inside surfs or is on a surf
 
-enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
+enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 enum{NOWEIGHT,VOLWEIGHT,RADWEIGHT};
 

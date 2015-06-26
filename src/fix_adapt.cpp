@@ -61,7 +61,8 @@ FixAdapt::FixAdapt(SPARTA *sparta, int narg, char **arg) :
   action2 = adapt->action2;
   file = adapt->file;
 
-  // NOTE: check that file has * char in it
+  if (strchr(file,'*') == NULL) 
+    error->all(FLERR,"Fix adapt filename must contain '*' character");
 
   // compute initial outputs
 

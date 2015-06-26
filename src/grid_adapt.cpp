@@ -120,7 +120,7 @@ void Grid::refine_cell(int icell, int iparent,
   // add all its sub cell particles to old split cell
   
   if (cells[icell].nsplit > 1)
-    combine_split_cell_particles(icell);
+    combine_split_cell_particles(icell,0);
   
   // assign particles in single old child cell to many new child cells
   // build linked list of particles within each new child cell
@@ -277,7 +277,7 @@ void Grid::coarsen_cell(int iparent, int nchild,
     if (proc[m] != me) continue;
     ichild = index[m];
     if (cells[ichild].nsplit == 1) continue;
-    combine_split_cell_particles(ichild);
+    combine_split_cell_particles(ichild,0);
   }
 
   // assign particles in many old child cells to single new child cell

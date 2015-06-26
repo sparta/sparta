@@ -1137,7 +1137,7 @@ template < int DIM, int SURF > void Update::move()
 /* ----------------------------------------------------------------------
    particle is entering split parent icell at x
    determine which split child cell it is in
-   return ccell = index of sub-cell in ChildCell
+   return index of sub-cell in ChildCell
 ------------------------------------------------------------------------- */
 
 int Update::split3d(int icell, double *x)
@@ -1193,7 +1193,7 @@ int Update::split3d(int icell, double *x)
 /* ----------------------------------------------------------------------
    particle is entering split ICELL at X
    determine which split sub-cell it is in
-   return ccell = index of sub-cell in ChildCell
+   return index of sub-cell in ChildCell
 ------------------------------------------------------------------------- */
 
 int Update::split2d(int icell, double *x)

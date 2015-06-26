@@ -15,7 +15,9 @@
 #include "string.h"
 #include "grid.h"
 #include "domain.h"
+#include "update.h"
 #include "comm.h"
+#include "particle.h"
 #include "surf.h"
 #include "cut2d.h"
 #include "cut3d.h"
@@ -62,7 +64,7 @@ int *Grid::csubs_request(int n)
 /* ----------------------------------------------------------------------
    map surf elements into owned grid cells
    if subflag = 1, create new owned split and sub cells as needed
-     called from ReadSurf
+     called from ReadSurf, RemoveSurf
    if subflag = 0, split/sub cells already exist
      called from ReadRestart
    in cells: set nsurf, csurfs, nsplit, isplit
@@ -233,7 +235,7 @@ void Grid::surf2grid(int subflag)
 
 /* ----------------------------------------------------------------------
    map surf elements into a single grid cell = icell
-   flag = 0 for grid refinement, check
+   flag = 0 for grid refinement, 1 for grid coarsening
    in cells: set nsurf, csurfs, nsplit, isplit
    in cinfo: set type, corner, volume
    initialize sinfo as needed
@@ -323,10 +325,12 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
 }
 
 /* ----------------------------------------------------------------------
-   remove all surf info from owned grid cells, including sub cells
-   set cell type and corner flags to UNKNOWN
+   remove all surf info from owned grid cells and reset cell volumes
+   also remove sub cells by compressing grid cells list
+   set cell type and corner flags to UNKNOWN or OUTSIDE
    called before reassigning surfs to grid cells
    changes cells data structure since sub cells are removed
+   if particles exist, reassign them to new cells
 ------------------------------------------------------------------------- */
 
 void Grid::clear_surf()
@@ -336,6 +340,13 @@ void Grid::clear_surf()
   int ncorner = 8;
   if (dimension == 2) ncorner = 4;
   double *lo,*hi;
+
+  // if surfs no longer exist, set cell type to OUTSIDE
+
+  int celltype = UNKNOWN;
+  if (!surf->exist) celltype = OUTSIDE;
+
+  int nlocal_prev = nlocal;
 
   int icell = 0;
   while (icell < nlocal) {
@@ -349,7 +360,7 @@ void Grid::clear_surf()
       cells[icell].csurfs = NULL;
       cells[icell].nsplit = 1;
       cells[icell].isplit = -1;
-      cinfo[icell].type = UNKNOWN;
+      cinfo[icell].type = celltype;
       for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
       lo = cells[icell].lo;
       hi = cells[icell].hi;
@@ -360,6 +371,26 @@ void Grid::clear_surf()
       else
         cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
       icell++;
+    }
+  }
+
+  // if particles exist and local cell count changed
+  // repoint particles to new icell indices
+  // assumes particles are sorted,
+  //   so count/first values in compressed cinfo data struct are still valid
+  // when done, particles are still sorted
+
+  if (particle->exist && nlocal < nlocal_prev) {
+    Particle::OnePart *particles = particle->particles;
+    int *next = particle->next;
+
+    int ip;
+    for (int icell = 0; icell < nlocal; icell++) {
+      ip = cinfo[icell].first;
+      while (ip >= 0) {
+	particles[ip].icell = icell;
+	ip = next[ip];
+      }
     }
   }
 
@@ -376,7 +407,8 @@ void Grid::clear_surf()
 }
 
 /* ----------------------------------------------------------------------
-   remove all surf info from owned grid cells, NOT including sub cells
+   remove all surf info from owned grid cells and reset cell volumes
+   do NOT remove sub cells by compressing grid cells list
    called from read_restart before reassigning surfs to grid cells
    sub cells already exist from restart file
 ------------------------------------------------------------------------- */
@@ -407,12 +439,13 @@ void Grid::clear_surf_restart()
   }
 }
 
-
 /* ----------------------------------------------------------------------
-// particle re-assign below can just loops over particles in each child cell
+   combine all particles in sub cells of a split icell to be in split cell
+   assumes particles are sorted, returns them sorted in icell
+   if relabel = 1, also change icell value for each particle, else do not
 ------------------------------------------------------------------------- */
 
-void Grid::combine_split_cell_particles(int icell)
+void Grid::combine_split_cell_particles(int icell, int relabel)
 {
   int ip,iplast,jcell;
 
@@ -440,6 +473,43 @@ void Grid::combine_split_cell_particles(int icell)
 
   cinfo[icell].count = count;
   cinfo[icell].first = first;
+
+  // repoint each particle now in parent split cell to the split cell
+
+  if (relabel) {
+    Particle::OnePart *particles = particle->particles;
+    ip = first;
+    while (ip >= 0) {
+      particles[ip].icell = icell;
+      ip = next[ip];
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   assign all particles in split icell to appropriate sub cells
+   assumes particles are sorted, are NOT sorted by sub cell when done
+   also change particle icell label
+------------------------------------------------------------------------- */
+
+void Grid::assign_split_cell_particles(int icell)
+{
+  int ip,jcell;
+
+  int dim = domain->dimension;
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+
+  ip = cinfo[icell].first;
+  while (ip >= 0) {
+    if (dim == 3) jcell = update->split3d(icell,particles[ip].x);
+    else jcell = update->split2d(icell,particles[ip].x);
+    particles[ip].icell = jcell;
+    ip = next[ip];
+  }
+
+  cinfo[icell].count = 0;
+  cinfo[icell].first = -1;
 }
 
 /* ----------------------------------------------------------------------
