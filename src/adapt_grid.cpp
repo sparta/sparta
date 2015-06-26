@@ -884,6 +884,8 @@ void AdaptGrid::refine_value()
     //printf("AAA %d %d: %g %g\n",
     //       icell,cells[icell].id,value,rvalue);
 
+    // for LESS, do not refine is value is 0.0
+
     if (rdecide == LESS) {
       if (value < rvalue && value > 0.0) rlist[n++] = icell;
     } else {
