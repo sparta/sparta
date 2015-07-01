@@ -94,8 +94,8 @@ void FixAdapt::init()
 
   adapt->check_args(nevery);
   
-  // if fix ave/grid exists, insure it comes before this fix
-  // so that its output values are updated on timesteps adaptation occurs
+  // if any fix ave/grid exists, insure it comes before this fix
+  // so that its output values are up-to-date on timesteps adaptation occurs
 
   int fixme = modify->find_fix(id);
   for (int i = 0; i < modify->nfix; i++) {

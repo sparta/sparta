@@ -243,10 +243,10 @@ void ComputeLambdaGrid::compute_per_grid()
   // invoke nrho and temp computes as needed
 
   if (nrhowhich == COMPUTE) {
-    //if (!(cnrho->invoked_flag & INVOKED_PER_GRID)) {
+    if (!(cnrho->invoked_flag & INVOKED_PER_GRID)) {
       cnrho->compute_per_grid();
       cnrho->invoked_flag |= INVOKED_PER_GRID;
-      //}
+    }
     if (nrhoindex == 0) {
       if (cnrho->post_process_grid_flag)
         cnrho->post_process_grid(NULL,NULL,-1,0,nrho,1);

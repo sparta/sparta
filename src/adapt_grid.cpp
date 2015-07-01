@@ -666,10 +666,15 @@ int AdaptGrid::refine()
     grid->compress();
 
     // reallocate per grid cell arrays in per grid computes
+    // also unset their invoked_flag so that if needed on this timestep
+    //   by any other caller, it will be invoked again with changed grid
 
     Compute **compute = modify->compute;
     for (int i = 0; i < modify->ncompute; i++)
-      if (compute[i]->per_grid_flag) compute[i]->reallocate();
+      if (compute[i]->per_grid_flag) {
+        compute[i]->reallocate();
+        compute[i]->invoked_flag = 0;
+      }
   }
 
   return nrefine;
@@ -713,10 +718,15 @@ int AdaptGrid::coarsen(int pstop)
     if (particle->exist && replyany) particle->compress_rebalance();
 
     // reallocate per grid cell arrays in per grid computes
+    // also unset their invoked_flag so that if needed on this timestep
+    //   by any other caller, it will be invoked again with changed grid
 
     Compute **compute = modify->compute;
     for (int i = 0; i < modify->ncompute; i++)
-      if (compute[i]->per_grid_flag) compute[i]->reallocate();
+      if (compute[i]->per_grid_flag) {
+        compute[i]->reallocate();
+        compute[i]->invoked_flag = 0;
+      }
   }
 
   return ncoarsen;
