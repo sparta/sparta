@@ -116,7 +116,7 @@ void FixAdapt::end_of_step()
 
   // memory allocation in AdaptGrid class
 
-  adapt->setup();
+  adapt->setup(0);
 
   // perform adaptation
 

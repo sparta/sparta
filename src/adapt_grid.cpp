@@ -64,8 +64,8 @@ AdaptGrid::AdaptGrid(SPARTA *sparta) : Pointers(sparta)
   nprocs = comm->nprocs;
 
   valueID = NULL;
+  maxnew = 0;
   newcells = NULL;
-  nnew = maxnew = 0;
   file = NULL;
 }
 
@@ -151,7 +151,7 @@ void AdaptGrid::command(int narg, char **arg)
   int pstop = grid->nparent;
 
   for (int iter = 0; iter < niterate; iter++) {
-    setup();
+    setup(iter);
 
     if (action1 == REFINE) nrefine = refine();
     else if (action1 == COARSEN) ncoarsen = coarsen(pstop);
@@ -584,8 +584,13 @@ void AdaptGrid::check_args(int nevery)
    setup for both adapt_grid and fix adapt
 ------------------------------------------------------------------------- */
 
-void AdaptGrid::setup()
+void AdaptGrid::setup(int iter)
 {
+  // zero new child cell counter on first iteration
+  // used in add_grid_fixes after all new child cells have been added
+
+  if (iter == 0) nnew = 0;
+
   // create RNG for style = RANDOM
 
   if (style == RANDOM) {

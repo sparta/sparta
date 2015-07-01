@@ -161,8 +161,6 @@ void FixEmitFaceFile::init()
   pts = surf->pts;
   lines = surf->lines;
   tris = surf->tris;
-  cells = grid->cells;
-  cinfo = grid->cinfo;
 
   // cannot inflow thru periodic boundary
 
@@ -222,6 +220,9 @@ int FixEmitFaceFile::create_task(int icell)
 {
   int j,n,extflag;
   int *cflags;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
 
   // corners[i][j] = J corner points of face I of a grid cell
   // works for 2d quads and 3d hexes
@@ -696,6 +697,9 @@ int FixEmitFaceFile::interpolate(int icell)
 
   // task lo/hi = extent of overlap
   // if lo >= hi, then no overlap
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
 
   lo = cells[icell].lo;
   hi = cells[icell].hi;

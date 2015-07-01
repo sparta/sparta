@@ -31,6 +31,8 @@ using namespace MathConst;
 enum{NONE,COMPUTE,FIX};
 enum{KNONE,KALL,KX,KY,KZ};
 
+#define INVOKED_PER_GRID 16
+
 /* ---------------------------------------------------------------------- */
 
 ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
@@ -238,8 +240,13 @@ void ComputeLambdaGrid::compute_per_grid()
     error->all(FLERR,"Compute lambda/grid fix not computed at compatible time");
 
   // grab nrho and temp values from compute or fix
+  // invoke nrho and temp computes as needed
 
   if (nrhowhich == COMPUTE) {
+    //if (!(cnrho->invoked_flag & INVOKED_PER_GRID)) {
+      cnrho->compute_per_grid();
+      cnrho->invoked_flag |= INVOKED_PER_GRID;
+      //}
     if (nrhoindex == 0) {
       if (cnrho->post_process_grid_flag)
         cnrho->post_process_grid(NULL,NULL,-1,0,nrho,1);
@@ -266,6 +273,10 @@ void ComputeLambdaGrid::compute_per_grid()
   }
 
   if (tempwhich == COMPUTE) {
+    if (!(ctemp->invoked_flag & INVOKED_PER_GRID)) {
+      ctemp->compute_per_grid();
+      ctemp->invoked_flag |= INVOKED_PER_GRID;
+    }
     if (tempindex == 0) {
       if (ctemp->post_process_grid_flag)
         ctemp->post_process_grid(NULL,NULL,-1,0,temp,1);

@@ -125,8 +125,6 @@ void FixEmitFace::init()
   pts = surf->pts;
   lines = surf->lines;
   tris = surf->tris;
-  cells = grid->cells;
-  cinfo = grid->cinfo;
 
   // cannot inflow thru periodic boundary
 
@@ -202,6 +200,9 @@ int FixEmitFace::create_task(int icell)
   int i,j,n,iface,flag,isp,extflag;
   int *cflags;
   double indot,area;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
 
   // corners[i][j] = J corner points of face I of a grid cell
   // works for 2d quads and 3d hexes
@@ -397,7 +398,7 @@ void FixEmitFace::perform_task()
   Particle::OnePart *p;
 
   dt = update->dt;
-  cells = grid->cells;
+  Grid::ChildCell *cells = grid->cells;
   int *species = particle->mixture[imix]->species;
 
   // insert particles for each task = cell/face pair

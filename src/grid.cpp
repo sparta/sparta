@@ -258,7 +258,7 @@ void Grid::add_parent_cell(cellint id, int iparent,
   p->grandparent = 0;                // set by caller
 
   if (p->nbits + p->newbits > maxbits) 
-    error->all(FLERR,"Cell ID has too many bits");
+    error->one(FLERR,"Cell ID has too many bits");
 
   p->nx = nx;
   p->ny = ny;

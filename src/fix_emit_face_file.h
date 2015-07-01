@@ -55,8 +55,6 @@ class FixEmitFaceFile : public FixEmit {
   Surf::Point *pts;
   Surf::Line *lines;
   Surf::Tri *tris;
-  Grid::ChildCell *cells;
-  Grid::ChildInfo *cinfo;
 
   // mesh data from input file
 

@@ -59,7 +59,7 @@ class AdaptGrid : protected Pointers {
   void command(int, char **);
   void process_args(int, char **);
   void check_args(int);
-  void setup();
+  void setup(int);
   int refine();
   int coarsen(int);
   void add_grid_fixes();

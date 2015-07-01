@@ -50,8 +50,6 @@ class FixEmitFace : public FixEmit {
   Surf::Point *pts;
   Surf::Line *lines;
   Surf::Tri *tris;
-  Grid::ChildCell *cells;
-  Grid::ChildInfo *cinfo;
 
   // one insertion task for a cell and a face
 

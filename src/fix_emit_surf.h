@@ -49,9 +49,6 @@ class FixEmitSurf : public FixEmit {
   Surf::Point *pts;
   Surf::Line *lines;
   Surf::Tri *tris;
-  Grid::ChildCell *cells;
-  Grid::ChildInfo *cinfo;
-  Grid::SplitInfo *sinfo;
 
   class Cut2d *cut2d;
   class Cut3d *cut3d;

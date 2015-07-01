@@ -111,9 +111,6 @@ void FixEmitSurf::init()
   pts = surf->pts;
   lines = surf->lines;
   tris = surf->tris;
-  cells = grid->cells;
-  cinfo = grid->cinfo;
-  sinfo = grid->sinfo;
 
   // create instance of Cut2d,Cut3d for geometry calculations
 
@@ -172,6 +169,10 @@ int FixEmitSurf::create_task(int icell)
   double indot,area,areaone;
   double *normal,*p1,*p2,*p3,*path;
   double cpath[36],delta[3],e1[3],e2[3];
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::SplitInfo *sinfo = grid->sinfo;
 
   // no tasks if no surfs in cell
 
@@ -623,6 +624,9 @@ int FixEmitSurf::unpack_task(char *buf, int icell)
   // reset task icell and pcell
   // if a split cell, set pcell via scan of icell csurfs, extract from sinfo
 
+  Grid::ChildCell *cells = grid->cells;
+  Grid::SplitInfo *sinfo = grid->sinfo;
+
   tasks[ntask].icell = icell;
   if (cells[icell].nsplit == 1) tasks[ntask].pcell = icell;
   else {
@@ -725,6 +729,7 @@ void FixEmitSurf::grow_task()
 void FixEmitSurf::post_compress_grid()
 {
   Grid::ChildCell *cells = grid->cells;
+  Grid::SplitInfo *sinfo = grid->sinfo;
 
   for (int i = 0; i < ntask; i++) {
     int icell = tasks[i].icell;
