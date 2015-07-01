@@ -12,6 +12,7 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include "stdio.h"
 #include "string.h"
 #include "move_surf.h"
 #include "surf.h"
@@ -32,28 +33,30 @@ using namespace MathConst;
 enum{READFILE,TRANSLATE,ROTATE};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
-/* ---------------------------------------------------------------------- */
+#define MAXLINE 256
 
-int *pflag;
+/* ---------------------------------------------------------------------- */
 
 MoveSurf::MoveSurf(SPARTA *sparta) : Pointers(sparta)
 {
   me = comm->me;
   nprocs = comm->nprocs;
 
-  // pflag = flags for which points have moved
+  // pselect = 1 if points is moved, else 0
 
-  memory->create(pflags,surf->npoint,"move_surf:pflags");
+  memory->create(pselect,surf->npoint,"move_surf:pselect");
 
   file = NULL;
+  fp = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 MoveSurf::~MoveSurf()
 {
-  memory->destroy(pflags);
+  memory->destroy(pselect);
   delete [] file;
+  if (fp) fclose(fp);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -84,7 +87,7 @@ void MoveSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
-  int dim = domain->dimension;
+  dim = domain->dimension;
 
   // sort particles
 
@@ -145,59 +148,10 @@ void MoveSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time5 = MPI_Wtime();
 
-  // remove particles in any cell that is now INSIDE or contains moved surfs
-  // reassign particles in split cells to sub cell owner
-  // compress particles if any flagged for deletion
-  // NOTE: doc this logic better, here and in ReadSurf
+  // remove particles as needed due to surface move
 
   bigint ndeleted;
-  if (particle->exist) {
-    Surf::Line *lines = surf->lines;
-    Surf::Tri *tris = surf->tris;
-    Grid::ChildCell *cells = grid->cells;
-    Grid::ChildInfo *cinfo = grid->cinfo;
-    int nglocal = grid->nlocal;
-    int delflag = 0;
-
-    for (int icell = 0; icell < nglocal; icell++) {
-      if (cinfo[icell].type == INSIDE) {
-	if (cinfo[icell].count) delflag = 1;
-	particle->remove_all_from_cell(cinfo[icell].first);
-	cinfo[icell].count = 0;
-	cinfo[icell].first = -1;
-	continue;
-      }
-      if (cells[icell].nsurf && cells[icell].nsplit >= 1) {
-	int nsurf = cells[icell].nsurf;
-	int *csurfs = cells[icell].csurfs;
-	int m;
-	if (dim == 2) {
-	  for (m = 0; m < nsurf; m++) {
-	    if (pflags[lines[csurfs[m]].p1]) break;
-	    if (pflags[lines[csurfs[m]].p2]) break;
-	  }
-	} else {
-	  for (m = 0; m < nsurf; m++) {
-	    if (pflags[tris[csurfs[m]].p1]) break;
-	    if (pflags[tris[csurfs[m]].p2]) break;
-	    if (pflags[tris[csurfs[m]].p3]) break;
-	  }
-	}
-	if (m < nsurf) {
-	  if (cinfo[icell].count) delflag = 1;
-	  particle->remove_all_from_cell(cinfo[icell].first);
-	  cinfo[icell].count = 0;
-	  cinfo[icell].first = -1;
-	}
-      }
-      if (cells[icell].nsplit > 1)
-      	grid->assign_split_cell_particles(icell);
-    }
-    int nlocal_old = particle->nlocal;
-    if (delflag) particle->compress_rebalance();
-    bigint delta = nlocal_old - particle->nlocal;
-    MPI_Allreduce(&delta,&ndeleted,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  }
+  if (particle->exist) ndeleted = remove_particles();
 
   MPI_Barrier(world);
   double time6 = MPI_Wtime();
@@ -238,12 +192,15 @@ void MoveSurf::process_args(int narg, char **arg)
 
   int iarg;
   if (strcmp(arg[0],"file") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal move surf command");
+    if (narg < 3) error->all(FLERR,"Illegal move surf command");
     action = READFILE;
     int n = strlen(arg[1]) + 1;
     file = new char[n];
     strcpy(file,arg[1]);
-    iarg = 2;
+    n = strlen(arg[2]) + 1;
+    entry = new char[n];
+    strcpy(entry,arg[2]);
+    iarg = 3;
   } else if (strcmp(arg[0],"trans") == 0) {
     if (narg < 4) error->all(FLERR,"Illegal move surf command");
     action = TRANSLATE;
@@ -279,33 +236,195 @@ void MoveSurf::process_args(int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    move points via specified action
-   each method sets pflags for moved points
+   each method sets pselect = 1 for moved points
+   fraction = portion of full distance points should move
 ------------------------------------------------------------------------- */
 
 void MoveSurf::move_points(double fraction)
 {
   if (domain->dimension == 2) {
     if (action == READFILE) {
-      // add read from file, based on fraction
-    }
+      readfile();
+      update_points(fraction);
+    } 
     else if (action == TRANSLATE) translate_2d(fraction);
     else if (action == ROTATE) rotate_2d(fraction);
-
     surf->compute_line_normal(0,surf->nline);
-    
   } else {
     if (action == READFILE) {
-      // add read from file, based on fraction
-    }
+      readfile();
+      update_points(fraction);
+    } 
     else if (action == TRANSLATE) translate_3d(fraction);
     else if (action == ROTATE) rotate_3d(fraction);
-
     surf->compute_tri_normal(0,surf->ntri);
   }
 
   // check that all points are still inside simulation box
 
   surf->check_point_inside(0,surf->npoint);
+}
+
+/* ----------------------------------------------------------------------
+   read entry of new point coords from file
+------------------------------------------------------------------------- */
+
+void MoveSurf::readfile()
+{
+  int i;
+  char line[MAXLINE];
+  char *word,*eof;
+
+  // open point file if necessary
+  // if already open, will just continue scanning below
+  // NOTE: allow for file name with wildcard char
+
+  if (me == 0 && fp == NULL) {
+    fp = fopen(file,"r");
+    if (fp == NULL) {
+      char str[128];
+      sprintf(str,"Cannot open move surf file %s",file);
+      error->one(FLERR,str);
+    }
+  }
+
+  // loop until section found that matches entry
+
+  if (me == 0) {
+    while (1) {
+      if (fgets(line,MAXLINE,fp) == NULL)
+	error->one(FLERR,"Did not find entry in move surf file");
+      if (strspn(line," \t\n\r") == strlen(line)) continue;  // blank line
+      if (line[0] == '#') continue;                          // comment
+      word = strtok(line," \t\n\r");
+      if (strcmp(word,entry) != 0) continue;          // non-matching entry
+      if (fgets(line,MAXLINE,fp) == NULL)
+	error->one(FLERR,"Incompete entry in move surf file");
+      word = strtok(line," \t\n\r");                  // npoints value after entry
+      nread = input->inumeric(FLERR,word);
+    }
+  }
+
+  // allocate index and coord arrays for nread points
+
+  MPI_Bcast(&nread,1,MPI_INT,0,world);
+
+  if (oldcoord) {
+    memory->destroy(readindex);
+    memory->destroy(oldcoord);
+    memory->destroy(newcoord);
+    memory->create(readindex,nread,"move_surf:readindex");
+    memory->create(oldcoord,nread,3,"move_surf:oldcoord");
+    memory->create(newcoord,nread,3,"move_surf:newcoord");
+  }
+
+  // read nread point coords in entry
+  // store old current point and new point coords so can move by fraction
+  // rindex = ID (index) of this read-in point in master list
+  // skip points that are out-of-range
+
+  Surf::Point *pts = surf->pts;
+  int npoint = surf->npoint;
+
+  if (me == 0) {
+    int id;
+    double x,y,z;
+
+    for (int i = 0; i < nread; i++) {
+      eof = fgets(line,MAXLINE,fp);
+      if (eof == NULL) error->one(FLERR,"Incomplete entry in move surf file");
+      id = input->inumeric(FLERR,strtok(line," \t\n\r"));
+      x = input->numeric(FLERR,strtok(NULL," \t\n\r"));
+      y = input->numeric(FLERR,strtok(NULL," \t\n\r"));
+      if (dim == 3) z = input->numeric(FLERR,strtok(NULL," \t\n\r"));
+      else z = 0.0;
+      if (id < 1 || id > npoint) 
+	error->one(FLERR,"Invalid point index in move surf file");
+      id--;
+      readindex[i] = id;
+      oldcoord[i][0] = pts[id].x[0];
+      oldcoord[i][1] = pts[id].x[1];
+      oldcoord[i][2] = pts[id].x[2];
+      newcoord[i][0] = x;
+      newcoord[i][1] = y;
+      newcoord[i][2] = z;
+    }
+  }
+
+  // broadcast point info to all procs
+
+  MPI_Bcast(readindex,nread,MPI_INT,0,world);
+  MPI_Bcast(&oldcoord[0][0],3*nread,MPI_DOUBLE,0,world);
+  MPI_Bcast(&newcoord[0][0],3*nread,MPI_DOUBLE,0,world);
+
+  // pselect[I] = index of Ith surf point in nread points (for now)
+  // NOTE: check that same surf point does not appear twice in nread list?
+
+  for (i = 0; i < npoint; i++) pselect[i] = -1;
+  for (i = 0; i < nread; i++) pselect[readindex[i]] = i;
+
+  int *rflag;
+  memory->create(rflag,nread,"move_surf:rflag");
+  for (i =0; i < nread; i++) rflag[i] = 0;
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int nline = surf->nline;
+  int ntri = surf->ntri;
+  int p1,p2,p3;
+
+  if (dim == 2) {
+    for (i = 0; i < nline; i++) {
+      if (!(lines[i].mask & groupbit)) continue;
+      p1 = lines[i].p1;
+      p2 = lines[i].p2;
+      if (pselect[p1] >= 0) rflag[pselect[p1]] = 1;
+      if (pselect[p2] >= 0) rflag[pselect[p2]] = 1;
+    }
+  } else {
+    for (i = 0; i < ntri; i++) {
+      if (!(tris[i].mask & groupbit)) continue;
+      p1 = tris[i].p1;
+      p2 = tris[i].p2;
+      p3 = tris[i].p3;
+      if (pselect[p1] >= 0) rflag[pselect[p1]] = 1;
+      if (pselect[p2] >= 0) rflag[pselect[p2]] = 1;
+      if (pselect[p3] >= 0) rflag[pselect[p3]] = 1;
+    }
+  }
+
+
+  // pselect[I] = 1 if Ith surf point is moved by nread points, else 0
+
+  for (i = 0; i < npoint; i++) pselect[i] = 0;
+  for (i = 0; i < nread; i++)
+    if (rflag[i]) pselect[readindex[i]] = 1;
+
+  // clean up
+
+  memory->destroy(rflag);
+}
+
+/* ----------------------------------------------------------------------
+   update points using info from file
+------------------------------------------------------------------------- */
+
+void MoveSurf::update_points(double fraction)
+{
+  int i;
+
+  // update points by fraction of old to new move
+
+  Surf::Point *pts = surf->pts;
+  Surf::Point *p;
+
+  for (i = 0; i < nread; i++) {
+    if (pselect[readindex[i]] == 0) continue;
+    p = &pts[readindex[i]];
+    p->x[0] = oldcoord[i][0] + fraction * (newcoord[i][0]-oldcoord[i][0]);
+    p->x[1] = oldcoord[i][1] + fraction * (newcoord[i][1]-oldcoord[i][1]);
+    p->x[2] = oldcoord[i][2] + fraction * (newcoord[i][2]-oldcoord[i][2]);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -321,7 +440,7 @@ void MoveSurf::translate_2d(double fraction)
   int nline = surf->nline;
   int npoint = surf->npoint;
 
-  for (i = 0; i < npoint; i++) pflags[i] = 0;
+  for (i = 0; i < npoint; i++) pselect[i] = 0;
 
   double dx = fraction * delta[0];
   double dy = fraction * delta[1];
@@ -330,15 +449,15 @@ void MoveSurf::translate_2d(double fraction)
     if (!(lines[i].mask & groupbit)) continue;
     p1 = lines[i].p1;
     p2 = lines[i].p2;
-    if (pflags[p1] == 0) {
+    if (pselect[p1] == 0) {
       pts[p1].x[0] += dx;
       pts[p1].x[1] += dy;
-      pflags[p1] = 1;
+      pselect[p1] = 1;
     }
-    if (pflags[p2] == 0) {
+    if (pselect[p2] == 0) {
       pts[p2].x[0] += dx;
       pts[p2].x[1] += dy;
-      pflags[p2] = 1;
+      pselect[p2] = 1;
     }
   }
 }
@@ -356,7 +475,7 @@ void MoveSurf::translate_3d(double fraction)
   int ntri = surf->ntri;
   int npoint = surf->npoint;
 
-  for (i = 0; i < npoint; i++) pflags[i] = 0;
+  for (i = 0; i < npoint; i++) pselect[i] = 0;
 
   double dx = fraction * delta[0];
   double dy = fraction * delta[1];
@@ -367,23 +486,23 @@ void MoveSurf::translate_3d(double fraction)
     p1 = tris[i].p1;
     p2 = tris[i].p2;
     p3 = tris[i].p3;
-    if (pflags[p1] == 0) {
+    if (pselect[p1] == 0) {
       pts[p1].x[0] += dx;
       pts[p1].x[1] += dy;
       pts[p1].x[2] += dz;
-      pflags[p1] = 1;
+      pselect[p1] = 1;
     }
-    if (pflags[p2] == 0) {
+    if (pselect[p2] == 0) {
       pts[p2].x[0] += dx;
       pts[p2].x[1] += dy;
       pts[p2].x[2] += dz;
-      pflags[p2] = 1;
+      pselect[p2] = 1;
     }
-    if (pflags[p3] == 0) {
+    if (pselect[p3] == 0) {
       pts[p3].x[0] += dx;
       pts[p3].x[1] += dy;
       pts[p3].x[2] += dz;
-      pflags[p3] = 1;
+      pselect[p3] = 1;
     }
   }
 }
@@ -403,7 +522,7 @@ void MoveSurf::rotate_2d(double fraction)
   int nline = surf->nline;
   int npoint = surf->npoint;
 
-  for (i = 0; i < npoint; i++) pflags[i] = 0;
+  for (i = 0; i < npoint; i++) pselect[i] = 0;
 
   double angle = fraction * theta;
   MathExtra::axisangle_to_quat(rvec,angle,q);
@@ -414,23 +533,23 @@ void MoveSurf::rotate_2d(double fraction)
     p1 = lines[i].p1;
     p2 = lines[i].p2;
 
-    if (pflags[p1] == 0) {
+    if (pselect[p1] == 0) {
       d[0] = pts[p1].x[0] - origin[0];
       d[1] = pts[p1].x[1] - origin[1];
       d[2] = pts[p1].x[2] - origin[2];
       MathExtra::matvec(rotmat,d,dnew);
       pts[p1].x[0] = dnew[0] + origin[0];
       pts[p1].x[1] = dnew[1] + origin[1];
-      pflags[p1] = 1;
+      pselect[p1] = 1;
     }
-    if (pflags[p2] == 0) {
+    if (pselect[p2] == 0) {
       d[0] = pts[p2].x[0] - origin[0];
       d[1] = pts[p2].x[1] - origin[1];
       d[2] = pts[p2].x[2] - origin[2];
       MathExtra::matvec(rotmat,d,dnew);
       pts[p2].x[0] = dnew[0] + origin[0];
       pts[p2].x[1] = dnew[1] + origin[1];
-      pflags[p2] = 1;
+      pselect[p2] = 1;
     }
   }
 }
@@ -450,7 +569,7 @@ void MoveSurf::rotate_3d(double fraction)
   int ntri = surf->ntri;
   int npoint = surf->npoint;
 
-  for (i = 0; i < npoint; i++) pflags[i] = 0;
+  for (i = 0; i < npoint; i++) pselect[i] = 0;
 
   double angle = fraction * theta;
   MathExtra::axisangle_to_quat(rvec,angle,q);
@@ -462,7 +581,7 @@ void MoveSurf::rotate_3d(double fraction)
     p2 = tris[i].p2;
     p3 = tris[i].p3;
 
-    if (pflags[p1] == 0) {
+    if (pselect[p1] == 0) {
       d[0] = pts[p1].x[0] - origin[0];
       d[1] = pts[p1].x[1] - origin[1];
       d[2] = pts[p1].x[2] - origin[2];
@@ -470,9 +589,9 @@ void MoveSurf::rotate_3d(double fraction)
       pts[p1].x[0] = dnew[0] + origin[0];
       pts[p1].x[1] = dnew[1] + origin[1];
       pts[p1].x[2] = dnew[2] + origin[2];
-      pflags[p1] = 1;
+      pselect[p1] = 1;
     }
-    if (pflags[p2] == 0) {
+    if (pselect[p2] == 0) {
       d[0] = pts[p2].x[0] - origin[0];
       d[1] = pts[p2].x[1] - origin[1];
       d[2] = pts[p2].x[2] - origin[2];
@@ -480,9 +599,9 @@ void MoveSurf::rotate_3d(double fraction)
       pts[p2].x[0] = dnew[0] + origin[0];
       pts[p2].x[1] = dnew[1] + origin[1];
       pts[p2].x[2] = dnew[2] + origin[2];
-      pflags[p2] = 1;
+      pselect[p2] = 1;
     }
-    if (pflags[p3] == 0) {
+    if (pselect[p3] == 0) {
       d[0] = pts[p3].x[0] - origin[0];
       d[1] = pts[p3].x[1] - origin[1];
       d[2] = pts[p3].x[2] - origin[2];
@@ -490,11 +609,67 @@ void MoveSurf::rotate_3d(double fraction)
       pts[p3].x[0] = dnew[0] + origin[0];
       pts[p3].x[1] = dnew[1] + origin[1];
       pts[p3].x[2] = dnew[2] + origin[2];
-      pflags[p3] = 1;
+      pselect[p3] = 1;
     }
   }
 }
 
+/* ----------------------------------------------------------------------
+   remove particles in any cell that is now INSIDE or contains moved surfs
+   surfs that moved determined by pselect for any of its points
+   reassign particles in split cells to sub cell owner
+   compress particles if any flagged for deletion
+   NOTE: doc this logic better
+------------------------------------------------------------------------- */
 
+bigint MoveSurf::remove_particles()
+{
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+  int delflag = 0;
 
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cinfo[icell].type == INSIDE) {
+      if (cinfo[icell].count) delflag = 1;
+      particle->remove_all_from_cell(cinfo[icell].first);
+      cinfo[icell].count = 0;
+      cinfo[icell].first = -1;
+      continue;
+    }
+    if (cells[icell].nsurf && cells[icell].nsplit >= 1) {
+      int nsurf = cells[icell].nsurf;
+      int *csurfs = cells[icell].csurfs;
+      int m;
+      if (dim == 2) {
+	for (m = 0; m < nsurf; m++) {
+	  if (pselect[lines[csurfs[m]].p1]) break;
+	  if (pselect[lines[csurfs[m]].p2]) break;
+	}
+      } else {
+	for (m = 0; m < nsurf; m++) {
+	  if (pselect[tris[csurfs[m]].p1]) break;
+	  if (pselect[tris[csurfs[m]].p2]) break;
+	  if (pselect[tris[csurfs[m]].p3]) break;
+	}
+      }
+      if (m < nsurf) {
+	if (cinfo[icell].count) delflag = 1;
+	particle->remove_all_from_cell(cinfo[icell].first);
+	cinfo[icell].count = 0;
+	cinfo[icell].first = -1;
+      }
+    }
+    if (cells[icell].nsplit > 1)
+      grid->assign_split_cell_particles(icell);
+  }
 
+  int nlocal_old = particle->nlocal;
+  if (delflag) particle->compress_rebalance();
+  bigint delta = nlocal_old - particle->nlocal;
+  bigint ndeleted;
+  MPI_Allreduce(&delta,&ndeleted,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  return ndeleted;
+}

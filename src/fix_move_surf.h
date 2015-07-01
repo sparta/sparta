@@ -32,12 +32,14 @@ class FixMoveSurf : public Fix {
   int setmask();
   void init();
   void end_of_step();
+  double compute_scalar();
 
  private:
   int me,nprocs;
   int nlarge,action;
   double fraction;
 
+  bigint ndeleted;
   class MoveSurf *movesurf;
 };
 

@@ -23,29 +23,37 @@ CommandStyle(move_surf,MoveSurf)
 
 #include "stdio.h"
 #include "pointers.h"
-#include "surf.h"
 
 namespace SPARTA_NS {
 
 class MoveSurf : protected Pointers {
  public:
   int mode;                 // 0 = move_surf command, 1 = fix move/surf command
-  int groupbit;             // values FixMoveSurf needs to access
-  int action;
-  int *pflags;
+  int groupbit;             // FixMoveSurf sets surf group
 
   MoveSurf(class SPARTA *);
   ~MoveSurf();
   void command(int, char **);
   void process_args(int, char **);
   void move_points(double);
+  bigint remove_particles();
 
  private:
   int me,nprocs;
-  char *file;
+  int dim,action;
+  char *file,*entry;
   double theta;
   double delta[3],rvec[3],origin[3];
+  FILE *fp;
 
+  int *pselect;                    // 1 if point is moved, else 0
+  
+  int nread;
+  int *readindex;
+  double **oldcoord,**newcoord;
+  
+  void readfile();
+  void update_points(double);
   void translate_2d(double);
   void translate_3d(double);
   void rotate_2d(double);

@@ -15,9 +15,11 @@
 #include "string.h"
 #include "fix_move_surf.h"
 #include "move_surf.h"
+#include "update.h"
 #include "comm.h"
 #include "input.h"
 #include "grid.h"
+#include "surf.h"
 #include "domain.h"
 #include "error.h"
 
@@ -34,6 +36,9 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
 
   if (!surf->exist)
     error->all(FLERR,"Cannot fix move/surf with no surf elements are defined");
+
+  scalar_flag = 1;
+  global_freq = 1;
 
   // create instance of MoveSurf class
 
@@ -58,9 +63,10 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Fix move/surf nlarge must be multiple of nevery");
 
   movesurf->process_args(narg-5,&arg[5]);
-  action = movesurf->action;
 
-  fraction = 1.0*nevery / nlarge;
+  // initial output
+
+  ndeleted = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -83,6 +89,9 @@ int FixMoveSurf::setmask()
 
 void FixMoveSurf::init()
 {
+  // NOTE: first read of file ?
+  //       what about on successive run
+  //       for both file and trans/rotate
 }
 
 /* ----------------------------------------------------------------------
@@ -98,9 +107,13 @@ void FixMoveSurf::end_of_step()
   if (particle->exist) particle->sort();
 
   // move points via chosen action by fractional amount
-
+  // NOTE: readfile needs to come after move by 1.0 fraction
+  //       ditto for trans,rotate?
+  //       use mode = 0/1
+  
+  int nsteps = update->ntimestep % nlarge;
+  fraction = 1.0*nsteps / nlarge;
   movesurf->move_points(fraction);
-  int *pflags = movesurf->pflags;
 
   // remake list of surf elements I own
   // assign split cell particles to parent split cell
@@ -134,55 +147,18 @@ void FixMoveSurf::end_of_step()
   grid->set_inout();
   grid->type_check(0);
 
-  // remove particles in any cell that is now INSIDE or contains moved surfs
-  // reassign particles in split cells to sub cell owner
-  // compress particles if any flagged for deletion
-  // NOTE: doc this logic better, here and in ReadSurf
+  // remove particles as needed due to surface move
+  // set ndeleted for scalar output
 
-  bigint ndeleted;
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  int nglocal = grid->nlocal;
-  int delflag = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cinfo[icell].type == INSIDE) {
-      if (cinfo[icell].count) delflag = 1;
-      particle->remove_all_from_cell(cinfo[icell].first);
-      cinfo[icell].count = 0;
-      cinfo[icell].first = -1;
-      continue;
-    }
-    if (cells[icell].nsurf && cells[icell].nsplit >= 1) {
-      int nsurf = cells[icell].nsurf;
-      int *csurfs = cells[icell].csurfs;
-      int m;
-      if (dim == 2) {
-        for (m = 0; m < nsurf; m++) {
-          if (pflags[lines[csurfs[m]].p1]) break;
-          if (pflags[lines[csurfs[m]].p2]) break;
-        }
-      } else {
-        for (m = 0; m < nsurf; m++) {
-          if (pflags[tris[csurfs[m]].p1]) break;
-          if (pflags[tris[csurfs[m]].p2]) break;
-          if (pflags[tris[csurfs[m]].p3]) break;
-        }
-      }
-      if (m < nsurf) {
-        if (cinfo[icell].count) delflag = 1;
-        particle->remove_all_from_cell(cinfo[icell].first);
-        cinfo[icell].count = 0;
-        cinfo[icell].first = -1;
-      }
-    }
-    if (cells[icell].nsplit > 1)
-      grid->assign_split_cell_particles(icell);
-  }
-  int nlocal_old = particle->nlocal;
-  if (delflag) particle->compress_rebalance();
-  bigint delta = nlocal_old - particle->nlocal;
-  MPI_Allreduce(&delta,&ndeleted,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  if (particle->exist) ndeleted = movesurf->remove_particles();
 }
+
+/* ----------------------------------------------------------------------
+   return particles deleted on last surface move
+------------------------------------------------------------------------- */
+
+double FixMoveSurf::compute_scalar()
+{
+  return (double) ndeleted;
+}
+
