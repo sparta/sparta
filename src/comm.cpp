@@ -42,8 +42,9 @@ Comm::Comm(SPARTA *sparta) : Pointers(sparta)
   neighflag = 0;
   neighlist = NULL;
 
-  irregular = new Irregular(sparta);
-  irregular_grid = NULL;
+  iparticle = new Irregular(sparta);
+  igrid = NULL;
+  iuniform = NULL;
 
   pproc = NULL;
   maxpproc = 0;
@@ -57,8 +58,10 @@ Comm::Comm(SPARTA *sparta) : Pointers(sparta)
 
 Comm::~Comm()
 {
-  delete irregular;
-  delete irregular_grid;
+  delete iparticle;
+  delete igrid;
+  delete iuniform;
+
   memory->destroy(pproc);
   memory->destroy(gproc);
   memory->destroy(gsize);
@@ -97,7 +100,7 @@ void Comm::reset_neighbors()
   for (int i = 0; i < nprocs; i++)
     if (neighlist[i]) neighlist[nneigh++] = i;
   
-  irregular->create_procs(nneigh,neighlist,commsortflag);
+  iparticle->create_procs(nneigh,neighlist,commsortflag);
 }
 
 /* ----------------------------------------------------------------------
@@ -173,8 +176,10 @@ int Comm::migrate_particles(int nmigrate, int *plist)
   // nrecv = # of incoming particles
   
   int nrecv;
-  if (neighflag) nrecv = irregular->augment_data_uniform(nsend,pproc);
-  else nrecv = irregular->create_data_uniform(nsend,pproc,commsortflag);
+  if (neighflag)
+    nrecv = iparticle->augment_data_uniform(nsend,pproc);
+  else 
+    nrecv = iparticle->create_data_uniform(nsend,pproc,commsortflag);
 
   // extend particle list if necessary
 
@@ -185,7 +190,7 @@ int Comm::migrate_particles(int nmigrate, int *plist)
   // else receive into rbuf, unpack particles one by one via unpack_custom()
 
   if (!ncustom)
-    irregular->
+    iparticle->
       exchange_uniform(sbuf,nbytes,
                        (char *) &particle->particles[particle->nlocal]);
 
@@ -196,7 +201,7 @@ int Comm::migrate_particles(int nmigrate, int *plist)
       memory->create(rbuf,maxrecvbuf,"comm:rbuf");
     }
 
-    irregular->exchange_uniform(sbuf,nbytes,rbuf);
+    iparticle->exchange_uniform(sbuf,nbytes,rbuf);
 
     offset = 0;
     int nlocal = particle->nlocal;
@@ -287,10 +292,10 @@ void Comm::migrate_cells(int nmigrate)
   // DEBUG: append a sort=1 arg so that messages from other procs
   //        are received in repeatable order, thus grid cells stay in order
 
-  if (!irregular_grid) irregular_grid = new Irregular(sparta);
+  if (!igrid) igrid = new Irregular(sparta);
   int recvsize;
   int nrecv = 
-    irregular_grid->create_data_variable(nmigrate,gproc,gsize,
+    igrid->create_data_variable(nmigrate,gproc,gsize,
                                          recvsize,commsortflag);
 
   // reallocate rbuf as needed
@@ -304,7 +309,7 @@ void Comm::migrate_cells(int nmigrate)
 
   // perform irregular communication
 
-  irregular_grid->exchange_variable(sbuf,gsize,rbuf);
+  igrid->exchange_variable(sbuf,gsize,rbuf);
 
   // unpack received grid cells with their particles
 
@@ -371,10 +376,10 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
   // DEBUG: append a sort=1 arg so that messages from other procs
   //        are received in repeatable order, thus grid cells stay in order
 
-  if (!irregular_grid) irregular_grid = new Irregular(sparta);
+  if (!igrid) igrid = new Irregular(sparta);
   int recvsize;
   int nrecv = 
-    irregular_grid->create_data_variable(nsend,procsend,gsize,
+    igrid->create_data_variable(nsend,procsend,gsize,
                                          recvsize,commsortflag);
 
   // reallocate rbuf as needed
@@ -388,7 +393,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 
   // perform irregular communication
 
-  irregular_grid->exchange_variable(sbuf,gsize,rbuf);
+  igrid->exchange_variable(sbuf,gsize,rbuf);
 
   // return rbuf and grid cell count
 
@@ -409,8 +414,8 @@ int Comm::irregular_uniform(int nsend, int *procsend,
   // DEBUG: append a sort=1 arg so that messages from other procs
   //        are received in repeatable order, thus grid cells stay in order
 
-  if (!irregular) irregular = new Irregular(sparta);
-  int nrecv = irregular->create_data_uniform(nsend,procsend,commsortflag);
+  if (!iuniform) iuniform = new Irregular(sparta);
+  int nrecv = iuniform->create_data_uniform(nsend,procsend,commsortflag);
 
   // reallocate rbuf as needed
 
@@ -423,7 +428,7 @@ int Comm::irregular_uniform(int nsend, int *procsend,
 
   // perform irregular communication
 
-  irregular->exchange_uniform(inbuf,nsize,rbuf);
+  iuniform->exchange_uniform(inbuf,nsize,rbuf);
 
   // return rbuf and grid cell count
 

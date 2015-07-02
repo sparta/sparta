@@ -43,8 +43,7 @@ class Comm : protected Pointers {
             void *, int self = 1);
 
  private:
-  class Irregular *irregular;
-  class Irregular *irregular_grid;
+  class Irregular *iparticle,*igrid,*iuniform;
   char *sbuf,*rbuf;
   int maxsendbuf,maxrecvbuf;
   int *pproc,*gproc,*gsize;
