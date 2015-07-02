@@ -18,6 +18,7 @@
 #include "grid.h"
 #include "surf.h"
 #include "comm.h"
+#include "update.h"
 #include "modify.h"
 #include "compute.h"
 #include "input.h"
@@ -112,6 +113,12 @@ void FixAdapt::init()
 
 void FixAdapt::end_of_step()
 {
+  // wrap adaptivity with clearstep/addstep since it may invoke computes
+
+  modify->clearstep_compute();
+
+  // same operations as in AdaptGrid single invocation
+
   grid->remove_ghosts();
 
   // memory allocation in AdaptGrid class
@@ -174,6 +181,10 @@ void FixAdapt::end_of_step()
   // write out new parent grid file
 
   if (file) adapt->write_file();
+
+  // wrap adaptivity with clearstep/addstep since it may invoke computes
+
+  modify->addstep_compute(update->ntimestep + nevery);
 
   // outputs
 
