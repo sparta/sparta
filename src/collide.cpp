@@ -1267,7 +1267,6 @@ void Collide::ambi_reset(int i, int j, int isp, int jsp,
 
 int Collide::pack_grid_one(int icell, char *buf, int memflag)
 {
-  if (!vremax) return 0;
   int nbytes = ngroups*ngroups*sizeof(double);
 
   Grid::ChildCell *cells = grid->cells;
@@ -1314,7 +1313,6 @@ int Collide::pack_grid_one(int icell, char *buf, int memflag)
 
 int Collide::unpack_grid_one(int icell, char *buf)
 {
-  if (!vremax) return 0;
   int nbytes = ngroups*ngroups*sizeof(double);
 
   Grid::ChildCell *cells = grid->cells;
@@ -1356,7 +1354,6 @@ int Collide::unpack_grid_one(int icell, char *buf)
 
 void Collide::compress_grid()
 {
-  if (!vremax) return;
   int nbytes = ngroups*ngroups*sizeof(double);
 
   int me = comm->me;

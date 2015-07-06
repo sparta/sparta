@@ -919,7 +919,7 @@ void Surf::group(int narg, char **arg)
           if (flag) tris[i].mask |= bit;
         }
       } else if (rstyle == REGION_ONE) {
-        for (i = 0; i < nline; i++) {
+        for (i = 0; i < ntri; i++) {
           flag = 0;
           if (region->match(pts[tris[i].p1].x)) flag = 1;
           if (region->match(pts[tris[i].p2].x)) flag = 1;
@@ -927,14 +927,14 @@ void Surf::group(int narg, char **arg)
           if (flag) tris[i].mask |= bit;
         }
       } else if (rstyle == REGION_CENTER) {
-        for (i = 0; i < nline; i++) {
+        for (i = 0; i < ntri; i++) {
           x[0] = (pts[tris[i].p1].x[0] + pts[tris[i].p2].x[0] + 
                   pts[tris[i].p3].x[0]) / 3.0;
           x[1] = (pts[tris[i].p1].x[1] + pts[tris[i].p2].x[1] + 
                   pts[tris[i].p3].x[1]) / 3.0;
           x[2] = (pts[tris[i].p1].x[2] + pts[tris[i].p2].x[2] + 
                   pts[tris[i].p3].x[2]) / 3.0;
-          if (region->match(x)) lines[i].mask |= bit;
+          if (region->match(x)) tris[i].mask |= bit;
         }
       }
     }
@@ -1069,6 +1069,24 @@ void Surf::group(int narg, char **arg)
     } else {
       for (i = 0; i < nline; i++) tris[i].mask &= inversebits;
     }
+  }
+
+  // print stats for changed group
+
+  int n = 0;
+  if (dimension == 2) {
+    for (i = 0; i < nline; i++) 
+      if (lines[i].mask & bit) n++;
+  } else {
+    for (i = 0; i < ntri; i++)
+      if (tris[i].mask & bit) n++;
+  }
+
+  if (comm->me == 0) {
+    if (screen) 
+      fprintf(screen,"%d surfaces in group %s\n",n,gnames[igroup]);
+    if (logfile)
+      fprintf(logfile,"%d surfaces in group %s\n",n,gnames[igroup]);
   }
 }
 

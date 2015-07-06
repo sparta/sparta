@@ -1015,9 +1015,6 @@ int AdaptGrid::perform_refine()
     }
   }
 
-  //printf("NGLOCAL %d nparent %d proc13 %d\n",grid->nlocal,grid->nparent,
-  //       grid->cells[13].proc);
-
   // return # of new parents on this proc
 
   return newparent;
