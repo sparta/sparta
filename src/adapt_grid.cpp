@@ -648,18 +648,12 @@ int AdaptGrid::refine()
 
   candidates_refine();
 
-  printf("PPP %d\n",comm->me);
-
   if (style == PARTICLE) refine_particle();
   else if (style == SURF) refine_surf();
   else if (style == VALUE) refine_value();
   else if (style == RANDOM) refine_random();
 
-  printf("QQQ1 %d %d\n",comm->me,grid->nlocal);
-      
   int delta = perform_refine();
-
-  printf("QQQ2 %d %d %d\n",comm->me,delta,grid->nlocal);
 
   // nrefine = # of new parents across all processors
 
@@ -668,10 +662,8 @@ int AdaptGrid::refine()
 
   if (nrefine) {
     gather_parents_refine(delta,nrefine);
-    printf("RRR %d\n",comm->me);
     if (collide) collide->adapt_grid();
     grid->compress();
-  printf("SSS %d\n",comm->me);
 
     // reallocate per grid cell arrays in per grid computes
     // also unset their invoked_flag so that if needed on this timestep
