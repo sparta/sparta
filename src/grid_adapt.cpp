@@ -57,7 +57,7 @@ void Grid::refine_cell(int icell, int iparent,
       for (ix = 0; ix < nx; ix++) {
         childlist[m] = nlocal;
         m++;
-        id = pcells[iparent].id | (m << pcells[iparent].nbits);
+        id = pcells[iparent].id | ((cellint) m << pcells[iparent].nbits);
         id_child_lohi(iparent,m,lo,hi);
         add_child_cell(id,iparent,lo,hi);
 
@@ -144,8 +144,8 @@ void Grid::refine_cell(int icell, int iparent,
     
     ichild = id_find_child(iparent,p->x);
     if (ichild < 0) {
-      printf("BAD CHILD %d: %d %d %d\n",
-             me,icell,cells[icell].id,iparent);
+      printf("BAD CHILD %d: %d %ld %d %ld: %d\n",
+             me,icell,cells[icell].id,iparent,pcells[iparent].id,ichild);
       error->one(FLERR,"Adapt particle remap indexed bad child cell");
     }
     
