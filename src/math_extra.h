@@ -176,8 +176,8 @@ void MathExtra::scale3(double s, const double *v, double *ans)
 void MathExtra::axpy3(double alpha, const double *x, double *y)
 {
   y[0] += alpha*x[0];
-  y[1] += alpha*x[2];
-  y[2] += alpha*x[1];
+  y[1] += alpha*x[1];
+  y[2] += alpha*x[2];
 }
 
 /* ----------------------------------------------------------------------
