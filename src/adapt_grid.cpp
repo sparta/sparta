@@ -1811,8 +1811,6 @@ int AdaptGrid::perform_coarsen()
   int *next = particle->next;
   
   Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::SplitInfo *sinfo = grid->sinfo;
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
@@ -1879,6 +1877,7 @@ int AdaptGrid::perform_coarsen()
     // also add it to chash to prevent it from being refined
 
     grid->coarsen_cell(iparent,nchild,proc,index,recv,this,cut2d,cut3d);
+    cells = grid->cells;
     (*chash)[ctask[i].id] = 0;
 
     // add new child cell to newcells list
@@ -1913,6 +1912,9 @@ int AdaptGrid::perform_coarsen()
   // don't need to flag sub cells, since grid compress will do that
   // also mark particles of cell for deletion
   // if cell is split, mark particles in all its sub cells for deletion
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::SplitInfo *sinfo = grid->sinfo;
 
   char *buf;
   nrecv = comm->irregular_uniform(nreply,procreply,

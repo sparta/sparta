@@ -22,6 +22,14 @@
 #include "memory.h"
 #include "error.h"
 
+
+
+
+// DEBUG
+#include "update.h"
+
+
+
 using namespace SPARTA_NS;
 using namespace MathConst;
 
@@ -1089,13 +1097,67 @@ void Grid::reset_neighbors()
   int i,nmask,nflag;
   cellint *neigh;
 
+  MPI_Barrier(world);
+  int flag = 0;
+  if (update->ntimestep == 140) flag = 1;
+  if (flag) printf("RS NCELLS %d: %d %d %d\n",comm->me,nlocal,nghost,nparent);
+  MPI_Barrier(world);
+
+  /*
+  if (flag) {
+    //if (comm->me == 10) {
+  for (int i = 0; i < grid->nlocal+grid->nghost; i++) {
+    if (i < grid->nlocal) {
+    printf("  neighs1 %d %d %d: %d %d: %d %d: %d %d: %d %d: %d %d\n",
+           comm->me,i,grid->cells[i].id,grid->cells[i].iparent,
+           grid->pcells[grid->cells[i].iparent].id,
+           grid->neigh_decode(grid->cells[i].nmask,0),grid->cells[i].neigh[0],
+           grid->neigh_decode(grid->cells[i].nmask,1),grid->cells[i].neigh[1],
+           grid->neigh_decode(grid->cells[i].nmask,2),grid->cells[i].neigh[2],
+           grid->neigh_decode(grid->cells[i].nmask,3),grid->cells[i].neigh[3]);
+    } else {
+      printf("  neighs1 %d %d %d: %d %d\n",
+        comm->me,i,grid->cells[i].id,grid->cells[i].iparent,
+             grid->pcells[grid->cells[i].iparent].id);
+    }
+  }
+  //}
+  }
+  MPI_Barrier(world);
+  MPI_Barrier(world);
+*/
+
+  int me = comm->me;
+
+
+  if (flag && me == 2) {
+    int iparent = cells[4].iparent;
+    int gparent = pcells[iparent].iparent;
+    int ggparent = pcells[gparent].iparent;
+
+    printf("  flag %d %d %d: %d: %d %d: %d %d: %d %d:: %d %d: "
+           "%d %d: %d %d: %d %d\n",
+           comm->me,nlocal,cells[4].id,
+           neigh_decode(cells[4].nmask,3),
+           iparent,pcells[iparent].id,
+           gparent,pcells[gparent].id,
+           ggparent,pcells[ggparent].id,
+           neigh_decode(cells[4].nmask,0),cells[4].neigh[0],
+           neigh_decode(cells[4].nmask,1),cells[4].neigh[1],
+           neigh_decode(cells[4].nmask,2),cells[4].neigh[2],
+           neigh_decode(cells[4].nmask,3),cells[4].neigh[3]);
+  }
+
   for (int icell = 0; icell < nlocal+nghost; icell++) {
     neigh = cells[icell].neigh;
     nmask = cells[icell].nmask;
 
     for (i = 0; i < 6; i++) {
+
       nflag = neigh_decode(nmask,i);
       if (nflag == NCHILD || nflag == NPBCHILD) {
+        //if (flag && me == 2 && icell == 4)
+        //  printf("  flag %d %d %d: %d %d\n",comm->me,icell,i,nflag,neigh[i]);
         if (hash->find(neigh[i]) == hash->end()) {
           if (nflag == NCHILD) nmask = neigh_encode(NUNKNOWN,nmask,i);
           else nmask = neigh_encode(NPBUNKNOWN,nmask,i);
@@ -1115,6 +1177,31 @@ void Grid::reset_neighbors()
 
     cells[icell].nmask = nmask;
   }
+
+
+  /*
+  if (flag) {
+    //if (comm->me == 10) {
+  for (int i = 0; i < grid->nlocal+grid->nghost; i++) {
+    if (i < grid->nlocal) {
+    printf("  neigh2 %d %d %d: %d %d: %d %d: %d %d: %d %d: %d %d\n",
+           comm->me,i,grid->cells[i].id,grid->cells[i].iparent,
+           grid->pcells[grid->cells[i].iparent].id,
+           grid->neigh_decode(grid->cells[i].nmask,0),grid->cells[i].neigh[0],
+           grid->neigh_decode(grid->cells[i].nmask,1),grid->cells[i].neigh[1],
+           grid->neigh_decode(grid->cells[i].nmask,2),grid->cells[i].neigh[2],
+           grid->neigh_decode(grid->cells[i].nmask,3),grid->cells[i].neigh[3]);
+    } else {
+      printf("  neigh2 %d %d %d: %d %d\n",
+        comm->me,i,grid->cells[i].id,grid->cells[i].iparent,
+             grid->pcells[grid->cells[i].iparent].id);
+    }
+  }
+  // }
+  }
+  MPI_Barrier(world);
+  MPI_Barrier(world);
+  */
 }
 
 /* ----------------------------------------------------------------------

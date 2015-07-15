@@ -30,6 +30,11 @@
 #include "error.h"
 #include "memory.h"
 
+// DEBUG
+#include "comm.h"
+
+
+
 #ifdef SPARTA_JPEG
 #include "jpeglib.h"
 #endif

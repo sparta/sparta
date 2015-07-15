@@ -113,6 +113,13 @@ void FixAdapt::init()
 
 void FixAdapt::end_of_step()
 {
+  // DEBUG
+  //if (update->ntimestep > 140) return;
+
+
+
+
+
   // wrap adaptivity with clearstep/addstep since it may invoke computes
 
   modify->clearstep_compute();
@@ -137,6 +144,9 @@ void FixAdapt::end_of_step()
 
   // if no refine or coarsen, just reghost/reneighbor and return
 
+  //if (comm->me == 0) printf("NREF COARSE %d %d nlocal %d\n",nrefine,ncoarsen,
+  //                          grid->nlocal);
+
   if (nrefine == 0 && ncoarsen == 0) {
     last_adapt = 0;
     grid->acquire_ghosts();
@@ -155,6 +165,29 @@ void FixAdapt::end_of_step()
   grid->setup_owned();
   grid->acquire_ghosts();
   grid->find_neighbors();
+
+
+  /*
+  int flag = 0;
+  if (update->ntimestep == 50) flag = 1;
+
+  if (flag) printf("AG NCELLS %d: %d %d\n",comm->me,grid->nlocal,grid->nghost);
+  MPI_Barrier(world);
+  if (flag) {
+    //if (comm->me == 5) {
+  for (int i = 0; i < grid->nlocal+grid->nghost; i++) {
+    printf("  neighs %d %d %d %d: %d %d: %d %d: %d %d: %d %d\n",
+           comm->me,i,grid->cells[i].id,grid->pcells[grid->cells[i].iparent].id,
+           grid->neigh_decode(grid->cells[i].nmask,0),grid->cells[i].neigh[0],
+           grid->neigh_decode(grid->cells[i].nmask,1),grid->cells[i].neigh[1],
+           grid->neigh_decode(grid->cells[i].nmask,2),grid->cells[i].neigh[2],
+           grid->neigh_decode(grid->cells[i].nmask,3),grid->cells[i].neigh[3]);
+  }
+  //}
+  }
+  */
+
+
   grid->check_uniform();
   comm->reset_neighbors();
 
