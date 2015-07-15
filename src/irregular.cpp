@@ -652,9 +652,6 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
 
   offset = size_self;
   for (int irecv = 0; irecv < nrecv; irecv++) {
-    if (update->ntimestep == 140 && me == 2)
-      printf("POST RECV %p %d %d\n",this,proc_recv[irecv],size_recv[irecv]);
-
     MPI_Irecv(&recvbuf[offset],size_recv[irecv],MPI_CHAR,
 	      proc_recv[irecv],0,world,&request[irecv]);
     offset += size_recv[irecv];
@@ -682,13 +679,6 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
       memcpy(&buf[offset],&sendbuf[offset_send[m]],nbytes[m]);
       offset += nbytes[m];
     }
-
-    if (update->ntimestep == 140 && proc_send[isend] == 2)
-      printf("SENDING from %d with %d bytes\n",me,size_send[isend]);
-    if (update->ntimestep == 140 && me == 1 && proc_send[isend] == 2)
-      printf("SENDING BUF %d\n",((Grid::ChildCell *) buf)->neigh[3]);
-
-
     MPI_Send(buf,size_send[isend],MPI_CHAR,proc_send[isend],0,world);
   }       
 
@@ -704,10 +694,4 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
   // wait on all incoming messages
 
   if (nrecv) MPI_Waitall(nrecv,request,status);
-
-  if (update->ntimestep == 140 && me == 2) {
-    printf("RECVING BUF %d %d %d\n",sizeof(cellint),num_self,
-           ((Grid::ChildCell *) recvbuf)->neigh[3]);
-  }
-
 }

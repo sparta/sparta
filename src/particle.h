@@ -114,6 +114,7 @@ class Particle : protected Pointers {
   void sort();
   void remove_all_from_cell(int);
   void grow(int);
+  void grow_next();
   void pre_weight();
   void post_weight();
 

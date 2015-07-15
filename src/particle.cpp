@@ -495,6 +495,25 @@ void Particle::grow(int nextra)
 }
 
 /* ----------------------------------------------------------------------
+   grow next list if more particles now exist than there is room for
+   called from Grid::unpack_particles_adapt() when grid adaptation
+     takes place and acquire particles from other procs due to coarsening
+   unlike sort(), this requires next list be grown, not destroy/create
+     b/c sorted particle list is maintained during adaptation
+------------------------------------------------------------------------- */
+
+void Particle::grow_next()
+{
+  // compare maxsort (length of next) to new particle count (nlocal)
+  // grow to maxlocal (max length of particles) to avoid frequent re-grow
+
+  if (maxsort < nlocal) {
+    maxsort = maxlocal;
+    memory->grow(next,maxsort,"particle:next");
+  }
+}
+
+/* ----------------------------------------------------------------------
    add a particle to particle list
    return 1 if particle array was reallocated, else 0
 ------------------------------------------------------------------------- */

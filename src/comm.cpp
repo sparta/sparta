@@ -271,42 +271,6 @@ void Comm::migrate_cells(int nmigrate)
   // pack cell info into sbuf
   // only called for unsplit and split cells I no longer own
 
-
-  if (update->ntimestep == 140) {
-    Grid::ChildCell *cells = grid->cells;
-    Grid::ParentCell *pcells = grid->pcells;
-    int nlocal = grid->nlocal;
-
-    for (int i = 0; i < nlocal; i++)
-      if (cells[i].id == 11423) {
-        int iparent = cells[i].iparent;
-        int gparent = pcells[iparent].iparent;
-        int ggparent = pcells[gparent].iparent;
-        printf("  PRE PACK "
-           "%d %d %d: %d: %d %d: %d %d: %d %d:: %d: %d %d %d %d\n",
-           comm->me,nlocal,cells[i].id,
-           grid->neigh_decode(cells[i].nmask,3),
-           iparent,pcells[iparent].id,
-           gparent,pcells[gparent].id,
-           ggparent,pcells[ggparent].id,
-           cells[i].nmask,
-           cells[i].neigh[0],
-           cells[i].neigh[1],
-           cells[i].neigh[2],
-               cells[i].neigh[3]);
-      }
-
-
-    if (me == 2) {
-      printf("MYCELLS: %d:",nlocal);
-      for (int i = 0; i < nlocal; i++)
-        printf(" %d",cells[i].id);
-      printf("\n");
-    }
-  }
-
-  MPI_Barrier(world);
-
   offset = 0;
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
@@ -314,29 +278,12 @@ void Comm::migrate_cells(int nmigrate)
     offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
   }
 
-  if (update->ntimestep == 140 && me == 1) {
-    printf("SENDPTR %d\n",((Grid::ChildCell *) sbuf)->neigh[3]);
-  }
-
-
   // compress my list of owned grid cells to remove migrated cells
   // compress particle list to remove particles in migrating cells
 
   if (nmigrate) {
     grid->compress();
     particle->compress_rebalance();
-  }
-
-  if (update->ntimestep == 140) {
-    Grid::ChildCell *cells = grid->cells;
-    Grid::ParentCell *pcells = grid->pcells;
-    int nlocal = grid->nlocal;
-    if (me == 2) {
-      printf("POST-COMPRESS MYCELLS: %d:",nlocal);
-      for (int i = 0; i < nlocal; i++)
-        printf(" %d",cells[i].id);
-      printf("\n");
-    }
   }
 
   // create irregular communication plan with variable size datums
@@ -353,10 +300,6 @@ void Comm::migrate_cells(int nmigrate)
 
   // reallocate rbuf as needed
 
-  if (update->ntimestep == 140 && me == 2) {
-    printf("RECVSIZE %d %d\n",recvsize,maxrecvbuf);
-  }
-
   if (recvsize > maxrecvbuf) {
     memory->destroy(rbuf);
     maxrecvbuf = recvsize;
@@ -370,32 +313,9 @@ void Comm::migrate_cells(int nmigrate)
 
   // unpack received grid cells with their particles
 
-  if (update->ntimestep == 140 && me == 2) {
-    printf("RECVPTR %d\n",((Grid::ChildCell *) rbuf)->neigh[3]);
-  }
-
-  if (update->ntimestep == 140 && comm->me == 2) printf("NRECV %d\n",nrecv);
-  MPI_Barrier(world);
-
   offset = 0;
-  for (i = 0; i < nrecv; i++) {
+  for (i = 0; i < nrecv; i++)
     offset += grid->unpack_one(&rbuf[offset],1,1);
-    if (update->ntimestep == 140 && comm->me == 2) printf("OFFSET %d\n",offset);
-  }
-
-
-
-  if (update->ntimestep == 140) {
-    Grid::ChildCell *cells = grid->cells;
-    Grid::ParentCell *pcells = grid->pcells;
-    int nlocal = grid->nlocal;
-    if (me == 2) {
-      printf("POST-RECV MYCELLS: %d:",nlocal);
-      for (int i = 0; i < nlocal; i++)
-        printf(" %d",cells[i].id);
-      printf("\n");
-    }
-  }
 }
 
 /* ----------------------------------------------------------------------

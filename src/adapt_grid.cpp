@@ -1807,9 +1807,6 @@ int AdaptGrid::perform_coarsen()
   int nsplit,jcell,ip;
   int *proc,*index,*recv,*csubs;
 
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-  
   Grid::ChildCell *cells = grid->cells;
 
 #ifdef SPARTA_MAP
@@ -1912,6 +1909,9 @@ int AdaptGrid::perform_coarsen()
   // don't need to flag sub cells, since grid compress will do that
   // also mark particles of cell for deletion
   // if cell is split, mark particles in all its sub cells for deletion
+
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;

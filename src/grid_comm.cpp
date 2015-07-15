@@ -164,36 +164,9 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag)
   if (ownflag) nlocal++;
   else nghost++;
 
-  if (update->ntimestep == 140 && comm->me == 2 && ownflag == 1)
-    printf("PTRCAST %d\n",((ChildCell *) ptr)->neigh[3]);
-
-
   memcpy(&cells[icell],ptr,sizeof(ChildCell));
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
-
-
-  if (update->ntimestep == 140 && comm->me == 2 && ownflag == 1) {
-    Grid::ChildCell *cells = grid->cells;
-    Grid::ParentCell *pcells = grid->pcells;
-
-    int i = nlocal-1;
-        int iparent = cells[i].iparent;
-        int gparent = pcells[iparent].iparent;
-        int ggparent = pcells[gparent].iparent;
-        printf("  UNPACK nghost %d:"
-           "%d %d %d: %d: %d %d: %d %d: %d %d:: %d: %d %d %d %d\n",
-               grid->nghost,comm->me,nlocal,cells[i].id,
-           grid->neigh_decode(cells[i].nmask,3),
-           iparent,pcells[iparent].id,
-           gparent,pcells[gparent].id,
-           ggparent,pcells[ggparent].id,
-           cells[i].nmask,
-           cells[i].neigh[0],
-           cells[i].neigh[1],
-           cells[i].neigh[2],
-               cells[i].neigh[3]);
-  }
 
   if (cells[icell].nsurf < 0) return ptr - buf;
 
@@ -490,6 +463,11 @@ void Grid::unpack_particles_adapt(int np, char *buf)
   }
 
   particle->nlocal = nplocal;
+
+  // insure particle->next list grows to accommodate new particles
+  // since particle sorting is maintained during this stage of adaptation
+
+  particle->grow_next();
 }
 
 /* ----------------------------------------------------------------------

@@ -221,77 +221,14 @@ void FixBalance::end_of_step()
   // migrate grid cells and their particles to new owners
   // invoke grid methods to complete grid setup
 
-  MPI_Barrier(world);
-  if (update->ntimestep == 140) {
-    Grid::ChildCell *cells = grid->cells;
-    Grid::ParentCell *pcells = grid->pcells;
-    int nlocal = grid->nlocal;
-
-    for (int i = 0; i < nlocal; i++)
-      if (cells[i].id == 11423) {
-        int iparent = cells[i].iparent;
-        int gparent = pcells[iparent].iparent;
-        int ggparent = pcells[gparent].iparent;
-        printf("  PRE MIGRATE "
-           "%d %d %d: %d: %d %d: %d %d: %d %d:: %d: %d %d %d %d: %d\n",
-           comm->me,nlocal,cells[i].id,
-           grid->neigh_decode(cells[i].nmask,3),
-           iparent,pcells[iparent].id,
-           gparent,pcells[gparent].id,
-           ggparent,pcells[ggparent].id,
-           cells[i].nmask,
-           cells[i].neigh[0],
-           cells[i].neigh[1],
-           cells[i].neigh[2],
-               cells[i].neigh[3],cells[cells[i].neigh[3]].id);
-      }
-  }
-
   grid->unset_neighbors();
   grid->remove_ghosts();
   comm->migrate_cells(nmigrate);
 
-
-  MPI_Barrier(world);
-  if (update->ntimestep == 140 && me == 2) {
-    Grid::ChildCell *cells = grid->cells;
-    Grid::ParentCell *pcells = grid->pcells;
-    int iparent = cells[4].iparent;
-    int gparent = pcells[iparent].iparent;
-    int ggparent = pcells[gparent].iparent;
-    int nlocal = grid->nlocal;
-
-    printf("  FIXBAL %d %d %d: %d: %d %d: %d %d: %d %d:: %d: %d %d %d %d\n",
-           comm->me,nlocal,cells[4].id,
-           grid->neigh_decode(cells[4].nmask,3),
-           iparent,pcells[iparent].id,
-           gparent,pcells[gparent].id,
-           ggparent,pcells[ggparent].id,
-           cells[4].nmask,
-           cells[4].neigh[0],
-           cells[4].neigh[1],
-           cells[4].neigh[2],
-           cells[4].neigh[3]);
-
-  /*
-           grid->neigh_decode(cells[4].nmask,1),cells[4].neigh[1],
-           grid->neigh_decode(cells[4].nmask,2),cells[4].neigh[2],
-           grid->neigh_decode(cells[4].nmask,3)); //cells[4].neigh[3]);
-    */
-  }
-
-
   grid->setup_owned();
   grid->acquire_ghosts();
 
-  //printf("FB PRE %d\n",comm->me);
-  //MPI_Barrier(world);
-
   grid->reset_neighbors();
-
-  //printf("FB POST %d\n",comm->me);
-  //MPI_Barrier(world);
-
   comm->reset_neighbors();
 
   // reallocate per grid cell arrays in per grid computes
