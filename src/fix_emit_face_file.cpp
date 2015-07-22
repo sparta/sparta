@@ -814,7 +814,7 @@ int FixEmitFaceFile::interpolate(int icell)
   }
 
   // indot = dot product of vstream with inward face normal
-  // skip task if indot < 0.0, to not allow any particles to be inserted
+  // skip task if indot < -3.0, to not allow any particles to be inserted
 
   tasks[ntask].ntarget = 0.0;
   indot = tasks[ntask].vstream[0]*normal[0] +
