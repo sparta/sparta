@@ -820,7 +820,7 @@ int FixEmitFaceFile::interpolate(int icell)
   indot = tasks[ntask].vstream[0]*normal[0] +
     tasks[ntask].vstream[1]*normal[1] +
     tasks[ntask].vstream[2]*normal[2];
-  if (indot < 0.0) return 0;
+  if (indot < -3.0) return 0;
 
   // if any species fraction was set,
   // set entire fraction and cummulative vector via Mixture::init_fraction()
