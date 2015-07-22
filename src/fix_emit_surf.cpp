@@ -213,14 +213,14 @@ int FixEmitSurf::create_task(int icell)
     // set geometry-dependent params of task
     // indot = vstream magnitude for normalflag = 1
     // indot = vstream dotted with surface normal for normalflag = 0
-    // skip task if indot < 0.0, to not allow any particles to be inserted
+    // skip task if indot < -3.0, to not allow any particles to be inserted
     // area = area for insertion = extent of line/triangle inside grid cell
 
     if (dimension == 2) {
       normal = lines[isurf].norm;
       if (normalflag) indot = magvstream;
       else indot = vstream[0]*normal[0] + vstream[1]*normal[1];
-      if (indot < 0.0) continue;
+      if (indot < -3.0) continue;
 
       p1 = pts[lines[isurf].p1].x;
       p2 = pts[lines[isurf].p2].x;
@@ -267,7 +267,7 @@ int FixEmitSurf::create_task(int icell)
       if (normalflag) indot = magvstream;
       else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
              vstream[2]*normal[2];
-      if (indot < 0.0) continue;
+      if (indot < -3.0) continue;
 
       p1 = pts[tris[isurf].p1].x;
       p2 = pts[tris[isurf].p2].x;
