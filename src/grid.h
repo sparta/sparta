@@ -46,7 +46,7 @@ class Grid : protected Pointers {
   int uniform;          // 1 if all child cells are at same level, else 0
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
   double cutoff;        // cutoff for ghost cells, -1.0 = infinite
-  double cell_epsilon;  // half of smallest cellsize of any cell in any dim
+  double cell_epsilon;  // half of smallest cellside of any cell in any dim
   int cellweightflag;   // 0/1+ for no/yes usage of cellwise fnum weighting
 
   int ngroup;               // # of defined groups

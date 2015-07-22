@@ -276,6 +276,10 @@ cellint Grid::id_find_face(double *x, int icell, int dim,
   newhi[1] = lo[1] + (iy+1)*(hi[1]-lo[1])/ny;
   newhi[2] = lo[2] + (iz+1)*(hi[2]-lo[2])/nz;
 
+  if (ix == nx-1) newhi[0] = hi[0];
+  if (iy == ny-1) newhi[1] = hi[1];
+  if (iz == nz-1) newhi[2] = hi[2];
+
   // if new cell does not fully overlap olo/ohi face, return parent ID
 
   if (dim != 0 && (newlo[0] > olo[0] || newhi[0] < ohi[0])) return p->id;

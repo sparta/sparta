@@ -52,10 +52,10 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 67521063  // particle ID
+#define MOVE_DEBUG_ID 898453646  // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 24       // particle index on owning proc
-#define MOVE_DEBUG_STEP 3    // timestep
+#define MOVE_DEBUG_INDEX 9873       // particle index on owning proc
+#define MOVE_DEBUG_STEP 2    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -535,7 +535,7 @@ template < int DIM, int SURF > void Update::move()
           }
         }
 
-        //if (iterate == 20) exit(1);
+        //if (iterate == 10) exit(1);
         //iterate++;
 
 #ifdef MOVE_DEBUG
