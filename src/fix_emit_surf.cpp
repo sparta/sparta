@@ -214,6 +214,8 @@ int FixEmitSurf::create_task(int icell)
     // indot = vstream magnitude for normalflag = 1
     // indot = vstream dotted with surface normal for normalflag = 0
     // skip task if indot < -3.0, to not allow any particles to be inserted
+    // 0.0 up to -3.0 allows backflow influx of particles opposite to
+    //   streaming velocity up to a reasonable limit
     // area = area for insertion = extent of line/triangle inside grid cell
 
     if (dimension == 2) {
