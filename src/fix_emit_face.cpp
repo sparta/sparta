@@ -151,7 +151,7 @@ void FixEmitFace::init()
     else normal[i/2] = -1.0;
     double indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
       vstream[2]*normal[2];
-    if (indot < 0.0) flag = 1;
+    if (indot < -3.0) flag = 1;
   }
 
   if (flag && comm->me == 0)
@@ -326,12 +326,12 @@ int FixEmitFace::create_task(int icell)
     }
 
     // indot = dot product of vstream with inward face normal
-    // skip task if indot < 0.0, to not allow any particles to be inserted
+    // skip task if indot < -3.0, to not allow any particles to be inserted
 
     indot = vstream[0]*tasks[ntask].normal[0] +
       vstream[1]*tasks[ntask].normal[1] +
       vstream[2]*tasks[ntask].normal[2];
-    if (indot < 0.0) continue;
+    if (indot < -3.0) continue;
 
     // area = area for insertion
     // depends on dimension and axisymmetry
