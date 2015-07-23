@@ -175,8 +175,11 @@ A {n} setting of {Np} > 0 can only be used with a {perspecies} setting
 of {no}.
 
 A warning will be issued if a specified face has an inward normal in a
-direction opposing the streaming velocity.  This is because no
-particles will be emitted from that face.
+direction opposing the streaming velocity.  Particles will still be
+emitted from that face, so long as a small fraction have a thermal
+velocity large enough to overcome the outward streaming velocity, so
+that their net velocity is inward.  The threshold for this is the
+thermal velocity for particles 3*sigma from the mean thermal velocity.
 
 [Related commands:]
 
