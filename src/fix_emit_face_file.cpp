@@ -814,15 +814,11 @@ int FixEmitFaceFile::interpolate(int icell)
   }
 
   // indot = dot product of vstream with inward face normal
-  // skip task if indot < -3.0, to not allow any particles to be inserted
-  // 0.0 up to -3.0 allows backflow influx of particles opposite to
-  //   streaming velocity up to a reasonable limit
 
   tasks[ntask].ntarget = 0.0;
   indot = tasks[ntask].vstream[0]*normal[0] +
     tasks[ntask].vstream[1]*normal[1] +
     tasks[ntask].vstream[2]*normal[2];
-  if (indot < -3.0) return 0;
 
   // if any species fraction was set,
   // set entire fraction and cummulative vector via Mixture::init_fraction()
@@ -848,6 +844,7 @@ int FixEmitFaceFile::interpolate(int icell)
 
   // set ntarget and ntargetsp via mol_inflow()
   // also scale ntarget by frac_user (0 to 1)
+  // skip task if final ntarget = 0.0, due to large outbound vstream
 
   for (isp = 0; isp < nspecies; isp++) {
     tasks[ntask].ntargetsp[isp] = frac_user *
@@ -857,6 +854,7 @@ int FixEmitFaceFile::interpolate(int icell)
     tasks[ntask].ntargetsp[isp] /= cinfo[icell].weight;
     tasks[ntask].ntarget += tasks[ntask].ntargetsp[isp];
   }
+  if (tasks[ntask].ntarget == 0.0) return 0;
 
   return 1;
 }

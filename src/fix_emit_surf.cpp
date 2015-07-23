@@ -213,16 +213,12 @@ int FixEmitSurf::create_task(int icell)
     // set geometry-dependent params of task
     // indot = vstream magnitude for normalflag = 1
     // indot = vstream dotted with surface normal for normalflag = 0
-    // skip task if indot < -3.0, to not allow any particles to be inserted
-    // 0.0 up to -3.0 allows backflow influx of particles opposite to
-    //   streaming velocity up to a reasonable limit
     // area = area for insertion = extent of line/triangle inside grid cell
 
     if (dimension == 2) {
       normal = lines[isurf].norm;
       if (normalflag) indot = magvstream;
       else indot = vstream[0]*normal[0] + vstream[1]*normal[1];
-      if (indot < -3.0) continue;
 
       p1 = pts[lines[isurf].p1].x;
       p2 = pts[lines[isurf].p2].x;
@@ -269,7 +265,6 @@ int FixEmitSurf::create_task(int icell)
       if (normalflag) indot = magvstream;
       else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
              vstream[2]*normal[2];
-      if (indot < -3.0) continue;
 
       p1 = pts[tris[isurf].p1].x;
       p2 = pts[tris[isurf].p2].x;
@@ -314,6 +309,7 @@ int FixEmitSurf::create_task(int icell)
     }
 
     // set ntarget and ntargetsp via mol_inflow()
+    // skip task if final ntarget = 0.0, due to large outbound vstream
 
     tasks[ntask].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
@@ -323,6 +319,7 @@ int FixEmitSurf::create_task(int icell)
       tasks[ntask].ntargetsp[isp] /= cinfo[icell].weight;
       tasks[ntask].ntarget += tasks[ntask].ntargetsp[isp];
     }
+    if (tasks[ntask].ntarget == 0.0) continue;
 
     // increment task counter
 

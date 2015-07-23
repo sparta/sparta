@@ -326,14 +326,10 @@ int FixEmitFace::create_task(int icell)
     }
 
     // indot = dot product of vstream with inward face normal
-    // skip task if indot < -3.0, to not allow any particles to be inserted
-    // 0.0 up to -3.0 allows backflow influx of particles opposite to
-    //   streaming velocity up to a reasonable limit
 
     indot = vstream[0]*tasks[ntask].normal[0] +
       vstream[1]*tasks[ntask].normal[1] +
       vstream[2]*tasks[ntask].normal[2];
-    if (indot < -3.0) continue;
 
     // area = area for insertion
     // depends on dimension and axisymmetry
@@ -360,6 +356,7 @@ int FixEmitFace::create_task(int icell)
     }      
 
     // set ntarget and ntargetsp via mol_inflow()
+    // skip task if final ntarget = 0.0, due to large outbound vstream
 
     tasks[ntask].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
@@ -369,6 +366,7 @@ int FixEmitFace::create_task(int icell)
       tasks[ntask].ntargetsp[isp] /= cinfo[icell].weight;
       tasks[ntask].ntarget += tasks[ntask].ntargetsp[isp];
     }
+    if (tasks[ntask].ntarget == 0.0) continue;
 
     // increment task counter
 
@@ -382,12 +380,6 @@ int FixEmitFace::create_task(int icell)
 
 /* ----------------------------------------------------------------------
    insert particles in grid cells with faces touching inflow boundaries
-   NOTE:
-     currently not allowing particle insertion on backflow boundaries
-     enforced by indot >= 0.0 check in init()
-     could allow particle insertion on backflow boundaries
-       when streaming velocity is small enough
-     need to insure double do-while loops below do not spin endlessly
 ------------------------------------------------------------------------- */
 
 void FixEmitFace::perform_task()
