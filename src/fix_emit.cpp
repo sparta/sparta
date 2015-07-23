@@ -384,11 +384,18 @@ void FixEmit::grow_list()
    indot = vstream dotted into face normal, assumed to be >= 0.0
    scosine = s cos(theta) in Bird notation where vscale = 1/beta
    see Bird 1994, eq 4.22
+   bounding by -3.0 allows backflow influx of particles opposite to
+     streaming velocity up to a reasonable limit
+   if did not bound, would rarely emit a particle, but when do,
+     could take too many iterations of double do while loop,
+     e.g. in FixEmitFace::perform_task(), 
+     to generate an inward velocity for the particle
 ------------------------------------------------------------------------- */
 
 double FixEmit::mol_inflow(double indot, double vscale, double fraction)
 {
   double scosine = indot / vscale;
+  if (scosine < -3.0) return 0.0;
   double inward_number_flux = vscale*fraction *
     (exp(-scosine*scosine) + sqrt(MY_PI)*scosine*(1.0 + erf(scosine))) / 
     (2*sqrt(MY_PI));
