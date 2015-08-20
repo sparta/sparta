@@ -57,10 +57,10 @@ keyword = {iterate} or {maxlevel} or {minlevel} or {thresh} or {combine} or {cel
 
 [Examples:]
 
-NOTE: need some better examples
-
 adapt_grid refine particle 10 50
 adapt_grid coarsen particle 10 50
+adapt_grid refine coarsen particle 10 50
+adapt_grid refine surf 0.15 iterate 1 dir 1 0 0 
 adapt_grid refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
 
 [Description:]
@@ -73,43 +73,51 @@ adapt"_fix_adapt.html command.
 
 Refinement means splitting one child cell into multiple new child
 cells; the original child cell becomes a parent cell.  Coarsening
-means combining all the child cells of a parent cell into a single new
-child cell.  See "Section howto 4.8"_Section_howto.html#howto_8 for a
+means combining all the child cells of a parent cell, so that the
+child cells are deleted and the parent cell becomes a single new child
+cell.  See "Section howto 4.8"_Section_howto.html#howto_8 for a
 description of the hierarchical grid used by SPARTA and a defintion of
 child and parent cells.
 
 Grid adaptation can be useful for adjusting the grid cell sizes to the
-current density distribution or mean-free-path of particles or to
+current density distribution, or mean-free-path of particles, or to
 other simulation attributes such as the presence of surface elements.
-A well-adapted grid can improve accuracy of the simulation and reduce
-its computational cost.
+A well-adapted grid can improve accuracy of the simulation and/or
+reduce a simulation's computational cost.
 
 The {action1} and {action2} parameters determine whether refinement or
 coarsening is performed and in what order.  {Action2} is optional.  If
-not specified, only {action1} is performed.  Note that cells that are
+not specified, only {action1} is performed.  Note that cells which are
 refined by {action1} are not eligible for subsequent coarsening by
-{action2}.  Likewise cells that are coarsened by {action1} are not
-eligible for subsequent refinement by {action2}.  This is also true if
-the {iterate} keyword is used to loop over the two actions multiple
-times.  Cells can be successivly refined on each iteration, but will
-never be coarsened.  Likewise cells can be successivly coarsensed, but
-will never be refined.  Of course they may be refined or coarsened
-later if the adapt_grid command is used again.
+{action2}, during a single invocation of this command.  Likewise cells
+that are coarsened by {action1} are not eligible for subsequent
+refinement by {action2}.  This is also true if the {iterate} keyword
+is used to loop over the two actions multiple times.  Cells can be
+successivly refined on each iteration, but will never be coarsened.
+Likewise cells can be successivly coarsensed, but will never be
+refined.  Of course any cell may be refined or coarsened later if the
+adapt_grid command is used again, including on later timesteps via the
+"fix adapt"_fix_adapt.html command.
 
-NOTE: Need some pics of adapted grids, for both refinment and
-coarsening.
+Examples of 2d and 3d refined grids are shown here.  The 3d simulation
+shows 2d planar cuts through the 3d grid.  Click on either image for a
+larger version.
+
+:c,image(JPG/adapt_2d_small.jpg,JPG/adapt_2d.jpg),image(JPG/adapt_3d_small.jpg,JPG/adapt_3d.jpg)
+
+:line
 
 The first step in a refinement action is to determine what child cells
 are eligible for refinement.  Child cells that are wholly inside a
 closed surface are not eligible.  The {maxlevel} and {region} keywords
-also affect elibilitity.  They are described below.
+also affect eligibility.  They are described below.
 
 The first step in a coarsening action is to determine what parent
-cells are eligible for coarsening.  Only parent cells with all of
-their children as child cells are eligible.  If one or more of their
-children are also parent cells, then the parent cell is a
-"grandparent" and is not eligible for coarsening.  The {minlevel} and
-{region} keywords also affect elibilitity.  They are described below.
+cells are eligible for coarsening.  Only parent cells whose children
+are all child cells are eligible.  If one or more of their children
+are also parent cells, then the parent cell is a "grandparent" and is
+not eligible for coarsening.  The {minlevel} and {region} keywords
+also affect eligibility.  They are described below.
 
 The {style} parameter is then used to decide whether to refine or
 coarsen each eligible grid cell.  The operation of the differnt styles
@@ -140,7 +148,7 @@ surface elements in the specified {surfID} group.  The {dir} keyword
 can be used to exclude additional surface elements.  For refinement,
 the cell is refined unless the refinement will create child cells with
 any of their dimensions smaller than the specified {ssize}.  For
-coarsening, the parent cell is coarsend only if any of the child cell
+coarsening, the parent cell is coarsened only if any of the child cell
 dimensions is smaller than the specified {ssize}.
 
 The {value} style uses values calculated by a "compute"_compute.html
@@ -149,7 +157,7 @@ compute must calculate per-grid values as described in "Section howto
 4.4"_Section_howto.html#howto_4.  If the compute or fix calculates a
 vector of such values, it is specified as c_ID or f_ID.  If it
 calculates an array of such values, it is specified as c_ID\[N\] or
-f_ID\[N\] when N is the column of value to use from 1 to Ncolumns.
+f_ID\[N\] when N is the column of values to use, from 1 to Ncolumns.
 
 For refinement, if the compute or fix value for the grid cell is
 "more" than {rvalue}, the cell is refined.  For coarsening, if the
@@ -164,17 +172,17 @@ NOTE: Give example of value style for time-averaged particle count
 from fix ave/grid.  And for lambda from compute lambda (and also a
 time-averaged version of lambda.
 
-The {random} style is provided mostly for test and debugging purposes.
-For each cell eligible for adaptation, a uniform random number RN
-bewteen 0.0 and 1.0 is generated.  For refinement, the cell is refined
-if RN < {rfrac}, so that approximately an {rfrac} fraction of the
-child cells are refined.  Similarly, for coarsening, the parent cell
-is coarsened if RN < {cfrac}, so that approximately a {cfrac} fraction
-of the parent cells are coarsened.
+The {random} style is provided for test and debugging purposes.  For
+each cell eligible for adaptation, a uniform random number RN bewteen
+0.0 and 1.0 is generated.  For refinement, the cell is refined if RN <
+{rfrac}, so that approximately an {rfrac} fraction of the child cells
+are refined.  Similarly, for coarsening, the parent cell is coarsened
+if RN < {cfrac}, so that approximately a {cfrac} fraction of the
+parent cells are coarsened.
 
 :line
 
-Various optional keyword can also be specified.
+Various optional keywords can also be specified.
 
 The {iterate} keyword determines how many times the {action1} and
 {action2} operations are looped over.  The default is once.  If
@@ -194,10 +202,11 @@ The {minlevel} keyword limits how far a grid cell can be coarsened.
 See "Section howto 4.8"_Section_howto.html#howto_8 for a definition of
 the level assigned to each parent and child cell.  Parent cells with a
 level < {Nmin} are not eligible for coarsening.  The default setting
-of {Nmax} = 1 means the only limit on coarsening is that the first
-level grid is preserved (never coarsened to a single root cell).
+of {Nmin} = 1 means the only limit on coarsening is that the first
+level grid is preserved (never coarsened to a single root cell).  The
+specified {Nmin} must be >= 1.
 
-The {thresh} keyword is only used by the style {value}.  It sets the
+The {thresh} keyword is only used by style {value}.  It sets the
 comparison criterion for refinement as {rdecide} = {less} or {more}.
 This means a child cell is refined if its compute or fix value is
 {less} or {more} than {rvalue}.  Similarly, it sets the comparison
@@ -206,18 +215,17 @@ a parent cell is coarsened if the compute or fix value accumulated
 from the compute or fix values of its children is {less} or {more}
 than {cvalue}.
 
-The {combine} keyword is only used by the style {value}.  It
-determines how the compute or fix value for a parent cell is
-accumulated from the compute or fix values of all its cheildren.  If
-the setting is {sum}, the child values are summed.  If it is {min} or
-{max}, the parent value is the minimum or maximum of all the child
-values.
+The {combine} keyword is only used by style {value}.  It determines
+how the compute or fix value for a parent cell is accumulated from the
+compute or fix values of all its children.  If the setting is {sum},
+the child values are summed.  If it is {min} or {max}, the parent
+value is the minimum or maximum of all the child values.
 
 The {cells} keyword determines how many new child cells are created
 when a single grid cell is refined.  Nx by Ny by Nz new child cells
-are created.  Nz must be 1 for 2d simulations.  In the future
-we will allow for variable refinement by allowing wild cards
-to be used for Nx, Ny, and Nz.
+are created.  Nz must be 1 for 2d simulations.  In the future we plan
+to allow for variable refinement by allowing wild cards to be used for
+Nx, Ny, and Nz.
 
 The {region} keyword can be used to limit which grid cells are
 eligible for adapation.  It applies to both child cells for refinment
@@ -251,19 +259,20 @@ specified {filename}.  The format of the file is the same as that
 created by the "write_grid"_write_grid.html command, which is a list
 of parent cells.  The file can be read in by a subsequent simulation
 to define a grid, or used by visualization or other post-procesing
-tools.
+tools.  Note that no file is written if no grid cells are refined or
+coarsened.
 
 If the filename contains a "*" wildcard character, then the "*" is
 replaced by the current timestep.  This is useful for the "fix
 adapt"_fix_adapt.html command, if you wish to write out multiple grid
-files.
+files, each time the grid iadapts.
 
 :line
 
 If the grid is partitioned across processors in a "clumped" manner
 before this command is invoked, it will still be clumped by processor
 after the adaptation.  Likewise if it is not clumped before, it will
-remain not clumped after adaptation.  You can use the
+remain un-clumped after adaptation.  You can use the
 "balance_grid"_balance_grid.html command after this command to
 re-balance the new adapted grid cells and their particles across
 processors.  See "Section howto 4.8"_Section_howto.html#howto_8 for a
@@ -276,9 +285,9 @@ This command can only be used after the grid has been created by the
 "read_restart"_read_restart.html commands.
 
 Currently a fix cannot be used with style {value} for {iterate} > 1.
-This is because the per grid cell values accumulated by the fix will
-need to be interpolated to new grid cells in order for the fix to be
-evaluated multiple times.
+This is because the per-grid cell values accumulated by the fix are
+not interpolated to new grid cells so that the fix can be re-evaluated
+multiple times.  In the future we may revove this restriction.
 
 [Related commands:]
 
