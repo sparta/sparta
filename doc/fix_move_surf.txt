@@ -1,0 +1,77 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix move/surf command :h3
+
+[Syntax:]
+
+fix ID move/surf Nevery Nlarge args ... :pre
+
+ID is documented in "fix"_fix.html command
+move/surf = style name of this fix command
+Nevery = move surfaces incrementally every this many steps
+Nlarge = move surfaces the entire distance after this many timesteps
+args = all remaining args are identical to those defined for the "move_surf"_move_surf.html command :ul
+
+[Examples:]
+
+fix 1 move/surf 100 1000 all trans 1 0 0
+fix 1 move/surf 100 10000 all rotate 360 0 0 1 5 5 0
+fix 1 move/surf 100 50000 object2 rotate 360 0 0 1 5 5 0 :pre
+
+[Description:]
+
+This command performs on-the-fly movement of a selected set of surface
+elements via one of several styles.  Surface element moves can also be
+performed before or between simulations by using the
+"move_surf"_move_surf.html command.
+
+Moving surfaces during a simulation run can be useful if you want to
+to track transient changes in a flow while some attribute of the
+surface elements change, e.g. the separation between two spheres.
+
+All of the command arguments which appear after {Nfreq}, which
+determine which surface elements move and how they move, are exactly
+the same as for the "move_surf"_move_surf.html command.  See its doc
+page for details.
+
+{Nevery} specifies how often surface elements are moved incrementally
+along the path towards their final position.  The current timestep
+must be a multiple of {Nevery}.
+
+{Nlarge} must be a multiple of {Nevery} and specifies how long it will
+take the surface elements to move to their final position.
+
+Thus if {Nlarge} = 100*{Nevery}, each surface elements will move 1/100 of
+its total distance every {Nevery} steps.
+
+The same rules that the "move_surf"_move_surf.html command follows for
+particle deletion after surface elements move, are followed by this
+command as well.  The criteria are applied after every incremental
+move.  This is to prevent particles from ending up inside surface
+objects.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.  No global or per-particle or per-grid quantities
+are stored by this fix for access by various output commands.
+
+[Restrictions:]
+
+An error will be generated if any surface element vertex is
+moved outside the simulation box.
+
+[Related commands:]
+
+"read_surf"_read_surf.html, "move_surf"_move_surf.html,
+"remove_surf"_remove_surf.html
+
+[Default:] none

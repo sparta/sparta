@@ -1,0 +1,82 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix move/surf command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID move/surf Nevery Nlarge args ... 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
+<LI>move/surf = style name of this fix command
+<LI>Nevery = move surfaces incrementally every this many steps
+<LI>Nlarge = move surfaces the entire distance after this many timesteps
+<LI>args = all remaining args are identical to those defined for the <A HREF = "move_surf.html">move_surf</A> command 
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 move/surf 100 1000 all trans 1 0 0
+fix 1 move/surf 100 10000 all rotate 360 0 0 1 5 5 0
+fix 1 move/surf 100 50000 object2 rotate 360 0 0 1 5 5 0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>This command performs on-the-fly movement of a selected set of surface
+elements via one of several styles.  Surface element moves can also be
+performed before or between simulations by using the
+<A HREF = "move_surf.html">move_surf</A> command.
+</P>
+<P>Moving surfaces during a simulation run can be useful if you want to
+to track transient changes in a flow while some attribute of the
+surface elements change, e.g. the separation between two spheres.
+</P>
+<P>All of the command arguments which appear after <I>Nfreq</I>, which
+determine which surface elements move and how they move, are exactly
+the same as for the <A HREF = "move_surf.html">move_surf</A> command.  See its doc
+page for details.
+</P>
+<P><I>Nevery</I> specifies how often surface elements are moved incrementally
+along the path towards their final position.  The current timestep
+must be a multiple of <I>Nevery</I>.
+</P>
+<P><I>Nlarge</I> must be a multiple of <I>Nevery</I> and specifies how long it will
+take the surface elements to move to their final position.
+</P>
+<P>Thus if <I>Nlarge</I> = 100*<I>Nevery</I>, each surface elements will move 1/100 of
+its total distance every <I>Nevery</I> steps.
+</P>
+<P>The same rules that the <A HREF = "move_surf.html">move_surf</A> command follows for
+particle deletion after surface elements move, are followed by this
+command as well.  The criteria are applied after every incremental
+move.  This is to prevent particles from ending up inside surface
+objects.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.  No global or per-particle or per-grid quantities
+are stored by this fix for access by various output commands.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>An error will be generated if any surface element vertex is
+moved outside the simulation box.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "move_surf.html">move_surf</A>,
+<A HREF = "remove_surf.html">remove_surf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
