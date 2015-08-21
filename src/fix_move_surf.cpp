@@ -73,7 +73,7 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
   // make copy of original points to pass to movesurf->move_points()
 
   npoint = surf->npoint;
-  Surf::Point *origpts = (Surf::Point *) 
+  origpts = (Surf::Point *) 
     memory->smalloc(npoint*sizeof(Surf::Point),"fix/move/surf:origpts");
   memcpy(origpts,surf->pts,npoint*sizeof(Surf::Point));
 
