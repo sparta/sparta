@@ -56,10 +56,10 @@ The program has two required arguments:
 
 % pvpython surf2paraview.py data.mir mir_surf
 
-The first argument is the filename of a SPARTA surf file containing a
+The first argument is the file name of a SPARTA surf file containing a
 3d triangulation of an objects surface, or a 2d enclosed polygon of
 line segments.  The second argument is the name of the resulting
-paraview output .pvd file.  The above command line will produce a file
+ParaView output .pvd file.  The above command line will produce a file
 called mir_surf.pvd and a directory called mir_surf/.  The mir_surf/
 directory contains a ParaView .vtu file with geometry information and
 is referred to by the mir_surf.pvd file.  Start ParaView and open the
@@ -70,14 +70,14 @@ with the surface elements:
 
 % pvpython surf2paraview.py data.mir mir_surf -r ../parent/mir/tmp_surf.*
 
-The -r (or --result) option is followed by a list of filenmames with
+The -r (or --result) option is followed by a list of file names with
 full or relative paths to SPARTA surf dump files.  The files can be
 over different time steps and from different processors at the same
 time step. The script will organize the result files so that ParaView
 can play a smooth animation over all time steps for the stored
-variables in the file.  The example above uses a wildcard character in
-the filename to gather all of the tmp_surf.* files stored in the
-directory.  Wildcard characters can only be used in the filename part
+variables in the file.  The example above uses a wild card character in
+the file name to gather all of the tmp_surf.* files stored in the
+directory.  Wild card characters can only be used in the file name part
 of the path and can be given for multiple paths.
 
 NOTE: SPARTA 2d enclosed polygons will be 2d outlines in ParaView.
@@ -97,7 +97,7 @@ III. USING grid2paraview.py
 The grid2paraview.py program converts a text file description of a 2D
 or 3D SPARTA mesh into a ParaView .pvd file.  Additionally, the
 program can optionally read one or more SPARTA grid dump files and
-associtate the calculated results with the grid cells over time.
+associate the calculated results with the grid cells over time.
 
 The program has two required arguments:
 
@@ -158,7 +158,7 @@ with the grid cells:
 
 % pvpython grid2paraview.py mir.txt mir_grid -r ../parent/mir/tmp_flow.*
 
-The -r (or --result) option is followed by a list of filenmames with
+The -r (or --result) option is followed by a list of file names with
 full or relative paths to SPARTA grid dump files. This option operates
 like the -r option in the surf2paraview.py program.
 
@@ -170,8 +170,8 @@ For large grids (greater than 100x100x100), the time to write out the
 .pvd file and data directory can be lengthy.  For this reason, the
 grid2paraview.py command has three additional options which can break
 the grid into smaller chunks at the top-most level of the grid.  Each
-chunk will be written out as a seperate .vtu file in the named
-subdirectory the .pvd file refers to.
+chunk will be written out as a separate .vtu file in the named
+sub directory the .pvd file refers to.
 
 These additional options are:
 
@@ -179,12 +179,12 @@ These additional options are:
 -yc (or --ychunk, default 100)
 -zc (or --zchunk, default 100)
 
-The program will launch a seperate thread of computation for each grid
+The program will launch a separate thread of computation for each grid
 chunk.  On workstations with many cores and sufficient memory, using
 small chunks (of about 1 million cells each) can greatly speed up
 output time. For 2d grids, the -zc option is ignored.
 
-NOTE: On Windows platforms, the grid chunking will always be executed
+NOTE: On Windows platforms, the grid blocking will always be executed
 serially.  This is due to how the multiprocessing module is
-implemented on Windows, which prohibits mutliple instances of pvpython
+implemented on Windows, which prohibits multiple instances of pvpython
 from starting independently.

@@ -130,9 +130,6 @@ def process_grid_chunk(chunk_id, chunk_info, num_chunks, \
       id_hash[int(gids.GetTuple1(i))] = i
     ug.GetCellData().RemoveArray("GlobalIds")
 
-
-#  grid_desc.pop("slice", None)
-
   if "slice" not in grid_desc:
     writer = vtk.vtkXMLUnstructuredGridWriter()
     writer.SetInputData(ug)
@@ -316,18 +313,28 @@ def is_3d_cell_refined(level, i, j, k, cell_index, grid_desc, dashed_id, xi, yi,
   else:
     if level == 1:
       if cell_index in grid_desc["parent_grid"]:
+        Cx = grid_desc["parent_grid"][cell_index]['px']
+        Cy = grid_desc["parent_grid"][cell_index]['py']
+        Cz = grid_desc["parent_grid"][cell_index]['pz']
+        r_spacing[0] = xi/float(Cx)
+        r_spacing[1] = yi/float(Cy)
+        r_spacing[2] = zi/float(Cz)
+        r_ndims[0] = Cx + 1
+        r_ndims[1] = Cy + 1
+        r_ndims[2] = Cz + 1
         return True
       else:
         return False
     else:
       s = dashed_id.split('-')
       d = None
+      lc = 2
       for id in s:
         if not d:
           d = grid_desc["parent_grid"][int(id)]['np']
         else:
           d = d[int(id)]['np']
-        if cell_index in d:
+        if cell_index in d and lc == level:
           Cx = d[cell_index]['px']
           Cy = d[cell_index]['py']
           Cz = d[cell_index]['pz']
@@ -338,8 +345,8 @@ def is_3d_cell_refined(level, i, j, k, cell_index, grid_desc, dashed_id, xi, yi,
           r_ndims[1] = Cy + 1
           r_ndims[2] = Cz + 1
           return True
-        else:
-          return False
+        lc += 1
+      return False
 
 def is_2d_cell_refined(level, i, j, cell_index, grid_desc, dashed_id, xi, yi, r_spacing, r_ndims):
   if "parent_grid" not in grid_desc:
@@ -349,18 +356,25 @@ def is_2d_cell_refined(level, i, j, cell_index, grid_desc, dashed_id, xi, yi, r_
   else:
     if level == 1: 
       if cell_index in grid_desc["parent_grid"]:
+        Cx = grid_desc["parent_grid"][cell_index]['px']
+        Cy = grid_desc["parent_grid"][cell_index]['py']
+        r_spacing[0] = xi/float(Cx)
+        r_spacing[1] = yi/float(Cy)
+        r_ndims[0] = Cx + 1
+        r_ndims[1] = Cy + 1
         return True
       else:
         return False
     else:
       s = dashed_id.split('-')
       d = None 
+      lc = 2
       for id in s:
         if not d:
           d = grid_desc["parent_grid"][int(id)]['np']
         else:
           d = d[int(id)]['np']
-        if cell_index in d:
+        if cell_index in d and lc == level:
           Cx = d[cell_index]['px']
           Cy = d[cell_index]['py']
           r_spacing[0] = xi/float(Cx)
@@ -368,8 +382,8 @@ def is_2d_cell_refined(level, i, j, cell_index, grid_desc, dashed_id, xi, yi, r_
           r_ndims[0] = Cx + 1
           r_ndims[1] = Cy + 1
           return True
-        else:
-          return False
+        lc += 1
+      return False
      
 def get_cell_size(level, grid_desc, cell_info):
   if "parent_grid" not in grid_desc:
@@ -1017,7 +1031,19 @@ if __name__ == "__main__":
   grid_desc = {}
   read_grid_description_file(gdf, grid_desc)
   gdf.close()
- 
+
+  if "dimension" not in grid_desc:
+    print "Error: grid description file does not have a dimension statement: ", args.sparta_grid_description_file
+    sys.exit(1)
+
+  if "create_box" not in grid_desc:
+    print "Error: grid description file does not have a create_box statement: ", args.sparta_grid_description_file
+    sys.exit(1)
+
+  if "read_grid" not in grid_desc and "create_grid" not in grid_desc:
+    print "Error: grid description file does not have a read_grid or a create_grid statement: ", args.sparta_grid_description_file
+    sys.exit(1)
+
   if "slice" not in grid_desc:
     if os.path.isfile(args.paraview_output_file + '.pvd'):
       print "ParaView output file exists: ", args.paraview_output_file + '.pvd'
