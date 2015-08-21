@@ -17,6 +17,7 @@ identical answers to those in the included log files.
 These are the sample problems in the various sub-directories.  Many
 are 2d problems so that they run quickly and can be easily visualized.
 
+adapt = static and on-the-fly grid adaptation
 ambi = amibpolar approxiation for ionized flow around a cylinder
 axi = axisymmetric flow around a sphere
 chem = chemistry in a 3d box
