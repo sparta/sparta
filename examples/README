@@ -28,6 +28,7 @@ free = free molecular motion in a 3d box
 sphere = 3d flow around a sphere
 spiky = 2d flow around a spiky circle
 step = 2d flow around a staircase of steps
+surf = change surfaces between or during runs
 
 Here is an example of how one of the sample problems can be run and
 visualized:
