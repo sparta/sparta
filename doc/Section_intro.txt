@@ -1,4 +1,4 @@
-<"Previous Section"_Manual.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_start.html :c
+"Previous Section"_Manual.html - "SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc - "Next Section"_Section_start.html :c
 
 :link(sws,http://sparta.sandia.gov)
 :link(sd,Manual.html)

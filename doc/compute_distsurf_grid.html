@@ -53,21 +53,21 @@ length does not matter, just its direction.  Only surface elements
 whose normal is opposed to the vector direction (in a dot product
 sense) are eligible surfaces for the distance calculations.  This can
 be useful to exclude surface elements that are not facing "upwind"
-with respect to the flow direction of the particles.  This is
-accomplished by setting Sx,Sy,Sz to the flow direction.  If Sy,Sy,Sz =
-(0,0,0), which is the default, then no surface elements are excluded.
+with respect to the flow direction of the particles.  I.e.  by setting
+Sx,Sy,Sz to the flow direction.  If Sy,Sy,Sz = (0,0,0), which is the
+default, then no surface elements are excluded by this criterion.
 </P>
 <P>Each grid cell also only considers a subset of eligible surfaces in
 its distance calculations.  A vector from the grid cell center to the
 center of each surface element is calculated.  If that vector is
-opposed to the surface normal vector (in a dot product sense), the
-distance from the grid cell to the surface is calculated.  This means
-that for an individual grid cell, only surface elements that are
-"facing" the grid cell are considered.
+opposed to the normal vector of the surface element (in a dot product
+sense), the distance from the grid cell to the surface is calculated.
+This means that for an individual grid cell, only surface elements
+that are "facing" the grid cell are considered.
 </P>
 <P>The "distance" between a grid cell and a surface element is the
 minimum distance between the two geometric entities.  If the surface
-elemene overlaps with the grid cell, the distance is 0.0.  Otherwise
+element overlaps with the grid cell, the distance is 0.0.  Otherwise
 the distance is the minimum distance between the perimeter of the grid
 cell and the line segment (in 2d) or the perimeter of the triangle (in
 3d).
@@ -82,6 +82,22 @@ grid cells closer to the surface a second time.
 </P>
 <P>NOTE: include pic
 </P>
+<P>Here is an example of how to use this compute with two successive
+"adapt_grid" commands.  The first refines once for grid cells within a
+distance of 0.3 from surface elements facing upwind.  The second
+refines again for grid cells within a distance of 0.1 from the surface
+elements.
+</P>
+<PRE>compute 5 distsurf/grid dir 1 0 0
+adapt_grid refine value c_5 0.3 0.0 thresh less more
+adapt_grid refine value c_5 0.1 0.0 thresh less more 
+</PRE>
+<P>For a 2d simulation of flow around a circle (flow from right to left),
+these commands produce this kind of adapted grid (click for a larger
+image):
+</P>
+<CENTER><A HREF = "JPG/adapt_surf.jpg"><IMG SRC = "JPG/adapt_surf_small.jpg"></A>
+</CENTER>
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid vector whose values are the
