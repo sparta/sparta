@@ -42,7 +42,7 @@ MoveSurf::MoveSurf(SPARTA *sparta) : Pointers(sparta)
   me = comm->me;
   nprocs = comm->nprocs;
 
-  // pselect = 1 if points is moved, else 0
+  // pselect = 1 if point is moved, else 0
 
   memory->create(pselect,surf->npoint,"move_surf:pselect");
 
@@ -64,7 +64,7 @@ MoveSurf::~MoveSurf()
 void MoveSurf::command(int narg, char **arg)
 {
   if (!surf->exist)
-    error->all(FLERR,"Cannot move_surf with no surf elements are defined");
+    error->all(FLERR,"Cannot move_surf with no surf elements defined");
 
   if (narg < 2) error->all(FLERR,"Illegal move_surf command");
 
@@ -98,7 +98,7 @@ void MoveSurf::command(int narg, char **arg)
 
   // move points via chosen action by full amount
 
-  move_points(1.0);
+  move_points(1.0,surf->pts);
 
   // remake list of surf elements I own
   // assign split cell particles to parent split cell
@@ -240,23 +240,23 @@ void MoveSurf::process_args(int narg, char **arg)
    fraction = portion of full distance points should move
 ------------------------------------------------------------------------- */
 
-void MoveSurf::move_points(double fraction)
+void MoveSurf::move_points(double fraction, Surf::Point *origpts)
 {
   if (domain->dimension == 2) {
     if (action == READFILE) {
       readfile();
       update_points(fraction);
     } 
-    else if (action == TRANSLATE) translate_2d(fraction);
-    else if (action == ROTATE) rotate_2d(fraction);
+    else if (action == TRANSLATE) translate_2d(fraction,origpts);
+    else if (action == ROTATE) rotate_2d(fraction,origpts);
     surf->compute_line_normal(0,surf->nline);
   } else {
     if (action == READFILE) {
       readfile();
       update_points(fraction);
     } 
-    else if (action == TRANSLATE) translate_3d(fraction);
-    else if (action == ROTATE) rotate_3d(fraction);
+    else if (action == TRANSLATE) translate_3d(fraction,origpts);
+    else if (action == ROTATE) rotate_3d(fraction,origpts);
     surf->compute_tri_normal(0,surf->ntri);
   }
 
@@ -300,7 +300,7 @@ void MoveSurf::readfile()
       if (strcmp(word,entry) != 0) continue;          // non-matching entry
       if (fgets(line,MAXLINE,fp) == NULL)
 	error->one(FLERR,"Incompete entry in move surf file");
-      word = strtok(line," \t\n\r");                  // npoints value after entry
+      word = strtok(line," \t\n\r");        // npoints value after entry
       nread = input->inumeric(FLERR,word);
     }
   }
@@ -431,7 +431,7 @@ void MoveSurf::update_points(double fraction)
    translate surf points in 2d
 ------------------------------------------------------------------------- */
 
-void MoveSurf::translate_2d(double fraction)
+void MoveSurf::translate_2d(double fraction, Surf::Point *origpts)
 {
   int i,p1,p2;
 
@@ -450,13 +450,13 @@ void MoveSurf::translate_2d(double fraction)
     p1 = lines[i].p1;
     p2 = lines[i].p2;
     if (pselect[p1] == 0) {
-      pts[p1].x[0] += dx;
-      pts[p1].x[1] += dy;
+      pts[p1].x[0] = origpts[p1].x[0] + dx;
+      pts[p1].x[1] = origpts[p1].x[1] + dy;
       pselect[p1] = 1;
     }
     if (pselect[p2] == 0) {
-      pts[p2].x[0] += dx;
-      pts[p2].x[1] += dy;
+      pts[p2].x[0] = origpts[p2].x[0] + dx;
+      pts[p2].x[1] = origpts[p2].x[1] + dy;
       pselect[p2] = 1;
     }
   }
@@ -466,7 +466,7 @@ void MoveSurf::translate_2d(double fraction)
    translate surf points in 3d
 ------------------------------------------------------------------------- */
 
-void MoveSurf::translate_3d(double fraction)
+void MoveSurf::translate_3d(double fraction, Surf::Point *origpts)
 {
   int i,p1,p2,p3;
 
@@ -487,21 +487,21 @@ void MoveSurf::translate_3d(double fraction)
     p2 = tris[i].p2;
     p3 = tris[i].p3;
     if (pselect[p1] == 0) {
-      pts[p1].x[0] += dx;
-      pts[p1].x[1] += dy;
-      pts[p1].x[2] += dz;
+      pts[p1].x[0] = origpts[p1].x[0] + dx;
+      pts[p1].x[1] = origpts[p1].x[1] + dy;
+      pts[p1].x[2] = origpts[p1].x[2] + dz;
       pselect[p1] = 1;
     }
     if (pselect[p2] == 0) {
-      pts[p2].x[0] += dx;
-      pts[p2].x[1] += dy;
-      pts[p2].x[2] += dz;
+      pts[p2].x[0] = origpts[p2].x[0] + dx;
+      pts[p2].x[1] = origpts[p2].x[1] + dy;
+      pts[p2].x[2] = origpts[p2].x[2] + dz;
       pselect[p2] = 1;
     }
     if (pselect[p3] == 0) {
-      pts[p3].x[0] += dx;
-      pts[p3].x[1] += dy;
-      pts[p3].x[2] += dz;
+      pts[p3].x[0] = origpts[p3].x[0] + dx;
+      pts[p3].x[1] = origpts[p3].x[1] + dy;
+      pts[p3].x[2] = origpts[p3].x[2] + dz;
       pselect[p3] = 1;
     }
   }
@@ -511,7 +511,7 @@ void MoveSurf::translate_3d(double fraction)
    rotate surf points in 2d
 ------------------------------------------------------------------------- */
 
-void MoveSurf::rotate_2d(double fraction)
+void MoveSurf::rotate_2d(double fraction, Surf::Point *origpts)
 {
   int i,p1,p2;
   double q[4],d[3],dnew[3];
@@ -534,18 +534,18 @@ void MoveSurf::rotate_2d(double fraction)
     p2 = lines[i].p2;
 
     if (pselect[p1] == 0) {
-      d[0] = pts[p1].x[0] - origin[0];
-      d[1] = pts[p1].x[1] - origin[1];
-      d[2] = pts[p1].x[2] - origin[2];
+      d[0] = origpts[p1].x[0] - origin[0];
+      d[1] = origpts[p1].x[1] - origin[1];
+      d[2] = origpts[p1].x[2] - origin[2];
       MathExtra::matvec(rotmat,d,dnew);
       pts[p1].x[0] = dnew[0] + origin[0];
       pts[p1].x[1] = dnew[1] + origin[1];
       pselect[p1] = 1;
     }
     if (pselect[p2] == 0) {
-      d[0] = pts[p2].x[0] - origin[0];
-      d[1] = pts[p2].x[1] - origin[1];
-      d[2] = pts[p2].x[2] - origin[2];
+      d[0] = origpts[p2].x[0] - origin[0];
+      d[1] = origpts[p2].x[1] - origin[1];
+      d[2] = origpts[p2].x[2] - origin[2];
       MathExtra::matvec(rotmat,d,dnew);
       pts[p2].x[0] = dnew[0] + origin[0];
       pts[p2].x[1] = dnew[1] + origin[1];
@@ -558,7 +558,7 @@ void MoveSurf::rotate_2d(double fraction)
    rotate surf points in 2d
 ------------------------------------------------------------------------- */
 
-void MoveSurf::rotate_3d(double fraction)
+void MoveSurf::rotate_3d(double fraction, Surf::Point *origpts)
 {
   int i,p1,p2,p3;
   double q[4],d[3],dnew[3];
@@ -582,9 +582,9 @@ void MoveSurf::rotate_3d(double fraction)
     p3 = tris[i].p3;
 
     if (pselect[p1] == 0) {
-      d[0] = pts[p1].x[0] - origin[0];
-      d[1] = pts[p1].x[1] - origin[1];
-      d[2] = pts[p1].x[2] - origin[2];
+      d[0] = origpts[p1].x[0] - origin[0];
+      d[1] = origpts[p1].x[1] - origin[1];
+      d[2] = origpts[p1].x[2] - origin[2];
       MathExtra::matvec(rotmat,d,dnew);
       pts[p1].x[0] = dnew[0] + origin[0];
       pts[p1].x[1] = dnew[1] + origin[1];
@@ -592,9 +592,9 @@ void MoveSurf::rotate_3d(double fraction)
       pselect[p1] = 1;
     }
     if (pselect[p2] == 0) {
-      d[0] = pts[p2].x[0] - origin[0];
-      d[1] = pts[p2].x[1] - origin[1];
-      d[2] = pts[p2].x[2] - origin[2];
+      d[0] = origpts[p2].x[0] - origin[0];
+      d[1] = origpts[p2].x[1] - origin[1];
+      d[2] = origpts[p2].x[2] - origin[2];
       MathExtra::matvec(rotmat,d,dnew);
       pts[p2].x[0] = dnew[0] + origin[0];
       pts[p2].x[1] = dnew[1] + origin[1];
@@ -602,9 +602,9 @@ void MoveSurf::rotate_3d(double fraction)
       pselect[p2] = 1;
     }
     if (pselect[p3] == 0) {
-      d[0] = pts[p3].x[0] - origin[0];
-      d[1] = pts[p3].x[1] - origin[1];
-      d[2] = pts[p3].x[2] - origin[2];
+      d[0] = origpts[p3].x[0] - origin[0];
+      d[1] = origpts[p3].x[1] - origin[1];
+      d[2] = origpts[p3].x[2] - origin[2];
       MathExtra::matvec(rotmat,d,dnew);
       pts[p3].x[0] = dnew[0] + origin[0];
       pts[p3].x[1] = dnew[1] + origin[1];
@@ -624,6 +624,7 @@ void MoveSurf::rotate_3d(double fraction)
 
 bigint MoveSurf::remove_particles()
 {
+  dim = domain->dimension;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   Grid::ChildCell *cells = grid->cells;

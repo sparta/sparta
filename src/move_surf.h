@@ -23,6 +23,7 @@ CommandStyle(move_surf,MoveSurf)
 
 #include "stdio.h"
 #include "pointers.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -35,7 +36,7 @@ class MoveSurf : protected Pointers {
   ~MoveSurf();
   void command(int, char **);
   void process_args(int, char **);
-  void move_points(double);
+  void move_points(double, Surf::Point *);
   bigint remove_particles();
 
  private:
@@ -54,10 +55,10 @@ class MoveSurf : protected Pointers {
   
   void readfile();
   void update_points(double);
-  void translate_2d(double);
-  void translate_3d(double);
-  void rotate_2d(double);
-  void rotate_3d(double);
+  void translate_2d(double, Surf::Point *);
+  void translate_3d(double, Surf::Point *);
+  void rotate_2d(double, Surf::Point *);
+  void rotate_3d(double, Surf::Point *);
 };
 
 }

@@ -21,6 +21,7 @@
 #include "grid.h"
 #include "surf.h"
 #include "domain.h"
+#include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
@@ -56,6 +57,9 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
 
   nevery = input->inumeric(FLERR,arg[3]);
   if (nevery < 0) error->all(FLERR,"Illegal fix move/surf command");
+  if (update->ntimestep % nevery) 
+    error->all(FLERR,"Current timestep must be multiple of "
+               "fix move/surf nevery");
 
   nlarge = input->inumeric(FLERR,arg[4]);
   if (nlarge < 0) error->all(FLERR,"Illegal fix move/surf command");
@@ -63,6 +67,15 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Fix move/surf nlarge must be multiple of nevery");
 
   movesurf->process_args(narg-5,&arg[5]);
+
+  ntimestep_original = update->ntimestep;
+
+  // make copy of original points to pass to movesurf->move_points()
+
+  npoint = surf->npoint;
+  Surf::Point *origpts = (Surf::Point *) 
+    memory->smalloc(npoint*sizeof(Surf::Point),"fix/move/surf:origpts");
+  memcpy(origpts,surf->pts,npoint*sizeof(Surf::Point));
 
   // initial output
 
@@ -74,6 +87,7 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
 FixMoveSurf::~FixMoveSurf()
 {
   delete movesurf;
+  memory->sfree(origpts);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -89,31 +103,34 @@ int FixMoveSurf::setmask()
 
 void FixMoveSurf::init()
 {
+  if (surf->npoint != npoint) 
+    error->all(FLERR,"Number of surface points changed in fix move/surf");
+
   // NOTE: first read of file ?
   //       what about on successive run
   //       for both file and trans/rotate
 }
 
 /* ----------------------------------------------------------------------
-   perform grid adaptation via AdaptGrid class
+   move surface points incrementally
 ------------------------------------------------------------------------- */
 
 void FixMoveSurf::end_of_step()
 {
   int dim = domain->dimension;
 
+  // fraction = fraction of Nlarge represented by this timestep
+
+  bigint nelapsed = update->ntimestep - ntimestep_original;
+  double fraction = 1.0*nelapsed / nlarge;
+
   // sort particles
 
   if (particle->exist) particle->sort();
 
-  // move points via chosen action by fractional amount
-  // NOTE: readfile needs to come after move by 1.0 fraction
-  //       ditto for trans,rotate?
-  //       use mode = 0/1
-  
-  int nsteps = update->ntimestep % nlarge;
-  fraction = 1.0*nsteps / nlarge;
-  movesurf->move_points(fraction);
+  // movesurf moves surface vertices
+
+  movesurf->move_points(fraction,origpts);
 
   // remake list of surf elements I own
   // assign split cell particles to parent split cell

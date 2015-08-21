@@ -22,6 +22,7 @@ FixStyle(move/surf,FixMoveSurf)
 #define SPARTA_FIX_MOVE_SURF_H
 
 #include "fix.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -36,11 +37,14 @@ class FixMoveSurf : public Fix {
 
  private:
   int me,nprocs;
-  int nlarge,action;
-  double fraction;
+  int nlarge;
 
+  int npoint;
+  bigint ntimestep_original;
   bigint ndeleted;
   class MoveSurf *movesurf;
+
+  Surf::Point *origpts;
 };
 
 }

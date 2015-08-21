@@ -25,10 +25,6 @@
 #include "memory.h"
 #include "error.h"
 
-
-//DEBUG
-#include "comm.h"
-
 using namespace SPARTA_NS;
 using namespace MathConst;
 
@@ -36,6 +32,7 @@ enum{NONE,COMPUTE,FIX};
 enum{KNONE,KALL,KX,KY,KZ};
 
 #define INVOKED_PER_GRID 16
+#define BIG 1.0e20
 
 /* ---------------------------------------------------------------------- */
 
@@ -312,7 +309,7 @@ void ComputeLambdaGrid::compute_per_grid()
   double lambda;
 
   for (int i = 0; i < nglocal; i++) {
-    if (nrho[i] == 0.0) lambda = 0.0;
+    if (nrho[i] == 0.0) lambda = BIG;
     else if (tempwhich == NONE || temp[i] == 0.0)
       lambda = 1.0 / (prefactor * nrho[i]);
     else 
