@@ -94,6 +94,9 @@ The {temp} argument can also be specified as NULL, which drops the
 the reference species defines omega = 1/2.  In that case, the {temp}
 argument is ignored, whether it is NULL or not.
 
+Note that if the value of {n} is 0.0 for a grid cell, its
+mean-free-path will be set to 1.0e20 (infinite length).
+
 The "compute_grid"_compute_grid.html command can calculate a number
 density, using its {nrho} value.  It can also calculate a temperature
 using its {temp} value.  Note that this temperature is inferred from
