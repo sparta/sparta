@@ -190,7 +190,12 @@ simulation, which includes unsplit, split, and sub cells.  <A HREF = "Section_ho
 4.8</A> of the manual gives details of how
 SPARTA defines child, unsplit, split, and sub cells.
 </P>
-<P><B>Restrictions:</B> none
+<P><B>Restrictions:</B>
+</P>
+<P>If performing on-the-fly grid adaptation every N timesteps, using the
+<A HREF = "fix_adapt.html">fix adapt</A> command, this fix cannot time-average
+across time windows > N steps, since the grid may change.  This means
+<I>Nfreq</I> cannot be > N, and keyword <I>ave</I> = <I>running</I> is not allowed.
 </P>
 <P><B>Related commands:</B>
 </P>

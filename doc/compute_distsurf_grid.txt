@@ -18,7 +18,7 @@ surfID = group ID for which surface elements to consider :l
 zero or more keyword/args pairs may be appended :l
 keyword = {dir} :l
   {dir} args = Sx Sy Sz
-    Sx,Sy,Sz = vector components used to test surf elements :pre
+    Sx,Sy,Sz = direction vector used to test surf elements :pre
 :ule
 
 [Examples:]
@@ -96,4 +96,7 @@ The per-grid array values for the vector will be in distance
 
 "adapt_grid"_adapt_grid.html
 
-[Default:] none
+[Default:]
+
+The keyword default is dir = 0,0,0.
+

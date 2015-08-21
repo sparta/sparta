@@ -36,8 +36,8 @@ also been deleted.  In either case, surface points and elements are
 renumbered by these operations to create compressed, contiguous lists.
 These lists are what is output by this command.
 
-The file is written in as text file in the same format as the
-"read_surf"_read_surf.html command raeds.
+The file is written as a text file in the same format as the
+"read_surf"_read_surf.html command reads in.
 
 [Restrictions:] none
 
