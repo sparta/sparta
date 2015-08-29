@@ -157,6 +157,7 @@ variable rho index 1.0e18 4.0e18 1.0e19 4.0e19 1.0e20 4.0e20 1.0e21 4.0e21
 log log.$a
 read data.grid
 global nrho ${rho}
+...
 compute myGrid grid all n temp
 dump 1 all grid 1000 dump.$a id c_myGrid
 run 100000

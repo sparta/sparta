@@ -33,7 +33,7 @@ keyword = {ave}
 
 [Examples:]
 
-fix 1 all ave/surf 1 100 100 standard ave running
+fix 1 all ave/surf 1 100 100 c_surf ave running
 fix 1 all ave/surf 10 20 1000 c_mine :pre
 
 [Description:]

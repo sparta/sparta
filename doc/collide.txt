@@ -26,8 +26,8 @@ keyword = {relax} :l
 [Examples:]
 
 collide none
-collide vss all.vss background
-collide vss all.vss background relax variable :pre
+collide vss all ../data/air.vss
+collide vss species all.vss relax variable :pre
 
 [Description:]
 

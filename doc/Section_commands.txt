@@ -412,5 +412,5 @@ See the "surf_collide"_surf_collide.html command for one-line
 descriptions of each style or click on the style itself for a full
 description:
 
-"diffuse"_surf_collide_diffuse.html,
-"specular"_surf_collide_specular.html :tb(c=2,ea=c)
+"diffuse"_surf_collide.html,
+"specular"_surf_collide.html :tb(c=2,ea=c)
