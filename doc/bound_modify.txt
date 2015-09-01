@@ -23,8 +23,8 @@ keywords = {collide} or {react}
 
 [Examples:]
 
-bound_modify yhi surf 1 react 2
-bound_modify zlo zhi surf hotwall :pre
+bound_modify yhi collide 1 react 2
+bound_modify zlo zhi collide hotwall :pre
 
 [Description:]
 
