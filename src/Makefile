@@ -35,6 +35,8 @@ help:
 # Build the code
 
 .DEFAULT:
+	@if [ $@ = "serial" -a ! -f STUBS/libmpi_stubs.a ]; \
+	  then $(MAKE) mpi-stubs; fi
 	@test -f MAKE/Makefile.$@
 	@if [ ! -d Obj_$@ ]; then mkdir Obj_$@; fi
 	@$(SHELL) Make.sh style
