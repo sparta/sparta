@@ -3,8 +3,8 @@
 # Script:  logplot.py
 # Purpose: use GnuPlot to plot two columns from a SPARTA log file
 # Author:  Steve Plimpton (Sandia), sjplimp at sandia.gov
-# Syntax:  logplot.py log.sparta X Y
-#          log.sparta = SPARTA log file
+# Syntax:  logplot.py logfile X Y
+#          logfile = SPARTA log file
 #          X,Y = plot Y versus X where X,Y are stats keywords
 #          once plot appears, you are in Python interpreter, type C-D to exit
 
@@ -15,7 +15,7 @@ from olog import olog
 from gnu import gnu
 
 if len(sys.argv) != 4:
-  raise StandardError, "Syntax: logplot.py log.sparta X Y"
+  raise StandardError, "Syntax: logplot.py logfile X Y"
 
 logfile = sys.argv[1]
 xlabel = sys.argv[2]
