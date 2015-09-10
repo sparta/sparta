@@ -47,7 +47,7 @@ stats_style         step cpu np nattempt ncoll nsreact c_temp &
                     c_10[6] c_10[7] c_10[8] c_10[9] c_10[10] c_10[11]
 
 #dump                2 image all 50 image.*.ppm type type &
-#                    surf proc 0.01 size 512 512 axes yes 0.9 0.02
+#                    surf proc 0.01 size 512 512 zoom 1.75
 #dump_modify	    2 pad 4 pdiam 6*10 0.2 pdiam 1*5 0.01
 
 stats               100
