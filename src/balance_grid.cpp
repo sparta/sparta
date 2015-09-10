@@ -53,7 +53,7 @@ void BalanceGrid::command(int narg, char **arg)
 
   int bstyle,order;
   int px,py,pz;
-  int rcbwt;
+  int rcbwt,rcbflip;
 
   if (strcmp(arg[0],"none") == 0) {
     if (narg != 1) error->all(FLERR,"Illegal balance_grid command");
@@ -100,11 +100,19 @@ void BalanceGrid::command(int narg, char **arg)
     bstyle = PROC;
 
   } else if (strcmp(arg[0],"rcb") == 0) {
-    if (narg != 2) error->all(FLERR,"Illegal balance_grid command");
+    if (narg != 2 && narg != 3) 
+      error->all(FLERR,"Illegal balance_grid command");
     bstyle = BISECTION;
     if (strcmp(arg[1],"cell") == 0) rcbwt = CELL;
     else if (strcmp(arg[1],"part") == 0) rcbwt = PARTICLE;
     else error->all(FLERR,"Illegal balance_grid command");
+    // undocumented optional 3rd arg
+    // rcbflip = 3rd arg = 1 forces rcb->compute() to flip sign
+    //           of all grid cell "dots" to force totally different
+    //           assignment of grid cells to procs and induce
+    //           complete rebalance data migration
+    rcbflip = 0;
+    if (narg == 3) rcbflip = atoi(arg[2]);
 
   } else error->all(FLERR,"Illegal balance_grid command");
 
@@ -280,7 +288,7 @@ void BalanceGrid::command(int narg, char **arg)
       }
     }
 
-    rcb->compute(nbalance,x,wt);
+    rcb->compute(nbalance,x,wt,rcbflip);
 
     // DEBUG info for dump image
 

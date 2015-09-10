@@ -28,7 +28,7 @@ SHLIBFLAGS =	-shared
 # LAMMPS ifdef settings, OPTIONAL
 # see possible settings in doc/Section_start.html#2_2 (step 4)
 
-SPARTA_INC =	-DSPARTA_GZIP
+SPARTA_INC =	-DSPARTA_GZIP -DSPARTA_UNORDERED_MAP -DSPARTA_JPEG
 
 # MPI library, REQUIRED
 # see discussion in doc/Section_start.html#2_2 (step 5)
@@ -50,7 +50,7 @@ MPI_LIB =	-lmpi_stubs
 
 JPG_INC =       
 JPG_PATH = 	
-JPG_LIB =	
+JPG_LIB =	-ljpeg
 
 # ---------------------------------------------------------------------
 # build rules and dependencies

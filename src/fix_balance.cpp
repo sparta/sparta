@@ -126,9 +126,6 @@ void FixBalance::end_of_step()
   // DEBUG
   //if (update->ntimestep >= 600) return;
 
-
-
-
   // return if imbalance < threshhold
 
   imbnow = imbalance_nlocal(maxperproc);
