@@ -27,7 +27,7 @@ fix		    in emit/face air xlo
 timestep 	    0.0001
 
 #dump                2 image all 50 image.*.ppm type type pdiam 0.1 &
-#                        surf proc 0.01 size 512 512 axes yes 0.9 0.02
+#                    surf proc 0.01 size 512 512 zoom 1.75
 #dump_modify	    2 pad 4
  
 stats		    100
