@@ -31,28 +31,28 @@ fix		    foo grid/check 1 error
 timestep 	    0.0001
 
 #dump                2 image all 100 image.*.ppm type type pdiam 0.04 &
-#                    surf one 0.01 size 1024 1024 axes yes 0.9 0.02 &
-#                    gline yes 0.005 axes no 0.0 0.0
-#dump_modify	    2 pad 6 scolor * white glinecolor white
+#                    surf one 0.01 size 1024 1024 &
+#                    gline yes 0.005 zoom 1.75
+#dump_modify	    2 pad 5 scolor * white glinecolor white
 
-#dump                3 image all 100 image2.*.ppm type type pdiam 0.02 &
-#                    surf one 0.01 size 1024 1024 axes yes 0.9 0.02 &
-#                    gline yes 0.005 axes no 0.0 0.0 grid proc
-#dump_modify	    3 pad 6 scolor * white glinecolor white
+#dump                3 image all 100 image2.*.jpg type type pdiam 0.02 &
+#                    surf one 0.01 size 1024 1024 zoom 1.75 &
+#                    gline yes 0.005 grid proc
+#dump_modify	    3 pad 5 scolor * white glinecolor white
  
 stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck
-run 		    500
+run 		    400
 
 fix                 2 adapt 100 refine coarsen particle 100 80
 fix                 5 balance 200 1.1 rcb cell
 
-fix                 10 move/surf 1 100 2000 trans 0 -0.9 0
-fix                 11 move/surf 2 100 2000 trans 0 0.9 0
+fix                 10 move/surf 1 200 10000 trans 0 -0.9 0
+fix                 11 move/surf 2 200 10000 trans 0 0.9 0
 
-run 		    2000
+run 		    10000
 
 unfix               10
 unfix               11
 
-run 		    1000
+run 		    2000
