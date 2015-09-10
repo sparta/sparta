@@ -106,7 +106,7 @@ RCB::~RCB()
    perform RCB balancing
 ------------------------------------------------------------------------- */
 
-void RCB::compute(int n, double **x, double *wt)
+void RCB::compute(int n, double **x, double *wt, int flip)
 {
   int i,j,k;
   int keep,outgoing,incoming,incoming2;
@@ -132,12 +132,22 @@ void RCB::compute(int n, double **x, double *wt)
     dots = (Dot *) memory->smalloc(ndot*sizeof(Dot),"RCB:dots");
   }
 
-  for (i = 0; i < ndot; i++) {
-    dots[i].x[0] = x[i][0];
-    dots[i].x[1] = x[i][1];
-    dots[i].x[2] = x[i][2];
-    dots[i].proc = me;
-    dots[i].index = i;
+  if (flip == 0) {
+    for (i = 0; i < ndot; i++) {
+      dots[i].x[0] = x[i][0];
+      dots[i].x[1] = x[i][1];
+      dots[i].x[2] = x[i][2];
+      dots[i].proc = me;
+      dots[i].index = i;
+    }
+  } else {
+    for (i = 0; i < ndot; i++) {
+      dots[i].x[0] = -x[i][0];
+      dots[i].x[1] = -x[i][1];
+      dots[i].x[2] = -x[i][2];
+      dots[i].proc = me;
+      dots[i].index = i;
+    }
   }
 
   if (wt)
