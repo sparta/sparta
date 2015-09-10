@@ -1,4 +1,4 @@
-# openmpi = Linux box, g++, OpenMPI via explicit path
+# chama_big = mpic++, OpenMPI (with default modules), BIGBIG setting
 
 SHELL = /bin/sh
 
@@ -6,18 +6,18 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
-CC =		g++
-CCFLAGS =	-g -O # -Wunused
+CC =		mpic++
+CCFLAGS =	-O2 -xsse4.2 -funroll-loops -fstrict-aliasing
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
-LINK =		g++
-LINKFLAGS =	-g -O
-LIB = 
+LINK =		mpic++
+LINKFLAGS =	-O -xsse4.2 
+LIB =           -lstdc++
 SIZE =		size
 
 ARCHIVE =	ar
-ARFLAGS =	-rc
+ARFLAGS =	-rcsv
 SHLIBFLAGS =	-shared
 
 # ---------------------------------------------------------------------
@@ -28,7 +28,7 @@ SHLIBFLAGS =	-shared
 # SPARTA ifdef settings, OPTIONAL
 # see possible settings in doc/Section_start.html#2_2 (step 4)
 
-SPARTA_INC =	-DSPARTA_GZIP -DSPARTA_JPEG
+SPARTA_INC =	-DSPARTA_GZIP -DSPARTA_BIGBIG
 
 # MPI library, REQUIRED
 # see discussion in doc/Section_start.html#2_2 (step 5)
@@ -37,9 +37,9 @@ SPARTA_INC =	-DSPARTA_GZIP -DSPARTA_JPEG
 # PATH = path for MPI library
 # LIB = name of MPI library
 
-MPI_INC =       -I/usr/local/openmpi/include
-MPI_PATH =      -L/usr/local/openmpi/lib
-MPI_LIB =	-lmpi -lmpi_cxx
+MPI_INC =       
+MPI_PATH = 
+MPI_LIB =	
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)
@@ -50,7 +50,7 @@ MPI_LIB =	-lmpi -lmpi_cxx
 
 JPG_INC =       
 JPG_PATH = 	
-JPG_LIB =	-ljpeg
+JPG_LIB =	
 
 # ---------------------------------------------------------------------
 # build rules and dependencies
@@ -91,4 +91,4 @@ shlib:	$(OBJ)
 # Individual dependencies
 
 DEPENDS = $(OBJ:.o=.d)
-include $(DEPENDS)
+sinclude $(DEPENDS)

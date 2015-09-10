@@ -1,4 +1,4 @@
-# chama - mpic++, openmpi
+# chama = mpic++, OpenMPI (with default modules)
 
 SHELL = /bin/sh
 

@@ -1,4 +1,4 @@
-# serial = RedHat Linux box, g++4, no MPI
+# serial = Linux box, g++, serial (no MPI)
 
 SHELL = /bin/sh
 

@@ -1,4 +1,4 @@
-# icc = RedHat Linux box, Intel icc, MPICH2
+# icc = Linux box, Intel icc compiler, MPICH2
 
 SHELL = /bin/sh
 

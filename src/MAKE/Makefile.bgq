@@ -1,4 +1,4 @@
-# bgq = BlueGene Q, GNU compiler
+# bgq = BlueGene Q, mpicxx (typically GNU compiler)
 
 SHELL = /bin/sh
 

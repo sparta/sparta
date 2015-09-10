@@ -1,4 +1,4 @@
-# openmpi = Linux box, g++, OpenMPI via explicit path
+# wsv = x86_64-suse-linux, g++, OpenMPI
 
 SHELL = /bin/sh
 
@@ -6,12 +6,12 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
-CC =		g++
+CC =		mpic++
 CCFLAGS =	-g -O # -Wunused
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
-LINK =		g++
+LINK =		mpic++
 LINKFLAGS =	-g -O
 LIB = 
 SIZE =		size
@@ -37,9 +37,9 @@ SPARTA_INC =	-DSPARTA_GZIP -DSPARTA_JPEG
 # PATH = path for MPI library
 # LIB = name of MPI library
 
-MPI_INC =       -I/usr/local/openmpi/include
-MPI_PATH =      -L/usr/local/openmpi/lib
-MPI_LIB =	-lmpi -lmpi_cxx
+MPI_INC =
+MPI_PATH =
+MPI_LIB =
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)
@@ -91,4 +91,4 @@ shlib:	$(OBJ)
 # Individual dependencies
 
 DEPENDS = $(OBJ:.o=.d)
-include $(DEPENDS)
+sinclude $(DEPENDS)
