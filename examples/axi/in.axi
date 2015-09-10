@@ -25,8 +25,6 @@ read_surf           data.circle origin 5 5 0 &
 surf_collide	    1 specular
 surf_modify         all collide 1
 
-#create_particles    air n 100000
-
 timestep 	    1e-6
 
 #dump                2 image all 50 image.*.ppm type type pdiam 0.002 &
