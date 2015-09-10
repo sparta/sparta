@@ -28,12 +28,12 @@ fix		    foo grid/check 1 error
 timestep 	    0.0001
 
 #dump                2 image all 100 image.*.ppm type type pdiam 0.04 &
-#                    surf one 0.01 size 1024 1024 &
+#                    surf one 0.01 size 512 512 &
 #                    gline yes 0.005 zoom 1.75
 #dump_modify	    2 pad 5 scolor * white glinecolor white
  
 #dump                3 image all 100 image2.*.ppm type type pdiam 0.02 &
-#                    surf one 0.01 size 1024 1024 &
+#                    surf one 0.01 size 512 512 &
 #                    gline yes 0.005 zoom 1.75 grid proc
 #dump_modify	    3 pad 5 scolor * white glinecolor white
  
