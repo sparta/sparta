@@ -392,7 +392,6 @@ void FixEmitFace::perform_task()
   Particle::OnePart *p;
 
   dt = update->dt;
-  Grid::ChildCell *cells = grid->cells;
   int *species = particle->mixture[imix]->species;
 
   // insert particles for each task = cell/face pair
