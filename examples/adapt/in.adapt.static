@@ -1,4 +1,4 @@
-# 2d flow around a circle
+# 2d flow around set of circles
 
 seed	    	    12345
 dimension   	    2
@@ -15,11 +15,22 @@ global		    nrho 1.0 fnum 0.001
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
 
+# 7 circles, 4 above, 3 below
+
+read_surf           data.circle origin 5 5 0 trans 1.0 0.5 0.0 &
+                    scale 0.33 0.33 1 group 1
 read_surf           data.circle origin 5 5 0 trans -1.0 1.5 0.0 &
                     scale 0.33 0.33 1 group 1
-read_surf           data.circle origin 5 5 0 trans -1.5 -1.5 0.0 &
+read_surf           data.circle origin 5 5 0 trans 1.0 2.5 0.0 &
+                    scale 0.33 0.33 1 group 1
+read_surf           data.circle origin 5 5 0 trans -1.0 3.5 0.0 &
+                    scale 0.33 0.33 1 group 1
+
+read_surf           data.circle origin 5 5 0 trans -1.5 -1.8 0.0 &
                     scale 0.33 0.33 1 group 2
-read_surf           data.circle origin 5 5 0 trans 1.0 0.5 0.0 &
+read_surf           data.circle origin 5 5 0 trans 0.5 -2.8 0.0 &
+                    scale 0.33 0.33 1 group 2
+read_surf           data.circle origin 5 5 0 trans -1.5 -3.8 0.0 &
                     scale 0.33 0.33 1 group 1
 
 surf_collide	    1 diffuse 300.0 0.0
@@ -54,5 +65,5 @@ run 		    2000
 unfix               2
 unfix               5
 
-run                 2000
+run                 3000
 
