@@ -216,7 +216,7 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
           } while (random->uniform() < react_prob);
             
           ilevel = static_cast<int> 
-            (abs(fabs(r->coeff[4]))/(update->boltz*species[isp].vibtemp));
+            (fabs(fabs(r->coeff[4]))/(update->boltz*species[isp].vibtemp));
           if (iv >= ilevel) react_prob = 1.0;
         }
 

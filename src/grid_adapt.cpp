@@ -144,7 +144,7 @@ void Grid::refine_cell(int icell, int iparent,
     
     ichild = id_find_child(iparent,p->x);
     if (ichild < 0) {
-      printf("BAD CHILD %d: %d %ld %d %ld: %d\n",
+      printf("BAD CHILD %d: %d " CELLINT_FORMAT " %d " CELLINT_FORMAT ": %d\n",
              me,icell,cells[icell].id,iparent,pcells[iparent].id,ichild);
       error->one(FLERR,"Adapt particle remap indexed bad child cell");
     }
@@ -248,9 +248,9 @@ void Grid::coarsen_cell(int iparent, int nchild,
     csurfs->vgot(nsurf);
     
     surf2grid_one(1,inew,-1,nsurf,cut3d,cut2d);
-    cells = cells;
-    cinfo = cinfo;
-    sinfo = sinfo;
+    //cells = cells;
+    //cinfo = cinfo;
+    //sinfo = sinfo;
     
     // update any per grid fixes for newly created sub cells
       
