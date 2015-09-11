@@ -226,6 +226,8 @@ void BalanceGrid::command(int narg, char **arg)
   } else if (bstyle == RANDOM) {
     int newproc;
     RanPark *random = new RanPark(update->ranmaster->uniform());
+    double seed = update->ranmaster->uniform();
+    random->reset(seed,comm->me,100);
 
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
