@@ -117,8 +117,6 @@ void FixMoveSurf::init()
 
 void FixMoveSurf::end_of_step()
 {
-  int dim = domain->dimension;
-
   // fraction = fraction of Nlarge represented by this timestep
 
   bigint nelapsed = update->ntimestep - ntimestep_original;

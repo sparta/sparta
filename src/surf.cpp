@@ -445,7 +445,6 @@ void Surf::check_watertight_2d(int npoint_old, int nline_old)
 
 void Surf::check_watertight_3d(int npoint_old, int ntri_old)
 {
-  int npoint_new = npoint - npoint_old;
   int ntri_new = ntri - ntri_old;
 
   // hash directed edges of all triangles
