@@ -28,8 +28,7 @@ surf_modify         all collide 1
 timestep 	    1e-6
 
 #dump                2 image all 50 image.*.ppm type type pdiam 0.002 &
-#                    surf proc 0.0 &
-#		    size 512 512 particle yes &
+#	            size 512 512 particle yes &
 #                    gline yes 0.01 &
 #                    surf proc 0.02 zoom 3.5
 #dump_modify	    2 pad 4 
