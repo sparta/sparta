@@ -21,6 +21,7 @@ arg1,arg2,... = list of keywords :ulb,l
                       nreact, nreactave, nsreact, nsreactave,
 		      vol, lx, ly, lz,
 		      xlo, xhi, ylo, yhi, zlo, zhi,
+		      s_ID\[I\], r_ID\[I\],
 		      c_ID, c_ID\[I\], c_ID\[I\]\[J\],
                       f_ID, f_ID\[I\], f_ID\[I\]\[J\],
                       v_name :pre
@@ -47,6 +48,8 @@ arg1,arg2,... = list of keywords :ulb,l
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
+      s_ID\[I\] = Ith component of global vector calculated by a surface collision model with ID
+      r_ID\[I\] = Ith component of global vector calculated by a surface reaction model with ID
       c_ID = global scalar value calculated by a compute with ID
       c_ID\[I\] = Ith component of global vector calculated by a compute with ID
       c_ID\[I\]\[J\] = I,J component of global array calculated by a compute with ID
@@ -116,7 +119,7 @@ The {npave}, {ntouchave}, {ncommave}, {nboundave}, {nexitave},
 {nscollave}, {nscheckave}, {ncollave}, {nattemptave}, {nreactave}, and
 {nsreactave} keywords all generate values that are the cummulative
 total of the corresponding count divided by {elapsed} = the number of
-timesteps since the start of the run.
+timesteps since the start of the current run.
 
 The {np} keyword is the number of particles.
 
@@ -164,21 +167,29 @@ boundaries of the simulation box.
 
 :line
 
+For the following keywords, the ID in the keyword should be replaced
+by the actual ID of a surface collision model, surface reaction model,
+compute, fix, or variable name that has been defined elsewhere in the
+input script.  See those commands for details.  If the entity
+calculates a global scalar, vector, or array, then the keyword formats
+with 0, 1, or 2 brackets will reference a scalar value from the
+entity.
+
+The {s_ID\[I\]} and {r_ID\[I\]} keywords allow global values
+calculated by a surface collision model or surface reaction model to
+be output.  As discussed on the "surf_collide"_surf_collide.html and
+surf_react"_surf_react.html doc pages, these models both calculate a
+global vector of quantities.
+ 
 The {c_ID} and {c_ID\[I\]} and {c_ID\[I\]\[J\]} keywords allow global
 values calculated by a compute to be output.  As discussed on the
-"compute"_compute.html doc page, computes can calculate global,
+ "compute"_compute.html doc page, computes can calculate global,
 per-particle, per-grid, or per-surf values.  Only global values can be
 referenced by this command.  However, per-particle, per-grid, or
 per-surf compute values can be referenced in a
-"variable"_variable.html and the variable referenced, as discussed
+ "variable"_variable.html and the variable referenced, as discussed
 below.
-
-The ID in the keyword should be replaced by the actual ID of a compute
-that has been defined elsewhere in the input script.  See the
-"compute"_compute.html command for details.  If the compute calculates
-a global scalar, vector, or array, then the keyword formats with 0, 1,
-or 2 brackets will reference a scalar value from the compute.
-
+ 
 The {f_ID} and {f_ID\[I\]} and {f_ID\[I\]\[J\]} keywords allow global
 values calculated by a fix to be output.  As discussed on the
 "fix"_fix.html doc page, fixes can calculate global, per-particle,
@@ -186,12 +197,6 @@ per-grid, or per-surf values.  Only global values can be referenced by
 this command.  However, per-particle or per-grid or per-surf fix
 values can be referenced in a "variable"_variable.html and the
 variable referenced, as discussed below.
-
-The ID in the keyword should be replaced by the actual ID of a fix
-that has been defined elsewhere in the input script.  See the
-"fix"_fix.html command for details.  If the fix calculates a global
-scalar, vector, or array, then the keyword formats with 0, 1, or 2
-brackets will reference a scalar value from the fix.
 
 The {v_name} keyword allow the current value of a variable to be
 output.  The name in the keyword should be replaced by the variable

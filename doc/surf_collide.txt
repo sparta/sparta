@@ -13,13 +13,14 @@ surf_collide command :h3
 surf_collide ID style args keyword values ... :pre
 
 ID = user-assigned name for the surface collision model :ulb,l
-style = {specular} or {diffuse} :l
+style = {specular} or {diffuse} or {vanish} :l
 args = arguments for specific style :l
   {specular} args = none
   {diffuse} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
-    acc = accommodation coefficient :pre
+    acc = accommodation coefficient
+  {vanish} args = none :pre
 zero or more keyword/arg pairs may be appended :l
 keyword = {translate} or {rotate} :l
 values = values for specific keyword :l
@@ -89,6 +90,22 @@ time.  Thus it is easy to specify a time-dependent temperature.
 
 :line
 
+The {vanish} style simply deletes any particle which hits the surface.
+
+This is useful if a surface is defined to be an inflow boundary on the
+simulation domain, e.g. using the "fix emit/surf"_fix_emit_surf.html
+command.  Using this surface collision model will also treat the
+surface as an outflow boundary.  This is similar to using the "fix
+emit/face"_fix_emit_face.html command on a simulation box face while
+also setting the face to be an outflow boundary via the "boundary
+o"_boundary.html command.
+
+Note that the "surf_react global"_surf_react.html command can also be
+used to delete particles hitting a surface, by setting the {pdelete}
+parameter to 1.0.  Using a surf_collide vanish command is simpler.
+
+:line
+
 The keyword {translate} can only be applied to the {diffuse} style.
 It models the surface as if it were translating with a constant
 velocity, specified by the vector (Vx,Vy,Vz).  This velocity is added
@@ -123,6 +140,23 @@ rotation produces a tangential velocity.  However if does enforce the
 condition by subtracting off any component of the added velocity that
 is normal to the simulation box boundary or individual surface
 element.
+
+:line
+
+[Output info:]
+
+All the surface collide models calculate a global vector of length 2.
+The values can be used by the "stats_style"_stats_style.html command
+and by "variables"_variable.html that define formulas.  The latter
+means they can be used by any command that uses a variable as input,
+e.g. "the "fix ave/time"_fix_ave_time.html command.  See "Section
+4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+options.
+
+The first element of the vector is the count of particles that hit
+surface elements assigned to this collision model during the current
+timestep.  The second element is the cummulative count of particles
+that have hit surface elements since the current run began.
 
 :line
 

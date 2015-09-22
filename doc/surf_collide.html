@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the surface collision model 
 
-<LI>style = <I>specular</I> or <I>diffuse</I> 
+<LI>style = <I>specular</I> or <I>diffuse</I> or <I>vanish</I> 
 
 <LI>args = arguments for specific style 
 
@@ -25,7 +25,8 @@
   <I>diffuse</I> args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
-    acc = accommodation coefficient 
+    acc = accommodation coefficient
+  <I>vanish</I> args = none 
 </PRE>
 <LI>zero or more keyword/arg pairs may be appended 
 
@@ -100,6 +101,22 @@ time.  Thus it is easy to specify a time-dependent temperature.
 </P>
 <HR>
 
+<P>The <I>vanish</I> style simply deletes any particle which hits the surface.
+</P>
+<P>This is useful if a surface is defined to be an inflow boundary on the
+simulation domain, e.g. using the <A HREF = "fix_emit_surf.html">fix emit/surf</A>
+command.  Using this surface collision model will also treat the
+surface as an outflow boundary.  This is similar to using the <A HREF = "fix_emit_face.html">fix
+emit/face</A> command on a simulation box face while
+also setting the face to be an outflow boundary via the <A HREF = "boundary.html">boundary
+o</A> command.
+</P>
+<P>Note that the <A HREF = "surf_react.html">surf_react global</A> command can also be
+used to delete particles hitting a surface, by setting the <I>pdelete</I>
+parameter to 1.0.  Using a surf_collide vanish command is simpler.
+</P>
+<HR>
+
 <P>The keyword <I>translate</I> can only be applied to the <I>diffuse</I> style.
 It models the surface as if it were translating with a constant
 velocity, specified by the vector (Vx,Vy,Vz).  This velocity is added
@@ -134,6 +151,23 @@ rotation produces a tangential velocity.  However if does enforce the
 condition by subtracting off any component of the added velocity that
 is normal to the simulation box boundary or individual surface
 element.
+</P>
+<HR>
+
+<P><B>Output info:</B>
+</P>
+<P>All the surface collide models calculate a global vector of length 2.
+The values can be used by the <A HREF = "stats_style.html">stats_style</A> command
+and by <A HREF = "variable.html">variables</A> that define formulas.  The latter
+means they can be used by any command that uses a variable as input,
+e.g. "the <A HREF = "fix_ave_time.html">fix ave/time</A> command.  See <A HREF = "Section_howto.html#howto_4">Section
+4.4</A> for an overview of SPARTA output
+options.
+</P>
+<P>The first element of the vector is the count of particles that hit
+surface elements assigned to this collision model during the current
+timestep.  The second element is the cummulative count of particles
+that have hit surface elements since the current run began.
 </P>
 <HR>
 

@@ -42,10 +42,9 @@ grid cell to any surface element.  This is useful for grid adaptation;
 the <A HREF = "adapt_grid.html">adapt_grid</A> command can use the compute as a
 criterion for refining or coarsening individual grid cells.
 </P>
-<P>The set of surface elements considered is determined in the following
-manner.  Only surface elements in the specified <I>surfID</I> group are
-included.  Surface groups can be deinfed by the <A HREF = "group.html">group
-surf</A> command.
+<P>Only surface elements in the specified <I>surfID</I> group are included in
+the distance calculations.  Surface groups can be defined by the
+<A HREF = "group.html">group surf</A> command.
 </P>
 <P>If the <I>dir</I> keyword is specified it can exclude additional surface
 elements.  The Sx,Sy,Sz settings are components of a vector.  It's
@@ -98,6 +97,8 @@ image):
 </P>
 <CENTER><A HREF = "JPG/adapt_surf.jpg"><IMG SRC = "JPG/adapt_surf_small.jpg"></A>
 </CENTER>
+<HR>
+
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid vector whose values are the

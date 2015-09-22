@@ -53,6 +53,8 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
     particle vector = mass, type, x, y, z, vx, vy, vz
     compute references = c_ID, c_ID\[i\], c_ID\[i\]\[j\]
     fix references = f_ID, f_ID\[i\], f_ID\[i\]\[j\]
+    surface collision model references = s_ID\[i\]
+    surface reaction model references = r_ID\[i\]
     variable references = v_name :pre
 :ule
 
@@ -318,6 +320,8 @@ Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
 Particle vectors: mass, type, x, y, z, vx, vy, vz
 Compute references: c_ID, c_ID\[i\], c_ID\[i\]\[j\]
 Fix references: f_ID, f_ID\[i\], f_ID\[i\]\[j\]
+Surface collision model references = s_ID\[i\]
+Surface reaction model references = r_ID\[i\]
 Other variables: v_name :tb(s=:)
 
 :line
@@ -654,6 +658,22 @@ If a variable attempts to access the fix on non-allowed timesteps, an
 error is generated.  For example, the "fix ave/time"_fix_ave_time.html
 command may only generate averaged quantities every 100 steps.  See
 the doc pages for individual fix commands for details.
+
+:line
+
+Surface collision and surface reation model References :h4
+
+These references access quantities calculated by a
+"surf_collide"_surf_collide.html or surf_react"_surf_react.html
+command.  The ID in the reference should be replaced by the ID of a
+surface collision or surface reaction model defined elsewhere in the
+input script.  As discussed in the doc pages for the
+"surf_collide"_surf_collide.html and "surf_react"_surf_react.html
+commands, these commmands produce global vectors, the elements of
+which can be accessed by equal-style or particle-style variables, e.g.
+
+s_ID\[I\]: Ith element of global vector for a surface collision model
+r_ID\[I\]: Ith element of global vector for a surface reaction model :tb(s=:)
 
 :line
 

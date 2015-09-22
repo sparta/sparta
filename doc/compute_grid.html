@@ -23,11 +23,12 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>nrho</I> or <I>mass</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> 
+<LI>value = <I>n</I> or <I>nrho</I> or <I>mass</I> or <I>massrho</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> 
 
 <PRE>  <I>n</I> = particle count
   <I>nrho</I> = number density
   <I>mass</I> = mass
+  <I>massrho</I> = mass density
   <I>u</I> = x component of velocity
   <I>v</I> = y component of velocity
   <I>w</I> = z component of velocity
@@ -58,10 +59,10 @@ dump 1 grid all 1000 tmp.grid id f_1
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each grid
-cell, based on the particles in the cell.  The values are summed for
-each group of species in the specified mixture.  See the
-<A HREF = "mixture.html">mixture</A> command for how a set of species can be
-partitioned into groups.
+cell, based on the particles in the cell.  The values are tallied
+separately for each group of species in the specified mixture, as
+described in the Ouput section below.  See the <A HREF = "mixture.html">mixture</A>
+command for how a set of species can be partitioned into groups.
 </P>
 <P>The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
@@ -70,18 +71,18 @@ different ways.  The values for a single timestep can be output by the
 <P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix
 ave/grid</A> command.  It does its averaging as if the
 particles in the cell at each sampling timestep were combined together
-into one large set to compute the formulas below.  The answer is then
-divided by the number of sampling timesteps if it is not otherwise
-normalized by the number of particles.  Note that this is a different
-normalization than taking the values produced by the formulas below
-for a single timestep, summing them over the sampling timesteps, and
-then dividing by the number of sampling timesteps.
+into one large set of particles to compute the formulas below.  Note
+that this is a different form of averaging than taking the values
+produced by the formulas below for a single timestep, summing those
+values over the sampling timesteps, and then dividing by the number of
+sampling timesteps.  Except for the <I>n</I> and <I>nrho</I> values where the
+two averaging methods are identical.
 </P>
 <HR>
 
-<P>The <I>n</I> value counts the number of particles in the group.
+<P>The <I>n</I> value counts the number of particles in each group.
 </P>
-<P>The <I>nrho</I> value computes the number density of particles in the
+<P>The <I>nrho</I> value computes the number density of particles in each
 group:
 </P>
 <P>Nrho = N * fnum / volume
@@ -90,32 +91,41 @@ group:
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
 command, and volume is the flow volume of the grid cell.
 </P>
-<P>The <I>mass</I> value computes the average mass of particles in the group:
+<P>The <I>mass</I> value computes the average mass of particles in each group:
 </P>
 <PRE>Mass = Sum_i (mass_i) / N 
 </PRE>
-<P>where Sum_i is a sum over particles in the grid cell and in the group.
+<P>where Sum_i is a sum over particles in the grid cell and in each group.
+</P>
+<P>The <I>massrho</I> value computes the mass density of particles in each
+group:
+</P>
+<PRE>Massrho = Mass * fnum / volume 
+</PRE>
+<P>Mass is the value computed by the <I>mass</I> keyword, fnum is the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command, and volume is the flow volume of the grid cell.
 </P>
 <P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the components of the average
-velocity of particles in the group:
+velocity of particles in each group:
 </P>
 <PRE>U = Sum_i (mass_i Vx_i) / Sum_i (mass_i) 
 </PRE>
 <P>The <I>usq</I>, <I>vsq</I>, <I>wsq</I> values compute the squared component of
-the average velocity of particles in the group.
+the average velocity of particles in each group.
 </P>
 <PRE>Usq = Sum_i (mass_i Vx_i Vx_i) / Sum_i (mass_i) 
 </PRE>
-<P>The <I>ke</I> value computes the average kinetic energy of particles in the
-group:
+<P>The <I>ke</I> value computes the average kinetic energy of particles in
+each group:
 </P>
 <PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 KE = Sum_i (1/2 mass_i Vsq_i) / N 
 </PRE>
 <P>The <I>temp</I> value first computes the average kinetic energy of
-particles in the group, as for the <I>ke</I> value.  This is then converted
-to a temperature <I>T</I> by the following formula where <I>kB</I> is the
-Boltzmann factor:
+particles in each group, as for the <I>ke</I> value.  This is then
+converted to a temperature <I>T</I> by the following formula where <I>kB</I> is
+the Boltzmann factor:
 </P>
 <PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 KE = Sum_i (1/2 mass_i Vsq_i) / N
@@ -129,7 +139,7 @@ command to calculate thermal temperatures after subtracting out
 streaming components of velocity.
 </P>
 <P>The <I>erot</I> value computes the average rotational energy of particles
-in the group:
+in each group:
 </P>
 <PRE>Erot = Sum_i (erot_i) / N 
 </PRE>
@@ -141,7 +151,7 @@ formula where <I>kB</I> is the Boltzmann factor:
 <P>Dof_i is the number of rotational degrees of freedom for particle i.
 </P>
 <P>The <I>evib</I> value computes the average vibrational energy of particles
-in the group:
+in each group:
 </P>
 <PRE>Evib = Sum_i (evib_i) / N 
 </PRE>
@@ -166,9 +176,8 @@ columns would be <I>n</I> and <I>u</I> for the second group, etc.
 in the simulation, which includes unsplit, cut, split, and sub cells.
 See <A HREF = "Section_howto.html#howto_8">Section 4.8</A> of the manual gives
 details of how SPARTA defines child, unsplit, split, and sub cells.
-Note that split cells and unsplit cells inside closed surfaces contain
-no particles.  Thus they will compute a zero result for all the
-individual values.
+Note that cells inside closed surfaces contain no particles.  Thus
+they will compute a zero result for all their values.
 </P>
 <P>The array can be accessed by any command that uses per-grid values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4</A>
@@ -177,16 +186,19 @@ for an overview of SPARTA output options.
 <P>The per-grid array values will be in the <A HREF = "units.html">units</A>
 appropriate to the individual values as described above.  <I>N</I> is
 unitless.  <I>Nrho</I> is in 1/distance^3 units for 3d simulations and
-1/distance^2 units for 2d simulations.  <I>Mass</I> is in mass units.  <I>U</I>,
-<I>v</I>, and <I>w</I> are in velocity units.  <I>Usq</I>, <I>vsq</I>, and <I>wsq</I> are in
-velocity squared units.  <I>Ke</I>, <I>erot</I>, and <I>evib</I> are in energy units.
-<I>Temp</I> and <I>trot</I> and <I>tvib</I> are in temperature units.
+1/distance^2 units for 2d simulations.  <I>Mass</I> is in mass units.
+<I>Massrho</I> is in is in mass/distance^3 units for 3d simulations and
+mass/distance^2 units for 2d simulations.  <I>U</I>, <I>v</I>, and <I>w</I> are in
+velocity units.  <I>Usq</I>, <I>vsq</I>, and <I>wsq</I> are in velocity squared
+units.  <I>Ke</I>, <I>erot</I>, and <I>evib</I> are in energy units.  <I>Temp</I> and
+<I>trot</I> and <I>tvib</I> are in temperature units.
 </P>
 <P><B>Restrictions:</B> none
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "dump.html">dump grid</A>
+<P><A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "dump.html">dump grid</A>, <A HREF = "compute_sonine_grid.html">compute
+sonine/grid</A>
 </P>
 <P><B>Default:</B> none
 </P>

@@ -58,6 +58,8 @@
     particle vector = mass, type, x, y, z, vx, vy, vz
     compute references = c_ID, c_ID[i], c_ID[i][j]
     fix references = f_ID, f_ID[i], f_ID[i][j]
+    surface collision model references = s_ID[i]
+    surface reaction model references = r_ID[i]
     variable references = v_name 
 </PRE>
 
@@ -322,6 +324,8 @@ references, and references to other variables.
 <TR><TD >Particle vectors</TD><TD > mass, type, x, y, z, vx, vy, vz</TD></TR>
 <TR><TD >Compute references</TD><TD > c_ID, c_ID[i], c_ID[i][j]</TD></TR>
 <TR><TD >Fix references</TD><TD > f_ID, f_ID[i], f_ID[i][j]</TD></TR>
+<TR><TD >Surface collision model references = s_ID[i]</TD></TR>
+<TR><TD >Surface reaction model references = r_ID[i]</TD></TR>
 <TR><TD >Other variables</TD><TD > v_name 
 </TD></TR></TABLE></DIV>
 
@@ -664,6 +668,24 @@ error is generated.  For example, the <A HREF = "fix_ave_time.html">fix ave/time
 command may only generate averaged quantities every 100 steps.  See
 the doc pages for individual fix commands for details.
 </P>
+<HR>
+
+<H4>Surface collision and surface reation model References 
+</H4>
+<P>These references access quantities calculated by a
+<A HREF = "surf_collide.html<A HREF = "surf_react.html">>surf_collide</A> or surf_react</A>
+command.  The ID in the reference should be replaced by the ID of a
+surface collision or surface reaction model defined elsewhere in the
+input script.  As discussed in the doc pages for the
+<A HREF = "surf_collide.html">surf_collide</A> and <A HREF = "surf_react.html">surf_react</A>
+commands, these commmands produce global vectors, the elements of
+which can be accessed by equal-style or particle-style variables, e.g.
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >s_ID[I]</TD><TD > Ith element of global vector for a surface collision model</TD></TR>
+<TR><TD >r_ID[I]</TD><TD > Ith element of global vector for a surface reaction model 
+</TD></TR></TABLE></DIV>
+
 <HR>
 
 <H4>Variable References 

@@ -71,6 +71,10 @@ command.
 
 The sum of {pdelete} and {pcreate} must be <= 1.0.
 
+Note that if you simply wish to delete all particles which hit the
+surface, you can use the "surf_collide vanish"_surf_collide.html
+command, which is simpler.
+
 :line
 
 For the {prob} style, a file is specified which contains a list of
@@ -157,6 +161,24 @@ ion and ambipolar electron.  In the file of reactions this is done by
 having the reactant not be an ambipolar ion, the first product be an
 ambipolar ion, and the second product be an ambipolar electron.  The
 two products must be specified in this order.
+
+:line
+
+[Output info:]
+
+All the surface reaction models calculate a global vector of length 2.
+The values can be used by the "stats_style"_stats_style.html command
+and by "variables"_variable.html that define formulas.  The latter
+means they can be used by any command that uses a variable as input,
+e.g. "the "fix ave/time"_fix_ave_time.html command.  See "Section
+4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
+options.
+
+The first element of the vector is the count of particles that
+performed surface reactions for surface elements assigned to this
+reaction model during the current timestep.  The second element is the
+cummulative count of particles that have performed reactions since the
+beginning of the current run.
 
 :line
 

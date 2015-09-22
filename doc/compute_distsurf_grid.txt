@@ -33,10 +33,9 @@ grid cell to any surface element.  This is useful for grid adaptation;
 the "adapt_grid"_adapt_grid.html command can use the compute as a
 criterion for refining or coarsening individual grid cells.
 
-The set of surface elements considered is determined in the following
-manner.  Only surface elements in the specified {surfID} group are
-included.  Surface groups can be deinfed by the "group
-surf"_group.html command.
+Only surface elements in the specified {surfID} group are included in
+the distance calculations.  Surface groups can be defined by the
+"group surf"_group.html command.
 
 If the {dir} keyword is specified it can exclude additional surface
 elements.  The Sx,Sy,Sz settings are components of a vector.  It's
@@ -88,6 +87,8 @@ these commands produce this kind of adapted grid (click for a larger
 image):
 
 :c,image(JPG/adapt_surf_small.jpg,JPG/adapt_surf.jpg)
+
+:line
 
 [Output info:]
 

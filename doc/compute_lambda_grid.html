@@ -51,10 +51,10 @@ dump 1 grid all 1000 tmp.grid id c_2
 </P>
 <P>Define a computation that calculates the mean free path (lambda)
 between molecular collisions for each grid cell, based on the
-particles in the cell.  It has an option to also compute the Knudsen
-number for each cell which is the mean free path divided by the cell
-size.  These quantities can be useful for estimating the optimal grid
-cell size and using it to adapt the grid, e.g. via the
+particles in that cell.  Optionally, the Knudsen number for each cell
+can also be calculated, which is the mean free path divided by the
+cell size.  These quantities can be useful for estimating the optimal
+grid cell size and using that value to adapt the grid, e.g. via the
 <A HREF = "adapt_grid.html">adapt_grid</A> or <A HREF = "fix_adapt_grid.html">fix adapt/grid</A>
 commands.
 </P>
@@ -147,6 +147,8 @@ lengths (or two cell lengths for a 2d simulation).  For <I>kx</I>, <I>ky</I>, or
 <I>kz</I>, the cell size is the single cell side length in the
 corresponding x,y,z dimension.
 </P>
+<HR>
+
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid vector or array.  If one of <I>kall</I>,
@@ -159,9 +161,8 @@ column is the Knudsen number.
 in the simulation, which includes unsplit, cut, split, and sub cells.
 See <A HREF = "Section_howto.html#howto_8">Section 4.8</A> of the manual gives
 details of how SPARTA defines child, unsplit, split, and sub cells.
-Note that split cells and unsplit cells inside closed surfaces contain
-no particles.  Thus they will compute a zero result for all the
-individual values.
+Note cells inside closed surfaces contain no particles.  Thus they
+will compute a zero result for all the individual values.
 </P>
 <P>The vector or array can be accessed by any command that uses per-grid
 values from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section
