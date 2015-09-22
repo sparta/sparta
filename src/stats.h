@@ -60,16 +60,24 @@ class Stats : protected Pointers {
   int *argindex1;        // indices into compute,fix scalar,vector
   int *argindex2;
 
-  int ncompute;                // # of Compute objects called by thermo
+  int ncompute;                // # of Compute objects called by stats
   char **id_compute;           // their IDs
   int *compute_which;          // 0/1/2 if should call scalar,vector,array
   class Compute **computes;    // list of ptrs to the Compute objects
 
-  int nfix;                    // # of Fix objects called by thermo
+  int nfix;                    // # of Fix objects called by stats
   char **id_fix;               // their IDs
   class Fix **fixes;           // list of ptrs to the Fix objects
 
-  int nvariable;               // # of variables evaulated by thermo
+  int nsurfcollide;            // # of SurfCollide objs called by stats
+  char **id_surf_collide;      // their IDs
+  class SurfCollide **sc;      // list of ptrs to SurfCollide objects
+
+  int nsurfreact;             // # of SurfReact objects called by stats
+  char **id_surf_react;       // their IDs
+  class SurfReact **sr;       // list of ptrs to SurfReact objects
+
+  int nvariable;               // # of variables evaulated by stats
   char **id_variable;          // list of variable names
   int *variables;              // list of Variable indices
 
@@ -80,14 +88,18 @@ class Stats : protected Pointers {
 
   int add_compute(const char *, int);
   int add_fix(const char *);
+  int add_surf_collide(const char *);
+  int add_surf_react(const char *);
   int add_variable(const char *);
 
   typedef void (Stats::*FnPtr)();
   void addfield(const char *, FnPtr, int);
   FnPtr *vfunc;                // list of ptrs to functions
 
-  void compute_compute();      // functions that compute a single value
-  void compute_fix();          // via calls to  Compute,Fix,Variable classes
+  void compute_compute();        // functions that compute a single value
+  void compute_fix();            // via calls to Compute,Fix,
+  void compute_surf_collide();   //   SurfCollide,SurfReact,Variable classes
+  void compute_surf_react();
   void compute_variable();
 
   // functions that compute a single value

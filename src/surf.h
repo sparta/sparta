@@ -65,6 +65,7 @@ class Surf : protected Pointers {
   int *mysurfs;             // indices of surf elements I own
   int nlocal;               // # of surf elements I own
 
+  int nsc,nsr;              // # of surface collision and reaction models
   class SurfCollide **sc;   // list of surface collision models
   class SurfReact **sr;     // list of surface reaction models
 
@@ -106,9 +107,7 @@ class Surf : protected Pointers {
   bigint memory_usage();
 
  private:
-  int nsc;                  // # of surface collision models
   int maxsc;                // max # of models in sc
-  int nsr;                  // # of surface reaction models
   int maxsr;                // max # of models in sr
 
   void collate_vector_allreduce(int, int *, double *, int, double *);

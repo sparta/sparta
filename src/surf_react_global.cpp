@@ -61,6 +61,7 @@ int SurfReactGlobal::react(Particle::OnePart *&ip, double *norm,
   // perform destroy reaction
 
   if (r < prob_destroy) {
+    nsingle++;
     ip = NULL;
     return 1;
   }
@@ -71,6 +72,7 @@ int SurfReactGlobal::react(Particle::OnePart *&ip, double *norm,
   //   make copy of x,v, then repoint ip to new particles data struct
 
   if (r < prob_destroy+prob_create) {
+    nsingle++;
     double x[3],v[3];
     int id = MAXSMALLINT*random->uniform();
     memcpy(x,ip->x,3*sizeof(double));

@@ -23,6 +23,8 @@
 #include "collide.h"
 #include "domain.h"
 #include "surf.h"
+#include "surf_collide.h"
+#include "surf_react.h"
 #include "modify.h"
 #include "fix.h"
 #include "compute.h"
@@ -347,6 +349,14 @@ void Stats::allocate()
   id_fix = new char*[n];
   fixes = new Fix*[n];
 
+  nsurfcollide = 0;
+  id_surf_collide = new char*[n];
+  sc = new SurfCollide*[n];
+
+  nsurfreact = 0;
+  id_surf_react = new char*[n];
+  sr = new SurfReact*[n];
+
   nvariable = 0;
   id_variable = new char*[n];
   variables = new int[n];
@@ -382,6 +392,14 @@ void Stats::deallocate()
   for (int i = 0; i < nfix; i++) delete [] id_fix[i];
   delete [] id_fix;
   delete [] fixes;
+
+  for (int i = 0; i < nsurfcollide; i++) delete [] id_surf_collide[i];
+  delete [] id_surf_collide;
+  delete [] sc;
+
+  for (int i = 0; i < nsurfreact; i++) delete [] id_surf_react[i];
+  delete [] id_surf_react;
+  delete [] sr;
 
   for (int i = 0; i < nvariable; i++) delete [] id_variable[i];
   delete [] id_variable;
@@ -488,6 +506,63 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"zhi") == 0) {
       addfield("Zhi",&Stats::compute_zhi,FLOAT);
 
+    // surf collide value = s_ID, surf react value = r_ID
+    // count trailing [] and store int arguments
+    // copy = at most 8 chars of ID to pass to addfield
+
+    } else if ((strncmp(arg[i],"s_",2) == 0) || 
+	       (strncmp(arg[i],"r_",2) == 0)) {
+
+      int n = strlen(arg[i]);
+      char *id = new char[n];
+      strcpy(id,&arg[i][2]);
+      char copy[9];
+      strncpy(copy,id,8);
+      copy[8] = '\0';
+
+      // parse zero or one or two trailing brackets from ID
+      // argindex1,argindex2 = int inside each bracket pair, 0 if no bracket
+
+      char *ptr = strchr(id,'[');
+      if (ptr == NULL) argindex1[nfield] = 0;
+      else {
+	*ptr = '\0';
+	argindex1[nfield] = input->variable->int_between_brackets(ptr,0);
+	ptr++;
+	if (*ptr == '[') {
+	  argindex2[nfield] = input->variable->int_between_brackets(ptr,0);
+	  ptr++;
+	} else argindex2[nfield] = 0;
+      }
+
+      if (arg[i][0] == 's') {
+	n = surf->find_collide(id);
+	if (n < 0) error->all(FLERR,"Could not find stats surf collide ID");
+	if (argindex1[nfield] == 0 || argindex2[nfield] > 0)
+	  error->all(FLERR,"Stats surf collide is not indexed correctly");
+	if (surf->sc[n]->vector_flag == 0)
+	  error->all(FLERR,"Stats surf collide does not compute vector");
+	if (argindex1[nfield] > surf->sc[n]->size_vector)
+	  error->all(FLERR,"Stats surf collide vector "
+                     "is accessed out-of-range");
+
+	field2index[nfield] = add_surf_collide(id);
+	addfield(copy,&Stats::compute_surf_collide,FLOAT);
+	
+      } else if (arg[i][0] == 'r') {
+	n = surf->find_react(id);
+	if (n < 0) error->all(FLERR,"Could not find stats surf react ID");
+	if (argindex1[nfield] == 0 || argindex2[nfield] > 0)
+	  error->all(FLERR,"Stats surf react is not indexed correctly");
+	if (surf->sr[n]->vector_flag == 0)
+	  error->all(FLERR,"Stats surf react does not compute vector");
+	if (argindex1[nfield] > surf->sr[n]->size_vector)
+	  error->all(FLERR,"Stats surf react vector is accessed out-of-range");
+
+	field2index[nfield] = add_surf_react(id);
+	addfield(copy,&Stats::compute_surf_react,FLOAT);
+      }
+      
     // compute value = c_ID, fix value = f_ID, variable value = v_ID
     // count trailing [] and store int arguments
     // copy = at most 8 chars of ID to pass to addfield
@@ -633,6 +708,32 @@ int Stats::add_fix(const char *id)
 }
 
 /* ----------------------------------------------------------------------
+   add surface collide ID to list of SurfCollide objects to call
+------------------------------------------------------------------------- */
+
+int Stats::add_surf_collide(const char *id)
+{
+  int n = strlen(id) + 1;
+  id_surf_collide[nsurfcollide] = new char[n];
+  strcpy(id_surf_collide[nsurfcollide],id);
+  nsurfcollide++;
+  return nsurfcollide-1;
+}
+
+/* ----------------------------------------------------------------------
+   add surface react ID to list of SurfReact objects to call
+------------------------------------------------------------------------- */
+
+int Stats::add_surf_react(const char *id)
+{
+  int n = strlen(id) + 1;
+  id_surf_react[nsurfreact] = new char[n];
+  strcpy(id_surf_react[nsurfreact],id);
+  nsurfreact++;
+  return nsurfreact-1;
+}
+
+/* ----------------------------------------------------------------------
    add variable ID to list of Variables to evaluate
 ------------------------------------------------------------------------- */
 
@@ -765,8 +866,26 @@ int Stats::evaluate_keyword(char *word, double *answer)
 }
 
 /* ----------------------------------------------------------------------
-   extraction of Compute, Fix, Variable results
+   extraction of SurfCollide, SurfReact, Compute, Fix, Variable results
 ------------------------------------------------------------------------- */
+
+void Stats::compute_surf_collide()
+{
+  int m = field2index[ifield];
+  SurfCollide *one = sc[m];
+  dvalue = one->compute_vector(argindex1[ifield]-1);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_surf_react()
+{
+  int m = field2index[ifield];
+  SurfReact *one = sr[m];
+  dvalue = one->compute_vector(argindex1[ifield]-1);
+}
+
+/* ---------------------------------------------------------------------- */
 
 void Stats::compute_compute()
 {

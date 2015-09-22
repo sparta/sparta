@@ -25,12 +25,21 @@ class SurfCollide : protected Pointers {
   char *id;
   char *style;
  
+  int vector_flag;          // 0/1 if compute_vector() function exists
+  int size_vector;          // length of global vector
+
   SurfCollide(class SPARTA *, int, char **);
   virtual ~SurfCollide();
-  virtual void init() = 0;
+  virtual void init();
   virtual Particle::OnePart *collide(Particle::OnePart *&, double *, int) = 0;
 
   virtual void dynamic() {}
+  void tally_update();
+  double compute_vector(int i);
+
+ protected:
+  int nsingle,ntotal;
+  double one[2],all[2];
 };
 
 }

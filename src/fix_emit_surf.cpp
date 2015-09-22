@@ -30,10 +30,6 @@
 #include "memory.h"
 #include "error.h"
 
-
-// DEBUG
-#include "comm.h"
-
 using namespace SPARTA_NS;
 using namespace MathConst;
 

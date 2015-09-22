@@ -164,7 +164,7 @@ void FixAmbipolar::surf_react(Particle::OnePart *iorig, int &i, int &j)
     ionambi[i] = 0;
   }
 
-  // dissociation raection
+  // dissociation reaction
   // if non-ion -> ion + electron, create an ambipolar ion
   // use global temp_thermal and vstream for electron creation
   // set j = -1 to delete electron that was just created by caller

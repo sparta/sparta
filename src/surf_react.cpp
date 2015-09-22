@@ -58,6 +58,11 @@ SurfReact::SurfReact(SPARTA *sparta, int narg, char **arg) :
   style = new char[n];
   strcpy(style,arg[0]);
 
+  vector_flag = 1;
+  size_vector = 2;
+    
+  nsingle = ntotal = 0;
+
   // surface reaction data structs
 
   nlist = maxlist = 0;
@@ -89,6 +94,13 @@ SurfReact::~SurfReact()
 
   memory->destroy(reactions);
   memory->destroy(indices);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfReact::init()
+{
+  nsingle = ntotal = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -331,4 +343,23 @@ int SurfReact::readone(char *line1, char *line2, int &n1, int &n2)
   }
 
   return 1;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfReact::tally_update()
+{
+  ntotal += nsingle;
+  nsingle = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double SurfReact::compute_vector(int i)
+{
+  one[0] = nsingle;
+  one[1] = ntotal + nsingle;
+  MPI_Allreduce(&one,&all,2,MPI_DOUBLE,MPI_SUM,world);
+
+  return all[i];
 }

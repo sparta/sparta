@@ -725,14 +725,15 @@ bigint DumpGrid::memory_usage()
    extraction of Compute, Fix, Variable results
 ------------------------------------------------------------------------- */
 
-// post_process_grid_flag() returns a value for every owned grid cell
-// dump buf only stores values for owned grid cells with particles
-
 void DumpGrid::pack_compute(int n)
 {
   int index = argindex[n];
   Compute *c = compute[field2index[n]];
 
+  // post_process_grid_flag() returns a value for every owned grid cell
+  // dump buf only stores values for owned grid cells with particles
+  // use cpartmax vector to extract needed subset
+  
   if (index == 0) {
     double *vector;
     if (c->post_process_grid_flag) {
@@ -746,8 +747,7 @@ void DumpGrid::pack_compute(int n)
     }
 
   } else if (c->post_process_grid_flag) {
-    index--;
-    c->post_process_grid(NULL,NULL,-1,index+1,cpartmax,1);
+    c->post_process_grid(NULL,NULL,-1,index,cpartmax,1);
     for (int i = 0; i < ncpart; i++) {
       buf[n] = cpartmax[cpart[i]];
       n += size_one;

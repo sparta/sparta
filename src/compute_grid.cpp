@@ -24,7 +24,7 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NRHO,MASS,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
+enum{NUM,NRHO,MASS,MASSRHO,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
 enum{NONE,COUNT,MASSWT,RDOF,VDOF};
 
 /* ---------------------------------------------------------------------- */
@@ -47,6 +47,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
     else if (strcmp(arg[iarg],"nrho") == 0) which[nvalue++] = NRHO;
     else if (strcmp(arg[iarg],"mass") == 0) which[nvalue++] = MASS;
+    else if (strcmp(arg[iarg],"massrho") == 0) which[nvalue++] = MASSRHO;
     else if (strcmp(arg[iarg],"u") == 0) which[nvalue++] = U;
     else if (strcmp(arg[iarg],"v") == 0) which[nvalue++] = V;
     else if (strcmp(arg[iarg],"w") == 0) which[nvalue++] = W;
@@ -78,7 +79,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   for (int i = 0; i < nvalue; i++) {
     if (which[i] == NUM || which[i] == NRHO) 
       norm_style[i] = NONE;
-    else if (which[i] == MASS) 
+    else if (which[i] == MASS || which[i] == MASSRHO) 
       norm_style[i] = COUNT;
     else if (which[i] == U || which[i] == V || which[i] == W) 
       norm_style[i] = MASSWT;
@@ -206,6 +207,9 @@ void ComputeGrid::compute_per_grid()
       case MASS:
         vec[k++] += mass;
         break;
+      case MASSRHO:
+        vec[k++] += mass * fnum * cinfo[icell].weight / cinfo[icell].volume;
+        break;
       case U:
         vec[k++] += mass*v[0];
         break;
@@ -277,7 +281,7 @@ void ComputeGrid::post_process_grid(void *innumer, void *indenom,
   } else error->all(FLERR,"Invalid call to ComputeGrid::post_process_grid()");
 
   // request for either a single value or entire column of values
-  // for single value, iterate thru outer loop just once
+  // for single value, iterate thru loop just once
 
   index--;
   int istart = icell;
@@ -296,7 +300,7 @@ void ComputeGrid::post_process_grid(void *innumer, void *indenom,
 
 /* ----------------------------------------------------------------------
    reallocate arrays if nglocal has changed
-   called by init() and load balancer
+   called by init() and whenever grid changes
 ------------------------------------------------------------------------- */
 
 void ComputeGrid::reallocate()

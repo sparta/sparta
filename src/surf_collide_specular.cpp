@@ -42,6 +42,8 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
 Particle::OnePart *SurfCollideSpecular::
 collide(Particle::OnePart *&ip, double *norm, int isr)
 {
+  nsingle++;
+
   // if surface chemistry defined, attempt reaction
   // reaction = 1 if reaction took place
 

@@ -85,6 +85,11 @@ class Update : protected Pointers {
   int maxmigrate;            // max # of particles in mlist
   class RanPark *random;     // RNG for particle timestep moves
 
+  int collide_react;         // 1 if any SurfCollide or React classes defined
+  int nsc,nsr;               // copy of Collide/React data in Surf class
+  class SurfCollide **sc;    
+  class SurfReact **sr;
+
   int bounce_tally;               // 1 if any bounces are ever tallied
   int nslist_compute;             // # of computes that tally surf bounces
   int nblist_compute;             // # of computes that tally boundary bounces
@@ -98,6 +103,9 @@ class Update : protected Pointers {
   
   int surf_pre_tally;       // 1 to log particle stats before surf collide
   int boundary_pre_tally;   // 1 to log particle stats before boundary collide
+
+  int collide_react_setup();
+  void collide_react_update();
 
   int bounce_setup();
   void bounce_set(bigint);

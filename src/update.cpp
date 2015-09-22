@@ -29,6 +29,7 @@
 #include "grid.h"
 #include "surf.h"
 #include "surf_collide.h"
+#include "surf_react.h"
 #include "output.h"
 #include "geometry.h"
 #include "random_mars.h"
@@ -188,6 +189,7 @@ void Update::setup()
   surf->nreact_running = 0;
   nstuck = 0;
 
+  collide_react = collide_react_setup();
   bounce_tally = bounce_setup();
 
   modify->setup();
@@ -212,6 +214,7 @@ void Update::run(int nsteps)
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
+    if (collide_react) collide_react_update();
     if (bounce_tally) bounce_set(ntimestep);
 
     // start of step fixes
@@ -1248,7 +1251,33 @@ int Update::split2d(int icell, double *x)
 
 /* ----------------------------------------------------------------------
    setup lists of all computes that tally surface and boundary bounce info
-   fixes with surf_react() methods  also trigger bounce tallying
+   return 1 if there are any, 0 if not
+------------------------------------------------------------------------- */
+
+int Update::collide_react_setup()
+{
+  nsc = surf->nsc;
+  sc = surf->sc;
+  nsr = surf->nsr;
+  sr = surf->sr;
+
+  if (sc || sr) return 1;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   setup lists of all computes that tally surface and boundary bounce info
+   return 1 if there are any, 0 if not
+------------------------------------------------------------------------- */
+
+void Update::collide_react_update()
+{
+  for (int i = 0; i < nsc; i++) sc[i]->tally_update();
+  for (int i = 0; i < nsr; i++) sr[i]->tally_update();
+}
+
+/* ----------------------------------------------------------------------
+   setup lists of all computes that tally surface and boundary bounce info
    return 1 if there are any, 0 if not
 ------------------------------------------------------------------------- */
 
@@ -1286,7 +1315,7 @@ int Update::bounce_setup()
 
 /* ----------------------------------------------------------------------
    set bounce tally flags for current timestep
-   tally flag = # of computes needing bounce info on this step
+   nsurf_tally = # of computes needing bounce info on this step
    clear accumulators in computes that will be invoked this step
 ------------------------------------------------------------------------- */
 

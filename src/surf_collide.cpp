@@ -39,6 +39,11 @@ SurfCollide::SurfCollide(SPARTA *sparta, int narg, char **arg) :
   n = strlen(arg[0]) + 1;
   style = new char[n];
   strcpy(style,arg[0]);
+
+  vector_flag = 1;
+  size_vector = 2;
+    
+  nsingle = ntotal = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -47,4 +52,30 @@ SurfCollide::~SurfCollide()
 {
   delete [] id;
   delete [] style;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollide::init()
+{
+  nsingle = ntotal = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollide::tally_update()
+{
+  ntotal += nsingle;
+  nsingle = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double SurfCollide::compute_vector(int i)
+{
+  one[0] = nsingle;
+  one[1] = ntotal + nsingle;
+  MPI_Allreduce(&one,&all,2,MPI_DOUBLE,MPI_SUM,world);
+
+  return all[i];
 }

@@ -25,13 +25,21 @@ class SurfReact : protected Pointers {
   char *id;
   char *style;
  
+  int vector_flag;          // 0/1 if compute_vector() function exists
+  int size_vector;          // length of global vector
+
   SurfReact(class SPARTA *, int, char **);
   virtual ~SurfReact();
-  virtual void init() {}
+  virtual void init();
   virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&) = 0;
+
+  void tally_update();
+  double compute_vector(int i);
 
  protected:
   FILE *fp;
+  int nsingle,ntotal;
+  double one[2],all[2];
 
   struct OneReaction {
     int active;                    // 1 if reaction is active

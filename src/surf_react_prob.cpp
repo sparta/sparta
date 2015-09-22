@@ -53,6 +53,7 @@ SurfReactProb::~SurfReactProb()
 
 void SurfReactProb::init()
 {
+  SurfReact::init();
   init_reactions();
 }
 
@@ -82,6 +83,7 @@ int SurfReactProb::react(Particle::OnePart *&ip, double *norm,
     react_prob += r->coeff[0];
 
     if (react_prob > random_prob) {
+      nsingle++;
       switch (r->type) {
       case DISSOCIATION:
         {
