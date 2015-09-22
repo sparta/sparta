@@ -320,8 +320,8 @@ Special functions: sum(x), min(x), max(x), ave(x), trap(x), slope(x), next(x)
 Particle vectors: mass, type, x, y, z, vx, vy, vz
 Compute references: c_ID, c_ID\[i\], c_ID\[i\]\[j\]
 Fix references: f_ID, f_ID\[i\], f_ID\[i\]\[j\]
-Surface collision model references = s_ID\[i\]
-Surface reaction model references = r_ID\[i\]
+Surface collision model references: s_ID\[i\]
+Surface reaction model references: r_ID\[i\]
 Other variables: v_name :tb(s=:)
 
 :line
@@ -661,10 +661,10 @@ the doc pages for individual fix commands for details.
 
 :line
 
-Surface collision and surface reation model References :h4
+Surface Collision and Surface Reaction Model References :h4
 
 These references access quantities calculated by a
-"surf_collide"_surf_collide.html or surf_react"_surf_react.html
+"surf_collide"_surf_collide.html or "surf_react"_surf_react.html
 command.  The ID in the reference should be replaced by the ID of a
 surface collision or surface reaction model defined elsewhere in the
 input script.  As discussed in the doc pages for the
