@@ -12,6 +12,7 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include "mpi.h"
 #include "ctype.h"
 #include "string.h"
 #include "surf_collide.h"
@@ -75,7 +76,7 @@ double SurfCollide::compute_vector(int i)
 {
   one[0] = nsingle;
   one[1] = ntotal + nsingle;
-  MPI_Allreduce(&one,&all,2,MPI_DOUBLE,MPI_SUM,world);
+  MPI_Allreduce(one,all,2,MPI_DOUBLE,MPI_SUM,world);
 
   return all[i];
 }

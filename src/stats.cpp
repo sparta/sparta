@@ -150,35 +150,46 @@ void Stats::init()
     if (i == nfield-1) strcat(format[i],"\n");
   }
 
+  // find current ptr for each SurfCollide and SurfReact ID
+
+  int m;
+
+  for (int i = 0; i < nsurfcollide; i++) {
+    m = surf->find_collide(id_surf_collide[i]);
+    if (m < 0) error->all(FLERR,"Could not find stats surf collide ID");
+    sc[i] = surf->sc[m];
+  }
+  for (int i = 0; i < nsurfreact; i++) {
+    m = surf->find_react(id_surf_react[i]);
+    if (m < 0) error->all(FLERR,"Could not find stats surf collide ID");
+    sr[i] = surf->sr[m];
+  }
+
   // find current ptr for each Compute ID
 
-  int icompute;
   for (int i = 0; i < ncompute; i++) {
-    icompute = modify->find_compute(id_compute[i]);
-    if (icompute < 0) error->all(FLERR,"Could not find stats compute ID");
-    computes[i] = modify->compute[icompute];
+    m = modify->find_compute(id_compute[i]);
+    if (m < 0) error->all(FLERR,"Could not find stats compute ID");
+    computes[i] = modify->compute[m];
   }
 
   // find current ptr for each Fix ID
   // check that fix frequency is acceptable with stats output frequency
 
-  int ifix;
   for (int i = 0; i < nfix; i++) {
-    ifix = modify->find_fix(id_fix[i]);
-    if (ifix < 0) error->all(FLERR,"Could not find stats fix ID");
-    fixes[i] = modify->fix[ifix];
+    m = modify->find_fix(id_fix[i]);
+    if (m < 0) error->all(FLERR,"Could not find stats fix ID");
+    fixes[i] = modify->fix[m];
     if (output->stats_every % fixes[i]->global_freq)
       error->all(FLERR,"Stats and fix not computed at compatible times");
   }
 
   // find current ptr for each Variable ID
 
-  int ivariable;
   for (int i = 0; i < nvariable; i++) {
-    ivariable = input->variable->find(id_variable[i]);
-    if (ivariable < 0) 
-      error->all(FLERR,"Could not find stats variable name");
-    variables[i] = ivariable;
+    m = input->variable->find(id_variable[i]);
+    if (m < 0) error->all(FLERR,"Could not find stats variable name");
+    variables[i] = m;
   }
 }
 
