@@ -574,6 +574,8 @@ void Stats::set_fields(int narg, char **arg)
 	addfield(copy,&Stats::compute_surf_react,FLOAT);
       }
       
+      delete [] id;
+
     // compute value = c_ID, fix value = f_ID, variable value = v_ID
     // count trailing [] and store int arguments
     // copy = at most 8 chars of ID to pass to addfield

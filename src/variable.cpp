@@ -26,6 +26,9 @@
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
+#include "surf.h"
+#include "surf_collide.h"
+#include "surf_react.h"
 #include "output.h"
 #include "stats.h"
 #include "random_mars.h"
@@ -899,7 +902,7 @@ double Variable::evaluate(char *str, Tree **tree)
       delete [] number;
 
     // ----------------
-    // letter: c_ID, c_ID[], c_ID[][], f_ID, f_ID[], f_ID[][],
+    // letter: c_ID, c_ID[], c_ID[][], f_ID, f_ID[], f_ID[][], s_ID[], r_ID[],
     //         v_name, exp(), x, PI, vol
     // ----------------
 
@@ -1227,6 +1230,120 @@ double Variable::evaluate(char *str, Tree **tree)
 	  treestack[ntreestack++] = newtree;
 
 	} else error->all(FLERR,"Mismatched fix in variable formula");
+
+      // ----------------
+      // surface collide model
+      // ----------------
+
+      } else if (strncmp(word,"s_",2) == 0) {
+	if (domain->box_exist == 0)
+	  error->all(FLERR,
+		     "Variable evaluation before simulation box is defined");
+ 
+	n = strlen(word) - 2 + 1;
+	char *id = new char[n];
+	strcpy(id,&word[2]);
+
+	int isc = surf->find_collide(id);
+	if (isc < 0) 
+          error->all(FLERR,"Invalid surf collide ID in variable formula");
+	SurfCollide *sc = surf->sc[isc];
+	delete [] id;
+
+	// parse zero or one or two trailing brackets
+	// point i beyond last bracket
+	// nbracket = # of bracket pairs
+	// index1,index2 = int inside each bracket pair
+
+	int nbracket,index1,index2;
+	if (str[i] != '[') nbracket = 0;
+	else {
+	  nbracket = 1;
+	  ptr = &str[i];
+	  index1 = int_between_brackets(ptr,1);
+	  i = ptr-str+1;
+	  if (str[i] == '[') {
+	    nbracket = 2;
+	    ptr = &str[i];
+	    index2 = int_between_brackets(ptr,1);
+	    i = ptr-str+1;
+	  }
+	}
+
+        // s_ID[i] = scalar from global vector
+
+	if (nbracket == 1 && sc->vector_flag) {
+	  if (index1 > sc->size_vector)
+	    error->all(FLERR,"Variable formula surf collide vector "
+		       "is accessed out-of-range");
+
+          value1 = sc->compute_vector(index1-1);
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+	} else error->all(FLERR,"Mismatched surf collide in variable formula");
+
+      // ----------------
+      // surface reaction model
+      // ----------------
+
+      } else if (strncmp(word,"r_",2) == 0) {
+	if (domain->box_exist == 0)
+	  error->all(FLERR,
+		     "Variable evaluation before simulation box is defined");
+ 
+	n = strlen(word) - 2 + 1;
+	char *id = new char[n];
+	strcpy(id,&word[2]);
+
+	int isr = surf->find_collide(id);
+	if (isr < 0) 
+          error->all(FLERR,"Invalid surf reaction ID in variable formula");
+	SurfReact *sr = surf->sr[isr];
+	delete [] id;
+
+	// parse zero or one or two trailing brackets
+	// point i beyond last bracket
+	// nbracket = # of bracket pairs
+	// index1,index2 = int inside each bracket pair
+
+	int nbracket,index1,index2;
+	if (str[i] != '[') nbracket = 0;
+	else {
+	  nbracket = 1;
+	  ptr = &str[i];
+	  index1 = int_between_brackets(ptr,1);
+	  i = ptr-str+1;
+	  if (str[i] == '[') {
+	    nbracket = 2;
+	    ptr = &str[i];
+	    index2 = int_between_brackets(ptr,1);
+	    i = ptr-str+1;
+	  }
+	}
+
+        // s_ID[i] = scalar from global vector
+
+	if (nbracket == 1 && sr->vector_flag) {
+	  if (index1 > sr->size_vector)
+	    error->all(FLERR,"Variable formula surf reaction vector "
+		       "is accessed out-of-range");
+
+          value1 = sr->compute_vector(index1-1);
+	  if (tree) {
+	    Tree *newtree = new Tree();
+	    newtree->type = VALUE;
+	    newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+	    treestack[ntreestack++] = newtree;
+	  } else argstack[nargstack++] = value1;
+
+	} else error->all(FLERR,"Mismatched surf reaction in variable formula");
 
       // ----------------
       // variable
