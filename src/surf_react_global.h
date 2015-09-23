@@ -29,7 +29,6 @@ class SurfReactGlobal : public SurfReact {
  public:
   SurfReactGlobal(class SPARTA *, int, char **);
   ~SurfReactGlobal();
-  void init() {}
   int react(Particle::OnePart *&, double *, Particle::OnePart *&);
 
  private:
