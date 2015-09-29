@@ -683,9 +683,6 @@ void FixAveGrid::add_grid_one(int icell, int flag)
 {
   if (flag) return;
 
-  //printf("AVEGRID %d %d %d: %d %g\n",icell,grid->cells[icell].id,
-  //       grid->pcells[grid->cells[icell].iparent].id);
-
   grow_percell(1);
 
   if (nvalues == 1) vector_grid[nglocal] = 0.0;
