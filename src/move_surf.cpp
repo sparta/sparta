@@ -138,6 +138,8 @@ void MoveSurf::command(int narg, char **arg)
   double time4 = MPI_Wtime();
 
   // flag cells and corners as OUTSIDE or INSIDE
+  // reallocate per grid cell arrays in per grid computes
+  //   local grid cell counts could have changed due to split cell changes
 
   grid->set_inout();
   grid->type_check();
