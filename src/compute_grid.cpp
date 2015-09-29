@@ -24,7 +24,8 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NRHO,MASS,MASSRHO,U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
+enum{NUM,NRHO,MASS,MASSRHO,U,V,W,USQ,VSQ,WSQ,
+     KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
 enum{NONE,COUNT,MASSWT,RDOF,VDOF};
 
 /* ---------------------------------------------------------------------- */
