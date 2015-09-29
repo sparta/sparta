@@ -33,8 +33,8 @@ keyword = {ave}
 
 [Examples:]
 
-fix 1 all ave/surf 1 100 100 c_surf ave running
-fix 1 all ave/surf 10 20 1000 c_mine :pre
+fix 1 ave/surf all 1 100 100 c_surf ave running
+fix 1 ave/surf leftcircle 10 20 1000 c_mine :pre
 
 [Description:]
 
@@ -94,8 +94,8 @@ surf"_compute_surf command produces 5 columns of output using the
 {all} mixture-ID which has a single group:
 
 compute 1 surf all n press px py pz
-fix 1 ave/surf 10 100 1000 c_1
-fix 1 ave/surf 10 100 1000 c_1\[1\] c_1\[2\] c_1\[3\] c_1\[4\] c_1\[5\] :pre
+fix 1 ave/surf all 10 100 1000 c_1
+fix 1 ave/surf all 10 100 1000 c_1\[1\] c_1\[2\] c_1\[3\] c_1\[4\] c_1\[5\] :pre
 
 Users can also write code for their own compute styles and "add them
 to SPARTA"_Section_modify.html.

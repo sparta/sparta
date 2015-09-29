@@ -16,11 +16,13 @@ ID is documented in "compute"_compute.html command :ulb,l
 grid = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {nrho} or {mass} or {massrho} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} or {evib} or {tvib} :l
+value = {n} or {nrho} or {nfrac} or {mass} or {massrho} or {massfrac} or {u} or {v} or {w} or {usq} or {vsq} or {wsq} of {ke} or {temp} or {erot} or {trot} or {evib} or {tvib} :l
   {n} = particle count
   {nrho} = number density
+  {nfrac} = number fraction
   {mass} = mass
   {massrho} = mass density
+  {massfrac} = mass fraction
   {u} = x component of velocity
   {v} = y component of velocity
   {w} = z component of velocity
@@ -66,8 +68,8 @@ into one large set of particles to compute the formulas below.  Note
 that this is a different form of averaging than taking the values
 produced by the formulas below for a single timestep, summing those
 values over the sampling timesteps, and then dividing by the number of
-sampling timesteps.  Except for the {n} and {nrho} values where the
-two averaging methods are identical.
+sampling steps.  Except for the {n} and {nrho} values where the two
+averaging methods are identical.
 
 :line
 
@@ -81,6 +83,14 @@ Nrho = N * fnum / volume
 N is the number of particles (same as the {n} keyword), fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
 command, and volume is the flow volume of the grid cell.
+
+The {nfrac} value computes the number fraction of particles in each
+group:
+
+Nfrac = Ngroup / Ntotal
+
+Ngroup is the count of particles in the group and Ntotal is the total
+number of particles in the cell (all groups).
 
 The {mass} value computes the average mass of particles in each group:
 
@@ -96,6 +106,14 @@ Massrho = Mass * fnum / volume :pre
 Mass is the value computed by the {mass} keyword, fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
 command, and volume is the flow volume of the grid cell.
+
+The {massfrac} value computes the mass fraction of particles in each
+group:
+
+Massfrac = Sum_i (mass_i) / Masstotal
+
+where Sum_i is a sum over particles in the group and Masstotal is the
+total mass of particles in the cell (all groups).
 
 The {u}, {v}, {w} values compute the components of the average
 velocity of particles in each group:

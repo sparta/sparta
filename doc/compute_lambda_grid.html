@@ -51,18 +51,18 @@ dump 1 grid all 1000 tmp.grid id c_2
 </P>
 <P>Define a computation that calculates the mean free path (lambda)
 between molecular collisions for each grid cell, based on the
-particles in that cell.  Optionally, the Knudsen number for each cell
+particles in that cell.  Optionally, a Knudsen number for each cell
 can also be calculated, which is the mean free path divided by the
 cell size.  These quantities can be useful for estimating the optimal
-grid cell size and using that value to adapt the grid, e.g. via the
+grid cell size when adapting the grid, e.g. via the
 <A HREF = "adapt_grid.html">adapt_grid</A> or <A HREF = "fix_adapt_grid.html">fix adapt/grid</A>
 commands.
 </P>
 <P>Unlike other computes that calculate per grid cell values, this
 compute does not take a <A HREF = "mixture.html">mixture</A> ID as an argument.
 This is because it uses the number density and temperature calculated
-by another compute or fix as input, and that compute or fix uses a
-<A HREF = "mixture.html">mixture</A> ID as its own argument.
+by other computes or fixes as input, and those computes or fixes use
+mixtures as part of their computations.
 </P>
 <P>The results of this compute can be used by different commands in
 different ways.  For example, the values can be output by the
@@ -87,8 +87,8 @@ species in the flow.  The reference species is specified by the
 collision properties read in by the <A HREF = "collide.html">collide</A> command.
 </P>
 <P>Specifically, Dref is the diameter of molecules of the species, Tref
-is the reference temperature, and omega is its viscosity
-temperature-dependence.
+is the reference temperature, and omega is the viscosity
+temperature-dependence for the species.
 </P>
 <P>In the formula above, <I>n</I> is the number density and <I>T</I> is the thermal
 temperature of particles in a grid cell.  This compute does not
@@ -100,9 +100,9 @@ and <I>temp</I> arguments as either
 <LI>f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output 
 </UL>
 <P>The <I>temp</I> argument can also be specified as NULL, which drops the
-(Tref/T) ratio term from the formula above.  That is also the case if
-the reference species defines omega = 1/2.  In that case, the <I>temp</I>
-argument is ignored, whether it is NULL or not.
+(Tref/T) ratio term from the formula above.  That is also effectively
+the case if the reference species defines omega = 1/2.  In that case,
+the <I>temp</I> argument is ignored, whether it is NULL or not.
 </P>
 <P>Note that if the value of <I>n</I> is 0.0 for a grid cell, its
 mean-free-path will be set to 1.0e20 (infinite length).
@@ -111,17 +111,18 @@ mean-free-path will be set to 1.0e20 (infinite length).
 density, using its <I>nrho</I> value.  It can also calculate a temperature
 using its <I>temp</I> value.  Note that this temperature is inferred from
 the translational kinetic energy of the particles, which is only
-appopriate for the mean free path calculation for systems with zero or
-small streaming velocities.  For systems with streaming flow, the
-temperature can be calculated by the <I>thermal</I> keyword of the <A HREF = "compute_sonine_grid.html">compute
-sonine/grid</A> command.  The formulas on its
-doc page show that the the center-of-mass velocity from the particles
-is subtracted, leaving their translational thermal velocity, from
-which a thermal temperature is inferred.
+appopriate for a mean free path calculation for systems with zero or
+small streaming velocities.  For systems with streaming flow, an
+appropriate temperature can be calculated by the <I>thermal</I> keyword of
+the <A HREF = "compute_sonine_grid.html">compute sonine/grid</A> command.  The
+formulas on its doc page show that the the center-of-mass velocity
+from the particles in each grid cell is subtracted from each
+particle's velocity to yield a translational thermal velocity, from
+which a thermal temperature is calculated.
 </P>
 <P>The <A HREF = "fix_ave_grid.html">fix ave/grid</A> command can calculate the same
 values in a time-averaged sense, assuming it uses these same computes
-as its input.  Using this fix as input to this compute will thus yield
+as input.  Using this fix as input to this compute will thus yield
 less noisy values, due to the time averaging.
 </P>
 <P>Note that the compute or fix (via the compute(s) it uses as input) can

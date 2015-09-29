@@ -46,8 +46,8 @@ zero or more input values can be listed
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>fix 1 all ave/surf 1 100 100 c_surf ave running
-fix 1 all ave/surf 10 20 1000 c_mine 
+<PRE>fix 1 ave/surf all 1 100 100 c_surf ave running
+fix 1 ave/surf leftcircle 10 20 1000 c_mine 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -107,8 +107,8 @@ surf</A> command produces 5 columns of output using the
 <I>all</I> mixture-ID which has a single group:
 </P>
 <PRE>compute 1 surf all n press px py pz
-fix 1 ave/surf 10 100 1000 c_1
-fix 1 ave/surf 10 100 1000 c_1[1] c_1[2] c_1[3] c_1[4] c_1[5] 
+fix 1 ave/surf all 10 100 1000 c_1
+fix 1 ave/surf all 10 100 1000 c_1[1] c_1[2] c_1[3] c_1[4] c_1[5] 
 </PRE>
 <P>Users can also write code for their own compute styles and <A HREF = "Section_modify.html">add them
 to SPARTA</A>.

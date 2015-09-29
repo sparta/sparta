@@ -40,7 +40,7 @@ to a file every 1000 steps:
 
 compute 1 grid species n u v w usq vsq wsq
 fix 1 ave/grid 10 100 1000 c_1
-dump 1 grid 1000 tmp.grid id f_1 :pre
+dump 1 grid all 1000 tmp.grid id f_1 :pre
 
 [Description:]
 
@@ -98,8 +98,8 @@ grid"_compute_grid.html command produces 3 columns of output using the
 {all} mixture-ID which has a single group:
 
 compute 1 grid all n u usq
-fix 1 ave/grid 10 100 1000 c_1
-fix 1 ave/grid 10 100 1000 c_1\[1\] c_1\[2\] c_1\[3\] :pre
+fix 1 ave/grid all 10 100 1000 c_1
+fix 1 ave/grid all 10 100 1000 c_1\[1\] c_1\[2\] c_1\[3\] :pre
 
 Users can also write code for their own compute styles and "add them
 to SPARTA"_Section_modify.html.

@@ -23,12 +23,14 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>nrho</I> or <I>mass</I> or <I>massrho</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> 
+<LI>value = <I>n</I> or <I>nrho</I> or <I>nfrac</I> or <I>mass</I> or <I>massrho</I> or <I>massfrac</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> 
 
 <PRE>  <I>n</I> = particle count
   <I>nrho</I> = number density
+  <I>nfrac</I> = number fraction
   <I>mass</I> = mass
   <I>massrho</I> = mass density
+  <I>massfrac</I> = mass fraction
   <I>u</I> = x component of velocity
   <I>v</I> = y component of velocity
   <I>w</I> = z component of velocity
@@ -75,8 +77,8 @@ into one large set of particles to compute the formulas below.  Note
 that this is a different form of averaging than taking the values
 produced by the formulas below for a single timestep, summing those
 values over the sampling timesteps, and then dividing by the number of
-sampling timesteps.  Except for the <I>n</I> and <I>nrho</I> values where the
-two averaging methods are identical.
+sampling steps.  Except for the <I>n</I> and <I>nrho</I> values where the two
+averaging methods are identical.
 </P>
 <HR>
 
@@ -90,6 +92,14 @@ group:
 <P>N is the number of particles (same as the <I>n</I> keyword), fnum is the
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
 command, and volume is the flow volume of the grid cell.
+</P>
+<P>The <I>nfrac</I> value computes the number fraction of particles in each
+group:
+</P>
+<P>Nfrac = Ngroup / Ntotal
+</P>
+<P>Ngroup is the count of particles in the group and Ntotal is the total
+number of particles in the cell (all groups).
 </P>
 <P>The <I>mass</I> value computes the average mass of particles in each group:
 </P>
@@ -105,6 +115,14 @@ group:
 <P>Mass is the value computed by the <I>mass</I> keyword, fnum is the
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
 command, and volume is the flow volume of the grid cell.
+</P>
+<P>The <I>massfrac</I> value computes the mass fraction of particles in each
+group:
+</P>
+<P>Massfrac = Sum_i (mass_i) / Masstotal
+</P>
+<P>where Sum_i is a sum over particles in the group and Masstotal is the
+total mass of particles in the cell (all groups).
 </P>
 <P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the components of the average
 velocity of particles in each group:
