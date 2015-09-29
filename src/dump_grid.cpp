@@ -730,7 +730,7 @@ void DumpGrid::pack_compute(int n)
   int index = argindex[n];
   Compute *c = compute[field2index[n]];
 
-  // post_process_grid_flag() returns a value for every owned grid cell
+  // post_process_grid() returns a value for every owned grid cell
   // dump buf only stores values for owned grid cells with particles
   // use cpartmax vector to extract needed subset
   
