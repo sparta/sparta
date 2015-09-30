@@ -116,10 +116,6 @@ void FixAdapt::end_of_step()
   // DEBUG
   //if (update->ntimestep > 140) return;
 
-
-
-
-
   // wrap adaptivity with clearstep/addstep since it may invoke computes
 
   modify->clearstep_compute();
