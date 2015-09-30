@@ -24,7 +24,8 @@ class Mixture : protected Pointers {
  public:
   char *id;                   // ID of mixture
   int nspecies;               // # of species in mixture
-  int *species;               // species indices in particle species list
+  int *species;               // species[i] = particle species index of 
+                              //              mixture species I
 
   int ngroup;                 // # of defined groups
   char **groups;              // group IDs
@@ -50,7 +51,7 @@ class Mixture : protected Pointers {
 
   double *cummulative;        // cummulative fraction for each species
   int *groupsize;             // # of species in each group
-  int **groupspecies;         // list of particle species in each group
+  int **groupspecies;         // list of particle species indices in each group
   int *species2group;         // s2g[i] = group that particle species I is in
                               // -1 if species I not in mixture
   int *species2species;       // s2s[i] = mixture species that 
