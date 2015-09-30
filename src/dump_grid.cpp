@@ -101,9 +101,8 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
     strcat(columns," ");
   }
 
-  ncpart = ncpartmax = 0;
+  ncpart = 0;
   cpart = NULL;
-  cpartmax = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -136,7 +135,6 @@ DumpGrid::~DumpGrid()
   delete [] columns;
 
   memory->destroy(cpart);
-  memory->destroy(cpartmax);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -216,8 +214,7 @@ void DumpGrid::init_style()
     variable[i] = ivariable;
   }
 
-  // create cpart,cpartmax arrays to index owned grid cells
-  // with and without particles
+  // create cpart index of owned grid cells with particles
 
   reset_grid();
 
@@ -688,22 +685,19 @@ void DumpGrid::allocate_values(int n)
 
 /* ----------------------------------------------------------------------
    create cpart array to index owned grid cells with particles
-   create cpartmax array to store values from all owned grid cells
    called from comm->migrate_cells() due to fix_balance
 ------------------------------------------------------------------------- */
 
 void DumpGrid::reset_grid()
 {
   memory->destroy(cpart);
-  memory->destroy(cpartmax);
-  ncpartmax = grid->nlocal;
-  memory->create(cpart,ncpartmax,"dump:cpart");
-  memory->create(cpartmax,ncpartmax,"dump:cpartmax");
+  int nglocal = grid->nlocal;
+  memory->create(cpart,nglocal,"dump:cpart");
 
   Grid::ChildCell *cells = grid->cells;
 
   ncpart = 0;
-  for (int i = 0; i < ncpartmax; i++) {
+  for (int i = 0; i < nglocal; i++) {
     if (cells[i].nsplit > 1) continue;
     cpart[ncpart++] = i;
   }
@@ -716,8 +710,7 @@ void DumpGrid::reset_grid()
 bigint DumpGrid::memory_usage()
 {
   bigint bytes = Dump::memory_usage();
-  bytes += memory->usage(cpart,ncpartmax);
-  bytes += memory->usage(cpartmax,ncpartmax);
+  bytes += memory->usage(cpart,grid->nlocal);
   return bytes;
 }
 
@@ -730,29 +723,20 @@ void DumpGrid::pack_compute(int n)
   int index = argindex[n];
   Compute *c = compute[field2index[n]];
 
-  // post_process_grid() returns a value for every owned grid cell
-  // dump buf only stores values for owned grid cells with particles
-  // use cpartmax vector to extract needed subset
-  
-  if (index == 0) {
-    double *vector;
-    if (c->post_process_grid_flag) {
-      c->post_process_grid(NULL,NULL,-1,0,cpartmax,1);
-      vector = cpartmax;
-    } else vector = c->vector_grid;
+  // if post_process_flag is set, invoke post_process() to fill vector_grid
+  // else extract from compute's vector_grid and array_grid directly
+  // dump buf only stores values for grid cells with particles
+  //   use cpart indices to extract needed subset
 
+  if (c->post_process_grid_flag) 
+    c->post_process_grid(index,-1,1,NULL,NULL,NULL,1);
+
+  if (index == 0 || c->post_process_grid_flag) {
+    double *vector = c->vector_grid;
     for (int i = 0; i < ncpart; i++) {
       buf[n] = vector[cpart[i]];
       n += size_one;
     }
-
-  } else if (c->post_process_grid_flag) {
-    c->post_process_grid(NULL,NULL,-1,index,cpartmax,1);
-    for (int i = 0; i < ncpart; i++) {
-      buf[n] = cpartmax[cpart[i]];
-      n += size_one;
-    }
-
   } else {
     index--;
     double **array = c->array_grid;

@@ -51,33 +51,32 @@ class FixAveGrid : public Fix {
   int *which;                // COMPUTE or FIX or VARIABLE
   int *argindex;             // which column from compute or fix to access
   int *value2index;          // index of compute,fix,variable
-  int *extraflag;            // 1 if need to invoke post_process_grid()
+  int *post_process;         // 1 if need compute->post_process() on value
+
+  int ntotal;                // total # of columns in tally array
+  double **tally;            // array of tally quantities, cells by ntotal
+                             // can be multiple tally quants per value
+
+                             // used when normalizing tallies
+  int *nmap;                 // # of tally quantities for each value
+                             //   these may not be unique
+  int **map;                 // indices of non-unique tally quantities
+                             //   in tally, for each value
+
+                             // used when accumulating tallies
+  int *numap;                // # of unique tally quantities for each value
+  int **umap;                // indices of tally quants in tally for each value
+  int **uomap;               // indices of corresponding quantities (0 to N-1)
+                             //   in compute/fix tally array, for each value
 
   int nglocal;               // # of owned grid cells
   int nglocalmax;            // max size of per-cell vectors/arrays
-  double *vector;            // tally vector when ave = RUNNING
-  double **array;            // tally array when ave = RUNNING
-
-  int *normacc;        // 1 if Ith value triggers one-time norm accumulation
-  int *normindex;      // index of norm vector for Ith value, -1 if none
-  double **norms;      // pointers to locally-stored accumulated norms
-  int nnorm;           // # of norm pointers in norms
-
-  struct Extra {
-    int ncol;
-    double **array_extra;
-    double **norm_extra;
-  };
-
-  Extra *extras;
-  int nextra;
 
   int pack_one(int, char *, int);
   int unpack_one(char *, int);
   void options(int, char **);
   void grow();
   bigint nextvalid();
-  void allocate(int);
   void grow_percell(int);
 };
 

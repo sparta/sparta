@@ -14,21 +14,21 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(grid,ComputeGrid)
+ComputeStyle(thermal/grid,ComputeThermalGrid)
 
 #else
 
-#ifndef SPARTA_COMPUTE_GRID_H
-#define SPARTA_COMPUTE_GRID_H
+#ifndef SPARTA_COMPUTE_THERMAL_GRID_H
+#define SPARTA_COMPUTE_THERMAL_GRID_H
 
 #include "compute.h"
 
 namespace SPARTA_NS {
 
-class ComputeGrid : public Compute {
+class ComputeThermalGrid : public Compute {
  public:
-  ComputeGrid(class SPARTA *, int, char **);
-  ~ComputeGrid();
+  ComputeThermalGrid(class SPARTA *, int, char **);
+  ~ComputeThermalGrid();
   void init();
   void compute_per_grid();
   int query_tally_grid(int, double **&, int *&);
@@ -37,25 +37,16 @@ class ComputeGrid : public Compute {
   bigint memory_usage();
 
  private:
-  int imix,nvalue,ngroup;
+  int imix,nvalue;
+  int ngroup,npergroup,ntotal;
 
-  int *value;                // keyword for each user requested value
-  int *unique;               // unique keywords for tally, len = npergroup
-  int npergroup;             // # of unique tally quantities per group
-  int cellcount,cellmass;    // 1 if total cell count/mass is tallied
-  int ntotal;                // total # of columns in tally array
   int nglocal;               // # of owned grid cells
 
   int *nmap;                 // # of tally quantities each user value uses
   int **map;                 // which tally columns each output value uses
   double **tally;            // array of tally quantities, cells by ntotal
 
-  double eprefactor;         // conversion from velocity^2 to energy
   double tprefactor;         // conversion from KE to temperature
-  double rvprefactor;         // conversion from rot/vib E to temperature
-
-  void set_map(int, int);
-  void reset_map();
 };
 
 }
@@ -71,16 +62,16 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
 
-E: Compute grid mixture ID does not exist
+E: Compute sonine/grid mixture ID does not exist
 
 Self-explanatory.
 
-E: Number of groups in compute grid mixture has changed
+E: Number of groups in compute sonine/grid mixture has changed
 
 This mixture property cannot be changed after this compute command is
 issued.
 
-E: Invalid call to ComputeGrid::post_process_grid()
+E: Invalid call to ComputeSonineGrid::post_process_grid()
 
 This indicates a coding error.  Please report the issue to the SPARTA
 developers.

@@ -41,6 +41,7 @@ class Compute : protected Pointers {
   double *vector_surf_tally;  // computed per-surf tally vector
   double **array_surf_tally;  // computed per-surf tally array
 
+  // NOTE: get rid of these fields?
   double **array_grid_extra;   // extra per-grid array
   double **norm_grid_extra;    // extra per-grid normalizations
 
@@ -58,6 +59,8 @@ class Compute : protected Pointers {
   int size_per_grid_cols;     // 0 = vector, N = columns in per-grid array
 
   int post_process_grid_flag;   // 1 if requires post_processing for output
+
+  // NOTE: get rid of this field?
   int size_per_grid_extra_cols; // 0 = none, N = columns in extra per-grid array
 
   int per_surf_flag;          // 0/1 if compute_per_surf() function exists
@@ -95,10 +98,15 @@ class Compute : protected Pointers {
   virtual void boundary_tally(int, int, Particle::OnePart *,
                               Particle::OnePart *, Particle::OnePart *) {}
 
-  virtual void post_process_grid(void *, void *, int, int, double *, int) {}
+  virtual int query_tally_grid(int, double **&, int *&) {return 0;}
+  virtual double post_process_grid(int, int, int, double **, int *, 
+                                   double *, int) {return 0.0;}
 
+  // NOTE: get rid of these methods
+  virtual void post_process_grid_old(void *, void *, int, int, double *, int) {}
   virtual void normwhich(int, int &, int &) {}
   virtual double *normptr(int) {return NULL;}
+
   virtual int surfinfo(int *&) {return 0;}
 
   void addstep(bigint);

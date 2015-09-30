@@ -248,20 +248,19 @@ void ComputeLambdaGrid::compute_per_grid()
       cnrho->compute_per_grid();
       cnrho->invoked_flag |= INVOKED_PER_GRID;
     }
-    if (nrhoindex == 0) {
-      if (cnrho->post_process_grid_flag)
-        cnrho->post_process_grid(NULL,NULL,-1,0,nrho,1);
-      else memcpy(nrho,cnrho->vector_grid,nglocal*sizeof(double));
-    } else {
+
+    if (cnrho->post_process_grid_flag)
+      cnrho->post_process_grid(nrhoindex,-1,1,NULL,NULL,NULL,1);
+
+    if (nrhoindex == 0 || cnrho->post_process_grid_flag)
+      memcpy(nrho,cnrho->vector_grid,nglocal*sizeof(double));
+    else {
       int index = nrhoindex-1;
-      if (cnrho->post_process_grid_flag)
-        cnrho->post_process_grid(NULL,NULL,-1,index+1,nrho,1);
-      else {
-        double **array = cnrho->array_grid;
-        for (int i = 0; i < nglocal; i++)
-          nrho[i] = array[i][index];
-      }
+      double **array = cnrho->array_grid;
+      for (int i = 0; i < nglocal; i++)
+        nrho[i] = array[i][index];
     }
+
   } else if (nrhowhich == FIX) {
     if (nrhoindex == 0) {
       memcpy(nrho,fnrho->vector_grid,nglocal*sizeof(double));
@@ -278,24 +277,23 @@ void ComputeLambdaGrid::compute_per_grid()
       ctemp->compute_per_grid();
       ctemp->invoked_flag |= INVOKED_PER_GRID;
     }
-    if (tempindex == 0) {
-      if (ctemp->post_process_grid_flag)
-        ctemp->post_process_grid(NULL,NULL,-1,0,temp,1);
-      else memcpy(temp,ctemp->vector_grid,nglocal*sizeof(double));
-    } else {
+
+    if (ctemp->post_process_grid_flag)
+      ctemp->post_process_grid(tempindex,-1,1,NULL,NULL,NULL,1);
+
+    if (tempindex == 0 || ctemp->post_process_grid_flag)
+      memcpy(temp,ctemp->vector_grid,nglocal*sizeof(double));
+    else {
       int index = tempindex-1;
-      if (ctemp->post_process_grid_flag)
-        ctemp->post_process_grid(NULL,NULL,-1,index+1,temp,1);
-      else {
-        double **array = ctemp->array_grid;
-        for (int i = 0; i < nglocal; i++)
-          temp[i] = array[i][index];
-      }
+      double **array = ctemp->array_grid;
+      for (int i = 0; i < nglocal; i++)
+        temp[i] = array[i][index];
     }
+
   } else if (tempwhich == FIX) {
-    if (tempindex == 0) {
+    if (tempindex == 0)
       memcpy(temp,ftemp->vector_grid,nglocal*sizeof(double));
-    } else {
+    else {
       double **array = ftemp->array_grid;
       int index = tempindex-1;
       for (int i = 0; i < nglocal; i++)

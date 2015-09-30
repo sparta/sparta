@@ -31,24 +31,31 @@ class ComputeSonineGrid : public Compute {
   ~ComputeSonineGrid();
   void init();
   void compute_per_grid();
-  void post_process_grid(void *, void *, int, int, double *, int);
-  void normwhich(int, int &, int &);
-  double *normptr(int);
+  int query_tally_grid(int, double **&, int *&);
+  double post_process_grid(int, int, int, double **, int *, double *, int);
   void reallocate();
   bigint memory_usage();
 
  private:
-  int imix,nvalue,ngroup,npergroup,ntotal;
-  int *which,*moment,*order;
+  int imix,ngroup;
 
-  int nglocal;                  // # of owned grid cells
-  double ***vcom;               // COM velocity per group and per cell
-  double **masstot;             // total mass per group and per cell
-  double **sonine;              // accumulator array
+  int nvalue;                // # of user-requested values 
+                             // each may generate multiple output values
 
-  int **value_norm_style;       // I,J = norm style of Jth value in Ith group
-  double **norm_count;          // per-group ptr to norm vector, by count
-  double **norm_mass;           // per-group ptr to norm vector, by mass
+  int *which;                // keyword for each user requested value
+  int *moment;               // moment for each user requested value
+  int *order;                // order (1-5) for each user requested value
+
+  int noutpergroup;          // # of output values per group
+  int npergroup;             // # of unique tally quantities per group
+  int ntotal;                // total # of columns in tally array
+  int nglocal;               // # of owned grid cells
+
+  int nmap;                  // # of tally quantities every output value uses
+  int **map;                 // which tally columns each output value uses
+  double **tally;            // array of tally quantities, cells by ntotal
+
+  double ***vcom;            // COM velocity and mass per group and per cell
 };
 
 }

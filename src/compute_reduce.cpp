@@ -444,6 +444,7 @@ double ComputeReduce::compute_one(int m, int flag)
       for (i = 0; i < n; i++)
         combine(one,particles[i].x[aidx],i);
     } else one = particles[flag].x[aidx];
+
   } else if (which[m] == V) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
@@ -460,6 +461,7 @@ double ComputeReduce::compute_one(int m, int flag)
     Particle::OnePart *p;
     double *v;
     double ke;
+
     if (flag < 0) {
       for (i = 0; i < n; i++) {
         p = &particles[i];
@@ -474,6 +476,7 @@ double ComputeReduce::compute_one(int m, int flag)
       one = mvv2e * 0.5 * species[p->ispecies].mass *
         (v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
     }
+
   } else if (which[m] == EROT) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
@@ -481,6 +484,7 @@ double ComputeReduce::compute_one(int m, int flag)
       for (i = 0; i < n; i++)
         combine(one,particles[i].erot,i);
     } else one = particles[flag].erot;
+
   } else if (which[m] == EVIB) {
     Particle::OnePart *particles = particle->particles;
     int n = particle->nlocal;
@@ -490,25 +494,26 @@ double ComputeReduce::compute_one(int m, int flag)
     } else one = particles[flag].evib;
 
   // invoke compute if not previously invoked
+  // for per-grid compute, invoke post_process_grid() if necessary
 
   } else if (which[m] == COMPUTE) {
-    Compute *compute = modify->compute[vidx];
+    Compute *c = modify->compute[vidx];
 
     if (flavor[m] == PARTICLE) {
-      if (!(compute->invoked_flag & INVOKED_PER_PARTICLE)) {
-        compute->compute_per_particle();
-        compute->invoked_flag |= INVOKED_PER_PARTICLE;
+      if (!(c->invoked_flag & INVOKED_PER_PARTICLE)) {
+        c->compute_per_particle();
+        c->invoked_flag |= INVOKED_PER_PARTICLE;
       }
 
       if (aidx == 0) {
-        double *cvec = compute->vector_particle;
+        double *cvec = c->vector_particle;
         int n = particle->nlocal;
         if (flag < 0) {
           for (i = 0; i < n; i++)
             combine(one,cvec[i],i);
         } else one = cvec[flag];
       } else {
-        double **carray = compute->array_particle;
+        double **carray = c->array_particle;
         int n = particle->nlocal;
         int aidxm1 = aidx - 1;
         if (flag < 0) {
@@ -518,20 +523,23 @@ double ComputeReduce::compute_one(int m, int flag)
       }
 
     } else if (flavor[m] == GRID) {
-      if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-        compute->compute_per_grid();
-        compute->invoked_flag |= INVOKED_PER_GRID;
+      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+        c->compute_per_grid();
+        c->invoked_flag |= INVOKED_PER_GRID;
       }
 
-      if (aidx == 0) {
-        double *cvec = compute->vector_grid;
+      if (c->post_process_grid_flag) 
+        c->post_process_grid(aidx,-1,1,NULL,NULL,NULL,1);
+      
+      if (aidx == 0 || c->post_process_grid_flag) {
+        double *cvec = c->vector_grid;
         int n = grid->nlocal;
         if (flag < 0) {
           for (i = 0; i < n; i++)
             combine(one,cvec[i],i);
         } else one = cvec[flag];
       } else {
-        double **carray = compute->array_grid;
+        double **carray = c->array_grid;
         int n = grid->nlocal;
         int aidxm1 = aidx - 1;
         if (flag < 0) {

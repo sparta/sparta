@@ -31,20 +31,24 @@ class ComputeTvibGrid : public Compute {
   ~ComputeTvibGrid();
   void init();
   void compute_per_grid();
-  void post_process_grid(void *, void *, int, int, double *, int);
-  void normwhich(int, int &, int &);
-  double *normptr(int);
+  int query_tally_grid(int, double **&, int *&);
+  double post_process_grid(int, int, int, double **, int *, double *, int);
   void reallocate();
   bigint memory_usage();
 
  private:
-  int imix,ngroup,nspecies;
+  int imix,ngroup,mixspecies,nspecies;
 
+  int ntotal;                // total # of columns in tally array
   int nglocal;               // # of owned grid cells
+
+  int *nmap;                 // # of tally quantities each group value uses
+  int **map;                 // which tally columns each group value uses
+  double **tally;            // array of tally quantities, cells by ntotal
+
   double *tspecies;          // per-species vibrational temperature
-  int *g2s;                  // list of mixture species in requested group
-  int gspecies;              // # of species in requested group
-  int previndex;             // index of previously requested group
+  int *s2t;                  // convert particle species to tally column
+  int *t2s;                  // convert tally column to particle species
 };
 
 }

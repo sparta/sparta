@@ -12,73 +12,52 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#include "math.h"
+#include "stdlib.h"
 #include "string.h"
-#include "compute_tvib_grid.h"
+#include "compute_thermal_grid.h"
 #include "particle.h"
 #include "mixture.h"
 #include "grid.h"
 #include "update.h"
 #include "modify.h"
+#include "comm.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
-enum{NONE,COUNT,MASSWT,DOF};
-
 /* ---------------------------------------------------------------------- */
 
-ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
+ComputeThermalGrid::ComputeThermalGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg != 3) error->all(FLERR,"Illegal compute grid command");
+  if (narg != 3) error->all(FLERR,"Illegal compute thermal/grid command");
 
   imix = particle->find_mixture(arg[2]);
-  if (imix < 0) error->all(FLERR,"Compute tvib/grid mixture ID does not exist");
+  if (imix < 0) 
+    error->all(FLERR,"Compute thermal/grid mixture ID does not exist");
 
   ngroup = particle->mixture[imix]->ngroup;
-  mixspecies = particle->mixture[imix]->nspecies;
-  nspecies = particle->nspecies;
 
   per_grid_flag = 1;
   size_per_grid_cols = ngroup;
   post_process_grid_flag = 1;
 
-  // allocate and initialize nmap,map,s2t,t2s
-  // must first set groupsize, groupspecies by mixture->init()
-  // 2 tally quantities per species across all groups
+  // allocate and initialize nmap and map
+  // npergroup = 6 tally quantities per group
 
-  particle->mixture[imix]->init();
-  int *groupsize = particle->mixture[imix]->groupsize;
-  int **groupspecies = particle->mixture[imix]->groupspecies;
-
-  int nmax = 0;
-  for (int i = 0; i < ngroup; i++)
-    nmax = MAX(nmax,groupsize[i]);
+  npergroup = 6;
+  ntotal = ngroup*npergroup;
 
   nmap = new int[ngroup];
-  memory->create(map,ngroup,2*nmax,"tvib/grid:map");
+  for (int i = 0; i < ngroup; i++) nmap[i] = 6;
 
-  tspecies = new double[nspecies];
-  ntotal = 2*mixspecies;
-
-  s2t = new int[nspecies];
-  t2s = new int[ntotal];
-
-  for (int isp = 0; isp < nspecies; isp++) s2t[isp] = -1;
-
+  memory->create(map,ngroup,npergroup,"thermal/grid:map");
   int itally = 0;
-  for (int igroup = 0; igroup < ngroup; igroup++) {
-    nmap[igroup] = 2*groupsize[igroup];
-    for (int n = 0; n < groupsize[igroup]; n++) {
-      s2t[groupspecies[igroup][n]] = itally;
-      t2s[itally] = groupspecies[igroup][n];
-      t2s[itally+1] = groupspecies[igroup][n];
-      map[igroup][2*n] = itally;
-      map[igroup][2*n+1] = itally+1;
-      itally += 2;
-    }
-  }
+  for (int i = 0; i < ngroup; i++)
+    for (int j = 0; j < 6; j++)
+      map[i][j] = itally++;
 
   nglocal = 0;
   vector_grid = NULL;
@@ -87,14 +66,10 @@ ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-ComputeTvibGrid::~ComputeTvibGrid()
+ComputeThermalGrid::~ComputeThermalGrid()
 {
   delete [] nmap;
   memory->destroy(map);
-
-  delete [] tspecies;
-  delete [] s2t;
-  delete [] t2s;
 
   memory->destroy(vector_grid);
   memory->destroy(tally);
@@ -102,39 +77,31 @@ ComputeTvibGrid::~ComputeTvibGrid()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeTvibGrid::init()
+void ComputeThermalGrid::init()
 {
   if (ngroup != particle->mixture[imix]->ngroup)
-    error->all(FLERR,"Number of groups in compute tvib/grid "
+    error->all(FLERR,"Number of groups in compute thermal/grid "
                "mixture has changed");
-  if (mixspecies != particle->mixture[imix]->nspecies)
-    error->all(FLERR,"Number of species in compute tvib/grid "
-               "mixture has changed");
-  if (nspecies != particle->nspecies)
-    error->all(FLERR,"Number of total species in compute tvib/grid "
-               "has changed");
 
-  int *groupsize = particle->mixture[imix]->groupsize;
-  for (int i = 0; i < ngroup; i++)
-    if (2*groupsize[i] != nmap[i])
-      error->all(FLERR,"Number of species in compute tvib/grid "
-                 "group has changed");
+  tprefactor = update->mvv2e / (3.0*update->boltz);
 
   reallocate();
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeTvibGrid::compute_per_grid()
+void ComputeThermalGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;
 
+  Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
-  int *s2s = particle->mixture[imix]->species2species;
   int nlocal = particle->nlocal;
 
-  int i,j,ispecies,igroup,icell;
+  int i,j,k,ispecies,igroup,icell;
+  double mass;
+  double *v,*vec;
 
   // zero all accumulators - could do this with memset()
 
@@ -143,7 +110,6 @@ void ComputeTvibGrid::compute_per_grid()
       tally[i][j] = 0.0;
 
   // loop over all particles, skip species not in mixture group
-  // tally vibrational energy and particle count for each species
 
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
@@ -151,9 +117,20 @@ void ComputeTvibGrid::compute_per_grid()
     if (igroup < 0) continue;
     icell = particles[i].icell;
 
-    j = s2t[ispecies];
-    tally[icell][j] += particles[i].evib;
-    tally[icell][j+1] += 1.0;
+    mass = species[ispecies].mass;
+    v = particles[i].v;
+
+    // 6 tallies per particle: N, Mass, mVx, mVy, mVz, mV^2
+
+    vec = tally[icell];
+    k = igroup*npergroup;
+    
+    vec[k++] += 1.0;
+    vec[k++] += mass;
+    vec[k++] += mass*v[0];
+    vec[k++] += mass*v[1];
+    vec[k++] += mass*v[2];
+    vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
   }
 }
 
@@ -165,7 +142,7 @@ void ComputeTvibGrid::compute_per_grid()
    also return cols = ptr to list of columns in tally for this index
 ------------------------------------------------------------------------- */
 
-int ComputeTvibGrid::query_tally_grid(int index, double **&array, int *&cols)
+int ComputeThermalGrid::query_tally_grid(int index, double **&array, int *&cols)
 {
   index--;
   array = tally;
@@ -189,9 +166,9 @@ int ComputeTvibGrid::query_tally_grid(int index, double **&array, int *&cols)
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
-                                          double **etally, int *emap,
-                                          double *vec, int nstride)
+double ComputeThermalGrid::
+post_process_grid(int index, int onecell, int nsample,
+                  double **etally, int *emap, double *vec, int nstride)
 {
   index--;
   
@@ -213,49 +190,31 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
   }
 
   // compute normalized final value for each grid cell
-  // compute Ibar and Tspecies for each species in the requested group
-  // loop over species in group to compute normalized Tgroup
+  // Vcm = Sum mv / Sum m
+  // KE = Sum m(v - Vcm)^2 / N 
+  // KE = Sum(i=xyz) [(Sum mVi^2) / N - M/N Vcmx^2]
+  // KE = Sum(i=xyz) [(Sum mVi^2) / N - (Sum mVx)^2 / MN]
+  // KE = Sum (mv^2) / N - [(Sum mVx)^2 + (Sum mVy)^2 + (Sum mVz)^2] / MN
+  // thermal temp = (2/(3kB)) * 0.5 * KE
 
-  Particle::Species *species = particle->species;
+  double ncount,mass,mvx,mvy,mvz,mvsq;
+  double *values;
 
-  int isp,evib,count,ispecies;
-  double theta,ibar,numer,denom;
-
-  double boltz = update->boltz;
-  int nsp = nmap[index] / 2;
+  int n = emap[0];
 
   for (int icell = lo; icell < hi; icell++) {
-    evib = emap[0];
-    count = evib+1;
-    for (isp = 0; isp < nsp; isp++) {
-      ispecies = t2s[evib];
-      theta = species[ispecies].vibtemp;
-      if (theta == 0.0 || etally[icell][count] == 0.0) {
-        tspecies[isp] = 0.0;
-        continue;
-      }
-      ibar = etally[icell][evib] / (etally[icell][count] * boltz * theta);
-      if (ibar == 0.0) {
-        tspecies[isp] = 0.0;
-        continue;
-      }
-      denom = boltz * etally[icell][count] * ibar * log(1.0 + 1.0/ibar);
-      tspecies[isp] = etally[icell][evib] / denom;
-
-      evib += 2;
-      count = evib+1;
+    values = etally[icell];
+    ncount = values[n];
+    if (ncount == 0.0) vec[k] = 0.0;
+    else {
+      mass = values[n+1];
+      mvx = values[n+2];
+      mvy = values[n+3];
+      mvz = values[n+4];
+      mvsq = values[n+5];
+      vec[k] = mvsq/ncount - (mvx*mvx + mvy*mvy + mvz*mvz)/ncount/mass;
+      vec[k] *= tprefactor;
     }
-
-    numer = denom = 0.0;
-    count = emap[1];
-    for (isp = 0; isp < nsp; isp++) {
-      numer += tspecies[isp]*etally[icell][count];
-      denom += etally[icell][count];
-      count += 2;
-    }
-
-    if (denom == 0.0) vec[k] = 0.0;
-    else vec[k] = numer/denom;
     k += nstride;
   }
 
@@ -268,24 +227,24 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
    called by init() and whenever grid changes
 ------------------------------------------------------------------------- */
 
-void ComputeTvibGrid::reallocate()
+void ComputeThermalGrid::reallocate()
 {
   if (grid->nlocal == nglocal) return;
 
   memory->destroy(vector_grid);
   memory->destroy(tally);
   nglocal = grid->nlocal;
-  memory->create(vector_grid,nglocal,"tvib/grid:vector_grid");
-  memory->create(tally,nglocal,ntotal,"tvib/grid:tally");
+  memory->create(vector_grid,nglocal,"thermal/grid:vector_grid");
+  memory->create(tally,nglocal,ntotal,"thermal/grid:tally");
 }
 
 /* ----------------------------------------------------------------------
-   memory usage of local grid-based data
+   memory usage of local atom-based data
 ------------------------------------------------------------------------- */
 
-bigint ComputeTvibGrid::memory_usage()
+bigint ComputeThermalGrid::memory_usage()
 {
-  bigint bytes;
+  bigint bytes = 0;
   bytes = nglocal * sizeof(double);
   bytes = ntotal*nglocal * sizeof(double);
   return bytes;

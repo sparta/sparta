@@ -2125,12 +2125,12 @@ double AdaptGrid::value_compute(int icell)
 
   if (valindex == 0) {
     if (compute->post_process_grid_flag) 
-      compute->post_process_grid(NULL,NULL,icell,0,&value,1);
+      compute->post_process_grid_old(NULL,NULL,icell,0,&value,1);
     else value = compute->vector_grid[icell];
     
   } else {
     if (compute->post_process_grid_flag)
-      compute->post_process_grid(NULL,NULL,icell,valindex,&value,1);
+      compute->post_process_grid_old(NULL,NULL,icell,valindex,&value,1);
     else value = compute->array_grid[icell][valindex-1];
   }
 

@@ -833,15 +833,15 @@ void DumpImage::write()
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (gridwhich == COMPUTE) {
-        Compute *compute = modify->compute[gridindex];
-        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-          compute->compute_per_grid();
-          compute->invoked_flag |= INVOKED_PER_GRID;
+        Compute *c = modify->compute[gridindex];
+        if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+          c->compute_per_grid();
+          c->invoked_flag |= INVOKED_PER_GRID;
         }
-        if (compute->post_process_grid_flag)
-          compute->post_process_grid(NULL,NULL,icell,gridcol,&value,0);
-        else if (gridcol == 0) value = compute->vector_grid[icell];
-        else value = compute->array_grid[icell][gridcol-1];
+        if (c->post_process_grid_flag)
+          value = c->post_process_grid(gridcol,icell,1,NULL,NULL,NULL,1);
+        else if (gridcol == 0) value = c->vector_grid[icell];
+        else value = c->array_grid[icell][gridcol-1];
       } else if (gridwhich == FIX) {
         Fix *fix = modify->fix[gridindex];
         if (gridcol == 0) value = fix->vector_grid[icell];
@@ -868,15 +868,15 @@ void DumpImage::write()
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (gridxwhich == COMPUTE) {
-        Compute *compute = modify->compute[gridxindex];
-        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-          compute->compute_per_grid();
-          compute->invoked_flag |= INVOKED_PER_GRID;
+        Compute *c = modify->compute[gridxindex];
+        if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+          c->compute_per_grid();
+          c->invoked_flag |= INVOKED_PER_GRID;
         }
-        if (compute->post_process_grid_flag)
-          compute->post_process_grid(NULL,NULL,icell,gridxcol,&value,0);
-        else if (gridxcol == 0) value = compute->vector_grid[icell];
-        else value = compute->array_grid[icell][gridxcol-1];
+        if (c->post_process_grid_flag)
+          value = c->post_process_grid(gridxcol,icell,1,NULL,NULL,NULL,1);
+        else if (gridxcol == 0) value = c->vector_grid[icell];
+        else value = c->array_grid[icell][gridxcol-1];
       } else if (gridxwhich == FIX) {
         Fix *fix = modify->fix[gridxindex];
         if (gridxcol == 0) value = fix->vector_grid[icell];
@@ -903,15 +903,15 @@ void DumpImage::write()
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (gridywhich == COMPUTE) {
-        Compute *compute = modify->compute[gridyindex];
-        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-          compute->compute_per_grid();
-          compute->invoked_flag |= INVOKED_PER_GRID;
+        Compute *c = modify->compute[gridyindex];
+        if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+          c->compute_per_grid();
+          c->invoked_flag |= INVOKED_PER_GRID;
         }
-        if (compute->post_process_grid_flag)
-          compute->post_process_grid(NULL,NULL,icell,gridycol,&value,0);
-        else if (gridycol == 0) value = compute->vector_grid[icell];
-        else value = compute->array_grid[icell][gridycol-1];
+        if (c->post_process_grid_flag)
+          value = c->post_process_grid(gridycol,icell,1,NULL,NULL,NULL,1);
+        else if (gridycol == 0) value = c->vector_grid[icell];
+        else value = c->array_grid[icell][gridycol-1];
       } else if (gridywhich == FIX) {
         Fix *fix = modify->fix[gridyindex];
         if (gridycol == 0) value = fix->vector_grid[icell];
@@ -938,15 +938,15 @@ void DumpImage::write()
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (gridzwhich == COMPUTE) {
-        Compute *compute = modify->compute[gridzindex];
-        if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-          compute->compute_per_grid();
-          compute->invoked_flag |= INVOKED_PER_GRID;
+        Compute *c = modify->compute[gridzindex];
+        if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+          c->compute_per_grid();
+          c->invoked_flag |= INVOKED_PER_GRID;
         }
-        if (compute->post_process_grid_flag)
-          compute->post_process_grid(NULL,NULL,icell,gridzcol,&value,0);
-        else if (gridzcol == 0) value = compute->vector_grid[icell];
-        else value = compute->array_grid[icell][gridzcol-1];
+        if (c->post_process_grid_flag)
+          value = c->post_process_grid(gridzcol,icell,1,NULL,NULL,NULL,1);
+        else if (gridzcol == 0) value = c->vector_grid[icell];
+        else value = c->array_grid[icell][gridzcol-1];
       } else if (gridzwhich == FIX) {
         Fix *fix = modify->fix[gridzindex];
         if (gridzcol == 0) value = fix->vector_grid[icell];
@@ -1163,15 +1163,15 @@ void DumpImage::create_image()
 	color = gcolorproc;
       } else if (gcolor == ATTRIBUTE) {
         if (gridwhich == COMPUTE) {
-          Compute *compute = modify->compute[gridindex];
-          if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-            compute->compute_per_grid();
-            compute->invoked_flag |= INVOKED_PER_GRID;
+          Compute *c = modify->compute[gridindex];
+          if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+            c->compute_per_grid();
+            c->invoked_flag |= INVOKED_PER_GRID;
           }
-          if (compute->post_process_grid_flag)
-            compute->post_process_grid(NULL,NULL,icell,gridcol,&value,0);
-          else if (gridcol == 0) value = compute->vector_grid[icell];
-          else value = compute->array_grid[icell][gridcol-1];
+          if (c->post_process_grid_flag)
+            value = c->post_process_grid(gridcol,icell,1,NULL,NULL,NULL,1);
+          else if (gridcol == 0) value = c->vector_grid[icell];
+          else value = c->array_grid[icell][gridcol-1];
         } else if (gridwhich == FIX) {
           Fix *fix = modify->fix[gridindex];
           if (gridcol == 0) value = fix->vector_grid[icell];
@@ -1225,15 +1225,15 @@ void DumpImage::create_image()
             color = gcolorproc;
           } else if (gxcolor == ATTRIBUTE) {
             if (gridxwhich == COMPUTE) {
-              Compute *compute = modify->compute[gridxindex];
-              if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-                compute->compute_per_grid();
-                compute->invoked_flag |= INVOKED_PER_GRID;
+              Compute *c = modify->compute[gridxindex];
+              if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+                c->compute_per_grid();
+                c->invoked_flag |= INVOKED_PER_GRID;
               }
-              if (compute->post_process_grid_flag)
-                compute->post_process_grid(NULL,NULL,icell,gridxcol,&value,0);
-              else if (gridxcol == 0) value = compute->vector_grid[icell];
-              else value = compute->array_grid[icell][gridxcol-1];
+              if (c->post_process_grid_flag)
+                value = c->post_process_grid(gridxcol,icell,1,NULL,NULL,NULL,1);
+              else if (gridxcol == 0) value = c->vector_grid[icell];
+              else value = c->array_grid[icell][gridxcol-1];
             } else if (gridxwhich == FIX) {
               Fix *fix = modify->fix[gridxindex];
               if (gridxcol == 0) value = fix->vector_grid[icell];
@@ -1256,15 +1256,15 @@ void DumpImage::create_image()
             color = gcolorproc;
           } else if (gycolor == ATTRIBUTE) {
             if (gridywhich == COMPUTE) {
-              Compute *compute = modify->compute[gridyindex];
-              if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-                compute->compute_per_grid();
-                compute->invoked_flag |= INVOKED_PER_GRID;
+              Compute *c = modify->compute[gridyindex];
+              if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+                c->compute_per_grid();
+                c->invoked_flag |= INVOKED_PER_GRID;
               }
-              if (compute->post_process_grid_flag)
-                compute->post_process_grid(NULL,NULL,icell,gridycol,&value,0);
-              else if (gridycol == 0) value = compute->vector_grid[icell];
-              else value = compute->array_grid[icell][gridycol-1];
+              if (c->post_process_grid_flag)
+                value = c->post_process_grid(gridycol,icell,1,NULL,NULL,NULL,1);
+              else if (gridycol == 0) value = c->vector_grid[icell];
+              else value = c->array_grid[icell][gridycol-1];
             } else if (gridywhich == FIX) {
               Fix *fix = modify->fix[gridyindex];
               if (gridycol == 0) value = fix->vector_grid[icell];
@@ -1287,15 +1287,15 @@ void DumpImage::create_image()
             color = gcolorproc;
           } else if (gzcolor == ATTRIBUTE) {
             if (gridzwhich == COMPUTE) {
-              Compute *compute = modify->compute[gridzindex];
-              if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-                compute->compute_per_grid();
-                compute->invoked_flag |= INVOKED_PER_GRID;
+              Compute *c = modify->compute[gridzindex];
+              if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+                c->compute_per_grid();
+                c->invoked_flag |= INVOKED_PER_GRID;
               }
-              if (compute->post_process_grid_flag)
-                compute->post_process_grid(NULL,NULL,icell,gridzcol,&value,0);
-              else if (gridzcol == 0) value = compute->vector_grid[icell];
-              else value = compute->array_grid[icell][gridzcol-1];
+              if (c->post_process_grid_flag)
+                value = c->post_process_grid(gridzcol,icell,1,NULL,NULL,NULL,1);
+              else if (gridzcol == 0) value = c->vector_grid[icell];
+              else value = c->array_grid[icell][gridzcol-1];
             } else if (gridzwhich == FIX) {
               Fix *fix = modify->fix[gridzindex];
               if (gridzcol == 0) value = fix->vector_grid[icell];

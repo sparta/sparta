@@ -24,9 +24,19 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,NRHO,MASS,MASSRHO,U,V,W,USQ,VSQ,WSQ,
-     KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
-enum{NONE,COUNT,MASSWT,RDOF,VDOF};
+// user keywords
+
+enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
+     U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
+
+// internal accumulators
+
+enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
+     ENGROT,ENGVIB,DOFROT,DOFVIB,CELLCOUNT,CELLMASS,LASTSIZE};
+
+// max # of quantities to accumulate for any user value
+
+#define MAXACCUMULATE 2
 
 /* ---------------------------------------------------------------------- */
 
@@ -37,96 +47,126 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 
   imix = particle->find_mixture(arg[2]);
   if (imix < 0) error->all(FLERR,"Compute grid mixture ID does not exist");
+  ngroup = particle->mixture[imix]->ngroup;
 
   nvalue = narg - 3;
-  which = new int[nvalue];
-  norm_style = new int[nvalue];
+  value = new int[nvalue];
+  
+  npergroup = cellmass = cellcount = 0;
+  unique = new int[LASTSIZE];
+  nmap = new int[nvalue];
+  memory->create(map,ngroup*nvalue,MAXACCUMULATE,"grid:map");
+  for (int i = 0; i < nvalue; i++) nmap[i] = 0;
 
-  nvalue = 0;
+  int ivalue = 0;
   int iarg = 3;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
-    else if (strcmp(arg[iarg],"nrho") == 0) which[nvalue++] = NRHO;
-    else if (strcmp(arg[iarg],"mass") == 0) which[nvalue++] = MASS;
-    else if (strcmp(arg[iarg],"massrho") == 0) which[nvalue++] = MASSRHO;
-    else if (strcmp(arg[iarg],"u") == 0) which[nvalue++] = U;
-    else if (strcmp(arg[iarg],"v") == 0) which[nvalue++] = V;
-    else if (strcmp(arg[iarg],"w") == 0) which[nvalue++] = W;
-    else if (strcmp(arg[iarg],"usq") == 0) which[nvalue++] = USQ;
-    else if (strcmp(arg[iarg],"vsq") == 0) which[nvalue++] = VSQ;
-    else if (strcmp(arg[iarg],"wsq") == 0) which[nvalue++] = WSQ;
-    else if (strcmp(arg[iarg],"ke") == 0) which[nvalue++] = KE;
-    else if (strcmp(arg[iarg],"temp") == 0) which[nvalue++] = TEMPERATURE;
-    else if (strcmp(arg[iarg],"erot") == 0) which[nvalue++] = EROT;
-    else if (strcmp(arg[iarg],"trot") == 0) which[nvalue++] = TROT;
-    else if (strcmp(arg[iarg],"evib") == 0) which[nvalue++] = EVIB;
-    else if (strcmp(arg[iarg],"tvib") == 0) which[nvalue++] = TVIB;
-    else error->all(FLERR,"Illegal compute grid command");
+    if (strcmp(arg[iarg],"n") == 0) {
+      value[ivalue] = NUM;
+      set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"nrho") == 0) {
+      value[ivalue] = NRHO;
+      set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"nfrac") == 0) {
+      value[ivalue] = NFRAC;
+      set_map(ivalue,COUNT);
+      set_map(ivalue,CELLCOUNT);
+      cellcount = 1;
+    } else if (strcmp(arg[iarg],"mass") == 0) {
+      value[ivalue] = MASS;
+      set_map(ivalue,MASSSUM);
+      set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"massrho") == 0) {
+      value[ivalue] = MASSRHO;
+      set_map(ivalue,MASSSUM);
+      set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"massfrac") == 0) {
+      value[ivalue] = MASSFRAC;
+      set_map(ivalue,MASSSUM);
+      set_map(ivalue,CELLMASS);
+      cellmass = 1;
+    } else if (strcmp(arg[iarg],"u") == 0) {
+      value[ivalue] = U;
+      set_map(ivalue,MVX);
+      set_map(ivalue,MASSSUM);
+    } else if (strcmp(arg[iarg],"v") == 0) {
+      value[ivalue] = V;
+      set_map(ivalue,MVY);
+      set_map(ivalue,MASSSUM);
+    } else if (strcmp(arg[iarg],"w") == 0) {
+      value[ivalue] = W;
+      set_map(ivalue,MVZ);
+      set_map(ivalue,MASSSUM);
+    } else if (strcmp(arg[iarg],"usq") == 0) {
+      value[ivalue] = USQ;
+      set_map(ivalue,MVXSQ);
+      set_map(ivalue,MASSSUM);
+    } else if (strcmp(arg[iarg],"vsq") == 0) {
+      value[ivalue] = VSQ;
+      set_map(ivalue,MVYSQ);
+      set_map(ivalue,MASSSUM);
+    } else if (strcmp(arg[iarg],"wsq") == 0) {
+      value[ivalue] = WSQ;
+      set_map(ivalue,MVZSQ);
+      set_map(ivalue,MASSSUM);
+    } else if (strcmp(arg[iarg],"ke") == 0) {
+      value[ivalue] = KE;
+      set_map(ivalue,MVSQ);
+      set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"temp") == 0) {
+      value[ivalue] = TEMPERATURE;
+      set_map(ivalue,MVSQ);
+      set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"erot") == 0) {
+      value[ivalue] = EROT;
+      set_map(ivalue,ENGROT);
+      set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"trot") == 0) {
+      value[ivalue] = TROT;
+      set_map(ivalue,ENGROT);
+      set_map(ivalue,DOFROT);
+    } else if (strcmp(arg[iarg],"evib") == 0) {
+      value[ivalue] = EVIB;
+      set_map(ivalue,ENGVIB);
+      set_map(ivalue,COUNT);
+    } else if (strcmp(arg[iarg],"tvib") == 0) {
+      value[ivalue] = TVIB;
+      set_map(ivalue,ENGVIB);
+      set_map(ivalue,DOFVIB);
+    } else error->all(FLERR,"Illegal compute grid command");
+
+    ivalue++;
     iarg++;
   }
 
-  ngroup = particle->mixture[imix]->ngroup;
-  ntotal = ngroup*nvalue;
+  // ntotal = total # of columns in tally array
+  // reset_map() adjusts indices in initial map() using final npergroup
+  // also adds columns to tally array for CELLCOUNT/CELLMASS
+
+  ntotal = ngroup*npergroup;
+  reset_map();
 
   per_grid_flag = 1;
-  size_per_grid_cols = ntotal;
+  size_per_grid_cols = ngroup*nvalue;
   post_process_grid_flag = 1;
 
   nglocal = 0;
-  array_grid = NULL;
-
-  // norm vectors
-
-  for (int i = 0; i < nvalue; i++) {
-    if (which[i] == NUM || which[i] == NRHO) 
-      norm_style[i] = NONE;
-    else if (which[i] == MASS || which[i] == MASSRHO) 
-      norm_style[i] = COUNT;
-    else if (which[i] == U || which[i] == V || which[i] == W) 
-      norm_style[i] = MASSWT;
-    else if (which[i] == USQ || which[i] == VSQ || which[i] == WSQ) 
-      norm_style[i] = MASSWT;
-    else if (which[i] == KE)
-      norm_style[i] = COUNT;
-    else if (which[i] == TEMPERATURE) 
-      norm_style[i] = COUNT;
-    else if (which[i] == EROT)
-      norm_style[i] = COUNT;
-    else if (which[i] == TROT) 
-      norm_style[i] = RDOF;
-    else if (which[i] == EVIB)
-      norm_style[i] = COUNT;
-    else if (which[i] == TVIB) 
-      norm_style[i] = VDOF;
-  }
-
-  norm_count = new double*[ngroup];
-  norm_mass = new double*[ngroup];
-  norm_rdof = new double*[ngroup];
-  norm_vdof = new double*[ngroup];
-  for (int i = 0; i < ngroup; i++)
-    norm_count[i] = norm_mass[i] = norm_rdof[i] = norm_vdof[i] = NULL;
+  vector_grid = NULL;
+  tally = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 ComputeGrid::~ComputeGrid()
 {
-  delete [] which;
-  delete [] norm_style;
+  delete [] value;
+  delete [] unique;
 
-  memory->destroy(array_grid);
+  delete [] nmap;
+  memory->destroy(map);
 
-  for (int i = 0; i < ngroup; i++) {
-    memory->destroy(norm_count[i]);
-    memory->destroy(norm_mass[i]);
-    memory->destroy(norm_rdof[i]);
-    memory->destroy(norm_vdof[i]);
-  }
-  delete [] norm_count;
-  delete [] norm_mass;
-  delete [] norm_rdof;
-  delete [] norm_vdof;
+  memory->destroy(vector_grid);
+  memory->destroy(tally);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -135,6 +175,10 @@ void ComputeGrid::init()
 {
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute grid mixture has changed");
+
+  eprefactor = 0.5*update->mvv2e;
+  tprefactor = update->mvv2e / (3.0*update->boltz);
+  rvprefactor = 2.0*update->mvv2e / update->boltz;
 
   reallocate();
 }
@@ -151,36 +195,19 @@ void ComputeGrid::compute_per_grid()
   int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
 
-  double fnum = update->fnum;
-  double mvv2e = update->mvv2e;
-  double tprefactor = mvv2e / (3.0*update->boltz);
-  double trotprefactor = mvv2e * 2.0 / update->boltz;
-  double tvibprefactor = mvv2e * 2.0 / update->boltz;
-
   int i,j,k,m,ispecies,igroup,icell;
   double mass;
-  double *norm,*v,*vec;
+  double *v,*vec;
 
-  // zero accumulator array and norm vectors
+  // zero all accumulators - could do this with memset()
 
   for (i = 0; i < nglocal; i++)
     for (j = 0; j < ntotal; j++)
-      array_grid[i][j] = 0.0;
-
-  for (j = 0; j < ngroup; j++) {
-    if ((norm = norm_count[j]))
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    if ((norm = norm_mass[j]))
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    if ((norm = norm_rdof[j]))
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    if ((norm = norm_vdof[j]))
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-  }
+      tally[i][j] = 0.0;
 
   // loop over all particles, skip species not in mixture group
-  // tally any norm associated with group into norms
-  // tally all values associated with group into array_grid
+  // perform all tallies needed for each particle
+  // depends on its species group and the user-requested values
 
   for (i = 0; i < nlocal; i++) {
     ispecies = particles[i].ispecies;
@@ -189,65 +216,57 @@ void ComputeGrid::compute_per_grid()
     icell = particles[i].icell;
 
     mass = species[ispecies].mass;
-    if (norm_mass[igroup]) norm_mass[igroup][icell] += mass;
-    if (norm_count[igroup]) norm_count[igroup][icell] += 1.0;
-
     v = particles[i].v;
 
-    vec = array_grid[icell];
-    k = igroup*nvalue;
+    vec = tally[icell];
+    if (cellmass) vec[cellmass] += mass;
+    if (cellcount) vec[cellcount] += 1.0;
 
-    for (m = 0; m < nvalue; m++) {
-      switch (which[m]) {
-      case NUM:
+    // loop has all possible values particle needs to accumulate
+    // subset defined by user values are indexed by accumulate vector
+
+    k = igroup*npergroup;
+
+    for (m = 0; m < npergroup; m++) {
+      switch (unique[m]) {
+      case COUNT:
         vec[k++] += 1.0;
         break;
-      case NRHO:
-        vec[k++] += fnum * cinfo[icell].weight / cinfo[icell].volume;
-        break;
-      case MASS:
+      case MASSSUM:
         vec[k++] += mass;
         break;
-      case MASSRHO:
-        vec[k++] += mass * fnum * cinfo[icell].weight / cinfo[icell].volume;
-        break;
-      case U:
+      case MVX:
         vec[k++] += mass*v[0];
         break;
-      case V:
+      case MVY:
         vec[k++] += mass*v[1];
         break;
-      case W:
+      case MVZ:
         vec[k++] += mass*v[2];
         break;
-      case USQ:
+      case MVXSQ:
         vec[k++] += mass*v[0]*v[0];
         break;
-      case VSQ:
+      case MVYSQ:
         vec[k++] += mass*v[1]*v[1];
         break;
-      case WSQ:
+      case MVZSQ:
         vec[k++] += mass*v[2]*v[2];
         break;
-      case KE:
-        vec[k++] += 0.5*mvv2e*mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+      case MVSQ:
+        vec[k++] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
         break;
-      case TEMPERATURE:
-        vec[k++] += tprefactor*mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
-        break;
-      case EROT:
+      case ENGROT:
         vec[k++] += particles[i].erot;
         break;
-      case TROT:
-        vec[k++] += trotprefactor*particles[i].erot;
-        norm_rdof[igroup][icell] += species[ispecies].rotdof;
-        break;
-      case EVIB:
+      case ENGVIB:
         vec[k++] += particles[i].evib;
         break;
-      case TVIB:
-        vec[k++] += tvibprefactor*particles[i].evib;
-        norm_vdof[igroup][icell] += species[ispecies].vibdof;
+      case DOFROT:
+        vec[k++] += species[ispecies].rotdof;
+        break;
+      case DOFVIB:
+        vec[k++] += species[ispecies].vibdof;
         break;
       }
     }
@@ -255,52 +274,281 @@ void ComputeGrid::compute_per_grid()
 }
 
 /* ----------------------------------------------------------------------
-   use tallied info to compute normalized values
-   icell = -1, return values for entire group = index
-     store them in out vector with nstride
-   icell >= 0, return value for single icell in group = index
-     store it in out[0]
-   index = which column of this compute's output is requested
-     0 = vector, 1-N = columns of array
-   called by dumps with NULL input arrays, so use internal array/norm as input
-   called by fix ave/grid with arrays it accumulated over many timesteps
+   query info about internal tally array for this compute
+   index = which column of output (0 for vec, 1 to N for array)
+   return # of tally quantities for this index
+   also return array = ptr to tally array
+   also return cols = ptr to list of columns in tally for this index
 ------------------------------------------------------------------------- */
 
-void ComputeGrid::post_process_grid(void *innumer, void *indenom,
-                                    int icell, int index,
-                                    double *out, int nstride)
+int ComputeGrid::query_tally_grid(int index, double **&array, int *&cols)
 {
-  // use internal storage for input
-  // should never be called with non-NULL inputs
-  // fix ave/grid does its own normalization for this compute
-
-  double **array,*norm;
-
-  if (innumer == NULL) {
-    array = array_grid;
-    norm = normptr(index);
-  } else error->all(FLERR,"Invalid call to ComputeGrid::post_process_grid()");
-
-  // request for either a single value or entire column of values
-  // for single value, iterate thru loop just once
-
   index--;
-  int istart = icell;
-  if (icell < 0) istart = 0;
+  int ivalue = index % nvalue;
+  array = tally;
+  cols = map[index];
+  return nmap[ivalue];
+}
 
-  int m = 0;
+/* ----------------------------------------------------------------------
+   tally accumulated info to compute final normalized values
+   index = which column of output (0 for vec, 1 to N for array)
+   for etally = NULL:
+     use internal tallied info for single timestep, set nsample = 1
+     if onecell = -1, compute values for all grid cells
+       store results in vector_grid with nstride = 1 (single col of array_grid)
+     if onecell >= 0, compute single value for onecell and return it
+   for etaylly = ptr to caller array:
+     use external tallied info for many timesteps
+     nsample = additional normalization factor used by some values
+     emap = list of etally columns to use, # of columns determined by index
+     store results in caller's vec, spaced by nstride
+   if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
+------------------------------------------------------------------------- */
 
-  for (int i = istart; i < nglocal; i++) {
-    if (!norm) out[m] = array[i][index];
-    else if (norm[i] == 0.0) out[m] = 0.0;
-    else out[m] = array[i][index]/norm[i];
-    m += nstride;
-    if (icell >= 0) return;
+double ComputeGrid::post_process_grid(int index, int onecell, int nsample,
+                                      double **etally, int *emap,
+                                      double *vec, int nstride)
+{
+  index--;
+  int ivalue = index % nvalue;
+  
+  int lo = 0;
+  int hi = nglocal;
+  int k = 0;
+
+  if (!etally) {
+    nsample = 1;
+    etally = tally;
+    emap = map[index];
+    vec = vector_grid;
+    nstride = 1;
+    if (onecell >= 0) {
+      lo = onecell;
+      hi = lo + 1;
+      k = lo;
+    }
+  }
+
+  // compute normalized final value for each grid cell
+
+  switch (value[ivalue]) {
+
+  case NUM:
+    {
+      int count = emap[0];
+      for (int icell = lo; icell < hi; icell++) {
+        vec[k] = etally[icell][count] / nsample;
+        k += nstride;
+      }
+      break;
+    }
+
+  case MASS:
+    {
+      double norm;
+      int mass = emap[0];
+      int count = emap[1];
+      for (int icell = lo; icell < hi; icell++) {
+        norm = etally[icell][count];
+        if (norm == 0.0) vec[k] = 0.0;
+        else vec[k] = etally[icell][mass] / norm;
+        k += nstride;
+      }
+      break;
+    }
+
+  case NRHO:
+    {
+      double wt;
+      double fnum = update->fnum;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+
+      int count = emap[0];
+      for (int icell = lo; icell < hi; icell++) {
+        wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
+        vec[k] = wt * etally[icell][count] / nsample;
+        k += nstride;
+      }
+      break;
+    }
+
+  case MASSRHO:
+    {
+      double wt;
+      double fnum = update->fnum;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+
+      double norm;
+      int mass = emap[0];
+      int count = emap[1];
+      for (int icell = lo; icell < hi; icell++) {
+        norm = etally[icell][count];
+        if (norm == 0.0) vec[k] = 0.0;
+        else {
+          wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
+          vec[k] = wt * etally[icell][mass] / norm;
+        }
+        k += nstride;
+      }
+      break;
+    }
+
+  case NFRAC:
+  case MASSFRAC:
+    {
+      double norm;
+      int count = emap[0];
+      int cellcount = emap[1];
+      for (int icell = lo; icell < hi; icell++) {
+        norm = etally[icell][cellcount];
+        if (norm == 0.0) vec[k] = 0.0;
+        else vec[k] = etally[icell][count] / norm;
+        k += nstride;
+      }
+      break;
+    }
+
+  case U:
+  case V:
+  case W:
+  case USQ:
+  case VSQ:
+  case WSQ:
+    {
+      double norm;
+      int velocity = emap[0];
+      int mass = emap[1];
+      for (int icell = lo; icell < hi; icell++) {
+        norm = etally[icell][mass];
+        if (norm == 0.0) vec[k] = 0.0;
+        else vec[k] = etally[icell][velocity] / norm;
+        k += nstride;
+      }
+      break;
+    }
+
+  case KE:
+    {
+      double norm;
+      int mvsq = emap[0];
+      int count = emap[1];
+      for (int icell = lo; icell < hi; icell++) {
+        norm = etally[icell][count];
+        if (norm == 0.0) vec[k] = 0.0;
+        else vec[k] = eprefactor * etally[icell][mvsq] / norm;
+        k += nstride;
+      }
+      break;
+    }
+
+  case TEMPERATURE:
+    {
+      double norm;
+      int mvsq = emap[0];
+      int count = emap[1];
+      for (int icell = lo; icell < hi; icell++) {
+        norm = etally[icell][count];
+        if (norm == 0.0) vec[k] = 0.0;
+        else vec[k] = tprefactor * etally[icell][mvsq] / norm;
+        k += nstride;
+      }
+      break;
+    }
+
+  case EROT:
+  case EVIB:
+    {
+      double norm;
+      int eng = emap[0];
+      int count = emap[1];
+      for (int icell = lo; icell < hi; icell++) {
+        norm = etally[icell][count];
+        if (norm == 0.0) vec[k] = 0.0;
+        else vec[k] = etally[icell][eng] / norm;
+        k += nstride;
+      }
+      break;
+    }
+
+  case TROT:
+  case TVIB:
+    {
+      double norm;
+      int eng = emap[0];
+      int dof = emap[1];
+      for (int icell = lo; icell < hi; icell++) {
+        norm = etally[icell][dof];
+        if (norm == 0.0) vec[k] = 0.0;
+        else vec[k] = rvprefactor * etally[icell][eng] / norm;
+        k += nstride;
+      }
+      break;
+    }
+  }
+
+  if (onecell < 0) return 0.0;
+  return vec[onecell];
+}
+
+/* ----------------------------------------------------------------------
+   add a tally quantity to all groups for ivalue
+   also add it to unique list if first time this name is used
+   name = name of tally quantity from enum{} at top of file
+   nmap[i] = # of tally quantities for user value I
+   map[i][k] = index of Kth tally quantity for output value I
+   npergroup = length of unique list
+   do not add CELLCOUNT/CELLMASS to unique, since not a pergroup tally
+------------------------------------------------------------------------- */
+
+void ComputeGrid::set_map(int ivalue, int name)
+{
+  // index = loc of name in current unique list if there, else npergroup
+
+  int index = 0;
+  for (index = 0; index < npergroup; index++)
+    if (unique[index] == name) break;
+
+  // if name = CELLCOUNT/CELLMASS, just set index to name for now
+  // if name is not already in unique, add it and increment npergroup
+
+  if (name == CELLCOUNT || name == CELLMASS) index = name;
+  else if (index == npergroup) {
+    index = npergroup;
+    unique[npergroup++] = name;
+  }
+
+  // add index to map and nmap for all groups
+  // will add group offset in reset_map()
+
+  for (int igroup = 0; igroup < ngroup; igroup++)
+    map[igroup*nvalue+ivalue][nmap[ivalue]] = index;
+  nmap[ivalue]++;
+}
+
+/* ----------------------------------------------------------------------
+   increment ntotal = # of tally quantities for CELLCOUNT/CELLMASS
+   reset map indices to reflect final npergroup = unique quantities/group
+------------------------------------------------------------------------- */
+
+void ComputeGrid::reset_map()
+{
+  if (cellcount) cellcount = ntotal++;
+  if (cellmass) cellmass = ntotal++;
+
+  for (int i = 0; i < ngroup*nvalue; i++) {
+    int igroup = i / nvalue;
+    int ivalue = i % nvalue;
+    for (int k = 0; k < nmap[ivalue]; k++) {
+      if (map[i][k] == CELLCOUNT) map[i][k] = cellcount;
+      else if (map[i][k] == CELLMASS) map[i][k] = cellmass;
+      else map[i][k] += igroup*npergroup;
+    }
   }
 }
 
 /* ----------------------------------------------------------------------
-   reallocate arrays if nglocal has changed
+   reallocate data storage if nglocal has changed
    called by init() and whenever grid changes
 ------------------------------------------------------------------------- */
 
@@ -308,76 +556,21 @@ void ComputeGrid::reallocate()
 {
   if (grid->nlocal == nglocal) return;
 
+  memory->destroy(vector_grid);
+  memory->destroy(tally);
   nglocal = grid->nlocal;
-  memory->destroy(array_grid);
-  memory->create(array_grid,nglocal,ntotal,"grid:array_grid");
-
-  for (int i = 0; i < ngroup; i++) {
-    memory->destroy(norm_count[i]);
-    memory->destroy(norm_mass[i]);
-    memory->destroy(norm_rdof[i]);
-    memory->destroy(norm_vdof[i]);
-    norm_count[i] = norm_mass[i] = norm_rdof[i] = norm_vdof[i] = NULL;
-    for (int j = 0; j < nvalue; j++) {
-      if (norm_style[j] == COUNT && norm_count[i] == NULL)
-        memory->create(norm_count[i],nglocal,"grid:norm_count");
-      else if (norm_style[j] == MASSWT && norm_mass[i] == NULL)
-        memory->create(norm_mass[i],nglocal,"grid:norm_mass");
-      else if (norm_style[j] == RDOF && norm_rdof[i] == NULL)
-        memory->create(norm_rdof[i],nglocal,"grid:norm_dof");
-      else if (norm_style[j] == VDOF && norm_vdof[i] == NULL)
-        memory->create(norm_vdof[i],nglocal,"grid:norm_dof");
-    }
-  }
+  memory->create(vector_grid,nglocal,"grid:vector_grid");
+  memory->create(tally,nglocal,ntotal,"grid:tally");
 }
 
 /* ----------------------------------------------------------------------
-   return info for norm vector used by column N
-   input N is value from 1 to Ncols
-   output: istyle = NONE, COUNT, etc
-   output: igroup = which group within style
-------------------------------------------------------------------------- */
-
-void ComputeGrid::normwhich(int n, int &istyle, int &igroup)
-{
-  igroup = (n-1) / nvalue;
-  int ivalue = (n-1) % nvalue;
-  if (norm_style[ivalue] == COUNT) istyle = COUNT;
-  else if (norm_style[ivalue] == MASSWT) istyle = MASSWT;
-  else if (norm_style[ivalue] == RDOF) istyle = RDOF;
-  else if (norm_style[ivalue] == VDOF) istyle = VDOF;
-  else istyle = NONE;
-}
-
-/* ----------------------------------------------------------------------
-   return ptr to norm vector used by column N
-   input N is value from 1 to Ncols
-------------------------------------------------------------------------- */
-
-double *ComputeGrid::normptr(int n)
-{
-  int igroup = (n-1) / nvalue;
-  int ivalue = (n-1) % nvalue;
-  if (norm_style[ivalue] == COUNT) return norm_count[igroup];
-  if (norm_style[ivalue] == MASSWT) return norm_mass[igroup];
-  if (norm_style[ivalue] == RDOF) return norm_rdof[igroup];
-  if (norm_style[ivalue] == VDOF) return norm_vdof[igroup];
-  return NULL;
-}
-
-/* ----------------------------------------------------------------------
-   memory usage of local grid-based array
+   memory usage of local grid-based data
 ------------------------------------------------------------------------- */
 
 bigint ComputeGrid::memory_usage()
 {
   bigint bytes;
+  bytes = nglocal * sizeof(double);
   bytes = ntotal*nglocal * sizeof(double);
-  for (int i = 0; i < ngroup; i++) {
-    if (norm_count[i]) bytes += nglocal * sizeof(double);
-    if (norm_mass[i]) bytes += nglocal * sizeof(double);
-    if (norm_vdof[i]) bytes += nglocal * sizeof(double);
-    if (norm_rdof[i]) bytes += nglocal * sizeof(double);
-  }
   return bytes;
 }

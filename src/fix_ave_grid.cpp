@@ -65,10 +65,9 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   // parse values until one isn't recognized
   // expand compute or fix array into full set of columns
 
-  which = argindex = value2index = extraflag = NULL;
+  which = argindex = value2index = post_process = NULL;
   ids = NULL;
   nvalues = maxvalues = 0;
-  nextra = 0;
 
   iarg = 5;
   while (iarg < narg) {
@@ -92,10 +91,18 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 	argindex[nvalues] = atoi(ptr+1);
 	*ptr = '\0';
       } else argindex[nvalues] = 0;
-      extraflag[nvalues] = -1;
       n = strlen(suffix) + 1;
       ids[nvalues] = new char[n];
       strcpy(ids[nvalues],suffix);
+
+      post_process[nvalues] = 0;
+      if (which[nvalues] == COMPUTE) {
+	int icompute = modify->find_compute(ids[nvalues]);
+	if (icompute < 0)
+	  error->all(FLERR,"Compute ID for fix ave/grid does not exist");
+	post_process[nvalues] = 
+          modify->compute[icompute]->post_process_grid_flag;
+      }
 
       // expand an array arg into multiple vectors
 
@@ -108,8 +115,6 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
             error->all(FLERR,"Compute ID for fix ave/grid does not exist");
           if (modify->compute[icompute]->per_grid_flag) {
             ndup = modify->compute[icompute]->size_per_grid_cols;
-            if (modify->compute[icompute]->size_per_grid_extra_cols > 0)
-              extraflag[nvalues] = nextra++;
           }
         }
         if (which[nvalues] == FIX) {
@@ -120,14 +125,13 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
             ndup = modify->fix[ifix]->size_per_grid_cols;
         }
         if (ndup) {
-          int eflag = extraflag[nvalues];
           argindex[nvalues] = 1;
           nvalues++;
           for (int icol = 2; icol <= ndup; icol++) {
             if (nvalues == maxvalues) grow();
             which[nvalues] = which[nvalues-1];
             argindex[nvalues] = icol;
-            extraflag[nvalues] = eflag;
+	    post_process[nvalues] = post_process[nvalues-1];
             n = strlen(suffix) + 1;
             ids[nvalues] = new char[n];
             strcpy(ids[nvalues],suffix);
@@ -204,74 +208,22 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   if (nvalues == 1) size_per_grid_cols = 0;
   else size_per_grid_cols = nvalues;
 
-  vector_grid = vector = NULL;
-  array_grid = array = NULL;
-
-  // setup norm vectors and norm pointers
-  // only store unique norms by checking if 
-  //   current compute & flag matches previous computes & flags
-  // NOTE: add more logic for fixes and variables if enable them
-
-  normacc = new int[nvalues];
-  normindex = new int[nvalues];
-  norms = new double*[nvalues];
-  int *list_compute = new int[nvalues];
-  int *list_style = new int[nvalues];
-  int *list_group = new int[nvalues];
-
-  int istyle,igroup;
-
-  nnorm = 0;
-  for (int m = 0; m < nvalues; m++) {
-    int j = argindex[m];
-    
-    normacc[m] = 0;
-    normindex[m] = -1;
-    
-    if (which[m] == COMPUTE) {
-      int icompute = modify->find_compute(ids[m]);
-      Compute *compute = modify->compute[icompute];
-      compute->normwhich(j,istyle,igroup);
-      if (!istyle) continue;
-      
-      int i;
-      for (i = 0; i < nnorm; i++)
-        if (icompute == list_compute[i] && 
-            istyle == list_style[i] && igroup == list_group[i]) break;
-      if (i < nnorm) normindex[m] = i;
-      else {
-        normacc[m] = 1;
-        normindex[m] = nnorm;
-        norms[nnorm] = NULL;
-        list_compute[nnorm] = icompute;
-        list_style[nnorm] = istyle;
-        list_group[nnorm] = igroup;
-        nnorm++;
-      }
-    }
-  }
-
-  delete [] list_compute;
-  delete [] list_style;
-  delete [] list_group;
-
-  // setup Extra data structs
-
-  if (nextra) extras = new Extra[nextra];
-  else extras = NULL;
-
-  for (int m = 0; m < nvalues; m++) {
-    if (extraflag[m] < 0) continue;
-    int iextra = extraflag[m];
-    int icompute = modify->find_compute(ids[m]);
-    extras[iextra].ncol = modify->compute[icompute]->size_per_grid_extra_cols;
-    extras[iextra].array_extra = extras[iextra].norm_extra = NULL;
-  }
-
-  // allocate per-grid cell memory for vectors/arrays and norms
-
   nglocal = nglocalmax = grid->nlocal;
-  allocate(nglocal);
+
+  // allocate per-grid cell data storage
+  // zero vector/array grid in case used by dump or load balancer
+
+  vector_grid = NULL;
+  array_grid = NULL;
+
+  if (nvalues == 1) {
+    memory->grow(vector_grid,nglocal,"ave/grid:vector_grid");
+    for (int i = 0; i < nglocal; i++) vector_grid[i] = 0.0;
+  } else {
+    memory->grow(array_grid,nglocal,nvalues,"ave/grid:array_grid");
+    for (int i = 0; i < nglocal; i++)
+      for (int m = 0; m < nvalues; m++) array_grid[i][m] = 0.0;
+  }
 
   // nvalid = next step on which end_of_step does something
   // add nvalid to all computes that store invocation times
@@ -282,6 +234,97 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   irepeat = 0;
   nvalid = nextvalid();
   modify->addstep_compute_all(nvalid);
+
+  // determine size of map/umap/uomap data structs and allocate them
+  // tmax = max # of tally quantities for any value
+
+  int tmax = 1;
+  for (int m = 0; m < nvalues; m++) {
+    int n = -1;
+    int j = argindex[m];
+    if (which[m] != COMPUTE) continue;
+    n = modify->find_compute(ids[m]);
+    if (!modify->compute[n]->post_process_grid_flag) continue;
+    double **array;
+    int *cmap;
+    int ncount = modify->compute[n]->query_tally_grid(j,array,cmap);
+    tmax = MAX(tmax,ncount);
+  }
+
+  nmap = new int[nvalues];
+  memory->create(map,nvalues,tmax,"ave/grid:map");
+  numap = new int[nvalues];
+  memory->create(umap,nvalues,tmax,"ave/grid:umap");
+  memory->create(uomap,nvalues,tmax,"ave/grid:uomap");
+
+  // setup nmap/map and numap/umap/uomap data structs for all values
+  // ntotal = total # of unique tally quantities = columns in tally array
+
+  ntotal = 0;
+  for (int m = 0; m < nvalues; m++) {
+    int n = -1;
+    int j = argindex[m];
+
+    int pflag = 0;
+    if (which[m] == COMPUTE) {
+      n = modify->find_compute(ids[m]);
+      if (modify->compute[n]->post_process_grid_flag) pflag = 1;
+    }
+
+    // if not a compute that post-processes,
+    // add single new tally to nmap/map and numap/umap
+
+    if (!pflag) {
+      nmap[m] = 1;
+      map[m][0] = ntotal;
+      numap[m] = 1;
+      umap[m][0] = ntotal;
+      ntotal++;
+
+    // else add all compute tallies to nmap/map
+    // and only unique compute tallies to numap/umap/uomap
+
+    } else {
+      double **array;
+      int *cmap;
+      int ncount = modify->compute[n]->query_tally_grid(j,array,cmap);
+      nmap[m] = numap[m] = 0;
+      for (int i = 0; i < ncount; i++) {
+
+        // set ucol = -1 if first time this compute quantity is tallied
+        // else set to tally column that already tallies it
+
+        int col = -1;
+        for (int mm = 0; mm <= m; mm++) {
+          if (which[mm] != COMPUTE) continue;
+          int nn = modify->find_compute(ids[mm]);
+          if (!modify->compute[nn]->post_process_grid_flag) continue;
+          if (n != nn) continue;  // not same compute
+          for (int kk = 0; kk < numap[mm]; kk++)
+            if (cmap[i] == uomap[mm][kk]) col = umap[mm][kk];
+        }
+
+        // if this quantity already tallied, just point nmap/map to it
+        // else add to nmap/map and numap/umap/uomap
+
+        if (col >= 0) {
+          map[m][nmap[m]] = col;
+          nmap[m]++;
+        } else {
+          map[m][nmap[m]] = ntotal;
+          nmap[m]++;
+          umap[m][numap[m]] = ntotal;
+          uomap[m][numap[m]] = cmap[i];
+          numap[m]++;
+          ntotal++;
+        }
+      }
+    }
+  }
+
+  // allocate tally array
+
+  memory->create(tally,nglocal,ntotal,"ave/grid:tally");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -291,27 +334,19 @@ FixAveGrid::~FixAveGrid()
   memory->destroy(which);
   memory->destroy(argindex);
   memory->destroy(value2index);
-  memory->destroy(extraflag);
+  memory->destroy(post_process);
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
   memory->sfree(ids);
 
+  delete [] nmap;
+  memory->destroy(map);
+  delete [] numap;
+  memory->destroy(umap);
+  memory->destroy(uomap);
+
   if (nvalues == 1) memory->destroy(vector_grid);
   else memory->destroy(array_grid);
-  if (ave == RUNNING) {
-    if (nvalues == 1) memory->destroy(vector);
-    else memory->destroy(array);
-  }
-
-  delete [] normacc;
-  delete [] normindex;
-  for (int i = 0; i < nnorm; i++) memory->destroy(norms[i]);
-  delete [] norms;
-
-  for (int i = 0; i < nextra; i++) {
-    memory->destroy(extras[i].array_extra);
-    memory->destroy(extras[i].norm_extra);
-  }
-  delete [] extras;
+  memory->destroy(tally);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -365,47 +400,27 @@ void FixAveGrid::setup()
 
 void FixAveGrid::end_of_step()
 {
-  int i,j,m,n,ncol,iextra;
-  double *norm,*cfv_norm;
-  double **array_extra,**norm_extra;
+  int i,j,k,m,n;
+  int ntally,kk,tmp;
+  int *itmp;
+  double **ctally;
 
   // skip if not step which requires doing something
 
   bigint ntimestep = update->ntimestep;
   if (ntimestep != nvalid) return;
 
-  // zero vector/array and norms if ave = ONE and first sample
+  // zero tally if ave = ONE and first sample
+  // could do this with memset()
 
   if (ave == ONE && irepeat == 0) {
-    if (nvalues == 1)
-      for (i = 0; i < nglocal; i++)
-	vector[i] = 0.0;
-    else
-      for (i = 0; i < nglocal; i++)
-	for (m = 0; m < nvalues; m++)
-	  array[i][m] = 0.0;
-    for (int m = 0; m < nnorm; m++) {
-      norm = norms[m];
-      for (i = 0; i < nglocal; i++) norm[i] = 0.0;
-    }
-
-    if (nextra) {
-      for (int m = 0; m < nextra; m++) {
-        array_extra = extras[m].array_extra;
-        norm_extra = extras[m].norm_extra;
-        ncol = extras[m].ncol;
-        for (i = 0; i < nglocal; i++)
-          for (j = 0; j < ncol; j++) {
-            array_extra[i][j] = 0.0;
-            norm_extra[i][j] = 0.0;
-          }
-      }
-    }
+    for (i = 0; i < nglocal; i++)
+      for (j = 0; j < ntotal; j++)
+        tally[i][j] = 0.0;
   }
 
   // accumulate results of computes,fixes,variables
   // compute/fix/variable may invoke computes so wrap with clear/add
-  // accumulate norm values if necessary, only done once per unique norm
   // NOTE: add more logic for fixes and variables if enable them
 
   modify->clearstep_compute();
@@ -415,80 +430,54 @@ void FixAveGrid::end_of_step()
     j = argindex[m];
 
     // invoke compute if not previously invoked
-    // if compute stores values in its extra arrays, accumulate to local Extra
 
     if (which[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
       if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
         compute->compute_per_grid();
         compute->invoked_flag |= INVOKED_PER_GRID;
-
-        if (extraflag[m] >= 0) {
-          iextra = extraflag[m];
-          array_extra = extras[iextra].array_extra;
-          norm_extra = extras[iextra].norm_extra;
-          ncol = extras[iextra].ncol;
-          double **array_grid_extra = compute->array_grid_extra;
-          double **norm_grid_extra = compute->norm_grid_extra;
-          for (i = 0; i < nglocal; i++)
-            for (j = 0; j < ncol; j++) {
-              array_extra[i][j] += array_grid_extra[i][j];
-              norm_extra[i][j] += norm_grid_extra[i][j];
-            }
-        }
       }
 
-      // insure copying from compute extra arrays is only done once
+      // accumulate one or more compute values to umap columns of tally array
+      // if compute does not post-process, access its vec/array grid directly
+      // else access uomap columns in its ctally array
 
-      if (extraflag[m] >= 0) continue;
-      
-      // compute values are in vector/array grid and norm vector
-
-      if (j == 0) {
-        double *compute_vector = compute->vector_grid;
-        if (nvalues == 1)
-          for (i = 0; i < nglocal; i++)
-            vector[i] += compute_vector[i];
-        else
-          for (i = 0; i < nglocal; i++)
-            array[i][m] += compute_vector[i];
+      if (post_process[m]) {
+	ntally = numap[m];
+        tmp = compute->query_tally_grid(j,ctally,itmp);
+	for (int itally = 0; itally < ntally; itally++) {
+	  k = umap[m][itally];
+	  kk = uomap[m][itally];
+	  for (i = 0; i < nglocal; i++)
+	    tally[i][k] += ctally[i][kk];
+	}
       } else {
-        int jm1 = j - 1;
-        double **compute_array = compute->array_grid;
-        if (nvalues == 1)
-          for (i = 0; i < nglocal; i++)
-            vector[i] += compute_array[i][jm1];
-        else
-          for (i = 0; i < nglocal; i++)
-            array[i][m] += compute_array[i][jm1];
-      }
-      
-      if (normacc[m]) {
-        cfv_norm = compute->normptr(j);
-        norm = norms[normindex[m]];
-        for (i = 0; i < nglocal; i++) norm[i] += cfv_norm[i];
+        k = umap[m][0];
+        if (j == 0) {
+          double *compute_vector = compute->vector_grid;
+	  for (i = 0; i < nglocal; i++)
+	    tally[i][k] += compute_vector[i];
+        } else {
+          int jm1 = j - 1;
+          double **compute_array = compute->array_grid;
+	  for (i = 0; i < nglocal; i++)
+	    tally[i][k] += compute_array[i][jm1];
+        }
       }
 
     // access fix fields, guaranteed to be ready
       
     } else if (which[m] == FIX) {
+      k = umap[m][0];
       if (j == 0) {
         double *fix_vector = modify->fix[n]->vector_grid;
-        if (nvalues == 1)
-          for (i = 0; i < nglocal; i++)
-            vector[i] += fix_vector[i];
-        else
-          for (i = 0; i < nglocal; i++)
-            array[i][m] += fix_vector[i];
+	for (i = 0; i < nglocal; i++)
+	  tally[i][k] += fix_vector[i];
       } else {
         int jm1 = j - 1;
         double **fix_array = modify->fix[n]->array_grid;
-        if (nvalues == 1)
-          for (i = 0; i < nglocal; i++)
-            vector[i] += fix_array[i][jm1];
-        else
-          for (i = 0; i < nglocal; i++)
-            array[i][m] += fix_array[i][jm1];
+	for (i = 0; i < nglocal; i++)
+	  tally[i][k] += fix_array[i][jm1];
       }
       
       // evaluate grid-style variable
@@ -512,88 +501,36 @@ void FixAveGrid::end_of_step()
   nvalid = ntimestep+per_grid_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
 
-  // normalize for output on Nfreq timestep
-  // normindex < 0, just normalize by # of samples
-  // normindex >= 0, normalize by accumulated norm vector
-  // perform post-processing for computes that store extra arrays
-  //   not those that just have post_process flag set
+  // create normalized output in vector_grid or array_grid
+  // if post_process flag set, compute performs normalization via pp_grid()
+  // else just divide by nsample
 
-  if (ave == ONE) {
-    if (nvalues == 1) {
-      if (extraflag[0] >= 0) {
-        iextra = extraflag[0];
-        n = value2index[0];
-        j = argindex[0];
-        Compute *compute = modify->compute[n];
-        compute->post_process_grid(extras[iextra].array_extra,
-                                   extras[iextra].norm_extra,
-                                   -1,j,vector_grid,1);
-      } else if (normindex[0] < 0) {
-        for (i = 0; i < nglocal; i++) vector_grid[i] /= nsample;
-      } else {
-        norm = norms[normindex[0]];
-        for (i = 0; i < nglocal; i++)
-          if (norm[i] > 0.0) vector_grid[i] /= norm[i];
-      }
+  if (nvalues == 1) {
+    if (post_process[0]) {
+      n = value2index[0];
+      j = argindex[0];
+      Compute *c = modify->compute[n];
+      c->post_process_grid(j,-1,nsample,tally,map[0],vector_grid,1);
     } else {
-      for (m = 0; m < nvalues; m++) {
-        if (extraflag[m] >= 0) {
-          iextra = extraflag[m];
-          n = value2index[m];
-          j = argindex[m];
-          Compute *compute = modify->compute[n];
-          compute->post_process_grid(extras[iextra].array_extra,
-                                     extras[iextra].norm_extra,
-                                     -1,j,&array_grid[0][m],nvalues);
-        } else if (normindex[m] < 0) {
-          for (i = 0; i < nglocal; i++) array_grid[i][m] /= nsample;
-        } else {
-          norm = norms[normindex[m]];
-          for (i = 0; i < nglocal; i++)
-            if (norm[i] > 0.0) array_grid[i][m] /= norm[i];
-        }
-      }
+      k = map[0][0];
+      for (i = 0; i < nglocal; i++) vector_grid[i] = tally[i][k] / nsample;
     }
 
   } else {
-    if (nvalues == 1) {
-      if (extraflag[0] >= 0) {
-        iextra = extraflag[0];
-        n = value2index[0];
-        j = argindex[0];
-        Compute *compute = modify->compute[n];
-        compute->post_process_grid(extras[iextra].array_extra,
-                                   extras[iextra].norm_extra,
-                                   -1,j,vector_grid,1);
-      } if (normindex[0] < 0) {
-        for (i = 0; i < nglocal; i++) vector_grid[i] = vector[i]/nsample;
+    for (m = 0; m < nvalues; m++) {
+      if (post_process[m]) {
+	n = value2index[m];
+	j = argindex[m];
+	Compute *c = modify->compute[n];
+        c->post_process_grid(j,-1,nsample,tally,map[m],
+                             &array_grid[0][m],nvalues);
       } else {
-        norm = norms[normindex[0]];
-        for (i = 0; i < nglocal; i++) 
-          if (norm[i] > 0.0) vector_grid[i] = vector[i]/norm[i];
-      }
-    } else {
-      for (m = 0; m < nvalues; m++) {
-        if (extraflag[m] >= 0) {
-          iextra = extraflag[m];
-          n = value2index[m];
-          j = argindex[m];
-          Compute *compute = modify->compute[n];
-          compute->post_process_grid(extras[iextra].array_extra,
-                                     extras[iextra].norm_extra,
-                                     -1,j,&array_grid[0][m],nvalues);
-        } else if (normindex[m] < 0) {
-          for (i = 0; i < nglocal; i++)
-            array_grid[i][m] = array[i][m]/nsample;
-        } else {
-          norm = norms[normindex[m]];
-          for (i = 0; i < nglocal; i++) 
-            if (norm[i] > 0.0) array_grid[i][m] = array[i][m]/norm[i];
-        }
+        k = map[m][0];
+	for (i = 0; i < nglocal; i++) array_grid[i][m] = tally[i][k] / nsample;
       }
     }
   }
-
+  
   // reset nsample if ave = ONE
 
   if (ave == ONE) nsample = 0;
@@ -639,35 +576,8 @@ int FixAveGrid::pack_one(int icell, char *buf, int memflag)
   }
   ptr += nvalues*sizeof(double);
 
-  if (ave == RUNNING) {
-    if (memflag) {
-      if (nvalues == 1) *((double *) ptr) = vector[icell];
-      else memcpy(ptr,array[icell],nvalues*sizeof(double));
-    }
-    ptr += nvalues*sizeof(double);
-  }
-
-  if (memflag) {
-    double *dptr = (double *) ptr;
-    for (int i = 0; i < nnorm; i++) {
-      *dptr = norms[i][icell];
-      dptr++;
-    }
-  }
-  ptr += nnorm*sizeof(double);
-
-  if (nextra) {
-    for (int m = 0; m < nextra; m++) {
-      int ncol = extras[m].ncol;
-      if (memflag) {
-        double *dptr = (double *) ptr;
-        memcpy(dptr,extras[m].array_extra[icell],ncol*sizeof(double));
-        dptr += ncol;
-        memcpy(dptr,extras[m].norm_extra[icell],ncol*sizeof(double));
-      }
-      ptr += 2*ncol*sizeof(double);
-    }
-  }
+  if (memflag) memcpy(ptr,tally[icell],ntotal*sizeof(double));
+  ptr += ntotal*sizeof(double);
 
   return ptr-buf;
 }
@@ -689,21 +599,7 @@ void FixAveGrid::add_grid_one(int icell, int flag)
   else 
     for (int i = 0; i < nvalues; i++) array_grid[nglocal][i] = 0.0;
 
-  if (ave == RUNNING) {
-    if (nvalues == 1) vector[nglocal] = 0.0;
-    else 
-      for (int i = 0; i < nvalues; i++) array[nglocal][i] = 0.0;
-  }
-
-  for (int m = 0; m < nnorm; m++) norms[m][nglocal] = 0.0;
-
-  if (nextra) {
-    for (int m = 0; m < nextra; m++) {
-      int ncol = extras[m].ncol;
-      for (int i = 0; i < ncol; i++) extras[m].array_extra[nglocal][i] = 0.0;
-      for (int i = 0; i < ncol; i++) extras[m].norm_extra[nglocal][i] = 0.0;
-    }
-  }
+  for (int i = 0; i < ntotal; i++) tally[nglocal][i] = 0.0;
 
   nglocal++;
 }
@@ -750,29 +646,8 @@ int FixAveGrid::unpack_one(char *buf, int icell)
   else memcpy(array_grid[icell],ptr,nvalues*sizeof(double));
   ptr += nvalues*sizeof(double);
 
-  if (ave == RUNNING) {
-    if (nvalues == 1) vector[icell] = *((double *) ptr);
-    else memcpy(array[icell],ptr,nvalues*sizeof(double));
-    ptr += nvalues*sizeof(double);
-  }
-
-  double *dptr = (double *) ptr;
-  for (int i = 0; i < nnorm; i++) {
-    norms[i][icell] = *dptr;
-    dptr++;
-  }
-  ptr += nnorm*sizeof(double);
-
-  if (nextra) {
-    for (int m = 0; m < nextra; m++) {
-      int ncol = extras[m].ncol;
-      double *dptr = (double *) ptr;
-      memcpy(extras[m].array_extra[icell],dptr,ncol*sizeof(double));
-      dptr += ncol;
-      memcpy(extras[m].norm_extra[icell],dptr,ncol*sizeof(double));
-      ptr += 2*ncol*sizeof(double);
-    }
-  }
+  memcpy(tally[icell],ptr,ntotal*sizeof(double));
+  ptr += ntotal*sizeof(double);
 
   return ptr-buf;
 }
@@ -804,22 +679,9 @@ void FixAveGrid::compress_grid()
     if (nglocal != icell)  {
       if (nvalues == 1) vector_grid[nglocal] = vector_grid[icell];
       else memcpy(array_grid[nglocal],array_grid[icell],nvalues*sizeof(double));
-      if (ave == RUNNING) {
-        if (nvalues == 1) vector[nglocal] = vector[icell];
-        else memcpy(array[nglocal],array[icell],nvalues*sizeof(double));
-      }
-      for (int m = 0; m < nnorm; m++) norms[m][nglocal] = norms[m][icell];
-
-      if (nextra) {
-        for (int m = 0; m < nextra; m++) {
-          int ncol = extras[m].ncol;
-          memcpy(extras[m].array_extra[nglocal],extras[m].array_extra[icell],
-                 ncol*sizeof(double));
-          memcpy(extras[m].norm_extra[nglocal],extras[m].norm_extra[icell],
-                 ncol*sizeof(double));
-        }
-      }
+      memcpy(tally[nglocal],tally[icell],ntotal*sizeof(double));
     }
+
     nglocal++;
   }
 }
@@ -833,9 +695,6 @@ double FixAveGrid::memory_usage()
   double bytes = 0.0;
   bytes += nglocalmax*nvalues * sizeof(double);
   if (ave == RUNNING) bytes += nglocalmax*nvalues * sizeof(double);
-  bytes += nnorm*nglocalmax * sizeof(double);
-  for (int m = 0; m < nextra; m++)
-    bytes += 2*nglocalmax*extras[m].ncol * sizeof(double);
   return bytes;
 }
 
@@ -873,7 +732,7 @@ void FixAveGrid::grow()
   memory->grow(which,maxvalues,"ave/grid:which");
   memory->grow(argindex,maxvalues,"ave/grid:argindex");
   memory->grow(value2index,maxvalues,"ave/grid:value2index");
-  memory->grow(extraflag,maxvalues,"ave/grid:extraflag");
+  memory->grow(post_process,maxvalues,"ave/grid:post_process");
   ids = (char **) memory->srealloc(ids,maxvalues*sizeof(char *),"ave/grid:ids");
 }
 
@@ -896,63 +755,6 @@ bigint FixAveGrid::nextvalid()
 }
 
 /* ----------------------------------------------------------------------
-   allocate per-grid vectors/arrays/norms
-   zero newly allocated values in case used by dump or load balancer
-------------------------------------------------------------------------- */
-
-void FixAveGrid::allocate(int n)
-{
-  // if ave = ONE, allocate only vector_grid and array_grid
-  // if ave = RUNNING, also allocate vector and array
-
-  int m;
-
-  if (nvalues == 1) {
-    memory->grow(vector_grid,n,"ave/grid:vector_grid");
-    for (int i = 0; i < n; i++) vector_grid[i] = 0.0;
-  } else {
-    memory->grow(array_grid,n,nvalues,"ave/grid:array_grid");
-    for (int i = 0; i < n; i++)
-      for (m = 0; m < nvalues; m++) array_grid[i][m] = 0.0;
-  }
-  
-  if (ave == RUNNING) {
-    if (nvalues == 1) {
-      memory->grow(vector,n,"ave/grid:vector");
-      for (int i = 0; i < n; i++) vector[i] = 0.0;
-    } else {
-      memory->grow(array,n,nvalues,"ave/grid:array");
-      for (int i = 0; i < n; i++)
-        for (m = 0; m < nvalues; m++) array[i][m] = 0.0;
-    }
-  } else {
-    if (nvalues == 1) vector = vector_grid;
-    else array = array_grid;
-  }
-  
-  for (m = 0; m < nnorm; m++) {
-    memory->grow(norms[m],n,"ave/grid:norms");
-    double *norm = norms[m];
-    for (int i = 0; i < n; i++) norm[i] = 0.0;
-  }
-
-  if (nextra) {
-    for (int iextra = 0; iextra < nextra; iextra++) {
-      int ncol = extras[iextra].ncol;
-      memory->grow(extras[iextra].array_extra,n,ncol,"ave/grid:array_extra");
-      memory->grow(extras[iextra].norm_extra,n,ncol,"ave/grid:norm_extra");
-      double **array_extra = extras[iextra].array_extra;
-      double **norm_extra = extras[iextra].norm_extra;
-      for (int i = 0; i < n; i++)
-        for (m = 0; m < ncol; m++) {
-          array_extra[i][m] = 0.0;
-          norm_extra[i][m] = 0.0;
-        }
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
    insure per-cell arrays are allocated long enough for N new cells
 ------------------------------------------------------------------------- */
 
@@ -964,23 +766,5 @@ void FixAveGrid::grow_percell(int nnew)
 
   if (nvalues == 1) memory->grow(vector_grid,n,"ave/grid:vector_grid");
   else memory->grow(array_grid,n,nvalues,"ave/grid:array_grid");
-  
-  if (ave == RUNNING) {
-    if (nvalues == 1) memory->grow(vector,n,"ave/grid:vector");
-    else memory->grow(array,n,nvalues,"ave/grid:array");
-  } else {
-    if (nvalues == 1) vector = vector_grid;
-    else array = array_grid;
-  }
-  
-  for (int m = 0; m < nnorm; m++)
-    memory->grow(norms[m],n,"ave/grid:norms");
-
-  if (nextra) {
-    for (int m = 0; m < nextra; m++) {
-      int ncol = extras[m].ncol;
-      memory->grow(extras[m].array_extra,n,ncol,"ave/grid:array_extra");
-      memory->grow(extras[m].norm_extra,n,ncol,"ave/grid:norm_extra");
-    }
-  }
+  memory->grow(tally,n,ntotal,"ave/grid:tally");
 }
