@@ -242,8 +242,8 @@ void ComputeDistSurfGrid::reallocate()
 {
   if (grid->nlocal == nglocal) return;
 
-  nglocal = grid->nlocal;
   memory->destroy(vector_grid);
+  nglocal = grid->nlocal;
   memory->create(vector_grid,nglocal,"distsurf/grid:vector_grid");
 }
 
