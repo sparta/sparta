@@ -64,11 +64,11 @@ ave/surf"_fix_ave_surf.html command.  It does its averaging as if the
 particles striking the surface element at each sampling timestep were
 combined together into one large set to compute the formulas below.
 The answer is then divided by the number of sampling timesteps if it
-is not otherwise normalized by the number of particles.  Note that
-this is a different normalization than taking the values produced by
-the formulas below for a single timestep, summing them over the
-sampling timesteps, and then dividing by the number of sampling
-timesteps.  However, for the current values below, the two
+is not otherwise normalized by the number of particles.  Note that in
+general this is a different normalization than taking the values
+produced by the formulas below for a single timestep, summing them
+over the sampling timesteps, and then dividing by the number of
+sampling steps.  However for the current values listed below, the two
 normalization methods are the same.
 
 :line

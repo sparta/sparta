@@ -103,12 +103,12 @@ using its {temp} value.  Note that this temperature is inferred from
 the translational kinetic energy of the particles, which is only
 appopriate for a mean free path calculation for systems with zero or
 small streaming velocities.  For systems with streaming flow, an
-appropriate temperature can be calculated by the {thermal} keyword of
-the "compute sonine/grid"_compute_sonine_grid.html command.  The
-formulas on its doc page show that the the center-of-mass velocity
-from the particles in each grid cell is subtracted from each
-particle's velocity to yield a translational thermal velocity, from
-which a thermal temperature is calculated.
+appropriate temperature can be calculated by the "compute
+thermal/grid"_compute_thermal_grid.html command.  The formulas on its
+doc page show that the the center-of-mass velocity from the particles
+in each grid cell is subtracted from each particle's velocity to yield
+a translational thermal velocity, from which a thermal temperature is
+calculated.
 
 The "fix ave/grid"_fix_ave_grid.html command can calculate the same
 values in a time-averaged sense, assuming it uses these same computes
@@ -178,8 +178,9 @@ output.
 
 [Related commands:]
 
-"compute grid"_compute_grid.html, "fix ave/grid"_fix_ave_grid.html,
-"dump grid"_dump.html
+"compute grid"_compute_grid.html, "compute
+thermal/grid"_compute_thermal/grid.html, "fix
+ave/grid"_fix_ave_grid.html, "dump grid"_dump.html
 
 [Default:] none
 

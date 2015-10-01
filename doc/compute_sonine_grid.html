@@ -23,12 +23,11 @@
 
 <LI>one or more keywords may be appended, multiple times 
 
-<LI>keyword = <I>thermal</I> or <I>a</I> or <I>b</I> 
+<LI>keyword = <I>a</I> or <I>b</I> 
 
 <LI>values = values for specific keyword 
 
-<PRE>  <I>thermal</I> args = none = thermal temperature
-  <I>a</I> args = dim order = sonine A moment
+<PRE>  <I>a</I> args = dim order = sonine A moment
     dim = <I>x</I> or <I>y</I> or <I>z</I>
     order = number from 1 to 5
   <I>b</I> args = dim2 order = sonine B moment
@@ -39,8 +38,7 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>compute 1 sonine/grid species thermal a x 3 a z 3 b xy 3 b xz 3
-compute 1 sonine/grid air a x 5 b xy 5 
+<PRE>compute 1 sonine/grid air a x 5 b xy 5 
 </PRE>
 <P>These commands will dump 10 time averaged sonine moments for each
 species and each grid cell to a dump file every 1000 steps:
@@ -51,12 +49,11 @@ dump 1 grid all 1000 tmp.grid id f_1
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Define a computation that calculates the thermal temperature and/or
-sonine moments of the velocity distribution of the particles in each
-grid cell.  The values are tallied separately for each group of
-species in the specified mixture, as described in the Ouput section
-below.  See the mixture command for how a set of species can be
-partitioned into groups.
+<P>Define a computation that calculates the sonine moments of the
+velocity distribution of the particles in each grid cell.  The values
+are tallied separately for each group of species in the specified
+mixture, as described in the Output section below.  See the mixture
+command for how a set of species can be partitioned into groups.
 </P>
 <P>The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
@@ -65,17 +62,23 @@ different ways.  The values for a single timestep can be output by the
 <P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix
 ave/grid</A> command.  It does its averaging as if the
 particles in the cell at each sampling timestep were combined together
-into one large set of particles to compute the formulas below.  Note
-that this is a different form of averaging than taking the values
+into one large set of particles to compute the A,B formulas below.
+</P>
+<P>Note however that the center-of-mass (COM) velocity that is subtracted
+from each particle to yield a squared thermal velocity Csq for each
+particle is the COM velocity for the current timestep.  It is NOT the
+COM velocity for all particles across all timesteps.
+</P>
+<P>Note that this is a different form of averaging than taking the values
 produced by the formulas below for a single timestep, summing those
 values over the sampling timesteps, and then dividing by the number of
-sampling timesteps.
+sampling steps.
 </P>
 <HR>
 
-<P>The <I>thermal</I> keyword computes the average thermal kinetic energy for
-all <I>N</I> particles in each group.  This is converted to a temperature
-<I>T</I> by the following formula where <I>kB</I> is the Boltzmann factor:
+<P>Calculation of both the A and B sonine moments first require
+calcuating the center-of-mass (COM) velocity of particles for each
+group and each grid cell.  This is done as follows:
 </P>
 <PRE>COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
 COMy = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
@@ -83,15 +86,13 @@ COMz = Sum_i (mass_i Vz_i) / Sum_i (mass_i)
 Cx = Vx - COMx
 Cy = Vy - COMy
 Cz = Vz - COMz
-Csq = Cx*Cx + Cy*Cy + Cz*Cz
-thermal_KE = Sum_i (1/2 mass_i Csq_i) / N
-T = thermal_KE / (3/2 kB) 
+Csq = Cx*Cx + Cy*Cy + Cz*Cz 
 </PRE>
-<P>Note that the thermal kinetic energy is calculated from <I>C</I> = the
-thermal velocity of each particle, which is its velocity minus the
-center-of-mass (COM) velocity of particles in the group.  The COM
-velocity is the mass-weighted sum of the velocities of particles in
-the group divided by the total mass of the particles.
+<P>The COM velocity is (COMx,COMy,COMz).  The thermal velocity of each
+particle is then (Cx,Cy,Cz), i.e. its velocity minus the COM velocity
+of particles in its group and cell.  This allows computation of Csq
+for each particle which is used in the formulas below to calculate the
+sonine moments.
 </P>
 <HR>
 
@@ -105,9 +106,10 @@ A4 = Sum_i (mass_i * Vdim * pow(Csq,4)) / Sum_i (mass_i)
 A5 = Sum_i (mass_i * Vdim * pow(Csq,5)) / Sum_i (mass_i) 
 </PRE>
 <P>Vdim is Vx or Vy or Vz as specified by the <I>dim</I> value.  <I>Csq</I> is the
-squared thermal velocity of the particle, as in the <I>thermal</I>
-equations above.  The number of moments computed is specified by the
-<I>order</I> value, e.g. for order = 3, the first 3 moments are computed.
+squared thermal velocity of the particle, as in the COM equations
+above.  The number of moments computed is specified by the <I>order</I>
+value, e.g. for order = 3, the first 3 moments are computed, which
+leads to 3 columns of output as explained below.
 </P>
 <P>The <I>b</I> keyword calculates the average of one or more sonine B moments
 for all particles in each group:
@@ -119,21 +121,23 @@ B4 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,4)) / Sum_i (mass_i)
 B5 = Sum_i (mass_i * Vdim1 * Vdim2 * pow(Csq,5)) / Sum_i (mass_i) 
 </PRE>
 <P>Vdim is Vx or Vy or Vz as specified by the <I>dim</I> value.  <I>Csq</I> is the
-squared thermal velocity of the particle, as in the <I>thermal</I>
-equations above.  The number of moments computed is specified by the
-<I>order</I> value, , e.g. for order = 3, the first 3 moments are computed.
+squared thermal velocity of the particle, as in the COM equations
+above.  The number of moments computed is specified by the <I>order</I>
+value, e.g. for order = 2, the first 2 moments are computed, which
+leads to 2 columns of output as explained below.
 </P>
 <HR>
 
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid array, with the number of columns
-is equal to the number of values times the number of groups.  The
+equal to the number of values times the number of groups.  The
 ordering of columns is first by values, then by groups.  I.e. if the
-<I>thermal</I> and <I>b xy 2</I> moments were specified as keywords, then the
-1st thru 3rd columns would be the <I>thermal</I> and B1 and B2 moments of
-the first group, the 4th thru 6th columns would be the <I>thermal</I> and
-B1 and B2 moments of the second group, etc.
+<I>a z 3</I> and <I>b xy 2</I> moments were specified as keywords, then the 1st
+thru 3rd columns would be the A1, A2, A3 moments of the first group,
+the 4th and 5th columns would be the B1 and B2 moments of the first
+group, the 6th thru 8th columns would be the A1, A2, A3 moments of the
+2nd group, etc.
 </P>
 <P>This compute performs calculations for all flavors of child grid cells
 in the simulation, which includes unsplit, cut, split, and sub cells.
@@ -147,9 +151,8 @@ from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4
 for an overview of SPARTA output options.
 </P>
 <P>The per-grid array values will be in the <A HREF = "units.html">units</A>
-appropriate to the individual values as described above.  <I>Thermal</I> is
-in temperature units.  A and B are in units like velocity cubed or
-velocity to the 6th power.
+appropriate to the individual values as described above.  These are
+units like velocity cubed or velocity to the 6th power.
 </P>
 <P><B>Restrictions:</B> none
 </P>
