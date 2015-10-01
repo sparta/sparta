@@ -323,8 +323,12 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   }
 
   // allocate tally array
+  // zero in case used by ave = RUNNING or accessed for immediate output
 
   memory->create(tally,nglocal,ntotal,"ave/grid:tally");
+  for (int i = 0; i < nglocal; i++)
+    for (int j = 0; j < ntotal; j++)
+      tally[i][j] = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
