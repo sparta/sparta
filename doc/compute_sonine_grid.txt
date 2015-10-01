@@ -56,7 +56,8 @@ into one large set of particles to compute the A,B formulas below.
 
 Note however that the center-of-mass (COM) velocity that is subtracted
 from each particle to yield a squared thermal velocity Csq for each
-particle is the COM velocity for the current timestep.  It is NOT the
+particle, as described below, is the COM velocity for only the
+particles in the current timestep.  When time-averaging it is NOT the
 COM velocity for all particles across all timesteps.
 
 Note that this is a different form of averaging than taking the values
@@ -66,9 +67,9 @@ sampling steps.
 
 :line
 
-Calculation of both the A and B sonine moments first require
+Calculation of both the A and B sonine moments is done by first
 calcuating the center-of-mass (COM) velocity of particles for each
-group and each grid cell.  This is done as follows:
+group.  This is done as follows:
 
 COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
 COMy = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
@@ -79,9 +80,9 @@ Cz = Vz - COMz
 Csq = Cx*Cx + Cy*Cy + Cz*Cz :pre
 
 The COM velocity is (COMx,COMy,COMz).  The thermal velocity of each
-particle is then (Cx,Cy,Cz), i.e. its velocity minus the COM velocity
-of particles in its group and cell.  This allows computation of Csq
-for each particle which is used in the formulas below to calculate the
+particle is (Cx,Cy,Cz), i.e. its velocity minus the COM velocity of
+particles in its group and cell.  This allows computation of Csq for
+each particle which is used in the formulas below to calculate the
 sonine moments.
 
 :line
