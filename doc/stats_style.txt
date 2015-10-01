@@ -19,6 +19,7 @@ arg1,arg2,... = list of keywords :ulb,l
 		      nscoll, nscollave, nscheck, nscheckave,
                       ncoll, ncollave, nattempt, nattemptave,
                       nreact, nreactave, nsreact, nsreactave,
+                      nparent, nchild, nsplit,
 		      vol, lx, ly, lz,
 		      xlo, xhi, ylo, yhi, zlo, zhi,
 		      s_ID\[I\], r_ID\[I\],
@@ -45,6 +46,7 @@ arg1,arg2,... = list of keywords :ulb,l
       nattempt,nattemptave = # of attempted collisions (this step, per-step)
       nreact,nreactave = # of chemical reactions (this step, per-step)
       nsreact,nsreactave = # of chemical reactions on surfs and boundaries (this step, per-step)
+      nparent,nchild,nsplit = # of parent, child, split cells
       vol = volume of simulation box
       lx,ly,lz = simulation box lengths
       xlo,xhi,ylo,yhi,zlo,zhi = box boundaries,
@@ -156,6 +158,14 @@ occurred.  The {nsreact} keyword is the number of chemical reactions
 on surfaces that occurred, including the global boundaries if they are
 treated as reacting surfaces, via the "bound_modify"_bound_modify.html
 command.
+
+The {nparent} keyword is the number of parent cells, including the
+root cell.  The {nchild} keyword is the number of child cells, which
+includes both unsplit and split cells.  The {nsplit} keyword is the
+number of split cells.  See "Section howto
+4.8"_Section_howto.html#howto_8 for a description of the hierarchical
+grid used by SPARTA and a definition of these various kinds of grid
+cells.
 
 The {vol} keyword is the volume (or area in 2d) of the simulation box.
 
