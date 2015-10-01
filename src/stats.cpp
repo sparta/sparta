@@ -22,6 +22,7 @@
 #include "particle.h"
 #include "collide.h"
 #include "domain.h"
+#include "grid.h"
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
@@ -43,6 +44,7 @@ using namespace SPARTA_NS;
 // np,ntouch,ncomm,nbound,nexit,nscoll,nscheck,ncoll,nattempt,nreact,nsreact,
 // npave,ntouchave,ncommave,nboundave,nexitave,nscollave,nscheckave,
 // ncollave,nattemptave,nreactave,nsreactave,
+// nparent,nchild,
 // vol,lx,ly,lz,xlo,xhi,ylo,yhi,zlo,zhi
 
 enum{INT,FLOAT,BIGINT};
@@ -495,6 +497,13 @@ void Stats::set_fields(int narg, char **arg)
     } else if (strcmp(arg[i],"nsreactave") == 0) {
       addfield("Nsreactave",&Stats::compute_nsreactave,FLOAT);
 
+    } else if (strcmp(arg[i],"nparent") == 0) {
+      addfield("Nparent",&Stats::compute_nparent,INT);
+    } else if (strcmp(arg[i],"nchild") == 0) {
+      addfield("Nchild",&Stats::compute_nchild,BIGINT);
+    } else if (strcmp(arg[i],"nsplit") == 0) {
+      addfield("Nsplit",&Stats::compute_nsplit,INT);
+
     } else if (strcmp(arg[i],"vol") == 0) {
       addfield("Volume",&Stats::compute_vol,FLOAT);
     } else if (strcmp(arg[i],"lx") == 0) {
@@ -859,6 +868,10 @@ int Stats::evaluate_keyword(char *word, double *answer)
   else if (strcmp(word,"nattemptave") == 0) compute_nattemptave();
   else if (strcmp(word,"nreactave") == 0) compute_nreactave();
   else if (strcmp(word,"nsreactave") == 0) compute_nsreactave();
+
+  else if (strcmp(word,"nparent") == 0) compute_nparent();
+  else if (strcmp(word,"nchild") == 0) compute_nchild();
+  else if (strcmp(word,"nsplit") == 0) compute_nsplit();
 
   else if (strcmp(word,"vol") == 0) compute_vol();
   else if (strcmp(word,"lx") == 0) compute_lx();
@@ -1243,6 +1256,27 @@ void Stats::compute_nsreactave()
                 MPI_SUM,world);
   if (update->ntimestep == update->firststep) dvalue = 0.0;
   else dvalue = 1.0*bivalue / (update->ntimestep - update->firststep);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nparent()
+{
+  ivalue = grid->nparent;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nchild()
+{
+  bivalue = grid->ncell;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_nsplit()
+{
+  ivalue = grid->nsplit;
 }
 
 /* ---------------------------------------------------------------------- */

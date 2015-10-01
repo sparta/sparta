@@ -138,6 +138,10 @@ class Stats : protected Pointers {
   void compute_nreactave();
   void compute_nsreactave();
 
+  void compute_nparent();
+  void compute_nchild();
+  void compute_nsplit();
+
   void compute_vol();
   void compute_lx();
   void compute_ly();
