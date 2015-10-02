@@ -42,6 +42,7 @@ Domain::Domain(SPARTA *sparta) : Pointers(sparta)
   box_exist = 0;
   dimension = 3;
   axisymmetric = 0;
+  boundary_collision_check = 1;
 
   for (int i = 0; i < 6; i++) bflag[i] = PERIODIC;
   for (int i = 0; i < 6; i++) surf_collide[i] = surf_react[i] = -1;
@@ -75,9 +76,15 @@ void Domain::init()
     error->all(FLERR,"Axi-symmetry only allowed for 2d simulation");
   if (dimension == 2 && (bflag[ZLO] != PERIODIC || bflag[ZHI] != PERIODIC))
     error->all(FLERR,"Z dimension must be periodic for 2d simulation");
-  for (int i = 0; i < 6; i++)
-    if (bflag[i] == SURFACE && surf_collide[i] < 0)
-      error->all(FLERR,"Box boundary not assigned a surf_collide ID");
+
+  // check that every SURFACE boundary is assigned to a surf collision model
+  // skip if caller turned off the check, e.g. BalanceGrid
+
+  if (boundary_collision_check) {
+    for (int i = 0; i < 6; i++)
+      if (bflag[i] == SURFACE && surf_collide[i] < 0)
+        error->all(FLERR,"Box boundary not assigned a surf_collide ID");
+  }
 
   int cutflag = 0;
   if (bflag[0] == PERIODIC && grid->cutoff > xprd) cutflag = 1;

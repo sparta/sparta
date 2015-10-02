@@ -55,6 +55,7 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
   exist = 0;
+  surf_collision_check = 1;
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"surf:bitmask");
@@ -169,9 +170,9 @@ void Surf::modify_params(int narg, char **arg)
 void Surf::init()
 {
   // check that every element is assigned to a surf collision model
-  // skip if caller turned off the check, e.g. ReadRestart
+  // skip if caller turned off the check, e.g. BalanceGrid
 
-  if (surf_collision_assign_check) {
+  if (surf_collision_check) {
     int flag = 0;
     if (domain->dimension == 2) {
       for (int i = 0; i < nline; i++)

@@ -370,9 +370,11 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   int ghost_previous = grid->exist_ghost;
 
-  surf->surf_collision_assign_check = 0;
+  domain->boundary_collision_check = 0;
+  surf->surf_collision_check = 0;
   sparta->init();
-  surf->surf_collision_assign_check = 1;
+  domain->boundary_collision_check = 1;
+  surf->surf_collision_check = 1;
 
   grid->unset_neighbors();
   grid->remove_ghosts();

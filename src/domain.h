@@ -25,6 +25,8 @@ class Domain : protected Pointers {
   int box_exist;                    // 0 = not yet created, 1 = exists
   int dimension;                    // 2,3
   int axisymmetric;                 // 1 for yes, 0 for no, only allowed in 2d
+  int boundary_collision_check;  // flag for whether init() check is required
+                                 // for assign of collision models to boundaries
 
   double boxlo[3],boxhi[3];         // box global bounds
   double xprd,yprd,zprd;            // global box dimensions
