@@ -1317,3 +1317,28 @@ int Input::inumeric(const char *file, int line, char *str)
 
   return atoi(str);
 }
+
+/* ----------------------------------------------------------------------
+   read a big integer value from a string
+   generate an error if not a legitimate integer value
+   called by various commands to check validity of their arguments
+------------------------------------------------------------------------- */
+
+bigint Input::bnumeric(const char *file, int line, char *str)
+{
+  if (!str) 
+    error->all(file,line,
+               "Expected integer parameter in input script or data file");
+  int n = strlen(str);
+  if (n == 0) 
+    error->all(file,line,
+               "Expected integer parameter in input script or data file");
+
+  for (int i = 0; i < n; i++) {
+    if (isdigit(str[i]) || str[i] == '-' || str[i] == '+') continue;
+    error->all(file,line,
+               "Expected integer parameter in input script or data file");
+  }
+
+  return ATOBIGINT(str);
+}

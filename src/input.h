@@ -36,6 +36,7 @@ class Input : protected Pointers {
 
   double numeric(const char *, int, char *);    // arg checking
   int inumeric(const char *, int, char *);      // arg checking
+  bigint bnumeric(const char *, int, char *);   // arg checking
 
  private:
   int me;                      // proc ID

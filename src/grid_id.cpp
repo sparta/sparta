@@ -20,7 +20,7 @@ using namespace SPARTA_NS;
 // operations with grid cell IDs
 
 /* ----------------------------------------------------------------------
-   find child cell within iparent cell that contains pt x
+   find child cell within iparent cell assumed to be contain pt x
    recurse down thru parents until reach a child cell
    pt can be on any boundary of parent cell
    if I don't store child cell as owned or ghost, return -1 for unknown
