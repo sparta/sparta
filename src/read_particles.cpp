@@ -207,7 +207,7 @@ void ReadParticles::process_particles(int n, int nfield, double **fields)
     icell = grid->id_find_child(0,x);
     if (icell < 0 || cells[icell].proc != me) continue;
         
-    id = static_cast<int> (fields[i][0]) - 1;
+    id = static_cast<int> (fields[i][0]);
     ispecies = static_cast<int> (fields[i][1]) - 1;
     v[0] = fields[i][5];
     v[1] = fields[i][6];
