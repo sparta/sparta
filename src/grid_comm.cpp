@@ -19,13 +19,6 @@
 #include "modify.h"
 #include "adapt_grid.h"
 
-
-
-// DEBUG
-#include "update.h"
-#include "comm.h"
-
-
 using namespace SPARTA_NS;
 
 // grid cell communication
