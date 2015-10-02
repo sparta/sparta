@@ -55,7 +55,8 @@ create_grid 8 8 10 level 2 5* * * 4 4 4 level 3 1 2*3 3* 2 2 1
 <A HREF = "create_box.html">create_box</A> command.  The grid can also be defined by
 the <A HREF = "read_grid.html">read_grid</A> command.
 </P>
-<P>The grid in SPARTA is hierarchical.  The entire simulation box is a
+<P>The grid in SPARTA is hierarchical, as described in <A HREF = "Section_howto.html#howto_8">Section howto
+4.8</A>.  The entire simulation box is a
 single parent grid cell at level 0.  It is subdivided into Nx by Ny by
 Nz cells at level 1.  Each of those cells can be a child cell (no
 further sub-division) or can be a parent cell which is further
@@ -253,8 +254,8 @@ integer ID.  The precision is set by the -DSPARTA_BIG or
 <A HREF = "Section_start.html#start_2">Section 2.2</A>.  The number of grid levels
 that can be used depends on the resolution of the grid at each level.
 For a minimal refinement of 2x2x2, a level uses 4 bits of the integer
-ID.  Thus a maximum of 7 levels can be used for 32-bit IDs and 15
-levels for 64-bit IDs.
+ID.  Thus for this style of refinement a maximum of 7 levels can be
+used for 32-bit IDs and 15 levels for 64-bit IDs.
 </P>
 <P><B>Related commands:</B>
 </P>

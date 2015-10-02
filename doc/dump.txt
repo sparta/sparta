@@ -207,8 +207,10 @@ This section explains the particle attributes that can be specified as
 part of the {particle} style.
 
 {Id} is the particle ID.  {Type} is an integer index representing the
-particle species.  {Proc} is the ID of the processor which currently
-owns the particle.
+particle species.  It is a value from 1 to Nspecies, The value
+corresponds to the order in which species were defined via the
+"species"_species.html command.  {Proc} is the ID of the processor
+which currently owns the particle.
 
 The {x}, {y}, {z} attributes write particle coordinates "unscaled", in
 the appropriate distance "units"_units.html.  Use {xs}, {ys}, {zs} to
