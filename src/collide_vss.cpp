@@ -62,6 +62,9 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
   // broadcasts params to all procs
 
   nparams = particle->nspecies;
+  if (nparams == 0) 
+    error->all(FLERR,"Cannot use collide command with no species defined");
+
   params = new Params[nparams];
   if (comm->me == 0) read_param_file(arg[2]);
   MPI_Bcast(params,nparams*sizeof(Params),MPI_BYTE,0,world);

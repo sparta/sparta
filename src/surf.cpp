@@ -169,20 +169,23 @@ void Surf::modify_params(int narg, char **arg)
 void Surf::init()
 {
   // check that every element is assigned to a surf collision model
+  // skip if caller turned off the check, e.g. ReadRestart
 
-  int flag = 0;
-  if (domain->dimension == 2) {
-    for (int i = 0; i < nline; i++)
-      if (lines[i].isc < 0) flag++;
-  } 
-  if (domain->dimension == 3) {
-    for (int i = 0; i < ntri; i++)
-      if (tris[i].isc < 0) flag++;
-  }
-  if (flag) {
-    char str[64];
-    sprintf(str,"%d surface elements not assigned to a collision model",flag);
-    error->all(FLERR,str);
+  if (surf_collision_assign_check) {
+    int flag = 0;
+    if (domain->dimension == 2) {
+      for (int i = 0; i < nline; i++)
+        if (lines[i].isc < 0) flag++;
+    } 
+    if (domain->dimension == 3) {
+      for (int i = 0; i < ntri; i++)
+        if (tris[i].isc < 0) flag++;
+    }
+    if (flag) {
+      char str[64];
+      sprintf(str,"%d surface elements not assigned to a collision model",flag);
+      error->all(FLERR,str);
+    }
   }
 
   // initialize surf collision and reaction models
@@ -1289,10 +1292,12 @@ void Surf::read_restart(FILE *fp)
 {
   int me = comm->me;
 
+  // if any exist, clear existing group names, before reading new ones
+
+  for (int i = 0; i < ngroup; i++) delete [] gnames[i];
+
   if (me == 0) fread(&ngroup,sizeof(int),1,fp);
   MPI_Bcast(&ngroup,1,MPI_INT,0,world);
-  gnames = (char **) memory->smalloc(ngroup*sizeof(char *),"surf:gnames");
-  bitmask = (int *) memory->smalloc(ngroup*sizeof(int),"surf:bitmaxk");
 
   int n;
   for (int i = 0; i < ngroup; i++) {

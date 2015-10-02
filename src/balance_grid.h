@@ -28,7 +28,7 @@ namespace SPARTA_NS {
 class BalanceGrid : protected Pointers {
  public:
   BalanceGrid(class SPARTA *);
-  void command(int, char **);
+  void command(int, char **, int outflag=1);
 
  private:
   void procs2grid(int, int, int, int &, int &, int &);

@@ -456,7 +456,8 @@ void ReadSurf::command(int narg, char **arg)
 
     for (int icell = 0; icell < nglocal; icell++) {
       if (cinfo[icell].type == INSIDE) {
-	if (partflag == KEEP) error->one(FLERR,"Particles are inside new surfaces");
+	if (partflag == KEEP) 
+          error->one(FLERR,"Particles are inside new surfaces");
 	if (cinfo[icell].count) delflag = 1;
 	particle->remove_all_from_cell(cinfo[icell].first);
 	cinfo[icell].count = 0;

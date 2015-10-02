@@ -24,6 +24,8 @@
 #include "comm.h"
 #include "grid.h"
 #include "surf.h"
+#include "input.h"
+#include "balance_grid.h"
 #include "memory.h"
 #include "error.h"
 
@@ -53,7 +55,7 @@ ReadRestart::ReadRestart(SPARTA *spa) : Pointers(spa) {}
 
 void ReadRestart::command(int narg, char **arg)
 {
-  if (narg != 1) error->all(FLERR,"Illegal read_restart command");
+  if (narg == 0) error->all(FLERR,"Illegal read_restart command");
 
   if (domain->box_exist)
     error->all(FLERR,"Cannot read_restart after simulation box is defined");
@@ -100,6 +102,23 @@ void ReadRestart::command(int narg, char **arg)
     if (multiproc) delete [] hfile;
   }
 
+  // process optional args
+
+  int gridcutflag = 0;
+  int balanceflag = 0;
+
+  if (narg > 1) {
+    if (strcmp(arg[1],"gridcut") == 0) {
+      if (narg < 3) error->all(FLERR,"Illegal read_restart command");
+      gridcutflag = 2;
+    } else if (strcmp(arg[1],"balance") == 0) {
+      if (narg < 3) error->all(FLERR,"Illegal read_restart command");
+      balanceflag = 2;
+    } else error->all(FLERR,"Illegal read_restart command");
+  }
+
+  // preform rebalancing
+
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
@@ -121,7 +140,7 @@ void ReadRestart::command(int narg, char **arg)
   grid_params();
   grid->exist = 1;
   surf->exist = surf_params();
-  
+
   if (surf->exist) {
     if (domain->dimension == 2) surf->compute_line_normal(0,surf->nline);
     if (domain->dimension == 3) surf->compute_tri_normal(0,surf->ntri);
@@ -217,6 +236,7 @@ void ReadRestart::command(int narg, char **arg)
       MPI_Send(&tmp,0,MPI_INT,0,0,world);
       MPI_Wait(&request,&status);
     }
+
 
     n = grid->unpack_restart(buf);
     create_child_cells(0);
@@ -424,12 +444,11 @@ void ReadRestart::command(int narg, char **arg)
   if (grid->cellweightflag) grid->weight(-1,NULL);
   grid->setup_owned();
 
-  // grid is no longer clumped unless reading on same # of procs
-  // clumped decomposition is maintained (assuiming original file had it)
+  // clumped decomposition is maintained (if original file had it)
   //   for all reading methods above where nprocs_file = current nprocs
+  // no longer clumped if reading on different # of procs
 
   if (nprocs_file != nprocs) grid->clumped = 0;
-  if (nprocs == 1) grid->clumped = 0;
 
   // check that all grid cells and particles were assigned to procs
   // print stats on grid cells, particles, surfs
@@ -488,13 +507,32 @@ void ReadRestart::command(int narg, char **arg)
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
+  // if read restart file on different number of procs, clumped will be off
+  // if grid cutoff is set, will not be able to acquire ghosts
+  // if surfs exist, call to grid->set_inout() below will fail
+  // two command options allow user to overcome this
+  // gridcut can be reset to negative value
+  // re-balance can be triggered (with no output)
+
+  if (surf->exist && grid->cutoff >= 0.0 && grid->clumped == 0) {
+    if (gridcutflag) grid->cutoff = input->numeric(FLERR,arg[gridcutflag]);
+    else if (balanceflag) {
+      BalanceGrid *bg = new BalanceGrid(sparta);
+      bg->command(narg-balanceflag,&arg[balanceflag],0);
+      delete bg;
+    }
+  }
+
+  MPI_Barrier(world);
+  double time4 = MPI_Wtime();
+
   grid->acquire_ghosts();
   grid->find_neighbors();
   grid->check_uniform();
   comm->reset_neighbors();
 
   MPI_Barrier(world);
-  double time4 = MPI_Wtime();
+  double time5 = MPI_Wtime();
 
   if (surf->exist) {
     grid->set_inout();
@@ -505,22 +543,26 @@ void ReadRestart::command(int narg, char **arg)
   //grid->debug();
 
   MPI_Barrier(world);
-  double time5 = MPI_Wtime();
+  double time6 = MPI_Wtime();
 
-  double time_total = time5-time1;
+  double time_total = time6-time1;
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/surf2grid/ghost/inout percent = %g %g %g %g\n",
+      fprintf(screen,"  read/surf2grid/rebalance/ghost/inout "
+              "percent = %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
-              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total);
+              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
+              100.0*(time6-time5)/time_total);
     }
     if (logfile) {
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/surf2grid/ghost/inout percent = %g %g %g %g\n",
+      fprintf(logfile,"  read/surf2grid/rebalance/ghost/inout "
+              "percent = %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
-              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total);
+              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
+              100.0*(time6-time5)/time_total);
     }
   }
 }

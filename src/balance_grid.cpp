@@ -17,6 +17,7 @@
 #include "balance_grid.h"
 #include "update.h"
 #include "grid.h"
+#include "surf.h"
 #include "domain.h"
 #include "modify.h"
 #include "comm.h"
@@ -44,7 +45,7 @@ BalanceGrid::BalanceGrid(SPARTA *sparta) : Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
-void BalanceGrid::command(int narg, char **arg)
+void BalanceGrid::command(int narg, char **arg, int outflag)
 {
   if (!grid->exist)
     error->all(FLERR,"Cannot balance grid before grid is defined");
@@ -362,12 +363,17 @@ void BalanceGrid::command(int narg, char **arg)
 
   // invoke init() so all grid cell info, including collide & fixes,
   //   is ready to migrate
+  // for init, do not require surfs be assigned collision models
+  //   this allows balance call early in script, e.g. from ReadRestart
   // migrate grid cells and their particles to new owners
   // invoke grid methods to complete grid setup
 
   int ghost_previous = grid->exist_ghost;
 
+  surf->surf_collision_assign_check = 0;
   sparta->init();
+  surf->surf_collision_assign_check = 1;
+
   grid->unset_neighbors();
   grid->remove_ghosts();
   comm->migrate_cells(nmigrate);
@@ -411,13 +417,15 @@ void BalanceGrid::command(int narg, char **arg)
   */
 
   // stats on balance operation
+  // only print if outflag = 1
+  // some callers suppress output, e.g. ReadRestart
 
   bigint count = nmigrate;
   bigint nmigrate_all;
   MPI_Allreduce(&count,&nmigrate_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   double time_total = time5-time1;
 
-  if (comm->me == 0) {
+  if (comm->me == 0 && outflag) {
     if (screen) {
       fprintf(screen,"Balance grid migrated " BIGINT_FORMAT " cells\n",
               nmigrate_all);

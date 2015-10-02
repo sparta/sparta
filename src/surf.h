@@ -24,6 +24,10 @@ namespace SPARTA_NS {
 class Surf : protected Pointers {
  public:
   int exist;                // 1 if any surfaces are defined, else 0
+  int surf_collision_assign_check;  
+                            // flag for whether init() check is required
+                            // for assignment of collision models to surfs
+
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for surf tallies
 

@@ -22,14 +22,6 @@
 #include "memory.h"
 #include "error.h"
 
-
-
-
-// DEBUG
-#include "update.h"
-
-
-
 using namespace SPARTA_NS;
 using namespace MathConst;
 
@@ -1760,10 +1752,12 @@ void Grid::read_restart(FILE *fp)
   if (me == 0) fread(pcells,sizeof(ParentCell),nparent,fp);
   MPI_Bcast(pcells,nparent*sizeof(ParentCell),MPI_CHAR,0,world);
 
+  // if any exist, clear existing group names, before reading new ones
+
+  for (int i = 0; i < ngroup; i++) delete [] gnames[i];
+
   if (me == 0) fread(&ngroup,sizeof(int),1,fp);
   MPI_Bcast(&ngroup,1,MPI_INT,0,world);
-  gnames = (char **) memory->smalloc(ngroup*sizeof(char *),"surf:gnames");
-  bitmask = (int *) memory->smalloc(ngroup*sizeof(int),"surf:bitmaxk");
 
   int n;
   for (int i = 0; i < ngroup; i++) {
