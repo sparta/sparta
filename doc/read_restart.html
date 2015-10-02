@@ -132,12 +132,14 @@ simulation, as specified by the associated commands:
 information about these simulation entities and their associated
 commands is NOT stored:
 </P>
-<UL><LI><A HREF = "compute.html">computes</A>
+<UL><LI><A HREF = "seed,html">random number seed</A>
+<LI><A HREF = "compute.html">computes</A>
 <LI><A HREF = "fix.html">fixes</A>
 <LI><A HREF = "collide.html">collision model</A>
 <LI><A HREF = "react.html">chemistry (reaction) model</A>
-<LI><A HREF = "surf_collide.html">surface collision model</A>
-<LI><A HREF = "surf_modify.html">surface modifications</A>
+<LI><A HREF = "surf_collide.html">surface collision models</A>
+<LI><A HREF = "surf_react.html">surface reaction models</A>
+<LI>assignment of surfaces/boundaries to surface models
 <LI><A HREF = "variable.html">variables</A>
 <LI><A HREF = "region.html">regions</A>
 <LI>output options for <A HREF = "stats_style.html">stats</A>, <A HREF = "dump.html">dump</A>, <A HREF = "restart.html">restart</A> files
@@ -152,29 +154,29 @@ to override a setting that was stored in the restart file.  For
 example, the <A HREF = "global.html">global</A> command can be used to reset the
 values of its specified keywords.
 </P>
-<P>In particular, take note of these issues:
+<P>In particular, take note of the following issues:
 </P>
-<UL><LI>The status of time-averaging fixes, such as <A HREF = "fix_ave_time.html">fix
+<P>The status of time-averaging fixes, such as <A HREF = "fix_ave_time.html">fix
 ave/time</A>, <A HREF = "fix_ave_grid.html">fix ave/grid</A>, <A HREF = "fix_ave_surf.html">fix
 ave/surf</A>, does not carry over into the restarted
 run.  E.g. if the <I>ave running</I> option is used with those commands in
 the original script and again specified in the restart script, the
-running averaged quantities do not persist into the new run. 
-
-<LI>The <A HREF = "surf_modify.html">surf_modify</A> command must be used in the restart
+running averaged quantities do not persist into the new run.
+</P>
+<P>The <A HREF = "surf_modify.html">surf_modify</A> command must be used in the restart
 script to assign surface collision models, specified by the
 <A HREF = "surf_collide.html">surf_collide</A> command, to all <A HREF = "boundary.html">global
 boundaries</A> of type "s", and to any surfaces contained
 in the restart file, as read in by the <A HREF = "read_surf.html">read_surf</A>
-command.  
-
-<LI>If a collision model is specified in the restart script, and the
+command.
+</P>
+<P>If a collision model is specified in the restart script, and the
 <A HREF = "collide_modify.html">collide_modify vremax or remain</A> command is used
 to enable Vremax and fractional collision count to persist for many
 timesteps, no information about these quantities persists from the
 original simulation to the restarted simulation.  The initial run in
-the restart script will re-initialize these data structures. 
-</UL>
+the restart script will re-initialize these data structures.
+</P>
 <P>If a fix is used which defines custom attributes of particles, the
 vectors or arrays for these attributes are stored in the restart file.
 See the <A HREF = "fix_ambipolar">fix ambipolar</A> command as an example; it
