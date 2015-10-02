@@ -10,9 +10,9 @@ balance_grid command :h3
 
 [Syntax:]
 
-balance_grid keyword args ... :pre
+balance_grid style args ... :pre
 
-keyword = {none} or {stride} or {clump} or {block} or {random} or {proc} or {rcb} :ulb,l
+style = {none} or {stride} or {clump} or {block} or {random} or {proc} or {rcb} :ulb,l
   {none} args = none
   {stride} args = {xyz} or {xzy} or {yxz} or {yzx} or {zxy} or {zyx}
   {clump} args = {xyz} or {xzy} or {yxz} or {yzx} or {zxy} or {zyx}
@@ -67,10 +67,10 @@ The details of how child cells are assigned to processors by the
 various options of this command are described below.  The cells
 assigned to each processor will either be "clumped" or "dispersed".
 
-The {clump} and {block} and {rcb} keywords will produce clumped
+The {clump} and {block} and {rcb} styles will produce clumped
 assignments of child cells to each processor.  This means each
 processor's cells will be geometrically compact.  The {stride} and
-{random} and {proc} keywords will produce dispersed assignments of
+{random} and {proc} styles will produce dispersed assignments of
 child cells to each processor.
 
 IMPORTANT NOTE: See "Section 5.8"_Section_howto.html#howto_8 of the
@@ -79,7 +79,7 @@ assignments and their relative performance trade-offs.
 
 :line
 
-The {none} keyword will not change the assignment of grid cells to
+The {none} style will not change the assignment of grid cells to
 processors.  However it will update the internal data structures
 within SPARTA that store ghost cell information on each processor for
 cells owned by other processors.  This is useful if the "global
@@ -89,7 +89,7 @@ processors, which then needs to be re-generated before a simulation is
 run.  Using the balance_grid none command will re-generate the ghost
 cell information.
 
-The {stride}, {clump}, and {block} keywords can only be used if the
+The {stride}, {clump}, and {block} styles can only be used if the
 grid is "uniform".  The grid in SPARTA is hierarchical with one or
 more levels, as defined by the "create_grid"_create_grid.html or
 "read_grid"_read_grid.html commlands.  If the parent cell of every
@@ -98,23 +98,23 @@ this command the grid is uniform, meaning the collection of grid cells
 effectively form a uniform fine grid overlaying the entire simulation
 domain.
 
-The meaning of the {stride}, {clump}, and {block} keywords is exactly
-the same as when they are used with the "create_grid"_create_grid.html
-command.  See its doc page for details.
+The meaning of the {stride}, {clump}, and {block} styles is exactly
+the same as when they are used as keywords with the
+"create_grid"_create_grid.html command.  See its doc page for details.
 
-The {random} keyword means that each grid cell will be assigned
+The {random} style means that each grid cell will be assigned
 randomly to one of the processors.  Note that in this case every
 processor will typically not be assigned the exact same number of
 cells.
 
-The {proc} keyword means that each processor will choose a random
+The {proc} style means that each processor will choose a random
 processor to assign its first grid cell to.  It will then loop over
 its grid cells and assign each to consecutive processors, wrapping
 around the enumeration of processors if necessary.  Note that in this
 case every processor will typically not be assigned exactly the same
 number of cells.
 
-The {rcb} keyword uses a recursive coordinate bisectioning (RCB)
+The {rcb} style uses a recursive coordinate bisectioning (RCB)
 algorithm to assign spatially-compact clumps of grid cells to
 processors.  Each grid cell has a "weight" in this algorithm so that
 each processor is assigned an equal total weight of grid cells, as

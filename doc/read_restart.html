@@ -13,15 +13,25 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>read_restart file 
+<PRE>read_restart file keyword args ... 
 </PRE>
-<UL><LI>file = name of binary restart file to read in 
+<UL><LI>file = name of binary restart file to read in
+<LI>zero or one keyword/args pair may be listed 
+</UL>
+<PRE>keywords = <I>gridcut</I> or <I>balance</I>
+  <I>gridcut</I> arg = cutoff
+    cutoff = acquire ghost cells up to this far away (distance units)
+  <I>balance</I> args = same as for <A HREF = "balance_grid.html">balance_grid</A> command 
+</PRE>
+
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>read_restart save.10000
 read_restart restart.*
-read_restart flow.*.% 
+read_restart flow.*.%
+read_restart save.10000 gridcut -1.0
+read_restart save.10000 balance rcb cell 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -50,31 +60,34 @@ particles) to processors will be the same as in the original
 simulation.  If the processor count changes, then the assignment will
 necessarily be different.  In particular, even if the original
 assignment was "clumped", meaning each processor's cells were
-geometrically compact, the new assignment will not be, but will be
-"dispersed".
-</P>
-<P>IMPORTANT NOTE: See <A HREF = "Section_howto.html#howto_8">Section 5.8</A> of the
+geometrically compact, the new assignment will not be clumped; it will
+be "dispersed".  See <A HREF = "Section_howto.html#howto_8">Section 5.8</A> of the
 manual for an explanation of clumped and dispersed grid cell
-assignments and their relative performance trade-offs.  The
-<A HREF = "balance_grid.html">balance_grid</A> command can be used after the restart
-file is read, to assign child cells to processors in different ways.
-The "fix balance" command can be used to re-assign them in a
-load-balanced manner periodically during a running simulation.
+assignments and their relative performance trade-offs.
 </P>
-<P>IMPORTANT NOTE: As explained below, the restart file contains the
-setting for the <A HREF = "global.html">global gridcut</A> command.  If you restart
-on a different number of processors, and the gridcut setting from the
-original script is >= 0.0, then SPARTA will be unable to generate
-ghost cell information when setting up the grid.  This is because the
-assignment of grid cells to processors will not be clumped.  This will
-generate an error when a simulation is performed.  The solution is to
-use the <A HREF = "balance_grid.html">balance_grid</A> command after reading the
-restart file.  Optionally, the <A HREF = "global.html">global gridcut</A> command
-can be used before the <A HREF = "balance_grid.html">balance_grid</A> command, to
-change the cutoff setting.  If the cutoff is set to -1.0, then the
-<A HREF = "balance_grid.html">balance_grid none</A> command can be used, which will
-not change the grid cell assignments, but will generate the needed
-ghost cell information.
+<P>Note that the restart file contains the setting for the <A HREF = "global.html">global
+gridcut</A> command.  If it is >= 0.0 and the assignment of
+grid cells to processors is "dispersed" (as described in the
+preceeding paragraph), and there are surface elements defined in the
+restart file, an error will be triggered.  This is because the
+read_restart command needs to mark all the grid cells as inside vs
+outside the defined surface and cannot do this without ghost cell
+information.  As explained on the doc page for the <A HREF = "global.html">global
+gridcut</A> command, ghost cells cannot be setup with gridcut
+>= 0.0 and "dispersed" grid cells.
+</P>
+<P>The solution is to use one of the two keywords listed above, either
+<I>gridcut</I> or <I>balance</I>.  The former allows you to reset the grid
+cutoff to -1.0 so that ghost cells can be setup.  Note however that
+this means each processor will own a copy of all grid cells (at least
+until you change it later), which may be undesirable or even
+impossible for large problems if it requires too much memory.  The
+other solution is to use the <I>balance</I> keyword to trigger a re-balance
+of the grid cells to processors as soon as the read_restart command
+reads them in.  The arguments for the <I>balance</I> keyword are identical
+to those for the <A HREF = "balance_grid.html">balance_grid</A> command.  If you
+choose a balancing style that results in a "clumped" assignment, then
+ghost cells will be setup successfully.
 </P>
 <HR>
 
