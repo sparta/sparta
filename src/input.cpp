@@ -1342,3 +1342,31 @@ bigint Input::bnumeric(const char *file, int line, char *str)
 
   return ATOBIGINT(str);
 }
+
+/* ----------------------------------------------------------------------
+   count and return words in a single line
+   make copy of line before using strtok so as not to change line
+   trim anything from '#' onward
+------------------------------------------------------------------------- */
+
+int Input::count_words(char *line)
+{
+  int n = strlen(line) + 1;
+  char *copy = (char *) memory->smalloc(n*sizeof(char),"copy");
+  strcpy(copy,line);
+
+  char *ptr;
+  if ((ptr = strchr(copy,'#'))) *ptr = '\0';
+
+  if (strtok(copy," \t\n\r\f") == NULL) {
+    memory->sfree(copy);
+    return 0;
+  }
+  n = 1;
+  while (strtok(NULL," \t\n\r\f")) n++;
+
+  memory->sfree(copy);
+  return n;
+}
+
+

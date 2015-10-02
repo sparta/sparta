@@ -35,8 +35,9 @@ class Input : protected Pointers {
                                  // substitute for variables in a string
 
   double numeric(const char *, int, char *);    // arg checking
-  int inumeric(const char *, int, char *);      // arg checking
-  bigint bnumeric(const char *, int, char *);   // arg checking
+  int inumeric(const char *, int, char *);
+  bigint bnumeric(const char *, int, char *);
+  int count_words(char *);
 
  private:
   int me;                      // proc ID

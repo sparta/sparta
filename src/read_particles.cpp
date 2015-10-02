@@ -16,10 +16,10 @@
 #include "stdlib.h"
 #include "string.h"
 #include "read_particles.h"
-#include "comm.h"
 #include "particle.h"
 #include "grid.h"
 #include "domain.h"
+#include "comm.h"
 #include "input.h"
 #include "memory.h"
 #include "error.h"
@@ -51,7 +51,7 @@ void ReadParticles::command(int narg, char **arg)
   char *file = arg[0];
   bigint nrequest = input->bnumeric(FLERR,arg[1]);
 
-  int me = comm->me;
+  me = comm->me;
   nspecies = particle->nspecies;
   line = new char[MAXLINE];
 
@@ -184,7 +184,6 @@ void ReadParticles::process_particles(int n, int nfield, double **fields)
   int id,ispecies,icell;
   double x[3],v[3];
 
-  int me = comm->me;
   Grid::ChildCell *cells = grid->cells;
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
@@ -288,12 +287,18 @@ bigint ReadParticles::read_header()
 
 void ReadParticles::read_particles(int n, int nfield, double **fields)
 {
-  int i,m;
+  int i,m,nwords;
   char *eof,*word;
 
   for (i = 0; i < n; i++) {
     eof = fgets(line,MAXLINE,fp);
     if (eof == NULL) error->one(FLERR,"Unexpected end of read_particles file");
+
+    if (i == 0) {
+      nwords = input->count_words(line);
+      if (nwords != nfield)
+        error->one(FLERR,"Bad particle line in read_particles file");
+    }
 
     // tokenize the line and convert words to fields
 

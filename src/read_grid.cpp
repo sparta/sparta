@@ -18,6 +18,7 @@
 #include "grid.h"
 #include "domain.h"
 #include "comm.h"
+#include "input.h"
 #include "memory.h"
 #include "error.h"
 
@@ -175,7 +176,7 @@ void ReadGrid::create_parents(int n, char *buf)
 
   next = strchr(buf,'\n');
   *next = '\0';
-  int nwords = count_words(buf);
+  int nwords = input->count_words(buf);
   *next = '\n';
 
   if (nwords != 5)
@@ -452,32 +453,6 @@ void ReadGrid::parse_keyword(int first)
 	 || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);
-}
-
-/* ----------------------------------------------------------------------
-   count and return words in a single line
-   make copy of line before using strtok so as not to change line
-   trim anything from '#' onward
-------------------------------------------------------------------------- */
-
-int ReadGrid::count_words(char *line)
-{
-  int n = strlen(line) + 1;
-  char *copy = (char *) memory->smalloc(n*sizeof(char),"copy");
-  strcpy(copy,line);
-
-  char *ptr;
-  if ((ptr = strchr(copy,'#'))) *ptr = '\0';
-
-  if (strtok(copy," \t\n\r\f") == NULL) {
-    memory->sfree(copy);
-    return 0;
-  }
-  n = 1;
-  while (strtok(NULL," \t\n\r\f")) n++;
-
-  memory->sfree(copy);
-  return n;
 }
 
 /* ----------------------------------------------------------------------

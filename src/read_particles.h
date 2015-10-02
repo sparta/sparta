@@ -33,16 +33,17 @@ class ReadParticles : protected Pointers {
   void command(int, char **);
 
  private:
-  int nspecies;
-  FILE *fp;
+  int me,nspecies;
   char *line;
+  FILE *fp;
+
+  void process_particles(int, int, double **);
 
   int read_time(bigint &);
   void skip();
   bigint read_header();
   void read_particles(int, int, double **);
   void read_lines(int);
-  void process_particles(int, int, double **);
 };
 
 }
