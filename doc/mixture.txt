@@ -22,6 +22,10 @@ keyword = {nrho} or {vstream} or {temp} or {frac} or {group} or {copy} or {delet
     Vx,Vy,Vz = streaming velocity of entire mixture (velocity units)
   {temp} arg = thermal
     thermal = temperature of entire mixture (temperature units)
+  {trot} arg = rotational temperature
+    rotational temperature = rotational temperature of entire mixture (temperature units)
+  {tvib} arg = vibrationaltemperature
+    vibrational temperature = vibrational temperature of entire mixture (temperature units)
   {frac} arg = fraction
     fraction = number fraction for each listed species (0 to 1)
   {group} arg = SELF or group-ID
@@ -116,6 +120,16 @@ thermal temperature of its particles.  When particles are created,
 this value is used to sample a Gaussian velocity distribution, which
 is superposed on the streaming velocity, when a particle's velocity is
 initialized.
+
+
+The {trot} keyword sets a different rotational temperature for the 
+mixture than the thermal temperature. If one is not specified, the rotational
+teperature defaults to the thermal.
+
+The {tvib} keyword sets a different vibrational temperature for the 
+mixture than the thermal temperature. If one is not specified, the vibrational 
+teperature defaults to the thermal.
+
 
 :line
 
