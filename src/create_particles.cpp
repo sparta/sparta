@@ -183,6 +183,8 @@ void CreateParticles::create_single()
   x[0] = xp;  x[1] = yp;  x[2] = zp;
   v[0] = vx;  v[1] = vy;  v[2] = vz;
   double temp_thermal = particle->mixture[imix]->temp_thermal;
+  double temp_rot = particle->mixture[imix]->temp_rot;
+  double temp_vib = particle->mixture[imix]->temp_vib;
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
   if (domain->dimension == 2 && x[2] != 0.0)
@@ -223,11 +225,11 @@ void CreateParticles::create_single()
 
   if (iwhich >= 0) {
     int id = MAXSMALLINT*random->uniform();
-    double erot = particle->erot(mspecies,temp_thermal,random);
-    double evib = particle->evib(mspecies,temp_thermal,random);
+    double erot = particle->erot(mspecies,temp_rot,random);
+    double evib = particle->evib(mspecies,temp_vib,random);
     particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
     if (nfix_add_particle) 
-      modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
+      modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
   }
 
   delete random;
@@ -322,6 +324,8 @@ void CreateParticles::create_local(bigint np)
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
   double temp_thermal = particle->mixture[imix]->temp_thermal;
+  double temp_rot = particle->mixture[imix]->temp_rot;
+  double temp_vib = particle->mixture[imix]->temp_vib;
 
   int npercell,isp,ispecies,id;
   double x[3],v[3];
@@ -360,12 +364,6 @@ void CreateParticles::create_local(bigint np)
 
       if (region && !region->match(x)) continue;
 
-      // double boundary = 1.5E-3-1.E-4*sin((x[0]/0.5E-3)*2.*MY_PI+MY_PI*0.5);
-      // double boundary = 1.5E-3-1.E-4*sin(x[2]/0.5E-3*2.*MY_PI+MY_PI*0.5)*
-      //                   sin(x[0]/0.5E-3*2.*MY_PI+MY_PI*0.5);
-      // if (x[1]>=boundary) ispecies = 1;
-      // if (x[1]<boundary) ispecies = 0;
-
       vn = vscale[isp] * sqrt(-log(random->uniform()));
       vr = vscale[isp] * sqrt(-log(random->uniform()));
       theta1 = MY_2PI * random->uniform();
@@ -375,14 +373,14 @@ void CreateParticles::create_local(bigint np)
       v[1] = vstream[1] + vr*cos(theta2);
       v[2] = vstream[2] + vr*sin(theta2);
 
-      erot = particle->erot(ispecies,temp_thermal,random);
-      evib = particle->evib(ispecies,temp_thermal,random);
+      erot = particle->erot(ispecies,temp_rot,random);
+      evib = particle->evib(ispecies,temp_vib,random);
 
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
       if (nfix_add_particle) 
-        modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
+        modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
     }
 
     nprev += npercell;
