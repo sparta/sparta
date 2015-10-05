@@ -70,7 +70,7 @@ class Fix : protected Pointers {
 
   virtual void start_of_step() {}
   virtual void end_of_step() {}
-  virtual void add_particle(int, double, double *) {}
+  virtual void add_particle(int, double, double, double, double *) {}
   virtual void gas_react(int) {}
   virtual void surf_react(Particle::OnePart *, int &, int &) {}
 
