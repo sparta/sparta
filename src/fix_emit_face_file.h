@@ -48,7 +48,7 @@ class FixEmitFaceFile : public FixEmit {
   int dimension;
   double fnum,dt;
   int nspecies;
-  double nrho,temp_thermal;
+  double nrho,temp_thermal,temp_rot,temp_vib;
   double *vstream,*vscale,*fraction,*cummulative,*fraction_user;
   int *fraction_flag,*species2species;
 
@@ -87,7 +87,7 @@ class FixEmitFaceFile : public FixEmit {
 
     double nrho;
     double vstream[3];
-    double temp_thermal;
+    double temp_thermal,temp_rot,temp_vib;
     double *fraction;
     double *cummulative;
     double *vscale;

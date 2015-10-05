@@ -117,6 +117,8 @@ void FixEmitFace::init()
   nspecies = particle->mixture[imix]->nspecies;
   nrho = particle->mixture[imix]->nrho;
   temp_thermal = particle->mixture[imix]->temp_thermal;
+  temp_rot = particle->mixture[imix]->temp_rot;
+  temp_vib = particle->mixture[imix]->temp_vib;
   vstream = particle->mixture[imix]->vstream;
   vscale = particle->mixture[imix]->vscale;
   fraction = particle->mixture[imix]->fraction;
@@ -454,8 +456,8 @@ void FixEmitFace::perform_task()
           vr = vscale[isp] * sqrt(-log(random->uniform()));
           v[pdim] = vr * sin(theta) + vstream[pdim];
           v[qdim] = vr * cos(theta) + vstream[qdim];
-          erot = particle->erot(ispecies,temp_thermal,random);
-          evib = particle->evib(ispecies,temp_thermal,random);
+          erot = particle->erot(ispecies,temp_rot,random);
+          evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
 	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
@@ -466,7 +468,7 @@ void FixEmitFace::perform_task()
           p->dtremain = dt * random->uniform();
 
           if (nfix_add_particle) 
-            modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
+            modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
 	}
 
 	nsingle += nactual;
@@ -512,8 +514,8 @@ void FixEmitFace::perform_task()
         vr = vscale[isp] * sqrt(-log(random->uniform()));
         v[pdim] = vr * sin(theta) + vstream[pdim];
         v[qdim] = vr * cos(theta) + vstream[qdim];
-        erot = particle->erot(ispecies,temp_thermal,random);
-        evib = particle->evib(ispecies,temp_thermal,random);
+        erot = particle->erot(ispecies,temp_rot,random);
+        evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
 	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
@@ -524,7 +526,7 @@ void FixEmitFace::perform_task()
         p->dtremain = dt * random->uniform();
 
         if (nfix_add_particle) 
-          modify->add_particle(particle->nlocal-1,temp_thermal,vstream);
+          modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;

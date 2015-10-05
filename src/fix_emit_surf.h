@@ -43,7 +43,7 @@ class FixEmitSurf : public FixEmit {
   int dimension;
   double fnum,dt;
   int nspecies;
-  double nrho,temp_thermal;
+  double nrho,temp_thermal,temp_rot,temp_vib;
   double *vstream,*vscale,*fraction,*cummulative;
 
   Surf::Point *pts;
