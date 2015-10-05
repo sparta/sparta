@@ -39,8 +39,14 @@ class Mixture : protected Pointers {
   int vstream_flag;           // 1 if user set vstream
   double vstream_user[3];     // user value
   double temp_thermal;        // thermal temperature
+  double temp_rot;            // rotational temperature
+  double temp_vib;            // vibrational temperature
   int temp_thermal_flag;      // 1 if user set thermal temp
+  int temp_rot_flag;          // 1 if user set rotational temp
+  int temp_vib_flag;          // 1 if user set vibrational temp
   double temp_thermal_user;   // user value
+  double temp_rot_user;       // user value
+  double temp_vib_user;       // user value
 
                               // per-species attributes
   double *fraction;           // relative fraction of each species

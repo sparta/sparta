@@ -56,6 +56,8 @@ Mixture::Mixture(SPARTA *sparta, char *userid) : Pointers(sparta)
   nrho_flag = 0;
   vstream_flag = 0;
   temp_thermal_flag = 0;
+  temp_rot_flag = 0;
+  temp_vib_flag = 0;
 
   fraction = NULL;
   fraction_user = NULL;
@@ -154,6 +156,8 @@ void Mixture::command(int narg, char **arg)
     if (strcmp(arg[iarg],"nrho") == 0) break;
     if (strcmp(arg[iarg],"vstream") == 0) break;
     if (strcmp(arg[iarg],"temp") == 0) break;
+    if (strcmp(arg[iarg],"trot") == 0) break;
+    if (strcmp(arg[iarg],"tvib") == 0) break;
     if (strcmp(arg[iarg],"frac") == 0) break;
     if (strcmp(arg[iarg],"group") == 0) break;
     if (strcmp(arg[iarg],"copy") == 0) break;
@@ -198,6 +202,10 @@ void Mixture::init()
   }
   if (temp_thermal_flag) temp_thermal = temp_thermal_user;
   else temp_thermal = update->temp_thermal;
+  if (temp_rot_flag) temp_rot = temp_rot_user;
+ else temp_rot = temp_thermal;
+  if (temp_vib_flag) temp_vib = temp_vib_user;
+ else temp_vib = temp_thermal;
 
   // initialize all per-species fraction and cummulative values
   // account for both explicitly and implicitly set fractions
@@ -371,11 +379,28 @@ void Mixture::params(int narg, char **arg)
       vstream_user[1] = atof(arg[iarg+2]);
       vstream_user[2] = atof(arg[iarg+3]);
       iarg += 4;
+
     } else if (strcmp(arg[iarg],"temp") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
       temp_thermal_flag = 1;
       temp_thermal_user = atof(arg[iarg+1]);
       if (temp_thermal_user <= 0.0) 
+        error->all(FLERR,"Illegal mixture command");
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"trot") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
+      temp_rot_flag = 1;
+      temp_rot_user = atof(arg[iarg+1]);
+      if (temp_rot_user <= 0.0) 
+        error->all(FLERR,"Illegal mixture command");
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"tvib") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal mixture command");
+      temp_vib_flag = 1;
+      temp_vib_user = atof(arg[iarg+1]);
+      if (temp_vib_user <= 0.0) 
         error->all(FLERR,"Illegal mixture command");
       iarg += 2;
 
@@ -627,6 +652,8 @@ void Mixture::write_restart(FILE *fp)
   if (vstream_flag) fwrite(vstream_user,sizeof(double),3,fp);
   fwrite(&temp_thermal_flag,sizeof(int),1,fp);
   if (temp_thermal_flag) fwrite(&temp_thermal_user,sizeof(double),1,fp);
+  if (temp_rot_flag) fwrite(&temp_rot_user,sizeof(double),1,fp);
+  if (temp_vib_flag) fwrite(&temp_vib_user,sizeof(double),1,fp);
 
   fwrite(fraction_flag,sizeof(int),nspecies,fp);
   fwrite(fraction_user,sizeof(double),nspecies,fp);
@@ -674,6 +701,18 @@ void Mixture::read_restart(FILE *fp)
   if (temp_thermal_flag) {
     if (me == 0) fread(&temp_thermal_user,sizeof(double),1,fp);
     MPI_Bcast(&temp_thermal_user,1,MPI_DOUBLE,0,world);
+  }
+  if (me == 0) fread(&temp_rot_flag,sizeof(int),1,fp);
+  MPI_Bcast(&temp_rot_flag,1,MPI_INT,0,world);
+  if (temp_rot_flag) {
+    if (me == 0) fread(&temp_rot_user,sizeof(double),1,fp);
+    MPI_Bcast(&temp_rot_user,1,MPI_DOUBLE,0,world);
+  }
+  if (me == 0) fread(&temp_vib_flag,sizeof(int),1,fp);
+  MPI_Bcast(&temp_vib_flag,1,MPI_INT,0,world);
+  if (temp_vib_flag) {
+    if (me == 0) fread(&temp_vib_user,sizeof(double),1,fp);
+    MPI_Bcast(&temp_vib_user,1,MPI_DOUBLE,0,world);
   }
 
   if (me == 0) fread(fraction_flag,sizeof(int),nspecies,fp);
