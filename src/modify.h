@@ -59,7 +59,7 @@ class Modify : protected Pointers {
   void list_init_fixes();
   void list_init_computes();
 
-  void add_particle(int, double, double *);
+  void add_particle(int, double, double, double, double *);
   void gas_react(int);
   void surf_react(Particle::OnePart *, int &, int &);
 
