@@ -28,7 +28,7 @@ keyword = {global} or {region} :l
 
 [Examples:]
 
-create_particles background
+create_particles background n 0
 create_particles air n 100000 region sphere
 create_particles air n 100000 global yes
 create_particles air single N 5.0 6.0 5.4 10.0 -1.0 0.0 :pre
