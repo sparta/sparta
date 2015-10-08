@@ -78,6 +78,7 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   remain = NULL;
   rotstyle = SMOOTH;
   vibstyle = NONE;
+  nearcp = 0;
 
   ambiflag = 0;
   maxelectron = 0;
@@ -256,11 +257,18 @@ void Collide::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"smooth") == 0) vibstyle = SMOOTH;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
-
+    } else if (strcmp(arg[iarg],"nearcp") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal collide_modify command");
+      limit = atoi(arg[iarg+1]);
+      if (limit <= 0) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+2],"yes") == 0) nearcp = 1;
+      else if (strcmp(arg[iarg+2],"no") == 0) nearcp = 0;
+      else error->all(FLERR,"Illegal collide_modify command");
+      iarg += 3;
     } else if (strcmp(arg[iarg],"ambipolar") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
-      if (strcmp(arg[iarg+1],"no") == 0) ambiflag = 0;
-      else if (strcmp(arg[iarg+1],"yes") == 0) ambiflag = 1;
+      if (iarg+1 > narg) error->all(FLERR,"Illegal collide_modify command");
+      if (strcmp(arg[iarg+2],"no") == 0) ambiflag = 0;
+      else if (strcmp(arg[iarg+2],"yes") == 0) ambiflag = 1;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
 
@@ -379,53 +387,58 @@ void Collide::collisions_one()
     // test if collision actually occurs
 
     for (k = 0; k < nattempt; k++) {
+
       i = np * random->uniform();
-      j = np * random->uniform();
-      while (i == j) j = np * random->uniform();
+      if (nearcp > 0) {
+        j = find_j(i,np);
+      } else {
+        j = np * random->uniform();
+        while (i == j) j = np * random->uniform();
+      }
 
-      ipart = &particles[plist[i]];
-      jpart = &particles[plist[j]];
+    ipart = &particles[plist[i]];
+    jpart = &particles[plist[j]];
 
-      // test if collision actually occurs, then perform it
-      // ijspecies = species before collision chemistry
-      // continue to next collision if no reaction
+    // test if collision actually occurs, then perform it
+    // ijspecies = species before collision chemistry
+    // continue to next collision if no reaction
 
-      if (!test_collision(icell,0,0,ipart,jpart)) continue;
-      setup_collision(ipart,jpart);
-      reactflag = perform_collision(ipart,jpart,kpart);
-      ncollide_one++;
-      if (reactflag) nreact_one++;
-      else continue;
+    if (!test_collision(icell,0,0,ipart,jpart)) continue;
+    setup_collision(ipart,jpart);
+    reactflag = perform_collision(ipart,jpart,kpart);
+    ncollide_one++;
+    if (reactflag) nreact_one++;
+    else continue;
 
-      // jpart destroyed, delete from plist
-      // also add particle to deletion list
-      // exit attempt loop if only single particle left
+    // jpart destroyed, delete from plist
+    // also add particle to deletion list
+    // exit attempt loop if only single particle left
 
-      if (!jpart) {
-        if (ndelete == maxdelete) {
+    if (!jpart) {
+      if (ndelete == maxdelete) {
           maxdelete += DELTADELETE;
           memory->grow(dellist,maxdelete,"collide:dellist");
-        }
+      }
         dellist[ndelete++] = plist[j];
         plist[j] = plist[np-1];
         np--;
         if (np < 2) break;
-      }
+    }
       
-      // if kpart created, add to plist
-      // kpart was just added to particle list, so index = nlocal-1
-      // particle data structs may have been realloced by kpart
+    // if kpart created, add to plist
+    // kpart was just added to particle list, so index = nlocal-1
+    // particle data structs may have been realloced by kpart
       
-      if (kpart) {
-        if (np == npmax) {
+    if (kpart) {
+       if (np == npmax) {
           npmax = np + DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
-        }
-        plist[np++] = particle->nlocal-1;
-        particles = particle->particles;
-      }
-    }
-  }
+       }
+       plist[np++] = particle->nlocal-1;
+       particles = particle->particles;
+     }
+   }
+ }
 }
 
 /* ----------------------------------------------------------------------
@@ -514,9 +527,17 @@ void Collide::collisions_group()
 
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
-	j = *nj * random->uniform();
-	if (igroup == jgroup)
-	  while (i == j) j = *nj * random->uniform();
+        if (nearcp > 0) {
+           if (*nj > 0) j = gfind_j(i,*nj,ilist,jlist);
+        } else {
+	   j = *nj * random->uniform();
+	   if (igroup == jgroup)
+	      while (i == j) j = *nj * random->uniform();
+        } 
+
+//	j = *nj * random->uniform();
+//	if (igroup == jgroup)
+//	  while (i == j) j = *nj * random->uniform();
 
 	ipart = &particles[ilist[i]];
 	jpart = &particles[jlist[j]];
@@ -703,9 +724,14 @@ void Collide::collisions_one_ambipolar()
     // if chemistry occurs, exit attempt loop if group count goes to 0
 
     for (k = 0; k < nattempt; k++) {
+
       i = np * random->uniform();
-      j = np * random->uniform();
-      while (i == j) j = np * random->uniform();
+      if (nearcp > 0) {
+        j = find_j(i,np);
+      } else {
+        j = np * random->uniform();
+        while (i == j) j = np * random->uniform();
+      }
 
       // plist index >= 0 for particles array
       // plist index < 0 for electron array
@@ -983,9 +1009,13 @@ void Collide::collisions_group_ambipolar()
 
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
-	j = *nj * random->uniform();
-	if (igroup == jgroup)
-	  while (i == j) j = *nj * random->uniform();
+        if (nearcp > 0) {
+           if (*nj > 0) j = gfind_j(i,*nj,ilist,jlist);
+        } else {
+	   j = *nj * random->uniform();
+	   if (igroup == jgroup)
+	      while (i == j) j = *nj * random->uniform();
+        }
 
         // ilist/jlist indices >= 0 for particles array
         // ilist/jlist indices < 0 for electron array
@@ -1420,4 +1450,77 @@ void Collide::grow_percell(int n)
   memory->grow(vremax,nglocalmax,ngroups,ngroups,"collide:vremax");
   if (remainflag) 
     memory->grow(remain,nglocalmax,ngroups,ngroups,"collide:remain");
+}
+
+int Collide::find_j(int i, int np)
+{
+
+    int j=0, count=0,jj=0;
+    Particle::OnePart *ipart, *jpart;
+    Particle::OnePart *particles = particle->particles;
+    double dt = update->dt;
+
+    ipart = &particles[plist[i]];
+    double *vi = ipart->v;
+    double *xi = ipart->x;
+    double dis =  dt*dt*(vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
+
+    double sep=0.0;
+    double minsep=1.0E6;
+    if (limit > np-1) limit = np-1;
+    j = np * random->uniform();
+    while (i == j) j = np * random->uniform();
+//    j = i ;
+
+    do {
+       count++;
+       if ( j >= np ) j -= np;
+       jpart = &particles[plist[j]];
+       double *xj = jpart->x;
+       sep =     ((xi[0]-xj[0])*(xi[0]-xj[0]) +
+                  (xi[1]-xj[1])*(xi[1]-xj[1]) +
+                  (xi[2]-xj[2])*(xi[2]-xj[2]));
+
+       if (sep < minsep && sep > 0.0  ) {
+           minsep = sep;
+           jj = j;
+       }
+       j++;
+    } while (sep > dis && count < limit); 
+ return jj;
+}
+
+int Collide::gfind_j(int i, int np, int *ilist, int *jlist)
+{
+
+    int j=0, count=0,jj=0;
+    Particle::OnePart *ipart, *jpart;
+    Particle::OnePart *particles = particle->particles;
+    double dt = update->dt;
+
+    ipart = &particles[ilist[i]];
+    double *vi = ipart->v;
+    double *xi = ipart->x;
+    double dis =  dt*dt*(vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
+
+    double sep=0.0;
+    double minsep=1.0E6;
+    j = np * random->uniform();
+
+    if (limit > np) limit = np;
+    do {
+       count++;
+       if ( j >= np ) j -= np;
+       jpart = &particles[jlist[j]];
+       double *xj = jpart->x;
+       sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
+              (xi[1]-xj[1])*(xi[1]-xj[1]) +
+              (xi[2]-xj[2])*(xi[2]-xj[2]));
+       if (sep < minsep && sep > 0.0  ) {
+           minsep = sep;
+           jj = j;
+       }
+       j++;
+    } while (sep > dis && count < limit); 
+ return jj;
 }
