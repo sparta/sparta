@@ -28,6 +28,7 @@ class Collide : protected Pointers {
   char *style;
   int rotstyle;       // none/smooth rotational modes
   int vibstyle;       // none/discrete/smooth vibrational modes
+  int nearcp, limit;       // near neighbor collisions
 
   int ncollide_one,nattempt_one,nreact_one;
   bigint ncollide_running,nattempt_running,nreact_running;
@@ -54,6 +55,8 @@ class Collide : protected Pointers {
   int unpack_grid_one(int, char *);
   void compress_grid();
   void adapt_grid();
+  int find_j(int, int);
+  int gfind_j(int, int, int *, int *);
 
  protected:
   int npmax;          // max # of particles in plist
