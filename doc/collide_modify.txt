@@ -105,6 +105,16 @@ file read by the "species"_species.html command, i.e. for species that
 are dimer molecules.  Species with more degrees of freedom (4,6,etc)
 are always treated as if the setting were {smooth}.
 
+The {nearcp} (near collision partner) keyword affects how collision 
+partners are selected. If nothing is specified the collision partner
+of a molecule is selected randomly from the population of the cell.
+If {yes} is selected then for each initially picked particle a 
+collision partner that is within the sphere the particle could have 
+moved (calculated with the timestep and it velocity) is randomly
+selected. To avoid long searches a limit is defined that is the maximum
+number of attempts to find the second particle. If none is found the 
+closest  is selected.
+
 :line
 
 [Restrictions:] none
