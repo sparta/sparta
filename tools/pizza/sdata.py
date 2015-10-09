@@ -316,11 +316,11 @@ class sdata:
     points = []
     lines = []
     for i in range(n1):
-      points.append([x0*i*(x1-x0)/n1,y0+i*(y1-y0)/n1,0.0])
+      points.append([x0+i*(x1-x0)/n1,y0+i*(y1-y0)/n1,0.0])
     for i in range(n2):
-      points.append([x1*i*(x2-x1)/n2,y1+i*(y2-y1)/n2,0.0])
+      points.append([x1+i*(x2-x1)/n2,y1+i*(y2-y1)/n2,0.0])
     for i in range(n3):
-      points.append([x2*i*(x0-x2)/n3,y2+i*(y0-y2)/n3,0.0])
+      points.append([x2+i*(x0-x2)/n3,y2+i*(y0-y2)/n3,0.0])
 
     for i in range(n1*n2*n3-1):
       lines.append([i,i+1])
@@ -934,6 +934,7 @@ class sdata:
           x = xlo + float(i)*(xhi-xlo)/nx
           for j in range(nz+1):
             z = zlo + float(j)*(zhi-zlo)/nz
+            lines.append([id+i,itype+nlevel+1] + [x,ylo,z,x,yhi,z])
         id += (nx+1)*(nz+1)
         for i in range(nx+1):
           x = xlo + float(i)*(xhi-xlo)/nx

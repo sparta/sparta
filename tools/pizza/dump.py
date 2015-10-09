@@ -18,6 +18,7 @@ d = dump("dump.*",0)		  two args = store filenames, but don't read
 
   incomplete and duplicate snapshots are deleted
   atoms will be unscaled if stored in files as scaled
+  self-describing column names assigned 
 
 time = d.next()             	  read next snapshot from dump files
 
@@ -27,7 +28,7 @@ time = d.next()             	  read next snapshot from dump files
   return -1 if no snapshots left or last snapshot is incomplete
   no column name assignment or unscaling is performed
 
-d.map(1,"id",3,"x")               assign names to atom columns (1-N)
+d.map(1,"id",3,"x")               assign names to columns (1-N)
 
   not needed if dump file is self-describing
   
