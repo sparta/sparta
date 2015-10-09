@@ -1010,7 +1010,7 @@ void Collide::collisions_group_ambipolar()
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
         if (nearcp > 0) {
-           if (*nj > 0) j = gfind_j(i,*nj,ilist,jlist);
+           if (*nj > 1) j = gfind_j(i,*nj,ilist,jlist);
         } else {
 	   j = *nj * random->uniform();
 	   if (igroup == jgroup)
@@ -1456,6 +1456,7 @@ int Collide::find_j(int i, int np)
 {
 
     int j=0, count=0,jj=0;
+    int localimit;
     Particle::OnePart *ipart, *jpart;
     Particle::OnePart *particles = particle->particles;
     double dt = update->dt;
@@ -1467,14 +1468,16 @@ int Collide::find_j(int i, int np)
 
     double sep=0.0;
     double minsep=1.0E6;
-    if (limit > np-1) limit = np-1;
+    localimit = limit;
+    if (localimit > np-1) localimit = np-1;
+
     j = np * random->uniform();
     while (i == j) j = np * random->uniform();
 //    j = i ;
 
     do {
        count++;
-       if ( j >= np ) j -= np;
+       if ( j >= np-1 ) j = 0;
        jpart = &particles[plist[j]];
        double *xj = jpart->x;
        sep =     ((xi[0]-xj[0])*(xi[0]-xj[0]) +
@@ -1486,14 +1489,14 @@ int Collide::find_j(int i, int np)
            jj = j;
        }
        j++;
-    } while (sep > dis && count < limit); 
+    } while (sep > dis && count < localimit); 
  return jj;
 }
 
 int Collide::gfind_j(int i, int np, int *ilist, int *jlist)
 {
-
     int j=0, count=0,jj=0;
+    int localimit;
     Particle::OnePart *ipart, *jpart;
     Particle::OnePart *particles = particle->particles;
     double dt = update->dt;
@@ -1507,10 +1510,11 @@ int Collide::gfind_j(int i, int np, int *ilist, int *jlist)
     double minsep=1.0E6;
     j = np * random->uniform();
 
-    if (limit > np) limit = np;
+    localimit = limit;
+    if (localimit > np) localimit = np;
     do {
        count++;
-       if ( j >= np ) j -= np;
+       if ( j >= np-1 ) j = 0;
        jpart = &particles[jlist[j]];
        double *xj = jpart->x;
        sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
@@ -1521,6 +1525,6 @@ int Collide::gfind_j(int i, int np, int *ilist, int *jlist)
            jj = j;
        }
        j++;
-    } while (sep > dis && count < limit); 
+    } while (sep > dis && count < localimit); 
  return jj;
 }
