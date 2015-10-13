@@ -1121,8 +1121,8 @@ void Grid::reset_neighbors()
    set type in/out for all owned cells
    also set corner points of OVERLAP cells if not already set
    only UNKNOWN cells are marked
-   only UNKNOWN corner flags of OVERLAP cells are marekd
-     all (not some) of the cornerflags must be UNKNOWN 
+   only UNKNOWN corner flags of OVERLAP cells are marked
+     for these, all (not some) of the cornerflags will be UNKNOWN 
        due to Cut2d/Cut3d split() failing to mark them
        b/c surf(s) only touch cell at single point(s) on cell surface
      set cornerflags to either all INSIDE or all OUTSIDE
@@ -1487,8 +1487,10 @@ void Grid::check_uniform()
 /* ----------------------------------------------------------------------
    require all cell types be set
    require all corner pts of OVERLAP cells be set
-     error if corner pts on global box boundary are not set
-     warning if interior corner pts are not set
+     error if corner pts in cell on global box boundary are not set
+     warning if corner pts of cell not on global bound are not set
+     NOTE: should it only be error if corner pts are actually on face,
+           could still be interior pts for cell that is touching face
    flag = 1 (default) to output stats
 ------------------------------------------------------------------------- */
 
