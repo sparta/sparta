@@ -528,7 +528,7 @@ void Collide::collisions_group()
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
         if (nearcp > 0) {
-           if (*nj > 0) j = gfind_j(i,*nj,ilist,jlist);
+           j = group_find_j(i,*nj,ilist,jlist);
         } else {
 	   j = *nj * random->uniform();
 	   if (igroup == jgroup)
@@ -727,7 +727,7 @@ void Collide::collisions_one_ambipolar()
 
       i = np * random->uniform();
       if (nearcp > 0) {
-        j = find_j(i,np);
+        j = ambi_find_j(i,np);
       } else {
         j = np * random->uniform();
         while (i == j) j = np * random->uniform();
@@ -1010,7 +1010,8 @@ void Collide::collisions_group_ambipolar()
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
         if (nearcp > 0) {
-           if (*nj > 1) j = gfind_j(i,*nj,ilist,jlist);
+	   if (igroup == jgroup) j = ambi_group_find_j(i,*nj-1,ilist,ilist);
+           j = ambi_group_find_j(i,*nj,ilist,jlist);
         } else {
 	   j = *nj * random->uniform();
 	   if (igroup == jgroup)
@@ -1473,18 +1474,17 @@ int Collide::find_j(int i, int np)
 
     j = np * random->uniform();
     while (i == j) j = np * random->uniform();
-//    j = i ;
 
     do {
        count++;
        if ( j >= np-1 ) j = 0;
        jpart = &particles[plist[j]];
        double *xj = jpart->x;
-       sep =     ((xi[0]-xj[0])*(xi[0]-xj[0]) +
-                  (xi[1]-xj[1])*(xi[1]-xj[1]) +
-                  (xi[2]-xj[2])*(xi[2]-xj[2]));
+       sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
+              (xi[1]-xj[1])*(xi[1]-xj[1]) +
+              (xi[2]-xj[2])*(xi[2]-xj[2]));
 
-       if (sep < minsep && sep > 0.0  ) {
+       if (sep < minsep && sep > 0.0) {
            minsep = sep;
            jj = j;
        }
@@ -1493,7 +1493,7 @@ int Collide::find_j(int i, int np)
  return jj;
 }
 
-int Collide::gfind_j(int i, int np, int *ilist, int *jlist)
+int Collide::group_find_j(int i, int np, int *ilist, int *jlist)
 {
     int j=0, count=0,jj=0;
     int localimit;
@@ -1511,20 +1511,105 @@ int Collide::gfind_j(int i, int np, int *ilist, int *jlist)
     j = np * random->uniform();
 
     localimit = limit;
-    if (localimit > np) localimit = np;
+    if (localimit > np-1) localimit = np;
     do {
        count++;
-       if ( j >= np-1 ) j = 0;
+       if ( j > np-1 ) j = 0;
        jpart = &particles[jlist[j]];
        double *xj = jpart->x;
        sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
               (xi[1]-xj[1])*(xi[1]-xj[1]) +
               (xi[2]-xj[2])*(xi[2]-xj[2]));
-       if (sep < minsep && sep > 0.0  ) {
+       if (sep < minsep && sep > 0.0) {
+           minsep = sep;
+           jj = j;
+       }
+       j++;
+    } while (sep > dis && count <= localimit); 
+
+ return jj;
+}
+
+int Collide::ambi_find_j(int i, int np)
+{
+
+    int j=0, count=0,jj=0;
+    int localimit;
+    Particle::OnePart *ipart, *jpart;
+    Particle::OnePart *particles = particle->particles;
+    double dt = update->dt;
+
+    ipart = &particles[plist[i]];
+    if (plist[i] >= 0) ipart = &particles[plist[i]];
+    else ipart = &elist[-plist[i]-1];
+    double *vi = ipart->v;
+    double *xi = ipart->x;
+    double dis =  dt*dt*(vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
+
+    double sep=0.0;
+    double minsep=1.0E6;
+    localimit = limit;
+    if (localimit > np-1) localimit = np-1;
+
+    j = np * random->uniform();
+    while (i == j) j = np * random->uniform();
+
+    do {
+       count++;
+       if ( j >= np-1 ) j = 0;
+       jpart = &particles[plist[j]];
+       double *xj = jpart->x;
+       sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
+              (xi[1]-xj[1])*(xi[1]-xj[1]) +
+              (xi[2]-xj[2])*(xi[2]-xj[2]));
+
+       if (sep < minsep && sep > 0.0) {
            minsep = sep;
            jj = j;
        }
        j++;
     } while (sep > dis && count < localimit); 
+ return jj;
+}
+
+int Collide::ambi_group_find_j(int i, int np, int *ilist, int *jlist)
+{
+    int j=0, count=0,jj=0;
+    int localimit;
+    Particle::OnePart *ipart, *jpart;
+    Particle::OnePart *particles = particle->particles;
+    double dt = update->dt;
+
+    if (ilist[i] >= 0) ipart = &particles[ilist[i]];
+    else ipart = &elist[-ilist[i]-1];
+
+    double *vi = ipart->v;
+    double *xi = ipart->x;
+    double dis =  dt*dt*(vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
+
+    double sep=0.0;
+    double minsep=1.0E6;
+    j = np * random->uniform();
+    if (jlist[j] >= 0) jpart = &particles[jlist[j]];
+    else jpart = &elist[-jlist[j]-1];
+
+    localimit = limit;
+    if (localimit > np-1) localimit = np;
+    do {
+       count++;
+       if ( j > np-1 ) j = 0;
+       if (jlist[j] >= 0) jpart = &particles[jlist[j]];
+       else jpart = &elist[-jlist[j]-1];
+       double *xj = jpart->x;
+       sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
+              (xi[1]-xj[1])*(xi[1]-xj[1]) +
+              (xi[2]-xj[2])*(xi[2]-xj[2]));
+       if (sep < minsep && sep > 0.0) {
+           minsep = sep;
+           jj = j;
+       }
+       j++;
+    } while (sep > dis && count <= localimit); 
+
  return jj;
 }

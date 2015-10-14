@@ -56,7 +56,9 @@ class Collide : protected Pointers {
   void compress_grid();
   void adapt_grid();
   int find_j(int, int);
-  int gfind_j(int, int, int *, int *);
+  int ambi_find_j(int, int);
+  int group_find_j(int, int, int *, int *);
+  int ambi_group_find_j(int, int, int *, int *);
 
  protected:
   int npmax;          // max # of particles in plist
