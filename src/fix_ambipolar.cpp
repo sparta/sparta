@@ -106,7 +106,7 @@ void FixAmbipolar::init()
 ------------------------------------------------------------------------- */
 
 void FixAmbipolar::add_particle(int index, 
-                                double temp_thermal, double *vstream)
+                                double temp_thermal, double temp_rot, double temp_vib, double *vstream)
 {
   int *ionambi = particle->eivec[particle->ewhich[ionindex]];
   double **velambi = particle->edarray[particle->ewhich[velindex]];
@@ -174,7 +174,7 @@ void FixAmbipolar::surf_react(Particle::OnePart *iorig, int &i, int &j)
     Particle::OnePart *particles = particle->particles;
     if (ions[particles[i].ispecies] == 0) return;
     if (particles[j].ispecies != especies) return;
-    add_particle(i,update->temp_thermal,update->vstream);
+    add_particle(i,update->temp_thermal,update->temp_thermal,update->temp_thermal,update->vstream);
     j = -1;
   }
 }

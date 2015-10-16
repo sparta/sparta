@@ -36,7 +36,7 @@ class FixAmbipolar : public Fix {
   ~FixAmbipolar();
   int setmask();
   void init();
-  void add_particle(int, double, double *);
+  void add_particle(int, double, double, double, double *);
   void surf_react(Particle::OnePart *, int &, int &);
 
  private:
