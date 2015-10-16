@@ -55,10 +55,10 @@ class Collide : protected Pointers {
   int unpack_grid_one(int, char *);
   void compress_grid();
   void adapt_grid();
-  int find_j(int, int);
-  int ambi_find_j(int, int);
-  int group_find_j(int, int, int *, int *);
-  int ambi_group_find_j(int, int, int *, int *);
+//  int find_j(int, int);
+//  int ambi_find_j(int, int);
+//  int group_find_j(int, int, int *, int *);
+//  int ambi_group_find_j(int, int, int *, int *);
 
  protected:
   int npmax;          // max # of particles in plist
@@ -123,6 +123,11 @@ class Collide : protected Pointers {
                   Particle::OnePart *, int *);
   void ambi_check();
   void grow_percell(int);
+
+  int find_j(int, int);
+  int ambi_find_j(int, int);
+  int group_find_j(int , int ,  int *, int *);
+  int ambi_group_find_j(int, int, int *, int *);
 };
 
 }

@@ -79,6 +79,7 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   rotstyle = SMOOTH;
   vibstyle = NONE;
   nearcp = 0;
+  limit = 10;
 
   ambiflag = 0;
   maxelectron = 0;
@@ -1009,8 +1010,11 @@ void Collide::collisions_group_ambipolar()
 
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
+        if (ilist[i] >= 0) ipart = &particles[ilist[i]];
+        else ipart = &elist[-ilist[i]-1];
+
         if (nearcp > 0) {
-	   if (igroup == jgroup) j = ambi_group_find_j(i,*nj-1,ilist,ilist);
+//	   if (igroup == jgroup) j = ambi_group_find_j(i,*nj-1,ilist,ilist);
            j = ambi_group_find_j(i,*nj,ilist,jlist);
         } else {
 	   j = *nj * random->uniform();
@@ -1021,8 +1025,8 @@ void Collide::collisions_group_ambipolar()
         // ilist/jlist indices >= 0 for particles array
         // ilist/jlist indices < 0 for electron array
 
-        if (ilist[i] >= 0) ipart = &particles[ilist[i]];
-        else ipart = &elist[-ilist[i]-1];
+//        if (ilist[i] >= 0) ipart = &particles[ilist[i]];
+//        else ipart = &elist[-ilist[i]-1];
         if (jlist[j] >= 0) jpart = &particles[jlist[j]];
         else jpart = &elist[-jlist[j]-1];
 
@@ -1539,7 +1543,6 @@ int Collide::ambi_find_j(int i, int np)
     Particle::OnePart *particles = particle->particles;
     double dt = update->dt;
 
-    ipart = &particles[plist[i]];
     if (plist[i] >= 0) ipart = &particles[plist[i]];
     else ipart = &elist[-plist[i]-1];
     double *vi = ipart->v;
@@ -1557,7 +1560,8 @@ int Collide::ambi_find_j(int i, int np)
     do {
        count++;
        if ( j >= np-1 ) j = 0;
-       jpart = &particles[plist[j]];
+       if (plist[j] >= 0) jpart = &particles[plist[j]];
+       else jpart = &elist[-plist[j]-1];
        double *xj = jpart->x;
        sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
               (xi[1]-xj[1])*(xi[1]-xj[1]) +
@@ -1590,11 +1594,9 @@ int Collide::ambi_group_find_j(int i, int np, int *ilist, int *jlist)
     double sep=0.0;
     double minsep=1.0E6;
     j = np * random->uniform();
-    if (jlist[j] >= 0) jpart = &particles[jlist[j]];
-    else jpart = &elist[-jlist[j]-1];
 
     localimit = limit;
-    if (localimit > np-1) localimit = np;
+    if (localimit > np) localimit = np;
     do {
        count++;
        if ( j > np-1 ) j = 0;
