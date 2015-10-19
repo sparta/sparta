@@ -110,10 +110,11 @@ partners are selected. If nothing is specified the collision partner
 of a molecule is selected randomly from the population of the cell.
 If {yes} is selected then for each initially picked particle a 
 collision partner that is within the sphere the particle could have 
-moved (calculated with the timestep and it velocity) is randomly
-selected. To avoid long searches a limit is defined that is the maximum
-number of attempts to find the second particle. If none is found the 
-closest  is selected.
+moved (calculated with the timestep and the first particle's velocity) 
+is randomly selected. To avoid long searches a limit is defined that 
+is the maximum number of attempts to find the second particle. If none
+is found the closest particle is selected. The convergence of this 
+algorithm can be found in "(Gallis10)"_#Gallis10. 
 
 :line
 
@@ -125,5 +126,13 @@ closest  is selected.
 
 [Default:]
 
-The option defaults are vremax = (0,yes), remain = yes, ambipolar no,
+The option defaults are vremax = (0,yes), remain = yes, ambipolar no, nearcp no,
 rotate yes, and vibrate = no.
+
+
+
+:link(Gallis10)
+[(Gallis10)] M. A. Gallis, J. R. Torczynski, “Effect of Collision-Partner 
+Selection Schemes on the Accuracy and Efficiency of the Direct Simulation 
+Monte Carlo Method,” International Journal for Numerical Methods in Fluids, 
+67(8):1057 - 1072. DOI:10.1002/fld.2409 (2011).
