@@ -229,7 +229,8 @@ void CreateParticles::create_single()
     double evib = particle->evib(mspecies,temp_vib,random);
     particle->add_particle(id,mspecies,iwhich,x,v,erot,evib);
     if (nfix_add_particle) 
-      modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
+      modify->add_particle(particle->nlocal-1,temp_thermal,
+                           temp_rot,temp_vib,vstream);
   }
 
   delete random;
@@ -380,7 +381,8 @@ void CreateParticles::create_local(bigint np)
 
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
       if (nfix_add_particle) 
-        modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
+        modify->add_particle(particle->nlocal-1,temp_thermal,
+                             temp_rot,temp_vib,vstream);
     }
 
     nprev += npercell;

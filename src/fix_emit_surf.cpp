@@ -453,7 +453,8 @@ void FixEmitSurf::perform_task()
           p->dtremain = dt * random->uniform();
 
           if (nfix_add_particle) 
-            modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
+            modify->add_particle(particle->nlocal-1,temp_thermal,
+                                 temp_rot,temp_vib,vstream);
 	}
 
 	nsingle += nactual;
@@ -545,7 +546,8 @@ void FixEmitSurf::perform_task()
         p->dtremain = dt * random->uniform();
 
         if (nfix_add_particle) 
-          modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
+          modify->add_particle(particle->nlocal-1,temp_thermal,
+                               temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;

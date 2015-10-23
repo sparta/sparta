@@ -40,7 +40,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // same as Grid
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
-enum{NRHO,TEMP_THERMAL,VX,VY,VZ,SPECIES};
+enum{NRHO,TEMP_THERMAL,TEMP_ROT,TEMP_VIB,VX,VY,VZ,SPECIES};
 
 #define DELTATASK 256
 #define MAXLINE 1024
@@ -148,17 +148,17 @@ void FixEmitFaceFile::init()
   dt = update->dt;
 
   nspecies = particle->mixture[imix]->nspecies;
-  nrho = particle->mixture[imix]->nrho;
-  temp_thermal = particle->mixture[imix]->temp_thermal;
-  temp_rot = particle->mixture[imix]->temp_rot;
-  temp_vib = particle->mixture[imix]->temp_vib;
-  vstream = particle->mixture[imix]->vstream;
-  vscale = particle->mixture[imix]->vscale;
-  fraction = particle->mixture[imix]->fraction;
-  fraction_flag = particle->mixture[imix]->fraction_flag;
-  fraction_user = particle->mixture[imix]->fraction_user;
-  cummulative = particle->mixture[imix]->cummulative;
-  species2species = particle->mixture[imix]->species2species;
+  nrho_mix = particle->mixture[imix]->nrho;
+  temp_thermal_mix = particle->mixture[imix]->temp_thermal;
+  temp_rot_mix = particle->mixture[imix]->temp_rot;
+  temp_vib_mix = particle->mixture[imix]->temp_vib;
+  vstream_mix = particle->mixture[imix]->vstream;
+  vscale_mix = particle->mixture[imix]->vscale;
+  fraction_mix = particle->mixture[imix]->fraction;
+  fraction_flag_mix = particle->mixture[imix]->fraction_flag;
+  fraction_user_mix = particle->mixture[imix]->fraction_user;
+  cummulative_mix = particle->mixture[imix]->cummulative;
+  species2species_mix = particle->mixture[imix]->species2species;
 
   pts = surf->pts;
   lines = surf->lines;
@@ -200,8 +200,8 @@ void FixEmitFaceFile::init()
   fflag = new int[nspecies];
   fuser = new double[nspecies];
   for (isp = 0; isp < nspecies; isp++) {
-    fflag[isp] = fraction_flag[isp];
-    fuser[isp] = fraction_user[isp];
+    fflag[isp] = fraction_flag_mix[isp];
+    fuser[isp] = fraction_user_mix[isp];
   }
 
   // invoke FixEmit::init() to populate task list
@@ -318,10 +318,11 @@ int FixEmitFaceFile::create_task(int icell)
 void FixEmitFaceFile::perform_task()
 {
   int pcell,ninsert,nactual,isp,ispecies,ndim,id;
-  double *lo,*hi,*vstream,*cummulative,*vscale;
-  double x[3],v[3];
-  double indot,scosine,rn,ntarget,temp_thermal,temp_rot,temp_vib,vr;
+  double temp_thermal,temp_rot,temp_vib;
+  double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
+  double x[3],v[3];
+  double *lo,*hi,*vstream,*cummulative,*vscale;
   Particle::OnePart *p;
 
   double dt = update->dt;
@@ -400,7 +401,8 @@ void FixEmitFaceFile::perform_task()
           p->dtremain = dt * random->uniform();
 
           if (nfix_add_particle) 
-            modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
+            modify->add_particle(particle->nlocal-1,temp_thermal,
+                                 temp_rot,temp_vib,vstream);
 	}
 
 	nsingle += nactual;
@@ -453,7 +455,8 @@ void FixEmitFaceFile::perform_task()
         p->dtremain = dt * random->uniform();
 
         if (nfix_add_particle) 
-          modify->add_particle(particle->nlocal-1,temp_thermal,temp_rot,temp_vib,vstream);
+          modify->add_particle(particle->nlocal-1,temp_thermal,
+                               temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;
@@ -557,6 +560,8 @@ void FixEmitFaceFile::read_file(char *file, char *section)
     word = strtok(NULL," \t\n\r");
     if (strcmp(word,"nrho") == 0) mesh.which[i] = NRHO;
     else if (strcmp(word,"temp") == 0) mesh.which[i] = TEMP_THERMAL;
+    else if (strcmp(word,"temp/rot") == 0) mesh.which[i] = TEMP_ROT;
+    else if (strcmp(word,"temp/vib") == 0) mesh.which[i] = TEMP_VIB;
     else if (strcmp(word,"vx") == 0) mesh.which[i] = VX;
     else if (strcmp(word,"vy") == 0) mesh.which[i] = VY;
     else if (strcmp(word,"vz") == 0) mesh.which[i] = VZ;
@@ -725,15 +730,17 @@ int FixEmitFaceFile::interpolate(int icell)
     
   // default task params from mixture
   
-  tasks[ntask].nrho = nrho;
-  tasks[ntask].vstream[0] = vstream[0];
-  tasks[ntask].vstream[1] = vstream[1];
-  tasks[ntask].vstream[2] = vstream[2];
-  tasks[ntask].temp_thermal = temp_thermal;
+  tasks[ntask].nrho = nrho_mix;
+  tasks[ntask].vstream[0] = vstream_mix[0];
+  tasks[ntask].vstream[1] = vstream_mix[1];
+  tasks[ntask].vstream[2] = vstream_mix[2];
+  tasks[ntask].temp_thermal = temp_thermal_mix;
+  tasks[ntask].temp_rot = temp_rot_mix;
+  tasks[ntask].temp_vib = temp_vib_mix;
   for (j = 0; j < nspecies; j++) {
-    tasks[ntask].fraction[j] = fraction[j];
-    tasks[ntask].cummulative[j] = cummulative[j];
-    tasks[ntask].vscale[j] = vscale[j];
+    tasks[ntask].fraction[j] = fraction_mix[j];
+    tasks[ntask].cummulative[j] = cummulative_mix[j];
+    tasks[ntask].vscale[j] = vscale_mix[j];
   }
 
   // xc = centroid of cell face overlap with mesh
@@ -772,8 +779,13 @@ int FixEmitFaceFile::interpolate(int icell)
           linear_interpolation(xc[0],m,plo,phi);
         for (isp = 0; isp < nspecies; isp++)
           tasks[ntask].vscale[isp] = 
-            vscale[isp] * sqrt(newtemp/temp_thermal);
-      } else if (mesh.which[m] == VX)
+            vscale_mix[isp] * sqrt(newtemp/temp_thermal_mix);
+      }
+      else if (mesh.which[m] == TEMP_ROT)
+        tasks[ntask].temp_rot = linear_interpolation(xc[0],m,plo,phi);
+      else if (mesh.which[m] == TEMP_VIB)
+        tasks[ntask].temp_vib = linear_interpolation(xc[0],m,plo,phi);
+      else if (mesh.which[m] == VX)
         tasks[ntask].vstream[0] = linear_interpolation(xc[0],m,plo,phi);
       else if (mesh.which[m] == VY)
         tasks[ntask].vstream[1] = linear_interpolation(xc[0],m,plo,phi);
@@ -782,7 +794,7 @@ int FixEmitFaceFile::interpolate(int icell)
       else {
         anyfrac = 1;
         isp = -mesh.which[m] - 1;
-        isp = species2species[isp];
+        isp = species2species_mix[isp];
         fuser[isp] = linear_interpolation(xc[0],m,plo,phi);
         fflag[isp] = 1;
       }
@@ -797,8 +809,15 @@ int FixEmitFaceFile::interpolate(int icell)
           bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
         for (isp = 0; isp < nspecies; isp++)
           tasks[ntask].vscale[isp] = 
-            vscale[isp] * sqrt(newtemp/temp_thermal);
-      } else if (mesh.which[m] == VX)
+            vscale_mix[isp] * sqrt(newtemp/temp_thermal_mix);
+      }
+      else if (mesh.which[m] == TEMP_ROT)
+        tasks[ntask].temp_rot = 
+          bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
+      else if (mesh.which[m] == TEMP_VIB)
+        tasks[ntask].temp_vib = 
+          bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
+      else if (mesh.which[m] == VX)
         tasks[ntask].vstream[0] =
           bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
       else if (mesh.which[m] == VY)
@@ -810,7 +829,7 @@ int FixEmitFaceFile::interpolate(int icell)
       else {
         anyfrac = 1;
         isp = -mesh.which[m] - 1;
-        isp = species2species[isp];
+        isp = species2species_mix[isp];
         fuser[isp] = bilinear_interpolation(xc[0],xc[1],m,plo,phi,qlo,qhi);
         fflag[isp] = 1;
       }

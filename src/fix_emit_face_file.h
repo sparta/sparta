@@ -48,9 +48,10 @@ class FixEmitFaceFile : public FixEmit {
   int dimension;
   double fnum,dt;
   int nspecies;
-  double nrho,temp_thermal,temp_rot,temp_vib;
-  double *vstream,*vscale,*fraction,*cummulative,*fraction_user;
-  int *fraction_flag,*species2species;
+  double nrho_mix,temp_thermal_mix,temp_rot_mix,temp_vib_mix;
+  double *vstream_mix,*vscale_mix,*fraction_mix;
+  double *cummulative_mix,*fraction_user_mix;
+  int *fraction_flag_mix,*species2species_mix;
 
   Surf::Point *pts;
   Surf::Line *lines;

@@ -210,10 +210,12 @@ void Modify::compress_grid(int flag)
    invoke add_particle() method, only for relevant fixes
 ------------------------------------------------------------------------- */
 
-void Modify::add_particle(int index, double temp_thermal, double temp_rot, double temp_vib, double *vstream)
+void Modify::add_particle(int index, double temp_thermal, 
+                          double temp_rot, double temp_vib, double *vstream)
 {
   for (int i = 0; i < n_add_particle; i++)
-    fix[list_add_particle[i]]->add_particle(index,temp_thermal,temp_rot,temp_vib,vstream);
+    fix[list_add_particle[i]]->add_particle(index,temp_thermal,temp_rot,
+                                            temp_vib,vstream);
 }
 
 /* ----------------------------------------------------------------------
