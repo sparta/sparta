@@ -85,12 +85,12 @@ weighted using the <A HREF = "global.html">global weight</A> command.
 </P>
 <P>The velocity of the particle is set to the sum of the streaming
 velocity and a thermal velocity sampled from the thermal temperature.
-The internal energy modes of the particle are determined by the
-thermal temperature and the <I>rotate</I> and <I>vibrate</I> options of the
-<A HREF = "collide_modify.html">collide_modify</A> command.  Note that if the
-<A HREF = "collide.html">collide</A> command has not been specified (free molecular
-flow), then no rotational or vibrational energy will be assigned to
-created particles.
+The internal energy modes of the particle are determined by the <I>trot</I>
+and <I>tvib</I> settings of the mixture and the <I>rotate</I> and <I>vibrate</I>
+options of the <A HREF = "collide_modify.html">collide_modify</A> command.  Note
+that if the <A HREF = "collide.html">collide</A> command has not been specified
+(free molecular flow), then no rotational or vibrational energy will
+be assigned to created particles.
 </P>
 <P>If the final particle velocity is not directed "into" the grid cell,
 then the velocity sampling procedure is repeated until it is.  This

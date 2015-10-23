@@ -47,10 +47,11 @@ create_particles air single N 5.0 6.0 5.4 10.0 -1.0 0.0
 <P>Create particles and add them to the simulation domain.  The
 attributes of individual particles, such as species and velocity, are
 determined by the mixture attributes, as specied by the <I>mix-ID</I>.  In
-particular the <I>temp</I> and <I>vstream</I> attributes of the mixture affect
-create particle velocities and internal energy modes.  See the
-<A HREF = "mixture.html">mixture</A> command for more details.  Note that this
-command can be used multiple times to add more and more particles.
+particular the <I>temp</I>, <I>trot</I>, <I>tvib</I>, and <I>vstream</I> attributes of the
+mixture affect create particle velocities and internal energy modes.
+See the <A HREF = "mixture.html">mixture</A> command for more details.  Note that
+this command can be used multiple times to add more and more
+particles.
 </P>
 <P>Particles are only created in grid cells which are entirely external
 to surfaces.  Particles are not created in grid cells cut by surfaces.
@@ -58,7 +59,7 @@ to surfaces.  Particles are not created in grid cells cut by surfaces.
 <P>IMPORTANT NOTE: When a particle is created at a specified temperature
 (as set by the <A HREF = "mixture.html">mixture</A> command), it's rotational and
 vibrational energy will also be initialized, consistent with the
-temperature.  The <I>rotate</I> and <I>vibrate</I> options of the
+mixture temperatures.  The <I>rotate</I> and <I>vibrate</I> options of the
 <A HREF = "collide_modify.html">collide_modify</A> command determine how internal
 energy modes are initialized.  If the <A HREF = "collide.html">collide</A> command
 has not yet been specified, then no rotational or vibrational energy
@@ -107,7 +108,9 @@ settings of the collection of species in the mixture, as set by the
 to the sum of the streaming velocity of the mixture and a thermal
 velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
-<A HREF = "mixture.html">mixture</A> command.
+<A HREF = "mixture.html">mixture</A> command.  The internal rotational and
+vibrational energies of the particle are also set based on the <I>trot</I>
+and <I>tvib</I> settings for the mixture, as explained above.
 </P>
 <P>The <I>single</I> style creates a single particle.  This can be useful for
 debugging purposes, e.g. to advect a single particle towards a

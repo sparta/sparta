@@ -38,10 +38,11 @@ create_particles air single N 5.0 6.0 5.4 10.0 -1.0 0.0 :pre
 Create particles and add them to the simulation domain.  The
 attributes of individual particles, such as species and velocity, are
 determined by the mixture attributes, as specied by the {mix-ID}.  In
-particular the {temp} and {vstream} attributes of the mixture affect
-create particle velocities and internal energy modes.  See the
-"mixture"_mixture.html command for more details.  Note that this
-command can be used multiple times to add more and more particles.
+particular the {temp}, {trot}, {tvib}, and {vstream} attributes of the
+mixture affect create particle velocities and internal energy modes.
+See the "mixture"_mixture.html command for more details.  Note that
+this command can be used multiple times to add more and more
+particles.
 
 Particles are only created in grid cells which are entirely external
 to surfaces.  Particles are not created in grid cells cut by surfaces.
@@ -49,7 +50,7 @@ to surfaces.  Particles are not created in grid cells cut by surfaces.
 IMPORTANT NOTE: When a particle is created at a specified temperature
 (as set by the "mixture"_mixture.html command), it's rotational and
 vibrational energy will also be initialized, consistent with the
-temperature.  The {rotate} and {vibrate} options of the
+mixture temperatures.  The {rotate} and {vibrate} options of the
 "collide_modify"_collide_modify.html command determine how internal
 energy modes are initialized.  If the "collide"_collide.html command
 has not yet been specified, then no rotational or vibrational energy
@@ -98,7 +99,9 @@ settings of the collection of species in the mixture, as set by the
 to the sum of the streaming velocity of the mixture and a thermal
 velocity sampled from the thermal temperature of the mixture.  Both
 the streaming velocity and thermal temperature are also set by the
-"mixture"_mixture.html command.
+"mixture"_mixture.html command.  The internal rotational and
+vibrational energies of the particle are also set based on the {trot}
+and {tvib} settings for the mixture, as explained above.
 
 The {single} style creates a single particle.  This can be useful for
 debugging purposes, e.g. to advect a single particle towards a

@@ -84,8 +84,8 @@ described below.
 
 The velocity of the particle is set to the sum of the streaming
 velocity and a thermal velocity sampled from the thermal temperature.
-The internal energy modes of the particle are determined by the
-thermal temperature and the {rotate} and {vibrate} options of the
+The internal energy modes of the particle are determined by the {trot}
+and {tvib} settings and the {rotate} and {vibrate} options of the
 "collide_modify"_collide_modify.html command.  Note that if the
 "collide"_collide.html command has not been specified (free molecular
 flow), then no rotational or vibrational energy will be assigned to
@@ -201,6 +201,8 @@ the mesh point:
 nrho = number density
 vstream = 3 components of streaming velocity
 temp = thermal temperature
+trot = rotational temperature
+tvib = vibrational temperature
 species = number fraction of any species in the mixture :ul
 
 The IMESH and JMESH lines must list values that are monotonically
