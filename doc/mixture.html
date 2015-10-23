@@ -29,6 +29,10 @@
     Vx,Vy,Vz = streaming velocity of entire mixture (velocity units)
   <I>temp</I> arg = thermal
     thermal = temperature of entire mixture (temperature units)
+  <I>trot</I> arg = rotational temperature
+    rotational temperature = rotational temperature of entire mixture (temperature units)
+  <I>tvib</I> arg = vibrationaltemperature
+    vibrational temperature = vibrational temperature of entire mixture (temperature units)
   <I>frac</I> arg = fraction
     fraction = number fraction for each listed species (0 to 1)
   <I>group</I> arg = SELF or group-ID
@@ -122,8 +126,20 @@ the specified <I>Vx,Vy,Vz</I> values.
 <P>The <I>temp</I> keyword sets a global attribute of the mixture, namely the
 thermal temperature of its particles.  When particles are created,
 this value is used to sample a Gaussian velocity distribution, which
-is superposed on the streaming velocity, when a particle's velocity is
-initialized.
+is superposed on the streaming velocity, when each particle's velocity
+is initialized.
+</P>
+<P>The <I>trot</I> keyword sets a global attribute of the mixture, namely the
+rotational temperature of its particles.  When particles are created,
+this value is used to sample a Gaussian energy distribution to define
+each particle's rotational energy.  If this keyword is not specified,
+the thermal temperature is used as the default.
+</P>
+<P>The <I>tvig</I> keyword sets a global attribute of the mixture, namely the
+vibrational temperature of its particles.  When particles are created,
+this value is used to sample a Gaussian energy distribution to define
+each particle's vibrational energy.  If this keyword is not specified,
+the thermal temperature is used as the default.
 </P>
 <HR>
 
@@ -226,6 +242,8 @@ that have no species assigned to them are also deleted.
 </P>
 <P>The <I>nrho</I>, <I>vstream</I>, and <I>temp</I> defaults are those defined for the
 background gas density, as set by the <A HREF = "global.html">global</A> command.
+The <I>trot</I> and <I>tvib</I> defaults are to use the thermal temperature
+<I>temp</I>, either its default or the value specified by this command.
 The <I>frac</I> default is described above.  The <I>group</I> keyword has no
 default; if it is not used, new species not already in the mixture are
 assigned to a group with a group ID = "default".

@@ -118,18 +118,20 @@ the specified {Vx,Vy,Vz} values.
 The {temp} keyword sets a global attribute of the mixture, namely the
 thermal temperature of its particles.  When particles are created,
 this value is used to sample a Gaussian velocity distribution, which
-is superposed on the streaming velocity, when a particle's velocity is
-initialized.
+is superposed on the streaming velocity, when each particle's velocity
+is initialized.
 
+The {trot} keyword sets a global attribute of the mixture, namely the
+rotational temperature of its particles.  When particles are created,
+this value is used to sample a Gaussian energy distribution to define
+each particle's rotational energy.  If this keyword is not specified,
+the thermal temperature is used as the default.
 
-The {trot} keyword sets a different rotational temperature for the 
-mixture than the thermal temperature. If one is not specified, the rotational
-teperature defaults to the thermal.
-
-The {tvib} keyword sets a different vibrational temperature for the 
-mixture than the thermal temperature. If one is not specified, the vibrational 
-teperature defaults to the thermal.
-
+The {tvig} keyword sets a global attribute of the mixture, namely the
+vibrational temperature of its particles.  When particles are created,
+this value is used to sample a Gaussian energy distribution to define
+each particle's vibrational energy.  If this keyword is not specified,
+the thermal temperature is used as the default.
 
 :line
 
@@ -232,6 +234,8 @@ The restrictions on use of the {delete} keyword are described above.
 
 The {nrho}, {vstream}, and {temp} defaults are those defined for the
 background gas density, as set by the "global"_global.html command.
+The {trot} and {tvib} defaults are to use the thermal temperature
+{temp}, either its default or the value specified by this command.
 The {frac} default is described above.  The {group} keyword has no
 default; if it is not used, new species not already in the mixture are
 assigned to a group with a group ID = "default".
