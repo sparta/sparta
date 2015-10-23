@@ -122,9 +122,9 @@ class Collide : protected Pointers {
   void grow_percell(int);
 
   int find_j(int, int);
-  int ambi_find_j(int, int);
-  int group_find_j(int , int ,  int *, int *);
-  int ambi_group_find_j(int, int, int *, int *);
+  int find_j_group(int , int ,  int *, int *);
+  int find_j_ambi(int, int);
+  int find_j_group_ambi(int, int, int *, int *);
 };
 
 }
