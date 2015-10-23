@@ -21,7 +21,7 @@ keywords = {vremax} or {remain} or {ambipolar} or {nearcp} or {rotate} or {vibra
   {nearcp} values = choice Nlimit
     choice = {yes} or {no} to turn on/off near collision partners
     Nlimit = max # of attempts made to find a collision partner
-  {ambipolor} value = {no} or {yes}
+  {ambipolar} value = {no} or {yes}
   {rotate} value = {no} or {yes}
   {vibrate} value = {no} or {discrete} or {smooth} :pre
 :ule
