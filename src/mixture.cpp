@@ -203,10 +203,10 @@ void Mixture::init()
   if (temp_thermal_flag) temp_thermal = temp_thermal_user;
   else temp_thermal = update->temp_thermal;
   if (temp_rot_flag) temp_rot = temp_rot_user;
- else temp_rot = temp_thermal;
+  else temp_rot = temp_thermal;
   if (temp_vib_flag) temp_vib = temp_vib_user;
- else temp_vib = temp_thermal;
-
+  else temp_vib = temp_thermal;
+  
   // initialize all per-species fraction and cummulative values
   // account for both explicitly and implicitly set fractions
 
