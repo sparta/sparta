@@ -560,8 +560,8 @@ void FixEmitFaceFile::read_file(char *file, char *section)
     word = strtok(NULL," \t\n\r");
     if (strcmp(word,"nrho") == 0) mesh.which[i] = NRHO;
     else if (strcmp(word,"temp") == 0) mesh.which[i] = TEMP_THERMAL;
-    else if (strcmp(word,"temp/rot") == 0) mesh.which[i] = TEMP_ROT;
-    else if (strcmp(word,"temp/vib") == 0) mesh.which[i] = TEMP_VIB;
+    else if (strcmp(word,"trot") == 0) mesh.which[i] = TEMP_ROT;
+    else if (strcmp(word,"tvib") == 0) mesh.which[i] = TEMP_VIB;
     else if (strcmp(word,"vx") == 0) mesh.which[i] = VX;
     else if (strcmp(word,"vy") == 0) mesh.which[i] = VY;
     else if (strcmp(word,"vz") == 0) mesh.which[i] = VZ;
