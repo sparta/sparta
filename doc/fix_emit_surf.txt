@@ -77,15 +77,15 @@ cells can be weighted using the "global weight"_global.html command.
 
 The velocity of the particle is set to the sum of the streaming
 velocity and a thermal velocity sampled from the thermal temperature.
-The internal energy modes of the particle are determined by the
-thermal temperature and the {rotate} and {vibrate} options of the
-"collide_modify"_collide_modify.html command.  Note that if the
-"collide"_collide.html command has not been specified (free molecular
-flow), then no rotational or vibrational energy will be assigned to
-created particles.  See the discussion of the {normal} keyword below
-for a way to change the velocity assignment to be oriented in the
-direction normal to the surface element, rather than in the direction
-of the streaming velocity.
+The internal energy modes of the particle are determined by the {trot}
+and {tvib} settings of the mixture and the {rotate} and {vibrate}
+options of the "collide_modify"_collide_modify.html command.  Note
+that if the "collide"_collide.html command has not been specified
+(free molecular flow), then no rotational or vibrational energy will
+be assigned to created particles.  See the discussion of the {normal}
+keyword below for a way to change the velocity assignment to be
+oriented in the direction normal to the surface element, rather than
+in the direction of the streaming velocity.
 
 If the final particle velocity is not directed "out of" the surface
 element, then the velocity sampling procedure is repeated until it is.
