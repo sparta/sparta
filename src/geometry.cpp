@@ -697,9 +697,6 @@ bool axi_line_intersect(double tdelta, double *x, double *v,
     t2 = MAX(tone,ttwo);
   }
 
-  //if (id == 850133757) 
-  //  printf("T1T2 %d %d: %g %g: %g: %g %g\n",nc,selfflag,t1,t2,tdelta,x[0],x[1]);
-
   // if selfflag, particle starts on surf line segment
   // discard crossing at time = 0.0 or +/- epsilon (due to round-off)
   // nc=2 test b/c horizontal line has already discarded this collision pt
