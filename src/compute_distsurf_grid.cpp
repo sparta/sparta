@@ -119,7 +119,7 @@ void ComputeDistSurfGrid::compute_per_grid()
       }
     }
   } else {
-    memory->create(eflag,nline,"distsurf/grid:eflag");
+    memory->create(eflag,ntri,"distsurf/grid:eflag");
     memory->create(slist,ntri,"distsurf/grid:slist");
     for (i = 0; i < ntri; i++) {
       eflag[i] = 0;
@@ -150,7 +150,7 @@ void ComputeDistSurfGrid::compute_per_grid()
       if (!(tris[i].mask & sgroupbit)) continue;
       p1 = tris[m].p1;
       p2 = tris[m].p2;
-      p2 = tris[m].p3;
+      p3 = tris[m].p3;
       sctr[i][0] = invthird * (pts[p1].x[0] + pts[p2].x[0] + pts[p3].x[0]);
       sctr[i][1] = invthird * (pts[p1].x[1] + pts[p2].x[1] + pts[p3].x[1]);
       sctr[i][2] = invthird * (pts[p1].x[2] + pts[p2].x[2] + pts[p3].x[2]);
