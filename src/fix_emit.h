@@ -54,6 +54,9 @@ class FixEmit : public Fix {
 
   int ntask;           // # of insert tasks in underlying child class
 
+  int active_current;  // set to 0 if grid cell data struct changes
+                       // triggers rebuild of active cell list in child classes
+
   virtual int create_task(int) = 0;
   virtual void perform_task() = 0;
   virtual int pack_task(int, char *, int) = 0;

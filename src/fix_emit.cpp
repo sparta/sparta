@@ -150,6 +150,8 @@ void FixEmit::init()
       nlist++;
     }
   }
+
+  active_current = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -172,6 +174,8 @@ void FixEmit::start_of_step()
 
 void FixEmit::add_grid_one(int icell, int flag)
 {
+  active_current = 0;
+
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
@@ -227,6 +231,8 @@ void FixEmit::add_grid_one(int icell, int flag)
 
 int FixEmit::pack_grid_one(int icell, char *buf, int memflag)
 {
+  active_current = 0;
+
   char *ptr = buf;
 
   // ntaskcell = task count for icell
@@ -262,6 +268,8 @@ int FixEmit::pack_grid_one(int icell, char *buf, int memflag)
 
 int FixEmit::unpack_grid_one(int icell, char *buf)
 {
+  active_current = 0;
+
   char *ptr = buf;
 
   if (nglocal == nglocalmax) grow_percell(1);
@@ -312,6 +320,8 @@ int FixEmit::unpack_grid_one(int icell, char *buf)
 
 void FixEmit::compress_grid()
 {
+  active_current = 0;
+
   int me = comm->me;
   Grid::ChildCell *cells = grid->cells;
 

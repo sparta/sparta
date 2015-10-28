@@ -185,6 +185,7 @@ void Particle::init()
    called every step from Comm::migrate_particles() when particles migrate
    this is similar to compress_reactions(), but does not need
      an auxiliary vector b/c indices are in ascending order
+   this does NOT preserve particle sorting
 ------------------------------------------------------------------------- */
 
 void Particle::compress_migrate(int nmigrate, int *mlist)
@@ -347,7 +348,7 @@ void Particle::sort()
     //first[i] = -1;
   }
 
-  // reverse loop stores linked list in forward order
+  // reverse loop over partlcles to store linked lists in forward order
   // icell = global cell the particle is in
 
   int icell;
@@ -363,6 +364,20 @@ void Particle::sort()
     //next[i] = first[icell];
     //first[icell] = i;
     //cellcount[icell]++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   reallocate next list if necessary
+   called before partial sort by FixEmit classes in subsonic case
+------------------------------------------------------------------------- */
+
+void Particle::sort_allocate()
+{
+  if (maxsort < maxlocal) {
+    maxsort = maxlocal;
+    memory->destroy(next);
+    memory->create(next,maxsort,"particle:next");
   }
 }
 

@@ -35,9 +35,11 @@ class FixEmitFace : public FixEmit {
   void post_compress_grid();
 
  private:
-  int imix,np;
+  int imix,np,subsonic,subsonic_style;
   int faces[6];
   int npertask,nthresh;
+  double psubsonic,tsubsonic,nsubsonic;
+  double tprefactor,sprefactor;
 
   // copies of data from other classes
 
@@ -57,6 +59,7 @@ class FixEmitFace : public FixEmit {
     double lo[3];               // lower-left corner of face
     double hi[3];               // upper-right corner of face
     double normal[3];           // inward normal from external boundary
+    double area;                // area of face;
     double ntarget;             // # of mols to insert for all species
     double *ntargetsp;          // # of mols to insert for each species
     int icell;                  // associated cell index, unsplit or split cell
@@ -71,14 +74,41 @@ class FixEmitFace : public FixEmit {
   Task *tasks;           // list of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated
 
+  // instantaneous subsonic per-task values
+
+  struct SSTask {
+    double nrho,temp_thermal;
+    double vstream[3];
+  };
+
+  SSTask *sstasks;
+
+  int active_current,maxactive;
+  int *activecell;
+
+  // persistent subsonic per-task values
+
+  struct SSTaskSave {
+    double foo;
+  };
+
+  SSTaskSave *sstaskssave;
+
+  // private methods
+
   int create_task(int);
   void perform_task();
+
+  int split(int, int);
+
+  void subsonic_inflow();
+  void subsonic_sort();
+  void subsonic_grid();
+
   int pack_task(int, char *, int);
   int unpack_task(char *, int);
   void copy_task(int, int, int, int);
   void grow_task();
-
-  int split(int, int);
 
   int option(int, char **);
 };
