@@ -60,7 +60,7 @@ available in SPARTA:
 "reduce"_compute_reduce.html - reduce vectors to scalars
 "sonine/grid"_compute_sonine_grid.html - Sonine moments per grid cell
 "surf"_compute_surf.html - various per surface element quantities
-"thermal/grid"_compute_sonine_grid.html - thermal temperature per grid cell
+"thermal/grid"_compute_thermal_grid.html - thermal temperature per grid cell
 "temp"_compute_temp.html - temperature of particles
 "tvib/grid"_compute_tvib_grid.html - vibrational temperature per grid cell :ul
 

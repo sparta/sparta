@@ -188,7 +188,7 @@ for an overview of SPARTA output options.
 The per-surf array values will be in the "units"_units.html
 appropriate to the individual values as described above. {N} is
 unitless.  {Press}, {px}, {py}, {pz}, {shx}, {shy}, {shz} are in in
-presure units.  {Ke}, {erot}, {evib}, and {etot} are in
+pressure units.  {Ke}, {erot}, {evib}, and {etot} are in
 energy/area-time units for 3d simulations and energy/length-time units
 for 2d simulations.
 
