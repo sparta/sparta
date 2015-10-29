@@ -44,6 +44,7 @@ time = seconds
 energy = ergs
 velocity = centimeters/second
 acceleration = centimeters/second^2
+pressure = barye (dyne/cm^2 = 0.1 pascals)
 temperature = degrees K :ul
 
 For style {si}, these are the units:
@@ -56,6 +57,7 @@ time = seconds
 energy = Joules
 velocity = meters/second
 acceleration = meters/second^2
+pressure = pascals (newton/meter^2)
 temperature = degrees K :ul
 
 The units command also sets a default timestep size; see the
