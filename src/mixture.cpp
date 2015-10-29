@@ -652,7 +652,9 @@ void Mixture::write_restart(FILE *fp)
   if (vstream_flag) fwrite(vstream_user,sizeof(double),3,fp);
   fwrite(&temp_thermal_flag,sizeof(int),1,fp);
   if (temp_thermal_flag) fwrite(&temp_thermal_user,sizeof(double),1,fp);
+  fwrite(&temp_rot_flag,sizeof(int),1,fp);
   if (temp_rot_flag) fwrite(&temp_rot_user,sizeof(double),1,fp);
+  fwrite(&temp_vib_flag,sizeof(int),1,fp);
   if (temp_vib_flag) fwrite(&temp_vib_user,sizeof(double),1,fp);
 
   fwrite(fraction_flag,sizeof(int),nspecies,fp);
