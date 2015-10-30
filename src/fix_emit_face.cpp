@@ -739,7 +739,7 @@ void FixEmitFace::subsonic_grid()
       mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
       masstot += mass;
       gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
-      ip=next[ip];
+      ip = next[ip];
     }
 
     vstream = sstasks[i].vstream;
@@ -756,9 +756,9 @@ void FixEmitFace::subsonic_grid()
     if (subsonic_style == PTBOTH) {
       sstasks[i].nrho = nsubsonic;
       sstasks[i].temp_thermal = tsubsonic;
-      sstasks[i].vstream[0]=vstream[0];
-      sstasks[i].vstream[1]=vstream[1];
-      sstasks[i].vstream[2]=vstream[2];
+ //     sstasks[i].vstream[0]=vstream[0];
+ //     sstasks[i].vstream[1]=vstream[1];
+ //     sstasks[i].vstream[2]=vstream[2];
 
     } else {
       if (np) {
@@ -779,9 +779,9 @@ void FixEmitFace::subsonic_grid()
           (press_cell-psubsonic) / (massrho_cell*soundspeed_cell);
         sstasks[i].temp_thermal = psubsonic / (boltz * sstasks[i].nrho);
 // velocities not correctly communicated investigae T = NULL case
-      sstasks[i].vstream[0]=vstream[0];
-      sstasks[i].vstream[1]=vstream[1];
-      sstasks[i].vstream[2]=vstream[2];
+//      sstasks[i].vstream[0]=vstream[0];
+//      sstasks[i].vstream[1]=vstream[1];
+//      sstasks[i].vstream[2]=vstream[2];
       } else {
         sstasks[i].nrho = psubsonic / (soundspeed_cell*soundspeed_cell);
         sstasks[i].temp_thermal = psubsonic / (boltz * sstasks[i].nrho);
