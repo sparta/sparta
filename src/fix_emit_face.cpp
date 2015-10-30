@@ -445,6 +445,7 @@ void FixEmitFace::perform_task()
     normal = tasks[i].normal;
 
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
+//     printf ("%e %e %e %e\n", indot,vstream[0],vstream[1],vstream[2]);
 
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
@@ -624,6 +625,7 @@ void FixEmitFace::subsonic_inflow()
     normal = tasks[i].normal;
     area = tasks[i].area;
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
+//     printf ("A %e %e %e %e\n", indot,vstream[0],vstream[1],vstream[2]);
     
     icell = tasks[i].icell;
       
@@ -685,7 +687,7 @@ void FixEmitFace::subsonic_sort()
   int *next = particle->next;
   int nlocal = particle->nlocal;
 
-  for (i = 0; i < nlocal; i--) {
+  for (i = 0; i < nlocal; i++) {
     icell = particles[i].icell;
     if (!activecell[icell]) continue;
     next[i] = cinfo[icell].first;
@@ -711,6 +713,7 @@ void FixEmitFace::subsonic_grid()
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
   Particle::Species *species = particle->species;
   double boltz = update->boltz;
 
@@ -736,6 +739,7 @@ void FixEmitFace::subsonic_grid()
       mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
       masstot += mass;
       gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
+      ip=next[ip];
     }
 
     vstream = sstasks[i].vstream;
@@ -743,6 +747,7 @@ void FixEmitFace::subsonic_grid()
       vstream[0] = mv[0] / masstot;
       vstream[1] = mv[1] / masstot;
       vstream[2] = mv[2] / masstot;
+//     printf ("C %e %e %e\n", vstream[0],vstream[1],vstream[2]);
     } else vstream[0] = vstream[1] = vstream[2] = 0.0;
 
     // store nrho, thermal temp, vstream for task
@@ -751,6 +756,9 @@ void FixEmitFace::subsonic_grid()
     if (subsonic_style == PTBOTH) {
       sstasks[i].nrho = nsubsonic;
       sstasks[i].temp_thermal = tsubsonic;
+      sstasks[i].vstream[0]=vstream[0];
+      sstasks[i].vstream[1]=vstream[1];
+      sstasks[i].vstream[2]=vstream[2];
 
     } else {
       if (np) {
@@ -770,7 +778,10 @@ void FixEmitFace::subsonic_grid()
         vstream[ndim] += sign * 
           (press_cell-psubsonic) / (massrho_cell*soundspeed_cell);
         sstasks[i].temp_thermal = psubsonic / (boltz * sstasks[i].nrho);
-
+// velocities not correctly communicated investigae T = NULL case
+      sstasks[i].vstream[0]=vstream[0];
+      sstasks[i].vstream[1]=vstream[1];
+      sstasks[i].vstream[2]=vstream[2];
       } else {
         sstasks[i].nrho = psubsonic / (soundspeed_cell*soundspeed_cell);
         sstasks[i].temp_thermal = psubsonic / (boltz * sstasks[i].nrho);
