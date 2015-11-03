@@ -156,7 +156,7 @@ Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 KE = Sum_i (1/2 mass_i Vsq_i) / N :pre
 
 Note that this is different than the group's contribution to the
-average kinetic energy for entire grid cells.  That can be calculated
+average kinetic energy of entire grid cells.  That can be calculated
 by multiplying the {ke} quantity by the {n} quantity.
 
 The {temp} value first computes the average kinetic energy of
@@ -182,8 +182,8 @@ in each group:
 
 Erot = Sum_i (erot_i) / N :pre
 
-Note that this is different than the group's contributino to the
-average rotational energy for entire grid cells.  That can be
+Note that this is different than the group's contribution to the
+average rotational energy of entire grid cells.  That can be
 calculated by multiplying the {erot} quantity by the {n} quantity.
 
 The {trot} value computes a rotational temperature by the following
@@ -201,7 +201,7 @@ in each group:
 Evib = Sum_i (evib_i) / N :pre
 
 Note that this is different than the group's contribution to the
-average vibrational energy for entire grid cells.  That can be
+average vibrational energy of entire grid cells.  That can be
 calculated by multiplying the {evib} quantity by the {n} quantity.
 
 The {tvib} value computes a classical definition of vibrational
