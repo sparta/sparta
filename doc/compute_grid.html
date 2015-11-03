@@ -99,7 +99,8 @@ group:
 <P>Nfrac = Ngroup / Ntotal
 </P>
 <P>Ngroup is the count of particles in the group and Ntotal is the total
-number of particles in the cell (all groups).
+number of particles in all groups in the mixture.  Note that this
+total is not (necessarily) all particles in the cell.
 </P>
 <P>The <I>mass</I> value computes the average mass of particles in each group:
 </P>
@@ -119,10 +120,11 @@ command, and volume is the flow volume of the grid cell.
 <P>The <I>massfrac</I> value computes the mass fraction of particles in each
 group:
 </P>
-<P>Massfrac = Sum_i (mass_i) / Masstotal
-</P>
+<PRE>Massfrac = Sum_i (mass_i) / Masstotal 
+</PRE>
 <P>where Sum_i is a sum over particles in the group and Masstotal is the
-total mass of particles in the cell (all groups).
+total mass of particles in all groups in the mixture.  Note that this
+total is not (necessarily) the mass of all particles in the cell.
 </P>
 <P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the components of the average
 velocity of particles in each group:
