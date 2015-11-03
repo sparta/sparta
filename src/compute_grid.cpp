@@ -27,7 +27,8 @@ using namespace SPARTA_NS;
 // user keywords
 
 enum{NUM,NRHO,NFRAC,MASS,MASSRHO,MASSFRAC,
-     U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB};
+     U,V,W,USQ,VSQ,WSQ,KE,TEMPERATURE,EROT,TROT,EVIB,TVIB,
+     PXRHO,PYRHO,PZRHO,KERHO};
 
 // internal accumulators
 
@@ -133,6 +134,18 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
       value[ivalue] = TVIB;
       set_map(ivalue,ENGVIB);
       set_map(ivalue,DOFVIB);
+    } else if (strcmp(arg[iarg],"pxrho") == 0) {
+      value[ivalue] = PXRHO;
+      set_map(ivalue,MVX);
+    } else if (strcmp(arg[iarg],"pyrho") == 0) {
+      value[ivalue] = PYRHO;
+      set_map(ivalue,MVY);
+    } else if (strcmp(arg[iarg],"pzrho") == 0) {
+      value[ivalue] = PZRHO;
+      set_map(ivalue,MVZ);
+    } else if (strcmp(arg[iarg],"kerho") == 0) {
+      value[ivalue] = KERHO;
+      set_map(ivalue,MVSQ);
     } else error->all(FLERR,"Illegal compute grid command");
 
     ivalue++;
@@ -481,6 +494,38 @@ double ComputeGrid::post_process_grid(int index, int onecell, int nsample,
         norm = etally[icell][dof];
         if (norm == 0.0) vec[k] = 0.0;
         else vec[k] = rvprefactor * etally[icell][eng] / norm;
+        k += nstride;
+      }
+      break;
+    }
+
+  case PXRHO:
+  case PYRHO:
+  case PZRHO:
+    {
+      double wt;
+      double fnum = update->fnum;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+
+      int mom = emap[0];
+      for (int icell = lo; icell < hi; icell++) {
+        wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
+        vec[k] = wt * etally[icell][mom] / nsample;
+        k += nstride;
+      }
+      break;
+    }
+
+  case KERHO:
+    {
+      double wt;
+      double fnum = update->fnum;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+
+      int ke = emap[0];
+      for (int icell = lo; icell < hi; icell++) {
+        wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
+        vec[k] = eprefactor * wt * etally[icell][ke] / nsample;
         k += nstride;
       }
       break;
