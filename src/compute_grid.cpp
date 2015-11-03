@@ -398,12 +398,12 @@ double ComputeGrid::post_process_grid(int index, int onecell, int nsample,
   case MASSFRAC:
     {
       double norm;
-      int count = emap[0];
-      int cellcount = emap[1];
+      int count_or_mass = emap[0];
+      int cell_count_or_mass = emap[1];
       for (int icell = lo; icell < hi; icell++) {
-        norm = etally[icell][cellcount];
+        norm = etally[icell][cell_count_or_mass];
         if (norm == 0.0) vec[k] = 0.0;
-        else vec[k] = etally[icell][count] / norm;
+        else vec[k] = etally[icell][count_or_mass] / norm;
         k += nstride;
       }
       break;
