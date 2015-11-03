@@ -10,24 +10,29 @@ fix emit/face command :h3
 
 [Syntax:]
 
-fix ID emit/face mix-ID face1 face2 ... keyword value ... :pre
+fix ID emit/face mix-ID face1 face2 ... keyword value(s) ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 emit/face = style name of this fix command :l
 mix-ID = ID of mixture to use when creating particles :l
 face1,face2,... = one or more of {all} or {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :l
-zero or more keyword/value pairs may be appended :l
+zero or more keyword/value(s) pairs may be appended :l
 keyword = {n} or {nevery} or {perspecies} or {region} :l
   {n} value = Np = number of particles to create
   {nevery} value = Nstep = add particles every this many timesteps
   {perspecies} value = {yes} or {no}
-  {region} value = region-ID :pre
+  {region} value = region-ID 
+  {subsonic} values = Psub Tsub
+    Psub = pressure setting at inflow boundary (pressure units)
+    Tsub = temperature setting at inflow boundary (temperature units) :pre
 :ule
 
 [Examples:]
 
 fix in emit/face air all
 fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle :pre
+fix in emit/face air xlo subsonic 0.1 300
+fix in emit/face air xhi subsonic 0.05 NULL :pre
 
 [Description:]
 
@@ -153,6 +158,10 @@ to not being inside the region.
 
 :line
 
+The {subsonic} keyword ...
+
+:line
+
 [Restart, output info:]
 
 No information about this fix is written to "binary restart
@@ -178,8 +187,10 @@ A warning will be issued if a specified face has an inward normal in a
 direction opposing the streaming velocity.  Particles will still be
 emitted from that face, so long as a small fraction have a thermal
 velocity large enough to overcome the outward streaming velocity, so
-that their net velocity is inward.  The threshold for this is the
-thermal velocity for particles 3*sigma from the mean thermal velocity.
+that their net velocity is inward.  The threshold for this is that a
+thermal velocity 3 sigmas from the mean thermal velocity is large
+enough to overcome the outward streaming velocity and produce a net
+velocity into the simulation box.
 
 [Related commands:]
 
@@ -189,7 +200,7 @@ emit/face/file"_fix_emit_face_file.html
 [Default:]
 
 The keyword defaults are n = 0, nevery = 1, perspecies = yes, region =
-none.
+none, no subsonic setting.
 
 :line
 

@@ -23,7 +23,7 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>nrho</I> or <I>nfrac</I> or <I>mass</I> or <I>massrho</I> or <I>massfrac</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> 
+<LI>value = <I>n</I> or <I>nrho</I> or <I>nfrac</I> or <I>mass</I> or <I>massrho</I> or <I>massfrac</I> or <I>u</I> or <I>v</I> or <I>w</I> or <I>usq</I> or <I>vsq</I> or <I>wsq</I> of <I>ke</I> or <I>temp</I> or <I>erot</I> or <I>trot</I> or <I>evib</I> or <I>tvib</I> or <I>pxrho</I> or <I>pyrho</I> or <I>pzrho</I> or <I>kerho</I> 
 
 <PRE>  <I>n</I> = particle count
   <I>nrho</I> = number density
@@ -42,7 +42,11 @@
   <I>erot</I> = rotational energy
   <I>trot</I> = rotational temperature
   <I>evib</I> = vibrational energy 
-  <I>tvib</I> = vibrational temperature (classical definition) 
+  <I>tvib</I> = vibrational temperature (classical definition)
+  <I>pxrho</I> = x component of momentum density
+  <I>pyrho</I> = y component of momentum density
+  <I>pzrho</I> = z component of momentum density
+  <I>kerho</I> = kinetic energy density 
 </PRE>
 
 </UL>
@@ -73,25 +77,31 @@ different ways.  The values for a single timestep can be output by the
 <P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_grid.html">fix
 ave/grid</A> command.  It does its averaging as if the
 particles in the cell at each sampling timestep were combined together
-into one large set of particles to compute the formulas below.  Note
-that this is a different form of averaging than taking the values
-produced by the formulas below for a single timestep, summing those
-values over the sampling timesteps, and then dividing by the number of
-sampling steps.  Except for the <I>n</I> and <I>nrho</I> values where the two
-averaging methods are identical.
+into one large set of particles to compute the formulas below.
+</P>
+<P>Note that for most of the values, this is a different form of
+averaging than taking the values produced by the formulas below for a
+single timestep, summing those values over the sampling timesteps, and
+then dividing by the number of sampling steps.
 </P>
 <HR>
 
-<P>The <I>n</I> value counts the number of particles in each group.
+<HR>
+
+<P>The <I>n</I> value counts the number of particles in each group.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.
 </P>
-<P>The <I>nrho</I> value computes the number density of particles in each
-group:
+<P>The <I>nrho</I> value computes the number density for the grid cell volume
+due to particles in each group:
 </P>
-<P>Nrho = N * fnum / volume
-</P>
+<PRE>Nrho = fnum/volume * N 
+</PRE>
 <P>N is the number of particles (same as the <I>n</I> keyword), fnum is the
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
-command, and volume is the flow volume of the grid cell.
+command, and volume is the flow volume of the grid cell.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.
 </P>
 <P>The <I>nfrac</I> value computes the number fraction of particles in each
 group:
@@ -102,16 +112,18 @@ group:
 number of particles in all groups in the mixture.  Note that this
 total is not (necessarily) all particles in the cell.
 </P>
+<HR>
+
 <P>The <I>mass</I> value computes the average mass of particles in each group:
 </P>
 <PRE>Mass = Sum_i (mass_i) / N 
 </PRE>
-<P>where Sum_i is a sum over particles in the grid cell and in each group.
+<P>where Sum_i is a sum over particles in the group.
 </P>
-<P>The <I>massrho</I> value computes the mass density of particles in each
-group:
+<P>The <I>massrho</I> value computes the mass density for the grid cell volume
+due to particles in each group:
 </P>
-<PRE>Massrho = Mass * fnum / volume 
+<PRE>Massrho = fnum*volume * Mass 
 </PRE>
 <P>Mass is the value computed by the <I>mass</I> keyword, fnum is the
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
@@ -126,22 +138,37 @@ group:
 total mass of particles in all groups in the mixture.  Note that this
 total is not (necessarily) the mass of all particles in the cell.
 </P>
-<P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the components of the average
-velocity of particles in each group:
+<HR>
+
+<P>The <I>u</I>, <I>v</I>, <I>w</I> values compute the components of the mass-weighted
+average velocity of particles in each group:
 </P>
-<PRE>U = Sum_i (mass_i Vx_i) / Sum_i (mass_i) 
+<PRE>U = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
+V = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
+W = Sum_i (mass_i Vz_i) / Sum_i (mass_i) 
 </PRE>
-<P>The <I>usq</I>, <I>vsq</I>, <I>wsq</I> values compute the squared component of
-the average velocity of particles in each group.
+<P>This is the same as the center-of-mass velocity of particles in each
+group.
 </P>
-<PRE>Usq = Sum_i (mass_i Vx_i Vx_i) / Sum_i (mass_i) 
+<P>The <I>usq</I>, <I>vsq</I>, <I>wsq</I> values compute the average mass-weighted
+squared components of the velocity of particles in each group:
+</P>
+<PRE>Usq = Sum_i (mass_i Vx_i Vx_i) / Sum_i (mass_i)
+Vsq = Sum_i (mass_i Vy_i Vy_i) / Sum_i (mass_i)
+Wsq = Sum_i (mass_i Vz_i Vz_i) / Sum_i (mass_i) 
 </PRE>
+<HR>
+
 <P>The <I>ke</I> value computes the average kinetic energy of particles in
 each group:
 </P>
 <PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
 KE = Sum_i (1/2 mass_i Vsq_i) / N 
 </PRE>
+<P>Note that this is different than the group's contribution to the
+average kinetic energy for entire grid cells.  That can be calculated
+by multiplying the <I>ke</I> quantity by the <I>n</I> quantity.
+</P>
 <P>The <I>temp</I> value first computes the average kinetic energy of
 particles in each group, as for the <I>ke</I> value.  This is then
 converted to a temperature <I>T</I> by the following formula where <I>kB</I> is
@@ -158,11 +185,17 @@ velocity.  See the <A HREF = "compute_thermal_grid.html">compute thermal/grid</A
 command to calculate thermal temperatures after subtracting out
 streaming components of velocity.
 </P>
+<HR>
+
 <P>The <I>erot</I> value computes the average rotational energy of particles
 in each group:
 </P>
 <PRE>Erot = Sum_i (erot_i) / N 
 </PRE>
+<P>Note that this is different than the group's contributino to the
+average rotational energy for entire grid cells.  That can be
+calculated by multiplying the <I>erot</I> quantity by the <I>n</I> quantity.
+</P>
 <P>The <I>trot</I> value computes a rotational temperature by the following
 formula where <I>kB</I> is the Boltzmann factor:
 </P>
@@ -170,11 +203,17 @@ formula where <I>kB</I> is the Boltzmann factor:
 </PRE>
 <P>Dof_i is the number of rotational degrees of freedom for particle i.
 </P>
+<HR>
+
 <P>The <I>evib</I> value computes the average vibrational energy of particles
 in each group:
 </P>
 <PRE>Evib = Sum_i (evib_i) / N 
 </PRE>
+<P>Note that this is different than the group's contribution to the
+average vibrational energy for entire grid cells.  That can be
+calculated by multiplying the <I>evib</I> quantity by the <I>n</I> quantity.
+</P>
 <P>The <I>tvib</I> value computes a classical definition of vibrational
 temperature, valid for continous distributions of vibrational energy,
 by the following formula where <I>kB</I> is the Boltzmann factor:
@@ -183,6 +222,33 @@ by the following formula where <I>kB</I> is the Boltzmann factor:
 </PRE>
 <P>Dof_i is the number of vibrational degrees of freedom for particle i.
 </P>
+<HR>
+
+<P>The <I>pxrho</I>, <I>pyrho</I>, <I>pzrho</I> values compute components of momentum
+density for the grid cell volume due to particles in each group:
+</P>
+<PRE>Pxrho = fnum/volume * Sum_i (mass_i * Vx_i)
+Pyrho = fnum/volume * Sum_i (mass_i * Vy_i)
+Pzrho = fnum/volume * Sum_i (mass_i * Vz_i) 
+</PRE>
+<P>where Sum_i is a sum over particles in the group, fnum is the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command, and volume is the flow volume of the grid cell.
+</P>
+<P>The <I>kerho</I> value computes the kinetic energy density for the grid
+cell volume due to particles in each group:
+</P>
+<PRE>Vsq = Vx*Vx + Vy*Vy + Vz*Vz
+KErho = fnum/volume * Sum_i (mass_i * Vsq_i) 
+</PRE>
+<P>where Sum_i is a sum over particles in the group, fnum is the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command, and volume is the flow volume of the grid cell.
+</P>
+<HR>
+
+<HR>
+
 <P><B>Output info:</B>
 </P>
 <P>This compute calculates a per-grid array, with the number of columns
@@ -211,7 +277,12 @@ unitless.  <I>Nrho</I> is in 1/distance^3 units for 3d simulations and
 mass/distance^2 units for 2d simulations.  <I>U</I>, <I>v</I>, and <I>w</I> are in
 velocity units.  <I>Usq</I>, <I>vsq</I>, and <I>wsq</I> are in velocity squared
 units.  <I>Ke</I>, <I>erot</I>, and <I>evib</I> are in energy units.  <I>Temp</I> and
-<I>trot</I> and <I>tvib</I> are in temperature units.
+<I>trot</I> and <I>tvib</I> are in temperature units.  <I>Pxrho</I>, <I>pyrho</I>, <I>pzrho</I>
+are in momentum/distance^3 units for 3d simulations and
+momentum/distance^2 units for 2d simulations, where momentum is in
+units of mass*velocity.  <I>Kerho</I> is in units of energy/distance^3
+units for 3d simulations and energy/distance^2 units for 2d
+simulations.
 </P>
 <P><B>Restrictions:</B> none
 </P>
