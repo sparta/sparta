@@ -445,7 +445,6 @@ void FixEmitFace::perform_task()
     normal = tasks[i].normal;
 
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
-//     printf ("%e %e %e %e\n", indot,vstream[0],vstream[1],vstream[2]);
 
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
@@ -625,7 +624,6 @@ void FixEmitFace::subsonic_inflow()
     normal = tasks[i].normal;
     area = tasks[i].area;
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
-//     printf ("A %e %e %e %e\n", indot,vstream[0],vstream[1],vstream[2]);
     
     icell = tasks[i].icell;
       
@@ -748,7 +746,6 @@ void FixEmitFace::subsonic_grid()
       vstream[0] = mv[0] / masstot;
       vstream[1] = mv[1] / masstot;
       vstream[2] = mv[2] / masstot;
-//     printf ("C %e %e %e\n", vstream[0],vstream[1],vstream[2]);
     } else vstream[0] = vstream[1] = vstream[2] = 0.0;
 
     // store nrho, thermal temp, vstream for task
@@ -773,7 +770,7 @@ void FixEmitFace::subsonic_grid()
           (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
         ndim = tasks[i].ndim;
         sign = tasks[i].normal[ndim];
-        vstream[ndim] += sign * 
+        vstream[ndim] -= sign * 
           (press_cell-psubsonic) / (massrho_cell*soundspeed_cell);
         sstasks[i].temp_thermal = psubsonic / (boltz * sstasks[i].nrho);
       } else {
