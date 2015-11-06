@@ -667,6 +667,7 @@ void FixEmitFace::subsonic_sort()
 
   // update list of active grid cells if necessary
   // active cells = those assigned to tasks
+  // active_current flag set by parent class
 
   if (!active_current) {
     if (grid->nlocal > maxactive) {
