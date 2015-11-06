@@ -27,37 +27,53 @@
 
 using namespace SPARTA_NS;
 
+// user keywords
+
+enum{TEMP,PRESS};
+
 /* ---------------------------------------------------------------------- */
 
 ComputeThermalGrid::ComputeThermalGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg != 3) error->all(FLERR,"Illegal compute thermal/grid command");
+  if (narg < 4) error->all(FLERR,"Illegal compute thermal/grid command");
 
   imix = particle->find_mixture(arg[2]);
   if (imix < 0) 
     error->all(FLERR,"Compute thermal/grid mixture ID does not exist");
-
   ngroup = particle->mixture[imix]->ngroup;
 
+  nvalue = narg - 3;
+  value = new int[nvalue];
+
+  int ivalue = 0;
+  int iarg = 3;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"temp") == 0) value[ivalue] = TEMP;
+    else if (strcmp(arg[iarg],"press") == 0) value[ivalue] = PRESS;
+    else error->all(FLERR,"Illegal compute thermal/grid command");
+    ivalue++;
+    iarg++;
+  }
+
   per_grid_flag = 1;
-  size_per_grid_cols = ngroup;
+  size_per_grid_cols = ngroup*nvalue;
   post_process_grid_flag = 1;
 
   // allocate and initialize nmap and map
   // npergroup = 6 tally quantities per group
+  // same tally quantities for all user values
 
   npergroup = 6;
   ntotal = ngroup*npergroup;
 
-  nmap = new int[ngroup];
-  for (int i = 0; i < ngroup; i++) nmap[i] = 6;
+  nmap = new int[nvalue];
+  for (int i = 0; i < nvalue; i++) nmap[i] = npergroup;
 
-  memory->create(map,ngroup,npergroup,"thermal/grid:map");
-  int itally = 0;
-  for (int i = 0; i < ngroup; i++)
-    for (int j = 0; j < 6; j++)
-      map[i][j] = itally++;
+  memory->create(map,ngroup*nvalue,npergroup,"thermal/grid:map");
+  for (int i = 0; i < ngroup*nvalue; i++)
+    for (int j = 0; j < npergroup; j++)
+      map[i][j] = (i/nvalue)*npergroup + j;
 
   nglocal = 0;
   vector_grid = NULL;
@@ -68,6 +84,8 @@ ComputeThermalGrid::ComputeThermalGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeThermalGrid::~ComputeThermalGrid()
 {
+  delete [] value;
+
   delete [] nmap;
   memory->destroy(map);
 
@@ -84,6 +102,7 @@ void ComputeThermalGrid::init()
                "mixture has changed");
 
   tprefactor = update->mvv2e / (3.0*update->boltz);
+  pprefactor = update->fnum * update->mvv2e / 3.0;
 
   reallocate();
 }
@@ -145,9 +164,10 @@ void ComputeThermalGrid::compute_per_grid()
 int ComputeThermalGrid::query_tally_grid(int index, double **&array, int *&cols)
 {
   index--;
+  int ivalue = index % nvalue;
   array = tally;
   cols = map[index];
-  return nmap[index];
+  return nmap[ivalue];
 }
 
 /* ----------------------------------------------------------------------
@@ -171,7 +191,8 @@ post_process_grid(int index, int onecell, int nsample,
                   double **etally, int *emap, double *vec, int nstride)
 {
   index--;
-  
+  int ivalue = index % nvalue;
+
   int lo = 0;
   int hi = nglocal;
   int k = 0;
@@ -191,12 +212,21 @@ post_process_grid(int index, int onecell, int nsample,
 
   // compute normalized final value for each grid cell
   // Vcm = Sum mv / Sum m
-  // KE = Sum m(v - Vcm)^2 / N 
-  // KE = Sum(i=xyz) [(Sum mVi^2) / N - M/N Vcmx^2]
-  // KE = Sum(i=xyz) [(Sum mVi^2) / N - (Sum mVx)^2 / MN]
-  // KE = Sum (mv^2) / N - [(Sum mVx)^2 + (Sum mVy)^2 + (Sum mVz)^2] / MN
-  // thermal temp = (2/(3kB)) * 0.5 * KE
+  // total KE = 0.5 * Sum m(v - Vcm)^2
+  // KE = 0.5 * Sum(i=xyz) [(Sum mVi^2) - M Vcmx^2]
+  // KE = 0.5 * Sum(i=xyz) [(Sum mVi^2) - (Sum mVx)^2 / M]
+  // KE = 0.5 * Sum (mv^2) - [(Sum mVx)^2 + (Sum mVy)^2 + (Sum mVz)^2] / M
+  // thermal temp = (2/(3NkB)) * KE
+  // press = (2/(3V)) * KE
 
+  int tflag = 1;
+  if (value[ivalue] == PRESS) tflag = 0;
+
+  double prefactor;
+  if (value[ivalue] == TEMP) prefactor = tprefactor;
+  else if (value[ivalue] == PRESS) prefactor = pprefactor;
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
   double ncount,mass,mvx,mvy,mvz,mvsq;
   double *values;
 
@@ -212,8 +242,10 @@ post_process_grid(int index, int onecell, int nsample,
       mvy = values[n+3];
       mvz = values[n+4];
       mvsq = values[n+5];
-      vec[k] = mvsq/ncount - (mvx*mvx + mvy*mvy + mvz*mvz)/ncount/mass;
-      vec[k] *= tprefactor;
+      vec[k] = mvsq - (mvx*mvx + mvy*mvy + mvz*mvz)/mass;
+      vec[k] *= prefactor;
+      if (tflag) vec[k] /= ncount;
+      else vec[k] /= cinfo[icell].volume;
     }
     k += nstride;
   }

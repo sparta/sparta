@@ -38,8 +38,11 @@ class ComputeThermalGrid : public Compute {
 
  private:
   int imix,nvalue;
-  int ngroup,npergroup,ntotal;
+  int ngroup;
 
+  int *value;                // keyword for each user requested value
+  int npergroup;             // # of unique tally quantities per group
+  int ntotal;                // total # of columns in tally array
   int nglocal;               // # of owned grid cells
 
   int *nmap;                 // # of tally quantities each user value uses
@@ -47,6 +50,7 @@ class ComputeThermalGrid : public Compute {
   double **tally;            // array of tally quantities, cells by ntotal
 
   double tprefactor;         // conversion from KE to temperature
+  double pprefactor;         // conversion from KE to pressure
 };
 
 }
