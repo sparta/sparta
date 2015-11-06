@@ -10,40 +10,47 @@ compute thermal/grid command :h3
 
 [Syntax:]
 
-compute ID thermal/grid mix-ID :pre
+compute ID thermal/grid mix-ID value1 value2 ... :pre
 
-ID is documented in "compute"_compute.html command
-thermal/grid = style name of this compute command
-mix-ID = mixture ID to perform calculation on :ul
+ID is documented in "compute"_compute.html command :ulb,l
+thermal/grid = style name of this compute command :l
+mix-ID = mixture ID to perform calculation on :l
+one or more values can be appended :l
+value = {temp} or {press} :l
+  {temp} = temperature
+  {press} = pressure :pre
+:ule
 
 [Examples:]
 
-compute 1 thermal/grid species
-compute 1 thermal/grid air
+compute 1 thermal/grid species temp
+compute 1 thermal/grid air temp press :pre
 
 These commands will dump 10 time averaged thermal temperatures for
 each species and each grid cell to a dump file every 1000 steps:
 
-compute 1 thermal/grid species
+compute 1 thermal/grid species temp
 fix 1 ave/grid 10 100 1000 c_1
 dump 1 grid all 1000 tmp.grid id f_1 :pre
 
 [Description:]
 
-Define a computation that calculates the thermal temperature of the
-particles in each grid cell.  The values are tallied separately for
-each group of species in the specified mixture, as described in the
-Output section below.  See the mixture command for how a set of
-species can be partitioned into groups.
+Define a computation that calculates one or more values for each grid
+cell, which are based on the thermal temperature of the particles in
+each grid cell.  The values are tallied separately for each group of
+species in the specified mixture, as described in the Output section
+below.  See the mixture command for how a set of species can be
+partitioned into groups.
 
-The thermal temperature subtracts the center-of-mass (COM) velocity
-for all particles in the group and grid cell from each particle to
-yield a thermal velocity.  This thermal velocity is used to compute
-the temperature.  This is in contrast to the "compute grid
-temp"_compute_grid.html command which simply uses the full velocity of
-each particle to compute a temperature.  For non-streaming
-simulations, the two results should be similar, but for streaming
-flows, they will be different.
+The values listed above rely on first computing a thermal temperature
+which subtracts the center-of-mass (COM) velocity for all particles in
+the group and grid cell from each particle to yield a thermal
+velocity.  This thermal velocity is used to compute the temperature,
+as described below.  This is in contrast to some of the values tallied
+by the "compute grid temp"_compute_grid.html command which simply uses
+the full velocity of each particle to compute a temperature.  For
+non-streaming simulations, the two results should be similar, but for
+streaming flows, they will be different.
 
 The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
@@ -81,18 +88,36 @@ Cz = Vz - COMz
 Csq = Cx*Cx + Cy*Cy + Cz*Cz :pre
 
 The COM velocity is (COMx,COMy,COMz).  The thermal velocity of each
-particle is (Cx,Cy,Cz), i.e. its velocity minus the COM velocity
-of particles in its group and cell.  This allows computation of Csq
-for each particle which is used to calculate the kinetic energy
-and thermal temperature T as follows:
+particle is (Cx,Cy,Cz), i.e. its velocity minus the COM velocity of
+particles in its group and cell.  This allows computation of Csq for
+each particle which is used to calculate the total kinetic energy due
+to particles in the group as follows:
 
-thermal_KE = Sum_i (1/2 mass_i Csq_i) / N
-T = thermal_KE / (3/2 kB) :pre
+thermal_KE = Sum_i (1/2 mass_i Csq_i) :pre
+
+The {temp} value computes the thermal temperature T, due to particles
+in each group:
+
+T = thermal_KE / (3/2 N kB) :pre
+
+The {press} value uses the thermal_KE to compute a pressure P for the
+grid cell due to particles in the group:
+
+P = 2/3 fnum/volume * thermal_KE :pre
+
+Note that if multiple groups are defined in the mixture, one group's
+value is effectively a partial pressure due to particles in the group.
+
+:line
 
 [Output info:]
 
 This compute calculates a per-grid array, with the number of columns
-is equal to the number of groups in the specified mixture.
+equal to the number of values times the number of groups.  The
+ordering of columns is first by values, then by groups.  I.e. if the
+{temp} and {press} values were specified as keywords, then the first
+two columns would be {temp} and {press} for the first group, the 3rd
+and 4th columns would be {temp} and {press} for the second group, etc.
 
 This compute performs calculations for all flavors of child grid cells
 in the simulation, which includes unsplit, cut, split, and sub cells.
@@ -105,7 +130,9 @@ The array can be accessed by any command that uses per-grid values
 from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
 for an overview of SPARTA output options.
 
-The per-grid array values will be in temperature "units"_units.html.
+The per-grid array values will be in the "units"_units.html
+appropriate to the individual values as described above.  {Temp} is in
+temperature units.  {Press} is in prsesure units.
 
 [Restrictions:] none
 
