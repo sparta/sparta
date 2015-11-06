@@ -83,7 +83,7 @@ class FixEmitFace : public FixEmit {
 
   SSTask *sstasks;
 
-  int active_current,maxactive;
+  int maxactive;
   int *activecell;
 
   // persistent subsonic per-task values
