@@ -98,8 +98,26 @@ class FixEmitFaceFile : public FixEmit {
   Task *tasks;           // list of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated
 
+  // instantaneous subsonic per-task values
+
+  struct SSTask {
+    double nrho,temp_thermal;
+    double vstream[3];
+  };
+
+  SSTask *sstasks;
+
+  // active grid cells assigned to tasks, used by subsonic sorting
+
+  int maxactive;
+  int *activecell;
+
+  // per-species vectors for species fractions on mesh
+
   int *fflag;
   double *fuser;
+
+  // private methods
 
   int create_task(int);
   void perform_task();

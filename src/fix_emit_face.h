@@ -83,16 +83,10 @@ class FixEmitFace : public FixEmit {
 
   SSTask *sstasks;
 
+  // active grid cells assigned to tasks
+
   int maxactive;
   int *activecell;
-
-  // persistent subsonic per-task values
-
-  struct SSTaskSave {
-    double foo;
-  };
-
-  SSTaskSave *sstaskssave;
 
   // private methods
 

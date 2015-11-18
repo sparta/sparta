@@ -40,7 +40,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // same as Grid
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
-enum{NRHO,TEMP_THERMAL,TEMP_ROT,TEMP_VIB,VX,VY,VZ,SPECIES};
+enum{NRHO,TEMP_THERMAL,TEMP_ROT,TEMP_VIB,VX,VY,VZ,PRESS,SPECIES};
 
 #define DELTATASK 256
 #define MAXLINE 1024
@@ -565,6 +565,7 @@ void FixEmitFaceFile::read_file(char *file, char *section)
     else if (strcmp(word,"vx") == 0) mesh.which[i] = VX;
     else if (strcmp(word,"vy") == 0) mesh.which[i] = VY;
     else if (strcmp(word,"vz") == 0) mesh.which[i] = VZ;
+    else if (strcmp(word,"press") == 0) mesh.which[i] = PRESS;
     else {
       int index = particle->find_species(word);
       if (index < 0) error->one(FLERR,"Unknown species in inflow file");

@@ -444,6 +444,14 @@ void FixEmitFace::perform_task()
     hi = tasks[i].hi;
     normal = tasks[i].normal;
 
+    // override mixture properties with per-task subsonic values
+
+    if (subsonic) {
+      temp_thermal = sstasks[i].temp_thermal;
+      temp_rot = temp_vib = temp_thermal;
+      vstream = sstasks[i].vstream;
+    }
+
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
     if (perspecies) {
