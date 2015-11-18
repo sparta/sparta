@@ -142,8 +142,9 @@ nearcp no, rotate yes, and vibrate = no.
 :line
 
 :link(Gallis11)
-[(Gallis11)] M. A. Gallis, J. R. Torczynski, “Effect of
+
+[(Gallis11)] M. A. Gallis, J. R. Torczynski, "Effect of
 Collision-Partner Selection Schemes on the Accuracy and Efficiency of
-the Direct Simulation Monte Carlo Method,” International Journal for
+the Direct Simulation Monte Carlo Method," International Journal for
 Numerical Methods in Fluids, 67(8):1057-1072. DOI:10.1002/fld.2409
 (2011).
