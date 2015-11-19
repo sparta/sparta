@@ -39,10 +39,9 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // same as Grid
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
+enum{NOSUBSONIC,PTBOTH,PONLY};
 
 #define DELTATASK 256
-
-enum{PTBOTH,PONLY};
 
 /* ---------------------------------------------------------------------- */
 
@@ -80,6 +79,7 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
 
   np = 0;
   subsonic = 0;
+  subsonic_style = NOSUBSONIC;
 
   options(narg-iarg,&arg[iarg]);
 
@@ -101,7 +101,6 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
   tasks = NULL;
   ntask = ntaskmax = 0;
 
-  sstasks = NULL;
   maxactive = 0;
   activecell = NULL;
 }
@@ -110,9 +109,11 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
 
 FixEmitFace::~FixEmitFace()
 {
-  for (int i = 0; i < ntaskmax; i++) delete [] tasks[i].ntargetsp;
+  for (int i = 0; i < ntaskmax; i++) {
+    delete [] tasks[i].ntargetsp;
+    delete [] tasks[i].vscale;
+  }
   memory->sfree(tasks);
-  memory->sfree(sstasks);
   memory->destroy(activecell);
 }
 
@@ -127,12 +128,6 @@ void FixEmitFace::init()
   dt = update->dt;
 
   nspecies = particle->mixture[imix]->nspecies;
-  nrho = particle->mixture[imix]->nrho;
-  temp_thermal = particle->mixture[imix]->temp_thermal;
-  temp_rot = particle->mixture[imix]->temp_rot;
-  temp_vib = particle->mixture[imix]->temp_vib;
-  vstream = particle->mixture[imix]->vstream;
-  vscale = particle->mixture[imix]->vscale;
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
 
@@ -144,6 +139,21 @@ void FixEmitFace::init()
 
   tprefactor = update->mvv2e / (3.0*update->boltz);
 
+  // mixture soundspeed, used by subsonic PONLY as default cell property
+
+  double avegamma = 0.0;
+  double avemass = 0.0;
+
+  for (int m = 0; m < nspecies; m++) {
+    int ispecies = particle->mixture[imix]->species[m];
+    avemass += fraction[m] * particle->species[ispecies].mass;
+    avegamma += fraction[m] * (1.0 + 2.0 / 
+                               (3.0 + particle->species[ispecies].rotdof));
+  }
+
+  soundspeed_mixture = sqrt(avegamma * update->boltz * 
+                            particle->mixture[imix]->temp_thermal / avemass);
+
   // cannot inflow thru periodic boundary
 
   for (int i = 0; i < 6; i++)
@@ -151,6 +161,8 @@ void FixEmitFace::init()
       error->all(FLERR,"Cannot use fix emit/face on periodic boundary");
 
   // cannot have inflow on yhi if axisymmetric
+
+  double *vstream = particle->mixture[imix]->vstream;
 
   if (domain->axisymmetric && faces[YHI] && vstream[1] != 0.0)
     error->all(FLERR,"Cannot use fix emit on axisymmetric yhi "
@@ -176,12 +188,18 @@ void FixEmitFace::init()
     error->warning(FLERR,
                    "One or more fix inflow faces oppose streaming velocity");
 
-  // reallocate ntargetsp for each task 
+  // reallocate ntargetsp and vscale for each task 
   // b/c nspecies count of mixture may have changed
 
-  for (int i = 0; i < ntask; i++) {
-    delete [] tasks[i].ntargetsp;
-    tasks[i].ntargetsp = new double[nspecies];
+  if (perspecies) {
+    for (int i = 0; i < ntask; i++) {
+      delete [] tasks[i].ntargetsp;
+      tasks[i].ntargetsp = new double[nspecies];
+      if (subsonic_style == PONLY) {
+        delete [] tasks[i].vscale;
+        tasks[i].vscale = new double[nspecies];
+      }
+    }
   }
 
   // invoke FixEmit::init() to populate task list
@@ -193,8 +211,8 @@ void FixEmitFace::init()
   // if Np > 0, nper = # of insertions per task
   // set nthresh so as to achieve exactly Np insertions
   // tasks > tasks_with_no_extra need to insert 1 extra particle
-  // NOTE: setting same # of insertions per task
-  //       could weight by cell face area
+  // NOTE: currently setting same # of insertions per task
+  //       could instead weight by cell face area
 
   if (np > 0) {
     int all,nupto,tasks_with_no_extra;
@@ -217,10 +235,14 @@ int FixEmitFace::create_task(int icell)
 {
   int i,j,n,iface,flag,isp,extflag;
   int *cflags;
-  double indot,area;
+  double indot,area,ntargetsp;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
+
+  double nrho = particle->mixture[imix]->nrho;
+  double *vstream = particle->mixture[imix]->vstream;
+  double *vscale = particle->mixture[imix]->vscale;
 
   // corners[i][j] = J corner points of face I of a grid cell
   // works for 2d quads and 3d hexes
@@ -376,16 +398,28 @@ int FixEmitFace::create_task(int icell)
 
     // set ntarget and ntargetsp via mol_inflow()
     // skip task if final ntarget = 0.0, due to large outbound vstream
+    // do not skip for subsonic since it resets ntarget every step
 
     tasks[ntask].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
-      tasks[ntask].ntargetsp[isp] = 
-        mol_inflow(indot,vscale[isp],fraction[isp]);
-      tasks[ntask].ntargetsp[isp] *= nrho*area*dt / fnum;
-      tasks[ntask].ntargetsp[isp] /= cinfo[icell].weight;
-      tasks[ntask].ntarget += tasks[ntask].ntargetsp[isp];
+      ntargetsp = mol_inflow(indot,vscale[isp],fraction[isp]);
+      ntargetsp *= nrho*area*dt / fnum;
+      ntargetsp /= cinfo[icell].weight;
+      tasks[ntask].ntarget += ntargetsp;
+      if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
     }
-    if (tasks[ntask].ntarget == 0.0) continue;
+    if (tasks[ntask].ntarget == 0.0 && !subsonic) continue;
+
+    // initialize other task values with mixture properties
+    // may be overwritten by subsonic methods
+
+    tasks[ntask].nrho = particle->mixture[imix]->nrho;
+    tasks[ntask].temp_thermal = particle->mixture[imix]->temp_thermal;
+    tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
+    tasks[ntask].temp_vib = particle->mixture[imix]->temp_vib;
+    tasks[ntask].vstream[0] = particle->mixture[imix]->vstream[0];
+    tasks[ntask].vstream[1] = particle->mixture[imix]->vstream[1];
+    tasks[ntask].vstream[2] = particle->mixture[imix]->vstream[2];
 
     // increment task counter
 
@@ -404,16 +438,18 @@ int FixEmitFace::create_task(int icell)
 void FixEmitFace::perform_task()
 {
   int pcell,ninsert,nactual,isp,ispecies,ndim,pdim,qdim,id;
-  double *lo,*hi,*normal;
-  double x[3],v[3];
   double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
+  double temp_thermal,temp_rot,temp_vib;
+  double x[3],v[3];
+  double *lo,*hi,*normal,*vstream,*vscale;
   Particle::OnePart *p;
 
   dt = update->dt;
   int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
+  // also computes current per-task temp_thermal and vstream
 
   if (subsonic) subsonic_inflow();
 
@@ -444,13 +480,13 @@ void FixEmitFace::perform_task()
     hi = tasks[i].hi;
     normal = tasks[i].normal;
 
-    // override mixture properties with per-task subsonic values
+    temp_thermal = tasks[i].temp_thermal;
+    temp_rot = tasks[i].temp_rot;
+    temp_vib = tasks[i].temp_vib;
+    vstream = tasks[i].vstream;
 
-    if (subsonic) {
-      temp_thermal = sstasks[i].temp_thermal;
-      temp_rot = temp_vib = temp_thermal;
-      vstream = sstasks[i].vstream;
-    }
+    if (subsonic_style == PONLY) vscale = tasks[i].vscale;
+    else vscale = particle->mixture[imix]->vscale;
 
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
@@ -615,7 +651,7 @@ void FixEmitFace::subsonic_inflow()
   // recompute mixture velscale, since depends on temp_thermal
 
   int isp,icell;
-  double mass,indot,area,velscale;
+  double mass,indot,area,nrho,temp_thermal,velscale,ntargetsp;
   double *vstream,*normal;
   
   Particle::Species *species = particle->species;
@@ -625,24 +661,24 @@ void FixEmitFace::subsonic_inflow()
   double boltz = update->boltz;
 
   for (int i = 0; i < ntask; i++) {
-    nrho = sstasks[i].nrho;
-    temp_thermal = sstasks[i].temp_thermal;
-    vstream = sstasks[i].vstream;
-    
+    vstream = tasks[i].vstream;
     normal = tasks[i].normal;
-    area = tasks[i].area;
     indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
-    
+
+    area = tasks[i].area;
+    nrho = tasks[i].nrho;
+    temp_thermal = tasks[i].temp_thermal;
     icell = tasks[i].icell;
       
     tasks[i].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
       mass = species[mspecies[isp]].mass;
       velscale = sqrt(2.0 * boltz * temp_thermal / mass);
-      tasks[i].ntargetsp[isp] = mol_inflow(indot,velscale,fraction[isp]);
-      tasks[i].ntargetsp[isp] *= nrho*area*dt / fnum;
-      tasks[i].ntargetsp[isp] /= cinfo[icell].weight;
-      tasks[i].ntarget += tasks[i].ntargetsp[isp];
+      ntargetsp = mol_inflow(indot,velscale,fraction[isp]);
+      ntargetsp *= nrho*area*dt / fnum;
+      ntargetsp /= cinfo[icell].weight;
+      tasks[i].ntarget += ntargetsp;
+      if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
     }
   }
 }
@@ -711,12 +747,12 @@ void FixEmitFace::subsonic_sort()
 
 void FixEmitFace::subsonic_grid()
 {
-  int ip,np,icell,ispecies,ndim;
+  int m,ip,np,icell,ispecies,ndim,index;
   double mass,masstot,gamma,ke,sign;
   double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
   double mass_cell,gamma_cell,soundspeed_cell;
   double mv[4];
-  double *v;
+  double *v,*vstream,*vscale;
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
@@ -749,42 +785,51 @@ void FixEmitFace::subsonic_grid()
       ip = next[ip];
     }
 
-    vstream = sstasks[i].vstream;
+    // compute/store nrho, 3 temps, vstream for task
+    // also vscale for PONLY
+    // if sound speed = 0.0 due to 0 or 1 particles in cell or 
+    //   all particles having COM velocity, set via mixture properties
+
+    vstream = tasks[i].vstream;
     if (np) {
       vstream[0] = mv[0] / masstot;
       vstream[1] = mv[1] / masstot;
       vstream[2] = mv[2] / masstot;
     } else vstream[0] = vstream[1] = vstream[2] = 0.0;
 
-    // store nrho, thermal temp, vstream for task
-    // NOTE: check unit consistency for all of this
-
     if (subsonic_style == PTBOTH) {
-      sstasks[i].nrho = nsubsonic;
-      sstasks[i].temp_thermal = tsubsonic;
+      tasks[i].nrho = nsubsonic;
+      tasks[i].temp_thermal = tsubsonic;
 
     } else {
-      if (np) {
-        nrho_cell = np * fnum / cinfo[icell].volume;
-        massrho_cell = masstot * fnum / cinfo[icell].volume;
-        ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
-        temp_thermal_cell = tprefactor * ke;
-        press_cell = nrho_cell * boltz * temp_thermal_cell;
-        mass_cell = masstot / np;
-        gamma_cell = gamma / np;
-        soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
-        
-        sstasks[i].nrho = nrho_cell + 
-          (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
-        ndim = tasks[i].ndim;
-        sign = tasks[i].normal[ndim];
-        vstream[ndim] -= sign * 
-          (press_cell-psubsonic) / (massrho_cell*soundspeed_cell);
-        sstasks[i].temp_thermal = psubsonic / (boltz * sstasks[i].nrho);
-      } else {
-        sstasks[i].nrho = psubsonic / (soundspeed_cell*soundspeed_cell);
-        sstasks[i].temp_thermal = psubsonic / (boltz * sstasks[i].nrho);
-      }
+      nrho_cell = np * fnum / cinfo[icell].volume;
+      massrho_cell = masstot * fnum / cinfo[icell].volume;
+      ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
+      temp_thermal_cell = tprefactor * ke;
+      press_cell = nrho_cell * boltz * temp_thermal_cell;
+      mass_cell = masstot / np;
+      gamma_cell = gamma / np;
+      soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
+      if (soundspeed_cell == 0.0) soundspeed_cell = soundspeed_mixture;
+      
+      tasks[i].nrho = nrho_cell + 
+        (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
+      temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
+      
+      ndim = tasks[i].ndim;
+      sign = tasks[i].normal[ndim];
+      vstream[ndim] -= sign * 
+        (press_cell - psubsonic) / (massrho_cell*soundspeed_cell);
+    }
+
+    tasks[i].temp_thermal = temp_thermal_cell;
+    tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
+      
+    vscale = tasks[i].vscale;
+    for (m = 0; m < nspecies; i++) {
+      ispecies = particle->mixture[imix]->species[m];
+      vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_cell /
+                       species[ispecies].mass);
     }
   }
 }
@@ -802,10 +847,13 @@ int FixEmitFace::pack_task(int itask, char *buf, int memflag)
   ptr += sizeof(Task);
   ptr = ROUNDUP(ptr);
 
-  // pack task vector
+  // pack task vectors
+  // vscale is allocated, but not communicated, since updated every step
 
-  if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
-  ptr += nspecies*sizeof(double);
+  if (perspecies) {
+    if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
+    ptr += nspecies*sizeof(double);
+  }
 
   return ptr-buf;
 }
@@ -820,17 +868,22 @@ int FixEmitFace::unpack_task(char *buf, int icell)
 
   if (ntask == ntaskmax) grow_task();
   double *ntargetsp = tasks[ntask].ntargetsp;
+  double *vscale = tasks[ntask].vscale;
 
   memcpy(&tasks[ntask],ptr,sizeof(Task));
   ptr += sizeof(Task);
   ptr = ROUNDUP(ptr);
 
-  // unpack task vector
+  // unpack task vectors
+  // vscale is allocated, but not communicated, since updated every step
 
-  memcpy(ntargetsp,ptr,nspecies*sizeof(double));
-  ptr += nspecies*sizeof(double);
+  if (perspecies) {
+    memcpy(ntargetsp,ptr,nspecies*sizeof(double));
+    ptr += nspecies*sizeof(double);
+  }
 
   tasks[ntask].ntargetsp = ntargetsp;
+  tasks[ntask].vscale = vscale;
 
   // reset task icell and pcell
   // if a split cell, set pcell via split() which calls update->split()
@@ -851,7 +904,8 @@ int FixEmitFace::unpack_task(char *buf, int icell)
 void FixEmitFace::copy_task(int icell, int n, int first, int oldfirst)
 {
   // reset icell in each copied task
-  // copy task vector
+  // copy task vectors
+  // vscale is allocated, but not copied, since updated every step
 
   if (first == oldfirst) {
     for (int i = 0; i < n; i++) {
@@ -862,11 +916,14 @@ void FixEmitFace::copy_task(int icell, int n, int first, int oldfirst)
   } else {
     for (int i = 0; i < n; i++) {
       double *ntargetsp = tasks[first].ntargetsp;
+      double *vscale = tasks[first].vscale;
 
       memcpy(&tasks[first],&tasks[oldfirst],sizeof(Task));
-      memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
+      if (perspecies)
+        memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
 
       tasks[first].ntargetsp = ntargetsp;
+      tasks[first].vscale = vscale;
 
       tasks[first].icell = icell;
       first++;
@@ -887,21 +944,29 @@ void FixEmitFace::grow_task()
   ntaskmax += DELTATASK;
   tasks = (Task *) memory->srealloc(tasks,ntaskmax*sizeof(Task),
 				    "emit/face:tasks");
-  if (subsonic) {
-    memory->sfree(sstasks);
-    sstasks = (SSTask *) memory->smalloc(ntaskmax*sizeof(SSTask),
-                                         "emit/face:sstasks");
-  }
 
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized
 
   memset(&tasks[oldmax],0,(ntaskmax-oldmax)*sizeof(Task));
 
-  // allocate vector in each new task
+  // allocate vectors in each new task or set to NULL
 
-  for (int i = oldmax; i < ntaskmax; i++)
-    tasks[i].ntargetsp = new double[nspecies];
+  if (perspecies) {
+    for (int i = oldmax; i < ntaskmax; i++)
+      tasks[i].ntargetsp = new double[nspecies];
+  } else {
+    for (int i = oldmax; i < ntaskmax; i++)
+      tasks[i].ntargetsp = NULL;
+  }
+
+  if (subsonic_style == PONLY) {
+    for (int i = oldmax; i < ntaskmax; i++)
+      tasks[i].vscale = new double[nspecies];
+  } else {
+    for (int i = oldmax; i < ntaskmax; i++)
+      tasks[i].vscale = NULL;
+  }
 }
 
 /* ----------------------------------------------------------------------

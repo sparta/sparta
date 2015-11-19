@@ -48,6 +48,8 @@ class FixEmitFaceFile : public FixEmit {
   int dimension;
   double fnum,dt;
   int nspecies;
+  int subsonic,subsonic_style;
+  double tprefactor;
   double nrho_mix,temp_thermal_mix,temp_rot_mix,temp_vib_mix;
   double *vstream_mix,*vscale_mix,*fraction_mix;
   double *cummulative_mix,*fraction_user_mix;
@@ -78,6 +80,7 @@ class FixEmitFaceFile : public FixEmit {
   struct Task {
     double lo[3];               // lower-left corner of overlap of cell/file
     double hi[3];               // upper-right corner of overlap of cell/file
+    double area;                // area of face
     double ntarget;             // # of mols to insert for all species
     double *ntargetsp;          // # of mols to insert for each species
     int icell;                  // associated cell index, unsplit or split cell
@@ -89,6 +92,7 @@ class FixEmitFaceFile : public FixEmit {
     double nrho;
     double vstream[3];
     double temp_thermal,temp_rot,temp_vib;
+    double press;
     double *fraction;
     double *cummulative;
     double *vscale;
@@ -97,15 +101,6 @@ class FixEmitFaceFile : public FixEmit {
                          // ntask = # of tasks is stored by parent class
   Task *tasks;           // list of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated
-
-  // instantaneous subsonic per-task values
-
-  struct SSTask {
-    double nrho,temp_thermal;
-    double vstream[3];
-  };
-
-  SSTask *sstasks;
 
   // active grid cells assigned to tasks, used by subsonic sorting
 
@@ -119,21 +114,25 @@ class FixEmitFaceFile : public FixEmit {
 
   // private methods
 
-  int create_task(int);
-  void perform_task();
-  int pack_task(int, char *, int);
-  int unpack_task(char *, int);
-  void copy_task(int, int, int, int);
-  void grow_task();
-
-  int split(int);
-
   void read_file(char *, char *);
   void bcast_mesh();
   void check_mesh_values();
   int interpolate(int);
   double linear_interpolation(double, int, int, int);
   double bilinear_interpolation(double, double, int, int, int, int, int);
+
+  int split(int);
+
+  void subsonic_inflow();
+  void subsonic_sort();
+  void subsonic_grid();
+
+  int create_task(int);
+  void perform_task();
+  int pack_task(int, char *, int);
+  int unpack_task(char *, int);
+  void copy_task(int, int, int, int);
+  void grow_task();
 
   int option(int, char **);
   void print_task(int);

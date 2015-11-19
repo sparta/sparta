@@ -39,15 +39,13 @@ class FixEmitFace : public FixEmit {
   int faces[6];
   int npertask,nthresh;
   double psubsonic,tsubsonic,nsubsonic;
-  double tprefactor,sprefactor;
+  double tprefactor,soundspeed_mixture;
 
   // copies of data from other classes
 
-  int dimension;
+  int dimension,nspecies;
   double fnum,dt;
-  int nspecies;
-  double nrho,temp_thermal,temp_rot,temp_vib;
-  double *vstream,*vscale,*fraction,*cummulative;
+  double *fraction,*cummulative;
 
   Surf::Point *pts;
   Surf::Line *lines;
@@ -59,9 +57,18 @@ class FixEmitFace : public FixEmit {
     double lo[3];               // lower-left corner of face
     double hi[3];               // upper-right corner of face
     double normal[3];           // inward normal from external boundary
-    double area;                // area of face;
+    double area;                // area of cell face
     double ntarget;             // # of mols to insert for all species
-    double *ntargetsp;          // # of mols to insert for each species
+    double nrho;                // from mixture or adjacent subsonic cell
+    double temp_thermal;        // from mixture or adjacent subsonic cell
+    double temp_rot;            // from mixture or subsonic temp_thermal
+    double temp_vib;            // from mixture or subsonic temp_thermal
+    double vstream[3];          // from mixture or adjacent subsonic cell
+    double *ntargetsp;          // # of mols to insert for each species,
+                                //   only defined for PERSPECIES
+    double *vscale;             // vscale for each species,
+                                //   only defined for subsonic_style PONLY
+
     int icell;                  // associated cell index, unsplit or split cell
     int iface;                  // which face of unsplit or split cell
     int pcell;                  // associated cell index for particles
@@ -74,16 +81,7 @@ class FixEmitFace : public FixEmit {
   Task *tasks;           // list of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated
 
-  // instantaneous subsonic per-task values
-
-  struct SSTask {
-    double nrho,temp_thermal;
-    double vstream[3];
-  };
-
-  SSTask *sstasks;
-
-  // active grid cells assigned to tasks
+  // active grid cells assigned to tasks, used by subsonic sorting
 
   int maxactive;
   int *activecell;

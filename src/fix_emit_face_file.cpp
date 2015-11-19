@@ -41,6 +41,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // same as Grid
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{NRHO,TEMP_THERMAL,TEMP_ROT,TEMP_VIB,VX,VY,VZ,PRESS,SPECIES};
+enum{PTBOTH,PONLY};
 
 #define DELTATASK 256
 #define MAXLINE 1024
@@ -113,10 +114,13 @@ FixEmitFaceFile::FixEmitFaceFile(SPARTA *sparta, int narg, char **arg) :
     else normal[2] = -1.0;
   }
 
-  // task list
+  // task list and subsonic data structs
 
   tasks = NULL;
   ntask = ntaskmax = 0;
+
+  maxactive = 0;
+  activecell = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -135,6 +139,7 @@ FixEmitFaceFile::~FixEmitFaceFile()
     delete [] tasks[i].vscale;
   }
   memory->sfree(tasks);
+  memory->destroy(activecell);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -163,6 +168,10 @@ void FixEmitFaceFile::init()
   pts = surf->pts;
   lines = surf->lines;
   tris = surf->tris;
+
+  // subsonic prefactor
+
+  tprefactor = update->mvv2e / (3.0*update->boltz);
 
   // cannot inflow thru periodic boundary
 
@@ -297,7 +306,7 @@ int FixEmitFaceFile::create_task(int icell)
   else tasks[ntask].pcell = icell;
 
   // interpolate remaining task values from mesh to cell face
-  // interpolate return 1 if task is valid, else 0
+  // interpolate returns 1 if task is valid, else 0
 
   flag = interpolate(icell);
   if (!flag) return 0;
@@ -310,9 +319,6 @@ int FixEmitFaceFile::create_task(int icell)
 
 /* ----------------------------------------------------------------------
    insert particles in grid cells with faces touching inflow boundary
-   NOTE:
-     currently not allowing particle insertion on backflow boundaries
-     see comment in FixEmitFace
 ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::perform_task()
@@ -327,6 +333,11 @@ void FixEmitFaceFile::perform_task()
 
   double dt = update->dt;
   int *species = particle->mixture[imix]->species;
+
+  // if subsonic, re-compute particle inflow counts for each task
+  // also computes current temp_thermal and vstream in insertion cells
+
+  if (subsonic) subsonic_inflow();
 
   // insert particles for each task = cell
   // ntarget/ninsert is either perspecies or for all species
@@ -351,12 +362,13 @@ void FixEmitFaceFile::perform_task()
     lo = tasks[i].lo;
     hi = tasks[i].hi;
 
-    vstream = tasks[i].vstream;
-    indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
     vscale = tasks[i].vscale;
+
+    vstream = tasks[i].vstream;
+    indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
 
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
@@ -662,6 +674,25 @@ void FixEmitFaceFile::bcast_mesh()
   MPI_Bcast(mesh.jmesh,mesh.nj,MPI_DOUBLE,0,world);
   MPI_Bcast(&mesh.values[0][0],mesh.ni*mesh.nj*mesh.nvalues,
             MPI_DOUBLE,0,world);
+
+  // subsonic if PRESS is set in mesh file
+  // PTBOTH if TEMP is also set, else PONLY
+  // error if TEMP_ROT, TEMP_VIB, or VSTREAM is set
+
+  subsonic = 0;
+  for (int i = 0; i < mesh.nvalues; i++)
+    if (mesh.which[i] == PRESS) subsonic = 1;
+
+  if (subsonic) {
+    subsonic_style = PONLY;
+    for (int i = 0; i < mesh.nvalues; i++) {
+      if (mesh.which[i] == TEMP_THERMAL) subsonic_style = PTBOTH;
+      if (mesh.which[i] == TEMP_ROT || mesh.which[i] == TEMP_ROT || 
+          mesh.which[i] == VX || mesh.which[i] == VY || mesh.which[i] == VZ) 
+        error->all(FLERR,"Fix emit/face/file cannot set "
+                   "Trot, Tvib, or Vstream when subsonic");
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -865,10 +896,12 @@ int FixEmitFaceFile::interpolate(int icell)
     area = (tasks[ntask].hi[pdim]*tasks[ntask].hi[pdim] -
             tasks[ntask].lo[pdim]*tasks[ntask].lo[pdim])*MY_PI;
   else area = tasks[ntask].hi[pdim]-tasks[ntask].lo[pdim];
+  tasks[ntask].area = area;
 
   // set ntarget and ntargetsp via mol_inflow()
   // also scale ntarget by frac_user (0 to 1)
   // skip task if final ntarget = 0.0, due to large outbound vstream
+  // do not skip for subsonic since it resets ntarget every step
 
   for (isp = 0; isp < nspecies; isp++) {
     tasks[ntask].ntargetsp[isp] = frac_user *
@@ -878,7 +911,7 @@ int FixEmitFaceFile::interpolate(int icell)
     tasks[ntask].ntargetsp[isp] /= cinfo[icell].weight;
     tasks[ntask].ntarget += tasks[ntask].ntargetsp[isp];
   }
-  if (tasks[ntask].ntarget == 0.0) return 0;
+  if (tasks[ntask].ntarget == 0.0 && !subsonic) return 0;
 
   return 1;
 }
@@ -950,6 +983,202 @@ int FixEmitFaceFile::split(int icell)
   if (dimension == 2) splitcell = update->split2d(icell,x);
   else splitcell = update->split3d(icell,x);
   return splitcell;
+}
+
+/* ----------------------------------------------------------------------
+   insert particles in grid cells with faces touching inflow boundaries
+------------------------------------------------------------------------- */
+
+void FixEmitFaceFile::subsonic_inflow()
+{
+  // for grid cells that are part of tasks:
+  // calculate local nrho, vstream, and thermal temperature
+  // if needed sort particles for grid cells with tasks
+
+  if (!particle->sorted) subsonic_sort();
+  subsonic_grid();
+
+  // recalculate particle insertion counts for each task
+  // recompute mixture velscale, since depends on temp_thermal
+
+  int isp,icell;
+  double nrho,temp_thermal;
+  double mass,indot,area,velscale;
+  double *vstream;
+  
+  Particle::Species *species = particle->species;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int *mspecies = particle->mixture[imix]->species;
+  double fnum = update->fnum;
+  double boltz = update->boltz;
+
+  for (int i = 0; i < ntask; i++) {
+    nrho = tasks[i].nrho;
+    temp_thermal = tasks[i].temp_thermal;
+    vstream = tasks[i].vstream;
+    
+    area = tasks[i].area;
+    indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
+    
+    icell = tasks[i].icell;
+      
+    tasks[i].ntarget = 0.0;
+    for (isp = 0; isp < nspecies; isp++) {
+      mass = species[mspecies[isp]].mass;
+      velscale = sqrt(2.0 * boltz * temp_thermal / mass);
+      tasks[i].ntargetsp[isp] = mol_inflow(indot,velscale,
+                                           tasks[i].fraction[isp]);
+      tasks[i].ntargetsp[isp] *= nrho*area*dt / fnum;
+      tasks[i].ntargetsp[isp] /= cinfo[icell].weight;
+      tasks[i].ntarget += tasks[i].ntargetsp[isp];
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   identify particles in grid cells associated with a task
+   store count and linked list, same as for particle sorting
+------------------------------------------------------------------------- */
+
+void FixEmitFaceFile::subsonic_sort()
+{
+  int i,icell;
+
+  // initialize particle sort lists for grid cells assigned to tasks
+  // use task pcell, not icell
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (i = 0; i < ntask; i++) {
+    icell = tasks[i].pcell;
+    cinfo[icell].first = -1;
+    cinfo[icell].count = 0;
+  }
+
+  // reallocate particle next list if necessary
+
+  particle->sort_allocate();
+
+  // update list of active grid cells if necessary
+  // active cells = those assigned to tasks
+  // active_current flag set by parent class
+
+  if (!active_current) {
+    if (grid->nlocal > maxactive) {
+      memory->destroy(activecell);
+      maxactive = grid->nlocal;
+      memory->create(activecell,maxactive,"emit/face:active");
+    }
+    memset(activecell,0,maxactive*sizeof(int));
+    for (i = 0; i < ntask; i++) activecell[tasks[i].pcell] = 1;
+    active_current = 1;
+  }
+
+  // loop over particles to store linked lists for active cells
+  // not using reverse loop like Particle::sort(),
+  //   since this should only be created/used occasionally
+
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+  int nlocal = particle->nlocal;
+
+  for (i = 0; i < nlocal; i++) {
+    icell = particles[i].icell;
+    if (!activecell[icell]) continue;
+    next[i] = cinfo[icell].first;
+    cinfo[icell].first = i;
+    cinfo[icell].count++;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   compute number density, thermal temperature, stream velocity
+   only for grid cells associated with a task
+   first compute for grid cells, then adjust due to boundary conditions
+------------------------------------------------------------------------- */
+
+void FixEmitFaceFile::subsonic_grid()
+{
+  int ip,np,icell,ispecies,ndim;
+  double mass,masstot,gamma,ke,sign;
+  double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
+  double mass_cell,gamma_cell,soundspeed_cell;
+  double mv[4];
+  double *v,*vstream;
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+  Particle::Species *species = particle->species;
+  double boltz = update->boltz;
+
+  for (int i = 0; i < ntask; i++) {
+    icell = tasks[i].pcell;
+    np = cinfo[icell].count;
+
+    // accumulate needed per-particle quantities
+    // mv = mass*velocity terms, masstot = total mass
+    // gamma = rotational/tranlational DOFs
+
+    mv[0] = mv[1] = mv[2] = mv[3] = 0.0;
+    masstot = gamma = 0.0;
+
+    ip = cinfo[icell].first;
+    while (ip >= 0) {
+      ispecies = particles[i].ispecies;
+      mass = species[ispecies].mass;
+      v = particles[ip].v;
+      mv[0] += mass*v[0];
+      mv[1] += mass*v[1];
+      mv[2] += mass*v[2];
+      mv[3] += mass * (v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+      masstot += mass;
+      gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
+      ip = next[ip];
+    }
+
+    vstream = tasks[i].vstream;
+    if (np) {
+      vstream[0] = mv[0] / masstot;
+      vstream[1] = mv[1] / masstot;
+      vstream[2] = mv[2] / masstot;
+    } else vstream[0] = vstream[1] = vstream[2] = 0.0;
+
+    // store nrho, thermal temp, vstream for task
+    // NOTE: check unit consistency for all of this
+    // NOTE: for np = 0, soundspeed_cell is not set
+    // NOTE: for np = 1 (or even small), ke could be 0.0 -> soundspeed = 0.0
+    //       which leads to divide by 0.0 for nrho
+
+    if (subsonic_style == PTBOTH) {
+      //tasks[i].nrho = nsubsonic;
+      //tasks[i].temp_thermal = tsubsonic;
+
+    } else {
+      if (np) {
+        nrho_cell = np * fnum / cinfo[icell].volume;
+        massrho_cell = masstot * fnum / cinfo[icell].volume;
+        ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
+        temp_thermal_cell = tprefactor * ke;
+        press_cell = nrho_cell * boltz * temp_thermal_cell;
+        mass_cell = masstot / np;
+        gamma_cell = gamma / np;
+        soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
+
+        /*        
+        tasks[i].nrho = nrho_cell + 
+          (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
+        sign = normal[ndim];
+        vstream[ndim] -= sign * 
+          (press_cell-psubsonic) / (massrho_cell*soundspeed_cell);
+        tasks[i].temp_thermal = psubsonic / (boltz * tasks[i].nrho);
+        */
+      } else {
+        //tasks[i].nrho = psubsonic / (soundspeed_cell*soundspeed_cell);
+        //tasks[i].temp_thermal = psubsonic / (boltz * tasks[i].nrho);
+      }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
