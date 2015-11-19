@@ -1021,7 +1021,7 @@ int FixEmitFaceFile::split(int icell)
 }
 
 /* ----------------------------------------------------------------------
-   insert particles in grid cells with faces touching inflow boundaries
+   recalculate task properties based on subsonic BC
 ------------------------------------------------------------------------- */
 
 void FixEmitFaceFile::subsonic_inflow()

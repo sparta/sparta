@@ -35,8 +35,10 @@ class FixEmitSurf : public FixEmit {
   void post_compress_grid();
 
  private:
-  int imix,groupbit,np,normalflag;
+  int imix,groupbit,np,normalflag,subsonic,subsonic_style;
   int npertask,nthresh;
+  double psubsonic,tsubsonic,nsubsonic;
+  double tprefactor,soundspeed_mixture;
 
   // copies of data from other classes
 
@@ -56,17 +58,27 @@ class FixEmitSurf : public FixEmit {
   // one insertion task for a cell and a surf
 
   struct Task {
+    double area;                // area of overlap of surf with cell
+    double ntarget;             // # of mols to insert for all species
+    double tan1[3],tan2[3];     // 2 normalized tangent vectors to surf normal
+    double nrho;                // from mixture or adjacent subsonic cell
+    double temp_thermal;        // from mixture or adjacent subsonic cell
+    double temp_rot;            // from mixture or subsonic temp_thermal
+    double temp_vib;            // from mixture or subsonic temp_thermal
+    double vstream[3];          // from mixture or adjacent subsonic cell
+    double *ntargetsp;          // # of mols to insert for each species,
+                                //   only defined for PERSPECIES
+    double *vscale;             // vscale for each species,
+                                //   only defined for subsonic_style PONLY
+
+    double *path;               // path of points for overlap of surf with cell
+    double *fracarea;           // fractional area for each sub tri in path
+
     int icell;                  // associated cell index, unsplit or split cell
     int isurf;                  // surf index
     int pcell;                  // associated cell index for particles
                                 // unsplit or sub cell (not split cell)
     int npoint;                 // # of points in path
-    double *path;               // path of points for overlap of surf with cell
-    double area;                // area of overlap of surf with cell
-    double *fracarea;           // fractional area for each sub tri in path
-    double tan1[3],tan2[3];     // 2 normal tangent vectors to surf normal
-    double ntarget;             // # of mols to insert for all species
-    double *ntargetsp;          // # of mols to insert for each species
   };
 
                          // ntask = # of tasks is stored by parent class
@@ -75,8 +87,20 @@ class FixEmitSurf : public FixEmit {
 
   double magvstream;     // magnitude of vstream
 
+  // active grid cells assigned to tasks, used by subsonic sorting
+
+  int maxactive;
+  int *activecell;
+
+  // private methods
+
   int create_task(int);
   void perform_task();
+
+  void subsonic_inflow();
+  void subsonic_sort();
+  void subsonic_grid();
+
   int pack_task(int, char *, int);
   int unpack_task(char *, int);
   void copy_task(int, int, int, int);

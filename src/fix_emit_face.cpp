@@ -637,7 +637,7 @@ int FixEmitFace::split(int icell, int iface)
 }
 
 /* ----------------------------------------------------------------------
-   insert particles in grid cells with faces touching inflow boundaries
+   recalculate task properties based on subsonic BC
 ------------------------------------------------------------------------- */
 
 void FixEmitFace::subsonic_inflow()
@@ -789,7 +789,7 @@ void FixEmitFace::subsonic_grid()
 
     // compute/store nrho, 3 temps, vstream for task
     // also vscale for PONLY
-    // if sound speed = 0.0 due to 0 or 1 particles in cell or 
+    // if sound speed = 0.0 due to <= 1 particle in cell or 
     //   all particles having COM velocity, set via mixture properties
 
     vstream = tasks[i].vstream;
@@ -801,7 +801,7 @@ void FixEmitFace::subsonic_grid()
 
     if (subsonic_style == PTBOTH) {
       tasks[i].nrho = nsubsonic;
-      tasks[i].temp_thermal = tsubsonic;
+      temp_thermal_cell = tsubsonic;
 
     } else {
       nrho_cell = np * fnum / cinfo[icell].volume;
@@ -822,17 +822,17 @@ void FixEmitFace::subsonic_grid()
       sign = tasks[i].normal[ndim];
       vstream[ndim] -= sign * 
         (press_cell - psubsonic) / (massrho_cell*soundspeed_cell);
+
+      vscale = tasks[i].vscale;
+      for (m = 0; m < nspecies; i++) {
+        ispecies = particle->mixture[imix]->species[m];
+        vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_cell /
+                         species[ispecies].mass);
+      }
     }
 
     tasks[i].temp_thermal = temp_thermal_cell;
     tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
-      
-    vscale = tasks[i].vscale;
-    for (m = 0; m < nspecies; i++) {
-      ispecies = particle->mixture[imix]->species[m];
-      vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_cell /
-                       species[ispecies].mass);
-    }
   }
 }
 
