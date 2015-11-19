@@ -35,9 +35,10 @@ class FixEmitFaceFile : public FixEmit {
   void post_compress_grid();
 
  private:
-  int imix,iface;
+  int imix,iface,subsonic,subsonic_style;
   int npertask,nthresh;
   double frac_user;
+  double tprefactor,soundspeed_mixture;
 
   double normal[3];             // inward normal from external boundary face
   int ndim;                     // dim (0,1,2) normal to face
@@ -45,11 +46,8 @@ class FixEmitFaceFile : public FixEmit {
 
   // copies of data from other classes
 
-  int dimension;
+  int dimension,nspecies;
   double fnum,dt;
-  int nspecies;
-  int subsonic,subsonic_style;
-  double tprefactor;
   double nrho_mix,temp_thermal_mix,temp_rot_mix,temp_vib_mix;
   double *vstream_mix,*vscale_mix,*fraction_mix;
   double *cummulative_mix,*fraction_user_mix;
@@ -82,7 +80,9 @@ class FixEmitFaceFile : public FixEmit {
     double hi[3];               // upper-right corner of overlap of cell/file
     double area;                // area of face
     double ntarget;             // # of mols to insert for all species
-    double *ntargetsp;          // # of mols to insert for each species
+    double *ntargetsp;          // # of mols to insert for each species,
+                                //   only defined for PERSPECIES
+
     int icell;                  // associated cell index, unsplit or split cell
     int pcell;                  // associated cell index for particles
                                 // unsplit or sub cell (not split cell)
@@ -90,9 +90,9 @@ class FixEmitFaceFile : public FixEmit {
     // interpolated file values or defaults from mixture params
 
     double nrho;
-    double vstream[3];
     double temp_thermal,temp_rot,temp_vib;
     double press;
+    double vstream[3];
     double *fraction;
     double *cummulative;
     double *vscale;

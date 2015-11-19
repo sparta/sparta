@@ -188,17 +188,19 @@ void FixEmitFace::init()
     error->warning(FLERR,
                    "One or more fix inflow faces oppose streaming velocity");
 
-  // reallocate ntargetsp and vscale for each task 
+  // if used, reallocate ntargetsp and vscale for each task
   // b/c nspecies count of mixture may have changed
 
   if (perspecies) {
     for (int i = 0; i < ntask; i++) {
       delete [] tasks[i].ntargetsp;
       tasks[i].ntargetsp = new double[nspecies];
-      if (subsonic_style == PONLY) {
-        delete [] tasks[i].vscale;
-        tasks[i].vscale = new double[nspecies];
-      }
+    }
+  }
+  if (subsonic_style == PONLY) {
+    for (int i = 0; i < ntask; i++) {
+      delete [] tasks[i].vscale;
+      tasks[i].vscale = new double[nspecies];
     }
   }
 
@@ -648,10 +650,10 @@ void FixEmitFace::subsonic_inflow()
   subsonic_grid();
 
   // recalculate particle insertion counts for each task
-  // recompute mixture velscale, since depends on temp_thermal
+  // recompute mixture vscale, since depends on temp_thermal
 
   int isp,icell;
-  double mass,indot,area,nrho,temp_thermal,velscale,ntargetsp;
+  double mass,indot,area,nrho,temp_thermal,vscale,ntargetsp;
   double *vstream,*normal;
   
   Particle::Species *species = particle->species;
@@ -673,8 +675,8 @@ void FixEmitFace::subsonic_inflow()
     tasks[i].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
       mass = species[mspecies[isp]].mass;
-      velscale = sqrt(2.0 * boltz * temp_thermal / mass);
-      ntargetsp = mol_inflow(indot,velscale,fraction[isp]);
+      vscale = sqrt(2.0 * boltz * temp_thermal / mass);
+      ntargetsp = mol_inflow(indot,vscale,fraction[isp]);
       ntargetsp *= nrho*area*dt / fnum;
       ntargetsp /= cinfo[icell].weight;
       tasks[i].ntarget += ntargetsp;
