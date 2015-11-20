@@ -46,7 +46,8 @@ particles thru the face.
 The properties of the added particles are determined by the mixture
 with ID {mix-ID} and the input file.  Together they set the number and
 species of added particles, as well as their streaming velocity,
-thermal temperature, and internal energy modes.  The details are
+thermal temperature, and internal energy modes.  Settings for a
+subsonic pressure boundary condition is also allowed.  The details are
 explained below.
 
 Only one face of the simulation box can be specified via the {face}
@@ -185,7 +186,7 @@ changes:
 
 "NIJ 4 10" is replaced by "NI 6"
 JMESH line is not included
-"I,J,value1,..." is replaced by "I,value1,..." :ul
+"I,J,value1,..." is replaced by "I,value1,..." :pre
 
 A section begins with a non-blank line whose first character is not a
 "#".  Blank lines or lines starting with "#" can be used as comments
@@ -203,6 +204,7 @@ vstream = 3 components of streaming velocity
 temp = thermal temperature
 trot = rotational temperature
 tvib = vibrational temperature
+press = pressure for subsonic boundary condition
 species = number fraction of any species in the mixture :ul
 
 The IMESH and JMESH lines must list values that are monotonically
@@ -222,6 +224,19 @@ mixture.  This means that number fractions of species not specified in
 the file or in the mixture may be reset (for that grid cell) to insure
 the sum = 1.0, as explained on the "mixture"_mixture.html command doc
 page.  If this cannot be done, an error will be generated.
+
+If the {press} keyword is used, this means a subsonic pressure
+boundary condition is used for the face, similar to how the {subsonic}
+keyword is used for the "fix emit/face"_fix_emit_face.html command.
+If just the {press} keyword is specified, but not the {temp} keyword,
+then it is similar to the "subsonic press NULL" setting for the "fix
+emit/face"_fix_emit_face.html command.  If both keywords are used it
+is similar to the "subsonic press temp" setting for the "fix
+emit/face"_fix_emit_face.html command.  The difference with this
+command is that both the {press} and {temp} values can be vary
+spatially across the box face, like the other keyword values.
+
+More details on subsonic ...
 
 :line
 

@@ -17,18 +17,24 @@ emit/surf = style name of this fix command :l
 mix-ID = ID of mixture to use when creating particles :l
 group-ID = ID of surface group that emits particles :l
 zero or more keyword/value pairs may be appended :l
-keyword = {n} or {normal} or {nevery} or {perspecies} or {region} :l
+keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} :l
   {n} value = Np = number of particles to create
   {normal} value = yes or no = emit normal to surface elements or with streaming velocity
   {nevery} value = Nstep = add particles every this many timesteps
   {perspecies} value = {yes} or {no}
-  {region} value = region-ID :pre
+  {region} value = region-ID
+  {subsonic} values = Psub Tsub
+    Psub = pressure setting at inflow boundary (pressure units)
+    Tsub = temperature setting at inflow boundary (temperature units) :pre
+
 :ule
 
 [Examples:]
 
 fix in emit/surf air all
 fix in emit/face mymix myPatch region circle normal yes :pre
+fix in emit/surf air all subsonic 0.1 300
+fix in emit/surf air all subsonic 0.05 NULL :pre
 
 [Description:]
 
@@ -177,6 +183,10 @@ inside the region.
 
 :line
 
+The {subsonic} keyword ...
+
+:line
+
 [Restart, output info:]
 
 No information about this fix is written to "binary restart
@@ -213,7 +223,7 @@ emit/face"_fix_emit_face.html
 [Default:]
 
 The keyword defaults are n = 0, normal = no, nevery = 1, perspecies =
-yes, region = none.
+yes, region = none, no subsonic settings.
 
 :line
 
