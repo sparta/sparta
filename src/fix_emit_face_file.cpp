@@ -1202,8 +1202,8 @@ void FixEmitFaceFile::subsonic_grid()
       temp_thermal_cell = tasks[i].press / (boltz * tasks[i].nrho);
 
       sign = normal[ndim];
-      vstream[ndim] -= sign * 
-        (press_cell - tasks[i].press) / (massrho_cell*soundspeed_cell);
+      vstream[ndim] += sign * 
+        (tasks[i].press - press_cell) / (massrho_cell*soundspeed_cell);
 
       vscale = tasks[i].vscale;
       for (m = 0; m < nspecies; i++) {

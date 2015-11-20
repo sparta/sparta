@@ -42,11 +42,10 @@ class FixEmitSurf : public FixEmit {
 
   // copies of data from other classes
 
-  int dimension;
+  int dimension,nspecies;
   double fnum,dt;
-  int nspecies;
   double nrho,temp_thermal,temp_rot,temp_vib;
-  double *vstream,*vscale,*fraction,*cummulative;
+  double *fraction,*cummulative;
 
   Surf::Point *pts;
   Surf::Line *lines;
@@ -85,7 +84,8 @@ class FixEmitSurf : public FixEmit {
   Task *tasks;           // list of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated
 
-  double magvstream;     // magnitude of vstream
+  double magvstream;       // magnitude of mixture vstream
+  double norm_vstream[3];  // direction of mixture vstream
 
   // active grid cells assigned to tasks, used by subsonic sorting
 

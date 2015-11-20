@@ -820,8 +820,8 @@ void FixEmitFace::subsonic_grid()
       
       ndim = tasks[i].ndim;
       sign = tasks[i].normal[ndim];
-      vstream[ndim] -= sign * 
-        (press_cell - psubsonic) / (massrho_cell*soundspeed_cell);
+      vstream[ndim] += sign * 
+        (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
 
       vscale = tasks[i].vscale;
       for (m = 0; m < nspecies; i++) {

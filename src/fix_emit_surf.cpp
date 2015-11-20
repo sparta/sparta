@@ -136,9 +136,18 @@ void FixEmitSurf::init()
   if (dimension == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  // magvstream = magnitude of vstream vector
+  // magvstream = magnitude of mxiture vstream vector
+  // norm_vstream = unit vector in stream direction
 
+  double *vstream = particle->mixture[imix]->vstream;
   magvstream = MathExtra::len3(vstream);
+
+  norm_vstream[0] = vstream[0];
+  norm_vstream[1] = vstream[1];
+  norm_vstream[2] = vstream[2];
+  if (norm_vstream[0] != 0.0 || norm_vstream[1] != 0.0 || 
+      norm_vstream[2] != 0.0)
+    MathExtra::norm3(norm_vstream);
 
   // if used, reallocate ntargetsp and vscale for each task
   // b/c nspecies count of mixture may have changed
@@ -384,7 +393,7 @@ void FixEmitSurf::perform_task()
   double indot,scosine,rn,ntarget,vr,alpha,beta;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
   double vnmag,vamag,vbmag;
-  double *normal,*p1,*p2,*p3,*atan,*btan;
+  double *normal,*p1,*p2,*p3,*atan,*btan,*vstream,*vscale;
   double x[3],v[3],e1[3],e2[3];
   Particle::OnePart *p;
 
@@ -428,6 +437,9 @@ void FixEmitSurf::perform_task()
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
     vstream = tasks[i].vstream;
+
+    if (subsonic_style == PONLY) vscale = tasks[i].vscale;
+    else vscale = particle->mixture[imix]->vscale;
 
     if (!normalflag) indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
                        vstream[2]*normal[2];
@@ -643,14 +655,18 @@ void FixEmitSurf::subsonic_inflow()
     // indot depends on normalflag
 
     if (dimension == 2) {
-      normal = lines[tasks[i].isurf].norm;
       if (normalflag) indot = magvstream;
-      else indot = vstream[0]*normal[0] + vstream[1]*normal[1];
+      else {
+        normal = lines[tasks[i].isurf].norm;
+        indot = vstream[0]*normal[0] + vstream[1]*normal[1];
+      }
     } else {
-      normal = tris[tasks[i].isurf].norm;
       if (normalflag) indot = magvstream;
-      else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
-             vstream[2]*normal[2];
+      else {
+        normal = tris[tasks[i].isurf].norm;
+        indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
+          vstream[2]*normal[2];
+      }
     }
 
     area = tasks[i].area;
@@ -738,9 +754,9 @@ void FixEmitSurf::subsonic_grid()
   int m,ip,np,icell,ispecies,ndim,index;
   double mass,masstot,gamma,ke,sign;
   double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
-  double mass_cell,gamma_cell,soundspeed_cell;
+  double mass_cell,gamma_cell,soundspeed_cell,vsmag;
   double mv[4];
-  double *v,*vstream,*vscale;
+  double *v,*vstream,*vscale,*normal;
 
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
@@ -804,12 +820,22 @@ void FixEmitSurf::subsonic_grid()
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
       
-      /*
-      ndim = tasks[i].ndim;
-      sign = tasks[i].normal[ndim];
-      vstream[ndim] -= sign * 
-        (press_cell - psubsonic) / (massrho_cell*soundspeed_cell);
-      */
+      // adjust COM vstream by difference bewteen
+      //   cell pressure and subsonic target pressure
+      // normal = direction of difference which depends on normalflag
+      
+      if (dimension == 2) {
+        if (normalflag) normal = lines[tasks[i].isurf].norm;
+        else normal = norm_vstream;
+      } else {
+        if (normalflag) normal = tris[tasks[i].isurf].norm;
+        else normal = norm_vstream;
+      }
+
+      vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
+      vstream[0] += vsmag*normal[0];
+      vstream[1] += vsmag*normal[1];
+      vstream[2] += vsmag*normal[2];
 
       vscale = tasks[i].vscale;
       for (m = 0; m < nspecies; i++) {
