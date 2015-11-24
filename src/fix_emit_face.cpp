@@ -824,7 +824,7 @@ void FixEmitFace::subsonic_grid()
         (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
 
       vscale = tasks[i].vscale;
-      for (m = 0; m < nspecies; i++) {
+      for (m = 0; m < nspecies; m++) {
         ispecies = particle->mixture[imix]->species[m];
         vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_cell /
                          species[ispecies].mass);
