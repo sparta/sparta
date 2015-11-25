@@ -167,16 +167,29 @@ Particles those grid cells attempt to add are included in the count
 for N, even if some or all of the particle insertions are rejected due
 to not being inside the region.
 </P>
-<HR>
-
-<P>The <I>subsonic</I> keyword invokes the method by Fang and Liou <A HREF = "#Fang02">(Fang02)</A>
-which uses the method of characteristics to calculate the mean properties
-of the incoming molecular flux, so that the desired, prescribed pressure is
-achieved.  These properties are then applied to calculate the molecular 
-flux across a grid cell face per unit time as given by equation 4.22 of 
-<A HREF = "#Bird94">(Bird94)</A>. The method, as implemented, is employing instantaneous 
-values for the density, temperature and stream velocity, of the molecular 
-population in the cells adjacent to the boundary.
+<P>The <I>subsonic</I> keyword uses the method of Fang and Liou
+<A HREF = "#Fang02">(Fang02)</A> to determine the number of particles to insert in
+each grid cell on the emitting face(s).  They used the method of
+characteristics to calculate the mean properties of the incoming
+molecular flux, so that the prescribed pressure condition is achieved.
+These properties are then applied to calculate the molecular flux
+across a grid cell face per unit time, as given by equation 4.22 of
+<A HREF = "#Bird94">(Bird94)</A>.
+</P>
+<P>This keyword allows specification of both the pressure and temperature
+at the boundary or just the pressure.  Currently, instantaneous values
+for the density, temperature, and stream velocity of particles in the
+cells adjacent to the boundary face(s) are computed and used to
+determine the properties of inserted particles on each timestep.
+</P>
+<P>IMPORTANT NOTE: When using this keyword, you should also use an
+appropriate boundary collision or chemistry model via the
+<A HREF = "boundary.htmo">boundary</A> or <A HREF = "bound_modify.html">bound_modify</A> or
+<A HREF = "surf_collide.html">surf_collide</A> or <A HREF = "surf_react.html">surf_react</A>
+commands, so that particles hitting the surface disappear as if they
+were exiting the simulation domain.  That is necessary to produce the
+correct subsonic conditions that the particle insertions due to this
+command are trying to achieve.
 </P>
 <HR>
 
@@ -224,9 +237,10 @@ none, no subsonic settings.
 
 <A NAME = "Bird94"></A>
 
-<A NAME = "Fang02"></A><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
+<P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
-
+</P>
+<A NAME = "Fang02"></A>
 
 <P><B>(Fang02)</B> Y. Fang and W. W. Liou, Microfluid Flow Computations 
 Using a Parallel DSMC Code, AIAA 2002-1057. (2002).
