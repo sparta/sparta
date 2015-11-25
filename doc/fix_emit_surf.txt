@@ -32,7 +32,7 @@ keyword = {n} or {normal} or {nevery} or {perspecies} or {region} or {subsonic} 
 [Examples:]
 
 fix in emit/surf air all
-fix in emit/face mymix myPatch region circle normal yes :pre
+fix in emit/face mymix myPatch region circle normal yes
 fix in emit/surf air all subsonic 0.1 300
 fix in emit/surf air all subsonic 0.05 NULL :pre
 

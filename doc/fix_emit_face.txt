@@ -30,7 +30,7 @@ keyword = {n} or {nevery} or {perspecies} or {region} or {subsonic} :l
 [Examples:]
 
 fix in emit/face air all
-fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle :pre
+fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle
 fix in emit/face air xlo subsonic 0.1 300
 fix in emit/face air xhi subsonic 0.05 NULL :pre
 
