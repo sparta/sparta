@@ -193,7 +193,17 @@ inside the region.
 </P>
 <HR>
 
-<P>The <I>subsonic</I> keyword ...
+<P>The <I>subsonic</I> keyword invokes the method by Fang and Liou <A HREF = "#Fang02">(Fang02)</A>
+which uses the method of characteristics to calculate the mean properties 
+of the incoming molecular flux, so that the desired, prescribed pressure is 
+achieved.  These properties are then applied to calculate the molecular 
+flux across a grid cell face per unit time as given by equation 4.22 of 
+<A HREF = "#Bird94">(Bird94)</A>. The method, as implemented, is employing instantaneous 
+values for the density, temperature and stream velocity, of the molecular 
+population in the cells adjacent to the boundary. 
+When the subsonic boundary conditions are applied to a surface and to produce 
+the correct subsonic conditions this boundary condition must be paired with 
+surface chemistry allowing molecules that hit the surface to disappear.
 </P>
 <HR>
 
@@ -239,7 +249,11 @@ yes, region = none, no subsonic settings.
 
 <A NAME = "Bird94"></A>
 
-<P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
+<A NAME = "Fang02"></A><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+
+
+<P><B>(Fang02)</B> Y. Fang and W. W. Liou, Microfluid Flow Computations
+Using a Parallel DSMC Code, AIAA 2002-1057. (2002).
 </P>
 </HTML>
