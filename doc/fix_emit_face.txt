@@ -158,7 +158,14 @@ to not being inside the region.
 
 :line
 
-The {subsonic} keyword ...
+The {subsonic} keyword invokes the method by Fang and Liou "(Fang02)"_#Fang02
+which uses the method of characteristics to calculate the mean properties
+of the incoming molecular flux, so that the desired, prescribed pressure is
+achieved.  These properties are then applied to calculate the molecular 
+flux across a grid cell face per unit time as given by equation 4.22 of 
+"(Bird94)"_#Bird94. The method, as implemented, is employing instantaneous 
+values for the density, temperature and stream velocity, of the molecular 
+population in the cells adjacent to the boundary.
 
 :line
 
@@ -207,3 +214,6 @@ none, no subsonic settings.
 :link(Bird94)
 [(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+:link(Fang02)
+[(Fang02)] Y. Fang and W. W. Liou, Microfluid Flow Computations 
+Using a Parallel DSMC Code, AIAA 2002-1057. (2002).
