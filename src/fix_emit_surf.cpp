@@ -128,8 +128,8 @@ void FixEmitSurf::init()
                                (3.0 + particle->species[ispecies].rotdof));
   }
 
-  soundspeed_mixture = sqrt(avegamma * update->boltz * 
-                            particle->mixture[imix]->temp_thermal / avemass);
+//  soundspeed_mixture = sqrt(avegamma * update->boltz * 
+//                            particle->mixture[imix]->temp_thermal / avemass);
 
   // create instance of Cut2d,Cut3d for geometry calculations
 
@@ -808,13 +808,17 @@ void FixEmitSurf::subsonic_grid()
     } else {
       nrho_cell = np * fnum / cinfo[icell].volume;
       massrho_cell = masstot * fnum / cinfo[icell].volume;
-      ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
-      temp_thermal_cell = tprefactor * ke;
+      ke = 0.0;
+      if (np > 1) {
+         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
+         temp_thermal_cell = tprefactor * ke;
+      } else
+           temp_thermal_cell = particle->mixture[imix]->temp_thermal;
       press_cell = nrho_cell * boltz * temp_thermal_cell;
       mass_cell = masstot / np;
       gamma_cell = gamma / np;
       soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
-      if (soundspeed_cell == 0.0) soundspeed_cell = soundspeed_mixture;
+//      if (soundspeed_cell == 0.0) soundspeed_cell = soundspeed_mixture;
       
       tasks[i].nrho = nrho_cell + 
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
