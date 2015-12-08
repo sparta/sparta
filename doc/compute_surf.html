@@ -46,10 +46,10 @@ compute mine surf sphere species press shx shy shz
 <P>These commands will dump time averages for each species and each
 surface element to a dump file every 1000 steps:
 </P>
-<P>compute 1 surf all species n press shx shy shz
+<PRE>compute 1 surf all species n press shx shy shz
 fix 1 ave/surf all 10 100 1000 c_1
-dump 1 surf all 1000 tmp.surf id f_1
-</P>
+dump 1 surf all 1000 tmp.surf id f_1 
+</PRE>
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each

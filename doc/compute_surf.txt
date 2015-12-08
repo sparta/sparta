@@ -38,7 +38,7 @@ surface element to a dump file every 1000 steps:
 
 compute 1 surf all species n press shx shy shz
 fix 1 ave/surf all 10 100 1000 c_1
-dump 1 surf all 1000 tmp.surf id f_1
+dump 1 surf all 1000 tmp.surf id f_1 :pre
 
 [Description:]
 
