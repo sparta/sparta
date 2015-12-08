@@ -236,7 +236,30 @@ emit/face"_fix_emit_face.html command.  The difference with this
 command is that both the {press} and {temp} values can be vary
 spatially across the box face, like the other keyword values.
 
-More details on subsonic ...
+The subsonic pressure boundary condition is uses the method of Fang
+and Liou "(Fang02)"_#Fang02 to determine the number of particles to
+insert in each grid cell on the emitting face(s).  They used the
+method of characteristics to calculate the mean properties of the
+incoming molecular flux, so that the prescribed pressure condition is
+achieved.  These properties are then applied to calculate the
+molecular flux across a grid cell face per unit time, as given by
+equation 4.22 of "(Bird94)"_#Bird94.
+
+As explained above the input data file can specify both the pressure
+and temperature at the boundary or just the pressure.  Currently,
+instantaneous values for the density, temperature, and stream velocity
+of particles in the cells adjacent to the boundary face(s) are
+computed and used to determine the properties of inserted particles on
+each timestep.
+
+IMPORTANT NOTE: When using a subsonic prsesure boundary condition, you
+should also use an appropriate boundary collision or chemistry model
+via the "boundary"_boundary.htmo or "bound_modify"_bound_modify.html
+or "surf_collide"_surf_collide.html or "surf_react"_surf_react.html
+commands, so that particles hitting the surface disappear as if they
+were exiting the simulation domain.  That is necessary to produce the
+correct subsonic conditions that the particle insertions due to this
+command are trying to achieve.
 
 :line
 
