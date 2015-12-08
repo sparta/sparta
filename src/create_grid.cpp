@@ -450,7 +450,7 @@ void CreateGrid::bounds(char *str, int nmax, int &nlo, int &nhi)
     nhi = atoi(ptr+1);
   }
 
-  printf("BOUNDS %s nmax %d nlo/hi %d %d\n",str,nmax,nlo,nhi);
+  //printf("BOUNDS %s nmax %d nlo/hi %d %d\n",str,nmax,nlo,nhi);
 
   if (nlo < 1 || nhi > nmax || nlo > nhi) 
     error->all(FLERR,"Numeric index is out of bounds");

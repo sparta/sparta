@@ -3,12 +3,12 @@
    http://sparta.sandia.gov
    Steve Plimpton, sjplimp@sandia.gov, Michael Gallis, magalli@sandia.gov
    Sandia National Laboratories
-
+   
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
    certain rights in this software.  This software is distributed under 
    the GNU General Public License.
-
+   
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
@@ -45,38 +45,38 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   FixEmit(sparta, narg, arg)
 {
   if (narg < 4) error->all(FLERR,"Illegal fix emit/surf command");
-
+  
   imix = particle->find_mixture(arg[2]);
   if (imix < 0) 
     error->all(FLERR,"Fix emit/surf mixture ID does not exist");
-
+  
   int igroup = surf->find_group(arg[3]);
   if (igroup < 0) 
     error->all(FLERR,"Fix emit/surf group ID does not exist");
   groupbit = surf->bitmask[igroup];
-
+  
   // optional args
-
+  
   np = 0;
   normalflag = 0;
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
-
+  
   int iarg = 4;
   options(narg-iarg,&arg[iarg]);
-
+  
   // error checks
-
+  
   if (!surf->exist) 
     error->all(FLERR,"Fix emit/surf requires surface elements");
   if (np > 0 && perspecies) 
     error->all(FLERR,"Cannot use fix emit/face n > 0 with perspecies yes");
-
+  
   // task list and subsonic data structs
-
+  
   tasks = NULL;
   ntask = ntaskmax = 0;
-
+  
   maxactive = 0;
   activecell = NULL;
 }
@@ -99,59 +99,59 @@ FixEmitSurf::~FixEmitSurf()
 void FixEmitSurf::init()
 {
   // copies of class data before invoking parent init() and count_task()
-
+  
   dimension = domain->dimension;
   fnum = update->fnum;
   dt = update->dt;
-
+  
   nspecies = particle->mixture[imix]->nspecies;
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
-
+  
   pts = surf->pts;
   lines = surf->lines;
   tris = surf->tris;
-
+  
   // subsonic prefactor
-
+  
   tprefactor = update->mvv2e / (3.0*update->boltz);
-
+  
   // mixture soundspeed, used by subsonic PONLY as default cell property
-
+  
   double avegamma = 0.0;
   double avemass = 0.0;
-
+  
   for (int m = 0; m < nspecies; m++) {
     int ispecies = particle->mixture[imix]->species[m];
     avemass += fraction[m] * particle->species[ispecies].mass;
     avegamma += fraction[m] * (1.0 + 2.0 / 
                                (3.0 + particle->species[ispecies].rotdof));
   }
-
-//  soundspeed_mixture = sqrt(avegamma * update->boltz * 
-//                            particle->mixture[imix]->temp_thermal / avemass);
-
+  
+  soundspeed_mixture = sqrt(avegamma * update->boltz * 
+                            particle->mixture[imix]->temp_thermal / avemass);
+  
   // create instance of Cut2d,Cut3d for geometry calculations
-
+  
   if (dimension == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
-
+  
   // magvstream = magnitude of mxiture vstream vector
   // norm_vstream = unit vector in stream direction
-
+  
   double *vstream = particle->mixture[imix]->vstream;
   magvstream = MathExtra::len3(vstream);
-
+  
   norm_vstream[0] = vstream[0];
   norm_vstream[1] = vstream[1];
   norm_vstream[2] = vstream[2];
   if (norm_vstream[0] != 0.0 || norm_vstream[1] != 0.0 || 
       norm_vstream[2] != 0.0)
     MathExtra::norm3(norm_vstream);
-
+  
   // if used, reallocate ntargetsp and vscale for each task
   // b/c nspecies count of mixture may have changed
-
+  
   if (perspecies) {
     for (int i = 0; i < ntask; i++) {
       delete [] tasks[i].ntargetsp;
@@ -164,19 +164,19 @@ void FixEmitSurf::init()
       tasks[i].vscale = new double[nspecies];
     }
   }
-
+  
   // invoke FixEmit::init() to populate task list
   // it calls create_task() for each grid cell
-
+  
   ntask = 0;
   FixEmit::init();
-
+  
   // if Np > 0, nper = # of insertions per task
   // set nthresh so as to achieve exactly Np insertions
   // tasks > tasks_with_no_extra need to insert 1 extra particle
   // NOTE: setting same # of insertions per task
   //       should weight by overlap area of cell/surf
-
+  
   if (np > 0) {
     int all,nupto,tasks_with_no_extra;
     MPI_Allreduce(&ntask,&all,1,MPI_INT,MPI_SUM,world);
@@ -184,15 +184,15 @@ void FixEmitSurf::init()
       npertask = np / all;
       tasks_with_no_extra = all - (np % all);
     } else npertask = tasks_with_no_extra = 0;
-
+    
     MPI_Scan(&ntask,&nupto,1,MPI_INT,MPI_SUM,world);
     if (tasks_with_no_extra < nupto-ntask) nthresh = 0;
     else if (tasks_with_no_extra >= nupto) nthresh = ntask;
     else nthresh = tasks_with_no_extra - (nupto-ntask);
   }
-
+  
   // deallocate Cut2d,Cut3d
-
+  
   if (dimension == 3) delete cut3d;
   else delete cut2d;
 }
@@ -205,43 +205,43 @@ int FixEmitSurf::create_task(int icell)
   double indot,area,areaone,ntargetsp;
   double *normal,*p1,*p2,*p3,*path;
   double cpath[36],delta[3],e1[3],e2[3];
-
+  
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
-
+  
   double nrho = particle->mixture[imix]->nrho;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
-
+  
   // no tasks if no surfs in cell
-
+  
   if (cells[icell].nsurf == 0) return 0;
-
+  
   // loop over surfs in cell
   // use Cut2d/Cut3d to find overlap area and geoemtry of overlap
   
   int ntaskorig = ntask;
-
+  
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
   int *csurfs = cells[icell].csurfs;
   int nsurf = cells[icell].nsurf;
-
+  
   for (i = 0; i < nsurf; i++) {
     isurf = csurfs[i];
-
+    
     if (dimension == 2) {
       if (!(lines[isurf].mask & groupbit)) continue;
     } else {
       if (!(tris[isurf].mask & groupbit)) continue;
     }
-
+    
     // set cell parameters of task
     // pcell = sub cell for particles if a split cell
-
+    
     if (ntask == ntaskmax) grow_task();
-
+    
     tasks[ntask].icell = icell;
     tasks[ntask].isurf = isurf;
     if (cells[icell].nsplit == 1) tasks[ntask].pcell = icell;
@@ -249,22 +249,22 @@ int FixEmitSurf::create_task(int icell)
       isplit = cells[icell].isplit;
       tasks[ntask].pcell = sinfo[isplit].csubs[i];
     }
-
+    
     // set geometry-dependent params of task
     // indot = vstream magnitude for normalflag = 1
     // indot = vstream dotted with surface normal for normalflag = 0
     // area = area for insertion = extent of line/triangle inside grid cell
-
+    
     if (dimension == 2) {
       normal = lines[isurf].norm;
       if (normalflag) indot = magvstream;
       else indot = vstream[0]*normal[0] + vstream[1]*normal[1];
-
+      
       p1 = pts[lines[isurf].p1].x;
       p2 = pts[lines[isurf].p2].x;
       npoint = cut2d->clip_external(p1,p2,lo,hi,cpath);
       if (npoint < 2) continue;
-
+      
       tasks[ntask].npoint = 2;
       delete [] tasks[ntask].path;
       tasks[ntask].path = new double[6];
@@ -275,10 +275,10 @@ int FixEmitSurf::create_task(int icell)
       path[3] = cpath[2];
       path[4] = cpath[3];
       path[5] = 0.0;
-
+      
       // axisymmetric "area" of line segment = surf area of truncated cone
       // PI (y1+y2) sqrt( (y1-y2)^2 + (x1-x2)^2) )
-
+      
       if (domain->axisymmetric) {
         double sqrtarg = (path[1]-path[4])*(path[1]-path[4]) + 
           (path[0]-path[3])*(path[0]-path[3]);
@@ -288,30 +288,30 @@ int FixEmitSurf::create_task(int icell)
         area = MathExtra::len3(delta);
       }
       tasks[ntask].area = area;
-
+      
       // set 2 tangent vectors to surf normal
       // tan1 is in xy plane, 90 degrees from normal
       // tan2 is unit +z vector
-
+      
       tasks[ntask].tan1[0] = normal[1];
       tasks[ntask].tan1[1] = -normal[0];
       tasks[ntask].tan1[2] = 0.0;
       tasks[ntask].tan2[0] = 0.0;
       tasks[ntask].tan2[1] = 0.0;
       tasks[ntask].tan2[2] = 1.0;
-
+      
     } else {
       normal = tris[isurf].norm;
       if (normalflag) indot = magvstream;
       else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
              vstream[2]*normal[2];
-
+      
       p1 = pts[tris[isurf].p1].x;
       p2 = pts[tris[isurf].p2].x;
       p3 = pts[tris[isurf].p3].x;
       npoint = cut3d->clip_external(p1,p2,p3,lo,hi,cpath);
       if (npoint < 3) continue;
-
+      
       tasks[ntask].npoint = npoint;
       delete [] tasks[ntask].path;
       tasks[ntask].path = new double[npoint*3];
@@ -319,7 +319,7 @@ int FixEmitSurf::create_task(int icell)
       memcpy(path,cpath,npoint*3*sizeof(double));
       delete [] tasks[ntask].fracarea;
       tasks[ntask].fracarea = new double[npoint-2];
-
+      
       area = 0.0;
       p1 = &path[0];
       for (m = 0; m < npoint-2; m++) {
@@ -335,10 +335,10 @@ int FixEmitSurf::create_task(int icell)
       tasks[ntask].area = area;
       for (m = 0; m < npoint-2; m++)
         tasks[ntask].fracarea[m] /= area;
-
+      
       // set 2 random tangent vectors to surf normal
       // tangent vectors are also normal to each other
-
+      
       delta[0] = random->uniform();
       delta[1] = random->uniform();
       delta[2] = random->uniform();
@@ -347,11 +347,11 @@ int FixEmitSurf::create_task(int icell)
       MathExtra::cross3(tris[isurf].norm,tasks[ntask].tan1,tasks[ntask].tan2);
       MathExtra::norm3(tasks[ntask].tan2);
     }
-
+    
     // set ntarget and ntargetsp via mol_inflow()
     // skip task if final ntarget = 0.0, due to large outbound vstream
     // do not skip for subsonic since it resets ntarget every step
-
+    
     tasks[ntask].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
       ntargetsp = mol_inflow(indot,vscale[isp],fraction[isp]);
@@ -361,10 +361,10 @@ int FixEmitSurf::create_task(int icell)
       if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
     }
     if (tasks[ntask].ntarget == 0.0 && !subsonic) continue;
-
+    
     // initialize other task values with mixture properties
     // may be overwritten by subsonic methods
-
+    
     tasks[ntask].nrho = particle->mixture[imix]->nrho;
     tasks[ntask].temp_thermal = particle->mixture[imix]->temp_thermal;
     tasks[ntask].temp_rot = particle->mixture[imix]->temp_rot;
@@ -372,14 +372,14 @@ int FixEmitSurf::create_task(int icell)
     tasks[ntask].vstream[0] = particle->mixture[imix]->vstream[0];
     tasks[ntask].vstream[1] = particle->mixture[imix]->vstream[1];
     tasks[ntask].vstream[2] = particle->mixture[imix]->vstream[2];
-
+    
     // increment task counter
-
+    
     ntask++;
   }
-
+  
   // return # of tasks for this cell
-
+  
   return ntask-ntaskorig;
 }
 
@@ -396,15 +396,15 @@ void FixEmitSurf::perform_task()
   double *normal,*p1,*p2,*p3,*atan,*btan,*vstream,*vscale;
   double x[3],v[3],e1[3],e2[3];
   Particle::OnePart *p;
-
+  
   double dt = update->dt;
   int *species = particle->mixture[imix]->species;
-
+  
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
-
+  
   if (subsonic) subsonic_inflow();
-
+  
   // insert particles for each task = cell/surf pair
   // ntarget/ninsert is either perspecies or for all species
   // for one particle:
@@ -413,7 +413,7 @@ void FixEmitSurf::perform_task()
   //       if normalflag, mag of vstream is applied to surf normal dir
   //       first stage: normal dimension (normal)
   //       second stage: parallel dimensions (tan1,tan2)
-
+  
   // double while loop until randomized particle velocity meets 2 criteria
   // inner do-while loop:
   //   v = vstream-component + vthermal is into simulation box
@@ -421,10 +421,10 @@ void FixEmitSurf::perform_task()
   // outer do-while loop:
   //   shift Maxwellian distribution by stream velocity component
   //   see Bird 1994, p 259, eq 12.5
-
+  
   int nfix_add_particle = modify->n_add_particle;
   indot = magvstream;
-
+  
   for (i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;
     isurf = tasks[i].isurf;
@@ -432,27 +432,27 @@ void FixEmitSurf::perform_task()
     else normal = tris[isurf].norm;
     atan = tasks[i].tan1;
     btan = tasks[i].tan2;
-
+    
     temp_thermal = tasks[i].temp_thermal;
     temp_rot = tasks[i].temp_rot;
     temp_vib = tasks[i].temp_vib;
     vstream = tasks[i].vstream;
-
+    
     if (subsonic_style == PONLY) vscale = tasks[i].vscale;
     else vscale = particle->mixture[imix]->vscale;
-
+    
     if (!normalflag) indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
                        vstream[2]*normal[2];
-
+    
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
-	ntarget = tasks[i].ntargetsp[isp]+random->uniform();
-	ninsert = static_cast<int> (ntarget);
+        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        ninsert = static_cast<int> (ntarget);
         scosine = indot / vscale[isp];
-
+        
         nactual = 0;
-	for (m = 0; m < ninsert; m++) {
+        for (m = 0; m < ninsert; m++) {
           if (dimension == 2) {
             rn = random->uniform();
             p1 = &tasks[i].path[0];
@@ -480,21 +480,21 @@ void FixEmitSurf::perform_task()
             x[1] = p1[1] + alpha*e1[1] + beta*e2[1];
             x[2] = p1[2] + alpha*e1[2] + beta*e2[2];
           }
-
+          
           if (region && !region->match(x)) continue;
-
-	  do {
-	    do beta_un = (6.0*random->gaussian() - 3.0);
-	    while (beta_un + scosine < 0.0);
-	    normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
-	      (scosine + sqrt(scosine*scosine + 2.0)) *
-	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
-		  beta_un*beta_un);
-	  } while (normalized_distbn_fn < random->uniform());
-	  
+          
+          do {
+            do beta_un = (6.0*random->gaussian() - 3.0);
+            while (beta_un + scosine < 0.0);
+            normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+              (scosine + sqrt(scosine*scosine + 2.0)) *
+              exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+                  beta_un*beta_un);
+          } while (normalized_distbn_fn < random->uniform());
+          
           if (normalflag) vnmag = beta_un*vscale[isp] + magvstream;
           else vnmag = beta_un*vscale[isp] + indot;
-
+          
           theta = MY_2PI * random->gaussian();
           vr = vscale[isp] * sqrt(-log(random->uniform()));
           if (normalflag) {
@@ -504,47 +504,47 @@ void FixEmitSurf::perform_task()
             vamag = vr * sin(theta) + MathExtra::dot3(vstream,atan);
             vbmag = vr * cos(theta) + MathExtra::dot3(vstream,btan);
           }
-
+          
           v[0] = vnmag*normal[0] + vamag*atan[0] + vbmag*btan[0];
           v[1] = vnmag*normal[1] + vamag*atan[1] + vbmag*btan[1];
           v[2] = vnmag*normal[2] + vamag*atan[2] + vbmag*btan[2];
-
+          
           erot = particle->erot(ispecies,temp_rot,random);
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
-
-	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
           nactual++;
-
+          
           p = &particle->particles[particle->nlocal-1];
           p->flag = PSURF + 1 + isurf;
           p->dtremain = dt * random->uniform();
-
+          
           if (nfix_add_particle) 
             modify->add_particle(particle->nlocal-1,temp_thermal,
                                  temp_rot,temp_vib,vstream);
-	}
-
-	nsingle += nactual;
+        }
+        
+        nsingle += nactual;
       }
-
+      
     } else {
       if (np == 0) {
-	ntarget = tasks[i].ntarget+random->uniform();
-	ninsert = static_cast<int> (ntarget);
+        ntarget = tasks[i].ntarget+random->uniform();
+        ninsert = static_cast<int> (ntarget);
       } else {
-	ninsert = npertask;
-	if (i >= nthresh) ninsert++;
+        ninsert = npertask;
+        if (i >= nthresh) ninsert++;
       }
-
+      
       nactual = 0;
       for (int m = 0; m < ninsert; m++) {
-	rn = random->uniform();
-	isp = 0;
-	while (cummulative[isp] < rn) isp++;
+        rn = random->uniform();
+        isp = 0;
+        while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
         scosine = indot / vscale[isp];
-
+        
         if (dimension == 2) {
           rn = random->uniform();
           p1 = &tasks[i].path[0];
@@ -572,22 +572,22 @@ void FixEmitSurf::perform_task()
           x[1] = p1[1] + alpha*e1[1] + beta*e2[1];
           x[2] = p1[2] + alpha*e1[2] + beta*e2[2];
         }
-
+        
         if (region && !region->match(x)) continue;
-
-	do {
-	  do {
-	    beta_un = (6.0*random->gaussian() - 3.0);
-	  } while (beta_un + scosine < 0.0);
-	  normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
-	    (scosine + sqrt(scosine*scosine + 2.0)) *
-	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
-		beta_un*beta_un);
-	} while (normalized_distbn_fn < random->uniform());
-	
+        
+        do {
+          do {
+            beta_un = (6.0*random->gaussian() - 3.0);
+          } while (beta_un + scosine < 0.0);
+          normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+            (scosine + sqrt(scosine*scosine + 2.0)) *
+            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+                beta_un*beta_un);
+        } while (normalized_distbn_fn < random->uniform());
+        
         if (normalflag) vnmag = beta_un*vscale[isp] + magvstream;
         else vnmag = beta_un*vscale[isp] + indot;
-
+        
         theta = MY_2PI * random->gaussian();
         vr = vscale[isp] * sqrt(-log(random->uniform()));
         if (normalflag) {
@@ -597,27 +597,27 @@ void FixEmitSurf::perform_task()
           vamag = vr * sin(theta) + MathExtra::dot3(vstream,atan);
           vbmag = vr * cos(theta) + MathExtra::dot3(vstream,btan);
         }
-
+        
         v[0] = vnmag*normal[0] + vamag*atan[0] + vbmag*btan[0];
         v[1] = vnmag*normal[1] + vamag*atan[1] + vbmag*btan[1];
         v[2] = vnmag*normal[2] + vamag*atan[2] + vbmag*btan[2];
-
+        
         erot = particle->erot(ispecies,temp_rot,random);
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
-
-	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
-
+        
         p = &particle->particles[particle->nlocal-1];
         p->flag = PSURF + 1 + isurf;
         p->dtremain = dt * random->uniform();
-
+        
         if (nfix_add_particle) 
           modify->add_particle(particle->nlocal-1,temp_thermal,
                                temp_rot,temp_vib,vstream);
       }
-
+      
       nsingle += nactual;
     }
   }
@@ -632,13 +632,13 @@ void FixEmitSurf::subsonic_inflow()
   // for grid cells that are part of tasks:
   // calculate local nrho, vstream, and thermal temperature
   // if needed sort particles for grid cells with tasks
-
+  
   if (!particle->sorted) subsonic_sort();
   subsonic_grid();
-
+  
   // recalculate particle insertion counts for each task
   // recompute mixture vscale, since depends on temp_thermal
-
+  
   int isp,icell;
   double mass,indot,area,nrho,temp_thermal,vscale,ntargetsp;
   double *vstream,*normal;
@@ -648,12 +648,12 @@ void FixEmitSurf::subsonic_inflow()
   int *mspecies = particle->mixture[imix]->species;
   double fnum = update->fnum;
   double boltz = update->boltz;
-
+  
   for (int i = 0; i < ntask; i++) {
     vstream = tasks[i].vstream;
-
+    
     // indot depends on normalflag
-
+    
     if (dimension == 2) {
       if (normalflag) indot = magvstream;
       else {
@@ -668,12 +668,12 @@ void FixEmitSurf::subsonic_inflow()
           vstream[2]*normal[2];
       }
     }
-
+    
     area = tasks[i].area;
     nrho = tasks[i].nrho;
     temp_thermal = tasks[i].temp_thermal;
     icell = tasks[i].icell;
-      
+    
     tasks[i].ntarget = 0.0;
     for (isp = 0; isp < nspecies; isp++) {
       mass = species[mspecies[isp]].mass;
@@ -695,26 +695,26 @@ void FixEmitSurf::subsonic_inflow()
 void FixEmitSurf::subsonic_sort()
 {
   int i,icell;
-
+  
   // initialize particle sort lists for grid cells assigned to tasks
   // use task pcell, not icell
-
+  
   Grid::ChildInfo *cinfo = grid->cinfo;
-
+  
   for (i = 0; i < ntask; i++) {
     icell = tasks[i].pcell;
     cinfo[icell].first = -1;
     cinfo[icell].count = 0;
   }
-
+  
   // reallocate particle next list if necessary
-
+  
   particle->sort_allocate();
-
+  
   // update list of active grid cells if necessary
   // active cells = those assigned to tasks
   // active_current flag set by parent class
-
+  
   if (!active_current) {
     if (grid->nlocal > maxactive) {
       memory->destroy(activecell);
@@ -725,15 +725,15 @@ void FixEmitSurf::subsonic_sort()
     for (i = 0; i < ntask; i++) activecell[tasks[i].pcell] = 1;
     active_current = 1;
   }
-
+  
   // loop over particles to store linked lists for active cells
   // not using reverse loop like Particle::sort(),
   //   since this should only be created/used occasionally
-
+  
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   int nlocal = particle->nlocal;
-
+  
   for (i = 0; i < nlocal; i++) {
     icell = particles[i].icell;
     if (!activecell[icell]) continue;
@@ -757,24 +757,24 @@ void FixEmitSurf::subsonic_grid()
   double mass_cell,gamma_cell,soundspeed_cell,vsmag;
   double mv[4];
   double *v,*vstream,*vscale,*normal;
-
+  
   Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
   Particle::Species *species = particle->species;
   double boltz = update->boltz;
-
+  
   for (int i = 0; i < ntask; i++) {
     icell = tasks[i].pcell;
     np = cinfo[icell].count;
-
+    
     // accumulate needed per-particle quantities
     // mv = mass*velocity terms, masstot = total mass
     // gamma = rotational/tranlational DOFs
-
+    
     mv[0] = mv[1] = mv[2] = mv[3] = 0.0;
     masstot = gamma = 0.0;
-
+    
     ip = cinfo[icell].first;
     while (ip >= 0) {
       ispecies = particles[i].ispecies;
@@ -788,37 +788,36 @@ void FixEmitSurf::subsonic_grid()
       gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
       ip = next[ip];
     }
-
+    
     // compute/store nrho, 3 temps, vstream for task
     // also vscale for PONLY
     // if sound speed = 0.0 due to <= 1 particle in cell or 
     //   all particles having COM velocity, set via mixture properties
-
+    
     vstream = tasks[i].vstream;
     if (np) {
       vstream[0] = mv[0] / masstot;
       vstream[1] = mv[1] / masstot;
       vstream[2] = mv[2] / masstot;
     } else vstream[0] = vstream[1] = vstream[2] = 0.0;
-
+    
     if (subsonic_style == PTBOTH) {
       tasks[i].nrho = nsubsonic;
       temp_thermal_cell = tsubsonic;
-
+      
     } else {
       nrho_cell = np * fnum / cinfo[icell].volume;
       massrho_cell = masstot * fnum / cinfo[icell].volume;
-      ke = 0.0;
       if (np > 1) {
-         ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
-         temp_thermal_cell = tprefactor * ke;
-      } else
-           temp_thermal_cell = particle->mixture[imix]->temp_thermal;
+        ke = mv[3]/np - (mv[0]*mv[0] + mv[1]*mv[1] + mv[2]*mv[2])/np/masstot;
+        temp_thermal_cell = tprefactor * ke;
+      } else temp_thermal_cell = particle->mixture[imix]->temp_thermal;
       press_cell = nrho_cell * boltz * temp_thermal_cell;
-      mass_cell = masstot / np;
-      gamma_cell = gamma / np;
-      soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
-//      if (soundspeed_cell == 0.0) soundspeed_cell = soundspeed_mixture;
+      if (np) {
+        mass_cell = masstot / np;
+        gamma_cell = gamma / np;
+        soundspeed_cell = sqrt(gamma_cell*boltz*temp_thermal_cell / mass_cell);
+      } else soundspeed_cell = soundspeed_mixture;
       
       tasks[i].nrho = nrho_cell + 
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
@@ -835,12 +834,12 @@ void FixEmitSurf::subsonic_grid()
         if (normalflag) normal = tris[tasks[i].isurf].norm;
         else normal = norm_vstream;
       }
-
+      
       vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
       vstream[0] += vsmag*normal[0];
       vstream[1] += vsmag*normal[1];
       vstream[2] += vsmag*normal[2];
-
+      
       vscale = tasks[i].vscale;
       for (m = 0; m < nspecies; m++) {
         ispecies = particle->mixture[imix]->species[m];
@@ -848,7 +847,7 @@ void FixEmitSurf::subsonic_grid()
                          species[ispecies].mass);
       }
     }
-
+    
     tasks[i].temp_thermal = temp_thermal_cell;
     tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
   }
@@ -866,21 +865,21 @@ int FixEmitSurf::pack_task(int itask, char *buf, int memflag)
   if (memflag) memcpy(ptr,&tasks[itask],sizeof(Task));
   ptr += sizeof(Task);
   ptr = ROUNDUP(ptr);
-
+  
   // pack task vectors
   // vscale is allocated, but not communicated, since updated every step
-
+  
   if (perspecies) {
     if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
     ptr += nspecies*sizeof(double);
   }
-
+  
   int npoint = tasks[itask].npoint;
   if (memflag) memcpy(ptr,tasks[itask].path,npoint*3*sizeof(double));
   ptr += npoint*3*sizeof(double);
   if (memflag) memcpy(ptr,tasks[itask].fracarea,(npoint-2)*sizeof(double));
   ptr += (npoint-2)*sizeof(double);
-
+  
   return ptr-buf;
 }
 
@@ -891,47 +890,47 @@ int FixEmitSurf::pack_task(int itask, char *buf, int memflag)
 int FixEmitSurf::unpack_task(char *buf, int icell)
 {
   char *ptr = buf;
-
+  
   if (ntask == ntaskmax) grow_task();
   double *ntargetsp = tasks[ntask].ntargetsp;
   double *vscale = tasks[ntask].vscale;
   double *path = tasks[ntask].path;
   double *fracarea = tasks[ntask].fracarea;
-
+  
   memcpy(&tasks[ntask],ptr,sizeof(Task));
   ptr += sizeof(Task);
   ptr = ROUNDUP(ptr);
-
+  
   // unpack task vectors
   // vscale is allocated, but not communicated, since updated every step
-
+  
   if (perspecies) {
     memcpy(ntargetsp,ptr,nspecies*sizeof(double));
     ptr += nspecies*sizeof(double);
   }
-
+  
   int npoint = tasks[ntask].npoint;
   delete [] path;
   path = new double[npoint*3];
   memcpy(path,ptr,npoint*3*sizeof(double));
   ptr += npoint*3*sizeof(double);
-
+  
   delete [] fracarea;
   fracarea = new double[npoint-2];
   memcpy(fracarea,ptr,(npoint-2)*sizeof(double));
   ptr += (npoint-2)*sizeof(double);
-
+  
   tasks[ntask].ntargetsp = ntargetsp;
   tasks[ntask].vscale = vscale;
   tasks[ntask].path = path;
   tasks[ntask].fracarea = fracarea;
-
+  
   // reset task icell and pcell
   // if a split cell, set pcell via scan of icell csurfs, extract from sinfo
-
+  
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
-
+  
   tasks[ntask].icell = icell;
   if (cells[icell].nsplit == 1) tasks[ntask].pcell = icell;
   else {
@@ -944,7 +943,7 @@ int FixEmitSurf::unpack_task(char *buf, int icell)
     int isplit = cells[icell].isplit;
     tasks[ntask].pcell = sinfo[isplit].csubs[i];
   }
-
+  
   ntask++;
   return ptr-buf;
 }
@@ -958,13 +957,13 @@ void FixEmitSurf::copy_task(int icell, int n, int first, int oldfirst)
   // reset icell in each copied task
   // copy task vectors
   // vscale is allocated, but not copied, since updated every step
-
+  
   if (first == oldfirst) {
     for (int i = 0; i < n; i++) {
       tasks[first].icell = icell;
       first++;
     }
-
+    
   } else {
     int npoint;
     for (int i = 0; i < n; i++) {
@@ -972,32 +971,32 @@ void FixEmitSurf::copy_task(int icell, int n, int first, int oldfirst)
       double *vscale = tasks[first].vscale;
       double *path = tasks[first].path;
       double *fracarea = tasks[first].fracarea;
-
+      
       memcpy(&tasks[first],&tasks[oldfirst],sizeof(Task));
-
+      
       if (perspecies)
         memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
-
+      
       npoint = tasks[first].npoint;
       delete [] path;
       path = new double[npoint*3];
       memcpy(path,tasks[oldfirst].path,npoint*3*sizeof(double));
-
+      
       delete [] fracarea;
       fracarea = new double[npoint-2];
       memcpy(fracarea,tasks[oldfirst].fracarea,(npoint-2)*sizeof(double));
-
+      
       tasks[first].ntargetsp = ntargetsp;
       tasks[first].vscale = vscale;
       tasks[first].path = path;
       tasks[first].fracarea = fracarea;
-
+      
       tasks[first].icell = icell;
       first++;
       oldfirst++;
     }
   }
-
+  
   ntask += n;
 }
 
@@ -1011,15 +1010,15 @@ void FixEmitSurf::grow_task()
   ntaskmax += DELTATASK;
   tasks = (Task *) memory->srealloc(tasks,ntaskmax*sizeof(Task),
 				    "emit/face:tasks");
-
+  
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized
-
+  
   memset(&tasks[oldmax],0,(ntaskmax-oldmax)*sizeof(Task));
-
+  
   // allocate vectors in each new task or set to NULL
   // path and fracarea are allocated later to specific sizes
-
+  
   if (perspecies) {
     for (int i = oldmax; i < ntaskmax; i++)
       tasks[i].ntargetsp = new double[nspecies];
@@ -1027,7 +1026,7 @@ void FixEmitSurf::grow_task()
     for (int i = oldmax; i < ntaskmax; i++)
       tasks[i].ntargetsp = NULL;
   }
-
+  
   if (subsonic_style == PONLY) {
     for (int i = oldmax; i < ntaskmax; i++)
       tasks[i].vscale = new double[nspecies];
@@ -1035,7 +1034,7 @@ void FixEmitSurf::grow_task()
     for (int i = oldmax; i < ntaskmax; i++)
       tasks[i].vscale = NULL;
   }
-
+  
   for (int i = oldmax; i < ntaskmax; i++) {
     tasks[i].path = NULL;
     tasks[i].fracarea = NULL;
@@ -1046,15 +1045,15 @@ void FixEmitSurf::grow_task()
    reset pcell for all compress task entries
    called from Grid::compress() after grid cells have been compressed
    wait to do this until now b/c split cells and their sinfo
-     are setup in Grid::compress() between compress_grid() 
-     and post_compress_grid()
+   are setup in Grid::compress() between compress_grid() 
+   and post_compress_grid()
 ------------------------------------------------------------------------- */
 
 void FixEmitSurf::post_compress_grid()
 {
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
-
+  
   for (int i = 0; i < ntask; i++) {
     int icell = tasks[i].icell;
     if (cells[icell].nsplit == 1) tasks[i].pcell = icell;
@@ -1083,7 +1082,7 @@ int FixEmitSurf::option(int narg, char **arg)
     if (np <= 0) error->all(FLERR,"Illegal fix emit/surf/normal command");
     return 2;
   }
-
+  
   if (strcmp(arg[0],"normal") == 0) {
     if (2 > narg) error->all(FLERR,"Illegal fix emit/surf/normal command");
     if (strcmp(arg[1],"yes") == 0) normalflag = 1;
@@ -1091,7 +1090,7 @@ int FixEmitSurf::option(int narg, char **arg)
     else error->all(FLERR,"Illegal fix emit/surf/normal command");
     return 2;
   }
-
+  
   if (strcmp(arg[0],"subsonic") == 0) {
     if (3 > narg) error->all(FLERR,"Illegal fix emit/face command");
     subsonic = 1;
@@ -1106,7 +1105,7 @@ int FixEmitSurf::option(int narg, char **arg)
     }
     return 3;
   }
-
+  
   error->all(FLERR,"Illegal fix emit/surf/normal command");
   return 0;
 }
