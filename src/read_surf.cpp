@@ -1408,8 +1408,8 @@ void ReadSurf::check_neighbor_norm_2d()
   for (int i = 0; i < nline_new; i++) {
     p1 = lines[m].p1 - npoint_old;
     p2 = lines[m].p2 - npoint_old;
-    p2e[p1][count[p1]++] = i;
-    p2e[p2][count[p2]++] = i;
+    p2e[p1][count[p1]++] = m;
+    p2e[p2][count[p2]++] = m;
     m++;
   }
   
