@@ -49,7 +49,7 @@ for one in tritxt:
   vertices = re.findall(pattern,one)
   if len(vertices) != 3:
     print "Triangle record:"
-    print tri
+    print one
     error("Invalid triangle vertices")
   triverts.append(vertices)
 
