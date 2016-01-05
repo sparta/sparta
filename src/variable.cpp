@@ -26,6 +26,7 @@
 #include "modify.h"
 #include "compute.h"
 #include "fix.h"
+#include "grid.h"
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
@@ -104,6 +105,13 @@ Variable::Variable(SPARTA *sparta) : Pointers(sparta)
   precedence[MULTIPLY] = precedence[DIVIDE] = precedence[MODULO] = 6;
   precedence[CARAT] = 7;
   precedence[UNARY] = precedence[NOT] = 8;
+
+  // local storage of compute vector_grid values
+  // stored when a grid-style variable compute uses post_process_grid_flag
+
+  maxvec_storage = 0;
+  vec_storage = NULL;
+  maxlen_storage = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -129,6 +137,11 @@ Variable::~Variable()
 
   delete randomequal;
   delete randomparticle;
+
+  for (int i = 0; i < maxvec_storage; i++)
+    memory->destroy(vec_storage[i]);
+  memory->sfree(vec_storage);
+  memory->sfree(maxlen_storage);
 }
 
 /* ----------------------------------------------------------------------
@@ -380,7 +393,21 @@ void Variable::set(int narg, char **arg)
     copy(1,&arg[2],data[nvar]);
 
   } else if (strcmp(arg[1],"grid") == 0) {
-    error->all(FLERR,"Grid-style variables are not yet implemented");
+    //error->all(FLERR,"Grid-style variables are not yet implemented");
+    if (narg != 3) error->all(FLERR,"Illegal variable command");
+    if (find(arg[0]) >= 0) {
+      if (style[find(arg[0])] != GRID)
+	error->all(FLERR,"Cannot redefine variable as a different style");
+      remove(find(arg[0]));
+    }
+    if (nvar == maxvar) grow();
+    style[nvar] = GRID;
+    num[nvar] = 1;
+    which[nvar] = 0;
+    pad[nvar] = 0;
+    data[nvar] = new char*[num[nvar]];
+    copy(1,&arg[2],data[nvar]);
+
   } else if (strcmp(arg[1],"surf") == 0) {
     error->all(FLERR,"Surf-style variables are not yet implemented");
   } else error->all(FLERR,"Illegal variable command");
@@ -439,11 +466,13 @@ int Variable::next(int narg, char **arg)
       error->all(FLERR,"All variables in next command must be same style");
   }
 
-  // invalid styles STRING or EQUAL or WORLD or PARTICLE or GETENV or FORMAT
+  // invalid styles: STRING or EQUAL or WORLD or PARTICLE or GRID or
+  //                 GETENV or FORMAT
 
   int istyle = style[find(arg[0])];
-  if (istyle == STRING || istyle == EQUAL || istyle == WORLD
-      || istyle == GETENV || istyle == PARTICLE || istyle == FORMAT)
+  if (istyle == STRING || istyle == EQUAL || istyle == WORLD ||
+      istyle == GETENV || istyle == PARTICLE || istyle == GRID || 
+      istyle == FORMAT)
     error->all(FLERR,"Invalid variable style with next command");
 
   // if istyle = UNIVERSE or ULOOP, insure all such variables are incremented
@@ -554,7 +583,7 @@ int Variable::next(int narg, char **arg)
    if EQUAL var, evaluate variable and put result in str
    if FORMAT var, evaluate its variable and put formatted result in str
    if GETENV var, query environment and put result in str
-   if PARTICLE var, return NULL
+   if PARTICLE or GRID var, return NULL
    return NULL if no variable with name or which value is bad,
      caller must respond
 ------------------------------------------------------------------------- */
@@ -612,7 +641,7 @@ char *Variable::retrieve(char *name)
     data[ivar][1] = new char[n];
     strcpy(data[ivar][1],result);
     str = data[ivar][1];
-  } else if (style[ivar] == PARTICLE) return NULL;
+  } else if (style[ivar] == PARTICLE || style[ivar] == GRID) return NULL;
 
   return str;
 }
@@ -659,6 +688,7 @@ void Variable::compute_particle(int ivar, double *result,
     error->all(FLERR,"Variable has circular dependency");
   eval_in_progress[ivar] = 1;
 
+  treestyle = PARTICLE;
   double tmp = evaluate(data[ivar][0],&tree);
   tmp = collapse_tree(tree);
 
@@ -674,6 +704,48 @@ void Variable::compute_particle(int ivar, double *result,
   } else {
     int m = 0;
     for (int i = 0; i < nlocal; i++) {
+      result[m] += eval_tree(tree,i);
+      m += stride;
+    }
+  }
+
+  free_tree(tree);
+
+  eval_in_progress[ivar] = 0;
+}
+
+/* ----------------------------------------------------------------------
+   compute result of grid-style variable evaluation
+   answers are placed every stride locations into result
+   if sumflag, add variable values to existing result
+------------------------------------------------------------------------- */
+
+void Variable::compute_grid(int ivar, double *result,
+                            int stride, int sumflag)
+{
+  Tree *tree;
+
+  if (eval_in_progress[ivar]) 
+    error->all(FLERR,"Variable has circular dependency");
+  eval_in_progress[ivar] = 1;
+
+  nvec_storage = 0;
+  treestyle = GRID;
+  double tmp = evaluate(data[ivar][0],&tree);
+  tmp = collapse_tree(tree);
+
+  int nglocal = grid->nlocal;
+
+  if (sumflag == 0) {
+    int m = 0;
+    for (int i = 0; i < nglocal; i++) {
+      result[m] = eval_tree(tree,i);
+      m += stride;
+    }
+
+  } else {
+    int m = 0;
+    for (int i = 0; i < nglocal; i++) {
       result[m] += eval_tree(tree,i);
       m += stride;
     }
@@ -801,7 +873,8 @@ void Variable::copy(int narg, char **from, char **to)
 
 /* ----------------------------------------------------------------------
    recursive evaluation of a string str
-   str is an equal-style or particle-style formula containing one or more items:
+   str is an equal-style or particle-style or grid-style formula
+     containing one or more items:
      number = 0.0, -5.45, 2.8e-4, ...
      constant = PI
      stats keyword = step, np, vol, ...
@@ -816,7 +889,7 @@ void Variable::copy(int narg, char **from, char **to)
      variable = v_name
    equal-style variable passes in tree = NULL:
      evaluate the formula, return result as a double
-   particle-style variable passes in tree = non-NULL:
+   particle-style or grid-style variable passes in tree = non-NULL:
      parse the formula but do not evaluate it
      create a parse tree and return it
 ------------------------------------------------------------------------- */
@@ -1041,9 +1114,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	} else if (nbracket == 0 && compute->per_particle_flag && 
 		   compute->size_per_particle_cols == 0) {
 
-	  if (tree == NULL)
-	    error->all(FLERR,
-		       "Per-particle compute in equal-style variable formula");
+	  if (tree == NULL || treestyle != PARTICLE)
+	    error->all(FLERR,"Per-particle compute in "
+                       "non particle-style variable formula");
 	  if (update->runflag == 0) {
 	    if (compute->invoked_per_particle != update->ntimestep)
 	      error->all(FLERR,"Compute used in variable between runs "
@@ -1066,9 +1139,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	} else if (nbracket == 1 && compute->per_particle_flag &&
 		   compute->size_per_particle_cols > 0) {
 
-	  if (tree == NULL)
-	    error->all(FLERR,
-		       "Per-particle compute in equal-style variable formula");
+	  if (tree == NULL || treestyle != PARTICLE)
+	    error->all(FLERR,"Per-particle compute in "
+                       "non particle-style variable formula");
 	  if (index1 > compute->size_per_particle_cols)
 	    error->all(FLERR,"Variable formula compute array "
 		       "is accessed out-of-range");
@@ -1085,6 +1158,75 @@ double Variable::evaluate(char *str, Tree **tree)
 	  newtree->type = ARRAY;
 	  newtree->array = &compute->array_particle[0][index1-1];
 	  newtree->nstride = compute->size_per_particle_cols;
+          newtree->selfalloc = 0;
+	  newtree->left = newtree->middle = newtree->right = NULL;
+	  treestack[ntreestack++] = newtree;
+
+        // c_ID = vector from per-grid vector
+
+	} else if (nbracket == 0 && compute->per_grid_flag && 
+		   compute->size_per_grid_cols == 0) {
+
+	  if (tree == NULL || treestyle != GRID)
+	    error->all(FLERR,"Per-grid compute in "
+                       "non grid-style variable formula");
+	  if (update->runflag == 0) {
+	    if (compute->invoked_per_grid != update->ntimestep)
+	      error->all(FLERR,"Compute used in variable between runs "
+			 "is not current");
+	  } else if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+	    compute->compute_per_grid();
+	    compute->invoked_flag |= INVOKED_PER_GRID;
+	  }
+
+          if (compute->post_process_grid_flag)
+            compute->post_process_grid(0,-1,1,NULL,NULL,NULL,1);
+
+	  Tree *newtree = new Tree();
+	  newtree->type = ARRAY;
+	  newtree->array = compute->vector_grid;
+	  newtree->nstride = 1;
+          newtree->selfalloc = 0;
+	  newtree->left = newtree->middle = newtree->right = NULL;
+	  treestack[ntreestack++] = newtree;
+
+        // c_ID[i] = vector from per-grid array
+        // if compute sets post_process_grid_flag:
+        //   then values are in computes's vector_grid,
+        //   must store them locally via add_vector()
+        //   since compute's vector_grid be overwritten
+        //   if this variable accesses multiple columns from compute's array
+
+	} else if (nbracket == 1 && compute->per_grid_flag &&
+		   compute->size_per_grid_cols > 0) {
+
+	  if (tree == NULL || treestyle != GRID)
+	    error->all(FLERR,"Per-grid compute in "
+                       "non grid-style variable formula");
+	  if (index1 > compute->size_per_grid_cols)
+	    error->all(FLERR,"Variable formula compute array "
+		       "is accessed out-of-range");
+	  if (update->runflag == 0) {
+	    if (compute->invoked_per_grid != update->ntimestep)
+	      error->all(FLERR,"Compute used in variable between runs "
+			 "is not current");
+	  } else if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
+	    compute->compute_per_particle();
+	    compute->invoked_flag |= INVOKED_PER_GRID;
+	  }
+
+          if (compute->post_process_grid_flag)
+            compute->post_process_grid(index1,-1,1,NULL,NULL,NULL,1);
+
+	  Tree *newtree = new Tree();
+	  newtree->type = ARRAY;
+          if (compute->post_process_grid_flag) {
+            newtree->array = add_storage(compute->vector_grid);
+            newtree->nstride = 1;
+          } else {
+            newtree->array = &compute->array_grid[0][index1-1];
+            newtree->nstride = compute->size_per_grid_cols;
+          }
           newtree->selfalloc = 0;
 	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
@@ -1128,8 +1270,6 @@ double Variable::evaluate(char *str, Tree **tree)
 	    i = ptr-str+1;
 	  }
 	}
-
-        // f_ID = scalar from global scalar
 
 	if (nbracket == 0 && fix->scalar_flag) {
 
@@ -1225,6 +1365,49 @@ double Variable::evaluate(char *str, Tree **tree)
 	  newtree->type = ARRAY;
 	  newtree->array = &fix->array_particle[0][index1-1];
 	  newtree->nstride = fix->size_per_particle_cols;
+          newtree->selfalloc = 0;
+	  newtree->left = newtree->middle = newtree->right = NULL;
+	  treestack[ntreestack++] = newtree;
+
+        // f_ID = vector from per-grid vector
+
+	} else if (nbracket == 0 && fix->per_grid_flag && 
+		   fix->size_per_grid_cols == 0) {
+
+	  if (tree == NULL || treestyle != GRID)
+	    error->all(FLERR,"Per-grid fix in "
+                       "non grid-style variable formula");
+	  if (update->runflag > 0 && 
+	      update->ntimestep % fix->per_grid_freq)
+	    error->all(FLERR,"Fix in variable not computed at compatible time");
+
+	  Tree *newtree = new Tree();
+	  newtree->type = ARRAY;
+	  newtree->array = fix->vector_grid;
+	  newtree->nstride = 1;
+          newtree->selfalloc = 0;
+	  newtree->left = newtree->middle = newtree->right = NULL;
+	  treestack[ntreestack++] = newtree;
+
+        // f_ID[i] = vector from per-grid array
+
+	} else if (nbracket == 1 && fix->per_grid_flag &&
+		   fix->size_per_grid_cols > 0) {
+
+	  if (tree == NULL || treestyle != GRID)
+	    error->all(FLERR,"Per-grid fix in "
+                       "non grid-style variable formula");
+	  if (index1 > fix->size_per_grid_cols)
+	    error->all(FLERR,
+		       "Variable formula fix array is accessed out-of-range");
+	  if (update->runflag > 0 && 
+	      update->ntimestep % fix->per_grid_freq)
+	    error->all(FLERR,"Fix in variable not computed at compatible time");
+
+	  Tree *newtree = new Tree();
+	  newtree->type = ARRAY;
+	  newtree->array = &fix->array_grid[0][index1-1];
+	  newtree->nstride = fix->size_per_grid_cols;
           newtree->selfalloc = 0;
 	  newtree->left = newtree->middle = newtree->right = NULL;
 	  treestack[ntreestack++] = newtree;
@@ -1374,9 +1557,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	  i = ptr-str+1;
 	}
 
-        // v_name = scalar from non particle-style global scalar
+        // v_name = scalar from equal-style variable
 
-	if (nbracket == 0 && style[ivar] != PARTICLE) {
+	if (nbracket == 0 && style[ivar] != PARTICLE && style[ivar] != GRID) {
 
 	  char *var = retrieve(id);
 	  if (var == NULL)
@@ -1394,10 +1577,21 @@ double Variable::evaluate(char *str, Tree **tree)
 
 	} else if (nbracket == 0 && style[ivar] == PARTICLE) {
 
-	  if (tree == NULL)
-	    error->all(FLERR,
-		       "Particle-style variable in "
-                       "equal-style variable formula");
+	  if (tree == NULL || treestyle != PARTICLE)
+	    error->all(FLERR,"Per-particle variable in "
+                       "non particle-style variable formula");
+	  Tree *newtree;
+	  evaluate(data[ivar][0],&newtree);
+	  treestack[ntreestack++] = newtree;
+
+        // v_name = per-grid vector from grid-style variable
+        // evaluate the grid-style variable as newtree
+
+	} else if (nbracket == 0 && style[ivar] == GRID) {
+
+	  if (tree == NULL || treestyle != GRID)
+	    error->all(FLERR,"Per-grid variable in "
+                       "non grid-style variable formula");
 	  Tree *newtree;
 	  evaluate(data[ivar][0],&newtree);
 	  treestack[ntreestack++] = newtree;
@@ -1638,11 +1832,11 @@ double Variable::evaluate(char *str, Tree **tree)
 }
 
 /* ----------------------------------------------------------------------
-   one-time collapse of a particle-style variable parse tree
+   one-time collapse of a particle-style or grid-style variable parse tree
    tree was created by one-time parsing of formula string via evaulate()
    only keep tree nodes that depend on ARRAYs
    remainder is converted to single VALUE
-   this enables optimal eval_tree loop over particles
+   this enables optimal eval_tree loop over particles or grid cells
    customize by adding a function:
      sqrt(),exp(),ln(),log(),abs(),sin(),cos(),tan(),asin(),acos(),atan(),
      atan2(y,x),random(x,y),normal(x,y),ceil(),floor(),round(),
@@ -2079,6 +2273,7 @@ double Variable::collapse_tree(Tree *tree)
 
 /* ----------------------------------------------------------------------
    evaluate a particle-style variable parse tree for particle I
+     or a grid-style variable parse tree for grid cell I
    tree was created by one-time parsing of formula string via evaulate()
    customize by adding a function:
      sqrt(),exp(),ln(),log(),sin(),cos(),tan(),asin(),acos(),atan(),
@@ -3076,8 +3271,8 @@ int Variable::is_particle_vector(char *word)
 void Variable::particle_vector(char *word, Tree **tree,
 			       Tree **treestack, int &ntreestack)
 {
-  if (tree == NULL)
-    error->all(FLERR,"Particle vector in equal-style variable formula");
+  if (tree == NULL || treestyle != PARTICLE)
+    error->all(FLERR,"Particle vector in non particle-style variable formula");
 
   Particle::OnePart *particles = particle->particles;
   Particle::Species *species = particle->species;
@@ -3148,6 +3343,38 @@ char *Variable::find_next_comma(char *str)
     else if (',' == *p && !level) return p;
   }
   return NULL;
+}
+
+/* ----------------------------------------------------------------------
+   copy of cvec in local storage
+   return local ptr to copied vec
+------------------------------------------------------------------------- */
+
+double *Variable::add_storage(double *cvec)
+{
+  if (nvec_storage == maxvec_storage) {
+    maxvec_storage++;
+    vec_storage = (double **) 
+      memory->srealloc(vec_storage,maxvec_storage*sizeof(double *),
+                       "variable:vec_storage");
+    maxlen_storage = (int *) 
+      memory->srealloc(maxlen_storage,maxvec_storage*sizeof(int),
+                       "variable:maxlen_storage");
+    vec_storage[nvec_storage] = NULL;
+    maxlen_storage[nvec_storage] = 0;
+  }
+
+  int n = grid->nlocal;
+  if (maxlen_storage[nvec_storage] < n) {
+    maxlen_storage[nvec_storage] = n;
+    memory->destroy(vec_storage[nvec_storage]);
+    memory->create(vec_storage[nvec_storage],n,"variable:vec_storage");
+  }
+
+  memcpy(vec_storage[nvec_storage],cvec,n*sizeof(double));
+  nvec_storage++;
+
+  return vec_storage[nvec_storage-1];
 }
 
 /* ----------------------------------------------------------------------

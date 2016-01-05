@@ -36,12 +36,13 @@ class Variable : protected Pointers {
   double compute_equal(int);
   double compute_equal(char *);
   void compute_particle(int, double *, int, int);
-  void compute_grid(int, double *, int, int) {}
+  void compute_grid(int, double *, int, int);
   void compute_surf(int, double *, int, int) {}
   int int_between_brackets(char *&, int);
   double evaluate_boolean(char *);
 
  private:
+  int me;
   int nvar;                // # of defined variables
   int maxvar;              // max # of variables following lists can hold
   char **names;            // name of each variable
@@ -59,7 +60,14 @@ class Variable : protected Pointers {
 
   int precedence[17];      // precedence level of math operators
                            // set length to include up to OR in enum
-  int me;
+
+  int treestyle;           // tree being used for particle or grid-style var
+
+                           // local copies of compute vector_grid vectors
+  int nvec_storage;        // # of vectors currently stored locally
+  int maxvec_storage;      // max # of vectors in vec_storage
+  double **vec_storage;    // list of vector copies
+  int *maxlen_storage;     // allocated length of each vector
 
   struct Tree {            // parse tree for particle-style variables
     double value;          // single scalar  
@@ -89,6 +97,7 @@ class Variable : protected Pointers {
   double constant(char *);
   char *find_next_comma(char *);
   void print_tree(Tree *, int);
+  double *add_storage(double *);
 };
 
 class VarReader : protected Pointers {

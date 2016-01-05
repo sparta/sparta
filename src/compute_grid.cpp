@@ -311,7 +311,7 @@ int ComputeGrid::query_tally_grid(int index, double **&array, int *&cols)
      if onecell = -1, compute values for all grid cells
        store results in vector_grid with nstride = 1 (single col of array_grid)
      if onecell >= 0, compute single value for onecell and return it
-   for etaylly = ptr to caller array:
+   for etally = ptr to caller array:
      use external tallied info for many timesteps
      nsample = additional normalization factor used by some values
      emap = list of etally columns to use, # of columns determined by index

@@ -61,6 +61,7 @@ class DumpGrid : public Dump {
 
   int *cpart;                // indices into grid->cells of cells with particles
   int ncpart;                // # of owned grid cells with particles
+  int maxlocal;              // max length of per-grid variable vectors
 
   int dimension;
 

@@ -244,10 +244,11 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
       int ivariable = input->variable->find(ids[i]);
       if (ivariable < 0)
         error->all(FLERR,"Variable name for compute reduce does not exist");
-      if (input->variable->particle_style(ivariable) == 0)
-        error->all(FLERR,
-                   "Compute reduce variable is not particle-style variable");
-      flavor[i] = PARTICLE;
+      if (input->variable->particle_style(ivariable)) flavor[i] = PARTICLE;
+      else if (input->variable->grid_style(ivariable)) flavor[i] = GRID;
+      else
+        error->all(FLERR,"Compute reduce variable is not "
+                   "particle-style or grid-style variable");
     }
   }
 
@@ -266,8 +267,8 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
     owner = new int[size_vector];
   }
 
-  maxparticle = 0;
-  varparticle = NULL;
+  maxparticle = maxgrid = 0;
+  varparticle = vargrid = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -288,6 +289,7 @@ ComputeReduce::~ComputeReduce()
   delete [] owner;
 
   memory->destroy(varparticle);
+  memory->destroy(vargrid);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -618,21 +620,37 @@ double ComputeReduce::compute_one(int m, int flag)
       }
     }
 
-  // evaluate particle-style variable
+  // evaluate particle-style or grid-style variable
 
   } else if (which[m] == VARIABLE) {
-    int n = particle->nlocal;
-    if (n > maxparticle) {
-      maxparticle = particle->maxlocal;
-      memory->destroy(varparticle);
-      memory->create(varparticle,maxparticle,"reduce:varparticle");
-    }
+    if (flavor[m] == PARTICLE) {
+      int n = particle->nlocal;
+      if (n > maxparticle) {
+        maxparticle = particle->maxlocal;
+        memory->destroy(varparticle);
+        memory->create(varparticle,maxparticle,"reduce:varparticle");
+      }
 
-    input->variable->compute_particle(vidx,varparticle,1,0);
-    if (flag < 0) {
-      for (i = 0; i < n; i++)
-        combine(one,varparticle[i],i);
-    } else one = varparticle[flag];
+      input->variable->compute_particle(vidx,varparticle,1,0);
+      if (flag < 0) {
+        for (i = 0; i < n; i++)
+          combine(one,varparticle[i],i);
+      } else one = varparticle[flag];
+
+    } else if (flavor[m] == GRID) {
+      int n = grid->nlocal;
+      if (n > maxgrid) {
+        maxgrid = grid->maxlocal;
+        memory->destroy(vargrid);
+        memory->create(vargrid,maxgrid,"reduce:vargrid");
+      }
+
+      input->variable->compute_grid(vidx,vargrid,1,0);
+      if (flag < 0) {
+        for (i = 0; i < n; i++)
+          combine(one,vargrid[i],i);
+      } else one = vargrid[flag];
+    }
   }
 
   return one;
@@ -646,33 +664,21 @@ bigint ComputeReduce::count(int m)
 
   if (which[m] == X || which[m] == V) {
     ncount = particle->nlocal;
-    MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   } else if (which[m] == KE || which[m] == EROT || which[m] == EVIB) {
     ncount = particle->nlocal;
-    MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   } else if (which[m] == COMPUTE) {
-    if (flavor[m] == PARTICLE) {
-      ncount = particle->nlocal;
-      MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-    } else if (flavor[m] == GRID) {
-      ncount = grid->nlocal;
-      MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-    }
+    if (flavor[m] == PARTICLE) ncount = particle->nlocal;
+    else if (flavor[m] == GRID) ncount = grid->nlocal;
   } else if (which[m] == FIX) {
-    if (flavor[m] == PARTICLE) {
-      ncount = particle->nlocal;
-      MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-    } else if (flavor[m] == GRID) {
-      ncount = grid->nlocal;
-      MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-    } else if (flavor[m] == SURF) {
-      ncount = surf->nlocal;
-      MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-    }
+    if (flavor[m] == PARTICLE) ncount = particle->nlocal;
+    else if (flavor[m] == GRID) ncount = grid->nlocal;
+    else if (flavor[m] == SURF) ncount = surf->nlocal;
   } else if (which[m] == VARIABLE) {
-    ncount = particle->nlocal;
-    MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    if (flavor[m] == PARTICLE) ncount = particle->nlocal;
+    else if (flavor[m] == GRID) ncount = grid->nlocal;
   }
+
+  MPI_Allreduce(&ncount,&ncountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   return ncountall;
 }
@@ -705,5 +711,6 @@ void ComputeReduce::combine(double &one, double two, int i)
 bigint ComputeReduce::memory_usage()
 {
   bigint bytes = maxparticle * sizeof(double);
+  bytes += maxgrid * sizeof(double);
   return bytes;
 }

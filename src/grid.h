@@ -172,6 +172,8 @@ class Grid : protected Pointers {
   int nsubghost;              // # of ghost sub cells I store
   int nparent;                // # of parent cells
 
+  int maxlocal;               // size of cinfo
+
   ChildCell *cells;           // list of owned and ghost child cells
   ChildInfo *cinfo;           // extra info for nlocal owned cells
   SplitInfo *sinfo;           // extra info for owned and ghost split cells
@@ -280,7 +282,6 @@ class Grid : protected Pointers {
  private:
   int me;
   int maxcell;             // size of cells
-  int maxlocal;            // size of cinfo
   int maxsplit;            // size of sinfo
   int maxparent;           // size of pcells
   int maxbits;             // max bits allowed in a cell ID

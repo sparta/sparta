@@ -44,8 +44,8 @@ class ComputeReduce : public Compute {
   int index;
   char *idregion;
 
-  int maxparticle;
-  double *varparticle;
+  int maxparticle,maxgrid;
+  double *varparticle,*vargrid;
 
   struct Pair {
     double value;

@@ -69,6 +69,10 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Invalid attribute in dump grid command");
   size_one = nfield;
 
+  // max length of per-grid variable vectors
+
+  maxlocal = 0;
+
   // setup format strings
 
   vformat = new char*[nfield];
@@ -268,6 +272,17 @@ void DumpGrid::header_item(bigint ndump)
 
 int DumpGrid::count()
 {
+  // grow variable vbuf arrays if needed
+
+  int nglocal = grid->nlocal;
+  if (nglocal > maxlocal) {
+    maxlocal = grid->maxlocal;
+    for (int i = 0; i < nvariable; i++) {
+      memory->destroy(vbuf[i]);
+      memory->create(vbuf[i],maxlocal,"dump:vbuf");
+    }
+  }
+
   // invoke Computes for per-grid quantities
 
   if (ncompute) {
