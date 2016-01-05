@@ -80,7 +80,10 @@ in the simulation, which includes unsplit, cut, split, and sub cells.
 See "Section 4.8"_Section_howto.html#howto_8 of the manual gives
 details of how SPARTA defines child, unsplit, split, and sub cells.
 Note cells inside closed surfaces contain no particles.  Thus they
-will compute a zero result for all the individual values.
+will compute a zero result for all the individual values.  Likewise,
+split cells store no particles and will produce a zero result.  This
+is because their sub-cells actually contain the particles that are
+geometrically inside the split cell.
 
 The array can be accessed by any command that uses per-grid values
 from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
