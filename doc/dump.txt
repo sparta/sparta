@@ -433,6 +433,9 @@ stats keywords, or invoke other computes, fixes, or variables when
 they are evaluated, so this is a very general means of creating
 quantities to output to a dump file.
 
+IMPORTANT NOTE: Surf-style variables have not yet been implemented in
+SPARTA.
+
 See "Section 8"_Section_modify.html of the manual for information on
 how to add new compute and fix styles to SPARTA to calculate per-surf
 quantities which could then be output into dump files.

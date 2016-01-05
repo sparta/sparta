@@ -31,7 +31,7 @@
   c_ID[I] = Ith column of per-particle or per-grid array calculated by a compute with ID
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
   f_ID[I] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID
-  v_name = per-particle vector calculated by a particle-style variable with name 
+  v_name = per-particle or per-grid vector calculated by a particle-style or grid-style variable with name 
 </PRE>
 <LI>zero or more keyword/args pairs may be appended 
 
@@ -64,10 +64,11 @@ or per-grid or per-surf quantities; they cannot be global quantities.
 Particle attributes are per-particle quantities,
 <A HREF = "compute.html">computes</A> may generate per-particle or per-grid
 quantities, <A HREF = "fix.html">fixes</A> may generate any of the three kinds of
-quantities, and <A HREF = "variable.html">particle-style variables</A> generate
-per-particle quantities.  See the <A HREF = "variable">variable</A> command and its
-special functions which can perform the same operations as the compute
-reduce command on global vectors.
+quantities, and <A HREF = "variable.html">particle-style or grid-style variables</A>
+generate per-particle or per-grid quantities.  See the
+<A HREF = "variable">variable</A> command and its special functions which can
+perform the same operations as the compute reduce command on global
+vectors.
 </P>
 <P>The reduction operation is specified by the <I>mode</I> setting.  The <I>sum</I>
 option adds the values in the vector into a global total.  The <I>min</I>
@@ -117,11 +118,12 @@ their own fix style and <A HREF = "Section_modify.html">add them to SPARTA</A>.
 </P>
 <P>If a value begins with "v_", a variable name must follow which has
 been previously defined in the input script.  It must be a
-<A HREF = "variable.html">particle-style variable</A>.  Particle-style variables can
-reference stats keywords and various per-particle attributes, or
-invoke other computes, fixes, or variables when they are evaluated, so
-this is a very general means of generating per-particle quantities to
-reduce.
+<A HREF = "variable.html">particle-style or grid-style variable</A>.  Both styles
+define formulas which can reference stats keywords or invoke other
+computes, fixes, or variables when they are evaluated.  Particle-style
+variables can also reference various per-particle attributes
+(position, velocity, etc).  So these variables are a very general
+means of creating per-particle or per-grid quantities to reduce.
 </P>
 <HR>
 
