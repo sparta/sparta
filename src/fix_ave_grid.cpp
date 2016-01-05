@@ -91,6 +91,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 	argindex[nvalues] = atoi(ptr+1);
 	*ptr = '\0';
       } else argindex[nvalues] = 0;
+
       n = strlen(suffix) + 1;
       ids[nvalues] = new char[n];
       strcpy(ids[nvalues],suffix);
@@ -484,9 +485,11 @@ void FixAveGrid::end_of_step()
 	  tally[i][k] += fix_array[i][jm1];
       }
       
-      // evaluate grid-style variable
+    // evaluate grid-style variable, sum values to Kth column of tally array
       
     } else if (which[m] == VARIABLE) {
+      k = umap[m][0];
+      input->variable->compute_grid(n,&tally[0][k],ntotal,1);
     }
   }
 

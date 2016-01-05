@@ -1211,7 +1211,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	      error->all(FLERR,"Compute used in variable between runs "
 			 "is not current");
 	  } else if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
-	    compute->compute_per_particle();
+	    compute->compute_per_grid();
 	    compute->invoked_flag |= INVOKED_PER_GRID;
 	  }
 
