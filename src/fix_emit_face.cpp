@@ -410,7 +410,13 @@ int FixEmitFace::create_task(int icell)
       tasks[ntask].ntarget += ntargetsp;
       if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
     }
-    if (tasks[ntask].ntarget == 0.0 && !subsonic) continue;
+
+    if (!subsonic) {
+      if (tasks[ntask].ntarget == 0.0) continue;
+      if (tasks[ntask].ntarget >= MAXSMALLINT) 
+        error->one(FLERR,
+                   "Fix emit/face insertion count exceeds 32-bit int");
+    }
 
     // initialize other task values with mixture properties
     // may be overwritten by subsonic methods
@@ -682,6 +688,9 @@ void FixEmitFace::subsonic_inflow()
       tasks[i].ntarget += ntargetsp;
       if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
     }
+    if (tasks[i].ntarget >= MAXSMALLINT) 
+      error->one(FLERR,
+                 "Fix emit/face subsonic insertion count exceeds 32-bit int");
   }
 }
 
@@ -822,10 +831,12 @@ void FixEmitFace::subsonic_grid()
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
       
-      ndim = tasks[i].ndim;
-      sign = tasks[i].normal[ndim];
-      vstream[ndim] += sign * 
-        (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
+      if (np)  {
+        ndim = tasks[i].ndim;
+        sign = tasks[i].normal[ndim];
+        vstream[ndim] += sign * 
+          (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
+      }
 
       vscale = tasks[i].vscale;
       for (m = 0; m < nspecies; m++) {

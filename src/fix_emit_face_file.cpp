@@ -945,7 +945,13 @@ int FixEmitFaceFile::interpolate(int icell)
     tasks[ntask].ntarget += ntargetsp;
     if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
   }
-  if (tasks[ntask].ntarget == 0.0 && !subsonic) return 0;
+
+  if (!subsonic) {
+    if (tasks[ntask].ntarget == 0.0) return 0;
+    if (tasks[ntask].ntarget >= MAXSMALLINT) 
+      error->one(FLERR,
+                 "Fix emit/face/file insertion count exceeds 32-bit int");
+  }
 
   return 1;
 }
@@ -1065,6 +1071,10 @@ void FixEmitFaceFile::subsonic_inflow()
       tasks[i].ntarget += ntargetsp;
       if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
     }
+    if (tasks[i].ntarget >= MAXSMALLINT) 
+      error->one(FLERR,
+                 "Fix emit/face/file subsonic insertion count "
+                 "exceeds 32-bit int");
   }
 }
 
@@ -1204,9 +1214,11 @@ void FixEmitFaceFile::subsonic_grid()
         (tasks[i].press - press_cell) / (soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = tasks[i].press / (boltz * tasks[i].nrho);
 
-      sign = normal[ndim];
-      vstream[ndim] += sign * 
-        (tasks[i].press - press_cell) / (massrho_cell*soundspeed_cell);
+      if (np) {
+        sign = normal[ndim];
+        vstream[ndim] += sign * 
+          (tasks[i].press - press_cell) / (massrho_cell*soundspeed_cell);
+      }
 
       vscale = tasks[i].vscale;
       for (m = 0; m < nspecies; i++) {

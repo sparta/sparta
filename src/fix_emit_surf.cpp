@@ -190,7 +190,7 @@ void FixEmitSurf::init()
     else if (tasks_with_no_extra >= nupto) nthresh = ntask;
     else nthresh = tasks_with_no_extra - (nupto-ntask);
   }
-  
+
   // deallocate Cut2d,Cut3d
   
   if (dimension == 3) delete cut3d;
@@ -360,7 +360,13 @@ int FixEmitSurf::create_task(int icell)
       tasks[ntask].ntarget += ntargetsp;
       if (perspecies) tasks[ntask].ntargetsp[isp] = ntargetsp;
     }
-    if (tasks[ntask].ntarget == 0.0 && !subsonic) continue;
+
+    if (!subsonic) {
+      if (tasks[ntask].ntarget == 0.0) continue;
+      if (tasks[ntask].ntarget >= MAXSMALLINT) 
+        error->one(FLERR,
+                   "Fix emit/surf insertion count exceeds 32-bit int");
+    }
     
     // initialize other task values with mixture properties
     // may be overwritten by subsonic methods
@@ -602,6 +608,9 @@ void FixEmitSurf::perform_task()
         v[1] = vnmag*normal[1] + vamag*atan[1] + vbmag*btan[1];
         v[2] = vnmag*normal[2] + vamag*atan[2] + vbmag*btan[2];
         
+        printf("VEL %g %g %g: %g %g %g %g %g\n",v[0],v[1],v[2],vscale[isp],
+               vr,vnmag,vamag,vbmag);
+
         erot = particle->erot(ispecies,temp_rot,random);
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
@@ -678,12 +687,16 @@ void FixEmitSurf::subsonic_inflow()
     for (isp = 0; isp < nspecies; isp++) {
       mass = species[mspecies[isp]].mass;
       vscale = sqrt(2.0 * boltz * temp_thermal / mass);
+      printf("AAA %g %g\n",temp_thermal,vscale);
       ntargetsp = mol_inflow(indot,vscale,fraction[isp]);
       ntargetsp *= nrho*area*dt / fnum;
       ntargetsp /= cinfo[icell].weight;
       tasks[i].ntarget += ntargetsp;
       if (perspecies) tasks[i].ntargetsp[isp] = ntargetsp;
     }
+    if (tasks[i].ntarget >= MAXSMALLINT) 
+      error->one(FLERR,
+                 "Fix emit/surf subsonic insertion count exceeds 32-bit int");
   }
 }
 
@@ -822,7 +835,9 @@ void FixEmitSurf::subsonic_grid()
       tasks[i].nrho = nrho_cell + 
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
-      
+      printf("TEMPTHERMALCELL %g: %g %g %g\n",temp_thermal_cell,
+             psubsonic,boltz,tasks[i].nrho);
+
       // adjust COM vstream by difference bewteen
       //   cell pressure and subsonic target pressure
       // normal = direction of difference which depends on normalflag
@@ -835,16 +850,19 @@ void FixEmitSurf::subsonic_grid()
         else normal = norm_vstream;
       }
       
-      vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
-      vstream[0] += vsmag*normal[0];
-      vstream[1] += vsmag*normal[1];
-      vstream[2] += vsmag*normal[2];
-      
+      if (np) {
+        vsmag = (psubsonic - press_cell) / (massrho_cell*soundspeed_cell);
+        vstream[0] += vsmag*normal[0];
+        vstream[1] += vsmag*normal[1];
+        vstream[2] += vsmag*normal[2];
+      }
+
       vscale = tasks[i].vscale;
       for (m = 0; m < nspecies; m++) {
         ispecies = particle->mixture[imix]->species[m];
         vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_cell /
                          species[ispecies].mass);
+        printf("VSCALE %d %d %g\n",i,m,vscale[m]);
       }
     }
     
