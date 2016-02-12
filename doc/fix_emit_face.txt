@@ -165,6 +165,15 @@ These properties are then applied to calculate the molecular flux
 across a grid cell face per unit time, as given by equation 4.22 of
 "(Bird94)"_#Bird94.
 
+Caution must be exercised when using the subsonic boundary condition
+without specifying the inlet temperature. In this case the code tries
+to estimate the temperature of the flow from the properties of the 
+particles in the domain. If the domain contains few particles per 
+cell it may lead to spurious results.
+This boundary condition is meant more for an outlet than an inlet boundary
+condition, and performs well in cases where the cells are adequately
+populated.
+ 
 This keyword allows specification of both the pressure and temperature
 at the boundary or just the pressure.  Currently, instantaneous values
 for the density, temperature, and stream velocity of particles in the
