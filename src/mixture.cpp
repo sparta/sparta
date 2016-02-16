@@ -207,6 +207,13 @@ void Mixture::init()
   if (temp_vib_flag) temp_vib = temp_vib_user;
   else temp_vib = temp_thermal;
   
+  // mixture temperarate cannot be 0.0 if streaming velocity is 0.0
+
+  if (temp_thermal == 0.0 && 
+      vstream[0] == 0.0 && vstream[1] == 0.0 && vstream[2] == 0.0)
+    error->all(FLERR,"Mixture streaming velocity and "
+               "temperature cannot both be zero");
+    
   // initialize all per-species fraction and cummulative values
   // account for both explicitly and implicitly set fractions
 
