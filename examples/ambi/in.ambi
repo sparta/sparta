@@ -20,7 +20,6 @@ mixture             noelectron N2 frac 0.8
 mixture             noelectron O2 frac 0.2
 
 read_surf           data.circle invert
-global              surfpush yes
 surf_collide	    1 diffuse 615.0 1.0
 surf_react          1 prob air.surf
 surf_modify         all collide 1 react 1
