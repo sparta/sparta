@@ -27,9 +27,10 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
     ex,ey,ez = direction vector that gravity acts in
   {surfmax} value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
-  {surfpush} value = yes or no
+  {surfpush} value(s) = yes, or slo shi svalue
     yes = push surface element points near cell surface to the surface
-    no = do not push points to cell surface
+    slo,shi = push points within this range
+    svalue = push points to this value
   {gridcut} value = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
   {comm/sort} value = yes or no
@@ -48,7 +49,6 @@ global fnum 1.0e20
 global vstream 100.0 0 0 fnum 5.0e18
 global temp 1000
 global weight cell radius :pre
-
 
 [Description:]
 
@@ -92,15 +92,40 @@ The {surfpush} keyword enables a numerical round-off issue to be
 addressed when surface elements and intersected with grid cells to
 determine the cut-cell volume and splitting.  This is a one time
 operation that occurs when surface elements are defined via the
-"read_surf"_read_surf.html command.  In rare cases, if a surface
-element point is slightly inside or outside a grid cell, but within an
-epsilon distance from the surface of the grid cell, a numerical error
-can occur when computing the cut volume.  The error can be avoided if
-such points are shifted by epsilon to be on the cell surface (only
-during the computation of the cut volumes).  Setting {surfpush} to
-{yes} will perform this operation.  The default setting is {no}, which
-will not perform the shift.  Thus you should only need to use this
-keyword if an error occurs for the "read_surf"_read_surf.html command.
+"read_surf"_read_surf.html command.
+
+In rare cases, if a surface element point is just slightly inside or
+outside a grid cell, but within an epsilon distance from the surface
+of the grid cell, a numerical error can occur when computing the cut
+volume.  The error can be avoided if such points are pushed (shifted)
+to a slightly different location (which only induces a tiny change in
+the computed cut volume).  The {surfpush} keyword allows control over
+how the push is performed.  The default for this keyword is
+to perform no push; you only need to use it if an error is
+triggered when surfaces are read in.
+
+The 3 values used when pushing are {slo}, {shi}, and {svalue}.  They
+are all multipliers on an epsilon of 1.0e-10 which is set internally
+in the code.  Epsilon refers to the size of a grid cell in each of its
+dimensions.  Negative values for {slo} or {shi} are distances inside a
+grid cell (inward from the cell face).  Positive values for {slo} or
+{shi} are distances outside a grid cell (outward from the cell face).
+Zero values for {slo} or {shi} are exactly on the cell face.  If any
+surface points (end points of 2d lines, corner points of 3d triangles)
+is between a {slo} and {shi} distance from any of the cell faces, then
+it is pushed to be a distance {svalue} from the face.
+
+Setting {surfpush} to {yes} will perform a push using the following
+values, which in our experience work nearly all the time when pushing
+is needed: {slo} = -1, {shi} = 1, {svalue} = 1.  This means any point
+within a fractional distance (in each dimension) 1.0e-10 inside the
+cell to 1.0e-10 outside the cell, is shifted to be a distance 1.0e-10
+outside the cell.  The values {slo} = -1, {shi} = 1, {svalue} = 0 also
+often work.
+
+If you still get an error reading your surface with these optional
+{surfpush} settings, please contact the SPARTA developers.  We want
+to figure out what is unusual about your surface file!
 
 The {gridcut} keyword determines the cutoff distance at which ghost
 grid cells will be stored by each processor.  Assuming the processor
@@ -227,6 +252,6 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 [Default:]
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, surfpush
-= no, gridcut = -1.0, comm/sort = no, comm/style = neigh, weight =
-cell none.
+0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, no
+surfpush setting, gridcut = -1.0, comm/sort = no, comm/style = neigh,
+weight = cell none.

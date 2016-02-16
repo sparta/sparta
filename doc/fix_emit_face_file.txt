@@ -246,11 +246,20 @@ molecular flux across a grid cell face per unit time, as given by
 equation 4.22 of "(Bird94)"_#Bird94.
 
 As explained above the input data file can specify both the pressure
-and temperature at the boundary or just the pressure.  Currently,
-instantaneous values for the density, temperature, and stream velocity
-of particles in the cells adjacent to the boundary face(s) are
-computed and used to determine the properties of inserted particles on
-each timestep.
+and temperature at the boundary or just the pressure.  If specified,
+the temperature must be > 0.0.  Currently, instantaneous values for
+the density, temperature, and stream velocity of particles in the
+cells adjacent to the boundary face(s) are computed and used to
+determine the properties of inserted particles on each timestep.
+
+IMPORTANT NOTE: Caution must be exercised when using the subsonic
+boundary condition without specifying an inlet temperature. In this
+case the code tries to estimate the temperature of the flow from the
+properties of the particles in the domain. If the domain contains few
+particles per cell it may lead to spurious results.  This boundary
+condition is meant more for an outlet than an inlet boundary
+condition, and performs well in cases where the cells are adequately
+populated.
 
 IMPORTANT NOTE: When using a subsonic prsesure boundary condition, you
 should also use an appropriate boundary collision or chemistry model

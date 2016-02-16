@@ -224,6 +224,10 @@ that have no species assigned to them are also deleted.
 
 [Restrictions:]
 
+The streaming velocity and thermal temperature of the mixture cannot
+both be zero.  A zero streaming velocity means a zero vector =
+(0,0,0).
+
 The restrictions on use of the {delete} keyword are described above.
 
 [Related commands:]
