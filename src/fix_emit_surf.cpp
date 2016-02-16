@@ -25,6 +25,7 @@
 #include "cut2d.h"
 #include "cut3d.h"
 #include "input.h"
+#include "comm.h"
 #include "random_park.h"
 #include "math_extra.h"
 #include "math_const.h"
@@ -38,6 +39,7 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NOSUBSONIC,PTBOTH,PONLY};
 
 #define DELTATASK 256
+#define TEMPLIMIT 1.0e5
 
 /* ---------------------------------------------------------------------- */
 
@@ -61,7 +63,8 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   normalflag = 0;
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
-  
+  subsonic_warning = 0;
+
   int iarg = 4;
   options(narg-iarg,&arg[iarg]);
   
@@ -607,9 +610,6 @@ void FixEmitSurf::perform_task()
         v[0] = vnmag*normal[0] + vamag*atan[0] + vbmag*btan[0];
         v[1] = vnmag*normal[1] + vamag*atan[1] + vbmag*btan[1];
         v[2] = vnmag*normal[2] + vamag*atan[2] + vbmag*btan[2];
-        
-        printf("VEL %g %g %g: %g %g %g %g %g\n",v[0],v[1],v[2],vscale[isp],
-               vr,vnmag,vamag,vbmag);
 
         erot = particle->erot(ispecies,temp_rot,random);
         evib = particle->evib(ispecies,temp_vib,random);
@@ -687,7 +687,6 @@ void FixEmitSurf::subsonic_inflow()
     for (isp = 0; isp < nspecies; isp++) {
       mass = species[mspecies[isp]].mass;
       vscale = sqrt(2.0 * boltz * temp_thermal / mass);
-      printf("AAA %g %g\n",temp_thermal,vscale);
       ntargetsp = mol_inflow(indot,vscale,fraction[isp]);
       ntargetsp *= nrho*area*dt / fnum;
       ntargetsp /= cinfo[icell].weight;
@@ -777,6 +776,9 @@ void FixEmitSurf::subsonic_grid()
   Particle::Species *species = particle->species;
   double boltz = update->boltz;
   
+  int temp_exceed_flag = 0;
+  double tempmax = 0.0;
+
   for (int i = 0; i < ntask; i++) {
     icell = tasks[i].pcell;
     np = cinfo[icell].count;
@@ -835,8 +837,10 @@ void FixEmitSurf::subsonic_grid()
       tasks[i].nrho = nrho_cell + 
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
-      printf("TEMPTHERMALCELL %g: %g %g %g\n",temp_thermal_cell,
-             psubsonic,boltz,tasks[i].nrho);
+      if (temp_thermal_cell > TEMPLIMIT) {
+        temp_exceed_flag = 1;
+        tempmax = MAX(tempmax,temp_thermal_cell);
+      }
 
       // adjust COM vstream by difference bewteen
       //   cell pressure and subsonic target pressure
@@ -862,13 +866,17 @@ void FixEmitSurf::subsonic_grid()
         ispecies = particle->mixture[imix]->species[m];
         vscale[m] = sqrt(2.0 * update->boltz * temp_thermal_cell /
                          species[ispecies].mass);
-        printf("VSCALE %d %d %g\n",i,m,vscale[m]);
       }
     }
     
     tasks[i].temp_thermal = temp_thermal_cell;
     tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
   }
+
+  // test if any task has invalid thermal temperature
+
+  if (!subsonic_warning)
+    subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
 }
 
 /* ----------------------------------------------------------------------
@@ -1118,7 +1126,8 @@ int FixEmitSurf::option(int narg, char **arg)
     if (strcmp(arg[2],"NULL") == 0) subsonic_style = PONLY;
     else {
       tsubsonic = input->numeric(FLERR,arg[2]);
-      if (tsubsonic < 0.0) error->all(FLERR,"Illegal fix emit/face command");
+      if (tsubsonic <= 0.0) 
+        error->all(FLERR,"Subsonic temperature cannot be <= 0.0");
       nsubsonic = psubsonic / (update->boltz * tsubsonic);
     }
     return 3;

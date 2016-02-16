@@ -42,6 +42,7 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 enum{NOSUBSONIC,PTBOTH,PONLY};
 
 #define DELTATASK 256
+#define TEMPLIMIT 1.0e5
 
 /* ---------------------------------------------------------------------- */
 
@@ -80,6 +81,7 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
   np = 0;
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
+  subsonic_warning = 0;
 
   options(narg-iarg,&arg[iarg]);
 
@@ -771,6 +773,9 @@ void FixEmitFace::subsonic_grid()
   Particle::Species *species = particle->species;
   double boltz = update->boltz;
 
+  int temp_exceed_flag = 0;
+  double tempmax = 0.0;
+
   for (int i = 0; i < ntask; i++) {
     icell = tasks[i].pcell;
     np = cinfo[icell].count;
@@ -830,7 +835,11 @@ void FixEmitFace::subsonic_grid()
       tasks[i].nrho = nrho_cell + 
         (psubsonic - press_cell) / (soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = psubsonic / (boltz * tasks[i].nrho);
-      
+      if (temp_thermal_cell > TEMPLIMIT) {
+        temp_exceed_flag = 1;
+        tempmax = MAX(tempmax,temp_thermal_cell);
+      }
+
       if (np)  {
         ndim = tasks[i].ndim;
         sign = tasks[i].normal[ndim];
@@ -849,6 +858,11 @@ void FixEmitFace::subsonic_grid()
     tasks[i].temp_thermal = temp_thermal_cell;
     tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
   }
+
+  // test if any task has invalid thermal temperature for first time
+
+  if (!subsonic_warning)
+    subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
 }
 
 /* ----------------------------------------------------------------------
@@ -1027,7 +1041,8 @@ int FixEmitFace::option(int narg, char **arg)
     if (strcmp(arg[2],"NULL") == 0) subsonic_style = PONLY;
     else {
       tsubsonic = input->numeric(FLERR,arg[2]);
-      if (tsubsonic < 0.0) error->all(FLERR,"Illegal fix emit/face command");
+      if (tsubsonic <= 0.0) 
+        error->all(FLERR,"Subsonic temperature cannot be <= 0.0");
       nsubsonic = psubsonic / (update->boltz * tsubsonic);
     }
     return 3;

@@ -44,6 +44,7 @@ enum{NRHO,TEMP_THERMAL,TEMP_ROT,TEMP_VIB,VX,VY,VZ,PRESS,SPECIES};
 enum{NOSUBSONIC,PTBOTH,PONLY};
 
 #define DELTATASK 256
+#define TEMPLIMIT 1.0e5
 #define MAXLINE 1024
 
 /* ---------------------------------------------------------------------- */
@@ -704,6 +705,7 @@ void FixEmitFaceFile::bcast_mesh()
 
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
+  subsonic_warning = 0;
 
   for (int i = 0; i < mesh.nvalues; i++)
     if (mesh.which[i] == PRESS) subsonic = 1;
@@ -837,6 +839,8 @@ int FixEmitFaceFile::interpolate(int icell)
       else if (mesh.which[m] == TEMP_THERMAL) {
         newtemp = tasks[ntask].temp_thermal = 
           linear_interpolation(xc[0],m,plo,phi);
+        if (newtemp <= 0.0 && subsonic_style == PTBOTH)
+          error->all(FLERR,"Subsonic temperature cannot be <= 0.0");
         for (isp = 0; isp < nspecies; isp++)
           tasks[ntask].vscale[isp] = 
             vscale_mix[isp] * sqrt(newtemp/temp_thermal_mix);
@@ -1155,6 +1159,9 @@ void FixEmitFaceFile::subsonic_grid()
   Particle::Species *species = particle->species;
   double boltz = update->boltz;
 
+  int temp_exceed_flag = 0;
+  double tempmax = 0.0;
+
   for (int i = 0; i < ntask; i++) {
     icell = tasks[i].pcell;
     np = cinfo[icell].count;
@@ -1213,6 +1220,10 @@ void FixEmitFaceFile::subsonic_grid()
       tasks[i].nrho = nrho_cell + 
         (tasks[i].press - press_cell) / (soundspeed_cell*soundspeed_cell);
       temp_thermal_cell = tasks[i].press / (boltz * tasks[i].nrho);
+      if (temp_thermal_cell > TEMPLIMIT) {
+        temp_exceed_flag = 1;
+        tempmax = MAX(tempmax,temp_thermal_cell);
+      }
 
       if (np) {
         sign = normal[ndim];
@@ -1231,6 +1242,11 @@ void FixEmitFaceFile::subsonic_grid()
     tasks[i].temp_thermal = temp_thermal_cell;
     tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
   }
+
+  // test if any task has invalid thermal temperature for first time
+
+  if (!subsonic_warning)
+    subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
 }
 
 /* ----------------------------------------------------------------------

@@ -418,6 +418,29 @@ double FixEmit::mol_inflow(double indot, double vscale, double fraction)
    called from constructor of child emit styles
 ------------------------------------------------------------------------- */
 
+int FixEmit::subsonic_temperature_check(int flag, double tempmax)
+{
+  int allflag;
+  MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_SUM,world);
+  if (allflag) {
+    double allmax;
+    MPI_Allreduce(&tempmax,&allmax,1,MPI_DOUBLE,MPI_MAX,world);
+    if (comm->me == 0) {
+      char str[128];
+      sprintf(str,"Excessive subsonic thermal temp = %g",allmax);
+      error->warning(FLERR,str);
+    }
+    return 1;
+  }
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   process optional keywords common to all emit styles
+   pass unrecognized keyword back to child option() method
+   called from constructor of child emit styles
+------------------------------------------------------------------------- */
+
 void FixEmit::options(int narg, char **arg)
 {
   nevery = 1;
