@@ -35,7 +35,7 @@ class FixEmitFace : public FixEmit {
   void post_compress_grid();
 
  private:
-  int imix,np,subsonic,subsonic_style;
+  int imix,np,subsonic,subsonic_style,subsonic_warning;
   int faces[6];
   int npertask,nthresh;
   double psubsonic,tsubsonic,nsubsonic;

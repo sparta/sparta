@@ -35,7 +35,7 @@ class FixEmitSurf : public FixEmit {
   void post_compress_grid();
 
  private:
-  int imix,groupbit,np,normalflag,subsonic,subsonic_style;
+  int imix,groupbit,np,normalflag,subsonic,subsonic_style,subsonic_warning;
   int npertask,nthresh;
   double psubsonic,tsubsonic,nsubsonic;
   double tprefactor,soundspeed_mixture;

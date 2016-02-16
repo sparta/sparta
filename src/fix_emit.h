@@ -66,6 +66,7 @@ class FixEmit : public Fix {
   void grow_percell(int);
   void grow_list();
   double mol_inflow(double, double, double);
+  int subsonic_temperature_check(int, double);
   void options(int, char **);
   virtual int option(int, char **);
 };
