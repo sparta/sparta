@@ -40,6 +40,12 @@ Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
   axisymmetric = caller_axisymmetric;
 
   pushflag = surf->pushflag;
+  if (pushflag) {
+    pushlo = surf->pushlo;
+    pushhi = surf->pushhi;
+    pushvalue = surf->pushvalue;
+  }
+
   npush = 0;
 }
 
@@ -146,16 +152,6 @@ int Cut2d::cliptest(double *p, double *q)
   a[0] = p[0]; a[1] = p[1];
   b[0] = q[0]; b[1] = q[1];
 
-  // if requested, push line pts from just outside cell surface to surface
-  // must be done now so to insure a line slightly outside cell 
-  //   does not actually intersect cell when pushed in build_clines(),
-  //   else might not be added to list of lines intersecting cell
-
-  if (pushflag % 2) {
-    push_to_cell(a);
-    push_to_cell(b);
-  }
-
   if (a[0] < lo[0] && b[0] < lo[0]) return 0;
   if (a[0] < lo[0] || b[0] < lo[0]) {
     y = a[1] + (lo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
@@ -203,7 +199,6 @@ int Cut2d::cliptest(double *p, double *q)
    return # of clipped points, can be 0,1,2
    return clipped points in cpath as series of x,y pairs
    called externally, depends on no class variables
-   no push of line points is done, since external caller uses true surface
    duplicate points in cpath are deleted
 ------------------------------------------------------------------------- */
 
@@ -415,9 +410,11 @@ int Cut2d::build_clines()
     memcpy(p1,pts[line->p1].x,2*sizeof(double));
     memcpy(p2,pts[line->p2].x,2*sizeof(double));
 
+    // if requested, push line pts near cell surface
+
     if (pushflag) {
-      npush += push_to_cell(p1);
-      npush += push_to_cell(p2);
+      npush += push(p1);
+      npush += push(p2);
     }
 
     cline = &clines[n];
@@ -502,8 +499,10 @@ void Cut2d::weiler_build()
     // pt already exists
 
     if (j < npt) {
-      if (points[j].type == ENTRY || points[j].type == TWO) 
+      if (points[j].type == ENTRY || points[j].type == TWO) {
+        printf("CELL ID %d\n",id);
         error->one(FLERR,"Point appears first in more than one CLINE");
+      }
       points[j].type = TWO;
       points[j].line = clines[i].line;
       firstpt = j;
@@ -529,8 +528,10 @@ void Cut2d::weiler_build()
     // pt already exists
 
     if (j < npt) {
-      if (points[j].type == EXIT || points[j].type == TWO)
+      if (points[j].type == EXIT || points[j].type == TWO) {
+        printf("CELL ID %d\n",id);
         error->one(FLERR,"Point appears last in more than one CLINE");
+      }
       points[j].type = TWO;
       points[firstpt].next = j;
     }
@@ -925,16 +926,6 @@ void Cut2d::clip(double *p, double *q, double *a, double *b)
       q[0] >= lo[0] && q[0] <= hi[0] &&
       q[1] >= lo[1] && q[1] <= hi[1]) return;
 
-  // if requested, push line pts from just outside cell surface to surface
-  // must be done now so to insure a line slightly outside cell 
-  //   does not actually intersect cell when pushed in build_clines(),
-  //   else might not be added to list of lines intersecting cell
-
-  if (pushflag % 2) {
-    push_to_cell(a);
-    push_to_cell(b);
-  }
-
   if (a[0] < lo[0] || b[0] < lo[0]) {
     y = a[1] + (lo[0]-a[0])/(b[0]-a[0])*(b[1]-a[1]);
     if (a[0] < lo[0]) {
@@ -984,69 +975,23 @@ int Cut2d::ptflag(double *pt)
 }
 
 /* ----------------------------------------------------------------------
-   check if pt is within EPSCELL of cell surface
-   if so, push to cell surface
-   for pushflag = 1, can be inside or outside by EPSCELL
-   for pushflag = 2, only inside
-   for pushflag = 3, only outside
+   push point if near cell surface
 ------------------------------------------------------------------------- */
 
-int Cut2d::push_to_cell(double *pt)
+int Cut2d::push(double *pt)
 {
   double x = pt[0];
   double y = pt[1];
   double epsx = EPSCELL * (hi[0]-lo[0]);
   double epsy = EPSCELL * (hi[1]-lo[1]);
 
-  if (pushflag % 2) {
-    if (x < lo[0]-epsx || x > hi[0]+epsx || 
-        y < lo[1]-epsy || y > hi[1]+epsy) return 0;
-  } else {
-    if (x < lo[0] || x > hi[0] || y < lo[1] || y > hi[1]) return 0;
-  }
+  if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx || 
+      y < lo[1]-pushhi*epsy || y > hi[1]+pushhi*epsy) return 0;
 
-  if (pushflag == 1) {
-    if (fabs(x-lo[0]) < epsx || fabs(x-hi[0]) < epsx) {
-      if (y > lo[1]-epsy && y < hi[1]+epsy) {
-        if (fabs(x-lo[0]) < epsx) x = lo[0];
-        else x = hi[0];
-      }
-    }
-    if (fabs(y-lo[1]) < epsy || fabs(y-hi[1]) < epsy) {
-      if (x >= lo[0] && x <= hi[0]) {
-        if (fabs(y-lo[1]) < epsy) y = lo[1];
-        else y = hi[1];
-      }
-    }
-
-  } else if (pushflag == 2) {
-    if ((x >= lo[0] && x-lo[0] < epsx) || (x <= hi[0] && hi[0]-x < epsx)) {
-      if (y >= lo[1]-epsy && y <= hi[1]+epsy) {
-        if (x-lo[0] < epsx) x = lo[0];
-        else x = hi[0];
-      }
-    }
-    if ((y >= lo[1] && y-lo[1] < epsy) || (y <= hi[1] && hi[1]-y < epsy)) {
-      if (x >= lo[0] && x <= hi[0]) {
-        if (y-lo[1] < epsy) y = lo[1];
-        else y = hi[1];
-      }
-    }
-
-  } else if (pushflag == 3) {
-    if ((x > lo[0]-epsx && x <= lo[0]) || (x < hi[0]+epsx && x >= hi[0])) {
-      if (y >= lo[1]-epsy && y <= hi[1]+epsy) {
-        if (x <= lo[0]) x = lo[0];
-        else x = hi[0];
-      }
-    }
-    if ((y > lo[1]-epsy && y <= lo[1]) || (y < hi[1]+epsy && y >= hi[1])) {
-      if (x >= lo[0] && x <= hi[0]) {
-        if (y <= lo[1]) y = lo[1];
-        else y = hi[1];
-      }
-    }
-  }
+  if (x > lo[0]-pushhi*epsx && x < lo[0]-pushlo*epsx) x = lo[0]-pushvalue*epsx;
+  if (x > hi[0]+pushlo*epsx && x < hi[0]+pushhi*epsx) x = hi[0]+pushvalue*epsx;
+  if (y > lo[1]-pushhi*epsy && y < lo[1]-pushlo*epsy) y = lo[1]-pushvalue*epsy;
+  if (y > hi[1]+pushlo*epsy && y < hi[1]+pushhi*epsy) y = hi[1]+pushvalue*epsy;
 
   int flag = 0;
   if (x != pt[0] || y != pt[1]) {

@@ -22,7 +22,6 @@ namespace SPARTA_NS {
 
 class Cut2d : protected Pointers {
  public:
-  int pushflag;          // set to 1 to push surf pts to cell surface
   int npush;             // tally of points that are pushed
 
   struct Cline {
@@ -88,6 +87,10 @@ class Cut2d : protected Pointers {
   int nsurf;             // # of surf elements in cell
   int *surfs;            // indices of surf elements in cell
 
+  int pushflag;          // set to 1 to push surf pts near grid cell faces
+  double pushlo,pushhi;  // lo/hi ranges to push on
+  double pushvalue;      // new position to push to
+
   MyVec<double> areas;   // areas of each flow polygon found
   MyVec<int> used;       // 0/1 flag for each point when walking loops
 
@@ -102,7 +105,7 @@ class Cut2d : protected Pointers {
   void clip(double *, double *, double *, double *);
 
   int ptflag(double *);
-  int push_to_cell(double *);
+  int push(double *);
   int sameedge(double *, double *);
   int whichside(double *);
 

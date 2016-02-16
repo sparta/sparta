@@ -23,7 +23,6 @@ namespace SPARTA_NS {
 
 class Cut3d : protected Pointers {
  public:
-  int pushflag;          // set to 1 to push surf pts to cell surface
   int npush;             // tally of points that are pushed
 
   Cut3d(class SPARTA *);
@@ -40,6 +39,10 @@ class Cut3d : protected Pointers {
   double *lo,*hi;        // opposite corner pts of cell
   int nsurf;             // # of surf elements in cell
   int *surfs;            // indices of surf elements in cell
+
+  int pushflag;          // set to 1 to push surf pts near grid cell faces
+  double pushlo,pushhi;  // lo/hi ranges to push on
+  double pushvalue;      // new position to push to
 
   double **path1,**path2;
 
@@ -139,7 +142,7 @@ class Cut3d : protected Pointers {
   int samepoint(double *, double *);
   int corner(double *);
   int ptflag(double *);
-  int push_to_cell(double *);
+  int push(double *);
 
   void print_bpg(const char *);
   void print_loops();

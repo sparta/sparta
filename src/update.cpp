@@ -30,6 +30,7 @@
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
+#include "input.h"
 #include "output.h"
 #include "geometry.h"
 #include "random_mars.h"
@@ -1386,6 +1387,7 @@ void Update::global(int narg, char **arg)
       if (gmag > 0.0) MathExtra::snorm3(gmag,gravity);
       else gravity[0] = gravity[1] = gravity[2] = 0.0;
       iarg += 5;
+
     } else if (strcmp(arg[iarg],"surfmax") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (surf->exist) 
@@ -1398,10 +1400,23 @@ void Update::global(int narg, char **arg)
       iarg += 2;
     } else if (strcmp(arg[iarg],"surfpush") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (strcmp(arg[iarg+1],"yes") == 0) surf->pushflag = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) surf->pushflag = 0;
-      else error->all(FLERR,"Illegal global command");
-      iarg += 2;
+      if (strcmp(arg[iarg+1],"yes") == 0) {
+        surf->pushflag = 1;
+        surf->pushlo = -1.0;
+        surf->pushhi = 1.0;
+        surf->pushvalue = 1.0;
+        iarg += 2;
+      } else {
+        if (iarg+4 > narg) error->all(FLERR,"Illegal global command");
+        surf->pushflag = 1;
+        surf->pushlo = input->numeric(FLERR,arg[iarg+1]);
+        surf->pushhi = input->numeric(FLERR,arg[iarg+2]);
+        surf->pushvalue = input->numeric(FLERR,arg[iarg+3]);
+        if (surf->pushlo > surf->pushhi) 
+          error->all(FLERR,"Illegal global command");
+        iarg += 4;
+      }
+
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       grid->cutoff = atof(arg[iarg+1]);
@@ -1410,6 +1425,7 @@ void Update::global(int narg, char **arg)
       // force ghost info to be regenerated with new cutoff
       grid->remove_ghosts();
       iarg += 2;
+
     } else if (strcmp(arg[iarg],"comm/sort") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"yes") == 0) comm->commsortflag = 1;
@@ -1429,6 +1445,7 @@ void Update::global(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"local") == 0) surf->tally_comm = TALLYLOCAL;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
+
     } else if (strcmp(arg[iarg],"weight") == 0) {
       // for now assume just one arg after "cell"
       // may need to generalize later

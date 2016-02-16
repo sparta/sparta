@@ -72,8 +72,10 @@ class Surf : protected Pointers {
   class SurfCollide **sc;   // list of surface collision models
   class SurfReact **sr;     // list of surface reaction models
 
-  int pushflag;             // 1 if push surf pts to cell surface, 0 if not
-   
+  int pushflag;             // set to 1 to push surf pts near grid cell faces
+  double pushlo,pushhi;     // lo/hi ranges to push on
+  double pushvalue;         // new position to push to
+
   Surf(class SPARTA *);
   ~Surf();
   void modify_params(int, char **);

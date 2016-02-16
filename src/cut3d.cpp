@@ -44,6 +44,12 @@ Cut3d::Cut3d(SPARTA *sparta) : Pointers(sparta)
   memory->create(path2,12,3,"cut3d:path2");
 
   pushflag = surf->pushflag;
+  if (pushflag) {
+    pushlo = surf->pushlo;
+    pushhi = surf->pushhi;
+    pushvalue = surf->pushvalue;
+  }
+
   npush = 0;
 
   // DEBUG
@@ -227,17 +233,6 @@ int Cut3d::clip(double *p0, double *p1, double *p2)
       p2[1] >= lo[1] && p2[1] <= hi[1] &&
       p2[2] >= lo[2] && p2[2] <= hi[2]) return 1;
 
-  // if requested, push tri pts from just outside cell surface to surface
-  // must be done now so to insure a tri slightly outside cell 
-  //   does not actually intersect cell when pushed in add_tris(),
-  //   else might not be added to list of surfs intersecting cell
-
-  if (pushflag % 2) {
-    push_to_cell(path1[0]);
-    push_to_cell(path1[1]);
-    push_to_cell(path1[2]);
-  }
-
   // clip tri against each of 6 grid face planes
 
   for (int dim = 0; dim < 3; dim++) {
@@ -285,7 +280,6 @@ int Cut3d::clip(double *p0, double *p1, double *p2)
    return # of clipped points, can be 0,1,2,3 up to 8 (I think)
    return clipped points in cpath as series of x,y,z triplets
    called externally, depends on no class variables
-   no push of tri points is done, since external caller uses true surface
    duplicate points in cpath are deleted
    uses Sutherland-Hodgman clipping algorithm
 ------------------------------------------------------------------------- */
@@ -519,12 +513,12 @@ void Cut3d::add_tris()
     memcpy(p2,pts[tri->p2].x,3*sizeof(double));
     memcpy(p3,pts[tri->p3].x,3*sizeof(double));
 
-    // if requested, push tri pts near cell surface to cell surface
+    // if requested, push tri pts near cell surface
 
     if (pushflag) {
-      npush += push_to_cell(p1);
-      npush += push_to_cell(p2);
-      npush += push_to_cell(p3);
+      npush += push(p1);
+      npush += push(p2);
+      npush += push(p3);
     }
 
     vert = &verts[nvert];
@@ -1883,14 +1877,10 @@ int Cut3d::ptflag(double *pt)
 }
 
 /* ----------------------------------------------------------------------
-   check if pt is within EPSCELL of cell surface
-   if so, push to cell surface
-   for pushflag = 1, can be inside or outside by EPSCELL
-   for pushflag = 2, only inside
-   for pushflag = 3, only outside
+   push point if near cell surface
 ------------------------------------------------------------------------- */
 
-int Cut3d::push_to_cell(double *pt)
+int Cut3d::push(double *pt)
 {
   double x = pt[0];
   double y = pt[1];
@@ -1899,78 +1889,16 @@ int Cut3d::push_to_cell(double *pt)
   double epsy = EPSCELL * (hi[1]-lo[1]);
   double epsz = EPSCELL * (hi[2]-lo[2]);
 
-  if (pushflag % 2) {
-    if (x < lo[0]-epsx || x > hi[0]+epsx || 
-        y < lo[1]-epsy || y > hi[1]+epsy || 
-        z < lo[2]-epsz || z > hi[2]+epsz) return 0;
-  } else {
-    if (x < lo[0] || x > hi[0] || y < lo[1] || y > hi[1] || 
-        z < lo[2] || z > hi[2]) return 0;
-  }
+  if (x < lo[0]-pushhi*epsx || x > hi[0]+pushhi*epsx || 
+      y < lo[1]-pushhi*epsy || y > hi[1]+pushhi*epsy ||
+      z < lo[2]-pushhi*epsz || z > hi[2]+pushhi*epsz) return 0;
 
-  if (pushflag == 1) {
-    if (fabs(x-lo[0]) < epsx || fabs(x-hi[0]) < epsx) {
-      if (y > lo[1]-epsy && y < hi[1]+epsy && 
-          z > lo[2]-epsz && z < hi[2]+epsz) {
-        if (fabs(x-lo[0]) < epsx) x = lo[0];
-        else x = hi[0];
-      }
-    }
-    if (fabs(y-lo[1]) < epsy || fabs(y-hi[1]) < epsy) {
-      if (x >= lo[0] && x <= hi[0] && z > lo[2]-epsz && z < hi[2]+epsz) {
-        if (fabs(y-lo[1]) < epsy) y = lo[1];
-        else y = hi[1];
-      }
-    }
-    if (fabs(z-lo[2]) < epsz || fabs(z-hi[2]) < epsz) {
-      if (x >= lo[0] && x <= hi[0] && y >= lo[1] && y <= hi[1]) {
-        if (fabs(z-lo[2]) < epsz) z = lo[2];
-        else z = hi[2];
-      }
-    }
-
-  } else if (pushflag == 2) {
-    if ((x >= lo[0] && x-lo[0] < epsx) || (x <= hi[0] && hi[0]-x < epsx)) {
-      if (y >= lo[1]-epsy && y <= hi[1]+epsy && 
-          z >= lo[2]-epsz && z <= hi[2]+epsz) {
-        if (x-lo[0] < epsx) x = lo[0];
-        else x = hi[0];
-      }
-    }
-    if ((y >= lo[1] && y-lo[1] < epsy) || (y <= hi[1] && hi[1]-y < epsy)) {
-      if (x >= lo[0] && x <= hi[0] && z > lo[2]-epsz && z < hi[2]+epsz) {
-        if (y-lo[1] < epsy) y = lo[1];
-        else y = hi[1];
-      }
-    }
-    if ((z >= lo[2] && z-lo[2] < epsz) || (z <= hi[2] && hi[2]-z < epsz)) {
-      if (x >= lo[0] && x <= hi[0] && y >= lo[1] && y <= hi[1]) {
-        if (z-lo[2] < epsz) z = lo[2];
-        else z = hi[2];
-      }
-    }
-
-  } else if (pushflag == 3) {
-    if ((x > lo[0]-epsx && x <= lo[0]) || (x < hi[0]+epsx && x >= hi[0])) {
-      if (y >= lo[1]-epsy && y <= hi[1]+epsy && 
-          z >= lo[2]-epsz && z <= hi[2]+epsz) {
-        if (x <= lo[0]) x = lo[0];
-        else x = hi[0];
-      }
-    }
-    if ((y > lo[1]-epsy && y <= lo[1]) || (y < hi[1]+epsy && y >= hi[1])) {
-      if (x >= lo[0] && x <= hi[0] && z > lo[2]-epsz && z < hi[2]+epsz) {
-        if (y <= lo[1]) y = lo[1];
-        else y = hi[1];
-      }
-    }
-    if ((z > lo[2]-epsz && z <= lo[2]) || (z < hi[2]+epsz && z >= hi[2])) {
-      if (x >= lo[0] && x <= hi[0] && y >= lo[1] && y <= hi[1]) {
-        if (z <= lo[2]) z = lo[2];
-        else z = hi[2];
-      }
-    }
-  }
+  if (x > lo[0]-pushhi*epsx && x < lo[0]-pushlo*epsx) x = lo[0]-pushvalue*epsx;
+  if (x > hi[0]+pushlo*epsx && x < hi[0]+pushhi*epsx) x = hi[0]+pushvalue*epsx;
+  if (y > lo[1]-pushhi*epsy && y < lo[1]-pushlo*epsy) y = lo[1]-pushvalue*epsy;
+  if (y > hi[1]+pushlo*epsy && y < hi[1]+pushhi*epsy) y = hi[1]+pushvalue*epsy;
+  if (z > lo[2]-pushhi*epsz && z < lo[2]-pushlo*epsz) z = lo[2]-pushvalue*epsz;
+  if (z > hi[2]+pushlo*epsz && z < hi[2]+pushhi*epsz) z = hi[2]+pushvalue*epsz;
 
   int flag = 0;
   if (x != pt[0] || y != pt[1] || z != pt[2]) {
