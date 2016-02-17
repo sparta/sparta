@@ -38,6 +38,8 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 #define DELTADELETE 1024
 #define DELTAELECTRON 128
 
+#define BIG 1.0e20
+
 /* ---------------------------------------------------------------------- */
 
 Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
@@ -85,6 +87,11 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   maxelectron = 0;
   elist = NULL;
 
+  // used if near-neighbor model is invoked
+
+  max_nn = 1024;
+  memory->create(nn_last_partner,max_nn,"collide:nn_last_partner");
+
   // initialize counters in case stats outputs them
 
   ncollide_one = nattempt_one = nreact_one = 0;
@@ -113,6 +120,7 @@ Collide::~Collide()
   memory->destroy(vremax);
   memory->destroy(vremax_initial);
   memory->destroy(remain);
+  memory->destroy(nn_last_partner);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -358,6 +366,12 @@ void Collide::collisions_one()
   for (int icell = 0; icell < nglocal; icell++) {
     np = cinfo[icell].count;
     if (np <= 1) continue;
+
+    if (nearcp) {
+      if (np > max_nn) realloc_nn(np);
+      memset(nn_last_partner,0,np*sizeof(int));
+    }
+
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
 
@@ -390,7 +404,7 @@ void Collide::collisions_one()
 
     for (k = 0; k < nattempt; k++) {
       i = np * random->uniform();
-      if (nearcp > 0) j = find_j(i,np);
+      if (nearcp) j = find_nn(i,np);
       else {
         j = np * random->uniform();
         while (i == j) j = np * random->uniform();
@@ -404,6 +418,12 @@ void Collide::collisions_one()
       // continue to next collision if no reaction
 
       if (!test_collision(icell,0,0,ipart,jpart)) continue;
+
+      if (nearcp) {
+        nn_last_partner[i] = j+1;
+        nn_last_partner[j] = i+1;
+      }
+
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
@@ -420,8 +440,9 @@ void Collide::collisions_one()
           memory->grow(dellist,maxdelete,"collide:dellist");
         }
         dellist[ndelete++] = plist[j];
-        plist[j] = plist[np-1];
         np--;
+        plist[j] = plist[np];
+        if (nearcp) nn_last_partner[j] = nn_last_partner[np];
         if (np < 2) break;
       }
       
@@ -434,6 +455,7 @@ void Collide::collisions_one()
           npmax = np + DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
         }
+        if (nearcp) set_nn(np);
         plist[np++] = particle->nlocal-1;
         particles = particle->particles;
       }
@@ -527,12 +549,9 @@ void Collide::collisions_group()
 
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
-        if (nearcp) j = find_j_group(i,*nj,ilist,jlist);
-        else {
-          j = *nj * random->uniform();
-          if (igroup == jgroup)
-            while (i == j) j = *nj * random->uniform();
-        } 
+        j = *nj * random->uniform();
+        if (igroup == jgroup)
+          while (i == j) j = *nj * random->uniform();
 
 	ipart = &particles[ilist[i]];
 	jpart = &particles[jlist[j]];
@@ -720,11 +739,8 @@ void Collide::collisions_one_ambipolar()
 
     for (k = 0; k < nattempt; k++) {
       i = np * random->uniform();
-      if (nearcp > 0) j = find_j_ambi(i,np);
-      else {
-        j = np * random->uniform();
-        while (i == j) j = np * random->uniform();
-      }
+      j = np * random->uniform();
+      while (i == j) j = np * random->uniform();
 
       // plist index >= 0 for particles array
       // plist index < 0 for electron array
@@ -1006,12 +1022,9 @@ void Collide::collisions_group_ambipolar()
         if (ilist[i] >= 0) ipart = &particles[ilist[i]];
         else ipart = &elist[-ilist[i]-1];
 
-        if (nearcp > 0) j = find_j_group_ambi(i,*nj,ilist,jlist);
-        else {
-          j = *nj * random->uniform();
-          if (igroup == jgroup)
-            while (i == j) j = *nj * random->uniform();
-        }
+        j = *nj * random->uniform();
+        if (igroup == jgroup)
+          while (i == j) j = *nj * random->uniform();
 
         // ilist/jlist indices >= 0 for particles array
         // ilist/jlist indices < 0 for electron array
@@ -1447,180 +1460,104 @@ void Collide::grow_percell(int n)
 }
 
 /* ----------------------------------------------------------------------
-   find J collision partner for near neighbor algorithm
-   single group collisions
+   for particle I, find collision partner J via near neighbor algorithm
+   always returns a J neighbor, even if not that near
+   near neighbor algorithm: 
+     check up to nearlimit particles, starting with random particle
+     as soon as find one within distance moved by particle I, return it
+     else return the closest one found
+     also exclude an I,J pair if both most recently collided with each other
+   this version is for single group collisions
 ------------------------------------------------------------------------- */
 
-int Collide::find_j(int i, int np)
+int Collide::find_nn(int i, int np)
 {
-  int j=0, count=0,jj=0;
-  int localimit;
-  Particle::OnePart *ipart, *jpart;
+  int jneigh;
+  double dx,dy,dz,rsq;
+  double *xj;
+
+  // if np = 2, just return J = non-I particle
+  // np is never < 2
+
+  if (np == 2) return (i+1) % 2;
+
+  Particle::OnePart *ipart,*jpart;
   Particle::OnePart *particles = particle->particles;
   double dt = update->dt;
   
+  // thresh = distance particle I moves in this timestep
+
   ipart = &particles[plist[i]];
   double *vi = ipart->v;
   double *xi = ipart->x;
-  double dis =  dt*dt*(vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
-  
-  double sep=0.0;
-  double minsep=1.0E6;
-  localimit = nearlimit;
-  if (localimit > np-1) localimit = np-1;
-    
-  j = np * random->uniform();
+  double threshsq =  dt*dt * (vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
+  double minrsq = BIG;
+
+  // nlimit = max # of J candidates to consider
+
+  int nlimit = MIN(nearlimit,np-1);
+  int count = 0;
+
+  // pick a random starting J
+
+  int j = np * random->uniform();
   while (i == j) j = np * random->uniform();
 
   do {
     count++;
-    if ( j >= np-1 ) j = 0;
+
+    // skip this J if I,J last collided with each other
+
+    if (nn_last_partner[i] == j+1 && nn_last_partner[j] == i+1) {
+      j++;
+      if (j == np) j = 0;
+      continue;
+    }
+
+    // rsq = squared distance between particles I and J
+    // if rsq = 0.0, skip this J
+    //   could be I = J, or a cloned J at same position as I
+
     jpart = &particles[plist[j]];
-    double *xj = jpart->x;
-    sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
-           (xi[1]-xj[1])*(xi[1]-xj[1]) +
-           (xi[2]-xj[2])*(xi[2]-xj[2]));
-    
-    if (sep < minsep && sep > 0.0) {
-      minsep = sep;
-      jj = j;
+    xj = jpart->x;
+    dx = xi[0] - xj[0];
+    dy = xi[1] - xj[1];
+    dz = xi[2] - xj[2];
+    rsq = dx*dx + dy*dy + dz*dz;
+    if (rsq < minrsq && rsq > 0.0) {
+      minrsq = rsq;
+      jneigh = j;
     }
     j++;
-  } while (sep > dis && count < localimit); 
+    if (j == np) j = 0;
+  } while (rsq > threshsq && count < nlimit); 
 
-  return jj;
+  return jneigh;
 }
 
 /* ----------------------------------------------------------------------
-   find J collision partner for near neighbor algorithm
-   multi group collisions
+   reallocate the nn_last_partner vector to allow for N values
+   increase size by multiples of 2x
 ------------------------------------------------------------------------- */
 
-int Collide::find_j_group(int i, int np, int *ilist, int *jlist)
+void Collide::realloc_nn(int n)
 {
-  int j=0, count=0,jj=0;
-  int localimit;
-  Particle::OnePart *ipart, *jpart;
-  Particle::OnePart *particles = particle->particles;
-  double dt = update->dt;
-
-  ipart = &particles[ilist[i]];
-  double *vi = ipart->v;
-  double *xi = ipart->x;
-  double dis =  dt*dt*(vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
-
-  double sep=0.0;
-  double minsep=1.0E6;
-  j = np * random->uniform();
-
-  localimit = nearlimit;
-  if (localimit > np-1) localimit = np;
-  do {
-    count++;
-    if ( j > np-1 ) j = 0;
-    jpart = &particles[jlist[j]];
-    double *xj = jpart->x;
-    sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
-           (xi[1]-xj[1])*(xi[1]-xj[1]) +
-           (xi[2]-xj[2])*(xi[2]-xj[2]));
-    if (sep < minsep && sep > 0.0) {
-      minsep = sep;
-      jj = j;
-    }
-    j++;
-  } while (sep > dis && count <= localimit); 
-
- return jj;
+  while (n > max_nn) max_nn *= 2;
+  memory->destroy(nn_last_partner);
+  memory->create(nn_last_partner,max_nn,"collide:nn_last_partner");
 }
 
-/* ----------------------------------------------------------------------
-   find J collision partner for near neighbor algorithm
-   single group collisions for ambipolar model
-------------------------------------------------------------------------- */
-
-int Collide::find_j_ambi(int i, int np)
-{
-  int j=0, count=0,jj=0;
-  int localimit;
-  Particle::OnePart *ipart, *jpart;
-  Particle::OnePart *particles = particle->particles;
-  double dt = update->dt;
-  
-  if (plist[i] >= 0) ipart = &particles[plist[i]];
-  else ipart = &elist[-plist[i]-1];
-  double *vi = ipart->v;
-  double *xi = ipart->x;
-  double dis =  dt*dt*(vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
-
-  double sep=0.0;
-  double minsep=1.0E6;
-  localimit = nearlimit;
-  if (localimit > np-1) localimit = np-1;
-
-  j = np * random->uniform();
-  while (i == j) j = np * random->uniform();
-
-  do {
-    count++;
-    if ( j >= np-1 ) j = 0;
-    if (plist[j] >= 0) jpart = &particles[plist[j]];
-    else jpart = &elist[-plist[j]-1];
-    double *xj = jpart->x;
-    sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
-           (xi[1]-xj[1])*(xi[1]-xj[1]) +
-           (xi[2]-xj[2])*(xi[2]-xj[2]));
-    
-    if (sep < minsep && sep > 0.0) {
-      minsep = sep;
-      jj = j;
-    }
-    j++;
-  } while (sep > dis && count < localimit); 
-
- return jj;
-}
 
 /* ----------------------------------------------------------------------
-   find J collision partner for near neighbor algorithm
-   multi group collisions for ambipolar model
+   set nn_last_partner[I] = 0 for newly created particle
+   grow the vector if necessary
 ------------------------------------------------------------------------- */
 
-int Collide::find_j_group_ambi(int i, int np, int *ilist, int *jlist)
+void Collide::set_nn(int i)
 {
-  int j=0, count=0,jj=0;
-  int localimit;
-  Particle::OnePart *ipart, *jpart;
-  Particle::OnePart *particles = particle->particles;
-  double dt = update->dt;
-
-  if (ilist[i] >= 0) ipart = &particles[ilist[i]];
-  else ipart = &elist[-ilist[i]-1];
-
-  double *vi = ipart->v;
-  double *xi = ipart->x;
-  double dis =  dt*dt*(vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
-  
-  double sep=0.0;
-  double minsep=1.0E6;
-  j = np * random->uniform();
-
-  localimit = nearlimit;
-  if (localimit > np) localimit = np;
-  do {
-    count++;
-    if ( j > np-1 ) j = 0;
-    if (jlist[j] >= 0) jpart = &particles[jlist[j]];
-    else jpart = &elist[-jlist[j]-1];
-    double *xj = jpart->x;
-    sep = ((xi[0]-xj[0])*(xi[0]-xj[0]) +
-           (xi[1]-xj[1])*(xi[1]-xj[1]) +
-           (xi[2]-xj[2])*(xi[2]-xj[2]));
-    if (sep < minsep && sep > 0.0) {
-      minsep = sep;
-      jj = j;
-    }
-    j++;
-  } while (sep > dis && count <= localimit); 
-
- return jj;
+  if (i == max_nn) {
+    max_nn *= 2;
+    memory->grow(nn_last_partner,max_nn,"collide:nn_last_partner");
+  }
+  nn_last_partner[i] = 0;
 }

@@ -73,6 +73,10 @@ class Collide : protected Pointers {
   int **gpair;        // Nx3 list of species pairs to do collisions for
                       // 0 = igroup, 1 = jgroup, 2 = # of attempt collisions
 
+  int max_nn;             // allocated size of nn_last_partner
+  int *nn_last_partner;   // index+1 of last collision partner for each particle
+                          // 0 = no collision yet (on this step)
+
   int ndelete,maxdelete;      // # of particles removed by chemsitry
   int *dellist;               // list of particle indices to delete
 
@@ -121,10 +125,9 @@ class Collide : protected Pointers {
   void ambi_check();
   void grow_percell(int);
 
-  int find_j(int, int);
-  int find_j_group(int , int ,  int *, int *);
-  int find_j_ambi(int, int);
-  int find_j_group_ambi(int, int, int *, int *);
+  int find_nn(int, int);
+  void realloc_nn(int);
+  void set_nn(int);
 };
 
 }
