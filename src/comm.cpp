@@ -280,11 +280,13 @@ void Comm::migrate_cells(int nmigrate)
 
   // compress my list of owned grid cells to remove migrated cells
   // compress particle list to remove particles in migrating cells
+  // unset particle sorted since compress_rebalance() does
+  //   and may receive particles which will then be unsorted
 
   if (nmigrate) {
     grid->compress();
     particle->compress_rebalance();
-  }
+  } else particle->sorted = 0;
 
   // create irregular communication plan with variable size datums
   // nrecv = # of incoming grid cells
