@@ -76,19 +76,22 @@ The {nearcp} keyword stands for "near collision partner" and affects
 how collision partners are selected.  If {no} is specified, which is
 the default, then collision partner pairs are selected randomly from
 all particles in the grid cell.  In this case the {Nlimit} parameter
-is ignored, though it must still be specfied.  If {yes} is specified,
-then the first collision partner is selcted randomly from all
-particles in the grid cell.  A distance R that the first particle
-could move is calcuated based on the timestep and the particle's
-velocity.  The second collision particle is selected randomly from all
-other particles in the grid cell that are within a distance R from the
-first particle.  This is done by looping over all the other particles
-in the cell.  To avoid costly searches when there are many particles
-in a cell, the specified {Nlimit} parameter is used to limit the
-number of particles that are looped over to at most {Nlimit}.  If no
-second particle inside the sphere of radius R is found, then the
-closest particle is selected.  The convergence properties of this
-algorithm are described in "(Gallis11)"_#Gallis11.
+is ignored, though it must still be specfied.  
+
+If {yes} is specified, then up to {Nlimit} collision partners are
+considered for each collision.  The first partner I is chosen randomly
+from all particles in the grid cell.  A distance R that pariticle I
+moves in that timestep is calculated, based on its velocity.  {Nlimit}
+possible collision partners J are examined, starting at a random J.
+If one of them is within a distance R of particle I, it is immediately
+selected as the collision partner.  If none of the {Nlimit} particles
+are within a distance R, the closest J particle to I is selected.  An
+exception to these rules is that a particle J is not considered for a
+collision if the most recent collision partners for I and J (in the
+current timestep) were each other.  The convergence properties of this
+near-neighbor algorithm are described in "(Gallis11)"_#Gallis11.  Note
+that choosing {Nlimit} judiciously will avoid costly searches when
+there are large numbers of particles in some or all grid cells.
 
 If the {ambipolar} keyword is set to {yes}, then collisions within a
 grid cell with use the ambipolar approximation.  This requires use of
