@@ -95,6 +95,7 @@ FixEmitSurf::~FixEmitSurf()
     delete [] tasks[i].fracarea;
   }
   memory->sfree(tasks);
+  memory->destroy(activecell);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -204,7 +205,7 @@ void FixEmitSurf::init()
 
 int FixEmitSurf::create_task(int icell)
 {
-  int i,m,isurf,isp,npoint,isplit;
+  int i,m,isurf,isp,npoint,isplit,subcell;
   double indot,area,areaone,ntargetsp;
   double *normal,*p1,*p2,*p3,*path;
   double cpath[36],delta[3],e1[3],e2[3];
@@ -250,7 +251,8 @@ int FixEmitSurf::create_task(int icell)
     if (cells[icell].nsplit == 1) tasks[ntask].pcell = icell;
     else {
       isplit = cells[icell].isplit;
-      tasks[ntask].pcell = sinfo[isplit].csubs[i];
+      subcell = sinfo[isplit].csplits[i];
+      tasks[ntask].pcell = sinfo[isplit].csubs[subcell];
     }
     
     // set geometry-dependent params of task
@@ -386,7 +388,7 @@ int FixEmitSurf::create_task(int icell)
     
     ntask++;
   }
-  
+
   // return # of tasks for this cell
   
   return ntask-ntaskorig;
@@ -718,7 +720,7 @@ void FixEmitSurf::subsonic_sort()
     cinfo[icell].first = -1;
     cinfo[icell].count = 0;
   }
-  
+
   // reallocate particle next list if necessary
   
   particle->sort_allocate();
@@ -791,8 +793,9 @@ void FixEmitSurf::subsonic_grid()
     masstot = gamma = 0.0;
     
     ip = cinfo[icell].first;
+
     while (ip >= 0) {
-      ispecies = particles[i].ispecies;
+      ispecies = particles[ip].ispecies;
       mass = species[ispecies].mass;
       v = particles[ip].v;
       mv[0] += mass*v[0];
@@ -803,7 +806,7 @@ void FixEmitSurf::subsonic_grid()
       gamma += 1.0 + 2.0 / (3.0 + species[ispecies].rotdof);
       ip = next[ip];
     }
-    
+
     // compute/store nrho, 3 temps, vstream for task
     // also vscale for PONLY
     // if sound speed = 0.0 due to <= 1 particle in cell or 
@@ -873,7 +876,7 @@ void FixEmitSurf::subsonic_grid()
     tasks[i].temp_rot = tasks[i].temp_vib = temp_thermal_cell;
   }
 
-  // test if any task has invalid thermal temperature
+  // test if any task has invalid thermal temperature for first time
 
   if (!subsonic_warning)
     subsonic_warning = subsonic_temperature_check(temp_exceed_flag,tempmax);
@@ -967,7 +970,8 @@ int FixEmitSurf::unpack_task(char *buf, int icell)
     for (i = 0; i < nsurf; i++)
       if (csurfs[i] == isurf) break;
     int isplit = cells[icell].isplit;
-    tasks[ntask].pcell = sinfo[isplit].csubs[i];
+    int subcell = sinfo[isplit].csplits[i];
+    tasks[ntask].pcell = sinfo[isplit].csubs[subcell];
   }
   
   ntask++;
@@ -1071,8 +1075,8 @@ void FixEmitSurf::grow_task()
    reset pcell for all compress task entries
    called from Grid::compress() after grid cells have been compressed
    wait to do this until now b/c split cells and their sinfo
-   are setup in Grid::compress() between compress_grid() 
-   and post_compress_grid()
+     are setup in Grid::compress() between compress_grid() 
+     and post_compress_grid()
 ------------------------------------------------------------------------- */
 
 void FixEmitSurf::post_compress_grid()
@@ -1091,7 +1095,8 @@ void FixEmitSurf::post_compress_grid()
       for (j = 0; j < nsurf; j++)
         if (csurfs[j] == isurf) break;
       int isplit = cells[icell].isplit;
-      tasks[i].pcell = sinfo[isplit].csubs[j];
+      int subcell = sinfo[isplit].csplits[j];
+      tasks[i].pcell = sinfo[isplit].csubs[subcell];
     }
   }
 }

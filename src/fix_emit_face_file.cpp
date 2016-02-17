@@ -1175,7 +1175,7 @@ void FixEmitFaceFile::subsonic_grid()
 
     ip = cinfo[icell].first;
     while (ip >= 0) {
-      ispecies = particles[i].ispecies;
+      ispecies = particles[ip].ispecies;
       mass = species[ispecies].mass;
       v = particles[ip].v;
       mv[0] += mass*v[0];
