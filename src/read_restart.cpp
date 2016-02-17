@@ -173,7 +173,7 @@ void ReadRestart::command(int narg, char **arg)
 
   // read per-proc info, grid cells and particles
 
-  int n,flag,value,tmp;
+  int n,flag,value,tmp,procmatch_check,procmatch;
   long filepos;
   MPI_Status status;
   MPI_Request request;
@@ -191,6 +191,7 @@ void ReadRestart::command(int narg, char **arg)
   //   assigns all particles to its cells
 
   particle->exist = 1;
+  procmatch_check = 0;
 
   if (multiproc == 0 && nprocs_file == nprocs) {
 
@@ -338,9 +339,10 @@ void ReadRestart::command(int narg, char **arg)
   else {
 
     // nclusterprocs = # of procs in my cluster that read from one file
-    // filewriter = 1 if this proc reads file, else 0
+    // filereader = 1 if this proc reads file, else 0
     // fileproc = ID of proc in my cluster who reads from file
     // clustercomm = MPI communicator within my cluster of procs
+    // procmatch = 1 if each proc in cluster gets one chunk
 
     int nfile = multiproc_file;
     int icluster = static_cast<int> ((bigint) me * nfile/nprocs);
@@ -381,6 +383,10 @@ void ReadRestart::command(int narg, char **arg)
       fread(&procsperfile,sizeof(int),1,fp);
     }
     MPI_Bcast(&procsperfile,1,MPI_INT,0,clustercomm);
+
+    procmatch_check = 1;
+    if (procsperfile == nclusterprocs) procmatch = 1;
+    else procmatch = 0;
 
     int tmp,iproc;
     MPI_Status status;
@@ -445,10 +451,19 @@ void ReadRestart::command(int narg, char **arg)
   grid->setup_owned();
 
   // clumped decomposition is maintained (if original file had it)
-  //   for all reading methods above where nprocs_file = current nprocs
-  // no longer clumped if reading on different # of procs
+  //   if nprocs_file = current nprocs
+  //   and each proc ends up being receiving one chunk
+  // for case of procmatch_check = 1, must verify
+  //   that each cluster of procs that read one file
+  //   read matching # of per-proc chunks in that file,
+  //   do this check via MPI_Allreduce()
 
   if (nprocs_file != nprocs) grid->clumped = 0;
+  else if (procmatch_check) {
+    int allcheck;
+    MPI_Allreduce(&procmatch,&allcheck,1,MPI_INT,MPI_MIN,world);
+    if (allcheck == 0) grid->clumped = 0;
+  }
 
   // check that all grid cells and particles were assigned to procs
   // print stats on grid cells, particles, surfs
