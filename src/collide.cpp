@@ -89,8 +89,10 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   // used if near-neighbor model is invoked
 
-  max_nn = 1024;
+  max_nn = 1;
   memory->create(nn_last_partner,max_nn,"collide:nn_last_partner");
+  memory->create(nn_last_partner_igroup,max_nn,"collide:nn_last_partner");
+  memory->create(nn_last_partner_jgroup,max_nn,"collide:nn_last_partner");
 
   // initialize counters in case stats outputs them
 
@@ -127,6 +129,12 @@ Collide::~Collide()
 
 void Collide::init()
 {
+  // error check
+
+  if (ambiflag && nearcp) 
+    error->all(FLERR,"Ambipolar collision model does not yet support "
+               "near-neighbor collisions");
+
   // require mixture to contain all species
 
   int imix = particle->find_mixture(mixID);
@@ -323,8 +331,13 @@ void Collide::collisions()
   // one variant is optimized for a single group
 
   if (!ambiflag) {
-    if (ngroups == 1) collisions_one();
-    else collisions_group();
+    if (nearcp == 0) {
+      if (ngroups == 1) collisions_one<0>();
+      else collisions_group<0>();
+    } else {
+      if (ngroups == 1) collisions_one<1>();
+      else collisions_group<1>();
+    }
   } else {
     if (ngroups == 1) collisions_one_ambipolar();
     else collisions_group_ambipolar();
@@ -349,7 +362,7 @@ void Collide::collisions()
    NTC algorithm for a single group
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_one()
+template < int NEARCP > void Collide::collisions_one()
 {
   int i,j,k,n,ip,np;
   int nattempt,reactflag;
@@ -367,8 +380,8 @@ void Collide::collisions_one()
     np = cinfo[icell].count;
     if (np <= 1) continue;
 
-    if (nearcp) {
-      if (np > max_nn) realloc_nn(np);
+    if (NEARCP) {
+      if (np > max_nn) realloc_nn(np,nn_last_partner);
       memset(nn_last_partner,0,np*sizeof(int));
     }
 
@@ -404,7 +417,7 @@ void Collide::collisions_one()
 
     for (k = 0; k < nattempt; k++) {
       i = np * random->uniform();
-      if (nearcp) j = find_nn(i,np);
+      if (NEARCP) j = find_nn(i,np);
       else {
         j = np * random->uniform();
         while (i == j) j = np * random->uniform();
@@ -419,7 +432,7 @@ void Collide::collisions_one()
 
       if (!test_collision(icell,0,0,ipart,jpart)) continue;
 
-      if (nearcp) {
+      if (NEARCP) {
         nn_last_partner[i] = j+1;
         nn_last_partner[j] = i+1;
       }
@@ -442,7 +455,7 @@ void Collide::collisions_one()
         dellist[ndelete++] = plist[j];
         np--;
         plist[j] = plist[np];
-        if (nearcp) nn_last_partner[j] = nn_last_partner[np];
+        if (NEARCP) nn_last_partner[j] = nn_last_partner[np];
         if (np < 2) break;
       }
       
@@ -455,7 +468,7 @@ void Collide::collisions_one()
           npmax = np + DELTAPART;
           memory->grow(plist,npmax,"collide:plist");
         }
-        if (nearcp) set_nn(np);
+        if (NEARCP) set_nn(np);
         plist[np++] = particle->nlocal-1;
         particles = particle->particles;
       }
@@ -468,11 +481,12 @@ void Collide::collisions_one()
    pre-compute # of attempts per group pair
 ------------------------------------------------------------------------- */
 
-void Collide::collisions_group()
+template < int NEARCP > void Collide::collisions_group()
 {
-  int i,j,k,ip,np,isp,ipair,igroup,jgroup,newgroup;
+  int i,j,k,n,ip,np,isp,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
+  int *nn_igroup,*nn_jgroup;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
 
@@ -503,6 +517,15 @@ void Collide::collisions_group()
       }
       glist[igroup][ngroup[igroup]++] = ip;
       ip = next[ip];
+    }
+
+    if (NEARCP) {
+      ngmax = 0;
+      for (i = 0; i < ngroups; i++) ngmax = MAX(ngmax,ngroup[i]);
+      if (ngmax > max_nn) {
+        realloc_nn(ngmax,nn_last_partner_igroup);
+        realloc_nn(ngmax,nn_last_partner_jgroup);
+      }
     }
 
     // attempt = exact collision attempt count for a pair of groups
@@ -547,11 +570,22 @@ void Collide::collisions_group()
       if (*ni == 0 || *nj == 0) continue;
       if (igroup == jgroup && *ni == 1) continue;
 
+      if (NEARCP) {
+        nn_igroup = nn_last_partner_igroup;
+        if (igroup == jgroup) nn_jgroup = nn_last_partner_igroup;
+        else nn_jgroup = nn_last_partner_jgroup;
+        memset(nn_igroup,0,(*ni)*sizeof(int));
+        if (igroup != jgroup) memset(nn_jgroup,0,(*nj)*sizeof(int));
+      }
+
       for (k = 0; k < nattempt; k++) {
 	i = *ni * random->uniform();
-        j = *nj * random->uniform();
-        if (igroup == jgroup)
-          while (i == j) j = *nj * random->uniform();
+        if (NEARCP) j = find_nn_group(i,ilist,*nj,jlist,nn_igroup,nn_jgroup);
+        else {
+          j = *nj * random->uniform();
+          if (igroup == jgroup)
+            while (i == j) j = *nj * random->uniform();
+        }
 
 	ipart = &particles[ilist[i]];
 	jpart = &particles[jlist[j]];
@@ -561,6 +595,12 @@ void Collide::collisions_group()
         // continue to next collision if no reaction
 
 	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
+
+        if (NEARCP) {
+          nn_igroup[i] = j+1;
+          nn_jgroup[j] = i+1;
+        }
+
 	setup_collision(ipart,jpart);
 	reactflag = perform_collision(ipart,jpart,kpart);
 	ncollide_one++;
@@ -605,8 +645,9 @@ void Collide::collisions_group()
             memory->grow(dellist,maxdelete,"collide:dellist");
           }
           dellist[ndelete++] = jlist[j];
-	  jlist[j] = jlist[*nj-1];
 	  (*nj)--;
+	  jlist[j] = jlist[*nj];
+          if (NEARCP) nn_jgroup[j] = nn_jgroup[*nj];
 	  if (*nj <= 1) {
 	    if (*nj == 0) break;
 	    if (igroup == jgroup) break;
@@ -620,6 +661,19 @@ void Collide::collisions_group()
 
 	if (kpart) {
 	  newgroup = species2group[kpart->ispecies];
+
+          if (NEARCP) {
+            if (newgroup == igroup || newgroup == jgroup) {
+              n = ngroup[newgroup];
+              set_nn_group(n);
+              nn_igroup = nn_last_partner_igroup;
+              if (igroup == jgroup) nn_jgroup = nn_last_partner_igroup;
+              else nn_jgroup = nn_last_partner_jgroup;
+              nn_igroup[n] = 0;
+              nn_jgroup[n] = 0;
+            }
+          }
+
 	  addgroup(newgroup,particle->nlocal-1);
           ilist = glist[igroup];
           jlist = glist[jgroup];
@@ -1536,28 +1590,117 @@ int Collide::find_nn(int i, int np)
 }
 
 /* ----------------------------------------------------------------------
-   reallocate the nn_last_partner vector to allow for N values
+   for particle I, find collision partner J via near neighbor algorithm
+   always returns a J neighbor, even if not that near
+   same near neighbor algorithm as in find_nn()
+     looking for J particles in jlist of length Np
+     ilist = jlist when igroup = jgroup
+   this version is for multi group collisions
+------------------------------------------------------------------------- */
+
+int Collide::find_nn_group(int i, int *ilist, int np, int *jlist, 
+                           int *nn_igroup, int *nn_jgroup)
+{
+  int jneigh;
+  double dx,dy,dz,rsq;
+  double *xj;
+
+  // if ilist = jlist and np = 2, just return J = non-I particle
+  // np is never < 2 for ilist = jlist
+  // np is never < 1 for ilist != jlist
+
+  if (ilist == jlist && np == 2) return (i+1) % 2;
+
+  Particle::OnePart *ipart,*jpart;
+  Particle::OnePart *particles = particle->particles;
+  double dt = update->dt;
+  
+  // thresh = distance particle I moves in this timestep
+
+  ipart = &particles[ilist[i]];
+  double *vi = ipart->v;
+  double *xi = ipart->x;
+  double threshsq =  dt*dt * (vi[0]*vi[0]+vi[1]*vi[1]+vi[2]*vi[2]);
+  double minrsq = BIG;
+
+  // nlimit = max # of J candidates to consider
+
+  int nlimit = MIN(nearlimit,np-1);
+  int count = 0;
+
+  // pick a random starting J
+
+  int j = np * random->uniform();
+  if (ilist == jlist) 
+    while (i == j) j = np * random->uniform();
+
+  do {
+    count++;
+
+    // skip this J if I,J last collided with each other
+
+    if (nn_igroup[i] == j+1 && nn_jgroup[j] == i+1) {
+      j++;
+      if (j == np) j = 0;
+      continue;
+    }
+
+    // rsq = squared distance between particles I and J
+    // if rsq = 0.0, skip this J
+    //   could be I = J, or a cloned J at same position as I
+
+    jpart = &particles[plist[j]];
+    xj = jpart->x;
+    dx = xi[0] - xj[0];
+    dy = xi[1] - xj[1];
+    dz = xi[2] - xj[2];
+    rsq = dx*dx + dy*dy + dz*dz;
+    if (rsq < minrsq && rsq > 0.0) {
+      minrsq = rsq;
+      jneigh = j;
+    }
+    j++;
+    if (j == np) j = 0;
+  } while (rsq > threshsq && count < nlimit); 
+
+  return jneigh;
+}
+
+/* ----------------------------------------------------------------------
+   reallocate a nn_last_partner vector to allow for N values
    increase size by multiples of 2x
 ------------------------------------------------------------------------- */
 
-void Collide::realloc_nn(int n)
+void Collide::realloc_nn(int n, int *vec)
 {
   while (n > max_nn) max_nn *= 2;
-  memory->destroy(nn_last_partner);
-  memory->create(nn_last_partner,max_nn,"collide:nn_last_partner");
+  memory->destroy(vec);
+  memory->create(vec,max_nn,"collide:nn_last_partner");
 }
 
-
 /* ----------------------------------------------------------------------
-   set nn_last_partner[I] = 0 for newly created particle
+   set nn_last_partner[N] = 0 for newly created particle
    grow the vector if necessary
 ------------------------------------------------------------------------- */
 
-void Collide::set_nn(int i)
+void Collide::set_nn(int n)
 {
-  if (i == max_nn) {
+  if (n == max_nn) {
     max_nn *= 2;
     memory->grow(nn_last_partner,max_nn,"collide:nn_last_partner");
   }
-  nn_last_partner[i] = 0;
+  nn_last_partner[n] = 0;
+}
+
+/* ----------------------------------------------------------------------
+   grow the group last parnter vectors if necessary
+------------------------------------------------------------------------- */
+
+void Collide::set_nn_group(int n)
+{
+  if (n == max_nn) {
+    max_nn *= 2;
+    memory->grow(nn_last_partner_igroup,max_nn,"collide:nn_last_partner");
+    memory->grow(nn_last_partner_jgroup,max_nn,"collide:nn_last_partner");
+  }
 }

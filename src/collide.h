@@ -76,6 +76,8 @@ class Collide : protected Pointers {
   int max_nn;             // allocated size of nn_last_partner
   int *nn_last_partner;   // index+1 of last collision partner for each particle
                           // 0 = no collision yet (on this step)
+  int *nn_last_partner_igroup;   // ditto for igroup and jgroup particles
+  int *nn_last_partner_jgroup;
 
   int ndelete,maxdelete;      // # of particles removed by chemsitry
   int *dellist;               // list of particle indices to delete
@@ -116,8 +118,8 @@ class Collide : protected Pointers {
     glist[igroup][ngroup[igroup]++] = n;
   }
 
-  void collisions_one();
-  void collisions_group();
+  template < int > void collisions_one();
+  template < int > void collisions_group();
   void collisions_one_ambipolar();
   void collisions_group_ambipolar();
   void ambi_reset(int, int, int, int, Particle::OnePart *, Particle::OnePart *, 
@@ -126,8 +128,10 @@ class Collide : protected Pointers {
   void grow_percell(int);
 
   int find_nn(int, int);
-  void realloc_nn(int);
+  int find_nn_group(int, int *, int, int *, int *, int *);
+  void realloc_nn(int, int *);
   void set_nn(int);
+  void set_nn_group(int);
 };
 
 }
