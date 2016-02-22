@@ -123,6 +123,8 @@ Collide::~Collide()
   memory->destroy(vremax_initial);
   memory->destroy(remain);
   memory->destroy(nn_last_partner);
+  memory->destroy(nn_last_partner_igroup);
+  memory->destroy(nn_last_partner_jgroup);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1553,11 +1555,14 @@ int Collide::find_nn(int i, int np)
   int count = 0;
 
   // pick a random starting J
+  // jneigh = collision partner when exit loop
+  //   set to initial J as default in case no Nlimit J meets criteria
 
   int j = np * random->uniform();
   while (i == j) j = np * random->uniform();
+  jneigh = j;
 
-  do {
+  while (count < nlimit) {
     count++;
 
     // skip this J if I,J last collided with each other
@@ -1571,6 +1576,8 @@ int Collide::find_nn(int i, int np)
     // rsq = squared distance between particles I and J
     // if rsq = 0.0, skip this J
     //   could be I = J, or a cloned J at same position as I
+    // if rsq <= threshsq, this J is collision partner
+    // if rsq = smallest yet seen, this J is tentative collision partner
 
     jpart = &particles[plist[j]];
     xj = jpart->x;
@@ -1578,13 +1585,21 @@ int Collide::find_nn(int i, int np)
     dy = xi[1] - xj[1];
     dz = xi[2] - xj[2];
     rsq = dx*dx + dy*dy + dz*dz;
-    if (rsq < minrsq && rsq > 0.0) {
-      minrsq = rsq;
-      jneigh = j;
+
+    if (rsq > 0.0) {
+      if (rsq <= threshsq) {
+        jneigh = j;
+        break;
+      }
+      if (rsq < minrsq) {
+        minrsq = rsq;
+        jneigh = j;
+      }
     }
+
     j++;
     if (j == np) j = 0;
-  } while (rsq > threshsq && count < nlimit); 
+  }
 
   return jneigh;
 }
@@ -1629,12 +1644,15 @@ int Collide::find_nn_group(int i, int *ilist, int np, int *jlist,
   int count = 0;
 
   // pick a random starting J
+  // jneigh = collision partner when exit loop
+  //   set to initial J as default in case no Nlimit J meets criteria
 
   int j = np * random->uniform();
   if (ilist == jlist) 
     while (i == j) j = np * random->uniform();
+  jneigh = j;
 
-  do {
+  while (count < nlimit) {
     count++;
 
     // skip this J if I,J last collided with each other
@@ -1648,6 +1666,8 @@ int Collide::find_nn_group(int i, int *ilist, int np, int *jlist,
     // rsq = squared distance between particles I and J
     // if rsq = 0.0, skip this J
     //   could be I = J, or a cloned J at same position as I
+    // if rsq <= threshsq, this J is collision partner
+    // if rsq = smallest yet seen, this J is tentative collision partner
 
     jpart = &particles[plist[j]];
     xj = jpart->x;
@@ -1655,13 +1675,21 @@ int Collide::find_nn_group(int i, int *ilist, int np, int *jlist,
     dy = xi[1] - xj[1];
     dz = xi[2] - xj[2];
     rsq = dx*dx + dy*dy + dz*dz;
-    if (rsq < minrsq && rsq > 0.0) {
-      minrsq = rsq;
-      jneigh = j;
+
+    if (rsq > 0.0) {
+      if (rsq <= threshsq) {
+        jneigh = j;
+        break;
+      }
+      if (rsq < minrsq) {
+        minrsq = rsq;
+        jneigh = j;
+      }
     }
+
     j++;
     if (j == np) j = 0;
-  } while (rsq > threshsq && count < nlimit); 
+  }
 
   return jneigh;
 }
@@ -1671,7 +1699,7 @@ int Collide::find_nn_group(int i, int *ilist, int np, int *jlist,
    increase size by multiples of 2x
 ------------------------------------------------------------------------- */
 
-void Collide::realloc_nn(int n, int *vec)
+void Collide::realloc_nn(int n, int *&vec)
 {
   while (n > max_nn) max_nn *= 2;
   memory->destroy(vec);

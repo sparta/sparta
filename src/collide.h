@@ -129,7 +129,7 @@ class Collide : protected Pointers {
 
   int find_nn(int, int);
   int find_nn_group(int, int *, int, int *, int *, int *);
-  void realloc_nn(int, int *);
+  void realloc_nn(int, int *&);
   void set_nn(int);
   void set_nn_group(int);
 };
