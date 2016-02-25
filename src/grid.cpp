@@ -1402,6 +1402,11 @@ void Grid::set_inout()
       cinfo[icell].corner[j] = cinfo[splitcell].corner[j];
   }
 
+  // set volume of cells that are now INSIDE to 0.0
+
+  for (icell = 0; icell < nlocal; icell++)
+    if (cinfo[icell].type == INSIDE) cinfo[icell].volume = 0.0;
+
   /*
   printf("POST INOUT %d: %d\n",comm->me,grid->nlocal);
   for (int i = 0; i < grid->nlocal; i++) {
