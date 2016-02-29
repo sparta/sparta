@@ -86,18 +86,18 @@ is ignored, though it must still be specfied.
 </P>
 <P>If <I>yes</I> is specified, then up to <I>Nlimit</I> collision partners are
 considered for each collision.  The first partner I is chosen randomly
-from all particles in the grid cell.  A distance R that pariticle I
+from all particles in the grid cell.  A distance R that particle I
 moves in that timestep is calculated, based on its velocity.  <I>Nlimit</I>
 possible collision partners J are examined, starting at a random J.
 If one of them is within a distance R of particle I, it is immediately
 selected as the collision partner.  If none of the <I>Nlimit</I> particles
 are within a distance R, the closest J particle to I is selected.  An
 exception to these rules is that a particle J is not considered for a
-collision if the most recent collision partners for I and J (in the
-current timestep) were each other.  The convergence properties of this
-near-neighbor algorithm are described in <A HREF = "#Gallis11">(Gallis11)</A>.  Note
-that choosing <I>Nlimit</I> judiciously will avoid costly searches when
-there are large numbers of particles in some or all grid cells.
+collision if the I,J pair were the most recent collision partners (in
+the current timestep) for each other.  The convergence properties of
+this near-neighbor algorithm are described in <A HREF = "#Gallis11">(Gallis11)</A>.
+Note that choosing <I>Nlimit</I> judiciously will avoid costly searches
+when there are large numbers of particles in some or all grid cells.
 </P>
 <P>If the <I>ambipolar</I> keyword is set to <I>yes</I>, then collisions within a
 grid cell with use the ambipolar approximation.  This requires use of

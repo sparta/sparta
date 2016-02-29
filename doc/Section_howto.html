@@ -674,9 +674,9 @@ and is typically filled with particles.
 <LI>parent cell = a grid cell at any level that is sub-divided further
 <LI>child cell = a grid cell that is not sub-divided further
 <LI>unsplit cell = a child cell not intersected by any surface elements
-<LI>cut cell = a child cell intersected by one or more surface elements so that one portion of the cell is in the flow region
-<LI>split cell = a child cell intersected by two or more surface elemments so that two or more disjoint portions of the cell are in the flow region
-<LI>sub cell = one disjoint portion of a split cell in the flow region 
+<LI>cut cell = a child cell intersected by one or more surface elements, one resulting flow region
+<LI>split cell = a child cell intersected by two or more surface elemments, two or more resulting disjoint flow regions
+<LI>sub cell = one disjoint flow region portion of a split cell 
 </UL>
 <P>The list of parent cells in a simulation is stored by every processor
 and is read in by the <A HREF = "read_grid.html">read_grid</A> command, or defined
@@ -687,19 +687,27 @@ processors, so that each child cell is owned by exactly one processor,
 as discussed below.
 </P>
 <P>When surface objects are defined via the <A HREF = "read_surf.html">read_surf</A>
-command, they intersect child cells.  Child cells can thus become one
-of 3 flavors: unsplit, cut, or split.  A child cell not intersected by
-any surface elements is an unsplit cell.  It can be entirely in the
-flow region or entirely inside a surface object.  If a child cell is
-intersected so that it is partitioned into two contiguous volumes, one
-in the flow region, the other inside a surface object, then it is a
-cut cell.  This is the usual case.  The left side of the diagram below
-is an example, where red represents the flow region.  Sometimes a
-child cell can be partitioned by surface elements so that more than
-one contiguous flow region is created.  Then it is a split cell.
-Additionally, each of the two or more contiguous flow regions is a sub
-cell of the split cell.  The right side of the diagram shows a split
-cell with 3 sub cells.
+command, they intersect child cells.  In this contex "intersection" by
+a surface element means a geometric overlap between the area of the
+surface element and the volume of the grid cell (or length of element
+and area of grid cell in 2d).  Thus an intersection includes a surface
+triangle that only touches a grid cell on its face, edge, or at its
+corner point.  When intersected by one or more surface elements, a
+child cell becomes one of 3 flavors: unsplit, cut, or split.  A child
+cell not intersected by any surface elements is an unsplit cell.  It
+can be entirely in the flow region or entirely inside a surface
+object.  If a child cell is intersected so that it is partitioned into
+two contiguous volumes, one in the flow region, the other inside a
+surface object, then it is a cut cell.  This is the usual case.  Note
+that either the flow volume or inside volume can be of size zero, if
+the surface only "touches" the grid cell, i.e. the intersection is
+only on a face, edge, or corner point of the grid cell.  The left side
+of the diagram below is an example, where red represents the flow
+region.  Sometimes a child cell can be partitioned by surface elements
+so that more than one contiguous flow region is created.  Then it is a
+split cell.  Additionally, each of the two or more contiguous flow
+regions is a sub cell of the split cell.  The right side of the
+diagram shows a split cell with 3 sub cells.
 </P>
 <CENTER><IMG SRC = "JPG/split.jpg">
 </CENTER>

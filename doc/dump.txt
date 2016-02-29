@@ -287,15 +287,16 @@ per-particle quantities which could then be output into dump files.
 This section explains the grid cell attributes that can be specified
 as part of the {grid} style.
 
-Note that dump grid will output one line (per snapshot) for two kinds
-of child cells: unsplit cells and sub cells of split cells.  "Section
-4.8"_Section_howto.html#howto_8 of the manual gives details of how
-SPARTA defines child, unsplit, split, and sub cells.  This is
-different than "compute"_compute.html or "fix"_fix.html commands that
-produce per grid information, which also include split cells in their
-output.  The dump grid command discards that output since the sub
-cells of a split cell provide the needed information for further
-processing and visualization.
+Note that dump grid will output one line (per snapshot) for 3 kinds of
+child cells: unsplit cells, cut cells, and sub cells of split cells.
+"Section 4.8"_Section_howto.html#howto_8 of the manual gives details
+of how SPARTA defines child, unsplit, cut, split, and sub cells.  This
+is different than "compute"_compute.html or "fix"_fix.html commands
+that produce per grid information, which also include split cells in
+their output.  The dump grid command discards that output since the
+sub cells of a split cell provide the needed information for further
+processing and visualization.  Note that unsplit cells can
+be outside (in the flow) or inside surface objects, if they exist.
 
 {Id} and {idstr} are two different forms of the grid cell ID.  In
 SPARTA each grid cell is assigned a unique ID which represents its
@@ -320,11 +321,15 @@ grid cell.  The {zlo}, {zhi}, {zc} attributes cannot be used for a 2d
 simulation.
 
 The {vol} attribute is the flow volume of the grid cell (or area in
-2d) for unsplit or sub cells.  "Section
+2d) for unsplit or cut or sub cells.  "Section
 4.8"_Section_howto.html#howto_8 of the manual gives details of how
 SPARTA defines unsplit and sub cells.  Flow volume is the portion of
 the grid cell that is accessible to particles, i.e. outside any closed
-surface that may intersect the cell.
+surface that may intersect the cell.  Note that unsplit cells which
+are inside a surface object will have a flow volume of 0.0.  Likewise
+a cut cell which is inside a suface object but which is intersected by
+surface element(s) which only touch a face, edge, or corner point of
+the grid cell, will have a flow volume of 0.0.
 
 The {c_ID} and {c_ID\[N\]} attributes allow per-grid vectors or arrays
 calculated by a "compute"_compute.html to be output.  The ID in the

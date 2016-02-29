@@ -132,10 +132,11 @@ and 4th columns would be <I>temp</I> and <I>press</I> for the second group, etc.
 in the simulation, which includes unsplit, cut, split, and sub cells.
 See <A HREF = "Section_howto.html#howto_8">Section 4.8</A> of the manual gives
 details of how SPARTA defines child, unsplit, split, and sub cells.
-Note that cells inside closed surfaces contain no particles.  Thus
-they will compute a zero result for all the individual values.
-Likewise, split cells store no particles and will produce a zero
-result.  This is because their sub-cells actually contain the
+Note that cells inside closed surfaces contain no particles.  These
+could be unsplit or cut cells (if they have zero flow volume).  Both
+of these kinds of cells will compute a zero result for all their
+values.  Likewise, split cells store no particles and will produce a
+zero result.  This is because their sub-cells actually contain the
 particles that are geometrically inside the split cell.
 </P>
 <P>The array can be accessed by any command that uses per-grid values
