@@ -377,10 +377,15 @@ double ComputeGrid::post_process_grid(int index, int onecell, int nsample,
       double fnum = update->fnum;
       Grid::ChildInfo *cinfo = grid->cinfo;
 
+      double norm;
       int count = emap[0];
       for (int icell = lo; icell < hi; icell++) {
-        wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-        vec[k] = wt * etally[icell][count] / nsample;
+        norm = cinfo[icell].volume;
+        if (norm == 0.0) vec[k] = 0.0;
+        else {
+          wt = fnum * cinfo[icell].weight / norm;
+          vec[k] = wt * etally[icell][count] / nsample;
+        }
         k += nstride;
       }
       break;
@@ -507,10 +512,15 @@ double ComputeGrid::post_process_grid(int index, int onecell, int nsample,
       double fnum = update->fnum;
       Grid::ChildInfo *cinfo = grid->cinfo;
 
+      double norm;
       int mom = emap[0];
       for (int icell = lo; icell < hi; icell++) {
-        wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-        vec[k] = wt * etally[icell][mom] / nsample;
+        norm = cinfo[icell].volume;
+        if (norm == 0.0) vec[k] = 0.0;
+        else {
+          wt = fnum * cinfo[icell].weight / norm;
+          vec[k] = wt * etally[icell][mom] / nsample;
+        }
         k += nstride;
       }
       break;
@@ -522,10 +532,15 @@ double ComputeGrid::post_process_grid(int index, int onecell, int nsample,
       double fnum = update->fnum;
       Grid::ChildInfo *cinfo = grid->cinfo;
 
+      double norm;
       int ke = emap[0];
       for (int icell = lo; icell < hi; icell++) {
-        wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-        vec[k] = eprefactor * wt * etally[icell][ke] / nsample;
+        norm = cinfo[icell].volume;
+        if (norm == 0.0) vec[k] = 0.0;
+        else {
+          wt = fnum * cinfo[icell].weight / norm;
+          vec[k] = eprefactor * wt * etally[icell][ke] / nsample;
+        }
         k += nstride;
       }
       break;
