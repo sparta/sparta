@@ -18,6 +18,7 @@
 #include "cut3d.h"
 #include "cut2d.h"
 #include "surf.h"
+#include "domain.h"
 #include "memory.h"
 #include "error.h"
 
@@ -1878,6 +1879,7 @@ int Cut3d::ptflag(double *pt)
 
 /* ----------------------------------------------------------------------
    push point if near cell surface
+   do not push point outside simulation box
 ------------------------------------------------------------------------- */
 
 int Cut3d::push(double *pt)
@@ -1899,6 +1901,19 @@ int Cut3d::push(double *pt)
   if (y > hi[1]+pushlo*epsy && y < hi[1]+pushhi*epsy) y = hi[1]+pushvalue*epsy;
   if (z > lo[2]-pushhi*epsz && z < lo[2]-pushlo*epsz) z = lo[2]-pushvalue*epsz;
   if (z > hi[2]+pushlo*epsz && z < hi[2]+pushhi*epsz) z = hi[2]+pushvalue*epsz;
+
+  printf("PP %g %g\n",pt[0],x);
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  x = MAX(x,boxlo[0]);
+  x = MIN(x,boxhi[0]);
+  y = MAX(y,boxlo[1]);
+  y = MIN(y,boxhi[1]);
+  z = MAX(z,boxlo[2]);
+  z = MIN(z,boxhi[2]);
+
+  printf("  PPNEW %g %g\n",pt[0],x);
 
   int flag = 0;
   if (x != pt[0] || y != pt[1] || z != pt[2]) {

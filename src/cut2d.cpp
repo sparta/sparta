@@ -16,6 +16,7 @@
 #include "string.h"
 #include "cut2d.h"
 #include "surf.h"
+#include "domain.h"
 #include "math_const.h"
 #include "error.h"
 
@@ -39,7 +40,12 @@ Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
 {
   axisymmetric = caller_axisymmetric;
 
+  // pushing is only done here for 2d or axisymmetric simulations
+  // done in Cut3d for 3d simulations
+
   pushflag = surf->pushflag;
+  if (domain->dimension == 3) pushflag = 0;
+
   if (pushflag) {
     pushlo = surf->pushlo;
     pushhi = surf->pushhi;
@@ -550,8 +556,10 @@ void Cut2d::weiler_build()
   // error check that every singlet point is on cell border
 
   for (i = 0; i < npt; i++)
-    if (points[i].type != TWO && ptflag(points[i].x) != BORDER)
+    if (points[i].type != TWO && ptflag(points[i].x) != BORDER) {
+      printf("CELL ID %d\n",id);
       error->one(FLERR,"Singlet CLINES point not on cell border");
+    }
 
   // add 4 cell CORNER pts to points
   // only if corner pt is not already an ENTRY or EXIT pt
@@ -976,6 +984,7 @@ int Cut2d::ptflag(double *pt)
 
 /* ----------------------------------------------------------------------
    push point if near cell surface
+   do not push point outside simulation box
 ------------------------------------------------------------------------- */
 
 int Cut2d::push(double *pt)
@@ -992,6 +1001,13 @@ int Cut2d::push(double *pt)
   if (x > hi[0]+pushlo*epsx && x < hi[0]+pushhi*epsx) x = hi[0]+pushvalue*epsx;
   if (y > lo[1]-pushhi*epsy && y < lo[1]-pushlo*epsy) y = lo[1]-pushvalue*epsy;
   if (y > hi[1]+pushlo*epsy && y < hi[1]+pushhi*epsy) y = hi[1]+pushvalue*epsy;
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  x = MAX(x,boxlo[0]);
+  x = MIN(x,boxhi[0]);
+  y = MAX(y,boxlo[1]);
+  y = MIN(y,boxhi[1]);
 
   int flag = 0;
   if (x != pt[0] || y != pt[1]) {
