@@ -1118,7 +1118,7 @@ void Grid::reset_neighbors()
 }
 
 /* ----------------------------------------------------------------------
-   set type in/out for all owned cells
+   set type in/out for all owned cells if not already set
    also set corner points of OVERLAP cells if not already set
    only UNKNOWN cells are marked
    only UNKNOWN corner flags of OVERLAP cells are marked
@@ -1126,7 +1126,7 @@ void Grid::reset_neighbors()
        due to Cut2d/Cut3d split() failing to mark them
        b/c surf(s) only touch cell at single point(s) on cell surface
      set cornerflags to either all INSIDE or all OUTSIDE
-     if set to OUTSIDE, also set flow area = entire cell
+       reset cell volume to zero or entire cell
 ------------------------------------------------------------------------- */
 
 void Grid::set_inout()
@@ -1149,7 +1149,7 @@ void Grid::set_inout()
   printf("PRE INOUT %d: %d\n",comm->me,grid->nlocal);
   for (int i = 0; i < grid->nlocal; i++) {
     Grid::ChildCell *g = &grid->cells[i];
-    //if (g->id == 59 || g->id == 187)
+    //if (g->id == 52)
     printf("ICELL %d: %d id %d pid %d lo %g %g "
            "hi %g %g type %d corners %d %d %d %d vol %g\n",
            comm->me,i,g->id,pcells[g->iparent].id,
@@ -1246,8 +1246,8 @@ void Grid::set_inout()
                 if (jcorner[0] != UNKNOWN) continue;
                 for (icorner = 0; icorner < ncorner; icorner++)
                   jcorner[icorner] = marktype;
-                /*
-                if (marktype == OUTSIDE) {
+                if (marktype == INSIDE) cinfo[jcell].volume = 0.0;
+                else if (marktype == OUTSIDE) {
                   double *lo = cells[jcell].lo;
                   double *hi = cells[jcell].hi;
                   if (dimension == 3) 
@@ -1259,7 +1259,6 @@ void Grid::set_inout()
                   else
                     cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
                 }
-                */
                 setnew[nsetnew++] = jcell;
               } else if (marktype != jtype) {
                 //printf("AAA icell %d id %d iface %d jcell %d id %d "
@@ -1308,8 +1307,8 @@ void Grid::set_inout()
                   if (jcorner[0] != UNKNOWN) continue;
                   for (icorner = 0; icorner < ncorner; icorner++)
                     jcorner[icorner] = marktype;
-                  /*
-                  if (marktype == OUTSIDE) {
+                  if (marktype == INSIDE) cinfo[jcell].volume = 0.0;
+                  else if (marktype == OUTSIDE) {
                     double *lo = cells[jcell].lo;
                     double *hi = cells[jcell].hi;
                     if (dimension == 3) 
@@ -1321,7 +1320,6 @@ void Grid::set_inout()
                     else
                       cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
                   }
-                  */
                   setnew[nsetnew++] = jcell;
                 } else if (marktype != jtype) {
                   error->one(FLERR,"Cell type mis-match when marking on self");
@@ -1411,7 +1409,7 @@ void Grid::set_inout()
   printf("POST INOUT %d: %d\n",comm->me,grid->nlocal);
   for (int i = 0; i < grid->nlocal; i++) {
     Grid::ChildCell *g = &grid->cells[i];
-    if (g->id == 59 || g->id == 187)
+    if (g->id == 52)
     printf("ICELL %d: %d id %d pid %d lo %g %g "
            "hi %g %g type %d corners %d %d %d %d vol %g\n",
            comm->me,i,g->id,pcells[g->iparent].id,
