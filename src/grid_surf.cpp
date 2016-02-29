@@ -145,17 +145,10 @@ void Grid::surf2grid(int subflag, int outflag)
       nsplit = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
                             vols,surfmap,cinfo[icell].corner,xsub,xsplit);
 
-    if (nsplit == 1) {
+    if (nsplit == 1) 
+      cinfo[icell].volume = vols[0];
 
-      // if corner pts are UNKNOWN, surfs just touch cell border:
-      // vols[0] is 0.0, so don't overwrite original volume
-      // the cell will later be marked OUTSIDE or INSIDE
-      // if OUTSIDE, will need full original volume
-
-      if (cinfo[icell].corner[0] != UNKNOWN)
-        cinfo[icell].volume = vols[0];
-
-    } else if (subflag) {
+    else if (subflag) {
       cells[icell].nsplit = nsplit;
       nunsplitlocal--;
       
