@@ -1902,8 +1902,6 @@ int Cut3d::push(double *pt)
   if (z > lo[2]-pushhi*epsz && z < lo[2]-pushlo*epsz) z = lo[2]-pushvalue*epsz;
   if (z > hi[2]+pushlo*epsz && z < hi[2]+pushhi*epsz) z = hi[2]+pushvalue*epsz;
 
-  printf("PP %g %g\n",pt[0],x);
-
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
   x = MAX(x,boxlo[0]);
@@ -1912,8 +1910,6 @@ int Cut3d::push(double *pt)
   y = MIN(y,boxhi[1]);
   z = MAX(z,boxlo[2]);
   z = MIN(z,boxhi[2]);
-
-  printf("  PPNEW %g %g\n",pt[0],x);
 
   int flag = 0;
   if (x != pt[0] || y != pt[1] || z != pt[2]) {
