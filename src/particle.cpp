@@ -821,9 +821,9 @@ void Particle::read_species_file()
   char line[MAXLINE],copy[MAXLINE];
 
   while (fgets(line,MAXLINE,fp)) {
-    int pre = strspn(line," \t\n");
+    int pre = strspn(line," \t\n\r");
     if (pre == strlen(line) || line[pre] == '#') continue;
-
+                                                
     strcpy(copy,line);
     int nwords = wordcount(copy,NULL);
     if (nwords != NWORDS)

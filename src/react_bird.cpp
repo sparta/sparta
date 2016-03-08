@@ -396,7 +396,7 @@ void ReactBird::readfile(char *fname)
     int side = 0;
     int species = 1;
 
-    word = strtok(line1," \t\n");
+    word = strtok(line1," \t\n\r");
 
     while (1) {
       if (!word) {
@@ -434,7 +434,7 @@ void ReactBird::readfile(char *fname)
       } else {
         species = 1;
         if (strcmp(word,"+") == 0) {
-          word = strtok(NULL," \t\n");
+          word = strtok(NULL," \t\n\r");
           continue;
         }
         if (strcmp(word,"-->") != 0) {
@@ -443,10 +443,10 @@ void ReactBird::readfile(char *fname)
         }
         side = 1;
       }
-      word = strtok(NULL," \t\n");
+      word = strtok(NULL," \t\n\r");
     }
 
-    word = strtok(line2," \t\n");
+    word = strtok(line2," \t\n\r");
     if (!word) {
       print_reaction(copy1,copy2);
       error->all(FLERR,"Invalid reaction type in file");
@@ -484,7 +484,7 @@ void ReactBird::readfile(char *fname)
       }
     }
 
-    word = strtok(NULL," \t\n");
+    word = strtok(NULL," \t\n\r");
     if (!word) {
       print_reaction(copy1,copy2);
       error->all(FLERR,"Invalid reaction style in file");
@@ -499,7 +499,7 @@ void ReactBird::readfile(char *fname)
     if (r->style == ARRHENIUS || r->style == QUANTUM) r->ncoeff = 5;
 
     for (int i = 0; i < r->ncoeff; i++) {
-      word = strtok(NULL," \t\n");
+      word = strtok(NULL," \t\n\r");
       if (!word) {
         print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid reaction coefficients in file");
@@ -507,7 +507,7 @@ void ReactBird::readfile(char *fname)
       r->coeff[i] = input->numeric(FLERR,word);
     }
 
-    word = strtok(NULL," \t\n");
+    word = strtok(NULL," \t\n\r");
     if (word) {
       print_reaction(copy1,copy2);
       error->all(FLERR,"Too many coefficients in a reaction formula");
@@ -529,7 +529,7 @@ int ReactBird::readone(char *line1, char *line2, int &n1, int &n2)
 {
   char *eof;
   while ((eof = fgets(line1,MAXLINE,fp))) {
-    int pre = strspn(line1," \t\n");
+    int pre = strspn(line1," \t\n\r");
     if (pre == strlen(line1) || line1[pre] == '#') continue;
     eof = fgets(line2,MAXLINE,fp);
     if (!eof) break;
