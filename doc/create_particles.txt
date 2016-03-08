@@ -23,7 +23,7 @@ style = {n} or {single} :l
 zero or more keyword/value pairs may be appended :l
 keyword = {global} or {region} or {species} or {density} or {set} :l
   {global} value = {yes} or {no}
-  {region} value = region-ID :pre
+  {region} value = region-ID
   {species} value = name = variable name to evaluate for species variation
   {density} value = name = variable name to evaluate for density variation
   {set} values = dim name
