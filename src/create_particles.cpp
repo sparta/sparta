@@ -88,8 +88,8 @@ void CreateParticles::command(int narg, char **arg)
 
   int globalflag = 0;
   region = NULL;
-  densflag = 0;
-  dstr = xstr = ystr = zstr = NULL;
+  speciesflag = densflag = 0;
+  tstr = dstr = xstr = ystr = zstr = NULL;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"global") == 0) {
@@ -104,6 +104,14 @@ void CreateParticles::command(int narg, char **arg)
       if (iregion < 0) 
         error->all(FLERR,"Create_particles region does not exist");
       region = domain->regions[iregion];
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"species") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      delete [] tstr;
+      int n = strlen(arg[iarg+1]) + 1;
+      tstr = new char[n];
+      strcpy(tstr,arg[iarg+1]);
+      speciesflag = 1;
       iarg += 2;
     } else if (strcmp(arg[iarg],"density") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
@@ -141,18 +149,28 @@ void CreateParticles::command(int narg, char **arg)
   // error checks and further setup for variables
   // save local copy of each equal variable string so can restore at end
 
-  if (!dstr && (xstr || ystr || zstr))
+  if (speciesflag && densflag) 
+    error->all(FLERR,"Cannot use type and density in create_particles command");
+  if ((!tstr && !dstr) && (xstr || ystr || zstr))
     error->all(FLERR,"Incomplete use of variables in create_particles command");
-  if (dstr && (!xstr && !ystr && !zstr))
+  if ((tstr || dstr) && (!xstr && !ystr && !zstr))
     error->all(FLERR,"Incomplete use of variables in create_particles command");
-
-  if (densflag) {
-    dvar = input->variable->find(dstr);
-    if (dvar < 0)
-      error->all(FLERR,"Variable name for create_particles does not exist");
-    if (!input->variable->equal_style(dvar))
-      error->all(FLERR,"Variable for create_particles is invalid style");
-
+  
+  if (speciesflag || densflag) {
+    if (speciesflag) {
+      tvar = input->variable->find(tstr);
+      if (tvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(tvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+    }
+    if (densflag) {
+      dvar = input->variable->find(dstr);
+      if (dvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(dvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+    }
     if (xstr) {
       xvar = input->variable->find(xstr);
       if (xvar < 0)
@@ -213,12 +231,12 @@ void CreateParticles::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   // error check
-  // only if no region and no variable density specified
+  // only if no region and no variables specified
 
   bigint nglobal;
   bigint nme = particle->nlocal;
   MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  if (!region && !densflag && nglobal-nprevious != np) {
+  if (!region && !speciesflag && !densflag && nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of particles: " 
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
@@ -230,7 +248,7 @@ void CreateParticles::command(int narg, char **arg)
 
   // restore each equal variable string previously saved
 
-  if (densflag) {
+  if (speciesflag || densflag) {
     if (xstr) input->variable->equal_restore(xvar,xstr_copy);
     if (ystr) input->variable->equal_restore(yvar,ystr_copy);
     if (zstr) input->variable->equal_restore(zvar,zstr_copy);
@@ -238,6 +256,7 @@ void CreateParticles::command(int narg, char **arg)
 
   // clean up
 
+  delete [] tstr;
   delete [] dstr;
   delete [] xstr;
   delete [] ystr;
@@ -411,6 +430,7 @@ void CreateParticles::create_local(bigint np)
   double *cummulative = particle->mixture[imix]->cummulative;
   double *vstream = particle->mixture[imix]->vstream;
   double *vscale = particle->mixture[imix]->vscale;
+  int nspecies = particle->mixture[imix]->nspecies;
   double temp_thermal = particle->mixture[imix]->temp_thermal;
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
@@ -441,7 +461,7 @@ void CreateParticles::create_local(bigint np)
     ncreate = npercell;
 
     if (densflag) {
-      scale = density_factor(lo,hi);
+      scale = density_variable(lo,hi);
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-npercell) ncreate++;
@@ -459,6 +479,11 @@ void CreateParticles::create_local(bigint np)
       if (dimension == 2) x[2] = 0.0;
 
       if (region && !region->match(x)) continue;
+      if (speciesflag) {
+        isp = species_variable(x) - 1;
+        if (isp < 0 || isp >= nspecies) continue;
+        ispecies = species[isp];
+      }
 
       vn = vscale[isp] * sqrt(-log(random->uniform()));
       vr = vscale[isp] * sqrt(-log(random->uniform()));
@@ -510,11 +535,27 @@ int CreateParticles::outside_region(int dim, double *lo, double *hi)
 
 
 /* ----------------------------------------------------------------------
-   test a generated atom position against variable evaluation
-   first plug in x,y,z values as requested
+   use particle position in tvariable to generate particle species
+   first plug in x,y,z values specified by set option
 ------------------------------------------------------------------------- */
 
-double CreateParticles::density_factor(double *lo, double *hi)
+int CreateParticles::species_variable(double *x)
+{
+  if (xstr) input->variable->equal_override(xvar,x[0]);
+  if (ystr) input->variable->equal_override(yvar,x[1]);
+  if (zstr) input->variable->equal_override(zvar,x[2]);
+
+  double value = input->variable->compute_equal(tvar);
+  int isp = static_cast<int> (value);
+  return isp;
+}
+
+/* ----------------------------------------------------------------------
+   use grid cell center in dvariable to generate density scale factor
+   first plug in x,y,z values specified by set option
+------------------------------------------------------------------------- */
+
+double CreateParticles::density_variable(double *lo, double *hi)
 {
   double center[3];
   center[0] = 0.5 * (lo[0]+hi[0]);
@@ -525,8 +566,8 @@ double CreateParticles::density_factor(double *lo, double *hi)
   if (ystr) input->variable->equal_override(yvar,center[1]);
   if (zstr) input->variable->equal_override(zvar,center[2]);
 
-  double value = input->variable->compute_equal(dvar);
-  return value;
+  double scale = input->variable->compute_equal(dvar);
+  return scale;
 }
 
 /* ----------------------------------------------------------------------
