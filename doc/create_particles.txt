@@ -35,8 +35,9 @@ create_particles background n 0
 create_particles air n 100000 region sphere
 create_particles air n 100000 global yes
 create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
-create_particles air n 0 species mySpecies set x xpos set z zpos :pre
-create_particles air n 0 density myDens set x xgrid set y ygrid :pre
+create_particles air n 0 species mySpecies xpos NULL zpos
+create_particles air n 0 density myDens xgrid ygrid NULL
+create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL :pre
 
 [Description:]
 
