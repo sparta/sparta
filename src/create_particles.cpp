@@ -24,6 +24,8 @@
 #include "comm.h"
 #include "domain.h"
 #include "region.h"
+#include "input.h"
+#include "variable.h"
 #include "random_mars.h"
 #include "random_park.h"
 #include "math_const.h"
@@ -86,6 +88,8 @@ void CreateParticles::command(int narg, char **arg)
 
   int globalflag = 0;
   region = NULL;
+  densflag = 0;
+  dstr = xstr = ystr = zstr = NULL;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"global") == 0) {
@@ -101,11 +105,79 @@ void CreateParticles::command(int narg, char **arg)
         error->all(FLERR,"Create_particles region does not exist");
       region = domain->regions[iregion];
       iarg += 2;
+    } else if (strcmp(arg[iarg],"density") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
+      delete [] dstr;
+      int n = strlen(arg[iarg+1]) + 1;
+      dstr = new char[n];
+      strcpy(dstr,arg[iarg+1]);
+      densflag = 1;
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"set") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Illegal create_particles command");
+      if (strcmp(arg[iarg+1],"x") == 0) {
+        delete [] xstr;
+        int n = strlen(arg[iarg+2]) + 1;
+        xstr = new char[n];
+        strcpy(xstr,arg[iarg+2]);
+      } else if (strcmp(arg[iarg+1],"y") == 0) {
+        delete [] ystr;
+        int n = strlen(arg[iarg+2]) + 1;
+        ystr = new char[n];
+        strcpy(ystr,arg[iarg+2]);
+      } else if (strcmp(arg[iarg+1],"z") == 0) {
+        delete [] zstr;
+        int n = strlen(arg[iarg+2]) + 1;
+        zstr = new char[n];
+        strcpy(zstr,arg[iarg+2]);
+      } else error->all(FLERR,"Illegal create_particles command");
+      iarg += 3;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
   if (globalflag) 
     error->all(FLERR,"Create_particles global option not yet implemented");
+
+  // error checks and further setup for variables
+  // save local copy of each equal variable string so can restore at end
+
+  if (!dstr && (xstr || ystr || zstr))
+    error->all(FLERR,"Incomplete use of variables in create_particles command");
+  if (dstr && (!xstr && !ystr && !zstr))
+    error->all(FLERR,"Incomplete use of variables in create_particles command");
+
+  if (densflag) {
+    dvar = input->variable->find(dstr);
+    if (dvar < 0)
+      error->all(FLERR,"Variable name for create_particles does not exist");
+    if (!input->variable->equal_style(dvar))
+      error->all(FLERR,"Variable for create_particles is invalid style");
+
+    if (xstr) {
+      xvar = input->variable->find(xstr);
+      if (xvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(xvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(xvar,xstr_copy);
+    }
+    if (ystr) {
+      yvar = input->variable->find(ystr);
+      if (yvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(yvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(yvar,ystr_copy);
+    }
+    if (zstr) {
+      zvar = input->variable->find(zstr);
+      if (zvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(zvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(zvar,zstr_copy);
+    }
+  }
 
   // calculate Np if not set explicitly
 
@@ -141,12 +213,12 @@ void CreateParticles::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   // error check
-  // only if no region specified
+  // only if no region and no variable density specified
 
   bigint nglobal;
   bigint nme = particle->nlocal;
   MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  if (!region && nglobal-nprevious != np) {
+  if (!region && !densflag && nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of particles: " 
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
@@ -155,6 +227,21 @@ void CreateParticles::command(int narg, char **arg)
   }
   bigint ncreated = nglobal-nprevious;
   particle->nglobal = nglobal;
+
+  // restore each equal variable string previously saved
+
+  if (densflag) {
+    if (xstr) input->variable->equal_restore(xvar,xstr_copy);
+    if (ystr) input->variable->equal_restore(yvar,ystr_copy);
+    if (zstr) input->variable->equal_restore(zvar,zstr_copy);
+  }
+
+  // clean up
+
+  delete [] dstr;
+  delete [] xstr;
+  delete [] ystr;
+  delete [] zstr;
 
   // print stats
 
@@ -328,9 +415,9 @@ void CreateParticles::create_local(bigint np)
   double temp_rot = particle->mixture[imix]->temp_rot;
   double temp_vib = particle->mixture[imix]->temp_vib;
 
-  int npercell,isp,ispecies,id;
+  int npercell,ncreate,isp,ispecies,id;
   double x[3],v[3];
-  double ntarget,rn,vn,vr,theta1,theta2,erot,evib;
+  double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
 
   double volsum = 0.0;
   bigint nprev = 0;
@@ -351,8 +438,16 @@ void CreateParticles::create_local(bigint np)
     ntarget = nme * volsum/volme - nprev;
     npercell = static_cast<int> (ntarget);
     if (random->uniform() < ntarget-npercell) npercell++;
+    ncreate = npercell;
 
-    for (int m = 0; m < npercell; m++) {
+    if (densflag) {
+      scale = density_factor(lo,hi);
+      ntarget *= scale;
+      ncreate = static_cast<int> (ntarget);
+      if (random->uniform() < ntarget-npercell) ncreate++;
+    }
+
+    for (int m = 0; m < ncreate; m++) {
       rn = random->uniform();
       isp = 0;
       while (cummulative[isp] < rn) isp++;
@@ -385,6 +480,9 @@ void CreateParticles::create_local(bigint np)
                              temp_rot,temp_vib,vstream);
     }
 
+    // increment count without effect of density variation
+    // so that target insertion count is undisturbed
+
     nprev += npercell;
   }
 
@@ -408,6 +506,27 @@ int CreateParticles::outside_region(int dim, double *lo, double *hi)
         lo[2] < region->extent_zhi) flag = 0;
   }
   return flag;
+}
+
+
+/* ----------------------------------------------------------------------
+   test a generated atom position against variable evaluation
+   first plug in x,y,z values as requested
+------------------------------------------------------------------------- */
+
+double CreateParticles::density_factor(double *lo, double *hi)
+{
+  double center[3];
+  center[0] = 0.5 * (lo[0]+hi[0]);
+  center[1] = 0.5 * (lo[1]+hi[1]);
+  center[2] = 0.5 * (lo[2]+hi[2]);
+
+  if (xstr) input->variable->equal_override(xvar,center[0]);
+  if (ystr) input->variable->equal_override(yvar,center[1]);
+  if (zstr) input->variable->equal_override(zvar,center[2]);
+
+  double value = input->variable->compute_equal(dvar);
+  return value;
 }
 
 /* ----------------------------------------------------------------------

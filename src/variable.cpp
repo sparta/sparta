@@ -45,6 +45,7 @@ using namespace MathConst;
 #define MAXLEVEL 4
 #define MAXLINE 256
 #define CHUNK 1024
+#define VALUELENGTH 64
 
 #define MYROUND(a) (( a-floor(a) ) >= .5) ? ceil(a) : floor(a)
 
@@ -671,6 +672,46 @@ double Variable::compute_equal(int ivar)
 double Variable::compute_equal(char *str)
 {
   return evaluate(str,NULL);
+}
+
+/* ----------------------------------------------------------------------
+   save copy of EQUAL style ivar formula in copy
+   allocate copy here, later equal_restore() call will free it
+   insure data[ivar][0] is of VALUELENGTH since will be overridden
+   next 3 functions are used by create_atoms to temporarily override variables
+------------------------------------------------------------------------- */
+
+void Variable::equal_save(int ivar, char *&copy)
+{
+  int n = strlen(data[ivar][0]) + 1;
+  copy = new char[n];
+  strcpy(copy,data[ivar][0]);
+  delete [] data[ivar][0];
+  data[ivar][0] = new char[VALUELENGTH];
+}
+
+/* ----------------------------------------------------------------------
+   restore formula string of EQUAL style ivar from copy
+   then free copy, allocated in equal_save()
+------------------------------------------------------------------------- */
+
+void Variable::equal_restore(int ivar, char *copy)
+{
+  delete [] data[ivar][0];
+  int n = strlen(copy) + 1;
+  data[ivar][0] = new char[n];
+  strcpy(data[ivar][0],copy);
+  delete [] copy;
+}
+
+/* ----------------------------------------------------------------------
+   override EQUAL style ivar formula with value converted to string
+   data[ivar][0] was set to length 64 in equal_save()
+------------------------------------------------------------------------- */
+
+void Variable::equal_override(int ivar, double value)
+{
+  sprintf(data[ivar][0],"%.15g",value);
 }
 
 /* ----------------------------------------------------------------------

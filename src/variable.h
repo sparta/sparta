@@ -35,6 +35,9 @@ class Variable : protected Pointers {
   char *retrieve(char *);
   double compute_equal(int);
   double compute_equal(char *);
+  void equal_save(int, char *&);
+  void equal_restore(int, char *);
+  void equal_override(int, double);
   void compute_particle(int, double *, int, int);
   void compute_grid(int, double *, int, int);
   void compute_surf(int, double *, int, int) {}

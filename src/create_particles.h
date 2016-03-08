@@ -38,8 +38,13 @@ class CreateParticles : protected Pointers {
   double xp,yp,zp,vx,vy,vz;
   class Region *region;
 
+  int densflag,dvar,xvar,yvar,zvar;
+  char *dstr,*xstr,*ystr,*zstr;
+  char *xstr_copy,*ystr_copy,*zstr_copy;
+
   void create_single();
   void create_local(bigint);
+  double density_factor(double *, double *);
   int outside_region(int, double *, double *);
 };
 
