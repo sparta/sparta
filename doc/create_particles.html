@@ -28,15 +28,16 @@
 </PRE>
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>global</I> or <I>region</I> or <I>density</I> or <I>set</I> 
+<LI>keyword = <I>global</I> or <I>region</I> or <I>species</I> or <I>density</I> or <I>set</I> 
 
 <PRE>  <I>global</I> value = <I>yes</I> or <I>no</I>
   <I>region</I> value = region-ID 
 </PRE>
-<PRE>  <I>density</I> value = name = variable name to evaluate for density variation
+<PRE>  <I>species</I> value = name = variable name to evaluate for species variation
+  <I>density</I> value = name = variable name to evaluate for density variation
   <I>set</I> values = dim name
     dim = <I>x</I> or <I>y</I> or <I>z</I>
-    name = name of variable to set with x, y, or z grid position 
+    name = name of variable to set with x, y, or z particle or grid position 
 </PRE>
 
 </UL>
@@ -46,7 +47,9 @@
 create_particles air n 100000 region sphere
 create_particles air n 100000 global yes
 create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
-create_particles air n 0 density myDens set x xgrid set y ygrid 
+create_particles air n 0 species mySpecies set x xpos set z zpos 
+</PRE>
+<PRE>create_particles air n 0 density myDens set x xgrid set y ygrid 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -163,17 +166,57 @@ attempt to add are included in the count for N, even if some or all of
 the particle insertions are rejected due to not being inside the
 region.
 </P>
+<P>The <I>species</I> and <I>set</I> keywords can be used together to create
+particles with a spatially-dependent separation of species.  The
+<I>name</I> specified for the <I>species</I> keyword is the name of an
+<A HREF = "variable.html">equal-style variable</A> which should evaluate to a
+species number, i.e. an integer from 1 to Nsp, where Nsp is the number
+of species in the mixture with mix-ID.  Since equal-style variables
+evaluate to floating-point values, this value is truncated to an
+integer value.  The formula for the species can use one or two or
+three variables which will store the x, y, or z coordinates of the
+particle that is being created.  If used, these other variables must
+be <A HREF = "variable.html">equal-style variables</A> defined in the input script,
+but their formula can by anything.  The <I>set</I> keyword is used to
+identify the names of these other variables, one variable for the
+x-coordinate of particle, one for y, and one for z.
+</P>
+<P>When a particle is added, its coordinates override the formula for any
+<I>set</I> variable that is defined.  The <I>species</I> variable is then
+evaluated.  The returned value is used to set the species of that
+particle, based on the list of species defined for the mixture.  If
+the returned value is <= 0 or > Nsp = the number of species in the
+mixture, then no particle is created.  After the create_particles
+operation is complete, the formulas defined for all of the <I>set</I>
+variables are restored to their original strings.
+</P>
+<P>As an example, these commands can be used in a 2d simulation, to
+create a particle distribution with species 1 on top of species 2 with
+a sinudoidal interface between the two species, as illustrated in the
+snapshot of the initial particle distribution.  Click on the image for
+a larger version.  Note that when using this option less than the
+requested N particles can be created if the species variable returns
+values <= 0 or greater than the number of species in the mixture.
+</P>
+<PRE>variable x equal 1
+variable y equal 1
+variable n equal 3
+variable s equal "(v_y < 0.5*(ylo+yhi) + 0.15*yhi*sin(2*PI*v_n*v_x/xhi)) + 1"
+create_particles species n 10000 species s set x x set y y 
+</PRE>
+<CENTER><A HREF = "JPG/species_variation.jpg"><IMG SRC = "JPG/species_variation_small.jpg"></A>
+</CENTER>
 <P>The <I>density</I> and <I>set</I> keywords can be used together to create
 particles with a spatially-dependent density variation.  The <I>name</I>
 specified for the <I>density</I> keyword is the name of an <A HREF = "variable.html">equal-style
-variable</A> which should evaluate to a positive value
-based on one or two or three variables which will store the x, y, or z
-coordinates of the geometric center point of a grid cell.  If used,
-these other variables must be <A HREF = "variable.html">equal-style variables</A>
-defined in the input script, but their formula can by anything.  The
-<I>set</I> keyword is used to identify the names of these other variables,
-one variable for the x-coordinate of the grid cell center point, one
-for y, and one for z.
+variable</A> which should evaluate to a positive value.
+The formula for the density can use one or two or three variables
+which will store the x, y, or z coordinates of the geometric center
+point of a grid cell.  If used, these other variables must be
+<A HREF = "variable.html">equal-style variables</A> defined in the input script, but
+their formula can by anything.  The <I>set</I> keyword is used to identify
+the names of these other variables, one variable for the x-coordinate
+of the grid cell center point, one for y, and one for z.
 </P>
 <P>When particles are added to a grid cell, its center point coordinates
 override the formula for any <I>set</I> variable that is defined.  The
@@ -186,17 +229,19 @@ operation is complete, the formulas defined for all of the <I>set</I>
 variables are restored to their original strings.
 </P>
 <P>As an example, these commands can be used in a 2d simulation, to
-create more particles towareds the upper right corner of the domain
-and less towards the lower left corner.
+create more particles towards the upper right corner of the domain and
+less towards the lower left corner, as illustrated in the snapshot of
+the initial particle distribution.  Click on the image for a larger
+version.  Note that less than 10000 particles will be created because
+all the scale factors generated by the variable <I>d</I> are less than 1.0.
 </P>
 <PRE>variable x equal 1
 variable y equal 1
 variable d equal "v_x/xhi * v_y/yhi"
 create_particles air n 10000 density d set x x set y y 
 </PRE>
-<P>Note that less than 10000 particles will be created because all the
-scale factors generated by the variable <I>d</I> are less than 1.0.
-</P>
+<CENTER><A HREF = "JPG/density_variation.jpg"><IMG SRC = "JPG/density_variation_small.jpg"></A>
+</CENTER>
 <HR>
 
 <P><B>Restrictions:</B> none
