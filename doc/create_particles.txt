@@ -24,11 +24,9 @@ zero or more keyword/value pairs may be appended :l
 keyword = {global} or {region} or {species} or {density} or {set} :l
   {global} value = {yes} or {no}
   {region} value = region-ID
-  {species} value = name = variable name to evaluate for species variation
-  {density} value = name = variable name to evaluate for density variation
-  {set} values = dim name
-    dim = {x} or {y} or {z}
-    name = name of variable to set with x, y, or z particle or grid position :pre
+  {species} values = svar xvar yvar zvar
+  {density} values = dvar xvar yvar zvar
+  {velocity} values = vxvar vyvar vzvar xvar yvar zvar :pre
 :ule
 
 [Examples:]
@@ -155,29 +153,29 @@ attempt to add are included in the count for N, even if some or all of
 the particle insertions are rejected due to not being inside the
 region.
 
-The {species} and {set} keywords can be used together to create
-particles with a spatially-dependent separation of species.  The
-{name} specified for the {species} keyword is the name of an
-"equal-style variable"_variable.html which should evaluate to a
-species number, i.e. an integer from 1 to Nsp, where Nsp is the number
-of species in the mixture with mix-ID.  Since equal-style variables
-evaluate to floating-point values, this value is truncated to an
-integer value.  The formula for the species can use one or two or
-three variables which will store the x, y, or z coordinates of the
-particle that is being created.  If used, these other variables must
-be "equal-style variables"_variable.html defined in the input script,
-but their formula can by anything.  The {set} keyword is used to
-identify the names of these other variables, one variable for the
-x-coordinate of particle, one for y, and one for z.
+The {species} keyword can be used to create particles with a
+spatially-dependent separation of species.  The specified {svar} is
+the name of an "equal-style variable"_variable.html whose formula
+should evaluate to a species number, i.e. an integer from 1 to Nsp,
+where Nsp is the number of species in the mixture with mix-ID.  Since
+equal-style variables evaluate to floating-point values, this value is
+truncated to an integer value.  The formula for the species variable
+can use one or two or three variables which will store the x, y, or z
+coordinates of the particle that is being created.  If used, these
+variables must be "equal-style variables"_variable.html defined in the
+input script, but their formula can by anything.  Their names are
+specified as {xvar}, {yvar}, and {zvar}.  If any of them is not used
+in the {svar} formula, it can be specified as NULL.
 
-When a particle is added, its coordinates override the formula for any
-{set} variable that is defined.  The {species} variable is then
-evaluated.  The returned value is used to set the species of that
+When a particle is added, its coordinates override the formula for
+{xvar}, {yvar}, {zvar} if they are defined.  The {svar} variable is
+then evaluated.  The returned value is used to set the species of that
 particle, based on the list of species defined for the mixture.  If
 the returned value is <= 0 or greater than Nsp = the number of species
 in the mixture, then no particle is created.  After the
-create_particles operation is complete, the formulas defined for all
-of the {set} variables are restored to their original strings.
+create_particles operation is complete, the formulas defined for the
+{xvar}, {yvar}, {zvar} variables are restored to their original
+strings.
 
 As an example, these commands can be used in a 2d simulation, to
 create a particle distribution with species 1 on top of species 2 with
@@ -192,31 +190,30 @@ variable x equal 1
 variable y equal 1
 variable n equal 3
 variable s equal "(v_y < 0.5*(ylo+yhi) + 0.15*yhi*sin(2*PI*v_n*v_x/xhi)) + 1"
-create_particles species n 10000 species s set x x set y y :pre
+create_particles species n 10000 species s x y NULL :pre
 
 :c,image(JPG/species_variation_small.jpg,JPG/species_variation.jpg)
 
-The {density} and {set} keywords can be used together to create
-particles with a spatially-dependent density variation.  The {name}
-specified for the {density} keyword is the name of an "equal-style
-variable"_variable.html which should evaluate to a positive value.
-The formula for the density can use one or two or three variables
-which will store the x, y, or z coordinates of the geometric center
-point of a grid cell.  If used, these other variables must be
-"equal-style variables"_variable.html defined in the input script, but
-their formula can by anything.  The {set} keyword is used to identify
-the names of these other variables, one variable for the x-coordinate
-of the grid cell center point, one for y, and one for z.
+The {density} keyword can be used to create particles with a
+spatially-dependent density variation.  The specified {dvar} is the
+name of an "equal-style variable"_variable.html whose formula should
+evaluate to a positive value.  The formula for the density variable
+can use one or two or three variables which will store the x, y, or z
+coordinates of the geometric center point of a grid cell.  If used,
+these other variables must be "equal-style variables"_variable.html
+defined in the input script, but their formula can by anything.  Their
+names are specified as {xvar}, {yvar}, and {zvar}.  If any of them is
+not used in the {dvar} formula, it can be specified as NULL.
 
 When particles are added to a grid cell, its center point coordinates
-override the formula for any {set} variable that is defined.  The
-{density} variable is then evaluated.  The returned value is used as a
-scale factor on the number of particles to create in that grid cell.
+override the formula for {xvar}, {yvar}, {zvar} if they are defined.
+The {dvar} variable is then evaluated.  The returned value is used as
+a scale factor on the number of particles to create in that grid cell.
 Thus a value of 0.5 would create half as many particles in that grid
 cell as would otherwise be the case.  A value of 1.2 would create 20%
 more particles in that grid cell.  After the create_particles
-operation is complete, the formulas defined for all of the {set}
-variables are restored to their original strings.
+operation is complete, the formulas defined for the {xvar}, {yvar},
+{zvar} variables are restored to their original strings.
 
 As an example, these commands can be used in a 2d simulation, to
 create more particles towards the upper right corner of the domain and
@@ -229,9 +226,50 @@ are less than 1.0.
 variable x equal 1
 variable y equal 1
 variable d equal "v_x/xhi * v_y/yhi"
-create_particles air n 10000 density d set x x set y y :pre
+create_particles air n 10000 density d x y NULL :pre
 
 :c,image(JPG/density_variation_small.jpg,JPG/density_variation.jpg)
+
+The {velocity} keyword can be used to create particles with a
+spatially-dependent streaming velocity.  The specified {vxvar},
+{vyvar}, {vzvar} are the names of "equal-style
+variables"_variable.html whose formulas should evaluate to the
+corresponding component of the streaming velocity.  If any of them
+are specified as NULL, then that streaming velocity component is
+set by the corresponding global or mixture streaming velocity component,
+the same as if the {velocity} keyword were not used.  
+
+The formulas for the {vxvar}, {vyvar}, {vzvar} variables can use one
+or two or three variables which will store the x, y, or z coordinates
+of the particle that is being created.  If used, these other variables
+must be "equal-style variables"_variable.html defined in the input
+script, but their formula can by anything.  Their names are specified
+as {xvar}, {yvar}, and {zvar}.  If any of them is not used in the
+{vxvar}, {vyvar}, {vzvar} formulas, it can be specified as NULL.
+
+When a particle is added, its coordinates override the formula for
+{xvar}, {yvar}, {zvar} if they are defined.  The {vxvar}, {vyvar},
+{vzvar} variables are then evaluated.  The returned values are used to
+set the streaming velocity of that particle.  A thermal velocity is
+also added to the particle, using the the global or mixture
+temperature, as described above.  After the create_particles operation
+is complete, the formulas defined for the {xvar}, {yvar}, {zvar}
+variables are restored to their original strings.
+
+As an example, these commands can be used in a 2d simulation, to give
+particles an initial velocity pointing towards the upper right corner
+of the domain with a magnitude that makes them all reach that point at
+the same time (assuming their thermal velocity is small and it is not
+a collisional flow).  Click on the image to play an animation of the
+effect.
+
+variable x equal 1
+variable y equal 1
+variable vx equal (xhi-v_x)/(1000*7.0e-9)  # timesteps and timestep-size
+variable vy equal (yhi-v_y)/(1000*7.0e-9)
+create_particles air n 10000 velocity vx vy NULL x y NULL :pre
+
+:c,image(JPG/velocity_variation_small.jpg,JPG/velocity_variation.gif)
 
 :line
 
