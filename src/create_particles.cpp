@@ -88,8 +88,10 @@ void CreateParticles::command(int narg, char **arg)
 
   int globalflag = 0;
   region = NULL;
-  speciesflag = densflag = 0;
-  tstr = dstr = xstr = ystr = zstr = NULL;
+  speciesflag = densflag = velflag = 0;
+  sstr = sxstr = systr = szstr = NULL;
+  dstr = dxstr = dystr = dzstr = NULL;
+  vxstr = vystr = vzstr = vstrx = vstry = vstrz = NULL;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"global") == 0) {
@@ -106,40 +108,43 @@ void CreateParticles::command(int narg, char **arg)
       region = domain->regions[iregion];
       iarg += 2;
     } else if (strcmp(arg[iarg],"species") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
-      delete [] tstr;
-      int n = strlen(arg[iarg+1]) + 1;
-      tstr = new char[n];
-      strcpy(tstr,arg[iarg+1]);
+      if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
       speciesflag = 1;
-      iarg += 2;
+      sstr = arg[iarg+1];
+      if (strcmp(arg[iarg+2],"NULL") == 0) sxstr = NULL;
+      else sxstr = arg[iarg+2];
+      if (strcmp(arg[iarg+3],"NULL") == 0) systr = NULL;
+      else systr = arg[iarg+3];
+      if (strcmp(arg[iarg+4],"NULL") == 0) szstr = NULL;
+      else szstr = arg[iarg+4];
+      iarg += 5;
     } else if (strcmp(arg[iarg],"density") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal create_particles command");
-      delete [] dstr;
-      int n = strlen(arg[iarg+1]) + 1;
-      dstr = new char[n];
-      strcpy(dstr,arg[iarg+1]);
+      if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
       densflag = 1;
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"set") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal create_particles command");
-      if (strcmp(arg[iarg+1],"x") == 0) {
-        delete [] xstr;
-        int n = strlen(arg[iarg+2]) + 1;
-        xstr = new char[n];
-        strcpy(xstr,arg[iarg+2]);
-      } else if (strcmp(arg[iarg+1],"y") == 0) {
-        delete [] ystr;
-        int n = strlen(arg[iarg+2]) + 1;
-        ystr = new char[n];
-        strcpy(ystr,arg[iarg+2]);
-      } else if (strcmp(arg[iarg+1],"z") == 0) {
-        delete [] zstr;
-        int n = strlen(arg[iarg+2]) + 1;
-        zstr = new char[n];
-        strcpy(zstr,arg[iarg+2]);
-      } else error->all(FLERR,"Illegal create_particles command");
-      iarg += 3;
+      dstr = arg[iarg+1];
+      if (strcmp(arg[iarg+2],"NULL") == 0) dxstr = NULL;
+      else dxstr = arg[iarg+2];
+      if (strcmp(arg[iarg+3],"NULL") == 0) dystr = NULL;
+      else dystr = arg[iarg+3];
+      if (strcmp(arg[iarg+4],"NULL") == 0) dzstr = NULL;
+      else dzstr = arg[iarg+4];
+      iarg += 5;
+    } else if (strcmp(arg[iarg],"velocity") == 0) {
+      if (iarg+7 > narg) error->all(FLERR,"Illegal create_particles command");
+      velflag = 1;
+      if (strcmp(arg[iarg+1],"NULL") == 0) vxstr = NULL;
+      else vxstr = arg[iarg+1];
+      if (strcmp(arg[iarg+2],"NULL") == 0) vystr = NULL;
+      else vystr = arg[iarg+2];
+      if (strcmp(arg[iarg+3],"NULL") == 0) vzstr = NULL;
+      else vzstr = arg[iarg+3];
+      if (strcmp(arg[iarg+4],"NULL") == 0) vstrx = NULL;
+      else vstrx = arg[iarg+4];
+      if (strcmp(arg[iarg+5],"NULL") == 0) vstry = NULL;
+      else vstry = arg[iarg+5];
+      if (strcmp(arg[iarg+6],"NULL") == 0) vstrz = NULL;
+      else vstrz = arg[iarg+6];
+      iarg += 7;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
@@ -147,53 +152,117 @@ void CreateParticles::command(int narg, char **arg)
     error->all(FLERR,"Create_particles global option not yet implemented");
 
   // error checks and further setup for variables
-  // save local copy of each equal variable string so can restore at end
+  // save local copy of equal variable strings so can restore at end
 
-  if (speciesflag && densflag) 
-    error->all(FLERR,"Cannot use type and density in create_particles command");
-  if ((!tstr && !dstr) && (xstr || ystr || zstr))
-    error->all(FLERR,"Incomplete use of variables in create_particles command");
-  if ((tstr || dstr) && (!xstr && !ystr && !zstr))
-    error->all(FLERR,"Incomplete use of variables in create_particles command");
-  
-  if (speciesflag || densflag) {
-    if (speciesflag) {
-      tvar = input->variable->find(tstr);
-      if (tvar < 0)
+  if (speciesflag) {
+    svar = input->variable->find(sstr);
+    if (svar < 0)
+      error->all(FLERR,"Variable name for create_particles does not exist");
+    if (!input->variable->equal_style(svar))
+      error->all(FLERR,"Variable for create_particles is invalid style");
+    if (sxstr) {
+      sxvar = input->variable->find(sxstr);
+      if (sxvar < 0)
         error->all(FLERR,"Variable name for create_particles does not exist");
-      if (!input->variable->equal_style(tvar))
+      if (!input->variable->equal_style(sxvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(sxvar,sxstr_copy);
+    }
+    if (systr) {
+      syvar = input->variable->find(systr);
+      if (syvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(syvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(syvar,systr_copy);
+    }
+    if (szstr) {
+      szvar = input->variable->find(szstr);
+      if (szvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(szvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(szvar,szstr_copy);
+    }
+  }
+
+  if (densflag) {
+    dvar = input->variable->find(dstr);
+    if (dvar < 0)
+      error->all(FLERR,"Variable name for create_particles does not exist");
+    if (!input->variable->equal_style(dvar))
+      error->all(FLERR,"Variable for create_particles is invalid style");
+    if (dxstr) {
+      dxvar = input->variable->find(dxstr);
+      if (dxvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(dxvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(dxvar,dxstr_copy);
+    }
+    if (dystr) {
+      dyvar = input->variable->find(dystr);
+      if (dyvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(dyvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(dyvar,dystr_copy);
+    }
+    if (dzstr) {
+      dzvar = input->variable->find(dzstr);
+      if (dzvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(dzvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(dzvar,dzstr_copy);
+    }
+  }
+
+  if (velflag) {
+    if (vxstr) {
+      vxvar = input->variable->find(vxstr);
+      if (vxvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(vxvar))
         error->all(FLERR,"Variable for create_particles is invalid style");
     }
-    if (densflag) {
-      dvar = input->variable->find(dstr);
-      if (dvar < 0)
+    if (vystr) {
+      vyvar = input->variable->find(vystr);
+      if (vyvar < 0)
         error->all(FLERR,"Variable name for create_particles does not exist");
-      if (!input->variable->equal_style(dvar))
+      if (!input->variable->equal_style(vyvar))
         error->all(FLERR,"Variable for create_particles is invalid style");
     }
-    if (xstr) {
-      xvar = input->variable->find(xstr);
-      if (xvar < 0)
+    if (vzstr) {
+      vzvar = input->variable->find(vzstr);
+      if (vzvar < 0)
         error->all(FLERR,"Variable name for create_particles does not exist");
-      if (!input->variable->equal_style(xvar))
+      if (!input->variable->equal_style(vzvar))
         error->all(FLERR,"Variable for create_particles is invalid style");
-      input->variable->equal_save(xvar,xstr_copy);
     }
-    if (ystr) {
-      yvar = input->variable->find(ystr);
-      if (yvar < 0)
+    if (vstrx) {
+      vvarx = input->variable->find(vstrx);
+      if (vvarx < 0)
         error->all(FLERR,"Variable name for create_particles does not exist");
-      if (!input->variable->equal_style(yvar))
+      if (!input->variable->equal_style(vvarx))
         error->all(FLERR,"Variable for create_particles is invalid style");
-      input->variable->equal_save(yvar,ystr_copy);
+      input->variable->equal_save(vvarx,vstrx_copy);
     }
-    if (zstr) {
-      zvar = input->variable->find(zstr);
-      if (zvar < 0)
+    if (vstry) {
+      vvary = input->variable->find(vstry);
+      if (vvary < 0)
         error->all(FLERR,"Variable name for create_particles does not exist");
-      if (!input->variable->equal_style(zvar))
+      if (!input->variable->equal_style(vvary))
         error->all(FLERR,"Variable for create_particles is invalid style");
-      input->variable->equal_save(zvar,zstr_copy);
+      input->variable->equal_save(vvary,vstry_copy);
+    }
+    if (vstrz) {
+      vvarz = input->variable->find(vstrz);
+      if (vvarz < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->equal_style(vvarz))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+      input->variable->equal_save(vvarz,vstrz_copy);
     }
   }
 
@@ -231,7 +300,7 @@ void CreateParticles::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   // error check
-  // only if no region and no variables specified
+  // only if no region and no variable species/density specified
 
   bigint nglobal;
   bigint nme = particle->nlocal;
@@ -248,19 +317,21 @@ void CreateParticles::command(int narg, char **arg)
 
   // restore each equal variable string previously saved
 
-  if (speciesflag || densflag) {
-    if (xstr) input->variable->equal_restore(xvar,xstr_copy);
-    if (ystr) input->variable->equal_restore(yvar,ystr_copy);
-    if (zstr) input->variable->equal_restore(zvar,zstr_copy);
+  if (speciesflag) {
+    if (sxstr) input->variable->equal_restore(sxvar,sxstr_copy);
+    if (systr) input->variable->equal_restore(syvar,systr_copy);
+    if (szstr) input->variable->equal_restore(szvar,szstr_copy);
   }
-
-  // clean up
-
-  delete [] tstr;
-  delete [] dstr;
-  delete [] xstr;
-  delete [] ystr;
-  delete [] zstr;
+  if (densflag) {
+    if (dxstr) input->variable->equal_restore(dxvar,dxstr_copy);
+    if (dystr) input->variable->equal_restore(dyvar,dystr_copy);
+    if (dzstr) input->variable->equal_restore(dzvar,dzstr_copy);
+  }
+  if (velflag) {
+    if (vstrx) input->variable->equal_restore(vvarx,vstrx_copy);
+    if (vstry) input->variable->equal_restore(vvary,vstry_copy);
+    if (vstrz) input->variable->equal_restore(vvarz,vstrz_copy);
+  }
 
   // print stats
 
@@ -436,7 +507,7 @@ void CreateParticles::create_local(bigint np)
   double temp_vib = particle->mixture[imix]->temp_vib;
 
   int npercell,ncreate,isp,ispecies,id;
-  double x[3],v[3];
+  double x[3],v[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
 
   double volsum = 0.0;
@@ -490,9 +561,16 @@ void CreateParticles::create_local(bigint np)
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
 	
-      v[0] = vstream[0] + vn*cos(theta1);
-      v[1] = vstream[1] + vr*cos(theta2);
-      v[2] = vstream[2] + vr*sin(theta2);
+      if (velflag) {
+        velocity_variable(x,vstream,vstream_variable);
+        v[0] = vstream_variable[0] + vn*cos(theta1);
+        v[1] = vstream_variable[1] + vr*cos(theta2);
+        v[2] = vstream_variable[2] + vr*sin(theta2);
+      } else {
+        v[0] = vstream[0] + vn*cos(theta1);
+        v[1] = vstream[1] + vr*cos(theta2);
+        v[2] = vstream[2] + vr*sin(theta2);
+      }
 
       erot = particle->erot(ispecies,temp_rot,random);
       evib = particle->evib(ispecies,temp_vib,random);
@@ -535,24 +613,24 @@ int CreateParticles::outside_region(int dim, double *lo, double *hi)
 
 
 /* ----------------------------------------------------------------------
-   use particle position in tvariable to generate particle species
-   first plug in x,y,z values specified by set option
+   use particle position in svar variable to generate particle species
+   first plug in particle x,y,z values into sxvar,syvar,szvar
 ------------------------------------------------------------------------- */
 
 int CreateParticles::species_variable(double *x)
 {
-  if (xstr) input->variable->equal_override(xvar,x[0]);
-  if (ystr) input->variable->equal_override(yvar,x[1]);
-  if (zstr) input->variable->equal_override(zvar,x[2]);
+  if (sxstr) input->variable->equal_override(sxvar,x[0]);
+  if (systr) input->variable->equal_override(syvar,x[1]);
+  if (szstr) input->variable->equal_override(szvar,x[2]);
 
-  double value = input->variable->compute_equal(tvar);
+  double value = input->variable->compute_equal(svar);
   int isp = static_cast<int> (value);
   return isp;
 }
 
 /* ----------------------------------------------------------------------
-   use grid cell center in dvariable to generate density scale factor
-   first plug in x,y,z values specified by set option
+   use grid cell center in dvar variable to generate density scale factor
+   first plug in grid x,y,z values into dxvar,dyvar,dzvar
 ------------------------------------------------------------------------- */
 
 double CreateParticles::density_variable(double *lo, double *hi)
@@ -562,12 +640,32 @@ double CreateParticles::density_variable(double *lo, double *hi)
   center[1] = 0.5 * (lo[1]+hi[1]);
   center[2] = 0.5 * (lo[2]+hi[2]);
 
-  if (xstr) input->variable->equal_override(xvar,center[0]);
-  if (ystr) input->variable->equal_override(yvar,center[1]);
-  if (zstr) input->variable->equal_override(zvar,center[2]);
+  if (dxstr) input->variable->equal_override(dxvar,center[0]);
+  if (dystr) input->variable->equal_override(dyvar,center[1]);
+  if (dzstr) input->variable->equal_override(dzvar,center[2]);
 
   double scale = input->variable->compute_equal(dvar);
   return scale;
+}
+
+/* ----------------------------------------------------------------------
+   use particle position in vxvar,vyvar,vzvar variables to generate vel stream
+   first plug in particle x,y,z values into vvarx,vvary,vvarz
+------------------------------------------------------------------------- */
+
+void CreateParticles::velocity_variable(double *x, double *vstream,
+                                        double *vstream_variable)
+{
+  if (vstrx) input->variable->equal_override(vvarx,x[0]);
+  if (vstry) input->variable->equal_override(vvary,x[1]);
+  if (vstrz) input->variable->equal_override(vvarz,x[2]);
+
+  if (vxstr) vstream_variable[0] = input->variable->compute_equal(vxvar);
+  else vstream_variable[0] = vstream[0];
+  if (vystr) vstream_variable[1] = input->variable->compute_equal(vyvar);
+  else vstream_variable[1] = vstream[1];
+  if (vzstr) vstream_variable[2] = input->variable->compute_equal(vzvar);
+  else vstream_variable[2] = vstream[2];
 }
 
 /* ----------------------------------------------------------------------

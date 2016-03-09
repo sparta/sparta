@@ -711,7 +711,7 @@ void Surf::group(int narg, char **arg)
 
       // add surf to group if meets condition
 
-      if (category == TYPE) {
+      if (category == ID) {
         if (condition == LT) {
           if (dimension == 2) {
             for (i = 0; i < nline; i++) 
@@ -769,7 +769,7 @@ void Surf::group(int narg, char **arg)
               if (i+1 >= bound1 && i+1 <= bound2) tris[i].mask |= bit;
           }
         }
-      } else if (category == ID) {
+      } else if (category == TYPE) {
         if (condition == LT) {
           if (dimension == 2) {
             for (i = 0; i < nline; i++) 
@@ -850,7 +850,7 @@ void Surf::group(int narg, char **arg)
 
         // add surf to group if type/id matches value or sequence
       
-        if (category == TYPE) {
+        if (category == ID) {
           if (dimension == 2) {
             for (i = 0; i < nline; i++)
               if (i+1 >= start && i+1 <= stop) lines[i].mask |= bit;
@@ -858,7 +858,7 @@ void Surf::group(int narg, char **arg)
             for (i = 0; i < ntri; i++)
               if (i+1 >= start && i+1 <= stop) tris[i].mask |= bit;
           }
-        } else if (category == ID) {
+        } else if (category == TYPE) {
           if (dimension == 2) {
             for (i = 0; i < nline; i++)
               if (lines[i].type >= start && lines[i].type <= stop) 
