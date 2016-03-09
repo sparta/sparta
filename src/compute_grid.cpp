@@ -80,7 +80,6 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"massrho") == 0) {
       value[ivalue] = MASSRHO;
       set_map(ivalue,MASSSUM);
-      set_map(ivalue,COUNT);
     } else if (strcmp(arg[iarg],"massfrac") == 0) {
       value[ivalue] = MASSFRAC;
       set_map(ivalue,MASSSUM);
@@ -399,13 +398,12 @@ double ComputeGrid::post_process_grid(int index, int onecell, int nsample,
 
       double norm;
       int mass = emap[0];
-      int count = emap[1];
       for (int icell = lo; icell < hi; icell++) {
-        norm = etally[icell][count];
+        norm = cinfo[icell].volume;
         if (norm == 0.0) vec[k] = 0.0;
         else {
-          wt = fnum * cinfo[icell].weight / cinfo[icell].volume;
-          vec[k] = wt * etally[icell][mass] / norm;
+          wt = fnum * cinfo[icell].weight / norm;
+          vec[k] = wt * etally[icell][mass] / nsample;
         }
         k += nstride;
       }
