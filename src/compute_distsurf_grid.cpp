@@ -101,8 +101,9 @@ void ComputeDistSurfGrid::compute_per_grid()
   int nline = surf->nline;
   int ntri = surf->ntri;
 
-  // eflag = 0/1 flag = eligibility of each surf, based on normal vs sdir
+  // nsurf = # of eligible surfs, based on group and sdir setting
   // slist = list of Nsurf eligible surf indices to use for computing distances
+  // eflag = 0/1 eligibility flag on all Nline/Ntri surfs
 
   int *eflag,*slist;
   int nsurf = 0;
@@ -140,14 +141,12 @@ void ComputeDistSurfGrid::compute_per_grid()
   for (i = 0; i < nsurf; i++) {
     m = slist[i];
     if (dim == 2) {
-      if (!(lines[i].mask & sgroupbit)) continue;
       p1 = lines[m].p1;
       p2 = lines[m].p2;
       sctr[i][0] = 0.5 * (pts[p1].x[0] + pts[p2].x[0]);
       sctr[i][1] = 0.5 * (pts[p1].x[1] + pts[p2].x[1]);
       sctr[i][2] = 0.0;
     } else {
-      if (!(tris[i].mask & sgroupbit)) continue;
       p1 = tris[m].p1;
       p2 = tris[m].p2;
       p3 = tris[m].p3;
@@ -178,8 +177,20 @@ void ComputeDistSurfGrid::compute_per_grid()
         m = csurfs[i];
         if (eflag[m]) break;
       }
+
+      // cell is overlapped, set dist = 0.0 and return
+      // if split cell, also set vector for sub-cells
+
       if (i < n) {
         vector_grid[icell] = 0.0;
+        if (cells[icell].nsplit > 1) {
+          n = cells[icell].nsplit;
+          csubs = sinfo[cells[icell].isplit].csubs;
+          for (i = 0; i < n; i++) {
+            m = csubs[i];
+            vector_grid[m] = mindist;
+          }
+        }
         continue;
       }
     }
@@ -213,17 +224,6 @@ void ComputeDistSurfGrid::compute_per_grid()
     }
     
     vector_grid[icell] = mindist;
-
-    // also set vector for sub-cells of split cell
-
-    if (cells[icell].nsplit > 1) {
-      n = cells[icell].nsplit;
-      csubs = sinfo[cells[icell].isplit].csubs;
-      for (i = 0; i < n; i++) {
-        m = csubs[i];
-        vector_grid[m] = mindist;
-      }
-    }
   }
 
   // clean up

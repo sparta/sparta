@@ -680,7 +680,7 @@ void Surf::group(int narg, char **arg)
 
     int category;
     if (strcmp(arg[2],"type") == 0) category = TYPE;
-    else if (strcmp(arg[1],"id") == 0) category = ID;
+    else if (strcmp(arg[2],"id") == 0) category = ID;
 
     // args = logical condition
     
@@ -699,7 +699,7 @@ void Surf::group(int narg, char **arg)
       else if (strcmp(arg[3],"!=") == 0) condition = NEQ;
       else if (strcmp(arg[3],"<>") == 0) condition = BETWEEN;
       else error->all(FLERR,"Illegal group command");
-      
+
       int bound1,bound2;
       bound1 = input->inumeric(FLERR,arg[4]);
       bound2 = -1;
@@ -712,6 +712,7 @@ void Surf::group(int narg, char **arg)
       // add surf to group if meets condition
 
       if (category == ID) {
+        printf("COND %d %d\n",condition,BETWEEN);
         if (condition == LT) {
           if (dimension == 2) {
             for (i = 0; i < nline; i++) 
@@ -841,7 +842,7 @@ void Surf::group(int narg, char **arg)
         if (strchr(arg[iarg],':')) {
           ptr = strchr(arg[iarg],':'); 
           *ptr = '\0';
-          start = input->inumeric(FLERR,ptr); 
+          start = input->inumeric(FLERR,arg[iarg]); 
           *ptr = ':';
           stop = input->inumeric(FLERR,ptr+1); 
         } else {

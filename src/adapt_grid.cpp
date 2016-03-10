@@ -782,8 +782,8 @@ void AdaptGrid::refine_particle()
       np = 0;
       nsplit = cells[icell].nsplit;
       csubs = sinfo[cells[icell].isplit].csubs;
-      for (int i = 0; i < nsplit; i++) {
-        jcell = csubs[i];
+      for (int j = 0; j < nsplit; j++) {
+        jcell = csubs[j];
         np += cinfo[jcell].count;
       }
     }
@@ -877,8 +877,8 @@ void AdaptGrid::refine_value()
       if (combine == SUM) value = 0.0;
       else if (combine == MINIMUM) value = BIG;
       else if (combine == MAXIMUM) value = -BIG;
-      for (int i = 0; i < nsplit; i++) {
-        jcell = csubs[i];
+      for (int j = 0; j < nsplit; j++) {
+        jcell = csubs[j];
         if (combine == SUM) {
           if (valuewhich == COMPUTE) value += value_compute(jcell);
           else if (valuewhich == FIX) value += value_fix(jcell);
@@ -896,13 +896,9 @@ void AdaptGrid::refine_value()
       }
     }
 
-    //printf("AAA %d %d: %g %g\n",
-    //       icell,cells[icell].id,value,rvalue);
-
     if (rdecide == LESS) {
       if (value < rvalue) rlist[n++] = icell;
     } else {
-      //printf("AAA %d %d: %g %g\n",icell,cells[icell].id,value,rthresh);
       if (value > rvalue) rlist[n++] = icell;
     }
   }
@@ -1408,8 +1404,8 @@ void AdaptGrid::candidates_coarsen(int pstop)
           if (combine == SUM) value = 0.0;
           else if (combine == MINIMUM) value = BIG;
           else if (combine == MAXIMUM) value = -BIG;
-          for (int i = 0; i < nsplit; i++) {
-            jcell = csubs[i];
+          for (int j = 0; j < nsplit; j++) {
+            jcell = csubs[j];
             np += cinfo[jcell].count;
             if (style == VALUE) {
               if (combine == SUM) {
@@ -1594,8 +1590,8 @@ void AdaptGrid::coarsen_particle()
         else {
           nsplit = cells[icell].nsplit;
           csubs = sinfo[cells[icell].isplit].csubs;
-          for (int i = 0; i < nsplit; i++) {
-            jcell = csubs[i];
+          for (int j = 0; j < nsplit; j++) {
+            jcell = csubs[j];
             np += cinfo[jcell].count;
           }
         }
@@ -1738,8 +1734,8 @@ void AdaptGrid::coarsen_value()
 
           nsplit = cells[icell].nsplit;
           csubs = sinfo[cells[icell].isplit].csubs;
-          for (int i = 0; i < nsplit; i++) {
-            jcell = csubs[i];
+          for (int j = 0; j < nsplit; j++) {
+            jcell = csubs[j];
             if (combine == SUM) {
               if (valuewhich == COMPUTE) value += value_compute(jcell);
               else if (valuewhich == FIX) value += value_fix(jcell);
@@ -2127,7 +2123,7 @@ double AdaptGrid::value_compute(int icell)
     if (compute->post_process_grid_flag) 
       compute->post_process_grid_old(NULL,NULL,icell,0,&value,1);
     else value = compute->vector_grid[icell];
-    
+
   } else {
     if (compute->post_process_grid_flag)
       compute->post_process_grid_old(NULL,NULL,icell,valindex,&value,1);
