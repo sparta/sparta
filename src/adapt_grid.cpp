@@ -896,6 +896,9 @@ void AdaptGrid::refine_value()
       }
     }
 
+    //printf("AAA %d %d: %g %g\n",
+    //       icell,cells[icell].id,value,rvalue);
+
     if (rdecide == LESS) {
       if (value < rvalue) rlist[n++] = icell;
     } else {
