@@ -989,7 +989,7 @@ void Surf::group(int narg, char **arg)
 
   // style = union
 
-  } else if (strcmp(arg[1],"union") == 0) {
+  } else if (strcmp(arg[2],"union") == 0) {
     if (narg < 4) error->all(FLERR,"Illegal group command");
 
     int length = narg-3;
@@ -1021,7 +1021,7 @@ void Surf::group(int narg, char **arg)
 
   // style = intersect
 
-  } else if (strcmp(arg[1],"intersect") == 0) {
+  } else if (strcmp(arg[2],"intersect") == 0) {
     if (narg < 5) error->all(FLERR,"Illegal group command");
 
     int length = narg-3;

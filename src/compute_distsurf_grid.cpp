@@ -179,7 +179,7 @@ void ComputeDistSurfGrid::compute_per_grid()
       }
 
       // cell is overlapped, set dist = 0.0 and return
-      // if split cell, also set vector for sub-cells
+      // if split cell, also set vector_grid = 0.0 for sub-cells
 
       if (i < n) {
         vector_grid[icell] = 0.0;
@@ -188,7 +188,7 @@ void ComputeDistSurfGrid::compute_per_grid()
           csubs = sinfo[cells[icell].isplit].csubs;
           for (i = 0; i < n; i++) {
             m = csubs[i];
-            vector_grid[m] = mindist;
+            vector_grid[m] = 0.0;
           }
         }
         continue;
