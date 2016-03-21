@@ -603,6 +603,7 @@ void Particle::add_species(int narg, char **arg)
     }
   }
 
+  // nfilespecies = # of species defined in file
   // filespecies = list of species defined in file
 
   nfilespecies = maxfilespecies = 0;
@@ -610,11 +611,9 @@ void Particle::add_species(int narg, char **arg)
 
   if (me == 0) read_species_file();
   MPI_Bcast(&nfilespecies,1,MPI_INT,0,world);
-  if (nfilespecies >= maxfilespecies) {
-    memory->destroy(filespecies);
-    maxfilespecies = nfilespecies;
+  if (comm->me) {
     filespecies = (Species *) 
-      memory->smalloc(maxfilespecies*sizeof(Species),
+      memory->smalloc(nfilespecies*sizeof(Species),
 		      "particle:filespecies");
   }
   MPI_Bcast(filespecies,nfilespecies*sizeof(Species),MPI_BYTE,0,world);
@@ -809,9 +808,6 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
 
 void Particle::read_species_file()
 {
-  nfilespecies = maxfilespecies = 0;
-  filespecies = NULL;
-
   // read file line by line
   // skip blank lines or comment lines starting with '#'
   // all other lines must have NWORDS 
