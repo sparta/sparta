@@ -117,6 +117,7 @@ void ComputeSurf::init()
   for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
 
   // normflux for all surface elements, based on area and timestep size
+  // store inverse, so can multipy by scale factor when tally
   // store for all surf elements, b/c don't know which ones I need to normalize
   // one-time only initialization
 
@@ -133,6 +134,7 @@ void ComputeSurf::init()
       else if (axisymmetric) normflux[i] = surf->axi_line_size(i);
       else normflux[i] = surf->line_size(i);
       normflux[i] *= nfactor;
+      normflux[i] = 1.0/normflux[i];
     }
   }
 
@@ -154,21 +156,9 @@ void ComputeSurf::compute_per_surf()
 {
   invoked_per_surf = update->ntimestep;
 
-  // normalize all local tallies (except NUM) by normflux
+  // no operation to perform, local tallies are already normalized
   // NOTE: this does not produce vector_surf or array_surf
   //       which might be what some callers expect
-
-  int iglobal,m;
-  double norm;
-
-  for (int i = 0; i < nlocal; i++) {
-    iglobal = loc2glob[i];
-    norm = normflux[iglobal];
-    for (int j = 0; j < ntotal; j++) {
-      m = j % nvalue;
-      if (which[m] != NUM) array_surf_tally[i][j] /= norm;
-    }
-  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -176,6 +166,7 @@ void ComputeSurf::compute_per_surf()
 void ComputeSurf::clear()
 {
   // reset all set glob2loc values to -1
+  // called by Update at beginning of timesteps surf tallying is done
 
   for (int i = 0; i < nlocal; i++)
     glob2loc[loc2glob[i]] = -1;
@@ -224,12 +215,15 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
     for (int i = 0; i < ntotal; i++) vec[i] = 0.0;
   }
 
+  double fluxscale = normflux[isurf];
+
   // tally all values associated with group into array
   // set nflag and tflag after normal and tangent computation is done once
   // particle weight used for all keywords except NUM
+  // fluxscale factor applied for all keywords except NUM
 
   double vsqpre,ivsqpost,jvsqpost;
-  double ierot,jerot,ievib,jevib,iother,jother,otherpre;
+  double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
   double pdelta[3],pnorm[3],ptang[3];
 
   double *norm;
@@ -259,7 +253,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
       MathExtra::scale3(-origmass,vorig,pdelta);
       if (ip) MathExtra::axpy3(imass,ip->v,pdelta);
       if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
-      vec[k++] += MathExtra::dot3(pdelta,norm);
+      vec[k++] += MathExtra::dot3(pdelta,norm) * fluxscale;
       break;
     case XPRESS:
       if (!nflag) {
@@ -269,7 +263,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
-      vec[k++] -= pnorm[0];
+      vec[k++] -= pnorm[0] * fluxscale;
       break;
     case YPRESS:
       if (!nflag) {
@@ -279,7 +273,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
-      vec[k++] -= pnorm[1];
+      vec[k++] -= pnorm[1] * fluxscale;
       break;
     case ZPRESS:
       if (!nflag) {
@@ -289,7 +283,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
         if (jp) MathExtra::axpy3(jmass,jp->v,pdelta);
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
       }
-      vec[k++] -= pnorm[2];
+      vec[k++] -= pnorm[2] * fluxscale;
       break;
     case XSHEAR:
       if (!tflag) {
@@ -300,7 +294,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
-      vec[k++] -= ptang[0];
+      vec[k++] -= ptang[0] * fluxscale;
       break;
     case YSHEAR:
       if (!tflag) {
@@ -311,7 +305,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
-      vec[k++] -= ptang[1];
+      vec[k++] -= ptang[1] * fluxscale;
       break;
     case ZSHEAR:
       if (!tflag) {
@@ -322,7 +316,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
         MathExtra::scale3(MathExtra::dot3(pdelta,norm),norm,pnorm);
         MathExtra::sub3(pdelta,pnorm,ptang);
       }
-      vec[k++] -= ptang[2];
+      vec[k++] -= ptang[2] * fluxscale;
       break;
     case KE:
       vsqpre = origmass * MathExtra::lensq3(vorig);
@@ -330,21 +324,21 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
       else ivsqpost = 0.0;
       if (jp) jvsqpost = jmass * MathExtra::lensq3(jp->v);
       else jvsqpost = 0.0;
-      vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre);
+      vec[k++] -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
       break;
     case EROT:
       if (ip) ierot = ip->erot;
       else ierot = 0.0;
       if (jp) jerot = jp->erot;
       else jerot = 0.0;
-      vec[k++] -= weight * (ierot + jerot - iorig->erot);
+      vec[k++] -= weight * (ierot + jerot - iorig->erot) * fluxscale;
       break;
     case EVIB:
       if (ip) ievib = ip->evib;
       else ievib = 0.0;
       if (jp) jevib = jp->evib;
       else jevib = 0.0;
-      vec[k++] -= weight * (ievib + jevib - iorig->evib);
+      vec[k++] -= weight * (ievib + jevib - iorig->evib) * fluxscale;
       break;
     case ETOT:
       vsqpre = origmass * MathExtra::lensq3(vorig);
@@ -357,8 +351,9 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
 	jvsqpost = jmass * MathExtra::lensq3(jp->v);
 	jother = jp->erot + jp->evib;
       } else jvsqpost = jother = 0.0;
-      vec[k++] -= 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+      etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
         weight * (iother + jother - otherpre);
+      vec[k++] -= etot * fluxscale;
       break;
     }
   }
