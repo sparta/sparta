@@ -40,7 +40,7 @@ class ReadRestart : protected Pointers {
                              // else # of procs writing files
 
   bigint nparticle_file;
-  int nunsplit_file,nsplit_file,nsub_file;
+  bigint nunsplit_file,nsplit_file,nsub_file;
   int npoint_file,nsurf_file;
 
   void file_search(char *, char *);

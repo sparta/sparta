@@ -238,7 +238,6 @@ void ReadRestart::command(int narg, char **arg)
       MPI_Wait(&request,&status);
     }
 
-
     n = grid->unpack_restart(buf);
     create_child_cells(0);
     n += particle->unpack_restart(&buf[n]);
