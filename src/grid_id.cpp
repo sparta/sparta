@@ -136,7 +136,7 @@ cellint Grid::id_str2num(char *idstr)
          but this would use up some extra bits in the ID
 ------------------------------------------------------------------------- */
 
-void Grid::id_num2str(int id, char *str)
+void Grid::id_num2str(cellint id, char *str)
 {
   int idparent = 0;
   int iparent = 0;
