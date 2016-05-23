@@ -254,7 +254,7 @@ class Grid : protected Pointers {
   int id_find_child(int, double *);
   int id_find_parent(cellint, cellint &);
   cellint id_str2num(char *);
-  void id_num2str(int, char *);
+  void id_num2str(cellint, char *);
   void id_pc_split(char *, char *, char *);
   void id_child_lohi(int, cellint, double *, double *);
   int id_bits(int, int, int);
