@@ -57,7 +57,9 @@ class ComputeSurf : public Compute {
 
   int weightflag;          // 1 if cell weighting is enabled
   double weight;           // particle weight, based on initial cell
-  double *normflux;        // normalization factor for all surf elements
+  double nfactor;          // dt/fnum for normalization
+  double nfactor_inverse;  // fnum/dt for normalization
+  double *normflux;        // normalization factor for each surf element
 
   void grow();
 };

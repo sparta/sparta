@@ -27,7 +27,8 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
+enum{NUM,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,
+     KE,EROT,EVIB,ETOT};
 
 #define DELTA 4096
 
@@ -52,6 +53,9 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
+    else if (strcmp(arg[iarg],"fx") == 0) which[nvalue++] = FX;
+    else if (strcmp(arg[iarg],"fy") == 0) which[nvalue++] = FY;
+    else if (strcmp(arg[iarg],"fz") == 0) which[nvalue++] = FZ;
     else if (strcmp(arg[iarg],"press") == 0) which[nvalue++] = PRESS;
     else if (strcmp(arg[iarg],"px") == 0) which[nvalue++] = XPRESS;
     else if (strcmp(arg[iarg],"py") == 0) which[nvalue++] = YPRESS;
@@ -116,6 +120,11 @@ void ComputeSurf::init()
   memory->create(glob2loc,nsurf,"surf:glob2loc");
   for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
 
+  // normalization nfactor = dt/fnum
+
+  nfactor = update->dt/update->fnum;
+  nfactor_inverse = 1.0/nfactor;
+
   // normflux for all surface elements, based on area and timestep size
   // store inverse, so can multipy by scale factor when tally
   // store for all surf elements, b/c don't know which ones I need to normalize
@@ -124,7 +133,6 @@ void ComputeSurf::init()
   if (normflux == NULL)  {
     memory->create(normflux,nsurf,"surf:normflux");
 
-    double nfactor = update->dt/update->fnum;
     int dimension = domain->dimension;
     int axisymmetric = domain->axisymmetric;
     double tmp;
@@ -220,11 +228,12 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
   // tally all values associated with group into array
   // set nflag and tflag after normal and tangent computation is done once
   // particle weight used for all keywords except NUM
-  // fluxscale factor applied for all keywords except NUM
+  // forcescale factor applied for keywords FX,FY,FZ
+  // fluxscale factor applied for all keywords except NUM,FX,FY,FZ
 
   double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
-  double pdelta[3],pnorm[3],ptang[3];
+  double pdelta[3],pnorm[3],ptang[3],pdelta_force[3];
 
   double *norm;
   if (dimension == 2) norm = lines[isurf].norm;
@@ -241,6 +250,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
 
   vec = array_surf_tally[ilocal];
   int k = igroup*nvalue;
+  int fflag = 0;
   int nflag = 0;
   int tflag = 0;
 
@@ -248,6 +258,33 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
     switch (which[m]) {
     case NUM:
       vec[k++] += 1.0;
+      break;
+    case FX:
+      if (!fflag) {
+        fflag = 1;
+        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+      }
+      vec[k++] -= pdelta_force[0] * nfactor_inverse;
+      break;
+    case FY:
+      if (!fflag) {
+        fflag = 1;
+        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+      }
+      vec[k++] -= pdelta_force[1] * nfactor_inverse;
+      break;
+    case FZ:
+      if (!fflag) {
+        fflag = 1;
+        MathExtra::scale3(-origmass,vorig,pdelta_force);
+        if (ip) MathExtra::axpy3(imass,ip->v,pdelta_force);
+        if (jp) MathExtra::axpy3(jmass,jp->v,pdelta_force);
+      }
+      vec[k++] -= pdelta_force[2] * nfactor_inverse;
       break;
     case PRESS:
       MathExtra::scale3(-origmass,vorig,pdelta);
