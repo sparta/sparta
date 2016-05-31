@@ -1750,6 +1750,11 @@ void Grid::write_restart(FILE *fp)
 
 void Grid::read_restart(FILE *fp)
 {
+  // read_restart may have reset maxsurfpercell in its header() method
+  // if so, need to reallocate surf arrays to correct max length
+
+  if (maxsurfpercell != MAXSURFPERCELL) allocate_surf_arrays();
+
   if (me == 0) fread(&nparent,sizeof(int),1,fp);
   MPI_Bcast(&nparent,1,MPI_INT,0,world);
   grow_pcells(nparent);
