@@ -48,8 +48,8 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
     tstr = new char[n];
     strcpy(tstr,&arg[2][2]);
   } else {
-    twall = atof(arg[2]);
-    if (twall < 0.0) error->all(FLERR,"Illegal surf_collide diffuse command");
+    twall = input->inumeric(FLERR,arg[2]); 
+    if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
   }
 
   acc = atof(arg[3]);
@@ -291,4 +291,5 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 void SurfCollideDiffuse::dynamic()
 {
   twall = input->variable->compute_equal(tvar);
+  if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
 }

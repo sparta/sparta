@@ -109,6 +109,7 @@ class Cut2d : protected Pointers {
   int sameedge(double *, double *);
   int whichside(double *);
 
+  void failed_cell();
   void print_clines();
   void print_points();
   void print_loops();

@@ -783,9 +783,14 @@ void Cut2d::loop2pg()
   for (int i = 0; i < nloop; i++)
     if (loops[i].area > 0.0) positive++;
     else negative++;
-  if (positive == 0) error->one(FLERR,"No positive areas in cell");
-  if (positive > 1 && negative) 
+  if (positive == 0) {
+    failed_cell();
+    error->one(FLERR,"No positive areas in cell");
+  }
+  if (positive > 1 && negative) {
+    failed_cell();
     error->one(FLERR,"More than one positive area with a negative area");
+  }
 
   pgs.grow(positive);
 
@@ -1047,6 +1052,27 @@ int Cut2d::whichside(double *pt)
   if (pt[1] == lo[1]) return 0;
   if (pt[1] == hi[1]) return 2;
   return -1;
+}
+
+/* ----------------------------------------------------------------------
+   debug: print out failed cell info
+------------------------------------------------------------------------- */
+
+void Cut2d::failed_cell()
+{
+  if (sizeof(cellint) == 4) printf("Failed cell ID: %d",id);
+  else printf("Failed cell ID: %ld\n",id);
+  printf("  Lo corner %g %g\n",lo[0],lo[1]);
+  printf("  Hi corner %g %g\n",hi[0],hi[1]);
+  if (!nsurf) {
+    printf("  called from cut3d\n");
+    print_clines();
+  } else {
+    printf("  # of surfs = %d\n",nsurf);
+    printf("  surfs:");
+    for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]);
+    printf("\n");
+  }
 }
 
 /* ----------------------------------------------------------------------
