@@ -48,7 +48,7 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
     tstr = new char[n];
     strcpy(tstr,&arg[2][2]);
   } else {
-    twall = input->inumeric(FLERR,arg[2]); 
+    twall = input->numeric(FLERR,arg[2]); 
     if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
   }
 
