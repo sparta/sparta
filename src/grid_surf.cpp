@@ -681,8 +681,9 @@ void Grid::flow_stats()
 /* ----------------------------------------------------------------------
    compute flow volume for entire box, using global list of surfs
    volume for one surf is projection to lower z face
-   NOTE: this does not work if any surfs are clipped to zlo or zhi faces
-         need to add contribution due to closing surfs on zlo/zhi faces
+   NOTE: this does not work if any surfs are clipped to zlo or zhi faces in 3d
+         this does not work if any surfs are clipped to ylo or yhi faces in 3d
+         need to add contribution due to closing surfs on those faces
          fairly easy to add in 2d, not so easy in 3d
 ------------------------------------------------------------------------- */
 
@@ -729,6 +730,8 @@ double Grid::flow_volume()
       p1 = pts[lines[i].p1].x;
       p2 = pts[lines[i].p2].x;
       volume -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);
+      printf("FV: i %d vol %g cumm %g\n",i,
+             -(0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]),volume);
     }
     if (volume <= 0.0) volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
   }
