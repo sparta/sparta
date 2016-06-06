@@ -24,6 +24,7 @@
 #include "comm.h"
 #include "geometry.h"
 #include "input.h"
+#include "write_surf.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -136,11 +137,13 @@ void ReadSurf::command(int narg, char **arg)
 
   // apply optional keywords for geometric transformations
   // store optional keywords for group and type information
+  // store optional keyword for file output
 
   origin[0] = origin[1] = origin[2] = 0.0;
   int grouparg = 0;
   int typeadd = 0;
   int partflag = NONE;
+  int filearg = 0;
 
   int iarg = 1;
   while (iarg < narg) {
@@ -268,6 +271,11 @@ void ReadSurf::command(int narg, char **arg)
       else error->all(FLERR,"Invalid read_surf command");
       iarg += 2;
 
+    } else if (strcmp(arg[iarg],"file") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      filearg = iarg+1;
+      iarg += 2;
+
     } else error->all(FLERR,"Invalid read_surf command");
   }
 
@@ -368,6 +376,28 @@ void ReadSurf::command(int narg, char **arg)
   // all points must be inside or on surface of simulation box
 
   surf->check_point_inside(npoint_old,npoint_new);
+
+  // write out new surf file if requested
+  // do this before assigning surfs to grid cells, in case an error occurs
+
+  if (filearg) {
+    WriteSurf *wf = new WriteSurf(sparta);
+    if (comm->me == 0) {
+      FILE *fp = fopen(arg[filearg],"w");
+      if (!fp) {
+	char str[128];
+	sprintf(str,"Cannot open surface file %s",arg[0]);
+	error->one(FLERR,str);
+      }
+      wf->write_file(fp);
+      fclose(fp);
+    }
+    delete wf;
+  }
+
+  // -----------------------
+  // map surfs to grid cells
+  // -----------------------
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
@@ -1408,8 +1438,8 @@ void ReadSurf::check_neighbor_norm_2d()
   for (int i = 0; i < nline_new; i++) {
     p1 = lines[m].p1 - npoint_old;
     p2 = lines[m].p2 - npoint_old;
-    p2e[p1][count[p1]++] = m;
-    p2e[p2][count[p2]++] = m;
+    p2e[p1][count[p1]++] = i;
+    p2e[p2][count[p2]++] = i;
     m++;
   }
   

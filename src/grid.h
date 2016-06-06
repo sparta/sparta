@@ -289,19 +289,12 @@ class Grid : protected Pointers {
   int neighmask[6];        // bit-masks for each face in nmask
   int neighshift[6];       // bit-shifts for each face in nmask
 
-  // connection between one of my child cell corner pts
-  // and a corner point in another child cell owned by me or another proc
+  // connection between one of my cells and a neighbor cell on another proc
 
   struct Connect {
-    int newvalue;        // new value on the corner pt
-    int icorner;         // what corner in other cell
-    int icell;           // what other cell
-    int proc;            // what proc owns the hcell
-  };
-
-  struct Connect2 {
-    int newvalue;        // new value for neighbor cell
-    int icell;           // index of other cell on owning proc
+    int itype;           // type of sending cell
+    int marktype;        // new type value (IN/OUT) for neighbor cell
+    int jcell;           // index of neighbor cell on receiving proc (owner)
   };
 
   // bounding box for a clump of grid cells

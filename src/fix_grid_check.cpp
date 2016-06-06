@@ -151,6 +151,20 @@ void FixGridCheck::end_of_step()
       }
       nflag++;
     }
+
+    // does icell have zero volume, then collision attempt freq will blow up
+
+    if (cinfo[icell].volume == 0.0) {
+      if (outflag == ERROR) {
+        char str[128];
+        sprintf(str,
+                "Particle %d,%d on proc %d is in volume=0 cell " CELLINT_FORMAT
+                " on timestep " BIGINT_FORMAT,
+                i,particles[i].id,comm->me,cells[icell].id,update->ntimestep);
+        error->one(FLERR,str);
+      }
+      nflag++;
+    }
   }
 
   // warning message instead of error

@@ -68,13 +68,13 @@ int *Grid::csubs_request(int n)
    if subflag = 0, split/sub cells already exist
      called from ReadRestart
    in cells: set nsurf, csurfs, nsplit, isplit
-   in cinfo: set type, corner, volume
+   in cinfo: for cells with surfs, set type, corner, volume 
    initialize sinfo as needed
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid(int subflag, int outflag)
 {
-  int i,isub,nsurf,nsplit,xsub;
+  int i,isub,nsurf,nsplitone,xsub;
   int *surfmap,*ptr;
   double *lo,*hi,*vols;
   double xsplit[3];
@@ -128,28 +128,28 @@ void Grid::surf2grid(int subflag, int outflag)
 
   // compute cut volume and possible split of each grid cell by surfs
   // decrement nunsplitlocal if convert an unsplit cell to split cell
-  // if nsplit > 1, create new split cell sinfo and sub-cells
+  // if nsplitone > 1, create new split cell sinfo and sub-cells
 
   int ncurrent = nlocal;
   for (int icell = 0; icell < ncurrent; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    if (cells[icell].nsurf == 0) continue;
+    if (cinfo[icell].type != OVERLAP) continue;
 
     surfmap = csplits->vget();
     c = &cells[icell];
 
     if (dim == 3)
-      nsplit = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                            vols,surfmap,cinfo[icell].corner,xsub,xsplit);
+      nsplitone = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                               vols,surfmap,cinfo[icell].corner,xsub,xsplit);
     else
-      nsplit = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                            vols,surfmap,cinfo[icell].corner,xsub,xsplit);
+      nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                               vols,surfmap,cinfo[icell].corner,xsub,xsplit);
 
-    if (nsplit == 1) 
+    if (nsplitone == 1) {
       cinfo[icell].volume = vols[0];
 
-    else if (subflag) {
-      cells[icell].nsplit = nsplit;
+    } else if (subflag) {
+      cells[icell].nsplit = nsplitone;
       nunsplitlocal--;
       
       cells[icell].isplit = nsplitlocal;
@@ -165,7 +165,7 @@ void Grid::surf2grid(int subflag, int outflag)
 
       ptr = s->csubs = csubs->vget();
 
-      for (i = 0; i < nsplit; i++) {
+      for (i = 0; i < nsplitone; i++) {
         isub = nlocal;
         add_sub_cell(icell,1);
         cells[isub].nsplit = -i;
@@ -174,12 +174,12 @@ void Grid::surf2grid(int subflag, int outflag)
       }
       
       csplits->vgot(cells[icell].nsurf);
-      csubs->vgot(nsplit);
+      csubs->vgot(nsplitone);
 
     } else {
-      if (cells[icell].nsplit != nsplit) {
+      if (cells[icell].nsplit != nsplitone) {
         printf("BAD %d %d: %d %d\n",icell,cells[icell].id,
-               nsplit,cells[icell].nsplit);
+               nsplitone,cells[icell].nsplit);
         error->one(FLERR,
                    "Inconsistent surface to grid mapping in read_restart");
       }
@@ -193,7 +193,7 @@ void Grid::surf2grid(int subflag, int outflag)
       else s->xsplit[2] = 0.0;
 
       ptr = s->csubs;
-      for (i = 0; i < nsplit; i++) {
+      for (i = 0; i < nsplitone; i++) {
         isub = ptr[i];
         cells[isub].nsurf = cells[icell].nsurf;
         cells[isub].csurfs = cells[icell].csurfs;
@@ -207,23 +207,62 @@ void Grid::surf2grid(int subflag, int outflag)
   //double t3 = MPI_Wtime();
   //printf("TIME %g\n",t3-t2);
 
-  int npush;
-  if (dim == 3) {
-    npush = cut3d->npush;
-    delete cut3d;
-  } else {
-    npush = cut2d->npush;
-    delete cut2d;
-  }
+  // stats on pushed cells and unmarked corner points in OVERLAP cells
 
-  if (surf->pushflag) {
-    int npushall;
-    MPI_Allreduce(&npush,&npushall,1,MPI_INT,MPI_SUM,world);
+  if (outflag) {
+    int npushmax;
+    int *npushcell;
+    if (dim == 3) {
+      npushmax = cut3d->npushmax;
+      npushcell = cut3d->npushcell;
+    } else {
+      npushmax = cut2d->npushmax;
+      npushcell = cut2d->npushcell;
+    }
+    int *npushall = new int[npushmax];
+    MPI_Allreduce(npushcell,npushall,npushmax+1,MPI_INT,MPI_SUM,world);
     if (comm->me == 0) {
-      if (screen) fprintf(screen,"  %d = number of pushed points\n",npushall);
-      if (logfile) fprintf(logfile,"  %d = number of pushed points\n",npushall);
+      if (screen) {
+        fprintf(screen,"  ");
+        for (int i = 1; i <= npushmax; i++)
+          fprintf(screen,"%d ",npushall[i]);
+        fprintf(screen,"= number of pushed cells\n");
+      }
+      if (logfile) {
+        fprintf(logfile,"  ");
+        for (int i = 1; i <= npushmax; i++)
+          fprintf(logfile,"%d ",npushall[i]);
+        fprintf(logfile,"= number of pushed cells\n");
+      }
+    }
+    delete [] npushall;
+
+    int noverlap = 0;
+    int ncorner = 0;
+    for (int icell = 0; icell < nlocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      if (cinfo[icell].type == OVERLAP) {
+        noverlap++;
+        if (cinfo[icell].corner[0] == UNKNOWN) ncorner++;
+      }
+    }
+    int ncornerall,noverlapall;
+    MPI_Allreduce(&ncorner,&ncornerall,1,MPI_INT,MPI_SUM,world);
+    MPI_Allreduce(&noverlap,&noverlapall,1,MPI_INT,MPI_SUM,world);
+    if (comm->me == 0) {
+      if (screen) fprintf(screen,"  %d %d = cells overlapping surfs, "
+                          "overlap cells with unmarked corner pts\n",
+                          noverlapall,ncornerall);
+      if (logfile) fprintf(logfile,"  %d %d = cells overlapping surfs, "
+                           "overlap cells with unmarked corner pts\n",
+                           noverlapall,ncornerall);
     }
   }
+
+  // clean up
+
+  if (dim == 3) delete cut3d;
+  else delete cut2d;
 }
 
 /* ----------------------------------------------------------------------
@@ -237,7 +276,7 @@ void Grid::surf2grid(int subflag, int outflag)
 void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
                          Cut3d *cut3d, Cut2d *cut2d)
 {
-  int nsurf,isub,xsub;
+  int nsurf,isub,xsub,nsplitone;
   int *ptr;
   double xsplit[3];
   double *vols;
@@ -275,20 +314,20 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
   ChildCell *c = &cells[icell];
   
   if (dim == 3)
-    nsplit = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                          vols,surfmap,cinfo[icell].corner,
-                          xsub,xsplit);
+    nsplitone = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                             vols,surfmap,cinfo[icell].corner,
+                             xsub,xsplit);
   else
-    nsplit = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                          vols,surfmap,cinfo[icell].corner,
-                          xsub,xsplit);
+    nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                             vols,surfmap,cinfo[icell].corner,
+                             xsub,xsplit);
   
-  if (nsplit == 1) {
+  if (nsplitone == 1) {
     if (cinfo[icell].corner[0] != UNKNOWN)
       cinfo[icell].volume = vols[0];
     
   } else {
-    c->nsplit = nsplit;
+    c->nsplit = nsplitone;
     nunsplitlocal--;
     
     c->isplit = grid->nsplitlocal;
@@ -304,7 +343,7 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
     
     ptr = s->csubs = csubs->vget();
     
-    for (int i = 0; i < nsplit; i++) {
+    for (int i = 0; i < nsplitone; i++) {
       isub = nlocal;
       add_sub_cell(icell,1);
       cells[isub].nsplit = -i;
@@ -313,7 +352,7 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
     }
     
     csplits->vgot(nsurf);
-    csubs->vgot(nsplit);
+    csubs->vgot(nsplitone);
   }
 }
 
@@ -328,13 +367,13 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
 
 void Grid::clear_surf()
 {
-
   int dimension = domain->dimension;
   int ncorner = 8;
   if (dimension == 2) ncorner = 4;
   double *lo,*hi;
 
-  // if surfs no longer exist, set cell type to OUTSIDE
+  // if surfs no longer exist, set cell type to OUTSIDE, else UNKNOWN
+  // set corner points of every cell to UNKNOWN
 
   int celltype = UNKNOWN;
   if (!surf->exist) celltype = OUTSIDE;

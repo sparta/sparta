@@ -30,11 +30,7 @@ class WriteSurf : protected Pointers {
  public:
   WriteSurf(class SPARTA *);
   void command(int, char **);
-
- private:
-  FILE *fp;
-
-  void write_file();
+  void write_file(FILE *);
 };
 
 }

@@ -23,7 +23,8 @@ namespace SPARTA_NS {
 
 class Cut3d : protected Pointers {
  public:
-  int npush;             // tally of points that are pushed
+  int npushmax;           // # of push options to try
+  int npushcell[4];       // tally of cells that required surf point push
 
   Cut3d(class SPARTA *);
   ~Cut3d();
@@ -40,9 +41,11 @@ class Cut3d : protected Pointers {
   int nsurf;             // # of surf elements in cell
   int *surfs;            // indices of surf elements in cell
 
-  int pushflag;          // set to 1 to push surf pts near grid cell faces
+  int pushflag;          // 0 for no push, else push surf points near cell surf
   double pushlo,pushhi;  // lo/hi ranges to push on
   double pushvalue;      // new position to push to
+  double pushlo_vec[3],pushhi_vec[3],pushvalue_vec[3];  // push values to try
+  int inout;             // orientation of triangles that just touch cell
 
   double **path1,**path2;
 
@@ -113,19 +116,19 @@ class Cut3d : protected Pointers {
   class Cut2d *cut2d;
 
   int clip(double *, double *, double *);
-  void add_tris();
+  int add_tris();
   int clip_tris();
   void ctri_volume();
-  void edge2face();
+  int edge2face();
   void edge2clines(int);
-  void add_face_pgons(int);
-  void add_face(int, double *, double *);
+  int add_face_pgons(int);
+  int add_face(int, double *, double *);
   void remove_faces();
-  void check();
+  int check();
   void walk();
-  void loop2ph();
+  int loop2ph();
   void create_surfmap(int *);
-  int split_point(int *, double *);
+  int split_point(int *, double *, int &);
   
   void edge_insert(int, int, int, int, int, int, int);
   void edge_remove(Edge *);
@@ -142,8 +145,10 @@ class Cut3d : protected Pointers {
   int samepoint(double *, double *);
   int corner(double *);
   int ptflag(double *);
-  int push(double *);
+  int push_increment();
+  void push(double *);
 
+  void failed_cell();
   void print_bpg(const char *);
   void print_loops();
 };
@@ -157,18 +162,14 @@ class Cut3d : protected Pointers {
 E: Singlet BPG edge not on cell face
 
 This is an error when calculating how a 3d grid is cut or split by
-surface elements.  It can occur when surface element points are too
-close but not on a grid cell face.  Using the global surfpush yes
-command should fix the issue.  If not, please report the issue to the
-SPARTA developers.
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: BPG edge on more than 2 faces
 
 This is an error when calculating how a 3d grid is cut or split by
-surface elements.  It can occur when surface element points are too
-close but not on a grid cell face.  Using the global surfpush yes
-command should fix the issue.  If not, please report the issue to the
-SPARTA developers.
+surface elements.  It should not normally occur.  Please report the
+issue to the SPARTA developers.
 
 E: Vertex has less than 3 edges
 

@@ -1400,15 +1400,15 @@ void Update::global(int narg, char **arg)
       iarg += 2;
     } else if (strcmp(arg[iarg],"surfpush") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (strcmp(arg[iarg+1],"yes") == 0) {
+      if (strcmp(arg[iarg+1],"no") == 0) {
+        surf->pushflag = 0;
+        iarg += 2;
+      } else if (strcmp(arg[iarg+1],"yes") == 0) {
         surf->pushflag = 1;
-        surf->pushlo = -1.0;
-        surf->pushhi = 1.0;
-        surf->pushvalue = 1.0;
         iarg += 2;
       } else {
         if (iarg+4 > narg) error->all(FLERR,"Illegal global command");
-        surf->pushflag = 1;
+        surf->pushflag = 2;
         surf->pushlo = input->numeric(FLERR,arg[iarg+1]);
         surf->pushhi = input->numeric(FLERR,arg[iarg+2]);
         surf->pushvalue = input->numeric(FLERR,arg[iarg+3]);

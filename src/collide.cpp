@@ -389,6 +389,7 @@ template < int NEARCP > void Collide::collisions_one()
 
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
+    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
 
     // setup particle list for this cell
 
@@ -505,6 +506,7 @@ template < int NEARCP > void Collide::collisions_group()
     if (np <= 1) continue;
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
+    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
 
     // setup per-group particle lists for this cell
 
@@ -715,6 +717,7 @@ void Collide::collisions_one_ambipolar()
     if (np <= 1) continue;
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
+    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
 
     // DEBUG test that there are no electrons
     // can remove at some point
@@ -972,6 +975,7 @@ void Collide::collisions_group_ambipolar()
     if (np <= 1) continue;
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
+    if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
 
     // DEBUG test that there are no electrons
     // can remove at some point

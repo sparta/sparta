@@ -45,17 +45,19 @@ void WriteSurf::command(int narg, char **arg)
   double time1 = MPI_Wtime();
 
   int me = comm->me;
+  FILE *fp;
+
   if (me == 0) {
     if (screen) fprintf(screen,"Writing surf file ...\n");
     fp = fopen(arg[0],"w");
     if (!fp) {
       char str[128];
-      sprintf(str,"Cannot open file %s",arg[0]);
+      sprintf(str,"Cannot open surface file %s",arg[0]);
       error->one(FLERR,str);
     }
   }
 
-  if (me == 0) write_file();
+  if (me == 0) write_file(fp);
 
   // close file
 
@@ -90,7 +92,7 @@ void WriteSurf::command(int narg, char **arg)
    only called by proc 0
 ------------------------------------------------------------------------- */
 
-void WriteSurf::write_file()
+void WriteSurf::write_file(FILE *fp)
 {
   int dim = domain->dimension;
 

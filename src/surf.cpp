@@ -73,7 +73,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   pts = NULL;
   lines = NULL;
   tris = NULL;
-  pushflag = 0;
+  pushflag = 1;
 
   nlocal = 0;
   mysurfs = NULL;
