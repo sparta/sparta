@@ -450,6 +450,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     // all triangles just touched cell surface
     // mark corner points based on grazeflag and in/out tri orientation
     // return vol = 0.0 for UNKNOWN/INSIDE, full cell vol for OUTSIDE
+    // vol is changed in Grid::set_inout() if OVERLAP cell corners are marked
 
     if (empty) {
       if (pushflag) npushcell[pushflag]++;

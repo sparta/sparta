@@ -1456,6 +1456,8 @@ void Grid::set_inout()
   }
 
   // set volume of cells that are now INSIDE to 0.0
+  // this allows error check in Collide and FixGridCheck for particles
+  //   in zero-volume cells
 
   for (icell = 0; icell < nlocal; icell++)
     if (cinfo[icell].type == INSIDE) cinfo[icell].volume = 0.0;
