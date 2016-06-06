@@ -32,8 +32,9 @@
     ex,ey,ez = direction vector that gravity acts in
   <I>surfmax</I> value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
-  <I>surfpush</I> value(s) = yes, or slo shi svalue
-    yes = push surface element points near cell surface to the surface
+  <I>surfpush</I> value(s) = no/yes or slo shi svalue
+    no = do not push surface element points near cell surface
+    yes = push surface element points near cell surface if necessary
     slo,shi = push points within this range
     svalue = push points to this value
   <I>gridcut</I> value = cutoff
@@ -96,44 +97,52 @@ size of surface elements).
 </P>
 <HR>
 
-<P>The <I>surfpush</I> keyword enables a numerical round-off issue to be
-addressed when surface elements and intersected with grid cells to
-determine the cut-cell volume and splitting.  This is a one time
-operation that occurs when surface elements are defined via the
-<A HREF = "read_surf.html">read_surf</A> command.
+<P>The <I>surfpush</I> keyword is only useful to use when SPARTA is having
+problems embedding a surface in the simulation grid, which occurs when
+when surface elements are defined via the <A HREF = "read_surf.html">read_surf</A>
+command.  Or for debugging purposes.
 </P>
 <P>In rare cases, if a surface element point is just slightly inside or
 outside a grid cell, but within an epsilon distance from the surface
-of the grid cell, a numerical error can occur when computing the cut
-volume.  The error can be avoided if such points are pushed (shifted)
-to a slightly different location (which only induces a tiny change in
-the computed cut volume).  The <I>surfpush</I> keyword allows control over
-how the push is performed.  The default for this keyword is
-to perform no push; you only need to use it if an error is
-triggered when surfaces are read in.
+of the grid cell, a numerical round-off error can occur when computing
+the cut volume.  The error can be avoided if such points are shifted
+(pushed) to a slightly different location, which only induces a tiny
+change in the computed cut volume.  By default the <I>surfpush</I> keyword
+is set to <I>yes</I>, which will perform this "push" operation on a grid
+cell if the numerical issue is flagged.  SPARTA prints out how many
+grid cells needed this push operation.
 </P>
-<P>The 3 values used when pushing are <I>slo</I>, <I>shi</I>, and <I>svalue</I>.  They
-are all multipliers on an epsilon of 1.0e-10 which is set internally
-in the code.  Epsilon refers to the size of a grid cell in each of its
-dimensions.  Negative values for <I>slo</I> or <I>shi</I> are distances inside a
-grid cell (inward from the cell face).  Positive values for <I>slo</I> or
-<I>shi</I> are distances outside a grid cell (outward from the cell face).
-Zero values for <I>slo</I> or <I>shi</I> are exactly on the cell face.  If any
-surface points (end points of 2d lines, corner points of 3d triangles)
-is between a <I>slo</I> and <I>shi</I> distance from any of the cell faces, then
-it is pushed to be a distance <I>svalue</I> from the face.
+<P>If you set <I>surfpush</I> to <I>no</I>, then the push operation is not
+performed, which will result in an error if the numerical issue
+occurs.
 </P>
-<P>Setting <I>surfpush</I> to <I>yes</I> will perform a push using the following
-values, which in our experience work nearly all the time when pushing
-is needed: <I>slo</I> = -1, <I>shi</I> = 1, <I>svalue</I> = 1.  This means any point
-within a fractional distance (in each dimension) 1.0e-10 inside the
-cell to 1.0e-10 outside the cell, is shifted to be a distance 1.0e-10
-outside the cell.  The values <I>slo</I> = -1, <I>shi</I> = 1, <I>svalue</I> = 0 also
-often work.
+<P>If the default <I>surfpush yes</I> still gives an error, then
+setting the <I>slo</I>, <I>shi</I>, and <I>svalue</I> allows experimentation
+with a different mode of pushing.
 </P>
-<P>If you still get an error reading your surface with these optional
-<I>surfpush</I> settings, please contact the SPARTA developers.  We will
-want to figure out what is unusual about your surface file!
+<P>These 3 values are all multipliers on an epsilon of 1.0e-6 which is
+set internally in the code.  Epsilon refers to a fraction of the size
+of a grid cell in each of its dimensions.  Negative values for any of
+the 3 values distances inside a grid cell (inward from the cell face).
+Positive values are distances outside a grid cell (outward from the
+cell face).  Zero values are exactly on the cell face.  If any surface
+point (end points of 2d lines, corner points of 3d triangles) is
+between a <I>slo</I> to <I>shi</I> distance from any of the cell faces, then it
+is pushed to be a distance <I>svalue</I> from the face.
+</P>
+<P>When <I>surfpush</I> is set to <I>yes</I>, SPARTA tries 2 kinds of pushing
+first, if the numerical issue is encountered for a grid cell.  The
+first is <I>slo</I> = -1, <I>shi</I> = 1, <I>svalue</I> = 1, which means any point
+within a fractional distance (in each dimension) of 1.0e-6 inside the
+cell to 1.0e-6 outside the cell, is shifted to be a distance 1.0e-6
+outside the cell.  The second try is with <I>slo</I> = -1, <I>shi</I> = 1,
+<I>svalue</I> = 0, which puts the point on the face.  If you set <I>slo</I>,
+<I>shi</I>, <I>svalue</I> explicitly, it will be the third option tried.
+</P>
+<P>If you cannot get a surface to embed properly in a grid, meaning you
+get errors with the default setting of <I>surfpush yes</I>, then please
+contact the SPARTA developers.  We will want to figure out what is
+unusual about your surface file!
 </P>
 <HR>
 
@@ -262,8 +271,8 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, no
-surfpush setting, gridcut = -1.0, comm/sort = no, comm/style = neigh,
-weight = cell none.
+0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, surfpush
+= yes, gridcut = -1.0, comm/sort = no, comm/style = neigh, weight =
+cell none.
 </P>
 </HTML>
