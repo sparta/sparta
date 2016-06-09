@@ -239,8 +239,9 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
   precoln.ave_vibdof = 0.5 * (species[isp].vibdof + species[jsp].vibdof);
   precoln.ave_dof = (precoln.ave_rotdof  + precoln.ave_vibdof)/2.;
 
-  precoln.mr = species[isp].mass * species[jsp].mass /
-    (species[isp].mass + species[jsp].mass);
+  double imass = precoln.imass = species[isp].mass;
+  double jmass = precoln.jmass = species[jsp].mass;
+  precoln.mr = imass * jmass / (imass+jmass);
 
   precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
@@ -251,12 +252,12 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   // COM velocity calculated using reactant masses
 
-  double divisor = 1.0 / (species[isp].mass + species[jsp].mass);
+  double divisor = 1.0 / (imass+jmass);
   double *vi = ip->v;
   double *vj = jp->v;
-  precoln.ucmf = ((species[isp].mass*vi[0])+(species[jsp].mass*vj[0]))*divisor;
-  precoln.vcmf = ((species[isp].mass*vi[1])+(species[jsp].mass*vj[1]))*divisor;
-  precoln.wcmf = ((species[isp].mass*vi[2])+(species[jsp].mass*vj[2]))*divisor;
+  precoln.ucmf = ((imass*vi[0])+(jmass*vj[0])) * divisor;
+  precoln.vcmf = ((imass*vi[1])+(jmass*vj[1])) * divisor;
+  precoln.wcmf = ((imass*vi[2])+(jmass*vj[2])) * divisor;
 
   postcoln.etrans = precoln.etrans;
   postcoln.erot = 0.0;
@@ -271,11 +272,13 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
                                   Particle::OnePart *&jp, 
                                   Particle::OnePart *&kp)
 {
-  double x[3],v[3];
   int reactflag,kspecies;
+  double x[3],v[3];
+  Particle::OnePart *p3;
 
   // if gas-phase chemistry defined, attempt and perform reaction
-  // if a 3rd particle is created, its kspecies is returned
+  // if a 3rd particle is created, its kspecies >= 0 is returned
+  // if 2nd particle is removed, its jspecies is set to -1
 
   if (react) { 
     reactflag = react->attempt(ip,jp,
@@ -284,11 +287,20 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
   }
   else reactflag = 0;
  
-  // add a 3rd particle if necessary, index = nlocal-1
-  // if add_particle() performs a realloc:
-  //   make copy of x,v, then repoint ip,jp to new particles data struct
+  // repartition energy and perform velocity scattering for I,J,K particles
+  // reaction may have changed species of I,J particles
+  // J,K particles may have been removed or created by reaction
+
+
+  kp = NULL;
 
   if (reactflag) {
+
+    // add 3rd K particle if reaction created it
+    // index of new K particle = nlocal-1
+    // if add_particle() performs a realloc:
+    //   make copy of x,v, then repoint ip,jp to new particles data struct
+
     if (kspecies >= 0) {
       int id = MAXSMALLINT*random->uniform();
 
@@ -306,14 +318,34 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_ThreeBodyScattering(ip,jp,kp);
 
+    // remove 2nd J particle if recombination reaction removed it
+    // p3 is 3rd particle participating in energy exchange
+
+    } else if (jp->ispecies < 1) {
+      double *vi = ip->v;
+      double *vj = jp->v;
+
+      double divisor = 1.0 / (precoln.imass + precoln.jmass);
+      double ucmf = ((precoln.imass*vi[0]) + (precoln.jmass*vj[0])) * divisor;
+      double vcmf = ((precoln.imass*vi[1]) + (precoln.jmass*vj[1])) * divisor;
+      double wcmf = ((precoln.imass*vi[2]) + (precoln.jmass*vj[2])) * divisor;
+
+      vi[0]=ucmf;
+      vi[1]=vcmf;
+      vi[2]=wcmf;
+
+      jp = NULL;
+      p3 = react->recomb_part3;
+      setup_collision(ip,p3);
+      if (precoln.ave_dof > 0.0) EEXCHANGE_ReactingEDisposal(ip,p3,jp);
+      SCATTER_TwoBodyScattering(ip,p3);
+
     } else {
-      kp = NULL;
       EEXCHANGE_ReactingEDisposal(ip,jp,kp);
       SCATTER_TwoBodyScattering(ip,jp);
     }
 
   } else { 
-    kp = NULL;
     if (precoln.ave_dof > 0.0) EEXCHANGE_NonReactingEDisposal(ip,jp);
     SCATTER_TwoBodyScattering(ip,jp);
   }

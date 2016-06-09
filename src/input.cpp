@@ -531,6 +531,7 @@ int Input::execute_command()
   else if (!strcmp(command,"group")) group();
   else if (!strcmp(command,"mixture")) mixture();
   else if (!strcmp(command,"react")) react_command();
+  else if (!strcmp(command,"react_modify")) react_modify();
   else if (!strcmp(command,"region")) region();
   else if (!strcmp(command,"reset_timestep")) reset_timestep();
   else if (!strcmp(command,"restart")) restart();
@@ -1134,6 +1135,15 @@ void Input::react_command()
 #undef REACT_CLASS
 
   else error->all(FLERR,"Unrecognized react style");
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::react_modify()
+{
+  if (react == NULL) 
+    error->all(FLERR,"Cannot use react_modify with no reactions defined");
+  react->modify_params(narg,arg);
 }
 
 /* ---------------------------------------------------------------------- */

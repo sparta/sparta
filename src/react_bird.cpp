@@ -52,9 +52,11 @@ ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
   nlist = maxlist = 0;
   rlist = NULL;
   readfile(arg[1]);
+  check_duplicate();
 
   reactions = NULL;
-  indices = NULL;
+  list_ij = NULL;
+  sp2recomb_ij = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -75,7 +77,8 @@ ReactBird::~ReactBird()
   memory->destroy(rlist);
 
   memory->destroy(reactions);
-  memory->destroy(indices);
+  memory->destroy(list_ij);
+  memory->destroy(sp2recomb_ij);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -98,13 +101,26 @@ void ReactBird::init()
     for (int i = 0; i < r->nproduct; i++) {
       r->products[i] = particle->find_species(r->id_products[i]);
       if (r->products[i] < 0) {
+
+        // special case: recombination reaction with 2nd product = atom/mol
+
+        if (r->type == RECOMBINATION && i == 1) {
+          if (strcmp(r->id_products[i],"atom") == 0) {
+            r->products[i] = -1;
+            continue;
+          } else if (strcmp(r->id_products[i],"mol") == 0) {
+            r->products[i] = -2;
+            continue;
+          }
+        }
+
         r->active = 0;
         break;
       }
     }
   }
 
-  // count possible reactions for each species pair
+  // count possible active reactions for each species pair
   // include J,I reactions in I,J list and vice versa
   // this allows collision pair I,J to be in either order in Collide
 
@@ -130,21 +146,21 @@ void ReactBird::init()
     n++;
   }
 
-  // allocate indices = entire list of reactions for all IJ pairs
+  // allocate list_IJ = contiguous list of reactions for each IJ pair
 
-  memory->destroy(indices);
-  memory->create(indices,n,"react/tce:indices");
+  memory->destroy(list_ij);
+  memory->create(list_ij,n,"react/tce:list_ij");
 
-  // reactions[i][j].list = offset into full indices vector
+  // reactions[i][j].list = pointer into full list_ij vector
 
   int offset = 0;
   for (int i = 0; i < nspecies; i++)
     for (int j = 0; j < nspecies; j++) {
-      reactions[i][j].list = &indices[offset];
+      reactions[i][j].list = &list_ij[offset];
       offset += reactions[i][j].n;
     }
 
-  // reactions[i][j].list = indices of possible reactions for each species pair
+  // reactions[i][j].list = indices of reactions for each species pair
   // include J,I reactions in I,J list and vice versa
 
   for (int i = 0; i < nspecies; i++)
@@ -231,8 +247,110 @@ void ReactBird::init()
     double aomega = collide->extract(aspec,"omega");
     r->coeff[6] = 0.5 * (momega+aomega);
   }
+
+  // set recombflag = 0/1 if any recombination reactions are defined
+  // also check if user disabled them
+
+  recombflag = 0;
+  for (int m = 0; m < nlist; m++) {
+    if (!rlist[m].active) continue;
+    if (rlist[m].type == RECOMBINATION) recombflag = 1;
+  }
+  if (recombflag_user == 0) recombflag = 0;
+
+  if (!recombflag) return;
+
+  // count how many IJ pairs have a recombination reaction
+  // allocate sp2recomb_ij = contiguous list of reactions
+  //                         for all species for each IJ pair
+
+  OneReaction *r;
+
+  int nij = 0;
+  for (int i = 0; i < nspecies; i++)
+    for (int j = 0; j < nspecies; j++) {
+      int n = reactions[i][j].n;
+      int *list = reactions[i][j].list;
+      for (int m = 0; m < n; m++) {
+        r = &rlist[list[m]];
+        if (r->type == RECOMBINATION) {
+          nij++;
+          break;
+        }
+      }
+    }
+
+  memory->destroy(sp2recomb_ij);
+  memory->create(sp2recomb_ij,nij*nspecies,"react/tce:sp2recomb_ij");
+
+  // reactions[i][j].sp2recomb = pointer into full sp2recomb_ij vector
+
+  offset = 0;
+  for (int i = 0; i < nspecies; i++)
+    for (int j = 0; j < nspecies; j++) {
+      int n = reactions[i][j].n;
+      int *list = reactions[i][j].list;
+      for (int m = 0; m < n; m++) {
+        r = &rlist[list[m]];
+        if (r->type == RECOMBINATION) {
+          reactions[i][j].sp2recomb = &sp2recomb_ij[offset];
+          offset += nspecies;
+          break;
+        }
+      }
+    }
+
+  // reactions[i][j].sp2recomb = indices of reactions for each species pair
+  // loop over species K for each IJ pair
+  // find recombination reaction that is most specific match to species K
+  // 3 levels of specificity from most to least, in 3 inner loops
+  //   explicit K, K = atom/mol, any K
+
+  for (int i = 0; i < nspecies; i++)
+    for (int j = 0; j < nspecies; j++) {
+      int n = reactions[i][j].n;
+      int *list = reactions[i][j].list;
+      int *sp2recomb = reactions[i][j].sp2recomb;
+      for (int k = 0; k < nspecies; k++) {
+        sp2recomb[k] = -1;
+        for (int m = 0; m < n; m++) {
+          r = &rlist[list[m]];
+          if (r->type != RECOMBINATION) continue;
+          if (r->nproduct != 2 || r->products[1] < 0) continue;
+          if (r->products[1] == k) sp2recomb[k] = list[m];
+        }
+        if (sp2recomb[k] >= 0) break;
+        for (int m = 0; m < n; m++) {
+          r = &rlist[list[m]];
+          if (r->type != RECOMBINATION) continue;
+          if (r->nproduct != 2 || r->products[1] >= 0) continue;
+          if (r->products[1] == -1 && particle->species[k].vibdof == 0)
+            sp2recomb[k] = list[m];
+          if (r->products[1] == -2 && particle->species[k].vibdof > 0)
+            sp2recomb[k] = list[m];
+        }
+        if (sp2recomb[k] >= 0) break;
+        for (int m = 0; m < n; m++) {
+          r = &rlist[list[m]];
+          if (r->type != RECOMBINATION) continue;
+          if (r->nproduct != 1) continue;
+          sp2recomb[k] = list[m];
+        }
+      }
+    }
 }
 
+/* ----------------------------------------------------------------------
+   return 1 if any recombination reactions are defined for species pair ISP,JSP
+   else return 0
+   called from Collide::init(), after React::init() has been performed
+------------------------------------------------------------------------- */
+
+int ReactBird::recomb_exist(int isp, int jsp)
+{
+  if (reactions[isp][jsp].sp2recomb) return 1;
+  return 0;
+}
 
 /* ----------------------------------------------------------------------
    check active reactions that include ambi ion or electron especies
@@ -322,8 +440,13 @@ void ReactBird::ambi_check()
 
     // recombination must match this
     // R: A+ + e -> A
+    // NOTE allow for 3 forms?
+    // NOTE: disallow RECOMBINATION with ambipolar for now
 
     else if (r->type == RECOMBINATION) {
+      error->all(FLERR,"Recombination reactions are currently "
+                 "not allowed for ambipolar model");
+
       if (r->nreactant == 2 && r->nproduct == 1) {
         if (ions[r->reactants[0]] == 1 && r->reactants[1] == especies &&
             ions[r->products[0]] == 0) flag = 0;
@@ -478,7 +601,7 @@ void ReactBird::readfile(char *fname)
         error->all(FLERR,"Invalid ionization reaction");
       }
     } else if (r->type == RECOMBINATION) {
-      if (r->nreactant != 2 || r->nproduct != 1) {
+      if (r->nreactant != 2 || (r->nproduct != 1 && r->nproduct != 2)) {
         print_reaction(copy1,copy2);
         error->all(FLERR,"Invalid recombination reaction");
       }
@@ -542,6 +665,51 @@ int ReactBird::readone(char *line1, char *line2, int &n1, int &n2)
 }
 
 /* ----------------------------------------------------------------------
+   check for duplicates in list of reactions read from file
+   error if any exist
+------------------------------------------------------------------------- */
+
+void ReactBird::check_duplicate() 
+{
+  OneReaction *r,*s;
+
+  for (int i = 0; i < nlist; i++) {
+    r = &rlist[i];
+
+    for (int j = i+1; j < nlist; j++) {
+      s = &rlist[j];
+
+      if (r->type != s->type) continue;
+      if (r->style != s->style) continue;
+      if (r->nreactant != s->nreactant) continue;
+      if (r->nproduct != s->nproduct) continue;
+
+      int reactant_match = 0;
+      if (r->reactants[0] == s->reactants[0] && 
+          r->reactants[1] == s->reactants[1]) reactant_match = 1;
+      else if (r->reactants[0] == s->reactants[1] && 
+          r->reactants[1] == s->reactants[0]) reactant_match = 2;
+      if (!reactant_match) continue;
+
+      int product_match = 0;
+      if (r->nproduct == 1) {
+        if (r->products[0] == s->products[0]) product_match = 1;
+      } else if (r->nproduct >= 2) {
+        if (r->products[0] == s->products[0] &&
+            r->products[1] == s->products[1]) product_match = 1;
+        else if (r->products[0] == s->products[1] &&
+            r->products[1] == s->products[0]) product_match = 2;
+      }
+      if (!product_match) continue;
+
+      print_reaction(r);
+      print_reaction(s);
+      error->all(FLERR,"Duplicate reactions in reaction file");
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
    print reaction as read from file
    only proc 0 performs output
 ------------------------------------------------------------------------- */
@@ -551,6 +719,40 @@ void ReactBird::print_reaction(char *line1, char *line2)
   if (comm->me) return;
   printf("Bad reaction format:\n");
   printf("%s\n%s\n",line1,line2);
+};
+
+/* ----------------------------------------------------------------------
+   print reaction as stored in rlist
+   only proc 0 performs output
+------------------------------------------------------------------------- */
+
+void ReactBird::print_reaction(OneReaction *r) 
+{
+  if (comm->me) return;
+  printf("Bad reaction:\n");
+
+  char type;
+  if (r->type == DISSOCIATION) type = 'D';
+  else if (r->type == EXCHANGE) type = 'E';
+  else if (r->type == IONIZATION) type = 'I';
+  else if (r->type == RECOMBINATION) type = 'R';
+
+  char style;
+  if (r->style == ARRHENIUS) style = 'A';
+  else if (r->style == QUANTUM) style = 'Q';
+
+  if (r->nproduct == 1)
+    printf("  %c %c: %s + %s --> %s\n",type,style,
+           r->id_reactants[0],r->id_reactants[1],
+           r->id_products[0]);
+  else if (r->nproduct == 2)
+    printf("  %c %c: %s + %s --> %s %s\n",type,style,
+           r->id_reactants[0],r->id_reactants[1],
+           r->id_products[0],r->id_products[1]);
+  else if (r->nproduct == 3)
+    printf("  %c %c: %s + %s --> %s %s %s\n",type,style,
+           r->id_reactants[0],r->id_reactants[1],
+           r->id_products[0],r->id_products[1],r->id_products[2]);
 };
 
 /* ----------------------------------------------------------------------

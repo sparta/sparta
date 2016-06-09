@@ -49,6 +49,7 @@ class CollideVSS : public Collide {
   struct State {      // two-particle state
     double vr2;
     double vr;
+    double imass,jmass;
     double mr;
     double ave_rotdof;
     double ave_vibdof;

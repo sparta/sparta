@@ -26,9 +26,10 @@ class ReactBird : public React {
   ReactBird(class SPARTA *, int, char **);
   virtual ~ReactBird();
   virtual void init();
-  virtual void ambi_check();
-  int attempt(Particle::OnePart *, Particle::OnePart *, 
-              double, double, double, double &, int &) = 0;
+  int recomb_exist(int, int);
+  void ambi_check();
+  virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
+                      double, double, double, double &, int &) = 0;
 
  protected:
   FILE *fp;
@@ -49,19 +50,33 @@ class ReactBird : public React {
   int nlist;                       // # of reactions read from file
   int maxlist;                     // max # of reactions in rlist
 
-  // possible reactions a pair of reactant species is part of
+  // all reactions a pair of reactant species is part of
 
   struct ReactionIJ {
-    int *list;           // list of indices into rlist, ptr into indices
-    int n;               // # of reactions in list
+    int *list;       // N-length list of indices into rlist for IJ reactions
+                     //   just a ptr into list_ij vector for all pairs
+    int *sp2recomb;  // Nspecies-length list of indices into rlist
+                     // for recomb reaction matching each 3rd particle species
+                     //   just a ptr into sp2recomb_ij vector for all pairs
+                     //   NULL if no recomb reactions for this IJ
+    int n;           // # of reactions in list
   };
 
   ReactionIJ **reactions;     // reactions for all IJ pairs of species
-  int *indices;               // master list of indices
+  int *list_ij;               // chunks of rlist indices for each IJ pair
+                              //   stored in one contiguous vector
+                              // length of each chunk is # of IJ reactions
+                              // pointed into by reactions[i][k].list
+  int *sp2recomb_ij;          // chunks of rlist indices for each IJ pair
+                              //   stored in one contiguous vector
+                              // length of each chunk is # of species
+                              // pointed into by reactions[i][k].sp2recomb
 
   void readfile(char *);
   int readone(char *, char *, int &, int &);
+  void check_duplicate();
   void print_reaction(char *, char *);
+  void print_reaction(OneReaction *);
   void print_reaction_ambipolar(OneReaction *);
 };
 

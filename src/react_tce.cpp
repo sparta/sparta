@@ -56,7 +56,6 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.0;
 
   int n = reactions[isp][jsp].n;
-
   if (n == 0) return 0;
   int *list = reactions[isp][jsp].list;
 
@@ -92,7 +91,27 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
           pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
         break;
       }
-        
+
+    case RECOMBINATION:
+      {
+        // skip if no 3rd particle chosen by Collide::collisions()
+        //   this includes effect of boost factor to skip recomb reactions
+        // check if this recomb reaction is the same one 
+        //   that the 3rd particle species maps to, else skip it
+        // this effectively skips all recombinations reactions 
+        //   if selected a 3rd particle species that matches none of them
+        // scale probability by boost factor to restore correct stats
+
+        if (recomb_species < 0) continue;
+        int *sp2recomb = reactions[isp][jsp].sp2recomb;
+        if (sp2recomb[recomb_species] != list[i]) continue;
+
+        react_prob += recomb_boost * recomb_density * r->coeff[2] *
+          pow(ecc,r->coeff[3]) *
+          pow(1.0-r->coeff[1]/ecc,r->coeff[5]);
+        break;
+      }
+
     default:
       error->one(FLERR,"Unknown outcome in reaction");
       break;
@@ -100,6 +119,9 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       
     // test against random number to see if this reaction occurs
     // if it does, reset species of I,J and optional K to product species
+    // J particle can be destroyed in recombination reaction, set species = -1
+    // K particle can be created in a dissociation or ionization reaction,
+    //   set its kspecies, parent will create it
     // important NOTE:
     //   does not matter what order I,J reactants are in compared
     //     to order the reactants are listed in the reaction file
@@ -114,12 +136,15 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     if (react_prob > random_prob) {
       ip->ispecies = r->products[0];
-      jp->ispecies = r->products[1];
-      
-      post_etotal = pre_etotal + r->coeff[4];
+
+      if (r->nproduct >= 2) jp->ispecies = r->products[1];
+      else jp->ispecies = -1;
+
       if (r->nproduct > 2) kspecies = r->products[2];
       else kspecies = -1;
       
+      post_etotal = pre_etotal + r->coeff[4];
+
       return 1;
     }
   }

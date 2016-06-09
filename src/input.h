@@ -89,6 +89,7 @@ class Input : protected Pointers {
   void group();
   void mixture();
   void react_command();
+  void react_modify();
   void region();
   void reset_timestep();
   void restart();

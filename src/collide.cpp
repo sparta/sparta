@@ -83,6 +83,8 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   nearcp = 0;
   nearlimit = 10;
 
+  recomb_ijflag = NULL;
+
   ambiflag = 0;
   maxelectron = 0;
   elist = NULL;
@@ -125,6 +127,8 @@ Collide::~Collide()
   memory->destroy(nn_last_partner);
   memory->destroy(nn_last_partner_igroup);
   memory->destroy(nn_last_partner_jgroup);
+
+  memory->destroy(recomb_ijflag);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -202,6 +206,23 @@ void Collide::init()
     for (int igroup = 0; igroup < ngroups; igroup++)
       for (int jgroup = 0; jgroup < ngroups; jgroup++)
         vremax_initial[igroup][jgroup] = vremax_init(igroup,jgroup);
+  }
+
+  // if recombination reactions exist, set flags per species pair
+
+  recombflag = 0;
+  if (react) {
+    recombflag = react->recombflag;
+    recomb_boost_inverse = react->recomb_boost_inverse;
+  }
+
+  if (recombflag) {
+    int nspecies = particle->nspecies;
+    memory->destroy(recomb_ijflag);
+    memory->create(recomb_ijflag,nspecies,nspecies,"collide:recomb_ijflag");
+    for (int i = 0; i < nspecies; i++)
+      for (int j = 0; j < nspecies; j++)
+        recomb_ijflag[i][j] = react->recomb_exist(i,j);
   }
 
   // find ambipolar fix
@@ -366,7 +387,7 @@ void Collide::collisions()
 
 template < int NEARCP > void Collide::collisions_one()
 {
-  int i,j,k,n,ip,np;
+  int i,j,k,m,n,ip,np;
   int nattempt,reactflag;
   double attempt,volume;
   Particle::OnePart *ipart,*jpart,*kpart;
@@ -418,7 +439,7 @@ template < int NEARCP > void Collide::collisions_one()
     // select random pair of particles, cannot be same
     // test if collision actually occurs
 
-    for (k = 0; k < nattempt; k++) {
+    for (m = 0; m < nattempt; m++) {
       i = np * random->uniform();
       if (NEARCP) j = find_nn(i,np);
       else {
@@ -429,8 +450,7 @@ template < int NEARCP > void Collide::collisions_one()
       ipart = &particles[plist[i]];
       jpart = &particles[plist[j]];
 
-      // test if collision actually occurs, then perform it
-      // ijspecies = species before collision chemistry
+      // test if collision actually occurs
       // continue to next collision if no reaction
 
       if (!test_collision(icell,0,0,ipart,jpart)) continue;
@@ -440,13 +460,33 @@ template < int NEARCP > void Collide::collisions_one()
         nn_last_partner[j] = i+1;
       }
 
+      // if recombination reaction is possible for this IJ pair
+      // pick a 3rd particle to participate and set cell number density
+      // unless boost factor turns it off, or there is no 3rd particle
+
+      if (recombflag && recomb_ijflag[ipart->ispecies][jpart->ispecies]) {
+        if (random->uniform() > react->recomb_boost_inverse) 
+          react->recomb_species = -1;
+        else if (np <= 2) 
+          react->recomb_species = -1;
+        else {
+          k = np * random->uniform();
+          while (k == i || k == j) k = np * random->uniform();
+          react->recomb_part3 = &particles[plist[k]];
+          react->recomb_species = react->recomb_part3->ispecies;
+          react->recomb_density = np * update->fnum / volume;
+        }
+      }
+
+      // perform collision and possible reaction
+
       setup_collision(ipart,jpart);
       reactflag = perform_collision(ipart,jpart,kpart);
       ncollide_one++;
       if (reactflag) nreact_one++;
       else continue;
 
-      // jpart destroyed, delete from plist
+      // if jpart destroyed, delete from plist
       // also add particle to deletion list
       // exit attempt loop if only single particle left
 
@@ -486,7 +526,7 @@ template < int NEARCP > void Collide::collisions_one()
 
 template < int NEARCP > void Collide::collisions_group()
 {
-  int i,j,k,n,ip,np,isp,ipair,igroup,jgroup,newgroup,ngmax;
+  int i,j,k,m,n,ip,np,isp,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   int *nn_igroup,*nn_jgroup;
@@ -582,7 +622,7 @@ template < int NEARCP > void Collide::collisions_group()
         if (igroup != jgroup) memset(nn_jgroup,0,(*nj)*sizeof(int));
       }
 
-      for (k = 0; k < nattempt; k++) {
+      for (m = 0; m < nattempt; m++) {
 	i = *ni * random->uniform();
         if (NEARCP) j = find_nn_group(i,ilist,*nj,jlist,nn_igroup,nn_jgroup);
         else {
@@ -594,8 +634,7 @@ template < int NEARCP > void Collide::collisions_group()
 	ipart = &particles[ilist[i]];
 	jpart = &particles[jlist[j]];
 
-        // test if collision actually occurs, then perform it
-        // ijspecies = species before collision chemistry
+        // test if collision actually occurs
         // continue to next collision if no reaction
 
 	if (!test_collision(icell,igroup,jgroup,ipart,jpart)) continue;
@@ -604,6 +643,26 @@ template < int NEARCP > void Collide::collisions_group()
           nn_igroup[i] = j+1;
           nn_jgroup[j] = i+1;
         }
+
+        // if recombination reaction is possible for this IJ pair
+        // pick a 3rd particle to participate and set cell number density
+        // unless boost factor turns it off, or there is no 3rd particle
+        
+        if (recombflag && recomb_ijflag[ipart->ispecies][jpart->ispecies]) {
+          if (random->uniform() > react->recomb_boost_inverse) 
+            react->recomb_species = -1;
+          else if (np <= 2) 
+            react->recomb_species = -1;
+          else {
+            k = np * random->uniform();
+            while (k == i || k == j) k = np * random->uniform();
+            react->recomb_part3 = &particles[plist[k]];
+            react->recomb_species = react->recomb_part3->ispecies;
+            react->recomb_density = np * update->fnum / volume;
+          }
+        }
+
+        // perform collision and possible reaction
 
 	setup_collision(ipart,jpart);
 	reactflag = perform_collision(ipart,jpart,kpart);

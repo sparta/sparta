@@ -96,6 +96,12 @@ class Collide : protected Pointers {
   double ***remain;   // collision number remainder, per cell, per group pair
   double **vremax_initial;   // initial vremax value, per group pair
 
+  // recombination reactions
+
+  int recombflag;               // 1 if recomb reactions enabled, 0 if not
+  double recomb_boost_inverse;  // recombination rate boost factor from React
+  int **recomb_ijflag;          // 1 if species I,J have recomb reaction(s)
+
   // ambipolar approximation data structs
 
   int ambiflag;       // 1 if ambipolar option is enabled
