@@ -685,23 +685,31 @@ void ReactBird::check_duplicate()
       if (r->nproduct != s->nproduct) continue;
 
       int reactant_match = 0;
-      if (r->reactants[0] == s->reactants[0] && 
-          r->reactants[1] == s->reactants[1]) reactant_match = 1;
-      else if (r->reactants[0] == s->reactants[1] && 
-          r->reactants[1] == s->reactants[0]) reactant_match = 2;
+      if (strcmp(r->id_reactants[0],s->id_reactants[0]) == 0 && 
+          strcmp(r->id_reactants[1],s->id_reactants[1]) == 0) 
+        reactant_match = 1;
+      else if (strcmp(r->id_reactants[0],s->id_reactants[1]) == 0 && 
+               strcmp(r->id_reactants[1],s->id_reactants[0]) == 0)
+        reactant_match = 2;
       if (!reactant_match) continue;
 
       int product_match = 0;
       if (r->nproduct == 1) {
-        if (r->products[0] == s->products[0]) product_match = 1;
+        if (strcmp(r->id_products[0],s->id_products[0]) == 0)
+          product_match = 1;
       } else if (r->nproduct >= 2) {
-        if (r->products[0] == s->products[0] &&
-            r->products[1] == s->products[1]) product_match = 1;
-        else if (r->products[0] == s->products[1] &&
-            r->products[1] == s->products[0]) product_match = 2;
+        if (strcmp(r->id_products[0],s->id_products[0]) == 0 &&
+            strcmp(r->id_products[1],s->id_products[1]) == 0)
+          product_match = 1;
+        else if (strcmp(r->id_products[0],s->id_products[1]) == 0 &&
+                 strcmp(r->id_products[1],s->id_products[0]) == 0)
+          product_match = 2;
       }
       if (!product_match) continue;
 
+      printf("MATCH %d %d %d: %d\n",i,j,nlist,product_match);
+      printf("MATCH %d %d %d %d\n",
+             r->products[0],r->products[1],s->products[0],s->products[1]);
       print_reaction(r);
       print_reaction(s);
       error->all(FLERR,"Duplicate reactions in reaction file");
