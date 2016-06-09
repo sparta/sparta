@@ -262,10 +262,11 @@ Settings:
 
 "collide"_collide.html, "collide_modify"_collide_modify.html,
 "compute"_compute.html, "fix"_fix.html, "global"_global.html,
-"react"_react.html, "region"_region.html,
-"surf_collide"_surf_collide.html, "surf_modify"_surf_modify.html,
-"surf_react"_surf_react.html, "timestep"_timestep.html,
-"uncompute"_uncompute.html, "unfix"_unfix.html
+"react"_react.html, "react_modify"_react_modify.html,
+"region"_region.html, "surf_collide"_surf_collide.html,
+"surf_modify"_surf_modify.html, "surf_react"_surf_react.html,
+"timestep"_timestep.html, "uncompute"_uncompute.html,
+"unfix"_unfix.html
 
 Output:
 
@@ -328,6 +329,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "print"_print.html,
 "quit"_quit.html,
 "react"_react.html,
+"react_modify"_react_modify.html,
 "read_grid"_read_grid.html,
 "read_particles"_read_particles.html,
 "read_restart"_read_restart.html,

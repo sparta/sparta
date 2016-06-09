@@ -156,10 +156,12 @@ type style C1 C2 ...
 R2, etc are one or more reactants, listed as <A HREF = "species.html">species</A>
 IDs.  P1, P2, etc are one or more products, also listed as
 <A HREF = "species.html">species</A> IDs.  The number of allowed reactants and
-products depends on the reaction type, as discussed below.  Individual
-reactants and products must be separated by whitespace and a "+" sign.
-The left-hand and right-hand sides of the equation must be separated
-by whitespace and "-->".
+products depends on the reaction type, as discussed below.  In most
+cases there is no restriction on the order or listed reactants or
+products on what species are listed.  Exceptions are detailed below.
+Note that individual reactants and products must be separated by
+whitespace and a "+" sign.  The left-hand and right-hand sides of the
+equation must be separated by whitespace and "-->".
 </P>
 <P>The <I>type</I> of each reaction is a single character (upper or lower
 case) with the following meaning.  The type determines how many
@@ -168,7 +170,7 @@ reactants and products can be specified in the first line.
 <PRE>D = dissociation = 2 reactants and 3 products
 E = exchange = 2 reactants and 2 products
 I = ionization = 2 reactants and 2 or 3 products
-R = recombination = 2 reactants and 1 product 
+R = recombination = 2 reactants and 1 product (see below) 
 </PRE>
 <P>A dissociation reaction means that R1 dissociates into P1 and P2 when
 it collides with R2.  R2 is preserved in the collision, so P3 = R2 is
@@ -194,8 +196,47 @@ required.
 in P1.  There is no restriction on the species involved in the
 reaction.
 </P>
-<P>IMPORTANT NOTE: Recombination reactions are not yet supported
-in SPARTA.
+<P>Note that recombination reactions actually involve a 3rd particle
+whose species is not altered by the reaction but whose velocity is, in
+order to balance energy and momentum.  So conceptually it can be
+thought of as both a reactant and a product.  There are 3 ways you can
+specify recombination reactions, to include information about which
+species of 3rd particles are eligible to participate:
+</P>
+<PRE>R1 + R2 -> P1
+R1 + R2 -> P1 + atom/mol
+R1 + R2 -> P1 + P2 
+</PRE>
+<P>In the first case, no info for a 3rd particle is listed.  This means
+any species of 3rd particle can be used.  In the second case, a
+non-species keyword is used, either "atom" or "mol".  This means the
+3rd particle must be either an atomic species, or a molecular species.
+This is based on the vibrational degrees of freedom listed in the
+<A HREF = "species.html">species file</A>.  A non-zero DOF is molecular; zero DOF is
+atomic.  In the third case, a specific species P2 is listed.  This
+means the 3rd particle must be that species.
+</P>
+<P>Note that for the same R1 and R2, multiple recombination reactions can
+be listed in the reaction file.  When two particles R1 and R2 are
+selected for collision and a possible reaction, if any recombination
+reaction is defined for R1 and R2, then a 3rd particle in the same
+grid cell is randomly selected.  Its species P2 is used to match at
+most one of the possibly multiple recombination reactions for R1 and
+R2.  Only that recombination reaction is checked for a reaction as a
+possible outcome of the collision.
+</P>
+<P>This matching is done from most-specific to least-specific, i.e. the
+reverse ordering of the 3 cases above.  If there is a defined reaction
+that lists P2 (third case, most specific), it is used.  If not, and
+there is a defined reaction for "atom" or "mol" that corresponds to P2
+(second case, intermediate specificity), then it is used.  If not, and
+there is a defined reaction with no P2 (first case, least specific),
+then it is used.  If none of these matches occur, no recombination
+reaction is possible for that collision between R1 and R2.  Note that
+these matching rules means that for the same R1 and R2, you can list
+two reactions, one with P2 = "atom", and one with P2 = "mol".  And/or
+you can list multiple reactions of the third kind, each with a unique
+P2.
 </P>
 <P>IMPORTANT NOTE: If the ambipolar approximation is being used, via the
 <A HREF = "fix_ambipolar.hmtl">fix ambipolar</A> and <A HREF = "collide_modify.html">collide_modify ambipolar
@@ -266,8 +307,8 @@ C + AB+ -> A + BC+
 </P>
 <PRE>A+ + e -> A 
 </PRE>
-<P>IMPORTANT NOTE: Recombination reactions are not yet supported
-in SPARTA.
+<P>IMPORTANT NOTE: Ambipolar recombination reactions are not yet
+supported in SPARTA.
 </P>
 <HR>
 
