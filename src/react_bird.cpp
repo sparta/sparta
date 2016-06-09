@@ -248,7 +248,7 @@ void ReactBird::init()
     r->coeff[6] = 0.5 * (momega+aomega);
   }
 
-  // set recombflag = 0/1 if any recombination reactions are defined
+  // set recombflag = 0/1 if any recombination reactions are defined & active
   // also check if user disabled them
 
   recombflag = 0;
