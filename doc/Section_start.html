@@ -16,10 +16,11 @@ experienced users.
 </P>
 2.1 <A HREF = "#start_1">What's in the SPARTA distribution</A><BR>
 2.2 <A HREF = "#start_2">Making SPARTA</A><BR>
-2.3 <A HREF = "#start_3">Building SPARTA as a library</A><BR>
-2.4 <A HREF = "#start_4">Running SPARTA</A><BR>
-2.5 <A HREF = "#start_5">Command-line options</A><BR>
-2.6 <A HREF = "#start_6">Screen output</A> <BR>
+2.3 <A HREF = "#start_3">Making SPARTA with optional packages</A><BR>
+2.4 <A HREF = "#start_4">Building SPARTA as a library</A><BR>
+2.5 <A HREF = "#start_5">Running SPARTA</A><BR>
+2.6 <A HREF = "#start_6">Command-line options</A><BR>
+2.7 <A HREF = "#start_7">Screen output</A> <BR>
 
 <HR>
 
@@ -104,6 +105,10 @@ more quickly.
 </P>
 <P>If you get no errors and an executable like spa_g++ or spa_mac is
 produced, you're done; it's your lucky day.
+</P>
+<P>Note that by default none of the SPARTA optional packages are
+installed.  To build SPARTA with optional packages, see <A HREF = "#start_3">this
+section</A> below.
 </P>
 <P><B>Step 1</B>
 </P>
@@ -339,7 +344,13 @@ find it.
 <P>As before, if these header and library files are in the usual place on
 your machine, you may not need to set these variables.
 </P>
-<P><B>Step 7</B>
+<P><B>Step 8</B>
+</P>
+<P>Note that by default none of the SPARTA optional packages are
+installed.  To build SPARTA with optional packages, see <A HREF = "#start_3">this
+section</A> below, before proceeding to Step 9.
+</P>
+<P><B>Step 9</B>
 </P>
 <P>That's it.  Once you have a correct Makefile.foo, and you have
 pre-built any other needed libraries (e.g. MPI), all you need to do
@@ -433,7 +444,100 @@ them in the distribution.
 </P>
 <HR>
 
-<H4><A NAME = "start_3"></A>2.3 Building SPARTA as a library 
+<H4><A NAME = "start_3"></A>2.3 Making SPARTA with optional packages 
+</H4>
+<P>This section has the following sub-sections:
+</P>
+<P><A HREF = "#start_3_1">Package basics</A>
+<A HREF = "#start_3_2">Including/excluding packages</A>
+</P>
+<HR>
+
+<A NAME = "start_3_1"></A><B><I>Package basics:</I></B> 
+
+<P>The source code for SPARTA is structured as a set of core files which
+are always included, plus optional packages.  Packages are groups of
+files that enable a specific set of features.  For example, the KOKKOS
+package for versions of SPARTA kernels that run on GPUs or the Intel
+KNL processor.
+</P>
+<P>You can see the list of all packages by typing "make package" from
+within the src directory of the SPARTA distribution.  This also lists
+various make commands that can be used to manipulate packages.
+</P>
+<P>If you use a command in a SPARTA input script that is part of a
+package, you must have built SPARTA with that package, else you will
+get an error that the style is invalid or the command is unknown.
+Every command's doc page specfies if it is part of a package.
+</P>
+<HR>
+
+<A NAME = "start_3_2"></A><B><I>Including/excluding packages:</I></B> 
+
+<P>To use (or not use) a package you must include it (or exclude it)
+before building SPARTA.  From the src directory, this is typically as
+simple as:
+</P>
+<PRE>make yes-fft
+make g++ 
+</PRE>
+<P>or
+</P>
+<PRE>make no-fft
+make g++ 
+</PRE>
+<P>NOTE: You should NOT include/exclude packages and build SPARTA in a
+single make command using multiple targets, e.g. make yes-fft g++.
+This is because the make procedure creates a list of source files that
+will be out-of-date for the build if the package configuration changes
+within the same command.
+</P>
+<P>Some packages have individual files that depend on other packages
+being included.  SPARTA checks for this and does the right thing.
+I.e. individual files are only included if their dependencies are
+already included.  Likewise, if a package is excluded, other files
+dependent on that package are also excluded.
+</P>
+<P>If you will never run simulations that use the features in a
+particular packages, there is no reason to include it in your build.
+</P>
+<P>When you download a SPARTA tarball, no packages are pre-installed in
+the src directory.
+</P>
+<P>Packages are included or excluded by typing "make yes-name" or "make
+no-name", where "name" is the name of the package in lower-case, e.g.
+name = fft for the FFT package.  You can also type "make yes-all", or
+"make no-all" to include/exclude all packages.  Type "make package" to
+see all of the package-related make options.
+</P>
+<P>NOTE: Inclusion/exclusion of a package works by simply moving files
+back and forth between the main src directory and sub-directories with
+the package name (e.g. src/FFT, src/KOKKOS), so that the files are
+seen or not seen when SPARTA is built.  After you have included or
+excluded a package, you must re-build SPARTA.
+</P>
+<P>Additional package-related make options exist to help manage SPARTA
+files that exist in both the src directory and in package
+sub-directories.  You do not normally need to use these commands
+unless you are editing SPARTA files.
+</P>
+<P>Typing "make package-update" or "make pu" will overwrite src files
+with files from the package sub-directories if the package has been
+included.  It should be used after a patch is installed, since patches
+only update the files in the package sub-directory, but not the src
+files.  Typing "make package-overwrite" will overwrite files in the
+package sub-directories with src files.
+</P>
+<P>Typing "make package-status" or "make ps" will show which packages are
+currently included. For those that are included, it will list any
+files that are different in the src directory and package
+sub-directory.  Typing "make package-diff" lists all differences
+between these files.  Again, type "make package" to see all of the
+package-related make options.
+</P>
+<HR>
+
+<H4><A NAME = "start_4"></A>2.4 Building SPARTA as a library 
 </H4>
 <P>SPARTA can be built as either a static or shared library, which can
 then be called from another application or a scripting language.  See
@@ -553,7 +657,7 @@ interface and how to extend it for your needs.
 </P>
 <HR>
 
-<H4><A NAME = "start_4"></A>2.4 Running SPARTA 
+<H4><A NAME = "start_5"></A>2.5 Running SPARTA 
 </H4>
 <P>By default, SPARTA runs by reading commands from standard input.  Thus
 if you run the SPARTA executable by itself, e.g.
@@ -622,7 +726,7 @@ more processors or setup a smaller problem.
 </P>
 <HR>
 
-<H4><A NAME = "start_5"></A>2.5 Command-line options 
+<H4><A NAME = "start_6"></A>2.6 Command-line options 
 </H4>
 <P>At run time, SPARTA recognizes several optional command-line switches
 which may be used in any order.  Either the full word or a one-or-two
@@ -768,7 +872,7 @@ negative numeric value. It is OK if the first value1 starts with a
 </P>
 <HR>
 
-<H4><A NAME = "start_6"></A>2.6 SPARTA screen output 
+<H4><A NAME = "start_7"></A>2.7 SPARTA screen output 
 </H4>
 <P>As SPARTA reads an input script, it prints information to both the
 screen and a log file about significant actions it takes to setup a

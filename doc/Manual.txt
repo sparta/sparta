@@ -89,10 +89,11 @@ it gives quick access to documentation for all SPARTA commands.
 "Getting started"_Section_start.html :l
   2.1 "What's in the SPARTA distribution"_start_1 :ulb,b
   2.2 "Making SPARTA"_start_2 :b
-  2.3 "Building SPARTA as a library"_start_3 :b
-  2.4 "Running SPARTA"_start_4 :b
-  2.5 "Command-line options"_start_5 :b
-  2.6 "Screen output"_start_6 :ule,b
+  2.3 "Building SPARTA with optional packages"_start_3 :b
+  2.4 "Building SPARTA as a library"_start_4 :b
+  2.5 "Running SPARTA"_start_5 :b
+  2.6 "Command-line options"_start_6 :b
+  2.7 "Screen output"_start_7 :ule,b
 "Commands"_Section_commands.html :l
   3.1 "SPARTA input script"_cmd_1 :ulb,b
   3.2 "Parsing rules"_cmd_2 :b
@@ -144,6 +145,7 @@ it gives quick access to documentation for all SPARTA commands.
 :link(start_4,Section_start.html#start_4)
 :link(start_5,Section_start.html#start_5)
 :link(start_6,Section_start.html#start_6)
+:link(start_7,Section_start.html#start_7)
 
 :link(cmd_1,Section_commands.html#cmd_1)
 :link(cmd_2,Section_commands.html#cmd_2)
