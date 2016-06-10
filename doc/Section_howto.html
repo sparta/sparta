@@ -169,7 +169,7 @@ jump in.flow
 <P>All of the above examples work whether you are running on 1 or
 multiple processors, but assumed you are running SPARTA on a single
 partition of processors.  SPARTA can be run on multiple partitions via
-the "-partition" command-line switch as described in <A HREF = "Section_start.html#start_5">Section
+the "-partition" command-line switch as described in <A HREF = "Section_start.html#start_6">Section
 2.5</A> of the manual.
 </P>
 <P>In the last 2 examples, if SPARTA were run on 3 partitions, the same
@@ -461,7 +461,7 @@ surface and grid cell information as output by SPARTA.
 
 <A NAME = "howto_6"></A><H4>4.6 Library interface to SPARTA 
 </H4>
-<P>As described in <A HREF = "Section_start.html#start_3">Section 2.3</A>, SPARTA can
+<P>As described in <A HREF = "Section_start.html#start_4">Section 2.4</A>, SPARTA can
 be built as a library, so that it can be called by another code, used
 in a <A HREF = "Section_howto.html#howto_7">coupled manner</A> with other codes, or
 driven through a <A HREF = "Section_python.html">Python interface</A>.
@@ -483,7 +483,7 @@ void sparta_file(void *, char *);
 char *sparta_command(void *, char *); 
 </PRE>
 <P>The sparta_open() function is used to initialize SPARTA, passing in a
-list of strings as if they were <A HREF = "Section_start.html#start_5">command-line
+list of strings as if they were <A HREF = "Section_start.html#start_6">command-line
 arguments</A> when SPARTA is run in
 stand-alone mode from the command line, and a MPI communicator for
 SPARTA to run under.  It returns a ptr to the SPARTA object that is

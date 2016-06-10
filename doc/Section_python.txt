@@ -34,7 +34,7 @@ packages.  It can be used to glue multiple pieces of software
 together, e.g. to run a coupled or multiscale model.  See "Section
 4.7"_Section_howto.html#howto_7 of the manual and the examples/COUPLE
 directory of the distribution for more ideas about coupling SPARTA to
-other codes.  See "Section 2.3"_Section_start.html#start_3 about how
+other codes.  See "Section 2.4"_Section_start.html#start_4 about how
 to build SPARTA as a library, and "Section
 4.6"_Section_howto.html#howto_6 for a description of the library
 interface provided in src/library.cpp and src/library.h and how to
@@ -78,7 +78,7 @@ check which version of Python you have installed, by simply typing
 9.1 Building SPARTA as a shared library :link(py_1),h4
 
 Instructions on how to build SPARTA as a shared library are given in
-"Section 2.3"_Section_start.html#start_3.  A shared library is one
+"Section 2.4"_Section_start.html#start_4.  A shared library is one
 that is dynamically loadable, which is what Python requires.  On Linux
 this is a library file that ends in ".so", not ".a".
 
@@ -285,7 +285,7 @@ first importing from the sparta.py file:
 >>> CDLL("libsparta.so") :pre
 
 If an error occurs, carefully go thru the steps in "Section
-2.3"_Section_start.html#start_3 and above about building a shared
+2.4"_Section_start.html#start_4 and above about building a shared
 library and about insuring Python can find the necessary two files it
 needs.
 

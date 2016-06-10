@@ -166,7 +166,7 @@ All of the above examples work whether you are running on 1 or
 multiple processors, but assumed you are running SPARTA on a single
 partition of processors.  SPARTA can be run on multiple partitions via
 the "-partition" command-line switch as described in "Section
-2.5"_Section_start.html#start_5 of the manual.
+2.5"_Section_start.html#start_6 of the manual.
 
 In the last 2 examples, if SPARTA were run on 3 partitions, the same
 scripts could be used if the "index" and "loop" variables were
@@ -451,7 +451,7 @@ surface and grid cell information as output by SPARTA.
 
 4.6 Library interface to SPARTA :link(howto_6),h4
 
-As described in "Section 2.3"_Section_start.html#start_3, SPARTA can
+As described in "Section 2.4"_Section_start.html#start_4, SPARTA can
 be built as a library, so that it can be called by another code, used
 in a "coupled manner"_Section_howto.html#howto_7 with other codes, or
 driven through a "Python interface"_Section_python.html.
@@ -474,7 +474,7 @@ char *sparta_command(void *, char *); :pre
 
 The sparta_open() function is used to initialize SPARTA, passing in a
 list of strings as if they were "command-line
-arguments"_Section_start.html#start_5 when SPARTA is run in
+arguments"_Section_start.html#start_6 when SPARTA is run in
 stand-alone mode from the command line, and a MPI communicator for
 SPARTA to run under.  It returns a ptr to the SPARTA object that is
 created, and which is used in subsequent library calls.  The

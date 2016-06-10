@@ -96,7 +96,7 @@ General features :h4
   syntax for defining and using "variables and formulas"_variable.html
   syntax for "looping over runs"_jump.html and breaking out of loops
   run one or "multiple simulations simultaneously"_Section_howto.html#howto_3 (in parallel) from one script
-  "build as library"_Section_start.html#start_3, invoke SPARTA thru "library interface"_Section_howto.html#howto_6 or provided "Python wrapper"_Section_python.html
+  "build as library"_Section_start.html#start_4, invoke SPARTA thru "library interface"_Section_howto.html#howto_6 or provided "Python wrapper"_Section_python.html
   "couple with other codes"_Section_howto.html#howto_7: SPARTA calls other code, other code calls SPARTA, umbrella code calls both :ul
 
 Models :h4

@@ -37,7 +37,7 @@ packages.  It can be used to glue multiple pieces of software
 together, e.g. to run a coupled or multiscale model.  See <A HREF = "Section_howto.html#howto_7">Section
 4.7</A> of the manual and the examples/COUPLE
 directory of the distribution for more ideas about coupling SPARTA to
-other codes.  See <A HREF = "Section_start.html#start_3">Section 2.3</A> about how
+other codes.  See <A HREF = "Section_start.html#start_4">Section 2.4</A> about how
 to build SPARTA as a library, and <A HREF = "Section_howto.html#howto_6">Section
 4.6</A> for a description of the library
 interface provided in src/library.cpp and src/library.h and how to
@@ -82,7 +82,7 @@ check which version of Python you have installed, by simply typing
 <A NAME = "py_1"></A><H4>9.1 Building SPARTA as a shared library 
 </H4>
 <P>Instructions on how to build SPARTA as a shared library are given in
-<A HREF = "Section_start.html#start_3">Section 2.3</A>.  A shared library is one
+<A HREF = "Section_start.html#start_4">Section 2.4</A>.  A shared library is one
 that is dynamically loadable, which is what Python requires.  On Linux
 this is a library file that ends in ".so", not ".a".
 </P>
@@ -288,8 +288,8 @@ first importing from the sparta.py file:
 <PRE>>>> from ctypes import CDLL
 >>> CDLL("libsparta.so") 
 </PRE>
-<P>If an error occurs, carefully go thru the steps in <A HREF = "Section_start.html#start_3">Section
-2.3</A> and above about building a shared
+<P>If an error occurs, carefully go thru the steps in <A HREF = "Section_start.html#start_4">Section
+2.4</A> and above about building a shared
 library and about insuring Python can find the necessary two files it
 needs.
 </P>
