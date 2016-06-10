@@ -23,12 +23,6 @@
 #include "memory.h"
 #include "error.h"
 
-
-
-// DEBUG
-#include "update.h"
-#include "grid.h"
-
 using namespace SPARTA_NS;
 
 // allocate space for static class variable
