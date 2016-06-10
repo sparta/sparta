@@ -182,20 +182,14 @@ no-all:
 	@for p in $(PACKALL); do $(MAKE) no-$$p; done
 
 yes-%:
-	@if [ ! -e Makefile.package ]; \
-	  then cp Makefile.package.empty Makefile.package; fi
-	@if [ ! -e Makefile.package.settings ]; \
-	  then cp Makefile.package.settings.empty Makefile.package.settings; fi
 	@if [ ! -e $(YESDIR) ]; then \
 	  echo "Package $(@:yes-%=%) does not exist"; \
 	elif [ -e $(YESDIR)/Install.sh ]; then \
 	  echo "Installing package $(@:yes-%=%)"; \
 	  cd $(YESDIR); $(SHELL) Install.sh 1; cd ..; \
-		$(SHELL) Depend.sh $(YESDIR) 1; \
 	else \
 	  echo "Installing package $(@:yes-%=%)"; \
 	  cd $(YESDIR); $(SHELL) ../Install.sh 1; cd ..; \
-		$(SHELL) Depend.sh $(YESDIR) 1; \
 	fi;
 
 no-%:
@@ -204,11 +198,9 @@ no-%:
 	elif [ -e $(NODIR)/Install.sh ]; then \
 	  echo "Uninstalling package $(@:no-%=%)"; \
 	  cd $(NODIR); $(SHELL) Install.sh 0; cd ..; \
-		$(SHELL) Depend.sh $(NODIR) 0; \
 	else \
 	  echo "Uninstalling package $(@:no-%=%)"; \
 	  cd $(NODIR); $(SHELL) ../Install.sh 0; cd ..; \
-		$(SHELL) Depend.sh $(NODIR) 0; \
         fi;
 
 # status = list src files that differ from package files
