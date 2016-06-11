@@ -34,12 +34,13 @@ class Irregular : protected Pointers {
   int augment_data_uniform(int, int *);
   void exchange_uniform(char *, int, char *);
   void exchange_variable(char *, int *, char *);
+  void reverse(int, int *);
 
  private:
   int me,nprocs;
 
   // plan for irregular communication of datums
-  // same for uniform vs variable sized datums
+  // same for uniform or variable sized datums
 
   int nsend;                 // # of messages to send, no self
   int nrecv;                 // # of messages to recv, no self

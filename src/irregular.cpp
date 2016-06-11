@@ -689,3 +689,26 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
 
   if (nrecv) MPI_Waitall(nrecv,request,status);
 }
+
+/* ----------------------------------------------------------------------
+   create a proclist that allows reverse communication
+   do sanity check that N matches # of received datums
+   fill proclist with proc ID of who sent me each of my received datums
+   caller can use proclist to perform irregular comm 
+     from recv procs back to send procs
+------------------------------------------------------------------------- */
+
+void Irregular::reverse(int n, int *proclist)
+{
+  if (n != nrecvdatum) 
+    error->one(FLERR,"Irregular reverse comm size does not match");
+
+  int m = 0;
+  for (int i = 0; i < num_self; i++) proclist[m++] = me;
+
+  int proc;
+  for (int i = 0; i < nrecv; i++) {
+    proc = proc_recv[i];
+    for (int j = 0; j < num_recv[i]; j++) proclist[m++] = proc;
+  }
+}
