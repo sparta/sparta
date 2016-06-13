@@ -172,7 +172,23 @@ void Domain::set_boundary(int narg, char **arg)
       if (bflag[m] != PERIODIC || bflag[m+1] != PERIODIC)
 	error->all(FLERR,"Both sides of boundary must be periodic");
     }
+}
 
+/* ----------------------------------------------------------------------
+   check whether simulation box is periodic in each dimension
+   return dims[DIM] = 1/0 for periodic or not for DIM = 0,1,2
+     for 2d simulation ZDIM is periodic
+   return 1 if all dims are periodic, 0 if not
+------------------------------------------------------------------------- */
+
+int Domain::periodic(int *dims)
+{
+  dims[0] = dims[1] = dims[2] = 0;
+  if (bflag[0] == PERIODIC) dims[0] = 1;
+  if (bflag[2] == PERIODIC) dims[1] = 1;
+  if (bflag[4] == PERIODIC) dims[2] = 1;
+  if (dims[0] && dims[1] && dims[2]) return 1;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

@@ -47,6 +47,7 @@ class Domain : protected Pointers {
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);
+  int periodic(int *);
   void boundary_modify(int, char **);
   int collide(Particle::OnePart *&, int, int, double *, Particle::OnePart *&);
   void uncollide(int, double *);
