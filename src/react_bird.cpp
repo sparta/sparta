@@ -127,7 +127,7 @@ void ReactBird::init()
   memory->destroy(reactions);
   int nspecies = particle->nspecies;
   reactions = memory->create(reactions,nspecies,nspecies,
-                             "react/tce:reactions");
+                             "react/bird:reactions");
 
   for (int i = 0; i < nspecies; i++)
     for (int j = 0; j < nspecies; j++)
@@ -149,7 +149,7 @@ void ReactBird::init()
   // allocate list_IJ = contiguous list of reactions for each IJ pair
 
   memory->destroy(list_ij);
-  memory->create(list_ij,n,"react/tce:list_ij");
+  memory->create(list_ij,n,"react/bird:list_ij");
 
   // reactions[i][j].list = pointer into full list_ij vector
 
@@ -298,7 +298,7 @@ void ReactBird::init()
     }
 
   memory->destroy(sp2recomb_ij);
-  memory->create(sp2recomb_ij,nij*nspecies,"react/tce:sp2recomb_ij");
+  memory->create(sp2recomb_ij,nij*nspecies,"react/bird:sp2recomb_ij");
 
   // reactions[i][j].sp2recomb = pointer into full sp2recomb_ij vector
 
@@ -535,7 +535,7 @@ void ReactBird::readfile(char *fname)
     if (nlist == maxlist) {
       maxlist += DELTALIST;
       rlist = (OneReaction *) 
-        memory->srealloc(rlist,maxlist*sizeof(OneReaction),"react/tce:rlist");
+        memory->srealloc(rlist,maxlist*sizeof(OneReaction),"react/bird:rlist");
       for (int i = nlist; i < maxlist; i++) {
         r = &rlist[i];
         r->nreactant = r->nproduct = 0;
