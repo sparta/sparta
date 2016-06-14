@@ -279,7 +279,7 @@ void ReactBird::init()
 
   // count how many IJ pairs have a recombination reaction
   // allocate sp2recomb_ij = contiguous list of reactions
-  //                         for all species for each IJ pair
+  //   for all species for each IJ pair that has a recombination reaction
 
   OneReaction *r;
 
@@ -317,51 +317,60 @@ void ReactBird::init()
       }
     }
 
-  // reactions[i][j].sp2recomb = indices of reactions for each species pair
   // loop over species K for each IJ pair
-  // find recombination reaction that is most specific match to species K
-  // 3 levels of specificity from most to least, in 3 inner loops
-  //   explicit K, K = atom/mol, any K
+  // if the IJ pair has any recombination reactions, 
+  //   then fill in its reactions[i][j].sp2recomb entries,
+  //   which are indices into rlist of specific recomb reaction
+  //   for each 3rd particle species
+  // if IJ pair has no recombination reactions, then do NOT set sp2recomb vec
+  // matching recombination reaction is one most specific to species K
+  // 4 levels of specificity from most to least, in 4 inner loops
+  //   explicit K, K = atom/mol, any K, no match at all (sp2recomb = -1)
 
-  int sp2recomb;
+  int m;
 
   for (int i = 0; i < nspecies; i++)
     for (int j = 0; j < nspecies; j++) {
       int n = reactions[i][j].n;
       int *list = reactions[i][j].list;
       for (int k = 0; k < nspecies; k++) {
-        sp2recomb = -1;
-        for (int m = 0; m < n; m++) {
+        for (m = 0; m < n; m++) {
           r = &rlist[list[m]];
           if (r->type != RECOMBINATION) continue;
           if (r->nproduct != 2 || r->products[1] < 0) continue;
-          if (r->products[1] == k) sp2recomb = list[m];
-        }
-        if (sp2recomb >= 0) {
-          reactions[i][j].sp2recomb[k] = sp2recomb;
+          if (r->products[1] == k) reactions[i][j].sp2recomb[k] = list[m];
           break;
         }
-        for (int m = 0; m < n; m++) {
+        if (m < n) break;
+
+        for (m = 0; m < n; m++) {
           r = &rlist[list[m]];
           if (r->type != RECOMBINATION) continue;
           if (r->nproduct != 2 || r->products[1] >= 0) continue;
-          if (r->products[1] == -1 && particle->species[k].vibdof == 0)
-            sp2recomb = list[m];
-          if (r->products[1] == -2 && particle->species[k].vibdof > 0)
-            sp2recomb = list[m];
+          if (r->products[1] == -1 && particle->species[k].vibdof == 0) {
+            reactions[i][j].sp2recomb[k] = list[m];
+            break;
+          }
+          if (r->products[1] == -2 && particle->species[k].vibdof > 0) {
+            reactions[i][j].sp2recomb[k] = list[m];
+            break;
+          }
         }
-        if (sp2recomb >= 0) {
-          reactions[i][j].sp2recomb[k] = sp2recomb;
-          break;
-        }
-        for (int m = 0; m < n; m++) {
+        if (m < n) break;
+
+        for (m = 0; m < n; m++) {
           r = &rlist[list[m]];
           if (r->type != RECOMBINATION) continue;
           if (r->nproduct != 1) continue;
-          sp2recomb = list[m];
+          reactions[i][j].sp2recomb[k] = list[m];
+          break;
         }
-        if (sp2recomb >= 0) {
-          reactions[i][j].sp2recomb[k] = sp2recomb;
+        if (m < n) break;
+
+        for (m = 0; m < n; m++) {
+          r = &rlist[list[m]];
+          if (r->type != RECOMBINATION) continue;
+          reactions[i][j].sp2recomb[k] = -1;
           break;
         }
       }

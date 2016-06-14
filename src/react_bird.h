@@ -53,23 +53,29 @@ class ReactBird : public React {
   // all reactions a pair of reactant species is part of
 
   struct ReactionIJ {
-    int *list;       // N-length list of indices into rlist for IJ reactions
-                     //   just a ptr into list_ij vector for all pairs
-    int *sp2recomb;  // Nspecies-length list of indices into rlist
-                     // for recomb reaction matching each 3rd particle species
-                     //   just a ptr into sp2recomb_ij vector for all pairs
-                     //   NULL if no recomb reactions for this IJ
+    int *list;       // N-length list of rlist indices 
+                     //   for reactions defined for this IJ pair,
+                     //   just a ptr into sub-section of long list_ij vector
+                     //   for all pairs
+    int *sp2recomb;  // Nspecies-length list of rlist indices
+                     //   for recomb reactions defined for this IJ pair,
+                     //   one index for all 3rd particle species,
+                     //   just a ptr into sub-section of long sp2recomb_ij
+                     //   vector for all pairs which have recomb reactions
     int n;           // # of reactions in list
   };
 
-  ReactionIJ **reactions;     // reactions for all IJ pairs of species
-  int *list_ij;               // chunks of rlist indices for each IJ pair
-                              //   stored in one contiguous vector
-                              // length of each chunk is # of IJ reactions
+  ReactionIJ **reactions;     // reaction info for all IJ pairs of species
+  int *list_ij;               // chunks of rlist indices,
+                              //   one chunk per IJ pair,
+                              //   stored in contiguous vector,
+                              //   length of each chunk is # of IJ reactions
                               // pointed into by reactions[i][k].list
-  int *sp2recomb_ij;          // chunks of rlist indices for each IJ pair
-                              //   stored in one contiguous vector
-                              // length of each chunk is # of species
+  int *sp2recomb_ij;          // chunks of rlist indices,
+                              //   one chunk per IJ pair that has
+                              //     recombination reactions,
+                              //   stored in contiguous vector
+                              //   length of each chunk is # of species
                               // pointed into by reactions[i][k].sp2recomb
 
   void readfile(char *);
