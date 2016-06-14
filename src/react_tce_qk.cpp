@@ -40,6 +40,13 @@ void ReactTCEQK::init()
     error->all(FLERR,"React tce/qk can only be used with collide vss");
 
   ReactBird::init();
+
+  // do not allow recombination reactions for now
+
+  for (int i = 0; i < nlist; i++)
+    if (rlist[i].active && rlist[i].type == RECOMBINATION)
+      error->all(FLERR,
+                 "React qk does not currently support recombination reactions");
 }
 
 /* ---------------------------------------------------------------------- */

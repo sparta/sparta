@@ -47,7 +47,7 @@ enum{ARRHENIUS,QUANTUM};                               // other react files
 ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
   React(sparta, narg, arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal react tce command");
+  if (narg != 2) error->all(FLERR,"Illegal react tce or qk command");
 
   nlist = maxlist = 0;
   rlist = NULL;

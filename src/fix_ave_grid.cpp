@@ -405,7 +405,7 @@ void FixAveGrid::setup()
 
 void FixAveGrid::end_of_step()
 {
-  int i,j,k,m,n;
+  int i,j,k,m,n,itally;
   int ntally,kk,tmp;
   int *itmp;
   double **ctally;
@@ -426,7 +426,6 @@ void FixAveGrid::end_of_step()
 
   // accumulate results of computes,fixes,variables
   // compute/fix/variable may invoke computes so wrap with clear/add
-  // NOTE: add more logic for fixes and variables if enable them
 
   modify->clearstep_compute();
 
@@ -450,10 +449,10 @@ void FixAveGrid::end_of_step()
       if (post_process[m]) {
 	ntally = numap[m];
         tmp = compute->query_tally_grid(j,ctally,itmp);
-	for (int itally = 0; itally < ntally; itally++) {
-	  k = umap[m][itally];
-	  kk = uomap[m][itally];
-	  for (i = 0; i < nglocal; i++)
+        for (i = 0; i < nglocal; i++)
+          for (itally = 0; itally < ntally; itally++) {
+            k = umap[m][itally];
+            kk = uomap[m][itally];
 	    tally[i][k] += ctally[i][kk];
 	}
       } else {
