@@ -431,10 +431,10 @@ void ReadSurf::command(int narg, char **arg)
   // error checks that can be done before surfs are mapped to grid cells
 
   if (dim == 2) {
-    surf->check_watertight_2d(npoint_old, nline_old);
+    surf->check_watertight_2d(npoint_old,nline_old);
     check_neighbor_norm_2d();
   } else {
-    surf->check_watertight_3d(npoint_old, ntri_old);
+    surf->check_watertight_3d(npoint_old,ntri_old);
     check_neighbor_norm_3d();
   }
 
