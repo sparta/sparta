@@ -70,17 +70,17 @@ ave/grid</A> command.  It does its averaging as if the
 particles in the cell at each sampling timestep were combined together
 into one large set of particles to compute the formulas below.  
 </P>
-<P>Note that the center-of-mass (COM) velocity that is subtracted from
-each particle to yield a squared thermal velocity Csq for each
-particle, as described below, is also computed over one large set of
-particles (across all timesteps), in contrast to using a COM velocity
-computed only for particles in the current timestep, which is what the
-<A HREF = "compute_sonine_grid.html">compute sonine/grid</A> command does.
-</P>
 <P>Note that this is a different form of averaging than taking the values
 produced by the formulas below for a single timestep, summing those
 values over the sampling timesteps, and then dividing by the number of
 sampling steps.
+</P>
+<P>Also note that the center-of-mass (COM) velocity that is subtracted
+from each particle to yield a squared thermal velocity Csq for each
+particle, as described below, is also computed over one large set of
+particles (across all timesteps).  This is in contrast to using a COM
+velocity computed only for particles in the current timestep, which is
+what the <A HREF = "compute_sonine_grid.html">compute sonine/grid</A> command does.
 </P>
 <HR>
 
@@ -116,6 +116,8 @@ grid cell due to particles in the group:
 </PRE>
 <P>Note that if multiple groups are defined in the mixture, one group's
 value is effectively a partial pressure due to particles in the group.
+When accumulated over multiple sampling steps, this value is
+normalized by the number of sampling steps.
 </P>
 <HR>
 

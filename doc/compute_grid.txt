@@ -225,7 +225,9 @@ Pzrho = fnum/volume * Sum_i (mass_i * Vz_i) :pre
 
 where Sum_i is a sum over particles in the group, fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
-command, and volume is the flow volume of the grid cell.
+command, and volume is the flow volume of the grid cell.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.
 
 The {kerho} value computes the kinetic energy density for the grid
 cell volume due to particles in each group:
@@ -235,7 +237,9 @@ KErho = fnum/volume * Sum_i (mass_i * Vsq_i) :pre
 
 where Sum_i is a sum over particles in the group, fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
-command, and volume is the flow volume of the grid cell.
+command, and volume is the flow volume of the grid cell.  When
+accumulated over multiple sampling steps, this value is normalized by
+the number of sampling steps.
 
 :line
 :line
