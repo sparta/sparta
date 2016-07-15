@@ -37,9 +37,9 @@ SurfCollide::SurfCollide(SPARTA *sparta, int narg, char **arg) :
       error->all(FLERR,"Surf_collide ID must be alphanumeric or "
                  "underscore characters");
 
-  n = strlen(arg[0]) + 1;
+  n = strlen(arg[1]) + 1;
   style = new char[n];
-  strcpy(style,arg[0]);
+  strcpy(style,arg[1]);
 
   vector_flag = 1;
   size_vector = 2;
