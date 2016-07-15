@@ -53,9 +53,11 @@ available in SPARTA:
 "boundary"_compute_boundary.html - various quantities on each global boundary 
 "count"_compute_count.html - particle counts for species and mixtures and mixture groups
 "distsurf/grid"_compute_distsurf_grid.html - distance from grid cells to surface
+"eflux/grid"_compute_eflux_grid.html - energy flux density per grid cell
 "grid"_compute_grid.html - various per grid cell quantities
 "ke/particle"_compute_ke_particle.html - temperature per particle
 "lambda/grid"_compute_lambda_grid.html - mean-free path per grid cell
+"pflux/grid"_compute_pflux_grid.html - momentum flux density per grid cell
 "property/grid"_compute_property_grid.html - per grid cell properties
 "reduce"_compute_reduce.html - reduce vectors to scalars
 "sonine/grid"_compute_sonine_grid.html - Sonine moments per grid cell

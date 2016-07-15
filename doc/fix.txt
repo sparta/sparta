@@ -73,7 +73,9 @@ styles available in SPARTA:
 "balance"_fix_balance.html - perform dynamic load-balancing
 "emit/face"_fix_emit_face.html - emit particles at global boundaries
 "emit/face/file"_fix_emit_face_file.html - emit particles at global boundaries using a distribution defined in a file
+"emit/surf"_fix_emit_surf.html - emit particles at surfaces
 "grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
+"move/surf"_fix_move_surf.html - move surfaces dynamically during a simulation
 "print"_fix_print.html - print text and variables during a simulation :ul
 
 :line
