@@ -32,20 +32,22 @@ The {recomb} keyword turns on or off recombination reactions.  It is
 only relevant if recombination reactions were defined in the reaction
 file read in by the "react"_react.html command.  If the setting is
 {no} then they will be disabled even if they were listed in the
-reaction file.  This is useful to turn recombination reactions off to
+reaction file.  This is useful to turn recombination reactions off, to
 see if they affect simulation results.
 
-The {rboost} keyword does not affect the statistical properties of
-recombination reactions, but tries to improve their computational
-efficiency.  Recombination reactions typically occur with very low
-probability, which means the code spends time testing for reactions
-that rarely occur.  If the {rfactor} is set to N > 1, then
-recombination reactions are skipped N-1 out of N times, when one or
-more such reactions is defined for a pair of colliding particles.  A
-random number us used to select on that probability.  To compensate,
-when a recombination reaction is actually tested for occurrence, its
-rate is boosted by a factor of N, making it N times more likely to
-occur.
+The {rboost} keyword is a setting for recombination reactions.  It is
+ignored if no recombination reactions exist, or the {recomb} keyword
+is set to {no}.  The {rboost} setting does not affect the overalll
+statistical results of recombination reactions, but tries to improve
+their computational efficiency.  Recombination reactions typically
+occur with very low probability, which means the code spends time
+testing for reactions that rarely occur.  If the {rfactor} is set to N
+> 1, then recombination reactions are skipped N-1 out of N times, when
+one or more such reactions is defined for a pair of colliding
+particles.  A random number us used to select on that probability.  To
+compensate, when a recombination reaction is actually tested for
+occurrence, its rate is boosted by a factor of N, making it N times
+more likely to occur.
 
 The smallest value {rboost} can be set to is 1.0, which effectively
 applies no boost factor.
