@@ -87,10 +87,17 @@ void ReactBird::init()
 {
   // convert species IDs to species indices
   // flag reactions as active/inactive depending on whether all species exist
+  // mark recombination reactions inactive if recombflag_user = 0
 
   for (int m = 0; m < nlist; m++) {
     OneReaction *r = &rlist[m];
     r->active = 1;
+
+    if (r->type == RECOMBINATION && recombflag_user == 0) {
+      r->active = 0;
+      continue;
+    }
+
     for (int i = 0; i < r->nreactant; i++) {
       r->reactants[i] = particle->find_species(r->id_reactants[i]);
       if (r->reactants[i] < 0) {
@@ -98,6 +105,7 @@ void ReactBird::init()
         break;
       }
     }
+
     for (int i = 0; i < r->nproduct; i++) {
       r->products[i] = particle->find_species(r->id_products[i]);
       if (r->products[i] < 0) {
@@ -266,14 +274,13 @@ void ReactBird::init()
   }
 
   // set recombflag = 0/1 if any recombination reactions are defined & active
-  // also check if user disabled them
+  // check for user disabling them is at top of this method
 
   recombflag = 0;
   for (int m = 0; m < nlist; m++) {
     if (!rlist[m].active) continue;
     if (rlist[m].type == RECOMBINATION) recombflag = 1;
   }
-  if (recombflag_user == 0) recombflag = 0;
 
   if (!recombflag) return;
 
