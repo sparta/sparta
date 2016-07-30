@@ -65,7 +65,7 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
 
   int offset = 5;
   ioptional = parse_fields(narg-offset,&arg[offset]) + offset;
-  if (offset+ioptional < narg)
+  if (ioptional < narg)
     error->all(FLERR,"Invalid attribute in dump grid command");
   size_one = nfield;
 

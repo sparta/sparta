@@ -18,8 +18,8 @@ FixStyle(ave/surf,FixAveSurf)
 
 #else
 
-#ifndef LMP_FIX_AVE_SURF_H
-#define LMP_FIX_AVE_SURF_H
+#ifndef SPARTA_FIX_AVE_SURF_H
+#define SPARTA_FIX_AVE_SURF_H
 
 #include "fix.h"
 

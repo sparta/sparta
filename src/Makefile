@@ -211,23 +211,23 @@ no-%:
 
 package-status ps:
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p status; done
-	@echo ''
-	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p status; done
+#	@echo ''
+#	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p status; done
 
 package-update pu:
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p update; done
-	@echo ''
-	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p update; done
+#	@echo ''
+#	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p update; done
 
 package-overwrite:
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p overwrite; done
-	@echo ''
-	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p overwrite; done
+#	@echo ''
+#	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p overwrite; done
 
 package-diff pd:
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p diff; done
-	@echo ''
-	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p diff; done
+#	@echo ''
+#	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p diff; done
 
 package-purge: Purge.list
 	@echo 'Purging obsolete and auto-generated source files'

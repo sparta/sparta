@@ -20,8 +20,8 @@
    changes 2008-2011 by Axel Kohlmeyer <akohlmey@gmail.com>
 */
 
-#ifndef LMP_FFT_KISSFFT
-#define LMP_FFT_KISSFFT
+#ifndef SPARTA_FFT_KISSFFT
+#define SPARTA_FFT_KISSFFT
 
 #include <stdlib.h>
 #include <string.h>

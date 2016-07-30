@@ -18,8 +18,8 @@ FixStyle(ave/grid,FixAveGrid)
 
 #else
 
-#ifndef LMP_FIX_AVE_GRID_H
-#define LMP_FIX_AVE_GRID_H
+#ifndef SPARTA_FIX_AVE_GRID_H
+#define SPARTA_FIX_AVE_GRID_H
 
 #include "fix.h"
 

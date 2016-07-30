@@ -63,8 +63,9 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   // NOTE: could add: array entries may expand into multiple fields
   // could use ioptional to add on keyword/arg pairs
 
-  ioptional = parse_fields(narg-5,&arg[5]) + 5;
-  if (5+ioptional < narg &&
+  int offset = 5;
+  ioptional = parse_fields(narg-offset,&arg[offset]) + offset;
+  if (ioptional < narg &&
       (strcmp(style,"image") != 0 && strcmp(style,"movie") != 0))
     error->all(FLERR,"Invalid attribute in dump particle command");
   size_one = nfield;

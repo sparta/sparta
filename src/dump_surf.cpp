@@ -65,7 +65,7 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
 
   int offset = 5;
   ioptional = parse_fields(narg-offset,&arg[offset]) + offset;
-  if (offset+ioptional < narg)
+  if (offset < narg)
     error->all(FLERR,"Invalid attribute in dump surf command");
   size_one = nfield;
 

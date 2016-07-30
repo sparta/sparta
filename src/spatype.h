@@ -107,7 +107,7 @@ typedef int bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT_MAX
-#define MPI_LMP_BIGINT MPI_INT
+#define MPI_SPARTA_BIGINT MPI_INT
 #define CELLINT_FORMAT "%d"
 #define BIGINT_FORMAT "%d"
 #define ATOCELLINT atoi
