@@ -535,7 +535,7 @@ void CreateParticles::create_local(bigint np)
       scale = density_variable(lo,hi);
       ntarget *= scale;
       ncreate = static_cast<int> (ntarget);
-      if (random->uniform() < ntarget-npercell) ncreate++;
+      if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
     for (int m = 0; m < ncreate; m++) {
