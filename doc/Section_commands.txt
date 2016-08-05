@@ -369,6 +369,8 @@ of each style or click on the style itself for a full description:
 "adapt"_fix_adapt.html,
 "ambipolar"_fix_ambipolar.html,
 "ave/grid"_fix_ave_grid.html,
+"ave/histo"_fix_ave_histo.html,
+"ave/histo/weight"_fix_ave_histo.html,
 "ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
 "balance"_fix_balance.html,
