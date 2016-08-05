@@ -13,7 +13,7 @@ variable command :h3
 variable name style args ... :pre
 
 name = name of variable to define :ulb,l
-style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {equal} or {particle} or {grid} :l
+style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {string} or {format} or {getenv} or {file} or {internal} or {equal} or {particle} or {grid} :l
   {delete} = no args
   {index} args = one or more strings
   {loop} args = N
@@ -39,6 +39,7 @@ style = {delete} or {index} or {loop} or {world} or {universe} or {uloop} or {st
     fstr = C-style format string
   {getenv} arg = one string
   {file} arg = filename
+  {internal} arg = numeric value
   {equal} or {particle} or {grid} args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
@@ -67,6 +68,7 @@ variable beta equal "temp / 3.0"
 variable b equal c_myTemp
 variable b particle x*y/vol
 variable foo string myfile
+variable foo internal 3.5
 variable f file values.txt
 variable temp world 300.0 310.0 320.0 $\{Tfinal\}
 variable x universe 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
@@ -92,7 +94,8 @@ command), or used as input to an averaging fix (see the "fix
 ave/time"_fix_ave_time.html command).  Variables of style {particle}
 store a formula which when evaluated produces one numeric value per
 particle which can be output to a dump file (see the "dump
-particle"_dump.html command).
+particle"_dump.html command).  Variables of style {internal} are used
+by a few commands which set their value directly.
 
 In the discussion that follows, the "name" of the variable is the
 arbitrary string that is the 1st argument in the variable command.
@@ -105,12 +108,23 @@ evaluation of the string.  Note that the same string can generate
 different values when it is evaluated at different times during a
 simulation.
 
-IMPORTANT NOTE: When the input script line is encountered that defines
-a variable of style {equal} or {particle} that contains a formula, the
-formula is NOT immediately evaluated and the result stored.  See the
-discussion below about "Immediate Evaluation of Variables" if you want
-to do this.  This is also true of the {format} style variable since it
-evaluates another variable when it is invoked.
+IMPORTANT NOTE: When an input script line is encountered that defines
+a variable of style {equal} or {particle} or {grid} that contains a
+formula, the formula is NOT immediately evaluated and the result
+stored.  See the discussion below about "Immediate Evaluation of
+Variables" if you want to do this.  This is also true of the {format}
+style variable since it evaluates another variable when it is invoked.
+
+Variables of style {equal} and {particle} and {grid} can be used as
+inputs to various other commands which evaluate their formulas as
+needed, e.g. at different timesteps during a "run"_run.html.
+
+Variables of style {internal} can be used in place of an equal-style
+variable, except by commands that set the value stored by the
+internal-style variable.  Thus any command that states it can use an
+equal-style variable as an argument, can also use an internal-style
+variable.  This means that when the command evaluates the variable, it
+will use the value set (internally) by another command.
 
 IMPORTANT NOTE: When a variable command is encountered in the input
 script and the variable name has already been specified, the command
@@ -123,12 +137,12 @@ means that using the "command-line switch"_Section_start.html#start_6
 script.
 
 There are two exceptions to this rule.  First, variables of style
-{string}, {getenv}, {equal} and {particle} ARE redefined each time the
-command is encountered.  This allows these style of variables to be
-redefined multiple times in an input script.  In a loop, this means
-the formula associated with an {equal} or {particle} style variable
-can change if it contains a substitution for another variable, e.g. $x
-or v_x.
+{string}, {getenv}, {internal}, {equal}, and {particle} ARE redefined
+each time the command is encountered.  This allows these style of
+variables to be redefined multiple times in an input script.  In a
+loop, this means the formula associated with an {equal} or {particle}
+style variable can change if it contains a substitution for another
+variable, e.g. $x or v_x.
 
 Second, as described below, if a variable is iterated on to the end of
 its list of strings via the "next"_next.html command, it is removed
@@ -272,6 +286,15 @@ The rules for formatting the file are as follows.  A comment character
 character is stripped.  Blank lines are skipped.  The first "word" of
 a non-blank line, delimited by white space, is the "string" assigned
 to the variable.
+
+For the {internal} style a numeric value is provided.  This value will
+be assigned to the variable until a SPARTA command sets it to a new
+value.  There is currently only one command that requirew {internal}
+variables as inputs, because it resets them:
+"create_particles"_create_particles.html.  As mentioned above, an
+internal-style variable can be used in place of an equal-style
+variable anywhere else in an input script, e.g. as an argument to
+another command that allows for equal-style variables.
 
 :line
 

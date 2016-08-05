@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>name = name of variable to define 
 
-<LI>style = <I>delete</I> or <I>index</I> or <I>loop</I> or <I>world</I> or <I>universe</I> or <I>uloop</I> or <I>string</I> or <I>format</I> or <I>getenv</I> or <I>file</I> or <I>equal</I> or <I>particle</I> or <I>grid</I> 
+<LI>style = <I>delete</I> or <I>index</I> or <I>loop</I> or <I>world</I> or <I>universe</I> or <I>uloop</I> or <I>string</I> or <I>format</I> or <I>getenv</I> or <I>file</I> or <I>internal</I> or <I>equal</I> or <I>particle</I> or <I>grid</I> 
 
 <PRE>  <I>delete</I> = no args
   <I>index</I> args = one or more strings
@@ -44,6 +44,7 @@
     fstr = C-style format string
   <I>getenv</I> arg = one string
   <I>file</I> arg = filename
+  <I>internal</I> arg = numeric value
   <I>equal</I> or <I>particle</I> or <I>grid</I> args = one formula containing numbers, stats keywords, math operations, particle vectors, compute/fix/variable references
     numbers = 0.0, 100, -5.4, 2.8e-4, etc
     constants = PI
@@ -73,6 +74,7 @@ variable beta equal "temp / 3.0"
 variable b equal c_myTemp
 variable b particle x*y/vol
 variable foo string myfile
+variable foo internal 3.5
 variable f file values.txt
 variable temp world 300.0 310.0 320.0 ${Tfinal}
 variable x universe 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
@@ -98,7 +100,8 @@ command), or used as input to an averaging fix (see the <A HREF = "fix_ave_time.
 ave/time</A> command).  Variables of style <I>particle</I>
 store a formula which when evaluated produces one numeric value per
 particle which can be output to a dump file (see the <A HREF = "dump.html">dump
-particle</A> command).
+particle</A> command).  Variables of style <I>internal</I> are used
+by a few commands which set their value directly.
 </P>
 <P>In the discussion that follows, the "name" of the variable is the
 arbitrary string that is the 1st argument in the variable command.
@@ -111,12 +114,23 @@ evaluation of the string.  Note that the same string can generate
 different values when it is evaluated at different times during a
 simulation.
 </P>
-<P>IMPORTANT NOTE: When the input script line is encountered that defines
-a variable of style <I>equal</I> or <I>particle</I> that contains a formula, the
-formula is NOT immediately evaluated and the result stored.  See the
-discussion below about "Immediate Evaluation of Variables" if you want
-to do this.  This is also true of the <I>format</I> style variable since it
-evaluates another variable when it is invoked.
+<P>IMPORTANT NOTE: When an input script line is encountered that defines
+a variable of style <I>equal</I> or <I>particle</I> or <I>grid</I> that contains a
+formula, the formula is NOT immediately evaluated and the result
+stored.  See the discussion below about "Immediate Evaluation of
+Variables" if you want to do this.  This is also true of the <I>format</I>
+style variable since it evaluates another variable when it is invoked.
+</P>
+<P>Variables of style <I>equal</I> and <I>particle</I> and <I>grid</I> can be used as
+inputs to various other commands which evaluate their formulas as
+needed, e.g. at different timesteps during a <A HREF = "run.html">run</A>.
+</P>
+<P>Variables of style <I>internal</I> can be used in place of an equal-style
+variable, except by commands that set the value stored by the
+internal-style variable.  Thus any command that states it can use an
+equal-style variable as an argument, can also use an internal-style
+variable.  This means that when the command evaluates the variable, it
+will use the value set (internally) by another command.
 </P>
 <P>IMPORTANT NOTE: When a variable command is encountered in the input
 script and the variable name has already been specified, the command
@@ -129,12 +143,12 @@ means that using the <A HREF = "Section_start.html#start_6">command-line switch<
 script.
 </P>
 <P>There are two exceptions to this rule.  First, variables of style
-<I>string</I>, <I>getenv</I>, <I>equal</I> and <I>particle</I> ARE redefined each time the
-command is encountered.  This allows these style of variables to be
-redefined multiple times in an input script.  In a loop, this means
-the formula associated with an <I>equal</I> or <I>particle</I> style variable
-can change if it contains a substitution for another variable, e.g. $x
-or v_x.
+<I>string</I>, <I>getenv</I>, <I>internal</I>, <I>equal</I>, and <I>particle</I> ARE redefined
+each time the command is encountered.  This allows these style of
+variables to be redefined multiple times in an input script.  In a
+loop, this means the formula associated with an <I>equal</I> or <I>particle</I>
+style variable can change if it contains a substitution for another
+variable, e.g. $x or v_x.
 </P>
 <P>Second, as described below, if a variable is iterated on to the end of
 its list of strings via the <A HREF = "next.html">next</A> command, it is removed
@@ -278,6 +292,15 @@ below.
 character is stripped.  Blank lines are skipped.  The first "word" of
 a non-blank line, delimited by white space, is the "string" assigned
 to the variable.
+</P>
+<P>For the <I>internal</I> style a numeric value is provided.  This value will
+be assigned to the variable until a SPARTA command sets it to a new
+value.  There is currently only one command that requirew <I>internal</I>
+variables as inputs, because it resets them:
+<A HREF = "create_particles.html">create_particles</A>.  As mentioned above, an
+internal-style variable can be used in place of an equal-style
+variable anywhere else in an input script, e.g. as an argument to
+another command that allows for equal-style variables.
 </P>
 <HR>
 
