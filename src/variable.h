@@ -28,19 +28,21 @@ class Variable : protected Pointers {
   void set(char *, int, char **);
   int next(int, char **);
   int find(char *);
+
   int equal_style(int);
   int particle_style(int);
   int grid_style(int);
   int surf_style(int);
+  int internal_style(int);
+
   char *retrieve(char *);
   double compute_equal(int);
   double compute_equal(char *);
-  void equal_save(int, char *&);
-  void equal_restore(int, char *);
-  void equal_override(int, double);
   void compute_particle(int, double *, int, int);
   void compute_grid(int, double *, int, int);
   void compute_surf(int, double *, int, int) {}
+  void internal_set(int, double);
+
   int int_between_brackets(char *&, int);
   double evaluate_boolean(char *);
 
@@ -55,6 +57,7 @@ class Variable : protected Pointers {
   int *pad;                // 1 = pad loop/uloop variables with 0s, 0 = no pad
   class VarReader **reader;   // variable that reads from file
   char ***data;            // str value of each variable's values
+  double *dvalue;          // single numeric value for internal variables
 
   int *eval_in_progress;   // flag if evaluation of variable is in progress
 

@@ -30,6 +30,7 @@
 #include "surf.h"
 #include "surf_collide.h"
 #include "surf_react.h"
+#include "input.h"
 #include "output.h"
 #include "stats.h"
 #include "random_mars.h"
@@ -50,7 +51,7 @@ using namespace MathConst;
 #define MYROUND(a) (( a-floor(a) ) >= .5) ? ceil(a) : floor(a)
 
 enum{INDEX,LOOP,WORLD,UNIVERSE,ULOOP,STRING,GETENV,
-     SCALARFILE,FORMAT,EQUAL,PARTICLE,GRID,SURF};
+     SCALARFILE,FORMAT,EQUAL,PARTICLE,GRID,SURF,INTERNAL};
 enum{ARG,OP};
 
 // customize by adding a function
@@ -91,6 +92,7 @@ Variable::Variable(SPARTA *sparta) : Pointers(sparta)
   pad = NULL; 
   reader = NULL;
   data = NULL;
+  dvalue = NULL;
 
   eval_in_progress = NULL;
 
@@ -133,6 +135,7 @@ Variable::~Variable()
   memory->destroy(pad);
   memory->sfree(reader);
   memory->sfree(data);
+  memory->sfree(dvalue);
 
   memory->destroy(eval_in_progress);
 
@@ -152,6 +155,8 @@ Variable::~Variable()
 void Variable::set(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR,"Illegal variable command");
+
+  int replaceflag = 0;
 
   // DELETE
   // doesn't matter if variable no longer exists
@@ -276,25 +281,29 @@ void Variable::set(int narg, char **arg)
 		   "All universe/uloop variables must have same # of values");
 
   // STRING
-  // remove pre-existing var if also style STRING (allows it to be reset)
+  // replace pre-existing var if also style STRING (allows it to be reset)
   // num = 1, which = 1st value
   // data = 1 value, string to eval
 
   } else if (strcmp(arg[1],"string") == 0) {
     if (narg != 3) error->all(FLERR,"Illegal variable command");
-    if (find(arg[0]) >= 0) {
+    int ivar = find(arg[0]);
+    if (ivar >= 0) {
       if (style[find(arg[0])] != STRING)
 	error->all(FLERR,"Cannot redefine variable as a different style");
-      remove(find(arg[0]));
+      delete [] data[ivar][0];
+      copy(1,&arg[2],data[ivar]);
+      replaceflag = 1;
+    } else {
+      if (nvar == maxvar) grow();
+      style[nvar] = STRING;
+      num[nvar] = 1;
+      which[nvar] = 0;
+      pad[nvar] = 0;
+      data[nvar] = new char*[num[nvar]];
+      copy(1,&arg[2],data[nvar]);
     }
-    if (nvar == maxvar) grow();
-    style[nvar] = STRING;
-    num[nvar] = 1;
-    which[nvar] = 0;
-    pad[nvar] = 0;
-    data[nvar] = new char*[num[nvar]];
-    copy(1,&arg[2],data[nvar]);
-
+    
   // GETENV
   // remove pre-existing var if also style GETENV (allows it to be reset)
   // num = 1, which = 1st value
@@ -314,7 +323,8 @@ void Variable::set(int narg, char **arg)
     pad[nvar] = 0;
     data[nvar] = new char*[num[nvar]];
     copy(1,&arg[2],data[nvar]);
-    data[nvar][1] = NULL;
+    data[nvar][1] = new char[VALUELENGTH];
+    strcpy(data[nvar][1],"(undefined)");
 
   // SCALARFILE for strings or numbers
   // which = 1st value
@@ -350,72 +360,121 @@ void Variable::set(int narg, char **arg)
     pad[nvar] = 0;
     data[nvar] = new char*[num[nvar]];
     copy(2,&arg[2],data[nvar]);
-    data[nvar][2] = NULL;
+    data[nvar][2] = new char[VALUELENGTH];
+    strcpy(data[nvar][2],"(undefined)");
 
   // EQUAL
-  // remove pre-existing var if also style EQUAL (allows it to be reset)
+  // replace pre-existing var if also style EQUAL (allows it to be reset)
   // num = 2, which = 1st value
   // data = 2 values, 1st is string to eval, 2nd is filled on retrieval
 
   } else if (strcmp(arg[1],"equal") == 0) {
     if (narg != 3) error->all(FLERR,"Illegal variable command");
-    if (find(arg[0]) >= 0) {
+    int ivar = find(arg[0]);
+    if (ivar >= 0) {
       if (style[find(arg[0])] != EQUAL)
 	error->all(FLERR,"Cannot redefine variable as a different style");
-      remove(find(arg[0]));
+      delete [] data[ivar][0];
+      copy(1,&arg[2],data[ivar]);
+      replaceflag = 1;
+    } else {
+      if (nvar == maxvar) grow();
+      style[nvar] = EQUAL;
+      num[nvar] = 2;
+      which[nvar] = 0;
+      pad[nvar] = 0;
+      data[nvar] = new char*[num[nvar]];
+      copy(1,&arg[2],data[nvar]);
+      data[nvar][1] = new char[VALUELENGTH];
+      strcpy(data[nvar][1],"(undefined)");
     }
-    if (nvar == maxvar) grow();
-    style[nvar] = EQUAL;
-    num[nvar] = 2;
-    which[nvar] = 0;
-    pad[nvar] = 0;
-    data[nvar] = new char*[num[nvar]];
-    copy(1,&arg[2],data[nvar]);
-    data[nvar][1] = NULL;
     
   // PARTICLE
-  // remove pre-existing var if also style PARTICLE (allows it to be reset)
+  // replace pre-existing var if also style PARTICLE (allows it to be reset)
   // num = 1, which = 1st value
   // data = 1 value, string to eval
 
   } else if (strcmp(arg[1],"particle") == 0) {
     if (narg != 3) error->all(FLERR,"Illegal variable command");
-    if (find(arg[0]) >= 0) {
+    int ivar = find(arg[0]);
+    if (ivar >= 0) {
       if (style[find(arg[0])] != PARTICLE)
 	error->all(FLERR,"Cannot redefine variable as a different style");
-      remove(find(arg[0]));
+      delete [] data[ivar][0];
+      copy(1,&arg[2],data[ivar]);
+      replaceflag = 1;
+    } else {
+      if (nvar == maxvar) grow();
+      style[nvar] = PARTICLE;
+      num[nvar] = 1;
+      which[nvar] = 0;
+      pad[nvar] = 0;
+      data[nvar] = new char*[num[nvar]];
+      copy(1,&arg[2],data[nvar]);
     }
-    if (nvar == maxvar) grow();
-    style[nvar] = PARTICLE;
-    num[nvar] = 1;
-    which[nvar] = 0;
-    pad[nvar] = 0;
-    data[nvar] = new char*[num[nvar]];
-    copy(1,&arg[2],data[nvar]);
+
+  // GRID
+  // replace pre-existing var if also style GRID (allows it to be reset)
+  // num = 1, which = 1st value
+  // data = 1 value, string to eval
 
   } else if (strcmp(arg[1],"grid") == 0) {
-    //error->all(FLERR,"Grid-style variables are not yet implemented");
     if (narg != 3) error->all(FLERR,"Illegal variable command");
-    if (find(arg[0]) >= 0) {
+    int ivar = find(arg[0]);
+    if (ivar >= 0) {
       if (style[find(arg[0])] != GRID)
 	error->all(FLERR,"Cannot redefine variable as a different style");
-      remove(find(arg[0]));
+      delete [] data[ivar][0];
+      copy(1,&arg[2],data[ivar]);
+      replaceflag = 1;
+    } else {
+      if (nvar == maxvar) grow();
+      style[nvar] = GRID;
+      num[nvar] = 1;
+      which[nvar] = 0;
+      pad[nvar] = 0;
+      data[nvar] = new char*[num[nvar]];
+      copy(1,&arg[2],data[nvar]);
     }
-    if (nvar == maxvar) grow();
-    style[nvar] = GRID;
-    num[nvar] = 1;
-    which[nvar] = 0;
-    pad[nvar] = 0;
-    data[nvar] = new char*[num[nvar]];
-    copy(1,&arg[2],data[nvar]);
+
+  // SURF (not implemented yet)
+  // replace pre-existing var if also style SURF (allows it to be reset)
+  // num = 1, which = 1st value
+  // data = 1 value, string to eval
 
   } else if (strcmp(arg[1],"surf") == 0) {
     error->all(FLERR,"Surf-style variables are not yet implemented");
+
+  // INTERNAL
+  // replace pre-existing var if also style INTERNAL (allows it to be reset)
+  // num = 1, for string representation of dvalue, set by retrieve()
+  // dvalue = numeric initialization from 2nd arg, reset by internal_set()
+
+  } else if (strcmp(arg[1],"internal") == 0) {
+    if (narg != 3) error->all(FLERR,"Illegal variable command");
+    int ivar = find(arg[0]);
+    if (ivar >= 0) {
+      if (style[ivar] != INTERNAL)
+        error->all(FLERR,"Cannot redefine variable as a different style");
+      dvalue[nvar] = input->numeric(FLERR,arg[2]);
+      replaceflag = 1;
+    } else {
+      if (nvar == maxvar) grow();
+      style[nvar] = INTERNAL;
+      num[nvar] = 1;
+      which[nvar] = 0;
+      pad[nvar] = 0;
+      data[nvar] = new char*[num[nvar]];
+      data[nvar][0] = new char[VALUELENGTH];
+      dvalue[nvar] = input->numeric(FLERR,arg[2]);
+    }
+
   } else error->all(FLERR,"Illegal variable command");
 
-  // set name of variable
-  // must come at end, since STRING/EQUAL/PARTICLE reset may have removed name
+  // set name of variable, if not replacing one flagged with replaceflag
   // name must be all alphanumeric chars or underscores
+
+  if (replaceflag) return;
 
   int n = strlen(arg[0]) + 1;
   names[nvar] = new char[n];
@@ -467,13 +526,13 @@ int Variable::next(int narg, char **arg)
       error->all(FLERR,"All variables in next command must be same style");
   }
 
-  // invalid styles: STRING or EQUAL or WORLD or PARTICLE or GRID or
-  //                 GETENV or FORMAT
+  // invalid styles: STRING, EQUAL, WORLD, PARTICLE, GRID, GETENV,
+  //                 FORMAT, INTERNAL
 
   int istyle = style[find(arg[0])];
   if (istyle == STRING || istyle == EQUAL || istyle == WORLD ||
       istyle == GETENV || istyle == PARTICLE || istyle == GRID || 
-      istyle == FORMAT)
+      istyle == FORMAT || istyle == INTERNAL)
     error->all(FLERR,"Invalid variable style with next command");
 
   // if istyle = UNIVERSE or ULOOP, insure all such variables are incremented
@@ -585,6 +644,7 @@ int Variable::next(int narg, char **arg)
    if FORMAT var, evaluate its variable and put formatted result in str
    if GETENV var, query environment and put result in str
    if PARTICLE or GRID var, return NULL
+   if INTERNAL, convert dvalue and put result in str
    return NULL if no variable with name or which value is bad,
      caller must respond
 ------------------------------------------------------------------------- */
@@ -614,34 +674,29 @@ char *Variable::retrieve(char *name)
     strcpy(data[ivar][0],result);
     str = data[ivar][0];
   } else if (style[ivar] == EQUAL) {
-    char result[64];
     double answer = evaluate(data[ivar][0],NULL);
-    sprintf(result,"%.15g",answer);
-    int n = strlen(result) + 1;
-    if (data[ivar][1]) delete [] data[ivar][1];
-    data[ivar][1] = new char[n];
-    strcpy(data[ivar][1],result);
+    sprintf(data[ivar][1],"%.15g",answer);
     str = data[ivar][1];
   } else if (style[ivar] == FORMAT) {
-    char result[64];
     int jvar = find(data[ivar][0]);
     if (jvar == -1) return NULL;
     if (!equal_style(jvar)) return NULL;
-    double answer = evaluate(data[jvar][0],NULL);
-    sprintf(result,data[ivar][1],answer);
-    int n = strlen(result) + 1;
-    if (data[ivar][2]) delete [] data[ivar][2];
-    data[ivar][2] = new char[n];
-    strcpy(data[ivar][2],result);
+    double answer = compute_equal(jvar);
+    sprintf(data[ivar][2],data[ivar][1],answer);
     str = data[ivar][2];
   } else if (style[ivar] == GETENV) {
     const char *result = getenv(data[ivar][0]);
-    if (data[ivar][1]) delete [] data[ivar][1];
     if (result == NULL) result = (const char *)"";
     int n = strlen(result) + 1;
-    data[ivar][1] = new char[n];
+    if (n > VALUELENGTH) {
+      delete [] data[ivar][1];
+      data[ivar][1] = new char[n];
+    }
     strcpy(data[ivar][1],result);
     str = data[ivar][1];
+  } else if (style[ivar] == INTERNAL) {
+    sprintf(data[ivar][0],"%.15g",dvalue[ivar]);
+    str = data[ivar][0];
   } else if (style[ivar] == PARTICLE || style[ivar] == GRID) return NULL;
 
   return str;
@@ -649,6 +704,7 @@ char *Variable::retrieve(char *name)
 
 /* ----------------------------------------------------------------------
    return result of equal-style variable evaluation
+   can be EQUAL or INTERNAL style
 ------------------------------------------------------------------------- */
 
 double Variable::compute_equal(int ivar)
@@ -658,7 +714,9 @@ double Variable::compute_equal(int ivar)
 
   eval_in_progress[ivar] = 1;
 
-  double value = evaluate(data[ivar][0],NULL);
+  double value;
+  if (style[ivar] == EQUAL) value = evaluate(data[ivar][0],NULL);
+  else if (style[ivar] == INTERNAL) value = dvalue[ivar];
 
   eval_in_progress[ivar] = 0;
   return value;
@@ -672,46 +730,6 @@ double Variable::compute_equal(int ivar)
 double Variable::compute_equal(char *str)
 {
   return evaluate(str,NULL);
-}
-
-/* ----------------------------------------------------------------------
-   save copy of EQUAL style ivar formula in copy
-   allocate copy here, later equal_restore() call will free it
-   insure data[ivar][0] is of VALUELENGTH since will be overridden
-   next 3 functions are used by create_atoms to temporarily override variables
-------------------------------------------------------------------------- */
-
-void Variable::equal_save(int ivar, char *&copy)
-{
-  int n = strlen(data[ivar][0]) + 1;
-  copy = new char[n];
-  strcpy(copy,data[ivar][0]);
-  delete [] data[ivar][0];
-  data[ivar][0] = new char[VALUELENGTH];
-}
-
-/* ----------------------------------------------------------------------
-   restore formula string of EQUAL style ivar from copy
-   then free copy, allocated in equal_save()
-------------------------------------------------------------------------- */
-
-void Variable::equal_restore(int ivar, char *copy)
-{
-  delete [] data[ivar][0];
-  int n = strlen(copy) + 1;
-  data[ivar][0] = new char[n];
-  strcpy(data[ivar][0],copy);
-  delete [] copy;
-}
-
-/* ----------------------------------------------------------------------
-   override EQUAL style ivar formula with value converted to string
-   data[ivar][0] was set to length 64 in equal_save()
-------------------------------------------------------------------------- */
-
-void Variable::equal_override(int ivar, double value)
-{
-  sprintf(data[ivar][0],"%.15g",value);
 }
 
 /* ----------------------------------------------------------------------
@@ -798,6 +816,15 @@ void Variable::compute_grid(int ivar, double *result,
 }
 
 /* ----------------------------------------------------------------------
+   set value stored by INTERNAL style ivar
+------------------------------------------------------------------------- */
+
+void Variable::internal_set(int ivar, double value)
+{
+  dvalue[ivar] = value;
+}
+
+/* ----------------------------------------------------------------------
    search for name in list of variables names
    return index or -1 if not found
 ------------------------------------------------------------------------- */
@@ -810,12 +837,12 @@ int Variable::find(char *name)
 }
 
 /* ----------------------------------------------------------------------
-   return 1 if variable is EQUAL style, 0 if not
+   return 1 if variable is EQUAL or INTERNAL style, 0 if not
 ------------------------------------------------------------------------- */
   
 int Variable::equal_style(int ivar)
 {
-  if (style[ivar] == EQUAL) return 1;
+  if (style[ivar] == EQUAL || style[ivar] == INTERNAL) return 1;
   return 0;
 }
 
@@ -846,6 +873,17 @@ int Variable::grid_style(int ivar)
 int Variable::surf_style(int ivar)
 {
   if (style[ivar] == SURF) return 1;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   return 1 if variable is INTERNAL style, 0 if not
+   this is checked before call to set_internal() to assure it can be set
+------------------------------------------------------------------------- */
+
+int Variable::internal_style(int ivar)
+{
+  if (style[ivar] == INTERNAL) return 1;
   return 0;
 }
 
@@ -893,6 +931,7 @@ void Variable::grow()
   for (int i = old; i < maxvar; i++) reader[i] = NULL;
 
   data = (char ***) memory->srealloc(data,maxvar*sizeof(char **),"var:data");
+  memory->grow(dvalue,maxvar,"var:dvalue");
 
   memory->grow(eval_in_progress,maxvar,"var:eval_in_progress");
   for (int i = 0; i < maxvar; i++) eval_in_progress[i] = 0;
@@ -1598,9 +1637,25 @@ double Variable::evaluate(char *str, Tree **tree)
 	  i = ptr-str+1;
 	}
 
-        // v_name = scalar from equal-style variable
+        // v_name = scalar from internal-style variable
+        // access value directly
 
-	if (nbracket == 0 && style[ivar] != PARTICLE && style[ivar] != GRID) {
+        if (nbracket == 0 && style[ivar] == INTERNAL) {
+
+          value1 = dvalue[ivar];
+          if (tree) {
+            Tree *newtree = new Tree();
+            newtree->type = VALUE;
+            newtree->value = value1;
+	    newtree->left = newtree->middle = newtree->right = NULL;
+            treestack[ntreestack++] = newtree;
+          } else argstack[nargstack++] = value1;
+
+        // v_name = scalar from non particle/grid variable
+        // access value via retrieve()
+
+	} else if (nbracket == 0 && style[ivar] != PARTICLE && 
+                   style[ivar] != GRID) {
 
 	  char *var = retrieve(id);
 	  if (var == NULL)
