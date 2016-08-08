@@ -1,1 +1,1 @@
-#define SPARTA_VERSION "5 Aug 2016"
+#define SPARTA_VERSION "8 Aug 2016"
