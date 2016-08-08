@@ -25,7 +25,9 @@ keyword = {append} or {buffer} or {every} or {fileper} or {first} or {flush} or 
     Np = write one file for every this many processors
   {first} arg = {yes} or {no}
   {flush} arg = {yes} or {no}
-  {format} arg = C-style format string for one line of output
+  {format} args = {line} string, {int} string, {float} string, M string, or {none}
+    string = C-style format string
+    M = integer from 1 to N, where N = # of per-atom quantities being output
   {nfile} arg = Nf
     Nf = write this many files, one from each of Nf processors
   {pad} arg = Nchar = # of characters to convert timestep to
@@ -89,7 +91,8 @@ keyword = {bcolor} or {bdiam} or {backcolor} or {bitrate} or {boxcolor} or {cmap
 
 [Examples:]
 
-dump_modify 1 format "%d %d %20.15g %g %g"
+dump_modify 1 format line "%d %d %20.15g %g %g"
+dump_modify 1 format float %20.15g
 dump_modify myDump thresh x < 0.0 thresh vx >= 3.0
 dump_modify 1 every 1000
 dump_modify 1 every v_myVar
@@ -188,14 +191,36 @@ completes.
 
 :line
 
-The text-based dump styles have a default C-style format string which
-simply specifies %d for integers and %g for real values, when per
-particle or per grid cell or per surface element info is written to
-the dump file.  The {format} keyword can be used to override the
-default with a new C-style format string.  The number of fields it
-specifies should match the number of entities being printed on each
-line.  Do not include a trailing "\n" newline character in the format
-string.
+The {format} keyword can be used to change the default numeric format
+output by the text-based dump styles: {particle}, {grid}, {surf}.
+
+All the specified format strings are C-style formats, e.g. as used by
+the C/C++ printf() command.  The {line} keyword takes a single
+argument which is the format string for an entire line of output with
+N fields for each particle, grid cell, or suraface elememt, which you
+must enclose in quotes if it is more than one field.  The {int} and
+{float} keywords take a single format argument and are applied to all
+integer or floating-point quantities output.  The setting for {M
+string} also takes a single format argument which is used for the Mth
+value output in each line, e.g. the 5th column is output in high
+precision for "format 5 %20.15g".
+
+The {format} keyword can be used multiple times.  The precedence is
+that for each value in a line of output, the {M} format (if specified)
+is used, else the {int} or {float} setting (if specified) is used,
+else the {line} setting (if specified) for that value is used, else
+the default setting is used.  A setting of {none} clears all previous
+settings, reverting all values to their default format.
+
+NOTE: Grid cell IDs are stored internally as 4-byte or 8-byte signed
+integers, depending on how SPARTA was compiled.  When specifying the
+{format int} option you can use a "%d"-style format identifier in the
+format string and SPARTA will convert this to the corresponding 8-byte
+form it it is needed when outputting those values.  However, when
+specifying the {line} option or {format M string} option for those
+values, you should specify a format string appropriate for an 8-byte
+signed integer, e.g. one with "%ld", if SPARTA was compiled with the
+-DSPARTA_BIGBIG option for 8-byte IDs.
 
 :line
 

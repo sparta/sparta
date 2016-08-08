@@ -20,9 +20,9 @@
 <LI>keyword = <I>flush</I> or <I>format</I> or <I>every</I> 
 
 <PRE>  <I>flush</I> value = <I>yes</I> or <I>no</I>
-  <I>format</I> values = <I>int</I> string or <I>float</I> string or M string
-    M = integer from 1 to N, where N = # of quantities being printed
+  <I>format</I> values = <I>line</I> string, <I>int</I> string, <I>float</I> string, M string, or <I>none</I>
     string = C-style format string
+    M = integer from 1 to N, where N = # of quantities being output
   <I>every</I> value = v_name
     v_name = an equal-style variable name 
 </PRE>
@@ -31,8 +31,8 @@
 <P><B>Examples:</B>
 </P>
 <PRE>stats_modify flush yes
-stats_modify temp myTemp format 3 %15.8g
-stats_modify line multi format float %g 
+stats_modify format 3 %15.8g
+stas_modify format line "%ld %g %g %15.8g" 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -44,22 +44,34 @@ is written to the log file.  This insures the output in that file is
 current (no buffering by the OS), even if SPARTA halts before the
 simulation completes.
 </P>
-<P>The <I>format</I> keyword sets the numeric format of individual printed
-quantities.  The <I>int</I> and <I>float</I> keywords set the format for all
-integer or floating-point quantities printed.  The setting with a
-numeric value M (e.g. format 5 %10.4g) sets the format of the Mth
-value printed in each output line, e.g. the 5th column of output in
-this case.  If the format for a specific column has been set, it will
-take precedent over the <I>int</I> or <I>float</I> setting.
+<P>The <I>format</I> keyword can be used to change the default numeric format
+of any of quantities the <A HREF = "stats_style.html">stats_style</A> command
+outputs.  All the specified format strings are C-style formats,
+e.g. as used by the C/C++ printf() command.  The <I>line</I> keyword takes
+a single argument which is the format string for the entire line of
+stats output, with N fields, which you must enclose in quotes if it is
+more than one field.  The <I>int</I> and <I>float</I> keywords take a single
+format argument and are applied to all integer or floating-point
+quantities output.  The setting for <I>M string</I> also takes a single
+format argument which is used for the Mth value output in each line,
+e.g. the 5th column is output in high precision for "format 5
+%20.15g".
 </P>
-<P>IMPORTANT NOTE: The output values <I>step</I> and <I>np</I> are stored
-internally as 8-byte signed integers, rather than the usual 4-byte
-signed integers.  When specifying the "format int" keyword you can use
-a "%d"-style format identifier in the format string and SPARTA will
-convert this to the corresponding "%ld" form when it is applied to
-those keywords.  However, when specifying the "format M string"
-keyword for those keywords, you should specify a string appropriate
-for an 8-byte signed integer, e.g. one with "%ld".
+<P>The <I>format</I> keyword can be used multiple times.  The precedence is
+that for each value in a line of output, the <I>M</I> format (if specified)
+is used, else the <I>int</I> or <I>float</I> setting (if specified) is used,
+else the <I>line</I> setting (if specified) for that value is used, else
+the default setting is used.  A setting of <I>none</I> clears all previous
+settings, reverting all values to their default format.
+</P>
+<P>NOTE: The stats output values <I>step</I> and <I>atoms</I> are stored internally
+as 8-byte signed integers, rather than the usual 4-byte signed
+integers.  When specifying the <I>format int</I> option you can use a
+"%d"-style format identifier in the format string and SPARTA will
+convert this to the corresponding 8-byte form when it is applied to
+those keywords.  However, when specifying the <I>line</I> option or <I>format
+M string</I> option for <I>step</I> and <I>natoms</I>, you should specify a format
+string appropriate for an 8-byte signed integer, e.g. one with "%ld".
 </P>
 <P>The <I>every</I> keyword allows a variable to be specified which will
 determine the timesteps on which statistical output is generated.  It

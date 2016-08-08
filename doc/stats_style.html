@@ -57,10 +57,10 @@
       s_ID[I] = Ith component of global vector calculated by a surface collision model with ID
       r_ID[I] = Ith component of global vector calculated by a surface reaction model with ID
       c_ID = global scalar value calculated by a compute with ID
-      c_ID[I] = Ith component of global vector calculated by a compute with ID
+      c_ID[I] = Ith component of global vector calculated by a compute with ID, I can include wildcard (see below)
       c_ID[I][J] = I,J component of global array calculated by a compute with ID
       f_ID = global scalar value calculated by a fix with ID
-      f_ID[I] = Ith component of global vector calculated by a fix with ID
+      f_ID[I] = Ith component of global vector calculated by a fix with ID, I can include wildcard (see below)
       f_ID[I][J] = I,J component of global array calculated by a fix with ID
       v_name = scalar value calculated by an equal-style variable with name 
 </PRE>
@@ -69,7 +69,8 @@
 <P><B>Examples:</B>
 </P>
 <PRE>stats_style step cpu np
-stats_style step cpu spcpu np xlo xhi c_myTemp 
+stats_style step cpu spcpu np xlo xhi c_myCount[2]
+stats_style step cpu spcpu np xlo xhi c_myCount[*] 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -182,6 +183,29 @@ boundaries of the simulation box.
 </P>
 <HR>
 
+<P>For output values from a compute or fix, the bracketed index I used to
+index a vector, as in <I>c_ID[I]</I> or <I>f_ID[I]</I>, can be specified
+using a wildcard asterisk with the index to effectively specify
+multiple values.  This takes the form "*" or "*n" or "n*" or "m*n".
+If N = the size of the vector (for <I>mode</I> = scalar) or the number of
+columns in the array (for <I>mode</I> = vector), then an asterisk with no
+numeric values means all indices from 1 to N.  A leading asterisk
+means all indices from 1 to n (inclusive).  A trailing asterisk means
+all indices from n to N (inclusive).  A middle asterisk means all
+indices from m to n (inclusive).
+</P>
+<P>Using a wildcard is the same as if the individual elements of the
+vector had been listed one by one.  E.g. these 2 stats_style commands
+are equivalent, since the <A HREF = "compute_reduce.html">compute reduce</A> command
+creates a global vector with 6 values.
+</P>
+<PRE>compute myCount reduce max x y z vx vy vz
+stats_style step np c_myCount[*]
+stats_style step np c_myCount[1] c_myCount[2] c_myCount[3] &
+                    c_myCount[4] c_myCount[5] c_myCount[6] 
+</PRE>
+<HR>
+
 <P>For the following keywords, the ID in the keyword should be replaced
 by the actual ID of a surface collision model, surface reaction model,
 compute, fix, or variable name that has been defined elsewhere in the
@@ -198,12 +222,14 @@ global vector of quantities.
 </P>
 <P>The <I>c_ID</I> and <I>c_ID[I]</I> and <I>c_ID[I][J]</I> keywords allow global
 values calculated by a compute to be output.  As discussed on the
- <A HREF = "compute.html">compute</A> doc page, computes can calculate global,
+<A HREF = "compute.html">compute</A> doc page, computes can calculate global,
 per-particle, per-grid, or per-surf values.  Only global values can be
 referenced by this command.  However, per-particle, per-grid, or
 per-surf compute values can be referenced in a
- <A HREF = "variable.html">variable</A> and the variable referenced, as discussed
-below.
+<A HREF = "variable.html">variable</A> and the variable referenced, as discussed
+below.  See the discussion above for how the I in <I>c_ID[I]</I> can be
+specified with a wildcard asterisk to effectively specify multiple
+values from a global compute vector.
 </P>
 <P>The <I>f_ID</I> and <I>f_ID[I]</I> and <I>f_ID[I][J]</I> keywords allow global
 values calculated by a fix to be output.  As discussed on the
@@ -211,7 +237,9 @@ values calculated by a fix to be output.  As discussed on the
 per-grid, or per-surf values.  Only global values can be referenced by
 this command.  However, per-particle or per-grid or per-surf fix
 values can be referenced in a <A HREF = "variable.html">variable</A> and the
-variable referenced, as discussed below.
+variable referenced, as discussed below.  See the discussion above for
+how the I in <I>f_ID[I]</I> can be specified with a wildcard asterisk to
+effectively specify multiple values from a global fix vector.
 </P>
 <P>The <I>v_name</I> keyword allow the current value of a variable to be
 output.  The name in the keyword should be replaced by the variable

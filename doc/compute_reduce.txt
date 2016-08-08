@@ -14,15 +14,15 @@ compute ID reduce mode input1 input2 ... keyword args ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 reduce = style name of this compute command :l
-mode = {sum} or {min} or {max} or {ave} :l
+mode = {sum} or {min} or {max} or {ave}  or {sumsq} or {avesq} :l
 one or more inputs can be listed :l
 input = x, y, z, vx, vy, vz, ke, erot, evib, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :l
   x,y,z,vx,vy,vz = particle position or velocity component
   ke,erot,evib = particle energy component
   c_ID = per-particle or per-grid vector calculated by a compute with ID
-  c_ID\[I\] = Ith column of per-particle or per-grid array calculated by a compute with ID
+  c_ID\[I\] = Ith column of per-particle or per-grid array calculated by a compute with ID, I can include wildcard (see below)
   f_ID = per-particle or per-grid or per-surf vector calculated by a fix with ID
-  f_ID\[I\] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID
+  f_ID\[I\] = Ith column of per-particle or per-grid or per-surf array calculated by a fix with ID, I can include wildcard (see below)
   v_name = per-particle or per-grid vector calculated by a particle-style or grid-style variable with name :pre
 
 zero or more keyword/args pairs may be appended :l
@@ -34,7 +34,7 @@ keyword = {replace} :l
 
 [Examples:]
 
-compute 1 reduce sum c_grid
+compute 1 reduce sum c_grid\[*\]
 compute 2 reduce min f_ave v_myKE
 compute 3 reduce max c_mine\[1\] c_mine\[2\] c_temp replace 1 3 replace 2 3 :pre
 
@@ -63,13 +63,39 @@ The reduction operation is specified by the {mode} setting.  The {sum}
 option adds the values in the vector into a global total.  The {min}
 or {max} options find the minimum or maximum value across all vector
 values.  The {ave} setting adds the vector values into a global total,
-then divides by the number of values in the vector.
+then divides by the number of values in the vector.  The {sumsq}
+option sums the square of the values in the vector into a global
+total.  The {avesq} setting does the same as {sumsq}, then divdes the
+sum of squares by the number of values.  The last two options can be
+useful for calculating the variance of some quantity, e.g. variance =
+sumsq - ave^2.
 
 Each listed input is operated on independently.
 
 Each listed input can be a particle attribute or can be the result of
 a "compute"_compute.html or "fix"_fix.html or the evaluation of a
 "variable"_variable.html.
+
+Note that for values from a compute or fix, the bracketed index I can
+be specified using a wildcard asterisk with the index to effectively
+specify multiple values.  This takes the form "*" or "*n" or "n*" or
+"m*n".  If N = the size of the vector (for {mode} = scalar) or the
+number of columns in the array (for {mode} = vector), then an asterisk
+with no numeric values means all indices from 1 to N.  A leading
+asterisk means all indices from 1 to n (inclusive).  A trailing
+asterisk means all indices from n to N (inclusive).  A middle asterisk
+means all indices from m to n (inclusive).
+
+Using a wildcard is the same as if the individual columns of the array
+had been listed one by one.  E.g. these 2 compute reduce commands are
+equivalent, since the "compute grid"_compute_grid.html command creates
+a per-grid array with 3 columns:
+
+compute myGrid all u v w
+compute 2 all reduce min c_myGrid\[*\]
+compute 2 all reduce min c_myGrid\[1\] c_myGrid\[2\] c_myGrid\[3\] :pre
+
+:line
 
 The particle attributes x,y,z,vx,vy,vz are position and velocity
 components.  The ke,erot,evib attributes are for kinetic, rotational,
@@ -82,7 +108,9 @@ per-particle or per-grid quantities.  See the individual
 is appended, the vector calculated by the compute is used.  If a
 bracketed integer is appended, the Ith column of the array calculated
 by the compute is used.  Users can also write code for their own
-compute styles and "add them to SPARTA"_Section_modify.html.
+compute styles and "add them to SPARTA"_Section_modify.html.  See the
+discussion above for how I can be specified with a wildcard asterisk
+to effectively specify multiple values.
 
 IMPORTANT NOTE: A compute which generates per-surf quantities cannot
 be used as input.  This is because its values have not yet been
@@ -103,7 +131,9 @@ with when this compute references the values, else an error results.
 If no bracketed integer is appended, the vector calculated by the fix
 is used.  If a bracketed integer is appended, the Ith column of the
 array calculated by the fix is used.  Users can also write code for
-their own fix style and "add them to SPARTA"_Section_modify.html.
+their own fix style and "add them to SPARTA"_Section_modify.html.  See
+the discussion above for how I can be specified with a wildcard
+asterisk to effectively specify multiple values.
 
 If a value begins with "v_", a variable name must follow which has
 been previously defined in the input script.  It must be a
