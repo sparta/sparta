@@ -33,10 +33,10 @@ keyword = {ave}
 
 [Examples:]
 
-fix 1 all ave/grid 10 20 1000 c_mine
-fix 1 all ave/grid 1 100 100 c_2\[1\] ave running
-fix 1 all ave/grid 1 100 100 c_2\[*\] ave running
-fix 1 all ave/grid 5 20 100 v_myEng :pre
+fix 1 ave/grid 10 20 1000 c_mine
+fix 1 ave/grid 1 100 100 c_2\[1\] ave running
+fix 1 ave/grid 1 100 100 c_2\[*\] ave running
+fix 1 ave/grid 5 20 100 v_myEng :pre
 
 These commands will dump averages for each species and each grid cell
 to a file every 1000 steps:
