@@ -20,6 +20,7 @@
 #include "dump.h"
 #include "domain.h"
 #include "update.h"
+#include "input.h"
 #include "grid.h"
 #include "output.h"
 #include "memory.h"
@@ -34,7 +35,9 @@ using namespace SPARTA_NS;
 #define ONEFIELD 32
 #define DELTA 1048576
 
-enum{INT,DOUBLE,CELLINT,STRING};    // many files
+enum{INT,DOUBLE,BIGINT,STRING};    // many dump files
+
+enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 /* ---------------------------------------------------------------------- */
 
@@ -57,8 +60,15 @@ Dump::Dump(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   first_flag = 0;
   flush_flag = 1;
+
   format = NULL;
-  format_user = NULL;
+  format_default = NULL;
+
+  format_line_user = NULL;
+  format_float_user = NULL;
+  format_int_user = NULL;
+  format_bigint_user = NULL;
+
   clearstep = 0;
   append_flag = 0;
   buffer_allow = 0;
@@ -123,7 +133,12 @@ Dump::~Dump()
 
   delete [] format;
   delete [] format_default;
-  delete [] format_user;
+  delete [] format_line_user;
+  delete [] format_float_user;
+  delete [] format_int_user;
+  delete [] format_bigint_user;
+  for (int i = 0; i < size_one; i++) delete [] format_column_user[i];
+  delete [] format_column_user;
 
   memory->destroy(buf);
   memory->destroy(sbuf);
@@ -143,6 +158,66 @@ Dump::~Dump()
 
 void Dump::init()
 {
+  // format = copy of default or user-specified line format
+
+  delete [] format;
+  char *str;
+  if (format_line_user) str = format_line_user;
+  else str = format_default;
+
+  int n = strlen(str) + 1;
+  format = new char[n];
+  strcpy(format,str);
+
+  // tokenize the format string and add space at end of each format element
+  // if user-specified int/float format exists, use it instead
+  // if user-specified column format exists, use it instead
+  // lo priority = line, medium priority = int/float, hi priority = column
+
+  char *ptr;
+  for (int i = 0; i < size_one; i++) {
+    if (i == 0) ptr = strtok(format," \0");
+    else ptr = strtok(NULL," \0");
+    if (ptr == NULL) error->all(FLERR,"Dump_modify format line is too short");
+    delete [] vformat[i];
+
+    if (format_column_user[i]) {
+      vformat[i] = new char[strlen(format_column_user[i]) + 2];
+      strcpy(vformat[i],format_column_user[i]);
+    } else if (vtype[i] == INT && format_int_user) {
+      vformat[i] = new char[strlen(format_int_user) + 2];
+      strcpy(vformat[i],format_int_user);
+    } else if (vtype[i] == DOUBLE && format_float_user) {
+      vformat[i] = new char[strlen(format_float_user) + 2];
+      strcpy(vformat[i],format_float_user);
+    } else if (vtype[i] == BIGINT && format_bigint_user) {
+      vformat[i] = new char[strlen(format_bigint_user) + 2];
+      strcpy(vformat[i],format_bigint_user);
+    } else {
+      vformat[i] = new char[strlen(ptr) + 2];
+      strcpy(vformat[i],ptr);
+    }
+
+    vformat[i] = strcat(vformat[i]," ");
+  }
+
+  // setup boundary string
+
+  int m = 0;
+  for (int idim = 0; idim < 3; idim++) {
+    for (int iside = 0; iside < 2; iside++) {
+      if (domain->bflag[idim*2+iside] == PERIODIC) boundstr[m++] = 'p';
+      else if (domain->bflag[idim*2+iside] == OUTFLOW) boundstr[m++] = 'o';
+      else if (domain->bflag[idim*2+iside] == REFLECT) boundstr[m++] = 'r';
+      else if (domain->bflag[idim*2+iside] == AXISYM) boundstr[m++] = 'a';
+      else if (domain->bflag[idim*2+iside] == SURFACE) boundstr[m++] = 's';
+    }
+    boundstr[m++] = ' ';
+  }
+  boundstr[8] = '\0';
+  
+  // style-specific initialization
+
   init_style();
 }
 
@@ -374,9 +449,9 @@ int Dump::convert_string(int n, double *mybuf)
         offset += sprintf(&sbuf[offset],vformat[j],static_cast<int> (mybuf[m]));
       else if (vtype[j] == DOUBLE) 
         offset += sprintf(&sbuf[offset],vformat[j],mybuf[m]);
-      else if (vtype[j] == CELLINT) 
+      else if (vtype[j] == BIGINT) 
         offset += sprintf(&sbuf[offset],vformat[j],
-                          static_cast<cellint> (mybuf[m]));
+                          static_cast<bigint> (mybuf[m]));
       else if (vtype[j] == STRING) {
         // NOTE: this is a kludge
         // assumes any STRING field from dump particle/grid/surf
@@ -484,14 +559,64 @@ void Dump::modify_params(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"format") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump_modify command");
-      delete [] format_user;
-      format_user = NULL;
-      if (strcmp(arg[iarg+1],"none")) {
-	int n = strlen(arg[iarg+1]) + 1;
-	format_user = new char[n];
-	strcpy(format_user,arg[iarg+1]);
+
+      if (strcmp(arg[iarg+1],"none") == 0) {
+        delete [] format_line_user;
+        delete [] format_int_user;
+        delete [] format_bigint_user;
+        delete [] format_float_user;
+        format_line_user = NULL;
+        format_int_user = NULL;
+        format_bigint_user = NULL;
+        format_float_user = NULL;
+        iarg += 2;
+        continue;
       }
-      iarg += 2;
+
+      if (iarg+3 > narg) error->all(FLERR,"Illegal dump_modify command");
+
+      if (strcmp(arg[iarg+1],"line") == 0) {
+        delete [] format_line_user;
+        int n = strlen(arg[iarg+2]) + 1;
+        format_line_user = new char[n];
+        strcpy(format_line_user,arg[iarg+2]);
+        iarg += 3;
+      } else if (strcmp(arg[iarg+1],"int") == 0) {
+        delete [] format_int_user;
+        int n = strlen(arg[iarg+2]) + 1;
+        format_int_user = new char[n];
+        strcpy(format_int_user,arg[iarg+2]);
+        delete [] format_bigint_user;
+        n = strlen(format_int_user) + 8;
+        format_bigint_user = new char[n];
+        // replace "d" in format_int_user with bigint format specifier
+        // use of &str[1] removes leading '%' from BIGINT_FORMAT string
+        char *ptr = strchr(format_int_user,'d');
+        if (ptr == NULL)
+          error->all(FLERR,
+                     "Dump_modify int format does not contain d character");
+        char str[8];
+        sprintf(str,"%s",BIGINT_FORMAT);
+        *ptr = '\0';
+        sprintf(format_bigint_user,"%s%s%s",format_int_user,&str[1],ptr+1);
+        *ptr = 'd';
+        
+      } else if (strcmp(arg[iarg+1],"float") == 0) {
+        delete [] format_float_user;
+        int n = strlen(arg[iarg+2]) + 1;
+        format_float_user = new char[n];
+        strcpy(format_float_user,arg[iarg+2]);
+        
+      } else {
+        int i = input->inumeric(FLERR,arg[iarg+1]) - 1;
+        if (i < 0 || i >= size_one)
+          error->all(FLERR,"Illegal dump_modify command");
+        if (format_column_user[i]) delete [] format_column_user[i];
+        int n = strlen(arg[iarg+2]) + 1;
+        format_column_user[i] = new char[n];
+        strcpy(format_column_user[i],arg[iarg+2]);
+      }
+      iarg += 3;
 
     } else if (strcmp(arg[iarg],"nfile") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal dump_modify command");

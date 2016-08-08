@@ -28,7 +28,7 @@
 
 using namespace SPARTA_NS;
 
-enum{SUM,MINN,MAXX,AVE};
+enum{SUM,SUMSQ,MINN,MAXX,AVE,AVESQ};
 enum{X,V,KE,EROT,EVIB,COMPUTE,FIX,VARIABLE};
 enum{PARTICLE,GRID,SURF};
 
@@ -46,24 +46,35 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
   if (narg < 4) error->all(FLERR,"Illegal compute reduce command");
 
   if (strcmp(arg[2],"sum") == 0) mode = SUM;
+  else if (strcmp(arg[2],"sumsq") == 0) mode = SUMSQ;
   else if (strcmp(arg[2],"min") == 0) mode = MINN;
   else if (strcmp(arg[2],"max") == 0) mode = MAXX;
   else if (strcmp(arg[2],"ave") == 0) mode = AVE;
+  else if (strcmp(arg[2],"avesq") == 0) mode = AVESQ;
   else error->all(FLERR,"Illegal compute reduce command");
 
   MPI_Comm_rank(world,&me);
 
+  // expand args if any have wildcard character "*"
+
+  int expand = 0;
+  char **earg;
+  int nargnew = input->expand_args(narg-3,&arg[3],1,earg);
+
+  if (earg != &arg[3]) expand = 1;
+  arg = earg;
+
   // parse remaining values until one isn't recognized
 
-  which = new int[narg-3];
-  argindex = new int[narg-3];
-  flavor = new int[narg-3];
-  ids = new char*[narg-3];
-  value2index = new int[narg-3];
+  which = new int[nargnew];
+  argindex = new int[nargnew];
+  flavor = new int[nargnew];
+  ids = new char*[nargnew];
+  value2index = new int[nargnew];
   nvalues = 0;
 
-  int iarg = 3;
-  while (iarg < narg) {
+  int iarg = 0;
+  while (iarg < nargnew) {
     ids[nvalues] = NULL;
 
     if (strcmp(arg[iarg],"x") == 0) {
@@ -131,7 +142,7 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
   replace = new int[nvalues];
   for (int i = 0; i < nvalues; i++) replace[i] = -1;
 
-  while (iarg < narg) {
+  while (iarg < nargnew) {
     if (strcmp(arg[iarg],"replace") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal compute reduce command");
       if (mode != MINN && mode != MAXX)
@@ -156,6 +167,13 @@ ComputeReduce::ComputeReduce(SPARTA *spa, int narg, char **arg) :
   if (!flag) {
     delete [] replace;
     replace = NULL;
+  }
+
+  // if wildcard expansion occurred, free earg memory from expand_args()
+
+  if (expand) {
+    for (int i = 0; i < nargnew; i++) delete [] earg[i];
+    memory->sfree(earg);
   }
 
   // setup and error check
@@ -329,13 +347,13 @@ double ComputeReduce::compute_scalar()
 
   double one = compute_one(0,-1);
 
-  if (mode == SUM) {
+  if (mode == SUM || mode == SUMSQ) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
   } else if (mode == MINN) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_MIN,world);
   } else if (mode == MAXX) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_MAX,world);
-  } else if (mode == AVE) {
+  } else if (mode == AVE || mode == AVESQ) {
     MPI_Allreduce(&one,&scalar,1,MPI_DOUBLE,MPI_SUM,world);
     bigint n = count(0);
     if (n) scalar /= n;
@@ -356,7 +374,7 @@ void ComputeReduce::compute_vector()
       indices[m] = index;
     }
 
-  if (mode == SUM) {
+  if (mode == SUM || mode == SUMSQ) {
     for (int m = 0; m < nvalues; m++)
       MPI_Allreduce(&onevec[m],&vector[m],1,MPI_DOUBLE,MPI_SUM,world);
 
@@ -404,7 +422,7 @@ void ComputeReduce::compute_vector()
         }
     }
 
-  } else if (mode == AVE) {
+  } else if (mode == AVE || mode == AVESQ) {
     for (int m = 0; m < nvalues; m++) {
       MPI_Allreduce(&onevec[m],&vector[m],1,MPI_DOUBLE,MPI_SUM,world);
       bigint n = count(m);
@@ -691,6 +709,7 @@ bigint ComputeReduce::count(int m)
 void ComputeReduce::combine(double &one, double two, int i)
 {
   if (mode == SUM || mode == AVE) one += two;
+  else if (mode == SUMSQ || mode == AVESQ) one += two*two;
   else if (mode == MINN) {
     if (two < one) {
       one = two;

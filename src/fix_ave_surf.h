@@ -58,8 +58,7 @@ class FixAveSurf : public Fix {
   double *vec_local;
   double **array_local;
 
-  void options(int, char **);
-  void grow();
+  void options(int, int, char **);
   void grow_local();
   bigint nextvalid();
 };

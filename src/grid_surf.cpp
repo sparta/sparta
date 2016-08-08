@@ -219,7 +219,7 @@ void Grid::surf2grid(int subflag, int outflag)
       npushmax = cut2d->npushmax;
       npushcell = cut2d->npushcell;
     }
-    int *npushall = new int[npushmax];
+    int *npushall = new int[npushmax+1];
     MPI_Allreduce(npushcell,npushall,npushmax+1,MPI_INT,MPI_SUM,world);
     if (comm->me == 0) {
       if (screen) {
@@ -730,8 +730,6 @@ double Grid::flow_volume()
       p1 = pts[lines[i].p1].x;
       p2 = pts[lines[i].p2].x;
       volume -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);
-      printf("FV: i %d vol %g cumm %g\n",i,
-             -(0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]),volume);
     }
     if (volume <= 0.0) volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
   }

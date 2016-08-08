@@ -55,88 +55,68 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
   // scan values, then read options
 
+  nvalues = 0;
+
   int iarg = 6;
   while (iarg < narg) {
     if ((strncmp(arg[iarg],"c_",2) == 0) || 
 	(strncmp(arg[iarg],"f_",2) == 0) || 
-	(strncmp(arg[iarg],"v_",2) == 0)) iarg++;
-    else break;
-  }
-
-  options(narg-iarg,&arg[iarg]);
-
-  // parse values until one isn't recognized
-  // expand compute or fix array into full set of columns
-
-  which = argindex = value2index = NULL;
-  ids = NULL;
-  nvalues = maxvalues = 0;
-
-  iarg = 6;
-  while (iarg < narg) {
-    if (strncmp(arg[iarg],"c_",2) == 0 || 
-        strncmp(arg[iarg],"f_",2) == 0 || 
-        strncmp(arg[iarg],"v_",2) == 0) {
-      
-      if (nvalues == maxvalues) grow();
-      if (arg[iarg][0] == 'c') which[nvalues] = COMPUTE;
-      else if (arg[iarg][0] == 'f') which[nvalues] = FIX;
-      else if (arg[iarg][0] == 'v') which[nvalues] = VARIABLE;
-
-      int n = strlen(arg[iarg]);
-      char *suffix = new char[n];
-      strcpy(suffix,&arg[iarg][2]);
-
-      char *ptr = strchr(suffix,'[');
-      if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Illegal fix ave/surf command");
-	argindex[nvalues] = atoi(ptr+1);
-	*ptr = '\0';
-      } else argindex[nvalues] = 0;
-
-      n = strlen(suffix) + 1;
-      ids[nvalues] = new char[n];
-      strcpy(ids[nvalues],suffix);
-
-      // expand an array arg into multiple vectors
-
-      if ((which[nvalues] == COMPUTE || which[nvalues] == FIX) && 
-          argindex[nvalues] == 0) {
-        int ndup = 1;
-        if (which[nvalues] == COMPUTE) {
-          int icompute = modify->find_compute(ids[nvalues]);
-          if (icompute >= 0)
-            if (modify->compute[icompute]->per_surf_flag)
-              ndup = modify->compute[icompute]->size_per_surf_cols;
-        }
-        if (which[nvalues] == FIX) {
-          int ifix = modify->find_fix(ids[nvalues]);
-          if (ifix >= 0)
-            if (modify->fix[ifix]->per_surf_flag)
-              ndup = modify->fix[ifix]->size_per_surf_cols;
-        }
-        if (ndup > 1) {
-          argindex[nvalues] = 1;
-          nvalues++;
-          for (int icol = 2; icol <= ndup; icol++) {
-            if (nvalues == maxvalues) grow();
-            which[nvalues] = which[nvalues-1];
-            argindex[nvalues] = icol;
-            n = strlen(suffix) + 1;
-            ids[nvalues] = new char[n];
-            strcpy(ids[nvalues],suffix);
-            nvalues++;
-          }
-          nvalues--;
-        }
-      }
-
+	(strncmp(arg[iarg],"v_",2) == 0)) {
       nvalues++;
-      delete [] suffix;
-
       iarg++;
     } else break;
+  }
+
+  if (nvalues == 0) error->all(FLERR,"No values in fix ave/surf command");
+
+  options(iarg,narg,arg);
+
+  // expand args if any have wildcard character "*"
+  // this can reset nvalues
+
+  int expand = 0;
+  char **earg;
+  nvalues = input->expand_args(nvalues,&arg[6],1,earg);
+
+  if (earg != &arg[6]) expand = 1;
+  arg = earg;
+
+  // parse values
+
+  which = new int[nvalues];
+  argindex = new int[nvalues];
+  value2index = new int[nvalues];
+  ids = new char*[nvalues];
+
+  for (int i = 0; i < nvalues; i++) {
+    if (arg[i][0] == 'c') which[i] = COMPUTE;
+    else if (arg[i][0] == 'f') which[i] = FIX;
+    else if (arg[i][0] == 'v') which[i] = VARIABLE;
+
+    int n = strlen(arg[i]);
+    char *suffix = new char[n];
+    strcpy(suffix,&arg[i][2]);
+
+    char *ptr = strchr(suffix,'[');
+    if (ptr) {
+      if (suffix[strlen(suffix)-1] != ']')
+        error->all(FLERR,"Illegal fix ave/surf command");
+      argindex[i] = atoi(ptr+1);
+      *ptr = '\0';
+    } else argindex[i] = 0;
+
+    n = strlen(suffix) + 1;
+    ids[i] = new char[n];
+    strcpy(ids[i],suffix);
+    delete [] suffix;
+  }
+
+  // if wildcard expansion occurred, free earg memory from expand_args()
+  // wait to do this until after file comment lines are printed
+
+  if (expand) {
+    for (int i = 0; i < nvalues; i++) delete [] earg[i];
+    memory->sfree(earg);
   }
 
   // setup and error check
@@ -287,11 +267,11 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
 FixAveSurf::~FixAveSurf()
 {
-  memory->destroy(which);
-  memory->destroy(argindex);
-  memory->destroy(value2index);
+  delete [] which;
+  delete [] argindex;
+  delete [] value2index;
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
-  memory->sfree(ids);
+  delete [] ids;
 
   memory->destroy(buflocal);
   memory->destroy(masks);
@@ -575,7 +555,7 @@ void FixAveSurf::end_of_step()
    parse optional args
 ------------------------------------------------------------------------- */
 
-void FixAveSurf::options(int narg, char **arg)
+void FixAveSurf::options(int iarg, int narg, char **arg)
 {
   // option defaults
 
@@ -583,7 +563,6 @@ void FixAveSurf::options(int narg, char **arg)
 
   // optional args
 
-  int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"ave") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/surf command");
@@ -593,19 +572,6 @@ void FixAveSurf::options(int narg, char **arg)
       iarg += 2;
     } else error->all(FLERR,"Illegal fix ave/surf command");
   }
-}
-
-/* ----------------------------------------------------------------------
-   grow vectors for each input value
-------------------------------------------------------------------------- */
-
-void FixAveSurf::grow()
-{
-  maxvalues += DELTA;
-  memory->grow(which,maxvalues,"ave/surf:which");
-  memory->grow(argindex,maxvalues,"ave/surf:argindex");
-  memory->grow(value2index,maxvalues,"ave/surf:value2index");
-  ids = (char **) memory->srealloc(ids,maxvalues*sizeof(char *),"ave/surf:ids");
 }
 
 /* ---------------------------------------------------------------------- */

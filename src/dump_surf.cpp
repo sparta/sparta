@@ -33,7 +33,7 @@ using namespace SPARTA_NS;
 
 enum{ID,TYPE,V1X,V1Y,V1Z,V2X,V2Y,V2Z,V3X,V3Y,V3Z,
      COMPUTE,FIX,VARIABLE};
-enum{INT,DOUBLE,CELLINT,STRING};    // many files
+enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
 
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
@@ -59,15 +59,55 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
 
   nevery = atoi(arg[3]);
 
-  // scan values and set size_one
-  // array entries may expand into multiple fields
-  // could use ioptional to add on keyword/arg pairs
+  // expand args if any have wildcard character "*"
+  // ok to include trailing optional args,
+  //   so long as they do not have "*" between square brackets
+  // nfield may be shrunk below if extra optional args exist
 
-  int offset = 5;
-  ioptional = parse_fields(narg-offset,&arg[offset]) + offset;
-  if (offset < narg)
+  int expand = 0;
+  char **earg;
+  int nargnew = nfield = input->expand_args(narg-5,&arg[5],1,earg);
+
+  if (earg != &arg[5]) expand = 1;
+
+  // allocate field vectors
+
+  pack_choice = new FnPtrPack[nfield];
+  vtype = new int[nfield];
+  field2index = new int[nfield];
+  argindex = new int[nfield];
+
+  // computes, fixes, variables which the dump accesses
+
+  ncompute = 0;
+  id_compute = NULL;
+  compute = NULL;
+
+  nfix = 0;
+  id_fix = NULL;
+  fix = NULL;
+
+  nvariable = 0;
+  id_variable = NULL;
+  variable = NULL;
+  vbuf = NULL;
+
+  // process attributes
+  // ioptional = start of additional optional args in expanded args
+
+  int ioptional = parse_fields(nfield,earg);
+
+  if (ioptional < nfield)
     error->all(FLERR,"Invalid attribute in dump surf command");
+
+  // noptional = # of optional args
+  // reset nfield to subtract off optional args
+  // reset ioptional to what it would be in original arg list
+
+  int noptional = nfield - ioptional;
+  nfield -= noptional;
   size_one = nfield;
+  ioptional = narg - noptional;
 
   // setup format strings
 
@@ -82,21 +122,26 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
     vformat[i] = NULL;
   }
 
-  // setup column string using field2arg
-  // add column subscripts to array args that were expanded
+  format_column_user = new char*[size_one];
+  for (int i = 0; i < size_one; i++) format_column_user[i] = NULL;
+
+  // setup column string
 
   int n = 0;
-  for (int i = 0; i < nfield; i++) n += strlen(arg[field2arg[i]+offset]) + 6;
+  for (int iarg = 0; iarg < nfield; iarg++) n += strlen(earg[iarg]) + 2;
   columns = new char[n];
   columns[0] = '\0';
-  char subscript[6];
-  for (int i = 0; i < nfield; i++) {
-    strcat(columns,arg[field2arg[i]+offset]);
-    if (argindex[i] > 0 && columns[strlen(columns)-1] != ']') {
-      sprintf(subscript,"[%d]",argindex[i]);
-      strcat(columns,subscript);
-    }
+  for (int iarg = 0; iarg < nfield; iarg++) {
+    strcat(columns,earg[iarg]);
     strcat(columns," ");
+  }
+
+  // if wildcard expansion occurred, free earg memory from expand_args()
+  // wait to do this until after column string is created
+
+  if (expand) {
+    for (int i = 0; i < nargnew; i++) delete [] earg[i];
+    memory->sfree(earg);
   }
 
   // trigger setup of list of owned surf elements belonging to surf group
@@ -114,11 +159,10 @@ DumpSurf::~DumpSurf()
   memory->destroy(clocal);
   memory->destroy(buflocal);
 
-  memory->sfree(pack_choice);
-  memory->destroy(vtype);
-  memory->destroy(field2arg);
-  memory->destroy(field2index);
-  memory->destroy(argindex);
+  delete [] pack_choice;
+  delete [] vtype;
+  delete [] field2index;
+  delete [] argindex;
 
   for (int i = 0; i < ncompute; i++) delete [] id_compute[i];
   memory->sfree(id_compute);
@@ -144,42 +188,6 @@ DumpSurf::~DumpSurf()
 
 void DumpSurf::init_style()
 {
-  delete [] format;
-  char *str;
-  if (format_user) str = format_user;
-  else str = format_default;
-
-  int n = strlen(str) + 1;
-  format = new char[n];
-  strcpy(format,str);
-
-  // tokenize the format string and add space at end of each format element
-
-  char *ptr;
-  for (int i = 0; i < nfield; i++) {
-    if (i == 0) ptr = strtok(format," \0");
-    else ptr = strtok(NULL," \0");
-    delete [] vformat[i];
-    vformat[i] = new char[strlen(ptr) + 2];
-    strcpy(vformat[i],ptr);
-    vformat[i] = strcat(vformat[i]," ");
-  }
-
-  // setup boundary string
-
-  int m = 0;
-  for (int idim = 0; idim < 3; idim++) {
-    for (int iside = 0; iside < 2; iside++) {
-      if (domain->bflag[idim*2+iside] == OUTFLOW) boundstr[m++] = 'o';
-      else if (domain->bflag[idim*2+iside] == PERIODIC) boundstr[m++] = 'p';
-      else if (domain->bflag[idim*2+iside] == REFLECT) boundstr[m++] = 'r';
-      else if (domain->bflag[idim*2+iside] == AXISYM) boundstr[m++] = 'a';
-      else if (domain->bflag[idim*2+iside] == SURFACE) boundstr[m++] = 's';
-    }
-    boundstr[m++] = ' ';
-  }
-  boundstr[8] = '\0';
-
   // setup function ptrs
 
   if (binary) header_choice = &DumpSurf::header_binary;
@@ -379,159 +387,89 @@ void DumpSurf::write_text(int n, double *mybuf)
 
 int DumpSurf::parse_fields(int narg, char **arg)
 {
-  // initialize per-field lists
-
-  pack_choice = NULL;
-  vtype = NULL;
-  field2arg = NULL;
-  field2index = NULL;
-  argindex = NULL;
-
-  int maxfield = narg;
-  allocate_values(maxfield);
-  nfield = 0;
-
-  ncompute = 0;
-  id_compute = NULL;
-  compute = NULL;
-
-  nfix = 0;
-  id_fix = NULL;
-  fix = NULL;
-
-  nvariable = 0;
-  id_variable = NULL;
-  variable = NULL;
-  vbuf = NULL;
-
   // customize by adding to if statement
 
+  int i;
   for (int iarg = 0; iarg < narg; iarg++) {
-    if (nfield == maxfield) {
-      maxfield += CHUNK;
-      allocate_values(maxfield);
-    }
-
-    argindex[nfield] = -1;
+    i = iarg;
+    argindex[i] = -1;
 
     if (strcmp(arg[iarg],"id") == 0) {
-      pack_choice[nfield] = &DumpSurf::pack_id;
-      vtype[nfield] = INT;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_id;
+      vtype[i] = INT;
     } else if (strcmp(arg[iarg],"type") == 0) {
-      pack_choice[nfield] = &DumpSurf::pack_type;
-      vtype[nfield] = INT;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_type;
+      vtype[i] = INT;
 
     } else if (strcmp(arg[iarg],"v1x") == 0) {
-      pack_choice[nfield] = &DumpSurf::pack_v1x;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v1x;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v1y") == 0) {
-      pack_choice[nfield] = &DumpSurf::pack_v1y;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v1y;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v1z") == 0) {
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
-      pack_choice[nfield] = &DumpSurf::pack_v1z;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v1z;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v2x") == 0) {
-      pack_choice[nfield] = &DumpSurf::pack_v2x;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v2x;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v2y") == 0) {
-      pack_choice[nfield] = &DumpSurf::pack_v2y;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v2y;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v2z") == 0) {
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
-      pack_choice[nfield] = &DumpSurf::pack_v2z;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v2z;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3x") == 0) {
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
-      pack_choice[nfield] = &DumpSurf::pack_v3x;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v3x;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3y") == 0) {
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
-      pack_choice[nfield] = &DumpSurf::pack_v3y;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v3y;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"v3z") == 0) {
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump surf field for 2d simulation");
-      pack_choice[nfield] = &DumpSurf::pack_v3z;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpSurf::pack_v3z;
+      vtype[i] = DOUBLE;
 
     // compute value = c_ID
     // if no trailing [], then index = 0, else index = int between []
-    // if index = 0 and compute stores array, expand to one value per column
 
     } else if (strncmp(arg[iarg],"c_",2) == 0) {
+      pack_choice[i] = &DumpSurf::pack_compute;
+      vtype[i] = DOUBLE;
+
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
-      int index;
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump surf command");
-	index = atoi(ptr+1);
+	argindex[i] = atoi(ptr+1);
 	*ptr = '\0';
-      } else index = 0;
+      } else argindex[i] = 0;
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf compute ID");
       if (modify->compute[n]->per_surf_flag == 0)
 	error->all(FLERR,"Dump surf compute does not compute per-surf info");
-      if (index > 0 && modify->compute[n]->size_per_surf_cols == 0)
+      if (argindex[i] > 0 && modify->compute[n]->size_per_surf_cols == 0)
 	error->all(FLERR,
 		   "Dump surf compute does not calculate per-surf array");
-      if (index > 0 && index > modify->compute[n]->size_per_surf_cols)
+      if (argindex[i] > 0 && 
+          argindex[i] > modify->compute[n]->size_per_surf_cols)
 	error->all(FLERR,"Dump surf compute array is accessed out-of-range");
 
-      if (index == 0 && modify->compute[n]->size_per_surf_cols > 0) {
-	int ncol = modify->compute[n]->size_per_surf_cols;
-	for (int i = 0; i < ncol; i++) {
-	  if (nfield == maxfield) {
-	    maxfield += CHUNK;
-	    allocate_values(maxfield);
-	  }
-	  pack_choice[nfield] = &DumpSurf::pack_compute;
-	  vtype[nfield] = DOUBLE;
-	  argindex[nfield] = i+1;
-	  field2arg[nfield] = iarg;
-	  field2index[nfield] = add_compute(suffix);
-	  nfield++;
-	} 
-      } else {
-	pack_choice[nfield] = &DumpSurf::pack_compute;
-	vtype[nfield] = DOUBLE;
-	argindex[nfield] = index;
-	field2arg[nfield] = iarg;
-	field2index[nfield] = add_compute(suffix);
-	nfield++;
-      }
-
+      field2index[i] = add_compute(suffix);
       delete [] suffix;
 
     // fix value = f_ID
@@ -539,74 +477,52 @@ int DumpSurf::parse_fields(int narg, char **arg)
     // if index = 0 and compute stores array, expand to one value per column
 
     } else if (strncmp(arg[iarg],"f_",2) == 0) {
+      pack_choice[i] = &DumpSurf::pack_fix;
+      vtype[i] = DOUBLE;
+
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
-      int index;
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump surf command");
-	index = atoi(ptr+1);
+	argindex[i] = atoi(ptr+1);
 	*ptr = '\0';
-      } else index = 0;
+      } else argindex[i] = 0;
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf fix ID");
       if (modify->fix[n]->per_surf_flag == 0)
 	error->all(FLERR,"Dump surf fix does not compute per-surf info");
-      if (index > 0 && modify->fix[n]->size_per_surf_cols == 0)
+      if (argindex[i] > 0 && modify->fix[n]->size_per_surf_cols == 0)
 	error->all(FLERR,"Dump surf fix does not compute per-surf array");
-      if (index > 0 && index > modify->fix[n]->size_per_surf_cols)
+      if (argindex[i] > 0 && argindex[i] > modify->fix[n]->size_per_surf_cols)
 	error->all(FLERR,"Dump surf fix array is accessed out-of-range");
 
-      if (index == 0 && modify->fix[n]->size_per_surf_cols > 0) {
-	int ncol = modify->fix[n]->size_per_surf_cols;
-	for (int i = 0; i < ncol; i++) {
-	  if (nfield == maxfield) {
-	    maxfield += CHUNK;
-	    allocate_values(maxfield);
-	  }
-	  pack_choice[nfield] = &DumpSurf::pack_fix;
-	  vtype[nfield] = DOUBLE;
-	  argindex[nfield] = i+1;
-	  field2arg[nfield] = iarg;
-	  field2index[nfield] = add_fix(suffix);
-	  nfield++;
-	} 
-      } else {
-	pack_choice[nfield] = &DumpSurf::pack_fix;
-	vtype[nfield] = DOUBLE;
-	argindex[nfield] = index;
-	field2arg[nfield] = iarg;
-	field2index[nfield] = add_fix(suffix);
-	nfield++;
-      }
-
+      field2index[i] = add_fix(suffix);
       delete [] suffix;
 
     // variable value = v_name
 
     } else if (strncmp(arg[iarg],"v_",2) == 0) {
-      pack_choice[nfield] = &DumpSurf::pack_variable;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
+      pack_choice[i] = &DumpSurf::pack_variable;
+      vtype[i] = DOUBLE;
 
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
-      argindex[nfield] = 0;
+      argindex[i] = 0;
 
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf variable name");
       if (input->variable->surf_style(n) == 0)
 	error->all(FLERR,"Dump surf variable is not surf-style variable");
 
-      field2index[nfield] = add_variable(suffix);
+      field2index[i] = add_variable(suffix);
       delete [] suffix;
-      nfield++;
 
     } else return iarg;
   }
@@ -691,20 +607,6 @@ int DumpSurf::add_variable(char *id)
   strcpy(id_variable[nvariable],id);
   nvariable++;
   return nvariable-1;
-}
-
-/* ----------------------------------------------------------------------
-   reallocate vectors for each input value, of length N
-------------------------------------------------------------------------- */
-
-void DumpSurf::allocate_values(int n)
-{
-  pack_choice = (FnPtrPack *) 
-    memory->srealloc(pack_choice,n*sizeof(FnPtrPack),"dump:pack_choice");
-  memory->grow(vtype,n,"dump:vtype");
-  memory->grow(field2arg,n,"dump:field2arg");
-  memory->grow(field2index,n,"dump:field2index");
-  memory->grow(argindex,n,"dump:argindex");
 }
 
 /* ----------------------------------------------------------------------

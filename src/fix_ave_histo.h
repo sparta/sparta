@@ -80,7 +80,6 @@ class FixAveHisto : public Fix {
   virtual void calculate_weights() {}
 
   void options(int, int, char **);
-  void allocate_values(int);
   bigint nextvalid();
 };
 

@@ -74,7 +74,7 @@ class FixAveGrid : public Fix {
 
   int pack_one(int, char *, int);
   int unpack_one(char *, int);
-  void options(int, char **);
+  void options(int, int, char **);
   void grow();
   bigint nextvalid();
   void grow_percell(int);

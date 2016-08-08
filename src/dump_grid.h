@@ -41,8 +41,6 @@ class DumpGrid : public Dump {
   int nfield;                // # of keywords listed by user
   int ioptional;             // index of start of optional args
 
-  int *field2arg;            // which arg for each field, since args may expand
-
   int *field2index;          // which compute,fix,variable calcs this field
   int *argindex;             // index into compute,fix scalar_atom,vector_atom
                              // 0 for scalar_atom, 1-N for vector_atom values

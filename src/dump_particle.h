@@ -87,7 +87,6 @@ class DumpParticle : public Dump {
   int add_compute(char *);
   int add_fix(char *);
   int add_variable(char *);
-  void allocate_values(int);
 
   virtual int modify_param(int, char **);
 

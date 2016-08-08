@@ -33,10 +33,12 @@ class Input : protected Pointers {
   char *one(const char *);       // process a single command
   void substitute(char *&, char *&, int &, int &, int);  
                                  // substitute for variables in a string
+  int expand_args(int, char **, int, char **&);  // expand args due to wildcard
 
   double numeric(const char *, int, char *);    // arg checking
   int inumeric(const char *, int, char *);
   bigint bnumeric(const char *, int, char *);
+  void bounds(char *, int, int &, int &, int nmin=1);
   int count_words(char *);
 
  private:

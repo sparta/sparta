@@ -38,11 +38,13 @@ class Stats : protected Pointers {
   int nfield;
   int me;
 
-  char **format,**format_user;
-  char *format_float_one_def;
-  char *format_int_one_def;
+  char **format;
+  char *format_line_user;
   char *format_float_user,*format_int_user,*format_bigint_user;
-  char format_bigint_one_def[8];
+  char **format_column_user;
+
+  char *format_float_def,*format_int_def;
+  char format_bigint_def[8];
 
   int firststep;
   int flushflag,lineflag;

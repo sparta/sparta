@@ -66,82 +66,49 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
     } else break;
   }
 
-  options(narg-iarg,&arg[iarg]);
+  if (nvalues == 0) error->all(FLERR,"No values in fix ave/time command");
 
-  // parse values until one isn't recognized
-  // if mode = VECTOR and value is a global array:
-  // expand compute or fix array into full set of columns
+  options(iarg,narg,arg);
 
-  which = argindex = value2index = offcol = NULL;
-  ids = NULL;
-  nvalues = maxvalues = 0;
+  // expand args if any have wildcard character "*"
+  // this can reset nvalues
 
-  iarg = 5;
-  while (iarg < narg) {
-    if (strncmp(arg[iarg],"c_",2) == 0 || 
-	strncmp(arg[iarg],"f_",2) == 0 || 
-	strncmp(arg[iarg],"v_",2) == 0) {
+  int expand = 0;
+  char **earg;
+  nvalues = input->expand_args(nvalues,&arg[5],mode,earg);
 
-      if (nvalues == maxvalues) grow();
-      if (arg[iarg][0] == 'c') which[nvalues] = COMPUTE;
-      else if (arg[iarg][0] == 'f') which[nvalues] = FIX;
-      else if (arg[iarg][0] == 'v') which[nvalues] = VARIABLE;
+  if (earg != &arg[5]) expand = 1;
+  arg = earg;
 
-      int n = strlen(arg[iarg]);
-      char *suffix = new char[n];
-      strcpy(suffix,&arg[iarg][2]);
+  // parse values
 
-      char *ptr = strchr(suffix,'[');
-      if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Illegal fix ave/time command");
-	argindex[nvalues] = atoi(ptr+1);
-	*ptr = '\0';
-      } else argindex[nvalues] = 0;
+  which = new int[nvalues];
+  argindex = new int[nvalues];
+  value2index = new int[nvalues];
+  offcol = new int[nvalues];
+  ids = new char*[nvalues];
 
-      n = strlen(suffix) + 1;
-      ids[nvalues] = new char[n];
-      strcpy(ids[nvalues],suffix);
+  for (int i = 0; i < nvalues; i++) {
+    if (arg[i][0] == 'c') which[i] = COMPUTE;
+    else if (arg[i][0] == 'f') which[i] = FIX;
+    else if (arg[i][0] == 'v') which[i] = VARIABLE;
 
-      // expand an array arg into multiple vectors
+    int n = strlen(arg[i]);
+    char *suffix = new char[n];
+    strcpy(suffix,&arg[i][2]);
 
-      if (mode == VECTOR && 
-          (which[nvalues] == COMPUTE || which[nvalues] == FIX) && 
-	  argindex[nvalues] == 0) {
-        int ndup = 1;
-        if (which[nvalues] == COMPUTE) {
-          int icompute = modify->find_compute(ids[nvalues]);
-          if (icompute >= 0)
-            if (modify->compute[icompute]->array_flag)
-              ndup = modify->compute[icompute]->size_array_cols;
-        }
-        if (which[nvalues] == FIX) {
-          int ifix = modify->find_fix(ids[nvalues]);
-          if (ifix >= 0)
-            if (modify->fix[ifix]->array_flag)
-              ndup = modify->fix[ifix]->size_array_cols;
-        }
-        if (ndup > 1) {
-          argindex[nvalues] = 1;
-          nvalues++;
-          for (int icol = 2; icol <= ndup; icol++) {
-            if (nvalues == maxvalues) grow();
-            which[nvalues] = which[nvalues-1];
-            argindex[nvalues] = icol;
-            n = strlen(suffix) + 1;
-            ids[nvalues] = new char[n];
-            strcpy(ids[nvalues],suffix);
-            nvalues++;
-          }
-          nvalues--;
-        }
-      }
+    char *ptr = strchr(suffix,'[');
+    if (ptr) {
+      if (suffix[strlen(suffix)-1] != ']')
+        error->all(FLERR,"Illegal fix ave/time command");
+      argindex[i] = atoi(ptr+1);
+      *ptr = '\0';
+    } else argindex[i] = 0;
 
-      nvalues++;
-      delete [] suffix;
-
-      iarg++;
-    } else break;
+    n = strlen(suffix) + 1;
+    ids[i] = new char[n];
+    strcpy(ids[i],suffix);
+    delete [] suffix;
   }
 
   // set off columns now that nvalues is finalized
@@ -259,18 +226,13 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
     if (title2) fprintf(fp,"%s\n",title2);
     else if (mode == SCALAR) {
       fprintf(fp,"# TimeStep");
-      for (int i = 0; i < nvalues; i++) fprintf(fp," %s",arg[6+i]);
+      for (int i = 0; i < nvalues; i++) fprintf(fp," %s",earg[i]);
       fprintf(fp,"\n");
     } else fprintf(fp,"# TimeStep Number-of-rows\n");
     if (title3 && mode == VECTOR) fprintf(fp,"%s\n",title3);
     else if (mode == VECTOR) {
       fprintf(fp,"# Row");
-      for (int i = 0; i < nvalues; i++) {
-	if (which[i] == COMPUTE) fprintf(fp," c_%s",ids[i]);
-	else if (which[i] == FIX) fprintf(fp," f_%s",ids[i]);
-	else if (which[i] == VARIABLE) fprintf(fp," v_%s",ids[i]);
-	if (argindex[i]) fprintf(fp,"[%d]",argindex[i]);
-      }
+      for (int i = 0; i < nvalues; i++) fprintf(fp," %s",earg[i]);
       fprintf(fp,"\n");
     }
   }
@@ -278,6 +240,14 @@ FixAveTime::FixAveTime(SPARTA *sparta, int narg, char **arg) :
   delete [] title1;
   delete [] title2;
   delete [] title3;
+
+  // if wildcard expansion occurred, free earg memory from expand_args()
+  // wait to do this until after file comment lines are printed
+
+  if (expand) {
+    for (int i = 0; i < nvalues; i++) delete [] earg[i];
+    memory->sfree(earg);
+  }
 
   // allocate accumulators
 
@@ -722,7 +692,7 @@ double FixAveTime::compute_array(int i, int j)
    parse optional args
 ------------------------------------------------------------------------- */
 
-void FixAveTime::options(int narg, char **arg)
+void FixAveTime::options(int iarg, int narg, char **arg)
 {
   // option defaults
 
@@ -738,7 +708,6 @@ void FixAveTime::options(int narg, char **arg)
 
   // optional args
 
-  int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"file") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/time command");

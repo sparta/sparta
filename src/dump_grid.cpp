@@ -33,9 +33,7 @@ using namespace SPARTA_NS;
 
 enum{ID,PROC,XLO,YLO,ZLO,XHI,YHI,ZHI,XC,YC,ZC,VOL,
      COMPUTE,FIX,VARIABLE};
-enum{INT,DOUBLE,CELLINT,STRING};    // many files
-
-enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
+enum{INT,DOUBLE,BIGINT,STRING};        // same as Dump
 
 #define INVOKED_PER_GRID 16
 #define CHUNK 8
@@ -59,15 +57,55 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
 
   nevery = atoi(arg[3]);
 
-  // scan values and set size_one
-  // array entries may expand into multiple fields
-  // could use ioptional to add on keyword/arg pairs
+  // expand args if any have wildcard character "*"
+  // ok to include trailing optional args,
+  //   so long as they do not have "*" between square brackets
+  // nfield may be shrunk below if extra optional args exist
 
-  int offset = 5;
-  ioptional = parse_fields(narg-offset,&arg[offset]) + offset;
-  if (ioptional < narg)
+  int expand = 0;
+  char **earg;
+  int nargnew = nfield = input->expand_args(narg-5,&arg[5],1,earg);
+
+  if (earg != &arg[5]) expand = 1;
+
+  // allocate field vectors
+
+  pack_choice = new FnPtrPack[nfield];
+  vtype = new int[nfield];
+  field2index = new int[nfield];
+  argindex = new int[nfield];
+
+  // computes, fixes, variables which the dump accesses
+
+  ncompute = 0;
+  id_compute = NULL;
+  compute = NULL;
+
+  nfix = 0;
+  id_fix = NULL;
+  fix = NULL;
+
+  nvariable = 0;
+  id_variable = NULL;
+  variable = NULL;
+  vbuf = NULL;
+
+  // process attributes
+  // ioptional = start of additional optional args in expanded args
+
+  int ioptional = parse_fields(nfield,earg);
+
+  if (ioptional < nfield)
     error->all(FLERR,"Invalid attribute in dump grid command");
+
+  // noptional = # of optional args
+  // reset nfield to subtract off optional args
+  // reset ioptional to what it would be in original arg list
+
+  int noptional = nfield - ioptional;
+  nfield -= noptional;
   size_one = nfield;
+  ioptional = narg - noptional;
 
   // max length of per-grid variable vectors
 
@@ -83,26 +121,31 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
   for (int i = 0; i < nfield; i++) {
     if (vtype[i] == INT) strcat(format_default,"%d ");
     else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
-    else if (vtype[i] == CELLINT) strcat(format_default,CELLINT_FORMAT " ");
+    else if (vtype[i] == BIGINT) strcat(format_default,BIGINT_FORMAT " ");
     else if (vtype[i] == STRING) strcat(format_default,"%s ");
     vformat[i] = NULL;
   }
 
-  // setup column string using field2arg
-  // add column subscripts to array args that were expanded
+  format_column_user = new char*[size_one];
+  for (int i = 0; i < size_one; i++) format_column_user[i] = NULL;
+
+  // setup column string
 
   int n = 0;
-  for (int i = 0; i < nfield; i++) n += strlen(arg[field2arg[i]+offset]) + 6;
+  for (int iarg = 0; iarg < nfield; iarg++) n += strlen(earg[iarg]) + 2;
   columns = new char[n];
   columns[0] = '\0';
-  char subscript[6];
-  for (int i = 0; i < nfield; i++) {
-    strcat(columns,arg[field2arg[i]+offset]);
-    if (argindex[i] > 0 && columns[strlen(columns)-1] != ']') {
-      sprintf(subscript,"[%d]",argindex[i]);
-      strcat(columns,subscript);
-    }
+  for (int iarg = 0; iarg < nfield; iarg++) {
+    strcat(columns,earg[iarg]);
     strcat(columns," ");
+  }
+
+  // if wildcard expansion occurred, free earg memory from expand_args()
+  // wait to do this until after column string is created
+
+  if (expand) {
+    for (int i = 0; i < nargnew; i++) delete [] earg[i];
+    memory->sfree(earg);
   }
 
   ncpart = 0;
@@ -113,11 +156,10 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
 
 DumpGrid::~DumpGrid()
 {
-  memory->sfree(pack_choice);
-  memory->destroy(vtype);
-  memory->destroy(field2arg);
-  memory->destroy(field2index);
-  memory->destroy(argindex);
+  delete [] pack_choice;
+  delete [] vtype;
+  delete [] field2index;
+  delete [] argindex;
 
   for (int i = 0; i < ncompute; i++) delete [] id_compute[i];
   memory->sfree(id_compute);
@@ -145,42 +187,6 @@ DumpGrid::~DumpGrid()
 
 void DumpGrid::init_style()
 {
-  delete [] format;
-  char *str;
-  if (format_user) str = format_user;
-  else str = format_default;
-
-  int n = strlen(str) + 1;
-  format = new char[n];
-  strcpy(format,str);
-
-  // tokenize the format string and add space at end of each format element
-
-  char *ptr;
-  for (int i = 0; i < nfield; i++) {
-    if (i == 0) ptr = strtok(format," \0");
-    else ptr = strtok(NULL," \0");
-    delete [] vformat[i];
-    vformat[i] = new char[strlen(ptr) + 2];
-    strcpy(vformat[i],ptr);
-    vformat[i] = strcat(vformat[i]," ");
-  }
-
-  // setup boundary string
-
-  int m = 0;
-  for (int idim = 0; idim < 3; idim++) {
-    for (int iside = 0; iside < 2; iside++) {
-      if (domain->bflag[idim*2+iside] == PERIODIC) boundstr[m++] = 'p';
-      else if (domain->bflag[idim*2+iside] == OUTFLOW) boundstr[m++] = 'o';
-      else if (domain->bflag[idim*2+iside] == REFLECT) boundstr[m++] = 'r';
-      else if (domain->bflag[idim*2+iside] == AXISYM) boundstr[m++] = 'a';
-      else if (domain->bflag[idim*2+iside] == SURFACE) boundstr[m++] = 's';
-    }
-    boundstr[m++] = ' ';
-  }
-  boundstr[8] = '\0';
-  
   // setup function ptrs
 
   if (binary) header_choice = &DumpGrid::header_binary;
@@ -348,8 +354,8 @@ void DumpGrid::write_text(int n, double *mybuf)
         fprintf(fp,vformat[j],static_cast<int> (mybuf[m]));
       else if (vtype[j] == DOUBLE) 
         fprintf(fp,vformat[j],mybuf[m]);
-      else if (vtype[j] == CELLINT) 
-        fprintf(fp,vformat[j],static_cast<cellint> (mybuf[m]));
+      else if (vtype[j] == BIGINT) 
+        fprintf(fp,vformat[j],static_cast<bigint> (mybuf[m]));
       else if (vtype[j] == STRING) { 
         grid->id_num2str(static_cast<int> (mybuf[m]),str);
         fprintf(fp,vformat[j],str);
@@ -364,165 +370,94 @@ void DumpGrid::write_text(int n, double *mybuf)
 
 int DumpGrid::parse_fields(int narg, char **arg)
 {
-  // initialize per-field lists
-
-  pack_choice = NULL;
-  vtype = NULL;
-  field2arg = NULL;
-  field2index = NULL;
-  argindex = NULL;
-
-  int maxfield = narg;
-  allocate_values(maxfield);
-  nfield = 0;
-
-  ncompute = 0;
-  id_compute = NULL;
-  compute = NULL;
-
-  nfix = 0;
-  id_fix = NULL;
-  fix = NULL;
-
-  nvariable = 0;
-  id_variable = NULL;
-  variable = NULL;
-  vbuf = NULL;
-
   // customize by adding to if statement
 
+  int i;
   for (int iarg = 0; iarg < narg; iarg++) {
-    if (nfield == maxfield) {
-      maxfield += CHUNK;
-      allocate_values(maxfield);
-    }
-
-    argindex[nfield] = -1;
+    i = iarg;
+    argindex[i] = -1;
 
     if (strcmp(arg[iarg],"id") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_id;
-      vtype[nfield] = CELLINT;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_id;
+      if (sizeof(cellint) == sizeof(smallint)) vtype[i] = INT;
+      else vtype[i] = BIGINT;
     } else if (strcmp(arg[iarg],"idstr") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_id;
-      vtype[nfield] = STRING;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_id;
+      vtype[i] = STRING;
     } else if (strcmp(arg[iarg],"proc") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_proc;
-      vtype[nfield] = INT;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_proc;
+      vtype[i] = INT;
 
     } else if (strcmp(arg[iarg],"xlo") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_xlo;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_xlo;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"ylo") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_ylo;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_ylo;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"zlo") == 0) {
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump grid field for 2d simulation");
-      pack_choice[nfield] = &DumpGrid::pack_zlo;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_zlo;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"xhi") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_xhi;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_xhi;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"yhi") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_yhi;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_yhi;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"zhi") == 0) {
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump grid field for 2d simulation");
-      pack_choice[nfield] = &DumpGrid::pack_zhi;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_zhi;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"xc") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_xc;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_xc;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"yc") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_yc;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_yc;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"zc") == 0) {
       if (dimension == 2) 
 	error->all(FLERR,"Invalid dump grid field for 2d simulation");
-      pack_choice[nfield] = &DumpGrid::pack_zc;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_zc;
+      vtype[i] = DOUBLE;
     } else if (strcmp(arg[iarg],"vol") == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_vol;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
-      nfield++;
+      pack_choice[i] = &DumpGrid::pack_vol;
+      vtype[i] = DOUBLE;
 
     // compute value = c_ID
     // if no trailing [], then index = 0, else index = int between []
-    // if index = 0 and compute stores array, expand to one value per column
 
     } else if (strncmp(arg[iarg],"c_",2) == 0) {
+      pack_choice[i] = &DumpGrid::pack_compute;
+      vtype[i] = DOUBLE;
+
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
-      int index;
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump grid command");
-	index = atoi(ptr+1);
+	argindex[i] = atoi(ptr+1);
 	*ptr = '\0';
-      } else index = 0;
+      } else argindex[i] = 0;
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid compute ID");
       if (modify->compute[n]->per_grid_flag == 0)
 	error->all(FLERR,"Dump grid compute does not compute per-grid info");
-      if (index > 0 && modify->compute[n]->size_per_grid_cols == 0)
-	error->all(FLERR,
-		   "Dump grid compute does not compute per-grid array");
-      if (index > 0 && index > modify->compute[n]->size_per_grid_cols)
+      if (argindex[i] == 0 && modify->compute[n]->size_per_grid_cols != 0)
+	error->all(FLERR,"Dump grid compute does not calculate "
+                   "per-grid vector");
+      if (argindex[i] > 0 && modify->compute[n]->size_per_grid_cols == 0)
+	error->all(FLERR,"Dump grid compute does not calculate per-grid array");
+      if (argindex[i] > 0 && 
+          argindex[i] > modify->compute[n]->size_per_grid_cols)
 	error->all(FLERR,"Dump grid compute array is accessed out-of-range");
 
-      if (index == 0 && modify->compute[n]->size_per_grid_cols > 0) {
-	int ncol = modify->compute[n]->size_per_grid_cols;
-	for (int i = 0; i < ncol; i++) {
-	  if (nfield == maxfield) {
-	    maxfield += CHUNK;
-	    allocate_values(maxfield);
-	  }
-	  pack_choice[nfield] = &DumpGrid::pack_compute;
-	  vtype[nfield] = DOUBLE;
-	  argindex[nfield] = i+1;
-	  field2arg[nfield] = iarg;
-	  field2index[nfield] = add_compute(suffix);
-	  nfield++;
-	} 
-      } else {
-	pack_choice[nfield] = &DumpGrid::pack_compute;
-	vtype[nfield] = DOUBLE;
-	argindex[nfield] = index;
-	field2arg[nfield] = iarg;
-	field2index[nfield] = add_compute(suffix);
-	nfield++;
-      }
-
+      field2index[i] = add_compute(suffix);
       delete [] suffix;
 
     // fix value = f_ID
@@ -530,74 +465,54 @@ int DumpGrid::parse_fields(int narg, char **arg)
     // if index = 0 and compute stores array, expand to one value per column
 
     } else if (strncmp(arg[iarg],"f_",2) == 0) {
+      pack_choice[i] = &DumpGrid::pack_fix;
+      vtype[i] = DOUBLE;
+
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
-      int index;
       char *ptr = strchr(suffix,'[');
       if (ptr) {
 	if (suffix[strlen(suffix)-1] != ']')
 	  error->all(FLERR,"Invalid attribute in dump grid command");
-	index = atoi(ptr+1);
+	argindex[i] = atoi(ptr+1);
 	*ptr = '\0';
-      } else index = 0;
+      } else argindex[i] = 0;
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid fix ID");
       if (modify->fix[n]->per_grid_flag == 0)
 	error->all(FLERR,"Dump grid fix does not compute per-grid info");
-      if (index > 0 && modify->fix[n]->size_per_grid_cols == 0)
-	error->all(FLERR,"Dump grid fix does not compute per-grid array");
-      if (index > 0 && index > modify->fix[n]->size_per_grid_cols)
+      if (argindex[i] == 0 && modify->fix[n]->size_per_grid_cols != 0)
+	error->all(FLERR,"Dump grid fix does not calculate a per-grid vector");
+      if (argindex[i] > 0 && modify->fix[n]->size_per_grid_cols == 0)
+	error->all(FLERR,"Dump grid fix does not calculate per-grid array");
+      if (argindex[i] > 0 && argindex[i] > modify->fix[n]->size_per_grid_cols)
 	error->all(FLERR,"Dump grid fix array is accessed out-of-range");
 
-      if (index == 0 && modify->fix[n]->size_per_grid_cols > 0) {
-	int ncol = modify->fix[n]->size_per_grid_cols;
-	for (int i = 0; i < ncol; i++) {
-	  if (nfield == maxfield) {
-	    maxfield += CHUNK;
-	    allocate_values(maxfield);
-	  }
-	  pack_choice[nfield] = &DumpGrid::pack_fix;
-	  vtype[nfield] = DOUBLE;
-	  argindex[nfield] = i+1;
-	  field2arg[nfield] = iarg;
-	  field2index[nfield] = add_fix(suffix);
-	  nfield++;
-	} 
-      } else {
-	pack_choice[nfield] = &DumpGrid::pack_fix;
-	vtype[nfield] = DOUBLE;
-	argindex[nfield] = index;
-	field2arg[nfield] = iarg;
-	field2index[nfield] = add_fix(suffix);
-	nfield++;
-      }
-
+      field2index[i] = add_fix(suffix);
       delete [] suffix;
 
     // variable value = v_name
 
     } else if (strncmp(arg[iarg],"v_",2) == 0) {
-      pack_choice[nfield] = &DumpGrid::pack_variable;
-      vtype[nfield] = DOUBLE;
-      field2arg[nfield] = iarg;
+      pack_choice[i] = &DumpGrid::pack_variable;
+      vtype[i] = DOUBLE;
 
       int n = strlen(arg[iarg]);
       char *suffix = new char[n];
       strcpy(suffix,&arg[iarg][2]);
 
-      argindex[nfield] = 0;
+      argindex[i] = 0;
 
       n = input->variable->find(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump grid variable name");
       if (input->variable->grid_style(n) == 0)
 	error->all(FLERR,"Dump grid variable is not grid-style variable");
 
-      field2index[nfield] = add_variable(suffix);
+      field2index[i] = add_variable(suffix);
       delete [] suffix;
-      nfield++;
 
     } else return iarg;
   }
@@ -682,20 +597,6 @@ int DumpGrid::add_variable(char *id)
   strcpy(id_variable[nvariable],id);
   nvariable++;
   return nvariable-1;
-}
-
-/* ----------------------------------------------------------------------
-   reallocate vectors for each input value, of length N
-------------------------------------------------------------------------- */
-
-void DumpGrid::allocate_values(int n)
-{
-  pack_choice = (FnPtrPack *) 
-    memory->srealloc(pack_choice,n*sizeof(FnPtrPack),"dump:pack_choice");
-  memory->grow(vtype,n,"dump:vtype");
-  memory->grow(field2arg,n,"dump:field2arg");
-  memory->grow(field2index,n,"dump:field2index");
-  memory->grow(argindex,n,"dump:argindex");
 }
 
 /* ----------------------------------------------------------------------

@@ -33,7 +33,6 @@ enum{COMPUTE,FIX,VARIABLE};
 enum{ONE,RUNNING};                // multiple files
 
 #define INVOKED_PER_GRID 16
-#define DELTAINPUT 8
 #define DELTAGRID 1024            // must be bigger than split cells per cell
 
 /* ---------------------------------------------------------------------- */
@@ -52,101 +51,78 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 
   // scan values, then read options
 
+  nvalues = 0;
+
   int iarg = 5;
   while (iarg < narg) {
     if ((strncmp(arg[iarg],"c_",2) == 0) || 
 	(strncmp(arg[iarg],"f_",2) == 0) || 
-	(strncmp(arg[iarg],"v_",2) == 0)) iarg++;
-    else break;
-  }
-
-  options(narg-iarg,&arg[iarg]);
-
-  // parse values until one isn't recognized
-  // expand compute or fix array into full set of columns
-
-  which = argindex = value2index = post_process = NULL;
-  ids = NULL;
-  nvalues = maxvalues = 0;
-
-  iarg = 5;
-  while (iarg < narg) {
-    if (strncmp(arg[iarg],"c_",2) == 0 || 
-        strncmp(arg[iarg],"f_",2) == 0 || 
-        strncmp(arg[iarg],"v_",2) == 0) {
-
-      if (nvalues == maxvalues) grow();
-      if (arg[iarg][0] == 'c') which[nvalues] = COMPUTE;
-      else if (arg[iarg][0] == 'f') which[nvalues] = FIX;
-      else if (arg[iarg][0] == 'v') which[nvalues] = VARIABLE;
-
-      int n = strlen(arg[iarg]);
-      char *suffix = new char[n];
-      strcpy(suffix,&arg[iarg][2]);
-
-      char *ptr = strchr(suffix,'[');
-      if (ptr) {
-	if (suffix[strlen(suffix)-1] != ']')
-	  error->all(FLERR,"Illegal fix ave/grid command");
-	argindex[nvalues] = atoi(ptr+1);
-	*ptr = '\0';
-      } else argindex[nvalues] = 0;
-
-      n = strlen(suffix) + 1;
-      ids[nvalues] = new char[n];
-      strcpy(ids[nvalues],suffix);
-
-      post_process[nvalues] = 0;
-      if (which[nvalues] == COMPUTE) {
-	int icompute = modify->find_compute(ids[nvalues]);
-	if (icompute < 0)
-	  error->all(FLERR,"Compute ID for fix ave/grid does not exist");
-	post_process[nvalues] = 
-          modify->compute[icompute]->post_process_grid_flag;
-      }
-
-      // expand an array arg into multiple vectors
-
-      if ((which[nvalues] == COMPUTE || which[nvalues] == FIX) && 
-          argindex[nvalues] == 0) {
-        int ndup = 0;
-        if (which[nvalues] == COMPUTE) {
-          int icompute = modify->find_compute(ids[nvalues]);
-          if (icompute < 0)
-            error->all(FLERR,"Compute ID for fix ave/grid does not exist");
-          if (modify->compute[icompute]->per_grid_flag) {
-            ndup = modify->compute[icompute]->size_per_grid_cols;
-          }
-        }
-        if (which[nvalues] == FIX) {
-          int ifix = modify->find_fix(ids[nvalues]);
-          if (ifix < 0)
-            error->all(FLERR,"Fix ID for fix ave/grid does not exist");
-          if (modify->fix[ifix]->per_grid_flag)
-            ndup = modify->fix[ifix]->size_per_grid_cols;
-        }
-        if (ndup) {
-          argindex[nvalues] = 1;
-          nvalues++;
-          for (int icol = 2; icol <= ndup; icol++) {
-            if (nvalues == maxvalues) grow();
-            which[nvalues] = which[nvalues-1];
-            argindex[nvalues] = icol;
-	    post_process[nvalues] = post_process[nvalues-1];
-            n = strlen(suffix) + 1;
-            ids[nvalues] = new char[n];
-            strcpy(ids[nvalues],suffix);
-            nvalues++;
-          }
-          nvalues--;
-        }
-      }
-
+	(strncmp(arg[iarg],"v_",2) == 0)) {
       nvalues++;
-      delete [] suffix;
-
       iarg++;
     } else break;
+  }
+
+  if (nvalues == 0) error->all(FLERR,"No values in fix ave/grid command");
+
+  options(iarg,narg,arg);
+
+  // expand args if any have wildcard character "*"
+  // this can reset nvalues
+
+  int expand = 0;
+  char **earg;
+  nvalues = input->expand_args(nvalues,&arg[5],1,earg);
+
+  if (earg != &arg[5]) expand = 1;
+  arg = earg;
+
+  // parse values
+
+  which = new int[nvalues];
+  argindex = new int[nvalues];
+  value2index = new int[nvalues];
+  post_process = new int[nvalues];
+  ids = new char*[nvalues];
+
+  for (int i = 0; i < nvalues; i++) {
+    if (arg[i][0] == 'c') which[i] = COMPUTE;
+    else if (arg[i][0] == 'f') which[i] = FIX;
+    else if (arg[i][0] == 'v') which[i] = VARIABLE;
+    
+    int n = strlen(arg[i]);
+    char *suffix = new char[n];
+    strcpy(suffix,&arg[i][2]);
+
+    char *ptr = strchr(suffix,'[');
+    if (ptr) {
+      if (suffix[strlen(suffix)-1] != ']')
+        error->all(FLERR,"Illegal fix ave/grid command");
+      argindex[i] = atoi(ptr+1);
+      *ptr = '\0';
+    } else argindex[i] = 0;
+
+    n = strlen(suffix) + 1;
+    ids[i] = new char[n];
+    strcpy(ids[i],suffix);
+    delete [] suffix;
+      
+    post_process[i] = 0;
+    if (which[i] == COMPUTE) {
+      int icompute = modify->find_compute(ids[i]);
+      if (icompute < 0)
+        error->all(FLERR,"Compute ID for fix ave/grid does not exist");
+      post_process[i] = 
+        modify->compute[icompute]->post_process_grid_flag;
+    }
+  }
+
+  // if wildcard expansion occurred, free earg memory from expand_args()
+  // wait to do this until after file comment lines are printed
+
+  if (expand) {
+    for (int i = 0; i < nvalues; i++) delete [] earg[i];
+    memory->sfree(earg);
   }
 
   // setup and error check
@@ -168,10 +144,10 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
       if (argindex[i] == 0 && 
 	  modify->compute[icompute]->size_per_grid_cols != 0)
 	error->all(FLERR,"Fix ave/grid compute does not "
-		   "calculate a per-grid vector");
+		   "calculate per-grid vector");
       if (argindex[i] && modify->compute[icompute]->size_per_grid_cols == 0)
 	error->all(FLERR,"Fix ave/grid compute does not "
-		   "calculate a per-grid array");
+		   "calculate per-grid array");
       if (argindex[i] && 
 	  argindex[i] > modify->compute[icompute]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid compute array is accessed out-of-range");
@@ -184,10 +160,10 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 	error->all(FLERR,"Fix ave/grid fix does not calculate per-grid values");
       if (argindex[i] == 0 && modify->fix[ifix]->size_per_grid_cols != 0)
 	error->all(FLERR,
-		   "Fix ave/grid fix does not calculate a per-grid vector");
+		   "Fix ave/grid fix does not calculate per-grid vector");
       if (argindex[i] && modify->fix[ifix]->size_per_grid_cols == 0)
 	error->all(FLERR,
-		   "Fix ave/grid fix does not calculate a per-grid array");
+		   "Fix ave/grid fix does not calculate per-grid array");
       if (argindex[i] && argindex[i] > modify->fix[ifix]->size_per_grid_cols)
 	error->all(FLERR,"Fix ave/grid fix array is accessed out-of-range");
       if (nevery % modify->fix[ifix]->per_grid_freq)
@@ -336,12 +312,12 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 
 FixAveGrid::~FixAveGrid()
 {
-  memory->destroy(which);
-  memory->destroy(argindex);
-  memory->destroy(value2index);
-  memory->destroy(post_process);
+  delete [] which;
+  delete [] argindex;
+  delete [] value2index;
+  delete [] post_process;
   for (int i = 0; i < nvalues; i++) delete [] ids[i];
-  memory->sfree(ids);
+  delete [] ids;
 
   delete [] nmap;
   memory->destroy(map);
@@ -708,7 +684,7 @@ double FixAveGrid::memory_usage()
    parse optional args
 ------------------------------------------------------------------------- */
 
-void FixAveGrid::options(int narg, char **arg)
+void FixAveGrid::options(int iarg, int narg, char **arg)
 {
   // option defaults
 
@@ -716,7 +692,6 @@ void FixAveGrid::options(int narg, char **arg)
 
   // optional args
 
-  int iarg = 0;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"ave") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/grid command");
@@ -726,20 +701,6 @@ void FixAveGrid::options(int narg, char **arg)
       iarg += 2;
     } else error->all(FLERR,"Illegal fix ave/grid command");
   }
-}
-
-/* ----------------------------------------------------------------------
-   grow vectors for each input value
-------------------------------------------------------------------------- */
-
-void FixAveGrid::grow()
-{
-  maxvalues += DELTAINPUT;
-  memory->grow(which,maxvalues,"ave/grid:which");
-  memory->grow(argindex,maxvalues,"ave/grid:argindex");
-  memory->grow(value2index,maxvalues,"ave/grid:value2index");
-  memory->grow(post_process,maxvalues,"ave/grid:post_process");
-  ids = (char **) memory->srealloc(ids,maxvalues*sizeof(char *),"ave/grid:ids");
 }
 
 /* ----------------------------------------------------------------------

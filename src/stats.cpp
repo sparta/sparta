@@ -72,9 +72,6 @@ Stats::Stats(SPARTA *sparta) : Pointers(sparta)
   vfunc = NULL;
   vtype = NULL;
 
-  format = NULL;
-  format_user = NULL;
-
   field2index = NULL;
   argindex1 = NULL;
   argindex2 = NULL;
@@ -100,10 +97,11 @@ Stats::Stats(SPARTA *sparta) : Pointers(sparta)
 
   char *bigint_format = (char *) BIGINT_FORMAT;
 
-  format_float_one_def = (char *) "%12.8g";
-  format_int_one_def = (char *) "%8d";
-  sprintf(format_bigint_one_def,"%%8%s",&bigint_format[1]);
+  format_float_def = (char *) "%12.8g";
+  format_int_def = (char *) "%8d";
+  sprintf(format_bigint_def,"%%8%s",&bigint_format[1]);
 
+  format_line_user = NULL;
   format_float_user = NULL;
   format_int_user = NULL;
   format_bigint_user = NULL;
@@ -118,6 +116,7 @@ Stats::~Stats()
 
   // format strings
 
+  delete [] format_line_user;
   delete [] format_float_user;
   delete [] format_int_user;
   delete [] format_bigint_user;
@@ -127,30 +126,48 @@ Stats::~Stats()
 
 void Stats::init()
 {
+  int i,n;
+
   // set format string for each field
   // add trailing '/n' to last value
 
-  char *ptr;
-  for (int i = 0; i < nfield; i++) {
+  char *format_line = NULL;
+  if (format_line_user) {
+    int n = strlen(format_line_user) + 1;
+    format_line = new char[n];
+    strcpy(format_line,format_line_user);
+  }
+
+  char *ptr,*format_line_ptr;
+  for (i = 0; i < nfield; i++) {
     format[i][0] = '\0';
 
-    if (format_user[i]) ptr = format_user[i];
-    else if (vtype[i] == FLOAT) {
-      if (format_float_user) ptr = format_float_user;
-      else ptr = format_float_one_def;
-    } else if (vtype[i] == INT) {
-      if (format_int_user) ptr = format_int_user;
-      else ptr = format_int_one_def;
-    } else if (vtype[i] == BIGINT) {
-      if (format_bigint_user) ptr = format_bigint_user;
-      else ptr = format_bigint_one_def;
+    if (format_line) {
+      if (i == 0) format_line_ptr = strtok(format_line," \0");
+      else format_line_ptr = strtok(NULL," \0");
     }
 
-    int n = strlen(format[i]);
-    sprintf(&format[i][n],"%s ",ptr);
+    if (format_column_user[i]) ptr = format_column_user[i];
+    else if (vtype[i] == FLOAT) {
+      if (format_float_user) ptr = format_float_user;
+      else if (format_line_user) ptr = format_line_ptr;
+      else ptr = format_float_def;
+    } else if (vtype[i] == INT) {
+      if (format_int_user) ptr = format_int_user;
+      else if (format_line_user) ptr = format_line_ptr;
+      else ptr = format_int_def;
+    } else if (vtype[i] == BIGINT) {
+      if (format_bigint_user) ptr = format_bigint_user;
+      else if (format_line_user) ptr = format_line_ptr;
+      else ptr = format_bigint_def;
+    }
 
-    if (i == nfield-1) strcat(format[i],"\n");
+    n = strlen(format[i]);
+    sprintf(&format[i][n],"%s ",ptr);
   }
+  strcat(format[nfield-1],"\n");
+
+  delete [] format_line;
 
   // find current ptr for each SurfCollide and SurfReact ID
 
@@ -292,36 +309,64 @@ void Stats::modify_params(int narg, char **arg)
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"format") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal stats_modify command");
+
+      if (strcmp(arg[iarg+1],"none") == 0) {
+        delete [] format_line_user;
+        delete [] format_int_user;
+        delete [] format_bigint_user;
+        delete [] format_float_user;
+        format_line_user = NULL;
+        format_int_user = NULL;
+        format_bigint_user = NULL;
+        format_float_user = NULL;
+        for (int i = 0; i < nfield; i++) {
+          delete [] format_column_user[i];
+          format_column_user[i] = NULL;
+        }
+        iarg += 2;
+        continue;
+      }
+
       if (iarg+3 > narg) error->all(FLERR,"Illegal stats_modify command");
-      if (strcmp(arg[iarg+1],"int") == 0) {
-	if (format_int_user) delete [] format_int_user;
-	int n = strlen(arg[iarg+2]) + 1;
-	format_int_user = new char[n];
-	strcpy(format_int_user,arg[iarg+2]);
-	if (format_bigint_user) delete [] format_bigint_user;
-	n = strlen(format_int_user) + 3;
-	format_bigint_user = new char[n];
-	char *ptr = strchr(format_int_user,'d');
-	if (ptr == NULL) 
-	  error->all(FLERR,
-		     "Stats_modify int format does not contain d character");
-	*ptr = '\0';
-	sprintf(format_bigint_user,"%s%s%s",format_int_user,
-		BIGINT_FORMAT,ptr+1);
-	*ptr = 'd';
+
+      if (strcmp(arg[iarg+1],"line") == 0) {
+        delete [] format_line_user;
+        int n = strlen(arg[iarg+2]) + 1;
+        format_line_user = new char[n];
+        strcpy(format_line_user,arg[iarg+2]);
+      } else if (strcmp(arg[iarg+1],"int") == 0) {
+        if (format_int_user) delete [] format_int_user;
+        int n = strlen(arg[iarg+2]) + 1;
+        format_int_user = new char[n];
+        strcpy(format_int_user,arg[iarg+2]);
+        if (format_bigint_user) delete [] format_bigint_user;
+        n = strlen(format_int_user) + 8;
+        format_bigint_user = new char[n];
+        // replace "d" in format_int_user with bigint format specifier
+        // use of &str[1] removes leading '%' from BIGINT_FORMAT string
+        char *ptr = strchr(format_int_user,'d');
+        if (ptr == NULL)
+          error->all(FLERR,
+                     "Stats_modify int format does not contain d character");
+        char str[8];
+        sprintf(str,"%s",BIGINT_FORMAT);
+        *ptr = '\0';
+        sprintf(format_bigint_user,"%s%s%s",format_int_user,&str[1],ptr+1);
+        *ptr = 'd';
       } else if (strcmp(arg[iarg+1],"float") == 0) {
-	if (format_float_user) delete [] format_float_user;
-	int n = strlen(arg[iarg+2]) + 1;
-	format_float_user = new char[n];
-	strcpy(format_float_user,arg[iarg+2]);
+        if (format_float_user) delete [] format_float_user;
+        int n = strlen(arg[iarg+2]) + 1;
+        format_float_user = new char[n];
+        strcpy(format_float_user,arg[iarg+2]);
       } else {
-	int i = atoi(arg[iarg+1]) - 1;
-	if (i < 0 || i >= nfield)
-	  error->all(FLERR,"Illegal stats_modify command");
-	if (format_user[i]) delete [] format_user[i];
-	int n = strlen(arg[iarg+2]) + 1;
-	format_user[i] = new char[n];
-	strcpy(format_user[i],arg[iarg+2]);
+        int i = input->inumeric(FLERR,arg[iarg+1]) - 1;
+        if (i < 0 || i >= nfield)
+          error->all(FLERR,"Illegal stats_modify command");
+        if (format_column_user[i]) delete [] format_column_user[i];
+        int n = strlen(arg[iarg+2]) + 1;
+        format_column_user[i] = new char[n];
+        strcpy(format_column_user[i],arg[iarg+2]);
       }
       iarg += 3;
 
@@ -344,8 +389,8 @@ void Stats::allocate()
 
   format = new char*[n];
   for (int i = 0; i < n; i++) format[i] = new char[32];
-  format_user = new char*[n];
-  for (int i = 0; i < n; i++) format_user[i] = NULL;
+  format_column_user = new char*[n];
+  for (int i = 0; i < n; i++) format_column_user[i] = NULL;
 
   field2index = new int[n];
   argindex1 = new int[n];
@@ -390,8 +435,8 @@ void Stats::deallocate()
 
   for (int i = 0; i < n; i++) delete [] format[i];
   delete [] format;
-  for (int i = 0; i < n; i++) delete [] format_user[i];
-  delete [] format_user;
+  for (int i = 0; i < n; i++) delete [] format_column_user[i];
+  delete [] format_column_user;
 
   delete [] field2index;
   delete [] argindex1;
@@ -421,19 +466,30 @@ void Stats::deallocate()
 
 /* ----------------------------------------------------------------------
    set fields of stats output from args
+   called by constructor with default fields
+   called by Input with stats_style command args
 ------------------------------------------------------------------------- */
 
 void Stats::set_fields(int narg, char **arg)
 {
   deallocate();
-  nfield = narg;
-  allocate();
 
+  // expand args if any have wildcard character "*"
+
+  int expand = 0;
+  char **earg;
+  int nargnew = input->expand_args(narg,arg,0,earg);
+
+  if (earg != arg) expand = 1;
+  arg = earg;
+
+  nfield = nargnew;
+  allocate();
   nfield = 0;
 
   // customize a new keyword by adding to if statement
 
-  for (int i = 0; i < narg; i++) {
+  for (int i = 0; i < nargnew; i++) {
     if (strcmp(arg[i],"step") == 0) {
       addfield("Step",&Stats::compute_step,BIGINT);
     } else if (strcmp(arg[i],"elapsed") == 0) {
@@ -536,9 +592,6 @@ void Stats::set_fields(int narg, char **arg)
       int n = strlen(arg[i]);
       char *id = new char[n];
       strcpy(id,&arg[i][2]);
-      char copy[9];
-      strncpy(copy,id,8);
-      copy[8] = '\0';
 
       // parse zero or one or two trailing brackets from ID
       // argindex1,argindex2 = int inside each bracket pair, 0 if no bracket
@@ -567,7 +620,7 @@ void Stats::set_fields(int narg, char **arg)
                      "is accessed out-of-range");
 
 	field2index[nfield] = add_surf_collide(id);
-	addfield(copy,&Stats::compute_surf_collide,FLOAT);
+	addfield(arg[i],&Stats::compute_surf_collide,FLOAT);
 	
       } else if (arg[i][0] == 'r') {
 	n = surf->find_react(id);
@@ -580,7 +633,7 @@ void Stats::set_fields(int narg, char **arg)
 	  error->all(FLERR,"Stats surf react vector is accessed out-of-range");
 
 	field2index[nfield] = add_surf_react(id);
-	addfield(copy,&Stats::compute_surf_react,FLOAT);
+	addfield(arg[i],&Stats::compute_surf_react,FLOAT);
       }
       
       delete [] id;
@@ -596,9 +649,6 @@ void Stats::set_fields(int narg, char **arg)
       int n = strlen(arg[i]);
       char *id = new char[n];
       strcpy(id,&arg[i][2]);
-      char copy[9];
-      strncpy(copy,id,8);
-      copy[8] = '\0';
 
       // parse zero or one or two trailing brackets from ID
       // argindex1,argindex2 = int inside each bracket pair, 0 if no bracket
@@ -640,7 +690,7 @@ void Stats::set_fields(int narg, char **arg)
 	  field2index[nfield] = add_compute(id,VECTOR);
 	else 
 	  field2index[nfield] = add_compute(id,ARRAY);
-	addfield(copy,&Stats::compute_compute,FLOAT);
+	addfield(arg[i],&Stats::compute_compute,FLOAT);
 
       } else if (arg[i][0] == 'f') {
 	n = modify->find_fix(id);
@@ -662,7 +712,7 @@ void Stats::set_fields(int narg, char **arg)
 	}
 
 	field2index[nfield] = add_fix(id);
-	addfield(copy,&Stats::compute_fix,FLOAT);
+	addfield(arg[i],&Stats::compute_fix,FLOAT);
 
       } else if (arg[i][0] == 'v') {
 	n = input->variable->find(id);
@@ -673,12 +723,19 @@ void Stats::set_fields(int narg, char **arg)
 	  error->all(FLERR,"Stats variable cannot be indexed");
 
 	field2index[nfield] = add_variable(id);
-	addfield(copy,&Stats::compute_variable,FLOAT);
+	addfield(arg[i],&Stats::compute_variable,FLOAT);
       }
 
       delete [] id;
 
     } else error->all(FLERR,"Invalid keyword in stats_style command");
+  }
+
+  // if wildcard expansion occurred, free earg memory from expand_args()
+
+  if (expand) {
+    for (int i = 0; i < nargnew; i++) delete [] earg[i];
+    memory->sfree(earg);
   }
 }
 
