@@ -97,9 +97,9 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
 
   int expand = 0;
   char **earg;
-  nvalues = input->expand_args(nvalues,&arg[9],mode,earg);
+  nvalues = input->expand_args(nvalues,&arg[8],mode,earg);
 
-  if (earg != &arg[9]) expand = 1;
+  if (earg != &arg[8]) expand = 1;
   arg = earg;
 
   // parse values
