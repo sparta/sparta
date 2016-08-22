@@ -110,7 +110,7 @@ Collide::~Collide()
   delete [] mixID;
   delete random;
 
-  if (ngroups == 1) memory->destroy(plist);
+  memory->destroy(plist);
   if (ngroups > 1) {
     delete [] ngroup;
     delete [] maxgroup;
@@ -158,6 +158,7 @@ void Collide::init()
   if (ngroups != oldgroups) {
     if (oldgroups == 1) {
       memory->destroy(plist);
+      npmax = 0;
       plist = NULL;
     }
     if (oldgroups > 1) {
@@ -526,7 +527,7 @@ template < int NEARCP > void Collide::collisions_one()
 
 template < int NEARCP > void Collide::collisions_group()
 {
-  int i,j,k,m,n,ip,np,isp,ipair,igroup,jgroup,newgroup,ngmax;
+  int i,j,k,m,n,ii,jj,ip,np,isp,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   int *nn_igroup,*nn_jgroup;
@@ -547,6 +548,23 @@ template < int NEARCP > void Collide::collisions_group()
     ip = cinfo[icell].first;
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
+
+    // if recombination is possible, setup particle list for this cell
+    // used to pick 3rd particle from entire cell, not just IJgroups
+
+    if (recombflag) {
+      if (np > npmax) {
+        npmax = np + DELTAPART;
+        memory->destroy(plist);
+        memory->create(plist,npmax,"collide:plist");
+      }
+
+      n = 0;
+      while (ip >= 0) {
+        plist[n++] = ip;
+        ip = next[ip];
+      }
+    }
 
     // setup per-group particle lists for this cell
 
@@ -655,7 +673,9 @@ template < int NEARCP > void Collide::collisions_group()
             react->recomb_species = -1;
           else {
             k = np * random->uniform();
-            while (k == i || k == j) k = np * random->uniform();
+            ii = ilist[i];
+            jj = jlist[j];
+            while (k == ii || k == jj) k = np * random->uniform();
             react->recomb_part3 = &particles[plist[k]];
             react->recomb_species = react->recomb_part3->ispecies;
             react->recomb_density = np * update->fnum / volume;
