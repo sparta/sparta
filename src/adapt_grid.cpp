@@ -639,6 +639,7 @@ int AdaptGrid::refine()
   // NOTE: why is grid not really hashed at this point even though it says so?
   // WHEN done with adapt, do I need to mark it hashed or unhashed?
   // NOTE: does fix balance always do a sort?  yes it does
+  // NOTE: collisions with chemistry may have un-sorted the particles
 
   //if (!grid->hashfilled) grid->rehash();
   //if (particle->exist && !particle->sorted) particle->sort();      

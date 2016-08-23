@@ -162,7 +162,6 @@ void FixAdapt::end_of_step()
   grid->acquire_ghosts();
   grid->find_neighbors();
 
-
   /*
   int flag = 0;
   if (update->ntimestep == 50) flag = 1;
@@ -182,7 +181,6 @@ void FixAdapt::end_of_step()
   //}
   }
   */
-
 
   grid->check_uniform();
   comm->reset_neighbors();

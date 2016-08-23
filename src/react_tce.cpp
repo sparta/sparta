@@ -21,6 +21,12 @@
 #include "random_park.h"
 #include "error.h"
 
+
+// DEBUG
+#include "update.h"
+
+
+
 using namespace SPARTA_NS;
 
 enum{DISSOCIATION,EXCHANGE,IONIZATION,RECOMBINATION};   // other files

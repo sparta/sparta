@@ -345,10 +345,12 @@ void ReactBird::init()
           r = &rlist[list[m]];
           if (r->type != RECOMBINATION) continue;
           if (r->nproduct != 2 || r->products[1] < 0) continue;
-          if (r->products[1] == k) reactions[i][j].sp2recomb[k] = list[m];
-          break;
+          if (r->products[1] == k) {
+            reactions[i][j].sp2recomb[k] = list[m];
+            break;
+          }
         }
-        if (m < n) break;
+        if (m < n) continue;
 
         for (m = 0; m < n; m++) {
           r = &rlist[list[m]];
@@ -363,7 +365,7 @@ void ReactBird::init()
             break;
           }
         }
-        if (m < n) break;
+        if (m < n) continue;
 
         for (m = 0; m < n; m++) {
           r = &rlist[list[m]];
@@ -372,7 +374,7 @@ void ReactBird::init()
           reactions[i][j].sp2recomb[k] = list[m];
           break;
         }
-        if (m < n) break;
+        if (m < n) continue;
 
         for (m = 0; m < n; m++) {
           r = &rlist[list[m]];

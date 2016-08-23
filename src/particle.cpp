@@ -281,6 +281,14 @@ void Particle::compress_reactions(int ndelete, int *dellist)
 
   int nbytes = sizeof(OnePart);
 
+  // reallocate next list as needed
+
+  if (maxsort < maxlocal) {
+    maxsort = maxlocal;
+    memory->destroy(next);
+    memory->create(next,maxsort,"particle:next");
+  }
+
   // use next as a scratch vector
   // is always defined when performing collisions and thus gas reactions
   // next is only used for upper locs from nlocal-ndelete to nlocal
@@ -329,6 +337,9 @@ void Particle::sort()
   sorted = 1;
 
   // reallocate next list as needed
+  // NOTE: why not just compare maxsort to nlocal?
+  //       then could realloc less often?
+  //       ditto for all reallocs of next in related methods
 
   if (maxsort < maxlocal) {
     maxsort = maxlocal;
