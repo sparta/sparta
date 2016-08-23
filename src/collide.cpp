@@ -564,6 +564,7 @@ template < int NEARCP > void Collide::collisions_group()
         plist[n++] = ip;
         ip = next[ip];
       }
+      ip = cinfo[icell].first;
     }
 
     // setup per-group particle lists for this cell
@@ -600,7 +601,7 @@ template < int NEARCP > void Collide::collisions_group()
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
 	attempt = attempt_collision(icell,igroup,jgroup,volume);
 	nattempt = static_cast<int> (attempt);
-
+        
 	if (nattempt) {
 	  gpair[npair][0] = igroup;
 	  gpair[npair][1] = jgroup;
@@ -609,6 +610,7 @@ template < int NEARCP > void Collide::collisions_group()
 	  npair++;
 	}
       }
+
 
     // perform collisions for each pair of groups in gpair list
     // select random particle in each group
