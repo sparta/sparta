@@ -550,7 +550,7 @@ template < int NEARCP > void Collide::collisions_group()
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
 
     // if recombination is possible, setup particle list for this cell
-    // used to pick 3rd particle from entire cell, not just IJgroups
+    // used to pick 3rd particle from entire cell, not just from IJgroups
 
     if (recombflag) {
       if (np > npmax) {
