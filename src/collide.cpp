@@ -563,7 +563,7 @@ template < int NEARCP > void Collide::collisions_group()
         plist[n++] = ip;
         ip = next[ip];
       }
-      ip = cinfo[icell].first;
+      ip = cinfo[icell].first;         // reset ip to 1st particle in cell
     }
 
     // setup per-group particle lists for this cell
@@ -593,7 +593,7 @@ template < int NEARCP > void Collide::collisions_group()
     // attempt = exact collision attempt count for a pair of groups
     // double loop over N^2 / 2 pairs of groups
     // nattempt = rounded attempt with RN
-    // add pair of groups to gpair
+    // add pair of groups to gpair when nattempt > 0
 
     npair = 0;
     for (igroup = 0; igroup < ngroups; igroup++)
@@ -615,9 +615,9 @@ template < int NEARCP > void Collide::collisions_group()
     // if igroup = jgroup, cannot be same particle
     // test if collision actually occurs
     // if chemistry occurs, move output I,J,K particles to new group lists
-    // if chemistry occurs, exit attempt loop if group count goes to 0
-    // NOTE: need to reset vremax ?
-    // NOTE: OK to use pre-computed nattempt when Ngroup may have changed?
+    // if chemistry occurs, exit attempt loop if group counts become too small
+    // NOTE: need to reset vremax?
+    // NOTE: OK to use pre-computed nattempt when Ngroup may change via react?
 
     for (ipair = 0; ipair < npair; ipair++) {
       igroup = gpair[ipair][0];
@@ -628,6 +628,9 @@ template < int NEARCP > void Collide::collisions_group()
       nj = &ngroup[jgroup];
       ilist = glist[igroup];
       jlist = glist[jgroup];
+
+      // re-test for no possible attempts
+      // could have changed due to reactions in previous group pairs
 
       if (*ni == 0 || *nj == 0) continue;
       if (igroup == jgroup && *ni == 1) continue;
@@ -665,7 +668,10 @@ template < int NEARCP > void Collide::collisions_group()
         // if recombination reaction is possible for this IJ pair
         // pick a 3rd particle to participate and set cell number density
         // unless boost factor turns it off, or there is no 3rd particle
-        
+        // NOTE: ok if selected plist[k] is a previously deleted particle,
+        //   will be skipped in react::attempt() for RECOMBINATION,
+        //   recomb_species = -1 due to part3->ispecies = -1 when deleted
+
         if (recombflag && recomb_ijflag[ipart->ispecies][jpart->ispecies]) {
           if (random->uniform() > react->recomb_boost_inverse) 
             react->recomb_species = -1;
@@ -727,6 +733,14 @@ template < int NEARCP > void Collide::collisions_group()
 	  (*nj)--;
 	  jlist[j] = jlist[*nj];
           if (NEARCP) nn_jgroup[j] = nn_jgroup[*nj];
+
+          /* NOTE: incomplete logic to update plist
+                   would have to scan plist for deleted jlist[j] index
+          if (recombflag) {
+            np--;
+            plist[j] = plist[np];   // NOTE: this line cannot work
+          }
+          */
 	}
 
         // if kpart created, add to group list
@@ -753,6 +767,17 @@ template < int NEARCP > void Collide::collisions_group()
           ilist = glist[igroup];
           jlist = glist[jgroup];
           particles = particle->particles;
+
+          /* NOTE: could add new particle to plist
+                   even if don't delete jpart above
+          if (recombflag) {
+            if (np == npmax) {
+              npmax = np + DELTAPART;
+              memory->grow(plist,npmax,"collide:plist");
+            }
+            plist[np++] = particle->nlocal-1;
+          }
+          */
 	}
 
         // test to exit attempt loop due to groups becoming too small
