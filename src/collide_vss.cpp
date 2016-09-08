@@ -280,17 +280,15 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
   // if a 3rd particle is created, its kspecies >= 0 is returned
   // if 2nd particle is removed, its jspecies is set to -1
 
-  if (react) { 
+  if (react) 
     reactflag = react->attempt(ip,jp,
                                precoln.etrans,precoln.erot,
                                precoln.evib,postcoln.etotal,kspecies);
-  }
   else reactflag = 0;
- 
+  
   // repartition energy and perform velocity scattering for I,J,K particles
   // reaction may have changed species of I,J particles
   // J,K particles may have been removed or created by reaction
-
 
   kp = NULL;
 
@@ -321,7 +319,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
     // remove 2nd J particle if recombination reaction removed it
     // p3 is 3rd particle participating in energy exchange
 
-    } else if (jp->ispecies < 1) {
+    } else if (jp->ispecies < 0) {
       double *vi = ip->v;
       double *vj = jp->v;
 
@@ -330,9 +328,9 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
       double vcmf = ((precoln.imass*vi[1]) + (precoln.jmass*vj[1])) * divisor;
       double wcmf = ((precoln.imass*vi[2]) + (precoln.jmass*vj[2])) * divisor;
 
-      vi[0]=ucmf;
-      vi[1]=vcmf;
-      vi[2]=wcmf;
+      vi[0] = ucmf;
+      vi[1] = vcmf;
+      vi[2] = wcmf;
 
       jp = NULL;
       p3 = react->recomb_part3;

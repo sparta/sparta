@@ -526,7 +526,7 @@ template < int NEARCP > void Collide::collisions_one()
 
 template < int NEARCP > void Collide::collisions_group()
 {
-  int i,j,k,m,n,ii,jj,ip,np,isp,ipair,igroup,jgroup,newgroup,ngmax;
+  int i,j,k,m,n,ii,jj,kk,ip,np,isp,ipair,igroup,jgroup,newgroup,ngmax;
   int nattempt,reactflag;
   int *ni,*nj,*ilist,*jlist;
   int *nn_igroup,*nn_jgroup;
@@ -548,7 +548,7 @@ template < int NEARCP > void Collide::collisions_group()
     volume = cinfo[icell].volume / cinfo[icell].weight;
     if (volume == 0.0) error->one(FLERR,"Collision cell volume is zero");
 
-    // if recombination is possible, setup particle list for this cell
+    // if recombination is possible, setup particle list for entire cell
     // used to pick 3rd particle from entire cell, not just from IJgroups
 
     if (recombflag) {
@@ -609,7 +609,6 @@ template < int NEARCP > void Collide::collisions_group()
 	  npair++;
 	}
       }
-
 
     // perform collisions for each pair of groups in gpair list
     // select random particle in each group
@@ -673,10 +672,14 @@ template < int NEARCP > void Collide::collisions_group()
           else if (np <= 2) 
             react->recomb_species = -1;
           else {
-            k = np * random->uniform();
             ii = ilist[i];
             jj = jlist[j];
-            while (k == ii || k == jj) k = np * random->uniform();
+            k = np * random->uniform();
+            kk = plist[k];
+            while (kk == ii || kk == jj) {
+              k = np * random->uniform();
+              kk = plist[k];
+            }
             react->recomb_part3 = &particles[plist[k]];
             react->recomb_species = react->recomb_part3->ispecies;
             react->recomb_density = np * update->fnum / volume;
@@ -698,14 +701,10 @@ template < int NEARCP > void Collide::collisions_group()
 	if (newgroup != igroup) {
 	  addgroup(newgroup,ilist[i]);
           jlist = glist[jgroup];
-	  ilist[i] = ilist[*ni-1];
 	  (*ni)--;
+	  ilist[i] = ilist[*ni];
           // this line needed if jgroup=igroup and just moved jlist[j]
           if (jlist == ilist && j == *ni) j = i;
-	  if (*ni <= 1) {
-	    if (*ni == 0) break;
-	    if (igroup == jgroup) break;
-	  }
 	}
 
 	// jpart may now be in different group or destroyed
@@ -716,12 +715,8 @@ template < int NEARCP > void Collide::collisions_group()
 	  if (newgroup != jgroup) {
 	    addgroup(newgroup,jlist[j]);
             ilist = glist[igroup];
-	    jlist[j] = jlist[*nj-1];
 	    (*nj)--;
-	    if (*nj <= 1) {
-	      if (*nj == 0) break;
-	      if (igroup == jgroup) break;
-	    }
+	    jlist[j] = jlist[*nj];
 	  }
 	} else {
           if (ndelete == maxdelete) {
@@ -732,10 +727,6 @@ template < int NEARCP > void Collide::collisions_group()
 	  (*nj)--;
 	  jlist[j] = jlist[*nj];
           if (NEARCP) nn_jgroup[j] = nn_jgroup[*nj];
-	  if (*nj <= 1) {
-	    if (*nj == 0) break;
-	    if (igroup == jgroup) break;
-	  }
 	}
 
         // if kpart created, add to group list
@@ -763,6 +754,17 @@ template < int NEARCP > void Collide::collisions_group()
           jlist = glist[jgroup];
           particles = particle->particles;
 	}
+
+        // test to exit attempt loop due to groups becoming too small
+        
+        if (*ni <= 1) {
+          if (*ni == 0) break;
+          if (igroup == jgroup) break;
+        }
+        if (*nj <= 1) {
+          if (*nj == 0) break;
+          if (igroup == jgroup) break;
+        }
       }
     }
   }
@@ -1231,14 +1233,10 @@ void Collide::collisions_group_ambipolar()
 	if (newgroup != igroup) {
 	  addgroup(newgroup,ilist[i]);
           jlist = glist[jgroup];
-	  ilist[i] = ilist[*ni-1];
 	  (*ni)--;
+	  ilist[i] = ilist[*ni];
           // this line needed if jgroup=igroup and just moved jlist[j]
           if (jlist == ilist && j == *ni) j = i;
-	  if (*ni <= 1) {
-	    if (*ni == 0) break;
-	    if (igroup == jgroup) break;
-	  }
 	}
 
 	// jpart may now be in different group or destroyed
@@ -1249,26 +1247,17 @@ void Collide::collisions_group_ambipolar()
 	  if (newgroup != jgroup) {
 	    addgroup(newgroup,jlist[j]);
             ilist = glist[igroup];
-	    jlist[j] = jlist[*nj-1];
 	    (*nj)--;
-            if (*nj <= 1) {
-	      if (*nj == 0) break;
-	      if (igroup == jgroup) break;
-	    }
+	    jlist[j] = jlist[*nj];
 	  }
-
 	} else {
           if (ndelete == maxdelete) {
             maxdelete += DELTADELETE;
             memory->grow(dellist,maxdelete,"collide:dellist");
           }
           dellist[ndelete++] = jlist[j];
-	  jlist[j] = jlist[*nj-1];
 	  (*nj)--;
-	  if (*nj <= 1) {
-	    if (*nj == 0) break;
-	    if (igroup == jgroup) break;
-	  }
+	  jlist[j] = jlist[*nj];
 	}
 
         // if kpart created, add to group list
@@ -1285,6 +1274,17 @@ void Collide::collisions_group_ambipolar()
           ionambi = particle->eivec[particle->ewhich[index_ionambi]];
           velambi = particle->edarray[particle->ewhich[index_velambi]];
 	}
+
+        // test to exit attempt loop due to groups becoming too small
+        
+        if (*ni <= 1) {
+          if (*ni == 0) break;
+          if (igroup == jgroup) break;
+        }
+        if (*nj <= 1) {
+          if (*nj == 0) break;
+          if (igroup == jgroup) break;
+        }
       }
     }
 
