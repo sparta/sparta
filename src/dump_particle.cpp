@@ -854,7 +854,6 @@ int DumpParticle::parse_fields(int narg, char **arg)
   return narg;
 }
 
-
 /* ----------------------------------------------------------------------
    add Custom ID to list of particle custom attribute IDs used by dump
    return index of where this custom attribute is in list

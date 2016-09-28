@@ -86,7 +86,7 @@ class Particle : protected Pointers {
   // extra custom vectors/arrays for per-particle data
   // ncustom > 0 if there are any extra arrays
   // custom attributes are created by various commands
-  // these varaiables are public, others below are private
+  // these variables are public, others below are private
 
   int ncustom;              // # of custom attributes, some may be deleted
   int *etype;               // type = INT/DOUBLE of each attribute
