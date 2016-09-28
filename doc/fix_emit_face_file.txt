@@ -200,7 +200,7 @@ as follows, along with the meaning of the numeric value specified for
 the mesh point:
 
 nrho = number density
-vstream = 3 components of streaming velocity
+vx,vy,vz = 3 components of streaming velocity
 temp = thermal temperature
 trot = rotational temperature
 tvib = vibrational temperature
