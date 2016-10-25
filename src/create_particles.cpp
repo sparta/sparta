@@ -278,6 +278,9 @@ void CreateParticles::command(int narg, char **arg)
   // generate particles
   // NOTE: invoke local or global option here
 
+  if (comm->me == 0)
+    if (screen) fprintf(screen,"Creating particles ...\n");
+
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
