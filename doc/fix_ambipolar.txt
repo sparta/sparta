@@ -37,15 +37,14 @@ Each pair of particles thus moves together through the simulation
 domain, as if they were a single particle, which is how they are
 stored within SPARTA.  This means a normal timestep can be used.
 
-An overview of all the operations within SPARTA which use the
-ambipolar approximation is given in the "Section
-4.11"_Section_howto.html#howto_11.  This includes gas-phase collisions
-and chemistry as well as surface chemistry when particles collide with
-surface elements or the global boundary of the simulation box.  The
-section also lists all the commands that can be used in an input
-script to invoke various options associated with the ambipolar
-approximation.  All of them depend on this fix ambipolar command being
-defined.
+An overview of how to run simulations with the ambipolar approximation
+is given in the "Section 4.11"_Section_howto.html#howto_11.  This
+includes gas-phase collisions and chemistry as well as surface
+chemistry when particles collide with surface elements or the global
+boundary of the simulation box.  The section also lists all the
+commands that can be used in an input script to invoke various options
+associated with the ambipolar approximation.  All of them depend on
+this fix ambipolar command being defined.
 
 This command defines {especies} which is the species ID associated
 with the ambipolar electrons.  It also specifies one or more species

@@ -139,6 +139,11 @@ vibrational info (temperature, relaxation number, degeneracy) for each
 species that has 4,6,8 vibrational degrees of freedom, which
 correspond to 2,3,4 vibrational modes.
 
+Note that if any species are defined which have more than one
+vibrational mode (see the "species"_species/html command, then use of
+the {discrete} option also requires use of the "fix
+vibmode"_fix_vibmode.html command.
+
 :line
 
 [Restrictions:] none
