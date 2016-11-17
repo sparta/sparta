@@ -68,6 +68,8 @@ styles available in SPARTA:
 "adapt"_fix_adapt.html - on-the-fly grid adaptation
 "ambipolar"_fix_ambipolar.html - ambipolar approximation for ionized plasmas
 "ave/grid"_fix_ave_grid.html - compute per grid cell time-averaged quantities
+"ave/histo"_fix_ave_histo.html - compute/output time averaged histograms
+"ave/histo/weight"_fix_ave_histo.html - compute/output weighted histograms
 "ave/surf"_fix_ave_surf.html - compute per surface element time-averaged quantities
 "ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
 "balance"_fix_balance.html - perform dynamic load-balancing
@@ -76,7 +78,8 @@ styles available in SPARTA:
 "emit/surf"_fix_emit_surf.html - emit particles at surfaces
 "grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
 "move/surf"_fix_move_surf.html - move surfaces dynamically during a simulation
-"print"_fix_print.html - print text and variables during a simulation :ul
+"print"_fix_print.html - print text and variables during a simulation
+"vibmode"_fix_vibmode.html - discrete vibrational energy modes :ul
 
 :line
 

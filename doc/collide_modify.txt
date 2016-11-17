@@ -22,8 +22,8 @@ keywords = {vremax} or {remain} or {ambipolar} or {nearcp} or {rotate} or {vibra
     choice = {yes} or {no} to turn on/off near collision partners
     Nlimit = max # of attempts made to find a collision partner
   {ambipolar} value = {no} or {yes}
-  {rotate} value = {no} or {yes}
-  {vibrate} value = {no} or {discrete} or {smooth} :pre
+  {rotate} value = {no} or {smooth} or {discrete}
+  {vibrate} value = {no} or {smooth} or {discrete} :pre
 :ule
 
 [Examples:]
@@ -95,39 +95,49 @@ when there are large numbers of particles in some or all grid cells.
 
 If the {ambipolar} keyword is set to {yes}, then collisions within a
 grid cell with use the ambipolar approximation.  This requires use of
-the "fix ambipolar"_fix_ambipolar.html command to define which species
+the "fix ambipolar"_fix ambipolar.html command to define which species
 is an electron and which species are ions.  There can be many of the
 latter.  When collisions within a single grid cell are performed, each
 ambipolar ion is split into two particles, the ion and an associated
 electron.  Collisions between the augmented set of particles are
 calculated.  Ion/electron chemistry can also occur if the
-'react"_react.html command has been used to read a file of reactions
+"react"_react.html command has been used to read a file of reactions
 that include such reactions.  See the "react"_react.html command doc
 page.  After all collisions in the grid cell have been computed, there
 is still a one-to-one correspondence between ambipolar ions and
 electron, and each pair is recombined into a single ambipolar
 particle.
 
-The {rotate} keyword determines how vibrational energy is treated in
+The {rotate} keyword determines how rotational energy is treated in
 particle collisions and stored by particles.  If the value is set to
 {no}, then rotational energy is not tracked; every particle's
-rotational energy is 0.0.  If the value is set to {yes}, a particle's
-rotational energy is a continuous value.
+rotational energy is 0.0.  If the value is set to {smooth}, a
+particle's rotational energy is a continuous value.  If the value is
+set to {discrete}, each particle's rotational energy is set to
+discrete values, namely multiples of order kT where k = the Boltzmann
+constant and T is one or more characteristic rotational temperatures
+set for the particle species. 
+
+Note that in the {discrete} case the "species"_species.html command
+must be used with its optional {rotfile} keyword to set the rotational
+temperature(s) for each species that has 2 or 3 rotational degrees of
+freedom.
 
 The {vibrate} keyword determines how vibrational energy is treated in
 particle collisions and stored by particles.  If the value is set to
 {no}, then vibrational energy is not tracked; every particle's
-vibrational energy is 0.0.  If the value is set to {discrete}, each
-particle's vibrational energy is set to discrete values, namely
-multiples of kT where k = the Boltzmann constant and T is the
-characteristic vibrational temperature set for the particle's species
-in the file read by the "species"_species.html command.  If the value
-is set to {smooth}, a particle's vibrational energy is a continuous
-value.  Note that the {discrete} setting is only observed if the
-vibrational degrees of freedom for the species is 2, as set in the
-file read by the "species"_species.html command, i.e. for species that
-are dimer molecules.  Species with more degrees of freedom (4,6,etc)
-are always treated as if the setting were {smooth}.
+vibrational energy is 0.0.  If the value is set to {smooth}, a
+particle's vibrational energy is a continuous value.  If the value is
+set to {discrete}, each particle's vibrational energy is set to
+discrete values, namely multiples of kT where k = the Boltzmann
+constant and T is one or more characteristic vibrational temperatures
+set for the particle species.
+
+Note that in the {discrete} case the "species"_species.html command
+must be used with its optional {vibfile} keyword to set the
+vibrational info (temperature, relaxation number, degeneracy) for each
+species that has 4,6,8 vibrational degrees of freedom, which
+correspond to 2,3,4 vibrational modes.
 
 :line
 

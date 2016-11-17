@@ -25,7 +25,8 @@ SPARTA works.
 4.8 <A HREF = "#howto_8">Details of grid geometry in SPARTA</A><BR>
 4.9 <A HREF = "#howto_9">Details of surfaces in SPARTA</A><BR>
 4.10 <A HREF = "#howto_10">Restarting a simulation</A><BR>
-4.11 <A HREF = "#howto_11">Using the ambipolar approximation</A> <BR>
+4.11 <A HREF = "#howto_11">Using the ambipolar approximation</A><BR>
+4.12 <A HREF = "#howto_12">Using multiple vibrational energy levels</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -1054,9 +1055,73 @@ collisions.  The <A HREF = "stats_style.html">stats_style</A> <I>nsreact</I> and
 attributes defined by the <A HREF = "fix_ambipolar.html">fix ambipolar</A> command.
 E.g. this command
 </P>
-<PRE>dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi 
+<PRE>dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi[2] 
 </PRE>
-<P>will output the ionambi flag = 1 for ambipolar ions, along with the
-vx,vy,vz of their associated ambipolar electrons.
+<P>will output the ionambi flag = 1 for ambipolar ions, along with the vy
+of their associated ambipolar electrons.
+</P>
+<P>The <A HREF = "read_restart.html">read_restart</A> doc page explains how to restart
+ambipolar simulations where a fix like <A HREF = "fix_ambipolar.html">fix
+ambipolar</A> has been used to store extra
+per-particle properties.
+</P>
+<HR>
+
+<A NAME = "howto_12"></A><H4>4.12 Using multiple vibrational energy levels 
+</H4>
+<P>DSMC models for collisions between one or more polyatomic species can
+include the effect of multiple discrete vibrational levels, where a
+collision transfers vibrational energy not just between the two
+particles but between the various levels appopriate to each particle
+species.
+</P>
+<P>This kind of model can be enabled in SPARTA using the following
+commands:
+</P>
+<UL><LI><A HREF = "species.html">species ... vibfile ...</A>
+<LI><A HREF = "collide_modify.html">collide_modify vibrate discrete</A>
+<LI><A HREF = "fix_vibmode.html">fix vibmode</A>
+<LI><A HREF = "dump.html">dump particle p_vibmode</A> 
+</UL>
+<P>The <A HREF = "species.html">species</A> command with its <I>vibfile</I> option allows a
+separate file with per-species vibrational information to be read.
+See data/air.species.vib for an example of such a file.
+</P>
+<P>Only species with 4,6,8 vibrational degrees of freedom, as defined in
+the species file read by the <A HREF = "species.html">species</A> command, need to
+be listed in the <I>vibfile</I>.  These species have N modes, where N =
+degrees of freedom / 2.  For each mode, a vibrational temperature,
+relaxation number, and degeneracy is defined in the <I>vibfile</I>.  These
+quantities are used in the energy exchange formulas for each
+collision.
+</P>
+<P>The <A HREF = "collide_modify.html">collide_modify vibrate discrete</A> command is
+used to enable the discrete model.  Other allowed settings are <I>none</I>
+and <I>smooth</I>.  The former turns off vibrational energy effects
+altogether.  The latter uses a single continuous value to represent
+vibrational energy; no per-mode information is stored.
+</P>
+<P>The <A HREF = "fix_vibmode.html">fix vibmode</A> command is used to allocate
+per-particle storage for the population of levels appropriate to each
+species.  This will be 1 to 4 values for each species.  Note that this
+command must be used before particles are created via the
+<A HREF = "create_particles.html">create_particles</A> command to allow the level
+populations for new particles to be set appropriately.  The
+<A HREF = "fix_vibmode.html">fix vibmode</A> command doc page has more details.
+</P>
+<P>The <A HREF = "dump.html">dump particle</A> command can output the custom particle
+attributes defined by the <A HREF = "fix_vibmode.html">fix vibmode</A> command.
+E.g. this command
+</P>
+<PRE>dump 1 particle 1000 tmp.dump id type x y z evib p_vibmode[1] p_vibmode[2] p_vibmode[3] 
+</PRE>
+<P>will output the total vibrational energy (summed across all levels)
+and the population counts for the first 3 vibrational energy levels
+for each particle.  The vibmode count will be 0 for vibrational levels
+that do not exist for a particular species.
+</P>
+<P>The <A HREF = "read_restart.html">read_restart</A> doc page explains how to restart
+simulations where a fix like <A HREF = "fix_vibmode.html">fix vibmode</A> has been
+used to store extra per-particle properties.
 </P>
 </HTML>

@@ -10,17 +10,22 @@ species command :h3
 
 [Syntax:]
 
-species file ID1 ID2 ... :pre
+species file ID1 ID2 ... keyword value ... :pre
 
-file = filename that lists species
-ID1, ID2, ... = one or more species names listed in file
-multi-species abbreviations can also be used (see below) :ul
+file = filename with species info :ulb,l
+ID1, ID2, ... = one or more species names listed in file :l
+multi-species abbreviations can also be used (see below) :l
+zero or more keyword/value pairs may be appended :l
+keyword = {rotfile} or {vibfile} :l
+  {rotfile} value = rfile = filename for extra rotational info
+  {vibfile} value = vfile = filename for extra vibrational info :pre
+:ule
 
 [Examples:]
 
-species species.data air
-species species.data air Cl
-species species.data O2 N2 NO
+species air.species air
+species ar.species Ar
+species co2.species air CO2 CO rotfile air.rot
 species myfile H+ Cl- HCl :pre
 
 [Description:]
@@ -30,10 +35,10 @@ command can be used as many times as desired to add species to the
 list of species that the simulation recognizes.
 
 The specified {file} is the name of a file containing definitions for
-some number of species, not all of which need to used by this
-simulation.  Only those requested by ID will be extracted from the
-file and they must be present in the file.  The format of the species
-file is discussed below.  The data directory in the SPARTA
+a list of species, not all of which need to specified in this command,
+or used in a simulation.  Only those requested by ID will be extracted
+from the file and they must be present in the file.  The format of the
+species file is discussed below.  The data directory in the SPARTA
 distribution contains several species files, all with the suffix
 ".species".
 
@@ -43,13 +48,13 @@ alphanumeric characters or "+", "-", or underscore.
 
 Instead of specifying IDs for single species, one of several
 pre-defined multi-species names can be used, each of which is expanded
-into a list of several individual species IDs.  The list of recognized
-abbreviations is as follows:
+into a list of several individual species IDs.  The list of currently
+recognized abbreviations is as follows:
 
 air = N, O, NO :ul
 
 These abbreviations can be used in combination with single-species IDs
-as in the 2nd example above.
+as in the 3rd example above.
 
 :line
 
@@ -58,21 +63,105 @@ are allowed in the file.  Comment lines start with a "#" character.
 All other lines must have the following format with values separated
 by whitespace:
 
-species-ID prop1 prop2 ... prop9
+species-ID prop1 prop2 ... prop9 prop10 :pre
 
 The species-ID is a string that will be matched against the requested
 species-ID, as described above.  The properties are as follows:
 
 prop1 = molecular weight (atomic mass units, e.g. 16 for oxygen)
 prop2 = molecular mass (mass units)
-prop3 = rotational degrees of freedom (integer)
+prop3 = rotational degrees of freedom (integer, unitless)
 prop4 = inverse rotational relaxtion number (unitless)
-prop5 = vibrational degrees of freedom (integer)
+prop5 = vibrational degrees of freedom (integer, unitless)
 prop6 = inverse vibrational relaxation number (unitless)
 prop7 = vibrational temperature (temperature units)
 prop8 = species weight (unitless)
 prop9 = multiple of electon charge (1 for a proton) :ul
 
+The allowed values for rotational degrees of freedom (rotdof = prop3)
+are 0,2,3.  Typically, 0 = monatomic species, 2 = diatomic, 3 =
+anything else.
+
+The allowed values for vibrational degrees of freedom (vibdof = prop5)
+are 0,2,4,6,8.  The associated number of vibrational modes is vibdof
+divided by 2.  Typically, 0 modes = monatomic species, 1 mode =
+diatomic, 2/3/4 modes = triatomic or larger molecules.
+
+Note that all the listed rotational and vibrational values must be
+specified for each species, but cases where they are not used by
+SPARTA, they can simply be specified as 0.0.  Whether or not the
+values are used for a species depends on the value of rotdof and
+vibdof, and whether they are used in a simulation also depends on the
+settings specified for the {rotation} and {vibration} keywords of the
+"collide_modify"_collide_modify.html command.
+
+Specifically, if prop3 for rotdof = 0, then prop4 is ignored.  If
+prop5 for vibdof = 0, then prop6 and prop7 are ignored.
+
+If rotdof = 2 or 3, then rotational temperatures can be specified for
+the species in a separate file using the optional {rotfile} keyword,
+as discussed below.  If the "collide_modify
+rotation"_collide_modify.html command is used with a setting of
+{discrete}, then these rotational temperatures must be specified for
+each species with a rotdof = 2 or 3.
+
+If vibdof = 4,6,8, then information for 2,3,4 vibrational modes can be
+specified for the species in a separate file using the optional
+{vibfile} keyword, as discussed below.  If the "collide_modify
+vibration"_collide_modify.html command is used with a setting of
+{discrete}, then this vibrational mode info must be specified for each
+species with a vibdof = 4,6,8.
+
+:line
+
+The optional {rotfile} keyword can be used to specify additional
+rotational information in the specified {rfile}, though this
+information is ignored unless the "collide_modify
+rotate"_collide_modify.html setting is specified as {discrete}.
+
+The format of a species rotational file is as follows.  Comments
+or blank lines are allowed in the file.  Comment lines start with a
+"#" character.  All other lines must have the following format with
+values separated by whitespace:
+
+species-ID N temp1 temp2 ... tempN :pre
+
+The species-ID is a string that will be matched against the requested
+species-ID, as described above.  N is the number of rotational
+temperatures that follow.  N must be 1 if rotdof = 2 was used in the
+species file.  N must be 3 if rotdof = 3.
+
+These quantities are used during collisions if rotational energy is
+modeled in discrete levels.
+
+:line
+
+The optional {vibfile} keyword can be used to specify additional
+vibrational information in the specified {vfile}, though this
+information is ignored unless the "collide_modify
+vibrate"_collide_modify.html setting is specified as {discrete}.
+
+The format of a species vibrational file is as follows.  Comments or
+blank lines are allowed in the file.  Comment lines start with a "#"
+character.  All other lines must have the following format with values
+separated by whitespace:
+
+species-ID N temp1 relax1 degen1 temp2 relax2 degen2 ... tempN relaxN degenN :pre
+
+The species-ID is a string that will be matched against the requested
+species-ID, as described above.  N is the number of vibrational modes
+that follow, which must be either 2,3,4, and must match the
+corresponding vibdof value = 4,6,8 (divided by two) used in the
+species file.
+
+For each of the N modes, 3 values are listed:
+
+tempI = vibrational temperature of mode I (temperature units)
+relaxI = inverse vibrational relaxation number of mode I (unitless)
+degenI = degeneracy of mode I (integer, unitless) :ul
+
+These quantities are used during collisions if vibrational energy is
+modeled in discrete levels.
 
 :line
 

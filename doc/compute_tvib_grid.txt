@@ -55,8 +55,8 @@ species.
 The vibrational temperature Tsp for particles of a single species in
 the group is defined as Tsp as follows:
 
-Ibar = Sum_i (e_vib_i) / (N kB Theta) :pre
-Tsp = (2/kB) Sum_i (evib_i) / N (2 Ibar ln(1 + 1/Ibar))
+Ibar = Sum_i (e_vib_i) / (N kB Theta)
+Tsp = (2/kB) Sum_i (evib_i) / N (2 Ibar ln(1 + 1/Ibar)) :pre
 
 where e_vib is the vibrational energy of a single particle I, N is the
 total # of particles of that species, and {kB} is the Boltzmann factor.

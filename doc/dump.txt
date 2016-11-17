@@ -25,7 +25,7 @@ args = list of arguments for a particular style :l
   {particle} args = list of particle attributes
     possible attributes = id, type, proc, x, y, z, xs, ys, zs, vx, vy, vz,
                           ke, erot, evib, 
-                          p_ID, p_ID\[N]\, c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+                          p_ID, p_ID\[N\], c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
 
       id = particle ID
       type = particle species

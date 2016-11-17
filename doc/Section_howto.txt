@@ -22,7 +22,8 @@ SPARTA works.
 4.8 "Details of grid geometry in SPARTA"_#howto_8
 4.9 "Details of surfaces in SPARTA"_#howto_9
 4.10 "Restarting a simulation"_#howto_10
-4.11 "Using the ambipolar approximation"_#howto_11 :all(b)
+4.11 "Using the ambipolar approximation"_#howto_11
+4.12 "Using multiple vibrational energy levels"_#howto_12 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
@@ -1044,7 +1045,71 @@ The "dump particle"_dump.html command can output the custom particle
 attributes defined by the "fix ambipolar"_fix_ambipolar.html command.
 E.g. this command
 
-dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi :pre
+dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi\[2\] :pre
 
-will output the ionambi flag = 1 for ambipolar ions, along with the
-vx,vy,vz of their associated ambipolar electrons.
+will output the ionambi flag = 1 for ambipolar ions, along with the vy
+of their associated ambipolar electrons.
+
+The "read_restart"_read_restart.html doc page explains how to restart
+ambipolar simulations where a fix like "fix
+ambipolar"_fix_ambipolar.html has been used to store extra
+per-particle properties.
+
+:line
+
+4.12 Using multiple vibrational energy levels :link(howto_12),h4
+
+DSMC models for collisions between one or more polyatomic species can
+include the effect of multiple discrete vibrational levels, where a
+collision transfers vibrational energy not just between the two
+particles but between the various levels appopriate to each particle
+species.
+
+This kind of model can be enabled in SPARTA using the following
+commands:
+
+"species ... vibfile ..."_species.html
+"collide_modify vibrate discrete"_collide_modify.html
+"fix vibmode"_fix_vibmode.html
+"dump particle p_vibmode"_dump.html :ul
+
+The "species"_species.html command with its {vibfile} option allows a
+separate file with per-species vibrational information to be read.
+See data/air.species.vib for an example of such a file.
+
+Only species with 4,6,8 vibrational degrees of freedom, as defined in
+the species file read by the "species"_species.html command, need to
+be listed in the {vibfile}.  These species have N modes, where N =
+degrees of freedom / 2.  For each mode, a vibrational temperature,
+relaxation number, and degeneracy is defined in the {vibfile}.  These
+quantities are used in the energy exchange formulas for each
+collision.
+
+The "collide_modify vibrate discrete"_collide_modify.html command is
+used to enable the discrete model.  Other allowed settings are {none}
+and {smooth}.  The former turns off vibrational energy effects
+altogether.  The latter uses a single continuous value to represent
+vibrational energy; no per-mode information is stored.
+
+The "fix vibmode"_fix_vibmode.html command is used to allocate
+per-particle storage for the population of levels appropriate to each
+species.  This will be 1 to 4 values for each species.  Note that this
+command must be used before particles are created via the
+"create_particles"_create_particles.html command to allow the level
+populations for new particles to be set appropriately.  The
+"fix vibmode"_fix_vibmode.html command doc page has more details.
+
+The "dump particle"_dump.html command can output the custom particle
+attributes defined by the "fix vibmode"_fix_vibmode.html command.
+E.g. this command
+
+dump 1 particle 1000 tmp.dump id type x y z evib p_vibmode\[1\] p_vibmode\[2\] p_vibmode\[3\] :pre
+
+will output the total vibrational energy (summed across all levels)
+and the population counts for the first 3 vibrational energy levels
+for each particle.  The vibmode count will be 0 for vibrational levels
+that do not exist for a particular species.
+
+The "read_restart"_read_restart.html doc page explains how to restart
+simulations where a fix like "fix vibmode"_fix_vibmode.html has been
+used to store extra per-particle properties.

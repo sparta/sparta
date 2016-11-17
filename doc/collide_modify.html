@@ -27,8 +27,8 @@
     choice = <I>yes</I> or <I>no</I> to turn on/off near collision partners
     Nlimit = max # of attempts made to find a collision partner
   <I>ambipolar</I> value = <I>no</I> or <I>yes</I>
-  <I>rotate</I> value = <I>no</I> or <I>yes</I>
-  <I>vibrate</I> value = <I>no</I> or <I>discrete</I> or <I>smooth</I> 
+  <I>rotate</I> value = <I>no</I> or <I>smooth</I> or <I>discrete</I>
+  <I>vibrate</I> value = <I>no</I> or <I>smooth</I> or <I>discrete</I> 
 </PRE>
 
 </UL>
@@ -101,39 +101,49 @@ when there are large numbers of particles in some or all grid cells.
 </P>
 <P>If the <I>ambipolar</I> keyword is set to <I>yes</I>, then collisions within a
 grid cell with use the ambipolar approximation.  This requires use of
-the <A HREF = "fix_ambipolar.html<A HREF = "react.html">>fix ambipolar</A> command to define which species
+the <A HREF = "fix">fix ambipolar</A> ambipolar.html command to define which species
 is an electron and which species are ions.  There can be many of the
 latter.  When collisions within a single grid cell are performed, each
 ambipolar ion is split into two particles, the ion and an associated
 electron.  Collisions between the augmented set of particles are
 calculated.  Ion/electron chemistry can also occur if the
-'react</A> command has been used to read a file of reactions
+<A HREF = "react.html">react</A> command has been used to read a file of reactions
 that include such reactions.  See the <A HREF = "react.html">react</A> command doc
 page.  After all collisions in the grid cell have been computed, there
 is still a one-to-one correspondence between ambipolar ions and
 electron, and each pair is recombined into a single ambipolar
 particle.
 </P>
-<P>The <I>rotate</I> keyword determines how vibrational energy is treated in
+<P>The <I>rotate</I> keyword determines how rotational energy is treated in
 particle collisions and stored by particles.  If the value is set to
 <I>no</I>, then rotational energy is not tracked; every particle's
-rotational energy is 0.0.  If the value is set to <I>yes</I>, a particle's
-rotational energy is a continuous value.
+rotational energy is 0.0.  If the value is set to <I>smooth</I>, a
+particle's rotational energy is a continuous value.  If the value is
+set to <I>discrete</I>, each particle's rotational energy is set to
+discrete values, namely multiples of order kT where k = the Boltzmann
+constant and T is one or more characteristic rotational temperatures
+set for the particle species. 
+</P>
+<P>Note that in the <I>discrete</I> case the <A HREF = "species.html">species</A> command
+must be used with its optional <I>rotfile</I> keyword to set the rotational
+temperature(s) for each species that has 2 or 3 rotational degrees of
+freedom.
 </P>
 <P>The <I>vibrate</I> keyword determines how vibrational energy is treated in
 particle collisions and stored by particles.  If the value is set to
 <I>no</I>, then vibrational energy is not tracked; every particle's
-vibrational energy is 0.0.  If the value is set to <I>discrete</I>, each
-particle's vibrational energy is set to discrete values, namely
-multiples of kT where k = the Boltzmann constant and T is the
-characteristic vibrational temperature set for the particle's species
-in the file read by the <A HREF = "species.html">species</A> command.  If the value
-is set to <I>smooth</I>, a particle's vibrational energy is a continuous
-value.  Note that the <I>discrete</I> setting is only observed if the
-vibrational degrees of freedom for the species is 2, as set in the
-file read by the <A HREF = "species.html">species</A> command, i.e. for species that
-are dimer molecules.  Species with more degrees of freedom (4,6,etc)
-are always treated as if the setting were <I>smooth</I>.
+vibrational energy is 0.0.  If the value is set to <I>smooth</I>, a
+particle's vibrational energy is a continuous value.  If the value is
+set to <I>discrete</I>, each particle's vibrational energy is set to
+discrete values, namely multiples of kT where k = the Boltzmann
+constant and T is one or more characteristic vibrational temperatures
+set for the particle species.
+</P>
+<P>Note that in the <I>discrete</I> case the <A HREF = "species.html">species</A> command
+must be used with its optional <I>vibfile</I> keyword to set the
+vibrational info (temperature, relaxation number, degeneracy) for each
+species that has 4,6,8 vibrational degrees of freedom, which
+correspond to 2,3,4 vibrational modes.
 </P>
 <HR>
 
