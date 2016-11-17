@@ -14,33 +14,29 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(ambipolar,FixAmbipolar)
+FixStyle(vibmode,FixVibmode)
 
 #else
 
-#ifndef SPARTA_FIX_AMBIPOLAR_H
-#define SPARTA_FIX_AMBIPOLAR_H
+#ifndef SPARTA_FIX_VIBMODE_H
+#define SPARTA_FIX_VIBMODE_H
 
+#include "stdio.h"
 #include "fix.h"
-#include "particle.h"
 
 namespace SPARTA_NS {
 
-class FixAmbipolar : public Fix {
+class FixVibmode : public Fix {
  public:
-  int especies;               // index of electron species
-  int *ions;                  // 1 if a particle species is an ionx
-
-  FixAmbipolar(class SPARTA *, int, char **);
-  ~FixAmbipolar();
+  FixVibmode(class SPARTA *, int, char **);
+  ~FixVibmode();
   int setmask();
   void init();
   void add_particle(int, double, double, double, double *);
-  void surf_react(Particle::OnePart *, int &, int &);
 
  private:
-  int maxion;                 // length of ions vector
-  int ionindex,velindex;      // indices into particle custom data structs
+  int maxmode;           // max # of vibrational modes for any species
+  int vibmodeindex;      // index into particle custom data structs
   class RanPark *random;
 };
 

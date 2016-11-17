@@ -25,21 +25,39 @@ class Particle : protected Pointers {
   int exist;                // 1 if particles exist
   int sorted;               // 1 if particles are sorted by grid cell
 
-  struct Species {          // info on each particle species
+  struct Species {          // info on each particle species, read from file
+    char id[16];            // species ID
+    double molwt;           // molecular weight
+    double mass;            // molecular mass
+    double specwt;          // species weight
+    double charge;          // multiple of electron charge
+    double rotrel;          // inverse rotational relaxation number
+    double rottemp[3];      // rotational temperature(s)
+    double vibtemp[4];      // vibrational tempearture(s)
+    double vibrel[4];       // inverse vibrational relaxation number(s)
+    int vibdegen[4];        // vibrational mode degeneracies
+    int rotdof,vibdof;      // rotational/vibrational DOF
+    int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
+    int internaldof;        // 1 if either rotdof or vibdof != 0
+  };
+
+  struct RotFile {          // extra rotation info read from rotfile
     char id[16];
-    double molwt;
-    double mass;
-    double rotrel;
-    double vibrel;
-    double vibtemp;
-    double specwt;
-    double charge;
-    int rotdof,vibdof;
-    int internaldof;
+    double rottemp[4];
+    int ntemp;
+  };
+
+  struct VibFile {          // extra vibration info read from vibfile
+    char id[16];
+    double vibrel[4];
+    double vibtemp[4];
+    int vibdegen[4];
+    int nmode;
   };
 
   Species *species;         // list of particle species info
   int nspecies;             // # of defined species
+  int maxvibmode;           // max vibmode of any species (mode = dof/2)
 
   class Mixture **mixture;
   int nmixture;
@@ -138,6 +156,7 @@ class Particle : protected Pointers {
   int unpack_restart(char *);
 
   int find_custom(char *);
+  void error_custom();
   int add_custom(char *, int, int);
   void grow_custom(int, int, int);
   void remove_custom(int);
@@ -156,10 +175,13 @@ class Particle : protected Pointers {
   int maxsort;              // max # of particles next can hold
   int maxspecies;           // max size of species list
 
+  FILE *fp;                 // file pointer for species, rotation, vibration
+  int nfile;                // # of species read from file
+  int maxfile;              // max size of file list
+
   Species *filespecies;     // list of species read from file
-  int nfilespecies;         // # of species read from file
-  int maxfilespecies;       // max size of filespecies list
-  FILE *fp;                 // species file pointer
+  RotFile *filerot;         // list of species rotation info read from file
+  VibFile *filevib;         // list of species vibration info read from file
 
   class RanPark *wrandom;   // RNG for particle weighting
 
@@ -188,6 +210,8 @@ class Particle : protected Pointers {
   // private methods
 
   void read_species_file();
+  void read_rotation_file();
+  void read_vibration_file();
   int wordcount(char *, char **);
 };
 

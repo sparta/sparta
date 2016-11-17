@@ -150,6 +150,45 @@ void Collide::init()
   if (mixture->nspecies != particle->nspecies)
     error->all(FLERR,"Collision mixture does not contain all species");
 
+  // if rotstyle or vibstyle = DISCRETE,
+  // check that extra rotation/vibration info is defined
+  // for species that require it
+
+  if (rotstyle == DISCRETE) {
+    Particle::Species *species = particle->species;
+    int nspecies = particle->nspecies;
+
+    int flag = 0;
+    for (int isp = 0; isp < nspecies; isp++) {
+      if (species[isp].rotdof == 0) continue;
+      if (species[isp].rotdof == 2 && species[isp].nrottemp != 1) flag++;
+      if (species[isp].rotdof == 3 && species[isp].nrottemp != 3) flag++;
+    }
+    if (flag) {
+      char str[128];
+      sprintf(str,"%d species do not define corrent rotational "
+              "temps for discrete model",flag);
+      error->all(FLERR,str);
+    }
+  }
+
+  if (vibstyle == DISCRETE) {
+    Particle::Species *species = particle->species;
+    int nspecies = particle->nspecies;
+
+    int flag = 0;
+    for (int isp = 0; isp < nspecies; isp++) {
+      if (species[isp].vibdof <= 2) continue;
+      if (species[isp].nvibmode != species[isp].vibdof / 2) flag++;
+    }
+    if (flag) {
+      char str[128];
+      sprintf(str,"%d species do not define correct vibrational "
+              "modes for discrete model",flag);
+      error->all(FLERR,str);
+    }
+  }
+
   // reallocate one-cell data structs for one or many groups
 
   int oldgroups = ngroups;
@@ -288,7 +327,8 @@ void Collide::modify_params(int narg, char **arg)
     } else if (strcmp(arg[iarg],"rotate") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"no") == 0) rotstyle = NONE;
-      else if (strcmp(arg[iarg+1],"yes") == 0) rotstyle = SMOOTH;
+      else if (strcmp(arg[iarg+1],"discrete") == 0) rotstyle = DISCRETE;
+      else if (strcmp(arg[iarg+1],"smooth") == 0) rotstyle = SMOOTH;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"vibrate") == 0) {
