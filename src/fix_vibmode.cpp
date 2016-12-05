@@ -122,8 +122,8 @@ void FixVibmode::add_particle(int index, double temp_thermal,
   for (int imode = 0; imode < nmode; imode++) {
     ivib = -log(random->uniform()) * temp_vib /
       particle->species[isp].vibtemp[imode];
+    vibmode[index][imode] = ivib;
     evib += ivib * update->boltz * particle->species[isp].vibtemp[imode];
-
   }
 
   particle->particles[index].evib = evib;
