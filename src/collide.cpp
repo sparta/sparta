@@ -173,12 +173,17 @@ void Collide::init()
   }
 
   if (vibstyle == DISCRETE) {
+    index_vibmode = particle->find_custom((char *) "vibmode");
+
     Particle::Species *species = particle->species;
     int nspecies = particle->nspecies;
 
     int flag = 0;
     for (int isp = 0; isp < nspecies; isp++) {
       if (species[isp].vibdof <= 2) continue;
+      if (index_vibmode < 0) 
+        error->all(FLERR,
+                   "Fix vibmode must be used with discrete vibrational modes");
       if (species[isp].nvibmode != species[isp].vibdof / 2) flag++;
     }
     if (flag) {

@@ -102,6 +102,10 @@ class Collide : protected Pointers {
   double recomb_boost_inverse;  // recombination rate boost factor from React
   int **recomb_ijflag;          // 1 if species I,J have recomb reaction(s)
 
+  // discrete vibrational energy data structs
+
+  int index_vibmode;   // custom vibmode vector
+
   // ambipolar approximation data structs
 
   int ambiflag;       // 1 if ambipolar option is enabled
