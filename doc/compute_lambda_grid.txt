@@ -33,7 +33,7 @@ These commands will dump time averages for the mean free path for each
 grid cell to a dump file every 1000 steps:
 
 compute 1 grid species nrho temp
-fix 1 ave/grid 10 100 1000 c_1
+fix 1 ave/grid 10 100 1000 c_1\[*\]
 compute 2 lambda/grid f_1\[1\] f_1\[2\] Ar
 dump 1 grid all 1000 tmp.grid id c_2 :pre
 

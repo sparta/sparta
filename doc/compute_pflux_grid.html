@@ -39,8 +39,8 @@ compute 1 pflux/grid species momxx momxy
 each species and each grid cell to a dump file every 1000 steps:
 </P>
 <PRE>compute 1 pflux/grid species momxx momyy momzz
-fix 1 ave/grid 10 100 1000 c_1
-dump 1 grid all 1000 tmp.grid id f_1 
+fix 1 ave/grid 10 100 1000 c_1[*]
+dump 1 grid all 1000 tmp.grid id f_1[*] 
 </PRE>
 <P><B>Description:</B>
 </P>
