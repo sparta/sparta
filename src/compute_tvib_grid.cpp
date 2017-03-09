@@ -229,7 +229,7 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
     count = evib+1;
     for (isp = 0; isp < nsp; isp++) {
       ispecies = t2s[evib];
-      theta = species[ispecies].vibtemp[0];
+      theta = species[ispecies].vibtemp;
       if (theta == 0.0 || etally[icell][count] == 0.0) {
         tspecies[isp] = 0.0;
         continue;

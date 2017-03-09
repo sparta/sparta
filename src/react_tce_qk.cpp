@@ -163,7 +163,7 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
                            double pre_etrans, double pre_erot, double pre_evib,
                            double &post_etotal, int &kspecies)
 {
-  double prob,evib,inverse_kT;
+  double prob,evib;
   int iv,ilevel,maxlev,limlev;
   int mspec,aspec;
 
@@ -192,14 +192,13 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
 
   // compute probability of reaction
         
-  inverse_kT = 1.0 / (update->boltz * species[isp].vibtemp[0]);
-
   switch (r->type) {
   case DISSOCIATION:
     {
       ecc = pre_etrans + ip->evib;
-      maxlev = static_cast<int> (ecc * inverse_kT);
-      limlev = static_cast<int> (fabs(r->coeff[1]) * inverse_kT);
+      maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
+      limlev = static_cast<int> 
+        (fabs(r->coeff[1])/(update->boltz*species[isp].vibtemp));
       if (maxlev > limlev) react_prob = 1.0;
       break; 
     }
@@ -210,7 +209,7 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
         // endothermic reaction 
         
         ecc = pre_etrans + ip->evib;
-        maxlev = static_cast<int> (ecc * inverse_kT);
+        maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
         if (ecc > r->coeff[1]) {
 
           // PROB is the probability ratio of eqn (5.61)
@@ -218,11 +217,13 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
           prob = 0.0;
           do {
             iv =  static_cast<int> (random->uniform()*(maxlev+0.99999999));
-            evib = static_cast<double> (iv / inverse_kT);
+            evib = static_cast<double> 
+              (iv*update->boltz*species[isp].vibtemp);
             if (evib < ecc) react_prob = pow(1.0-evib/ecc,1.5-omega);
           } while (random->uniform() < react_prob);
             
-          ilevel = static_cast<int> (fabs(r->coeff[4]) * inverse_kT);
+          ilevel = static_cast<int> 
+            (fabs(fabs(r->coeff[4]))/(update->boltz*species[isp].vibtemp));
           if (iv >= ilevel) react_prob = 1.0;
         }
 
@@ -244,16 +245,16 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
         // potential post-collision energy
 
         ecc += r->coeff[4];
-        maxlev = static_cast<int> (ecc * inverse_kT);
+        maxlev = static_cast<int> (ecc/(update->boltz*species[isp].vibtemp));
         do {
           iv = random->uniform()*(maxlev+0.99999999);
           evib = static_cast<double> 
-            (iv * update->boltz*species[mspec].vibtemp[0]);
+            (iv*update->boltz*species[mspec].vibtemp);
           if (evib < ecc) prob = pow(1.0-evib/ecc,1.5 - r->coeff[6]);
         } while (random->uniform() < prob);
         
         ilevel = static_cast<int> 
-          (fabs(r->coeff[4]/update->boltz/species[mspec].vibtemp[0]));
+          (fabs(r->coeff[4]/update->boltz/species[mspec].vibtemp));
         if (iv >= ilevel) react_prob = 1.0;
       }
         

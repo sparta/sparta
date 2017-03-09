@@ -21,6 +21,7 @@ FixStyle(ambipolar,FixAmbipolar)
 #ifndef SPARTA_FIX_AMBIPOLAR_H
 #define SPARTA_FIX_AMBIPOLAR_H
 
+#include "stdio.h"
 #include "fix.h"
 #include "particle.h"
 

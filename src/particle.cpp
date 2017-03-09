@@ -55,9 +55,8 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   nlocal = maxlocal = 0;
   particles = NULL;
 
-  nspecies = maxspecies = 0;
+  nspecies = maxspecies  = 0;
   species = NULL;
-  maxvibmode = 0;
 
   //maxgrid = 0;
   //cellcount = NULL;
@@ -144,12 +143,6 @@ Particle::~Particle()
 
 void Particle::init()
 {
-  // check for errors in custom particle vectors/arrays
-
-  error_custom();
-
-  // initialize mixtures
-
   for (int i = 0; i < nmixture; i++) mixture[i]->init();
 
   // RNG for particle weighting
@@ -608,7 +601,7 @@ int Particle::clone_particle(int index)
 
 void Particle::add_species(int narg, char **arg)
 {
-  int i,j,k,n;;
+  int i,j,n;;
 
   if (narg < 2) error->all(FLERR,"Illegal species command");
 
@@ -621,59 +614,43 @@ void Particle::add_species(int narg, char **arg)
     }
   }
 
-  // nfile = # of species defined in file
+  // nfilespecies = # of species defined in file
   // filespecies = list of species defined in file
 
-  nfile = maxfile = 0;
+  nfilespecies = maxfilespecies = 0;
   filespecies = NULL;
 
   if (me == 0) read_species_file();
-  MPI_Bcast(&nfile,1,MPI_INT,0,world);
+  MPI_Bcast(&nfilespecies,1,MPI_INT,0,world);
   if (comm->me) {
     filespecies = (Species *) 
-      memory->smalloc(nfile*sizeof(Species),"particle:filespecies");
+      memory->smalloc(nfilespecies*sizeof(Species),
+		      "particle:filespecies");
   }
-  MPI_Bcast(filespecies,nfile*sizeof(Species),MPI_BYTE,0,world);
+  MPI_Bcast(filespecies,nfilespecies*sizeof(Species),MPI_BYTE,0,world);
 
-  // newspecies = # of new user-requested species,
-  //   not including trailing optional keywords
+  // newspecies = # of new user-requested species
   // names = list of new species IDs
   // customize abbreviations by adding new keyword in 2 places
 
   char line[MAXLINE];
 
   int newspecies = 0;
-  int iarg = 1;
-  while (iarg < narg) {
+  for (int iarg = 1; iarg < narg; iarg++) {
     if (strcmp(arg[iarg],"air") == 0) {
       strcpy(line,AIR);
       newspecies += wordcount(line,NULL);
-    } else if (strcmp(arg[iarg],"rotfile") == 0) {
-      break;
-    } else if (strcmp(arg[iarg],"vibfile") == 0) {
-      break;
-    } else {
-      newspecies++;
-    }
-    iarg++;
+    } else newspecies++;
   }
 
   char **names = new char*[newspecies];
   newspecies = 0;
 
-  iarg = 1;
-  while (iarg < narg) {
+  for (int iarg = 1; iarg < narg; iarg++) {
     if (strcmp(arg[iarg],"air") == 0) {
       strcpy(line,AIR);
       newspecies += wordcount(line,&names[newspecies]);
-    } else if (strcmp(arg[iarg],"rotfile") == 0) {
-      break;
-    } else if (strcmp(arg[iarg],"vibfile") == 0) {
-      break;
-    } else {
-      names[newspecies++] = arg[iarg];
-    }
-    iarg++;
+    } else names[newspecies++] = arg[iarg];
   }
 
   // species ID must be all alphanumeric chars, underscore, plus/minus
@@ -697,8 +674,6 @@ void Particle::add_species(int narg, char **arg)
   // extract info on user-requested species from file species list
   // add new species to default mixtures "all" and "species"
 
-  int nspecies_original = nspecies;
-
   int imix_all = find_mixture((char *) "all");
   int imix_species = find_mixture((char *) "species");
 
@@ -706,9 +681,9 @@ void Particle::add_species(int narg, char **arg)
     for (j = 0; j < nspecies; j++)
       if (strcmp(names[i],species[j].id) == 0) break;
     if (j < nspecies) error->all(FLERR,"Species ID is already defined");
-    for (j = 0; j < nfile; j++)
+    for (j = 0; j < nfilespecies; j++)
       if (strcmp(names[i],filespecies[j].id) == 0) break;
-    if (j == nfile)
+    if (j == nfilespecies)
       error->all(FLERR,"Species ID does not appear in species file");
     memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
     nspecies++;
@@ -718,130 +693,6 @@ void Particle::add_species(int narg, char **arg)
   }
 
   memory->sfree(filespecies);
-
-  // process any optional keywords
-
-  int rotindex = 0;
-  int vibindex = 0;
-
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"rotfile") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal species command");
-      if (rotindex) 
-        error->all(FLERR,"Species command can only use a single rotfile");
-      rotindex = iarg+1;
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"vibfile") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal species command");
-      if (vibindex) 
-        error->all(FLERR,"Species command can only use a single vibfile");
-      vibindex = iarg+1;
-      iarg += 2;
-    } else error->all(FLERR,"Illegal species command");
-  }
-
-  // read rotational species file and setup per-species params
-
-  if (rotindex) {
-    if (me == 0) {
-      fp = fopen(arg[rotindex],"r");
-      if (fp == NULL) {
-        char str[128];
-        sprintf(str,"Cannot open rotation file %s",arg[rotindex]);
-        error->one(FLERR,str);
-      }
-    }
-
-    nfile = maxfile = 0;
-    filerot = NULL;
-
-    if (me == 0) read_rotation_file();
-    MPI_Bcast(&nfile,1,MPI_INT,0,world);
-    if (comm->me) {
-      filerot = (RotFile *) 
-        memory->smalloc(nfile*sizeof(RotFile),"particle:filerot");
-    }
-    MPI_Bcast(filerot,nfile*sizeof(RotFile),MPI_BYTE,0,world);
-
-    for (i = 0; i < newspecies; i++) {
-      int ii = nspecies_original + i;
-
-      for (j = 0; j < nfile; j++)
-        if (strcmp(names[i],filerot[j].id) == 0) break;
-      if (j == nfile) {
-        if (species[ii].rotdof == 0) continue;
-        error->all(FLERR,"Species ID does not appear in rotation file");
-      }
-
-      int ntemp = filerot[j].ntemp;
-      if ((species[ii].rotdof == 0) || 
-          (species[ii].rotdof == 2 && ntemp != 1) || 
-          (species[ii].rotdof == 3 && ntemp != 3))
-          error->all(FLERR,"Mismatch between species rotdof " 
-                     "and rotation file entry");
-
-      species[ii].nrottemp = ntemp;
-      for (k = 0; k < ntemp; k++) {
-        species[ii].rottemp[k] = filerot[j].rottemp[k];
-      }
-    }
-
-    memory->sfree(filerot);
-  }
-
-  // read vibrational species file and setup per-species params
-
-  if (vibindex) {
-    if (me == 0) {
-      fp = fopen(arg[vibindex],"r");
-      if (fp == NULL) {
-        char str[128];
-        sprintf(str,"Cannot open vibration file %s",arg[vibindex]);
-        error->one(FLERR,str);
-      }
-    }
-
-    nfile = maxfile = 0;
-    filevib = NULL;
-
-    if (me == 0) read_vibration_file();
-    MPI_Bcast(&nfile,1,MPI_INT,0,world);
-    if (comm->me) {
-      filevib = (VibFile *) 
-        memory->smalloc(nfile*sizeof(VibFile),"particle:filevib");
-    }
-    MPI_Bcast(filevib,nfile*sizeof(VibFile),MPI_BYTE,0,world);
-
-    for (i = 0; i < newspecies; i++) {
-      int ii = nspecies_original + i;
-
-      for (j = 0; j < nfile; j++)
-        if (strcmp(names[i],filevib[j].id) == 0) break;
-      if (j == nfile) {
-        if (species[ii].vibdof <= 2) continue;
-        error->all(FLERR,"Species ID does not appear in vibration file");
-      }
-
-      int nmode = filevib[j].nmode;
-      if (species[ii].nvibmode != nmode)
-        error->all(FLERR,"Mismatch between species vibdof " 
-                   "and vibration file entry");
-
-      species[ii].nvibmode = nmode;
-      for (k = 0; k < nmode; k++) {
-        species[ii].vibtemp[k] = filevib[j].vibtemp[k];
-        species[ii].vibrel[k] = filevib[j].vibrel[k];
-        species[ii].vibdegen[k] = filevib[j].vibdegen[k];
-      }
-
-      maxvibmode = MAX(maxvibmode,species[ii].nvibmode);
-    }
-
-    memory->sfree(filevib);
-  }
-
-  // clean up
-
   delete [] names;
 }
 
@@ -937,14 +788,11 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
   if (collide) vibstyle = collide->vibstyle;
   if (vibstyle == NONE || species[isp].vibdof < 2) return 0.0;
 
-  // DISCRETE is correct for species with vibdof = 0,2 (mode = 0,1)
-  // is not correct for more modes, but will be reset in FixVibmode
-
   eng = 0.0;
   if (vibstyle == DISCRETE && species[isp].vibdof == 2) {
     int ivib = -log(erandom->uniform()) * temp_thermal / 
-      particle->species[isp].vibtemp[0];
-    eng = ivib * update->boltz * particle->species[isp].vibtemp[0];
+      particle->species[isp].vibtemp;
+    eng = ivib * update->boltz * particle->species[isp].vibtemp;
   } else if (vibstyle == SMOOTH || species[isp].vibdof >= 2) {
     if (species[isp].vibdof == 2)
       eng = -log(erandom->uniform()) * update->boltz * temp_thermal;
@@ -965,7 +813,7 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
 
 /* ----------------------------------------------------------------------
    read list of species defined in species file
-   store info in filespecies and nfile
+   store info in filespecies and nfilespecies
    only invoked by proc 0
 ------------------------------------------------------------------------- */
 
@@ -988,16 +836,17 @@ void Particle::read_species_file()
     if (nwords != NWORDS)
       error->one(FLERR,"Incorrect line format in species file");
 
-    if (nfile == maxfile) {
-      maxfile += DELTASPECIES;
+    if (nfilespecies == maxfilespecies) {
+      maxfilespecies += DELTASPECIES;
       filespecies = (Species *) 
-	memory->srealloc(filespecies,maxfile*sizeof(Species),
+	memory->srealloc(filespecies,maxfilespecies*sizeof(Species),
 			 "particle:filespecies");
-      memset(&filespecies[nfile],0,(maxfile-nfile)*sizeof(Species));
+      memset(&filespecies[nfilespecies],0,
+             (maxfilespecies-nfilespecies)*sizeof(Species));
     }
 
     nwords = wordcount(line,words);
-    Species *fsp = &filespecies[nfile];
+    Species *fsp = &filespecies[nfilespecies];
 
     if (strlen(words[0]) + 1 > 16)
       error->one(FLERR,"Invalid species ID in species file");
@@ -1008,153 +857,15 @@ void Particle::read_species_file()
     fsp->rotdof = atoi(words[3]);
     fsp->rotrel = atof(words[4]);
     fsp->vibdof = atoi(words[5]);
-    fsp->vibrel[0] = atof(words[6]);
-    fsp->vibtemp[0] = atof(words[7]);
+    fsp->vibrel = atof(words[6]);
+    fsp->vibtemp = atof(words[7]);
     fsp->specwt = atof(words[8]);
     fsp->charge = atof(words[9]);
 
     if (fsp->rotdof > 0 || fsp->vibdof > 0) fsp->internaldof = 1;
     else fsp->internaldof = 0;
 
-    // error checks
-
-    if (fsp->rotdof != 0 && fsp->rotdof != 2 && fsp->rotdof != 3)
-      error->all(FLERR,"Invalid rotational DOF in species file");
-    if (fsp->vibdof < 0 || fsp->vibdof > 8 || fsp->vibdof % 2)
-      error->all(FLERR,"Invalid vibrational DOF in species file");
-
-    // initialize additional rotation/vibration fields
-    // may be overwritten by rotfile or vibfile
-
-    fsp->nrottemp = 0;
-    fsp->nvibmode = fsp->vibdof / 2;
-
-    fsp->rottemp[0] = fsp->rottemp[1] = fsp->rottemp[2] = 0.0;
-    fsp->vibtemp[1] = fsp->vibtemp[2] = fsp->vibtemp[3] = 0.0;
-    fsp->vibrel[1] = fsp->vibrel[2] = fsp->vibrel[3] = 0.0;
-    fsp->vibdegen[0] = fsp->vibdegen[1] = 
-      fsp->vibdegen[2] = fsp->vibdegen[3] = 0;
-
-    nfile++;
-  }
-
-  delete [] words;
-
-  fclose(fp);
-}
-
-/* ----------------------------------------------------------------------
-   read list of extra rotation info in rotation file
-   store info in filerot and nfile
-   only invoked by proc 0
-------------------------------------------------------------------------- */
-
-void Particle::read_rotation_file()
-{
-  // read file line by line
-  // skip blank lines or comment lines starting with '#'
-  // all other lines can have up to NWORDS 
-
-  int NWORDS = 5;
-  char **words = new char*[NWORDS];
-  char line[MAXLINE],copy[MAXLINE];
-
-  while (fgets(line,MAXLINE,fp)) {
-    int pre = strspn(line," \t\n\r");
-    if (pre == strlen(line) || line[pre] == '#') continue;
-                                                
-    strcpy(copy,line);
-    int nwords = wordcount(copy,NULL);
-    if (nwords > NWORDS)
-      error->one(FLERR,"Incorrect line format in rotation file");
-
-    if (nfile == maxfile) {
-      maxfile += DELTASPECIES;
-      filerot = (RotFile *) 
-	memory->srealloc(filerot,maxfile*sizeof(RotFile),
-			 "particle:filerot");
-      memset(&filerot[nfile],0,(maxfile-nfile)*sizeof(RotFile));
-    }
-
-    nwords = wordcount(line,words);
-    RotFile *rsp = &filerot[nfile];
-
-    if (strlen(words[0]) + 1 > 16)
-      error->one(FLERR,"Invalid species ID in rotation file");
-    strcpy(rsp->id,words[0]);
-
-    rsp->ntemp = atoi(words[1]);
-    if (rsp->ntemp != 1 && rsp->ntemp != 3)
-      error->one(FLERR,"Invalid N count in rotation file");
-    if (nwords != 2 + rsp->ntemp)
-      error->one(FLERR,"Incorrect line format in rotation file");
-   
-    int j = 2;
-    for (int i = 0; i < rsp->ntemp; i++)
-      rsp->rottemp[i] = atof(words[j++]);
-
-    nfile++;
-  }
-
-  delete [] words;
-
-  fclose(fp);
-}
-
-/* ----------------------------------------------------------------------
-   read list of extra rotation info in vibration file
-   store info in filevig and nfile
-   only invoked by proc 0
-------------------------------------------------------------------------- */
-
-void Particle::read_vibration_file()
-{
-  // read file line by line
-  // skip blank lines or comment lines starting with '#'
-  // all other lines can have up to NWORDS 
-
-  int NWORDS = 14;
-  char **words = new char*[NWORDS];
-  char line[MAXLINE],copy[MAXLINE];
-
-  while (fgets(line,MAXLINE,fp)) {
-    int pre = strspn(line," \t\n\r");
-    if (pre == strlen(line) || line[pre] == '#') continue;
-                                                
-    strcpy(copy,line);
-    int nwords = wordcount(copy,NULL);
-    if (nwords > NWORDS)
-      error->one(FLERR,"Incorrect line format in vibration file");
-
-    if (nfile == maxfile) {
-      maxfile += DELTASPECIES;
-      filevib = (VibFile *) 
-	memory->srealloc(filevib,maxfile*sizeof(VibFile),
-			 "particle:filevib");
-      memset(&filevib[nfile],0,(maxfile-nfile)*sizeof(VibFile));
-    }
-
-    nwords = wordcount(line,words);
-    VibFile *vsp = &filevib[nfile];
-
-    if (strlen(words[0]) + 1 > 16)
-      error->one(FLERR,"Invalid species ID in vibration file");
-    strcpy(vsp->id,words[0]);
-
-    vsp->nmode = atoi(words[1]);
-    if (vsp->nmode < 2 || vsp->nmode > 4)
-      error->one(FLERR,"Invalid N count in vibration file");
-    if (nwords != 2 + 3*vsp->nmode)
-      error->one(FLERR,"Incorrect line format in vibration file");
-   
-    int j = 2;
-    for (int i = 0; i < vsp->nmode; i++) {
-      vsp->vibtemp[i] = atof(words[j++]);
-      vsp->vibrel[i] = atof(words[j++]);
-      vsp->vibdegen[i] = atoi(words[j++]);
-    }
-
-    nfile++;
+    nfilespecies++;
   }
 
   delete [] words;
@@ -1210,10 +921,6 @@ void Particle::read_restart_species(FILE *fp)
 
   if (me == 0) fread(species,sizeof(Species),nspecies,fp);
   MPI_Bcast(species,nspecies*sizeof(Species),MPI_CHAR,0,world);
-
-  maxvibmode = 0;
-  for (int isp = 0; isp < nspecies; isp++)
-    maxvibmode = MAX(maxvibmode,species[isp].nvibmode);
 }
 
 /* ----------------------------------------------------------------------
@@ -1373,21 +1080,6 @@ int Particle::find_custom(char *name)
   for (int i = 0; i < ncustom; i++)
     if (ename[i] && strcmp(ename[i],name) == 0) return i;
   return -1;
-}
-
-/* ----------------------------------------------------------------------
-   error checks on existence of custom vectors/arrays
-------------------------------------------------------------------------- */
-
-void Particle::error_custom()
-{
-  if (collide && collide->vibstyle == DISCRETE && maxvibmode > 1) {
-    int index = find_custom((char *) "vibmode");
-    if (index < 0) 
-      error->all(FLERR,"No custom particle vibmode array defined");
-    if (esize[index] != maxvibmode) 
-      error->all(FLERR,"Custom particle vibmode array is wrong size");
-  }
 }
 
 /* ----------------------------------------------------------------------

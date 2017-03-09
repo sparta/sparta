@@ -228,7 +228,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   // zero vector/array since dump may access it on timestep 0
   // zero vector/array since a variable may access it before first run
 
-  if (nvalues == 1) {
+  if (nvalues == 0) {
     for (int i = 0; i < nslocal; i++)
       vector_surf[i] = 0.0;
   } else {

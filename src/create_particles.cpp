@@ -368,7 +368,6 @@ void CreateParticles::create_single()
 
   // nfix_add_particle = # of fixes with add_particle() method
 
-  particle->error_custom();
   modify->list_init_fixes();
   int nfix_add_particle = modify->n_add_particle;
 
@@ -461,7 +460,6 @@ void CreateParticles::create_local(bigint np)
 
   // nfix_add_particle = # of fixes with add_particle() method
 
-  particle->error_custom();
   modify->list_init_fixes();
   int nfix_add_particle = modify->n_add_particle;
 
