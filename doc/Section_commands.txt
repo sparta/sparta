@@ -379,8 +379,7 @@ of each style or click on the style itself for a full description:
 "emit/surf"_fix_emit_surf.html,
 "grid/check"_fix_grid_check.html,
 "move/surf"_fix_move_surf.html,
-"print"_fix_print.html,
-"vibmode"_fix_vibmode.html :tb(c=6,ea=c)
+"print"_fix_print.html :tb(c=6,ea=c)
 
 :line
 
