@@ -288,7 +288,9 @@ void Collide::modify_params(int narg, char **arg)
     } else if (strcmp(arg[iarg],"rotate") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"no") == 0) rotstyle = NONE;
+      // NOTE: keep both for now
       else if (strcmp(arg[iarg+1],"yes") == 0) rotstyle = SMOOTH;
+      else if (strcmp(arg[iarg+1],"smooth") == 0) rotstyle = SMOOTH;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"vibrate") == 0) {
