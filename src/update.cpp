@@ -54,10 +54,10 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 38574483  // particle ID
+#define MOVE_DEBUG_ID 537898343   // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
 #define MOVE_DEBUG_INDEX 16617       // particle index on owning proc
-#define MOVE_DEBUG_STEP 147    // timestep
+#define MOVE_DEBUG_STEP 16    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -763,10 +763,13 @@ template < int DIM, int SURF > void Update::move()
 
               // perform surface collision using surface collision model
               // surface chemistry may destroy particle or create new one
+              // must update particle's icell to current icell so that
+              //   if jpart is created, it will be added to correct cell
               // if jpart, add new particle to this iteration via pstop++
               // tally surface statistics if requested using iorig
 
               ipart = &particles[i];
+              ipart->icell = icell;
               dtremain *= 1.0 - minparam*frac;
 
               if (nsurf_tally) 
