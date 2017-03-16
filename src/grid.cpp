@@ -36,8 +36,11 @@ using namespace MathConst;
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
-// cell is entirely outside/inside surfs or has any overlap with surfs
-// corner pt is outside/inside surfs or is on a surf
+// cell type = OUTSIDE/INSIDE/OVERLAP if entirely outside/inside surfs
+//   or has any overlap with surfs including grazing or touching
+// corner point = OUTSIDE/INSIDE (not OVERLAP) if outside/inside
+//   if exactly on surf, is still marked OUTSIDE or INSIDE by cut2d/cut3d
+//   corner pts are only set if cell type = OVERLAP
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
@@ -1121,7 +1124,8 @@ void Grid::reset_neighbors()
    set type = INSIDE/OUTSIDE for all owned cells if not already set
    input:
      all cells marked as OVERLAP or UNKNOWN
-     most OVERLAP cells have corner points marked as INSIDE/OUTSIDE
+     most OVERLAP cells have their corner points marked as INSIDE/OUTSIDE
+       a corner point is never marked as OVERLAP
      some OVERLAP cells may have all corner points UNKNOWN
        due to Cut2d/Cut3d split() failing to mark them
        b/c surf(s) only touch cell at point(s) on cell surface
@@ -1130,12 +1134,13 @@ void Grid::reset_neighbors()
    output:
      all UNKNOWN cells marked as INSIDE/OUTSIDE
      mark corner pts of any OVERLAP cells with UNKNOWN corner pts
-       to be all INSIDE or OUTSIDE, set cell volume accordingly
+       to be all INSIDE or all OUTSIDE, set cell volume accordingly
    output status will be checked when type_check() is invoked
      errors or warnings will be triggered
    NOTE: if UNKNOWN corner pts of OVERLAP cells are not set,
-     may just be warning, but means a non-zero volume for a cell that
-     is effectively OUTSIDE will not be set correctly
+     may just be flagged as warning in type_check(),
+     but it means a non-zero volume for a cell that
+       is effectively OUTSIDE will not be set correctly
 ------------------------------------------------------------------------- */
 
 void Grid::set_inout()
@@ -1234,30 +1239,33 @@ void Grid::set_inout()
           jcell = cells[icell].neigh[iface];
           nflag = neigh_decode(cells[icell].nmask,iface);
 
-          //printf(" setting icell/iface %d %d: jcell %d: type6574 %d\n",
-          //       icell,iface,jcell,cinfo[6574].type);
-
           if (nflag == NCHILD || nflag == NPBCHILD) {
 
             // this proc owns neighbor cell
-            // if jtype = UNKNOWN:
-            //   set jtype = marktype = OUTSIDE/INSIDE
-            //   add jcell to new set
-            // else if jtype = OVERLAP and itype != OVERLAP,
-            //   and jcell corner pts = UNKNOWN:
-            //   set jcell corner pts = marktype = OUTSIDE/INSIDE
-            //   also set its volume to full cell or zero
-            //   do not add jcell to new set, since is OVERLAP cell
-            //     maybe could but not sure need to, and could be marked wrong
-            // else if itype != OVERLAP and jcell already marked different:
-            //   error b/c markings are inconsistent
+            // perform this marking logic (here and below):
+            // (1) if jtype = UNKNOWN:
+            //     set jtype = marktype = OUTSIDE/INSIDE
+            //     add jcell to new set
+            // (2) else if jtype = OVERLAP:
+            //     skip if jcell's corners are already marked
+            //     set jcell corner pts = marktype = OUTSIDE/INSIDE
+            //     also set its volume to full cell or zero
+            //     do not add jcell to new set, since is OVERLAP cell
+            //       maybe could add, but not sure need to, 
+            //       and could be marked wrong ?
+            // (3) else jcell = OUTSIDE/INSIDE:
+            //     if jcell mark is different than marktype,
+            //     error b/c markings are inconsistent
 
             if (cells[jcell].proc == me) {
               jtype = cinfo[jcell].type;
+
               if (jtype == UNKNOWN) {
                 cinfo[jcell].type = marktype;
                 setnew[nsetnew++] = jcell;
-              } else if (itype != OVERLAP && jtype == OVERLAP) {
+              } else if (jtype == OVERLAP) {
+                // don't think this restriction needed (Mar 2017)
+                //if (itype == OVERLAP) continue;
                 jcorner = cinfo[jcell].corner;
                 if (jcorner[0] != UNKNOWN) continue;
                 for (icorner = 0; icorner < ncorner; icorner++)
@@ -1275,18 +1283,21 @@ void Grid::set_inout()
                   else
                     cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
                 }
-                //setnew[nsetnew++] = jcell;  (see comment above)
-              } else if (itype != OVERLAP && marktype != jtype) {
-                printf("ICELL1 %d id %d iface %d jcell %d id %d "
-                       "marktype %d jtype %d\n",
-                       icell,cells[icell].id,iface,jcell,cells[jcell].id,
-                       marktype,jtype);
-                error->one(FLERR,"Cell type mis-match when marking on self");
+                // do not add to setnew, see comment above
+                //setnew[nsetnew++] = jcell;
+              } else {
+                if (jtype != marktype) {
+                  printf("ICELL1 %d id %d iface %d jcell %d id %d "
+                         "marktype %d jtype %d\n",
+                         icell,cells[icell].id,iface,jcell,cells[jcell].id,
+                         marktype,jtype);
+                  error->one(FLERR,"Cell type mis-match when marking on self");
+                }
               }
 
             // this proc does not own neighbor cell
             // pack sbuf with info to send
-
+              
             } else {
               if (nsend == maxsend) {
                 maxsend += DELTA;
@@ -1302,6 +1313,12 @@ void Grid::set_inout()
             }
 
           } else if (nflag == NPARENT || nflag == NPBPARENT) {
+
+            // neighbor is a parent cell, not a child cell
+            // for each corner points of icell face:
+            //   find jcell = child cell owner of the face corner pt
+            //   if I own the child cell, mark it in same manner as above
+
             pcell = jcell;
             for (m = 0; m < nface_pts; m++) {
               ic = corners[iface][m];
@@ -1319,14 +1336,17 @@ void Grid::set_inout()
               if (jcell < 0) error->one(FLERR,"Parent cell child missing");
 
               // this proc owns neighbor cell
-              // same logic as above for marking type and corner pts
+              // perform same marking logic as above
 
               if (cells[jcell].proc == me) {
                 jtype = cinfo[jcell].type;
+
                 if (jtype == UNKNOWN) {
                   cinfo[jcell].type = marktype;
                   setnew[nsetnew++] = jcell;
-                } else if (itype != OVERLAP && jtype == OVERLAP) {
+                } else if (jtype == OVERLAP) {
+                  // don't think this restriction needed (Mar 2017)
+                  //if (itype == OVERLAP) continue;
                   jcorner = cinfo[jcell].corner;
                   if (jcorner[0] != UNKNOWN) continue;
                   for (icorner = 0; icorner < ncorner; icorner++)
@@ -1344,13 +1364,17 @@ void Grid::set_inout()
                     else
                       cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
                   }
-                  //setnew[nsetnew++] = jcell;  (see comment above)
-                } else if (itype != OVERLAP && marktype != jtype) {
-                  printf("ICELL2 %d id %d iface %d jcell %d id %d "
-                         "marktype %d jtype %d\n",
-                         icell,cells[icell].id,iface,jcell,cells[jcell].id,
-                         marktype,jtype);
-                  error->one(FLERR,"Cell type mis-match when marking on self");
+                  // do not add to setnew, see comment above
+                  //setnew[nsetnew++] = jcell;
+                } else {
+                  if (jtype != marktype) {
+                    printf("ICELL2 %d id %d iface %d jcell %d id %d "
+                           "marktype %d jtype %d\n",
+                           icell,cells[icell].id,iface,jcell,cells[jcell].id,
+                           marktype,jtype);
+                    error->one(FLERR,
+                               "Cell type mis-match when marking on self");
+                  }
                 }
 
               // this proc does not own neighbor cell
@@ -1405,17 +1429,20 @@ void Grid::set_inout()
     irregular->exchange_uniform((char *) sbuf,sizeof(Connect),(char *) rbuf);
 
     // this proc received info to mark neighbor cell it owns
-    // same logic as above for marking type and corner pts
+    // perform same marking logic as above
     
     for (i = 0; i < nrecv; i++) {
       itype = rbuf[i].itype;
       marktype = rbuf[i].marktype;
       jcell = rbuf[i].jcell;
       jtype = cinfo[jcell].type;
+
       if (jtype == UNKNOWN) {
         cinfo[jcell].type = marktype;
         set[nset++] = jcell;
-      } else if (itype != OVERLAP && jtype == OVERLAP) {
+      } else if (jtype == OVERLAP) {
+        // don't think this restriction needed (Mar 2017)
+        //if (itype == OVERLAP) continue;
         jcorner = cinfo[jcell].corner;
         if (jcorner[0] != UNKNOWN) continue;
         for (icorner = 0; icorner < ncorner; icorner++)
@@ -1433,14 +1460,30 @@ void Grid::set_inout()
           else
             cinfo[jcell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
         }
-        //set[nset++] = jcell;  (see comment above)
-      } else if (itype != OVERLAP && marktype != jtype) {
-        printf("JCELL3 %d id %d marktype %d jtype %d\n",
-               jcell,cells[jcell].id,marktype,jtype);
-        error->one(FLERR,"Cell type mis-match when marking on neigh proc");
+        // do not add to setnew, see comment above
+        //set[nset++] = jcell;
+      } else {
+        if (marktype != jtype) {
+          printf("JCELL3 %d id %d marktype %d jtype %d\n",
+                 jcell,cells[jcell].id,marktype,jtype);
+          error->one(FLERR,"Cell type mis-match when marking on neigh proc");
+        }
       }
     }  
   }
+
+  // NOTE: at this point could make a final attempt to mark
+  //   any remaining UNKNOWN corner pts of an overlap cell
+  //   to avoid warnings and errors in type_check()
+  // when doing grid adaptation, a new cell could possibly still be unmarked,
+  //   because its already marked neighbors which are non-OVERLAP cells
+  //     will not try to mark it
+  //   this is in contrast to first-time marking, when sweep entire grid
+  // the final attempt logic could do this:
+  //   instead of having marked cells mark their unmarked neighbors
+  //   have unmarked cells look at their neighbors to acquire markings
+  //   not necessary when doing initial full-grid sweep,
+  //     but may be necessary when doing incremental adaptation
 
   // all done with marking
   // set type and cflags for all sub cells from split cell it belongs to
@@ -1602,7 +1645,16 @@ void Grid::type_check(int flag)
         else x[2] = cells[icell].hi[2];
       } else x[2] = 0.0;
 
-      if (Geometry::point_on_hex(x,boxlo,boxhi)) outside++;
+      if (Geometry::point_on_hex(x,boxlo,boxhi)) {
+        printf("BAD CORNER icell %d id %d type %d "
+               "icorner %d x %g %g %g cflags %d %d %d %d\n",
+               icell,cells[icell].id,cinfo[icell].type,i,x[0],x[1],x[2],
+               cinfo[icell].corner[0],
+               cinfo[icell].corner[1],
+               cinfo[icell].corner[2],
+               cinfo[icell].corner[3]);
+        outside++;
+      }
       else inside++;
     }
   }

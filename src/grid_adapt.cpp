@@ -36,7 +36,7 @@ void Grid::refine_cell(int icell, int iparent,
                        int nx, int ny, int nz, int *childlist,
                        Cut2d *cut2d, Cut3d *cut3d)
 {
-  int i,m,ix,iy,iz,offset,ichild;
+  int i,j,m,ix,iy,iz,offset,ichild;
   int dim,ncorner,mark,ip,ipnew;
   cellint id;
   double lo[3],hi[3];
@@ -89,7 +89,8 @@ void Grid::refine_cell(int icell, int iparent,
         }
       }
 
-  // use parent corner pts to mark new child cells with no surfs
+  // use parent corner pts to mark type of new child cells with no surfs
+  //   as INSIDE/OUTSIDE, no need to mark corner pts of an INSIDE/OUTSIDE cell
   // child cells with surfs were marked above, including their corner pts
   // if mark as OUTSIDE, no need to set volume since add_cell() set it
 
@@ -108,8 +109,10 @@ void Grid::refine_cell(int icell, int iparent,
       if (cinfo[m].type == OVERLAP) continue;
 
       // parent corner pt could be UNKNOWN if iterating
-      // and have not yet re-marked all new grid cells via set_inout()
-      
+      //   and have not yet re-marked all new grid cells via set_inout()
+      // otherwise mark cell type as INSIDE or OUTSIDE
+      //   to match parent corner, since new child has no surfs
+
       mark = cinfo[icell].corner[i];
       if (mark == UNKNOWN) continue;
       cinfo[m].type = mark;
