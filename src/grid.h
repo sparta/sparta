@@ -125,7 +125,8 @@ class Grid : protected Pointers {
     int mask;                 // grid group mask
     int type;                 // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
     int corner[8];            // corner flags, 4/8 in 2d/3d
-                              // OUTSIDE,INSIDE,OVERLAP,UNKNOWN
+                              // OUTSIDE,INSIDE,UNKNOWN
+                              // no OVERLAP is used for this anymore I think
                               // ordered x first, y next, z last
                               // for sub cells, type/corner
                               //   are same as in split cell containing them
