@@ -149,7 +149,7 @@ All the surface collide models calculate a global vector of length 2.
 The values can be used by the "stats_style"_stats_style.html command
 and by "variables"_variable.html that define formulas.  The latter
 means they can be used by any command that uses a variable as input,
-e.g. "the "fix ave/time"_fix_ave_time.html command.  See "Section
+e.g. the "fix ave/time"_fix_ave_time.html command.  See "Section
 4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
