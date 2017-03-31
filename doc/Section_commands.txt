@@ -408,18 +408,27 @@ each style or click on the style itself for a full description:
 
 Collide styles :h4
 
-See the "collide"_collide.html command for one-line descriptions of
-each style or click on the style itself for a full description:
+See the "collide"_collide.html command for details of each style.
 
-"vss"_collide_vss.html :tb(c=1,ea=c)
+"vss"_collide.html :tb(c=1,ea=c)
 
 :line
 
 Surface collide styles :h4
 
-See the "surf_collide"_surf_collide.html command for one-line
-descriptions of each style or click on the style itself for a full
-description:
+See the "surf_collide"_surf_collide.html command for details of each
+style.
 
 "diffuse"_surf_collide.html,
-"specular"_surf_collide.html :tb(c=2,ea=c)
+"specular"_surf_collide.html,
+"vanish"_surf_collide.html :tb(c=3,ea=c)
+
+:line
+
+Surface reaction styles :h4
+
+See the "surf_react"_surf_react.html command for details of each
+style.
+
+"global"_surf_react.html,
+"prob"_surf_react.html :tb(c=2,ea=c)
