@@ -91,7 +91,10 @@ N is the number of particles (same as the {n} keyword), fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
 command, and volume is the flow volume of the grid cell.  When
 accumulated over multiple sampling steps, this value is normalized by
-the number of sampling steps.
+the number of sampling steps.  Note that if particle weighting is
+enabled via the "global weight"_global.html command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
 
 The {nfrac} value computes the number fraction of particles in each
 group:
@@ -119,7 +122,10 @@ where Sum_i is a sum over particles in the group, fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
 command, and volume is the flow volume of the grid cell.  When
 accumulated over multiple sampling steps, this value is normalized by
-the number of sampling steps.
+the number of sampling steps.  Note that if particle weighting is
+enabled via the "global weight"_global.html command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
 
 The {massfrac} value computes the mass fraction of particles in each
 group:
@@ -227,7 +233,10 @@ where Sum_i is a sum over particles in the group, fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
 command, and volume is the flow volume of the grid cell.  When
 accumulated over multiple sampling steps, this value is normalized by
-the number of sampling steps.
+the number of sampling steps.  Note that if particle weighting is
+enabled via the "global weight"_global.html command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
 
 The {kerho} value computes the kinetic energy density for the grid
 cell volume due to particles in each group:
@@ -239,7 +248,10 @@ where Sum_i is a sum over particles in the group, fnum is the
 real/simulated particle ratio set by the "global fnum"_global.html
 command, and volume is the flow volume of the grid cell.  When
 accumulated over multiple sampling steps, this value is normalized by
-the number of sampling steps.
+the number of sampling steps.  Note that if particle weighting is
+enabled via the "global weight"_global.html command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
 
 :line
 :line

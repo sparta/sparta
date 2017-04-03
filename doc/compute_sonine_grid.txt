@@ -69,7 +69,7 @@ sampling steps.
 
 Calculation of both the A and B sonine moments is done by first
 calcuating the center-of-mass (COM) velocity of particles for each
-group.  This is done as follows:
+group within a grid cell.  This is done as follows:
 
 COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
 COMy = Sum_i (mass_i Vy_i) / Sum_i (mass_i)

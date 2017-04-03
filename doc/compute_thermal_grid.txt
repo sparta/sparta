@@ -76,7 +76,7 @@ what the "compute sonine/grid"_compute_sonine_grid.html command does.
 :line
 
 Calculation of the thermal temperature is done by first calcuating the
-center-of-mass (COM) velocity of particles for each group.
+center-of-mass (COM) velocity of particles for each group within a
 grid cell.  This is done as follows:
 
 COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
@@ -108,7 +108,10 @@ P = 2/3 fnum/volume * thermal_KE :pre
 Note that if multiple groups are defined in the mixture, one group's
 value is effectively a partial pressure due to particles in the group.
 When accumulated over multiple sampling steps, this value is
-normalized by the number of sampling steps.
+normalized by the number of sampling steps.  Note that if particle
+weighting is enabled via the "global weight"_global.html command, then
+the volume used in the formula is divided by the weight assigned to
+the grid cell.
 
 :line
 
