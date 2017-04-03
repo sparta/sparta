@@ -101,7 +101,10 @@ due to particles in each group:
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
 command, and volume is the flow volume of the grid cell.  When
 accumulated over multiple sampling steps, this value is normalized by
-the number of sampling steps.
+the number of sampling steps.  Note that if particle weighting is
+enabled via the <A HREF = "global.html">global weight</A> command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
 </P>
 <P>The <I>nfrac</I> value computes the number fraction of particles in each
 group:
@@ -129,7 +132,10 @@ due to particles in each group:
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
 command, and volume is the flow volume of the grid cell.  When
 accumulated over multiple sampling steps, this value is normalized by
-the number of sampling steps.
+the number of sampling steps.  Note that if particle weighting is
+enabled via the <A HREF = "global.html">global weight</A> command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
 </P>
 <P>The <I>massfrac</I> value computes the mass fraction of particles in each
 group:
@@ -237,7 +243,10 @@ Pzrho = fnum/volume * Sum_i (mass_i * Vz_i)
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
 command, and volume is the flow volume of the grid cell.  When
 accumulated over multiple sampling steps, this value is normalized by
-the number of sampling steps.
+the number of sampling steps.  Note that if particle weighting is
+enabled via the <A HREF = "global.html">global weight</A> command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
 </P>
 <P>The <I>kerho</I> value computes the kinetic energy density for the grid
 cell volume due to particles in each group:
@@ -249,7 +258,10 @@ KErho = fnum/volume * Sum_i (mass_i * Vsq_i)
 real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
 command, and volume is the flow volume of the grid cell.  When
 accumulated over multiple sampling steps, this value is normalized by
-the number of sampling steps.
+the number of sampling steps.  Note that if particle weighting is
+enabled via the <A HREF = "global.html">global weight</A> command, then the volume
+used in the formula is divided by the weight assigned to the grid
+cell.
 </P>
 <HR>
 

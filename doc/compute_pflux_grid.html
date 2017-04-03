@@ -87,8 +87,8 @@ sampling steps.
 <HR>
 
 <P>Calculation of the momentum flux density is done by first calcuating
-the center-of-mass (COM) velocity of particles for each group.  grid
-cell.  This is done as follows:
+the center-of-mass (COM) velocity of particles for each group within a
+grid cell.  This is done as follows:
 </P>
 <PRE>COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
 COMy = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
@@ -117,6 +117,10 @@ group as follows:
 momyz = fnum/volume Sum_i (mass_i Cy Cz)
 momxz = fnum/volume Sum_i (mass_i Cx Cz) 
 </PRE>
+<P>Note that if particle weighting is enabled via the <A HREF = "global.html">global
+weight</A> command, then the volume used in the formula is
+divided by the weight assigned to the grid cell.
+</P>
 <HR>
 
 <P><B>Output info:</B>

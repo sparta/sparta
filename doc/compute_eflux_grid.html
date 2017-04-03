@@ -86,8 +86,8 @@ sampling steps.
 <HR>
 
 <P>Calculation of the energy flux density is done by first calcuating the
-center-of-mass (COM) velocity of particles for each group.  grid cell.
-This is done as follows:
+center-of-mass (COM) velocity of particles for each group with a grid
+cell.  This is done as follows:
 </P>
 <PRE>COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
 COMy = Sum_i (mass_i Vy_i) / Sum_i (mass_i)
@@ -104,9 +104,13 @@ particles in its group and cell.
 <P>The <I>heatx</I>, <I>heaty</I>, <I>heatz</I> values compute the components of the
 energy flux density vector due to particles in the group as follows:
 </P>
-<P>heatx = 0.5 * fnum/volume Sum_i (mass_i Cx Csq)
+<PRE>heatx = 0.5 * fnum/volume Sum_i (mass_i Cx Csq)
 heaty = 0.5 * fnum/volume Sum_i (mass_i Cy Csq)
-heatz = 0.5 * fnum/volume Sum_i (mass_i Cz Csq)
+heatz = 0.5 * fnum/volume Sum_i (mass_i Cz Csq) 
+</PRE>
+<P>Note that if particle weighting is enabled via the <A HREF = "global.html">global
+weight</A> command, then the volume used in the formula is
+divided by the weight assigned to the grid cell.
 </P>
 <HR>
 

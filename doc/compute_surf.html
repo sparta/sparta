@@ -92,6 +92,13 @@ over the sampling timesteps, and then dividing by the number of
 sampling steps.  However for the current values listed below, the two
 normalization methods are the same.
 </P>
+<P>NOTE: If particle weighting is enabled via the <A HREF = "global.html">global
+weight</A> command, then all of the values below are scaled
+by the weight assigned to the grid cell in which the particle
+collision with the surface element occurs.  The only exception is the
+the <I>n</I> value, which is NOT scaled by the weight; it is a simple count
+of particle collisions with the surface element.
+</P>
 <HR>
 
 <P>The <I>n</I> value counts the number of particles in the group striking the

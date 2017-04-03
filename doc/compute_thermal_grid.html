@@ -85,7 +85,7 @@ what the <A HREF = "compute_sonine_grid.html">compute sonine/grid</A> command do
 <HR>
 
 <P>Calculation of the thermal temperature is done by first calcuating the
-center-of-mass (COM) velocity of particles for each group.
+center-of-mass (COM) velocity of particles for each group within a
 grid cell.  This is done as follows:
 </P>
 <PRE>COMx = Sum_i (mass_i Vx_i) / Sum_i (mass_i)
@@ -117,7 +117,10 @@ grid cell due to particles in the group:
 <P>Note that if multiple groups are defined in the mixture, one group's
 value is effectively a partial pressure due to particles in the group.
 When accumulated over multiple sampling steps, this value is
-normalized by the number of sampling steps.
+normalized by the number of sampling steps.  Note that if particle
+weighting is enabled via the <A HREF = "global.html">global weight</A> command, then
+the volume used in the formula is divided by the weight assigned to
+the grid cell.
 </P>
 <HR>
 
