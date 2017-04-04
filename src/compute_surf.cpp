@@ -27,8 +27,8 @@
 
 using namespace SPARTA_NS;
 
-enum{NUM,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,XSHEAR,YSHEAR,ZSHEAR,
-     KE,EROT,EVIB,ETOT};
+enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
+     XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 #define DELTA 4096
 
@@ -53,6 +53,8 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
+    else if (strcmp(arg[iarg],"nwt") == 0) which[nvalue++] = NUMWT;
+    else if (strcmp(arg[iarg],"mflux") == 0) which[nvalue++] = MFLUX;
     else if (strcmp(arg[iarg],"fx") == 0) which[nvalue++] = FX;
     else if (strcmp(arg[iarg],"fy") == 0) which[nvalue++] = FY;
     else if (strcmp(arg[iarg],"fz") == 0) which[nvalue++] = FZ;
@@ -258,6 +260,14 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
     switch (which[m]) {
     case NUM:
       vec[k++] += 1.0;
+      break;
+    case NUMWT:
+      vec[k++] += weight;
+      break;
+    case MFLUX:
+      vec[k++] += origmass;
+      if (ip) vec[k++] -= imass;
+      if (jp) vec[k++] -= jmass;
       break;
     case FX:
       if (!fflag) {
