@@ -52,7 +52,7 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
     if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
   }
 
-  acc = atof(arg[3]);
+  acc = input->numeric(FLERR,arg[3]); 
   if (acc < 0.0 || acc > 1.0) 
     error->all(FLERR,"Illegal surf_collide diffuse command");
 
@@ -128,13 +128,14 @@ void SurfCollideDiffuse::init()
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
+   isr = index of reaction model if >= 0, -1 for no chemistry
    ip = set to NULL if destroyed by chemsitry
    return jp = new particle if created by chemistry
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideDiffuse::
-collide(Particle::OnePart *&ip, double *norm, int isr)
+collide(Particle::OnePart *&ip, double *norm, double &dtremain, int isr)
 {
   nsingle++;
 

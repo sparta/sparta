@@ -34,13 +34,14 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
+   isr = index of reaction model if >= 0, -1 for no chemistry
    ip = set to NULL if destroyed by chemsitry
    return jp = new particle if created by chemistry
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideSpecular::
-collide(Particle::OnePart *&ip, double *norm, int isr)
+collide(Particle::OnePart *&ip, double *norm, double &dtremain, int isr)
 {
   nsingle++;
 

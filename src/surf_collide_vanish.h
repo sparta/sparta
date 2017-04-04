@@ -30,7 +30,7 @@ class SurfCollideVanish : public SurfCollide {
  public:
   SurfCollideVanish(class SPARTA *, int, char **);
   ~SurfCollideVanish() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, int);
+  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
 };
 
 }

@@ -30,11 +30,12 @@ SurfCollideVanish::SurfCollideVanish(SPARTA *sparta, int narg, char **arg) :
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
+   isr = index of reaction model if >= 0, -1 for no chemistry
    simply return ip = NULL to delete particle
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideVanish::
-collide(Particle::OnePart *&ip, double *norm, int isr)
+collide(Particle::OnePart *&ip, double *norm, double &dtremain, int isr)
 {
   nsingle++;
 

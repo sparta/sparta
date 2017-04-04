@@ -264,7 +264,7 @@ void Update::run(int nsteps)
 
 /* ----------------------------------------------------------------------
    advect particles thru grid
-   DIM = 2/3 for 2d/3d
+   DIM = 2/3 for 2d/3d, 1 for 2d axisymmetric
    SURF = 0/1 for no surfs or surfs
    use multiple iterations of move/comm if necessary
 ------------------------------------------------------------------------- */
@@ -777,10 +777,10 @@ template < int DIM, int SURF > void Update::move()
 
               if (DIM == 3)
                 jpart = surf->sc[tri->isc]->
-                  collide(ipart,tri->norm,tri->isr);
+                  collide(ipart,tri->norm,dtremain,tri->isr);
               if (DIM != 3)
                 jpart = surf->sc[line->isc]->
-                  collide(ipart,line->norm,line->isr);
+                  collide(ipart,line->norm,dtremain,line->isr);
 
               if (jpart) {
                 particles = particle->particles;
@@ -950,6 +950,7 @@ template < int DIM, int SURF > void Update::move()
         // neighbor cell is global boundary
         // tally boundary stats if requested using iorig
         // collide() updates x,v,xnew as needed due to boundary interaction
+        //   may also update dtremain (piston BC)
         // for axisymmetric, must recalculate xnew since v may have changed
         // surface chemistry may destroy particle or create new one
         // if jpart, add new particle to this iteration via pstop++
@@ -963,7 +964,7 @@ template < int DIM, int SURF > void Update::move()
           if (nboundary_tally) 
             memcpy(&iorig,&particles[i],sizeof(Particle::OnePart));
 
-          bflag = domain->collide(ipart,outface,icell,xnew,jpart);
+          bflag = domain->collide(ipart,outface,icell,xnew,dtremain,jpart);
 
           if (jpart) {
             particles = particle->particles;

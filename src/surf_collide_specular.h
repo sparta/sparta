@@ -30,7 +30,7 @@ class SurfCollideSpecular : public SurfCollide {
  public:
   SurfCollideSpecular(class SPARTA *, int, char **);
   ~SurfCollideSpecular() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, int);
+  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
 };
 
 }

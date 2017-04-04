@@ -268,7 +268,7 @@ void Domain::boundary_modify(int narg, char **arg)
 ------------------------------------------------------------------------- */
 
 int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew, 
-                    Particle::OnePart *&jp)
+                    double &dtremain, Particle::OnePart *&jp)
 {
   jp = NULL;
 
@@ -339,28 +339,24 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
     }
     
   // treat global boundary as a surface
-  // dtr = time remaining after collision
   // particle velocity is changed by surface collision model
-  // reset one component of xnew due to new velocity
+  // dtremain may be changed by collision model
+  // reset all components of xnew, in case dtremain changed
+  // if axisymmetric, caller will reset again, including xnew[2]
 
   case SURFACE: 
     {
-      double *lo = grid->cells[icell].lo;
-      double *hi = grid->cells[icell].hi;
-      int dim = face / 2;
-
-      if (face % 2 == 0) {
-	double dtr = fabs((lo[dim]-xnew[dim])/ip->v[dim]);
-	jp = surf->sc[surf_collide[face]]->
-          collide(ip,norm[face],surf_react[face]);
-	if (ip) xnew[dim] = lo[dim] + ip->v[dim]*dtr;
-      } else {
-	double dtr = fabs((xnew[dim]-hi[dim])/ip->v[dim]);
-	jp = surf->sc[surf_collide[face]]->
-          collide(ip,norm[face],surf_react[face]);
-	if (ip) xnew[dim] = hi[dim] + ip->v[dim]*dtr;
-      }
+      jp = surf->sc[surf_collide[face]]->
+        collide(ip,norm[face],dtremain,surf_react[face]);
       
+      if (ip) {
+        double *x = ip->x;
+        double *v = ip->v;
+        xnew[0] = x[0] + dtremain*v[0];
+        xnew[1] = x[1] + dtremain*v[1];
+        if (dimension == 3) xnew[2] = x[2] + dtremain*v[2];
+      }
+
       return SURFACE;
     }
 
