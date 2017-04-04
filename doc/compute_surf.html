@@ -25,9 +25,11 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>fx</I> or <I>fy</I> or <I>fz</I> or <I>press</I> or <I>px</I> or <I>py</I> or <I>pz</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
+<LI>value = <I>n</I> or <I>nwt</I> or <I>mflux</I> or <I>fx</I> or <I>fy</I> or <I>fz</I> or <I>press</I> or <I>px</I> or <I>py</I> or <I>pz</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
 
 <PRE>  n = count of particles hitting surface element
+  nwt = weighted count of particles hitting surface element
+  mflux = flux of mass on surface element
   fx,fy,fz = components of force on surface element
   press = magnitude of normal pressure on surface element
   px,py,pz = components of normal pressure on surface element
@@ -76,6 +78,21 @@ how surface elements can be assigned to surface groups.
 for 2d simulations.  See the <A HREF = "read_surf.html">read_surf</A> command for
 details.
 </P>
+<P>Note that when a particle collides with a surface element, it can
+bounce off (possibly as a different species), be captured by the
+surface (vanish), or a 2nd particle can also be emitted.  The formulas
+below account for all the possible outcomes.  For example, the kinetic
+energy flux <I>ke</I> onto a suface element for a single collision includes
+a positive contribution from the incoming particle and negative
+contributions from 0, 1, or 2 outgoing particles.  The exception is
+the <I>n</I> and <I>nwt</I> values which simply tally counts of particles
+colliding with the surface element.
+</P>
+<P>Also note that all values for a collision are tallied based on the
+species group of the incident particle.  Quantities associated with
+outgoing particles are part of the same tally, even if they are in
+different species groups.
+</P>
 <P>The results of this compute are used by different commands in
 different ways.  The values for a single timestep can be output by the
 <A HREF = "dump.html">dump surf</A> command.  
@@ -104,6 +121,23 @@ of particle collisions with the surface element.
 <P>The <I>n</I> value counts the number of particles in the group striking the
 surface element.
 </P>
+<P>The <I>nwt</I> value counts the number of particles in the group striking
+the surface element and weights the count by the weight assigned to
+the grid cell in which the particle collision with the surface element
+occurs.  The <I>nwt</I> quantity will only be different than <I>n</I> if
+particle weighting is enabled via the <A HREF = "global.html">global weight</A>
+command.
+</P>
+<P>The <I>mflux</I> value calculates the mass flux imparted to the surface
+element by particles in the group.  This is computed as
+</P>
+<PRE>Mflux = Sum_i (mass_i) / (A * dt / fnum) 
+</PRE>
+<P>where the sum is over all contributing particle masses, normalized by
+A = the area of the surface element, dt = the timestep, and fnum = the
+real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
+command.
+</P>
 <P>The <I>fx</I>, <I>fy</I>, <I>fz</I> values calculate the components of force extered
 on the surface element by particles in the group, with respect to the
 x, y, z coordinate axes.  These are computed as
@@ -116,9 +150,7 @@ Pz = - Sum_i (p_delta_z) / (dt / fnum)
 <P>where p_delta is the change in momentum of a particle, whose velocity
 changes from V_pre to V_post when colliding with the surface element.
 The force exerted on the surface element is the sum over all
-contributing p_delta, normalized by dt = the timestep and fnum = the
-real/simulated particle ratio set by the <A HREF = "global.html">global fnum</A>
-command.
+contributing p_delta, normalized by dt and fnum as defined before.
 </P>
 <P>The <I>press</I> value calculates the pressure <I>P</I> exerted on the surface
 element in the normal direction by particles in the group, such that
