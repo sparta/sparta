@@ -20,6 +20,8 @@ args = arguments for specific style :l
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
     acc = accommodation coefficient
+  {piston} args = Vwall
+    Vwall = velocity of boundary wall (velocity units)
   {vanish} args = none :pre
 zero or more keyword/arg pairs may be appended :l
 keyword = {translate} or {rotate} :l
@@ -87,6 +89,40 @@ Equal-style variables can specify formulas with various mathematical
 functions, and include "stats_style"_status_style.html command
 keywords for the simulation box parameters and timestep and elapsed
 time.  Thus it is easy to specify a time-dependent temperature.
+
+:line
+
+The {piston} style models a subsonic pressure boundary condition.  It
+can only be assigned to the simulation box boundaries via the
+"bound_modify"_bound_modify.html command or to surface elements which
+are parallel to one of the box boundaries (via the
+"surf_modify"_surf_modify.html command).
+
+It treats collisions of particles with the surface as if the surface
+were moving with specified velocity {Vwall} away from the incident
+particle.  Thus the "collision" actually occurs later in the timestep
+and the reflected velocity is less than it would be for reflection
+from a stationary surface.  This calculation is performed using
+equations 12.30 and 12.31 in "(Bird94)"_#Bird94) to compute the
+reflected velocity and final position of the particle.  If the
+particle does not return within the timestep to a position inside the
+simulation box (for a boundary surface) or to the same side of the
+initial surface that it started from (for a surface element
+collision), the particle is deleted.  This effectively induces
+particles at the boundary to have a velocity distribution consistent
+with a subsonic pressure boundary condition, as explained in
+"(Bird94)"_#Bird94).
+
+{Vwall} should be chosen to correspond to a desired pressure condition
+for the density of particles in the system.
+
+NOTE: explain how to do this?
+
+Note that {Vwall} must always be input as a value >= 0.0, meaning the
+surface is moving away from the incident particle.  For example, in
+the z-dimension, if the upper box face is assigned {Vwall}, it is
+moving upward.  Similarly if the lower box face is assigned {Vwall},
+it is moving downward.
 
 :line
 
@@ -169,3 +205,10 @@ The {translate} and {rotate} keywords cannot be used together.
 "read_surf"_read_surf.html, "bound_modify"_bound_modify.html
 
 [Default:] none
+
+:line
+
+:link(Bird94)
+[(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+

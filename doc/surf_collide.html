@@ -26,6 +26,8 @@
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
     acc = accommodation coefficient
+  <I>piston</I> args = Vwall
+    Vwall = velocity of boundary wall (velocity units)
   <I>vanish</I> args = none 
 </PRE>
 <LI>zero or more keyword/arg pairs may be appended 
@@ -98,6 +100,40 @@ determine the current surface temperature.
 functions, and include <A HREF = "status_style.html">stats_style</A> command
 keywords for the simulation box parameters and timestep and elapsed
 time.  Thus it is easy to specify a time-dependent temperature.
+</P>
+<HR>
+
+<P>The <I>piston</I> style models a subsonic pressure boundary condition.  It
+can only be assigned to the simulation box boundaries via the
+<A HREF = "bound_modify.html">bound_modify</A> command or to surface elements which
+are parallel to one of the box boundaries (via the
+<A HREF = "surf_modify.html">surf_modify</A> command).
+</P>
+<P>It treats collisions of particles with the surface as if the surface
+were moving with specified velocity <I>Vwall</I> away from the incident
+particle.  Thus the "collision" actually occurs later in the timestep
+and the reflected velocity is less than it would be for reflection
+from a stationary surface.  This calculation is performed using
+equations 12.30 and 12.31 in <A HREF = "#Bird94">(Bird94)</A>) to compute the
+reflected velocity and final position of the particle.  If the
+particle does not return within the timestep to a position inside the
+simulation box (for a boundary surface) or to the same side of the
+initial surface that it started from (for a surface element
+collision), the particle is deleted.  This effectively induces
+particles at the boundary to have a velocity distribution consistent
+with a subsonic pressure boundary condition, as explained in
+<A HREF = "#Bird94">(Bird94)</A>).
+</P>
+<P><I>Vwall</I> should be chosen to correspond to a desired pressure condition
+for the density of particles in the system.
+</P>
+<P>NOTE: explain how to do this?
+</P>
+<P>Note that <I>Vwall</I> must always be input as a value >= 0.0, meaning the
+surface is moving away from the incident particle.  For example, in
+the z-dimension, if the upper box face is assigned <I>Vwall</I>, it is
+moving upward.  Similarly if the lower box face is assigned <I>Vwall</I>,
+it is moving downward.
 </P>
 <HR>
 
@@ -180,5 +216,12 @@ that have hit surface elements since the current run began.
 <P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "bound_modify.html">bound_modify</A>
 </P>
 <P><B>Default:</B> none
+</P>
+<HR>
+
+<A NAME = "Bird94"></A>
+
+<P><B>(Bird94)</B> G. A. Bird, Molecular Gas Dynamics and the Direct
+Simulation of Gas Flows, Clarendon Press, Oxford (1994).
 </P>
 </HTML>
