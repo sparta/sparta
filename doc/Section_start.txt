@@ -215,6 +215,12 @@ MPI version does not recognize "long long" data types.  In this case a
 "long" data type is likely already 64-bits, in which case this setting
 will use that data type.
 
+Using one of the -DPACK_ARRAY, -DPACK_POINTER, and -DPACK_MEMCPY
+options can make for faster parallel FFTs on some platforms.  The
+-DPACK_ARRAY setting is the default.  See the "compute
+fft/grid"_compute_fft_grid.html command for info about FFTs.  See Step
+6 below for info about building SPPARKS with an FFT library.
+
 [Step 5]
 
 The 3 MPI variables are used to specify an MPI library to build SPARTA
@@ -279,10 +285,11 @@ or vendor optimized libraries.  If you are not including the FFT
 package in your build, you can also leave the 3 variables blank.
 
 Otherwise, select which kinds of FFTs to use as part of the FFT_INC
-setting by a switch of the form -DFFT_XXX.  Recommended values for XXX
-are: MKL, SCSL, FFTW2, and FFTW3.  Legacy options are: INTEL, SGI,
-ACML, and T3E.  For backward compatability, using -DFFT_FFTW will use
-the FFTW2 library.  Using -DFFT_NONE will use the KISS library
+setting by a switch of the form -DFFT_XXX. 
+Recommended values for XXX
+are: MKL or FFTW3.  FFTW2 and NONE are supported as legacy options.
+Selecting -DFFT_FFTW will use the FFTW3 library and -DFFT_NONE will
+use the KISS library described above.
 described above.
 
 You may also need to set the FFT_INC, FFT_PATH, and FFT_LIB variables,
@@ -313,8 +320,7 @@ PPPM operations are somewhat insensitive to floating point truncation
 errors and thus do not always need to be performed in double
 precision.  Using the -DFFT_SINGLE setting trades off a little
 accuracy for reduced memory use and parallel communication costs for
-transposing 3d FFT data.  Note that single precision FFTs have only
-been tested with the FFTW3, FFTW2, MKL, and KISS FFT options.
+transposing 3d FFT data.
 
 [Step 7]
 
