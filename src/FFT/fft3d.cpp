@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "fft3d.h"
-#include "remap3d.h"
+#include "remap.h"
 
 // include kissfft implementation
 
@@ -204,6 +204,7 @@ void fft_3d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_3d *plan)
              (FFT_SCALAR *) plan->scratch, plan->post_plan);
 
   // scaling if required
+
   if (flag == 1 && plan->scaled) {
     norm = plan->norm;
     num = plan->normnum;
@@ -760,8 +761,7 @@ void bifactor(int n, int *factor1, int *factor2)
    plan         plan returned by previous call to fft_3d_create_plan
 ------------------------------------------------------------------------- */
 
-void fft_3d_1d_only(FFT_DATA *data, int nsize, int flag, 
-                    struct fft_plan_3d *plan)
+void fft_1d_only(FFT_DATA *data, int nsize, int flag, struct fft_plan_3d *plan)
 {
   int i,num;
   FFT_SCALAR norm;
@@ -781,8 +781,9 @@ void fft_3d_1d_only(FFT_DATA *data, int nsize, int flag,
   int total3 = plan->total3;
   int length3 = plan->length3;
 
-// fftw3 and Dfti in MKL encode the number of transforms
-// into the plan, so we cannot operate on a smaller data set.
+  // fftw3 and Dfti in MKL encode the number of transforms
+  // into the plan, so we cannot operate on a smaller data set
+
 #if defined(FFT_MKL) || defined(FFT_FFTW3)
   if ((total1 > nsize) || (total2 > nsize) || (total3 > nsize))
     return;
