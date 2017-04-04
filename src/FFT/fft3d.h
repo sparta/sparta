@@ -26,14 +26,14 @@ typedef double FFT_SCALAR;
 #endif
 
 #ifdef FFT_FFTW
-#define FFT_FFTW2
+#define FFT_FFTW3
 #endif
 
 #include "fftdata.h"
 
 // -------------------------------------------------------------------------
 
-// plan for how to perform a 3d FFT
+// details of how to do a 3d FFT
 
 struct fft_plan_3d {
   struct remap_plan_3d *pre_plan;       // remap from input -> 1st FFTs
@@ -51,36 +51,10 @@ struct fft_plan_3d {
   double norm;                      // normalization factor for rescaling
 
                                     // system specific 1d FFT info
-#if defined(FFT_SGI)
-  FFT_DATA *coeff1;
-  FFT_DATA *coeff2;
-  FFT_DATA *coeff3;
-#elif defined(FFT_SCSL)
-  FFT_PREC *coeff1;
-  FFT_PREC *coeff2;
-  FFT_PREC *coeff3;
-  FFT_PREC *work1;
-  FFT_PREC *work2;
-  FFT_PREC *work3;
-#elif defined(FFT_ACML)
-  FFT_DATA *coeff1;
-  FFT_DATA *coeff2;
-  FFT_DATA *coeff3;
-#elif defined(FFT_INTEL)
-  FFT_DATA *coeff1;
-  FFT_DATA *coeff2;
-  FFT_DATA *coeff3;
-#elif defined(FFT_MKL)
+#if defined(FFT_MKL)
   DFTI_DESCRIPTOR *handle_fast;
   DFTI_DESCRIPTOR *handle_mid;
   DFTI_DESCRIPTOR *handle_slow;
-#elif defined(FFT_T3E)
-  double *coeff1;
-  double *coeff2;
-  double *coeff3;
-  double *work1;
-  double *work2;
-  double *work3;
 #elif defined(FFT_FFTW2)
   fftw_plan plan_fast_forward;
   fftw_plan plan_fast_backward;
@@ -114,7 +88,7 @@ extern "C" {
                                          int, int, int, int, int, int, int,
                                          int, int, int *, int);
   void fft_3d_destroy_plan(struct fft_plan_3d *);
-  void factor3d(int, int *, int *);
+  void factor(int, int *, int *);
   void bifactor(int, int *, int *);
   void fft_3d_1d_only(FFT_DATA *, int, int, struct fft_plan_3d *);
 }

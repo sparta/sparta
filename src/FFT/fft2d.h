@@ -49,28 +49,9 @@ struct fft_plan_2d {
   double norm;                      // normalization factor for rescaling
 
                                     // system specific 1d FFT info
-#if defined(FFT_SGI)
-  FFT_DATA *coeff1;
-  FFT_DATA *coeff2;
-#elif defined(FFT_SCSL)
-  FFT_PREC *coeff1;
-  FFT_PREC *coeff2;
-  FFT_PREC *work1;
-  FFT_PREC *work2;
-#elif defined(FFT_ACML)
-  FFT_DATA *coeff1;
-  FFT_DATA *coeff2;
-#elif defined(FFT_INTEL)
-  FFT_DATA *coeff1;
-  FFT_DATA *coeff2;
-#elif defined(FFT_MKL)
+#if defined(FFT_MKL)
   DFTI_DESCRIPTOR *handle_fast;
   DFTI_DESCRIPTOR *handle_slow;
-#elif defined(FFT_T3E)
-  double *coeff1;
-  double *coeff2;
-  double *work1;
-  double *work2;
 #elif defined(FFT_FFTW2)
   fftw_plan plan_fast_forward;
   fftw_plan plan_fast_backward;

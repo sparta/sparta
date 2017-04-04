@@ -60,25 +60,15 @@
 void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
 {
   int i,total,length,offset,num;
-  double norm,*out_ptr;
+  FFT_SCALAR norm;
+#if defined(FFT_FFTW3)
+  FFT_SCALAR *out_ptr;
+#endif
   FFT_DATA *data,*copy;
 
   // system specific constants
 
-#if defined(FFT_SCSL)
-  int isys = 0;
-  FFT_PREC scalef = 1.0;
-#elif defined(FFT_DEC)
-  char c = 'C';
-  char f = 'F';
-  char b = 'B';
-  int one = 1;
-#elif defined(FFT_T3E)
-  int isys = 0;
-  double scalef = 1.0;
-#elif defined(FFT_ACML)
-  int info;
-#elif defined(FFT_FFTW3)
+#if defined(FFT_FFTW3)
   FFTW_API(plan) theplan;
 #else
   // nothing to do for other FFTs.
@@ -100,35 +90,11 @@ void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
   total = plan->total1;
   length = plan->length1;
 
-#if defined(FFT_SGI)
-  for (offset = 0; offset < total; offset += length)
-    FFT_1D(flag,length,&data[offset],1,plan->coeff1);
-#elif defined(FFT_SCSL)
-  for (offset = 0; offset < total; offset += length)
-    FFT_1D(flag,length,scalef,&data[offset],&data[offset],plan->coeff1,
-           plan->work1,&isys);
-#elif defined(FFT_ACML)
-  num=total/length;
-  FFT_1D(&flag,&num,&length,data,plan->coeff1,&info);
-#elif defined(FFT_INTEL)
-  for (offset = 0; offset < total; offset += length)
-    FFT_1D(&data[offset],&length,&flag,plan->coeff1);
-#elif defined(FFT_MKL)
+#if defined(FFT_MKL)
   if (flag == -1)
     DftiComputeForward(plan->handle_fast,data);
   else
     DftiComputeBackward(plan->handle_fast,data);
-#elif defined(FFT_DEC)
-  if (flag == -1)
-    for (offset = 0; offset < total; offset += length)
-      FFT_1D(&c,&c,&f,&data[offset],&data[offset],&length,&one);
-  else
-    for (offset = 0; offset < total; offset += length)
-      FFT_1D(&c,&c,&b,&data[offset],&data[offset],&length,&one);
-#elif defined(FFT_T3E)
-  for (offset = 0; offset < total; offset += length)
-    FFT_1D(&flag,&length,&scalef,&data[offset],&data[offset],plan->coeff1,
-           plan->work1,&isys);
 #elif defined(FFT_FFTW2)
   if (flag == -1)
     fftw(plan->plan_fast_forward,total/length,data,1,length,NULL,0,0);
@@ -163,35 +129,11 @@ void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
   total = plan->total2;
   length = plan->length2;
 
-#if defined(FFT_SGI)
-  for (offset = 0; offset < total; offset += length)
-    FFT_1D(flag,length,&data[offset],1,plan->coeff2);
-#elif defined(FFT_SCSL)
-  for (offset = 0; offset < total; offset += length)
-    FFT_1D(flag,length,scalef,&data[offset],&data[offset],plan->coeff2,
-           plan->work2,&isys);
-#elif defined(FFT_ACML)
-  num=total/length;
-  FFT_1D(&flag,&num,&length,data,plan->coeff2,&info);
-#elif defined(FFT_INTEL)
-  for (offset = 0; offset < total; offset += length)
-    FFT_1D(&data[offset],&length,&flag,plan->coeff2);
-#elif defined(FFT_MKL)
+#if defined(FFT_MKL)
   if (flag == -1)
     DftiComputeForward(plan->handle_mid,data);
   else
     DftiComputeBackward(plan->handle_mid,data);
-#elif defined(FFT_DEC)
-  if (flag == -1)
-    for (offset = 0; offset < total; offset += length)
-      FFT_1D(&c,&c,&f,&data[offset],&data[offset],&length,&one);
-  else
-    for (offset = 0; offset < total; offset += length)
-      FFT_1D(&c,&c,&b,&data[offset],&data[offset],&length,&one);
-#elif defined(FFT_T3E)
-  for (offset = 0; offset < total; offset += length)
-    FFT_1D(&flag,&length,&scalef,&data[offset],&data[offset],plan->coeff2,
-           plan->work2,&isys);
 #elif defined(FFT_FFTW2)
   if (flag == -1)
     fftw(plan->plan_mid_forward,total/length,data,1,length,NULL,0,0);
@@ -221,11 +163,12 @@ void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
 
   // scaling if required
 
-#if !defined(FFT_T3E) && !defined(FFT_ACML)
   if (flag == 1 && plan->scaled) {
     norm = plan->norm;
     num = plan->normnum;
+#if defined(FFT_FFTW3)
     out_ptr = (FFT_SCALAR *)out;
+#endif
     for (i = 0; i < num; i++) {
 #if defined(FFT_FFTW3)
       *(out_ptr++) *= norm;
@@ -238,24 +181,6 @@ void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
 #endif
     }
   }
-#endif
-
-#ifdef FFT_T3E
-  if (flag == 1 && plan->scaled) {
-    norm = plan->norm;
-    num = plan->normnum;
-    for (i = 0; i < num; i++) out[i] *= (norm,norm);
-  }
-#endif
-
-#ifdef FFT_ACML
-  norm = plan->norm;
-  num = plan->normnum;
-  for (i = 0; i < num; i++) {
-    out[i].re *= norm;
-    out[i].im *= norm;
-  }
-#endif
 }
 
 /* ----------------------------------------------------------------------
@@ -289,23 +214,6 @@ struct fft_plan_2d *fft_2d_create_plan(
   int second_ilo,second_ihi,second_jlo,second_jhi;
   int out_size,first_size,second_size,copy_size,scratch_size;
   int list[50];
-
-  // system specific variables
-
-#ifdef FFT_SCSL
-  FFT_DATA dummy_d[5];
-  FFT_PREC dummy_p[5];
-  int isign,isys;
-  FFT_PREC scalef;
-#endif
-#ifdef FFT_INTEL
-  FFT_DATA dummy;
-#endif
-#ifdef FFT_T3E
-  FFT_DATA dummy[5];
-  int isign,isys;
-  double scalef;
-#endif
 
   // query MPI info
 
@@ -461,113 +369,7 @@ struct fft_plan_2d *fft_2d_create_plan(
   // system specific pre-computation of 1d FFT coeffs 
   // and scaling normalization
 
-#if defined(FFT_SGI)
-
-  plan->coeff1 = (FFT_DATA *) malloc((nfast+15)*sizeof(FFT_DATA));
-  plan->coeff2 = (FFT_DATA *) malloc((nslow+15)*sizeof(FFT_DATA));
-
-  if (plan->coeff1 == NULL || plan->coeff2 == NULL) return NULL;
-
-  FFT_1D_INIT(nfast,plan->coeff1);
-  FFT_1D_INIT(nslow,plan->coeff2);
-
-  if (scaled == 0)
-    plan->scaled = 0;
-  else {
-    plan->scaled = 1;
-    plan->norm = 1.0/(nfast*nslow);
-    plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
-  }
-
-#elif defined(FFT_SCSL)
-
-  plan->coeff1 = (FFT_PREC *) malloc((2*nfast+30)*sizeof(FFT_PREC));
-  plan->coeff2 = (FFT_PREC *) malloc((2*slow+30)*sizeof(FFT_PREC));
-
-  if (plan->coeff1 == NULL || plan->coeff2 == NULL) return NULL;
-
-  plan->work1 = (FFT_PREC *) malloc((2*nfast)*sizeof(FFT_PREC));
-  plan->work2 = (FFT_PREC *) malloc((2*nslow)*sizeof(FFT_PREC));
-
-  if (plan->work1 == NULL || plan->work2 == NULL) return NULL;
-
-  isign = 0;
-  scalef = 1.0;
-  isys = 0;
-
-  FFT_1D_INIT(isign,nfast,scalef,dummy_d,dummy_d,plan->coeff1,dummy_p,&isys);
-  FFT_1D_INIT(isign,nslow,scalef,dummy_d,dummy_d,plan->coeff2,dummy_p,&isys);
-
-  if (scaled == 0)
-    plan->scaled = 0;
-  else {
-    plan->scaled = 1;
-    plan->norm = 1.0/(nfast*nslow);
-    plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
-  }
-
-#elif defined(FFT_ACML)
-
-  plan->coeff1 = (FFT_DATA *) malloc((3*nfast+100)*sizeof(FFT_DATA));
-  plan->coeff2 = (FFT_DATA *) malloc((3*nslow+100)*sizeof(FFT_DATA));
-
-  if (plan->coeff1 == NULL || plan->coeff2 == NULL) return NULL;
-
-  int isign = 100;
-  int isys = 1;
-  int info = 0;
-  FFT_DATA *dummy = NULL;
-
-  FFT_1D(&isign,&isys,&nfast,dummy,plan->coeff1,&info);
-  FFT_1D(&isign,&isys,&nslow,dummy,plan->coeff2,&info);
-
-  if (scaled == 0) {
-    plan->scaled = 0;
-    plan->norm = sqrt(nfast*nslow);
-    plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
-  } else {
-    plan->scaled = 1;
-    plan->norm = sqrt(nfast*nslow*nslow);
-    plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
-  }
-
-#elif defined(FFT_INTEL)
-
-  flag = 0;
-
-  num = 0;
-  factor_2d(nfast,&num,list);
-  for (i = 0; i < num; i++)
-    if (list[i] != 2 && list[i] != 3 && list[i] != 5) flag = 1;
-  num = 0;
-  factor_2d(nslow,&num,list);
-  for (i = 0; i < num; i++)
-    if (list[i] != 2 && list[i] != 3 && list[i] != 5) flag = 1;
-
-  MPI_Allreduce(&flag,&fftflag,1,MPI_INT,MPI_MAX,comm);
-  if (fftflag) {
-    if (me == 0) printf("ERROR: FFTs are not power of 2,3,5\n");
-    return NULL;
-  }
-
-  plan->coeff1 = (FFT_DATA *) malloc((3*nfast/2+1)*sizeof(FFT_DATA));
-  plan->coeff2 = (FFT_DATA *) malloc((3*nslow/2+1)*sizeof(FFT_DATA));
-
-  if (plan->coeff1 == NULL || plan->coeff2 == NULL) return NULL;
-
-  flag = 0;
-  FFT_1D_INIT(&dummy,&nfast,&flag,plan->coeff1);
-  FFT_1D_INIT(&dummy,&nslow,&flag,plan->coeff2);
-
-  if (scaled == 0) {
-    plan->scaled = 1;
-    plan->norm = nfast*nslow;
-    plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
-  }
-  else
-    plan->scaled = 0;
-
-#elif defined(FFT_MKL)
+#if defined(FFT_MKL)
   DftiCreateDescriptor( &(plan->handle_fast), FFT_MKL_PREC, DFTI_COMPLEX, 1, (MKL_LONG)nfast);
   DftiSetValue(plan->handle_fast, DFTI_NUMBER_OF_TRANSFORMS, (MKL_LONG)plan->total1/nfast);
   DftiSetValue(plan->handle_fast, DFTI_PLACEMENT,DFTI_INPLACE);
@@ -581,43 +383,6 @@ struct fft_plan_2d *fft_2d_create_plan(
   DftiSetValue(plan->handle_slow, DFTI_INPUT_DISTANCE, (MKL_LONG)nslow);
   DftiSetValue(plan->handle_slow, DFTI_OUTPUT_DISTANCE, (MKL_LONG)nslow);
   DftiCommitDescriptor(plan->handle_slow);
-
-  if (scaled == 0)
-    plan->scaled = 0;
-  else {
-    plan->scaled = 1;
-    plan->norm = 1.0/(nfast*nslow);
-    plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
-  }
-
-#elif defined(FFT_DEC)
-
-  if (scaled == 0) {
-    plan->scaled = 1;
-    plan->norm = nfast*nslow;
-    plan->normnum = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
-  }
-  else
-    plan->scaled = 0;
-
-#elif defined(FFT_T3E)
-
-  plan->coeff1 = (double *) malloc((12*nfast)*sizeof(double));
-  plan->coeff2 = (double *) malloc((12*nslow)*sizeof(double));
-
-  if (plan->coeff1 == NULL || plan->coeff2 == NULL) return NULL;
-
-  plan->work1 = (double *) malloc((8*nfast)*sizeof(double));
-  plan->work2 = (double *) malloc((8*nslow)*sizeof(double));
-
-  if (plan->work1 == NULL || plan->work2 == NULL) return NULL;
-
-  isign = 0;
-  scalef = 1.0;
-  isys = 0;
-
-  FFT_1D_INIT(&isign,&nfast,&scalef,dummy,dummy,plan->coeff1,dummy,&isys);
-  FFT_1D_INIT(&isign,&nslow,&scalef,dummy,dummy,plan->coeff2,dummy,&isys);
 
   if (scaled == 0)
     plan->scaled = 0;
@@ -721,28 +486,9 @@ void fft_2d_destroy_plan(struct fft_plan_2d *plan)
   if (plan->copy) free(plan->copy);
   if (plan->scratch) free(plan->scratch);
 
-#if defined(FFT_SGI)
-  free(plan->coeff1);
-  free(plan->coeff2);
-#elif defined(FFT_SCSL)
-  free(plan->coeff1);
-  free(plan->coeff2);
-  free(plan->work1);
-  free(plan->work2);
-#elif defined(FFT_ACML)
-  free(plan->coeff1);
-  free(plan->coeff2);
-#elif defined(FFT_INTEL)
-  free(plan->coeff1);
-  free(plan->coeff2);
-#elif defined(FFT_MKL)
+#if defined(FFT_MKL)
   DftiFreeDescriptor(&(plan->handle_fast));
   DftiFreeDescriptor(&(plan->handle_slow));
-#elif defined(FFT_T3E)
-  free(plan->coeff1);
-  free(plan->coeff2);
-  free(plan->work1);
-  free(plan->work2);
 #elif defined(FFT_FFTW2)
   if (plan->plan_slow_forward != plan->plan_fast_forward) {
     fftw_destroy_plan(plan->plan_slow_forward);
@@ -829,22 +575,8 @@ void fft_2d_1d_only(FFT_DATA *data, int nsize, int flag,
 {
   int i,total,length,offset,num;
   FFT_SCALAR norm,*data_ptr;
-
-  // system specific constants
-
-#ifdef FFT_SCSL
-  int isys = 0;
-  FFT_PREC scalef = 1.0;
-#endif
-#ifdef FFT_DEC
-  char c = 'C';
-  char f = 'F';
-  char b = 'B';
-  int one = 1;
-#endif
-#ifdef FFT_T3E
-  int isys = 0;
-  double scalef = 1.0;
+#if defined(FFT_FFTW3)
+  FFT_SCALAR *data_ptr;
 #endif
 
   // total = size of data needed in each dim
@@ -869,34 +601,7 @@ void fft_2d_1d_only(FFT_DATA *data, int nsize, int flag,
   // perform 1d FFTs in each of 3 dimensions
   // data is just an array of 0.0
 
-#ifdef FFT_SGI
-  for (offset = 0; offset < total1; offset += length1)
-    FFT_1D(flag,length1,&data[offset],1,plan->coeff1);
-  for (offset = 0; offset < total2; offset += length2)
-    FFT_1D(flag,length2,&data[offset],1,plan->coeff2);
-
-#elif defined(FFT_SCSL)
-  for (offset = 0; offset < total1; offset += length1)
-    FFT_1D(flag,length1,scalef,&data[offset],&data[offset],plan->coeff1,
-           plan->work1,&isys);
-  for (offset = 0; offset < total2; offset += length2)
-    FFT_1D(flag,length2,scalef,&data[offset],&data[offset],plan->coeff2,
-           plan->work2,&isys);
-
-#elif defined(FFT_ACML)
-  int info=0;
-  num=total1/length1;
-  FFT_1D(&flag,&num,&length1,data,plan->coeff1,&info);
-  num=total2/length2;
-  FFT_1D(&flag,&num,&length2,data,plan->coeff2,&info);
-
-#elif defined(FFT_INTEL)
-  for (offset = 0; offset < total1; offset += length1)
-    FFT_1D(&data[offset],&length1,&flag,plan->coeff1);
-  for (offset = 0; offset < total2; offset += length2)
-    FFT_1D(&data[offset],&length2,&flag,plan->coeff2);
-
-#elif defined(FFT_MKL)
+#if defined(FFT_MKL)
   if (flag == -1) {
     DftiComputeForward(plan->handle_fast,data);
     DftiComputeForward(plan->handle_slow,data);
@@ -904,27 +609,6 @@ void fft_2d_1d_only(FFT_DATA *data, int nsize, int flag,
     DftiComputeBackward(plan->handle_fast,data);
     DftiComputeBackward(plan->handle_slow,data);
   }
-
-#elif defined(FFT_DEC)
-  if (flag == -1) {
-    for (offset = 0; offset < total1; offset += length1)
-      FFT_1D(&c,&c,&f,&data[offset],&data[offset],&length1,&one);
-    for (offset = 0; offset < total2; offset += length2)
-      FFT_1D(&c,&c,&f,&data[offset],&data[offset],&length2,&one);
-  } else {
-    for (offset = 0; offset < total1; offset += length1)
-      FFT_1D(&c,&c,&b,&data[offset],&data[offset],&length1,&one);
-    for (offset = 0; offset < total2; offset += length2)
-      FFT_1D(&c,&c,&b,&data[offset],&data[offset],&length2,&one);
-  }
-
-#elif defined(FFT_T3E)
-  for (offset = 0; offset < total1; offset += length1)
-    FFT_1D(&flag,&length1,&scalef,&data[offset],&data[offset],plan->coeff1,
-           plan->work1,&isys);
-  for (offset = 0; offset < total2; offset += length2)
-    FFT_1D(&flag,&length2,&scalef,&data[offset],&data[offset],plan->coeff2,
-           plan->work2,&isys);
 
 #elif defined(FFT_FFTW2)
   if (flag == -1) {
@@ -965,11 +649,12 @@ void fft_2d_1d_only(FFT_DATA *data, int nsize, int flag,
   // scaling if required
   // limit num to size of data
 
-#ifndef FFT_T3E
   if (flag == 1 && plan->scaled) {
     norm = plan->norm;
     num = MIN(plan->normnum,nsize);
+#if defined(FFT_FFTW3)
     data_ptr = (FFT_SCALAR *)data;
+#endif
     for (i = 0; i < num; i++) {
 #if defined(FFT_FFTW3)
       *(data_ptr++) *= norm;
@@ -982,13 +667,4 @@ void fft_2d_1d_only(FFT_DATA *data, int nsize, int flag,
 #endif
     }
   }
-#endif
-
-#ifdef FFT_T3E
-  if (flag == 1 && plan->scaled) {
-    norm = plan->norm;
-    num = MIN(plan->normnum,nsize);
-    for (i = 0; i < num; i++) data[i] *= (norm,norm);
-  }
-#endif
 }
