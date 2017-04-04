@@ -452,9 +452,9 @@ This section has the following sub-sections:
 
 The source code for SPARTA is structured as a set of core files which
 are always included, plus optional packages.  Packages are groups of
-files that enable a specific set of features.  For example, the KOKKOS
-package for versions of SPARTA kernels that run on GPUs or the Intel
-KNL processor.
+files that enable a specific set of features.  For example, the FFT
+package which includes a "compute fft/grid"_compute_fft_grid.html
+command and a 2d and 3d FFT library.
 
 You can see the list of all packages by typing "make package" from
 within the src directory of the SPARTA distribution.  This also lists
@@ -507,7 +507,7 @@ see all of the package-related make options.
 
 NOTE: Inclusion/exclusion of a package works by simply moving files
 back and forth between the main src directory and sub-directories with
-the package name (e.g. src/FFT, src/KOKKOS), so that the files are
+the package name (e.g. src/FFT or src/KOKKOS), so that the files are
 seen or not seen when SPARTA is built.  After you have included or
 excluded a package, you must re-build SPARTA.
 
