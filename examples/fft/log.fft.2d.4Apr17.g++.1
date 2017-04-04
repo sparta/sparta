@@ -1,0 +1,125 @@
+SPARTA (16 Mar 2017)
+# advect particles via VSS collisional flow on a uniform grid
+
+variable            x index 16
+variable            y index 16
+
+variable            lx equal $x*1.0e-5
+variable            lx equal 16*1.0e-5
+variable            ly equal $y*1.0e-5
+variable            ly equal 16*1.0e-5
+
+variable            n equal 10*$x*$y
+variable            n equal 10*16*$y
+variable            n equal 10*16*16
+
+seed	    	    12345
+dimension   	    2
+
+boundary	    p p p
+
+create_box  	    0 ${lx} 0 ${ly} -0.5 0.5
+create_box  	    0 0.00016 0 ${ly} -0.5 0.5
+create_box  	    0 0.00016 0 0.00016 -0.5 0.5
+Created orthogonal box = (0 0 -0.5) to (0.00016 0.00016 0.5)
+create_grid 	    $x $y 1
+create_grid 	    16 $y 1
+create_grid 	    16 16 1
+Created 256 child grid cells
+  parent cells = 1
+  CPU time = 0.00104809 secs
+  create/ghost percent = 84.2357 15.7643
+
+balance_grid        rcb part
+Balance grid migrated 0 cells
+  CPU time = 0.000136137 secs
+  reassign/sort/migrate/ghost percent = 44.8336 0.700525 12.6095 41.8564
+
+species		    ar.species Ar
+mixture		    air Ar vstream 0.0 0.0 0.0 temp 273.15
+
+global              nrho 7.07043E22
+global              fnum 7.07043E6
+
+collide		    vss air ar.vss
+
+create_particles    air n $n
+create_particles    air n 2560
+Created 2560 particles
+  CPU time = 0.00164914 secs
+
+stats		    100
+compute             temp temp
+stats_style	    step cpu np nattempt ncoll c_temp
+
+# energy spectrum
+
+compute             1 grid all u v w
+fix                 1 ave/grid 10 100 1000 c_1[*]
+compute             2 fft/grid f_1[1] f_1[2] f_1[3]
+dump                1 grid all 1000 dump.grid.2d id c_2[*] f_1[*]
+
+timestep 	    7.00E-9
+
+run 		    1000
+Memory usage per proc in Mbytes:
+  particles (ave,min,max) = 1.6875 1.6875 1.6875
+  grid      (ave,min,max) = 1.51388 1.51388 1.51388
+  surf      (ave,min,max) = 0 0 0
+  total     (ave,min,max) = 3.24044 3.24044 3.24044
+Step CPU Np Natt Ncoll c_temp 
+       0            0     2560        0        0    275.90865 
+     100 0.0074298382     2560        0        0    275.90865 
+     200  0.014851809     2560        0        0    275.90865 
+     300  0.022265911     2560        0        0    275.90865 
+     400  0.029688835     2560        0        0    275.90865 
+     500  0.037015915     2560        0        0    275.90865 
+     600  0.044334888     2560        0        0    275.90865 
+     700  0.051673889     2560        0        0    275.90865 
+     800  0.059060812     2560        0        0    275.90865 
+     900  0.066380024     2560        0        0    275.90865 
+    1000  0.074692965     2560        0        0    275.90865 
+Loop time of 0.0746989 on 1 procs for 1000 steps with 2560 particles
+
+Particle moves    = 2560000 (2.56M)
+Cells touched     = 3246426 (3.25M)
+Particle comms    = 0 (0K)
+Boundary collides = 0 (0K)
+Boundary exits    = 0 (0K)
+SurfColl checks   = 0 (0K)
+SurfColl occurs   = 0 (0K)
+Surf reactions    = 0 (0K)
+Collide attempts  = 0 (0K)
+Collide occurs    = 0 (0K)
+Reactions         = 0 (0K)
+Particles stuck   = 0
+
+Particle-moves/CPUsec/proc: 3.42709e+07
+Particle-moves/step: 2560
+Cell-touches/particle/step: 1.26814
+Particle comm iterations/step: 1
+Particle fraction communicated: 0
+Particle fraction colliding with boundary: 0
+Particle fraction exiting boundary: 0
+Surface-checks/particle/step: 0
+Surface-collisions/particle/step: 0
+Surf-reactions/particle/step: 0
+Collision-attempts/particle/step: 0
+Collisions/particle/step: 0
+Reactions/particle/step: 0
+
+Move  time (%) = 0.0518401 (69.3987)
+Coll  time (%) = 0.00855112 (11.4474)
+Sort  time (%) = 0.00916076 (12.2636)
+Comm  time (%) = 0.000187397 (0.25087)
+Outpt time (%) = 0.0011754 (1.57352)
+Other time (%) = 0.00378418 (5.06591)
+
+Particles: 2560 ave 2560 max 2560 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+Cells:      256 ave 256 max 256 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+GhostCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
+EmptyCell: 0 ave 0 max 0 min
+Histogram: 1 0 0 0 0 0 0 0 0 0
