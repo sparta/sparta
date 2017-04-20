@@ -60,6 +60,7 @@ void Grid::refine_cell(int icell, int iparent,
         id = pcells[iparent].id | ((cellint) m << pcells[iparent].nbits);
         id_child_lohi(iparent,m,lo,hi);
         add_child_cell(id,iparent,lo,hi);
+        weight_one(nlocal-1);
 
         // add each new child cell to grid hash
         
@@ -204,6 +205,8 @@ void Grid::coarsen_cell(int iparent, int nchild,
   
   add_child_cell(pcells[iparent].id,pcells[iparent].iparent,
                  pcells[iparent].lo,pcells[iparent].hi);
+  weight_one(nlocal-1);
+        
   (*hash)[pcells[iparent].id] = nlocal;
   inew = nlocal - 1;
 

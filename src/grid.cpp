@@ -1699,15 +1699,13 @@ void Grid::type_check(int flag)
    set static cellwise fnum weights based on uncut volumes
    for volume, use volume of cell, whether axisymmetric or not
    for radius, use radius of cell centroid from axisymmetric axis
-   called from input script and read_restart (with narg = -1)
+   weight() called from input script and read_restart (with narg = -1)
+   weight_one() is called only for adapted cells from grid_adapt
 ------------------------------------------------------------------------- */
 
 void Grid::weight(int narg, char **arg)
 {
   int i;
-  double *lo,*hi;
-  int dimension = domain->dimension;
-  int axisymmetric = domain->axisymmetric;
 
   if (!exist) error->all(FLERR,"Cannot weight cells before grid is defined");
   if (narg > 0 && narg != 1) error->all(FLERR,"Illegal weight command");
@@ -1721,32 +1719,36 @@ void Grid::weight(int narg, char **arg)
     else error->all(FLERR,"Illegal weight command");
   }
 
-  if (cellweightflag == RADWEIGHT && !axisymmetric) 
+  if (cellweightflag == RADWEIGHT && !domain->axisymmetric) 
     error->all(FLERR,"Cannot use weight cell radius unless axisymmetric");
 
   // set per-cell weights
 
+  for (i = 0; i < nlocal; i++) weight_one(i);
+}
+
+void Grid::weight_one(int icell)
+{
+  double *lo,*hi;
+
+  int dimension = domain->dimension;
+  int axisymmetric = domain->axisymmetric;
+
   if (cellweightflag == NOWEIGHT) {
-    for (i = 0; i < nlocal; i++) cinfo[i].weight = 1.0;
-
+    cinfo[icell].weight = 1.0;
   } else if (cellweightflag == VOLWEIGHT) {
-    for (int i = 0; i < nlocal; i++) {
-      lo = cells[i].lo;
-      hi = cells[i].hi;
-      if (dimension == 3) 
-        cinfo[i].weight = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-      else if (axisymmetric)
-        cinfo[i].weight = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
-      else
-        cinfo[i].weight = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-    }
-
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    if (dimension == 3) 
+      cinfo[icell].weight = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    else if (axisymmetric)
+      cinfo[icell].weight = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+    else
+      cinfo[icell].weight = (hi[0]-lo[0]) * (hi[1]-lo[1]);
   } else if (cellweightflag == RADWEIGHT) {
-    for (int i = 0; i < nlocal; i++) {
-      lo = cells[i].lo;
-      hi = cells[i].hi;
-      cinfo[i].weight = 0.5*(hi[1]+lo[1]) * (hi[0]-lo[0]);
-    }
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    cinfo[icell].weight = 0.5*(hi[1]+lo[1]) * (hi[0]-lo[0]);
   }
 }
 

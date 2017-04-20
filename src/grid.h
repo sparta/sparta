@@ -207,6 +207,7 @@ class Grid : protected Pointers {
   void check_uniform();
   void type_check(int flag=1);
   void weight(int, char **);
+  void weight_one(int);
   
   void refine_cell(int, int, int, int, int, int *, 
                    class Cut2d *, class Cut3d *);
