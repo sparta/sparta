@@ -17,7 +17,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "fft3d.h"
-#include "remap.h"
+#include "remap3d.h"
 
 // include kissfft implementation
 
