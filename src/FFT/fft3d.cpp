@@ -761,7 +761,7 @@ void bifactor(int n, int *factor1, int *factor2)
    plan         plan returned by previous call to fft_3d_create_plan
 ------------------------------------------------------------------------- */
 
-void fft_1d_only(FFT_DATA *data, int nsize, int flag, struct fft_plan_3d *plan)
+void fft_3d_1d_only(FFT_DATA *data, int nsize, int flag, struct fft_plan_3d *plan)
 {
   int i,num;
   FFT_SCALAR norm;
