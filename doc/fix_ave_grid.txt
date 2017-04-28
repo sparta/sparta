@@ -10,7 +10,7 @@ fix ave/grid command :h3
 
 [Syntax:]
 
-fix ID ave/grid gropu-ID Nevery Nrepeat Nfreq value1 value2 ... keyword args ... :pre
+fix ID ave/grid group-ID Nevery Nrepeat Nfreq value1 value2 ... keyword args ... :pre
 
 ID is documented in "fix"_fix.html command :ulb,l
 ave/grid = style name of this fix command :l
