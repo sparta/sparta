@@ -16,14 +16,15 @@ ID is documented in "compute"_compute.html command :ulb,l
 boundary = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {press} or {shx} or {shy} or {shz} or {ke} :l
+value = {n} or {nwt} or {press} or {shx} or {shy} or {shz} or {ke} or {erot} or {evib} or {etot} :l
   n = count of particles hitting boundary
+  nwt = weighted count of particles hitting boundary
   press = magnitude of normal pressure on boundary
   shx,shy,shz = components of shear stress on boundary
-  ke = flux of kinetic energy on boundary 
-  erot = flux of rotational energy on boundary 
-  evib = flux of vibrational energy on boundary 
-  etot = flux of total energy on boundary :pre
+  ke = flux of particle kinetic energy on boundary 
+  erot = flux of particle rotational energy on boundary 
+  evib = flux of particle vibrational energy on boundary 
+  etot = flux of particle total energy on boundary :pre
 :ule
 
 [Examples:]
@@ -31,36 +32,78 @@ value = {n} or {press} or {shx} or {shy} or {shz} or {ke} :l
 compute 1 boundary all n press eng
 compute mine boundary species press shx shy shz :pre
 
+These commands will print values for the current timestep for 
+the xlo and xhi boundaryies, as part of statistical output:
+
+compute 1 boundary all n press
+stats_style step np c_1\[1\]\[1\] c_1\[1\]\[2\] c_1\[2\]\[1\] c_1\[2\]\[2\] :pre
+
 These commands will dump time averages for each species and each
 boundary to a file every 1000 steps:
 
 compute 1 boundary species n press shx shy shz
-fix 1 ave/time 10 100 1000 c_1 file tmp.boundary :pre
+fix 1 ave/time 10 100 1000 c_1\[*\] mode vector file tmp.boundary :pre
 
 [Description:]
 
 Define a computation that calculates one or more values for each
 boundary (i.e. face) of the simulation box, based on the particles
-that strike that boundary.  The values are summed for each group of
-species in the specified mixture.  See the "mixture"_mixture.html
-command for how a set of species can be partitioned into groups.
+that cross or collide with the boundary.  The values are summed for
+each group of species in the specified mixture.  See the
+"mixture"_mixture.html command for how a set of species can be
+partitioned into groups.
 
-The manner in which statistics are tallied for each boundary depends
-on the style of boundary as specified by the "boundary"_boundary.html
-command.  For {outflow} boundaries, only the flux of particles leaving
-the simulation box contributes to the pressure, stress, and energy;
-there is no contribution from reflected particles.  For {periodic}
-boundaries, only the count {n} is tallied, since the particles exert
-no pressure or stress on the boundary.  For {specular} boundaries, the
-particle collisions exert pressure and stress on the boundary but no
-energy flux, since the collisions conserve energy.  For {surface}
-boundaries, each collision may contribute to all the values, depending
-on the "surface collision model"_surf_collide.html.
+Note that depending on the settings for the "boundary"_boundary.html
+command, when a particle collides with a boundary, it can exit the
+simulation box (outflow), re-enter from the other side (periodic),
+reflect specularly from the boundary, or interact with it as if it
+were a surface.  In the surface case, the incident particle may bounce
+off (possibly as a different species), be captured by the boundary
+(vanish), or a 2nd particle can also be emitted.  The formulas below
+account for all these possible scenarios.  As an example, the pressure
+exerted on an outflow boundary versus a specularly reflecting boundary
+is different, since in the former case there is no net momentum flux
+back into the simulation box by reflected particles.
+
+Also note that all values for a boundary collision are tallied based
+on the species group of the incident particle.  Quantities associated
+with outgoing particles are part of the same tally, even if they are
+in different species groups.
+
+The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+"stats_style"_dump.html command.
+
+The values over many sampling timesteps can be averaged by the "fix
+ave/surf"_fix_ave_surf.html command.  It does its averaging as if the
+particles striking the surface element at each sampling timestep were
+combined together into one large set to compute the formulas below.
+The answer is then divided by the number of sampling timesteps if it
+is not otherwise normalized by the number of particles.  Note that in
+general this is a different normalization than taking the values
+produced by the formulas below for a single timestep, summing them
+over the sampling timesteps, and then dividing by the number of
+sampling steps.  However for the current values listed below, the two
+normalization methods are the same.
+
+NOTE: If particle weighting is enabled via the "global
+weight"_global.html command, then all of the values below are scaled
+by the weight assigned to the grid cell in which the particle
+collision with the boundary occurs.  The only exception is the the {n}
+value, which is NOT scaled by the weight; it is a simple count of
+particle collisions with the boundary.
 
 :line
 
-The {n} value counts the number of particles in the group striking the
-boundary or passing through it.
+The {n} value counts the number of particles in the group crossing or
+colliding with the boundary.
+
+The {nwt} value counts the number of particles in the group crossing
+or colliding with the boundary and weights the count by the weight
+assigned to the grid cell in which the particle collision with the
+boundary occurs.  The {nwt} quantity will only be different than {n}
+if particle weighting is enabled via the "global weight"_global.html
+command.
 
 The {press} value calculates the pressure {P} exerted on the boundary
 in the normal direction by particles in the group, such that outward

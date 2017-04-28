@@ -212,7 +212,7 @@ entity.
 The {s_ID\[I\]} and {r_ID\[I\]} keywords allow global values
 calculated by a surface collision model or surface reaction model to
 be output.  As discussed on the "surf_collide"_surf_collide.html and
-surf_react"_surf_react.html doc pages, these models both calculate a
+"surf_react"_surf_react.html doc pages, these models both calculate a
 global vector of quantities.
  
 The {c_ID} and {c_ID\[I\]} and {c_ID\[I\]\[J\]} keywords allow global

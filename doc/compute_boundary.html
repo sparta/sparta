@@ -23,15 +23,16 @@
 
 <LI>one or more values can be appended 
 
-<LI>value = <I>n</I> or <I>press</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> 
+<LI>value = <I>n</I> or <I>nwt</I> or <I>press</I> or <I>shx</I> or <I>shy</I> or <I>shz</I> or <I>ke</I> or <I>erot</I> or <I>evib</I> or <I>etot</I> 
 
 <PRE>  n = count of particles hitting boundary
+  nwt = weighted count of particles hitting boundary
   press = magnitude of normal pressure on boundary
   shx,shy,shz = components of shear stress on boundary
-  ke = flux of kinetic energy on boundary 
-  erot = flux of rotational energy on boundary 
-  evib = flux of vibrational energy on boundary 
-  etot = flux of total energy on boundary 
+  ke = flux of particle kinetic energy on boundary 
+  erot = flux of particle rotational energy on boundary 
+  evib = flux of particle vibrational energy on boundary 
+  etot = flux of particle total energy on boundary 
 </PRE>
 
 </UL>
@@ -40,36 +41,78 @@
 <PRE>compute 1 boundary all n press eng
 compute mine boundary species press shx shy shz 
 </PRE>
+<P>These commands will print values for the current timestep for 
+the xlo and xhi boundaryies, as part of statistical output:
+</P>
+<PRE>compute 1 boundary all n press
+stats_style step np c_1[1][1] c_1[1][2] c_1[2][1] c_1[2][2] 
+</PRE>
 <P>These commands will dump time averages for each species and each
 boundary to a file every 1000 steps:
 </P>
 <PRE>compute 1 boundary species n press shx shy shz
-fix 1 ave/time 10 100 1000 c_1 file tmp.boundary 
+fix 1 ave/time 10 100 1000 c_1[*] mode vector file tmp.boundary 
 </PRE>
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each
 boundary (i.e. face) of the simulation box, based on the particles
-that strike that boundary.  The values are summed for each group of
-species in the specified mixture.  See the <A HREF = "mixture.html">mixture</A>
-command for how a set of species can be partitioned into groups.
+that cross or collide with the boundary.  The values are summed for
+each group of species in the specified mixture.  See the
+<A HREF = "mixture.html">mixture</A> command for how a set of species can be
+partitioned into groups.
 </P>
-<P>The manner in which statistics are tallied for each boundary depends
-on the style of boundary as specified by the <A HREF = "boundary.html">boundary</A>
-command.  For <I>outflow</I> boundaries, only the flux of particles leaving
-the simulation box contributes to the pressure, stress, and energy;
-there is no contribution from reflected particles.  For <I>periodic</I>
-boundaries, only the count <I>n</I> is tallied, since the particles exert
-no pressure or stress on the boundary.  For <I>specular</I> boundaries, the
-particle collisions exert pressure and stress on the boundary but no
-energy flux, since the collisions conserve energy.  For <I>surface</I>
-boundaries, each collision may contribute to all the values, depending
-on the <A HREF = "surf_collide.html">surface collision model</A>.
+<P>Note that depending on the settings for the <A HREF = "boundary.html">boundary</A>
+command, when a particle collides with a boundary, it can exit the
+simulation box (outflow), re-enter from the other side (periodic),
+reflect specularly from the boundary, or interact with it as if it
+were a surface.  In the surface case, the incident particle may bounce
+off (possibly as a different species), be captured by the boundary
+(vanish), or a 2nd particle can also be emitted.  The formulas below
+account for all these possible scenarios.  As an example, the pressure
+exerted on an outflow boundary versus a specularly reflecting boundary
+is different, since in the former case there is no net momentum flux
+back into the simulation box by reflected particles.
+</P>
+<P>Also note that all values for a boundary collision are tallied based
+on the species group of the incident particle.  Quantities associated
+with outgoing particles are part of the same tally, even if they are
+in different species groups.
+</P>
+<P>The results of this compute can be used by different commands in
+different ways.  The values for a single timestep can be output by the
+<A HREF = "dump.html">stats_style</A> command.
+</P>
+<P>The values over many sampling timesteps can be averaged by the <A HREF = "fix_ave_surf.html">fix
+ave/surf</A> command.  It does its averaging as if the
+particles striking the surface element at each sampling timestep were
+combined together into one large set to compute the formulas below.
+The answer is then divided by the number of sampling timesteps if it
+is not otherwise normalized by the number of particles.  Note that in
+general this is a different normalization than taking the values
+produced by the formulas below for a single timestep, summing them
+over the sampling timesteps, and then dividing by the number of
+sampling steps.  However for the current values listed below, the two
+normalization methods are the same.
+</P>
+<P>NOTE: If particle weighting is enabled via the <A HREF = "global.html">global
+weight</A> command, then all of the values below are scaled
+by the weight assigned to the grid cell in which the particle
+collision with the boundary occurs.  The only exception is the the <I>n</I>
+value, which is NOT scaled by the weight; it is a simple count of
+particle collisions with the boundary.
 </P>
 <HR>
 
-<P>The <I>n</I> value counts the number of particles in the group striking the
-boundary or passing through it.
+<P>The <I>n</I> value counts the number of particles in the group crossing or
+colliding with the boundary.
+</P>
+<P>The <I>nwt</I> value counts the number of particles in the group crossing
+or colliding with the boundary and weights the count by the weight
+assigned to the grid cell in which the particle collision with the
+boundary occurs.  The <I>nwt</I> quantity will only be different than <I>n</I>
+if particle weighting is enabled via the <A HREF = "global.html">global weight</A>
+command.
 </P>
 <P>The <I>press</I> value calculates the pressure <I>P</I> exerted on the boundary
 in the normal direction by particles in the group, such that outward

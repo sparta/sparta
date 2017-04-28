@@ -57,12 +57,12 @@ stats_style step cpu np c_2\[1\] c_2\[2\] :pre
 
 Define a computation that calculates one or more values for each
 surface element in a group of elements, based on the particles that
-strike that element.  The values are summed for each group of species
-in the specified mixture.  See the "mixture"_mixture.html command for
-how a set of species can be partitioned into groups.  Only surface
-elements in the surface group specified by {group-ID} are included in
-the calculations.  See the "group surf"_group.html command for info on
-how surface elements can be assigned to surface groups.
+collide with that element.  The values are summed for each group of
+species in the specified mixture.  See the "mixture"_mixture.html
+command for how a set of species can be partitioned into groups.  Only
+surface elements in the surface group specified by {group-ID} are
+included in the calculations.  See the "group surf"_group.html command
+for info on how surface elements can be assigned to surface groups.
 
 Surface elements are triangles for 3d simulations and line segments
 for 2d simulations.  See the "read_surf"_read_surf.html command for
