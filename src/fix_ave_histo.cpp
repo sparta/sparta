@@ -897,9 +897,8 @@ void FixAveHisto::bin_particles(int attribute, int index)
   if (attribute == X) {
     if (regionflag && mixflag) {
       for (int i = 0; i < nlocal; i++) {
-        if (!region->match(particles[i].x)) continue;
-        if (s2g[particles[i].ispecies] < 0) continue;
-        bin_one(particles[i].x[index]);
+        if (region->match(particles[i].x) &&
+            s2g[particles[i].ispecies] >= 0) bin_one(particles[i].x[index]);
       }
     } else if (regionflag) {
       for (int i = 0; i < nlocal; i++) {
@@ -917,17 +916,16 @@ void FixAveHisto::bin_particles(int attribute, int index)
   } else if (attribute == V) {
     if (regionflag && mixflag) {
       for (int i = 0; i < nlocal; i++) {
-        if (!region->match(particles[i].x)) continue;
-        if (s2g[particles[i].ispecies] < 0) continue;
-        bin_one(particles[i].x[index]);
+        if (region->match(particles[i].x) &&
+            s2g[particles[i].ispecies] < 0) bin_one(particles[i].v[index]);
       }
     } else if (regionflag) {
       for (int i = 0; i < nlocal; i++) {
-        if (region->match(particles[i].x)) bin_one(particles[i].x[index]);
+        if (region->match(particles[i].x)) bin_one(particles[i].v[index]);
       }
     } else if (mixflag) {
       for (int i = 0; i < nlocal; i++) {
-        if (s2g[particles[i].ispecies] >= 0) bin_one(particles[i].x[index]);
+        if (s2g[particles[i].ispecies] >= 0) bin_one(particles[i].v[index]);
       }
     } else {
       for (int i = 0; i < nlocal; i++)

@@ -17,6 +17,9 @@
 #include <unistd.h>
 #include "fix_ave_histo_weight.h"
 #include "particle.h"
+#include "mixture.h"
+#include "domain.h"
+#include "region.h"
 #include "grid.h"
 #include "modify.h"
 #include "compute.h"
@@ -310,25 +313,71 @@ void FixAveHistoWeight::bin_vector(int n, double *values, int stride)
    bin a per-particle attribute with weights
    index is 0,1,2 if attribute is X or V
    weights have a stridewt
-   NOTE: only bin if particle is in mixture ??
 ------------------------------------------------------------------------- */
 
 void FixAveHistoWeight::bin_particles(int attribute, int index)
 {
   Particle::OnePart *particles = particle->particles;
+  int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
+
+  Region *region;
+  if (regionflag) region = domain->regions[iregion];
 
   int mwt = 0;
 
   if (attribute == X) {
-    for (int i = 0; i < nlocal; i++) {
-      bin_one_weight(particles[i].x[index],weights[mwt]);
-      mwt += stridewt;
+    if (regionflag && mixflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (region->match(particles[i].x) &&
+            s2g[particles[i].ispecies] < 0)
+          bin_one_weight(particles[i].x[index],weights[mwt]);
+        mwt += stridewt;
+      }
+    } else if (regionflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (region->match(particles[i].x)) 
+          bin_one_weight(particles[i].x[index],weights[mwt]);
+        mwt += stridewt;
+      }
+    } else if (mixflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (s2g[particles[i].ispecies] >= 0) 
+          bin_one_weight(particles[i].x[index],weights[mwt]);
+        mwt += stridewt;
+      }
+    } else {
+      for (int i = 0; i < nlocal; i++) {
+        bin_one_weight(particles[i].x[index],weights[mwt]);
+        mwt += stridewt;
+      }
     }
+
   } else if (attribute == V) {
-    for (int i = 0; i < nlocal; i++) {
-      bin_one_weight(particles[i].v[index],weights[mwt]);
-      mwt += stridewt;
+    if (regionflag && mixflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (region->match(particles[i].x) &&
+            s2g[particles[i].ispecies] < 0)
+          bin_one_weight(particles[i].v[index],weights[mwt]);
+        mwt += stridewt;
+      }
+    } else if (regionflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (region->match(particles[i].x)) 
+          bin_one_weight(particles[i].v[index],weights[mwt]);
+        mwt += stridewt;
+      }
+    } else if (mixflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (s2g[particles[i].ispecies] >= 0) 
+          bin_one_weight(particles[i].v[index],weights[mwt]);
+        mwt += stridewt;
+      }
+    } else {
+      for (int i = 0; i < nlocal; i++) {
+        bin_one_weight(particles[i].v[index],weights[mwt]);
+        mwt += stridewt;
+      }
     }
   }
 }
@@ -336,36 +385,75 @@ void FixAveHistoWeight::bin_particles(int attribute, int index)
 /* ----------------------------------------------------------------------
    bin a per-particle vector of values with weights
    values and weights each have a stride
-   NOTE: only bin if particle is in mixture ??
 ------------------------------------------------------------------------- */
 
 void FixAveHistoWeight::bin_particles(double *values, int stride)
 {
+  Particle::OnePart *particles = particle->particles;
+  int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
+
+  Region *region;
+  if (regionflag) region = domain->regions[iregion];
 
   int m = 0;
   int mwt = 0;
-  for (int i = 0; i < nlocal; i++) {
-    bin_one_weight(values[m],weights[mwt]);
-    m += stride;
-    mwt += stridewt;
+
+  if (regionflag && mixflag) {
+    for (int i = 0; i < nlocal; i++) {
+      if (region->match(particles[i].x) && 
+          s2g[particles[i].ispecies] >= 0) 
+        bin_one_weight(values[m],weights[mwt]);
+      m += stride;
+      mwt += stridewt;
+    }
+  } else if (regionflag) {
+    for (int i = 0; i < nlocal; i++) {
+      if (region->match(particles[i].x)) 
+        bin_one_weight(values[m],weights[mwt]);
+      m += stride;
+      mwt += stridewt;
+    }
+  } else if (mixflag) {
+    for (int i = 0; i < nlocal; i++) {
+      if (s2g[particles[i].ispecies] < 0)
+        bin_one_weight(values[m],weights[mwt]);
+      m += stride;
+      mwt += stridewt;
+    }
+  } else {
+    for (int i = 0; i < nlocal; i++) {
+      bin_one_weight(values[m],weights[mwt]);
+      m += stride;
+      mwt += stridewt;
+    }
   }
 }
 
 /* ----------------------------------------------------------------------
    bin a per-grid vector of values with weights
-   NOTE: only bin if grid cell is in group ??
 ------------------------------------------------------------------------- */
 
 void FixAveHistoWeight::bin_grid_cells(double *values, int stride)
 {
+  Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
   int m = 0;
   int mwt = 0;
-  for (int i = 0; i < nglocal; i++) {
-    bin_one_weight(values[m],weights[mwt]);
-    m += stride;
-    mwt += stridewt;
+
+  if (groupflag) {
+    for (int i = 0; i < nglocal; i++) {
+      if (cinfo[i].mask & groupbit) 
+        bin_one_weight(values[m],weights[mwt]);
+      m += stride;
+      mwt += stridewt;
+    }
+  } else {
+    for (int i = 0; i < nglocal; i++) {
+      bin_one_weight(values[m],weights[mwt]);
+      m += stride;
+      mwt += stridewt;
+    }
   }
 }
