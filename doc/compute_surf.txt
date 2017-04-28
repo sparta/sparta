@@ -83,9 +83,9 @@ species group of the incident particle.  Quantities associated with
 outgoing particles are part of the same tally, even if they are in
 different species groups.
 
-The results of this compute are used by different commands in
+The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
-"dump surf"_dump.html command.  
+"dump surf"_dump.html command.
 
 The values over many sampling timesteps can be averaged by the "fix
 ave/surf"_fix_ave_surf.html command.  It does its averaging as if the
