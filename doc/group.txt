@@ -14,9 +14,7 @@ group ID which style args :pre
 
 ID = user-defined name of the grid or surface group :ulb,l
 which = {grid} or {surf} :l
-
-style options for which = grid: none yet implemented :l
-
+style options for which = grid: {region} or {subtract} or {union} or {intersect} or {clear} :l
 style options for which = surf: {type} or {id} or {region} or {subtract} or {union} or {intersect} or {clear} :l
   {type} or {id} args
     args = list of one or more surface element types or IDs
@@ -29,11 +27,11 @@ style options for which = surf: {type} or {id} or {region} or {subtract} or {uni
       logical = "<>"
       value1,value2 = surface element types or IDs
   {region} args = region-ID rflag
-    region-ID = ID of region which surface element must be in
+    region-ID = ID of region which grid cell or surface element must be in
     rflag = {one} or {all} or {center}
-      {any} = one (or more) corner point of surface element in region
-      {all} = all corner points of surface element in region
-      {any} = center point of surface element in region
+      {any} = one (or more) corner points of grid cell or surface element in region
+      {all} = all corner points of grid cell or surface element in region
+      {any} = center point of grid cell or surface element in region
   {subtract} args = two or more group IDs
   {union} args = one or more group IDs
   {intersect} args = two or more group IDs
@@ -46,8 +44,10 @@ group sphere surf type 1 3
 group sphere surf id 50 100:150
 group sphere surf id <= 1000
 group sphere surf id <> 50 250
+group patch grid region leftedge
 group patch surf region cutout
 group boundary surf subtract all a2 a3
+group boundary grid union lower upper
 group boundary surf union lower upper
 group boundary surf intersect upper leftside :pre
 
@@ -63,8 +63,6 @@ grid"_compute_grid.html, "compute surf"_compute_surf.html, "fix
 ave/grid"_fix_ave_grid.html, "fix ave/surf"_fix_ave_surf.html, "dump
 grid"_dump.html, or "dump surf"_dump.html commands.
 
-IMPORTANT NOTE: Grid groups are not yet implemented in SPARTA.
-
 An individual grid cell can belong to multiple grid groups.  An
 individual surface element can belong to multiple surface groups.
 Each grid or surface group has a name which is specified as the {ID}
@@ -78,15 +76,35 @@ This means the group command can be used multiple times with the same
 group ID to incrementally add grid cells or surface elements to the
 group.
 
-A grid group with the ID {all} is predefined.  All grid cells belong
+A grid group with the ID {all} is pre-defined.  All grid cells belong
 to this group.  Likewise, a surface group with the ID {all} is
-predefined.  All surface elements belong to this group.
+pre-defined.  All surface elements belong to this group.
+
+After this command has performed its grid cell or surface elements
+assignments, statistics about the group are printed to the screen, so
+that you can check if the command operated as you expect.
+
+Note that this command assigns all flavors of child grid cells to
+groups, which includes unsplit, cut, split, and sub cells.  See
+"Section 4.8"_Section_howto.html#howto_8 of the manual gives details
+of how SPARTA defines child, unsplit, split, and sub cells.
 
 :line
 
 The following styles can be used for grid groups.
 
-IMPORTANT NOTE: No grid group styles are implemented yet.
+The {region} style puts all grid cells in the region volume associated
+with the {region-ID} into the group.  See the "region"_region.html
+command for details on what kind of geometric regions can be defined.
+Note that the {side} option for the "region"_region.html command can
+be used to define whether the inside or outside of the geometric
+region is considered to be "in" the region.
+
+The {rflag} setting determines how a grid cell is judged to be in the
+region or not.  For {rflag} = {one}, it is in the region if any of its
+corner points (4 for 2d, 8 for 3d) is in the region.  For {rflag} =
+{all}, all its corner points must be in the region.  For {rflag} =
+{center}, the center point of the grid cell must be in the region.
 
 :line
 
@@ -173,7 +191,7 @@ defined, including "all".
 [Related commands:]
 
 "dump"_dump.html, "region"_region.html, "compute
-surf"_compute_surf.html
+grid"_compute_grid.html, "compute surf"_compute_surf.html
 
 [Default:]
 

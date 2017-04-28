@@ -49,10 +49,11 @@ grid cell size when adapting the grid, e.g. via the
 commands.
 
 Unlike other computes that calculate per grid cell values, this
-compute does not take a "mixture"_mixture.html ID as an argument.
+compute does not take a "group-ID" for a grid cell group as an
+argument, nor a particle "mixture"_mixture.html ID as an argument.
 This is because it uses the number density and temperature calculated
 by other computes or fixes as input, and those computes or fixes use
-mixtures as part of their computations.
+grid group IDs or mixture IDs as part of their computations.
 
 The results of this compute can be used by different commands in
 different ways.  For example, the values can be output by the
