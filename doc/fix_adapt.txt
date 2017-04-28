@@ -19,11 +19,11 @@ args = all remaining args are identical to those defined for the "adapt_grid"_ad
 
 [Examples:]
 
-fix 1 adapt 1000 refine particle 10 50
-fix 1 adapt 1000 coarsen particle 10 50
-fix 1 adapt 500 refine coarsen particle 10 50
-fix 1 adapt 10000 refine surf 0.15 iterate 1 dir 1 0 0 
-fix 10 adapt 1000 refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
+fix 1 adapt 1000 all refine particle 10 50
+fix 1 adapt 1000 all coarsen particle 10 50
+fix 1 adapt 500 subset refine coarsen particle 10 50
+fix 1 adapt 10000 all refine surf 0.15 iterate 1 dir 1 0 0 
+fix 10 adapt 1000 all refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
 
 [Description:]
 
@@ -51,7 +51,10 @@ Adaptation is performed by this command once every {Nfreq} timesteps.
 All of the command arguments which appear after {Nfreq}, which
 determine how adapation is done for both refinement and coarsening,
 are exactly the same as for the "adapt_grid"_adapt_grid.html command.
-See its doc page for details.
+
+This includes a group-ID parameter which can be used to limit
+adaptation to a subset of current grid cells.  See the
+"adapt_grid"_adapt_grid.html command doc page for details.
 
 The one exception is that the {iterate} keyword cannot be used with
 the fix adapt command.  Only a single iteration of the action1 and

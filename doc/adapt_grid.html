@@ -13,8 +13,10 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>adapt_grid action1 action2 style args ... keyword args ... 
+<PRE>adapt_grid group-ID action1 action2 style args ... keyword args ... 
 </PRE>
+<LI>group-ID = group ID for which grid cell adaptation will be attempted 
+
 <LI>action1 = <I>refine</I> or <I>coarsen</I> 
 
 <LI>action2 = <I>coarsen</I> or <I>refine</I>, optional 
@@ -75,11 +77,11 @@ adapt_grid refine coarsen value c_1<B>1</B> 5.0 10.0 iterate 2
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>This command perform a one-time adaptation of grid cells, either by
-refinement or coarsening or both.  This command can be invoked as many
-times as desired, before or between simulation runs.  Grid adaptation
-can also be performed on-the-fly during a simulation by using the <A HREF = "fix_adapt.html">fix
-adapt</A> command.
+<P>This command perform a one-time adaptation of grid cells within a grid
+cell group, either by refinement or coarsening or both.  This command
+can be invoked as many times as desired, before or between simulation
+runs.  Grid adaptation can also be performed on-the-fly during a
+simulation by using the <A HREF = "fix_adapt.html">fix adapt</A> command.
 </P>
 <P>Refinement means splitting one child cell into multiple new child
 cells; the original child cell becomes a parent cell.  Coarsening
@@ -94,6 +96,15 @@ current density distribution, or mean-free-path of particles, or to
 other simulation attributes such as the presence of surface elements.
 A well-adapted grid can improve accuracy of the simulation and/or
 reduce a simulation's computational cost.
+</P>
+<P>Only grid cells in the grid group specified by <I>group-ID</I> are eligible
+for refinement.  A parent grid cell is only eligible for coarsening if
+all its child cells are in the specified grid group.  See the <A HREF = "group.html">group
+grid</A> command for info on how grid cells can be assigned to
+grid groups.  Note that the grid group assignment is transferred to
+new refined or coarsened cells, so that new cells remain eligible for
+adaptation if the adapt_grid command is invoked again or successive
+adaptations are performed via the <A HREF = "fix_adapt.html">fix adapt</A> command.
 </P>
 <P>The <I>action1</I> and <I>action2</I> parameters determine whether refinement or
 coarsening is performed and in what order.  <I>Action2</I> is optional.  If

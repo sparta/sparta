@@ -10,8 +10,9 @@ adapt_grid command :h3
 
 [Syntax:]
 
-adapt_grid action1 action2 style args ... keyword args ... :pre
+adapt_grid group-ID action1 action2 style args ... keyword args ... :pre
 
+group-ID = group ID for which grid cell adaptation will be attempted :l
 action1 = {refine} or {coarsen} :l
 action2 = {coarsen} or {refine}, optional :l
 style = {particle} or {surf} or {value} or {random} :l
@@ -65,11 +66,11 @@ adapt_grid refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
 
 [Description:]
 
-This command perform a one-time adaptation of grid cells, either by
-refinement or coarsening or both.  This command can be invoked as many
-times as desired, before or between simulation runs.  Grid adaptation
-can also be performed on-the-fly during a simulation by using the "fix
-adapt"_fix_adapt.html command.
+This command perform a one-time adaptation of grid cells within a grid
+cell group, either by refinement or coarsening or both.  This command
+can be invoked as many times as desired, before or between simulation
+runs.  Grid adaptation can also be performed on-the-fly during a
+simulation by using the "fix adapt"_fix_adapt.html command.
 
 Refinement means splitting one child cell into multiple new child
 cells; the original child cell becomes a parent cell.  Coarsening
@@ -84,6 +85,15 @@ current density distribution, or mean-free-path of particles, or to
 other simulation attributes such as the presence of surface elements.
 A well-adapted grid can improve accuracy of the simulation and/or
 reduce a simulation's computational cost.
+
+Only grid cells in the grid group specified by {group-ID} are eligible
+for refinement.  A parent grid cell is only eligible for coarsening if
+all its child cells are in the specified grid group.  See the "group
+grid"_group.html command for info on how grid cells can be assigned to
+grid groups.  Note that the grid group assignment is transferred to
+new refined or coarsened cells, so that new cells remain eligible for
+adaptation if the adapt_grid command is invoked again or successive
+adaptations are performed via the "fix adapt"_fix_adapt.html command.
 
 The {action1} and {action2} parameters determine whether refinement or
 coarsening is performed and in what order.  {Action2} is optional.  If

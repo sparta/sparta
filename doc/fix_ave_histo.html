@@ -44,13 +44,16 @@
 </PRE>
 <LI>zero or more keyword/arg pairs may be appended 
 
-<LI>keyword = <I>mode</I> or <I>file</I> or <I>ave</I> or <I>start</I> or <I>beyond</I> or <I>overwrite</I> or <I>title1</I> or <I>title2</I> or <I>title3</I> 
+<LI>keyword = <I>mode</I> or <I>file</I> or <I>region</I> or <I>mix</I> or <I>group</I> or <I>ave</I> or <I>start</I> or <I>beyond</I> or <I>overwrite</I> or <I>title1</I> or <I>title2</I> or <I>title3</I> 
 
 <PRE>  <I>mode</I> arg = <I>scalar</I> or <I>vector</I>
     scalar = all input values are scalars
     vector = all input values are vectors
   <I>file</I> arg = filename
     filename = name of file to output histogram(s) to
+  <I>region</I> arg = region-ID for particle inclusion
+  <I>mix</I> arg = mixture-ID for particle inclusion
+  <I>group</I> arg = group-ID for grid cell inclusion
   <I>ave</I> args = <I>one</I> or <I>running</I> or <I>window</I>
     one = output a new average value every Nfreq steps
     running = output cumulative average of all previous Nfreq steps
@@ -92,8 +95,9 @@ a histogram bin.  <I>Nbins</I> are defined, with even spacing between <I>lo</I>
 and <I>hi</I>.  Values that fall outside the lo/hi bounds can be treated in
 different ways; see the discussion of the <I>beyond</I> keyword below.
 </P>
-<P>Each input value can be a particle attribute (position, velocity) or
-can be the result of a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> or the
+<P>Each input value can be a particle attribute (position, velocity), or
+can be the result of a <A HREF = "compute.html">compute</A> or <A HREF = "fix.html">fix</A> that
+produces global or per-particle or per-grid quantities, or the
 evaluation of an equal-style or particle-style or grid-style
 <A HREF = "variable.html">variable</A>.  The set of input values can be either all
 global, all per-particle, or all per-grid quantities.  Inputs of
@@ -227,19 +231,38 @@ keyword is set to <I>vector</I>, then all input values must be global or
 per-particle or per-grid vectors, or columns of global or per-particle
 or per-grid arrays.
 </P>
-<P>The <I>beyond</I> keyword determines how input values that fall outside the
-<I>lo</I> to <I>hi</I> bounds are treated.  Values such that <I>lo</I> <= value <=
-<I>hi</I> are assigned to one bin.  Values on a bin boundary are assigned
-to the lower of the 2 bins.  If <I>beyond</I> is set to <I>ignore</I> then
-values < <I>lo</I> and values > <I>hi</I> are ignored, i.e. they are not binned.
-If <I>beyond</I> is set to <I>end</I> then values < <I>lo</I> are counted in the
-first bin and values > <I>hi</I> are counted in the last bin.  If <I>beyond</I>
-is set to <I>extend</I> then two extra bins are created, so that there are
-Nbins+2 total bins.  Values < <I>lo</I> are counted in the first bin and
-values > <I>hi</I> are counted in the last bin (Nbins+1).  Values between
-<I>lo</I> and <I>hi</I> (inclusive) are counted in bins 2 thru Nbins+1.  The
-"coordinate" stored and printed for these two extra bins is <I>lo</I> and
-<I>hi</I>.
+<P>The <I>file</I> keyword allows a filename to be specified.  Every <I>Nfreq</I>
+steps, one histogram is written to the file.  This includes a leading
+line that contains the timestep, number of bins, the total count of
+values contributing to the histogram, the count of values that were
+not histogrammed (see the <I>beyond</I> keyword), the minimum value
+encountered, and the maximum value encountered.  The min/max values
+include values that were not histogrammed.  Following the leading
+line, one line per bin is written into the file.  Each line contains
+the bin #, the coordinate for the center of the bin (between <I>lo</I> and
+<I>hi</I>), the count of values in the bin, and the normalized count.  The
+normalized count is the bin count divided by the total count (not
+including values not histogrammed), so that the normalized values sum
+to 1.0 across all bins.
+</P>
+<P>The <I>region</I>, <I>mix</I>, and <I>group</I> keywords limit which particles
+or grid cells are included in the histogramming.
+</P>
+<P>The <I>region</I> keyword only applies to per-particle histogramming.  Only
+particles in the specified <I>region-ID</I> are included in the histogram.
+See the <A HREF = "region.html">region</A> command for details of how geometric
+regions are defined.
+</P>
+<P>The <I>mix</I> keyword only applies to per-particle histogramming.  Only
+particles whose species are in the specified <I>mixture-ID</I> are included
+in the histogram, which allows for only a subset of species to be
+included.  See the <A HREF = "mixture.html">mixture</A> command for details of how
+mixtures are defined.
+</P>
+<P>The <I>group</I> keyword only applies to per-grid cell histogramming.  Only
+grid cells in the grid group specified by <I>group-ID</I> are included in
+the histogram.  See the <A HREF = "group.html">grid group</A> command for details of
+how grid groups are defined.
 </P>
 <P>The <I>ave</I> keyword determines how the histogram produced every <I>Nfreq</I>
 steps are averaged with histograms produced on previous steps that
@@ -272,19 +295,19 @@ on.  The default is step 0.  Often input values can be 0.0 at time 0,
 so setting <I>start</I> to a larger value can avoid including a 0.0 in
 a running or windowed histogram.
 </P>
-<P>The <I>file</I> keyword allows a filename to be specified.  Every <I>Nfreq</I>
-steps, one histogram is written to the file.  This includes a leading
-line that contains the timestep, number of bins, the total count of
-values contributing to the histogram, the count of values that were
-not histogrammed (see the <I>beyond</I> keyword), the minimum value
-encountered, and the maximum value encountered.  The min/max values
-include values that were not histogrammed.  Following the leading
-line, one line per bin is written into the file.  Each line contains
-the bin #, the coordinate for the center of the bin (between <I>lo</I> and
-<I>hi</I>), the count of values in the bin, and the normalized count.  The
-normalized count is the bin count divided by the total count (not
-including values not histogrammed), so that the normalized values sum
-to 1.0 across all bins.
+<P>The <I>beyond</I> keyword determines how input values that fall outside the
+<I>lo</I> to <I>hi</I> bounds are treated.  Values such that <I>lo</I> <= value <=
+<I>hi</I> are assigned to one bin.  Values on a bin boundary are assigned
+to the lower of the 2 bins.  If <I>beyond</I> is set to <I>ignore</I> then
+values < <I>lo</I> and values > <I>hi</I> are ignored, i.e. they are not binned.
+If <I>beyond</I> is set to <I>end</I> then values < <I>lo</I> are counted in the
+first bin and values > <I>hi</I> are counted in the last bin.  If <I>beyond</I>
+is set to <I>extend</I> then two extra bins are created, so that there are
+Nbins+2 total bins.  Values < <I>lo</I> are counted in the first bin and
+values > <I>hi</I> are counted in the last bin (Nbins+1).  Values between
+<I>lo</I> and <I>hi</I> (inclusive) are counted in bins 2 thru Nbins+1.  The
+"coordinate" stored and printed for these two extra bins is <I>lo</I> and
+<I>hi</I>.
 </P>
 <P>The <I>overwrite</I> keyword will continuously overwrite the output file
 with the latest output, so that it only contains one timestep worth of

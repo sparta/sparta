@@ -66,9 +66,9 @@ stats_style step cpu np c_2[1] c_2[2]
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each
-surface element in a group of elements, based on the particles that
-collide with that element.  The values are summed for each group of
-species in the specified mixture.  See the <A HREF = "mixture.html">mixture</A>
+surface element in a surface element group, based on the particles
+that collide with that element.  The values are summed for each group
+of species in the specified mixture.  See the <A HREF = "mixture.html">mixture</A>
 command for how a set of species can be partitioned into groups.  Only
 surface elements in the surface group specified by <I>group-ID</I> are
 included in the calculations.  See the <A HREF = "group.html">group surf</A> command
@@ -251,8 +251,8 @@ ordering of columns is first by values, then by groups.  I.e. if the
 columns would be <I>n</I> and <I>u</I> for the first group, the 3rd and 4th
 columns would be <I>n</I> and <I>u</I> for the second group, etc.
 </P>
-<P>Surface elements not in the specified <I>group-ID</I> will have zeroes for
-all their values.
+<P>Surface elements not in the specified <I>group-ID</I> will output zeroes
+for all their values.
 </P>
 <P>The array can be accessed by any command that uses per-surf values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4</A>
