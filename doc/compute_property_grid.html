@@ -13,11 +13,13 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>compute ID property/grid input1 input2 ... 
+<PRE>compute ID property/grid group-ID input1 input2 ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
 <LI>property/grid = style name of this compute command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
 
 <LI>input = one or more grid attributes 
 
@@ -39,10 +41,15 @@
 <P><B>Description:</B>
 </P>
 <P>Define a computation that simply stores grid attributes for each grid
-cell.  This is useful so that the values can be used by other <A HREF = "Section_howto.html#howto_4">output
-commands</A> that take computes as inputs.
-See for example, the <A HREF = "compute_reduce.html">compute reduce</A>, <A HREF = "fix_ave_atom.html">fix
-ave/grid</A>, and <A HREF = "dump.html">dump grid</A> commands.
+cell in a grid cell group.  This is useful so that the values can be
+used by other <A HREF = "Section_howto.html#howto_4">output commands</A> that take
+computes as inputs.  See for example, the <A HREF = "compute_reduce.html">compute
+reduce</A>, <A HREF = "fix_ave_atom.html">fix ave/grid</A>, and
+<A HREF = "dump.html">dump grid</A> commands.
+</P>
+<P>Only grid cells in the grid group specified by <I>group-ID</I> are included
+in the calculation.  See the <A HREF = "group.html">group grid</A> command for info
+on how grid cells can be assigned to grid groups.
 </P>
 <P>The values are stored in a per-grid vector or array as discussed
 below. 
@@ -92,6 +99,9 @@ and its sub cells are all the same.  The <I>vol</I> of a cut cell is the
 portion of the cell in the flow.  The <I>vol</I> of a split cell is the
 same as if it were unsplit.  The <I>vol</I> of each sub cell within a split
 cell is its portion of the flow volume.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> will output zeroes for all
+their values.
 </P>
 <P>The vector or array can be accessed by any command that uses per-atom
 values from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section

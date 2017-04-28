@@ -13,11 +13,13 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>fix ID ave/grid Nevery Nrepeat Nfreq value1 value2 ... keyword args ... 
+<PRE>fix ID ave/grid gropu-ID Nevery Nrepeat Nfreq value1 value2 ... keyword args ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
 
 <LI>ave/grid = style name of this fix command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
 
 <LI>Nevery = use input values every this many timesteps 
 
@@ -45,10 +47,10 @@ zero or more input values can be listed
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>fix 1 ave/grid 10 20 1000 c_mine
-fix 1 ave/grid 1 100 100 c_2[1] ave running
-fix 1 ave/grid 1 100 100 c_2[*] ave running
-fix 1 ave/grid 5 20 100 v_myEng 
+<PRE>fix 1 ave/grid all 10 20 1000 c_mine
+fix 1 ave/grid all 1 100 100 c_2[1] ave running
+fix 1 ave/grid all 1 100 100 c_2[*] ave running
+fix 1 ave/grid section1 5 20 100 v_myEng 
 </PRE>
 <P>These commands will dump averages for each species and each grid cell
 to a file every 1000 steps:
@@ -63,7 +65,10 @@ dump 1 grid all 1000 tmp.grid id f_1[*]
 average by grid cell over longer timescales, applying appropriate
 normalization factors.  The resulting per grid cell averages can be
 used by other output commands such as the <A HREF = "dump.html">dump grid</A>
-command.
+command.  Only grid cells in the grid group specified by <I>group-ID</I>
+are included in the averaging.  See the <A HREF = "group.html">group grid</A>
+command for info on how grid cells can be assigned to grid
+groups.
 </P>
 <P>Each input value can be the result of a <A HREF = "compute.html">compute</A> or
 <A HREF = "fix.html">fix</A> or <A HREF = "variable.html">grid-style variable</A>.  The compute or
@@ -209,10 +214,13 @@ columns is the number of quantities averaged.  The per-grid values can
 only be accessed on timesteps that are multiples of <I>Nfreq</I> since that
 is when averaging is performed.
 </P>
-<P>This fix performs calculations for all child grid cells in the
+<P>This fix performs averaging for all child grid cells in the
 simulation, which includes unsplit, split, and sub cells.  <A HREF = "Section_howto.html#howto_">Section
 4.8</A> of the manual gives details of how
 SPARTA defines child, unsplit, split, and sub cells.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> will output zeroes for all
+their values.
 </P>
 <P><B>Restrictions:</B>
 </P>

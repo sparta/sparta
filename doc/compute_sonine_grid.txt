@@ -10,10 +10,11 @@ compute sonine/grid command :h3
 
 [Syntax:]
 
-compute ID sonine/grid mix-ID keyword values ... :pre
+compute ID sonine/grid group-ID mix-ID keyword values ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 sonine/grid = style name of this compute command :l
+group-ID = group ID for which grid cells to perform calculation on :l
 mix-ID = mixture ID to perform calculation on :l
 one or more keywords may be appended, multiple times :l
 keyword = {a} or {b} :l
@@ -28,22 +29,28 @@ values = values for specific keyword :l
 
 [Examples:]
 
-compute 1 sonine/grid air a x 5 b xy 5 :pre
+compute 1 sonine/grid all air a x 5 b xy 5
+compute 1 sonine/grid subset air a x 5 :pre
 
 These commands will dump 10 time averaged sonine moments for each
 species and each grid cell to a dump file every 1000 steps:
 
-compute 1 sonine/grid species a x 5 b xy 5
+compute 1 sonine/grid all species a x 5 b xy 5
 fix 1 ave/grid 10 100 1000 c_1\[*\]
 dump 1 grid all 1000 tmp.grid id f_1\[*\] :pre
 
 [Description:]
 
 Define a computation that calculates the sonine moments of the
-velocity distribution of the particles in each grid cell.  The values
-are tallied separately for each group of species in the specified
-mixture, as described in the Output section below.  See the mixture
-command for how a set of species can be partitioned into groups.
+velocity distribution of the particles in each grid cell in a grid
+cell group.  The values are tallied separately for each group of
+species in the specified mixture, as described in the Output section
+below.  See the mixture command for how a set of species can be
+partitioned into groups.
+
+Only grid cells in the grid group specified by {group-ID} are included
+in the calculations.  See the "group grid"_group.html command for info
+on how grid cells can be assigned to grid groups.
 
 The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
@@ -140,6 +147,9 @@ of these kinds of cells will compute a zero result for all their
 values.  Likewise, split cells store no particles and will produce a
 zero result.  This is because their sub-cells actually contain the
 particles that are geometrically inside the split cell.
+
+Grid cells not in the specified {group-ID} will have zeroes for all
+their values.
 
 The array can be accessed by any command that uses per-grid values
 from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4

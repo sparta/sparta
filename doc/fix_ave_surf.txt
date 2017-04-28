@@ -174,8 +174,8 @@ columns is the number of quantities averaged.  The per-surf values can
 only be accessed on timesteps that are multiples of {Nfreq} since that
 is when averaging is performed.
 
-Surface elements not in the specified {group-ID} will have zeroes for
-all their values.
+Surface elements not in the specified {group-ID} will output zeroes
+for all their values.
 
 [Restrictions:] none
 

@@ -13,11 +13,13 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>compute ID pflux/grid mix-ID value1 value2 ... 
+<PRE>compute ID pflux/grid group-ID mix-ID value1 value2 ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
 <LI>pflux/grid = style name of this compute command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
 
 <LI>mix-ID = mixture ID to perform calculation on 
 
@@ -32,25 +34,29 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>compute 1 pflux/grid species momxx momyy momzz
-compute 1 pflux/grid species momxx momxy 
+<PRE>compute 1 pflux/grid all species momxx momyy momzz
+compute 1 pflux/grid subset species momxx momxy 
 </PRE>
 <P>These commands will dump 10 time averaged momentum flux densities for
 each species and each grid cell to a dump file every 1000 steps:
 </P>
-<PRE>compute 1 pflux/grid species momxx momyy momzz
+<PRE>compute 1 pflux/grid all species momxx momyy momzz
 fix 1 ave/grid 10 100 1000 c_1[*]
 dump 1 grid all 1000 tmp.grid id f_1[*] 
 </PRE>
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates components of the momemtum flux
-density tensor for each grid cell.  This is equivalent to the kinetic
-energy density tensor, and is based on the thermal velocity of the
-particles in each grid cell.  The values are tallied separately for
-each group of species in the specified mixture, as described in the
-Output section below.  See the mixture command for how a set of
-species can be partitioned into groups.
+density tensor for each grid cell in a grid cell group.  This is
+equivalent to the kinetic energy density tensor, and is based on the
+thermal velocity of the particles in each grid cell.  The values are
+tallied separately for each group of species in the specified mixture,
+as described in the Output section below.  See the mixture command for
+how a set of species can be partitioned into groups.
+</P>
+<P>Only grid cells in the grid group specified by <I>group-ID</I> are included
+in the calculations.  See the <A HREF = "group.html">group grid</A> command for info
+on how grid cells can be assigned to grid groups.
 </P>
 <P>The values listed above rely on first computing and subtracting the
 center-of-mass (COM) velocity for all particles in the group and grid
@@ -142,6 +148,9 @@ of these kinds of cells will compute a zero result for all their
 values.  Likewise, split cells store no particles and will produce a
 zero result.  This is because their sub-cells actually contain the
 particles that are geometrically inside the split cell.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> will output zeroes for all
+their values.
 </P>
 <P>The array can be accessed by any command that uses per-grid values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4</A>

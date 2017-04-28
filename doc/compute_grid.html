@@ -13,11 +13,13 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>compute ID grid mix-ID value1 value2 ... 
+<PRE>compute ID grid group-ID mix-ID value1 value2 ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
 <LI>grid = style name of this compute command 
+
+<LI>group-ID = group ID for which grid cells to perform calculation on 
 
 <LI>mix-ID = mixture ID to perform calculation on 
 
@@ -52,23 +54,27 @@
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>compute 1 grid species n u v w usq vsq wsq
-compute 1 grid air n u v w 
+<PRE>compute 1 grid all species n u v w usq vsq wsq
+compute 1 grid subset air n u v w 
 </PRE>
 <P>These commands will dump time averages for each species and each grid
 cell to a dump file every 1000 steps:
 </P>
-<PRE>compute 1 grid species n u v w usq vsq wsq
+<PRE>compute 1 grid all species n u v w usq vsq wsq
 fix 1 ave/grid 10 100 1000 c_1[*]
 dump 1 grid all 1000 tmp.grid id f_1[*] 
 </PRE>
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each grid
-cell, based on the particles in the cell.  The values are tallied
-separately for each group of species in the specified mixture, as
-described in the Ouput section below.  See the <A HREF = "mixture.html">mixture</A>
-command for how a set of species can be partitioned into groups.
+cell in a grid cell group, based on the particles in the cell.  The
+values are tallied separately for each group of species in the
+specified mixture, as described in the Ouput section below.  See the
+<A HREF = "mixture.html">mixture</A> command for how a set of species can be
+partitioned into groups.  Only grid cells in the grid group specified
+by <I>group-ID</I> are included in the calculations.  See the <A HREF = "group.html">group
+grid</A> command for info on how grid cells can be assigned to
+grid groups.
 </P>
 <P>The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
@@ -286,6 +292,9 @@ of these kinds of cells will compute a zero result for all their
 values.  Likewise, split cells store no particles and will produce a
 zero result.  This is because their sub-cells actually contain the
 particles that are geometrically inside the split cell.
+</P>
+<P>Grid cells not in the specified <I>group-ID</I> will output zeroes for all
+their values.
 </P>
 <P>The array can be accessed by any command that uses per-grid values
 from a compute as input.  See <A HREF = "Section_howto.html#howto_4">Section 4.4</A>

@@ -61,19 +61,18 @@ group boundary surf intersect upper leftside
 </P>
 <P>Assign grid cells to grid groups or surface elements to surface
 groups.  In SPARTA, a "grid group" is a collection of one or more grid
-cells.  A "surface" group is a collection or more surface elements
-(line segements in 2d, triangles in 3d).  Other commands take group
-IDs as arguments so that they act on a set of grid cells or surface
-elements.  For example, see the <A HREF = "compute_grid.html">compute grid</A>,
-<A HREF = "compute_surf.html">compute surf</A>, <A HREF = "fix_ave_grid.html">fix ave/grid</A>,
-<A HREF = "fix_ave_surf.html">fix ave/surf</A>, <A HREF = "dump.html">dump grid</A>, or <A HREF = "dump.html">dump
-surf</A> commands.
+cells.  A "surface" group is a collection of one or more surface
+elements (line segements in 2d, triangles in 3d).  Other commands take
+group IDs as arguments so that they act on a set of grid cells or
+surface elements.  For example, see the <A HREF = "compute_grid.html">compute
+grid</A>, <A HREF = "compute_surf.html">compute surf</A>, <A HREF = "fix_ave_grid.html">fix
+ave/grid</A>, <A HREF = "fix_ave_surf.html">fix ave/surf</A>, <A HREF = "dump.html">dump
+grid</A>, or <A HREF = "dump.html">dump surf</A> commands.
 </P>
-<P>IMPORTANT NOTE: Grid groups are not yet fully implemented
-in SPARTA.
+<P>IMPORTANT NOTE: Grid groups are not yet implemented in SPARTA.
 </P>
-<P>An individual grid cell can be part of multiple grid groups.  An
-individual surface elements being part of multiple surface groups.
+<P>An individual grid cell can belong to multiple grid groups.  An
+individual surface element can belong to multiple surface groups.
 Each grid or surface group has a name which is specified as the <I>ID</I>
 in this command.  Each grid group and surface group ID must be unique,
 though the same ID can be used for both a grid and surface group.  IDs
@@ -93,7 +92,7 @@ predefined.  All surface elements belong to this group.
 
 <P>The following styles can be used for grid groups.
 </P>
-<P>IMPORTANT NOTE: No grid group styles are implemented yet.  Stay tuned.
+<P>IMPORTANT NOTE: No grid group styles are implemented yet.
 </P>
 <HR>
 

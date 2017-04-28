@@ -15,10 +15,11 @@
 </P>
 <PRE>move_surf groupID style args ... 
 </PRE>
-<UL><LI>group-ID = 
+<UL><LI>group-ID = group ID for which surface elements to move 
 
-<PRE>style = <I>file</I> or <I>trans</I> or <I>rotate</I>
-  <I>file</I> args = filename entry
+<LI>style = <I>file</I> or <I>trans</I> or <I>rotate</I> 
+
+<PRE>  <I>file</I> args = filename entry
   <I>trans</I> args = Dx Dy Dz
     Dx,Dy,Dz = displacement applied to all surface points (distance units)
   <I>rotate</I> args = theta Rx Ry Rz Ox Oy Oz 
@@ -37,10 +38,14 @@ move_surf object2 rotate 360 0 0 1 5 5 0
 <P><B>Description:</B>
 </P>
 <P>This command performs a one-time movement of all the surface elements
-in the specified group via the specified style.  This command can be
-invoked as many times as desired, before or between simulation runs.
-Surface points can also be moved on-the-fly during a simulation by
-using the <A HREF = "fix_move_surf.html">fix move/surf</A> command.
+in the specified group via the specified style.  See the <A HREF = "group.html">group
+surf</A> command for info on how surface elements can be
+assigned to surface groups.
+</P>
+<P>This command can be invoked as many times as desired, before or
+between simulation runs.  Surface points can also be moved on-the-fly
+during a simulation by using the <A HREF = "fix_move_surf.html">fix move/surf</A>
+command.
 </P>
 <P>Moving surfaces between simulations can be useful if you want to
 perform a series of runs from one input script, where some attribute

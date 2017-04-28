@@ -12,8 +12,8 @@ move_surf command :h3
 
 move_surf groupID style args ... :pre
 
-group-ID = :ulb,l
-style = {file} or {trans} or {rotate}
+group-ID = group ID for which surface elements to move :ulb,l
+style = {file} or {trans} or {rotate} :l
   {file} args = filename entry
   {trans} args = Dx Dy Dz
     Dx,Dy,Dz = displacement applied to all surface points (distance units)
@@ -32,10 +32,14 @@ move_surf object2 rotate 360 0 0 1 5 5 0 :pre
 [Description:]
 
 This command performs a one-time movement of all the surface elements
-in the specified group via the specified style.  This command can be
-invoked as many times as desired, before or between simulation runs.
-Surface points can also be moved on-the-fly during a simulation by
-using the "fix move/surf"_fix_move_surf.html command.
+in the specified group via the specified style.  See the "group
+surf"_group.html command for info on how surface elements can be
+assigned to surface groups.
+
+This command can be invoked as many times as desired, before or
+between simulation runs.  Surface points can also be moved on-the-fly
+during a simulation by using the "fix move/surf"_fix_move_surf.html
+command.
 
 Moving surfaces between simulations can be useful if you want to
 perform a series of runs from one input script, where some attribute
