@@ -35,8 +35,7 @@ class ComputePropertyGrid : public Compute {
   bigint memory_usage();
 
  private:
-  int nvalues;
-  int nglocal;
+  int groupbit,nvalues,nglocal;
   int *index;
   double *buf;
 

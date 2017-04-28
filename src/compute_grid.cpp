@@ -44,13 +44,17 @@ enum{COUNT,MASSSUM,MVX,MVY,MVZ,MVXSQ,MVYSQ,MVZSQ,MVSQ,
 ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 4) error->all(FLERR,"Illegal compute grid command");
+  if (narg < 5) error->all(FLERR,"Illegal compute grid command");
 
-  imix = particle->find_mixture(arg[2]);
+  int igroup = grid->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Compute grid group ID does not exist");
+  groupbit = grid->bitmask[igroup];
+
+  imix = particle->find_mixture(arg[3]);
   if (imix < 0) error->all(FLERR,"Compute grid mixture ID does not exist");
   ngroup = particle->mixture[imix]->ngroup;
 
-  nvalue = narg - 3;
+  nvalue = narg - 4;
   value = new int[nvalue];
   
   npergroup = cellmass = cellcount = 0;
@@ -60,7 +64,7 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
   for (int i = 0; i < nvalue; i++) nmap[i] = 0;
 
   int ivalue = 0;
-  int iarg = 3;
+  int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) {
       value[ivalue] = NUM;
@@ -218,6 +222,7 @@ void ComputeGrid::compute_per_grid()
       tally[i][j] = 0.0;
 
   // loop over all particles, skip species not in mixture group
+  // skip cells not in grid group
   // perform all tallies needed for each particle
   // depends on its species group and the user-requested values
 
@@ -226,6 +231,7 @@ void ComputeGrid::compute_per_grid()
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
     icell = particles[i].icell;
+    if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
     v = particles[i].v;

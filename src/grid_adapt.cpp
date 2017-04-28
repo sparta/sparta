@@ -130,11 +130,11 @@ void Grid::refine_cell(int icell, int iparent,
   // build linked list of particles within each new child cell
   //   via particle next and cinfo count and first
   //   cinfo->mask enables this by storing last particle in cell (so far)
-  //   then reset cinfo->mask = 1 (all) for newly created child cells
+  //   caller will reset cinfo->mask for newly created child cells
   // must allow for each new child cell to be a split cell
   // NOTE: this is tricky code, document it better
   //       is inverse of coarsen_cell() logic
-  // NOTE: may not need to build new linkeds list if will re-sort anyway
+  // NOTE: may not need to build new linked lists if will re-sort anyway
   
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
@@ -291,7 +291,7 @@ void Grid::coarsen_cell(int iparent, int nchild,
   // build linked list of particles within new child cell
   //   via particle next and cinfo count and first
   //   cinfo->mask enables this by storing last particle in cell (so far)
-  //   then reset cinfo->mask = 1 (all) for newly created child cells
+  //   caller will reset cinfo->mask for newly created child cell
   // must allow for new child cell to be a split cell
   // NOTE: this is tricky code, document it better
   //       is inverse of refine_cell() logic

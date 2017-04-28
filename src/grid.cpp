@@ -16,6 +16,7 @@
 #include "grid.h"
 #include "geometry.h"
 #include "domain.h"
+#include "region.h"
 #include "comm.h"
 #include "irregular.h"
 #include "math_const.h"
@@ -35,6 +36,7 @@ using namespace MathConst;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
+enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Surf
 
 // cell type = OUTSIDE/INSIDE/OVERLAP if entirely outside/inside surfs
 //   or has any overlap with surfs including grazing or touching
@@ -65,7 +67,11 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"grid:gnames");
   bitmask = (int *) memory->smalloc(MAXGROUP*sizeof(int),"grid:bitmask");
+  inversemask = (int *) memory->smalloc(MAXGROUP*sizeof(int),
+                                        "grid:inversemask");
+
   for (int i = 0; i < MAXGROUP; i++) bitmask[i] = 1 << i;
+  for (int i = 0; i < MAXGROUP; i++) inversemask[i] = bitmask[i] ^ ~0;
 
   ngroup = 1;
   int n = strlen("all") + 1;
@@ -127,6 +133,7 @@ Grid::~Grid()
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
   memory->sfree(gnames);
   memory->sfree(bitmask);
+  memory->sfree(inversemask);
 
   memory->sfree(cells);
   memory->sfree(cinfo);
@@ -1815,7 +1822,231 @@ void Grid::grow_sinfo(int n)
 
 void Grid::group(int narg, char **arg)
 {
-  error->all(FLERR,"Group grid command not yet implemented");
+  int i,flag;
+  double x[3];
+
+  if (narg < 3) error->all(FLERR,"Illegal group command");
+
+  int dimension = domain->dimension;
+
+  int igroup = find_group(arg[0]);
+  if (igroup < 0) igroup = add_group(arg[0]);
+  int bit = bitmask[igroup];
+
+  // style = region
+  // add grid cell to group if in region
+
+  if (strcmp(arg[2],"region") == 0) {
+    if (narg != 5) error->all(FLERR,"Illegal group command");
+    int iregion = domain->find_region(arg[3]);
+    if (iregion == -1) error->all(FLERR,"Group region ID does not exist");
+    Region *region = domain->regions[iregion];
+
+    int rstyle;
+    if (strcmp(arg[4],"all") == 0) rstyle = REGION_ALL;
+    else if (strcmp(arg[4],"one") == 0) rstyle = REGION_ONE;
+    else if (strcmp(arg[4],"center") == 0) rstyle = REGION_CENTER;
+    else error->all(FLERR,"Illegal group command");
+
+    if (dimension == 2) x[2] = 0.0;
+
+    if (rstyle == REGION_ALL) {
+      for (i = 0; i < nlocal; i++) {
+        flag = 1;
+
+        if (dimension == 3) x[2] = cells[i].lo[2];
+        x[0] = cells[i].lo[0];
+        x[1] = cells[i].lo[1];
+        if (!region->match(x)) flag = 0;
+        x[0] = cells[i].hi[0];
+        x[1] = cells[i].lo[1];
+        if (!region->match(x)) flag = 0;
+        x[0] = cells[i].lo[0];
+        x[1] = cells[i].hi[1];
+        if (!region->match(x)) flag = 0;
+        x[0] = cells[i].hi[1];
+        x[1] = cells[i].hi[1];
+        if (!region->match(x)) flag = 0;
+
+        if (dimension == 3) x[2] = cells[i].hi[2];
+        if (dimension == 3) {
+          x[0] = cells[i].lo[0];
+          x[1] = cells[i].lo[1];
+          if (!region->match(x)) flag = 0;
+          x[0] = cells[i].hi[0];
+          x[1] = cells[i].lo[1];
+          if (!region->match(x)) flag = 0;
+          x[0] = cells[i].lo[0];
+          x[1] = cells[i].hi[1];
+          if (!region->match(x)) flag = 0;
+          x[0] = cells[i].hi[0];
+          x[1] = cells[i].hi[1];
+          if (!region->match(x)) flag = 0;
+        }
+
+        if (flag) cinfo[i].mask |= bit;
+      }
+
+    } else if (rstyle == REGION_ONE) {
+      for (i = 0; i < nlocal; i++) {
+        flag = 0;
+
+        if (dimension == 3) x[2] = cells[i].lo[2];
+        x[0] = cells[i].lo[0];
+        x[1] = cells[i].lo[1];
+        if (region->match(x)) flag = 1;
+        x[0] = cells[i].hi[0];
+        x[1] = cells[i].lo[1];
+        if (region->match(x)) flag = 1;
+        x[0] = cells[i].lo[0];
+        x[1] = cells[i].hi[1];
+        if (region->match(x)) flag = 1;
+        x[0] = cells[i].hi[1];
+        x[1] = cells[i].hi[1];
+        if (region->match(x)) flag = 1;
+
+        if (dimension == 3) x[2] = cells[i].hi[2];
+        if (dimension == 3) {
+          x[0] = cells[i].lo[0];
+          x[1] = cells[i].lo[1];
+          if (region->match(x)) flag = 1;
+          x[0] = cells[i].hi[0];
+          x[1] = cells[i].lo[1];
+          if (region->match(x)) flag = 1;
+          x[0] = cells[i].lo[0];
+          x[1] = cells[i].hi[1];
+          if (region->match(x)) flag = 1;
+          x[0] = cells[i].hi[0];
+          x[1] = cells[i].hi[1];
+          if (region->match(x)) flag = 1;
+        }
+
+        if (flag) cinfo[i].mask |= bit;
+      }
+
+    } else if (rstyle == REGION_CENTER) {
+      for (i = 0; i < nlocal; i++) {
+        x[0] = 0.5 * (cells[i].lo[0] + cells[i].hi[0]);
+        x[1] = 0.5 * (cells[i].lo[1] + cells[i].hi[1]);
+        if (dimension == 3) x[2] = 0.5 * (cells[i].lo[2] + cells[i].hi[2]);
+        if (region->match(x)) cinfo[i].mask |= bit;
+      }
+    }
+
+  // style = subtract
+
+  } else if (strcmp(arg[2],"subtract") == 0) {
+    if (narg < 5) error->all(FLERR,"Illegal group command");
+
+    int length = narg-3;
+    int *list = new int[length];
+
+    int jgroup;
+    for (int iarg = 3; iarg < narg; iarg++) {
+      jgroup = find_group(arg[iarg]);
+      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      list[iarg-3] = jgroup;
+    }
+
+    // add to group if in 1st group in list
+
+    int otherbit = bitmask[list[0]];
+
+    for (i = 0; i < nlocal; i++)
+      if (cinfo[i].mask & otherbit) cinfo[i].mask |= bit;
+
+    // remove grid cells if they are in any of the other groups
+    // AND with inverse mask removes the grid cell from group
+
+    int inverse = inversemask[igroup];
+
+    for (int ilist = 1; ilist < length; ilist++) {
+      otherbit = bitmask[list[ilist]];
+      for (i = 0; i < nlocal; i++)
+        if (cinfo[i].mask & otherbit) cinfo[i].mask &= inverse;
+    }
+
+    delete [] list;
+
+  // style = union
+
+  } else if (strcmp(arg[2],"union") == 0) {
+    if (narg < 4) error->all(FLERR,"Illegal group command");
+
+    int length = narg-3;
+    int *list = new int[length];
+
+    int jgroup;
+    for (int iarg = 3; iarg < narg; iarg++) {
+      jgroup = find_group(arg[iarg]);
+      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      list[iarg-3] = jgroup;
+    }
+
+    // add to group if in any other group in list
+
+    int otherbit;
+
+    for (int ilist = 0; ilist < length; ilist++) {
+      otherbit = bitmask[list[ilist]];
+      for (i = 0; i < nlocal; i++)
+        if (cinfo[i].mask & otherbit) cinfo[i].mask |= bit;
+    }
+
+    delete [] list;
+
+  // style = intersect
+
+  } else if (strcmp(arg[2],"intersect") == 0) {
+    if (narg < 5) error->all(FLERR,"Illegal group command");
+
+    int length = narg-3;
+    int *list = new int[length];
+
+    int jgroup;
+    for (int iarg = 3; iarg < narg; iarg++) {
+      jgroup = find_group(arg[iarg]);
+      if (jgroup == -1) error->all(FLERR,"Group ID does not exist");
+      list[iarg-3] = jgroup;
+    }
+
+    // add to group if in all groups in list
+
+    int otherbit,ok,ilist;
+
+    for (i = 0; i < nlocal; i++) {
+      ok = 1;
+      for (ilist = 0; ilist < length; ilist++) {
+        otherbit = bitmask[list[ilist]];
+        if ((cinfo[i].mask & otherbit) == 0) ok = 0;
+      }
+      if (ok) cinfo[i].mask |= bit;
+    }
+
+    delete [] list;
+
+  // style = clear
+  // remove all grid cells from group
+
+  } else if (strcmp(arg[2],"clear") == 0) {
+    if (igroup == 0) error->all(FLERR,"Cannot clear group all");
+    int inversebits = inversemask[igroup];
+
+    for (i = 0; i < nlocal; i++) cinfo[i].mask &= inversebits;
+  }
+
+  // print stats for changed group
+
+  int n = 0;
+  for (i = 0; i < nlocal; i++) 
+    if (cinfo[i].mask & bit) n++;
+
+  if (comm->me == 0) {
+    if (screen) 
+      fprintf(screen,"%d grid cells in group %s\n",n,gnames[igroup]);
+    if (logfile)
+      fprintf(logfile,"%d grid cells in group %s\n",n,gnames[igroup]);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1864,7 +2095,6 @@ void Grid::write_restart(FILE *fp)
     n = strlen(gnames[i]) + 1;
     fwrite(&n,sizeof(int),1,fp);
     fwrite(gnames[i],sizeof(char),n,fp);
-    fwrite(&bitmask[i],sizeof(int),1,fp);
   }
 }
 
@@ -1901,8 +2131,6 @@ void Grid::read_restart(FILE *fp)
     gnames[i] = new char[n];
     if (me == 0) fread(gnames[i],sizeof(char),n,fp);
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
-    if (me == 0) fread(&bitmask[i],sizeof(int),1,fp);
-    MPI_Bcast(&bitmask[i],1,MPI_INT,0,world);
   }
 }
 

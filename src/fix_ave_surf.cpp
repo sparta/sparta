@@ -456,28 +456,21 @@ void FixAveSurf::end_of_step()
       }
       
     // access fix fields, guaranteed to be ready
-    // check group mask in case other fix uses a different surf group
 
     } else if (which[m] == FIX) {
       if (j == 0) {
         double *fix_vector = modify->fix[n]->vector_surf;
-        if (nvalues == 1) {
-          for (i = 0; i < nslocal; i++)
-            if (masks[i] & groupbit) accvec[i] += fix_vector[i];
-        } else {
-          for (i = 0; i < nslocal; i++)
-            if (masks[i] & groupbit) accarray[i][m] += fix_vector[i];
-        }
+        if (nvalues == 1)
+          for (i = 0; i < nslocal; i++) accvec[i] += fix_vector[i];
+        else
+          for (i = 0; i < nslocal; i++) accarray[i][m] += fix_vector[i];
       } else {
         int jm1 = j - 1;
         double **fix_array = modify->fix[n]->array_surf;
-        if (nvalues == 1) {
-          for (i = 0; i < nslocal; i++)
-            if (masks[i] & groupbit) accvec[i] += fix_array[i][jm1];
-        } else {
-          for (i = 0; i < nslocal; i++)
-            if (masks[i] & groupbit) accarray[i][m] += fix_array[i][jm1];
-        }
+        if (nvalues == 1) 
+          for (i = 0; i < nslocal; i++) accvec[i] += fix_array[i][jm1];
+        else
+          for (i = 0; i < nslocal; i++) accarray[i][m] += fix_array[i][jm1];
       }
 
     // evaluete surf-style variable
@@ -512,16 +505,14 @@ void FixAveSurf::end_of_step()
     if (which[m] != COMPUTE) continue;
     if (nvalues == 1) {
       surf->collate_vector(nlocal,loc2glob,vec_local,1,buflocal);
-      for (i = 0; i < nslocal; i++)
-        if (masks[i] & groupbit) accvec[i] += buflocal[i];
+      for (i = 0; i < nslocal; i++) accvec[i] += buflocal[i];
     } else {
       if (nlocal)
         surf->collate_vector(nlocal,loc2glob,&array_local[0][m],
                              nvalues,buflocal);
       else
         surf->collate_vector(nlocal,loc2glob,NULL,nvalues,buflocal);
-      for (i = 0; i < nslocal; i++)
-        if (masks[i] & groupbit) accarray[i][m] += buflocal[i];
+      for (i = 0; i < nslocal; i++) accarray[i][m] += buflocal[i];
     }
   }
 
@@ -533,17 +524,30 @@ void FixAveSurf::end_of_step()
     if (nvalues == 1)
       for (i = 0; i < nslocal; i++) vector_surf[i] /= nsample;
     else
-      for (m = 0; m < nvalues; m++)
-        for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nslocal; i++)
+        for (m = 0; m < nvalues; m++)
           array_surf[i][m] /= nsample;
-
   } else {
     if (nvalues == 1)
-      for (i = 0; i < nslocal; i++) vector_surf[i] = accvec[i]/nsample;
+      for (i = 0; i < nslocal; i++)
+        vector_surf[i] = accvec[i]/nsample;
     else
-      for (m = 0; m < nvalues; m++)
-        for (i = 0; i < nslocal; i++)
+      for (i = 0; i < nslocal; i++)
+        for (m = 0; m < nvalues; m++)
           array_surf[i][m] = accarray[i][m]/nsample;
+  }
+
+  // set values for surfs not in group to zero
+
+  if (groupbit != 1) {
+    if (nvalues == 1) {
+      for (i = 0; i < nslocal; i++)
+        if (!(masks[i] & groupbit)) vector_surf[i] = 0.0;
+    } else {
+      for (i = 0; i < nslocal; i++)
+        if (!(masks[i] & groupbit))
+          for (m = 0; m < nvalues; m++) array_surf[i][m] = 0.0;
+    }
   }
 
   // reset nsample if ave = ONE

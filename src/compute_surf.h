@@ -40,8 +40,7 @@ class ComputeSurf : public Compute {
   bigint memory_usage();
 
  private:
-  int groupbit,imix;
-  int nvalue,ngroup,ntotal;
+  int groupbit,imix,nvalue,ngroup,ntotal;
   int *which;
 
   int nsurf;               // # of global surfs, lines or triangles

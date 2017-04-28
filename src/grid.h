@@ -52,6 +52,7 @@ class Grid : protected Pointers {
   int ngroup;               // # of defined groups
   char **gnames;            // name of each group
   int *bitmask;             // one-bit mask for each group
+  int *inversemask;         // inverse mask for each group
 
   // hash for all cell IDs (owned,ghost,parent)
 

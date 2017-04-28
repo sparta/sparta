@@ -18,7 +18,10 @@
 #include "fix_ave_histo.h"
 #include "update.h"
 #include "particle.h"
+#include "mixture.h"
 #include "grid.h"
+#include "domain.h"
+#include "region.h"
 #include "modify.h"
 #include "compute.h"
 #include "input.h"
@@ -880,54 +883,119 @@ void FixAveHisto::bin_vector(int n, double *values, int stride)
 /* ----------------------------------------------------------------------
    bin a per-particle attribute
    index is 0,1,2 if attribute is X or V
-   NOTE: only bin if particle is in mixture ??
 ------------------------------------------------------------------------- */
 
 void FixAveHisto::bin_particles(int attribute, int index)
 {
   Particle::OnePart *particles = particle->particles;
+  int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
 
-  int m = 0;
+  Region *region;
+  if (regionflag) region = domain->regions[iregion];
 
   if (attribute == X) {
-    for (int i = 0; i < nlocal; i++)
-      bin_one(particles[i].x[index]);
+    if (regionflag && mixflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (!region->match(particles[i].x)) continue;
+        if (s2g[particles[i].ispecies] < 0) continue;
+        bin_one(particles[i].x[index]);
+      }
+    } else if (regionflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (region->match(particles[i].x)) bin_one(particles[i].x[index]);
+      }
+    } else if (mixflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (s2g[particles[i].ispecies] >= 0) bin_one(particles[i].x[index]);
+      }
+    } else {
+      for (int i = 0; i < nlocal; i++)
+        bin_one(particles[i].x[index]);
+    }
+
   } else if (attribute == V) {
-    for (int i = 0; i < nlocal; i++)
-      bin_one(particles[i].v[index]);
+    if (regionflag && mixflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (!region->match(particles[i].x)) continue;
+        if (s2g[particles[i].ispecies] < 0) continue;
+        bin_one(particles[i].x[index]);
+      }
+    } else if (regionflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (region->match(particles[i].x)) bin_one(particles[i].x[index]);
+      }
+    } else if (mixflag) {
+      for (int i = 0; i < nlocal; i++) {
+        if (s2g[particles[i].ispecies] >= 0) bin_one(particles[i].x[index]);
+      }
+    } else {
+      for (int i = 0; i < nlocal; i++)
+        bin_one(particles[i].v[index]);
+    }
   }
 }
 
 /* ----------------------------------------------------------------------
    bin a per-particle vector of values with stride
-   NOTE: only bin if particle is in mixture ??
 ------------------------------------------------------------------------- */
 
 void FixAveHisto::bin_particles(double *values, int stride)
 {
+  Particle::OnePart *particles = particle->particles;
+  int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
 
+  Region *region;
+  if (regionflag) region = domain->regions[iregion];
+
   int m = 0;
-  for (int i = 0; i < nlocal; i++) {
-    bin_one(values[m]);
-    m += stride;
+
+  if (regionflag && mixflag) {
+    for (int i = 0; i < nlocal; i++) {
+      if (region->match(particles[i].x) && 
+          s2g[particles[i].ispecies] >= 0) bin_one(values[m]);
+      m += stride;
+    }
+  } else if (regionflag) {
+    for (int i = 0; i < nlocal; i++) {
+      if (region->match(particles[i].x)) bin_one(values[m]);
+      m += stride;
+    }
+  } else if (mixflag) {
+    for (int i = 0; i < nlocal; i++) {
+      if (s2g[particles[i].ispecies] < 0) bin_one(values[m]);
+      m += stride;
+    }
+  } else {
+    for (int i = 0; i < nlocal; i++) {
+      bin_one(values[m]);
+      m += stride;
+    }
   }
 }
 
 /* ----------------------------------------------------------------------
    bin a per-grid vector of values with stride
-   NOTE: only bin if grid cell is in group ??
 ------------------------------------------------------------------------- */
 
 void FixAveHisto::bin_grid_cells(double *values, int stride)
 {
+  Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
 
   int m = 0;
-  for (int i = 0; i < nglocal; i++) {
-    bin_one(values[m]);
-    m += stride;
+
+  if (groupflag) {
+    for (int i = 0; i < nglocal; i++) {
+      if (cinfo[i].mask & groupbit) bin_one(values[m]);
+      m += stride;
+    }
+  } else {
+    for (int i = 0; i < nglocal; i++) {
+      bin_one(values[m]);
+      m += stride;
+    }
   }
 }
 
@@ -945,6 +1013,9 @@ void FixAveHisto::options(int iarg, int narg, char **arg)
   mode = SCALAR;
   beyond = IGNORE;
   overwrite = 0;
+  regionflag = 0;
+  mixflag = 0;
+  groupflag = 0;
   title1 = NULL;
   title2 = NULL;
   title3 = NULL;
@@ -996,6 +1067,30 @@ void FixAveHisto::options(int iarg, int narg, char **arg)
     } else if (strcmp(arg[iarg],"overwrite") == 0) {
       overwrite = 1;
       iarg += 1;
+
+    } else if (strcmp(arg[iarg],"region") == 0) {
+      if (iarg+2 < narg) error->all(FLERR,"Illegal fix ave/histo command");
+      regionflag = 1;
+      iregion = domain->find_region(arg[iarg+1]);
+      if (iregion == -1)
+        error->all(FLERR,"Fix ave/histo region ID does not exist");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"mix") == 0) {
+      if (iarg+2 < narg) error->all(FLERR,"Illegal fix ave/histo command");
+      mixflag = 1;
+      imix = particle->find_mixture(arg[iarg+1]);
+      if (imix == -1)
+        error->all(FLERR,"Fix ave/histo mixture ID does not exist");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"group") == 0) {
+      if (iarg+2 < narg) error->all(FLERR,"Illegal fix ave/histo command");
+      groupflag = 1;
+      int igroup = grid->find_group(arg[iarg+1]);
+      if (igroup == -1)
+        error->all(FLERR,"Fix ave/histo group ID does not exist");
+      groupbit = grid->bitmask[igroup];
+      iarg += 2;
+
     } else if (strcmp(arg[iarg],"title1") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/histo command");
       delete [] title1;

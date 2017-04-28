@@ -37,7 +37,7 @@ class ComputeTvibGrid : public Compute {
   bigint memory_usage();
 
  private:
-  int imix,ngroup,mixspecies,nspecies;
+  int groupbit,imix,ngroup,mixspecies,nspecies;
 
   int ntotal;                // total # of columns in tally array
   int nglocal;               // # of owned grid cells

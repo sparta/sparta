@@ -40,11 +40,15 @@ enum{ONE,RUNNING};                // multiple files
 FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg < 5) error->all(FLERR,"Illegal fix ave/grid command");
+  if (narg < 7) error->all(FLERR,"Illegal fix ave/grid command");
 
-  nevery = atoi(arg[2]);
-  nrepeat = atoi(arg[3]);
-  per_grid_freq = atoi(arg[4]);
+  int igroup = grid->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Could not find fix ave/grid group ID");
+  groupbit = grid->bitmask[igroup];
+
+  nevery = atoi(arg[3]);
+  nrepeat = atoi(arg[4]);
+  per_grid_freq = atoi(arg[5]);
 
   time_depend = 1;
   gridmigrate = 1;
@@ -53,7 +57,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 
   nvalues = 0;
 
-  int iarg = 5;
+  int iarg = 6;
   while (iarg < narg) {
     if ((strncmp(arg[iarg],"c_",2) == 0) || 
 	(strncmp(arg[iarg],"f_",2) == 0) || 
@@ -72,9 +76,9 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 
   int expand = 0;
   char **earg;
-  nvalues = input->expand_args(nvalues,&arg[5],1,earg);
+  nvalues = input->expand_args(nvalues,&arg[6],1,earg);
 
-  if (earg != &arg[5]) expand = 1;
+  if (earg != &arg[6]) expand = 1;
   arg = earg;
 
   // parse values
@@ -483,7 +487,7 @@ void FixAveGrid::end_of_step()
   nvalid = ntimestep+per_grid_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
 
-  // create normalized output in vector_grid or array_grid
+  // normalize the accumulators for output on Nfreq timestep
   // if post_process flag set, compute performs normalization via pp_grid()
   // else just divide by nsample
 
@@ -513,6 +517,20 @@ void FixAveGrid::end_of_step()
     }
   }
   
+  // set values for grid cells not in group to zero
+
+  if (groupbit != 1) {
+    Grid::ChildInfo *cinfo = grid->cinfo;
+    if (nvalues == 1) {
+      for (i = 0; i < nglocal; i++)
+        if (!(cinfo[i].mask & groupbit)) vector_grid[i] = 0.0;
+    } else {
+      for (i = 0; i < nglocal; i++)
+        if (!(cinfo[i].mask & groupbit))
+          for (m = 0; m < nvalues; m++) array_grid[i][m] = 0.0;
+    }
+  }
+
   // reset nsample if ave = ONE
 
   if (ave == ONE) nsample = 0;

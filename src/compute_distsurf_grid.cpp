@@ -34,12 +34,17 @@ ComputeDistSurfGrid::
 ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 3) error->all(FLERR,"Illegal compute distsurf/grid command");
+  if (narg < 4) error->all(FLERR,"Illegal compute distsurf/grid command");
 
   per_grid_flag = 1;
   size_per_grid_cols = 0;
 
-  int igroup = surf->find_group(arg[2]);
+  int igroup = grid->find_group(arg[2]);
+  if (igroup < 0) 
+    error->all(FLERR,"Compute distsurf/grid group ID does not exist");
+  groupbit = grid->bitmask[igroup];
+
+  igroup = surf->find_group(arg[3]);
   if (igroup < 0)
     error->all(FLERR,"Compute distsurf/grid command surface group "
                "does not exist");
@@ -49,7 +54,7 @@ ComputeDistSurfGrid(SPARTA *sparta, int narg, char **arg) :
 
   sdir[0] = sdir[1] = sdir[2] = 0.0;
 
-  int iarg = 3;
+  int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"dir") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal distsurf/grid command");
@@ -165,9 +170,11 @@ void ComputeDistSurfGrid::compute_per_grid()
   // if assign dist to split cell, also assign dist to all its sub cells
 
   Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
 
   for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit < 1) continue;
 
     if (cells[icell].nsurf) {

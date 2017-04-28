@@ -45,6 +45,7 @@ class AdaptGrid : protected Pointers {
     int ichild;             // which child cell (0 to NxNyNz-1) within parent
     int iparent;            // index of cell's parent cell
     int type;               // cinfo type of cell
+    int mask;               // cinfo mask of cell
     int nsurf;              // # of surfs in cell
     int np;                 // # of particles in cell or all its sub cells
     double value;           // per-cell value to coarsen on
@@ -68,7 +69,7 @@ class AdaptGrid : protected Pointers {
 
  private:
   int me,nprocs;
-  int style,niterate,sgroupbit,regstyle;
+  int groupbit,style,niterate,sgroupbit,regstyle;
   int rdecide,cdecide,combine,minlevel,maxlevel;
   int nx,ny,nz;
   int valuewhich,valindex,icompute,ifix;
@@ -143,6 +144,7 @@ class AdaptGrid : protected Pointers {
 
   void assign_parents_coarsen(int);
   void candidates_coarsen(int);
+  void coarsen_group();
   void coarsen_particle();
   void coarsen_surf();
   void coarsen_value();

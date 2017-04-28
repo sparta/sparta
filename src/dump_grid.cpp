@@ -224,7 +224,7 @@ void DumpGrid::init_style()
     variable[i] = ivariable;
   }
 
-  // create cpart index of owned grid cells with particles
+  // create cpart index of owned grid cells with particles in grid group
 
   reset_grid();
 
@@ -600,8 +600,8 @@ int DumpGrid::add_variable(char *id)
 }
 
 /* ----------------------------------------------------------------------
-   create cpart array to index owned grid cells with particles
-   called from comm->migrate_cells() due to fix_balance
+   create cpart array to index owned grid cells with particles in grid group
+   also called from comm->migrate_cells() due to fix_balance
 ------------------------------------------------------------------------- */
 
 void DumpGrid::reset_grid()
@@ -611,9 +611,11 @@ void DumpGrid::reset_grid()
   memory->create(cpart,nglocal,"dump:cpart");
 
   Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
 
   ncpart = 0;
   for (int i = 0; i < nglocal; i++) {
+    if (!(cinfo[i].mask & groupbit)) continue;
     if (cells[i].nsplit > 1) continue;
     cpart[ncpart++] = i;
   }

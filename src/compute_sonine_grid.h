@@ -37,7 +37,7 @@ class ComputeSonineGrid : public Compute {
   bigint memory_usage();
 
  private:
-  int imix,ngroup;
+  int groupbit,imix,ngroup;
 
   int nvalue;                // # of user-requested values 
                              // each may generate multiple output values

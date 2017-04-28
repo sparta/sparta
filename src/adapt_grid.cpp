@@ -341,21 +341,25 @@ void AdaptGrid::command(int narg, char **arg)
 
 void AdaptGrid::process_args(int narg, char **arg)
 {
-  if (narg < 2) error->all(FLERR,"Illegal adapt command");
+  if (narg < 3) error->all(FLERR,"Illegal adapt command");
+
+  int igroup = grid->find_group(arg[0]);
+  if (igroup < 0) error->all(FLERR,"Adapt_grid group ID does not exist");
+  groupbit = grid->bitmask[igroup];
 
   // define action(s)
 
-  if (strcmp(arg[0],"refine") == 0) action1 = REFINE;
-  else if (strcmp(arg[0],"coarsen") == 0) action1 = COARSEN;
+  if (strcmp(arg[1],"refine") == 0) action1 = REFINE;
+  else if (strcmp(arg[1],"coarsen") == 0) action1 = COARSEN;
   else error->all(FLERR,"Illegal adapt command");
-  int iarg = 1;
+  int iarg = 2;
   
-  if (strcmp(arg[1],"refine") == 0) {
+  if (strcmp(arg[2],"refine") == 0) {
     action2 = REFINE;
-    iarg = 2;
-  } else if (strcmp(arg[1],"coarsen") == 0) {
+    iarg = 3;
+  } else if (strcmp(arg[2],"coarsen") == 0) {
     action2 = COARSEN;
-    iarg = 2;
+    iarg = 3;
   } else action2 = NONE;
 
   if (action1 == action2) error->all(FLERR,"Illegal adapt command");
@@ -699,6 +703,7 @@ int AdaptGrid::coarsen(int pstop)
 
   assign_parents_coarsen(pstop);
   candidates_coarsen(pstop);
+  coarsen_group();
 
   if (style == PARTICLE) coarsen_particle();
   else if (style == SURF) coarsen_surf();
@@ -735,7 +740,7 @@ int AdaptGrid::coarsen(int pstop)
 
 /* ----------------------------------------------------------------------
    create list of child cells I will possibly refine
-   observe maxlevel
+   check grid group, split status, maxlevel, INSIDE status, region
    chash check skips child cells created by coarsening a parent cell
 ------------------------------------------------------------------------- */
 
@@ -750,6 +755,7 @@ void AdaptGrid::candidates_refine()
   rnum = 0;
 
   for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
     if (cells[icell].nsplit <= 0) continue;
     if (maxlevel && pcells[cells[icell].iparent].level >= maxlevel-1) continue;
     if (cinfo[icell].type == INSIDE) continue;
@@ -970,6 +976,7 @@ int AdaptGrid::perform_refine()
   
   Grid::ParentCell *pcells = grid->pcells;
   Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
 
   int nxyz = nx*ny*nz;
   int newparent = 0;
@@ -984,12 +991,14 @@ int AdaptGrid::perform_refine()
     cells[icell].proc = -1;
 
     // add new parent cell at end of my pcells
+    // set new parent group mask to same value as child cell
 
     grid->add_parent_cell(cells[icell].id,cells[icell].iparent,
                           nx,ny,nz,cells[icell].lo,cells[icell].hi);
     newparent++;
     pcells = grid->pcells;
     iparent = grid->nparent - 1;
+    pcells[iparent].mask = cinfo[icell].mask;
 
     // add Nx by Ny by Nz child cells to replace icell
     // refine_cell() adds all new unsplit/split cells to grid hash
@@ -997,10 +1006,13 @@ int AdaptGrid::perform_refine()
     nglocalprev = grid->nlocal;
     grid->refine_cell(icell,iparent,nx,ny,nz,childlist,cut2d,cut3d);
     cells = grid->cells;
+    cinfo = grid->cinfo;
     nglocal = grid->nlocal;
 
+    // set each new child cell group mask to same value as original child
+    //   for all unsplit/split/sub cells
     // add each new child cell to newcells list
-    // only for unsplit/split cells, not sub cells
+    //   only for unsplit/split cells, not sub cells
 
     if (nnew + nxyz > maxnew) {
       while (nnew + nxyz > maxnew) maxnew += DELTA_NEW;
@@ -1008,6 +1020,7 @@ int AdaptGrid::perform_refine()
     }
 
     for (jcell = nglocalprev; jcell < nglocal; jcell++) {
+      cinfo[jcell].mask = cinfo[icell].mask;
       if (cells[jcell].nsplit < 1) continue;
       newcells[nnew++] = cells[jcell].id;
     }
@@ -1128,8 +1141,8 @@ void AdaptGrid::gather_parents_refine(int delta, int nrefine)
    assign each parent to an owning proc
    for non-clumped distribution use rendezvous proc = round robin
    for clumped distribution assign to proc owning central child cell
-     userendezvous comm to figure that out
-   observe minlevel
+     use rendezvous comm to figure that out
+   observe minlevel and region restrictions
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::assign_parents_coarsen(int pstop)
@@ -1287,7 +1300,7 @@ void AdaptGrid::assign_parents_coarsen(int pstop)
 }
 
 /* ----------------------------------------------------------------------
-   create list of parent cells I will coarsen
+   create list of parent cells I will attempt to coarsen
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::candidates_coarsen(int pstop)
@@ -1391,6 +1404,7 @@ void AdaptGrid::candidates_coarsen(int pstop)
         sadapt[nsend].ichild = m;
         sadapt[nsend].iparent = i;
         sadapt[nsend].type = cinfo[icell].type;
+        sadapt[nsend].mask = cinfo[icell].mask;
         sadapt[nsend].nsurf = cells[icell].nsurf;
         if (cells[icell].nsplit == 1) {
           sadapt[nsend].np = cinfo[icell].count;
@@ -1563,12 +1577,50 @@ void AdaptGrid::candidates_coarsen(int pstop)
 }
 
 /* ----------------------------------------------------------------------
+   coarsen based on child grid cell group criteria
+   all child cells must be in group to allow coarsening
+   checked before specified style
+------------------------------------------------------------------------- */
+
+void AdaptGrid::coarsen_group()
+{
+  int m,nchild,nmatch,icell,mask;
+  int *proc,*index,*recv;
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (int i = 0; i < cnum; i++) {
+    if (ctask[i].flag == 0) continue;
+    ctask[i].flag = 0;
+
+    nchild = ctask[i].nchild;
+    proc = ctask[i].proc;
+    index = ctask[i].index;
+    recv = ctask[i].recv;
+
+    nmatch = 0;
+
+    for (m = 0; m < nchild; m++) {
+      if (proc[m] == me) {
+        icell = index[m];
+        if (cinfo[icell].mask & groupbit) nmatch++;
+      } else {
+        mask = sa_header[recv[m]]->mask;
+        if (mask & groupbit) nmatch++;
+      }
+    }
+
+    if (nmatch == nchild) ctask[i].flag = 1;
+  }
+}
+
+/* ----------------------------------------------------------------------
    coarsen based on particle count
 ------------------------------------------------------------------------- */
 
 void AdaptGrid::coarsen_particle()
 {
-  int m,iparent,nchild,np,icell,nsplit,jcell;
+  int m,nchild,np,icell,nsplit,jcell;
   int *proc,*index,*recv,*csubs;
 
   Grid::ChildCell *cells = grid->cells;
@@ -1579,7 +1631,6 @@ void AdaptGrid::coarsen_particle()
     if (ctask[i].flag == 0) continue;
     ctask[i].flag = 0;
 
-    iparent = ctask[i].iparent;
     nchild = ctask[i].nchild;
     proc = ctask[i].proc;
     index = ctask[i].index;
@@ -1801,11 +1852,13 @@ void AdaptGrid::coarsen_random()
 
 int AdaptGrid::perform_coarsen()
 {
-  int i,m,icell,iparent,nchild;
+  int i,m,icell,iparent,nchild,inew,mask;
   int nsplit,jcell,ip;
   int *proc,*index,*recv,*csubs;
 
   Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  Grid::SplitInfo *sinfo = grid->sinfo;
 
 #ifdef SPARTA_MAP
   std::map<cellint,int> *hash = grid->hash;
@@ -1869,11 +1922,29 @@ int AdaptGrid::perform_coarsen()
 
     // coarsen iparent to a new child cell
     // coarsen_cell() will add new child to grid hash
-    // also add it to chash to prevent it from being refined
+    //   also add it to chash to prevent it from being refined
+    // set group mask of all new children to groupbit + all
+    //   new children = one child + all its sub cells (if any)
+    //   NOTE: could set mask to intersection of all old children
+    //         to attempt to preserve other group settings
 
     grid->coarsen_cell(iparent,nchild,proc,index,recv,this,cut2d,cut3d);
     cells = grid->cells;
+    cinfo = grid->cinfo;
     (*chash)[ctask[i].id] = 0;
+
+    inew = grid->nlocal - 1;
+    mask = groupbit | 1;
+    cinfo[inew].mask = mask;
+    if (cells[inew].nsplit > 1) {
+      sinfo = grid->sinfo;
+      nsplit = cells[inew].nsplit;
+      csubs = sinfo[cells[inew].isplit].csubs;
+      for (int j = 0; j < nsplit; j++) {
+        jcell = csubs[j];
+        cinfo[jcell].mask = mask;
+      }
+    }
 
     // add new child cell to newcells list
 
@@ -1908,11 +1979,9 @@ int AdaptGrid::perform_coarsen()
   // also mark particles of cell for deletion
   // if cell is split, mark particles in all its sub cells for deletion
 
+  sinfo = grid->sinfo;
   Particle::OnePart *particles = particle->particles;
   int *next = particle->next;
-
-  Grid::ChildInfo *cinfo = grid->cinfo;
-  Grid::SplitInfo *sinfo = grid->sinfo;
 
   char *buf;
   nrecv = comm->irregular_uniform(nreply,procreply,

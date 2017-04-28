@@ -119,7 +119,6 @@ DumpParticle::DumpParticle(SPARTA *sparta, int narg, char **arg) :
   // options
 
   iregion = -1;
-  idregion = NULL;
   nthresh = 0;
   thresh_array = NULL;
   thresh_op = NULL;
@@ -183,7 +182,6 @@ DumpParticle::~DumpParticle()
   delete [] field2index;
   delete [] argindex;
 
-  delete [] idregion;
   memory->destroy(thresh_array);
   memory->destroy(thresh_op);
   memory->destroy(thresh_value);
@@ -271,14 +269,6 @@ void DumpParticle::init_style()
     if (ivariable < 0) 
       error->all(FLERR,"Could not find dump particle variable name");
     variable[i] = ivariable;
-  }
-
-  // set index and check validity of region
-
-  if (iregion >= 0) {
-    iregion = domain->find_region(idregion);
-    if (iregion == -1)
-      error->all(FLERR,"Region ID for dump particle does not exist");
   }
 
   // open single file, one time only
@@ -969,9 +959,6 @@ int DumpParticle::modify_param(int narg, char **arg)
       iregion = domain->find_region(arg[1]);
       if (iregion == -1)
         error->all(FLERR,"Dump_modify region ID does not exist");
-      int n = strlen(arg[1]) + 1;
-      idregion = new char[n];
-      strcpy(idregion,arg[1]);
     }
     return 2;
   }

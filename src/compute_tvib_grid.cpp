@@ -31,9 +31,13 @@ enum{NONE,COUNT,MASSWT,DOF};
 ComputeTvibGrid::ComputeTvibGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg != 3) error->all(FLERR,"Illegal compute grid command");
+  if (narg != 4) error->all(FLERR,"Illegal compute grid command");
 
-  imix = particle->find_mixture(arg[2]);
+  int igroup = grid->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Compute grid group ID does not exist");
+  groupbit = grid->bitmask[igroup];
+
+  imix = particle->find_mixture(arg[3]);
   if (imix < 0) error->all(FLERR,"Compute tvib/grid mixture ID does not exist");
 
   ngroup = particle->mixture[imix]->ngroup;
@@ -129,6 +133,7 @@ void ComputeTvibGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;
 
+  Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
   int *s2s = particle->mixture[imix]->species2species;
@@ -150,6 +155,7 @@ void ComputeTvibGrid::compute_per_grid()
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
     icell = particles[i].icell;
+    if (!(cinfo[icell].mask & groupbit)) continue;
 
     j = s2t[ispecies];
     tally[icell][j] += particles[i].evib;

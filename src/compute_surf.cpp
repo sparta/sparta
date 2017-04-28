@@ -45,6 +45,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
 
   imix = particle->find_mixture(arg[3]);
   if (imix < 0) error->all(FLERR,"Compute surf mixture ID does not exist");
+  ngroup = particle->mixture[imix]->ngroup;
 
   nvalue = narg - 4;
   which = new int[nvalue];
@@ -79,7 +80,6 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   surf_tally_flag = 1;
   timeflag = 1;
   per_surf_flag = 1;
-  ngroup = particle->mixture[imix]->ngroup;
   ntotal = ngroup*nvalue;
   size_per_surf_cols = ntotal;
 

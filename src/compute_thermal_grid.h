@@ -37,7 +37,7 @@ class ComputeThermalGrid : public Compute {
   bigint memory_usage();
 
  private:
-  int imix,nvalue;
+  int groupbit,imix,nvalue;
   int ngroup;
 
   int *value;                // keyword for each user requested value

@@ -37,7 +37,7 @@ class ComputeGrid : public Compute {
   bigint memory_usage();
 
  private:
-  int imix,nvalue,ngroup;
+  int groupbit,imix,nvalue,ngroup;
 
   int *value;                // keyword for each user requested value
   int *unique;               // unique keywords for tally, len = npergroup

@@ -36,18 +36,22 @@ enum{TEMP,PRESS};
 ComputeThermalGrid::ComputeThermalGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 4) error->all(FLERR,"Illegal compute thermal/grid command");
+  if (narg < 5) error->all(FLERR,"Illegal compute thermal/grid command");
 
-  imix = particle->find_mixture(arg[2]);
+  int igroup = grid->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Compute grid group ID does not exist");
+  groupbit = grid->bitmask[igroup];
+
+  imix = particle->find_mixture(arg[3]);
   if (imix < 0) 
     error->all(FLERR,"Compute thermal/grid mixture ID does not exist");
   ngroup = particle->mixture[imix]->ngroup;
 
-  nvalue = narg - 3;
+  nvalue = narg - 4;
   value = new int[nvalue];
 
   int ivalue = 0;
-  int iarg = 3;
+  int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"temp") == 0) value[ivalue] = TEMP;
     else if (strcmp(arg[iarg],"press") == 0) value[ivalue] = PRESS;
@@ -113,6 +117,7 @@ void ComputeThermalGrid::compute_per_grid()
 {
   invoked_per_grid = update->ntimestep;
 
+  Grid::ChildInfo *cinfo = grid->cinfo;
   Particle::Species *species = particle->species;
   Particle::OnePart *particles = particle->particles;
   int *s2g = particle->mixture[imix]->species2group;
@@ -135,6 +140,7 @@ void ComputeThermalGrid::compute_per_grid()
     igroup = s2g[ispecies];
     if (igroup < 0) continue;
     icell = particles[i].icell;
+    if (!(cinfo[icell].mask & groupbit)) continue;
 
     mass = species[ispecies].mass;
     v = particles[i].v;

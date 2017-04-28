@@ -43,7 +43,7 @@ class FixAveGrid : public Fix {
   double memory_usage();
 
  private:
-  int nvalues,maxvalues;
+  int groupbit,nvalues,maxvalues;
   int nrepeat,irepeat,nsample;
   bigint nvalid;
 

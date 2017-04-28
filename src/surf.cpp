@@ -40,7 +40,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Update
-enum{REGION_ALL,REGION_ONE,REGION_CENTER};
+enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Grid
 enum{TYPE,MOLECULE,ID};
 enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 
@@ -1260,7 +1260,6 @@ void Surf::write_restart(FILE *fp)
     n = strlen(gnames[i]) + 1;
     fwrite(&n,sizeof(int),1,fp);
     fwrite(gnames[i],sizeof(char),n,fp);
-    fwrite(&bitmask[i],sizeof(int),1,fp);
   }
 
   fwrite(&npoint,sizeof(int),1,fp);
@@ -1307,8 +1306,6 @@ void Surf::read_restart(FILE *fp)
     gnames[i] = new char[n];
     if (me == 0) fread(gnames[i],sizeof(char),n,fp);
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
-    if (me == 0) fread(&bitmask[i],sizeof(int),1,fp);
-    MPI_Bcast(&bitmask[i],1,MPI_INT,0,world);
   }
 
   if (me == 0) fread(&npoint,sizeof(int),1,fp);
