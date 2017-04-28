@@ -29,7 +29,7 @@ using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
-enum{NUM,NUMWT,PRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
+enum{NUM,NUMWT,MFLUX,PRESS,XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 /* ---------------------------------------------------------------------- */
 
@@ -49,6 +49,7 @@ ComputeBoundary::ComputeBoundary(SPARTA *sparta, int narg, char **arg) :
   while (iarg < narg) {
     if (strcmp(arg[iarg],"n") == 0) which[nvalue++] = NUM;
     else if (strcmp(arg[iarg],"nwt") == 0) which[nvalue++] = NUMWT;
+    else if (strcmp(arg[iarg],"mflux") == 0) which[nvalue++] = MFLUX;
     else if (strcmp(arg[iarg],"press") == 0) which[nvalue++] = PRESS;
     else if (strcmp(arg[iarg],"shx") == 0) which[nvalue++] = XSHEAR;
     else if (strcmp(arg[iarg],"shy") == 0) which[nvalue++] = YSHEAR;
@@ -210,6 +211,9 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
       case NUMWT:
         vec[k++] += weight;
         break;
+      case MFLUX:
+        vec[k++] += origmass;
+        break;
       case PRESS:
         if (!nflag) {
           nflag = 1;
@@ -267,6 +271,11 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
         break;
       case NUMWT:
         vec[k++] += weight;
+        break;
+      case MFLUX:
+        vec[k++] += origmass;
+        if (ip) vec[k++] -= imass;
+        if (jp) vec[k++] -= jmass;
         break;
       case PRESS:
         MathExtra::scale3(-origmass,vorig,pdelta);
