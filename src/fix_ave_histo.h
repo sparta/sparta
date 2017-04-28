@@ -73,6 +73,8 @@ class FixAveHisto : public Fix {
   double *vectorwt;
   int maxvectorwt;
 
+  // methods
+
   virtual void bin_one(double);
   virtual void bin_vector(int, double *, int);
   virtual void bin_particles(int, int);
