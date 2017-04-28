@@ -31,7 +31,7 @@ different ways.  The values for a single timestep can be output by the
 The kinetic energy is
 
 Vsq = Vx*Vx + Vy*Vy + Vz*Vz
-KE = 1/2 m Vsq
+KE = 1/2 m Vsq :pre
 
 where m is the mass and (Vx,Vy,Vz) are the velocity components of the
 particle.

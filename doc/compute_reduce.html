@@ -52,7 +52,8 @@ compute 3 reduce max c_mine[1] c_mine[2] c_temp replace 1 3 replace 2 3
 <P>These commands will include the average grid cell temperature, across
 all grid cells, in the stats output:
 </P>
-<PRE>compute	2 grid all temp
+<PRE>compute 1 temp
+compute	2 grid all temp
 compute 3 reduce ave c_2[1]
 stats_style step c_temp c_3 
 </PRE>

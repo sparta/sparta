@@ -17,7 +17,7 @@ count = style name of this compute command :l
 id1,id2,... = species ID or mixture ID or mixture/group :l
   species ID = ID used with the "species"_species.html command
   mixture ID = ID used with the "mixture"_mixture.html command, expands to all groups in mixture
-  mixture/group = ID of mixture followed by name of one group within mixture :pre
+  mixture/group = ID of mixture followed by name of a group within mixture :pre
 :ule
 
 [Examples:]
@@ -49,8 +49,8 @@ species, e.g.
 
 compute 1 count O2 N2 O N NO O2+ N2+ O+ N+ NO+ :pre
 
-An {id} can be of the form mix-ID/name where mix-ID is a mixture ID
-and name is the name of a group in that mixture.
+An {id} can also be of the form mix-ID/name where mix-ID is a mixture
+ID and name is the name of a group in that mixture.
 
 :line
 
