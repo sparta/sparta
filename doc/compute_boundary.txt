@@ -16,9 +16,10 @@ ID is documented in "compute"_compute.html command :ulb,l
 boundary = style name of this compute command :l
 mix-ID = mixture ID to perform calculation on :l
 one or more values can be appended :l
-value = {n} or {nwt} or {press} or {shx} or {shy} or {shz} or {ke} or {erot} or {evib} or {etot} :l
+value = {n} or {nwt} or {mflux} or {press} or {shx} or {shy} or {shz} or {ke} or {erot} or {evib} or {etot} :l
   n = count of particles hitting boundary
   nwt = weighted count of particles hitting boundary
+  mflux = flux of mass on boundary
   press = magnitude of normal pressure on boundary
   shx,shy,shz = components of shear stress on boundary
   ke = flux of particle kinetic energy on boundary 
@@ -91,7 +92,7 @@ weight"_global.html command, then all of the values below are scaled
 by the weight assigned to the grid cell in which the particle
 collision with the boundary occurs.  The only exception is the the {n}
 value, which is NOT scaled by the weight; it is a simple count of
-particle collisions with the boundary.
+particle crossings or collisions with the boundary.
 
 :line
 
@@ -105,6 +106,16 @@ boundary occurs.  The {nwt} quantity will only be different than {n}
 if particle weighting is enabled via the "global weight"_global.html
 command.
 
+The {mflux} value calculates the mass flux imparted to the boundary by
+particles in the group.  This is computed as
+
+Mflux = Sum_i (mass_i) / (A * dt / fnum) :pre
+
+where the sum is over all contributing particle masses, normalized by
+A = the area of the surface element, dt = the timestep, and fnum = the
+real/simulated particle ratio set by the "global fnum"_global.html
+command.
+
 The {press} value calculates the pressure {P} exerted on the boundary
 in the normal direction by particles in the group, such that outward
 pressure is positive.  This is computed as
@@ -112,13 +123,14 @@ pressure is positive.  This is computed as
 p_delta = mass * (V_post - V_pre)
 P = Sum_i (p_delta_i dot N) / (A * dt / fnum) :pre
 
-where p_delta is the change in momentum of a particle, whose velocity
-changes from V_pre to V_post when colliding with the boundary.  The
-pressure exerted on the boundary is the sum over all contributing
-p_delta dotted into the normal N of the boundary which is directed
-into the box, normalized by A = the area of the boundary face and dt =
-the timestep and fnum = the real/simulated particle ratio set by the
-"global fnum"_global.html command.
+where A, dt, fnum are defined as before.  P_delta is the change in
+momentum of a particle, whose velocity changes from V_pre to V_post
+when colliding with the boundary.  The pressure exerted on the
+boundary is the sum over all contributing p_delta dotted into the
+normal N of the boundary which is directed into the box, normalized by
+A = the area of the boundary face and dt = the timestep and fnum = the
+real/simulated particle ratio set by the "global fnum"_global.html
+command.
 
 The {shx}, {shy}, {shz} values calculate the shear pressure components
 Sx, Sy, Sz extered on the boundary in the tangential direction to its
@@ -131,10 +143,10 @@ Sx = - Sum_i (p_delta_t_x) / (A * dt / fnum)
 Sy = - Sum_i (p_delta_t_y) / (A * dt / fnum)
 Sz = - Sum_i (p_delta_t_z) / (A * dt / fnum) :pre
 
-where p_delta, V_pre, V_post, N, A, and dt are defined as before.
-P_delta_t is the tangential component of the change in momentum vector
-p_delta of a particle.  P_delta_t_x (and y,z) are its x, y, z
-components.
+where p_delta, V_pre, V_post, N, A, dt, and fnum are defined as
+before.  P_delta_t is the tangential component of the change in
+momentum vector p_delta of a particle.  P_delta_t_x (and y,z) are its
+x, y, z components.
 
 The {ke} value calculates the kinetic energy flux {Eflux} imparted to
 the boundary by particles in the group, such that energy lost by a
@@ -147,8 +159,8 @@ where e_delta is the kinetic energy change in a particle, whose
 velocity changes from V_pre to V_post when colliding with the
 boundary.  The energy flux imparted to the boundary is the sum over
 all contributing e_delta, normalized by A = the area of the boundary
-face and dt = the timestep and fnum = the real/simulated
-particle ratio set by the "global fnum"_global.html command.
+face and dt = the timestep and fnum = the real/simulated particle
+ratio set by the "global fnum"_global.html command.
 
 The {erot} value calculates the rotational energy flux {Eflux}
 imparted to the boundary by particles in the group, such that energy
