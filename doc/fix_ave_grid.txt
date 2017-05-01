@@ -87,9 +87,9 @@ had been listed one by one.  E.g. these 2 fix ave/grid commands are
 equivalent, since the "compute grid"_compute_grid.html command creates
 a per-grid array with 3 columns:
 
-compute myGrid all u v w
-fix 1 all ave/grid 10 20 1000 c_myGrid\[*\]
-fix 1 all ave/grid 10 20 1000 c_myGrid\[1\] c_myGrid\[2\] c_myGrid\[3\] :pre
+compute myGrid all all u v w
+fix 1 ave/grid all 10 20 1000 c_myGrid\[*\]
+fix 1 ave/grid all 10 20 1000 c_myGrid\[1\] c_myGrid\[2\] c_myGrid\[3\] :pre
 
 :line
 

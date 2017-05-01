@@ -120,9 +120,9 @@ vector or columns of the array had been listed one by one.  E.g. these
 grid"_compute_com_chunk.html command creates a per-grid array with 3
 columns:
 
-compute myGrid grid all u v w
-fix 1 all ave/histo 100 1 100 c_myGrid file tmp1.grid mode vector
-fix 2 all ave/histo 100 1 100 c_myGrid\[1\] c_myGrid\[2\] c_myGrid\[3\] file tmp2.grid mode vector :pre
+compute myGrid grid all all u v w
+fix 1 ave/histo 100 1 100 c_myGrid file tmp1.grid mode vector
+fix 2 ave/histo 100 1 100 c_myGrid\[1\] c_myGrid\[2\] c_myGrid\[3\] file tmp2.grid mode vector :pre
 
 If the fix ave/histo/weight command is used, exactly two values must
 be specified.  If the values are vectors, they must be the same

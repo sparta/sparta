@@ -158,7 +158,7 @@ log log.$a
 read data.grid
 global nrho ${rho}
 ...
-compute myGrid grid all n temp
+compute myGrid grid all all n temp
 dump 1 all grid 1000 dump.$a id c_myGrid
 run 100000
 clear

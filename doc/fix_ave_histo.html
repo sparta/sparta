@@ -137,9 +137,9 @@ vector or columns of the array had been listed one by one.  E.g. these
 grid</A> command creates a per-grid array with 3
 columns:
 </P>
-<PRE>compute myGrid grid all u v w
-fix 1 all ave/histo 100 1 100 c_myGrid file tmp1.grid mode vector
-fix 2 all ave/histo 100 1 100 c_myGrid[1] c_myGrid[2] c_myGrid[3] file tmp2.grid mode vector 
+<PRE>compute myGrid grid all all u v w
+fix 1 ave/histo 100 1 100 c_myGrid file tmp1.grid mode vector
+fix 2 ave/histo 100 1 100 c_myGrid[1] c_myGrid[2] c_myGrid[3] file tmp2.grid mode vector 
 </PRE>
 <P>If the fix ave/histo/weight command is used, exactly two values must
 be specified.  If the values are vectors, they must be the same
