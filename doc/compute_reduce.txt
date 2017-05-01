@@ -42,7 +42,7 @@ These commands will include the average grid cell temperature, across
 all grid cells, in the stats output:
 
 compute 1 temp
-compute	2 grid all temp
+compute	2 grid all all temp
 compute 3 reduce ave c_2\[1\]
 stats_style step c_temp c_3 :pre
 
@@ -92,7 +92,7 @@ had been listed one by one.  E.g. these 2 compute reduce commands are
 equivalent, since the "compute grid"_compute_grid.html command creates
 a per-grid array with 3 columns:
 
-compute myGrid all u v w
+compute myGrid grid all all u v w
 compute 2 all reduce min c_myGrid\[*\]
 compute 2 all reduce min c_myGrid\[1\] c_myGrid\[2\] c_myGrid\[3\] :pre
 
