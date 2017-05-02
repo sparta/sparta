@@ -888,7 +888,6 @@ void FixAveHisto::bin_vector(int n, double *values, int stride)
 void FixAveHisto::bin_particles(int attribute, int index)
 {
   Particle::OnePart *particles = particle->particles;
-  int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
 
   Region *region;
@@ -896,6 +895,7 @@ void FixAveHisto::bin_particles(int attribute, int index)
 
   if (attribute == X) {
     if (regionflag && mixflag) {
+      int *s2g = particle->mixture[imix]->species2group;
       for (int i = 0; i < nlocal; i++) {
         if (region->match(particles[i].x) &&
             s2g[particles[i].ispecies] >= 0) bin_one(particles[i].x[index]);
@@ -905,6 +905,7 @@ void FixAveHisto::bin_particles(int attribute, int index)
         if (region->match(particles[i].x)) bin_one(particles[i].x[index]);
       }
     } else if (mixflag) {
+      int *s2g = particle->mixture[imix]->species2group;
       for (int i = 0; i < nlocal; i++) {
         if (s2g[particles[i].ispecies] >= 0) bin_one(particles[i].x[index]);
       }
@@ -915,6 +916,7 @@ void FixAveHisto::bin_particles(int attribute, int index)
 
   } else if (attribute == V) {
     if (regionflag && mixflag) {
+      int *s2g = particle->mixture[imix]->species2group;
       for (int i = 0; i < nlocal; i++) {
         if (region->match(particles[i].x) &&
             s2g[particles[i].ispecies] < 0) bin_one(particles[i].v[index]);
@@ -924,6 +926,7 @@ void FixAveHisto::bin_particles(int attribute, int index)
         if (region->match(particles[i].x)) bin_one(particles[i].v[index]);
       }
     } else if (mixflag) {
+      int *s2g = particle->mixture[imix]->species2group;
       for (int i = 0; i < nlocal; i++) {
         if (s2g[particles[i].ispecies] >= 0) bin_one(particles[i].v[index]);
       }
@@ -941,7 +944,6 @@ void FixAveHisto::bin_particles(int attribute, int index)
 void FixAveHisto::bin_particles(double *values, int stride)
 {
   Particle::OnePart *particles = particle->particles;
-  int *s2g = particle->mixture[imix]->species2group;
   int nlocal = particle->nlocal;
 
   Region *region;
@@ -950,6 +952,7 @@ void FixAveHisto::bin_particles(double *values, int stride)
   int m = 0;
 
   if (regionflag && mixflag) {
+    int *s2g = particle->mixture[imix]->species2group;
     for (int i = 0; i < nlocal; i++) {
       if (region->match(particles[i].x) && 
           s2g[particles[i].ispecies] >= 0) bin_one(values[m]);
@@ -961,6 +964,7 @@ void FixAveHisto::bin_particles(double *values, int stride)
       m += stride;
     }
   } else if (mixflag) {
+    int *s2g = particle->mixture[imix]->species2group;
     for (int i = 0; i < nlocal; i++) {
       if (s2g[particles[i].ispecies] < 0) bin_one(values[m]);
       m += stride;
