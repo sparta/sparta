@@ -1067,21 +1067,21 @@ void FixAveHisto::options(int iarg, int narg, char **arg)
       iarg += 1;
 
     } else if (strcmp(arg[iarg],"region") == 0) {
-      if (iarg+2 < narg) error->all(FLERR,"Illegal fix ave/histo command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/histo command");
       regionflag = 1;
       iregion = domain->find_region(arg[iarg+1]);
       if (iregion == -1)
         error->all(FLERR,"Fix ave/histo region ID does not exist");
       iarg += 2;
     } else if (strcmp(arg[iarg],"mix") == 0) {
-      if (iarg+2 < narg) error->all(FLERR,"Illegal fix ave/histo command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/histo command");
       mixflag = 1;
       imix = particle->find_mixture(arg[iarg+1]);
       if (imix == -1)
         error->all(FLERR,"Fix ave/histo mixture ID does not exist");
       iarg += 2;
     } else if (strcmp(arg[iarg],"group") == 0) {
-      if (iarg+2 < narg) error->all(FLERR,"Illegal fix ave/histo command");
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix ave/histo command");
       groupflag = 1;
       int igroup = grid->find_group(arg[iarg+1]);
       if (igroup == -1)
