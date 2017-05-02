@@ -21,11 +21,12 @@ style = {n} or {single} :l
     x,y,z = position of particle (distance units)
     vx,vy,vz = velocity of particle (velocity units) :pre
 zero or more keyword/value pairs may be appended :l
-keyword = {global} or {region} or {species} or {density} or {set} :l
+keyword = {global} or {region} or {species} or {density} or {temperature} or {velocity} :l
   {global} value = {yes} or {no}
   {region} value = region-ID
   {species} values = svar xvar yvar zvar
   {density} values = dvar xvar yvar zvar
+  {temperature} values = tvar xvar yvar zvar
   {velocity} values = vxvar vyvar vzvar xvar yvar zvar :pre
 :ule
 
@@ -37,6 +38,7 @@ create_particles air n 100000 global yes
 create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
 create_particles air n 0 species mySpecies xpos NULL zpos
 create_particles air n 0 density myDens xgrid ygrid NULL
+create_particles air n 0 temperature myTemp xgrid ygrid zgrid
 create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL :pre
 
 [Description:]
@@ -197,22 +199,22 @@ create_particles species n 10000 species s x y NULL :pre
 The {density} keyword can be used to create particles with a
 spatially-dependent density variation.  The specified {dvar} is the
 name of an "equal-style variable"_variable.html whose formula should
-evaluate to a positive value.  The formula for the density variable
-can use one or two or three variables which will store the x, y, or z
-coordinates of the geometric center point of a grid cell.  If used,
-these other variables must be "internal-style variables"_variable.html
-defined in the input script; their initial numeric values can by
-anything.  Their names are specified as {xvar}, {yvar}, and {zvar}.
-If any of them is not used in the {dvar} formula, it can be specified
-as NULL.
+evaluate to a positive value.  The formula for {dvar} can use one or
+two or three variables which will store the x, y, or z coordinates of
+the geometric center point of a grid cell.  If used, these other
+variables must be "internal-style variables"_variable.html defined in
+the input script; their initial numeric values can by anything.  Their
+names are specified as {xvar}, {yvar}, and {zvar}.  If any of them is
+not used in the {dvar} formula, it can be specified as NULL.
 
 When particles are added to a grid cell, its center point coordinates
 are stored in {xvar}, {yvar}, {zvar} if they are defined.  The {dvar}
 variable is then evaluated.  The returned value is used as a scale
 factor on the number of particles to create in that grid cell.  Thus a
 value of 0.5 would create half as many particles in that grid cell as
-would otherwise be the case.  A value of 1.2 would create 20% more
-particles in that grid cell.
+would otherwise be the case, due to the global {fnum} and mixture
+{nrho} settings that define the density, as explained above.  A value
+of 1.2 would create 20% more particles in that grid cell.
 
 As an example, these commands can be used in a 2d simulation, to
 create more particles towards the upper right corner of the domain and
@@ -229,14 +231,45 @@ create_particles air n 10000 density d x y NULL :pre
 
 :c,image(JPG/density_variation_small.jpg,JPG/density_variation.jpg)
 
+The {temperature} keyword can be used to create particles with a
+spatially-dependent thermal temperature variation.  The specified
+{tvar} is the name of an "equal-style variable"_variable.html whose
+formula should evaluate to a positive value.  The formula for the
+{tvar} variable can use one or two or three variables which will store
+the x, y, or z coordinates of the geometric center point of a grid
+cell.  If used, these other variables must be "internal-style
+variables"_variable.html defined in the input script; their initial
+numeric values can by anything.  Their names are specified as {xvar},
+{yvar}, and {zvar}.  If any of them is not used in the {tvar} formula,
+it can be specified as NULL.
+
+When particles are added to a grid cell, its center point coordinates
+are stored in {xvar}, {yvar}, {zvar} if they are defined.  The {tvar}
+variable is then evaluated.  The returned value is used as a scale
+factor on the thermal temperature number for particles created in that
+grid cell.  Thus a value of 0.5 would create particles with a thermal
+temperature half of what would otherwise be the case, due to the
+mixture {temp} setting which defines the thermal temperature, as
+explained above.  A value of 1.2 would create particles with a 20%
+higher thermal temperature.
+
+As an example, these commands can be used in a 2d simulation, to
+create a thermal temperature gradient in x, where the temperature on
+the left side of the box is the default value, and the temperature on
+the right side is 3x larger.
+
+variable x internal 0
+variable t equal "1.0 + 2.0*(v_x-xlo)/(xhi-xlo)"
+create_particles air n 10000 temperature t x NULL NULL :pre
+
 The {velocity} keyword can be used to create particles with a
 spatially-dependent streaming velocity.  The specified {vxvar},
 {vyvar}, {vzvar} are the names of "equal-style
 variables"_variable.html whose formulas should evaluate to the
-corresponding component of the streaming velocity.  If any of them
-are specified as NULL, then that streaming velocity component is
-set by the corresponding global or mixture streaming velocity component,
-the same as if the {velocity} keyword were not used.  
+corresponding component of the streaming velocity.  If any of them are
+specified as NULL, then that streaming velocity component is set by
+the corresponding global or mixture streaming velocity component, the
+same as if the {velocity} keyword were not used.
 
 The formulas for the {vxvar}, {vyvar}, {vzvar} variables can use one
 or two or three variables which will store the x, y, or z coordinates

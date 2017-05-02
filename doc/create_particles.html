@@ -28,12 +28,13 @@
 </PRE>
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>global</I> or <I>region</I> or <I>species</I> or <I>density</I> or <I>set</I> 
+<LI>keyword = <I>global</I> or <I>region</I> or <I>species</I> or <I>density</I> or <I>temperature</I> or <I>velocity</I> 
 
 <PRE>  <I>global</I> value = <I>yes</I> or <I>no</I>
   <I>region</I> value = region-ID
   <I>species</I> values = svar xvar yvar zvar
   <I>density</I> values = dvar xvar yvar zvar
+  <I>temperature</I> values = tvar xvar yvar zvar
   <I>velocity</I> values = vxvar vyvar vzvar xvar yvar zvar 
 </PRE>
 
@@ -46,6 +47,7 @@ create_particles air n 100000 global yes
 create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
 create_particles air n 0 species mySpecies xpos NULL zpos
 create_particles air n 0 density myDens xgrid ygrid NULL
+create_particles air n 0 temperature myTemp xgrid ygrid zgrid
 create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL 
 </PRE>
 <P><B>Description:</B>
@@ -206,22 +208,22 @@ create_particles species n 10000 species s x y NULL
 <P>The <I>density</I> keyword can be used to create particles with a
 spatially-dependent density variation.  The specified <I>dvar</I> is the
 name of an <A HREF = "variable.html">equal-style variable</A> whose formula should
-evaluate to a positive value.  The formula for the density variable
-can use one or two or three variables which will store the x, y, or z
-coordinates of the geometric center point of a grid cell.  If used,
-these other variables must be <A HREF = "variable.html">internal-style variables</A>
-defined in the input script; their initial numeric values can by
-anything.  Their names are specified as <I>xvar</I>, <I>yvar</I>, and <I>zvar</I>.
-If any of them is not used in the <I>dvar</I> formula, it can be specified
-as NULL.
+evaluate to a positive value.  The formula for <I>dvar</I> can use one or
+two or three variables which will store the x, y, or z coordinates of
+the geometric center point of a grid cell.  If used, these other
+variables must be <A HREF = "variable.html">internal-style variables</A> defined in
+the input script; their initial numeric values can by anything.  Their
+names are specified as <I>xvar</I>, <I>yvar</I>, and <I>zvar</I>.  If any of them is
+not used in the <I>dvar</I> formula, it can be specified as NULL.
 </P>
 <P>When particles are added to a grid cell, its center point coordinates
 are stored in <I>xvar</I>, <I>yvar</I>, <I>zvar</I> if they are defined.  The <I>dvar</I>
 variable is then evaluated.  The returned value is used as a scale
 factor on the number of particles to create in that grid cell.  Thus a
 value of 0.5 would create half as many particles in that grid cell as
-would otherwise be the case.  A value of 1.2 would create 20% more
-particles in that grid cell.
+would otherwise be the case, due to the global <I>fnum</I> and mixture
+<I>nrho</I> settings that define the density, as explained above.  A value
+of 1.2 would create 20% more particles in that grid cell.
 </P>
 <P>As an example, these commands can be used in a 2d simulation, to
 create more particles towards the upper right corner of the domain and
@@ -238,14 +240,45 @@ create_particles air n 10000 density d x y NULL
 </PRE>
 <CENTER><A HREF = "JPG/density_variation.jpg"><IMG SRC = "JPG/density_variation_small.jpg"></A>
 </CENTER>
+<P>The <I>temperature</I> keyword can be used to create particles with a
+spatially-dependent thermal temperature variation.  The specified
+<I>tvar</I> is the name of an <A HREF = "variable.html">equal-style variable</A> whose
+formula should evaluate to a positive value.  The formula for the
+<I>tvar</I> variable can use one or two or three variables which will store
+the x, y, or z coordinates of the geometric center point of a grid
+cell.  If used, these other variables must be <A HREF = "variable.html">internal-style
+variables</A> defined in the input script; their initial
+numeric values can by anything.  Their names are specified as <I>xvar</I>,
+<I>yvar</I>, and <I>zvar</I>.  If any of them is not used in the <I>tvar</I> formula,
+it can be specified as NULL.
+</P>
+<P>When particles are added to a grid cell, its center point coordinates
+are stored in <I>xvar</I>, <I>yvar</I>, <I>zvar</I> if they are defined.  The <I>tvar</I>
+variable is then evaluated.  The returned value is used as a scale
+factor on the thermal temperature number for particles created in that
+grid cell.  Thus a value of 0.5 would create particles with a thermal
+temperature half of what would otherwise be the case, due to the
+mixture <I>temp</I> setting which defines the thermal temperature, as
+explained above.  A value of 1.2 would create particles with a 20%
+higher thermal temperature.
+</P>
+<P>As an example, these commands can be used in a 2d simulation, to
+create a thermal temperature gradient in x, where the temperature on
+the left side of the box is the default value, and the temperature on
+the right side is 3x larger.
+</P>
+<PRE>variable x internal 0
+variable t equal "1.0 + 2.0*(v_x-xlo)/(xhi-xlo)"
+create_particles air n 10000 temperature t x NULL NULL 
+</PRE>
 <P>The <I>velocity</I> keyword can be used to create particles with a
 spatially-dependent streaming velocity.  The specified <I>vxvar</I>,
 <I>vyvar</I>, <I>vzvar</I> are the names of <A HREF = "variable.html">equal-style
 variables</A> whose formulas should evaluate to the
-corresponding component of the streaming velocity.  If any of them
-are specified as NULL, then that streaming velocity component is
-set by the corresponding global or mixture streaming velocity component,
-the same as if the <I>velocity</I> keyword were not used.  
+corresponding component of the streaming velocity.  If any of them are
+specified as NULL, then that streaming velocity component is set by
+the corresponding global or mixture streaming velocity component, the
+same as if the <I>velocity</I> keyword were not used.
 </P>
 <P>The formulas for the <I>vxvar</I>, <I>vyvar</I>, <I>vzvar</I> variables can use one
 or two or three variables which will store the x, y, or z coordinates
