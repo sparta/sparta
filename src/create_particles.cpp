@@ -88,9 +88,10 @@ void CreateParticles::command(int narg, char **arg)
 
   int globalflag = 0;
   region = NULL;
-  speciesflag = densflag = velflag = 0;
+  speciesflag = densflag = velflag = tempflag = 0;
   sstr = sxstr = systr = szstr = NULL;
   dstr = dxstr = dystr = dzstr = NULL;
+  tstr = txstr = tystr = tzstr = NULL;
   vxstr = vystr = vzstr = vstrx = vstry = vstrz = NULL;
 
   while (iarg < narg) {
@@ -128,6 +129,17 @@ void CreateParticles::command(int narg, char **arg)
       else dystr = arg[iarg+3];
       if (strcmp(arg[iarg+4],"NULL") == 0) dzstr = NULL;
       else dzstr = arg[iarg+4];
+      iarg += 5;
+    } else if (strcmp(arg[iarg],"temperature") == 0) {
+      if (iarg+5 > narg) error->all(FLERR,"Illegal create_particles command");
+      tempflag = 1;
+      tstr = arg[iarg+1];
+      if (strcmp(arg[iarg+2],"NULL") == 0) txstr = NULL;
+      else txstr = arg[iarg+2];
+      if (strcmp(arg[iarg+3],"NULL") == 0) tystr = NULL;
+      else tystr = arg[iarg+3];
+      if (strcmp(arg[iarg+4],"NULL") == 0) tzstr = NULL;
+      else tzstr = arg[iarg+4];
       iarg += 5;
     } else if (strcmp(arg[iarg],"velocity") == 0) {
       if (iarg+7 > narg) error->all(FLERR,"Illegal create_particles command");
@@ -207,6 +219,35 @@ void CreateParticles::command(int narg, char **arg)
       if (dzvar < 0)
         error->all(FLERR,"Variable name for create_particles does not exist");
       if (!input->variable->internal_style(dzvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+    }
+  }
+
+  if (tempflag) {
+    tvar = input->variable->find(tstr);
+    if (tvar < 0)
+      error->all(FLERR,"Variable name for create_particles does not exist");
+    if (!input->variable->equal_style(tvar))
+      error->all(FLERR,"Variable for create_particles is invalid style");
+    if (txstr) {
+      txvar = input->variable->find(txstr);
+      if (txvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->internal_style(txvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+    }
+    if (tystr) {
+      tyvar = input->variable->find(tystr);
+      if (tyvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->internal_style(tyvar))
+        error->all(FLERR,"Variable for create_particles is invalid style");
+    }
+    if (tzstr) {
+      tzvar = input->variable->find(tzstr);
+      if (tzvar < 0)
+        error->all(FLERR,"Variable name for create_particles does not exist");
+      if (!input->variable->internal_style(tzvar))
         error->all(FLERR,"Variable for create_particles is invalid style");
     }
   }
@@ -298,7 +339,7 @@ void CreateParticles::command(int narg, char **arg)
   bigint nglobal;
   bigint nme = particle->nlocal;
   MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  if (!region && !speciesflag && !densflag && nglobal-nprevious != np) {
+  if (!region && !speciesflag && !densflag && !tempflag && nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of particles: " 
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
@@ -485,6 +526,9 @@ void CreateParticles::create_local(bigint np)
   double x[3],v[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
 
+  double tempscale = 1.0;
+  double sqrttempscale = 1.0;
+
   double volsum = 0.0;
   bigint nprev = 0;
 
@@ -531,11 +575,16 @@ void CreateParticles::create_local(bigint np)
         ispecies = species[isp];
       }
 
-      vn = vscale[isp] * sqrt(-log(random->uniform()));
-      vr = vscale[isp] * sqrt(-log(random->uniform()));
+      if (tempflag) {
+        tempscale = temperature_variable(x);
+        sqrttempscale = sqrt(tempscale);
+      }
+
+      vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+      vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
-	
+
       if (velflag) {
         velocity_variable(x,vstream,vstream_variable);
         v[0] = vstream_variable[0] + vn*cos(theta1);
@@ -547,8 +596,8 @@ void CreateParticles::create_local(bigint np)
         v[2] = vstream[2] + vr*sin(theta2);
       }
 
-      erot = particle->erot(ispecies,temp_rot,random);
-      evib = particle->evib(ispecies,temp_vib,random);
+      erot = particle->erot(ispecies,temp_rot*tempscale,random);
+      evib = particle->evib(ispecies,temp_vib*tempscale,random);
 
       id = MAXSMALLINT*random->uniform();
 
@@ -623,6 +672,21 @@ double CreateParticles::density_variable(double *lo, double *hi)
   return scale;
 }
 
+/* ----------------------------------------------------------------------
+   use grid cell center in tvar variable to generate temperature scale factor
+   first plug in grid x,y,z values into txvar,tyvar,tzvar
+------------------------------------------------------------------------- */
+
+double CreateParticles::temperature_variable(double *x)
+{
+
+  if (txstr) input->variable->internal_set(txvar,x[0]);
+  if (tystr) input->variable->internal_set(tyvar,x[1]);
+  if (tzstr) input->variable->internal_set(tzvar,x[2]);
+
+  double scale = input->variable->compute_equal(tvar);
+  return scale;
+}
 /* ----------------------------------------------------------------------
    use particle position in vxvar,vyvar,vzvar variables to generate vel stream
    first plug in particle x,y,z values into vvarx,vvary,vvarz
