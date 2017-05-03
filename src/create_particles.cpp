@@ -339,7 +339,8 @@ void CreateParticles::command(int narg, char **arg)
   bigint nglobal;
   bigint nme = particle->nlocal;
   MPI_Allreduce(&nme,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  if (!region && !speciesflag && !densflag && !tempflag && nglobal-nprevious != np) {
+  if (!region && !speciesflag && !densflag && !tempflag && 
+      nglobal-nprevious != np) {
     char str[128];
     sprintf(str,"Created incorrect # of particles: " 
 	    BIGINT_FORMAT " versus " BIGINT_FORMAT,
@@ -556,6 +557,7 @@ void CreateParticles::create_local(bigint np)
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
+
     for (int m = 0; m < ncreate; m++) {
       rn = random->uniform();
       isp = 0;
@@ -633,7 +635,6 @@ int CreateParticles::outside_region(int dim, double *lo, double *hi)
   }
   return flag;
 }
-
 
 /* ----------------------------------------------------------------------
    use particle position in svar variable to generate particle species
