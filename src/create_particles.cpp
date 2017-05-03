@@ -556,7 +556,6 @@ void CreateParticles::create_local(bigint np)
       ncreate = static_cast<int> (ntarget);
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
-
     for (int m = 0; m < ncreate; m++) {
       rn = random->uniform();
       isp = 0;
