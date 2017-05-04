@@ -462,6 +462,8 @@ int DumpSurf::parse_fields(int narg, char **arg)
       if (n < 0) error->all(FLERR,"Could not find dump surf compute ID");
       if (modify->compute[n]->per_surf_flag == 0)
 	error->all(FLERR,"Dump surf compute does not compute per-surf info");
+      if (argindex[i]== 0 && modify->compute[n]->size_per_surf_cols != 0)
+	error->all(FLERR,"Dump surf compute does not compute per-surf vector");
       if (argindex[i] > 0 && modify->compute[n]->size_per_surf_cols == 0)
 	error->all(FLERR,
 		   "Dump surf compute does not calculate per-surf array");
@@ -496,6 +498,8 @@ int DumpSurf::parse_fields(int narg, char **arg)
       if (n < 0) error->all(FLERR,"Could not find dump surf fix ID");
       if (modify->fix[n]->per_surf_flag == 0)
 	error->all(FLERR,"Dump surf fix does not compute per-surf info");
+      if (argindex[i]== 0 && modify->fix[n]->size_per_surf_cols != 0)
+	error->all(FLERR,"Dump surf fix does not compute per-surf vector");
       if (argindex[i] > 0 && modify->fix[n]->size_per_surf_cols == 0)
 	error->all(FLERR,"Dump surf fix does not compute per-surf array");
       if (argindex[i] > 0 && argindex[i] > modify->fix[n]->size_per_surf_cols)
