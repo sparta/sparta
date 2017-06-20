@@ -13,7 +13,7 @@ variable            n equal 10*$x*$y*$z
 seed	    	    12345
 dimension   	    3
 
-boundary	    rr rr rr
+boundary	    p p p
 
 create_box  	    0 ${lx} 0 ${ly} 0 ${lz}
 create_grid 	    $x $y $z
@@ -36,8 +36,8 @@ stats_style	    step cpu np nattempt ncoll c_temp
 
 # energy spectrum
 
-compute             1 grid all u v w
-fix                 1 ave/grid 10 100 1000 c_1[*]
+compute             1 grid all all u v w
+fix                 1 ave/grid all 10 100 1000 c_1[*]
 compute             2 fft/grid f_1[1] f_1[2] f_1[3]
 dump                1 grid all 1000 dump.grid.3d id c_2[*] f_1[*]
 
