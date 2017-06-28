@@ -12,6 +12,7 @@ variable            n equal 10*$x*$y*$z
 
 seed	    	    12345
 dimension   	    3
+global              comm/sort yes
 
 boundary	    p p p
 

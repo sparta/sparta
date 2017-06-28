@@ -10,6 +10,7 @@ variable            n equal 10*$x*$y
 
 seed	    	    12345
 dimension   	    2
+global              comm/sort yes
 
 boundary	    p p p
 
