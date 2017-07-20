@@ -59,7 +59,7 @@ class ComputeSurf : public Compute {
   double nfactor;          // dt/fnum for normalization
   double nfactor_inverse;  // fnum/dt for normalization
   double *normflux;        // normalization factor for each surf element
-
+  double nfactor_previous; // nfactor from previous run
   void grow();
 };
 

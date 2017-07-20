@@ -87,6 +87,7 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   glob2loc = loc2glob = NULL;
   array_surf_tally = NULL;
   normflux = NULL;
+  nfactor_previous = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -130,9 +131,10 @@ void ComputeSurf::init()
   // normflux for all surface elements, based on area and timestep size
   // store inverse, so can multipy by scale factor when tally
   // store for all surf elements, b/c don't know which ones I need to normalize
-  // one-time only initialization
+  // one-time only initialization unless timestep or fnum changes between runs
 
-  if (normflux == NULL)  {
+  if (nfactor != nfactor_previous)  {
+    memory->destroy(normflux);
     memory->create(normflux,nsurf,"surf:normflux");
 
     int dimension = domain->dimension;
@@ -147,6 +149,8 @@ void ComputeSurf::init()
       normflux[i] = 1.0/normflux[i];
     }
   }
+
+  nfactor_previous = nfactor;
 
   // set weightflag if cell weighting is enabled
   // else weight = 1.0 for all particles
