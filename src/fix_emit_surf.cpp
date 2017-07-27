@@ -495,7 +495,7 @@ void FixEmitSurf::perform_task()
           if (region && !region->match(x)) continue;
           
           do {
-            do beta_un = (6.0*random->gaussian() - 3.0);
+            do beta_un = (6.0*random->uniform() - 3.0);
             while (beta_un + scosine < 0.0);
             normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
               (scosine + sqrt(scosine*scosine + 2.0)) *
@@ -506,7 +506,7 @@ void FixEmitSurf::perform_task()
           if (normalflag) vnmag = beta_un*vscale[isp] + magvstream;
           else vnmag = beta_un*vscale[isp] + indot;
           
-          theta = MY_2PI * random->gaussian();
+          theta = MY_2PI * random->uniform();
           vr = vscale[isp] * sqrt(-log(random->uniform()));
           if (normalflag) {
             vamag = vr * sin(theta);
@@ -588,7 +588,7 @@ void FixEmitSurf::perform_task()
         
         do {
           do {
-            beta_un = (6.0*random->gaussian() - 3.0);
+            beta_un = (6.0*random->uniform() - 3.0);
           } while (beta_un + scosine < 0.0);
           normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
             (scosine + sqrt(scosine*scosine + 2.0)) *
@@ -599,7 +599,7 @@ void FixEmitSurf::perform_task()
         if (normalflag) vnmag = beta_un*vscale[isp] + magvstream;
         else vnmag = beta_un*vscale[isp] + indot;
         
-        theta = MY_2PI * random->gaussian();
+        theta = MY_2PI * random->uniform();
         vr = vscale[isp] * sqrt(-log(random->uniform()));
         if (normalflag) {
           vamag = vr * sin(theta);
