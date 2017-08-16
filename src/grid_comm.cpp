@@ -42,6 +42,7 @@ int Grid::pack_one(int icell, char *buf,
 
   // pack child cell and its csurfs and cinfo
   // just pack child cell if nsurf < 0 since is EMPTY ghost
+  //   unpack_one() will reset other fields (csurfs, nsplit, isplit)
 
   if (memflag) memcpy(ptr,&cells[icell],sizeof(ChildCell));
   ptr += sizeof(ChildCell);
@@ -161,7 +162,15 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag)
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
 
-  if (cells[icell].nsurf < 0) return ptr - buf;
+  // if nsurf < 0 since is EMPTY ghost
+  // reset other fields for ghost cell (csurfs, nsplit, isplit)
+
+  if (cells[icell].nsurf < 0) {
+    cells[icell].csurfs = NULL;
+    cells[icell].nsplit = 1;
+    cells[icell].isplit = -1;
+    return ptr - buf;
+  }
 
   if (ownflag) {
     cells[icell].proc = me;
