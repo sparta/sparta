@@ -410,7 +410,7 @@ void FixEmitSurf::perform_task()
   
   double dt = update->dt;
   int *species = particle->mixture[imix]->species;
-  
+
   // if subsonic, re-compute particle inflow counts for each task
   // also computes current per-task temp_thermal and vstream
   
