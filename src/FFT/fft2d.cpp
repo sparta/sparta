@@ -131,19 +131,19 @@ void fft_2d(FFT_DATA *in, FFT_DATA *out, int flag, struct fft_plan_2d *plan)
 
 #if defined(FFT_MKL)
   if (flag == -1)
-    DftiComputeForward(plan->handle_mid,data);
+    DftiComputeForward(plan->handle_slow,data);
   else
-    DftiComputeBackward(plan->handle_mid,data);
+    DftiComputeBackward(plan->handle_slow,data);
 #elif defined(FFT_FFTW2)
   if (flag == -1)
-    fftw(plan->plan_mid_forward,total/length,data,1,length,NULL,0,0);
+    fftw(plan->plan_slow_forward,total/length,data,1,length,NULL,0,0);
   else
-    fftw(plan->plan_mid_backward,total/length,data,1,length,NULL,0,0);
+    fftw(plan->plan_slow_backward,total/length,data,1,length,NULL,0,0);
 #elif defined(FFT_FFTW3)
   if (flag == -1)
-    theplan=plan->plan_mid_forward;
+    theplan=plan->plan_slow_forward;
   else
-    theplan=plan->plan_mid_backward;
+    theplan=plan->plan_slow_backward;
   FFTW_API(execute_dft)(theplan,data,data);
 #else
   if (flag == -1)
@@ -574,7 +574,7 @@ void fft_2d_1d_only(FFT_DATA *data, int nsize, int flag,
                     struct fft_plan_2d *plan)
 {
   int i,total,length,offset,num;
-  FFT_SCALAR norm,*data_ptr;
+  FFT_SCALAR norm;
 #if defined(FFT_FFTW3)
   FFT_SCALAR *data_ptr;
 #endif
