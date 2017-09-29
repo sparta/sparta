@@ -347,7 +347,7 @@ int FixEmitFaceFile::create_task(int icell)
 
 void FixEmitFaceFile::perform_task()
 {
-  int pcell,ninsert,nactual,isp,ispecies,ndim,id;
+  int pcell,ninsert,nactual,isp,ispecies,id;
   double temp_thermal,temp_rot,temp_vib;
   double indot,scosine,rn,ntarget,vr;
   double beta_un,normalized_distbn_fn,theta,erot,evib;
@@ -1146,7 +1146,7 @@ void FixEmitFaceFile::subsonic_sort()
 
 void FixEmitFaceFile::subsonic_grid()
 {
-  int m,ip,np,icell,ispecies,ndim;
+  int m,ip,np,icell,ispecies;
   double mass,masstot,gamma,ke,sign;
   double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
   double mass_cell,gamma_cell,soundspeed_cell;

@@ -1325,7 +1325,7 @@ void Surf::read_restart(FILE *fp)
         fread(&lines[i].mask,sizeof(int),1,fp);
         lines[i].isc = lines[i].isr = -1;
         fread(&lines[i].p1,sizeof(int),2,fp);
-        lines[i].norm[0] = lines[i].norm[2] = lines[i].norm[2] = 0.0;
+        lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
       }
     }
     MPI_Bcast(lines,nline*sizeof(Line),MPI_CHAR,0,world);
@@ -1342,7 +1342,7 @@ void Surf::read_restart(FILE *fp)
         fread(&tris[i].mask,sizeof(int),1,fp);
         tris[i].isc = tris[i].isr = -1;
         fread(&tris[i].p1,sizeof(int),3,fp);
-        tris[i].norm[0] = tris[i].norm[2] = tris[i].norm[2] = 0.0;
+        tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
       }
     }
     MPI_Bcast(tris,ntri*sizeof(Tri),MPI_CHAR,0,world);
