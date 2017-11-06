@@ -550,7 +550,7 @@ void Grid::assign_split_cell_particles(int icell)
 
 void Grid::surf2grid_stats()
 {
-  double cmax,len,area;
+  double cmax,len;
   int dimension = domain->dimension;
 
   int scount = 0;
@@ -575,7 +575,7 @@ void Grid::surf2grid_stats()
       }
     } else if (dimension == 3) {
       for (int i = 0; i < cells[icell].nsurf; i++) {
-	area = surf->tri_size(cells[icell].csurfs[i],len);
+	surf->tri_size(cells[icell].csurfs[i],len);
 	sratio = MIN(sratio,len/cmax);
       }
     }

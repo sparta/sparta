@@ -59,7 +59,7 @@ void SurfReactProb::init()
 
 /* ---------------------------------------------------------------------- */
 
-int SurfReactProb::react(Particle::OnePart *&ip, double *norm, 
+int SurfReactProb::react(Particle::OnePart *&ip, double *, 
                          Particle::OnePart *&jp)
 {
   int n = reactions[ip->ispecies].n;
@@ -98,19 +98,16 @@ int SurfReactProb::react(Particle::OnePart *&ip, double *norm,
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
           return 1;
-          break;
         }
       case EXCHANGE:
         {
           ip->ispecies = r->products[0];
           return 1;
-          break;
         }
       case RECOMBINATION:
         {
           ip = NULL;
           return 1;
-          break;
         }
       }
     }

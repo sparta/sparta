@@ -598,7 +598,7 @@ void RCB::compute(int n, double **x, double *wt, int flip)
    merge of each component of an RCB bounding box
 ------------------------------------------------------------------------- */
 
-void box_merge(void *in, void *inout, int *len, MPI_Datatype *dptr)
+void box_merge(void *in, void *inout, int *, MPI_Datatype *)
 
 {
   RCB::BBox *box1 = (RCB::BBox *) in;
@@ -630,7 +630,7 @@ void box_merge(void *in, void *inout, int *len, MPI_Datatype *dptr)
 	                          all procs must get same proclo,prochi
 ------------------------------------------------------------------------- */
 
-void median_merge(void *in, void *inout, int *len, MPI_Datatype *dptr)
+void median_merge(void *in, void *inout, int *, MPI_Datatype *)
 
 {
   RCB::Median *med1 = (RCB::Median *) in;

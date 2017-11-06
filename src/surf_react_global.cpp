@@ -53,7 +53,7 @@ SurfReactGlobal::~SurfReactGlobal()
 
 /* ---------------------------------------------------------------------- */
 
-int SurfReactGlobal::react(Particle::OnePart *&ip, double *norm, 
+int SurfReactGlobal::react(Particle::OnePart *&ip, double *, 
                            Particle::OnePart *&jp)
 {
   double r = random->uniform();

@@ -58,7 +58,6 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   double pre_etotal;
   double e_excess;
   double ecc;
-  int reaction;
 
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
@@ -85,13 +84,13 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     // compute probability of reaction
         
     if (r->style == ARRHENIUS)  
-      reaction = attempt_tce(ip,jp,r,
-                             pre_etrans,pre_erot,
-                             pre_evib,post_etotal,kspecies);
+      attempt_tce(ip,jp,r,
+                  pre_etrans,pre_erot,
+                  pre_evib,post_etotal,kspecies);
     else if (r->style == QUANTUM)  
-      reaction = attempt_qk(ip,jp,r,
-                            pre_etrans,pre_erot,
-                            pre_evib,post_etotal,kspecies);
+      attempt_qk(ip,jp,r,
+                 pre_etrans,pre_erot,
+                 pre_evib,post_etotal,kspecies);
   }
   
   return 0;
@@ -165,7 +164,7 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
 {
   double prob,evib;
   int iv,ilevel,maxlev,limlev;
-  int mspec,aspec;
+  int mspec;
 
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
@@ -232,14 +231,11 @@ int ReactTCEQK::attempt_qk(Particle::OnePart *ip, Particle::OnePart *jp,
         ecc = pre_etrans + ip->evib;
         
         // mspec = post-collision species of the particle
-        // aspec = post-collision species of the atom
 
         mspec = r->products[0];
-        aspec = r->products[1];
         
         if (species[mspec].rotdof < 2.0)  {
           mspec = r->products[1];
-            aspec = r->products[0];
         }
 
         // potential post-collision energy

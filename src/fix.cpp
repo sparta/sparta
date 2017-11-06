@@ -24,7 +24,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Fix::Fix(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
+Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 {
   // fix ID and style
   // ID must be all alphanumeric chars or underscores

@@ -2132,9 +2132,7 @@ void Cut3d::push(double *pt)
   z = MAX(z,boxlo[2]);
   z = MIN(z,boxhi[2]);
 
-  int flag = 0;
   if (x != pt[0] || y != pt[1] || z != pt[2]) {
-    flag = 1;
     pt[0] = x;
     pt[1] = y;
     pt[2] = z;
@@ -2154,7 +2152,6 @@ void Cut3d::failed_cell()
   while (iparent >= 0) {
     int nx = grid->pcells[iparent].nx;
     int ny = grid->pcells[iparent].ny;
-    int nz = grid->pcells[iparent].nz;
     int ix = (ichild-1) % nx;
     int iy = ((ichild-1)/nx) % ny;
     int iz = (ichild-1) / (nx*ny);

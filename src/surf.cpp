@@ -446,7 +446,7 @@ void Surf::check_watertight_2d(int npoint_old, int nline_old)
    only check points and lines newer than old indices
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_3d(int npoint_old, int ntri_old)
+void Surf::check_watertight_3d(int, int ntri_old)
 {
   int ntri_new = ntri - ntri_old;
 
@@ -1181,8 +1181,8 @@ void Surf::collate_vector_allreduce(int nrow, int *l2g,
   memory->destroy(all);
 }
 
-void Surf::collate_vector_irregular(int nrow, int *l2g, 
-                                    double *in, int instride, double *out)
+void Surf::collate_vector_irregular(int, int *, 
+                                    double *, int, double *)
 {
 }
 
@@ -1242,8 +1242,8 @@ void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g,
   memory->destroy(all);
 }
 
-void Surf::collate_array_irregular(int nrow, int ncol, int *l2g, 
-                                   double **in, double **out)
+void Surf::collate_array_irregular(int, int, int *, 
+                                   double **, double **)
 {
 }
 

@@ -765,8 +765,8 @@ void FixEmitSurf::subsonic_sort()
 
 void FixEmitSurf::subsonic_grid()
 {
-  int m,ip,np,icell,ispecies,ndim,index;
-  double mass,masstot,gamma,ke,sign;
+  int m,ip,np,icell,ispecies;
+  double mass,masstot,gamma,ke;
   double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
   double mass_cell,gamma_cell,soundspeed_cell,vsmag;
   double mv[4];

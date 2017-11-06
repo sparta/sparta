@@ -59,7 +59,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   double pre_etotal,ecc,e_excess;
   double prob,evib;
   int iv,ilevel,maxlev,limlev;
-  int mspec,aspec;
+  int mspec;
   OneReaction *r;
 
   Particle::Species *species = particle->species;
@@ -140,14 +140,11 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
           ecc = pre_etrans + ip->evib;
         
           // mspec = post-collision species of the particle
-          // aspec = post-collision species of the atom
 
           mspec = r->products[0];
-          aspec = r->products[1];
 
           if (species[mspec].rotdof < 2.0)  {
             mspec = r->products[1];
-            aspec = r->products[0];
           }
               
           // post-collision energy

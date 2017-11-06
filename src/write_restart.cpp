@@ -397,7 +397,7 @@ void WriteRestart::surf_params()
    all procs call this method, only proc 0 writes to file
 ------------------------------------------------------------------------- */
 
-void WriteRestart::file_layout(int send_size)
+void WriteRestart::file_layout(int)
 {
   if (me == 0) write_int(MULTIPROC,multiproc);
 

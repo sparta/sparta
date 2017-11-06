@@ -760,7 +760,7 @@ void CollideVSS::read_param_file(char *fname)
   int isp;
 
   while (fgets(line,MAXLINE,fp)) {
-    int pre = strspn(line," \t\n\r");
+    size_t pre = strspn(line," \t\n\r");
     if (pre == strlen(line) || line[pre] == '#') continue;
 
     strcpy(copy,line);

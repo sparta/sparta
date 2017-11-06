@@ -26,7 +26,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-React::React(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
+React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 {
   int n = strlen(arg[0]) + 1;
   style = new char[n];

@@ -963,16 +963,13 @@ void DumpImage::write()
   }
 
   if (surfflag && scolor == ATTRIBUTE && image->map_dynamic(SURF)) {
-    int m;
     double value,two[2],twoall[2];
     double lo = BIG;
     double hi = -BIG;
 
-    int *mysurfs = surf->mysurfs;
     int nslocal = surf->nlocal;
 
     for (int isurf = 0; isurf < nslocal; isurf++) {
-      m = mysurfs[isurf];
       if (surfwhich == COMPUTE) {
         Compute *compute = modify->compute[surfindex];
         if (!(compute->invoked_flag & INVOKED_PER_SURF)) {

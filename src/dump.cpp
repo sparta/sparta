@@ -41,7 +41,7 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 
 /* ---------------------------------------------------------------------- */
 
-Dump::Dump(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
+Dump::Dump(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);

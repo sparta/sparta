@@ -1746,7 +1746,7 @@ void AdaptGrid::coarsen_surf()
 
 void AdaptGrid::coarsen_value()
 {
-  int m,iparent,nchild,icell,jcell,nsplit;
+  int m,nchild,icell,jcell,nsplit;
   int *proc,*index,*recv,*csubs;
   double value;
 
@@ -1757,7 +1757,6 @@ void AdaptGrid::coarsen_value()
     if (ctask[i].flag == 0) continue;
     ctask[i].flag = 0;
 
-    iparent = ctask[i].iparent;
     nchild = ctask[i].nchild;
     proc = ctask[i].proc;
     index = ctask[i].index;
@@ -1816,9 +1815,6 @@ void AdaptGrid::coarsen_value()
       }
     }
     
-    //printf("BBB %d %d: %g %g\n",
-    //      i,grid->pcells[iparent].id,value,cvalue);
-
     if (cdecide == LESS) {
       if (value < cvalue) ctask[i].flag = 1;
     } else {

@@ -748,8 +748,8 @@ void Variable::compute_particle(int ivar, double *result,
   eval_in_progress[ivar] = 1;
 
   treestyle = PARTICLE;
-  double tmp = evaluate(data[ivar][0],&tree);
-  tmp = collapse_tree(tree);
+  evaluate(data[ivar][0],&tree);
+  collapse_tree(tree);
 
   int nlocal = particle->nlocal;
 
@@ -790,8 +790,8 @@ void Variable::compute_grid(int ivar, double *result,
 
   nvec_storage = 0;
   treestyle = GRID;
-  double tmp = evaluate(data[ivar][0],&tree);
-  tmp = collapse_tree(tree);
+  evaluate(data[ivar][0],&tree);
+  collapse_tree(tree);
 
   int nglocal = grid->nlocal;
 
@@ -1516,9 +1516,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	// parse zero or one or two trailing brackets
 	// point i beyond last bracket
 	// nbracket = # of bracket pairs
-	// index1,index2 = int inside each bracket pair
+	// index1 = int inside each bracket pair
 
-	int nbracket,index1,index2;
+	int nbracket,index1;
 	if (str[i] != '[') nbracket = 0;
 	else {
 	  nbracket = 1;
@@ -1528,7 +1528,6 @@ double Variable::evaluate(char *str, Tree **tree)
 	  if (str[i] == '[') {
 	    nbracket = 2;
 	    ptr = &str[i];
-	    index2 = int_between_brackets(ptr,1);
 	    i = ptr-str+1;
 	  }
 	}
@@ -1573,9 +1572,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	// parse zero or one or two trailing brackets
 	// point i beyond last bracket
 	// nbracket = # of bracket pairs
-	// index1,index2 = int inside each bracket pair
+	// index1 = int inside each bracket pair
 
-	int nbracket,index1,index2;
+	int nbracket,index1;
 	if (str[i] != '[') nbracket = 0;
 	else {
 	  nbracket = 1;
@@ -1585,7 +1584,7 @@ double Variable::evaluate(char *str, Tree **tree)
 	  if (str[i] == '[') {
 	    nbracket = 2;
 	    ptr = &str[i];
-	    index2 = int_between_brackets(ptr,1);
+	    int_between_brackets(ptr,1);
 	    i = ptr-str+1;
 	  }
 	}
@@ -1626,14 +1625,13 @@ double Variable::evaluate(char *str, Tree **tree)
 	// parse zero or one trailing brackets
 	// point i beyond last bracket
 	// nbracket = # of bracket pairs
-	// index = int inside bracket
 
-	int nbracket,index;
+	int nbracket;
 	if (str[i] != '[') nbracket = 0;
 	else {
 	  nbracket = 1;
 	  ptr = &str[i];
-	  index = int_between_brackets(ptr,1);
+	  int_between_brackets(ptr,1);
 	  i = ptr-str+1;
 	}
 
@@ -3737,7 +3735,7 @@ double Variable::evaluate_boolean(char *str)
    for flag = SCALARFILE, reads one value per line
 ------------------------------------------------------------------------- */
 
-VarReader::VarReader(SPARTA *sparta, char *name, char *file, int flag) : 
+VarReader::VarReader(SPARTA *sparta, char *, char *file, int flag) : 
   Pointers(sparta)
 {
   me = comm->me;

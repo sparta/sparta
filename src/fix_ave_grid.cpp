@@ -386,7 +386,7 @@ void FixAveGrid::setup()
 void FixAveGrid::end_of_step()
 {
   int i,j,k,m,n,itally;
-  int ntally,kk,tmp;
+  int ntally,kk;
   int *itmp;
   double **ctally;
 
@@ -428,7 +428,7 @@ void FixAveGrid::end_of_step()
 
       if (post_process[m]) {
 	ntally = numap[m];
-        tmp = compute->query_tally_grid(j,ctally,itmp);
+        compute->query_tally_grid(j,ctally,itmp);
         for (i = 0; i < nglocal; i++)
           for (itally = 0; itally < ntally; itally++) {
             k = umap[m][itally];
@@ -589,7 +589,7 @@ int FixAveGrid::pack_one(int icell, char *buf, int memflag)
          could add logic to interpolate new values for created cell
 ------------------------------------------------------------------------- */
 
-void FixAveGrid::add_grid_one(int icell, int flag)
+void FixAveGrid::add_grid_one(int, int flag)
 {
   if (flag) return;
 

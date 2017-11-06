@@ -760,7 +760,7 @@ void FixEmitFace::subsonic_sort()
 
 void FixEmitFace::subsonic_grid()
 {
-  int m,ip,np,icell,ispecies,ndim,index;
+  int m,ip,np,icell,ispecies,ndim;
   double mass,masstot,gamma,ke,sign;
   double nrho_cell,massrho_cell,temp_thermal_cell,press_cell;
   double mass_cell,gamma_cell,soundspeed_cell;

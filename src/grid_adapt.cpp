@@ -36,7 +36,7 @@ void Grid::refine_cell(int icell, int iparent,
                        int nx, int ny, int nz, int *childlist,
                        Cut2d *cut2d, Cut3d *cut3d)
 {
-  int i,j,m,ix,iy,iz,offset,ichild;
+  int i,m,ix,iy,iz,offset,ichild;
   int dim,ncorner,mark,ip,ipnew;
   cellint id;
   double lo[3],hi[3];

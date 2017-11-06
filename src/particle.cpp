@@ -828,7 +828,7 @@ void Particle::read_species_file()
   char line[MAXLINE],copy[MAXLINE];
 
   while (fgets(line,MAXLINE,fp)) {
-    int pre = strspn(line," \t\n\r");
+    size_t pre = strspn(line," \t\n\r");
     if (pre == strlen(line) || line[pre] == '#') continue;
                                                 
     strcpy(copy,line);

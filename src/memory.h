@@ -400,7 +400,7 @@ class Memory : protected Pointers {
       array = (TYPE ****) smalloc(nbytes,name);
       
       int i,j,k;
-      bigint m1,m2,m3;
+      bigint m1,m2;
       bigint n = 0;
       for (i = 0; i < n1; i++) {
 	m2 = ((bigint) i) * n2;
@@ -443,14 +443,14 @@ class Memory : protected Pointers {
 ------------------------------------------------------------------------- */
 
   template <typename TYPE>
-    bigint usage(TYPE *array, int n)
+    bigint usage(TYPE *, int n)
     {
       bigint bytes = ((bigint) sizeof(TYPE)) * n;
       return bytes;
     }
 
   template <typename TYPE>
-    bigint usage(TYPE **array, int n1, int n2)
+    bigint usage(TYPE **, int n1, int n2)
     {
       bigint bytes = ((bigint) sizeof(TYPE)) * n1*n2;
       bytes += ((bigint) sizeof(TYPE *)) * n1;
@@ -458,7 +458,7 @@ class Memory : protected Pointers {
     }
 
   template <typename TYPE>
-    bigint usage(TYPE ***array, int n1, int n2, int n3)
+    bigint usage(TYPE ***, int n1, int n2, int n3)
     {
       bigint bytes = ((bigint) sizeof(TYPE)) * n1*n2*n3;
       bytes += ((bigint) sizeof(TYPE *)) * n1*n2;
@@ -467,7 +467,7 @@ class Memory : protected Pointers {
     }
 
   template <typename TYPE>
-    bigint usage(TYPE ****array, int n1, int n2, int n3, int n4)
+    bigint usage(TYPE ****, int n1, int n2, int n3, int n4)
     {
       bigint bytes = ((bigint) sizeof(TYPE)) * n1*n2*n3*n4;
       bytes += ((bigint) sizeof(TYPE *)) * n1*n2*n3;

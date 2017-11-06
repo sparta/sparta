@@ -62,7 +62,7 @@ int Grid::id_find_child(int iparent, double *x)
 
 int Grid::id_find_parent(cellint id, cellint &ichild)
 {
-  int nbits,newbits,nx,ny,nz,mask,index;
+  int nbits,newbits,mask,index;
   cellint idparent,idnew;
   ParentCell *p;
 
@@ -72,9 +72,6 @@ int Grid::id_find_parent(cellint id, cellint &ichild)
     idparent = p->id;
     nbits = p->nbits;
     newbits = p->newbits;
-    nx = p->nx;
-    ny = p->ny;
-    nz = p->nz;
 
     // ichild = the newbits above nbits in id
 

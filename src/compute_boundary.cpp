@@ -176,7 +176,7 @@ void ComputeBoundary::boundary_tally(int iface, int istyle,
   // styles PERIODIC and OUTFLOW do not have post-bounce velocity
 
   double vsqpre,ivsqpost,jvsqpost;
-  double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
+  double ierot,jerot,ievib,jevib,iother,jother,otherpre;
   double vnorm[3],vtang[3],pdelta[3],pnorm[3],ptang[3];
 
   double *norm = domain->norm[iface];

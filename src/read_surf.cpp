@@ -1701,7 +1701,7 @@ void ReadSurf::point_line_compare(int i, Surf::Line *line, double epssq,
 
 void ReadSurf::point_tri_compare(int i, Surf::Tri *tri, double epssq, 
                                  int &nerror, int &nwarn, 
-                                 int icell, int ci, int cj)
+                                 int, int, int)
 {
   if (i == tri->p1 || i == tri->p2 || i == tri->p3) return;
   double rsq = 

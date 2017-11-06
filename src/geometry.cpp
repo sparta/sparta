@@ -546,7 +546,7 @@ int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
 
 bool line_line_intersect(double *start, double *stop,
 			 double *v0, double *v1, double *norm, 
-			 double *point, double &param, int &side, int id)
+			 double *point, double &param, int &side, int)
 {
   double vec[3],start2stop[3],edge[3],pvec[3];
 

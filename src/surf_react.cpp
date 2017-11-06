@@ -39,7 +39,7 @@ enum{SIMPLE};                                     // other surf react files
 
 /* ---------------------------------------------------------------------- */
 
-SurfReact::SurfReact(SPARTA *sparta, int narg, char **arg) : 
+SurfReact::SurfReact(SPARTA *sparta, int, char **arg) : 
   Pointers(sparta)
 {
   // ID and style
@@ -333,7 +333,7 @@ int SurfReact::readone(char *line1, char *line2, int &n1, int &n2)
 {
   char *eof;
   while ((eof = fgets(line1,MAXLINE,fp))) {
-    int pre = strspn(line1," \t\n");
+    size_t pre = strspn(line1," \t\n");
     if (pre == strlen(line1) || line1[pre] == '#') continue;
     eof = fgets(line2,MAXLINE,fp);
     if (!eof) break;

@@ -1150,7 +1150,7 @@ template < int DIM, int SURF > void Update::move()
 
 int Update::split3d(int icell, double *x)
 {
-  int m,cflag,isurf,hitflag,side,minside,minsurfindex;
+  int m,cflag,isurf,hitflag,side,minsurfindex;
   double param,minparam;
   double xc[3];
   Surf::Tri *tri;
@@ -1188,7 +1188,6 @@ int Update::split3d(int icell, double *x)
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
       minparam = param;
-      minside = side;
       minsurfindex = m;
     }
   }
@@ -1206,7 +1205,7 @@ int Update::split3d(int icell, double *x)
 
 int Update::split2d(int icell, double *x)
 {
-  int m,cflag,isurf,hitflag,side,minside,minsurfindex;
+  int m,cflag,isurf,hitflag,side,minsurfindex;
   double param,minparam;
   double xc[3];
   Surf::Line *line;
@@ -1244,7 +1243,6 @@ int Update::split2d(int icell, double *x)
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
       minparam = param;
-      minside = side;
       minsurfindex = m;
     }
   }

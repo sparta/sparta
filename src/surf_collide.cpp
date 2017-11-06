@@ -22,7 +22,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollide::SurfCollide(SPARTA *sparta, int narg, char **arg) : 
+SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) : 
   Pointers(sparta)
 {
   // ID and style

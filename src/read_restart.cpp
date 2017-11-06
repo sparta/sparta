@@ -623,7 +623,7 @@ void ReadRestart::file_search(char *infile, char *outfile)
   // scan all files in directory, searching for files that match pattern
   // maxnum = largest int that matches "*"
 
-  int n = strlen(pattern) + 16;
+  size_t n = strlen(pattern) + 16;
   char *begin = new char[n];
   char *middle = new char[n];
   char *end = new char[n];

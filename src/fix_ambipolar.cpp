@@ -106,7 +106,7 @@ void FixAmbipolar::init()
 ------------------------------------------------------------------------- */
 
 void FixAmbipolar::add_particle(int index, double temp_thermal, 
-                                double temp_rot, double temp_vib, 
+                                double, double, 
                                 double *vstream)
 {
   int *ionambi = particle->eivec[particle->ewhich[ionindex]];

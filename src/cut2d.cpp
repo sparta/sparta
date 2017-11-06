@@ -440,7 +440,7 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
      incremented by 20 so Cut3d can distinguish from its own error messages
 ------------------------------------------------------------------------- */
 
-int Cut2d::split_face(int id_caller, int iface, double *onelo, double *onehi)
+int Cut2d::split_face(int id_caller, int, double *onelo, double *onehi)
 {
   id = id_caller;
   lo = onelo;
@@ -1154,9 +1154,7 @@ void Cut2d::push(double *pt)
   y = MAX(y,boxlo[1]);
   y = MIN(y,boxhi[1]);
 
-  int flag = 0;
   if (x != pt[0] || y != pt[1]) {
-    flag = 1;
     pt[0] = x;
     pt[1] = y;
   }
@@ -1205,7 +1203,6 @@ void Cut2d::failed_cell()
   while (iparent >= 0) {
     int nx = grid->pcells[iparent].nx;
     int ny = grid->pcells[iparent].ny;
-    int nz = grid->pcells[iparent].nz;
     int ix = (ichild-1) % nx;
     int iy = ((ichild-1)/nx) % ny;
     int iz = (ichild-1) / (nx*ny);

@@ -162,12 +162,12 @@ void ReadParticles::command(int narg, char **arg)
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"Read " BIGINT_FORMAT " particles out of " 
-              BIGINT_FORMAT "\n",nactual,np);
+              "%d\n",nactual,np);
       fprintf(screen,"  CPU time = %g secs\n",time2-time1);
     }
     if (logfile) {
       fprintf(logfile,"Read " BIGINT_FORMAT " particles out of " 
-              BIGINT_FORMAT "\n",nactual,np);
+              "%d\n",nactual,np);
       fprintf(logfile,"  CPU time = %g secs\n",time2-time1);
     }
   }
@@ -179,7 +179,7 @@ void ReadParticles::command(int narg, char **arg)
    for now, assume fields are id,x,y,z,vx,vy,vz
 ------------------------------------------------------------------------- */
 
-void ReadParticles::process_particles(int n, int nfield, double **fields)
+void ReadParticles::process_particles(int n, int, double **fields)
 {
   int id,ispecies,icell;
   double x[3],v[3];

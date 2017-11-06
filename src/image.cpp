@@ -1029,9 +1029,9 @@ void Image::compute_SSAO()
 
 /* ---------------------------------------------------------------------- */
 
+#ifdef SPARTA_JPEG
 void Image::write_JPG(FILE *fp)
 {
-#ifdef SPARTA_JPEG
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
   JSAMPROW row_pointer;
@@ -1056,14 +1056,18 @@ void Image::write_JPG(FILE *fp)
 
   jpeg_finish_compress(&cinfo);
   jpeg_destroy_compress(&cinfo);
-#endif
 }
+#else
+void Image::write_JPG(FILE*)
+{
+}
+#endif
 
 /* ---------------------------------------------------------------------- */
 
+#ifdef SPARTA_PNG
 void Image::write_PNG(FILE *fp)
 {
-#ifdef SPARTA_PNG
   png_structp png_ptr;
   png_infop info_ptr;
 
@@ -1112,8 +1116,12 @@ void Image::write_PNG(FILE *fp)
   png_write_end(png_ptr, info_ptr);
 
   png_destroy_write_struct(&png_ptr, &info_ptr);
-#endif
 }
+#else
+void Image::write_PNG(FILE *)
+{
+}
+#endif
 
 /* ---------------------------------------------------------------------- */
 
@@ -1891,7 +1899,7 @@ int ColorMap::minmax(double mindynamic, double maxdynamic)
 
 double *ColorMap::value2color(double value)
 {
-  double lo,hi;
+  double lo;
 
   value = MAX(value,locurrent);
   value = MIN(value,hicurrent);
@@ -1900,10 +1908,8 @@ double *ColorMap::value2color(double value)
     if (locurrent == hicurrent) value = 0.0;
     else value = (value-locurrent) / (hicurrent-locurrent);
     lo = 0.0;
-    hi = 1.0;
   } else {
     lo = locurrent;
-    hi = hicurrent;
   }
 
   if (mstyle == CONTINUOUS) {

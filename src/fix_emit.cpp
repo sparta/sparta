@@ -476,7 +476,7 @@ void FixEmit::options(int narg, char **arg)
    process unknown keyword
 ------------------------------------------------------------------------- */
 
-int FixEmit::option(int narg, char **arg)
+int FixEmit::option(int, char **)
 {
   error->all(FLERR,"Illegal fix emit command");
   return 0;

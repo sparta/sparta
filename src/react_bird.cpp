@@ -698,7 +698,7 @@ int ReactBird::readone(char *line1, char *line2, int &n1, int &n2)
 {
   char *eof;
   while ((eof = fgets(line1,MAXLINE,fp))) {
-    int pre = strspn(line1," \t\n\r");
+    size_t pre = strspn(line1," \t\n\r");
     if (pre == strlen(line1) || line1[pre] == '#') continue;
     eof = fgets(line2,MAXLINE,fp);
     if (!eof) break;

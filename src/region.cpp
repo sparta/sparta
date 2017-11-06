@@ -23,7 +23,7 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Region::Region(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
+Region::Region(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 {
   int n = strlen(arg[0]) + 1;
   id = new char[n];
