@@ -218,10 +218,11 @@ void Update::run(int nsteps)
     if (collide_react) collide_react_update();
     if (bounce_tally) bounce_set(ntimestep);
 
+    timer->stamp();
+
     // start of step fixes
 
     if (n_start_of_step) {
-      timer->stamp();
       modify->start_of_step();
       timer->stamp(TIME_MODIFY);
     }
@@ -230,24 +231,20 @@ void Update::run(int nsteps)
 
     // move particles
 
-    timer->stamp();
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();
     timer->stamp(TIME_MOVE);
 
     // communicate particles
 
-    timer->stamp();
     comm->migrate_particles(nmigrate,mlist);
     if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
 
     if (collide) {
-      timer->stamp();
       particle->sort();
       timer->stamp(TIME_SORT);
 
-      timer->stamp();
       collide->collisions();
       timer->stamp(TIME_COLLIDE);
     }
@@ -255,7 +252,6 @@ void Update::run(int nsteps)
     // diagnostic fixes
 
     if (n_end_of_step) {
-      timer->stamp();
       modify->end_of_step();
       timer->stamp(TIME_MODIFY);
     }
@@ -263,7 +259,6 @@ void Update::run(int nsteps)
     // all output
 
     if (ntimestep == output->next) {
-      timer->stamp();
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
