@@ -63,7 +63,7 @@ void Finish::end(int flag, double time_multiple_runs)
     time_other = timer->array[TIME_LOOP] -
       (timer->array[TIME_MOVE] + timer->array[TIME_COLLIDE] + 
        timer->array[TIME_SORT] + timer->array[TIME_COMM] +
-       timer->array[TIME_OUTPUT]);
+       timer->array[TIME_MODIFY] + timer->array[TIME_OUTPUT]);
     
     time_loop = timer->array[TIME_LOOP];
     MPI_Allreduce(&time_loop,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
