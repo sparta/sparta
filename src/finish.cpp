@@ -299,6 +299,18 @@ void Finish::end(int flag, double time_multiple_runs)
 		time,time/time_loop*100.0);
     }
     
+    time = timer->array[TIME_MODIFY];
+    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
+    time = tmp/nprocs;
+    if (me == 0) {
+      if (screen) 
+	fprintf(screen,"Modfy time (%%) = %g (%g)\n",
+		time,time/time_loop*100.0);
+      if (logfile) 
+	fprintf(logfile,"Modfy time (%%) = %g (%g)\n",
+		time,time/time_loop*100.0);
+    }
+    
     time = timer->array[TIME_OUTPUT];
     MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
     time = tmp/nprocs;

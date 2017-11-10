@@ -220,7 +220,11 @@ void Update::run(int nsteps)
 
     // start of step fixes
 
-    if (n_start_of_step) modify->start_of_step();
+    if (n_start_of_step) {
+      timer->stamp();
+      modify->start_of_step();
+      timer->stamp(TIME_MODIFY);
+    }
 
     //if (dynamic) domain->dynamic();
 
@@ -250,7 +254,11 @@ void Update::run(int nsteps)
 
     // diagnostic fixes
 
-    if (n_end_of_step) modify->end_of_step();
+    if (n_end_of_step) {
+      timer->stamp();
+      modify->end_of_step();
+      timer->stamp(TIME_MODIFY);
+    }
 
     // all output
 
