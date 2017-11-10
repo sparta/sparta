@@ -1120,7 +1120,9 @@ template < int DIM, int SURF > void Update::move()
 
     MPI_Allreduce(&entryexit,&any_entryexit,1,MPI_INT,MPI_MAX,world);
     if (any_entryexit) {
+      timer->stamp(TIME_MOVE);
       pstart = comm->migrate_particles(nmigrate,mlist);
+      timer->stamp(TIME_COMM);
       pstop = particle->nlocal;
       if (pstop-pstart > maxmigrate) {
         maxmigrate = pstop-pstart;
