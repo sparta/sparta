@@ -38,7 +38,7 @@ class CreateParticles : protected Pointers {
   double xp,yp,zp,vx,vy,vz;
   class Region *region;
 
-  int speciesflag,densflag,velflag,tempflag;
+  int speciesflag,densflag,velflag,tempflag,normflag;
   char *sstr,*sxstr,*systr,*szstr;
   char *dstr,*dxstr,*dystr,*dzstr;
   char *tstr,*txstr,*tystr,*tzstr;
