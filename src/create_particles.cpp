@@ -88,7 +88,7 @@ void CreateParticles::command(int narg, char **arg)
 
   int globalflag = 0;
   region = NULL;
-  speciesflag = densflag = velflag = tempflag = normflag = 0;
+  speciesflag = densflag = velflag = tempflag = 0;
   sstr = sxstr = systr = szstr = NULL;
   dstr = dxstr = dystr = dzstr = NULL;
   tstr = txstr = tystr = tzstr = NULL;
@@ -157,12 +157,6 @@ void CreateParticles::command(int narg, char **arg)
       if (strcmp(arg[iarg+6],"NULL") == 0) vstrz = NULL;
       else vstrz = arg[iarg+6];
       iarg += 7;
-    } else if (strcmp(arg[iarg],"norm") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal create command");
-      if (strcmp(arg[iarg+1],"yes") == 0) normflag = 1;
-      else if (strcmp(arg[iarg+1],"no") == 0) normflag = 0;
-      else error->all(FLERR,"Illegal create paricles command");
-      iarg += 2;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
@@ -416,7 +410,6 @@ void CreateParticles::create_single()
 
   // nfix_add_particle = # of fixes with add_particle() method
 
-//  particle->error_custom();
   modify->list_init_fixes();
   int nfix_add_particle = modify->n_add_particle;
 
@@ -509,7 +502,6 @@ void CreateParticles::create_local(bigint np)
 
   // nfix_add_particle = # of fixes with add_particle() method
 
-//  particle->error_custom();
   modify->list_init_fixes();
   int nfix_add_particle = modify->n_add_particle;
 
@@ -534,16 +526,6 @@ void CreateParticles::create_local(bigint np)
   int npercell,ncreate,isp,ispecies,id;
   double x[3],v[3],vstream_variable[3];
   double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
-  double vsum[3], rv[3], rv2[3];
-  double v0sum;
-  double v2sum[3];
-  double v1sum[3];
-  double v3sum[3];
-  double ke;
-  int ifirst;
-  double mass, avemass;
-
-  Particle::OnePart *particles = particle->particles;
 
   double tempscale = 1.0;
   double sqrttempscale = 1.0;
@@ -576,13 +558,6 @@ void CreateParticles::create_local(bigint np)
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
-    for (int k = 0; k < 3; k++){
-      vsum[k]=0;
-      v1sum[k]=0;
-      v2sum[k]=0;
-    }
-      v0sum  = 0.0;
- 
     for (int m = 0; m < ncreate; m++) {
       rn = random->uniform();
       isp = 0;
@@ -606,15 +581,8 @@ void CreateParticles::create_local(bigint np)
         sqrttempscale = sqrt(tempscale);
       }
 
-      Particle::Species *species = particle->species;
-
       vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
       vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
-
-      double nvs = vscale[isp]*sqrttempscale; 
-
-// this forms the ratio 2KT/m for each species to be used for temperature normalization
-
       theta1 = MY_2PI * random->uniform();
       theta2 = MY_2PI * random->uniform();
 
@@ -629,101 +597,22 @@ void CreateParticles::create_local(bigint np)
         v[2] = vstream[2] + vr*sin(theta2);
       }
 
-// calcualte avergae velocity and energy tobe used for normalization
-
-      if (normflag) {
-        mass = species[isp].mass;
-
-        v0sum += mass;
-
-        double vnorm = v[0]/nvs;
-        vsum[0]  += v[0]*mass;
-        v1sum[0] += vnorm;
-        v2sum[0] += vnorm*vnorm;
-
-        vnorm     = v[1]/nvs;
-        vsum[1]  += v[1]*mass;
-        v1sum[1] += vnorm;;
-        v2sum[1] += vnorm*vnorm;
-
-        vnorm     = v[2]/nvs;
-        vsum[2]  += v[2]*mass;
-        v1sum[2] += +vnorm;
-        v2sum[2] += +vnorm*vnorm;
-      }
-
       erot = particle->erot(ispecies,temp_rot*tempscale,random);
       evib = particle->evib(ispecies,temp_vib*tempscale,random);
 
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
-
-      if (m == 0) ifirst = particle->nlocal-1;
-
       if (nfix_add_particle) 
         modify->add_particle(particle->nlocal-1,temp_thermal,
                              temp_rot,temp_vib,vstream);
     }
 
-// temperature ratio Teff/To
-
-    if (normflag) {
-      avemass = v0sum/double(ncreate);
-
-      v1sum[0] /= double(ncreate);
-      v1sum[1] /= double(ncreate);
-      v1sum[2] /= double(ncreate);
-
-      v2sum[0] /= double(ncreate);
-      v2sum[1] /= double(ncreate);
-      v2sum[2] /= double(ncreate);
-
-      ke = 2./3.* (v2sum[0] + v2sum[1] + v2sum[2]
-         - (v1sum[0]*v1sum[0] + v1sum[1]*v1sum[1] + v1sum[2]*v1sum[2]));
-
-      vsum[0] /= v0sum;
-      vsum[1] /= v0sum;
-      vsum[2] /= v0sum;
-
-      double *vnew;
-      int idn;
-      Particle::OnePart *particles = particle->particles;
-
-      for (int k = 0; k < ncreate ; k++) {
-        idn = ifirst + k;
-        vnew = particles[idn].v;
- 
-        if (velflag) {
-          vnew[0] = (vnew[0]-vsum[0])/sqrt(ke) + vstream_variable[0];
-          vnew[1] = (vnew[1]-vsum[1])/sqrt(ke) + vstream_variable[1];
-          vnew[2] = (vnew[2]-vsum[2])/sqrt(ke) + vstream_variable[2];
-        } else {
-          vnew[0] = (vnew[0]-vsum[0])/sqrt(ke) + vstream[0];
-          vnew[1] = (vnew[1]-vsum[1])/sqrt(ke) + vstream[1];
-          vnew[2] = (vnew[2]-vsum[2])/sqrt(ke) + vstream[2];
-        }
-      }
-
-/* Optional check that the velocity normalization has taken place
-      for (int k = 0; k < 3; k++){
-        v3sum[k]=0;
-      }
-
-      for (int k = 0; k < ncreate ; k++) {
-        idn = ifirst + k;
-        vnew = particles[idn].v;
-        v3sum[0] = v3sum[0]+vnew[0];
-      }
-
-      v3sum[0] = v3sum[0]/double(ncreate);
-// End of optional check  */
-
-    }
     // increment count without effect of density variation
     // so that target insertion count is undisturbed
+
     nprev += npercell;
- }
+  }
 
   delete random;
 }
