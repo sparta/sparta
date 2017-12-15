@@ -82,6 +82,7 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
   subsonic = 0;
   subsonic_style = NOSUBSONIC;
   subsonic_warning = 0;
+  twopass = 0;
 
   options(narg-iarg,&arg[iarg]);
 
@@ -439,6 +440,189 @@ int FixEmitFace::create_task(int icell)
 ------------------------------------------------------------------------- */
 
 void FixEmitFace::perform_task()
+{
+  if (!twopass) perform_task_onepass();
+  else perform_task_twopass();
+}
+
+/* ----------------------------------------------------------------------
+   perform insertion in one pass thru tasks
+   this is simpler, somewhat faster code
+   but uses random #s differently than Kokkos, so insertions are different
+------------------------------------------------------------------------- */
+
+void FixEmitFace::perform_task_onepass()
+{
+  int pcell,ninsert,nactual,isp,ispecies,ndim,pdim,qdim,id;
+  double indot,scosine,rn,ntarget,vr;
+  double beta_un,normalized_distbn_fn,theta,erot,evib;
+  double temp_thermal,temp_rot,temp_vib;
+  double x[3],v[3];
+  double *lo,*hi,*normal,*vstream,*vscale;
+  Particle::OnePart *p;
+
+  dt = update->dt;
+  int *species = particle->mixture[imix]->species;
+
+  // if subsonic, re-compute particle inflow counts for each task
+  // also computes current per-task temp_thermal and vstream
+
+  if (subsonic) subsonic_inflow();
+
+  // insert particles for each task = cell/face pair
+  // ntarget/ninsert is either perspecies or for all species
+  // for one particle:
+  //   x = random position on face
+  //   v = randomized thermal velocity + vstream
+  //       first stage: normal dimension (ndim)
+  //       second stage: parallel dimensions (pdim,qdim)
+
+  // double while loop until randomized particle velocity meets 2 criteria
+  // inner do-while loop:
+  //   v = vstream-component + vthermal is into simulation box
+  //   see Bird 1994, p 425
+  // outer do-while loop:
+  //   shift Maxwellian distribution by stream velocity component
+  //   see Bird 1994, p 259, eq 12.5
+
+  int nfix_add_particle = modify->n_add_particle;
+
+  for (int i = 0; i < ntask; i++) {
+    pcell = tasks[i].pcell;
+    ndim = tasks[i].ndim;
+    pdim = tasks[i].pdim;
+    qdim = tasks[i].qdim;
+    lo = tasks[i].lo;
+    hi = tasks[i].hi;
+    normal = tasks[i].normal;
+
+    temp_thermal = tasks[i].temp_thermal;
+    temp_rot = tasks[i].temp_rot;
+    temp_vib = tasks[i].temp_vib;
+    vstream = tasks[i].vstream;
+
+    if (subsonic_style == PONLY) vscale = tasks[i].vscale;
+    else vscale = particle->mixture[imix]->vscale;
+
+    indot = vstream[0]*normal[0] + vstream[1]*normal[1] + vstream[2]*normal[2];
+
+    if (perspecies) {
+      for (isp = 0; isp < nspecies; isp++) {
+        ispecies = species[isp];
+	ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+	ninsert = static_cast<int> (ntarget);
+        scosine = indot / vscale[isp];
+
+        nactual = 0;
+	for (int m = 0; m < ninsert; m++) {
+	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+	  if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+          else x[2] = 0.0;
+
+          if (region && !region->match(x)) continue;
+
+	  do {
+	    do beta_un = (6.0*random->uniform() - 3.0);
+	    while (beta_un + scosine < 0.0);
+	    normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+	      (scosine + sqrt(scosine*scosine + 2.0)) *
+	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+		  beta_un*beta_un);
+	  } while (normalized_distbn_fn < random->uniform());
+	  
+          v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+
+          theta = MY_2PI * random->uniform();
+          vr = vscale[isp] * sqrt(-log(random->uniform()));
+          v[pdim] = vr * sin(theta) + vstream[pdim];
+          v[qdim] = vr * cos(theta) + vstream[qdim];
+          erot = particle->erot(ispecies,temp_rot,random);
+          evib = particle->evib(ispecies,temp_vib,random);
+          id = MAXSMALLINT*random->uniform();
+
+	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          nactual++;
+
+          p = &particle->particles[particle->nlocal-1];
+          p->flag = PINSERT;
+          p->dtremain = dt * random->uniform();
+
+          if (nfix_add_particle) 
+            modify->add_particle(particle->nlocal-1,temp_thermal,
+                                 temp_rot,temp_vib,vstream);
+	}
+
+	nsingle += nactual;
+      }
+
+    } else {
+      if (np == 0) {
+	ntarget = tasks[i].ntarget+random->uniform();
+	ninsert = static_cast<int> (ntarget);
+      } else {
+	ninsert = npertask;
+	if (i >= nthresh) ninsert++;
+      }
+
+      nactual = 0;
+      for (int m = 0; m < ninsert; m++) {
+	rn = random->uniform();
+	isp = 0;
+	while (cummulative[isp] < rn) isp++;
+        ispecies = species[isp];
+        scosine = indot / vscale[isp];
+
+	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+        if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        else x[2] = 0.0;
+
+        if (region && !region->match(x)) continue;
+
+	do {
+	  do {
+	    beta_un = (6.0*random->uniform() - 3.0);
+	  } while (beta_un + scosine < 0.0);
+	  normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+	    (scosine + sqrt(scosine*scosine + 2.0)) *
+	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+		beta_un*beta_un);
+	} while (normalized_distbn_fn < random->uniform());
+	
+        v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
+
+        theta = MY_2PI * random->uniform();
+        vr = vscale[isp] * sqrt(-log(random->uniform()));
+        v[pdim] = vr * sin(theta) + vstream[pdim];
+        v[qdim] = vr * cos(theta) + vstream[qdim];
+        erot = particle->erot(ispecies,temp_rot,random);
+        evib = particle->evib(ispecies,temp_vib,random);
+        id = MAXSMALLINT*random->uniform();
+
+	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        nactual++;
+
+        p = &particle->particles[particle->nlocal-1];
+        p->flag = PINSERT;
+        p->dtremain = dt * random->uniform();
+
+        if (nfix_add_particle) 
+          modify->add_particle(particle->nlocal-1,temp_thermal,
+                               temp_rot,temp_vib,vstream);
+      }
+
+      nsingle += nactual;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   perform insertion the way Kokkos does in two passes thru tasks
+   this uses random #s the same as Kokkos, for easier debugging
+------------------------------------------------------------------------- */
+
+void FixEmitFace::perform_task_twopass()
 {
   int pcell,ninsert,nactual,isp,ispecies,ndim,pdim,qdim,id;
   double indot,scosine,rn,ntarget,vr;
@@ -1079,6 +1263,11 @@ int FixEmitFace::option(int narg, char **arg)
     return 3;
   }
 
+  if (strcmp(arg[0],"twopass") == 0) {
+    twopass = 1;
+    return 1;
+  }
+  
   error->all(FLERR,"Illegal fix emit/face command");
   return 0;
 }
