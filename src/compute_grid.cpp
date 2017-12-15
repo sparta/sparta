@@ -175,6 +175,8 @@ ComputeGrid::ComputeGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeGrid::~ComputeGrid()
 {
+  if (copymode) return;
+
   delete [] value;
   delete [] unique;
 

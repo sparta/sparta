@@ -39,7 +39,7 @@ class Collide : protected Pointers {
   virtual void init();
   void modify_params(int, char **);
   void reset_vremax();
-  void collisions();
+  virtual void collisions();
 
   virtual double vremax_init(int, int) = 0;
   virtual double attempt_collision(int, int, double) = 0;
@@ -52,10 +52,10 @@ class Collide : protected Pointers {
 
   virtual double extract(int, const char *) {return 0.0;}
 
-  int pack_grid_one(int, char *, int);
-  int unpack_grid_one(int, char *);
-  void compress_grid();
-  void adapt_grid();
+  virtual int pack_grid_one(int, char *, int);
+  virtual int unpack_grid_one(int, char *);
+  virtual void compress_grid();
+  virtual void adapt_grid();
 
  protected:
   int npmax;          // max # of particles in plist
@@ -101,6 +101,11 @@ class Collide : protected Pointers {
   int recombflag;               // 1 if recomb reactions enabled, 0 if not
   double recomb_boost_inverse;  // recombination rate boost factor from React
   int **recomb_ijflag;          // 1 if species I,J have recomb reaction(s)
+
+  int oldgroups;         // pass from parent to child class
+  int copymode;          // 1 if copy of class (prevents deallocation of
+                         //  base class when child copy is destroyed)
+  int kokkosable;        // 1 if collide method supports Kokkos
 
   // ambipolar approximation data structs
 

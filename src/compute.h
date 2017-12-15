@@ -102,6 +102,12 @@ class Compute : protected Pointers {
   virtual double post_process_grid(int, int, int, double **, int *, 
                                    double *, int) {return 0.0;}
 
+  // Kokkos methods
+
+  int kokkos_flag;          // 1 if Kokkos-enabled
+  int copy,copymode;        // 1 if copy of class (prevents deallocation of
+                            //  base class when child copy is destroyed)
+
   // NOTE: get rid of these methods
   virtual void post_process_grid_old(void *, void *, int, int, double *, int) {}
   virtual void normwhich(int, int &, int &) {}

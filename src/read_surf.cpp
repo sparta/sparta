@@ -100,12 +100,7 @@ void ReadSurf::command(int narg, char **arg)
   maxline = nline_old + nline_new;
   maxtri = ntri_old + ntri_new;
 
-  pts = (Surf::Point *) 
-    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
-  lines = (Surf::Line *) 
-    memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
-  tris = (Surf::Tri *) 
-    memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
+  grow_surf();
 
   // read and store Points and Lines/Tris sections
 
@@ -1854,6 +1849,20 @@ void ReadSurf::parse_keyword(int first)
 	 || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);
+}
+
+/* ----------------------------------------------------------------------
+   grow surface data structures
+------------------------------------------------------------------------- */
+
+void ReadSurf::grow_surf()
+{
+  pts = (Surf::Point *) 
+    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
+  lines = (Surf::Line *) 
+    memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
+  tris = (Surf::Tri *) 
+    memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
 }
 
 /* ----------------------------------------------------------------------

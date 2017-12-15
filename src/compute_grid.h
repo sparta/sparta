@@ -30,13 +30,13 @@ class ComputeGrid : public Compute {
   ComputeGrid(class SPARTA *, int, char **);
   ~ComputeGrid();
   void init();
-  void compute_per_grid();
-  int query_tally_grid(int, double **&, int *&);
-  double post_process_grid(int, int, int, double **, int *, double *, int);
-  void reallocate();
+  virtual void compute_per_grid();
+  virtual int query_tally_grid(int, double **&, int *&);
+  virtual double post_process_grid(int, int, int, double **, int *, double *, int);
+  virtual void reallocate();
   bigint memory_usage();
 
- private:
+ protected:
   int groupbit,imix,nvalue,ngroup;
 
   int *value;                // keyword for each user requested value

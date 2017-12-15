@@ -64,6 +64,11 @@ class Update : protected Pointers {
 
   int nstuck;                // # of particles stuck on surfs and deleted
 
+  int reorder_period;        // # of timesteps between particle reordering
+
+  int copymode;          // 1 if copy of class (prevents deallocation of
+                         //  base class when child copy is destroyed)
+
   class RanMars *ranmaster;   // master random number generator
 
   double rcblo[3],rcbhi[3];    // debug info from RCB for dump image
@@ -71,16 +76,16 @@ class Update : protected Pointers {
   Update(class SPARTA *);
   ~Update();
   void set_units(const char *);
-  void init();
-  void setup();
-  void run(int);
+  virtual void init();
+  virtual void setup();
+  virtual void run(int);
   void global(int, char **);
   void reset_timestep(int, char **);
 
   int split3d(int, double *);
   int split2d(int, double *);
 
- private:
+ protected:
   int me,nprocs;
   int maxmigrate;            // max # of particles in mlist
   class RanPark *random;     // RNG for particle timestep moves

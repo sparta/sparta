@@ -42,6 +42,10 @@
 
 namespace SPARTA_NS {
 
+// enum used for KOKKOS host/device flags
+
+enum ExecutionSpace{Host,Device};
+
 // default settings: 32-bit smallint, 64-bit bigint, 32-bit cellint
 
 #if !defined(SPARTA_SMALL) && !defined(SPARTA_BIG) && !defined(SPARTA_BIGBIG)

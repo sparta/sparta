@@ -52,12 +52,16 @@ Comm::Comm(SPARTA *sparta) : Pointers(sparta)
   maxgproc = 0;
   sbuf = rbuf = NULL;
   maxsendbuf = maxrecvbuf = 0;
+
+  copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Comm::~Comm()
 {
+  if (copymode) return;
+
   delete iparticle;
   delete igrid;
   delete iuniform;

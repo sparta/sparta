@@ -54,6 +54,9 @@ class Grid : protected Pointers {
   int *bitmask;             // one-bit mask for each group
   int *inversemask;         // inverse mask for each group
 
+  int copy,copymode;    // 1 if copy of class (prevents deallocation of
+                        //  base class when child copy is destroyed)
+
   // hash for all cell IDs (owned,ghost,parent)
 
 #ifdef SPARTA_MAP
@@ -219,7 +222,7 @@ class Grid : protected Pointers {
   int add_group(const char *);
   int find_group(const char *);
 
-  void grow_pcells(int);
+  virtual void grow_pcells(int);
 
   void write_restart(FILE *);
   void read_restart(FILE *);
@@ -282,7 +285,7 @@ class Grid : protected Pointers {
     return nmask;
   }
 
- private:
+ protected:
   int me;
   int maxcell;             // size of cells
   int maxsplit;            // size of sinfo
@@ -322,8 +325,8 @@ class Grid : protected Pointers {
   int box_overlap(double *, double *, double *, double *);
   int box_periodic(double *, double *, Box *);
 
-  void grow_cells(int, int);
-  void grow_sinfo(int);
+  virtual void grow_cells(int, int);
+  virtual void grow_sinfo(int);
 
   void surf2grid_stats();
   void flow_stats();

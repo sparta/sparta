@@ -543,6 +543,26 @@ void Surf::add_collide(int narg, char **arg)
 
   // create new SurfCollide class
 
+  if (sparta->suffix_enable) {
+    if (sparta->suffix) {
+      char estyle[256];
+      sprintf(estyle,"%s/%s",arg[1],sparta->suffix);
+
+      if (0) return;
+
+#define SURF_COLLIDE_CLASS
+#define SurfCollideStyle(key,Class) \
+      else if (strcmp(estyle,#key) == 0) { \
+        sc[nsc] = new Class(sparta,narg,arg); \
+        nsc++; \
+        return; \
+      }
+#include "style_surf_collide.h"
+#undef SurfCollideStyle
+#undef SURF_COLLIDE_CLASS
+    }
+  }
+
   if (0) return;
 
 #define SURF_COLLIDE_CLASS

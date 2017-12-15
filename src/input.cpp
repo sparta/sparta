@@ -40,6 +40,7 @@
 #include "stats.h"
 #include "dump.h"
 #include "math_extra.h"
+#include "accelerator_kokkos.h"
 #include "error.h"
 #include "memory.h"
 
@@ -676,6 +677,7 @@ int Input::execute_command()
   else if (!strcmp(command,"fix")) fix();
   else if (!strcmp(command,"global")) global();
   else if (!strcmp(command,"group")) group();
+  else if (!strcmp(command,"package")) package();
   else if (!strcmp(command,"mixture")) mixture();
   else if (!strcmp(command,"react")) react_command();
   else if (!strcmp(command,"react_modify")) react_modify();
@@ -704,18 +706,38 @@ int Input::execute_command()
 
   // check if command is added via style.h
 
-  if (0) return 0;      // dummy line to enable else-if macro expansion
+  if (sparta->suffix_enable && sparta->suffix) {
+    char command2[256];
+    sprintf(command2,"%s/%s",command,sparta->suffix);
+    
+    if (0) return 0;      // dummy line to enable else-if macro expansion
+#define COMMAND_CLASS
+#define CommandStyle(key,Class)            \
+    else if (strcmp(command2,#key) == 0) { \
+      Class cmd_obj(sparta);               \
+      cmd_obj.command(narg,arg);           \
+      flag = 1;                            \
+    }
+#include "style_command.h"
+#undef CommandStyle
+#undef COMMAND_CLASS
+  }
 
+  if (flag) return 0;
+
+  if (0) return 0;      // dummy line to enable else-if macro expansion
 #define COMMAND_CLASS
 #define CommandStyle(key,Class)         \
   else if (strcmp(command,#key) == 0) { \
-    Class key(sparta);			\
-    key.command(narg,arg);              \
-    return 0;                           \
+    Class cmd_obj(sparta);              \
+    cmd_obj.command(narg,arg);          \
+    flag = 1;                           \
   }
 #include "style_command.h"
 #undef CommandStyle
 #undef COMMAND_CLASS
+
+  if (flag) return 0;
 
   // unrecognized command
 
@@ -726,13 +748,12 @@ int Input::execute_command()
 /* ---------------------------------------------------------------------- */
 /* ---------------------------------------------------------------------- */
 
-/* ---------------------------------------------------------------------- */
-
 void Input::clear()
 {
   if (narg > 0) error->all(FLERR,"Illegal clear command");
   sparta->destroy();
   sparta->create();
+  sparta->post_create();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1176,6 +1197,25 @@ void Input::collide_command()
 
   delete collide;
 
+  if (sparta->suffix_enable) {
+    if (sparta->suffix) {
+      char estyle[256];
+      sprintf(estyle,"%s/%s",arg[0],sparta->suffix);
+
+      if (0) return;
+
+#define COLLIDE_CLASS
+#define CollideStyle(key,Class) \
+      else if (strcmp(estyle,#key) == 0) { \
+        collide = new Class(sparta,narg,arg); \
+        return; \
+      }
+#include "style_collide.h"
+#undef CollideStyle
+#undef COLLIDE_CLASS
+    }
+  }
+
   if (strcmp(arg[0],"none") == 0) collide = NULL;
 
 #define COLLIDE_CLASS
@@ -1261,6 +1301,26 @@ void Input::group()
 void Input::mixture()
 {
   particle->add_mixture(narg,arg);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Input::package()
+{
+  if (domain->box_exist)
+    error->all(FLERR,"Package command after simulation box is defined");
+  if (narg < 1) error->all(FLERR,"Illegal package command");
+
+  // same checks for packages existing as in SPARTA::post_create()
+  // since can be invoked here by package command in input script
+
+  if (strcmp(arg[0],"kokkos") == 0) {
+    if (sparta->kokkos == NULL || sparta->kokkos->kokkos_exists == 0)
+      error->all(FLERR,
+                 "Package kokkos command without KOKKOS package enabled");
+    sparta->kokkos->accelerator(narg-1,&arg[1]);
+
+  } else error->all(FLERR,"Illegal package command");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1429,7 +1489,7 @@ void Input::units()
    called by various commands to check validity of their arguments
 ------------------------------------------------------------------------- */
 
-double Input::numeric(const char *file, int line, char *str)
+double Input::numeric(const char *file, int line, const char *str)
 {
   if (!str)
     error->all(file,line,"Expected floating point parameter "

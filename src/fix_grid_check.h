@@ -34,7 +34,7 @@ class FixGridCheck : public Fix {
   void end_of_step();
   double compute_scalar();
 
- private:
+ protected:
   int ntotal,outflag;
 };
 

@@ -29,7 +29,8 @@ namespace SPARTA_NS {
 class SurfCollideSpecular : public SurfCollide {
  public:
   SurfCollideSpecular(class SPARTA *, int, char **);
-  ~SurfCollideSpecular() {}
+  SurfCollideSpecular(class SPARTA *sparta) : SurfCollide(sparta) {}
+  virtual ~SurfCollideSpecular() {}
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
 };
 

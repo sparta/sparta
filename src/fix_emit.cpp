@@ -67,6 +67,8 @@ FixEmit::FixEmit(SPARTA *sparta, int narg, char **arg) :
 
 FixEmit::~FixEmit()
 {
+  if (copymode) return;
+
   delete random;
 
   memory->destroy(c2list);

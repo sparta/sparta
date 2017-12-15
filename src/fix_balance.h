@@ -31,7 +31,7 @@ class FixBalance : public Fix {
   ~FixBalance();
   int setmask();
   void init();
-  void end_of_step();
+  virtual void end_of_step();
   double compute_scalar();
   double compute_vector(int);
   double memory_usage();

@@ -46,11 +46,20 @@ class SPARTA {
   FILE *screen;                  // screen output
   FILE *logfile;                 // logfile
 
+  char *suffix;                  // suffix to add to input script style names
+  int suffix_enable;             // 1 if suffixes are enabled, 0 if disabled
+  char ***packargs;              // arguments for cmdline package commands
+  int num_package;               // number of cmdline package commands
+
+  class KokkosSPARTA *kokkos;    // KOKKOS accelerator class
+  class MemoryKokkos *memoryKK;  // KOKKOS version of Memory class
+
   // other top-level SPARTA classes and variables
 
   SPARTA(int, char **, MPI_Comm);
   ~SPARTA();
   void create();
+  void post_create();
   void init();
   void destroy();
 

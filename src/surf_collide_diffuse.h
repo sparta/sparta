@@ -28,13 +28,14 @@ namespace SPARTA_NS {
 class SurfCollideDiffuse : public SurfCollide {
  public:
   SurfCollideDiffuse(class SPARTA *, int, char **);
+  SurfCollideDiffuse(class SPARTA *sparta) : SurfCollide(sparta) {}
   ~SurfCollideDiffuse();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
 
   void dynamic();
 
- private:
+ protected:
   double twall;              // surface temperature
   double acc;                // surface accomodation coeff
   double vx,vy,vz;           // translational velocity of surface

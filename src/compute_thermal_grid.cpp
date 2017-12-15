@@ -88,6 +88,8 @@ ComputeThermalGrid::ComputeThermalGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeThermalGrid::~ComputeThermalGrid()
 {
+  if (copymode) return;
+
   delete [] value;
 
   delete [] nmap;

@@ -36,13 +36,13 @@ class Comm : protected Pointers {
   void init() {}
   void reset_neighbors();
   int migrate_particles(int, int *);
-  void migrate_cells(int);
+  virtual void migrate_cells(int);
   int send_cells_adapt(int, int *, char *, char **);
   int irregular_uniform(int, int *, char *, int, char **);
   void ring(int, int, void *, int, void (*)(int, char *), 
             void *, int self = 1);
 
- private:
+ protected:
   class Irregular *iparticle,*igrid,*iuniform;
   char *sbuf,*rbuf;
   int maxsendbuf,maxrecvbuf;
@@ -52,6 +52,9 @@ class Comm : protected Pointers {
   int neighflag;                    // 1 if nearest-neighbor particle comm
   int nneigh;                       // # of procs I own ghost cells of
   int *neighlist;                   // list of ghost procs
+
+  int copymode;                     // 1 if copy of class (prevents deallocation of
+                                    //  base class when child copy is destroyed)
 };
 
 }

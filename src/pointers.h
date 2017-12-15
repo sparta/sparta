@@ -61,10 +61,12 @@ class Pointers {
     react(ptr->react),
     output(ptr->output),
     timer(ptr->timer),
+    memoryKK(ptr->memoryKK),
     world(ptr->world),
     infile(ptr->infile),
     screen(ptr->screen),
     logfile(ptr->logfile) {}
+
   virtual ~Pointers() {}
 
  protected:
@@ -85,6 +87,8 @@ class Pointers {
   React *&react;
   Output *&output;
   Timer *&timer;
+
+  MemoryKokkos *&memoryKK;
 
   MPI_Comm &world;
   FILE *&infile;

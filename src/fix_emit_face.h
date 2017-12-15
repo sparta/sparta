@@ -30,26 +30,9 @@ namespace SPARTA_NS {
 class FixEmitFace : public FixEmit {
  public:
   FixEmitFace(class SPARTA *, int, char **);
-  ~FixEmitFace();
-  void init();
-  void post_compress_grid();
-
- private:
-  int imix,np,subsonic,subsonic_style,subsonic_warning;
-  int faces[6];
-  int npertask,nthresh;
-  double psubsonic,tsubsonic,nsubsonic;
-  double tprefactor,soundspeed_mixture;
-
-  // copies of data from other classes
-
-  int dimension,nspecies;
-  double fnum,dt;
-  double *fraction,*cummulative;
-
-  Surf::Point *pts;
-  Surf::Line *lines;
-  Surf::Tri *tris;
+  virtual ~FixEmitFace();
+  virtual void init();
+  virtual void post_compress_grid();
 
   // one insertion task for a cell and a face
 
@@ -77,6 +60,23 @@ class FixEmitFace : public FixEmit {
     int pdim,qdim;              // 2 dims (0,1,2) parallel to face
   };
 
+ protected:
+  int imix,np,subsonic,subsonic_style,subsonic_warning;
+  int faces[6];
+  int npertask,nthresh;
+  double psubsonic,tsubsonic,nsubsonic;
+  double tprefactor,soundspeed_mixture;
+
+  // copies of data from other classes
+
+  int dimension,nspecies;
+  double fnum,dt;
+  double *fraction,*cummulative;
+
+  Surf::Point *pts;
+  Surf::Line *lines;
+  Surf::Tri *tris;
+
                          // ntask = # of tasks is stored by parent class
   Task *tasks;           // list of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated
@@ -86,10 +86,10 @@ class FixEmitFace : public FixEmit {
   int maxactive;
   int *activecell;
 
-  // private methods
+  // protected methods
 
   int create_task(int);
-  void perform_task();
+  virtual void perform_task();
 
   int split(int, int);
 
@@ -97,10 +97,11 @@ class FixEmitFace : public FixEmit {
   void subsonic_sort();
   void subsonic_grid();
 
-  int pack_task(int, char *, int);
-  int unpack_task(char *, int);
-  void copy_task(int, int, int, int);
-  void grow_task();
+  virtual int pack_task(int, char *, int);
+  virtual int unpack_task(char *, int);
+  virtual void copy_task(int, int, int, int);
+  virtual void grow_task();
+  virtual void realloc_nspecies();
 
   int option(int, char **);
 };

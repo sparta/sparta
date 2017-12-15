@@ -37,21 +37,24 @@ class Domain : protected Pointers {
 
   int surfreactany;                 // 1 if any boundary has surf reactions
 
+  int copy,copymode;                // 1 if copy of class (prevents deallocation of
+                                    //  base class when child copy is destroyed)
+
   int nregion;                      // # of defined Regions
   int maxregion;                    // max # regions can hold
   class Region **regions;           // list of defined Regions
 
   Domain(class SPARTA *);
-  ~Domain();
+  virtual ~Domain();
   void init();
   void set_initial_box();
   void set_global_box();
   void set_boundary(int, char **);
   int periodic(int *);
   void boundary_modify(int, char **);
-  int collide(Particle::OnePart *&, int, int, double *, double &, 
+  virtual int collide(Particle::OnePart *&, int, int, double *, double &, 
               Particle::OnePart *&);
-  void uncollide(int, double *);
+  virtual void uncollide(int, double *);
   void add_region(int, char **);
   void delete_region(int, char **);
   int find_region(char *);

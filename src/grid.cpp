@@ -124,12 +124,15 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 #endif
 
   hashfilled = 0;
+  copy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Grid::~Grid()
 {
+  if (copy || copymode) return;
+
   for (int i = 0; i < ngroup; i++) delete [] gnames[i];
   memory->sfree(gnames);
   memory->sfree(bitmask);

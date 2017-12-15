@@ -30,13 +30,13 @@ class ComputeThermalGrid : public Compute {
   ComputeThermalGrid(class SPARTA *, int, char **);
   ~ComputeThermalGrid();
   void init();
-  void compute_per_grid();
-  int query_tally_grid(int, double **&, int *&);
-  double post_process_grid(int, int, int, double **, int *, double *, int);
-  void reallocate();
+  virtual void compute_per_grid();
+  virtual int query_tally_grid(int, double **&, int *&);
+  virtual double post_process_grid(int, int, int, double **, int *, double *, int);
+  virtual void reallocate();
   bigint memory_usage();
 
- private:
+ protected:
   int groupbit,imix,nvalue;
   int ngroup;
 

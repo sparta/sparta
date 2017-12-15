@@ -67,12 +67,16 @@ Irregular::Irregular(SPARTA *sparta) : Pointers(sparta)
   offset_send = NULL;
   bufmax = 0;
   buf = NULL;
+
+  copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Irregular::~Irregular()
 {
+  if (copymode) return;
+
   memory->destroy(proc_send);
   memory->destroy(num_send);
   memory->destroy(proc_recv);

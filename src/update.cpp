@@ -88,12 +88,18 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   slist_active = blist_active = NULL;
 
   ranmaster = new RanMars(sparta);
+
+  reorder_period = 0;
+
+  copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Update::~Update()
 {
+  if (copymode) return;
+
   delete [] unit_style;
   memory->destroy(mlist);
   delete [] slist_compute;
@@ -1460,6 +1466,11 @@ void Update::global(int narg, char **arg)
       if (strcmp(arg[iarg+1],"cell") == 0) grid->weight(1,&arg[iarg+2]);
       else error->all(FLERR,"Illegal weight command");
       iarg += 3;
+    } else if (strcmp(arg[iarg],"particle/reorder") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      reorder_period = atoi(arg[iarg+1]);
+      if (reorder_period < 0) error->all(FLERR,"Illegal global command");
+      iarg += 2;
     } else error->all(FLERR,"Illegal global command");
   }
 }

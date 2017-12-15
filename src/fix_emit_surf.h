@@ -32,6 +32,7 @@ class FixEmitSurf : public FixEmit {
   FixEmitSurf(class SPARTA *, int, char **);
   ~FixEmitSurf();
   void init();
+  void setup();
   void post_compress_grid();
 
  private:

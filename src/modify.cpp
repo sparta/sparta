@@ -282,16 +282,39 @@ void Modify::add_fix(int narg, char **arg)
 
   // create the Fix
 
-  if (0) return;
+  int found = 0;
+  if (sparta->suffix_enable) {
+    if (sparta->suffix) {
+      char estyle[256];
+      sprintf(estyle,"%s/%s",arg[1],sparta->suffix);
+
+      if (0) return;
 
 #define FIX_CLASS
 #define FixStyle(key,Class) \
-  else if (strcmp(arg[1],#key) == 0) fix[ifix] = new Class(sparta,narg,arg);
+      else if (strcmp(estyle,#key) == 0) { \
+        fix[ifix] = new Class(sparta,narg,arg); \
+        found = 1; \
+      }
+#include "style_fix.h"
+#undef FixStyle
+#undef FIX_CLASS
+    }
+  }
+
+  if (!found) {
+
+    if (0) return;
+
+#define FIX_CLASS
+#define FixStyle(key,Class) \
+    else if (strcmp(arg[1],#key) == 0) fix[ifix] = new Class(sparta,narg,arg);
 #include "style_fix.h"
 #undef FixStyle
 #undef FIX_CLASS
 
-  else error->all(FLERR,"Unrecognized fix style");
+    else error->all(FLERR,"Unrecognized fix style");
+  }
 
   // set fix mask values and increment nfix (if new)
 
@@ -355,17 +378,40 @@ void Modify::add_compute(int narg, char **arg)
 
   // create the Compute
 
-  if (0) return;
+  int found = 0;
+  if (sparta->suffix_enable) {
+    if (sparta->suffix) {
+      char estyle[256];
+      sprintf(estyle,"%s/%s",arg[1],sparta->suffix);
+
+      if (0) return;
 
 #define COMPUTE_CLASS
 #define ComputeStyle(key,Class) \
-  else if (strcmp(arg[1],#key) == 0) \
-    compute[ncompute] = new Class(sparta,narg,arg);
+      else if (strcmp(estyle,#key) == 0) { \
+        compute[ncompute] = new Class(sparta,narg,arg); \
+        found = 1; \
+      }
+#include "style_compute.h"
+#undef ComputeStyle
+#undef COMPUTE_CLASS
+    }
+  }
+
+  if (!found) {
+
+    if (0) return;
+
+#define COMPUTE_CLASS
+#define ComputeStyle(key,Class) \
+    else if (strcmp(arg[1],#key) == 0) \
+      compute[ncompute] = new Class(sparta,narg,arg);
 #include "style_compute.h"
 #undef ComputeStyle
 #undef COMPUTE_CLASS
 
-  else error->all(FLERR,"Unrecognized compute style");
+    else error->all(FLERR,"Unrecognized compute style");
+  }
 
   ncompute++;
 }

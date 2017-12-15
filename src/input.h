@@ -35,7 +35,7 @@ class Input : protected Pointers {
                                  // substitute for variables in a string
   int expand_args(int, char **, int, char **&);  // expand args due to wildcard
 
-  double numeric(const char *, int, char *);    // arg checking
+  double numeric(const char *, int, const char *);    // arg checking
   int inumeric(const char *, int, char *);
   bigint bnumeric(const char *, int, char *);
   void bounds(char *, int, int &, int &, int nmin=1);
@@ -90,6 +90,7 @@ class Input : protected Pointers {
   void global();
   void group();
   void mixture();
+  void package();
   void react_command();
   void react_modify();
   void region();

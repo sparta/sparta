@@ -40,7 +40,9 @@ endif
 
 # Package variables
 
-PACKAGE = fft
+PACKAGE = fft kokkos
+
+PACKALL = $(PACKAGE)
 
 PACKAGEUC = $(shell echo $(PACKAGE) | tr a-z A-Z)
 
@@ -55,7 +57,7 @@ help:
 	@echo 'make clean-machine       delete object files for one machine'
 	@echo 'make mpi-stubs           build dummy MPI library in STUBS'
 	@echo 'make install-python      install SPARTA wrapper in Python'
-	@echo 'make tar                 create lmp_src.tar.gz of src dir and packages'
+	@echo 'make tar                 create spa_src.tar.gz of src dir and packages'
 	@echo ''
 	@echo 'make package             list available packages'
 	@echo 'make yes-package         install a single pgk in src dir'
@@ -93,8 +95,14 @@ help:
 	@test -f MAKE/Makefile.$@
 	@if [ ! -d $(objdir) ]; then mkdir $(objdir); fi
 	@$(SHELL) Make.sh style
+	@cp MAKE/Makefile.$@ $(objdir)/Makefile
+	@if [ ! -e Makefile.package ]; \
+	  then cp Makefile.package.empty Makefile.package; fi
+	@if [ ! -e Makefile.package.settings ]; \
+	  then cp Makefile.package.settings.empty Makefile.package.settings; fi
 	@if [ -f MAKE/Makefile.$@ ]; \
 	  then cp MAKE/Makefile.$@ $(objdir)/Makefile; fi
+	@cp Makefile.package Makefile.package.settings $(objdir)
 ifeq ($(mode),exe)
 	@cd $(objdir); \
 	$(MAKE) $(MFLAGS) "OBJ = $(OBJ)" "INC = $(INC)" "SHFLAGS =" \
@@ -155,6 +163,7 @@ tar:
 	  src/Make* src/Package.sh src/Install.sh \
 	  src/MAKE src/*.cpp src/*.h src/STUBS \
 	  $(patsubst %,src/%,$(PACKAGEUC)) \
+	  $(patsubst %,src/%,$(PACKAGEUC)) $(patsubst %,src/%,$(PACKUSERUC)) \
           --exclude=*/.svn
 	@cd STUBS; $(MAKE)
 	@echo "Created $(ROOT)_src.tar.gz"
@@ -182,6 +191,10 @@ no-all:
 	@for p in $(PACKALL); do $(MAKE) no-$$p; done
 
 yes-%:
+	@if [ ! -e Makefile.package ]; \
+	  then cp Makefile.package.empty Makefile.package; fi
+	@if [ ! -e Makefile.package.settings ]; \
+	  then cp Makefile.package.settings.empty Makefile.package.settings; fi
 	@if [ ! -e $(YESDIR) ]; then \
 	  echo "Package $(@:yes-%=%) does not exist"; \
 	elif [ -e $(YESDIR)/Install.sh ]; then \

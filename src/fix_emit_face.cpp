@@ -111,11 +111,15 @@ FixEmitFace::FixEmitFace(SPARTA *sparta, int narg, char **arg) :
 
 FixEmitFace::~FixEmitFace()
 {
-  for (int i = 0; i < ntaskmax; i++) {
-    delete [] tasks[i].ntargetsp;
-    delete [] tasks[i].vscale;
+  if (copymode) return;
+
+  if (tasks) {
+    for (int i = 0; i < ntaskmax; i++) {
+      delete [] tasks[i].ntargetsp;
+      delete [] tasks[i].vscale;
+    }
+    memory->sfree(tasks);
   }
-  memory->sfree(tasks);
   memory->destroy(activecell);
 }
 
@@ -193,18 +197,7 @@ void FixEmitFace::init()
   // if used, reallocate ntargetsp and vscale for each task
   // b/c nspecies count of mixture may have changed
 
-  if (perspecies) {
-    for (int i = 0; i < ntask; i++) {
-      delete [] tasks[i].ntargetsp;
-      tasks[i].ntargetsp = new double[nspecies];
-    }
-  }
-  if (subsonic_style == PONLY) {
-    for (int i = 0; i < ntask; i++) {
-      delete [] tasks[i].vscale;
-      tasks[i].vscale = new double[nspecies];
-    }
-  }
+  realloc_nspecies();
 
   // invoke FixEmit::init() to populate task list
   // it calls create_task() for each grid cell
@@ -481,6 +474,29 @@ void FixEmitFace::perform_task()
 
   int nfix_add_particle = modify->n_add_particle;
 
+  int ninsert_dim1 = perspecies ? nspecies : 1;
+  int** ninsert_values;
+  memory->create(ninsert_values, ntask, ninsert_dim1, "fix_emit_face:ninsert");
+
+  for (int i = 0; i < ntask; i++) {
+    if (perspecies) {
+      for (isp = 0; isp < nspecies; isp++) {
+        ntarget = tasks[i].ntargetsp[isp]+random->uniform();
+        ninsert = static_cast<int> (ntarget);
+        ninsert_values[i][isp] = ninsert;
+      }
+    } else {
+      if (np == 0) {
+        ntarget = tasks[i].ntarget+random->uniform();
+        ninsert = static_cast<int> (ntarget);
+      } else {
+        ninsert = npertask;
+        if (i >= nthresh) ninsert++;
+      }
+      ninsert_values[i][0] = ninsert;
+    }
+  }
+
   for (int i = 0; i < ntask; i++) {
     pcell = tasks[i].pcell;
     ndim = tasks[i].ndim;
@@ -503,28 +519,27 @@ void FixEmitFace::perform_task()
     if (perspecies) {
       for (isp = 0; isp < nspecies; isp++) {
         ispecies = species[isp];
-	ntarget = tasks[i].ntargetsp[isp]+random->uniform();
-	ninsert = static_cast<int> (ntarget);
+        ninsert = ninsert_values[i][isp];
         scosine = indot / vscale[isp];
 
         nactual = 0;
-	for (int m = 0; m < ninsert; m++) {
-	  x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	  x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
-	  if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+        for (int m = 0; m < ninsert; m++) {
+          x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+          x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+          if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
           else x[2] = 0.0;
 
           if (region && !region->match(x)) continue;
 
-	  do {
-	    do beta_un = (6.0*random->uniform() - 3.0);
-	    while (beta_un + scosine < 0.0);
-	    normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
-	      (scosine + sqrt(scosine*scosine + 2.0)) *
-	      exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
-		  beta_un*beta_un);
-	  } while (normalized_distbn_fn < random->uniform());
-	  
+          do {
+            do beta_un = (6.0*random->uniform() - 3.0);
+            while (beta_un + scosine < 0.0);
+            normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+              (scosine + sqrt(scosine*scosine + 2.0)) *
+              exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+                  beta_un*beta_un);
+          } while (normalized_distbn_fn < random->uniform());
+
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
           theta = MY_2PI * random->uniform();
@@ -535,7 +550,7 @@ void FixEmitFace::perform_task()
           evib = particle->evib(ispecies,temp_vib,random);
           id = MAXSMALLINT*random->uniform();
 
-	  particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+          particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
           nactual++;
 
           p = &particle->particles[particle->nlocal-1];
@@ -544,46 +559,40 @@ void FixEmitFace::perform_task()
 
           if (nfix_add_particle) 
             modify->add_particle(particle->nlocal-1,temp_thermal,
-                                 temp_rot,temp_vib,vstream);
-	}
+                temp_rot,temp_vib,vstream);
+        }
 
-	nsingle += nactual;
+        nsingle += nactual;
       }
 
     } else {
-      if (np == 0) {
-	ntarget = tasks[i].ntarget+random->uniform();
-	ninsert = static_cast<int> (ntarget);
-      } else {
-	ninsert = npertask;
-	if (i >= nthresh) ninsert++;
-      }
+      ninsert = ninsert_values[i][0];
 
       nactual = 0;
       for (int m = 0; m < ninsert; m++) {
-	rn = random->uniform();
-	isp = 0;
-	while (cummulative[isp] < rn) isp++;
+        rn = random->uniform();
+        isp = 0;
+        while (cummulative[isp] < rn) isp++;
         ispecies = species[isp];
         scosine = indot / vscale[isp];
 
-	x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
-	x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+        x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+        x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
         if (dimension == 3) x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
         else x[2] = 0.0;
 
         if (region && !region->match(x)) continue;
 
-	do {
-	  do {
-	    beta_un = (6.0*random->uniform() - 3.0);
-	  } while (beta_un + scosine < 0.0);
-	  normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
-	    (scosine + sqrt(scosine*scosine + 2.0)) *
-	    exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
-		beta_un*beta_un);
-	} while (normalized_distbn_fn < random->uniform());
-	
+        do {
+          do {
+            beta_un = (6.0*random->uniform() - 3.0);
+          } while (beta_un + scosine < 0.0);
+          normalized_distbn_fn = 2.0 * (beta_un + scosine) / 
+            (scosine + sqrt(scosine*scosine + 2.0)) *
+            exp(0.5 + (0.5*scosine)*(scosine-sqrt(scosine*scosine + 2.0)) - 
+                beta_un*beta_un);
+        } while (normalized_distbn_fn < random->uniform());
+
         v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
         theta = MY_2PI * random->uniform();
@@ -594,7 +603,7 @@ void FixEmitFace::perform_task()
         evib = particle->evib(ispecies,temp_vib,random);
         id = MAXSMALLINT*random->uniform();
 
-	particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
+        particle->add_particle(id,ispecies,pcell,x,v,erot,evib);
         nactual++;
 
         p = &particle->particles[particle->nlocal-1];
@@ -603,12 +612,14 @@ void FixEmitFace::perform_task()
 
         if (nfix_add_particle) 
           modify->add_particle(particle->nlocal-1,temp_thermal,
-                               temp_rot,temp_vib,vstream);
+              temp_rot,temp_vib,vstream);
       }
 
       nsingle += nactual;
     }
   }
+
+  memory->destroy(ninsert_values);
 }
 
 /* ----------------------------------------------------------------------
@@ -997,6 +1008,26 @@ void FixEmitFace::grow_task()
   } else {
     for (int i = oldmax; i < ntaskmax; i++)
       tasks[i].vscale = NULL;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   reallocate nspecies arrays
+------------------------------------------------------------------------- */
+
+void FixEmitFace::realloc_nspecies()
+{
+  if (perspecies) {
+    for (int i = 0; i < ntask; i++) {
+      delete [] tasks[i].ntargetsp;
+      tasks[i].ntargetsp = new double[nspecies];
+    }
+  }
+  if (subsonic_style == PONLY) {
+    for (int i = 0; i < ntask; i++) {
+      delete [] tasks[i].vscale;
+      tasks[i].vscale = new double[nspecies];
+    }
   }
 }
 

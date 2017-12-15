@@ -29,22 +29,17 @@ namespace SPARTA_NS {
 class CollideVSS : public Collide {
  public:
   CollideVSS(class SPARTA *, int, char **);
-  ~CollideVSS();
-  void init();
+  virtual ~CollideVSS();
+  virtual void init();
 
   double vremax_init(int, int);
-  double attempt_collision(int, int, double);
+  virtual double attempt_collision(int, int, double);
   double attempt_collision(int, int, int, double);
-  int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
-  void setup_collision(Particle::OnePart *, Particle::OnePart *);
-  int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
+  virtual int test_collision(int, int, int, Particle::OnePart *, Particle::OnePart *);
+  virtual void setup_collision(Particle::OnePart *, Particle::OnePart *);
+  virtual int perform_collision(Particle::OnePart *&, Particle::OnePart *&, 
                         Particle::OnePart *&);
   double extract(int, const char *);
-
- private:
-  int relaxflag,eng_exchange;
-  double vr_indice;
-  double **prefactor; // static portion of collision attempt frequency
 
   struct State {      // two-particle state
     double vr2;
@@ -64,9 +59,6 @@ class CollideVSS : public Collide {
     double vcmf;
     double wcmf;
   };
- 
-  struct State precoln;       // state before collision
-  struct State postcoln;      // state after collision
 
   struct Params {             // VSS model parameters
     double diam;
@@ -79,7 +71,15 @@ class CollideVSS : public Collide {
     double vibc1;
     double vibc2;
   };
-  
+
+ protected:
+  int relaxflag,eng_exchange;
+  double vr_indice;
+  double **prefactor; // static portion of collision attempt frequency
+ 
+  struct State precoln;       // state before collision
+  struct State postcoln;      // state after collision
+
   Params *params;             // VSS params for each species
   int nparams;                // # of per-species params read in
 

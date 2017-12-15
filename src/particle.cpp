@@ -99,12 +99,16 @@ Particle::Particle(SPARTA *sparta) : Pointers(sparta)
   // RNG for particle weighting
 
   wrandom = NULL;
+
+  copy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Particle::~Particle()
 {
+  if (copy || copymode) return;
+
   memory->sfree(species);
   for (int i = 0; i < nmixture; i++) delete mixture[i];
   memory->sfree(mixture);
@@ -521,6 +525,17 @@ void Particle::grow(int nextra)
 }
 
 /* ----------------------------------------------------------------------
+   insure species list can hold maxspecies species
+   assumes that maxspecies has already been increased
+------------------------------------------------------------------------- */
+
+void Particle::grow_species()
+{
+  species = (Species *) 
+    memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+}
+
+/* ----------------------------------------------------------------------
    grow next list if more particles now exist than there is room for
    called from Grid::unpack_particles_adapt() when grid adaptation
      takes place and acquire particles from other procs due to coarsening
@@ -667,8 +682,7 @@ void Particle::add_species(int narg, char **arg)
 
   if (nspecies + newspecies > maxspecies) {
     while (nspecies+newspecies > maxspecies) maxspecies += DELTASPECIES;
-    species = (Species *) 
-      memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+    grow_species();
   }
 
   // extract info on user-requested species from file species list
@@ -915,8 +929,7 @@ void Particle::read_restart_species(FILE *fp)
 
   if (nspecies > maxspecies) {
     while (nspecies > maxspecies) maxspecies += DELTASPECIES;
-    species = (Species *) 
-      memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+    grow_species();
   }
 
   if (me == 0) fread(species,sizeof(Species),nspecies,fp);

@@ -30,10 +30,10 @@ namespace SPARTA_NS {
 class ReadSurf : protected Pointers {
  public:
   ReadSurf(class SPARTA *);
-  ~ReadSurf();
-  void command(int, char **);
+  virtual ~ReadSurf();
+  virtual void command(int, char **);
 
- private:
+ protected:
   int me;
   char *line,*keyword,*buffer;
   FILE *fp;
@@ -82,6 +82,8 @@ class ReadSurf : protected Pointers {
   void open(char *);
   void parse_keyword(int);
   int count_words(char *);
+
+  virtual void grow_surf();
 };
 
 }

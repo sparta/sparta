@@ -29,6 +29,7 @@ class SurfCollide : protected Pointers {
   int size_vector;          // length of global vector
 
   SurfCollide(class SPARTA *, int, char **);
+  SurfCollide(class SPARTA *sparta) : Pointers(sparta) {}
   virtual ~SurfCollide();
   virtual void init();
   virtual Particle::OnePart *collide(Particle::OnePart *&, double *, 
@@ -37,6 +38,8 @@ class SurfCollide : protected Pointers {
   virtual void dynamic() {}
   void tally_update();
   double compute_vector(int i);
+
+  int copy;
 
  protected:
   int nsingle,ntotal;

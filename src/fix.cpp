@@ -17,6 +17,7 @@
 #include "fix.h"
 #include "memory.h"
 #include "error.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -54,12 +55,21 @@ Fix::Fix(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   START_OF_STEP = 1;
   END_OF_STEP = 2;
+
+  kokkosable = 0;
+  copymode = 0;
+
+  execution_space = Host;
+  datamask_read = ALL_MASK;
+  datamask_modify = ALL_MASK;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Fix::~Fix()
 {
+  if (copymode) return;
+
   delete [] id;
   delete [] style;
 }

@@ -59,12 +59,17 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   invoked_scalar = invoked_vector = invoked_array = -1;
   invoked_per_particle = invoked_per_grid = invoked_per_surf = -1;
+
+  kokkos_flag = 0;
+  copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Compute::~Compute()
 {
+  if (copymode) return;
+
   delete [] id;
   delete [] style;
   memory->destroy(tlist);

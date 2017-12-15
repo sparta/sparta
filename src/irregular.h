@@ -36,7 +36,7 @@ class Irregular : protected Pointers {
   void exchange_variable(char *, int *, char *);
   void reverse(int, int *);
 
- private:
+ protected:
   int me,nprocs;
 
   // plan for irregular communication of datums
@@ -61,6 +61,8 @@ class Irregular : protected Pointers {
   MPI_Request *request;      // MPI requests for posted recvs
   MPI_Status *status;        // MPI statuses for WaitAll
   char *buf;                 // buffer for largest single send message
+  int copymode;              // 1 if copy of class (prevents deallocation of
+                             //   base class when child copy is destroyed)
 
   // only defined for variable sized datums
 

@@ -36,13 +36,13 @@ class Modify : protected Pointers {
   ~Modify();
   void init();
   void setup();
-  void start_of_step();
-  void end_of_step();
+  virtual void start_of_step();
+  virtual void end_of_step();
 
-  void add_grid_one(int, int);
-  int pack_grid_one(int, char *, int);
-  int unpack_grid_one(int, char *);
-  void compress_grid(int);
+  virtual void add_grid_one(int, int);
+  virtual int pack_grid_one(int, char *, int);
+  virtual int unpack_grid_one(int, char *);
+  virtual void compress_grid(int);
 
   void add_fix(int, char **);
   void delete_fix(const char *);
@@ -59,9 +59,9 @@ class Modify : protected Pointers {
   void list_init_fixes();
   void list_init_computes();
 
-  void add_particle(int, double, double, double, double *);
-  void gas_react(int);
-  void surf_react(Particle::OnePart *, int &, int &);
+  virtual void add_particle(int, double, double, double, double *);
+  virtual void gas_react(int);
+  virtual void surf_react(Particle::OnePart *, int &, int &);
 
   bigint memory_usage();
 

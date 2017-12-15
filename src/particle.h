@@ -103,23 +103,27 @@ class Particle : protected Pointers {
   int nlocal_restart;
   char *particle_restart;
 
+  int copy,copymode;        // 1 if copy of class (prevents deallocation of
+                            //  base class when child copy is destroyed)
+
   // methods
 
   Particle(class SPARTA *);
-  ~Particle();
+  virtual ~Particle();
   void init();
-  void compress_migrate(int, int *);
+  virtual void compress_migrate(int, int *);
   void compress_rebalance();
   void compress_reactions(int, int *);
   void sort();
   void sort_allocate();
   void remove_all_from_cell(int);
-  void grow(int);
+  virtual void grow(int);
+  virtual void grow_species();
   void grow_next();
-  void pre_weight();
-  void post_weight();
+  virtual void pre_weight();
+  virtual void post_weight();
 
-  int add_particle(int, int, int, double *, double *, double, double);
+  virtual int add_particle(int, int, int, double *, double *, double, double);
   int clone_particle(int);
   void add_species(int, char **);
   void add_mixture(int, char **);
@@ -150,7 +154,7 @@ class Particle : protected Pointers {
 
   bigint memory_usage();
 
- private:
+ protected:
   int me;
   int maxgrid;              // max # of indices first can hold
   int maxsort;              // max # of particles next can hold

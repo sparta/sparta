@@ -182,6 +182,7 @@ void FixBalance::end_of_step()
 
     double *wt = NULL;
     if (rcbwt == PARTICLE) {
+      if (!particle->sorted) particle->sort();
       int n;
       memory->create(wt,nglocal,"balance:wt");
       nbalance = 0;

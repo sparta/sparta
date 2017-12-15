@@ -45,12 +45,19 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
   size_vector = 2;
     
   nsingle = ntotal = 0;
+
+  copy = 0;
 }
+
+//SurfCollide::SurfCollide(SPARTA *sparta) : 
+//  Pointers(sparta) {}
 
 /* ---------------------------------------------------------------------- */
 
 SurfCollide::~SurfCollide()
 {
+  if (copy) return;
+
   delete [] id;
   delete [] style;
 }

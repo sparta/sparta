@@ -269,7 +269,7 @@ void Variable::set(int narg, char **arg)
     which[nvar] = universe->iworld;
 
     if (universe->me == 0) {
-      FILE *fp = fopen("tmp.lammps.variable","w");
+      FILE *fp = fopen("tmp.sparta.variable","w");
       fprintf(fp,"%d\n",universe->nworlds);
       fclose(fp);
     }

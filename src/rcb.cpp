@@ -514,9 +514,9 @@ void RCB::compute(int n, double **x, double *wt, int flip)
     keep = outgoing = 0;
     for (i = 0; i < ndot; i++) {
       if (dotmark[i] == markactive)
-	memcpy(&buf[outgoing++],&dots[i],sizeof(Dot));
+        buf[outgoing++] = dots[i];
       else
-	memcpy(&dots[keep++],&dots[i],sizeof(Dot));
+        dots[keep++] = dots[i];
     }
 
     // post receives for dots

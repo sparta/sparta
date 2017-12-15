@@ -33,12 +33,12 @@ class CreateParticles : protected Pointers {
   int evib(int);
   double erot(int);
 
- private:
+ protected:
   int imix,single,mspecies;
   double xp,yp,zp,vx,vy,vz;
   class Region *region;
 
-  int speciesflag,densflag,velflag,tempflag;
+  int speciesflag,densflag,velflag,tempflag,normflag;
   char *sstr,*sxstr,*systr,*szstr;
   char *dstr,*dxstr,*dystr,*dzstr;
   char *tstr,*txstr,*tystr,*tzstr;
@@ -52,8 +52,8 @@ class CreateParticles : protected Pointers {
   char *txstr_copy,*tystr_copy,*tzstr_copy;
   char *vstrx_copy,*vstry_copy,*vstrz_copy;
 
-  void create_single();
-  void create_local(bigint);
+  virtual void create_single();
+  virtual void create_local(bigint);
   int species_variable(double *);
   double density_variable(double *, double *);
   double temperature_variable(double *);

@@ -88,6 +88,8 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
 
 CollideVSS::~CollideVSS()
 {
+  if (copymode) return;
+
   delete [] params;
   memory->destroy(prefactor);
 }

@@ -203,6 +203,17 @@ void FixEmitSurf::init()
 
 /* ---------------------------------------------------------------------- */
 
+void FixEmitSurf::setup()
+{
+  // needed for Kokkos because pointers are changed in UpdateKokkos::setup()
+
+  pts = surf->pts;
+  lines = surf->lines;
+  tris = surf->tris;
+}
+
+/* ---------------------------------------------------------------------- */
+
 int FixEmitSurf::create_task(int icell)
 {
   int i,m,isurf,isp,npoint,isplit,subcell;
