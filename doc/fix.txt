@@ -66,20 +66,31 @@ what it does, as listed below.  Here is an alphabetic list of fix
 styles available in SPARTA:
 
 "adapt"_fix_adapt.html - on-the-fly grid adaptation
+"adapt/kk"_fix_adapt.html - Kokkos version of fix adapt
 "ambipolar"_fix_ambipolar.html - ambipolar approximation for ionized plasmas
 "ave/grid"_fix_ave_grid.html - compute per grid cell time-averaged quantities
+"ave/grid/kk"_fix_ave_grid.html - Kokkos version of fix ave/grid
 "ave/histo"_fix_ave_histo.html - compute/output time averaged histograms
 "ave/histo/weight"_fix_ave_histo.html - compute/output weighted histograms
 "ave/surf"_fix_ave_surf.html - compute per surface element time-averaged quantities
 "ave/time"_fix_ave_time.html - compute/output global time-averaged quantities
 "balance"_fix_balance.html - perform dynamic load-balancing
+"balance/kk"_fix_balance.html - Kokkos version of fix balance
 "emit/face"_fix_emit_face.html - emit particles at global boundaries
+"emit/face/kk"_fix_emit_face.html - Kokkos version of fix emit/face
 "emit/face/file"_fix_emit_face_file.html - emit particles at global boundaries using a distribution defined in a file
 "emit/surf"_fix_emit_surf.html - emit particles at surfaces
 "grid/check"_fix_grid_check.html - check if particles are in the correct grid cell
+"grid/check/kk"_fix_grid_check.html - Kokkos version of fix grid/check
 "move/surf"_fix_move_surf.html - move surfaces dynamically during a simulation
+"move/surf/kk"_fix_move_surf.html - Kokkos version of fix move/surf
 "print"_fix_print.html - print text and variables during a simulation
 "vibmode"_fix_vibmode.html - discrete vibrational energy modes :ul
+
+There are also additional accelerated compute styles included in the
+SPARTA distribution for faster performance on specific hardware.  The
+list of these with links to the individual styles are given in the
+pair section of "this page"_Section_commands.html#cmd_5.
 
 :line
 

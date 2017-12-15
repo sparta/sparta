@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -41,7 +41,9 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
     all = allow particle comm with potentially any processor
   {weight} value = {wstyle} {mode}
     wstyle = {cell}
-    mode = {none} or {volume} or {radius} :pre
+    mode = {none} or {volume} or {radius}
+  {particle/reorder} value = {nsteps}
+    nsteps = reorder the particles every this many timesteps :pre
 :ule
 
 [Examples:]
@@ -253,6 +255,14 @@ Note that the first calculation of weights is performed whenever the
 are not cloned or destroyed by the new weights.  The second
 calculation only happens when a simulation is run.
 
+The {particle/reorder} keyword determines how often the list of
+particles on each processor is reordered to store particles in the
+same grid cell contiguously in memory.  This operation is performed
+every {nsteps} as specified.  A value of 0 means no reordering is ever
+done.  This option is only available when using the KOKKOS package and
+can improve performance on certain hardware such as GPUs, but is
+typically slower on CPUs.
+
 [Restrictions:]
 
 The global surfmax command must be used before surface elements are
@@ -267,4 +277,4 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, surfpush
 = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh, weight =
-cell none.
+cell none, particle/reorder = 0.

@@ -55,6 +55,7 @@ available in SPARTA:
 "distsurf/grid"_compute_distsurf_grid.html - distance from grid cells to surface
 "eflux/grid"_compute_eflux_grid.html - energy flux density per grid cell
 "grid"_compute_grid.html - various per grid cell quantities
+"grid/kk"_compute_grid.html - Kokkos version of compute grid
 "ke/particle"_compute_ke_particle.html - temperature per particle
 "lambda/grid"_compute_lambda_grid.html - mean-free path per grid cell
 "pflux/grid"_compute_pflux_grid.html - momentum flux density per grid cell
@@ -63,8 +64,15 @@ available in SPARTA:
 "sonine/grid"_compute_sonine_grid.html - Sonine moments per grid cell
 "surf"_compute_surf.html - various per surface element quantities
 "thermal/grid"_compute_thermal_grid.html - thermal temperature per grid cell
+"thermal/grid/kk"_compute_thermal_grid.html - Kokkos version of compute thermal/grid
 "temp"_compute_temp.html - temperature of particles
+"temp/kk"_compute_temp.html - Kokkos version of compute temp
 "tvib/grid"_compute_tvib_grid.html - vibrational temperature per grid cell :ul
+
+There are also additional accelerated compute styles included in the
+SPARTA distribution for faster performance on specific hardware.  The
+list of these with links to the individual styles are given in the
+pair section of "this page"_Section_commands.html#cmd_5.
 
 :line
 

@@ -1,0 +1,174 @@
+<HTML>
+<CENTER><A HREF = "Section_packages.html">Previous Section</A> - <A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> -
+<A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> - <A HREF = "Section_howto.html">Next
+Section</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>5. Accelerating SPARTA performance 
+</H3>
+<P>This section describes various methods for improving SPARTA
+performance for different classes of problems running on different
+kinds of machines.
+</P>
+<P>Currently the only option is to use the KOKKOS accelerator
+packages provided with SPARTA that
+contains code optimized for certain kinds of hardware, including
+multi-core CPUs, GPUs, and Intel Xeon Phi coprocessors.
+</P>
+<UL><LI>5.1 <A HREF = "#acc_1">Measuring performance</A> 
+
+<LI>5.2 <A HREF = "#acc_3">Accelerator packages with optimized styles</A> 
+
+<LI>    5.2.1 <A HREF = "accelerate_kokkos.html">KOKKOS package</A> 
+
+
+</UL>
+<P>The <A HREF = "http://sparta.sandia.gov/bench.html">Benchmark page</A> of the SPARTA
+web site gives performance results for the various accelerator
+packages discussed in Section 5.2, for several of the standard SPARTA
+benchmark problems, as a function of problem size and number of
+compute nodes, on different hardware platforms.
+</P>
+<HR>
+
+<H4><A NAME = "acc_1"></A>5.1 Measuring performance 
+</H4>
+<P>Before trying to make your simulation run faster, you should
+understand how it currently performs and where the bottlenecks are.
+</P>
+<P>The best way to do this is run the your system (actual number of
+particles) for a modest number of timesteps (say 100 steps) on several
+different processor counts, including a single processor if possible.
+Do this for an equilibrium version of your system, so that the
+100-step timings are representative of a much longer run.  There is
+typically no need to run for 1000s of timesteps to get accurate
+timings; you can simply extrapolate from short runs.
+</P>
+<P>For the set of runs, look at the timing data printed to the screen and
+log file at the end of each SPARTA run.  <A HREF = "Section_start.html#start_7">This
+section</A> of the manual has an overview.
+</P>
+<P>Running on one (or a few processors) should give a good estimate of
+the serial performance and what portions of the timestep are taking
+the most time.  Running the same problem on a few different processor
+counts should give an estimate of parallel scalability.  I.e. if the
+simulation runs 16x faster on 16 processors, its 100% parallel
+efficient; if it runs 8x faster on 16 processors, it's 50% efficient.
+</P>
+<P>The most important data to look at in the timing info is the timing
+breakdown and relative percentages.  For example, trying different
+options for speeding up the FFTs will have little impact
+if they only consume 10% of the run time.  If the collide time is
+dominating, you may want to look at the KOKKOS package, as discussed
+below.  Comparing how the percentages change as
+you increase the processor count gives you a sense of how different
+operations within the timestep are scaling.
+</P>
+<P>Another important detail in the timing info are the histograms of
+particles counts and neighbor counts.  If these vary widely across
+processors, you have a load-imbalance issue.  This often results in
+inaccurate relative timing data, because processors have to wait when
+communication occurs for other processors to catch up.  Thus the
+reported times for "Communication" or "Other" may be higher than they
+really are, due to load-imbalance.  If this is an issue, you can
+uncomment the MPI_Barrier() lines in src/timer.cpp, and recompile
+SPARTA, to obtain synchronized timings.
+</P>
+<HR>
+
+<H4><A NAME = "acc_3"></A>5.3 Packages with optimized styles 
+</H4>
+<P>Accelerated versions of various <A HREF = "collide_style.html">collide_style</A>,
+<A HREF = "fix.html">fixes</A>, <A HREF = "compute.html">computes</A>, and other commands have
+been added to SPARTA via the KOKKOS package, which may run faster than the
+standard non-accelerated versions.
+</P>
+<P>All of these commands are in the KOKKOS package provided with SPARTA.  An
+overview of packages is give in <A HREF = "Section_packages.html">Section
+packages</A>.
+</P>
+<P>SPARTA currently has acceleration support for
+three kinds of hardware, via the KOKKOS package: Many-core CPUs, NVIDIA GPUs, and
+Intel Xeon Phi.
+</P>
+<P>Whether you will see speedup for your hardware may depend on the size
+problem you are running and what commands (accelerated and
+non-accelerated) are invoked by your input script.  While these doc
+pages include performance guidelines, there is no substitute for
+trying out the KOKKOS package.
+</P>
+<P>Any accelerated style has the same name as the corresponding standard
+style, except that a suffix is appended.  Otherwise, the syntax for
+the command that uses the style is identical, their functionality is
+the same, and the numerical results it produces should also be the
+same, except for precision and round-off effects, and differences in random
+numbers.
+</P>
+<P>For example, the KOKKOS package provides an accelerated variant of the
+Temperature Compute <A HREF = "compute_temp.html">compute temp</A>, namely <A HREF = "compute_temp.html">compute
+temp/kk</A>
+</P>
+<P>To see what accelerate styles are currently available, see
+<A HREF = "Section_commands.html#cmd_5">Section 3.5</A> of the manual.  The
+doc pages for individual commands (e.g. <A HREF = "compute_temp.html">compute temp</A>)
+also list any accelerated variants available
+for that style.
+</P>
+<P>To use an accelerator package in SPARTA, and one or more of the styles
+it provides, follow these general steps:
+</P>
+<DIV ALIGN=center><TABLE  BORDER=1 >
+<TR><TD >install the accelerator package </TD><TD >  make yes-fft, make yes-kokkos, etc </TD></TR>
+<TR><TD >add compile/link flags to Makefile.machine in src/MAKE </TD><TD >  KOKKOS_ARCH=Pascal60 </TD></TR>
+<TR><TD >re-build SPARTA </TD><TD >  make kokkos_cuda </TD></TR>
+<TR><TD >prepare and test a regular SPARTA simulation </TD><TD >  lmp_kokkos_cuda -in in.script; mpirun -np 32 lmp_kokkos_cuda -in in.script </TD></TR>
+<TR><TD >enable specific accelerator support via '-k on' <A HREF = "Section_start.html#start_6">command-line switch</A>, </TD><TD >  -k on g 1 </TD></TR>
+<TR><TD >set any needed options for the package via "-pk" <A HREF = "Section_start.html#start_6">command-line switch</A> or <A HREF = "package.html">package</A> command, </TD><TD >  only if defaults need to be changed, -pk kokkos reduction atomic </TD></TR>
+<TR><TD >use accelerated styles in your input via "-sf" <A HREF = "Section_start.html#start_6">command-line switch</A> or <A HREF = "suffix.html">suffix</A> command </TD><TD > lmp_kokkos_cuda -in in.script -sf kk
+</TD></TR></TABLE></DIV>
+
+<P>Note that the first 3 steps can be done as a single command with
+suitable make command invocations. This is discussed in <A HREF = "Section_packages.html">Section
+4</A> of the manual, and its use is
+illustrated in the individual accelerator sections.  Typically these
+steps only need to be done once, to create an executable that uses one
+or more accelerator packages.
+</P>
+<P>The last 4 steps can all be done from the command-line when SPARTA is
+launched, without changing your input script, as illustrated in the
+individual accelerator sections.  Or you can add
+<A HREF = "package.html">package</A> and <A HREF = "suffix.html">suffix</A> commands to your input
+script.
+</P>
+<P>The <A HREF = "http://sparta.sandia.gov/bench.html">Benchmark
+page</A> of the SPARTA web site gives
+performance results for the various accelerator packages for several
+of the standard SPARTA benchmark problems, as a function of problem
+size and number of compute nodes, on different hardware platforms.
+</P>
+<P>Here is a brief summary of what the KOKKOS package provides.
+</P>
+<LI>Styles with a "kk" suffix are part of the KOKKOS package, and can be
+run using OpenMP on multicore CPUs, on an NVIDIA GPU, or on an Intel
+Xeon Phi in "native" mode.  The speed-up depends on a variety of
+factors, as discussed on the KOKKOS accelerator page. 
+
+
+</UL>
+<P>The KOKKOS accelerator package doc page explains:
+</P>
+<UL><LI>what hardware and software the accelerated package requires
+<LI>how to build SPARTA with the accelerated package
+<LI>how to run with the accelerated package either via command-line switches or modifying the input script
+<LI>speed-ups to expect
+<LI>guidelines for best performance
+<LI>restrictions 
+</UL>
+</HTML>

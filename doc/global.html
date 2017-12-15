@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs 
 
-<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfmax</I> or <I>surfpush</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> 
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfmax</I> or <I>surfpush</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -46,7 +46,9 @@
     all = allow particle comm with potentially any processor
   <I>weight</I> value = <I>wstyle</I> <I>mode</I>
     wstyle = <I>cell</I>
-    mode = <I>none</I> or <I>volume</I> or <I>radius</I> 
+    mode = <I>none</I> or <I>volume</I> or <I>radius</I>
+  <I>particle/reorder</I> value = <I>nsteps</I>
+    nsteps = reorder the particles every this many timesteps 
 </PRE>
 
 </UL>
@@ -259,6 +261,14 @@ deleted with probability 0.3.
 are not cloned or destroyed by the new weights.  The second
 calculation only happens when a simulation is run.
 </P>
+<P>The <I>particle/reorder</I> keyword determines how often the list of
+particles on each processor is reordered to store particles in the
+same grid cell contiguously in memory.  This operation is performed
+every <I>nsteps</I> as specified.  A value of 0 means no reordering is ever
+done.  This option is only available when using the KOKKOS package and
+can improve performance on certain hardware such as GPUs, but is
+typically slower on CPUs.
+</P>
 <P><B>Restrictions:</B>
 </P>
 <P>The global surfmax command must be used before surface elements are
@@ -273,6 +283,6 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, surfpush
 = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh, weight =
-cell none.
+cell none, particle/reorder = 0.
 </P>
 </HTML>

@@ -247,7 +247,9 @@ This section lists many SPARTA commands, grouped by category.  The
 
 Initialization:
 
-"dimension"_dimension.html, "seed"_seed.html, "units"_units.html
+"dimension"_dimension.html, "package"_package.html, "seed"_seed.html,
+"suffix"_suffix.html, "units"_units.html
+
 
 Problem definition:
 
@@ -324,7 +326,8 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "log"_log.html,
 "mixture"_mixture.html,
 "move_surf"_move_surf.html,
-"next"_next.html,
+"next"_next.html,"
+"package"_package.html,
 "partition"_partition.html,
 "print"_print.html,
 "quit"_quit.html,
@@ -346,6 +349,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "stats"_stats.html,
 "stats_modify"_stats_modify.html,
 "stats_style"_stats_style.html,
+"suffix"_suffix.html,
 "surf_collide"_surf_collide.html,
 "surf_react"_surf_react.html,
 "surf_modify"_surf_modify.html,
@@ -363,22 +367,25 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 
 Fix styles :h4
 
-See the "fix"_fix.html command for one-line descriptions
-of each style or click on the style itself for a full description:
+See the "fix"_fix.html command for one-line descriptions of each style
+or click on the style itself for a full description.  Some of the
+styles have accelerated versions, which can be used if SPARTA is built
+with the "appropriate accelerated package"_Section_accelerate.html.
+This is indicated by additional letters in parenthesis: k = KOKKOS.
 
-"adapt"_fix_adapt.html,
+"adapt (k)"_fix_adapt.html,
 "ambipolar"_fix_ambipolar.html,
-"ave/grid"_fix_ave_grid.html,
+"ave/grid (k)"_fix_ave_grid.html,
 "ave/histo"_fix_ave_histo.html,
 "ave/histo/weight"_fix_ave_histo.html,
 "ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
-"balance"_fix_balance.html,
-"emit/face"_fix_emit_face.html,
+"balance (k)"_fix_balance.html,
+"emit/face (k)"_fix_emit_face.html,
 "emit/face/file"_fix_emit_face_file.html,
 "emit/surf"_fix_emit_surf.html,
-"grid/check"_fix_grid_check.html,
-"move/surf"_fix_move_surf.html,
+"grid/check (k)"_fix_grid_check.html,
+"move/surf (k)"_fix_move_surf.html,
 "print"_fix_print.html :tb(c=6,ea=c)
 
 :line
@@ -386,14 +393,18 @@ of each style or click on the style itself for a full description:
 Compute styles :h4
 
 See the "compute"_compute.html command for one-line descriptions of
-each style or click on the style itself for a full description:
+each style or click on the style itself for a full description.  Some
+of the styles have accelerated versions, which can be used if SPARTA
+is built with the "appropriate accelerated
+package"_Section_accelerate.html.  This is indicated by additional
+letters in parenthesis: k = KOKKOS.
 
 "boundary"_compute_boundary.html,
 "count"_compute_count.html,
 "distsurf/grid"_compute_distsurf_grid.html,
 "eflux/grid"_compute_eflux_grid.html,
 "fft/grid"_compute_fft_grid.html,
-"grid"_compute_grid.html,
+"grid (k)"_compute_grid.html,
 "ke/particle"_compute_ke_particle.html,
 "lambda/grid"_compute_lambda_grid.html,
 "pflux/grid"_compute_pflux_grid.html,
@@ -401,8 +412,8 @@ each style or click on the style itself for a full description:
 "reduce"_compute_reduce.html,
 "sonine/grid"_compute_sonine_grid.html,
 "surf"_compute_surf.html,
-"thermal/grid"_compute_thermal_grid.html,
-"temp"_compute_temp.html,
+"thermal/grid (k)"_compute_thermal_grid.html,
+"temp (k)"_compute_temp.html,
 "tvib/grid"_compute_tvib_grid.html :tb(c=6,ea=c)
 
 :line
@@ -410,20 +421,27 @@ each style or click on the style itself for a full description:
 Collide styles :h4
 
 See the "collide"_collide.html command for details of each style.
+Some of the styles have accelerated versions, which can be used if
+SPARTA is built with the "appropriate accelerated
+package"_Section_accelerate.html.  This is indicated by additional
+letters in parenthesis: k = KOKKOS.
 
-"vss"_collide.html :tb(c=1,ea=c)
+"vss (k)"_collide.html :tb(c=1,ea=c)
 
 :line
 
 Surface collide styles :h4
 
 See the "surf_collide"_surf_collide.html command for details of each
-style.
+style.  Some of the styles have accelerated versions, which can be
+used if SPARTA is built with the "appropriate accelerated
+package"_Section_accelerate.html.  This is indicated by additional
+letters in parenthesis: k = KOKKOS.
 
-"diffuse"_surf_collide.html,
+"diffuse (k)"_surf_collide.html,
 "piston"_surf_collide.html,
-"specular"_surf_collide.html,
-"vanish"_surf_collide.html :tb(c=3,ea=c)
+"specular (k)"_surf_collide.html,
+"vanish (k)"_surf_collide.html :tb(c=3,ea=c)
 
 :line
 
