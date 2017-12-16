@@ -18,14 +18,15 @@ emit/face = style name of this fix command :l
 mix-ID = ID of mixture to use when creating particles :l
 face1,face2,... = one or more of {all} or {xlo} or {xhi} or {ylo} or {yhi} or {zlo} or {zhi} :l
 zero or more keyword/value(s) pairs may be appended :l
-keyword = {n} or {nevery} or {perspecies} or {region} or {subsonic} :l
+keyword = {n} or {nevery} or {perspecies} or {region} or {subsonic} or {twopass} :l
   {n} value = Np = number of particles to create
   {nevery} value = Nstep = add particles every this many timesteps
   {perspecies} value = {yes} or {no}
   {region} value = region-ID 
   {subsonic} values = Psub Tsub
     Psub = pressure setting at inflow boundary (pressure units)
-    Tsub = temperature setting at inflow boundary, can be NULL (temperature units) :pre
+    Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
+  {twopass} values = none
 :ule
 
 [Examples:]
@@ -33,7 +34,7 @@ keyword = {n} or {nevery} or {perspecies} or {region} or {subsonic} :l
 fix in emit/face air all
 fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle
 fix in emit/face air xlo subsonic 0.1 300
-fix in emit/face air xhi subsonic 0.05 NULL :pre
+fix in emit/face air xhi subsonic 0.05 NULL twopass :pre
 
 [Description:]
 
@@ -192,6 +193,16 @@ were exiting the simulation domain.  That is necessary to produce the
 correct subsonic conditions that the particle insertions due to this
 command are trying to achieve.
 
+The {twopass} keyword does not require a value.  If used, the
+insertion procedure will loop over the insertion grid cells twice, the
+same as the KOKKOS package version of this fix does, so that it can
+reallocate memory efficiently, e.g. on a GPU.  If this keyword is used
+the non-KOKKOS and KOKKOS version will generate exactly the same set
+of particles, which makes debugging easier.  If the keyword is not
+used, the non-KOKKOS and KOKKOS runs will use random numbers
+differently and thus generate different particles, though they will be
+statistically similar.
+
 :line
 
 [Restart, output info:]
@@ -257,7 +268,7 @@ emit/face/file"_fix_emit_face_file.html
 [Default:]
 
 The keyword defaults are n = 0, nevery = 1, perspecies = yes, region =
-none, no subsonic settings.
+none, no subsonic settings, no twopass setting.
 
 :line
 

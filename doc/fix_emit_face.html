@@ -27,16 +27,16 @@
 
 <LI>zero or more keyword/value(s) pairs may be appended 
 
-<LI>keyword = <I>n</I> or <I>nevery</I> or <I>perspecies</I> or <I>region</I> or <I>subsonic</I> 
+<LI>keyword = <I>n</I> or <I>nevery</I> or <I>perspecies</I> or <I>region</I> or <I>subsonic</I> or <I>twopass</I> 
 
-<PRE>  <I>n</I> value = Np = number of particles to create
+  <I>n</I> value = Np = number of particles to create
   <I>nevery</I> value = Nstep = add particles every this many timesteps
   <I>perspecies</I> value = <I>yes</I> or <I>no</I>
   <I>region</I> value = region-ID 
   <I>subsonic</I> values = Psub Tsub
     Psub = pressure setting at inflow boundary (pressure units)
-    Tsub = temperature setting at inflow boundary, can be NULL (temperature units) 
-</PRE>
+    Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
+  <I>twopass</I> values = none
 
 </UL>
 <P><B>Examples:</B>
@@ -44,7 +44,7 @@
 <PRE>fix in emit/face air all
 fix in emit/face mymix xlo yhi n 1000 nevery 10 region circle
 fix in emit/face air xlo subsonic 0.1 300
-fix in emit/face air xhi subsonic 0.05 NULL 
+fix in emit/face air xhi subsonic 0.05 NULL twopass 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -203,6 +203,16 @@ were exiting the simulation domain.  That is necessary to produce the
 correct subsonic conditions that the particle insertions due to this
 command are trying to achieve.
 </P>
+<P>The <I>twopass</I> keyword does not require a value.  If used, the
+insertion procedure will loop over the insertion grid cells twice, the
+same as the KOKKOS package version of this fix does, so that it can
+reallocate memory efficiently, e.g. on a GPU.  If this keyword is used
+the non-KOKKOS and KOKKOS version will generate exactly the same set
+of particles, which makes debugging easier.  If the keyword is not
+used, the non-KOKKOS and KOKKOS runs will use random numbers
+differently and thus generate different particles, though they will be
+statistically similar.
+</P>
 <HR>
 
 <P><B>Restart, output info:</B>
@@ -268,7 +278,7 @@ emit/face/file</A>
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are n = 0, nevery = 1, perspecies = yes, region =
-none, no subsonic settings.
+none, no subsonic settings, no twopass setting.
 </P>
 <HR>
 
