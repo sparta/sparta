@@ -219,7 +219,7 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
   // determine size of map/umap/uomap data structs and allocate them
   // tmax = max # of tally quantities for any value
 
-  int tmax = 1;
+  tmax = 1;
   for (int m = 0; m < nvalues; m++) {
     int n = -1;
     int j = argindex[m];
@@ -316,6 +316,8 @@ FixAveGrid::FixAveGrid(SPARTA *sparta, int narg, char **arg) :
 
 FixAveGrid::~FixAveGrid()
 {
+  if (copymode) return;
+
   delete [] which;
   delete [] argindex;
   delete [] value2index;
@@ -414,7 +416,7 @@ void FixAveGrid::end_of_step()
     j = argindex[m];
 
     // invoke compute if not previously invoked
-
+  
     if (which[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
       if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
@@ -448,7 +450,7 @@ void FixAveGrid::end_of_step()
 	    tally[i][k] += compute_array[i][jm1];
         }
       }
-
+  
     // access fix fields, guaranteed to be ready
       
     } else if (which[m] == FIX) {

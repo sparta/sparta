@@ -42,7 +42,8 @@ class FixAveGrid : public Fix {
   void compress_grid();
   double memory_usage();
 
- private:
+ protected:
+  int tmax;
   int groupbit,nvalues,maxvalues;
   int nrepeat,irepeat,nsample;
   bigint nvalid;
