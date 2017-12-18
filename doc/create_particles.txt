@@ -22,13 +22,14 @@ style = {n} or {single} :l
     x,y,z = position of particle (distance units)
     vx,vy,vz = velocity of particle (velocity units) :pre
 zero or more keyword/value pairs may be appended :l
-keyword = {global} or {region} or {species} or {density} or {temperature} or {velocity} :l
+keyword = {global} or {region} or {species} or {density} or {temperature} or {velocity} or {twopass} :l
   {global} value = {yes} or {no}
   {region} value = region-ID
   {species} values = svar xvar yvar zvar
   {density} values = dvar xvar yvar zvar
   {temperature} values = tvar xvar yvar zvar
-  {velocity} values = vxvar vyvar vzvar xvar yvar zvar :pre
+  {velocity} values = vxvar vyvar vzvar xvar yvar zvar
+  {twopass} values = none :pre
 :ule
 
 [Examples:]
@@ -40,7 +41,7 @@ create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
 create_particles air n 0 species mySpecies xpos NULL zpos
 create_particles air n 0 density myDens xgrid ygrid NULL
 create_particles air n 0 temperature myTemp xgrid ygrid zgrid
-create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL :pre
+create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL twopass :pre
 
 [Description:]
 
@@ -302,6 +303,16 @@ variable vy equal (yhi-v_y)/(1000*7.0e-9)
 create_particles air n 10000 velocity vx vy NULL x y NULL :pre
 
 :c,image(JPG/velocity_variation_small.jpg,JPG/velocity_variation.gif)
+
+The {twopass} keyword does not require a value.  If used, the
+creation procedure will loop over the creation grid cells twice, the
+same as the KOKKOS package version of this command does, so that it can
+reallocate memory efficiently, e.g. on a GPU.  If this keyword is used
+the non-KOKKOS and KOKKOS version will generate exactly the same set
+of particles, which makes debugging easier.  If the keyword is not
+used, the non-KOKKOS and KOKKOS runs will use random numbers
+differently and thus generate different particles, though they will be
+statistically similar.
 
 :line
 
