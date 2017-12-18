@@ -87,6 +87,7 @@ void CreateParticles::command(int narg, char **arg)
   // optional args
 
   int globalflag = 0;
+  twopass = 0;
   region = NULL;
   speciesflag = densflag = velflag = tempflag = 0;
   sstr = sxstr = systr = szstr = NULL;
@@ -157,6 +158,10 @@ void CreateParticles::command(int narg, char **arg)
       if (strcmp(arg[iarg+6],"NULL") == 0) vstrz = NULL;
       else vstrz = arg[iarg+6];
       iarg += 7;
+    } else if (strcmp(arg[iarg],"twopass") == 0) {
+      if (iarg+1 > narg) error->all(FLERR,"Illegal create_particles command");
+      twopass = 1;
+      iarg += 1;
     } else error->all(FLERR,"Illegal create_particles command");
   }
 
@@ -327,8 +332,10 @@ void CreateParticles::command(int narg, char **arg)
 
   bigint nprevious = particle->nglobal;
   if (single) create_single();
-  else if (!globalflag) create_local(np);
-  //else create_global(np);
+  else if (!globalflag) {
+    if (twopass) create_local_twopass(np);
+    else create_local(np);
+  } //else create_global(np);
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
@@ -558,6 +565,7 @@ void CreateParticles::create_local(bigint np)
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
+
     for (int m = 0; m < ncreate; m++) {
       rn = random->uniform();
       isp = 0;
@@ -608,11 +616,215 @@ void CreateParticles::create_local(bigint np)
                              temp_rot,temp_vib,vstream);
     }
 
+
     // increment count without effect of density variation
     // so that target insertion count is undisturbed
 
     nprev += npercell;
   }
+
+  delete random;
+}
+
+/* ----------------------------------------------------------------------
+   create Np particles in parallel
+   every proc creates fraction of Np for cells it owns
+   only insert in cells uncut by surfs
+   account for cell weighting
+   attributes of created particle depend on number of procs
+------------------------------------------------------------------------- */
+
+void CreateParticles::create_local_twopass(bigint np)
+{
+  int dimension = domain->dimension;
+
+  int me = comm->me;
+  RanPark *random = new RanPark(update->ranmaster->uniform());
+  double seed = update->ranmaster->uniform();
+  random->reset(seed,me,100);
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  // volme = volume of grid cells I own that are OUTSIDE surfs
+  // skip cells entirely outside region
+  // Nme = # of particles I will create
+  // MPI_Scan() logic insures sum of nme = Np
+
+  double *lo,*hi;
+  double volone;
+
+  double volme = 0.0;
+  for (int i = 0; i < nglocal; i++) {
+    if (cinfo[i].type != OUTSIDE) continue;
+    lo = cells[i].lo;
+    hi = cells[i].hi;
+    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+      continue;
+
+    if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    else if (domain->axisymmetric) 
+      volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
+    else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+    volme += volone / cinfo[i].weight;
+  }
+  
+  double volupto;
+  MPI_Scan(&volme,&volupto,1,MPI_DOUBLE,MPI_SUM,world);
+
+  double *vols;
+  int nprocs = comm->nprocs;
+  memory->create(vols,nprocs,"create_particles:vols");
+  MPI_Allgather(&volupto,1,MPI_DOUBLE,vols,1,MPI_DOUBLE,world);
+
+  // nme = # of particles for me to create
+  // gathered Scan results not guaranteed to be monotonically increasing
+  // can cause epsilon mis-counts for huge particle counts
+  // enforce that by brute force
+
+  for (int i = 1; i < nprocs; i++)
+    if (vols[i] != vols[i-1] && 
+        fabs(vols[i]-vols[i-1])/vols[nprocs-1] < EPSZERO)
+      vols[i] = vols[i-1];
+
+  bigint nstart,nstop;
+  if (me > 0) nstart = static_cast<bigint> (np * (vols[me-1]/vols[nprocs-1]));
+  else nstart = 0;
+  nstop = static_cast<bigint> (np * (vols[me]/vols[nprocs-1]));
+  bigint nme = nstop-nstart;
+
+  memory->destroy(vols);
+
+  // nfix_add_particle = # of fixes with add_particle() method
+
+  modify->list_init_fixes();
+  int nfix_add_particle = modify->n_add_particle;
+
+  // loop over cells I own
+  // only add particles to OUTSIDE cells
+  // skip cells entirely outside region
+  // ntarget = floating point # of particles to create in one cell
+  // npercell = integer # of particles to create in one cell
+  // basing ntarget on accumulated volume and nprev insures Nme total creations
+  // particle species = random value based on mixture fractions
+  // particle velocity = stream velocity + thermal velocity
+
+  int *species = particle->mixture[imix]->species;
+  double *cummulative = particle->mixture[imix]->cummulative;
+  double *vstream = particle->mixture[imix]->vstream;
+  double *vscale = particle->mixture[imix]->vscale;
+  int nspecies = particle->mixture[imix]->nspecies;
+  double temp_thermal = particle->mixture[imix]->temp_thermal;
+  double temp_rot = particle->mixture[imix]->temp_rot;
+  double temp_vib = particle->mixture[imix]->temp_vib;
+
+  int npercell,ncreate,isp,ispecies,id;
+  double x[3],v[3],vstream_variable[3];
+  double ntarget,scale,rn,vn,vr,theta1,theta2,erot,evib;
+
+  double tempscale = 1.0;
+  double sqrttempscale = 1.0;
+
+  double volsum = 0.0;
+  bigint nprev = 0;
+
+  int* ncreate_values;
+  memory->create(ncreate_values, nglocal, "create_particles:ncreate");
+
+  for (int i = 0; i < nglocal; i++) {
+    if (cinfo[i].type != OUTSIDE) continue;
+    lo = cells[i].lo;
+    hi = cells[i].hi;
+    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+      continue;
+
+    if (dimension == 3) volone = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    else if (domain->axisymmetric)
+      volone = (hi[0]-lo[0]) * (hi[1]*hi[1]-lo[1]*lo[1])*MY_PI;
+    else volone = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+    volsum += volone / cinfo[i].weight;
+
+    ntarget = nme * volsum/volme - nprev;
+    npercell = static_cast<int> (ntarget);
+    if (random->uniform() < ntarget-npercell) npercell++;
+    ncreate = npercell;
+
+    if (densflag) {
+      scale = density_variable(lo,hi);
+      ntarget *= scale;
+      ncreate = static_cast<int> (ntarget);
+      if (random->uniform() < ntarget-ncreate) ncreate++;
+    }
+
+    ncreate_values[i] = ncreate;
+
+    // increment count without effect of density variation
+    // so that target insertion count is undisturbed
+
+    nprev += npercell;
+  }
+
+  for (int i = 0; i < nglocal; i++) {
+    if (cinfo[i].type != OUTSIDE) continue;
+    lo = cells[i].lo;
+    hi = cells[i].hi;
+    if (region && region->bboxflag && outside_region(dimension,lo,hi))
+      continue;
+    ncreate = ncreate_values[i];
+
+    for (int m = 0; m < ncreate; m++) {
+      rn = random->uniform();
+      isp = 0;
+      while (cummulative[isp] < rn) isp++;
+      ispecies = species[isp];
+
+      x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
+      x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
+      x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+      if (dimension == 2) x[2] = 0.0;
+
+      if (region && !region->match(x)) continue;
+      if (speciesflag) {
+        isp = species_variable(x) - 1;
+        if (isp < 0 || isp >= nspecies) continue;
+        ispecies = species[isp];
+      }
+
+      if (tempflag) {
+        tempscale = temperature_variable(x);
+        sqrttempscale = sqrt(tempscale);
+      }
+
+      vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+      vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
+      theta1 = MY_2PI * random->uniform();
+      theta2 = MY_2PI * random->uniform();
+
+      if (velflag) {
+        velocity_variable(x,vstream,vstream_variable);
+        v[0] = vstream_variable[0] + vn*cos(theta1);
+        v[1] = vstream_variable[1] + vr*cos(theta2);
+        v[2] = vstream_variable[2] + vr*sin(theta2);
+      } else {
+        v[0] = vstream[0] + vn*cos(theta1);
+        v[1] = vstream[1] + vr*cos(theta2);
+        v[2] = vstream[2] + vr*sin(theta2);
+      }
+
+      erot = particle->erot(ispecies,temp_rot*tempscale,random);
+      evib = particle->evib(ispecies,temp_vib*tempscale,random);
+
+      id = MAXSMALLINT*random->uniform();
+
+      particle->add_particle(id,ispecies,i,x,v,erot,evib);
+      if (nfix_add_particle) 
+        modify->add_particle(particle->nlocal-1,temp_thermal,
+                             temp_rot,temp_vib,vstream);
+    }
+  }
+
+  memory->destroy(ncreate_values);
 
   delete random;
 }

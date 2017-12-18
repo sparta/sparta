@@ -34,7 +34,7 @@ class CreateParticles : protected Pointers {
   double erot(int);
 
  protected:
-  int imix,single,mspecies;
+  int imix,single,mspecies,twopass;
   double xp,yp,zp,vx,vy,vz;
   class Region *region;
 
@@ -54,6 +54,7 @@ class CreateParticles : protected Pointers {
 
   virtual void create_single();
   virtual void create_local(bigint);
+  void create_local_twopass(bigint);
   int species_variable(double *);
   double density_variable(double *, double *);
   double temperature_variable(double *);
