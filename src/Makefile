@@ -75,7 +75,7 @@ help:
 	@echo 'make mode=shlib machine  build SPARTA as shared lib for machine'
 	@echo 'make mode=shexe machine  build SPARTA as shared exe for machine'
 	@echo 'make makelist            create Makefile.list used by old makes'
-	@echo 'make -f Makefile.list machine     build LAMMPS for machine (old)'
+	@echo 'make -f Makefile.list machine     build SPARTA for machine (old)'
 	@echo ''
 	@echo 'machine is one of these from src/MAKE:'
 	@echo ''
