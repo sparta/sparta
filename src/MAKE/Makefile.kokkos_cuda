@@ -1,8 +1,9 @@
-# kokkos_cuda = KOKKOS package with CUDA support, OpenMPI, nvcc/mpicxx compiler
+# kokkos_cuda = KOKKOS package with CUDA support, MPI, nvcc/mpicxx compiler
 
 SHELL = /bin/sh
 
 KOKKOS_ABSOLUTE_PATH = $(shell cd $(KOKKOS_PATH); pwd)
+export MPICH_CXX = $(KOKKOS_ABSOLUTE_PATH)/config/nvcc_wrapper
 export OMPI_CXX = $(KOKKOS_ABSOLUTE_PATH)/config/nvcc_wrapper
 
 # ---------------------------------------------------------------------
@@ -23,7 +24,7 @@ ARCHIVE =	ar
 ARFLAGS =	-rc
 SHLIBFLAGS =	-shared
 KOKKOS_DEVICES = Cuda
-KOKKOS_ARCH = Pascal60,Power8
+KOKKOS_ARCH = Kepler35
 
 # ---------------------------------------------------------------------
 # SPARTA-specific settings
