@@ -49,9 +49,6 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
   copy = 0;
 }
 
-//SurfCollide::SurfCollide(SPARTA *sparta) : 
-//  Pointers(sparta) {}
-
 /* ---------------------------------------------------------------------- */
 
 SurfCollide::~SurfCollide()
