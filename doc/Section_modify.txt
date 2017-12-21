@@ -8,18 +8,18 @@ Section"_Section_python.html :c
 
 :line
 
-8. Modifying & extending SPARTA :h3
+10. Modifying & extending SPARTA :h3
 
 This section describes how to extend SPARTA by modifying its source code.
 
-8.1 "Compute styles"_#mod_1
-8.2 "Fix styles"_#mod_2
-8.3 "Region styles"_#mod_3
-8.4 "Collision styles"_#mod_4
-8.5 "Surface collision styles"_#mod_5
-8.6 "Chemistry styles"_#mod_6
-8.7 "Dump styles"_#mod_7
-8.8 "Input script commands"_#mod_8 :all(b)
+10.1 "Compute styles"_#mod_1
+10.2 "Fix styles"_#mod_2
+10.3 "Region styles"_#mod_3
+10.4 "Collision styles"_#mod_4
+10.5 "Surface collision styles"_#mod_5
+10.6 "Chemistry styles"_#mod_6
+10.7 "Dump styles"_#mod_7
+10.8 "Input script commands"_#mod_8 :all(b)
 
 SPARTA is designed in a modular fashion so as to be easy to modify and
 extend with new functionality.
@@ -115,7 +115,7 @@ consider adding it to the SPARTA distribution. :ule,l
 :line
 :line
 
-8.1 Compute styles :link(mod_1),h4
+10.1 Compute styles :link(mod_1),h4
 
 "Compute style commands"_compute.html calculate instantaneous
 properties of the simulated system.  They can be global properties, or
@@ -146,7 +146,7 @@ properties.  See the compute.h header file for one-line descriptions.
 
 :line
 
-8.2 Fix styles :link(mod_2),h4
+10.2 Fix styles :link(mod_2),h4
 
 "Fix style commands"_fix.html perform operations during the
 timestepping loop of a simulation.  They can define methods which are
@@ -188,7 +188,7 @@ particles as ambipolar ions, and a floatin-point array called
 
 :line
 
-8.3 Region styles :link(mod_3),h4
+10.3 Region styles :link(mod_3),h4
 
 "Region style commands"_region.html define geometric regions
 within the simulation box.  Other commands use regions
@@ -201,7 +201,7 @@ inside: determine whether a point is inside/outside the region
 
 :line
 
-8.4 Collision styles :link(mod_4),h4
+10.4 Collision styles :link(mod_4),h4
 
 "Collision style commands"_collide.html define collision models that
 calculate interactions between particles in the same grid cell.
@@ -221,7 +221,7 @@ perform_collision: calculate the outcome of a 2-particle collision :tb(s=:)
 
 :line
 
-8.5 Surface collision styles :link(mod_5),h4
+10.5 Surface collision styles :link(mod_5),h4
 
 "Surface collision style commands"_collide.html define collision
 models that calculate interactions between a particle and surface
@@ -237,7 +237,7 @@ dynamic: allow surface property to change during a simulation :tb(s=:)
 
 :line
 
-8.6 Chemistry styles :link(mod_6),h4
+10.6 Chemistry styles :link(mod_6),h4
 
 Particle/particle chemistry models in SPARTA are specified by
 "reaction style commands"_react.html which define lists of possible
@@ -252,7 +252,7 @@ attempt: attempt a chemical reaction between two particles :tb(s=:)
 
 :line
 
-8.7 Dump styles :link(mod_7),h4
+10.7 Dump styles :link(mod_7),h4
 
 "Dump commands"_dump.html output snapshots of simulation data to a
 file periodically during a simulation, in a particular file format.
@@ -273,7 +273,7 @@ memory_usage: tally memory usage :tb(s=:)
 
 :line
 
-8.8 Input script commands :link(mod_8),h4
+10.8 Input script commands :link(mod_8),h4
 
 New commands can be added to SPARTA that will be recognized in input
 scripts.  For example, the "create_particles"_create_particles.html,

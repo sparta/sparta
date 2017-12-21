@@ -6,18 +6,18 @@
 
 :line
 
-11. Future and history :h3
+13. Future and history :h3
 
 This section lists features we are planning to add to SPARTA, features
 of previous versions of SPARTA, and features of other parallel
 molecular dynamics codes I've distributed.
 
-11.1 "Coming attractions"_#hist_1
-11.2 "Past versions"_#hist_2 :all(b)
+13.1 "Coming attractions"_#hist_1
+13.2 "Past versions"_#hist_2 :all(b)
 
 :line
 
-11.1 Coming attractions :h4,link(hist_1)
+13.1 Coming attractions :h4,link(hist_1)
 
 The "wish list link"_http://sparta.sandia.gov/future.html on the
 SPARTA web page gives a list of features we are planning to add to
@@ -32,7 +32,7 @@ your wish to the list.
 
 :line
 
-11.2 Past versions :h4,link(hist_2)
+13.2 Past versions :h4,link(hist_2)
 
 Sandia's predecessor to SPARTA is a DSMC code called ICARUS.  It was
 developed in the early 1990s by Tim Bartel and "Steve

@@ -6,7 +6,7 @@
 
 :line
 
-5. Performance & scalability :h3
+8. Performance & scalability :h3
 
 The SPARTA distribution includes a bench sub-directory with several
 sample problems.  The Benchmarks page of the "SPARTA WWW Site"_sws

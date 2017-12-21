@@ -6,17 +6,17 @@
 
 :line
 
-9. Python interface to SPARTA :h3
+11. Python interface to SPARTA :h3
 
 This section describes how to build and use SPARTA via a Python
 interface.
 
-9.1 "Building SPARTA as a shared library"_#py_1
-9.2 "Installing the Python wrapper into Python"_#py_2
-9.3 "Extending Python with MPI to run in parallel"_#py_3
-9.4 "Testing the Python-SPARTA interface"_#py_4
-9.5 "Using SPARTA from Python"_#py_5
-9.6 "Example Python scripts that use SPARTA"_#py_6 :ul
+11.1 "Building SPARTA as a shared library"_#py_1
+11.2 "Installing the Python wrapper into Python"_#py_2
+11.3 "Extending Python with MPI to run in parallel"_#py_3
+11.4 "Testing the Python-SPARTA interface"_#py_4
+11.5 "Using SPARTA from Python"_#py_5
+11.6 "Example Python scripts that use SPARTA"_#py_6 :ul
 
 The SPARTA distribution includes the file python/sparta.py which wraps
 the library interface to SPARTA.  This file makes it is possible to
@@ -75,7 +75,7 @@ check which version of Python you have installed, by simply typing
 :line
 :line
 
-9.1 Building SPARTA as a shared library :link(py_1),h4
+11.1 Building SPARTA as a shared library :link(py_1),h4
 
 Instructions on how to build SPARTA as a shared library are given in
 "Section 2.4"_Section_start.html#start_4.  A shared library is one
@@ -100,7 +100,7 @@ MPI which may not be built as shared libraries on your system.
 
 :line
 
-9.2 Installing the Python wrapper into Python :link(py_2),h4
+11.2 Installing the Python wrapper into Python :link(py_2),h4
 
 For Python to invoke SPARTA, there are 2 files it needs to know about:
 
@@ -168,7 +168,7 @@ environment variable as described above.
 
 :line
 
-9.3 Extending Python with MPI to run in parallel :link(py_3),h4
+11.3 Extending Python with MPI to run in parallel :link(py_3),h4
 
 If you wish to run SPARTA in parallel from Python, you need to extend
 your Python with an interface to MPI.  This also allows you to
@@ -259,7 +259,7 @@ the right one.
 
 :line
 
-9.4 Testing the Python-SPARTA interface :link(py_4),h4
+11.4 Testing the Python-SPARTA interface :link(py_4),h4
 
 To test if SPARTA is callable from Python, launch Python interactively
 and type:
@@ -385,7 +385,7 @@ Python on a single processor, not in parallel.
 :line
 :line
 
-9.5 Using SPARTA from Python :link(py_5),h4
+11.5 Using SPARTA from Python :link(py_5),h4
 
 The Python interface to SPARTA consists of a Python "sparta" module,
 the source code for which is in python/sparta.py, which creates a
@@ -503,7 +503,7 @@ Python script.  Isn't ctypes amazing? :l,ule
 :line
 :line
 
-9.6 Example Python scripts that use SPARTA :link(py_6),h4
+11.6 Example Python scripts that use SPARTA :link(py_6),h4
 
 There are demonstration Python scripts included in the python/examples
 directory of the SPARTA distribution, to illustrate what is possible

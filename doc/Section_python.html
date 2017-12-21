@@ -9,17 +9,17 @@
 
 <HR>
 
-<H3>9. Python interface to SPARTA 
+<H3>11. Python interface to SPARTA 
 </H3>
 <P>This section describes how to build and use SPARTA via a Python
 interface.
 </P>
-<UL><LI>9.1 <A HREF = "#py_1">Building SPARTA as a shared library</A>
-<LI>9.2 <A HREF = "#py_2">Installing the Python wrapper into Python</A>
-<LI>9.3 <A HREF = "#py_3">Extending Python with MPI to run in parallel</A>
-<LI>9.4 <A HREF = "#py_4">Testing the Python-SPARTA interface</A>
-<LI>9.5 <A HREF = "#py_5">Using SPARTA from Python</A>
-<LI>9.6 <A HREF = "#py_6">Example Python scripts that use SPARTA</A> 
+<UL><LI>11.1 <A HREF = "#py_1">Building SPARTA as a shared library</A>
+<LI>11.2 <A HREF = "#py_2">Installing the Python wrapper into Python</A>
+<LI>11.3 <A HREF = "#py_3">Extending Python with MPI to run in parallel</A>
+<LI>11.4 <A HREF = "#py_4">Testing the Python-SPARTA interface</A>
+<LI>11.5 <A HREF = "#py_5">Using SPARTA from Python</A>
+<LI>11.6 <A HREF = "#py_6">Example Python scripts that use SPARTA</A> 
 </UL>
 <P>The SPARTA distribution includes the file python/sparta.py which wraps
 the library interface to SPARTA.  This file makes it is possible to
@@ -79,7 +79,7 @@ check which version of Python you have installed, by simply typing
 
 <HR>
 
-<A NAME = "py_1"></A><H4>9.1 Building SPARTA as a shared library 
+<A NAME = "py_1"></A><H4>11.1 Building SPARTA as a shared library 
 </H4>
 <P>Instructions on how to build SPARTA as a shared library are given in
 <A HREF = "Section_start.html#start_4">Section 2.4</A>.  A shared library is one
@@ -104,7 +104,7 @@ MPI which may not be built as shared libraries on your system.
 </P>
 <HR>
 
-<A NAME = "py_2"></A><H4>9.2 Installing the Python wrapper into Python 
+<A NAME = "py_2"></A><H4>11.2 Installing the Python wrapper into Python 
 </H4>
 <P>For Python to invoke SPARTA, there are 2 files it needs to know about:
 </P>
@@ -172,7 +172,7 @@ environment variable as described above.
 </P>
 <HR>
 
-<A NAME = "py_3"></A><H4>9.3 Extending Python with MPI to run in parallel 
+<A NAME = "py_3"></A><H4>11.3 Extending Python with MPI to run in parallel 
 </H4>
 <P>If you wish to run SPARTA in parallel from Python, you need to extend
 your Python with an interface to MPI.  This also allows you to
@@ -263,7 +263,7 @@ the right one.
 </P>
 <HR>
 
-<A NAME = "py_4"></A><H4>9.4 Testing the Python-SPARTA interface 
+<A NAME = "py_4"></A><H4>11.4 Testing the Python-SPARTA interface 
 </H4>
 <P>To test if SPARTA is callable from Python, launch Python interactively
 and type:
@@ -390,7 +390,7 @@ Python on a single processor, not in parallel.
 
 <HR>
 
-<A NAME = "py_5"></A><H4>9.5 Using SPARTA from Python 
+<A NAME = "py_5"></A><H4>11.5 Using SPARTA from Python 
 </H4>
 <P>The Python interface to SPARTA consists of a Python "sparta" module,
 the source code for which is in python/sparta.py, which creates a
@@ -509,7 +509,7 @@ Python script.  Isn't ctypes amazing?
 
 <HR>
 
-<A NAME = "py_6"></A><H4>9.6 Example Python scripts that use SPARTA 
+<A NAME = "py_6"></A><H4>11.6 Example Python scripts that use SPARTA 
 </H4>
 <P>There are demonstration Python scripts included in the python/examples
 directory of the SPARTA distribution, to illustrate what is possible

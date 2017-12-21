@@ -8,18 +8,18 @@ Section"_Section_history.html :c
 
 :line
 
-10. Errors :h3
+12. Errors :h3
 
 This section describes the various kinds of errors you can encounter
 when using SPARTA.
 
-10.1 "Common problems"_#err_1
-10.2 "Reporting bugs"_#err_2
-10.3 "Error & warning messages"_#err_3 :all(b)
+12.1 "Common problems"_#err_1
+12.2 "Reporting bugs"_#err_2
+12.3 "Error & warning messages"_#err_3 :all(b)
 
 :line
 
-10.1 Common problems :link(err_1),h4
+12.1 Common problems :link(err_1),h4
 
 If two SPARTA runs do not produce the same answer on different
 machines or different numbers of processors, this is typically not a
@@ -94,7 +94,7 @@ buffering or boost the sizes of messages that can be buffered.
 
 :line
 
-10.2 Reporting bugs :link(err_2),h4
+12.2 Reporting bugs :link(err_2),h4
 
 If you are confident that you have found a bug in SPARTA, please
 follow these steps.
@@ -115,7 +115,7 @@ problem.
 
 :line
 
-10.3 Error & warning messages :h4,link(err_3)
+12.3 Error & warning messages :h4,link(err_3)
 
 These are two alphabetic lists of the "ERROR"_#error and
 "WARNING"_#warn messages SPARTA prints out and the reason why.  If the

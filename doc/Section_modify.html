@@ -11,18 +11,18 @@ Section</A>
 
 <HR>
 
-<H3>8. Modifying & extending SPARTA 
+<H3>10. Modifying & extending SPARTA 
 </H3>
 <P>This section describes how to extend SPARTA by modifying its source code.
 </P>
-8.1 <A HREF = "#mod_1">Compute styles</A><BR>
-8.2 <A HREF = "#mod_2">Fix styles</A><BR>
-8.3 <A HREF = "#mod_3">Region styles</A><BR>
-8.4 <A HREF = "#mod_4">Collision styles</A><BR>
-8.5 <A HREF = "#mod_5">Surface collision styles</A><BR>
-8.6 <A HREF = "#mod_6">Chemistry styles</A><BR>
-8.7 <A HREF = "#mod_7">Dump styles</A><BR>
-8.8 <A HREF = "#mod_8">Input script commands</A> <BR>
+10.1 <A HREF = "#mod_1">Compute styles</A><BR>
+10.2 <A HREF = "#mod_2">Fix styles</A><BR>
+10.3 <A HREF = "#mod_3">Region styles</A><BR>
+10.4 <A HREF = "#mod_4">Collision styles</A><BR>
+10.5 <A HREF = "#mod_5">Surface collision styles</A><BR>
+10.6 <A HREF = "#mod_6">Chemistry styles</A><BR>
+10.7 <A HREF = "#mod_7">Dump styles</A><BR>
+10.8 <A HREF = "#mod_8">Input script commands</A> <BR>
 
 <P>SPARTA is designed in a modular fashion so as to be easy to modify and
 extend with new functionality.
@@ -119,7 +119,7 @@ consider adding it to the SPARTA distribution.
 
 <HR>
 
-<A NAME = "mod_1"></A><H4>8.1 Compute styles 
+<A NAME = "mod_1"></A><H4>10.1 Compute styles 
 </H4>
 <P><A HREF = "compute.html">Compute style commands</A> calculate instantaneous
 properties of the simulated system.  They can be global properties, or
@@ -152,7 +152,7 @@ properties.  See the compute.h header file for one-line descriptions.
 </P>
 <HR>
 
-<A NAME = "mod_2"></A><H4>8.2 Fix styles 
+<A NAME = "mod_2"></A><H4>10.2 Fix styles 
 </H4>
 <P><A HREF = "fix.html">Fix style commands</A> perform operations during the
 timestepping loop of a simulation.  They can define methods which are
@@ -198,7 +198,7 @@ particles as ambipolar ions, and a floatin-point array called
 </P>
 <HR>
 
-<A NAME = "mod_3"></A><H4>8.3 Region styles 
+<A NAME = "mod_3"></A><H4>10.3 Region styles 
 </H4>
 <P><A HREF = "region.html">Region style commands</A> define geometric regions
 within the simulation box.  Other commands use regions
@@ -211,7 +211,7 @@ class.  See region.h for details.  The inside() method is required.
 </P>
 <HR>
 
-<A NAME = "mod_4"></A><H4>8.4 Collision styles 
+<A NAME = "mod_4"></A><H4>10.4 Collision styles 
 </H4>
 <P><A HREF = "collide.html">Collision style commands</A> define collision models that
 calculate interactions between particles in the same grid cell.
@@ -233,7 +233,7 @@ except init() and modify_params().
 
 <HR>
 
-<A NAME = "mod_5"></A><H4>8.5 Surface collision styles 
+<A NAME = "mod_5"></A><H4>10.5 Surface collision styles 
 </H4>
 <P><A HREF = "collide.html">Surface collision style commands</A> define collision
 models that calculate interactions between a particle and surface
@@ -251,7 +251,7 @@ required except dynamic().
 
 <HR>
 
-<A NAME = "mod_6"></A><H4>8.6 Chemistry styles 
+<A NAME = "mod_6"></A><H4>10.6 Chemistry styles 
 </H4>
 <P>Particle/particle chemistry models in SPARTA are specified by
 <A HREF = "react.html">reaction style commands</A> which define lists of possible
@@ -268,7 +268,7 @@ the attempt() method is required.
 
 <HR>
 
-<A NAME = "mod_7"></A><H4>8.7 Dump styles 
+<A NAME = "mod_7"></A><H4>10.7 Dump styles 
 </H4>
 <P><A HREF = "dump.html">Dump commands</A> output snapshots of simulation data to a
 file periodically during a simulation, in a particular file format.
@@ -291,7 +291,7 @@ memory_usage() methods are optional; all the others are required.
 
 <HR>
 
-<A NAME = "mod_8"></A><H4>8.8 Input script commands 
+<A NAME = "mod_8"></A><H4>10.8 Input script commands 
 </H4>
 <P>New commands can be added to SPARTA that will be recognized in input
 scripts.  For example, the <A HREF = "create_particles.html">create_particles</A>,
