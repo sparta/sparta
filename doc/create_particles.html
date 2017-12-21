@@ -30,14 +30,15 @@
 </PRE>
 <LI>zero or more keyword/value pairs may be appended 
 
-<LI>keyword = <I>global</I> or <I>region</I> or <I>species</I> or <I>density</I> or <I>temperature</I> or <I>velocity</I> 
+<LI>keyword = <I>global</I> or <I>region</I> or <I>species</I> or <I>density</I> or <I>temperature</I> or <I>velocity</I> or <I>twopass</I> 
 
 <PRE>  <I>global</I> value = <I>yes</I> or <I>no</I>
   <I>region</I> value = region-ID
   <I>species</I> values = svar xvar yvar zvar
   <I>density</I> values = dvar xvar yvar zvar
   <I>temperature</I> values = tvar xvar yvar zvar
-  <I>velocity</I> values = vxvar vyvar vzvar xvar yvar zvar 
+  <I>velocity</I> values = vxvar vyvar vzvar xvar yvar zvar
+  <I>twopass</I> values = none 
 </PRE>
 
 </UL>
@@ -50,7 +51,7 @@ create_particles air single 3 5.0 6.0 5.4 10.0 -1.0 0.0
 create_particles air n 0 species mySpecies xpos NULL zpos
 create_particles air n 0 density myDens xgrid ygrid NULL
 create_particles air n 0 temperature myTemp xgrid ygrid zgrid
-create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL 
+create_particles air n 0 velocity myVx NULL myVz xpos ypos NULL twopass 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -313,6 +314,16 @@ create_particles air n 10000 velocity vx vy NULL x y NULL
 </PRE>
 <CENTER><A HREF = "JPG/velocity_variation.gif"><IMG SRC = "JPG/velocity_variation_small.jpg"></A>
 </CENTER>
+<P>The <I>twopass</I> keyword does not require a value.  If used, the
+creation procedure will loop over the creation grid cells twice, the
+same as the KOKKOS package version of this command does, so that it can
+reallocate memory efficiently, e.g. on a GPU.  If this keyword is used
+the non-KOKKOS and KOKKOS version will generate exactly the same set
+of particles, which makes debugging easier.  If the keyword is not
+used, the non-KOKKOS and KOKKOS runs will use random numbers
+differently and thus generate different particles, though they will be
+statistically similar.
+</P>
 <HR>
 
 <P>This command (or more generically styles) can take a suffix as shown
