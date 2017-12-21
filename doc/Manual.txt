@@ -101,7 +101,6 @@ it gives quick access to documentation for all SPARTA commands.
   3.4 "Commands listed by category"_cmd_4 :b
   3.5 "Commands listed alphabetically"_cmd_5 :ule,b
 "Packages"_Section_packages.html :l
-  4.1 "SPARTA packages"_pkg_1 :ulb,b,ule
 "Accelerating SPARTA performance"_Section_accelerate.html :l
   5.1 "Measuring performance"_acc_1 :ulb,b
   5.2 "Packages with optimized styles"_acc_2 :ule,b
@@ -165,8 +164,6 @@ it gives quick access to documentation for all SPARTA commands.
 :link(cmd_3,Section_commands.html#cmd_3)
 :link(cmd_4,Section_commands.html#cmd_4)
 :link(cmd_5,Section_commands.html#cmd_5)
-
-:link(pkg_1,Section_packages.html#pkg_1)
 
 :link(acc_1,Section_accelerate.html#acc_1)
 :link(acc_2,Section_accelerate.html#acc_2)
