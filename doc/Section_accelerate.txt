@@ -20,7 +20,7 @@ contains code optimized for certain kinds of hardware, including
 multi-core CPUs, GPUs, and Intel Xeon Phi coprocessors.
 
 5.1 "Measuring performance"_#acc_1 :ulb,l
-5.2 "Accelerator packages with optimized styles"_#acc_3 :l
+5.2 "Accelerator packages with optimized styles"_#acc_2 :l
     5.2.1 "KOKKOS package"_accelerate_kokkos.html :l
 :ule
 
@@ -77,7 +77,7 @@ SPARTA, to obtain synchronized timings.
 
 :line
 
-5.3 Packages with optimized styles :h4,link(acc_3)
+5.2 Packages with optimized styles :h4,link(acc_2)
 
 Accelerated versions of various "collide_style"_collide_style.html,
 "fixes"_fix.html, "computes"_compute.html, and other commands have

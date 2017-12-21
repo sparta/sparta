@@ -100,37 +100,42 @@ it gives quick access to documentation for all SPARTA commands.
   3.3 "Input script structure"_cmd_3 :b
   3.4 "Commands listed by category"_cmd_4 :b
   3.5 "Commands listed alphabetically"_cmd_5 :ule,b
+"Packages"_Section_packages.html :l
+  4.1 "SPARTA packages"_pkg_1 :ulb,b,ule
+"Accelerating SPARTA performance"_Section_accelerate.html :l
+  5.1 "Measuring performance"_acc_1 :ulb,b
+  5.2 "Packages with optimized styles"_acc_2 :ule,b
 "How-to discussions"_Section_howto.html :l
-  4.1 "2d simulations"_howto_1 :ulb,b
-  4.2 "Axisymmetric simulations"_howto_2 :b
-  4.3 "Running multiple simulations from one input script"_howto_3 :b
-  4.4 "Output from SPARTA"_howto_4 :b
-  4.5 "Visualizing SPARTA snapshots"_howto_5 :b
-  4.6 "Library interface to SPARTA"_howto_6 :b
-  4.7 "Coupling SPARTA to other codes"_howto_7 :b
-  4.8 "Details of grid geometry in SPARTA"_howto_8 :b
-  4.9 "Details of surfaces in SPARTA"_howto_9 :b
-  4.10 "Restarting a simulation"_howto_10 :b
-  4.11 "Using the ambipolar approximation"_howto_11 :ule,b
+  6.1 "2d simulations"_howto_1 :ulb,b
+  6.2 "Axisymmetric simulations"_howto_2 :b
+  6.3 "Running multiple simulations from one input script"_howto_3 :b
+  6.4 "Output from SPARTA"_howto_4 :b
+  6.5 "Visualizing SPARTA snapshots"_howto_5 :b
+  6.6 "Library interface to SPARTA"_howto_6 :b
+  6.7 "Coupling SPARTA to other codes"_howto_7 :b
+  6.8 "Details of grid geometry in SPARTA"_howto_8 :b
+  6.9 "Details of surfaces in SPARTA"_howto_9 :b
+  6.10 "Restarting a simulation"_howto_10 :b
+  6.11 "Using the ambipolar approximation"_howto_11 :ule,b
 "Example problems"_Section_example.html :l
 "Performance & scalability"_Section_perf.html :l
 "Additional tools"_Section_tools.html :l
 "Modifying & extending SPARTA"_Section_modify.html :l
 "Python interface"_Section_python.html :l
-  9.1 "Extending Python with a serial version of SPARTA"_py_1 :ulb,b
-  9.2 "Creating a shared MPI library"_py_2 :b
-  9.3 "Extending Python with a parallel version of SPARTA"_py_3 :b
-  9.4 "Extending Python with MPI"_py_4 :b
-  9.5 "Testing the Python-SPARTA interface"_py_5 :b
-  9.6 "Using SPARTA from Python"_py_6 :b
-  9.7 "Example Python scripts that use SPARTA"_py_7 :ule,b
+  11.1 "Extending Python with a serial version of SPARTA"_py_1 :ulb,b
+  11.2 "Creating a shared MPI library"_py_2 :b
+  11.3 "Extending Python with a parallel version of SPARTA"_py_3 :b
+  11.4 "Extending Python with MPI"_py_4 :b
+  11.5 "Testing the Python-SPARTA interface"_py_5 :b
+  11.6 "Using SPARTA from Python"_py_6 :b
+  11.7 "Example Python scripts that use SPARTA"_py_7 :ule,b
 "Errors"_Section_errors.html :l
-  10.1 "Common problems"_err_1 :ulb,b
-  10.2 "Reporting bugs"_err_2 :b
-  10.3 "Error & warning messages"_err_3 :ule,b
+  12.1 "Common problems"_err_1 :ulb,b
+  12.2 "Reporting bugs"_err_2 :b
+  12.3 "Error & warning messages"_err_3 :ule,b
 "Future and history"_Section_history.html :l
-  11.1 "Coming attractions"_hist_1 :ulb,b
-  11.2 "Past versions"_hist_2 :ule,b
+  13.1 "Coming attractions"_hist_1 :ulb,b
+  13.2 "Past versions"_hist_2 :ule,b
 :ole
 
 :link(intro_1,Section_intro.html#intro_1)
@@ -152,6 +157,11 @@ it gives quick access to documentation for all SPARTA commands.
 :link(cmd_3,Section_commands.html#cmd_3)
 :link(cmd_4,Section_commands.html#cmd_4)
 :link(cmd_5,Section_commands.html#cmd_5)
+
+:link(pkg_1,Section_packages.html#pkg_1)
+
+:link(acc_1,Section_accelerate.html#acc_1)
+:link(acc_2,Section_accelerate.html#acc_2)
 
 :link(howto_1,Section_howto.html#howto_1)
 :link(howto_2,Section_howto.html#howto_2)
