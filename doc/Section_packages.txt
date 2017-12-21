@@ -50,7 +50,7 @@ ext = external library: you will need to download and install it on your machine
 
 :line
 
-[SPARTA packages] :link(table_standard),p
+[SPARTA packages] :link(pkg_1),p
 
 Package, Description, Doc page, Example, Library
 "FFT"_#FFT, fast Fourier transforms, "compute_style compute/fft/grid"_compute_fft_grid.html, fft, int or ext

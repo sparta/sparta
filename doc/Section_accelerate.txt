@@ -81,16 +81,16 @@ SPARTA, to obtain synchronized timings.
 
 Accelerated versions of various "collide_style"_collide_style.html,
 "fixes"_fix.html, "computes"_compute.html, and other commands have
-been added to SPARTA via the KOKKOS package, which may run faster than the
-standard non-accelerated versions.
+been added to SPARTA via the KOKKOS package, which may run faster than
+the standard non-accelerated versions.
 
-All of these commands are in the KOKKOS package provided with SPARTA.  An
-overview of packages is give in "Section
+All of these commands are in the KOKKOS package provided with SPARTA.
+An overview of packages is give in "Section
 packages"_Section_packages.html.
 
-SPARTA currently has acceleration support for
-three kinds of hardware, via the KOKKOS package: Many-core CPUs, NVIDIA GPUs, and
-Intel Xeon Phi.
+SPARTA currently has acceleration support for three kinds of hardware,
+via the KOKKOS package: Many-core CPUs, NVIDIA GPUs, and Intel Xeon
+Phi.
 
 Whether you will see speedup for your hardware may depend on the size
 problem you are running and what commands (accelerated and
@@ -102,18 +102,17 @@ Any accelerated style has the same name as the corresponding standard
 style, except that a suffix is appended.  Otherwise, the syntax for
 the command that uses the style is identical, their functionality is
 the same, and the numerical results it produces should also be the
-same, except for precision and round-off effects, and differences in random
-numbers.
+same, except for precision and round-off effects, and differences in
+random numbers.
 
 For example, the KOKKOS package provides an accelerated variant of the
 Temperature Compute "compute temp"_compute_temp.html, namely "compute
 temp/kk"_compute_temp.html
 
-To see what accelerate styles are currently available, see
-"Section 3.5"_Section_commands.html#cmd_5 of the manual.  The
-doc pages for individual commands (e.g. "compute temp"_compute_temp.html)
-also list any accelerated variants available
-for that style.
+To see what accelerate styles are currently available, see "Section
+3.5"_Section_commands.html#cmd_5 of the manual.  The doc pages for
+individual commands (e.g. "compute temp"_compute_temp.html) also list
+any accelerated variants available for that style.
 
 To use an accelerator package in SPARTA, and one or more of the styles
 it provides, follow these general steps:
@@ -135,10 +134,10 @@ use accelerated styles in your input via "-sf" "command-line switch"_Section_sta
 
 Note that the first 3 steps can be done as a single command with
 suitable make command invocations. This is discussed in "Section
-4"_Section_packages.html of the manual, and its use is
-illustrated in the individual accelerator sections.  Typically these
-steps only need to be done once, to create an executable that uses one
-or more accelerator packages.
+4"_Section_packages.html of the manual, and its use is illustrated in
+the individual accelerator sections.  Typically these steps only need
+to be done once, to create an executable that uses one or more
+accelerator packages.
 
 The last 4 steps can all be done from the command-line when SPARTA is
 launched, without changing your input script, as illustrated in the
@@ -146,11 +145,11 @@ individual accelerator sections.  Or you can add
 "package"_package.html and "suffix"_suffix.html commands to your input
 script.
 
-The "Benchmark
-page"_http://sparta.sandia.gov/bench.html of the SPARTA web site gives
-performance results for the various accelerator packages for several
-of the standard SPARTA benchmark problems, as a function of problem
-size and number of compute nodes, on different hardware platforms.
+The "Benchmark page"_http://sparta.sandia.gov/bench.html of the SPARTA
+web site gives performance results for the various accelerator
+packages for several of the standard SPARTA benchmark problems, as a
+function of problem size and number of compute nodes, on different
+hardware platforms.
 
 Here is a brief summary of what the KOKKOS package provides.
 

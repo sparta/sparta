@@ -39,7 +39,7 @@ parallel machines as well as commodity clusters.
 :link(mpi,http://www-unix.mcs.anl.gov/mpi)
 
 SPARTA can model systems with only a few particles up to millions or
-billions.  See "Section 6"_Section_perf.html for information on SPARTA
+billions.  See "Section 8"_Section_perf.html for information on SPARTA
 performance and scalability, or the Benchmarks section of the "SPARTA
 WWW Site"_sws.
 

@@ -57,7 +57,7 @@ the box itself has been defined.  Likewise you cannot read in
 triangulated surfaces until a grid has been defined to store them.
 
 Many input script errors are detected by SPARTA and an ERROR or
-WARNING message is printed.  "Section 10"_Section_errors.html gives
+WARNING message is printed.  "Section 12"_Section_errors.html gives
 more information on what errors mean.  The documentation for each
 command lists restrictions on how the command can be used.
 
