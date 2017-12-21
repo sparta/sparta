@@ -29,6 +29,7 @@ bench                      benchmark problems
 data                       files with species/reaction params, surface files
 doc                        documentation
 examples                   simple test problems
+lib                        additional library files
 python                     Python wrapper on SPARTA as a library
 src                        source files
 tools                      pre- and post-processing tools
