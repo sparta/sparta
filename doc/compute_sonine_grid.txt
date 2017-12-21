@@ -139,7 +139,7 @@ group, the 6th thru 8th columns would be the A1, A2, A3 moments of the
 
 This compute performs calculations for all flavors of child grid cells
 in the simulation, which includes unsplit, cut, split, and sub cells.
-See "Section 4.8"_Section_howto.html#howto_8 of the manual gives
+See "Section 6.8"_Section_howto.html#howto_8 of the manual gives
 details of how SPARTA defines child, unsplit, split, and sub cells.
 Note that cells inside closed surfaces contain no particles.  These
 could be unsplit or cut cells (if they have zero flow volume).  Both
@@ -152,7 +152,7 @@ Grid cells not in the specified {group-ID} will have zeroes for all
 their values.
 
 The array can be accessed by any command that uses per-grid values
-from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
+from a compute as input.  See "Section 6.4"_Section_howto.html#howto_4
 for an overview of SPARTA output options.
 
 The per-grid array values will be in the "units"_units.html

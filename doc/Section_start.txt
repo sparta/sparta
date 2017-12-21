@@ -542,8 +542,8 @@ package-related make options.
 
 SPARTA can be built as either a static or shared library, which can
 then be called from another application or a scripting language.  See
-"Section 4.7"_Section_howto.html#howto_7 for more info on coupling
-SPARTA to other codes.  See "Section 9"_Section_python.html for more
+"Section 6.7"_Section_howto.html#howto_7 for more info on coupling
+SPARTA to other codes.  See "Section 11"_Section_python.html for more
 info on wrapping and running SPARTA from Python.
 
 [Static library:] :h5
@@ -712,7 +712,7 @@ your working directory, which is probably not what you want.
 
 If SPARTA encounters errors in the input script or while running a
 simulation it will print an ERROR message and stop or a WARNING
-message and continue.  See "Section 10"_Section_errors.html for a
+message and continue.  See "Section 12"_Section_errors.html for a
 discussion of the various kinds of errors SPARTA can or can't detect,
 a list of all ERROR and WARNING messages, and what to do about them.
 
@@ -880,7 +880,7 @@ desktop), you can run on more (virtual) processors than you have
 physical processors.
 
 To run multiple independent simulatoins from one input script, using
-multiple partitions, see "Section 4.3"_Section_howto.html#howto_3 of
+multiple partitions, see "Section 6.3"_Section_howto.html#howto_3 of
 the manual.  World- and universe-style variables are useful in this
 context.
 

@@ -29,7 +29,7 @@ a compute are instantaneous values, meaning they are calculated from
 information about the current timestep.  Examples include calculation
 of the system temperature or counting collisions of particles with
 surface elements.  Code for new computes can be added to SPARTA; see
-"Section 8"_Section_modify.html of the manual for details.
+"Section 10"_Section_modify.html of the manual for details.
 
 Note that defining a compute does not perform a computation.  Instead
 computes are invoked by other SPARTA commands as needed, e.g. to

@@ -25,7 +25,7 @@ SPARTA works.
 6.11 "Using the ambipolar approximation"_#howto_11 :all(b)
 
 The example input scripts included in the SPARTA distribution and
-highlighted in "Section 5"_Section_example.html of the manual also
+highlighted in "Section 7"_Section_example.html of the manual also
 show how to setup and run various kinds of simulations.
 
 :line

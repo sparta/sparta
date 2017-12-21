@@ -84,7 +84,7 @@ inputs.
 
 This compute performs calculations for all flavors of child grid cells
 in the simulation, which includes unsplit, cut, split, and sub cells.
-See "Section 4.8"_Section_howto.html#howto_8 of the manual gives
+See "Section 6.8"_Section_howto.html#howto_8 of the manual gives
 details of how SPARTA defines child, unsplit, split, and sub cells.
 The {id} and {xlo,ylo,zlo} and {xhi,yhi,zhi} values for a split cell
 and its sub cells are all the same.  The {vol} of a cut cell is the

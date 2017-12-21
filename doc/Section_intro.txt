@@ -55,7 +55,7 @@ of the open-source philosophy.
 
 SPARTA is designed to be easy to modify or extend with new
 capabilities, such as new collision or chemistry models, boundary
-conditions, or diagnostics.  See "Section 8"_Section_modify.html for
+conditions, or diagnostics.  See "Section 10"_Section_modify.html for
 more details.
 
 SPARTA is written in C++ which is used at a hi-level to structure the
@@ -80,7 +80,7 @@ illustrates the kinds of grid geometries and surface definitions which
 SPARTA supports.
 
 If SPARTA doesn't have your favorite collision model, boundary
-condition, or diagnostic, see "Section 8"_Section_modify.html of the
+condition, or diagnostic, see "Section 10"_Section_modify.html of the
 manual, which describes how it can be added to SPARTA.
 
 General features :h4
@@ -152,7 +152,7 @@ Output :h4
 Pre- and post-processing :h4
 
 Various pre- and post-processing serial tools are packaged with
-SPARTA; see "Section 7"_Section_tools.html of the manual. :ulb,l
+SPARTA; see "Section 9"_Section_tools.html of the manual. :ulb,l
 
 Our group has also written and released a separate toolkit called
 "Pizza.py"_pizza which provides tools for doing setup, analysis,
@@ -244,7 +244,7 @@ Site"_sws, or have a suggestion for something to clarify or include,
 send an email to the
 "developers"_http://sparta.sandia.gov/authors.html. :l
 
-If you find a bug, "Section 10.1"_Section_errors.html#err_2 describes
+If you find a bug, "Section 12.1"_Section_errors.html#err_2 describes
 how to report it. :l
 
 If you publish a paper using SPARTA results, send the citation (and
@@ -254,13 +254,13 @@ back to you. :l
 
 The tools sub-directory of the SPARTA distribution has various
 stand-alone codes for pre- and post-processing of SPARTA data.  More
-details are given in "Section 7"_Section_tools.html.  If you write a
+details are given in "Section 9"_Section_tools.html.  If you write a
 new tool that others will find useful, it can be added to the SPARTA
 distribution. :l
 
 SPARTA is designed to be easy to extend with new code for features
 like boundary conditions, collision or chemistry models, diagnostic
-computations, etc.  "Section 8"_Section_modify.html of the manual
+computations, etc.  "Section 10"_Section_modify.html of the manual
 gives details.  If you add a feature of general interest, it can be
 added to the SPARTA distribution. :l
 

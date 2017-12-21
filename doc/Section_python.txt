@@ -468,7 +468,7 @@ What is returned depends on whether the compute calculates a scalar or
 vector or array.  For a scalar, a single double value is returned.  If
 the compute or fix calculates a vector or array, a pointer to the
 internal SPARTA data is returned, which you can use via normal Python
-subscripting.  See "Section 4.4"_Section_howto.html#howto_4 of the
+subscripting.  See "Section 6.4"_Section_howto.html#howto_4 of the
 manual for a discussion of global, per particle, per grid, and per
 surf data, and of scalar, vector, and array data types.  See the doc
 pages for individual "computes"_compute.html for a description of what

@@ -245,7 +245,7 @@ Surface elements not in the specified {group-ID} will output zeroes
 for all their values.
 
 The array can be accessed by any command that uses per-surf values
-from a compute as input.  See "Section 4.4"_Section_howto.html#howto_4
+from a compute as input.  See "Section 6.4"_Section_howto.html#howto_4
 for an overview of SPARTA output options.
 
 The per-surf array values will be in the "units"_units.html

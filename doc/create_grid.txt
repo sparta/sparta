@@ -72,7 +72,7 @@ as the round-robin assignment scheme for grids with multiple levels
 (described below), will produce dispersed assignments of child cells
 to each processor.
 
-IMPORTANT NOTE: See "Section 5.8"_Section_howto.html#howto_8 of the
+IMPORTANT NOTE: See "Section 6.8"_Section_howto.html#howto_8 of the
 manual for an explanation of clumped and dispersed grid cell
 assignments and their relative performance trade-offs.  The
 "balance_grid"_balance_grid.html command can be used after the grid is
