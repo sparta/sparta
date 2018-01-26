@@ -78,7 +78,7 @@ class FixAveGrid : public Fix {
   void options(int, int, char **);
   void grow();
   bigint nextvalid();
-  void grow_percell(int);
+  virtual void grow_percell(int);
 };
 
 }
