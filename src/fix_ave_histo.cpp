@@ -339,7 +339,7 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
       if (argindex[i] &&
           argindex[i] > modify->fix[ifix]->size_per_particle_cols)
         error->all(FLERR,"Fix ave/histo fix array is accessed out-of-range");
-      if (nevery % modify->fix[ifix]->global_freq)
+      if (nevery % modify->fix[ifix]->per_particle_freq)
         error->all(FLERR,
                    "Fix for fix ave/histo not computed at compatible time");
 
@@ -360,7 +360,7 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
       if (argindex[i] &&
           argindex[i] > modify->fix[ifix]->size_per_grid_cols)
         error->all(FLERR,"Fix ave/histo fix array is accessed out-of-range");
-      if (nevery % modify->fix[ifix]->global_freq)
+      if (nevery % modify->fix[ifix]->per_grid_freq)
         error->all(FLERR,
                    "Fix for fix ave/histo not computed at compatible time");
 
