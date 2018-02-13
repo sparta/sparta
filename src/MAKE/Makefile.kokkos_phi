@@ -1,4 +1,4 @@
-# kokkos_phi = KOKKOS package with PHI support, Intel compiler, default MPI
+# kokkos_phi = KOKKOS package with OpenMP backend, KNL Xeon Phi support, Cray System, default MPI
 
 SHELL = /bin/sh
 

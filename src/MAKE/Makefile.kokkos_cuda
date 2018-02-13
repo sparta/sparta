@@ -1,4 +1,4 @@
-# kokkos_cuda = KOKKOS package with CUDA support, MPI, nvcc/mpicxx compiler
+# kokkos_cuda = KOKKOS package with CUDA backend, default MPI, nvcc/mpicxx compiler with OpenMPI or MPICH
 
 SHELL = /bin/sh
 
