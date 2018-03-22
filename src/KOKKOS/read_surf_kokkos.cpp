@@ -82,7 +82,7 @@ void ReadSurfKokkos::grow_surf()
       surf_kk->modify(Host,PT_MASK); // force resize on host
       surf_kk->k_pts.resize(maxpoint);
     }
-    pts = surf_kk->k_pts.h_view.ptr_on_device();
+    pts = surf_kk->k_pts.h_view.data();
 
     if (lines == NULL)
         surf_kk->k_lines = tdual_line_1d("surf:lines",maxline);
@@ -91,7 +91,7 @@ void ReadSurfKokkos::grow_surf()
       surf_kk->modify(Host,LINE_MASK); // force resize on host
       surf_kk->k_lines.resize(maxline);
     }
-    lines = surf_kk->k_lines.h_view.ptr_on_device();
+    lines = surf_kk->k_lines.h_view.data();
 
     if (tris == NULL)
         surf_kk->k_tris = tdual_tri_1d("surf:tris",maxtri);
@@ -100,6 +100,6 @@ void ReadSurfKokkos::grow_surf()
       surf_kk->modify(Host,TRI_MASK); // force resize on host
       surf_kk->k_tris.resize(maxtri);
     }
-    tris = surf_kk->k_tris.h_view.ptr_on_device();
+    tris = surf_kk->k_tris.h_view.data();
   }
 }

@@ -152,7 +152,7 @@ void FixEmitFaceKokkos::perform_task()
   else k_tasks.sync<SPADeviceType>();
 
   auto ninsert_dim1 = perspecies ? nspecies : 1;
-  if (d_ninsert.dimension_0() < ntask * ninsert_dim1)
+  if (d_ninsert.extent(0) < ntask * ninsert_dim1)
     d_ninsert = DAT::t_int_1d("ninsert", ntask * ninsert_dim1);
 
   copymode = 1;
@@ -178,10 +178,10 @@ void FixEmitFaceKokkos::perform_task()
   //   shift Maxwellian distribution by stream velocity component
   //   see Bird 1994, p 259, eq 12.5
 
-  if (d_x.dimension_0() < ncands || d_x.dimension_1() < l_dimension)
+  if (d_x.extent(0) < ncands || d_x.extent(1) < l_dimension)
     d_x = DAT::t_float_2d("x", ncands, l_dimension);
 
-  if (d_task.dimension_0() < ncands) {
+  if (d_task.extent(0) < ncands) {
     d_beta_un  = DAT::t_float_1d("beta_un", ncands);
     d_theta    = DAT::t_float_1d("theta", ncands);
     d_vr       = DAT::t_float_1d("vr", ncands);
@@ -548,7 +548,7 @@ void FixEmitFaceKokkos::grow_task()
     k_tasks.resize(ntaskmax);
   }
   d_tasks = k_tasks.d_view;
-  tasks = k_tasks.h_view.ptr_on_device();
+  tasks = k_tasks.h_view.data();
 
   // set all new task bytes to 0 so valgrind won't complain
   // if bytes between fields are uninitialized
@@ -563,7 +563,7 @@ void FixEmitFaceKokkos::grow_task()
     k_ntargetsp.resize(ntaskmax,nspecies);
     d_ntargetsp = k_ntargetsp.d_view;
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.h_view.ptr_on_device() + i*k_ntargetsp.h_view.dimension_1();
+      tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
   }
   
   if (subsonic_style == PONLY) {
@@ -572,7 +572,7 @@ void FixEmitFaceKokkos::grow_task()
     k_vscale.resize(ntaskmax,nspecies);
     d_vscale = k_vscale.d_view;
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.h_view.ptr_on_device() + i*k_vscale.h_view.dimension_1();
+      tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
   }
 }
 
@@ -586,13 +586,13 @@ void FixEmitFaceKokkos::realloc_nspecies()
     k_ntargetsp = DAT::tdual_float_2d_lr("emit/face:ntargetsp",ntaskmax,nspecies);
     d_ntargetsp = k_ntargetsp.d_view;
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].ntargetsp = k_ntargetsp.h_view.ptr_on_device() + i*k_ntargetsp.h_view.dimension_1();
+      tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
   }
   if (subsonic_style == PONLY) {
     k_vscale = DAT::tdual_float_2d_lr("emit/face:vscale",ntaskmax,nspecies);
     d_vscale = k_vscale.d_view;
     for (int i = 0; i < ntaskmax; i++)
-      tasks[i].vscale = k_vscale.h_view.ptr_on_device() + i*k_vscale.h_view.dimension_1();
+      tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
   }
 }
 

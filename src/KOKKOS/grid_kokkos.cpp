@@ -96,7 +96,7 @@ void GridKokkos::grow_cells(int n, int m)
         k_cells.resize(maxcell);
         this->modify(Device,CELL_MASK); // needed for auto sync
       }
-      cells = k_cells.h_view.ptr_on_device();
+      cells = k_cells.h_view.data();
     }
 
     if (nlocal+m >= maxlocal) {
@@ -108,7 +108,7 @@ void GridKokkos::grow_cells(int n, int m)
         k_cinfo.resize(maxlocal);
         this->modify(Device,CINFO_MASK); // needed for auto sync
       }
-      cinfo = k_cinfo.h_view.ptr_on_device();
+      cinfo = k_cinfo.h_view.data();
     }
   }
 }
@@ -132,7 +132,7 @@ void GridKokkos::grow_pcells(int n)
         k_pcells.resize(maxparent);
         this->modify(Device,PCELL_MASK); // needed for auto sync
       }
-      pcells = k_pcells.h_view.ptr_on_device();
+      pcells = k_pcells.h_view.data();
     }
   }
 }
@@ -156,7 +156,7 @@ void GridKokkos::grow_sinfo(int n)
         k_sinfo.resize(maxsplit);
         this->modify(Device,SINFO_MASK); // needed for auto sync
       }
-      sinfo = k_sinfo.h_view.ptr_on_device();
+      sinfo = k_sinfo.h_view.data();
     }
   }
 }
@@ -236,44 +236,44 @@ void GridKokkos::wrap_kokkos()
 {
   // cells
 
-  if (cells != k_cells.h_view.ptr_on_device()) {
+  if (cells != k_cells.h_view.data()) {
     memoryKK->wrap_kokkos(k_cells,cells,maxcell,"grid:cells");
     k_cells.modify<SPAHostType>();
     k_cells.sync<DeviceType>();
     memory->sfree(cells);
-    cells = k_cells.h_view.ptr_on_device();
+    cells = k_cells.h_view.data();
   }
 
   // cinfo
 
-  if (cinfo != k_cinfo.h_view.ptr_on_device()) {
+  if (cinfo != k_cinfo.h_view.data()) {
     memoryKK->wrap_kokkos(k_cinfo,cinfo,maxlocal,"grid:cinfo");
     k_cinfo.modify<SPAHostType>();
     k_cinfo.sync<DeviceType>();
     memory->sfree(cinfo);
-    cinfo = k_cinfo.h_view.ptr_on_device();
+    cinfo = k_cinfo.h_view.data();
   }
 
   // sinfo
 
-  if (sinfo != k_sinfo.h_view.ptr_on_device()) {
+  if (sinfo != k_sinfo.h_view.data()) {
     memoryKK->wrap_kokkos(k_sinfo,sinfo,maxsplit,"grid:sinfo");
     k_sinfo.modify<SPAHostType>();
     k_sinfo.sync<DeviceType>();
     memory->sfree(sinfo);
-    sinfo = k_sinfo.h_view.ptr_on_device();
+    sinfo = k_sinfo.h_view.data();
   }
 
   wrap_kokkos_graphs();
 
   // pcells
 
-  if (pcells != k_pcells.h_view.ptr_on_device()) {
+  if (pcells != k_pcells.h_view.data()) {
     memoryKK->wrap_kokkos(k_pcells,pcells,maxparent,"grid:pcells");
     k_pcells.modify<SPAHostType>();
     k_pcells.sync<DeviceType>();
     memory->sfree(pcells);
-    pcells = k_pcells.h_view.ptr_on_device();
+    pcells = k_pcells.h_view.data();
   }
 }
 

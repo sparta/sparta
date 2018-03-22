@@ -380,7 +380,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   if (NEARCP) {
     int maxcellcount = particle_kk->get_maxcellcount();
-    if (int(d_nn_last_partner.dimension_0()) < nglocal || int(d_nn_last_partner.dimension_1()) < maxcellcount)
+    if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < maxcellcount)
       d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount);
     //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }

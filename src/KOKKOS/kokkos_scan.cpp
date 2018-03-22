@@ -22,7 +22,7 @@ struct ExclScan {
     if (final_pass) {
       out_[0] = 0;
       out_[i + 1] = static_cast<int>(update);
-      if (i + 1 == int(in_.dimension_0())) total_() = static_cast<int>(update);
+      if (i + 1 == int(in_.extent(0))) total_() = static_cast<int>(update);
     }
   }
   using execution_space = Device;

@@ -278,7 +278,7 @@ void UpdateKokkos::run(int nsteps)
     DAT::t_int_1d d_mlist_small = Kokkos::subview(k_mlist.d_view,std::make_pair(0,nmigrate));
     HAT::t_int_1d h_mlist_small = HAT::t_int_1d(Kokkos::view_alloc("mlist_mirror",Kokkos::WithoutInitializing),nmigrate);
     Kokkos::deep_copy(h_mlist_small, d_mlist_small);
-    auto mlist_small = h_mlist_small.ptr_on_device();
+    auto mlist_small = h_mlist_small.data();
 
     ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,d_mlist_small);
     if (cellweightflag) particle->post_weight();
@@ -506,7 +506,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     DAT::t_int_1d d_mlist_small = Kokkos::subview(k_mlist.d_view,std::make_pair(0,nmigrate));
     HAT::t_int_1d h_mlist_small = HAT::t_int_1d(Kokkos::view_alloc("mlist_mirror",Kokkos::WithoutInitializing),nmigrate);
     Kokkos::deep_copy(h_mlist_small, d_mlist_small);
-    auto mlist_small = h_mlist_small.ptr_on_device();
+    auto mlist_small = h_mlist_small.data();
 
     int error_flag;
 

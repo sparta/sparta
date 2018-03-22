@@ -390,7 +390,7 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
     //pack_buffer_serial(0,count);
     copymode = 0;
 
-    MPI_Send(d_buf.ptr_on_device(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
+    MPI_Send(d_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
   }
 
   // copy datums to self, put at beginning of recvbuf

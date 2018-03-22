@@ -65,33 +65,33 @@ SurfKokkos::~SurfKokkos()
 void SurfKokkos::wrap_kokkos()
 {
   if (pts != NULL && npoint > 0) {
-    if (pts != k_pts.h_view.ptr_on_device()) {
+    if (pts != k_pts.h_view.data()) {
       memoryKK->wrap_kokkos(k_pts,pts,npoint,"surf:pts");
       k_pts.modify<SPAHostType>();
       k_pts.sync<DeviceType>();
       memory->sfree(pts);
-      pts = k_pts.h_view.ptr_on_device();
+      pts = k_pts.h_view.data();
     }
   }
 
 
   if (lines != NULL && nline > 0) {
-    if (lines != k_lines.h_view.ptr_on_device()) {
+    if (lines != k_lines.h_view.data()) {
       memoryKK->wrap_kokkos(k_lines,lines,nline,"surf:lines");
       k_lines.modify<SPAHostType>();
       k_lines.sync<DeviceType>();
       memory->sfree(lines);
-      lines = k_lines.h_view.ptr_on_device();
+      lines = k_lines.h_view.data();
     }
   }
 
   if (tris != NULL && ntri > 0) {
-    if (tris != k_tris.h_view.ptr_on_device()) {
+    if (tris != k_tris.h_view.data()) {
       memoryKK->wrap_kokkos(k_tris,tris,ntri,"surf:tris");
       k_tris.modify<SPAHostType>();
       k_tris.sync<DeviceType>();
       memory->sfree(tris);
-      tris = k_tris.h_view.ptr_on_device();
+      tris = k_tris.h_view.data();
     }
   }
 }

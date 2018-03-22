@@ -111,7 +111,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   }
   //if (maxsendbuf == 0 || nmigrate*nbytes > maxsendbuf) { // this doesn't work, not sure why 
     maxsendbuf = nmigrate*nbytes;
-    if (maxsendbuf > int(d_sbuf.dimension_0()))
+    if (maxsendbuf > int(d_sbuf.extent(0)))
       d_sbuf = DAT::t_char_1d("comm:sbuf",maxsendbuf);
   //}
 
@@ -202,7 +202,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
     d_particles = particle_kk->k_particles.d_view;
     iparticle_kk->
       exchange_uniform(d_sbuf,nbytes,
-                       (char *) (d_particles.ptr_on_device()+particle->nlocal));
+                       (char *) (d_particles.data()+particle->nlocal));
 
     particle_kk->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d(); // destroy reference to reduce memory use
