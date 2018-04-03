@@ -60,7 +60,6 @@ class Domain : protected Pointers {
   int find_region(char *);
   void print_box(const char *);
 
- private:
   int surf_collide[6];              // index of SurfCollide model
   int surf_react[6];                // index of SurfReact model
                                     // for each bflag = SURFACE boundary

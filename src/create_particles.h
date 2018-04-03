@@ -54,7 +54,7 @@ class CreateParticles : protected Pointers {
 
   virtual void create_single();
   virtual void create_local(bigint);
-  void create_local_twopass(bigint);
+  virtual void create_local_twopass(bigint);
   int species_variable(double *);
   double density_variable(double *, double *);
   double temperature_variable(double *);

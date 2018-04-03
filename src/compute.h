@@ -83,6 +83,7 @@ class Compute : protected Pointers {
   bigint invoked_per_surf;     // ditto for compute_per_surf()
 
   Compute(class SPARTA *, int, char **);
+  Compute(class SPARTA* sparta) : Pointers(sparta) {} 
   virtual ~Compute();
   virtual void init() {}
 

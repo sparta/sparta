@@ -113,7 +113,7 @@ class Update : protected Pointers {
   void collide_react_update();
 
   int bounce_setup();
-  void bounce_set(bigint);
+  virtual void bounce_set(bigint);
   void reset_timestep(bigint);
 
   //int axi_vertical_line(double, double *, double *, double, double, double,

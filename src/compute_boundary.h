@@ -29,14 +29,15 @@ namespace SPARTA_NS {
 class ComputeBoundary : public Compute {
  public:
   ComputeBoundary(class SPARTA *, int, char **);
+  ComputeBoundary(class SPARTA* sparta) : Compute(sparta) {}
   ~ComputeBoundary();
-  void init();
-  void compute_array();
-  void clear();
-  void boundary_tally(int, int, Particle::OnePart *,
-                      Particle::OnePart *, Particle::OnePart *);
+  virtual void init();
+  virtual void compute_array();
+  virtual void clear();
+  virtual void boundary_tally(int, int, Particle::OnePart *,
+                              Particle::OnePart *, Particle::OnePart *);
 
- private:
+ protected:
   int imix,nvalue,ngroup,ntotal,nrow;
   int *which;
 

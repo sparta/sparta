@@ -79,6 +79,8 @@ ComputeBoundary::ComputeBoundary(SPARTA *sparta, int narg, char **arg) :
 
 ComputeBoundary::~ComputeBoundary()
 {
+  if (copy || copymode) return;
+
   delete [] which;
   memory->destroy(array);
   memory->destroy(myarray);

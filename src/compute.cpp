@@ -62,13 +62,14 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   kokkos_flag = 0;
   copymode = 0;
+  copy = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Compute::~Compute()
 {
-  if (copymode) return;
+  if (copy || copymode) return;
 
   delete [] id;
   delete [] style;

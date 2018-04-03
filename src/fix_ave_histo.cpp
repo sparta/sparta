@@ -673,12 +673,12 @@ void FixAveHisto::end_of_step()
       } else if (kind == PERPARTICLE) {
         if (j == 0) bin_particles(fix->vector_particle,1);
         else if (fix->array_particle)
-          bin_particles(fix->array_particle[j-1],fix->size_per_particle_cols);
+          bin_particles(&fix->array_particle[0][j-1],fix->size_per_particle_cols);
 
       } else if (kind == PERGRID) {
         if (j == 0) bin_grid_cells(fix->vector_grid,1);
         else if (fix->array_grid)
-          bin_grid_cells(fix->array_grid[j-1],fix->size_per_grid_cols);
+          bin_grid_cells(&fix->array_grid[0][j-1],fix->size_per_grid_cols);
       }
 
     // evaluate equal-style or particle-style or grid-style variable

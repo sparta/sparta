@@ -62,8 +62,8 @@ int Grid::id_find_child(int iparent, double *x)
 
 int Grid::id_find_parent(cellint id, cellint &ichild)
 {
-  int nbits,newbits,mask,index;
-  cellint idparent,idnew;
+  int nbits,newbits,index;
+  cellint idparent,idnew,mask;
   ParentCell *p;
 
   int iparent = 0;
@@ -75,7 +75,7 @@ int Grid::id_find_parent(cellint id, cellint &ichild)
 
     // ichild = the newbits above nbits in id
 
-    mask = (1 << newbits) - 1;
+    mask = (1L << newbits) - 1;
     ichild = (id >> nbits) & mask;
     idnew = idparent | (ichild << nbits);
     if (idnew == id) break;
@@ -140,7 +140,7 @@ void Grid::id_num2str(cellint id, char *str)
   int offset = 0;
 
   while (1) {
-    int mask = (1 << pcells[iparent].newbits) - 1;
+    cellint mask = (1L << pcells[iparent].newbits) - 1;
     int idlevel = id & mask;
     sprintf(&str[offset],"%d",idlevel);
     offset = strlen(str);
