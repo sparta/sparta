@@ -120,6 +120,8 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   k_error_flag = DAT::tdual_int_scalar("UpdateKokkos:error_flag");
   d_error_flag = k_error_flag.view<DeviceType>();
   h_error_flag = k_error_flag.h_view;
+
+  nboundary_tally = 0;
 }
 
 /* ---------------------------------------------------------------------- */
