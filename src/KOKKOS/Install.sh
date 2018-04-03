@@ -47,6 +47,8 @@ fi
 
 action collide_vss_kokkos.cpp
 action collide_vss_kokkos.h
+action compute_boundary_kokkos.cpp
+action compute_boundary_kokkos.h
 action compute_grid_kokkos.cpp
 action compute_grid_kokkos.h
 action compute_temp_kokkos.cpp
@@ -125,9 +127,14 @@ if (test $1 = 1) then
   if (test -e ../Makefile.package.settings) then
     $SED -i -e '/CXX\ =\ \$(CC)/d' ../Makefile.package.settings
     $SED -i -e '/^include.*kokkos.*$/d' ../Makefile.package.settings
-    # multiline form needed for BSD sed on Macs
-    $SED -i -e '4 i \CXX = $(CC)' ../Makefile.package.settings
-    $SED -i -e '5 i \include ..\/..\/lib\/kokkos\/Makefile.kokkos' ../Makefile.package.settings
+    # multiline form needed for BSD $SED on Macs
+    $SED -i -e '4 i \
+CXX = $(CC)
+' ../Makefile.package.settings
+
+    $SED -i -e '5 i \
+include ..\/..\/lib\/kokkos\/Makefile.kokkos
+' ../Makefile.package.settings
   fi
 
 elif (test $1 = 0) then

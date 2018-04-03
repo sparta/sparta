@@ -237,8 +237,6 @@ void CreateParticlesKokkos::create_local(bigint np)
         sqrttempscale = sqrt(tempscale);
       }
 
-      Particle::Species *species = particle->species;
-
       auto vn = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
       auto vr = vscale[isp] * sqrttempscale * sqrt(-log(random->uniform()));
 

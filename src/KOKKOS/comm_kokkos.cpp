@@ -110,7 +110,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
     d_pproc = k_pproc.d_view;
   }
   //if (maxsendbuf == 0 || nmigrate*nbytes > maxsendbuf) { // this doesn't work, not sure why 
-    maxsendbuf = nmigrate*nbytes;
+    int maxsendbuf = nmigrate*nbytes;
     if (maxsendbuf > int(d_sbuf.extent(0)))
       d_sbuf = DAT::t_char_1d("comm:sbuf",maxsendbuf);
   //}

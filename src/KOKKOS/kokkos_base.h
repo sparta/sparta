@@ -30,8 +30,10 @@ class KokkosBase {
                                    DAT::t_float_1d_strided) {return 0.0;}
 
   DAT::t_float_1d d_vector_grid;     // Kokkos version of computed per-grid vector
-  DAT::t_float_2d_lr d_array_grid;      // Kokkos version of computed per-grid array
+  DAT::t_float_2d_lr d_array_grid;   // Kokkos version of computed per-grid array
 
+  DAT::tdual_float_2d_lr k_array;    // Kokkos version of computed array
+  DAT::t_float_2d_lr d_array;        // Kokkos version of computed array
 };
 
 }

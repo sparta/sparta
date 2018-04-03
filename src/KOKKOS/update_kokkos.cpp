@@ -63,15 +63,19 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
 #define MOVE_DEBUG_INDEX 16617       // particle index on owning proc
 #define MOVE_DEBUG_STEP 16    // timestep
 
+#define VAL_1(X) X
+#define VAL_2(X) VAL_1(X), VAL_1(X)
+
 /* ---------------------------------------------------------------------- */
 
 UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   grid_kk_copy(sparta),
   domain_kk_copy(sparta),
   //// Virtual functions are not yet supported on the GPU, which leads to pain:
-  sc_kk_specular_copy(sparta),
-  sc_kk_diffuse_copy(sparta),
-  sc_kk_vanish_copy(sparta)
+  sc_kk_specular_copy{VAL_2(KKCopy<SurfCollideSpecularKokkos>(sparta))},
+  sc_kk_diffuse_copy{VAL_2(KKCopy<SurfCollideDiffuseKokkos>(sparta))},
+  sc_kk_vanish_copy{VAL_2(KKCopy<SurfCollideVanishKokkos>(sparta))},
+  blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))}
 {
   k_ncomm_one = DAT::tdual_int_scalar("UpdateKokkos:ncomm_one");
   d_ncomm_one = k_ncomm_one.view<DeviceType>();
@@ -129,9 +133,21 @@ UpdateKokkos::~UpdateKokkos()
 
   grid_kk_copy.uncopy();
   domain_kk_copy.uncopy();
-  sc_kk_specular_copy.uncopy();
-  sc_kk_diffuse_copy.uncopy();
-  sc_kk_vanish_copy.uncopy();
+
+  if (surf->nsc > 0) {
+    for (int i=0; i<surf->nsc; i++) {
+      sc_kk_specular_copy[i].uncopy();
+      sc_kk_diffuse_copy[i].uncopy();
+      sc_kk_vanish_copy[i].uncopy();
+    }
+  }
+
+  if (nboundary_tally > 0) {
+    for (int i=0; i<nboundary_tally; i++) {
+      blist_active_copy[i].uncopy();
+    }
+  }
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -432,27 +448,39 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     grid_kk_copy.copy(grid_kk);
     domain_kk_copy.copy((DomainKokkos*)domain);
 
-    if (surf->nsc > 1)
-      error->all(FLERR,"Kokkos currently does not support multiple surface collide methods");
+    if (surf->nsc > KOKKOS_TOT_SURF_COLL)
+      error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
 
-    if (surf->exist) {
-      if (strcmp(surf->sc[0]->style,"specular") == 0) {
-        sc_kk_specular_copy.copy((SurfCollideSpecularKokkos*)(surf->sc[0]));
-        sc_type = 0;
-      } else if (strcmp(surf->sc[0]->style,"diffuse") == 0) {
-        sc_kk_diffuse_copy.copy((SurfCollideDiffuseKokkos*)(surf->sc[0]));
-        sc_kk_diffuse_copy.obj.pre_collide();
-        sc_type = 1;
-      } else if (strcmp(surf->sc[0]->style,"vanish") == 0) {
-        sc_kk_vanish_copy.copy((SurfCollideVanishKokkos*)(surf->sc[0]));
-        sc_type = 2;
-      } else {
-        error->all(FLERR,"Unknown Kokkos surface collide method");
+    if (surf->nsc > 0) {
+      int nspec,ndiff,nvan;
+      nspec = ndiff = nvan = 0;
+      for (int n = 0; n < surf->nsc; n++) {
+        if (strcmp(surf->sc[n]->style,"specular") == 0) {
+          sc_kk_specular_copy[nspec].copy((SurfCollideSpecularKokkos*)(surf->sc[n]));
+          sc_type_list[n] = 0;
+          sc_map[n] = nspec;
+          nspec++;
+        } else if (strcmp(surf->sc[n]->style,"diffuse") == 0) {
+          sc_kk_diffuse_copy[ndiff].copy((SurfCollideDiffuseKokkos*)(surf->sc[n]));
+          sc_kk_diffuse_copy[ndiff].obj.pre_collide();
+          sc_type_list[n] = 1;
+          sc_map[n] = ndiff;
+          ndiff++;
+        } else if (strcmp(surf->sc[n]->style,"vanish") == 0) {
+          sc_kk_vanish_copy[nvan].copy((SurfCollideVanishKokkos*)(surf->sc[n]));
+          sc_type_list[n] = 2;
+          sc_map[nvan] = nvan;
+          nvan++;
+        } else {
+          error->all(FLERR,"Unknown Kokkos surface collide method");
+        }
       }
+      if (nspec > KOKKOS_MAX_SURF_COLL_PER_TYPE || ndiff > KOKKOS_MAX_SURF_COLL_PER_TYPE || nvan > KOKKOS_MAX_SURF_COLL_PER_TYPE)
+        error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
     }
 
-    if (nsurf_tally || nboundary_tally)
-      error->all(FLERR,"Cannot (yet) use boundary or surface tallying computes with Kokkos");
+    if (nsurf_tally)
+      error->all(FLERR,"Cannot (yet) use surface tallying compute with Kokkos");
 
     if (surf->nsr)
       error->all(FLERR,"Cannot (yet) use surface reactions with Kokkos");
@@ -578,7 +606,9 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     if (grid->cutoff < 0.0) break;
 
+    timer->stamp(TIME_MOVE);
     MPI_Allreduce(&entryexit,&any_entryexit,1,MPI_INT,MPI_MAX,world);
+    timer->stamp();
     if (any_entryexit) {
       timer->stamp(TIME_MOVE);
       pstart = ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,d_mlist_small);
@@ -644,6 +674,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
   // Particle::OnePart iorig;
   Particle::OnePart *ipart,*jpart;
+  jpart = NULL;
 
   // received from another proc and move is done
   // if first iteration, PDONE is from a previous step,
@@ -817,33 +848,18 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     }
 
     /** Kokkos functions **/
-    // surf->sc[tri->isc]->collide
     // slist_active[m]->surf_tally
-    // blist_active[m]->boundary_tally
 
     /** Kokkos views **/
-    // surf->sc
     // slist_active
-    // blist_active
 
 
-//    if (DIM == 3)
-//      jpart = surf->sc[tri->isc]->
-//        collide(ipart,tri->norm,dtremain,tri->isr);/////
-//    if (DIM != 3)
-//      jpart = surf->sc[line->isc]->
-//        collide(ipart,line->norm,dtremain,line->isr);////
-//
 //    ////Need to error out for now if surface reactions create (or destroy?) particles////
 //
 //    if (nsurf_tally)
 //      for (m = 0; m < nsurf_tally; m++)
 //        slist_active[m]->surf_tally(minsurf,&iorig,ipart,jpart);////
 //
-//    if (nboundary_tally)
-//      for (m = 0; m < nboundary_tally; m++)
-//        blist_active[m]->
-//          boundary_tally(outface,bflag,&iorig,ipart,jpart);////
 
     if (SURF) {
 
@@ -1004,26 +1020,29 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
           //if (nsurf_tally) 
           //  memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
+          int n = DIM == 3 ? tri->isc : line->isc;
+          int sc_type = sc_type_list[n];
+          int m = sc_map[n];
 
           if (DIM == 3)
             if (sc_type == 0)
-              jpart = sc_kk_specular_copy.obj.
+              jpart = sc_kk_specular_copy[m].obj.
                 collide_kokkos(ipart,tri->norm,dtremain,tri->isr);/////
             else if (sc_type == 1)
-              jpart = sc_kk_diffuse_copy.obj.
+              jpart = sc_kk_diffuse_copy[m].obj.
                 collide_kokkos(ipart,tri->norm,dtremain,tri->isr);/////
             else if (sc_type == 2)
-              jpart = sc_kk_vanish_copy.obj.
+              jpart = sc_kk_vanish_copy[m].obj.
                 collide_kokkos(ipart,tri->norm,dtremain,tri->isr);/////
           if (DIM != 3)
             if (sc_type == 0)
-              jpart = sc_kk_specular_copy.obj.
+              jpart = sc_kk_specular_copy[m].obj.
                 collide_kokkos(ipart,line->norm,dtremain,line->isr);////
             else if (sc_type == 1)
-              jpart = sc_kk_diffuse_copy.obj.
+              jpart = sc_kk_diffuse_copy[m].obj.
                 collide_kokkos(ipart,line->norm,dtremain,line->isr);////
             else if (sc_type == 2)
-              jpart = sc_kk_vanish_copy.obj.
+              jpart = sc_kk_vanish_copy[m].obj.
                 collide_kokkos(ipart,line->norm,dtremain,line->isr);////
 
           ////Need to error out for now if surface reactions create (or destroy?) particles////
@@ -1185,13 +1204,45 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
     else {
       ipart = &particle_i;
 
-      //if (nboundary_tally) 
-      //  memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
+      Particle::OnePart iorig;
+      if (nboundary_tally) 
+        memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
 
       Particle::OnePart* ipart = &particle_i;
       lo = d_cells[icell].lo;
       hi = d_cells[icell].hi;
-      bflag = domain_kk_copy.obj.collide_kokkos(ipart,outface,lo,hi,xnew/*,dtremain*/);
+      if (domain_kk_copy.obj.bflag[outface] == SURFACE) {
+        // treat global boundary as a surface
+        // particle velocity is changed by surface collision model
+        // dtremain may be changed by collision model
+        // reset all components of xnew, in case dtremain changed
+        // if axisymmetric, caller will reset again, including xnew[2]
+
+        int n = domain_kk_copy.obj.surf_collide[outface];
+        int sc_type = sc_type_list[n];
+        int m = sc_map[n];
+
+        if (sc_type == 0)
+          jpart = sc_kk_specular_copy[m].obj.
+            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface]);/////
+        else if (sc_type == 1)
+          jpart = sc_kk_diffuse_copy[m].obj.
+            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface]);/////
+        else if (sc_type == 2)
+          jpart = sc_kk_vanish_copy[m].obj.
+            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface]);/////
+
+        if (ipart) {
+          double *x = ipart->x;
+          double *v = ipart->v;
+          xnew[0] = x[0] + dtremain*v[0];
+          xnew[1] = x[1] + dtremain*v[1];
+          if (domain_kk_copy.obj.dimension == 3) xnew[2] = x[2] + dtremain*v[2];
+        }
+        bflag = SURFACE;
+      } else {
+        bflag = domain_kk_copy.obj.collide_kokkos(ipart,outface,lo,hi,xnew/*,dtremain*/);
+      }
 
       //if (jpart) {
       //  particles = particle->particles;
@@ -1199,10 +1250,10 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       //  v = particle_i.v;
       //}
 
-      //if (nboundary_tally)
-      //  for (m = 0; m < nboundary_tally; m++)
-      //    blist_active[m]->
-      //      boundary_tally(outface,bflag,&iorig,ipart,jpart);////
+      if (nboundary_tally)
+        for (int m = 0; m < nboundary_tally; m++)
+          blist_active_copy[m].obj.
+            boundary_tally_kk(outface,bflag,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
 
       if (DIM == 1) {
         xnew[0] = x[0] + dtremain*v[0];
@@ -1444,4 +1495,35 @@ int UpdateKokkos::split2d(int icell, double *x) const
   if (!cflag) return d_csubs.entries(csubs_begin + d_sinfo[isplit].xsub);
   int index = d_csplits.entries(csplits_begin + minsurfindex);
   return d_csubs.entries(csubs_begin + index);
+}
+
+/* ----------------------------------------------------------------------
+   set bounce tally flags for current timestep
+   nsurf_tally = # of computes needing bounce info on this step
+   clear accumulators in computes that will be invoked this step
+------------------------------------------------------------------------- */
+
+void UpdateKokkos::bounce_set(bigint ntimestep)
+{
+  Update::bounce_set(ntimestep);
+
+  int i;
+
+  //if (nslist_compute) {
+  //  for (i = 0; i < nslist_compute; i++)
+  //    if (slist_compute[i]->matchstep(ntimestep)) {
+  //      slist_active[nsurf_tally++] = slist_compute[i];
+  //    }
+  //}
+
+  if (nboundary_tally > KOKKOS_MAX_BLIST)
+    error->all(FLERR,"Kokkos currently only supports two instances of compute boundary");
+
+  if (nboundary_tally) {
+    for (i = 0; i < nboundary_tally; i++) {
+      ComputeBoundaryKokkos* compute_boundary_kk = (ComputeBoundaryKokkos*)(blist_active[i]);
+      compute_boundary_kk->pre_boundary_tally();
+      blist_active_copy[i].copy(compute_boundary_kk);
+    }
+  }
 }

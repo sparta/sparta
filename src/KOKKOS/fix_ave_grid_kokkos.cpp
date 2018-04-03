@@ -408,9 +408,11 @@ void FixAveGridKokkos::grow_percell(int nnew)
   if (nvalues == 1) {
     memoryKK->grow_kokkos(k_vector_grid,vector_grid,n,"ave/grid:vector_grid");
     d_vector_grid = k_vector_grid.d_view;
+    k_vector_grid.sync<SPAHostType>();
   } else {
     memoryKK->grow_kokkos(k_array_grid,array_grid,n,nvalues,"ave/grid:array_grid");
     d_array_grid = k_array_grid.d_view;
+    k_array_grid.sync<SPAHostType>();
   }
 
   memoryKK->grow_kokkos(k_tally,tally,n,ntotal,"ave/grid:tally");

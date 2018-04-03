@@ -32,7 +32,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 
   delete memory;
   memory = new MemoryKokkos(sparta);
-  MemoryKokkos* memoryKK = (MemoryKokkos*) memory;
+  memoryKK = (MemoryKokkos*) memory;
 
   int me = 0;
   MPI_Comm_rank(world,&me);

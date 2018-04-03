@@ -108,29 +108,8 @@ class DomainKokkos : public Domain {
   
         return REFLECT;
       }
-  
-      // treat global boundary as a surface
-      // particle velocity is changed by surface collision model
-      // dtremain may be changed by collision model
-      // reset all components of xnew, in case dtremain changed
-      // if axisymmetric, caller will reset again, including xnew[2]
-      
-      //case SURFACE: 
-      //{
-      //
-      //  jp = surf->sc[surf_collide[face]]->
-      //    collide(ip,norm[face],dtremain,surf_react[face]);
-      //
-      //  if (ip) {
-      //    double *x = ip->x;
-      //    double *v = ip->v;
-      //    xnew[0] = x[0] + dtremain*v[0];
-      //    xnew[1] = x[1] + dtremain*v[1];
-      //    if (dimension == 3) xnew[2] = x[2] + dtremain*v[2];
-      //  }
-      //}
 
-  }
+    }
   
     return 0;
   };

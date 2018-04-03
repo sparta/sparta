@@ -24,8 +24,14 @@
 #include "surf_collide_diffuse_kokkos.h"
 #include "surf_collide_specular_kokkos.h"
 #include "surf_collide_vanish_kokkos.h"
+#include "compute_boundary_kokkos.h"
 
 namespace SPARTA_NS {
+
+#define KOKKOS_SURF_COLL_TYPES 3
+#define KOKKOS_MAX_SURF_COLL_PER_TYPE 2
+#define KOKKOS_TOT_SURF_COLL 6
+#define KOKKOS_MAX_BLIST 2
 
 struct s_UPDATE_REDUCE {
   int ntouch_one,nexit_one,nboundary_one,
@@ -116,10 +122,12 @@ class UpdateKokkos : public Update {
   KKCopy<GridKokkos> grid_kk_copy;
   KKCopy<DomainKokkos> domain_kk_copy;
 
-  KKCopy<SurfCollideSpecularKokkos> sc_kk_specular_copy;
-  KKCopy<SurfCollideDiffuseKokkos> sc_kk_diffuse_copy;
-  KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy;
-  int sc_type;
+  int sc_type_list[KOKKOS_TOT_SURF_COLL];
+  int sc_map[KOKKOS_TOT_SURF_COLL];
+  KKCopy<SurfCollideSpecularKokkos> sc_kk_specular_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideDiffuseKokkos> sc_kk_diffuse_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
 
   DAT::tdual_int_scalar k_ntouch_one;
   typename AT::t_int_scalar d_ntouch_one;
@@ -164,6 +172,8 @@ class UpdateKokkos : public Update {
   DAT::tdual_int_scalar k_error_flag;
   typename AT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
+
+  void bounce_set(bigint);
 
   // remap x and v components into axisymmetric plane
   // input x at end of linear move (x = xold + dt*v)

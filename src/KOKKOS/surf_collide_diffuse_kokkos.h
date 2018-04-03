@@ -81,7 +81,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   ------------------------------------------------------------------------- */
   
   KOKKOS_INLINE_FUNCTION
-  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, double *norm, double &, int) const
+  Particle::OnePart* collide_kokkos(Particle::OnePart *&ip, const double *norm, double &, int) const
   {
     Kokkos::atomic_fetch_add(&d_nsingle(),1);
   
@@ -132,7 +132,7 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
   int rotstyle, vibstyle;
 
   KOKKOS_INLINE_FUNCTION
-  void diffuse(Particle::OnePart *p, double *norm) const
+  void diffuse(Particle::OnePart *p, const double *norm) const
   {
     // specular reflection
     // reflect incident v around norm

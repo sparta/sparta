@@ -39,6 +39,7 @@ class FixEmitFaceKokkos : public FixEmitFace {
   ~FixEmitFaceKokkos();
   void init();
   void perform_task() override;
+  void perform_task_twopass() override { perform_task(); }
   void post_compress_grid();
 
   KOKKOS_INLINE_FUNCTION

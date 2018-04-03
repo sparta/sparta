@@ -30,7 +30,8 @@ class CreateParticlesKokkos : public CreateParticles {
  public:
   CreateParticlesKokkos(class SPARTA *);
 
-  virtual void create_local(bigint);
+  void create_local(bigint);
+  void create_local_twopass(bigint np) { create_local(np); };
 };
 
 }

@@ -26,22 +26,22 @@ void GridKokkos::update_hash()
   size_type failed_count = 0;
 
   // Copy the keys:values from hash to Kokkos::UnorderedMap that lives on host
-  host_hash_type hash_h(hash->size());
-  for (auto it : *hash) {
+  host_hash_type hash_h(2*hash->size()); // double hash capacity to prevent insertion failure
+  for (volatile auto it : *hash) { // volatile keyword works around a suspected compiler bug
     key_type key = static_cast<key_type>(it.first);
     value_type val = static_cast<value_type>(it.second);
     auto insert_result = hash_h.insert(key, val);
     failed_count += insert_result.failed() ? 1 : 0;
   }
   if (failed_count) {
-    error->all(FLERR, "Kokkos::UnorderedMap insertion failed");
+    error->one(FLERR, "Kokkos::UnorderedMap insertion failed");
   }
 
   // Deep copy the host view of the hash to the device
-  hash_kk.clear();
-  if (hash_kk.capacity() < hash->size()) {
-    hash_kk.rehash(static_cast<size_t>(hash->size()));
-  }
+  //hash_kk.clear();
+  //if (hash_kk.capacity() < hash->size()) {
+  //  hash_kk.rehash(static_cast<size_t>(hash->size()));
+  //}
   Kokkos::deep_copy(hash_kk, hash_h);
 
 }
