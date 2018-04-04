@@ -15,6 +15,8 @@
 </P>
 <PRE>compute ID boundary mix-ID value1 value2 ... 
 </PRE>
+<PRE>compute ID boundary/kk mix-ID value1 value2 ... 
+</PRE>
 <UL><LI>ID is documented in <A HREF = "compute.html">compute</A> command 
 
 <LI>boundary = style name of this compute command 
@@ -224,7 +226,35 @@ individual values as described above.  <I>N</I> is unitless. <I>Press</I>,
 <I>etot</I> are in energy/area-time units for 3d simulations and
 energy/length-time units for 2d simulations.
 </P>
-<P><B>Restrictions:</B> none
+<HR>
+
+<P>Styles with a <I>kk</I> suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+<A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+</P>
+<P>These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the <A HREF = "Section_start.html#start_3">Making
+SPARTA</A> section for more info.
+</P>
+<P>You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the <A HREF = "Section_start.html#start_6">-suffix command-line
+switch</A> when you invoke SPARTA, or you can
+use the <A HREF = "suffix.html">suffix</A> command in your input script.
+</P>
+<P>See the <A HREF = "Section_accelerate.html">Accelerating SPARTA</A> section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>If specified with a <I>kk</I> suffix, this compute can be used no more than
+twice in the same input script (active at the same time).
 </P>
 <P><B>Related commands:</B>
 </P>
