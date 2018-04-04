@@ -11,6 +11,7 @@ compute boundary command :h3
 [Syntax:]
 
 compute ID boundary mix-ID value1 value2 ... :pre
+compute ID boundary/kk mix-ID value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
 boundary = style name of this compute command :l
@@ -215,7 +216,35 @@ individual values as described above.  {N} is unitless. {Press},
 {etot} are in energy/area-time units for 3d simulations and
 energy/length-time units for 2d simulations.
 
-[Restrictions:] none
+:line
+
+Styles with a {kk} suffix are functionally the same as the
+corresponding style without the suffix.  They have been optimized to
+run faster, depending on your available hardware, as discussed in the
+"Accelerating SPARTA"_Section_accelerate.html section of the manual.
+The accelerated styles take the same arguments and should produce the
+same results, except for different random number, round-off and
+precision issues.
+
+These accelerated styles are part of the KOKKOS package. They are only
+enabled if SPARTA was built with that package.  See the "Making
+SPARTA"_Section_start.html#start_3 section for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Section_start.html#start_6 when you invoke SPARTA, or you can
+use the "suffix"_suffix.html command in your input script.
+
+See the "Accelerating SPARTA"_Section_accelerate.html section of the
+manual for more instructions on how to use the accelerated styles
+effectively.
+
+:line
+
+[Restrictions:]
+
+If specified with a {kk} suffix, this compute can be used no more than
+twice in the same input script (active at the same time).
 
 [Related commands:]
 

@@ -228,7 +228,9 @@ effectively.
 [Restrictions:]
 
 The {translate} and {rotate} keywords cannot be used together.
-Only a single instantiation of each {kk} suffix style type is allowed.
+
+If specified with a {kk} suffix, this command can be used no more than
+twice in the same input script (active at the same time).
 
 [Related commands:]
 
