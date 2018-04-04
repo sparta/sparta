@@ -29,11 +29,12 @@
 #include "random_park.h"
 #include "memory.h"
 #include "error.h"
+#include "timer.h"
 
 using namespace SPARTA_NS;
 
 enum{RANDOM,PROC,BISECTION};
-enum{CELL,PARTICLE};
+enum{CELL,PARTICLE,TIME};
 
 #define ZEROPARTICLE 0.1
 
@@ -65,6 +66,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
     bstyle = BISECTION;
     if (strcmp(arg[5],"cell") == 0) rcbwt = CELL;
     else if (strcmp(arg[5],"part") == 0) rcbwt = PARTICLE;
+    else if (strcmp(arg[5],"time") == 0) rcbwt = TIME;
     else error->all(FLERR,"Illegal fix balance command");
   } else error->all(FLERR,"Illegal fix balance command");
 
@@ -87,7 +89,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
 
   // compute initial outputs
 
-  imbfinal = imbprev = imbalance_nlocal(maxperproc);
+  imbfinal = imbprev = imbalance_factor(maxperproc);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -115,6 +117,9 @@ void FixBalance::init()
 
   if (bstyle != BISECTION && grid->cutoff >= 0.0)
     error->all(FLERR,"Cannot use non-rcb fix balance with a grid cutoff");
+
+  timer->init();
+  last = 0.0;
 }
 
 /* ----------------------------------------------------------------------
@@ -128,7 +133,7 @@ void FixBalance::end_of_step()
 
   // return if imbalance < threshhold
 
-  imbnow = imbalance_nlocal(maxperproc);
+  imbnow = imbalance_factor(maxperproc);
   if (imbnow <= thresh) return;
   imbprev = imbnow;
 
@@ -183,8 +188,8 @@ void FixBalance::end_of_step()
     double *wt = NULL;
     if (rcbwt == PARTICLE) {
       if (!particle->sorted) particle->sort();
-      int n;
       memory->create(wt,nglocal,"balance:wt");
+      int n;
       nbalance = 0;
       for (int icell = 0; icell < nglocal; icell++) {
         if (cells[icell].nsplit <= 0) continue;
@@ -192,6 +197,9 @@ void FixBalance::end_of_step()
         if (n) wt[nbalance++] = n;
         else wt[nbalance++] = ZEROPARTICLE;
       }
+    } else if (rcbwt == TIME) {
+      memory->create(wt,nglocal,"balance:wt");
+      timer_cell_weights(wt);
     }
 
     rcb->compute(nbalance,x,wt);
@@ -242,23 +250,33 @@ void FixBalance::end_of_step()
 
   // final imbalance factor
 
-  imbfinal = imbalance_nlocal(maxperproc);
+  if (bstyle == BISECTION && rcbwt == TIME)
+    imbfinal = 0.0; // can't compute imbalance from timers since grid cells moved
+  else
+    imbfinal = imbalance_factor(maxperproc);
 }
 
 /* ----------------------------------------------------------------------
    calculate imbalance based on current particle count
-   return max = max particles per proc
+   return maxcost = max particles per proc or CPU time per proc
    return imbalance factor = max per proc / ave per proc
 ------------------------------------------------------------------------- */
 
-double FixBalance::imbalance_nlocal(int &max)
+double FixBalance::imbalance_factor(double &maxcost)
 {
-  bigint n,nglobal;
-  n = particle->nlocal;
-  MPI_Allreduce(&n,&nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&particle->nlocal,&max,1,MPI_INT,MPI_MAX,world);
+  double mycost,totalcost;
+  double mycost_proc_weighted,maxcost_proc_weighted,nprocs_weighted;
+
+  if (bstyle == BISECTION && rcbwt == TIME) {
+    timer_cost();
+    mycost = my_timer_cost;
+  } else mycost = particle->nlocal;
+
+  MPI_Allreduce(&mycost,&totalcost,1,MPI_DOUBLE,MPI_SUM,world);
+  MPI_Allreduce(&mycost,&maxcost,1,MPI_DOUBLE,MPI_MAX,world);
+
   double imbalance = 1.0;
-  if (max) imbalance = max / (1.0 * nglobal / nprocs);
+  if (maxcost) imbalance = maxcost / (totalcost / nprocs);
   return imbalance;
 }
 
@@ -277,8 +295,68 @@ double FixBalance::compute_scalar()
 
 double FixBalance::compute_vector(int i)
 {
-  if (i == 0) return (double) maxperproc;
+  if (i == 0) return maxperproc;
   return imbprev;
+}
+
+/* -------------------------------------------------------------------- */
+
+void FixBalance::timer_cost()
+{
+  // my_timer_cost = CPU time for relevant timers since last invocation
+
+  my_timer_cost = -last;
+  my_timer_cost += timer->array[TIME_MOVE];
+  my_timer_cost += timer->array[TIME_SORT];
+  my_timer_cost += timer->array[TIME_COLLIDE];
+  my_timer_cost += timer->array[TIME_MODIFY];
+
+  // last = time up to this point
+
+  last += my_timer_cost;
+}
+
+/* -------------------------------------------------------------------- */
+
+void FixBalance::timer_cell_weights(double *weight)
+{
+  // localwt = weight assigned to each owned grid cell
+  // just return if no time yet tallied
+
+  double maxcost;
+  MPI_Allreduce(&my_timer_cost,&maxcost,1,MPI_DOUBLE,MPI_MAX,world);
+  if (maxcost <= 0.0) {
+    memory->destroy(weight);
+    weight = NULL;
+    return;
+  }
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  double localwt_total = 0.0;
+  if (nglocal) localwt_total = my_timer_cost/nglocal;
+  if (nglocal && localwt_total <= 0.0) error->one(FLERR,"Balance weight <= 0.0");
+
+  if (!particle->sorted) particle->sort();
+  double wttotal = 0;
+  int nbalance = 0;
+  double* localwt;
+  memory->create(localwt,nglocal,"imbalance_time:localwt");
+  for (int icell = 0; icell < nglocal; icell++) {
+    localwt[icell] = 0.0;
+    if (cells[icell].nsplit <= 0) continue;
+    int n = cinfo[icell].count;
+    if (n) localwt[nbalance++] = n;
+    else localwt[nbalance++] = ZEROPARTICLE;
+    wttotal += localwt[nbalance-1];
+  }
+
+  for (int icell = 0; icell < nglocal; icell++) 
+    weight[icell] = my_timer_cost*localwt[icell]/wttotal;
+
+  memory->destroy(localwt);
 }
 
 /* ----------------------------------------------------------------------
@@ -288,6 +366,6 @@ double FixBalance::compute_vector(int i)
 double FixBalance::memory_usage()
 {
   double bytes = 0.0;
-  //double bytes = irregular->memory_usage();
+  // tally wt vector?
   return bytes;
 }

@@ -40,16 +40,19 @@ class FixBalance : public Fix {
   int me,nprocs;
   double thresh;
   int bstyle,rcbwt;
+  double last,my_timer_cost;
 
   double imbnow;                // current imbalance factor
   double imbprev;               // imbalance factor before last rebalancing
   double imbfinal;              // imbalance factor after last rebalancing
-  int maxperproc;               // max atoms on any processor
+  double maxperproc;            // max atoms or CPU cost on any processor
 
   class RanPark *random;
   class RCB *rcb;
 
-  double imbalance_nlocal(int &);
+  double imbalance_factor(double &);
+  void timer_cost();
+  void timer_cell_weights(double *);
 };
 
 }

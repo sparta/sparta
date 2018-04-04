@@ -1119,7 +1119,10 @@ template < int DIM, int SURF > void Update::move()
 
     if (grid->cutoff < 0.0) break;
 
+    timer->stamp(TIME_MOVE);
     MPI_Allreduce(&entryexit,&any_entryexit,1,MPI_INT,MPI_MAX,world);
+    timer->stamp();
+
     if (any_entryexit) {
       timer->stamp(TIME_MOVE);
       pstart = comm->migrate_particles(nmigrate,mlist);

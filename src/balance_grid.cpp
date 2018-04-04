@@ -28,6 +28,7 @@
 #include "random_park.h"
 #include "memory.h"
 #include "error.h"
+#include "timer.h"
 
 using namespace SPARTA_NS;
 
@@ -35,13 +36,15 @@ using namespace SPARTA_NS;
 
 enum{NONE,STRIDE,CLUMP,BLOCK,RANDOM,PROC,BISECTION};
 enum{XYZ,XZY,YXZ,YZX,ZXY,ZYX};
-enum{CELL,PARTICLE};
+enum{CELL,PARTICLE,TIME};
 
 #define ZEROPARTICLE 0.1
 
 /* ---------------------------------------------------------------------- */
 
-BalanceGrid::BalanceGrid(SPARTA *sparta) : Pointers(sparta) {}
+BalanceGrid::BalanceGrid(SPARTA *sparta) : Pointers(sparta) {
+  last = 0.0;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -106,6 +109,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     bstyle = BISECTION;
     if (strcmp(arg[1],"cell") == 0) rcbwt = CELL;
     else if (strcmp(arg[1],"part") == 0) rcbwt = PARTICLE;
+    else if (strcmp(arg[1],"time") == 0) rcbwt = TIME;
     else error->all(FLERR,"Illegal balance_grid command");
     // undocumented optional 3rd arg
     // rcbflip = 3rd arg = 1 forces rcb->compute() to flip sign
@@ -276,9 +280,9 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     double *wt = NULL;
     if (rcbwt == PARTICLE) {
       particle->sort();
-      int zero = 0;
-      int n;
       memory->create(wt,nglocal,"balance_grid:wt");
+      int n;
+      int zero = 0;
       nbalance = 0;
       for (int icell = 0; icell < nglocal; icell++) {
         if (cells[icell].nsplit <= 0) continue;
@@ -289,6 +293,9 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
           zero++;
         }
       }
+    } else if (rcbwt == TIME) {
+      memory->create(wt,nglocal,"balance_grid:wt");
+      timer_cell_weights(wt);
     }
 
     rcb->compute(nbalance,x,wt,rcbflip);
@@ -536,4 +543,61 @@ void BalanceGrid::procs2grid(int nx, int ny, int nz,
 
     ipx++;
   }
+}
+
+/* -------------------------------------------------------------------- */
+
+void BalanceGrid::timer_cell_weights(double *weight)
+{
+  // cost = CPU time for relevant timers since last invocation
+
+  double cost = -last;
+  cost += timer->array[TIME_MOVE];
+  cost += timer->array[TIME_SORT];
+  cost += timer->array[TIME_COLLIDE];
+  cost += timer->array[TIME_MODIFY];
+
+  // localwt = weight assigned to each owned grid cell
+  // just return if no time yet tallied
+
+  double maxcost;
+  MPI_Allreduce(&cost,&maxcost,1,MPI_DOUBLE,MPI_MAX,world);
+  if (maxcost <= 0.0) {
+    memory->destroy(weight);
+    weight = NULL;
+    return;
+  }
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+
+  double localwt_total = 0.0;
+  if (nglocal) localwt_total = cost/nglocal;
+  if (nglocal && localwt_total <= 0.0) error->one(FLERR,"Balance weight <= 0.0");
+
+  if (!particle->sorted) particle->sort();
+  double wttotal = 0;
+  int nbalance = 0;
+  double* localwt;
+  memory->create(localwt,nglocal,"imbalance_time:localwt");
+  for (int icell = 0; icell < nglocal; icell++) {
+    localwt[icell] = 0.0;
+    if (cells[icell].nsplit <= 0) continue;
+    int n = cinfo[icell].count;
+    if (n) localwt[nbalance++] = n;
+    else {
+      localwt[nbalance++] = ZEROPARTICLE;
+    }
+    wttotal += localwt[nbalance-1];
+  }
+
+  for (int icell = 0; icell < nglocal; icell++) 
+    weight[icell] = cost*localwt[icell]/wttotal;
+
+  memory->destroy(localwt);
+
+  // last = time up to this point
+
+  last += cost;
 }
