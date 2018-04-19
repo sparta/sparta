@@ -365,6 +365,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
 
   case MASSRHO:
     {
+      mass = emap[0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeGrid_MASSRHO>(lo,hi),*this);
       DeviceType::fence();
       break;
