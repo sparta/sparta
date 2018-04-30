@@ -180,7 +180,11 @@ wavevector magnitudes are effectively unitless, e.g. sqrt(Kx^2 + Ky^2
 imaginary or squared values in K-space resulting from FFTs of per-grid
 quantities in whatever units the specified input values represent.
 
-[Restrictions:] none
+[Restrictions:]
+
+This style is part of the FFT package.  It is only enabled if SPARTA
+was built with that package.  See the "Getting
+Started"_Section_start.html#start_3 section for more info.
 
 [Related commands:]
 
