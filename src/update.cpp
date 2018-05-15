@@ -221,6 +221,7 @@ void Update::run(int nsteps)
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
+
     if (collide_react) collide_react_update();
     if (bounce_tally) bounce_set(ntimestep);
 
@@ -346,7 +347,6 @@ template < int DIM, int SURF > void Update::move()
     }
 
     for (int i = pstart; i < pstop; i++) {
-
       pflag = particles[i].flag;
 
       // received from another proc and move is done
