@@ -179,11 +179,9 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
 }
 
 /* ----------------------------------------------------------------------
-   particle collision with surface with optional chemistry
-   ip = particle with current x = collision pt, current v = incident v
+   diffusive particle collision with surface
+   p = particle with current x = collision pt, current v = incident v
    norm = surface normal unit vector
-   ip = set to NULL if destroyed by chemsitry
-   return jp = new particle if created by chemistry
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
