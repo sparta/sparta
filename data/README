@@ -6,6 +6,10 @@ the directory where your input script is and modify them as you wish.
 Files that end in ".species" contain thermophysical properties of
 chemical species and are read by the species command.
 
+Files that end in ".species.vib" contain additional info about the
+vibrational modes of polyatomic chemcial species.  They are read by
+the species command via its "vibfile" option.
+
 Files that end in ".vss" or ".vhs" or ".hs" contain collision model
 parameters that can be for the variable soft sphere (VSS) or variable
 hard sphere (vhs) or hard-sphere (HS) models.  These are read by the
@@ -28,6 +32,7 @@ These are the doc pages for various commands which describe the format
 of the corresponding files:
 
 species = doc/species.html
+species.vib = doc/species.html
 vss/vhs/hs = doc/collide.html
 tce = doc/react.html
 sdata = doc/read_surf.html
