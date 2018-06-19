@@ -85,7 +85,15 @@ The particle's speed is unchanged.
 </P>
 <P>The model has 2 parameters set by the <I>Tsurf</I> and <I>acc</I> arguments.
 <I>Tsurf</I> is the temperature of the surface.  <I>Acc</I> is an accommodation
-coefficient.
+coefficient from 0.0 to 1.0, which determines what fraction of surface
+collisions are diffusive.  The rest are specular.  Thus a setting of
+<I>acc</I> = 1.0 means all collisions are specular.
+</P>
+<P>Note that setting <I>acc</I> = 1.0, is a way to perform surface reactions
+with specular reflection, via the <A HREF = "surf_react.html">surf_react</A>
+command, which cannot be done in conjunction with the surf_collide
+specular command.  See the <A HREF = "surf_react.html">surf_react</A> doc page for
+details.
 </P>
 <P>Diffuse reflection emits the particle from the surface with no
 dependence on its incident velocity.  A new velocity is assigned to

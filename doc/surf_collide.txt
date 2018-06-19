@@ -74,7 +74,15 @@ The {diffuse} style computes a simple diffusive reflection model.
 
 The model has 2 parameters set by the {Tsurf} and {acc} arguments.
 {Tsurf} is the temperature of the surface.  {Acc} is an accommodation
-coefficient.
+coefficient from 0.0 to 1.0, which determines what fraction of surface
+collisions are diffusive.  The rest are specular.  Thus a setting of
+{acc} = 1.0 means all collisions are specular.
+
+Note that setting {acc} = 1.0, is a way to perform surface reactions
+with specular reflection, via the "surf_react"_surf_react.html
+command, which cannot be done in conjunction with the surf_collide
+specular command.  See the "surf_react"_surf_react.html doc page for
+details.
 
 Diffuse reflection emits the particle from the surface with no
 dependence on its incident velocity.  A new velocity is assigned to

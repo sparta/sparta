@@ -53,6 +53,19 @@ which reaction (if any) takes place.  A check is made that the sum of
 probabilities for all possible reactions is <= 1.0, which should
 normally be the case if reasonable reaction coefficients are defined.
 
+IMPORTANT NOTE: A surface reaction model can only be specified for
+surfaces whose surface collision model is {diffuse}.  This is partly
+because reactions do not make physical sense with the other current
+surface collision models.  And because the {diffuse} model defines a
+surface temperature, which is used to initialize the rotational and
+vibrational energies of new particles appearing due to dissociation
+reactions.  Note that the {diffuse} model can effectively perform
+specular reflections if its {acc} parameter is set to 0.0.  This is a
+way to to perform surface reactions with specular reflection, which
+you cannot do directly using the "surf_collide
+specular"_surf_collide.html model.  See the
+"surf_collide"_surf_collide.html doc page for details.
+
 :line
 
 The {global} style is a simple model that can be used to test whether

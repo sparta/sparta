@@ -6,26 +6,27 @@
 
 :line 
 
-6. How-to discussions :h3
+4. How-to discussions :h3
 
 The following sections describe how to perform common tasks using
 SPARTA, as well as provide some techinical details about how
 SPARTA works.
 
-6.1 "2d simulations"_#howto_1
-6.2 "Axisymmetric simulations"_#howto_2
-6.3 "Running multiple simulations from one input script"_#howto_3
-6.4 "Output from SPARTA (stats, dumps, computes, fixes, variables)"_#howto_4
-6.5 "Visualizing SPARTA snapshots"_#howto_5
-6.6 "Library interface to SPARTA"_#howto_6
-6.7 "Coupling SPARTA to other codes"_#howto_7 
-6.8 "Details of grid geometry in SPARTA"_#howto_8
-6.9 "Details of surfaces in SPARTA"_#howto_9
-6.10 "Restarting a simulation"_#howto_10
-6.11 "Using the ambipolar approximation"_#howto_11 :all(b)
+4.1 "2d simulations"_#howto_1
+4.2 "Axisymmetric simulations"_#howto_2
+4.3 "Running multiple simulations from one input script"_#howto_3
+4.4 "Output from SPARTA (stats, dumps, computes, fixes, variables)"_#howto_4
+4.5 "Visualizing SPARTA snapshots"_#howto_5
+4.6 "Library interface to SPARTA"_#howto_6
+4.7 "Coupling SPARTA to other codes"_#howto_7 
+4.8 "Details of grid geometry in SPARTA"_#howto_8
+4.9 "Details of surfaces in SPARTA"_#howto_9
+4.10 "Restarting a simulation"_#howto_10
+4.11 "Using the ambipolar approximation"_#howto_11
+4.12 "Using multiple vibrational energy levels"_#howto_12 :all(b)
 
 The example input scripts included in the SPARTA distribution and
-highlighted in "Section 7"_Section_example.html of the manual also
+highlighted in "Section 5"_Section_example.html of the manual also
 show how to setup and run various kinds of simulations.
 
 :line
@@ -63,7 +64,7 @@ are for 2d models.
 
 :line
 
-6.2 Axisymmetric simulations :link(howto_2),h4
+4.2 Axisymmetric simulations :link(howto_2),h4
 
 In SPARTA, an axi-symmetric model is a 2d model.  An example input
 script is provided in the examples/axisymm directory.
@@ -93,7 +94,7 @@ rotated around the y=0 axis of symmetry.
 
 :line
 
-6.3 Running multiple simulations from one input script :link(howto_3),h4
+4.3 Running multiple simulations from one input script :link(howto_3),h4
 
 This can be done in several ways.  See the documentation for
 individual commands for more details on how these examples work.
@@ -181,7 +182,7 @@ simulation, and so forth, until all 8 were completed.
 
 :line
 
-6.4 Output from SPARTA (stats, dumps, computes, fixes, variables) :link(howto_4),h4
+4.4 Output from SPARTA (stats, dumps, computes, fixes, variables) :link(howto_4),h4
 
 There are four basic kinds of SPARTA output:
 
@@ -413,7 +414,7 @@ Command: Input: Output:
 
 :line
 
-6.5 Visualizing SPARTA snapshots :link(howto_5),h4
+4.5 Visualizing SPARTA snapshots :link(howto_5),h4
 
 The "dump image"_dump_image.html command can be used to do on-the-fly
 visualization as a simulation proceeds.  It works by creating a series
@@ -449,7 +450,7 @@ surface and grid cell information as output by SPARTA.
 
 :line
 
-6.6 Library interface to SPARTA :link(howto_6),h4
+4.6 Library interface to SPARTA :link(howto_6),h4
 
 As described in "Section 2.4"_Section_start.html#start_4, SPARTA can
 be built as a library, so that it can be called by another code, used
@@ -530,7 +531,7 @@ distribution yet.
 
 :line
 
-6.7 Coupling SPARTA to other codes :link(howto_7),h4
+4.7 Coupling SPARTA to other codes :link(howto_7),h4
 
 SPARTA is designed to allow it to be coupled to other codes.  For
 example, a continuum finite element (FE) simulation might use SPARTA
@@ -596,7 +597,7 @@ Python wrapper provided with SPARTA that operates through the SPARTA
 library interface.
 
 The files src/library.cpp and library.h contain the C-style interface
-to SPARTA.  See "Section 6.6"_#howto_6 of the manual for a description
+to SPARTA.  See "Section 4.6"_#howto_6 of the manual for a description
 of the interface and how to extend it for your needs.
 
 Note that the sparta_open() function that creates an instance of
@@ -612,7 +613,7 @@ instances of SPARTA to perform different calculations.
 
 :line
 
-6.8 Details of grid geometry in SPARTA :link(howto_8),h4
+4.8 Details of grid geometry in SPARTA :link(howto_8),h4
 
 SPARTA overlays a grid over the simulation domain which is used to
 track particles and to co-locate particles in the same grid cell for
@@ -793,7 +794,7 @@ computational load in a statistical sense.
 
 :line
 
-6.9 Details of surfaces in SPARTA :link(howto_9),h4
+4.9 Details of surfaces in SPARTA :link(howto_9),h4
 
 A SPARTA simulation can define one or more surface objects, each of
 which are read in via the "read_surf"_read_surf.html.  For 2d
@@ -836,7 +837,7 @@ off the surface can be computed.  This is done via the
 "surf_modify"_surf_modify.html and "surf_collide"_surf_collide.html
 commands.
 
-As described in the previous "Section 6.8"_#howto_8, SPARTA overlays a
+As described in the previous "Section 4.8"_#howto_8, SPARTA overlays a
 grid over the simulation domain to track particles.  Surface elements
 are also assigned to grid cells they intersect with, so that
 particle/surface collisions can be efficiently computed.  Typically a
@@ -858,7 +859,7 @@ overlapping surface elements must be computed.
 
 :line
 
-6.10 Restarting a simulation :link(howto_10),h4
+4.10 Restarting a simulation :link(howto_10),h4
 
 There are two ways to continue a long SPARTA simulation.  Multiple
 "run"_run.html commands can be used in the same input script.  Each
@@ -918,7 +919,7 @@ the original run.
 
 :line
 
-6.11 Using the ambipolar approximation :link(howto_11),h4
+4.11 Using the ambipolar approximation :link(howto_11),h4
 
 The ambipolar approximation is a computationally efficient way to
 model low-density plasmas which contain positively-charged ions and
@@ -1044,7 +1045,72 @@ The "dump particle"_dump.html command can output the custom particle
 attributes defined by the "fix ambipolar"_fix_ambipolar.html command.
 E.g. this command
 
-dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi :pre
+dump 1 particle 1000 tmp.dump id type x y z p_ionambi p_velambi\[2\] :pre
 
-will output the ionambi flag = 1 for ambipolar ions, along with the
-vx,vy,vz of their associated ambipolar electrons.
+will output the ionambi flag = 1 for ambipolar ions, along with the vy
+of their associated ambipolar electrons.
+
+The "read_restart"_read_restart.html doc page explains how to restart
+ambipolar simulations where a fix like "fix
+ambipolar"_fix_ambipolar.html has been used to store extra
+per-particle properties.
+
+:line
+
+4.12 Using multiple vibrational energy levels :link(howto_12),h4
+
+DSMC models for collisions between one or more polyatomic species can
+include the effect of multiple discrete vibrational levels, where a
+collision transfers vibrational energy not just between the two
+particles in aggregate but between the various levels defined for each
+particle species.
+
+This kind of model can be enabled in SPARTA using the following
+commands:
+
+"species ... vibfile ..."_species.html
+"collide_modify vibrate discrete"_collide_modify.html
+"fix vibmode"_fix_vibmode.html
+"dump particle p_vibmode"_dump.html :ul
+
+The "species"_species.html command with its {vibfile} option allows a
+separate file with per-species vibrational information to be read.
+See data/air.species.vib for an example of such a file.
+
+Only species with 4,6,8 vibrational degrees of freedom, as defined in
+the species file read by the "species"_species.html command, need to
+be listed in the {vibfile}.  These species have N modes, where N =
+degrees of freedom / 2.  For each mode, a vibrational temperature,
+relaxation number, and degeneracy is defined in the {vibfile}.  These
+quantities are used in the energy exchange formulas for each
+collision.
+
+The "collide_modify vibrate discrete"_collide_modify.html command is
+used to enable the discrete model.  Other allowed settings are {none}
+and {smooth}.  The former turns off vibrational energy effects
+altogether.  The latter uses a single continuous value to represent
+vibrational energy; no per-mode information is used.
+
+The "fix vibmode"_fix_vibmode.html command is used to allocate
+per-particle storage for the population of levels appropriate to the
+particle's species.  This will be from 1 to 4 values for each species.
+Note that this command must be used before particles are created via
+the "create_particles"_create_particles.html command to allow the
+level populations for new particles to be set appropriately.  The "fix
+vibmode"_fix_vibmode.html command doc page has more details.
+
+The "dump particle"_dump.html command can output the custom particle
+attributes defined by the "fix vibmode"_fix_vibmode.html command.
+E.g. this command
+
+dump 1 particle 1000 tmp.dump id type x y z evib p_vibmode\[1\] p_vibmode\[2\] p_vibmode\[3\] :pre
+
+will output for each particle evib = total vibrational energy (summed
+across all levels), and the population counts for the first 3
+vibrational energy levels.  The vibmode count will be 0 for
+vibrational levels that do not exist for particles of a particular
+species.
+
+The "read_restart"_read_restart.html doc page explains how to restart
+simulations where a fix like "fix vibmode"_fix_vibmode.html has been
+used to store extra per-particle properties.
