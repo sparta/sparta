@@ -118,9 +118,12 @@ per-particle storage for these additional modes.
 <HR>
 
 <P>The optional <I>vibfile</I> keyword can be used to specify additional
-vibrational information in the specified <I>vfile</I>, though this
-information is ignored unless the <A HREF = "collide_modify.html">collide_modify
-vibrate</A> setting is specified as <I>discrete</I>.
+vibrational information in the specified <I>vfile</I>.  If this option is
+used, then an entry must appear in <I>vfile</I> for every species in this
+command with a vibdof value = 4,6,8.  Note that even if this
+vibrational info is read, it is ignored by SPARTA unless the
+<A HREF = "collide_modify.html">collide_modify vibrate</A> setting is specified as
+<I>discrete</I>.
 </P>
 <P>The format of a species vibrational file is as follows.  See
 data/co2.species.vib for an example. Comments or blank lines are
