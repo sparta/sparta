@@ -69,7 +69,9 @@ int SurfReactGlobal::react(Particle::OnePart *&ip, double *,
   // perform create reaction
   // clone 1st particle to create 2nd particle
   // if add_particle performs a realloc:
-  //   make copy of x,v, then repoint ip to new particles data struct
+  //   make copy of x,v with new species
+  //   rot/vib energies will be reset by SurfCollide
+  //   repoint ip to new particles data struct if reallocated
 
   if (r < prob_destroy+prob_create) {
     nsingle++;

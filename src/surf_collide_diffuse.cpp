@@ -92,6 +92,8 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
   if (tflag || rflag) trflag = 1;
   else trflag = 0;
 
+  vstream[0] = vstream[1] = vstream[2] = 0.0;
+
   // initialize RNG
 
   random = new RanPark(update->ranmaster->uniform());
@@ -155,9 +157,17 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
   }
 
   // diffuse reflection for each particle
+  // resets v, roteng, vibeng
+  // if new particle J created, also need to trigger any fixes
 
   if (ip) diffuse(ip,norm);
-  if (jp) diffuse(jp,norm);
+  if (jp) {
+    diffuse(jp,norm);
+    if (modify->n_add_particle) {
+      int j = jp - particle->particles;
+      modify->add_particle(j,twall,twall,twall,vstream);
+    }
+  }
 
   // call any fixes with a surf_react() method
   // they may reset j to -1, e.g. fix ambipolar
@@ -192,6 +202,8 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
 
   if (random->uniform() > acc) {
     MathExtra::reflect3(p->v,norm);
+    p->erot = particle->erot(p->ispecies,twall,random);
+    p->evib = particle->evib(p->ispecies,twall,random);
 
   // diffuse reflection
   // vrm = most probable speed of species, eqns (4.1) and (4.7)
@@ -279,6 +291,8 @@ void SurfCollideDiffuse::diffuse(Particle::OnePart *p, double *norm)
       v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1];
       v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
     }
+
+    // initialize rot/vib energy
 
     p->erot = particle->erot(ispecies,twall,random);
     p->evib = particle->evib(ispecies,twall,random);

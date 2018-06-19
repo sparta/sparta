@@ -74,7 +74,9 @@ int SurfReactProb::react(Particle::OnePart *&ip, double *,
 
   // loop over possible reactions for this species
   // if dissociation performs a realloc:
-  //   make copy of x,v, then repoint ip to new particles data struct
+  //   make copy of x,v with new species
+  //   rot/vib energies will be reset by SurfCollide
+  //   repoint ip to new particles data struct if reallocated
 
   OneReaction *r;
 
