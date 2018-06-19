@@ -24,7 +24,7 @@ class SurfReact : protected Pointers {
  public:
   char *id;
   char *style;
- 
+
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
 

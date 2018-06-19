@@ -31,7 +31,7 @@
 
 using namespace SPARTA_NS;
 
-enum{NONE,DISCRETE,SMOOTH};       // several files
+enum{NONE,DISCRETE,SMOOTH};       // several files  (NOTE: change order)
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 
 #define DELTAGRID 1000            // must be bigger than split cells per cell
@@ -42,7 +42,7 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 
 /* ---------------------------------------------------------------------- */
 
-Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
+Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 {
   int n = strlen(arg[0]) + 1;
   style = new char[n];
@@ -100,16 +100,12 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   ncollide_one = nattempt_one = nreact_one = 0;
   ncollide_running = nattempt_running = nreact_running = 0;
-
-  copymode = kokkosable = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Collide::~Collide()
 {
-  if (copymode) return;
-
   delete [] style;
   delete [] mixID;
   delete random;
@@ -154,13 +150,53 @@ void Collide::init()
   if (mixture->nspecies != particle->nspecies)
     error->all(FLERR,"Collision mixture does not contain all species");
 
-  if (sparta->kokkos && !kokkosable)
-    error->all(FLERR,"Must use Kokkos-supported collision style if "
-               "Kokkos is enabled");
+  // if rotstyle or vibstyle = DISCRETE,
+  // check that extra rotation/vibration info is defined
+  // for species that require it
+
+  if (rotstyle == DISCRETE) {
+    Particle::Species *species = particle->species;
+    int nspecies = particle->nspecies;
+
+    int flag = 0;
+    for (int isp = 0; isp < nspecies; isp++) {
+      if (species[isp].rotdof == 0) continue;
+      if (species[isp].rotdof == 2 && species[isp].nrottemp != 1) flag++;
+      if (species[isp].rotdof == 3 && species[isp].nrottemp != 3) flag++;
+    }
+    if (flag) {
+      char str[128];
+      sprintf(str,"%d species do not define corrent rotational "
+              "temps for discrete model",flag);
+      error->all(FLERR,str);
+    }
+  }
+
+  if (vibstyle == DISCRETE) {
+    index_vibmode = particle->find_custom((char *) "vibmode");
+
+    Particle::Species *species = particle->species;
+    int nspecies = particle->nspecies;
+
+    int flag = 0;
+    for (int isp = 0; isp < nspecies; isp++) {
+      if (species[isp].vibdof <= 2) continue;
+      if (index_vibmode < 0) 
+        error->all(FLERR,
+                   "Fix vibmode must be used with discrete vibrational modes");
+      if (species[isp].nvibmode != species[isp].vibdof / 2) flag++;
+    }
+    if (flag) {
+      char str[128];
+      sprintf(str,"%d species do not define correct vibrational "
+              "modes for discrete model",flag);
+      error->all(FLERR,str);
+    }
+  }
 
   // reallocate one-cell data structs for one or many groups
 
-  oldgroups = ngroups;
+  int oldgroups = ngroups;
   ngroups = mixture->ngroup;
 
   if (ngroups != oldgroups) {
@@ -296,8 +332,8 @@ void Collide::modify_params(int narg, char **arg)
     } else if (strcmp(arg[iarg],"rotate") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal collide_modify command");
       if (strcmp(arg[iarg+1],"no") == 0) rotstyle = NONE;
-      // NOTE: keep both for now
-      else if (strcmp(arg[iarg+1],"yes") == 0) rotstyle = SMOOTH;
+      // not yet supported
+      //else if (strcmp(arg[iarg+1],"discrete") == 0) rotstyle = DISCRETE;
       else if (strcmp(arg[iarg+1],"smooth") == 0) rotstyle = SMOOTH;
       else error->all(FLERR,"Illegal collide_modify command");
       iarg += 2;
@@ -1426,7 +1462,7 @@ void Collide::collisions_group_ambipolar()
      do not access ionambi if could be e, since e may be in elist
 ------------------------------------------------------------------------- */
 
-void Collide::ambi_reset(int i, int j, int, int jsp, 
+void Collide::ambi_reset(int i, int j, int isp, int jsp, 
                          Particle::OnePart *ip, Particle::OnePart *jp, 
                          Particle::OnePart *kp, int *ionambi)
 {

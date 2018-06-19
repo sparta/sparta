@@ -38,17 +38,42 @@ class ComputeTvibGrid : public Compute {
 
  private:
   int groupbit,imix,ngroup,mixspecies,nspecies;
+  int modeflag;              // 1 when tallying stats for each vib mode
+  int maxmode;               // max vib mode for any species
 
-  int ntotal;                // total # of columns in tally array
+  int ntally;                // total # of columns in tally array
   int nglocal;               // # of owned grid cells
+  double **tally;            // array of tally quantities, ncells by ntally
 
-  int *nmap;                 // # of tally quantities each group value uses
-  int **map;                 // which tally columns each group value uses
-  double **tally;            // array of tally quantities, cells by ntotal
+  int *nmap;               // nmap[i] = # of tally values for Ith output column
+                           // size = # of outputs (Ngroup or Ngroup*Nmode)
 
-  double *tspecies;          // per-species vibrational temperature
-  int *s2t;                  // convert particle species to tally column
-  int *t2s;                  // convert tally column to particle species
+  int **map;               // map[i][j] = tally columns for Ith output column
+                           // size = # of outputs (Ngroup or Ngroup*Nmode)
+                           //   by # of tally columns (2*nmax or 2*nmax*Nmode)
+                           // nmax = max # of species in any group
+
+  // modeflag = 0, tallying per grid cell and per species
+
+  double *tspecies;          // per-species vibrational temps
+                             // size = Nspecies
+
+  int *s2t;                  // s2t[i] = first tally column for species I
+                             // size = Nspecies
+  int *t2s;                  // t2s[i] = species index for Ith tally column
+                             // size = Ntally = 2*Nspecies
+
+  // modeflag = 1 or 2, tallying per grid cell, per species, per mode
+
+  int index_vibmode;         // index into extra particle values for vibmodes
+
+  double **tspecies_mode;    // per-species per-mode vibrational temps
+                             // size = Nspecies by Nmode
+  int **s2t_mode;            // s2tmode[i][j] = 
+                             //   first tally column for species I, mode J
+                             // length = Nspecies by Nmode
+  int *t2s_mode;             // t2s_mode[i] = species index for Ith tally column
+                             // size = Ntally = 2*Nspecies*Nmode
 };
 
 }

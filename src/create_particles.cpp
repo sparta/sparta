@@ -335,7 +335,8 @@ void CreateParticles::command(int narg, char **arg)
   else if (!globalflag) {
     if (twopass) create_local_twopass(np);
     else create_local(np);
-  } //else create_global(np);
+  }
+  //else create_global(np);
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
@@ -417,6 +418,7 @@ void CreateParticles::create_single()
 
   // nfix_add_particle = # of fixes with add_particle() method
 
+  particle->error_custom();
   modify->list_init_fixes();
   int nfix_add_particle = modify->n_add_particle;
 
@@ -509,6 +511,7 @@ void CreateParticles::create_local(bigint np)
 
   // nfix_add_particle = # of fixes with add_particle() method
 
+  particle->error_custom();
   modify->list_init_fixes();
   int nfix_add_particle = modify->n_add_particle;
 
@@ -565,7 +568,6 @@ void CreateParticles::create_local(bigint np)
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
-
     for (int m = 0; m < ncreate; m++) {
       rn = random->uniform();
       isp = 0;
@@ -611,11 +613,11 @@ void CreateParticles::create_local(bigint np)
       id = MAXSMALLINT*random->uniform();
 
       particle->add_particle(id,ispecies,i,x,v,erot,evib);
+
       if (nfix_add_particle) 
         modify->add_particle(particle->nlocal-1,temp_thermal,
                              temp_rot,temp_vib,vstream);
     }
-
 
     // increment count without effect of density variation
     // so that target insertion count is undisturbed
@@ -627,7 +629,7 @@ void CreateParticles::create_local(bigint np)
 }
 
 /* ----------------------------------------------------------------------
-   create Np particles in parallel
+   create Np particles in parallel in two passes
    every proc creates fraction of Np for cells it owns
    only insert in cells uncut by surfs
    account for cell weighting

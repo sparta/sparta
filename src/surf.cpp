@@ -188,6 +188,27 @@ void Surf::init()
     }
   }
 
+  // if a surf element is assigned a reaction model
+  // must have a collision model that allows reactions
+
+  if (surf_collision_check) {
+    int flag = 0;
+    if (domain->dimension == 2) {
+      for (int i = 0; i < nline; i++)
+        if (lines[i].isr >= 0 && sc[lines[i].isc]->allowreact == 0) flag++;
+    } 
+    if (domain->dimension == 3) {
+      for (int i = 0; i < ntri; i++)
+        if (tris[i].isr >= 0 && sc[tris[i].isc]->allowreact == 0) flag++;
+    } 
+    if (flag) {
+      char str[64];
+      sprintf(str,"%d surface elements with reaction model, "
+              "but invalid collision model",flag);
+      error->all(FLERR,str);
+    }
+  }    
+
   // initialize surf collision and reaction models
 
   for (int i = 0; i < nsc; i++) sc[i]->init();

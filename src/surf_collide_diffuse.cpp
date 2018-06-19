@@ -41,6 +41,8 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 4) error->all(FLERR,"Illegal surf_collide diffuse command");
 
+  allowreact = 1;
+
   tstr = NULL;
 
   if (strstr(arg[2],"v_") == arg[2]) {
