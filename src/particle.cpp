@@ -176,7 +176,7 @@ void Particle::init()
   // if vibstyle = DISCRETE,
   // all species with vibdof = 4,6,8 must have info read from a species.vib file
   
-  if (collide->vibstyle == DISCRETE) {
+  if (collide && collide->vibstyle == DISCRETE) {
     for (int isp = 0; isp < nspecies; isp++) {
       if (species[isp].vibdof <= 2) continue;
       if (species[isp].vibdiscrete_read == 0) {
