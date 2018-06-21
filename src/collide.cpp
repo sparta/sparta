@@ -100,12 +100,16 @@ Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
 
   ncollide_one = nattempt_one = nreact_one = 0;
   ncollide_running = nattempt_running = nreact_running = 0;
+
+  copymode = kokkosable = 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 Collide::~Collide()
-{
+{ 
+  if (copymode) return;
+
   delete [] style;
   delete [] mixID;
   delete random;
@@ -149,6 +153,10 @@ void Collide::init()
 
   if (mixture->nspecies != particle->nspecies)
     error->all(FLERR,"Collision mixture does not contain all species");
+
+  if (sparta->kokkos && !kokkosable)
+    error->all(FLERR,"Must use Kokkos-supported collision style if "
+               "Kokkos is enabled");
 
   // if rotstyle or vibstyle = DISCRETE,
   // check that extra rotation/vibration info is defined
