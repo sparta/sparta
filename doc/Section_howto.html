@@ -9,24 +9,24 @@
 
 <HR>
 
-<H3>4. How-to discussions 
+<H3>6. How-to discussions 
 </H3>
 <P>The following sections describe how to perform common tasks using
 SPARTA, as well as provide some techinical details about how
 SPARTA works.
 </P>
-4.1 <A HREF = "#howto_1">2d simulations</A><BR>
-4.2 <A HREF = "#howto_2">Axisymmetric simulations</A><BR>
-4.3 <A HREF = "#howto_3">Running multiple simulations from one input script</A><BR>
-4.4 <A HREF = "#howto_4">Output from SPARTA (stats, dumps, computes, fixes, variables)</A><BR>
-4.5 <A HREF = "#howto_5">Visualizing SPARTA snapshots</A><BR>
-4.6 <A HREF = "#howto_6">Library interface to SPARTA</A><BR>
-4.7 <A HREF = "#howto_7">Coupling SPARTA to other codes</A> <BR>
-4.8 <A HREF = "#howto_8">Details of grid geometry in SPARTA</A><BR>
-4.9 <A HREF = "#howto_9">Details of surfaces in SPARTA</A><BR>
-4.10 <A HREF = "#howto_10">Restarting a simulation</A><BR>
-4.11 <A HREF = "#howto_11">Using the ambipolar approximation</A><BR>
-4.12 <A HREF = "#howto_12">Using multiple vibrational energy levels</A> <BR>
+6.1 <A HREF = "#howto_1">2d simulations</A><BR>
+6.2 <A HREF = "#howto_2">Axisymmetric simulations</A><BR>
+6.3 <A HREF = "#howto_3">Running multiple simulations from one input script</A><BR>
+6.4 <A HREF = "#howto_4">Output from SPARTA (stats, dumps, computes, fixes, variables)</A><BR>
+6.5 <A HREF = "#howto_5">Visualizing SPARTA snapshots</A><BR>
+6.6 <A HREF = "#howto_6">Library interface to SPARTA</A><BR>
+6.7 <A HREF = "#howto_7">Coupling SPARTA to other codes</A> <BR>
+6.8 <A HREF = "#howto_8">Details of grid geometry in SPARTA</A><BR>
+6.9 <A HREF = "#howto_9">Details of surfaces in SPARTA</A><BR>
+6.10 <A HREF = "#howto_10">Restarting a simulation</A><BR>
+6.11 <A HREF = "#howto_11">Using the ambipolar approximation</A><BR>
+6.12 <A HREF = "#howto_12">Using multiple vibrational energy levels</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -68,7 +68,7 @@ are for 2d models.
 </P>
 <HR>
 
-<A NAME = "howto_2"></A><H4>4.2 Axisymmetric simulations 
+<A NAME = "howto_2"></A><H4>6.2 Axisymmetric simulations 
 </H4>
 <P>In SPARTA, an axi-symmetric model is a 2d model.  An example input
 script is provided in the examples/axisymm directory.
@@ -98,7 +98,7 @@ rotated around the y=0 axis of symmetry.
 </P>
 <HR>
 
-<A NAME = "howto_3"></A><H4>4.3 Running multiple simulations from one input script 
+<A NAME = "howto_3"></A><H4>6.3 Running multiple simulations from one input script 
 </H4>
 <P>This can be done in several ways.  See the documentation for
 individual commands for more details on how these examples work.
@@ -186,7 +186,7 @@ simulation, and so forth, until all 8 were completed.
 </P>
 <HR>
 
-<A NAME = "howto_4"></A><H4>4.4 Output from SPARTA (stats, dumps, computes, fixes, variables) 
+<A NAME = "howto_4"></A><H4>6.4 Output from SPARTA (stats, dumps, computes, fixes, variables) 
 </H4>
 <P>There are four basic kinds of SPARTA output:
 </P>
@@ -422,7 +422,7 @@ vector input could be a column of an array.
 
 <HR>
 
-<A NAME = "howto_5"></A><H4>4.5 Visualizing SPARTA snapshots 
+<A NAME = "howto_5"></A><H4>6.5 Visualizing SPARTA snapshots 
 </H4>
 <P>The <A HREF = "dump_image.html">dump image</A> command can be used to do on-the-fly
 visualization as a simulation proceeds.  It works by creating a series
@@ -460,7 +460,7 @@ surface and grid cell information as output by SPARTA.
 
 <HR>
 
-<A NAME = "howto_6"></A><H4>4.6 Library interface to SPARTA 
+<A NAME = "howto_6"></A><H4>6.6 Library interface to SPARTA 
 </H4>
 <P>As described in <A HREF = "Section_start.html#start_4">Section 2.4</A>, SPARTA can
 be built as a library, so that it can be called by another code, used
@@ -541,7 +541,7 @@ distribution yet.
 </P>
 <HR>
 
-<A NAME = "howto_7"></A><H4>4.7 Coupling SPARTA to other codes 
+<A NAME = "howto_7"></A><H4>6.7 Coupling SPARTA to other codes 
 </H4>
 <P>SPARTA is designed to allow it to be coupled to other codes.  For
 example, a continuum finite element (FE) simulation might use SPARTA
@@ -607,7 +607,7 @@ Python wrapper provided with SPARTA that operates through the SPARTA
 library interface.
 </P>
 <P>The files src/library.cpp and library.h contain the C-style interface
-to SPARTA.  See <A HREF = "#howto_6">Section 4.6</A> of the manual for a description
+to SPARTA.  See <A HREF = "#howto_6">Section 6.6</A> of the manual for a description
 of the interface and how to extend it for your needs.
 </P>
 <P>Note that the sparta_open() function that creates an instance of
@@ -623,7 +623,7 @@ instances of SPARTA to perform different calculations.
 </P>
 <HR>
 
-<A NAME = "howto_8"></A><H4>4.8 Details of grid geometry in SPARTA 
+<A NAME = "howto_8"></A><H4>6.8 Details of grid geometry in SPARTA 
 </H4>
 <P>SPARTA overlays a grid over the simulation domain which is used to
 track particles and to co-locate particles in the same grid cell for
@@ -804,7 +804,7 @@ computational load in a statistical sense.
 </P>
 <HR>
 
-<A NAME = "howto_9"></A><H4>4.9 Details of surfaces in SPARTA 
+<A NAME = "howto_9"></A><H4>6.9 Details of surfaces in SPARTA 
 </H4>
 <P>A SPARTA simulation can define one or more surface objects, each of
 which are read in via the <A HREF = "read_surf.html">read_surf</A>.  For 2d
@@ -847,7 +847,7 @@ off the surface can be computed.  This is done via the
 <A HREF = "surf_modify.html">surf_modify</A> and <A HREF = "surf_collide.html">surf_collide</A>
 commands.
 </P>
-<P>As described in the previous <A HREF = "#howto_8">Section 4.8</A>, SPARTA overlays a
+<P>As described in the previous <A HREF = "#howto_8">Section 6.8</A>, SPARTA overlays a
 grid over the simulation domain to track particles.  Surface elements
 are also assigned to grid cells they intersect with, so that
 particle/surface collisions can be efficiently computed.  Typically a
@@ -869,7 +869,7 @@ overlapping surface elements must be computed.
 </P>
 <HR>
 
-<A NAME = "howto_10"></A><H4>4.10 Restarting a simulation 
+<A NAME = "howto_10"></A><H4>6.10 Restarting a simulation 
 </H4>
 <P>There are two ways to continue a long SPARTA simulation.  Multiple
 <A HREF = "run.html">run</A> commands can be used in the same input script.  Each
@@ -929,7 +929,7 @@ the original run.
 </P>
 <HR>
 
-<A NAME = "howto_11"></A><H4>4.11 Using the ambipolar approximation 
+<A NAME = "howto_11"></A><H4>6.11 Using the ambipolar approximation 
 </H4>
 <P>The ambipolar approximation is a computationally efficient way to
 model low-density plasmas which contain positively-charged ions and
@@ -1067,7 +1067,7 @@ per-particle properties.
 </P>
 <HR>
 
-<A NAME = "howto_12"></A><H4>4.12 Using multiple vibrational energy levels 
+<A NAME = "howto_12"></A><H4>6.12 Using multiple vibrational energy levels 
 </H4>
 <P>DSMC models for collisions between one or more polyatomic species can
 include the effect of multiple discrete vibrational levels, where a
