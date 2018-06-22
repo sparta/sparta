@@ -284,7 +284,7 @@ void FixAveGridKokkos::end_of_step()
         j = argindex[m];
         Compute *c = modify->compute[n];
         KokkosBase* cKKBase = dynamic_cast<KokkosBase*>(c);
-        cKKBase->post_process_grid_kokkos(j,-1,nsample,d_tally,map[m],
+        if (d_array_grid.data()) cKKBase->post_process_grid_kokkos(j,-1,nsample,d_tally,map[m],
                              Kokkos::subview(d_array_grid,Kokkos::ALL(),m)); // need to use subview
       } else {
         k = map[m][0];
