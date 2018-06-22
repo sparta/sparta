@@ -15,8 +15,8 @@ Created orthogonal box = (0 0 0) to (1e-05 1e-05 1e-05)
 create_grid 	    2 2 2
 Created 8 child grid cells
   parent cells = 1
-  CPU time = 0.00167894 secs
-  create/ghost percent = 97.2593 2.7407
+  CPU time = 0.00247502 secs
+  create/ghost percent = 97.8615 2.13852
 
 species		    co2.species N2 CO2 vibfile co2.species.vib
 
@@ -32,7 +32,7 @@ fix                 1 vibmode
 
 create_particles    mix n 0
 Created 1000 particles
-  CPU time = 0.00373602 secs
+  CPU time = 0.00371909 secs
 
 variable            collrate equal "ncoll*step*2/np"
 
@@ -42,7 +42,7 @@ compute             5 thermal/grid all all temp
 compute             St reduce ave c_5[1]
 
 compute             6 tvib/grid all species
-compute             Sv reduce ave c_6[1]
+compute             Sv reduce ave c_6[2]
 
 compute             7 grid all all trot tvib
 compute             Sr reduce ave c_7[1]
@@ -61,17 +61,17 @@ Memory usage per proc in Mbytes:
   total     (ave,min,max) = 3.39022 3.39022 3.39022
 Step CPU Np Natt Ncoll c_St c_Sr c_Srv c_Sv 
        0            0     1000        0        0    19951.268    20485.142            0            0 
-      10  0.005261898     1000       41       31    19503.535    20401.525    242.04955            0 
-      20  0.010343075     1000       44       27    19206.486    20426.647    431.93939            0 
-      30  0.014991045     1000       42       32    18782.829    20451.957    639.02755            0 
-      40  0.019604921     1000       43       25    18466.025    20480.921    791.56155            0 
-      50  0.023972034     1000       44       26    18492.004    20158.762     933.0874            0 
-      60  0.028306961     1000       44       28    17944.109    20231.208    1115.7521            0 
-      70  0.032444954     1000       43       26    17934.353    19930.675    1292.2718            0 
-      80  0.036429882     1000       44       33    17906.539    19611.466    1448.9284            0 
-      90  0.040416002     1000       43       25     17591.35     19369.42    1617.8801            0 
-     100  0.044157028     1000       44       24    17169.881    19529.782    1800.3223            0 
-Loop time of 0.0441759 on 1 procs for 100 steps with 1000 particles
+      10 0.0051929951     1000       41       31    19503.535    20401.525    242.04955    867.24095 
+      20 0.0099349022     1000       44       27    19206.486    20426.647    431.93939    1161.4614 
+      30  0.014529943     1000       42       32    18782.829    20451.957    639.02755    1431.8889 
+      40  0.018886805     1000       43       25    18466.025    20480.921    791.56155    1619.2965 
+      50  0.023144007     1000       44       26    18492.004    20158.762     933.0874    1781.6771 
+      60  0.027331829     1000       44       28    17944.109    20231.208    1115.7521    1993.8556 
+      70  0.031322956     1000       43       26    17934.353    19930.675    1292.2718    2180.7503 
+      80  0.035312891     1000       44       33    17906.539    19611.466    1448.9284    2363.9774 
+      90  0.039059877     1000       43       25     17591.35     19369.42    1617.8801     2548.053 
+     100  0.042773962     1000       44       24    17169.881    19529.782    1800.3223    2742.0673 
+Loop time of 0.042793 on 1 procs for 100 steps with 1000 particles
 
 Particle moves    = 100000 (0.1M)
 Cells touched     = 328764 (0.329M)
@@ -86,7 +86,7 @@ Collide occurs    = 2908 (2.91K)
 Reactions         = 0 (0K)
 Particles stuck   = 0
 
-Particle-moves/CPUsec/proc: 2.26368e+06
+Particle-moves/CPUsec/proc: 2.33683e+06
 Particle-moves/step: 1000
 Cell-touches/particle/step: 3.28764
 Particle comm iterations/step: 1
@@ -100,13 +100,13 @@ Collision-attempts/particle/step: 0.04276
 Collisions/particle/step: 0.02908
 Reactions/particle/step: 0
 
-Move  time (%) = 0.0392554 (88.8616)
-Coll  time (%) = 0.00330114 (7.47273)
-Sort  time (%) = 0.000593424 (1.34332)
-Comm  time (%) = 0.000101805 (0.230453)
+Move  time (%) = 0.0379395 (88.6582)
+Coll  time (%) = 0.00317955 (7.43006)
+Sort  time (%) = 0.000591278 (1.38172)
+Comm  time (%) = 9.9659e-05 (0.232886)
 Modfy time (%) = 0 (0)
-Outpt time (%) = 0.000855923 (1.93753)
-Other time (%) = 6.81877e-05 (0.154355)
+Outpt time (%) = 0.000907898 (2.1216)
+Other time (%) = 7.51019e-05 (0.1755)
 
 Particles: 1000 ave 1000 max 1000 min
 Histogram: 1 0 0 0 0 0 0 0 0 0

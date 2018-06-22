@@ -15,8 +15,8 @@ Created orthogonal box = (0 0 0) to (1e-05 1e-05 1e-05)
 create_grid 	    2 2 2
 Created 8 child grid cells
   parent cells = 1
-  CPU time = 0.00244212 secs
-  create/ghost percent = 93.4492 6.55082
+  CPU time = 0.00223112 secs
+  create/ghost percent = 90.7138 9.28617
 
 species		    co2.species N2 CO2 vibfile co2.species.vib
 
@@ -32,7 +32,7 @@ fix                 1 vibmode
 
 create_particles    mix n 0
 Created 1000 particles
-  CPU time = 0.00276899 secs
+  CPU time = 0.00238299 secs
 
 variable            collrate equal "ncoll*step*2/np"
 
@@ -42,7 +42,7 @@ compute             5 thermal/grid all all temp
 compute             St reduce ave c_5[1]
 
 compute             6 tvib/grid all species
-compute             Sv reduce ave c_6[1]
+compute             Sv reduce ave c_6[2]
 
 compute             7 grid all all trot tvib
 compute             Sr reduce ave c_7[1]
@@ -58,61 +58,61 @@ Memory usage per proc in Mbytes:
   particles (ave,min,max) = 1.875 1.875 1.875
   grid      (ave,min,max) = 1.51388 1.51388 1.51388
   surf      (ave,min,max) = 0 0 0
-  total     (ave,min,max) = 3.38955 3.38955 3.38955
+  total     (ave,min,max) = 3.38921 3.38921 3.38921
 Step CPU Np Natt Ncoll c_St c_Sr c_Srv c_Sv 
-       0            0     1000        0        0    19931.342    21183.978            0            0 
-      10 0.0032680035     1000       40       32    19501.104    20940.905    209.81763            0 
-      20 0.0060508251     1000       44       32    19198.361     21017.09    437.93631            0 
-      30 0.0087549686     1000       43       24    18765.355    21091.484    676.31451            0 
-      40  0.011413813     1000       43       30    18693.592    20486.413    924.64344            0 
-      50  0.014007807     1000       41       29    18487.497    20237.503    1085.0227            0 
-      60  0.016593933     1000       43       32    18265.171    19947.729    1325.5629            0 
-      70   0.01906085     1000       43       30    18336.088    19751.208    1386.4245            0 
-      80  0.021524906     1000       44       27    17876.694    19783.688    1611.5932            0 
-      90  0.023937941     1000       43       32     17420.86    20158.877     1736.767            0 
-     100  0.026308775     1000       43       26    17355.364    20068.418    1829.7619            0 
-Loop time of 0.0263315 on 2 procs for 100 steps with 1000 particles
+       0            0     1000        0        0    19458.192    20253.049            0            0 
+      10 0.0024080276     1000       41       27    18874.537    20612.831    224.13352    809.17203 
+      20 0.0042409897     1000       41       33    18703.186    20039.578    465.29562    1201.0374 
+      30 0.0060710907     1000       40       27     18659.66    19562.521     728.8356    1536.7261 
+      40 0.0078890324     1000       43       30    18714.021    18967.334    878.41501    1729.8747 
+      50 0.0096719265     1000       44       32    18188.769    18940.113    1183.4298    2084.0506 
+      60    0.0114429     1000       44       31    17930.521    18722.324    1372.0652     2297.646 
+      70  0.013152122     1000       44       29    17790.789    18322.181    1579.9414    2521.7839 
+      80  0.014806032     1000       44       31    17465.647      18521.6    1723.3154    2678.6829 
+      90  0.016485929     1000       41       29    17080.281    18741.057    1857.9468    2831.0557 
+     100   0.01811409     1000       44       27    16856.269    18978.265     1901.585    2872.9175 
+Loop time of 0.0181413 on 4 procs for 100 steps with 1000 particles
 
 Particle moves    = 100000 (0.1M)
-Cells touched     = 331323 (0.331M)
-Particle comms    = 48374 (48.4K)
-Boundary collides = 231198 (0.231M)
+Cells touched     = 326813 (0.327M)
+Particle comms    = 73825 (73.8K)
+Boundary collides = 226777 (0.227M)
 Boundary exits    = 0 (0K)
 SurfColl checks   = 0 (0K)
 SurfColl occurs   = 0 (0K)
 Surf reactions    = 0 (0K)
-Collide attempts  = 4245 (4.25K)
-Collide occurs    = 2916 (2.92K)
+Collide attempts  = 4190 (4.19K)
+Collide occurs    = 2815 (2.81K)
 Reactions         = 0 (0K)
 Particles stuck   = 0
 
-Particle-moves/CPUsec/proc: 1.89886e+06
+Particle-moves/CPUsec/proc: 1.37807e+06
 Particle-moves/step: 1000
-Cell-touches/particle/step: 3.31323
+Cell-touches/particle/step: 3.26813
 Particle comm iterations/step: 1
-Particle fraction communicated: 0.48374
-Particle fraction colliding with boundary: 2.31198
+Particle fraction communicated: 0.73825
+Particle fraction colliding with boundary: 2.26777
 Particle fraction exiting boundary: 0
 Surface-checks/particle/step: 0
 Surface-collisions/particle/step: 0
 Surf-reactions/particle/step: 0
-Collision-attempts/particle/step: 0.04245
-Collisions/particle/step: 0.02916
+Collision-attempts/particle/step: 0.0419
+Collisions/particle/step: 0.02815
 Reactions/particle/step: 0
 
-Move  time (%) = 0.0170935 (64.9166)
-Coll  time (%) = 0.00165033 (6.26751)
-Sort  time (%) = 0.000335932 (1.27578)
-Comm  time (%) = 0.00659251 (25.0366)
+Move  time (%) = 0.00858879 (47.3439)
+Coll  time (%) = 0.000904381 (4.98521)
+Sort  time (%) = 0.000203073 (1.1194)
+Comm  time (%) = 0.00778615 (42.9196)
 Modfy time (%) = 0 (0)
-Outpt time (%) = 0.00057435 (2.18123)
-Other time (%) = 8.4877e-05 (0.32234)
+Outpt time (%) = 0.000558317 (3.07761)
+Other time (%) = 0.000100553 (0.554278)
 
-Particles: 500 ave 514 max 486 min
-Histogram: 1 0 0 0 0 0 0 0 0 1
-Cells:      4 ave 4 max 4 min
-Histogram: 2 0 0 0 0 0 0 0 0 0
-GhostCell: 4 ave 4 max 4 min
-Histogram: 2 0 0 0 0 0 0 0 0 0
+Particles: 250 ave 276 max 219 min
+Histogram: 1 0 0 0 0 1 1 0 0 1
+Cells:      2 ave 2 max 2 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 6 ave 6 max 6 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
 EmptyCell: 0 ave 0 max 0 min
-Histogram: 2 0 0 0 0 0 0 0 0 0
+Histogram: 4 0 0 0 0 0 0 0 0 0
