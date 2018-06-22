@@ -119,6 +119,7 @@ void FixBalance::init()
   if (bstyle != BISECTION && grid->cutoff >= 0.0)
     error->all(FLERR,"Cannot use non-rcb fix balance with a grid cutoff");
 
+  last = 0.0;
   timer->init();
 }
 
