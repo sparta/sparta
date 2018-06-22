@@ -42,7 +42,7 @@ enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 
 /* ---------------------------------------------------------------------- */
 
-Collide::Collide(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
+Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 {
   int n = strlen(arg[0]) + 1;
   style = new char[n];
@@ -1474,7 +1474,7 @@ void Collide::collisions_group_ambipolar()
      do not access ionambi if could be e, since e may be in elist
 ------------------------------------------------------------------------- */
 
-void Collide::ambi_reset(int i, int j, int isp, int jsp, 
+void Collide::ambi_reset(int i, int j, int, int jsp, 
                          Particle::OnePart *ip, Particle::OnePart *jp, 
                          Particle::OnePart *kp, int *ionambi)
 {
