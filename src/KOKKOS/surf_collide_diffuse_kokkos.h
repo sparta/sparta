@@ -278,8 +278,8 @@ class SurfCollideDiffuseKokkos : public SurfCollideDiffuse {
     eng = 0.0;
     if (vibstyle == DISCRETE && d_species[isp].vibdof == 2) {
       int ivib = -log(rand_gen.drand()) * temp_thermal / 
-        d_species[isp].vibtemp;
-      eng = ivib * boltz * d_species[isp].vibtemp;
+        d_species[isp].vibtemp[0];
+      eng = ivib * boltz * d_species[isp].vibtemp[0];
     } else if (vibstyle == SMOOTH || d_species[isp].vibdof >= 2) {
       if (d_species[isp].vibdof == 2)
         eng = -log(rand_gen.drand()) * boltz * temp_thermal;

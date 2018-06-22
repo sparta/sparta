@@ -188,8 +188,8 @@ double ParticleKokkos::evib(int isp, double temp_thermal, rand_type &erandom) co
   eng = 0.0;
   if (vibstyle == DISCRETE && d_species[isp].vibdof == 2) {
     int ivib = static_cast<int> (-log(erandom.drand()) * temp_thermal / 
-                                 d_species[isp].vibtemp);
-    eng = ivib * boltz * d_species[isp].vibtemp;
+                                 d_species[isp].vibtemp[0]);
+    eng = ivib * boltz * d_species[isp].vibtemp[0];
   } else if (vibstyle == SMOOTH || d_species[isp].vibdof >= 2) {
     if (d_species[isp].vibdof == 2)
       eng = -log(erandom.drand()) * boltz * temp_thermal;

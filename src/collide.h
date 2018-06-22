@@ -167,6 +167,14 @@ E: Collision mixture does not contain all species
 The specified mixture must contain all species in the simulation so
 that they can be assigned to collision groups.
 
+E: Must use Kokkos-supported collision style if Kokkos is enabled
+
+Self-explantory.
+
+E: Cannot (yet) use KOKKOS package with 'collide_modify vibrate discrete'
+
+This feature is not yet supported.
+
 E: Illegal ... command
 
 Self-explanatory.  Check the input script syntax and compare to the

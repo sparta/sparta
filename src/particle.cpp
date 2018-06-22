@@ -548,6 +548,17 @@ void Particle::grow(int nextra)
 }
 
 /* ----------------------------------------------------------------------
+   insure species list can hold maxspecies species
+   assumes that maxspecies has already been increased
+------------------------------------------------------------------------- */
+
+void Particle::grow_species()
+{
+  species = (Species *) 
+    memory->srealloc(species,maxspecies*sizeof(Species),"particle:species");
+}
+
+/* ----------------------------------------------------------------------
    grow next list if more particles now exist than there is room for
    called from Grid::unpack_particles_adapt() when grid adaptation
      takes place and acquire particles from other procs due to coarsening

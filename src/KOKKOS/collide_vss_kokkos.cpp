@@ -781,7 +781,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
       postcoln.erot += p->erot;
  
       vibdof = d_species[sp].vibdof;
-      double vibn_phi = d_species[sp].vibrel; 
+      double vibn_phi = d_species[sp].vibrel[0]; 
 
       if (vibdof) {
         if (relaxflag == VARIABLE) vibn_phi = vibrel(sp,E_Dispose+p->evib);
@@ -792,11 +792,11 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
 
             E_Dispose += p->evib;
             max_level = static_cast<int>
-              (E_Dispose / (boltz * d_species[sp].vibtemp));
+              (E_Dispose / (boltz * d_species[sp].vibtemp[0]));
             do {
               ivib = static_cast<int> 
                 (rand_gen.drand()*(max_level+AdjustFactor));
-              p->evib = ivib * boltz * d_species[sp].vibtemp;
+              p->evib = ivib * boltz * d_species[sp].vibtemp[0];
               State_prob = pow((1.0 - p->evib / E_Dispose),
                              (1.5 - d_params[sp].omega));
             } while (State_prob < rand_gen.drand());
