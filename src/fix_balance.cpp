@@ -89,6 +89,7 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
 
   // compute initial outputs
 
+  last = 0.0;
   imbfinal = imbprev = imbalance_factor(maxperproc);
 }
 
@@ -119,7 +120,6 @@ void FixBalance::init()
     error->all(FLERR,"Cannot use non-rcb fix balance with a grid cutoff");
 
   timer->init();
-  last = 0.0;
 }
 
 /* ----------------------------------------------------------------------
