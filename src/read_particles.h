@@ -77,7 +77,7 @@ Self-explanatory.
 
 E: Create_particles global option not yet implemented
 
-Self-explantory.
+Self-explanatory.
 
 E: Created incorrect # of particles: %ld versus %ld
 

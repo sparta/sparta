@@ -160,7 +160,7 @@ class Collide : protected Pointers {
 
 E: Collision mixture does not exist
 
-Self-explantory.
+Self-explanatory.
 
 E: Collision mixture does not contain all species
 
@@ -169,7 +169,7 @@ that they can be assigned to collision groups.
 
 E: Must use Kokkos-supported collision style if Kokkos is enabled
 
-Self-explantory.
+Self-explanatory.
 
 E: Cannot (yet) use KOKKOS package with 'collide_modify vibrate discrete'
 

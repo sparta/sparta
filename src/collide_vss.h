@@ -126,7 +126,7 @@ Species cannot be added after VSS colision file is read.
 
 E: Cannot open VSS parameter file %s
 
-Self-explantory.
+Self-explanatory.
 
 E: Incorrect line format in VSS parameter file
 

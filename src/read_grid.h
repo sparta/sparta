@@ -113,7 +113,7 @@ executable can be found and run.
 
 E: Unexpected end of grid file
 
-Self-explantory.
+Self-explanatory.
 
 E: Grid file does not contain parents
 

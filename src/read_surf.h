@@ -95,7 +95,7 @@ class ReadSurf : protected Pointers {
 
 E: Cannot read_surf before grid is defined
 
-Self-explantory.
+Self-explanatory.
 
 E: Cannot read_surf before grid ghost cells are defined
 

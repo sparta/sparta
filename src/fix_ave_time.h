@@ -84,7 +84,7 @@ command-line option when running SPARTA to see the offending line.
 
 E: Invalid fix ave/time off column
 
-Self-explantory.
+Self-explanatory.
 
 E: Compute ID for fix ave/time does not exist
 
@@ -92,11 +92,11 @@ Self-explanatory.
 
 E: Fix ave/time compute does not calculate a scalar
 
-Self-explantory.
+Self-explanatory.
 
 E: Fix ave/time compute does not calculate a vector
 
-Self-explantory.
+Self-explanatory.
 
 E: Fix ave/time compute vector is accessed out-of-range
 

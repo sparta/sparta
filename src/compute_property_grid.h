@@ -76,6 +76,6 @@ in a 2d simulation.
 
 E: Invalid keyword in compute property/grid command
 
-Self-explantory.
+Self-explanatory.
 
 */

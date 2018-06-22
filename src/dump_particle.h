@@ -214,7 +214,7 @@ Self-explanatory.
 
 E: Invalid attribute in dump modify command
 
-Self-explantory.
+Self-explanatory.
 
 E: Could not find dump modify compute ID
 
