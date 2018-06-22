@@ -208,7 +208,7 @@ void Collide::init()
 
   // reallocate one-cell data structs for one or many groups
 
-  int oldgroups = ngroups;
+  oldgroups = ngroups;
   ngroups = mixture->ngroup;
 
   if (ngroups != oldgroups) {
