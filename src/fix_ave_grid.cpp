@@ -510,8 +510,8 @@ void FixAveGrid::end_of_step()
 	n = value2index[m];
 	j = argindex[m];
 	Compute *c = modify->compute[n];
-        c->post_process_grid(j,-1,nsample,tally,map[m],
-                             &array_grid[0][m],nvalues);
+        if (array_grid) c->post_process_grid(j,-1,nsample,tally,map[m],
+                                             &array_grid[0][m],nvalues);
       } else {
         k = map[m][0];
 	for (i = 0; i < nglocal; i++) array_grid[i][m] = tally[i][k] / nsample;
