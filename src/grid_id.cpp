@@ -135,13 +135,15 @@ cellint Grid::id_str2num(char *idstr)
 
 void Grid::id_num2str(cellint id, char *str)
 {
-  int idparent = 0;
+  cellint mask,idlevel;
+
+  cellint idparent = 0;
   int iparent = 0;
   int offset = 0;
 
   while (1) {
-    cellint mask = (1L << pcells[iparent].newbits) - 1;
-    int idlevel = id & mask;
+    mask = (1L << pcells[iparent].newbits) - 1;
+    idlevel = id & mask;
     sprintf(&str[offset],"%d",idlevel);
     offset = strlen(str);
     id = id >> pcells[iparent].newbits;
