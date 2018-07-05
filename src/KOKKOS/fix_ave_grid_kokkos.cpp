@@ -211,7 +211,7 @@ void FixAveGridKokkos::end_of_step()
           Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Add_compute_vector>(0,nglocal),*this);
           DeviceType::fence();
         } else {
-          //int jm1 = j - 1;
+          jm1 = j - 1;
           d_compute_array = computeKKBase->d_array_grid;
           Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Add_compute_array>(0,nglocal),*this);
           DeviceType::fence();
