@@ -115,7 +115,7 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
 
   vformat = new char*[nfield];
 
-  format_default = new char[3*nfield+1];
+  format_default = new char[4*nfield+1];
   format_default[0] = '\0';
 
   for (int i = 0; i < nfield; i++) {

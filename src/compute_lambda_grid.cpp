@@ -70,6 +70,10 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
       if (modify->compute[n]->per_grid_flag == 0)
 	error->all(FLERR,"Compute lambda/grid compute does not "
                    "compute per-grid info");
+      if (nrhoindex == 0 && modify->compute[n]->size_per_grid_cols > 0)
+	error->all(FLERR,
+		   "Compute lambda/grid compute does not "
+                   "compute per-grid vector");
       if (nrhoindex > 0 && modify->compute[n]->size_per_grid_cols == 0)
 	error->all(FLERR,
 		   "Compute lambda/grid compute does not "
@@ -83,6 +87,9 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
       if (modify->fix[n]->per_grid_flag == 0)
 	error->all(FLERR,"Compute lambda/grid fix does not "
                    "compute per-grid info");
+      if (nrhoindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
+	error->all(FLERR,"Compute lambda/grid fix does not "
+                   "compute per-grid vector");
       if (nrhoindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
 	error->all(FLERR,"Compute lambda/grid fix does not "
                    "compute per-grid array");
@@ -115,6 +122,10 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
       if (modify->compute[n]->per_grid_flag == 0)
 	error->all(FLERR,"Compute lambda/grid compute does not "
                    "compute per-grid info");
+      if (tempindex == 0 && modify->compute[n]->size_per_grid_cols > 0)
+	error->all(FLERR,
+		   "Compute lambda/grid compute does not "
+                   "compute per-grid vector");
       if (tempindex > 0 && modify->compute[n]->size_per_grid_cols == 0)
 	error->all(FLERR,
 		   "Compute lambda/grid compute does not "
@@ -128,6 +139,9 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
       if (modify->fix[n]->per_grid_flag == 0)
 	error->all(FLERR,"Compute lambda/grid fix does not "
                    "compute per-grid info");
+      if (tempindex == 0 && modify->fix[n]->size_per_grid_cols > 0)
+	error->all(FLERR,"Compute lambda/grid fix does not "
+                   "compute per-grid vector");
       if (tempindex > 0 && modify->fix[n]->size_per_grid_cols == 0)
 	error->all(FLERR,"Compute lambda/grid fix does not "
                    "compute per-grid array");
