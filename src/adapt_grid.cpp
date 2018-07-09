@@ -1217,7 +1217,7 @@ void AdaptGrid::assign_parents_coarsen(int pstop)
     nxyz = pcells[i].nx * pcells[i].ny * pcells[i].nz;
 
     for (m = 0; m < nxyz; m++) {
-      id = pcells[i].id | ((m+1) << pcells[i].nbits);
+      id = pcells[i].id | ((cellint) (m+1) << pcells[i].nbits);
       if (hash->find(id) == hash->end()) continue;
       icell = (*hash)[id] - 1;
       
@@ -1369,7 +1369,7 @@ void AdaptGrid::candidates_coarsen(int pstop)
 
       if (pcount[i]) {
         for (m = 0; m < nxyz; m++) {
-          id = pcells[i].id | ((m+1) << pcells[i].nbits);
+          id = pcells[i].id | ((cellint) (m+1) << pcells[i].nbits);
           if (hash->find(id) == hash->end()) proc[m] = index[m] = -1;
           else {
             icell = (*hash)[id] - 1;
@@ -1386,7 +1386,7 @@ void AdaptGrid::candidates_coarsen(int pstop)
       //printf("CCC %d: %d %d\n",me,i,pcells[i].id);
       oproc = powner[i];
       for (m = 0; m < nxyz; m++) {
-        id = pcells[i].id | ((m+1) << pcells[i].nbits);
+        id = pcells[i].id | ((cellint) (m+1) << pcells[i].nbits);
         if (hash->find(id) == hash->end()) continue;
         icell = (*hash)[id] - 1;
 
