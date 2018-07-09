@@ -85,10 +85,12 @@ In the formula above, {n} is the number density and {T} is the thermal
 temperature of particles in a grid cell.  This compute does not
 calculate these quantities itself; instead it uses another compute or
 fix to perform the calculation.  This is done by specifying the {nrho}
-and {temp} arguments as either
+and {temp} arguments like this:
 
-c_ID\[m\] = compute with ID that calculates nrho/temp as its Mth column of output
-f_ID\[m\] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output :ul
+c_ID = compute with ID that calculates nrho/temp as a vector output
+c_ID\[m\] = compute with ID that calculates nrho/temp as its Mth column of array output
+f_ID\[m\] = fix with ID that calculates a time-averaged nrho/temp as a vector output
+f_ID\[m\] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of array output :ul
 
 The {temp} argument can also be specified as NULL, which drops the
 (Tref/T) ratio term from the formula above.  That is also effectively

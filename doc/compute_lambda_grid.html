@@ -95,10 +95,12 @@ temperature-dependence for the species.
 temperature of particles in a grid cell.  This compute does not
 calculate these quantities itself; instead it uses another compute or
 fix to perform the calculation.  This is done by specifying the <I>nrho</I>
-and <I>temp</I> arguments as either
+and <I>temp</I> arguments like this:
 </P>
-<UL><LI>c_ID[m] = compute with ID that calculates nrho/temp as its Mth column of output
-<LI>f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of output 
+<UL><LI>c_ID = compute with ID that calculates nrho/temp as a vector output
+<LI>c_ID[m] = compute with ID that calculates nrho/temp as its Mth column of array output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as a vector output
+<LI>f_ID[m] = fix with ID that calculates a time-averaged nrho/temp as its Mth column of array output 
 </UL>
 <P>The <I>temp</I> argument can also be specified as NULL, which drops the
 (Tref/T) ratio term from the formula above.  That is also effectively
