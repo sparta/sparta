@@ -308,10 +308,11 @@ void RemoveSurf::remove_3d(int groupbit)
       fprintf(screen,"  %d tris and %d points remain\n",
 	      surf->ntri,surf->npoint);
     }
-  } else {
-    fprintf(logfile,"  removed %d tris and %d points\n",
-	    ntri_remove,npoint_remove);
-    fprintf(logfile,"  %d tris and %d points remain\n",
-	    surf->ntri,surf->npoint);
+    if (logfile) {
+      fprintf(logfile,"  removed %d tris and %d points\n",
+              ntri_remove,npoint_remove);
+      fprintf(logfile,"  %d tris and %d points remain\n",
+              surf->ntri,surf->npoint);
+    }
   }
 }
