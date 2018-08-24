@@ -228,11 +228,12 @@ void ReactBird::init()
     if (r->type == IONIZATION) z = 0.0;
     
     // add additional coeff for effective DOF
+    // added MAX() limit, 24Aug18
 
     double c1 = MY_PIS*epsilon*r->coeff[2]/(2.0*sigma) *
       sqrt(mr/(2.0*update->boltz*tref)) *
       pow(tref,1.0-omega)/pow(update->boltz,r->coeff[3]-1.0+omega) *
-      tgamma(z+2.5-omega)/tgamma(z+r->coeff[3]+1.5);
+      tgamma(z+2.5-omega) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5));
     double c2 = r->coeff[3] - 1.0 + omega;
 
     r->coeff[2] = c1;
@@ -425,12 +426,15 @@ void ReactBird::ambi_check()
     if (!r->active) continue;
 
     // skip reaction if no ambipolar ions or electrons as reactant or product
+    // r->products[j] can be < 0 for atom or mol
 
     flag = 0;
     for (int j = 0; j < r->nreactant; j++)
       if (r->reactants[j] == especies || ions[r->reactants[j]]) flag = 1;
-    for (int j = 0; j < r->nproduct; j++)
+    for (int j = 0; j < r->nproduct; j++) {
+      if (r->products[j] < 0) continue;
       if (r->products[j] == especies || ions[r->products[j]]) flag = 1;
+    }
     if (!flag) continue;
 
     // dissociation must match one of these orders

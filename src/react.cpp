@@ -34,7 +34,7 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
   recombflag_user = 1;
   recomb_boost = 1000.0;
-  recomb_boost_inverse = 0.0001;
+  recomb_boost_inverse = 0.001;
 
   random = new RanPark(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
