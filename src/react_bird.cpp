@@ -228,11 +228,12 @@ void ReactBird::init()
     if (r->type == IONIZATION) z = 0.0;
     
     // add additional coeff for effective DOF
+    // added MAX() limit, 24Aug18
 
     double c1 = MY_PIS*epsilon*r->coeff[2]/(2.0*sigma) *
       sqrt(mr/(2.0*update->boltz*tref)) *
       pow(tref,1.0-omega)/pow(update->boltz,r->coeff[3]-1.0+omega) *
-      tgamma(z+2.5-omega)/tgamma(z+r->coeff[3]+1.5);
+      tgamma(z+2.5-omega) / MAX(1.0e-6,tgamma(z+r->coeff[3]+1.5));
     double c2 = r->coeff[3] - 1.0 + omega;
 
     r->coeff[2] = c1;
