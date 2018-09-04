@@ -135,6 +135,8 @@ ComputeEFluxGrid::ComputeEFluxGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeEFluxGrid::~ComputeEFluxGrid()
 {
+  if (copymode) return;
+
   delete [] value;
   delete [] unique;
 

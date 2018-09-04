@@ -36,7 +36,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 FixMoveSurfKokkos::FixMoveSurfKokkos(SPARTA *sparta, int narg, char **arg) :
   FixMoveSurf(sparta, narg, arg)
 {
-  kokkosable = 0; // need auto sync
+  kokkos_flag = 0; // need auto sync
   execution_space = Host;
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;

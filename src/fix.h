@@ -60,7 +60,7 @@ class Fix : protected Pointers {
 
   int START_OF_STEP,END_OF_STEP;    // mask settings
 
-  int kokkosable;                // 0/1 if Kokkos fix
+  int kokkos_flag;                // 0/1 if Kokkos fix
   int copymode;                 // 1 if copy of class (prevents deallocation of
                                 //  base class when child copy is destroyed)
   ExecutionSpace execution_space;

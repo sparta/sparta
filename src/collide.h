@@ -123,7 +123,7 @@ class Collide : protected Pointers {
   int oldgroups;         // pass from parent to child class
   int copymode;          // 1 if copy of class (prevents deallocation of
                          //   base class when child copy is destroyed)
-  int kokkosable;        // 1 if collide method supports Kokkos
+  int kokkos_flag;        // 1 if collide method supports Kokkos
 
   // inline function
 

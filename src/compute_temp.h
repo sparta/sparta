@@ -29,7 +29,7 @@ class ComputeTemp : public Compute {
  public:
   ComputeTemp(class SPARTA *, int, char **);
   ~ComputeTemp() {}
-  double compute_scalar();
+  virtual double compute_scalar();
 };
 
 }

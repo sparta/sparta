@@ -56,11 +56,15 @@ class RandPoolWrap : protected Pointers {
 #endif
 
     RandWrap rand_wrap;
-    int tid = 0;
-#ifndef KOKKOS_HAVE_CUDA
-    tid = DeviceType::hardware_thread_id();
-#endif
+
+    typedef Kokkos::Experimental::UniqueToken<
+      DeviceType, Kokkos::Experimental::UniqueTokenScope::Global> unique_token_type;
+
+    unique_token_type unique_token;
+    int tid = unique_token.acquire();
     rand_wrap.rng = random_thr[tid];
+    unique_token.release(tid);
+
     return rand_wrap;
   }
   

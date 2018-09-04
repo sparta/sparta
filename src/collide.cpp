@@ -101,7 +101,7 @@ Collide::Collide(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   ncollide_one = nattempt_one = nreact_one = 0;
   ncollide_running = nattempt_running = nreact_running = 0;
 
-  copymode = kokkosable = 0;
+  copymode = kokkos_flag = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -154,7 +154,7 @@ void Collide::init()
   if (mixture->nspecies != particle->nspecies)
     error->all(FLERR,"Collision mixture does not contain all species");
 
-  if (sparta->kokkos && !kokkosable)
+  if (sparta->kokkos && !kokkos_flag)
     error->all(FLERR,"Must use Kokkos-supported collision style if "
                "Kokkos is enabled");
 

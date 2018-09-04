@@ -110,13 +110,14 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 #ifdef KOKKOS_HAVE_CUDA
   if (ngpus <= 0)
     error->all(FLERR,"Kokkos has been compiled for CUDA but no GPUs are requested");
-
-  Kokkos::HostSpace::execution_space::initialize(nthreads,numa);
-  Kokkos::Cuda::SelectDevice select_device(device);
-  Kokkos::Cuda::initialize(select_device);
-#else
-  SPAHostType::initialize(nthreads,numa);
 #endif
+
+  Kokkos::InitArguments args;
+  args.num_threads = nthreads;
+  args.num_numa = numa;
+  args.device_id = device;
+
+  Kokkos::initialize(args);
 
   // default settings for package kokkos command
 
@@ -129,6 +130,9 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   if (nthreads == 1 && ngpus == 0)
     need_atomics = 0;
 
+  collide_retry_flag = 0;
+  collide_extra = 1.1;
+
   //if (need_atomics == 0) // prevent unnecessary parallel_reduce
   //  atomic_reduction = 1;
 }
@@ -139,12 +143,7 @@ KokkosSPARTA::~KokkosSPARTA()
 {
   // finalize Kokkos
 
-#ifdef KOKKOS_HAVE_CUDA
-  Kokkos::Cuda::finalize();
-  Kokkos::HostSpace::execution_space::finalize();
-#else
-  SPAHostType::finalize();
-#endif
+  Kokkos::finalize();
 }
 
 /* ----------------------------------------------------------------------
@@ -175,6 +174,18 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
         atomic_reduction = 0;
       } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"collide/retry") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
+      if (strcmp(arg[iarg+1],"yes") == 0) {
+        collide_retry_flag = 1;
+      } else if (strcmp(arg[iarg+1],"no") == 0) {
+        collide_retry_flag = 0;
+      } else error->all(FLERR,"Illegal package kokkos command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"collide/extra") == 0) {
+      if (iarg+1 > narg) error->all(FLERR,"Illegal package kokkos command");
+        collide_extra = atof(arg[iarg+1]);
+      iarg += 1;
     } else error->all(FLERR,"Illegal package kokkos command");
   }
 }

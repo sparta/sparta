@@ -98,6 +98,8 @@ FixAveHistoWeight::FixAveHistoWeight(SPARTA *spa, int narg, char **arg) :
 
 FixAveHistoWeight::~FixAveHistoWeight()
 {
+  if (copymode) return;
+
   memory->destroy(vectorwt);
 }
 

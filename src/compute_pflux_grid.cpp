@@ -124,6 +124,8 @@ ComputePFluxGrid::ComputePFluxGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputePFluxGrid::~ComputePFluxGrid()
 {
+  if (copymode) return;
+
   delete [] value;
   delete [] unique;
 

@@ -24,6 +24,7 @@ namespace SPARTA_NS {
 class ReactBird : public React {
  public:
   ReactBird(class SPARTA *, int, char **);
+  ReactBird(class SPARTA *);
   virtual ~ReactBird();
   virtual void init();
   int recomb_exist(int, int);

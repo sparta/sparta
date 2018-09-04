@@ -43,7 +43,7 @@ enum{ONE,RUNNING};                // multiple files
 FixAveGridKokkos::FixAveGridKokkos(SPARTA *sparta, int narg, char **arg) :
   FixAveGrid(sparta, narg, arg)
 {
-  kokkosable = 1;
+  kokkos_flag = 1;
   execution_space = Device;
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;

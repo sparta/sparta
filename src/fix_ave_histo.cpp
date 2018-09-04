@@ -481,6 +481,8 @@ FixAveHisto::FixAveHisto(SPARTA *spa, int narg, char **arg) :
 
 FixAveHisto::~FixAveHisto()
 {
+  if (copymode) return;
+
   delete [] which;
   delete [] argindex;
   delete [] value2index;
