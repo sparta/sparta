@@ -29,11 +29,10 @@ class KokkosBase {
   virtual double post_process_grid_kokkos(int, int, int, DAT::t_float_2d_lr, int *,
                                    DAT::t_float_1d_strided) {return 0.0;}
 
-  DAT::t_float_1d d_vector_grid;     // Kokkos version of computed per-grid vector
-  DAT::t_float_2d_lr d_array_grid;   // Kokkos version of computed per-grid array
+  DAT::t_float_1d d_vector;     // Kokkos device version of computed vector
+  DAT::t_float_2d_lr d_array;   // Kokkos device version of computed array
 
-  DAT::tdual_float_2d_lr k_array;    // Kokkos version of computed array
-  DAT::t_float_2d_lr d_array;        // Kokkos version of computed array
+  DAT::tdual_float_2d_lr k_array;    // Kokkos DualView version of computed array
 };
 
 }
