@@ -75,6 +75,10 @@ action fix_ave_grid_kokkos.cpp
 action fix_ave_grid_kokkos.h
 action fix_balance_kokkos.cpp
 action fix_balance_kokkos.h
+action fix_ave_histo_kokkos.cpp
+action fix_ave_histo_kokkos.h
+action fix_ave_histo_weight_kokkos.cpp
+action fix_ave_histo_weight_kokkos.h
 action fix_move_surf_kokkos.cpp
 action fix_move_surf_kokkos.h
 action geometry_kokkos.h
