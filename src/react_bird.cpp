@@ -425,12 +425,15 @@ void ReactBird::ambi_check()
     if (!r->active) continue;
 
     // skip reaction if no ambipolar ions or electrons as reactant or product
+    // r->products[j] can be < 0 for atom or mol
 
     flag = 0;
     for (int j = 0; j < r->nreactant; j++)
       if (r->reactants[j] == especies || ions[r->reactants[j]]) flag = 1;
-    for (int j = 0; j < r->nproduct; j++)
+    for (int j = 0; j < r->nproduct; j++) {
+      if (r->products[j] < 0) continue;
       if (r->products[j] == especies || ions[r->products[j]]) flag = 1;
+    }
     if (!flag) continue;
 
     // dissociation must match one of these orders

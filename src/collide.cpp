@@ -282,6 +282,10 @@ void Collide::init()
         recomb_ijflag[i][j] = react->recomb_exist(i,j);
   }
 
+  if (recombflag && ambiflag) 
+    error->all(FLERR,"Ambipolar collision model does not yet support "
+               "recombination reactions");
+
   // find ambipolar fix
   // set ambipolar vector/array indices
   // if reactions defined, check that they are valid ambipolar reactions
@@ -1008,7 +1012,6 @@ void Collide::collisions_one_ambipolar()
       ncollide_one++;
       if (reactflag) nreact_one++;
       else continue;
-
 
       // reset ambipolar ions and ion/electron pairings due to reaction
       // must do now before group reset below can break out of loop
