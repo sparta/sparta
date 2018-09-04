@@ -98,9 +98,9 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(nrhoindex,-1,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (nrhoindex == 0 || cnrho->post_process_grid_flag)
-      Kokkos::deep_copy(d_nrho_vector, computeKKBase->d_vector_grid);
+      Kokkos::deep_copy(d_nrho_vector, computeKKBase->d_vector);
     else {
-      d_array = computeKKBase->d_array_grid;
+      d_array = computeKKBase->d_array;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadNrhoVecFromArray>(0,nglocal),*this);
       DeviceType::fence();
@@ -111,9 +111,9 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(fnrho);
     if (nrhoindex == 0)
-      d_nrho_vector = computeKKBase->d_vector_grid;
+      d_nrho_vector = computeKKBase->d_vector;
     else {
-      d_array = computeKKBase->d_array_grid;
+      d_array = computeKKBase->d_array;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadNrhoVecFromArray>(0,nglocal),*this);
       DeviceType::fence();
@@ -134,9 +134,9 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       computeKKBase->post_process_grid_kokkos(tempindex,-1,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (tempindex == 0 || ctemp->post_process_grid_flag)
-      Kokkos::deep_copy(d_temp_vector, computeKKBase->d_vector_grid);
+      Kokkos::deep_copy(d_temp_vector, computeKKBase->d_vector);
     else{
-      d_array = computeKKBase->d_array_grid;
+      d_array = computeKKBase->d_array;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadTempVecFromArray>(0,nglocal),*this);
       DeviceType::fence();
@@ -147,9 +147,9 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
       error->all(FLERR,"Cannot (yet) use non-Kokkos fixes with compute lambda/grid/kk");
     KokkosBase* computeKKBase = dynamic_cast<KokkosBase*>(ftemp);
     if (tempindex == 0)
-      d_temp_vector = computeKKBase->d_vector_grid;
+      d_temp_vector = computeKKBase->d_vector;
     else {
-      d_array = computeKKBase->d_array_grid;
+      d_array = computeKKBase->d_array;
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeLambdaGrid_LoadTempVecFromArray>(0,nglocal),*this);
       DeviceType::fence();
@@ -200,8 +200,8 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
   else
     lambda = 1.0 / (prefactor * d_nrho_vector(i) * pow(tref/d_temp_vector(i),omega-0.5));
 
-  if (kflag == KNONE) d_vector_grid(i) = lambda;
-  else d_array_grid(i,0) = lambda;
+  if (kflag == KNONE) d_vector(i) = lambda;
+  else d_array(i,0) = lambda;
 
   // calculate per-cell Knudsen number
   if (kflag == KNONE) return;
@@ -215,13 +215,13 @@ void ComputeLambdaGridKokkos::operator()(TagComputeLambdaGrid_ComputePerGrid, co
       size += (d_cells(i).hi[2] - d_cells(i).lo[2]);
       size /= 3.0;
     }
-    d_array_grid(i,1) = d_array_grid(i,0) / size;
+    d_array(i,1) = d_array(i,0) / size;
   } else if (kflag == KX) {
-    d_array_grid(i,1) = d_array_grid(i,0) / (d_cells(i).hi[0] - d_cells(i).lo[0]);
+    d_array(i,1) = d_array(i,0) / (d_cells(i).hi[0] - d_cells(i).lo[0]);
   } else if (kflag == KY) {
-    d_array_grid(i,1) = d_array_grid(i,0) / (d_cells(i).hi[1] - d_cells(i).lo[1]);
+    d_array(i,1) = d_array(i,0) / (d_cells(i).hi[1] - d_cells(i).lo[1]);
   } else if (kflag == KZ) {
-    d_array_grid(i,1) = d_array_grid(i,0) / (d_cells(i).hi[2] - d_cells(i).lo[2]);
+    d_array(i,1) = d_array(i,0) / (d_cells(i).hi[2] - d_cells(i).lo[2]);
   }
 }
 
@@ -234,11 +234,11 @@ void ComputeLambdaGridKokkos::reallocate()
   if (kflag == KNONE) {
     memoryKK->destroy_kokkos(k_vector_grid,vector_grid);
     memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"lambda/grid:vector_grid");
-    d_vector_grid = k_vector_grid.d_view;
+    d_vector = k_vector_grid.d_view;
   } else {
     memoryKK->destroy_kokkos(k_array_grid,array_grid);
     memoryKK->create_kokkos(k_array_grid,array_grid,nglocal,2,"lambda/grid:array_grid");
-    d_array_grid = k_array_grid.d_view;
+    d_array = k_array_grid.d_view;
   }
   d_nrho_vector = DAT::t_float_1d ("d_nrho_vector", nglocal);
   d_temp_vector = DAT::t_float_1d ("d_temp_vector", nglocal);

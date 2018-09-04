@@ -106,6 +106,8 @@ ComputeCount::ComputeCount(SPARTA *sparta, int narg, char **arg) :
 
 ComputeCount::~ComputeCount()
 {
+  if (copymode) return;
+
   memory->destroy(spmix);
   memory->destroy(index);
   memory->destroy(indexgroup);

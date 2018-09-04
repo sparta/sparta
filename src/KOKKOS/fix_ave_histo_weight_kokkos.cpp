@@ -187,9 +187,9 @@ void FixAveHistoWeightKokkos::calculate_weights()
         compute->invoked_flag |= INVOKED_PER_GRID;
       }
       if (j == 0) {
-        d_weights = computeKKBase->d_vector_grid;
+        d_weights = computeKKBase->d_vector;
       } else if (compute->array_grid) {
-        d_weights = Kokkos::subview(computeKKBase->d_array_grid,Kokkos::ALL(),j-1);
+        d_weights = Kokkos::subview(computeKKBase->d_array,Kokkos::ALL(),j-1);
       }
     }
 
@@ -231,9 +231,9 @@ void FixAveHistoWeightKokkos::calculate_weights()
 
     } else if (kind == PERGRID) {
       if (j == 0) {
-        d_weights = fixKKBase->d_vector_grid;
-      } else if (fixKKBase->d_array_grid.data()) {
-        d_weights = Kokkos::subview(fixKKBase->d_array_grid,Kokkos::ALL(),j-1);
+        d_weights = fixKKBase->d_vector;
+      } else if (fixKKBase->d_array.data()) {
+        d_weights = Kokkos::subview(fixKKBase->d_array,Kokkos::ALL(),j-1);
       }
     }
 

@@ -281,7 +281,7 @@ double ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int onecell, 
   if (!d_etally.data()) {
     d_etally = d_tally;
     emap = map[index];
-    d_vec = d_vector_grid;
+    d_vec = d_vector;
     nstride = 1;
     if (onecell >= 0) {
       lo = onecell;
@@ -383,7 +383,7 @@ void ComputePFluxGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_tally,tally);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"pflux/grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector = k_vector_grid.d_view;
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"pflux/grid:tally");
   d_tally = k_tally.d_view;
 }

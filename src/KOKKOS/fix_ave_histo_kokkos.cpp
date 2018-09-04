@@ -244,12 +244,12 @@ void FixAveHistoKokkos::end_of_step()
           }
         }
         if (j == 0 || compute->post_process_grid_flag)
-          bin_grid_cells(reducer, computeKKBase->d_vector_grid);
-        else if (computeKKBase->d_array_grid.data())
+          bin_grid_cells(reducer, computeKKBase->d_vector);
+        else if (computeKKBase->d_array.data())
           // @stamoor: fix_ave_histo.cpp passes compute->array_grid[0][j-1],
-          // @stamoor: so send subview of d_array_grid.
+          // @stamoor: so send subview of d_array.
           bin_grid_cells(reducer,
-                         Kokkos::subview(computeKKBase->d_array_grid,Kokkos::ALL(),j-1));
+                         Kokkos::subview(computeKKBase->d_array,Kokkos::ALL(),j-1));
       }
 
     // access fix fields, guaranteed to be ready
@@ -286,14 +286,14 @@ void FixAveHistoKokkos::end_of_step()
           bin_particles(reducer, fix->array_particle[j-1],fix->size_per_particle_cols);
       } else if (kind == PERGRID) {
         if (j == 0) {
-          bin_grid_cells(reducer, fixKKBase->d_vector_grid);
-        } else if (fixKKBase->d_array_grid.data()) {
+          bin_grid_cells(reducer, fixKKBase->d_vector);
+        } else if (fixKKBase->d_array.data()) {
           // @stamoor: fix_ave_histo.cpp passes fix->array_grid[j-1], which is
           // not the same as what happens above with the compute object, it is
           // also inconsistent with fix_ave_histo_weight which uses
           // fix->array_grid[0][j-1] too.  Is this a type in fix_ave_histo?
           bin_grid_cells(reducer,
-                         Kokkos::subview(fixKKBase->d_array_grid,Kokkos::ALL(),j-1));
+                         Kokkos::subview(fixKKBase->d_array,Kokkos::ALL(),j-1));
         }
       }
 

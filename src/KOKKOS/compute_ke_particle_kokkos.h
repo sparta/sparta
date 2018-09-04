@@ -14,30 +14,34 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(ke/particle,ComputeKEParticle)
+ComputeStyle(ke/particle/kk,ComputeKEParticleKokkos)
 
 #else
 
-#ifndef SPARTA_COMPUTE_KE_PARTICLE_H
-#define SPARTA_COMPUTE_KE_PARTICLE_H
+#ifndef SPARTA_COMPUTE_KE_PARTICLE_KOKKOS_H
+#define SPARTA_COMPUTE_KE_PARTICLE_KOKKOS_H
 
-#include "compute.h"
+#include "compute_ke_particle.h"
+#include "kokkos_type.h"
+#include "kokkos_base.h"
 
 namespace SPARTA_NS {
 
-class ComputeKEParticle : public Compute {
+class ComputeKEParticleKokkos : public ComputeKEParticle, public KokkosBase {
  public:
-  ComputeKEParticle(class SPARTA *, int, char **);
-  ~ComputeKEParticle();
-  void init();
+  ComputeKEParticleKokkos(class SPARTA *, int, char **);
+  ~ComputeKEParticleKokkos();
   void compute_per_particle();
-  bigint memory_usage();
+  void compute_per_particle_kokkos();
 
- protected:
-  int nmax;
+  KOKKOS_INLINE_FUNCTION
+  void operator()(const int&) const;
+
+  DAT::tdual_float_1d k_vector_particle;
 
  private:
-  double *ke;
+  t_particle_1d d_particles;
+  t_species_1d d_species;
 };
 
 }

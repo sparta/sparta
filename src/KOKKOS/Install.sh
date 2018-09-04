@@ -49,10 +49,14 @@ action collide_vss_kokkos.cpp
 action collide_vss_kokkos.h
 action compute_boundary_kokkos.cpp
 action compute_boundary_kokkos.h
+action compute_count_kokkos.cpp
+action compute_count_kokkos.h
 action compute_eflux_grid_kokkos.cpp
 action compute_eflux_grid_kokkos.h
 action compute_grid_kokkos.cpp
 action compute_grid_kokkos.h
+action compute_ke_particle_kokkos.cpp
+action compute_ke_particle_kokkos.h
 action compute_lambda_grid_kokkos.cpp
 action compute_lambda_grid_kokkos.h
 action compute_pflux_grid_kokkos.cpp

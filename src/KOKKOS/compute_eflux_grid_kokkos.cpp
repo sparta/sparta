@@ -339,7 +339,7 @@ double ComputeEFluxGridKokkos::post_process_grid_kokkos(int index, int onecell, 
     nsample = 1;
     d_etally = d_tally;
     emap = map[index];
-    d_vec = d_vector_grid;
+    d_vec = d_vector;
     nstride = 1;
     if (onecell >= 0) {
       lo = onecell;
@@ -432,7 +432,7 @@ void ComputeEFluxGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_tally,tally);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"eflux/grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector = k_vector_grid.d_view;
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"eflux/grid:tally");
   d_tally = k_tally.d_view;
 }
