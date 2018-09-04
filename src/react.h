@@ -37,7 +37,7 @@ class React : protected Pointers {
   React(class SPARTA *, int, char **);
   React(class SPARTA *sparta) : Pointers(sparta) { style = NULL; random = NULL; }
   virtual ~React();
-  virtual void init() {} 
+  virtual void init() {}
   virtual int recomb_exist(int, int) = 0;
   virtual void ambi_check() = 0;
   virtual int attempt(Particle::OnePart *, Particle::OnePart *, 

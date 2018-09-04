@@ -597,7 +597,6 @@ void CollideVSSKokkos::operator()(TagCollideCollisionsOne< NEARCP, ATOMIC_REDUCT
   // attempt = exact collision attempt count for a pair of groups
   // nattempt = rounded attempt with RN
 
-
   const double attempt = attempt_collision_kokkos(icell,np,volume,rand_gen);
   const int nattempt = static_cast<int> (attempt);
   if (!nattempt){
