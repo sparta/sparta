@@ -313,7 +313,7 @@ double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int n
     nsample = 1;
     d_etally = d_tally;
     emap = map[index];
-    d_vec = d_vector_grid;
+    d_vec = d_vector;
     nstride = 1;
     if (onecell >= 0) {
       lo = onecell;
@@ -588,7 +588,7 @@ void ComputeGridKokkos::reallocate()
   memoryKK->destroy_kokkos(k_tally,tally);
   nglocal = grid->nlocal;
   memoryKK->create_kokkos(k_vector_grid,vector_grid,nglocal,"thermal/grid:vector_grid");
-  d_vector_grid = k_vector_grid.d_view;
+  d_vector = k_vector_grid.d_view;
   memoryKK->create_kokkos(k_tally,tally,nglocal,ntotal,"thermal/grid:tally");
   d_tally = k_tally.d_view;
 }

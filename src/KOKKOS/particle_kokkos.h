@@ -41,7 +41,7 @@ class ParticleKokkos : public Particle {
   ParticleKokkos(class SPARTA *);
   ~ParticleKokkos();
   static KOKKOS_INLINE_FUNCTION
-  void add_particle_kokkos(t_particle_1d particles, int, int, int, int,
+  int add_particle_kokkos(t_particle_1d particles, int, int, int, int,
                            double *, double *, double, double);
 #ifndef SPARTA_KOKKOS_EXACT
   void compress_migrate(int, int *);
@@ -90,8 +90,14 @@ class ParticleKokkos : public Particle {
 
   int sorted_kk;
 
+  inline
   int get_maxcellcount() {
     return maxcellcount;
+  }
+
+  inline
+  void set_maxcellcount(int in) {
+    maxcellcount = in;
   }
 
  private:
@@ -122,7 +128,7 @@ class ParticleKokkos : public Particle {
 };
 
 KOKKOS_INLINE_FUNCTION
-void ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int id,
+int ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int id,
       int ispecies, int icell, double *x, double *v, double erot, double evib)
 {
   OnePart tmp;
@@ -139,7 +145,16 @@ void ParticleKokkos::add_particle_kokkos(t_particle_1d particles, int index, int
   tmp.evib = evib;
   enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // same as .cpp file
   tmp.flag = PKEEP;
-  particles[index] = tmp;
+
+  int realloc = 0;
+
+  if (index < particles.extent(0)) {
+    particles[index] = tmp;
+  } else {
+    realloc = 1;
+  }
+
+  return realloc; 
 }
 
 

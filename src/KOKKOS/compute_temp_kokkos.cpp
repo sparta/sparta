@@ -12,9 +12,9 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-/*
- * Contributing author: Tim Fuller (Sandia)
- */
+/* ----------------------------------------------------------------------
+   Contributing author: Tim Fuller (Sandia)
+------------------------------------------------------------------------- */
 
 #include "mpi.h"
 #include "string.h"

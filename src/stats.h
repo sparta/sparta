@@ -143,6 +143,7 @@ class Stats : protected Pointers {
   void compute_nparent();
   void compute_nchild();
   void compute_nsplit();
+  void compute_maxlevel();
 
   void compute_vol();
   void compute_lx();

@@ -27,7 +27,7 @@ surf_modify         all collide 1 react 1
 fix                 ambi ambipolar e N+ N2+ NO+ O+ O2+
 
 collide		    vss species air.vss relax variable
-collide_modify      vremax 1000 yes vibrate discrete rotate yes
+collide_modify      vremax 1000 yes vibrate discrete rotate smooth
 collide_modify      ambipolar yes
 react               tce air.tce
 

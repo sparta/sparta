@@ -45,6 +45,8 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
 
 React::~React()
 {
+  if (copy) return;
+
   delete [] style;
   delete random;
 }

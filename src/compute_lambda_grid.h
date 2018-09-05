@@ -30,11 +30,11 @@ class ComputeLambdaGrid : public Compute {
   ComputeLambdaGrid(class SPARTA *, int, char **);
   ~ComputeLambdaGrid();
   void init();
-  void compute_per_grid();
-  void reallocate();
+  virtual void compute_per_grid();
+  virtual void reallocate();
   bigint memory_usage();
 
- private:
+ protected:
   int nglocal;
   int nrhowhich,tempwhich,kflag;
 

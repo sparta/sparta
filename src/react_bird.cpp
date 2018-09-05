@@ -61,18 +61,33 @@ ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
+ReactBird::ReactBird(SPARTA *sparta) :
+  React(sparta)
+{
+  rlist = NULL;
+  reactions = NULL;
+  list_ij = NULL;
+  sp2recomb_ij = NULL;
+}
+
+/* ---------------------------------------------------------------------- */
+
 ReactBird::~ReactBird()
 {
-  for (int i = 0; i < maxlist; i++) {
-    for (int j = 0; j < rlist[i].nreactant; j++)
-      delete [] rlist[i].id_reactants[j];
-    for (int j = 0; j < rlist[i].nproduct; j++)
-      delete [] rlist[i].id_products[j];
-    delete [] rlist[i].id_reactants;
-    delete [] rlist[i].id_products;
-    delete [] rlist[i].reactants;
-    delete [] rlist[i].products;
-    delete [] rlist[i].coeff;
+  if (copy) return;
+
+  if (rlist) {
+    for (int i = 0; i < maxlist; i++) {
+      for (int j = 0; j < rlist[i].nreactant; j++)
+        delete [] rlist[i].id_reactants[j];
+      for (int j = 0; j < rlist[i].nproduct; j++)
+        delete [] rlist[i].id_products[j];
+      delete [] rlist[i].id_reactants;
+      delete [] rlist[i].id_products;
+      delete [] rlist[i].reactants;
+      delete [] rlist[i].products;
+      delete [] rlist[i].coeff;
+    }
   }
   memory->destroy(rlist);
 

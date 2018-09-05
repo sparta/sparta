@@ -33,7 +33,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // same as Grid
 FixGridCheckKokkos::FixGridCheckKokkos(SPARTA *sparta, int narg, char **arg) : 
   FixGridCheck(sparta, narg, arg)
 {
-  kokkosable = 1;
+  kokkos_flag = 1;
   execution_space = Device;
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;

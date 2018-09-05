@@ -41,6 +41,7 @@ ComputeKEParticle::ComputeKEParticle(SPARTA *sparta, int narg, char **arg) :
 
 ComputeKEParticle::~ComputeKEParticle()
 {
+  if (copymode) return;
   memory->destroy(ke);
 }
 

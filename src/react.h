@@ -32,7 +32,10 @@ class React : protected Pointers {
   double recomb_boost_inverse;   // inverse of boost parameter
   Particle::OnePart *recomb_part3;  // ptr to 3rd particle in recomb reaction
 
+  int copy;                  // 1 if class copy
+
   React(class SPARTA *, int, char **);
+  React(class SPARTA *sparta) : Pointers(sparta) { style = NULL; random = NULL; }
   virtual ~React();
   virtual void init() {}
   virtual int recomb_exist(int, int) = 0;
@@ -41,6 +44,7 @@ class React : protected Pointers {
                       double, double, double, double &, int &) = 0;
 
   void modify_params(int, char **);
+  RanPark* get_random() { return random; }
 
  protected:
   class RanPark *random;

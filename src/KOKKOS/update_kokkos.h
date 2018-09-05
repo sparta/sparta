@@ -24,11 +24,12 @@
 #include "surf_collide_diffuse_kokkos.h"
 #include "surf_collide_specular_kokkos.h"
 #include "surf_collide_vanish_kokkos.h"
+#include "surf_collide_piston_kokkos.h"
 #include "compute_boundary_kokkos.h"
 
 namespace SPARTA_NS {
 
-#define KOKKOS_SURF_COLL_TYPES 3
+#define KOKKOS_SURF_COLL_TYPES 4
 #define KOKKOS_MAX_SURF_COLL_PER_TYPE 2
 #define KOKKOS_TOT_SURF_COLL 6
 #define KOKKOS_MAX_BLIST 2
@@ -127,6 +128,7 @@ class UpdateKokkos : public Update {
   KKCopy<SurfCollideSpecularKokkos> sc_kk_specular_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideDiffuseKokkos> sc_kk_diffuse_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollidePistonKokkos> sc_kk_piston_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
 
   DAT::tdual_int_scalar k_ntouch_one;

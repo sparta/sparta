@@ -273,6 +273,7 @@ namespace SPARTA_NS {
   typedef Kokkos::
     DualView<Particle::Species*, SPADeviceType::array_layout, DeviceType> tdual_species_1d;
   typedef tdual_species_1d::t_dev t_species_1d;
+  typedef tdual_species_1d::t_dev_const t_species_1d_const;
   typedef tdual_species_1d::t_host t_host_species_1d;
   
   typedef Kokkos::
