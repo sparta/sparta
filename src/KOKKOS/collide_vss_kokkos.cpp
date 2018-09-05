@@ -459,24 +459,24 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   if (react && !sparta->kokkos->collide_retry_flag)
   {
-      if (d_dellist.extent(0) < maxdelete) {
-        memoryKK->destroy_kokkos(k_dellist,dellist);
-        memoryKK->grow_kokkos(k_dellist,dellist,maxdelete*sparta->kokkos->collide_extra,"collide:dellist");
-        d_dellist = k_dellist.d_view;
-      }
+    if (d_dellist.extent(0) < maxdelete) {
+      memoryKK->destroy_kokkos(k_dellist,dellist);
+      memoryKK->grow_kokkos(k_dellist,dellist,maxdelete*sparta->kokkos->collide_extra,"collide:dellist");
+      d_dellist = k_dellist.d_view;
+    }
 
-      auto maxcellcount = particle_kk->get_maxcellcount();
-      if (d_plist.extent(1) < maxcellcount*sparta->kokkos->collide_extra) {
-        Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount*sparta->kokkos->collide_extra);
-        d_plist = grid_kk->d_plist;
-        d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount+3);
-        maxcellcount_kk = maxcellcount*sparta->kokkos->collide_extra;
-      }
+    auto maxcellcount = particle_kk->get_maxcellcount();
+    if (d_plist.extent(1) < maxcellcount*sparta->kokkos->collide_extra) {
+      Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount*sparta->kokkos->collide_extra);
+      d_plist = grid_kk->d_plist;
+      d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount+3);
+      maxcellcount_kk = maxcellcount*sparta->kokkos->collide_extra;
+    }
 
-      if (d_particles.extent(0) < particle->nlocal*sparta->kokkos->collide_extra) {
-        particle->grow(particle->nlocal*sparta->kokkos->collide_extra);
-        d_particles = particle_kk->k_particles.d_view;
-      }
+    if (d_particles.extent(0) < particle->nlocal*sparta->kokkos->collide_extra) {
+      particle->grow(particle->nlocal*sparta->kokkos->collide_extra);
+      d_particles = particle_kk->k_particles.d_view;
+    }
   }
 
   while (h_retry()) {
