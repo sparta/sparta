@@ -183,9 +183,9 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
       } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"collide/extra") == 0) {
-      if (iarg+1 > narg) error->all(FLERR,"Illegal package kokkos command");
-        collide_extra = atof(arg[iarg+1]);
-      iarg += 1;
+      if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
+      collide_extra = atof(arg[iarg+1]);
+      iarg += 2;
     } else error->all(FLERR,"Illegal package kokkos command");
   }
 }

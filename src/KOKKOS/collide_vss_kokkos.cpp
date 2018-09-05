@@ -457,7 +457,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
   auto h_retry = Kokkos::create_mirror_view(d_retry);
   Kokkos::deep_copy(h_retry,1);
 
-  if (react)
+  if (react && !sparta->kokkos->collide_retry_flag)
   {
       if (d_dellist.extent(0) < maxdelete) {
         memoryKK->destroy_kokkos(k_dellist,dellist);
