@@ -140,5 +140,3 @@ no. These settings are made automatically by the required "-k on"
 "command-line switch"_Section_start.html#start_6. You can change them by 
 using the package kokkos command in your input script or via the "-pk 
 kokkos" "command-line switch"_Section_start.html#start_6. 
-
-
