@@ -692,6 +692,13 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
   // wait on all incoming messages
 
   if (nrecv) MPI_Waitall(nrecv,request,status);
+
+  // deallocate large buffer to reduce memory footprint
+
+  if (buf)
+    memory->destroy(buf);
+  buf = NULL;
+  bufmax = 0;
 }
 
 /* ----------------------------------------------------------------------

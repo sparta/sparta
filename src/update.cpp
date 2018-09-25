@@ -90,6 +90,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   ranmaster = new RanMars(sparta);
 
   reorder_period = 0;
+  comm_mem_limit = 0;
 
   copymode = 0;
 }
@@ -1473,6 +1474,11 @@ void Update::global(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       reorder_period = atoi(arg[iarg+1]);
       if (reorder_period < 0) error->all(FLERR,"Illegal global command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"comm/limit") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      comm_mem_limit = atoi(arg[iarg+1]);
+      if (comm_mem_limit < 0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else error->all(FLERR,"Illegal global command");
   }
