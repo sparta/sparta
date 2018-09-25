@@ -33,7 +33,7 @@ class ComputeCount : public Compute {
   double compute_scalar();
   void compute_vector();
 
- private:
+ protected:
   int nvalues,maxvalues;     // number of values to count
   int *spmix;                // value is SPECIES or MIXTURE group
   int *index;                // index of species or mixture

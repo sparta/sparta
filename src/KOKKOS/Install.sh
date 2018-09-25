@@ -43,14 +43,24 @@ elif (test $mode = 0) then
   fi
 fi
 
-# list of files with optional dependcies
+# list of files with optional dependencies
 
 action collide_vss_kokkos.cpp
 action collide_vss_kokkos.h
 action compute_boundary_kokkos.cpp
 action compute_boundary_kokkos.h
+action compute_count_kokkos.cpp
+action compute_count_kokkos.h
+action compute_eflux_grid_kokkos.cpp
+action compute_eflux_grid_kokkos.h
 action compute_grid_kokkos.cpp
 action compute_grid_kokkos.h
+action compute_ke_particle_kokkos.cpp
+action compute_ke_particle_kokkos.h
+action compute_lambda_grid_kokkos.cpp
+action compute_lambda_grid_kokkos.h
+action compute_pflux_grid_kokkos.cpp
+action compute_pflux_grid_kokkos.h
 action compute_temp_kokkos.cpp
 action compute_temp_kokkos.h
 action compute_thermal_grid_kokkos.cpp
@@ -65,6 +75,10 @@ action fix_ave_grid_kokkos.cpp
 action fix_ave_grid_kokkos.h
 action fix_balance_kokkos.cpp
 action fix_balance_kokkos.h
+action fix_ave_histo_kokkos.cpp
+action fix_ave_histo_kokkos.h
+action fix_ave_histo_weight_kokkos.cpp
+action fix_ave_histo_weight_kokkos.h
 action fix_move_surf_kokkos.cpp
 action fix_move_surf_kokkos.h
 action geometry_kokkos.h
@@ -86,8 +100,14 @@ action particle_kokkos.cpp
 action particle_kokkos.h
 action rand_pool_wrap.cpp
 action rand_pool_wrap.h
+action react_bird_kokkos.cpp
+action react_bird_kokkos.h
+action react_tce_kokkos.cpp
+action react_tce_kokkos.h
 action surf_collide_diffuse_kokkos.cpp
 action surf_collide_diffuse_kokkos.h
+action surf_collide_piston_kokkos.cpp
+action surf_collide_piston_kokkos.h
 action surf_collide_specular_kokkos.cpp
 action surf_collide_specular_kokkos.h
 action surf_collide_vanish_kokkos.cpp

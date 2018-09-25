@@ -220,6 +220,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       x[0] = lo[0] + random->uniform() * (hi[0]-lo[0]);
       x[1] = lo[1] + random->uniform() * (hi[1]-lo[1]);
       x[2] = lo[2] + random->uniform() * (hi[2]-lo[2]);
+      if (dimension == 2) x[2] = 0.0;
 
       if (region && !region->match(x)) continue;
       if (speciesflag) {
@@ -230,7 +231,7 @@ void CreateParticlesKokkos::create_local(bigint np)
 
       h_keep(cand) = 1;
       h_isp(cand) = isp;
-      for (int d = 0; d < dimension; ++d) h_x(cand, d) = x[d];
+      for (int d = 0; d < 3; ++d) h_x(cand, d) = x[d];
 
       if (tempflag) {
         tempscale = temperature_variable(x);
@@ -301,7 +302,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       auto id = d_id(cand);
       auto ispecies = d_species(d_isp(cand));
       double x[3],v[3];
-      for (int d = 0; d < dimension; ++d) x[d] = d_x(cand, d);
+      for (int d = 0; d < 3; ++d) x[d] = d_x(cand, d);
       for (int d = 0; d < 3; ++d) v[d] = d_v(cand, d);
       auto erot = d_erot(cand);
       auto evib = d_evib(cand);

@@ -376,8 +376,8 @@ This is indicated by additional letters in parenthesis: k = KOKKOS.
 "adapt (k)"_fix_adapt.html,
 "ambipolar"_fix_ambipolar.html,
 "ave/grid (k)"_fix_ave_grid.html,
-"ave/histo"_fix_ave_histo.html,
-"ave/histo/weight"_fix_ave_histo.html,
+"ave/histo (k)"_fix_ave_histo.html,
+"ave/histo/weight (k)"_fix_ave_histo.html,
 "ave/surf"_fix_ave_surf.html,
 "ave/time"_fix_ave_time.html,
 "balance (k)"_fix_balance.html,
@@ -401,14 +401,14 @@ package"_Section_accelerate.html.  This is indicated by additional
 letters in parenthesis: k = KOKKOS.
 
 "boundary (k)"_compute_boundary.html,
-"count"_compute_count.html,
+"count (k)"_compute_count.html,
 "distsurf/grid"_compute_distsurf_grid.html,
-"eflux/grid"_compute_eflux_grid.html,
+"eflux/grid (k)"_compute_eflux_grid.html,
 "fft/grid"_compute_fft_grid.html,
 "grid (k)"_compute_grid.html,
-"ke/particle"_compute_ke_particle.html,
-"lambda/grid"_compute_lambda_grid.html,
-"pflux/grid"_compute_pflux_grid.html,
+"ke/particle (k)"_compute_ke_particle.html,
+"lambda/grid (k)"_compute_lambda_grid.html,
+"pflux/grid (k)"_compute_pflux_grid.html,
 "property/grid"_compute_property_grid.html,
 "reduce"_compute_reduce.html,
 "sonine/grid"_compute_sonine_grid.html,
@@ -440,7 +440,7 @@ package"_Section_accelerate.html.  This is indicated by additional
 letters in parenthesis: k = KOKKOS.
 
 "diffuse (k)"_surf_collide.html,
-"piston"_surf_collide.html,
+"piston (k)"_surf_collide.html,
 "specular (k)"_surf_collide.html,
 "vanish (k)"_surf_collide.html :tb(c=3,ea=c)
 

@@ -23,6 +23,7 @@ FixStyle(ave/grid/kk,FixAveGridKokkos)
 
 #include "fix_ave_grid.h"
 #include "kokkos_type.h"
+#include "kokkos_base.h"
 
 namespace SPARTA_NS {
 
@@ -37,7 +38,7 @@ struct TagFixAveGrid_Add_fix_array{};
 struct TagFixAveGrid_Norm_vector_grid{};
 struct TagFixAveGrid_Norm_array_grid{};
 
-class FixAveGridKokkos : public FixAveGrid {
+class FixAveGridKokkos : public FixAveGrid, public KokkosBase {
  public:
   FixAveGridKokkos(class SPARTA *, int, char **);
   ~FixAveGridKokkos();
@@ -76,10 +77,8 @@ class FixAveGridKokkos : public FixAveGrid {
   void operator()(TagFixAveGrid_Norm_array_grid, const int&) const;
 
   DAT::tdual_float_1d k_vector_grid;
-  DAT::t_float_1d d_vector_grid;
 
   DAT::tdual_float_2d_lr k_array_grid;
-  DAT::t_float_2d_lr d_array_grid;
 
  private:
   DAT::tdual_float_2d_lr k_tally;

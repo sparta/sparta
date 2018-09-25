@@ -25,6 +25,7 @@ CollideStyle(vss/kk,CollideVSSKokkos)
 #include "collide_vss_kokkos.h"
 #include "particle_kokkos.h"
 #include "grid_kokkos.h"
+#include "react_tce_kokkos.h"
 #include "kokkos_type.h"
 #include "Kokkos_Random.hpp"
 #include "rand_pool_wrap.h"
@@ -33,23 +34,26 @@ CollideStyle(vss/kk,CollideVSSKokkos)
 namespace SPARTA_NS {
 
 struct s_COLLIDE_REDUCE {
-  int nattempt_one,ncollide_one;
+  int nattempt_one,ncollide_one,nreact_one;
   KOKKOS_INLINE_FUNCTION
   s_COLLIDE_REDUCE() {
     nattempt_one = 0;
     ncollide_one = 0;
+    nreact_one = 0;
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const s_COLLIDE_REDUCE &rhs) {
     nattempt_one += rhs.nattempt_one;
     ncollide_one += rhs.ncollide_one;
+    nreact_one += rhs.nreact_one;
   }
 
   KOKKOS_INLINE_FUNCTION
   void operator+=(const volatile s_COLLIDE_REDUCE &rhs) volatile {
     nattempt_one += rhs.nattempt_one;
     ncollide_one += rhs.ncollide_one;
+    nreact_one += rhs.nreact_one;
   }
 };
 typedef struct s_COLLIDE_REDUCE COLLIDE_REDUCE;
@@ -92,7 +96,9 @@ class CollideVSSKokkos : public CollideVSS {
   void setup_collision_kokkos(Particle::OnePart *, Particle::OnePart *, struct State &, struct State &) const;
   KOKKOS_INLINE_FUNCTION
   int perform_collision_kokkos(Particle::OnePart *&, Particle::OnePart *&, 
-                        Particle::OnePart *&, struct State &, struct State &, rand_type &) const;
+                        Particle::OnePart *&, struct State &, struct State &, rand_type &,
+                        Particle::OnePart *&, int &, double &,
+                        int &) const;
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCollideResetVremax, const int&) const;
@@ -116,12 +122,11 @@ class CollideVSSKokkos : public CollideVSS {
   void grow_percell(int);
 
   KKCopy<GridKokkos> grid_kk_copy;
+  KKCopy<ReactTCEKokkos> react_kk_copy;
 
   t_particle_1d d_particles;
-  t_species_1d d_species;
-
-  DAT::tdual_int_1d k_next;
-  typename AT::t_int_1d d_next;
+  t_species_1d_const d_species;
+  typename AT::t_int_2d d_plist;
 
   DAT::tdual_float_2d k_vremax_initial;
   typename AT::t_float_2d d_vremax_initial;
@@ -138,11 +143,28 @@ class CollideVSSKokkos : public CollideVSS {
   typename AT::t_int_scalar d_ncollide_one;
   HAT::t_int_scalar h_ncollide_one;
 
+  DAT::tdual_int_scalar k_nreact_one;
+  typename AT::t_int_scalar d_nreact_one;
+  HAT::t_int_scalar h_nreact_one;
+
   DAT::tdual_int_scalar k_error_flag;
   typename AT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
 
-  typename AT::t_int_2d d_nn_last_partner; 
+  DAT::t_int_scalar d_retry;
+  DAT::t_int_scalar d_maxdelete;
+  DAT::t_int_scalar d_maxcellcount;
+  DAT::t_int_scalar d_part_grow;
+
+  DAT::t_int_scalar d_ndelete;
+  DAT::t_int_scalar d_nlocal;
+
+  DAT::tdual_int_1d k_dellist;
+  DAT::t_int_1d d_dellist;
+
+  DAT::t_float_2d d_recomb_ijflag;
+
+  typename AT::t_int_2d d_nn_last_partner;
 
   template < int NEARCP > void collisions_one(COLLIDE_REDUCE&);
 
@@ -159,6 +181,7 @@ class CollideVSSKokkos : public CollideVSS {
 
 
   double dt,fnum,boltz;
+  int maxcellcount,maxcellcount_kk,react_defined;
 
   KOKKOS_INLINE_FUNCTION
   void SCATTER_TwoBodyScattering(Particle::OnePart *, 
@@ -170,6 +193,17 @@ class CollideVSSKokkos : public CollideVSS {
                                       struct State &, struct State &, rand_type &) const;
 
   KOKKOS_INLINE_FUNCTION
+  void SCATTER_ThreeBodyScattering(Particle::OnePart *, 
+                                   Particle::OnePart *,
+                                   Particle::OnePart *,
+                                   struct State &, struct State &, rand_type &) const;
+  KOKKOS_INLINE_FUNCTION
+  void EEXCHANGE_ReactingEDisposal(Particle::OnePart *, 
+                                   Particle::OnePart *,
+                                   Particle::OnePart *,
+                                   struct State &, struct State &, rand_type &) const;
+
+  KOKKOS_INLINE_FUNCTION
   double sample_bl(rand_type &, double, double) const;
   KOKKOS_INLINE_FUNCTION
   double rotrel (int, double) const;
@@ -177,7 +211,20 @@ class CollideVSSKokkos : public CollideVSS {
   double vibrel (int, double) const;
 
   KOKKOS_INLINE_FUNCTION
+  int set_nn(int, int) const;
+  KOKKOS_INLINE_FUNCTION
   int find_nn(rand_type &, int, int, int) const;
+
+  void backup();
+  void restore();
+
+  t_particle_1d d_particles_backup;
+  typename AT::t_int_2d d_plist_backup;
+  typename AT::t_float_3d d_vremax_backup;
+  typename AT::t_float_3d d_remain_backup;
+  typename AT::t_int_2d d_nn_last_partner_backup;
+  RanPark* random_backup;
+  RanPark* react_random_backup;
 };
 
 }

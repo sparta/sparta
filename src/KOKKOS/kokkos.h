@@ -30,6 +30,8 @@ class KokkosSPARTA : protected Pointers {
   int nthreads,ngpus;
   int numa;
   int need_atomics;
+  int collide_retry_flag;
+  double collide_extra;
 
   KokkosSPARTA(class SPARTA *, int, char **);
   ~KokkosSPARTA();

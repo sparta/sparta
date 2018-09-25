@@ -61,7 +61,7 @@ void ModifyKokkos::start_of_step()
     int j = list_start_of_step[i];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
     int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
     fix[list_start_of_step[i]]->start_of_step();
 
@@ -82,7 +82,7 @@ void ModifyKokkos::end_of_step()
       int j = list_end_of_step[i];
       particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
       int prev_auto_sync = sparta->kokkos->auto_sync;
-      if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+      if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
       fix[list_end_of_step[i]]->end_of_step();
 
@@ -102,7 +102,7 @@ void ModifyKokkos::add_grid_one(int icell, int flag)
     int j = list_pergrid[i];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
     int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
     fix[list_pergrid[i]]->add_grid_one(icell,flag);
 
@@ -123,7 +123,7 @@ int ModifyKokkos::pack_grid_one(int icell, char *buf, int memflag)
     int j = list_pergrid[i];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
     int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
     ptr += fix[list_pergrid[i]]->pack_grid_one(icell,ptr,memflag);
 
@@ -145,7 +145,7 @@ int ModifyKokkos::unpack_grid_one(int icell, char *buf)
     int j = list_pergrid[i];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
     int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
     ptr += fix[list_pergrid[i]]->unpack_grid_one(icell,ptr);
 
@@ -167,7 +167,7 @@ void ModifyKokkos::compress_grid(int flag)
       int j = list_pergrid[i];
       particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
       int prev_auto_sync = sparta->kokkos->auto_sync;
-      if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+      if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
       fix[list_pergrid[i]]->compress_grid();
 
@@ -179,7 +179,7 @@ void ModifyKokkos::compress_grid(int flag)
       int j = list_pergrid[i];
       particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
       int prev_auto_sync = sparta->kokkos->auto_sync;
-      if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+      if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
       fix[list_pergrid[i]]->post_compress_grid();
 
@@ -199,7 +199,7 @@ void ModifyKokkos::add_particle(int index, double temp_thermal,
     int j = list_add_particle[i];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
     int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
     fix[list_add_particle[i]]->add_particle(index,temp_thermal,temp_rot,
                                             temp_vib,vstream);
@@ -219,7 +219,7 @@ void ModifyKokkos::gas_react(int index)
     int j = list_gas_react[i];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
     int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
     fix[list_gas_react[i]]->gas_react(index);
 
@@ -238,7 +238,7 @@ void ModifyKokkos::surf_react(Particle::OnePart *iorig, int &i, int &)
     int j = list_surf_react[m];
     particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
     int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkosable) sparta->kokkos->auto_sync = 1;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
     fix[list_surf_react[m]]->surf_react(iorig,i,j);
 

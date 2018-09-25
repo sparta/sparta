@@ -559,6 +559,8 @@ void Stats::set_fields(int narg, char **arg)
       addfield("Nchild",&Stats::compute_nchild,BIGINT);
     } else if (strcmp(arg[i],"nsplit") == 0) {
       addfield("Nsplit",&Stats::compute_nsplit,INT);
+    } else if (strcmp(arg[i],"maxlevel") == 0) {
+      addfield("Maxlevel",&Stats::compute_maxlevel,INT);
 
     } else if (strcmp(arg[i],"vol") == 0) {
       addfield("Volume",&Stats::compute_vol,FLOAT);
@@ -929,6 +931,7 @@ int Stats::evaluate_keyword(char *word, double *answer)
   else if (strcmp(word,"nparent") == 0) compute_nparent();
   else if (strcmp(word,"nchild") == 0) compute_nchild();
   else if (strcmp(word,"nsplit") == 0) compute_nsplit();
+  else if (strcmp(word,"maxlevel") == 0) compute_maxlevel();
 
   else if (strcmp(word,"vol") == 0) compute_vol();
   else if (strcmp(word,"lx") == 0) compute_lx();
@@ -1334,6 +1337,13 @@ void Stats::compute_nchild()
 void Stats::compute_nsplit()
 {
   ivalue = grid->nsplit;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Stats::compute_maxlevel()
+{
+  ivalue = grid->maxlevel;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -186,6 +186,8 @@ ComputeLambdaGrid::ComputeLambdaGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeLambdaGrid::~ComputeLambdaGrid()
 {
+  if (copymode) return;
+
   delete [] id_nrho;
   delete [] id_temp;
   delete [] species;

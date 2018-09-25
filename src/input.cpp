@@ -1331,6 +1331,25 @@ void Input::react_command()
 
   delete react;
 
+  if (sparta->suffix_enable) {
+    if (sparta->suffix) {
+      char estyle[256];
+      sprintf(estyle,"%s/%s",arg[0],sparta->suffix);
+
+      if (0) return;
+
+#define REACT_CLASS
+#define ReactStyle(key,Class) \
+      else if (strcmp(estyle,#key) == 0) { \
+        react = new Class(sparta,narg,arg); \
+        return; \
+      }
+#include "style_react.h"
+#undef ReactStyle
+#undef REACT_CLASS
+    }
+  }
+
   if (strcmp(arg[0],"none") == 0) react = NULL;
 
 #define REACT_CLASS

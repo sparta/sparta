@@ -33,8 +33,10 @@ class ComputeKEParticle : public Compute {
   void compute_per_particle();
   bigint memory_usage();
 
- private:
+ protected:
   int nmax;
+
+ private:
   double *ke;
 };
 

@@ -29,11 +29,12 @@ namespace SPARTA_NS {
 class SurfCollidePiston : public SurfCollide {
  public:
   SurfCollidePiston(class SPARTA *, int, char **);
+  SurfCollidePiston(class SPARTA *sparta) : SurfCollide(sparta) {}
   ~SurfCollidePiston() {}
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
 
- private:
+ protected:
   double vwall;
   double dt;
 };

@@ -29,9 +29,8 @@ namespace SPARTA_NS {
 class ComputeTempKokkos : public ComputeTemp {
  public:
   ComputeTempKokkos(class SPARTA *, int, char **);
-  ~ComputeTempKokkos() {}
+  virtual ~ComputeTempKokkos() {}
   double compute_scalar();
-  double compute_scalar_kokkos();
 
   KOKKOS_INLINE_FUNCTION
   void operator()(const int&, double&) const;
@@ -40,6 +39,7 @@ class ComputeTempKokkos : public ComputeTemp {
   t_particle_1d d_particles;
   t_species_1d d_species;
 
+  double compute_scalar_kokkos();
 };
 
 }

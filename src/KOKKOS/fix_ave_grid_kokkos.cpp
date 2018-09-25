@@ -43,7 +43,7 @@ enum{ONE,RUNNING};                // multiple files
 FixAveGridKokkos::FixAveGridKokkos(SPARTA *sparta, int narg, char **arg) :
   FixAveGrid(sparta, narg, arg)
 {
-  kokkosable = 1;
+  kokkos_flag = 1;
   execution_space = Device;
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;
@@ -57,7 +57,7 @@ FixAveGridKokkos::FixAveGridKokkos(SPARTA *sparta, int narg, char **arg) :
     memory->destroy(vector_grid);
     vector_grid = NULL;
     memoryKK->grow_kokkos(k_vector_grid,vector_grid,nglocal,"ave/grid:vector_grid");
-    d_vector_grid = k_vector_grid.d_view;
+    d_vector = k_vector_grid.d_view;
   } else {
     memory->destroy(array_grid);
     array_grid = NULL;
@@ -207,7 +207,7 @@ void FixAveGridKokkos::end_of_step()
       } else {
         k = umap[m][0];
         if (j == 0) {
-          d_compute_vector = computeKKBase->d_vector_grid;
+          d_compute_vector = computeKKBase->d_vector;
           Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Add_compute_vector>(0,nglocal),*this);
           DeviceType::fence();
         } else {
@@ -270,7 +270,7 @@ void FixAveGridKokkos::end_of_step()
       j = argindex[0];
       Compute *c = modify->compute[n];
       KokkosBase* cKKBase = dynamic_cast<KokkosBase*>(c);
-      cKKBase->post_process_grid_kokkos(j,-1,nsample,d_tally,map[0],d_vector_grid);
+      cKKBase->post_process_grid_kokkos(j,-1,nsample,d_tally,map[0],d_vector);
     } else {
       k = map[0][0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Norm_vector_grid>(0,nglocal),*this);
@@ -325,7 +325,7 @@ void FixAveGridKokkos::end_of_step()
 
 KOKKOS_INLINE_FUNCTION
 void FixAveGridKokkos::operator()(TagFixAveGrid_Zero_group_vector, const int &i) const {
-  if (!(d_cinfo[i].mask & groupbit)) d_vector_grid(i) = 0.0;
+  if (!(d_cinfo[i].mask & groupbit)) d_vector(i) = 0.0;
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -385,7 +385,7 @@ void FixAveGridKokkos::operator()(TagFixAveGrid_Add_fix_array, const int &i) con
 
 KOKKOS_INLINE_FUNCTION
 void FixAveGridKokkos::operator()(TagFixAveGrid_Norm_vector_grid, const int &i) const {
-  d_vector_grid[i] = d_tally(i,k) / nsample;
+  d_vector[i] = d_tally(i,k) / nsample;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -407,7 +407,7 @@ void FixAveGridKokkos::grow_percell(int nnew)
 
   if (nvalues == 1) {
     memoryKK->grow_kokkos(k_vector_grid,vector_grid,n,"ave/grid:vector_grid");
-    d_vector_grid = k_vector_grid.d_view;
+    d_vector = k_vector_grid.d_view;
     k_vector_grid.sync<SPAHostType>();
   } else {
     memoryKK->grow_kokkos(k_array_grid,array_grid,n,nvalues,"ave/grid:array_grid");
