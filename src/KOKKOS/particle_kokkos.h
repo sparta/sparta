@@ -25,11 +25,18 @@ namespace SPARTA_NS {
 
 struct TagParticleZero_cellcount{};
 struct TagParticleCompressReactions{};
+struct TagCopyParticleReorderDestinations{};
+struct TagFixedMemoryReorder{};
+struct TagFixedMemoryReorderInit{};
+struct TagSetIcellFromPlist{};
+struct TagParticleReorder_COPYPARTICLELIST{};
+struct TagSetDPlistNewStyle{};
+struct TagSetAverageCascadeSize{};
+struct TagSetMaxCascadeSize{};
 
 template<int NEED_ATOMICS>
 struct TagParticleSort{};
 
-struct TagParticleReorder{};
 
 class ParticleKokkos : public Particle {
  public:
@@ -82,7 +89,25 @@ class ParticleKokkos : public Particle {
   void operator()(TagParticleSort<NEED_ATOMICS>, const int&) const;
 
   KOKKOS_INLINE_FUNCTION
-  void operator()(TagParticleReorder, const int, int&, const bool&) const;
+  void operator()(TagParticleReorder_COPYPARTICLELIST, const int, int&, const bool&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCopyParticleReorderDestinations, const int, int&, const bool&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixedMemoryReorder, const int&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixedMemoryReorderInit, const int&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagSetIcellFromPlist, const int&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagSetAverageCascadeSize, const int&, int&) const;
+
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagSetMaxCascadeSize, const int&, int&) const;
 
   tdual_particle_1d k_particles;
   tdual_species_1d k_species;
@@ -104,6 +129,10 @@ class ParticleKokkos : public Particle {
   t_particle_1d d_particles;
   t_particle_1d d_sorted;
   t_species_1d d_species;
+  DAT::t_int_scalar d_nextParticleToCheckForReordering;
+  DAT::t_int_scalar d_allParticlesSorted;
+  DAT::t_int_1d d_cascadeSize;
+  int nParticlesWksp;
 
   int nbytes;
   int maxcellcount,ngrid;
@@ -125,6 +154,9 @@ class ParticleKokkos : public Particle {
   typename AT::t_int_scalar d_fail_flag;
   HAT::t_int_scalar h_fail_flag;
 
+  // work memory for reduced memory reordering
+  t_particle_1d d_pswap1;
+  t_particle_1d d_pswap2;
 };
 
 KOKKOS_INLINE_FUNCTION

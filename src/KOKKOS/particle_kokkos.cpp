@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -234,24 +234,200 @@ void ParticleKokkos::sort_kokkos()
   if (update->reorder_period &&
       (update->ntimestep % update->reorder_period == 0)) {
 
-    if (d_particles.extent(0) > d_sorted.extent(0)) {
+    if (update->reorder_scheme == COPYPARTICLELIST && d_particles.extent(0) > d_sorted.extent(0)) {
       d_sorted = t_particle_1d();
       d_sorted = t_particle_1d("particle:sorted",d_particles.extent(0));
+    }
+    else if (update->reorder_scheme == FIXEDMEMORY && d_pswap1.size() == 0){
+      nParticlesWksp = update->nParticlesReorderSet;
+      d_pswap1 = t_particle_1d("particle:swap1",nParticlesWksp);
+      d_pswap2 = t_particle_1d("particle:swap2",nParticlesWksp);
+      d_nextParticleToCheckForReordering = DAT::t_int_scalar("particle:nextParticleToCheckForReordering");
+      d_allParticlesSorted = DAT::t_int_scalar("particle:allParticlesSorted");
     }
 
     nbytes = sizeof(OnePart);
 
-    copymode = 1;
-    Kokkos::parallel_scan(Kokkos::RangePolicy<DeviceType, TagParticleReorder>(0,ngrid),*this);
-    copymode = 0;
-    Kokkos::deep_copy(k_particles.d_view,d_sorted);
-    this->modify(Device,PARTICLE_MASK);
+    if (update->reorder_scheme == COPYPARTICLELIST) {
+      copymode = 1;
+      Kokkos::parallel_scan(Kokkos::RangePolicy<DeviceType, TagParticleReorder_COPYPARTICLELIST>(0,ngrid),*this);
+      copymode = 0;
+      Kokkos::deep_copy(k_particles.d_view,d_sorted);
+      this->modify(Device,PARTICLE_MASK);
+    }
+    else if (update->reorder_scheme == FIXEDMEMORY) {
+
+      // fixed memory reordering---------------------------------------------------------
+      // Copy particle destinations into the particle list cell locations
+      //  (to avoid adding a "destination" integer in OnePart for the fixed memory reorder)
+      // After the particle list has been reordered, reset the icell values to correctly reflect
+      // the variable naming.
+      copymode = 1;
+      Kokkos::parallel_scan(Kokkos::RangePolicy<DeviceType, TagCopyParticleReorderDestinations>(0,ngrid),*this);
+      DeviceType::fence();
+      copymode = 0;
+
+      //      d_cascadeSize = DAT::t_int_1d("particle:cascadeSize",nParticlesWksp);
+
+      auto h_nextParticleToCheckForReordering = Kokkos::create_mirror_view(d_nextParticleToCheckForReordering);
+      auto h_allParticlesSorted = Kokkos::create_mirror_view(d_allParticlesSorted);
+      h_nextParticleToCheckForReordering() = 0;
+      int passesRequired = 0;
+      while (h_nextParticleToCheckForReordering() >= 0){
+
+        // identify next set of particles to reorder
+        copymode = 1;
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixedMemoryReorderInit>(0,nParticlesWksp),*this);
+        DeviceType::fence();
+        copymode = 0;
+
+        Kokkos::deep_copy(h_nextParticleToCheckForReordering,d_nextParticleToCheckForReordering);
+        Kokkos::deep_copy(h_allParticlesSorted,d_allParticlesSorted);
+
+        // reorder this set of particles
+        if (!h_allParticlesSorted()){
+          copymode = 1;
+          Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixedMemoryReorder>(0,nParticlesWksp),*this);
+          DeviceType::fence();
+          copymode = 0;
+          passesRequired++;
+
+          //          int sum = 0;
+          //          copymode = 1;
+          //          Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagSetAverageCascadeSize>(0,nParticlesWksp),*this,sum);
+          //          DeviceType::fence();
+          //          copymode = 0;
+
+          //          int max;
+          //          copymode = 1;
+          //          Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagSetMaxCascadeSize>(0,nParticlesWksp),*this,Kokkos::Max<int>(max));
+          //          DeviceType::fence();
+          //          copymode = 0;
+          //          std::cout << "pass = " << passesRequired << " AVERAGE CASCADE SIZE = " << static_cast<double>(sum)/nParticlesWksp << " MAX CASCADE SIZE = " << max << std::endl;
+        }
+      }
+
+      // reset the icell values in the particle list
+      copymode = 1;
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagSetIcellFromPlist>(0,ngrid),*this);
+      DeviceType::fence();
+      copymode = 0;
+      this->modify(Device,PARTICLE_MASK);
+
+      //      std::cout << "WORKSPACE MEMORY USED (MB) = " << 2*nParticlesWksp*nbytes/1.0e+6 << std::endl;
+    }
   }
 
   grid_kk->d_cellcount = d_cellcount;
   grid_kk->d_plist = d_plist;
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
+}
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::operator()(TagSetAverageCascadeSize, const int &i, int &sum) const
+{
+  sum += d_cascadeSize[i];
+}
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::operator()(TagSetMaxCascadeSize, const int &i, int &max) const
+{
+  if (d_cascadeSize[i] > max)
+    max = d_cascadeSize[i];
+}
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::operator()(TagCopyParticleReorderDestinations, const int icell, int &m_fill, const bool &final) const
+{
+  // load icell values with reorder destination index for particle reordering
+  //  (location in d_particles where particle is moving)
+  for (int j = 0; j < d_cellcount[icell]; j++) {
+    if (final) {
+      const int iparticle = d_plist(icell,j);
+      d_particles[iparticle].icell = m_fill;
+      d_plist(icell,j) = m_fill; // the new plist after reordering
+    }
+    m_fill++;
+  }
+}
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::operator()(TagFixedMemoryReorderInit, const int &i) const
+{
+  //  d_cascadeSize[i] = 0;
+  // note:  "i" is a thread id (cannot be greater than number of particles allocated in d_pswap* workspaces)
+
+  // assign batch of moving particles to threads (batch size = nParticlesWksp)
+  int count = 0;
+  int lastParticleChecked = -1;
+  d_pswap1[i].icell = -999; // thread isn't moving a particle
+  for (int n=d_nextParticleToCheckForReordering(); n<nlocal; ++n){
+    if (d_particles[n].icell != n){
+      if (i == count){
+        d_pswap1[i] = d_particles[n]; // copy the moving particle into the work space so the thread can move it later.
+        d_particles[n].icell = -1;    // current location of moving particle is marked as vacant
+        lastParticleChecked = n;
+        break;
+      }
+      count++;
+    }
+  }
+  if (i == 0) { // first thread
+    if (d_pswap1[i].icell != -999)
+      d_allParticlesSorted() = 0;  // first thread found a particle to move ==> particles are not sorted
+    else
+      d_allParticlesSorted() = 1;  // first thread couldn't find a particle to move ==> all particles sorted
+  }
+
+  // set next particle to check for next iteration
+  if (i == nParticlesWksp-1){ // last thread
+    if (lastParticleChecked >= 0 && lastParticleChecked+1 < nlocal)
+      d_nextParticleToCheckForReordering() = lastParticleChecked+1;
+    else
+      d_nextParticleToCheckForReordering() = -1;
+  }
+}
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::operator()(TagFixedMemoryReorder, const int &i) const
+{
+  // particle movement for this thread continues until a particle is moved to a vacant location (indicated by icell = -1)
+  OnePart *movePtr;
+  int newParticleLoc;
+  bool iHaveAnotherParticle = false;
+  if (d_pswap1[i].icell != -999)
+    iHaveAnotherParticle = true;
+
+  int count = 0;
+  while (iHaveAnotherParticle){
+    if (count % 2 == 0) { // even
+      movePtr = &d_pswap1[i];
+      newParticleLoc = movePtr->icell; // note:  this is a particle location, NOT a cell location
+      d_pswap2[i] = d_particles[newParticleLoc];
+      if (d_pswap2[i].icell == -1)
+        iHaveAnotherParticle = false;
+    }
+    else { // odd
+      movePtr = &d_pswap2[i];
+      newParticleLoc = movePtr->icell; // note:  this is a particle location, NOT a cell location
+      d_pswap1[i] = d_particles[newParticleLoc];
+      if (d_pswap1[i].icell == -1)
+        iHaveAnotherParticle = false;
+    }
+    d_particles[newParticleLoc] = *movePtr;
+    count++;
+  }
+  //  d_cascadeSize[i] = count;
+}
+
+KOKKOS_INLINE_FUNCTION
+void ParticleKokkos::operator()(TagSetIcellFromPlist, const int &icell) const
+{
+  for (int j = 0; j < d_cellcount[icell]; j++) {
+    const int iparticle = d_plist(icell,j);
+    d_particles[iparticle].icell = icell;
+  }
 }
 
 template<int NEED_ATOMICS>
@@ -273,9 +449,9 @@ void ParticleKokkos::operator()(TagParticleSort<NEED_ATOMICS>, const int &i) con
 }
 
 KOKKOS_INLINE_FUNCTION
-void ParticleKokkos::operator()(TagParticleReorder, const int icell, int &m_fill, const bool &final) const
+void ParticleKokkos::operator()(TagParticleReorder_COPYPARTICLELIST, const int icell, int &m_fill, const bool &final) const
 {
-  for (int j = 0; j < d_cellcount(icell); j++) {
+  for (int j = 0; j < d_cellcount[icell]; j++) {
     if (final) {
       const int iparticle = d_plist(icell,j);
       //memcpy(&d_sorted[m_fill],&d_particles[iparticle],nbytes);
@@ -288,7 +464,7 @@ void ParticleKokkos::operator()(TagParticleReorder, const int icell, int &m_fill
 
 KOKKOS_INLINE_FUNCTION
 void ParticleKokkos::operator()(TagParticleZero_cellcount, const int &i) const {
-  d_cellcount(i) = 0.0;
+  d_cellcount[i] = 0.0;
 }
 
 /* ----------------------------------------------------------------------
@@ -321,7 +497,7 @@ void ParticleKokkos::pre_weight()
    only grid-based weighting is currently implemented
 ------------------------------------------------------------------------- */
 
-struct PostWeightPair { int i; int id; }; 
+struct PostWeightPair { int i; int id; };
 
 void ParticleKokkos::post_weight()
 {
@@ -419,16 +595,16 @@ void ParticleKokkos::grow(int nextra)
 {
   if (ncustom)
     error->all(FLERR,"Custom per-particles attributes not yet supported with Kokkos");
-  
+
   bigint target = (bigint) nlocal + nextra;
   if (target <= maxlocal) return;
-  
+
   bigint newmax = maxlocal;
   while (newmax < target) newmax += MAX(DELTA, newmax*1.1);
-  
-  if (newmax > MAXSMALLINT) 
+
+  if (newmax > MAXSMALLINT)
     error->one(FLERR,"Per-processor particle count is too big");
-  
+
   maxlocal = newmax;
   if (particles == NULL)
     k_particles = tdual_particle_1d("particle:particles",maxlocal);
@@ -439,9 +615,9 @@ void ParticleKokkos::grow(int nextra)
   }
   d_particles = k_particles.d_view;
   particles = k_particles.h_view.data();
-  
+
   if (ncustom == 0) return;
-  
+
   //for (int i = 0; i < ncustom; i++) {
   //  if (ename[i] == NULL) continue;
   //  grow_custom(i,oldmax,maxlocal);

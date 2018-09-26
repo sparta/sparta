@@ -1470,10 +1470,16 @@ void Update::global(int narg, char **arg)
       else error->all(FLERR,"Illegal weight command");
       iarg += 3;
     } else if (strcmp(arg[iarg],"particle/reorder") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       reorder_period = atoi(arg[iarg+1]);
       if (reorder_period < 0) error->all(FLERR,"Illegal global command");
+      reorder_scheme = COPYPARTICLELIST;
       iarg += 2;
+      if (strcmp(arg[iarg],"fixedmem") == 0) {
+        nParticlesReorderSet = atoi(arg[iarg+1]);
+        if (nParticlesReorderSet <= 0) error->all(FLERR,"Illegal particle/reorder command,");
+        reorder_scheme = FIXEDMEMORY;
+        iarg += 2;
+      }
     } else error->all(FLERR,"Illegal global command");
   }
 }

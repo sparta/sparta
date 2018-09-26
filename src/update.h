@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -17,8 +17,11 @@
 
 #include "math.h"
 #include "pointers.h"
+#include <iostream>
 
 namespace SPARTA_NS {
+
+enum{COPYPARTICLELIST,FIXEDMEMORY};
 
 class Update : protected Pointers {
  public:
@@ -65,6 +68,9 @@ class Update : protected Pointers {
   int nstuck;                // # of particles stuck on surfs and deleted
 
   int reorder_period;        // # of timesteps between particle reordering
+  int nParticlesReorderSet;  // # of particles in reorder set in fixed memory reordering scheme
+                             //  (on GPU, this will be number of threads for each reordering pass)
+  int reorder_scheme;        // (copying full particle list or using a small fixed memory)
 
   int copymode;          // 1 if copy of class (prevents deallocation of
                          //  base class when child copy is destroyed)
@@ -92,7 +98,7 @@ class Update : protected Pointers {
 
   int collide_react;         // 1 if any SurfCollide or React classes defined
   int nsc,nsr;               // copy of Collide/React data in Surf class
-  class SurfCollide **sc;    
+  class SurfCollide **sc;
   class SurfReact **sr;
 
   int bounce_tally;               // 1 if any bounces are ever tallied
@@ -105,7 +111,7 @@ class Update : protected Pointers {
   int nboundary_tally;     // # of Cmp tallying boundary bounce info this step
   class Compute **slist_active;   // list of active surf Computes this step
   class Compute **blist_active;   // list of active boundary Computes this step
-  
+
   int surf_pre_tally;       // 1 to log particle stats before surf collide
   int boundary_pre_tally;   // 1 to log particle stats before boundary collide
 
