@@ -232,9 +232,6 @@ void Comm::migrate_cells(int nmigrate)
 {
   int i,n;
 
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
   // grow proc and size lists if needed
 
   if (nmigrate > maxgproc) {
@@ -249,102 +246,106 @@ void Comm::migrate_cells(int nmigrate)
   // compute byte count needed to pack cells
 
   int icell_start = 0;
-  int icell_end = nglocal;
+  int icell_end = grid->nlocal;
   int not_done = 1;
   int num_pass = 0;
 
   while (not_done) {
-  num_pass++;
-  int nsend = 0;
-  bigint boffset = 0;
-  for (int icell = icell_start; icell < nglocal; icell++) {
-    icell_end = icell+1;
-    if (cells[icell].nsplit <= 0) continue;
-    if (cells[icell].proc == me) continue;
-    gproc[nsend] = cells[icell].proc;
-    n = grid->pack_one(icell,NULL,1,1,0);
-    if (update->comm_mem_limit > 0) {
-      if (n > 0 && boffset > 0 && boffset+n > update->comm_mem_limit) {
-        icell_end -= 1;
-        break;
+
+    Grid::ChildCell *cells = grid->cells;
+    int nglocal = grid->nlocal;
+
+    num_pass++;
+    int nsend = 0;
+    bigint boffset = 0;
+    for (int icell = icell_start; icell < nglocal; icell++) {
+      icell_end = icell+1;
+      if (cells[icell].nsplit <= 0) continue;
+      if (cells[icell].proc == me) continue;
+      gproc[nsend] = cells[icell].proc;
+      n = grid->pack_one(icell,NULL,1,1,0);
+      if (update->comm_mem_limit > 0) {
+        if (n > 0 && boffset > 0 && boffset+n > update->comm_mem_limit) {
+          icell_end -= 1;
+          break;
+        }
       }
+      gsize[nsend++] = n;
+      boffset += n;
     }
-    gsize[nsend++] = n;
-    boffset += n;
-  }
 
-  if (boffset > MAXSMALLINT) 
-    error->one(FLERR,"Migrate cells send buffer exceeds 2 GB");
-  int offset = boffset;
+    if (boffset > MAXSMALLINT) 
+      error->one(FLERR,"Migrate cells send buffer exceeds 2 GB");
+    int offset = boffset;
 
-  // reallocate sbuf as needed
+    // reallocate sbuf as needed
 
-  if (offset > maxsendbuf) {
-    memory->destroy(sbuf);
-    maxsendbuf = offset;
-    memory->create(sbuf,maxsendbuf,"comm:sbuf");
-    memset(sbuf,0,maxsendbuf);
-  }
+    if (offset > maxsendbuf) {
+      memory->destroy(sbuf);
+      maxsendbuf = offset;
+      memory->create(sbuf,maxsendbuf,"comm:sbuf");
+      memset(sbuf,0,maxsendbuf);
+    }
 
-  // pack cell info into sbuf
-  // only called for unsplit and split cells I no longer own
+    // pack cell info into sbuf
+    // only called for unsplit and split cells I no longer own
 
-  offset = 0;
-  for (int icell = icell_start; icell < icell_end; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    if (cells[icell].proc == me) continue;
-    offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
-  }
+    offset = 0;
+    for (int icell = icell_start; icell < icell_end; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      if (cells[icell].proc == me) continue;
+      offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
+    }
 
-  // create irregular communication plan with variable size datums
-  // nrecv = # of incoming grid cells
-  // recvsize = total byte size of incoming grid + particle info
-  // DEBUG: append a sort=1 arg so that messages from other procs
-  //        are received in repeatable order, thus grid cells stay in order
+    // create irregular communication plan with variable size datums
+    // nrecv = # of incoming grid cells
+    // recvsize = total byte size of incoming grid + particle info
+    // DEBUG: append a sort=1 arg so that messages from other procs
+    //        are received in repeatable order, thus grid cells stay in order
 
-  if (!igrid) igrid = new Irregular(sparta);
-  int recvsize;
-  int nrecv = 
-    igrid->create_data_variable(nsend,gproc,gsize,
+    if (!igrid) igrid = new Irregular(sparta);
+    int recvsize;
+    int nrecv = 
+      igrid->create_data_variable(nsend,gproc,gsize,
                                          recvsize,commsortflag);
 
-  // reallocate rbuf as needed
+    // reallocate rbuf as needed
 
-  if (recvsize > maxrecvbuf) {
-    memory->destroy(rbuf);
-    maxrecvbuf = recvsize;
-    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
-    memset(rbuf,0,maxrecvbuf);
-  }
+    if (recvsize > maxrecvbuf) {
+      memory->destroy(rbuf);
+      maxrecvbuf = recvsize;
+      memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+      memset(rbuf,0,maxrecvbuf);
+    }
 
-  // perform irregular communication
+    // perform irregular communication
 
-  igrid->exchange_variable(sbuf,gsize,rbuf);
+    igrid->exchange_variable(sbuf,gsize,rbuf);
 
-  // unpack received grid cells with their particles
+    // unpack received grid cells with their particles
 
-  offset = 0;
-  for (i = 0; i < nrecv; i++)
-    offset += grid->unpack_one(&rbuf[offset],1,1);
+    offset = 0;
+    for (i = 0; i < nrecv; i++)
+      offset += grid->unpack_one(&rbuf[offset],1,1);
 
-  // deallocate large buffers to reduce memory footprint
+    // deallocate large buffers to reduce memory footprint
 
-  if (sbuf)
-    memory->destroy(sbuf);
-  sbuf = NULL;
-  maxsendbuf = -1;
+    if (sbuf)
+      memory->destroy(sbuf);
+    sbuf = NULL;
+    maxsendbuf = -1;
 
-  if (rbuf)
-    memory->destroy(rbuf);
-  rbuf = NULL;
-  maxrecvbuf = -1;
+    if (rbuf)
+      memory->destroy(rbuf);
+    rbuf = NULL;
+    maxrecvbuf = -1;
 
-  if (igrid) delete igrid;
-  igrid = NULL;
+    if (igrid) delete igrid;
+    igrid = NULL;
 
-  icell_start = icell_end;
-  int not_done_local = icell_start < nglocal;
-  MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world); 
+    icell_start = icell_end;
+    int not_done_local = icell_start < nglocal;
+    MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world); 
   }
 
   // compress my list of owned grid cells to remove migrated cells
