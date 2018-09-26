@@ -248,13 +248,24 @@ void Comm::migrate_cells(int nmigrate)
   // fill proclist with procs to send to
   // compute byte count needed to pack cells
 
+  int icell_start = 0;
+  int icell_end = nglocal;
+
+  while (icell_start < nglocal) {
+  printf("HERE %i %i\n",icell_start,icell_end);
   int nsend = 0;
   bigint boffset = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
+  for (int icell = icell_start; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
     gproc[nsend] = cells[icell].proc;
     n = grid->pack_one(icell,NULL,1,1,0);
+    if (update->comm_mem_limit > 0) {
+      if (boffset+n > update->comm_mem_limit) {
+        icell_end = icell;
+        break;
+      }
+    }
     gsize[nsend++] = n;
     boffset += n;
   }
@@ -276,7 +287,7 @@ void Comm::migrate_cells(int nmigrate)
   // only called for unsplit and split cells I no longer own
 
   offset = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
+  for (int icell = icell_start; icell < icell_end; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
     offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
@@ -322,6 +333,24 @@ void Comm::migrate_cells(int nmigrate)
   offset = 0;
   for (i = 0; i < nrecv; i++)
     offset += grid->unpack_one(&rbuf[offset],1,1);
+
+  // deallocate large buffers to reduce memory footprint
+
+  if (sbuf)
+    memory->destroy(sbuf);
+  sbuf = NULL;
+  maxsendbuf = 0;
+
+  if (rbuf)
+    memory->destroy(rbuf);
+  rbuf = NULL;
+  maxrecvbuf = 0;
+
+  if (igrid) delete igrid;
+  igrid = NULL;
+
+  icell_start = icell_end;
+  }
 }
 
 /* ----------------------------------------------------------------------

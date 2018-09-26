@@ -71,6 +71,7 @@ class Update : protected Pointers {
   int nParticlesReorderSet;  // # of particles in reorder set in fixed memory reordering scheme
                              //  (on GPU, this will be number of threads for each reordering pass)
   int reorder_scheme;        // (copying full particle list or using a small fixed memory)
+  int comm_mem_limit;        // max # of bytes in comm messase size for rebalance
 
   int copymode;          // 1 if copy of class (prevents deallocation of
                          //  base class when child copy is destroyed)
