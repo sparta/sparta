@@ -250,19 +250,22 @@ void Comm::migrate_cells(int nmigrate)
 
   int icell_start = 0;
   int icell_end = nglocal;
+  int not_done = 1;
+  int num_pass = 0;
 
-  while (icell_start < nglocal) {
-  printf("HERE %i %i\n",icell_start,icell_end);
+  while (not_done) {
+  num_pass++;
   int nsend = 0;
   bigint boffset = 0;
   for (int icell = icell_start; icell < nglocal; icell++) {
+    icell_end = icell+1;
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
     gproc[nsend] = cells[icell].proc;
     n = grid->pack_one(icell,NULL,1,1,0);
     if (update->comm_mem_limit > 0) {
-      if (boffset+n > update->comm_mem_limit) {
-        icell_end = icell;
+      if (n > 0 && boffset > 0 && boffset+n > update->comm_mem_limit) {
+        icell_end -= 1;
         break;
       }
     }
@@ -293,16 +296,6 @@ void Comm::migrate_cells(int nmigrate)
     offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
   }
 
-  // compress my list of owned grid cells to remove migrated cells
-  // compress particle list to remove particles in migrating cells
-  // unset particle sorted since compress_rebalance() does
-  //   and may receive particles which will then be unsorted
-
-  if (nmigrate) {
-    grid->compress();
-    particle->compress_rebalance();
-  } else particle->sorted = 0;
-
   // create irregular communication plan with variable size datums
   // nrecv = # of incoming grid cells
   // recvsize = total byte size of incoming grid + particle info
@@ -312,7 +305,7 @@ void Comm::migrate_cells(int nmigrate)
   if (!igrid) igrid = new Irregular(sparta);
   int recvsize;
   int nrecv = 
-    igrid->create_data_variable(nmigrate,gproc,gsize,
+    igrid->create_data_variable(nsend,gproc,gsize,
                                          recvsize,commsortflag);
 
   // reallocate rbuf as needed
@@ -339,18 +332,33 @@ void Comm::migrate_cells(int nmigrate)
   if (sbuf)
     memory->destroy(sbuf);
   sbuf = NULL;
-  maxsendbuf = 0;
+  maxsendbuf = -1;
 
   if (rbuf)
     memory->destroy(rbuf);
   rbuf = NULL;
-  maxrecvbuf = 0;
+  maxrecvbuf = -1;
 
   if (igrid) delete igrid;
   igrid = NULL;
 
   icell_start = icell_end;
+  int not_done_local = icell_start < nglocal;
+  MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world); 
   }
+
+  // compress my list of owned grid cells to remove migrated cells
+  // compress particle list to remove particles in migrating cells
+  // unset particle sorted since compress_rebalance() does
+  //   and may receive particles which will then be unsorted
+
+  if (nmigrate) {
+    grid->compress();
+    particle->compress_rebalance();
+  } else particle->sorted = 0;
+
+  if (comm->me == 0)
+      printf("Balance required %i comm passes\n",num_pass);
 }
 
 /* ----------------------------------------------------------------------
