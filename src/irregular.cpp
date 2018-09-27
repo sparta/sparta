@@ -698,7 +698,7 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
   if (buf)
     memory->destroy(buf);
   buf = NULL;
-  bufmax = 0;
+  bufmax = -1;
 }
 
 /* ----------------------------------------------------------------------
