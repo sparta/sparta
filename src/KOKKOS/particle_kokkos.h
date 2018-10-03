@@ -129,10 +129,11 @@ class ParticleKokkos : public Particle {
   t_particle_1d d_particles;
   t_particle_1d d_sorted;
   t_species_1d d_species;
-  DAT::t_int_scalar d_nextParticleToCheckForReordering;
-  DAT::t_int_scalar d_allParticlesSorted;
   DAT::t_int_1d d_cascadeSize;
   int nParticlesWksp;
+  DAT::tdual_int_scalar k_reorder_pass;
+  typename AT::t_int_scalar d_reorder_pass;
+  HAT::t_int_scalar h_reorder_pass;
 
   int nbytes;
   int maxcellcount,ngrid;
