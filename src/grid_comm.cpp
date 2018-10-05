@@ -431,8 +431,18 @@ int Grid::unpack_particles(char *buf, int icell)
   ptr = ROUNDUP(ptr);
 
   int npnew = nplocal + np;
-  for (int i = nplocal; i < npnew; i++) particles[i].icell = icell;
   particle->nlocal = npnew;
+
+  particle->grow_next();
+  
+  cinfo[icell].first = nplocal;
+  cinfo[icell].count = np;
+
+  for (int i = nplocal; i < npnew; i++) {
+    particles[i].icell = icell;
+    particle->next[i] = i+1;
+  }
+  particle->next[npnew-1] = -1;
 
   return ptr-buf;
 }
