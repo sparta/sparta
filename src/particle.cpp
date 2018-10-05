@@ -291,6 +291,73 @@ void Particle::compress_rebalance()
 }
 
 /* ----------------------------------------------------------------------
+   compress particle list to remove particles with icell < 0
+   all particles MUST be in owned cells
+   overwrite deleted particle with particle from end of nlocal list
+   called from Comm::migrate_cells() when cells+particles migrate on rebalance
+   called from AdaptGrid when particles are sent to other procs
+   called from ReadSurf to remove particles from cells with surfs
+   this does preserve particle sorting
+------------------------------------------------------------------------- */
+
+void Particle::compress_rebalance_sorted()
+{
+  int nbytes = sizeof(OnePart);
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  if (!ncustom) {
+    int i = 0;
+    while (i < nlocal) {
+      if (particles[i].icell < 0) {
+        int icell = particles[nlocal-1].icell;
+        if (icell >= 0) {
+          if (cinfo[icell].first == nlocal-1) cinfo[icell].first = i;
+          else {
+            int ip = cinfo[icell].first;
+            while (ip >= 0) {
+              if (next[ip] == nlocal-1) {
+                next[ip] = i;
+                break;
+              }
+              ip = next[ip];
+            }
+          }
+          next[i] = next[nlocal-1];
+        }
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        nlocal--;
+      } else i++;
+    }
+
+  } else {
+    int i = 0;
+    while (i < nlocal) {
+      if (particles[i].icell < 0) {
+        int icell = particles[nlocal-1].icell;
+        if (icell >= 0) {
+          if (cinfo[icell].first == nlocal-1) cinfo[icell].first = i;
+          else {
+            int ip = cinfo[icell].first;
+            while (ip >= 0) {
+              if (next[ip] == nlocal-1) {
+                next[ip] = i;
+                break;
+              }
+              ip = next[ip];
+            }
+          }
+          next[i] = next[nlocal-1];
+        } 
+        memcpy(&particles[i],&particles[nlocal-1],nbytes);
+        copy_custom(i,nlocal-1);
+        nlocal--;
+      } else i++;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
    compress particle list to remove particles with indices in dellist
    dellist indices can be in ANY order
    overwrite deleted particle with particle from end of nlocal list

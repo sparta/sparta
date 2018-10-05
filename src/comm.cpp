@@ -297,6 +297,11 @@ void Comm::migrate_cells(int nmigrate)
       offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
     }
 
+    // compress particle list to remove particles in migrating cells
+
+    if (nmigrate)
+      particle->compress_rebalance_sorted();
+
     // create irregular communication plan with variable size datums
     // nrecv = # of incoming grid cells
     // recvsize = total byte size of incoming grid + particle info
@@ -349,14 +354,9 @@ void Comm::migrate_cells(int nmigrate)
   }
 
   // compress my list of owned grid cells to remove migrated cells
-  // compress particle list to remove particles in migrating cells
-  // unset particle sorted since compress_rebalance() does
-  //   and may receive particles which will then be unsorted
 
-  if (nmigrate) {
+  if (nmigrate)
     grid->compress();
-    particle->compress_rebalance();
-  } else particle->sorted = 0;
 
   if (comm->me == 0)
       printf("Balance required %i comm passes\n",num_pass);
