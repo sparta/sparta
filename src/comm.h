@@ -43,6 +43,8 @@ class Comm : protected Pointers {
             void *, int self = 1);
 
  protected:
+  void migrate_cells_less_mem(int);
+
   class Irregular *iparticle,*igrid,*iuniform;
   char *sbuf,*rbuf;
   int maxsendbuf,maxrecvbuf;

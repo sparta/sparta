@@ -1476,7 +1476,8 @@ void Update::global(int narg, char **arg)
       reorder_scheme = COPYPARTICLELIST;
       iarg += 2;
       if (strcmp(arg[iarg],"fixedmem") == 0) {
-        nParticlesReorderSet = atoi(arg[iarg+1]);
+        int bytes_limit = atoi(arg[iarg+1]);
+        nParticlesReorderSet = (double)bytes_limit/sizeof(Particle::OnePart);
         if (nParticlesReorderSet <= 0) error->all(FLERR,"Illegal particle/reorder command,");
         reorder_scheme = FIXEDMEMORY;
         iarg += 2;

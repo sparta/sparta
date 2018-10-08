@@ -230,6 +230,111 @@ int Comm::migrate_particles(int nmigrate, int *plist)
 
 void Comm::migrate_cells(int nmigrate)
 {
+  if (update->comm_mem_limit > 0)
+    return migrate_cells_less_mem(nmigrate);
+
+  int i,n;
+
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  // grow proc and size lists if needed
+
+  if (nmigrate > maxgproc) {
+    maxgproc = nmigrate;
+    memory->destroy(gproc);
+    memory->destroy(gsize);
+    memory->create(gproc,maxgproc,"comm:gproc");
+    memory->create(gsize,maxgproc,"comm:gsize");
+  }
+
+  // fill proclist with procs to send to
+  // compute byte count needed to pack cells
+
+  int nsend = 0;
+  bigint boffset = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    if (cells[icell].proc == me) continue;
+    gproc[nsend] = cells[icell].proc;
+    n = grid->pack_one(icell,NULL,1,1,0);
+    gsize[nsend++] = n;
+    boffset += n;
+  }
+
+  if (boffset > MAXSMALLINT) 
+    error->one(FLERR,"Migrate cells send buffer exceeds 2 GB");
+  int offset = boffset;
+
+  // reallocate sbuf as needed
+
+  if (offset > maxsendbuf) {
+    memory->destroy(sbuf);
+    maxsendbuf = offset;
+    memory->create(sbuf,maxsendbuf,"comm:sbuf");
+    memset(sbuf,0,maxsendbuf);
+  }
+
+  // pack cell info into sbuf
+  // only called for unsplit and split cells I no longer own
+
+  offset = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    if (cells[icell].proc == me) continue;
+    offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
+  }
+
+  // compress my list of owned grid cells to remove migrated cells
+  // compress particle list to remove particles in migrating cells
+  // unset particle sorted since compress_rebalance() does
+  //   and may receive particles which will then be unsorted
+
+  if (nmigrate) {
+    grid->compress();
+    particle->compress_rebalance();
+  } else particle->sorted = 0;
+
+  // create irregular communication plan with variable size datums
+  // nrecv = # of incoming grid cells
+  // recvsize = total byte size of incoming grid + particle info
+  // DEBUG: append a sort=1 arg so that messages from other procs
+  //        are received in repeatable order, thus grid cells stay in order
+
+  if (!igrid) igrid = new Irregular(sparta);
+  int recvsize;
+  int nrecv = 
+    igrid->create_data_variable(nmigrate,gproc,gsize,
+                                         recvsize,commsortflag);
+
+  // reallocate rbuf as needed
+
+  if (recvsize > maxrecvbuf) {
+    memory->destroy(rbuf);
+    maxrecvbuf = recvsize;
+    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+    memset(rbuf,0,maxrecvbuf);
+  }
+
+  // perform irregular communication
+
+  igrid->exchange_variable(sbuf,gsize,rbuf);
+
+  // unpack received grid cells with their particles
+
+  offset = 0;
+  for (i = 0; i < nrecv; i++)
+    offset += grid->unpack_one(&rbuf[offset],1,1);
+}
+
+/* ----------------------------------------------------------------------
+   migrate grid cells with their particles to new procs
+   called from BalanceGrid and FixBalance
+   uses multiple comm passes to reduce buffer size
+------------------------------------------------------------------------- */
+
+void Comm::migrate_cells_less_mem(int nmigrate)
+{
   int i,n;
 
   // grow proc and size lists if needed
@@ -248,14 +353,12 @@ void Comm::migrate_cells(int nmigrate)
   int icell_start = 0;
   int icell_end = grid->nlocal;
   int not_done = 1;
-  int num_pass = 0;
+  int nglocal = grid->nlocal;
 
   while (not_done) {
 
     Grid::ChildCell *cells = grid->cells;
-    int nglocal = grid->nlocal;
 
-    num_pass++;
     int nsend = 0;
     bigint boffset = 0;
     for (int icell = icell_start; icell < nglocal; icell++) {
@@ -264,11 +367,9 @@ void Comm::migrate_cells(int nmigrate)
       if (cells[icell].proc == me) continue;
       gproc[nsend] = cells[icell].proc;
       n = grid->pack_one(icell,NULL,1,1,0);
-      if (update->comm_mem_limit > 0) {
-        if (n > 0 && boffset > 0 && boffset+n > update->comm_mem_limit) {
-          icell_end -= 1;
-          break;
-        }
+      if (n > 0 && boffset > 0 && boffset+n > update->comm_mem_limit) {
+        icell_end -= 1;
+        break;
       }
       gsize[nsend++] = n;
       boffset += n;
@@ -331,7 +432,7 @@ void Comm::migrate_cells(int nmigrate)
 
     offset = 0;
     for (i = 0; i < nrecv; i++)
-      offset += grid->unpack_one(&rbuf[offset],1,1);
+      offset += grid->unpack_one(&rbuf[offset],1,1,1);
 
     // deallocate large buffers to reduce memory footprint
 
@@ -357,9 +458,6 @@ void Comm::migrate_cells(int nmigrate)
 
   if (nmigrate)
     grid->compress();
-
-  if (comm->me == 0)
-      printf("Balance required %i comm passes\n",num_pass);
 }
 
 /* ----------------------------------------------------------------------
