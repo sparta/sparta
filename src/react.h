@@ -32,7 +32,7 @@ class React : protected Pointers {
   double recomb_boost_inverse;   // inverse of boost parameter
   Particle::OnePart *recomb_part3;  // ptr to 3rd particle in recomb reaction
 
-  int copy;                  // 1 if class copy
+  int copy,copymode;         // 1 if class copy
 
   React(class SPARTA *, int, char **);
   React(class SPARTA *sparta) : Pointers(sparta) { style = NULL; random = NULL; }

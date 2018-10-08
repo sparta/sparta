@@ -51,6 +51,7 @@ class KKCopy {
       ptr_temp = NULL;
     }
     obj.copy = 0;
+    obj.copymode = 0;
   }
 
  private:
