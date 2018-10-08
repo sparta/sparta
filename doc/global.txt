@@ -34,6 +34,8 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
     svalue = push points to this value
   {gridcut} value = cutoff
     cutoff = acquire ghost cells up to this far away (distance units)
+  {comm/limit} value = nbytes
+    nbytes = memory limit for buffers used in load balancing
   {comm/sort} value = yes or no
     yes/no = sort incoming messages by proc ID if yes, else no sort
   {comm/style} value = neigh or all
@@ -43,7 +45,9 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
     wstyle = {cell}
     mode = {none} or {volume} or {radius}
   {particle/reorder} value = {nsteps}
-    nsteps = reorder the particles every this many timesteps :pre
+    nsteps = reorder the particles every this many timesteps
+      {fixedmem} value = {nbytes}
+        nbytes = memory limit for buffer used in reordering :pre
 :ule
 
 [Examples:]
@@ -188,6 +192,21 @@ regenerate ghost cell information.  If this is not done before
 surfaces are read in or a simulation is performed, an error will
 result.
 
+The {comm/limit} keyword limits the size of the buffers used for load 
+balancing. Communication for load balancing requires several buffers, 
+and in the worst case, the memory footprint for load balancing can be 3x 
+larger than the particle data structure. This keyword allows the 
+inter-processor communication for load balancing to be broken into 
+multiple passes (if necessary) to reduce memory use. Typically a good 
+value of the memory limit is the memory required for grid cells on a 
+single MPI rank. This is because the memory required for the particle 
+data structure is typically significantly larger than that required for 
+the grid cells. If the memory limit value is too small, then performance 
+will suffer because too many communication passes will be required. If 
+the memory limit is less than the size of a single grid cell plus the 
+particles contained therein, a single grid cell with all of its 
+particles will be sent each pass (not recommended).
+
 The {comm/sort} keyword determines whether the messages a proc
 receives for migrating particles (every step) and ghost grid cells (at
 setup and after re-balance) are sorted by processor ID.  Doing this
@@ -255,13 +274,26 @@ Note that the first calculation of weights is performed whenever the
 are not cloned or destroyed by the new weights.  The second
 calculation only happens when a simulation is run.
 
-The {particle/reorder} keyword determines how often the list of
-particles on each processor is reordered to store particles in the
-same grid cell contiguously in memory.  This operation is performed
-every {nsteps} as specified.  A value of 0 means no reordering is ever
-done.  This option is only available when using the KOKKOS package and
-can improve performance on certain hardware such as GPUs, but is
-typically slower on CPUs.
+The {particle/reorder} keyword determines how often the list of 
+particles on each processor is reordered to store particles in the same 
+grid cell contiguously in memory. This operation is performed every 
+{nsteps} as specified. A value of 0 means no reordering is ever done. 
+This option is only available when using the KOKKOS package and can 
+improve performance on certain hardware such as GPUs, but is typically 
+slower on CPUs except when running on thousands of nodes. Using particle 
+reordering temporarily doubles the memory size of the particle array 
+because by default reordering is performed out of place. However, the 
+{fixedmem} keyword reduces memory overhead to specified limit by 
+performing multiple passes for reordering in place. The memory limit 
+value should be carefully chosen; typically a good value of the memory 
+limit is the value required for grid cells on a single MPI rank since 
+the memory required for the particle data structure is typically 
+significantly larger than that required for the grid cells. If the 
+memory limit value is too small, then performance will suffer because 
+too many passes are required for reordering. If the memory value is too 
+large (i.e. larger than the size of the particle array), then the 
+program may run slow due to degraded cache access patterns or run out 
+memory. 
 
 [Restrictions:]
 

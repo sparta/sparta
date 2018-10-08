@@ -6,7 +6,7 @@
 
    Copyright (2014) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under
+   certain rights in this software.  This software is distributed under 
    the GNU General Public License.
 
    See the README file in the top-level SPARTA directory.
@@ -243,7 +243,7 @@ void ParticleKokkos::sort_kokkos()
       d_sorted = t_particle_1d("particle:sorted",d_particles.extent(0));
     }
     else if (update->reorder_scheme == FIXEDMEMORY && d_pswap1.size() == 0){
-      nParticlesWksp = update->nParticlesReorderSet;
+      nParticlesWksp = update->num_reorder_set;
       d_pswap1 = t_particle_1d("particle:swap1",nParticlesWksp);
       d_pswap2 = t_particle_1d("particle:swap2",nParticlesWksp);
     }
