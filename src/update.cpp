@@ -90,7 +90,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   ranmaster = new RanMars(sparta);
 
   reorder_period = 0;
-  comm_mem_limit = 0;
+  global_mem_limit = 0;
 
   copymode = 0;
 }
@@ -1473,19 +1473,11 @@ void Update::global(int narg, char **arg)
     } else if (strcmp(arg[iarg],"particle/reorder") == 0) {
       reorder_period = atoi(arg[iarg+1]);
       if (reorder_period < 0) error->all(FLERR,"Illegal global command");
-      reorder_scheme = COPYPARTICLELIST;
       iarg += 2;
-      if (strcmp(arg[iarg],"fixedmem") == 0) {
-        int bytes_limit = atoi(arg[iarg+1]);
-        num_reorder_set = (double)bytes_limit/sizeof(Particle::OnePart);
-        if (num_reorder_set <= 0) error->all(FLERR,"Illegal particle/reorder command,");
-        reorder_scheme = FIXEDMEMORY;
-        iarg += 2;
-      }
-    } else if (strcmp(arg[iarg],"comm/limit") == 0) {
+    } else if (strcmp(arg[iarg],"mem/limit") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      comm_mem_limit = atoi(arg[iarg+1]);
-      if (comm_mem_limit < 0) error->all(FLERR,"Illegal global command");
+      global_mem_limit = atoi(arg[iarg+1]);
+      if (global_mem_limit < 0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else error->all(FLERR,"Illegal global command");
   }

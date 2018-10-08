@@ -67,9 +67,7 @@ class Update : protected Pointers {
   int nstuck;                // # of particles stuck on surfs and deleted
 
   int reorder_period;        // # of timesteps between particle reordering
-  int num_reorder_set;       // # of particles in reorder set in fixed memory reordering scheme
-  int reorder_scheme;        // (copying full particle list or using a small fixed memory)
-  int comm_mem_limit;        // max # of bytes in comm messase size for rebalance
+  int global_mem_limit;      // max # of bytes in arrays for rebalance and reordering
 
   int copymode;          // 1 if copy of class (prevents deallocation of
                          //  base class when child copy is destroyed)

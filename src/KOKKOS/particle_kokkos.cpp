@@ -179,6 +179,9 @@ void ParticleKokkos::operator()(TagParticleCompressReactions, const int &i) cons
 void ParticleKokkos::sort_kokkos()
 {
   sorted_kk = 1;
+  int reorder_scheme = COPYPARTICLELIST;
+  if (update->global_mem_limit > 0)
+    reorder_scheme = FIXEDMEMORY;
 
   ngrid = grid->nlocal;
   GridKokkos* grid_kk = (GridKokkos*)grid;
@@ -238,26 +241,26 @@ void ParticleKokkos::sort_kokkos()
   if (update->reorder_period &&
       (update->ntimestep % update->reorder_period == 0)) {
 
-    if (update->reorder_scheme == COPYPARTICLELIST && d_particles.extent(0) > d_sorted.extent(0)) {
+    if (reorder_scheme == COPYPARTICLELIST && d_particles.extent(0) > d_sorted.extent(0)) {
       d_sorted = t_particle_1d();
       d_sorted = t_particle_1d("particle:sorted",d_particles.extent(0));
     }
-    else if (update->reorder_scheme == FIXEDMEMORY && d_pswap1.size() == 0){
-      nParticlesWksp = update->num_reorder_set;
+    else if (reorder_scheme == FIXEDMEMORY && d_pswap1.size() == 0){
+      nParticlesWksp = (double)update->global_mem_limit/sizeof(Particle::OnePart);
       d_pswap1 = t_particle_1d("particle:swap1",nParticlesWksp);
       d_pswap2 = t_particle_1d("particle:swap2",nParticlesWksp);
     }
 
     nbytes = sizeof(OnePart);
 
-    if (update->reorder_scheme == COPYPARTICLELIST) {
+    if (reorder_scheme == COPYPARTICLELIST) {
       copymode = 1;
       Kokkos::parallel_scan(Kokkos::RangePolicy<DeviceType, TagParticleReorder_COPYPARTICLELIST>(0,ngrid),*this);
       copymode = 0;
       Kokkos::deep_copy(k_particles.d_view,d_sorted);
       this->modify(Device,PARTICLE_MASK);
     }
-    else if (update->reorder_scheme == FIXEDMEMORY) {
+    else if (reorder_scheme == FIXEDMEMORY) {
       //    double timeA = MPI_Wtime();
       // fixed memory reordering---------------------------------------------------------
       // Copy particle destinations into the particle list cell locations

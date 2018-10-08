@@ -230,7 +230,7 @@ int Comm::migrate_particles(int nmigrate, int *plist)
 
 void Comm::migrate_cells(int nmigrate)
 {
-  if (update->comm_mem_limit > 0)
+  if (update->global_mem_limit > 0)
     return migrate_cells_less_mem(nmigrate);
 
   int i,n;
@@ -367,7 +367,7 @@ void Comm::migrate_cells_less_mem(int nmigrate)
       if (cells[icell].proc == me) continue;
       gproc[nsend] = cells[icell].proc;
       n = grid->pack_one(icell,NULL,1,1,0);
-      if (n > 0 && boffset > 0 && boffset+n > update->comm_mem_limit) {
+      if (n > 0 && boffset > 0 && boffset+n > update->global_mem_limit) {
         icell_end -= 1;
         break;
       }
