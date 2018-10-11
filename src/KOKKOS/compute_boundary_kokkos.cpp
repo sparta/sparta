@@ -43,6 +43,17 @@ ComputeBoundaryKokkos::ComputeBoundaryKokkos(SPARTA *sparta, int narg, char **ar
   d_which = DAT::t_int_1d("boundary:which",nvalue);
 }
 
+ComputeBoundaryKokkos::ComputeBoundaryKokkos(SPARTA *sparta) :
+  ComputeBoundary(sparta)
+{
+  array = NULL;
+  myarray = NULL;
+  which = NULL;
+  id = NULL;
+  style = NULL;
+  tlist = NULL;
+}
+
 /* ---------------------------------------------------------------------- */
 
 ComputeBoundaryKokkos::~ComputeBoundaryKokkos()
