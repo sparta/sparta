@@ -230,6 +230,8 @@ int Comm::migrate_particles(int nmigrate, int *plist)
 
 void Comm::migrate_cells(int nmigrate)
 {
+  if (update->mem_limit_grid_flag)
+    update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
   if (update->global_mem_limit > 0)
     return migrate_cells_less_mem(nmigrate);
 

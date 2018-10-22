@@ -68,6 +68,7 @@ class Update : protected Pointers {
 
   int reorder_period;        // # of timesteps between particle reordering
   int global_mem_limit;      // max # of bytes in arrays for rebalance and reordering
+  int mem_limit_grid_flag;   // 1 if using size of grid as memory limit
 
   int copymode;          // 1 if copy of class (prevents deallocation of
                          //  base class when child copy is destroyed)

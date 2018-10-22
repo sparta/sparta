@@ -91,6 +91,7 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
 
   reorder_period = 0;
   global_mem_limit = 0;
+  mem_limit_grid_flag = 0;
 
   copymode = 0;
 }
@@ -1476,7 +1477,10 @@ void Update::global(int narg, char **arg)
       iarg += 2;
     } else if (strcmp(arg[iarg],"mem/limit") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      global_mem_limit = atoi(arg[iarg+1]);
+      if (strcmp(arg[iarg+1],"grid") == 0)
+        mem_limit_grid_flag = 1;
+      else
+        global_mem_limit = atoi(arg[iarg+1]);
       if (global_mem_limit < 0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else error->all(FLERR,"Illegal global command");

@@ -44,7 +44,8 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
     mode = {none} or {volume} or {radius}
   {particle/reorder} value = {nsteps}
     nsteps = reorder the particles every this many timesteps
-  {mem/limit} value = nbytes
+  {mem/limit} value = {grid} or nbytes
+    grid = use current amount of memory required for the grid cells as the memory limit
     nbytes = memory limit (in bytes) for arrays used in load balancing and particle reordering :pre
 :ule
 
@@ -268,13 +269,17 @@ slower on CPUs except when running on thousands of nodes.
 The {mem/limit} keyword limits the memory overhead needed for load 
 balancing and particle reordering. Communication for load balancing 
 requires several buffers, and in the worst case, the memory footprint 
-for load balancing can be 3x larger than the particle data structure. 
+for load balancing may be 3x larger than the particle data structure. 
 This keyword allows the inter-processor communication for load balancing 
 to be broken into multiple passes (if necessary) to reduce memory use. 
 Typically a good value of the memory limit is the memory required for 
 grid cells on a single MPI rank. This is because the memory required for 
 the particle data structure is typically significantly larger than that 
-required for the grid cells. If the memory limit value is too small, 
+required for the grid cells. Using the {grid} keyword sets the memory 
+limit as the amount of memory currently used to hold the grid cells on 
+each MPI rank (excludes ghost cells may change as the simulation 
+progresses). The memory limit value may also be set manually by 
+specifying a number in bytes. If the memory limit value is too small, 
 then performance will suffer because too many communication passes will 
 be required. If the memory limit is less than the size of a single grid 
 cell plus the particles contained therein, a single grid cell with all 
@@ -287,7 +292,7 @@ limit value for reordering is too small, then performance will suffer
 because too many passes are required for reordering. If the memory value 
 is too large (i.e. larger than the size of the particle array), then the 
 program may run slow due to degraded cache access patterns or run out 
-memory. A value of 0 means no limit will be used.
+memory. A value of 0 means no limit will be used. 
 
 [Restrictions:]
 
