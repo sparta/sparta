@@ -38,18 +38,18 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
   if (narg < 5) error->all(FLERR,"Illegal compute sonine/grid command");
 
   int igroup = grid->find_group(arg[2]);
-  if (igroup < 0) 
+  if (igroup < 0)
     error->all(FLERR,"Compute sonine/grid group ID does not exist");
   groupbit = grid->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
-  if (imix < 0) 
+  if (imix < 0)
     error->all(FLERR,"Compute sonine/grid mixture ID does not exist");
   ngroup = particle->mixture[imix]->ngroup;
 
   // assume args are correct to infer nvalue, error check when process args
 
-  nvalue = (narg-4) / 4;
+  nvalue = (narg-4) / 3;
   which = new int[nvalue];
   moment = new int[nvalue];
   order = new int[nvalue];
@@ -60,7 +60,7 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
   int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"a") == 0) {
-      if (iarg+3 > narg) 
+      if (iarg+3 > narg)
         error->all(FLERR,"Illegal compute sonine/grid command");
       which[ivalue] = AMOM;
       if (strcmp(arg[iarg+1],"x") == 0) moment[ivalue] = X;
@@ -126,6 +126,8 @@ ComputeSonineGrid::ComputeSonineGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeSonineGrid::~ComputeSonineGrid()
 {
+  if (copymode) return;
+
   delete [] which;
   delete [] moment;
   delete [] order;
@@ -200,11 +202,11 @@ void ComputeSonineGrid::compute_per_grid()
       vcom[i][j][1] /= norm;
       vcom[i][j][2] /= norm;
     }
-  
+
   // zero all accumulators - could do this with memset()
 
   for (i = 0; i < nglocal; i++)
-    for (j = 0; j < ntotal; j++) 
+    for (j = 0; j < ntotal; j++)
       tally[i][j] = 0.0;
 
   // loop over all particles, skip species not in mixture group
@@ -229,7 +231,7 @@ void ComputeSonineGrid::compute_per_grid()
     vthermal[0] = v[0] - vcom[icell][igroup][0];
     vthermal[1] = v[1] - vcom[icell][igroup][1];
     vthermal[2] = v[2] - vcom[icell][igroup][2];
-    csq = vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] + 
+    csq = vthermal[0]*vthermal[0] + vthermal[1]*vthermal[1] +
       vthermal[2]*vthermal[2];
 
     for (m = 0; m < nvalue; m++) {
@@ -288,7 +290,7 @@ post_process_grid(int index, int onecell, int,
                   double **etally, int *emap, double *vec, int nstride)
 {
   index--;
-  
+
   int lo = 0;
   int hi = nglocal;
   int k = 0;
@@ -306,7 +308,6 @@ post_process_grid(int index, int onecell, int,
   }
 
   // compute normalized final value for each grid cell
-
   double norm;
   int numerator = emap[0];
   int mass = emap[1];

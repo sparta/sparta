@@ -36,10 +36,10 @@ class ComputeSonineGrid : public Compute {
   void reallocate();
   bigint memory_usage();
 
- private:
+ protected:
   int groupbit,imix,ngroup;
 
-  int nvalue;                // # of user-requested values 
+  int nvalue;                // # of user-requested values
                              // each may generate multiple output values
 
   int *which;                // keyword for each user requested value
