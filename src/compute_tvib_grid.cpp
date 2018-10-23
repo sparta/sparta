@@ -401,23 +401,25 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
     for (int icell = lo; icell < hi; icell++) {
       evib = emap[0];
       count = evib+1;
-      
       for (isp = 0; isp < nsp; isp++) {
         ispecies = t2s[evib];
         theta = species[ispecies].vibtemp[0];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies[isp] = 0.0;
+          evib += 2;
+          count = evib+1;
           continue;
         }
         ibar = etally[icell][evib] / (etally[icell][count] * boltz * theta);
         if (ibar == 0.0) {
           tspecies[isp] = 0.0;
+          evib += 2;
+          count = evib+1;
           continue;
         }
         tspecies[isp] = theta / (log(1.0 + 1.0/ibar));
         //denom = boltz * etally[icell][count] * ibar * log(1.0 + 1.0/ibar);
         //tspecies[isp] = etally[icell][evib] / denom;
-        
         evib += 2;
         count = evib+1;
       }
@@ -457,17 +459,20 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
           theta = species[ispecies].vibtemp[imode];
           if (theta == 0.0 || etally[icell][count] == 0.0) {
             tspecies_mode[isp][imode] = 0.0;
+            evib += 2;
+            count = evib+1;
             continue;
           }
           ibar = etally[icell][evib] / etally[icell][count];
           if (ibar == 0.0) {
             tspecies_mode[isp][imode] = 0.0;
+            evib += 2;
+            count = evib+1;
             continue;
           }
           tspecies_mode[isp][imode] = theta / (log(1.0 + 1.0/ibar));
           //denom = boltz * etally[icell][count] * ibar * log(1.0 + 1.0/ibar);
           //tspecies_mode[isp][imode] = etally[icell][evib] / denom;
-        
           evib += 2;
           count = evib+1;
         }
@@ -511,17 +516,20 @@ double ComputeTvibGrid::post_process_grid(int index, int onecell, int nsample,
         theta = species[ispecies].vibtemp[imode];
         if (theta == 0.0 || etally[icell][count] == 0.0) {
           tspecies_mode[isp][imode] = 0.0;
+          evib += 2*maxmode;
+          count = evib+1;
           continue;
         }
         ibar = etally[icell][evib] / etally[icell][count];
         if (ibar == 0.0) {
           tspecies_mode[isp][imode] = 0.0;
+          evib += 2*maxmode;
+          count = evib+1;
           continue;
         }
         tspecies_mode[isp][imode] = theta / (log(1.0 + 1.0/ibar));
         //denom = boltz * etally[icell][count] * ibar * log(1.0 + 1.0/ibar);
         //tspecies_mode[isp][imode] = etally[icell][evib] / denom;
-        
         evib += 2*maxmode;
         count = evib+1;
       }

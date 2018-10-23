@@ -662,7 +662,7 @@ template < int NEARCP > void Collide::collisions_group()
       for (jgroup = igroup; jgroup < ngroups; jgroup++) {
 	attempt = attempt_collision(icell,igroup,jgroup,volume);
 	nattempt = static_cast<int> (attempt);
-        
+
 	if (nattempt) {
 	  gpair[npair][0] = igroup;
 	  gpair[npair][1] = jgroup;
