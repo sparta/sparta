@@ -31,8 +31,6 @@ struct TagFixedMemoryReorderInit{};
 struct TagSetIcellFromPlist{};
 struct TagParticleReorder_COPYPARTICLELIST{};
 struct TagSetDPlistNewStyle{};
-struct TagSetAverageCascadeSize{};
-struct TagSetMaxCascadeSize{};
 
 template<int NEED_ATOMICS>
 struct TagParticleSort{};
@@ -103,11 +101,6 @@ class ParticleKokkos : public Particle {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagSetIcellFromPlist, const int&) const;
 
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagSetAverageCascadeSize, const int&, int&) const;
-
-  KOKKOS_INLINE_FUNCTION
-  void operator()(TagSetMaxCascadeSize, const int&, int&) const;
 
   tdual_particle_1d k_particles;
   tdual_species_1d k_species;
@@ -129,7 +122,6 @@ class ParticleKokkos : public Particle {
   t_particle_1d d_particles;
   t_particle_1d d_sorted;
   t_species_1d d_species;
-  DAT::t_int_1d d_cascadeSize;
   int nParticlesWksp;
   DAT::tdual_int_scalar k_reorder_pass;
   typename AT::t_int_scalar d_reorder_pass;

@@ -263,8 +263,6 @@ void ParticleKokkos::sort_kokkos()
       this->modify(Device,PARTICLE_MASK);
     }
     else if (reorder_scheme == FIXEDMEMORY) {
-      //    double timeA = MPI_Wtime();
-      // fixed memory reordering---------------------------------------------------------
       // Copy particle destinations into the particle list cell locations
       //  (to avoid adding a "destination" integer in OnePart for the fixed memory reorder)
       // After the particle list has been reordered, reset the icell values to correctly reflect
@@ -274,7 +272,6 @@ void ParticleKokkos::sort_kokkos()
       DeviceType::fence();
       copymode = 0;
 
-      d_cascadeSize = DAT::t_int_1d("particle:cascadeSize",nParticlesWksp);
       int npasses = (nlocal-1)/nParticlesWksp + 1;
       for (int ipass=0; ipass < npasses; ++ipass) {
 
@@ -293,20 +290,6 @@ void ParticleKokkos::sort_kokkos()
         Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixedMemoryReorder>(0,nParticlesWksp),*this);
         DeviceType::fence();
         copymode = 0;
-#if 0
-        int sum = 0;
-        copymode = 1;
-        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagSetAverageCascadeSize>(0,nParticlesWksp),*this,sum);
-        DeviceType::fence();
-        copymode = 0;
-
-        int max;
-        copymode = 1;
-        Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagSetMaxCascadeSize>(0,nParticlesWksp),*this,Kokkos::Max<int>(max));
-        DeviceType::fence();
-        copymode = 0;
-        std::cout << "pass = " << ipass << " AVERAGE CASCADE SIZE = " << static_cast<double>(sum)/nParticlesWksp << " MAX CASCADE SIZE = " << max << std::endl;
-#endif
       }
 
       // reset the icell values in the particle list
@@ -316,9 +299,9 @@ void ParticleKokkos::sort_kokkos()
       copymode = 0;
       this->modify(Device,PARTICLE_MASK);
 
-      //      std::cout << "WORKSPACE MEMORY USED (MB) = " << 2*nParticlesWksp*nbytes/1.0e+6 << std::endl;
-      //    double timeB = MPI_Wtime();
-      //    std::cout << "time for fixed memory reordering (sec) = " << timeB - timeA << std::endl;
+      // destroy references to reduce memory use
+      d_pswap1 = t_particle_1d();
+      d_pswap2 = t_particle_1d();
     }
   }
 
@@ -326,19 +309,6 @@ void ParticleKokkos::sort_kokkos()
   grid_kk->d_plist = d_plist;
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
-}
-
-KOKKOS_INLINE_FUNCTION
-void ParticleKokkos::operator()(TagSetAverageCascadeSize, const int &i, int &sum) const
-{
-  sum += d_cascadeSize[i];
-}
-
-KOKKOS_INLINE_FUNCTION
-void ParticleKokkos::operator()(TagSetMaxCascadeSize, const int &i, int &max) const
-{
-  if (d_cascadeSize[i] > max)
-    max = d_cascadeSize[i];
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -402,7 +372,6 @@ void ParticleKokkos::operator()(TagFixedMemoryReorder, const int &i) const
     d_particles[newParticleLoc] = *movePtr;
     count++;
   }
-  d_cascadeSize[i] = count;
 }
 
 KOKKOS_INLINE_FUNCTION
