@@ -411,7 +411,7 @@ letters in parenthesis: k = KOKKOS.
 "pflux/grid (k)"_compute_pflux_grid.html,
 "property/grid"_compute_property_grid.html,
 "reduce"_compute_reduce.html,
-"sonine/grid"_compute_sonine_grid.html,
+"sonine/grid (k)"_compute_sonine_grid.html,
 "surf"_compute_surf.html,
 "thermal/grid (k)"_compute_thermal_grid.html,
 "temp (k)"_compute_temp.html,
