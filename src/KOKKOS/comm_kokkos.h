@@ -25,6 +25,9 @@ namespace SPARTA_NS {
 template<int NEED_ATOMICS>
 struct TagCommMigrateParticles{};
 
+template<int NEED_ATOMICS>
+struct TagCommMigrateUnpackParticles{};
+
 class CommKokkos : public Comm {
  public:
   typedef ArrayTypes<DeviceType> AT;
@@ -38,6 +41,10 @@ class CommKokkos : public Comm {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagCommMigrateParticles<NEED_ATOMICS>, const int&) const;
 
+  template<int NEED_ATOMICS>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCommMigrateUnpackParticles<NEED_ATOMICS>, const int&) const;
+
   inline
   void pack_serial(const int, const int) const;
 
@@ -45,6 +52,7 @@ class CommKokkos : public Comm {
   DAT::tdual_int_scalar k_nsend;
   DAT::t_int_scalar d_nsend;
   HAT::t_int_scalar h_nsend;
+  DAT::t_int_scalar d_nlocal;
 
   typedef Kokkos::
     DualView<Grid::ChildCell*, Kokkos::LayoutRight, DeviceType> tdual_cell_1d;
@@ -60,6 +68,7 @@ class CommKokkos : public Comm {
   DAT::tdual_int_1d k_pproc;
   DAT::t_int_1d d_pproc;
   DAT::t_char_1d d_sbuf;
+  DAT::t_char_1d d_rbuf;
 
   int nbytes_particle;
 };

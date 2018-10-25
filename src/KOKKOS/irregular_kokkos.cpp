@@ -339,20 +339,32 @@ int IrregularKokkos::augment_data_uniform(int n, int *proclist)
    recvbuf = received datums, including copied from me
 ------------------------------------------------------------------------- */
 
-void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_in, char *d_recvbuf_in)
+void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_in,
+                                       char* d_recvbuf_ptr_in, DAT::t_char_1d d_recvbuf_in)
 {
   int offset,count;
 
   nbytes = nbytes_in;
   d_sendbuf = d_sendbuf_in;
+  d_recvbuf_ptr = d_recvbuf_ptr_in;
   d_recvbuf = d_recvbuf_in;
+
+  if (!sparta->kokkos->gpu_direct_flag &&
+      h_recvbuf.extent(0) != d_recvbuf.extent(0)) {
+    h_recvbuf = HAT::t_char_1d("irregular:d_recvbuf:mirror",d_recvbuf.extent(0));
+  }
 
   // post all receives, starting after self copies
 
   offset = num_self*nbytes;
   for (int irecv = 0; irecv < nrecv; irecv++) {
-    MPI_Irecv(&d_recvbuf[offset],num_recv[irecv]*nbytes,MPI_CHAR,
-              proc_recv[irecv],0,world,&request[irecv]);
+    if (sparta->kokkos->gpu_direct_flag) {
+      MPI_Irecv(&d_recvbuf_ptr[offset],num_recv[irecv]*nbytes,MPI_CHAR,
+                proc_recv[irecv],0,world,&request[irecv]);
+    } else {
+      MPI_Irecv(h_recvbuf.data() + offset,num_recv[irecv]*nbytes,MPI_CHAR,
+                proc_recv[irecv],0,world,&request[irecv]);
+    }
     offset += num_recv[irecv]*nbytes;
   }
 
@@ -361,6 +373,9 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   if (sendmax*nbytes > bufmax) {
     bufmax = sendmax*nbytes;
     d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
+
+    if (!sparta->kokkos->gpu_direct_flag)
+      h_buf = HAT::t_char_1d("irregular:d_buf:mirror",bufmax);
   }
 
   // send each message
@@ -390,7 +405,12 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
     //pack_buffer_serial(0,count);
     copymode = 0;
 
-    MPI_Send(d_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
+    if (sparta->kokkos->gpu_direct_flag)
+      MPI_Send(d_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
+    else {
+      Kokkos::deep_copy(h_buf,d_buf);
+      MPI_Send(h_buf.data(),count*nbytes,MPI_CHAR,proc_send[isend],0,world);
+    }
   }
 
   // copy datums to self, put at beginning of recvbuf
@@ -402,7 +422,12 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   // wait on all incoming messages
 
-  if (nrecv) MPI_Waitall(nrecv,request,status);
+  if (nrecv) {
+    MPI_Waitall(nrecv,request,status);
+
+    if (!sparta->kokkos->gpu_direct_flag)
+      Kokkos::deep_copy(d_recvbuf,h_recvbuf);
+  }
 }
 
 template<int NEED_ATOMICS>

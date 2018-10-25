@@ -125,6 +125,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
   atomic_reduction = 0;
   prewrap = 1;
   auto_sync = 0;
+  gpu_direct_flag = 1;
 
   need_atomics = 1;
   if (nthreads == 1 && ngpus == 0)
@@ -185,6 +186,14 @@ void KokkosSPARTA::accelerator(int narg, char **arg)
     } else if (strcmp(arg[iarg],"collide/extra") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
       collide_extra = atof(arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"gpu/direct") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal package kokkos command");
+      if (strcmp(arg[iarg+1],"yes") == 0) {
+        gpu_direct_flag = 1;
+      } else if (strcmp(arg[iarg+1],"no") == 0) {
+        gpu_direct_flag = 0;
+      } else error->all(FLERR,"Illegal package kokkos command");
       iarg += 2;
     } else error->all(FLERR,"Illegal package kokkos command");
   }

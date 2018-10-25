@@ -33,7 +33,7 @@ class IrregularKokkos : public Irregular {
   ~IrregularKokkos();
   int create_data_uniform(int, int *, int sort = 0);
   int augment_data_uniform(int, int *);
-  void exchange_uniform(DAT::t_char_1d, int, char *);
+  void exchange_uniform(DAT::t_char_1d, int, char *, DAT::t_char_1d);
 
   template<int NEED_ATOMICS>
   KOKKOS_INLINE_FUNCTION
@@ -56,8 +56,11 @@ class IrregularKokkos : public Irregular {
   HAT::t_int_scalar h_n;
 
   DAT::t_char_1d d_sendbuf;
-  char *d_recvbuf;
+  char* d_recvbuf_ptr;
+  DAT::t_char_1d d_recvbuf;
   DAT::t_char_1d d_buf;
+  HAT::t_char_1d h_recvbuf;
+  HAT::t_char_1d h_buf;
   int nbytes;
 };
 
