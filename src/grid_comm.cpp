@@ -145,7 +145,7 @@ void Grid::unpack_ghosts(int nsize, char *buf)
    return length of unpacking in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::unpack_one(char *buf, int ownflag, int molflag)
+int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
 {
   char *ptr = buf;
 
@@ -262,7 +262,7 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag)
 
   if (!molflag) return ptr - buf;
 
-  ptr += unpack_particles(ptr,icell);
+  ptr += unpack_particles(ptr,icell,sortflag);
 
   // unpack particles of sub cells
 
@@ -271,7 +271,7 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag)
     int nsplit = cells[icell].nsplit;
     for (int i = 0; i < nsplit; i++) {
       int m = sinfo[isplit].csubs[i];
-      ptr += unpack_particles(ptr,m);
+      ptr += unpack_particles(ptr,m,sortflag);
     }
   }
 
@@ -397,10 +397,12 @@ int Grid::pack_particles(int icell, char *buf, int memflag)
 /* ----------------------------------------------------------------------
    unpack particles from buf into one cell = icell
    point unpacked particles to icell
+   if sortflag: keep particles sorted via setting
+     particle->cinfo.first/count and particle->next values for added particles
    return length of unpacking in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::unpack_particles(char *buf, int icell)
+int Grid::unpack_particles(char *buf, int icell, int sortflag)
 {
   char *ptr = buf;
 
@@ -433,6 +435,17 @@ int Grid::unpack_particles(char *buf, int icell)
   int npnew = nplocal + np;
   for (int i = nplocal; i < npnew; i++) particles[i].icell = icell;
   particle->nlocal = npnew;
+
+  if (sortflag) {
+    particle->grow_next();
+    
+    cinfo[icell].first = nplocal;
+    cinfo[icell].count = np;
+    
+    for (int i = nplocal; i < npnew-1; i++)
+      particle->next[i] = i+1;
+    particle->next[npnew-1] = -1;
+  }
 
   return ptr-buf;
 }

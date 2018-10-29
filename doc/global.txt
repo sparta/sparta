@@ -43,7 +43,10 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
     wstyle = {cell}
     mode = {none} or {volume} or {radius}
   {particle/reorder} value = {nsteps}
-    nsteps = reorder the particles every this many timesteps :pre
+    nsteps = reorder the particles every this many timesteps
+  {mem/limit} value = {grid} or bytes
+    grid = limit extra memory for load-balancing and particle reordering to grid cell memory
+    bytes = limit extra particle memory to this amount (in MBytes) :pre
 :ule
 
 [Examples:]
@@ -51,7 +54,8 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
 global fnum 1.0e20
 global vstream 100.0 0 0 fnum 5.0e18
 global temp 1000
-global weight cell radius :pre
+global weight cell radius 
+global mem/limit 100 :pre
 
 [Description:]
 
@@ -258,10 +262,45 @@ calculation only happens when a simulation is run.
 The {particle/reorder} keyword determines how often the list of
 particles on each processor is reordered to store particles in the
 same grid cell contiguously in memory.  This operation is performed
-every {nsteps} as specified.  A value of 0 means no reordering is ever
+every {nsteps} as specified. A value of 0 means no reordering is ever
 done.  This option is only available when using the KOKKOS package and
 can improve performance on certain hardware such as GPUs, but is
-typically slower on CPUs.
+typically slower on CPUs except when running on thousands of nodes.
+
+The {mem/limit} keyword limits the amount of memory allocated for two
+operations: load balancing and reordering of particles.  This should
+only be necessary for very large simulations where the memory
+footprint for particles and grid cells is a significant fraction of
+available memory.  In this case, these operations can trigger a memory
+error due to the additional memory they require.  Setting a limit on
+the memory size will perform these two operations more incrementally
+so that memory errors do not occur.
+
+A load-balance operation can use as much as 3x more memory than the
+memory used to store particles (reported by SPARTA when a simulation
+begins).  Particle reordering temporarily doubles the memory needed to
+store particles because it is performed out-of-place by default.
+
+Specifying the value for {mem/limit} as {grid}, will allocate extra
+memory limited to the size of memory for storing grid cells on each
+processor.  For most simulations this is typically much smaller than
+the memory used to store particles.  Specifying a numeric value for
+{bytes} will allocate extra memory limited to that many MBytes on each
+processor.  {Bytes} can be specified as a floating point value or an
+integer, e.g. 0.5 if you want to use 1/2 MByte of extra memory or 100
+for a 100 MByte buffer.  Specifying a value of 0 (the default) means
+no limit is used.
+
+For load-balancing, the communication of grid and particle data to new
+processors will then be performed in multiple passes (if necessary) so
+that only a portion of grid cells and their particles which fit into
+the extra memory are migrated in each pass.  Similarly for particle
+reordering, multiple passes are performed using the extra memory to
+reorder the particles nearly in-place.
+
+Note that for both operations if the extra memory is too small,
+performance will suffer due to the large number of multiple passes
+required.
 
 [Restrictions:]
 
@@ -277,4 +316,4 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, surfpush
 = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh, weight =
-cell none, particle/reorder = 0.
+cell none, particle/reorder = 0, mem/limit = 0.

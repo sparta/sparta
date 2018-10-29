@@ -40,7 +40,7 @@ class SurfCollide : protected Pointers {
   void tally_update();
   double compute_vector(int i);
 
-  int copy;
+  int copy,copymode;
 
  protected:
   int nsingle,ntotal;

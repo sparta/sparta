@@ -137,19 +137,15 @@ UpdateKokkos::~UpdateKokkos()
   grid_kk_copy.uncopy();
   domain_kk_copy.uncopy();
 
-  if (surf->nsc > 0) {
-    for (int i=0; i<surf->nsc; i++) {
-      sc_kk_specular_copy[i].uncopy();
-      sc_kk_diffuse_copy[i].uncopy();
-      sc_kk_vanish_copy[i].uncopy();
-      sc_kk_piston_copy[i].uncopy();
-    }
+  for (int i=0; i<KOKKOS_MAX_SURF_COLL_PER_TYPE; i++) {
+    sc_kk_specular_copy[i].uncopy();
+    sc_kk_diffuse_copy[i].uncopy();
+    sc_kk_vanish_copy[i].uncopy();
+    sc_kk_piston_copy[i].uncopy();
   }
 
-  if (nboundary_tally > 0) {
-    for (int i=0; i<nboundary_tally; i++) {
-      blist_active_copy[i].uncopy();
-    }
+  for (int i=0; i<KOKKOS_MAX_BLIST; i++) {
+    blist_active_copy[i].uncopy();
   }
 
 }

@@ -237,10 +237,10 @@ class Grid : protected Pointers {
   // grid_comm.cpp
 
   int pack_one(int, char *, int, int, int);
-  int unpack_one(char *, int, int);
+  int unpack_one(char *, int, int, int sortflag=0);
   int pack_one_adapt(char *, char *, int);
   int pack_particles(int, char *, int);
-  int unpack_particles(char *, int);
+  int unpack_particles(char *, int, int);
   void unpack_particles_adapt(int, char *);
   void compress();
 

@@ -47,7 +47,7 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
     
   nsingle = ntotal = 0;
 
-  copy = 0;
+  copy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */

@@ -65,7 +65,7 @@ ReactBirdKokkos::~ReactBirdKokkos()
   //  d_rlist(i).d_coeff = DAT::t_int_1d();
   //}
 
-  int nspecies = particle->nspecies;
+  int nspecies = k_reactions.h_view.extent(0);
   for (int i = 0; i < nspecies; i++) {
     for (int j = 0; j < nspecies; j++) {
       if (d_reactions.data()) {
