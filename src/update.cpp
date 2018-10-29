@@ -1479,8 +1479,8 @@ void Update::global(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"grid") == 0) mem_limit_grid_flag = 1;
       else {
-        global_mem_limit = input->inumeric(FLERR,arg[iarg+1]);
-        global_mem_limit *= 1024*1024;
+        double factor = input->numeric(FLERR,arg[iarg+1]);
+        global_mem_limit = static_cast<int> (factor * 1024*1024);
         if (global_mem_limit < 0) error->all(FLERR,"Illegal global command");
       }
       iarg += 2;

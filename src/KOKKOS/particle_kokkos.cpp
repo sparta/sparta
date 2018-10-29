@@ -37,6 +37,7 @@ using namespace SPARTA_NS;
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // several files
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{INT,DOUBLE};                      // several files
+enum{COPYPARTICLELIST,FIXEDMEMORY};
 
 #define DELTA 16384
 #define DELTASPECIES 16
@@ -48,8 +49,6 @@ enum{INT,DOUBLE};                      // several files
 // also add a check for the keyword in 2 places in add_species()
 
 #define AIR "N O NO"
-
-
 
 /* ---------------------------------------------------------------------- */
 
