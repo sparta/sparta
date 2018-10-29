@@ -36,6 +36,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
 #define MAXLINE 256
 #define CHUNK 1024
+#define CHUNKDELTA 100
 
 // NOTE: allow reading 2nd set of isurfs into a different group region ??
 // NOTE: check that all boundary point values are 0
@@ -89,8 +90,6 @@ void ReadISurf::command(int narg, char **arg)
   int igroup = grid->find_group(arg[1]);
   if (igroup < 0) error->all(FLERR,"Read_isurf group ID does not exist");
 
-  int nxyz[3];
-  double corner[3],xyzsize[3];
   count = grid->check_uniform_group(igroup,nxyz,corner,xyzsize);
 
   // read header info
@@ -102,15 +101,21 @@ void ReadISurf::command(int narg, char **arg)
 
   // read per-grid values
   // corner points and surf types
+  // create and destroy dictionary of my grid cells in group
+  //   used to assign per-grid values to local grid cells
+
+  create_dict(count,igroup);
 
   parse_keyword(1);
 
-  while (len(keyword)) {
+  while (strlen(keyword)) {
     if (strcmp(keyword,"Corners") == 0) read_corners();
-    elif (strcmp(keyword,"Surf Types") == 0) read_types();
-    else error->all("Unknown section in read_isurfs file");
+    else if (strcmp(keyword,"Surf Types") == 0) read_types();
+    else error->all(FLERR,"Unknown section in read_isurfs file");
     parse_keyword(0);
   }
+
+  destroy_dict();
 
   // close file
 
@@ -284,8 +289,8 @@ void ReadISurf::header()
     if (eof == NULL) error->one(FLERR,"Unexpected end of data file");
   }
 
-  nx = ny = 0;
-  nz = 1;
+  nxyz[0] = nxyz[1] = 0;
+  nxyz[2] = 1;
    
   while (1) {
 
@@ -317,37 +322,16 @@ void ReadISurf::header()
     // search line for header keyword and set corresponding variable
 
     
-    if (strstr(line,"nx")) sscanf(line,"%d",&nx);
-    else if (strstr(line,"ny")) sscanf(line,"%d",&ny);
-    else if (strstr(line,"nz")) sscanf(line,"%d",&nz);
+    if (strstr(line,"nx")) sscanf(line,"%d",&nxyz[0]);
+    else if (strstr(line,"ny")) sscanf(line,"%d",&nxyz[1]);
+    else if (strstr(line,"nz")) sscanf(line,"%d",&nxyz[2]);
     else break;
   }
 
-  if (nx == 0 || ny == 0) 
+  if (nxyz[0] == 0 || nxyz[1] == 0) 
     error->all(FLERR,"Isurf file does not contain nx or ny");
-  if (dim == 2 && nz != 1) 
+  if (dim == 2 && nxyz[2] != 1) 
     error->all(FLERR,"Isurf file nz value is invalid for 2d model");
-}
-
-/* ----------------------------------------------------------------------
-   grab n values from file fp and put them in list
-   values can be several to a line
-   only called by proc 0
-------------------------------------------------------------------------- */
-
-void ReadIsurf::grab(int n, int *list)
-{
-  char *eof;
-
-  int i = 0;
-  while (i < n) {
-    eof = fgets(line,MAXLINE,fptr);
-    if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
-    ptr = strtok(line," \t\n\r\f");
-    list[i++] = atoi(ptr);
-    while ((ptr = strtok(NULL," \t\n\r\f"))) list[i++] = atof(ptr);
-    // NOTE: how to avoid exceeding NCHUNK
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -356,31 +340,31 @@ void ReadIsurf::grab(int n, int *list)
 
 void ReadISurf::read_corners()
 {
-  int i,m,nchunk;
-  char *next,*buf;
+  int i,m,nchunk,nactual,nmax;
+
+  int *list;
+  nmax = nchunk + CHUNKDELTA;
+  memory->create(list,nmax,"readisurf:list");
 
   // read and broadcast one CHUNK of values at a time
   // each proc stores grid corner point values it needs
 
-  bigint ncorners = (bigint) (nx+1) * (ny+1)*(nz*1);
+  bigint ncorners = (bigint) (nxyz[0]+1) * (nxyz[1]+1)*(nxyz[2]*1);
   bigint nread = 0;
-  
+  int nstart = 0;
+
   while (nread < ncorners) {
     if (ncorners-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ncorners-nread;
 
-    if (me == 0) grab(nchunk,list);
+    if (me == 0) grab(nchunk,nstart,nmax,list,nactual);
     MPI_Bcast(list,nchunk,MPI_INT,0,world);
 
-    for (int i = 0; i < nchunk; i++) {
-      // each ichunk value is one of 8 corners of various grid cells
-      // use grid indices (ix,iy,iz) to map to grid cell index
-      // lookup cell index in local dict to retrieve icell
-      // store the corner point value with icell
-      // store locally for now, in fix property/grid later
-    }
+    assign_corners(nchunk,nread,list);
 
     nread += nchunk;
+    nstart = nactual - nchunk;
+    memcpy(list,&list[nchunk],nstart*sizeof(int));
   }
 
   if (me == 0) {
@@ -388,7 +372,7 @@ void ReadISurf::read_corners()
     if (logfile) fprintf(logfile,"  %ld corner points\n",ncorners);
   }
 
-  // NOTE: where to check for 0 values on boundary of grid block
+  memory->destroy(list);
 }
 
 /* ----------------------------------------------------------------------
@@ -397,6 +381,93 @@ void ReadISurf::read_corners()
 
 void ReadISurf::read_types()
 {
+  int i,m,nchunk,nactual,nmax;
+
+  int *list;
+  nmax = nchunk + CHUNKDELTA;
+  memory->create(list,nmax,"readisurf:list");
+
+  // read and broadcast one CHUNK of values at a time
+  // each proc stores grid corner point values it needs
+
+  bigint ntypes = (bigint) nxyz[0] * nxyz[1]*nxyz[2];
+  bigint nread = 0;
+  int nstart = 0;
+
+  while (nread < ntypes) {
+    if (ntypes-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = ntypes-nread;
+
+    if (me == 0) grab(nchunk,nstart,nmax,list,nactual);
+    MPI_Bcast(list,nchunk,MPI_INT,0,world);
+
+    assign_types(nchunk,nread,list);
+
+    nread += nchunk;
+    nstart = nactual - nchunk;
+    memcpy(list,&list[nchunk],nstart*sizeof(int));
+  }
+
+  if (me == 0) {
+    if (screen) fprintf(screen,"  %ld surface types\n",ntypes);
+    if (logfile) fprintf(logfile,"  %ld surface types\n",ntypes);
+  }
+
+  memory->destroy(list);
+}
+
+/* ----------------------------------------------------------------------
+   create dictionary for my grid cells in group
+   key = index of grid cell in Nx x Ny x Nz contiguous block
+   value = my local icell
+------------------------------------------------------------------------- */
+
+void ReadISurf::create_dict(int count, int igroup)
+{
+  // allocate dict to size count
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+  int groupbit = grid->bitmask[igroup];
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    // add cell to dict
+  }
+}
+
+/* ----------------------------------------------------------------------
+   read/store all grid surf type values
+------------------------------------------------------------------------- */
+
+void ReadISurf::destroy_dict()
+{
+}
+
+/* ----------------------------------------------------------------------
+   read/store all grid surf type values
+------------------------------------------------------------------------- */
+
+void ReadISurf::assign_corners(int n, bigint offset, int *list)
+{
+  // compute ix, iy, iz
+  // loop over 4 or 8
+  // generate cell index and corner index (0 to 7)
+  // lookup in dict and exit if necessary
+  // set the corner value in local storage for [icell][icorner]
+  // check for 0 values on boundary of grid block
+}
+
+/* ----------------------------------------------------------------------
+   read/store all grid surf type values
+------------------------------------------------------------------------- */
+
+void ReadISurf::assign_types(int n, bigint offset, int *list)
+{
+  // compute ix, iy, iz
+  // generate cell index
+  // lookup in dict and exit if necessary
+  // set the surf type value in local storage for [icell]
 }
 
 /* ----------------------------------------------------------------------
@@ -482,7 +553,7 @@ void ReadISurf::open(char *file)
    if first = 1, line variable holds non-blank line that ended header
 ------------------------------------------------------------------------- */
 
-void ReadSurf::parse_keyword(int first)
+void ReadISurf::parse_keyword(int first)
 {
   int eof = 0;
 
@@ -522,6 +593,32 @@ void ReadSurf::parse_keyword(int first)
 	 || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);
+}
+
+/* ----------------------------------------------------------------------
+   grab n values from file FP and put them in list
+   values can be several to a line
+   only called by proc 0
+------------------------------------------------------------------------- */
+
+void ReadISurf::grab(int n, int nstart, int nmax, int *list, int &nactual)
+{
+  char *eof,*ptr;
+
+  int i = nstart;
+  while (i < n) {
+    eof = fgets(line,MAXLINE,fp);
+    if (strlen(line) == MAXLINE-1)
+      error->one(FLERR,"Too long a line in isurf file");
+    if (eof == NULL) error->one(FLERR,"Unexpected end of isurf file");
+    ptr = strtok(line," \t\n\r\f");
+    list[i++] = atoi(ptr);
+    while ((ptr = strtok(NULL," \t\n\r\f")))
+      if (i < nmax) list[i++] = atof(ptr);
+    if (i > nmax) error->one(FLERR,"Reading of isurf file exceeded buffer");
+  }
+
+  nactual = i;
 }
 
 /* ----------------------------------------------------------------------

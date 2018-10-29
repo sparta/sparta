@@ -221,7 +221,7 @@ class Grid : protected Pointers {
   void group(int, char **);
   int add_group(const char *);
   int find_group(const char *);
-  void check_uniform_group(int, int *, double *, double *);
+  int check_uniform_group(int, int *, double *, double *);
 
   virtual void grow_pcells(int);
 

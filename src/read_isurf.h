@@ -41,6 +41,10 @@ class ReadISurf : protected Pointers {
 
   int dim;
 
+  int count;
+  int nxyz[3];
+  double corner[3],xyzsize[3];
+
   Surf::Point *pts;
   Surf::Line *lines;
   Surf::Tri *tris;
@@ -49,14 +53,23 @@ class ReadISurf : protected Pointers {
   void header();
   void read_corners();
   void read_types();
+
+  void create_dict(int, int);
+  void destroy_dict();
+
+  void assign_corners(int, bigint, int *);
+  void assign_types(int, bigint, int *);
+
   void grid2surf();
 
   double shortest_line();
   void smallest_tri(double &, double &);
 
   void open(char *);
+  void parse_keyword(int);
+  void grab(int, int, int, int *, int &);
 
-  virtual void grow_surf();
+  void grow_surf();
 };
 
 }

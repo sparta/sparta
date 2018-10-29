@@ -2090,8 +2090,8 @@ int Grid::find_group(const char *id)
    group forms a contiguous 3d block of cells
 ------------------------------------------------------------------------- */
 
-void Grid::check_uniform_group(int igroup, int *nxyz, 
-                               double *corner, double *xyzsize)
+int Grid::check_uniform_group(int igroup, int *nxyz, 
+                              double *corner, double *xyzsize)
 {
   int iparent; 
   // minlevel/maxlevel = min/max of any child cell in group
@@ -2176,6 +2176,7 @@ void Grid::check_uniform_group(int igroup, int *nxyz,
   if ((bigint) nxyz[0] * nxyz[1]*nxyz[2] != allbcount)
     error->all(FLERR,"Read_isurfs grid group is not a contiguous brick");
 
+  return count;
 }
 
 /* ----------------------------------------------------------------------
