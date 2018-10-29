@@ -43,8 +43,6 @@ class Comm : protected Pointers {
             void *, int self = 1);
 
  protected:
-  void migrate_cells_less_mem(int);
-
   class Irregular *iparticle,*igrid,*iuniform;
   char *sbuf,*rbuf;
   int maxsendbuf,maxrecvbuf;
@@ -55,8 +53,10 @@ class Comm : protected Pointers {
   int nneigh;                       // # of procs I own ghost cells of
   int *neighlist;                   // list of ghost procs
 
-  int copymode;                     // 1 if copy of class (prevents deallocation of
-                                    //  base class when child copy is destroyed)
+  int copymode;                 // 1 if copy of class (prevents deallocation of
+                                // base class when child copy is destroyed)
+
+  void migrate_cells_less_memory(int);  // small memory version of migrate_cells
 };
 
 }

@@ -1373,31 +1373,31 @@ void Update::global(int narg, char **arg)
   while (iarg < narg) {
     if (strcmp(arg[iarg],"fnum") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      fnum = atof(arg[iarg+1]);
+      fnum = input->numeric(FLERR,arg[iarg+1]);
       if (fnum <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      nrho = atof(arg[iarg+1]);
+      nrho = input->numeric(FLERR,arg[iarg+1]);
       if (nrho <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"vstream") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal global command");
-      vstream[0] = atof(arg[iarg+1]);
-      vstream[1] = atof(arg[iarg+2]);
-      vstream[2] = atof(arg[iarg+3]);
+      vstream[0] = input->numeric(FLERR,arg[iarg+1]);
+      vstream[1] = input->numeric(FLERR,arg[iarg+2]);
+      vstream[2] = input->numeric(FLERR,arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"temp") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      temp_thermal = atof(arg[iarg+1]);
+      temp_thermal = input->numeric(FLERR,arg[iarg+1]);
       if (temp_thermal <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"gravity") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal global command");
-      double gmag = atof(arg[iarg+1]);
-      gravity[0] = atof(arg[iarg+2]);
-      gravity[1] = atof(arg[iarg+3]);
-      gravity[2] = atof(arg[iarg+4]);
+      double gmag = input->numeric(FLERR,arg[iarg+1]);
+      gravity[0] = input->numeric(FLERR,arg[iarg+2]);
+      gravity[1] = input->numeric(FLERR,arg[iarg+3]);
+      gravity[2] = input->numeric(FLERR,arg[iarg+4]);
       if (gmag < 0.0) error->all(FLERR,"Illegal global command");
       if (gmag > 0.0 && 
           gravity[0] == 0.0 && gravity[1] == 0.0 && gravity[2] == 0.0)
@@ -1437,7 +1437,7 @@ void Update::global(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      grid->cutoff = atof(arg[iarg+1]);
+      grid->cutoff = input->numeric(FLERR,arg[iarg+1]);
       if (grid->cutoff < 0.0 && grid->cutoff != -1.0)
         error->all(FLERR,"Illegal global command");
       // force ghost info to be regenerated with new cutoff
@@ -1472,16 +1472,17 @@ void Update::global(int narg, char **arg)
       else error->all(FLERR,"Illegal weight command");
       iarg += 3;
     } else if (strcmp(arg[iarg],"particle/reorder") == 0) {
-      reorder_period = atoi(arg[iarg+1]);
+      reorder_period = input->inumeric(FLERR,arg[iarg+1]);
       if (reorder_period < 0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"mem/limit") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (strcmp(arg[iarg+1],"grid") == 0)
-        mem_limit_grid_flag = 1;
-      else
-        global_mem_limit = atoi(arg[iarg+1]);
-      if (global_mem_limit < 0) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"grid") == 0) mem_limit_grid_flag = 1;
+      else {
+        global_mem_limit = input->inumeric(FLERR,arg[iarg+1]);
+        global_mem_limit *= 1024*1024;
+        if (global_mem_limit < 0) error->all(FLERR,"Illegal global command");
+      }
       iarg += 2;
     } else error->all(FLERR,"Illegal global command");
   }

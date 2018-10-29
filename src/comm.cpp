@@ -233,7 +233,7 @@ void Comm::migrate_cells(int nmigrate)
   if (update->mem_limit_grid_flag)
     update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
   if (update->global_mem_limit > 0)
-    return migrate_cells_less_mem(nmigrate);
+    return migrate_cells_less_memory(nmigrate);
 
   int i,n;
 
@@ -305,9 +305,8 @@ void Comm::migrate_cells(int nmigrate)
 
   if (!igrid) igrid = new Irregular(sparta);
   int recvsize;
-  int nrecv = 
-    igrid->create_data_variable(nmigrate,gproc,gsize,
-                                         recvsize,commsortflag);
+  int nrecv = igrid->create_data_variable(nmigrate,gproc,gsize,
+                                          recvsize,commsortflag);
 
   // reallocate rbuf as needed
 
@@ -335,7 +334,7 @@ void Comm::migrate_cells(int nmigrate)
    uses multiple comm passes to reduce buffer size
 ------------------------------------------------------------------------- */
 
-void Comm::migrate_cells_less_mem(int nmigrate)
+void Comm::migrate_cells_less_memory(int nmigrate)
 {
   int i,n;
 
@@ -358,7 +357,6 @@ void Comm::migrate_cells_less_mem(int nmigrate)
   int nglocal = grid->nlocal;
 
   while (not_done) {
-
     Grid::ChildCell *cells = grid->cells;
 
     int nsend = 0;
@@ -402,8 +400,7 @@ void Comm::migrate_cells_less_mem(int nmigrate)
 
     // compress particle list to remove particles in migrating cells
 
-    if (nmigrate)
-      particle->compress_rebalance_sorted();
+    if (nmigrate) particle->compress_rebalance_sorted();
 
     // create irregular communication plan with variable size datums
     // nrecv = # of incoming grid cells
@@ -413,9 +410,8 @@ void Comm::migrate_cells_less_mem(int nmigrate)
 
     if (!igrid) igrid = new Irregular(sparta);
     int recvsize;
-    int nrecv = 
-      igrid->create_data_variable(nsend,gproc,gsize,
-                                         recvsize,commsortflag);
+    int nrecv = igrid->create_data_variable(nsend,gproc,gsize,
+                                            recvsize,commsortflag);
 
     // reallocate rbuf as needed
 
@@ -431,24 +427,24 @@ void Comm::migrate_cells_less_mem(int nmigrate)
     igrid->exchange_variable(sbuf,gsize,rbuf);
 
     // unpack received grid cells with their particles
+    // set unpack_one() sortflag arg to keep new particles sorted
 
     offset = 0;
     for (i = 0; i < nrecv; i++)
       offset += grid->unpack_one(&rbuf[offset],1,1,1);
 
     // deallocate large buffers to reduce memory footprint
+    // also deallocate igrid for same reason
 
-    if (sbuf)
-      memory->destroy(sbuf);
+    if (sbuf) memory->destroy(sbuf);
     sbuf = NULL;
-    maxsendbuf = -1;
+    maxsendbuf = 0;
 
-    if (rbuf)
-      memory->destroy(rbuf);
+    if (rbuf) memory->destroy(rbuf);
     rbuf = NULL;
-    maxrecvbuf = -1;
+    maxrecvbuf = 0;
 
-    if (igrid) delete igrid;
+    delete igrid;
     igrid = NULL;
 
     icell_start = icell_end;
@@ -458,8 +454,7 @@ void Comm::migrate_cells_less_mem(int nmigrate)
 
   // compress my list of owned grid cells to remove migrated cells
 
-  if (nmigrate)
-    grid->compress();
+  if (nmigrate) grid->compress();
 }
 
 /* ----------------------------------------------------------------------
@@ -524,7 +519,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
   int recvsize;
   int nrecv = 
     igrid->create_data_variable(nsend,procsend,gsize,
-                                         recvsize,commsortflag);
+                                recvsize,commsortflag);
 
   // reallocate rbuf as needed
 
