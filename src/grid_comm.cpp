@@ -397,6 +397,8 @@ int Grid::pack_particles(int icell, char *buf, int memflag)
 /* ----------------------------------------------------------------------
    unpack particles from buf into one cell = icell
    point unpacked particles to icell
+   if sortflag: keep particles sorted via setting
+     particle->cinfo.first/count and particle->next values for added particles
    return length of unpacking in bytes
 ------------------------------------------------------------------------- */
 
