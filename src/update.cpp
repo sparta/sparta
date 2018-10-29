@@ -1406,9 +1406,6 @@ void Update::global(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"surfs") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      if (surf->exist)
-        error->all(FLERR,
-                   "Cannot set global surfs when surfaces already exist");
       surf->global(arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"surfmax") == 0) {
