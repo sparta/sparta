@@ -23,7 +23,10 @@ namespace SPARTA_NS {
 
 class Surf : protected Pointers {
  public:
-  int exist;                // 1 if any surfaces are defined, else 0
+  int exist;                // 1 if any surfaces are defined, else 0 
+  int style;                // EXPLICIT, EXPLICIT_DISTRIBUTED,
+                            // IMPLICIT_STATIC, IMPLICIT_DYNAMIC
+  int implicit;             // 1 if implicit surfs, 0 if explicit
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
 
@@ -60,9 +63,9 @@ class Surf : protected Pointers {
     double norm[3];         // outward normal to triangle
   };
 
-  Point *pts;               // global list of points
-  Line *lines;              // global list of lines
-  Tri *tris;                // global list of tris
+  Point *pts;               // list of points
+  Line *lines;              // list of lines
+  Tri *tris;                // list of tris
   int npoint,nline,ntri;    // number of each
 
   int *mysurfs;             // indices of surf elements I own
@@ -78,6 +81,7 @@ class Surf : protected Pointers {
 
   Surf(class SPARTA *);
   ~Surf();
+  void global(char *);
   void modify_params(int, char **);
   void init();
   int nelement();

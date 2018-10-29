@@ -68,6 +68,8 @@ void ReadSurf::command(int narg, char **arg)
 {
   if (!grid->exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
+  if (surf->implicit)
+    error->all(FLERR,"Cannot read_surf when global surf implicit is set");
 
   surf->exist = 1;
   dim = domain->dimension;

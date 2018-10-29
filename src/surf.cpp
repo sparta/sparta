@@ -39,6 +39,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+enum{EXPLICIT,EXPLICIT_DISTRIBUTED,IMPLICIT_STATIC,IMPLICIT_DYNAMIC};
 enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Update
 enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Grid
 enum{TYPE,MOLECULE,ID};
@@ -54,6 +55,8 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
   exist = 0;
+  style = EXPLICIT;
+  implicit = 0;
   surf_collision_check = 1;
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
@@ -105,6 +108,23 @@ Surf::~Surf()
   memory->sfree(sc);
   for (int i = 0; i < nsr; i++) delete sr[i];
   memory->sfree(sr);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Surf::global(char *arg)
+{
+  if (exist) 
+    error->all(FLERR,"Cannot set global surfs when surfaces already exist");
+
+  if (strcmp(arg,"explicit") == 0) style = EXPLICIT;
+  else if (strcmp(arg,"explicit/distributed") == 0) style = EXPLICIT_DISTRIBUTED;
+  else if (strcmp(arg,"implicit/static") == 0) style = IMPLICIT_STATIC;
+  else if (strcmp(arg,"implicit/dynamic") == 0) style = IMPLICIT_DYNAMIC;
+  else error->all(FLERR,"Illegal global command");
+
+  if (style == IMPLICIT_STATIC || style == IMPLICIT_DYNAMIC) implicit = 1;
+  else implicit = 0;
 }
 
 /* ---------------------------------------------------------------------- */
