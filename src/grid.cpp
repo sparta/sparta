@@ -2083,6 +2083,102 @@ int Grid::find_group(const char *id)
 }
 
 /* ----------------------------------------------------------------------
+   check if a grid group is a uniform grid
+   no child cells with surfs
+   all child cells are at same level (i.e. parents are at same level)
+   all child cells are same size
+   group forms a contiguous 3d block of cells
+------------------------------------------------------------------------- */
+
+void Grid::check_uniform_group(int igroup, int *nxyz, 
+                               double *corner, double *xyzsize)
+{
+  int iparent; 
+  // minlevel/maxlevel = min/max of any child cell in group
+
+  int sflag = 0;
+  int minlev = maxlevel;
+  int maxlev = 0;
+  double minsize[3],maxsize[3];
+  double lo[3],hi[3];
+  int count = 0;
+
+  int groupbit = bitmask[igroup];
+
+  for (int icell = 0; icell < nlocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsurf) sflag++;
+    iparent = pcells[cells[icell].iparent].level;
+    minlev = MIN(minlev,pcells[iparent].level+1);
+    maxlev = MAX(maxlev,pcells[iparent].level+1);
+    minsize[0] = MIN(minsize[0],cells[icell].hi[0]-cells[icell].lo[0]);
+    minsize[1] = MIN(minsize[1],cells[icell].hi[1]-cells[icell].lo[1]);
+    minsize[2] = MIN(minsize[2],cells[icell].hi[2]-cells[icell].lo[2]);
+    maxsize[0] = MAX(maxsize[0],cells[icell].hi[0]-cells[icell].lo[0]);
+    maxsize[1] = MAX(maxsize[1],cells[icell].hi[1]-cells[icell].lo[1]);
+    maxsize[2] = MAX(maxsize[2],cells[icell].hi[2]-cells[icell].lo[2]);
+    lo[0] = MIN(lo[0],cells[icell].lo[0]);
+    lo[1] = MIN(lo[1],cells[icell].lo[1]);
+    lo[2] = MIN(lo[2],cells[icell].lo[2]);
+    hi[0] = MIN(hi[0],cells[icell].hi[0]);
+    hi[1] = MIN(hi[1],cells[icell].hi[1]);
+    hi[2] = MIN(hi[2],cells[icell].hi[2]);
+    count++;
+  }
+ 
+  int allsflag;
+  MPI_Allreduce(&sflag,&allsflag,1,MPI_INT,MPI_SUM,world);
+  if (allsflag) {
+    char str[128];
+    sprintf(str,
+            "Read_isurfs adding surfs to %d cells which already have surfs",
+            allsflag);
+    error->all(FLERR,str);
+  }
+
+  int allminlev,allmaxlev;
+  MPI_Allreduce(&minlev,&allminlev,1,MPI_INT,MPI_MIN,world);
+  MPI_Allreduce(&maxlev,&allmaxlev,1,MPI_INT,MPI_MAX,world);
+  if (allminlev != allmaxlev)
+    error->all(FLERR,"Read_isurfs grid group is not all at uniform level");
+
+  // bounds, size, contiguous checks based on geometry of cells
+  // since child cells may span multiple parent cells
+
+  double allminsize[3],allmaxsize[3];
+  MPI_Allreduce(minsize,&allminsize,3,MPI_DOUBLE,MPI_MIN,world);
+  MPI_Allreduce(maxsize,&allmaxsize,3,MPI_DOUBLE,MPI_MAX,world);
+  if (allmaxsize[0]-allminsize[0] >= cell_epsilon ||
+      allmaxsize[1]-allminsize[1] >= cell_epsilon ||
+      allmaxsize[2]-allminsize[2] >= cell_epsilon)
+    error->all(FLERR,"Read_isurfs grid group cells are not all the same size");
+
+  double alllo[3],allhi[3];
+  MPI_Allreduce(lo,&alllo,3,MPI_DOUBLE,MPI_MIN,world);
+  MPI_Allreduce(hi,&allhi,3,MPI_DOUBLE,MPI_MAX,world);
+
+  xyzsize[0] = 0.5 * (allminsize[0]+allmaxsize[0]);
+  xyzsize[1] = 0.5 * (allminsize[1]+allmaxsize[1]);
+  xyzsize[2] = 0.5 * (allminsize[2]+allmaxsize[2]);
+
+  corner[0] = alllo[0];
+  corner[1] = alllo[1];
+  corner[2] = alllo[2];
+
+  nxyz[0] = static_cast<int> ((allhi[0]-alllo[0])/xyzsize[0] + 0.5);
+  nxyz[1] = static_cast<int> ((allhi[1]-alllo[1])/xyzsize[1] + 0.5);
+  nxyz[2] = static_cast<int> ((allhi[2]-alllo[2])/xyzsize[2] + 0.5);
+
+  bigint allbcount;
+  bigint bcount = count;
+  MPI_Allreduce(&bcount,&allbcount,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  if ((bigint) nxyz[0] * nxyz[1]*nxyz[2] != allbcount)
+    error->all(FLERR,"Read_isurfs grid group is not a contiguous brick");
+
+}
+
+/* ----------------------------------------------------------------------
    proc 0 writes parent grid and group info to restart file
 ------------------------------------------------------------------------- */
 

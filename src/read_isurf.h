@@ -47,7 +47,8 @@ class ReadISurf : protected Pointers {
   int maxpoint,maxline,maxtri;
 
   void header();
-  void read_grid();
+  void read_corners();
+  void read_types();
   void grid2surf();
 
   double shortest_line();

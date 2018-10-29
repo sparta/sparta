@@ -36,14 +36,13 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
 #define MAXLINE 256
 #define CHUNK 1024
-#define EPSILON_NORM 1.0e-12
-#define EPSILON_GRID 1.0e-3
-#define BIG 1.0e20
-#define DELTA 128           // must be 2 or greater 
 
 // NOTE: allow reading 2nd set of isurfs into a different group region ??
 // NOTE: check that all boundary point values are 0
 // NOTE: option to write out surf once formed?
+// NOTE: where to store 8 corner points per cell (static vs dynamic?)
+// NOTE: do I need a fix isurf which stores per-grid values with a name?
+// NOTE: what about split cells induced by a single cell with Isurfs
 
 /* ---------------------------------------------------------------------- */
 
@@ -80,30 +79,39 @@ void ReadISurf::command(int narg, char **arg)
 
   if (narg != 2) error->all(FLERR,"Illegal read_isurf command");
 
-  // read header info
-  // verify that grid is uniform child cells within region
-
   if (me == 0) {
     if (screen) fprintf(screen,"Reading isurf file ...\n");
     open(arg[0]);
   }
 
+  // verify that grid group is a set of uniform child cells
+  // must comprise a 3d contiguous block
+
   int igroup = grid->find_group(arg[1]);
   if (igroup < 0) error->all(FLERR,"Read_isurf group ID does not exist");
 
-  int nx,ny,nz;
-  //int flag = grid->check_uniform(igroup,nx,ny,nz);
-  // NOTE: how to store offsets, some way to loop over grid cells in group
+  int nxyz[3];
+  double corner[3],xyzsize[3];
+  count = grid->check_uniform_group(igroup,nxyz,corner,xyzsize);
+
+  // read header info
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
   header();
 
-  // read corner point grid values
-  // assign 8 corner point values to each grid cell
+  // read per-grid values
+  // corner points and surf types
 
-  read_grid();
+  parse_keyword(1);
+
+  while (len(keyword)) {
+    if (strcmp(keyword,"Corners") == 0) read_corners();
+    elif (strcmp(keyword,"Surf Types") == 0) read_types();
+    else error->all("Unknown section in read_isurfs file");
+    parse_keyword(0);
+  }
 
   // close file
 
@@ -113,7 +121,7 @@ void ReadISurf::command(int narg, char **arg)
   }
 
   // convert grid point values to surfs
-  // NOTE: this is where will call marching cubes?
+  // NOTE: this is where will call marching cubes
 
   grid2surf();
 
@@ -277,8 +285,9 @@ void ReadISurf::header()
     if (eof == NULL) error->one(FLERR,"Unexpected end of data file");
   }
 
-  //npoint_new = nline_new = ntri_new = 0;
-
+  nx = ny = 0;
+  nz = 1;
+   
   while (1) {
 
     // read a line and bcast length
@@ -306,16 +315,26 @@ void ReadISurf::header()
     if ((ptr = strchr(line,'#'))) *ptr = '\0';
     if (strspn(line," \t\n\r") == strlen(line)) continue;
 
+    // search line for header keyword and set corresponding variable
+
+    
+    if (strstr(line,"nx")) sscanf(line,"%d",&nx);
+    else if (strstr(line,"ny")) sscanf(line,"%d",&ny);
+    else if (strstr(line,"nz")) sscanf(line,"%d",&nz);
+    else break;
   }
 
-  //if (npoint_new == 0) error->all(FLERR,"Surf file does not contain points");
+  if (nx == 0 || ny == 0) 
+    error->all(FLERR,"Isurf file does not contain nx or ny");
+  if (dim == 2 && nz != 1) 
+    error->all(FLERR,"Isurf file nz value is invalid for 2d model");
 }
 
 /* ----------------------------------------------------------------------
-   read/store all grid values
+   read/store all grid corner point values
 ------------------------------------------------------------------------- */
 
-void ReadISurf::read_grid()
+void ReadISurf::read_corners()
 {
   int i,m,nchunk;
   char *next,*buf;
@@ -375,6 +394,14 @@ void ReadISurf::read_grid()
   }
 
   */
+}
+
+/* ----------------------------------------------------------------------
+   read/store all grid surf type values
+------------------------------------------------------------------------- */
+
+void ReadISurf::read_types()
+{
 }
 
 /* ----------------------------------------------------------------------
@@ -449,6 +476,57 @@ void ReadISurf::open(char *file)
     sprintf(str,"Cannot open file %s",file);
     error->one(FLERR,str);
   }
+}
+
+/* ----------------------------------------------------------------------
+   grab next keyword
+   read lines until one is non-blank
+   keyword is all text on line w/out leading & trailing white space
+   read one additional line (assumed blank)
+   if any read hits EOF, set keyword to empty
+   if first = 1, line variable holds non-blank line that ended header
+------------------------------------------------------------------------- */
+
+void ReadSurf::parse_keyword(int first)
+{
+  int eof = 0;
+
+  // proc 0 reads upto non-blank line plus 1 following line
+  // eof is set to 1 if any read hits end-of-file
+
+  if (me == 0) {
+    if (!first) {
+      if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
+    }
+    while (eof == 0 && strspn(line," \t\n\r") == strlen(line)) {
+      if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
+    }
+    if (fgets(buffer,MAXLINE,fp) == NULL) eof = 1;
+  }
+
+  // if eof, set keyword empty and return
+
+  MPI_Bcast(&eof,1,MPI_INT,0,world);
+  if (eof) {
+    keyword[0] = '\0';
+    return;
+  }
+
+  // bcast keyword line to all procs
+
+  int n;
+  if (me == 0) n = strlen(line) + 1;
+  MPI_Bcast(&n,1,MPI_INT,0,world);
+  MPI_Bcast(line,n,MPI_CHAR,0,world);
+
+  // copy non-whitespace portion of line into keyword
+
+  int start = strspn(line," \t\n\r");
+  int stop = strlen(line) - 1;
+  while (line[stop] == ' ' || line[stop] == '\t' 
+	 || line[stop] == '\n' || line[stop] == '\r') stop--;
+  line[stop+1] = '\0';
+  strcpy(keyword,&line[start]);
 }
 
 /* ----------------------------------------------------------------------
