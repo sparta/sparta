@@ -51,7 +51,6 @@ ReadISurf::ReadISurf(SPARTA *sparta) : Pointers(sparta)
   MPI_Comm_rank(world,&me);
   line = new char[MAXLINE];
   keyword = new char[MAXLINE];
-  buffer = new char[CHUNK*MAXLINE];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -331,6 +330,27 @@ void ReadISurf::header()
 }
 
 /* ----------------------------------------------------------------------
+   grab n values from file fp and put them in list
+   values can be several to a line
+   only called by proc 0
+------------------------------------------------------------------------- */
+
+void ReadIsurf::grab(int n, int *list)
+{
+  char *eof;
+
+  int i = 0;
+  while (i < n) {
+    eof = fgets(line,MAXLINE,fptr);
+    if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
+    ptr = strtok(line," \t\n\r\f");
+    list[i++] = atoi(ptr);
+    while ((ptr = strtok(NULL," \t\n\r\f"))) list[i++] = atof(ptr);
+    // NOTE: how to avoid exceeding NCHUNK
+  }
+}
+
+/* ----------------------------------------------------------------------
    read/store all grid corner point values
 ------------------------------------------------------------------------- */
 
@@ -339,61 +359,36 @@ void ReadISurf::read_corners()
   int i,m,nchunk;
   char *next,*buf;
 
-  // read and broadcast one CHUNK of lines at a time
+  // read and broadcast one CHUNK of values at a time
+  // each proc stores grid corner point values it needs
 
-  /*
-
-  int n = npoint_old;
-  int nread = 0;
+  bigint ncorners = (bigint) (nx+1) * (ny+1)*(nz*1);
+  bigint nread = 0;
   
-  while (nread < npoint_new) {
-    if (npoint_new-nread > CHUNK) nchunk = CHUNK;
-    else nchunk = npoint_new-nread;
-    if (me == 0) {
-      char *eof;
-      m = 0;
-      for (i = 0; i < nchunk; i++) {
-	eof = fgets(&buffer[m],MAXLINE,fp);
-	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
-	m += strlen(&buffer[m]);
-      }
-      m++;
-    }
-    MPI_Bcast(&m,1,MPI_INT,0,world);
-    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
+  while (nread < ncorners) {
+    if (ncorners-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = ncorners-nread;
 
-    buf = buffer;
-    next = strchr(buf,'\n');
-    *next = '\0';
-    int nwords = input->count_words(buf);
-    *next = '\n';
-
-    if (dim == 2 && nwords != 3)
-      error->all(FLERR,"Incorrect point format in surf file");
-    if (dim == 3 && nwords != 4)
-      error->all(FLERR,"Incorrect point format in surf file");
+    if (me == 0) grab(nchunk,list);
+    MPI_Bcast(list,nchunk,MPI_INT,0,world);
 
     for (int i = 0; i < nchunk; i++) {
-      next = strchr(buf,'\n');
-      strtok(buf," \t\n\r\f");
-      pts[n].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-      pts[n].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-      if (dim == 3) 
-        pts[n].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-      else pts[n].x[2] = 0.0;
-      n++;
-      buf = next + 1;
+      // each ichunk value is one of 8 corners of various grid cells
+      // use grid indices (ix,iy,iz) to map to grid cell index
+      // lookup cell index in local dict to retrieve icell
+      // store the corner point value with icell
+      // store locally for now, in fix property/grid later
     }
 
     nread += nchunk;
   }
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  %d points\n",npoint_new);
-    if (logfile) fprintf(logfile,"  %d points\n",npoint_new);
+    if (screen) fprintf(screen,"  %ld corner points\n",ncorners);
+    if (logfile) fprintf(logfile,"  %ld corner points\n",ncorners);
   }
 
-  */
+  // NOTE: where to check for 0 values on boundary of grid block
 }
 
 /* ----------------------------------------------------------------------
