@@ -276,15 +276,15 @@ error due to the additional memory they require.  Setting a limit on
 the memory size will perform these two operations more incrementally
 so that memory errors do not occur.
 
-A load-balance oepration can use as much as 3x more memory than the
+A load-balance operation can use as much as 3x more memory than the
 memory used to store particles (reported by SPARTA when a simulation
 begins).  Particle reordering temporarily doubles the memory needed to
-store particles because it is perfored out-of-place by default.
+store particles because it is performed out-of-place by default.
 
-Specfiying the value for {mem/limit} as {grid}, will allocate extra
+Specifying the value for {mem/limit} as {grid}, will allocate extra
 memory limited to the size of memory for storing grid cells on each
 processor.  For most simulations this is typically much smaller than
-the memory used to store particles.  Specfiying a numeric value for
+the memory used to store particles.  Specifying a numeric value for
 {bytes} will allocate extra memory limited to that many MBytes on each
 processor.  {Bytes} can be specified as a floating point value or an
 integer, e.g. 0.5 if you want to use 1/2 MByte of extra memory or 100
@@ -292,7 +292,7 @@ for a 100 MByte buffer.  Specifying a value of 0 (the default) means
 no limit is used.
 
 For load-balancing, the communication of grid and particle data to new
-processors will then be performed in muliple passes (if necessary) so
+processors will then be performed in multiple passes (if necessary) so
 that only a portion of grid cells and their particles which fit into
 the extra memory are migrated in each pass.  Similarly for particle
 reordering, multiple passes are performed using the extra memory to
