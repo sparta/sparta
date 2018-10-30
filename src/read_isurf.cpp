@@ -31,11 +31,10 @@ enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
-#define NCHUNK 1024
+#define NCHUNK 1024     // can boost this much larger
 
 // NOTE: allow reading 2nd set of isurfs into a different group region ??
-// NOTE: check that all boundary point values are 0
-// NOTE: option to write out surf once formed?
+// NOTE: option to write out surf once formed, like read surf?
 // NOTE: where to store 8 corner points per cell (static vs dynamic?)
 // NOTE: do I need a fix isurf which stores per-grid values with a name?
 // NOTE: what about split cells induced by a single cell with Isurfs
@@ -68,11 +67,13 @@ void ReadISurf::command(int narg, char **arg)
     error->all(FLERR,"Cannot read_isurf unless global surf implicit is set");
   if (particle->exist)
     error->all(FLERR,"Cannot read_isurf when particles exist");
+  if (domain->axisymmetric)
+    error->all(FLERR,"Cannot read_isurf for axisymmetric domains");
 
   surf->exist = 1;
   dim = domain->dimension;
 
-  if (narg < 5) error->all(FLERR,"Illegal read_isurf command");
+  if (narg < 6) error->all(FLERR,"Illegal read_isurf command");
 
   int iggroup = grid->find_group(arg[0]);
   if (iggroup < 0) error->all(FLERR,"Read_isurf grid group ID does not exist");
@@ -85,12 +86,16 @@ void ReadISurf::command(int narg, char **arg)
 
   char *gridfile = arg[4];
 
+  thresh = input->inumeric(FLERR,arg[5]);
+  if (thresh <= 0 || thresh >= 255) 
+    error->all(FLERR,"Invalid read_isurf command");
+
   // optional args
 
   sgrouparg = -1;
   char *typefile = NULL;
 
-  int iarg = 5;
+  int iarg = 6;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"group") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
@@ -515,18 +520,25 @@ void ReadISurf::marching_cubes(int igroup)
 /* ----------------------------------------------------------------------
    create 2d implicit surfs from grid point values
    follows https://en.wikipedia.org/wiki/Marching_squares
+     see 2 sections: Basic algorithm and Disambiguation of saddle points
+     treating open circles as flow volume, solid circles as material
+   treats each grid cell independently
+   4 corner points open/solid -> 2^4 = 16 cases
+   cases infer 0,1,2 line segments in each grid cell
+   order 2 points in each line segment to give normal into flow volume
+   treat two saddle point cases (5,10) based on ave value at cell center
 ------------------------------------------------------------------------- */
-
-// NOTE: how does border = 0 match with thresh?
-// NOTE: set normal direction of each line
 
 void ReadISurf::marching_squares(int igroup)
 {
+  int i,ipt;
   int v00,v01,v10,v11,bit0,bit1,bit2,bit3;
-  int nsurf,which;
-  double pt[4][2];
+  int nsurf,which,splitflag;
   double *lo,*hi;
   double ave;
+
+  double pt[4][3];
+  pt[0][2] = pt[1][2] = pt[2][2] = pt[3][2] = 0.0;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -549,6 +561,7 @@ void ReadISurf::marching_squares(int igroup)
     bit3 = v11 <= thresh ? 0 : 1;
     
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
+    splitflag = 0;
 
     switch (which) {
 
@@ -592,6 +605,7 @@ void ReadISurf::marching_squares(int igroup)
       nsurf = 2;
       ave = 0.25 * (v00 + v01 + v10 + v11);
       if (ave > thresh) {
+        splitflag = 1;
         pt[0][0] = lo[0];
         pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
         pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
@@ -648,6 +662,7 @@ void ReadISurf::marching_squares(int igroup)
       nsurf = 2;
       ave = 0.25 * (v00 + v01 + v10 + v11);
       if (ave > thresh) {
+        splitflag = 1;
         pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
         pt[0][1] = lo[1];
         pt[1][0] = lo[0];
@@ -704,7 +719,29 @@ void ReadISurf::marching_squares(int igroup)
       nsurf = 0;
       break;
     }
+
+    // populate Grid and Surf data structs
+    // not worrying about unique points
+
+    ipt = 0;
+    for (i = 0; i < nsurf; i++) {
+      /*
+      surf->add_point(&pt[ipt][0]);
+      surf->add_point(&pt[ipt+1][0]);
+      ipt += 2;
+      npoint = surf->npoint;
+      surf->add_line(svalue[icell],npoint-2,npoint-1);
+      nline = surf->nline;
+      surf->lines[nline-1].mask |= sgroupbit;
+      */
+    }
+
+    cells[icell].nsurf = nsurf;
+    // how to create list of local surfs via csurfs
+    // cells[icell].csurfs = csurfs;
+    // what to do with split cell (know it now)
   }
+
 }
 
 /* ----------------------------------------------------------------------
