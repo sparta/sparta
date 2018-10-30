@@ -294,7 +294,7 @@ void ReadISurf::read_corners(char *gridfile)
   int nchunk;
   FILE *fp;
 
-  char *buf;
+  uint8_t *buf;
   memory->create(buf,NCHUNK,"readisurf:buf");
 
   // proc 0 opens and reads binary file
@@ -311,14 +311,17 @@ void ReadISurf::read_corners(char *gridfile)
   // read and broadcast one CHUNK of values at a time
   // each proc stores grid corner point values it needs in assign_corners()
 
-  bigint ncorners = (bigint) (nx+1) * (ny+1)*(nz+1);
+  bigint ncorners;
+  if (dim == 3) ncorners = (bigint) (nx+1) * (ny+1)*(nz+1);
+  else ncorners = (bigint) (nx+1) * (ny+1)*nz;
+
   bigint nread = 0;
 
   while (nread < ncorners) {
     if (ncorners-nread > NCHUNK) nchunk = NCHUNK;
     else nchunk = ncorners-nread;
 
-    if (me == 0) fread(buf,sizeof(char),nchunk,fp);
+    if (me == 0) fread(buf,sizeof(uint8_t),nchunk,fp);
     MPI_Bcast(buf,nchunk,MPI_CHAR,0,world);
 
     assign_corners(nchunk,nread,buf);
@@ -431,7 +434,7 @@ void ReadISurf::create_hash(int count, int igroup)
    check that corner point values = 0 on boundary of grid block
 ------------------------------------------------------------------------- */
 
-void ReadISurf::assign_corners(int n, bigint offset, char *buf)
+void ReadISurf::assign_corners(int n, bigint offset, uint8_t *buf)
 {
   int icell,ncorner,zeroflag;
   int pix,piy,piz;
@@ -444,9 +447,12 @@ void ReadISurf::assign_corners(int n, bigint offset, char *buf)
     piz = pointindex / ((nx+1)*(ny+1));
 
     zeroflag = 0;
-    if ((pix == 0 || piy == 0 || piz == 0) && buf[i]) zeroflag = 1;
-    if ((pix == nx || piy == ny || piz == nz) && buf[i]) zeroflag = 1;
-    if (zeroflag) error->all(FLERR,"Grid boundary value != 0");
+    if (buf[i]) {
+      if (pix == 0 || piy == 0) zeroflag = 1;
+      if (pix == nx || piy == ny) zeroflag = 1;
+      if (dim == 3 && (piz == 0 || piz == nz)) zeroflag = 1;
+      if (zeroflag) error->all(FLERR,"Grid boundary value != 0");
+    }
 
     // ncorner = 0,1,2,3,4,5,6,7 when corner point is 
     //   bottom-lower-left, bottom-lower-right, 
@@ -466,7 +472,7 @@ void ReadISurf::assign_corners(int n, bigint offset, char *buf)
             cellindex = (bigint) nx * ny*ciz + nx*ciy + cix;
             if (hash->find(cellindex) == hash->end()) continue;
             icell = (*hash)[cellindex];
-            cvalues[icell][ncorner] = (int) buf[i];
+            cvalues[icell][ncorner] = buf[i];
           }
         }
       }
@@ -482,13 +488,21 @@ void ReadISurf::assign_corners(int n, bigint offset, char *buf)
           ncorner--;
           if (cix < 0 || cix >= nx || ciy < 0 || ciy >=ny) continue;
           cellindex = (bigint) nx * ciy + cix;
+          printf("CELLINDEX %ld ncorner %d PI %d %d %d\n",
+                 cellindex,ncorner,pix,piy,piz);
           if (hash->find(cellindex) == hash->end()) continue;
+          if (buf[i]) printf("SET buf %d icell %d ncorner %d\n",
+                             buf[i],icell,ncorner,pix,piy,piz);
           icell = (*hash)[cellindex];
-          cvalues[icell][ncorner] = (int) buf[i];
+          cvalues[icell][ncorner] = buf[i];
         }
       }
     }
   }
+
+  printf("CORNERS14 %d %d %d %d\n",
+         cvalues[14][0],cvalues[14][1],cvalues[14][2],cvalues[14][3]);
+
 }
 
 /* ----------------------------------------------------------------------
@@ -563,6 +577,9 @@ void ReadISurf::marching_squares(int igroup)
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
     splitflag = 0;
 
+    if (icell == 14) printf("CELL14 %d %d %d %d: %d %d %d %d: %d\n",
+                            v00,v01,v10,v11,bit0,bit1,bit2,bit3,which);
+
     switch (which) {
 
     case 0: 
@@ -599,6 +616,8 @@ void ReadISurf::marching_squares(int igroup)
       pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
       pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
       pt[1][1] = hi[1];
+      printf("CASE4 icell/id %d %d: %g %g: %g %g\n",icell,cells[icell].id,
+             pt[0][0],pt[0][1],pt[1][0],pt[1][1]);
       break;
 
     case 5:
@@ -725,6 +744,10 @@ void ReadISurf::marching_squares(int igroup)
 
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
+      printf("LINE icell/id %d %d: %g %g: %g %g\n",icell,cells[icell].id,
+             pt[ipt][0],pt[ipt][1],pt[ipt+1][0],pt[ipt+1][1]);
+      ipt += 2;
+       
       /*
       surf->add_point(&pt[ipt][0]);
       surf->add_point(&pt[ipt+1][0]);

@@ -64,7 +64,7 @@ class ReadISurf : protected Pointers {
   void create_hash(int, int);
   void destroy_hash();
 
-  void assign_corners(int, bigint, char *);
+  void assign_corners(int, bigint, uint8_t *);
   void assign_types(int, bigint, int *);
 
   void marching_cubes(int);

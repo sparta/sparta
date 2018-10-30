@@ -1867,7 +1867,7 @@ void Grid::group(int narg, char **arg)
         x[0] = cells[i].lo[0];
         x[1] = cells[i].hi[1];
         if (!region->match(x)) flag = 0;
-        x[0] = cells[i].hi[1];
+        x[0] = cells[i].hi[0];
         x[1] = cells[i].hi[1];
         if (!region->match(x)) flag = 0;
 
@@ -1898,13 +1898,14 @@ void Grid::group(int narg, char **arg)
         x[0] = cells[i].lo[0];
         x[1] = cells[i].lo[1];
         if (region->match(x)) flag = 1;
+
         x[0] = cells[i].hi[0];
         x[1] = cells[i].lo[1];
         if (region->match(x)) flag = 1;
         x[0] = cells[i].lo[0];
         x[1] = cells[i].hi[1];
         if (region->match(x)) flag = 1;
-        x[0] = cells[i].hi[1];
+        x[0] = cells[i].hi[0];
         x[1] = cells[i].hi[1];
         if (region->match(x)) flag = 1;
 
@@ -2094,14 +2095,23 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
                               double *corner, double *xyzsize)
 {
   int iparent; 
-  // minlevel/maxlevel = min/max of any child cell in group
+  double minsize[3],maxsize[3];
+  double lo[3],hi[3];
 
   int sflag = 0;
   int minlev = maxlevel;
   int maxlev = 0;
-  double minsize[3],maxsize[3];
-  double lo[3],hi[3];
   int count = 0;
+  minsize[0] = domain->prd[0];
+  minsize[1] = domain->prd[1];
+  minsize[2] = domain->prd[2];
+  maxsize[0] = maxsize[1] = maxsize[2] = 0.0;
+  lo[0] = domain->boxhi[0];
+  lo[1] = domain->boxhi[1];
+  lo[2] = domain->boxhi[2];
+  hi[0] = domain->boxlo[0];
+  hi[1] = domain->boxlo[1];
+  hi[2] = domain->boxlo[2];
 
   int groupbit = bitmask[igroup];
 
@@ -2120,12 +2130,12 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
     lo[0] = MIN(lo[0],cells[icell].lo[0]);
     lo[1] = MIN(lo[1],cells[icell].lo[1]);
     lo[2] = MIN(lo[2],cells[icell].lo[2]);
-    hi[0] = MIN(hi[0],cells[icell].hi[0]);
-    hi[1] = MIN(hi[1],cells[icell].hi[1]);
-    hi[2] = MIN(hi[2],cells[icell].hi[2]);
+    hi[0] = MAX(hi[0],cells[icell].hi[0]);
+    hi[1] = MAX(hi[1],cells[icell].hi[1]);
+    hi[2] = MAX(hi[2],cells[icell].hi[2]);
     count++;
   }
- 
+
   int allsflag;
   MPI_Allreduce(&sflag,&allsflag,1,MPI_INT,MPI_SUM,world);
   if (allsflag) {
