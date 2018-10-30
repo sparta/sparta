@@ -15,28 +15,23 @@
 #include "mpi.h"
 #include "string.h"
 #include "stdlib.h"
-#include "ctype.h"
+#include "stdio.h"
 #include "read_isurf.h"
-#include "math_extra.h"
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
 #include "comm.h"
 #include "input.h"
-#include "math_const.h"
 #include "memory.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
-using namespace MathConst;
 
 enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
-#define MAXLINE 256
-#define CHUNK 1024
-#define CHUNKDELTA 100
+#define NCHUNK 1024
 
 // NOTE: allow reading 2nd set of isurfs into a different group region ??
 // NOTE: check that all boundary point values are 0
@@ -50,17 +45,17 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 ReadISurf::ReadISurf(SPARTA *sparta) : Pointers(sparta)
 {
   MPI_Comm_rank(world,&me);
-  line = new char[MAXLINE];
-  keyword = new char[MAXLINE];
+
+  cvalues = NULL;
+  svalues = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
 ReadISurf::~ReadISurf()
 {
-  delete [] line;
-  delete [] keyword;
-  delete [] buffer;
+  memory->destroy(cvalues);
+  memory->destroy(svalues);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -77,57 +72,79 @@ void ReadISurf::command(int narg, char **arg)
   surf->exist = 1;
   dim = domain->dimension;
 
-  if (narg != 2) error->all(FLERR,"Illegal read_isurf command");
+  if (narg < 5) error->all(FLERR,"Illegal read_isurf command");
 
-  if (me == 0) {
-    if (screen) fprintf(screen,"Reading isurf file ...\n");
-    open(arg[0]);
+  int iggroup = grid->find_group(arg[0]);
+  if (iggroup < 0) error->all(FLERR,"Read_isurf grid group ID does not exist");
+
+  nx = input->inumeric(FLERR,arg[1]);
+  ny = input->inumeric(FLERR,arg[2]);
+  nz = input->inumeric(FLERR,arg[3]);
+
+  if (dim == 2 && nz != 1) error->all(FLERR,"Invalid read_isurf command");
+
+  char *gridfile = arg[4];
+
+  // optional args
+
+  sgrouparg = -1;
+  char *typefile = NULL;
+
+  int iarg = 5;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"group") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      sgrouparg = iarg+1;
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"type") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      typefile = arg[iarg+1];
+      iarg += 2;
+    } else error->all(FLERR,"Invalid read_isurf command");
   }
 
   // verify that grid group is a set of uniform child cells
   // must comprise a 3d contiguous block
 
-  int igroup = grid->find_group(arg[1]);
-  if (igroup < 0) error->all(FLERR,"Read_isurf group ID does not exist");
+  int nxyz[3];
+  count = grid->check_uniform_group(iggroup,nxyz,corner,xyzsize);
+  if (nx != nxyz[0] || ny != nxyz[1] || nz != nxyz[2])
+    error->all(FLERR,"Read_isurf grid group does not match nx,ny,nz");
 
-  count = grid->check_uniform_group(igroup,nxyz,corner,xyzsize);
+  // read grid corner point values
+  // create and destroy dictionary of my grid cells in group
+  //   used to assign per-grid values to local grid cells
 
-  // read header info
+  if (me == 0)
+    if (screen) fprintf(screen,"Reading isurf file(s) ...\n");
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
-  header();
+  create_hash(count,iggroup);
 
-  // read per-grid values
-  // corner points and surf types
-  // create and destroy dictionary of my grid cells in group
-  //   used to assign per-grid values to local grid cells
+  if (dim == 3) memory->create(cvalues,grid->nlocal,8,"readisurf:cvalues");
+  else memory->create(cvalues,grid->nlocal,4,"readisurf:cvalues");
 
-  create_dict(count,igroup);
+  read_corners(gridfile);
 
-  parse_keyword(1);
-
-  while (strlen(keyword)) {
-    if (strcmp(keyword,"Corners") == 0) read_corners();
-    else if (strcmp(keyword,"Surf Types") == 0) read_types();
-    else error->all(FLERR,"Unknown section in read_isurfs file");
-    parse_keyword(0);
+  if (typefile) {
+    memory->create(svalues,grid->nlocal,"readisurf:svalues");
+    read_types(typefile);
   }
 
-  destroy_dict();
+  delete hash;
 
-  // close file
+  // create surfs in each grid cell based on corner point values
 
-  if (me == 0) {
-    if (compressed) pclose(fp);
-    else fclose(fp);
-  }
+  MPI_Barrier(world);
+  double time2 = MPI_Wtime();
 
-  // convert grid point values to surfs
-  // NOTE: this is where will call marching cubes
+  if (dim == 3) marching_cubes(iggroup);
+  else marching_squares(iggroup);
 
-  grid2surf();
+  MPI_Barrier(world);
+  double time3 = MPI_Wtime();
 
   // extent of surfs
   // compute sizes of smallest surface elements
@@ -192,9 +209,6 @@ void ReadISurf::command(int narg, char **arg)
   // map surfs to grid cells
   // -----------------------
 
-  MPI_Barrier(world);
-  double time2 = MPI_Wtime();
-
   // make list of surf elements I own
   // assign surfs to grid cells
   // error checks to flag bad surfs
@@ -204,9 +218,6 @@ void ReadISurf::command(int narg, char **arg)
   grid->unset_neighbors();
   grid->remove_ghosts();
   grid->clear_surf();
-
-  MPI_Barrier(world);
-  double time3 = MPI_Wtime();
 
   // error checks that can be done before surfs are mapped to grid cells
 
@@ -270,101 +281,43 @@ void ReadISurf::command(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-   read free-format header of data file
-   1st line and blank lines are skipped
-   non-blank lines are checked for header keywords and leading value is read
-   header ends with non-blank line containing no header keyword (or EOF)
-   return line with non-blank line (or empty line if EOF)
-------------------------------------------------------------------------- */
-
-void ReadISurf::header()
-{
-  int n;
-  char *ptr;
-
-  // skip 1st line of file
-
-  if (me == 0) {
-    char *eof = fgets(line,MAXLINE,fp);
-    if (eof == NULL) error->one(FLERR,"Unexpected end of data file");
-  }
-
-  nxyz[0] = nxyz[1] = 0;
-  nxyz[2] = 1;
-   
-  while (1) {
-
-    // read a line and bcast length
-
-    if (me == 0) {
-      if (fgets(line,MAXLINE,fp) == NULL) n = 0;
-      else n = strlen(line) + 1;
-    }
-    MPI_Bcast(&n,1,MPI_INT,0,world);
-
-    // if n = 0 then end-of-file so return with blank line
-
-    if (n == 0) {
-      line[0] = '\0';
-      return;
-    }
-
-    // bcast line
-
-    MPI_Bcast(line,n,MPI_CHAR,0,world);
-
-    // trim anything from '#' onward
-    // if line is blank, continue
-
-    if ((ptr = strchr(line,'#'))) *ptr = '\0';
-    if (strspn(line," \t\n\r") == strlen(line)) continue;
-
-    // search line for header keyword and set corresponding variable
-
-    
-    if (strstr(line,"nx")) sscanf(line,"%d",&nxyz[0]);
-    else if (strstr(line,"ny")) sscanf(line,"%d",&nxyz[1]);
-    else if (strstr(line,"nz")) sscanf(line,"%d",&nxyz[2]);
-    else break;
-  }
-
-  if (nxyz[0] == 0 || nxyz[1] == 0) 
-    error->all(FLERR,"Isurf file does not contain nx or ny");
-  if (dim == 2 && nxyz[2] != 1) 
-    error->all(FLERR,"Isurf file nz value is invalid for 2d model");
-}
-
-/* ----------------------------------------------------------------------
    read/store all grid corner point values
 ------------------------------------------------------------------------- */
 
-void ReadISurf::read_corners()
+void ReadISurf::read_corners(char *gridfile)
 {
-  int i,m,nchunk,nactual,nmax;
+  int nchunk;
+  FILE *fp;
 
-  int *list;
-  nmax = nchunk + CHUNKDELTA;
-  memory->create(list,nmax,"readisurf:list");
+  char *buf;
+  memory->create(buf,NCHUNK,"readisurf:buf");
+
+  // proc 0 opens and reads binary file
+
+  if (me == 0) {
+    fp = fopen(gridfile,"rb");
+    if (fp == NULL) {
+      char str[128];
+      snprintf(str,128,"Cannot open isurf grid corner file %s",gridfile);
+      error->one(FLERR,str);
+    }
+  }
 
   // read and broadcast one CHUNK of values at a time
-  // each proc stores grid corner point values it needs
+  // each proc stores grid corner point values it needs in assign_corners()
 
-  bigint ncorners = (bigint) (nxyz[0]+1) * (nxyz[1]+1)*(nxyz[2]*1);
+  bigint ncorners = (bigint) (nx+1) * (ny+1)*(nz+1);
   bigint nread = 0;
-  int nstart = 0;
 
   while (nread < ncorners) {
-    if (ncorners-nread > CHUNK) nchunk = CHUNK;
+    if (ncorners-nread > NCHUNK) nchunk = NCHUNK;
     else nchunk = ncorners-nread;
 
-    if (me == 0) grab(nchunk,nstart,nmax,list,nactual);
-    MPI_Bcast(list,nchunk,MPI_INT,0,world);
+    if (me == 0) fread(buf,sizeof(char),nchunk,fp);
+    MPI_Bcast(buf,nchunk,MPI_CHAR,0,world);
 
-    assign_corners(nchunk,nread,list);
-
+    assign_corners(nchunk,nread,buf);
     nread += nchunk;
-    nstart = nactual - nchunk;
-    memcpy(list,&list[nchunk],nstart*sizeof(int));
   }
 
   if (me == 0) {
@@ -372,40 +325,51 @@ void ReadISurf::read_corners()
     if (logfile) fprintf(logfile,"  %ld corner points\n",ncorners);
   }
 
-  memory->destroy(list);
+  memory->destroy(buf);
+
+  // close file
+
+  if (me == 0) fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
-   read/store all grid surf type values
+   read/store all grid surface type values
 ------------------------------------------------------------------------- */
 
-void ReadISurf::read_types()
+void ReadISurf::read_types(char *typefile)
 {
-  int i,m,nchunk,nactual,nmax;
+  int nchunk;
+  FILE *fp;
 
-  int *list;
-  nmax = nchunk + CHUNKDELTA;
-  memory->create(list,nmax,"readisurf:list");
+  int *buf;
+  memory->create(buf,NCHUNK,"readisurf:buf");
+
+  // proc 0 opens and reads binary file
+
+  if (me == 0) {
+    fp = fopen(typefile,"rb");
+    if (fp == NULL) {
+      char str[128];
+      snprintf(str,128,"Cannot open isurf surface type file %s",typefile);
+      error->one(FLERR,str);
+    }
+  }
 
   // read and broadcast one CHUNK of values at a time
-  // each proc stores grid corner point values it needs
+  // each proc stores grid corner point values it needs in assign_corners()
 
-  bigint ntypes = (bigint) nxyz[0] * nxyz[1]*nxyz[2];
+  bigint ntypes = (bigint) nx * ny*nz;
   bigint nread = 0;
-  int nstart = 0;
 
   while (nread < ntypes) {
-    if (ntypes-nread > CHUNK) nchunk = CHUNK;
+    if (ntypes-nread > NCHUNK) nchunk = NCHUNK;
     else nchunk = ntypes-nread;
 
-    if (me == 0) grab(nchunk,nstart,nmax,list,nactual);
-    MPI_Bcast(list,nchunk,MPI_INT,0,world);
+    if (me == 0) fread(buf,sizeof(int),nchunk,fp);
+    MPI_Bcast(buf,nchunk,MPI_INT,0,world);
 
-    assign_types(nchunk,nread,list);
-
+    assign_types(nchunk,nread,buf);
     nread += nchunk;
-    nstart = nactual - nchunk;
-    memcpy(list,&list[nchunk],nstart*sizeof(int));
   }
 
   if (me == 0) {
@@ -413,69 +377,349 @@ void ReadISurf::read_types()
     if (logfile) fprintf(logfile,"  %ld surface types\n",ntypes);
   }
 
-  memory->destroy(list);
+  memory->destroy(buf);
+
+  // close file
+
+  if (me == 0) fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
-   create dictionary for my grid cells in group
-   key = index of grid cell in Nx x Ny x Nz contiguous block
+   create hash for my grid cells in group
+   key = index (0 to N-1) of grid cell in Nx by Ny by Nz contiguous block
    value = my local icell
 ------------------------------------------------------------------------- */
 
-void ReadISurf::create_dict(int count, int igroup)
+void ReadISurf::create_hash(int count, int igroup)
 {
-  // allocate dict to size count
+#ifdef SPARTA_MAP
+  hash = new std::map<bigint,int>();
+#elif defined SPARTA_UNORDERED_MAP
+  hash = new std::unordered_map<bigint,int>();
+#else
+  hash = new std::tr1::unordered_map<bigint,int>();
+#endif
 
+  int dim = domain->dimension;
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+  int nglocal = grid->nlocal;
+  int groupbit = grid->bitmask[igroup];
+
+  int ix,iy,iz;
+  bigint index;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    ix = static_cast<int> ((cells[icell].lo[0]-corner[0]) / xyzsize[0] + 0.5);
+    iy = static_cast<int> ((cells[icell].lo[1]-corner[0]) / xyzsize[1] + 0.5);
+    iz = static_cast<int> ((cells[icell].lo[2]-corner[0]) / xyzsize[2] + 0.5);
+    index = (bigint) nx * ny*iz + nx*iy + ix;
+    (*hash)[index] = icell;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   store all grid corner point values
+   use hash to see if I own any grid cells that contain a corner point
+   each corner point can be stored by as many as 4 or 8 grid cells
+   check that corner point values = 0 on boundary of grid block
+------------------------------------------------------------------------- */
+
+void ReadISurf::assign_corners(int n, bigint offset, char *buf)
+{
+  int icell,ncorner,zeroflag;
+  int pix,piy,piz;
+  bigint pointindex,cellindex;
+
+  for (int i = 0; i < n; i++) {
+    pointindex = offset + i;
+    pix = pointindex % (nx+1);
+    piy = (pointindex / (nx+1)) % (ny+1);
+    piz = pointindex / ((nx+1)*(ny+1));
+
+    zeroflag = 0;
+    if ((pix == 0 || piy == 0 || piz == 0) && buf[i]) zeroflag = 1;
+    if ((pix == nx || piy == ny || piz == nz) && buf[i]) zeroflag = 1;
+    if (zeroflag) error->all(FLERR,"Grid boundary value != 0");
+
+    // ncorner = 0,1,2,3,4,5,6,7 when corner point is 
+    //   bottom-lower-left, bottom-lower-right, 
+    //   bottom-upper-left, bottom-upper-right,
+    //   top-lower-left, top-lower-right, top-upper-left, top-upper-right
+    //   of cell
+    // if test on cix,ciy,ciz excludes cells that are outside of grid block
+
+    if (dim == 3) {
+      ncorner = 8;
+      for (int ciz = piz-1; ciz <= piz; ciz++) {
+        for (int ciy = piy-1; ciy <= piy; ciy++) {
+          for (int cix = pix-1; cix <= pix; cix++) {
+            ncorner--;
+            if (cix < 0 || cix >= nx || ciy < 0 || ciy >=ny || 
+                ciz < 0 || ciz >= nz) continue;
+            cellindex = (bigint) nx * ny*ciz + nx*ciy + cix;
+            if (hash->find(cellindex) == hash->end()) continue;
+            icell = (*hash)[cellindex];
+            cvalues[icell][ncorner] = (int) buf[i];
+          }
+        }
+      }
+
+    // ncorner = 0,1,2,3 when corner point is 
+    //   lower-left, lower-right, upper-left, upper-right of cell
+    // if test on cix,ciy excludes cells that are outside of grid block
+
+    } else {
+      ncorner = 4;
+      for (int ciy = piy-1; ciy <= piy; ciy++) {
+        for (int cix = pix-1; cix <= pix; cix++) {
+          ncorner--;
+          if (cix < 0 || cix >= nx || ciy < 0 || ciy >=ny) continue;
+          cellindex = (bigint) nx * ciy + cix;
+          if (hash->find(cellindex) == hash->end()) continue;
+          icell = (*hash)[cellindex];
+          cvalues[icell][ncorner] = (int) buf[i];
+        }
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   store all grid surf type values
+   use hash to see if I own grid cell corresponding to index (0 to N-1)
+------------------------------------------------------------------------- */
+
+void ReadISurf::assign_types(int n, bigint offset, int *buf)
+{
+  int icell;
+  bigint cellindex;
+
+  for (int i = 0; i < n; i++) {
+    cellindex = offset + i;
+    if (hash->find(cellindex) == hash->end()) continue;
+    icell = (*hash)[cellindex];
+    svalues[icell] = buf[i];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   create 3d implicit surfs from grid point values
+------------------------------------------------------------------------- */
+
+void ReadISurf::marching_cubes(int igroup)
+{
+}
+
+/* ----------------------------------------------------------------------
+   create 2d implicit surfs from grid point values
+   follows https://en.wikipedia.org/wiki/Marching_squares
+------------------------------------------------------------------------- */
+
+// NOTE: how does border = 0 match with thresh?
+// NOTE: set normal direction of each line
+
+void ReadISurf::marching_squares(int igroup)
+{
+  int v00,v01,v10,v11,bit0,bit1,bit2,bit3;
+  int nsurf,which;
+  double pt[4][2];
+  double *lo,*hi;
+  double ave;
+
+  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
   int groupbit = grid->bitmask[igroup];
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
-    // add cell to dict
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    v00 = cvalues[icell][0];
+    v01 = cvalues[icell][1];
+    v10 = cvalues[icell][2];
+    v11 = cvalues[icell][3];
+    
+    bit0 = v00 <= thresh ? 0 : 1;
+    bit1 = v01 <= thresh ? 0 : 1;
+    bit2 = v10 <= thresh ? 0 : 1;
+    bit3 = v11 <= thresh ? 0 : 1;
+    
+    which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
+
+    switch (which) {
+
+    case 0: 
+      nsurf = 0;
+      break;
+
+    case 1:
+      nsurf = 1;
+      pt[0][0] = lo[0];
+      pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
+      pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[1][1] = lo[1];
+      break;
+
+    case 2:
+      nsurf = 1;
+      pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[0][1] = lo[1];
+      pt[1][0] = hi[0];
+      pt[1][1] = interpolate(v01,v11,lo[1],hi[1]);
+      break;
+
+    case 3:
+      nsurf = 1;
+      pt[0][0] = lo[0];
+      pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
+      pt[1][0] = hi[0];
+      pt[1][1] = interpolate(v01,v11,lo[1],hi[1]);
+      break;
+
+    case 4:
+      nsurf = 1;
+      pt[0][0] = hi[0];
+      pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
+      pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[1][1] = hi[1];
+      break;
+
+    case 5:
+      nsurf = 2;
+      ave = 0.25 * (v00 + v01 + v10 + v11);
+      if (ave > thresh) {
+        pt[0][0] = lo[0];
+        pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
+        pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
+        pt[1][1] = hi[1];
+        pt[2][0] = hi[0];
+        pt[2][1] = interpolate(v01,v11,lo[1],hi[1]);
+        pt[3][0] = interpolate(v00,v01,lo[0],hi[0]);
+        pt[3][1] = lo[1];
+      } else {
+        pt[0][0] = lo[0];
+        pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
+        pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
+        pt[1][1] = lo[1];
+        pt[2][0] = hi[0];
+        pt[2][1] = interpolate(v01,v11,lo[1],hi[1]);
+        pt[3][0] = interpolate(v10,v11,lo[0],hi[0]);
+        pt[3][1] = hi[1];
+      }
+      break;
+
+    case 6:
+      nsurf = 1;
+      pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[0][1] = lo[1];
+      pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[1][1] = hi[1];
+      break;
+
+    case 7:
+      nsurf = 1;
+      pt[0][0] = lo[0];
+      pt[0][1] = interpolate(v00,v10,lo[1],hi[1]);
+      pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[1][1] = hi[1];
+      break;
+
+    case 8:
+      nsurf = 1;
+      pt[0][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[0][1] = hi[1];
+      pt[1][0] = lo[0];
+      pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
+      break;
+
+    case 9:
+      nsurf = 1;
+      pt[0][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[0][1] = hi[1];
+      pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[1][1] = lo[1];
+      break;
+
+    case 10:
+      nsurf = 2;
+      ave = 0.25 * (v00 + v01 + v10 + v11);
+      if (ave > thresh) {
+        pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
+        pt[0][1] = lo[1];
+        pt[1][0] = lo[0];
+        pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
+        pt[2][0] = interpolate(v10,v11,lo[0],hi[0]);
+        pt[2][1] = hi[1];
+        pt[3][0] = hi[0];
+        pt[3][1] = interpolate(v01,v11,lo[1],hi[1]);
+      } else {
+        pt[0][0] = interpolate(v10,v11,lo[0],hi[0]);
+        pt[0][1] = hi[1];
+        pt[1][0] = lo[0];
+        pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
+        pt[2][0] = interpolate(v00,v01,lo[0],hi[0]);
+        pt[2][1] = lo[1];
+        pt[3][0] = hi[0];
+        pt[3][1] = interpolate(v01,v11,lo[1],hi[1]);
+      }
+      break;
+
+    case 11:
+      nsurf = 1;
+      pt[0][0] = interpolate(v10,v11,lo[0],hi[0]);
+      pt[0][1] = hi[1];
+      pt[1][0] = hi[0];
+      pt[1][1] = interpolate(v01,v11,lo[1],hi[1]);
+      break;
+
+    case 12:
+      nsurf = 1;
+      pt[0][0] = hi[0];
+      pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
+      pt[1][0] = lo[0];
+      pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
+      break;
+
+    case 13:
+      nsurf = 1;
+      pt[0][0] = hi[0];
+      pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
+      pt[1][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[1][1] = lo[1];
+      break;
+    
+    case 14:
+      nsurf = 1;
+      pt[0][0] = interpolate(v00,v01,lo[0],hi[0]);
+      pt[0][1] = lo[1];
+      pt[1][0] = lo[0];
+      pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
+      break;
+    
+    case 15:
+      nsurf = 0;
+      break;
+    }
   }
 }
 
 /* ----------------------------------------------------------------------
-   read/store all grid surf type values
+   interpolate for marching squares
+   lo/hi = coordinates of end points of edge of square
+   v0/v1 = values at lo/hi end points
+   value = interpolated coordinate for thresh value
 ------------------------------------------------------------------------- */
 
-void ReadISurf::destroy_dict()
+double ReadISurf::interpolate(int v0, int v1, double lo, double hi)
 {
-}
-
-/* ----------------------------------------------------------------------
-   read/store all grid surf type values
-------------------------------------------------------------------------- */
-
-void ReadISurf::assign_corners(int n, bigint offset, int *list)
-{
-  // compute ix, iy, iz
-  // loop over 4 or 8
-  // generate cell index and corner index (0 to 7)
-  // lookup in dict and exit if necessary
-  // set the corner value in local storage for [icell][icorner]
-  // check for 0 values on boundary of grid block
-}
-
-/* ----------------------------------------------------------------------
-   read/store all grid surf type values
-------------------------------------------------------------------------- */
-
-void ReadISurf::assign_types(int n, bigint offset, int *list)
-{
-  // compute ix, iy, iz
-  // generate cell index
-  // lookup in dict and exit if necessary
-  // set the surf type value in local storage for [icell]
-}
-
-/* ----------------------------------------------------------------------
-   create implicit surfs from grid point values
-------------------------------------------------------------------------- */
-
-void ReadISurf::grid2surf()
-{
+  double value = lo + (hi-lo)*(v1-thresh)/(v1-v0);
+  value = MAX(value,lo);
+  value = MIN(value,hi);
+  return value;
 }
 
 /* ----------------------------------------------------------------------
@@ -515,123 +759,3 @@ void ReadISurf::smallest_tri(double &len, double &area)
   }
   */
 }
-
-/* ----------------------------------------------------------------------
-   proc 0 opens data file
-   test if gzipped
-------------------------------------------------------------------------- */
-
-void ReadISurf::open(char *file)
-{
-  compressed = 0;
-  char *suffix = file + strlen(file) - 3;
-  if (suffix > file && strcmp(suffix,".gz") == 0) compressed = 1;
-  if (!compressed) fp = fopen(file,"r");
-  else {
-#ifdef SPARTA_GZIP
-    char gunzip[128];
-    sprintf(gunzip,"gunzip -c %s",file);
-    fp = popen(gunzip,"r");
-#else
-    error->one(FLERR,"Cannot open gzipped file");
-#endif
-  }
-
-  if (fp == NULL) {
-    char str[128];
-    sprintf(str,"Cannot open file %s",file);
-    error->one(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   grab next keyword
-   read lines until one is non-blank
-   keyword is all text on line w/out leading & trailing white space
-   read one additional line (assumed blank)
-   if any read hits EOF, set keyword to empty
-   if first = 1, line variable holds non-blank line that ended header
-------------------------------------------------------------------------- */
-
-void ReadISurf::parse_keyword(int first)
-{
-  int eof = 0;
-
-  // proc 0 reads upto non-blank line plus 1 following line
-  // eof is set to 1 if any read hits end-of-file
-
-  if (me == 0) {
-    if (!first) {
-      if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
-    }
-    while (eof == 0 && strspn(line," \t\n\r") == strlen(line)) {
-      if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
-    }
-    if (fgets(buffer,MAXLINE,fp) == NULL) eof = 1;
-  }
-
-  // if eof, set keyword empty and return
-
-  MPI_Bcast(&eof,1,MPI_INT,0,world);
-  if (eof) {
-    keyword[0] = '\0';
-    return;
-  }
-
-  // bcast keyword line to all procs
-
-  int n;
-  if (me == 0) n = strlen(line) + 1;
-  MPI_Bcast(&n,1,MPI_INT,0,world);
-  MPI_Bcast(line,n,MPI_CHAR,0,world);
-
-  // copy non-whitespace portion of line into keyword
-
-  int start = strspn(line," \t\n\r");
-  int stop = strlen(line) - 1;
-  while (line[stop] == ' ' || line[stop] == '\t' 
-	 || line[stop] == '\n' || line[stop] == '\r') stop--;
-  line[stop+1] = '\0';
-  strcpy(keyword,&line[start]);
-}
-
-/* ----------------------------------------------------------------------
-   grab n values from file FP and put them in list
-   values can be several to a line
-   only called by proc 0
-------------------------------------------------------------------------- */
-
-void ReadISurf::grab(int n, int nstart, int nmax, int *list, int &nactual)
-{
-  char *eof,*ptr;
-
-  int i = nstart;
-  while (i < n) {
-    eof = fgets(line,MAXLINE,fp);
-    if (strlen(line) == MAXLINE-1)
-      error->one(FLERR,"Too long a line in isurf file");
-    if (eof == NULL) error->one(FLERR,"Unexpected end of isurf file");
-    ptr = strtok(line," \t\n\r\f");
-    list[i++] = atoi(ptr);
-    while ((ptr = strtok(NULL," \t\n\r\f")))
-      if (i < nmax) list[i++] = atof(ptr);
-    if (i > nmax) error->one(FLERR,"Reading of isurf file exceeded buffer");
-  }
-
-  nactual = i;
-}
-
-/* ----------------------------------------------------------------------
-   grow surface data structures
-------------------------------------------------------------------------- */
-
-void ReadISurf::grow_surf()
-{
-  pts = (Surf::Point *) 
-    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
-  lines = (Surf::Line *) 
-    memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
-  tris = (Surf::Tri *) 
-    memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
-}
-

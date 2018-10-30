@@ -23,7 +23,14 @@ CommandStyle(read_isurf,ReadISurf)
 
 #include "stdio.h"
 #include "pointers.h"
-#include "surf.h"
+
+#ifdef SPARTA_MAP
+#include <map>
+#elif defined SPARTA_UNORDERED_MAP
+#include <unordered_map>
+#else
+#include <tr1/unordered_map>
+#endif
 
 namespace SPARTA_NS {
 
@@ -35,41 +42,37 @@ class ReadISurf : protected Pointers {
 
  protected:
   int me;
-  char *line,*keyword,*buffer;
-  FILE *fp;
-  int compressed;
-
   int dim;
-
-  int count;
-  int nxyz[3];
+  int count,iggroup,sgrouparg,thresh;
+  int nx,ny,nz;
   double corner[3],xyzsize[3];
 
-  Surf::Point *pts;
-  Surf::Line *lines;
-  Surf::Tri *tris;
-  int maxpoint,maxline,maxtri;
+#ifdef SPARTA_MAP
+  std::map<bigint,int> *hash;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<bigint,int> *hash;
+#else
+  std::tr1::unordered_map<bigint,int> *hash;
+#endif
 
-  void header();
-  void read_corners();
-  void read_types();
+  int **cvalues;
+  int *svalues;
 
-  void create_dict(int, int);
-  void destroy_dict();
+  void read_corners(char *);
+  void read_types(char *);
 
-  void assign_corners(int, bigint, int *);
+  void create_hash(int, int);
+  void destroy_hash();
+
+  void assign_corners(int, bigint, char *);
   void assign_types(int, bigint, int *);
 
-  void grid2surf();
+  void marching_cubes(int);
+  void marching_squares(int);
+  double interpolate(int, int, double, double);
 
   double shortest_line();
   void smallest_tri(double &, double &);
-
-  void open(char *);
-  void parse_keyword(int);
-  void grab(int, int, int, int *, int &);
-
-  void grow_surf();
 };
 
 }
