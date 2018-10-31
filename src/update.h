@@ -20,8 +20,6 @@
 
 namespace SPARTA_NS {
 
-enum{COPYPARTICLELIST,FIXEDMEMORY};
-
 class Update : protected Pointers {
  public:
   bigint ntimestep;               // current timestep

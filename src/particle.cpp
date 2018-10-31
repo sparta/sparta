@@ -292,12 +292,8 @@ void Particle::compress_rebalance()
 
 /* ----------------------------------------------------------------------
    compress particle list to remove particles with icell < 0
-   all particles MUST be in owned cells
-   overwrite deleted particle with particle from end of nlocal list
-   called from Comm::migrate_cells() when cells+particles migrate on rebalance
-   called from AdaptGrid when particles are sent to other procs
-   called from ReadSurf to remove particles from cells with surfs
-   this does preserve particle sorting
+   same as compress_rebalance() except this DOES preserve particle sorting
+   invoked by balance migrate_cells_less_memory()
 ------------------------------------------------------------------------- */
 
 void Particle::compress_rebalance_sorted()

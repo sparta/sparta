@@ -694,11 +694,11 @@ void Irregular::exchange_variable(char *sendbuf, int *nbytes, char *recvbuf)
   if (nrecv) MPI_Waitall(nrecv,request,status);
 
   // deallocate large buffer to reduce memory footprint
+  // will be reallocated each time by load-balancer and grid adaptation
 
-  if (buf)
-    memory->destroy(buf);
+  memory->destroy(buf);
   buf = NULL;
-  bufmax = -1;
+  bufmax = 0;
 }
 
 /* ----------------------------------------------------------------------
