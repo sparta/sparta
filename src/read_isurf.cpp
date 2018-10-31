@@ -32,6 +32,7 @@ enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
 #define NCHUNK 1024     // can boost this much larger
+#define BIG 1.0e20
 
 // NOTE: allow reading 2nd set of isurfs into a different group region ??
 // NOTE: option to write out surf once formed, like read surf?
@@ -75,8 +76,8 @@ void ReadISurf::command(int narg, char **arg)
 
   if (narg < 6) error->all(FLERR,"Illegal read_isurf command");
 
-  int iggroup = grid->find_group(arg[0]);
-  if (iggroup < 0) error->all(FLERR,"Read_isurf grid group ID does not exist");
+  int ggroup = grid->find_group(arg[0]);
+  if (ggroup < 0) error->all(FLERR,"Read_isurf grid group ID does not exist");
 
   nx = input->inumeric(FLERR,arg[1]);
   ny = input->inumeric(FLERR,arg[2]);
@@ -92,7 +93,7 @@ void ReadISurf::command(int narg, char **arg)
 
   // optional args
 
-  sgrouparg = -1;
+  int sgrouparg = 0;
   char *typefile = NULL;
 
   int iarg = 6;
@@ -112,7 +113,7 @@ void ReadISurf::command(int narg, char **arg)
   // must comprise a 3d contiguous block
 
   int nxyz[3];
-  count = grid->check_uniform_group(iggroup,nxyz,corner,xyzsize);
+  count = grid->check_uniform_group(ggroup,nxyz,corner,xyzsize);
   if (nx != nxyz[0] || ny != nxyz[1] || nz != nxyz[2])
     error->all(FLERR,"Read_isurf grid group does not match nx,ny,nz");
 
@@ -126,7 +127,7 @@ void ReadISurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
-  create_hash(count,iggroup);
+  create_hash(count,ggroup);
 
   if (dim == 3) memory->create(cvalues,grid->nlocal,8,"readisurf:cvalues");
   else memory->create(cvalues,grid->nlocal,4,"readisurf:cvalues");
@@ -141,12 +142,23 @@ void ReadISurf::command(int narg, char **arg)
   delete hash;
 
   // create surfs in each grid cell based on corner point values
+  // if specified, apply group keyword to reset per-surf mask info
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
-  if (dim == 3) marching_cubes(iggroup);
-  else marching_squares(iggroup);
+  if (dim == 3) marching_cubes(ggroup);
+  else marching_squares(ggroup);
+
+  if (sgrouparg) {
+    int sgroup = surf->find_group(arg[sgrouparg]);
+    if (sgroup < 0) sgroup = surf->add_group(arg[sgrouparg]);
+    int sgroupbit = surf->bitmask[sgroup];
+ 
+    Surf::Line *lines = surf->lines;
+    int nline = surf->nline;
+    for (int i = 0; i < nline; i++) lines[i].mask |= sgroupbit;
+  }
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
@@ -154,20 +166,20 @@ void ReadISurf::command(int narg, char **arg)
   // extent of surfs
   // compute sizes of smallest surface elements
 
-  /*
   double extent[3][2];
   extent[0][0] = extent[1][0] = extent[2][0] = BIG;
   extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
 
-  int m = npoint_old;
-  for (int i = 0; i < npoint_new; i++) {
-    extent[0][0] = MIN(extent[0][0],pts[m].x[0]);
-    extent[0][1] = MAX(extent[0][1],pts[m].x[0]);
-    extent[1][0] = MIN(extent[1][0],pts[m].x[1]);
-    extent[1][1] = MAX(extent[1][1],pts[m].x[1]);
-    extent[2][0] = MIN(extent[2][0],pts[m].x[2]);
-    extent[2][1] = MAX(extent[2][1],pts[m].x[2]);
-    m++;
+  Surf::Point *pts = surf->pts;
+  int npoint = surf->npoint;
+  
+  for (int i = 0; i < npoint; i++) {
+    extent[0][0] = MIN(extent[0][0],pts[i].x[0]);
+    extent[0][1] = MAX(extent[0][1],pts[i].x[0]);
+    extent[1][0] = MIN(extent[1][0],pts[i].x[1]);
+    extent[1][1] = MAX(extent[1][1],pts[i].x[1]);
+    extent[2][0] = MIN(extent[2][0],pts[i].x[2]);
+    extent[2][1] = MAX(extent[2][1],pts[i].x[2]);
   }
 
   double minlen,minarea;
@@ -198,17 +210,11 @@ void ReadISurf::command(int narg, char **arg)
       }
     }
   }
-  */
 
   // compute normals of new lines or triangles
 
-  //if (dim == 2) surf->compute_line_normal(nline_old,nline_new);
-  //else surf->compute_tri_normal(ntri_old,ntri_new);
-
-  // error check on new points,lines,tris
-  // all points must be inside or on surface of simulation box
-
-  //surf->check_point_inside(npoint_old,npoint_new);
+  if (dim == 2) surf->compute_line_normal(0,surf->nline);
+  else surf->compute_tri_normal(0,surf->ntri);
 
   // -----------------------
   // map surfs to grid cells
@@ -226,11 +232,13 @@ void ReadISurf::command(int narg, char **arg)
 
   // error checks that can be done before surfs are mapped to grid cells
 
-  if (dim == 2) {
-    //surf->check_watertight_2d(npoint_old,nline_old);
-  } else {
-    //surf->check_watertight_3d(npoint_old,ntri_old);
-  }
+  // NOTE: how to do this test with duplicate points?
+
+  //if (dim == 2) {
+  //  surf->check_watertight_2d(0,surf->nline);
+  //} else {
+  //  surf->check_watertight_3d(0,surf->ntri);
+  // }
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
@@ -238,7 +246,7 @@ void ReadISurf::command(int narg, char **arg)
   // map surfs to grid cells then error check
   // check done on per-grid-cell basis, too expensive to do globally
 
-  grid->surf2grid(1);
+  grid->surf2grid(1);    // NOTE: this call is not needed ??
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();
@@ -420,8 +428,8 @@ void ReadISurf::create_hash(int count, int igroup)
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     ix = static_cast<int> ((cells[icell].lo[0]-corner[0]) / xyzsize[0] + 0.5);
-    iy = static_cast<int> ((cells[icell].lo[1]-corner[0]) / xyzsize[1] + 0.5);
-    iz = static_cast<int> ((cells[icell].lo[2]-corner[0]) / xyzsize[2] + 0.5);
+    iy = static_cast<int> ((cells[icell].lo[1]-corner[1]) / xyzsize[1] + 0.5);
+    iz = static_cast<int> ((cells[icell].lo[2]-corner[2]) / xyzsize[2] + 0.5);
     index = (bigint) nx * ny*iz + nx*iy + ix;
     (*hash)[index] = icell;
   }
@@ -488,21 +496,13 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *buf)
           ncorner--;
           if (cix < 0 || cix >= nx || ciy < 0 || ciy >=ny) continue;
           cellindex = (bigint) nx * ciy + cix;
-          printf("CELLINDEX %ld ncorner %d PI %d %d %d\n",
-                 cellindex,ncorner,pix,piy,piz);
           if (hash->find(cellindex) == hash->end()) continue;
-          if (buf[i]) printf("SET buf %d icell %d ncorner %d\n",
-                             buf[i],icell,ncorner,pix,piy,piz);
           icell = (*hash)[cellindex];
           cvalues[icell][ncorner] = buf[i];
         }
       }
     }
   }
-
-  printf("CORNERS14 %d %d %d %d\n",
-         cvalues[14][0],cvalues[14][1],cvalues[14][2],cvalues[14][3]);
-
 }
 
 /* ----------------------------------------------------------------------
@@ -536,11 +536,16 @@ void ReadISurf::marching_cubes(int igroup)
    follows https://en.wikipedia.org/wiki/Marching_squares
      see 2 sections: Basic algorithm and Disambiguation of saddle points
      treating open circles as flow volume, solid circles as material
+     NOTE: Wiki page numbers points counter-clockwise
+           SPARTA numbers them in x, then in y
+           so bit2 and bit 3 are swapped below
+           this gives case #s here consistent with Wiki page
    treats each grid cell independently
    4 corner points open/solid -> 2^4 = 16 cases
    cases infer 0,1,2 line segments in each grid cell
    order 2 points in each line segment to give normal into flow volume
-   treat two saddle point cases (5,10) based on ave value at cell center
+   treat two saddle point cases (my 9,6) (Wiki 5,10)
+     based on ave value at cell center
 ------------------------------------------------------------------------- */
 
 void ReadISurf::marching_squares(int igroup)
@@ -564,21 +569,23 @@ void ReadISurf::marching_squares(int igroup)
     lo = cells[icell].lo;
     hi = cells[icell].hi;
 
+    // cvalues are ordered lower-left, lower-right, upper-left, upper-right
+    // Vyx encodes this as 0/1 in each dim
+
     v00 = cvalues[icell][0];
     v01 = cvalues[icell][1];
     v10 = cvalues[icell][2];
     v11 = cvalues[icell][3];
     
+    // make last 2 bits consistent with Wiki page (see NOTE above)
+
     bit0 = v00 <= thresh ? 0 : 1;
     bit1 = v01 <= thresh ? 0 : 1;
-    bit2 = v10 <= thresh ? 0 : 1;
-    bit3 = v11 <= thresh ? 0 : 1;
+    bit2 = v11 <= thresh ? 0 : 1;
+    bit3 = v10 <= thresh ? 0 : 1;
     
     which = (bit3 << 3) + (bit2 << 2) + (bit1 << 1) + bit0;
     splitflag = 0;
-
-    if (icell == 14) printf("CELL14 %d %d %d %d: %d %d %d %d: %d\n",
-                            v00,v01,v10,v11,bit0,bit1,bit2,bit3,which);
 
     switch (which) {
 
@@ -616,8 +623,6 @@ void ReadISurf::marching_squares(int igroup)
       pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
       pt[1][0] = interpolate(v10,v11,lo[0],hi[0]);
       pt[1][1] = hi[1];
-      printf("CASE4 icell/id %d %d: %g %g: %g %g\n",icell,cells[icell].id,
-             pt[0][0],pt[0][1],pt[1][0],pt[1][1]);
       break;
 
     case 5:
@@ -718,7 +723,7 @@ void ReadISurf::marching_squares(int igroup)
       pt[1][1] = interpolate(v00,v10,lo[1],hi[1]);
       break;
 
-    case 13:
+    case 13: 
       nsurf = 1;
       pt[0][0] = hi[0];
       pt[0][1] = interpolate(v01,v11,lo[1],hi[1]);
@@ -740,23 +745,16 @@ void ReadISurf::marching_squares(int igroup)
     }
 
     // populate Grid and Surf data structs
-    // not worrying about unique points
+    // point will be duplicated, not unique
 
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      printf("LINE icell/id %d %d: %g %g: %g %g\n",icell,cells[icell].id,
-             pt[ipt][0],pt[ipt][1],pt[ipt+1][0],pt[ipt+1][1]);
-      ipt += 2;
-       
-      /*
       surf->add_point(&pt[ipt][0]);
       surf->add_point(&pt[ipt+1][0]);
       ipt += 2;
-      npoint = surf->npoint;
-      surf->add_line(svalue[icell],npoint-2,npoint-1);
-      nline = surf->nline;
-      surf->lines[nline-1].mask |= sgroupbit;
-      */
+      int npoint = surf->npoint;
+      if (svalues) surf->add_line(svalues[icell],npoint-2,npoint-1);
+      else surf->add_line(1,npoint-2,npoint-1);
     }
 
     cells[icell].nsurf = nsurf;
@@ -764,7 +762,6 @@ void ReadISurf::marching_squares(int igroup)
     // cells[icell].csurfs = csurfs;
     // what to do with split cell (know it now)
   }
-
 }
 
 /* ----------------------------------------------------------------------
@@ -776,7 +773,7 @@ void ReadISurf::marching_squares(int igroup)
 
 double ReadISurf::interpolate(int v0, int v1, double lo, double hi)
 {
-  double value = lo + (hi-lo)*(v1-thresh)/(v1-v0);
+  double value = lo + (hi-lo)*(thresh-v0)/(v1-v0);
   value = MAX(value,lo);
   value = MIN(value,hi);
   return value;
@@ -788,7 +785,7 @@ double ReadISurf::interpolate(int v0, int v1, double lo, double hi)
 
 double ReadISurf::shortest_line()
 {
-  /*
+  /*  NOTE: this should be local scan followed by Allreduce
   double len = BIG;
   int m = nline_old;
   for (int i = 0; i < nline_new; i++) {

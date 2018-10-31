@@ -45,7 +45,8 @@ enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Grid
 enum{TYPE,MOLECULE,ID};
 enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 
-#define DELTA 4
+#define DELTA 1024
+#define DELTAMODEL 4
 #define EPSSQ 1.0e-12
 #define BIG 1.0e20
 #define MAXGROUP 32
@@ -73,6 +74,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   strcpy(gnames[0],"all");
 
   npoint = nline = ntri = 0;
+  maxpoint = maxline = maxtri = 0;
   pts = NULL;
   lines = NULL;
   tris = NULL;
@@ -243,6 +245,65 @@ int Surf::nelement()
 {
   if (domain->dimension == 2) return nline;
   return ntri;
+}
+
+/* ----------------------------------------------------------------------
+   add a point
+   called by ReadISurf
+------------------------------------------------------------------------- */
+
+void Surf::add_point(double *pt)
+{
+  if (npoint == maxpoint) {
+    maxpoint += DELTA;
+    pts = (Point *) memory->srealloc(pts,maxpoint*sizeof(Point),"surf:pts");
+  }
+
+  pts[npoint].x[0] = pt[0];
+  pts[npoint].x[1] = pt[1];
+  pts[npoint].x[2] = pt[2];
+  npoint++;
+}
+
+/* ----------------------------------------------------------------------
+   add a line
+   called by ReadISurf
+------------------------------------------------------------------------- */
+
+void Surf::add_line(int itype, int p1, int p2)
+{
+  if (nline == maxline) {
+    maxline += DELTA;
+    lines = (Line *) memory->srealloc(lines,maxline*sizeof(Line),"surf:lines");
+  }
+
+  lines[nline].type = itype;
+  lines[nline].mask = 1;
+  lines[nline].isc = lines[nline].isr = -1;
+  lines[nline].p1 = p1;
+  lines[nline].p2 = p2;
+  nline++;
+}
+
+/* ----------------------------------------------------------------------
+   add a triangle
+   called by ReadISurf
+------------------------------------------------------------------------- */
+
+void Surf::add_tri(int itype, int p1, int p2, int p3)
+{
+  if (ntri == maxtri) {
+    maxtri += DELTA;
+    tris = (Tri *) memory->srealloc(tris,maxtri*sizeof(Tri),"surf:tris");
+  }
+
+  tris[ntri].type = itype;
+  tris[ntri].mask = 1;
+  tris[ntri].isc = tris[ntri].isr = -1;
+  tris[ntri].p1 = p1;
+  tris[ntri].p2 = p2;
+  tris[ntri].p3 = p3;
+  ntri++;
 }
 
 /* ----------------------------------------------------------------------
@@ -577,7 +638,7 @@ void Surf::add_collide(int narg, char **arg)
   // extend SurfCollide list if necessary
 
   if (nsc == maxsc) {
-    maxsc += DELTA;
+    maxsc += DELTAMODEL;
     sc = (SurfCollide **)
       memory->srealloc(sc,maxsc*sizeof(SurfCollide *),"surf:sc");
   }
@@ -680,7 +741,7 @@ void Surf::add_react(int narg, char **arg)
   // extend SurfReact list if necessary
 
   if (nsr == maxsr) {
-    maxsr += DELTA;
+    maxsr += DELTAMODEL;
     sr = (SurfReact **)
       memory->srealloc(sr,maxsr*sizeof(SurfReact *),"surf:sr");
   }

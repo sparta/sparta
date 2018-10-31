@@ -317,6 +317,10 @@ void ReadSurf::command(int narg, char **arg)
   surf->nline = nline_old + nline_new;
   surf->ntri = ntri_old + ntri_new;
 
+  surf->maxpoint = maxpoint;
+  surf->maxline = maxline;
+  surf->maxtri = maxtri;
+
   // extent of surf after geometric transformations
   // compute sizes of smallest surface elements
 

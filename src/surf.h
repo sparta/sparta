@@ -63,10 +63,11 @@ class Surf : protected Pointers {
     double norm[3];         // outward normal to triangle
   };
 
-  Point *pts;               // list of points
-  Line *lines;              // list of lines
-  Tri *tris;                // list of tris
-  int npoint,nline,ntri;    // number of each
+  Point *pts;                   // list of points
+  Line *lines;                  // list of lines
+  Tri *tris;                    // list of tris
+  int npoint,nline,ntri;        // number of each
+  int maxpoint,maxline,maxtri;  // max allocation for each
 
   int *mysurfs;             // indices of surf elements I own
   int nlocal;               // # of surf elements I own
@@ -85,6 +86,9 @@ class Surf : protected Pointers {
   void modify_params(int, char **);
   void init();
   int nelement();
+  void add_point(double *);
+  void add_line(int, int, int);
+  void add_tri(int, int, int, int);
   void setup_surf();
 
   void compute_line_normal(int, int);
