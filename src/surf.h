@@ -38,32 +38,31 @@ class Surf : protected Pointers {
   int *bitmask;             // one-bit mask for each group
   int *inversemask;         // inverse mask for each group
 
-  struct Point {
-    double x[3];
-  };
-
   struct Line {
-    int type,mask;          // type and mask of the element
+    int id;                 // unique ID for explicit surf
+                            // cell ID for implicit surf  NOTE: make a bigint?
+    int type,mask;          // type and mask of the surf
     int isc,isr;            // index of surface collision and reaction models
                             // -1 if unassigned
-    int p1,p2;              // indices of points in line segment
+    double p1[3],p2[3];     // end points of line segment
                             // rhand rule: Z x (p2-p1) = outward normal
     double norm[3];         // outward normal to line segment
   };
 
   struct Tri {
-    int type,mask;          // type and mask of the element
+    int id;                 // unique ID for explicit surf
+                            // cell ID for implicit surf
+    int type,mask;          // type and mask of the surf
     int isc,isr;            // index of surface collision and reaction models
                             // -1 if unassigned
-    int p1,p2,p3;           // indices of points in triangle
+    double p1[3],p2[3],p3[3];  // corner points of triangle
                             // rhand rule: (p2-p1) x (p3-p1) = outward normal
     double norm[3];         // outward normal to triangle
   };
 
-  Point *pts;               // global list of points
-  Line *lines;              // global list of lines
-  Tri *tris;                // global list of tris
-  int npoint,nline,ntri;    // number of each
+  Line *lines;              // list of lines
+  Tri *tris;                // list of tris
+  int nline,ntri;           // number of each
 
   int *mysurfs;             // indices of surf elements I own
   int nlocal;               // # of surf elements I own
@@ -91,8 +90,8 @@ class Surf : protected Pointers {
   double axi_line_size(int);
   double tri_size(int, double &);
 
-  void check_watertight_2d(int, int);
-  void check_watertight_3d(int, int);
+  void check_watertight_2d(int);
+  void check_watertight_3d(int);
   void check_point_inside(int, int);
 
   void add_collide(int, char **);

@@ -43,7 +43,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
-     NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
+     NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
@@ -495,8 +495,6 @@ void ReadRestart::command(int narg, char **arg)
     error->all(FLERR,"Did not assign all restart particles correctly");
 
   if (me == 0 && surf->exist) {
-    if (screen) fprintf(screen,"  %d surf points\n",surf->npoint);
-    if (logfile) fprintf(logfile,"  %d surf points\n",surf->npoint);
     if (domain->dimension == 2) {
       if (screen) fprintf(screen,"  %d surf lines\n",surf->nline);
       if (logfile) fprintf(logfile,"  %d surf lines\n",surf->nline);
@@ -759,8 +757,6 @@ void ReadRestart::header(int incompatible)
       nsplit_file = read_int();
     } else if (flag == NSUB) {
       nsub_file = read_int();
-    } else if (flag == NPOINT) {
-      npoint_file = read_int();
     } else if (flag == NSURF) {
       nsurf_file = read_int();
 

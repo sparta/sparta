@@ -39,7 +39,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
      COMM_SORT,COMM_STYLE,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
-     NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
+     NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
@@ -325,7 +325,6 @@ void WriteRestart::header()
   write_bigint(NUNSPLIT,grid->nunsplit);
   write_int(NSPLIT,grid->nsplit);
   write_int(NSUB,grid->nsub);
-  write_int(NPOINT,surf->npoint);
   if (domain->dimension == 2) write_int(NSURF,surf->nline);
   else write_int(NSURF,surf->ntri);
 

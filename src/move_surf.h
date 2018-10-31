@@ -36,7 +36,8 @@ class MoveSurf : protected Pointers {
   ~MoveSurf();
   void command(int, char **);
   void process_args(int, char **);
-  void move_points(double, Surf::Point *);
+  void move_lines(double, Surf::Line *);
+  void move_tris(double, Surf::Tri *);
   bigint remove_particles();
 
  private:
@@ -55,10 +56,10 @@ class MoveSurf : protected Pointers {
   
   void readfile();
   void update_points(double);
-  void translate_2d(double, Surf::Point *);
-  void translate_3d(double, Surf::Point *);
-  void rotate_2d(double, Surf::Point *);
-  void rotate_3d(double, Surf::Point *);
+  void translate_2d(double, Surf::Line *);
+  void translate_3d(double, Surf::Tri *);
+  void rotate_2d(double, Surf::Line *);
+  void rotate_3d(double, Surf::Tri *);
 };
 
 }

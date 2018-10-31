@@ -1434,7 +1434,6 @@ void DumpImage::create_image()
     diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
     diameter *= sdiamvalue;
-    Surf::Point *pts = surf->pts;
     Surf::Line *lines = surf->lines;
     Surf::Tri *tris = surf->tris;
     int *mysurfs = surf->mysurfs;
@@ -1465,11 +1464,9 @@ void DumpImage::create_image()
       }
       
       if (domain->dimension == 2)
-        image->draw_line(pts[lines[m].p1].x,pts[lines[m].p2].x,
-                         color,diameter);
+        image->draw_line(lines[m].p1,lines[m].p2,color,diameter);
       else
-        image->draw_triangle(pts[tris[m].p1].x,pts[tris[m].p2].x,
-                             pts[tris[m].p3].x,color);
+        image->draw_triangle(tris[m].p1,tris[m].p2,tris[m].p3,color);
     }
   }
 
@@ -1481,7 +1478,6 @@ void DumpImage::create_image()
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
     diameter *= slinediam;
 
-    Surf::Point *pts = surf->pts;
     Surf::Line *lines = surf->lines;
     Surf::Tri *tris = surf->tris;
     int *mysurfs = surf->mysurfs;
@@ -1490,18 +1486,14 @@ void DumpImage::create_image()
     if (domain->dimension == 2) {
       for (int isurf = 0; isurf < nslocal; isurf++) {
         m = mysurfs[isurf];
-        image->draw_line(pts[lines[m].p1].x,pts[lines[m].p2].x,
-                         slinecolor,diameter);
+        image->draw_line(lines[m].p1,lines[m].p2,slinecolor,diameter);
       }
     } else {
       for (int isurf = 0; isurf < nslocal; isurf++) {
         m = mysurfs[isurf];
-        image->draw_line(pts[tris[m].p1].x,pts[tris[m].p2].x,
-                         slinecolor,diameter);
-        image->draw_line(pts[tris[m].p2].x,pts[tris[m].p3].x,
-                         slinecolor,diameter);
-        image->draw_line(pts[tris[m].p3].x,pts[tris[m].p1].x,
-                         slinecolor,diameter);
+        image->draw_line(tris[m].p1,tris[m].p2,slinecolor,diameter);
+        image->draw_line(tris[m].p2,tris[m].p3,slinecolor,diameter);
+        image->draw_line(tris[m].p3,tris[m].p1,slinecolor,diameter);
       }
     }
   }

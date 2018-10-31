@@ -717,18 +717,16 @@ void DumpSurf::pack_type(int n)
 
 void DumpSurf::pack_v1x(int n)
 {
-  Surf::Point *pts = surf->pts;
-
   if (dimension == 2) {
     Surf::Line *lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = pts[lines[cglobal[i]].p1].x[0];
+      buf[n] = lines[cglobal[i]].p1[0];
       n += size_one;
     }
   } else if (dimension == 3) {
     Surf::Tri *tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = pts[tris[cglobal[i]].p1].x[0];
+      buf[n] = tris[cglobal[i]].p1[0];
       n += size_one;
     }
   }
@@ -738,18 +736,16 @@ void DumpSurf::pack_v1x(int n)
 
 void DumpSurf::pack_v1y(int n)
 {
-  Surf::Point *pts = surf->pts;
-
   if (dimension == 2) {
     Surf::Line *lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = pts[lines[cglobal[i]].p1].x[1];
+      buf[n] = lines[cglobal[i]].p1[1];
       n += size_one;
     }
   } else if (dimension == 3) {
     Surf::Tri *tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = pts[tris[cglobal[i]].p1].x[1];
+      buf[n] = tris[cglobal[i]].p1[1];
       n += size_one;
     }
   }
@@ -759,11 +755,9 @@ void DumpSurf::pack_v1y(int n)
 
 void DumpSurf::pack_v1z(int n)
 {
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = pts[tris[cglobal[i]].p1].x[2];
+    buf[n] = tris[cglobal[i]].p1[2];
     n += size_one;
   }
 }
@@ -772,18 +766,16 @@ void DumpSurf::pack_v1z(int n)
 
 void DumpSurf::pack_v2x(int n)
 {
-  Surf::Point *pts = surf->pts;
-
   if (dimension == 2) {
     Surf::Line *lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = pts[lines[cglobal[i]].p2].x[0];
+      buf[n] = lines[cglobal[i]].p2[0];
       n += size_one;
     }
   } else if (dimension == 3) {
     Surf::Tri *tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = pts[tris[cglobal[i]].p2].x[0];
+      buf[n] = tris[cglobal[i]].p2[0];
       n += size_one;
     }
   }
@@ -793,18 +785,16 @@ void DumpSurf::pack_v2x(int n)
 
 void DumpSurf::pack_v2y(int n)
 {
-  Surf::Point *pts = surf->pts;
-
   if (dimension == 2) {
     Surf::Line *lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = pts[lines[cglobal[i]].p2].x[1];
+      buf[n] = lines[cglobal[i]].p2[1];
       n += size_one;
     }
   } else if (dimension == 3) {
     Surf::Tri *tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
-      buf[n] = pts[tris[cglobal[i]].p2].x[1];
+      buf[n] = tris[cglobal[i]].p2[1];
       n += size_one;
     }
   }
@@ -814,11 +804,9 @@ void DumpSurf::pack_v2y(int n)
 
 void DumpSurf::pack_v2z(int n)
 {
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = pts[tris[cglobal[i]].p2].x[2];
+    buf[n] = tris[cglobal[i]].p2[2];
     n += size_one;
   }
 }
@@ -827,11 +815,9 @@ void DumpSurf::pack_v2z(int n)
 
 void DumpSurf::pack_v3x(int n)
 {
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = pts[tris[cglobal[i]].p3].x[0];
+    buf[n] = tris[cglobal[i]].p3[0];
     n += size_one;
   }
 }
@@ -840,11 +826,9 @@ void DumpSurf::pack_v3x(int n)
 
 void DumpSurf::pack_v3y(int n)
 {
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = pts[tris[cglobal[i]].p3].x[1];
+    buf[n] = tris[cglobal[i]].p3[1];
     n += size_one;
   }
 }
@@ -853,11 +837,9 @@ void DumpSurf::pack_v3y(int n)
 
 void DumpSurf::pack_v3z(int n)
 {
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = pts[tris[cglobal[i]].p3].x[2];
+    buf[n] = tris[cglobal[i]].p3[2];
     n += size_one;
   }
 }

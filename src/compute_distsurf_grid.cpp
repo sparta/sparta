@@ -91,16 +91,15 @@ void ComputeDistSurfGrid::init()
 
 void ComputeDistSurfGrid::compute_per_grid()
 {
-  int i,m,n,p1,p2,p3;
+  int i,m,n;
   int *csurfs,*csubs;
   double dist,mindist;
-  double *lo,*hi;
+  double *p1,*p2,*p3,*lo,*hi;
   double cctr[3],cell2surf[3];
 
   invoked_per_grid = update->ntimestep;
 
   int dim = domain->dimension;
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int nline = surf->nline;
@@ -148,16 +147,16 @@ void ComputeDistSurfGrid::compute_per_grid()
     if (dim == 2) {
       p1 = lines[m].p1;
       p2 = lines[m].p2;
-      sctr[i][0] = 0.5 * (pts[p1].x[0] + pts[p2].x[0]);
-      sctr[i][1] = 0.5 * (pts[p1].x[1] + pts[p2].x[1]);
+      sctr[i][0] = 0.5 * (p1[0] + p2[0]);
+      sctr[i][1] = 0.5 * (p1[1] + p2[1]);
       sctr[i][2] = 0.0;
     } else {
       p1 = tris[m].p1;
       p2 = tris[m].p2;
       p3 = tris[m].p3;
-      sctr[i][0] = invthird * (pts[p1].x[0] + pts[p2].x[0] + pts[p3].x[0]);
-      sctr[i][1] = invthird * (pts[p1].x[1] + pts[p2].x[1] + pts[p3].x[1]);
-      sctr[i][2] = invthird * (pts[p1].x[2] + pts[p2].x[2] + pts[p3].x[2]);
+      sctr[i][0] = invthird * (p1[0] + p2[0] + p3[0]);
+      sctr[i][1] = invthird * (p1[1] + p2[1] + p3[1]);
+      sctr[i][2] = invthird * (p1[2] + p2[2] + p3[2]);
     }
   }
 
@@ -219,12 +218,11 @@ void ComputeDistSurfGrid::compute_per_grid()
 
       if (dim == 2) {
         if (MathExtra::dot3(cell2surf,lines[m].norm) > 0.0) continue;
-        dist = Geometry::dist_line_quad(pts[lines[m].p1].x,pts[lines[m].p2].x,
-                                        lo,hi);
+        dist = Geometry::dist_line_quad(lines[m].p1,lines[m].p2,lo,hi);
       } else {
         if (MathExtra::dot3(cell2surf,tris[m].norm) > 0.0) continue;
-        dist = Geometry::dist_tri_hex(pts[tris[m].p1].x,pts[tris[m].p2].x,
-                                      pts[tris[m].p3].x,tris[m].norm,lo,hi);
+        dist = Geometry::dist_tri_hex(tris[m].p1,tris[m].p2,tris[m].p3,
+                                      tris[m].norm,lo,hi);
       }
 
       mindist = MIN(mindist,dist);

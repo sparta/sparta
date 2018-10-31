@@ -96,24 +96,25 @@ void WriteSurf::write_file(FILE *fp)
 {
   int dim = domain->dimension;
 
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
-  int npoint = surf->npoint;
   int nline = surf->nline;
   int ntri = surf->ntri;
 
   // header section
 
   fprintf(fp,"# Surface element file written by SPARTA\n\n");
-  fprintf(fp,"%d points\n",npoint);
+  // NOTE: how to do this
+  //fprintf(fp,"%d points\n",npoint);
   if (dim == 2) fprintf(fp,"%d lines\n",nline);
   else fprintf(fp,"%d triangles\n",ntri);
   fprintf(fp,"\n");
 
   // points
-  
+  // NOTE: how to do this?
+
+  /*
   fprintf(fp,"Points\n\n");
   if (dim == 2) {
     for (int i = 0; i < npoint; i++)
@@ -123,6 +124,7 @@ void WriteSurf::write_file(FILE *fp)
       fprintf(fp,"%d %20.15g %20.15g %20.15g\n",i+1,
 	      pts[i].x[0],pts[i].x[1],pts[i].x[2]);
   }
+  */
 
   // lines
 

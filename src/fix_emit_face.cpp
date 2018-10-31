@@ -138,7 +138,6 @@ void FixEmitFace::init()
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
 
-  pts = surf->pts;
   lines = surf->lines;
   tris = surf->tris;
 
@@ -287,8 +286,7 @@ int FixEmitFace::create_task(int icell)
           for (j = 0; j < cells[icell].nsurf; j++) {
             n = cells[icell].csurfs[j];
             if (Geometry::
-                line_quad_face_touch(pts[lines[n].p1].x,
-                                     pts[lines[n].p2].x,
+                line_quad_face_touch(lines[n].p1,lines[n].p2,
                                      iface,cells[icell].lo,cells[icell].hi)) {
               flag = 0;
               break;
@@ -298,9 +296,7 @@ int FixEmitFace::create_task(int icell)
           for (j = 0; j < cells[icell].nsurf; j++) {
             n = cells[icell].csurfs[j];
             if (Geometry::
-                tri_hex_face_touch(pts[tris[n].p1].x,
-                                   pts[tris[n].p2].x,
-                                   pts[tris[n].p3].x,
+                tri_hex_face_touch(tris[n].p1,tris[n].p2,tris[n].p3,
                                    iface,cells[icell].lo,cells[icell].hi)) {
               flag = 0;
               break;
