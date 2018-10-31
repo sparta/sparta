@@ -413,7 +413,7 @@ double Surf::tri_size(int m, double &len)
 }
 
 /* ----------------------------------------------------------------------
-   NOTE: this needs to be reformulated
+   NOTE POINT: this needs to be reformulated
    check that points are each end point of exactly 2 new lines
    exception: not required of point on simulation box surface
    only check points and lines newer than old indices
@@ -478,7 +478,7 @@ void Surf::check_watertight_2d(int nline_old)
 }
 
 /* ----------------------------------------------------------------------
-   NOTE: this needs to be reformulated
+   NOTE POINT: this needs to be reformulated
    check directed triangle edges
    must be unique and match exactly one inverted edge
    exception: not required of triangle edge on simulation box surface
@@ -561,7 +561,7 @@ void Surf::check_watertight_3d(int ntri_old)
 }
 
 /* ----------------------------------------------------------------------
-   NOTE: caller needs to call this with new surfs, not points
+   NOTE POINT: caller needs to call this with new surfs, not points
    check if all points are inside or on surface of global simulation box
 ------------------------------------------------------------------------- */
 
@@ -1325,7 +1325,7 @@ void Surf::write_restart(FILE *fp)
   if (domain->dimension == 2) {
     fwrite(&nline,sizeof(int),1,fp);
     for (int i = 0; i < nline; i++) {
-      fwrite(&lines[i].id,sizeof(int),1,fp);    // NOTE: should be bigint?
+      fwrite(&lines[i].id,sizeof(int),1,fp);    // NOTE POINT: should be bigint?
       fwrite(&lines[i].type,sizeof(int),1,fp);
       fwrite(&lines[i].mask,sizeof(int),1,fp);
       fwrite(&lines[i].p1,sizeof(double),3,fp);
@@ -1335,7 +1335,7 @@ void Surf::write_restart(FILE *fp)
   if (domain->dimension == 3) {
     fwrite(&ntri,sizeof(int),1,fp);
     for (int i = 0; i < ntri; i++) {
-      fwrite(&tris[i].id,sizeof(int),1,fp);    // NOTE: should be bigint?
+      fwrite(&tris[i].id,sizeof(int),1,fp);    // NOTE POINT: should be bigint?
       fwrite(&tris[i].type,sizeof(int),1,fp);
       fwrite(&tris[i].mask,sizeof(int),1,fp);
       fwrite(&tris[i].p1,sizeof(double),3,fp);

@@ -127,7 +127,7 @@ void MoveSurf::command(int narg, char **arg)
   grid->clear_surf();
   grid->surf2grid(1);
 
-  // NOTE: is this needed - move method to grid to avoid code duplication
+  // NOTE POINT: is this needed - move method to grid to avoid code duplication
   //if (dim == 2) check_point_near_surf_2d();
   //else check_point_near_surf_3d();
 
@@ -262,7 +262,7 @@ void MoveSurf::move_lines(double fraction, Surf::Line *origlines)
 
   // check that all points are still inside simulation box
 
-  // NOTE: need to change this call
+  // NOTE POINT: need to change this call
   //surf->check_point_inside(0,surf->npoint);
 }
 
@@ -279,7 +279,7 @@ void MoveSurf::move_tris(double fraction, Surf::Tri *origtris)
 
   // check that all points are still inside simulation box
 
-  // NOTE: need to change this call
+  // NOTE POINT: need to change this call
   //surf->check_point_inside(0,surf->npoint);
 }
 

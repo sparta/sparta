@@ -105,14 +105,14 @@ void WriteSurf::write_file(FILE *fp)
   // header section
 
   fprintf(fp,"# Surface element file written by SPARTA\n\n");
-  // NOTE: how to do this
+  // NOTE POINT: how to do this
   //fprintf(fp,"%d points\n",npoint);
   if (dim == 2) fprintf(fp,"%d lines\n",nline);
   else fprintf(fp,"%d triangles\n",ntri);
   fprintf(fp,"\n");
 
   // points
-  // NOTE: how to do this?
+  // NOTE POINT: how to do this?
 
   /*
   fprintf(fp,"Points\n\n");

@@ -409,7 +409,7 @@ void ReadSurf::command(int narg, char **arg)
 
   // error check on new points,lines,tris
   // all points must be inside or on surface of simulation box
-  // NOTE: need to change this call
+  // NOTE POINT: need to change this call
 
   //surf->check_point_inside(npoint_old,npoint_new);
 

@@ -40,7 +40,8 @@ class Surf : protected Pointers {
 
   struct Line {
     int id;                 // unique ID for explicit surf
-                            // cell ID for implicit surf  NOTE: make a bigint?
+                            // cell ID for implicit surf
+                            // NOTE POINT: make a bigint?
     int type,mask;          // type and mask of the surf
     int isc,isr;            // index of surface collision and reaction models
                             // -1 if unassigned
