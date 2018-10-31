@@ -745,7 +745,7 @@ void ReadISurf::marching_squares(int igroup)
     }
 
     // populate Grid and Surf data structs
-    // point will be duplicated, not unique
+    // points will be duplicated, not unique
 
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
