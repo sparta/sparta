@@ -311,7 +311,7 @@ void ReadSurf::command(int narg, char **arg)
     extent[2][1] = MAX(extent[2][1],pts[i].x[2]);
   }
 
-  double minlen,minarea;
+  double minlen,minarea; 
   if (dim == 2) minlen = shortest_line();
   if (dim == 3) smallest_tri(minlen,minarea);
 
@@ -379,6 +379,7 @@ void ReadSurf::command(int narg, char **arg)
     }
 
     surf->lines = newlines;
+    surf->nline = nline_new;
 
   } else if (dim == 3) {
     ntri_old = surf->ntri;
@@ -400,6 +401,7 @@ void ReadSurf::command(int narg, char **arg)
     }
 
     surf->tris = newtris;
+    surf->ntri = ntri_new;
   }
 
   // compute normals of new lines or triangles
@@ -592,6 +594,8 @@ void ReadSurf::header()
   int n;
   char *ptr;
 
+  nline = ntri = 0;
+
   // skip 1st line of file
 
   if (me == 0) {
@@ -654,7 +658,7 @@ void ReadSurf::header()
 
 void ReadSurf::read_points()
 {
-  int i,m,nchunk;
+  int i,m,n,nchunk;
   char *next,*buf;
 
   // read and broadcast one CHUNK of lines at a time
@@ -688,15 +692,17 @@ void ReadSurf::read_points()
     if (dim == 3 && nwords != 4)
       error->all(FLERR,"Incorrect point format in surf file");
 
+    n = nread;
+
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
-      pts[npoint].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-      pts[npoint].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      pts[n].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      pts[n].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
       if (dim == 3) 
-        pts[npoint].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
-      else pts[npoint].x[2] = 0.0;
-      npoint++;
+        pts[n].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+      else pts[n].x[2] = 0.0;
+      n++;
       buf = next + 1;
     }
 
@@ -716,7 +722,7 @@ void ReadSurf::read_points()
 
 void ReadSurf::read_lines()
 {
-  int i,m,nchunk,type,p1,p2;
+  int i,m,n,nchunk,type,p1,p2;
   char *next,*buf;
 
   // read and broadcast one CHUNK of lines at a time
@@ -752,6 +758,8 @@ void ReadSurf::read_lines()
     int typeflag = 0;
     if (nwords == 4) typeflag = 1;
 
+    n = nread;
+
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
@@ -761,11 +769,11 @@ void ReadSurf::read_lines()
       p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
       if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || p1 == p2)
 	error->all(FLERR,"Invalid point index in line");
-      lines[nline].type = type;
-      lines[nline].mask = 1;
-      lines[nline].p1 = p1-1;
-      lines[nline].p2 = p2-1;
-      nline++;
+      lines[n].type = type;
+      lines[n].mask = 1;
+      lines[n].p1 = p1-1;
+      lines[n].p2 = p2-1;
+      n++;
       buf = next + 1;
     }
 
@@ -785,7 +793,7 @@ void ReadSurf::read_lines()
 
 void ReadSurf::read_tris()
 {
-  int i,m,nchunk,type,p1,p2,p3;
+  int i,m,n,nchunk,type,p1,p2,p3;
   char *next,*buf;
 
   // read and broadcast one CHUNK of triangles at a time
@@ -821,6 +829,8 @@ void ReadSurf::read_tris()
     int typeflag = 0;
     if (nwords == 5) typeflag = 1;
 
+    n = nread;
+
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
@@ -832,12 +842,12 @@ void ReadSurf::read_tris()
       if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || 
 	  p3 < 1 || p3 > npoint || p1 == p2 || p2 == p3)
 	error->all(FLERR,"Invalid point index in triangle");
-      tris[ntri].type = type;
-      tris[ntri].mask = 1;
-      tris[ntri].p1 = p1-1;
-      tris[ntri].p2 = p2-1;
-      tris[ntri].p3 = p3-1;
-      ntri++;
+      tris[n].type = type;
+      tris[n].mask = 1;
+      tris[n].p1 = p1-1;
+      tris[n].p2 = p2-1;
+      tris[n].p3 = p3-1;
+      n++;
       buf = next + 1;
     }
 
@@ -1742,10 +1752,8 @@ void ReadSurf::add_edge(int i, int j, int m)
 double ReadSurf::shortest_line()
 {
   double len = BIG;
-  int m = nline_old;
-  for (int i = 0; i < nline_new; i++) {
-    len = MIN(len,surf->line_size(m));
-    m++;
+  for (int i = 0; i < nline; i++) {
+    len = MIN(len,surf->line_size(pts[lines[i].p1].x,pts[lines[i].p2].x));
   }
   return len;
 }
@@ -1759,12 +1767,11 @@ void ReadSurf::smallest_tri(double &len, double &area)
   double lenone,areaone;
 
   len = area = BIG;
-  int m = ntri_old;
-  for (int i = 0; i < ntri_new; i++) {
-    areaone = surf->tri_size(m,lenone);
+  for (int i = 0; i < ntri; i++) {
+    areaone = surf->tri_size(pts[tris[i].p1].x,pts[tris[i].p2].x,
+                             pts[tris[i].p3].x,lenone);
     len = MIN(len,lenone);
     area = MIN(area,areaone);
-    m++;
   }
 }
 

@@ -252,9 +252,9 @@ void Surf::setup_surf()
   // set bounding box of all surfs based on their pts
   // for 2d, set zlo,zhi to box bounds
 
-  for (i = 0; i < 3; i++) {
-    bblo[i] = BIG;
-    bbhi[i] = -BIG;
+  for (j = 0; j < 3; j++) {
+    bblo[j] = BIG;
+    bbhi[j] = -BIG;
   }
   
   double *x;
@@ -262,14 +262,14 @@ void Surf::setup_surf()
   if (domain->dimension == 2) {
     for (i = 0; i < nline; i++) {
       x = lines[i].p1;
-      for (j = 0; j < 2; i++) {
-        bblo[i] = MIN(bblo[i],x[i]);
-        bbhi[i] = MAX(bbhi[i],x[i]);
+      for (j = 0; j < 2; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
       }
       x = lines[i].p2;
-      for (j = 0; j < 2; i++) {
-        bblo[i] = MIN(bblo[i],x[i]);
-        bbhi[i] = MAX(bbhi[i],x[i]);
+      for (j = 0; j < 2; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
       }
     }
     bblo[2] = domain->boxlo[2];
@@ -278,19 +278,19 @@ void Surf::setup_surf()
   } else if (domain->dimension == 3) {
     for (i = 0; i < ntri; i++) {
       x = tris[i].p1;
-      for (j = 0; j < 3; i++) {
-        bblo[i] = MIN(bblo[i],x[i]);
-        bbhi[i] = MAX(bbhi[i],x[i]);
+      for (j = 0; j < 3; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
       }
       x = tris[i].p2;
-      for (j = 0; j < 3; i++) {
-        bblo[i] = MIN(bblo[i],x[i]);
-        bbhi[i] = MAX(bbhi[i],x[i]);
+      for (j = 0; j < 3; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
       }
       x = tris[i].p3;
-      for (j = 0; j < 3; i++) {
-        bblo[i] = MIN(bblo[i],x[i]);
-        bbhi[i] = MAX(bbhi[i],x[i]);
+      for (j = 0; j < 3; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
       }
     }
   }
@@ -372,8 +372,17 @@ void Surf::hex_corner_point(int icorner, double *lo, double *hi, double *pt)
 
 double Surf::line_size(int m)
 {
+  return line_size(lines[m].p1,lines[m].p2);
+}
+
+/* ----------------------------------------------------------------------
+   return length of line bewteen 2 points
+------------------------------------------------------------------------- */
+
+double Surf::line_size(double *p1, double *p2)
+{
   double delta[3];
-  MathExtra::sub3(lines[m].p2,lines[m].p1,delta);
+  MathExtra::sub3(p2,p1,delta);
   return MathExtra::len3(delta);
 }
 
@@ -392,18 +401,29 @@ double Surf::axi_line_size(int m)
 }
 
 /* ----------------------------------------------------------------------
-   compute side length and area of a triangle
+   compute side length and area of triangle M
    return len = length of shortest edge of triangle M
    return area = area of triangle M
 ------------------------------------------------------------------------- */
 
 double Surf::tri_size(int m, double &len)
 {
+  return tri_size(tris[m].p1,tris[m].p2,tris[m].p3,len);
+}
+
+/* ----------------------------------------------------------------------
+   compute side length and area of a triangle
+   return len = length of shortest edge of triangle M
+   return area = area of triangle M
+------------------------------------------------------------------------- */
+
+double Surf::tri_size(double *p1, double *p2, double *p3, double &len)
+{
   double delta12[3],delta13[3],delta23[3],cross[3];
 
-  MathExtra::sub3(tris[m].p2,tris[m].p1,delta12);
-  MathExtra::sub3(tris[m].p3,tris[m].p1,delta13);
-  MathExtra::sub3(tris[m].p3,tris[m].p2,delta23);
+  MathExtra::sub3(p2,p1,delta12);
+  MathExtra::sub3(p3,p1,delta13);
+  MathExtra::sub3(p3,p2,delta23);
   len = MIN(MathExtra::len3(delta12),MathExtra::len3(delta13));
   len = MIN(len,MathExtra::len3(delta23));
 

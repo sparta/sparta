@@ -88,8 +88,10 @@ class Surf : protected Pointers {
   void quad_corner_point(int, double *, double *, double *);
   void hex_corner_point(int, double *, double *, double *);
   double line_size(int);
+  double line_size(double *, double *);
   double axi_line_size(int);
   double tri_size(int, double &);
+  double tri_size(double *, double *, double *, double &);
 
   void check_watertight_2d(int);
   void check_watertight_3d(int);
