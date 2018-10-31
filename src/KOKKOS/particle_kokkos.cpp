@@ -248,8 +248,8 @@ void ParticleKokkos::sort_kokkos()
     }
     else if (reorder_scheme == FIXEDMEMORY && d_pswap1.size() == 0){
       nParticlesWksp = (double)update->global_mem_limit/sizeof(Particle::OnePart);
-      d_pswap1 = t_particle_1d("particle:swap1",nParticlesWksp);
-      d_pswap2 = t_particle_1d("particle:swap2",nParticlesWksp);
+      d_pswap1 = t_particle_1d(Kokkos::view_alloc("particle:swap1",Kokkos::WithoutInitializing),nParticlesWksp);
+      d_pswap2 = t_particle_1d(Kokkos::view_alloc("particle:swap2",Kokkos::WithoutInitializing),nParticlesWksp);
     }
 
     nbytes = sizeof(OnePart);
