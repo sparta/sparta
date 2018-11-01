@@ -22,8 +22,10 @@
 #include "comm.h"
 #include "grid.h"
 #include "surf.h"
+#include "mpiio.h"
 #include "memory.h"
 #include "error.h"
+#include "input.h"
 
 using namespace SPARTA_NS;
 
@@ -41,7 +43,7 @@ enum{VERSION,SMALLINT,CELLINT,BIGINT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
-     MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
+     MULTIPROC,PROCSPERFILE,PERPROC,MPIIO};    // new fields added after MPIIO
 
 /* ---------------------------------------------------------------------- */
 
@@ -77,11 +79,13 @@ void WriteRestart::command(int narg, char **arg)
 
   if (strchr(arg[0],'%')) multiproc = nprocs;
   else multiproc = 0;
+  if (strstr(arg[0],".mpiio")) mpiioflag = 1;
+  else mpiioflag = 0;
 
   // setup output style and process optional args
   // also called by Output class for periodic restart files
 
-  multiproc_options(multiproc,narg-1,&arg[1]);
+  multiproc_options(multiproc,mpiioflag,narg-1,&arg[1]);
 
   // init entire system
   // this is probably not required
@@ -98,10 +102,24 @@ void WriteRestart::command(int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-void WriteRestart::multiproc_options(int multiproc_caller,
+void WriteRestart::multiproc_options(int multiproc_caller, int mpiioflag_caller,
                                      int narg, char **arg)
 {
   multiproc = multiproc_caller;
+  mpiioflag = mpiioflag_caller;
+
+  // error checks
+
+  if (multiproc && mpiioflag)
+    error->all(FLERR,
+               "Restart file MPI-IO output not allowed with % in filename");
+
+  if (mpiioflag) {
+    mpiio = new RestartMPIIO(sparta);
+    if (!mpiio->mpiio_exists)
+      error->all(FLERR,"Writing to MPI-IO filename when "
+                 "MPIIO package is not installed");
+  }
 
   // defaults for multiproc file writing
 
@@ -124,11 +142,11 @@ void WriteRestart::multiproc_options(int multiproc_caller,
     if (strcmp(arg[iarg],"fileper") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal write_restart command");
       if (!multiproc)
-	error->all(FLERR,"Cannot use write_restart fileper "
+        error->all(FLERR,"Cannot use write_restart fileper "
                    "without % in restart file name");
-      int nper = atoi(arg[iarg+1]);
+      int nper = input->inumeric(FLERR,arg[iarg+1]);
       if (nper <= 0) error->all(FLERR,"Illegal write_restart command");
-      
+
       multiproc = nprocs/nper;
       if (nprocs % nper) multiproc++;
       fileproc = me/nper * nper;
@@ -142,9 +160,9 @@ void WriteRestart::multiproc_options(int multiproc_caller,
     } else if (strcmp(arg[iarg],"nfile") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal write_restart command");
       if (!multiproc)
-	error->all(FLERR,"Cannot use write_restart nfile "
+        error->all(FLERR,"Cannot use write_restart nfile "
                    "without % in restart file name");
-      int nfile = atoi(arg[iarg+1]);
+      int nfile = input->inumeric(FLERR,arg[iarg+1]);
       if (nfile <= 0) error->all(FLERR,"Illegal write_restart command");
       nfile = MIN(nfile,nprocs);
 
@@ -153,7 +171,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
       fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
       int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
       if (fcluster < icluster) fileproc++;
-      int fileprocnext = 
+      int fileprocnext =
         static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
       fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
       if (fcluster < icluster+1) fileprocnext++;
@@ -264,31 +282,53 @@ void WriteRestart::write(char *file)
   int n = grid->pack_restart(buf);
   n += particle->pack_restart(&buf[n]);
 
+  // MPI-IO output to single file
+
+  if (mpiioflag) {
+    if (me == 0 && fp) {
+      fclose(fp);
+      fp = NULL;
+    }
+    mpiio->openForWrite(file);
+    mpiio->write(headerOffset,send_size,buf);
+    mpiio->close();
+  }
+
   // output of one or more native files
   // filewriter = 1 = this proc writes to file
   // ping each proc in my cluster, receive its data, write data to file
   // else wait for ping from fileproc, send my data to fileproc
 
-  int tmp,recv_size;
-  MPI_Status status;
-  MPI_Request request;
-
-  if (filewriter) {
-    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
-      if (iproc) {
-        MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
-        MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
-        MPI_Wait(&request,&status);
-        MPI_Get_count(&status,MPI_CHAR,&recv_size);
-      } else recv_size = send_size;
-      
-      write_char_vec(PERPROC,recv_size,buf);
+  else {
+    int tmp,recv_size;
+    MPI_Status status;
+    MPI_Request request;
+    
+    if (filewriter) {
+    
+    
+      for (int iproc = 0; iproc < nclusterprocs; iproc++) {
+        if (iproc) {
+          MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
+          MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
+          MPI_Wait(&request,&status);
+          MPI_Get_count(&status,MPI_CHAR,&recv_size);
+        } else recv_size = send_size;
+        
+        write_char_vec(PERPROC,recv_size,buf);
+      }
+      fclose(fp);
+    
+    
+    
+    
+    
+    
+    } else {
+      MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+      MPI_Rsend(buf,send_size,MPI_CHAR,fileproc,0,world);
+    
     }
-    fclose(fp);
-
-  } else {
-    MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
-    MPI_Rsend(buf,send_size,MPI_CHAR,fileproc,0,world);
   }
 
   // clean up
@@ -397,15 +437,34 @@ void WriteRestart::surf_params()
    all procs call this method, only proc 0 writes to file
 ------------------------------------------------------------------------- */
 
-void WriteRestart::file_layout(int)
+void WriteRestart::file_layout(int send_size)
 {
-  if (me == 0) write_int(MULTIPROC,multiproc);
+  if (me == 0) {
+    write_int(MULTIPROC,multiproc);
+    write_int(MPIIO,mpiioflag);
+  }
+
+  if (mpiioflag) {
+    int *all_send_sizes;
+    memory->create(all_send_sizes,nprocs,"write_restart:all_send_sizes");
+    MPI_Gather(&send_size, 1, MPI_INT, all_send_sizes, 1, MPI_INT, 0,world);
+    if (me == 0) fwrite(all_send_sizes,sizeof(int),nprocs,fp);
+    memory->destroy(all_send_sizes);
+  }
 
   // -1 flag signals end of file layout info
 
   if (me == 0) {
     int flag = -1;
     fwrite(&flag,sizeof(int),1,fp);
+  }
+
+  // if MPI-IO file, broadcast the end of the header offset
+  // this allows all ranks to compute offset to their data
+
+  if (mpiioflag) {
+    if (me == 0) headerOffset = ftell(fp);
+    MPI_Bcast(&headerOffset,1,MPI_SPARTA_BIGINT,0,world);
   }
 }
 

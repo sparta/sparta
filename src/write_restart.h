@@ -30,7 +30,7 @@ class WriteRestart : protected Pointers {
  public:
   WriteRestart(class SPARTA *);
   void command(int, char **);
-  void multiproc_options(int, int, char **);
+  void multiproc_options(int, int, int, char **);
   void write(char *);
 
  private:
@@ -43,6 +43,12 @@ class WriteRestart : protected Pointers {
   int filewriter;            // 1 if this proc writes a file, else 0
   int fileproc;              // ID of proc in my cluster who writes to file
   int icluster;              // which cluster I am in
+
+  // MPI-IO values
+
+  int mpiioflag;               // 1 for MPIIO output, else 0
+  class RestartMPIIO *mpiio;   // MPIIO for restart file output
+  MPI_Offset headerOffset;
 
   void header();
   void box_params();
