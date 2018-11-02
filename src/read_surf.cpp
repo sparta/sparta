@@ -358,7 +358,7 @@ void ReadSurf::command(int narg, char **arg)
     delete wf;
   }
 
-  // add read-in pts/lines/tris to Surf data structures
+  // add pts/lines/tris read from file to Surf line or tri data struct
 
   if (dim == 2) {
     nline_old = surf->nline;

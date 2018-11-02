@@ -69,6 +69,7 @@ enum ExecutionSpace{Host,Device};
 
 typedef int smallint;
 typedef int cellint;
+typedef int surfint;
 typedef int64_t bigint;
 
 #define MAXSMALLINT INT_MAX
@@ -88,6 +89,7 @@ typedef int64_t bigint;
 
 typedef int smallint;
 typedef int64_t cellint;
+typedef int64_t surfint;
 typedef int64_t bigint;
 
 #define MAXSMALLINT INT_MAX

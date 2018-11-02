@@ -39,9 +39,8 @@ class Surf : protected Pointers {
   int *inversemask;         // inverse mask for each group
 
   struct Line {
-    int id;                 // unique ID for explicit surf
+    surfint id;             // unique ID for explicit surf
                             // cell ID for implicit surf
-                            // NOTE POINT: make a bigint?
     int type,mask;          // type and mask of the surf
     int isc,isr;            // index of surface collision and reaction models
                             // -1 if unassigned
@@ -51,7 +50,7 @@ class Surf : protected Pointers {
   };
 
   struct Tri {
-    int id;                 // unique ID for explicit surf
+    surfint id;             // unique ID for explicit surf
                             // cell ID for implicit surf
     int type,mask;          // type and mask of the surf
     int isc,isr;            // index of surface collision and reaction models
