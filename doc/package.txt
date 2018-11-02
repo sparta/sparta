@@ -27,13 +27,17 @@ args = arguments specific to the style :l
         factor = increase memory used for collisions by this factor (default)
       {collide/retry} = {yes} or {no}
         yes = retry collision algorithm until successful
-        no = do not retry collision algorithm (default) :pre
+        no = do not retry collision algorithm (default)
+      {gpu/direct} = {yes} or {no}
+        yes = use GPU-direct, i.e. CUDA-aware MPI (default)
+        no = do not use GPU-direct :pre
 :ule
 
 [Examples:]
 
 package kokkos comm classic
-package kokkos comm threaded reduction atomic :pre
+package kokkos comm threaded reduction atomic
+package kokkos gpu/direct no :pre
 
 [Description:]
 
@@ -116,6 +120,13 @@ without being moved between the host and GPU.  This requires that your
 MPI is able to access GPU memory directly.  Currently that is true for
 OpenMPI 1.8 (or later versions), Mvapich2 1.9 (or later), and CrayMPI.
 
+The {gpu/direct} keyword chooses whether GPU-direct will be used. When 
+this keyword is set to {on}, buffers in GPU memory are passed directly 
+through MPI send/receive calls. This can reduce overhead of first 
+copying the data to the host CPU. However GPU-direct is not supported on 
+all systems, which can lead to segmentation faults and would require 
+using a value of {off}. 
+
 :line
 
 [Restrictions:]
@@ -136,7 +147,7 @@ setting"_Section_start.html#start_6
 
 For the KOKKOS package, the option defaults are comm = threaded, 
 reduction = parallel/reduce, collide/extra = 1.1, and collide/retry = 
-no. These settings are made automatically by the required "-k on" 
-"command-line switch"_Section_start.html#start_6. You can change them by 
-using the package kokkos command in your input script or via the "-pk 
-kokkos" "command-line switch"_Section_start.html#start_6. 
+no, gpu/direct yes. These settings are made automatically by the 
+required "-k on" "command-line switch"_Section_start.html#start_6. You 
+can change them by using the package kokkos command in your input script 
+or via the "-pk kokkos" "command-line switch"_Section_start.html#start_6. 
