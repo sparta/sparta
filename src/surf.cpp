@@ -433,68 +433,82 @@ double Surf::tri_size(double *p1, double *p2, double *p3, double &len)
 }
 
 /* ----------------------------------------------------------------------
-   NOTE POINT: this needs to be reformulated
-   check that points are each end point of exactly 2 new lines
+   check that points are each a different end point of exactly 2 lines
    exception: not required of point on simulation box surface
-   only check points and lines newer than old indices
+   only check lines newer than old indices
 ------------------------------------------------------------------------- */
 
 void Surf::check_watertight_2d(int nline_old)
 {
-  /*
-  int p1,p2;
+#ifdef SPARTA_MAP
+  std::map<std::pair<double,double>,int> hash;
+  std::map<std::pair<double,double>,int>::iterator it;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<std::pair<double,double>,int> hash;
+  std::unordered_map<std::pair<double,double>,int>::iterator it;
+#else
+  std::tr1::unordered_map<std::pair<double,double>,int> hash;
+  std::tr1::unordered_map<std::pair<double,double>,int>::iterator it;
+#endif
 
-  int npoint_new = npoint - npoint_old;
+  double *p1,*p2;
+  std::pair <double, double> key;
+  int value;
+
   int nline_new = nline - nline_old;
-
-  // count[I] = # of lines that vertex I is part of
-
-  int *count;
-  memory->create(count,npoint_new,"readsurf:count");
-  for (int i = 0; i < npoint_new; i++) count[i] = 0;
 
   int ndup = 0;
   int m = nline_old;
   for (int i = 0; i < nline_new; i++) {
-    p1 = lines[m].p1 - npoint_old;
-    p2 = lines[m].p2 - npoint_old;
-    count[p1]++;
-    count[p2]++;
-    if (count[p1] > 2) ndup++;
-    if (count[p2] > 2) ndup++;
+    p1 = lines[m].p1;
+    key = std::make_pair(p1[0],p1[1]);
+    if (hash.find(key) == hash.end()) hash[key] = 1;
+    else {
+      value = hash[key];
+      if (value != 2) ndup++;
+      else hash[key] = 3;
+    }
+
+    p2 = lines[m].p2;
+    key = std::make_pair(p2[0],p2[1]);
+    if (hash.find(key) == hash.end()) hash[key] = 2;
+    else {
+      value = hash[key];
+      if (value != 1) ndup++;
+      else hash[key] = 3;
+    }
+
     m++;
   }
   
   if (ndup) {
     char str[128];
-    sprintf(str,"Surface check failed with %d duplicate points",ndup);
+    sprintf(str,"Watertight check failed with %d duplicate points",ndup);
     error->all(FLERR,str);
   }
 
-  // check that all counts are 2
-  // allow for exception if point on box surface
+  // check that all points in hash have value 3
+  // allow for exception if point is on box surface
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
+  double pt[3];
 
   int nbad = 0;
-  for (int i = 0; i < npoint_new; i++) {
-    if (count[i] == 0) nbad++;
-    else if (count[i] == 1) {
-      if (!Geometry::point_on_hex(pts[i+npoint_old].x,boxlo,boxhi)) nbad++;
+  for (it = hash.begin(); it != hash.end(); ++it) {
+    if (it->second != 3) {
+      pt[0] = it->first.first;
+      pt[1] = it->first.second;
+      pt[2] = 0.0;
+      if (!Geometry::point_on_hex(pt,boxlo,boxhi)) nbad++;
     }
   }
 
   if (nbad) {
     char str[128];
-    sprintf(str,"Surface check failed with %d unmatched points",nbad);
+    sprintf(str,"Watertight check failed with %d unmatched points",nbad);
     error->all(FLERR,str);
   }
-
-  // clean up
-
-  memory->destroy(count);
-  */
 }
 
 /* ----------------------------------------------------------------------
@@ -508,12 +522,6 @@ void Surf::check_watertight_2d(int nline_old)
 void Surf::check_watertight_3d(int ntri_old)
 {
   /*
-  int ntri_new = ntri - ntri_old;
-
-  // hash directed edges of all triangles
-  // key = directed edge, value = # of times it appears in any triangle
-  // NOTE: could prealloc hash to correct size here
-
 #ifdef SPARTA_MAP
   std::map<bigint,int> hash;
   std::map<bigint,int>::iterator it;
@@ -525,11 +533,18 @@ void Surf::check_watertight_3d(int ntri_old)
   std::tr1::unordered_map<bigint,int>::iterator it;
 #endif
 
+  // hash directed edges of all triangles
+  // key = directed edge, value = # of times it appears in any triangle
+  // NOTE: could prealloc hash to correct size here
+
   // insert each edge into hash
   // should appear once in each direction
   // error if any duplicate edges
 
-  bigint p1,p2,p3,key;
+  bigint key;
+  double *p1,*p2,*p3;
+
+  int ntri_new = ntri - ntri_old;
 
   int ndup = 0;
   int m = ntri_old;
