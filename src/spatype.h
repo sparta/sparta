@@ -76,6 +76,7 @@ typedef int64_t bigint;
 #define MAXBIGINT INT64_MAX
 #define MPI_SPARTA_BIGINT MPI_LL
 #define CELLINT_FORMAT "%d"
+#define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%" PRId64
 #define ATOCELLINT atoi
 #define ATOBIGINT ATOLL
@@ -96,6 +97,7 @@ typedef int64_t bigint;
 #define MAXBIGINT INT64_MAX
 #define MPI_SPARTA_BIGINT MPI_LL
 #define CELLINT_FORMAT "%" PRId64
+#define SURFINT_FORMAT "%" PRId64
 #define BIGINT_FORMAT "%" PRId64
 #define ATOCELLINT ATOLL
 #define ATOBIGINT ATOLL
@@ -109,12 +111,14 @@ typedef int64_t bigint;
 
 typedef int smallint;
 typedef int cellint;
+typedef int surfint;
 typedef int bigint;
 
 #define MAXSMALLINT INT_MAX
 #define MAXBIGINT INT_MAX
 #define MPI_SPARTA_BIGINT MPI_INT
 #define CELLINT_FORMAT "%d"
+#define SURFINT_FORMAT "%d"
 #define BIGINT_FORMAT "%d"
 #define ATOCELLINT atoi
 #define ATOBIGINT atoi
