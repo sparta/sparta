@@ -55,7 +55,6 @@ SurfKokkos::SurfKokkos(SPARTA *sparta) : Surf(sparta)
 
 SurfKokkos::~SurfKokkos()
 {
-  pts = NULL;
   lines = NULL;
   tris = NULL;
 }
@@ -64,17 +63,6 @@ SurfKokkos::~SurfKokkos()
 
 void SurfKokkos::wrap_kokkos()
 {
-  if (pts != NULL && npoint > 0) {
-    if (pts != k_pts.h_view.data()) {
-      memoryKK->wrap_kokkos(k_pts,pts,npoint,"surf:pts");
-      k_pts.modify<SPAHostType>();
-      k_pts.sync<DeviceType>();
-      memory->sfree(pts);
-      pts = k_pts.h_view.data();
-    }
-  }
-
-
   if (lines != NULL && nline > 0) {
     if (lines != k_lines.h_view.data()) {
       memoryKK->wrap_kokkos(k_lines,lines,nline,"surf:lines");
@@ -110,11 +98,9 @@ void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)
   if (space == Device) {
     if (sparta->kokkos->auto_sync)
       modify(Host,mask);
-    if (mask & PT_MASK) k_pts.sync<SPADeviceType>();
     if (mask & LINE_MASK) k_lines.sync<SPADeviceType>();
     if (mask & TRI_MASK) k_tris.sync<SPADeviceType>();
   } else {
-    if (mask & PT_MASK) k_pts.sync<SPAHostType>();
     if (mask & LINE_MASK) k_lines.sync<SPAHostType>();
     if (mask & TRI_MASK) k_tris.sync<SPAHostType>();
   }
@@ -132,13 +118,11 @@ void SurfKokkos::modify(ExecutionSpace space, unsigned int mask)
   }
 
   if (space == Device) {
-    if (mask & PT_MASK) k_pts.modify<SPADeviceType>();
     if (mask & LINE_MASK) k_lines.modify<SPADeviceType>();
     if (mask & TRI_MASK) k_tris.modify<SPADeviceType>();
     if (sparta->kokkos->auto_sync)
       sync(Host,mask);
   } else {
-    if (mask & PT_MASK) k_pts.modify<SPAHostType>();
     if (mask & LINE_MASK) k_lines.modify<SPAHostType>();
     if (mask & TRI_MASK) k_tris.modify<SPAHostType>();
   }

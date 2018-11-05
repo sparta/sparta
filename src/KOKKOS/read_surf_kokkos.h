@@ -30,9 +30,6 @@ class ReadSurfKokkos : public ReadSurf {
   ReadSurfKokkos(class SPARTA *);
   ~ReadSurfKokkos() {}
   void command(int, char **);
-
- private:
-  void grow_surf();
 };
 
 }
