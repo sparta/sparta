@@ -433,26 +433,36 @@ double Surf::tri_size(double *p1, double *p2, double *p3, double &len)
 }
 
 /* ----------------------------------------------------------------------
-   check that points are each a different end point of exactly 2 lines
-   exception: not required of point on simulation box surface
-   only check lines newer than old indices
+   check end points of lines
+   each end point should appear exactly once as different ends of 2 lines
+   exception: not required of end point on simulation box surface
+   only check lines newer than old ones
 ------------------------------------------------------------------------- */
 
 void Surf::check_watertight_2d(int nline_old)
 {
+  // hash end points of all lines
+  // key = end point
+  // value = 1 if first point, 2 if second point, 3 if both points
+  // NOTE: could prealloc hash to correct size here
+
 #ifdef SPARTA_MAP
-  std::map<std::pair<double,double>,int> hash;
-  std::map<std::pair<double,double>,int>::iterator it;
+  std::map<OnePoint2d,int> hash;
+  std::map<OnePoint2d,int>::iterator it;
 #elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<std::pair<double,double>,int> hash;
-  std::unordered_map<std::pair<double,double>,int>::iterator it;
+  std::unordered_map<OnePoint2d,int,Hasher2d> hash;
+  std::unordered_map<OnePoint2d,int,Hasher2d>::iterator it;
 #else
-  std::tr1::unordered_map<std::pair<double,double>,int> hash;
-  std::tr1::unordered_map<std::pair<double,double>,int>::iterator it;
+  std::tr1::unordered_map<OnePoint2d,int,Hasher2d> hash;
+  std::tr1::unordered_map<OnePoint2d,int,Hasher2d>::iterator it;
 #endif
 
+  // insert each end point into hash
+  // should appear once at each end
+  // error if any duplicate points
+
   double *p1,*p2;
-  std::pair <double, double> key;
+  OnePoint2d key;
   int value;
 
   int nline_new = nline - nline_old;
@@ -461,21 +471,21 @@ void Surf::check_watertight_2d(int nline_old)
   int m = nline_old;
   for (int i = 0; i < nline_new; i++) {
     p1 = lines[m].p1;
-    key = std::make_pair(p1[0],p1[1]);
+    key.pt[0] = p1[0]; key.pt[1] = p1[1];
     if (hash.find(key) == hash.end()) hash[key] = 1;
     else {
       value = hash[key];
-      if (value != 2) ndup++;
-      else hash[key] = 3;
+      if (value == 2) hash[key] = 3;
+      else ndup++;
     }
 
     p2 = lines[m].p2;
-    key = std::make_pair(p2[0],p2[1]);
+    key.pt[0] = p2[0]; key.pt[1] = p2[1];
     if (hash.find(key) == hash.end()) hash[key] = 2;
     else {
       value = hash[key];
-      if (value != 1) ndup++;
-      else hash[key] = 3;
+      if (value == 1) hash[key] = 3;
+      else ndup++;
     }
 
     m++;
@@ -487,19 +497,19 @@ void Surf::check_watertight_2d(int nline_old)
     error->all(FLERR,str);
   }
 
-  // check that all points in hash have value 3
-  // allow for exception if point is on box surface
+  // check that each end point has a match
+  // allow for exception if end point on box surface
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
+  double *kpt;
   double pt[3];
 
   int nbad = 0;
   for (it = hash.begin(); it != hash.end(); ++it) {
     if (it->second != 3) {
-      pt[0] = it->first.first;
-      pt[1] = it->first.second;
-      pt[2] = 0.0;
+      kpt = (double *) it->first.pt;
+      pt[0] = kpt[0]; pt[1] = kpt[1]; pt[2] = 0.0;
       if (!Geometry::point_on_hex(pt,boxlo,boxhi)) nbad++;
     }
   }
@@ -512,37 +522,37 @@ void Surf::check_watertight_2d(int nline_old)
 }
 
 /* ----------------------------------------------------------------------
-   NOTE POINT: this needs to be reformulated
    check directed triangle edges
-   must be unique and match exactly one inverted edge
+   each edge should appear exactly once in each direction
    exception: not required of triangle edge on simulation box surface
-   only check points and lines newer than old indices
+   only check triangles newer than old ones
 ------------------------------------------------------------------------- */
 
 void Surf::check_watertight_3d(int ntri_old)
 {
-  /*
-#ifdef SPARTA_MAP
-  std::map<bigint,int> hash;
-  std::map<bigint,int>::iterator it;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<bigint,int> hash;
-  std::unordered_map<bigint,int>::iterator it;
-#else
-  std::tr1::unordered_map<bigint,int> hash;
-  std::tr1::unordered_map<bigint,int>::iterator it;
-#endif
-
   // hash directed edges of all triangles
-  // key = directed edge, value = # of times it appears in any triangle
+  // key = directed edge
+  // value = 1 if appears once, 2 if reverse also appears once
   // NOTE: could prealloc hash to correct size here
+
+#ifdef SPARTA_MAP
+  std::map<TwoPoint3d,int> hash;
+  std::map<TwoPoint3d,int>::iterator it;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<TwoPoint3d,int,Hasher3d> hash;
+  std::unordered_map<TwoPoint3d,int,Hasher3d>::iterator it;
+#else
+  std::tr1::unordered_map<TwoPoint3d,int,Hasher3d> hash;
+  std::tr1::unordered_map<TwoPoint3d,int,Hasher3d>::iterator it;
+#endif
 
   // insert each edge into hash
   // should appear once in each direction
   // error if any duplicate edges
-
-  bigint key;
+  
   double *p1,*p2,*p3;
+  TwoPoint3d key,keyinv;
+  int value;
 
   int ntri_new = ntri - ntri_old;
 
@@ -552,70 +562,129 @@ void Surf::check_watertight_3d(int ntri_old)
     p1 = tris[m].p1;
     p2 = tris[m].p2;
     p3 = tris[m].p3;
-    key = (p1 << 32) | p2;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
-    key = (p2 << 32) | p3;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
-    key = (p3 << 32) | p1;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
+
+    key.pts[0] = p1[0]; key.pts[1] = p1[1]; key.pts[2] = p1[2];
+    key.pts[3] = p2[0]; key.pts[4] = p2[1]; key.pts[5] = p2[2];
+    if (hash.find(key) == hash.end()) {
+      keyinv.pts[0] = p2[0]; keyinv.pts[1] = p1[1]; keyinv.pts[2] = p2[2];
+      keyinv.pts[3] = p1[0]; keyinv.pts[4] = p2[1]; keyinv.pts[5] = p1[2];
+      if (hash.find(keyinv) == hash.end()) hash[key] = 1;
+      else {
+	value = hash[keyinv];
+	if (value == 1) hash[keyinv] = 2;
+	else ndup++;
+      }
+    } else ndup++;
+    
+    key.pts[0] = p2[0]; key.pts[1] = p2[1]; key.pts[2] = p2[2];
+    key.pts[3] = p3[0]; key.pts[4] = p3[1]; key.pts[5] = p3[2];
+    if (hash.find(key) == hash.end()) {
+      keyinv.pts[0] = p3[0]; keyinv.pts[1] = p3[1]; keyinv.pts[2] = p3[2];
+      keyinv.pts[3] = p2[0]; keyinv.pts[4] = p2[1]; keyinv.pts[5] = p2[2];
+      if (hash.find(keyinv) == hash.end()) hash[key] = 1;
+      else {
+	value = hash[keyinv];
+	if (value == 1) hash[keyinv] = 2;
+	else ndup++;
+      }
+    } else ndup++;
+
+    key.pts[0] = p3[0]; key.pts[1] = p3[1]; key.pts[2] = p3[2];
+    key.pts[3] = p1[0]; key.pts[4] = p1[1]; key.pts[5] = p1[2];
+    if (hash.find(key) == hash.end()) {
+      keyinv.pts[0] = p1[0]; keyinv.pts[1] = p1[1]; keyinv.pts[2] = p1[2];
+      keyinv.pts[3] = p3[0]; keyinv.pts[4] = p3[1]; keyinv.pts[5] = p3[2];
+      if (hash.find(keyinv) == hash.end()) hash[key] = 1;
+      else {
+	value = hash[keyinv];
+	if (value == 1) hash[keyinv] = 2;
+	else ndup++;
+      } 
+    } else ndup++;
+      
     m++;
   }
 
   if (ndup) {
     char str[128];
-    sprintf(str,"Surface check failed with %d duplicate edges",ndup);
+    sprintf(str,"Watertight check failed with %d duplicate edges",ndup);
     error->all(FLERR,str);
   }
 
   // check that each edge has an inverted match
   // allow for exception if edge on box surface
+  // NOTE: this does not check if 2 pts of edge are on same box face
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
+  double *pts;
 
   int nbad = 0;
   for (it = hash.begin(); it != hash.end(); ++it) {
-    p1 = it->first >> 32;
-    p2 = it->first & MAXSMALLINT;
-    key = (p2 << 32) | p1;
-    if (hash.find(key) == hash.end()) {
-      if (!Geometry::point_on_hex(pts[p1].x,boxlo,boxhi) ||
-          !Geometry::point_on_hex(pts[p2].x,boxlo,boxhi)) nbad++;
+    if (it->second != 2) {
+      pts = (double *) it->first.pts;
+      if (!Geometry::point_on_hex(&pts[0],boxlo,boxhi)) nbad++;
+      if (!Geometry::point_on_hex(&pts[3],boxlo,boxhi)) nbad++;
     }
   }
 
   if (nbad) {
     char str[128];
-    sprintf(str,"Surface check failed with %d unmatched edges",nbad);
+    sprintf(str,"Watertight check failed with %d unmatched edges",nbad);
     error->all(FLERR,str);
   }
-  */
 }
 
 /* ----------------------------------------------------------------------
-   NOTE POINT: caller needs to call this with new surfs, not points
    check if all points are inside or on surface of global simulation box
+   called by ReadSurf for lines or triangles
+   nold = previous # of elements
+   nnew = current # of elements
 ------------------------------------------------------------------------- */
 
-void Surf::check_point_inside(int npoint_old, int npoint_new)
+void Surf::check_point_inside(int nold)
 {
-  /*
+  int nbad;
   double *x;
 
+  int dim = domain->dimension;
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
 
-  int m = npoint_old;
-  int nbad = 0;
-  for (int i = 0; i < npoint_new; i++) {
-    x = pts[m].x;
-    if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
-	x[1] < boxlo[1] || x[1] > boxhi[1] ||
-	x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
-    m++;
+  if (dim == 2) {
+    int nline_new = nline - nold;
+    int m = nold;
+    nbad = 0;
+    for (int i = 0; i < nline_new; i++) {
+      x = lines[m].p1;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      x = lines[m].p2;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      m++;
+    }
+  } else if (dim == 3) {
+    int ntri_new = ntri - nold;
+    int m = nold;
+    nbad = 0;
+    for (int i = 0; i < ntri_new; i++) {
+      x = tris[m].p1;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      x = tris[m].p2;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      x = tris[m].p3;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      m++;
+    }
   }
 
   if (nbad) {
@@ -624,7 +693,6 @@ void Surf::check_point_inside(int npoint_old, int npoint_new)
 	    nbad);
     error->all(FLERR,str);
   }
-  */
 }
 
 /* ----------------------------------------------------------------------

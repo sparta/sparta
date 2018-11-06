@@ -409,11 +409,11 @@ void ReadSurf::command(int narg, char **arg)
   if (dim == 2) surf->compute_line_normal(nline_old,nline_new);
   else surf->compute_tri_normal(ntri_old,ntri_new);
 
-  // error check on new points,lines,tris
+  // error check on new lines,tris
   // all points must be inside or on surface of simulation box
-  // NOTE POINT: need to change this call
 
-  //surf->check_point_inside(npoint_old,npoint_new);
+  if (dim == 2) surf->check_point_inside(nline_old);
+  else surf->check_point_inside(ntri_old);
 
   // -----------------------
   // map surfs to grid cells
