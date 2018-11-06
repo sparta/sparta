@@ -566,8 +566,8 @@ void Surf::check_watertight_3d(int ntri_old)
     key.pts[0] = p1[0]; key.pts[1] = p1[1]; key.pts[2] = p1[2];
     key.pts[3] = p2[0]; key.pts[4] = p2[1]; key.pts[5] = p2[2];
     if (hash.find(key) == hash.end()) {
-      keyinv.pts[0] = p2[0]; keyinv.pts[1] = p1[1]; keyinv.pts[2] = p2[2];
-      keyinv.pts[3] = p1[0]; keyinv.pts[4] = p2[1]; keyinv.pts[5] = p1[2];
+      keyinv.pts[0] = p2[0]; keyinv.pts[1] = p2[1]; keyinv.pts[2] = p2[2];
+      keyinv.pts[3] = p1[0]; keyinv.pts[4] = p1[1]; keyinv.pts[5] = p1[2];
       if (hash.find(keyinv) == hash.end()) hash[key] = 1;
       else {
 	value = hash[keyinv];

@@ -106,11 +106,9 @@ class Surf : protected Pointers {
     double pt[2];
 
     bool operator ==(const OnePoint2d &other) const { 
-      if (pt[0] < other.pt[0]) return 1;
-      else if (pt[0] > other.pt[0]) return 0;
-      if (pt[1] < other.pt[1]) return 1;
-      else if (pt[1] > other.pt[1]) return 0;
-      return 0;
+      if (pt[0] != other.pt[0]) return 0;
+      if (pt[1] != other.pt[1]) return 0;
+      return 1;
     }
   };
 
