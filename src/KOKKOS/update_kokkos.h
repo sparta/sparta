@@ -114,7 +114,6 @@ class UpdateKokkos : public Update {
   Kokkos::Crs<int, SPADeviceType, void, int> d_csplits;
   Kokkos::Crs<int, SPADeviceType, void, int> d_csubs;
 
-  t_point_1d d_pts;
   t_line_1d d_lines;
   t_tri_1d d_tris;
 
