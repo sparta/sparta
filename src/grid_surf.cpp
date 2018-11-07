@@ -64,7 +64,7 @@ int *Grid::csubs_request(int n)
 /* ----------------------------------------------------------------------
    map surf elements into owned grid cells
    if subflag = 1, create new owned split and sub cells as needed
-     called from ReadSurf, RemoveSurf
+     called from ReadSurf, RemoveSurf, MoveSurf
    if subflag = 0, split/sub cells already exist
      called from ReadRestart
    in cells: set nsurf, csurfs, nsplit, isplit
@@ -147,7 +147,7 @@ void Grid::surf2grid(int subflag, int outflag)
 
     if (nsplitone == 1) {
       cinfo[icell].volume = vols[0];
-
+    
     } else if (subflag) {
       cells[icell].nsplit = nsplitone;
       nunsplitlocal--;

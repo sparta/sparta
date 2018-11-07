@@ -130,6 +130,9 @@ void MoveSurf::command(int narg, char **arg)
   if (dim == 2) surf->check_point_near_surf_2d();
   else surf->check_point_near_surf_3d();
 
+  if (dim == 2) surf->check_watertight_2d(0);
+  else surf->check_watertight_3d(0);
+
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
@@ -259,6 +262,8 @@ void MoveSurf::process_args(int narg, char **arg)
 
 void MoveSurf::move_lines(double fraction, Surf::Line *origlines)
 {
+  if (connectflag && groupbit != 1) connect_2d_pre();
+
   if (action == READFILE) {
     readfile();
     update_points(fraction);
@@ -266,7 +271,7 @@ void MoveSurf::move_lines(double fraction, Surf::Line *origlines)
   else if (action == TRANSLATE) translate_2d(fraction,origlines);
   else if (action == ROTATE) rotate_2d(fraction,origlines);
   
-  if (connectflag && groupbit != 1) connect_2d();
+  if (connectflag && groupbit != 1) connect_2d_post();
 
   surf->compute_line_normal(0);
 
@@ -275,8 +280,16 @@ void MoveSurf::move_lines(double fraction, Surf::Line *origlines)
   surf->check_point_inside(0);
 }
 
+/* ----------------------------------------------------------------------
+   move points in triangles via specified action
+   each method sets pselect = 1 for moved points
+   fraction = portion of full distance points should move
+------------------------------------------------------------------------- */
+
 void MoveSurf::move_tris(double fraction, Surf::Tri *origtris)
 {
+  if (connectflag && groupbit != 1) connect_3d_pre();
+
   if (action == READFILE) {
     readfile();
     update_points(fraction);
@@ -284,7 +297,7 @@ void MoveSurf::move_tris(double fraction, Surf::Tri *origtris)
   else if (action == TRANSLATE) translate_3d(fraction,origtris);
   else if (action == ROTATE) rotate_3d(fraction,origtris);
 
-  if (connectflag && groupbit != 1) connect_3d();
+  if (connectflag && groupbit != 1) connect_3d_post();
 
   surf->compute_tri_normal(0);
 
@@ -637,22 +650,22 @@ void MoveSurf::rotate_3d(double fraction, Surf::Tri *origtris)
 }
 
 /* ----------------------------------------------------------------------
-   move points in lines connected to group line points that were moved
+   add points in moved lines to hash
 ------------------------------------------------------------------------- */
 
-void MoveSurf::connect_2d()
+void MoveSurf::connect_2d_pre()
 {
-  // hash end points of lines
+  // hash for end points of moved lines
   // key = end point
   // value = global index (0 to 2*Nline-1) of the point
   // NOTE: could prealloc hash to correct size here
 
 #ifdef SPARTA_MAP
-  std::map<Point3d,int> hash;
+  hash = new std::map<Point3d,int>();
 #elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<Point3d,int,Hasher3d> hash;
+  hash = new std::unordered_map<Point3d,int,Hasher3d>();
 #else
-  std::tr1::unordered_map<Point3d,int,Hasher3d> hash;
+  hash = new std::tr1::unordered_map<Point3d,int,Hasher3d>();
 #endif
 
   // add moved points to hash
@@ -668,16 +681,28 @@ void MoveSurf::connect_2d()
     p1 = lines[i].p1;
     p2 = lines[i].p2;
     key.pt[0] = p1[0]; key.pt[1] = p1[1]; key.pt[2] = 0.0;
-    if (hash.find(key) == hash.end()) hash[key] = 2*i+0;
+    if (hash->find(key) == hash->end()) (*hash)[key] = 2*i+0;
     key.pt[0] = p2[0]; key.pt[1] = p2[1]; key.pt[2] = 0.0;
-    if (hash.find(key) == hash.end()) hash[key] = 2*i+1;
+    if (hash->find(key) == hash->end()) (*hash)[key] = 2*i+1;
   }
+}
 
+/* ----------------------------------------------------------------------
+   move points in lines connected to line points that were moved
+------------------------------------------------------------------------- */
+
+void MoveSurf::connect_2d_post()
+{
   // check if non-moved points are in hash
   // if so, set their coords to matching point
+  // set pselect for newly moved points so remove_particles() will work
 
   int m,value,j,jwhich;
   double *p[2],*q;
+  Point3d key;
+
+  Surf::Line *lines = surf->lines;
+  int nline = surf->nline;
 
   for (int i = 0; i < nline; i++) {
     if (lines[i].mask & groupbit) continue;
@@ -686,36 +711,42 @@ void MoveSurf::connect_2d()
 
     for (m = 0; m < 2; m++) {
       key.pt[0] = p[m][0]; key.pt[1] = p[m][1]; key.pt[2] = 0.0;
-      if (hash.find(key) != hash.end()) {
-        value = hash[key];
+      if (hash->find(key) != hash->end()) {
+        value = (*hash)[key];
         j = value/2;
         jwhich = value % 2;
         if (jwhich == 0) q = lines[j].p1;
         else q = lines[j].p2;
         p[m][0] = q[0];
         p[m][1] = q[1];
+        if (m == 0) pselect[2*i] = 1;
+        else pselect[2*i+1] = 1;
       }
     }
   }
+
+  // free the hash
+
+  delete hash;
 }
 
 /* ----------------------------------------------------------------------
-   move points in tris connected to group tri points that were moved
+   add points in moved triangles to hash
 ------------------------------------------------------------------------- */
 
-void MoveSurf::connect_3d()
+void MoveSurf::connect_3d_pre()
 {
-  // hash corner points of triangles
+  // hash for corner points of moved triangles
   // key = corner point
   // value = global index (0 to 3*Ntri-1) of the point
   // NOTE: could prealloc hash to correct size here
 
 #ifdef SPARTA_MAP
-  std::map<Point3d,int> hash;
+  hash = new std::map<Point3d,int>();
 #elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<Point3d,int,Hasher3d> hash;
+  hash = new std::unordered_map<Point3d,int,Hasher3d>();
 #else
-  std::tr1::unordered_map<Point3d,int,Hasher3d> hash;
+  hash = new std::tr1::unordered_map<Point3d,int,Hasher3d>();
 #endif
 
   // add moved points to hash
@@ -732,18 +763,30 @@ void MoveSurf::connect_3d()
     p2 = tris[i].p2;
     p3 = tris[i].p3;
     key.pt[0] = p1[0]; key.pt[1] = p1[1]; key.pt[2] = p1[2];
-    if (hash.find(key) == hash.end()) hash[key] = 3*i+0;
+    if (hash->find(key) == hash->end()) (*hash)[key] = 3*i+0;
     key.pt[0] = p2[0]; key.pt[1] = p2[1]; key.pt[2] = p2[2];
-    if (hash.find(key) == hash.end()) hash[key] = 3*i+1;
+    if (hash->find(key) == hash->end()) (*hash)[key] = 3*i+1;
     key.pt[0] = p3[0]; key.pt[1] = p3[1]; key.pt[2] = p3[2];
-    if (hash.find(key) == hash.end()) hash[key] = 3*i+2;
+    if (hash->find(key) == hash->end()) (*hash)[key] = 3*i+2;
   }
+}
 
+/* ----------------------------------------------------------------------
+   move points in tris connected to tri points that were moved
+------------------------------------------------------------------------- */
+
+void MoveSurf::connect_3d_post()
+{
   // check if non-moved points are in hash
   // if so, set their coords to matching point
+  // set pselect for newly moved points so remove_particles() will work
 
   int m,value,j,jwhich;
   double *p[3],*q;
+  Point3d key;
+
+  Surf::Tri *tris = surf->tris;
+  int ntri = surf->ntri;
 
   for (int i = 0; i < ntri; i++) {
     if (tris[i].mask & groupbit) continue;
@@ -753,19 +796,26 @@ void MoveSurf::connect_3d()
 
     for (m = 0; m < 3; m++) {
       key.pt[0] = p[m][0]; key.pt[1] = p[m][1]; key.pt[2] = p[m][2];
-      if (hash.find(key) != hash.end()) {
-        value = hash[key];
+      if (hash->find(key) != hash->end()) {
+        value = (*hash)[key];
         j = value/3;
         jwhich = value % 3;
         if (jwhich == 0) q = tris[j].p1;
-        else if (jwhich == 2) q = tris[j].p2;
+        else if (jwhich == 1) q = tris[j].p2;
         else q = tris[j].p3;
         p[m][0] = q[0];
         p[m][1] = q[1];
         p[m][2] = q[2];
+        if (m == 0) pselect[3*i] = 1;
+        else if (m == 1) pselect[3*i+1] = 1;
+        else pselect[3*i+2] = 1;
       }
     }
   }  
+
+  // free the hash
+
+  delete hash;
 }
 
 /* ----------------------------------------------------------------------
@@ -778,6 +828,9 @@ void MoveSurf::connect_3d()
 
 bigint MoveSurf::remove_particles()
 {
+  int isurf,nsurf;
+  int *csurfs;
+
   dim = domain->dimension;
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -785,6 +838,10 @@ bigint MoveSurf::remove_particles()
   int delflag = 0;
 
   for (int icell = 0; icell < nglocal; icell++) {
+
+    // cell is inside surfs
+    // remove particles in case it wasn't before
+
     if (cinfo[icell].type == INSIDE) {
       if (cinfo[icell].count) delflag = 1;
       particle->remove_all_from_cell(cinfo[icell].first);
@@ -792,22 +849,31 @@ bigint MoveSurf::remove_particles()
       cinfo[icell].first = -1;
       continue;
     }
+
+    // cell has surfs or is split
+    // if m < nsurf, loop over csurfs did not finish
+    // which means cell contains a moved surf, so delete all its particles
+
     if (cells[icell].nsurf && cells[icell].nsplit >= 1) {
-      int nsurf = cells[icell].nsurf;
-      int *csurfs = cells[icell].csurfs;
+      nsurf = cells[icell].nsurf;
+      csurfs = cells[icell].csurfs;
+
       int m;
       if (dim == 2) {
 	for (m = 0; m < nsurf; m++) {
-	  if (pselect[2*m]) break;
-	  if (pselect[2*m+1]) break;
+          isurf = csurfs[m];
+	  if (pselect[2*isurf]) break;
+	  if (pselect[2*isurf+1]) break;
 	}
       } else {
 	for (m = 0; m < nsurf; m++) {
-	  if (pselect[3*m]) break;
-	  if (pselect[3*m+1]) break;
-	  if (pselect[3*m+2]) break;
+          isurf = csurfs[m];
+	  if (pselect[3*isurf]) break;
+	  if (pselect[3*isurf+1]) break;
+	  if (pselect[3*isurf+2]) break;
 	}
       }
+
       if (m < nsurf) {
 	if (cinfo[icell].count) delflag = 1;
 	particle->remove_all_from_cell(cinfo[icell].first);
@@ -815,6 +881,7 @@ bigint MoveSurf::remove_particles()
 	cinfo[icell].first = -1;
       }
     }
+
     if (cells[icell].nsplit > 1)
       grid->assign_split_cell_particles(icell);
   }

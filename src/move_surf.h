@@ -26,6 +26,14 @@ CommandStyle(move_surf,MoveSurf)
 #include "surf.h"
 #include "hash.h"
 
+#ifdef SPARTA_MAP
+#include <map>
+#elif SPARTA_UNORDERED_MAP
+#include <unordered_map>
+#else
+#include <tr1/unordered_map>
+#endif
+
 namespace SPARTA_NS {
 
 class MoveSurf : protected Pointers {
@@ -67,6 +75,16 @@ class MoveSurf : protected Pointers {
   };
 #endif
 
+  // hash for surface element points
+
+#ifdef SPARTA_MAP
+  std::map<Point3d,int> *hash;
+#elif SPARTA_UNORDERED_MAP
+  std::unordered_map<Point3d,int,Hasher3d> *hash;
+#else
+  std::tr1::unordered_map<Point3d,int,Hasher3d> *hash;
+#endif
+
   MoveSurf(class SPARTA *);
   ~MoveSurf();
   void command(int, char **);
@@ -95,8 +113,10 @@ class MoveSurf : protected Pointers {
   void translate_3d(double, Surf::Tri *);
   void rotate_2d(double, Surf::Line *);
   void rotate_3d(double, Surf::Tri *);
-  void connect_2d();
-  void connect_3d();
+  void connect_2d_pre();
+  void connect_2d_post();
+  void connect_3d_pre();
+  void connect_3d_post();
 };
 
 }
