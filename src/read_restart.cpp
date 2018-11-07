@@ -142,8 +142,8 @@ void ReadRestart::command(int narg, char **arg)
   surf->exist = surf_params();
 
   if (surf->exist) {
-    if (domain->dimension == 2) surf->compute_line_normal(0,surf->nline);
-    if (domain->dimension == 3) surf->compute_tri_normal(0,surf->ntri);
+    if (domain->dimension == 2) surf->compute_line_normal(0);
+    if (domain->dimension == 3) surf->compute_tri_normal(0);
   }
 
   // read file layout info
