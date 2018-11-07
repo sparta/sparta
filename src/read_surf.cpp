@@ -39,7 +39,6 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 #define MAXLINE 256
 #define CHUNK 1024
 #define EPSILON_NORM 1.0e-12
-#define EPSILON_GRID 1.0e-3
 #define BIG 1.0e20
 #define DELTA 128           // must be 2 or greater 
 
@@ -473,8 +472,8 @@ void ReadSurf::command(int narg, char **arg)
 
   grid->surf2grid(1);
 
-  if (dim == 2) check_point_near_surf_2d();
-  else check_point_near_surf_3d();
+  if (dim == 2) surf->check_point_near_surf_2d();
+  else surf->check_point_near_surf_3d();
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();
@@ -1542,171 +1541,6 @@ void ReadSurf::check_neighbor_norm_3d()
             "nearly infinitely thin triangle pairs",nwarn);
     if (me == 0) error->warning(FLERR,str);
   }
-}
-
-/* ----------------------------------------------------------------------
-   check nearness of all points to other lines in same cell
-   error if point is on line, including duplicate point
-   warn if closer than EPSILON_GRID = fraction of grid cell size
-   NOTE: this can miss a close point/line pair in 2 different grid cells
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_point_near_surf_2d()
-{
-  int i,j,n;
-  int *csurfs;
-  double side,epssq;
-  double *p1,*p2,*lo,*hi;
-  Surf::Line *line;
-
-  Surf::Line *surflines = surf->lines;
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  int nerror = 0;
-  int nwarn = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    n = cells[icell].nsurf;
-    if (n == 0) continue;
-
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-    side = MIN(hi[0]-lo[0],hi[1]-lo[1]);
-    epssq = (EPSILON_GRID*side) * (EPSILON_GRID*side);
-
-    csurfs = cells[icell].csurfs;
-    for (i = 0; i < n; i++) {
-      line = &surflines[csurfs[i]];
-      for (j = 0; j < n; j++) {
-        if (i == j) continue;
-        p1 = surflines[csurfs[j]].p1;
-        p2 = surflines[csurfs[j]].p2;
-        point_line_compare(p1,line->p1,line->p2,epssq,nerror,nwarn);
-        point_line_compare(p2,line->p1,line->p2,epssq,nerror,nwarn);
-      }
-    }
-  }
-
-  int all;
-  MPI_Allreduce(&nerror,&all,1,MPI_INT,MPI_SUM,world);
-  if (all) {
-    char str[128];
-    sprintf(str,"Surface check failed with %d points on lines",all);
-    error->all(FLERR,str);
-  }
-
-  MPI_Allreduce(&nwarn,&all,1,MPI_INT,MPI_SUM,world);
-  if (all) {
-    char str[128];
-    sprintf(str,"Surface check found %d points nearly on lines",all);
-    if (me == 0) error->warning(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   check nearness of all points to other triangles in same cell
-   error if point is on triangle, including duplicate point
-   warn if closer than EPSILON_GRID = fraction of grid cell size
-   NOTE: this can miss a close point/triangle pair in 2 different grid cells
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_point_near_surf_3d()
-{
-  int i,j,n;
-  int *csurfs;
-  double side,epssq;
-  double *p1,*p2,*p3,*lo,*hi;
-  Surf::Tri *tri;
-
-  Surf::Tri *surftris = surf->tris;
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  int nerror = 0;
-  int nwarn = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    n = cells[icell].nsurf;
-    if (n == 0) continue;
-
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-    side = MIN(hi[0]-lo[0],hi[1]-lo[1]);
-    side = MIN(side,hi[2]-lo[2]);
-    epssq = (EPSILON_GRID*side) * (EPSILON_GRID*side);
-
-    csurfs = cells[icell].csurfs;
-    for (i = 0; i < n; i++) {
-      tri = &surftris[csurfs[i]];
-      for (j = 0; j < n; j++) {
-        if (i == j) continue;
-        p1 = surftris[csurfs[j]].p1;
-        p2 = surftris[csurfs[j]].p2;
-        p3 = surftris[csurfs[j]].p3;
-        point_tri_compare(p1,tri->p1,tri->p2,tri->p3,tri->norm,
-                          epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
-        point_tri_compare(p2,tri->p1,tri->p2,tri->p3,tri->norm,
-                          epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
-        point_tri_compare(p3,tri->p1,tri->p2,tri->p3,tri->norm,
-                          epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
-      }
-    }
-  }
-
-  int all;
-  MPI_Allreduce(&nerror,&all,1,MPI_INT,MPI_SUM,world);
-  if (all) {
-    char str[128];
-    sprintf(str,"Surface check failed with %d points on triangles",all);
-    error->all(FLERR,str);
-  }
-
-  MPI_Allreduce(&nwarn,&all,1,MPI_INT,MPI_SUM,world);
-  if (all) {
-    char str[128];
-    sprintf(str,"Surface check found %d points nearly on triangles",all);
-    if (me == 0) error->warning(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   compute distance bewteen a point and line
-   just return if point is an endpoint of line
-   increment nerror if point on line
-   increment nwarn if point is within epssq distance of line
-------------------------------------------------------------------------- */
-
-void ReadSurf::point_line_compare(double *pt, double *p1, double *p2,
-                                  double epssq, int &nerror, int &nwarn)
-{
-  if (pt[0] == p1[0] && pt[1] == p1[1]) return;
-  if (pt[0] == p2[0] && pt[1] == p2[1]) return;
-  double rsq = Geometry::distsq_point_line(pt,p1,p2);
-  if (rsq == 0.0) nerror++;
-  else if (rsq < epssq) nwarn++;
-}
-
-/* ----------------------------------------------------------------------
-   compute distance bewteen a point and triangle
-   just return if point is an endpoint of triangle
-   increment nerror if point on triangle
-   increment nwarn if point is within epssq distance of triangle
-------------------------------------------------------------------------- */
-
-void ReadSurf::point_tri_compare(double *pt, double *p1, double *p2, double *p3,
-                                 double *norm,
-                                 double epssq, int &nerror, int &nwarn,
-                                 int, int, int) 
-{
-  if (pt[0] == p1[0] && pt[1] == p1[1] && pt[2] == p1[2]) return;
-  if (pt[0] == p2[0] && pt[1] == p2[1] && pt[2] == p2[2]) return;
-  if (pt[0] == p3[0] && pt[1] == p3[1] && pt[2] == p3[2]) return;
-  double rsq = Geometry::distsq_point_tri(pt,p1,p2,p3,norm);
-  if (rsq == 0.0) nerror++;
-  else if (rsq < epssq) nwarn++;
 }
 
 /* ----------------------------------------------------------------------

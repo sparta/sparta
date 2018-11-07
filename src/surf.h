@@ -155,6 +155,8 @@ class Surf : protected Pointers {
   void check_watertight_2d(int);
   void check_watertight_3d(int);
   void check_point_inside(int);
+  void check_point_near_surf_2d();
+  void check_point_near_surf_3d();
 
   void add_collide(int, char **);
   int find_collide(const char *);
@@ -175,6 +177,10 @@ class Surf : protected Pointers {
  private:
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
+
+  void point_line_compare(double *, double *, double *, double, int &, int &);
+  void point_tri_compare(double *, double *, double *, double *, double *,
+                         double, int &, int &, int, int, int);
 
   void collate_vector_allreduce(int, int *, double *, int, double *);
   void collate_vector_irregular(int, int *, double *, int, double *);

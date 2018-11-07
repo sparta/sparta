@@ -127,10 +127,8 @@ void MoveSurf::command(int narg, char **arg)
   grid->clear_surf();
   grid->surf2grid(1);
 
-  // NOTE: is this needed - if so, move method from ReadSurf
-  //       to grid to avoid code duplication
-  //if (dim == 2) check_point_near_surf_2d();
-  //else check_point_near_surf_3d();
+  if (dim == 2) surf->check_point_near_surf_2d();
+  else surf->check_point_near_surf_3d();
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
@@ -200,7 +198,7 @@ void MoveSurf::process_args(int narg, char **arg)
 {
   if (narg < 1) error->all(FLERR,"Illegal move surf command");
 
-  int iarg;
+  int iarg = 0;
   if (strcmp(arg[0],"file") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal move surf command");
     action = READFILE;
@@ -239,9 +237,18 @@ void MoveSurf::process_args(int narg, char **arg)
     iarg = 8;
   } else error->all(FLERR,"Illegal move surf command");
 
-  // no optional args
+  // optional args
 
-  if (iarg < narg) error->all(FLERR,"Illegal move surf command");
+  connectflag = 0;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"connect") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal move surf command");
+      if (strcmp(arg[iarg+1],"yes") == 0) connectflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) connectflag = 0;
+      iarg += 2;
+    } else error->all(FLERR,"Illegal move surf command");
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -259,6 +266,8 @@ void MoveSurf::move_lines(double fraction, Surf::Line *origlines)
   else if (action == TRANSLATE) translate_2d(fraction,origlines);
   else if (action == ROTATE) rotate_2d(fraction,origlines);
   
+  if (connectflag && groupbit != 1) connect_2d();
+
   surf->compute_line_normal(0);
 
   // check that all points are still inside simulation box
@@ -274,6 +283,8 @@ void MoveSurf::move_tris(double fraction, Surf::Tri *origtris)
   } 
   else if (action == TRANSLATE) translate_3d(fraction,origtris);
   else if (action == ROTATE) rotate_3d(fraction,origtris);
+
+  if (connectflag && groupbit != 1) connect_3d();
 
   surf->compute_tri_normal(0);
 
@@ -623,6 +634,138 @@ void MoveSurf::rotate_3d(double fraction, Surf::Tri *origtris)
     p3[2] = dnew[2] + origin[2];
     pselect[3*i+2] = 1;
   }
+}
+
+/* ----------------------------------------------------------------------
+   move points in lines connected to group line points that were moved
+------------------------------------------------------------------------- */
+
+void MoveSurf::connect_2d()
+{
+  // hash end points of lines
+  // key = end point
+  // value = global index (0 to 2*Nline-1) of the point
+  // NOTE: could prealloc hash to correct size here
+
+#ifdef SPARTA_MAP
+  std::map<Point3d,int> hash;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<Point3d,int,Hasher3d> hash;
+#else
+  std::tr1::unordered_map<Point3d,int,Hasher3d> hash;
+#endif
+
+  // add moved points to hash
+
+  double *p1,*p2;
+  Point3d key;
+
+  Surf::Line *lines = surf->lines;
+  int nline = surf->nline;
+
+  for (int i = 0; i < nline; i++) {
+    if (!(lines[i].mask & groupbit)) continue;
+    p1 = lines[i].p1;
+    p2 = lines[i].p2;
+    key.pt[0] = p1[0]; key.pt[1] = p1[1]; key.pt[2] = 0.0;
+    if (hash.find(key) == hash.end()) hash[key] = 2*i+0;
+    key.pt[0] = p2[0]; key.pt[1] = p2[1]; key.pt[2] = 0.0;
+    if (hash.find(key) == hash.end()) hash[key] = 2*i+1;
+  }
+
+  // check if non-moved points are in hash
+  // if so, set their coords to matching point
+
+  int m,value,j,jwhich;
+  double *p[2],*q;
+
+  for (int i = 0; i < nline; i++) {
+    if (lines[i].mask & groupbit) continue;
+    p[0] = lines[i].p1;
+    p[1] = lines[i].p2;
+
+    for (m = 0; m < 2; m++) {
+      key.pt[0] = p[m][0]; key.pt[1] = p[m][1]; key.pt[2] = 0.0;
+      if (hash.find(key) != hash.end()) {
+        value = hash[key];
+        j = value/2;
+        jwhich = value % 2;
+        if (jwhich == 0) q = lines[j].p1;
+        else q = lines[j].p2;
+        p[m][0] = q[0];
+        p[m][1] = q[1];
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   move points in tris connected to group tri points that were moved
+------------------------------------------------------------------------- */
+
+void MoveSurf::connect_3d()
+{
+  // hash corner points of triangles
+  // key = corner point
+  // value = global index (0 to 3*Ntri-1) of the point
+  // NOTE: could prealloc hash to correct size here
+
+#ifdef SPARTA_MAP
+  std::map<Point3d,int> hash;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<Point3d,int,Hasher3d> hash;
+#else
+  std::tr1::unordered_map<Point3d,int,Hasher3d> hash;
+#endif
+
+  // add moved points to hash
+
+  double *p1,*p2,*p3;
+  Point3d key;
+
+  Surf::Tri *tris = surf->tris;
+  int ntri = surf->ntri;
+
+  for (int i = 0; i < ntri; i++) {
+    if (!(tris[i].mask & groupbit)) continue;
+    p1 = tris[i].p1;
+    p2 = tris[i].p2;
+    p3 = tris[i].p3;
+    key.pt[0] = p1[0]; key.pt[1] = p1[1]; key.pt[2] = p1[2];
+    if (hash.find(key) == hash.end()) hash[key] = 3*i+0;
+    key.pt[0] = p2[0]; key.pt[1] = p2[1]; key.pt[2] = p2[2];
+    if (hash.find(key) == hash.end()) hash[key] = 3*i+1;
+    key.pt[0] = p3[0]; key.pt[1] = p3[1]; key.pt[2] = p3[2];
+    if (hash.find(key) == hash.end()) hash[key] = 3*i+2;
+  }
+
+  // check if non-moved points are in hash
+  // if so, set their coords to matching point
+
+  int m,value,j,jwhich;
+  double *p[3],*q;
+
+  for (int i = 0; i < ntri; i++) {
+    if (tris[i].mask & groupbit) continue;
+    p[0] = tris[i].p1;
+    p[1] = tris[i].p2;
+    p[2] = tris[i].p3;
+
+    for (m = 0; m < 3; m++) {
+      key.pt[0] = p[m][0]; key.pt[1] = p[m][1]; key.pt[2] = p[m][2];
+      if (hash.find(key) != hash.end()) {
+        value = hash[key];
+        j = value/3;
+        jwhich = value % 3;
+        if (jwhich == 0) q = tris[j].p1;
+        else if (jwhich == 2) q = tris[j].p2;
+        else q = tris[j].p3;
+        p[m][0] = q[0];
+        p[m][1] = q[1];
+        p[m][2] = q[2];
+      }
+    }
+  }  
 }
 
 /* ----------------------------------------------------------------------

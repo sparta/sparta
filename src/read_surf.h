@@ -82,12 +82,6 @@ class ReadSurf : protected Pointers {
   void push_points_to_boundary(double);
   void check_neighbor_norm_2d();
   void check_neighbor_norm_3d();
-  void check_point_near_surf_2d();
-  void check_point_near_surf_3d();
-
-  void point_line_compare(double *, double *, double *, double, int &, int &);
-  void point_tri_compare(double *, double *, double *, double *, double *,
-                         double, int &, int &, int, int, int);
 
   int find_edge(int, int);
   void add_edge(int, int, int);
