@@ -1424,7 +1424,7 @@ void Surf::write_restart(FILE *fp)
   if (domain->dimension == 2) {
     fwrite(&nline,sizeof(int),1,fp);
     for (int i = 0; i < nline; i++) {
-      fwrite(&lines[i].id,sizeof(int),1,fp);    // NOTE POINT: should be bigint?
+      fwrite(&lines[i].id,sizeof(surfint),1,fp);
       fwrite(&lines[i].type,sizeof(int),1,fp);
       fwrite(&lines[i].mask,sizeof(int),1,fp);
       fwrite(&lines[i].p1,sizeof(double),3,fp);
@@ -1434,7 +1434,7 @@ void Surf::write_restart(FILE *fp)
   if (domain->dimension == 3) {
     fwrite(&ntri,sizeof(int),1,fp);
     for (int i = 0; i < ntri; i++) {
-      fwrite(&tris[i].id,sizeof(int),1,fp);    // NOTE POINT: should be bigint?
+      fwrite(&tris[i].id,sizeof(surfint),1,fp);
       fwrite(&tris[i].type,sizeof(int),1,fp);
       fwrite(&tris[i].mask,sizeof(int),1,fp);
       fwrite(&tris[i].p1,sizeof(double),3,fp);
@@ -1476,7 +1476,7 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < nline; i++) {
-        fread(&lines[i].id,sizeof(int),1,fp);
+        fread(&lines[i].id,sizeof(surfint),1,fp);
         fread(&lines[i].type,sizeof(int),1,fp);
         fread(&lines[i].mask,sizeof(int),1,fp);
         lines[i].isc = lines[i].isr = -1;
@@ -1495,7 +1495,7 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < ntri; i++) {
-        fread(&tris[i].id,sizeof(int),1,fp);
+        fread(&tris[i].id,sizeof(surfint),1,fp);
         fread(&tris[i].type,sizeof(int),1,fp);
         fread(&tris[i].mask,sizeof(int),1,fp);
         tris[i].isc = tris[i].isr = -1;
