@@ -297,43 +297,39 @@ void Surf::setup_surf()
 }
 
 /* ----------------------------------------------------------------------
-   compute unit outward normal vectors of N lines starting at Nstart
+   compute unit outward normal vectors of all lines starting at Nold
    outward normal = +z axis x (p2-p1)
 ------------------------------------------------------------------------- */
 
-void Surf::compute_line_normal(int nstart, int n)
+void Surf::compute_line_normal(int nold)
 {
   double z[3],delta[3];
 
   z[0] = 0.0; z[1] = 0.0; z[2] = 1.0;
 
-  int m = nstart;
-  for (int i = 0; i < n; i++) {
-    MathExtra::sub3(lines[m].p2,lines[m].p1,delta);
-    MathExtra::cross3(z,delta,lines[m].norm);
-    MathExtra::norm3(lines[m].norm);
-    lines[m].norm[2] = 0.0;
-    m++;
+  for (int i = nold; i < nline; i++) {
+    MathExtra::sub3(lines[i].p2,lines[i].p1,delta);
+    MathExtra::cross3(z,delta,lines[i].norm);
+    MathExtra::norm3(lines[i].norm);
+    lines[i].norm[2] = 0.0;
   }
 }
 
 /* ----------------------------------------------------------------------
-   compute unit outward normal vectors of N triangles starting at Nstart
+   compute unit outward normal vectors of all lines starting at Nold
    outward normal = (p2-p1) x (p3-p1)
 ------------------------------------------------------------------------- */
 
-void Surf::compute_tri_normal(int nstart, int n)
+void Surf::compute_tri_normal(int nold)
 {
   int p1,p2,p3;
   double delta12[3],delta13[3];
 
-  int m = nstart;
-  for (int i = 0; i < n; i++) {
-    MathExtra::sub3(tris[m].p2,tris[m].p1,delta12);
-    MathExtra::sub3(tris[m].p3,tris[m].p1,delta13);
-    MathExtra::cross3(delta12,delta13,tris[m].norm);
-    MathExtra::norm3(tris[m].norm);
-    m++;
+  for (int i = nold; i < ntri; i++) {
+    MathExtra::sub3(tris[i].p2,tris[i].p1,delta12);
+    MathExtra::sub3(tris[i].p3,tris[i].p1,delta13);
+    MathExtra::cross3(delta12,delta13,tris[i].norm);
+    MathExtra::norm3(tris[i].norm);
   }
 }
 

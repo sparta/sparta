@@ -258,7 +258,7 @@ void MoveSurf::move_lines(double fraction, Surf::Line *origlines)
   else if (action == TRANSLATE) translate_2d(fraction,origlines);
   else if (action == ROTATE) rotate_2d(fraction,origlines);
   
-  surf->compute_line_normal(0,surf->nline);
+  surf->compute_line_normal(0);
 
   // check that all points are still inside simulation box
 
@@ -275,7 +275,7 @@ void MoveSurf::move_tris(double fraction, Surf::Tri *origtris)
   else if (action == TRANSLATE) translate_3d(fraction,origtris);
   else if (action == ROTATE) rotate_3d(fraction,origtris);
 
-  surf->compute_tri_normal(0,surf->ntri);
+  surf->compute_tri_normal(0);
 
   // check that all points are still inside simulation box
 

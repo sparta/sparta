@@ -142,8 +142,8 @@ class Surf : protected Pointers {
   int nelement();
   void setup_surf();
 
-  void compute_line_normal(int, int);
-  void compute_tri_normal(int, int);
+  void compute_line_normal(int);
+  void compute_tri_normal(int);
   void quad_corner_point(int, double *, double *, double *);
   void hex_corner_point(int, double *, double *, double *);
   double line_size(int);

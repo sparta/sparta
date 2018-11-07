@@ -406,8 +406,8 @@ void ReadSurf::command(int narg, char **arg)
 
   // compute normals of new lines or triangles
 
-  if (dim == 2) surf->compute_line_normal(nline_old,nline_new);
-  else surf->compute_tri_normal(ntri_old,ntri_new);
+  if (dim == 2) surf->compute_line_normal(nline_old);
+  else surf->compute_tri_normal(ntri_old);
 
   // error check on new lines,tris
   // all points must be inside or on surface of simulation box
@@ -926,22 +926,18 @@ void ReadSurf::invert()
   int tmp;
 
   if (dim == 2) {
-    int m = nline_old;
-    for (int i = 0; i < nline_new; i++) {
-      tmp = lines[m].p1;
-      lines[m].p1 = lines[m].p2;
-      lines[m].p2 = tmp;
-      m++;
+    for (int i = 0; i < nline; i++) {
+      tmp = lines[i].p1;
+      lines[i].p1 = lines[i].p2;
+      lines[i].p2 = tmp;
     }
   }
 
   if (dim == 3) {
-    int m = ntri_old;
-    for (int i = 0; i < ntri_new; i++) {
-      tmp = tris[m].p2;
-      tris[m].p2 = tris[m].p3;
-      tris[m].p3 = tmp;
-      m++;
+    for (int i = 0; i < ntri; i++) {
+      tmp = tris[i].p2;
+      tris[i].p2 = tris[i].p3;
+      tris[i].p3 = tmp;
     }
   }
 }
