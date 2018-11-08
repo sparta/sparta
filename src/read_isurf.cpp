@@ -22,6 +22,7 @@
 #include "grid.h"
 #include "comm.h"
 #include "input.h"
+#include "my_page.h"
 #include "memory.h"
 #include "error.h"
 
@@ -141,6 +142,12 @@ void ReadISurf::command(int narg, char **arg)
 
   delete hash;
 
+  // clear out old surfs
+
+  grid->unset_neighbors();
+  grid->remove_ghosts();
+  grid->clear_surf();
+
   // create surfs in each grid cell based on corner point values
   // if specified, apply group keyword to reset per-surf mask info
 
@@ -216,37 +223,21 @@ void ReadISurf::command(int narg, char **arg)
   if (dim == 2) surf->compute_line_normal(0,surf->nline);
   else surf->compute_tri_normal(0,surf->ntri);
 
-  // -----------------------
-  // map surfs to grid cells
-  // -----------------------
-
-  // make list of surf elements I own
-  // assign surfs to grid cells
-  // error checks to flag bad surfs
-
-  surf->setup_surf();
-
-  grid->unset_neighbors();
-  grid->remove_ghosts();
-  grid->clear_surf();
-
   // error checks that can be done before surfs are mapped to grid cells
-
-  // NOTE: how to do this test with duplicate points?
 
   //if (dim == 2) {
   //  surf->check_watertight_2d(0,surf->nline);
   //} else {
   //  surf->check_watertight_3d(0,surf->ntri);
-  // }
+  //}
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
 
-  // map surfs to grid cells then error check
-  // check done on per-grid-cell basis, too expensive to do globally
+  // create split cells if needed
 
-  grid->surf2grid(1);    // NOTE: this call is not needed ??
+  surf->setup_surf();
+  grid->surf2grid_implicit();
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();
@@ -553,14 +544,16 @@ void ReadISurf::marching_squares(int igroup)
   int i,ipt;
   int v00,v01,v10,v11,bit0,bit1,bit2,bit3;
   int nsurf,which,splitflag;
-  double *lo,*hi;
   double ave;
+  double *lo,*hi;
+  int *ptr;
 
   double pt[4][3];
   pt[0][2] = pt[1][2] = pt[2][2] = pt[3][2] = 0.0;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
+  MyPage<int> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
   int groupbit = grid->bitmask[igroup];
 
@@ -747,6 +740,8 @@ void ReadISurf::marching_squares(int igroup)
     // populate Grid and Surf data structs
     // points will be duplicated, not unique
 
+    ptr = csurfs->get(nsurf);
+
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
       surf->add_point(&pt[ipt][0]);
@@ -755,12 +750,14 @@ void ReadISurf::marching_squares(int igroup)
       int npoint = surf->npoint;
       if (svalues) surf->add_line(svalues[icell],npoint-2,npoint-1);
       else surf->add_line(1,npoint-2,npoint-1);
+      ptr[i] = surf->nline - 1;
     }
 
     cells[icell].nsurf = nsurf;
-    // how to create list of local surfs via csurfs
-    // cells[icell].csurfs = csurfs;
-    // what to do with split cell (know it now)
+    if (nsurf) {
+      cells[icell].csurfs = ptr;
+      cinfo[icell].type = OVERLAP;
+    }
   }
 }
 
