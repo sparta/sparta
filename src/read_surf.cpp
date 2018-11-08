@@ -368,7 +368,7 @@ void ReadSurf::command(int narg, char **arg)
 
     int m = nline_old;
     for (int i = 0; i < nline; i++) {
-      newlines[m].id = m+1;
+      newlines[m].id = m+1;  // check for overflow when allow distributed surfs
       newlines[m].type = lines[i].type;
       newlines[m].mask = lines[i].mask;
       newlines[m].isc = newlines[m].isr = -1;
@@ -389,7 +389,7 @@ void ReadSurf::command(int narg, char **arg)
 
     int m = ntri_old;
     for (int i = 0; i < ntri; i++) {
-      newtris[m].id = m+1;
+      newtris[m].id = m+1;  // check for overflow when allow distributed surfs
       newtris[m].type = tris[i].type;
       newtris[m].mask = tris[i].mask;
       newtris[m].isc = newtris[m].isr = -1;

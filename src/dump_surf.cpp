@@ -119,6 +119,7 @@ DumpSurf::DumpSurf(SPARTA *sparta, int narg, char **arg) :
   for (int i = 0; i < nfield; i++) {
     if (vtype[i] == INT) strcat(format_default,"%d ");
     else if (vtype[i] == DOUBLE) strcat(format_default,"%g ");
+    else if (vtype[i] == BIGINT) strcat(format_default,BIGINT_FORMAT " ");
     vformat[i] = NULL;
   }
 
@@ -396,7 +397,8 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
     if (strcmp(arg[iarg],"id") == 0) {
       pack_choice[i] = &DumpSurf::pack_id;
-      vtype[i] = INT;
+      if (sizeof(surfint) == sizeof(smallint)) vtype[i] = INT;
+      else vtype[i] = BIGINT;
     } else if (strcmp(arg[iarg],"type") == 0) {
       pack_choice[i] = &DumpSurf::pack_type;
       vtype[i] = INT;
@@ -688,9 +690,20 @@ void DumpSurf::pack_variable(int n)
 
 void DumpSurf::pack_id(int n)
 {
-  for (int i = 0; i < nchoose; i++) {
-    buf[n] = cglobal[i] + 1;
-    n += size_one;
+  // NOTE: surfint (bigint) won't fit in double in some cases
+
+  if (dimension == 2) {
+    Surf::Line *lines = surf->lines;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = lines[cglobal[i]].id;
+      n += size_one;
+    }
+  } else {
+    Surf::Tri *tris = surf->tris;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = tris[cglobal[i]].id;
+      n += size_one;
+    }
   }
 }
 
