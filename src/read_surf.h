@@ -23,6 +23,7 @@ CommandStyle(read_surf,ReadSurf)
 
 #include "stdio.h"
 #include "pointers.h"
+#include "hash3.h"
 #include "surf.h"
 
 namespace SPARTA_NS {
@@ -66,6 +67,17 @@ class ReadSurf : protected Pointers {
 
   int **edge;
   int nedge,maxedge;
+
+#ifdef SPARTA_MAP
+  typedef std::map<bigint,int> MyHash;
+  typedef std::map<bigint,int>::iterator MyIterator;
+#elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<bigint,int> MyHash;
+  typedef std::unordered_map<bigint,int>::iterator MyIterator;
+#else
+  typedef std::tr1::unordered_map<bigint,int> MyHash;
+  typedef std::tr1::unordered_map<bigint,int>::iterator MyIterator;
+#endif
 
   void header();
   void read_points();

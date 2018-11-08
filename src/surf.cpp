@@ -26,16 +26,9 @@
 #include "input.h"
 #include "math_extra.h"
 #include "math_const.h"
+#include "hash3.h"
 #include "memory.h"
 #include "error.h"
-
-#ifdef SPARTA_MAP
-#include <map>
-#elif defined SPARTA_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -448,11 +441,11 @@ void Surf::check_watertight_2d(int nline_old)
   std::map<OnePoint2d,int> hash;
   std::map<OnePoint2d,int>::iterator it;
 #elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<OnePoint2d,int,Hasher2d> hash;
-  std::unordered_map<OnePoint2d,int,Hasher2d>::iterator it;
+  std::unordered_map<OnePoint2d,int,OnePoint2dHash> hash;
+  std::unordered_map<OnePoint2d,int,OnePoint2dHash>::iterator it;
 #else
-  std::tr1::unordered_map<OnePoint2d,int,Hasher2d> hash;
-  std::tr1::unordered_map<OnePoint2d,int,Hasher2d>::iterator it;
+  std::tr1::unordered_map<OnePoint2d,int,OnePoint2dHash> hash;
+  std::tr1::unordered_map<OnePoint2d,int,OnePoint2dHash>::iterator it;
 #endif
 
   // insert each end point into hash
@@ -533,16 +526,8 @@ void Surf::check_watertight_3d(int ntri_old)
   // value = 1 if appears once, 2 if reverse also appears once
   // NOTE: could prealloc hash to correct size here
 
-#ifdef SPARTA_MAP
-  std::map<TwoPoint3d,int> hash;
-  std::map<TwoPoint3d,int>::iterator it;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<TwoPoint3d,int,Hasher3d> hash;
-  std::unordered_map<TwoPoint3d,int,Hasher3d>::iterator it;
-#else
-  std::tr1::unordered_map<TwoPoint3d,int,Hasher3d> hash;
-  std::tr1::unordered_map<TwoPoint3d,int,Hasher3d>::iterator it;
-#endif
+  MyHash hash;
+  MyIterator it;
 
   // insert each edge into hash
   // should appear once in each direction

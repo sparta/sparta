@@ -660,18 +660,12 @@ void MoveSurf::connect_2d_pre()
   // value = global index (0 to 2*Nline-1) of the point
   // NOTE: could prealloc hash to correct size here
 
-#ifdef SPARTA_MAP
-  hash = new std::map<Point3d,int>();
-#elif defined SPARTA_UNORDERED_MAP
-  hash = new std::unordered_map<Point3d,int,Hasher3d>();
-#else
-  hash = new std::tr1::unordered_map<Point3d,int,Hasher3d>();
-#endif
+  hash = new MyHash();
 
   // add moved points to hash
 
   double *p1,*p2;
-  Point3d key;
+  OnePoint3d key;
 
   Surf::Line *lines = surf->lines;
   int nline = surf->nline;
@@ -699,7 +693,7 @@ void MoveSurf::connect_2d_post()
 
   int m,value,j,jwhich;
   double *p[2],*q;
-  Point3d key;
+  OnePoint3d key;
 
   Surf::Line *lines = surf->lines;
   int nline = surf->nline;
@@ -741,18 +735,12 @@ void MoveSurf::connect_3d_pre()
   // value = global index (0 to 3*Ntri-1) of the point
   // NOTE: could prealloc hash to correct size here
 
-#ifdef SPARTA_MAP
-  hash = new std::map<Point3d,int>();
-#elif defined SPARTA_UNORDERED_MAP
-  hash = new std::unordered_map<Point3d,int,Hasher3d>();
-#else
-  hash = new std::tr1::unordered_map<Point3d,int,Hasher3d>();
-#endif
+  hash = new MyHash();
 
   // add moved points to hash
 
   double *p1,*p2,*p3;
-  Point3d key;
+  OnePoint3d key;
 
   Surf::Tri *tris = surf->tris;
   int ntri = surf->ntri;
@@ -783,7 +771,7 @@ void MoveSurf::connect_3d_post()
 
   int m,value,j,jwhich;
   double *p[3],*q;
-  Point3d key;
+  OnePoint3d key;
 
   Surf::Tri *tris = surf->tris;
   int ntri = surf->ntri;

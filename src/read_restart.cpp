@@ -156,14 +156,7 @@ void ReadRestart::command(int narg, char **arg)
 
   // add parent cells to Grid::hash
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+  Grid::MyHash *hash = grid->hash;
   Grid::ParentCell *pcells = grid->pcells;
   int nparent = grid->nparent;
 
@@ -881,14 +874,7 @@ void ReadRestart::create_child_cells(int skipflag)
   // for skipflag = 0, add all child cells in Grid restart to my Grid::cells
   // for skipflag = 1, only add every Pth cell in list
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+  Grid::MyHash *hash = grid->hash;
   int nlocal = grid->nlocal_restart;
   cellint *ids = grid->id_restart;
   int *nsplits = grid->nsplit_restart;
@@ -951,16 +937,9 @@ void ReadRestart::assign_particles(int skipflag)
 {
   int icell;
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
+  Grid::MyHash *hash = grid->hash;
 
   int nlocal = particle->nlocal_restart;
   char *ptr = particle->particle_restart;

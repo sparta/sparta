@@ -25,65 +25,29 @@ CommandStyle(move_surf,MoveSurf)
 #include "pointers.h"
 #include "surf.h"
 #include "hash.h"
-
-#ifdef SPARTA_MAP
-#include <map>
-#elif SPARTA_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
+#include "hash3.h"
 
 namespace SPARTA_NS {
+
 
 class MoveSurf : protected Pointers {
  public:
   int mode;                 // 0 = move_surf command, 1 = fix move/surf command
   int groupbit;             // FixMoveSurf sets surf group
 
-#ifdef SPARTA_MAP
-  struct Point3d {
-    double pt[3];
-    
-    bool operator <(const Point3d& other) const {
-      if (pt[0] < other.pt[0]) return 1;
-      else if (pt[0] > other.pt[0]) return 0;
-      if (pt[1] < other.pt[1]) return 1;
-      else if (pt[1] > other.pt[1]) return 0;
-      if (pt[2] < other.pt[2]) return 1;
-      else if (pt[2] > other.pt[2]) return 0;
-      return 0;
-    }
-  };
-
-#else
-  struct Point3d {
-    double pt[3];
-
-    bool operator ==(const Point3d &other) const { 
-      if (pt[0] != other.pt[0]) return 0;
-      if (pt[1] != other.pt[1]) return 0;
-      if (pt[2] != other.pt[2]) return 0;
-      return 1;
-    }
-  };
-
-  struct Hasher3d {
-    uint32_t operator ()(const Point3d& one) const {
-      return hashlittle(one.pt,3*sizeof(double),0);
-    }
-  };
-#endif
-
   // hash for surface element points
 
+#include "hash_options.h"
+
 #ifdef SPARTA_MAP
-  std::map<Point3d,int> *hash;
+  typedef std::map<OnePoint3d,int> MyHash;
 #elif SPARTA_UNORDERED_MAP
-  std::unordered_map<Point3d,int,Hasher3d> *hash;
+  typedef std::unordered_map<OnePoint3d,int,OnePoint3dHash> MyHash;
 #else
-  std::tr1::unordered_map<Point3d,int,Hasher3d> *hash;
+  typedef std::tr1::unordered_map<OnePoint3d,int,OnePoint3dHash> MyHash;
 #endif
+
+  MyHash *hash;
 
   MoveSurf(class SPARTA *);
   ~MoveSurf();

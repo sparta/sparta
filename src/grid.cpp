@@ -115,14 +115,7 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
   // allocate hash for cell IDs
 
-#ifdef SPARTA_MAP
-  hash = new std::map<cellint,int>();
-#elif defined SPARTA_UNORDERED_MAP
-  hash = new std::unordered_map<cellint,int>();
-#else
-  hash = new std::tr1::unordered_map<cellint,int>();
-#endif
-
+  hash = new MyHash();
   hashfilled = 0;
   copy = copymode = 0;
 }

@@ -1480,16 +1480,8 @@ void ReadSurf::check_neighbor_norm_3d()
   // key = directed edge, value = triangle it is part of
   // NOTE: could prealloc hash to correct size here
 
-#ifdef SPARTA_MAP
-  std::map<bigint,int> hash;
-  std::map<bigint,int>::iterator it;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<bigint,int> hash;
-  std::unordered_map<bigint,int>::iterator it;
-#else
-  std::tr1::unordered_map<bigint,int> hash;
-  std::tr1::unordered_map<bigint,int>::iterator it;
-#endif
+  MyHash hash;
+  MyIterator it;
 
   // insert each edge into hash with triangle as value
 

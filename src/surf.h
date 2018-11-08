@@ -18,6 +18,7 @@
 
 #include "stdio.h"
 #include "pointers.h"
+#include "hash3.h"
 #include "hash.h"
 
 namespace SPARTA_NS {
@@ -76,64 +77,7 @@ class Surf : protected Pointers {
   double pushlo,pushhi;     // lo/hi ranges to push on
   double pushvalue;         // new position to push to
 
-#ifdef SPARTA_MAP
-  struct OnePoint2d {
-    double pt[2];
-    
-    bool operator <(const OnePoint2d& other) const {
-      if (pt[0] < other.pt[0]) return 1;
-      else if (pt[0] > other.pt[0]) return 0;
-      if (pt[1] < other.pt[1]) return 1;
-      else if (pt[1] > other.pt[1]) return 0;
-      return 0;
-    }
-  };
-
-  struct TwoPoint3d {
-    double pts[6];
-    
-    bool operator <(const TwoPoint3d& other) const {
-      for (int i = 0; i < 6; i++) {
-        if (pts[i] < other.pts[i]) return 1;
-        else if (pts[i] > other.pts[i]) return 0;
-      }
-      return 0;
-    }
-  };
-
-#else
-  struct OnePoint2d {
-    double pt[2];
-
-    bool operator ==(const OnePoint2d &other) const { 
-      if (pt[0] != other.pt[0]) return 0;
-      if (pt[1] != other.pt[1]) return 0;
-      return 1;
-    }
-  };
-
-  struct Hasher2d {
-    uint32_t operator ()(const OnePoint2d& one) const {
-      return hashlittle(one.pt,2*sizeof(double),0);
-    }
-  };
-
-  struct TwoPoint3d {
-    double pts[6];
-
-    bool operator ==(const TwoPoint3d &other) const { 
-      for (int i = 0; i < 6; i++)
-        if (pts[i] != other.pts[i]) return 0;
-      return 1;
-    }
-  };
-
-  struct Hasher3d {
-    uint32_t operator ()(const TwoPoint3d& two) const {
-      return hashlittle(two.pts,6*sizeof(double),0);
-    }
-  };
-#endif
+#include "hash_options.h"
 
   Surf(class SPARTA *);
   ~Surf();
@@ -177,6 +121,18 @@ class Surf : protected Pointers {
  private:
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
+
+#ifdef SPARTA_MAP
+  typedef std::map<TwoPoint3d,int> MyHash;
+  typedef std::map<TwoPoint3d,int>::iterator MyIterator;
+#elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash;
+  typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::iterator MyIterator;
+#else
+  typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash;
+  typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::iterator 
+    MyIterator;
+#endif
 
   void point_line_compare(double *, double *, double *, double, int &, int &);
   void point_tri_compare(double *, double *, double *, double *, double *,
