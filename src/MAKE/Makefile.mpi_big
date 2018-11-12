@@ -1,4 +1,4 @@
-# g++_big = Linux box, g++, MPICH2, BIGBIG setting
+# mpi = Linux box/cluster, g++, installed MPI
 
 SHELL = /bin/sh
 
@@ -6,14 +6,14 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
-CC =		g++
-CCFLAGS =	-g -O # -Wunused
+CC =		mpic++
+CCFLAGS =	-O
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
-LINK =		g++
-LINKFLAGS =	-g -O
-LIB = 
+LINK =		mpic++
+LINKFLAGS =	-O
+LIB =           
 SIZE =		size
 
 ARCHIVE =	ar
@@ -28,7 +28,7 @@ SHLIBFLAGS =	-shared
 # SPARTA ifdef settings, OPTIONAL
 # see possible settings in doc/Section_start.html#2_2 (step 4)
 
-SPARTA_INC =	-DSPARTA_GZIP -DSPARTA_JPEG -DSPARTA_BIGBIG
+SPARTA_INC =	-DSPARTA_GZIP -DSPARTA_BIGBIG
 
 # MPI library, REQUIRED
 # see discussion in doc/Section_start.html#2_2 (step 5)
@@ -37,9 +37,9 @@ SPARTA_INC =	-DSPARTA_GZIP -DSPARTA_JPEG -DSPARTA_BIGBIG
 # PATH = path for MPI library
 # LIB = name of MPI library
 
-MPI_INC =       -DMPICH_SKIP_MPICXX
-MPI_PATH = 
-MPI_LIB =	-lmpich -lmpl -lpthread
+MPI_INC =       
+MPI_PATH =      
+MPI_LIB =	
 
 # FFT library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 6)
@@ -61,7 +61,7 @@ FFT_LIB =
 
 JPG_INC =       
 JPG_PATH = 	
-JPG_LIB =	-ljpeg
+JPG_LIB =	
 
 # ---------------------------------------------------------------------
 # build rules and dependencies
@@ -102,4 +102,4 @@ shlib:	$(OBJ)
 # Individual dependencies
 
 DEPENDS = $(OBJ:.o=.d)
-sinclude $(DEPENDS)
+include $(DEPENDS)

@@ -53,7 +53,6 @@ class FixEmitFaceFile : public FixEmit {
   double *cummulative_mix,*fraction_user_mix;
   int *fraction_flag_mix,*species2species_mix;
 
-  Surf::Point *pts;
   Surf::Line *lines;
   Surf::Tri *tris;
 

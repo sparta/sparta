@@ -109,7 +109,6 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
   hi = hi_caller;
   surfs = surfs_caller;
 
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
   int ntri = surf->ntri;
 
@@ -118,9 +117,9 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 
   nsurf = 0;
   for (int m = 0; m < ntri; m++) {
-    x1 = pts[tris[m].p1].x;
-    x2 = pts[tris[m].p2].x;
-    x3 = pts[tris[m].p3].x;
+    x1 = tris[m].p1;
+    x2 = tris[m].p2;
+    x3 = tris[m].p3;
 
     value = MAX(x1[0],x2[0]);
     if (MAX(value,x3[0]) < lo[0]) continue;
@@ -176,7 +175,6 @@ int Cut3d::surf2grid_list(cellint id_caller,
   hi = hi_caller;
   surfs = surfs_caller;
 
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
 
   int m;
@@ -186,9 +184,9 @@ int Cut3d::surf2grid_list(cellint id_caller,
   nsurf = 0;
   for (int i = 0; i < nlist; i++) {
     m = list[i];
-    x1 = pts[tris[m].p1].x;
-    x2 = pts[tris[m].p2].x;
-    x3 = pts[tris[m].p3].x;
+    x1 = tris[m].p1;
+    x2 = tris[m].p2;
+    x3 = tris[m].p3;
 
     value = MAX(x1[0],x2[0]);
     if (MAX(value,x3[0]) < lo[0]) continue;
@@ -669,7 +667,6 @@ int Cut3d::add_tris()
   Vertex *vert;
   Edge *edge;
 
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
 
   verts.grow(nsurf);
@@ -681,9 +678,9 @@ int Cut3d::add_tris()
   for (i = 0; i < nsurf; i++) {
     m = surfs[i];
     tri = &tris[m];
-    memcpy(p1,pts[tri->p1].x,3*sizeof(double));
-    memcpy(p2,pts[tri->p2].x,3*sizeof(double));
-    memcpy(p3,pts[tri->p3].x,3*sizeof(double));
+    memcpy(p1,tri->p1,3*sizeof(double));
+    memcpy(p2,tri->p2,3*sizeof(double));
+    memcpy(p3,tri->p3,3*sizeof(double));
 
     // if pushflag is set, push tri pts near cell surface
 
@@ -959,9 +956,9 @@ int Cut3d::clip_tris()
       cbox[1] = 0.5*(lo[1]+hi[1]);
       cbox[2] = 0.5*(lo[2]+hi[2]);
       int itri = surfs[verts[ivert].label];
-      p1 = surf->pts[surf->tris[itri].p1].x;
-      p2 = surf->pts[surf->tris[itri].p2].x;
-      p3 = surf->pts[surf->tris[itri].p3].x;
+      p1 = surf->tris[itri].p1;
+      p2 = surf->tris[itri].p2;
+      p3 = surf->tris[itri].p3;
       ctri[0] = (p1[0]+p2[0]+p3[0])/3.0;
       ctri[1] = (p1[1]+p2[1]+p3[1])/3.0;
       ctri[2] = (p1[2]+p2[2]+p3[2])/3.0;
@@ -1666,7 +1663,6 @@ int Cut3d::split_point(int *surfmap, double *xsplit, int &xsub)
   int itri;
   double *x1,*x2,*x3;
 
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
 
   // if end pt of any line with non-negative surfmap is in/on cell, return
@@ -1674,9 +1670,9 @@ int Cut3d::split_point(int *surfmap, double *xsplit, int &xsub)
   for (int i = 0; i < nsurf; i++) {
     if (surfmap[i] < 0) continue;
     itri = surfs[i];
-    x1 = pts[tris[itri].p1].x;
-    x2 = pts[tris[itri].p2].x;
-    x3 = pts[tris[itri].p3].x;
+    x1 = tris[itri].p1;
+    x2 = tris[itri].p2;
+    x3 = tris[itri].p3;
     if (ptflag(x1) != EXTERIOR) {
       xsplit[0] = x1[0]; xsplit[1] = x1[1]; xsplit[2] = x1[2];
       xsub = surfmap[i];
@@ -1699,9 +1695,9 @@ int Cut3d::split_point(int *surfmap, double *xsplit, int &xsub)
   for (int i = 0; i < nsurf; i++) {
     if (surfmap[i] < 0) continue;
     itri = surfs[i];
-    x1 = pts[tris[itri].p1].x;
-    x2 = pts[tris[itri].p2].x;
-    x3 = pts[tris[itri].p3].x;
+    x1 = tris[itri].p1;
+    x2 = tris[itri].p2;
+    x3 = tris[itri].p3;
     clip(x1,x2,x3);
     xsplit[0] = path1[0][0]; xsplit[1] = path1[0][1]; xsplit[2] = path1[0][2];
     xsub = surfmap[i];
@@ -2175,18 +2171,14 @@ void Cut3d::failed_cell()
   printf("\n");
 
   /*
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
   for (int i = 0; i < nsurf; i++) {
     int itri = surfs[i];
-    printf("  surf %d: p1 %d %15.12g %15.12g %15.12g: p2 %d %15.12g %15.12g %15.12g: p3 %d %15.12g %15.12g %15.12g\n",
+    printf("  surf %d: p1 %15.12g %15.12g %15.12g: p2 %15.12g %15.12g %15.12g: p3 %15.12g %15.12g %15.12g\n",
            itri+1,
-           tris[itri].p1,pts[tris[itri].p1].x[0],
-           pts[tris[itri].p1].x[1],pts[tris[itri].p1].x[2],
-           tris[itri].p2,pts[tris[itri].p2].x[0],
-           pts[tris[itri].p2].x[1],pts[tris[itri].p2].x[2],
-           tris[itri].p3,pts[tris[itri].p3].x[0],
-           pts[tris[itri].p3].x[1],pts[tris[itri].p3].x[2]);
+           tris[itri].p1[0],tris[itri].p1[1],tris[itri].p1[2],
+           tris[itri].p2[0],tris[itri].p2[1],tris[itri].p2[2],
+           tris[itri].p3[0],tris[itri].p3[1],tris[itri].p3[2]);
   }
   */
 }

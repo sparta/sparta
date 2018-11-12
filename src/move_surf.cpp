@@ -44,7 +44,10 @@ MoveSurf::MoveSurf(SPARTA *sparta) : Pointers(sparta)
 
   // pselect = 1 if point is moved, else 0
 
-  memory->create(pselect,surf->npoint,"move_surf:pselect");
+  if (domain->dimension == 2)
+    memory->create(pselect,2*surf->nline,"move_surf:pselect");
+  else
+    memory->create(pselect,3*surf->ntri,"move_surf:pselect");
 
   file = NULL;
   fp = NULL;
@@ -77,6 +80,9 @@ void MoveSurf::command(int narg, char **arg)
   process_args(narg-1,&arg[1]);
   mode = 0;
 
+  if (action == READFILE) 
+    error->all(FLERR,"Move_surf file option is not yet implemented");
+
   // perform surface move
 
   if (me == 0) {
@@ -96,9 +102,10 @@ void MoveSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
-  // move points via chosen action by full amount
+  // move line/tri points via chosen action by full amount
 
-  move_points(1.0,surf->pts);
+  if (dim == 2) move_lines(1.0,surf->lines);
+  else move_tris(1.0,surf->tris);
 
   // remake list of surf elements I own
   // assign split cell particles to parent split cell
@@ -120,9 +127,11 @@ void MoveSurf::command(int narg, char **arg)
   grid->clear_surf();
   grid->surf2grid(1);
 
-  // NOTE: is this needed - move method to grid to avoid code duplication
-  //if (dim == 2) check_point_near_surf_2d();
-  //else check_point_near_surf_3d();
+  if (dim == 2) surf->check_point_near_surf_2d();
+  else surf->check_point_near_surf_3d();
+
+  if (dim == 2) surf->check_watertight_2d(0);
+  else surf->check_watertight_3d(0);
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
@@ -192,7 +201,7 @@ void MoveSurf::process_args(int narg, char **arg)
 {
   if (narg < 1) error->all(FLERR,"Illegal move surf command");
 
-  int iarg;
+  int iarg = 0;
   if (strcmp(arg[0],"file") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal move surf command");
     action = READFILE;
@@ -231,40 +240,70 @@ void MoveSurf::process_args(int narg, char **arg)
     iarg = 8;
   } else error->all(FLERR,"Illegal move surf command");
 
-  // no optional args
+  // optional args
 
-  if (iarg < narg) error->all(FLERR,"Illegal move surf command");
+  connectflag = 0;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"connect") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal move surf command");
+      if (strcmp(arg[iarg+1],"yes") == 0) connectflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) connectflag = 0;
+      iarg += 2;
+    } else error->all(FLERR,"Illegal move surf command");
+  }
 }
 
 /* ----------------------------------------------------------------------
-   move points via specified action
+   move points in lines via specified action
    each method sets pselect = 1 for moved points
    fraction = portion of full distance points should move
 ------------------------------------------------------------------------- */
 
-void MoveSurf::move_points(double fraction, Surf::Point *origpts)
+void MoveSurf::move_lines(double fraction, Surf::Line *origlines)
 {
-  if (domain->dimension == 2) {
-    if (action == READFILE) {
-      readfile();
-      update_points(fraction);
-    } 
-    else if (action == TRANSLATE) translate_2d(fraction,origpts);
-    else if (action == ROTATE) rotate_2d(fraction,origpts);
-    surf->compute_line_normal(0,surf->nline);
-  } else {
-    if (action == READFILE) {
-      readfile();
-      update_points(fraction);
-    } 
-    else if (action == TRANSLATE) translate_3d(fraction,origpts);
-    else if (action == ROTATE) rotate_3d(fraction,origpts);
-    surf->compute_tri_normal(0,surf->ntri);
-  }
+  if (connectflag && groupbit != 1) connect_2d_pre();
+
+  if (action == READFILE) {
+    readfile();
+    update_points(fraction);
+  } 
+  else if (action == TRANSLATE) translate_2d(fraction,origlines);
+  else if (action == ROTATE) rotate_2d(fraction,origlines);
+  
+  if (connectflag && groupbit != 1) connect_2d_post();
+
+  surf->compute_line_normal(0);
 
   // check that all points are still inside simulation box
 
-  surf->check_point_inside(0,surf->npoint);
+  surf->check_point_inside(0);
+}
+
+/* ----------------------------------------------------------------------
+   move points in triangles via specified action
+   each method sets pselect = 1 for moved points
+   fraction = portion of full distance points should move
+------------------------------------------------------------------------- */
+
+void MoveSurf::move_tris(double fraction, Surf::Tri *origtris)
+{
+  if (connectflag && groupbit != 1) connect_3d_pre();
+
+  if (action == READFILE) {
+    readfile();
+    update_points(fraction);
+  } 
+  else if (action == TRANSLATE) translate_3d(fraction,origtris);
+  else if (action == ROTATE) rotate_3d(fraction,origtris);
+
+  if (connectflag && groupbit != 1) connect_3d_post();
+
+  surf->compute_tri_normal(0);
+
+  // check that all points are still inside simulation box
+
+  surf->check_point_inside(0);
 }
 
 /* ----------------------------------------------------------------------
@@ -273,6 +312,7 @@ void MoveSurf::move_points(double fraction, Surf::Point *origpts)
 
 void MoveSurf::readfile()
 {
+  /*
   int i;
   char line[MAXLINE];
   char *word,*eof;
@@ -405,6 +445,7 @@ void MoveSurf::readfile()
   // clean up
 
   memory->destroy(rflag);
+  */
 }
 
 /* ----------------------------------------------------------------------
@@ -413,6 +454,7 @@ void MoveSurf::readfile()
 
 void MoveSurf::update_points(double fraction)
 {
+  /*
   int i;
 
   // update points by fraction of old to new move
@@ -427,40 +469,39 @@ void MoveSurf::update_points(double fraction)
     p->x[1] = oldcoord[i][1] + fraction * (newcoord[i][1]-oldcoord[i][1]);
     p->x[2] = oldcoord[i][2] + fraction * (newcoord[i][2]-oldcoord[i][2]);
   }
+  */
 }
 
 /* ----------------------------------------------------------------------
    translate surf points in 2d
 ------------------------------------------------------------------------- */
 
-void MoveSurf::translate_2d(double fraction, Surf::Point *origpts)
+void MoveSurf::translate_2d(double fraction, Surf::Line *origlines)
 {
-  int i,p1,p2;
+  double *p1,*p2,*op1,*op2;
 
   Surf::Line *lines = surf->lines;
-  Surf::Point *pts = surf->pts;
   int nline = surf->nline;
-  int npoint = surf->npoint;
 
-  for (i = 0; i < npoint; i++) pselect[i] = 0;
+  for (int i = 0; i < 2*nline; i++) pselect[i] = 0;
 
   double dx = fraction * delta[0];
   double dy = fraction * delta[1];
 
-  for (i = 0; i < nline; i++) {
+  for (int i = 0; i < nline; i++) {
     if (!(lines[i].mask & groupbit)) continue;
     p1 = lines[i].p1;
     p2 = lines[i].p2;
-    if (pselect[p1] == 0) {
-      pts[p1].x[0] = origpts[p1].x[0] + dx;
-      pts[p1].x[1] = origpts[p1].x[1] + dy;
-      pselect[p1] = 1;
-    }
-    if (pselect[p2] == 0) {
-      pts[p2].x[0] = origpts[p2].x[0] + dx;
-      pts[p2].x[1] = origpts[p2].x[1] + dy;
-      pselect[p2] = 1;
-    }
+    op1 = origlines[i].p1;
+    op2 = origlines[i].p2;
+
+    p1[0] = op1[0] + dx;
+    p1[1] = op1[1] + dy;
+    pselect[2*i] = 1;
+
+    p2[0] = op2[0] + dx;
+    p2[1] = op2[1] + dy;
+    pselect[2*i+1] = 1;
   }
 }
 
@@ -468,44 +509,42 @@ void MoveSurf::translate_2d(double fraction, Surf::Point *origpts)
    translate surf points in 3d
 ------------------------------------------------------------------------- */
 
-void MoveSurf::translate_3d(double fraction, Surf::Point *origpts)
+void MoveSurf::translate_3d(double fraction, Surf::Tri *origtris)
 {
-  int i,p1,p2,p3;
+  double *p1,*p2,*p3,*op1,*op2,*op3;
 
   Surf::Tri *tris = surf->tris;
-  Surf::Point *pts = surf->pts;
   int ntri = surf->ntri;
-  int npoint = surf->npoint;
 
-  for (i = 0; i < npoint; i++) pselect[i] = 0;
+  for (int i = 0; i < 3*ntri; i++) pselect[i] = 0;
 
   double dx = fraction * delta[0];
   double dy = fraction * delta[1];
   double dz = fraction * delta[2];
 
-  for (i = 0; i < ntri; i++) {
+  for (int i = 0; i < ntri; i++) {
     if (!(tris[i].mask & groupbit)) continue;
     p1 = tris[i].p1;
     p2 = tris[i].p2;
     p3 = tris[i].p3;
-    if (pselect[p1] == 0) {
-      pts[p1].x[0] = origpts[p1].x[0] + dx;
-      pts[p1].x[1] = origpts[p1].x[1] + dy;
-      pts[p1].x[2] = origpts[p1].x[2] + dz;
-      pselect[p1] = 1;
-    }
-    if (pselect[p2] == 0) {
-      pts[p2].x[0] = origpts[p2].x[0] + dx;
-      pts[p2].x[1] = origpts[p2].x[1] + dy;
-      pts[p2].x[2] = origpts[p2].x[2] + dz;
-      pselect[p2] = 1;
-    }
-    if (pselect[p3] == 0) {
-      pts[p3].x[0] = origpts[p3].x[0] + dx;
-      pts[p3].x[1] = origpts[p3].x[1] + dy;
-      pts[p3].x[2] = origpts[p3].x[2] + dz;
-      pselect[p3] = 1;
-    }
+    op1 = origtris[i].p1;
+    op2 = origtris[i].p2;
+    op3 = origtris[i].p3;
+
+    p1[0] = op1[0] + dx;
+    p1[1] = op1[1] + dy;
+    p1[2] = op1[2] + dz;
+    pselect[3*i] = 1;
+
+    p2[0] = op2[0] + dx;
+    p2[1] = op2[1] + dy;
+    p2[2] = op2[2] + dz;
+    pselect[3*i+1] = 1;
+
+    p3[0] = op3[0] + dx;
+    p3[1] = op3[1] + dy;
+    p3[2] = op3[2] + dz;
+    pselect[3*i+2] = 1;
   }
 }
 
@@ -513,107 +552,258 @@ void MoveSurf::translate_3d(double fraction, Surf::Point *origpts)
    rotate surf points in 2d
 ------------------------------------------------------------------------- */
 
-void MoveSurf::rotate_2d(double fraction, Surf::Point *origpts)
+void MoveSurf::rotate_2d(double fraction, Surf::Line *origlines)
 {
-  int i,p1,p2;
+  double *p1,*p2,*op1,*op2;
   double q[4],d[3],dnew[3];
   double rotmat[3][3];
 
   Surf::Line *lines = surf->lines;
-  Surf::Point *pts = surf->pts;
   int nline = surf->nline;
-  int npoint = surf->npoint;
 
-  for (i = 0; i < npoint; i++) pselect[i] = 0;
+  for (int i = 0; i < 2*nline; i++) pselect[i] = 0;
 
   double angle = fraction * theta;
   MathExtra::axisangle_to_quat(rvec,angle,q);
   MathExtra::quat_to_mat(q,rotmat);
 
-  for (i = 0; i < nline; i++) {
+  for (int i = 0; i < nline; i++) {
     if (!(lines[i].mask & groupbit)) continue;
     p1 = lines[i].p1;
     p2 = lines[i].p2;
+    op1 = origlines[i].p1;
+    op2 = origlines[i].p2;
 
-    if (pselect[p1] == 0) {
-      d[0] = origpts[p1].x[0] - origin[0];
-      d[1] = origpts[p1].x[1] - origin[1];
-      d[2] = origpts[p1].x[2] - origin[2];
-      MathExtra::matvec(rotmat,d,dnew);
-      pts[p1].x[0] = dnew[0] + origin[0];
-      pts[p1].x[1] = dnew[1] + origin[1];
-      pselect[p1] = 1;
-    }
-    if (pselect[p2] == 0) {
-      d[0] = origpts[p2].x[0] - origin[0];
-      d[1] = origpts[p2].x[1] - origin[1];
-      d[2] = origpts[p2].x[2] - origin[2];
-      MathExtra::matvec(rotmat,d,dnew);
-      pts[p2].x[0] = dnew[0] + origin[0];
-      pts[p2].x[1] = dnew[1] + origin[1];
-      pselect[p2] = 1;
-    }
+    d[0] = op1[0] - origin[0];
+    d[1] = op1[1] - origin[1];
+    d[2] = op1[2] - origin[2];
+    MathExtra::matvec(rotmat,d,dnew);
+    p1[0] = dnew[0] + origin[0];
+    p1[1] = dnew[1] + origin[1];
+    pselect[2*i] = 1;
+    
+    d[0] = op2[0] - origin[0];
+    d[1] = op2[1] - origin[1];
+    d[2] = op2[2] - origin[2];
+    MathExtra::matvec(rotmat,d,dnew);
+    p2[0] = dnew[0] + origin[0];
+    p2[1] = dnew[1] + origin[1];
+    pselect[2*i+1] = 1;
   }
 }
 
 /* ----------------------------------------------------------------------
-   rotate surf points in 2d
+   rotate surf points in 3d
 ------------------------------------------------------------------------- */
 
-void MoveSurf::rotate_3d(double fraction, Surf::Point *origpts)
+void MoveSurf::rotate_3d(double fraction, Surf::Tri *origtris)
 {
-  int i,p1,p2,p3;
+  double *p1,*p2,*p3,*op1,*op2,*op3;
   double q[4],d[3],dnew[3];
   double rotmat[3][3];
 
   Surf::Tri *tris = surf->tris;
-  Surf::Point *pts = surf->pts;
   int ntri = surf->ntri;
-  int npoint = surf->npoint;
 
-  for (i = 0; i < npoint; i++) pselect[i] = 0;
+  for (int i = 0; i < 3*ntri; i++) pselect[i] = 0;
 
   double angle = fraction * theta;
   MathExtra::axisangle_to_quat(rvec,angle,q);
   MathExtra::quat_to_mat(q,rotmat);
 
-  for (i = 0; i < ntri; i++) {
+  for (int i = 0; i < ntri; i++) {
     if (!(tris[i].mask & groupbit)) continue;
     p1 = tris[i].p1;
     p2 = tris[i].p2;
     p3 = tris[i].p3;
+    op1 = origtris[i].p1;
+    op2 = origtris[i].p2;
+    op3 = origtris[i].p3;
 
-    if (pselect[p1] == 0) {
-      d[0] = origpts[p1].x[0] - origin[0];
-      d[1] = origpts[p1].x[1] - origin[1];
-      d[2] = origpts[p1].x[2] - origin[2];
-      MathExtra::matvec(rotmat,d,dnew);
-      pts[p1].x[0] = dnew[0] + origin[0];
-      pts[p1].x[1] = dnew[1] + origin[1];
-      pts[p1].x[2] = dnew[2] + origin[2];
-      pselect[p1] = 1;
-    }
-    if (pselect[p2] == 0) {
-      d[0] = origpts[p2].x[0] - origin[0];
-      d[1] = origpts[p2].x[1] - origin[1];
-      d[2] = origpts[p2].x[2] - origin[2];
-      MathExtra::matvec(rotmat,d,dnew);
-      pts[p2].x[0] = dnew[0] + origin[0];
-      pts[p2].x[1] = dnew[1] + origin[1];
-      pts[p2].x[2] = dnew[2] + origin[2];
-      pselect[p2] = 1;
-    }
-    if (pselect[p3] == 0) {
-      d[0] = origpts[p3].x[0] - origin[0];
-      d[1] = origpts[p3].x[1] - origin[1];
-      d[2] = origpts[p3].x[2] - origin[2];
-      MathExtra::matvec(rotmat,d,dnew);
-      pts[p3].x[0] = dnew[0] + origin[0];
-      pts[p3].x[1] = dnew[1] + origin[1];
-      pts[p3].x[2] = dnew[2] + origin[2];
-      pselect[p3] = 1;
+    d[0] = op1[0] - origin[0];
+    d[1] = op1[1] - origin[1];
+    d[2] = op1[2] - origin[2];
+    MathExtra::matvec(rotmat,d,dnew);
+    p1[0] = dnew[0] + origin[0];
+    p1[1] = dnew[1] + origin[1];
+    p1[2] = dnew[2] + origin[2];
+    pselect[3*i] = 1;
+    
+    d[0] = op2[0] - origin[0];
+    d[1] = op2[1] - origin[1];
+    d[2] = op2[2] - origin[2];
+    MathExtra::matvec(rotmat,d,dnew);
+    p2[0] = dnew[0] + origin[0];
+    p2[1] = dnew[1] + origin[1];
+    p2[2] = dnew[2] + origin[2];
+    pselect[3*i+1] = 1;
+
+    d[0] = op3[0] - origin[0];
+    d[1] = op3[1] - origin[1];
+    d[2] = op3[2] - origin[2];
+    MathExtra::matvec(rotmat,d,dnew);
+    p3[0] = dnew[0] + origin[0];
+    p3[1] = dnew[1] + origin[1];
+    p3[2] = dnew[2] + origin[2];
+    pselect[3*i+2] = 1;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   add points in moved lines to hash
+------------------------------------------------------------------------- */
+
+void MoveSurf::connect_2d_pre()
+{
+  // hash for end points of moved lines
+  // key = end point
+  // value = global index (0 to 2*Nline-1) of the point
+  // NOTE: could prealloc hash to correct size here
+
+  hash = new MyHash();
+
+  // add moved points to hash
+
+  double *p1,*p2;
+  OnePoint3d key;
+
+  Surf::Line *lines = surf->lines;
+  int nline = surf->nline;
+
+  for (int i = 0; i < nline; i++) {
+    if (!(lines[i].mask & groupbit)) continue;
+    p1 = lines[i].p1;
+    p2 = lines[i].p2;
+    key.pt[0] = p1[0]; key.pt[1] = p1[1]; key.pt[2] = 0.0;
+    if (hash->find(key) == hash->end()) (*hash)[key] = 2*i+0;
+    key.pt[0] = p2[0]; key.pt[1] = p2[1]; key.pt[2] = 0.0;
+    if (hash->find(key) == hash->end()) (*hash)[key] = 2*i+1;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   move points in lines connected to line points that were moved
+------------------------------------------------------------------------- */
+
+void MoveSurf::connect_2d_post()
+{
+  // check if non-moved points are in hash
+  // if so, set their coords to matching point
+  // set pselect for newly moved points so remove_particles() will work
+
+  int m,value,j,jwhich;
+  double *p[2],*q;
+  OnePoint3d key;
+
+  Surf::Line *lines = surf->lines;
+  int nline = surf->nline;
+
+  for (int i = 0; i < nline; i++) {
+    if (lines[i].mask & groupbit) continue;
+    p[0] = lines[i].p1;
+    p[1] = lines[i].p2;
+
+    for (m = 0; m < 2; m++) {
+      key.pt[0] = p[m][0]; key.pt[1] = p[m][1]; key.pt[2] = 0.0;
+      if (hash->find(key) != hash->end()) {
+        value = (*hash)[key];
+        j = value/2;
+        jwhich = value % 2;
+        if (jwhich == 0) q = lines[j].p1;
+        else q = lines[j].p2;
+        p[m][0] = q[0];
+        p[m][1] = q[1];
+        if (m == 0) pselect[2*i] = 1;
+        else pselect[2*i+1] = 1;
+      }
     }
   }
+
+  // free the hash
+
+  delete hash;
+}
+
+/* ----------------------------------------------------------------------
+   add points in moved triangles to hash
+------------------------------------------------------------------------- */
+
+void MoveSurf::connect_3d_pre()
+{
+  // hash for corner points of moved triangles
+  // key = corner point
+  // value = global index (0 to 3*Ntri-1) of the point
+  // NOTE: could prealloc hash to correct size here
+
+  hash = new MyHash();
+
+  // add moved points to hash
+
+  double *p1,*p2,*p3;
+  OnePoint3d key;
+
+  Surf::Tri *tris = surf->tris;
+  int ntri = surf->ntri;
+
+  for (int i = 0; i < ntri; i++) {
+    if (!(tris[i].mask & groupbit)) continue;
+    p1 = tris[i].p1;
+    p2 = tris[i].p2;
+    p3 = tris[i].p3;
+    key.pt[0] = p1[0]; key.pt[1] = p1[1]; key.pt[2] = p1[2];
+    if (hash->find(key) == hash->end()) (*hash)[key] = 3*i+0;
+    key.pt[0] = p2[0]; key.pt[1] = p2[1]; key.pt[2] = p2[2];
+    if (hash->find(key) == hash->end()) (*hash)[key] = 3*i+1;
+    key.pt[0] = p3[0]; key.pt[1] = p3[1]; key.pt[2] = p3[2];
+    if (hash->find(key) == hash->end()) (*hash)[key] = 3*i+2;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   move points in tris connected to tri points that were moved
+------------------------------------------------------------------------- */
+
+void MoveSurf::connect_3d_post()
+{
+  // check if non-moved points are in hash
+  // if so, set their coords to matching point
+  // set pselect for newly moved points so remove_particles() will work
+
+  int m,value,j,jwhich;
+  double *p[3],*q;
+  OnePoint3d key;
+
+  Surf::Tri *tris = surf->tris;
+  int ntri = surf->ntri;
+
+  for (int i = 0; i < ntri; i++) {
+    if (tris[i].mask & groupbit) continue;
+    p[0] = tris[i].p1;
+    p[1] = tris[i].p2;
+    p[2] = tris[i].p3;
+
+    for (m = 0; m < 3; m++) {
+      key.pt[0] = p[m][0]; key.pt[1] = p[m][1]; key.pt[2] = p[m][2];
+      if (hash->find(key) != hash->end()) {
+        value = (*hash)[key];
+        j = value/3;
+        jwhich = value % 3;
+        if (jwhich == 0) q = tris[j].p1;
+        else if (jwhich == 1) q = tris[j].p2;
+        else q = tris[j].p3;
+        p[m][0] = q[0];
+        p[m][1] = q[1];
+        p[m][2] = q[2];
+        if (m == 0) pselect[3*i] = 1;
+        else if (m == 1) pselect[3*i+1] = 1;
+        else pselect[3*i+2] = 1;
+      }
+    }
+  }  
+
+  // free the hash
+
+  delete hash;
 }
 
 /* ----------------------------------------------------------------------
@@ -626,15 +816,20 @@ void MoveSurf::rotate_3d(double fraction, Surf::Point *origpts)
 
 bigint MoveSurf::remove_particles()
 {
+  int isurf,nsurf;
+  int *csurfs;
+
   dim = domain->dimension;
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
   int delflag = 0;
 
   for (int icell = 0; icell < nglocal; icell++) {
+
+    // cell is inside surfs
+    // remove particles in case it wasn't before
+
     if (cinfo[icell].type == INSIDE) {
       if (cinfo[icell].count) delflag = 1;
       particle->remove_all_from_cell(cinfo[icell].first);
@@ -642,22 +837,31 @@ bigint MoveSurf::remove_particles()
       cinfo[icell].first = -1;
       continue;
     }
+
+    // cell has surfs or is split
+    // if m < nsurf, loop over csurfs did not finish
+    // which means cell contains a moved surf, so delete all its particles
+
     if (cells[icell].nsurf && cells[icell].nsplit >= 1) {
-      int nsurf = cells[icell].nsurf;
-      int *csurfs = cells[icell].csurfs;
+      nsurf = cells[icell].nsurf;
+      csurfs = cells[icell].csurfs;
+
       int m;
       if (dim == 2) {
 	for (m = 0; m < nsurf; m++) {
-	  if (pselect[lines[csurfs[m]].p1]) break;
-	  if (pselect[lines[csurfs[m]].p2]) break;
+          isurf = csurfs[m];
+	  if (pselect[2*isurf]) break;
+	  if (pselect[2*isurf+1]) break;
 	}
       } else {
 	for (m = 0; m < nsurf; m++) {
-	  if (pselect[tris[csurfs[m]].p1]) break;
-	  if (pselect[tris[csurfs[m]].p2]) break;
-	  if (pselect[tris[csurfs[m]].p3]) break;
+          isurf = csurfs[m];
+	  if (pselect[3*isurf]) break;
+	  if (pselect[3*isurf+1]) break;
+	  if (pselect[3*isurf+2]) break;
 	}
       }
+
       if (m < nsurf) {
 	if (cinfo[icell].count) delflag = 1;
 	particle->remove_all_from_cell(cinfo[icell].first);
@@ -665,6 +869,7 @@ bigint MoveSurf::remove_particles()
 	cinfo[icell].first = -1;
       }
     }
+
     if (cells[icell].nsplit > 1)
       grid->assign_split_cell_particles(icell);
   }

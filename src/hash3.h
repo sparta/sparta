@@ -12,31 +12,12 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifdef COMMAND_CLASS
+// choose map or hash based on compilation flag
 
-CommandStyle(read_surf/kk,ReadSurfKokkos)
-
+#ifdef SPARTA_MAP
+#include <map>
+#elif SPARTA_UNORDERED_MAP
+#include <unordered_map>
 #else
-
-#ifndef SPARTA_READ_SURF_KOKKOS_H
-#define SPARTA_READ_SURF_KOKKOS_H
-
-#include "read_surf.h"
-
-namespace SPARTA_NS {
-
-class ReadSurfKokkos : public ReadSurf {
- public:
-  ReadSurfKokkos(class SPARTA *);
-  ~ReadSurfKokkos() {}
-  void command(int, char **);
-};
-
-}
-
+#include <tr1/unordered_map>
 #endif
-#endif
-
-/* ERROR/WARNING messages:
-
-*/

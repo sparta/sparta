@@ -625,13 +625,7 @@ void AdaptGrid::setup(int iter)
 
   // allocate chash for child cell IDs created by coarsening a parent
 
-#ifdef SPARTA_MAP
-  chash = new std::map<cellint,int>();
-#elif defined SPARTA_UNORDERED_MAP
-  chash = new std::unordered_map<cellint,int>();
-#else
-  chash = new std::tr1::unordered_map<cellint,int>();
-#endif
+  chash = new MyHash();
 }
 
 /* ----------------------------------------------------------------------
@@ -946,14 +940,7 @@ void AdaptGrid::refine_random()
 
 void AdaptGrid::add_grid_fixes()
 {
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+  Grid::MyHash *hash = grid->hash;
   grid->rehash();
 
   int icell;
@@ -1080,14 +1067,7 @@ void AdaptGrid::gather_parents_refine(int delta, int nrefine)
   int myfirst = nprev + displs[me]/psize;
   int mylast = myfirst + recvcounts[me]/psize;
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+  Grid::MyHash *hash = grid->hash;
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
   int nparent = grid->nparent;
@@ -1194,17 +1174,10 @@ void AdaptGrid::assign_parents_coarsen(int pstop)
   // so use rendezvous procs to choose an owner and communicate
   //   the owner to all the child cells of the coarsened parent
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
   // send 4 values per child cell to rendezvous proc
   // sending proc, local icell, iparent, ichild (0 to Nxyz-1)
 
+  Grid::MyHash *hash = grid->hash;
   int *sbuf = NULL;
   int *procsend = NULL;
   int sendmax = 0;
@@ -1310,14 +1283,6 @@ void AdaptGrid::candidates_coarsen(int pstop)
   double value;
   int *proc,*index;
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
   // for style = VALUE, setup compute or fix values
   // NOTE: always invoke compute - is there someway to check more carefully?
   // needed if iterating, needed if refine follows coarsen
@@ -1333,6 +1298,7 @@ void AdaptGrid::candidates_coarsen(int pstop)
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
+  Grid::MyHash *hash = grid->hash;
 
   // create ctask entries = list of parents I will possibly coarsen
   // create sadapt = list of child cells I will send to other procs
@@ -1855,14 +1821,7 @@ int AdaptGrid::perform_coarsen()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
-
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
+  Grid::MyHash *hash = grid->hash;
 
   // loop over coarsening tasks
 
@@ -2038,14 +1997,6 @@ void AdaptGrid::gather_parents_coarsen(int delta, int nrefine)
   cellint tmp;
   int *csubs;
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
   // perform Allgatherv of removed parent cells from all procs
 
   int *recvcounts,*displs;
@@ -2068,6 +2019,7 @@ void AdaptGrid::gather_parents_coarsen(int delta, int nrefine)
   // remove parent cell from hash
 
   Grid::ParentCell *pcells = grid->pcells;
+  Grid::MyHash *hash = grid->hash;
 
   for (i = 0; i < deltaall; i++) {
     iparent = delparentall[i];
