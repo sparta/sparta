@@ -207,8 +207,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
                          (char *) (d_particles.data()+particle->nlocal),d_rbuf);
     } else {
       int maxrecvbuf = nrecv*nbytes;
-      if (maxrecvbuf > int(d_rbuf.extent(0)))
-        d_rbuf = DAT::t_char_1d("comm:sbuf",maxrecvbuf);
+      d_rbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:sbuf",Kokkos::WithoutInitializing),maxrecvbuf);
 
       Kokkos::deep_copy(d_nlocal,particle->nlocal);
       iparticle_kk->exchange_uniform(d_sbuf,nbytes,NULL,d_rbuf);

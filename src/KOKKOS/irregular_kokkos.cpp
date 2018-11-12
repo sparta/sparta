@@ -396,6 +396,11 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];
 
+    if (!sparta->kokkos->gpu_direct_flag) {
+      d_buf = DAT::t_char_1d(Kokkos::view_alloc("irregular:d_buf",Kokkos::WithoutInitializing),count*nbytes);
+      h_buf = HAT::t_char_1d(Kokkos::view_alloc("irregular:d_buf:mirror",Kokkos::WithoutInitializing),count*nbytes);
+    }
+
     copymode = 1;
     if (sparta->kokkos->need_atomics)
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagIrregularPackBuffer<1> >(0,count),*this);
