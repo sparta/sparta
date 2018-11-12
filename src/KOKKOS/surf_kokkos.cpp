@@ -84,6 +84,36 @@ void SurfKokkos::wrap_kokkos()
   }
 }
 
+/* ----------------------------------------------------------------------
+   grow surface data structures
+------------------------------------------------------------------------- */
+void SurfKokkos::grow()
+{
+  if (sparta->kokkos->prewrap) {
+    Surf::grow();
+  } else {
+    SurfKokkos* surf_kk = (SurfKokkos*) surf;
+
+    if (lines == NULL)
+        surf_kk->k_lines = tdual_line_1d("surf:lines",nline);
+    else {
+      surf_kk->sync(Host,LINE_MASK);
+      surf_kk->modify(Host,LINE_MASK); // force resize on host
+      surf_kk->k_lines.resize(nline);
+    }
+    lines = surf_kk->k_lines.h_view.data();
+
+    if (tris == NULL)
+        surf_kk->k_tris = tdual_tri_1d("surf:tris",ntri);
+    else {
+      surf_kk->sync(Host,TRI_MASK);
+      surf_kk->modify(Host,TRI_MASK); // force resize on host
+      surf_kk->k_tris.resize(ntri);
+    }
+    tris = surf_kk->k_tris.h_view.data();
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
 void SurfKokkos::sync(ExecutionSpace space, unsigned int mask)

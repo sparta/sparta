@@ -1663,6 +1663,16 @@ void Surf::read_restart(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
+void Surf::grow()
+{
+  lines = (Surf::Line *) 
+    memory->srealloc(lines,nline*sizeof(Surf::Line),"surf:lines");
+  tris = (Surf::Tri *) 
+    memory->srealloc(tris,ntri*sizeof(Surf::Tri),"surf:tris");
+}
+
+/* ---------------------------------------------------------------------- */
+
 bigint Surf::memory_usage()
 {
   bigint bytes = 0;

@@ -362,9 +362,9 @@ void ReadSurf::command(int narg, char **arg)
   if (dim == 2) {
     nline_old = surf->nline;
     nline_new = nline_old + nline;
+    surf->nline = nline_new;
+    surf->grow();
     Surf::Line *newlines = surf->lines;
-    newlines = (Surf::Line *) 
-      memory->srealloc(newlines,nline_new*sizeof(Surf::Line),"surf:lines");
 
     int m = nline_old;
     for (int i = 0; i < nline; i++) {
@@ -378,14 +378,13 @@ void ReadSurf::command(int narg, char **arg)
     }
 
     surf->lines = newlines;
-    surf->nline = nline_new;
 
   } else if (dim == 3) {
     ntri_old = surf->ntri;
     ntri_new = ntri_old + ntri;
+    surf->ntri = ntri_new;
+    surf->grow();
     Surf::Tri *newtris = surf->tris;
-    newtris = (Surf::Tri *) 
-      memory->srealloc(newtris,ntri_new*sizeof(Surf::Tri),"surf:tris");
 
     int m = ntri_old;
     for (int i = 0; i < ntri; i++) {
@@ -400,7 +399,6 @@ void ReadSurf::command(int narg, char **arg)
     }
 
     surf->tris = newtris;
-    surf->ntri = ntri_new;
   }
 
   // compute normals of new lines or triangles
