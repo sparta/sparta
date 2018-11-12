@@ -1860,7 +1860,7 @@ void Grid::group(int narg, char **arg)
         x[0] = cells[i].lo[0];
         x[1] = cells[i].hi[1];
         if (!region->match(x)) flag = 0;
-        x[0] = cells[i].hi[1];
+        x[0] = cells[i].hi[0];
         x[1] = cells[i].hi[1];
         if (!region->match(x)) flag = 0;
 
@@ -1897,7 +1897,7 @@ void Grid::group(int narg, char **arg)
         x[0] = cells[i].lo[0];
         x[1] = cells[i].hi[1];
         if (region->match(x)) flag = 1;
-        x[0] = cells[i].hi[1];
+        x[0] = cells[i].hi[0];
         x[1] = cells[i].hi[1];
         if (region->match(x)) flag = 1;
 
