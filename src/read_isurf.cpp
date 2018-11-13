@@ -226,12 +226,13 @@ void ReadISurf::command(int narg, char **arg)
   else surf->compute_tri_normal(0);
 
   // error checks that can be done before surfs are mapped to grid cells
+  // NOTE: won't work now, b/c there are duplicate points
 
-  if (dim == 2) {
-    surf->check_watertight_2d(0);
-  } else {
-    surf->check_watertight_3d(0);
-  }
+  //if (dim == 2) {
+  //  surf->check_watertight_2d(0);
+  //} else {
+  //  surf->check_watertight_3d(0);
+  // }
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
