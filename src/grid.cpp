@@ -30,9 +30,10 @@ using namespace MathConst;
 #define BIG 1.0e20
 #define MAXGROUP 32
 
-// default value, can be overridden by global command
+// default values, can be overridden by global command
 
 #define MAXSURFPERCELL 100
+#define MAXCELLPERSURF 100
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
@@ -95,6 +96,10 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
   maxsurfpercell = MAXSURFPERCELL;
   csurfs = NULL; csplits = NULL; csubs = NULL;
   allocate_surf_arrays();
+
+  maxcellpersurf = MAXCELLPERSURF;
+  cpsurf = NULL;
+  allocate_cell_arrays();
 
   neighshift[XLO] = 0;
   neighshift[XHI] = 3;

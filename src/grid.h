@@ -34,6 +34,7 @@ class Grid : protected Pointers {
   int nsplit;           // global count of split cells
   int nsub;             // global count of split sub cells
   int maxsurfpercell;   // max surf elements in one child cell
+  int maxcellpersurf;   // max cells overlapping one surf element
   int maxlevel;         // max level of any child cell in grid, 0 = root
   int uniform;          // 1 if all child cells are at same level, else 0
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
@@ -70,6 +71,7 @@ class Grid : protected Pointers {
                               // owned + ghost split info
   MyPage<int> *csubs;         // lists of sub cell indices for
                               // owned + ghost split info
+  MyPage<cellint> *cpsurf;    // lists of cell IDs that overlap with my surfs
 
   // owned or ghost child cell
   // includes unsplit cells, split cells, sub cells in any order
@@ -239,6 +241,7 @@ class Grid : protected Pointers {
 
   // grid_surf.cpp
 
+  void surf2grid2(int, int outflag=1);
   void surf2grid(int, int outflag=1);
   void surf2grid_one(int, int, int, int, class Cut3d *, class Cut2d *);
   void clear_surf();
@@ -246,7 +249,11 @@ class Grid : protected Pointers {
   void combine_split_cell_particles(int, int);
   void assign_split_cell_particles(int);
   void allocate_surf_arrays();
+  void allocate_cell_arrays();
   int *csubs_request(int);
+
+  int find_overlaps(int, cellint *);
+  void recurse2d(int, double [][2], ParentCell *, int &, int *);
 
   // grid_id.cpp
 
@@ -288,6 +295,9 @@ class Grid : protected Pointers {
   int neighmask[6];        // bit-masks for each face in nmask
   int neighshift[6];       // bit-shifts for each face in nmask
 
+  class Cut2d *cut2d;
+  class Cut3d *cut3d;
+
   // connection between one of my cells and a neighbor cell on another proc
 
   struct Connect {
@@ -310,6 +320,7 @@ class Grid : protected Pointers {
 
   // private methods
 
+  void surf2grid_half(int, int);
   void acquire_ghosts_all();
   void acquire_ghosts_near();
 

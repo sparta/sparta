@@ -147,6 +147,23 @@ int Cut2d::surf2grid_list(cellint id_caller,
 }
 
 /* ----------------------------------------------------------------------
+   compute intersections of a grid cell with a provided list of surfs
+   csurfs = indices into global surf list
+   nlist, list = vector of surf indices of length nlist
+   return nsurf = # of surfs
+   return -1 if nsurf > max
+   called by AdaptGrid via Grid::surf2grid_one
+------------------------------------------------------------------------- */
+
+int Cut2d::surf2grid_one(double *p, double *q, 
+                         double *lo_caller, double *hi_caller)
+{
+  lo = lo_caller;
+  hi = hi_caller;
+  return cliptest(p,q);
+}
+
+/* ----------------------------------------------------------------------
    clip test of line segment PQ against cell with corners LO,HI
    return 1 if intersects, 0 if not
 ------------------------------------------------------------------------- */

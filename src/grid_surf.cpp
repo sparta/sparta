@@ -35,7 +35,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
 // operations for surfaces in grid cells
 
 /* ----------------------------------------------------------------------
-   allocate page data structs to hold variable-length surf info
+   allocate page data structs to hold variable-length surf and cell info
 ------------------------------------------------------------------------- */
 
 void Grid::allocate_surf_arrays()
@@ -49,6 +49,12 @@ void Grid::allocate_surf_arrays()
   csubs = new MyPage<int>(MAXSPLITPERCELL,128);
 }
 
+void Grid::allocate_cell_arrays()
+{
+  delete cpsurf;
+  cpsurf = new MyPage<int>(maxcellpersurf,MAX(100*maxcellpersurf,1024));
+}
+
 /* ----------------------------------------------------------------------
    request N-length vector from csubs
    called by ReadRestart
@@ -57,8 +63,160 @@ void Grid::allocate_surf_arrays()
 int *Grid::csubs_request(int n)
 {
   int *ptr = csubs->vget();
-  csubs->vgot(n);
+  cpsurf->vgot(n);
   return ptr;
+}
+
+/* ----------------------------------------------------------------------
+   enumerate overlaps of isurf with any child grid cell
+------------------------------------------------------------------------- */
+
+int Grid::find_overlaps(int isurf, cellint *list)
+{
+  Surf::Line *line = &surf->lines[isurf];
+
+  double sbox[2][2];
+  sbox[0][0] = MIN(line->p1[0],line->p2[0]);
+  sbox[0][1] = MIN(line->p1[1],line->p2[1]);
+  sbox[1][0] = MAX(line->p1[0],line->p2[0]);
+  sbox[1][1] = MAX(line->p1[1],line->p2[1]);
+
+  int ncell = 0;
+  recurse2d(isurf,sbox,&pcells[0],ncell,NULL);
+  if (ncell > maxcellpersurf) return ncell;
+
+  ncell = 0;
+  recurse2d(isurf,sbox,&pcells[0],ncell,list);
+  return ncell;
+}
+
+/* ----------------------------------------------------------------------
+   enumerate overlaps of isurf with all child grid cells
+------------------------------------------------------------------------- */
+
+void Grid::recurse2d(int iline, double sbox[][2], ParentCell *pcell, 
+                     int &n, int *list)
+{
+  int i,j,parentflag,overlap,index,iparent;
+  cellint cellid;
+  double newsbox[2][2];
+  double clo[2],chi[2];
+
+  double *lo = pcell->lo;
+  double *hi = pcell->hi;
+  int nx = pcell->nx;
+  int ny = pcell->ny;
+  int ilo = (sbox[0][0] - lo[0]) / nx;  // same way cell computes its lo/hi
+  int ihi = (sbox[1][0] - lo[0]) / nx;  // account for sbox on edge of cell
+  int jlo = (sbox[0][1] - lo[1]) / ny;
+  int jhi = (sbox[1][1] - lo[1]) / ny;
+
+  double *p1 = surf->lines[iline].p1;
+  double *p2 = surf->lines[iline].p2;
+
+  for (j = jlo; j <= jhi; j++) {
+    for (i = ilo; i <= ihi; i++) {
+      cellid = 0;  // f(i,j)
+      clo[0] = 0.0;   // same way cell computes its lo/hi
+      clo[1] = 0.0;
+      chi[0] = 0.0;
+      chi[1] = 0.0;
+      if (hash->find(cellid) == hash->end()) parentflag = 0;
+      else if ((*hash)[cellid] >= 0) parentflag = 0;
+      else parentflag = 1;
+      
+      if (parentflag) {
+        index = (*hash)[cellid];
+        iparent = -index-1;
+        newsbox[0][0] = MAX(sbox[0][0],clo[0]);
+        newsbox[0][1] = MAX(sbox[0][1],clo[1]);
+        newsbox[1][0] = MIN(sbox[1][0],chi[0]);
+        newsbox[1][1] = MIN(sbox[1][1],chi[1]);
+        recurse2d(iline,newsbox,&pcells[iparent],n,list);
+      } else { 
+        overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
+        if (!overlap) continue;
+        if (list) list[n] = cellid;
+        n++;
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   NEW VERSION
+   map surf elements into owned grid cells
+   if subflag = 1, create new owned split and sub cells as needed
+     called from ReadSurf, RemoveSurf, MoveSurf
+   if subflag = 0, split/sub cells already exist
+     called from ReadRestart
+   in cells: set nsurf, csurfs, nsplit, isplit
+   in cinfo: for cells with surfs, set type, corner, volume 
+   initialize sinfo as needed
+------------------------------------------------------------------------- */
+
+void Grid::surf2grid2(int subflag, int outflag)
+{
+  cellint *ptr;
+  cellint **celllist;   // NOTE: need to allocate this
+
+  int dim = domain->dimension;
+
+  if (dim == 3) cut3d = new Cut3d(sparta);
+  else cut2d = new Cut2d(sparta,domain->axisymmetric);
+
+
+  // insure pcell IDs are in hash
+
+  //if (!hashfilled) hash();
+
+  // compute overlap of surfs I own with all grid cells
+  // info stored in ncell, celllist
+  // ncell = # of cells that overlap with surf bbox
+
+  //double t1 = MPI_Wtime();
+
+  int nprocs = comm->nprocs;
+  int ntotal,ncell;
+
+  if (dim == 2) ntotal = surf->nline;
+  else ntotal = surf->ntri;
+
+  for (int isurf = 0; isurf < nlocal; isurf += nprocs) {
+    ptr = cpsurf->vget();
+    ncell = find_overlaps(isurf,ptr);
+
+    if (ncell > maxcellpersurf) {
+      error->one(FLERR,"Cells per surf exceeded limit");
+      //special_list[nspecial++] = isurf;
+      //celllist[isurf] = NULL;
+      //cpsurf->vgot(0);
+      continue;
+    }
+
+    celllist[isurf] = ptr;
+    cpsurf->vgot(ncell);
+  }
+
+  // rendevous comm to convert cells per surf to surfs per cell
+
+  // surf settings for each owned cell
+
+  /*
+    if (nsurf < 0) error->one(FLERR,"Too many surfs in one cell");
+    if (nsurf) {
+      cinfo[icell].type = OVERLAP;
+      cells[icell].nsurf = nsurf;
+      cells[icell].csurfs = ptr;
+      csurfs->vgot(nsurf);
+    }
+  }
+  */
+
+  //double t2 = MPI_Wtime();
+  //printf("TIME %g\n",t2-t1);
+
+  surf2grid_half(subflag,outflag);
 }
 
 /* ----------------------------------------------------------------------
@@ -74,14 +232,9 @@ int *Grid::csubs_request(int n)
 
 void Grid::surf2grid(int subflag, int outflag)
 {
-  int i,isub,nsurf,nsplitone,xsub;
-  int *surfmap,*ptr;
-  double *lo,*hi,*vols;
-  double xsplit[3];
-  ChildCell *c;
-  SplitInfo *s;
-  Cut2d *cut2d;
-  Cut3d *cut3d;
+  int nsurf;
+  int *ptr;
+  double *lo,*hi;
 
   int dim = domain->dimension;
 
@@ -123,7 +276,33 @@ void Grid::surf2grid(int subflag, int outflag)
 
   //double t2 = MPI_Wtime();
   //printf("TIME %g\n",t2-t1);
-  
+
+  surf2grid_half(subflag,outflag);
+}
+
+/* ----------------------------------------------------------------------
+   2nd half of surf2grid
+   map surf elements into owned grid cells
+   if subflag = 1, create new owned split and sub cells as needed
+     called from ReadSurf, RemoveSurf, MoveSurf
+   if subflag = 0, split/sub cells already exist
+     called from ReadRestart
+   in cells: set nsurf, csurfs, nsplit, isplit
+   in cinfo: for cells with surfs, set type, corner, volume 
+   initialize sinfo as needed
+------------------------------------------------------------------------- */
+
+void Grid::surf2grid_half(int subflag, int outflag)
+{
+  int i,isub,nsurf,nsplitone,xsub;
+  int *surfmap,*ptr;
+  double *lo,*hi,*vols;
+  double xsplit[3];
+  ChildCell *c;
+  SplitInfo *s;
+
+  int dim = domain->dimension;
+
   if (outflag) surf2grid_stats();
 
   // compute cut volume and possible split of each grid cell by surfs
