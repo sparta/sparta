@@ -23,6 +23,7 @@ CommandStyle(read_surf,ReadSurf)
 
 #include "stdio.h"
 #include "pointers.h"
+#include "hash3.h"
 #include "surf.h"
 
 namespace SPARTA_NS {
@@ -39,18 +40,44 @@ class ReadSurf : protected Pointers {
   FILE *fp;
   int compressed;
 
-  int dim,isc;
+  int dim;
   double origin[3];
 
-  Surf::Point *pts;
-  Surf::Line *lines;
-  Surf::Tri *tris;
-  int npoint_old,nline_old,ntri_old;
-  int npoint_new,nline_new,ntri_new;
+  struct Point {
+    double x[3];
+  };
+
+  struct Line {
+    int type,mask;          // type and mask of the line
+    int p1,p2;              // indices of points in line segment
+  };
+
+  struct Tri {
+    int type,mask;          // type and mask of the triangle
+    int p1,p2,p3;           // indices of points in triangle
+  };
+
+  Point *pts;
+  Line *lines;
+  Tri *tris;
+  int npoint,nline,ntri;
   int maxpoint,maxline,maxtri;
+  int nline_old,nline_new;
+  int ntri_old,ntri_new;
 
   int **edge;
   int nedge,maxedge;
+
+#ifdef SPARTA_MAP
+  typedef std::map<bigint,int> MyHash;
+  typedef std::map<bigint,int>::iterator MyIterator;
+#elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<bigint,int> MyHash;
+  typedef std::unordered_map<bigint,int>::iterator MyIterator;
+#else
+  typedef std::tr1::unordered_map<bigint,int> MyHash;
+  typedef std::tr1::unordered_map<bigint,int>::iterator MyIterator;
+#endif
 
   void header();
   void read_points();
@@ -67,11 +94,6 @@ class ReadSurf : protected Pointers {
   void push_points_to_boundary(double);
   void check_neighbor_norm_2d();
   void check_neighbor_norm_3d();
-  void check_point_near_surf_2d();
-  void check_point_near_surf_3d();
-
-  void point_line_compare(int, Surf::Line *, double, int &, int &);
-  void point_tri_compare(int, Surf::Tri *, double, int &, int &, int, int, int);
 
   int find_edge(int, int);
   void add_edge(int, int, int);
@@ -82,8 +104,6 @@ class ReadSurf : protected Pointers {
   void open(char *);
   void parse_keyword(int);
   int count_words(char *);
-
-  virtual void grow_surf();
 };
 
 }

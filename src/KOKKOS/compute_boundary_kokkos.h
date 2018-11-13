@@ -31,7 +31,7 @@ namespace SPARTA_NS {
 class ComputeBoundaryKokkos : public ComputeBoundary, public KokkosBase {
  public:
   ComputeBoundaryKokkos(class SPARTA *, int, char **);
-  ComputeBoundaryKokkos(class SPARTA* sparta) : ComputeBoundary(sparta) {}
+  ComputeBoundaryKokkos(class SPARTA* sparta);
   ~ComputeBoundaryKokkos();
   void init();
   void compute_array();

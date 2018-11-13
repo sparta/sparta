@@ -20,21 +20,15 @@
 #include "surf_react.h"
 #include "domain.h"
 #include "region.h"
+#include "grid.h"
 #include "comm.h"
 #include "geometry.h"
 #include "input.h"
 #include "math_extra.h"
 #include "math_const.h"
+#include "hash3.h"
 #include "memory.h"
 #include "error.h"
-
-#ifdef SPARTA_MAP
-#include <map>
-#elif defined SPARTA_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -48,6 +42,7 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 #define DELTA 1024
 #define DELTAMODEL 4
 #define EPSSQ 1.0e-12
+#define EPSILON_GRID 1.0e-3
 #define BIG 1.0e20
 #define MAXGROUP 32
 
@@ -73,9 +68,8 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   gnames[0] = new char[n];
   strcpy(gnames[0],"all");
 
-  npoint = nline = ntri = 0;
-  maxpoint = maxline = maxtri = 0;
-  pts = NULL;
+  nline = ntri = 0;
+  maxline = maxtri = 0;
   lines = NULL;
   tris = NULL;
   pushflag = 1;
@@ -85,7 +79,6 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
   nsc = maxsc = 0;
   sc = NULL;
-
   nsr = maxsr = 0;
   sr = NULL;
 
@@ -101,7 +94,6 @@ Surf::~Surf()
   memory->sfree(bitmask);
   memory->sfree(inversemask);
 
-  memory->sfree(pts);
   memory->sfree(lines);
   memory->sfree(tris);
   memory->sfree(mysurfs);
@@ -248,40 +240,26 @@ int Surf::nelement()
 }
 
 /* ----------------------------------------------------------------------
-   add a point
-   called by ReadISurf
-------------------------------------------------------------------------- */
-
-void Surf::add_point(double *pt)
-{
-  if (npoint == maxpoint) {
-    maxpoint += DELTA;
-    pts = (Point *) memory->srealloc(pts,maxpoint*sizeof(Point),"surf:pts");
-  }
-
-  pts[npoint].x[0] = pt[0];
-  pts[npoint].x[1] = pt[1];
-  pts[npoint].x[2] = pt[2];
-  npoint++;
-}
-
-/* ----------------------------------------------------------------------
    add a line
    called by ReadISurf
 ------------------------------------------------------------------------- */
 
-void Surf::add_line(int itype, int p1, int p2)
+void Surf::add_line(int itype, double *p1, double *p2)
 {
   if (nline == maxline) {
     maxline += DELTA;
-    lines = (Line *) memory->srealloc(lines,maxline*sizeof(Line),"surf:lines");
+    grow();
   }
 
   lines[nline].type = itype;
   lines[nline].mask = 1;
   lines[nline].isc = lines[nline].isr = -1;
-  lines[nline].p1 = p1;
-  lines[nline].p2 = p2;
+  lines[nline].p1[0] = p1[0];
+  lines[nline].p1[1] = p1[1];
+  lines[nline].p1[2] = 0.0;
+  lines[nline].p2[0] = p2[0];
+  lines[nline].p2[1] = p2[1];
+  lines[nline].p2[2] = 0.0;
   nline++;
 }
 
@@ -290,19 +268,25 @@ void Surf::add_line(int itype, int p1, int p2)
    called by ReadISurf
 ------------------------------------------------------------------------- */
 
-void Surf::add_tri(int itype, int p1, int p2, int p3)
+void Surf::add_tri(int itype, double *p1, double *p2, double *p3)
 {
-  if (ntri == maxtri) {
+  if (nline == maxtri) {
     maxtri += DELTA;
-    tris = (Tri *) memory->srealloc(tris,maxtri*sizeof(Tri),"surf:tris");
+    grow();
   }
 
   tris[ntri].type = itype;
   tris[ntri].mask = 1;
   tris[ntri].isc = tris[ntri].isr = -1;
-  tris[ntri].p1 = p1;
-  tris[ntri].p2 = p2;
-  tris[ntri].p3 = p3;
+  tris[nline].p1[0] = p1[0];
+  tris[nline].p1[1] = p1[1];
+  tris[nline].p1[2] = p1[2];
+  tris[nline].p2[0] = p2[0];
+  tris[nline].p2[1] = p2[1];
+  tris[nline].p2[2] = p2[2];
+  tris[nline].p3[0] = p3[0];
+  tris[nline].p3[1] = p3[1];
+  tris[nline].p3[2] = p3[2];
   ntri++;
 }
 
@@ -314,6 +298,8 @@ void Surf::add_tri(int itype, int p1, int p2, int p3)
 
 void Surf::setup_surf()
 {
+  int i,j;
+
   int me = comm->me;
   int nprocs = comm->nprocs;
 
@@ -331,76 +317,87 @@ void Surf::setup_surf()
   for (int m = me; m < n; m += nprocs)
     mysurfs[nlocal++] = m;
 
-  // set bounding box of all surfs based on pts
+  // set bounding box of all surfs based on their pts
   // for 2d, set zlo,zhi to box bounds
 
-  int i;
-  for (i = 0; i < 3; i++) {
-    bblo[i] = BIG;
-    bbhi[i] = -BIG;
+  for (j = 0; j < 3; j++) {
+    bblo[j] = BIG;
+    bbhi[j] = -BIG;
   }
   
   double *x;
-  for (int ipt = 0; ipt < npoint; ipt++) {
-    x = pts[ipt].x;
-    for (i = 0; i < 3; i++) {
-      bblo[i] = MIN(bblo[i],x[i]);
-      bbhi[i] = MAX(bbhi[i],x[i]);
-    }
-  }
 
   if (domain->dimension == 2) {
+    for (i = 0; i < nline; i++) {
+      x = lines[i].p1;
+      for (j = 0; j < 2; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
+      }
+      x = lines[i].p2;
+      for (j = 0; j < 2; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
+      }
+    }
     bblo[2] = domain->boxlo[2];
     bbhi[2] = domain->boxhi[2];
+
+  } else if (domain->dimension == 3) {
+    for (i = 0; i < ntri; i++) {
+      x = tris[i].p1;
+      for (j = 0; j < 3; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
+      }
+      x = tris[i].p2;
+      for (j = 0; j < 3; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
+      }
+      x = tris[i].p3;
+      for (j = 0; j < 3; j++) {
+        bblo[j] = MIN(bblo[j],x[j]);
+        bbhi[j] = MAX(bbhi[j],x[j]);
+      }
+    }
   }
 }
 
 /* ----------------------------------------------------------------------
-   compute unit outward normal vectors of N lines starting at Nstart
+   compute unit outward normal vectors of all lines starting at Nold
    outward normal = +z axis x (p2-p1)
 ------------------------------------------------------------------------- */
 
-void Surf::compute_line_normal(int nstart, int n)
+void Surf::compute_line_normal(int nold)
 {
-  int p1,p2;
-  double z[3],delta[3],norm[3];
+  double z[3],delta[3];
 
   z[0] = 0.0; z[1] = 0.0; z[2] = 1.0;
 
-  int m = nstart;
-  for (int i = 0; i < n; i++) {
-    p1 = lines[m].p1;
-    p2 = lines[m].p2;
-    MathExtra::sub3(pts[p2].x,pts[p1].x,delta);
-    MathExtra::cross3(z,delta,norm);
-    MathExtra::norm3(norm);
-    lines[m].norm[0] = norm[0];
-    lines[m].norm[1] = norm[1];
-    lines[m].norm[2] = 0.0;
-    m++;
+  for (int i = nold; i < nline; i++) {
+    MathExtra::sub3(lines[i].p2,lines[i].p1,delta);
+    MathExtra::cross3(z,delta,lines[i].norm);
+    MathExtra::norm3(lines[i].norm);
+    lines[i].norm[2] = 0.0;
   }
 }
 
 /* ----------------------------------------------------------------------
-   compute unit outward normal vectors of N triangles starting at Nstart
+   compute unit outward normal vectors of all lines starting at Nold
    outward normal = (p2-p1) x (p3-p1)
 ------------------------------------------------------------------------- */
 
-void Surf::compute_tri_normal(int nstart, int n)
+void Surf::compute_tri_normal(int nold)
 {
   int p1,p2,p3;
   double delta12[3],delta13[3];
 
-  int m = nstart;
-  for (int i = 0; i < n; i++) {
-    p1 = tris[m].p1;
-    p2 = tris[m].p2;
-    p3 = tris[m].p3;
-    MathExtra::sub3(pts[p2].x,pts[p1].x,delta12);
-    MathExtra::sub3(pts[p3].x,pts[p1].x,delta13);
-    MathExtra::cross3(delta12,delta13,tris[m].norm);
-    MathExtra::norm3(tris[m].norm);
-    m++;
+  for (int i = nold; i < ntri; i++) {
+    MathExtra::sub3(tris[i].p2,tris[i].p1,delta12);
+    MathExtra::sub3(tris[i].p3,tris[i].p1,delta13);
+    MathExtra::cross3(delta12,delta13,tris[i].norm);
+    MathExtra::norm3(tris[i].norm);
   }
 }
 
@@ -439,8 +436,17 @@ void Surf::hex_corner_point(int icorner, double *lo, double *hi, double *pt)
 
 double Surf::line_size(int m)
 {
+  return line_size(lines[m].p1,lines[m].p2);
+}
+
+/* ----------------------------------------------------------------------
+   return length of line bewteen 2 points
+------------------------------------------------------------------------- */
+
+double Surf::line_size(double *p1, double *p2)
+{
   double delta[3];
-  MathExtra::sub3(pts[lines[m].p2].x,pts[lines[m].p1].x,delta);
+  MathExtra::sub3(p2,p1,delta);
   return MathExtra::len3(delta);
 }
 
@@ -450,12 +456,23 @@ double Surf::line_size(int m)
 
 double Surf::axi_line_size(int m)
 {
-  double *x1 = pts[lines[m].p1].x;
-  double *x2 = pts[lines[m].p2].x;
+  double *x1 = lines[m].p1;
+  double *x2 = lines[m].p2;
   double h = x2[0]-x1[0];
   double r = x2[1]-x1[1];
   double area = MY_PI*(x1[1]+x2[1])*sqrt(r*r+h*h);
   return area;
+}
+
+/* ----------------------------------------------------------------------
+   compute side length and area of triangle M
+   return len = length of shortest edge of triangle M
+   return area = area of triangle M
+------------------------------------------------------------------------- */
+
+double Surf::tri_size(int m, double &len)
+{
+  return tri_size(tris[m].p1,tris[m].p2,tris[m].p3,len);
 }
 
 /* ----------------------------------------------------------------------
@@ -464,13 +481,13 @@ double Surf::axi_line_size(int m)
    return area = area of triangle M
 ------------------------------------------------------------------------- */
 
-double Surf::tri_size(int m, double &len)
+double Surf::tri_size(double *p1, double *p2, double *p3, double &len)
 {
   double delta12[3],delta13[3],delta23[3],cross[3];
 
-  MathExtra::sub3(pts[tris[m].p2].x,pts[tris[m].p1].x,delta12);
-  MathExtra::sub3(pts[tris[m].p3].x,pts[tris[m].p1].x,delta13);
-  MathExtra::sub3(pts[tris[m].p3].x,pts[tris[m].p2].x,delta23);
+  MathExtra::sub3(p2,p1,delta12);
+  MathExtra::sub3(p3,p1,delta13);
+  MathExtra::sub3(p3,p2,delta23);
   len = MIN(MathExtra::len3(delta12),MathExtra::len3(delta13));
   len = MIN(len,MathExtra::len3(delta23));
 
@@ -480,98 +497,120 @@ double Surf::tri_size(int m, double &len)
 }
 
 /* ----------------------------------------------------------------------
-   check that points are each end point of exactly 2 new lines
-   exception: not required of point on simulation box surface
-   only check points and lines newer than old indices
+   check end points of lines
+   each end point should appear exactly once as different ends of 2 lines
+   exception: not required of end point on simulation box surface
+   only check lines newer than old ones
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_2d(int npoint_old, int nline_old)
+void Surf::check_watertight_2d(int nline_old)
 {
-  int p1,p2;
+  // hash end points of all lines
+  // key = end point
+  // value = 1 if first point, 2 if second point, 3 if both points
+  // NOTE: could prealloc hash to correct size here
 
-  int npoint_new = npoint - npoint_old;
+#ifdef SPARTA_MAP
+  std::map<OnePoint2d,int> hash;
+  std::map<OnePoint2d,int>::iterator it;
+#elif defined SPARTA_UNORDERED_MAP
+  std::unordered_map<OnePoint2d,int,OnePoint2dHash> hash;
+  std::unordered_map<OnePoint2d,int,OnePoint2dHash>::iterator it;
+#else
+  std::tr1::unordered_map<OnePoint2d,int,OnePoint2dHash> hash;
+  std::tr1::unordered_map<OnePoint2d,int,OnePoint2dHash>::iterator it;
+#endif
+
+  // insert each end point into hash
+  // should appear once at each end
+  // error if any duplicate points
+
+  double *p1,*p2;
+  OnePoint2d key;
+  int value;
+
   int nline_new = nline - nline_old;
-
-  // count[I] = # of lines that vertex I is part of
-
-  int *count;
-  memory->create(count,npoint_new,"readsurf:count");
-  for (int i = 0; i < npoint_new; i++) count[i] = 0;
 
   int ndup = 0;
   int m = nline_old;
   for (int i = 0; i < nline_new; i++) {
-    p1 = lines[m].p1 - npoint_old;
-    p2 = lines[m].p2 - npoint_old;
-    count[p1]++;
-    count[p2]++;
-    if (count[p1] > 2) ndup++;
-    if (count[p2] > 2) ndup++;
+    p1 = lines[m].p1;
+    key.pt[0] = p1[0]; key.pt[1] = p1[1];
+    if (hash.find(key) == hash.end()) hash[key] = 1;
+    else {
+      value = hash[key];
+      if (value == 2) hash[key] = 3;
+      else ndup++;
+    }
+
+    p2 = lines[m].p2;
+    key.pt[0] = p2[0]; key.pt[1] = p2[1];
+    if (hash.find(key) == hash.end()) hash[key] = 2;
+    else {
+      value = hash[key];
+      if (value == 1) hash[key] = 3;
+      else ndup++;
+    }
+
     m++;
   }
   
   if (ndup) {
     char str[128];
-    sprintf(str,"Surface check failed with %d duplicate points",ndup);
+    sprintf(str,"Watertight check failed with %d duplicate points",ndup);
     error->all(FLERR,str);
   }
 
-  // check that all counts are 2
-  // allow for exception if point on box surface
+  // check that each end point has a match
+  // allow for exception if end point on box surface
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
+  double *kpt;
+  double pt[3];
 
   int nbad = 0;
-  for (int i = 0; i < npoint_new; i++) {
-    if (count[i] == 0) nbad++;
-    else if (count[i] == 1) {
-      if (!Geometry::point_on_hex(pts[i+npoint_old].x,boxlo,boxhi)) nbad++;
+  for (it = hash.begin(); it != hash.end(); ++it) {
+    if (it->second != 3) {
+      kpt = (double *) it->first.pt;
+      pt[0] = kpt[0]; pt[1] = kpt[1]; pt[2] = 0.0;
+      if (!Geometry::point_on_hex(pt,boxlo,boxhi)) nbad++;
     }
   }
 
   if (nbad) {
     char str[128];
-    sprintf(str,"Surface check failed with %d unmatched points",nbad);
+    sprintf(str,"Watertight check failed with %d unmatched points",nbad);
     error->all(FLERR,str);
   }
-
-  // clean up
-
-  memory->destroy(count);
 }
 
 /* ----------------------------------------------------------------------
    check directed triangle edges
-   must be unique and match exactly one inverted edge
+   each edge should appear exactly once in each direction
    exception: not required of triangle edge on simulation box surface
-   only check points and lines newer than old indices
+   only check triangles newer than old ones
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_3d(int, int ntri_old)
+void Surf::check_watertight_3d(int ntri_old)
 {
-  int ntri_new = ntri - ntri_old;
-
   // hash directed edges of all triangles
-  // key = directed edge, value = # of times it appears in any triangle
+  // key = directed edge
+  // value = 1 if appears once, 2 if reverse also appears once
   // NOTE: could prealloc hash to correct size here
 
-#ifdef SPARTA_MAP
-  std::map<bigint,int> hash;
-  std::map<bigint,int>::iterator it;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<bigint,int> hash;
-  std::unordered_map<bigint,int>::iterator it;
-#else
-  std::tr1::unordered_map<bigint,int> hash;
-  std::tr1::unordered_map<bigint,int>::iterator it;
-#endif
+  MyHash hash;
+  MyIterator it;
 
   // insert each edge into hash
   // should appear once in each direction
   // error if any duplicate edges
+  
+  double *p1,*p2,*p3;
+  TwoPoint3d key,keyinv;
+  int value;
 
-  bigint p1,p2,p3,key;
+  int ntri_new = ntri - ntri_old;
 
   int ndup = 0;
   int m = ntri_old;
@@ -579,47 +618,303 @@ void Surf::check_watertight_3d(int, int ntri_old)
     p1 = tris[m].p1;
     p2 = tris[m].p2;
     p3 = tris[m].p3;
-    key = (p1 << 32) | p2;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
-    key = (p2 << 32) | p3;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
-    key = (p3 << 32) | p1;
-    if (hash.find(key) != hash.end()) ndup++;
-    else hash[key] = 0;
+
+    key.pts[0] = p1[0]; key.pts[1] = p1[1]; key.pts[2] = p1[2];
+    key.pts[3] = p2[0]; key.pts[4] = p2[1]; key.pts[5] = p2[2];
+    if (hash.find(key) == hash.end()) {
+      keyinv.pts[0] = p2[0]; keyinv.pts[1] = p2[1]; keyinv.pts[2] = p2[2];
+      keyinv.pts[3] = p1[0]; keyinv.pts[4] = p1[1]; keyinv.pts[5] = p1[2];
+      if (hash.find(keyinv) == hash.end()) hash[key] = 1;
+      else {
+	value = hash[keyinv];
+	if (value == 1) hash[keyinv] = 2;
+	else ndup++;
+      }
+    } else ndup++;
+    
+    key.pts[0] = p2[0]; key.pts[1] = p2[1]; key.pts[2] = p2[2];
+    key.pts[3] = p3[0]; key.pts[4] = p3[1]; key.pts[5] = p3[2];
+    if (hash.find(key) == hash.end()) {
+      keyinv.pts[0] = p3[0]; keyinv.pts[1] = p3[1]; keyinv.pts[2] = p3[2];
+      keyinv.pts[3] = p2[0]; keyinv.pts[4] = p2[1]; keyinv.pts[5] = p2[2];
+      if (hash.find(keyinv) == hash.end()) hash[key] = 1;
+      else {
+	value = hash[keyinv];
+	if (value == 1) hash[keyinv] = 2;
+	else ndup++;
+      }
+    } else ndup++;
+
+    key.pts[0] = p3[0]; key.pts[1] = p3[1]; key.pts[2] = p3[2];
+    key.pts[3] = p1[0]; key.pts[4] = p1[1]; key.pts[5] = p1[2];
+    if (hash.find(key) == hash.end()) {
+      keyinv.pts[0] = p1[0]; keyinv.pts[1] = p1[1]; keyinv.pts[2] = p1[2];
+      keyinv.pts[3] = p3[0]; keyinv.pts[4] = p3[1]; keyinv.pts[5] = p3[2];
+      if (hash.find(keyinv) == hash.end()) hash[key] = 1;
+      else {
+	value = hash[keyinv];
+	if (value == 1) hash[keyinv] = 2;
+	else ndup++;
+      } 
+    } else ndup++;
+      
     m++;
   }
 
   if (ndup) {
     char str[128];
-    sprintf(str,"Surface check failed with %d duplicate edges",ndup);
+    sprintf(str,"Watertight check failed with %d duplicate edges",ndup);
     error->all(FLERR,str);
   }
 
   // check that each edge has an inverted match
   // allow for exception if edge on box surface
+  // NOTE: this does not check if 2 pts of edge are on same box face
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
+  double *pts;
 
   int nbad = 0;
   for (it = hash.begin(); it != hash.end(); ++it) {
-    p1 = it->first >> 32;
-    p2 = it->first & MAXSMALLINT;
-    key = (p2 << 32) | p1;
-    if (hash.find(key) == hash.end()) {
-      if (!Geometry::point_on_hex(pts[p1].x,boxlo,boxhi) ||
-          !Geometry::point_on_hex(pts[p2].x,boxlo,boxhi)) nbad++;
+    if (it->second != 2) {
+      pts = (double *) it->first.pts;
+      if (!Geometry::point_on_hex(&pts[0],boxlo,boxhi)) nbad++;
+      if (!Geometry::point_on_hex(&pts[3],boxlo,boxhi)) nbad++;
     }
   }
 
   if (nbad) {
     char str[128];
-    sprintf(str,"Surface check failed with %d unmatched edges",nbad);
+    sprintf(str,"Watertight check failed with %d unmatched edges",nbad);
     error->all(FLERR,str);
   }
 }
+
+/* ----------------------------------------------------------------------
+   check if all points are inside or on surface of global simulation box
+   called by ReadSurf for lines or triangles
+   nold = previous # of elements
+   nnew = current # of elements
+------------------------------------------------------------------------- */
+
+void Surf::check_point_inside(int nold)
+{
+  int nbad;
+  double *x;
+
+  int dim = domain->dimension;
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+
+  if (dim == 2) {
+    int nline_new = nline - nold;
+    int m = nold;
+    nbad = 0;
+    for (int i = 0; i < nline_new; i++) {
+      x = lines[m].p1;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      x = lines[m].p2;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      m++;
+    }
+  } else if (dim == 3) {
+    int ntri_new = ntri - nold;
+    int m = nold;
+    nbad = 0;
+    for (int i = 0; i < ntri_new; i++) {
+      x = tris[m].p1;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      x = tris[m].p2;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      x = tris[m].p3;
+      if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
+	  x[1] < boxlo[1] || x[1] > boxhi[1] ||
+	  x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
+      m++;
+    }
+  }
+
+  if (nbad) {
+    char str[128];
+    sprintf(str,"%d surface points are not inside simulation box",
+	    nbad);
+    error->all(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check nearness of all points to other lines in same cell
+   error if point is on line, including duplicate point
+   warn if closer than EPSILON_GRID = fraction of grid cell size
+   NOTE: this can miss a close point/line pair in 2 different grid cells
+------------------------------------------------------------------------- */
+
+void Surf::check_point_near_surf_2d()
+{
+  int i,j,n;
+  int *csurfs;
+  double side,epssq;
+  double *p1,*p2,*lo,*hi;
+  Surf::Line *line;
+
+  Surf::Line *surflines = surf->lines;
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  int nerror = 0;
+  int nwarn = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    n = cells[icell].nsurf;
+    if (n == 0) continue;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    side = MIN(hi[0]-lo[0],hi[1]-lo[1]);
+    epssq = (EPSILON_GRID*side) * (EPSILON_GRID*side);
+
+    csurfs = cells[icell].csurfs;
+    for (i = 0; i < n; i++) {
+      line = &surflines[csurfs[i]];
+      for (j = 0; j < n; j++) {
+        if (i == j) continue;
+        p1 = surflines[csurfs[j]].p1;
+        p2 = surflines[csurfs[j]].p2;
+        point_line_compare(p1,line->p1,line->p2,epssq,nerror,nwarn);
+        point_line_compare(p2,line->p1,line->p2,epssq,nerror,nwarn);
+      }
+    }
+  }
+
+  int all;
+  MPI_Allreduce(&nerror,&all,1,MPI_INT,MPI_SUM,world);
+  if (all) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d points on lines",all);
+    error->all(FLERR,str);
+  }
+
+  MPI_Allreduce(&nwarn,&all,1,MPI_INT,MPI_SUM,world);
+  if (all) {
+    char str[128];
+    sprintf(str,"Surface check found %d points nearly on lines",all);
+    if (comm->me == 0) error->warning(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   check nearness of all points to other triangles in same cell
+   error if point is on triangle, including duplicate point
+   warn if closer than EPSILON_GRID = fraction of grid cell size
+   NOTE: this can miss a close point/triangle pair in 2 different grid cells
+------------------------------------------------------------------------- */
+
+void Surf::check_point_near_surf_3d()
+{
+  int i,j,n;
+  int *csurfs;
+  double side,epssq;
+  double *p1,*p2,*p3,*lo,*hi;
+  Surf::Tri *tri;
+
+  Surf::Tri *surftris = surf->tris;
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  int nerror = 0;
+  int nwarn = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    n = cells[icell].nsurf;
+    if (n == 0) continue;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    side = MIN(hi[0]-lo[0],hi[1]-lo[1]);
+    side = MIN(side,hi[2]-lo[2]);
+    epssq = (EPSILON_GRID*side) * (EPSILON_GRID*side);
+
+    csurfs = cells[icell].csurfs;
+    for (i = 0; i < n; i++) {
+      tri = &surftris[csurfs[i]];
+      for (j = 0; j < n; j++) {
+        if (i == j) continue;
+        p1 = surftris[csurfs[j]].p1;
+        p2 = surftris[csurfs[j]].p2;
+        p3 = surftris[csurfs[j]].p3;
+        point_tri_compare(p1,tri->p1,tri->p2,tri->p3,tri->norm,
+                          epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
+        point_tri_compare(p2,tri->p1,tri->p2,tri->p3,tri->norm,
+                          epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
+        point_tri_compare(p3,tri->p1,tri->p2,tri->p3,tri->norm,
+                          epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
+      }
+    }
+  }
+
+  int all;
+  MPI_Allreduce(&nerror,&all,1,MPI_INT,MPI_SUM,world);
+  if (all) {
+    char str[128];
+    sprintf(str,"Surface check failed with %d points on triangles",all);
+    error->all(FLERR,str);
+  }
+
+  MPI_Allreduce(&nwarn,&all,1,MPI_INT,MPI_SUM,world);
+  if (all) {
+    char str[128];
+    sprintf(str,"Surface check found %d points nearly on triangles",all);
+    if (comm->me == 0) error->warning(FLERR,str);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   compute distance bewteen a point and line
+   just return if point is an endpoint of line
+   increment nerror if point on line
+   increment nwarn if point is within epssq distance of line
+------------------------------------------------------------------------- */
+
+void Surf::point_line_compare(double *pt, double *p1, double *p2,
+                              double epssq, int &nerror, int &nwarn)
+{
+  if (pt[0] == p1[0] && pt[1] == p1[1]) return;
+  if (pt[0] == p2[0] && pt[1] == p2[1]) return;
+  double rsq = Geometry::distsq_point_line(pt,p1,p2);
+  if (rsq == 0.0) nerror++;
+  else if (rsq < epssq) nwarn++;
+}
+
+/* ----------------------------------------------------------------------
+   compute distance bewteen a point and triangle
+   just return if point is an endpoint of triangle
+   increment nerror if point on triangle
+   increment nwarn if point is within epssq distance of triangle
+------------------------------------------------------------------------- */
+
+void Surf::point_tri_compare(double *pt, double *p1, double *p2, double *p3,
+                             double *norm, double epssq, int &nerror, int &nwarn,
+                             int, int, int) 
+{
+  if (pt[0] == p1[0] && pt[1] == p1[1] && pt[2] == p1[2]) return;
+  if (pt[0] == p2[0] && pt[1] == p2[1] && pt[2] == p2[2]) return;
+  if (pt[0] == p3[0] && pt[1] == p3[1] && pt[2] == p3[2]) return;
+  double rsq = Geometry::distsq_point_tri(pt,p1,p2,p3,norm);
+  if (rsq == 0.0) nerror++;
+  else if (rsq < epssq) nwarn++;
+}
+
 
 /* ----------------------------------------------------------------------
    add a surface collision model
@@ -679,36 +974,6 @@ void Surf::add_collide(int narg, char **arg)
 
   nsc++;
 }
-
-/* ----------------------------------------------------------------------
-   check if all points are inside or on surface of global simulation box
-------------------------------------------------------------------------- */
-
-void Surf::check_point_inside(int npoint_old, int npoint_new)
-{
-  double *x;
-
-  double *boxlo = domain->boxlo;
-  double *boxhi = domain->boxhi;
-
-  int m = npoint_old;
-  int nbad = 0;
-  for (int i = 0; i < npoint_new; i++) {
-    x = pts[m].x;
-    if (x[0] < boxlo[0] || x[0] > boxhi[0] ||
-	x[1] < boxlo[1] || x[1] > boxhi[1] ||
-	x[2] < boxlo[2] || x[2] > boxhi[2]) nbad++;
-    m++;
-  }
-
-  if (nbad) {
-    char str[128];
-    sprintf(str,"%d surface points are not inside simulation box",
-	    nbad);
-    error->all(FLERR,str);
-  }
-}
-
 
 /* ----------------------------------------------------------------------
    find a surface collide model by ID
@@ -1014,21 +1279,21 @@ void Surf::group(int narg, char **arg)
       if (rstyle == REGION_ALL) {
         for (i = 0; i < nline; i++) {
           flag = 1;
-          if (!region->match(pts[lines[i].p1].x)) flag = 0;
-          if (!region->match(pts[lines[i].p2].x)) flag = 0;
+          if (!region->match(lines[i].p1)) flag = 0;
+          if (!region->match(lines[i].p2)) flag = 0;
           if (flag) lines[i].mask |= bit;
         }
       } else if (rstyle == REGION_ONE) {
         for (i = 0; i < nline; i++) {
           flag = 0;
-          if (region->match(pts[lines[i].p1].x)) flag = 1;
-          if (region->match(pts[lines[i].p2].x)) flag = 1;
+          if (region->match(lines[i].p1)) flag = 1;
+          if (region->match(lines[i].p2)) flag = 1;
           if (flag) lines[i].mask |= bit;
         }
       } else if (rstyle == REGION_CENTER) {
         for (i = 0; i < nline; i++) {
-          x[0] = 0.5 * (pts[lines[i].p1].x[0] + pts[lines[i].p2].x[0]);
-          x[1] = 0.5 * (pts[lines[i].p1].x[1] + pts[lines[i].p2].x[1]);
+          x[0] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
+          x[1] = 0.5 * (lines[i].p1[1] + lines[i].p2[1]);
           x[2] = 0.0;
           if (region->match(x)) lines[i].mask |= bit;
         }
@@ -1038,27 +1303,24 @@ void Surf::group(int narg, char **arg)
       if (rstyle == REGION_ALL) {
         for (i = 0; i < ntri; i++) {
           flag = 1;
-          if (!region->match(pts[tris[i].p1].x)) flag = 0;
-          if (!region->match(pts[tris[i].p2].x)) flag = 0;
-          if (!region->match(pts[tris[i].p3].x)) flag = 0;
+          if (!region->match(tris[i].p1)) flag = 0;
+          if (!region->match(tris[i].p2)) flag = 0;
+          if (!region->match(tris[i].p3)) flag = 0;
           if (flag) tris[i].mask |= bit;
         }
       } else if (rstyle == REGION_ONE) {
         for (i = 0; i < ntri; i++) {
           flag = 0;
-          if (region->match(pts[tris[i].p1].x)) flag = 1;
-          if (region->match(pts[tris[i].p2].x)) flag = 1;
-          if (region->match(pts[tris[i].p3].x)) flag = 1;
+          if (region->match(tris[i].p1)) flag = 1;
+          if (region->match(tris[i].p2)) flag = 1;
+          if (region->match(tris[i].p3)) flag = 1;
           if (flag) tris[i].mask |= bit;
         }
       } else if (rstyle == REGION_CENTER) {
         for (i = 0; i < ntri; i++) {
-          x[0] = (pts[tris[i].p1].x[0] + pts[tris[i].p2].x[0] + 
-                  pts[tris[i].p3].x[0]) / 3.0;
-          x[1] = (pts[tris[i].p1].x[1] + pts[tris[i].p2].x[1] + 
-                  pts[tris[i].p3].x[1]) / 3.0;
-          x[2] = (pts[tris[i].p1].x[2] + pts[tris[i].p2].x[2] + 
-                  pts[tris[i].p3].x[2]) / 3.0;
+          x[0] = (tris[i].p1[0] + tris[i].p2[0] + tris[i].p3[0]) / 3.0;
+          x[1] = (tris[i].p1[1] + tris[i].p2[1] + tris[i].p3[1]) / 3.0;
+          x[2] = (tris[i].p1[2] + tris[i].p2[2] + tris[i].p3[2]) / 3.0;
           if (region->match(x)) tris[i].mask |= bit;
         }
       }
@@ -1384,23 +1646,25 @@ void Surf::write_restart(FILE *fp)
     fwrite(gnames[i],sizeof(char),n,fp);
   }
 
-  fwrite(&npoint,sizeof(int),1,fp);
-  fwrite(pts,sizeof(Point),npoint,fp);
-
   if (domain->dimension == 2) {
     fwrite(&nline,sizeof(int),1,fp);
     for (int i = 0; i < nline; i++) {
+      fwrite(&lines[i].id,sizeof(surfint),1,fp);
       fwrite(&lines[i].type,sizeof(int),1,fp);
       fwrite(&lines[i].mask,sizeof(int),1,fp);
-      fwrite(&lines[i].p1,sizeof(int),2,fp);
+      fwrite(&lines[i].p1,sizeof(double),3,fp);
+      fwrite(&lines[i].p2,sizeof(double),3,fp);
     }
   }
   if (domain->dimension == 3) {
     fwrite(&ntri,sizeof(int),1,fp);
     for (int i = 0; i < ntri; i++) {
+      fwrite(&tris[i].id,sizeof(surfint),1,fp);
       fwrite(&tris[i].type,sizeof(int),1,fp);
       fwrite(&tris[i].mask,sizeof(int),1,fp);
-      fwrite(&tris[i].p1,sizeof(int),3,fp);
+      fwrite(&tris[i].p1,sizeof(double),3,fp);
+      fwrite(&tris[i].p2,sizeof(double),3,fp);
+      fwrite(&tris[i].p3,sizeof(double),3,fp);
     }
   }
 }
@@ -1430,12 +1694,6 @@ void Surf::read_restart(FILE *fp)
     MPI_Bcast(gnames[i],n,MPI_CHAR,0,world);
   }
 
-  if (me == 0) fread(&npoint,sizeof(int),1,fp);
-  MPI_Bcast(&npoint,1,MPI_INT,0,world);
-  pts = (Point *) memory->smalloc(npoint*sizeof(Point),"surf:pts");
-  if (me == 0) fread(pts,sizeof(Point),npoint,fp);
-  MPI_Bcast(pts,npoint*sizeof(Point),MPI_CHAR,0,world);
-
   if (domain->dimension == 2) {
     if (me == 0) fread(&nline,sizeof(int),1,fp);
     MPI_Bcast(&nline,1,MPI_INT,0,world);
@@ -1443,10 +1701,12 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < nline; i++) {
+        fread(&lines[i].id,sizeof(surfint),1,fp);
         fread(&lines[i].type,sizeof(int),1,fp);
         fread(&lines[i].mask,sizeof(int),1,fp);
         lines[i].isc = lines[i].isr = -1;
-        fread(&lines[i].p1,sizeof(int),2,fp);
+        fread(lines[i].p1,sizeof(double),3,fp);
+        fread(lines[i].p2,sizeof(double),3,fp);
         lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
       }
     }
@@ -1460,10 +1720,13 @@ void Surf::read_restart(FILE *fp)
 
     if (me == 0) {
       for (int i = 0; i < ntri; i++) {
+        fread(&tris[i].id,sizeof(surfint),1,fp);
         fread(&tris[i].type,sizeof(int),1,fp);
         fread(&tris[i].mask,sizeof(int),1,fp);
         tris[i].isc = tris[i].isr = -1;
-        fread(&tris[i].p1,sizeof(int),3,fp);
+        fread(tris[i].p1,sizeof(double),3,fp);
+        fread(tris[i].p2,sizeof(double),3,fp);
+        fread(tris[i].p3,sizeof(double),3,fp);
         tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
       }
     }
@@ -1473,13 +1736,23 @@ void Surf::read_restart(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
+void Surf::grow()
+{
+  if (domain->dimension == 2)
+    lines = (Surf::Line *) 
+      memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
+  else 
+    tris = (Surf::Tri *) 
+      memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
+}
+
+/* ---------------------------------------------------------------------- */
+
 bigint Surf::memory_usage()
 {
   bigint bytes = 0;
-  bytes += (bigint) npoint * sizeof(Point);
   bytes += (bigint) nline * sizeof(Line);
   bytes += (bigint) ntri * sizeof(Tri);
   bytes += nlocal * sizeof(int);
   return bytes;
 }
-

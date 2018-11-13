@@ -19,16 +19,9 @@
 #include "grid.h"
 #include "domain.h"
 #include "comm.h"
+#include "hash3.h"
 #include "memory.h"
 #include "error.h"
-
-#ifdef SPARTA_MAP
-#include <map>
-#elif defined SPARTA_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
 
 using namespace SPARTA_NS;
 
@@ -130,14 +123,7 @@ void WriteGrid::write_parents()
 
   if (!grid->hashfilled) {
 
-#ifdef SPARTA_MAP
-    std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-    std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-    std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+    Grid::MyHash *hash = grid->hash;
     hash->clear();
 
     Grid::ParentCell *pcells = grid->pcells;

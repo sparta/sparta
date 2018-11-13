@@ -68,14 +68,27 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
 
   movesurf->process_args(narg-5,&arg[5]);
 
+  dim = domain->dimension;
   ntimestep_original = update->ntimestep;
 
-  // make copy of original points to pass to movesurf->move_points()
+  // make copy of original lines or tris
+  // to pass to movesurf->move_lines() or movesurf->move_tris()
 
-  npoint = surf->npoint;
-  origpts = (Surf::Point *) 
-    memory->smalloc(npoint*sizeof(Surf::Point),"fix/move/surf:origpts");
-  memcpy(origpts,surf->pts,npoint*sizeof(Surf::Point));
+  nline = ntri = 0;
+  origlines = NULL;
+  origtris = NULL;
+
+  if (dim == 2) {
+    nline = surf->nline;
+    origlines = (Surf::Line *) 
+      memory->smalloc(nline*sizeof(Surf::Line),"fix/move/surf:origlines");
+    memcpy(origlines,surf->lines,nline*sizeof(Surf::Line));
+  } else if (dim == 3) {
+    ntri = surf->ntri;
+    origtris = (Surf::Tri *) 
+      memory->smalloc(ntri*sizeof(Surf::Tri),"fix/move/surf:origtris");
+    memcpy(origtris,surf->tris,ntri*sizeof(Surf::Tri));
+  }
 
   // initial output
 
@@ -87,7 +100,8 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
 FixMoveSurf::~FixMoveSurf()
 {
   delete movesurf;
-  memory->sfree(origpts);
+  memory->sfree(origlines);
+  memory->sfree(origtris);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -103,8 +117,12 @@ int FixMoveSurf::setmask()
 
 void FixMoveSurf::init()
 {
-  if (surf->npoint != npoint) 
-    error->all(FLERR,"Number of surface points changed in fix move/surf");
+  int flag = 0;
+  if (dim == 2 && surf->nline != nline) flag = 1;
+  if (dim == 3 && surf->ntri != ntri) flag = 1;
+
+  if (flag)
+    error->all(FLERR,"Number of surface elements changed in fix move/surf");
 
   // NOTE: first read of file ?
   //       what about on successive run
@@ -128,7 +146,8 @@ void FixMoveSurf::end_of_step()
 
   // movesurf moves surface vertices
 
-  movesurf->move_points(fraction,origpts);
+  if (dim == 2) movesurf->move_lines(fraction,origlines);
+  else movesurf->move_tris(fraction,origtris);
 
   // remake list of surf elements I own
   // assign split cell particles to parent split cell
@@ -176,4 +195,3 @@ double FixMoveSurf::compute_scalar()
 {
   return (double) ndeleted;
 }
-

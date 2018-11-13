@@ -78,7 +78,6 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
   hi = hi_caller;
   surfs = surfs_caller;
 
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
   int nline = surf->nline;
 
@@ -86,8 +85,8 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 
   nsurf = 0;
   for (int m = 0; m < nline; m++) {
-    x1 = pts[lines[m].p1].x;
-    x2 = pts[lines[m].p2].x;
+    x1 = lines[m].p1;
+    x2 = lines[m].p2;
 
     if (MAX(x1[0],x2[0]) < lo[0]) continue;
     if (MIN(x1[0],x2[0]) > hi[0]) continue;
@@ -122,7 +121,6 @@ int Cut2d::surf2grid_list(cellint id_caller,
   hi = hi_caller;
   surfs = surfs_caller;
 
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
 
   int m;
@@ -131,8 +129,8 @@ int Cut2d::surf2grid_list(cellint id_caller,
   nsurf = 0;
   for (int i = 0; i < nlist; i++) {
     m = list[i];
-    x1 = pts[lines[m].p1].x;
-    x2 = pts[lines[m].p2].x;
+    x1 = lines[m].p1;
+    x2 = lines[m].p2;
 
     if (MAX(x1[0],x2[0]) < lo[0]) continue;
     if (MIN(x1[0],x2[0]) > hi[0]) continue;
@@ -491,7 +489,6 @@ int Cut2d::build_clines()
   Surf::Line *line;
   Cline *cline;
 
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
 
   clines.grow(nsurf);
@@ -505,8 +502,8 @@ int Cut2d::build_clines()
   for (int i = 0; i < nsurf; i++) {
     m = surfs[i];
     line = &lines[m];
-    memcpy(p1,pts[line->p1].x,2*sizeof(double));
-    memcpy(p2,pts[line->p2].x,2*sizeof(double));
+    memcpy(p1,line->p1,2*sizeof(double));
+    memcpy(p2,line->p2,2*sizeof(double));
 
     // if pushflag is set, push line pts near cell surface
 
@@ -537,8 +534,8 @@ int Cut2d::build_clines()
       cbox[0] = 0.5*(lo[0]+hi[0]);
       cbox[1] = 0.5*(lo[1]+hi[1]);
       cbox[2] = 0.0;
-      pp1 = surf->pts[line->p1].x;
-      pp2 = surf->pts[line->p2].x;
+      pp1 = line->p1;
+      pp2 = line->p2;
       cmid[0] = 0.5*(pp1[0]+pp2[0]);
       cmid[1] = 0.5*(pp1[1]+pp2[1]);
       cmid[2] = 0.0;
@@ -1003,7 +1000,6 @@ int Cut2d::split_point(int *surfmap, double *xsplit, int &xsub)
   double *x1,*x2;
   double a[2],b[2];
 
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
 
   // if end pt of any line with non-negative surfmap is in/on cell, return
@@ -1011,8 +1007,8 @@ int Cut2d::split_point(int *surfmap, double *xsplit, int &xsub)
   for (int i = 0; i < nsurf; i++) {
     if (surfmap[i] < 0) continue;
     iline = surfs[i];
-    x1 = pts[lines[iline].p1].x;
-    x2 = pts[lines[iline].p2].x;
+    x1 = lines[iline].p1;
+    x2 = lines[iline].p2;
     if (ptflag(x1) != EXTERIOR) {
       xsplit[0] = x1[0]; xsplit[1] = x1[1];
       xsub = surfmap[i];
@@ -1030,8 +1026,8 @@ int Cut2d::split_point(int *surfmap, double *xsplit, int &xsub)
   for (int i = 0; i < nsurf; i++) {
     if (surfmap[i] < 0) continue;
     iline = surfs[i];
-    x1 = pts[lines[iline].p1].x;
-    x2 = pts[lines[iline].p2].x;
+    x1 = lines[iline].p1;
+    x2 = lines[iline].p2;
     clip(x1,x2,a,b);
     xsplit[0] = a[0]; xsplit[1] = a[1];
     xsub = surfmap[i];

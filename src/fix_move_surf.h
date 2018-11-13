@@ -37,14 +37,15 @@ class FixMoveSurf : public Fix {
 
  private:
   int me,nprocs;
-  int nlarge;
+  int dim,nlarge;
 
-  int npoint;
   bigint ntimestep_original;
   bigint ndeleted;
   class MoveSurf *movesurf;
 
-  Surf::Point *origpts;
+  int nline,ntri;
+  Surf::Line *origlines;
+  Surf::Tri *origtris;
 };
 
 }

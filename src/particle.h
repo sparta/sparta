@@ -134,6 +134,7 @@ class Particle : protected Pointers {
   void init();
   virtual void compress_migrate(int, int *);
   void compress_rebalance();
+  void compress_rebalance_sorted();
   void compress_reactions(int, int *);
   void sort();
   void sort_allocate();

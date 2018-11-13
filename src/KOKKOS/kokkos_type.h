@@ -297,11 +297,6 @@ namespace SPARTA_NS {
   typedef tdual_pcell_1d::t_host t_host_pcell_1d;
 
   typedef Kokkos::
-    DualView<Surf::Point*, SPADeviceType::array_layout, DeviceType> tdual_point_1d;
-  typedef tdual_point_1d::t_dev t_point_1d;
-  typedef tdual_point_1d::t_host t_host_point_1d;
-
-  typedef Kokkos::
     DualView<Surf::Line*, SPADeviceType::array_layout, DeviceType> tdual_line_1d;
   typedef tdual_line_1d::t_dev t_line_1d;
   typedef tdual_line_1d::t_host t_host_line_1d;
@@ -593,11 +588,11 @@ typedef tdual_float_scalar::t_host_const_um t_float_scalar_const_um;
 //Generic ArrayTypes
 typedef Kokkos::
   DualView<char*, SPADeviceType::array_layout, SPADeviceType> tdual_char_1d;
-typedef tdual_char_1d::t_dev t_char_1d;
-typedef tdual_char_1d::t_dev_const t_char_1d_const;
-typedef tdual_char_1d::t_dev_um t_char_1d_um;
-typedef tdual_char_1d::t_dev_const_um t_char_1d_const_um;
-typedef tdual_char_1d::t_dev_const_randomread t_char_1d_randomread;
+typedef tdual_char_1d::t_host t_char_1d;
+typedef tdual_char_1d::t_host_const t_char_1d_const;
+typedef tdual_char_1d::t_host_um t_char_1d_um;
+typedef tdual_char_1d::t_host_const_um t_char_1d_const_um;
+typedef tdual_char_1d::t_host_const_randomread t_char_1d_randomread;
 
 typedef Kokkos::DualView<int*, SPADeviceType::array_layout, SPADeviceType> tdual_int_1d;
 typedef tdual_int_1d::t_host t_int_1d;

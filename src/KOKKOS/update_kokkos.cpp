@@ -137,19 +137,15 @@ UpdateKokkos::~UpdateKokkos()
   grid_kk_copy.uncopy();
   domain_kk_copy.uncopy();
 
-  if (surf->nsc > 0) {
-    for (int i=0; i<surf->nsc; i++) {
-      sc_kk_specular_copy[i].uncopy();
-      sc_kk_diffuse_copy[i].uncopy();
-      sc_kk_vanish_copy[i].uncopy();
-      sc_kk_piston_copy[i].uncopy();
-    }
+  for (int i=0; i<KOKKOS_MAX_SURF_COLL_PER_TYPE; i++) {
+    sc_kk_specular_copy[i].uncopy();
+    sc_kk_diffuse_copy[i].uncopy();
+    sc_kk_vanish_copy[i].uncopy();
+    sc_kk_piston_copy[i].uncopy();
   }
 
-  if (nboundary_tally > 0) {
-    for (int i=0; i<nboundary_tally; i++) {
-      blist_active_copy[i].uncopy();
-    }
+  for (int i=0; i<KOKKOS_MAX_BLIST; i++) {
+    blist_active_copy[i].uncopy();
   }
 
 }
@@ -442,7 +438,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     if (surf->exist) {
       SurfKokkos* surf_kk = ((SurfKokkos*)surf);
       surf_kk->sync(Device,ALL_MASK);
-      d_pts = surf_kk->k_pts.d_view;
       d_lines = surf_kk->k_lines.d_view;
       d_tris = surf_kk->k_tris.d_view;
     }
@@ -925,21 +920,21 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
             tri = &d_tris[isurf];
             hitflag = GeometryKokkos::
               line_tri_intersect(x,xnew,
-                                 d_pts[tri->p1].x,d_pts[tri->p2].x,
-                                 d_pts[tri->p3].x,tri->norm,xc,param,side);
+                                 tri->p1,tri->p2,
+                                 tri->p3,tri->norm,xc,param,side);
           }
           if (DIM == 2) {
             line = &d_lines[isurf];
             hitflag = GeometryKokkos::
               line_line_intersect(x,xnew,
-                                  d_pts[line->p1].x,d_pts[line->p2].x,
+                                  line->p1,line->p2,
                                   line->norm,xc,param,side);
           }
           if (DIM == 1) {
             line = &d_lines[isurf];
             hitflag = GeometryKokkos::
               axi_line_intersect(dtsurf,x,v,outface,lo,hi,
-                                 d_pts[line->p1].x,d_pts[line->p2].x,
+                                 line->p1,line->p2,
                                  line->norm,exclude == isurf,
                                  xc,vc,param,side);
           }
@@ -1449,7 +1444,7 @@ int UpdateKokkos::split3d(int icell, double *x) const
     tri = &d_tris[isurf];
     hitflag = GeometryKokkos::
       line_tri_intersect(x,xnew,
-                         d_pts[tri->p1].x,d_pts[tri->p2].x,d_pts[tri->p3].x,
+                         tri->p1,tri->p2,tri->p3,
                          tri->norm,xc,param,side);
     
     if (hitflag && side != INSIDE && param < minparam) {
@@ -1501,7 +1496,7 @@ int UpdateKokkos::split2d(int icell, double *x) const
     line = &d_lines[isurf];
     hitflag = GeometryKokkos::
       line_line_intersect(x,xnew,
-                          d_pts[line->p1].x,d_pts[line->p2].x,line->norm,
+                          line->p1,line->p2,line->norm,
                           xc,param,side);
 
     if (hitflag && side != INSIDE && param < minparam) {

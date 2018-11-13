@@ -24,6 +24,7 @@
 #include "memory_kokkos.h"
 #include "error.h"
 #include "sparta_masks.h"
+#include "kokkos.h"
 
 using namespace SPARTA_NS;
 
@@ -41,6 +42,17 @@ ComputeBoundaryKokkos::ComputeBoundaryKokkos(SPARTA *sparta, int narg, char **ar
   d_myarray = k_myarray.d_view;
   d_array = k_array.d_view;
   d_which = DAT::t_int_1d("boundary:which",nvalue);
+}
+
+ComputeBoundaryKokkos::ComputeBoundaryKokkos(SPARTA *sparta) :
+  ComputeBoundary(sparta)
+{
+  array = NULL;
+  myarray = NULL;
+  which = NULL;
+  id = NULL;
+  style = NULL;
+  tlist = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -73,11 +85,17 @@ void ComputeBoundaryKokkos::compute_array()
 
   // sum tallies across processors
 
-  MPI_Allreduce(d_myarray.data(),d_array.data(),nrow*ntotal,
-                MPI_DOUBLE,MPI_SUM,world);
-
-  k_array.modify<DeviceType>();
-  k_array.sync<SPAHostType>();
+  if (sparta->kokkos->gpu_direct_flag) {
+    MPI_Allreduce(d_myarray.data(),d_array.data(),nrow*ntotal,
+                  MPI_DOUBLE,MPI_SUM,world);
+    k_array.modify<DeviceType>();
+    k_array.sync<SPAHostType>();
+  } else {
+    k_myarray.modify<DeviceType>();
+    k_myarray.sync<SPAHostType>();
+    MPI_Allreduce(k_myarray.h_view.data(),k_array.h_view.data(),nrow*ntotal,
+                  MPI_DOUBLE,MPI_SUM,world);
+  }
 
   // normalize tallies
 

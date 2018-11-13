@@ -94,8 +94,7 @@ CollideVSSKokkos::~CollideVSSKokkos()
   if (copymode) return;
 
   grid_kk_copy.uncopy();
-  if (react)
-    react_kk_copy.uncopy();
+  react_kk_copy.uncopy();
 
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();

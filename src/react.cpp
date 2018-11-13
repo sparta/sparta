@@ -39,6 +39,8 @@ React::React(SPARTA *sparta, int, char **arg) : Pointers(sparta)
   random = new RanPark(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
+
+  copy = copymode = 0;
 }
 
 /* ---------------------------------------------------------------------- */

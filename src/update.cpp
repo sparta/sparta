@@ -90,6 +90,8 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   ranmaster = new RanMars(sparta);
 
   reorder_period = 0;
+  global_mem_limit = 0;
+  mem_limit_grid_flag = 0;
 
   copymode = 0;
 }
@@ -325,7 +327,6 @@ template < int DIM, int SURF > void Update::move()
   Grid::ChildCell *cells = grid->cells;
   Surf::Tri *tris = surf->tris;
   Surf::Line *lines = surf->lines;
-  Surf::Point *pts = surf->pts;
   double dt = update->dt;
   int notfirst = 0;
 
@@ -618,22 +619,19 @@ template < int DIM, int SURF > void Update::move()
               if (DIM == 3) {
                 tri = &tris[isurf];
                 hitflag = Geometry::
-                  line_tri_intersect(x,xnew,
-                                     pts[tri->p1].x,pts[tri->p2].x,
-                                     pts[tri->p3].x,tri->norm,xc,param,side);
+                  line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+                                     tri->norm,xc,param,side);
               }
               if (DIM == 2) {
                 line = &lines[isurf];
                 hitflag = Geometry::
-                  line_line_intersect(x,xnew,
-                                      pts[line->p1].x,pts[line->p2].x,
+                  line_line_intersect(x,xnew,line->p1,line->p2,
                                       line->norm,xc,param,side);
               }
               if (DIM == 1) {
                 line = &lines[isurf];
                 hitflag = Geometry::
-                  axi_line_intersect(dtsurf,x,v,outface,lo,hi,
-                                     pts[line->p1].x,pts[line->p2].x,
+                  axi_line_intersect(dtsurf,x,v,outface,lo,hi,line->p1,line->p2,
                                      line->norm,exclude == isurf,
                                      xc,vc,param,side);
               }
@@ -650,9 +648,9 @@ template < int DIM, int SURF > void Update::move()
                          "Param %g: Side %d\n",
                          MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],x[2],xnew[0],xnew[1],xnew[2],
-                         pts[tri->p1].x[0],pts[tri->p1].x[1],pts[tri->p1].x[2],
-                         pts[tri->p2].x[0],pts[tri->p2].x[1],pts[tri->p2].x[2],
-                         pts[tri->p3].x[0],pts[tri->p3].x[1],pts[tri->p3].x[2],
+                         tri->p1[0],tri->p1[1],tri->p1[2],
+                         tri->p2[0],tri->p2[1],tri->p2[2],
+                         tri->p3[0],tri->p3[1],tri->p3[2],
                          tri->norm[0],tri->norm[1],tri->norm[2],
                          xc[0],xc[1],xc[2],param,side);
               }
@@ -665,8 +663,7 @@ template < int DIM, int SURF > void Update::move()
                          "Param %g: Side %d\n",
                          MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],xnew[0],xnew[1],
-                         pts[line->p1].x[0],pts[line->p1].x[1],
-                         pts[line->p2].x[0],pts[line->p2].x[1],
+                         line->p1[0],line->p1[1],line->p2[0],line->p2[1],
                          line->norm[0],line->norm[1],
                          xc[0],xc[1],param,side);
               }
@@ -680,13 +677,12 @@ template < int DIM, int SURF > void Update::move()
                          hitflag,ntimestep,MOVE_DEBUG_INDEX,icell,nsurf,isurf,
                          x[0],x[1],
                          xnew[0],sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]),
-                         pts[line->p1].x[0],pts[line->p1].x[1],
-                         pts[line->p2].x[0],pts[line->p2].x[1],
+                         line->p1[0],line->p1[1],line->p2[0],line->p2[1],
                          line->norm[0],line->norm[1],
                          xc[0],xc[1],vc[0],vc[1],vc[2],param,side);
                 double edge1[3],edge2[3],xfinal[3],cross[3];
-                MathExtra::sub3(pts[line->p2].x,pts[line->p1].x,edge1);
-                MathExtra::sub3(x,pts[line->p1].x,edge2);
+                MathExtra::sub3(line->p2,line->p1,edge1);
+                MathExtra::sub3(x,line->p1,edge2);
                 MathExtra::cross3(edge2,edge1,cross);
                 if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
                     MOVE_DEBUG_ID == particles[i].id)
@@ -694,7 +690,7 @@ template < int DIM, int SURF > void Update::move()
                 xfinal[0] = xnew[0];
                 xfinal[1] = sqrt(xnew[1]*xnew[1]+xnew[2]*xnew[2]);
                 xfinal[2] = 0.0;
-                MathExtra::sub3(xfinal,pts[line->p1].x,edge2);
+                MathExtra::sub3(xfinal,line->p1,edge2);
                 MathExtra::cross3(edge2,edge1,cross);
                 if (hitflag && ntimestep == MOVE_DEBUG_STEP && 
                     MOVE_DEBUG_ID == particles[i].id)
@@ -1172,7 +1168,6 @@ int Update::split3d(int icell, double *x)
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
   Surf::Tri *tris = surf->tris;
-  Surf::Point *pts = surf->pts;
 
   // check for collisions with lines in cell
   // find 1st surface hit via minparam
@@ -1195,8 +1190,7 @@ int Update::split3d(int icell, double *x)
     isurf = csurfs[m];
     tri = &tris[isurf];
     hitflag = Geometry::
-      line_tri_intersect(x,xnew,
-                         pts[tri->p1].x,pts[tri->p2].x,pts[tri->p3].x,
+      line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
                          tri->norm,xc,param,side);
     
     if (hitflag && side != INSIDE && param < minparam) {
@@ -1227,7 +1221,6 @@ int Update::split2d(int icell, double *x)
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
   Surf::Line *lines = surf->lines;
-  Surf::Point *pts = surf->pts;
 
   // check for collisions with lines in cell
   // find 1st surface hit via minparam
@@ -1250,9 +1243,7 @@ int Update::split2d(int icell, double *x)
     isurf = csurfs[m];
     line = &lines[isurf];
     hitflag = Geometry::
-      line_line_intersect(x,xnew,
-                          pts[line->p1].x,pts[line->p2].x,line->norm,
-                          xc,param,side);
+      line_line_intersect(x,xnew,line->p1,line->p2,line->norm,xc,param,side);
     
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
@@ -1371,31 +1362,31 @@ void Update::global(int narg, char **arg)
   while (iarg < narg) {
     if (strcmp(arg[iarg],"fnum") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      fnum = atof(arg[iarg+1]);
+      fnum = input->numeric(FLERR,arg[iarg+1]);
       if (fnum <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"nrho") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      nrho = atof(arg[iarg+1]);
+      nrho = input->numeric(FLERR,arg[iarg+1]);
       if (nrho <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"vstream") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal global command");
-      vstream[0] = atof(arg[iarg+1]);
-      vstream[1] = atof(arg[iarg+2]);
-      vstream[2] = atof(arg[iarg+3]);
+      vstream[0] = input->numeric(FLERR,arg[iarg+1]);
+      vstream[1] = input->numeric(FLERR,arg[iarg+2]);
+      vstream[2] = input->numeric(FLERR,arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"temp") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      temp_thermal = atof(arg[iarg+1]);
+      temp_thermal = input->numeric(FLERR,arg[iarg+1]);
       if (temp_thermal <= 0.0) error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"gravity") == 0) {
       if (iarg+5 > narg) error->all(FLERR,"Illegal global command");
-      double gmag = atof(arg[iarg+1]);
-      gravity[0] = atof(arg[iarg+2]);
-      gravity[1] = atof(arg[iarg+3]);
-      gravity[2] = atof(arg[iarg+4]);
+      double gmag = input->numeric(FLERR,arg[iarg+1]);
+      gravity[0] = input->numeric(FLERR,arg[iarg+2]);
+      gravity[1] = input->numeric(FLERR,arg[iarg+3]);
+      gravity[2] = input->numeric(FLERR,arg[iarg+4]);
       if (gmag < 0.0) error->all(FLERR,"Illegal global command");
       if (gmag > 0.0 && 
           gravity[0] == 0.0 && gravity[1] == 0.0 && gravity[2] == 0.0)
@@ -1439,7 +1430,7 @@ void Update::global(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"gridcut") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      grid->cutoff = atof(arg[iarg+1]);
+      grid->cutoff = input->numeric(FLERR,arg[iarg+1]);
       if (grid->cutoff < 0.0 && grid->cutoff != -1.0)
         error->all(FLERR,"Illegal global command");
       // force ghost info to be regenerated with new cutoff
@@ -1474,9 +1465,17 @@ void Update::global(int narg, char **arg)
       else error->all(FLERR,"Illegal weight command");
       iarg += 3;
     } else if (strcmp(arg[iarg],"particle/reorder") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
-      reorder_period = atoi(arg[iarg+1]);
+      reorder_period = input->inumeric(FLERR,arg[iarg+1]);
       if (reorder_period < 0) error->all(FLERR,"Illegal global command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"mem/limit") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (strcmp(arg[iarg+1],"grid") == 0) mem_limit_grid_flag = 1;
+      else {
+        double factor = input->numeric(FLERR,arg[iarg+1]);
+        global_mem_limit = static_cast<int> (factor * 1024*1024);
+        if (global_mem_limit < 0) error->all(FLERR,"Illegal global command");
+      }
       iarg += 2;
     } else error->all(FLERR,"Illegal global command");
   }

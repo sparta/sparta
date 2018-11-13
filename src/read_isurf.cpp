@@ -177,16 +177,18 @@ void ReadISurf::command(int narg, char **arg)
   extent[0][0] = extent[1][0] = extent[2][0] = BIG;
   extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
 
-  Surf::Point *pts = surf->pts;
-  int npoint = surf->npoint;
+  if (dim == 2) {
+    Surf::Line *lines = surf->lines;
+    int nline = surf->nline;
   
-  for (int i = 0; i < npoint; i++) {
-    extent[0][0] = MIN(extent[0][0],pts[i].x[0]);
-    extent[0][1] = MAX(extent[0][1],pts[i].x[0]);
-    extent[1][0] = MIN(extent[1][0],pts[i].x[1]);
-    extent[1][1] = MAX(extent[1][1],pts[i].x[1]);
-    extent[2][0] = MIN(extent[2][0],pts[i].x[2]);
-    extent[2][1] = MAX(extent[2][1],pts[i].x[2]);
+    for (int i = 0; i < nline; i++) {
+      extent[0][0] = MIN(extent[0][0],lines[i].p1[0]);
+      extent[0][1] = MAX(extent[0][1],lines[i].p1[0]);
+      extent[1][0] = MIN(extent[1][0],lines[i].p2[1]);
+      extent[1][1] = MAX(extent[1][1],lines[i].p2[1]);
+    }
+
+  } else {
   }
 
   double minlen,minarea;
@@ -220,16 +222,16 @@ void ReadISurf::command(int narg, char **arg)
 
   // compute normals of new lines or triangles
 
-  if (dim == 2) surf->compute_line_normal(0,surf->nline);
-  else surf->compute_tri_normal(0,surf->ntri);
+  if (dim == 2) surf->compute_line_normal(0);
+  else surf->compute_tri_normal(0);
 
   // error checks that can be done before surfs are mapped to grid cells
 
-  //if (dim == 2) {
-  //  surf->check_watertight_2d(0,surf->nline);
-  //} else {
-  //  surf->check_watertight_3d(0,surf->ntri);
-  //}
+  if (dim == 2) {
+    surf->check_watertight_2d(0);
+  } else {
+    surf->check_watertight_3d(0);
+  }
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
@@ -744,12 +746,9 @@ void ReadISurf::marching_squares(int igroup)
 
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      surf->add_point(&pt[ipt][0]);
-      surf->add_point(&pt[ipt+1][0]);
+      if (svalues) surf->add_line(svalues[icell],pt[ipt],pt[ipt+1]);
+      else surf->add_line(1,pt[ipt],pt[ipt+1]);
       ipt += 2;
-      int npoint = surf->npoint;
-      if (svalues) surf->add_line(svalues[icell],npoint-2,npoint-1);
-      else surf->add_line(1,npoint-2,npoint-1);
       ptr[i] = surf->nline - 1;
     }
 
