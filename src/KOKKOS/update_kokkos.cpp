@@ -76,7 +76,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   sc_kk_diffuse_copy{VAL_2(KKCopy<SurfCollideDiffuseKokkos>(sparta))},
   sc_kk_vanish_copy{VAL_2(KKCopy<SurfCollideVanishKokkos>(sparta))},
   sc_kk_piston_copy{VAL_2(KKCopy<SurfCollidePistonKokkos>(sparta))},
-  blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))}
+  blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))},
   slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))}
 {
   k_ncomm_one = DAT::tdual_int_scalar("UpdateKokkos:ncomm_one");
@@ -490,9 +490,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
         error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
     }
 
-    if (nsurf_tally)
-      error->all(FLERR,"Cannot (yet) use surface tallying compute with Kokkos");
-
     if (surf->nsr)
       error->all(FLERR,"Cannot (yet) use surface reactions with Kokkos");
 
@@ -683,7 +680,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   Particle::OnePart &particle_i = d_particles[i];
   pflag = particle_i.flag;
 
-  // Particle::OnePart iorig;
+  Particle::OnePart iorig;
   Particle::OnePart *ipart,*jpart;
   jpart = NULL;
 
@@ -858,20 +855,6 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       }
     }
 
-    /** Kokkos functions **/
-    // slist_active[m]->surf_tally
-
-    /** Kokkos views **/
-    // slist_active
-
-
-//    ////Need to error out for now if surface reactions create (or destroy?) particles////
-//
-//    if (nsurf_tally)
-//      for (m = 0; m < nsurf_tally; m++)
-//        slist_active[m]->surf_tally(minsurf,&iorig,ipart,jpart);////
-//
-
     if (SURF) {
 
       nsurf = d_cells[icell].nsurf;
@@ -1029,8 +1012,8 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           ipart->icell = icell;
           dtremain *= 1.0 - minparam*frac;
 
-          //if (nsurf_tally) 
-          //  memcpy(&iorig,&particle_i,sizeof(Particle::OnePart));
+          if (nsurf_tally) 
+            iorig = particle_i;
           int n = DIM == 3 ? tri->isc : line->isc;
           int sc_type = sc_type_list[n];
           int m = sc_map[n];
@@ -1073,9 +1056,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           //  pstop++;
           //}
 
-          //if (nsurf_tally)
-          //  for (m = 0; m < nsurf_tally; m++)
-          //    slist_active[m]->surf_tally(minsurf,&iorig,ipart,jpart);////
+          if (nsurf_tally)
+            for (m = 0; m < nsurf_tally; m++)
+              slist_active[m]->surf_tally(minsurf,&iorig,ipart,jpart);
           
           // nstuck = consective iterations particle is immobile
 
@@ -1274,11 +1257,6 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         for (int m = 0; m < nboundary_tally; m++)
           blist_active_copy[m].obj.
             boundary_tally_kk(outface,bflag,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
-
-      if (nsurf_tally)
-        for (int m = 0; m < nsurf_tally; m++)
-          slist_active_copy[m].obj.
-            surf_tally_kk(outface,bflag,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
 
       if (DIM == 1) {
         xnew[0] = x[0] + dtremain*v[0];

@@ -26,7 +26,7 @@
 #include "surf_collide_vanish_kokkos.h"
 #include "surf_collide_piston_kokkos.h"
 #include "compute_boundary_kokkos.h"
-#include "compute_suf_kokkos.h"
+#include "compute_surf_kokkos.h"
 
 namespace SPARTA_NS {
 
