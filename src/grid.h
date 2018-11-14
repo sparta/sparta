@@ -253,7 +253,7 @@ class Grid : protected Pointers {
   int *csubs_request(int);
 
   int find_overlaps(int, cellint *);
-  void recurse2d(int, double [][2], ParentCell *, int &, int *);
+  void recurse2d(int, double [][2], int, int &, int *);
 
   // grid_id.cpp
 
