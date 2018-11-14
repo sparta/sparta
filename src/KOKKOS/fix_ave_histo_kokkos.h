@@ -68,7 +68,7 @@ class FixAveHistoKokkos : public FixAveHisto
 {
 public:
 
-  typedef Kokkos::Experimental::MinMax<double,DeviceType> minmax_type;
+  typedef Kokkos::MinMax<double,DeviceType> minmax_type;
   typedef minmax_type::value_type mm_value_type;
 
   FixAveHistoKokkos(class SPARTA *, int, char **);
@@ -167,7 +167,7 @@ protected:
   void
   bin_one(mm_value_type& mm_v, double value, double weight) const
   {
-    auto nbins = d_bin.dimension_0();
+    auto nbins = d_bin.extent(0);
     if (value < mm_v.min_val) mm_v.min_val = value;
     if (value > mm_v.max_val) mm_v.max_val = value;
     if (value < lo) {
