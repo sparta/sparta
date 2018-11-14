@@ -1,6 +1,6 @@
 # Default settings common options.
 
-#LAMMPS specific settings:
+#SPARTA specific settings:
 ifndef KOKKOS_PATH
   KOKKOS_PATH=../../lib/kokkos
 endif
