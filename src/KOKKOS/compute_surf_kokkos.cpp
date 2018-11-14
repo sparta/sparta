@@ -111,6 +111,7 @@ void ComputeSurfKokkos::clear()
 
   nlocal = 0;
   Kokkos::deep_copy(d_nlocal,0);
+  Kokkos::deep_copy(d_array_surf_tally,0);
 }
 
 KOKKOS_INLINE_FUNCTION

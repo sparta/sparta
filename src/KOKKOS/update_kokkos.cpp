@@ -1063,7 +1063,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (nsurf_tally)
             for (m = 0; m < nsurf_tally; m++)
               slist_active_copy[m].obj.
-                    surf_tally_kk(minsurf,&iorig,ipart,jpart);
+                    surf_tally_kk<ATOMIC_REDUCTION>(minsurf,&iorig,ipart,jpart);
 
           // nstuck = consective iterations particle is immobile
 

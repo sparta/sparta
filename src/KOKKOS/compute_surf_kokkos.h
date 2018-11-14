@@ -52,6 +52,7 @@ enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
+template <int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void surf_tally_kk(int isurf, Particle::OnePart *iorig, 
                    Particle::OnePart *ip, Particle::OnePart *jp) const
@@ -76,7 +77,10 @@ void surf_tally_kk(int isurf, Particle::OnePart *iorig,
 
   int ilocal = d_glob2loc(isurf);
   if (ilocal < 0) {
-    ilocal = Kokkos::atomic_fetch_add(&d_nlocal(),1); // template out?
+    if (ATOMIC_REDUCTION != 0)
+      ilocal = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+    else
+      ilocal = d_nlocal()++;
     d_loc2glob(ilocal) = isurf;
     d_glob2loc(isurf) = ilocal;
   }
