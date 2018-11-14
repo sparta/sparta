@@ -649,6 +649,10 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   nscheck_running += nscheck_one;
   nscollide_running += nscollide_one;
   surf->nreact_running += surf->nreact_one;
+
+  if (nsurf_tally)
+    for (int m = 0; m < nsurf_tally; m++)
+      slist_active_copy[m].obj.post_surf_tally();
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1058,8 +1062,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
           if (nsurf_tally)
             for (m = 0; m < nsurf_tally; m++)
-              slist_active[m]->surf_tally(minsurf,&iorig,ipart,jpart);
-          
+              slist_active_copy[m].obj.
+                    surf_tally_kk(minsurf,&iorig,ipart,jpart);
+
           // nstuck = consective iterations particle is immobile
 
           if (minparam == 0.0) stuck_iterate++;

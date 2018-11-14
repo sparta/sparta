@@ -38,6 +38,7 @@ class ComputeSurfKokkos : public ComputeSurf {
   void clear();
   int surfinfo(int *&);
   void pre_surf_tally();
+  void post_surf_tally();
 
 enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
      XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
@@ -52,8 +53,8 @@ enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void surf_tally(int isurf, Particle::OnePart *iorig, 
-          Particle::OnePart *ip, Particle::OnePart *jp) const
+void surf_tally_kk(int isurf, Particle::OnePart *iorig, 
+                   Particle::OnePart *ip, Particle::OnePart *jp) const
 {
   // skip if isurf not in surface group
 

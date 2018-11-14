@@ -81,9 +81,14 @@ void ComputeSurfKokkos::init()
     h_normflux(n) = normflux[n];
   Kokkos::deep_copy(d_normflux,h_normflux);
 
+  // Cannot realloc inside a Kokkos parallel region, so size loc2glob the 
+  //  same as glob2loc 
+
+  memoryKK->destroy_kokkos(k_loc2glob,loc2glob);
   memoryKK->create_kokkos(k_loc2glob,loc2glob,nsurf,"surf:loc2glob");
   d_loc2glob = k_loc2glob.d_view;
 
+  memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
   memoryKK->create_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
   d_array_surf_tally = k_array_surf_tally.d_view;
 }
@@ -95,13 +100,17 @@ void ComputeSurfKokkos::clear()
   // reset all set glob2loc values to -1
   // called by Update at beginning of timesteps surf tallying is done
 
+  auto h_nlocal = Kokkos::create_mirror_view(d_nlocal);
+  Kokkos::deep_copy(h_nlocal,d_nlocal);
+  nlocal = h_nlocal();
+
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSurf_clear>(0,nlocal),*this);
   DeviceType::fence();
   copymode = 0;
 
   nlocal = 0;
-  Kokkos::deep_copy(d_nlocal,nlocal);
+  Kokkos::deep_copy(d_nlocal,0);
 }
 
 KOKKOS_INLINE_FUNCTION
@@ -124,6 +133,14 @@ void ComputeSurfKokkos::pre_surf_tally()
   surf_kk->sync(Device,ALL_MASK);
   d_lines = surf_kk->k_lines.d_view;
   d_tris = surf_kk->k_tris.d_view;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void ComputeSurfKokkos::post_surf_tally()
+{
+  k_array_surf_tally.modify<DeviceType>();
+  k_array_surf_tally.sync<SPAHostType>();
 }
 
 /* ----------------------------------------------------------------------
