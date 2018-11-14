@@ -77,6 +77,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   sc_kk_vanish_copy{VAL_2(KKCopy<SurfCollideVanishKokkos>(sparta))},
   sc_kk_piston_copy{VAL_2(KKCopy<SurfCollidePistonKokkos>(sparta))},
   blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))}
+  slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))}
 {
   k_ncomm_one = DAT::tdual_int_scalar("UpdateKokkos:ncomm_one");
   d_ncomm_one = k_ncomm_one.view<DeviceType>();
@@ -148,6 +149,9 @@ UpdateKokkos::~UpdateKokkos()
     blist_active_copy[i].uncopy();
   }
 
+  for (int i=0; i<KOKKOS_MAX_SLIST; i++) {
+    slist_active_copy[i].uncopy();
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1271,6 +1275,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           blist_active_copy[m].obj.
             boundary_tally_kk(outface,bflag,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
 
+      if (nsurf_tally)
+        for (int m = 0; m < nsurf_tally; m++)
+          slist_active_copy[m].obj.
+            surf_tally_kk(outface,bflag,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
+
       if (DIM == 1) {
         xnew[0] = x[0] + dtremain*v[0];
         xnew[1] = x[1] + dtremain*v[1];
@@ -1525,13 +1534,6 @@ void UpdateKokkos::bounce_set(bigint ntimestep)
 
   int i;
 
-  //if (nslist_compute) {
-  //  for (i = 0; i < nslist_compute; i++)
-  //    if (slist_compute[i]->matchstep(ntimestep)) {
-  //      slist_active[nsurf_tally++] = slist_compute[i];
-  //    }
-  //}
-
   if (nboundary_tally > KOKKOS_MAX_BLIST)
     error->all(FLERR,"Kokkos currently only supports two instances of compute boundary");
 
@@ -1540,6 +1542,17 @@ void UpdateKokkos::bounce_set(bigint ntimestep)
       ComputeBoundaryKokkos* compute_boundary_kk = (ComputeBoundaryKokkos*)(blist_active[i]);
       compute_boundary_kk->pre_boundary_tally();
       blist_active_copy[i].copy(compute_boundary_kk);
+    }
+  }
+
+  if (nsurf_tally > KOKKOS_MAX_SLIST)
+    error->all(FLERR,"Kokkos currently only supports two instances of compute surface");
+
+  if (nsurf_tally) {
+    for (i = 0; i < nsurf_tally; i++) {
+      ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[i]);
+      compute_surf_kk->pre_surf_tally();
+      slist_active_copy[i].copy(compute_surf_kk);
     }
   }
 }
