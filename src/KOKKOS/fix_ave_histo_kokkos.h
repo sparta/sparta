@@ -68,7 +68,7 @@ class FixAveHistoKokkos : public FixAveHisto
 {
 public:
 
-  typedef Kokkos::MinMax<double,DeviceType> minmax_type;
+  typedef Kokkos::MinMax<double,SPAHostType> minmax_type;
   typedef minmax_type::value_type mm_value_type;
 
   FixAveHistoKokkos(class SPARTA *, int, char **);
