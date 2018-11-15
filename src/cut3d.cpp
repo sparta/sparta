@@ -224,6 +224,23 @@ int Cut3d::surf2grid_list(cellint id_caller,
 }
 
 /* ----------------------------------------------------------------------
+   compute intersections of a grid cell with a single surf
+   p012 = corner pts of surf
+   lo,hi = grid cell corner points
+   return 1 if intersects, 0 if not
+   called by Grid::surf2grid2
+------------------------------------------------------------------------- */
+
+int Cut3d::surf2grid_one(double *p0, double *p1, double *p2,
+                         double *lo_caller, double *hi_caller)
+{
+  lo = lo_caller;
+  hi = hi_caller;
+  return clip(p0,p1,p2);
+}
+
+
+/* ----------------------------------------------------------------------
    Sutherland-Hodgman clipping algorithm
    don't need to delete duplicate points since touching counts as intersection
 ------------------------------------------------------------------------- */
