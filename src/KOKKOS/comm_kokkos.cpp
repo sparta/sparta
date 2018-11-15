@@ -206,8 +206,11 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
         exchange_uniform(d_sbuf,nbytes,
                          (char *) (d_particles.data()+particle->nlocal),d_rbuf);
     } else {
+
+      // allocate exact buffer size to reduce GPU <--> CPU memory transfer
+
       int maxrecvbuf = nrecv*nbytes;
-      d_rbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:sbuf",Kokkos::WithoutInitializing),maxrecvbuf);
+      d_rbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:rbuf",Kokkos::WithoutInitializing),maxrecvbuf);
 
       Kokkos::deep_copy(d_nlocal,particle->nlocal);
       iparticle_kk->exchange_uniform(d_sbuf,nbytes,NULL,d_rbuf);
