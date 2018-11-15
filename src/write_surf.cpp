@@ -90,38 +90,49 @@ void WriteSurf::command(int narg, char **arg)
 /* ----------------------------------------------------------------------
    write surf file
    only called by proc 0
+   write points with duplicates
+   each line writes its 2 end points
+   each triangle writes its 3 corner points
 ------------------------------------------------------------------------- */
 
 void WriteSurf::write_file(FILE *fp)
 {
   int dim = domain->dimension;
 
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
-  int npoint = surf->npoint;
   int nline = surf->nline;
   int ntri = surf->ntri;
 
   // header section
 
   fprintf(fp,"# Surface element file written by SPARTA\n\n");
-  fprintf(fp,"%d points\n",npoint);
-  if (dim == 2) fprintf(fp,"%d lines\n",nline);
-  else fprintf(fp,"%d triangles\n",ntri);
+  if (dim == 2) {
+    fprintf(fp,"%d points\n",2*nline);
+    fprintf(fp,"%d lines\n",nline);
+  } else if (dim == 3) {
+    fprintf(fp,"%d points\n",3*ntri);
+    fprintf(fp,"%d triangles\n",ntri);
+  }
   fprintf(fp,"\n");
 
-  // points
-  
   fprintf(fp,"Points\n\n");
+
   if (dim == 2) {
-    for (int i = 0; i < npoint; i++)
-      fprintf(fp,"%d %20.15g %20.15g\n",i+1,pts[i].x[0],pts[i].x[1]);
+    for (int i = 0; i < nline; i++) {
+      fprintf(fp,"%d %20.15g %20.15g\n",2*i+1,lines[i].p1[0],lines[i].p1[1]);
+      fprintf(fp,"%d %20.15g %20.15g\n",2*i+2,lines[i].p2[0],lines[i].p2[1]);
+    }
   } else {
-    for (int i = 0; i < npoint; i++)
-      fprintf(fp,"%d %20.15g %20.15g %20.15g\n",i+1,
-	      pts[i].x[0],pts[i].x[1],pts[i].x[2]);
+    for (int i = 0; i < ntri; i++) {
+      fprintf(fp,"%d %20.15g %20.15g %20.15g\n",
+              3*i+1,tris[i].p1[0],tris[i].p1[1],tris[i].p1[2]);
+      fprintf(fp,"%d %20.15g %20.15g %20.15g\n",
+              3*i+2,tris[i].p2[0],tris[i].p2[1],tris[i].p2[2]);
+      fprintf(fp,"%d %20.15g %20.15g %20.15g\n",
+              3*i+3,tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+    }
   }
 
   // lines
@@ -129,16 +140,14 @@ void WriteSurf::write_file(FILE *fp)
   if (dim == 2) {
     fprintf(fp,"\nLines\n\n");
     for (int i = 0; i < nline; i++)
-      fprintf(fp,"%d %d %d %d\n",i+1,lines[i].type,
-	      lines[i].p1+1,lines[i].p2+1);
+      fprintf(fp,"%d %d %d %d\n",i+1,lines[i].type,2*i+1,2*i+2);
   }
 
   // triangles
 
   if (dim == 3) {
     fprintf(fp,"\nTriangles\n\n");
-    for (int i = 0; i < ntri; i++)
-      fprintf(fp,"%d %d %d %d %d\n",i+1,tris[i].type,
-	      tris[i].p1+1,tris[i].p2+1,tris[i].p3+1);
+    for (int i = 0; i < nline; i++)
+      fprintf(fp,"%d %d %d %d %d\n",i+1,tris[i].type,3*i+1,3*i+2,3*i+3);
   }
 }

@@ -1,4 +1,4 @@
-# serial = Linux box, g++, serial (no MPI)
+# serial_debug = Linux box, g++, serial (no MPI)
 
 SHELL = /bin/sh
 

@@ -73,7 +73,6 @@ class FixEmitFace : public FixEmit {
   double fnum,dt;
   double *fraction,*cummulative;
 
-  Surf::Point *pts;
   Surf::Line *lines;
   Surf::Tri *tris;
 

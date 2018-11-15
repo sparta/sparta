@@ -39,7 +39,6 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 #define MAXLINE 256
 #define CHUNK 1024
 #define EPSILON_NORM 1.0e-12
-#define EPSILON_GRID 1.0e-3
 #define BIG 1.0e20
 #define DELTA 128           // must be 2 or greater 
 
@@ -86,21 +85,15 @@ void ReadSurf::command(int narg, char **arg)
 
   header();
 
-  // extend pts,lines,tris data structures
+  // create pts,lines,tris data structures
 
-  pts = surf->pts;
-  lines = surf->lines;
-  tris = surf->tris;
+  pts = (Point *) memory->smalloc(npoint*sizeof(Point),"readsurf:pts");
+  lines = (Line *) memory->smalloc(nline*sizeof(Line),"readsurf:lines");
+  tris = (Tri *) memory->smalloc(ntri*sizeof(Tri),"readsurf:tris");
 
-  npoint_old = surf->npoint;
-  nline_old = surf->nline;
-  ntri_old = surf->ntri;
-
-  maxpoint = npoint_old + npoint_new;
-  maxline = nline_old + nline_new;
-  maxtri = ntri_old + ntri_new;
-
-  grow_surf();
+  maxpoint = npoint;
+  maxline = nline;
+  maxtri = ntri;
 
   // read and store Points and Lines/Tris sections
 
@@ -287,53 +280,37 @@ void ReadSurf::command(int narg, char **arg)
     if (igroup < 0) igroup = surf->add_group(arg[grouparg]);
     int groupbit = surf->bitmask[igroup];
     if (dim == 2) {
-      int n = nline_old + nline_new;
-      for (int i = nline_old; i < n; i++) lines[i].mask |= groupbit;
+      for (int i = 0; i < nline; i++) lines[i].mask |= groupbit;
     } else {
-      int n = ntri_old + ntri_new;
-      for (int i = ntri_old; i < n; i++) tris[i].mask |= groupbit;
+      for (int i = 0; i < ntri; i++) tris[i].mask |= groupbit;
     }
   }
 
   if (typeadd) {
     if (dim == 2) {
-      int n = nline_old + nline_new;
-      for (int i = nline_old; i < n; i++) lines[i].type += typeadd;
+      for (int i = 0; i < nline; i++) lines[i].type += typeadd;
     } else {
-      int n = ntri_old + ntri_new;
-      for (int i = ntri_old; i < n; i++) tris[i].type += typeadd;
+      for (int i = 0; i < ntri; i++) tris[i].type += typeadd;
     }
   }
 
-  // update Surf data structures
-
-  surf->pts = pts;
-  surf->lines = lines;
-  surf->tris = tris;
-
-  surf->npoint = npoint_old + npoint_new;
-  surf->nline = nline_old + nline_new;
-  surf->ntri = ntri_old + ntri_new;
-
-  // extent of surf after geometric transformations
+  // extent of surfs after geometric transformations
   // compute sizes of smallest surface elements
 
   double extent[3][2];
   extent[0][0] = extent[1][0] = extent[2][0] = BIG;
   extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
 
-  int m = npoint_old;
-  for (int i = 0; i < npoint_new; i++) {
-    extent[0][0] = MIN(extent[0][0],pts[m].x[0]);
-    extent[0][1] = MAX(extent[0][1],pts[m].x[0]);
-    extent[1][0] = MIN(extent[1][0],pts[m].x[1]);
-    extent[1][1] = MAX(extent[1][1],pts[m].x[1]);
-    extent[2][0] = MIN(extent[2][0],pts[m].x[2]);
-    extent[2][1] = MAX(extent[2][1],pts[m].x[2]);
-    m++;
+  for (int i = 0; i < npoint; i++) {
+    extent[0][0] = MIN(extent[0][0],pts[i].x[0]);
+    extent[0][1] = MAX(extent[0][1],pts[i].x[0]);
+    extent[1][0] = MIN(extent[1][0],pts[i].x[1]);
+    extent[1][1] = MAX(extent[1][1],pts[i].x[1]);
+    extent[2][0] = MIN(extent[2][0],pts[i].x[2]);
+    extent[2][1] = MAX(extent[2][1],pts[i].x[2]);
   }
 
-  double minlen,minarea;
+  double minlen,minarea; 
   if (dim == 2) minlen = shortest_line();
   if (dim == 3) smallest_tri(minlen,minarea);
 
@@ -362,16 +339,6 @@ void ReadSurf::command(int narg, char **arg)
     }
   }
 
-  // compute normals of new lines or triangles
-
-  if (dim == 2) surf->compute_line_normal(nline_old,nline_new);
-  else surf->compute_tri_normal(ntri_old,ntri_new);
-
-  // error check on new points,lines,tris
-  // all points must be inside or on surface of simulation box
-
-  surf->check_point_inside(npoint_old,npoint_new);
-
   // write out new surf file if requested
   // do this before assigning surfs to grid cells, in case an error occurs
 
@@ -389,6 +356,61 @@ void ReadSurf::command(int narg, char **arg)
     }
     delete wf;
   }
+
+  // add pts/lines/tris read from file to Surf line or tri data struct
+
+  if (dim == 2) {
+    nline_old = surf->nline;
+    nline_new = nline_old + nline;
+    surf->nline = nline_new;
+    surf->grow();
+    Surf::Line *newlines = surf->lines;
+
+    int m = nline_old;
+    for (int i = 0; i < nline; i++) {
+      newlines[m].id = m+1;  // check for overflow when allow distributed surfs
+      newlines[m].type = lines[i].type;
+      newlines[m].mask = lines[i].mask;
+      newlines[m].isc = newlines[m].isr = -1;
+      memcpy(newlines[m].p1,pts[lines[i].p1].x,3*sizeof(double));
+      memcpy(newlines[m].p2,pts[lines[i].p2].x,3*sizeof(double));
+      m++;
+    }
+
+    surf->lines = newlines;
+
+  } else if (dim == 3) {
+    ntri_old = surf->ntri;
+    ntri_new = ntri_old + ntri;
+    surf->ntri = ntri_new;
+    surf->grow();
+    Surf::Tri *newtris = surf->tris;
+
+    int m = ntri_old;
+    for (int i = 0; i < ntri; i++) {
+      newtris[m].id = m+1;  // check for overflow when allow distributed surfs
+      newtris[m].type = tris[i].type;
+      newtris[m].mask = tris[i].mask;
+      newtris[m].isc = newtris[m].isr = -1;
+      memcpy(newtris[m].p1,pts[tris[i].p1].x,3*sizeof(double));
+      memcpy(newtris[m].p2,pts[tris[i].p2].x,3*sizeof(double));
+      memcpy(newtris[m].p3,pts[tris[i].p3].x,3*sizeof(double));
+      m++;
+    }
+
+    surf->tris = newtris;
+  }
+
+  // compute normals of new lines or triangles
+
+  if (dim == 2) surf->compute_line_normal(nline_old);
+  else surf->compute_tri_normal(ntri_old);
+
+  // error check on new lines,tris
+  // all points must be inside or on surface of simulation box
+
+  if (dim == 2) surf->check_point_inside(nline_old);
+  else surf->check_point_inside(ntri_old);
 
   // -----------------------
   // map surfs to grid cells
@@ -426,12 +448,19 @@ void ReadSurf::command(int narg, char **arg)
   // error checks that can be done before surfs are mapped to grid cells
 
   if (dim == 2) {
-    surf->check_watertight_2d(npoint_old,nline_old);
+    surf->check_watertight_2d(nline_old);
     check_neighbor_norm_2d();
   } else {
-    surf->check_watertight_3d(npoint_old,ntri_old);
+    surf->check_watertight_3d(ntri_old);
     check_neighbor_norm_3d();
   }
+
+  // can now free local copy of read-in surfs
+  // last use was in check_neighbor() methods
+
+  memory->sfree(pts);
+  memory->sfree(lines);
+  memory->sfree(tris);
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
@@ -441,8 +470,8 @@ void ReadSurf::command(int narg, char **arg)
 
   grid->surf2grid(1);
 
-  if (dim == 2) check_point_near_surf_2d();
-  else check_point_near_surf_3d();
+  if (dim == 2) surf->check_point_near_surf_2d();
+  else surf->check_point_near_surf_3d();
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();
@@ -562,14 +591,14 @@ void ReadSurf::header()
   int n;
   char *ptr;
 
+  nline = ntri = 0;
+
   // skip 1st line of file
 
   if (me == 0) {
     char *eof = fgets(line,MAXLINE,fp);
     if (eof == NULL) error->one(FLERR,"Unexpected end of data file");
   }
-
-  npoint_new = nline_new = ntri_new = 0;
 
   while (1) {
 
@@ -600,23 +629,23 @@ void ReadSurf::header()
 
     // search line for header keyword and set corresponding variable
 
-    if (strstr(line,"points")) sscanf(line,"%d",&npoint_new);
+    if (strstr(line,"points")) sscanf(line,"%d",&npoint);
     else if (strstr(line,"lines")) {
       if (dim == 3) 
 	error->all(FLERR,"Surf file cannot contain lines for 3d simulation");
-      sscanf(line,"%d",&nline_new);
+      sscanf(line,"%d",&nline);
     } else if (strstr(line,"triangles")) {
       if (dim == 2) 
 	error->all(FLERR,
 		   "Surf file cannot contain triangles for 2d simulation");
-      sscanf(line,"%d",&ntri_new);
+      sscanf(line,"%d",&ntri);
     } else break;
   }
 
-  if (npoint_new == 0) error->all(FLERR,"Surf file does not contain points");
-  if (dim == 2 && nline_new == 0) 
+  if (npoint == 0) error->all(FLERR,"Surf file does not contain points");
+  if (dim == 2 && nline == 0) 
     error->all(FLERR,"Surf file does not contain lines");
-  if (dim == 3 && ntri_new == 0) 
+  if (dim == 3 && ntri == 0) 
     error->all(FLERR,"Surf file does not contain triangles");
 }
 
@@ -626,17 +655,16 @@ void ReadSurf::header()
 
 void ReadSurf::read_points()
 {
-  int i,m,nchunk;
+  int i,m,n,nchunk;
   char *next,*buf;
 
   // read and broadcast one CHUNK of lines at a time
 
-  int n = npoint_old;
   int nread = 0;
   
-  while (nread < npoint_new) {
-    if (npoint_new-nread > CHUNK) nchunk = CHUNK;
-    else nchunk = npoint_new-nread;
+  while (nread < npoint) {
+    if (npoint-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = npoint-nread;
     if (me == 0) {
       char *eof;
       m = 0;
@@ -661,6 +689,8 @@ void ReadSurf::read_points()
     if (dim == 3 && nwords != 4)
       error->all(FLERR,"Incorrect point format in surf file");
 
+    n = nread;
+
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
@@ -677,8 +707,8 @@ void ReadSurf::read_points()
   }
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  %d points\n",npoint_new);
-    if (logfile) fprintf(logfile,"  %d points\n",npoint_new);
+    if (screen) fprintf(screen,"  %d points\n",npoint);
+    if (logfile) fprintf(logfile,"  %d points\n",npoint);
   }
 }
 
@@ -689,17 +719,16 @@ void ReadSurf::read_points()
 
 void ReadSurf::read_lines()
 {
-  int i,m,nchunk,type,p1,p2;
+  int i,m,n,nchunk,type,p1,p2;
   char *next,*buf;
 
   // read and broadcast one CHUNK of lines at a time
 
-  int n = nline_old;
   int nread = 0;
 
-  while (nread < nline_new) {
-    if (nline_new-nread > CHUNK) nchunk = CHUNK;
-    else nchunk = nline_new-nread;
+  while (nread < nline) {
+    if (nline-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = nline-nread;
     if (me == 0) {
       char *eof;
       m = 0;
@@ -726,6 +755,8 @@ void ReadSurf::read_lines()
     int typeflag = 0;
     if (nwords == 4) typeflag = 1;
 
+    n = nread;
+
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
@@ -733,13 +764,12 @@ void ReadSurf::read_lines()
       else type = 1;
       p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
       p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || p1 == p2)
+      if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || p1 == p2)
 	error->all(FLERR,"Invalid point index in line");
       lines[n].type = type;
       lines[n].mask = 1;
-      lines[n].isc = lines[n].isr = -1;
-      lines[n].p1 = p1-1 + npoint_old;
-      lines[n].p2 = p2-1 + npoint_old;
+      lines[n].p1 = p1-1;
+      lines[n].p2 = p2-1;
       n++;
       buf = next + 1;
     }
@@ -748,8 +778,8 @@ void ReadSurf::read_lines()
   }
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  %d lines\n",nline_new);
-    if (logfile) fprintf(logfile,"  %d lines\n",nline_new);
+    if (screen) fprintf(screen,"  %d lines\n",nline);
+    if (logfile) fprintf(logfile,"  %d lines\n",nline);
   }
 }
 
@@ -760,17 +790,16 @@ void ReadSurf::read_lines()
 
 void ReadSurf::read_tris()
 {
-  int i,m,nchunk,type,p1,p2,p3;
+  int i,m,n,nchunk,type,p1,p2,p3;
   char *next,*buf;
 
   // read and broadcast one CHUNK of triangles at a time
 
-  int n = ntri_old;
   int nread = 0;
 
-  while (nread < ntri_new) {
-    if (ntri_new-nread > CHUNK) nchunk = CHUNK;
-    else nchunk = ntri_new-nread;
+  while (nread < ntri) {
+    if (ntri-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = ntri-nread;
     if (me == 0) {
       char *eof;
       m = 0;
@@ -797,6 +826,8 @@ void ReadSurf::read_tris()
     int typeflag = 0;
     if (nwords == 5) typeflag = 1;
 
+    n = nread;
+
     for (int i = 0; i < nchunk; i++) {
       next = strchr(buf,'\n');
       strtok(buf," \t\n\r\f");
@@ -805,16 +836,14 @@ void ReadSurf::read_tris()
       p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
       p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
       p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      if (p1 < 1 || p1 > npoint_new || p2 < 1 || p2 > npoint_new || 
-	  p3 < 1 || p3 > npoint_new || p1 == p2 || p2 == p3)
+      if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || 
+	  p3 < 1 || p3 > npoint || p1 == p2 || p2 == p3)
 	error->all(FLERR,"Invalid point index in triangle");
       tris[n].type = type;
       tris[n].mask = 1;
-      tris[n].isc = tris[n].isr = -1;
-      tris[n].p1 = p1-1 + npoint_old;
-      tris[n].p2 = p2-1 + npoint_old;
-      tris[n].p3 = p3-1 + npoint_old;
-
+      tris[n].p1 = p1-1;
+      tris[n].p2 = p2-1;
+      tris[n].p3 = p3-1;
       n++;
       buf = next + 1;
     }
@@ -823,8 +852,8 @@ void ReadSurf::read_tris()
   }
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  %d triangles\n",ntri_new);
-    if (logfile) fprintf(logfile,"  %d triangles\n",ntri_new);
+    if (screen) fprintf(screen,"  %d triangles\n",ntri);
+    if (logfile) fprintf(logfile,"  %d triangles\n",ntri);
   }
 }
 
@@ -835,12 +864,10 @@ void ReadSurf::read_tris()
 
 void ReadSurf::translate(double dx, double dy, double dz)
 {
-  int m = npoint_old;
-  for (int i = 0; i < npoint_new; i++) {
-    pts[m].x[0] += dx;
-    pts[m].x[1] += dy;
-    pts[m].x[2] += dz;
-    m++;
+  for (int i = 0; i < npoint; i++) {
+    pts[i].x[0] += dx;
+    pts[i].x[1] += dy;
+    pts[i].x[2] += dz;
   }
 }
 
@@ -851,12 +878,10 @@ void ReadSurf::translate(double dx, double dy, double dz)
 
 void ReadSurf::scale(double sx, double sy, double sz)
 {
-  int m = npoint_old;
-  for (int i = 0; i < npoint_new; i++) {
-    pts[m].x[0] = sx*(pts[m].x[0]-origin[0]) + origin[0];
-    pts[m].x[1] = sy*(pts[m].x[1]-origin[1]) + origin[1];
-    if (dim == 3) pts[m].x[2] = sz*(pts[m].x[2]-origin[2]) + origin[2];
-    m++;
+  for (int i = 0; i < npoint; i++) {
+    pts[i].x[0] = sx*(pts[i].x[0]-origin[0]) + origin[0];
+    pts[i].x[1] = sy*(pts[i].x[1]-origin[1]) + origin[1];
+    if (dim == 3) pts[i].x[2] = sz*(pts[i].x[2]-origin[2]) + origin[2];
   }
 }
 
@@ -877,16 +902,14 @@ void ReadSurf::rotate(double theta, double rx, double ry, double rz)
   MathExtra::axisangle_to_quat(r,theta,q);
   MathExtra::quat_to_mat(q,rotmat);
 
-  int m = npoint_old;
-  for (int i = 0; i < npoint_new; i++) {
-    d[0] = pts[m].x[0] - origin[0];
-    d[1] = pts[m].x[1] - origin[1];
-    d[2] = pts[m].x[2] - origin[2];
+  for (int i = 0; i < npoint; i++) {
+    d[0] = pts[i].x[0] - origin[0];
+    d[1] = pts[i].x[1] - origin[1];
+    d[2] = pts[i].x[2] - origin[2];
     MathExtra::matvec(rotmat,d,dnew);
-    pts[m].x[0] = dnew[0] + origin[0];
-    pts[m].x[1] = dnew[1] + origin[1];
-    if (dim == 3) pts[m].x[2] = dnew[2] + origin[2];
-    m++;
+    pts[i].x[0] = dnew[0] + origin[0];
+    pts[i].x[1] = dnew[1] + origin[1];
+    if (dim == 3) pts[i].x[2] = dnew[2] + origin[2];
   }
 }
 
@@ -900,22 +923,18 @@ void ReadSurf::invert()
   int tmp;
 
   if (dim == 2) {
-    int m = nline_old;
-    for (int i = 0; i < nline_new; i++) {
-      tmp = lines[m].p1;
-      lines[m].p1 = lines[m].p2;
-      lines[m].p2 = tmp;
-      m++;
+    for (int i = 0; i < nline; i++) {
+      tmp = lines[i].p1;
+      lines[i].p1 = lines[i].p2;
+      lines[i].p2 = tmp;
     }
   }
 
   if (dim == 3) {
-    int m = ntri_old;
-    for (int i = 0; i < ntri_new; i++) {
-      tmp = tris[m].p2;
-      tris[m].p2 = tris[m].p3;
-      tris[m].p3 = tmp;
-      m++;
+    for (int i = 0; i < ntri; i++) {
+      tmp = tris[i].p2;
+      tris[i].p2 = tris[i].p3;
+      tris[i].p3 = tmp;
     }
   }
 }
@@ -929,7 +948,7 @@ void ReadSurf::invert()
 
 void ReadSurf::clip2d()
 {
-  int i,m,n,nptotal,nltotal,dim,side,flag;
+  int i,n,nptotal,nltotal,dim,side,flag;
   double value,param;
   double *x,*x1,*x2;
 
@@ -948,29 +967,27 @@ void ReadSurf::clip2d()
     // reallocate pts and lines if needed and reset x1,x2
     // nptotal,nltotal = total current count of points and lines, including old
 
-    m = nline_old;
-    n = nline_new;
-    nptotal = npoint_old + npoint_new;
-    nltotal = nline_old + nline_new;
+    nptotal = npoint;
+    nltotal = nline;
 
-    for (i = 0; i < n; i++) {
-      x1 = pts[lines[m].p1].x;
-      x2 = pts[lines[m].p2].x;
+    for (i = 0; i < nline; i++) {
+      x1 = pts[lines[i].p1].x;
+      x2 = pts[lines[i].p2].x;
       flag = 0;
       if (x1[dim] < value && x2[dim] > value) flag = 1;
       if (x1[dim] > value && x2[dim] < value) flag = 1;
       if (flag) {
 	if (nptotal == maxpoint) {
 	  maxpoint += DELTA;
-	  pts = (Surf::Point *) 
-	    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
-	  x1 = pts[lines[m].p1].x;
-	  x2 = pts[lines[m].p2].x;
+	  pts = (Point *) 
+	    memory->srealloc(pts,maxpoint*sizeof(Point),"readsurf:pts");
+	  x1 = pts[lines[i].p1].x;
+	  x2 = pts[lines[i].p2].x;
 	}
 	if (nltotal == maxline) {
 	  maxline += DELTA;
-	  lines = (Surf::Line *) 
-	    memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
+	  lines = (Line *) 
+	    memory->srealloc(lines,maxline*sizeof(Line),"readsurf:lines");
 	}
 
 	param = (value-x1[dim]) / (x2[dim]-x1[dim]);
@@ -979,60 +996,51 @@ void ReadSurf::clip2d()
 	pts[nptotal].x[2] = 0.0;
 	pts[nptotal].x[dim] = value;
 
-	memcpy(&lines[nltotal],&lines[m],sizeof(Surf::Line));
-	lines[m].p2 = nptotal;
+	memcpy(&lines[nltotal],&lines[i],sizeof(Surf::Line));
+	lines[i].p2 = nptotal;
 	lines[nltotal].p1 = nptotal;
 
         nptotal++;
         nltotal++;
       }
-      m++;
     }
 
-    npoint_new = nptotal - npoint_old;
-    nline_new = nltotal - nline_old;
+    npoint = nptotal;
+    nline = nltotal;
 
     // project all points outside clipping edge to the edge
 
-    m = npoint_old;
-    for (i = 0; i < npoint_new; i++) {
-      x = pts[m].x;
+    for (i = 0; i < npoint; i++) {
+      x = pts[i].x;
       if (side == 0 && x[dim] < value) x[dim] = value;
       if (side == 1 && x[dim] > value) x[dim] = value;
-      m++;
     }
 
     // ptflag[I] = # of lines that include point I
     
     int *ptflag;
-    memory->create(ptflag,npoint_new+npoint_old,"readsurf:ptflag");
-    m = npoint_old;
-    for (i = 0; i < npoint_new; i++) ptflag[m++] = 0;
+    memory->create(ptflag,npoint,"readsurf:ptflag");
+    for (i = 0; i < npoint; i++) ptflag[i] = 0;
 
-    m = nline_old;
-    for (i = 0; i < nline_new; i++) {
-      ptflag[lines[m].p1]++;
-      ptflag[lines[m].p2]++;
-      m++;
+    for (i = 0; i < nline; i++) {
+      ptflag[lines[i].p1]++;
+      ptflag[lines[i].p2]++;
     }
 
     // lineflag[I] = 1 if line I can be removed b/c lies on clip edge
     // also decrement ptflag for pts in removed line
     
     int *lineflag;
-    memory->create(lineflag,nline_new+nline_old,"readsurf:lineflag");
-    m = nline_old;
-    for (i = 0; i < nline_new; i++) lineflag[m++] = 0;
+    memory->create(lineflag,nline,"readsurf:lineflag");
+    for (i = 0; i < nline; i++) lineflag[i] = 0;
 
-    m = nline_old;
-    for (i = 0; i < nline_new; i++) {
-      if (pts[lines[m].p1].x[dim] == value && 
-	  pts[lines[m].p2].x[dim] == value) {
-	lineflag[m] = 1;
-	ptflag[lines[m].p1]--;
-	ptflag[lines[m].p2]--;
+    for (i = 0; i < nline; i++) {
+      if (pts[lines[i].p1].x[dim] == value && 
+          pts[lines[i].p2].x[dim] == value) {
+	lineflag[i] = 1;
+	ptflag[lines[i].p1]--;
+	ptflag[lines[i].p2]--;
       }
-      m++;
     }
 
     // condense pts/lines to remove deleted points and lines
@@ -1040,28 +1048,26 @@ void ReadSurf::clip2d()
     // renumber point indices in lines using altered ptflag
     // reset npoint_new,nline_new
 
-    n = m = npoint_old;
-    for (i = 0; i < npoint_new; i++) {
-      if (ptflag[m]) {
-	memcpy(&pts[n],&pts[m],sizeof(Surf::Point));
-	ptflag[m] = n;
+    n = 0;
+    for (i = 0; i < npoint; i++) {
+      if (ptflag[i]) {
+	memcpy(&pts[n],&pts[i],sizeof(Point));
+	ptflag[i] = n;
 	n++;
       }
-      m++;
     }
-    npoint_new = n - npoint_old;
+    npoint = n;
     
-    n = m = nline_old;
-    for (i = 0; i < nline_new; i++) {
-      if (!lineflag[m]) {
-	memcpy(&lines[n],&lines[m],sizeof(Surf::Line));
+    n = 0;
+    for (i = 0; i < nline; i++) {
+      if (!lineflag[i]) {
+	memcpy(&lines[n],&lines[i],sizeof(Line));
 	lines[n].p1 = ptflag[lines[n].p1];
 	lines[n].p2 = ptflag[lines[n].p2];
 	n++;
       }
-      m++;
     }
-    nline_new = n - nline_old;
+    nline = n;
 
     // clean up
 
@@ -1071,12 +1077,12 @@ void ReadSurf::clip2d()
 
   if (me == 0) {
     if (screen) {
-      fprintf(screen,"  clipped to %d points\n",npoint_new);
-      fprintf(screen,"  clipped to %d lines\n",nline_new);
+      fprintf(screen,"  clipped to %d points\n",npoint);
+      fprintf(screen,"  clipped to %d lines\n",nline);
     }
     if (logfile) {
-      fprintf(logfile,"  clipped to %d points\n",npoint_new);
-      fprintf(logfile,"  clipped to %d lines\n",nline_new);
+      fprintf(logfile,"  clipped to %d points\n",npoint);
+      fprintf(logfile,"  clipped to %d lines\n",nline);
     }
   }
 }
@@ -1090,7 +1096,7 @@ void ReadSurf::clip2d()
 
 void ReadSurf::clip3d()
 {
-  int i,m,n,nptotal,nttotal,dim,side;
+  int i,n,nptotal,nttotal,dim,side;
   int ngood,nbad,good,bad,ipt;
   double value,param;
   int p[3],pflag[3];
@@ -1118,15 +1124,13 @@ void ReadSurf::clip3d()
     nedge = maxedge = 0;
     edge = NULL;
     
-    m = ntri_old;
-    n = ntri_new;
-    nptotal = npoint_old + npoint_new;
-    nttotal = ntri_old + ntri_new;
+    nptotal = npoint;
+    nttotal = ntri;
 
-    for (i = 0; i < n; i++) {
-      p[0] = tris[m].p1;
-      p[1] = tris[m].p2;
-      p[2] = tris[m].p3;
+    for (i = 0; i < ntri; i++) {
+      p[0] = tris[i].p1;
+      p[1] = tris[i].p2;
+      p[2] = tris[i].p3;
       xp[0] = pts[p[0]].x;
       xp[1] = pts[p[1]].x;
       xp[2] = pts[p[2]].x;
@@ -1164,16 +1168,16 @@ void ReadSurf::clip3d()
       if (nbad && ngood) {
 	if (nptotal+2 >= maxpoint) {
 	  maxpoint += DELTA;
-	  pts = (Surf::Point *) 
-	    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
+	  pts = (Point *) 
+	    memory->srealloc(pts,maxpoint*sizeof(Point),"surf:pts");
 	  xp[0] = pts[p[0]].x;
 	  xp[1] = pts[p[1]].x;
 	  xp[2] = pts[p[2]].x;
 	}
 	if (nttotal == maxtri) {
 	  maxtri += DELTA;
-	  tris = (Surf::Tri *) 
-	    memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
+	  tris = (Tri *) 
+	    memory->srealloc(tris,maxtri*sizeof(Tri),"surf:tris");
 	}
 
 	if (ngood == 1) {
@@ -1196,9 +1200,9 @@ void ReadSurf::clip3d()
             nptotal++;
 	  }
 
-	  if (bad == 0) tris[m].p1 = ipt;
-	  else if (bad == 1) tris[m].p2 = ipt;
-	  else if (bad == 2) tris[m].p3 = ipt;
+	  if (bad == 0) tris[i].p1 = ipt;
+	  else if (bad == 1) tris[i].p2 = ipt;
+	  else if (bad == 2) tris[i].p3 = ipt;
 
 	  if (nbad == 2) {
 	    if (bad == 0 && pflag[1] == BAD) bad = 1;
@@ -1219,9 +1223,9 @@ void ReadSurf::clip3d()
               nptotal++;
 	    }
 
-	    if (bad == 0) tris[m].p1 = ipt;
-	    else if (bad == 1) tris[m].p2 = ipt;
-	    else if (bad == 2) tris[m].p3 = ipt;
+	    if (bad == 0) tris[i].p1 = ipt;
+	    else if (bad == 1) tris[i].p2 = ipt;
+	    else if (bad == 2) tris[i].p3 = ipt;
 	  }
 
 	} else if (ngood == 2) {
@@ -1244,11 +1248,11 @@ void ReadSurf::clip3d()
             nptotal++;
 	  }
 
-	  if (bad == 0) tris[m].p1 = ipt;
-	  else if (bad == 1) tris[m].p2 = ipt;
-	  else if (bad == 2) tris[m].p3 = ipt;
+	  if (bad == 0) tris[i].p1 = ipt;
+	  else if (bad == 1) tris[i].p2 = ipt;
+	  else if (bad == 2) tris[i].p3 = ipt;
 
-	  memcpy(&tris[nttotal],&tris[m],sizeof(Surf::Tri));
+	  memcpy(&tris[nttotal],&tris[i],sizeof(Tri));
 	  if (good == 0) tris[nttotal].p1 = ipt;
 	  else if (good == 1) tris[nttotal].p2 = ipt;
 	  else if (good == 2) tris[nttotal].p3 = ipt;
@@ -1274,58 +1278,49 @@ void ReadSurf::clip3d()
 	  nttotal++;
 	}
       }
-      m++;
     }
 
     memory->destroy(edge);
 
-    npoint_new = nptotal - npoint_old;
-    ntri_new = nttotal - ntri_old;
+    npoint = nptotal;
+    ntri = nttotal;
 
     // project all points outside clipping plane to the plane
 
-    m = npoint_old;
-    for (i = 0; i < npoint_new; i++) {
-      x = pts[m].x;
+    for (i = 0; i < npoint; i++) {
+      x = pts[i].x;
       if (side == 0 && x[dim] < value) x[dim] = value;
       if (side == 1 && x[dim] > value) x[dim] = value;
-      m++;
     }
 
     // ptflag[I] = # of tris that include point I
     
     int *ptflag;
-    memory->create(ptflag,npoint_new+npoint_old,"readsurf:ptflag");
-    m = npoint_old;
-    for (i = 0; i < npoint_new; i++) ptflag[m++] = 0;
+    memory->create(ptflag,npoint,"readsurf:ptflag");
+    for (i = 0; i < npoint; i++) ptflag[i] = 0;
 
-    m = ntri_old;
-    for (i = 0; i < ntri_new; i++) {
-      ptflag[tris[m].p1]++;
-      ptflag[tris[m].p2]++;
-      ptflag[tris[m].p3]++;
-      m++;
+    for (i = 0; i < ntri; i++) {
+      ptflag[tris[i].p1]++;
+      ptflag[tris[i].p2]++;
+      ptflag[tris[i].p3]++;
     }
 
     // triflag[I] = 1 if tri I can be removed b/c lies on clip plane
     // also decrement ptflag for pts in removed tri
     
     int *triflag;
-    memory->create(triflag,ntri_new+ntri_old,"readsurf:triflag");
-    m = ntri_old;
-    for (i = 0; i < ntri_new; i++) triflag[m++] = 0;
+    memory->create(triflag,ntri,"readsurf:triflag");
+    for (i = 0; i < ntri; i++) triflag[i] = 0;
 
-    m = ntri_old;
-    for (i = 0; i < ntri_new; i++) {
-      if (pts[tris[m].p1].x[dim] == value && 
-	  pts[tris[m].p2].x[dim] == value &&
-	  pts[tris[m].p3].x[dim] == value) {
-	triflag[m] = 1;
-	ptflag[tris[m].p1]--;
-	ptflag[tris[m].p2]--;
-	ptflag[tris[m].p3]--;
+    for (i = 0; i < ntri; i++) {
+      if (pts[tris[i].p1].x[dim] == value && 
+	  pts[tris[i].p2].x[dim] == value &&
+	  pts[tris[i].p3].x[dim] == value) {
+	triflag[i] = 1;
+	ptflag[tris[i].p1]--;
+	ptflag[tris[i].p2]--;
+	ptflag[tris[i].p3]--;
       }
-      m++;
     }
 
     // condense pts/tris to remove deleted points and tris
@@ -1333,29 +1328,27 @@ void ReadSurf::clip3d()
     // renumber point indices in tris using altered ptflag
     // reset npoint_new,ntri_new
 
-    n = m = npoint_old;
-    for (i = 0; i < npoint_new; i++) {
-      if (ptflag[m]) {
-	memcpy(&pts[n],&pts[m],sizeof(Surf::Point));
-	ptflag[m] = n;
+    n = 0;
+    for (i = 0; i < npoint; i++) {
+      if (ptflag[i]) {
+	memcpy(&pts[n],&pts[i],sizeof(Point));
+	ptflag[i] = n;
 	n++;
       }
-      m++;
     }
-    npoint_new = n - npoint_old;
+    npoint = n;
     
-    n = m = ntri_old;
-    for (i = 0; i < ntri_new; i++) {
-      if (!triflag[m]) {
-	memcpy(&tris[n],&tris[m],sizeof(Surf::Tri));
+    n = 0;
+    for (i = 0; i < ntri; i++) {
+      if (!triflag[0]) {
+	memcpy(&tris[n],&tris[i],sizeof(Tri));
 	tris[n].p1 = ptflag[tris[n].p1];
 	tris[n].p2 = ptflag[tris[n].p2];
 	tris[n].p3 = ptflag[tris[n].p3];
 	n++;
       }
-      m++;
     }
-    ntri_new = n - ntri_old;
+    ntri = n;
 
     // clean up
 
@@ -1365,12 +1358,12 @@ void ReadSurf::clip3d()
 
   if (me == 0) {
     if (screen) {
-      fprintf(screen,"  clipped to %d points\n",npoint_new);
-      fprintf(screen,"  clipped to %d tris\n",ntri_new);
+      fprintf(screen,"  clipped to %d points\n",npoint);
+      fprintf(screen,"  clipped to %d tris\n",ntri);
     }
     if (logfile) {
-      fprintf(logfile,"  clipped to %d points\n",npoint_new);
-      fprintf(logfile,"  clipped to %d tris\n",ntri_new);
+      fprintf(logfile,"  clipped to %d points\n",npoint);
+      fprintf(logfile,"  clipped to %d tris\n",ntri);
     }
   }
 }
@@ -1392,8 +1385,7 @@ void ReadSurf::push_points_to_boundary(double frac)
   double ydelta = frac * (boxhi[1]-boxlo[1]);
   double zdelta = frac * (boxhi[2]-boxlo[2]);
 
-  int n = npoint_old + npoint_new;
-  for (int i = npoint_old; i < n; i++) {
+  for (int i = 0; i < npoint; i++) {
     x = pts[i].x;
     if (x[0] >= boxlo[0] && x[0] <= boxhi[0]) {
       if (x[0]-boxlo[0] < xdelta) x[0] = boxlo[0];
@@ -1425,30 +1417,31 @@ void ReadSurf::check_neighbor_norm_2d()
 
   int *count;
   int **p2e;
-  memory->create(count,npoint_new,"readsurf:count");
-  memory->create(p2e,npoint_new,2,"readsurf:count");
-  for (int i = 0; i < npoint_new; i++) count[i] = 0;
+  memory->create(count,npoint,"readsurf:count");
+  memory->create(p2e,npoint,2,"readsurf:count");
+  for (int i = 0; i < npoint; i++) count[i] = 0;
 
-  int m = nline_old;
-  for (int i = 0; i < nline_new; i++) {
-    p1 = lines[m].p1 - npoint_old;
-    p2 = lines[m].p2 - npoint_old;
-    p2e[p1][count[p1]++] = m;
-    p2e[p2][count[p2]++] = m;
-    m++;
+  for (int i = 0; i < nline; i++) {
+    p1 = lines[i].p1;
+    p2 = lines[i].p2;
+    p2e[p1][count[p1]++] = i;
+    p2e[p2][count[p2]++] = i;
   }
   
   // check that norms of adjacent lines are not in opposite directions
+  // norms are stored in Surf::lines, at end of orignal nline_old surfs
+
+  Surf::Line *surflines = surf->lines;
 
   double dot;
   double *norm1,*norm2;
 
   int nerror = 0;
   int nwarn = 0;
-  for (int i = 0; i < npoint_new; i++) {
+  for (int i = 0; i < npoint; i++) {
     if (count[i] == 1) continue;
-    norm1 = lines[p2e[i][0]].norm;
-    norm2 = lines[p2e[i][1]].norm;
+    norm1 = surflines[p2e[i][0] + nline_old].norm;
+    norm2 = surflines[p2e[i][1] + nline_old].norm;
     dot = MathExtra::dot3(norm1,norm2);
     if (dot <= -1.0) nerror++;
     else if (dot < -1.0+EPSILON_NORM) nwarn++;
@@ -1485,36 +1478,29 @@ void ReadSurf::check_neighbor_norm_3d()
   // key = directed edge, value = triangle it is part of
   // NOTE: could prealloc hash to correct size here
 
-#ifdef SPARTA_MAP
-  std::map<bigint,int> hash;
-  std::map<bigint,int>::iterator it;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<bigint,int> hash;
-  std::unordered_map<bigint,int>::iterator it;
-#else
-  std::tr1::unordered_map<bigint,int> hash;
-  std::tr1::unordered_map<bigint,int>::iterator it;
-#endif
+  MyHash hash;
+  MyIterator it;
 
   // insert each edge into hash with triangle as value
 
   bigint p1,p2,p3,key;
 
-  int m = ntri_old;
-  for (int i = 0; i < ntri_new; i++) {
-    p1 = tris[m].p1;
-    p2 = tris[m].p2;
-    p3 = tris[m].p3;
+  for (int i = 0; i < ntri; i++) {
+    p1 = tris[i].p1;
+    p2 = tris[i].p2;
+    p3 = tris[i].p3;
     key = (p1 << 32) | p2;
-    hash[key] = m;
+    hash[key] = i;
     key = (p2 << 32) | p3;
-    hash[key] = m;
+    hash[key] = i;
     key = (p3 << 32) | p1;
-    hash[key] = m;
-    m++;
+    hash[key] = i;
   }
 
   // check that norms of adjacent triangles are not in opposite directions
+  // norms are stored in Surf::tris, at end of orignal ntri_old surfs
+
+  Surf::Tri *surftris = surf->tris;
 
   double dot;
   double *norm1,*norm2;
@@ -1526,8 +1512,8 @@ void ReadSurf::check_neighbor_norm_3d()
     p2 = it->first & MAXSMALLINT;
     key = (p2 << 32) | p1;
     if (hash.find(key) == hash.end()) continue;
-    norm1 = tris[it->second].norm;
-    norm2 = tris[hash[key]].norm;
+    norm1 = surftris[it->second + ntri_old].norm;
+    norm2 = surftris[hash[key] + ntri_old].norm;
     dot = MathExtra::dot3(norm1,norm2);
     if (dot <= -1.0) nerror++;
     else if (dot < -1.0+EPSILON_NORM) nwarn++;
@@ -1545,166 +1531,6 @@ void ReadSurf::check_neighbor_norm_3d()
             "nearly infinitely thin triangle pairs",nwarn);
     if (me == 0) error->warning(FLERR,str);
   }
-}
-
-/* ----------------------------------------------------------------------
-   check nearness of all points to other lines in same cell
-   error if point is on line, including duplicate point
-   warn if closer than EPSILON_GRID = fraction of grid cell size
-   NOTE: this can miss a close point/line pair in 2 different grid cells
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_point_near_surf_2d()
-{
-  int i,j,n,p1,p2;
-  int *csurfs;
-  double side,epssq;
-  double *lo,*hi;
-  Surf::Line *line;
-
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  int nerror = 0;
-  int nwarn = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    n = cells[icell].nsurf;
-    if (n == 0) continue;
-
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-    side = MIN(hi[0]-lo[0],hi[1]-lo[1]);
-    epssq = (EPSILON_GRID*side) * (EPSILON_GRID*side);
-
-    csurfs = cells[icell].csurfs;
-    for (i = 0; i < n; i++) {
-      line = &lines[csurfs[i]];
-      for (j = 0; j < n; j++) {
-        if (i == j) continue;
-        p1 = lines[csurfs[j]].p1;
-        p2 = lines[csurfs[j]].p2;
-        point_line_compare(p1,line,epssq,nerror,nwarn);
-        point_line_compare(p2,line,epssq,nerror,nwarn);
-      }
-    }
-  }
-
-  int all;
-  MPI_Allreduce(&nerror,&all,1,MPI_INT,MPI_SUM,world);
-  if (all) {
-    char str[128];
-    sprintf(str,"Surface check failed with %d points on lines",all);
-    error->all(FLERR,str);
-  }
-
-  MPI_Allreduce(&nwarn,&all,1,MPI_INT,MPI_SUM,world);
-  if (all) {
-    char str[128];
-    sprintf(str,"Surface check found %d points nearly on lines",all);
-    if (me == 0) error->warning(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   check nearness of all points to other triangles in same cell
-   error if point is on triangle, including duplicate point
-   warn if closer than EPSILON_GRID = fraction of grid cell size
-   NOTE: this can miss a close point/triangle pair in 2 different grid cells
-------------------------------------------------------------------------- */
-
-void ReadSurf::check_point_near_surf_3d()
-{
-  int i,j,n,p1,p2,p3;
-  int *csurfs;
-  double side,epssq;
-  double *lo,*hi;
-  Surf::Tri *tri;
-
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  int nerror = 0;
-  int nwarn = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    n = cells[icell].nsurf;
-    if (n == 0) continue;
-
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-    side = MIN(hi[0]-lo[0],hi[1]-lo[1]);
-    side = MIN(side,hi[2]-lo[2]);
-    epssq = (EPSILON_GRID*side) * (EPSILON_GRID*side);
-
-    csurfs = cells[icell].csurfs;
-    for (i = 0; i < n; i++) {
-      tri = &tris[csurfs[i]];
-      for (j = 0; j < n; j++) {
-        if (i == j) continue;
-        p1 = tris[csurfs[j]].p1;
-        p2 = tris[csurfs[j]].p2;
-        p3 = tris[csurfs[j]].p3;
-        point_tri_compare(p1,tri,epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
-        point_tri_compare(p2,tri,epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
-        point_tri_compare(p3,tri,epssq,nerror,nwarn,icell,csurfs[i],csurfs[j]);
-      }
-    }
-  }
-
-  int all;
-  MPI_Allreduce(&nerror,&all,1,MPI_INT,MPI_SUM,world);
-  if (all) {
-    char str[128];
-    sprintf(str,"Surface check failed with %d points on triangles",all);
-    error->all(FLERR,str);
-  }
-
-  MPI_Allreduce(&nwarn,&all,1,MPI_INT,MPI_SUM,world);
-  if (all) {
-    char str[128];
-    sprintf(str,"Surface check found %d points nearly on triangles",all);
-    if (me == 0) error->warning(FLERR,str);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   compute distance bewteen a point and line
-   just return if point is an endpoint of line
-   increment nerror if point on line
-   increment nwarn if point is within epssq distance of line
-------------------------------------------------------------------------- */
-
-void ReadSurf::point_line_compare(int i, Surf::Line *line, double epssq, 
-                                  int &nerror, int &nwarn)
-{
-  if (i == line->p1 || i == line->p2) return;
-  double rsq = 
-    Geometry::distsq_point_line(pts[i].x,pts[line->p1].x,pts[line->p2].x);
-  if (rsq == 0.0) nerror++;
-  else if (rsq < epssq) nwarn++;
-}
-
-/* ----------------------------------------------------------------------
-   compute distance bewteen a point and triangle
-   just return if point is an endpoint of triangle
-   increment nerror if point on triangle
-   increment nwarn if point is within epssq distance of triangle
-------------------------------------------------------------------------- */
-
-void ReadSurf::point_tri_compare(int i, Surf::Tri *tri, double epssq, 
-                                 int &nerror, int &nwarn, 
-                                 int, int, int)
-{
-  if (i == tri->p1 || i == tri->p2 || i == tri->p3) return;
-  double rsq = 
-    Geometry::distsq_point_tri(pts[i].x,
-                               pts[tri->p1].x,pts[tri->p2].x,pts[tri->p3].x,
-                               tri->norm);
-  if (rsq == 0.0) nerror++;
-  else if (rsq < epssq) nwarn++;
 }
 
 /* ----------------------------------------------------------------------
@@ -1746,10 +1572,8 @@ void ReadSurf::add_edge(int i, int j, int m)
 double ReadSurf::shortest_line()
 {
   double len = BIG;
-  int m = nline_old;
-  for (int i = 0; i < nline_new; i++) {
-    len = MIN(len,surf->line_size(m));
-    m++;
+  for (int i = 0; i < nline; i++) {
+    len = MIN(len,surf->line_size(pts[lines[i].p1].x,pts[lines[i].p2].x));
   }
   return len;
 }
@@ -1763,12 +1587,11 @@ void ReadSurf::smallest_tri(double &len, double &area)
   double lenone,areaone;
 
   len = area = BIG;
-  int m = ntri_old;
-  for (int i = 0; i < ntri_new; i++) {
-    areaone = surf->tri_size(m,lenone);
+  for (int i = 0; i < ntri; i++) {
+    areaone = surf->tri_size(pts[tris[i].p1].x,pts[tris[i].p2].x,
+                             pts[tris[i].p3].x,lenone);
     len = MIN(len,lenone);
     area = MIN(area,areaone);
-    m++;
   }
 }
 
@@ -1849,20 +1672,6 @@ void ReadSurf::parse_keyword(int first)
 	 || line[stop] == '\n' || line[stop] == '\r') stop--;
   line[stop+1] = '\0';
   strcpy(keyword,&line[start]);
-}
-
-/* ----------------------------------------------------------------------
-   grow surface data structures
-------------------------------------------------------------------------- */
-
-void ReadSurf::grow_surf()
-{
-  pts = (Surf::Point *) 
-    memory->srealloc(pts,maxpoint*sizeof(Surf::Point),"surf:pts");
-  lines = (Surf::Line *) 
-    memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
-  tris = (Surf::Tri *) 
-    memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
 }
 
 /* ----------------------------------------------------------------------

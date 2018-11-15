@@ -19,16 +19,9 @@
 #include "domain.h"
 #include "comm.h"
 #include "input.h"
+#include "hash3.h"
 #include "memory.h"
 #include "error.h"
-
-#ifdef SPARTA_MAP
-#include <map>
-#elif defined SPARTA_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
 
 using namespace SPARTA_NS;
 
@@ -93,14 +86,7 @@ void ReadGrid::read(char *filename, int external)
 
   // clear Grid::hash before re-populating it
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+  Grid::MyHash *hash = grid->hash;
   hash->clear();
 
   // read Parents section
@@ -196,14 +182,7 @@ void ReadGrid::create_parents(int n, char *buf)
   // use Grid hash to store key = parent ID, value = index in pcells
   // NOTE: could prealloc hash to size nparents here
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+  Grid::MyHash *hash = grid->hash;
   int dimension = domain->dimension;
 
   for (int i = 0; i < n; i++) {
@@ -267,16 +246,9 @@ void ReadGrid::create_parents(int n, char *buf)
 
 void ReadGrid::create_children()
 {
+  Grid::MyHash *hash = grid->hash;
   Grid::ParentCell *pcells = grid->pcells;
   int nparent = grid->nparent;
-
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
 
   int nprocs = comm->nprocs;
   bigint count = 0;

@@ -112,7 +112,6 @@ void FixEmitSurf::init()
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
   
-  pts = surf->pts;
   lines = surf->lines;
   tris = surf->tris;
   
@@ -207,7 +206,6 @@ void FixEmitSurf::setup()
 {
   // needed for Kokkos because pointers are changed in UpdateKokkos::setup()
 
-  pts = surf->pts;
   lines = surf->lines;
   tris = surf->tris;
 }
@@ -276,8 +274,8 @@ int FixEmitSurf::create_task(int icell)
       if (normalflag) indot = magvstream;
       else indot = vstream[0]*normal[0] + vstream[1]*normal[1];
       
-      p1 = pts[lines[isurf].p1].x;
-      p2 = pts[lines[isurf].p2].x;
+      p1 = lines[isurf].p1;
+      p2 = lines[isurf].p2;
       npoint = cut2d->clip_external(p1,p2,lo,hi,cpath);
       if (npoint < 2) continue;
       
@@ -322,9 +320,9 @@ int FixEmitSurf::create_task(int icell)
       else indot = vstream[0]*normal[0] + vstream[1]*normal[1] + 
              vstream[2]*normal[2];
       
-      p1 = pts[tris[isurf].p1].x;
-      p2 = pts[tris[isurf].p2].x;
-      p3 = pts[tris[isurf].p3].x;
+      p1 = tris[isurf].p1;
+      p2 = tris[isurf].p2;
+      p3 = tris[isurf].p3;
       npoint = cut3d->clip_external(p1,p2,p3,lo,hi,cpath);
       if (npoint < 3) continue;
       

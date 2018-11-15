@@ -22,14 +22,7 @@ CommandStyle(adapt_grid,AdaptGrid)
 #define SPARTA_ADAPT_GRID_H
 
 #include "pointers.h"
-
-#ifdef SPARTA_MAP
-#include <map>
-#elif SPARTA_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
+#include "hash3.h"
 
 namespace SPARTA_NS {
 
@@ -125,12 +118,14 @@ class AdaptGrid : protected Pointers {
   // hash for child cell IDs created by converting a coarsened parent cell
 
 #ifdef SPARTA_MAP
-  std::map<cellint,int> *chash;
+  typedef std::map<cellint,int> MyHash;
 #elif SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *chash;
+  typedef std::unordered_map<cellint,int> MyHash;
 #else
-  std::tr1::unordered_map<cellint,int> *chash;
+  typedef std::tr1::unordered_map<cellint,int> MyHash;
 #endif
+
+  MyHash *chash;
 
   // methods
 

@@ -10,7 +10,7 @@ move_surf command :h3
 
 [Syntax:]
 
-move_surf groupID style args ... :pre
+move_surf groupID style args ... keyword value ... :pre
 
 group-ID = group ID for which surface elements to move :ulb,l
 style = {file} or {trans} or {rotate} :l
@@ -21,12 +21,15 @@ style = {file} or {trans} or {rotate} :l
     theta = rotate surface points by this angle in counter-clockwise direction (degrees)
     Rx,Ry,Rz = rotate around vector starting at origin pointing in this direction
     Ox,Oy,Oz = origin to rotate around (distance units) :pre
+zero  or more keyword/value pairs may be appended  :l
+keyword = {connect} :l
+  connect arg = yes or no :pre
 :ule
 
 [Examples:]
 
 move_surf all trans 1 0 0
-move_surf all rotate 360 0 0 1 5 5 0
+move_surf partial rotate 360 0 0 1 5 5 0 connect yes
 move_surf object2 rotate 360 0 0 1 5 5 0 :pre
 
 [Description:]
@@ -53,10 +56,19 @@ In 2d, surface elements are line segments with 2 vertices each.  In
 3d, surface elements are triangles with 3 vertices each.  If a line
 segment or triangle belongs to the specified group, all of its
 vertices are moved.  This effectively moves the entire surface
-element.  Note that if two (or more) surface elements share the same
-vertex and one (or more) of the elements is not in the specified
-group, the shape of that surface element may also be affected, since
-only some of its vertices may move.
+element.  
+
+IMPORTANT NOTE: Unless a vertex is on the simulation box boundary, it
+will be part of two surface elements (in 2d) or multiple surface
+elements (in 3d).  If you choose a surface groupID which does not
+include all the elements in a gridded object, then you cannot move
+them without breaking apart the object in a "watertight" sense (so
+that particles could erroneously move inside the object).  To prevent
+this use the optional {connect} keyword with its {yes} setting.  This
+will insure that multiple copies of the same vertex in other elements
+(not in the surface group) will also be moved.  This is a way to morph
+the shape of a gridded object, e.g. make a sphere more oblate, by
+moving only a portion of its elements.
 
 The {trans} style shifts or displaces each vertex by the vector
 (Dx,Dy,Dz).
@@ -86,12 +98,15 @@ outside the object.
 
 [Restrictions:]
 
-An error will be generated if any surface element vertex is
-moved outside the simulation box.
+An error will be generated if any surface element vertex is moved
+outside the simulation box.
 
 [Related commands:]
 
 "read_surf"_read_surf.html, "fix move/surf"_fix_move_surf.html,
 "remove_surf"_remove_surf.html
 
-[Default:] none
+[Default:]
+
+The option default is connect = no.
+

@@ -297,11 +297,6 @@ namespace SPARTA_NS {
   typedef tdual_pcell_1d::t_host t_host_pcell_1d;
 
   typedef Kokkos::
-    DualView<Surf::Point*, SPADeviceType::array_layout, DeviceType> tdual_point_1d;
-  typedef tdual_point_1d::t_dev t_point_1d;
-  typedef tdual_point_1d::t_host t_host_point_1d;
-
-  typedef Kokkos::
     DualView<Surf::Line*, SPADeviceType::array_layout, DeviceType> tdual_line_1d;
   typedef tdual_line_1d::t_dev t_line_1d;
   typedef tdual_line_1d::t_host t_host_line_1d;
