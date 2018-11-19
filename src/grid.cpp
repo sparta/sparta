@@ -144,6 +144,7 @@ Grid::~Grid()
   delete csurfs;
   delete csplits;
   delete csubs;
+  delete cpsurf;
   delete hash;
 }
 

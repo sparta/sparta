@@ -242,6 +242,8 @@ class Grid : protected Pointers {
   // grid_surf.cpp
 
   void surf2grid2(int, int outflag=1);
+  void comm_invert(int, int *, cellint **);
+
   void surf2grid(int, int outflag=1);
   void surf2grid_one(int, int, int, int, class Cut3d *, class Cut2d *);
   void clear_surf();

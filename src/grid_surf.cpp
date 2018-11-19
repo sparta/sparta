@@ -21,6 +21,7 @@
 #include "surf.h"
 #include "cut2d.h"
 #include "cut3d.h"
+#include "irregular.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -165,7 +166,7 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
   jhi = MIN(jhi,ny-1);
 
   // loop over range of grid cells between ij lo/hi inclusive
-  // if cell is a child cell, compute overlap via surf2grid_one()
+  // if cell is a child cell, compute overlap via surf2gridne()
   // else it is a parent cell, so recurse
   // set newsbox to intersection of sbox with new parent cell
 
@@ -377,24 +378,88 @@ void Grid::surf2grid2(int subflag, int outflag)
   double t2 = MPI_Wtime();
   printf("TIME %g\n",t2-t1);
 
-  return;
-
   // rendevous comm to convert cells per surf to surfs per cell
 
-  // surf settings for each owned cell
+  comm_invert(nsurf,cellcount,celllist);
 
-  /*
-    if (nsurf < 0) error->one(FLERR,"Too many surfs in one cell");
-    if (nsurf) {
-      cinfo[icell].type = OVERLAP;
-      cells[icell].nsurf = nsurf;
-      cells[icell].csurfs = ptr;
-      csurfs->vgot(nsurf);
-    }
-  }
-  */
+  memory->destroy(cellcount);
+  memory->sfree(celllist);
+  delete cpsurf;
+  cpsurf = NULL;
+
+  double t3 = MPI_Wtime();
+  printf("TIME %g\n",t3-t2);
 
   surf2grid_half(subflag,outflag);
+}
+
+/* ----------------------------------------------------------------------
+   rendezvous comm to convert surf and list of cells to cell and list of surfs
+   rendezvous proc for each grid cell
+     based on hash of cellID, mod by nprocs
+   send (cellID,surfID) to each proc for my celllist
+   send (cellID,me) to each proc for my owned grid cells
+   do this in one comm?
+   on rendezvous proc:
+     create list of surfs for each grid cell
+     send (cellID,list) back to owning proc of grid cell
+     do this in 2 passes to count sizes for each grid cell
+     throw error if too many surfs/cell
+   every proc:
+     recv the list of surfs for each grid cell
+     store them in my grid data struct
+     when loop over my cells, skip nsplit < 1
+     set type = OVERLAP
+     if (nsurf < 0) error->one(FLERR,"Too many surfs in one cell");
+     if (nsurf) cinfo[icell].type = OVERLAP;
+
+------------------------------------------------------------------------- */
+
+void Grid::comm_invert(int nsurf, int *cellcount, cellint **celllist)
+{
+  // NOTE: worry if cellcount set for all values and NULLs in celllist
+
+  int n = 0;
+  for (int i = 0; i < nsurf; i++)
+    n += cellcount[i];
+
+  int *proclist;
+  memory->create(proclist,n,"surf2grid2:proclist");
+  cellsurf = (CellSurf *) memory->smalloc(n*sizeof(CellSurf),
+                                          "surf2grid:cellsurf");
+    
+  int m = 0;
+  for (int i = 0; i < nsurf; i++) {
+    if (cellcount[i] == 0) continue;
+    surfID = surf->line[me+i*nprocs];     // line or tri
+    for (j = 0; j < cellcount[i]; j++) {
+      proclist[m] = hash(celllist[i][j]) % nprocs;
+      cellsurf[m].cellID = celllist[i][j];
+      cellsurf[m].surfID = surfID;
+    }
+  }
+
+  // should I add (cell,proc) pairs to this send?
+  // surfint vs int, need to be negative numbers
+
+  Irregular *forward = new Irregular(sparta);
+  int nrecv = forward->create_data_uniform(n,proclist,1);
+  
+  CellSurf *rbuf;
+  memory->smalloc(rbuf,nrecv*sizeof(CellSurf),"surf2grid2:rbuf");
+
+  irregular->exchange_uniform(cellsurf,sizeof(CellSurf),rbuf);
+
+  delete irregular;
+
+
+  // reverse comm
+
+  Irregular *backward = new Irregular(sparta);
+
+  int recvsize;
+  int nrecv = forward->create_data_variable(n,proclist,sizes,recvsize,1);
+
 }
 
 /* ----------------------------------------------------------------------
@@ -424,6 +489,7 @@ void Grid::surf2grid(int subflag, int outflag)
 
   // compute overlap of surfs with each cell I own
   // info stored in nsurf,csurfs
+  // skip if nsplit <= 0 b/c split cells could exist if restarting
 
   double t1 = MPI_Wtime();
 
@@ -481,13 +547,15 @@ void Grid::surf2grid_half(int subflag, int outflag)
 
   int dim = domain->dimension;
 
-  if (outflag) surf2grid_stats();
+  //double t2 = MPI_Wtime();
+  //printf("TIME %g\n",t2-t1);
 
-  return;
+  if (outflag) surf2grid_stats();
 
   // compute cut volume and possible split of each grid cell by surfs
   // decrement nunsplitlocal if convert an unsplit cell to split cell
   // if nsplitone > 1, create new split cell sinfo and sub-cells
+  // skip if nsplit <= 0 b/c split cells could exist if restarting
 
   int ncurrent = nlocal;
   for (int icell = 0; icell < ncurrent; icell++) {
@@ -617,6 +685,9 @@ void Grid::surf2grid_half(int subflag, int outflag)
                            noverlapall,ncornerall);
     }
   }
+
+  //double t4 = MPI_Wtime();
+  //printf("TIME %g\n",t4-t3);
 
   // clean up
 

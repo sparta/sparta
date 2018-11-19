@@ -470,9 +470,7 @@ void ReadSurf::command(int narg, char **arg)
   // done on per-grid-cell basis, too expensive to do globally
 
   grid->surf2grid(1);
-  grid->surf2grid2(1);
-
-  error->all(FLERR,"Done for now");
+  //grid->surf2grid2(1);
 
   if (dim == 2) surf->check_point_near_surf_2d();
   else surf->check_point_near_surf_3d();
