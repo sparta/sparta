@@ -65,11 +65,11 @@ void RemoveSurf::command(int narg, char **arg)
 
   if (domain->dimension == 2) {
     remove_2d(groupbit);
-    surf->check_watertight_2d(0,0);
+    surf->check_watertight_2d(0);
     if (surf->nline == 0) surf->exist = 0 ;
   } else {
     remove_3d(groupbit);
-    surf->check_watertight_3d(0,0);
+    surf->check_watertight_3d(0);
     if (surf->ntri == 0) surf->exist = 0 ;
   }
 
@@ -148,10 +148,7 @@ void RemoveSurf::remove_2d(int groupbit)
 {
   int i;
 
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
-
-  int npoint_old = surf->npoint;
   int nline_old = surf->nline;
 
   // remove lines not in group
@@ -168,61 +165,18 @@ void RemoveSurf::remove_2d(int groupbit)
 
   surf->nline = nline = n;
 
-  // ptflag[I] = # of lines that include point I
-
-  int npoint = surf->npoint;
-
-  int *ptflag;
-  memory->create(ptflag,npoint,"surf:ptflag");
-  for (i = 0; i < npoint; i++) ptflag[i] = 0;
-  
-  for (i = 0; i < nline; i++) {
-    ptflag[lines[i].p1]++;
-    ptflag[lines[i].p2]++;
-  }
-
-  // condense pts to remove points no longer in lines
-  // when compress points, set ptflag[I] = new index of point I
-  // renumber point indices in lines using altered ptflag
-
-  nbytes = sizeof(Surf::Point);
-
-  n = 0;
-  for (i = 0; i < npoint; i++) {
-    if (ptflag[i]) {
-      if (i != n) memcpy(&pts[n],&pts[i],nbytes);
-      ptflag[i] = n;
-      n++;
-    }
-  }
-  surf->npoint = n;
-
-  for (i = 0; i < nline; i++) {
-    lines[i].p1 = ptflag[lines[i].p1];
-    lines[i].p2 = ptflag[lines[i].p2];
-  }
-
-  // clean up
-
-  memory->destroy(ptflag);
-
   // print stats after removal
 
-  int npoint_remove = npoint_old - surf->npoint;
   int nline_remove = nline_old - surf->nline;
 
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"  removed %d lines and %d points\n",
-	      nline_remove,npoint_remove);
-      fprintf(screen,"  %d lines and %d points remain\n",
-	      surf->nline,surf->npoint);
+      fprintf(screen,"  removed %d lines\n",nline_remove);
+      fprintf(screen,"  %d lines remain\n",surf->nline);
     }
     if (logfile) {
-      fprintf(logfile,"  removed %d lines and %d points\n",
-	      nline_remove,npoint_remove);
-      fprintf(logfile,"  %d lines and %d points remain\n",
-	      surf->nline,surf->npoint);
+      fprintf(logfile,"  removed %d lines\n",nline_remove);
+      fprintf(logfile,"  %d lines remain\n",surf->nline);
     }
   }
 }
@@ -236,10 +190,7 @@ void RemoveSurf::remove_3d(int groupbit)
 {
   int i;
 
-  Surf::Point *pts = surf->pts;
   Surf::Tri *tris = surf->tris;
-
-  int npoint_old = surf->npoint;
   int ntri_old = surf->ntri;
 
   // remove triangles not in group
@@ -256,63 +207,18 @@ void RemoveSurf::remove_3d(int groupbit)
 
   surf->ntri = ntri = n;
 
-  // ptflag[I] = # of tris that include point I
-
-  int npoint = surf->npoint;
-
-  int *ptflag;
-  memory->create(ptflag,npoint,"surf:ptflag");
-  for (i = 0; i < npoint; i++) ptflag[i] = 0;
-  
-  for (i = 0; i < ntri; i++) {
-    ptflag[tris[i].p1]++;
-    ptflag[tris[i].p2]++;
-    ptflag[tris[i].p3]++;
-  }
-
-  // condense pts to remove points no longer in triangles
-  // when compress points, set ptflag[I] = new index of point I
-  // renumber point indices in tris using altered ptflag
-
-  nbytes = sizeof(Surf::Point);
-
-  n = 0;
-  for (i = 0; i < npoint; i++) {
-    if (ptflag[i]) {
-      if (i != n) memcpy(&pts[n],&pts[i],nbytes);
-      ptflag[i] = n;
-      n++;
-    }
-  }
-  surf->npoint = n;
-
-  for (i = 0; i < ntri; i++) {
-    tris[i].p1 = ptflag[tris[i].p1];
-    tris[i].p2 = ptflag[tris[i].p2];
-    tris[i].p3 = ptflag[tris[i].p3];
-  }
-
-  // clean up
-
-  memory->destroy(ptflag);
-
   // print stats after removal
 
-  int npoint_remove = npoint_old - surf->npoint;
   int ntri_remove = ntri_old - surf->ntri;
 
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"  removed %d tris and %d points\n",
-	      ntri_remove,npoint_remove);
-      fprintf(screen,"  %d tris and %d points remain\n",
-	      surf->ntri,surf->npoint);
+      fprintf(screen,"  removed %d tris\n",ntri_remove);
+      fprintf(screen,"  %d tris remain\n",surf->ntri);
     }
     if (logfile) {
-      fprintf(logfile,"  removed %d tris and %d points\n",
-              ntri_remove,npoint_remove);
-      fprintf(logfile,"  %d tris and %d points remain\n",
-              surf->ntri,surf->npoint);
+      fprintf(logfile,"  removed %d tris\n",ntri_remove);
+      fprintf(logfile,"  %d tris remain\n",surf->ntri);
     }
   }
 }

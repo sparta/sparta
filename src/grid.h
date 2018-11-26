@@ -17,15 +17,7 @@
 
 #include "stdio.h"
 #include "pointers.h"
-
-#ifdef SPARTA_MAP
-#include <map>
-#elif SPARTA_UNORDERED_MAP
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
-
+#include "hash3.h"
 #include "my_page.h"
 
 namespace SPARTA_NS {
@@ -60,13 +52,14 @@ class Grid : protected Pointers {
   // hash for all cell IDs (owned,ghost,parent)
 
 #ifdef SPARTA_MAP
-  std::map<cellint,int> *hash;
+  typedef std::map<cellint,int> MyHash;
 #elif SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash;
+  typedef std::unordered_map<cellint,int> MyHash;
 #else
-  std::tr1::unordered_map<cellint,int> *hash;
+  typedef std::tr1::unordered_map<cellint,int> MyHash;
 #endif
 
+  MyHash *hash;
   int hashfilled;             // 1 if hash is filled with parent/child IDs
 
   // list data structs

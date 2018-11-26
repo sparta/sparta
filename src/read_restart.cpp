@@ -155,8 +155,8 @@ void ReadRestart::command(int narg, char **arg)
   surf->exist = surf_params();
 
   if (surf->exist) {
-    if (domain->dimension == 2) surf->compute_line_normal(0,surf->nline);
-    if (domain->dimension == 3) surf->compute_tri_normal(0,surf->ntri);
+    if (domain->dimension == 2) surf->compute_line_normal(0);
+    if (domain->dimension == 3) surf->compute_tri_normal(0);
   }
 
   // read file layout info
@@ -169,14 +169,7 @@ void ReadRestart::command(int narg, char **arg)
 
   // add parent cells to Grid::hash
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+  Grid::MyHash *hash = grid->hash;
   Grid::ParentCell *pcells = grid->pcells;
   int nparent = grid->nparent;
 
@@ -521,8 +514,6 @@ void ReadRestart::command(int narg, char **arg)
     error->all(FLERR,"Did not assign all restart particles correctly");
 
   if (me == 0 && surf->exist) {
-    if (screen) fprintf(screen,"  %d surf points\n",surf->npoint);
-    if (logfile) fprintf(logfile,"  %d surf points\n",surf->npoint);
     if (domain->dimension == 2) {
       if (screen) fprintf(screen,"  %d surf lines\n",surf->nline);
       if (logfile) fprintf(logfile,"  %d surf lines\n",surf->nline);
@@ -786,8 +777,6 @@ void ReadRestart::header(int incompatible)
       nsplit_file = read_int();
     } else if (flag == NSUB) {
       nsub_file = read_int();
-    } else if (flag == NPOINT) {
-      npoint_file = read_int();
     } else if (flag == NSURF) {
       nsurf_file = read_int();
 
@@ -991,14 +980,7 @@ void ReadRestart::create_child_cells(int skipflag)
   // for skipflag = 0, add all child cells in Grid restart to my Grid::cells
   // for skipflag = 1, only add every Pth cell in list
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
+  Grid::MyHash *hash = grid->hash;
   int nlocal = grid->nlocal_restart;
   cellint *ids = grid->id_restart;
   int *nsplits = grid->nsplit_restart;
@@ -1061,16 +1043,9 @@ void ReadRestart::assign_particles(int skipflag)
 {
   int icell;
 
-#ifdef SPARTA_MAP
-  std::map<cellint,int> *hash = grid->hash;
-#elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<cellint,int> *hash = grid->hash;
-#else
-  std::tr1::unordered_map<cellint,int> *hash = grid->hash;
-#endif
-
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
+  Grid::MyHash *hash = grid->hash;
 
   int nlocal = particle->nlocal_restart;
   char *ptr = particle->particle_restart;

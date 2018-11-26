@@ -64,7 +64,7 @@ int *Grid::csubs_request(int n)
 /* ----------------------------------------------------------------------
    map surf elements into owned grid cells
    if subflag = 1, create new owned split and sub cells as needed
-     called from ReadSurf, RemoveSurf
+     called from ReadSurf, RemoveSurf, MoveSurf
    if subflag = 0, split/sub cells already exist
      called from ReadRestart
    in cells: set nsurf, csurfs, nsplit, isplit
@@ -147,7 +147,7 @@ void Grid::surf2grid(int subflag, int outflag)
 
     if (nsplitone == 1) {
       cinfo[icell].volume = vols[0];
-
+    
     } else if (subflag) {
       cells[icell].nsplit = nsplitone;
       nunsplitlocal--;
@@ -692,7 +692,6 @@ double Grid::flow_volume()
   double zarea;
   double *p1,*p2,*p3;
 
-  Surf::Point *pts = surf->pts;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   double *boxlo = domain->boxlo;
@@ -702,9 +701,9 @@ double Grid::flow_volume()
 
   if (domain->dimension == 3) {
     for (int i = 0; i < surf->ntri; i++) {
-      p1 = pts[tris[i].p1].x;
-      p2 = pts[tris[i].p2].x;
-      p3 = pts[tris[i].p3].x;
+      p1 = tris[i].p1;
+      p2 = tris[i].p2;
+      p3 = tris[i].p3;
       zarea = 0.5 * ((p2[0]-p1[0])*(p3[1]-p1[1]) - (p2[1]-p1[1])*(p3[0]-p1[0]));
       volume -= zarea * ((p1[2]+p2[2]+p3[2])/3.0 - boxlo[2]);
     }
@@ -717,8 +716,8 @@ double Grid::flow_volume()
 
   } else if (domain->axisymmetric) {
     for (int i = 0; i < surf->nline; i++) {
-      p1 = pts[lines[i].p1].x;
-      p2 = pts[lines[i].p2].x;
+      p1 = lines[i].p1;
+      p2 = lines[i].p2;
       volume -= 
         MY_PI3 * (p1[1]*p1[1] + p1[1]*p2[1] + p2[1]*p2[1]) * (p2[0]-p1[0]);
     }
@@ -727,8 +726,8 @@ double Grid::flow_volume()
 
   } else {
     for (int i = 0; i < surf->nline; i++) {
-      p1 = pts[lines[i].p1].x;
-      p2 = pts[lines[i].p2].x;
+      p1 = lines[i].p1;
+      p2 = lines[i].p2;
       volume -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);
     }
     if (volume <= 0.0) volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 

@@ -26,6 +26,7 @@
 #include "surf_collide_vanish_kokkos.h"
 #include "surf_collide_piston_kokkos.h"
 #include "compute_boundary_kokkos.h"
+#include "compute_surf_kokkos.h"
 
 namespace SPARTA_NS {
 
@@ -33,6 +34,7 @@ namespace SPARTA_NS {
 #define KOKKOS_MAX_SURF_COLL_PER_TYPE 2
 #define KOKKOS_TOT_SURF_COLL 6
 #define KOKKOS_MAX_BLIST 2
+#define KOKKOS_MAX_SLIST 2
 
 struct s_UPDATE_REDUCE {
   int ntouch_one,nexit_one,nboundary_one,
@@ -114,7 +116,6 @@ class UpdateKokkos : public Update {
   Kokkos::Crs<int, SPADeviceType, void, int> d_csplits;
   Kokkos::Crs<int, SPADeviceType, void, int> d_csubs;
 
-  t_point_1d d_pts;
   t_line_1d d_lines;
   t_tri_1d d_tris;
 
@@ -130,6 +131,7 @@ class UpdateKokkos : public Update {
   KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollidePistonKokkos> sc_kk_piston_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
+  KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
   DAT::tdual_int_scalar k_ntouch_one;
   typename AT::t_int_scalar d_ntouch_one;

@@ -41,6 +41,7 @@ CommKokkos::CommKokkos(SPARTA *sparta) : Comm(sparta)
   k_nsend = DAT::tdual_int_scalar("comm:nsend");
   d_nsend = k_nsend.view<DeviceType>();
   h_nsend = k_nsend.h_view;
+  d_nlocal = DAT::t_int_scalar("comm:nlocal");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -198,11 +199,30 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
 
   //if (!ncustom)
     particle_kk->sync(Device,PARTICLE_MASK);
-
     d_particles = particle_kk->k_particles.d_view;
-    iparticle_kk->
-      exchange_uniform(d_sbuf,nbytes,
-                       (char *) (d_particles.data()+particle->nlocal));
+
+    if (sparta->kokkos->gpu_direct_flag) {
+      iparticle_kk->
+        exchange_uniform(d_sbuf,nbytes,
+                         (char *) (d_particles.data()+particle->nlocal),d_rbuf);
+    } else {
+
+      // allocate exact buffer size to reduce GPU <--> CPU memory transfer
+
+      int maxrecvbuf = nrecv*nbytes;
+      d_rbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:rbuf",Kokkos::WithoutInitializing),maxrecvbuf);
+
+      Kokkos::deep_copy(d_nlocal,particle->nlocal);
+      iparticle_kk->exchange_uniform(d_sbuf,nbytes,NULL,d_rbuf);
+
+      copymode = 1;
+      if (sparta->kokkos->need_atomics)
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<1> >(0,nrecv),*this);
+      else
+        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCommMigrateUnpackParticles<0> >(0,nrecv),*this);
+      DeviceType::fence();
+      copymode = 0;
+    }
 
     particle_kk->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d(); // destroy reference to reduce memory use
@@ -248,6 +268,20 @@ void CommKokkos::operator()(TagCommMigrateParticles<NEED_ATOMICS>, const int &i)
   d_particles[j].icell = d_cells[d_particles[j].icell].ilocal;
   const int offset = nsend*nbytes_particle;
   memcpy(&d_sbuf[offset],&d_particles[j],nbytes_particle);
+}
+
+template<int NEED_ATOMICS>
+KOKKOS_INLINE_FUNCTION
+void CommKokkos::operator()(TagCommMigrateUnpackParticles<NEED_ATOMICS>, const int &irecv) const {
+  int i;
+  if (NEED_ATOMICS)
+    i = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+  else {
+    i = d_nlocal();
+    d_nlocal()++;
+  }
+  const int offset = irecv*nbytes_particle;
+  memcpy(&d_particles[i],&d_rbuf[offset],nbytes_particle);
 }
 
 inline

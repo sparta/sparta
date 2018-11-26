@@ -169,6 +169,7 @@ void CreateParticlesKokkos::create_local(bigint np)
       if (random->uniform() < ntarget-ncreate) ncreate++;
     }
 
+    if (ncreate < 0) ncreate = 0;
     h_npercell(i) = ncreate;
   
     // increment count without effect of density variation

@@ -365,7 +365,6 @@ void WriteRestart::header()
   write_bigint(NUNSPLIT,grid->nunsplit);
   write_int(NSPLIT,grid->nsplit);
   write_int(NSUB,grid->nsub);
-  write_int(NPOINT,surf->npoint);
   if (domain->dimension == 2) write_int(NSURF,surf->nline);
   else write_int(NSURF,surf->ntri);
 

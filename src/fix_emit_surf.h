@@ -48,7 +48,6 @@ class FixEmitSurf : public FixEmit {
   double nrho,temp_thermal,temp_rot,temp_vib;
   double *fraction,*cummulative;
 
-  Surf::Point *pts;
   Surf::Line *lines;
   Surf::Tri *tris;
 
