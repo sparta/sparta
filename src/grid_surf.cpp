@@ -23,6 +23,7 @@
 #include "cut3d.h"
 #include "irregular.h"
 #include "math_const.h"
+#include "hashlittle.h"
 #include "memory.h"
 #include "error.h"
 
@@ -311,7 +312,7 @@ void Grid::recurse3d(int itri, double sbox[][3], int iparent,
 
 void Grid::surf2grid2(int subflag, int outflag)
 {
-  cellint *ptr;
+  int i,j,m,icell,isurf;
 
   int dim = domain->dimension;
 
@@ -342,9 +343,11 @@ void Grid::surf2grid2(int subflag, int outflag)
   cellint **celllist = 
     (cellint **) memory->smalloc(nsurf*sizeof(cellint *),"surf2grid2:celllist");
 
+  cellint *ptr;
+
   int badcount = 0;
-  int m = 0;
-  for (int isurf = comm->me; isurf < ntotal; isurf += nprocs) {
+  m = 0;
+  for (isurf = comm->me; isurf < ntotal; isurf += nprocs) {
     ptr = cpsurf->vget();
     ncell = find_overlaps(isurf,ptr);
 
@@ -362,7 +365,7 @@ void Grid::surf2grid2(int subflag, int outflag)
   }
 
   int mytotal = 0;
-  for (int i = 0; i < nsurf; i++)
+  for (i = 0; i < nsurf; i++)
     mytotal += cellcount[i];
 
   int allcount;
@@ -376,90 +379,191 @@ void Grid::surf2grid2(int subflag, int outflag)
   }
 
   double t2 = MPI_Wtime();
-  printf("TIME %g\n",t2-t1);
+  printf("TIME first %g\n",t2-t1);
 
-  // rendevous comm to convert cells per surf to surfs per cell
+  // -----------------------------------------------------
+  // rendezvous to convert list of cells per surf to list of surfs per cell
+  // -----------------------------------------------------
 
-  comm_invert(nsurf,cellcount,celllist);
+  // ncount = # of my datums to send
+  // include nlocal datums with owner of each grid cell
 
-  memory->destroy(cellcount);
-  memory->sfree(celllist);
-  delete cpsurf;
-  cpsurf = NULL;
+  int ncount = nlocal;
+  for (i = 0; i < nsurf; i++)
+    ncount += cellcount[i];
+
+  int *proclist;
+  memory->create(proclist,ncount,"surf2grid2:proclist");
+  InRvous *inbuf = (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
+                                               "surf2grid:inbuf");
+    
+  // setup input buf to rendezvous comm
+  // input datums = pairs of surfIDs and cellIDs
+  // owning proc for each datum = random hash of cellID
+  // one datum for each owned cell: datum = owning proc, cellID
+  // one datum for each surf/cell pair: datum = cellID, surfID
+
+  m = 0;
+  for (i = 0; i < nlocal; i++) {
+    proclist[m] = hashlittle(&cells[i].id,sizeof(cellint),0) % nprocs;
+    inbuf[m].me = me;
+    inbuf[m].cellID = cells[i].id;
+    inbuf[m].surfID = 0;
+    m++;
+  }
+
+  surfint surfID;
+
+  for (i = 0; i < nsurf; i++) {
+    if (dim == 2) surfID = surf->lines[me+i*nprocs].id;
+    else surfID = surf->tris[me+i*nprocs].id;
+    for (j = 0; j < cellcount[i]; j++) {
+      proclist[m] = hashlittle(&celllist[i][j],sizeof(cellint),0) % nprocs;
+      inbuf[m].me = -1;
+      inbuf[m].cellID = celllist[i][j];
+      inbuf[m].surfID = surfID;
+      m++;
+    }
+  }
+
+  // perform rendezvous operation
+  // each proc owns random subset of cells
+  // receives all info to form and return their surf lists
+
+  char *buf;
+  int nreturn = comm->rendezvous(ncount,proclist,(char *) inbuf,sizeof(InRvous),
+                                 rendezvous_surflist,
+                                 buf,sizeof(OutRvous),(void *) this);
+  OutRvous *outbuf = (OutRvous *) buf;
+
+  memory->destroy(proclist);
+  memory->sfree(inbuf);
+
+  // set cells nsurf and surfs for all my cells based on output info
+  // output datums = pairs of cellIDs and surfIDs
+  // process in 2 passes to first count surfs/cell and allocate csurfs
+
+  // NOTE: is this part necessary?
+  // is nsurf,csurfs already 0,NULL?
+
+  for (icell = 0; icell < nlocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    cells[icell].nsurf = 0;
+    cells[icell].csurfs = NULL;
+  }
+
+  for (m = 0; m < nreturn; m++) {
+    icell = (*hash)[outbuf[m].cellID];
+    cells[icell].nsurf++;
+  }
+
+  for (i = 0; i < nlocal; i++) {
+    if (cells[icell].nsplit <= 0) continue;
+    if (cells[i].nsurf)
+      cells[icell].csurfs = csurfs->get(cells[i].nsurf);
+    cells[icell].nsurf = 0;
+  }
+
+  // NOTE: assigning a surfint to a local int
+
+  for (m = 0; m < nreturn; m++) {
+    icell = (*hash)[outbuf[m].cellID];
+    cells[icell].csurfs[cells[icell].nsurf++] = outbuf[m].surfID;
+  }
+
+  memory->sfree(outbuf);
+
+  //memory->destroy(cellcount);
+  //memory->sfree(celllist);
+  //delete cpsurf;
+  //cpsurf = NULL;
 
   double t3 = MPI_Wtime();
-  printf("TIME %g\n",t3-t2);
+  printf("TIME second %g\n",t3-t2);
 
   surf2grid_half(subflag,outflag);
 }
 
 /* ----------------------------------------------------------------------
-   rendezvous comm to convert surf and list of cells to cell and list of surfs
-   rendezvous proc for each grid cell
-     based on hash of cellID, mod by nprocs
-   send (cellID,surfID) to each proc for my celllist
-   send (cellID,me) to each proc for my owned grid cells
-   do this in one comm?
    on rendezvous proc:
-     create list of surfs for each grid cell
-     send (cellID,list) back to owning proc of grid cell
-     do this in 2 passes to count sizes for each grid cell
-     throw error if too many surfs/cell
-   every proc:
-     recv the list of surfs for each grid cell
-     store them in my grid data struct
-     when loop over my cells, skip nsplit < 1
-     set type = OVERLAP
-     if (nsurf < 0) error->one(FLERR,"Too many surfs in one cell");
-     if (nsurf) cinfo[icell].type = OVERLAP;
+   create list of surfs for each grid cell
+   send (cellID,list) back to owning proc of grid cell
+   do this in 2 passes to count sizes for each grid cell
+   throw error if too many surfs/cell
+---------------------------------------------------------------------- */
 
-------------------------------------------------------------------------- */
-
-void Grid::comm_invert(int nsurf, int *cellcount, cellint **celllist)
+int Grid::rendezvous_surflist(int n, char *inbuf,
+                              int *&proclist, char *&outbuf,
+                              void *ptr)
 {
-  // NOTE: worry if cellcount set for all values and NULLs in celllist
+  int i,m;
 
-  int n = 0;
-  for (int i = 0; i < nsurf; i++)
-    n += cellcount[i];
+  Grid *gptr = (Grid *) ptr;
+  Memory *memory = gptr->memory;
+  Error *error = gptr->error;
 
-  int *proclist;
-  memory->create(proclist,n,"surf2grid2:proclist");
-  cellsurf = (CellSurf *) memory->smalloc(n*sizeof(CellSurf),
-                                          "surf2grid:cellsurf");
-    
-  int m = 0;
-  for (int i = 0; i < nsurf; i++) {
-    if (cellcount[i] == 0) continue;
-    surfID = surf->line[me+i*nprocs];     // line or tri
-    for (j = 0; j < cellcount[i]; j++) {
-      proclist[m] = hash(celllist[i][j]) % nprocs;
-      cellsurf[m].cellID = celllist[i][j];
-      cellsurf[m].surfID = surfID;
-    }
+  // initialize hash
+  // ncount = number of atoms assigned to me
+  // key = atom ID
+  // value = index into Ncount-length data structure
+
+  InRvous *in = (InRvous *) inbuf;
+  MyHash *hash;
+  
+  int ncount = 0;
+  for (i = 0; i < n; i++)
+    if (in[i].me >= 0)
+      (*hash)[in[i].cellID] = ncount++;
+
+  // procowner = caller proc that owns each cell
+  // surfcount = count of surfs per cell
+
+  int *procowner,*surfcount;
+  memory->create(procowner,ncount,"special:procowner");
+  memory->create(surfcount,ncount,"special:surfcount");
+  for (m = 0; m < ncount; m++) surfcount[m] = 0;
+
+  for (i = 0; i < n; i++) { 
+    m = hash->find(in[i].cellID)->second;
+    if (in[i].me >= 0) procowner[m] = in[i].me;
+    else surfcount[m]++;
   }
 
-  // should I add (cell,proc) pairs to this send?
-  // surfint vs int, need to be negative numbers
+  // error check if any cell exceeds max surf count
 
-  Irregular *forward = new Irregular(sparta);
-  int nrecv = forward->create_data_uniform(n,proclist,1);
-  
-  CellSurf *rbuf;
-  memory->smalloc(rbuf,nrecv*sizeof(CellSurf),"surf2grid2:rbuf");
+  int maxsurfpercell = gptr->maxsurfpercell;
+  for (m = 0; m < ncount; m++)
+    if (surfcount[m] > maxsurfpercell)
+      error->one(FLERR,"Too many surfs in one cell");
 
-  irregular->exchange_uniform(cellsurf,sizeof(CellSurf),rbuf);
+  // pass list of OutRvous datums back to comm->rendezvous
 
-  delete irregular;
+  int nout = 0;
+  for (m = 0; m < ncount; m++) nout += surfcount[m];
 
+  memory->create(proclist,nout,"special:proclist");
+  OutRvous *out = (OutRvous *)
+    memory->smalloc((bigint) nout*sizeof(OutRvous),"special:out");
 
-  // reverse comm
+  nout = 0;
+  for (i = 0; i < n; i++) {
+    if (in[i].me >= 0) continue;
+    m = hash->find(in[i].cellID)->second;
+    proclist[nout] = procowner[m];
+    out[nout].cellID = in[i].cellID;
+    out[nout].surfID = in[i].surfID;
+    nout++;
+  }
 
-  Irregular *backward = new Irregular(sparta);
+  outbuf = (char *) out;
 
-  int recvsize;
-  int nrecv = forward->create_data_variable(n,proclist,sizes,recvsize,1);
+  // clean up
+  // Comm::rendezvous will delete proclist and out (outbuf)
 
+  memory->destroy(procowner);
+  memory->destroy(surfcount);
+
+  return nout;
 }
 
 /* ----------------------------------------------------------------------

@@ -316,6 +316,19 @@ class Grid : protected Pointers {
     int proc;              // proc that owns it
   };
 
+  // data structs for rendezvous comm
+
+  struct InRvous {
+    int me;
+    cellint cellID;
+    surfint surfID;
+  };
+
+  struct OutRvous {
+    cellint cellID;
+    surfint surfID;
+  };
+
   // Particle class values used for packing/unpacking particles in grid comm
 
   int ncustom;
@@ -345,6 +358,10 @@ class Grid : protected Pointers {
 
   static Grid *gptr;
   static void unpack_ghosts(int, char *);
+
+  // callback function for rendezvous communication
+
+  static int rendezvous_surflist(int, char *, int *&, char *&, void *);
 };
 
 }
