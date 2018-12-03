@@ -319,7 +319,7 @@ class Grid : protected Pointers {
   // data structs for rendezvous comm
 
   struct InRvous {
-    int me;
+    int proc;
     cellint cellID;
     surfint surfID;
   };

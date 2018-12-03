@@ -406,7 +406,7 @@ void Grid::surf2grid2(int subflag, int outflag)
   m = 0;
   for (i = 0; i < nlocal; i++) {
     proclist[m] = hashlittle(&cells[i].id,sizeof(cellint),0) % nprocs;
-    inbuf[m].me = me;
+    inbuf[m].proc = me;
     inbuf[m].cellID = cells[i].id;
     inbuf[m].surfID = 0;
     m++;
@@ -419,7 +419,7 @@ void Grid::surf2grid2(int subflag, int outflag)
     else surfID = surf->tris[me+i*nprocs].id;
     for (j = 0; j < cellcount[i]; j++) {
       proclist[m] = hashlittle(&celllist[i][j],sizeof(cellint),0) % nprocs;
-      inbuf[m].me = -1;
+      inbuf[m].proc = -1;
       inbuf[m].cellID = celllist[i][j];
       inbuf[m].surfID = surfID;
       m++;
@@ -453,26 +453,31 @@ void Grid::surf2grid2(int subflag, int outflag)
   }
 
   for (m = 0; m < nreturn; m++) {
-    icell = (*hash)[outbuf[m].cellID];
+    icell = (*hash)[outbuf[m].cellID] - 1;
     cells[icell].nsurf++;
   }
 
-  for (i = 0; i < nlocal; i++) {
+  for (icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    if (cells[i].nsurf)
-      cells[icell].csurfs = csurfs->get(cells[i].nsurf);
+    if (cells[icell].nsurf)
+      cells[icell].csurfs = csurfs->get(cells[icell].nsurf);
     cells[icell].nsurf = 0;
   }
 
   // NOTE: assigning a surfint to a local int
+  // converting surfID to local index
 
   for (m = 0; m < nreturn; m++) {
-    icell = (*hash)[outbuf[m].cellID];
-    cells[icell].csurfs[cells[icell].nsurf++] = outbuf[m].surfID;
+    icell = (*hash)[outbuf[m].cellID] - 1;
+    cells[icell].csurfs[cells[icell].nsurf++] = outbuf[m].surfID - 1;
   }
+
+  for (icell = 0; icell < nlocal; icell++)
+    if (cells[icell].nsurf) cinfo[icell].type = OVERLAP;
 
   memory->sfree(outbuf);
 
+  // NOTE: need to clean up memory
   //memory->destroy(cellcount);
   //memory->sfree(celllist);
   //delete cpsurf;
@@ -508,12 +513,12 @@ int Grid::rendezvous_surflist(int n, char *inbuf,
   // value = index into Ncount-length data structure
 
   InRvous *in = (InRvous *) inbuf;
-  MyHash *hash;
+  MyHash rhash;
   
   int ncount = 0;
   for (i = 0; i < n; i++)
-    if (in[i].me >= 0)
-      (*hash)[in[i].cellID] = ncount++;
+    if (in[i].proc >= 0)
+      rhash[in[i].cellID] = ncount++;
 
   // procowner = caller proc that owns each cell
   // surfcount = count of surfs per cell
@@ -524,8 +529,8 @@ int Grid::rendezvous_surflist(int n, char *inbuf,
   for (m = 0; m < ncount; m++) surfcount[m] = 0;
 
   for (i = 0; i < n; i++) { 
-    m = hash->find(in[i].cellID)->second;
-    if (in[i].me >= 0) procowner[m] = in[i].me;
+    m = rhash.find(in[i].cellID)->second;
+    if (in[i].proc >= 0) procowner[m] = in[i].proc;
     else surfcount[m]++;
   }
 
@@ -547,8 +552,8 @@ int Grid::rendezvous_surflist(int n, char *inbuf,
 
   nout = 0;
   for (i = 0; i < n; i++) {
-    if (in[i].me >= 0) continue;
-    m = hash->find(in[i].cellID)->second;
+    if (in[i].proc >= 0) continue;
+    m = rhash.find(in[i].cellID)->second;
     proclist[nout] = procowner[m];
     out[nout].cellID = in[i].cellID;
     out[nout].surfID = in[i].surfID;
@@ -623,7 +628,7 @@ void Grid::surf2grid(int subflag, int outflag)
   }
 
   double t2 = MPI_Wtime();
-  printf("TIME %g\n",t2-t1);
+  printf("TIME both %g\n",t2-t1);
 
   surf2grid_half(subflag,outflag);
 }
@@ -693,6 +698,11 @@ void Grid::surf2grid_half(int subflag, int outflag)
       s->xsplit[1] = xsplit[1];
       if (dim == 3) s->xsplit[2] = xsplit[2];
       else s->xsplit[2] = 0.0;
+
+      if (nsplitone > MAXSPLITPERCELL) {
+        printf("BAD %d %d\n",nsplitone,MAXSPLITPERCELL);
+        error->one(FLERR,"Too many split cells in a single cell");
+      }
 
       ptr = s->csubs = csubs->vget();
 
