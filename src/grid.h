@@ -241,9 +241,7 @@ class Grid : protected Pointers {
 
   // grid_surf.cpp
 
-  void surf2grid2(int, int outflag=1);
-  void comm_invert(int, int *, cellint **);
-
+  void surf2grid_old(int, int outflag=1);
   void surf2grid(int, int outflag=1);
   void surf2grid_one(int, int, int, int, class Cut3d *, class Cut2d *);
   void clear_surf();
@@ -253,10 +251,6 @@ class Grid : protected Pointers {
   void allocate_surf_arrays();
   void allocate_cell_arrays();
   int *csubs_request(int);
-
-  int find_overlaps(int, cellint *);
-  void recurse2d(int, double [][2], int, int &, int *);
-  void recurse3d(int, double [][3], int, int &, int *);
 
   // grid_id.cpp
 
@@ -336,7 +330,11 @@ class Grid : protected Pointers {
 
   // private methods
 
-  void surf2grid_half(int, int);
+  int find_overlaps(int, cellint *);
+  void recurse2d(int, double [][2], int, int &, int *);
+  void recurse3d(int, double [][3], int, int &, int *);
+
+  void surf2grid_final(int, int);
   void acquire_ghosts_all();
   void acquire_ghosts_near();
 
