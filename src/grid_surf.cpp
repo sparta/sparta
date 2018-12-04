@@ -30,6 +30,10 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
+// prototype for non-class function
+
+int compare_surfs(const void *, const void *);
+
 #define BIG 1.0e20
 #define MAXSPLITPERCELL 10
 
@@ -167,7 +171,7 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
   jhi = MIN(jhi,ny-1);
 
   // loop over range of grid cells between ij lo/hi inclusive
-  // if cell is a child cell, compute overlap via surf2gridne()
+  // if cell is a child cell, compute overlap via surf2grid_one()
   // else it is a parent cell, so recurse
   // set newsbox to intersection of sbox with new parent cell
 
@@ -327,6 +331,7 @@ void Grid::surf2grid2(int subflag, int outflag)
   // info stored in ncell, celllist
   // ncell = # of cells that overlap with surf bbox
 
+  MPI_Barrier(world);
   double t1 = MPI_Wtime();
 
   int nprocs = comm->nprocs;
@@ -336,12 +341,20 @@ void Grid::surf2grid2(int subflag, int outflag)
   else ntotal = surf->ntri;
 
   int nsurf = ntotal / nprocs;
-  if (me < nsurf % nprocs) nsurf++;
+  if (me < ntotal % nprocs) nsurf++;
 
   int *cellcount;
   memory->create(cellcount,nsurf,"surf2grid2:cellcount");
   cellint **celllist = 
     (cellint **) memory->smalloc(nsurf*sizeof(cellint *),"surf2grid2:celllist");
+
+  // NOTE: badcount needs to be changed to store list of large surfs
+  // then allgather them
+  // all procs loop over their cells and call cut->surf2grid)list()
+  // save those pairs to include in comm->rendezvous
+  // or could just save them in cells[icell].csurfs and never invoke again
+  // compute and store them after rendezvous is done ??
+  // place a limit on how many?  or do not call this method if nsurfs < nprocs
 
   cellint *ptr;
 
@@ -352,15 +365,16 @@ void Grid::surf2grid2(int subflag, int outflag)
     ncell = find_overlaps(isurf,ptr);
 
     if (ncell > maxcellpersurf) {
+      badcount++;
       cpsurf->vgot(0);
       cellcount[m] = ncell;
-      badcount++;
+      m++;
       continue;
     }
 
+    cpsurf->vgot(ncell);
     cellcount[m] = ncell;
     celllist[m] = ptr;
-    cpsurf->vgot(ncell);
     m++;
   }
 
@@ -378,8 +392,9 @@ void Grid::surf2grid2(int subflag, int outflag)
     error->all(FLERR,"Cells per surf exceeded limit");
   }
 
+  MPI_Barrier(world);
   double t2 = MPI_Wtime();
-  printf("TIME first %g\n",t2-t1);
+  if (me == 0) printf("TIME first %g\n",t2-t1);
 
   // -----------------------------------------------------
   // rendezvous to convert list of cells per surf to list of surfs per cell
@@ -466,6 +481,7 @@ void Grid::surf2grid2(int subflag, int outflag)
 
   // NOTE: assigning a surfint to a local int
   // converting surfID to local index
+  // perform a sort of each cell's list of surfs, for performance
 
   for (m = 0; m < nreturn; m++) {
     icell = (*hash)[outbuf[m].cellID] - 1;
@@ -473,7 +489,10 @@ void Grid::surf2grid2(int subflag, int outflag)
   }
 
   for (icell = 0; icell < nlocal; icell++)
-    if (cells[icell].nsurf) cinfo[icell].type = OVERLAP;
+    if (cells[icell].nsurf) {
+      cinfo[icell].type = OVERLAP;
+      qsort(cells[icell].csurfs,cells[icell].nsurf,sizeof(int),compare_surfs);
+    }
 
   memory->sfree(outbuf);
 
@@ -483,10 +502,25 @@ void Grid::surf2grid2(int subflag, int outflag)
   //delete cpsurf;
   //cpsurf = NULL;
 
+  MPI_Barrier(world);
   double t3 = MPI_Wtime();
-  printf("TIME second %g\n",t3-t2);
+  if (me == 0) printf("TIME second %g\n",t3-t2);
 
   surf2grid_half(subflag,outflag);
+}
+
+/* ----------------------------------------------------------------------
+   comparison function invoked by qsort()
+   // NOTE: maybe should be cellints
+------------------------------------------------------------------------- */
+
+int compare_surfs(const void *iptr, const void *jptr)
+{
+  int i = *((int *) iptr);
+  int j = *((int *) jptr);
+  if (i < j) return -1;
+  if (i > j) return 1;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -600,6 +634,7 @@ void Grid::surf2grid(int subflag, int outflag)
   // info stored in nsurf,csurfs
   // skip if nsplit <= 0 b/c split cells could exist if restarting
 
+  MPI_Barrier(world);
   double t1 = MPI_Wtime();
 
   for (int icell = 0; icell < nlocal; icell++) {
@@ -627,8 +662,9 @@ void Grid::surf2grid(int subflag, int outflag)
     }
   }
 
+  MPI_Barrier(world);
   double t2 = MPI_Wtime();
-  printf("TIME both %g\n",t2-t1);
+  if (me == 0) printf("TIME both %g\n",t2-t1);
 
   surf2grid_half(subflag,outflag);
 }
@@ -815,6 +851,7 @@ void Grid::surf2grid_half(int subflag, int outflag)
    in cells: set nsurf, csurfs, nsplit, isplit
    in cinfo: set type, corner, volume
    initialize sinfo as needed
+   called from AdaptGrid
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
