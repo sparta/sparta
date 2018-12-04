@@ -24,6 +24,7 @@
 #include "irregular.h"
 #include "math_const.h"
 #include "hashlittle.h"
+#include "my_page.h"
 #include "memory.h"
 #include "error.h"
 
@@ -59,7 +60,7 @@ void Grid::allocate_surf_arrays()
 void Grid::allocate_cell_arrays()
 {
   delete cpsurf;
-  cpsurf = new MyPage<int>(maxcellpersurf,MAX(100*maxcellpersurf,1024));
+  cpsurf = new MyPage<cellint>(maxcellpersurf,MAX(100*maxcellpersurf,1024));
 }
 
 /* ----------------------------------------------------------------------
@@ -504,7 +505,7 @@ int Grid::find_overlaps(int isurf, cellint *list)
 ------------------------------------------------------------------------- */
 
 void Grid::recurse2d(int iline, double sbox[][2], int iparent, 
-                     int &n, int *list)
+                     int &n, cellint *list)
 {
   int ix,iy,ichild,newparent,index,parentflag,overlap;
   cellint idchild;
@@ -590,7 +591,7 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
 ------------------------------------------------------------------------- */
 
 void Grid::recurse3d(int itri, double sbox[][3], int iparent, 
-                     int &n, int *list)
+                     int &n, cellint *list)
 {
   int ix,iy,iz,ichild,newparent,index,parentflag,overlap;
   cellint idchild;
