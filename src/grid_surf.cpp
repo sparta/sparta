@@ -33,12 +33,13 @@ using namespace MathConst;
 
 // prototype for non-class function
 
-int compare_surfs(const void *, const void *);
+int compare_surfIDs(const void *, const void *);
 
 #define BIG 1.0e20
-#define MAXSPLITPERCELL 10
+#define CHUNK 16
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
+enum{COMBO,PERCELL,PERSURF};            // several files
 
 // operations for surfaces in grid cells
 
@@ -54,7 +55,7 @@ void Grid::allocate_surf_arrays()
 
   csurfs = new MyPage<int>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
   csplits = new MyPage<int>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
-  csubs = new MyPage<int>(MAXSPLITPERCELL,128);
+  csubs = new MyPage<int>(maxsplitpercell,128);
 }
 
 void Grid::allocate_cell_arrays()
@@ -76,18 +77,35 @@ int *Grid::csubs_request(int n)
 }
 
 /* ----------------------------------------------------------------------
-   OLD version (as of Dec 2018), keep for a while if needed for debugging
    map surf elements into owned grid cells
-   if subflag = 1, create new owned split and sub cells as needed
-     called from ReadSurf, RemoveSurf, MoveSurf
-   if subflag = 0, split/sub cells already exist
-     called from ReadRestart
-   in cells: set nsurf, csurfs, nsplit, isplit
-   in cinfo: for cells with surfs, set type, corner, volume 
-   initialize sinfo as needed
 ------------------------------------------------------------------------- */
 
-void Grid::surf2grid_old(int subflag, int outflag)
+void Grid::surf2grid(int subflag, int outflag)
+{
+  int ntotal;
+  if (domain->dimension == 2) ntotal = surf->nline;
+  else ntotal = surf->ntri;
+
+  // choose algorithm based on total nsurfs vs nprocs
+
+  if (surfgrid_algorithm == COMBO) {
+    if (comm->nprocs > ntotal) surf2grid_cell_algorithm(outflag);
+    else surf2grid_surf_algorithm(outflag);
+  }
+  else if (surfgrid_algorithm == PERCELL) surf2grid_cell_algorithm(outflag);
+  else if (surfgrid_algorithm == PERSURF) surf2grid_surf_algorithm(outflag);
+  
+  surf2grid_split(subflag,outflag);
+}
+
+/* ----------------------------------------------------------------------
+   map surf elements into owned grid cells
+   algorithm: for each of my cells, check all surfs
+   in cells: set nsurf, csurfs
+   in cinfo: set type=OVERLAP for cells with surfs
+------------------------------------------------------------------------- */
+
+void Grid::surf2grid_cell_algorithm(int outflag)
 {
   int nsurf;
   int *ptr;
@@ -101,8 +119,6 @@ void Grid::surf2grid_old(int subflag, int outflag)
   if (dim == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  // debug timing info
-
   MPI_Barrier(world);
   double t1 = MPI_Wtime();
 
@@ -110,6 +126,8 @@ void Grid::surf2grid_old(int subflag, int outflag)
   // info stored in nsurf,csurfs
   // skip if nsplit <= 0 b/c split cells could exist if restarting
 
+  int max = 0;
+  
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
 
@@ -126,37 +144,45 @@ void Grid::surf2grid_old(int subflag, int outflag)
       nsurf = cut2d->surf2grid(cells[icell].id,cells[icell].lo,cells[icell].hi,
                                ptr,maxsurfpercell);
 
-    if (nsurf < 0) error->one(FLERR,"Too many surfs in one cell");
-    if (nsurf) {
-      cinfo[icell].type = OVERLAP;
+    if (nsurf > maxsurfpercell) {
+      max = MAX(max,nsurf);
+      csurfs->vgot(0);
+    } else {
+      csurfs->vgot(nsurf);
       cells[icell].nsurf = nsurf;
       cells[icell].csurfs = ptr;
-      csurfs->vgot(nsurf);
+      cinfo[icell].type = OVERLAP;
     }
   }
 
-  // debug timing info
+  // error if surf count exceeds maxsurfpercell in any cell
 
+  int maxall;
+  MPI_Allreduce(&max,&maxall,1,MPI_INT,MPI_MAX,world);
+  if (maxall) {
+    if (me == 0) printf("Max surfs in any cell = %d\n",maxall);
+    error->all(FLERR,"Too many surfs in one cell - set global surfmax");
+  }
+
+  // timing info
+  // NOTE: make all timing info output cleaner
+  
   MPI_Barrier(world);
   double t2 = MPI_Wtime();
-  if (me == 0) printf("TIME both %g\n",t2-t1);
+  if (me == 0) printf("  surf2grid via cells CPU = %g secs\n",t2-t1);
 
-  surf2grid_final(subflag,outflag);
+  if (outflag) surf2grid_stats();
 }
-
 
 /* ----------------------------------------------------------------------
    map surf elements into owned grid cells
-   if subflag = 1, create new owned split and sub cells as needed
-     called from ReadSurf, RemoveSurf, MoveSurf
-   if subflag = 0, split/sub cells already exist
-     called from ReadRestart
-   in cells: set nsurf, csurfs, nsplit, isplit
-   in cinfo: for cells with surfs, set type, corner, volume 
-   initialize sinfo as needed
+   algorithm: for each of my surfs, find overlapping cells via recursive grid walk
+     rendezvous comm to convert list of cells per surf to list of surfs per cell
+   in cells: set nsurf, csurfs
+   in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
 
-void Grid::surf2grid(int subflag, int outflag)
+void Grid::surf2grid_surf_algorithm(int outflag)
 {
   int i,j,m,icell,isurf;
 
@@ -169,14 +195,13 @@ void Grid::surf2grid(int subflag, int outflag)
 
   if (!hashfilled) rehash();
 
-  // debug timing info
-
   MPI_Barrier(world);
   double t1 = MPI_Wtime();
 
-  // compute overlap of surfs I own with all grid cells
-  // info stored in ncell, celllist
-  // ncell = # of cells that overlap with surf bbox
+  // assign every Pth surf to me
+  // nsurf = # of surfs I own for finding overlaps with cells
+  // cellcount = # of cells my surfs overlap with
+  // celllist = list of cell IDs my surfs overlap with
 
   int nprocs = comm->nprocs;
   int ntotal,ncell;
@@ -192,61 +217,45 @@ void Grid::surf2grid(int subflag, int outflag)
   cellint **celllist = 
     (cellint **) memory->smalloc(nsurf*sizeof(cellint *),"surf2grid2:celllist");
 
-  // NOTE: badcount needs to be changed to store list of large surfs
-  // then allgather them
-  // all procs loop over their cells and call cut->surf2grid)list()
-  // save those pairs to include in comm->rendezvous
-  // or could just save them in cells[icell].csurfs and never invoke again
-  // compute and store them after rendezvous is done ??
-  // place a limit on how many?  or do not call this method if nsurfs < nprocs
+  // for my surfs: populate cellcount and celllist via find_overlaps()
+  // done recursively using bounding box of surf and grid structure
+  // overlap test is performed for each cell that overlaps surf bbox
+  //   via call to cut2d/3d->surf2grid_one()
 
   cellint *ptr;
 
-  int badcount = 0;
+  int max = 0;
   m = 0;
   for (isurf = comm->me; isurf < ntotal; isurf += nprocs) {
     ptr = cpsurf->vget();
     ncell = find_overlaps(isurf,ptr);
 
     if (ncell > maxcellpersurf) {
-      badcount++;
+      max = MAX(max,ncell);
       cpsurf->vgot(0);
+    } else {
+      cpsurf->vgot(ncell);
       cellcount[m] = ncell;
+      celllist[m] = ptr;
       m++;
-      continue;
     }
-
-    cpsurf->vgot(ncell);
-    cellcount[m] = ncell;
-    celllist[m] = ptr;
-    m++;
   }
 
-  int mytotal = 0;
-  for (i = 0; i < nsurf; i++)
-    mytotal += cellcount[i];
+  // error if cell count exceeds maxcellpersurf for any surf
 
-  int allcount;
-  MPI_Allreduce(&mytotal,&allcount,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("Count of surf/cell intersects = %d\n",allcount);
-
-  MPI_Allreduce(&badcount,&allcount,1,MPI_INT,MPI_SUM,world);
-  if (allcount) {
-    if (me == 0) printf("All bad count = %d\n",allcount);
-    error->all(FLERR,"Cells per surf exceeded limit");
+  int maxall;
+  MPI_Allreduce(&max,&maxall,1,MPI_INT,MPI_MAX,world);
+  if (maxall) {
+    if (me == 0) printf("Max cells overlapping any surf = %d\n",maxall);
+    error->all(FLERR,"Too many cells overlap one surf - set global cellmax");
   }
-
-  // debug timing info
-
+  
   MPI_Barrier(world);
   double t2 = MPI_Wtime();
-  if (me == 0) printf("TIME first %g\n",t2-t1);
+  if (me == 0) printf("  surf2grid via surfs CPU = %g secs\n",t2-t1);
 
-  // -----------------------------------------------------
   // rendezvous to convert list of cells per surf to list of surfs per cell
-  // -----------------------------------------------------
-
-  // ncount = # of my datums to send
+  // ncount = # of my datums to send to rendevous procs
   // include nlocal datums with owner of each grid cell
 
   int ncount = nlocal;
@@ -287,6 +296,11 @@ void Grid::surf2grid(int subflag, int outflag)
     }
   }
 
+  memory->destroy(cellcount);
+  memory->sfree(celllist);
+  delete cpsurf;
+  cpsurf = NULL;
+
   // perform rendezvous operation
   // each proc owns random subset of cells
   // receives all info to form and return their surf lists
@@ -303,9 +317,7 @@ void Grid::surf2grid(int subflag, int outflag)
   // set cells nsurf and surfs for all my cells based on output info
   // output datums = pairs of cellIDs and surfIDs
   // process in 2 passes to first count surfs/cell and allocate csurfs
-
-  // NOTE: is this part necessary?
-  // is nsurf,csurfs already 0,NULL?
+  // skip if nsplit <= 0 b/c split cells could exist if restarting
 
   for (icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
@@ -318,16 +330,27 @@ void Grid::surf2grid(int subflag, int outflag)
     cells[icell].nsurf++;
   }
 
+  max = 0;
   for (icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    if (cells[icell].nsurf)
-      cells[icell].csurfs = csurfs->get(cells[icell].nsurf);
+    nsurf = cells[icell].nsurf;
+    max = MAX(max,nsurf);
+    if (nsurf) cells[icell].csurfs = csurfs->get(nsurf);
     cells[icell].nsurf = 0;
   }
 
-  // NOTE: assigning a surfint to a local int
-  // converting surfID to local index
-  // perform a sort of each cell's list of surfs, for performance
+  // error if surf count exceeds maxsurfpercell in any cell
+
+  MPI_Allreduce(&max,&maxall,1,MPI_INT,MPI_MAX,world);
+
+  if (maxall > maxsurfpercell) {
+    if (me == 0) printf("Max surfs in any cell = %d\n",maxall);
+    error->all(FLERR,"Too many surfs in one cell - set global surfmax");
+  }
+  
+  // store surfIDs as local indices in each cell's csurfs list
+  // for performance, sort each cell's csurfs list
+  // NOTE: assigning a surfint to a local int, change when distribute surfs
 
   for (m = 0; m < nreturn; m++) {
     icell = (*hash)[outbuf[m].cellID] - 1;
@@ -337,45 +360,497 @@ void Grid::surf2grid(int subflag, int outflag)
   for (icell = 0; icell < nlocal; icell++)
     if (cells[icell].nsurf) {
       cinfo[icell].type = OVERLAP;
-      qsort(cells[icell].csurfs,cells[icell].nsurf,sizeof(int),compare_surfs);
+      qsort(cells[icell].csurfs,cells[icell].nsurf,sizeof(int),compare_surfIDs);
     }
 
   memory->sfree(outbuf);
 
-  // NOTE: need to clean up memory
-  //memory->destroy(cellcount);
-  //memory->sfree(celllist);
-  //delete cpsurf;
-  //cpsurf = NULL;
-
-  // debug timing info
-
   MPI_Barrier(world);
   double t3 = MPI_Wtime();
-  if (me == 0) printf("TIME second %g\n",t3-t2);
+  if (me == 0) printf("  surf2grid via surfs CPU = %g secs\n",t3-t2);
 
-  surf2grid_final(subflag,outflag);
+  if (outflag) surf2grid_stats();
 }
 
 /* ----------------------------------------------------------------------
-   comparison function invoked by qsort() called by surf2grid()
-   this is not a class method
-   // NOTE: maybe should be cellints
+   compute cut volume of each cell and any split cell info
+   nsurf and csurfs list for each grid cell have already been computed
+   if subflag = 1, create new owned split and sub cells as needed
+     called from ReadSurf, RemoveSurf, MoveSurf
+   if subflag = 0, split/sub cells already exist
+     called from ReadRestart
+   in cells: set nsplit, isplit
+   in cinfo: set corner, volume 
+   initialize sinfo as needed
 ------------------------------------------------------------------------- */
 
-int compare_surfs(const void *iptr, const void *jptr)
+void Grid::surf2grid_split(int subflag, int outflag)
 {
-  int i = *((int *) iptr);
-  int j = *((int *) jptr);
-  if (i < j) return -1;
-  if (i > j) return 1;
-  return 0;
+  int i,isub,nsurf,nsplitone,xsub;
+  int *surfmap,*ptr;
+  double *lo,*hi,*vols;
+  double xsplit[3];
+  ChildCell *c;
+  SplitInfo *s;
+
+  int dim = domain->dimension;
+
+  //double t2 = MPI_Wtime();
+  //printf("TIME %g\n",t2-t1);
+
+  // compute cut volume and possible split of each grid cell by surfs
+  // decrement nunsplitlocal if convert an unsplit cell to split cell
+  // if nsplitone > 1, create new split cell sinfo and sub-cells
+  // skip if nsplit <= 0 b/c split cells could exist if restarting
+
+  int max = 0;
+  int ncurrent = nlocal;
+  
+  for (int icell = 0; icell < ncurrent; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    if (cinfo[icell].type != OVERLAP) continue;
+
+    surfmap = csplits->vget();
+    c = &cells[icell];
+
+    if (dim == 3)
+      nsplitone = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                               vols,surfmap,cinfo[icell].corner,xsub,xsplit);
+    else
+      nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                               vols,surfmap,cinfo[icell].corner,xsub,xsplit);
+
+    if (nsplitone == 1) {
+      cinfo[icell].volume = vols[0];
+    
+    } else if (subflag) {
+      if (nsplitone > maxsplitpercell) {
+	max = MAX(max,nsplitone);
+	csplits->vgot(0);
+	
+      } else {
+	cells[icell].nsplit = nsplitone;
+	nunsplitlocal--;
+      
+	cells[icell].isplit = nsplitlocal;
+	add_split_cell(1);
+	s = &sinfo[nsplitlocal-1];
+	s->icell = icell;
+	s->csplits = surfmap;
+	s->xsub = xsub;
+	s->xsplit[0] = xsplit[0];
+	s->xsplit[1] = xsplit[1];
+	if (dim == 3) s->xsplit[2] = xsplit[2];
+	else s->xsplit[2] = 0.0;
+
+	ptr = s->csubs = csubs->vget();
+
+	for (i = 0; i < nsplitone; i++) {
+	  isub = nlocal;
+	  add_sub_cell(icell,1);
+	  cells[isub].nsplit = -i;
+	  cinfo[isub].volume = vols[i];
+	  ptr[i] = isub;
+	}
+	
+	csubs->vgot(nsplitone);
+	csplits->vgot(cells[icell].nsurf);
+      }
+      
+    } else {
+      if (cells[icell].nsplit != nsplitone) {
+        printf("BAD %d %d: %d %d\n",icell,cells[icell].id,
+               nsplitone,cells[icell].nsplit);
+        error->one(FLERR,
+                   "Inconsistent surface to grid mapping in read_restart");
+      }
+
+      s = &sinfo[cells[icell].isplit];
+      s->csplits = surfmap;
+      s->xsub = xsub;
+      s->xsplit[0] = xsplit[0];
+      s->xsplit[1] = xsplit[1];
+      if (dim == 3) s->xsplit[2] = xsplit[2];
+      else s->xsplit[2] = 0.0;
+
+      ptr = s->csubs;
+      for (i = 0; i < nsplitone; i++) {
+        isub = ptr[i];
+        cells[isub].nsurf = cells[icell].nsurf;
+        cells[isub].csurfs = cells[icell].csurfs;
+        cinfo[isub].volume = vols[i];
+      }
+      
+      csplits->vgot(cells[icell].nsurf);
+    }
+  }
+
+  // error if split count exceeds maxsplitpercell for any cell
+
+  int maxall;
+  MPI_Allreduce(&max,&maxall,1,MPI_INT,MPI_MAX,world);
+  if (maxall) {
+    if (me == 0) printf("Max split cells in any cell = %d\n",maxall);
+    error->all(FLERR,"Too many split cells in a single cell - set global splitmax");
+  }
+
+  //double t3 = MPI_Wtime();
+  //printf("TIME %g\n",t3-t2);
+
+  // stats on pushed cells and unmarked corner points in OVERLAP cells
+
+  if (outflag) {
+    int npushmax;
+    int *npushcell;
+    if (dim == 3) {
+      npushmax = cut3d->npushmax;
+      npushcell = cut3d->npushcell;
+    } else {
+      npushmax = cut2d->npushmax;
+      npushcell = cut2d->npushcell;
+    }
+    int *npushall = new int[npushmax+1];
+    MPI_Allreduce(npushcell,npushall,npushmax+1,MPI_INT,MPI_SUM,world);
+    if (comm->me == 0) {
+      if (screen) {
+        fprintf(screen,"  ");
+        for (int i = 1; i <= npushmax; i++)
+          fprintf(screen,"%d ",npushall[i]);
+        fprintf(screen,"= number of pushed cells\n");
+      }
+      if (logfile) {
+        fprintf(logfile,"  ");
+        for (int i = 1; i <= npushmax; i++)
+          fprintf(logfile,"%d ",npushall[i]);
+        fprintf(logfile,"= number of pushed cells\n");
+      }
+    }
+    delete [] npushall;
+
+    int noverlap = 0;
+    int ncorner = 0;
+    for (int icell = 0; icell < nlocal; icell++) {
+      if (cells[icell].nsplit <= 0) continue;
+      if (cinfo[icell].type == OVERLAP) {
+        noverlap++;
+        if (cinfo[icell].corner[0] == UNKNOWN) ncorner++;
+      }
+    }
+    int ncornerall,noverlapall;
+    MPI_Allreduce(&ncorner,&ncornerall,1,MPI_INT,MPI_SUM,world);
+    MPI_Allreduce(&noverlap,&noverlapall,1,MPI_INT,MPI_SUM,world);
+    if (comm->me == 0) {
+      if (screen) fprintf(screen,"  %d %d = cells overlapping surfs, "
+                          "overlap cells with unmarked corner pts\n",
+                          noverlapall,ncornerall);
+      if (logfile) fprintf(logfile,"  %d %d = cells overlapping surfs, "
+                           "overlap cells with unmarked corner pts\n",
+                           noverlapall,ncornerall);
+    }
+  }
+
+  //double t4 = MPI_Wtime();
+  //printf("TIME %g\n",t4-t3);
+
+  // clean up
+
+  if (dim == 3) delete cut3d;
+  else delete cut2d;
 }
 
 /* ----------------------------------------------------------------------
-   computation performed within rendezvous decomposition
+   map surf elements into a single grid cell = icell
+   flag = 0 for grid refinement, 1 for grid coarsening
+   in cells: set nsurf, csurfs, nsplit, isplit
+   in cinfo: set type, corner, volume
+   initialize sinfo as needed
+   called from AdaptGrid
+------------------------------------------------------------------------- */
+
+void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
+                         Cut3d *cut3d, Cut2d *cut2d)
+{
+  int nsurf,isub,xsub,nsplitone;
+  int *ptr;
+  double xsplit[3];
+  double *vols;
+
+  int dim = domain->dimension;
+
+  // identify surfs in new cell only for grid refinement
+
+  if (flag == 0) {
+    ptr = csurfs->vget();
+    if (dim == 3)
+      nsurf = cut3d->surf2grid_list(cells[icell].id,
+                                    cells[icell].lo,cells[icell].hi,
+                                    cells[iparent].nsurf,cells[iparent].csurfs,
+                                    ptr,maxsurfpercell);
+    else
+      nsurf = cut2d->surf2grid_list(cells[icell].id,
+                                    cells[icell].lo,cells[icell].hi,
+                                    cells[iparent].nsurf,cells[iparent].csurfs,
+                                    ptr,maxsurfpercell);
+
+    if (nsurf == 0) return;
+    if (nsurf > maxsurfpercell) {
+      printf("Surfs in one refined cell = %d\n",nsurf);
+      error->one(FLERR,"Too many surfs in one refined cell - set global surfmax");
+    }
+    
+    cinfo[icell].type = OVERLAP;
+    cells[icell].nsurf = nsurf;
+    cells[icell].csurfs = ptr;
+    csurfs->vgot(nsurf);
+
+  } else nsurf = nsurf_caller;
+  
+  // split check done for both refinement and coarsening
+  
+  int *surfmap = csplits->vget();
+  ChildCell *c = &cells[icell];
+  
+  if (dim == 3)
+    nsplitone = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                             vols,surfmap,cinfo[icell].corner,
+                             xsub,xsplit);
+  else
+    nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
+                             vols,surfmap,cinfo[icell].corner,
+                             xsub,xsplit);
+  
+  if (nsplitone == 1) {
+    if (cinfo[icell].corner[0] != UNKNOWN)
+      cinfo[icell].volume = vols[0];
+    
+  } else {
+    c->nsplit = nsplitone;
+    nunsplitlocal--;
+    
+    c->isplit = grid->nsplitlocal;
+    add_split_cell(1);
+    SplitInfo *s = &sinfo[nsplitlocal-1];
+    s->icell = icell;
+    s->csplits = surfmap;
+    s->xsub = xsub;
+    s->xsplit[0] = xsplit[0];
+    s->xsplit[1] = xsplit[1];
+    if (dim == 3) s->xsplit[2] = xsplit[2];
+    else s->xsplit[2] = 0.0;
+    
+    ptr = s->csubs = csubs->vget();
+    
+    for (int i = 0; i < nsplitone; i++) {
+      isub = nlocal;
+      add_sub_cell(icell,1);
+      cells[isub].nsplit = -i;
+      cinfo[isub].volume = vols[i];
+      ptr[i] = isub;
+    }
+    
+    csplits->vgot(nsurf);
+    csubs->vgot(nsplitone);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   remove all surf info from owned grid cells and reset cell volumes
+   also remove sub cells by compressing grid cells list
+   set cell type and corner flags to UNKNOWN or OUTSIDE
+   called before reassigning surfs to grid cells
+   changes cells data structure since sub cells are removed
+   if particles exist, reassign them to new cells
+------------------------------------------------------------------------- */
+
+void Grid::clear_surf()
+{
+  int dimension = domain->dimension;
+  int ncorner = 8;
+  if (dimension == 2) ncorner = 4;
+  double *lo,*hi;
+
+  // if surfs no longer exist, set cell type to OUTSIDE, else UNKNOWN
+  // set corner points of every cell to UNKNOWN
+
+  int celltype = UNKNOWN;
+  if (!surf->exist) celltype = OUTSIDE;
+
+  int nlocal_prev = nlocal;
+
+  int icell = 0;
+  while (icell < nlocal) {
+    if (cells[icell].nsplit <= 0) {
+      memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
+      memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
+      nlocal--;
+    } else {
+      cells[icell].ilocal = icell;
+      cells[icell].nsurf = 0;
+      cells[icell].csurfs = NULL;
+      cells[icell].nsplit = 1;
+      cells[icell].isplit = -1;
+      cinfo[icell].type = celltype;
+      for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
+      lo = cells[icell].lo;
+      hi = cells[icell].hi;
+      if (dimension == 3) 
+        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+      else if (domain->axisymmetric)
+        cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+      else
+        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+      icell++;
+    }
+  }
+
+  // if particles exist and local cell count changed
+  // repoint particles to new icell indices
+  // assumes particles are sorted,
+  //   so count/first values in compressed cinfo data struct are still valid
+  // when done, particles are still sorted
+
+  if (particle->exist && nlocal < nlocal_prev) {
+    Particle::OnePart *particles = particle->particles;
+    int *next = particle->next;
+
+    int ip;
+    for (int icell = 0; icell < nlocal; icell++) {
+      ip = cinfo[icell].first;
+      while (ip >= 0) {
+	particles[ip].icell = icell;
+	ip = next[ip];
+      }
+    }
+  }
+
+  // reset csurfs and csplits and csubs so can refill
+
+  csurfs->reset();
+  csplits->reset();
+  csubs->reset();
+
+  // reset all cell counters
+  
+  nunsplitlocal = nlocal;
+  nsplitlocal = nsublocal = 0;
+}
+
+/* ----------------------------------------------------------------------
+   remove all surf info from owned grid cells and reset cell volumes
+   do NOT remove sub cells by compressing grid cells list
+   called from read_restart before reassigning surfs to grid cells
+   sub cells already exist from restart file
+------------------------------------------------------------------------- */
+
+void Grid::clear_surf_restart()
+{
+  // reset current grid cells as if no surfs existed
+  // just skip sub cells
+  // set values in cells/cinfo as if no surfaces, including volume
+
+  int dimension = domain->dimension;
+  int ncorner = 8;
+  if (dimension == 2) ncorner = 4;
+  double *lo,*hi;
+
+  for (int icell = 0; icell < nlocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    cinfo[icell].type = UNKNOWN;
+    for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+    if (dimension == 3) 
+      cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
+    else if (domain->axisymmetric)
+      cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
+    else
+      cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   combine all particles in sub cells of a split icell to be in split cell
+   assumes particles are sorted, returns them sorted in icell
+   if relabel = 1, also change icell value for each particle, else do not
+------------------------------------------------------------------------- */
+
+void Grid::combine_split_cell_particles(int icell, int relabel)
+{
+  int ip,iplast,jcell;
+
+  int nsplit = cells[icell].nsplit;
+  int *mycsubs = sinfo[cells[icell].isplit].csubs;
+  int count = 0;
+  int first = -1;
+
+  int *next = particle->next;
+
+  for (int i = 0; i < nsplit; i++) {
+    jcell = mycsubs[i];
+    count += cinfo[jcell].count;
+    if (cinfo[jcell].first < 0) continue;
+    
+    if (first < 0) first = cinfo[jcell].first;
+    else next[iplast] = cinfo[jcell].first;
+    
+    ip = cinfo[jcell].first;
+    while (ip >= 0) {
+      iplast = ip;
+      ip = next[ip];
+    }
+  }
+
+  cinfo[icell].count = count;
+  cinfo[icell].first = first;
+
+  // repoint each particle now in parent split cell to the split cell
+
+  if (relabel) {
+    Particle::OnePart *particles = particle->particles;
+    ip = first;
+    while (ip >= 0) {
+      particles[ip].icell = icell;
+      ip = next[ip];
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   assign all particles in split icell to appropriate sub cells
+   assumes particles are sorted, are NOT sorted by sub cell when done
+   also change particle icell label
+------------------------------------------------------------------------- */
+
+void Grid::assign_split_cell_particles(int icell)
+{
+  int ip,jcell;
+
+  int dim = domain->dimension;
+  Particle::OnePart *particles = particle->particles;
+  int *next = particle->next;
+
+  ip = cinfo[icell].first;
+  while (ip >= 0) {
+    if (dim == 3) jcell = update->split3d(icell,particles[ip].x);
+    else jcell = update->split2d(icell,particles[ip].x);
+    particles[ip].icell = jcell;
+    ip = next[ip];
+  }
+
+  cinfo[icell].count = 0;
+  cinfo[icell].first = -1;
+}
+
+// ----------------------------------------------------------------------
+// private class methods
+// ----------------------------------------------------------------------
+
+/* ----------------------------------------------------------------------
+   rendezvous decomposition computation
    create list of surfs for each grid cell
-   send (cellID,list) back to owning proc of grid cell
+   recv (surfID,cellID) pairs from owner of each surf
+     also (me,cellID) from owner of each grid cell
+   send (cellID,surfID) pairs back to owning proc of each grid cell
    do this in 2 passes to count sizes for each grid cell
    throw error if too many surfs/cell
 ---------------------------------------------------------------------- */
@@ -416,13 +891,6 @@ int Grid::rendezvous_surflist(int n, char *inbuf,
     if (in[i].proc >= 0) procowner[m] = in[i].proc;
     else surfcount[m]++;
   }
-
-  // error check if any cell exceeds max surf count
-
-  int maxsurfpercell = gptr->maxsurfpercell;
-  for (m = 0; m < ncount; m++)
-    if (surfcount[m] > maxsurfpercell)
-      error->one(FLERR,"Too many surfs in one cell");
 
   // pass list of OutRvous datums back to comm->rendezvous
 
@@ -686,463 +1154,22 @@ void Grid::recurse3d(int itri, double sbox[][3], int iparent,
 }
 
 /* ----------------------------------------------------------------------
-   2nd half of surf2grid
-   map surf elements into owned grid cells
-   if subflag = 1, create new owned split and sub cells as needed
-     called from ReadSurf, RemoveSurf, MoveSurf
-   if subflag = 0, split/sub cells already exist
-     called from ReadRestart
-   in cells: set nsurf, csurfs, nsplit, isplit
-   in cinfo: for cells with surfs, set type, corner, volume 
-   initialize sinfo as needed
+   comparison function invoked by qsort() called by surf2grid()
+   when sorting the csurfs list of a single cell
+   this is not a class method
 ------------------------------------------------------------------------- */
 
-void Grid::surf2grid_final(int subflag, int outflag)
+int compare_surfIDs(const void *iptr, const void *jptr)
 {
-  int i,isub,nsurf,nsplitone,xsub;
-  int *surfmap,*ptr;
-  double *lo,*hi,*vols;
-  double xsplit[3];
-  ChildCell *c;
-  SplitInfo *s;
-
-  int dim = domain->dimension;
-
-  //double t2 = MPI_Wtime();
-  //printf("TIME %g\n",t2-t1);
-
-  if (outflag) surf2grid_stats();
-
-  // compute cut volume and possible split of each grid cell by surfs
-  // decrement nunsplitlocal if convert an unsplit cell to split cell
-  // if nsplitone > 1, create new split cell sinfo and sub-cells
-  // skip if nsplit <= 0 b/c split cells could exist if restarting
-
-  int ncurrent = nlocal;
-  for (int icell = 0; icell < ncurrent; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    if (cinfo[icell].type != OVERLAP) continue;
-
-    surfmap = csplits->vget();
-    c = &cells[icell];
-
-    if (dim == 3)
-      nsplitone = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                               vols,surfmap,cinfo[icell].corner,xsub,xsplit);
-    else
-      nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                               vols,surfmap,cinfo[icell].corner,xsub,xsplit);
-
-    if (nsplitone == 1) {
-      cinfo[icell].volume = vols[0];
-    
-    } else if (subflag) {
-      cells[icell].nsplit = nsplitone;
-      nunsplitlocal--;
-      
-      cells[icell].isplit = nsplitlocal;
-      add_split_cell(1);
-      s = &sinfo[nsplitlocal-1];
-      s->icell = icell;
-      s->csplits = surfmap;
-      s->xsub = xsub;
-      s->xsplit[0] = xsplit[0];
-      s->xsplit[1] = xsplit[1];
-      if (dim == 3) s->xsplit[2] = xsplit[2];
-      else s->xsplit[2] = 0.0;
-
-      if (nsplitone > MAXSPLITPERCELL) {
-        printf("BAD %d %d\n",nsplitone,MAXSPLITPERCELL);
-        error->one(FLERR,"Too many split cells in a single cell");
-      }
-
-      ptr = s->csubs = csubs->vget();
-
-      for (i = 0; i < nsplitone; i++) {
-        isub = nlocal;
-        add_sub_cell(icell,1);
-        cells[isub].nsplit = -i;
-        cinfo[isub].volume = vols[i];
-        ptr[i] = isub;
-      }
-      
-      csplits->vgot(cells[icell].nsurf);
-      csubs->vgot(nsplitone);
-
-    } else {
-      if (cells[icell].nsplit != nsplitone) {
-        printf("BAD %d %d: %d %d\n",icell,cells[icell].id,
-               nsplitone,cells[icell].nsplit);
-        error->one(FLERR,
-                   "Inconsistent surface to grid mapping in read_restart");
-      }
-
-      s = &sinfo[cells[icell].isplit];
-      s->csplits = surfmap;
-      s->xsub = xsub;
-      s->xsplit[0] = xsplit[0];
-      s->xsplit[1] = xsplit[1];
-      if (dim == 3) s->xsplit[2] = xsplit[2];
-      else s->xsplit[2] = 0.0;
-
-      ptr = s->csubs;
-      for (i = 0; i < nsplitone; i++) {
-        isub = ptr[i];
-        cells[isub].nsurf = cells[icell].nsurf;
-        cells[isub].csurfs = cells[icell].csurfs;
-        cinfo[isub].volume = vols[i];
-      }
-      
-      csplits->vgot(cells[icell].nsurf);
-    }
-  }
-
-  //double t3 = MPI_Wtime();
-  //printf("TIME %g\n",t3-t2);
-
-  // stats on pushed cells and unmarked corner points in OVERLAP cells
-
-  if (outflag) {
-    int npushmax;
-    int *npushcell;
-    if (dim == 3) {
-      npushmax = cut3d->npushmax;
-      npushcell = cut3d->npushcell;
-    } else {
-      npushmax = cut2d->npushmax;
-      npushcell = cut2d->npushcell;
-    }
-    int *npushall = new int[npushmax+1];
-    MPI_Allreduce(npushcell,npushall,npushmax+1,MPI_INT,MPI_SUM,world);
-    if (comm->me == 0) {
-      if (screen) {
-        fprintf(screen,"  ");
-        for (int i = 1; i <= npushmax; i++)
-          fprintf(screen,"%d ",npushall[i]);
-        fprintf(screen,"= number of pushed cells\n");
-      }
-      if (logfile) {
-        fprintf(logfile,"  ");
-        for (int i = 1; i <= npushmax; i++)
-          fprintf(logfile,"%d ",npushall[i]);
-        fprintf(logfile,"= number of pushed cells\n");
-      }
-    }
-    delete [] npushall;
-
-    int noverlap = 0;
-    int ncorner = 0;
-    for (int icell = 0; icell < nlocal; icell++) {
-      if (cells[icell].nsplit <= 0) continue;
-      if (cinfo[icell].type == OVERLAP) {
-        noverlap++;
-        if (cinfo[icell].corner[0] == UNKNOWN) ncorner++;
-      }
-    }
-    int ncornerall,noverlapall;
-    MPI_Allreduce(&ncorner,&ncornerall,1,MPI_INT,MPI_SUM,world);
-    MPI_Allreduce(&noverlap,&noverlapall,1,MPI_INT,MPI_SUM,world);
-    if (comm->me == 0) {
-      if (screen) fprintf(screen,"  %d %d = cells overlapping surfs, "
-                          "overlap cells with unmarked corner pts\n",
-                          noverlapall,ncornerall);
-      if (logfile) fprintf(logfile,"  %d %d = cells overlapping surfs, "
-                           "overlap cells with unmarked corner pts\n",
-                           noverlapall,ncornerall);
-    }
-  }
-
-  //double t4 = MPI_Wtime();
-  //printf("TIME %g\n",t4-t3);
-
-  // clean up
-
-  if (dim == 3) delete cut3d;
-  else delete cut2d;
+  int i = *((int *) iptr);
+  int j = *((int *) jptr);
+  if (i < j) return -1;
+  if (i > j) return 1;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
-   map surf elements into a single grid cell = icell
-   flag = 0 for grid refinement, 1 for grid coarsening
-   in cells: set nsurf, csurfs, nsplit, isplit
-   in cinfo: set type, corner, volume
-   initialize sinfo as needed
-   called from AdaptGrid
-------------------------------------------------------------------------- */
-
-void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
-                         Cut3d *cut3d, Cut2d *cut2d)
-{
-  int nsurf,isub,xsub,nsplitone;
-  int *ptr;
-  double xsplit[3];
-  double *vols;
-
-  int dim = domain->dimension;
-
-  // identify surfs in new cell only for grid refinement
-
-  if (flag == 0) {
-    ptr = csurfs->vget();
-    if (dim == 3)
-      nsurf = cut3d->surf2grid_list(cells[icell].id,
-                                    cells[icell].lo,cells[icell].hi,
-                                    cells[iparent].nsurf,cells[iparent].csurfs,
-                                    ptr,maxsurfpercell);
-    else
-      nsurf = cut2d->surf2grid_list(cells[icell].id,
-                                    cells[icell].lo,cells[icell].hi,
-                                    cells[iparent].nsurf,cells[iparent].csurfs,
-                                    ptr,maxsurfpercell);
-    
-    if (nsurf == 0) return;
-    if (nsurf < 0) error->one(FLERR,"Too many surfs in one refined cell");
-
-    cinfo[icell].type = OVERLAP;
-    cells[icell].nsurf = nsurf;
-    cells[icell].csurfs = ptr;
-    csurfs->vgot(nsurf);
-
-  } else nsurf = nsurf_caller;
-  
-  // split check done for both refinement and coarsening
-  
-  int *surfmap = csplits->vget();
-  ChildCell *c = &cells[icell];
-  
-  if (dim == 3)
-    nsplitone = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                             vols,surfmap,cinfo[icell].corner,
-                             xsub,xsplit);
-  else
-    nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                             vols,surfmap,cinfo[icell].corner,
-                             xsub,xsplit);
-  
-  if (nsplitone == 1) {
-    if (cinfo[icell].corner[0] != UNKNOWN)
-      cinfo[icell].volume = vols[0];
-    
-  } else {
-    c->nsplit = nsplitone;
-    nunsplitlocal--;
-    
-    c->isplit = grid->nsplitlocal;
-    add_split_cell(1);
-    SplitInfo *s = &sinfo[nsplitlocal-1];
-    s->icell = icell;
-    s->csplits = surfmap;
-    s->xsub = xsub;
-    s->xsplit[0] = xsplit[0];
-    s->xsplit[1] = xsplit[1];
-    if (dim == 3) s->xsplit[2] = xsplit[2];
-    else s->xsplit[2] = 0.0;
-    
-    ptr = s->csubs = csubs->vget();
-    
-    for (int i = 0; i < nsplitone; i++) {
-      isub = nlocal;
-      add_sub_cell(icell,1);
-      cells[isub].nsplit = -i;
-      cinfo[isub].volume = vols[i];
-      ptr[i] = isub;
-    }
-    
-    csplits->vgot(nsurf);
-    csubs->vgot(nsplitone);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   remove all surf info from owned grid cells and reset cell volumes
-   also remove sub cells by compressing grid cells list
-   set cell type and corner flags to UNKNOWN or OUTSIDE
-   called before reassigning surfs to grid cells
-   changes cells data structure since sub cells are removed
-   if particles exist, reassign them to new cells
-------------------------------------------------------------------------- */
-
-void Grid::clear_surf()
-{
-  int dimension = domain->dimension;
-  int ncorner = 8;
-  if (dimension == 2) ncorner = 4;
-  double *lo,*hi;
-
-  // if surfs no longer exist, set cell type to OUTSIDE, else UNKNOWN
-  // set corner points of every cell to UNKNOWN
-
-  int celltype = UNKNOWN;
-  if (!surf->exist) celltype = OUTSIDE;
-
-  int nlocal_prev = nlocal;
-
-  int icell = 0;
-  while (icell < nlocal) {
-    if (cells[icell].nsplit <= 0) {
-      memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
-      memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
-      nlocal--;
-    } else {
-      cells[icell].ilocal = icell;
-      cells[icell].nsurf = 0;
-      cells[icell].csurfs = NULL;
-      cells[icell].nsplit = 1;
-      cells[icell].isplit = -1;
-      cinfo[icell].type = celltype;
-      for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
-      lo = cells[icell].lo;
-      hi = cells[icell].hi;
-      if (dimension == 3) 
-        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-      else if (domain->axisymmetric)
-        cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
-      else
-        cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-      icell++;
-    }
-  }
-
-  // if particles exist and local cell count changed
-  // repoint particles to new icell indices
-  // assumes particles are sorted,
-  //   so count/first values in compressed cinfo data struct are still valid
-  // when done, particles are still sorted
-
-  if (particle->exist && nlocal < nlocal_prev) {
-    Particle::OnePart *particles = particle->particles;
-    int *next = particle->next;
-
-    int ip;
-    for (int icell = 0; icell < nlocal; icell++) {
-      ip = cinfo[icell].first;
-      while (ip >= 0) {
-	particles[ip].icell = icell;
-	ip = next[ip];
-      }
-    }
-  }
-
-  // reset csurfs and csplits and csubs so can refill
-
-  csurfs->reset();
-  csplits->reset();
-  csubs->reset();
-
-  // reset all cell counters
-  
-  nunsplitlocal = nlocal;
-  nsplitlocal = nsublocal = 0;
-}
-
-/* ----------------------------------------------------------------------
-   remove all surf info from owned grid cells and reset cell volumes
-   do NOT remove sub cells by compressing grid cells list
-   called from read_restart before reassigning surfs to grid cells
-   sub cells already exist from restart file
-------------------------------------------------------------------------- */
-
-void Grid::clear_surf_restart()
-{
-  // reset current grid cells as if no surfs existed
-  // just skip sub cells
-  // set values in cells/cinfo as if no surfaces, including volume
-
-  int dimension = domain->dimension;
-  int ncorner = 8;
-  if (dimension == 2) ncorner = 4;
-  double *lo,*hi;
-
-  for (int icell = 0; icell < nlocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    cinfo[icell].type = UNKNOWN;
-    for (int m = 0; m < ncorner; m++) cinfo[icell].corner[m] = UNKNOWN;
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-    if (dimension == 3) 
-      cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]) * (hi[2]-lo[2]);
-    else if (domain->axisymmetric)
-      cinfo[icell].volume = MY_PI * (hi[1]*hi[1]-lo[1]*lo[1]) * (hi[0]-lo[0]);
-    else
-      cinfo[icell].volume = (hi[0]-lo[0]) * (hi[1]-lo[1]);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   combine all particles in sub cells of a split icell to be in split cell
-   assumes particles are sorted, returns them sorted in icell
-   if relabel = 1, also change icell value for each particle, else do not
-------------------------------------------------------------------------- */
-
-void Grid::combine_split_cell_particles(int icell, int relabel)
-{
-  int ip,iplast,jcell;
-
-  int nsplit = cells[icell].nsplit;
-  int *mycsubs = sinfo[cells[icell].isplit].csubs;
-  int count = 0;
-  int first = -1;
-
-  int *next = particle->next;
-
-  for (int i = 0; i < nsplit; i++) {
-    jcell = mycsubs[i];
-    count += cinfo[jcell].count;
-    if (cinfo[jcell].first < 0) continue;
-    
-    if (first < 0) first = cinfo[jcell].first;
-    else next[iplast] = cinfo[jcell].first;
-    
-    ip = cinfo[jcell].first;
-    while (ip >= 0) {
-      iplast = ip;
-      ip = next[ip];
-    }
-  }
-
-  cinfo[icell].count = count;
-  cinfo[icell].first = first;
-
-  // repoint each particle now in parent split cell to the split cell
-
-  if (relabel) {
-    Particle::OnePart *particles = particle->particles;
-    ip = first;
-    while (ip >= 0) {
-      particles[ip].icell = icell;
-      ip = next[ip];
-    }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   assign all particles in split icell to appropriate sub cells
-   assumes particles are sorted, are NOT sorted by sub cell when done
-   also change particle icell label
-------------------------------------------------------------------------- */
-
-void Grid::assign_split_cell_particles(int icell)
-{
-  int ip,jcell;
-
-  int dim = domain->dimension;
-  Particle::OnePart *particles = particle->particles;
-  int *next = particle->next;
-
-  ip = cinfo[icell].first;
-  while (ip >= 0) {
-    if (dim == 3) jcell = update->split3d(icell,particles[ip].x);
-    else jcell = update->split2d(icell,particles[ip].x);
-    particles[ip].icell = jcell;
-    ip = next[ip];
-  }
-
-  cinfo[icell].count = 0;
-  cinfo[icell].first = -1;
-}
-
-/* ----------------------------------------------------------------------
-   new surf-based methods
+   output stats on overlap of surfs with grid cells
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid_stats()
@@ -1201,7 +1228,9 @@ void Grid::surf2grid_stats()
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   output stats on aggregate flow volume and cells in/out of the flow
+------------------------------------------------------------------------- */
 
 void Grid::flow_stats()
 {

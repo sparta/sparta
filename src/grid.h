@@ -33,8 +33,7 @@ class Grid : protected Pointers {
   bigint nunsplit;      // global count of unsplit cells
   int nsplit;           // global count of split cells
   int nsub;             // global count of split sub cells
-  int maxsurfpercell;   // max surf elements in one child cell
-  int maxcellpersurf;   // max cells overlapping one surf element
+
   int maxlevel;         // max level of any child cell in grid, 0 = root
   int uniform;          // 1 if all child cells are at same level, else 0
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
@@ -42,6 +41,11 @@ class Grid : protected Pointers {
   double cell_epsilon;  // half of smallest cellside of any cell in any dim
   int cellweightflag;   // 0/1+ for no/yes usage of cellwise fnum weighting
 
+  int surfgrid_algorithm;  // algorithm for overlap of surfs & grid cells
+  int maxsurfpercell;   // max surf elements in one child cell
+  int maxcellpersurf;   // max cells overlapping one surf element
+  int maxsplitpercell;  // max split cells in one child cell
+  
   int ngroup;               // # of defined groups
   char **gnames;            // name of each group
   int *bitmask;             // one-bit mask for each group
@@ -241,7 +245,6 @@ class Grid : protected Pointers {
 
   // grid_surf.cpp
 
-  void surf2grid_old(int, int outflag=1);
   void surf2grid(int, int outflag=1);
   void surf2grid_one(int, int, int, int, class Cut3d *, class Cut2d *);
   void clear_surf();
@@ -330,11 +333,13 @@ class Grid : protected Pointers {
 
   // private methods
 
+  void surf2grid_cell_algorithm(int);
+  void surf2grid_surf_algorithm(int);
   int find_overlaps(int, cellint *);
   void recurse2d(int, double [][2], int, int &, cellint *);
   void recurse3d(int, double [][3], int, int &, cellint *);
+  void surf2grid_split(int, int);
 
-  void surf2grid_final(int, int);
   void acquire_ghosts_all();
   void acquire_ghosts_near();
 

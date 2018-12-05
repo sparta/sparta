@@ -466,11 +466,8 @@ void ReadSurf::command(int narg, char **arg)
   double time4 = MPI_Wtime();
 
   // map surfs to grid cells
-  // new algorithm in Dec 2018
-  // keep call to old algorithm for debugging
 
   grid->surf2grid(1);
-  //grid->surf2grid_old(1);
 
   // error check on any points too near other surfs
   // done on per-grid-cell basis, too expensive to do globally

@@ -148,8 +148,8 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
     // }
 
     if (clip(x1,x2,x3)) {
-      if (nsurf == max) return -1;
-      surfs[nsurf++] = m;
+      if (nsurf < max) surfs[nsurf] = m;
+      nsurf++;
     }
   }
 
@@ -215,8 +215,8 @@ int Cut3d::surf2grid_list(cellint id_caller,
     // }
 
     if (clip(x1,x2,x3)) {
-      if (nsurf == max) return -1;
-      surfs[nsurf++] = m;
+      if (nsurf < max) surfs[nsurf] = m;
+      nsurf++;
     }
   }
 

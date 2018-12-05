@@ -94,8 +94,8 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
     if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
     if (cliptest(x1,x2)) {
-      if (nsurf == max) return -1;
-      surfs[nsurf++] = m;
+      if (nsurf < max) surfs[nsurf] = m;
+      nsurf++;
     }
   }
 
@@ -138,8 +138,8 @@ int Cut2d::surf2grid_list(cellint id_caller,
     if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
     if (cliptest(x1,x2)) {
-      if (nsurf == max) return -1;
-      surfs[nsurf++] = m;
+      if (nsurf < max) surfs[nsurf] = m;
+      nsurf++;
     }
   }
 
