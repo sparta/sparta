@@ -222,21 +222,21 @@ void UpdateKokkos::setup()
     // grid
 
     grid_kk->wrap_kokkos();
+    grid_kk->update_hash();
 
     // surf
 
     if (surf->exist) {
       surf_kk->wrap_kokkos();
-      grid_kk->update_hash();
     }
 
     sparta->kokkos->prewrap = 0;
   } else {
     particle_kk->modify(Host,ALL_MASK);
     grid_kk->modify(Host,ALL_MASK);
+    grid_kk->update_hash();
     if (surf->exist) {
       surf_kk->modify(Host,ALL_MASK);
-      grid_kk->update_hash();
       grid_kk->wrap_kokkos_graphs();
     }
   }
