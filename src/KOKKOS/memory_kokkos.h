@@ -67,7 +67,7 @@ template <typename TYPE, typename HTYPE>
                      const char *name)
 {
   data = TYPE(std::string(name),n1);
-#ifndef KOKKOS_USE_CUDA_UVM
+#ifndef KOKKOS_ENABLE_CUDA_UVM
   h_data = Kokkos::create_mirror_view(data);
 #else
   h_data = data;
@@ -82,7 +82,7 @@ template <typename TYPE, typename HTYPE>
                      int n1, const char *name)
 {
   data = TYPE(std::string(name),n1);
-#ifndef KOKKOS_USE_CUDA_UVM
+#ifndef KOKKOS_ENABLE_CUDA_UVM
   h_data = Kokkos::create_mirror_view(data);
 #else
   h_data = data;
@@ -194,7 +194,7 @@ template <typename TYPE, typename HTYPE>
                      const char *name)
 {
   data = TYPE(std::string(name),n1,n2);
-#ifndef KOKKOS_USE_CUDA_UVM
+#ifndef KOKKOS_ENABLE_CUDA_UVM
   h_data = Kokkos::create_mirror_view(data);
 #else
   h_data = data;
@@ -227,7 +227,7 @@ template <typename TYPE, typename HTYPE>
                      const char *name)
 {
   data = TYPE(std::string(name),n1,n2);
-#ifndef KOKKOS_USE_CUDA_UVM
+#ifndef KOKKOS_ENABLE_CUDA_UVM
   h_data = Kokkos::create_mirror_view(data);
 #else
   h_data = data;
