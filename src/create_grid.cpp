@@ -180,7 +180,8 @@ void CreateGrid::command(int narg, char **arg)
   int nprocs = comm->nprocs;
   bigint count = 0;
 
-  int pnx,pny,pnz,ix,iy,iz,nbits,pflag,proc;
+  int pnx,pny,pnz,nbits,pflag,proc;
+  cellint ix,iy,iz;
   cellint m,nth,idgrandparent,idparent,idchild;
   double lo[3],hi[3];
   Grid::ParentCell *p;
@@ -534,9 +535,9 @@ void CreateGrid::procs2grid(int nx, int ny, int nz, int &px, int &py, int &pz)
   // area[0] = xy, area[1] = xz, area[2] = yz
 
   double area[3];
-  area[0] = nx*ny;
-  area[1] = nx*nz;
-  area[2] = ny*nz;
+  area[0] = (bigint) nx*ny;
+  area[1] = (bigint) nx*nz;
+  area[2] = (bigint) ny*nz;
 
   double bestsurf = 2.0 * (area[0]+area[1]+area[2]);
 
