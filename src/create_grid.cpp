@@ -180,8 +180,7 @@ void CreateGrid::command(int narg, char **arg)
   int nprocs = comm->nprocs;
   bigint count = 0;
 
-  int pnx,pny,pnz,nbits,pflag,proc;
-  cellint ix,iy,iz;
+  int pnx,pny,pnz,ix,iy,iz,nbits,pflag,proc;
   cellint m,nth,idgrandparent,idparent,idchild;
   double lo[3],hi[3];
   Grid::ParentCell *p;
