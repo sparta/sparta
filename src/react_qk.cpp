@@ -68,9 +68,7 @@ int ReactQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.0;
 
-  double iomega = collide->extract(isp,"omega");
-  double jomega = collide->extract(jsp,"omega");
-  double omega = 0.5 * (iomega+jomega);
+  double omega = collide->extract(isp,jsp,"omega");
 
   int n = reactions[isp][jsp].n;
               

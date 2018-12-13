@@ -66,19 +66,9 @@ CollideVSS::CollideVSS(SPARTA *sparta, int narg, char **arg) :
   if (nparams == 0) 
     error->all(FLERR,"Cannot use collide command with no species defined");
 
-  params = new Params[nparams];
+  memory->create(params,nparams,nparams,"collide:params");
   if (comm->me == 0) read_param_file(arg[2]);
-  MPI_Bcast(params,nparams*sizeof(Params),MPI_BYTE,0,world);
-
-  // check that params were read for all species
-
-  for (int i = 0; i < nparams; i++)
-    if (params[i].diam < 0.0) {
-      char str[128];
-      sprintf(str,"Species %s did not appear in VSS parameter file",
-	      particle->species[i].id);
-      error->one(FLERR,str);
-    }
+  MPI_Bcast(params[0],nparams*nparams*sizeof(Params),MPI_BYTE,0,world);
 
   // allocate per-species prefactor array
 
@@ -91,7 +81,7 @@ CollideVSS::~CollideVSS()
 {
   if (copymode) return;
 
-  delete [] params;
+  memory->destroy(params);
   memory->destroy(prefactor);
 }
 
@@ -128,14 +118,10 @@ double CollideVSS::vremax_init(int igroup, int jgroup)
     for (int jsp = 0; jsp < nspecies; jsp++) {
       if (mix2group[jsp] != jgroup) continue;
 
-      double diam = 0.5 * (params[isp].diam + params[jsp].diam);
-      double omega = 0.5 * (params[isp].omega + params[jsp].omega);
-      double tref = 0.5 * (params[isp].tref + params[jsp].tref);
-      double mr = species[isp].mass * species[jsp].mass /
-	(species[isp].mass + species[jsp].mass);
-      double cxs = diam*diam*MY_PI;
-      prefactor[isp][jsp] = cxs *
-	pow(2.0*update->boltz*tref/mr,omega-0.5)/tgamma(2.5-omega);
+      double cxs = params[isp][jsp].diam*params[isp][jsp].diam*MY_PI;
+      prefactor[isp][jsp] = cxs * pow(2.0*update->boltz*params[isp][jsp].tref/
+	params[isp][jsp].mr,params[isp][jsp].omega-0.5) /
+	tgamma(2.5-params[isp][jsp].omega);
       double beta = MAX(vscale[isp],vscale[jsp]);
       double vrm = 2.0 * cxs * beta;
       vrmgroup = MAX(vrmgroup,vrm);
@@ -212,12 +198,9 @@ int CollideVSS::test_collision(int icell, int igroup, int jgroup,
   double dv  = vi[1] - vj[1];
   double dw  = vi[2] - vj[2];
   double vr2 = du*du + dv*dv + dw*dw;
-  double omega1 = params[ispecies].omega;
-  double omega2 = params[jspecies].omega;
-  double omega = 0.5 * (omega1+omega2);
-  double vro  = pow(vr2,1.0-omega);
+  double vro  = pow(vr2,1.0-params[ispecies][jspecies].omega);
 
-  // although the vremax is calcualted for the group,
+  // although the vremax is calculated for the group,
   // the individual collisions calculated species dependent vre
 
   double vre = vro*prefactor[ispecies][jspecies];
@@ -244,9 +227,8 @@ void CollideVSS::setup_collision(Particle::OnePart *ip, Particle::OnePart *jp)
 
   double imass = precoln.imass = species[isp].mass;
   double jmass = precoln.jmass = species[jsp].mass;
-  precoln.mr = imass * jmass / (imass+jmass);
 
-  precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
+  precoln.etrans = 0.5 * params[isp][jsp].mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
   precoln.evib = ip->evib + jp->evib;
 
@@ -370,20 +352,18 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   double mass_i = species[isp].mass;
   double mass_j = species[jsp].mass;
 
-  double alpha_r = 2.0 / (params[isp].alpha + params[jsp].alpha);
-  double mr = species[isp].mass * species[jsp].mass /
-    (species[isp].mass + species[jsp].mass);
-
+  double alpha_r = 1.0 / params[isp][jsp].alpha;
+ 
   double eps = random->uniform() * 2*MY_PI;
   if (fabs(alpha_r - 1.0) < 0.001) { 
-    double vr = sqrt(2.0 * postcoln.etrans / mr);
+    double vr = sqrt(2.0 * postcoln.etrans / params[isp][jsp].mr);
     double cosX = 2.0*random->uniform() - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     ua = vr*cosX;
     vb = vr*sinX*cos(eps);
     wc = vr*sinX*sin(eps); 
   } else {
-    double scale = sqrt((2.0 * postcoln.etrans) / (mr * precoln.vr2));
+    double scale = sqrt((2.0 * postcoln.etrans) / (params[isp][jsp].mr * precoln.vr2));
     double cosX = 2.0*pow(random->uniform(),alpha_r) - 1.0;
     double sinX = sqrt(1.0 - cosX*cosX);
     vrc[0] = vi[0]-vj[0];
@@ -442,9 +422,6 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
   } else {
     E_Dispose = precoln.etrans;
 
-    double aveomega = 0.5*(params[ip->ispecies].omega + 
-                           params[jp->ispecies].omega); 
-
     for (i = 0; i < 2; i++) {
       if (i == 0) p = ip; 
       else p = jp;
@@ -461,14 +438,15 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
           } else if (rotstyle != NONE && rotdof == 2) {
             E_Dispose += p->erot;
             Fraction_Rot = 
-              1- pow(random->uniform(),(1/(2.5-aveomega)));
+              1- pow(random->uniform(),
+		     (1/(2.5-params[ip->ispecies][jp->ispecies].omega)));
             p->erot = Fraction_Rot * E_Dispose;
             E_Dispose -= p->erot;
           } else {
             E_Dispose += p->erot;
             p->erot = E_Dispose * 
               sample_bl(random,0.5*species[sp].rotdof-1.0,
-                        1.5-params[sp].omega);
+                        1.5-params[ip->ispecies][jp->ispecies].omega);
             E_Dispose -= p->erot;
           }
         }
@@ -488,7 +466,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             if (vibstyle == SMOOTH) {
               E_Dispose += p->evib;
               Fraction_Vib = 
-                1.0 - pow(random->uniform(),(1.0/(2.5-aveomega)));
+                1.0 - pow(random->uniform(),
+			  (1.0/(2.5-params[ip->ispecies][jp->ispecies].omega)));
               p->evib= Fraction_Vib * E_Dispose;
               E_Dispose -= p->evib;
 
@@ -501,7 +480,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                   (random->uniform()*(max_level+AdjustFactor));
                 p->evib = ivib * update->boltz * species[sp].vibtemp[0];
                 State_prob = pow((1.0 - p->evib / E_Dispose),
-                                 (1.5 - params[sp].omega));
+                                 (1.5 - params[ip->ispecies][jp->ispecies].omega));
               } while (State_prob < random->uniform());
               E_Dispose -= p->evib;
             }
@@ -511,7 +490,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
               E_Dispose += p->evib;
               p->evib = E_Dispose * 
                 sample_bl(random,0.5*species[sp].vibdof-1.0,
-                          1.5-aveomega);
+                          1.5-params[ip->ispecies][jp->ispecies].omega);
               E_Dispose -= p->evib;
               
             } else if (vibstyle == DISCRETE) {
@@ -534,7 +513,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                     (random->uniform()*(max_level+AdjustFactor));
                   pevib = ivib * update->boltz * species[sp].vibtemp[imode];
                   State_prob = pow((1.0 - pevib / E_Dispose),
-                                   (1.5 - aveomega));
+                                   (1.5 - params[ip->ispecies][jp->ispecies].omega));
                 } while (State_prob < random->uniform());
                 
                 vibmode[pindex][imode] = ivib;
@@ -575,7 +554,7 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   double *vj = jp->v;
   double *vk = kp->v;
 
-  double alpha_r = 2.0 / (params[isp].alpha + params[jsp].alpha);
+  double alpha_r = 1.0 / params[isp][jsp].alpha;
   double mr = mass_ij * mass_k / (mass_ij + mass_k);
   postcoln.eint = ip->erot + jp->erot + ip->evib + jp->evib 
                 + kp->erot + kp->evib;
@@ -642,7 +621,7 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     ip->evib = 0.0;
     jp->evib = 0.0;
     numspecies = 2;
-    aveomega = 0.5*(params[ip->ispecies].omega + params[jp->ispecies].omega); 
+    aveomega = params[ip->ispecies][jp->ispecies].omega;
   } else {
     ip->erot = 0.0;
     jp->erot = 0.0;
@@ -651,8 +630,8 @@ void CollideVSS::EEXCHANGE_ReactingEDisposal(Particle::OnePart *ip,
     jp->evib = 0.0;
     kp->evib = 0.0;
     numspecies = 3;
-    aveomega = (params[ip->ispecies].omega + params[jp->ispecies].omega + 
-                params[kp->ispecies].omega)/3;
+    aveomega = (params[ip->ispecies][ip->ispecies].omega + params[jp->ispecies][jp->ispecies].omega +
+                params[kp->ispecies][kp->ispecies].omega)/3;
   }
 
   // handle each kind of energy disposal for non-reacting reactants
@@ -778,9 +757,9 @@ double CollideVSS::sample_bl(RanPark *random, double Exp_1, double Exp_2)
 
 double CollideVSS::rotrel(int isp, double Ec)
 {
-  double Tr = Ec /(update->boltz * (2.5-params[isp].omega));
-  double rotphi = (1.0+params[isp].rotc2/sqrt(Tr) + params[isp].rotc3/Tr)
-                / params[isp].rotc1; 
+  double Tr = Ec /(update->boltz * (2.5-params[isp][isp].omega));
+  double rotphi = (1.0+params[isp][isp].rotc2/sqrt(Tr) + params[isp][isp].rotc3/Tr)
+                / params[isp][isp].rotc1;
   return rotphi;
 }
 
@@ -790,10 +769,9 @@ double CollideVSS::rotrel(int isp, double Ec)
 
 double CollideVSS::vibrel(int isp, double Ec)
 {
-  double Tr = Ec /(update->boltz * (3.5-params[isp].omega));
-  double omega = params[isp].omega;
-  double vibphi = 1.0 / (params[isp].vibc1/pow(Tr,omega) * 
-                         exp(params[isp].vibc2/pow(Tr,1.0/3.0)));
+  double Tr = Ec /(update->boltz * (3.5-params[isp][isp].omega));
+  double vibphi = 1.0 / (params[isp][isp].vibc1/pow(Tr,params[isp][isp].omega) *
+                         exp(params[isp][isp].vibc2/pow(Tr,1.0/3.0)));
   return vibphi;
 }
 
@@ -812,88 +790,151 @@ void CollideVSS::read_param_file(char *fname)
     error->one(FLERR,str);
   }
 
-  // set all diameters to -1, so can detect if not read
+  // set all species diameters to -1, so can detect if not read
+  // set all cross-species parameters to -1 to catch no-reads, as
+  // well as user-selected average
 
-  for (int i = 0; i < nparams; i++) params[i].diam = -1.0;
+  for (int i = 0; i < nparams; i++) {
+    params[i][i].diam = -1.0;
+    for ( int j = i+1; j<nparams; j++) {
+      params[i][j].diam = params[i][j].omega = params[i][j].tref = -1.0;
+      params[i][j].alpha = params[i][j].rotc1 = params[i][j].rotc2 = -1.0;
+      params[i][j].rotc3 = params[i][j].vibc1 = params[i][j].vibc2 = -1.0;
+    }
+  }
 
   // read file line by line
   // skip blank lines or comment lines starting with '#'
-  // all other lines must have at least NWORDS 
+  // all other lines must have at least REQWORDS, which depends on VARIABLE flag
 
-  int NWORDS = 5;
-  if (relaxflag == VARIABLE) NWORDS = 9;
-  char **words = new char*[NWORDS];
-  char line[MAXLINE],copy[MAXLINE];
-  int isp;
+  int REQWORDS = 5;
+  if (relaxflag == VARIABLE) REQWORDS = 9;
+  char **words = new char*[REQWORDS+1]; // one extra word in cross-species lines
+  char line[MAXLINE];
+  int isp,jsp;
 
   while (fgets(line,MAXLINE,fp)) {
     int pre = strspn(line," \t\n\r");
     if (pre == strlen(line) || line[pre] == '#') continue;
 
-    strcpy(copy,line);
-    int nwords = wordcount(copy);
-    if (nwords < NWORDS)
+    int nwords = wordparse(REQWORDS+1,line,words);
+    if (nwords < REQWORDS)
       error->one(FLERR,"Incorrect line format in VSS parameter file");
-    wordparse(NWORDS,line,words);
 
     isp = particle->find_species(words[0]);
     if (isp < 0) continue;
 
-    params[isp].diam = atof(words[1]);
-    params[isp].omega = atof(words[2]);
-    params[isp].tref = atof(words[3]);
-    params[isp].alpha = atof(words[4]);
-    if (relaxflag == VARIABLE) {
-      params[isp].rotc1 = atof(words[5]);
-      params[isp].rotc2 = atof(words[6]);
-      params[isp].rotc3 =  (MY_PI+MY_PI2*MY_PI2)*params[isp].rotc2;
-      params[isp].rotc2 =  (MY_PI*MY_PIS/2.)*sqrt(params[isp].rotc2);
-      params[isp].vibc1 = atof(words[7]);
-      params[isp].vibc2 = atof(words[8]);
+    jsp = particle->find_species(words[1]);
+
+    // if we don't match a species with second word, but it's not a number,
+    // skip the line (it involves a species we aren't using)
+    if ( jsp < 0 &&  !(atof(words[1]) > 0) ) continue;
+
+    if (jsp < 0 ) {
+      params[isp][isp].diam = atof(words[1]);
+      params[isp][isp].omega = atof(words[2]);
+      params[isp][isp].tref = atof(words[3]);
+      params[isp][isp].alpha = atof(words[4]);
+      if (relaxflag == VARIABLE) {
+        params[isp][isp].rotc1 = atof(words[5]);
+        params[isp][isp].rotc2 = atof(words[6]);
+        params[isp][isp].rotc3 = (MY_PI+MY_PI2*MY_PI2)*params[isp][isp].rotc2;
+        params[isp][isp].rotc2 = (MY_PI*MY_PIS/2.)*sqrt(params[isp][isp].rotc2);
+        params[isp][isp].vibc1 = atof(words[7]);
+        params[isp][isp].vibc2 = atof(words[8]);
+      }
+    }else {
+      if (nwords < REQWORDS+1)  // one extra word in cross-species lines
+        error->one(FLERR,"Incorrect line format in VSS parameter file");
+      params[isp][jsp].diam = params[jsp][isp].diam = atof(words[2]);
+      params[isp][jsp].omega = params[jsp][isp].omega = atof(words[3]);
+      params[isp][jsp].tref = params[jsp][isp].tref = atof(words[4]);
+      params[isp][jsp].alpha = params[jsp][isp].alpha = atof(words[5]);
+      if (relaxflag == VARIABLE) {
+        params[isp][jsp].rotc1 = params[jsp][isp].rotc1 = atof(words[6]);
+        params[isp][jsp].rotc2 = atof(words[7]);
+        params[isp][jsp].rotc3 = params[jsp][isp].rotc3 =
+        		(MY_PI+MY_PI2*MY_PI2)*params[isp][jsp].rotc2;
+        if(params[isp][jsp].rotc2 > 0)
+        	params[isp][jsp].rotc2 = params[jsp][isp].rotc2 =
+        			(MY_PI*MY_PIS/2.)*sqrt(params[isp][jsp].rotc2);
+        params[isp][jsp].vibc1 = params[jsp][isp].vibc1= atof(words[8]);
+        params[isp][jsp].vibc2 = params[jsp][isp].vibc2= atof(words[9]);
+      }
     }
   }
 
   delete [] words;
   fclose(fp);
+
+  // check that params were read for all species
+  for (int i = 0; i < nparams; i++) {
+
+    if (params[i][i].diam < 0.0) {
+      char str[128];
+      sprintf(str,"Species %s did not appear in VSS parameter file",
+	      particle->species[i].id);
+      error->one(FLERR,str);
+    }
+  }
+
+  for ( int i = 0; i<nparams; i++) {
+    params[i][i].mr = particle->species[i].mass / 2;
+    for ( int j = i+1; j<nparams; j++) {
+      params[i][j].mr = params[j][i].mr = particle->species[i].mass * 
+	particle->species[j].mass / (particle->species[i].mass + particle->species[j].mass);
+
+      if(params[i][j].diam < 0) params[i][j].diam = params[j][i].diam =
+				  0.5*(params[i][i].diam + params[j][j].diam);
+      if(params[i][j].omega < 0) params[i][j].omega = params[j][i].omega =
+				   0.5*(params[i][i].omega + params[j][j].omega);
+      if(params[i][j].tref < 0) params[i][j].tref = params[j][i].tref =
+				  0.5*(params[i][i].tref + params[j][j].tref);
+      if(params[i][j].alpha < 0) params[i][j].alpha = params[j][i].alpha =
+				   0.5*(params[i][i].alpha + params[j][j].alpha);
+ 
+      if (relaxflag == VARIABLE) {
+	if(params[i][j].rotc1 < 0) params[i][j].rotc1 = params[j][i].rotc1 =
+				     0.5*(params[i][i].rotc1 + params[j][j].rotc1);
+	if(params[i][j].rotc2 < 0) params[i][j].rotc2 = params[j][i].rotc2 =
+				     0.5*(params[i][i].rotc2 + params[j][j].rotc2);
+	if(params[i][j].rotc3 < 0) params[i][j].rotc3 = params[j][i].rotc3 =
+				     0.5*(params[i][i].rotc3 + params[j][j].rotc3);
+	if(params[i][j].vibc1 < 0) params[i][j].vibc1 = params[j][i].vibc1 =
+				     0.5*(params[i][i].vibc1 + params[j][j].vibc1);
+	if(params[i][j].vibc2 < 0) params[i][j].vibc2 = params[j][i].vibc2 =
+				     0.5*(params[i][i].vibc2 + params[j][j].vibc2);
+      }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
-   count whitespace-delimited words in line
+   parse up to n=maxwords whitespace-delimited words in line
+   store ptr to each word in words and count number of words
 ------------------------------------------------------------------------- */
 
-int CollideVSS::wordcount(char *line)
+int CollideVSS::wordparse(int maxwords, char *line, char **words)
 {
-  int nwords = 0;
-  char *word = strtok(line," \t");
-  while (word) {
-    nwords++;
-    word = strtok(NULL," \t");
+  int nwords = 1;
+  char * word;
+
+  words[0] = strtok(line," \t\n");
+  while ((word = strtok(NULL," \t\n")) != NULL && nwords < maxwords) {
+    words[nwords++] = word;
   }
   return nwords;
-}
-
-/* ----------------------------------------------------------------------
-   parse first N whitespace-delimited words in line
-   store ptr to each word in words
-------------------------------------------------------------------------- */
-
-void CollideVSS::wordparse(int n, char *line, char **words)
-{
-  for (int i = 0; i < n; i++) {
-    if (i == 0) words[i] = strtok(line," \t");
-    else words[i] = strtok(NULL," \t");
-  }
 }
 
 /* ----------------------------------------------------------------------
    return a per-species parameter to caller
 ------------------------------------------------------------------------- */
 
-double CollideVSS::extract(int isp, const char *name)
+double CollideVSS::extract(int isp, int jsp, const char *name)
 {
-  if (strcmp(name,"diam") == 0) return params[isp].diam;
-  else if (strcmp(name,"omega") == 0) return params[isp].omega;
-  else if (strcmp(name,"tref") == 0) return params[isp].tref;
+  if (strcmp(name,"diam") == 0) return params[isp][jsp].diam;
+  else if (strcmp(name,"omega") == 0) return params[isp][jsp].omega;
+  else if (strcmp(name,"tref") == 0) return params[isp][jsp].tref;
   else error->all(FLERR,"Request for unknown parameter from collide");
   return 0.0;
 }

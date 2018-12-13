@@ -220,17 +220,11 @@ void ReactBird::init()
     double epsilon = 1.0;         
     if (isp == jsp) epsilon = 2.0;
 
-    double idiam = collide->extract(isp,"diam");
-    double jdiam = collide->extract(jsp,"diam");
-    double iomega = collide->extract(isp,"omega");
-    double jomega = collide->extract(jsp,"omega");
-    double itref = collide->extract(isp,"tref");
-    double jtref = collide->extract(jsp,"tref");
+    double diam = collide->extract(isp,jsp,"diam");
+    double omega = collide->extract(isp,jsp,"omega");
+    double tref = collide->extract(isp,jsp,"tref");
 
     // double pre_ave_vibdof = (species[isp].vibdof + species[jsp].vibdof)/2.0;
-    double diam = 0.5 * (idiam+jdiam);
-    double omega = 0.5 * (iomega+jomega);
-    double tref = 0.5 * (itref+jtref);
     double mr = species[isp].mass * species[jsp].mass /
         (species[isp].mass + species[jsp].mass);
     double sigma = MY_PI*diam*diam;
@@ -272,11 +266,11 @@ void ReactBird::init()
               
       int ncount = 0;
       if (mspec >= 0) {
-        momega = collide->extract(mspec,"omega");
+        momega = collide->extract(mspec,mspec,"omega");
         ncount++;
       } else momega = 0.0;
       if (aspec >= 0) {
-        aomega = collide->extract(aspec,"omega");
+        aomega = collide->extract(aspec,aspec,"omega");
         ncount++;
       } else aomega = 0.0;
 
@@ -284,7 +278,7 @@ void ReactBird::init()
 
     } else {
       int mspec = r->products[0];
-      momega = collide->extract(mspec,"omega");
+      momega = collide->extract(mspec,mspec,"omega");
       r->coeff[6] = momega;
     }
   }

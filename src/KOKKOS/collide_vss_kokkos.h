@@ -174,11 +174,10 @@ class CollideVSSKokkos : public CollideVSS {
   typename AT::t_float_2d d_prefactor;
 
   typedef Kokkos::
-    DualView<Params*, Kokkos::LayoutRight, DeviceType> tdual_params_1d;
-  typedef tdual_params_1d::t_dev t_params_1d;
-  tdual_params_1d k_params;
-  t_params_1d d_params;
-
+    DualView<Params**, Kokkos::LayoutRight, DeviceType> tdual_params_2d;
+  typedef tdual_params_2d::t_dev t_params_2d;
+  tdual_params_2d k_params;
+  t_params_2d d_params;
 
   double dt,fnum,boltz;
   int maxcellcount,maxcellcount_kk,react_defined;
