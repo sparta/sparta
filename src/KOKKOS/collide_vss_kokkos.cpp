@@ -1031,14 +1031,14 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             E_Dispose += p->erot;
             Fraction_Rot = 
               1- pow(rand_gen.drand(),
-		     (1/(2.5-params[ip->ispecies][jp->ispecies].omega)));
+		     (1/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
             p->erot = Fraction_Rot * E_Dispose;
             E_Dispose -= p->erot;
           } else {
             E_Dispose += p->erot;
             p->erot = E_Dispose * 
               sample_bl(rand_gen,0.5*d_species[sp].rotdof-1.0,
-                        1.5-params[ip->ispecies][jp->ispecies].omega);
+                        1.5-d_params(ip->ispecies,jp->ispecies).omega);
             E_Dispose -= p->erot;
           }
         }
@@ -1063,7 +1063,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
                 (rand_gen.drand()*(max_level+AdjustFactor));
               p->evib = ivib * boltz * d_species[sp].vibtemp[0];
               State_prob = pow((1.0 - p->evib / E_Dispose),
-			       (1.5 - params[ip->ispecies][jp->ispecies].omega));
+			       (1.5 - d_params(ip->ispecies,jp->ispecies).omega));
             } while (State_prob < rand_gen.drand());
             E_Dispose -= p->evib;
 
@@ -1071,7 +1071,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             E_Dispose += p->evib;
             Fraction_Vib = 
               1.0 - pow(rand_gen.drand(),
-			(1.0/(2.5-params[ip->ispecies][jp->ispecies].omega)));
+			(1.0/(2.5-d_params(ip->ispecies,jp->ispecies).omega)));
             p->evib= Fraction_Vib * E_Dispose;
             E_Dispose -= p->evib;
 
@@ -1079,7 +1079,7 @@ void CollideVSSKokkos::EEXCHANGE_NonReactingEDisposal(Particle::OnePart *ip,
             E_Dispose += p->evib;
             p->evib = E_Dispose * 
               sample_bl(rand_gen,0.5*d_species[sp].vibdof-1.0,
-                        1.5-params[ip->ispecies][jp->ispecies].omega);
+                        1.5-d_params(ip->ispecies,jp->ispecies).omega);
             E_Dispose -= p->evib;
           }
 
