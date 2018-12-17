@@ -63,6 +63,13 @@ of a recombination reaction becomes > 1.0, when it is does occur.
 SPARTA does not check for this, so you should estimate the largest
 boost factor that is safe to use for your model.
 </P>
+<P>The {bird} keyword is a setting used to define how the energy used in the TCE
+model is defined. If the {bird} keyword is specified, the total energy is the sum
+of the translational energy and rotational energy weighted by the participating
+rotational degrees of freedom. If the keyword is not specified, then the total
+energy is the sum of the translational, rotational and vibrational degrees of
+freedom.
+</P>
 <HR>
 
 <P><B>Restrictions:</B> none
