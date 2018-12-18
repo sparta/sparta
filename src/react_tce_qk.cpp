@@ -107,6 +107,7 @@ int ReactTCEQK::attempt_tce(Particle::OnePart *ip, Particle::OnePart *jp,
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
+  double ecc;
 
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.;
 
