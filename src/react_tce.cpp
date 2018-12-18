@@ -20,7 +20,7 @@
 #include "collide.h"
 #include "random_park.h"
 #include "error.h"
-
+#include "grid.h"
 
 // DEBUG
 #include "update.h"
@@ -62,12 +62,13 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
   Particle::Species *species = particle->species;
   int isp = ip->ispecies;
   int jsp = jp->ispecies;
-
+  
   double pre_ave_rotdof = (species[isp].rotdof + species[jsp].rotdof)/2.0;
 
   int n = reactions[isp][jsp].n;
   if (n == 0) return 0;
   int *list = reactions[isp][jsp].list;
+  double nfrac_p3;
 
   // probablity to compare to reaction probability
 
