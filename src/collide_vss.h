@@ -74,7 +74,7 @@ class CollideVSS : public Collide {
   };
 
  protected:
-  int relaxflag,eng_exchange;
+  int relaxflag,relaxtypeflag,eng_exchange;
   double vr_indice;
   double **prefactor; // static portion of collision attempt frequency
  
