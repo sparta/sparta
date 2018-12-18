@@ -86,7 +86,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
 
     // two options for total energy in TCE model
     // 1: Bird's implementation from DS1V using the translational + weighted rotational energy
-    // 2: Using the sum of translational, rotationa and vibrational energies
+    // 2: Using the sum of translational, rotational and vibrational energies
      
     if (birdflag) {
        ecc = pre_etrans; 
