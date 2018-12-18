@@ -24,6 +24,8 @@ args = arguments for that style :l
 zero or more keyword/value pairs may be appended :l
 keyword = {relax} :l
   {relax} value = {constant} or {variable} :pre
+keyword = {relaxtype} :l
+  {relaxtype} value = {serial} or {prohibdouble} :pre
 :ule
 
 [Examples:]
@@ -167,6 +169,18 @@ Note that a collision data file with the 4 extra relaxation parameters
 (per species) can be used when the {relax} keyword is specified as
 {constant}.  In that case, the extra parameters are simply ignored.
 
+The {relaxtype} keyword specifies which relaxation procedure should
+be used for non-reacting inelastic collisions. If the {relaxtype}
+keyword is specified as {serial}, the serial particle selection procedure
+from Bird is is used. If the {relaxtype} keyword is specified as
+{prohibdouble}, the particle selection methodology prohibiting double
+relaxation from "(Haas94)"_#Haas94 is used.
+If both the {relax} and {relaxtype} keywords are specified as
+{variable} and {prohibdouble}, respectively, then an additional parameter
+must be specified in the .vss file. That parameter is the sigma_v (distance^2) units
+specified by Park to correct the vibrational relaxation number to
+realistic values at high temperature.
+
 :line
 
 Styles with a {kk} suffix are functionally the same as the
@@ -219,3 +233,7 @@ Simulation of Gas Flows, Clarendon Press, Oxford (1994).
 "Molecular gas dynamics observations of Chapman-Enskog behavior and
 departures therefrom in nonequilibrium gases," Phys Rev E, 69, 042201
 (2004).
+
+:link(Haas94)
+[(Haas94)] Haas, Brian L., et al. "Rates of thermal relaxation in direct 
+simulation Monte Carlo methods." Physics of Fluids 6.6 (1994): 2191-2201.
