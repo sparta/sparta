@@ -466,7 +466,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_Serial(Particle::OnePart *ip,
       double rotn_phi = 1.0/species[sp].rotrel; 
 
       if (rotdof) {
-        if (relaxflag == VARIABLE) rotn_phi = rotrel_serial(sp,E_Dispose);
+        if (relaxflag == VARIABLE) rotn_phi = 1.0/rotrel_serial(sp,E_Dispose);
         if (rotn_phi >= random->uniform()) {
           if (rotstyle == NONE) {
             p->erot = 0.0; 
@@ -491,7 +491,7 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_Serial(Particle::OnePart *ip,
       double vibn_phi = 1.0/species[sp].vibrel[0]; 
 
       if (vibdof) {
-        if (relaxflag == VARIABLE) vibn_phi = vibrel_serial(sp,E_Dispose+p->evib);
+        if (relaxflag == VARIABLE) vibn_phi = 1.0/vibrel_serial(sp,E_Dispose+p->evib);
         if (vibn_phi >= random->uniform()) {
           if (vibstyle == NONE) {
             p->evib = 0.0; 
@@ -624,7 +624,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
               } else if (vibstyle == SMOOTH) {
 
                   factor *= 1/(1-phi);
-                  if (relaxflag == VARIABLE) phi = factor*(1.0 + vibdof/transdof)/vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof+transdof);
+                  if (relaxflag == VARIABLE) phi = factor*(1.0 + vibdof/transdof)/
+			  vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof+transdof);
                   else phi = factor*(1.0 + vibdof/transdof)/species[sp].vibrel[0];
 
                   if (phi >= random->uniform()) {
@@ -633,7 +634,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
                           Fraction_Vib = 1.0 - pow(random->uniform(),(1.0/(2.5-params[sp].omega)));
                           p->evib= Fraction_Vib * E_Dispose;
                       }
-                      else if (vibdof > 2) p->evib = E_Dispose * sample_bl(random,0.5*vibdof-1.0,1.5-params[sp].omega);
+                      else if (vibdof > 2) p->evib = E_Dispose * 
+			      sample_bl(random,0.5*vibdof-1.0,1.5-params[sp].omega);
                       E_Dispose -= p->evib;
                       postcoln.evib += p->evib;
                       relaxflag1 = 1;
@@ -647,7 +649,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
                       A = pow(vibdof_dis,2)*exp(species[sp].vibtemp[0]/Tt)/2.0;
 
                       factor *= 1/(1-phi);
-                      if (relaxflag == VARIABLE) phi = factor*(1.0 + A/transdof)/vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof_dis+transdof);
+                      if (relaxflag == VARIABLE) phi = factor*(1.0 + A/transdof)/
+			      vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof_dis+transdof);
                       else phi = factor*(1.0 + A/transdof)/species[sp].vibrel[0];
 
                       if (phi >= random->uniform()) {
@@ -681,7 +684,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
                         A = pow(vibdof_dis,2)*exp(species[sp].vibtemp[imode]/Tt)/2.0;
 
                         factor *= 1/(1-phi);
-                        if (relaxflag == VARIABLE) phi = factor*(1.0 + A/transdof)/vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof_dis+transdof);
+                        if (relaxflag == VARIABLE) phi = factor*(1.0 + A/transdof)/
+				vibrel_prohibdouble(sp,E_Dispose+p->evib,vibdof_dis+transdof);
                         else phi = factor*(1.0 + A/transdof)/species[sp].vibrel[imode];
 
                         if (phi >= random->uniform()) {
@@ -732,7 +736,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
                 p->erot = 0.0;
             } else {
                 factor *= 1/(1-phi);
-                if (relaxflag == VARIABLE) phi = factor*(1.0 + rotdof/transdof)/rotrel_prohibdouble(sp,E_Dispose+p->erot);
+                if (relaxflag == VARIABLE) phi = factor*(1.0 + rotdof/transdof)/
+			rotrel_prohibdouble(sp,E_Dispose+p->erot);
                 else phi = factor*(1.0 + rotdof/transdof)/species[sp].rotrel;
 
                 if (phi >= random->uniform()) {
@@ -741,7 +746,8 @@ void CollideVSS::EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *
                         Fraction_Vib = 1.0 - pow(random->uniform(),(1.0/(2.5-params[sp].omega)));
                         p->erot= Fraction_Vib * E_Dispose;
                     }
-                    else if (rotdof > 2) p->erot = E_Dispose * sample_bl(random,0.5*rotdof-1.0,1.5-params[sp].omega);
+                    else if (rotdof > 2) p->erot = E_Dispose * 
+			    sample_bl(random,0.5*rotdof-1.0,1.5-params[sp].omega);
                     E_Dispose -= p->erot;
                     postcoln.erot += p->erot;
                     break;
@@ -794,7 +800,7 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
     wc = vr*sinX*sin(eps);
   } else {
     double scale = sqrt((2.0*postcoln.etrans) / (mr*precoln.vr2));
-    // Should this be vij-vk?? (Arnaud 12/17/18)
+    // Should this be vij-vk?? (A. Borner 12/17/18)
     vrc[0] = vi[0]-vj[0];
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
@@ -984,8 +990,8 @@ double CollideVSS::sample_bl(RanPark *random, double Exp_1, double Exp_2)
 double CollideVSS::rotrel_serial(int isp, double Ec)
 {
   double Tr = Ec /(update->boltz * (2.5-params[isp].omega));
-  double rotphi = (1.0+params[isp].rotc2/sqrt(Tr) + params[isp].rotc3/Tr)
-                / params[isp].rotc1; 
+  double rotphi = params[isp].rotc1 / 
+	  (1.0+params[isp].rotc2/sqrt(Tr) + params[isp].rotc3/Tr);
   return rotphi;
 }
 
@@ -995,10 +1001,14 @@ double CollideVSS::rotrel_serial(int isp, double Ec)
 
 double CollideVSS::vibrel_serial(int isp, double Ec)
 {
+	Particle::Species *species = particle->species;
   double Tr = Ec /(update->boltz * (3.5-params[isp].omega));
   double omega = params[isp].omega;
-  double vibphi = 1.0 / (params[isp].vibc1/pow(Tr,omega) * 
-                         exp(params[isp].vibc2/pow(Tr,1.0/3.0)));
+  double diam = params[isp].diam;
+  double tref = params[isp].tref;
+  double vibphi = 4.0 * MY_PIS * pow(diam,2.0)*pow(tref,omega)
+                  * pow(Tr,-omega-0.5)*101325.0*exp(params[isp].vibc1
+                  * (pow(Tr,-1.0/3.0)-params[isp].vibc2)-18.42)/sqrt(species[isp].mass*update->boltz);
   return vibphi;
 }
 
@@ -1024,8 +1034,8 @@ double CollideVSS::vibrel_prohibdouble(int isp, double Ec, double doftot)
 {
   Particle::Species *species = particle->species;
   double Tr = 2.0 * Ec / (update->boltz * doftot);
-  double Zmw = 4.0*MY_PIS * pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega-0.5)
-                  * pow(Tr,-params[isp].omega)*101325.0*exp(params[isp].vibc1
+  double Zmw = 4.0*MY_PIS * pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega)
+                  * pow(Tr,-params[isp].omega-0.5)*101325.0*exp(params[isp].vibc1
                   * (pow(Tr,-1.0/3.0)-params[isp].vibc2)-18.42)/sqrt(species[isp].mass*update->boltz);
   double Zpark = 4.0*MY_PI*pow(params[isp].diam,2.0)*pow(params[isp].tref,params[isp].omega-0.5)
                           *pow(Tr,2.5-params[isp].omega)/(2.5e9*params[isp].park);
