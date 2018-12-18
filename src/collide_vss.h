@@ -70,6 +70,7 @@ class CollideVSS : public Collide {
     double rotc3;
     double vibc1;
     double vibc2;
+    double park;
   };
 
  protected:
@@ -85,7 +86,9 @@ class CollideVSS : public Collide {
 
   void SCATTER_TwoBodyScattering(Particle::OnePart *, 
 				 Particle::OnePart *);
-  void EEXCHANGE_NonReactingEDisposal(Particle::OnePart *, 
+  void EEXCHANGE_NonReactingEDisposal_Serial(Particle::OnePart *, 
+				      Particle::OnePart *);
+	void EEXCHANGE_NonReactingEDisposal_ProhibDouble(Particle::OnePart *, 
 				      Particle::OnePart *);
   void SCATTER_ThreeBodyScattering(Particle::OnePart *, 
                                    Particle::OnePart *,
@@ -95,8 +98,10 @@ class CollideVSS : public Collide {
                                    Particle::OnePart *);
 
   double sample_bl(RanPark *, double, double);
-  double rotrel (int, double);  
-  double vibrel (int, double);  
+  double rotrel_serial (int, double);  
+  double vibrel_serial (int, double);
+	double rotrel_prohibdouble (int, double);  
+  double vibrel_prohibdouble (int, double, double);
 
   void read_param_file(char *);
   int wordcount(char *);
