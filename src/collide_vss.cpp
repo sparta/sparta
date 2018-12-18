@@ -34,6 +34,7 @@ using namespace MathConst;
 
 enum{NONE,DISCRETE,SMOOTH};            // several files
 enum{CONSTANT,VARIABLE};
+enum{SERIAL,PROHIBDOUBLE};
 
 #define MAXLINE 1024
 
@@ -355,7 +356,7 @@ int CollideVSS::perform_collision(Particle::OnePart *&ip,
 
   } else { 
     if (precoln.ave_dof > 0.0) {
-      if (relaxtypeflag == PROHIBDOUBLE} EEXCHANGE_NonReactingEDisposal_ProhibDouble(ip,jp);
+      if (relaxtypeflag == PROHIBDOUBLE) EEXCHANGE_NonReactingEDisposal_ProhibDouble(ip,jp);
       else EEXCHANGE_NonReactingEDisposal_Serial(ip,jp);
     }
     SCATTER_TwoBodyScattering(ip,jp);
