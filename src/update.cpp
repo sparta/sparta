@@ -1402,8 +1402,10 @@ void Update::global(int narg, char **arg)
         error->all(FLERR,
                    "Cannot set global surfgrid when surfaces already exist");
       if (strcmp(arg[iarg+1],"combo") == 0) grid->surfgrid_algorithm = COMBO;
-      else if (strcmp(arg[iarg+1],"percell") == 0) grid->surfgrid_algorithm = PERCELL;
-      else if (strcmp(arg[iarg+1],"persurf") == 0) grid->surfgrid_algorithm = PERSURF;
+      else if (strcmp(arg[iarg+1],"percell") == 0) 
+        grid->surfgrid_algorithm = PERCELL;
+      else if (strcmp(arg[iarg+1],"persurf") == 0) 
+        grid->surfgrid_algorithm = PERSURF;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"surfmax") == 0) {

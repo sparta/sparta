@@ -334,7 +334,7 @@ class Grid : protected Pointers {
   // private methods
 
   void surf2grid_cell_algorithm(int);
-  void surf2grid_surf_algorithm(int);
+  void surf2grid_surf_algorithm(int, int);
   int find_overlaps(int, cellint *);
   void recurse2d(int, double [][2], int, int &, cellint *);
   void recurse3d(int, double [][3], int, int &, cellint *);

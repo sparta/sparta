@@ -90,10 +90,12 @@ void Grid::surf2grid(int subflag, int outflag)
 
   if (surfgrid_algorithm == COMBO) {
     if (comm->nprocs > ntotal) surf2grid_cell_algorithm(outflag);
-    else surf2grid_surf_algorithm(outflag);
+    else surf2grid_surf_algorithm(subflag,outflag);
   }
-  else if (surfgrid_algorithm == PERCELL) surf2grid_cell_algorithm(outflag);
-  else if (surfgrid_algorithm == PERSURF) surf2grid_surf_algorithm(outflag);
+  else if (surfgrid_algorithm == PERCELL) 
+    surf2grid_cell_algorithm(outflag);
+  else if (surfgrid_algorithm == PERSURF) 
+    surf2grid_surf_algorithm(subflag,outflag);
   
   surf2grid_split(subflag,outflag);
 }
@@ -108,6 +110,7 @@ void Grid::surf2grid(int subflag, int outflag)
 void Grid::surf2grid_cell_algorithm(int outflag)
 {
   int nsurf;
+  double t1,t2;
   int *ptr;
   double *lo,*hi;
 
@@ -119,8 +122,10 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   if (dim == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  MPI_Barrier(world);
-  double t1 = MPI_Wtime();
+  if (outflag) {
+    MPI_Barrier(world);
+    t1 = MPI_Wtime();
+  }
 
   // compute overlap of surfs with each cell I own
   // info stored in nsurf,csurfs
@@ -147,7 +152,7 @@ void Grid::surf2grid_cell_algorithm(int outflag)
     if (nsurf > maxsurfpercell) {
       max = MAX(max,nsurf);
       csurfs->vgot(0);
-    } else {
+    } else if (nsurf) {
       csurfs->vgot(nsurf);
       cells[icell].nsurf = nsurf;
       cells[icell].csurfs = ptr;
@@ -165,11 +170,12 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   }
 
   // timing info
-  // NOTE: make all timing info output cleaner
   
-  MPI_Barrier(world);
-  double t2 = MPI_Wtime();
-  if (me == 0) printf("  surf2grid via cells CPU = %g secs\n",t2-t1);
+  if (outflag) {
+    MPI_Barrier(world);
+    t2 = MPI_Wtime();
+    if (me == 0) printf("  surf2grid via cells CPU = %g secs\n",t2-t1);
+  }
 
   if (outflag) surf2grid_stats();
 }
@@ -182,21 +188,26 @@ void Grid::surf2grid_cell_algorithm(int outflag)
    in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
 
-void Grid::surf2grid_surf_algorithm(int outflag)
+void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 {
   int i,j,m,icell,isurf;
+  double t1,t2,t3;
 
   int dim = domain->dimension;
 
   if (dim == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  // insure parent/child IDs are in hash
+  if (outflag) {
+    MPI_Barrier(world);
+    t1 = MPI_Wtime();
+  }
 
-  if (!hashfilled) rehash();
+  // if subflag, reset hash for parent/child IDs
+  // needed b/c callers called clear_surf before surf2grid
+  //   to wipe out split cells and compress local cell list
 
-  MPI_Barrier(world);
-  double t1 = MPI_Wtime();
+  if (subflag) rehash();
 
   // assign every Pth surf to me
   // nsurf = # of surfs I own for finding overlaps with cells
@@ -249,10 +260,11 @@ void Grid::surf2grid_surf_algorithm(int outflag)
     if (me == 0) printf("Max cells overlapping any surf = %d\n",maxall);
     error->all(FLERR,"Too many cells overlap one surf - set global cellmax");
   }
-  
-  MPI_Barrier(world);
-  double t2 = MPI_Wtime();
-  if (me == 0) printf("  surf2grid via surfs CPU = %g secs\n",t2-t1);
+
+  if (outflag) {
+    MPI_Barrier(world);
+    t2 = MPI_Wtime();
+  }
 
   // rendezvous to convert list of cells per surf to list of surfs per cell
   // ncount = # of my datums to send to rendevous procs
@@ -298,8 +310,7 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
   memory->destroy(cellcount);
   memory->sfree(celllist);
-  delete cpsurf;
-  cpsurf = NULL;
+  cpsurf->reset();
 
   // perform rendezvous operation
   // each proc owns random subset of cells
@@ -365,9 +376,12 @@ void Grid::surf2grid_surf_algorithm(int outflag)
 
   memory->sfree(outbuf);
 
-  MPI_Barrier(world);
-  double t3 = MPI_Wtime();
-  if (me == 0) printf("  surf2grid via surfs CPU = %g secs\n",t3-t2);
+  if (outflag) {
+    MPI_Barrier(world);
+    t3 = MPI_Wtime();
+    if (me == 0) printf("  surf2grid via surfs CPU = %g secs, 2 parts: %g %g\n",
+                        t3-t1,(t2-t1)/(t3-t1),(t3-t2)/(t3-t1));
+  }
 
   if (outflag) surf2grid_stats();
 }
@@ -491,7 +505,8 @@ void Grid::surf2grid_split(int subflag, int outflag)
   MPI_Allreduce(&max,&maxall,1,MPI_INT,MPI_MAX,world);
   if (maxall) {
     if (me == 0) printf("Max split cells in any cell = %d\n",maxall);
-    error->all(FLERR,"Too many split cells in a single cell - set global splitmax");
+    error->all(FLERR,"Too many split cells in a single cell - "
+               "set global splitmax");
   }
 
   //double t3 = MPI_Wtime();
@@ -998,16 +1013,16 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
   int ihi = static_cast<int> ((sbox[1][0]-plo[0]) * nx/(phi[0]-plo[0]));
   int jlo = static_cast<int> ((sbox[0][1]-plo[1]) * ny/(phi[1]-plo[1]));
   int jhi = static_cast<int> ((sbox[1][1]-plo[1]) * ny/(phi[1]-plo[1]));
-  
-  // decrement indices by 1 if touching lower boundary
+
+  // decrement indices by 1 if sbox touches or slightly overlaps lower boundary
   // should be no need to increment if touching upper boundary
   //   since ihi,jhi will then already index cell beyond boundary
   // same equation as in Grid::id_child_lohi()
 
   boundary = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (boundary == sbox[0][0]) ilo--;
+  if (boundary >= sbox[0][0]) ilo--;
   boundary = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (boundary == sbox[0][1]) jlo--;
+  if (boundary >= sbox[0][1]) jlo--;
 
   // insure each index is between 0 and N-1 inclusive
 
@@ -1028,7 +1043,7 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
   for (iy = jlo; iy <= jhi; iy++) {
     for (ix = ilo; ix <= ihi; ix++) {
       ichild = iy*nx + ix + 1;
-      idchild = p->id | (ichild << p->nbits);
+      idchild = p->id | ((cellint) ichild << p->nbits);
       grid->id_child_lohi(iparent,ichild,clo,chi);
 
       if (hash->find(idchild) == hash->end()) parentflag = 0;
@@ -1089,17 +1104,17 @@ void Grid::recurse3d(int itri, double sbox[][3], int iparent,
   int klo = static_cast<int> ((sbox[0][2]-plo[2]) * nz/(phi[2]-plo[2]));
   int khi = static_cast<int> ((sbox[1][2]-plo[2]) * nz/(phi[2]-plo[2]));
   
-  // decrement indices by 1 if touching lower boundary
+  // decrement indices by 1 if sbox touches or slightly overlaps lower boundary
   // should be no need to increment if touching upper boundary
   //   since ihi,jhi will then already index cell beyond boundary
   // same equation as in Grid::id_child_lohi()
 
   boundary = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (boundary == sbox[0][0]) ilo--;
+  if (boundary >= sbox[0][0]) ilo--;
   boundary = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (boundary == sbox[0][1]) jlo--;
+  if (boundary >= sbox[0][1]) jlo--;
   boundary = plo[2] + klo*(phi[2]-plo[2])/nz;
-  if (boundary == sbox[0][2]) klo--;
+  if (boundary >= sbox[0][2]) klo--;
 
   // insure each index is between 0 and N-1 inclusive
 
@@ -1124,8 +1139,8 @@ void Grid::recurse3d(int itri, double sbox[][3], int iparent,
   for (iz = klo; iz <= khi; iz++) {
     for (iy = jlo; iy <= jhi; iy++) {
       for (ix = ilo; ix <= ihi; ix++) {
-        ichild = iz*nx*ny + iy*nx + ix + 1;
-        idchild = p->id | (ichild << p->nbits);
+        ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
+        idchild = p->id | ((cellint) ichild << p->nbits);
         grid->id_child_lohi(iparent,ichild,clo,chi);
 
         if (hash->find(idchild) == hash->end()) parentflag = 0;
