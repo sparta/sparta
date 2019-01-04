@@ -25,31 +25,32 @@ using namespace SPARTA_NS;
    pt can be on any boundary of parent cell
    if I don't store child cell as owned or ghost, return -1 for unknown
    else return local index of child cell
-   NOTE: replace recursive with while loop
 ------------------------------------------------------------------------- */
 
 int Grid::id_find_child(int iparent, double *x)
 {
-  ParentCell *p = &pcells[iparent];
-  double *lo = p->lo;
-  double *hi = p->hi;
-  int nx = p->nx;
-  int ny = p->ny;
-  int nz = p->nz;
-  int ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
-  int iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
-  int iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
-  if (ix == nx) ix--;
-  if (iy == ny) iy--;
-  if (iz == nz) iz--;
+  while (1) {
+    ParentCell *p = &pcells[iparent];
+    double *lo = p->lo;
+    double *hi = p->hi;
+    int nx = p->nx;
+    int ny = p->ny;
+    int nz = p->nz;
+    int ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
+    int iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
+    int iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
+    if (ix == nx) ix--;
+    if (iy == ny) iy--;
+    if (iz == nz) iz--;
 
-  cellint ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-  cellint idchild = p->id | (ichild << p->nbits);
+    cellint ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
+    cellint idchild = p->id | (ichild << p->nbits);
 
-  if (hash->find(idchild) == hash->end()) return -1;
-  int index = (*hash)[idchild];
-  if (index > 0) return index-1;
-  return id_find_child(-index-1,x);
+    if (hash->find(idchild) == hash->end()) return -1;
+    int index = (*hash)[idchild];
+    if (index > 0) return index-1;
+    iparent = -index-1;
+  }
 }
 
 /* ----------------------------------------------------------------------

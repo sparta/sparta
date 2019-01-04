@@ -335,10 +335,10 @@ class Grid : protected Pointers {
 
   void surf2grid_cell_algorithm(int);
   void surf2grid_surf_algorithm(int, int);
-  int find_overlaps(int, cellint *);
-  void recurse2d(int, double [][2], int, int &, cellint *);
-  void recurse3d(int, double [][3], int, int &, cellint *);
   void surf2grid_split(int, int);
+  int find_overlaps(int, cellint *);
+  void recurse2d(int, double *, double *, int, int &, cellint *);
+  void recurse3d(int, double *, double *, int, int &, cellint *);
 
   void acquire_ghosts_all();
   void acquire_ghosts_near();

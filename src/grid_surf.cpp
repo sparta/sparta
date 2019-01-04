@@ -44,39 +44,6 @@ enum{COMBO,PERCELL,PERSURF};            // several files
 // operations for surfaces in grid cells
 
 /* ----------------------------------------------------------------------
-   allocate page data structs to hold variable-length surf and cell info
-------------------------------------------------------------------------- */
-
-void Grid::allocate_surf_arrays()
-{
-  delete csurfs;
-  delete csplits;
-  delete csubs;
-
-  csurfs = new MyPage<int>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
-  csplits = new MyPage<int>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
-  csubs = new MyPage<int>(maxsplitpercell,128);
-}
-
-void Grid::allocate_cell_arrays()
-{
-  delete cpsurf;
-  cpsurf = new MyPage<cellint>(maxcellpersurf,MAX(100*maxcellpersurf,1024));
-}
-
-/* ----------------------------------------------------------------------
-   request N-length vector from csubs
-   called by ReadRestart
-------------------------------------------------------------------------- */
-
-int *Grid::csubs_request(int n)
-{
-  int *ptr = csubs->vget();
-  cpsurf->vgot(n);
-  return ptr;
-}
-
-/* ----------------------------------------------------------------------
    map surf elements into owned grid cells
 ------------------------------------------------------------------------- */
 
@@ -564,9 +531,6 @@ void Grid::surf2grid_split(int subflag, int outflag)
     }
   }
 
-  //double t4 = MPI_Wtime();
-  //printf("TIME %g\n",t4-t3);
-
   // clean up
 
   if (dim == 3) delete cut3d;
@@ -856,6 +820,40 @@ void Grid::assign_split_cell_particles(int icell)
   cinfo[icell].first = -1;
 }
 
+/* ----------------------------------------------------------------------
+   re-allocate page data structs to hold variable-length surf and cell info
+   used for mapping surfaces to grid cells
+------------------------------------------------------------------------- */
+
+void Grid::allocate_surf_arrays()
+{
+  delete csurfs;
+  delete csplits;
+  delete csubs;
+
+  csurfs = new MyPage<int>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
+  csplits = new MyPage<int>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
+  csubs = new MyPage<int>(maxsplitpercell,128);
+}
+
+void Grid::allocate_cell_arrays()
+{
+  delete cpsurf;
+  cpsurf = new MyPage<cellint>(maxcellpersurf,MAX(100*maxcellpersurf,1024));
+}
+
+/* ----------------------------------------------------------------------
+   request N-length vector from csubs
+   called by ReadRestart
+------------------------------------------------------------------------- */
+
+int *Grid::csubs_request(int n)
+{
+  int *ptr = csubs->vget();
+  cpsurf->vgot(n);
+  return ptr;
+}
+
 // ----------------------------------------------------------------------
 // private class methods
 // ----------------------------------------------------------------------
@@ -945,38 +943,39 @@ int Grid::rendezvous_surflist(int n, char *inbuf,
 
 int Grid::find_overlaps(int isurf, cellint *list)
 {
+  double slo[3],shi[3];
+
   int ncell = 0;
 
   if (domain->dimension == 2) {
     Surf::Line *line = &surf->lines[isurf];
 
-    double sbox[2][2];
-    sbox[0][0] = MIN(line->p1[0],line->p2[0]);
-    sbox[0][1] = MIN(line->p1[1],line->p2[1]);
-    sbox[1][0] = MAX(line->p1[0],line->p2[0]);
-    sbox[1][1] = MAX(line->p1[1],line->p2[1]);
+    slo[0] = MIN(line->p1[0],line->p2[0]);
+    slo[1] = MIN(line->p1[1],line->p2[1]);
+    shi[0] = MAX(line->p1[0],line->p2[0]);
+    shi[1] = MAX(line->p1[1],line->p2[1]);
     
-    recurse2d(isurf,sbox,0,ncell,list);
+    recurse2d(isurf,slo,shi,0,ncell,list);
 
   } else {
     Surf::Tri *tri = &surf->tris[isurf];
 
     double sbox[2][3];
-    sbox[0][0] = MIN(tri->p1[0],tri->p2[0]);
-    sbox[0][0] = MIN(tri->p3[0],sbox[0][0]);
-    sbox[0][1] = MIN(tri->p1[1],tri->p2[1]);
-    sbox[0][1] = MIN(tri->p3[1],sbox[0][1]);
-    sbox[0][2] = MIN(tri->p1[2],tri->p2[2]);
-    sbox[0][2] = MIN(tri->p3[2],sbox[0][2]);
+    slo[0] = MIN(tri->p1[0],tri->p2[0]);
+    slo[0] = MIN(tri->p3[0],slo[0]);
+    slo[1] = MIN(tri->p1[1],tri->p2[1]);
+    slo[1] = MIN(tri->p3[1],slo[1]);
+    slo[2] = MIN(tri->p1[2],tri->p2[2]);
+    slo[2] = MIN(tri->p3[2],slo[2]);
 
-    sbox[1][0] = MAX(tri->p1[0],tri->p2[0]);
-    sbox[1][0] = MAX(tri->p3[0],sbox[1][0]);
-    sbox[1][1] = MAX(tri->p1[1],tri->p2[1]); 
-    sbox[1][1] = MAX(tri->p3[1],sbox[1][1]);
-    sbox[1][2] = MAX(tri->p1[2],tri->p2[2]);
-    sbox[1][2] = MAX(tri->p3[2],sbox[1][2]);
+    shi[0] = MAX(tri->p1[0],tri->p2[0]);
+    shi[0] = MAX(tri->p3[0],shi[0]);
+    shi[1] = MAX(tri->p1[1],tri->p2[1]); 
+    shi[1] = MAX(tri->p3[1],shi[1]);
+    shi[2] = MAX(tri->p1[2],tri->p2[2]);
+    shi[2] = MAX(tri->p3[2],shi[2]);
     
-    recurse3d(isurf,sbox,0,ncell,list);
+    recurse3d(isurf,slo,shi,0,ncell,list);
   }
 
   return ncell;
@@ -987,13 +986,13 @@ int Grid::find_overlaps(int isurf, cellint *list)
    called by surfgrid() via find_overlaps()
 ------------------------------------------------------------------------- */
 
-void Grid::recurse2d(int iline, double sbox[][2], int iparent, 
+void Grid::recurse2d(int iline, double *slo, double *shi, int iparent, 
                      int &n, cellint *list)
 {
   int ix,iy,ichild,newparent,index,parentflag,overlap;
   cellint idchild;
-  double boundary;
-  double newsbox[2][2];
+  double celledge;
+  double newslo[2],newshi[2];
   double clo[3],chi[3];
 
   double *p1 = surf->lines[iline].p1;
@@ -1005,24 +1004,27 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
   int nx = p->nx;
   int ny = p->ny;
 
-  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by sbox
+  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by slo/shi
   // overlap means point is inside grid cell or touches boundary
   // same equation as in Grid::id_find_child()
 
-  int ilo = static_cast<int> ((sbox[0][0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int ihi = static_cast<int> ((sbox[1][0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int jlo = static_cast<int> ((sbox[0][1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int jhi = static_cast<int> ((sbox[1][1]-plo[1]) * ny/(phi[1]-plo[1]));
+  int ilo = static_cast<int> ((slo[0]-plo[0]) * nx/(phi[0]-plo[0]));
+  int ihi = static_cast<int> ((shi[0]-plo[0]) * nx/(phi[0]-plo[0]));
+  int jlo = static_cast<int> ((slo[1]-plo[1]) * ny/(phi[1]-plo[1]));
+  int jhi = static_cast<int> ((shi[1]-plo[1]) * ny/(phi[1]-plo[1]));
 
-  // decrement indices by 1 if sbox touches or slightly overlaps lower boundary
-  // should be no need to increment if touching upper boundary
-  //   since ihi,jhi will then already index cell beyond boundary
+  // augment indices if sbox touches or slightly overlaps cell edges
   // same equation as in Grid::id_child_lohi()
 
-  boundary = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (boundary >= sbox[0][0]) ilo--;
-  boundary = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (boundary >= sbox[0][1]) jlo--;
+  celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
+  if (slo[0] <= celledge) ilo--;
+  celledge = plo[0] + (ihi+1)*(phi[0]-plo[0])/nx;
+  if (shi[0] >= celledge) ihi++;
+
+  celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
+  if (slo[1] <= celledge) jlo--;
+  celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
+  if (shi[1] >= celledge) jhi++;
 
   // insure each index is between 0 and N-1 inclusive
 
@@ -1038,7 +1040,7 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
   // loop over range of grid cells between ij lo/hi inclusive
   // if cell is a child cell, compute overlap via surf2grid_one()
   // else it is a parent cell, so recurse
-  // set newsbox to intersection of sbox with new parent cell
+  // set newslo/newshi to intersection of slo/shi with new parent cell
 
   for (iy = jlo; iy <= jhi; iy++) {
     for (ix = ilo; ix <= ihi; ix++) {
@@ -1053,11 +1055,11 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
       if (parentflag) {
         index = (*hash)[idchild];
         newparent = -index-1;
-        newsbox[0][0] = MAX(sbox[0][0],clo[0]);
-        newsbox[0][1] = MAX(sbox[0][1],clo[1]);
-        newsbox[1][0] = MIN(sbox[1][0],chi[0]);
-        newsbox[1][1] = MIN(sbox[1][1],chi[1]);
-        recurse2d(iline,newsbox,newparent,n,list);
+        newslo[0] = MAX(slo[0],clo[0]);
+        newslo[1] = MAX(slo[1],clo[1]);
+        newshi[0] = MIN(shi[0],chi[0]);
+        newshi[1] = MIN(shi[1],chi[1]);
+        recurse2d(iline,newslo,newshi,newparent,n,list);
       } else { 
         overlap = cut2d->surf2grid_one(p1,p2,clo,chi);
         if (!overlap) continue;
@@ -1073,13 +1075,13 @@ void Grid::recurse2d(int iline, double sbox[][2], int iparent,
    called by surfgrid() via find_overlaps()
 ------------------------------------------------------------------------- */
 
-void Grid::recurse3d(int itri, double sbox[][3], int iparent, 
+void Grid::recurse3d(int itri, double *slo, double *shi, int iparent, 
                      int &n, cellint *list)
 {
   int ix,iy,iz,ichild,newparent,index,parentflag,overlap;
   cellint idchild;
-  double boundary;
-  double newsbox[2][3];
+  double celledge;
+  double newslo[3],newshi[3];
   double clo[3],chi[3];
 
   double *p1 = surf->tris[itri].p1;
@@ -1093,28 +1095,34 @@ void Grid::recurse3d(int itri, double sbox[][3], int iparent,
   int ny = p->ny;
   int nz = p->nz;
 
-  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by sbox
+  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by slo/shi
   // overlap means point is inside grid cell or touches boundary
   // same equation as in Grid::id_find_child()
 
-  int ilo = static_cast<int> ((sbox[0][0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int ihi = static_cast<int> ((sbox[1][0]-plo[0]) * nx/(phi[0]-plo[0]));
-  int jlo = static_cast<int> ((sbox[0][1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int jhi = static_cast<int> ((sbox[1][1]-plo[1]) * ny/(phi[1]-plo[1]));
-  int klo = static_cast<int> ((sbox[0][2]-plo[2]) * nz/(phi[2]-plo[2]));
-  int khi = static_cast<int> ((sbox[1][2]-plo[2]) * nz/(phi[2]-plo[2]));
+  int ilo = static_cast<int> ((slo[0]-plo[0]) * nx/(phi[0]-plo[0]));
+  int ihi = static_cast<int> ((shi[0]-plo[0]) * nx/(phi[0]-plo[0]));
+  int jlo = static_cast<int> ((slo[1]-plo[1]) * ny/(phi[1]-plo[1]));
+  int jhi = static_cast<int> ((shi[1]-plo[1]) * ny/(phi[1]-plo[1]));
+  int klo = static_cast<int> ((slo[2]-plo[2]) * nz/(phi[2]-plo[2]));
+  int khi = static_cast<int> ((shi[2]-plo[2]) * nz/(phi[2]-plo[2]));
   
-  // decrement indices by 1 if sbox touches or slightly overlaps lower boundary
-  // should be no need to increment if touching upper boundary
-  //   since ihi,jhi will then already index cell beyond boundary
+  // augment indices if sbox touches or slightly overlaps cell edges
   // same equation as in Grid::id_child_lohi()
 
-  boundary = plo[0] + ilo*(phi[0]-plo[0])/nx;
-  if (boundary >= sbox[0][0]) ilo--;
-  boundary = plo[1] + jlo*(phi[1]-plo[1])/ny;
-  if (boundary >= sbox[0][1]) jlo--;
-  boundary = plo[2] + klo*(phi[2]-plo[2])/nz;
-  if (boundary >= sbox[0][2]) klo--;
+  celledge = plo[0] + ilo*(phi[0]-plo[0])/nx;
+  if (slo[0] <= celledge) ilo--;
+  celledge = plo[0] + (ihi+1)*(phi[0]-plo[0])/nx;
+  if (shi[0] >= celledge) ihi++;
+
+  celledge = plo[1] + jlo*(phi[1]-plo[1])/ny;
+  if (slo[1] <= celledge) jlo--;
+  celledge = plo[1] + (jhi+1)*(phi[1]-plo[1])/ny;
+  if (shi[1] >= celledge) jhi++;
+
+  celledge = plo[2] + klo*(phi[2]-plo[2])/nz;
+  if (slo[2] <= celledge) klo--;
+  celledge = plo[2] + (khi+1)*(phi[2]-plo[2])/nz;
+  if (shi[2] >= celledge) khi++;
 
   // insure each index is between 0 and N-1 inclusive
 
@@ -1134,7 +1142,7 @@ void Grid::recurse3d(int itri, double sbox[][3], int iparent,
   // loop over range of grid cells between ij lo/hi inclusive
   // if cell is a child cell, compute overlap via surf2grid_one()
   // else it is a parent cell, so recurse
-  // set newsbox to intersection of sbox with new parent cell
+  // set newslo/newshi to intersection of slo/shi with new parent cell
 
   for (iz = klo; iz <= khi; iz++) {
     for (iy = jlo; iy <= jhi; iy++) {
@@ -1150,13 +1158,13 @@ void Grid::recurse3d(int itri, double sbox[][3], int iparent,
         if (parentflag) {
           index = (*hash)[idchild];
           newparent = -index-1;
-          newsbox[0][0] = MAX(sbox[0][0],clo[0]);
-          newsbox[0][1] = MAX(sbox[0][1],clo[1]);
-          newsbox[0][2] = MAX(sbox[0][2],clo[2]);
-          newsbox[1][0] = MIN(sbox[1][0],chi[0]);
-          newsbox[1][1] = MIN(sbox[1][1],chi[1]);
-          newsbox[1][2] = MIN(sbox[1][2],chi[2]);
-          recurse3d(itri,newsbox,newparent,n,list);
+          newslo[0] = MAX(slo[0],clo[0]);
+          newslo[1] = MAX(slo[1],clo[1]);
+          newslo[2] = MAX(slo[2],clo[2]);
+          newshi[0] = MIN(shi[0],chi[0]);
+          newshi[1] = MIN(shi[1],chi[1]);
+          newshi[2] = MIN(shi[2],chi[2]);
+          recurse3d(itri,newslo,newshi,newparent,n,list);
         } else { 
           overlap = cut3d->surf2grid_one(p1,p2,p3,clo,chi);
           if (!overlap) continue;
