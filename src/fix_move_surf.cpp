@@ -167,6 +167,7 @@ void FixMoveSurf::end_of_step()
   }
 
   grid->clear_surf();
+
   grid->surf2grid(1,0);
 
   // re-setup owned and ghost cell info

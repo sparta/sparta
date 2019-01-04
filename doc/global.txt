@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfgrid} or {surfmax} or {cellmax} or {splitmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -25,8 +25,16 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfmax} or {
   {gravity} values = mag ex ey ez
     mag = magnitude of acceleration due to gravity (acceleration units)
     ex,ey,ez = direction vector that gravity acts in
+  {surfgrid} value = combo or percell or persurf
+    percell = loop over my cells and check every surf
+    persurf = loop over my surfs and cells they overlap
+    combo = choose percell or persurf based on surface element and proc count
   {surfmax} value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
+  {cellmax} value = Ncell
+    Ncell = max # of grid cells a single surf can overlap
+  {splitmax} value = Nsplit
+    Nsplit = max # of sub-cells one grid cell can be split into by surface elements
   {surfpush} value(s) = no/yes or slo shi svalue
     no = do not push surface element points near cell surface
     yes = push surface element points near cell surface if necessary
@@ -89,11 +97,43 @@ keyword.  Its direction of action is set as (ex,ex,ez).  The direction
 does not have to be a unit vector.  If the magnitude is set to 0.0, no
 acceleration term is included, which is the default.
 
+:line
+
+The {surfgrid} keyword determines what algorithm is used to enumerate
+the overlaps (intersections) between grid cells and surface elements
+(lines in 2d, triangles in 3d).  The possible settings are {percell},
+{persurf}, and {combo}.  The {combo} setting is the default and will
+choose between a {percell} or {persurf} algorithm based on the number
+of surface elements and processor count.  If there are more processors
+than surface elements, the {percell} algorithm is used.  Otherwise the
+{persurf} algorithm is used.  The {percell} algorithm loops over the
+subset of grid cells each processor owns.  All the surface elements
+are tested for overlap with each owned grid cell.  The {persurf}
+algorithm loops over a 1/P fraction of surface elements on each
+processor.  The bounding box around each surface is used to find all
+grid cells it possibly overlaps.  For large numbers of surface
+elements or processors, the {persurf} algorithm is generally faster.
+
 The {surfmax} keyword determines the maximum number of surface
 elements (lines in 2d, triangles in 3d) that can overlap a single grid
 cell.  The default is 100, which should be large enough for any
-simulation, unless you define very coarse grid cells (relative to the
-size of surface elements).
+simulation, unless you define very coarse grid cells relative to the
+size of surface elements they contain.
+
+The {cellmax} keyword determines the maximum number of grid cells that
+a single surface element (lines in 2d, tringles in 3d) can overlap.
+This keyword is only used if the {persurf} algorithm defined by the
+{surfgrid} keyword is invoked.  The default is 100, which should be
+large enough for most simulations, unless you define one or more very
+large surface elements relative to the size of grid cells they
+intersect.
+
+The {splitmax} keyword determines the maximum number of sub-cells a
+single grid cell can be split into as a result of its intersection
+with multiple surface elements (lines in 2d, triangles in 3d).  The
+default is 10, which should be large enough for any simulation, unless
+you embed a complex-shaped surface object into one or a very few grid
+cells.
 
 :line
 
@@ -314,6 +354,7 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 [Default:]
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfmax = 100, surfpush
-= yes, gridcut = -1.0, comm/sort = no, comm/style = neigh, weight =
-cell none, particle/reorder = 0, mem/limit = 0.
+0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfgrid = combo,
+surfmax = 100, cellmax = 100, splitmax = 10, surfpush = yes, gridcut =
+-1.0, comm/sort = no, comm/style = neigh, weight = cell none,
+particle/reorder = 0, mem/limit = 0.

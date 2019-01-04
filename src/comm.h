@@ -41,6 +41,9 @@ class Comm : protected Pointers {
   int irregular_uniform(int, int *, char *, int, char **);
   void ring(int, int, void *, int, void (*)(int, char *), 
             void *, int self = 1);
+  int rendezvous(int, int *, char *, int, 
+                 int (*)(int, char *, int *&, char *&, void *), 
+                 char *&, int, void *);
 
  protected:
   class Irregular *iparticle,*igrid,*iuniform;
