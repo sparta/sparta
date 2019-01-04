@@ -44,7 +44,11 @@ enum{COMBO,PERCELL,PERSURF};            // several files
 // operations for surfaces in grid cells
 
 /* ----------------------------------------------------------------------
-   map surf elements into owned grid cells
+   map surf elements to grid cells
+   via one of two algorithms
+   cell_alg = original, loop over my cells, check all surfs within bbox
+   surf_alg = Jan19, loop over N/P surfs, find small set of cells each overlaps,
+              perform rendezvous comm to convert cells per surf to surfs per cell
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid(int subflag, int outflag)
@@ -64,11 +68,14 @@ void Grid::surf2grid(int subflag, int outflag)
   else if (surfgrid_algorithm == PERSURF) 
     surf2grid_surf_algorithm(subflag,outflag);
   
+  // now have list of surfs that overlap each cell
+  // compute cut volume and split info for each cell
+
   surf2grid_split(subflag,outflag);
 }
 
 /* ----------------------------------------------------------------------
-   map surf elements into owned grid cells
+   find surfs that overlap owned grid cells
    algorithm: for each of my cells, check all surfs
    in cells: set nsurf, csurfs
    in cinfo: set type=OVERLAP for cells with surfs
@@ -141,16 +148,17 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   if (outflag) {
     MPI_Barrier(world);
     t2 = MPI_Wtime();
-    if (me == 0) printf("  surf2grid via cells CPU = %g secs\n",t2-t1);
+    tmap = t2-t1;
+    trvous = 0.0;
   }
 
   if (outflag) surf2grid_stats();
 }
 
 /* ----------------------------------------------------------------------
-   map surf elements into owned grid cells
-   algorithm: for each of my surfs, find overlapping cells via recursive grid walk
-     rendezvous comm to convert list of cells per surf to list of surfs per cell
+   find surfs that overlap owned grid cells
+   algorithm: for each of my N/P surfs, find small set of overlapping cells
+     use rendezvous algorithm to convert cells per surf to surfs per cell
    in cells: set nsurf, csurfs
    in cinfo: set type=OVERLAP for cells with surfs
 ------------------------------------------------------------------------- */
@@ -346,8 +354,8 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   if (outflag) {
     MPI_Barrier(world);
     t3 = MPI_Wtime();
-    if (me == 0) printf("  surf2grid via surfs CPU = %g secs, 2 parts: %g %g\n",
-                        t3-t1,(t2-t1)/(t3-t1),(t3-t2)/(t3-t1));
+    tmap = t2-t1;
+    trvous = t3-t2;
   }
 
   if (outflag) surf2grid_stats();
@@ -369,6 +377,7 @@ void Grid::surf2grid_split(int subflag, int outflag)
 {
   int i,isub,nsurf,nsplitone,xsub;
   int *surfmap,*ptr;
+  double t1,t2;
   double *lo,*hi,*vols;
   double xsplit[3];
   ChildCell *c;
@@ -376,8 +385,10 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
   int dim = domain->dimension;
 
-  //double t2 = MPI_Wtime();
-  //printf("TIME %g\n",t2-t1);
+  if (outflag) {
+    MPI_Barrier(world);
+    t1 = MPI_Wtime();
+  }
 
   // compute cut volume and possible split of each grid cell by surfs
   // decrement nunsplitlocal if convert an unsplit cell to split cell
@@ -476,9 +487,6 @@ void Grid::surf2grid_split(int subflag, int outflag)
                "set global splitmax");
   }
 
-  //double t3 = MPI_Wtime();
-  //printf("TIME %g\n",t3-t2);
-
   // stats on pushed cells and unmarked corner points in OVERLAP cells
 
   if (outflag) {
@@ -535,6 +543,12 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
   if (dim == 3) delete cut3d;
   else delete cut2d;
+
+  if (outflag) {
+    MPI_Barrier(world);
+    t2 = MPI_Wtime();
+    tsplit = t2-t1;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -937,8 +951,8 @@ int Grid::rendezvous_surflist(int n, char *inbuf,
 
 /* ----------------------------------------------------------------------
    enumerate intersections of isurf with any child grid cell
-   do this by recursively walking down grid tree
-   called by surfgrid()
+   recurse 2d/3d do this by recursively walking down the grid tree
+   called by surf2grid_surf_algorithm()
 ------------------------------------------------------------------------- */
 
 int Grid::find_overlaps(int isurf, cellint *list)
@@ -983,7 +997,12 @@ int Grid::find_overlaps(int isurf, cellint *list)
 
 /* ----------------------------------------------------------------------
    enumerate intersections of isurf with any child grid cell in iparent cell
-   called by surfgrid() via find_overlaps()
+   called by surf2grid_surf_algorithm() via find_overlaps()
+   iline = which surf element
+   slo/shi = bounding box around line segment
+   iparent = current parent cell
+   n, list = growing list of cell IDs this line overlaps with
+   cut2d->surf2grid_one() is used to determine actual overlap
 ------------------------------------------------------------------------- */
 
 void Grid::recurse2d(int iline, double *slo, double *shi, int iparent, 
@@ -1004,7 +1023,7 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
   int nx = p->nx;
   int ny = p->ny;
 
-  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by slo/shi
+  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by surf bbox
   // overlap means point is inside grid cell or touches boundary
   // same equation as in Grid::id_find_child()
 
@@ -1072,7 +1091,12 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
 
 /* ----------------------------------------------------------------------
    enumerate intersections of isurf with any child grid cell in iparent cell
-   called by surfgrid() via find_overlaps()
+   called by surf2grid_surf_algorithm() via find_overlaps()
+   itri = which surf element
+   slo/shi = bounding box around triangle
+   iparent = current parent cell
+   n, list = growing list of cell IDs this tri overlaps with
+   cut2d->surf2grid_one() is used to determine actual overlap
 ------------------------------------------------------------------------- */
 
 void Grid::recurse3d(int itri, double *slo, double *shi, int iparent, 
@@ -1095,7 +1119,7 @@ void Grid::recurse3d(int itri, double *slo, double *shi, int iparent,
   int ny = p->ny;
   int nz = p->nz;
 
-  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by slo/shi
+  // ilo,ihi jlo,jhi = indices for range of grid cells overlapped by surf bbox
   // overlap means point is inside grid cell or touches boundary
   // same equation as in Grid::id_find_child()
 
@@ -1177,8 +1201,8 @@ void Grid::recurse3d(int itri, double *slo, double *shi, int iparent,
 }
 
 /* ----------------------------------------------------------------------
-   comparison function invoked by qsort() called by surf2grid()
-   when sorting the csurfs list of a single cell
+   comparison function invoked by qsort() called by surf2grid_surf_algorithm()
+   used to sort the csurfs list of a single cell
    this is not a class method
 ------------------------------------------------------------------------- */
 

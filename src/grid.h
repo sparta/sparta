@@ -51,6 +51,8 @@ class Grid : protected Pointers {
   int *bitmask;             // one-bit mask for each group
   int *inversemask;         // inverse mask for each group
 
+  double tmap,trvous,tsplit;  // timing breakdown
+
   int copy,copymode;    // 1 if copy of class (prevents deallocation of
                         //  base class when child copy is destroyed)
 
