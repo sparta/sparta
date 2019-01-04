@@ -94,6 +94,8 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
 
 ComputeSurf::~ComputeSurf()
 {
+  if (copy || copymode) return;
+
   delete [] which;
   memory->destroy(glob2loc);
   memory->destroy(loc2glob);

@@ -96,6 +96,8 @@ CollideVSSKokkos::~CollideVSSKokkos()
   grid_kk_copy.uncopy();
   react_kk_copy.uncopy();
 
+  memoryKK->destroy_kokkos(k_dellist,dellist);
+
 #ifdef SPARTA_KOKKOS_EXACT
   rand_pool.destroy();
   if (random_backup)
@@ -366,7 +368,11 @@ void CollideVSSKokkos::collisions()
     k_dellist.modify<DeviceType>();
     k_dellist.sync<SPAHostType>();
     ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+#ifndef SPARTA_KOKKOS_EXACT
     particle_kk->compress_migrate(ndelete,dellist);
+#else
+    particle->compress_reactions(ndelete,dellist);
+#endif
   }
   if (react) {
     particle->sorted = 0;
@@ -458,6 +464,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   if (react && !sparta->kokkos->collide_retry_flag)
   {
+    maxdelete = MAX(maxdelete,DELTADELETE);
     if (d_dellist.extent(0) < maxdelete) {
       memoryKK->destroy_kokkos(k_dellist,dellist);
       memoryKK->grow_kokkos(k_dellist,dellist,maxdelete*sparta->kokkos->collide_extra,"collide:dellist");
@@ -804,8 +811,9 @@ void CollideVSSKokkos::setup_collision_kokkos(Particle::OnePart *ip, Particle::O
   precoln.ave_vibdof = 0.5 * (d_species[isp].vibdof + d_species[jsp].vibdof);
   precoln.ave_dof = (precoln.ave_rotdof  + precoln.ave_vibdof)/2.;
 
-  precoln.mr = d_species[isp].mass * d_species[jsp].mass /
-    (d_species[isp].mass + d_species[jsp].mass);
+  double imass = precoln.imass = d_species[isp].mass;
+  double jmass = precoln.jmass = d_species[jsp].mass;
+  precoln.mr = imass * jmass / (imass+jmass);
 
   precoln.etrans = 0.5 * precoln.mr * precoln.vr2;
   precoln.erot = ip->erot + jp->erot;
