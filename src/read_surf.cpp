@@ -465,16 +465,18 @@ void ReadSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
 
-  // map surfs to grid cells then error check
-  // check done on per-grid-cell basis, too expensive to do globally
+  // map surfs to grid cells
 
   grid->surf2grid(1);
 
-  if (dim == 2) surf->check_point_near_surf_2d();
-  else surf->check_point_near_surf_3d();
-
   MPI_Barrier(world);
   double time5 = MPI_Wtime();
+
+  // error check on any points too near other surfs
+  // done on per-grid-cell basis, too expensive to do globally
+
+  if (dim == 2) surf->check_point_near_surf_2d();
+  else surf->check_point_near_surf_3d();
 
   // re-setup grid ghosts and neighbors
 
@@ -551,6 +553,7 @@ void ReadSurf::command(int narg, char **arg)
   double time8 = MPI_Wtime();
 
   double time_total = time6-time1;
+  double time_s2g = time5-time4;
 
   if (comm->me == 0) {
     if (screen) {
@@ -563,7 +566,12 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
+      fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
+      fprintf(screen,"  map/rvous/split percent = %g %g %g\n",
+              100.0*grid->tmap/time_s2g,100.0*grid->trvous/time_s2g,
+              100.0*grid->tsplit/time_s2g);
     }
+
     if (logfile) {
       if (particle->exist)
 	fprintf(logfile,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
@@ -574,6 +582,10 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
+      fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
+      fprintf(logfile,"  map/rvous/split percent = %g %g %g\n",
+              100.0*grid->tmap/time_s2g,100.0*grid->trvous/time_s2g,
+              100.0*grid->tsplit/time_s2g);
     }
   }
 }

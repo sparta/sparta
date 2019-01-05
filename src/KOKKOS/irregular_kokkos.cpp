@@ -373,9 +373,6 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   if (sendmax*nbytes > bufmax) {
     bufmax = sendmax*nbytes;
     d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
-
-    if (!sparta->kokkos->gpu_direct_flag)
-      h_buf = HAT::t_char_1d(Kokkos::view_alloc("irregular:d_buf:mirror",Kokkos::WithoutInitializing),bufmax);
   }
 
   // send each message
@@ -395,6 +392,14 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
 
   for (int isend = 0; isend < nsend; isend++) {
     count = num_send[isend];
+
+    if (!sparta->kokkos->gpu_direct_flag) {
+
+      // allocate exact buffer size to reduce GPU <--> CPU memory transfer
+
+      d_buf = DAT::t_char_1d(Kokkos::view_alloc("irregular:buf",Kokkos::WithoutInitializing),count*nbytes);
+      h_buf = HAT::t_char_1d(Kokkos::view_alloc("irregular:buf:mirror",Kokkos::WithoutInitializing),count*nbytes);
+    }
 
     copymode = 1;
     if (sparta->kokkos->need_atomics)

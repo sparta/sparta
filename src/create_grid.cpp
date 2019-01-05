@@ -276,13 +276,13 @@ void CreateGrid::command(int narg, char **arg)
           for (m = 0; m < ntotal; m++) {
             ix = m % nx;
             iy = (m / nx) % ny;
-            iz = m / (nx*ny);
-            if (order == XYZ) nth = (cellint) iz*nx*ny + iy*nx + ix;
-            else if (order == XZY) nth = (cellint) iy*nx*nz + iz*nx + ix;
-            else if (order == YXZ) nth = (cellint) iz*ny*nx + ix*ny + iy;
-            else if (order == YZX) nth = (cellint) ix*ny*nz + iz*ny + iy;
-            else if (order == ZXY) nth = (cellint) iy*nz*nx + ix*nz + iz;
-            else if (order == ZYX) nth = (cellint) ix*nz*ny + iy*nz + iz;
+            iz = m / ((cellint) nx*ny);
+            if (order == XYZ) nth = (cellint) iz*nx*ny + (cellint) iy*nx + ix;
+            else if (order == XZY) nth = (cellint) iy*nx*nz + (cellint) iz*nx + ix;
+            else if (order == YXZ) nth = (cellint) iz*ny*nx + (cellint) ix*ny + iy;
+            else if (order == YZX) nth = (cellint) ix*ny*nz + (cellint) iz*ny + iy;
+            else if (order == ZXY) nth = (cellint) iy*nz*nx + (cellint) ix*nz + iz;
+            else if (order == ZYX) nth = (cellint) ix*nz*ny + (cellint) iy*nz + iz;
             nth++;
             if (bstyle == STRIDE) proc = nth % nprocs;
             else proc = static_cast<int> (1.0*nth/ntotal * nprocs);
@@ -310,7 +310,7 @@ void CreateGrid::command(int narg, char **arg)
           for (iz = izstart; iz < izstop; iz++) {
             for (iy = iystart; iy < iystop; iy++) {
               for (ix = ixstart; ix < ixstop; ix++) {
-                m = (cellint) iz*nx*ny + iy*nx + ix;
+                m = (cellint) iz*nx*ny + (cellint) iy*nx + ix;
                 m++;
                 idchild = idparent | (m << nbits);
                 grid->id_child_lohi(iparent,m,lo,hi);
@@ -534,9 +534,9 @@ void CreateGrid::procs2grid(int nx, int ny, int nz, int &px, int &py, int &pz)
   // area[0] = xy, area[1] = xz, area[2] = yz
 
   double area[3];
-  area[0] = nx*ny;
-  area[1] = nx*nz;
-  area[2] = ny*nz;
+  area[0] = (bigint) nx*ny;
+  area[1] = (bigint) nx*nz;
+  area[2] = (bigint) ny*nz;
 
   double bestsurf = 2.0 * (area[0]+area[1]+area[2]);
 

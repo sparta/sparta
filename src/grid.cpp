@@ -30,13 +30,16 @@ using namespace MathConst;
 #define BIG 1.0e20
 #define MAXGROUP 32
 
-// default value, can be overridden by global command
+// default values, can be overridden by global command
 
-#define MAXSURFPERCELL 100
+#define MAXSURFPERCELL  100
+#define MAXCELLPERSURF  100
+#define MAXSPLITPERCELL 10
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Surf
+enum{COMBO,PERCELL,PERSURF};                    // several files
 
 // cell type = OUTSIDE/INSIDE/OVERLAP if entirely outside/inside surfs
 //   or has any overlap with surfs including grazing or touching
@@ -92,9 +95,15 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
   maxbits = 8*sizeof(cellint)-1;
 
+  surfgrid_algorithm = COMBO;
   maxsurfpercell = MAXSURFPERCELL;
+  maxsplitpercell = MAXSPLITPERCELL;
   csurfs = NULL; csplits = NULL; csubs = NULL;
   allocate_surf_arrays();
+
+  maxcellpersurf = MAXCELLPERSURF;
+  cpsurf = NULL;
+  allocate_cell_arrays();
 
   neighshift[XLO] = 0;
   neighshift[XHI] = 3;
@@ -139,6 +148,7 @@ Grid::~Grid()
   delete csurfs;
   delete csplits;
   delete csubs;
+  delete cpsurf;
   delete hash;
 }
 

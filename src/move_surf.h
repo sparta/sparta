@@ -24,11 +24,9 @@ CommandStyle(move_surf,MoveSurf)
 #include "stdio.h"
 #include "pointers.h"
 #include "surf.h"
-#include "hash.h"
 #include "hash3.h"
 
 namespace SPARTA_NS {
-
 
 class MoveSurf : protected Pointers {
  public:

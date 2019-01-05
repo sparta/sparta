@@ -29,17 +29,18 @@ namespace SPARTA_NS {
 class ComputeSurf : public Compute {
  public:
   ComputeSurf(class SPARTA *, int, char **);
+  ComputeSurf(class SPARTA* sparta) : Compute(sparta) {}
   ~ComputeSurf();
-  void init();
+  virtual void init();
   void compute_per_surf();
-  void clear();
-  void surf_tally(int, Particle::OnePart *, 
-                  Particle::OnePart *, Particle::OnePart *);
+  virtual void clear();
+  virtual void surf_tally(int, Particle::OnePart *, 
+                          Particle::OnePart *, Particle::OnePart *);
   double *normptr(int);
-  int surfinfo(int *&);
+  virtual int surfinfo(int *&);
   bigint memory_usage();
 
- private:
+ protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
   int *which;
 

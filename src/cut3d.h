@@ -30,6 +30,7 @@ class Cut3d : protected Pointers {
   ~Cut3d();
   int surf2grid(cellint, double *, double *, int *, int);
   int surf2grid_list(cellint, double *, double *, int, int *, int *, int);
+  int surf2grid_one(double *, double *, double *, double *, double *);
   int split(cellint, double *, double *, int, int *,
             double *&, int *, int *, int &, double *);
   int clip_external(double *, double *, double *, 

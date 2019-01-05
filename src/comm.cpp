@@ -620,3 +620,65 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
   memory->destroy(buf);
   memory->destroy(bufcopy);
 }
+
+/* ----------------------------------------------------------------------
+   rendezvous communication operation
+   three stages:
+     first Irregular converts inbuf from caller decomp to rvous decomp
+     callback operates on data in rendevous decomp
+     last Irregular converts outbuf from rvous decomp back to caller decomp
+   inputs:
+     n = # of input datums
+     proclist = proc that owns each input datum in rendezvous decomposition
+     inbuf = list of input datums
+     insize = size in bytes of each input datum
+     callback = caller function to invoke in rendezvous decomposition
+   outputs:
+     nout = # of output datums (function return)
+     outbuf = list of output datums
+     outsize = size in bytes of each output datum
+------------------------------------------------------------------------- */
+
+int Comm::rendezvous(int n, int *proclist, char *inbuf, int insize,
+                     int (*callback)(int, char *, int *&, char *&, void *),
+                     char *&outbuf, int outsize, void *ptr)
+{
+  // comm inbuf from caller decomposition to rendezvous decomposition
+
+  Irregular *irregular = new Irregular(sparta);
+
+  int n_rvous = irregular->create_data_uniform(n,proclist);  // add sort
+  char *inbuf_rvous = (char *) memory->smalloc((bigint) n_rvous*insize,
+                                               "rendezvous:inbuf_rvous");
+  irregular->exchange_uniform(inbuf,insize,inbuf_rvous);
+
+  delete irregular;
+
+  // peform rendezvous computation via callback()
+  // callback() allocates/populates proclist_rvous and outbuf_rvous
+
+  int *proclist_rvous;
+  char *outbuf_rvous;
+
+  int nout_rvous = 
+    callback(n_rvous,inbuf_rvous,proclist_rvous,outbuf_rvous,ptr);
+
+  memory->sfree(inbuf_rvous);
+
+  // comm outbuf from rendezvous decomposition back to caller
+  // caller will free outbuf
+
+  irregular = new Irregular(sparta);
+  
+  int nout = irregular->create_data_uniform(nout_rvous,proclist_rvous);
+  outbuf = (char *) memory->smalloc((bigint) nout*outsize,"rendezvous:outbuf");
+  irregular->exchange_uniform(outbuf_rvous,outsize,outbuf);
+  
+  delete irregular;
+  memory->destroy(proclist_rvous);
+  memory->sfree(outbuf_rvous);
+
+  // return number of datums
+
+  return nout;
+}

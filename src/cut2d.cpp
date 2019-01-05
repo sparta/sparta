@@ -94,8 +94,8 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
     if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
     if (cliptest(x1,x2)) {
-      if (nsurf == max) return -1;
-      surfs[nsurf++] = m;
+      if (nsurf < max) surfs[nsurf] = m;
+      nsurf++;
     }
   }
 
@@ -138,12 +138,28 @@ int Cut2d::surf2grid_list(cellint id_caller,
     if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
     if (cliptest(x1,x2)) {
-      if (nsurf == max) return -1;
-      surfs[nsurf++] = m;
+      if (nsurf < max) surfs[nsurf] = m;
+      nsurf++;
     }
   }
 
   return nsurf;
+}
+
+/* ----------------------------------------------------------------------
+   compute intersections of a grid cell with a single surf
+   p,q = endpoints of surf
+   lo,hi = grid cell corner points
+   return 1 if intersects, 0 if not
+   called by Grid::surf2grid2
+------------------------------------------------------------------------- */
+
+int Cut2d::surf2grid_one(double *p, double *q, 
+                         double *lo_caller, double *hi_caller)
+{
+  lo = lo_caller;
+  hi = hi_caller;
+  return cliptest(p,q);
 }
 
 /* ----------------------------------------------------------------------

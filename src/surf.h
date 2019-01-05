@@ -19,7 +19,7 @@
 #include "stdio.h"
 #include "pointers.h"
 #include "hash3.h"
-#include "hash.h"
+#include "hashlittle.h"
 
 namespace SPARTA_NS {
 
