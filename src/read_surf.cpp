@@ -296,7 +296,7 @@ void ReadSurf::command(int narg, char **arg)
     }
   }
 
-  // extent of surf after geometric transformations
+  // extent of surfs after geometric transformations
   // compute sizes of smallest surface elements
 
   double extent[3][2];
