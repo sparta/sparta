@@ -25,13 +25,16 @@ namespace SPARTA_NS {
 
 class Surf : protected Pointers {
  public:
-  int exist;                // 1 if any surfaces are defined, else 0 
-  int style;                // EXPLICIT, EXPLICIT_DISTRIBUTED,
-                            // IMPLICIT_STATIC, IMPLICIT_DYNAMIC
-  int implicit;             // 1 if implicit surfs, 0 if explicit
+  int exist;                // 1 if any surfaces are defined, else 0
+  int distributed;          // 1 = surfs spread across procs, 0 = each proc owns all
+  int implicit;             // 1 = implicit surfs, 0 = explicit surfs
+  int dynamic;              // 1 = implicit surfs change, 0 = static
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
 
+  bigint nsurf;             // total # of surf elements, lines or tris
+  int nmax;                 // max length of lines/tris lists
+  
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for surf tallies
 
@@ -65,13 +68,27 @@ class Surf : protected Pointers {
     double norm[3];         // outward normal to triangle
   };
 
-  Line *lines;              // list of lines
-  Tri *tris;                // list of tris
-  int nline,ntri;           // number of each
-  int maxline,maxtri;       // max elements that lines and tris can hold
+  Line *lines;              // list of lines for surface collisions
+  Tri *tris;                // list of tris for surface collisions
+  int nlocal;               // # of lines or tris
+                            // explicit, all: nlocal = nsurf
+                            // explicit, distributed: 
+                            //   surfs which overlap my owned grid cells
+                            // implicit: surfs within my owned grid cells
+  int nghost;               // # of ghost surfs I store for collisions
+                            // explicit, all: nghost = 0
+                            // explicit, distributed: 
+                            //   surfs which overlap my ghost grid cells
+                            // implicit: surfs within my ghost grid cells
 
-  int *mysurfs;             // indices of surf elements I own
-  int nlocal;               // # of surf elements I own
+  Line *mylines;            // list of lines assigned uniquely to me
+                            //   only for explicit, distributed
+  Tri *mytris;              // list of tris assigned uniquely to me
+                            //   only for explicit, distributed
+  int *myindex;             // indices into lines/tris for 
+                            //   surfs assigned uniquely to me
+                            //   only for explicit, all
+  int nown;                 // # of lines or tris I own uniquely
 
   int nsc,nsr;              // # of surface collision and reaction models
   class SurfCollide **sc;   // list of surface collision models
@@ -88,10 +105,13 @@ class Surf : protected Pointers {
   void global(char *);
   void modify_params(int, char **);
   void init();
-  int nelement();
+  void remove_ghosts();
   void add_line(int, double *, double *);
+  void add_line_copy(int, Line *);
   void add_tri(int, double *, double *, double *);
-  void setup_surf();
+  void add_tri_copy(int, Tri *);
+  void setup_owned();
+  void setup_bbox();
 
   void compute_line_normal(int);
   void compute_tri_normal(int);
@@ -121,6 +141,8 @@ class Surf : protected Pointers {
   void collate_vector(int, int *, double *, int, double *);
   void collate_array(int, int, int *, double **, double **);
 
+  void compress_rebalance();
+  
   void write_restart(FILE *);
   void read_restart(FILE *);
   virtual void grow();

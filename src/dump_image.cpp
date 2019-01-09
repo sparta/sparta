@@ -1436,8 +1436,8 @@ void DumpImage::create_image()
     diameter *= sdiamvalue;
     Surf::Line *lines = surf->lines;
     Surf::Tri *tris = surf->tris;
-    int *mysurfs = surf->mysurfs;
-    int nslocal = surf->nlocal;
+    int *mysurfs = surf->myindex;
+    int nslocal = surf->nown;
 
     for (int isurf = 0; isurf < nslocal; isurf++) {
       m = mysurfs[isurf];
@@ -1480,8 +1480,8 @@ void DumpImage::create_image()
 
     Surf::Line *lines = surf->lines;
     Surf::Tri *tris = surf->tris;
-    int *mysurfs = surf->mysurfs;
-    int nslocal = surf->nlocal;
+    int *mysurfs = surf->myindex;
+    int nslocal = surf->nown;
 
     if (domain->dimension == 2) {
       for (int isurf = 0; isurf < nslocal; isurf++) {

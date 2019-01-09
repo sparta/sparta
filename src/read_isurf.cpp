@@ -35,12 +35,6 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 #define NCHUNK 1024     // can boost this much larger
 #define BIG 1.0e20
 
-// NOTE: allow reading 2nd set of isurfs into a different group region ??
-// NOTE: option to write out surf once formed, like read surf?
-// NOTE: where to store 8 corner points per cell (static vs dynamic?)
-// NOTE: do I need a fix isurf which stores per-grid values with a name?
-// NOTE: what about split cells induced by a single cell with Isurfs
-
 /* ---------------------------------------------------------------------- */
 
 ReadISurf::ReadISurf(SPARTA *sparta) : Pointers(sparta)
@@ -149,6 +143,7 @@ void ReadISurf::command(int narg, char **arg)
   grid->clear_surf();
 
   // create surfs in each grid cell based on corner point values
+  // set surf->nsurf
   // if specified, apply group keyword to reset per-surf mask info
 
   MPI_Barrier(world);
@@ -157,14 +152,22 @@ void ReadISurf::command(int narg, char **arg)
   if (dim == 3) marching_cubes(ggroup);
   else marching_squares(ggroup);
 
+  bigint nlocal = surf->nlocal;
+  MPI_Allreduce(&nlocal,&surf->nsurf,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  
   if (sgrouparg) {
     int sgroup = surf->find_group(arg[sgrouparg]);
     if (sgroup < 0) sgroup = surf->add_group(arg[sgrouparg]);
     int sgroupbit = surf->bitmask[sgroup];
  
-    Surf::Line *lines = surf->lines;
-    int nline = surf->nline;
-    for (int i = 0; i < nline; i++) lines[i].mask |= sgroupbit;
+    int nsurf = surf->nlocal;
+    if (dim == 3) {
+      Surf::Tri *tris = surf->tris;
+      for (int i = 0; i < nsurf; i++) tris[i].mask |= sgroupbit;
+    } else {
+      Surf::Line *lines = surf->lines;
+      for (int i = 0; i < nsurf; i++) lines[i].mask |= sgroupbit;
+    }
   }
 
   MPI_Barrier(world);
@@ -179,9 +182,9 @@ void ReadISurf::command(int narg, char **arg)
 
   if (dim == 2) {
     Surf::Line *lines = surf->lines;
-    int nline = surf->nline;
+    int nsurf = surf->nlocal;
   
-    for (int i = 0; i < nline; i++) {
+    for (int i = 0; i < nsurf; i++) {
       extent[0][0] = MIN(extent[0][0],lines[i].p1[0]);
       extent[0][1] = MAX(extent[0][1],lines[i].p1[0]);
       extent[1][0] = MIN(extent[1][0],lines[i].p2[1]);
@@ -226,21 +229,14 @@ void ReadISurf::command(int narg, char **arg)
   else surf->compute_tri_normal(0);
 
   // error checks that can be done before surfs are mapped to grid cells
-  // NOTE: won't work now, b/c there are duplicate points
 
-  //if (dim == 2) {
-  //  surf->check_watertight_2d(0);
-  //} else {
-  //  surf->check_watertight_3d(0);
-  // }
+  if (dim == 2) surf->check_watertight_2d(0);
+  else surf->check_watertight_3d(0);
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
 
-  // create split cells if needed
-
-  surf->setup_surf();
-  grid->surf2grid_implicit();
+  grid->surf2grid_implicit(1,1);
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();
@@ -266,23 +262,32 @@ void ReadISurf::command(int narg, char **arg)
   // stats
 
   double time_total = time6-time1;
+  double time_s2g = time5-time4;
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/sort/check/surf2grid/ghost/inout/particle percent = "
+      fprintf(screen,"  read/marching/check/surf2grid/ghost/inout/particle percent = "
               "%g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total);
+      fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
+      fprintf(screen,"  map/rvous/split percent = %g %g %g\n",
+              100.0*grid->tmap/time_s2g,100.0*grid->trvous/time_s2g,
+              100.0*grid->tsplit/time_s2g);
     }
     if (logfile) {
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/sort/check/surf2grid/ghost/inout/particle percent = "
+      fprintf(logfile,"  read/marching/check/surf2grid/ghost/inout/particle percent = "
               "%g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total);
+      fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
+      fprintf(logfile,"  map/rvous/split percent = %g %g %g\n",
+              100.0*grid->tmap/time_s2g,100.0*grid->trvous/time_s2g,
+              100.0*grid->tsplit/time_s2g);
     }
   }
 }
@@ -331,8 +336,8 @@ void ReadISurf::read_corners(char *gridfile)
   }
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  %ld corner points\n",ncorners);
-    if (logfile) fprintf(logfile,"  %ld corner points\n",ncorners);
+    if (screen) fprintf(screen,"  " BIGINT_FORMAT " corner points\n",ncorners);
+    if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " corner points\n",ncorners);
   }
 
   memory->destroy(buf);
@@ -383,8 +388,8 @@ void ReadISurf::read_types(char *typefile)
   }
 
   if (me == 0) {
-    if (screen) fprintf(screen,"  %ld surface types\n",ntypes);
-    if (logfile) fprintf(logfile,"  %ld surface types\n",ntypes);
+    if (screen) fprintf(screen,"  " BIGINT_FORMAT " surface types\n",ntypes);
+    if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surface types\n",ntypes);
   }
 
   memory->destroy(buf);
@@ -532,7 +537,7 @@ void ReadISurf::marching_cubes(int igroup)
      treating open circles as flow volume, solid circles as material
      NOTE: Wiki page numbers points counter-clockwise
            SPARTA numbers them in x, then in y
-           so bit2 and bit 3 are swapped below
+           so bit2 and bit3 are swapped below
            this gives case #s here consistent with Wiki page
    treats each grid cell independently
    4 corner points open/solid -> 2^4 = 16 cases
@@ -544,9 +549,8 @@ void ReadISurf::marching_cubes(int igroup)
 
 void ReadISurf::marching_squares(int igroup)
 {
-  int i,ipt;
+  int i,ipt,isurf,nsurf,which,splitflag;
   int v00,v01,v10,v11,bit0,bit1,bit2,bit3;
-  int nsurf,which,splitflag;
   double ave;
   double *lo,*hi;
   int *ptr;
@@ -742,7 +746,8 @@ void ReadISurf::marching_squares(int igroup)
 
     // populate Grid and Surf data structs
     // points will be duplicated, not unique
-
+    // surf ID = cell ID for all surfs in cell
+    
     ptr = csurfs->get(nsurf);
 
     ipt = 0;
@@ -750,7 +755,9 @@ void ReadISurf::marching_squares(int igroup)
       if (svalues) surf->add_line(svalues[icell],pt[ipt],pt[ipt+1]);
       else surf->add_line(1,pt[ipt],pt[ipt+1]);
       ipt += 2;
-      ptr[i] = surf->nline - 1;
+      isurf = surf->nlocal - 1;
+      surf->lines[isurf].id = cells[icell].id;
+      ptr[i] = isurf;
     }
 
     cells[icell].nsurf = nsurf;

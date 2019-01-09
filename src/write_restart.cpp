@@ -325,8 +325,7 @@ void WriteRestart::header()
   write_bigint(NUNSPLIT,grid->nunsplit);
   write_int(NSPLIT,grid->nsplit);
   write_int(NSUB,grid->nsub);
-  if (domain->dimension == 2) write_int(NSURF,surf->nline);
-  else write_int(NSURF,surf->ntri);
+  write_bigint(NSURF,surf->nsurf);
 
   // -1 flag signals end of header
 

@@ -15,6 +15,8 @@
 #include "string.h"
 #include "grid.h"
 #include "particle.h"
+#include "domain.h"
+#include "surf.h"
 #include "collide.h"
 #include "modify.h"
 #include "adapt_grid.h"
@@ -41,7 +43,7 @@ int Grid::pack_one(int icell, char *buf,
   char *ptr = buf;
 
   // pack child cell and its csurfs and cinfo
-  // just pack child cell if nsurf < 0 since is EMPTY ghost
+  // just pack child cell if nsurf < 0 which is EMPTY ghost
   //   unpack_one() will reset other fields (csurfs, nsplit, isplit)
 
   if (memflag) memcpy(ptr,&cells[icell],sizeof(ChildCell));
@@ -50,11 +52,38 @@ int Grid::pack_one(int icell, char *buf,
 
   if (cells[icell].nsurf < 0) return ptr - buf;
 
-  if (cells[icell].nsurf) {
-    int nsurf = cells[icell].nsurf;
-    if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(int));
-    ptr += nsurf*sizeof(int);
-    ptr = ROUNDUP(ptr);
+  // if nsurfs, pack different info for explicit vs implicit
+  // explicit all: list of csurf indices
+  // explicit distributed: TBD
+  // implicit: list of lines or triangles
+  
+  int nsurf = cells[icell].nsurf;
+  if (nsurf) {
+    if (!surf->implicit) {
+      if (memflag) memcpy(ptr,cells[icell].csurfs,nsurf*sizeof(int));
+      ptr += nsurf*sizeof(int);
+      ptr = ROUNDUP(ptr);
+    } else if (domain->dimension == 2) {
+      Surf::Line *lines = surf->lines;
+      int sizesurf = sizeof(Surf::Line);
+      int *csurfs = cells[icell].csurfs;
+      for (int m = 0; m < nsurf; m++) {
+	int isurf = csurfs[m];
+	if (memflag) memcpy(ptr,&lines[isurf],sizesurf);
+	ptr += sizesurf;
+	ptr = ROUNDUP(ptr);
+      }
+    } else {
+      Surf::Tri *tris = surf->tris;
+      int sizesurf = sizeof(Surf::Tri);
+      int *csurfs = cells[icell].csurfs;
+      for (int m = 0; m < nsurf; m++) {
+	int isurf = csurfs[m];
+	if (memflag) memcpy(ptr,&tris[isurf],sizesurf);
+	ptr += sizesurf;
+	ptr = ROUNDUP(ptr);
+      }
+    }
   }
 
   if (ownflag) {
@@ -162,7 +191,7 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
 
-  // if nsurf < 0 since is EMPTY ghost
+  // nsurf < 0 means EMPTY ghost
   // reset other fields for ghost cell (csurfs, nsplit, isplit)
 
   if (cells[icell].nsurf < 0) {
@@ -177,15 +206,42 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
     cells[icell].ilocal = icell;
   }
 
-  if (cells[icell].nsurf) {
-    int nsurf = cells[icell].nsurf;
-    cells[icell].csurfs = csurfs->vget();
-    memcpy(cells[icell].csurfs,ptr,nsurf*sizeof(int));
-    csurfs->vgot(nsurf);
-    ptr += nsurf*sizeof(int);
-    ptr = ROUNDUP(ptr);
-  }
+  // if nsurfs, unpack different info for explicit vs implicit
+  // explicit all: list of csurf indices
+  // explicit distributed: TBD
+  // implicit: list of lines or triangles
 
+  int nsurf = cells[icell].nsurf;
+  if (nsurf) {
+    cells[icell].csurfs = csurfs->vget();
+    if (!surf->implicit) {
+      memcpy(cells[icell].csurfs,ptr,nsurf*sizeof(int));
+      ptr += nsurf*sizeof(int);
+      ptr = ROUNDUP(ptr);
+    } else if (domain->dimension == 2) {
+      int sizesurf = sizeof(Surf::Line);
+      int *csurfs = cells[icell].csurfs;
+      for (int m = 0; m < nsurf; m++) {
+	Surf::Line *line = (Surf::Line *) ptr;
+	surf->add_line_copy(ownflag,line);
+	csurfs[m] = surf->nlocal-1;
+	ptr += sizesurf;
+	ptr = ROUNDUP(ptr);
+      }
+    } else {
+      int sizesurf = sizeof(Surf::Tri);
+      int *csurfs = cells[icell].csurfs;
+      for (int m = 0; m < nsurf; m++) {
+	Surf::Tri *tri = (Surf::Tri *) ptr;
+	surf->add_tri_copy(ownflag,tri);
+	csurfs[m] = surf->nlocal-1;
+	ptr += sizesurf;
+	ptr = ROUNDUP(ptr);
+      }
+    }
+    csurfs->vgot(nsurf);
+  }
+  
   if (ownflag) {
     memcpy(&cinfo[icell],ptr,sizeof(ChildInfo));
     ptr += sizeof(ChildInfo);

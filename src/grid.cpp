@@ -17,6 +17,7 @@
 #include "geometry.h"
 #include "domain.h"
 #include "region.h"
+#include "surf.h"
 #include "comm.h"
 #include "irregular.h"
 #include "math_const.h"
@@ -327,15 +328,16 @@ void Grid::add_sub_cell(int icell, int ownflag)
 }
 
 /* ----------------------------------------------------------------------
-   remove ghosts and any allocated data they have
-   NOTE: currently, cells just have ptrs to vectors that will be cleared
-         but in future, may need to de-register the vectors
+   remove ghost grid cells and any allocated data they have
+     currently, cells just have ptrs into pages that are deallocated separately
+   also remove ghost surfaces, either explicit or implicit
 ------------------------------------------------------------------------- */
 
 void Grid::remove_ghosts()
 {
   exist_ghost = 0;
   nghost = nunsplitghost = nsplitghost = nsubghost = 0;
+  surf->remove_ghosts();
 }
 
 /* ----------------------------------------------------------------------

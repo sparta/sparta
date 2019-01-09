@@ -102,8 +102,7 @@ void ComputeDistSurfGrid::compute_per_grid()
   int dim = domain->dimension;
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
-  int nline = surf->nline;
-  int ntri = surf->ntri;
+  int ntotal = surf->nsurf;
 
   // nsurf = # of eligible surfs, based on group and sdir setting
   // slist = list of Nsurf eligible surf indices to use for computing distances
@@ -113,9 +112,9 @@ void ComputeDistSurfGrid::compute_per_grid()
   int nsurf = 0;
 
   if (dim == 2) {
-    memory->create(eflag,nline,"distsurf/grid:eflag");
-    memory->create(slist,nline,"distsurf/grid:slist");
-    for (i = 0; i < nline; i++) {
+    memory->create(eflag,ntotal,"distsurf/grid:eflag");
+    memory->create(slist,ntotal,"distsurf/grid:slist");
+    for (i = 0; i < ntotal; i++) {
       eflag[i] = 0;
       if (!(lines[i].mask & sgroupbit)) continue;
       if (MathExtra::dot3(lines[i].norm,sdir) <= 0.0) {
@@ -124,9 +123,9 @@ void ComputeDistSurfGrid::compute_per_grid()
       }
     }
   } else {
-    memory->create(eflag,ntri,"distsurf/grid:eflag");
-    memory->create(slist,ntri,"distsurf/grid:slist");
-    for (i = 0; i < ntri; i++) {
+    memory->create(eflag,ntotal,"distsurf/grid:eflag");
+    memory->create(slist,ntotal,"distsurf/grid:slist");
+    for (i = 0; i < ntotal; i++) {
       eflag[i] = 0;
       if (!(tris[i].mask & sgroupbit)) continue;
       if (MathExtra::dot3(tris[i].norm,sdir) <= 0.0) {

@@ -118,8 +118,7 @@ void ComputeSurf::init()
 
   // allocate and initialize glob2loc indices
 
-  if (dimension == 2) nsurf = surf->nline;
-  else nsurf = surf->ntri;
+  nsurf = surf->nsurf;
 
   memory->destroy(glob2loc);
   memory->create(glob2loc,nsurf,"surf:glob2loc");

@@ -53,9 +53,7 @@ enum{COMBO,PERCELL,PERSURF};            // several files
 
 void Grid::surf2grid(int subflag, int outflag)
 {
-  int ntotal;
-  if (domain->dimension == 2) ntotal = surf->nline;
-  else ntotal = surf->ntri;
+  int ntotal = surf->nsurf;
 
   // choose algorithm based on total nsurfs vs nprocs
 
@@ -189,11 +187,9 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   // cellcount = # of cells my surfs overlap with
   // celllist = list of cell IDs my surfs overlap with
 
+  int ncell;
   int nprocs = comm->nprocs;
-  int ntotal,ncell;
-
-  if (dim == 2) ntotal = surf->nline;
-  else ntotal = surf->ntri;
+  int ntotal = surf->nsurf;
 
   int nsurf = ntotal / nprocs;
   if (me < ntotal % nprocs) nsurf++;
@@ -359,6 +355,24 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   }
 
   if (outflag) surf2grid_stats();
+}
+
+/* ----------------------------------------------------------------------
+   compute split cells for implicit surfs
+   surfs per cell already created
+   called from ReadISurf
+------------------------------------------------------------------------- */
+
+void Grid::surf2grid_implicit(int subflag, int outflag)
+{
+  int dim = domain->dimension;
+  if (dim == 3) cut3d = new Cut3d(sparta);
+  else cut2d = new Cut2d(sparta,domain->axisymmetric);
+
+  tmap = trvous = 0.0;
+
+  if (outflag) surf2grid_stats();
+  surf2grid_split(subflag,outflag);
 }
 
 /* ----------------------------------------------------------------------
@@ -552,151 +566,6 @@ void Grid::surf2grid_split(int subflag, int outflag)
 }
 
 /* ----------------------------------------------------------------------
-   map surf elements into owned grid cells
-   called from ReadISurf
-   in cells: set nsurf, csurfs, nsplit, isplit
-   in cinfo: for cells with surfs, set type, corner, volume 
-   initialize sinfo as needed
-------------------------------------------------------------------------- */
-
-void Grid::surf2grid_implicit()
-{
-  int i,isub,nsurf,nsplitone,xsub;
-  int *surfmap,*ptr;
-  double *lo,*hi,*vols;
-  double xsplit[3];
-  ChildCell *c;
-  SplitInfo *s;
-  Cut2d *cut2d;
-  Cut3d *cut3d;
-
-  int dim = domain->dimension;
-
-  if (dim == 3) cut3d = new Cut3d(sparta);
-  else cut2d = new Cut2d(sparta,domain->axisymmetric);
-
-  // compute overlap of surfs with each cell I own
-  // info stored in nsurf,csurfs
-
-  //double t2 = MPI_Wtime();
-  //printf("TIME %g\n",t2-t1);
-  
-  surf2grid_stats();
-
-  // compute cut volume and possible split of each grid cell by surfs
-  // decrement nunsplitlocal if convert an unsplit cell to split cell
-  // if nsplitone > 1, create new split cell sinfo and sub-cells
-
-  int ncurrent = nlocal;
-  for (int icell = 0; icell < ncurrent; icell++) {
-    if (cells[icell].nsurf == 0) continue;
-
-    surfmap = csplits->vget();
-    c = &cells[icell];
-
-    if (dim == 3)
-      nsplitone = cut3d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                               vols,surfmap,cinfo[icell].corner,xsub,xsplit);
-    else
-      nsplitone = cut2d->split(c->id,c->lo,c->hi,c->nsurf,c->csurfs,
-                               vols,surfmap,cinfo[icell].corner,xsub,xsplit);
-
-    if (nsplitone == 1) {
-      cinfo[icell].volume = vols[0];
-
-    } else {
-      cells[icell].nsplit = nsplitone;
-      nunsplitlocal--;
-      
-      cells[icell].isplit = nsplitlocal;
-      add_split_cell(1);
-      s = &sinfo[nsplitlocal-1];
-      s->icell = icell;
-      s->csplits = surfmap;
-      s->xsub = xsub;
-      s->xsplit[0] = xsplit[0];
-      s->xsplit[1] = xsplit[1];
-      if (dim == 3) s->xsplit[2] = xsplit[2];
-      else s->xsplit[2] = 0.0;
-
-      ptr = s->csubs = csubs->vget();
-
-      for (i = 0; i < nsplitone; i++) {
-        isub = nlocal;
-        add_sub_cell(icell,1);
-        cells[isub].nsplit = -i;
-        cinfo[isub].volume = vols[i];
-        ptr[i] = isub;
-      }
-      
-      csplits->vgot(cells[icell].nsurf);
-      csubs->vgot(nsplitone);
-    }
-  }
-
-  //double t3 = MPI_Wtime();
-  //printf("TIME %g\n",t3-t2);
-
-  // stats on pushed cells and unmarked corner points in OVERLAP cells
-
-  int outflag = 1;
-  if (outflag) {
-    int npushmax;
-    int *npushcell;
-    if (dim == 3) {
-      npushmax = cut3d->npushmax;
-      npushcell = cut3d->npushcell;
-    } else {
-      npushmax = cut2d->npushmax;
-      npushcell = cut2d->npushcell;
-    }
-    int *npushall = new int[npushmax+1];
-    MPI_Allreduce(npushcell,npushall,npushmax+1,MPI_INT,MPI_SUM,world);
-    if (comm->me == 0) {
-      if (screen) {
-        fprintf(screen,"  ");
-        for (int i = 1; i <= npushmax; i++)
-          fprintf(screen,"%d ",npushall[i]);
-        fprintf(screen,"= number of pushed cells\n");
-      }
-      if (logfile) {
-        fprintf(logfile,"  ");
-        for (int i = 1; i <= npushmax; i++)
-          fprintf(logfile,"%d ",npushall[i]);
-        fprintf(logfile,"= number of pushed cells\n");
-      }
-    }
-    delete [] npushall;
-
-    int noverlap = 0;
-    int ncorner = 0;
-    for (int icell = 0; icell < nlocal; icell++) {
-      if (cells[icell].nsplit <= 0) continue;
-      if (cinfo[icell].type == OVERLAP) {
-        noverlap++;
-        if (cinfo[icell].corner[0] == UNKNOWN) ncorner++;
-      }
-    }
-    int ncornerall,noverlapall;
-    MPI_Allreduce(&ncorner,&ncornerall,1,MPI_INT,MPI_SUM,world);
-    MPI_Allreduce(&noverlap,&noverlapall,1,MPI_INT,MPI_SUM,world);
-    if (comm->me == 0) {
-      if (screen) fprintf(screen,"  %d %d = cells overlapping surfs, "
-                          "overlap cells with unmarked corner pts\n",
-                          noverlapall,ncornerall);
-      if (logfile) fprintf(logfile,"  %d %d = cells overlapping surfs, "
-                           "overlap cells with unmarked corner pts\n",
-                           noverlapall,ncornerall);
-    }
-  }
-
-  // clean up
-
-  if (dim == 3) delete cut3d;
-  else delete cut2d;
-}
-
-/* ----------------------------------------------------------------------
    map surf elements into a single grid cell = icell
    flag = 0 for grid refinement, 1 for grid coarsening
    in cells: set nsurf, csurfs, nsplit, isplit
@@ -846,7 +715,7 @@ void Grid::clear_surf()
   // assumes particles are sorted,
   //   so count/first values in compressed cinfo data struct are still valid
   // when done, particles are still sorted
-
+  
   if (particle->exist && nlocal < nlocal_prev) {
     Particle::OnePart *particles = particle->particles;
     int *next = particle->next;
@@ -1518,7 +1387,7 @@ double Grid::flow_volume()
   double volume = 0.0;
 
   if (domain->dimension == 3) {
-    for (int i = 0; i < surf->ntri; i++) {
+    for (int i = 0; i < surf->nsurf; i++) {
       p1 = tris[i].p1;
       p2 = tris[i].p2;
       p3 = tris[i].p3;
@@ -1533,7 +1402,7 @@ double Grid::flow_volume()
   // PI/3 (y1^2 + y1y2 + y2^2) (x2-x1)
 
   } else if (domain->axisymmetric) {
-    for (int i = 0; i < surf->nline; i++) {
+    for (int i = 0; i < surf->nsurf; i++) {
       p1 = lines[i].p1;
       p2 = lines[i].p2;
       volume -= 
@@ -1543,7 +1412,7 @@ double Grid::flow_volume()
       volume += MY_PI * boxhi[1]*boxhi[1] * (boxhi[0]-boxlo[0]);
 
   } else {
-    for (int i = 0; i < surf->nline; i++) {
+    for (int i = 0; i < surf->nsurf; i++) {
       p1 = lines[i].p1;
       p2 = lines[i].p2;
       volume -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);

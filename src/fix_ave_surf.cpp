@@ -182,8 +182,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   // allocate accumulators for owned surfaces
   // if ave = RUNNING, allocate extra set of accvec/accarray
 
-  nslocal = surf->nlocal;
-
+  nslocal = surf->nown;
   memory->create(buflocal,nslocal,"ave/surf:buflocal");
   memory->create(masks,nslocal,"ave/surf:masks");
 
@@ -200,8 +199,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
   // allocate accumulators for local surfaces
 
-  if (domain->dimension == 2) nsurf = surf->nline;
-  else nsurf = surf->ntri;
+  nsurf = surf->nsurf;
 
   memory->create(glob2loc,nsurf,"surf:glob2loc");
   for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
@@ -240,7 +238,7 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
 
   // local storage of surf element masks
 
-  int *mysurfs = surf->mysurfs;
+  int *mysurfs = surf->myindex;
 
   if (domain->dimension == 2) {
     Surf::Line *lines = surf->lines;
@@ -302,8 +300,7 @@ int FixAveSurf::setmask()
 
 void FixAveSurf::init()
 {
-  if ((domain->dimension == 2 && nsurf != surf->nline) || 
-      (domain->dimension == 3 && nsurf != surf->ntri)) 
+  if (nsurf != surf->nsurf)
     error->all(FLERR,"Number of surface elements changed in dump surf");
 
   // set indices and check validity of all computes,fixes,variables

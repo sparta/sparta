@@ -241,8 +241,8 @@ void DumpSurf::init_style()
   if (!firstflag) return;
 
   firstflag = 0;
-  int *mysurfs = surf->mysurfs;
-  nslocal = surf->nlocal;
+  int *mysurfs = surf->myindex;
+  nslocal = surf->nown;
 
   nchoose = 0;
   for (int i = 0; i < nslocal; i++)

@@ -68,7 +68,7 @@ void ReadSurf::command(int narg, char **arg)
   if (!grid->exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
   if (surf->implicit)
-    error->all(FLERR,"Cannot read_surf when global surf implicit is set");
+    error->all(FLERR,"Cannot read_surf unless global surf explicit is set");
 
   surf->exist = 1;
   dim = domain->dimension;
@@ -362,9 +362,9 @@ void ReadSurf::command(int narg, char **arg)
   // add pts/lines/tris read from file to Surf line or tri data struct
 
   if (dim == 2) {
-    nline_old = surf->nline;
+    nline_old = surf->nsurf;
     nline_new = nline_old + nline;
-    surf->maxline = nline_new;
+    surf->nmax = nline_new;
     surf->grow();
     Surf::Line *newlines = surf->lines;
 
@@ -378,12 +378,12 @@ void ReadSurf::command(int narg, char **arg)
       memcpy(newlines[m].p2,pts[lines[i].p2].x,3*sizeof(double));
       m++;
     }
-    surf->nline = nline_new;
+    surf->nsurf = nline_new;
 
   } else if (dim == 3) {
-    ntri_old = surf->ntri;
+    ntri_old = surf->nsurf;
     ntri_new = ntri_old + ntri;
-    surf->maxtri = ntri_new;
+    surf->nmax = ntri_new;
     surf->grow();
     Surf::Tri *newtris = surf->tris;
 
@@ -398,7 +398,7 @@ void ReadSurf::command(int narg, char **arg)
       memcpy(newtris[m].p3,pts[tris[i].p3].x,3*sizeof(double));
       m++;
     }
-    surf->ntri = ntri_new;
+    surf->nsurf = ntri_new;
   }
 
   // compute normals of new lines or triangles
@@ -424,11 +424,9 @@ void ReadSurf::command(int narg, char **arg)
   if (particle->exist) particle->sort();
 
   // make list of surf elements I own
-  // assign surfs to grid cells
-  // error checks to flag bad surfs
-
-  surf->setup_surf();
-
+  // clear grid of surf info including split cells
+  
+  surf->setup_owned();
   grid->unset_neighbors();
   grid->remove_ghosts();
 
@@ -465,7 +463,7 @@ void ReadSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
 
-  // map surfs to grid cells
+  // assign surfs to grid cells
 
   grid->surf2grid(1);
 
@@ -552,6 +550,8 @@ void ReadSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time8 = MPI_Wtime();
 
+  // stats
+  
   double time_total = time6-time1;
   double time_s2g = time5-time4;
 

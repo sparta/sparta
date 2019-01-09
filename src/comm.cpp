@@ -19,6 +19,7 @@
 #include "irregular.h"
 #include "particle.h"
 #include "grid.h"
+#include "surf.h"
 #include "update.h"
 #include "adapt_grid.h"
 #include "memory.h"
@@ -287,12 +288,15 @@ void Comm::migrate_cells(int nmigrate)
     offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
   }
 
-  // compress my list of owned grid cells to remove migrated cells
+  // compress implicit surf list to remove surfs in migrating cells
+  //   do before grid->compress() b/c uses grid hash
+  // compress my list of owned grid cells to remove migrating cells
   // compress particle list to remove particles in migrating cells
   // unset particle sorted since compress_rebalance() does
   //   and may receive particles which will then be unsorted
 
   if (nmigrate) {
+    if (surf->implicit) surf->compress_rebalance();
     grid->compress();
     particle->compress_rebalance();
   } else particle->sorted = 0;

@@ -33,7 +33,6 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{EXPLICIT,EXPLICIT_DISTRIBUTED,IMPLICIT_STATIC,IMPLICIT_DYNAMIC};
 enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Update
 enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Grid
 enum{TYPE,MOLECULE,ID};
@@ -51,8 +50,9 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
   exist = 0;
-  style = EXPLICIT;
+  distributed = 0;
   implicit = 0;
+  dynamic = 0;
   surf_collision_check = 1;
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
@@ -68,14 +68,20 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   gnames[0] = new char[n];
   strcpy(gnames[0],"all");
 
-  nline = ntri = 0;
-  maxline = maxtri = 0;
+  nsurf = 0;
+  distributed = 0;
+  implicit = 0;
+  dynamic = 0;
+  
+  nlocal = nghost = nmax = 0;
   lines = NULL;
   tris = NULL;
   pushflag = 1;
 
-  nlocal = 0;
-  mysurfs = NULL;
+  nown = 0;
+  mylines = NULL;
+  mytris = NULL;
+  myindex = NULL;
 
   nsc = maxsc = 0;
   sc = NULL;
@@ -96,7 +102,9 @@ Surf::~Surf()
 
   memory->sfree(lines);
   memory->sfree(tris);
-  memory->sfree(mysurfs);
+  memory->sfree(mylines);
+  memory->sfree(mytris);
+  memory->sfree(myindex);
 
   for (int i = 0; i < nsc; i++) delete sc[i];
   memory->sfree(sc);
@@ -111,14 +119,23 @@ void Surf::global(char *arg)
   if (exist) 
     error->all(FLERR,"Cannot set global surfs when surfaces already exist");
 
-  if (strcmp(arg,"explicit") == 0) style = EXPLICIT;
-  else if (strcmp(arg,"explicit/distributed") == 0) style = EXPLICIT_DISTRIBUTED;
-  else if (strcmp(arg,"implicit/static") == 0) style = IMPLICIT_STATIC;
-  else if (strcmp(arg,"implicit/dynamic") == 0) style = IMPLICIT_DYNAMIC;
-  else error->all(FLERR,"Illegal global command");
-
-  if (style == IMPLICIT_STATIC || style == IMPLICIT_DYNAMIC) implicit = 1;
-  else implicit = 0;
+  if (strcmp(arg,"explicit") == 0) {
+    implicit = 0;
+    distributed = 0;
+    dynamic = 0;
+  } else if (strcmp(arg,"explicit/distributed") == 0) {
+    implicit = 0;
+    distributed = 1;
+    dynamic = 0;
+  } else if (strcmp(arg,"implicit/static") == 0) {
+    implicit = 1;
+    distributed = 1;
+    dynamic = 0;
+  } else if (strcmp(arg,"implicit/dynamic") == 0) {
+    implicit = 1;
+    distributed = 1;
+    dynamic = 1;
+  } else error->all(FLERR,"Illegal global command");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -141,11 +158,11 @@ void Surf::modify_params(int narg, char **arg)
       // set surf collision model for each surf in surface group
 
       if (domain->dimension == 2) {
-        for (int i = 0; i < nline; i++)
+        for (int i = 0; i < nsurf; i++)
           if (lines[i].mask & groupbit) lines[i].isc = isc;
       }
       if (domain->dimension == 3) {
-        for (int i = 0; i < ntri; i++)
+        for (int i = 0; i < nsurf; i++)
           if (tris[i].mask & groupbit) tris[i].isc = isc;
       }
 
@@ -164,11 +181,11 @@ void Surf::modify_params(int narg, char **arg)
       // set surf reaction model for each surf in surface group
 
       if (domain->dimension == 2) {
-        for (int i = 0; i < nline; i++)
+        for (int i = 0; i < nsurf; i++)
           if (lines[i].mask & groupbit) lines[i].isr = isr;
       }
       if (domain->dimension == 3) {
-        for (int i = 0; i < ntri; i++)
+        for (int i = 0; i < nsurf; i++)
           if (tris[i].mask & groupbit) tris[i].isr = isr;
       }
 
@@ -188,11 +205,11 @@ void Surf::init()
   if (surf_collision_check) {
     int flag = 0;
     if (domain->dimension == 2) {
-      for (int i = 0; i < nline; i++)
+      for (int i = 0; i < nsurf; i++)
         if (lines[i].isc < 0) flag++;
     } 
     if (domain->dimension == 3) {
-      for (int i = 0; i < ntri; i++)
+      for (int i = 0; i < nsurf; i++)
         if (tris[i].isc < 0) flag++;
     }
     if (flag) {
@@ -208,11 +225,11 @@ void Surf::init()
   if (surf_collision_check) {
     int flag = 0;
     if (domain->dimension == 2) {
-      for (int i = 0; i < nline; i++)
+      for (int i = 0; i < nsurf; i++)
         if (lines[i].isr >= 0 && sc[lines[i].isc]->allowreact == 0) flag++;
     } 
     if (domain->dimension == 3) {
-      for (int i = 0; i < ntri; i++)
+      for (int i = 0; i < nsurf; i++)
         if (tris[i].isr >= 0 && sc[tris[i].isc]->allowreact == 0) flag++;
     } 
     if (flag) {
@@ -230,96 +247,159 @@ void Surf::init()
 }
 
 /* ----------------------------------------------------------------------
-   return # of lines or triangles
+   remove ghost surfs
 ------------------------------------------------------------------------- */
 
-int Surf::nelement()
+void Surf::remove_ghosts()
 {
-  if (domain->dimension == 2) return nline;
-  return ntri;
+  nghost = 0;
 }
 
 /* ----------------------------------------------------------------------
-   add a line
+   add a line to owned list
    called by ReadISurf
 ------------------------------------------------------------------------- */
 
 void Surf::add_line(int itype, double *p1, double *p2)
 {
-  if (nline == maxline) {
-    maxline += DELTA;
+  if (nlocal == nmax) {
+    nmax += DELTA;
     grow();
   }
-
-  lines[nline].type = itype;
-  lines[nline].mask = 1;
-  lines[nline].isc = lines[nline].isr = -1;
-  lines[nline].p1[0] = p1[0];
-  lines[nline].p1[1] = p1[1];
-  lines[nline].p1[2] = 0.0;
-  lines[nline].p2[0] = p2[0];
-  lines[nline].p2[1] = p2[1];
-  lines[nline].p2[2] = 0.0;
-  nline++;
+  
+  lines[nlocal].type = itype;
+  lines[nlocal].mask = 1;
+  lines[nlocal].isc = lines[nlocal].isr = -1;
+  lines[nlocal].p1[0] = p1[0];
+  lines[nlocal].p1[1] = p1[1];
+  lines[nlocal].p1[2] = 0.0;
+  lines[nlocal].p2[0] = p2[0];
+  lines[nlocal].p2[1] = p2[1];
+  lines[nlocal].p2[2] = 0.0;
+  nlocal++;
 }
 
 /* ----------------------------------------------------------------------
-   add a triangle
+   add a line to owned or ghost list, depending on ownflag
+   called by Grid::unpack_one
+------------------------------------------------------------------------- */
+
+void Surf::add_line_copy(int ownflag, Line *line)
+{
+  int index;
+  
+  if (ownflag) {
+    if (nlocal == nmax) {
+      nmax += DELTA;
+      grow();
+    }
+    index = nlocal;
+    nlocal++;
+    
+  } else {
+    if (nlocal+nghost == nmax) {
+      nmax += DELTA;
+      grow();
+    }
+    index = nlocal+nghost;
+    nghost++;
+  }
+  
+  memcpy(&lines[index],line,sizeof(Line));
+}
+
+/* ----------------------------------------------------------------------
+   add a triangle to owned list
    called by ReadISurf
 ------------------------------------------------------------------------- */
 
 void Surf::add_tri(int itype, double *p1, double *p2, double *p3)
 {
-  if (nline == maxtri) {
-    maxtri += DELTA;
+  if (nlocal == nmax) {
+    nmax += DELTA;
     grow();
   }
 
-  tris[ntri].type = itype;
-  tris[ntri].mask = 1;
-  tris[ntri].isc = tris[ntri].isr = -1;
-  tris[nline].p1[0] = p1[0];
-  tris[nline].p1[1] = p1[1];
-  tris[nline].p1[2] = p1[2];
-  tris[nline].p2[0] = p2[0];
-  tris[nline].p2[1] = p2[1];
-  tris[nline].p2[2] = p2[2];
-  tris[nline].p3[0] = p3[0];
-  tris[nline].p3[1] = p3[1];
-  tris[nline].p3[2] = p3[2];
-  ntri++;
+  tris[nlocal].type = itype;
+  tris[nlocal].mask = 1;
+  tris[nlocal].isc = tris[nlocal].isr = -1;
+  tris[nlocal].p1[0] = p1[0];
+  tris[nlocal].p1[1] = p1[1];
+  tris[nlocal].p1[2] = p1[2];
+  tris[nlocal].p2[0] = p2[0];
+  tris[nlocal].p2[1] = p2[1];
+  tris[nlocal].p2[2] = p2[2];
+  tris[nlocal].p3[0] = p3[0];
+  tris[nlocal].p3[1] = p3[1];
+  tris[nlocal].p3[2] = p3[2];
+  nlocal++;
 }
 
 /* ----------------------------------------------------------------------
-   setup owned surf elements
-   create mysurfs list of owned surfs
-   compute local index for owned cells
+   add a triangle to owned or ghost list, depending on ownflag
+   called by Grid::unpack_one
 ------------------------------------------------------------------------- */
 
-void Surf::setup_surf()
+void Surf::add_tri_copy(int ownflag, Tri *tri)
+{
+  int index;
+  
+  if (ownflag) {
+    if (nlocal == nmax) {
+      nmax += DELTA;
+      grow();
+    }
+    index = nlocal;
+    nlocal++;
+    
+  } else {
+    if (nlocal+nghost == nmax) {
+      nmax += DELTA;
+      grow();
+    }
+    index = nlocal+nghost;
+    nghost++;
+  }
+  
+  memcpy(&tris[index],tri,sizeof(Tri));
+}
+
+/* ----------------------------------------------------------------------
+   setup list of owned surf elements
+   NOTE: which flavors of surfs need this?
+   NOTE: how to set mylines, mysurfs otherwise?
+------------------------------------------------------------------------ */
+
+void Surf::setup_owned()
 {
   int i,j;
 
   int me = comm->me;
   int nprocs = comm->nprocs;
 
-  int n = nelement();
-
   // assign every Pth surf element to this proc
 
-  nlocal = n/nprocs;
-  if (me < n % nprocs) nlocal++;
+  nlocal = nsurf/nprocs;
+  if (me < nsurf % nprocs) nlocal++;
 
-  memory->destroy(mysurfs);
-  memory->create(mysurfs,nlocal,"surf:mysurfs");
+  memory->destroy(myindex);
+  memory->create(myindex,nlocal,"surf:myindex");
 
   nlocal = 0;
-  for (int m = me; m < n; m += nprocs)
-    mysurfs[nlocal++] = m;
+  for (int m = me; m < nsurf; m += nprocs)
+    myindex[nlocal++] = m;
+}
 
-  // set bounding box of all surfs based on their pts
-  // for 2d, set zlo,zhi to box bounds
+/* ----------------------------------------------------------------------
+   set bounding box around all surfs based on their pts
+   for 2d, set zlo,zhi to box bounds
+   NOTE: which flavors of surfs need this?
+------------------------------------------------------------------------- */
 
+void Surf::setup_bbox()
+{
+  int i,j;
+  
   for (j = 0; j < 3; j++) {
     bblo[j] = BIG;
     bbhi[j] = -BIG;
@@ -328,7 +408,7 @@ void Surf::setup_surf()
   double *x;
 
   if (domain->dimension == 2) {
-    for (i = 0; i < nline; i++) {
+    for (i = 0; i < nlocal; i++) {
       x = lines[i].p1;
       for (j = 0; j < 2; j++) {
         bblo[j] = MIN(bblo[j],x[j]);
@@ -344,7 +424,7 @@ void Surf::setup_surf()
     bbhi[2] = domain->boxhi[2];
 
   } else if (domain->dimension == 3) {
-    for (i = 0; i < ntri; i++) {
+    for (i = 0; i < nlocal; i++) {
       x = tris[i].p1;
       for (j = 0; j < 3; j++) {
         bblo[j] = MIN(bblo[j],x[j]);
@@ -375,7 +455,7 @@ void Surf::compute_line_normal(int nold)
 
   z[0] = 0.0; z[1] = 0.0; z[2] = 1.0;
 
-  for (int i = nold; i < nline; i++) {
+  for (int i = nold; i < nsurf; i++) {
     MathExtra::sub3(lines[i].p2,lines[i].p1,delta);
     MathExtra::cross3(z,delta,lines[i].norm);
     MathExtra::norm3(lines[i].norm);
@@ -393,7 +473,7 @@ void Surf::compute_tri_normal(int nold)
   int p1,p2,p3;
   double delta12[3],delta13[3];
 
-  for (int i = nold; i < ntri; i++) {
+  for (int i = nold; i < nsurf; i++) {
     MathExtra::sub3(tris[i].p2,tris[i].p1,delta12);
     MathExtra::sub3(tris[i].p3,tris[i].p1,delta13);
     MathExtra::cross3(delta12,delta13,tris[i].norm);
@@ -505,6 +585,9 @@ double Surf::tri_size(double *p1, double *p2, double *p3, double &len)
 
 void Surf::check_watertight_2d(int nline_old)
 {
+  // NOTE: need to enable this for explicit and implicit
+  if (distributed) return;
+  
   // hash end points of all lines
   // key = end point
   // value = 1 if first point, 2 if second point, 3 if both points
@@ -529,7 +612,7 @@ void Surf::check_watertight_2d(int nline_old)
   OnePoint2d key;
   int value;
 
-  int nline_new = nline - nline_old;
+  int nline_new = nsurf - nline_old;
 
   int ndup = 0;
   int m = nline_old;
@@ -594,6 +677,9 @@ void Surf::check_watertight_2d(int nline_old)
 
 void Surf::check_watertight_3d(int ntri_old)
 {
+  // NOTE: need to enable this for explicit and implicit
+  if (distributed) return;
+
   // hash directed edges of all triangles
   // key = directed edge
   // value = 1 if appears once, 2 if reverse also appears once
@@ -610,7 +696,7 @@ void Surf::check_watertight_3d(int ntri_old)
   TwoPoint3d key,keyinv;
   int value;
 
-  int ntri_new = ntri - ntri_old;
+  int ntri_new = nsurf - ntri_old;
 
   int ndup = 0;
   int m = ntri_old;
@@ -708,7 +794,7 @@ void Surf::check_point_inside(int nold)
   double *boxhi = domain->boxhi;
 
   if (dim == 2) {
-    int nline_new = nline - nold;
+    int nline_new = nsurf - nold;
     int m = nold;
     nbad = 0;
     for (int i = 0; i < nline_new; i++) {
@@ -723,7 +809,7 @@ void Surf::check_point_inside(int nold)
       m++;
     }
   } else if (dim == 3) {
-    int ntri_new = ntri - nold;
+    int ntri_new = nsurf - nold;
     int m = nold;
     nbad = 0;
     for (int i = 0; i < ntri_new; i++) {
@@ -1102,117 +1188,117 @@ void Surf::group(int narg, char **arg)
         printf("COND %d %d\n",condition,BETWEEN);
         if (condition == LT) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 < bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 < bound1) tris[i].mask |= bit;
           }
         } else if (condition == LE) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 <= bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 <= bound1) tris[i].mask |= bit;
           }
         } else if (condition == GT) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 > bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 > bound1) tris[i].mask |= bit;
           }
         } else if (condition == GE) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 >= bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 >= bound1) tris[i].mask |= bit;
           }
         } else if (condition == EQ) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 == bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 == bound1) tris[i].mask |= bit;
           }
         } else if (condition == NEQ) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 != bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (i+1 != bound1) tris[i].mask |= bit;
           }
         } else if (condition == BETWEEN) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++)
+            for (i = 0; i < nsurf; i++)
               if (i+1 >= bound1 && i+1 <= bound2) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++)
+            for (i = 0; i < nsurf; i++)
               if (i+1 >= bound1 && i+1 <= bound2) tris[i].mask |= bit;
           }
         }
       } else if (category == TYPE) {
         if (condition == LT) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (lines[i].type < bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (tris[i].type < bound1) lines[i].mask |= bit;
           }
         } else if (condition == LE) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (lines[i].type <= bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (tris[i].type <= bound1) lines[i].mask |= bit;
           }
         } else if (condition == GT) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (lines[i].type > bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (tris[i].type > bound1) lines[i].mask |= bit;
           }
         } else if (condition == GE) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (lines[i].type >= bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (tris[i].type >= bound1) lines[i].mask |= bit;
           }
         } else if (condition == EQ) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (lines[i].type == bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (tris[i].type == bound1) lines[i].mask |= bit;
           }
         } else if (condition == NEQ) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (lines[i].type != bound1) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++) 
+            for (i = 0; i < nsurf; i++) 
               if (tris[i].type != bound1) lines[i].mask |= bit;
           }
         } else if (condition == BETWEEN) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++)
+            for (i = 0; i < nsurf; i++)
               if (lines[i].type >= bound1 && lines[i].type <= bound2) 
                 lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++)
+            for (i = 0; i < nsurf; i++)
               if (tris[i].type >= bound1 && tris[i].type <= bound2) 
                 tris[i].mask |= bit;
           }
@@ -1240,19 +1326,19 @@ void Surf::group(int narg, char **arg)
       
         if (category == ID) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++)
+            for (i = 0; i < nsurf; i++)
               if (i+1 >= start && i+1 <= stop) lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++)
+            for (i = 0; i < nsurf; i++)
               if (i+1 >= start && i+1 <= stop) tris[i].mask |= bit;
           }
         } else if (category == TYPE) {
           if (dimension == 2) {
-            for (i = 0; i < nline; i++)
+            for (i = 0; i < nsurf; i++)
               if (lines[i].type >= start && lines[i].type <= stop) 
                 lines[i].mask |= bit;
           } else {
-            for (i = 0; i < ntri; i++)
+            for (i = 0; i < nsurf; i++)
               if (tris[i].type >= start && tris[i].type <= stop) 
                 tris[i].mask |= bit;
           }
@@ -1277,21 +1363,21 @@ void Surf::group(int narg, char **arg)
 
     if (dimension == 2) {
       if (rstyle == REGION_ALL) {
-        for (i = 0; i < nline; i++) {
+        for (i = 0; i < nsurf; i++) {
           flag = 1;
           if (!region->match(lines[i].p1)) flag = 0;
           if (!region->match(lines[i].p2)) flag = 0;
           if (flag) lines[i].mask |= bit;
         }
       } else if (rstyle == REGION_ONE) {
-        for (i = 0; i < nline; i++) {
+        for (i = 0; i < nsurf; i++) {
           flag = 0;
           if (region->match(lines[i].p1)) flag = 1;
           if (region->match(lines[i].p2)) flag = 1;
           if (flag) lines[i].mask |= bit;
         }
       } else if (rstyle == REGION_CENTER) {
-        for (i = 0; i < nline; i++) {
+        for (i = 0; i < nsurf; i++) {
           x[0] = 0.5 * (lines[i].p1[0] + lines[i].p2[0]);
           x[1] = 0.5 * (lines[i].p1[1] + lines[i].p2[1]);
           x[2] = 0.0;
@@ -1301,7 +1387,7 @@ void Surf::group(int narg, char **arg)
 
     } else if (dimension == 3) {
       if (rstyle == REGION_ALL) {
-        for (i = 0; i < ntri; i++) {
+        for (i = 0; i < nsurf; i++) {
           flag = 1;
           if (!region->match(tris[i].p1)) flag = 0;
           if (!region->match(tris[i].p2)) flag = 0;
@@ -1309,7 +1395,7 @@ void Surf::group(int narg, char **arg)
           if (flag) tris[i].mask |= bit;
         }
       } else if (rstyle == REGION_ONE) {
-        for (i = 0; i < ntri; i++) {
+        for (i = 0; i < nsurf; i++) {
           flag = 0;
           if (region->match(tris[i].p1)) flag = 1;
           if (region->match(tris[i].p2)) flag = 1;
@@ -1317,7 +1403,7 @@ void Surf::group(int narg, char **arg)
           if (flag) tris[i].mask |= bit;
         }
       } else if (rstyle == REGION_CENTER) {
-        for (i = 0; i < ntri; i++) {
+        for (i = 0; i < nsurf; i++) {
           x[0] = (tris[i].p1[0] + tris[i].p2[0] + tris[i].p3[0]) / 3.0;
           x[1] = (tris[i].p1[1] + tris[i].p2[1] + tris[i].p3[1]) / 3.0;
           x[2] = (tris[i].p1[2] + tris[i].p2[2] + tris[i].p3[2]) / 3.0;
@@ -1346,10 +1432,10 @@ void Surf::group(int narg, char **arg)
     int otherbit = bitmask[list[0]];
 
     if (dimension == 2) {
-      for (i = 0; i < nline; i++)
+      for (i = 0; i < nsurf; i++)
         if (lines[i].mask & otherbit) lines[i].mask |= bit;
     } else {
-      for (i = 0; i < ntri; i++)
+      for (i = 0; i < nsurf; i++)
         if (tris[i].mask & otherbit) tris[i].mask |= bit;
     }
 
@@ -1361,10 +1447,10 @@ void Surf::group(int narg, char **arg)
     for (int ilist = 1; ilist < length; ilist++) {
       otherbit = bitmask[list[ilist]];
       if (dimension == 2) {
-        for (i = 0; i < nline; i++)
+        for (i = 0; i < nsurf; i++)
           if (lines[i].mask & otherbit) lines[i].mask &= inverse;
       } else {
-        for (i = 0; i < ntri; i++)
+        for (i = 0; i < nsurf; i++)
           if (tris[i].mask & otherbit) tris[i].mask &= inverse;
       }
     }
@@ -1393,10 +1479,10 @@ void Surf::group(int narg, char **arg)
     for (int ilist = 0; ilist < length; ilist++) {
       otherbit = bitmask[list[ilist]];
       if (dimension == 2) {
-        for (i = 0; i < nline; i++)
+        for (i = 0; i < nsurf; i++)
           if (lines[i].mask & otherbit) lines[i].mask |= bit;
       } else {
-        for (i = 0; i < ntri; i++)
+        for (i = 0; i < nsurf; i++)
           if (tris[i].mask & otherbit) tris[i].mask |= bit;
       }
     }
@@ -1423,7 +1509,7 @@ void Surf::group(int narg, char **arg)
     int otherbit,ok,ilist;
 
     if (dimension == 2) {
-      for (i = 0; i < nline; i++) {
+      for (i = 0; i < nsurf; i++) {
         ok = 1;
         for (ilist = 0; ilist < length; ilist++) {
           otherbit = bitmask[list[ilist]];
@@ -1432,7 +1518,7 @@ void Surf::group(int narg, char **arg)
         if (ok) lines[i].mask |= bit;
       }
     } else {
-      for (i = 0; i < ntri; i++) {
+      for (i = 0; i < nsurf; i++) {
         ok = 1;
         for (ilist = 0; ilist < length; ilist++) {
           otherbit = bitmask[list[ilist]];
@@ -1452,9 +1538,9 @@ void Surf::group(int narg, char **arg)
     int inversebits = inversemask[igroup];
 
     if (dimension == 2) {
-      for (i = 0; i < nline; i++) lines[i].mask &= inversebits;
+      for (i = 0; i < nsurf; i++) lines[i].mask &= inversebits;
     } else {
-      for (i = 0; i < nline; i++) tris[i].mask &= inversebits;
+      for (i = 0; i < nsurf; i++) tris[i].mask &= inversebits;
     }
   }
 
@@ -1462,10 +1548,10 @@ void Surf::group(int narg, char **arg)
 
   int n = 0;
   if (dimension == 2) {
-    for (i = 0; i < nline; i++) 
+    for (i = 0; i < nsurf; i++) 
       if (lines[i].mask & bit) n++;
   } else {
-    for (i = 0; i < ntri; i++)
+    for (i = 0; i < nsurf; i++)
       if (tris[i].mask & bit) n++;
   }
 
@@ -1538,9 +1624,7 @@ void Surf::collate_vector_allreduce(int nrow, int *l2g,
 {
   int i,m;
 
-  int nglobal;
-  if (domain->dimension == 2) nglobal = nline;
-  else nglobal = ntri;
+  int nglobal = nsurf;
   if (nglobal == 0) return;
 
   double *one,*all;
@@ -1557,7 +1641,7 @@ void Surf::collate_vector_allreduce(int nrow, int *l2g,
 
   MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
 
-  for (i = 0; i < nlocal; i++) out[i] = all[mysurfs[i]];
+  for (i = 0; i < nlocal; i++) out[i] = all[myindex[i]];
 
   // NOTE: don't need to destroy them ?
 
@@ -1593,9 +1677,7 @@ void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g,
 {
   int i,j,m;
 
-  int nglobal;
-  if (domain->dimension == 2) nglobal = nline;
-  else nglobal = ntri;
+  int nglobal = nsurf;
   if (nglobal == 0) return;
 
   double **one,**all;
@@ -1615,7 +1697,7 @@ void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g,
   MPI_Allreduce(&one[0][0],&all[0][0],nglobal*ncol,MPI_DOUBLE,MPI_SUM,world);
 
   for (i = 0; i < nlocal; i++) {
-    m = mysurfs[i];
+    m = myindex[i];
     for (j = 0; j < ncol; j++) 
       out[i][j] += all[m][j];
   }
@@ -1629,6 +1711,42 @@ void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g,
 void Surf::collate_array_irregular(int, int, int *, 
                                    double **, double **)
 {
+}
+
+/* ----------------------------------------------------------------------
+   compress owned implicit surfs to account for migrating grid cells
+   migrating grid cells are ones with proc != me
+   only called for implicit surfs
+------------------------------------------------------------------------- */
+
+void Surf::compress_rebalance()
+{
+  int icell;
+  cellint cellID;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::MyHash *hash = grid->hash;
+  int me = comm->me;
+  int n = 0;
+
+  if (domain->dimension == 2) {
+    for (int i = 0; i < nlocal; i++) {
+      icell = (*hash)[lines[i].id];
+      if (cells[icell].proc != me) continue;
+      if (i != n) memcpy(&lines[n],&lines[i],sizeof(Line));
+      n++;
+    }
+
+  } else {
+    for (int i = 0; i < nlocal; i++) {
+      icell = (*hash)[tris[i].id];
+      if (cells[icell].proc != me) continue;
+      if (i != n) memcpy(&tris[n],&tris[i],sizeof(Tri));
+      n++;
+    }
+  }
+
+  nlocal = n;
 }
 
 /* ----------------------------------------------------------------------
@@ -1647,8 +1765,8 @@ void Surf::write_restart(FILE *fp)
   }
 
   if (domain->dimension == 2) {
-    fwrite(&nline,sizeof(int),1,fp);
-    for (int i = 0; i < nline; i++) {
+    fwrite(&nsurf,sizeof(int),1,fp);
+    for (int i = 0; i < nsurf; i++) {
       fwrite(&lines[i].id,sizeof(surfint),1,fp);
       fwrite(&lines[i].type,sizeof(int),1,fp);
       fwrite(&lines[i].mask,sizeof(int),1,fp);
@@ -1657,8 +1775,8 @@ void Surf::write_restart(FILE *fp)
     }
   }
   if (domain->dimension == 3) {
-    fwrite(&ntri,sizeof(int),1,fp);
-    for (int i = 0; i < ntri; i++) {
+    fwrite(&nsurf,sizeof(int),1,fp);
+    for (int i = 0; i < nsurf; i++) {
       fwrite(&tris[i].id,sizeof(surfint),1,fp);
       fwrite(&tris[i].type,sizeof(int),1,fp);
       fwrite(&tris[i].mask,sizeof(int),1,fp);
@@ -1695,12 +1813,12 @@ void Surf::read_restart(FILE *fp)
   }
 
   if (domain->dimension == 2) {
-    if (me == 0) fread(&nline,sizeof(int),1,fp);
-    MPI_Bcast(&nline,1,MPI_INT,0,world);
-    lines = (Line *) memory->smalloc(nline*sizeof(Line),"surf:lines");
+    if (me == 0) fread(&nsurf,sizeof(int),1,fp);
+    MPI_Bcast(&nsurf,1,MPI_INT,0,world);
+    lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
 
     if (me == 0) {
-      for (int i = 0; i < nline; i++) {
+      for (int i = 0; i < nsurf; i++) {
         fread(&lines[i].id,sizeof(surfint),1,fp);
         fread(&lines[i].type,sizeof(int),1,fp);
         fread(&lines[i].mask,sizeof(int),1,fp);
@@ -1710,16 +1828,16 @@ void Surf::read_restart(FILE *fp)
         lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
       }
     }
-    MPI_Bcast(lines,nline*sizeof(Line),MPI_CHAR,0,world);
+    MPI_Bcast(lines,nsurf*sizeof(Line),MPI_CHAR,0,world);
   }
 
   if (domain->dimension == 3) {
-    if (me == 0) fread(&ntri,sizeof(int),1,fp);
-    MPI_Bcast(&ntri,1,MPI_INT,0,world);
-    tris = (Tri *) memory->smalloc(ntri*sizeof(Tri),"surf:tris");
+    if (me == 0) fread(&nsurf,sizeof(int),1,fp);
+    MPI_Bcast(&nsurf,1,MPI_INT,0,world);
+    tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
 
     if (me == 0) {
-      for (int i = 0; i < ntri; i++) {
+      for (int i = 0; i < nsurf; i++) {
         fread(&tris[i].id,sizeof(surfint),1,fp);
         fread(&tris[i].type,sizeof(int),1,fp);
         fread(&tris[i].mask,sizeof(int),1,fp);
@@ -1730,7 +1848,7 @@ void Surf::read_restart(FILE *fp)
         tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
       }
     }
-    MPI_Bcast(tris,ntri*sizeof(Tri),MPI_CHAR,0,world);
+    MPI_Bcast(tris,nsurf*sizeof(Tri),MPI_CHAR,0,world);
   }
 }
 
@@ -1740,10 +1858,10 @@ void Surf::grow()
 {
   if (domain->dimension == 2)
     lines = (Surf::Line *) 
-      memory->srealloc(lines,maxline*sizeof(Surf::Line),"surf:lines");
+      memory->srealloc(lines,nmax*sizeof(Surf::Line),"surf:lines");
   else 
     tris = (Surf::Tri *) 
-      memory->srealloc(tris,maxtri*sizeof(Surf::Tri),"surf:tris");
+      memory->srealloc(tris,nmax*sizeof(Surf::Tri),"surf:tris");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1751,8 +1869,8 @@ void Surf::grow()
 bigint Surf::memory_usage()
 {
   bigint bytes = 0;
-  bytes += (bigint) nline * sizeof(Line);
-  bytes += (bigint) ntri * sizeof(Tri);
+  if (domain->dimension == 2) bytes += nsurf * sizeof(Line);
+  else bytes += nsurf * sizeof(Tri);
   bytes += nlocal * sizeof(int);
   return bytes;
 }
