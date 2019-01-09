@@ -26,7 +26,7 @@ inputs:
    template T = one datum, e.g. int, double, struct
    maxchunk = max # of datums in one chunk, def = 1
    pagesize = # of datums in one page, def = 1024
-              should be insure big enough to store multiple chunks
+              should insure big enough to store multiple chunks
    pagedelta = # of pages to allocate at a time, def = 1
 methods:
    T *get() = return ptr to one datum
