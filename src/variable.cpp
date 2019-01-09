@@ -1856,15 +1856,15 @@ double Variable::evaluate(char *str, Tree **tree)
 	    argstack[nargstack++] = value1 * value2;
 	  else if (opprevious == DIVIDE) {
 	    if (value2 == 0.0)
-	      error->all(FLERR,"Divide by 0 in variable formula");
+	      error->one(FLERR,"Divide by 0 in variable formula");
 	    argstack[nargstack++] = value1 / value2;
           } else if (opprevious == MODULO) {
             if (value2 == 0.0)
-              error->all(FLERR,"Modulo 0 in variable formula");
+              error->one(FLERR,"Modulo 0 in variable formula");
             argstack[nargstack++] = fmod(value1,value2);
 	  } else if (opprevious == CARAT) {
 	    if (value2 == 0.0)
-	      error->all(FLERR,"Power by 0 in variable formula");
+	      error->one(FLERR,"Power by 0 in variable formula");
 	    argstack[nargstack++] = pow(value1,value2);
 	  } else if (opprevious == UNARY) {
 	    argstack[nargstack++] = -value2;
