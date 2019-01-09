@@ -201,7 +201,7 @@ void Grid::id_child_lohi(int iparent, cellint ichild, double *lo, double *hi)
 
   int ix = ichild % nx;
   int iy = (ichild/nx) % ny;
-  int iz = ichild / (nx*ny);
+  int iz = ichild / ((bigint) nx*ny);
 
   double *plo = p->lo;
   double *phi = p->hi;
