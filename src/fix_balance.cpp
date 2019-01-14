@@ -31,6 +31,9 @@
 #include "error.h"
 #include "timer.h"
 
+// DEBUG
+#include "surf.h"
+
 using namespace SPARTA_NS;
 
 enum{RANDOM,PROC,BISECTION};
@@ -138,6 +141,8 @@ void FixBalance::end_of_step()
   if (imbnow <= thresh) return;
   imbprev = imbnow;
 
+  if (me == 0) printf("BALANCING %g\n",imbnow);
+
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
@@ -230,6 +235,7 @@ void FixBalance::end_of_step()
 
   grid->unset_neighbors();
   grid->remove_ghosts();
+
   comm->migrate_cells(nmigrate);
 
   grid->setup_owned();

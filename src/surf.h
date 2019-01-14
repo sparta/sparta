@@ -26,7 +26,8 @@ namespace SPARTA_NS {
 class Surf : protected Pointers {
  public:
   int exist;                // 1 if any surfaces are defined, else 0
-  int distributed;          // 1 = surfs spread across procs, 0 = each proc owns all
+  int distributed;          // 1 = surfs spread across procs, 
+                            // 0 = each proc owns all
   int implicit;             // 1 = implicit surfs, 0 = explicit surfs
   int dynamic;              // 1 = implicit surfs change, 0 = static
   int surf_collision_check; // flag for whether init() check is required
@@ -140,9 +141,10 @@ class Surf : protected Pointers {
 
   void collate_vector(int, int *, double *, int, double *);
   void collate_array(int, int, int *, double **, double **);
-
-  void compress_rebalance();
   
+  void compress_rebalance();
+  void reset_csurfs_implicit();
+
   void write_restart(FILE *);
   void read_restart(FILE *);
   virtual void grow();
@@ -153,16 +155,21 @@ class Surf : protected Pointers {
   int maxsr;                // max # of models in sr
 
 #ifdef SPARTA_MAP
+  typedef std::map<surfint,int> MySurfHash;
   typedef std::map<TwoPoint3d,int> MyHash;
   typedef std::map<TwoPoint3d,int>::iterator MyIterator;
 #elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<surfint,int> MySurfHash;
   typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash;
   typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::iterator MyIterator;
 #else
+  typedef std::tr1::unordered_map<surfint,int> MySurfHash;
   typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash;
   typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::iterator 
     MyIterator;
 #endif
+
+  MySurfHash *shash;
 
   void point_line_compare(double *, double *, double *, double, int &, int &);
   void point_tri_compare(double *, double *, double *, double *, double *,

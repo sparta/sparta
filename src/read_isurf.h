@@ -43,8 +43,9 @@ class ReadISurf : protected Pointers {
  protected:
   int me;
   int dim;
-  int count,iggroup,sgrouparg,thresh;
+  int count,iggroup,sgrouparg;
   int nx,ny,nz;
+  double thresh;
   double corner[3],xyzsize[3];
 
 #ifdef SPARTA_MAP

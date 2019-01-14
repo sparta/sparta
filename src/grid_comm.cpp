@@ -21,6 +21,9 @@
 #include "modify.h"
 #include "adapt_grid.h"
 
+// DEBUG
+#include "comm.h"
+
 using namespace SPARTA_NS;
 
 // grid cell communication
@@ -224,7 +227,8 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
       for (int m = 0; m < nsurf; m++) {
 	Surf::Line *line = (Surf::Line *) ptr;
 	surf->add_line_copy(ownflag,line);
-	csurfs[m] = surf->nlocal-1;
+        if (ownflag) csurfs[m] = surf->nlocal-1;
+        else csurfs[m] = surf->nlocal+surf->nghost-1;
 	ptr += sizesurf;
 	ptr = ROUNDUP(ptr);
       }
@@ -234,7 +238,8 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
       for (int m = 0; m < nsurf; m++) {
 	Surf::Tri *tri = (Surf::Tri *) ptr;
 	surf->add_tri_copy(ownflag,tri);
-	csurfs[m] = surf->nlocal-1;
+        if (ownflag) csurfs[m] = surf->nlocal-1;
+        else csurfs[m] = surf->nlocal+surf->nghost-1;
 	ptr += sizesurf;
 	ptr = ROUNDUP(ptr);
       }

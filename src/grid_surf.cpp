@@ -88,16 +88,20 @@ void Grid::surf2grid_cell_algorithm(int outflag)
 
   int dim = domain->dimension;
 
-  double *slo = surf->bblo;
-  double *shi = surf->bbhi;
-
-  if (dim == 3) cut3d = new Cut3d(sparta);
-  else cut2d = new Cut2d(sparta,domain->axisymmetric);
-
   if (outflag) {
     MPI_Barrier(world);
     t1 = MPI_Wtime();
   }
+
+  surf->setup_bbox();
+
+  double *slo = surf->bblo;
+  double *shi = surf->bbhi;
+
+  printf("AAA %g %g %g: %g %g %g\n",slo[0],slo[1],slo[2],shi[0],shi[1],shi[2]);
+
+  if (dim == 3) cut3d = new Cut3d(sparta);
+  else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
   // compute overlap of surfs with each cell I own
   // info stored in nsurf,csurfs
@@ -1366,7 +1370,7 @@ void Grid::flow_stats()
 }
 
 /* ----------------------------------------------------------------------
-   compute flow volume for entire box, using global list of surfs
+   compute flow volume for entire box, using list of surfs
    volume for one surf is projection to lower z face
    NOTE: this does not work if any surfs are clipped to zlo or zhi faces in 3d
          this does not work if any surfs are clipped to ylo or yhi faces in 3d
@@ -1376,7 +1380,7 @@ void Grid::flow_stats()
 
 double Grid::flow_volume()
 {
-  double zarea;
+  double zarea,volall;
   double *p1,*p2,*p3;
 
   Surf::Line *lines = surf->lines;
@@ -1387,38 +1391,53 @@ double Grid::flow_volume()
   double volume = 0.0;
 
   if (domain->dimension == 3) {
-    for (int i = 0; i < surf->nsurf; i++) {
+    for (int i = 0; i < surf->nlocal; i++) {
       p1 = tris[i].p1;
       p2 = tris[i].p2;
       p3 = tris[i].p3;
       zarea = 0.5 * ((p2[0]-p1[0])*(p3[1]-p1[1]) - (p2[1]-p1[1])*(p3[0]-p1[0]));
       volume -= zarea * ((p1[2]+p2[2]+p3[2])/3.0 - boxlo[2]);
     }
-    if (volume <= 0.0) 
-      volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) * 
+
+    if (surf->distributed)
+      MPI_Allreduce(&volume,&volall,1,MPI_DOUBLE,MPI_SUM,world);
+    else volall = volume;
+
+    if (volall <= 0.0) 
+      volall += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]) * 
         (boxhi[2]-boxlo[2]); 
  
   // axisymmetric "volume" of line segment = volume of truncated cone
   // PI/3 (y1^2 + y1y2 + y2^2) (x2-x1)
 
   } else if (domain->axisymmetric) {
-    for (int i = 0; i < surf->nsurf; i++) {
+    for (int i = 0; i < surf->nlocal; i++) {
       p1 = lines[i].p1;
       p2 = lines[i].p2;
       volume -= 
         MY_PI3 * (p1[1]*p1[1] + p1[1]*p2[1] + p2[1]*p2[1]) * (p2[0]-p1[0]);
     }
-    if (volume <= 0.0) 
-      volume += MY_PI * boxhi[1]*boxhi[1] * (boxhi[0]-boxlo[0]);
+
+    if (surf->distributed)
+      MPI_Allreduce(&volume,&volall,1,MPI_DOUBLE,MPI_SUM,world);
+    else volall = volume;
+
+    if (volall <= 0.0) 
+      volall += MY_PI * boxhi[1]*boxhi[1] * (boxhi[0]-boxlo[0]);
 
   } else {
-    for (int i = 0; i < surf->nsurf; i++) {
+    for (int i = 0; i < surf->nlocal; i++) {
       p1 = lines[i].p1;
       p2 = lines[i].p2;
       volume -= (0.5*(p1[1]+p2[1]) - boxlo[1]) * (p2[0]-p1[0]);
     }
-    if (volume <= 0.0) volume += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
+
+    if (surf->distributed)
+      MPI_Allreduce(&volume,&volall,1,MPI_DOUBLE,MPI_SUM,world);
+    else volall = volume;
+
+    if (volall <= 0.0) volall += (boxhi[0]-boxlo[0]) * (boxhi[1]-boxlo[1]); 
   }
-  
-  return volume;
+
+  return volall;
 }

@@ -26,6 +26,9 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+#include "unistd.h"
+
 using namespace SPARTA_NS;
 
 enum{NEITHER,BAD,GOOD};
@@ -82,7 +85,9 @@ void ReadISurf::command(int narg, char **arg)
 
   char *gridfile = arg[4];
 
-  thresh = input->inumeric(FLERR,arg[5]);
+  // NOTE: check for exact int value ??
+
+  thresh = input->numeric(FLERR,arg[5]);
   if (thresh <= 0 || thresh >= 255) 
     error->all(FLERR,"Invalid read_isurf command");
 
@@ -189,6 +194,8 @@ void ReadISurf::command(int narg, char **arg)
       extent[0][1] = MAX(extent[0][1],lines[i].p1[0]);
       extent[1][0] = MIN(extent[1][0],lines[i].p2[1]);
       extent[1][1] = MAX(extent[1][1],lines[i].p2[1]);
+      extent[2][0] = MIN(extent[2][0],lines[i].p2[2]);
+      extent[2][1] = MAX(extent[2][1],lines[i].p2[2]);
     }
 
   } else {
@@ -789,34 +796,36 @@ double ReadISurf::interpolate(int v0, int v1, double lo, double hi)
 
 double ReadISurf::shortest_line()
 {
-  /*  NOTE: this should be local scan followed by Allreduce
+  int nlocal = surf->nlocal;
+
   double len = BIG;
-  int m = nline_old;
-  for (int i = 0; i < nline_new; i++) {
-    len = MIN(len,surf->line_size(m));
-    m++;
-  }
-  return len;
-  */
-  return 0.0;
+  for (int i = 0; i < nlocal; i++)
+    len = MIN(len,surf->line_size(i));
+
+  double lenall;
+  MPI_Allreduce(&len,&lenall,1,MPI_DOUBLE,MPI_MIN,world);
+
+  return lenall;
 }
 
 /* ----------------------------------------------------------------------
    return shortest tri edge and smallest tri area
 ------------------------------------------------------------------------- */
 
-void ReadISurf::smallest_tri(double &len, double &area)
+void ReadISurf::smallest_tri(double &lenall, double &areaall)
 {
   double lenone,areaone;
 
-  /*
-  len = area = BIG;
-  int m = ntri_old;
-  for (int i = 0; i < ntri_new; i++) {
-    areaone = surf->tri_size(m,lenone);
+  int nlocal = surf->nlocal;
+
+  double len = BIG;
+  double area = BIG;
+  for (int i = 0; i < nlocal; i++) {
+    areaone = surf->tri_size(i,lenone);
     len = MIN(len,lenone);
     area = MIN(area,areaone);
-    m++;
   }
-  */
+
+  MPI_Allreduce(&len,&lenall,1,MPI_DOUBLE,MPI_MIN,world);
+  MPI_Allreduce(&area,&areaall,1,MPI_DOUBLE,MPI_MIN,world);
 }

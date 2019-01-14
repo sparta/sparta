@@ -288,16 +288,17 @@ void Comm::migrate_cells(int nmigrate)
     offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
   }
 
-  // compress implicit surf list to remove surfs in migrating cells
-  //   do before grid->compress() b/c uses grid hash
+  // compress my list of owned implicit surfs
   // compress my list of owned grid cells to remove migrating cells
+  // reset csurf pointers to implicit surfs since they were compressed
   // compress particle list to remove particles in migrating cells
-  // unset particle sorted since compress_rebalance() does
-  //   and may receive particles which will then be unsorted
+  // procs with no migrating cells must also unset particle sorted
+  //   since compress_rebalance() unsets it
 
   if (nmigrate) {
     if (surf->implicit) surf->compress_rebalance();
     grid->compress();
+    if (surf->implicit) surf->reset_csurfs_implicit();
     particle->compress_rebalance();
   } else particle->sorted = 0;
 

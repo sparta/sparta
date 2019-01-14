@@ -1399,6 +1399,7 @@ void Update::global(int narg, char **arg)
     } else if (strcmp(arg[iarg],"surfs") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       surf->global(arg[iarg+1]);
+      iarg += 2;
     } else if (strcmp(arg[iarg],"surfgrid") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (surf->exist) 
