@@ -1352,7 +1352,7 @@ void ReadSurf::clip3d()
     
     n = 0;
     for (i = 0; i < ntri; i++) {
-      if (!triflag[0]) {
+      if (!triflag[i]) {
 	memcpy(&tris[n],&tris[i],sizeof(Tri));
 	tris[n].p1 = ptflag[tris[n].p1];
 	tris[n].p2 = ptflag[tris[n].p2];
