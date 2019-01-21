@@ -30,6 +30,12 @@
 
 using namespace SPARTA_NS;
 
+// local function prototypes, code at end of file
+
+static void mpi_timings(const char *label, Timer *t, int tt,
+                        MPI_Comm world, const int nprocs,
+                        const int me, double time_loop, FILE *scr, FILE *log);
+
 /* ---------------------------------------------------------------------- */
 
 Finish::Finish(SPARTA *sparta) : Pointers(sparta) {}
@@ -93,6 +99,43 @@ void Finish::end(int flag, double time_multiple_runs)
 			 "Loop time of %g on %d procs for %d steps with " 
 			 BIGINT_FORMAT " particles\n",
 			 time_loop,nprocs,update->nsteps,particle->nglobal);
+  }
+
+  // timing breakdowns
+
+  if (timeflag) {
+    const char hdr[] = "\nMPI task timing breakdown:\n"
+      "Section |  min time  |  avg time  |  max time  |%varavg| %total\n"
+      "---------------------------------------------------------------\n";
+    if (me == 0) {
+      if (screen)  fputs(hdr,screen);
+      if (logfile) fputs(hdr,logfile);
+    }
+
+    mpi_timings("Move",timer,TIME_MOVE,world,nprocs,
+                me,time_loop,screen,logfile);
+    mpi_timings("Coll",timer,TIME_COLLIDE,world,nprocs,
+                me,time_loop,screen,logfile);
+    mpi_timings("Sort",timer,TIME_SORT,world,nprocs,
+                me,time_loop,screen,logfile);
+    mpi_timings("Comm",timer,TIME_COMM,world,nprocs,
+                me,time_loop,screen,logfile);
+    mpi_timings("Modify",timer,TIME_MODIFY,world,nprocs,
+                me,time_loop,screen,logfile);
+    mpi_timings("Output",timer,TIME_OUTPUT,world,nprocs,
+                me,time_loop,screen,logfile);
+
+    time = time_other;
+    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
+    time = tmp/nprocs;
+
+    const char *fmt;
+    fmt = "Other   |            |%- 12.4g|            |       |%6.2f\n";
+
+    if (me == 0) {
+      if (screen) fprintf(screen,fmt,time,time/time_loop*100.0);
+      if (logfile) fprintf(logfile,fmt,time,time/time_loop*100.0);
+    }
   }
 
   // cummulative stats over entire run
@@ -243,99 +286,6 @@ void Finish::end(int flag, double time_multiple_runs)
     }
   }
 
-  // timing breakdowns
-
-  if (timeflag) {
-    if (me == 0) {
-      if (screen) fprintf(screen,"\n");
-      if (logfile) fprintf(logfile,"\n");
-    }
-
-    time = timer->array[TIME_MOVE];
-    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
-    time = tmp/nprocs;
-    if (me == 0) {
-      if (screen) 
-	fprintf(screen,"Move  time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-      if (logfile) 
-	fprintf(logfile,"Move  time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-    }
-
-    time = timer->array[TIME_COLLIDE];
-    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
-    time = tmp/nprocs;
-    if (me == 0) {
-      if (screen) 
-	fprintf(screen,"Coll  time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-      if (logfile)
-	fprintf(logfile,"Coll  time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-    }
-    
-    time = timer->array[TIME_SORT];
-    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
-    time = tmp/nprocs;
-    if (me == 0) {
-      if (screen) 
-	fprintf(screen,"Sort  time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-      if (logfile)
-	fprintf(logfile,"Sort  time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-    }
-    
-    time = timer->array[TIME_COMM];
-    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
-    time = tmp/nprocs;
-    if (me == 0) {
-      if (screen) 
-	fprintf(screen,"Comm  time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-      if (logfile) 
-	fprintf(logfile,"Comm  time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-    }
-    
-    time = timer->array[TIME_MODIFY];
-    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
-    time = tmp/nprocs;
-    if (me == 0) {
-      if (screen) 
-	fprintf(screen,"Modfy time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-      if (logfile) 
-	fprintf(logfile,"Modfy time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-    }
-    
-    time = timer->array[TIME_OUTPUT];
-    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
-    time = tmp/nprocs;
-    if (me == 0) {
-      if (screen) 
-	fprintf(screen,"Outpt time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-      if (logfile) 
-	fprintf(logfile,"Outpt time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-    }
-    
-    time = time_other;
-    MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
-    time = tmp/nprocs;
-    if (me == 0) {
-      if (screen) 
-	fprintf(screen,"Other time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-      if (logfile) 
-	fprintf(logfile,"Other time (%%) = %g (%g)\n",
-		time,time/time_loop*100.0);
-    }
-  }
-       
   // histograms
 
   if (histoflag) {
@@ -462,4 +412,38 @@ void Finish::stats(int n, double *data,
   *pave = ave;
   *pmax = max;
   *pmin = min;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void mpi_timings(const char *label, Timer *t, int tt,
+                        MPI_Comm world, const int nprocs,
+                        const int me, double time_loop, FILE *scr, FILE *log)
+{
+  double tmp, time_max, time_min, time_sq;
+  double time = t->array[tt];
+
+  MPI_Allreduce(&time,&time_min,1,MPI_DOUBLE,MPI_MIN,world);
+  MPI_Allreduce(&time,&time_max,1,MPI_DOUBLE,MPI_MAX,world);
+  time_sq = time*time;
+  MPI_Allreduce(&time,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
+  time = tmp/nprocs;
+  MPI_Allreduce(&time_sq,&tmp,1,MPI_DOUBLE,MPI_SUM,world);
+  time_sq = tmp/nprocs;
+
+  // % variance from the average as measure of load imbalance
+  if ((time > 0.001) && ((time_sq/time - time) > 1.0e-10))
+    time_sq = sqrt(time_sq/time - time)*100.0;
+  else
+    time_sq = 0.0;
+
+
+  if (me == 0) {
+    tmp = time/time_loop*100.0;
+    const char fmt[] = "%-8s|%- 12.5g|%- 12.5g|%- 12.5g|%6.1f |%6.2f\n";
+    if (scr)
+      fprintf(scr,fmt,label,time_min,time,time_max,time_sq,tmp);
+    if (log)
+      fprintf(log,fmt,label,time_min,time,time_max,time_sq,tmp);
+  }
 }
