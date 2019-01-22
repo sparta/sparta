@@ -79,49 +79,35 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))},
   slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))}
 {
-  k_ncomm_one = DAT::tdual_int_scalar("UpdateKokkos:ncomm_one");
-  d_ncomm_one = k_ncomm_one.view<DeviceType>();
-  h_ncomm_one = k_ncomm_one.h_view;
 
-  k_nexit_one = DAT::tdual_int_scalar("UpdateKokkos:nexit_one");
-  d_nexit_one = k_nexit_one.view<DeviceType>();
-  h_nexit_one = k_nexit_one.h_view;
+  // use 1D view for scalars to reduce GPU memory operations
 
-  k_nboundary_one = DAT::tdual_int_scalar("UpdateKokkos:nboundary_one");
-  d_nboundary_one = k_nboundary_one.view<DeviceType>();
-  h_nboundary_one = k_nboundary_one.h_view;
+  d_scalars = t_int_11("collide:scalars");
+  h_scalars = t_host_int_11("collide:scalars_mirror");
 
-  k_nmigrate = DAT::tdual_int_scalar("UpdateKokkos:nmigrate");
-  d_nmigrate = k_nmigrate.view<DeviceType>();
-  h_nmigrate = k_nmigrate.h_view;
+  d_ncomm_one     = Kokkos::subview(d_scalars,0);
+  d_nexit_one     = Kokkos::subview(d_scalars,1);
+  d_nboundary_one = Kokkos::subview(d_scalars,2);
+  d_nmigrate      = Kokkos::subview(d_scalars,3);
+  d_entryexit     = Kokkos::subview(d_scalars,4);
+  d_ntouch_one    = Kokkos::subview(d_scalars,5);
+  d_nscheck_one   = Kokkos::subview(d_scalars,6);
+  d_nscollide_one = Kokkos::subview(d_scalars,7);
+  d_nreact_one    = Kokkos::subview(d_scalars,8);
+  d_nstuck        = Kokkos::subview(d_scalars,9);
+  d_error_flag    = Kokkos::subview(d_scalars,10);
 
-  k_entryexit = DAT::tdual_int_scalar("UpdateKokkos:entryexit");
-  d_entryexit = k_entryexit.view<DeviceType>();
-  h_entryexit = k_entryexit.h_view;
-
-  k_ntouch_one = DAT::tdual_int_scalar("UpdateKokkos:ntouch_one");
-  d_ntouch_one = k_ntouch_one.view<DeviceType>();
-  h_ntouch_one = k_ntouch_one.h_view;
-
-  k_nscheck_one = DAT::tdual_int_scalar("UpdateKokkos:nscheck_one");
-  d_nscheck_one = k_nscheck_one.view<DeviceType>();
-  h_nscheck_one = k_nscheck_one.h_view;
-
-  k_nscollide_one = DAT::tdual_int_scalar("UpdateKokkos:nscollide_one");
-  d_nscollide_one = k_nscollide_one.view<DeviceType>();
-  h_nscollide_one = k_nscollide_one.h_view;
-
-  k_nreact_one = DAT::tdual_int_scalar("UpdateKokkos:nreact_one");
-  d_nreact_one = k_nreact_one.view<DeviceType>();
-  h_nreact_one = k_nreact_one.h_view;
-
-  k_nstuck = DAT::tdual_int_scalar("UpdateKokkos:nstuck");
-  d_nstuck = k_nstuck.view<DeviceType>();
-  h_nstuck = k_nstuck.h_view;
-
-  k_error_flag = DAT::tdual_int_scalar("UpdateKokkos:error_flag");
-  d_error_flag = k_error_flag.view<DeviceType>();
-  h_error_flag = k_error_flag.h_view;
+  h_ncomm_one     = Kokkos::subview(h_scalars,0);
+  h_nexit_one     = Kokkos::subview(h_scalars,1);
+  h_nboundary_one = Kokkos::subview(h_scalars,2);
+  h_nmigrate      = Kokkos::subview(h_scalars,3);
+  h_entryexit     = Kokkos::subview(h_scalars,4);
+  h_ntouch_one    = Kokkos::subview(h_scalars,5);
+  h_nscheck_one   = Kokkos::subview(h_scalars,6);
+  h_nscollide_one = Kokkos::subview(h_scalars,7);
+  h_nreact_one    = Kokkos::subview(h_scalars,8);
+  h_nstuck        = Kokkos::subview(h_scalars,9);
+  h_error_flag    = Kokkos::subview(h_scalars,10);
 
   nboundary_tally = 0;
 }
@@ -382,37 +368,15 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
   if (sparta->kokkos->atomic_reduction) {
     h_ntouch_one() = 0;
-    k_ntouch_one.modify<SPAHostType>();
-    k_ntouch_one.sync<DeviceType>();
-
     h_nexit_one() = 0;
-    k_nexit_one.modify<SPAHostType>();
-    k_nexit_one.sync<DeviceType>();
-
     h_nboundary_one() = 0;
-    k_nboundary_one.modify<SPAHostType>();
-    k_nboundary_one.sync<DeviceType>();
-
     h_ncomm_one() = 0;
-    k_ncomm_one.modify<SPAHostType>();
-    k_ncomm_one.sync<DeviceType>();
-
     h_nscheck_one() = 0;
-    k_nscheck_one.modify<SPAHostType>();
-    k_nscheck_one.sync<DeviceType>();
-
     h_nscollide_one() = 0;
-    k_nscollide_one.modify<SPAHostType>();
-    k_nscollide_one.sync<DeviceType>();
-
     h_nreact_one() = 0;
-    k_nreact_one.modify<SPAHostType>();
-    k_nreact_one.sync<DeviceType>();
   }
 
   h_error_flag() = 0;
-  k_error_flag.modify<SPAHostType>();
-  k_error_flag.sync<DeviceType>();
 
   // move/migrate iterations
 
@@ -493,12 +457,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       error->all(FLERR,"Cannot (yet) use surface reactions with Kokkos");
 
     h_nmigrate() = 0;
-    k_nmigrate.modify<SPAHostType>();
-    k_nmigrate.sync<DeviceType>();
-
     h_entryexit() = 0;
-    k_entryexit.modify<SPAHostType>();
-    k_entryexit.sync<DeviceType>();
 
     nmigrate = 0;
     entryexit = 0;
@@ -516,6 +475,8 @@ template < int DIM, int SURF > void UpdateKokkos::move()
                         -1 = use parallel_reduce
     */
 
+    Kokkos::deep_copy(d_scalars,h_scalars);
+
     k_mlist.sync<SPADeviceType>();
     copymode = 1;
     if (sparta->kokkos->atomic_reduction) {
@@ -529,13 +490,13 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     }
     copymode = 0;
 
+    Kokkos::deep_copy(h_scalars,d_scalars);
+
     particle_kk->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
     // END of pstart/pstop loop advecting all particles
 
-    k_nmigrate.modify<DeviceType>();
-    k_nmigrate.sync<SPAHostType>();
     nmigrate = h_nmigrate();
 
     DAT::t_int_1d d_mlist_small = Kokkos::subview(k_mlist.d_view,std::make_pair(0,nmigrate));
@@ -546,36 +507,13 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     int error_flag;
 
     if (sparta->kokkos->atomic_reduction) {
-      k_ntouch_one.modify<DeviceType>();
-      k_ntouch_one.sync<SPAHostType>();
       ntouch_one = h_ntouch_one();
-
-      k_nexit_one.modify<DeviceType>();
-      k_nexit_one.sync<SPAHostType>();
       nexit_one = h_nexit_one();
-
-      k_nboundary_one.modify<DeviceType>();
-      k_nboundary_one.sync<SPAHostType>();
       nboundary_one = h_nboundary_one();
-
-      k_ncomm_one.modify<DeviceType>();
-      k_ncomm_one.sync<SPAHostType>();
       ncomm_one = h_ncomm_one();
-
-      k_nscheck_one.modify<DeviceType>();
-      k_nscheck_one.sync<SPAHostType>();
       nscheck_one = h_nscheck_one();
-
-      k_nscollide_one.modify<DeviceType>();
-      k_nscollide_one.sync<SPAHostType>();
       nscollide_one = h_nscollide_one();
-
-      k_nreact_one.modify<DeviceType>();
-      k_nreact_one.sync<SPAHostType>();
       surf->nreact_one = h_nreact_one();
-
-      k_nstuck.modify<DeviceType>();
-      k_nstuck.sync<SPAHostType>();
       nstuck = h_nstuck();
     } else {
       ntouch_one       += reduce.ntouch_one   ;
@@ -588,12 +526,8 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       nstuck           += reduce.nstuck       ;
     }
 
-    k_entryexit.modify<DeviceType>();
-    k_entryexit.sync<SPAHostType>();
     entryexit = h_entryexit();
 
-    k_error_flag.modify<DeviceType>();
-    k_error_flag.sync<SPAHostType>();
     error_flag = h_error_flag();
 
     if (error_flag) {

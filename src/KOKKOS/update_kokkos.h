@@ -133,47 +133,43 @@ class UpdateKokkos : public Update {
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
-  DAT::tdual_int_scalar k_ntouch_one;
+
+  typedef Kokkos::DualView<int[11], SPADeviceType::array_layout, SPADeviceType> tdual_int_11;
+  typedef tdual_int_11::t_dev t_int_11;
+  typedef tdual_int_11::t_host t_host_int_11;
+  t_int_11 d_scalars;
+  t_host_int_11 h_scalars;
+
   typename AT::t_int_scalar d_ntouch_one;
   HAT::t_int_scalar h_ntouch_one;
 
-  DAT::tdual_int_scalar k_nexit_one;
   typename AT::t_int_scalar d_nexit_one;
   HAT::t_int_scalar h_nexit_one;
 
-  DAT::tdual_int_scalar k_nboundary_one;
   typename AT::t_int_scalar d_nboundary_one;
   HAT::t_int_scalar h_nboundary_one;
 
-  DAT::tdual_int_scalar k_nmigrate;
   typename AT::t_int_scalar d_nmigrate;
   HAT::t_int_scalar h_nmigrate;
 
-  DAT::tdual_int_scalar k_entryexit;
   typename AT::t_int_scalar d_entryexit;
   HAT::t_int_scalar h_entryexit;
 
-  DAT::tdual_int_scalar k_ncomm_one;
   typename AT::t_int_scalar d_ncomm_one;
   HAT::t_int_scalar h_ncomm_one;
 
-  DAT::tdual_int_scalar k_nscheck_one;
   typename AT::t_int_scalar d_nscheck_one;
   HAT::t_int_scalar h_nscheck_one;
 
-  DAT::tdual_int_scalar k_nscollide_one;
   typename AT::t_int_scalar d_nscollide_one;
   HAT::t_int_scalar h_nscollide_one;
 
-  DAT::tdual_int_scalar k_nreact_one;
   typename AT::t_int_scalar d_nreact_one;
   HAT::t_int_scalar h_nreact_one;
 
-  DAT::tdual_int_scalar k_nstuck;
   typename AT::t_int_scalar d_nstuck;
   HAT::t_int_scalar h_nstuck;
 
-  DAT::tdual_int_scalar k_error_flag;
   typename AT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
 

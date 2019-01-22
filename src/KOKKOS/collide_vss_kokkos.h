@@ -138,7 +138,6 @@ class CollideVSSKokkos : public CollideVSS {
   typedef Kokkos::DualView<int[10], SPADeviceType::array_layout, SPADeviceType> tdual_int_10;
   typedef tdual_int_10::t_dev t_int_10;
   typedef tdual_int_10::t_host t_host_int_10;
-  tdual_int_10 k_scalars;
   t_int_10 d_scalars;
   t_host_int_10 h_scalars;
 

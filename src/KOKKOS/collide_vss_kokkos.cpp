@@ -58,6 +58,8 @@ CollideVSSKokkos::CollideVSSKokkos(SPARTA *sparta, int narg, char **arg) :
 {
   kokkos_flag = 1;
 
+  // use 1D view for scalars to reduce GPU memory operations
+
   d_scalars = t_int_10("collide:scalars");
   h_scalars = t_host_int_10("collide:scalars_mirror");
 
