@@ -135,29 +135,42 @@ class CollideVSSKokkos : public CollideVSS {
   DAT::tdual_float_3d k_remain;
   typename AT::t_float_3d d_remain;
 
-  DAT::tdual_int_scalar k_nattempt_one;
+  typedef Kokkos::DualView<int[10], SPADeviceType::array_layout, SPADeviceType> tdual_int_10;
+  typedef tdual_int_10::t_dev t_int_10;
+  typedef tdual_int_10::t_host t_host_int_10;
+  tdual_int_10 k_scalars;
+  t_int_10 d_scalars;
+  t_host_int_10 h_scalars;
+
   typename AT::t_int_scalar d_nattempt_one;
   HAT::t_int_scalar h_nattempt_one;
 
-  DAT::tdual_int_scalar k_ncollide_one;
   typename AT::t_int_scalar d_ncollide_one;
   HAT::t_int_scalar h_ncollide_one;
 
-  DAT::tdual_int_scalar k_nreact_one;
   typename AT::t_int_scalar d_nreact_one;
   HAT::t_int_scalar h_nreact_one;
 
-  DAT::tdual_int_scalar k_error_flag;
   typename AT::t_int_scalar d_error_flag;
   HAT::t_int_scalar h_error_flag;
 
-  DAT::t_int_scalar d_retry;
-  DAT::t_int_scalar d_maxdelete;
-  DAT::t_int_scalar d_maxcellcount;
-  DAT::t_int_scalar d_part_grow;
+  typename AT::t_int_scalar d_retry;
+  HAT::t_int_scalar h_retry;
 
-  DAT::t_int_scalar d_ndelete;
-  DAT::t_int_scalar d_nlocal;
+  typename AT::t_int_scalar d_maxdelete;
+  HAT::t_int_scalar h_maxdelete;
+
+  typename AT::t_int_scalar d_maxcellcount;
+  HAT::t_int_scalar h_maxcellcount;
+
+  typename AT::t_int_scalar d_part_grow;
+  HAT::t_int_scalar h_part_grow;
+
+  typename AT::t_int_scalar d_ndelete;
+  HAT::t_int_scalar h_ndelete;
+
+  typename AT::t_int_scalar d_nlocal;
+  HAT::t_int_scalar h_nlocal;
 
   DAT::tdual_int_1d k_dellist;
   DAT::t_int_1d d_dellist;
