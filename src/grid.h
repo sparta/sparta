@@ -368,7 +368,7 @@ class Grid : protected Pointers {
 
   // callback function for rendezvous communication
 
-  static int rendezvous_surflist(int, char *, int *&, char *&, void *);
+  static int rendezvous_surflist(int, char *, int &, int *&, char *&, void *);
 };
 
 }

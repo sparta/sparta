@@ -466,8 +466,6 @@ void Surf::setup_bbox()
     }
   }
 
-  printf("XXX %d %g %g\n",nlocal,bblo_one[0],bbhi_one[0]);
-
   MPI_Allreduce(bblo_one,bblo,3,MPI_DOUBLE,MPI_MIN,world);
   MPI_Allreduce(bbhi_one,bbhi,3,MPI_DOUBLE,MPI_MAX,world);
 }
@@ -1214,7 +1212,6 @@ void Surf::group(int narg, char **arg)
       // add surf to group if meets condition
 
       if (category == ID) {
-        printf("COND %d %d\n",condition,BETWEEN);
         if (condition == LT) {
           if (dimension == 2) {
             for (i = 0; i < nlocal+nghost; i++) 
@@ -1680,7 +1677,7 @@ void Surf::collate_vector_allreduce(int nrow, int *l2g,
 
   MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
 
-  for (i = 0; i < nlocal; i++) out[i] = all[myindex[i]];
+  for (i = 0; i < nown; i++) out[i] = all[myindex[i]];
 
   // NOTE: don't need to destroy them ?
 
@@ -1735,7 +1732,7 @@ void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g,
 
   MPI_Allreduce(&one[0][0],&all[0][0],nglobal*ncol,MPI_DOUBLE,MPI_SUM,world);
 
-  for (i = 0; i < nlocal; i++) {
+  for (i = 0; i < nown; i++) {
     m = myindex[i];
     for (j = 0; j < ncol; j++) 
       out[i][j] += all[m][j];

@@ -98,8 +98,6 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   double *slo = surf->bblo;
   double *shi = surf->bbhi;
 
-  printf("AAA %g %g %g: %g %g %g\n",slo[0],slo[1],slo[2],shi[0],shi[1],shi[2]);
-
   if (dim == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
@@ -292,9 +290,9 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   // receives all info to form and return their surf lists
 
   char *buf;
-  int nreturn = comm->rendezvous(ncount,proclist,(char *) inbuf,sizeof(InRvous),
-                                 rendezvous_surflist,
-                                 buf,sizeof(OutRvous),(void *) this);
+  int nreturn = comm->rendezvous(1,ncount,(char *) inbuf,sizeof(InRvous),
+                                 0,proclist,rendezvous_surflist,
+                                 0,buf,sizeof(OutRvous),(void *) this,1);
   OutRvous *outbuf = (OutRvous *) buf;
 
   memory->destroy(proclist);
@@ -900,7 +898,7 @@ int *Grid::csubs_request(int n)
    throw error if too many surfs/cell
 ---------------------------------------------------------------------- */
 
-int Grid::rendezvous_surflist(int n, char *inbuf,
+int Grid::rendezvous_surflist(int n, char *inbuf, int &flag,
                               int *&proclist, char *&outbuf,
                               void *ptr)
 {
@@ -964,6 +962,9 @@ int Grid::rendezvous_surflist(int n, char *inbuf,
   memory->destroy(procowner);
   memory->destroy(surfcount);
 
+  // flag = 2: new outbuf
+
+  flag = 2;
   return nout;
 }
 

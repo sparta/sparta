@@ -378,7 +378,7 @@ void ReadSurf::command(int narg, char **arg)
       memcpy(newlines[m].p2,pts[lines[i].p2].x,3*sizeof(double));
       m++;
     }
-    surf->nsurf = nline_new;
+    surf->nsurf = surf->nlocal = nline_new;
 
   } else if (dim == 3) {
     ntri_old = surf->nsurf;
@@ -398,7 +398,7 @@ void ReadSurf::command(int narg, char **arg)
       memcpy(newtris[m].p3,pts[tris[i].p3].x,3*sizeof(double));
       m++;
     }
-    surf->nsurf = ntri_new;
+    surf->nsurf = surf->nlocal = ntri_new;
   }
 
   // compute normals of new lines or triangles
@@ -1352,7 +1352,7 @@ void ReadSurf::clip3d()
     
     n = 0;
     for (i = 0; i < ntri; i++) {
-      if (!triflag[0]) {
+      if (!triflag[i]) {
 	memcpy(&tris[n],&tris[i],sizeof(Tri));
 	tris[n].p1 = ptflag[tris[n].p1];
 	tris[n].p2 = ptflag[tris[n].p2];
@@ -1493,7 +1493,7 @@ void ReadSurf::check_neighbor_norm_3d()
   MyHash hash;
   MyIterator it;
 
-  // insert each edge into hash with triangle as value
+  // insert each edge into hash with triangle index as value
 
   bigint p1,p2,p3,key;
 
