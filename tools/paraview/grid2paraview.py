@@ -143,6 +143,9 @@ def process_grid_chunk(chunk_id, chunk_info, num_chunks, \
       filepaths[0][time][chunk_id] = filepath
       writer.SetFileName(filepath)
       writer.Write()
+    
+      if chunk_id == 0:
+        write_pvtu_file(ug, output_file, num_chunks, time)
   else:
     vp = vtk.vtkPlane()
     writer = vtk.vtkXMLPolyDataWriter()
@@ -952,8 +955,8 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
 
     fh.close()
 
-def write_pvd_file(time_steps, file_name, chunking, index):
-  fh = open(file_name + ".pvd", "w")
+def write_pvd_file_original(time_steps, file_name, chunking, index):
+  fh = open(file_name + "_original.pvd", "w")
   fh.write('<?xml version="1.0"?>\n')
   fh.write('<VTKFile type="Collection" version="0.1"\n')
   fh.write('               byte_order="LittleEndian"\n')
@@ -969,6 +972,48 @@ def write_pvd_file(time_steps, file_name, chunking, index):
 
   fh.write('</VTKFile>    \n')
   fh.close()
+
+def write_pvd_file(time_steps, file_name, chunking, index):
+  fh = open(file_name + ".pvd", "w")
+  fh.write('<?xml version="1.0"?>\n')
+  fh.write('<VTKFile type="Collection" version="0.1"\n')
+  fh.write('               byte_order="LittleEndian"\n')
+  fh.write('               compressor="vtkZLibDataCompressor">\n')
+
+  fh.write('   <Collection>    \n')
+  for time in time_steps:
+      fh.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
+      filepath = os.path.join(file_name, file_name + '_'  + str(time) + '.pvtu')
+      fh.write('             file="' + filepath + '"/>\n')
+  fh.write('   </Collection>    \n')
+
+  fh.write('</VTKFile>    \n')
+  fh.close()
+
+def write_pvtu_file(ug, output_file, num_chunks, time):
+  filepath = os.path.join(output_file, output_file + '_'  + str(time) + '.pvtu')
+  fh = open(filepath, "w")
+  fh.write('<?xml version="1.0"?>\n')
+  fh.write('<VTKFile type="PUnstructuredGrid" version="0.1"\n')
+  fh.write('               byte_order="LittleEndian"\n')
+  fh.write('               compressor="vtkZLibDataCompressor">\n')
+  fh.write('<PUnstructuredGrid GhostLevel="0">\n')
+  fh.write('<PCellData>\n')
+
+  for i in range(ug.GetCellData().GetNumberOfArrays()):
+    array = ug.GetCellData().GetArray(i)
+    fh.write('<PDataArray type="Float64" Name="' + array.GetName() + '"/>\n')
+
+  fh.write('</PCellData>\n')
+  fh.write('<PPoints>\n')
+  fh.write('<PDataArray type="Float32" Name="Points" NumberOfComponents="3"/>\n')
+  fh.write('</PPoints>\n')
+
+  for chunk_id in range(num_chunks):
+    fh.write('<Piece Source="' + output_file + '_' + str(chunk_id) + '_' + str(time) + '.vtu"/>\n')
+
+  fh.write('</PUnstructuredGrid>\n')
+  fh.write('</VTKFile>\n')
 
 def report_chunk_complete(rv):
   chunk_id = rv[0]
@@ -1108,6 +1153,7 @@ if __name__ == "__main__":
       report_chunk_complete(res)
 
   if "slice" not in grid_desc:
+    write_pvd_file_original(sorted(time_steps_dict.keys()), args.paraview_output_file, chunking, 0)
     write_pvd_file(sorted(time_steps_dict.keys()), args.paraview_output_file, chunking, 0)
   else:
     for idx, slice in enumerate(report_chunk_complete.filepaths):
@@ -1115,6 +1161,7 @@ if __name__ == "__main__":
                     str(round(grid_desc["slice"][slice]["nx"],4)) + "_" + \
                     str(round(grid_desc["slice"][slice]["ny"],4)) + "_" + \
                     str(round(grid_desc["slice"][slice]["nz"],4))
+      write_pvd_file_original(sorted(time_steps_dict.keys()), file_name, chunking, slice)
       write_pvd_file(sorted(time_steps_dict.keys()), file_name, chunking, slice)
 
   print "Done."
