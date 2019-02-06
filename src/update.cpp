@@ -288,7 +288,7 @@ template < int DIM, int SURF > void Update::move()
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
   int pstart,pstop,entryexit,any_entryexit;
-  int *csurfs;
+  surfint *csurfs;
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
@@ -1179,7 +1179,7 @@ int Update::split3d(int icell, double *x)
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
   int nsurf = cells[icell].nsurf;
-  int *csurfs = cells[icell].csurfs;
+  surfint *csurfs = cells[icell].csurfs;
   int isplit = cells[icell].isplit;
   int *csplits = sinfo[isplit].csplits;
   double *xnew = sinfo[isplit].xsplit;
@@ -1232,7 +1232,7 @@ int Update::split2d(int icell, double *x)
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
   int nsurf = cells[icell].nsurf;
-  int *csurfs = cells[icell].csurfs;
+  surfint *csurfs = cells[icell].csurfs;
   int isplit = cells[icell].isplit;
   int *csplits = sinfo[isplit].csplits;
   double *xnew = sinfo[isplit].xsplit;

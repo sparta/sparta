@@ -92,7 +92,8 @@ void ComputeDistSurfGrid::init()
 void ComputeDistSurfGrid::compute_per_grid()
 {
   int i,m,n;
-  int *csurfs,*csubs;
+  int *csubs;
+  surfint *csurfs;
   double dist,mindist;
   double *p1,*p2,*p3,*lo,*hi;
   double cctr[3],cell2surf[3];

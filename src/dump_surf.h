@@ -56,11 +56,13 @@ class DumpSurf : public Dump {
   double **vbuf;             // local storage for variable evaluation
 
   int dimension;
-  int nslocal;               // # of surf elements owned by this proc
+  int nown;                  // # of surf elements owned by this proc
   int nchoose;               // # of surf elements output by this proc
   int *cglobal;              // indices of global elements for nchoose
   int *clocal;               // indices of local owned elements for nchoose
   double *buflocal;          // buffer for per-surf element values
+
+  int distributed,implicit;  // Surf settings
 
   int firstflag;
 

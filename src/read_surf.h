@@ -39,6 +39,8 @@ class ReadSurf : protected Pointers {
   char *line,*keyword,*buffer;
   FILE *fp;
   int compressed;
+  int distributed;
+  int partflag,filearg;
 
   int dim;
   double origin[3];
@@ -82,7 +84,11 @@ class ReadSurf : protected Pointers {
   void header();
   void read_points();
   void read_lines();
+  void read_lines_distributed();
   void read_tris();
+  void read_tris_distributed();
+
+  void process_args(int, char **);
 
   void translate(double, double, double);
   void scale(double, double, double);
@@ -91,15 +97,13 @@ class ReadSurf : protected Pointers {
   void clip2d();
   void clip3d();
 
+  void add_surfs();
   void push_points_to_boundary(double);
   void check_neighbor_norm_2d();
   void check_neighbor_norm_3d();
 
   int find_edge(int, int);
   void add_edge(int, int, int);
-
-  double shortest_line();
-  void smallest_tri(double &, double &);
 
   void open(char *);
   void parse_keyword(int);

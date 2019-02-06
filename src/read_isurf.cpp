@@ -91,23 +91,9 @@ void ReadISurf::command(int narg, char **arg)
   if (thresh <= 0 || thresh >= 255) 
     error->all(FLERR,"Invalid read_isurf command");
 
-  // optional args
+  // process command line args
 
-  int sgrouparg = 0;
-  char *typefile = NULL;
-
-  int iarg = 6;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"group") == 0)  {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      sgrouparg = iarg+1;
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"type") == 0)  {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      typefile = arg[iarg+1];
-      iarg += 2;
-    } else error->all(FLERR,"Invalid read_isurf command");
-  }
+  process_args(narg-6,&arg[6]);
 
   // verify that grid group is a set of uniform child cells
   // must comprise a 3d contiguous block
@@ -121,8 +107,7 @@ void ReadISurf::command(int narg, char **arg)
   // create and destroy dictionary of my grid cells in group
   //   used to assign per-grid values to local grid cells
 
-  if (me == 0)
-    if (screen) fprintf(screen,"Reading isurf file(s) ...\n");
+  if (screen && me == 0) fprintf(screen,"Reading isurf file(s) ...\n");
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
@@ -148,7 +133,7 @@ void ReadISurf::command(int narg, char **arg)
   grid->clear_surf();
 
   // create surfs in each grid cell based on corner point values
-  // set surf->nsurf
+  // set surf->nsurf and surf->nown
   // if specified, apply group keyword to reset per-surf mask info
 
   MPI_Barrier(world);
@@ -157,6 +142,7 @@ void ReadISurf::command(int narg, char **arg)
   if (dim == 3) marching_cubes(ggroup);
   else marching_squares(ggroup);
 
+  surf->nown = surf->nlocal;
   bigint nlocal = surf->nlocal;
   MPI_Allreduce(&nlocal,&surf->nsurf,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   
@@ -175,62 +161,15 @@ void ReadISurf::command(int narg, char **arg)
     }
   }
 
+  // output extent of implicit surfs, some may be tiny
+
+  if (dim == 2) surf->output_extent(0);
+  else surf->output_extent(0);
+
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
-  // extent of surfs
-  // compute sizes of smallest surface elements
-
-  double extent[3][2];
-  extent[0][0] = extent[1][0] = extent[2][0] = BIG;
-  extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
-
-  if (dim == 2) {
-    Surf::Line *lines = surf->lines;
-    int nsurf = surf->nlocal;
-  
-    for (int i = 0; i < nsurf; i++) {
-      extent[0][0] = MIN(extent[0][0],lines[i].p1[0]);
-      extent[0][1] = MAX(extent[0][1],lines[i].p1[0]);
-      extent[1][0] = MIN(extent[1][0],lines[i].p2[1]);
-      extent[1][1] = MAX(extent[1][1],lines[i].p2[1]);
-      extent[2][0] = MIN(extent[2][0],lines[i].p2[2]);
-      extent[2][1] = MAX(extent[2][1],lines[i].p2[2]);
-    }
-
-  } else {
-  }
-
-  double minlen,minarea;
-  if (dim == 2) minlen = shortest_line();
-  if (dim == 3) smallest_tri(minlen,minarea);
-
-  if (me == 0) {
-    if (screen) {
-      fprintf(screen,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
-      fprintf(screen,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
-      fprintf(screen,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
-      if (dim == 2)
-	fprintf(screen,"  %g min line length\n",minlen);
-      if (dim == 3) {
-	fprintf(screen,"  %g min triangle edge length\n",minlen);
-	fprintf(screen,"  %g min triangle area\n",minarea);
-      }
-    }
-    if (logfile) {
-      fprintf(logfile,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
-      fprintf(logfile,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
-      fprintf(logfile,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
-      if (dim == 2)
-	fprintf(logfile,"  %g min line length\n",minlen);
-      if (dim == 3) {
-	fprintf(logfile,"  %g min triangle edge length\n",minlen);
-	fprintf(logfile,"  %g min triangle area\n",minarea);
-      }
-    }
-  }
-
-  // compute normals of new lines or triangles
+  // compute normals of new surfs
 
   if (dim == 2) surf->compute_line_normal(0);
   else surf->compute_tri_normal(0);
@@ -242,6 +181,8 @@ void ReadISurf::command(int narg, char **arg)
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
+
+  // copy surf info into grid cells that own them
 
   grid->surf2grid_implicit(1,1);
 
@@ -274,26 +215,26 @@ void ReadISurf::command(int narg, char **arg)
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/marching/check/surf2grid/ghost/inout/particle percent = "
+      fprintf(screen,"  read/marching/check/surf2grid/ghost/inout percent = "
               "%g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total);
       fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
       fprintf(screen,"  map/rvous/split percent = %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous/time_s2g,
+              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
               100.0*grid->tsplit/time_s2g);
     }
     if (logfile) {
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/marching/check/surf2grid/ghost/inout/particle percent = "
+      fprintf(logfile,"  read/marching/check/surf2grid/ghost/inout percent = "
               "%g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total);
       fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
       fprintf(logfile,"  map/rvous/split percent = %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous/time_s2g,
+              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
               100.0*grid->tsplit/time_s2g);
     }
   }
@@ -560,14 +501,14 @@ void ReadISurf::marching_squares(int igroup)
   int v00,v01,v10,v11,bit0,bit1,bit2,bit3;
   double ave;
   double *lo,*hi;
-  int *ptr;
+  surfint *ptr;
 
   double pt[4][3];
   pt[0][2] = pt[1][2] = pt[2][2] = pt[3][2] = 0.0;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-  MyPage<int> *csurfs = grid->csurfs;
+  MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
   int groupbit = grid->bitmask[igroup];
 
@@ -791,41 +732,26 @@ double ReadISurf::interpolate(int v0, int v1, double lo, double hi)
 }
 
 /* ----------------------------------------------------------------------
-   return shortest line length
+   process command line args
 ------------------------------------------------------------------------- */
 
-double ReadISurf::shortest_line()
+void ReadISurf::process_args(int narg, char **arg)
 {
-  int nlocal = surf->nlocal;
+  sgrouparg = 0;
+  typefile = NULL;
 
-  double len = BIG;
-  for (int i = 0; i < nlocal; i++)
-    len = MIN(len,surf->line_size(i));
-
-  double lenall;
-  MPI_Allreduce(&len,&lenall,1,MPI_DOUBLE,MPI_MIN,world);
-
-  return lenall;
-}
-
-/* ----------------------------------------------------------------------
-   return shortest tri edge and smallest tri area
-------------------------------------------------------------------------- */
-
-void ReadISurf::smallest_tri(double &lenall, double &areaall)
-{
-  double lenone,areaone;
-
-  int nlocal = surf->nlocal;
-
-  double len = BIG;
-  double area = BIG;
-  for (int i = 0; i < nlocal; i++) {
-    areaone = surf->tri_size(i,lenone);
-    len = MIN(len,lenone);
-    area = MIN(area,areaone);
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"group") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      sgrouparg = iarg+1;
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"type") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      typefile = arg[iarg+1];
+      iarg += 2;
+    } else error->all(FLERR,"Invalid read_isurf command");
   }
-
-  MPI_Allreduce(&len,&lenall,1,MPI_DOUBLE,MPI_MIN,world);
-  MPI_Allreduce(&area,&areaall,1,MPI_DOUBLE,MPI_MIN,world);
 }
+
+

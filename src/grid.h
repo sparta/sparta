@@ -19,6 +19,7 @@
 #include "pointers.h"
 #include "hash3.h"
 #include "my_page.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -51,7 +52,7 @@ class Grid : protected Pointers {
   int *bitmask;             // one-bit mask for each group
   int *inversemask;         // inverse mask for each group
 
-  double tmap,trvous,tsplit;  // timing breakdown
+  double tmap,trvous1,trvous2,tsplit;    // timing breakdown of grid2surf()
 
   int copy,copymode;    // 1 if copy of class (prevents deallocation of
                         //  base class when child copy is destroyed)
@@ -71,7 +72,7 @@ class Grid : protected Pointers {
 
   // list data structs
 
-  MyPage<int> *csurfs;        // lists of surf indices for
+  MyPage<surfint> *csurfs;    // lists of surf indices for
                               // owned + ghost child cells with surfs
   MyPage<int> *csplits;       // lists of sub cell offsets for
                               // owned + ghost split info
@@ -109,7 +110,8 @@ class Grid : protected Pointers {
     double lo[3],hi[3];       // opposite corner pts of cell
     int nsurf;                // # of surf elements in cell
                               // -1 = empty ghost cell
-    int *csurfs;              // indices of surf elements in cell
+    surfint *csurfs;          // indices of surf elements in cell
+                              // sometimes global surf IDs are stored
                               // for sub cells, lo/hi/nsurf/csurfs
                               //   are same as in split cell containing them
 
@@ -330,6 +332,30 @@ class Grid : protected Pointers {
     surfint surfID;
   };
 
+  struct InRvous2 {
+    int proc;
+    surfint surfID;
+  };
+
+  struct OutRvous2line {
+    Surf::Line line;
+  };
+
+  struct OutRvous2tri {
+    Surf::Tri tri;
+  };
+
+#ifdef SPARTA_MAP
+    typedef std::map<surfint,int> MySurfHash;
+    typedef std::map<surfint,int>::iterator MyIterator;
+#elif SPARTA_UNORDERED_MAP
+    typedef std::unordered_map<surfint,int> MySurfHash;
+    typedef std::unordered_map<surfint,int>::iterator MyIterator;
+#else
+    typedef std::tr1::unordered_map<surfint,int> MySurfHash;
+    typedef std::tr1::unordered_map<surfint,int>::iterator MyIterator;
+#endif
+
   // Particle class values used for packing/unpacking particles in grid comm
 
   int ncustom;
@@ -366,9 +392,10 @@ class Grid : protected Pointers {
   static Grid *gptr;
   static void unpack_ghosts(int, char *);
 
-  // callback function for rendezvous communication
+  // callback functions for rendezvous communication
 
   static int rendezvous_surflist(int, char *, int &, int *&, char *&, void *);
+  static int rendezvous_surfrequest(int, char *, int &, int *&, char *&, void *);
 };
 
 }

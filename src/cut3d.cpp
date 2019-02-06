@@ -102,7 +102,7 @@ Cut3d::~Cut3d()
 ------------------------------------------------------------------------- */
 
 int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
-                     int *surfs_caller, int max)
+                     surfint *surfs_caller, int max)
 {
   id = id_caller;
   lo = lo_caller;
@@ -167,8 +167,8 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 
 int Cut3d::surf2grid_list(cellint id_caller, 
                           double *lo_caller, double *hi_caller,
-                          int nlist, int *list,
-                          int *surfs_caller, int max)
+                          int nlist, surfint *list,
+                          surfint *surfs_caller, int max)
 {
   id = id_caller;
   lo = lo_caller;
@@ -415,7 +415,7 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
 ------------------------------------------------------------------------- */
 
 int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller, 
-                 int nsurf_caller, int *surfs_caller,
+                 int nsurf_caller, surfint *surfs_caller,
                  double *&vols_caller, int *surfmap, 
                  int *corners, int &xsub, double *xsplit)
 {

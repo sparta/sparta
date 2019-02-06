@@ -127,6 +127,7 @@ Grid::Grid(SPARTA *sparta) : Pointers(sparta)
 
   hash = new MyHash();
   hashfilled = 0;
+
   copy = copymode = 0;
 }
 
@@ -374,17 +375,26 @@ void Grid::setup_owned()
 
 /* ----------------------------------------------------------------------
    acquire ghost cells from local cells of other procs
+   if surfs are distributed, also acquire ghost cell surfs
+     explicit distributed surfs require use of hash
    method used depends on ghost cutoff
    no-op if grid is not clumped and want to acquire only nearby ghosts
 ------------------------------------------------------------------------- */
 
 void Grid::acquire_ghosts()
 {
+  if (surf->distributed && !surf->implicit) surf->rehash();
+
   if (cutoff < 0.0) acquire_ghosts_all();
   else if (clumped) acquire_ghosts_near();
   else if (comm->me == 0) 
     error->warning(FLERR,"Could not acquire nearby ghost cells b/c "
                    "grid partition is not clumped");
+
+  if (surf->distributed && !surf->implicit) {
+    surf->hash->clear();
+    surf->hashfilled = 0;
+  }
 }
 
 /* ----------------------------------------------------------------------

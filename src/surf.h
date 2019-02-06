@@ -33,9 +33,6 @@ class Surf : protected Pointers {
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
 
-  bigint nsurf;             // total # of surf elements, lines or tris
-  int nmax;                 // max length of lines/tris lists
-  
   double bblo[3],bbhi[3];   // bounding box around surfs
   int tally_comm;           // style of comm for surf tallies
 
@@ -46,6 +43,19 @@ class Surf : protected Pointers {
   char **gnames;            // name of each group
   int *bitmask;             // one-bit mask for each group
   int *inversemask;         // inverse mask for each group
+
+  // surf data structs
+  // explicit, all: each proc owns all surfs
+  //   nlocal = Nsurf, nghost = 0, tris = all surfs
+  //   nown = Nsurf/P, mytris = NULL
+  // explicit, distributed: each proc owns N/P surfs
+  //   nlocal/nghost = surfs in owned/ghost grid cells, tris = nloc+ngh surfs
+  //   nown = Nsurf/P, mytris = surfs I uniquely own
+  // implicit, distributed: each proc owns surfs in its owned grid cells
+  //   nlocal = surfs in owned grid cells, nghost = surfs in ghost grid cells
+  //   nown = nlocal, mytris = NULL
+
+  bigint nsurf;             // total # of surf elements, lines or tris
 
   struct Line {
     surfint id;             // unique ID for explicit surf
@@ -81,15 +91,14 @@ class Surf : protected Pointers {
                             // explicit, distributed: 
                             //   surfs which overlap my ghost grid cells
                             // implicit: surfs within my ghost grid cells
+  int nmax;                 // max length of lines/tris vecs
 
   Line *mylines;            // list of lines assigned uniquely to me
                             //   only for explicit, distributed
   Tri *mytris;              // list of tris assigned uniquely to me
                             //   only for explicit, distributed
-  int *myindex;             // indices into lines/tris for 
-                            //   surfs assigned uniquely to me
-                            //   only for explicit, all
   int nown;                 // # of lines or tris I own uniquely
+  int maxown;               // max length of owned lines/tris vecs
 
   int nsc,nsr;              // # of surface collision and reaction models
   class SurfCollide **sc;   // list of surface collision models
@@ -101,6 +110,31 @@ class Surf : protected Pointers {
 
 #include "hash_options.h"
 
+#ifdef SPARTA_MAP
+  typedef std::map<surfint,int> MySurfHash;
+  typedef std::map<OnePoint2d,int> MyHashPoint;
+  typedef std::map<OnePoint2d,int>::iterator MyPointIt;
+  typedef std::map<TwoPoint3d,int> MyHash2Point;
+  typedef std::map<TwoPoint3d,int>::iterator My2PointIt;
+#elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<surfint,int> MySurfHash;
+  typedef std::unordered_map<OnePoint2d,int,OnePoint2dHash> MyHashPoint;
+  typedef std::unordered_map<OnePoint2d,int,OnePoint2dHash>::iterator MyPointIt;
+  typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash2Point;
+  typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::iterator My2PointIt;
+#else
+  typedef std::tr1::unordered_map<surfint,int> MySurfHash;
+  typedef std::tr1::unordered_map<OnePoint2d,int,OnePoint2dHash> MyHashPoint;
+  typedef std::tr1::unordered_map<OnePoint2d,int,OnePoint2dHash>::
+    iterator MyPointIt;
+  typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash2Point;
+  typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::
+    iterator My2PointIt;
+#endif
+
+  MySurfHash *hash;           // hash for nlocal surf IDs
+  int hashfilled;             // 1 if hash is filled with surf IDs
+
   Surf(class SPARTA *);
   ~Surf();
   void global(char *);
@@ -109,8 +143,11 @@ class Surf : protected Pointers {
   void remove_ghosts();
   void add_line(int, double *, double *);
   void add_line_copy(int, Line *);
+  void add_line_own(int, double *, double *);
   void add_tri(int, double *, double *, double *);
   void add_tri_copy(int, Tri *);
+  void add_tri_own(int, double *, double *, double *);
+  void rehash();
   void setup_owned();
   void setup_bbox();
 
@@ -118,10 +155,14 @@ class Surf : protected Pointers {
   void compute_tri_normal(int);
   void quad_corner_point(int, double *, double *, double *);
   void hex_corner_point(int, double *, double *, double *);
+
   double line_size(int);
+  double line_size(Line *);
   double line_size(double *, double *);
   double axi_line_size(int);
+  double axi_line_size(Line *);
   double tri_size(int, double &);
+  double tri_size(Tri *, double &);
   double tri_size(double *, double *, double *, double &);
 
   void check_watertight_2d(int);
@@ -129,6 +170,10 @@ class Surf : protected Pointers {
   void check_point_inside(int);
   void check_point_near_surf_2d();
   void check_point_near_surf_3d();
+
+  void output_extent(int);
+  double shortest_line(int);
+  void smallest_tri(int, double &, double &);
 
   void add_collide(int, char **);
   int find_collide(const char *);
@@ -148,28 +193,12 @@ class Surf : protected Pointers {
   void write_restart(FILE *);
   void read_restart(FILE *);
   virtual void grow();
+  void grow_own();
   bigint memory_usage();
 
  private:
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
-
-#ifdef SPARTA_MAP
-  typedef std::map<surfint,int> MySurfHash;
-  typedef std::map<TwoPoint3d,int> MyHash;
-  typedef std::map<TwoPoint3d,int>::iterator MyIterator;
-#elif defined SPARTA_UNORDERED_MAP
-  typedef std::unordered_map<surfint,int> MySurfHash;
-  typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash;
-  typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::iterator MyIterator;
-#else
-  typedef std::tr1::unordered_map<surfint,int> MySurfHash;
-  typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash;
-  typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::iterator 
-    MyIterator;
-#endif
-
-  MySurfHash *shash;
 
   void point_line_compare(double *, double *, double *, double, int &, int &);
   void point_tri_compare(double *, double *, double *, double *, double *,

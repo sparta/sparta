@@ -47,6 +47,7 @@ class ReadISurf : protected Pointers {
   int nx,ny,nz;
   double thresh;
   double corner[3],xyzsize[3];
+  char *typefile;
 
 #ifdef SPARTA_MAP
   std::map<bigint,int> *hash;
@@ -58,6 +59,8 @@ class ReadISurf : protected Pointers {
 
   int **cvalues;
   int *svalues;
+
+  void process_args(int, char **);
 
   void read_corners(char *);
   void read_types(char *);
@@ -71,9 +74,6 @@ class ReadISurf : protected Pointers {
   void marching_cubes(int);
   void marching_squares(int);
   double interpolate(int, int, double, double);
-
-  double shortest_line();
-  void smallest_tri(double &, double &);
 };
 
 }

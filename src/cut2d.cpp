@@ -71,7 +71,7 @@ Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
 ------------------------------------------------------------------------- */
 
 int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller, 
-                     int *surfs_caller, int max)
+                     surfint *surfs_caller, int max)
 {
   id = id_caller;
   lo = lo_caller;
@@ -113,8 +113,8 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 
 int Cut2d::surf2grid_list(cellint id_caller, 
                           double *lo_caller, double *hi_caller,
-                          int nlist, int *list,
-                          int *surfs_caller, int max)
+                          int nlist, surfint *list,
+                          surfint *surfs_caller, int max)
 {
   id = id_caller;
   lo = lo_caller;
@@ -314,7 +314,7 @@ int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
 ------------------------------------------------------------------------- */
 
 int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller, 
-                 int nsurf_caller, int *surfs_caller,
+                 int nsurf_caller, surfint *surfs_caller,
                  double *&areas_caller, int *surfmap, 
                  int *corners, int &xsub, double *xsplit)
 {

@@ -815,7 +815,7 @@ void MoveSurf::connect_3d_post()
 bigint MoveSurf::remove_particles()
 {
   int isurf,nsurf;
-  int *csurfs;
+  surfint *csurfs;
 
   dim = domain->dimension;
   Grid::ChildCell *cells = grid->cells;
