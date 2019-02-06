@@ -178,11 +178,11 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
     t1 = MPI_Wtime();
   }
 
-  // if subflag, reset hash for parent/child IDs
+  // if no hash or subflag, reset hash for parent/child IDs
   // needed b/c callers called clear_surf before surf2grid
   //   to wipe out split cells and compress local cell list
 
-  if (subflag) rehash();
+  if (!hashfilled || subflag) rehash();
 
   // assign every Pth surf to me
   // nsurf = # of surfs I own for finding overlaps with cells
