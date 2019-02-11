@@ -153,6 +153,11 @@ this manner no modification to the input script is
 needed. Alternatively, one can run with the KOKKOS package by editing
 the input script as described below.
 
+NOTE: When using a single OpenMP thread, the Kokkos Serial backend (i.e. 
+Makefile.kokkos_mpi_only) will give better performance than the OpenMP 
+backend (i.e. Makefile.kokkos_omp) because some of the overhead to make 
+the code thread-safe is removed.
+
 NOTE: The default for the "package kokkos"_package.html command is to
 use "threaded" communication. However, when running on CPUs, it will
 typically be faster to use "classic" non-threaded communication.  Use
@@ -162,6 +167,18 @@ page for details and default settings. Experimenting with its options
 can provide a speed-up for specific calculations. For example:
 
 mpirun -np 16 spa_kokkos_mpi_only -k on -sf kk -pk kokkos comm classic -in in.collide       # non-threaded comm :pre
+
+For OpenMP, the KOKKOS package uses data duplication (i.e. 
+thread-private arrays) by default to avoid thread-level write conflicts 
+in some compute styles. Data duplication is typically fastest for small 
+numbers of threads (i.e. 8 or less) but does increase memory footprint 
+and is not scalable to large numbers of threads. An alternative to data 
+duplication is to use thread-level atomics, which don't require 
+duplication. When using the Kokkos Serial backend or the OpenMP backend 
+with a single thread, no duplication or atomics are used. For CUDA, the 
+KOKKOS package always uses atomics in these computes when necessary. The 
+use of atomics instead of duplication can be forced by compiling with the 
+"-DSPARTA_KOKKOS_USE_ATOMICS" compile switch. 
 
 [Core and Thread Affinity:]
 
