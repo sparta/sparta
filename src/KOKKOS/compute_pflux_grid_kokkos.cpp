@@ -109,6 +109,9 @@ void ComputePFluxGridKokkos::compute_per_grid_kokkos()
   // loop over all particles, skip species not in mixture group
 
   need_dup = sparta->kokkos->need_dup<DeviceType>();
+  if (particle_kk->sorted_kk && sparta->kokkos->need_atomics && !sparta->kokkos->atomic_reduction)
+    need_dup = 0;
+
   if (need_dup)
     dup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_tally);
   else
