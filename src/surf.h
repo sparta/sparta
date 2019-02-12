@@ -26,10 +26,10 @@ namespace SPARTA_NS {
 class Surf : protected Pointers {
  public:
   int exist;                // 1 if any surfaces are defined, else 0
-  int distributed;          // 1 = surfs spread across procs, 
-                            // 0 = each proc owns all
   int implicit;             // 1 = implicit surfs, 0 = explicit surfs
-  int dynamic;              // 1 = implicit surfs change, 0 = static
+  int distributed;          // 1 = surfs spread across procs (exp or impl)
+                            // 0 = each proc owns all
+  //int dynamic;              // 1 = implicit surfs change, 0 = static
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
 

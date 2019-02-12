@@ -38,6 +38,10 @@ void RemoveSurf::command(int narg, char **arg)
   if (!surf->exist) 
     error->all(FLERR,"Cannot remove_surf before surf elements are defined");
 
+  if (surf->distributed)
+    error->all(FLERR,
+               "Cannot yet use remove_surf with distributed surf elements");
+
   if (narg < 1) error->all(FLERR,"Illegal remove_surf command");
 
   int igroup = surf->find_group(arg[0]);

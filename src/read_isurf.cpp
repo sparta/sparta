@@ -26,16 +26,13 @@
 #include "memory.h"
 #include "error.h"
 
-// DEBUG
-#include "unistd.h"
-
 using namespace SPARTA_NS;
 
 enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
-#define NCHUNK 1024     // can boost this much larger
+#define CHUNK 8192
 #define BIG 1.0e20
 
 /* ---------------------------------------------------------------------- */
@@ -62,6 +59,8 @@ void ReadISurf::command(int narg, char **arg)
 {
   if (!grid->exist)
     error->all(FLERR,"Cannot read_isurf before grid is defined");
+  if (domain->dimension == 3)
+    error->all(FLERR,"Cannot yet use read_isurf for 3d simulations");
   if (!surf->implicit)
     error->all(FLERR,"Cannot read_isurf unless global surf implicit is set");
   if (particle->exist)
@@ -107,7 +106,7 @@ void ReadISurf::command(int narg, char **arg)
   // create and destroy dictionary of my grid cells in group
   //   used to assign per-grid values to local grid cells
 
-  if (screen && me == 0) fprintf(screen,"Reading isurf file(s) ...\n");
+  if (screen && me == 0) fprintf(screen,"Reading isurf file ...\n");
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
@@ -247,12 +246,15 @@ void ReadISurf::command(int narg, char **arg)
 void ReadISurf::read_corners(char *gridfile)
 {
   int nchunk;
+  int nxyz[3];
   FILE *fp;
 
   uint8_t *buf;
-  memory->create(buf,NCHUNK,"readisurf:buf");
+  memory->create(buf,CHUNK,"readisurf:buf");
+  int dimension = domain->dimension;
 
   // proc 0 opens and reads binary file
+  // error check the file grid matches input script extent
 
   if (me == 0) {
     fp = fopen(gridfile,"rb");
@@ -261,7 +263,18 @@ void ReadISurf::read_corners(char *gridfile)
       snprintf(str,128,"Cannot open isurf grid corner file %s",gridfile);
       error->one(FLERR,str);
     }
+    fread(nxyz,sizeof(int),dimension,fp);
   }
+
+  MPI_Bcast(nxyz,dimension,MPI_INT,0,world);
+  printf("DIMS %d %d\n",nxyz[0],nxyz[1]);
+
+  int flag = 0;
+  if (nxyz[0] != nx+1) flag = 1;
+  if (nxyz[1] != ny+1) flag = 1;
+  if (dimension == 3 && nxyz[2] != nz+1) flag = 1;
+  if (flag) 
+    error->all(FLERR,"Grid size in read_isurf file does not match request");
 
   // read and broadcast one CHUNK of values at a time
   // each proc stores grid corner point values it needs in assign_corners()
@@ -273,7 +286,7 @@ void ReadISurf::read_corners(char *gridfile)
   bigint nread = 0;
 
   while (nread < ncorners) {
-    if (ncorners-nread > NCHUNK) nchunk = NCHUNK;
+    if (ncorners-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ncorners-nread;
 
     if (me == 0) fread(buf,sizeof(uint8_t),nchunk,fp);
@@ -305,7 +318,7 @@ void ReadISurf::read_types(char *typefile)
   FILE *fp;
 
   int *buf;
-  memory->create(buf,NCHUNK,"readisurf:buf");
+  memory->create(buf,CHUNK,"readisurf:buf");
 
   // proc 0 opens and reads binary file
 
@@ -325,7 +338,7 @@ void ReadISurf::read_types(char *typefile)
   bigint nread = 0;
 
   while (nread < ntypes) {
-    if (ntypes-nread > NCHUNK) nchunk = NCHUNK;
+    if (ntypes-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ntypes-nread;
 
     if (me == 0) fread(buf,sizeof(int),nchunk,fp);

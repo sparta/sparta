@@ -38,6 +38,10 @@ FixMoveSurf::FixMoveSurf(SPARTA *sparta, int narg, char **arg) :
   if (!surf->exist)
     error->all(FLERR,"Cannot fix move/surf with no surf elements are defined");
 
+  if (surf->distributed)
+    error->all(FLERR,
+               "Cannot yet use fix move/surf with distributed surf elements");
+
   scalar_flag = 1;
   global_freq = 1;
 

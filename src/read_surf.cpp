@@ -285,12 +285,14 @@ void ReadSurf::command(int narg, char **arg)
 	surfint *csurfs = cells[icell].csurfs;
 	int m;
 	if (dim == 2) {
+          Surf::Line *lines = surf->lines;
 	  for (m = 0; m < nsurf; m++) {
-	    if (csurfs[m] >= nline_old) break;
+	    if (lines[csurfs[m]].id > nsurf_old) break;
 	  }
 	} else {
+          Surf::Tri *tris = surf->tris;
 	  for (m = 0; m < nsurf; m++) {
-	    if (csurfs[m] >= ntri_old) break;
+	    if (tris[csurfs[m]].id >= nsurf_old) break;
 	  }
 	}
 	if (m < nsurf && partflag == CHECK) {
@@ -330,7 +332,7 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
       fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(screen,"  map/rvous1/rvous2/split percent = %g %g %g\n",
+      fprintf(screen,"  map/rvous1/rvous2/split percent = %g %g %g %g\n",
               100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
               100.0*grid->trvous2/time_s2g,100.0*grid->tsplit/time_s2g);
     }
@@ -347,7 +349,7 @@ void ReadSurf::command(int narg, char **arg)
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
       fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(logfile,"  map/rvous1/rvous2/split percent = %g %g %g\n",
+      fprintf(logfile,"  map/rvous1/rvous2/split percent = %g %g %g %g\n",
               100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
               100.0*grid->trvous2/time_s2g,100.0*grid->tsplit/time_s2g);
     }
@@ -586,6 +588,7 @@ void ReadSurf::read_lines_distributed()
 
   int nprocs = comm->nprocs;
   bigint nsurf = surf->nsurf;
+  nsurf_old = nsurf;
   nline_old = surf->nown;
   nline_new = (nsurf + nline) / nprocs;
   if (me < nsurf+nline % nprocs) nline_new++;
@@ -746,6 +749,7 @@ void ReadSurf::read_tris_distributed()
 
   int nprocs = comm->nprocs;
   bigint nsurf = surf->nsurf;
+  nsurf_old = nsurf;
   ntri_old = surf->nown;
   ntri_new = (nsurf + ntri) / nprocs;
   if (me < nsurf+ntri % nprocs) ntri_new++;
@@ -987,13 +991,17 @@ void ReadSurf::process_args(int narg, char **arg)
     int groupbit = surf->bitmask[igroup];
     if (dim == 2) {
       if (distributed) {
-        for (int i = 0; i < nline; i++) lines[i].mask |= groupbit;
+        Surf::Line *mylines = surf->mylines;
+        int nown = surf->nown;
+        for (int i = nline_old; i < nown; i++) mylines[i].mask |= groupbit;
       } else {
         for (int i = 0; i < nline; i++) lines[i].mask |= groupbit;
       }
     } else {
       if (distributed) {
-        for (int i = 0; i < ntri; i++) tris[i].mask |= groupbit;
+        Surf::Tri *mytris = surf->mytris;
+        int nown = surf->nown;
+        for (int i = ntri_old; i < nown; i++) mytris[i].mask |= groupbit;
       } else {
         for (int i = 0; i < ntri; i++) tris[i].mask |= groupbit;
       }
@@ -1003,13 +1011,17 @@ void ReadSurf::process_args(int narg, char **arg)
   if (typeadd) {
     if (dim == 2) {
       if (distributed) {
-        for (int i = 0; i < nline; i++) lines[i].type += typeadd;
+        Surf::Line *mylines = surf->mylines;
+        int nown = surf->nown;
+        for (int i = nline_old; i < nown; i++) mylines[i].type += typeadd;
       } else {
         for (int i = 0; i < nline; i++) lines[i].type += typeadd;
       }
     } else {
       if (distributed) {
-        for (int i = 0; i < ntri; i++) tris[i].type += typeadd;
+        Surf::Tri *mytris = surf->mytris;
+        int nown = surf->nown;
+        for (int i = ntri_old; i < nown; i++) mytris[i].type += typeadd;
       } else {
         for (int i = 0; i < ntri; i++) tris[i].type += typeadd;
       }
@@ -1030,10 +1042,10 @@ void ReadSurf::translate(double dx, double dy, double dz)
       pts[i].x[1] += dy;
       pts[i].x[2] += dz;
     }
+
   } else if (dim == 2) {
     Surf::Line *mylines = surf->mylines;
     int nown = surf->nown;
-    
     for (int i = nline_old; i < nown; i++) {
       mylines[i].p1[0] += dx;
       mylines[i].p1[1] += dy;
@@ -1042,10 +1054,10 @@ void ReadSurf::translate(double dx, double dy, double dz)
       mylines[i].p2[1] += dy;
       mylines[i].p2[2] += dz;
     }
+
   } else if (dim == 3) {
     Surf::Tri *mytris = surf->mytris;
     int nown = surf->nown;
-    
     for (int i = ntri_old; i < nown; i++) {
       mytris[i].p1[0] += dx;
       mytris[i].p1[1] += dy;
@@ -1073,20 +1085,20 @@ void ReadSurf::scale(double sx, double sy, double sz)
       pts[i].x[1] = sy*(pts[i].x[1]-origin[1]) + origin[1];
       if (dim == 3) pts[i].x[2] = sz*(pts[i].x[2]-origin[2]) + origin[2];
     }
+
   } else if (dim == 2) {
     Surf::Line *mylines = surf->mylines;
     int nown = surf->nown;
-    
     for (int i = nline_old; i < nown; i++) {
       mylines[i].p1[0] = sx*(mylines[i].p1[0]-origin[0]) + origin[0];
       mylines[i].p1[1] = sy*(mylines[i].p1[1]-origin[1]) + origin[1];
       mylines[i].p2[0] = sx*(mylines[i].p2[0]-origin[0]) + origin[0];
       mylines[i].p2[1] = sy*(mylines[i].p2[1]-origin[1]) + origin[1];
     }
+
   } else if (dim == 3) {
     Surf::Tri *mytris = surf->mytris;
     int nown = surf->nown;
-    
     for (int i = ntri_old; i < nown; i++) {
       mytris[i].p1[0] = sx*(mytris[i].p1[0]-origin[0]) + origin[0];
       mytris[i].p1[1] = sy*(mytris[i].p1[1]-origin[1]) + origin[1];
@@ -1208,20 +1220,18 @@ void ReadSurf::invert()
     if (dim == 2) {
       Surf::Line *mylines = surf->mylines;
       int nown = surf->nown;
-
       for (int i = nline_old; i < nown; i++) {
-        memcpy(mytmp,mylines[i].p1,6*sizeof(double));
-        memcpy(mylines[i].p1,mylines[i].p2,6*sizeof(double));
-        memcpy(mylines[i].p1,mytmp,6*sizeof(double));
+        memcpy(mytmp,mylines[i].p1,3*sizeof(double));
+        memcpy(mylines[i].p1,mylines[i].p2,3*sizeof(double));
+        memcpy(mylines[i].p2,mytmp,3*sizeof(double));
       }
     } else if (dim == 3) {
       Surf::Tri *mytris = surf->mytris;
       int nown = surf->nown;
-
       for (int i = ntri_old; i < nown; i++) {
-        memcpy(mytmp,mytris[i].p2,6*sizeof(double));
-        memcpy(mytris[i].p2,mytris[i].p3,6*sizeof(double));
-        memcpy(mytris[i].p3,mytmp,6*sizeof(double));
+        memcpy(mytmp,mytris[i].p2,3*sizeof(double));
+        memcpy(mytris[i].p2,mytris[i].p3,3*sizeof(double));
+        memcpy(mytris[i].p3,mytmp,3*sizeof(double));
       }
     }
   }
@@ -1667,6 +1677,7 @@ void ReadSurf::add_surfs()
     bigint nsurf = surf->nsurf + nline;
     if (nsurf > MAXSMALLINT) error->all(FLERR,"Too many non-distributed surfs");
 
+    nsurf_old = surf->nsurf;
     nline_old = static_cast<int> (surf->nsurf);
     nline_new = nline_old + nline;
     surf->nmax = nline_new;
@@ -1689,6 +1700,7 @@ void ReadSurf::add_surfs()
     bigint nsurf = surf->nsurf + ntri;
     if (nsurf > MAXSMALLINT) error->all(FLERR,"Too many non-distributed surfs");
 
+    nsurf_old = surf->nsurf;
     ntri_old = static_cast<int> (surf->nsurf);
     ntri_new = ntri_old + ntri;
     surf->nmax = ntri_new;

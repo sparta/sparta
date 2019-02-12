@@ -72,6 +72,9 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   
   if (!surf->exist) 
     error->all(FLERR,"Fix emit/surf requires surface elements");
+  if (surf->distributed)
+    error->all(FLERR,
+               "Cannot yet use fix emit/surf with distributed surf elements");
   if (np > 0 && perspecies) 
     error->all(FLERR,"Cannot use fix emit/face n > 0 with perspecies yes");
   

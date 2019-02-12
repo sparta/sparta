@@ -50,9 +50,8 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
   exist = 0;
-  distributed = 0;
   implicit = 0;
-  dynamic = 0;
+  distributed = 0;
   surf_collision_check = 1;
 
   gnames = (char **) memory->smalloc(MAXGROUP*sizeof(char *),"surf:gnames");
@@ -125,19 +124,12 @@ void Surf::global(char *arg)
   if (strcmp(arg,"explicit") == 0) {
     implicit = 0;
     distributed = 0;
-    dynamic = 0;
   } else if (strcmp(arg,"explicit/distributed") == 0) {
     implicit = 0;
     distributed = 1;
-    dynamic = 0;
-  } else if (strcmp(arg,"implicit/static") == 0) {
+  } else if (strcmp(arg,"implicit") == 0) {
     implicit = 1;
     distributed = 1;
-    dynamic = 0;
-  } else if (strcmp(arg,"implicit/dynamic") == 0) {
-    implicit = 1;
-    distributed = 1;
-    dynamic = 1;
   } else error->all(FLERR,"Illegal global command");
 }
 

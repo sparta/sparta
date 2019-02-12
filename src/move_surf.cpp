@@ -69,6 +69,10 @@ void MoveSurf::command(int narg, char **arg)
   if (!surf->exist)
     error->all(FLERR,"Cannot move_surf with no surf elements defined");
 
+  if (surf->distributed)
+    error->all(FLERR,
+               "Cannot yet use move_surf with distributed surf elements");
+
   if (narg < 2) error->all(FLERR,"Illegal move_surf command");
 
   // process command-line args

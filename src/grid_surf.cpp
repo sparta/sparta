@@ -323,7 +323,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   char *buf;
   int nreturn = comm->rendezvous(1,ncount,(char *) inbuf,sizeof(InRvous),
                                  0,proclist,rendezvous_surflist,
-                                 0,buf,sizeof(OutRvous),(void *) this,1);
+                                 0,buf,sizeof(OutRvous),(void *) this);
   OutRvous *outbuf = (OutRvous *) buf;
 
   memory->destroy(proclist);
@@ -447,7 +447,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 
     int nreturn2 = comm->rendezvous(1,ncount,(char *) inbuf2,sizeof(InRvous2),
                                     0,proclist2,rendezvous_surfrequest,
-                                    0,outbuf2,outbytes,(void *) this,1);
+                                    0,outbuf2,outbytes,(void *) this);
     
     memory->destroy(proclist2);
     memory->sfree(inbuf2);

@@ -64,6 +64,7 @@ class ReadSurf : protected Pointers {
   Tri *tris;
   int npoint,nline,ntri;
   int maxpoint,maxline,maxtri;
+  bigint nsurf_old;
   int nline_old,nline_new;
   int ntri_old,ntri_new;
 

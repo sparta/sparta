@@ -141,8 +141,6 @@ void FixBalance::end_of_step()
   if (imbnow <= thresh) return;
   imbprev = imbnow;
 
-  if (me == 0) printf("BALANCING %g\n",imbnow);
-
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
