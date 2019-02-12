@@ -112,6 +112,13 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
     error->all(FLERR,"Kokkos has been compiled for CUDA but no GPUs are requested");
 #endif
 
+#ifndef KOKKOS_HAVE_SERIAL
+  if (nthreads == 1)
+    error->warning(FLERR,"When using a single thread, the Kokkos Serial backend "
+                         "(i.e. Makefile.kokkos_mpi_only) gives better performance "
+                         "than the OpenMP backend");
+#endif
+
   Kokkos::InitArguments args;
   args.num_threads = nthreads;
   args.num_numa = numa;

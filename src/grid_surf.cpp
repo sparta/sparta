@@ -184,7 +184,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   }
 
   // if no hash or subflag, reset hash for parent/child IDs
-  // needed b/c callers may have clear_surf before surf2grid
+  // needed b/c callers called clear_surf before surf2grid
   //   to wipe out split cells and compress local cell list
 
   if (!hashfilled || subflag) rehash();

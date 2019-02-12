@@ -37,6 +37,15 @@ class KokkosSPARTA : protected Pointers {
   KokkosSPARTA(class SPARTA *, int, char **);
   ~KokkosSPARTA();
   void accelerator(int, char **);
+
+  template<class DeviceType>
+  int need_dup()
+  {
+    int value = 0;
+    if (need_atomics)
+      value = NeedDup<1,DeviceType>::value;
+    return value;
+  }
 };
 
 }
