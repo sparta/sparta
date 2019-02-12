@@ -100,6 +100,8 @@ void ComputeSonineGridKokkos::compute_per_grid_kokkos()
   d_species = particle_kk->k_species.d_view;
 
   GridKokkos* grid_kk = (GridKokkos*) grid;
+  d_cellcount = grid_kk->d_cellcount;
+  d_plist = grid_kk->d_plist;
   grid_kk->sync(Device,CINFO_MASK);
   d_cinfo = grid_kk->k_cinfo.d_view;
   d_s2g = particle_kk->k_species2group.view<DeviceType>();
