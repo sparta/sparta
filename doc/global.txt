@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfgrid} or {surfmax} or {cellmax} or {splitmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {cellmax} or {splitmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -25,6 +25,12 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfgrid} or 
   {gravity} values = mag ex ey ez
     mag = magnitude of acceleration due to gravity (acceleration units)
     ex,ey,ez = direction vector that gravity acts in
+  {surfs} value = explicit or explicit/distributed or implicit
+    explicit = surfs defined in read_surf file, each proc owns copy of all surfs
+    explicit/distributed = surfs defined in read_surf file, each proc owns
+                           only the surfs for its owned_ghost grid cells
+    implicit = surfs defined in read_isurf file, each proc owns
+                           only the surfs for its owned+ghost grid cells
   {surfgrid} value = combo or percell or persurf
     percell = loop over my cells and check every surf
     persurf = loop over my surfs and cells they overlap
@@ -99,6 +105,20 @@ acceleration term is included, which is the default.
 
 :line
 
+The {surfs} keyword determines what kind of surface elements SPARTA
+uses and how they are distributed across processors.  Possible values
+are {explicit}, {explicit/distributed}, and {implicit}.  See the
+"Howto 6.13"_Section_howto.html#howto_13 section of the manual for an
+explantion of explicit versus implicit surfaces.  The distributed
+option can be important for models with huge numbers of surface
+elements.  Each processor stores copies of only the surfaces that
+overlap grid cells it owns or has ghost copies of.  Implicit surfaces
+are always distributed.  The {explicit} setting is the default and
+means each processor stores a copy of all the defined surface
+elements.  Note that a surface element requires about 100 bytes of
+storage, so storing a million on a single processor requires about 100
+MBytes.
+  
 The {surfgrid} keyword determines what algorithm is used to enumerate
 the overlaps (intersections) between grid cells and surface elements
 (lines in 2d, triangles in 3d).  The possible settings are {percell},
@@ -354,7 +374,7 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 [Default:]
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfgrid = combo,
-surfmax = 100, cellmax = 100, splitmax = 10, surfpush = yes, gridcut =
--1.0, comm/sort = no, comm/style = neigh, weight = cell none,
-particle/reorder = 0, mem/limit = 0.
+0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
+surfgrid = combo, surfmax = 100, cellmax = 100, splitmax = 10,
+surfpush = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh,
+weight = cell none, particle/reorder = 0, mem/limit = 0.

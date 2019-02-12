@@ -685,6 +685,10 @@ int AdaptGrid::refine()
 
 int AdaptGrid::coarsen(int pstop)
 {
+  if (surf->exist && surf->distributed)
+    error->all(FLERR,"Grid adapt coarsen does not yet support "
+               "distributed surface elements");
+  
   // NOTE: why is grid not really hashed at this point even though it says so?
   // WHEN done with adapt, do I need to mark it hashed or unhashed?
   // NOTE: does fix balance always do a sort?  yes it does

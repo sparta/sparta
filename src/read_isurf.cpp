@@ -62,7 +62,7 @@ void ReadISurf::command(int narg, char **arg)
   if (domain->dimension == 3)
     error->all(FLERR,"Cannot yet use read_isurf for 3d simulations");
   if (!surf->implicit)
-    error->all(FLERR,"Cannot read_isurf unless global surf implicit is set");
+    error->all(FLERR,"Cannot read_isurf unless global surfs implicit is set");
   if (particle->exist)
     error->all(FLERR,"Cannot read_isurf when particles exist");
   if (domain->axisymmetric)
@@ -84,11 +84,12 @@ void ReadISurf::command(int narg, char **arg)
 
   char *gridfile = arg[4];
 
-  // NOTE: check for exact int value ??
-
   thresh = input->numeric(FLERR,arg[5]);
   if (thresh <= 0 || thresh >= 255) 
     error->all(FLERR,"Invalid read_isurf command");
+  int ithresh = static_cast<int> (thresh);
+  if (ithresh == thresh) 
+    error->all(FLERR,"An integer value for read_isurf thresh is not allowed");
 
   // process command line args
 
@@ -260,21 +261,22 @@ void ReadISurf::read_corners(char *gridfile)
     fp = fopen(gridfile,"rb");
     if (fp == NULL) {
       char str[128];
-      snprintf(str,128,"Cannot open isurf grid corner file %s",gridfile);
+      snprintf(str,128,"Cannot open read_isurf grid corner point file %s",
+               gridfile);
       error->one(FLERR,str);
     }
     fread(nxyz,sizeof(int),dimension,fp);
   }
 
   MPI_Bcast(nxyz,dimension,MPI_INT,0,world);
-  printf("DIMS %d %d\n",nxyz[0],nxyz[1]);
 
   int flag = 0;
   if (nxyz[0] != nx+1) flag = 1;
   if (nxyz[1] != ny+1) flag = 1;
   if (dimension == 3 && nxyz[2] != nz+1) flag = 1;
   if (flag) 
-    error->all(FLERR,"Grid size in read_isurf file does not match request");
+    error->all(FLERR,"Grid size in read_isurf grid corner point file "
+               "does not match request");
 
   // read and broadcast one CHUNK of values at a time
   // each proc stores grid corner point values it needs in assign_corners()
@@ -315,21 +317,34 @@ void ReadISurf::read_corners(char *gridfile)
 void ReadISurf::read_types(char *typefile)
 {
   int nchunk;
+  int nxyz[3];
   FILE *fp;
 
   int *buf;
   memory->create(buf,CHUNK,"readisurf:buf");
+  int dimension = domain->dimension;
 
   // proc 0 opens and reads binary file
+  // error check the file grid matches input script extent
 
   if (me == 0) {
     fp = fopen(typefile,"rb");
     if (fp == NULL) {
       char str[128];
-      snprintf(str,128,"Cannot open isurf surface type file %s",typefile);
+      snprintf(str,128,"Cannot open read_isurf type file %s",typefile);
       error->one(FLERR,str);
     }
+    fread(nxyz,sizeof(int),dimension,fp);
   }
+
+  MPI_Bcast(nxyz,dimension,MPI_INT,0,world);
+
+  int flag = 0;
+  if (nxyz[0] != nx) flag = 1;
+  if (nxyz[1] != ny) flag = 1;
+  if (dimension == 3 && nxyz[2] != nz) flag = 1;
+  if (flag) 
+    error->all(FLERR,"Grid size in read_isurf type file does not match request");
 
   // read and broadcast one CHUNK of values at a time
   // each proc stores grid corner point values it needs in assign_corners()
@@ -766,5 +781,3 @@ void ReadISurf::process_args(int narg, char **arg)
     } else error->all(FLERR,"Invalid read_isurf command");
   }
 }
-
-
