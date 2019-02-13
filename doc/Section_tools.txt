@@ -43,6 +43,8 @@ SPARTA distribution.  Each is described in more detail below.
 "dump2cfg"_#dump2cfg - convert a particle dump file to CFG format
 "dump2xyz"_#dump2xyz - convert a particle dump file to XYZ format
 "grid_refine"_#gridrefine - refine a grid around a surface
+"implicit_grid"_#implicit - create a random porous region with implicit surfaces
+"jagged"_#jagged - create jagged 2d/3d surfaces with explicit surfaces
 "log2txt"_#log2txt - extract columns of info from a log file
 "logplot"_#logplot - plot columns of info from a log file via GnuPlot
 "paraview"_#paraview - converters of SPARTA data to "ParaView"_paraview format
@@ -101,6 +103,38 @@ The surface file can be read by the "read_surf"_read_surf.html command.
 
 See the header of the script for the various adaptivity options that
 are supported, and the syntax used to run it.
+
+:line
+
+implicit_grid tool :h4,link(jagged)
+
+This is a Python script which can be used to generate binary files
+representing porous media samples, as read by the
+"read_isurf"_read_isurf.html command.  The output files contain
+randomized grid corner point values which induce implicit surfaces
+which can contain huge numbers of surface elements.  They are useful
+for stress testing the implicit surface options in SPARTA, as selected
+by the "global surfs"_global.html command.
+
+See the header of the script for the syntax used to run it.
+
+The examples/implicit directory uses these files as input.
+
+:line
+
+jagged tools :h4,link(jagged)
+
+These are 2 Python scripts (jagged2d.py and jagged3d.py) which can be
+used to generate SPARTA surface files in a pattern that can be very
+jagged.  The surfaces can contain huge numbers of surface elements and
+be read by the "read_surf"_read_surf.html command.  They are useful
+for stress testing the explict surface options in SPARTA, including
+distributed or non-distributed storage, as selected by the "global
+surfs"_global.html command.
+
+See the header of the scripts for the syntax used to run them.
+
+The examples/jagged directory uses these files as input.
 
 :line
 
