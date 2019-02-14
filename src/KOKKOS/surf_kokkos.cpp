@@ -57,6 +57,9 @@ SurfKokkos::~SurfKokkos()
 {
   lines = NULL;
   tris = NULL;
+
+  mylines = NULL;
+  mytris = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
