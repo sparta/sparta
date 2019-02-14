@@ -193,7 +193,7 @@ class Surf : protected Pointers {
   void write_restart(FILE *);
   void read_restart(FILE *);
   virtual void grow();
-  void grow_own();
+  virtual void grow_own();
   bigint memory_usage();
 
  private:

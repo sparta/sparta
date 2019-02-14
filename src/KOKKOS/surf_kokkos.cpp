@@ -63,23 +63,43 @@ SurfKokkos::~SurfKokkos()
 
 void SurfKokkos::wrap_kokkos()
 {
-  if (lines != NULL && nline > 0) {
-    if (lines != k_lines.h_view.data()) {
-      memoryKK->wrap_kokkos(k_lines,lines,nline,"surf:lines");
-      k_lines.modify<SPAHostType>();
-      k_lines.sync<DeviceType>();
-      memory->sfree(lines);
-      lines = k_lines.h_view.data();
+  if (domain->dimension == 2) {
+    if (lines != NULL && nlocal+nghost > 0) {
+      if (lines != k_lines.h_view.data()) {
+        memoryKK->wrap_kokkos(k_lines,lines,nlocal+nghost,"surf:lines");
+        k_lines.modify<SPAHostType>();
+        k_lines.sync<DeviceType>();
+        memory->sfree(lines);
+        lines = k_lines.h_view.data();
+      }
     }
-  }
-
-  if (tris != NULL && ntri > 0) {
-    if (tris != k_tris.h_view.data()) {
-      memoryKK->wrap_kokkos(k_tris,tris,ntri,"surf:tris");
-      k_tris.modify<SPAHostType>();
-      k_tris.sync<DeviceType>();
-      memory->sfree(tris);
-      tris = k_tris.h_view.data();
+    if (mylines != NULL && nown > 0) {
+      if (mylines != k_mylines.h_view.data()) {
+        memoryKK->wrap_kokkos(k_mylines,mylines,nown,"surf:lines");
+        k_mylines.modify<SPAHostType>();
+        k_mylines.sync<DeviceType>();
+        memory->sfree(mylines);
+        mylines = k_mylines.h_view.data();
+      }
+    }
+  } else {
+    if (tris != NULL && nlocal+nghost > 0) {
+      if (tris != k_tris.h_view.data()) {
+        memoryKK->wrap_kokkos(k_tris,tris,nlocal+nghost,"surf:tris");
+        k_tris.modify<SPAHostType>();
+        k_tris.sync<DeviceType>();
+        memory->sfree(tris);
+        tris = k_tris.h_view.data();
+      }
+    }
+    if (mytris != NULL && nown > 0) {
+      if (mytris != k_mytris.h_view.data()) {
+        memoryKK->wrap_kokkos(k_mytris,mytris,nown,"surf:mytris");
+        k_mytris.modify<SPAHostType>();
+        k_mytris.sync<DeviceType>();
+        memory->sfree(mytris);
+        mytris = k_mytris.h_view.data();
+      }
     }
   }
 }
@@ -94,23 +114,58 @@ void SurfKokkos::grow()
   } else {
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
-    if (lines == NULL)
-        surf_kk->k_lines = tdual_line_1d("surf:lines",nline);
-    else {
-      surf_kk->sync(Host,LINE_MASK);
-      surf_kk->modify(Host,LINE_MASK); // force resize on host
-      surf_kk->k_lines.resize(nline);
+    if (domain->dimension == 2) {
+      if (lines == NULL)
+          surf_kk->k_lines = tdual_line_1d("surf:lines",nmax);
+      else {
+        surf_kk->sync(Host,LINE_MASK);
+        surf_kk->modify(Host,LINE_MASK); // force resize on host
+        surf_kk->k_lines.resize(nmax);
+      }
+      lines = surf_kk->k_lines.h_view.data();
+    } else {
+      if (tris == NULL)
+          surf_kk->k_tris = tdual_tri_1d("surf:tris",nmax);
+      else {
+        surf_kk->sync(Host,TRI_MASK);
+        surf_kk->modify(Host,TRI_MASK); // force resize on host
+        surf_kk->k_tris.resize(nmax);
+      }
+      tris = surf_kk->k_tris.h_view.data();
     }
-    lines = surf_kk->k_lines.h_view.data();
+  }
+}
 
-    if (tris == NULL)
-        surf_kk->k_tris = tdual_tri_1d("surf:tris",ntri);
-    else {
-      surf_kk->sync(Host,TRI_MASK);
-      surf_kk->modify(Host,TRI_MASK); // force resize on host
-      surf_kk->k_tris.resize(ntri);
+
+/* ----------------------------------------------------------------------
+   grow surface data structures
+------------------------------------------------------------------------- */
+void SurfKokkos::grow_own()
+{
+  if (sparta->kokkos->prewrap) {
+    Surf::grow_own();
+  } else {
+    SurfKokkos* surf_kk = (SurfKokkos*) surf;
+
+    if (domain->dimension == 2) {
+      if (mylines == NULL)
+          surf_kk->k_mylines = tdual_line_1d("surf:mylines",nown);
+      else {
+        surf_kk->sync(Host,LINE_MASK);
+        surf_kk->modify(Host,LINE_MASK); // force resize on host
+        surf_kk->k_mylines.resize(nown);
+      }
+      mylines = surf_kk->k_mylines.h_view.data();
+    } else {
+      if (mytris == NULL)
+          surf_kk->k_mytris = tdual_tri_1d("surf:mytris",nown);
+      else {
+        surf_kk->sync(Host,TRI_MASK);
+        surf_kk->modify(Host,TRI_MASK); // force resize on host
+        surf_kk->k_mytris.resize(nown);
+      }
+      mytris = surf_kk->k_mytris.h_view.data();
     }
-    tris = surf_kk->k_tris.h_view.data();
   }
 }
 
