@@ -26,6 +26,9 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+#include "comm.h"
+
 using namespace SPARTA_NS;
 
 enum{SUM,SUMSQ,MINN,MAXX,AVE,AVESQ};
@@ -622,14 +625,14 @@ double ComputeReduce::compute_one(int m, int flag)
                    "computed at compatible time");
       if (aidx == 0) {
         double *fvec = fix->vector_surf;
-        int n = surf->nlocal;
+        int n = surf->nown;
         if (flag < 0) {
           for (i = 0; i < n; i++)
             combine(one,fvec[i],i);
         } else one = fvec[flag];
       } else {
         double **farray = fix->array_surf;
-        int n = surf->nlocal;
+        int n = surf->nown;
         int aidxm1 = aidx - 1;
         if (flag < 0) {
           for (i = 0; i < n; i++)
