@@ -459,7 +459,11 @@ void Comm::migrate_cells_less_memory(int nmigrate)
 
   // compress my list of owned grid cells to remove migrated cells
 
-  if (nmigrate) grid->compress();
+  if (nmigrate) {
+    if (surf->implicit) surf->compress_rebalance();
+    grid->compress();
+    if (surf->implicit) surf->reset_csurfs_implicit();
+  }
 }
 
 /* ----------------------------------------------------------------------
