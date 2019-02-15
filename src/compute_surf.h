@@ -44,7 +44,9 @@ class ComputeSurf : public Compute {
   int groupbit,imix,nvalue,ngroup,ntotal;
   int *which;
 
-  int nsurf;               // # of global surfs, lines or triangles
+  int nsurf;               // # of lines/tris I own
+                           // surf->nlocal+nghost for explicit all or distributed
+
   int nlocal;              // # of local surfs I have tallied for
   int maxlocal;            // # of local surfs currently allocated
   double **array;          // tally values for local surfs

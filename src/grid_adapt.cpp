@@ -191,10 +191,10 @@ void Grid::coarsen_cell(int iparent, int nchild,
                         Cut2d *cut2d, Cut3d *cut3d)
 {
   int i,j,k,m,icell,ichild,inew,nsurf,ip,ipnew,ns;
-  int *ptr,*cs;
+  surfint *ptr,*cs;
 
   AdaptGrid::SendAdapt **sa_header = ag->sa_header;
-  int **sa_csurfs = ag->sa_csurfs;
+  surfint **sa_csurfs = ag->sa_csurfs;
   char **sa_particles = ag->sa_particles;
 
   int dim = domain->dimension;

@@ -72,6 +72,9 @@ FixEmitSurf::FixEmitSurf(SPARTA *sparta, int narg, char **arg) :
   
   if (!surf->exist) 
     error->all(FLERR,"Fix emit/surf requires surface elements");
+  if (surf->distributed)
+    error->all(FLERR,
+               "Cannot yet use fix emit/surf with distributed surf elements");
   if (np > 0 && perspecies) 
     error->all(FLERR,"Cannot use fix emit/face n > 0 with perspecies yes");
   
@@ -238,7 +241,7 @@ int FixEmitSurf::create_task(int icell)
   
   double *lo = cells[icell].lo;
   double *hi = cells[icell].hi;
-  int *csurfs = cells[icell].csurfs;
+  surfint *csurfs = cells[icell].csurfs;
   int nsurf = cells[icell].nsurf;
   
   for (i = 0; i < nsurf; i++) {
@@ -974,7 +977,7 @@ int FixEmitSurf::unpack_task(char *buf, int icell)
   else {
     int isurf = tasks[ntask].isurf;
     int nsurf = cells[icell].nsurf;
-    int *csurfs = cells[icell].csurfs;
+    surfint *csurfs = cells[icell].csurfs;
     int i;
     for (i = 0; i < nsurf; i++)
       if (csurfs[i] == isurf) break;
@@ -1099,7 +1102,7 @@ void FixEmitSurf::post_compress_grid()
     else {
       int isurf = tasks[i].isurf;
       int nsurf = cells[icell].nsurf;
-      int *csurfs = cells[icell].csurfs;
+      surfint *csurfs = cells[icell].csurfs;
       int j;
       for (j = 0; j < nsurf; j++)
         if (csurfs[j] == isurf) break;

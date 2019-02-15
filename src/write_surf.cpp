@@ -70,9 +70,7 @@ void WriteSurf::command(int narg, char **arg)
 
   double time_total = time2-time1;
 
-  int nsurf;
-  if (domain->dimension == 2) nsurf = surf->nline;
-  else nsurf = surf->ntri;
+  int nsurf = surf->nsurf;
 
   if (comm->me == 0) {
     if (screen) {
@@ -102,30 +100,29 @@ void WriteSurf::write_file(FILE *fp)
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
 
-  int nline = surf->nline;
-  int ntri = surf->ntri;
+  int nsurf = surf->nsurf;
 
   // header section
 
   fprintf(fp,"# Surface element file written by SPARTA\n\n");
   if (dim == 2) {
-    fprintf(fp,"%d points\n",2*nline);
-    fprintf(fp,"%d lines\n",nline);
+    fprintf(fp,"%d points\n",2*nsurf);
+    fprintf(fp,"%d lines\n",nsurf);
   } else if (dim == 3) {
-    fprintf(fp,"%d points\n",3*ntri);
-    fprintf(fp,"%d triangles\n",ntri);
+    fprintf(fp,"%d points\n",3*nsurf);
+    fprintf(fp,"%d triangles\n",nsurf);
   }
   fprintf(fp,"\n");
 
   fprintf(fp,"Points\n\n");
 
   if (dim == 2) {
-    for (int i = 0; i < nline; i++) {
+    for (int i = 0; i < nsurf; i++) {
       fprintf(fp,"%d %20.15g %20.15g\n",2*i+1,lines[i].p1[0],lines[i].p1[1]);
       fprintf(fp,"%d %20.15g %20.15g\n",2*i+2,lines[i].p2[0],lines[i].p2[1]);
     }
   } else {
-    for (int i = 0; i < ntri; i++) {
+    for (int i = 0; i < nsurf; i++) {
       fprintf(fp,"%d %20.15g %20.15g %20.15g\n",
               3*i+1,tris[i].p1[0],tris[i].p1[1],tris[i].p1[2]);
       fprintf(fp,"%d %20.15g %20.15g %20.15g\n",
@@ -139,7 +136,7 @@ void WriteSurf::write_file(FILE *fp)
 
   if (dim == 2) {
     fprintf(fp,"\nLines\n\n");
-    for (int i = 0; i < nline; i++)
+    for (int i = 0; i < nsurf; i++)
       fprintf(fp,"%d %d %d %d\n",i+1,lines[i].type,2*i+1,2*i+2);
   }
 
@@ -147,7 +144,7 @@ void WriteSurf::write_file(FILE *fp)
 
   if (dim == 3) {
     fprintf(fp,"\nTriangles\n\n");
-    for (int i = 0; i < nline; i++)
+    for (int i = 0; i < nsurf; i++)
       fprintf(fp,"%d %d %d %d %d\n",i+1,tris[i].type,3*i+1,3*i+2,3*i+3);
   }
 }

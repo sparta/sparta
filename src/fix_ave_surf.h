@@ -43,8 +43,8 @@ class FixAveSurf : public Fix {
   int *which,*argindex,*value2index;
   char **ids;
 
-  int nsurf;               // # of global surfs, lines or triangles
-  int nslocal;             // # of surfs I own
+  int nsurf;               // # of explicit surfs I store = surf->nlocal+nghost
+  int nown;                // # of explicit surfs I own = surf->nown
   double *accvec;          // accumulation vector
   double **accarray;       // accumulation array
   double *buflocal;        // surf collate vector for surfs I own

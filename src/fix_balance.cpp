@@ -31,6 +31,9 @@
 #include "error.h"
 #include "timer.h"
 
+// DEBUG
+#include "surf.h"
+
 using namespace SPARTA_NS;
 
 enum{RANDOM,PROC,BISECTION};
@@ -230,6 +233,7 @@ void FixBalance::end_of_step()
 
   grid->unset_neighbors();
   grid->remove_ghosts();
+
   comm->migrate_cells(nmigrate);
 
   grid->setup_owned();

@@ -47,6 +47,8 @@ SPARTA distribution.  Each is described in more detail below.
 <UL><LI><A HREF = "#dump2cfg">dump2cfg</A> - convert a particle dump file to CFG format
 <LI><A HREF = "#dump2xyz">dump2xyz</A> - convert a particle dump file to XYZ format
 <LI><A HREF = "#gridrefine">grid_refine</A> - refine a grid around a surface
+<LI><A HREF = "#implicit">implicit_grid</A> - create a random porous region with implicit surfaces
+<LI><A HREF = "#jagged">jagged</A> - create jagged 2d/3d surfaces with explicit surfaces
 <LI><A HREF = "#log2txt">log2txt</A> - extract columns of info from a log file
 <LI><A HREF = "#logplot">logplot</A> - plot columns of info from a log file via GnuPlot
 <LI><A HREF = "#paraview">paraview</A> - converters of SPARTA data to <A HREF = "http://www.paraview.org">ParaView</A> format
@@ -106,6 +108,38 @@ The surface file can be read by the <A HREF = "read_surf.html">read_surf</A> com
 </P>
 <P>See the header of the script for the various adaptivity options that
 are supported, and the syntax used to run it.
+</P>
+<HR>
+
+<H4><A NAME = "jagged"></A>implicit_grid tool 
+</H4>
+<P>This is a Python script which can be used to generate binary files
+representing porous media samples, as read by the
+<A HREF = "read_isurf.html">read_isurf</A> command.  The output files contain
+randomized grid corner point values which induce implicit surfaces
+which can contain huge numbers of surface elements.  They are useful
+for stress testing the implicit surface options in SPARTA, as selected
+by the <A HREF = "global.html">global surfs</A> command.
+</P>
+<P>See the header of the script for the syntax used to run it.
+</P>
+<P>The examples/implicit directory uses these files as input.
+</P>
+<HR>
+
+<H4><A NAME = "jagged"></A>jagged tools 
+</H4>
+<P>These are 2 Python scripts (jagged2d.py and jagged3d.py) which can be
+used to generate SPARTA surface files in a pattern that can be very
+jagged.  The surfaces can contain huge numbers of surface elements and
+be read by the <A HREF = "read_surf.html">read_surf</A> command.  They are useful
+for stress testing the explict surface options in SPARTA, including
+distributed or non-distributed storage, as selected by the <A HREF = "global.html">global
+surfs</A> command.
+</P>
+<P>See the header of the scripts for the syntax used to run them.
+</P>
+<P>The examples/jagged directory uses these files as input.
 </P>
 <HR>
 

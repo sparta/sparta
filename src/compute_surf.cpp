@@ -39,6 +39,9 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 5) error->all(FLERR,"Illegal compute surf command");
 
+  if (surf->implicit) 
+    error->all(FLERR,"Cannot use compute surf with implicit surfs");
+
   int igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Compute surf group ID does not exist");
   groupbit = surf->bitmask[igroup];
@@ -117,9 +120,9 @@ void ComputeSurf::init()
   tris = surf->tris;
 
   // allocate and initialize glob2loc indices
+  // nsurf = all explicit surfs in this procs grid cells
 
-  if (dimension == 2) nsurf = surf->nline;
-  else nsurf = surf->ntri;
+  nsurf = surf->nlocal + surf->nghost;
 
   memory->destroy(glob2loc);
   memory->create(glob2loc,nsurf,"surf:glob2loc");
@@ -181,11 +184,10 @@ void ComputeSurf::compute_per_surf()
 
 void ComputeSurf::clear()
 {
-  // reset all set glob2loc values to -1
+  // reset all set glob2loc values to -1 and nlocal to 0
   // called by Update at beginning of timesteps surf tallying is done
 
-  for (int i = 0; i < nlocal; i++)
-    glob2loc[loc2glob[i]] = -1;
+  for (int i = 0; i < nlocal; i++) glob2loc[loc2glob[i]] = -1;
   nlocal = 0;
 }
 

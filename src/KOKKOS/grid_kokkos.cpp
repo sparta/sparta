@@ -172,8 +172,10 @@ void GridKokkos::wrap_kokkos_graphs()
     int nsurf = cells[icell].nsurf;
     if (nsurf < 0) nsurf = 0;
     else if (fill) {
-      int* csurfs = cells[icell].csurfs;
-      for (int j = 0; j < nsurf; ++j) fill[j] = csurfs[j];
+      surfint* csurfs = cells[icell].csurfs;
+      // d_csurfs doesn't need to be surfint because at this point there are only
+      //   local (not global) ids stored in csurfs
+      for (int j = 0; j < nsurf; ++j) fill[j] = (int) csurfs[j];
     }
     return nsurf;
   };

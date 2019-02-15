@@ -489,11 +489,11 @@ void ReadRestart::command(int narg, char **arg)
 
   if (me == 0 && surf->exist) {
     if (domain->dimension == 2) {
-      if (screen) fprintf(screen,"  %d surf lines\n",surf->nline);
-      if (logfile) fprintf(logfile,"  %d surf lines\n",surf->nline);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf lines\n",surf->nsurf);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf lines\n",surf->nsurf);
     } else {
-      if (screen) fprintf(screen,"  %d surf triangles\n",surf->ntri);
-      if (logfile) fprintf(logfile,"  %d surf triangles\n",surf->ntri);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf triangles\n",surf->nsurf);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf triangles\n",surf->nsurf);
     }
   }
 
@@ -504,7 +504,7 @@ void ReadRestart::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   if (surf->exist) {
-    surf->setup_surf();
+    surf->setup_owned();
     grid->clear_surf_restart();
     grid->surf2grid(0);
   }
@@ -751,7 +751,7 @@ void ReadRestart::header(int incompatible)
     } else if (flag == NSUB) {
       nsub_file = read_int();
     } else if (flag == NSURF) {
-      nsurf_file = read_int();
+      nsurf_file = read_bigint();
 
     } else error->all(FLERR,"Invalid flag in header section of restart file");
 

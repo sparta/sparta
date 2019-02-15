@@ -52,16 +52,25 @@ read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6 :pre
 
 Read the geometry of a surface from the specified file.  In SPARTA, a
 "surface" is a collection of surface elements that represent the
-surface of one or more physical objects which will be embedded in the
-global simulation box.  Surface elements are triangles in 3d or line
-segments in 2d.  Surface elements for each physical object are
-required to be a complete, connected set that tile the entire surface
-of the object.  See the discussion of watertight surfaces below.
+surface(s) of one or more physical objects which will be embedded in
+the global simulation box.  Surfaces can be explicit or implicit.
+This command reads explicit surfaces from a file containing a list of
+explicit surfaces.  See the "read_isurf"_read_isurf.html command to
+read implicit surfaces from a different kind of file.  See the "Howto
+6.13"_Section_howto.html#howto_13 section of the manual for an
+explantion of explicit versus implicit surfaces as well as distributed
+versus non-distributed storage.  You cannot mix explicit and implicit
+surfaces in the same simulation.
+
+Surface elements are triangles in 3d or line segments in 2d.  Surface
+elements for each physical object are required to be a complete,
+connected set that tile the entire surface of the object.  See the
+discussion of watertight surfaces below.
 
 Particles collide with surface elements as they advect.  Each surface
 element is assigned to a collision model, specified by the
 "surf_collide"_surf_collide.html command which affects how a particle
-bounces off the surface.  Each surface elements can optionally be
+bounces off the surface.  Each surface element can optionally be
 assigned to a reaction model, specified by the
 "surf_react"_surf_react.html command which determines if any surface
 chemistry occurs during a collision.  Statistics for each surface
@@ -76,32 +85,39 @@ commands to operate on selected sets of elements.  This command has
 {group} and {typeadd} keywords which can be used to help assign
 different elements or different objects to different groups.
 
+Explicit surface elements can be stored in a distributed fashion (each
+processor only stores elements which overlap grid cells it owns or has
+a ghost cell copy of).  Or each processor can store a copy of all
+surface elements (the default).  See the "global surfs"_global.html to
+change this setting.
+
 Note that the read_surf command can be used multiple times to read
 multiple objects from multiple files and add them to the simulation
-domain.  The format of a surface file is discussed below.  Optional
-keywords allow the vertices in the file to be translated, scaled, and
-rotated in various ways.  This allows a single surface file,
-e.g. containing a unit sphere, to be used multiple times in a single
-simulation or in different simulations.
+domain.  The format of a surface file for explicit elements is
+discussed below.  Optional keywords allow the vertices in the file to
+be translated, scaled, and rotated in various ways.  This allows a
+single surface file, e.g. containing a unit sphere, to be used
+multiple times in a single simulation or in different simulations.
 
 The tools directory contains tools that can create surface files with
 simple geometric objects (spheres, blocks, etc).  It also has tools
-that can convert surface files in other formats to the SPARTA format,
-e.g. for files created by a mesh-generation program.
+that can convert surface files in other formats to the SPARTA format
+for explicit surfaces, e.g. for files created by a mesh-generation
+program.
 
 :line
 
 The specified file can be a text file or a gzipped text file (detected
 by a .gz suffix).
 
-A surface file has a header and a body.  The header appears first.
-The first line of the header is always skipped; it typically contains
-a description of the file.  Then lines are read one at a time.  Lines
-can have a trailing comment starting with '#' that is ignored.  If the
-line is blank (only whitespace after comment is deleted), it is
-skipped.  If the line contains a header keyword, the corresponding
-value is read from the line.  If it doesn't contain a header keyword,
-the line begins the body of the file.
+A surface file for explicit surfaces has a header and a body.  The
+header appears first.  The first line of the header is always skipped;
+it typically contains a description of the file.  Then lines are read
+one at a time.  Lines can have a trailing comment starting with '#'
+that is ignored.  If the line is blank (only whitespace after comment
+is deleted), it is skipped.  If the line contains a header keyword,
+the corresponding value is read from the line.  If it doesn't contain
+a header keyword, the line begins the body of the file.
 
 The body of the file contains one or more sections.  The first line of
 a section has only a keyword.  The next line is skipped.  The
@@ -350,6 +366,10 @@ for options with regard to particles.
 To read gzipped surface files, you must compile SPARTA with the
 -DSPARTA_GZIP option - see "Section 2.2"_Section_start.html#start_2 of
 the manual for details.
+
+The {clip} keyword cannot be used when the "global surfs
+explicit/distributed"_global.html command has been used.  This is
+because we have not yet figured out how to clip distributed surfaces.
 
 Every vertex in the final surface (after translation, rotation,
 scaling, etc) must be inside or on the surface of the global

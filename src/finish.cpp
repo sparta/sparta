@@ -411,6 +411,42 @@ void Finish::end(int flag, double time_multiple_runs)
 	fprintf(logfile,"\n");
       }
     }
+
+    if (surf->exist) {
+      tmp = surf->nlocal;
+      stats(1,&tmp,&ave,&max,&min,10,histo);
+      if (me == 0) {
+        if (screen) {
+          fprintf(screen,"Surfs:     %g ave %g max %g min\n",ave,max,min);
+          fprintf(screen,"Histogram:");
+          for (i = 0; i < 10; i++) fprintf(screen," %d",histo[i]);
+          fprintf(screen,"\n");
+        }
+        if (logfile) {
+          fprintf(logfile,"Surfs:    %g ave %g max %g min\n",ave,max,min);
+          fprintf(logfile,"Histogram:");
+          for (i = 0; i < 10; i++) fprintf(logfile," %d",histo[i]);
+          fprintf(logfile,"\n");
+        }
+      }
+
+      tmp = surf->nghost;
+      stats(1,&tmp,&ave,&max,&min,10,histo);
+      if (me == 0) {
+        if (screen) {
+          fprintf(screen,"GhostSurf: %g ave %g max %g min\n",ave,max,min);
+          fprintf(screen,"Histogram:");
+          for (i = 0; i < 10; i++) fprintf(screen," %d",histo[i]);
+          fprintf(screen,"\n");
+        }
+        if (logfile) {
+          fprintf(logfile,"GhostSurf: %g ave %g max %g min\n",ave,max,min);
+          fprintf(logfile,"Histogram:");
+          for (i = 0; i < 10; i++) fprintf(logfile," %d",histo[i]);
+          fprintf(logfile,"\n");
+        }
+      }
+    }
   }
     
   if (logfile) fflush(logfile);
