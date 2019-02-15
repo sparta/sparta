@@ -693,7 +693,7 @@ bigint ComputeReduce::count(int m)
   } else if (which[m] == FIX) {
     if (flavor[m] == PARTICLE) ncount = particle->nlocal;
     else if (flavor[m] == GRID) ncount = grid->nlocal;
-    else if (flavor[m] == SURF) ncount = surf->nlocal;
+    else if (flavor[m] == SURF) ncount = surf->nown;
   } else if (which[m] == VARIABLE) {
     if (flavor[m] == PARTICLE) ncount = particle->nlocal;
     else if (flavor[m] == GRID) ncount = grid->nlocal;
