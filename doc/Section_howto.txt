@@ -1118,7 +1118,7 @@ used to store extra per-particle properties.
 
 :line
 
-6.13 "Surface elements: explicit, implicit, distributed :link(howto_13),h4
+6.13 Surface elements: explicit, implicit, distributed :link(howto_13),h4
 
 SPARTA can work with two kinds of surface elements: explicit and
 implicit.  Explicit surfaces are lines (2d) or triangles (3d) defined
@@ -1167,7 +1167,7 @@ these commands do not yet support them:
 "move_surf"_move_surf.html
 "remove_surf"_remove_surf.html
 "fix move/surf"_fix_move_surf.html
-"fix emit/surf""_fix_emit_surf.html
+"fix emit/surf"_fix_emit_surf.html
 "read_surf clip option"_read_surf.html
 "adapt_grid coarsen"_adapt_grid.html
 "fix adapt/grid coarsen"_fix_adapt_grid.html :ul
