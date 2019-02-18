@@ -49,6 +49,16 @@ class ReadISurf : protected Pointers {
   double corner[3],xyzsize[3];
   char *typefile;
 
+  // 3d marching cubes
+
+  double *lo,*hi;
+  int v000,v001,v010,v011,v100,v101,v110,v111;
+  int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
+  double pt[36][3];
+    
+  int config;     // configuration of the active cube
+  int subconfig;  // subconfiguration of the active cube
+    
 #ifdef SPARTA_MAP
   std::map<bigint,int> *hash;
 #elif defined SPARTA_UNORDERED_MAP
@@ -74,6 +84,13 @@ class ReadISurf : protected Pointers {
   void marching_cubes(int);
   void marching_squares(int);
   double interpolate(int, int, double, double);
+
+  // 3d marching cubes
+
+  int add_triangle(int *, int);
+  bool test_face(int);
+  bool test_interior(int, int);
+  void print_cube();
 };
 
 }
