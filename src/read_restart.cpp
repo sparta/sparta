@@ -328,7 +328,7 @@ void ReadRestart::command(int narg, char **arg)
   // sends chunks round-robin to other procs in its cluster
   // each proc keeps all cells/particles in its perproc chunks in file
 
-  else if (update->global_mem_limit > 0 || !grid->nlocal) {
+  else if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal)) {
   
   // what to do if split particle??
 
