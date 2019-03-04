@@ -2309,6 +2309,22 @@ int Grid::pack_restart(char *buf)
 }
 
 /* ----------------------------------------------------------------------
+   size unpack
+------------------------------------------------------------------------- */
+
+int Grid::size_unpack_restart(int nlocal_restart)
+{
+  int n = 2*sizeof(int);
+  n = IROUNDUP(n);
+  n += nlocal_restart * sizeof(cellint);
+  n = IROUNDUP(n);
+  n += nlocal_restart * sizeof(int);
+  n = IROUNDUP(n);
+
+  return n;
+}
+
+/* ----------------------------------------------------------------------
    unpack child grid info into restart storage
    nlocal_restart, clumped as scalars
    id_restart, nsplit_restart as vectors
