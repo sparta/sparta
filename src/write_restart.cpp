@@ -361,6 +361,10 @@ void WriteRestart::write_less_memory(char *file)
   max_size = MAX(max_size,sizeof(Particle::OnePartRestart));
   max_size += 128; // extra for size and ROUNDUP(ptr)
 
+  int max_size_global;
+  MPI_Allreduce(&max_size,&max_size_global,1,MPI_INT,MPI_MAX,world);
+  max_size = max_size_global;
+
   char *buf;
   memory->create(buf,max_size,"write_restart:buf");
   memset(buf,0,max_size);
