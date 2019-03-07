@@ -118,7 +118,7 @@ template<>
 struct ExecutionSpaceFromDevice<SPAHostType> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Host;
 };
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template<>
 struct ExecutionSpaceFromDevice<Kokkos::Cuda> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
@@ -647,7 +647,7 @@ typedef tdual_float_1d_strided::t_dev t_float_1d_strided;
 typedef tdual_float_1d_strided::t_dev_um t_float_1d_strided_um;
 };
 
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template <>
 struct ArrayTypes<SPAHostType> {
 
@@ -936,11 +936,11 @@ template<class ViewType>
 void memset_kokkos (ViewType &view) {
   static MemsetZeroFunctor<typename ViewType::execution_space> f;
   f.ptr = view.data();
-  Kokkos::parallel_for(view.capacity()*sizeof(typename ViewType::value_type)/4, f);
+  Kokkos::parallel_for(view.scan()*sizeof(typename ViewType::value_type)/4, f);
   ViewType::execution_space::fence();
 }
 
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 #define SPARTA_LAMBDA [=] __device__
 #else
 #define SPARTA_LAMBDA [=]

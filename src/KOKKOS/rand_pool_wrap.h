@@ -51,7 +51,7 @@ class RandPoolWrap : protected Pointers {
   KOKKOS_INLINE_FUNCTION
   RandWrap get_state() const
   {
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
     error->all(FLERR,"Cannot use Park RNG with GPUs");
 #endif
 
