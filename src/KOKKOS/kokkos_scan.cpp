@@ -49,7 +49,7 @@ Kokkos::View<int*, Device> offset_scan(Kokkos::View<int*, Device> in, int& total
 
 template Kokkos::View<int*, SPAHostType> offset_scan(
     Kokkos::View<int*, SPAHostType> in, int& total);
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template Kokkos::View<int*, SPADeviceType> offset_scan(
     Kokkos::View<int*, SPADeviceType> in, int& total);
 #endif

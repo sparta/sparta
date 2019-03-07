@@ -39,7 +39,7 @@ void GridKokkos::update_hash()
 
   // Deep copy the host view of the hash to the device
   //hash_kk.clear();
-  //if (hash_kk.capacity() < hash->size()) {
+  //if (hash_kk.span() < hash->size()) {
   //  hash_kk.rehash(static_cast<size_t>(hash->size()));
   //}
   Kokkos::deep_copy(hash_kk, hash_h);
