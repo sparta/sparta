@@ -402,8 +402,10 @@ void WriteRestart::write_less_memory(char *file)
 
   // pack my child grid and particle data into buf
 
+  // number of particles per pass
   int step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
-  int my_npasses = ceil((double)particle->nlocal/step_size)+1; // extra one for grid
+
+  int my_npasses = ceil((double)particle->nlocal/step_size)+1; // extra pass for grid
 
   // output of one or more native files
   // filewriter = 1 = this proc writes to file

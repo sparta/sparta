@@ -2277,6 +2277,22 @@ int Grid::size_restart()
 }
 
 /* ----------------------------------------------------------------------
+   return size of child grid restart info using
+     arbitrary count of all owned cells
+------------------------------------------------------------------------- */
+
+int Grid::size_restart(int nlocal_restart)
+{
+  int n = 2*sizeof(int);
+  n = IROUNDUP(n);
+  n += nlocal_restart * sizeof(cellint);
+  n = IROUNDUP(n);
+  n += nlocal_restart * sizeof(int);
+  n = IROUNDUP(n);
+  return n;
+}
+
+/* ----------------------------------------------------------------------
    pack my child grid info into buf
    nlocal, clumped as scalars
    ID, nsplit as vectors for all owned cells
@@ -2303,22 +2319,6 @@ int Grid::pack_restart(char *buf)
   for (int i = 0; i < nlocal; i++)
     ibuf[i] = cells[i].nsplit;
   n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
-
-  return n;
-}
-
-/* ----------------------------------------------------------------------
-   size unpack
-------------------------------------------------------------------------- */
-
-int Grid::size_unpack_restart(int nlocal_restart)
-{
-  int n = 2*sizeof(int);
-  n = IROUNDUP(n);
-  n += nlocal_restart * sizeof(cellint);
-  n = IROUNDUP(n);
-  n += nlocal_restart * sizeof(int);
   n = IROUNDUP(n);
 
   return n;

@@ -399,7 +399,7 @@ void ReadRestart::command(int narg, char **arg)
         int grid_nlocal;
         fread(&grid_nlocal,sizeof(int),1,fp);
         fseek(fp,-sizeof(int),SEEK_CUR);
-        int grid_read_size = grid->size_unpack_restart(grid_nlocal);
+        int grid_read_size = grid->size_restart(grid_nlocal);
         int particle_read_size = n - grid_read_size;
         int particle_nlocal;
         fseek(fp,grid_read_size,SEEK_CUR);
@@ -418,8 +418,10 @@ void ReadRestart::command(int narg, char **arg)
           memory->create(buf,maxbuf,"read_restart:buf");
         }
 
+        // number of particles per pass
         step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
-        npasses = ceil((double)particle_nlocal/step_size)+1; // extra one for grid
+
+        npasses = ceil((double)particle_nlocal/step_size)+1; // extra pass for grid
 
         if (i % nclusterprocs) {
           iproc = me + (i % nclusterprocs);
@@ -434,7 +436,7 @@ void ReadRestart::command(int narg, char **arg)
             n = grid_read_size;
           else {
             n = step_size*sizeof(Particle::OnePartRestart);
-            if (ii == 1) n += ((sizeof(int) + 7) & ~7);
+            if (ii == 1) n += ((sizeof(int) + 7) & ~7); // ROUNDUP(ptr)
             if (total_read_part + n > particle_read_size)
               n = particle_read_size - total_read_part;
             total_read_part += n;

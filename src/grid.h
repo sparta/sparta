@@ -231,8 +231,8 @@ class Grid : protected Pointers {
   void write_restart(FILE *);
   void read_restart(FILE *);
   int size_restart();
+  int size_restart(int);
   int pack_restart(char *);
-  int size_unpack_restart(int);
   int unpack_restart(char *);
 
   bigint memory_usage();

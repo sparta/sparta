@@ -1442,6 +1442,7 @@ int Particle::pack_restart(char *buf)
 
 /* ----------------------------------------------------------------------
    pack my particle info into buf
+   use multiple passes to reduce memory use
    use OnePartRestart data struct for permanent info and to encode cell ID
    include per-particle custom attributes if defined
 ------------------------------------------------------------------------- */
@@ -1523,6 +1524,7 @@ int Particle::unpack_restart(char *buf)
 
 /* ----------------------------------------------------------------------
    unpack particle info into restart storage
+   use multiple passes to reduce memory use
    allocate data structure here, will be deallocated by ReadRestart
    include per-particle custom attributes if defined
 ------------------------------------------------------------------------- */
