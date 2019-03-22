@@ -953,8 +953,8 @@ void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
                                          vrc[0]*vrc[2]*sin(eps))/d );
     } else {
       ua = scale * ( cosX*vrc[0] ); 
-      vb = scale * ( sinX*vrc[1]*cos(eps) ); 
-      wc = scale * ( sinX*vrc[2]*sin(eps) );
+      vb = scale * ( sinX*vrc[0]*cos(eps) ); 
+      wc = scale * ( sinX*vrc[0]*sin(eps) );
     }
   }
   
@@ -1130,8 +1130,8 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
                                         vrc[0]*vrc[2]*sin(eps))/d);
     } else {
       ua = scale * cosX*vrc[0]; 
-      vb = scale * sinX*vrc[1]*cos(eps); 
-      wc = scale * sinX*vrc[2]*sin(eps);
+      vb = scale * sinX*vrc[0]*cos(eps); 
+      wc = scale * sinX*vrc[0]*sin(eps);
     }
   }
 
