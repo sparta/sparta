@@ -283,12 +283,13 @@ void UpdateKokkos::run(int nsteps)
 
     // communicate particles
 
-    DAT::t_int_1d d_mlist_small = Kokkos::subview(k_mlist.d_view,std::make_pair(0,nmigrate));
-    HAT::t_int_1d h_mlist_small = HAT::t_int_1d(Kokkos::view_alloc("mlist_mirror",Kokkos::WithoutInitializing),nmigrate);
-    Kokkos::deep_copy(h_mlist_small, d_mlist_small);
-    auto mlist_small = h_mlist_small.data();
+    if (nmigrate) {
+      k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,nmigrate));
+      k_mlist_small.sync<SPAHostType>();
+    }
+    auto mlist_small = k_mlist_small.h_view.data();
 
-    ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,d_mlist_small);
+    ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,k_mlist_small.d_view);
     if (cellweightflag) particle->post_weight();
     timer->stamp(TIME_COMM);
 
@@ -477,7 +478,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     Kokkos::deep_copy(d_scalars,h_scalars);
 
-    k_mlist.sync<SPADeviceType>();
+    //k_mlist.sync<SPADeviceType>();
     copymode = 1;
     if (sparta->kokkos->atomic_reduction) {
       if (sparta->kokkos->need_atomics) {
@@ -498,11 +499,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     // END of pstart/pstop loop advecting all particles
 
     nmigrate = h_nmigrate();
-
-    DAT::t_int_1d d_mlist_small = Kokkos::subview(k_mlist.d_view,std::make_pair(0,nmigrate));
-    HAT::t_int_1d h_mlist_small = HAT::t_int_1d(Kokkos::view_alloc("mlist_mirror",Kokkos::WithoutInitializing),nmigrate);
-    Kokkos::deep_copy(h_mlist_small, d_mlist_small);
-    auto mlist_small = h_mlist_small.data();
 
     int error_flag;
 
@@ -551,8 +547,14 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     MPI_Allreduce(&entryexit,&any_entryexit,1,MPI_INT,MPI_MAX,world);
     timer->stamp();
     if (any_entryexit) {
+      if (nmigrate) {
+        k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,nmigrate));
+        k_mlist_small.modify<DeviceType>();
+        k_mlist_small.sync<SPAHostType>();
+      }
+      auto mlist_small = k_mlist_small.h_view.data();
       timer->stamp(TIME_MOVE);
-      pstart = ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,d_mlist_small);
+      pstart = ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,k_mlist_small.d_view);
       timer->stamp(TIME_COMM);
       pstop = particle->nlocal;
       if (pstop-pstart > maxmigrate) {

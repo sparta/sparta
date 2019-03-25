@@ -135,12 +135,12 @@ class ParticleKokkos : public Particle {
   typename AT::t_int_2d d_plist;
   typename AT::t_int_1d d_cellcount;
 
-  DAT::tdual_int_1d k_mlist;
+  DAT::t_int_2d d_lists;
   DAT::t_int_1d d_mlist;
-  HAT::t_int_1d h_mlist;
-
-  DAT::tdual_int_1d k_slist;
   DAT::t_int_1d d_slist;
+
+  HAT::t_int_2d h_lists;
+  HAT::t_int_1d h_mlist;
   HAT::t_int_1d h_slist;
 
   DAT::tdual_int_scalar k_fail_flag;
