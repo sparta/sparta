@@ -19,7 +19,6 @@ import os
 import vtk
 import glob
 import platform
-import multiprocessing as mp
 
 def open_grid_file(filename):
   gf = None
@@ -955,24 +954,6 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
 
     fh.close()
 
-def write_pvd_file_original(time_steps, file_name, chunking, index):
-  fh = open(file_name + "_original.pvd", "w")
-  fh.write('<?xml version="1.0"?>\n')
-  fh.write('<VTKFile type="Collection" version="0.1"\n')
-  fh.write('               byte_order="LittleEndian"\n')
-  fh.write('               compressor="vtkZLibDataCompressor">\n')
-
-  fh.write('   <Collection>    \n')
-  for time in time_steps:
-    for chunk in range(len(chunking)):
-      if chunk in report_chunk_complete.filepaths[index][time]:
-        fh.write('    <DataSet timestep="' + str(time) + '" group="" part="' + str(chunk) + '"   \n')
-        fh.write('             file="' + report_chunk_complete.filepaths[index][time][chunk] + '"/>\n')
-  fh.write('   </Collection>    \n')
-
-  fh.write('</VTKFile>    \n')
-  fh.close()
-
 def write_pvd_file(time_steps, file_name, chunking, index):
   fh = open(file_name + ".pvd", "w")
   fh.write('<?xml version="1.0"?>\n')
@@ -1034,135 +1015,202 @@ report_chunk_complete.num_chunks = 0
 report_chunk_complete.filepaths = {}
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument("sparta_grid_description_file", help="SPARTA grid description input file name")
-  parser.add_argument("paraview_output_file", help="ParaView output file name")
-  group = parser.add_mutually_exclusive_group()
-  group.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
-  group.add_argument('-rf', '--resultfile', help="Optional filename containing path names of SPARTA dump result files")
-  parser.add_argument('-xc', '--xchunk', \
-                      help="Optional x grid chunk size (positive integer; default 100)", \
-                      default=100, type=int )
-  parser.add_argument('-yc', '--ychunk', \
-                      help="Optional y grid chunk size (positive integer; default 100)", \
-                      default=100, type=int )
-  parser.add_argument('-zc', '--zchunk', \
-                      help="Optional z grid chunk size (positive integer; default 100)", \
-                      default=100, type=int )
-  args = parser.parse_args()
+  controller = vtk.vtkMultiProcessController.GetGlobalController()
+  num_procs = controller.GetNumberOfProcesses()
+  local_proc_id = controller.GetLocalProcessId()
 
-  try:
-    gdf = open(args.sparta_grid_description_file, "r")
-  except IOError:
-    print "Unable to open SPARTA surf input file: ", args.sparta_grid_description_file
-    sys.exit(1)
+  if local_proc_id == 0:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("sparta_grid_description_file", help="SPARTA grid description input file name")
+    parser.add_argument("paraview_output_file", help="ParaView output file name")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
+    group.add_argument('-rf', '--resultfile', help="Optional filename containing path names of SPARTA dump result files")
+    parser.add_argument('-xc', '--xchunk', \
+                        help="Optional x grid chunk size (positive integer; default 100)", \
+                        default=100, type=int )
+    parser.add_argument('-yc', '--ychunk', \
+                        help="Optional y grid chunk size (positive integer; default 100)", \
+                        default=100, type=int )
+    parser.add_argument('-zc', '--zchunk', \
+                        help="Optional z grid chunk size (positive integer; default 100)", \
+                        default=100, type=int )
+    args = parser.parse_args()
 
-  if os.path.isdir(args.paraview_output_file):
-    print "ParaView output directory exists: ", args.paraview_output_file
-    sys.exit(1)
- 
-  if args.xchunk < 1:
-    print "Invalid xchunk size given: ", args.xchunk
-    sys.exit(1)
-
-  if args.ychunk < 1:
-    print "Invalid ychunk size given: ", args.ychunk
-    sys.exit(1)
-
-  if args.zchunk < 1:
-    print "Invalid zchunk size given: ", args.zchunk
-    sys.exit(1)
-
-  grid_desc = {}
-  read_grid_description_file(gdf, grid_desc)
-  gdf.close()
-
-  if "dimension" not in grid_desc:
-    print "Error: grid description file does not have a dimension statement: ", args.sparta_grid_description_file
-    sys.exit(1)
-
-  if "create_box" not in grid_desc:
-    print "Error: grid description file does not have a create_box statement: ", args.sparta_grid_description_file
-    sys.exit(1)
-
-  if "read_grid" not in grid_desc and "create_grid" not in grid_desc:
-    print "Error: grid description file does not have a read_grid or a create_grid statement: ", args.sparta_grid_description_file
-    sys.exit(1)
-
-  if "slice" not in grid_desc:
-    if os.path.isfile(args.paraview_output_file + '.pvd'):
-      print "ParaView output file exists: ", args.paraview_output_file + '.pvd'
+    try:
+      gdf = open(args.sparta_grid_description_file, "r")
+    except IOError:
+      print "Unable to open SPARTA surf input file: ", args.sparta_grid_description_file
       sys.exit(1)
-  else:
-    for idx, slice in enumerate(grid_desc["slice"]):
-      file_name = args.paraview_output_file + '_slice' + str(idx) + "-" +\
-                    str(round(slice["nx"],4)) + "_" + \
-                    str(round(slice["ny"],4)) + "_" + \
-                    str(round(slice["nz"],4))
-      if os.path.isfile(file_name + '.pvd'):
-        print "ParaView output file exists: ", file_name + '.pvd'
+
+    if os.path.isdir(args.paraview_output_file):
+      print "ParaView output directory exists: ", args.paraview_output_file
+      sys.exit(1)
+ 
+    if args.xchunk < 1:
+      print "Invalid xchunk size given: ", args.xchunk
+      sys.exit(1)
+
+    if args.ychunk < 1:
+      print "Invalid ychunk size given: ", args.ychunk
+      sys.exit(1)
+
+    if args.zchunk < 1:
+      print "Invalid zchunk size given: ", args.zchunk
+      sys.exit(1)
+
+    grid_desc = {}
+    read_grid_description_file(gdf, grid_desc)
+    gdf.close()
+
+    if "dimension" not in grid_desc:
+      print "Error: grid description file does not have a dimension statement: ", args.sparta_grid_description_file
+      sys.exit(1)
+
+    if "create_box" not in grid_desc:
+      print "Error: grid description file does not have a create_box statement: ", args.sparta_grid_description_file
+      sys.exit(1)
+
+    if "read_grid" not in grid_desc and "create_grid" not in grid_desc:
+      print "Error: grid description file does not have a read_grid or a create_grid statement: ", args.sparta_grid_description_file
+      sys.exit(1)
+
+    if "slice" not in grid_desc:
+      if os.path.isfile(args.paraview_output_file + '.pvd'):
+        print "ParaView output file exists: ", args.paraview_output_file + '.pvd'
+        sys.exit(1)
+    else:
+      for idx, slice in enumerate(grid_desc["slice"]):
+        file_name = args.paraview_output_file + '_slice' + str(idx) + "-" +\
+                      str(round(slice["nx"],4)) + "_" + \
+                      str(round(slice["ny"],4)) + "_" + \
+                      str(round(slice["nz"],4))
+        if os.path.isfile(file_name + '.pvd'):
+          print "ParaView output file exists: ", file_name + '.pvd'
+          sys.exit(1)
+
+    if "read_grid" in grid_desc:
+      create_grid_from_grid_file(grid_desc)
+
+    time_steps_dict = {}
+    time_steps_file_list = []
+    if args.result:
+      for f in args.result:
+        time_steps_file_list.extend(glob.glob(f))
+    elif args.resultfile:
+      try:
+        rf = open(args.resultfile, "r")
+        for name in rf:
+          time_steps_file_list.append(name.rstrip())
+        rf.close()
+      except IOError:
+        print "Unable to open SPARTA result file input list file: ", args.result_file
         sys.exit(1)
 
-  if "read_grid" in grid_desc:
-    create_grid_from_grid_file(grid_desc)
+    if not time_steps_file_list:
+      time_steps_dict[0] = []
 
-  time_steps_dict = {}
-  time_steps_file_list = []
-  if args.result:
-    for f in args.result:
-      time_steps_file_list.extend(glob.glob(f))
-  elif args.resultfile:
-    try:
-      rf = open(args.resultfile, "r")
-      for name in rf:
-        time_steps_file_list.append(name.rstrip()) 
-      rf.close()
-    except IOError:
-      print "Unable to open SPARTA result file input list file: ", args.result_file
-      sys.exit(1)
+    read_time_steps(time_steps_file_list, time_steps_dict)
 
-  if not time_steps_file_list:
-    time_steps_dict[0] = []
+    chunking = []
+    find_chunking(chunking, grid_desc, args)
 
-  read_time_steps(time_steps_file_list, time_steps_dict)
+    sys.stdin = open(os.devnull)
 
-  chunking = []
-  find_chunking(chunking, grid_desc, args)
+    print "Processing ", len(chunking), " grid chunk(s)."
+    report_chunk_complete.num_chunks = len(chunking)
 
-  sys.stdin = open(os.devnull)
+    os.mkdir(args.paraview_output_file)
 
-  print "Processing ", len(chunking), " grid chunk(s)."
-  report_chunk_complete.num_chunks = len(chunking)
+  def enum(*sequential, **named):
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    return type('Enum', (), enums)
 
-  os.mkdir(args.paraview_output_file)
+  tags = enum('READY', 'DONE', 'EXIT', 'START')
 
   import platform
   if platform.system() == 'Linux' or platform.system() == 'Darwin':
-    import multiprocessing as mp
+    if num_procs == 1:
+      import multiprocessing as mp
+      pool = mp.Pool()
+      for idx, chunk in enumerate(chunking):
+        pool.apply_async(process_grid_chunk, \
+                         args=(idx, chunk, len(chunking), grid_desc, \
+                               time_steps_dict, args.paraview_output_file, ), \
+                         callback = report_chunk_complete)
+      pool.close()
+      pool.join()
+    else:
+      from mpi4py import MPI
+      import array
+      comm = MPI.COMM_WORLD
+      size = comm.Get_size()
+      rank = comm.Get_rank()
+      name = MPI.Get_processor_name()
+      status = MPI.Status()
 
-    pool = mp.Pool()
-    for idx, chunk in enumerate(chunking):
-      pool.apply_async(process_grid_chunk, \
-                       args=(idx, chunk, len(chunking), grid_desc, time_steps_dict, args.paraview_output_file, ), \
-                       callback = report_chunk_complete)
-    pool.close()
-    pool.join()
+      if rank == 0:
+        paraview_output_file = args.paraview_output_file
+      else:
+        chunking = None
+        grid_desc = None
+        time_steps_dict = None
+        paraview_output_file = None
+
+      chunking = comm.bcast(chunking, root=0)
+      grid_desc = comm.bcast(grid_desc, root=0)
+      time_steps_dict = comm.bcast(time_steps_dict, root=0)
+      paraview_output_file = comm.bcast(paraview_output_file, root=0)
+
+      if rank == 0:
+        tasks = range(len(chunking))
+        task_index = 0
+        num_workers = size - 1
+        closed_workers = 0
+        while closed_workers < num_workers:
+          data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+          source = status.Get_source()
+          tag = status.Get_tag()
+          if tag == tags.READY:
+            if task_index < len(tasks):
+              comm.send(tasks[task_index], dest=source, tag=tags.START)
+              task_index += 1
+            else:
+              comm.send(None, dest=source, tag=tags.EXIT)
+          elif tag == tags.DONE:
+            results = data
+            report_chunk_complete(results)
+          elif tag == tags.EXIT:
+            closed_workers += 1
+      else:
+        while True:
+          comm.send(None, dest=0, tag=tags.READY)
+          task = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
+          tag = status.Get_tag()
+
+          if tag == tags.START:
+            result = process_grid_chunk(task, chunking[task], len(chunking),
+                    grid_desc, time_steps_dict, paraview_output_file)
+            comm.send(result, dest=0, tag=tags.DONE)
+          elif tag == tags.EXIT:
+            break
+        comm.send(None, dest=0, tag=tags.EXIT)
   else:
     for idx, chunk in enumerate(chunking):
-      res = process_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict, args.paraview_output_file)
+      res = process_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict,
+                               args.paraview_output_file)
       report_chunk_complete(res)
 
-  if "slice" not in grid_desc:
-    write_pvd_file_original(sorted(time_steps_dict.keys()), args.paraview_output_file, chunking, 0)
-    write_pvd_file(sorted(time_steps_dict.keys()), args.paraview_output_file, chunking, 0)
-  else:
-    for idx, slice in enumerate(report_chunk_complete.filepaths):
-      file_name = args.paraview_output_file + '_slice' + str(idx) + "-" + \
-                    str(round(grid_desc["slice"][slice]["nx"],4)) + "_" + \
-                    str(round(grid_desc["slice"][slice]["ny"],4)) + "_" + \
-                    str(round(grid_desc["slice"][slice]["nz"],4))
-      write_pvd_file_original(sorted(time_steps_dict.keys()), file_name, chunking, slice)
-      write_pvd_file(sorted(time_steps_dict.keys()), file_name, chunking, slice)
+  if local_proc_id == 0:
+    if "slice" not in grid_desc:
+      write_pvd_file(sorted(time_steps_dict.keys()), args.paraview_output_file, chunking, 0)
+    else:
+      for idx, slice in enumerate(report_chunk_complete.filepaths):
+        file_name = args.paraview_output_file + '_slice' + str(idx) + "-" + \
+                      str(round(grid_desc["slice"][slice]["nx"],4)) + "_" + \
+                      str(round(grid_desc["slice"][slice]["ny"],4)) + "_" + \
+                      str(round(grid_desc["slice"][slice]["nz"],4))
+        write_pvd_file(sorted(time_steps_dict.keys()), file_name, chunking, slice)
 
-  print "Done."
+    print "Done."
 
