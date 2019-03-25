@@ -143,7 +143,6 @@ class ParticleKokkos : public Particle {
   HAT::t_int_1d h_mlist;
   HAT::t_int_1d h_slist;
 
-  DAT::tdual_int_scalar k_fail_flag;
   typename AT::t_int_scalar d_fail_flag;
   HAT::t_int_scalar h_fail_flag;
 

@@ -54,9 +54,8 @@ enum{COPYPARTICLELIST,FIXEDMEMORY};
 
 ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 {
-  k_fail_flag = DAT::tdual_int_scalar("particle:fail_flag");
-  d_fail_flag = k_fail_flag.view<DeviceType>();
-  h_fail_flag = k_fail_flag.h_view;
+  d_fail_flag = DAT::t_int_scalar("particle:fail_flag");
+  h_fail_flag = HAT::t_int_scalar("particle:fail_flag_mirror");
 
   k_reorder_pass = DAT::tdual_int_scalar("particle:reorder_pass");
   d_reorder_pass = k_reorder_pass.view<DeviceType>();
@@ -216,8 +215,8 @@ void ParticleKokkos::sort_kokkos()
     DeviceType::fence();
     copymode = 0;
 
-    k_fail_flag.modify<DeviceType>();
-    k_fail_flag.sync<SPAHostType>();
+    Kokkos::deep_copy(h_fail_flag,d_fail_flag);
+
     if (h_fail_flag()) {
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleZero_cellcount>(0,ngrid),*this);
@@ -228,9 +227,7 @@ void ParticleKokkos::sort_kokkos()
       d_plist = typename AT::t_int_2d();
       d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
 
-      h_fail_flag() = 0;
-      k_fail_flag.modify<SPAHostType>();
-      k_fail_flag.sync<DeviceType>();
+      Kokkos::deep_copy(d_fail_flag,0);
     }
   } while (h_fail_flag());
 
