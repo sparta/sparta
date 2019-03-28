@@ -496,6 +496,8 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     particle_kk->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
+    k_mlist.modify<DeviceType>();
+
     // END of pstart/pstop loop advecting all particles
 
     nmigrate = h_nmigrate();
@@ -549,7 +551,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     if (any_entryexit) {
       if (nmigrate) {
         k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,nmigrate));
-        k_mlist_small.modify<DeviceType>();
         k_mlist_small.sync<SPAHostType>();
       }
       auto mlist_small = k_mlist_small.h_view.data();
