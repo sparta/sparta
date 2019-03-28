@@ -20,6 +20,7 @@
 #include "read_isurf.h"
 #include "surf.h"
 #include "domain.h"
+#include "geometry.h"
 #include "grid.h"
 #include "comm.h"
 #include "input.h"
