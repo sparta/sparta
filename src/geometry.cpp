@@ -526,6 +526,46 @@ int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
   return 0;
 }
 
+	/* ----------------------------------------------------------------------
+   compute whether triangle sits on iface of orthogonal 3d hex cell
+   sits is defined as
+     all triangle corner pt = any face pt (interior, edge, vertex)
+   v0,v1,v2 = 3 vertices of triangle
+   iface = 0 to 5 = XLO,XHI,YLO,YHI,ZLO,ZHI
+   lo,hi = opposite corner pts of quad
+   return 1 if touches, else 0
+------------------------------------------------------------------------- */
+
+int tri_hex_face_sits(double *v0, double *v1, double *v2, int iface,
+               double *lo, double *hi)
+{
+  // value = position of face
+
+  int dim = iface / 2;
+  int other1,other2;
+  if (dim == 0) {
+    other1 = 1; other2 = 2;
+  } else if (dim == 1) {
+    other1 = 0; other2 = 2;
+  } else if (dim == 2) {
+    other1 = 0; other2 = 1;
+  }
+  double value = iface % 2 ? hi[dim] : lo[dim];
+
+  // check if all triangle vertices are within face
+
+  if ((v0[dim] == value) && (v1[dim] == value) && (v2[dim] == value)) {
+    if (v0[other1] >= lo[other1] && v0[other1] <= hi[other1] &&
+    v0[other2] >= lo[other2] && v0[other2] <= hi[other2] &&
+    v1[other1] >= lo[other1] && v1[other1] <= hi[other1] &&
+    v1[other2] >= lo[other2] && v1[other2] <= hi[other2] &&
+    v2[other1] >= lo[other1] && v2[other1] <= hi[other1] &&
+    v2[other2] >= lo[other2] && v2[other2] <= hi[other2]) return 1;
+  }
+
+  return 0;
+}
+	
 /* ----------------------------------------------------------------------
    detect intersection between a directed line segment A and line segment B
    intersection is defined as any A pt (including end pts)
