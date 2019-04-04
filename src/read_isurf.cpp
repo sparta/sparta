@@ -179,7 +179,8 @@ void ReadISurf::command(int narg, char **arg)
   else surf->compute_tri_normal(0);
    
   // call clean_up_MC after normal are computed but before check_watertight
-  if (dim == 3) clean_up_MC();
+  // NOT WORKING YET
+  // if (dim == 3) clean_up_MC();
 
   // error checks that can be done before surfs are mapped to grid cells
 
