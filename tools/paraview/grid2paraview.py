@@ -19,6 +19,8 @@ import os
 import vtk
 import glob
 import platform
+import time
+from datetime import timedelta
 
 def open_grid_file(filename):
   gf = None
@@ -90,6 +92,14 @@ def find_chunking(chunks, grid_desc, args):
       for i in xc:
         chunks.append({"x": i, "y": j, "z": [1,1]}) 
 
+def create_and_write_grid_chunk(chunk_id, chunk_info, num_chunks, \
+                                grid_desc, time_steps_dict, output_file):
+  ug = process_grid_chunk(chunk_id, chunk_info, num_chunks, grid_desc, \
+                          time_steps_dict, output_file)
+  chunk_id, filepaths = write_grid_chunk(ug, chunk_id, num_chunks, \
+                                         grid_desc, time_steps_dict, output_file)
+  return chunk_id, filepaths
+
 def process_grid_chunk(chunk_id, chunk_info, num_chunks, \
                        grid_desc, time_steps_dict, output_file):
   xi = grid_desc["create_box"]["xhi"] - grid_desc["create_box"]["xlo"]
@@ -118,23 +128,39 @@ def process_grid_chunk(chunk_id, chunk_info, num_chunks, \
   elif grid_desc["dimension"] == 2:
     ug = create_2d_amr_grids(grid_desc, 1, 0, 0, origin, spacing, ndims, chunk_info, "")
 
+  return ug
+
+def create_cell_global_id_to_local_id_map(ug):
+  id_map = {}
+  gids = ug.GetCellData().GetArray("GlobalIds")
+  if gids:
+    for i in range(gids.GetNumberOfTuples()):
+      id_map[int(gids.GetTuple1(i))] = i
+    ug.GetCellData().RemoveArray("GlobalIds")
+  return id_map
+
+def write_grid_chunk(ug, chunk_id, num_chunks, \
+                     grid_desc, time_steps_dict, output_file):
   if not ug:
     return chunk_id, {}
 
   filepaths = {}
-  id_hash = {}
-  gids = ug.GetCellData().GetArray("GlobalIds")
-  if gids:
-    for i in range(gids.GetNumberOfTuples()):
-      id_hash[int(gids.GetTuple1(i))] = i
-    ug.GetCellData().RemoveArray("GlobalIds")
+  id_map = create_cell_global_id_to_local_id_map(ug)
+
+  #id_hash = {}
+  #gids = ug.GetCellData().GetArray("GlobalIds")
+  #if gids:
+  #  for i in range(gids.GetNumberOfTuples()):
+  #    id_hash[int(gids.GetTuple1(i))] = i
+  #  ug.GetCellData().RemoveArray("GlobalIds")
 
   if "slice" not in grid_desc:
     writer = vtk.vtkXMLUnstructuredGridWriter()
     writer.SetInputData(ug)
-    for time in sorted(time_steps_dict.keys()):
-      read_time_step_data(time_steps_dict[time], ug, id_hash)
-      filepath = os.path.join(output_file, output_file + '_' + str(chunk_id) + '_' + str(time) + '.vtu')
+    for idx, time in enumerate(sorted(time_steps_dict.keys())):
+      read_time_step_data(time_steps_dict[time], ug, id_map)
+      filepath = os.path.join(output_file, output_file + '_' + str(chunk_id) +
+        '_' + str(time) + '.vtu')
       if 0 not in filepaths:
         filepaths[0] = {}
       if time not in filepaths[0]:
@@ -144,6 +170,7 @@ def process_grid_chunk(chunk_id, chunk_info, num_chunks, \
       writer.Write()
     
       if chunk_id == 0:
+        print "Finished time step " + str(idx)
         write_pvtu_file(ug, output_file, num_chunks, time)
   else:
     vp = vtk.vtkPlane()
@@ -157,8 +184,9 @@ def process_grid_chunk(chunk_id, chunk_info, num_chunks, \
       vp.SetNormal(plane["nx"], plane["ny"], plane["nz"])
       cut.SetCutFunction(vp)
       for time in sorted(time_steps_dict.keys()):
-        read_time_step_data(time_steps_dict[time], ug, id_hash)
-        filepath = os.path.join(output_file, output_file + '_' + str(idx) + '_' + str(chunk_id) + '_' + str(time) + '.vtp')
+        read_time_step_data(time_steps_dict[time], ug, id_map)
+        filepath = os.path.join(output_file, output_file + '_' + str(idx) +
+          '_' + str(chunk_id) + '_' + str(time) + '.vtp')
         if idx not in filepaths:
           filepaths[idx] = {}
         if time not in filepaths[idx]:
@@ -451,8 +479,6 @@ def find_2d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, o
               gids.InsertNextTuple1(index*(2**parent_bit_mask) + parent_id)
 
           ug.GetCellData().AddArray(gids)
-          ug.GetCellData().SetActiveGlobalIds("GlobalIds")
-
           append.AddInputData(ug)
           break
       index += 1
@@ -531,8 +557,6 @@ def find_3d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, o
                 gids.InsertNextTuple1(index*(2**parent_bit_mask) + parent_id)
 
             ug.GetCellData().AddArray(gids)
-            ug.GetCellData().SetActiveGlobalIds("GlobalIds")
-
             append.AddInputData(ug)
             break
         index += 1
@@ -637,8 +661,6 @@ def build_3d_grid(parent_bit_mask, parent_id, origin, spacing, ndims, chunk_info
         gids.InsertNextTuple1((i+1)*(2**parent_bit_mask) + parent_id)
 
   ug.GetCellData().AddArray(gids)
-  ug.GetCellData().SetActiveGlobalIds("GlobalIds")
-
   return ug
 
 def build_2d_grid(parent_bit_mask, parent_id, origin, spacing, ndims, chunk_info, grid_desc):
@@ -685,10 +707,7 @@ def build_2d_grid(parent_bit_mask, parent_id, origin, spacing, ndims, chunk_info
         gids.InsertNextTuple1((i+1)*(2**parent_bit_mask) + parent_id)
 
   ug.GetCellData().AddArray(gids)
-  ug.GetCellData().SetActiveGlobalIds("GlobalIds")
-
   return ug
-
 
 def create_2d_amr_grids(grid_desc, level, parent_bit_mask, parent_id, \
                         origin, spacing, ndims, chunk_info, dashed_id):
@@ -954,7 +973,7 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
 
     fh.close()
 
-def write_pvd_file(time_steps, file_name, chunking, index):
+def write_pvd_file(time_steps, file_name):
   fh = open(file_name + ".pvd", "w")
   fh.write('<?xml version="1.0"?>\n')
   fh.write('<VTKFile type="Collection" version="0.1"\n')
@@ -1014,27 +1033,173 @@ report_chunk_complete.count = 0
 report_chunk_complete.num_chunks = 0
 report_chunk_complete.filepaths = {}
 
+def finish_MPI():
+  from mpi4py import MPI
+  comm = MPI.COMM_WORLD
+  if comm.Get_rank() == 0:
+    print "Waiting for barrier synchronization ..."
+  comm.Barrier()
+
+def setup_for_MPI(params_dict):
+  from mpi4py import MPI
+  pd = params_dict
+  #pd["comm"] = MPI.COMM_WORLD
+  comm = MPI.COMM_WORLD
+  pd["size"] = comm.Get_size()
+  pd["rank"] = comm.Get_rank()
+  #pd["status"] = MPI.Status()
+
+  pd["chunking"] = comm.bcast(pd["chunking"], root=0)
+  pd["grid_desc"] = comm.bcast(pd["grid_desc"], root=0)
+  pd["time_steps_dict"] = comm.bcast(pd["time_steps_dict"], root=0)
+  pd["paraview_output_file"] = comm.bcast(pd["paraview_output_file"], root=0)
+  pd["catalystscript"] = comm.bcast(pd["catalystscript"], root=0)
+
+def run_pvbatch_output(params_dict):
+  #from mpi4py import MPI
+  #comm =  params_dict["comm"]
+  rank =  params_dict["rank"]
+  size =  params_dict["size"]
+  #status = params_dict["status"]
+  chunking =  params_dict["chunking"]
+  grid_desc = params_dict["grid_desc"]
+  time_steps_dict = params_dict["time_steps_dict"]
+  paraview_output_file = params_dict["paraview_output_file"]
+  catalystscript = params_dict["catalystscript"]
+
+  if rank == 0:
+    print "Processing grid chunks on " + str(size) + " MPI ranks"
+
+  c = len(chunking)/size
+  r = len(chunking) % size
+  if rank < r:
+    start = rank * (c + 1)
+    stop = start + c
+  else:
+    start = rank * c + r
+    stop = start + (c - 1)
+
+  append = vtk.vtkAppendFilter()
+  append.MergePointsOn()
+  for idx, chunk in enumerate(chunking[start:stop+1]):
+    g = process_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict,
+                           paraview_output_file)
+    if g:
+      append.AddInputData(g)
+  append.Update()
+  ug = append.GetOutput()
+
+  if catalystscript is not None:
+    if rank == 0:
+      print "Calling Catalyst over " + str(len(time_steps_dict)) + " time steps ..."
+    import coprocessor
+    coprocessor.initialize()
+    coprocessor.addscript(catalystscript)
+    id_map = create_cell_global_id_to_local_id_map(ug)
+    for idx, time in enumerate(sorted(time_steps_dict.keys())):
+      read_time_step_data(time_steps_dict[time], ug, id_map)
+      coprocessor.coprocess(time, idx, ug)
+    coprocessor.finalize()
+  else:
+    if rank == 0:
+      print "Writing grid files over " + str(len(time_steps_dict)) + " time steps ..."
+    write_grid_chunk(ug, rank, size, grid_desc, time_steps_dict, paraview_output_file)
+
+  #id_hash = {}
+  #gids = ug.GetCellData().GetArray("GlobalIds")
+  #if gids:
+  #  for i in range(gids.GetNumberOfTuples()):
+  #    id_hash[int(gids.GetTuple1(i))] = i
+  #  ug.GetCellData().RemoveArray("GlobalIds")
+
+  #if "slice" not in grid_desc:
+  #  writer = vtk.vtkXMLUnstructuredGridWriter()
+  #  writer.SetInputData(ug)
+  #  for time in sorted(time_steps_dict.keys()):
+  #    read_time_step_data(time_steps_dict[time], ug, id_hash)
+  #    filepath = os.path.join(paraview_output_file, paraview_output_file + '_' + str(rank) +
+  #      '_' + str(time) + '.vtu')
+  #    writer.SetFileName(filepath)
+  #    writer.Write()
+
+  #    if rank == 0:
+  #      write_pvtu_file(ug, paraview_output_file, size, time)
+
+#def enum(*sequential, **named):
+#  enums = dict(zip(sequential, range(len(sequential))), **named)
+#  return type('Enum', (), enums)
+#
+#tags = enum('READY', 'DONE', 'EXIT', 'START')
+#
+#def run_pvbatch_grid_output(params_dict):
+#  from mpi4py import MPI
+#  comm =  params_dict["comm"]
+#  rank =  params_dict["rank"]
+#  size =  params_dict["size"]
+#  status = params_dict["status"]
+#  chunking =  params_dict["chunking"]
+#  grid_desc = params_dict["grid_desc"]
+#  time_steps_dict = params_dict["time_steps_dict"]
+#  paraview_output_file = params_dict["paraview_output_file"]
+#
+#  if rank == 0:
+#    tasks = range(len(chunking))
+#    task_index = 0
+#    num_workers = size - 1
+#    closed_workers = 0
+#    while closed_workers < num_workers:
+#      data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+#      source = status.Get_source()
+#      tag = status.Get_tag()
+#      if tag == tags.READY:
+#        if task_index < len(tasks):
+#          comm.send(tasks[task_index], dest=source, tag=tags.START)
+#          task_index += 1
+#        else:
+#          comm.send(None, dest=source, tag=tags.EXIT)
+#      elif tag == tags.DONE:
+#        results = data
+#        report_chunk_complete(results)
+#      elif tag == tags.EXIT:
+#        closed_workers += 1
+#  else:
+#    while True:
+#      comm.send(None, dest=0, tag=tags.READY)
+#      task = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
+#      tag = status.Get_tag()
+#
+#      if tag == tags.START:
+#        result = create_and_write_grid_chunk(task, chunking[task], len(chunking),
+#                 grid_desc, time_steps_dict, paraview_output_file)
+#        comm.send(result, dest=0, tag=tags.DONE)
+#      elif tag == tags.EXIT:
+#        break
+#    comm.send(None, dest=0, tag=tags.EXIT)
+#
 if __name__ == "__main__":
   controller = vtk.vtkMultiProcessController.GetGlobalController()
   num_procs = controller.GetNumberOfProcesses()
   local_proc_id = controller.GetLocalProcessId()
 
   if local_proc_id == 0:
+    start_time = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument("sparta_grid_description_file", help="SPARTA grid description input file name")
     parser.add_argument("paraview_output_file", help="ParaView output file name")
+    parser.add_argument('-c', '--catalystscript', help="Run a ParaView Catalyst Python script with pvbatch")
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-r', '--result', help="Optional list of SPARTA dump result files", nargs='+')
-    group.add_argument('-rf', '--resultfile', help="Optional filename containing path names of SPARTA dump result files")
+    group.add_argument('-rf', '--resultfile', \
+                        help="Optional filename containing path names of SPARTA dump result files")
     parser.add_argument('-xc', '--xchunk', \
                         help="Optional x grid chunk size (positive integer; default 100)", \
-                        default=100, type=int )
+                        default=100, type=int)
     parser.add_argument('-yc', '--ychunk', \
                         help="Optional y grid chunk size (positive integer; default 100)", \
-                        default=100, type=int )
+                        default=100, type=int)
     parser.add_argument('-zc', '--zchunk', \
                         help="Optional z grid chunk size (positive integer; default 100)", \
-                        default=100, type=int )
+                        default=100, type=int)
     args = parser.parse_args()
 
     try:
@@ -1059,20 +1224,38 @@ if __name__ == "__main__":
       print "Invalid zchunk size given: ", args.zchunk
       sys.exit(1)
 
+    if args.catalystscript:
+      if num_procs == 1:
+        print "Error: ParaView Catalyst only available with pvbatch and more than one MPI rank"
+        sys.exit(1)
+      try:
+        cf = open(args.catalystscript, "r")
+        cf.close()
+      except IOError:
+        print "Error: Unable to open Catalyst Python file: ", args.catalystscript
+        sys.exit(1)
+
     grid_desc = {}
     read_grid_description_file(gdf, grid_desc)
     gdf.close()
 
     if "dimension" not in grid_desc:
-      print "Error: grid description file does not have a dimension statement: ", args.sparta_grid_description_file
+      print "Error: grid description file does not have a dimension statement: ", \
+        args.sparta_grid_description_file
       sys.exit(1)
 
     if "create_box" not in grid_desc:
-      print "Error: grid description file does not have a create_box statement: ", args.sparta_grid_description_file
+      print "Error: grid description file does not have a create_box statement: ", \
+        args.sparta_grid_description_file
       sys.exit(1)
 
     if "read_grid" not in grid_desc and "create_grid" not in grid_desc:
-      print "Error: grid description file does not have a read_grid or a create_grid statement: ", args.sparta_grid_description_file
+      print "Error: grid description file does not have a read_grid or a create_grid statement: ", \
+        args.sparta_grid_description_file
+      sys.exit(1)
+
+    if "slice" in grid_desc and args.catalystscript:
+      print "Error: Slice plane output not available with ParaView Catalyst"
       sys.exit(1)
 
     if "slice" not in grid_desc:
@@ -1122,95 +1305,57 @@ if __name__ == "__main__":
 
     os.mkdir(args.paraview_output_file)
 
-  def enum(*sequential, **named):
-    enums = dict(zip(sequential, range(len(sequential))), **named)
-    return type('Enum', (), enums)
-
-  tags = enum('READY', 'DONE', 'EXIT', 'START')
-
   import platform
   if platform.system() == 'Linux' or platform.system() == 'Darwin':
     if num_procs == 1:
       import multiprocessing as mp
       pool = mp.Pool()
       for idx, chunk in enumerate(chunking):
-        pool.apply_async(process_grid_chunk, \
+        pool.apply_async(create_and_write_grid_chunk, \
                          args=(idx, chunk, len(chunking), grid_desc, \
                                time_steps_dict, args.paraview_output_file, ), \
                          callback = report_chunk_complete)
       pool.close()
       pool.join()
     else:
-      from mpi4py import MPI
-      import array
-      comm = MPI.COMM_WORLD
-      size = comm.Get_size()
-      rank = comm.Get_rank()
-      name = MPI.Get_processor_name()
-      status = MPI.Status()
-
-      if rank == 0:
-        paraview_output_file = args.paraview_output_file
+      pd = {}
+      if local_proc_id == 0:
+        pd["catalystscript"] = args.catalystscript
+        pd["paraview_output_file"] = args.paraview_output_file
+        pd["chunking"] = chunking
+        pd["grid_desc"] = grid_desc
+        pd["time_steps_dict"] = time_steps_dict
       else:
-        chunking = None
-        grid_desc = None
-        time_steps_dict = None
-        paraview_output_file = None
+        pd["catalystscript"] = None
+        pd["paraview_output_file"] = None
+        pd["chunking"] = None
+        pd["grid_desc"] = None
+        pd["time_steps_dict"] = None
 
-      chunking = comm.bcast(chunking, root=0)
-      grid_desc = comm.bcast(grid_desc, root=0)
-      time_steps_dict = comm.bcast(time_steps_dict, root=0)
-      paraview_output_file = comm.bcast(paraview_output_file, root=0)
+      setup_for_MPI(pd)
+      run_pvbatch_output(pd)
+      finish_MPI()
 
-      if rank == 0:
-        tasks = range(len(chunking))
-        task_index = 0
-        num_workers = size - 1
-        closed_workers = 0
-        while closed_workers < num_workers:
-          data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
-          source = status.Get_source()
-          tag = status.Get_tag()
-          if tag == tags.READY:
-            if task_index < len(tasks):
-              comm.send(tasks[task_index], dest=source, tag=tags.START)
-              task_index += 1
-            else:
-              comm.send(None, dest=source, tag=tags.EXIT)
-          elif tag == tags.DONE:
-            results = data
-            report_chunk_complete(results)
-          elif tag == tags.EXIT:
-            closed_workers += 1
-      else:
-        while True:
-          comm.send(None, dest=0, tag=tags.READY)
-          task = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
-          tag = status.Get_tag()
-
-          if tag == tags.START:
-            result = process_grid_chunk(task, chunking[task], len(chunking),
-                    grid_desc, time_steps_dict, paraview_output_file)
-            comm.send(result, dest=0, tag=tags.DONE)
-          elif tag == tags.EXIT:
-            break
-        comm.send(None, dest=0, tag=tags.EXIT)
+      #if pd["catalystscript"] is not None:
+      #  run_pvbatch_catalyst_output(pd)
+      #else:
+      #  run_pvbatch_grid_output(pd)
   else:
     for idx, chunk in enumerate(chunking):
-      res = process_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict,
-                               args.paraview_output_file)
+      res = create_and_write_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict,
+                                        args.paraview_output_file)
       report_chunk_complete(res)
 
   if local_proc_id == 0:
-    if "slice" not in grid_desc:
-      write_pvd_file(sorted(time_steps_dict.keys()), args.paraview_output_file, chunking, 0)
-    else:
-      for idx, slice in enumerate(report_chunk_complete.filepaths):
-        file_name = args.paraview_output_file + '_slice' + str(idx) + "-" + \
-                      str(round(grid_desc["slice"][slice]["nx"],4)) + "_" + \
-                      str(round(grid_desc["slice"][slice]["ny"],4)) + "_" + \
-                      str(round(grid_desc["slice"][slice]["nz"],4))
-        write_pvd_file(sorted(time_steps_dict.keys()), file_name, chunking, slice)
-
-    print "Done."
-
+    if args.catalystscript is None:
+      if "slice" not in grid_desc:
+        write_pvd_file(sorted(time_steps_dict.keys()), args.paraview_output_file)
+      else:
+        for idx, slice in enumerate(report_chunk_complete.filepaths):
+          file_name = args.paraview_output_file + '_slice' + str(idx) + "-" + \
+                        str(round(grid_desc["slice"][slice]["nx"],4)) + "_" + \
+                        str(round(grid_desc["slice"][slice]["ny"],4)) + "_" + \
+                        str(round(grid_desc["slice"][slice]["nz"],4))
+          write_pvd_file(sorted(time_steps_dict.keys()), file_name)
+    time_secs = time.time() - start_time
+    print "Done in %s (wall clock time)" % timedelta(seconds=round(time_secs))
