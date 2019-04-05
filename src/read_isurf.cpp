@@ -23,8 +23,9 @@
 #include "grid.h"
 #include "comm.h"
 #include "input.h"
-#include "my_page.h"
+#include "geometry.h"
 #include "lookup_table.h"
+#include "my_page.h"
 #include "memory.h"
 #include "error.h"
 
@@ -33,6 +34,7 @@ using namespace SPARTA_NS;
 enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
+enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 
 #define CHUNK 8192
 #define BIG 1.0e20
@@ -152,13 +154,13 @@ void ReadISurf::command(int narg, char **arg)
     if (sgroup < 0) sgroup = surf->add_group(arg[sgrouparg]);
     int sgroupbit = surf->bitmask[sgroup];
  
-    int nslocal = surf->nlocal;
+    int nsurf = surf->nlocal;
     if (dim == 3) {
       Surf::Tri *tris = surf->tris;
-      for (int i = 0; i < nslocal; i++) tris[i].mask |= sgroupbit;
+      for (int i = 0; i < nsurf; i++) tris[i].mask |= sgroupbit;
     } else {
       Surf::Line *lines = surf->lines;
-      for (int i = 0; i < nslocal; i++) lines[i].mask |= sgroupbit;
+      for (int i = 0; i < nsurf; i++) lines[i].mask |= sgroupbit;
     }
   }
 
@@ -174,6 +176,10 @@ void ReadISurf::command(int narg, char **arg)
 
   if (dim == 2) surf->compute_line_normal(0);
   else surf->compute_tri_normal(0);
+
+  // call clean_up_MC after normal are computed but before check_watertight
+  // NOTE: NOT WORKING YET
+  // if (dim == 3) clean_up_MC();
 
   // error checks that can be done before surfs are mapped to grid cells
 
@@ -524,25 +530,40 @@ void ReadISurf::process_args(int narg, char **arg)
 
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
-// 2d marching squares algorithm
+// Marching squares (2d) and Marching cubes (3d) algorithms
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 
 /* ----------------------------------------------------------------------
+   interpolate function used by both marching squares and cubes
+   lo/hi = coordinates of end points of edge of square
+   v0/v1 = values at lo/hi end points
+   value = interpolated coordinate for thresh value
+------------------------------------------------------------------------- */
+
+double ReadISurf::interpolate(int v0, int v1, double lo, double hi)
+{
+  double value = lo + (hi-lo)*(thresh-v0)/(v1-v0);
+  value = MAX(value,lo);
+  value = MIN(value,hi);
+  return value;
+}
+ 
+/* ----------------------------------------------------------------------
    create 2d implicit surfs from grid point values
-   treats each grid cell independently
+   follows https://en.wikipedia.org/wiki/Marching_squares
+   see 2 sections: Basic algorithm and Disambiguation of saddle points
+     treating open circles as flow volume, solid circles as material
+     NOTE: Wiki page numbers points counter-clockwise
+           SPARTA numbers them in x, then in y
+           so bit2 and bit3 are swapped below
+           this gives case #s here consistent with Wiki page
+   process each grid cell independently
    4 corner points open/solid -> 2^4 = 16 cases
    cases infer 0,1,2 line segments in each grid cell
    order 2 points in each line segment to give normal into flow volume
    treat two saddle point cases (my 9,6) (Wiki 5,10)
      based on ave value at cell center
-   follows https://en.wikipedia.org/wiki/Marching_squares
-   see 2 sections: Basic algorithm and Disambiguation of saddle points
-   treating open circles as flow volume, solid circles as material
-   NOTE: Wiki page numbers points counter-clockwise
-         SPARTA numbers them in x, then in y
-         so bit2 and bit3 are swapped below
-         this gives case #s here consistent with Wiki page
 ------------------------------------------------------------------------- */
 
 void ReadISurf::marching_squares(int igroup)
@@ -766,12 +787,6 @@ void ReadISurf::marching_squares(int igroup)
   }
 }
 
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-// 3d marching cubes algorithm
-// ----------------------------------------------------------------------
-// ----------------------------------------------------------------------
-
 /* ----------------------------------------------------------------------
    create 3d implicit surfs from grid point values
 ------------------------------------------------------------------------- */
@@ -813,6 +828,15 @@ void ReadISurf::marching_cubes(int igroup)
     v101 = cvalues[icell][5];
     v110 = cvalues[icell][6];
     v111 = cvalues[icell][7];
+     
+    v000iso = v000 - thresh;
+    v001iso = v001 - thresh;
+    v010iso = v010 - thresh;
+    v011iso = v011 - thresh;
+    v100iso = v100 - thresh;
+    v101iso = v101 - thresh;
+    v110iso = v110 - thresh;
+    v111iso = v111 - thresh;
         
     // make bits 2, 3, 6 and 7 consistent with Lewiner paper (see NOTE above)
         
@@ -857,7 +881,7 @@ void ReadISurf::marching_cubes(int igroup)
       break;
                 
     case  4:
-      if (test_interior(test4[config],icase))
+      if (modified_test_interior(test4[config],icase))
         nsurf = add_triangle(tiling4_1[config], 2); // 4.1.1
       else
         nsurf = add_triangle(tiling4_2[config], 6); // 4.1.2
@@ -871,7 +895,7 @@ void ReadISurf::marching_cubes(int igroup)
       if (test_face(test6[config][0]))
         nsurf = add_triangle(tiling6_2[config], 5); // 6.2
       else {
-        if (test_interior(test6[config][1],icase))
+        if (modified_test_interior(test6[config][1],icase))
           nsurf = add_triangle(tiling6_1_1[config], 3); // 6.1.1
         else {
           nsurf = add_triangle(tiling6_1_2[config], 9); // 6.1.2
@@ -1018,7 +1042,7 @@ void ReadISurf::marching_cubes(int igroup)
 
       case 23:/* 13.5 */
         subconfig = 0;
-        if (test_interior(test13[config][6],icase))
+        if (interior_test_case13())
           nsurf = add_triangle(tiling13_5_1[config][0], 6);
         else
           nsurf = add_triangle(tiling13_5_2[config][0], 10);
@@ -1026,7 +1050,7 @@ void ReadISurf::marching_cubes(int igroup)
 
       case 24:/* 13.5 */
         subconfig = 1;
-        if (test_interior(test13[config][6],icase))
+        if (interior_test_case13())
           nsurf = add_triangle(tiling13_5_1[config][1], 6);
         else
           nsurf = add_triangle(tiling13_5_2[config][1], 10);
@@ -1034,7 +1058,7 @@ void ReadISurf::marching_cubes(int igroup)
 
       case 25:/* 13.5 */
         subconfig = 2;
-        if (test_interior(test13[config][6],icase))
+        if (interior_test_case13())
           nsurf = add_triangle(tiling13_5_1[config][2], 6);
         else
           nsurf = add_triangle(tiling13_5_2[config][2], 10);
@@ -1042,7 +1066,7 @@ void ReadISurf::marching_cubes(int igroup)
 
       case 26:/* 13.5 */
         subconfig = 3;
-        if (test_interior(test13[config][6],icase))
+        if (interior_test_case13())
           nsurf = add_triangle(tiling13_5_1[config][3], 6);
         else
           nsurf = add_triangle(tiling13_5_2[config][3], 10);
@@ -1107,8 +1131,8 @@ void ReadISurf::marching_cubes(int igroup)
         
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      if (svalues) surf->add_tri(svalues[icell],pt[ipt],pt[ipt+1],pt[ipt+2]);
-      else surf->add_tri(1,pt[ipt],pt[ipt+1],pt[ipt+2]);
+      if (svalues) surf->add_tri(svalues[icell],pt[ipt+2],pt[ipt+1],pt[ipt]);
+      else surf->add_tri(1,pt[ipt+2],pt[ipt+1],pt[ipt]);
       ipt += 3;
       isurf = surf->nlocal - 1;
       surf->tris[isurf].id = cells[icell].id;
@@ -1294,40 +1318,47 @@ bool ReadISurf::test_face(int face)
   double A,B,C,D;
     
   switch (face) {
-  case -1: 
-  case 1:  
-    A = static_cast<double>(v000);  B = static_cast<double>(v100);
-    C = static_cast<double>(v101);  D = static_cast<double>(v001);  
+  case -1:
+  case 1:
+    A = v000iso;
+    B = v100iso;
+    C = v101iso;
+    D = v001iso;
     break;
-
-  case -2: 
-  case 2:  
-    A = static_cast<double>(v001);  B = static_cast<double>(v101);
-    C = static_cast<double>(v111);  D = static_cast<double>(v011);
+  case -2:
+  case 2:
+    A = v001iso;
+    B = v101iso;
+    C = v111iso;
+    D = v011iso;
     break;
-
   case -3:
-  case 3:  
-    A = static_cast<double>(v011);  B = static_cast<double>(v111);
-    C = static_cast<double>(v110);  D = static_cast<double>(v010);
+  case 3:
+    A = v011iso;
+    B = v111iso;
+    C = v110iso;
+    D = v010iso;
     break;
-
   case -4:
-  case 4:  
-    A = static_cast<double>(v010);  B = static_cast<double>(v110);
-    C = static_cast<double>(v100);  D = static_cast<double>(v000);
+  case 4:
+    A = v010iso;
+    B = v110iso;
+    C = v100iso;
+    D = v000iso;
     break;
-
   case -5:
   case 5:
-    A = static_cast<double>(v000);  B = static_cast<double>(v010);
-    C = static_cast<double>(v011);  D = static_cast<double>(v001);
+    A = v000iso;
+    B = v010iso;
+    C = v011iso;
+    D = v001iso;
     break;
-
   case -6:
   case 6:
-    A = static_cast<double>(v100);  B = static_cast<double>(v110);
-    C = static_cast<double>(v111);  D = static_cast<double>(v101);
+    A = v100iso;
+    B = v110iso;
+    C = v111iso;
+    D = v101iso;
     break;
 
   default: 
@@ -1353,123 +1384,121 @@ bool ReadISurf::test_interior(int s, int icase)
   int edge = -1;   // reference edge of the triangulation
     
   switch (icase) {
-  case 4:
-  case 10:
-    a = static_cast<double>(v100 - v000) * static_cast<double>(v111 - v011)
-      - static_cast<double>(v110 - v010) * static_cast<double>(v101 - v001);
-    b =  static_cast<double>(v011) * static_cast<double>(v100 - v000)
-      + static_cast<double>(v000) * static_cast<double>(v111 - v011)
-      - static_cast<double>(v001) * static_cast<double>(v110 - v010)
-      - static_cast<double>(v010) * static_cast<double>(v101 - v001);
-    t = - b / (2*a);
-    if (t<0.0 || t>1.0) return s>0;
-            
-    At = static_cast<double>(v000) + static_cast<double>(v100 - v000) * t;
-    Bt = static_cast<double>(v010) + static_cast<double>(v110 - v010) * t;
-    Ct = static_cast<double>(v011) + static_cast<double>(v111 - v011) * t;
-    Dt = static_cast<double>(v001) + static_cast<double>(v101 - v001) * t;
-    break;
-            
-    case 6:
-    case 7:
-    case 12:
-    case 13:
-      switch (icase) {
-      case  6: edge = test6 [config][2]; break;
-      case  7: edge = test7 [config][4]; break;
-      case 12: edge = test12[config][3]; break;
-      case 13: edge = tiling13_5_1[config][subconfig][0]; break;
-      }
-      switch (edge) {
-      case 0:
-        t  = static_cast<double>(v000) / static_cast<double>(v000 - v001);
-        At = 0.0;
-        Bt = static_cast<double>(v010) + static_cast<double>(v011 - v010) * t;
-        Ct = static_cast<double>(v110) + static_cast<double>(v111 - v110) * t;
-        Dt = static_cast<double>(v100) + static_cast<double>(v101 - v100) * t;
-        break;
-      case 1:
-        t  = static_cast<double>(v001) / static_cast<double>(v001 - v011);
-        At = 0.0;
-        Bt = static_cast<double>(v000) + static_cast<double>(v010 - v000) * t;
-        Ct = static_cast<double>(v100) + static_cast<double>(v110 - v100) * t;
-        Dt = static_cast<double>(v101) + static_cast<double>(v111 - v101) * t;
-        break;
-      case 2:
-        t  = static_cast<double>(v011) / static_cast<double>(v011 - v010);
-        At = 0.0;
-        Bt = static_cast<double>(v001) + static_cast<double>(v000 - v001) * t;
-        Ct = static_cast<double>(v101) + static_cast<double>(v100 - v101) * t;
-        Dt = static_cast<double>(v111) + static_cast<double>(v110 - v111) * t;
-        break;
-      case 3:
-        t  = static_cast<double>(v010) / static_cast<double>(v010 - v000);
-        At = 0.0;
-        Bt = static_cast<double>(v011) + static_cast<double>(v001 - v011) * t;
-        Ct = static_cast<double>(v111) + static_cast<double>(v101 - v111) * t;
-        Dt = static_cast<double>(v110) + static_cast<double>(v100 - v110) * t;
-        break;
-      case 4:
-        t  = static_cast<double>(v100) / static_cast<double>(v100 - v101);
-        At = 0.0;
-        Bt = static_cast<double>(v110) + static_cast<double>(v111 - v110) * t;
-        Ct = static_cast<double>(v010) + static_cast<double>(v011 - v010) * t;
-        Dt = static_cast<double>(v000) + static_cast<double>(v001 - v000) * t;
-        break;
-      case 5:
-        t  = static_cast<double>(v101) / static_cast<double>(v101 - v111);
-        At = 0.0;
-        Bt = static_cast<double>(v100) + static_cast<double>(v110 - v100) * t;
-        Ct = static_cast<double>(v000) + static_cast<double>(v010 - v000) * t;
-        Dt = static_cast<double>(v001) + static_cast<double>(v011 - v001) * t;
-        break;
-      case 6:
-        t  = static_cast<double>(v111) / static_cast<double>(v111 - v110);
-        At = 0.0;
-        Bt = static_cast<double>(v101) + static_cast<double>(v100 - v101) * t;
-        Ct = static_cast<double>(v001) + static_cast<double>(v000 - v001) * t;
-        Dt = static_cast<double>(v011) + static_cast<double>(v010 - v011) * t;
-        break;
-      case 7:
-        t  = static_cast<double>(v110) / static_cast<double>(v110 - v100);
-        At = 0.0;
-        Bt = static_cast<double>(v111) + static_cast<double>(v101 - v111) * t;
-        Ct = static_cast<double>(v011) + static_cast<double>(v001 - v011) * t;
-        Dt = static_cast<double>(v010) + static_cast<double>(v000 - v010) * t;
-        break;
-      case 8:
-        t  = static_cast<double>(v000) / static_cast<double>(v000 - v100);
-        At = 0.0;
-        Bt = static_cast<double>(v010) + static_cast<double>(v110 - v010) * t;
-        Ct = static_cast<double>(v011) + static_cast<double>(v111 - v011) * t;
-        Dt = static_cast<double>(v001) + static_cast<double>(v101 - v001) * t;
-        break;
-      case 9:
-        t  = static_cast<double>(v001) / static_cast<double>(v001 - v101);
-        At = 0.0;
-        Bt = static_cast<double>(v000) + static_cast<double>(v100 - v000) * t;
-        Ct = static_cast<double>(v010) + static_cast<double>(v110 - v010) * t;
-        Dt = static_cast<double>(v011) + static_cast<double>(v111 - v011) * t;
-        break;
-      case 10:
-        t  = static_cast<double>(v011) / static_cast<double>(v011 - v111);
-        At = 0.0;
-        Bt = static_cast<double>(v001) + static_cast<double>(v101 - v001) * t;
-        Ct = static_cast<double>(v000) + static_cast<double>(v100 - v000) * t;
-        Dt = static_cast<double>(v010) + static_cast<double>(v110 - v010) * t;
-        break;
-      case 11:
-        t  = static_cast<double>(v010) / static_cast<double>(v010 - v110);
-        At = 0.0;
-        Bt = static_cast<double>(v011) + static_cast<double>(v111 - v011) * t;
-        Ct = static_cast<double>(v001) + static_cast<double>(v101 - v001) * t;
-        Dt = static_cast<double>(v000) + static_cast<double>(v100 - v000) * t;
-        break;
+  case  4 :
+  case 10 :
+    a = ( v100iso - v000iso ) * ( v111iso - v011iso ) - 
+      ( v110iso - v010iso ) * ( v101iso - v001iso ) ;
+    b =  v011iso * ( v100iso - v000iso ) + v000iso * ( v111iso - v011iso ) - 
+      v001iso * ( v110iso - v010iso ) - v010iso * ( v101iso - v001iso ) ;
+    t = - b / (2*a) ;
+    if (t < 0 || t > 1) return s>0 ;
 
-      default: 
-        printf("Invalid edge %d\n", edge);  print_cube();  break;
-      }
-      break;
+    At = v000iso + ( v100iso - v000iso ) * t ;
+    Bt = v010iso + ( v110iso - v010iso ) * t ;
+    Ct = v011iso + ( v111iso - v011iso ) * t ;
+    Dt = v001iso + ( v101iso - v001iso ) * t ;
+    break ;
+
+  case  6 :
+  case  7 :
+  case 12 :
+  case 13 :
+    switch( icase ) {
+    case  6 : edge = test6 [config][2] ; break ;
+    case  7 : edge = test7 [config][4] ; break ;
+    case 12 : edge = test12[config][3] ; break ;
+    case 13 : edge = tiling13_5_1[config][subconfig][0] ; break ;
+    }
+    switch( edge ) {
+    case  0 :
+      t  = v000iso / ( v000iso - v001iso ) ;
+      At = 0.0 ;
+      Bt = v010iso + ( v011iso - v010iso ) * t ;
+      Ct = v110iso + ( v111iso - v110iso ) * t ;
+      Dt = v100iso + ( v101iso - v100iso ) * t ;
+      break ;
+    case  1 :
+      t  = v001iso / ( v001iso - v011iso ) ;
+      At = 0.0 ;
+      Bt = v000iso + ( v010iso - v000iso ) * t ;
+      Ct = v100iso + ( v110iso - v100iso ) * t ;
+      Dt = v101iso + ( v111iso - v101iso ) * t ;
+      break ;
+    case  2 :
+      t  = v011iso / ( v011iso - v010iso ) ;
+      At = 0.0 ;
+      Bt = v001iso + ( v000iso - v001iso ) * t ;
+      Ct = v101iso + ( v100iso - v101iso ) * t ;
+      Dt = v111iso + ( v110iso - v111iso ) * t ;
+      break ;
+    case  3 :
+      t  = v010iso / ( v010iso - v000iso ) ;
+      At = 0.0 ;
+      Bt = v011iso + ( v001iso - v011iso ) * t ;
+      Ct = v111iso + ( v101iso - v111iso ) * t ;
+      Dt = v110iso + ( v100iso - v110iso ) * t ;
+      break ;
+    case  4 :
+      t  = v100iso / ( v100iso - v101iso ) ;
+      At = 0.0 ;
+      Bt = v110iso + ( v111iso - v110iso ) * t ;
+      Ct = v010iso + ( v011iso - v010iso ) * t ;
+      Dt = v000iso + ( v001iso - v000iso ) * t ;
+      break ;
+    case  5 :
+      t  = v101iso / ( v101iso - v111iso ) ;
+      At = 0.0 ;
+      Bt = v100iso + ( v110iso - v100iso ) * t ;
+      Ct = v000iso + ( v010iso - v000iso ) * t ;
+      Dt = v001iso + ( v011iso - v001iso ) * t ;
+      break ;
+    case  6 :
+      t  = v111iso / ( v111iso - v110iso ) ;
+      At = 0.0 ;
+      Bt = v101iso + ( v100iso - v101iso ) * t ;
+      Ct = v001iso + ( v000iso - v001iso ) * t ;
+      Dt = v011iso + ( v010iso - v011iso ) * t ;
+      break ;
+    case  7 :
+      t  = v110iso / ( v110iso - v100iso ) ;
+      At = 0.0 ;
+      Bt = v111iso + ( v101iso - v111iso ) * t ;
+      Ct = v011iso + ( v001iso - v011iso ) * t ;
+      Dt = v010iso + ( v000iso - v010iso ) * t ;
+      break ;
+    case  8 :
+      t  = v000iso / ( v000iso - v100iso ) ;
+      At = 0.0 ;
+      Bt = v010iso + ( v110iso - v010iso ) * t ;
+      Ct = v011iso + ( v111iso - v011iso ) * t ;
+      Dt = v001iso + ( v101iso - v001iso ) * t ;
+      break ;
+    case  9 :
+      t  = v001iso / ( v001iso - v101iso ) ;
+      At = 0.0 ;
+      Bt = v000iso + ( v100iso - v000iso ) * t ;
+      Ct = v010iso + ( v110iso - v010iso ) * t ;
+      Dt = v011iso + ( v111iso - v011iso ) * t ;
+      break ;
+    case 10 :
+      t  = v011iso / ( v011iso - v111iso ) ;
+      At = 0.0 ;
+      Bt = v001iso + ( v101iso - v001iso ) * t ;
+      Ct = v000iso + ( v100iso - v000iso ) * t ;
+      Dt = v010iso + ( v110iso - v010iso ) * t ;
+      break ;
+    case 11 :
+      t  = v010iso / ( v010iso - v110iso ) ;
+      At = 0.0 ;
+      Bt = v011iso + ( v111iso - v011iso ) * t ;
+      Ct = v001iso + ( v101iso - v001iso ) * t ;
+      Dt = v000iso + ( v100iso - v000iso ) * t ;
+      break ;
+
+    default: 
+      printf("Invalid edge %d\n", edge);  print_cube();  break;
+    }
+    break;
       
   default: 
     printf("Invalid ambiguous case %d\n", icase);
@@ -1507,6 +1536,621 @@ bool ReadISurf::test_interior(int s, int icase)
   return s<0;
 }
 
+/* ---------------------------------------------------------------------- */
+
+bool ReadISurf::modified_test_interior(int s, int icase)
+{
+  int edge = -1;
+  int amb_face;
+
+  int inter_amb = 0;
+
+  switch (icase) {
+  case 4:
+    amb_face = 1;
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb += interior_ambiguity_verification(edge);
+
+    amb_face = 2;
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb += interior_ambiguity_verification(edge);
+
+    amb_face = 5;
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb += interior_ambiguity_verification(edge);
+
+    if (inter_amb == 0) return false;
+    else                return true;
+    break;
+
+  case 6:
+    amb_face = abs(test6[config][0]);
+
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb = interior_ambiguity_verification(edge);
+
+    if (inter_amb == 0) return false;
+    else		return true;
+
+    break;
+
+  case 7:
+    s = s * -1;
+
+    amb_face = 1;
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb += interior_ambiguity_verification(edge);
+
+    amb_face = 2;
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb += interior_ambiguity_verification(edge);
+
+    amb_face = 5;
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb += interior_ambiguity_verification(edge);
+
+    if (inter_amb == 0) return false;
+    else                return true;
+    break;
+
+  case 10:
+    amb_face = abs(test10[config][0]);
+
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb = interior_ambiguity_verification(edge);
+
+    if (inter_amb == 0) return false;
+    else                return true;
+    break;
+
+  case 12:
+    amb_face = abs(test12[config][0]);
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb += interior_ambiguity_verification(edge);
+
+
+    amb_face = abs(test12[config][1]);
+    edge = interior_ambiguity(amb_face, s);
+    inter_amb += interior_ambiguity_verification(edge);
+
+    if (inter_amb == 0) return false;
+    else                return true;
+    break;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+int ReadISurf::interior_ambiguity(int amb_face, int s)
+{
+  int edge;
+
+  switch (amb_face) {
+  case 1:
+  case 3:
+    if (((v001iso * s) > 0) && ((v110iso * s) > 0)) edge = 4;
+    if (((v000iso * s) > 0) && ((v111iso * s) > 0)) edge = 5;
+    if (((v010iso * s) > 0) && ((v101iso * s) > 0)) edge = 6;
+    if (((v011iso * s) > 0) && ((v100iso * s) > 0)) edge = 7;
+    break;
+
+  case 2:
+  case 4:
+    if (((v001iso * s) > 0) && ((v110iso * s) > 0)) edge = 0;
+    if (((v011iso * s) > 0) && ((v100iso * s) > 0)) edge = 1;
+    if (((v010iso * s) > 0) && ((v101iso * s) > 0)) edge = 2;
+    if (((v000iso * s) > 0) && ((v111iso * s) > 0)) edge = 3;
+    break;
+
+  case 5:
+  case 6:
+  case 0:
+    if (((v000iso * s) > 0) && ((v111iso * s) > 0)) edge = 8;
+    if (((v001iso * s) > 0) && ((v110iso * s) > 0)) edge = 9;
+    if (((v011iso * s) > 0) && ((v100iso * s) > 0)) edge = 10;
+    if (((v010iso * s) > 0) && ((v101iso * s) > 0)) edge = 11;
+    break;
+  }
+
+  return edge;
+}
+
+/* ---------------------------------------------------------------------- */
+
+int ReadISurf::interior_ambiguity_verification(int edge)
+{
+  double t, At = 0.0, Bt = 0.0, Ct = 0.0, Dt = 0.0, a = 0.0, b = 0.0;
+  double verify;
+
+  switch (edge) {
+
+  case 0:
+    a = (v000iso - v001iso) * (v110iso - v111iso)
+      - (v100iso - v101iso) * (v010iso - v011iso);
+    b = v111iso * (v000iso - v001iso) + v001iso * (v110iso - v111iso)
+      - v011iso * (v100iso - v101iso)
+      - v101iso * (v010iso - v011iso);
+
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v001iso + (v000iso - v001iso) * t;
+    Bt = v101iso + (v100iso - v101iso) * t;
+    Ct = v111iso + (v110iso - v111iso) * t;
+    Dt = v011iso + (v010iso - v011iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+
+    break;
+
+  case 1:
+    a = (v010iso - v011iso) * (v100iso - v101iso)
+      - (v000iso - v001iso) * (v110iso - v111iso);
+    b = v101iso * (v010iso - v011iso) + v011iso * (v100iso - v101iso)
+      - v111iso * (v000iso - v001iso)
+      - v001iso * (v110iso - v111iso);
+
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v011iso + (v010iso - v011iso) * t;
+    Bt = v001iso + (v000iso - v001iso) * t;
+    Ct = v101iso + (v100iso - v101iso) * t;
+    Dt = v111iso + (v110iso - v111iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 2:
+    a = (v011iso - v010iso) * (v101iso - v100iso)
+      - (v111iso - v110iso) * (v001iso - v000iso);
+    b = v100iso * (v011iso - v010iso) + v010iso * (v101iso - v100iso)
+      - v000iso * (v111iso - v110iso)
+      - v110iso * (v001iso - v000iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v010iso + (v011iso - v010iso) * t;
+    Bt = v110iso + (v111iso - v110iso) * t;
+    Ct = v100iso + (v101iso - v100iso) * t;
+    Dt = v000iso + (v001iso - v000iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 3:
+    a = (v001iso - v000iso) * (v111iso - v110iso)
+      - (v011iso - v010iso) * (v101iso - v100iso);
+    b = v110iso * (v001iso - v000iso) + v000iso * (v111iso - v110iso)
+      - v100iso * (v011iso - v010iso)
+      - v010iso * (v101iso - v100iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v000iso + (v001iso - v000iso) * t;
+    Bt = v010iso + (v011iso - v010iso) * t;
+    Ct = v110iso + (v111iso - v110iso) * t;
+    Dt = v100iso + (v101iso - v100iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 4:
+
+    a = (v011iso - v001iso) * (v110iso - v100iso)
+      - (v010iso - v000iso) * (v111iso - v101iso);
+    b = v100iso * (v011iso - v001iso) + v001iso * (v110iso - v100iso)
+      - v101iso * (v010iso - v000iso)
+      - v000iso * (v111iso - v101iso);
+
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v001iso + (v011iso - v001iso) * t;
+    Bt = v000iso + (v010iso - v000iso) * t;
+    Ct = v100iso + (v110iso - v100iso) * t;
+    Dt = v101iso + (v111iso - v101iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 5:
+
+    a = (v010iso - v000iso) * (v111iso - v101iso)
+      - (v011iso - v001iso) * (v110iso - v100iso);
+    b = v101iso * (v010iso - v000iso) + v000iso * (v111iso - v101iso)
+      - v100iso * (v011iso - v001iso)
+      - v001iso * (v110iso - v100iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v000iso + (v010iso - v000iso) * t;
+    Bt = v001iso + (v011iso - v001iso) * t;
+    Ct = v101iso + (v111iso - v101iso) * t;
+    Dt = v100iso + (v110iso - v100iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 6:
+    a = (v000iso - v010iso) * (v101iso - v111iso)
+      - (v100iso - v110iso) * (v001iso - v011iso);
+    b = v111iso * (v000iso - v010iso) + v010iso * (v101iso - v111iso)
+      - v011iso * (v100iso - v110iso)
+      - v110iso * (v001iso - v011iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v010iso + (v000iso - v010iso) * t;
+    Bt = v110iso + (v100iso - v110iso) * t;
+    Ct = v111iso + (v101iso - v111iso) * t;
+    Dt = v011iso + (v001iso - v011iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 7:
+    a = (v001iso - v011iso) * (v100iso - v110iso)
+      - (v000iso - v010iso) * (v101iso - v111iso);
+    b = v110iso * (v001iso - v011iso) + v011iso * (v100iso - v110iso)
+      - v111iso * (v000iso - v010iso)
+      - v010iso * (v101iso - v111iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v011iso + (v001iso - v011iso) * t;
+    Bt = v010iso + (v000iso - v010iso) * t;
+    Ct = v110iso + (v100iso - v110iso) * t;
+    Dt = v111iso + (v101iso - v111iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 8:
+    a = (v100iso - v000iso) * (v111iso - v011iso)
+      - (v110iso - v010iso) * (v101iso - v001iso);
+    b = v011iso * (v100iso - v000iso) + v000iso * (v111iso - v011iso)
+      - v001iso * (v110iso - v010iso)
+      - v010iso * (v101iso - v001iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v000iso + (v100iso - v000iso) * t;
+    Bt = v010iso + (v110iso - v010iso) * t;
+    Ct = v011iso + (v111iso - v011iso) * t;
+    Dt = v001iso + (v101iso - v001iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 9:
+    a = (v101iso - v001iso) * (v110iso - v010iso)
+      - (v100iso - v000iso) * (v111iso - v011iso);
+    b = v010iso * (v101iso - v001iso) + v001iso * (v110iso - v010iso)
+      - v011iso * (v100iso - v000iso)
+      - v000iso * (v111iso - v011iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v001iso + (v101iso - v001iso) * t;
+    Bt = v000iso + (v100iso - v000iso) * t;
+    Ct = v010iso + (v110iso - v010iso) * t;
+    Dt = v011iso + (v111iso - v011iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 10:
+    a = (v111iso - v011iso) * (v100iso - v000iso)
+      - (v101iso - v001iso) * (v110iso - v010iso);
+    b = v000iso * (v111iso - v011iso) + v011iso * (v100iso - v000iso)
+      - v010iso * (v101iso - v001iso)
+      - v001iso * (v110iso - v010iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v011iso + (v111iso - v011iso) * t;
+    Bt = v001iso + (v101iso - v001iso) * t;
+    Ct = v000iso + (v100iso - v000iso) * t;
+    Dt = v010iso + (v110iso - v010iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+
+  case 11:
+    a = (v110iso - v010iso) * (v101iso - v001iso)
+      - (v111iso - v011iso) * (v100iso - v000iso);
+    b = v001iso * (v110iso - v010iso) + v010iso * (v101iso - v001iso)
+      - v000iso * (v111iso - v011iso)
+      - v011iso * (v100iso - v000iso);
+    if (a > 0)
+      return 1;
+
+    t = -b / (2 * a);
+    if (t < 0 || t > 1)
+      return 1;
+
+    At = v010iso + (v110iso - v010iso) * t;
+    Bt = v011iso + (v111iso - v011iso) * t;
+    Ct = v001iso + (v101iso - v001iso) * t;
+    Dt = v000iso + (v100iso - v000iso) * t;
+
+    verify = At * Ct - Bt * Dt;
+
+    if (verify > 0)
+      return 0;
+    if (verify < 0)
+      return 1;
+    break;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   return true if the interior is empty (two faces)
+------------------------------------------------------------------------- */
+
+bool ReadISurf::interior_test_case13()
+{
+  double t1, t2, At1 = 0.0, Bt1 = 0.0, Ct1 = 0.0, Dt1 = 0.0;
+  double At2 = 0.0, Bt2 = 0.0, Ct2 = 0.0, Dt2 = 0.0, a = 0.0, b = 0.0, c = 0.0;
+
+  a = (v000iso - v001iso) * (v110iso - v111iso)
+    - (v100iso - v101iso) * (v010iso - v011iso);
+  b = v111iso * (v000iso - v001iso) + v001iso * (v110iso - v111iso)
+    - v011iso * (v100iso - v101iso)
+    - v101iso * (v010iso - v011iso);
+  c = v001iso*v111iso - v101iso*v011iso;
+
+  double delta = b*b - 4*a*c;
+
+  t1 = (-b + sqrt(delta))/(2*a);
+  t2 = (-b - sqrt(delta))/(2*a);
+
+  //    printf("delta = %f, t1 = %f, t2 = %f\n", delta, t1, t2);
+
+  if ((t1 < 1)&&(t1>0) &&(t2 < 1)&&(t2 > 0)) {
+    At1 = v001iso + (v000iso - v001iso) * t1;
+    Bt1 = v101iso + (v100iso - v101iso) * t1;
+    Ct1 = v111iso + (v110iso - v111iso) * t1;
+    Dt1 = v011iso + (v010iso - v011iso) * t1;
+
+    double x1 = (At1 - Dt1)/(At1 + Ct1 - Bt1 - Dt1);
+    double y1 = (At1 - Bt1)/(At1 + Ct1 - Bt1 - Dt1);
+
+    At2 = v001iso + (v000iso - v001iso) * t2;
+    Bt2 = v101iso + (v100iso - v101iso) * t2;
+    Ct2 = v111iso + (v110iso - v111iso) * t2;
+    Dt2 = v011iso + (v010iso - v011iso) * t2;
+    
+    double x2 = (At2 - Dt2)/(At2 + Ct2 - Bt2 - Dt2);
+    double y2 = (At2 - Bt2)/(At2 + Ct2 - Bt2 - Dt2);
+
+    if ((x1 < 1)&&(x1>0) &&(x2 < 1)&&(x2 > 0) && 
+        (y1 < 1)&&(y1>0) &&(y2 < 1)&&(y2 > 0)) return false;
+  }
+
+  // NOTE: SJP changed this logic, wasn't always returning a value
+
+  return true;
+}
+
+/* ----------------------------------------------------------------------
+Arnaud 03/28/19
+WARNING: NOT FUNCTIONAL YET
+
+  Eliminate or move problematic triangles created by the MC
+
+    Algorithm:
+    loop over cells with implicit tris:
+      loop over tris in that cell:
+        if tri not on face: skip
+        if I own cell on other side of face:
+          figure out which cell should own the tri
+          add or delete it to each of 2 cells that share the face
+        else:
+          add the tri to my "list"
+          if the tri should not be stored by my cell, delete it
+
+    do a MPI_AllGather across all procs to convert "list" to "fulllist"
+      include the owning cell ID in the data struct for the tri
+    the fulllist should be really short
+    every proc scans the fulllist and adds
+      tris that belong to cells it owns,
+      checking that the cell doesn't already own the tri
+
+ ------------------------------------------------------------------------- */
+
+void ReadISurf::clean_up_MC()
+{
+  int icell,i,j,k,n,m,iface,nmask,nflag,nsurf2;
+  cellint newcell;
+  cellint *neigh;
+  surfint *ptr;
+  Grid::ChildCell *cells = grid->cells;
+  MyPage<int> *csurfs = grid->csurfs;
+  int nglocal = grid->nlocal;
+  Surf::Tri *tris;
+  tris = surf->tris;
+  int *triflag;
+  bool changeflag;
+
+  int isurf = surf->nlocal - 1;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    n = cells[icell].nsurf;
+    if (n == 0) continue;
+
+    memory->create(triflag,n,"readisurf:triflag");
+    for (j = 0; j < n; j++) triflag[j] = 0;
+
+    changeflag = false;
+
+    neigh = cells[icell].neigh;
+    nmask = cells[icell].nmask;
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    for (j = 0; j < n; j++) {
+      m = cells[icell].csurfs[j];
+
+      for (i = 0; i < 6; i++) {
+        if (i == 0) iface = XLO;
+        else if (i == 1) iface = XHI;
+        else if (i == 2) iface = YLO;
+        else if (i == 3) iface = YHI;
+        else if (i == 4) iface = ZLO;
+        else if (i == 5) iface = ZHI;
+        if (Geometry::tri_hex_face_sits(tris[m].p1,tris[m].p2,
+                                        tris[m].p3,iface,lo,hi)) {
+          if (((i == 0) && (tris[m].norm[0] < 0)) ||
+              ((i == 1) && (tris[m].norm[0] > 0)) ||
+              ((i == 2) && (tris[m].norm[1] < 0)) ||
+              ((i == 3) && (tris[m].norm[1] > 0)) ||
+              ((i == 4) && (tris[m].norm[2] < 0)) ||
+              ((i == 5) && (tris[m].norm[2] > 0))) {
+            printf("tri id before and after %d %d j %d\n",
+                   tris[m].id,neigh[iface],j);
+            tris[m].id = neigh[iface];
+            changeflag = true;
+            triflag[j] = 1;
+            break;
+          }
+        }
+      }
+      // break will get me here
+    }
+
+    if (changeflag) {
+      k = 0;
+      for (j = 0; j < n; j++) {
+        m = cells[icell].csurfs[j];
+        if (!triflag[j]) {
+          cells[icell].csurfs[k] = m;
+          k++;
+        }
+        else {
+          newcell = tris[m].id - 2;
+          nsurf2 = cells[newcell].nsurf;
+          cells[newcell].csurfs[nsurf2] = m;
+          cells[newcell].nsurf++;
+        }
+      }
+      cells[icell].nsurf = k;
+      memory->destroy(triflag);
+    }
+  }
+  
+  //    for (icell = 0; icell < nglocal; icell++) {
+  //        if (cells[icell].nsplit <= 0) continue;
+  //        n = cells[icell].nsurf;
+  //        if (n == 0) continue;
+
+  //        lo = cells[icell].lo;
+  //        hi = cells[icell].hi;
+  //        printf("n %d lo %g %g %g\n",cells[icell].nsurf,lo[0],lo[1],lo[2]);
+  //     }
+}
+
 /* ----------------------------------------------------------------------
    print cube for debugging
 ------------------------------------------------------------------------- */
@@ -1514,19 +2158,4 @@ bool ReadISurf::test_interior(int s, int icase)
 void ReadISurf::print_cube() { 
   printf("\t %d %d %d %d %d %d %d %d\n",
           v000, v001, v011, v010, v100, v101, v111, v110);
-}
-
-/* ----------------------------------------------------------------------
-   interpolate for marching squares or cubes
-   lo/hi = coordinates of end points of edge of square
-   v0/v1 = values at lo/hi end points
-   value = interpolated coordinate for thresh value
-------------------------------------------------------------------------- */
-
-double ReadISurf::interpolate(int v0, int v1, double lo, double hi)
-{
-  double value = lo + (hi-lo)*(thresh-v0)/(v1-v0);
-  value = MAX(value,lo);
-  value = MIN(value,hi);
-  return value;
 }

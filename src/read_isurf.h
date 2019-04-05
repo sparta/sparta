@@ -49,10 +49,11 @@ class ReadISurf : protected Pointers {
   double corner[3],xyzsize[3];
   char *typefile;
 
-  // 3d marching cubes
+  // extra data for 3d marching cubes
 
   double *lo,*hi;
   int v000,v001,v010,v011,v100,v101,v110,v111;
+  double v000iso,v001iso,v010iso,v011iso,v100iso,v101iso,v110iso,v111iso;
   int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
   double pt[36][3];
     
@@ -85,12 +86,18 @@ class ReadISurf : protected Pointers {
   void marching_squares(int);
   double interpolate(int, int, double, double);
 
-  // 3d marching cubes
+  // extra functions for 3d marching cubes
 
   int add_triangle(int *, int);
   bool test_face(int);
   bool test_interior(int, int);
+  bool modified_test_interior(int, int);
+  int interior_ambiguity(int, int);
+  int interior_ambiguity_verification(int);
+  bool interior_test_case13();
   void print_cube();
+   
+  void clean_up_MC();
 };
 
 }

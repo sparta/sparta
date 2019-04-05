@@ -2056,15 +2056,20 @@ void Grid::group(int narg, char **arg)
 
   // print stats for changed group
 
-  int n = 0;
+  bigint n = 0;
   for (i = 0; i < nlocal; i++) 
     if (cinfo[i].mask & bit) n++;
 
+  bigint nall;
+  MPI_Allreduce(&n,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
   if (comm->me == 0) {
     if (screen) 
-      fprintf(screen,"%d grid cells in group %s\n",n,gnames[igroup]);
+      fprintf(screen,BIGINT_FORMAT " grid cells in group %s\n",
+              nall,gnames[igroup]);
     if (logfile)
-      fprintf(logfile,"%d grid cells in group %s\n",n,gnames[igroup]);
+      fprintf(logfile,BIGINT_FORMAT " grid cells in group %s\n",
+              nall,gnames[igroup]);
   }
 }
 
