@@ -172,6 +172,7 @@ def write_grid_chunk(ug, chunk_id, num_chunks, \
       if chunk_id == 0:
         print "Finished time step " + str(idx)
         write_pvtu_file(ug, output_file, num_chunks, time)
+      barrier_synchronize()
   else:
     vp = vtk.vtkPlane()
     writer = vtk.vtkXMLPolyDataWriter()
@@ -1033,12 +1034,18 @@ report_chunk_complete.count = 0
 report_chunk_complete.num_chunks = 0
 report_chunk_complete.filepaths = {}
 
-def finish_MPI():
+def barrier_synchronize():
   from mpi4py import MPI
-  comm = MPI.COMM_WORLD
-  if comm.Get_rank() == 0:
-    print "Waiting for barrier synchronization ..."
-  comm.Barrier()
+  if MPI.Is_initialized():
+    comm = MPI.COMM_WORLD
+    comm.Barrier()
+
+#def finish_MPI():
+#  from mpi4py import MPI
+#  comm = MPI.COMM_WORLD
+#  if comm.Get_rank() == 0:
+#    print "Waiting for barrier synchronization ..."
+#  comm.Barrier()
 
 def setup_for_MPI(params_dict):
   from mpi4py import MPI
@@ -1068,7 +1075,7 @@ def run_pvbatch_output(params_dict):
   catalystscript = params_dict["catalystscript"]
 
   if rank == 0:
-    print "Processing grid chunks on " + str(size) + " MPI ranks"
+    print "Processing grid chunk(s) on " + str(size) + " MPI ranks"
 
   c = len(chunking)/size
   r = len(chunking) % size
@@ -1091,7 +1098,7 @@ def run_pvbatch_output(params_dict):
 
   if catalystscript is not None:
     if rank == 0:
-      print "Calling Catalyst over " + str(len(time_steps_dict)) + " time steps ..."
+      print "Calling Catalyst over " + str(len(time_steps_dict)) + " time step(s) ..."
     import coprocessor
     coprocessor.initialize()
     coprocessor.addscript(catalystscript)
@@ -1099,10 +1106,12 @@ def run_pvbatch_output(params_dict):
     for idx, time in enumerate(sorted(time_steps_dict.keys())):
       read_time_step_data(time_steps_dict[time], ug, id_map)
       coprocessor.coprocess(time, idx, ug, paraview_output_file + '.pvd')
+      if rank == 0:
+        print "Finished time step " + str(idx)
     coprocessor.finalize()
   else:
     if rank == 0:
-      print "Writing grid files over " + str(len(time_steps_dict)) + " time steps ..."
+      print "Writing grid files over " + str(len(time_steps_dict)) + " time step(s) ..."
     write_grid_chunk(ug, rank, size, grid_desc, time_steps_dict, paraview_output_file)
 
   #id_hash = {}
@@ -1208,7 +1217,7 @@ if __name__ == "__main__":
       print "Unable to open SPARTA surf input file: ", args.sparta_grid_description_file
       sys.exit(1)
 
-    if os.path.isdir(args.paraview_output_file):
+    if os.path.isdir(args.paraview_output_file) and not args.catalystscript:
       print "ParaView output directory exists: ", args.paraview_output_file
       sys.exit(1)
  
@@ -1259,7 +1268,8 @@ if __name__ == "__main__":
       sys.exit(1)
 
     if "slice" not in grid_desc:
-      if os.path.isfile(args.paraview_output_file + '.pvd'):
+      if os.path.isfile(args.paraview_output_file + '.pvd') and not \
+         args.catalystscript:
         print "ParaView output file exists: ", args.paraview_output_file + '.pvd'
         sys.exit(1)
     else:
@@ -1303,7 +1313,8 @@ if __name__ == "__main__":
     print "Processing ", len(chunking), " grid chunk(s)."
     report_chunk_complete.num_chunks = len(chunking)
 
-    os.mkdir(args.paraview_output_file)
+    if not args.catalystscript:
+      os.mkdir(args.paraview_output_file)
 
   import platform
   if platform.system() == 'Linux' or platform.system() == 'Darwin':
@@ -1334,7 +1345,7 @@ if __name__ == "__main__":
 
       setup_for_MPI(pd)
       run_pvbatch_output(pd)
-      finish_MPI()
+      #finish_MPI()
 
       #if pd["catalystscript"] is not None:
       #  run_pvbatch_catalyst_output(pd)
