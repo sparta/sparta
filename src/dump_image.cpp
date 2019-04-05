@@ -977,15 +977,13 @@ void DumpImage::write()
 
     for (int isurf = 0; isurf < nsurf; isurf++) {
       if (surfwhich == COMPUTE) {
-        // NOTE: accessing compute's tallied values, not collated values ??
-        // see dump_surf for needed logic
         Compute *compute = modify->compute[surfindex];
         if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
           compute->compute_per_surf();
           compute->invoked_flag |= INVOKED_PER_SURF;
         }
-        if (surfcol == 0) value = compute->vector_surf[isurf];
-        else value = compute->array_surf[isurf][surfcol-1];
+        compute->tallysum(surfcol);
+        value = compute->vector_surf[isurf];
       } else if (surfwhich == FIX) {
         Fix *fix = modify->fix[surfindex];
         if (surfcol == 0) value = fix->vector_surf[isurf];
@@ -1473,15 +1471,13 @@ void DumpImage::create_image()
         color = scolorproc;
       } else if (scolor == ATTRIBUTE) {
         if (surfwhich == COMPUTE) {
-          // NOTE: accessing compute's tallied values, not collated values ??
-          // see dump_surf for needed logic
           Compute *compute = modify->compute[surfindex];
           if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
             compute->compute_per_surf();
             compute->invoked_flag |= INVOKED_PER_SURF;
           }
-          if (surfcol == 0) value = compute->vector_surf[isurf];
-          else value = compute->array_surf[isurf][surfcol-1];
+          compute->tallysum(surfcol);
+          value = compute->vector_surf[isurf];
         } else if (surfwhich == FIX) {
           Fix *fix = modify->fix[surfindex];
           if (surfcol == 0) value = fix->vector_surf[isurf];

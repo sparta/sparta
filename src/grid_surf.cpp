@@ -56,19 +56,17 @@ enum{COMBO,PERCELL,PERSURF};            // several files
 
 void Grid::surf2grid(int subflag, int outflag)
 {
-  int ntotal = surf->nsurf;
-
   if (surf->distributed)
     surf2grid_surf_algorithm(subflag,outflag);
   else if (surfgrid_algorithm == COMBO) {
-      if (comm->nprocs > ntotal) surf2grid_cell_algorithm(outflag);
-      else surf2grid_surf_algorithm(subflag,outflag);
-  } 
-  else if (surfgrid_algorithm == PERCELL) 
+    if (comm->nprocs > surf->nsurf) surf2grid_cell_algorithm(outflag);
+    else surf2grid_surf_algorithm(subflag,outflag);
+  } else if (surfgrid_algorithm == PERCELL) {
     surf2grid_cell_algorithm(outflag);
-  else if (surfgrid_algorithm == PERSURF) 
+  } else if (surfgrid_algorithm == PERSURF) {
     surf2grid_surf_algorithm(subflag,outflag);
-
+  }
+  
   // now have nsurf,csurfs list of local surfs that overlap each cell
   // compute cut volume and split info for each cell
 

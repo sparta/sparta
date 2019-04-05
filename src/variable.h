@@ -40,7 +40,7 @@ class Variable : protected Pointers {
   double compute_equal(char *);
   void compute_particle(int, double *, int, int);
   void compute_grid(int, double *, int, int);
-  void compute_surf(int, double *, int, int) {}
+  void compute_surf(int, double *, int, int) {}  // not yet supported
   void internal_set(int, double);
 
   int int_between_brackets(char *&, int);

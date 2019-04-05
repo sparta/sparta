@@ -77,20 +77,19 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
-  // NOTE: maybe per_surf_flag should be 0, since this compute
-  //       does not create array_surf, but only array_surf_tally
-
   surf_tally_flag = 1;
   timeflag = 1;
   per_surf_flag = 1;
   ntotal = ngroup*nvalue;
   size_per_surf_cols = ntotal;
 
-  nlocal = maxlocal = 0;
-  glob2loc = loc2glob = NULL;
+  ntally = maxtally = 0;
+  surf2tally = tally2surf = NULL;
   array_surf_tally = NULL;
+  vector_surf = NULL;
   normflux = NULL;
   nfactor_previous = 0.0;
+  last_tallysum = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -100,9 +99,10 @@ ComputeSurf::~ComputeSurf()
   if (copy || copymode) return;
 
   delete [] which;
-  memory->destroy(glob2loc);
-  memory->destroy(loc2glob);
+  memory->destroy(surf2tally);
+  memory->destroy(tally2surf);
   memory->destroy(array_surf_tally);
+  memory->destroy(vector_surf);
   memory->destroy(normflux);
 }
 
@@ -119,14 +119,14 @@ void ComputeSurf::init()
   lines = surf->lines;
   tris = surf->tris;
 
-  // allocate and initialize glob2loc indices
+  // allocate and initialize surf2tally indices
   // nsurf = all explicit surfs in this procs grid cells
 
   nsurf = surf->nlocal + surf->nghost;
 
-  memory->destroy(glob2loc);
-  memory->create(glob2loc,nsurf,"surf:glob2loc");
-  for (int i = 0; i < nsurf; i++) glob2loc[i] = -1;
+  memory->destroy(surf2tally);
+  memory->create(surf2tally,nsurf,"surf:surf2tally");
+  for (int i = 0; i < nsurf; i++) surf2tally[i] = -1;
 
   // normalization nfactor = dt/fnum
 
@@ -169,26 +169,26 @@ void ComputeSurf::init()
   clear();
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   no operations here, since compute results are stored in tally array
+   just used by callers to indicate compute was used
+   enables prediction of next step when update needs to tally
+------------------------------------------------------------------------- */
 
 void ComputeSurf::compute_per_surf()
 {
   invoked_per_surf = update->ntimestep;
-
-  // no operation to perform, local tallies are already normalized
-  // NOTE: this does not produce vector_surf or array_surf
-  //       which might be what some callers expect
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeSurf::clear()
 {
-  // reset all set glob2loc values to -1 and nlocal to 0
+  // reset all set surf2tally values to -1 and ntally to 0
   // called by Update at beginning of timesteps surf tallying is done
 
-  for (int i = 0; i < nlocal; i++) glob2loc[loc2glob[i]] = -1;
-  nlocal = 0;
+  for (int i = 0; i < ntally; i++) surf2tally[tally2surf[i]] = -1;
+  ntally = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -217,19 +217,19 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
   int igroup = particle->mixture[imix]->species2group[origspecies];
   if (igroup < 0) return;
 
-  // ilocal = local index of global isurf
-  // if 1st particle hitting isurf, add isurf to local list
-  // grow local list if needed
+  // itally = tally index of isurf
+  // if 1st particle hitting isurf, add isurf to tally list
+  // grow tally list if needed
 
   double *vec;
 
-  int ilocal = glob2loc[isurf];
-  if (ilocal < 0) {
-    if (nlocal == maxlocal) grow();
-    ilocal = nlocal++;
-    loc2glob[ilocal] = isurf;
-    glob2loc[isurf] = ilocal;
-    vec = array_surf_tally[ilocal];
+  int itally = surf2tally[isurf];
+  if (itally < 0) {
+    if (ntally == maxtally) grow_tally();
+    itally = ntally++;
+    tally2surf[itally] = isurf;
+    surf2tally[isurf] = itally;
+    vec = array_surf_tally[itally];
     for (int i = 0; i < ntotal; i++) vec[i] = 0.0;
   }
 
@@ -258,7 +258,7 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
   double *vorig = iorig->v;
   double mvv2e = update->mvv2e;
 
-  vec = array_surf_tally[ilocal];
+  vec = array_surf_tally[itally];
   int k = igroup*nvalue;
   int fflag = 0;
   int nflag = 0;
@@ -415,43 +415,62 @@ void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig,
 }
 
 /* ----------------------------------------------------------------------
-   return ptr to norm vector used by column N
-   input N is value from 1 to Ncols
+   return # of tallies and their indices into my local surf list
 ------------------------------------------------------------------------- */
 
-double *ComputeSurf::normptr(int n)
+int ComputeSurf::tallyinfo(int *&ptr)
 {
-  return NULL;
+  ptr = tally2surf;
+  return ntally;
 }
 
 /* ----------------------------------------------------------------------
-   return ptr to norm vector used by column N
+   sum tally values to per-surf values
+   index = 0 if this compute produces a vector
+   index = 1 to N if this compute produces an array with 1 to N columns
+   regardless, result is stored in vector_surf for Nown surfs this proc owns
 ------------------------------------------------------------------------- */
 
-int ComputeSurf::surfinfo(int *&locptr)
+void ComputeSurf::tallysum(int index)
 {
-  locptr = loc2glob;
-  return nlocal;
+  // skip if result has already been computed on this timestep
+  // NOTE: doing this for repeated index would require 
+  //       storing multiple vector_surfs
+
+  if (update->ntimestep == last_tallysum) return;
+  last_tallysum = update->ntimestep;
+
+  // allocate vector surf if necessary
+
+  if (!vector_surf) memory->create(vector_surf,surf->nown,"surf:vector_surf");
+
+  // array_surf_tally can be NULL if this proc has performed no tallies
+
+  if (array_surf_tally)
+    surf->collate_vector(ntally,tally2surf,
+                         &array_surf_tally[0][index-1],ntotal,vector_surf);
+  else 
+    surf->collate_vector(ntally,tally2surf,NULL,ntotal,vector_surf);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeSurf::grow()
+void ComputeSurf::grow_tally()
 {
-  maxlocal += DELTA;
-  memory->grow(loc2glob,maxlocal,"surf:loc2glob");
-  memory->grow(array_surf_tally,maxlocal,ntotal,"surf:array_surf_tally");
+  maxtally += DELTA;
+  memory->grow(tally2surf,maxtally,"surf:tally2surf");
+  memory->grow(array_surf_tally,maxtally,ntotal,"surf:array_surf_tally");
 }
 
 /* ----------------------------------------------------------------------
-   memory usage of local atom-based array
+   memory usage
 ------------------------------------------------------------------------- */
 
 bigint ComputeSurf::memory_usage()
 {
   bigint bytes = 0;
-  bytes += ntotal*maxlocal * sizeof(double);
-  bytes += maxlocal * sizeof(int);
-  bytes += nsurf * sizeof(int);
+  bytes += ntotal*maxtally * sizeof(double);    // array_surf_tally
+  bytes += maxtally * sizeof(int);              // tally2surf
+  bytes += nsurf * sizeof(int);                 // surf2tally
   return bytes;
 }

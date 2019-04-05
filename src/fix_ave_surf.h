@@ -47,19 +47,19 @@ class FixAveSurf : public Fix {
   int nown;                // # of explicit surfs I own = surf->nown
   double *accvec;          // accumulation vector
   double **accarray;       // accumulation array
-  double *buflocal;        // surf collate vector for surfs I own
+  double *bufvec;          // surf collate vector for surfs I own
+  double **bufarray;       // surf collate array for surfs I own
   int *masks;              // surface element group masks for surfs I own
 
-  int nlocal;              // # of local surf tallies
-  int maxlocal;            // # of local surf tallies currently allocated
-  int *glob2loc;           // glob2loc[I] = local index of Ith global surf
-  int *loc2glob;           // loc2glob[I] = global index of Ith local surf
-
-  double *vec_local;
-  double **array_local;
+  int ntally;              // # of surfs I have tallies for
+  int maxtally;            // # of tallies currently allocated
+  int *surf2tally;         // surf2tally[I] = tally index of Ith surf
+  int *tally2surf;         // tally2surf[I] = surf index of Ith tally
+  double *vec_tally;       // tally values, maxtally in length
+  double **array_tally;
 
   void options(int, int, char **);
-  void grow_local();
+  void grow_tally();
   bigint nextvalid();
 };
 

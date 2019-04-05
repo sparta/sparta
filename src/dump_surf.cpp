@@ -342,7 +342,7 @@ int DumpSurf::count()
   if (ncompute) {
     for (int i = 0; i < ncompute; i++)
       if (!(compute[i]->invoked_flag & INVOKED_PER_SURF)) {
-	compute[i]->compute_per_surf();
+	compute[i]->compute_per_grid();
 	compute[i]->invoked_flag |= INVOKED_PER_SURF;
       }
   }
@@ -646,27 +646,16 @@ int DumpSurf::add_variable(char *id)
 
 void DumpSurf::pack_compute(int n)
 {
-  int *loc2glob;
-  int nlocal = compute[field2index[n]]->surfinfo(loc2glob);
-  
   int index = argindex[n];
-  if (index == 0) {
-    double *vector = compute[field2index[n]]->vector_surf_tally;
-    surf->collate_vector(nlocal,loc2glob,vector,1,buflocal);
-  } else {
-    double **array = compute[field2index[n]]->array_surf_tally;
-    int stride = compute[field2index[n]]->size_per_surf_cols;
+  Compute *c = compute[field2index[n]];
+  c->tallysum(index);
 
-    // array can be NULL if nlocal = 0, b/c this proc tallied no surfs
+  // index is 0 for a compute vector, 1-N for a column of compute array
+  // either way, compute creates vector_surf
 
-    if (array) 
-      surf->collate_vector(nlocal,loc2glob,&array[0][index-1],stride,buflocal);
-    else
-      surf->collate_vector(nlocal,loc2glob,NULL,stride,buflocal);
-  }
-
+  double *vector = c->vector_surf;
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = buflocal[clocal[i]];
+    buf[n] = vector[clocal[i]];
     n += size_one;
   }
 }
