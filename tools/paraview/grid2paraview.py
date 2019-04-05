@@ -1098,7 +1098,7 @@ def run_pvbatch_output(params_dict):
     id_map = create_cell_global_id_to_local_id_map(ug)
     for idx, time in enumerate(sorted(time_steps_dict.keys())):
       read_time_step_data(time_steps_dict[time], ug, id_map)
-      coprocessor.coprocess(time, idx, ug)
+      coprocessor.coprocess(time, idx, ug, paraview_output_file + '.pvd')
     coprocessor.finalize()
   else:
     if rank == 0:
