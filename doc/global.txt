@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {cellmax} or {splitmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {cellmax} or {splitmax} or {surftally} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -31,16 +31,20 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
                            only the surfs for its owned_ghost grid cells
     implicit = surfs defined in read_isurf file, each proc owns
                            only the surfs for its owned+ghost grid cells
-  {surfgrid} value = combo or percell or persurf
+  {surfgrid} value = {percell} or {persurf} or {auto}
     percell = loop over my cells and check every surf
     persurf = loop over my surfs and cells they overlap
-    combo = choose percell or persurf based on surface element and proc count
+    auto = choose percell or persurf based on surface element and proc count
   {surfmax} value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
   {cellmax} value = Ncell
     Ncell = max # of grid cells a single surf can overlap
   {splitmax} value = Nsplit
     Nsplit = max # of sub-cells one grid cell can be split into by surface elements
+  {surftally} value = {reduce} or {rvous} or {auto}
+    reduce = tally surf collision info via MPI_Allreduce operations
+    rvous = tally via a rendezvous algorithm
+    auto = choose reduce or rvous based on surface element and proc count
   {surfpush} value(s) = no/yes or slo shi svalue
     no = do not push surface element points near cell surface
     yes = push surface element points near cell surface if necessary
@@ -122,7 +126,7 @@ MBytes.
 The {surfgrid} keyword determines what algorithm is used to enumerate
 the overlaps (intersections) between grid cells and surface elements
 (lines in 2d, triangles in 3d).  The possible settings are {percell},
-{persurf}, and {combo}.  The {combo} setting is the default and will
+{persurf}, and {auto}.  The {auto} setting is the default and will
 choose between a {percell} or {persurf} algorithm based on the number
 of surface elements and processor count.  If there are more processors
 than surface elements, the {percell} algorithm is used.  Otherwise the
@@ -154,6 +158,24 @@ with multiple surface elements (lines in 2d, triangles in 3d).  The
 default is 10, which should be large enough for any simulation, unless
 you embed a complex-shaped surface object into one or a very few grid
 cells.
+
+The {surftally} keyword determines what algorithm is used to combine
+tallies of surface collisions across processors that own portions of
+the same surface element.  The possible settings are {reduce},
+{rvous}, and {auto}.  The {auto} setting is the default and will
+choose between a {reduce} or {rvous} algorithm based on the number of
+surface elements and processor count.  If there are more processors
+than surface elements, the {reduce} algorithm is used.  Otherwise the
+{rvous} algorithm is used.  The {reduce} algorithm is suitable for
+relatively small surface elememt counts.  It creates a copy of a
+vector or array of length the global number of surface elements.  Each
+processor sums its tally contributions into the vector or array.  An
+MPI_Allreduce() is performed to sum it across all processors.  Each
+processor than extracts values for the N/P surfaces it owns.  The
+{rvous} algorithm is faster for large surface element counts.  A
+rendezvous style of communication is performed where every processor
+sends its tally contributions directly to the processor which owns the
+element as one of its N/P elements.
 
 :line
 
@@ -375,6 +397,7 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
-surfgrid = combo, surfmax = 100, cellmax = 100, splitmax = 10,
-surfpush = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh,
-weight = cell none, particle/reorder = 0, mem/limit = 0.
+surfgrid = auto, surfmax = 100, cellmax = 100, splitmax = 10,
+surftally = auto, surfpush = yes, gridcut = -1.0, comm/sort = no,
+comm/style = neigh, weight = cell none, particle/reorder = 0,
+mem/limit = 0.

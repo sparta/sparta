@@ -39,7 +39,7 @@ int compare_surfIDs(const void *, const void *);
 #define CHUNK 16
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
-enum{COMBO,PERCELL,PERSURF};            // several files
+enum{PERAUTO,PERCELL,PERSURF};          // several files
 
 // operations for surfaces in grid cells
 
@@ -50,7 +50,7 @@ enum{COMBO,PERCELL,PERSURF};            // several files
    surf_alg = Jan19, loop over N/P surfs, find small set of cells each overlaps,
               perform rendezvous comm to convert cells per surf to surfs per cell
    for distributed surfs, have to use surf_alg
-   COMBO option chooses based on total nsurfs vs nprocs
+   PERAUTO option chooses based on total nsurfs vs nprocs
    called from Readsurf, MoveSurf, RemoveSurf, ReadRestart, and FixMoveSurf
 ------------------------------------------------------------------------- */
 
@@ -58,7 +58,7 @@ void Grid::surf2grid(int subflag, int outflag)
 {
   if (surf->distributed)
     surf2grid_surf_algorithm(subflag,outflag);
-  else if (surfgrid_algorithm == COMBO) {
+  else if (surfgrid_algorithm == PERAUTO) {
     if (comm->nprocs > surf->nsurf) surf2grid_cell_algorithm(outflag);
     else surf2grid_surf_algorithm(subflag,outflag);
   } else if (surfgrid_algorithm == PERCELL) {
