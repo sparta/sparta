@@ -147,13 +147,6 @@ def write_grid_chunk(ug, chunk_id, num_chunks, \
   filepaths = {}
   id_map = create_cell_global_id_to_local_id_map(ug)
 
-  #id_hash = {}
-  #gids = ug.GetCellData().GetArray("GlobalIds")
-  #if gids:
-  #  for i in range(gids.GetNumberOfTuples()):
-  #    id_hash[int(gids.GetTuple1(i))] = i
-  #  ug.GetCellData().RemoveArray("GlobalIds")
-
   if "slice" not in grid_desc:
     writer = vtk.vtkXMLUnstructuredGridWriter()
     writer.SetInputData(ug)
@@ -1040,21 +1033,12 @@ def barrier_synchronize():
     comm = MPI.COMM_WORLD
     comm.Barrier()
 
-#def finish_MPI():
-#  from mpi4py import MPI
-#  comm = MPI.COMM_WORLD
-#  if comm.Get_rank() == 0:
-#    print "Waiting for barrier synchronization ..."
-#  comm.Barrier()
-
 def setup_for_MPI(params_dict):
   from mpi4py import MPI
   pd = params_dict
-  #pd["comm"] = MPI.COMM_WORLD
   comm = MPI.COMM_WORLD
   pd["size"] = comm.Get_size()
   pd["rank"] = comm.Get_rank()
-  #pd["status"] = MPI.Status()
 
   pd["chunking"] = comm.bcast(pd["chunking"], root=0)
   pd["grid_desc"] = comm.bcast(pd["grid_desc"], root=0)
@@ -1063,11 +1047,8 @@ def setup_for_MPI(params_dict):
   pd["catalystscript"] = comm.bcast(pd["catalystscript"], root=0)
 
 def run_pvbatch_output(params_dict):
-  #from mpi4py import MPI
-  #comm =  params_dict["comm"]
   rank =  params_dict["rank"]
   size =  params_dict["size"]
-  #status = params_dict["status"]
   chunking =  params_dict["chunking"]
   grid_desc = params_dict["grid_desc"]
   time_steps_dict = params_dict["time_steps_dict"]
@@ -1114,77 +1095,6 @@ def run_pvbatch_output(params_dict):
       print "Writing grid files over " + str(len(time_steps_dict)) + " time step(s) ..."
     write_grid_chunk(ug, rank, size, grid_desc, time_steps_dict, paraview_output_file)
 
-  #id_hash = {}
-  #gids = ug.GetCellData().GetArray("GlobalIds")
-  #if gids:
-  #  for i in range(gids.GetNumberOfTuples()):
-  #    id_hash[int(gids.GetTuple1(i))] = i
-  #  ug.GetCellData().RemoveArray("GlobalIds")
-
-  #if "slice" not in grid_desc:
-  #  writer = vtk.vtkXMLUnstructuredGridWriter()
-  #  writer.SetInputData(ug)
-  #  for time in sorted(time_steps_dict.keys()):
-  #    read_time_step_data(time_steps_dict[time], ug, id_hash)
-  #    filepath = os.path.join(paraview_output_file, paraview_output_file + '_' + str(rank) +
-  #      '_' + str(time) + '.vtu')
-  #    writer.SetFileName(filepath)
-  #    writer.Write()
-
-  #    if rank == 0:
-  #      write_pvtu_file(ug, paraview_output_file, size, time)
-
-#def enum(*sequential, **named):
-#  enums = dict(zip(sequential, range(len(sequential))), **named)
-#  return type('Enum', (), enums)
-#
-#tags = enum('READY', 'DONE', 'EXIT', 'START')
-#
-#def run_pvbatch_grid_output(params_dict):
-#  from mpi4py import MPI
-#  comm =  params_dict["comm"]
-#  rank =  params_dict["rank"]
-#  size =  params_dict["size"]
-#  status = params_dict["status"]
-#  chunking =  params_dict["chunking"]
-#  grid_desc = params_dict["grid_desc"]
-#  time_steps_dict = params_dict["time_steps_dict"]
-#  paraview_output_file = params_dict["paraview_output_file"]
-#
-#  if rank == 0:
-#    tasks = range(len(chunking))
-#    task_index = 0
-#    num_workers = size - 1
-#    closed_workers = 0
-#    while closed_workers < num_workers:
-#      data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
-#      source = status.Get_source()
-#      tag = status.Get_tag()
-#      if tag == tags.READY:
-#        if task_index < len(tasks):
-#          comm.send(tasks[task_index], dest=source, tag=tags.START)
-#          task_index += 1
-#        else:
-#          comm.send(None, dest=source, tag=tags.EXIT)
-#      elif tag == tags.DONE:
-#        results = data
-#        report_chunk_complete(results)
-#      elif tag == tags.EXIT:
-#        closed_workers += 1
-#  else:
-#    while True:
-#      comm.send(None, dest=0, tag=tags.READY)
-#      task = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
-#      tag = status.Get_tag()
-#
-#      if tag == tags.START:
-#        result = create_and_write_grid_chunk(task, chunking[task], len(chunking),
-#                 grid_desc, time_steps_dict, paraview_output_file)
-#        comm.send(result, dest=0, tag=tags.DONE)
-#      elif tag == tags.EXIT:
-#        break
-#    comm.send(None, dest=0, tag=tags.EXIT)
-#
 if __name__ == "__main__":
   controller = vtk.vtkMultiProcessController.GetGlobalController()
   num_procs = controller.GetNumberOfProcesses()
@@ -1345,12 +1255,6 @@ if __name__ == "__main__":
 
       setup_for_MPI(pd)
       run_pvbatch_output(pd)
-      #finish_MPI()
-
-      #if pd["catalystscript"] is not None:
-      #  run_pvbatch_catalyst_output(pd)
-      #else:
-      #  run_pvbatch_grid_output(pd)
   else:
     for idx, chunk in enumerate(chunking):
       res = create_and_write_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict,
