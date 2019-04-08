@@ -51,7 +51,6 @@ CommKokkos::~CommKokkos()
   if (copymode) return;
 
   if (!sparta->kokkos->comm_classic) {
-    memoryKK->destroy_kokkos(k_pproc,pproc);
     pproc = NULL;
   }
 }
@@ -106,14 +105,14 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
 
   if (nmigrate > maxpproc) {
     maxpproc = nmigrate;
-    memoryKK->destroy_kokkos(k_pproc,pproc);
-    memoryKK->create_kokkos(k_pproc,pproc,maxpproc,"comm:pproc");
-    d_pproc = k_pproc.d_view;
+    d_pproc = DAT::t_int_1d(Kokkos::view_alloc("comm:pproc",Kokkos::WithoutInitializing),maxpproc);
+    h_pproc = HAT::t_int_1d(Kokkos::view_alloc("comm:pproc_mirror",Kokkos::WithoutInitializing),maxpproc);
+    pproc = h_pproc.data();
   }
   //if (maxsendbuf == 0 || nmigrate*nbytes > maxsendbuf) { // this doesn't work, not sure why 
     int maxsendbuf = nmigrate*nbytes;
     if (maxsendbuf > int(d_sbuf.extent(0)))
-      d_sbuf = DAT::t_char_1d("comm:sbuf",maxsendbuf);
+      d_sbuf = DAT::t_char_1d(Kokkos::view_alloc("comm:sbuf",Kokkos::WithoutInitializing),maxsendbuf);
   //}
 
   // fill proclist with procs to send to
@@ -166,8 +165,7 @@ int CommKokkos::migrate_particles(int nmigrate, int *plist, DAT::t_int_1d d_plis
   particle_kk->modify(Device,PARTICLE_MASK);
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
 
-  k_pproc.modify<DeviceType>();
-  k_pproc.sync<SPAHostType>();
+  Kokkos::deep_copy(h_pproc,d_pproc);
 
   k_nsend.modify<DeviceType>();
   k_nsend.sync<SPAHostType>();

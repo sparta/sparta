@@ -429,7 +429,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < maxcellcount_kk)
-      d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount_kk);
+      d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
     //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }
 
@@ -459,7 +459,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     if (d_plist.extent(1) < maxcellcount*sparta->kokkos->collide_extra) {
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount*sparta->kokkos->collide_extra);
       d_plist = grid_kk->d_plist;
-      d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount+3);
+      d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount+3);
       maxcellcount_kk = maxcellcount*sparta->kokkos->collide_extra;
     }
 
@@ -514,7 +514,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
         maxcellcount_kk = h_maxcellcount();
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_kk);
         d_plist = grid_kk->d_plist;
-        d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount_kk);
+        d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
         particle_kk->set_maxcellcount(maxcellcount_kk);
       }
 
