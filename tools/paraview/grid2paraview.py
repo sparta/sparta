@@ -151,6 +151,7 @@ def write_grid_chunk(ug, chunk_id, num_chunks, \
     writer = vtk.vtkXMLUnstructuredGridWriter()
     writer.SetInputData(ug)
     for idx, time in enumerate(sorted(time_steps_dict.keys())):
+      pt = ParallelTimer()
       read_time_step_data(time_steps_dict[time], ug, id_map)
       filepath = os.path.join(output_file, output_file + '_' + str(chunk_id) +
         '_' + str(time) + '.vtu')
@@ -161,9 +162,10 @@ def write_grid_chunk(ug, chunk_id, num_chunks, \
       filepaths[0][time][chunk_id] = filepath
       writer.SetFileName(filepath)
       writer.Write()
+      pt.report_collective_time("grid file write time %s (wall clock time) for step "\
+        + str(idx))
     
       if chunk_id == 0:
-        print "Finished time step " + str(idx)
         write_pvtu_file(ug, output_file, num_chunks, time)
       barrier_synchronize()
   else:
@@ -178,6 +180,7 @@ def write_grid_chunk(ug, chunk_id, num_chunks, \
       vp.SetNormal(plane["nx"], plane["ny"], plane["nz"])
       cut.SetCutFunction(vp)
       for time in sorted(time_steps_dict.keys()):
+        pt = ParallelTimer()
         read_time_step_data(time_steps_dict[time], ug, id_map)
         filepath = os.path.join(output_file, output_file + '_' + str(idx) +
           '_' + str(chunk_id) + '_' + str(time) + '.vtp')
@@ -188,6 +191,9 @@ def write_grid_chunk(ug, chunk_id, num_chunks, \
         filepaths[idx][time][chunk_id] = filepath
         writer.SetFileName(filepath)
         writer.Write()
+        pt.report_collective_time("grid file write time %s (wall clock time) for step "\
+          + str(idx))
+        barrier_synchronize()
 
   return chunk_id, filepaths
 
@@ -1027,11 +1033,74 @@ report_chunk_complete.count = 0
 report_chunk_complete.num_chunks = 0
 report_chunk_complete.filepaths = {}
 
+class ParallelTimer:
+  def __init__(self):
+    from mpi4py import MPI
+    if MPI.Is_initialized():
+      self.initialized = True
+      self.comm = MPI.COMM_WORLD
+      self.rank = self.comm.Get_rank()
+      self.size = self.comm.Get_size()
+      self.start_time = time.time()
+    else:
+      self.initialized = False
+
+  def report_rank_zero_time(self, message):
+    if not self.initialized:
+      return
+    if self.rank == 0:
+      time_secs = time.time() - self.start_time
+      print ""
+      print message % timedelta(seconds=round(time_secs))
+      print ""
+
+  def report_collective_time(self, message):
+    if not self.initialized:
+      return
+    from mpi4py import MPI
+    time_secs = time.time() - self.start_time
+    total_time = self.comm.reduce(time_secs, op=MPI.SUM)
+    max_time = self.comm.reduce(time_secs, op=MPI.MAX)
+    min_time = self.comm.reduce(time_secs, op=MPI.MIN)
+    if self.rank == 0:
+      print ""
+      print "Average " + message % timedelta(seconds=total_time/float(self.size))
+      print "Maxiumum " + message % timedelta(seconds=max_time)
+      print "Minimum " + message % timedelta(seconds=min_time)
+      print ""
+
 def barrier_synchronize():
   from mpi4py import MPI
   if MPI.Is_initialized():
     comm = MPI.COMM_WORLD
     comm.Barrier()
+
+def report_collective_grid_sizes(ug):
+  from mpi4py import MPI
+  
+  if MPI.Is_initialized():
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+    total_cell_count = comm.reduce(ug.GetNumberOfCells(), op=MPI.SUM)
+    max_cell_count = comm.reduce(ug.GetNumberOfCells(), op=MPI.MAX)
+    min_cell_count = comm.reduce(ug.GetNumberOfCells(), op=MPI.MIN)
+    total_mem_used = comm.reduce(ug.GetActualMemorySize(), op=MPI.SUM)
+    min_mem_used = comm.reduce(ug.GetActualMemorySize(), op=MPI.MIN)
+    max_mem_used = comm.reduce(ug.GetActualMemorySize(), op=MPI.MAX)
+    if rank == 0:
+      print "Average grid cell count over MPI ranks: {:.1e}"\
+        .format(total_cell_count/float(size))
+      print "Minimum grid cell count over MPI ranks: {:.1e}"\
+        .format(min_cell_count)
+      print "Maximum grid cell count over MPI ranks: {:.1e}"\
+        .format(max_cell_count)
+      print "Average grid memory used over MPI ranks: {} MB"\
+        .format((total_mem_used/float(size))/1000.0)
+      print "Minimum grid memory used over MPI ranks: {} MB"\
+        .format(min_mem_used/1000.0)
+      print "Maximum grid memory used over MPI ranks: {} MB"\
+        .format(max_mem_used/1000.0)
 
 def setup_for_MPI(params_dict):
   from mpi4py import MPI
@@ -1077,6 +1146,8 @@ def run_pvbatch_output(params_dict):
   append.Update()
   ug = append.GetOutput()
 
+  report_collective_grid_sizes(ug)
+
   if catalystscript is not None:
     if rank == 0:
       print "Calling Catalyst over " + str(len(time_steps_dict)) + " time step(s) ..."
@@ -1085,10 +1156,11 @@ def run_pvbatch_output(params_dict):
     coprocessor.addscript(catalystscript)
     id_map = create_cell_global_id_to_local_id_map(ug)
     for idx, time in enumerate(sorted(time_steps_dict.keys())):
+      pt = ParallelTimer()
       read_time_step_data(time_steps_dict[time], ug, id_map)
       coprocessor.coprocess(time, idx, ug, paraview_output_file + '.pvd')
-      if rank == 0:
-        print "Finished time step " + str(idx)
+      pt.report_collective_time("catalyst output time %s (wall clock time) for step "\
+        + str(idx))
     coprocessor.finalize()
   else:
     if rank == 0:
@@ -1101,7 +1173,7 @@ if __name__ == "__main__":
   local_proc_id = controller.GetLocalProcessId()
 
   if local_proc_id == 0:
-    start_time = time.time()
+    pt = ParallelTimer()
     parser = argparse.ArgumentParser()
     parser.add_argument("sparta_grid_description_file", help="SPARTA grid description input file name")
     parser.add_argument("paraview_output_file", help="ParaView output file name")
@@ -1272,5 +1344,4 @@ if __name__ == "__main__":
                         str(round(grid_desc["slice"][slice]["ny"],4)) + "_" + \
                         str(round(grid_desc["slice"][slice]["nz"],4))
           write_pvd_file(sorted(time_steps_dict.keys()), file_name)
-    time_secs = time.time() - start_time
-    print "Done in %s (wall clock time)" % timedelta(seconds=round(time_secs))
+    pt.report_rank_zero_time("Done in %s (wall clock time)")
