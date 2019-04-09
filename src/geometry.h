@@ -27,6 +27,7 @@ namespace Geometry {
   int hex_tri_intersect_point(double *, double *, double *, double *,
 			      double *, double *, double *);
   int tri_hex_face_touch(double *, double *, double *, int, double *, double *);
+  int tri_hex_face_on(double *, double *, double *, double *, double *);
   int tri_hex_face_sits(double *, double *, double *, int, double *, double *);
 
   bool line_line_intersect(double *, double *, 

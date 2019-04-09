@@ -95,9 +95,8 @@ class ReadISurf : protected Pointers {
   int interior_ambiguity(int, int);
   int interior_ambiguity_verification(int);
   bool interior_test_case13();
+  void cleanup_MC();
   void print_cube();
-   
-  void clean_up_MC();
 };
 
 }

@@ -738,22 +738,30 @@ double Surf::tri_size(double *p1, double *p2, double *p3, double &len)
 }
 
 /* ----------------------------------------------------------------------
-   check end points of lines
+   check if 2d surf elements are watertight
    each end point should appear exactly once as different ends of 2 lines
-   exception: not required of end point on simulation box surface
-   only check lines newer than old ones
+   exception: not required of end points on simulation box surface
+   for explicit surfs, nline_old can be set to non-zero
+     to only check new read-in lines and skip old already-checked ones
 ------------------------------------------------------------------------- */
 
 void Surf::check_watertight_2d(int nline_old)
 {
-  // NOTE: need to enable this for explicit and implicit distributed
+  if (distributed) check_watertight_2d_distributed(nline_old);
+  else check_watertight_2d_all(nline_old);
+}
 
-  if (distributed) return;
-  
+/* ----------------------------------------------------------------------
+   check if 2d surf elements are watertight
+   this is for explicit non-distributed surfs where each proc has copy of all
+   each proc tests the entire surface, no communication needed
+------------------------------------------------------------------------- */
+
+void Surf::check_watertight_2d_all(int nline_old)
+{
   // hash end points of all lines
   // key = end point
   // value = 1 if first point, 2 if second point, 3 if both points
-  // NOTE: could prealloc hash to correct size here
 
   MyHashPoint phash;
   MyPointIt it;
@@ -798,7 +806,7 @@ void Surf::check_watertight_2d(int nline_old)
     error->all(FLERR,str);
   }
 
-  // check that each end point has a match
+  // check that each end point has a match (value = 3)
   // allow for exception if end point on box surface
 
   double *boxlo = domain->boxlo;
@@ -823,21 +831,174 @@ void Surf::check_watertight_2d(int nline_old)
 }
 
 /* ----------------------------------------------------------------------
-   check directed triangle edges
-   each edge should appear exactly once in each direction
-   exception: not required of triangle edge on simulation box surface
-   only check triangles newer than old ones
+   check if 2d surf elements are watertight
+   this is for explicit distributed surfs
+   rendezvous communication used to check that each point appears twice
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_3d(int ntri_old)
+void Surf::check_watertight_2d_distributed(int nline_old)
 {
-  // NOTE: need to enable this for explicit and implicit
-  if (distributed) return;
+  int n;
+  Line *lines_rvous;
 
+  if (implicit) {
+    n = nlocal;
+    lines_rvous = lines;
+  } else {
+    n = nown;
+    lines_rvous = mylines;
+  }
+
+  // allocate memory for rvous input
+
+  int *proclist;
+  memory->create(proclist,n*2,"surf:proclist");
+  InRvousPoint *inpoint = 
+    (InRvousPoint *) memory->smalloc((bigint) n*2*sizeof(InRvousPoint),
+                                     "surf:inpoint");
+  
+  // create rvous inputs
+  // proclist = owner of each point
+  // each line end point is sent with flag indicating first/second
+  // hash of point coord (xy) determines which proc to send to
+
+  int nprocs = comm->nprocs;
+  
+  int nrvous = 0;
+  for (int i = 0; i < n; i++) {
+    proclist[nrvous] = hashlittle(lines_rvous[i].p1,2*sizeof(double),0) % nprocs;
+    inpoint[nrvous].x[0] = lines_rvous[i].p1[0];
+    inpoint[nrvous].x[1] = lines_rvous[i].p1[1];
+    inpoint[nrvous].which = 1;
+    nrvous++;
+    proclist[nrvous] = hashlittle(lines_rvous[i].p2,2*sizeof(double),0) % nprocs;
+    inpoint[nrvous].x[0] = lines_rvous[i].p2[0];
+    inpoint[nrvous].x[1] = lines_rvous[i].p2[1];
+    inpoint[nrvous].which = 2;
+    nrvous++;
+  }
+
+  // perform rendezvous operation
+  // each proc assigned subset of points
+  // receives all copies of points, checks if count of each point is valid
+
+  char *buf;
+  int nout = comm->rendezvous(1,nrvous,(char *) inpoint,sizeof(InRvousPoint),
+			      0,proclist,rendezvous_watertight_2d,
+			      0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
+  memory->destroy(inpoint);
+}
+
+/* ----------------------------------------------------------------------
+   callback from rendezvous operation
+   process points assigned to me
+   inbuf = list of N Inbuf datums
+   no outbuf
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_watertight_2d(int n, char *inbuf, int &flag, int *&proclist,
+                                   char *&outbuf, void *ptr)
+{
+  Surf *sptr = (Surf *) ptr;
+  Domain *domain = sptr->domain;
+  Error *error = sptr->error;
+  MPI_Comm world = sptr->world;
+
+  Surf::InRvousPoint *inpoint = (Surf::InRvousPoint *) inbuf;
+
+  // hash all received end points
+  // key = end point
+  // value = 1 if first point, 2 if second point, 3 if both points
+
+  Surf::MyHashPoint phash;
+  Surf::MyPointIt it;
+
+  // insert each point into hash
+  // should appear once at each end of a line
+  // error if any duplicate points
+
+  Surf::OnePoint2d key;
+  int which,value;
+
+  int ndup = 0;
+  for (int i = 0; i < n; i++) {
+    key.pt[0] = inpoint[i].x[0]; key.pt[1] = inpoint[i].x[1];
+    which = inpoint[i].which;
+    if (phash.find(key) == phash.end()) phash[key] = which;
+    else {
+      value = phash[key];
+      if (value == 3) ndup++;    // point already seen twice
+      else if (value != which) phash[key] = 3;   // this is other point
+      else ndup++;               // value = which, this is duplicate point
+    }
+  }
+  
+  int alldup;
+  MPI_Allreduce(&ndup,&alldup,1,MPI_INT,MPI_SUM,world);
+  if (alldup) {
+    char str[128];
+    sprintf(str,"Watertight check failed with %d duplicate points",alldup);
+    error->all(FLERR,str);
+  }
+
+  // check that each end point has a match (value = 3)
+  // allow for exception if end point on box surface
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  double *kpt;
+  double pt[3];
+
+  int nbad = 0;
+  for (it = phash.begin(); it != phash.end(); ++it) {
+    if (it->second != 3) {
+      kpt = (double *) it->first.pt;
+      pt[0] = kpt[0]; pt[1] = kpt[1]; pt[2] = 0.0;
+      if (!Geometry::point_on_hex(pt,boxlo,boxhi)) nbad++;
+    }
+  }
+
+  int allbad;
+  MPI_Allreduce(&nbad,&allbad,1,MPI_INT,MPI_SUM,world);
+  if (nbad) {
+    char str[128];
+    sprintf(str,"Watertight check failed with %d unmatched points",allbad);
+    error->all(FLERR,str);
+  }
+
+  // flag = 0: no second comm needed in rendezvous
+
+  flag = 0;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   check if 3d surf elements are watertight
+   each edge should appear exactly once in each direction
+   exception: not required of triangle edge on simulation box surface
+   for explicit surfs, ntri_old can be set to non-zero
+     to only check new read-in tris and skip old already-checked ones
+------------------------------------------------------------------------- */
+
+void Surf::check_watertight_3d(int nline_old)
+{
+  if (distributed) check_watertight_3d_distributed(nline_old);
+  else check_watertight_3d_all(nline_old);
+}
+
+/* ----------------------------------------------------------------------
+   check if 3d surf elements are watertight
+   this is for explicit non-distributed surfs where each proc has copy of all
+   each proc tests the entire surface, no communication needed
+------------------------------------------------------------------------- */
+
+void Surf::check_watertight_3d_all(int ntri_old)
+{
   // hash directed edges of all triangles
   // key = directed edge
   // value = 1 if appears once, 2 if reverse also appears once
-  // NOTE: could prealloc hash to correct size here
 
   MyHash2Point phash;
   My2PointIt it;
@@ -908,7 +1069,7 @@ void Surf::check_watertight_3d(int ntri_old)
   }
 
   // check that each edge has an inverted match
-  // allow for exception if edge on box surface
+  // allow for exception if edge is on box face
   // NOTE: this does not check if 2 pts of edge are on same box face
 
   double *boxlo = domain->boxlo;
@@ -929,6 +1090,201 @@ void Surf::check_watertight_3d(int ntri_old)
     sprintf(str,"Watertight check failed with %d unmatched edges",nbad);
     error->all(FLERR,str);
   }
+}
+
+/* ----------------------------------------------------------------------
+   check if 3d surf elements are watertight
+   this is for explicit distributed surfs
+   rendezvous communication used to check that each edge appears twice
+------------------------------------------------------------------------- */
+
+void Surf::check_watertight_3d_distributed(int ntri_old)
+{
+  int n;
+  Tri *tris_rvous;
+
+  if (implicit) {
+    n = nlocal;
+    tris_rvous = tris;
+  } else {
+    n = nown;
+    tris_rvous = mytris;
+  }
+
+  // allocate memory for rvous input
+
+  int *proclist;
+  memory->create(proclist,n*6,"surf:proclist");
+  InRvousEdge *inedge = 
+    (InRvousEdge *) memory->smalloc((bigint) n*6*sizeof(InRvousEdge),
+                                     "surf:inedge");
+  
+  // create rvous inputs
+  // proclist = owner of each point
+  // each triangle edge is sent twice with flag indicating
+  //   forward or reverse order
+  // hash of edge coords (xyz for 2 pts) determines which proc to send to
+
+  double edge[6];
+  double *p1,*p2,*p3;
+
+  int nprocs = comm->nprocs;
+  int nbytes = 3*sizeof(double);
+
+  int nrvous = 0;
+  for (int i = 0; i < n; i++) {
+    p1 = tris_rvous[i].p1;
+    p2 = tris_rvous[i].p2;
+    p3 = tris_rvous[i].p3;
+
+    memcpy(&edge[0],p1,nbytes);
+    memcpy(&edge[3],p2,nbytes);
+    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    memcpy(inedge[nrvous].x1,p1,nbytes);
+    memcpy(inedge[nrvous].x2,p2,nbytes);
+    inedge[nrvous].which = 1;
+    nrvous++;
+
+    memcpy(&edge[0],p2,nbytes);
+    memcpy(&edge[3],p1,nbytes);
+    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    memcpy(inedge[nrvous].x1,p2,nbytes);
+    memcpy(inedge[nrvous].x2,p1,nbytes);
+    inedge[nrvous].which = 2;
+    nrvous++;
+
+    memcpy(&edge[0],p2,nbytes);
+    memcpy(&edge[3],p3,nbytes);
+    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    memcpy(inedge[nrvous].x1,p2,nbytes);
+    memcpy(inedge[nrvous].x2,p3,nbytes);
+    inedge[nrvous].which = 1;
+    nrvous++;
+
+    memcpy(&edge[0],p3,nbytes);
+    memcpy(&edge[3],p2,nbytes);
+    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    memcpy(inedge[nrvous].x1,p3,nbytes);
+    memcpy(inedge[nrvous].x2,p2,nbytes);
+    inedge[nrvous].which = 2;
+    nrvous++;
+
+    memcpy(&edge[0],p3,nbytes);
+    memcpy(&edge[3],p1,nbytes);
+    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    memcpy(inedge[nrvous].x1,p3,nbytes);
+    memcpy(inedge[nrvous].x2,p1,nbytes);
+    inedge[nrvous].which = 1;
+    nrvous++;
+
+    memcpy(&edge[0],p1,nbytes);
+    memcpy(&edge[3],p3,nbytes);
+    proclist[nrvous] = hashlittle(edge,2*nbytes,0) % nprocs;
+    memcpy(inedge[nrvous].x1,p1,nbytes);
+    memcpy(inedge[nrvous].x2,p3,nbytes);
+    inedge[nrvous].which = 2;
+    nrvous++;
+  }
+
+  // perform rendezvous operation
+  // each proc assigned subset of edges
+  // receives all copies of edges, checks if count of each edge is valid
+
+  char *buf;
+  int nout = comm->rendezvous(1,nrvous,(char *) inedge,sizeof(InRvousEdge),
+			      0,proclist,rendezvous_watertight_3d,
+			      0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
+  memory->destroy(inedge);
+}
+
+/* ----------------------------------------------------------------------
+   callback from rendezvous operation
+   process points assigned to me
+   inbuf = list of N Inbuf datums
+   no outbuf
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_watertight_3d(int n, char *inbuf, int &flag, int *&proclist,
+                                   char *&outbuf, void *ptr)
+{
+  Surf *sptr = (Surf *) ptr;
+  Domain *domain = sptr->domain;
+  Error *error = sptr->error;
+  MPI_Comm world = sptr->world;
+
+  Surf::InRvousEdge *inedge = (Surf::InRvousEdge *) inbuf;
+
+  // hash all received end points
+  // key = end point
+  // value = 1 if first point, 2 if second point, 3 if both points
+
+  Surf::MyHash2Point phash;
+  Surf::My2PointIt it;
+
+  // insert each edge into hash
+  // should appear once in each direction
+  // error if any duplicate edges
+
+  Surf::TwoPoint3d key;
+  double *x1,*x2;
+  int which,value;
+
+  int ndup = 0;
+  for (int i = 0; i < n; i++) {
+    x1 = inedge[i].x1; x2 = inedge[i].x2;
+    key.pts[0] = x1[0]; key.pts[1] = x1[1]; key.pts[2] = x1[2];
+    key.pts[3] = x2[0]; key.pts[4] = x2[1]; key.pts[5] = x2[2];
+    which = inedge[i].which;
+    if (phash.find(key) == phash.end()) phash[key] = which;
+    else {
+      value = phash[key];
+      if (value == 3) ndup++;    // edge already seen twice
+      else if (value != which) phash[key] = 3;   // this is flipped edge
+      else ndup++;               // value = which, this is duplicate edge
+    }
+  }
+  
+  int alldup;
+  MPI_Allreduce(&ndup,&alldup,1,MPI_INT,MPI_SUM,world);
+  alldup /= 2;              // avoid double counting
+  if (alldup) {
+    char str[128];
+    sprintf(str,"Watertight check failed with %d duplicate edges",alldup);
+    error->all(FLERR,str);
+  }
+
+  // check that each edge has an inverted match(value = 3)
+  // allow for exception if edge is on box face
+  // NOTE: this does not check if 2 pts of edge are on same box face
+
+  double *boxlo = domain->boxlo;
+  double *boxhi = domain->boxhi;
+  double *pts;
+
+  int nbad = 0;
+  for (it = phash.begin(); it != phash.end(); ++it) {
+    if (it->second != 3) {
+      pts = (double *) it->first.pts;
+      if (!Geometry::point_on_hex(&pts[0],boxlo,boxhi)) nbad++;
+      if (!Geometry::point_on_hex(&pts[3],boxlo,boxhi)) nbad++;
+    }
+  }
+
+  int allbad;
+  MPI_Allreduce(&nbad,&allbad,1,MPI_INT,MPI_SUM,world);
+  allbad /= 2;              // avoid double counting
+  if (nbad) {
+    char str[128];
+    sprintf(str,"Watertight check failed with %d unmatched edges",allbad);
+    error->all(FLERR,str);
+  }
+
+  // flag = 0: no second comm needed in rendezvous
+
+  flag = 0;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

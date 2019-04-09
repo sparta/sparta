@@ -196,9 +196,28 @@ class Surf : protected Pointers {
   virtual void grow_own();
   bigint memory_usage();
 
- private:
+ protected:
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
+
+  // watertight rendezvous data
+
+  struct InRvousPoint {
+    double x[2];            // 2d point coords
+    int which;              // 1 for first endpoint, 2 for second endpoint
+  };
+
+  struct InRvousEdge {
+    double x1[3],x2[3];     // 3d edge point coords
+    int which;              // 1 for forward order, 2 for reverse order
+  };
+
+  // private methods
+
+  void check_watertight_2d_all(int);
+  void check_watertight_2d_distributed(int);
+  void check_watertight_3d_all(int);
+  void check_watertight_3d_distributed(int);
 
   void point_line_compare(double *, double *, double *, double, int &, int &);
   void point_tri_compare(double *, double *, double *, double *, double *,
@@ -208,6 +227,13 @@ class Surf : protected Pointers {
   void collate_vector_irregular(int, int *, double *, int, double *);
   void collate_array_allreduce(int, int, int *, double **, double **);
   void collate_array_irregular(int, int, int *, double **, double **);
+
+  // callback functions for rendezvous communication
+
+  static int rendezvous_watertight_2d(int, char *, 
+                                      int &, int *&, char *&, void *);
+  static int rendezvous_watertight_3d(int, char *, 
+                                      int &, int *&, char *&, void *);
 };
 
 }

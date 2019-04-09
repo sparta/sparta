@@ -35,6 +35,7 @@ enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
+enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
 #define CHUNK 8192
 #define BIG 1.0e20
@@ -131,9 +132,10 @@ void ReadISurf::command(int narg, char **arg)
 
   // clear out old surfs
 
-  grid->unset_neighbors();
-  grid->remove_ghosts();
+  //grid->unset_neighbors();
+  //grid->remove_ghosts();
   grid->clear_surf();
+  surf->remove_ghosts();
 
   // create surfs in each grid cell based on corner point values
   // set surf->nsurf and surf->nown
@@ -177,9 +179,9 @@ void ReadISurf::command(int narg, char **arg)
   if (dim == 2) surf->compute_line_normal(0);
   else surf->compute_tri_normal(0);
 
-  // call clean_up_MC after normal are computed but before check_watertight
-  // NOTE: NOT WORKING YET
-  // if (dim == 3) clean_up_MC();
+  // cleanup_MC() checks for consistent triangles on the face between 2 cubes
+  
+  if (dim == 3) cleanup_MC();
 
   // error checks that can be done before surfs are mapped to grid cells
 
@@ -1114,7 +1116,7 @@ void ReadISurf::marching_cubes(int igroup)
         nsurf = add_triangle(tiling13_1_[config], 4); break;
         
       default:
-        printf("Marching Cubes: Impossible case 13?\n");  print_cube();
+        printf("Marching Cubes: Impossible case 13\n");  print_cube();
       }
       break;
                 
@@ -2034,32 +2036,165 @@ bool ReadISurf::interior_test_case13()
 }
 
 /* ----------------------------------------------------------------------
-Arnaud 03/28/19
-WARNING: NOT FUNCTIONAL YET
-
-  Eliminate or move problematic triangles created by the MC
-
-    Algorithm:
-    loop over cells with implicit tris:
-      loop over tris in that cell:
-        if tri not on face: skip
-        if I own cell on other side of face:
-          figure out which cell should own the tri
-          add or delete it to each of 2 cells that share the face
-        else:
-          add the tri to my "list"
-          if the tri should not be stored by my cell, delete it
-
-    do a MPI_AllGather across all procs to convert "list" to "fulllist"
-      include the owning cell ID in the data struct for the tri
-    the fulllist should be really short
-    every proc scans the fulllist and adds
-      tris that belong to cells it owns,
-      checking that the cell doesn't already own the tri
-
+   clean up an issue that marching cubes can occasionally produce
+   Rule:
+     for a triangle wholly on the face of a cell,
+       its normal points into one of the 2 cells that share the face
+     only the cell with an inward normal should own the triangle, not the other
+   Problem:
+     marching cubes will create the triangle once,
+       but may assign it to either cell
+   Solution:
+     unassign tris from the wrong cells, assign them to the correct cells
+   Algorithm:
+     loop over cells with implicit tris:
+       loop over tris in that cell:
+         if tri not on face: skip
+         if tri normal is into this cell: skip
+         if I own cell on other side of face:
+           delete it from current cell, assign to other cell
+         else:
+           delete it from current cell
+           add the tri to my "list", including its corner point info
+     do a MPI_AllGather across all procs to convert "list" to "fulllist"
+       include the owning cell ID in the data struct for the tri
+     the fulllist should be short
+     every proc scans the fulllist and adds tris belonging to cells it owns
  ------------------------------------------------------------------------- */
 
-void ReadISurf::clean_up_MC()
+void ReadISurf::cleanup_MC()
+{
+  int i,j,k,m,nsurf,iface,idim,nflag,othercell,nsurf_other;
+  surfint *ptr,*csurfs_other;
+  double *lo,*hi;
+
+  Surf::Tri *tris = surf->tris;
+  Grid::ChildCell *cells = grid->cells;
+  MyPage<int> *csurfs = grid->csurfs;
+  int nglocal = grid->nlocal;
+
+  int nlist = 0;
+  int maxlist = 0;
+
+  // Two initial surfs with conflicting edges
+
+  int isurf = 541013;
+  printf("INITIAL SURF %d cell %d\n",isurf,tris[isurf].id);
+  printf("  pt1: %g %g %g\n",tris[isurf].p1[0],tris[isurf].p1[1],
+         tris[isurf].p1[2]);
+  printf("  pt2: %g %g %g\n",tris[isurf].p2[0],tris[isurf].p2[1],
+         tris[isurf].p2[2]);
+  printf("  pt3: %g %g %g\n",tris[isurf].p3[0],tris[isurf].p3[1],
+         tris[isurf].p3[2]);
+  isurf = 541021;
+  printf("INITIAL SURF %d cell %d\n",isurf,tris[isurf].id);
+  printf("  pt1: %g %g %g\n",tris[isurf].p1[0],tris[isurf].p1[1],
+         tris[isurf].p1[2]);
+  printf("  pt2: %g %g %g\n",tris[isurf].p2[0],tris[isurf].p2[1],
+         tris[isurf].p2[2]);
+  printf("  pt3: %g %g %g\n",tris[isurf].p3[0],tris[isurf].p3[1],
+         tris[isurf].p3[2]);
+
+  int countadd = 0;
+  int countdel = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    nsurf = cells[icell].nsurf;
+    if (nsurf == 0) continue;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    j = 0;
+    while (j < nsurf) {
+
+      m = cells[icell].csurfs[j];
+      iface = Geometry::tri_hex_face_on(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
+      if (iface < 0) {
+        j++;
+        continue;
+      }
+
+      idim = iface / 2;
+      if (iface % 2 == 0 && tris[m].norm[idim] > 0.0) {
+        j++;
+        continue;
+      }
+      if (iface % 2 == 1 && tris[m].norm[idim] < 0.0) {
+        j++;
+        continue;
+      }
+
+      // iface neighbor cell must be NCHILD or NPBCHILD
+
+      nflag = grid->neigh_decode(cells[icell].nmask,iface);
+      if (nflag != NCHILD && nflag != NPBCHILD) 
+        error->one(FLERR,"Invalid neighbor cell in cleanup_MC()");
+      othercell = (int) cells[icell].neigh[iface];
+
+      // if I own the neighbor cell, add tri index to it
+      // need to allocate a new nsurf+1 length vector from csurfs
+
+      if (othercell < nglocal && othercell != icell) {
+        nsurf_other = cells[othercell].nsurf;
+        csurfs_other = cells[othercell].csurfs;
+        ptr = csurfs->get(nsurf_other+1);
+        for (k = 0; k < nsurf_other; k++)
+          ptr[k] = csurfs_other[k];
+        ptr[nsurf_other] = m;
+        cells[othercell].nsurf++;
+        cells[othercell].csurfs = ptr;
+        countadd++;
+
+      // else add tri to comm list
+      // BAD would be if cell was its own neighbor, e.g. reflective wall
+
+      } else {
+        printf("BAD %d %d %d %d\n",icell,iface,othercell,nglocal);
+      }
+
+      // delete tri from this cell
+
+      cells[icell].csurfs[j] = cells[icell].csurfs[nsurf-1];
+      nsurf--;
+      countdel++;
+    }
+
+    cells[icell].nsurf = nsurf;
+  }
+
+  printf("COUNTFIRST %d %d\n",countadd,countdel);
+
+  int count = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    nsurf = cells[icell].nsurf;
+    if (nsurf == 0) continue;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    for (j = 0; j < nsurf; j++) {
+
+      m = cells[icell].csurfs[j];
+      iface = Geometry::tri_hex_face_on(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
+      if (iface < 0) continue;
+
+      idim = iface / 2;
+      if (iface % 2 == 0 && tris[m].norm[idim] > 0.0) continue;
+      if (iface % 2 == 1 && tris[m].norm[idim] < 0.0) continue;
+      count++;
+    }
+  }
+
+  printf("COUNTFINAL %d\n",count);
+
+  // share comm list with all procs via MPI_Allgatherv()
+}
+
+/*
+void ReadISurf::cleanup_MC()
 {
   int icell,i,j,k,n,m,iface,nmask,nflag,nsurf2;
   cellint newcell;
@@ -2150,6 +2285,8 @@ void ReadISurf::clean_up_MC()
   //        printf("n %d lo %g %g %g\n",cells[icell].nsurf,lo[0],lo[1],lo[2]);
   //     }
 }
+
+*/
 
 /* ----------------------------------------------------------------------
    print cube for debugging
