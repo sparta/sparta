@@ -165,8 +165,8 @@ class Surf : protected Pointers {
   double tri_size(Tri *, double &);
   double tri_size(double *, double *, double *, double &);
 
-  void check_watertight_2d(int);
-  void check_watertight_3d(int);
+  void check_watertight_2d();
+  void check_watertight_3d();
   void check_point_inside(int);
   void check_point_near_surf_2d();
   void check_point_near_surf_3d();
@@ -214,10 +214,10 @@ class Surf : protected Pointers {
 
   // private methods
 
-  void check_watertight_2d_all(int);
-  void check_watertight_2d_distributed(int);
-  void check_watertight_3d_all(int);
-  void check_watertight_3d_distributed(int);
+  void check_watertight_2d_all();
+  void check_watertight_2d_distributed();
+  void check_watertight_3d_all();
+  void check_watertight_3d_distributed();
 
   void point_line_compare(double *, double *, double *, double, int &, int &);
   void point_tri_compare(double *, double *, double *, double *, double *,

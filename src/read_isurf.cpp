@@ -38,6 +38,7 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
 #define CHUNK 8192
+#define DELTA 128
 #define BIG 1.0e20
 #define EPSILON 1.0e-16
 
@@ -132,10 +133,9 @@ void ReadISurf::command(int narg, char **arg)
 
   // clear out old surfs
 
-  //grid->unset_neighbors();
-  //grid->remove_ghosts();
+  grid->unset_neighbors();
+  grid->remove_ghosts();
   grid->clear_surf();
-  surf->remove_ghosts();
 
   // create surfs in each grid cell based on corner point values
   // set surf->nsurf and surf->nown
@@ -181,12 +181,16 @@ void ReadISurf::command(int narg, char **arg)
 
   // cleanup_MC() checks for consistent triangles on the face between 2 cubes
   
-  if (dim == 3) cleanup_MC();
+  if (dim == 3) {
+    //grid->reset_neighbors();
+    //cleanup_MC();
+    //grid->unset_neighbors();
+  }
 
   // error checks that can be done before surfs are mapped to grid cells
 
-  if (dim == 2) surf->check_watertight_2d(0);
-  else surf->check_watertight_3d(0);
+  if (dim == 2) surf->check_watertight_2d();
+  else surf->check_watertight_3d();
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
@@ -392,13 +396,7 @@ void ReadISurf::read_types(char *typefile)
 
 void ReadISurf::create_hash(int count, int igroup)
 {
-#ifdef SPARTA_MAP
-  hash = new std::map<bigint,int>();
-#elif defined SPARTA_UNORDERED_MAP
-  hash = new std::unordered_map<bigint,int>();
-#else
-  hash = new std::tr1::unordered_map<bigint,int>();
-#endif
+  hash = new MyHash;
 
   int dim = domain->dimension;
   Grid::ChildCell *cells = grid->cells;
@@ -2036,14 +2034,15 @@ bool ReadISurf::interior_test_case13()
 }
 
 /* ----------------------------------------------------------------------
-   clean up an issue that marching cubes can occasionally produce
+   clean up an issue that marching cubes can occasionally generate
+     with assigning a triangle on the face between two cells
+     to one cell when SPARTA expects the other
    Rule:
      for a triangle wholly on the face of a cell,
        its normal points into one of the 2 cells that share the face
      only the cell with an inward normal should own the triangle, not the other
    Problem:
-     marching cubes will create the triangle once,
-       but may assign it to either cell
+     marching cubes will create the triangle once, but may assign to either cell
    Solution:
      unassign tris from the wrong cells, assign them to the correct cells
    Algorithm:
@@ -2066,6 +2065,7 @@ void ReadISurf::cleanup_MC()
 {
   int i,j,k,m,nsurf,iface,idim,nflag,othercell,nsurf_other;
   surfint *ptr,*csurfs_other;
+  cellint cellID;
   double *lo,*hi;
 
   Surf::Tri *tris = surf->tris;
@@ -2073,30 +2073,57 @@ void ReadISurf::cleanup_MC()
   MyPage<int> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
 
+  // DEBUG
+
+  int nmine = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    nmine += cells[icell].nsurf;
+  }
+
+  int nall;
+  MPI_Allreduce(&nmine,&nall,1,MPI_INT,MPI_SUM,world);
+
+  if (me == 0) printf("SURFCOUNT START %d\n",nall);
+
+  // END OF DEBUG
+
+  // DEBUG
+
+  int badcount = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    nsurf = cells[icell].nsurf;
+    if (nsurf == 0) continue;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    for (j = 0; j < nsurf; j++) {
+
+      m = cells[icell].csurfs[j];
+      iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
+      if (iface < 0) continue;
+
+      idim = iface / 2;
+      if (iface % 2 == 0 && tris[m].norm[idim] > 0.0) continue;
+      if (iface % 2 == 1 && tris[m].norm[idim] < 0.0) continue;
+      badcount++;
+    }
+  }
+
+  MPI_Allreduce(&badcount,&nall,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("WRONGCOUNT START %d\n",nall);
+
+  // END OF DEBUG
+
+  Surf::Tri *tlist = NULL;
   int nlist = 0;
   int maxlist = 0;
 
-  // Two initial surfs with conflicting edges
-
-  int isurf = 541013;
-  printf("INITIAL SURF %d cell %d\n",isurf,tris[isurf].id);
-  printf("  pt1: %g %g %g\n",tris[isurf].p1[0],tris[isurf].p1[1],
-         tris[isurf].p1[2]);
-  printf("  pt2: %g %g %g\n",tris[isurf].p2[0],tris[isurf].p2[1],
-         tris[isurf].p2[2]);
-  printf("  pt3: %g %g %g\n",tris[isurf].p3[0],tris[isurf].p3[1],
-         tris[isurf].p3[2]);
-  isurf = 541021;
-  printf("INITIAL SURF %d cell %d\n",isurf,tris[isurf].id);
-  printf("  pt1: %g %g %g\n",tris[isurf].p1[0],tris[isurf].p1[1],
-         tris[isurf].p1[2]);
-  printf("  pt2: %g %g %g\n",tris[isurf].p2[0],tris[isurf].p2[1],
-         tris[isurf].p2[2]);
-  printf("  pt3: %g %g %g\n",tris[isurf].p3[0],tris[isurf].p3[1],
-         tris[isurf].p3[2]);
-
-  int countadd = 0;
-  int countdel = 0;
+  // DEBUG
+  int count_mine = 0;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
@@ -2110,7 +2137,7 @@ void ReadISurf::cleanup_MC()
     while (j < nsurf) {
 
       m = cells[icell].csurfs[j];
-      iface = Geometry::tri_hex_face_on(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
+      iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
       if (iface < 0) {
         j++;
         continue;
@@ -2127,16 +2154,19 @@ void ReadISurf::cleanup_MC()
       }
 
       // iface neighbor cell must be NCHILD or NPBCHILD
+      // othercell can be owned by me or another proc
 
       nflag = grid->neigh_decode(cells[icell].nmask,iface);
       if (nflag != NCHILD && nflag != NPBCHILD) 
         error->one(FLERR,"Invalid neighbor cell in cleanup_MC()");
       othercell = (int) cells[icell].neigh[iface];
+      if (othercell == icell)
+        error->one(FLERR,"Invalid neighbor cell in cleanup_MC()");
 
       // if I own the neighbor cell, add tri index to it
-      // need to allocate a new nsurf+1 length vector from csurfs
+      // allocate/fill a new nsurf_other+1 length vector from csurfs
 
-      if (othercell < nglocal && othercell != icell) {
+      if (othercell < nglocal) {
         nsurf_other = cells[othercell].nsurf;
         csurfs_other = cells[othercell].csurfs;
         ptr = csurfs->get(nsurf_other+1);
@@ -2145,28 +2175,157 @@ void ReadISurf::cleanup_MC()
         ptr[nsurf_other] = m;
         cells[othercell].nsurf++;
         cells[othercell].csurfs = ptr;
-        countadd++;
+        count_mine++;
 
-      // else add tri to comm list
-      // BAD would be if cell was its own neighbor, e.g. reflective wall
+      // else add tri to tlist for comm to all procs
+      // set id = ID of cell that should own it
+      // then delete tri from my nlocal list my replacing it with last surf
+      // must also reset csurfs list for cell that owns the moved surf
 
       } else {
-        printf("BAD %d %d %d %d\n",icell,iface,othercell,nglocal);
+        if (nlist == maxlist) {
+          maxlist += DELTA;
+          tlist = (Surf::Tri *) 
+            memory->srealloc(tlist,maxlist*sizeof(Surf::Tri),"readisurf:tlist");
+        }
+        memcpy(&tlist[nlist],&tris[m],sizeof(Surf::Tri));
+        tlist[nlist].id = cells[othercell].id;
+        //printf("CELLID SEND %d %d %d: %d %d %d\n",
+        //      comm->me,icell,m,othercell,nglocal,cells[othercell].id);
+        nlist++;
+
+        int nlocalm1 = surf->nlocal;
+        memcpy(&surf->tris[nlocalm1],&surf->tris[m],sizeof(Surf::Tri));
+        surf->nlocal--;
+        othercell = (*grid->hash)[surf->tris[m].id];
+        for (i = 0; i < grid->cells[othercell].nsurf; i++)
+          if (grid->cells[othercell].csurfs[i] == nlocalm1)
+            grid->cells[othercell].csurfs[i] = m;
       }
 
       // delete tri from this cell
 
       cells[icell].csurfs[j] = cells[icell].csurfs[nsurf-1];
       nsurf--;
-      countdel++;
     }
 
     cells[icell].nsurf = nsurf;
   }
 
-  printf("COUNTFIRST %d %d\n",countadd,countdel);
+  // DEBUG
 
-  int count = 0;
+  MPI_Allreduce(&count_mine,&nall,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("SWAPPED INTERIOR %d\n",nall);
+
+  //printf("Sending %d %d\n",comm->me,nlist);
+  MPI_Allreduce(&nlist,&nall,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("SENT EXTERIOR %d\n",nall);
+
+  // END OF DEBUG
+
+  // DEBUG
+
+  nmine = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    nmine += cells[icell].nsurf;
+  }
+
+  MPI_Allreduce(&nmine,&nall,1,MPI_INT,MPI_SUM,world);
+
+  if (me == 0) printf("SURFCOUNT MIDDLE %d\n",nall);
+
+  // END OF DEBUG
+
+  // share comm list with all procs via MPI_Allgatherv()
+
+  int nprocs = comm->nprocs;
+
+  int nlistall;
+  MPI_Allreduce(&nlist,&nlistall,1,MPI_INT,MPI_SUM,world);
+
+  int *recvcounts,*displs;
+  memory->create(recvcounts,nprocs,"readisurf:recvcounts");
+  memory->create(displs,nprocs,"readisurf:displs");
+
+  int nsend = nlist * sizeof(Surf::Tri);
+  MPI_Allgather(&nsend,1,MPI_INT,recvcounts,1,MPI_INT,world);
+  displs[0] = 0;
+  for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
+
+  //if (me == 0) printf("SEND TLIST %d: %d %d\n",nlist,tlist[0].id,tlist[1].id);
+
+  //printf("ALLGATHER %d %d: %d %d %d %d: %d %d %d %d\n",comm->me,sizeof(Surf::Tri),
+  //     displs[0],displs[1],displs[2],displs[3],
+  //     recvcounts[0],recvcounts[1],recvcounts[2],recvcounts[3]);
+
+  Surf::Tri *tlistall = (Surf::Tri *) 
+    memory->smalloc(nlistall*sizeof(Surf::Tri),"readisurf:tlistall");
+  MPI_Allgatherv(tlist,nlist*sizeof(Surf::Tri),MPI_CHAR,
+                 tlistall,recvcounts,displs,MPI_CHAR,world);
+
+  memory->destroy(recvcounts);
+  memory->destroy(displs);
+
+  // scan concatenated tlistall from all procs
+  // if one of my owned cells owns the tri, add it to my local surfs
+  // allocate/fill a new nsurf_other+1 length vector from csurfs
+
+  int icell,isurf;
+  int *slist;
+
+  //printf("GRID HASHFILLED %d %d: %d %d\n",grid->hashfilled,nlistall,
+  //     tlistall[0].id,tlistall[1].id);
+
+  int nrecv = 0;
+  for (i = 0; i < nlistall; i++) {
+    if (grid->hash->find(tlistall[i].id) == grid->hash->end()) continue;
+    icell = (*grid->hash)[tlistall[i].id];
+
+    // copy surf info into new local surf
+    // this will set surf ID = cell ID of new owning cell
+
+    surf->add_tri(1,tlistall[i].p1,tlistall[i].p2,tlistall[i].p3);
+    isurf = surf->nlocal - 1;
+    memcpy(&surf->tris[isurf],&tlistall[i],sizeof(Surf::Tri));
+
+    nsurf = cells[icell].nsurf;
+    slist = cells[icell].csurfs;
+    ptr = csurfs->get(nsurf+1);
+    for (k = 0; k < nsurf; k++)
+      ptr[k] = slist[k];
+    ptr[nsurf] = isurf;
+    cells[icell].nsurf++;
+    cells[icell].csurfs = ptr;
+    nrecv++;
+  }
+
+  // DEBUG
+
+  //printf("Receiving %d %d %d\n",comm->me,nrecv,nlistall);
+  MPI_Allreduce(&nrecv,&nall,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("RECV EXTERIOR %d\n",nall);
+
+  // END OF DEBUG
+
+  // DEBUG
+
+  nmine = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    nmine += cells[icell].nsurf;
+  }
+
+  MPI_Allreduce(&nmine,&nall,1,MPI_INT,MPI_SUM,world);
+
+  if (me == 0) printf("SURFCOUNT STOP %d\n",nall);
+
+  // END OF DEBUG
+
+  // DEBUG
+
+  badcount = 0;
+
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     nsurf = cells[icell].nsurf;
@@ -2178,115 +2337,19 @@ void ReadISurf::cleanup_MC()
     for (j = 0; j < nsurf; j++) {
 
       m = cells[icell].csurfs[j];
-      iface = Geometry::tri_hex_face_on(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
+      iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
       if (iface < 0) continue;
 
       idim = iface / 2;
       if (iface % 2 == 0 && tris[m].norm[idim] > 0.0) continue;
       if (iface % 2 == 1 && tris[m].norm[idim] < 0.0) continue;
-      count++;
+      badcount++;
     }
   }
 
-  printf("COUNTFINAL %d\n",count);
-
-  // share comm list with all procs via MPI_Allgatherv()
+  MPI_Allreduce(&badcount,&nall,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("WRONGCOUNT STOP %d\n",nall);
 }
-
-/*
-void ReadISurf::cleanup_MC()
-{
-  int icell,i,j,k,n,m,iface,nmask,nflag,nsurf2;
-  cellint newcell;
-  cellint *neigh;
-  surfint *ptr;
-  Grid::ChildCell *cells = grid->cells;
-  MyPage<int> *csurfs = grid->csurfs;
-  int nglocal = grid->nlocal;
-  Surf::Tri *tris;
-  tris = surf->tris;
-  int *triflag;
-  bool changeflag;
-
-  int isurf = surf->nlocal - 1;
-
-  for (icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    n = cells[icell].nsurf;
-    if (n == 0) continue;
-
-    memory->create(triflag,n,"readisurf:triflag");
-    for (j = 0; j < n; j++) triflag[j] = 0;
-
-    changeflag = false;
-
-    neigh = cells[icell].neigh;
-    nmask = cells[icell].nmask;
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-
-    for (j = 0; j < n; j++) {
-      m = cells[icell].csurfs[j];
-
-      for (i = 0; i < 6; i++) {
-        if (i == 0) iface = XLO;
-        else if (i == 1) iface = XHI;
-        else if (i == 2) iface = YLO;
-        else if (i == 3) iface = YHI;
-        else if (i == 4) iface = ZLO;
-        else if (i == 5) iface = ZHI;
-        if (Geometry::tri_hex_face_sits(tris[m].p1,tris[m].p2,
-                                        tris[m].p3,iface,lo,hi)) {
-          if (((i == 0) && (tris[m].norm[0] < 0)) ||
-              ((i == 1) && (tris[m].norm[0] > 0)) ||
-              ((i == 2) && (tris[m].norm[1] < 0)) ||
-              ((i == 3) && (tris[m].norm[1] > 0)) ||
-              ((i == 4) && (tris[m].norm[2] < 0)) ||
-              ((i == 5) && (tris[m].norm[2] > 0))) {
-            printf("tri id before and after %d %d j %d\n",
-                   tris[m].id,neigh[iface],j);
-            tris[m].id = neigh[iface];
-            changeflag = true;
-            triflag[j] = 1;
-            break;
-          }
-        }
-      }
-      // break will get me here
-    }
-
-    if (changeflag) {
-      k = 0;
-      for (j = 0; j < n; j++) {
-        m = cells[icell].csurfs[j];
-        if (!triflag[j]) {
-          cells[icell].csurfs[k] = m;
-          k++;
-        }
-        else {
-          newcell = tris[m].id - 2;
-          nsurf2 = cells[newcell].nsurf;
-          cells[newcell].csurfs[nsurf2] = m;
-          cells[newcell].nsurf++;
-        }
-      }
-      cells[icell].nsurf = k;
-      memory->destroy(triflag);
-    }
-  }
-  
-  //    for (icell = 0; icell < nglocal; icell++) {
-  //        if (cells[icell].nsplit <= 0) continue;
-  //        n = cells[icell].nsurf;
-  //        if (n == 0) continue;
-
-  //        lo = cells[icell].lo;
-  //        hi = cells[icell].hi;
-  //        printf("n %d lo %g %g %g\n",cells[icell].nsurf,lo[0],lo[1],lo[2]);
-  //     }
-}
-
-*/
 
 /* ----------------------------------------------------------------------
    print cube for debugging

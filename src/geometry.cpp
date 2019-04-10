@@ -139,7 +139,7 @@ int quad_line_intersect_point(double *v0, double *v1, double *norm,
    return 1 if touches, else 0
 ------------------------------------------------------------------------- */
 
-int line_quad_face_touch(double *v0, double *v1, int iface,
+int line_touch_quad_face(double *v0, double *v1, int iface,
 			 double *lo, double *hi)
 {
   // value = position of face
@@ -492,7 +492,7 @@ int hex_tri_intersect_point(double *v0, double *v1, double *v2, double *norm,
    return 1 if touches, else 0
 ------------------------------------------------------------------------- */
 
-int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
+int tri_touch_hex_face(double *v0, double *v1, double *v2, int iface,
 		       double *lo, double *hi)
 {
   // value = position of face
@@ -532,7 +532,7 @@ int tri_hex_face_touch(double *v0, double *v1, double *v2, int iface,
    else return -1
 ------------------------------------------------------------------------- */
 
-int tri_hex_face_on(double *v0, double *v1, double *v2, double *lo, double *hi)
+int tri_on_hex_face(double *v0, double *v1, double *v2, double *lo, double *hi)
 {
   double vmin[3],vmax[3];
 
@@ -569,43 +569,39 @@ int tri_hex_face_on(double *v0, double *v1, double *v2, double *lo, double *hi)
 }
 
 /* ----------------------------------------------------------------------
-   compute whether triangle sits on iface of orthogonal 3d hex cell
-   sits is defined as
-     all triangle corner pt = any face pt (interior, edge, vertex)
-   v0,v1,v2 = 3 vertices of triangle
-   iface = 0 to 5 = XLO,XHI,YLO,YHI,ZLO,ZHI
-   lo,hi = opposite corner pts of quad
-   return 1 if touches, else 0
+   compute whether triangle edge sits on any face of orthogonal 3d hex cell
+   return 0 to 5 = XLO,XHI,YLO,YHI,ZLO,ZHI face
+   else return -1
 ------------------------------------------------------------------------- */
 
-int tri_hex_face_sits(double *v0, double *v1, double *v2, int iface,
-               double *lo, double *hi)
+int edge_on_hex_face(double *v0, double *v1, double *lo, double *hi)
 {
-  // value = position of face
+  double vmin[3],vmax[3];
 
-  int dim = iface / 2;
-  int other1,other2;
-  if (dim == 0) {
-    other1 = 1; other2 = 2;
-  } else if (dim == 1) {
-    other1 = 0; other2 = 2;
-  } else if (dim == 2) {
-    other1 = 0; other2 = 1;
-  }
-  double value = iface % 2 ? hi[dim] : lo[dim];
+  vmin[0] = MIN(v0[0],v1[0]);
+  vmin[1] = MIN(v0[1],v1[1]);
+  vmin[2] = MIN(v0[2],v1[2]);
 
-  // check if all triangle vertices are within face
+  vmax[0] = MAX(v0[0],v1[0]);
+  vmax[1] = MAX(v0[1],v1[1]);
+  vmax[2] = MAX(v0[2],v1[2]);
 
-  if ((v0[dim] == value) && (v1[dim] == value) && (v2[dim] == value)) {
-    if (v0[other1] >= lo[other1] && v0[other1] <= hi[other1] &&
-    v0[other2] >= lo[other2] && v0[other2] <= hi[other2] &&
-    v1[other1] >= lo[other1] && v1[other1] <= hi[other1] &&
-    v1[other2] >= lo[other2] && v1[other2] <= hi[other2] &&
-    v2[other1] >= lo[other1] && v2[other1] <= hi[other1] &&
-    v2[other2] >= lo[other2] && v2[other2] <= hi[other2]) return 1;
+  if (vmin[0] == vmax[0]) {
+    if (vmin[0] == lo[0]) return 0;
+    if (vmin[0] == hi[0]) return 1;
   }
 
-  return 0;
+  if (vmin[1] == vmax[1]) {
+    if (vmin[1] == lo[1]) return 2;
+    if (vmin[1] == hi[1]) return 3;
+  }
+
+  if (vmin[2] == vmax[2]) {
+    if (vmin[2] == lo[2]) return 4;
+    if (vmin[2] == hi[2]) return 5;
+  }
+
+  return -1;
 }
 	
 /* ----------------------------------------------------------------------

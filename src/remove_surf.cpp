@@ -69,11 +69,11 @@ void RemoveSurf::command(int narg, char **arg)
 
   if (domain->dimension == 2) {
     remove_2d(groupbit);
-    surf->check_watertight_2d(0);
+    surf->check_watertight_2d();
     if (surf->nsurf == 0) surf->exist = 0 ;
   } else {
     remove_3d(groupbit);
-    surf->check_watertight_3d(0);
+    surf->check_watertight_3d();
     if (surf->nsurf == 0) surf->exist = 0 ;
   }
 

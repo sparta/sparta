@@ -49,6 +49,9 @@ class ReadISurf : protected Pointers {
   double corner[3],xyzsize[3];
   char *typefile;
 
+  int **cvalues;
+  int *svalues;
+
   // extra data for 3d marching cubes
 
   double *lo,*hi;
@@ -61,15 +64,14 @@ class ReadISurf : protected Pointers {
   int subconfig;  // subconfiguration of the active cube
     
 #ifdef SPARTA_MAP
-  std::map<bigint,int> *hash;
+  typedef std::map<bigint,int> MyHash;
 #elif defined SPARTA_UNORDERED_MAP
-  std::unordered_map<bigint,int> *hash;
+  typedef std::unordered_map<bigint,int> MyHash;
 #else
-  std::tr1::unordered_map<bigint,int> *hash;
+  typedef std::tr1::unordered_map<bigint,int> MyHash;
 #endif
 
-  int **cvalues;
-  int *svalues;
+  MyHash *hash;
 
   void process_args(int, char **);
 

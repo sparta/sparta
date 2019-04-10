@@ -1434,7 +1434,7 @@ void Grid::set_inout()
         setnew = set2;
       }
     }
-    
+
     // if no proc has info to communicate, then done iterating
 
     int anysend;

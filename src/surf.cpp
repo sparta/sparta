@@ -741,14 +741,12 @@ double Surf::tri_size(double *p1, double *p2, double *p3, double &len)
    check if 2d surf elements are watertight
    each end point should appear exactly once as different ends of 2 lines
    exception: not required of end points on simulation box surface
-   for explicit surfs, nline_old can be set to non-zero
-     to only check new read-in lines and skip old already-checked ones
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_2d(int nline_old)
+void Surf::check_watertight_2d()
 {
-  if (distributed) check_watertight_2d_distributed(nline_old);
-  else check_watertight_2d_all(nline_old);
+  if (distributed) check_watertight_2d_distributed();
+  else check_watertight_2d_all();
 }
 
 /* ----------------------------------------------------------------------
@@ -757,7 +755,7 @@ void Surf::check_watertight_2d(int nline_old)
    each proc tests the entire surface, no communication needed
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_2d_all(int nline_old)
+void Surf::check_watertight_2d_all()
 {
   // hash end points of all lines
   // key = end point
@@ -774,12 +772,9 @@ void Surf::check_watertight_2d_all(int nline_old)
   OnePoint2d key;
   int value;
 
-  int nline_new = nsurf - nline_old;
-
   int ndup = 0;
-  int m = nline_old;
-  for (int i = 0; i < nline_new; i++) {
-    p1 = lines[m].p1;
+  for (int i = 0; i < nsurf; i++) {
+    p1 = lines[i].p1;
     key.pt[0] = p1[0]; key.pt[1] = p1[1];
     if (phash.find(key) == phash.end()) phash[key] = 1;
     else {
@@ -788,7 +783,7 @@ void Surf::check_watertight_2d_all(int nline_old)
       else ndup++;
     }
 
-    p2 = lines[m].p2;
+    p2 = lines[i].p2;
     key.pt[0] = p2[0]; key.pt[1] = p2[1];
     if (phash.find(key) == phash.end()) phash[key] = 2;
     else {
@@ -796,8 +791,6 @@ void Surf::check_watertight_2d_all(int nline_old)
       if (value == 1) phash[key] = 3;
       else ndup++;
     }
-
-    m++;
   }
   
   if (ndup) {
@@ -836,7 +829,7 @@ void Surf::check_watertight_2d_all(int nline_old)
    rendezvous communication used to check that each point appears twice
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_2d_distributed(int nline_old)
+void Surf::check_watertight_2d_distributed()
 {
   int n;
   Line *lines_rvous;
@@ -978,14 +971,12 @@ int Surf::rendezvous_watertight_2d(int n, char *inbuf, int &flag, int *&proclist
    check if 3d surf elements are watertight
    each edge should appear exactly once in each direction
    exception: not required of triangle edge on simulation box surface
-   for explicit surfs, ntri_old can be set to non-zero
-     to only check new read-in tris and skip old already-checked ones
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_3d(int nline_old)
+void Surf::check_watertight_3d()
 {
-  if (distributed) check_watertight_3d_distributed(nline_old);
-  else check_watertight_3d_all(nline_old);
+  if (distributed) check_watertight_3d_distributed();
+  else check_watertight_3d_all();
 }
 
 /* ----------------------------------------------------------------------
@@ -994,7 +985,7 @@ void Surf::check_watertight_3d(int nline_old)
    each proc tests the entire surface, no communication needed
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_3d_all(int ntri_old)
+void Surf::check_watertight_3d_all()
 {
   // hash directed edges of all triangles
   // key = directed edge
@@ -1011,14 +1002,11 @@ void Surf::check_watertight_3d_all(int ntri_old)
   TwoPoint3d key,keyinv;
   int value;
 
-  int ntri_new = nsurf - ntri_old;
-
   int ndup = 0;
-  int m = ntri_old;
-  for (int i = 0; i < ntri_new; i++) {
-    p1 = tris[m].p1;
-    p2 = tris[m].p2;
-    p3 = tris[m].p3;
+  for (int i = 0; i < nsurf; i++) {
+    p1 = tris[i].p1;
+    p2 = tris[i].p2;
+    p3 = tris[i].p3;
 
     key.pts[0] = p1[0]; key.pts[1] = p1[1]; key.pts[2] = p1[2];
     key.pts[3] = p2[0]; key.pts[4] = p2[1]; key.pts[5] = p2[2];
@@ -1058,8 +1046,6 @@ void Surf::check_watertight_3d_all(int ntri_old)
 	else ndup++;
       } 
     } else ndup++;
-      
-    m++;
   }
 
   if (ndup) {
@@ -1070,7 +1056,6 @@ void Surf::check_watertight_3d_all(int ntri_old)
 
   // check that each edge has an inverted match
   // allow for exception if edge is on box face
-  // NOTE: this does not check if 2 pts of edge are on same box face
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
@@ -1080,8 +1065,7 @@ void Surf::check_watertight_3d_all(int ntri_old)
   for (it = phash.begin(); it != phash.end(); ++it) {
     if (it->second != 2) {
       pts = (double *) it->first.pts;
-      if (!Geometry::point_on_hex(&pts[0],boxlo,boxhi)) nbad++;
-      if (!Geometry::point_on_hex(&pts[3],boxlo,boxhi)) nbad++;
+      if (Geometry::edge_on_hex_face(&pts[0],&pts[3],boxlo,boxhi) >= 0) nbad++;
     }
   }
 
@@ -1098,7 +1082,7 @@ void Surf::check_watertight_3d_all(int ntri_old)
    rendezvous communication used to check that each edge appears twice
 ------------------------------------------------------------------------- */
 
-void Surf::check_watertight_3d_distributed(int ntri_old)
+void Surf::check_watertight_3d_distributed()
 {
   int n;
   Tri *tris_rvous;
@@ -1257,7 +1241,6 @@ int Surf::rendezvous_watertight_3d(int n, char *inbuf, int &flag, int *&proclist
 
   // check that each edge has an inverted match(value = 3)
   // allow for exception if edge is on box face
-  // NOTE: this does not check if 2 pts of edge are on same box face
 
   double *boxlo = domain->boxlo;
   double *boxhi = domain->boxhi;
@@ -1267,8 +1250,7 @@ int Surf::rendezvous_watertight_3d(int n, char *inbuf, int &flag, int *&proclist
   for (it = phash.begin(); it != phash.end(); ++it) {
     if (it->second != 3) {
       pts = (double *) it->first.pts;
-      if (!Geometry::point_on_hex(&pts[0],boxlo,boxhi)) nbad++;
-      if (!Geometry::point_on_hex(&pts[3],boxlo,boxhi)) nbad++;
+      if (Geometry::edge_on_hex_face(&pts[0],&pts[3],boxlo,boxhi) >= 0) nbad++;
     }
   }
 
