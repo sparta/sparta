@@ -33,7 +33,7 @@
 using namespace SPARTA_NS;
 using namespace MathConst;
 
-enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Update
+enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Update
 enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Grid
 enum{TYPE,MOLECULE,ID};
 enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
@@ -1928,136 +1928,6 @@ int Surf::find_group(const char *id)
 }
 
 /* ----------------------------------------------------------------------
-   comm of vector of local tallies across all procs
-   nrow = # of entries in input vector
-   l2g = global surf index of each entry in input vector
-   in = input vector
-   instride = stride between entries in input vector
-   return out = summed tallies for nlocal surfs I own
-------------------------------------------------------------------------- */
-
-void Surf::collate_vector(int nrow, int *l2g, 
-                          double *in, int instride, double *out)
-{
-  collate_vector_allreduce(nrow,l2g,in,instride,out);
-
-  //if (tally_comm == TALLYAUTO) 
-  //  collate_vector_allreduce(nrow,l2g,in,instride,out);
-  //else
-  //  collate_vector_irregular(nrow,l2g,in,instride,out);
-}
-
-void Surf::collate_vector_allreduce(int nrow, int *l2g, 
-                                    double *in, int instride, double *out)
-{
-  int i,m;
-
-  // NOTE: this will not work for nsurf a true BIGINT > 2B
-  //       but should not use this method anyway
-  //       just use this method when nglobal is small
-
-  int nglobal = nsurf;
-  if (nglobal == 0) return;
-
-  double *one,*all;
-  memory->create(one,nglobal,"surf:one");
-  memory->create(all,nglobal,"surf:all");
-
-  for (i = 0; i < nglobal; i++) one[i] = 0.0;
-
-  m = 0;
-  for (i = 0; i < nrow; i++) {
-    one[l2g[i]] = in[m];
-    m += instride;
-  }
-
-  MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
-
-  // fill out with surf values I own
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-
-  m = 0;
-  for (i = me; i < nglobal; i += nprocs)
-    out[m++] = all[i];
-
-  // NOTE: don't need to destroy these ?
-
-  memory->destroy(one);
-  memory->destroy(all);
-}
-
-void Surf::collate_vector_irregular(int, int *, 
-                                    double *, int, double *)
-{
-}
-
-/* ----------------------------------------------------------------------
-   comm of array of local tallies across all procs
-   nrow,ncol = # of entries and columns in input array
-   l2g = global surf index of each entry in input vector
-   in = input vector
-   instride = stride between entries in input vector
-   return out = summed tallies for nlocal surfs I own
-------------------------------------------------------------------------- */
-
-void Surf::collate_array(int nrow, int ncol, int *l2g, 
-                         double **in, double **out)
-{
-  //if (tally_comm == TALLYAUTO) 
-    collate_array_allreduce(nrow,ncol,l2g,in,out);
-    //else
-    // collate_array_irregular(nrow,ncol,l2g,in,out);
-}
-
-void Surf::collate_array_allreduce(int nrow, int ncol, int *l2g, 
-                                   double **in, double **out)
-{
-  int i,j,m;
-
-  int nglobal = nsurf;
-  if (nglobal == 0) return;
-
-  double **one,**all;
-  memory->create(one,nglobal,ncol,"surf:one");
-  memory->create(all,nglobal,ncol,"surf:all");
-
-  for (i = 0; i < nglobal; i++)
-    for (j = 0; j < ncol; j++)
-      one[i][j] = 0.0;
-
-  for (i = 0; i < nrow; i++) {
-    m = l2g[i];
-    for (j = 0; j < ncol; j++) 
-      one[m][j] = in[i][j];
-  }
-
-  MPI_Allreduce(&one[0][0],&all[0][0],nglobal*ncol,MPI_DOUBLE,MPI_SUM,world);
-
-  // fill out with surf values I own
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-
-  m = 0;
-  for (i = me; i < nglobal; i += nprocs) {
-    for (j = 0; j < ncol; j++) out[m][j] += all[i][j];
-    m++;
-  }
-  
-  // NOTE: don't need to destroy these ?
-
-  memory->destroy(one);
-  memory->destroy(all);
-}
-
-void Surf::collate_array_irregular(int, int, int *, 
-                                   double **, double **)
-{
-}
-
-/* ----------------------------------------------------------------------
    compress owned implicit surfs to account for migrating grid cells
    migrating grid cells are ones with proc != me
    store info on reordered nlocal surfs in shash
@@ -2127,6 +1997,363 @@ void Surf::reset_csurfs_implicit()
 
   hash->clear();
   hashfilled = 0;
+}
+
+/* ----------------------------------------------------------------------
+   comm of tallies across all procs
+   nrow = # of tally entries in input vector
+   tally2surf = surf index of each entry in input vector
+   in = input vector of tallies
+   instride = stride between entries in input vector
+   return out = summed tallies for explicit surfs I own
+------------------------------------------------------------------------- */
+
+void Surf::collate_vector(int nrow, int *tally2surf, 
+                          double *in, int instride, double *out)
+{
+  // collate version depends on tally_comm setting
+
+  if (tally_comm == TALLYAUTO) {
+    if (comm->nprocs > nsurf) 
+      collate_vector_reduce(nrow,tally2surf,in,instride,out);
+    else collate_vector_rendezvous(nrow,tally2surf,in,instride,out);
+  } else if (tally_comm == TALLYREDUCE) {
+    collate_vector_reduce(nrow,tally2surf,in,instride,out);
+  } else if (tally_comm == TALLYRVOUS) {
+    collate_vector_rendezvous(nrow,tally2surf,in,instride,out);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   allreduce version of collate
+------------------------------------------------------------------------- */
+
+void Surf::collate_vector_reduce(int nrow, int *tally2surf, 
+                                 double *in, int instride, double *out)
+{
+  int i,j,m;
+
+  if (nsurf > MAXSMALLINT)
+    error->all(FLERR,"Two many surfs to tally reduce - "
+               "use global surf/comm auto or rvous");
+  
+  int nglobal = nsurf;
+
+  double *one,*all;
+  memory->create(one,nglobal,"surf:one");
+  memory->create(all,nglobal,"surf:all");
+
+  // zero all values and add in values I accumulated
+  
+  for (i = 0; i < nglobal; i++) one[i] = 0.0;
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int dim = domain->dimension;
+  surfint id;
+
+  j = 0;
+  for (i = 0; i < nrow; i++) {
+    if (dim == 2) m = (int) lines[tally2surf[i]].id - 1;
+    else m = (int) tris[tally2surf[i]].id - 1;
+    one[m] = in[j];
+    j += instride;
+  }
+
+  // global allreduce
+  
+  MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
+
+  // out = only surfs I own
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+
+  m = 0;
+  for (i = me; i < nglobal; i += nprocs)
+    out[m++] = all[i];
+
+  // NOTE: could persist these for multiple invocations
+  
+  memory->destroy(one);
+  memory->destroy(all);
+}
+
+/* ----------------------------------------------------------------------
+   rendezvous version of collate
+------------------------------------------------------------------------- */
+
+void Surf::collate_vector_rendezvous(int nrow, int *tally2surf, 
+                                     double *in, int instride, double *out)
+{
+  // allocate memory for rvous input
+
+  int *proclist;
+  memory->create(proclist,nrow,"surf:proclist");
+  InRvousVec *in_rvous = 
+    (InRvousVec *) memory->smalloc((bigint) nrow*sizeof(InRvousVec),
+                                   "surf:in_rvous");
+
+  // create rvous inputs
+  // proclist = owner of each surf
+  // logic of (id-1) % nprocs sends 
+  //   surf IDs 1,11,21,etc on 10 procs to proc 0
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int dim = domain->dimension;
+  int nprocs = comm->nprocs;
+  
+  surfint id;
+  
+  int m = 0;
+  for (int i = 0; i < nrow; i++) {
+    if (dim == 2) id = lines[tally2surf[i]].id;
+    else id = tris[tally2surf[i]].id;
+    proclist[i] = (id-1) % nprocs;
+    in_rvous[i].id = id;
+    in_rvous[i].value = in[m];
+    m += instride;
+  }
+
+  // perform rendezvous operation
+  // each proc owns subset of surfs
+  // receives all tally contributions to surfs it owns
+
+  out_rvous = out;
+  
+  char *buf;
+  int nout = comm->rendezvous(1,nrow,(char *) in_rvous,sizeof(InRvousVec),
+			      0,proclist,rendezvous_vector,
+			      0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
+  memory->destroy(in_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   callback from rendezvous operation
+   process tallies for surfs assigned to me
+   inbuf = list of N Inbuf datums
+   no outbuf
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
+                            char *&outbuf, void *ptr)
+{
+  Surf *sptr = (Surf *) ptr;
+  Memory *memory = sptr->memory;
+  int nown = sptr->nown;
+  double *out = sptr->out_rvous;
+  int nprocs = sptr->comm->nprocs;
+  int me = sptr->comm->me;
+  
+  // zero my owned surf values
+
+  for (int i = 0; i < nown; i++) out[i] = 0.0;
+  
+  // accumulate per-surf values from different procs to my owned surfs
+  // logic of (id-1-me) / nprocs maps 
+  //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
+  
+  Surf::InRvousVec *in_rvous = (Surf::InRvousVec *) inbuf;
+
+  int m;
+  for (int i = 0; i < n; i++) {
+    m = (in_rvous[i].id-1-me) / nprocs;
+    out[m] += in_rvous[i].value;
+  }
+
+  // flag = 0: no second comm needed in rendezvous
+
+  flag = 0;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   comm of tallies across all procs
+   nrow,ncol = # of entries and columns in input array
+   tally2surf = global surf index of each entry in input array
+   in = input array of tallies
+   instride = stride between entries in input array
+   return out = summed tallies for explicit surfs I own
+------------------------------------------------------------------------- */
+
+void Surf::collate_array(int nrow, int ncol, int *tally2surf, 
+                         double **in, double **out)
+{
+  // collate version depends on tally_comm setting
+
+  if (tally_comm == TALLYAUTO) {
+    if (comm->nprocs > nsurf) 
+      collate_array_reduce(nrow,ncol,tally2surf,in,out);
+    else collate_array_rendezvous(nrow,ncol,tally2surf,in,out);
+  } else if (tally_comm == TALLYREDUCE) {
+    collate_array_reduce(nrow,ncol,tally2surf,in,out);
+  } else if (tally_comm == TALLYRVOUS) {
+    collate_array_rendezvous(nrow,ncol,tally2surf,in,out);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   allreduce version of collate
+------------------------------------------------------------------------- */
+
+void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf, 
+                                double **in, double **out)
+{
+  int i,j,m;
+
+  bigint ntotal = (bigint) nsurf * ncol;
+
+  if (ntotal > MAXSMALLINT)
+    error->all(FLERR,"Two many surfs to tally reduce - "
+               "use global surf/comm auto or rvous");
+  
+  int nglobal = nsurf;
+
+  double **one,**all;
+  memory->create(one,nglobal,ncol,"surf:one");
+  memory->create(all,nglobal,ncol,"surf:all");
+
+  // zero all values and add in values I accumulated
+  
+  for (i = 0; i < nglobal; i++)
+    for (j = 0; j < ncol; j++)
+      one[i][j] = 0.0;
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int dim = domain->dimension;
+
+  for (i = 0; i < nrow; i++) {
+    if (dim == 2) m = (int) lines[tally2surf[i]].id - 1;
+    else m = (int) tris[tally2surf[i]].id - 1;
+    for (j = 0; j < ncol; j++) 
+      one[m][j] = in[i][j];
+  }
+
+  // global allreduce
+
+  MPI_Allreduce(&one[0][0],&all[0][0],ntotal,MPI_DOUBLE,MPI_SUM,world);
+
+  // out = only surfs I own
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+
+  m = 0;
+  for (i = me; i < nglobal; i += nprocs) {
+    for (j = 0; j < ncol; j++) out[m][j] = all[i][j];
+    m++;
+  }
+  
+  // NOTE: could persist these for multiple invocations
+  
+  memory->destroy(one);
+  memory->destroy(all);
+}
+
+/* ----------------------------------------------------------------------
+   rendezvous version of collate
+------------------------------------------------------------------------- */
+
+void Surf::collate_array_rendezvous(int nrow, int ncol, int *tally2surf, 
+                                    double **in, double **out)
+{
+  int i,j,m;
+
+  // allocate memory for rvous input
+
+  int *proclist;
+  memory->create(proclist,nrow,"surf:proclist");
+  double *in_rvous = (double *)     // worry about overflow
+    memory->smalloc(nrow*(ncol+1)*sizeof(double*),"surf:in_rvous");
+
+  // create rvous inputs
+  // proclist = owner of each surf
+  // logic of (id-1) % nprocs sends 
+  //   surf IDs 1,11,21,etc on 10 procs to proc 0
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  int dim = domain->dimension;
+  int nprocs = comm->nprocs;
+  surfint id;
+  
+  m = 0;
+  for (int i = 0; i < nrow; i++) {
+    if (dim == 2) id = lines[tally2surf[i]].id;
+    else id = tris[tally2surf[i]].id;
+    proclist[i] = (id-1) % nprocs;
+    in_rvous[m++] = ubuf(id).d;
+    for (j = 0; j < ncol; j++)
+      in_rvous[m++] = in[i][j];
+  }
+
+  // perform rendezvous operation
+  // each proc owns subset of surfs
+  // receives all tally contributions to surfs it owns
+
+  ncol_rvous = ncol;
+  if (out == NULL) out_rvous = NULL;
+  else out_rvous = &out[0][0];
+  int size = (ncol+1) * sizeof(double);
+
+  char *buf;
+  int nout = comm->rendezvous(1,nrow,(char *) in_rvous,size,
+			      0,proclist,rendezvous_array,
+			      0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
+  memory->sfree(in_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   callback from rendezvous operation
+   process tallies for surfs assigned to me
+   inbuf = list of N Inbuf datums
+   no outbuf
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_array(int n, char *inbuf,
+                           int &flag, int *&proclist, char *&outbuf,
+                           void *ptr)
+{
+  int i,j,k,m;
+
+  Surf *sptr = (Surf *) ptr;
+  Memory *memory = sptr->memory;
+  int nown = sptr->nown;
+  int ncol = sptr->ncol_rvous;
+  double *out = sptr->out_rvous;
+  int nprocs = sptr->comm->nprocs;
+  int me = sptr->comm->me;
+  
+  // zero my owned surf values
+
+  int ntotal = nown*ncol;
+  for (m = 0; m < ntotal; m++) out[m] = 0.0;
+  
+  // accumulate per-surf values from different procs to my owned surfs
+  // logic of (id-1-me) / nprocs maps 
+  //   surf IDs [1,11,21,...] on 10 procs to [0,1,2,...] on proc 0
+  
+  double *in_rvous = (double *) inbuf;
+  surfint id;
+
+  m = 0;
+  for (int i = 0; i < n; i++) {
+    id = (surfint) ubuf(in_rvous[m++]).i;
+    k = (id-1-me) / nprocs * ncol;
+    for (j = 0; j < ncol; j++)
+      out[k++] += in_rvous[m++];
+  }
+
+  // flag = 0: no second comm needed in rendezvous
+
+  flag = 0;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

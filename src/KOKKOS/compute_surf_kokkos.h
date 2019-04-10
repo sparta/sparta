@@ -75,14 +75,14 @@ void surf_tally_kk(int isurf, Particle::OnePart *iorig,
   // if 1st particle hitting isurf, add isurf to local list
   // grow local list if needed
 
-  int ilocal = d_glob2loc(isurf);
+  int ilocal = d_surf2tally(isurf);
   if (ilocal < 0) {
     if (ATOMIC_REDUCTION != 0)
-      ilocal = Kokkos::atomic_fetch_add(&d_nlocal(),1);
+      ilocal = Kokkos::atomic_fetch_add(&d_ntally(),1);
     else
-      ilocal = d_nlocal()++;
-    d_loc2glob(ilocal) = isurf;
-    d_glob2loc(isurf) = ilocal;
+      ilocal = d_ntally()++;
+    d_tally2surf(ilocal) = isurf;
+    d_surf2tally(isurf) = ilocal;
   }
 
   double fluxscale = d_normflux(isurf);
@@ -273,14 +273,14 @@ void surf_tally_kk(int isurf, Particle::OnePart *iorig,
  private:
   int mvv2e;
 
-  DAT::t_int_scalar d_nlocal;
+  DAT::t_int_scalar d_ntally;
   DAT::t_int_1d d_which;
 
   DAT::t_float_2d d_array_surf_tally;  // tally values for local surfs
   DAT::tdual_float_2d k_array_surf_tally;
-  DAT::t_int_1d d_glob2loc;           // glob2loc[I] = local index of Ith global surf
-  DAT::t_int_1d d_loc2glob;           // loc2glob[I] = global index of Ith local surf
-  DAT::tdual_int_1d k_loc2glob;
+  DAT::t_int_1d d_surf2tally;           // surf2tally[I] = local index of Ith global surf
+  DAT::t_int_1d d_tally2surf;           // tally2surf[I] = global index of Ith local surf
+  DAT::tdual_int_1d k_tally2surf;
 
   DAT::t_float_1d d_normflux;         // normalization factor for each surf element
 

@@ -413,7 +413,7 @@ void ReadSurf::header()
 
     if (strstr(line,"points")) {
       bigint bnpoint;
-      sscanf(line,"%ld",&bnpoint);
+      sscanf(line,BIGINT_FORMAT,&bnpoint);
       if (bnpoint > MAXSMALLINT) 
         error->all(FLERR,"Read surf npoint is too large");
       npoint = bnpoint;
@@ -421,7 +421,7 @@ void ReadSurf::header()
       if (dim == 3) 
 	error->all(FLERR,"Surf file cannot contain lines for 3d simulation");
       bigint bnline;
-      sscanf(line,"%ld",&bnline);
+      sscanf(line,BIGINT_FORMAT,&bnline);
       if (bnline > MAXSMALLINT) error->all(FLERR,"Read surf nline is too large");
       nline = bnline;
     } else if (strstr(line,"triangles")) {
@@ -429,7 +429,7 @@ void ReadSurf::header()
 	error->all(FLERR,
 		   "Surf file cannot contain triangles for 2d simulation");
       bigint bntri;
-      sscanf(line,"%ld",&bntri);
+      sscanf(line,BIGINT_FORMAT,&bntri);
       if (bntri > MAXSMALLINT) error->all(FLERR,"Read surf ntri is too large");
       ntri = bntri;
     } else break;
