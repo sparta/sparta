@@ -45,6 +45,7 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
   surf2tally = NULL;
   tally2surf = NULL;
   array_surf_tally = NULL;
+  vector_surf = NULL;
   normflux = NULL;
   id = NULL;
   style = NULL;
