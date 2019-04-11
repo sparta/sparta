@@ -591,7 +591,6 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
     wc = vr*sinX*sin(eps);
   } else {
     double scale = sqrt((2.0*postcoln.etrans) / (mr*precoln.vr2));
-    // Should this be vij-vk?? (Arnaud 12/17/18)
     vrc[0] = vi[0]-vj[0];
     vrc[1] = vi[1]-vj[1];
     vrc[2] = vi[2]-vj[2];
