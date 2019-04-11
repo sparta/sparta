@@ -67,9 +67,12 @@ void ReadSurf::command(int narg, char **arg)
 {
   if (!grid->exist) 
     error->all(FLERR,"Cannot read_surf before grid is defined");
+  if (surf->implicit)
+    error->all(FLERR,"Cannot read_surf unless global surfs explicit is set");
 
   surf->exist = 1;
   dim = domain->dimension;
+  distributed = surf->distributed;
 
   if (narg < 1) error->all(FLERR,"Illegal read_surf command");
 
@@ -85,15 +88,17 @@ void ReadSurf::command(int narg, char **arg)
 
   header();
 
-  // create pts,lines,tris data structures
+  // create local pts,lines,tris data structures for reading from file
 
   pts = (Point *) memory->smalloc(npoint*sizeof(Point),"readsurf:pts");
-  lines = (Line *) memory->smalloc(nline*sizeof(Line),"readsurf:lines");
-  tris = (Tri *) memory->smalloc(ntri*sizeof(Tri),"readsurf:tris");
-
   maxpoint = npoint;
-  maxline = nline;
-  maxtri = ntri;
+
+  if (!distributed) {
+    lines = (Line *) memory->smalloc(nline*sizeof(Line),"readsurf:lines");
+    tris = (Tri *) memory->smalloc(ntri*sizeof(Tri),"readsurf:tris");
+    maxline = nline;
+    maxtri = ntri;
+  }
 
   // read and store Points and Lines/Tris sections
 
@@ -108,12 +113,14 @@ void ReadSurf::command(int narg, char **arg)
     if (strcmp(keyword,"Lines") != 0)
       error->all(FLERR,
 	       "Read_surf did not find lines section of surf file");
-    read_lines();
+    if (distributed) read_lines_distributed();
+    else read_lines();
   } else {
     if (strcmp(keyword,"Triangles") != 0)
     error->all(FLERR,
 	       "Read_surf did not find triangles section of surf file");
-    read_tris();
+    if (distributed) read_tris_distributed();
+    else read_tris();
   }
 
   // close file
@@ -123,221 +130,22 @@ void ReadSurf::command(int narg, char **arg)
     else fclose(fp);
   }
 
-  // apply optional keywords for geometric transformations
-  // store optional keywords for group and type information
-  // store optional keyword for file output
+  // process command-line args
+  // geometry transformation, group, type, output
 
-  origin[0] = origin[1] = origin[2] = 0.0;
-  int grouparg = 0;
-  int typeadd = 0;
-  int partflag = NONE;
-  int filearg = 0;
+  process_args(narg-1,&arg[1]);
 
-  int iarg = 1;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"origin") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double ox = atof(arg[iarg+1]);
-      double oy = atof(arg[iarg+2]);
-      double oz = atof(arg[iarg+3]);
-      if (dim == 2 && oz != 0.0) 
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
-      origin[0] = ox;
-      origin[1] = oy;
-      origin[2] = oz;
-      iarg += 4;
-    } else if (strcmp(arg[iarg],"trans") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double dx = input->numeric(FLERR,arg[iarg+1]);
-      double dy = input->numeric(FLERR,arg[iarg+2]);
-      double dz = input->numeric(FLERR,arg[iarg+3]);
-      if (dim == 2 && dz != 0.0) 
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
-      origin[0] += dx;
-      origin[1] += dy;
-      origin[2] += dz;
-      translate(dx,dy,dz);
-      iarg += 4;
-    } else if (strcmp(arg[iarg],"atrans") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double ax = input->numeric(FLERR,arg[iarg+1]);
-      double ay = input->numeric(FLERR,arg[iarg+2]);
-      double az = input->numeric(FLERR,arg[iarg+3]);
-      if (dim == 2 && az != 0.0) 
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
-      double dx = ax - origin[0];
-      double dy = ay - origin[1];
-      double dz = az - origin[2];
-      origin[0] = ax;
-      origin[1] = ay;
-      origin[2] = az;
-      translate(dx,dy,dz);
-      iarg += 4;
-    } else if (strcmp(arg[iarg],"ftrans") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double fx = input->numeric(FLERR,arg[iarg+1]);
-      double fy = input->numeric(FLERR,arg[iarg+2]);
-      double fz = input->numeric(FLERR,arg[iarg+3]);
-      if (dim == 2 && fz != 0.5) 
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
-      double ax = domain->boxlo[0] + fx*domain->xprd;
-      double ay = domain->boxlo[1] + fy*domain->yprd;
-      double az;
-      if (dim == 3) az = domain->boxlo[2] + fz*domain->zprd;
-      else az = 0.0;
-      double dx = ax - origin[0];
-      double dy = ay - origin[1];
-      double dz = az - origin[2];
-      origin[0] = ax;
-      origin[1] = ay;
-      origin[2] = az;
-      translate(dx,dy,dz);
-      iarg += 4;
-    } else if (strcmp(arg[iarg],"scale") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
-      double sx = input->numeric(FLERR,arg[iarg+1]);
-      double sy = input->numeric(FLERR,arg[iarg+2]);
-      double sz = input->numeric(FLERR,arg[iarg+3]);
-      if (dim == 2 && sz != 1.0) 
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
-      scale(sx,sy,sz);
-      iarg += 4;
-    } else if (strcmp(arg[iarg],"rotate") == 0) {
-      if (iarg+5 > narg) error->all(FLERR,"Invalid read_surf command");
-      double theta = input->numeric(FLERR,arg[iarg+1]);
-      double rx = input->numeric(FLERR,arg[iarg+2]);
-      double ry = input->numeric(FLERR,arg[iarg+3]);
-      double rz = input->numeric(FLERR,arg[iarg+4]);
-      if (dim == 2 && (rx != 0.0 || ry != 0.0 || rz != 1.0))
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
-      if (rx == 0.0 && ry == 0.0 && rz == 0.0)
-	error->all(FLERR,"Invalid read_surf geometry transformation "
-		   "for 2d simulation");
-      rotate(theta,rx,ry,rz);
-      iarg += 5;
-    } else if (strcmp(arg[iarg],"invert") == 0) {
-      invert();
-      iarg += 1;
-    } else if (strcmp(arg[iarg],"clip") == 0) {
-      double frac = 0.0;
-      if (iarg+1 < narg) {
-        char c = arg[iarg+1][0];
-        if (isdigit(c) || c == '-' || c == '+' || c == '.') {
-          frac = input->numeric(FLERR,arg[iarg+1]);
-          if (frac < 0.0 || frac >= 0.5) 
-            error->all(FLERR,"Invalid read_surf command");
-          iarg++;
-        }
-      }
-      if (frac > 0.0) push_points_to_boundary(frac);
-      if (dim == 2) clip2d();
-      else clip3d();
-      iarg++;
+  // add pts/lines/tris read from file to Surf line/tri data struct
+  // only when each proc has copy of all surfs
+  // free local copy of read-in surfs
 
-    } else if (strcmp(arg[iarg],"group") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
-      grouparg = iarg+1;
-      iarg += 2;
-
-    } else if (strcmp(arg[iarg],"typeadd") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
-      typeadd = input->inumeric(FLERR,arg[iarg+1]);
-      if (typeadd < 0) error->all(FLERR,"Invalid read_surf command");
-      iarg += 2;
-
-    } else if (strcmp(arg[iarg],"particle") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
-      if (strcmp(arg[iarg+1],"none") == 0) partflag = NONE;
-      else if (strcmp(arg[iarg+1],"check") == 0) partflag = CHECK;
-      else if (strcmp(arg[iarg+1],"keep") == 0) partflag = KEEP;
-      else error->all(FLERR,"Invalid read_surf command");
-      iarg += 2;
-
-    } else if (strcmp(arg[iarg],"file") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
-      filearg = iarg+1;
-      iarg += 2;
-
-    } else error->all(FLERR,"Invalid read_surf command");
+  if (!distributed) {
+    add_surfs();
+    memory->sfree(lines);
+    memory->sfree(tris);
   }
 
-  // error test on particles
-
-  if (particle->exist && partflag == NONE)
-    error->all(FLERR,"Using read_surf particle none when particles exist");
-
-  // if specified, apply group and typeadd keywords
-  // these reset per-element mask/type info
-
-  if (grouparg) {
-    int igroup = surf->find_group(arg[grouparg]);
-    if (igroup < 0) igroup = surf->add_group(arg[grouparg]);
-    int groupbit = surf->bitmask[igroup];
-    if (dim == 2) {
-      for (int i = 0; i < nline; i++) lines[i].mask |= groupbit;
-    } else {
-      for (int i = 0; i < ntri; i++) tris[i].mask |= groupbit;
-    }
-  }
-
-  if (typeadd) {
-    if (dim == 2) {
-      for (int i = 0; i < nline; i++) lines[i].type += typeadd;
-    } else {
-      for (int i = 0; i < ntri; i++) tris[i].type += typeadd;
-    }
-  }
-
-  // extent of surfs after geometric transformations
-  // compute sizes of smallest surface elements
-
-  double extent[3][2];
-  extent[0][0] = extent[1][0] = extent[2][0] = BIG;
-  extent[0][1] = extent[1][1] = extent[2][1] = -BIG;
-
-  for (int i = 0; i < npoint; i++) {
-    extent[0][0] = MIN(extent[0][0],pts[i].x[0]);
-    extent[0][1] = MAX(extent[0][1],pts[i].x[0]);
-    extent[1][0] = MIN(extent[1][0],pts[i].x[1]);
-    extent[1][1] = MAX(extent[1][1],pts[i].x[1]);
-    extent[2][0] = MIN(extent[2][0],pts[i].x[2]);
-    extent[2][1] = MAX(extent[2][1],pts[i].x[2]);
-  }
-
-  double minlen,minarea; 
-  if (dim == 2) minlen = shortest_line();
-  if (dim == 3) smallest_tri(minlen,minarea);
-
-  if (me == 0) {
-    if (screen) {
-      fprintf(screen,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
-      fprintf(screen,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
-      fprintf(screen,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
-      if (dim == 2)
-	fprintf(screen,"  %g min line length\n",minlen);
-      if (dim == 3) {
-	fprintf(screen,"  %g min triangle edge length\n",minlen);
-	fprintf(screen,"  %g min triangle area\n",minarea);
-      }
-    }
-    if (logfile) {
-      fprintf(logfile,"  %g %g xlo xhi\n",extent[0][0],extent[0][1]);
-      fprintf(logfile,"  %g %g ylo yhi\n",extent[1][0],extent[1][1]);
-      fprintf(logfile,"  %g %g zlo zhi\n",extent[2][0],extent[2][1]);
-      if (dim == 2)
-	fprintf(logfile,"  %g min line length\n",minlen);
-      if (dim == 3) {
-	fprintf(logfile,"  %g min triangle edge length\n",minlen);
-	fprintf(logfile,"  %g min triangle area\n",minarea);
-      }
-    }
-  }
+  memory->sfree(pts);
 
   // write out new surf file if requested
   // do this before assigning surfs to grid cells, in case an error occurs
@@ -357,78 +165,50 @@ void ReadSurf::command(int narg, char **arg)
     delete wf;
   }
 
-  // add pts/lines/tris read from file to Surf line or tri data struct
+  // output extent of new surfs, tiny ones may have been created by clip
 
-  if (dim == 2) {
-    nline_old = surf->nline;
-    nline_new = nline_old + nline;
-    surf->nline = nline_new;
-    surf->grow();
-    Surf::Line *newlines = surf->lines;
+  if (dim == 2) surf->output_extent(nline_old);
+  else surf->output_extent(ntri_old);
 
-    int m = nline_old;
-    for (int i = 0; i < nline; i++) {
-      newlines[m].id = m+1;  // check for overflow when allow distributed surfs
-      newlines[m].type = lines[i].type;
-      newlines[m].mask = lines[i].mask;
-      newlines[m].isc = newlines[m].isr = -1;
-      memcpy(newlines[m].p1,pts[lines[i].p1].x,3*sizeof(double));
-      memcpy(newlines[m].p2,pts[lines[i].p2].x,3*sizeof(double));
-      m++;
-    }
+  MPI_Barrier(world);
+  double time2 = MPI_Wtime();
 
-    surf->lines = newlines;
-
-  } else if (dim == 3) {
-    ntri_old = surf->ntri;
-    ntri_new = ntri_old + ntri;
-    surf->ntri = ntri_new;
-    surf->grow();
-    Surf::Tri *newtris = surf->tris;
-
-    int m = ntri_old;
-    for (int i = 0; i < ntri; i++) {
-      newtris[m].id = m+1;  // check for overflow when allow distributed surfs
-      newtris[m].type = tris[i].type;
-      newtris[m].mask = tris[i].mask;
-      newtris[m].isc = newtris[m].isr = -1;
-      memcpy(newtris[m].p1,pts[tris[i].p1].x,3*sizeof(double));
-      memcpy(newtris[m].p2,pts[tris[i].p2].x,3*sizeof(double));
-      memcpy(newtris[m].p3,pts[tris[i].p3].x,3*sizeof(double));
-      m++;
-    }
-
-    surf->tris = newtris;
-  }
-
-  // compute normals of new lines or triangles
+  // compute normals of new surfs
 
   if (dim == 2) surf->compute_line_normal(nline_old);
   else surf->compute_tri_normal(ntri_old);
 
-  // error check on new lines,tris
+  // error check on new surfs
   // all points must be inside or on surface of simulation box
 
   if (dim == 2) surf->check_point_inside(nline_old);
   else surf->check_point_inside(ntri_old);
 
+  // error checks that can be done before surfs are mapped to grid cells
+
+  if (dim == 2) {
+    surf->check_watertight_2d(nline_old);
+    check_neighbor_norm_2d();
+  } else {
+    surf->check_watertight_3d(ntri_old);
+    check_neighbor_norm_3d();
+  }
+
+  MPI_Barrier(world);
+  double time3 = MPI_Wtime();
+
   // -----------------------
   // map surfs to grid cells
   // -----------------------
-
-  MPI_Barrier(world);
-  double time2 = MPI_Wtime();
 
   // sort particles
 
   if (particle->exist) particle->sort();
 
   // make list of surf elements I own
-  // assign surfs to grid cells
-  // error checks to flag bad surfs
-
-  surf->setup_surf();
-
+  // clear grid of surf info including split cells
+  
+  surf->setup_owned();
   grid->unset_neighbors();
   grid->remove_ghosts();
 
@@ -443,29 +223,9 @@ void ReadSurf::command(int narg, char **arg)
   grid->clear_surf();
 
   MPI_Barrier(world);
-  double time3 = MPI_Wtime();
-
-  // error checks that can be done before surfs are mapped to grid cells
-
-  if (dim == 2) {
-    surf->check_watertight_2d(nline_old);
-    check_neighbor_norm_2d();
-  } else {
-    surf->check_watertight_3d(ntri_old);
-    check_neighbor_norm_3d();
-  }
-
-  // can now free local copy of read-in surfs
-  // last use was in check_neighbor() methods
-
-  memory->sfree(pts);
-  memory->sfree(lines);
-  memory->sfree(tris);
-
-  MPI_Barrier(world);
   double time4 = MPI_Wtime();
 
-  // map surfs to grid cells
+  // assign surfs to grid cells
 
   grid->surf2grid(1);
 
@@ -473,7 +233,7 @@ void ReadSurf::command(int narg, char **arg)
   double time5 = MPI_Wtime();
 
   // error check on any points too near other surfs
-  // done on per-grid-cell basis, too expensive to do globally
+  // done on per-grid-cell basis, expensive to do globally
 
   if (dim == 2) surf->check_point_near_surf_2d();
   else surf->check_point_near_surf_3d();
@@ -522,15 +282,17 @@ void ReadSurf::command(int narg, char **arg)
       }
       if (cells[icell].nsurf && cells[icell].nsplit >= 1) {
 	int nsurf = cells[icell].nsurf;
-	int *csurfs = cells[icell].csurfs;
+	surfint *csurfs = cells[icell].csurfs;
 	int m;
 	if (dim == 2) {
+          Surf::Line *lines = surf->lines;
 	  for (m = 0; m < nsurf; m++) {
-	    if (csurfs[m] >= nline_old) break;
+	    if (lines[csurfs[m]].id > nsurf_old) break;
 	  }
 	} else {
+          Surf::Tri *tris = surf->tris;
 	  for (m = 0; m < nsurf; m++) {
-	    if (csurfs[m] >= ntri_old) break;
+	    if (tris[csurfs[m]].id >= nsurf_old) break;
 	  }
 	}
 	if (m < nsurf && partflag == CHECK) {
@@ -552,6 +314,8 @@ void ReadSurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time8 = MPI_Wtime();
 
+  // stats
+  
   double time_total = time6-time1;
   double time_s2g = time5-time4;
 
@@ -560,35 +324,41 @@ void ReadSurf::command(int narg, char **arg)
       if (particle->exist)
 	fprintf(screen,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/sort/check/surf2grid/ghost/inout/particle percent = "
+      fprintf(screen,"  read/check/sort/surf2grid/ghost/"
+              "inout/particle percent = "
               "%g %g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
       fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(screen,"  map/rvous/split percent = %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous/time_s2g,
-              100.0*grid->tsplit/time_s2g);
+      fprintf(screen,"  map/rvous1/rvous2/split percent = %g %g %g %g\n",
+              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
+              100.0*grid->trvous2/time_s2g,100.0*grid->tsplit/time_s2g);
     }
 
     if (logfile) {
       if (particle->exist)
 	fprintf(logfile,"  " BIGINT_FORMAT " deleted particles\n",ndeleted);
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/sort/check/surf2grid/ghost/inout/particle percent = "
+      fprintf(logfile,"  read/check/sort/surf2grid/ghost/"
+              "inout/particle percent = "
               "%g %g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
               100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
               100.0*(time8-time7)/time_total);
       fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(logfile,"  map/rvous/split percent = %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous/time_s2g,
-              100.0*grid->tsplit/time_s2g);
+      fprintf(logfile,"  map/rvous1/rvous2/split percent = %g %g %g %g\n",
+              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
+              100.0*grid->trvous2/time_s2g,100.0*grid->tsplit/time_s2g);
     }
   }
 }
+
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
+// ----------------------------------------------------------------------
 
 /* ----------------------------------------------------------------------
    read free-format header of data file
@@ -641,16 +411,27 @@ void ReadSurf::header()
 
     // search line for header keyword and set corresponding variable
 
-    if (strstr(line,"points")) sscanf(line,"%d",&npoint);
-    else if (strstr(line,"lines")) {
+    if (strstr(line,"points")) {
+      bigint bnpoint;
+      sscanf(line,BIGINT_FORMAT,&bnpoint);
+      if (bnpoint > MAXSMALLINT) 
+        error->all(FLERR,"Read surf npoint is too large");
+      npoint = bnpoint;
+    } else if (strstr(line,"lines")) {
       if (dim == 3) 
 	error->all(FLERR,"Surf file cannot contain lines for 3d simulation");
-      sscanf(line,"%d",&nline);
+      bigint bnline;
+      sscanf(line,BIGINT_FORMAT,&bnline);
+      if (bnline > MAXSMALLINT) error->all(FLERR,"Read surf nline is too large");
+      nline = bnline;
     } else if (strstr(line,"triangles")) {
       if (dim == 2) 
 	error->all(FLERR,
 		   "Surf file cannot contain triangles for 2d simulation");
-      sscanf(line,"%d",&ntri);
+      bigint bntri;
+      sscanf(line,BIGINT_FORMAT,&bntri);
+      if (bntri > MAXSMALLINT) error->all(FLERR,"Read surf ntri is too large");
+      ntri = bntri;
     } else break;
   }
 
@@ -796,6 +577,93 @@ void ReadSurf::read_lines()
 }
 
 /* ----------------------------------------------------------------------
+   read all lines, each proc only stores every 1/Pth line
+------------------------------------------------------------------------- */
+
+void ReadSurf::read_lines_distributed()
+{
+  int i,m,n,nchunk,type,p1,p2;
+  bigint index;
+  char *next,*buf;
+
+  int nprocs = comm->nprocs;
+  bigint nsurf = surf->nsurf;
+  nsurf_old = nsurf;
+  nline_old = surf->nown;
+  nline_new = (nsurf + nline) / nprocs;
+  if (me < nsurf+nline % nprocs) nline_new++;
+
+  surf->maxown = nline_new;
+  surf->grow_own();
+  Surf::Line *mylines = surf->mylines;
+
+  // read and broadcast one CHUNK of lines at a time
+
+  int nread = 0;
+
+  while (nread < nline) {
+    if (nline-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = nline-nread;
+    if (me == 0) {
+      char *eof;
+      m = 0;
+      for (i = 0; i < nchunk; i++) {
+	eof = fgets(&buffer[m],MAXLINE,fp);
+	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
+	m += strlen(&buffer[m]);
+      }
+      m++;
+    }
+    MPI_Bcast(&m,1,MPI_INT,0,world);
+    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
+
+    buf = buffer;
+    next = strchr(buf,'\n');
+    *next = '\0';
+    int nwords = input->count_words(buf);
+    *next = '\n';
+
+    // allow for optional type in each line element
+
+    if (nwords != 3 && nwords != 4)
+      error->all(FLERR,"Incorrect line format in surf file");
+    int typeflag = 0;
+    if (nwords == 4) typeflag = 1;
+
+    for (int i = 0; i < nchunk; i++) {
+      next = strchr(buf,'\n');
+
+      // only add next line if I own it
+
+      index = nsurf + nread + i;
+
+      if (index % nprocs == me) {
+        strtok(buf," \t\n\r\f");
+        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else type = 1;
+        p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || p1 == p2)
+          error->all(FLERR,"Invalid point index in line");
+        surf->add_line_own(type,pts[p1-1].x,pts[p2-1].x);
+        surf->mylines[surf->nown-1].id = static_cast<surfint> (index+1);
+      }
+
+      buf = next + 1;
+    }
+
+    nread += nchunk;
+  }
+
+  surf->nsurf += nline;
+
+  if (me == 0) {
+    if (screen) fprintf(screen,"  %d lines\n",nline);
+    if (logfile) fprintf(logfile,"  %d lines\n",nline);
+  }
+}
+
+/* ----------------------------------------------------------------------
    read/store all triangles
    alter p1,p2,p3 indices to point to newest set of stored points
 ------------------------------------------------------------------------- */
@@ -870,16 +738,337 @@ void ReadSurf::read_tris()
 }
 
 /* ----------------------------------------------------------------------
+   read all tris, each proc only stores every 1/Pth tri
+------------------------------------------------------------------------- */
+
+void ReadSurf::read_tris_distributed()
+{
+  int i,m,n,nchunk,type,p1,p2,p3;
+  bigint index;
+  char *next,*buf;
+
+  int nprocs = comm->nprocs;
+  bigint nsurf = surf->nsurf;
+  nsurf_old = nsurf;
+  ntri_old = surf->nown;
+  ntri_new = (nsurf + ntri) / nprocs;
+  if (me < nsurf+ntri % nprocs) ntri_new++;
+
+  surf->maxown = ntri_new;
+  surf->grow_own();
+  Surf::Tri *mytris = surf->mytris;
+
+  // read and broadcast one CHUNK of tris at a time
+
+  int nread = 0;
+
+  while (nread < ntri) {
+    if (ntri-nread > CHUNK) nchunk = CHUNK;
+    else nchunk = ntri-nread;
+    if (me == 0) {
+      char *eof;
+      m = 0;
+      for (i = 0; i < nchunk; i++) {
+	eof = fgets(&buffer[m],MAXLINE,fp);
+	if (eof == NULL) error->one(FLERR,"Unexpected end of surf file");
+	m += strlen(&buffer[m]);
+      }
+      m++;
+    }
+    MPI_Bcast(&m,1,MPI_INT,0,world);
+    MPI_Bcast(buffer,m,MPI_CHAR,0,world);
+
+    buf = buffer;
+    next = strchr(buf,'\n');
+    *next = '\0';
+    int nwords = input->count_words(buf);
+    *next = '\n';
+
+    // allow for optional type in each tri element
+
+    if (nwords != 4 && nwords != 5)
+      error->all(FLERR,"Incorrect tri format in surf file");
+    int typeflag = 0;
+    if (nwords == 5) typeflag = 1;
+
+    for (int i = 0; i < nchunk; i++) {
+      next = strchr(buf,'\n');
+
+      // only add next tri if I own it
+
+      index = nsurf + nread + i;
+
+      if (index % nprocs == me) {
+        strtok(buf," \t\n\r\f");
+        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else type = 1;
+        p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || 
+            p3 < 1 || p3 > npoint || p1 == p2 || p2 == p3)
+          error->all(FLERR,"Invalid point index in tri");
+        surf->add_tri_own(type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
+        surf->mytris[surf->nown-1].id = static_cast<surfint> (index+1);
+      }
+
+      buf = next + 1;
+    }
+
+    nread += nchunk;
+  }
+
+  surf->nsurf += ntri;
+
+  if (me == 0) {
+    if (screen) fprintf(screen,"  %d triangles\n",ntri);
+    if (logfile) fprintf(logfile,"  %d triangles\n",ntri);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   apply optional keywords for geometric transformations
+   store optional keywords for group and type information
+   store optional keyword for file output
+------------------------------------------------------------------------- */
+
+void ReadSurf::process_args(int narg, char **arg)
+{
+  origin[0] = origin[1] = origin[2] = 0.0;
+  int grouparg = 0;
+  int typeadd = 0;
+  partflag = NONE;
+  filearg = 0;
+
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"origin") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
+      double ox = atof(arg[iarg+1]);
+      double oy = atof(arg[iarg+2]);
+      double oz = atof(arg[iarg+3]);
+      if (dim == 2 && oz != 0.0) 
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      origin[0] = ox;
+      origin[1] = oy;
+      origin[2] = oz;
+      iarg += 4;
+    } else if (strcmp(arg[iarg],"trans") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
+      double dx = input->numeric(FLERR,arg[iarg+1]);
+      double dy = input->numeric(FLERR,arg[iarg+2]);
+      double dz = input->numeric(FLERR,arg[iarg+3]);
+      if (dim == 2 && dz != 0.0) 
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      origin[0] += dx;
+      origin[1] += dy;
+      origin[2] += dz;
+      translate(dx,dy,dz);
+      iarg += 4;
+    } else if (strcmp(arg[iarg],"atrans") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
+      double ax = input->numeric(FLERR,arg[iarg+1]);
+      double ay = input->numeric(FLERR,arg[iarg+2]);
+      double az = input->numeric(FLERR,arg[iarg+3]);
+      if (dim == 2 && az != 0.0) 
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      double dx = ax - origin[0];
+      double dy = ay - origin[1];
+      double dz = az - origin[2];
+      origin[0] = ax;
+      origin[1] = ay;
+      origin[2] = az;
+      translate(dx,dy,dz);
+      iarg += 4;
+    } else if (strcmp(arg[iarg],"ftrans") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
+      double fx = input->numeric(FLERR,arg[iarg+1]);
+      double fy = input->numeric(FLERR,arg[iarg+2]);
+      double fz = input->numeric(FLERR,arg[iarg+3]);
+      if (dim == 2 && fz != 0.5) 
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      double ax = domain->boxlo[0] + fx*domain->xprd;
+      double ay = domain->boxlo[1] + fy*domain->yprd;
+      double az;
+      if (dim == 3) az = domain->boxlo[2] + fz*domain->zprd;
+      else az = 0.0;
+      double dx = ax - origin[0];
+      double dy = ay - origin[1];
+      double dz = az - origin[2];
+      origin[0] = ax;
+      origin[1] = ay;
+      origin[2] = az;
+      translate(dx,dy,dz);
+      iarg += 4;
+    } else if (strcmp(arg[iarg],"scale") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
+      double sx = input->numeric(FLERR,arg[iarg+1]);
+      double sy = input->numeric(FLERR,arg[iarg+2]);
+      double sz = input->numeric(FLERR,arg[iarg+3]);
+      if (dim == 2 && sz != 1.0) 
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      scale(sx,sy,sz);
+      iarg += 4;
+    } else if (strcmp(arg[iarg],"rotate") == 0) {
+      if (iarg+5 > narg) error->all(FLERR,"Invalid read_surf command");
+      double theta = input->numeric(FLERR,arg[iarg+1]);
+      double rx = input->numeric(FLERR,arg[iarg+2]);
+      double ry = input->numeric(FLERR,arg[iarg+3]);
+      double rz = input->numeric(FLERR,arg[iarg+4]);
+      if (dim == 2 && (rx != 0.0 || ry != 0.0 || rz != 1.0))
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      if (rx == 0.0 && ry == 0.0 && rz == 0.0)
+	error->all(FLERR,"Invalid read_surf geometry transformation "
+		   "for 2d simulation");
+      rotate(theta,rx,ry,rz);
+      iarg += 5;
+    } else if (strcmp(arg[iarg],"invert") == 0) {
+      invert();
+      iarg += 1;
+    } else if (strcmp(arg[iarg],"clip") == 0) {
+      if (distributed) 
+        error->all(FLERR,"Cannot yet perform clip on distributed surfaces");
+
+      double frac = 0.0;
+      if (iarg+1 < narg) {
+        char c = arg[iarg+1][0];
+        if (isdigit(c) || c == '-' || c == '+' || c == '.') {
+          frac = input->numeric(FLERR,arg[iarg+1]);
+          if (frac < 0.0 || frac >= 0.5) 
+            error->all(FLERR,"Invalid read_surf command");
+          iarg++;
+        }
+      }
+      if (frac > 0.0) push_points_to_boundary(frac);
+      if (dim == 2) clip2d();
+      else clip3d();
+      iarg++;
+
+    } else if (strcmp(arg[iarg],"group") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      grouparg = iarg+1;
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"typeadd") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      typeadd = input->inumeric(FLERR,arg[iarg+1]);
+      if (typeadd < 0) error->all(FLERR,"Invalid read_surf command");
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"particle") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      if (strcmp(arg[iarg+1],"none") == 0) partflag = NONE;
+      else if (strcmp(arg[iarg+1],"check") == 0) partflag = CHECK;
+      else if (strcmp(arg[iarg+1],"keep") == 0) partflag = KEEP;
+      else error->all(FLERR,"Invalid read_surf command");
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"file") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      filearg = iarg+1;
+      iarg += 2;
+
+    } else error->all(FLERR,"Invalid read_surf command");
+  }
+
+  // error test on particles
+
+  if (particle->exist && partflag == NONE)
+    error->all(FLERR,"Using read_surf particle none when particles exist");
+
+  // if specified, apply group and typeadd keywords
+  // these reset per-element mask/type info
+
+  if (grouparg) {
+    int igroup = surf->find_group(arg[grouparg]);
+    if (igroup < 0) igroup = surf->add_group(arg[grouparg]);
+    int groupbit = surf->bitmask[igroup];
+    if (dim == 2) {
+      if (distributed) {
+        Surf::Line *mylines = surf->mylines;
+        int nown = surf->nown;
+        for (int i = nline_old; i < nown; i++) mylines[i].mask |= groupbit;
+      } else {
+        for (int i = 0; i < nline; i++) lines[i].mask |= groupbit;
+      }
+    } else {
+      if (distributed) {
+        Surf::Tri *mytris = surf->mytris;
+        int nown = surf->nown;
+        for (int i = ntri_old; i < nown; i++) mytris[i].mask |= groupbit;
+      } else {
+        for (int i = 0; i < ntri; i++) tris[i].mask |= groupbit;
+      }
+    }
+  }
+
+  if (typeadd) {
+    if (dim == 2) {
+      if (distributed) {
+        Surf::Line *mylines = surf->mylines;
+        int nown = surf->nown;
+        for (int i = nline_old; i < nown; i++) mylines[i].type += typeadd;
+      } else {
+        for (int i = 0; i < nline; i++) lines[i].type += typeadd;
+      }
+    } else {
+      if (distributed) {
+        Surf::Tri *mytris = surf->mytris;
+        int nown = surf->nown;
+        for (int i = ntri_old; i < nown; i++) mytris[i].type += typeadd;
+      } else {
+        for (int i = 0; i < ntri; i++) tris[i].type += typeadd;
+      }
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
    translate new vertices by (dx,dy,dz)
    for 2d, dz will be 0.0
 ------------------------------------------------------------------------- */
 
 void ReadSurf::translate(double dx, double dy, double dz)
 {
-  for (int i = 0; i < npoint; i++) {
-    pts[i].x[0] += dx;
-    pts[i].x[1] += dy;
-    pts[i].x[2] += dz;
+  if (!distributed) {
+    for (int i = 0; i < npoint; i++) {
+      pts[i].x[0] += dx;
+      pts[i].x[1] += dy;
+      pts[i].x[2] += dz;
+    }
+
+  } else if (dim == 2) {
+    Surf::Line *mylines = surf->mylines;
+    int nown = surf->nown;
+    for (int i = nline_old; i < nown; i++) {
+      mylines[i].p1[0] += dx;
+      mylines[i].p1[1] += dy;
+      mylines[i].p1[2] += dz;
+      mylines[i].p2[0] += dx;
+      mylines[i].p2[1] += dy;
+      mylines[i].p2[2] += dz;
+    }
+
+  } else if (dim == 3) {
+    Surf::Tri *mytris = surf->mytris;
+    int nown = surf->nown;
+    for (int i = ntri_old; i < nown; i++) {
+      mytris[i].p1[0] += dx;
+      mytris[i].p1[1] += dy;
+      mytris[i].p1[2] += dz;
+      mytris[i].p2[0] += dx;
+      mytris[i].p2[1] += dy;
+      mytris[i].p2[2] += dz;
+      mytris[i].p3[0] += dx;
+      mytris[i].p3[1] += dy;
+      mytris[i].p3[2] += dz;
+    }
   }
 }
 
@@ -890,10 +1079,37 @@ void ReadSurf::translate(double dx, double dy, double dz)
 
 void ReadSurf::scale(double sx, double sy, double sz)
 {
-  for (int i = 0; i < npoint; i++) {
-    pts[i].x[0] = sx*(pts[i].x[0]-origin[0]) + origin[0];
-    pts[i].x[1] = sy*(pts[i].x[1]-origin[1]) + origin[1];
-    if (dim == 3) pts[i].x[2] = sz*(pts[i].x[2]-origin[2]) + origin[2];
+  if (!distributed) {
+    for (int i = 0; i < npoint; i++) {
+      pts[i].x[0] = sx*(pts[i].x[0]-origin[0]) + origin[0];
+      pts[i].x[1] = sy*(pts[i].x[1]-origin[1]) + origin[1];
+      if (dim == 3) pts[i].x[2] = sz*(pts[i].x[2]-origin[2]) + origin[2];
+    }
+
+  } else if (dim == 2) {
+    Surf::Line *mylines = surf->mylines;
+    int nown = surf->nown;
+    for (int i = nline_old; i < nown; i++) {
+      mylines[i].p1[0] = sx*(mylines[i].p1[0]-origin[0]) + origin[0];
+      mylines[i].p1[1] = sy*(mylines[i].p1[1]-origin[1]) + origin[1];
+      mylines[i].p2[0] = sx*(mylines[i].p2[0]-origin[0]) + origin[0];
+      mylines[i].p2[1] = sy*(mylines[i].p2[1]-origin[1]) + origin[1];
+    }
+
+  } else if (dim == 3) {
+    Surf::Tri *mytris = surf->mytris;
+    int nown = surf->nown;
+    for (int i = ntri_old; i < nown; i++) {
+      mytris[i].p1[0] = sx*(mytris[i].p1[0]-origin[0]) + origin[0];
+      mytris[i].p1[1] = sy*(mytris[i].p1[1]-origin[1]) + origin[1];
+      mytris[i].p1[2] = sz*(mytris[i].p1[2]-origin[2]) + origin[2];
+      mytris[i].p2[0] = sx*(mytris[i].p2[0]-origin[0]) + origin[0];
+      mytris[i].p2[1] = sy*(mytris[i].p2[1]-origin[1]) + origin[1];
+      mytris[i].p2[2] = sz*(mytris[i].p2[2]-origin[2]) + origin[2];
+      mytris[i].p3[0] = sx*(mytris[i].p3[0]-origin[0]) + origin[0];
+      mytris[i].p3[1] = sy*(mytris[i].p3[1]-origin[1]) + origin[1];
+      mytris[i].p3[2] = sz*(mytris[i].p3[2]-origin[2]) + origin[2];
+    }
   }
 }
 
@@ -914,14 +1130,64 @@ void ReadSurf::rotate(double theta, double rx, double ry, double rz)
   MathExtra::axisangle_to_quat(r,theta,q);
   MathExtra::quat_to_mat(q,rotmat);
 
-  for (int i = 0; i < npoint; i++) {
-    d[0] = pts[i].x[0] - origin[0];
-    d[1] = pts[i].x[1] - origin[1];
-    d[2] = pts[i].x[2] - origin[2];
-    MathExtra::matvec(rotmat,d,dnew);
-    pts[i].x[0] = dnew[0] + origin[0];
-    pts[i].x[1] = dnew[1] + origin[1];
-    if (dim == 3) pts[i].x[2] = dnew[2] + origin[2];
+  if (!distributed) {
+    for (int i = 0; i < npoint; i++) {
+      d[0] = pts[i].x[0] - origin[0];
+      d[1] = pts[i].x[1] - origin[1];
+      d[2] = pts[i].x[2] - origin[2];
+      MathExtra::matvec(rotmat,d,dnew);
+      pts[i].x[0] = dnew[0] + origin[0];
+      pts[i].x[1] = dnew[1] + origin[1];
+      if (dim == 3) pts[i].x[2] = dnew[2] + origin[2];
+    }
+  } else if (dim == 2) {
+    Surf::Line *mylines = surf->mylines;
+    int nown = surf->nown;
+
+    for (int i = nline_old; i < nown; i++) {
+      d[0] = mylines[i].p1[0] - origin[0];
+      d[1] = mylines[i].p1[1] - origin[1];
+      d[2] = mylines[i].p1[2] - origin[2];
+      MathExtra::matvec(rotmat,d,dnew);
+      mylines[i].p1[0] = dnew[0] + origin[0];
+      mylines[i].p1[1] = dnew[1] + origin[1];
+
+      d[0] = mylines[i].p2[0] - origin[0];
+      d[1] = mylines[i].p2[1] - origin[1];
+      d[2] = mylines[i].p2[2] - origin[2];
+      MathExtra::matvec(rotmat,d,dnew);
+      mylines[i].p2[0] = dnew[0] + origin[0];
+      mylines[i].p2[1] = dnew[1] + origin[1];
+    }
+  } else if (dim == 3) {
+    Surf::Tri *mytris = surf->mytris;
+    int nown = surf->nown;
+
+    for (int i = ntri_old; i < nown; i++) {
+      d[0] = mytris[i].p1[0] - origin[0];
+      d[1] = mytris[i].p1[1] - origin[1];
+      d[2] = mytris[i].p1[2] - origin[2];
+      MathExtra::matvec(rotmat,d,dnew);
+      mytris[i].p1[0] = dnew[0] + origin[0];
+      mytris[i].p1[1] = dnew[1] + origin[1];
+      mytris[i].p1[2] = dnew[2] + origin[2];
+
+      d[0] = mytris[i].p2[0] - origin[0];
+      d[1] = mytris[i].p2[1] - origin[1];
+      d[2] = mytris[i].p2[2] - origin[2];
+      MathExtra::matvec(rotmat,d,dnew);
+      mytris[i].p2[0] = dnew[0] + origin[0];
+      mytris[i].p2[1] = dnew[1] + origin[1];
+      mytris[i].p2[2] = dnew[2] + origin[2];
+
+      d[0] = mytris[i].p3[0] - origin[0];
+      d[1] = mytris[i].p3[1] - origin[1];
+      d[2] = mytris[i].p3[2] - origin[2];
+      MathExtra::matvec(rotmat,d,dnew);
+      mytris[i].p3[0] = dnew[0] + origin[0];
+      mytris[i].p3[1] = dnew[1] + origin[1];
+      mytris[i].p3[2] = dnew[2] + origin[2];
+    }
   }
 }
 
@@ -933,20 +1199,40 @@ void ReadSurf::rotate(double theta, double rx, double ry, double rz)
 void ReadSurf::invert()
 {
   int tmp;
+  double mytmp[3];
 
-  if (dim == 2) {
-    for (int i = 0; i < nline; i++) {
-      tmp = lines[i].p1;
-      lines[i].p1 = lines[i].p2;
-      lines[i].p2 = tmp;
+  if (!distributed) {
+    if (dim == 2) {
+      for (int i = 0; i < nline; i++) {
+        tmp = lines[i].p1;
+        lines[i].p1 = lines[i].p2;
+        lines[i].p2 = tmp;
+      }
+    } else if (dim == 3) {
+      for (int i = 0; i < ntri; i++) {
+        tmp = tris[i].p2;
+        tris[i].p2 = tris[i].p3;
+        tris[i].p3 = tmp;
+      }
     }
-  }
 
-  if (dim == 3) {
-    for (int i = 0; i < ntri; i++) {
-      tmp = tris[i].p2;
-      tris[i].p2 = tris[i].p3;
-      tris[i].p3 = tmp;
+  } else {
+    if (dim == 2) {
+      Surf::Line *mylines = surf->mylines;
+      int nown = surf->nown;
+      for (int i = nline_old; i < nown; i++) {
+        memcpy(mytmp,mylines[i].p1,3*sizeof(double));
+        memcpy(mylines[i].p1,mylines[i].p2,3*sizeof(double));
+        memcpy(mylines[i].p2,mytmp,3*sizeof(double));
+      }
+    } else if (dim == 3) {
+      Surf::Tri *mytris = surf->mytris;
+      int nown = surf->nown;
+      for (int i = ntri_old; i < nown; i++) {
+        memcpy(mytmp,mytris[i].p2,3*sizeof(double));
+        memcpy(mytris[i].p2,mytris[i].p3,3*sizeof(double));
+        memcpy(mytris[i].p3,mytmp,3*sizeof(double));
+      }
     }
   }
 }
@@ -1381,6 +1667,62 @@ void ReadSurf::clip3d()
 }
 
 /* ----------------------------------------------------------------------
+   add surfs from local data struct to Surfs data strucs
+   only called when distributed = 0
+------------------------------------------------------------------------- */
+
+void ReadSurf::add_surfs()
+{
+  if (dim == 2) {
+    bigint nsurf = surf->nsurf + nline;
+    if (nsurf > MAXSMALLINT) error->all(FLERR,"Too many non-distributed surfs");
+
+    nsurf_old = surf->nsurf;
+    nline_old = static_cast<int> (surf->nsurf);
+    nline_new = nline_old + nline;
+    surf->nmax = nline_new;
+    surf->grow();
+    Surf::Line *newlines = surf->lines;
+
+    int m = nline_old;
+    for (int i = 0; i < nline; i++) {
+      newlines[m].id = m+1;
+      newlines[m].type = lines[i].type;
+      newlines[m].mask = lines[i].mask;
+      newlines[m].isc = newlines[m].isr = -1;
+      memcpy(newlines[m].p1,pts[lines[i].p1].x,3*sizeof(double));
+      memcpy(newlines[m].p2,pts[lines[i].p2].x,3*sizeof(double));
+      m++;
+    }
+    surf->nsurf = surf->nlocal = nline_new;
+
+  } else if (dim == 3) {
+    bigint nsurf = surf->nsurf + ntri;
+    if (nsurf > MAXSMALLINT) error->all(FLERR,"Too many non-distributed surfs");
+
+    nsurf_old = surf->nsurf;
+    ntri_old = static_cast<int> (surf->nsurf);
+    ntri_new = ntri_old + ntri;
+    surf->nmax = ntri_new;
+    surf->grow();
+    Surf::Tri *newtris = surf->tris;
+
+    int m = ntri_old;
+    for (int i = 0; i < ntri; i++) {
+      newtris[m].id = m+1;
+      newtris[m].type = tris[i].type;
+      newtris[m].mask = tris[i].mask;
+      newtris[m].isc = newtris[m].isr = -1;
+      memcpy(newtris[m].p1,pts[tris[i].p1].x,3*sizeof(double));
+      memcpy(newtris[m].p2,pts[tris[i].p2].x,3*sizeof(double));
+      memcpy(newtris[m].p3,pts[tris[i].p3].x,3*sizeof(double));
+      m++;
+    }
+    surf->nsurf = surf->nlocal = ntri_new;
+  }
+}
+
+/* ----------------------------------------------------------------------
    push all points to box boundary that are just inside
    delta = user-specified frac * (hi-lo)
    this avoids tiny clipped surf elements
@@ -1416,13 +1758,18 @@ void ReadSurf::push_points_to_boundary(double frac)
 }
 
 /* ----------------------------------------------------------------------
-   check norms of new adjacent lines
+   check norms of adjacent lines
    error if dot product of 2 norms is -1 -> infinitely thin surf
    warn if closer than EPSILON_NORM to -1
 ------------------------------------------------------------------------- */
 
 void ReadSurf::check_neighbor_norm_2d()
 {
+  // NOTE: need to enable this for distributed
+  // NOTE: and for all, now that surfs are stored with point coords
+
+  if (distributed || !distributed) return;
+
   int p1,p2;
 
   // count[I] = # of lines that vertex I is part of
@@ -1486,6 +1833,11 @@ void ReadSurf::check_neighbor_norm_2d()
 
 void ReadSurf::check_neighbor_norm_3d()
 {
+  // NOTE: need to enable this for distributed
+  // NOTE: and for all, now that surfs are stored with point coords
+
+  if (distributed || !distributed) return;
+
   // hash directed edges of all triangles
   // key = directed edge, value = triangle it is part of
   // NOTE: could prealloc hash to correct size here
@@ -1493,7 +1845,7 @@ void ReadSurf::check_neighbor_norm_3d()
   MyHash hash;
   MyIterator it;
 
-  // insert each edge into hash with triangle as value
+  // insert each edge into hash with triangle index as value
 
   bigint p1,p2,p3,key;
 
@@ -1575,36 +1927,6 @@ void ReadSurf::add_edge(int i, int j, int m)
   edge[nedge][1] = j;
   edge[nedge][2] = m;
   nedge++;
-}
-
-/* ----------------------------------------------------------------------
-   return shortest line length
-------------------------------------------------------------------------- */
-
-double ReadSurf::shortest_line()
-{
-  double len = BIG;
-  for (int i = 0; i < nline; i++) {
-    len = MIN(len,surf->line_size(pts[lines[i].p1].x,pts[lines[i].p2].x));
-  }
-  return len;
-}
-
-/* ----------------------------------------------------------------------
-   return shortest tri edge and smallest tri area
-------------------------------------------------------------------------- */
-
-void ReadSurf::smallest_tri(double &len, double &area)
-{
-  double lenone,areaone;
-
-  len = area = BIG;
-  for (int i = 0; i < ntri; i++) {
-    areaone = surf->tri_size(pts[tris[i].p1].x,pts[tris[i].p2].x,
-                             pts[tris[i].p3].x,lenone);
-    len = MIN(len,lenone);
-    area = MIN(area,areaone);
-  }
 }
 
 /* ----------------------------------------------------------------------

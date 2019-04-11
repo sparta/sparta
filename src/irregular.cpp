@@ -264,14 +264,14 @@ int Irregular::create_data_uniform(int n, int *proclist, int sort)
   // could use n-work1[me] for length of index_send to be more precise
 
   if (n > indexmax) {
-    indexmax = n;
     memory->destroy(index_send);
+    indexmax = n;
     memory->create(index_send,indexmax,"irregular:index_send");
   }
 
   if (work1[me] > indexselfmax) {
-    indexselfmax = work1[me];
     memory->destroy(index_self);
+    indexselfmax = work1[me];
     memory->create(index_self,indexselfmax,"irregular:index_self");
   }
 
@@ -315,6 +315,178 @@ int Irregular::create_data_uniform(int n, int *proclist, int sort)
     else {
       isend = work1[iproc];
       index_send[work2[isend]++] = i;
+    }
+  }
+
+  // tell receivers how many datums I send them
+  // sendmax = largest # of datums I send in a single message
+
+  sendmax = 0;
+  for (i = 0; i < nsend; i++) {
+    MPI_Send(&num_send[i],1,MPI_INT,proc_send[i],0,world);
+    sendmax = MAX(sendmax,num_send[i]);
+  }
+
+  // receive incoming messages
+  // proc_recv = procs I recv from
+  // num_recv = # of datums each proc sends me
+  // nrecvdatum = total # of datums I recv
+
+  nrecvdatum = 0;
+  for (i = 0; i < nrecv; i++) {
+    MPI_Recv(&num_recv[i],1,MPI_INT,MPI_ANY_SOURCE,0,world,status);
+    proc_recv[i] = status->MPI_SOURCE;
+    nrecvdatum += num_recv[i];
+  }
+  nrecvdatum += num_self;
+
+  // sort proc_recv and num_recv by proc ID if requested
+  // useful for debugging to insure reproducible ordering of received datums
+
+  if (sort) {
+    int *order = new int[nrecv];
+    int *proc_recv_ordered = new int[nrecv];
+    int *num_recv_ordered = new int[nrecv];
+
+    for (i = 0; i < nrecv; i++) order[i] = i;
+    proc_recv_copy = proc_recv;
+    qsort(order,nrecv,sizeof(int),compare_standalone);
+
+    int j;
+    for (i = 0; i < nrecv; i++) {
+      j = order[i];
+      proc_recv_ordered[i] = proc_recv[j];
+      num_recv_ordered[i] = num_recv[j];
+    }
+
+    memcpy(proc_recv,proc_recv_ordered,nrecv*sizeof(int));
+    memcpy(num_recv,num_recv_ordered,nrecv*sizeof(int));
+    delete [] order;
+    delete [] proc_recv_ordered;
+    delete [] num_recv_ordered;
+  }
+
+  // proc2recv[I] = which recv the Ith proc ID is
+  // will only be accessed by procs I actually receive from
+
+  for (i = 0; i < nrecv; i++) proc2recv[proc_recv[i]] = i;
+
+  // barrier to insure all MPI_ANY_SOURCE messages are received
+  // else another proc could proceed to exchange_data() and send to me
+
+  MPI_Barrier(world);
+
+  // return # of datums I will receive
+
+  return nrecvdatum;
+}
+
+/* ----------------------------------------------------------------------
+   create communication plan based on list of datums of uniform size
+   n = # of datums to send
+   procs = how many datums to send to each proc, must include self
+   sort = flag for sorting order of received datums by proc ID
+   return total # of datums I will recv, including any to self
+------------------------------------------------------------------------- */
+
+int Irregular::create_data_uniform_grouped(int n, int *procs, int sort)
+{
+  int i,j,k,m;
+
+  // setup for collective comm
+  // work1 = # of datums I send to each proc, set self to 0
+  // work2 = 1 for all procs, used for ReduceScatter
+
+  for (i = 0; i < nprocs; i++) {
+    work1[i] = procs[i];
+    work2[i] = 1;
+  }
+  work1[me] = 0;
+
+  // nrecv = # of procs I receive messages from, not including self
+  // options for performing ReduceScatter operation
+  // some are more efficient on some machines at big sizes
+
+#ifdef SPARTA_RS_ALLREDUCE_INPLACE
+  MPI_Allreduce(MPI_IN_PLACE,work1,nprocs,MPI_INT,MPI_SUM,world);
+  nrecv = work1[me];
+#else 
+#ifdef SPARTA_RS_ALLREDUCE
+  MPI_Allreduce(work1,work2,nprocs,MPI_INT,MPI_SUM,world);
+  nrecv = work2[me];
+#else
+  MPI_Reduce_scatter(work1,&nrecv,work2,MPI_INT,MPI_SUM,world);
+#endif
+#endif
+
+  // work1 = # of datums I send to each proc, including self
+  // nsend = # of procs I send messages to, not including self
+
+  for (i = 0; i < nprocs; i++) work1[i] = procs[i];
+
+  nsend = 0;
+  for (i = 0; i < nprocs; i++)
+    if (work1[i]) nsend++;
+  if (work1[me]) nsend--;
+
+  // reallocate send and self index lists if necessary
+  // could use n-work1[me] for length of index_send to be more precise
+
+  if (n > indexmax) {
+    memory->destroy(index_send);
+    indexmax = n;
+    memory->create(index_send,indexmax,"irregular:index_send");
+  }
+
+  if (work1[me] > indexselfmax) {
+    memory->destroy(index_self);
+    indexselfmax = work1[me];
+    memory->create(index_self,indexselfmax,"irregular:index_self");
+  }
+
+  // proc_send = procs I send to
+  // num_send = # of datums I send to each proc
+  // num_self = # of datums I copy to self
+  // to balance pattern of send messages:
+  //   each proc starts with iproc > me, continues until iproc = me
+  // reset work1 to store which send message each proc corresponds to
+
+  int iproc = me;
+  int isend = 0;
+  for (i = 0; i < nprocs; i++) {
+    iproc++;
+    if (iproc == nprocs) iproc = 0;
+    if (iproc == me) {
+      num_self = work1[iproc];
+      work1[iproc] = 0;
+    } else if (work1[iproc]) {
+      proc_send[isend] = iproc;
+      num_send[isend] = work1[iproc];
+      work1[iproc] = isend;
+      isend++;
+    }
+  }
+
+  // work2 = offsets into index_send for each proc I send to
+  // m = ptr into index_self
+  // index_send = list of which datums to send to each proc
+  //   1st N1 values are datum indices for 1st proc,
+  //   next N2 values are datum indices for 2nd proc, etc
+  // index_self = list of which datums to copy to self
+
+  work2[0] = 0;
+  for (i = 1; i < nsend; i++) work2[i] = work2[i-1] + num_send[i-1];
+
+  m = 0;
+  i = 0;
+  for (iproc = 0; iproc < nprocs; iproc++) {
+    k = procs[iproc];
+    for (j = 0; j < k; j++) {
+      if (iproc == me) index_self[m++] = i++;
+      else {
+        isend = work1[iproc];
+        index_send[work2[isend]++] = i++;
+      }
     }
   }
 
@@ -633,6 +805,15 @@ void Irregular::exchange_uniform(char *sendbuf, int nbytes, char *recvbuf)
   // wait on all incoming messages
 
   if (nrecv) MPI_Waitall(nrecv,request,status);
+
+  // approximate memory tally
+  // DEBUG lines
+
+  //bigint irregular_bytes = 0;
+  //irregular_bytes += 7*nprocs*sizeof(int);
+  //irregular_bytes += indexmax*sizeof(int);
+  //irregular_bytes += indexselfmax*sizeof(int);
+  //irregular_bytes += bufmax;
 }
 
 /* ----------------------------------------------------------------------

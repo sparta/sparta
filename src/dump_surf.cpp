@@ -189,6 +189,9 @@ DumpSurf::~DumpSurf()
 
 void DumpSurf::init_style()
 {
+  distributed = surf->distributed;
+  implicit = surf->implicit;
+
   // setup function ptrs
 
   if (binary) header_choice = &DumpSurf::header_binary;
@@ -232,40 +235,58 @@ void DumpSurf::init_style()
 
   // one-time setup of lists of owned elements contributing to dump
   // NOTE: will need to recalculate, if allow addition of surf elements
-  // nslocal = # of surf elements I own
-  // nchoose = # of nslocal surf elements in surface group
+  // nown = # of surf elements I own
+  // nchoose = # of nown surf elements in surface group
   // cglobal[] = global indices for nchoose elements
+  //             used to access lines/tris in Surf
   // clocal[] = local indices for nchoose elements
-  // mysurf[clocal[i]] = cglobal[i] for all nchoose
+  //            used to access nown data from per-surf computes,fixes,variables
 
   if (!firstflag) return;
-
   firstflag = 0;
-  int *mysurfs = surf->mysurfs;
-  nslocal = surf->nlocal;
+
+  Surf::Line *lines;
+  Surf::Tri *tris;
+
+  if (distributed && !implicit) lines = surf->mylines;
+  else lines = surf->lines;
+  if (distributed && !implicit) tris = surf->mytris;
+  else tris = surf->tris;
+
+  nown = surf->nown;
+  int m;
 
   nchoose = 0;
-  for (int i = 0; i < nslocal; i++)
+  for (int i = 0; i < nown; i++) {
     if (dimension == 2) {
-      if (surf->lines[mysurfs[i]].mask & groupbit) nchoose++;
+      if (!distributed) m = me + i*nprocs;
+      else m = i;
+      if (lines[m].mask & groupbit) nchoose++;
     } else {
-      if (surf->tris[mysurfs[i]].mask & groupbit) nchoose++;
+      if (!distributed) m = me + i*nprocs;
+      else m = i;
+      if (tris[m].mask & groupbit) nchoose++;
     }
+  }
 
   memory->create(cglobal,nchoose,"dump/surf:cglobal");
   memory->create(clocal,nchoose,"dump/surf:clocal");
-  memory->create(buflocal,nslocal,"dump/surf:buflocal");
+  memory->create(buflocal,nown,"dump/surf:buflocal");
 
   nchoose = 0;
-  for (int i = 0; i < nslocal; i++)
+  for (int i = 0; i < nown; i++)
     if (dimension == 2) {
-      if (surf->lines[mysurfs[i]].mask & groupbit) {
-        cglobal[nchoose] = mysurfs[i];
+      if (!distributed) m = me + i*nprocs;
+      else m = i;
+      if (lines[m].mask & groupbit) {
+        cglobal[nchoose] = m;
         clocal[nchoose++] = i;
       }
     } else {
-      if (surf->tris[mysurfs[i]].mask & groupbit) {
-        cglobal[nchoose] = mysurfs[i];
+      if (!distributed) m = me + i*nprocs;
+      else m = i;
+      if (tris[m].mask & groupbit) {
+        cglobal[nchoose] = m;
         clocal[nchoose++] = i;
       }
     }
@@ -321,7 +342,7 @@ int DumpSurf::count()
   if (ncompute) {
     for (int i = 0; i < ncompute; i++)
       if (!(compute[i]->invoked_flag & INVOKED_PER_SURF)) {
-	compute[i]->compute_per_surf();
+	compute[i]->compute_per_grid();
 	compute[i]->invoked_flag |= INVOKED_PER_SURF;
       }
   }
@@ -462,6 +483,8 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       n = modify->find_compute(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf compute ID");
+      if (surf->implicit) 
+        error->all(FLERR,"Cannot use dump surf compute with implicit surfs");
       if (modify->compute[n]->per_surf_flag == 0)
 	error->all(FLERR,"Dump surf compute does not compute per-surf info");
       if (argindex[i]== 0 && modify->compute[n]->size_per_surf_cols != 0)
@@ -498,6 +521,8 @@ int DumpSurf::parse_fields(int narg, char **arg)
 
       n = modify->find_fix(suffix);
       if (n < 0) error->all(FLERR,"Could not find dump surf fix ID");
+      if (surf->implicit) 
+        error->all(FLERR,"Cannot use dump surf fix with implicit surfs");
       if (modify->fix[n]->per_surf_flag == 0)
 	error->all(FLERR,"Dump surf fix does not compute per-surf info");
       if (argindex[i]== 0 && modify->fix[n]->size_per_surf_cols != 0)
@@ -621,27 +646,16 @@ int DumpSurf::add_variable(char *id)
 
 void DumpSurf::pack_compute(int n)
 {
-  int *loc2glob;
-  int nlocal = compute[field2index[n]]->surfinfo(loc2glob);
-  
   int index = argindex[n];
-  if (index == 0) {
-    double *vector = compute[field2index[n]]->vector_surf_tally;
-    surf->collate_vector(nlocal,loc2glob,vector,1,buflocal);
-  } else {
-    double **array = compute[field2index[n]]->array_surf_tally;
-    int stride = compute[field2index[n]]->size_per_surf_cols;
+  Compute *c = compute[field2index[n]];
+  c->tallysum(index);
 
-    // array can be NULL if nlocal = 0, b/c this proc tallied no surfs
+  // index is 0 for a compute vector, 1-N for a column of compute array
+  // either way, compute creates vector_surf
 
-    if (array) 
-      surf->collate_vector(nlocal,loc2glob,&array[0][index-1],stride,buflocal);
-    else
-      surf->collate_vector(nlocal,loc2glob,NULL,stride,buflocal);
-  }
-
+  double *vector = c->vector_surf;
   for (int i = 0; i < nchoose; i++) {
-    buf[n] = buflocal[clocal[i]];
+    buf[n] = vector[clocal[i]];
     n += size_one;
   }
 }
@@ -693,13 +707,17 @@ void DumpSurf::pack_id(int n)
   // NOTE: surfint (bigint) won't fit in double in some cases
 
   if (dimension == 2) {
-    Surf::Line *lines = surf->lines;
+    Surf::Line *lines;
+    if (distributed && !implicit) lines = surf->mylines;
+    else lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = lines[cglobal[i]].id;
       n += size_one;
     }
   } else {
-    Surf::Tri *tris = surf->tris;
+    Surf::Tri *tris;
+    if (distributed && !implicit) tris = surf->mytris;
+    else tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = tris[cglobal[i]].id;
       n += size_one;
@@ -712,13 +730,17 @@ void DumpSurf::pack_id(int n)
 void DumpSurf::pack_type(int n)
 {
   if (dimension == 2) {
-    Surf::Line *lines = surf->lines;
+    Surf::Line *lines;
+    if (distributed && !implicit) lines = surf->mylines;
+    else lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = lines[cglobal[i]].type;
       n += size_one;
     }
   } else if (dimension == 3) {
-    Surf::Tri *tris = surf->tris;
+    Surf::Tri *tris;
+    if (distributed && !implicit) tris = surf->mytris;
+    else tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = tris[cglobal[i]].type;
       n += size_one;
@@ -731,13 +753,17 @@ void DumpSurf::pack_type(int n)
 void DumpSurf::pack_v1x(int n)
 {
   if (dimension == 2) {
-    Surf::Line *lines = surf->lines;
+    Surf::Line *lines;
+    if (distributed && !implicit) lines = surf->mylines;
+    else lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = lines[cglobal[i]].p1[0];
       n += size_one;
     }
   } else if (dimension == 3) {
-    Surf::Tri *tris = surf->tris;
+    Surf::Tri *tris;
+    if (distributed && !implicit) tris = surf->mytris;
+    else tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = tris[cglobal[i]].p1[0];
       n += size_one;
@@ -750,13 +776,17 @@ void DumpSurf::pack_v1x(int n)
 void DumpSurf::pack_v1y(int n)
 {
   if (dimension == 2) {
-    Surf::Line *lines = surf->lines;
+    Surf::Line *lines;
+    if (distributed && !implicit) lines = surf->mylines;
+    else lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = lines[cglobal[i]].p1[1];
       n += size_one;
     }
   } else if (dimension == 3) {
-    Surf::Tri *tris = surf->tris;
+    Surf::Tri *tris;
+    if (distributed && !implicit) tris = surf->mytris;
+    else tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = tris[cglobal[i]].p1[1];
       n += size_one;
@@ -768,7 +798,9 @@ void DumpSurf::pack_v1y(int n)
 
 void DumpSurf::pack_v1z(int n)
 {
-  Surf::Tri *tris = surf->tris;
+  Surf::Tri *tris;
+  if (distributed && !implicit) tris = surf->mytris;
+  else tris = surf->tris;
   for (int i = 0; i < nchoose; i++) {
     buf[n] = tris[cglobal[i]].p1[2];
     n += size_one;
@@ -780,13 +812,17 @@ void DumpSurf::pack_v1z(int n)
 void DumpSurf::pack_v2x(int n)
 {
   if (dimension == 2) {
-    Surf::Line *lines = surf->lines;
+    Surf::Line *lines;
+    if (distributed && !implicit) lines = surf->mylines;
+    else lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = lines[cglobal[i]].p2[0];
       n += size_one;
     }
   } else if (dimension == 3) {
-    Surf::Tri *tris = surf->tris;
+    Surf::Tri *tris;
+    if (distributed && !implicit) tris = surf->mytris;
+    else tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = tris[cglobal[i]].p2[0];
       n += size_one;
@@ -799,13 +835,17 @@ void DumpSurf::pack_v2x(int n)
 void DumpSurf::pack_v2y(int n)
 {
   if (dimension == 2) {
-    Surf::Line *lines = surf->lines;
+    Surf::Line *lines;
+    if (distributed && !implicit) lines = surf->mylines;
+    else lines = surf->lines;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = lines[cglobal[i]].p2[1];
       n += size_one;
     }
   } else if (dimension == 3) {
-    Surf::Tri *tris = surf->tris;
+    Surf::Tri *tris;
+    if (distributed && !implicit) tris = surf->mytris;
+    else tris = surf->tris;
     for (int i = 0; i < nchoose; i++) {
       buf[n] = tris[cglobal[i]].p2[1];
       n += size_one;
@@ -817,7 +857,9 @@ void DumpSurf::pack_v2y(int n)
 
 void DumpSurf::pack_v2z(int n)
 {
-  Surf::Tri *tris = surf->tris;
+  Surf::Tri *tris;
+  if (distributed && !implicit) tris = surf->mytris;
+  else tris = surf->tris;
   for (int i = 0; i < nchoose; i++) {
     buf[n] = tris[cglobal[i]].p2[2];
     n += size_one;
@@ -828,7 +870,9 @@ void DumpSurf::pack_v2z(int n)
 
 void DumpSurf::pack_v3x(int n)
 {
-  Surf::Tri *tris = surf->tris;
+  Surf::Tri *tris;
+  if (distributed && !implicit) tris = surf->mytris;
+  else tris = surf->tris;
   for (int i = 0; i < nchoose; i++) {
     buf[n] = tris[cglobal[i]].p3[0];
     n += size_one;
@@ -839,7 +883,9 @@ void DumpSurf::pack_v3x(int n)
 
 void DumpSurf::pack_v3y(int n)
 {
-  Surf::Tri *tris = surf->tris;
+  Surf::Tri *tris;
+  if (distributed && !implicit) tris = surf->mytris;
+  else tris = surf->tris;
   for (int i = 0; i < nchoose; i++) {
     buf[n] = tris[cglobal[i]].p3[1];
     n += size_one;
@@ -850,7 +896,9 @@ void DumpSurf::pack_v3y(int n)
 
 void DumpSurf::pack_v3z(int n)
 {
-  Surf::Tri *tris = surf->tris;
+  Surf::Tri *tris;
+  if (distributed && !implicit) tris = surf->mytris;
+  else tris = surf->tris;
   for (int i = 0; i < nchoose; i++) {
     buf[n] = tris[cglobal[i]].p3[2];
     n += size_one;

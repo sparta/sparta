@@ -685,6 +685,10 @@ int AdaptGrid::refine()
 
 int AdaptGrid::coarsen(int pstop)
 {
+  if (surf->exist && surf->distributed)
+    error->all(FLERR,"Grid adapt coarsen does not yet support "
+               "distributed surface elements");
+  
   // NOTE: why is grid not really hashed at this point even though it says so?
   // WHEN done with adapt, do I need to mark it hashed or unhashed?
   // NOTE: does fix balance always do a sort?  yes it does
@@ -804,7 +808,7 @@ void AdaptGrid::refine_particle()
 void AdaptGrid::refine_surf()
 {
   int m,icell,flag,nsurf;
-  int *csurfs;
+  surfint *csurfs;
   double *norm,*lo,*hi;
 
   int dim = domain->dimension;
@@ -1460,8 +1464,8 @@ void AdaptGrid::candidates_coarsen(int pstop)
 
   sa_header = (SendAdapt **) 
     memory->smalloc(nrecv*sizeof(SendAdapt *),"adapt_grid::sa_header");
-  sa_csurfs = (int **) 
-    memory->smalloc(nrecv*sizeof(int *),"adapt_grid::sa_csurfs");
+  sa_csurfs = (surfint **) 
+    memory->smalloc(nrecv*sizeof(surfint *),"adapt_grid::sa_csurfs");
   sa_particles = (char **) 
     memory->smalloc(nrecv*sizeof(char *),"adapt_grid::sa_particles");
   int nbytes_total = sizeof(Particle::OnePart) + particle->sizeof_custom();
@@ -1474,8 +1478,8 @@ void AdaptGrid::candidates_coarsen(int pstop)
     ptr += sizeof(SendAdapt);
     ptr = ROUNDUP(ptr);
 
-    sa_csurfs[i] = (int *) ptr;
-    ptr += sa_header[i]->nsurf * sizeof(int);
+    sa_csurfs[i] = (surfint *) ptr;
+    ptr += sa_header[i]->nsurf * sizeof(surfint);
     ptr = ROUNDUP(ptr);
 
     sa_particles[i] = (char *) ptr;
@@ -1632,7 +1636,8 @@ void AdaptGrid::coarsen_particle()
 void AdaptGrid::coarsen_surf()
 {
   int i,j,m,iparent,nchild,icell,nsurf,flag;
-  int *proc,*index,*recv,*csurfs;
+  int *proc,*index,*recv;
+  surfint *csurfs;
   double *lo,*hi,*norm;
 
   int dim = domain->dimension;

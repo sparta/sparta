@@ -398,15 +398,14 @@ void CollideVSS::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
                                          vrc[0]*vrc[2]*sin(eps))/d );
     } else {
       ua = scale * ( cosX*vrc[0] ); 
-      vb = scale * ( sinX*vrc[1]*cos(eps) ); 
-      wc = scale * ( sinX*vrc[2]*sin(eps) );
+      vb = scale * ( sinX*vrc[0]*cos(eps) ); 
+      wc = scale * ( sinX*vrc[0]*sin(eps) );
     }
   }
   
   // new velocities for the products
 
   double divisor = 1.0 / (mass_i + mass_j);
-  // Changed signed of second term to match DS1V
   vi[0] = precoln.ucmf + (mass_j*divisor)*ua;
   vi[1] = precoln.vcmf + (mass_j*divisor)*vb;
   vi[2] = precoln.wcmf + (mass_j*divisor)*wc;
@@ -605,15 +604,14 @@ void CollideVSS::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
                                         vrc[0]*vrc[2]*sin(eps))/d);
     } else {
       ua = scale * cosX*vrc[0]; 
-      vb = scale * sinX*vrc[1]*cos(eps); 
-      wc = scale * sinX*vrc[2]*sin(eps);
+      vb = scale * sinX*vrc[0]*cos(eps); 
+      wc = scale * sinX*vrc[0]*sin(eps);
     }
   }
 
   // new velocities for the products
 
   double divisor = 1.0 / (mass_ij + mass_k);
-  // Changed signed of second term to match DS1V
   vi[0] = precoln.ucmf + (mass_ij*divisor)*ua;
   vi[1] = precoln.vcmf + (mass_ij*divisor)*vb;
   vi[2] = precoln.wcmf + (mass_ij*divisor)*wc;

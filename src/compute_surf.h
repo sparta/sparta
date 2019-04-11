@@ -36,20 +36,23 @@ class ComputeSurf : public Compute {
   virtual void clear();
   virtual void surf_tally(int, Particle::OnePart *, 
                           Particle::OnePart *, Particle::OnePart *);
-  double *normptr(int);
-  virtual int surfinfo(int *&);
+  virtual int tallyinfo(int *&);
+  virtual void tallysum(int);
   bigint memory_usage();
 
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
   int *which;
+  bigint last_tallysum;    // last timestep tallysum was called
 
-  int nsurf;               // # of global surfs, lines or triangles
-  int nlocal;              // # of local surfs I have tallied for
-  int maxlocal;            // # of local surfs currently allocated
-  double **array;          // tally values for local surfs
-  int *glob2loc;           // glob2loc[I] = local index of Ith global surf
-  int *loc2glob;           // loc2glob[I] = global index of Ith local surf
+  int nsurf;               // # of lines/tris I own
+                           // surf->nlocal+nghost for explicit all or distributed
+
+  int ntally;              // # of surfs I have tallied for
+  int maxtally;            // # of tallies currently allocated
+  int *surf2tally;         // surf2tally[I] = tally index of Ith surf
+  int *tally2surf;         // tally2surf[I] = surf index of Ith tally
+  double **array;          // tally values, maxtally in length
 
   int dimension;           // local copies
   Surf::Line *lines;
@@ -61,7 +64,7 @@ class ComputeSurf : public Compute {
   double nfactor_inverse;  // fnum/dt for normalization
   double *normflux;        // normalization factor for each surf element
   double nfactor_previous; // nfactor from previous run
-  void grow();
+  void grow_tally();
 };
 
 }

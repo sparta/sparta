@@ -30,9 +30,13 @@ class SurfKokkos : public Surf {
   void sync(ExecutionSpace, unsigned int);
   void modify(ExecutionSpace, unsigned int);
   void grow();
+  void grow_own();
 
   tdual_line_1d k_lines;
   tdual_tri_1d k_tris;
+
+  tdual_line_1d k_mylines;
+  tdual_tri_1d k_mytris;
 
  private:
 

@@ -87,6 +87,7 @@ class UpdateKokkos : public Update {
   typedef UPDATE_REDUCE value_type;
 
   DAT::tdual_int_1d k_mlist;
+  DAT::tdual_int_1d k_mlist_small;
   //DAT::t_int_1d d_mlist_small;
   //HAT::t_int_scalar h_mlist_small;
   //int* mlist_small;

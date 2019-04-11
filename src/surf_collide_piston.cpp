@@ -55,8 +55,8 @@ void SurfCollidePiston::init()
 
   if (domain->dimension == 2) {
     Surf::Line *lines = surf->lines;
-    int nline = surf->nline;
-    for (int i = 0; i < nline; i++)
+    int nsurf = surf->nsurf;
+    for (int i = 0; i < nsurf; i++)
       if (lines[i].isc == index) {
         if (lines[i].norm[0] != 0.0 && lines[i].norm[1] != 0.0) flag++;
       } 
@@ -64,8 +64,8 @@ void SurfCollidePiston::init()
 
   if (domain->dimension == 3) {
     Surf::Tri *tris = surf->tris;
-    int ntri = surf->ntri;
-    for (int i = 0; i < ntri; i++)
+    int nsurf = surf->nsurf;
+    for (int i = 0; i < nsurf; i++)
       if (tris[i].isc == index) {
         if (tris[i].norm[0] != 0.0 && tris[i].norm[1] != 0.0) flag++;
         if (tris[i].norm[1] != 0.0 && tris[i].norm[2] != 0.0) flag++;

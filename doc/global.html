@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>one or more keyword/value pairs 
 
-<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>cellmax</I> or <I>splitmax</I> or <I>surfpush</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
+<LI>keyword = <I>fnum</I> or <I>nrho</I> or <I>vstream</I> or <I>temp</I> or <I>gravity</I> or <I>surfs</I> or <I>surfgrid</I> or <I>surfmax</I> or <I>cellmax</I> or <I>splitmax</I> or <I>surfpush</I> or <I>gridcut</I> or <I>comm/sort</I> or <I>comm/style</I> or <I>weight</I> or <I>particle/reorder</I> or <I>mem/limit</I> 
 
 <PRE>  <I>fnum</I> value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
@@ -30,6 +30,12 @@
   <I>gravity</I> values = mag ex ey ez
     mag = magnitude of acceleration due to gravity (acceleration units)
     ex,ey,ez = direction vector that gravity acts in
+  <I>surfs</I> value = explicit or explicit/distributed or implicit
+    explicit = surfs defined in read_surf file, each proc owns copy of all surfs
+    explicit/distributed = surfs defined in read_surf file, each proc owns
+                           only the surfs for its owned_ghost grid cells
+    implicit = surfs defined in read_isurf file, each proc owns
+                           only the surfs for its owned+ghost grid cells
   <I>surfgrid</I> value = combo or percell or persurf
     percell = loop over my cells and check every surf
     persurf = loop over my surfs and cells they overlap
@@ -105,6 +111,20 @@ acceleration term is included, which is the default.
 </P>
 <HR>
 
+<P>The <I>surfs</I> keyword determines what kind of surface elements SPARTA
+uses and how they are distributed across processors.  Possible values
+are <I>explicit</I>, <I>explicit/distributed</I>, and <I>implicit</I>.  See the
+<A HREF = "Section_howto.html#howto_13">Howto 6.13</A> section of the manual for an
+explantion of explicit versus implicit surfaces.  The distributed
+option can be important for models with huge numbers of surface
+elements.  Each processor stores copies of only the surfaces that
+overlap grid cells it owns or has ghost copies of.  Implicit surfaces
+are always distributed.  The <I>explicit</I> setting is the default and
+means each processor stores a copy of all the defined surface
+elements.  Note that a surface element requires about 100 bytes of
+storage, so storing a million on a single processor requires about 100
+MBytes.
+</P>
 <P>The <I>surfgrid</I> keyword determines what algorithm is used to enumerate
 the overlaps (intersections) between grid cells and surface elements
 (lines in 2d, triangles in 3d).  The possible settings are <I>percell</I>,
@@ -360,9 +380,9 @@ defined, e.g. via the <A HREF = "read_surf.html">read_surf</A> command.
 <P><B>Default:</B>
 </P>
 <P>The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
-0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfgrid = combo,
-surfmax = 100, cellmax = 100, splitmax = 10, surfpush = yes, gridcut =
--1.0, comm/sort = no, comm/style = neigh, weight = cell none,
-particle/reorder = 0, mem/limit = 0.
+0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
+surfgrid = combo, surfmax = 100, cellmax = 100, splitmax = 10,
+surfpush = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh,
+weight = cell none, particle/reorder = 0, mem/limit = 0.
 </P>
 </HTML>

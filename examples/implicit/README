@@ -1,0 +1,5 @@
+The binary files used as input for the 2 scripts
+were generated as follows:
+
+% python ../../tools/implicit_grid.py 2 101 101 1 12345 binary.101x101
+% python ../../tools/implicit_grid.py 2 51 101 1 54321 binary.51x101

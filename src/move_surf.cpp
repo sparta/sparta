@@ -45,9 +45,9 @@ MoveSurf::MoveSurf(SPARTA *sparta) : Pointers(sparta)
   // pselect = 1 if point is moved, else 0
 
   if (domain->dimension == 2)
-    memory->create(pselect,2*surf->nline,"move_surf:pselect");
+    memory->create(pselect,2*surf->nsurf,"move_surf:pselect");
   else
-    memory->create(pselect,3*surf->ntri,"move_surf:pselect");
+    memory->create(pselect,3*surf->nsurf,"move_surf:pselect");
 
   file = NULL;
   fp = NULL;
@@ -68,6 +68,10 @@ void MoveSurf::command(int narg, char **arg)
 {
   if (!surf->exist)
     error->all(FLERR,"Cannot move_surf with no surf elements defined");
+
+  if (surf->distributed)
+    error->all(FLERR,
+               "Cannot yet use move_surf with distributed surf elements");
 
   if (narg < 2) error->all(FLERR,"Illegal move_surf command");
 
@@ -110,8 +114,6 @@ void MoveSurf::command(int narg, char **arg)
   // remake list of surf elements I own
   // assign split cell particles to parent split cell
   // assign surfs to grid cells
-
-  surf->setup_surf();
 
   grid->unset_neighbors();
   grid->remove_ghosts();
@@ -481,14 +483,14 @@ void MoveSurf::translate_2d(double fraction, Surf::Line *origlines)
   double *p1,*p2,*op1,*op2;
 
   Surf::Line *lines = surf->lines;
-  int nline = surf->nline;
+  int nsurf = surf->nsurf;
 
-  for (int i = 0; i < 2*nline; i++) pselect[i] = 0;
+  for (int i = 0; i < 2*nsurf; i++) pselect[i] = 0;
 
   double dx = fraction * delta[0];
   double dy = fraction * delta[1];
 
-  for (int i = 0; i < nline; i++) {
+  for (int i = 0; i < nsurf; i++) {
     if (!(lines[i].mask & groupbit)) continue;
     p1 = lines[i].p1;
     p2 = lines[i].p2;
@@ -514,15 +516,15 @@ void MoveSurf::translate_3d(double fraction, Surf::Tri *origtris)
   double *p1,*p2,*p3,*op1,*op2,*op3;
 
   Surf::Tri *tris = surf->tris;
-  int ntri = surf->ntri;
+  int nsurf = surf->nsurf;
 
-  for (int i = 0; i < 3*ntri; i++) pselect[i] = 0;
+  for (int i = 0; i < 3*nsurf; i++) pselect[i] = 0;
 
   double dx = fraction * delta[0];
   double dy = fraction * delta[1];
   double dz = fraction * delta[2];
 
-  for (int i = 0; i < ntri; i++) {
+  for (int i = 0; i < nsurf; i++) {
     if (!(tris[i].mask & groupbit)) continue;
     p1 = tris[i].p1;
     p2 = tris[i].p2;
@@ -559,15 +561,15 @@ void MoveSurf::rotate_2d(double fraction, Surf::Line *origlines)
   double rotmat[3][3];
 
   Surf::Line *lines = surf->lines;
-  int nline = surf->nline;
+  int nsurf = surf->nsurf;
 
-  for (int i = 0; i < 2*nline; i++) pselect[i] = 0;
+  for (int i = 0; i < 2*nsurf; i++) pselect[i] = 0;
 
   double angle = fraction * theta;
   MathExtra::axisangle_to_quat(rvec,angle,q);
   MathExtra::quat_to_mat(q,rotmat);
 
-  for (int i = 0; i < nline; i++) {
+  for (int i = 0; i < nsurf; i++) {
     if (!(lines[i].mask & groupbit)) continue;
     p1 = lines[i].p1;
     p2 = lines[i].p2;
@@ -603,15 +605,15 @@ void MoveSurf::rotate_3d(double fraction, Surf::Tri *origtris)
   double rotmat[3][3];
 
   Surf::Tri *tris = surf->tris;
-  int ntri = surf->ntri;
+  int nsurf = surf->nsurf;
 
-  for (int i = 0; i < 3*ntri; i++) pselect[i] = 0;
+  for (int i = 0; i < 3*nsurf; i++) pselect[i] = 0;
 
   double angle = fraction * theta;
   MathExtra::axisangle_to_quat(rvec,angle,q);
   MathExtra::quat_to_mat(q,rotmat);
 
-  for (int i = 0; i < ntri; i++) {
+  for (int i = 0; i < nsurf; i++) {
     if (!(tris[i].mask & groupbit)) continue;
     p1 = tris[i].p1;
     p2 = tris[i].p2;
@@ -668,9 +670,9 @@ void MoveSurf::connect_2d_pre()
   OnePoint3d key;
 
   Surf::Line *lines = surf->lines;
-  int nline = surf->nline;
+  int nsurf = surf->nsurf;
 
-  for (int i = 0; i < nline; i++) {
+  for (int i = 0; i < nsurf; i++) {
     if (!(lines[i].mask & groupbit)) continue;
     p1 = lines[i].p1;
     p2 = lines[i].p2;
@@ -696,9 +698,9 @@ void MoveSurf::connect_2d_post()
   OnePoint3d key;
 
   Surf::Line *lines = surf->lines;
-  int nline = surf->nline;
+  int nsurf = surf->nsurf;
 
-  for (int i = 0; i < nline; i++) {
+  for (int i = 0; i < nsurf; i++) {
     if (lines[i].mask & groupbit) continue;
     p[0] = lines[i].p1;
     p[1] = lines[i].p2;
@@ -743,9 +745,9 @@ void MoveSurf::connect_3d_pre()
   OnePoint3d key;
 
   Surf::Tri *tris = surf->tris;
-  int ntri = surf->ntri;
+  int nsurf = surf->nsurf;
 
-  for (int i = 0; i < ntri; i++) {
+  for (int i = 0; i < nsurf; i++) {
     if (!(tris[i].mask & groupbit)) continue;
     p1 = tris[i].p1;
     p2 = tris[i].p2;
@@ -774,9 +776,9 @@ void MoveSurf::connect_3d_post()
   OnePoint3d key;
 
   Surf::Tri *tris = surf->tris;
-  int ntri = surf->ntri;
+  int nsurf = surf->nsurf;
 
-  for (int i = 0; i < ntri; i++) {
+  for (int i = 0; i < nsurf; i++) {
     if (tris[i].mask & groupbit) continue;
     p[0] = tris[i].p1;
     p[1] = tris[i].p2;
@@ -817,7 +819,7 @@ void MoveSurf::connect_3d_post()
 bigint MoveSurf::remove_particles()
 {
   int isurf,nsurf;
-  int *csurfs;
+  surfint *csurfs;
 
   dim = domain->dimension;
   Grid::ChildCell *cells = grid->cells;
