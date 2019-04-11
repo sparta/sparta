@@ -961,12 +961,12 @@ void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
   // new velocities for the products
 
   double divisor = 1.0 / (mass_i + mass_j);
-  vi[0] = precoln.ucmf - (mass_j*divisor)*ua;
-  vi[1] = precoln.vcmf - (mass_j*divisor)*vb;
-  vi[2] = precoln.wcmf - (mass_j*divisor)*wc;
-  vj[0] = precoln.ucmf + (mass_i*divisor)*ua;
-  vj[1] = precoln.vcmf + (mass_i*divisor)*vb;
-  vj[2] = precoln.wcmf + (mass_i*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_j*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_j*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_j*divisor)*wc;
+  vj[0] = precoln.ucmf - (mass_i*divisor)*ua;
+  vj[1] = precoln.vcmf - (mass_i*divisor)*vb;
+  vj[2] = precoln.wcmf - (mass_i*divisor)*wc;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1138,12 +1138,12 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
   // new velocities for the products
 
   double divisor = 1.0 / (mass_ij + mass_k);
-  vi[0] = precoln.ucmf - (mass_ij*divisor)*ua;
-  vi[1] = precoln.vcmf - (mass_ij*divisor)*vb;
-  vi[2] = precoln.wcmf - (mass_ij*divisor)*wc;
-  vk[0] = precoln.ucmf + (mass_k*divisor)*ua;
-  vk[1] = precoln.vcmf + (mass_k*divisor)*vb;
-  vk[2] = precoln.wcmf + (mass_k*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_ij*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_ij*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_ij*divisor)*wc;
+  vk[0] = precoln.ucmf - (mass_k*divisor)*ua;
+  vk[1] = precoln.vcmf - (mass_k*divisor)*vb;
+  vk[2] = precoln.wcmf - (mass_k*divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];
