@@ -290,6 +290,7 @@ void ComputeTvibGrid::compute_per_grid()
 
   if (modeflag == 0) {
     for (i = 0; i < nlocal; i++) {
+      if (particles[i].evib == 0) continue;
       ispecies = particles[i].ispecies;
       igroup = s2g[ispecies];
       if (igroup < 0) continue;
@@ -316,6 +317,7 @@ void ComputeTvibGrid::compute_per_grid()
 
       nmode = particle->species[ispecies].nvibmode;
       for (imode = 0; imode < nmode; imode++) {
+        if (vibmode[i][imode] == 0) continue;
         j = s2t_mode[ispecies][imode];
         tally[icell][j] += vibmode[i][imode];
         tally[icell][j+1] += 1.0;

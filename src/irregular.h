@@ -30,6 +30,7 @@ class Irregular : protected Pointers {
   ~Irregular();
   void create_procs(int, int *, int sort = 0);
   int create_data_uniform(int, int *, int sort = 0);
+  int create_data_uniform_grouped(int, int *, int sort = 0);
   int create_data_variable(int, int *, int *, int &, int sort = 0);
   int augment_data_uniform(int, int *);
   void exchange_uniform(char *, int, char *);

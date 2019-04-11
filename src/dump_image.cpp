@@ -19,6 +19,7 @@
 #include "dump_image.h"
 #include "image.h"
 #include "domain.h"
+#include "comm.h"
 #include "region.h"
 #include "particle.h"
 #include "grid.h"
@@ -284,6 +285,9 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       if (strcmp(arg[iarg+1],"one") == 0) scolor = ONE;
       else if (strcmp(arg[iarg+1],"proc") == 0) scolor = PROC;
       else {
+        if (surf->implicit) 
+          error->all(FLERR,"Cannot use dump image surf with "
+                     "compute/fix/variable for implicit surfs");
         scolor = ATTRIBUTE;
         if (strncmp(arg[iarg+1],"c_",2) && strncmp(arg[iarg+1],"f_",2) && 
             strncmp(arg[iarg+1],"v_",2))
@@ -967,17 +971,19 @@ void DumpImage::write()
     double lo = BIG;
     double hi = -BIG;
 
-    int nslocal = surf->nlocal;
+    // only computes/fixes for explicit surfs allowed for this setting
 
-    for (int isurf = 0; isurf < nslocal; isurf++) {
+    int nsurf = surf->nown;
+
+    for (int isurf = 0; isurf < nsurf; isurf++) {
       if (surfwhich == COMPUTE) {
         Compute *compute = modify->compute[surfindex];
         if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
           compute->compute_per_surf();
           compute->invoked_flag |= INVOKED_PER_SURF;
         }
-        if (surfcol == 0) value = compute->vector_surf[isurf];
-        else value = compute->array_surf[isurf][surfcol-1];
+        compute->tallysum(surfcol);
+        value = compute->vector_surf[isurf];
       } else if (surfwhich == FIX) {
         Fix *fix = modify->fix[surfindex];
         if (surfcol == 0) value = fix->vector_surf[isurf];
@@ -1316,7 +1322,6 @@ void DumpImage::create_image()
   // do not use region as constraint
   // NOTE: could add this if allow for specifying different regions
 
-
   if (glineflag && (gridxflag || gridyflag || gridzflag)) {
     double x[3];
     double *lo,*hi;
@@ -1434,14 +1439,32 @@ void DumpImage::create_image()
     diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
     diameter *= sdiamvalue;
-    Surf::Line *lines = surf->lines;
-    Surf::Tri *tris = surf->tris;
-    int *mysurfs = surf->mysurfs;
-    int nslocal = surf->nlocal;
 
-    for (int isurf = 0; isurf < nslocal; isurf++) {
-      m = mysurfs[isurf];
-      
+    int me = comm->me;
+    int nprocs = comm->nprocs;
+    int dim = domain->dimension;
+    int nsurf,strided;
+    Surf::Line *lines;
+    Surf::Tri *tris;
+
+    if (!surf->distributed) {
+      nsurf = surf->nown;
+      strided = 1;
+      lines = surf->lines;
+      tris = surf->tris;
+    } else if (!surf->implicit) {
+      nsurf = surf->nown;
+      strided = 0;
+      lines = surf->mylines;
+      tris = surf->mytris;
+    } else {
+      nsurf = surf->nlocal;
+      strided = 0;
+      lines = surf->lines;
+      tris = surf->tris;
+    }
+
+    for (int isurf = 0; isurf < nsurf; isurf++) {
       if (scolor == ONE) {
         color = surfcolorone;
       } else if (scolor == PROC) {
@@ -1453,8 +1476,8 @@ void DumpImage::create_image()
             compute->compute_per_surf();
             compute->invoked_flag |= INVOKED_PER_SURF;
           }
-          if (surfcol == 0) value = compute->vector_surf[isurf];
-          else value = compute->array_surf[isurf][surfcol-1];
+          compute->tallysum(surfcol);
+          value = compute->vector_surf[isurf];
         } else if (surfwhich == FIX) {
           Fix *fix = modify->fix[surfindex];
           if (surfcol == 0) value = fix->vector_surf[isurf];
@@ -1462,8 +1485,11 @@ void DumpImage::create_image()
         }
         color = image->map_value2color(SURF,value);
       }
-      
-      if (domain->dimension == 2)
+
+      if (strided) m = me + isurf*nprocs;
+      else m = isurf;
+
+      if (dim == 2)
         image->draw_line(lines[m].p1,lines[m].p2,color,diameter);
       else
         image->draw_triangle(tris[m].p1,tris[m].p2,tris[m].p3,color);
@@ -1478,19 +1504,40 @@ void DumpImage::create_image()
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
     diameter *= slinediam;
 
-    Surf::Line *lines = surf->lines;
-    Surf::Tri *tris = surf->tris;
-    int *mysurfs = surf->mysurfs;
-    int nslocal = surf->nlocal;
+    int me = comm->me;
+    int nprocs = comm->nprocs;
+    int dim = domain->dimension;
+    int nsurf,strided;
+    Surf::Line *lines;
+    Surf::Tri *tris;
 
-    if (domain->dimension == 2) {
-      for (int isurf = 0; isurf < nslocal; isurf++) {
-        m = mysurfs[isurf];
+    if (!surf->distributed) {
+      nsurf = surf->nown;
+      strided = 1;
+      lines = surf->lines;
+      tris = surf->tris;
+    } else if (!surf->implicit) {
+      nsurf = surf->nown;
+      strided = 0;
+      lines = surf->mylines;
+      tris = surf->mytris;
+    } else {
+      nsurf = surf->nlocal;
+      strided = 0;
+      lines = surf->lines;
+      tris = surf->tris;
+    }
+
+    if (dim == 2) {
+      for (int isurf = 0; isurf < nsurf; isurf++) {
+        if (strided) m = me + isurf*nprocs;
+        else m = isurf;
         image->draw_line(lines[m].p1,lines[m].p2,slinecolor,diameter);
       }
     } else {
-      for (int isurf = 0; isurf < nslocal; isurf++) {
-        m = mysurfs[isurf];
+      for (int isurf = 0; isurf < nsurf; isurf++) { 
+        if (strided) m = me + isurf*nprocs;
+        else m = isurf;
         image->draw_line(tris[m].p1,tris[m].p2,slinecolor,diameter);
         image->draw_line(tris[m].p2,tris[m].p3,slinecolor,diameter);
         image->draw_line(tris[m].p3,tris[m].p1,slinecolor,diameter);

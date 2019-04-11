@@ -46,7 +46,8 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // several files
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
-enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
+enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Surf
+enum{PERAUTO,PERCELL,PERSURF};                  // several files
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
@@ -287,7 +288,7 @@ template < int DIM, int SURF > void Update::move()
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
   int pstart,pstop,entryexit,any_entryexit;
-  int *csurfs;
+  surfint *csurfs;
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
   double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
@@ -1178,7 +1179,7 @@ int Update::split3d(int icell, double *x)
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
   int nsurf = cells[icell].nsurf;
-  int *csurfs = cells[icell].csurfs;
+  surfint *csurfs = cells[icell].csurfs;
   int isplit = cells[icell].isplit;
   int *csplits = sinfo[isplit].csplits;
   double *xnew = sinfo[isplit].xsplit;
@@ -1231,7 +1232,7 @@ int Update::split2d(int icell, double *x)
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
   int nsurf = cells[icell].nsurf;
-  int *csurfs = cells[icell].csurfs;
+  surfint *csurfs = cells[icell].csurfs;
   int isplit = cells[icell].isplit;
   int *csplits = sinfo[isplit].csplits;
   double *xnew = sinfo[isplit].xsplit;
@@ -1395,6 +1396,22 @@ void Update::global(int narg, char **arg)
       else gravity[0] = gravity[1] = gravity[2] = 0.0;
       iarg += 5;
 
+    } else if (strcmp(arg[iarg],"surfs") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      surf->global(arg[iarg+1]);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"surfgrid") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (surf->exist) 
+        error->all(FLERR,
+                   "Cannot set global surfgrid when surfaces already exist");
+      if (strcmp(arg[iarg+1],"auto") == 0) grid->surfgrid_algorithm = PERAUTO;
+      else if (strcmp(arg[iarg+1],"percell") == 0) 
+        grid->surfgrid_algorithm = PERCELL;
+      else if (strcmp(arg[iarg+1],"persurf") == 0) 
+        grid->surfgrid_algorithm = PERSURF;
+      else error->all(FLERR,"Illegal global command");
+      iarg += 2;
     } else if (strcmp(arg[iarg],"surfmax") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (surf->exist) 
@@ -1402,7 +1419,27 @@ void Update::global(int narg, char **arg)
                    "Cannot set global surfmax when surfaces already exist");
       grid->maxsurfpercell = atoi(arg[iarg+1]);
       if (grid->maxsurfpercell <= 0) error->all(FLERR,"Illegal global command");
-      // reallocate paged data structs for variable-length surf into
+      // reallocate paged data structs for variable-length surf info
+      grid->allocate_surf_arrays();
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"cellmax") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (surf->exist) 
+        error->all(FLERR,
+                   "Cannot set global cellmax when surfaces already exist");
+      grid->maxcellpersurf = atoi(arg[iarg+1]);
+      if (grid->maxcellpersurf <= 0) error->all(FLERR,"Illegal global command");
+      // reallocate paged data structs for variable-length cell info
+      grid->allocate_cell_arrays();
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"splitmax") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
+      if (surf->exist) 
+        error->all(FLERR,
+                   "Cannot set global splitmax when surfaces already exist");
+      grid->maxsplitpercell = atoi(arg[iarg+1]);
+      if (grid->maxsplitpercell <= 0) error->all(FLERR,"Illegal global command");
+      // reallocate paged data structs for variable-length cell info
       grid->allocate_surf_arrays();
       iarg += 2;
     } else if (strcmp(arg[iarg],"surfpush") == 0) {
@@ -1445,11 +1482,11 @@ void Update::global(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"all") == 0) comm->commpartstyle = 0;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"surf/comm") == 0) {
+    } else if (strcmp(arg[iarg],"surftally") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"auto") == 0) surf->tally_comm = TALLYAUTO;
-      else if (strcmp(arg[iarg+1],"all") == 0) surf->tally_comm = TALLYREDUCE;
-      else if (strcmp(arg[iarg+1],"local") == 0) surf->tally_comm = TALLYLOCAL;
+      else if (strcmp(arg[iarg+1],"reduce") == 0) surf->tally_comm = TALLYREDUCE;
+      else if (strcmp(arg[iarg+1],"rvous") == 0) surf->tally_comm = TALLYRVOUS;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
 

@@ -15,24 +15,27 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>fix ID move/surf Nevery Nlarge args ... 
+<PRE>fix ID move/surf groupID Nevery Nlarge args ... 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command
 <LI>move/surf = style name of this fix command
+<LI>group-ID = group ID for which surface elements to move
 <LI>Nevery = move surfaces incrementally every this many steps
 <LI>Nlarge = move surfaces the entire distance after this many timesteps
-<LI>args = all remaining args are identical to those defined for the <A HREF = "move_surf.html">move_surf</A> command 
+<LI>args = all remaining args are identical to those defined for the <A HREF = "move_surf.html">move_surf</A> command starting with its "style" argument 
 </UL>
 <P><B>Examples:</B>
 </P>
-<PRE>fix 1 move/surf 100 1000 all trans 1 0 0
-fix 1 move/surf 100 10000 all rotate 360 0 0 1 5 5 0
-fix 1 move/surf 100 50000 object2 rotate 360 0 0 1 5 5 0 
+<PRE>fix 1 move/surf all 100 1000 trans 1 0 0
+fix 1 move/surf partial 100 10000 rotate 360 0 0 1 5 5 0 connect yes
+fix 1 move/surf object2 100 50000 rotate 360 0 0 1 5 5 0 
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>This command performs on-the-fly movement of a selected set of surface
-elements via one of several styles.  Surface element moves can also be
+<P>This command performs on-the-fly movement of all the surface elements
+in the specfied group via one of several styles.  See the <A HREF = "group.html">group
+surf</A> command for info on how surface elements can be
+assigned to surface groups.  Surface element moves can also be
 performed before or between simulations by using the
 <A HREF = "move_surf.html">move_surf</A> command.
 </P>
@@ -40,9 +43,10 @@ performed before or between simulations by using the
 to track transient changes in a flow while some attribute of the
 surface elements change, e.g. the separation between two spheres.
 </P>
-<P>All of the command arguments which appear after <I>Nfreq</I>, which
-determine which surface elements move and how they move, are exactly
-the same as for the <A HREF = "move_surf.html">move_surf</A> command.  See its doc
+<P>All of the command arguments which appear after <I>Nlarge</I>, which
+determine how surface elements move, are exactly the same as for the
+<A HREF = "move_surf.html">move_surf</A> command, starting with its <I>style</I>
+argument.  This includes optional keywords it defines.  See its doc
 page for details.
 </P>
 <P><I>Nevery</I> specifies how often surface elements are moved incrementally
@@ -60,6 +64,11 @@ particle deletion after surface elements move, are followed by this
 command as well.  The criteria are applied after every incremental
 move.  This is to prevent particles from ending up inside surface
 objects.
+</P>
+<P>Likewise, the <I>connect</I> option of the <A HREF = "move_surf.html">move_surf</A>
+command should be used in the same manner by this command if you
+need to insure that moving only some elements of an object
+do not result in a non-watertight surface grid.
 </P>
 <HR>
 
@@ -96,8 +105,8 @@ effectively.
 
 <P><B>Restrictions:</B>
 </P>
-<P>An error will be generated if any surface element vertex is
-moved outside the simulation box.
+<P>An error will be generated if any surface element vertex is moved
+outside the simulation box.
 </P>
 <P><B>Related commands:</B>
 </P>

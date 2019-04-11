@@ -71,7 +71,7 @@ Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
 ------------------------------------------------------------------------- */
 
 int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller, 
-                     int *surfs_caller, int max)
+                     surfint *surfs_caller, int max)
 {
   id = id_caller;
   lo = lo_caller;
@@ -79,12 +79,12 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
   surfs = surfs_caller;
 
   Surf::Line *lines = surf->lines;
-  int nline = surf->nline;
+  int ntotal = surf->nsurf;
 
   double *x1,*x2;
 
   nsurf = 0;
-  for (int m = 0; m < nline; m++) {
+  for (int m = 0; m < ntotal; m++) {
     x1 = lines[m].p1;
     x2 = lines[m].p2;
 
@@ -94,8 +94,8 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
     if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
     if (cliptest(x1,x2)) {
-      if (nsurf == max) return -1;
-      surfs[nsurf++] = m;
+      if (nsurf < max) surfs[nsurf] = m;
+      nsurf++;
     }
   }
 
@@ -113,8 +113,8 @@ int Cut2d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 
 int Cut2d::surf2grid_list(cellint id_caller, 
                           double *lo_caller, double *hi_caller,
-                          int nlist, int *list,
-                          int *surfs_caller, int max)
+                          int nlist, surfint *list,
+                          surfint *surfs_caller, int max)
 {
   id = id_caller;
   lo = lo_caller;
@@ -138,12 +138,28 @@ int Cut2d::surf2grid_list(cellint id_caller,
     if (MIN(x1[1],x2[1]) > hi[1]) continue;
 
     if (cliptest(x1,x2)) {
-      if (nsurf == max) return -1;
-      surfs[nsurf++] = m;
+      if (nsurf < max) surfs[nsurf] = m;
+      nsurf++;
     }
   }
 
   return nsurf;
+}
+
+/* ----------------------------------------------------------------------
+   compute intersections of a grid cell with a single surf
+   p,q = endpoints of surf
+   lo,hi = grid cell corner points
+   return 1 if intersects, 0 if not
+   called by Grid::surf2grid2
+------------------------------------------------------------------------- */
+
+int Cut2d::surf2grid_one(double *p, double *q, 
+                         double *lo_caller, double *hi_caller)
+{
+  lo = lo_caller;
+  hi = hi_caller;
+  return cliptest(p,q);
 }
 
 /* ----------------------------------------------------------------------
@@ -298,7 +314,7 @@ int Cut2d::clip_external(double *p, double *q, double *clo, double *chi,
 ------------------------------------------------------------------------- */
 
 int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller, 
-                 int nsurf_caller, int *surfs_caller,
+                 int nsurf_caller, surfint *surfs_caller,
                  double *&areas_caller, int *surfmap, 
                  int *corners, int &xsub, double *xsplit)
 {
@@ -1216,7 +1232,7 @@ void Cut2d::failed_cell()
 
   printf("  lo corner %g %g\n",lo[0],lo[1]);
   printf("  hi corner %g %g\n",hi[0],hi[1]);
-  printf("  # of surfs = %d out of %d\n",nsurf,surf->nline);
+  printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
   printf("  # of surfs = %d\n",nsurf);
   printf("  surfs:");
   for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]);

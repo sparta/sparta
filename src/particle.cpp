@@ -1441,6 +1441,60 @@ int Particle::pack_restart(char *buf)
 }
 
 /* ----------------------------------------------------------------------
+   pack my particle info into buf
+   use multiple passes to reduce memory use
+   use OnePartRestart data struct for permanent info and to encode cell ID
+   include per-particle custom attributes if defined
+------------------------------------------------------------------------- */
+
+int Particle::pack_restart(char *buf, int step, int pass)
+{
+  Grid::ChildCell *cells = grid->cells;
+  OnePart *p;
+  OnePartRestart *pr;
+  int nbytes_custom = sizeof_custom();
+
+  char *ptr = buf;
+  if (pass == 0) {
+    int *ibuf = (int *) ptr;
+    *ibuf = nlocal;
+    ptr += sizeof(int);
+    ptr = ROUNDUP(ptr);
+  }
+
+  int start = step*pass;
+  int end = start+step;
+  end = MIN(nlocal,end);
+  for (int i = start; i < end; i++) {
+    p = &particles[i];
+    pr = (OnePartRestart *) ptr;
+    pr->id = p->id;
+    pr->ispecies = p->ispecies;
+    pr->icell = cells[p->icell].id;
+    pr->nsplit = cells[p->icell].nsplit;
+    pr->x[0] = p->x[0];
+    pr->x[1] = p->x[1];
+    pr->x[2] = p->x[2];
+    pr->v[0] = p->v[0];
+    pr->v[1] = p->v[1];
+    pr->v[2] = p->v[2];
+    pr->erot = p->erot;
+    pr->evib = p->evib;
+
+    ptr += sizeof(OnePartRestart);
+    if (!ncustom) continue;
+
+    pack_custom(i,ptr);
+    ptr += nbytes_custom;
+  }
+
+  if (end == nlocal)
+    ptr = ROUNDUP(ptr);
+
+  return ptr - buf;
+}
+
+/* ----------------------------------------------------------------------
    unpack particle info into restart storage
    allocate data structure here, will be deallocated by ReadRestart
    include per-particle custom attributes if defined
@@ -1465,6 +1519,44 @@ int Particle::unpack_restart(char *buf)
   ptr += nlocal_restart * sizeof(OnePartRestart);
   ptr = ROUNDUP(ptr);
 
+  return ptr - buf;
+}
+
+/* ----------------------------------------------------------------------
+   unpack particle info into restart storage
+   use multiple passes to reduce memory use
+   allocate data structure here, will be deallocated by ReadRestart
+   include per-particle custom attributes if defined
+------------------------------------------------------------------------- */
+
+int Particle::unpack_restart(char *buf, int &nlocal_restart, int step, int pass)
+{
+  int nbytes_particle = sizeof(OnePartRestart);
+  int nbytes_custom = sizeof_custom();
+  int nbytes = nbytes_particle + nbytes_custom;
+
+  char *ptr = buf;
+  if (pass == 0) {
+    int *ibuf = (int *) buf;
+    nlocal_restart = *ibuf;
+    ptr += sizeof(int);
+    ptr = ROUNDUP(ptr);
+  }
+  int start = step*pass;
+  int end = start+step;
+  end = MIN(nlocal_restart,end);
+  step = end - start;
+
+  particle_restart = (char *) 
+    memory->smalloc(step*nbytes,"grid:particle_restart");
+
+  memcpy(particle_restart,ptr,step*nbytes);
+  ptr += step * sizeof(OnePartRestart);
+
+  if (end == nlocal_restart)
+    ptr = ROUNDUP(ptr);
+
+  this->nlocal_restart = step;
   return ptr - buf;
 }
 

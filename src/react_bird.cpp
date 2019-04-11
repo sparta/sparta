@@ -237,7 +237,6 @@ void ReactBird::init()
 
     // average DOFs participating in the reaction
 
-    // Now we read the particpating internal DOF directly from the .tce file
     double z = r->coeff[0];
     
     // add additional coeff for effective DOF

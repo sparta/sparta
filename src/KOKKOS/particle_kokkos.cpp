@@ -54,9 +54,8 @@ enum{COPYPARTICLELIST,FIXEDMEMORY};
 
 ParticleKokkos::ParticleKokkos(SPARTA *sparta) : Particle(sparta)
 {
-  k_fail_flag = DAT::tdual_int_scalar("particle:fail_flag");
-  d_fail_flag = k_fail_flag.view<DeviceType>();
-  h_fail_flag = k_fail_flag.h_view;
+  d_fail_flag = DAT::t_int_scalar("particle:fail_flag");
+  h_fail_flag = HAT::t_int_scalar("particle:fail_flag_mirror");
 
   k_reorder_pass = DAT::tdual_int_scalar("particle:reorder_pass");
   d_reorder_pass = k_reorder_pass.view<DeviceType>();
@@ -96,16 +95,15 @@ void ParticleKokkos::compress_migrate(int ndelete, int *dellist)
 
   nbytes = sizeof(OnePart);
 
-  if (ndelete > int(k_mlist.extent(0)))
-    k_mlist = DAT::tdual_int_1d("particle:mlist",ndelete);
-  d_mlist = k_mlist.d_view;
-  h_mlist = k_mlist.h_view;
+  if (ndelete > d_lists.extent(1)) {
+    d_lists = DAT::t_int_2d(Kokkos::view_alloc("particle:lists",Kokkos::WithoutInitializing),2,ndelete);
+    d_mlist = Kokkos::subview(d_lists,0,Kokkos::ALL);
+    d_slist = Kokkos::subview(d_lists,1,Kokkos::ALL);
 
-  if (ndelete > int(k_slist.extent(0)))
-    k_slist = DAT::tdual_int_1d("particle:slist",ndelete);
-  d_slist = k_slist.d_view;
-  h_slist = k_slist.h_view;
-
+    h_lists = HAT::t_int_2d(Kokkos::view_alloc("particle:lists_mirror",Kokkos::WithoutInitializing),2,ndelete);
+    h_mlist = Kokkos::subview(h_lists,0,Kokkos::ALL);
+    h_slist = Kokkos::subview(h_lists,1,Kokkos::ALL);
+  }
 
   // use next as a scratch vector
   // next is only used for upper locs from nlocal-ndelete to nlocal
@@ -138,11 +136,7 @@ void ParticleKokkos::compress_migrate(int ndelete, int *dellist)
 
   nlocal = upper;
 
-  k_mlist.modify<SPAHostType>();
-  k_mlist.sync<DeviceType>();
-
-  k_slist.modify<SPAHostType>();
-  k_slist.sync<DeviceType>();
+  Kokkos::deep_copy(d_lists,h_lists);
 
   this->sync(Device,PARTICLE_MASK);
   d_particles = k_particles.d_view;
@@ -181,7 +175,7 @@ void ParticleKokkos::sort_kokkos()
   int reorder_scheme = COPYPARTICLELIST;
   if (update->mem_limit_grid_flag)
     update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
-  if (update->global_mem_limit > 0)
+  if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal))
     reorder_scheme = FIXEDMEMORY;
 
   ngrid = grid->nlocal;
@@ -199,7 +193,7 @@ void ParticleKokkos::sort_kokkos()
   if (ngrid > int(d_plist.extent(0)) || maxcellcount > int(d_plist.extent(1))) {
     grid_kk->d_plist = typename AT::t_int_2d(); // destroy reference to reduce memory use
     d_plist = typename AT::t_int_2d();
-    d_plist = typename AT::t_int_2d("particle:plist",ngrid,maxcellcount);
+    d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
   }
 
   this->sync(Device,PARTICLE_MASK);
@@ -213,10 +207,6 @@ void ParticleKokkos::sort_kokkos()
   //  repeat the parallel loop again
 
   do {
-    h_fail_flag() = 0;
-    k_fail_flag.modify<SPAHostType>();
-    k_fail_flag.sync<DeviceType>();
-
     copymode = 1;
     if (sparta->kokkos->need_atomics)
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleSort<1> >(0,nlocal),*this);
@@ -225,8 +215,8 @@ void ParticleKokkos::sort_kokkos()
     DeviceType::fence();
     copymode = 0;
 
-    k_fail_flag.modify<DeviceType>();
-    k_fail_flag.sync<SPAHostType>();
+    Kokkos::deep_copy(h_fail_flag,d_fail_flag);
+
     if (h_fail_flag()) {
       copymode = 1;
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleZero_cellcount>(0,ngrid),*this);
@@ -235,7 +225,9 @@ void ParticleKokkos::sort_kokkos()
       maxcellcount += DELTACELLCOUNT;
       grid_kk->d_plist = typename AT::t_int_2d(); // destroy reference to reduce memory use
       d_plist = typename AT::t_int_2d();
-      d_plist = typename AT::t_int_2d("particle:plist",ngrid,maxcellcount);
+      d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+
+      Kokkos::deep_copy(d_fail_flag,0);
     }
   } while (h_fail_flag());
 

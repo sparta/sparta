@@ -19,6 +19,7 @@
 #include "update.h"
 #include "grid_kokkos.h"
 #include "particle_kokkos.h"
+#include "surf_kokkos.h"
 #include "comm.h"
 #include "rcb.h"
 #include "modify.h"
@@ -57,14 +58,17 @@ void FixBalanceKokkos::end_of_step()
 {
   GridKokkos* grid_kk = (GridKokkos*) grid;
   ParticleKokkos* particle_kk = (ParticleKokkos*) particle;
+  SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
   grid_kk->sync(Host,CELL_MASK|CINFO_MASK|SINFO_MASK);
   particle_kk->sync(Host,PARTICLE_MASK);
+  surf_kk->sync(Host,ALL_MASK);
 
   FixBalance::end_of_step();
 
   grid_kk->modify(Host,CELL_MASK|CINFO_MASK|SINFO_MASK);
   particle_kk->modify(Host,PARTICLE_MASK);
+  surf_kk->modify(Host,ALL_MASK);
   particle_kk->sorted_kk = 0;
 
   grid_kk->wrap_kokkos_graphs();

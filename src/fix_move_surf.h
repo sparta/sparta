@@ -43,7 +43,7 @@ class FixMoveSurf : public Fix {
   bigint ndeleted;
   class MoveSurf *movesurf;
 
-  int nline,ntri;
+  int nsurf;
   Surf::Line *origlines;
   Surf::Tri *origtris;
 };

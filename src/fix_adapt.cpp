@@ -113,9 +113,6 @@ void FixAdapt::init()
 
 void FixAdapt::end_of_step()
 {
-  // DEBUG
-  //if (update->ntimestep > 140) return;
-
   // wrap adaptivity with clearstep/addstep since it may invoke computes
 
   modify->clearstep_compute();
@@ -138,7 +135,7 @@ void FixAdapt::end_of_step()
   if (action2 == REFINE) nrefine = adapt->refine();
   else if (action2 == COARSEN) ncoarsen = adapt->coarsen(pstop);
 
-  // if no refine or coarsen, just reghost/reneighbor and return
+  // if no refinement or coarsening, just reghost/reneighbor and return
 
   //if (comm->me == 0) printf("NREF COARSE %d %d nlocal %d\n",nrefine,ncoarsen,
   //                          grid->nlocal);

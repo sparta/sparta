@@ -25,31 +25,32 @@ using namespace SPARTA_NS;
    pt can be on any boundary of parent cell
    if I don't store child cell as owned or ghost, return -1 for unknown
    else return local index of child cell
-   NOTE: replace recursive with while loop
 ------------------------------------------------------------------------- */
 
 int Grid::id_find_child(int iparent, double *x)
 {
-  ParentCell *p = &pcells[iparent];
-  double *lo = p->lo;
-  double *hi = p->hi;
-  int nx = p->nx;
-  int ny = p->ny;
-  int nz = p->nz;
-  int ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
-  int iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
-  int iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
-  if (ix == nx) ix--;
-  if (iy == ny) iy--;
-  if (iz == nz) iz--;
+  while (1) {
+    ParentCell *p = &pcells[iparent];
+    double *lo = p->lo;
+    double *hi = p->hi;
+    int nx = p->nx;
+    int ny = p->ny;
+    int nz = p->nz;
+    int ix = static_cast<int> ((x[0]-lo[0]) * nx/(hi[0]-lo[0]));
+    int iy = static_cast<int> ((x[1]-lo[1]) * ny/(hi[1]-lo[1]));
+    int iz = static_cast<int> ((x[2]-lo[2]) * nz/(hi[2]-lo[2]));
+    if (ix == nx) ix--;
+    if (iy == ny) iy--;
+    if (iz == nz) iz--;
 
-  cellint ichild = iz*nx*ny + iy*nx + ix + 1;
-  cellint idchild = p->id | (ichild << p->nbits);
+    cellint ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
+    cellint idchild = p->id | (ichild << p->nbits);
 
-  if (hash->find(idchild) == hash->end()) return -1;
-  int index = (*hash)[idchild];
-  if (index > 0) return index-1;
-  return id_find_child(-index-1,x);
+    if (hash->find(idchild) == hash->end()) return -1;
+    int index = (*hash)[idchild];
+    if (index > 0) return index-1;
+    iparent = -index-1;
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -109,7 +110,7 @@ cellint Grid::id_str2num(char *idstr)
     ParentCell *p = &pcells[iparent];
     if (ptr) *ptr = '\0';
     cellint ichild = ATOCELLINT(word);
-    if (ichild == 0 || ichild > ((cellint) p->nx) * p->ny * p->nz) {
+    if (ichild == 0 || ichild > ((cellint) p->nx*p->ny*p->nz)) {
       if (ptr) *ptr = '-';
       return -1;
     }
@@ -201,7 +202,7 @@ void Grid::id_child_lohi(int iparent, cellint ichild, double *lo, double *hi)
 
   int ix = ichild % nx;
   int iy = (ichild/nx) % ny;
-  int iz = ichild / (nx*ny);
+  int iz = ichild / ((bigint) nx*ny);
 
   double *plo = p->lo;
   double *phi = p->hi;
@@ -225,7 +226,7 @@ void Grid::id_child_lohi(int iparent, cellint ichild, double *lo, double *hi)
 
 int Grid::id_bits(int nx, int ny, int nz)
 {
-  bigint n = ((bigint) nx) *ny*nz;
+  bigint n = (bigint) nx*ny*nz;
   bigint nstore = 1;
   int nbits = 1;
   while (nstore < n) {
@@ -291,7 +292,7 @@ cellint Grid::id_find_face(double *x, int icell, int dim,
   // if child, return it
   // if parent, recurse
 
-  cellint ichild = ((cellint) iz) * nx*ny + ((cellint) iy) * nx + ix + 1;
+  cellint ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
   cellint id = p->id | (ichild << p->nbits);
   if (hash->find(id) == hash->end()) return id;
   icell = (*hash)[id];
@@ -314,8 +315,7 @@ int Grid::id_child_from_parent_corner(int iparent, int icorner)
   int iy = ((icorner/2) % 2) ? p->ny-1 : 0;
   int iz = (icorner / 4) ? p->nz-1 : 0;
   
-  cellint ichild = ((cellint) iz) * p->nx*p->ny + 
-    ((cellint) iy) * p->nx + ix + 1;
+  cellint ichild = (cellint) iz*p->nx*p->ny + (cellint) iy*p->nx + ix + 1;
   cellint idchild = p->id | (ichild << p->nbits);
 
   if (hash->find(idchild) == hash->end()) return -1;

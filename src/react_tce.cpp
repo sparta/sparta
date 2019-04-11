@@ -172,8 +172,8 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       ip->ispecies = r->products[0];
 
       // Previous statment did not destroy the 2nd species (B) if
-      // recombination was specified as A+B->AB+M (which has nproductus=2)
-      // but only for the A+B->AB specication form (which has nproductus=1)
+      //   recombination was specified as A+B->AB+M (which has nproductus=2)
+      //   but only for the A+B->AB specication form (which has nproductus=1)
        
       switch (r->type) {
       case DISSOCIATION:
@@ -185,7 +185,9 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
         }
       case RECOMBINATION:
         {
-          jp->ispecies = -1;              //always "destroy" 2nd reactant species
+          // always destroy 2nd reactant species
+
+          jp->ispecies = -1;
           break;
         }
       }

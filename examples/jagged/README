@@ -1,0 +1,8 @@
+The sdata files used as input for the 2 scripts
+were generated as follows:
+
+% python ../../tools/jagged2d.py 100 100 0.05 sdata.100x100
+% python ../../tools/jagged3d.py 20 20 10 10 10 0.05 sdata.20x20x10x10x10
+
+Note that you need to generate the 2nd file yourself.
+It is too large to include in the SPARTA distribution.
