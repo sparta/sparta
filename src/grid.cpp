@@ -619,7 +619,7 @@ void Grid::acquire_ghosts_near()
   memory->destroy(list);
   delete [] boxall;
 
-  // perform irregular communication of list on ghost cells
+  // perform irregular communication of list of ghost cells
 
   Irregular *irregular = new Irregular(sparta);
   int recvsize;

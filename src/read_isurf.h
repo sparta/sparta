@@ -23,6 +23,7 @@ CommandStyle(read_isurf,ReadISurf)
 
 #include "stdio.h"
 #include "pointers.h"
+#include "surf.h"
 
 #ifdef SPARTA_MAP
 #include <map>
@@ -63,6 +64,17 @@ class ReadISurf : protected Pointers {
   int config;     // configuration of the active cube
   int subconfig;  // subconfiguration of the active cube
     
+  // message datums for cleanup_MC()
+
+  struct SendDatum {
+    int sendcell,sendface;
+    int othercell,otherface;
+    int inwardnorm;            // for sending cell
+    Surf::Tri tri1,tri2;
+  };
+
+  // hash for assigning grid corner points to grid cells
+
 #ifdef SPARTA_MAP
   typedef std::map<bigint,int> MyHash;
 #elif defined SPARTA_UNORDERED_MAP

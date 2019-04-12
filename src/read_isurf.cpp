@@ -23,6 +23,7 @@
 #include "grid.h"
 #include "comm.h"
 #include "input.h"
+#include "irregular.h"
 #include "geometry.h"
 #include "lookup_table.h"
 #include "my_page.h"
@@ -30,6 +31,10 @@
 #include "error.h"
 
 using namespace SPARTA_NS;
+
+// prototype for non-class function
+
+int compare_indices(const void *, const void *);
 
 enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
@@ -64,10 +69,15 @@ ReadISurf::~ReadISurf()
 
 void ReadISurf::command(int narg, char **arg)
 {
+  // NOTE: at some point could allow another chunk of isurfs to be read
+  //       see note below about clear_surf()
+
   if (!grid->exist)
     error->all(FLERR,"Cannot read_isurf before grid is defined");
   if (!surf->implicit)
     error->all(FLERR,"Cannot read_isurf unless global surfs implicit is set");
+  if (surf->exist)
+    error->all(FLERR,"Cannot read_isurf when surfs already exist");
   if (particle->exist)
     error->all(FLERR,"Cannot read_isurf when particles exist");
   if (domain->axisymmetric)
@@ -131,18 +141,15 @@ void ReadISurf::command(int narg, char **arg)
 
   delete hash;
 
-  // clear out old surfs
-
-  grid->unset_neighbors();
-  grid->remove_ghosts();
-  grid->clear_surf();
-
   // create surfs in each grid cell based on corner point values
+  // call clear_surf first so cell/corner flags are all set
   // set surf->nsurf and surf->nown
   // if specified, apply group keyword to reset per-surf mask info
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
+
+  grid->clear_surf();
 
   if (dim == 3) marching_cubes(ggroup);
   else marching_squares(ggroup);
@@ -179,13 +186,10 @@ void ReadISurf::command(int narg, char **arg)
   if (dim == 2) surf->compute_line_normal(0);
   else surf->compute_tri_normal(0);
 
-  // cleanup_MC() checks for consistent triangles on the face between 2 cubes
-  
-  if (dim == 3) {
-    //grid->reset_neighbors();
-    //cleanup_MC();
-    //grid->unset_neighbors();
-  }
+  // cleanup_MC() checks for consistent triangles on grid cell faces
+  // needs to come after normals are computed
+
+  if (dim == 3) cleanup_MC();
 
   // error checks that can be done before surfs are mapped to grid cells
 
@@ -195,7 +199,15 @@ void ReadISurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
 
-  // copy surf info into grid cells that own them
+  // -----------------------
+  // map surfs to grid cells
+  // -----------------------
+
+  // surfs are already assigned to grid cells
+  // create split cells due to new surfs
+
+  grid->unset_neighbors();
+  grid->remove_ghosts();
 
   grid->surf2grid_implicit(1,1);
 
@@ -2034,65 +2046,74 @@ bool ReadISurf::interior_test_case13()
 }
 
 /* ----------------------------------------------------------------------
-   clean up an issue that marching cubes can occasionally generate
-     with assigning a triangle on the face between two cells
-     to one cell when SPARTA expects the other
-   Rule:
-     for a triangle wholly on the face of a cell,
-       its normal points into one of the 2 cells that share the face
-     only the cell with an inward normal should own the triangle, not the other
-   Problem:
-     marching cubes will create the triangle once, but may assign to either cell
-   Solution:
-     unassign tris from the wrong cells, assign them to the correct cells
-   Algorithm:
-     loop over cells with implicit tris:
-       loop over tris in that cell:
-         if tri not on face: skip
-         if tri normal is into this cell: skip
-         if I own cell on other side of face:
-           delete it from current cell, assign to other cell
-         else:
-           delete it from current cell
-           add the tri to my "list", including its corner point info
-     do a MPI_AllGather across all procs to convert "list" to "fulllist"
-       include the owning cell ID in the data struct for the tri
-     the fulllist should be short
-     every proc scans the fulllist and adds tris belonging to cells it owns
+   clean up issues that marching cubes (MC) occasionally generates
+     that cause problems for SPARTA
+   what MC does:
+     may generate 0 or 2 triangles on the face of a cell
+     the cell sharing the face may also have 0 or 2 triangles
+     the normals for the 2 triangles may be into or out of the cell
+   what SPARTA needs:
+     let cell1 and cell2 be two cells that share a face
+     if cell1 has 2 tris on face and cell2 has none:
+       if norm is into cell1: keep them in cell1
+       if norm is into cell2: assign both tris to cell2
+     if both cell1 and cell2 have 2 tris on face: delete all 4 tris
+   algorithm to do this:
+     loop over all my cells with implicit tris:
+       tally how many surfs on each face
+     loop over all my cells with implicit tris:
+       loop over faces with 2 tris:
+         if I own adjoining cell:
+           check its tally on shared face
+           reassign and/or delete triangles as necessary
+         if I do not own adjoining cell:
+           add 2 tris to send list for this proc
+     irregular comm of send list to nearby procs (share faces of my cells)
+     each proc loops over its recv list:
+       if my cell face has 2 tris: delete them
+       if my cell face has 0 tris: skip or add 2 tris depending on norm
  ------------------------------------------------------------------------- */
 
 void ReadISurf::cleanup_MC()
 {
-  int i,j,k,m,nsurf,iface,idim,nflag,othercell,nsurf_other;
+  int i,j,k,m,icell,iface,nsurf,idim,nflag,inwardnorm;
+  int ntri_other,othercell,otherface,otherproc,otherlocal,othernsurf;
+  cellint *oldcsurfs;
   surfint *ptr,*csurfs_other;
   cellint cellID;
   double *lo,*hi;
+  double *norm;
 
   Surf::Tri *tris = surf->tris;
   Grid::ChildCell *cells = grid->cells;
   MyPage<int> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
 
-  // DEBUG
-
-  int nmine = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    nmine += cells[icell].nsurf;
-  }
-
-  int nall;
-  MPI_Allreduce(&nmine,&nall,1,MPI_INT,MPI_SUM,world);
-
-  if (me == 0) printf("SURFCOUNT START %d\n",nall);
-
-  // END OF DEBUG
+  Surf::Tri *tlist = NULL;
+  int nlist = 0;
+  int maxlist = 0;
 
   // DEBUG
 
-  int badcount = 0;
+  /*
+  int nstotal;
+  MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("TOTAL TRI before count: %d\n",nstotal);
+  */
 
-  for (int icell = 0; icell < nglocal; icell++) {
+  // END of DEBUG
+
+  // count # of tris on each face of every cell I own
+
+  int **nfacetri;
+  int ***facetris;
+  memory->create(nfacetri,nglocal,6,"readisurf:nfacetri");
+  memory->create(facetris,nglocal,6,2,"readisurf:facetris");
+
+  for (icell = 0; icell < nglocal; icell++) {
+    nfacetri[icell][0] = nfacetri[icell][1] = nfacetri[icell][2] = 
+      nfacetri[icell][3] = nfacetri[icell][4] = nfacetri[icell][5] = 0;
+
     if (cells[icell].nsplit <= 0) continue;
     nsurf = cells[icell].nsurf;
     if (nsurf == 0) continue;
@@ -2101,60 +2122,58 @@ void ReadISurf::cleanup_MC()
     hi = cells[icell].hi;
 
     for (j = 0; j < nsurf; j++) {
-
       m = cells[icell].csurfs[j];
       iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
       if (iface < 0) continue;
-
-      idim = iface / 2;
-      if (iface % 2 == 0 && tris[m].norm[idim] > 0.0) continue;
-      if (iface % 2 == 1 && tris[m].norm[idim] < 0.0) continue;
-      badcount++;
+      if (nfacetri[icell][iface] < 2)
+        facetris[icell][iface][nfacetri[icell][iface]] = m;
+      nfacetri[icell][iface]++;
     }
   }
 
-  MPI_Allreduce(&badcount,&nall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("WRONGCOUNT START %d\n",nall);
+  // check that every face has 0 or 2 tris
 
-  // END OF DEBUG
+  int flag = 0;
+  for (icell = 0; icell < nglocal; icell++)
+    for (iface = 0; iface < 6; iface++)
+      if (nfacetri[icell][iface] != 0 && nfacetri[icell][iface] != 2) {
+        printf("Face count: cellID %d face %d tricount %d\n",
+               cells[icell].id,iface,nfacetri[icell][iface]);
+        flag++;
+      }
 
-  Surf::Tri *tlist = NULL;
-  int nlist = 0;
-  int maxlist = 0;
+  int flagall;
+  MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
+  if (flagall) 
+    error->all(FLERR,"Some cell faces do not have zero or 2 triangles");
+
+  // loop over all cell faces
+  // check tri count for that face for both adjoining cells
+
+  int *proclist = NULL;
+  SendDatum *bufsend = NULL;
+  int nsend = 0;
+  int maxsend = 0;
+
+  int *dellist = NULL;
+  int ndelete = 0;
+  int maxdelete = 0;
 
   // DEBUG
-  int count_mine = 0;
+  int ntotal = 0;
+  int nadd = 0;
+  int ndel = 0;
 
-  for (int icell = 0; icell < nglocal; icell++) {
+  for (icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     nsurf = cells[icell].nsurf;
     if (nsurf == 0) continue;
 
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
+    for (iface = 0; iface < 6; iface++) {
+      if (nfacetri[icell][iface] != 2) continue;
+      ntotal += 2;
 
-    j = 0;
-    while (j < nsurf) {
-
-      m = cells[icell].csurfs[j];
-      iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
-      if (iface < 0) {
-        j++;
-        continue;
-      }
-
-      idim = iface / 2;
-      if (iface % 2 == 0 && tris[m].norm[idim] > 0.0) {
-        j++;
-        continue;
-      }
-      if (iface % 2 == 1 && tris[m].norm[idim] < 0.0) {
-        j++;
-        continue;
-      }
-
-      // iface neighbor cell must be NCHILD or NPBCHILD
-      // othercell can be owned by me or another proc
+      // other cell/face/proc = info for matching face in adjacent cell
 
       nflag = grid->neigh_decode(cells[icell].nmask,iface);
       if (nflag != NCHILD && nflag != NPBCHILD) 
@@ -2163,192 +2182,302 @@ void ReadISurf::cleanup_MC()
       if (othercell == icell)
         error->one(FLERR,"Invalid neighbor cell in cleanup_MC()");
 
-      // if I own the neighbor cell, add tri index to it
-      // allocate/fill a new nsurf_other+1 length vector from csurfs
+      norm = tris[facetris[icell][iface][0]].norm;
+      if (iface % 2 && norm[iface] < 0.0) inwardnorm = 1;
+      else if (iface % 2 == 0 && norm[iface] > 0.0) inwardnorm = 1;
+      else inwardnorm = 0;
+      if (iface % 2) otherface = iface-1;
+      else otherface = iface+1;
+      otherproc = cells[othercell].proc;
+      otherlocal = cells[othercell].ilocal;
 
-      if (othercell < nglocal) {
-        nsurf_other = cells[othercell].nsurf;
-        csurfs_other = cells[othercell].csurfs;
-        ptr = csurfs->get(nsurf_other+1);
-        for (k = 0; k < nsurf_other; k++)
-          ptr[k] = csurfs_other[k];
-        ptr[nsurf_other] = m;
-        cells[othercell].nsurf++;
-        cells[othercell].csurfs = ptr;
-        count_mine++;
+      // if I own the adjacent cell, make decision about shared tris
+      // if both cells have 2 tris on face, delete all of them
+      // otherwise cell that matches inward normal is assigned the 2 tris
 
-      // else add tri to tlist for comm to all procs
-      // set id = ID of cell that should own it
-      // then delete tri from my nlocal list my replacing it with last surf
-      // must also reset csurfs list for cell that owns the moved surf
+      if (otherproc == me) {
+        ntri_other = nfacetri[othercell][otherface];
+
+        // this cell keeps the 2 tris
+
+        if (ntri_other == 0 && inwardnorm) continue;
+
+        // add 2 tris to other cell
+        // reset tri IDs to new owning cell
+
+        if (ntri_other == 0) { 
+          othernsurf = cells[othercell].nsurf;
+          oldcsurfs = cells[othercell].csurfs;
+          ptr = csurfs->get(othernsurf+2);
+          for (k = 0; k < othernsurf; k++)
+            ptr[k] = oldcsurfs[k];
+          ptr[othernsurf] = facetris[icell][iface][0];
+          ptr[othernsurf+1] = facetris[icell][iface][1];
+          cells[othercell].nsurf += 2;
+          cells[othercell].csurfs = ptr;
+          tris[facetris[icell][iface][0]].id = cells[othercell].id;
+          tris[facetris[icell][iface][1]].id = cells[othercell].id;
+          nadd += 2;
+        }
+
+        // delete 2 tris from other cell
+        // set nfacetri[othercell] = 0, so won't delete again when it is icell
+
+        if (ntri_other == 2) {
+          nfacetri[othercell][otherface] = 0;
+          othernsurf = cells[othercell].nsurf;
+          ptr = cells[othercell].csurfs;
+          m = facetris[othercell][otherface][0];
+          for (k = 0; k < othernsurf; k++)
+            if (ptr[k] == m) break;
+          if (k == othernsurf) 
+            error->one(FLERR,"Could not find surf in cleanup_MC");
+          cells[othercell].csurfs[k] = cells[othercell].csurfs[othernsurf-1];
+          othernsurf--;
+          m = facetris[othercell][otherface][1];
+          for (k = 0; k < othernsurf; k++)
+            if (ptr[k] == m) break;
+          if (k == othernsurf) 
+            error->one(FLERR,"Could not find surf in cleanup_MC");
+          cells[othercell].csurfs[k] = cells[othercell].csurfs[othernsurf-1];
+          othernsurf--;
+          cells[othercell].nsurf -= 2;
+          ndel += 2;
+        }
+
+        // delete 2 tris from this cell
+
+        ptr = cells[icell].csurfs;
+        m = facetris[icell][iface][0];
+        for (k = 0; k < nsurf; k++)
+          if (ptr[k] == m) break;
+        if (k == nsurf) error->one(FLERR,"Could not find surf in cleanup_MC");
+        cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
+        nsurf--;
+        m = facetris[icell][iface][1];
+        for (k = 0; k < nsurf; k++)
+          if (ptr[k] == m) break;
+        if (k == nsurf) error->one(FLERR,"Could not find surf in cleanup_MC");
+        cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
+        nsurf--;
+        cells[icell].nsurf -= 2;
+        ndel += 2;
+
+        // add 4 tris to delete list if both cells deleted them
+
+        if (ntri_other == 2) {
+          if (ndelete+4 > maxdelete) {
+            maxdelete += DELTA;
+            memory->grow(dellist,maxdelete,"readisurf:dellist");
+          }
+          dellist[ndelete++] = facetris[icell][iface][0];
+          dellist[ndelete++] = facetris[icell][iface][1];
+          dellist[ndelete++] = facetris[othercell][otherface][0];
+          dellist[ndelete++] = facetris[othercell][otherface][1];
+        }
+
+      // cell face is shared with another proc
+      // send it the cell/face indices and the 2 tris,
+      //   in case they need to be assigned to the other cell based on norm
 
       } else {
-        if (nlist == maxlist) {
-          maxlist += DELTA;
-          tlist = (Surf::Tri *) 
-            memory->srealloc(tlist,maxlist*sizeof(Surf::Tri),"readisurf:tlist");
+        if (nsend == maxsend) {
+          maxsend += DELTA;
+          proclist = (int *) 
+            memory->srealloc(proclist,maxsend*sizeof(int),
+                             "readisurf:proclist");
+          bufsend = (SendDatum *) 
+            memory->srealloc(bufsend,maxsend*sizeof(SendDatum),
+                             "readisurf:bufsend");
         }
-        memcpy(&tlist[nlist],&tris[m],sizeof(Surf::Tri));
-        tlist[nlist].id = cells[othercell].id;
-        //printf("CELLID SEND %d %d %d: %d %d %d\n",
-        //      comm->me,icell,m,othercell,nglocal,cells[othercell].id);
-        nlist++;
+        proclist[nsend] = otherproc;
+        bufsend[nsend].sendcell = icell;
+        bufsend[nsend].sendface = iface;
+        bufsend[nsend].othercell = otherlocal;
+        bufsend[nsend].otherface = otherface;
+        bufsend[nsend].inwardnorm = inwardnorm;
+        memcpy(&bufsend[nsend].tri1,&tris[facetris[icell][iface][0]],
+               sizeof(Surf::Tri));
+        memcpy(&bufsend[nsend].tri2,&tris[facetris[icell][iface][1]],
+               sizeof(Surf::Tri));
+        nsend++;
 
-        int nlocalm1 = surf->nlocal;
-        memcpy(&surf->tris[nlocalm1],&surf->tris[m],sizeof(Surf::Tri));
-        surf->nlocal--;
-        othercell = (*grid->hash)[surf->tris[m].id];
-        for (i = 0; i < grid->cells[othercell].nsurf; i++)
-          if (grid->cells[othercell].csurfs[i] == nlocalm1)
-            grid->cells[othercell].csurfs[i] = m;
+        // if not inwardnorm, delete 2 tris from this cell
+        // also add them to delete list
+
+        if (!inwardnorm) {
+          ptr = cells[icell].csurfs;
+          m = facetris[icell][iface][0];
+          for (k = 0; k < nsurf; k++)
+            if (ptr[k] == m) break;
+          if (k == nsurf) error->one(FLERR,"Could not find surf in cleanup_MC");
+          cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
+          nsurf--;
+          m = facetris[icell][iface][1];
+          for (k = 0; k < nsurf; k++)
+            if (ptr[k] == m) break;
+          if (k == nsurf) error->one(FLERR,"Could not find surf in cleanup_MC");
+          cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
+          nsurf--;
+          cells[icell].nsurf -= 2;
+          ndel += 2;
+
+          if (ndelete+2 > maxdelete) {
+            maxdelete += DELTA;
+            memory->grow(dellist,maxdelete,"readisurf:dellist");
+          }
+          dellist[ndelete++] = facetris[icell][iface][0];
+          dellist[ndelete++] = facetris[icell][iface][1];
+        }
       }
+    }
+  }
 
-      // delete tri from this cell
+  // perform irregular communication of list of cell faces and tri pairs
 
-      cells[icell].csurfs[j] = cells[icell].csurfs[nsurf-1];
+  Irregular *irregular = new Irregular(sparta);
+  int nrecv = irregular->create_data_uniform(nsend,proclist,1);
+
+  SendDatum *bufrecv = (SendDatum *) 
+    memory->smalloc(nrecv*sizeof(SendDatum),"readisurf:bufrecv");
+
+  irregular->exchange_uniform((char *) bufsend,sizeof(SendDatum),
+                              (char *) bufrecv);
+  delete irregular;
+  memory->sfree(proclist);
+  memory->sfree(bufsend);
+
+  // loop over list of received face/tri info
+  // if my matching face has 2 tris, delete them
+  // if my matching face has 0 tris, skip or add 2 tris depending on norm
+
+  for (i = 0; i < nrecv; i++) {
+    icell = bufrecv[i].othercell;
+    iface = bufrecv[i].otherface;
+
+    // this cell is not affected, sender cell keeps its 2 tris
+
+    if (nfacetri[icell][iface] == 0 && bufrecv[i].inwardnorm) continue;
+
+    // delete 2 tris from this cell
+    // also add them to delete list
+
+    if (nfacetri[icell][iface] == 2) {
+      nsurf = cells[icell].nsurf;
+      ptr = cells[icell].csurfs;
+      m = facetris[icell][iface][0];
+      for (k = 0; k < nsurf; k++)
+        if (ptr[k] == m) break;
+      if (k == nsurf) error->one(FLERR,"Could not find surf in cleanup_MC");
+      cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
       nsurf--;
+      m = facetris[icell][iface][1];
+      for (k = 0; k < nsurf; k++)
+        if (ptr[k] == m) break;
+      if (k == nsurf) error->one(FLERR,"Could not find surf in cleanup_MC");
+      cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
+      nsurf--;
+      cells[icell].nsurf -= 2;
+      ndel += 2;
+
+      if (ndelete+2 > maxdelete) {
+        maxdelete += DELTA;
+        memory->grow(dellist,maxdelete,"readisurf:dellist");
+      }
+      dellist[ndelete++] = facetris[icell][iface][0];
+      dellist[ndelete++] = facetris[icell][iface][1];
     }
+    
+    // add 2 tris to this cell and this processor's Surf::tris list
+    // reset tri IDs to new owing cell
 
-    cells[icell].nsurf = nsurf;
+    if (nfacetri[icell][iface] == 0) {
+      int nslocal = surf->nlocal;
+      surf->add_tri(1,bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);
+      surf->tris[nslocal].id = cells[icell].id;
+      surf->add_tri(1,bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
+      surf->tris[nslocal+1].id = cells[icell].id;
+      
+      nsurf = cells[icell].nsurf;
+      oldcsurfs = cells[icell].csurfs;
+      ptr = csurfs->get(nsurf+2);
+      for (k = 0; k < nsurf; k++)
+        ptr[k] = oldcsurfs[k];
+      ptr[nsurf] = nslocal;
+      ptr[nsurf+1] = nslocal+1;
+      cells[icell].nsurf += 2;
+      cells[icell].csurfs = ptr;
+      nadd += 2;
+    }
   }
 
-  // DEBUG
+  memory->sfree(bufrecv);
+  memory->destroy(nfacetri);
+  memory->destroy(facetris);
 
-  MPI_Allreduce(&count_mine,&nall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("SWAPPED INTERIOR %d\n",nall);
+  // compress Surf::tris list to remove deleted tris
+  // when 4 tris on same face, they were deleted, 2 from each adjacent cell
+  // must sort dellist, so compress tris in ascending index order
+  // must repoint one location in cells->csurfs to moved surf
 
-  //printf("Sending %d %d\n",comm->me,nlist);
-  MPI_Allreduce(&nlist,&nall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("SENT EXTERIOR %d\n",nall);
+  qsort(dellist,ndelete,sizeof(int),compare_indices);
 
-  // END OF DEBUG
+  tris = surf->tris;
+  int nslocal = surf->nlocal;
+  cellint celllID;
+  for (i = 0; i < ndelete; i++) {
+    m = dellist[i];
+    memcpy(&tris[m],&tris[nslocal-1],sizeof(Surf::Tri));
+    nslocal--;
 
-  // DEBUG
-
-  nmine = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    nmine += cells[icell].nsurf;
-  }
-
-  MPI_Allreduce(&nmine,&nall,1,MPI_INT,MPI_SUM,world);
-
-  if (me == 0) printf("SURFCOUNT MIDDLE %d\n",nall);
-
-  // END OF DEBUG
-
-  // share comm list with all procs via MPI_Allgatherv()
-
-  int nprocs = comm->nprocs;
-
-  int nlistall;
-  MPI_Allreduce(&nlist,&nlistall,1,MPI_INT,MPI_SUM,world);
-
-  int *recvcounts,*displs;
-  memory->create(recvcounts,nprocs,"readisurf:recvcounts");
-  memory->create(displs,nprocs,"readisurf:displs");
-
-  int nsend = nlist * sizeof(Surf::Tri);
-  MPI_Allgather(&nsend,1,MPI_INT,recvcounts,1,MPI_INT,world);
-  displs[0] = 0;
-  for (i = 1; i < nprocs; i++) displs[i] = displs[i-1] + recvcounts[i-1];
-
-  //if (me == 0) printf("SEND TLIST %d: %d %d\n",nlist,tlist[0].id,tlist[1].id);
-
-  //printf("ALLGATHER %d %d: %d %d %d %d: %d %d %d %d\n",comm->me,sizeof(Surf::Tri),
-  //     displs[0],displs[1],displs[2],displs[3],
-  //     recvcounts[0],recvcounts[1],recvcounts[2],recvcounts[3]);
-
-  Surf::Tri *tlistall = (Surf::Tri *) 
-    memory->smalloc(nlistall*sizeof(Surf::Tri),"readisurf:tlistall");
-  MPI_Allgatherv(tlist,nlist*sizeof(Surf::Tri),MPI_CHAR,
-                 tlistall,recvcounts,displs,MPI_CHAR,world);
-
-  memory->destroy(recvcounts);
-  memory->destroy(displs);
-
-  // scan concatenated tlistall from all procs
-  // if one of my owned cells owns the tri, add it to my local surfs
-  // allocate/fill a new nsurf_other+1 length vector from csurfs
-
-  int icell,isurf;
-  int *slist;
-
-  //printf("GRID HASHFILLED %d %d: %d %d\n",grid->hashfilled,nlistall,
-  //     tlistall[0].id,tlistall[1].id);
-
-  int nrecv = 0;
-  for (i = 0; i < nlistall; i++) {
-    if (grid->hash->find(tlistall[i].id) == grid->hash->end()) continue;
-    icell = (*grid->hash)[tlistall[i].id];
-
-    // copy surf info into new local surf
-    // this will set surf ID = cell ID of new owning cell
-
-    surf->add_tri(1,tlistall[i].p1,tlistall[i].p2,tlistall[i].p3);
-    isurf = surf->nlocal - 1;
-    memcpy(&surf->tris[isurf],&tlistall[i],sizeof(Surf::Tri));
-
+    icell = (*grid->hash)[tris[m].id] - 1;
     nsurf = cells[icell].nsurf;
-    slist = cells[icell].csurfs;
-    ptr = csurfs->get(nsurf+1);
+    ptr = cells[icell].csurfs;
     for (k = 0; k < nsurf; k++)
-      ptr[k] = slist[k];
-    ptr[nsurf] = isurf;
-    cells[icell].nsurf++;
-    cells[icell].csurfs = ptr;
-    nrecv++;
+      if (ptr[k] == nslocal) {
+        ptr[k] = m;
+        break;
+      }
+    if (k == nsurf) error->one(FLERR,"Did not find moved tri in cleanup_MC()");
   }
 
-  // DEBUG
-
-  //printf("Receiving %d %d %d\n",comm->me,nrecv,nlistall);
-  MPI_Allreduce(&nrecv,&nall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("RECV EXTERIOR %d\n",nall);
-
-  // END OF DEBUG
+  surf->nlocal = nslocal;
+  memory->destroy(dellist);
 
   // DEBUG
+  // NOTE: remove counters when debugged
 
-  nmine = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    nmine += cells[icell].nsurf;
-  }
+  /*
+  MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("TOTAL TRI after count: %d\n",nstotal);
 
-  MPI_Allreduce(&nmine,&nall,1,MPI_INT,MPI_SUM,world);
+  int alltotal,alladd,alldel,allsend,allrecv;
+  MPI_Allreduce(&ntotal,&alltotal,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&nadd,&alladd,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&ndel,&alldel,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&nsend,&allsend,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&nrecv,&allrecv,1,MPI_INT,MPI_SUM,world);
+  if (me == 0)
+    printf("CLEANUP counts: total %d add %d del %d send %d recv %d\n",
+           alltotal,alladd,alldel,allsend,allrecv);
+  */
 
-  if (me == 0) printf("SURFCOUNT STOP %d\n",nall);
+  // END of DEBUG
+}
 
-  // END OF DEBUG
+/* ----------------------------------------------------------------------
+   comparison function invoked by qsort() called by cleanup_MC()
+   used to sort the dellist of removed tris
+   this is not a class method
+------------------------------------------------------------------------- */
 
-  // DEBUG
-
-  badcount = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    nsurf = cells[icell].nsurf;
-    if (nsurf == 0) continue;
-
-    lo = cells[icell].lo;
-    hi = cells[icell].hi;
-
-    for (j = 0; j < nsurf; j++) {
-
-      m = cells[icell].csurfs[j];
-      iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
-      if (iface < 0) continue;
-
-      idim = iface / 2;
-      if (iface % 2 == 0 && tris[m].norm[idim] > 0.0) continue;
-      if (iface % 2 == 1 && tris[m].norm[idim] < 0.0) continue;
-      badcount++;
-    }
-  }
-
-  MPI_Allreduce(&badcount,&nall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("WRONGCOUNT STOP %d\n",nall);
+int compare_indices(const void *iptr, const void *jptr)
+{
+  int i = *((int *) iptr);
+  int j = *((int *) jptr);
+  if (i < j) return -1;
+  if (i > j) return 1;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
