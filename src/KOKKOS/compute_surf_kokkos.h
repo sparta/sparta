@@ -36,7 +36,7 @@ class ComputeSurfKokkos : public ComputeSurf {
   ~ComputeSurfKokkos();
   void init();
   void clear();
-  int surfinfo(int *&);
+  int tallyinfo(int *&);
   void pre_surf_tally();
   void post_surf_tally();
 
