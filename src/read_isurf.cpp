@@ -84,7 +84,7 @@ void ReadISurf::command(int narg, char **arg)
     error->all(FLERR,"Cannot read_isurf for axisymmetric domains");
 
   surf->exist = 1;
-  dim = domain->dimension;
+  dimension = domain->dimension;
 
   if (narg < 6) error->all(FLERR,"Illegal read_isurf command");
 
@@ -95,7 +95,7 @@ void ReadISurf::command(int narg, char **arg)
   ny = input->inumeric(FLERR,arg[2]);
   nz = input->inumeric(FLERR,arg[3]);
 
-  if (dim == 2 && nz != 1) error->all(FLERR,"Invalid read_isurf command");
+  if (dimension == 2 && nz != 1) error->all(FLERR,"Invalid read_isurf command");
 
   char *gridfile = arg[4];
 
@@ -129,7 +129,7 @@ void ReadISurf::command(int narg, char **arg)
 
   create_hash(count,ggroup);
 
-  if (dim == 3) memory->create(cvalues,grid->nlocal,8,"readisurf:cvalues");
+  if (dimension == 3) memory->create(cvalues,grid->nlocal,8,"readisurf:cvalues");
   else memory->create(cvalues,grid->nlocal,4,"readisurf:cvalues");
 
   read_corners(gridfile);
@@ -151,7 +151,7 @@ void ReadISurf::command(int narg, char **arg)
 
   grid->clear_surf();
 
-  if (dim == 3) marching_cubes(ggroup);
+  if (dimension == 3) marching_cubes(ggroup);
   else marching_squares(ggroup);
 
   surf->nown = surf->nlocal;
@@ -164,7 +164,7 @@ void ReadISurf::command(int narg, char **arg)
     int sgroupbit = surf->bitmask[sgroup];
  
     int nsurf = surf->nlocal;
-    if (dim == 3) {
+    if (dimension == 3) {
       Surf::Tri *tris = surf->tris;
       for (int i = 0; i < nsurf; i++) tris[i].mask |= sgroupbit;
     } else {
@@ -175,7 +175,7 @@ void ReadISurf::command(int narg, char **arg)
 
   // output extent of implicit surfs, some may be tiny
 
-  if (dim == 2) surf->output_extent(0);
+  if (dimension == 2) surf->output_extent(0);
   else surf->output_extent(0);
 
   MPI_Barrier(world);
@@ -183,17 +183,17 @@ void ReadISurf::command(int narg, char **arg)
 
   // compute normals of new surfs
 
-  if (dim == 2) surf->compute_line_normal(0);
+  if (dimension == 2) surf->compute_line_normal(0);
   else surf->compute_tri_normal(0);
 
   // cleanup_MC() checks for consistent triangles on grid cell faces
   // needs to come after normals are computed
 
-  if (dim == 3) cleanup_MC();
+  if (dimension == 3) cleanup_MC();
 
   // error checks that can be done before surfs are mapped to grid cells
 
-  if (dim == 2) surf->check_watertight_2d();
+  if (dimension == 2) surf->check_watertight_2d();
   else surf->check_watertight_3d();
 
   MPI_Barrier(world);
@@ -277,7 +277,6 @@ void ReadISurf::read_corners(char *gridfile)
 
   uint8_t *buf;
   memory->create(buf,CHUNK,"readisurf:buf");
-  int dimension = domain->dimension;
 
   // proc 0 opens and reads binary file
   // error check the file grid matches input script extent
@@ -307,7 +306,7 @@ void ReadISurf::read_corners(char *gridfile)
   // each proc stores grid corner point values it needs in assign_corners()
 
   bigint ncorners;
-  if (dim == 3) ncorners = (bigint) (nx+1) * (ny+1)*(nz+1);
+  if (dimension == 3) ncorners = (bigint) (nx+1) * (ny+1)*(nz+1);
   else ncorners = (bigint) (nx+1) * (ny+1)*nz;
 
   bigint nread = 0;
@@ -347,7 +346,6 @@ void ReadISurf::read_types(char *typefile)
 
   int *buf;
   memory->create(buf,CHUNK,"readisurf:buf");
-  int dimension = domain->dimension;
 
   // proc 0 opens and reads binary file
   // error check the file grid matches input script extent
@@ -410,7 +408,6 @@ void ReadISurf::create_hash(int count, int igroup)
 {
   hash = new MyHash;
 
-  int dim = domain->dimension;
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
@@ -452,7 +449,7 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *buf)
     if (buf[i]) {
       if (pix == 0 || piy == 0) zeroflag = 1;
       if (pix == nx || piy == ny) zeroflag = 1;
-      if (dim == 3 && (piz == 0 || piz == nz)) zeroflag = 1;
+      if (dimension == 3 && (piz == 0 || piz == nz)) zeroflag = 1;
       if (zeroflag) error->all(FLERR,"Grid boundary value != 0");
     }
 
@@ -463,7 +460,7 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *buf)
     //   of cell
     // if test on cix,ciy,ciz excludes cells that are outside of grid block
 
-    if (dim == 3) {
+    if (dimension == 3) {
       ncorner = 8;
       for (int ciz = piz-1; ciz <= piz; ciz++) {
         for (int ciy = piy-1; ciy <= piy; ciy++) {
@@ -2095,11 +2092,9 @@ void ReadISurf::cleanup_MC()
 
   // DEBUG
 
-  /*
   int nstotal;
   MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
   if (me == 0) printf("TOTAL TRI before count: %d\n",nstotal);
-  */
 
   // END of DEBUG
 
@@ -2183,8 +2178,9 @@ void ReadISurf::cleanup_MC()
         error->one(FLERR,"Invalid neighbor cell in cleanup_MC()");
 
       norm = tris[facetris[icell][iface][0]].norm;
-      if (iface % 2 && norm[iface] < 0.0) inwardnorm = 1;
-      else if (iface % 2 == 0 && norm[iface] > 0.0) inwardnorm = 1;
+      idim = iface/2;
+      if (iface % 2 && norm[idim] < 0.0) inwardnorm = 1;
+      else if (iface % 2 == 0 && norm[idim] > 0.0) inwardnorm = 1;
       else inwardnorm = 0;
       if (iface % 2) otherface = iface-1;
       else otherface = iface+1;
@@ -2447,7 +2443,6 @@ void ReadISurf::cleanup_MC()
   // DEBUG
   // NOTE: remove counters when debugged
 
-  /*
   MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
   if (me == 0) printf("TOTAL TRI after count: %d\n",nstotal);
 
@@ -2460,7 +2455,6 @@ void ReadISurf::cleanup_MC()
   if (me == 0)
     printf("CLEANUP counts: total %d add %d del %d send %d recv %d\n",
            alltotal,alladd,alldel,allsend,allrecv);
-  */
 
   // END of DEBUG
 }
