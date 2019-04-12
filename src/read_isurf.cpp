@@ -191,7 +191,7 @@ void ReadISurf::command(int narg, char **arg)
 
   if (dimension == 3) cleanup_MC();
 
-  // error checks that can be done before surfs are mapped to grid cells
+  // watertight check can be done before surfs are mapped to grid cells
 
   if (dimension == 2) surf->check_watertight_2d();
   else surf->check_watertight_3d();
@@ -2389,9 +2389,11 @@ void ReadISurf::cleanup_MC()
 
     if (nfacetri[icell][iface] == 0) {
       int nslocal = surf->nlocal;
-      surf->add_tri(1,bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);
+      surf->add_tri(1,bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
+      memcpy(&surf->tris[nslocal],&bufrecv[i].tri1,sizeof(Surf::Tri));
       surf->tris[nslocal].id = cells[icell].id;
       surf->add_tri(1,bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
+      memcpy(&surf->tris[nslocal+1],&bufrecv[i].tri2,sizeof(Surf::Tri));
       surf->tris[nslocal+1].id = cells[icell].id;
       
       nsurf = cells[icell].nsurf;
@@ -2457,6 +2459,49 @@ void ReadISurf::cleanup_MC()
            alltotal,alladd,alldel,allsend,allrecv);
 
   // END of DEBUG
+
+  // MORE DEBUG
+
+  ntotal = 0;
+  int nbad = 0;
+  int nonface = 0;
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    nsurf = cells[icell].nsurf;
+    if (nsurf == 0) continue;
+    ntotal += nsurf;
+
+    lo = cells[icell].lo;
+    hi = cells[icell].hi;
+
+    for (j = 0; j < nsurf; j++) {
+      m = cells[icell].csurfs[j];
+      iface = Geometry::tri_on_hex_face(tris[m].p1,tris[m].p2,tris[m].p3,lo,hi);
+      if (iface < 0) continue;
+
+      norm = tris[m].norm;
+      idim = iface/2;
+      if (iface % 2 && norm[idim] < 0.0) inwardnorm = 1;
+      else if (iface % 2 == 0 && norm[idim] > 0.0) inwardnorm = 1;
+      else inwardnorm = 0;
+
+      nonface++;
+      if (!inwardnorm) nbad++;
+    }
+  }
+
+  int nbadall;
+  MPI_Allreduce(&nbad,&nbadall,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("BAD NORM %d\n",nbadall);
+
+  int nonfaceall;
+  MPI_Allreduce(&nonface,&nonfaceall,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("Total onface %d\n",nonfaceall);
+
+  if (ntotal != surf->nlocal) error->one(FLERR,"Bad surf total");
+
+  // END of MORE DEBUG
 }
 
 /* ----------------------------------------------------------------------
