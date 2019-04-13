@@ -233,7 +233,7 @@ void Comm::migrate_cells(int nmigrate)
 {
   if (update->mem_limit_grid_flag)
     update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
-  if (update->global_mem_limit > 0)
+  if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal))
     return migrate_cells_less_memory(nmigrate);
 
   int i,n;
@@ -647,6 +647,7 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
                 takes input datums, returns output datums
      outorder = same as inorder, but for datums returned by callback()
      ptr = pointer to caller class, passed to callback()
+     statflag = 1 for stats output, else 0
    outputs:
      nout = # of output datums (function return)
      outbuf = vector of output datums

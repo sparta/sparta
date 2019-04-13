@@ -50,7 +50,6 @@ Compute::Compute(SPARTA *sparta, int narg, char **arg) : Pointers(sparta)
   scalar_flag = vector_flag = array_flag = 0;
   per_particle_flag = per_grid_flag = per_surf_flag = 0;
   post_process_grid_flag = 0;
-  size_per_grid_extra_cols = 0;
   surf_tally_flag = boundary_tally_flag = 0;
 
   timeflag = 0;

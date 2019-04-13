@@ -46,8 +46,8 @@ enum{PERIODIC,OUTFLOW,REFLECT,SURFACE,AXISYM};  // same as Domain
 enum{OUTSIDE,INSIDE,ONSURF2OUT,ONSURF2IN};      // several files
 enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};   // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
-enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
-enum{COMBO,PERCELL,PERSURF};            // several files
+enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Surf
+enum{PERAUTO,PERCELL,PERSURF};                  // several files
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
@@ -1405,7 +1405,7 @@ void Update::global(int narg, char **arg)
       if (surf->exist) 
         error->all(FLERR,
                    "Cannot set global surfgrid when surfaces already exist");
-      if (strcmp(arg[iarg+1],"combo") == 0) grid->surfgrid_algorithm = COMBO;
+      if (strcmp(arg[iarg+1],"auto") == 0) grid->surfgrid_algorithm = PERAUTO;
       else if (strcmp(arg[iarg+1],"percell") == 0) 
         grid->surfgrid_algorithm = PERCELL;
       else if (strcmp(arg[iarg+1],"persurf") == 0) 
@@ -1482,11 +1482,11 @@ void Update::global(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"all") == 0) comm->commpartstyle = 0;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
-    } else if (strcmp(arg[iarg],"surf/comm") == 0) {
+    } else if (strcmp(arg[iarg],"surftally") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal global command");
       if (strcmp(arg[iarg+1],"auto") == 0) surf->tally_comm = TALLYAUTO;
-      else if (strcmp(arg[iarg+1],"all") == 0) surf->tally_comm = TALLYREDUCE;
-      else if (strcmp(arg[iarg+1],"local") == 0) surf->tally_comm = TALLYLOCAL;
+      else if (strcmp(arg[iarg+1],"reduce") == 0) surf->tally_comm = TALLYREDUCE;
+      else if (strcmp(arg[iarg+1],"rvous") == 0) surf->tally_comm = TALLYRVOUS;
       else error->all(FLERR,"Illegal global command");
       iarg += 2;
 

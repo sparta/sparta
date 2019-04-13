@@ -13,7 +13,7 @@ global command :h3
 global keyword values ... :pre
 
 one or more keyword/value pairs :ulb,l
-keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {cellmax} or {splitmax} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
+keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {surfgrid} or {surfmax} or {cellmax} or {splitmax} or {surftally} or {surfpush} or {gridcut} or {comm/sort} or {comm/style} or {weight} or {particle/reorder} or {mem/limit} :l
   {fnum} value = ratio
     ratio = Fnum ratio of physical particles to simulation particles
   {nrho} value = density
@@ -31,16 +31,20 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
                            only the surfs for its owned_ghost grid cells
     implicit = surfs defined in read_isurf file, each proc owns
                            only the surfs for its owned+ghost grid cells
-  {surfgrid} value = combo or percell or persurf
+  {surfgrid} value = {percell} or {persurf} or {auto}
     percell = loop over my cells and check every surf
     persurf = loop over my surfs and cells they overlap
-    combo = choose percell or persurf based on surface element and proc count
+    auto = choose percell or persurf based on surface element and proc count
   {surfmax} value = Nsurf
     Nsurf = max # of surface elements allowed in single grid cell
   {cellmax} value = Ncell
     Ncell = max # of grid cells a single surf can overlap
   {splitmax} value = Nsplit
     Nsplit = max # of sub-cells one grid cell can be split into by surface elements
+  {surftally} value = {reduce} or {rvous} or {auto}
+    reduce = tally surf collision info via MPI_Allreduce operations
+    rvous = tally via a rendezvous algorithm
+    auto = choose reduce or rvous based on surface element and proc count
   {surfpush} value(s) = no/yes or slo shi svalue
     no = do not push surface element points near cell surface
     yes = push surface element points near cell surface if necessary
@@ -59,7 +63,7 @@ keyword = {fnum} or {nrho} or {vstream} or {temp} or {gravity} or {surfs} or {su
   {particle/reorder} value = {nsteps}
     nsteps = reorder the particles every this many timesteps
   {mem/limit} value = {grid} or bytes
-    grid = limit extra memory for load-balancing and particle reordering to grid cell memory
+    grid = limit extra memory for load-balancing, particle reordering, and restart file read/write to grid cell memory
     bytes = limit extra particle memory to this amount (in MBytes) :pre
 :ule
 
@@ -122,7 +126,7 @@ MBytes.
 The {surfgrid} keyword determines what algorithm is used to enumerate
 the overlaps (intersections) between grid cells and surface elements
 (lines in 2d, triangles in 3d).  The possible settings are {percell},
-{persurf}, and {combo}.  The {combo} setting is the default and will
+{persurf}, and {auto}.  The {auto} setting is the default and will
 choose between a {percell} or {persurf} algorithm based on the number
 of surface elements and processor count.  If there are more processors
 than surface elements, the {percell} algorithm is used.  Otherwise the
@@ -154,6 +158,24 @@ with multiple surface elements (lines in 2d, triangles in 3d).  The
 default is 10, which should be large enough for any simulation, unless
 you embed a complex-shaped surface object into one or a very few grid
 cells.
+
+The {surftally} keyword determines what algorithm is used to combine
+tallies of surface collisions across processors that own portions of
+the same surface element.  The possible settings are {reduce},
+{rvous}, and {auto}.  The {auto} setting is the default and will
+choose between a {reduce} or {rvous} algorithm based on the number of
+surface elements and processor count.  If there are more processors
+than surface elements, the {reduce} algorithm is used.  Otherwise the
+{rvous} algorithm is used.  The {reduce} algorithm is suitable for
+relatively small surface elememt counts.  It creates a copy of a
+vector or array of length the global number of surface elements.  Each
+processor sums its tally contributions into the vector or array.  An
+MPI_Allreduce() is performed to sum it across all processors.  Each
+processor than extracts values for the N/P surfaces it owns.  The
+{rvous} algorithm is faster for large surface element counts.  A
+rendezvous style of communication is performed where every processor
+sends its tally contributions directly to the processor which owns the
+element as one of its N/P elements.
 
 :line
 
@@ -319,48 +341,55 @@ Note that the first calculation of weights is performed whenever the
 are not cloned or destroyed by the new weights.  The second
 calculation only happens when a simulation is run.
 
-The {particle/reorder} keyword determines how often the list of
-particles on each processor is reordered to store particles in the
-same grid cell contiguously in memory.  This operation is performed
-every {nsteps} as specified. A value of 0 means no reordering is ever
-done.  This option is only available when using the KOKKOS package and
-can improve performance on certain hardware such as GPUs, but is
-typically slower on CPUs except when running on thousands of nodes.
+The {particle/reorder} keyword determines how often the list of 
+particles on each processor is reordered to store particles in the same 
+grid cell contiguously in memory. This operation is performed every 
+{nsteps} as specified. A value of 0 means no reordering is ever done. 
+This option is only available when using the KOKKOS package and can 
+improve performance on certain hardware such as GPUs, but is typically 
+slower on CPUs except when running on thousands of nodes. 
 
-The {mem/limit} keyword limits the amount of memory allocated for two
-operations: load balancing and reordering of particles.  This should
-only be necessary for very large simulations where the memory
-footprint for particles and grid cells is a significant fraction of
-available memory.  In this case, these operations can trigger a memory
-error due to the additional memory they require.  Setting a limit on
-the memory size will perform these two operations more incrementally
-so that memory errors do not occur.
+The {mem/limit} keyword limits the amount of memory allocated for 
+several operations: load balancing, reordering of particles, and restart 
+file read/write. This should only be necessary for very large 
+simulations where the memory footprint for particles and grid cells is a 
+significant fraction of available memory. In this case, these operations 
+can trigger a memory error due to the additional memory they require. 
+Setting a limit on the memory size will perform these operations more 
+incrementally so that memory errors do not occur. 
 
-A load-balance operation can use as much as 3x more memory than the
-memory used to store particles (reported by SPARTA when a simulation
-begins).  Particle reordering temporarily doubles the memory needed to
-store particles because it is performed out-of-place by default.
+A load-balance operation can use as much as 3x more memory than the 
+memory used to store particles (reported by SPARTA when a simulation 
+begins). Particle reordering temporarily doubles the memory needed to 
+store particles because it is performed out-of-place by default. Reading 
+and writing restart files also requires temporary buffers to hold grid 
+cells and particles and can double the memory required. 
 
-Specifying the value for {mem/limit} as {grid}, will allocate extra
-memory limited to the size of memory for storing grid cells on each
-processor.  For most simulations this is typically much smaller than
-the memory used to store particles.  Specifying a numeric value for
-{bytes} will allocate extra memory limited to that many MBytes on each
-processor.  {Bytes} can be specified as a floating point value or an
-integer, e.g. 0.5 if you want to use 1/2 MByte of extra memory or 100
-for a 100 MByte buffer.  Specifying a value of 0 (the default) means
-no limit is used.
+Specifying the value for {mem/limit} as {grid}, will allocate extra 
+memory limited to the size of memory for storing grid cells on each 
+processor. For most simulations this is typically much smaller than the 
+memory used to store particles. Specifying a numeric value for {bytes} 
+will allocate extra memory limited to that many MBytes on each 
+processor. {Bytes} can be specified as a floating point value or an 
+integer, e.g. 0.5 if you want to use 1/2 MByte of extra memory or 100 
+for a 100 MByte buffer. Specifying a value of 0 (the default) means no 
+limit is used. 
 
-For load-balancing, the communication of grid and particle data to new
-processors will then be performed in multiple passes (if necessary) so
-that only a portion of grid cells and their particles which fit into
-the extra memory are migrated in each pass.  Similarly for particle
-reordering, multiple passes are performed using the extra memory to
-reorder the particles nearly in-place.
+For load-balancing, the communication of grid and particle data to new 
+processors will then be performed in multiple passes (if necessary) so 
+that only a portion of grid cells and their particles which fit into the 
+extra memory are migrated in each pass. Similarly for particle 
+reordering, multiple passes are performed using the extra memory to 
+reorder the particles nearly in-place. For reading/writing restart 
+files, multiple passes are used to read from or write to the restart 
+file as well. For reading restart files, this option is ignored unless 
+reading from multiple files (i.e. a "%" character was used in the 
+command to write out the restart) and the number of MPI ranks is greater 
+than the number of files. 
 
-Note that for both operations if the extra memory is too small,
-performance will suffer due to the large number of multiple passes
-required.
+Note that for these operations if the extra memory is too small, 
+performance will suffer due to the large number of multiple passes 
+required. 
 
 [Restrictions:]
 
@@ -375,6 +404,7 @@ defined, e.g. via the "read_surf"_read_surf.html command.
 
 The keyword defaults are fnum = 1.0, nrho = 1.0, vstream = 0.0 0.0
 0.0, temp = 273.15, gravity = 0.0 0.0 0.0 0.0, surfs = explicit,
-surfgrid = combo, surfmax = 100, cellmax = 100, splitmax = 10,
-surfpush = yes, gridcut = -1.0, comm/sort = no, comm/style = neigh,
-weight = cell none, particle/reorder = 0, mem/limit = 0.
+surfgrid = auto, surfmax = 100, cellmax = 100, splitmax = 10,
+surftally = auto, surfpush = yes, gridcut = -1.0, comm/sort = no,
+comm/style = neigh, weight = cell none, particle/reorder = 0,
+mem/limit = 0.
