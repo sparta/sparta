@@ -807,11 +807,11 @@ void ReadISurf::marching_squares(int igroup)
 void ReadISurf::marching_cubes(int igroup)
 {
   int i,j,ipt,isurf,nsurf,icase,which;
-  int *ptr;
+  surfint *ptr;
     
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
-  MyPage<int> *csurfs = grid->csurfs;
+  MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
   int groupbit = grid->bitmask[igroup];
     
@@ -2090,7 +2090,7 @@ void ReadISurf::cleanup_MC()
 
   Surf::Tri *tris = surf->tris;
   Grid::ChildCell *cells = grid->cells;
-  MyPage<int> *csurfs = grid->csurfs;
+  MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
 
   Surf::Tri *tlist = NULL;
