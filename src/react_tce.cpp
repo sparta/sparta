@@ -143,8 +143,26 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     if (react_prob > random_prob) {
       ip->ispecies = r->products[0];
 
-      if (r->nproduct >= 2) jp->ispecies = r->products[1];
-      else jp->ispecies = -1;
+      // Previous statment did not destroy the 2nd species (B) if
+      //   recombination was specified as A+B->AB+M (which has nproductus=2)
+      //   but only for the A+B->AB specication form (which has nproductus=1)
+       
+      switch (r->type) {
+      case DISSOCIATION:
+      case IONIZATION:
+      case EXCHANGE:
+        {
+          jp->ispecies = r->products[1];
+          break;
+        }
+      case RECOMBINATION:
+        {
+          // always destroy 2nd reactant species
+
+          jp->ispecies = -1;
+          break;
+        }
+      }
 
       if (r->nproduct > 2) kspecies = r->products[2];
       else kspecies = -1;

@@ -183,12 +183,17 @@ class Surf : protected Pointers {
   void group(int, char **);
   int add_group(const char *);
   int find_group(const char *);
-
-  void collate_vector(int, int *, double *, int, double *);
-  void collate_array(int, int, int *, double **, double **);
   
   void compress_rebalance();
   void reset_csurfs_implicit();
+
+  void collate_vector(int, int *, double *, int, double *);
+  void collate_vector_reduce(int, int *, double *, int, double *);
+  void collate_vector_rendezvous(int, int *, double *, int, double *);
+
+  void collate_array(int, int, int *, double **, double **);
+  void collate_array_reduce(int, int, int *, double **, double **);
+  void collate_array_rendezvous(int, int, int *, double **, double **);
 
   void write_restart(FILE *);
   void read_restart(FILE *);
@@ -199,6 +204,16 @@ class Surf : protected Pointers {
  protected:
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
+  
+  // collate rendezvous data
+
+  struct InRvousVec {
+    surfint id;             // surface ID
+    double value;           // compute value
+  };
+
+  double *out_rvous;
+  int ncol_rvous;
 
   // watertight rendezvous data
 
@@ -212,13 +227,27 @@ class Surf : protected Pointers {
     int which;              // 1 for forward order, 2 for reverse order
   };
 
+  // union data struct for packing 32-bit and 64-bit ints into double bufs
+  // this avoids aliasing issues by having 2 pointers (double,int)
+  //   to same buf memory
+  // constructor for 32-bit int prevents compiler
+  //   from possibly calling the double constructor when passed an int
+  // copy to a double *buf:
+  //   buf[m++] = ubuf(foo).d, where foo is a 32-bit or 64-bit int
+  // copy from a double *buf:
+  //   foo = (int) ubuf(buf[m++]).i;, where (int) or (tagint) match foo
+  //   the cast prevents compiler warnings about possible truncation
+
+  union ubuf {
+    double d;
+    int64_t i;
+    ubuf(double arg) : d(arg) {}
+    ubuf(int64_t arg) : i(arg) {}
+    ubuf(int arg) : i(arg) {}
+  };
+
   // private methods
-
-  void check_watertight_2d_all();
-  void check_watertight_2d_distributed();
-  void check_watertight_3d_all();
-  void check_watertight_3d_distributed();
-
+  
   void point_line_compare(double *, double *, double *, double, int &, int &);
   void point_tri_compare(double *, double *, double *, double *, double *,
                          double, int &, int &, int, int, int);
@@ -228,8 +257,15 @@ class Surf : protected Pointers {
   void collate_array_allreduce(int, int, int *, double **, double **);
   void collate_array_irregular(int, int, int *, double **, double **);
 
-  // callback functions for rendezvous communication
+  void check_watertight_2d_all();
+  void check_watertight_2d_distributed();
+  void check_watertight_3d_all();
+  void check_watertight_3d_distributed();
 
+  // callback functions for rendezvous communication
+ 
+  static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
+  static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_watertight_2d(int, char *, 
                                       int &, int *&, char *&, void *);
   static int rendezvous_watertight_3d(int, char *, 
