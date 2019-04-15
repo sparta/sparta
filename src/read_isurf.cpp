@@ -12,6 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Arnaud Borner (NASA Ames)
+------------------------------------------------------------------------- */
+
 #include "mpi.h"
 #include "math.h"
 #include "string.h"
