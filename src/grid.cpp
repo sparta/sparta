@@ -355,7 +355,6 @@ void Grid::setup_owned()
   MPI_Allreduce(&one,&nunsplit,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&nsplitlocal,&nsplit,1,MPI_INT,MPI_SUM,world);
   MPI_Allreduce(&nsublocal,&nsub,1,MPI_INT,MPI_SUM,world);
-  one = nunsplitlocal = nlocal - nsplitlocal - nsublocal;
 
   // set cell_epsilon to 1/2 the smallest dimension of any grid cell
 
