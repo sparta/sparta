@@ -867,7 +867,8 @@ void ReadISurf::marching_cubes(int igroup)
     config = cases[which][1];
     subconfig = 0;
     
-    //        printf("case %d and config %d lo %1.0f %1.0f %1.0f hi %1.0f %1.0f %1.0f cvalues %d %d %d %d %d %d %d %d\n",icase,config,lo[0],lo[1],lo[2],hi[0],hi[1],hi[2],cvalues[icell][0],cvalues[icell][1],cvalues[icell][2],cvalues[icell][3],cvalues[icell][4],cvalues[icell][5],cvalues[icell][6],cvalues[icell][7]);
+    // DEBUG
+    // printf("case %d and config %d lo %1.0f %1.0f %1.0f hi %1.0f %1.0f %1.0f cvalues %d %d %d %d %d %d %d %d\n",icase,config,lo[0],lo[1],lo[2],hi[0],hi[1],hi[2],cvalues[icell][0],cvalues[icell][1],cvalues[icell][2],cvalues[icell][3],cvalues[icell][4],cvalues[icell][5],cvalues[icell][6],cvalues[icell][7]);
     
     switch (icase) {
     case  0:
@@ -1123,7 +1124,8 @@ void ReadISurf::marching_cubes(int igroup)
         nsurf = add_triangle(tiling13_1_[config], 4); break;
         
       default:
-        printf("Marching Cubes: Impossible case 13\n");  print_cube();
+        print_cube();
+        error->one(FLERR,"Marching cubes - impossible case 13");
       }
       break;
                 
@@ -1310,7 +1312,8 @@ int ReadISurf::add_triangle(int *trig, int n)
       break;
     }
 
-    //        printf("pt number %d n %d case %d and config %d lo %1.0f %1.0f %1.0f hi %1.0f %1.0f %1.0f cvalues %d %d %d %d %d %d %d %d coords %f %f %f\n" ,t,n,icase,config,lo[0],lo[1],lo[2],hi[0],hi[1],hi[2],v000,v001,v011,v010,v100,v101,v111,v110,pt[t][0],pt[t][1],pt[t][2]);
+    // DEBUG
+    // printf("pt number %d n %d case %d and config %d lo %1.0f %1.0f %1.0f hi %1.0f %1.0f %1.0f cvalues %d %d %d %d %d %d %d %d coords %f %f %f\n" ,t,n,icase,config,lo[0],lo[1],lo[2],hi[0],hi[1],hi[2],v000,v001,v011,v010,v100,v101,v111,v110,pt[t][0],pt[t][1],pt[t][2]);
 
   }
 
@@ -1371,8 +1374,9 @@ bool ReadISurf::test_face(int face)
     break;
 
   default: 
-    printf("Invalid face code %d\n", face);
-    print_cube(); A = B = C = D = 0.0;
+    A = B = C = D = 0.0;
+    print_cube();
+    error->one(FLERR,"Invalid face code");
   };
     
   if (fabs(A*C - B*D) < EPSILON) return face >= 0;
@@ -1505,14 +1509,14 @@ bool ReadISurf::test_interior(int s, int icase)
       break ;
 
     default: 
-      printf("Invalid edge %d\n", edge);  print_cube();  break;
+      print_cube();
+      error->one(FLERR,"Marching cubes - invalid edge");
     }
     break;
       
   default: 
-    printf("Invalid ambiguous case %d\n", icase);
     print_cube();
-    break;
+    error->one(FLERR,"Marching cubes - invalid ambiguous case");
   }
     
   if (At >= 0.0) test ++;
@@ -2014,7 +2018,8 @@ bool ReadISurf::interior_test_case13()
   t1 = (-b + sqrt(delta))/(2*a);
   t2 = (-b - sqrt(delta))/(2*a);
 
-  //    printf("delta = %f, t1 = %f, t2 = %f\n", delta, t1, t2);
+  // DEBUG
+  // printf("delta = %f, t1 = %f, t2 = %f\n", delta, t1, t2);
 
   if ((t1 < 1)&&(t1>0) &&(t2 < 1)&&(t2 > 0)) {
     At1 = v001iso + (v000iso - v001iso) * t1;
@@ -2036,8 +2041,6 @@ bool ReadISurf::interior_test_case13()
     if ((x1 < 1)&&(x1>0) &&(x2 < 1)&&(x2 > 0) && 
         (y1 < 1)&&(y1>0) &&(y2 < 1)&&(y2 > 0)) return false;
   }
-
-  // NOTE: SJP changed this logic, wasn't always returning a value
 
   return true;
 }
@@ -2092,9 +2095,9 @@ void ReadISurf::cleanup_MC()
 
   // DEBUG
 
-  int nstotal;
-  MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("TOTAL TRI before count: %d\n",nstotal);
+  //int nstotal;
+  //MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
+  //if (me == 0) printf("TOTAL TRI before count: %d\n",nstotal);
 
   // END of DEBUG
 
@@ -2131,11 +2134,8 @@ void ReadISurf::cleanup_MC()
   int flag = 0;
   for (icell = 0; icell < nglocal; icell++)
     for (iface = 0; iface < 6; iface++)
-      if (nfacetri[icell][iface] != 0 && nfacetri[icell][iface] != 2) {
-        printf("Face count: cellID %d face %d tricount %d\n",
-               cells[icell].id,iface,nfacetri[icell][iface]);
+      if (nfacetri[icell][iface] != 0 && nfacetri[icell][iface] != 2)
         flag++;
-      }
 
   int flagall;
   MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
@@ -2155,9 +2155,9 @@ void ReadISurf::cleanup_MC()
   int maxdelete = 0;
 
   // DEBUG
-  int ntotal = 0;
-  int nadd = 0;
-  int ndel = 0;
+  //int ntotal = 0;
+  //int nadd = 0;
+  //int ndel = 0;
 
   for (icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
@@ -2166,7 +2166,7 @@ void ReadISurf::cleanup_MC()
 
     for (iface = 0; iface < 6; iface++) {
       if (nfacetri[icell][iface] != 2) continue;
-      ntotal += 2;
+      //ntotal += 2;
 
       // other cell/face/proc = info for matching face in adjacent cell
 
@@ -2213,7 +2213,7 @@ void ReadISurf::cleanup_MC()
           cells[othercell].csurfs = ptr;
           tris[facetris[icell][iface][0]].id = cells[othercell].id;
           tris[facetris[icell][iface][1]].id = cells[othercell].id;
-          nadd += 2;
+          //nadd += 2;
         }
 
         // delete 2 tris from other cell
@@ -2238,7 +2238,7 @@ void ReadISurf::cleanup_MC()
           cells[othercell].csurfs[k] = cells[othercell].csurfs[othernsurf-1];
           othernsurf--;
           cells[othercell].nsurf -= 2;
-          ndel += 2;
+          //ndel += 2;
         }
 
         // delete 2 tris from this cell
@@ -2257,7 +2257,7 @@ void ReadISurf::cleanup_MC()
         cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
         nsurf--;
         cells[icell].nsurf -= 2;
-        ndel += 2;
+        //ndel += 2;
 
         // add 4 tris to delete list if both cells deleted them
 
@@ -2316,7 +2316,7 @@ void ReadISurf::cleanup_MC()
           cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
           nsurf--;
           cells[icell].nsurf -= 2;
-          ndel += 2;
+          //ndel += 2;
 
           if (ndelete+2 > maxdelete) {
             maxdelete += DELTA;
@@ -2374,7 +2374,7 @@ void ReadISurf::cleanup_MC()
       cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
       nsurf--;
       cells[icell].nsurf -= 2;
-      ndel += 2;
+      //ndel += 2;
 
       if (ndelete+2 > maxdelete) {
         maxdelete += DELTA;
@@ -2405,7 +2405,7 @@ void ReadISurf::cleanup_MC()
       ptr[nsurf+1] = nslocal+1;
       cells[icell].nsurf += 2;
       cells[icell].csurfs = ptr;
-      nadd += 2;
+      //nadd += 2;
     }
   }
 
@@ -2443,8 +2443,8 @@ void ReadISurf::cleanup_MC()
   memory->destroy(dellist);
 
   // DEBUG
-  // NOTE: remove counters when debugged
 
+  /*
   MPI_Allreduce(&surf->nlocal,&nstotal,1,MPI_INT,MPI_SUM,world);
   if (me == 0) printf("TOTAL TRI after count: %d\n",nstotal);
 
@@ -2457,10 +2457,6 @@ void ReadISurf::cleanup_MC()
   if (me == 0)
     printf("CLEANUP counts: total %d add %d del %d send %d recv %d\n",
            alltotal,alladd,alldel,allsend,allrecv);
-
-  // END of DEBUG
-
-  // MORE DEBUG
 
   ntotal = 0;
   int nbad = 0;
@@ -2500,8 +2496,9 @@ void ReadISurf::cleanup_MC()
   if (me == 0) printf("Total onface %d\n",nonfaceall);
 
   if (ntotal != surf->nlocal) error->one(FLERR,"Bad surf total");
+  */
 
-  // END of MORE DEBUG
+  // END of DEBUG
 }
 
 /* ----------------------------------------------------------------------
@@ -2523,7 +2520,8 @@ int compare_indices(const void *iptr, const void *jptr)
    print cube for debugging
 ------------------------------------------------------------------------- */
 
-void ReadISurf::print_cube() { 
-  printf("\t %d %d %d %d %d %d %d %d\n",
-          v000, v001, v011, v010, v100, v101, v111, v110);
+void ReadISurf::print_cube()
+{ 
+  fprintf(screen,"\t %d %d %d %d %d %d %d %d\n",
+         v000,v001,v011,v010,v100,v101,v111,v110);
 }
