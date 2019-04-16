@@ -132,8 +132,8 @@ void MoveSurf::command(int narg, char **arg)
   if (dim == 2) surf->check_point_near_surf_2d();
   else surf->check_point_near_surf_3d();
 
-  if (dim == 2) surf->check_watertight_2d(0);
-  else surf->check_watertight_3d(0);
+  if (dim == 2) surf->check_watertight_2d();
+  else surf->check_watertight_3d();
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();

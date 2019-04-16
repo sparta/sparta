@@ -165,8 +165,8 @@ class Surf : protected Pointers {
   double tri_size(Tri *, double &);
   double tri_size(double *, double *, double *, double &);
 
-  void check_watertight_2d(int);
-  void check_watertight_3d(int);
+  void check_watertight_2d();
+  void check_watertight_3d();
   void check_point_inside(int);
   void check_point_near_surf_2d();
   void check_point_near_surf_3d();
@@ -215,6 +215,18 @@ class Surf : protected Pointers {
   double *out_rvous;
   int ncol_rvous;
 
+  // watertight rendezvous data
+
+  struct InRvousPoint {
+    double x[2];            // 2d point coords
+    int which;              // 1 for first endpoint, 2 for second endpoint
+  };
+
+  struct InRvousEdge {
+    double x1[3],x2[3];     // 3d edge point coords
+    int which;              // 1 for forward order, 2 for reverse order
+  };
+
   // union data struct for packing 32-bit and 64-bit ints into double bufs
   // this avoids aliasing issues by having 2 pointers (double,int)
   //   to same buf memory
@@ -240,10 +252,24 @@ class Surf : protected Pointers {
   void point_tri_compare(double *, double *, double *, double *, double *,
                          double, int &, int &, int, int, int);
 
-  // callback functions for rendezvous communication
+  void collate_vector_allreduce(int, int *, double *, int, double *);
+  void collate_vector_irregular(int, int *, double *, int, double *);
+  void collate_array_allreduce(int, int, int *, double **, double **);
+  void collate_array_irregular(int, int, int *, double **, double **);
 
+  void check_watertight_2d_all();
+  void check_watertight_2d_distributed();
+  void check_watertight_3d_all();
+  void check_watertight_3d_distributed();
+
+  // callback functions for rendezvous communication
+ 
   static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
+  static int rendezvous_watertight_2d(int, char *, 
+                                      int &, int *&, char *&, void *);
+  static int rendezvous_watertight_3d(int, char *, 
+                                      int &, int *&, char *&, void *);
 };
 
 }

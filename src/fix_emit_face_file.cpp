@@ -292,7 +292,7 @@ int FixEmitFaceFile::create_task(int icell)
         for (j = 0; j < cells[icell].nsurf; j++) {
           n = cells[icell].csurfs[j];
           if (Geometry::
-              line_quad_face_touch(lines[n].p1,lines[n].p2,
+              line_touch_quad_face(lines[n].p1,lines[n].p2,
                                    iface,cells[icell].lo,cells[icell].hi)) {
             flag = 0;
             break;
@@ -302,7 +302,7 @@ int FixEmitFaceFile::create_task(int icell)
         for (j = 0; j < cells[icell].nsurf; j++) {
           n = cells[icell].csurfs[j];
           if (Geometry::
-              tri_hex_face_touch(tris[n].p1,tris[n].p2,tris[n].p3,
+              tri_touch_hex_face(tris[n].p1,tris[n].p2,tris[n].p3,
                                  iface,cells[icell].lo,cells[icell].hi)) {
             flag = 0;
             break;
