@@ -30,6 +30,7 @@ collide		    vss species air.vss relax variable
 collide_modify      vremax 1000 yes vibrate discrete rotate smooth
 collide_modify      ambipolar yes
 react               tce air.tce
+react_modify        bird
 
 create_particles    noelectron n 0
 
