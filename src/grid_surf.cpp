@@ -274,7 +274,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   memory->create(proclist,ncount,"surf2grid2:proclist");
   InRvous *inbuf = (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
                                                "surf2grid:inbuf");
-    
+
   // setup input buf to rendezvous comm
   // input datums = pairs of surfIDs and cellIDs
   // owning proc for each datum = random hash of cellID
@@ -1330,8 +1330,8 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
 void Grid::recurse3d(int itri, double *slo, double *shi, int iparent, 
                      int &n, cellint *list)
 {
-  int ix,iy,iz,ichild,newparent,index,parentflag,overlap;
-  cellint idchild;
+  int ix,iy,iz,newparent,index,parentflag,overlap;
+  cellint ichild,idchild;
   double celledge;
   double newslo[3],newshi[3];
   double clo[3],chi[3];
@@ -1407,7 +1407,7 @@ void Grid::recurse3d(int itri, double *slo, double *shi, int iparent,
     for (iy = jlo; iy <= jhi; iy++) {
       for (ix = ilo; ix <= ihi; ix++) {
         ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-        idchild = p->id | ((cellint) ichild << p->nbits);
+        idchild = p->id | (ichild << p->nbits);
         grid->id_child_lohi(iparent,ichild,clo,chi);
 
         if (hash->find(idchild) == hash->end()) parentflag = 0;
