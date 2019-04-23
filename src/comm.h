@@ -66,7 +66,8 @@ class Comm : protected Pointers {
                            int, char *&, int, void *, int);
   int rendezvous_all2all(int, char *, int, int, int *, 
                          int (*)(int, char *, int &, int *&, char *&, void *), 
-                         int, char *&, int, void *, int);  
+                         int, char *&, int, void *, int);
+  void rendezvous_stats(int, int, int, int, int, int);
 };
 
 }
