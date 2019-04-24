@@ -1062,7 +1062,7 @@ class ParallelTimer:
     total_time = self.comm.reduce(time_secs, op=MPI.SUM)
     max_time = self.comm.reduce(time_secs, op=MPI.MAX)
     min_time = self.comm.reduce(time_secs, op=MPI.MIN)
-    if self.rank == 0:
+    if self.rank == 0 and self.size > 1:
       print ""
       print "Average " + message % timedelta(seconds=total_time/float(self.size))
       print "Maxiumum " + message % timedelta(seconds=max_time)
@@ -1077,17 +1077,18 @@ def barrier_synchronize():
 
 def report_collective_grid_sizes(ug):
   from mpi4py import MPI
-  
+  num_cells = ug.GetNumberOfCells()
+  mem_size = ug.GetActualMemorySize()
   if MPI.Is_initialized():
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
-    total_cell_count = comm.reduce(ug.GetNumberOfCells(), op=MPI.SUM)
-    max_cell_count = comm.reduce(ug.GetNumberOfCells(), op=MPI.MAX)
-    min_cell_count = comm.reduce(ug.GetNumberOfCells(), op=MPI.MIN)
-    total_mem_used = comm.reduce(ug.GetActualMemorySize(), op=MPI.SUM)
-    min_mem_used = comm.reduce(ug.GetActualMemorySize(), op=MPI.MIN)
-    max_mem_used = comm.reduce(ug.GetActualMemorySize(), op=MPI.MAX)
+    total_cell_count = comm.reduce(num_cells, op=MPI.SUM)
+    max_cell_count = comm.reduce(num_cells, op=MPI.MAX)
+    min_cell_count = comm.reduce(num_cells, op=MPI.MIN)
+    total_mem_used = comm.reduce(mem_size, op=MPI.SUM)
+    min_mem_used = comm.reduce(mem_size, op=MPI.MIN)
+    max_mem_used = comm.reduce(mem_size, op=MPI.MAX)
     if rank == 0:
       print "Average grid cell count over MPI ranks: {:.1e}"\
         .format(total_cell_count/float(size))
@@ -1143,8 +1144,13 @@ def run_pvbatch_output(params_dict):
                            paraview_output_file)
     if g:
       append.AddInputData(g)
-  append.Update()
-  ug = append.GetOutput()
+  ug = None
+  if append.GetInputList().GetNumberOfItems():
+    append.Update()
+    ug = append.GetOutput()
+
+  if ug is None:
+    ug = vtk.vtkUnstructuredGrid()
 
   report_collective_grid_sizes(ug)
 

@@ -40,7 +40,7 @@ pvpython is in /Applications/paraview.app/Contents/bin/.
 
   On Windows:
 
-pvpython is in C:\Program Files (x86)\ParaView 4.1.0\bin. 
+pvpython is in C:\Program Files (x86)\ParaView 5.6.0\bin. 
 
 -------------------------------
 
@@ -188,3 +188,66 @@ NOTE: On Windows platforms, the grid blocking will always be executed
 serially.  This is due to how the multiprocessing module is
 implemented on Windows, which prohibits multiple instances of pvpython
 from starting independently.
+
+IV. PVBATCH FOR LARGE SPARTA GRIDS
+
+When Sparta grid output becomes large, the processing time required for
+grid2paraview.py can be long on a single node even with multi-processing.
+If more than one compute node is available (HPC environment), grid2paraview.py
+can be run with MPI using ParaView's pvbatch program. The pvbatch program
+is normally located in the same directory as pvpython, along with the mpiexec
+program that works with ParaView. In some environments, ParaView may have
+been compiled from source with a particular version of MPI, in which case 
+the appropriate mpiexec program will need to be used.
+
+From the mir.txt example in section III, to run grid2paraview.py using
+pvbatch, use the following command line.
+
+% mpiexec -np 256 pvbatch -sym grid2paraview.py mir.txt mir_grid -r \
+    ../parent/mir/tmp_flow.*
+
+This command will run grid2paraview.py on 256 MPI ranks and produce the same
+outputs as the pvpython version. Using 256 MPI ranks will be faster than
+multi-processing with threads on a single compute node. Notice the "-sym"
+argument to pvbatch, which tells pvbatch to run in symmetric MPI mode.
+This argument is required.
+
+V. CATALYST FOR LARGE SPARTA GRIDS
+
+There is an option in grid2paraview.py to execute a ParaView Catalyst Python
+script that has been exported from the ParaView GUI. For more details on
+Catalyst, please see the Catalyst user guide, located here.
+
+https://www.paraview.org/in-situ/
+
+The Catalyst script will generate images or data extracts for each time-step.
+This will avoid having to run ParaView as a separate step to generate
+visualizations. The ideal work-flow is to run the ParaView GUI on a much smaller
+grid version to setup the visualization and export the Catalyst script.
+Then, run grid2paraview.py on the larger Sparta grid output to generate
+images. From the mir.txt example, to run grid2paraview.py using pvbatch and
+catalyst, use the following command line (catalyst.py was exported from
+the ParaView GUI).
+
+% mpiexec -np 32 pvbatch -sym grid2paraview.py mir.txt mir_grid -r \
+    -c catalyst.py ../parent/mir/tmp_flow.*
+
+This will generate images or data extracts, depending on how catalyst.py was
+setup in the ParaView GUI. The grid2paraview.py script will not generate
+ParaView grid geometry when the "-c" option is used. Note that grid2paraview.py
+will assume that the grid input name is "mir_grid.pvd" in catalyst.py, since
+"mir_grid" is given as the output directory.  If these two names do not match,
+either edit your catalyst script or change the output directory name on the
+command line to match what your script expects. The output directory is not 
+created when "-c" option is used.
+
+VI. INTEGRATION TEST SCRIPT
+
+There is a bash script, runIntegrationTests.sh, located in this directory.
+This script will run 2D and 3D tests using the circle and sphere Sparta
+examples, and will create an output directory called 
+"integration_test_scratch_directory". There will be two subdirectories,
+circle and sphere, that contain the output of running surf2paraview.py,
+and grid2paraview.py using pvpython, pvbatch, and catalyst. Edit the top
+portion of runIntegrationTests.sh to point to your installed Sparta and
+ParaView before running.
