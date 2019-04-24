@@ -1065,7 +1065,7 @@ void Surf::check_watertight_3d_all()
   for (it = phash.begin(); it != phash.end(); ++it) {
     if (it->second != 2) {
       pts = (double *) it->first.pts;
-      if (Geometry::edge_on_hex_face(&pts[0],&pts[3],boxlo,boxhi) >= 0) nbad++;
+      if (Geometry::edge_on_hex_face(&pts[0],&pts[3],boxlo,boxhi) < 0) nbad++;
     }
   }
 

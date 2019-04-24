@@ -1311,9 +1311,9 @@ void Grid::set_inout()
                 //setnew[nsetnew++] = jcell;
               } else {
                 if (jtype != marktype) {
-                  printf("ICELL1 %d id %d iface %d jcell %d id %d "
-                         "marktype %d jtype %d\n",
-                         icell,cells[icell].id,iface,jcell,cells[jcell].id,
+                  printf("CELL1 proc %d icell %d id " CELLINT_FORMAT " iface %d "
+                         "jcell %d id " CELLINT_FORMAT " marktype %d jtype %d\n",
+                         me,icell,cells[icell].id,iface,jcell,cells[jcell].id,
                          marktype,jtype);
                   error->one(FLERR,"Cell type mis-match when marking on self");
                 }
@@ -1392,9 +1392,11 @@ void Grid::set_inout()
                   //setnew[nsetnew++] = jcell;
                 } else {
                   if (jtype != marktype) {
-                    printf("ICELL2 %d id %d iface %d jcell %d id %d "
-                           "marktype %d jtype %d\n",
-                           icell,cells[icell].id,iface,jcell,cells[jcell].id,
+                    printf("CELL2 proc %d icell %d id " CELLINT_FORMAT 
+                           " iface %d "
+                           "jcell %d id " CELLINT_FORMAT " marktype %d "
+                           "jtype %d\n",
+                           me,icell,cells[icell].id,iface,jcell,cells[jcell].id,
                            marktype,jtype);
                     error->one(FLERR,
                                "Cell type mis-match when marking on self");
@@ -1488,8 +1490,9 @@ void Grid::set_inout()
         //set[nset++] = jcell;
       } else {
         if (marktype != jtype) {
-          printf("JCELL3 %d id %d marktype %d jtype %d\n",
-                 jcell,cells[jcell].id,marktype,jtype);
+          printf("CELL3 me %d jcell %d id " CELLINT_FORMAT 
+                 " marktype %d jtype %d\n",
+                 me,jcell,cells[jcell].id,marktype,jtype);
           error->one(FLERR,"Cell type mis-match when marking on neigh proc");
         }
       }
