@@ -1634,6 +1634,10 @@ bool ReadISurf::modified_test_interior(int s, int icase)
     else                return true;
     break;
   }
+
+  // should never reach here
+
+  return true;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1999,6 +2003,10 @@ int ReadISurf::interior_ambiguity_verification(int edge)
       return 1;
     break;
   }
+
+  // should never reach here
+
+  return 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -2054,7 +2062,7 @@ bool ReadISurf::interior_test_case13()
      that cause problems for SPARTA
    what MC does:
      may generate 0 or 2 triangles on the face of a cell
-     the cell sharing the face may also have 0 or 2 triangles
+     the cell sharing the face may also generate 0 or 2 triangles
      the normals for the 2 triangles may be into or out of the cell
    what SPARTA needs:
      let cell1 and cell2 be two cells that share a face
@@ -2198,11 +2206,11 @@ void ReadISurf::cleanup_MC()
       if (otherproc == me) {
         ntri_other = nfacetri[othercell][otherface];
 
-        // this cell keeps the 2 tris
+        // icell keeps the 2 tris
 
         if (ntri_other == 0 && inwardnorm) continue;
 
-        // add 2 tris to other cell
+        // add 2 tris to othercell
         // reset tri IDs to new owning cell
 
         if (ntri_other == 0) { 
@@ -2220,7 +2228,7 @@ void ReadISurf::cleanup_MC()
           //nadd += 2;
         }
 
-        // delete 2 tris from other cell
+        // delete 2 tris from othercell
         // set nfacetri[othercell] = 0, so won't delete again when it is icell
 
         if (ntri_other == 2) {
@@ -2245,7 +2253,7 @@ void ReadISurf::cleanup_MC()
           //ndel += 2;
         }
 
-        // delete 2 tris from this cell
+        // delete 2 tris from icell
 
         ptr = cells[icell].csurfs;
         m = facetris[icell][iface][0];
@@ -2355,14 +2363,48 @@ void ReadISurf::cleanup_MC()
     icell = bufrecv[i].othercell;
     iface = bufrecv[i].otherface;
 
-    // this cell is not affected, sender cell keeps its 2 tris
+    // my icell is not affected, sender cell keeps its 2 tris
 
     if (nfacetri[icell][iface] == 0 && bufrecv[i].inwardnorm) continue;
 
-    // delete 2 tris from this cell
-    // also add them to delete list
+    // add 2 tris to icell and this processor's Surf::tris list
+    // reset tri IDs to new owning cell
+
+    if (nfacetri[icell][iface] == 0) {
+      int nslocal = surf->nlocal;
+      surf->add_tri(1,bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
+      memcpy(&surf->tris[nslocal],&bufrecv[i].tri1,sizeof(Surf::Tri));
+      surf->tris[nslocal].id = cells[icell].id;
+      surf->add_tri(1,bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
+      memcpy(&surf->tris[nslocal+1],&bufrecv[i].tri2,sizeof(Surf::Tri));
+      surf->tris[nslocal+1].id = cells[icell].id;
+      
+      nsurf = cells[icell].nsurf;
+      oldcsurfs = cells[icell].csurfs;
+      ptr = csurfs->get(nsurf+2);
+      for (k = 0; k < nsurf; k++)
+        ptr[k] = oldcsurfs[k];
+      ptr[nsurf] = nslocal;
+      ptr[nsurf+1] = nslocal+1;
+      cells[icell].nsurf += 2;
+      cells[icell].csurfs = ptr;
+      //nadd += 2;
+    }
+
+    // both cells have 2 tris on common face
+    // need to delete my 2 tris from icell
+    // sender will get similar message from me and delete
+    // inwardnorm check to see if I already deleted when sent a message,
+    // else delete now and add 2 tris to delete list
 
     if (nfacetri[icell][iface] == 2) {
+      norm = tris[facetris[icell][iface][0]].norm;
+      idim = iface/2;
+      if (iface % 2 && norm[idim] < 0.0) inwardnorm = 1;
+      else if (iface % 2 == 0 && norm[idim] > 0.0) inwardnorm = 1;
+      else inwardnorm = 0;
+      if (!inwardnorm) continue;
+
       nsurf = cells[icell].nsurf;
       ptr = cells[icell].csurfs;
       m = facetris[icell][iface][0];
@@ -2387,31 +2429,7 @@ void ReadISurf::cleanup_MC()
       dellist[ndelete++] = facetris[icell][iface][0];
       dellist[ndelete++] = facetris[icell][iface][1];
     }
-    
-    // add 2 tris to this cell and this processor's Surf::tris list
-    // reset tri IDs to new owing cell
-
-    if (nfacetri[icell][iface] == 0) {
-      int nslocal = surf->nlocal;
-      surf->add_tri(1,bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
-      memcpy(&surf->tris[nslocal],&bufrecv[i].tri1,sizeof(Surf::Tri));
-      surf->tris[nslocal].id = cells[icell].id;
-      surf->add_tri(1,bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
-      memcpy(&surf->tris[nslocal+1],&bufrecv[i].tri2,sizeof(Surf::Tri));
-      surf->tris[nslocal+1].id = cells[icell].id;
-      
-      nsurf = cells[icell].nsurf;
-      oldcsurfs = cells[icell].csurfs;
-      ptr = csurfs->get(nsurf+2);
-      for (k = 0; k < nsurf; k++)
-        ptr[k] = oldcsurfs[k];
-      ptr[nsurf] = nslocal;
-      ptr[nsurf+1] = nslocal+1;
-      cells[icell].nsurf += 2;
-      cells[icell].csurfs = ptr;
-      //nadd += 2;
-    }
-  }
+  }    
 
   memory->sfree(bufrecv);
   memory->destroy(nfacetri);

@@ -1236,7 +1236,7 @@ int Surf::rendezvous_watertight_3d(int n, char *inbuf, int &flag, int *&proclist
   if (alldup) {
     char str[128];
     sprintf(str,"Watertight check failed with %d duplicate edges",alldup);
-    //error->all(FLERR,str);
+    error->all(FLERR,str);
   }
 
   // check that each edge has an inverted match(value = 3)
@@ -1250,7 +1250,7 @@ int Surf::rendezvous_watertight_3d(int n, char *inbuf, int &flag, int *&proclist
   for (it = phash.begin(); it != phash.end(); ++it) {
     if (it->second != 3) {
       pts = (double *) it->first.pts;
-      if (Geometry::edge_on_hex_face(&pts[0],&pts[3],boxlo,boxhi) >= 0) nbad++;
+      if (Geometry::edge_on_hex_face(&pts[0],&pts[3],boxlo,boxhi) < 0) nbad++;
     }
   }
 
@@ -1260,7 +1260,7 @@ int Surf::rendezvous_watertight_3d(int n, char *inbuf, int &flag, int *&proclist
   if (nbad) {
     char str[128];
     sprintf(str,"Watertight check failed with %d unmatched edges",allbad);
-    //error->all(FLERR,str);
+    error->all(FLERR,str);
   }
 
   // flag = 0: no second comm needed in rendezvous

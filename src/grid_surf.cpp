@@ -1011,7 +1011,7 @@ void Grid::allocate_surf_arrays()
 
   csurfs = new MyPage<surfint>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
   csplits = new MyPage<int>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
-  csubs = new MyPage<int>(maxsplitpercell,128);
+  csubs = new MyPage<int>(maxsplitpercell,MAX(100*maxsplitpercell,128));
 }
 
 void Grid::allocate_cell_arrays()
