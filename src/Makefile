@@ -171,7 +171,7 @@ tar:
 # Package management
 
 package:
-	@echo 'Avaialble ackages:' $(PACKAGE)
+	@echo 'Available packages:' $(PACKAGE)
 	@echo ''
 	@echo 'make package                 list available packages'
 	@echo 'make yes-package             install a single pgk in src dir'

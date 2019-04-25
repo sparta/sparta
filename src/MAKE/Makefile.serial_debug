@@ -7,13 +7,13 @@ SHELL = /bin/sh
 # specify flags and libraries needed for your compiler
 
 CC =		g++
-CCFLAGS =	-g -O
+CCFLAGS =	-g
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M
 
 LINK =		g++
-LINKFLAGS =	-g -O
-LIB =           
+LINKFLAGS =	-g
+LIB =           -pthread
 SIZE =		size
 
 ARCHIVE =	ar
@@ -29,6 +29,17 @@ SHLIBFLAGS =	-shared
 # see possible settings in doc/Section_start.html#2_2 (step 4)
 
 SPARTA_INC =	-DSPARTA_GZIP
+
+# ZUZAX settings, OPTIONAL
+# Optional capability for solving complex surface problems with growth
+# and etching of bulk phases
+
+ZUZAX_HOME = /home/hkmoffa/arch/linux64_gcc720_rh7/Zzuzax_master_dbg
+ZUZAX_DEF = -DUSE_ZUZAX
+ZSURF_DEF = -DUSE_ZSURF
+ZUZAX_INC = -I$(ZUZAX_HOME)/include $(ZUZAX_DEF) $(ZSURF_DEF)
+ZUZAX_PATH = -L$(ZUZAX_HOME)/lib
+ZUZAX_LIB =  -lcantera -lctmath -lexecstream -lmpfit
 
 # MPI library, REQUIRED
 # see discussion in doc/Section_start.html#2_2 (step 5)
@@ -67,9 +78,9 @@ JPG_LIB =
 # build rules and dependencies
 # no need to edit this section
 
-EXTRA_INC = $(SPARTA_INC) $(MPI_INC) $(FFT_INC) $(JPG_INC)
-EXTRA_PATH = $(MPI_PATH) $(FFT_PATH) $(JPG_PATH)
-EXTRA_LIB = $(MPI_LIB) $(FFT_LIB) $(JPG_LIB)
+EXTRA_INC = $(SPARTA_INC) $(MPI_INC) $(FFT_INC) $(JPG_INC) $(ZUZAX_INC)
+EXTRA_PATH = $(MPI_PATH) $(FFT_PATH) $(JPG_PATH) $(ZUZAX_PATH)
+EXTRA_LIB = $(MPI_LIB) $(FFT_LIB) $(JPG_LIB) $(ZUZAX_LIB)
 
 # Path to src files
 
