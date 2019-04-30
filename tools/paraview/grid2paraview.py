@@ -17,9 +17,9 @@ import argparse
 import sys
 import os
 import vtk
-import glob
 import platform
 import time
+import glob
 from datetime import timedelta
 
 def open_grid_file(filename):
@@ -94,11 +94,10 @@ def find_chunking(chunks, grid_desc, args):
 
 def create_and_write_grid_chunk(chunk_id, chunk_info, num_chunks, \
                                 grid_desc, time_steps_dict, output_file):
-  ug = process_grid_chunk(chunk_id, chunk_info, num_chunks, grid_desc, \
-                          time_steps_dict, output_file)
-  chunk_id, filepaths = write_grid_chunk(ug, chunk_id, num_chunks, \
-                                         grid_desc, time_steps_dict, output_file)
-  return chunk_id, filepaths
+  ug = process_grid_chunk(chunk_id, chunk_info, num_chunks, \
+    grid_desc, time_steps_dict, output_file)
+  write_grid_chunk(ug, chunk_id, num_chunks, \
+    grid_desc, time_steps_dict, output_file)
 
 def process_grid_chunk(chunk_id, chunk_info, num_chunks, \
                        grid_desc, time_steps_dict, output_file):
@@ -120,13 +119,12 @@ def process_grid_chunk(chunk_id, chunk_info, num_chunks, \
   if "read_grid" in grid_desc:
     read_grid_file(grid_desc, chunk_info)
 
-  if "slice" in grid_desc:
-    grid_desc["slice_plane_indices"] = []
-
   if grid_desc["dimension"] == 3:
-    ug = create_3d_amr_grids(grid_desc, 1, 0, 0, origin, spacing, ndims, chunk_info, "")
+    ug = create_3d_amr_grids(grid_desc, 1, 0, 0, origin, \
+      spacing, ndims, chunk_info, "")
   elif grid_desc["dimension"] == 2:
-    ug = create_2d_amr_grids(grid_desc, 1, 0, 0, origin, spacing, ndims, chunk_info, "")
+    ug = create_2d_amr_grids(grid_desc, 1, 0, 0, origin, \
+      spacing, ndims, chunk_info, "")
 
   return ug
 
@@ -139,63 +137,27 @@ def create_cell_global_id_to_local_id_map(ug):
     ug.GetCellData().RemoveArray("GlobalIds")
   return id_map
 
-def write_grid_chunk(ug, chunk_id, num_chunks, \
-                     grid_desc, time_steps_dict, output_file):
+def write_grid_chunk(ug, chunk_id, num_chunks, grid_desc, time_steps_dict, \
+  output_file):
   if not ug:
-    return chunk_id, {}
+    return
 
-  filepaths = {}
   id_map = create_cell_global_id_to_local_id_map(ug)
 
-  if "slice" not in grid_desc:
-    writer = vtk.vtkXMLUnstructuredGridWriter()
-    writer.SetInputData(ug)
-    for idx, time in enumerate(sorted(time_steps_dict.keys())):
-      pt = ParallelTimer()
-      read_time_step_data(time_steps_dict[time], ug, id_map)
-      filepath = os.path.join(output_file, output_file + '_' + str(chunk_id) +
-        '_' + str(time) + '.vtu')
-      if 0 not in filepaths:
-        filepaths[0] = {}
-      if time not in filepaths[0]:
-        filepaths[0][time] = {}
-      filepaths[0][time][chunk_id] = filepath
-      writer.SetFileName(filepath)
-      writer.Write()
-      pt.report_collective_time("grid file write time %s (wall clock time) for step "\
-        + str(idx))
-    
-      if chunk_id == 0:
-        write_pvtu_file(ug, output_file, num_chunks, time)
-      barrier_synchronize()
-  else:
-    vp = vtk.vtkPlane()
-    writer = vtk.vtkXMLPolyDataWriter()
-    cut = vtk.vtkCutter()
-    cut.SetInputData(ug)
-    writer.SetInputConnection(cut.GetOutputPort())
-    for idx in grid_desc["slice_plane_indices"]:
-      plane = grid_desc["slice"][idx]
-      vp.SetOrigin(plane["px"], plane["py"], plane["pz"])
-      vp.SetNormal(plane["nx"], plane["ny"], plane["nz"])
-      cut.SetCutFunction(vp)
-      for time in sorted(time_steps_dict.keys()):
-        pt = ParallelTimer()
-        read_time_step_data(time_steps_dict[time], ug, id_map)
-        filepath = os.path.join(output_file, output_file + '_' + str(idx) +
-          '_' + str(chunk_id) + '_' + str(time) + '.vtp')
-        if idx not in filepaths:
-          filepaths[idx] = {}
-        if time not in filepaths[idx]:
-          filepaths[idx][time] = {}
-        filepaths[idx][time][chunk_id] = filepath
-        writer.SetFileName(filepath)
-        writer.Write()
-        pt.report_collective_time("grid file write time %s (wall clock time) for step "\
-          + str(idx))
-        barrier_synchronize()
+  writer = vtk.vtkXMLUnstructuredGridWriter()
+  writer.SetInputData(ug)
+  for idx, time in enumerate(sorted(time_steps_dict.keys())):
+    pt = ParallelTimer()
+    read_time_step_data(time_steps_dict[time], ug, id_map)
+    filepath = os.path.join(output_file, output_file + '_' + str(chunk_id) +
+      '_' + str(time) + '.vtu')
+    writer.SetFileName(filepath)
+    writer.Write()
+    pt.report_collective_time("grid file write time %s (wall clock time) for step "\
+      + str(idx))
 
-  return chunk_id, filepaths
+  cr = ChunkReport()
+  cr.reportChunkComplete(chunk_id)
 
 def create_3d_amr_grids(grid_desc, level, parent_bit_mask, parent_id, \
                         origin, spacing, ndims, chunk_info, dashed_id):
@@ -440,9 +402,10 @@ def find_2d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, o
         p01 = plane["px"]
         p02 = plane["py"]
         p03 = plane["pz"]
-        d = math.fabs(n1*(p1-p01) + n2*(p2-p02) + n3*(-p03))
-        rhs = a1*math.fabs(n1) + a2*math.fabs(n2)
-        if d < rhs or math.fabs(d-rhs) < 0.000001:
+ 
+        d = math.fabs(n1*(p1-p01) + n2*(p2-p02))
+        rhs = a1*n1 + a2*n2
+        if d <= math.fabs(rhs):
           ug = vtk.vtkUnstructuredGrid()
 
           points = vtk.vtkPoints()
@@ -510,10 +473,9 @@ def find_3d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, o
           p02 = plane["py"]
           p03 = plane["pz"]
           d = math.fabs(n1*(p1-p01) + n2*(p2-p02) + n3*(p3-p03))
-          rhs = a1*math.fabs(n1) + a2*math.fabs(n2) + a3*math.fabs(n3)
-          if d < rhs or math.fabs(d-rhs) < 0.000001:
+          rhs = a1*n1 + a2*n2 + a3*n3
+          if d <= math.fabs(rhs):
             ug = vtk.vtkUnstructuredGrid()
-
             points = vtk.vtkPoints()
             for pk in range(2):
               k_offset = pk*spacing[2]
@@ -568,40 +530,20 @@ def find_3d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, o
 
 def cells_on_slice_planes(parent_bit_mask, parent_id, origin, spacing, ndims, chunk_info, grid_desc):
   intersecting_planes = []
-  for idx, plane in enumerate(grid_desc["slice"]):
-    a1 = ((ndims[0]-1)*spacing[0])/2.0
-    a2 = ((ndims[1]-1)*spacing[1])/2.0
-    a3 = ((ndims[2]-1)*spacing[2])/2.0
-    p1 = a1 + origin[0]
-    p2 = a2 + origin[1]
-    p3 = a3 + origin[2]
-    n1 = plane["nx"]
-    n2 = plane["ny"]
-    n3 = plane["nz"]
-    p01 = plane["px"]
-    p02 = plane["py"]
-    p03 = plane["pz"]
-    d = math.fabs(n1*(p1-p01) + n2*(p2-p02) + n3*(p3-p03))
-    rhs = a1*math.fabs(n1) + a2*math.fabs(n2) + a3*math.fabs(n3)
-    if d < rhs or math.fabs(d-rhs) < 0.000001:
-      intersecting_planes.append(plane)
-      if idx not in grid_desc["slice_plane_indices"]:
-        grid_desc["slice_plane_indices"].append(idx)
-  
-  if intersecting_planes:
-    if grid_desc["dimension"] == 3:
-      return find_3d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, origin, \
-                                       spacing, ndims, chunk_info, grid_desc)
-    else:
-      return find_2d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, origin, \
-                                       spacing, ndims, chunk_info, grid_desc)
+  for plane in grid_desc["slice"]:
+    intersecting_planes.append(plane)
+
+  if grid_desc["dimension"] == 3:
+    return find_3d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, origin, \
+                                     spacing, ndims, chunk_info, grid_desc)
   else:
-    return None
+    return find_2d_intersected_cells(intersecting_planes, parent_bit_mask, parent_id, origin, \
+                                     spacing, ndims, chunk_info, grid_desc)
 
 def build_3d_grid(parent_bit_mask, parent_id, origin, spacing, ndims, chunk_info, grid_desc):
   if "slice" in grid_desc:
     return cells_on_slice_planes(parent_bit_mask, parent_id, origin, \
-                                    spacing, ndims, chunk_info, grid_desc)
+                                 spacing, ndims, chunk_info, grid_desc)
 
   ug = vtk.vtkUnstructuredGrid()
 
@@ -910,6 +852,14 @@ def read_time_steps(result_file_list, time_steps_dict):
 
     fh.close()
 
+def read_array_names(fh, array_names):
+  for line in fh:
+    s = clean_line(line)
+    if s.lower().replace(" ", "")[:10] == "item:cells":
+      for name in s.split()[2:]:
+        array_names.append(name)
+      break
+
 def read_time_step_data(time_step_file_list, ug, id_hash):
   for f in time_step_file_list:
     try:
@@ -919,12 +869,7 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
       return
 
     array_names = []
-    for line in fh:
-      s = clean_line(line)
-      if s.lower().replace(" ", "")[:10] == "item:cells":
-        for name in s.split()[2:]: 
-          array_names.append(name)
-        break
+    read_array_names(fh, array_names)
 
     id_index = 0
     try:
@@ -953,7 +898,6 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
     for val in array_names:
       arrays.append(ug.GetCellData().GetArray(val))
 
-    cells_read = 0
     for line in fh:
       s = clean_line(line)
       sl = s.split()
@@ -963,9 +907,6 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
           continue
         for idx, val in enumerate(array_names):
           arrays[idx].SetValue(id_hash[index], float(sl[idx]))
-        cells_read += 1
-        if cells_read == ug.GetNumberOfCells():
-          break
       else:
         print "Error reading SPARTA result file: ", f
         print "Flow data line cannot be processed:  ", line
@@ -973,24 +914,35 @@ def read_time_step_data(time_step_file_list, ug, id_hash):
 
     fh.close()
 
-def write_pvd_file(time_steps, file_name):
+def write_pvd_file(time_steps_dict, file_name, num_chunks):
   fh = open(file_name + ".pvd", "w")
   fh.write('<?xml version="1.0"?>\n')
   fh.write('<VTKFile type="Collection" version="0.1"\n')
   fh.write('               byte_order="LittleEndian"\n')
   fh.write('               compressor="vtkZLibDataCompressor">\n')
-
   fh.write('   <Collection>    \n')
-  for time in time_steps:
+  for time in sorted(time_steps_dict.keys()):
       fh.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
       filepath = os.path.join(file_name, file_name + '_'  + str(time) + '.pvtu')
       fh.write('             file="' + filepath + '"/>\n')
+      file_list = time_steps_dict[time]
+      if file_list:
+        try:
+          afh = open(file_list[0], "r")
+        except IOError:
+          print "Unable to open SPARTA result file: ", f
+          return
+      else:
+          return
+      array_names = []
+      read_array_names(afh, array_names)
+      afh.close()
+      write_pvtu_file(array_names, file_name, num_chunks, time)
   fh.write('   </Collection>    \n')
-
   fh.write('</VTKFile>    \n')
   fh.close()
 
-def write_pvtu_file(ug, output_file, num_chunks, time):
+def write_pvtu_file(array_names, output_file, num_chunks, time):
   filepath = os.path.join(output_file, output_file + '_'  + str(time) + '.pvtu')
   fh = open(filepath, "w")
   fh.write('<?xml version="1.0"?>\n')
@@ -1000,9 +952,8 @@ def write_pvtu_file(ug, output_file, num_chunks, time):
   fh.write('<PUnstructuredGrid GhostLevel="0">\n')
   fh.write('<PCellData>\n')
 
-  for i in range(ug.GetCellData().GetNumberOfArrays()):
-    array = ug.GetCellData().GetArray(i)
-    fh.write('<PDataArray type="Float64" Name="' + array.GetName() + '"/>\n')
+  for name in array_names:
+    fh.write('<PDataArray type="Float64" Name="' + name + '"/>\n')
 
   fh.write('</PCellData>\n')
   fh.write('<PPoints>\n')
@@ -1010,44 +961,90 @@ def write_pvtu_file(ug, output_file, num_chunks, time):
   fh.write('</PPoints>\n')
 
   for chunk_id in range(num_chunks):
-    fh.write('<Piece Source="' + output_file + '_' + str(chunk_id) + '_' + str(time) + '.vtu"/>\n')
+    fh.write('<Piece Source="' + output_file + '_' + str(chunk_id) + '_' + \
+      str(time) + '.vtu"/>\n')
 
   fh.write('</PUnstructuredGrid>\n')
   fh.write('</VTKFile>\n')
 
-def report_chunk_complete(rv):
-  chunk_id = rv[0]
-  for s in rv[1]:
-    for t in rv[1][s]:
-      for c in rv[1][s][t]:
-        if s not in report_chunk_complete.filepaths:
-          report_chunk_complete.filepaths[s] = {}
-        if t not in report_chunk_complete.filepaths[s]:
-          report_chunk_complete.filepaths[s][t] = {}
-        report_chunk_complete.filepaths[s][t][c] = rv[1][s][t][c]
-  report_chunk_complete.count += 1
-  rem = report_chunk_complete.num_chunks - report_chunk_complete.count
-  print "Completed grid chunk number: ", chunk_id, ",", rem, "chunk(s) remaining" 
+def write_slice_pvd_file(time_steps_dict, output_file):
+  fh = open(output_file + ".pvd", "w")
+  fh.write('<?xml version="1.0"?>\n')
+  fh.write('<VTKFile type="Collection" version="0.1"\n')
+  fh.write('               byte_order="LittleEndian"\n')
+  fh.write('               compressor="vtkZLibDataCompressor">\n')
+  fh.write('   <Collection>    \n')
+  for time in sorted(time_steps_dict.keys()):
+      fh.write('    <DataSet timestep="' + str(time) + '" group="" part="0"   \n')
+      filepath = os.path.join(output_file, output_file + '_'  + \
+        str(time) + '.pvtu')
+      fh.write('             file="' + filepath + '"/>\n')
+      file_list = time_steps_dict[time]
+      if file_list:
+        try:
+          afh = open(file_list[0], "r")
+        except IOError:
+          print "Unable to open SPARTA result file: ", f
+          return
+      else:
+          return
+      array_names = []
+      read_array_names(afh, array_names)
+      afh.close()
+      write_slice_pvtu_file(array_names, output_file, time)
+  fh.write('   </Collection>    \n')
+  fh.write('</VTKFile>    \n')
+  fh.close()
 
-report_chunk_complete.count = 0
-report_chunk_complete.num_chunks = 0
-report_chunk_complete.filepaths = {}
+def write_slice_pvtu_file(array_names, output_file, time):
+  filepath = os.path.join(output_file, output_file + '_' + str(time) + '.pvtu')
+  fh = open(filepath, "w")
+  fh.write('<?xml version="1.0"?>\n')
+  fh.write('<VTKFile type="PUnstructuredGrid" version="0.1"\n')
+  fh.write('               byte_order="LittleEndian"\n')
+  fh.write('               compressor="vtkZLibDataCompressor">\n')
+  fh.write('<PUnstructuredGrid GhostLevel="0">\n')
+  fh.write('<PCellData>\n')
+
+  for name in array_names:
+    fh.write('<PDataArray type="Float64" Name="' + name + '"/>\n')
+
+  fh.write('</PCellData>\n')
+  fh.write('<PPoints>\n')
+  fh.write('<PDataArray type="Float32" Name="Points" NumberOfComponents="3"/>\n')
+  fh.write('</PPoints>\n')
+
+  rexp_path = os.path.join(output_file, output_file + '_*_' + str(time) + '.vtu')
+  file_list = glob.glob(rexp_path)
+
+  for f in file_list:
+    fh.write('<Piece Source="' + os.path.basename(f) +'"/>\n')
+
+  fh.write('</PUnstructuredGrid>\n')
+  fh.write('</VTKFile>\n')
+
+class ChunkReport:
+  def __init__(self):
+    controller = vtk.vtkMultiProcessController.GetGlobalController()
+    self.num_procs = controller.GetNumberOfProcesses()
+
+  def reportChunkComplete(self, chunk_id):
+    if self.num_procs == 1:
+      print "Completed grid chunk number: ", chunk_id
 
 class ParallelTimer:
   def __init__(self):
     from mpi4py import MPI
     if MPI.Is_initialized():
-      self.initialized = True
       self.comm = MPI.COMM_WORLD
       self.rank = self.comm.Get_rank()
       self.size = self.comm.Get_size()
       self.start_time = time.time()
     else:
-      self.initialized = False
+      self.size = 1
+      self.rank = 0
 
   def report_rank_zero_time(self, message):
-    if not self.initialized:
-      return
     if self.rank == 0:
       time_secs = time.time() - self.start_time
       print ""
@@ -1055,25 +1052,19 @@ class ParallelTimer:
       print ""
 
   def report_collective_time(self, message):
-    if not self.initialized:
+    if self.size == 1:
       return
     from mpi4py import MPI
     time_secs = time.time() - self.start_time
     total_time = self.comm.reduce(time_secs, op=MPI.SUM)
     max_time = self.comm.reduce(time_secs, op=MPI.MAX)
     min_time = self.comm.reduce(time_secs, op=MPI.MIN)
-    if self.rank == 0 and self.size > 1:
+    if self.rank == 0:
       print ""
       print "Average " + message % timedelta(seconds=total_time/float(self.size))
       print "Maxiumum " + message % timedelta(seconds=max_time)
       print "Minimum " + message % timedelta(seconds=min_time)
       print ""
-
-def barrier_synchronize():
-  from mpi4py import MPI
-  if MPI.Is_initialized():
-    comm = MPI.COMM_WORLD
-    comm.Barrier()
 
 def report_collective_grid_sizes(ug):
   from mpi4py import MPI
@@ -1140,8 +1131,8 @@ def run_pvbatch_output(params_dict):
   append = vtk.vtkAppendFilter()
   append.MergePointsOn()
   for idx, chunk in enumerate(chunking[start:stop+1]):
-    g = process_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict,
-                           paraview_output_file)
+    g = process_grid_chunk(idx, chunk, len(chunking), \
+      grid_desc, time_steps_dict, paraview_output_file)
     if g:
       append.AddInputData(g)
   ug = None
@@ -1171,7 +1162,8 @@ def run_pvbatch_output(params_dict):
   else:
     if rank == 0:
       print "Writing grid files over " + str(len(time_steps_dict)) + " time step(s) ..."
-    write_grid_chunk(ug, rank, size, grid_desc, time_steps_dict, paraview_output_file)
+    write_grid_chunk(ug, rank, size, grid_desc, time_steps_dict, \
+      paraview_output_file)
 
 if __name__ == "__main__":
   controller = vtk.vtkMultiProcessController.GetGlobalController()
@@ -1299,7 +1291,6 @@ if __name__ == "__main__":
     sys.stdin = open(os.devnull)
 
     print "Processing ", len(chunking), " grid chunk(s)."
-    report_chunk_complete.num_chunks = len(chunking)
 
     if not args.catalystscript:
       os.mkdir(args.paraview_output_file)
@@ -1312,8 +1303,7 @@ if __name__ == "__main__":
       for idx, chunk in enumerate(chunking):
         pool.apply_async(create_and_write_grid_chunk, \
                          args=(idx, chunk, len(chunking), grid_desc, \
-                               time_steps_dict, args.paraview_output_file, ), \
-                         callback = report_chunk_complete)
+                               time_steps_dict, args.paraview_output_file, ))
       pool.close()
       pool.join()
     else:
@@ -1335,19 +1325,16 @@ if __name__ == "__main__":
       run_pvbatch_output(pd)
   else:
     for idx, chunk in enumerate(chunking):
-      res = create_and_write_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict,
-                                        args.paraview_output_file)
-      report_chunk_complete(res)
-
+      create_and_write_grid_chunk(idx, chunk, len(chunking), grid_desc, time_steps_dict,
+                                  args.paraview_output_file)
   if local_proc_id == 0:
     if args.catalystscript is None:
       if "slice" not in grid_desc:
-        write_pvd_file(sorted(time_steps_dict.keys()), args.paraview_output_file)
+        if num_procs == 1:
+          write_pvd_file(time_steps_dict, args.paraview_output_file, len(chunking))
+        else:
+          write_pvd_file(time_steps_dict, args.paraview_output_file, num_procs)
       else:
-        for idx, slice in enumerate(report_chunk_complete.filepaths):
-          file_name = args.paraview_output_file + '_slice' + str(idx) + "-" + \
-                        str(round(grid_desc["slice"][slice]["nx"],4)) + "_" + \
-                        str(round(grid_desc["slice"][slice]["ny"],4)) + "_" + \
-                        str(round(grid_desc["slice"][slice]["nz"],4))
-          write_pvd_file(sorted(time_steps_dict.keys()), file_name)
+        write_slice_pvd_file(time_steps_dict, args.paraview_output_file)
+          
     pt.report_rank_zero_time("Done in %s (wall clock time)")

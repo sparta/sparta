@@ -56,6 +56,7 @@ test_circle() {
     cp $CIRCLE_EXAMPLE_DIR/data.circle .
     cp $INPUT_FILE_DIR/in.circle .
     cp $INPUT_FILE_DIR/circle.txt .
+    cp $INPUT_FILE_DIR/circle_slice.txt .
     cp $INPUT_FILE_DIR/circle_read_grid.txt .
     cp $INPUT_FILE_DIR/circle_catalyst_script.py .
 
@@ -89,7 +90,8 @@ test_circle() {
     CURRENT_TEST="grid2paraview pvpython circle"
     echo ""
     echo "Checking $CURRENT_TEST output"
-    $PARAVIEW_PVPYTHON $GRID2PARAVIEW circle.txt circle_grid_pvpython -xc 10 -yc 10 -r tmp_flow.*
+    $PARAVIEW_PVPYTHON $GRID2PARAVIEW circle.txt circle_grid_pvpython \
+        -xc 10 -yc 10 -r tmp_flow.*
     echo ""
     echo "Checking $CURRENT_TEST output"
     check_file "circle_grid_pvpython.pvd" 
@@ -105,9 +107,43 @@ test_circle() {
     echo ""
     echo "$CURRENT_TEST test passed"
 
+    CURRENT_TEST="grid2paraview pvpython slice circle"
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    $PARAVIEW_PVPYTHON $GRID2PARAVIEW circle_slice.txt \
+        circle_slice_grid_pvpython -xc 10 -yc 10 -r tmp_flow.*
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    check_file "circle_slice_grid_pvpython.pvd" 
+    check_file "circle_slice_grid_pvpython/circle_slice_grid_pvpython_0.pvtu"
+    check_file "circle_slice_grid_pvpython/circle_slice_grid_pvpython_500.pvtu"
+    check_file "circle_slice_grid_pvpython/circle_slice_grid_pvpython_0_400.vtu"
+    check_file "circle_slice_grid_pvpython/circle_slice_grid_pvpython_1_400.vtu"
+    check_file "circle_slice_grid_pvpython/circle_slice_grid_pvpython_2_400.vtu"
+    check_file "circle_slice_grid_pvpython/circle_slice_grid_pvpython_3_400.vtu"
+    check_file "circle_slice_grid_pvpython/circle_slice_grid_pvpython_1000.pvtu"
+    echo ""
+    echo "$CURRENT_TEST test passed"
+
+    CURRENT_TEST="grid2paraview pvbatch slice circle"
+    $PARAVIEW_MPI_EXEC -np 4 $PARAVIEW_PVBATCH -sym $GRID2PARAVIEW circle_slice.txt \
+        circle_slice_grid_pvbatch -xc 10 -yc 10 -r tmp_flow.*
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    check_file "circle_slice_grid_pvbatch.pvd" 
+    check_file "circle_slice_grid_pvbatch/circle_slice_grid_pvbatch_0.pvtu"
+    check_file "circle_slice_grid_pvbatch/circle_slice_grid_pvbatch_500.pvtu"
+    check_file "circle_slice_grid_pvbatch/circle_slice_grid_pvbatch_0_600.vtu"
+    check_file "circle_slice_grid_pvbatch/circle_slice_grid_pvbatch_1_600.vtu"
+    check_file "circle_slice_grid_pvbatch/circle_slice_grid_pvbatch_2_600.vtu"
+    check_file "circle_slice_grid_pvbatch/circle_slice_grid_pvbatch_3_600.vtu"
+    check_file "circle_slice_grid_pvbatch/circle_slice_grid_pvbatch_1000.pvtu"
+    echo ""
+    echo "$CURRENT_TEST test passed"
+
     CURRENT_TEST="grid2paraview pvbatch circle"
-    $PARAVIEW_MPI_EXEC -np 4 $PARAVIEW_PVBATCH -sym $GRID2PARAVIEW circle.txt circle_grid_pvbatch \
-        -xc 10 -yc 10 -r tmp_flow.*
+    $PARAVIEW_MPI_EXEC -np 4 $PARAVIEW_PVBATCH -sym $GRID2PARAVIEW circle.txt \
+        circle_grid_pvbatch -xc 10 -yc 10 -r tmp_flow.*
     echo ""
     echo "Checking $CURRENT_TEST output"
     check_file "circle_grid_pvbatch.pvd"
@@ -124,8 +160,9 @@ test_circle() {
     echo "$CURRENT_TEST test passed"
 
     CURRENT_TEST="grid2paraview catalyst circle"
-    $PARAVIEW_MPI_EXEC -np 4 $PARAVIEW_PVBATCH -sym $GRID2PARAVIEW circle_read_grid.txt circle_grid_pvbatch \
-        -xc 10 -yc 10 -c circle_catalyst_script.py -r tmp_flow.*
+    $PARAVIEW_MPI_EXEC -np 4 $PARAVIEW_PVBATCH -sym $GRID2PARAVIEW \
+        circle_read_grid.txt circle_grid_pvbatch -xc 10 -yc 10 \
+        -c circle_catalyst_script.py -r tmp_flow.*
     echo ""
     echo "Checking $CURRENT_TEST output"
     check_file "RenderView1_0.png"
@@ -157,6 +194,7 @@ test_sphere() {
     cp $INPUT_FILE_DIR/in.sphere .
     cp $INPUT_FILE_DIR/sphere.txt .
     cp $INPUT_FILE_DIR/sphere_read_grid.txt .
+    cp $INPUT_FILE_DIR/sphere_slice.txt .
     cp $INPUT_FILE_DIR/sphere_catalyst_script.py .
 
     CURRENT_TEST="surf2paraview sphere"
@@ -205,6 +243,42 @@ test_sphere() {
     check_file "sphere_grid_pvpython/sphere_grid_pvpython_6_500.vtu" 
     check_file "sphere_grid_pvpython/sphere_grid_pvpython_7_500.vtu" 
     check_file "sphere_grid_pvpython/sphere_grid_pvpython_1000.pvtu" 
+    echo ""
+    echo "$CURRENT_TEST test passed"
+
+    CURRENT_TEST="grid2paraview pvpython slice sphere"
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    $PARAVIEW_PVPYTHON $GRID2PARAVIEW sphere_slice.txt \
+        sphere_slice_grid_pvpython -xc 5 -yc 5 -zc 5 -r tmp_flow.*
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    check_file "sphere_slice_grid_pvpython.pvd" 
+    check_file "sphere_slice_grid_pvpython/sphere_slice_grid_pvpython_0.pvtu"
+    check_file "sphere_slice_grid_pvpython/sphere_slice_grid_pvpython_500.pvtu"
+    check_file "sphere_slice_grid_pvpython/sphere_slice_grid_pvpython_33_100.vtu"
+    check_file "sphere_slice_grid_pvpython/sphere_slice_grid_pvpython_50_100.vtu"
+    check_file "sphere_slice_grid_pvpython/sphere_slice_grid_pvpython_27_100.vtu"
+    check_file "sphere_slice_grid_pvpython/sphere_slice_grid_pvpython_1000.pvtu"
+    echo ""
+    echo "$CURRENT_TEST test passed"
+
+    CURRENT_TEST="grid2paraview pvbatch slice sphere"
+    $PARAVIEW_MPI_EXEC -np 4 $PARAVIEW_PVBATCH -sym $GRID2PARAVIEW \
+        sphere_slice.txt sphere_slice_grid_pvbatch -xc 10 -yc 10 -zc 10 \
+        -r tmp_flow.*
+    echo ""
+    echo "Checking $CURRENT_TEST output"
+    check_file "sphere_slice_grid_pvbatch.pvd"
+    check_file "sphere_slice_grid_pvbatch/sphere_slice_grid_pvbatch_0.pvtu"
+    check_file "sphere_slice_grid_pvbatch/sphere_slice_grid_pvbatch_500.pvtu"
+    check_file "sphere_slice_grid_pvbatch/sphere_slice_grid_pvbatch_0_200.vtu"
+    check_file "sphere_slice_grid_pvbatch/sphere_slice_grid_pvbatch_1_200.vtu"
+    check_file "sphere_slice_grid_pvbatch/sphere_slice_grid_pvbatch_2_200.vtu"
+    check_file "sphere_slice_grid_pvbatch/sphere_slice_grid_pvbatch_3_200.vtu"
+    check_file "sphere_slice_grid_pvbatch/sphere_slice_grid_pvbatch_1000.pvtu"
+    echo ""
+    echo "Checking $CURRENT_TEST output"
     echo ""
     echo "$CURRENT_TEST test passed"
 

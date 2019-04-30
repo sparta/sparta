@@ -107,9 +107,9 @@ The first argument is a text file containing a description of the
 SPARTA grid.  The description uses commands found in the SPARTA input
 deck.  These commands are dimension, create_box, and create_grid or
 read_grid.  The file can also contain "slice" commands which will
-define slice planes through the 3d grid and output 2d data for each
-slice plane.  The file can also contain comment lines with start
-with a "#" character.
+define slice planes through the 3d grid and output 3d data for each
+slice plane (crinkle cut).  The file can also contain comment lines
+with start with a "#" character.
 
 The dimension and create_box command have exactly the same syntax as
 corresponding SPARTA input script commands.  Both of these commands
