@@ -2436,8 +2436,9 @@ void ReadISurf::cleanup_MC()
   memory->destroy(facetris);
 
   // compress Surf::tris list to remove deleted tris
-  // when 4 tris on same face, they were deleted, 2 from each adjacent cell
-  // must sort dellist, so compress tris in ascending index order
+  // must sort dellist, so as to compress tris in DESCENDING index order
+  // descending, not ascending, so that a surf is not moved from end-of-list
+  //   that is flagged for later deletion
   // must repoint one location in cells->csurfs to moved surf
 
   qsort(dellist,ndelete,sizeof(int),compare_indices);
@@ -2525,7 +2526,7 @@ void ReadISurf::cleanup_MC()
 
 /* ----------------------------------------------------------------------
    comparison function invoked by qsort() called by cleanup_MC()
-   used to sort the dellist of removed tris
+   used to sort the dellist of removed tris into DESCENDING order
    this is not a class method
 ------------------------------------------------------------------------- */
 
@@ -2533,8 +2534,8 @@ int compare_indices(const void *iptr, const void *jptr)
 {
   int i = *((int *) iptr);
   int j = *((int *) jptr);
-  if (i < j) return -1;
-  if (i > j) return 1;
+  if (i < j) return 1;
+  if (i > j) return -1;
   return 0;
 }
 
