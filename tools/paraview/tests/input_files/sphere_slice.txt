@@ -1,0 +1,7 @@
+dimension           3
+create_box          -2 2 -2 2 -2 2
+create_grid         20 20 20
+slice               1 0 0 0.0 0.0 0.0
+slice               0 1 0 0.0 0.0 0.0
+slice               1 1 1 0.0 0.0 0.0
+slice               1 0 1 0.0 0.0 0.0
