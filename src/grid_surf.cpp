@@ -1230,8 +1230,8 @@ int Grid::find_overlaps(int isurf, cellint *list)
 void Grid::recurse2d(int iline, double *slo, double *shi, int iparent, 
                      int &n, cellint *list)
 {
-  int ix,iy,ichild,newparent,index,parentflag,overlap;
-  cellint idchild;
+  int ix,iy,newparent,index,parentflag,overlap;
+  cellint ichild,idchild;
   double celledge;
   double newslo[2],newshi[2];
   double clo[3],chi[3];
@@ -1291,8 +1291,8 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
 
   for (iy = jlo; iy <= jhi; iy++) {
     for (ix = ilo; ix <= ihi; ix++) {
-      ichild = iy*nx + ix + 1;
-      idchild = p->id | ((cellint) ichild << p->nbits);
+      ichild = (cellint) iy*nx + ix + 1;
+      idchild = p->id | (ichild << p->nbits);
       grid->id_child_lohi(iparent,ichild,clo,chi);
 
       if (hash->find(idchild) == hash->end()) parentflag = 0;
