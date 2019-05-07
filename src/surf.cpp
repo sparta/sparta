@@ -2792,7 +2792,7 @@ void Surf::read_restart(FILE *fp)
   }
 
   if (domain->dimension == 3) {
-    if (me == 0) fread(&nsurf,sizeof(int),1,fp);
+    if (me == 0) fread(&nsurf,sizeof(bigint),1,fp);
     MPI_Bcast(&nsurf,1,MPI_INT,0,world);
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
     // NOTE: need different logic for different surf styles
