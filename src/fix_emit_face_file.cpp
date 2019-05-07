@@ -417,7 +417,7 @@ void FixEmitFaceFile::perform_task()
 	  
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
-          theta = MY_PI * random->uniform();
+          theta = MY_2PI * random->uniform();
           vr = vscale[isp] * sqrt(-log(random->uniform()));
           v[pdim] = vr * sin(theta) + vstream[pdim];
           v[qdim] = vr * cos(theta) + vstream[qdim];
@@ -536,12 +536,14 @@ void FixEmitFaceFile::read_file(char *file, char *section)
       nskip = atoi(word);
       word = strtok(NULL," \t\n\r");
       nskip *= atoi(word);
+      fgets(line,MAXLINE,fp);                         // NV line
       fgets(line,MAXLINE,fp);                         // values line
       fgets(line,MAXLINE,fp);                         // imesh line
       fgets(line,MAXLINE,fp);                         // jmesh line
     } else if (strcmp(word,"NI") == 0) {
       word = strtok(NULL," \t\n\r");
       nskip = atoi(word);
+      fgets(line,MAXLINE,fp);                         // NV line
       fgets(line,MAXLINE,fp);                         // values line
       fgets(line,MAXLINE,fp);                         // imesh line
     } else error->one(FLERR,"Misformatted section in inflow file");
