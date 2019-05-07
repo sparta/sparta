@@ -2696,10 +2696,15 @@ int Surf::rendezvous_array(int n, char *inbuf,
 
 /* ----------------------------------------------------------------------
    proc 0 writes surf geometry to restart file
+   NOTE: needs to be generalized for different surf styles
 ------------------------------------------------------------------------- */
 
 void Surf::write_restart(FILE *fp)
 {
+  if (distributed || implicit) 
+    error->all(FLERR,
+               "Restart files with distributed surfaces are not yet supported");
+
   fwrite(&ngroup,sizeof(int),1,fp);
 
   int n;
@@ -2710,7 +2715,7 @@ void Surf::write_restart(FILE *fp)
   }
 
   if (domain->dimension == 2) {
-    fwrite(&nsurf,sizeof(int),1,fp);
+    fwrite(&nsurf,sizeof(bigint),1,fp);
     for (int i = 0; i < nsurf; i++) {
       fwrite(&lines[i].id,sizeof(surfint),1,fp);
       fwrite(&lines[i].type,sizeof(int),1,fp);
@@ -2721,7 +2726,7 @@ void Surf::write_restart(FILE *fp)
   }
 
   if (domain->dimension == 3) {
-    fwrite(&nsurf,sizeof(int),1,fp);
+    fwrite(&nsurf,sizeof(bigint),1,fp);
     for (int i = 0; i < nsurf; i++) {
       fwrite(&tris[i].id,sizeof(surfint),1,fp);
       fwrite(&tris[i].type,sizeof(int),1,fp);
@@ -2741,6 +2746,10 @@ void Surf::write_restart(FILE *fp)
 
 void Surf::read_restart(FILE *fp)
 {
+  if (distributed || implicit) 
+    error->all(FLERR,
+               "Restart files with distributed surfaces are not yet supported");
+
   int me = comm->me;
 
   // if any exist, clear existing group names, before reading new ones
@@ -2760,9 +2769,11 @@ void Surf::read_restart(FILE *fp)
   }
 
   if (domain->dimension == 2) {
-    if (me == 0) fread(&nsurf,sizeof(int),1,fp);
-    MPI_Bcast(&nsurf,1,MPI_INT,0,world);
+    if (me == 0) fread(&nsurf,sizeof(bigint),1,fp);
+    MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
     lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
+    // NOTE: need different logic for different surf styles
+    nlocal = nsurf;
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
@@ -2775,6 +2786,8 @@ void Surf::read_restart(FILE *fp)
         lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
       }
     }
+    if (nsurf*sizeof(Line) > INT_MAX)
+      error->all(FLERR,"Surf restart memory exceeded");
     MPI_Bcast(lines,nsurf*sizeof(Line),MPI_CHAR,0,world);
   }
 
@@ -2782,6 +2795,8 @@ void Surf::read_restart(FILE *fp)
     if (me == 0) fread(&nsurf,sizeof(int),1,fp);
     MPI_Bcast(&nsurf,1,MPI_INT,0,world);
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
+    // NOTE: need different logic for different surf styles
+    nlocal = nsurf;
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
@@ -2795,6 +2810,8 @@ void Surf::read_restart(FILE *fp)
         tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
       }
     }
+    if (nsurf*sizeof(Tri) > INT_MAX)
+      error->all(FLERR,"Surf restart memory exceeded");
     MPI_Bcast(tris,nsurf*sizeof(Tri),MPI_CHAR,0,world);
   }
 }
