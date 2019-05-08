@@ -1053,9 +1053,10 @@ void ReadRestart::create_child_cells(int skipflag)
     id = ids[i];
     nsplit = nsplits[i];
 
-    // NOTE: need more doc of this method
-
     // unsplit or split cell
+    // for skipflag, add only if I own this cell
+    // add as child cell to grid->cells
+    // if split cell, also add split cell to sinfo
     // add unsplit/split cells (not sub cells) to Grid::hash as create them
 
     if (nsplit > 0) {
@@ -1077,6 +1078,8 @@ void ReadRestart::create_child_cells(int skipflag)
 
     // sub cell
     // for skipflag, add only if I also own the corresponding split cell
+    // add as sub cell to grid->cells
+    // set nsplit for new sub cell and csubs in owning cell's sinfo
 
     } else {
       if (skipflag && hash->find(id) == hash->end()) continue;

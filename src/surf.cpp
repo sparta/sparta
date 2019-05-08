@@ -2720,8 +2720,8 @@ void Surf::write_restart(FILE *fp)
       fwrite(&lines[i].id,sizeof(surfint),1,fp);
       fwrite(&lines[i].type,sizeof(int),1,fp);
       fwrite(&lines[i].mask,sizeof(int),1,fp);
-      fwrite(&lines[i].p1,sizeof(double),3,fp);
-      fwrite(&lines[i].p2,sizeof(double),3,fp);
+      fwrite(lines[i].p1,sizeof(double),3,fp);
+      fwrite(lines[i].p2,sizeof(double),3,fp);
     }
   }
 
@@ -2731,9 +2731,9 @@ void Surf::write_restart(FILE *fp)
       fwrite(&tris[i].id,sizeof(surfint),1,fp);
       fwrite(&tris[i].type,sizeof(int),1,fp);
       fwrite(&tris[i].mask,sizeof(int),1,fp);
-      fwrite(&tris[i].p1,sizeof(double),3,fp);
-      fwrite(&tris[i].p2,sizeof(double),3,fp);
-      fwrite(&tris[i].p3,sizeof(double),3,fp);
+      fwrite(tris[i].p1,sizeof(double),3,fp);
+      fwrite(tris[i].p2,sizeof(double),3,fp);
+      fwrite(tris[i].p3,sizeof(double),3,fp);
     }
   }
 }
@@ -2793,7 +2793,7 @@ void Surf::read_restart(FILE *fp)
 
   if (domain->dimension == 3) {
     if (me == 0) fread(&nsurf,sizeof(bigint),1,fp);
-    MPI_Bcast(&nsurf,1,MPI_INT,0,world);
+    MPI_Bcast(&nsurf,1,MPI_SPARTA_BIGINT,0,world);
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
     // NOTE: need different logic for different surf styles
     nlocal = nsurf;
