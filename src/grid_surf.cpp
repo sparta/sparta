@@ -1028,7 +1028,7 @@ void Grid::allocate_cell_arrays()
 int *Grid::csubs_request(int n)
 {
   int *ptr = csubs->vget();
-  cpsurf->vgot(n);
+  csubs->vgot(n);
   return ptr;
 }
 
@@ -1594,9 +1594,9 @@ void Grid::flow_stats()
 
 /* ----------------------------------------------------------------------
    compute flow volume for entire box, using list of surfs
-   volume for one surf is projection to lower z face
+   volume for one surf is projection to lower z face (3d) or y face (2d)
    NOTE: this does not work if any surfs are clipped to zlo or zhi faces in 3d
-         this does not work if any surfs are clipped to ylo or yhi faces in 3d
+         this does not work if any surfs are clipped to ylo or yhi faces in 2d
          need to add contribution due to closing surfs on those faces
          fairly easy to add in 2d, not so easy in 3d
 ------------------------------------------------------------------------- */

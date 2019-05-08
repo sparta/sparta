@@ -2268,7 +2268,7 @@ void Grid::read_restart(FILE *fp)
 
 /* ----------------------------------------------------------------------
    return size of child grid restart info for this proc
-   count of all owned cells
+   using count of all owned cells
   // NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
@@ -2284,8 +2284,8 @@ int Grid::size_restart()
 }
 
 /* ----------------------------------------------------------------------
-   return size of child grid restart info using
-     arbitrary count of all owned cells
+   return size of child grid restart info
+   using nlocal_restart count of all owned cells
 ------------------------------------------------------------------------- */
 
 int Grid::size_restart(int nlocal_restart)
