@@ -36,7 +36,7 @@ keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or 
   typeadd arg = Noffset
     Noffset = add Noffset to the type value of each element
   particle args = {none} or {check} or {keep}
-    none = allow no particles in simulation when read surfs
+    none = allow no particles in simulation when read surfs (default)
     check = delete particles inside surfs or in cells intersected by surfs
     keep = keep all particles :pre
 :ule
@@ -65,7 +65,7 @@ surfaces in the same simulation.
 Surface elements are triangles in 3d or line segments in 2d.  Surface
 elements for each physical object are required to be a complete,
 connected set that tile the entire surface of the object.  See the
-discussion of watertight surfaces below.
+discussion of watertight objects below.
 
 Particles collide with surface elements as they advect.  Each surface
 element is assigned to a collision model, specified by the
@@ -88,8 +88,8 @@ different elements or different objects to different groups.
 Explicit surface elements can be stored in a distributed fashion (each
 processor only stores elements which overlap grid cells it owns or has
 a ghost cell copy of).  Or each processor can store a copy of all
-surface elements (the default).  See the "global surfs"_global.html to
-change this setting.
+surface elements (the default).  See the "global surfs"_global.html
+command to change this setting.
 
 Note that the read_surf command can be used multiple times to read
 multiple objects from multiple files and add them to the simulation
@@ -146,57 +146,92 @@ These are the recognized section keywords for the body of the file.
 The {Points} section consists of N consecutive entries, where N = # of
 points, each of this form:
 
-point-ID x y z    (for 3d) 
-point-ID x y      (for 2d) :pre
+index x y z    (for 3d) 
+index x y      (for 2d) :pre
 
-The point-ID is ignored; it is only added to assist in examining the
-file.  The point-IDs should run consecutively from 1 to N.  {X,y,z}
-are the coordinates of the point in distance units.  Note that for 2d
-simulations, {z} should be omitted.
+The index value is ignored; it is only added to assist in examining
+the file.  When lines and triangles reference point indices they are
+simply ordered from 1 to N, regardless of the actual value of the
+index in the file.  {X,y,z} are the coordinates of the point in
+distance units.  Note that for 2d simulations, {z} should be omitted.
+
+IMPORTANT NOTE: Unless points are on the surface of the simulation
+box, they will appear in multiple lines or triangles.  There is no
+requirement that each unique point appear exactly once in the {Points}
+list.  However, if the same point appears multiple times in the
+{Points} list, the coordinates of all copies must be numerically
+identical, in order for SPARTA to verify the surface is a watertight
+object, as discussed below.
+
+Note that the {points} keyword and {Points} section are not required.
+You must either use both or neither.  See the optional format for the
+{Lines} or {Triangles} sections where point coordinates are included
+with each line or triangle.
 
 The {Lines} section is only allowed for 2d simulations and consists of
-N entries, where N = # of lines, each of this form:
+N entries, where N = # of lines.  The entries can all be in format A
+or B:
 
-line-ID (type) p1 p2 :pre
+line-ID (type) p1 p2               # format A :pre
+line-ID (type) p1x p1y p2x p2y     # format B :pre
 
-The line-ID is ignored; it is only added to assist in examining the
-file.  {Type} is an optional integer value which must be specified for
-all or none of the lines.  If used, it must be a positive integer
-value for each line.  If not specified, the type of each line is set
-to 1.  Line types can be used to assign lines to surface groups via
-the "group surf"_group.html command.
+The line-ID is stored internally with the line.  The line-IDs should
+be unique values from 1 to the # of lines, but do not need to be
+listed in order.  SPARTA does not check line-IDs for uniqueness.
+{Type} is an optional integer value which must be specified for all or
+none of the lines.  If used, it must be a positive integer value for
+each line.  If not specified, the type of each line is set to 1.  Line
+IDs and types can be used to assign lines to surface groups via the
+"group surf"_group.html command.
 
-{P1} and {p2} are the point-IDs of the 2 end points of the line
-segment.  Each is a value from 1 to Npoints, as described above.
+IMPORTANT NOTE: If the read_surf command is used when lines already
+exist, i.e. to add new lines, then the line-IDs are all incremented by
+Nprevious = the # of lines that already exist.
 
-The ordering of {p1} and {p2} is important as it defines the direction
-of the outward normal for the line segment when a particle collides
-with it.  Molecules only collide with the "outer" edge of a line
-segment.  This is defined by a right-hand rule.  The outward normal N
-= (0,0,1) x (p2-p1).  In other words, a unit z-direction vector is
-crossed into the vector from {p1} to {p2} to determine the normal.
+For format A, {p1} and {p2} are the indices of the 2 end points of the
+line segment.  Each is a value from 1 to the # of points, as described
+above.  For format B, (p1x,p1y) and (p2x,p2y) are the (x,y)
+coordinates of the two points (1,2) in the line.
+
+The ordering of {p1}, {p2} is important as it defines the direction of
+the outward normal for the line segment when a particle collides with
+it.  Molecules only collide with the "outer" edge of a line segment.
+This is defined by a right-hand rule.  The outward normal N = (0,0,1)
+x (p2-p1).  In other words, a unit z-direction vector is crossed into
+the vector from {p1} to {p2} to determine the normal.
 
 The {Triangles} section is only allowed for 3d simulations and
-consists of N entries, where N = # of triangles, each of this form:
+consists of N entries, where N = # of triangles.  The entries can all
+be in format A or B:
 
-tri-ID (type) p1 p2 p3 :pre
+tri-ID (type) p1 p2 p3                                  # format A :pre
+tri-ID (type) p1x p1y p1z p2x p2y p2z p3x p3y p3z       # format B :pre
 
-The tri-ID is ignored; it is only added to assist in examining the
-file.  {Type} is an optional integer value which must be specified for
-all or none of the triangles.  If used, it must be a positive integer
-value for each triangle.  If not specified, the type of each triangle
-is set to 1.  Triangle types can be used to assign triangles to
+The tri-ID is stored internally with the line.  The tri-IDs should be
+unique values from 1 to the # of triangles, but do not need to be
+listed in order.  SPARTA does not check tri-IDs for uniqueness.
+{Type} is an optional integer value which must be specified for all or
+none of the triangles.  If used, it must be a positive integer value
+for each triangle.  If not specified, the type of each triangle is set
+to 1.  Triangle IDs and types can be used to assign triangles to
 surface groups via the "group surf"_group.html command.
 
-{P1} and {p2} and {p3} are the point-IDs of the 3 corner points of the
-triangle.  Each is a value from 1 to Npoints, as described above.
+For format A, {p1}, {p2}, and {p3} are the indices of the 3 corner
+points of the triangle.  Each is a value from 1 to the # of points, as
+described above.  For format B, (p1x,p1y,p1z), (p2x,p2y,p2z), and
+(p3x,p3y,p3z) are the (x,y,z) coordinates of the three corner points
+(1,2,3) of the triangle.
 
-The ordering of {p1} and {p2} and {p3} is important as it defines the
+The ordering of {p1}, {p2}, {p3} is important as it defines the
 direction of the outward normal for the triangle when a particle
 collides with it.  Molecules only collide with the "outer" face of a
 triangle. This is defined by a right-hand rule.  The outward normal N
 = (p2-p1) x (p3-p1).  In other words, the edge from {p1} to {p2} is
 crossed into the edge from {p1} to {p3} to determine the normal.
+
+IMPORTANT NOTE: If the read_surf command is used when triangles
+already exist, i.e. to add new triangles, then the trid-IDs are all
+incremented by Nprevious = the # of triangles that already exist.
 
 :line
 
@@ -205,7 +240,8 @@ surface elements.  The geometric transformations they describe are
 performed in the order they are listed, which gives flexibility in how
 surfaces can be manipulated.  Note that the order may be important;
 e.g. performing an {origin} operation followed by a {rotate} operation
-may not be the same as a {rotate} followed by a {origin}.
+may not be the same as a {rotate} operation followed by an {origin}
+operation.
 
 Most of the keywords perform a geometric transformation on all the
 vertices in the surface file with respect to an origin point.  By
@@ -277,6 +313,9 @@ manner, then SPARTA will likely generate an error about mis-matched or
 inconsistent cells when it attempts to mark all the grid cells and
 their corner points as inside vs outside the surface.
 
+IMPORTANT NOTE: The clip keyword cannot uet be used with explicit
+distributed surfaces.
+
 If you use the {clip} keyword, you should check the resulting
 statistics of the clipped surface printed out by this command,
 including the minimum size of line and triangle edge lengths.  It is
@@ -301,6 +340,12 @@ or corner points of surface element lines (2d) or triangles (3d).  The
 resulting altered set of surface elements can be written out to a file
 by the "write_surf"_write_surf.html command, which can then be used an
 input to a new simulation or for post-processing and visualization.
+
+IMPORTANT NOTE: When the {clip} operation deletes or adds surface
+elements, the line-IDs or tri-IDs will be renumbered to produce IDs
+that are consective values from 1 to the # of surface elements.  The
+ID of a surface element that is unclipped may change due to this
+reordering.
 
 :line
 
