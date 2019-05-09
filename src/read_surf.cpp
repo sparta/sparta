@@ -90,8 +90,10 @@ void ReadSurf::command(int narg, char **arg)
 
   // create local pts,lines,tris data structures for reading from file
 
-  pts = (Point *) memory->smalloc(npoint*sizeof(Point),"readsurf:pts");
-  maxpoint = npoint;
+  if (npoint) {
+    pts = (Point *) memory->smalloc(npoint*sizeof(Point),"readsurf:pts");
+    maxpoint = npoint;
+  } else pts = NULL;
 
   if (!distributed) {
     lines = (Line *) memory->smalloc(nline*sizeof(Line),"readsurf:lines");
@@ -100,15 +102,17 @@ void ReadSurf::command(int narg, char **arg)
     maxtri = ntri;
   }
 
-  // read and store Points and Lines/Tris sections
+  // read and store Points/Lines/Tris sections
 
   parse_keyword(1);
-  if (strcmp(keyword,"Points") != 0)
-    error->all(FLERR,
-	       "Read_surf did not find points section of surf file");
-  read_points();
+
+  if (strcmp(keyword,"Points") == 0) {
+    read_points();
+    pointflag = 1;
+  }
 
   parse_keyword(0);
+
   if (dim == 2) {
     if (strcmp(keyword,"Lines") != 0)
       error->all(FLERR,
@@ -136,7 +140,7 @@ void ReadSurf::command(int narg, char **arg)
   process_args(narg-1,&arg[1]);
 
   // add pts/lines/tris read from file to Surf line/tri data struct
-  // only when each proc has copy of all surfs
+  // only when surfs are not distributed so each proc has copy of all surfs
   // free local copy of read-in surfs
 
   if (!distributed) {
@@ -373,7 +377,7 @@ void ReadSurf::header()
   int n;
   char *ptr;
 
-  nline = ntri = 0;
+  npoint = nline = ntri = 0;
 
   // skip 1st line of file
 
@@ -435,7 +439,6 @@ void ReadSurf::header()
     } else break;
   }
 
-  if (npoint == 0) error->all(FLERR,"Surf file does not contain points");
   if (dim == 2 && nline == 0) 
     error->all(FLERR,"Surf file does not contain lines");
   if (dim == 3 && ntri == 0) 
