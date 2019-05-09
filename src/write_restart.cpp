@@ -36,11 +36,13 @@ using namespace SPARTA_NS;
 
 enum{VERSION,SMALLINT,CELLINT,BIGINT,
      UNITS,NTIMESTEP,NPROCS,
-     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,SURFMAX,GRIDCUT,GRID_WEIGHT,
-     COMM_SORT,COMM_STYLE,
+     FNUM,NRHO,VSTREAM,TEMP_THERMAL,GRAVITY,
+     SURFDIST,SURFIMPLICIT,SURFMAX,CELLMAX,SPLITMAX,
+     GRIDCUT,COMM_SORT,COMM_STYLE,GRID_WEIGHT,
      DIMENSION,AXISYMMETRIC,BOXLO,BOXHI,BFLAG,
      NPARTICLE,NUNSPLIT,NSPLIT,NSUB,NPOINT,NSURF,
      SPECIES,MIXTURE,PARTICLE_CUSTOM,GRID,SURF,
+     GRIDPARENT,GRIDCHILD,SURFS,PARTICLES,
      MULTIPROC,PROCSPERFILE,PERPROC};    // new fields added after PERPROC
 
 /* ---------------------------------------------------------------------- */
@@ -167,7 +169,7 @@ void WriteRestart::multiproc_options(int multiproc_caller,
 }
 
 /* ----------------------------------------------------------------------
-   called from command() and directly from output within run/minimize loop
+   called from command() and directly from output within run loop
    file = final file name to write, except may contain a "%"
 ------------------------------------------------------------------------- */
 
@@ -175,7 +177,8 @@ void WriteRestart::write(char *file)
 {
   if (update->mem_limit_grid_flag)
     update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
-  if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal))
+  if (update->global_mem_limit > 0 || 
+      (update->mem_limit_grid_flag && !grid->nlocal))
     return write_less_memory(file);
 
   // open single restart file or base file for multiproc case
@@ -198,53 +201,11 @@ void WriteRestart::write(char *file)
     if (multiproc) delete [] hfile;
   }
 
-  // proc 0 writes magic string, endian flag, numeric version
-
-  if (me == 0) {
-    magic_string();
-    endian();
-    version_numeric();
-  }
-
-  // proc 0 writes header info
-  // also simulation box, particle species, parent grid cells, surf info
-
-  bigint btmp = particle->nlocal;
-  MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-
-  if (me == 0) {
-    header();
-    box_params();
-    particle_params();
-    grid_params();
-    surf_params();
-  }
-
-  // communication buffer for my per-proc info = child grid cells and particles
-  // max_size = largest buffer needed by any proc
-
-  int send_size = grid->size_restart();
-  send_size += particle->size_restart();
-
-  int max_size;
-  MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
-
-  char *buf;
-  memory->create(buf,max_size,"write_restart:buf");
-  memset(buf,0,max_size);
-
-  // all procs write file layout info which may include per-proc sizes
-
-  file_layout(send_size);
-
-  // header info is complete
   // if multiproc output:
-  //   close header file, open multiname file on each writing proc,
-  //   write PROCSPERFILE into new file
+  // open multiname file on each writing proc
+  // write PROCSPERFILE into new file
 
   if (multiproc) {
-    if (me == 0) fclose(fp);
-
     char *multiname = new char[strlen(file) + 16];
     char *ptr = strchr(file,'%');
     *ptr = '\0';
@@ -252,8 +213,8 @@ void WriteRestart::write(char *file)
     *ptr = '%';
 
     if (filewriter) {
-      fp = fopen(multiname,"wb");
-      if (fp == NULL) {
+      fpmulti = fopen(multiname,"wb");
+      if (fpmulti == NULL) {
         char str[128];
         sprintf(str,"Cannot open restart file %s",multiname);
         error->one(FLERR,str);
@@ -264,41 +225,47 @@ void WriteRestart::write(char *file)
     delete [] multiname;
   }
 
-  // pack my child grid and particle data into buf
+  // -----------------------------------------------
+  // write the restart file(s)
+  // -----------------------------------------------
 
-  int n = grid->pack_restart(buf);
-  n += particle->pack_restart(&buf[n]);
+  // write magic string, endian flag, numeric version
+  // this is written to proc 0 file
 
-  // output of one or more native files
-  // filewriter = 1 = this proc writes to file
-  // ping each proc in my cluster, receive its data, write data to file
-  // else wait for ping from fileproc, send my data to fileproc
-
-  int tmp,recv_size;
-  MPI_Status status;
-  MPI_Request request;
-
-  if (filewriter) {
-    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
-      if (iproc) {
-        MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
-        MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
-        MPI_Wait(&request,&status);
-        MPI_Get_count(&status,MPI_CHAR,&recv_size);
-      } else recv_size = send_size;
-      
-      write_char_vec(PERPROC,recv_size,buf);
-    }
-    fclose(fp);
-
-  } else {
-    MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
-    MPI_Rsend(buf,send_size,MPI_CHAR,fileproc,0,world);
+  if (me == 0) {
+    magic_string();
+    endian();
+    version_numeric();
   }
 
-  // clean up
+  // write header info
+  // also box, grid, surf, particle, file layout info
+  // this is written to proc 0 file
 
-  memory->destroy(buf);
+  bigint btmp = particle->nlocal;
+  MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  if (me == 0) {
+    header();
+    box_info();
+    grid_info();
+    surf_info();
+    particle_info();
+    file_layout();
+  }
+
+  // write out parent grid, child grid, surfs, particles
+  // this info goes into proc 0 file or multifiles
+
+  write_parent_grid();
+  write_child_grid();
+  write_surfs();
+  write_particles();
+
+  // close all files
+
+  if (me == 0) fclose(fp);
+  if (multiproc && filewriter) fclose(fpmulti);
 }
 
 /* ----------------------------------------------------------------------
@@ -337,17 +304,18 @@ void WriteRestart::write_less_memory(char *file)
   }
 
   // proc 0 writes header info
-  // also simulation box, particle species, parent grid cells, surf info
+  // also simulation box, grid, surf, particle, file layout info
 
   bigint btmp = particle->nlocal;
   MPI_Allreduce(&btmp,&particle->nglobal,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (me == 0) {
     header();
-    box_params();
-    particle_params();
-    grid_params();
-    surf_params();
+    box_info();
+    grid_info();
+    surf_info();
+    particle_info();
+    file_layout();
   }
 
   // communication buffer for my per-proc info = child grid cells and particles
@@ -368,10 +336,6 @@ void WriteRestart::write_less_memory(char *file)
   char *buf;
   memory->create(buf,max_size,"write_restart:buf");
   memset(buf,0,max_size);
-
-  // all procs write file layout info which may include per-proc sizes
-
-  file_layout(send_size);
 
   // header info is complete
   // if multiproc output:
@@ -402,10 +366,12 @@ void WriteRestart::write_less_memory(char *file)
 
   // pack my child grid and particle data into buf
 
-  // number of particles per pass
   int step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
 
-  int my_npasses = ceil((double)particle->nlocal/step_size)+1; // extra pass for grid
+  // number of particles per pass
+  // extra pass for grid
+
+  int my_npasses = ceil((double)particle->nlocal/step_size)+1; 
 
   // output of one or more native files
   // filewriter = 1 = this proc writes to file
@@ -488,7 +454,11 @@ void WriteRestart::header()
   write_double_vec(VSTREAM,3,update->vstream);
   write_double(TEMP_THERMAL,update->temp_thermal);
   write_double_vec(GRAVITY,3,update->gravity);
+  write_int(SURFDIST,surf->distributed);
+  write_int(SURFIMPLICIT,surf->implicit);
   write_int(SURFMAX,grid->maxsurfpercell);
+  write_int(CELLMAX,grid->maxcellpersurf);
+  write_int(SPLITMAX,grid->maxsplitpercell);
   write_double(GRIDCUT,grid->cutoff);
   write_int(COMM_SORT,comm->commsortflag);
   write_int(COMM_STYLE,comm->commpartstyle);
@@ -500,7 +470,7 @@ void WriteRestart::header()
   write_int(NSUB,grid->nsub);
   write_bigint(NSURF,surf->nsurf);
 
-  // -1 flag signals end of header
+  // -1 flag signals end of header section
 
   int flag = -1;
   fwrite(&flag,sizeof(int),1,fp);
@@ -510,25 +480,40 @@ void WriteRestart::header()
    proc 0 writes out simulation box info
 ------------------------------------------------------------------------- */
 
-void WriteRestart::box_params()
+void WriteRestart::box_info()
 {
   write_int(DIMENSION,domain->dimension);
   write_int(AXISYMMETRIC,domain->axisymmetric);
   write_double_vec(BOXLO,3,domain->boxlo);
   write_double_vec(BOXHI,3,domain->boxhi);
   write_int_vec(BFLAG,6,domain->bflag);
-
-  // -1 flag signals end of box info
-
-  int flag = -1;
-  fwrite(&flag,sizeof(int),1,fp);
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes out species info
+   proc 0 writes out grid info
 ------------------------------------------------------------------------- */
 
-void WriteRestart::particle_params()
+void WriteRestart::grid_info()
+{
+  write_int(GRID,0);
+  grid->write_restart_info(fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes out surface info
+------------------------------------------------------------------------- */
+
+void WriteRestart::surf_info()
+{
+  write_int(SURF,surf->exist);
+  surf->write_restart_info(fp);
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes out particle info
+------------------------------------------------------------------------- */
+
+void WriteRestart::particle_info()
 {
   write_int(SPECIES,0);
   particle->write_restart_species(fp);
@@ -539,45 +524,164 @@ void WriteRestart::particle_params()
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes out parent grid info
+   proc 0 writes out info on how file is layed out, serial or parallel
 ------------------------------------------------------------------------- */
 
-void WriteRestart::grid_params()
+void WriteRestart::file_layout()
 {
-  write_int(GRID,0);
-  grid->write_restart(fp);
+  write_int(MULTIPROC,multiproc);
+
+  // -1 flag signals end of global section
+
+  int flag = -1;
+  fwrite(&flag,sizeof(int),1,fp);
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes out surface element into
+   write out parent cell info
+   currently proc 0 writes out all parent cell data
 ------------------------------------------------------------------------- */
 
-void WriteRestart::surf_params()
+void WriteRestart::write_parent_grid()
 {
-  if (!surf->exist) {
-    write_int(SURF,0);
+  if (me == 0) write_int(GRIDPARENT,0);
+  if (me == 0) grid->write_restart_parent(fp);
+}
+
+/* ----------------------------------------------------------------------
+   write out child cell info
+------------------------------------------------------------------------- */
+
+void WriteRestart::write_child_grid()
+{
+  if (me == 0) write_int(GRIDCHILD,0);
+
+  // communication buffer for my child cell info
+  // max_size = largest buffer needed by any proc
+
+  int send_size = grid->size_restart_child();
+  int max_size;
+  MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
+
+  char *buf;
+  memory->create(buf,max_size,"write_restart:buf");
+  memset(buf,0,max_size);
+
+  // pack my child grid cell data into buf
+  // n will be send_size
+
+  int n = grid->pack_restart(buf);
+
+  // NOTE: abstract next section?
+  //comm(send_size,buf);
+
+  // output of one or more native files
+  // filewriter = 1 = this proc writes to file
+  // ping each proc in my cluster, receive its data, write data to file
+  // else wait for ping from fileproc, send my data to fileproc
+
+  int tmp,recv_size;
+  MPI_Status status;
+  MPI_Request request;
+
+  if (filewriter) {
+    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
+      if (iproc) {
+        MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
+        MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
+        MPI_Wait(&request,&status);
+        MPI_Get_count(&status,MPI_CHAR,&recv_size);
+      } else recv_size = send_size;
+      
+      // NOTE: need to use correct fp
+      write_char_vec(PERPROC,recv_size,buf);
+    }
+
+  } else {
+    MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+    MPI_Rsend(buf,send_size,MPI_CHAR,fileproc,0,world);
+  }
+
+  // clean up
+
+  memory->destroy(buf);
+}
+
+/* ----------------------------------------------------------------------
+   write out surface element info
+------------------------------------------------------------------------- */
+
+void WriteRestart::write_surfs()
+{
+  if (!surf->exist) return;
+
+  if (me == 0) write_int(SURFS,0);
+
+  if (!surf->distributed) {
+    if (me == 0) surf->write_restart_all(fp);
     return;
   }
 
-  write_int(SURF,1);
-  surf->write_restart(fp);
+  if (!surf->implicit) {
+
+    // communication buffer for my child cell info
+    // max_size = largest buffer needed by any proc
+    
+    int send_size = surf->size_restart_distributed();
+    int max_size;
+    MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
+    
+    char *buf;
+    memory->create(buf,max_size,"write_restart:buf");
+    memset(buf,0,max_size);
+
+    // pack my child grid cell data into buf
+    // n will be send_size
+    
+    int n = surf->pack_restart_distributed(buf);
+
+    // NOTE: abstract next section?
+    //comm(send_size,buf);
+
+    // clean up
+    
+    memory->destroy(buf);
+    return;
+  }
+
+  // communication buffer for my child cell info
+  // max_size = largest buffer needed by any proc
+    
+  int send_size = surf->size_restart_implicit();
+  int max_size;
+  MPI_Allreduce(&send_size,&max_size,1,MPI_INT,MPI_MAX,world);
+    
+  char *buf;
+  memory->create(buf,max_size,"write_restart:buf");
+  memset(buf,0,max_size);
+
+  // pack my child grid cell data into buf
+  // n will be send_size
+  
+  int n = surf->pack_restart_implicit(buf);
+  
+  // NOTE: abstract next section?
+  //comm(send_size,buf);
+  
+  // clean up
+  
+  memory->destroy(buf);
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes out file layout info
-   all procs call this method, only proc 0 writes to file
+   write out particle info
 ------------------------------------------------------------------------- */
 
-void WriteRestart::file_layout(int)
+void WriteRestart::write_particles()
 {
-  if (me == 0) write_int(MULTIPROC,multiproc);
+  if (me == 0) write_int(PARTICLES,0);
 
-  // -1 flag signals end of file layout info
-
-  if (me == 0) {
-    int flag = -1;
-    fwrite(&flag,sizeof(int),1,fp);
-  }
+  //particle->write_restart(fp);
 }
 
 // ----------------------------------------------------------------------

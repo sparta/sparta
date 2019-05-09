@@ -195,7 +195,7 @@ class Surf : protected Pointers {
   void collate_array_reduce(int, int, int *, double **, double **);
   void collate_array_rendezvous(int, int, int *, double **, double **);
 
-  void write_restart(FILE *);
+  void write_restart_all(FILE *);
   void read_restart(FILE *);
   virtual void grow();
   virtual void grow_own();

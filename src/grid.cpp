@@ -2212,14 +2212,11 @@ int Grid::check_uniform_group(int igroup, int *nxyz,
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes parent grid and group info to restart file
+   proc 0 writes grid info to restart file
 ------------------------------------------------------------------------- */
 
-void Grid::write_restart(FILE *fp)
+void Grid::write_restart_info(FILE *fp)
 {
-  fwrite(&nparent,sizeof(int),1,fp);
-  fwrite(pcells,sizeof(ParentCell),nparent,fp);
-
   fwrite(&ngroup,sizeof(int),1,fp);
 
   int n;
@@ -2228,6 +2225,16 @@ void Grid::write_restart(FILE *fp)
     fwrite(&n,sizeof(int),1,fp);
     fwrite(gnames[i],sizeof(char),n,fp);
   }
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes parent grid to restart file
+------------------------------------------------------------------------- */
+
+void Grid::write_restart_parent(FILE *fp)
+{
+  fwrite(&nparent,sizeof(int),1,fp);
+  fwrite(pcells,sizeof(ParentCell),nparent,fp);
 }
 
 /* ----------------------------------------------------------------------
@@ -2267,25 +2274,26 @@ void Grid::read_restart(FILE *fp)
 }
 
 /* ----------------------------------------------------------------------
-   return size of child grid restart info for this proc
-   using count of all owned cells
-  // NOTE: worry about N overflowing int, and in IROUNDUP ???
+   return size of child grid restart info
+   use count of all cells owned by this proc
 ------------------------------------------------------------------------- */
 
-int Grid::size_restart()
+int Grid::size_restart_child()
 {
-  int n = 2*sizeof(int);
-  n = IROUNDUP(n);
-  n += nlocal * sizeof(cellint);
-  n = IROUNDUP(n);
-  n += nlocal * sizeof(int);
-  n = IROUNDUP(n);
-  return n;
+  bigint n = 2*sizeof(int);
+  n = BIROUNDUP(n);
+  n += (bigint) nlocal * sizeof(cellint);
+  n = BIROUNDUP(n);
+  n += (bigint) nlocal * sizeof(int);
+  n = BIROUNDUP(n);
+
+  if (n > INT_MAX) error->one(FLERR,"Grid restart buffer size overflows");
+  return (int) n;
 }
 
 /* ----------------------------------------------------------------------
    return size of child grid restart info
-   using nlocal_restart count of all owned cells
+   using nlocal_restart cell count
 ------------------------------------------------------------------------- */
 
 int Grid::size_restart(int nlocal_restart)
@@ -2303,7 +2311,7 @@ int Grid::size_restart(int nlocal_restart)
    pack my child grid info into buf
    nlocal, clumped as scalars
    ID, nsplit as vectors for all owned cells
-   // NOTE: worry about N overflowing int, and in IROUNDUP ???
+   no overflow possible, b/c already called size_restart()
 ------------------------------------------------------------------------- */
 
 int Grid::pack_restart(char *buf)

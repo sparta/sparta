@@ -228,7 +228,9 @@ class Grid : protected Pointers {
 
   virtual void grow_pcells(int);
 
-  void write_restart(FILE *);
+  void write_restart_info(FILE *);
+  void write_restart_parent(FILE *);
+
   void read_restart(FILE *);
   int size_restart();
   int size_restart(int);

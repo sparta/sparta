@@ -2695,16 +2695,11 @@ int Surf::rendezvous_array(int n, char *inbuf,
 }
 
 /* ----------------------------------------------------------------------
-   proc 0 writes surf geometry to restart file
-   NOTE: needs to be generalized for different surf styles
+   proc 0 writes surf info to restart file
 ------------------------------------------------------------------------- */
 
-void Surf::write_restart(FILE *fp)
+void Surf::write_restart_info(FILE *fp)
 {
-  if (distributed || implicit) 
-    error->all(FLERR,
-               "Restart files with distributed surfaces are not yet supported");
-
   fwrite(&ngroup,sizeof(int),1,fp);
 
   int n;
@@ -2713,7 +2708,15 @@ void Surf::write_restart(FILE *fp)
     fwrite(&n,sizeof(int),1,fp);
     fwrite(gnames[i],sizeof(char),n,fp);
   }
+}
 
+/* ----------------------------------------------------------------------
+   proc 0 writes all surf geometry to restart file
+   only called by WriteRestart for explicit non-distributed surfs
+------------------------------------------------------------------------- */
+
+void Surf::write_restart_all(FILE *fp)
+{
   if (domain->dimension == 2) {
     fwrite(&nsurf,sizeof(bigint),1,fp);
     for (int i = 0; i < nsurf; i++) {

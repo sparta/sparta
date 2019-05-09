@@ -36,7 +36,7 @@ class WriteRestart : protected Pointers {
 
  private:
   int me,nprocs;
-  FILE *fp;
+  FILE *fp,*fpmulti;
 
   int multiproc;             // 0 = proc 0 writes for all
                              // else # of procs writing files
@@ -46,11 +46,16 @@ class WriteRestart : protected Pointers {
   int icluster;              // which cluster I am in
 
   void header();
-  void box_params();
-  void particle_params();
-  void grid_params();
-  void surf_params();
-  void file_layout(int);
+  void box_info();
+  void grid_info();
+  void surf_info();
+  void particle_info();
+  void file_layout();
+
+  void write_parent_grid();
+  void write_child_grid();
+  void write_surfs();
+  void write_particles();
 
   void magic_string();
   void endian();
