@@ -35,6 +35,7 @@
 #include "update.h"
 #include "collide.h"
 #include "react.h"
+#include "zuzax_setup.h"
 #include "output.h"
 #include "random_mars.h"
 #include "stats.h"
@@ -686,6 +687,7 @@ int Input::execute_command()
   else if (!strcmp(command,"restart")) restart();
   else if (!strcmp(command,"seed")) seed();
   else if (!strcmp(command,"species")) species();
+  else if (!strcmp(command,"zuzax_gas_species")) species_zuzax();
   else if (!strcmp(command,"stats")) stats();
   else if (!strcmp(command,"stats_modify")) stats_modify();
   else if (!strcmp(command,"stats_style")) stats_style();
@@ -1412,6 +1414,13 @@ void Input::species()
   particle->add_species(narg,arg);
 }
 
+
+/* ---------------------------------------------------------------------- */
+
+void Input::species_zuzax()
+{
+  zuzax_setup->initGasSetup(narg,arg);
+}
 /* ---------------------------------------------------------------------- */
 
 void Input::stats()

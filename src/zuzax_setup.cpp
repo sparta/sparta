@@ -17,6 +17,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "zuzax_setup.h"
+#include "zuzax/thermo/IdealGasPhase.h"
 
 namespace SPARTA_NS {
 
@@ -37,7 +38,7 @@ void ZuzaxSetup::init()
 //=================================================================================================
 void ZuzaxSetup::initGasSetup(int nargs, char** args)
 {
-
+ gasThermo =  new Zuzax::IdealGasPhase(args[1], "");
 }
 //=================================================================================================
 }

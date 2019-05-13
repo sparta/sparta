@@ -702,7 +702,7 @@ int Particle::clone_particle(int index)
 
 void Particle::add_species(int narg, char **arg)
 {
-  int i,j,k,n;;
+  int i,j,k,n;
 
   if (narg < 2) error->all(FLERR,"Illegal species command");
 

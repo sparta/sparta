@@ -63,48 +63,13 @@ void SurfReactZuzax::init()
 void SurfReactZuzax::init_reactions() 
 {
 }
+
 /* ---------------------------------------------------------------------- */
 
 int SurfReactZuzax::react(Particle::OnePart *&ip, double *tmpp, Particle::OnePart *&jp)
 {
-  double r = random->uniform();
-
-  // perform destroy reaction
-
-  if (r < prob_destroy) {
-    nsingle++;
-    ip = NULL;
-    return 1;
-  }
-
-  // perform create reaction
-  // clone 1st particle to create 2nd particle
-  // if add_particle performs a realloc:
-  //   make copy of x,v with new species
-  //   rot/vib energies will be reset by SurfCollide
-  //   repoint ip to new particles data struct if reallocated
-
-
-
-
-
-  if (r < prob_destroy+prob_create) {
-    nsingle++;
-    double x[3],v[3];
-    int id = MAXSMALLINT*random->uniform();
-    memcpy(x,ip->x,3*sizeof(double));
-    memcpy(v,ip->v,3*sizeof(double));
-    Particle::OnePart *particles = particle->particles;
-    int reallocflag =
-      particle->add_particle(id,ip->ispecies,ip->icell,x,v,0.0,0.0);
-    if (reallocflag) ip = particle->particles + (ip - particles);
-    jp = &particle->particles[particle->nlocal-1];
-    return 1;
-  }
-
-  // no reaction
-
   return 0;
 }
 //=================================================================================================
+}
 

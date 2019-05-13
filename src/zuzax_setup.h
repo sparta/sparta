@@ -18,6 +18,10 @@
 #include "cstdio"
 #include "pointers.h"
 
+#ifdef USE_ZSURF
+#include "zuzax/base/ct_defs.h"
+#include "zuzax/thermo/ThermoPhase.h"
+
 namespace SPARTA_NS {
 
 class ZuzaxSetup : protected Pointers {
@@ -52,10 +56,12 @@ public:
 
  protected:
 
+    Zuzax::thermo_t_double* gasThermo;
 
 };
 
 }
+#endif
 
 #endif
 

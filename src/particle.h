@@ -40,6 +40,10 @@ class Particle : protected Pointers {
     int nrottemp,nvibmode;  // # of rotational/vibrational temps/modes defined
     int internaldof;        // 1 if either rotdof or vibdof != 0
     int vibdiscrete_read;   // 1 if species.vib file read for this species
+#ifdef USE_ZSURF
+    double ezero;           // Zero point energy that corresponds to NASA thermochemical conventions
+    int zuzax_indexGasPhase; // Index 
+#endif
   };
 
   struct RotFile {          // extra rotation info read from rotfile
@@ -47,6 +51,10 @@ class Particle : protected Pointers {
     double rottemp[4];
     int ntemp;
   };
+
+#ifdef USE_ZSURF
+
+#endif
 
   struct VibFile {          // extra vibration info read from vibfile
     char id[16];
@@ -70,6 +78,9 @@ class Particle : protected Pointers {
     int icell;              // which local Grid::cells the particle is in
     double x[3];            // particle position
     double v[3];            // particle velocity
+#ifdef USE_ZSURF
+    double ezero;
+#endif
     double erot;            // rotational energy
     double evib;            // vibrational energy
     int flag;               // used for migration status
@@ -85,6 +96,9 @@ class Particle : protected Pointers {
                             // else neg of sub cell index (0 to Nsplit-1)
     double x[3];            // particle position
     double v[3];            // particle velocity
+#ifdef USE_ZSURF
+    double ezero;
+#endif
     double erot;            // rotational energy
     double evib;            // vibrational energy
   };

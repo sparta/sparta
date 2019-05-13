@@ -17,10 +17,14 @@
 
 #include "pointers.h"
 #include "particle.h"
+#include "surf_react.h"
+#ifdef USE_ZSURF
 #include "zuzax/base/ct_defs.h"
+#endif
 
 namespace SPARTA_NS {
 
+#ifdef USE_ZSURF
 //! Class which carries out complex surface reactions with etching or growth
 /*!
  *
@@ -37,6 +41,8 @@ public:
     //! Initializer
     virtual void init() override;
 
+    void init_reactions();
+
     //! Main routine which handles collisions
     virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&)  override;
 
@@ -44,6 +50,8 @@ public:
 
      class RanPark *random;     // RNG for reaction probabilities
 };
+
+#endif
 
 }
 #endif

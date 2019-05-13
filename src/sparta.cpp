@@ -28,6 +28,7 @@
 #include "surf.h"
 #include "collide.h"
 #include "react.h"
+#include "zuzax_setup.h"
 #include "output.h"
 #include "accelerator_kokkos.h"
 #include "timer.h"
@@ -486,6 +487,10 @@ void SPARTA::create()
   collide = NULL;
   react = NULL;
 
+#ifdef USE_ZSURF
+  zuzax_setup = new ZuzaxSetup(this);
+#endif
+
   if (kokkos) modify = new ModifyKokkos(this);
   else modify = new Modify(this);
 
@@ -569,6 +574,9 @@ void SPARTA::destroy()
   delete surf;
   delete collide;
   delete react;
+#ifdef USE_ZSURF
+  delete zuzax_setup;
+#endif
   delete output;
   delete timer;
 }
