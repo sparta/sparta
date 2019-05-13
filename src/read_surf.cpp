@@ -37,7 +37,7 @@ enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 
 #define MAXLINE 256
-#define CHUNK 1024
+#define CHUNK 16384
 #define EPSILON_NORM 1.0e-12
 #define BIG 1.0e20
 #define DELTA 128           // must be 2 or greater 

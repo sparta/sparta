@@ -47,7 +47,7 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Grid
 
-#define CHUNK 8192
+#define CHUNK 65536
 #define DELTA 128
 #define BIG 1.0e20
 #define EPSILON 1.0e-16
