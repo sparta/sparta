@@ -14,7 +14,7 @@ read_surf filename keyword args ... :pre
 
 filename = name of surface file :ulb,l
 zero or more keyword/args pairs may be appended :l
-keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {typeadd} or {particle} :l
+keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {typeadd} or {file} or {particle} :l
   origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   trans args = Dx Dy Dz
@@ -35,6 +35,9 @@ keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or 
     group-ID = new or existing surface group to assign the surface elements to
   typeadd arg = Noffset
     Noffset = add Noffset to the type value of each element
+  file args = filename yes/no
+    filename = file to write surfaces to
+    yes/no = whether to include Points section in file or not
   particle args = {none} or {check} or {keep}
     none = allow no particles in simulation when read surfs (default)
     check = delete particles inside surfs or in cells intersected by surfs
@@ -135,7 +138,7 @@ These are the recognized header keywords.  Header lines can come in
 any order.  The value(s) are read from the beginning of the line.
 Thus the keyword {points} should be in a line like "1000 points".
 
-{points} = # of points in surface
+{points} = # of points in surface (optional, see below)
 {lines} = # of line segments in surface (only allowed for 2d)
 {triangles} = # of triangles in surface (only allowed for 3d) :ul
 
@@ -156,23 +159,25 @@ index in the file.  {X,y,z} are the coordinates of the point in
 distance units.  Note that for 2d simulations, {z} should be omitted.
 
 IMPORTANT NOTE: Unless points are on the surface of the simulation
-box, they will appear in multiple lines or triangles.  There is no
-requirement that each unique point appear exactly once in the {Points}
-list.  However, if the same point appears multiple times in the
-{Points} list, the coordinates of all copies must be numerically
-identical, in order for SPARTA to verify the surface is a watertight
-object, as discussed below.
+box, they will be part of multiple lines or triangles.  However, there
+is no requirement that each point appear exactly once in the {Points}
+list.  For example, a point that is the common corner point of M
+triangles, could appear 1 or 2 or up to M times.  However, if the same
+point appears multiple times in the {Points} list, the coordinates of
+all copies must be numerically identical, in order for SPARTA to
+verify the surface is a watertight object, as discussed below.
 
 Note that the {points} keyword and {Points} section are not required.
-You must either use both or neither.  See the optional format for the
-{Lines} or {Triangles} sections where point coordinates are included
-with each line or triangle.
+You must either use both or neither.  As explained next, an optional
+format for the {Lines} or {Triangles} sections includes point
+coordinates directly with each line or triangle.
 
 The {Lines} section is only allowed for 2d simulations and consists of
-N entries, where N = # of lines.  The entries can all be in format A
-or B:
+N entries, where N = # of lines.  All entries must be in the same
+format, either A or B.  If a Points section was included, use format
+A.  If it was not, use format B.
 
-line-ID (type) p1 p2               # format A :pre
+line-ID (type) p1 p2               # format A
 line-ID (type) p1x p1y p2x p2y     # format B :pre
 
 The line-ID is stored internally with the line.  The line-IDs should
@@ -189,9 +194,10 @@ exist, i.e. to add new lines, then the line-IDs are all incremented by
 Nprevious = the # of lines that already exist.
 
 For format A, {p1} and {p2} are the indices of the 2 end points of the
-line segment.  Each is a value from 1 to the # of points, as described
-above.  For format B, (p1x,p1y) and (p2x,p2y) are the (x,y)
-coordinates of the two points (1,2) in the line.
+line segment, as found in the Points section.  Each is a value from 1
+to the # of points, as described above.  For format B, (p1x,p1y) and
+(p2x,p2y) are the (x,y) coordinates of the two points (1,2) in the
+line.
 
 The ordering of {p1}, {p2} is important as it defines the direction of
 the outward normal for the line segment when a particle collides with
@@ -201,10 +207,11 @@ x (p2-p1).  In other words, a unit z-direction vector is crossed into
 the vector from {p1} to {p2} to determine the normal.
 
 The {Triangles} section is only allowed for 3d simulations and
-consists of N entries, where N = # of triangles.  The entries can all
-be in format A or B:
+consists of N entries, where N = # of triangles.  All entries must be
+in the same format, either A or B.  If a Points section was included,
+use format A.  If it was not, use format B.
 
-tri-ID (type) p1 p2 p3                                  # format A :pre
+tri-ID (type) p1 p2 p3                                  # format A
 tri-ID (type) p1x p1y p1z p2x p2y p2z p3x p3y p3z       # format B :pre
 
 The tri-ID is stored internally with the line.  The tri-IDs should be
@@ -217,10 +224,10 @@ to 1.  Triangle IDs and types can be used to assign triangles to
 surface groups via the "group surf"_group.html command.
 
 For format A, {p1}, {p2}, and {p3} are the indices of the 3 corner
-points of the triangle.  Each is a value from 1 to the # of points, as
-described above.  For format B, (p1x,p1y,p1z), (p2x,p2y,p2z), and
-(p3x,p3y,p3z) are the (x,y,z) coordinates of the three corner points
-(1,2,3) of the triangle.
+points of the triangle, as found in the Points section.  Each is a
+value from 1 to the # of points, as described above.  For format B,
+(p1x,p1y,p1z), (p2x,p2y,p2z), and (p3x,p3y,p3z) are the (x,y,z)
+coordinates of the three corner points (1,2,3) of the triangle.
 
 The ordering of {p1}, {p2}, {p3} is important as it defines the
 direction of the outward normal for the triangle when a particle
@@ -349,8 +356,9 @@ reordering.
 
 :line
 
-The following optional keywords affect group and type settings of the
-read-in surface elements.
+The following optional keywords affect group and type settings for the
+read-in surface elements and output of the elements.  Also how
+particles are treated when surface elements are added.
 
 Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
@@ -381,6 +389,16 @@ Note that use of the {group} and {typeadd} keywords allow the same
 surface file to be read multiple times (e.g. with different origins,
 tranlations, rotations, etc) to define multiple objects, and assign
 their surface elements to different groups or different type values.
+
+If the {file} keyword is used, the surfaces will be written out to the
+specified {filename} immediately after they are read in.  The format
+for the file is the same as the one written by the
+"write_surf"_write_surf.html command, or read by this command.  This
+can be useful if clipping was performed; the new file will list the
+surfaces after clipping.  As explained above, the Points section is
+optional in a surface data file.  The {yes/no} argument determines
+whether a Points section is included in the file, or whether the point
+coordinates are included with individual lines or triangles.
 
 The {particle} keyword determines how particles in the simulation are
 affected by the new surface elements.  If the setting is {none}, which

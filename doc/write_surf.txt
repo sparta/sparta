@@ -12,7 +12,11 @@ write_surf command :h3
 
 write_surf file :pre
 
-file = name of file to write surface element info to :ul
+file = name of file to write surface element info to :ulb,l
+zero or more keyword/args pairs may be appended :l
+keyword = {points} :l
+  points args = {yes} or {no} to include a Points section in the file :pre
+:ule
 
 [Examples:]
 
@@ -37,7 +41,11 @@ renumbered by these operations to create compressed, contiguous lists.
 These lists are what is output by this command.
 
 The file is written as a text file in the same format as the
-"read_surf"_read_surf.html command reads in.
+"read_surf"_read_surf.html command reads in.  Note that a Points
+section is optional.  If the {points} keyword is specified with a
+value of {yes}, then a Points section is included in the file.  If the
+value is {no}, then point coordinates are included with individual
+lines or triangles.
 
 [Restrictions:] none
 
@@ -45,4 +53,7 @@ The file is written as a text file in the same format as the
 
 "read_surf"_read_surf.html
 
-[Default:] none
+[Default:]
+
+The default is points = yes.
+

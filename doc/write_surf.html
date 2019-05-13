@@ -16,6 +16,14 @@
 <PRE>write_surf file 
 </PRE>
 <UL><LI>file = name of file to write surface element info to 
+
+<LI>zero or more keyword/args pairs may be appended 
+
+<LI>keyword = <I>points</I> 
+
+<PRE>  points args = <I>yes</I> or <I>no</I> to include a Points section in the file 
+</PRE>
+
 </UL>
 <P><B>Examples:</B>
 </P>
@@ -40,7 +48,11 @@ renumbered by these operations to create compressed, contiguous lists.
 These lists are what is output by this command.
 </P>
 <P>The file is written as a text file in the same format as the
-<A HREF = "read_surf.html">read_surf</A> command reads in.
+<A HREF = "read_surf.html">read_surf</A> command reads in.  Note that a Points
+section is optional.  If the <I>points</I> keyword is specified with a
+value of <I>yes</I>, then a Points section is included in the file.  If the
+value is <I>no</I>, then point coordinates are included with individual
+lines or triangles.
 </P>
 <P><B>Restrictions:</B> none
 </P>
@@ -48,6 +60,8 @@ These lists are what is output by this command.
 </P>
 <P><A HREF = "read_surf.html">read_surf</A>
 </P>
-<P><B>Default:</B> none
+<P><B>Default:</B>
+</P>
+<P>The default is points = yes.
 </P>
 </HTML>

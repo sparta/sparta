@@ -17,11 +17,14 @@ Nx,Ny,Nz = grid cell extent for adding implicit surfs :l
 filename = binary file with grid corner point values :l
 thresh = threshold for surface definition, value > 0.0 and < 255.0 :l
 zero or more keyword/args pairs may be appended :l
-keyword = {group} or {type} :l
+keyword = {group} or {type} or {file} :l
   group arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
   type arg = tfile
-    tfile = binary file with per grid cell surface type values :pre
+    tfile = binary file with per grid cell surface type values
+  file args = filename yes/no
+    filename = file to write surfaces to
+    yes/no = whether to include Points section in file or not :pre
 :ule
 
 [Examples:]
@@ -168,8 +171,8 @@ periodic boundary.
 
 :line
 
-The following optional keywords affect group and type settings of the
-read-in surface elements.
+The following optional keywords affect group and type settings for the
+read-in surface elements and output of the elements.
 
 Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
@@ -230,6 +233,24 @@ indices very slowest.
 The type value for each grid cell is used to assign a type value to
 each surface element created in that grid cell by the marching cubes
 or squares algorithm.
+
+If the {file} keyword is used, the surfaces will be written out to the
+specified {filename} immediately after they are read in.  The format
+for the file is the same as the one written by the
+"write_surf"_write_surf.html command, or read by the
+"read_surf"_read_surf.html command.  This can be useful for
+visualizing the implicit surfaces with a tool that uses a SPARTA
+surface data file as input.  As explained on the
+"read_surf"_read_surf.html doc page, the Points section is optional in
+a surface data file.  The {yes/no} argument determines whether a
+Points section is included in the file, or whether the point
+coordinates are included with individual lines or triangles.
+
+IMPORTANT NOTE: You cannot use the "read_surf"_read_surf.html command
+to read in a surface data file and treat the surface elements as
+implicit surfaces.  If you use that command to read the surface data
+file produced by the {file} option, the surface elements will be
+treated as explicit surfaces in the new simulation.
 
 :line
 
