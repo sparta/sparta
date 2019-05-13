@@ -15,21 +15,32 @@
 #include "math.h"
 #include "ctype.h"
 #include "stdlib.h"
-#include "string.h"
+#include <cstring>
 #include "zuzax_setup.h"
 #include "zuzax/thermo/IdealGasPhase.h"
+
+#include "particle.h"
+#include "memory.h"
+#include "error.h"
+#include <string>
+
+#ifdef USE_ZUZAX
 
 namespace SPARTA_NS {
 
 
 //=================================================================================================
 ZuzaxSetup::ZuzaxSetup(SPARTA *sparta) : 
-    Pointers(sparta) 
+    Pointers(sparta) ,
+    gasThermo(nullptr),
+    SptoZu_speciesMap(nullptr)
 {
 }
 //=================================================================================================
 ZuzaxSetup::~ZuzaxSetup()
 {
+   delete (gasThermo);
+   memory->destroy(SptoZu_speciesMap);
 }
 //=================================================================================================
 void ZuzaxSetup::init()
@@ -38,8 +49,35 @@ void ZuzaxSetup::init()
 //=================================================================================================
 void ZuzaxSetup::initGasSetup(int nargs, char** args)
 {
- gasThermo =  new Zuzax::IdealGasPhase(args[1], "");
+  bool found = false;
+  gasThermo =  new Zuzax::IdealGasPhase(args[0], "");
+  Particle::Species *species = particle->species;
+  memory->create(SptoZu_speciesMap, particle->nspecies, "ZuzaxSetup::SptoZu_speciesMap");
+
+  for (int k = 0; k < particle->nspecies; ++k) {
+      Particle::Species& spk = species[k]; 
+      found = false;
+      std::string sspName(spk.id);
+      for (size_t kz = 0; kz < gasThermo->nSpecies(); ++kz) {
+          if (sspName == gasThermo->speciesName(kz)) {
+              found = true;
+              SptoZu_speciesMap[k] = (int) kz;
+              break;
+          }
+      }
+      if (!found) {
+        char estring[128];
+        sprintf(estring, "Can't find a corresponding Zuzax species for the Sparta species, %s",
+                        sspName.c_str());
+        error->all(FLERR, estring);
+      } 
+      spk.zuzax_indexGasPhase = SptoZu_speciesMap[k];
+  }
+
+   
+
 }
 //=================================================================================================
 }
+#endif
 

@@ -18,7 +18,7 @@
 #include "cstdio"
 #include "pointers.h"
 
-#ifdef USE_ZSURF
+#ifdef USE_ZUZAX
 #include "zuzax/base/ct_defs.h"
 #include "zuzax/thermo/ThermoPhase.h"
 
@@ -57,6 +57,13 @@ public:
  protected:
 
     Zuzax::thermo_t_double* gasThermo;
+
+    //! Sparta to Zuzax species map
+    /*!
+     *  Maps the sparta species index into the Zuzax species index within the gasThermo ThermoPhase routine
+     *  Length:   particle->nspecies 
+     */
+    int* SptoZu_speciesMap;
 
 };
 

@@ -1419,7 +1419,11 @@ void Input::species()
 
 void Input::species_zuzax()
 {
+#ifdef USE_ZUZAX
   zuzax_setup->initGasSetup(narg,arg);
+#else
+  error->all(FLERR,"species_zuzax illegal keyline when not using zuzax");
+#endif
 }
 /* ---------------------------------------------------------------------- */
 

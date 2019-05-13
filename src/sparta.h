@@ -38,7 +38,7 @@ class SPARTA {
   class Surf *surf;              // surface elements
   class Collide *collide;        // collisions and chemistry
   class React *react;            // chemistry reactions
-#ifdef USE_ZSURF
+#ifdef USE_ZUZAX
   class ZuzaxSetup *zuzax_setup; // Setup of the continuum surface chemistry problem
 #endif
   class Output *output;          // stats/dump/restart

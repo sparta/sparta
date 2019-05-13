@@ -35,6 +35,8 @@ enum{SIMPLE};                                     // other surf react files
 #define MAXLINE 1024
 #define DELTALIST 16
 
+#ifdef USE_ZSURF
+
 namespace SPARTA_NS {
 
 
@@ -73,3 +75,4 @@ int SurfReactZuzax::react(Particle::OnePart *&ip, double *tmpp, Particle::OnePar
 //=================================================================================================
 }
 
+#endif

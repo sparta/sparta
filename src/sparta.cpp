@@ -487,7 +487,7 @@ void SPARTA::create()
   collide = NULL;
   react = NULL;
 
-#ifdef USE_ZSURF
+#ifdef USE_ZUZAX
   zuzax_setup = new ZuzaxSetup(this);
 #endif
 
@@ -574,7 +574,7 @@ void SPARTA::destroy()
   delete surf;
   delete collide;
   delete react;
-#ifdef USE_ZSURF
+#ifdef USE_ZUZAX
   delete zuzax_setup;
 #endif
   delete output;
