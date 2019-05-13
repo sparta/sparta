@@ -30,7 +30,22 @@ class WriteSurf : protected Pointers {
  public:
   WriteSurf(class SPARTA *);
   void command(int, char **);
-  void write_file(FILE *);
+  void write_file(FILE *, int);
+
+ private:
+  int me,nprocs;
+
+  struct SurfIDType {
+    surfint id;
+    int type;
+  };
+
+  void write_file_all_points(FILE *);
+  void write_file_all_nopoints(FILE *);
+  void write_file_distributed_points(FILE *);
+  void write_file_distributed_nopoints(FILE *);
+  void write_file_implicit_points(FILE *);
+  void write_file_implicit_nopoints(FILE *);
 };
 
 }

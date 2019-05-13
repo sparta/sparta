@@ -73,6 +73,7 @@ void ReadSurf::command(int narg, char **arg)
   surf->exist = 1;
   dim = domain->dimension;
   distributed = surf->distributed;
+  nsurf_old = surf->nsurf;
 
   if (narg < 1) error->all(FLERR,"Illegal read_surf command");
 
@@ -88,43 +89,56 @@ void ReadSurf::command(int narg, char **arg)
 
   header();
 
-  // create local pts,lines,tris data structures for reading from file
+  // create all pts data struct if Points section included in file
+  // do this whether distributed or not
+  // only create all lines/tris data struct if not distributed
+
+  pts = NULL;
+  lines = NULL;
+  tris = NULL;
 
   if (npoint) {
-    pts = (Point *) memory->smalloc(npoint*sizeof(Point),"readsurf:pts");
+    bigint nbytes = (bigint) npoint * sizeof(Point);
+    pts = (Point *) memory->smalloc(nbytes,"readsurf:pts");
     maxpoint = npoint;
-  } else pts = NULL;
+  }
 
   if (!distributed) {
-    lines = (Line *) memory->smalloc(nline*sizeof(Line),"readsurf:lines");
-    tris = (Tri *) memory->smalloc(ntri*sizeof(Tri),"readsurf:tris");
+    bigint nbytes = (bigint) nline * sizeof(Line);
+    lines = (Line *) memory->smalloc(nbytes,"readsurf:lines");
+    nbytes = (bigint) ntri * sizeof(Tri);
+    tris = (Tri *) memory->smalloc(nbytes,"readsurf:tris");
     maxline = nline;
     maxtri = ntri;
   }
 
-  // read and store Points/Lines/Tris sections
+  // read and store data from Points section
 
   parse_keyword(1);
 
   if (strcmp(keyword,"Points") == 0) {
+    if (npoint == 0) error->all(FLERR,"Read_surf file has no points keyword");
     read_points();
-    pointflag = 1;
-  }
+    parse_keyword(0);
+  } else if (npoint)
+    error->all(FLERR,"Read_surf file has no Points section");
 
-  parse_keyword(0);
+  // read and store data from Lines or Triangles section
+  // for non-distributed, Lines/Tris stored locally with indices to Points
+  // for distributed, Lines/Tris stored in Surf with point coords
 
   if (dim == 2) {
     if (strcmp(keyword,"Lines") != 0)
       error->all(FLERR,
 	       "Read_surf did not find lines section of surf file");
     if (distributed) read_lines_distributed();
-    else read_lines();
+    else read_lines_all();
   } else {
     if (strcmp(keyword,"Triangles") != 0)
     error->all(FLERR,
 	       "Read_surf did not find triangles section of surf file");
     if (distributed) read_tris_distributed();
-    else read_tris();
+    else read_tris_all();
   }
 
   // close file
@@ -135,37 +149,37 @@ void ReadSurf::command(int narg, char **arg)
   }
 
   // process command-line args
-  // geometry transformation, group, type, output
+  // geometry transformations, group, type, output
+  // transformations operation on 
 
-  process_args(narg-1,&arg[1]);
+  process_args(1,narg,arg);
 
   // add pts/lines/tris read from file to Surf line/tri data struct
   // only when surfs are not distributed so each proc has copy of all surfs
-  // free local copy of read-in surfs
+  // can now free local copy of read-in pts, lines, tris
 
-  if (!distributed) {
-    add_surfs();
-    memory->sfree(lines);
-    memory->sfree(tris);
-  }
+  if (!distributed) add_surfs();
 
   memory->sfree(pts);
+  memory->sfree(lines);
+  memory->sfree(tris);
 
   // write out new surf file if requested
-  // do this before assigning surfs to grid cells, in case an error occurs
+  // do this before grid cell assignment or checks, in case an error occurs
 
   if (filearg) {
     WriteSurf *wf = new WriteSurf(sparta);
+    FILE *fp;
     if (comm->me == 0) {
-      FILE *fp = fopen(arg[filearg],"w");
+      fp = fopen(arg[filearg],"w");
       if (!fp) {
 	char str[128];
-	sprintf(str,"Cannot open surface file %s",arg[0]);
+	sprintf(str,"Cannot open surface file %s",arg[filearg]);
 	error->one(FLERR,str);
       }
-      wf->write_file(fp);
-      fclose(fp);
     }
+    wf->write_file(fp,file_pflag);
+    if (me == 0) fclose(fp);
     delete wf;
   }
 
@@ -370,6 +384,7 @@ void ReadSurf::command(int narg, char **arg)
    non-blank lines are checked for header keywords and leading value is read
    header ends with non-blank line containing no header keyword (or EOF)
    return line with non-blank line (or empty line if EOF)
+   file does not have to contain points keyword
 ------------------------------------------------------------------------- */
 
 void ReadSurf::header()
@@ -509,14 +524,27 @@ void ReadSurf::read_points()
 }
 
 /* ----------------------------------------------------------------------
-   read/store all lines
-   alter p1,p2 indices to point to newest set of stored points
+   read Lines section of file
+   store copy of all lines on each proc
+   store in local Lines data struct
+     with indices to points in local Points data struct
+   this is so that clipping can optionally be performed
+   if no Points section in file, create it here
+   augment line IDs by previously read surfaces
 ------------------------------------------------------------------------- */
 
-void ReadSurf::read_lines()
+void ReadSurf::read_lines_all()
 {
-  int i,m,n,nchunk,type,p1,p2;
+  int i,m,n,nchunk,type,p1,p2,ipt;
+  surfint id;
   char *next,*buf;
+
+  // if no Points section create local data struct for it
+
+  if (!npoint) {
+    bigint nbytes = (bigint) 2 * nline*sizeof(Point);
+    pts = (Point *) memory->smalloc(nbytes,"readsurf:pts");
+  }
 
   // read and broadcast one CHUNK of lines at a time
 
@@ -545,29 +573,73 @@ void ReadSurf::read_lines()
     *next = '\n';
 
     // allow for optional type in each line element
+    // different logic depending on whether points included with each line
 
-    if (nwords != 3 && nwords != 4)
-      error->all(FLERR,"Incorrect line format in surf file");
     int typeflag = 0;
-    if (nwords == 4) typeflag = 1;
+
+    if (npoint) {
+      if (nwords != 3 && nwords != 4)
+        error->all(FLERR,"Incorrect line format in surf file");
+      if (nwords == 4) typeflag = 1;
+    } else {
+      if (nwords != 7 && nwords != 8)
+        error->all(FLERR,"Incorrect line format in surf file");
+      if (nwords == 8) typeflag = 1;
+    }
 
     n = nread;
+    ipt = n*2;
 
-    for (int i = 0; i < nchunk; i++) {
-      next = strchr(buf,'\n');
-      strtok(buf," \t\n\r\f");
-      if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      else type = 1;
-      p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || p1 == p2)
-	error->all(FLERR,"Invalid point index in line");
-      lines[n].type = type;
-      lines[n].mask = 1;
-      lines[n].p1 = p1-1;
-      lines[n].p2 = p2-1;
-      n++;
-      buf = next + 1;
+    // if Points section in file, each read line has indices into it
+
+    if (npoint) {
+      for (int i = 0; i < nchunk; i++) {
+        next = strchr(buf,'\n');
+        id = ATOSURFINT(strtok(buf," \t\n\r\f"));
+        if (id < 1 || id > nline)
+          error->all(FLERR,"Invalid line ID in Lines section");
+        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else type = 1;
+        p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || p1 == p2)
+          error->all(FLERR,"Invalid point index in Lines section");
+        lines[n].id = id + nsurf_old;;
+        lines[n].type = type;
+        lines[n].mask = 1;
+        lines[n].p1 = p1-1;
+        lines[n].p2 = p2-1;
+        n++;
+        buf = next + 1;
+      }
+
+    // if no Points section, each read line has point coords
+    // add point coords to local Points data struct
+
+    } else {
+      for (int i = 0; i < nchunk; i++) {
+        next = strchr(buf,'\n');
+        id = ATOSURFINT(strtok(buf," \t\n\r\f"));
+        if (id < 1 || id > nline)
+          error->all(FLERR,"Invalid line ID in Lines section");
+        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else type = 1;
+        lines[n].id = id + nsurf_old;
+        lines[n].type = type;
+        lines[n].mask = 1;
+        lines[n].p1 = ipt;
+        lines[n].p2 = ipt+1;
+        n++;
+        pts[ipt].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[2] = 0.0;
+        ipt++;
+        pts[ipt].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[2] = 0.0;
+        ipt++;
+        buf = next + 1;
+      }
     }
 
     nread += nchunk;
@@ -580,25 +652,33 @@ void ReadSurf::read_lines()
 }
 
 /* ----------------------------------------------------------------------
-   read all lines, each proc only stores every 1/Pth line
+   read Lines section of file
+   each proc only stores every 1/Pth line, based on line ID
+   store in surf->mylines data struct
+   store with point coords from either 
+     local Points data struct or from line read from file
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_lines_distributed()
 {
   int i,m,n,nchunk,type,p1,p2;
-  bigint index;
+  surfint id;
   char *next,*buf;
+  double x1[2],x2[2];
+
+  // grow Surf->mylines to size needed for lines this file adds
 
   int nprocs = comm->nprocs;
   bigint nsurf = surf->nsurf;
-  nsurf_old = nsurf;
   nline_old = surf->nown;
-  nline_new = (nsurf + nline) / nprocs;
+  bigint nline_new = (nsurf + nline) / nprocs;
   if (me < nsurf+nline % nprocs) nline_new++;
+  if (nline_new > MAXSMALLINT) 
+    error->one(FLERR,"Too many distributed lines per processor");
 
-  surf->maxown = nline_new;
-  surf->grow_own();
-  Surf::Line *mylines = surf->mylines;
+  int maxown_old = surf->maxown;
+  surf->nown = surf->maxown = nline_new;
+  surf->grow_own(maxown_old);
 
   // read and broadcast one CHUNK of lines at a time
 
@@ -627,32 +707,69 @@ void ReadSurf::read_lines_distributed()
     *next = '\n';
 
     // allow for optional type in each line element
+    // different logic depending on whether points included with each line
 
-    if (nwords != 3 && nwords != 4)
-      error->all(FLERR,"Incorrect line format in surf file");
     int typeflag = 0;
-    if (nwords == 4) typeflag = 1;
 
-    for (int i = 0; i < nchunk; i++) {
-      next = strchr(buf,'\n');
+    if (npoint) {
+      if (nwords != 3 && nwords != 4)
+        error->all(FLERR,"Incorrect line format in surf file");
+      if (nwords == 4) typeflag = 1;
+    } else {
+      if (nwords != 7 && nwords != 8)
+        error->all(FLERR,"Incorrect line format in surf file");
+      if (nwords == 8) typeflag = 1;
+    }
 
-      // only add next line if I own it
+    // if Points section in file, each read line has indices into it
 
-      index = nsurf + nread + i;
+    if (npoint) {
+      for (int i = 0; i < nchunk; i++) {
+        next = strchr(buf,'\n');
+        id = ATOSURFINT(strtok(buf," \t\n\r\f"));
+        if (id < 1 || id > nline)
+          error->all(FLERR,"Invalid line ID in Lines section");
+        id += nsurf_old;
 
-      if (index % nprocs == me) {
-        strtok(buf," \t\n\r\f");
-        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        else type = 1;
-        p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || p1 == p2)
-          error->all(FLERR,"Invalid point index in line");
-        surf->add_line_own(type,pts[p1-1].x,pts[p2-1].x);
-        surf->mylines[surf->nown-1].id = static_cast<surfint> (index+1);
+        // only add this line if I own the ID
+
+        if ((id-1) % nprocs == me) {
+          if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          else type = 1;
+          p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || p1 == p2)
+            error->all(FLERR,"Invalid point index in Lines section");
+          surf->add_line_own(id,type,pts[p1-1].x,pts[p2-1].x);
+        }
+        
+        buf = next + 1;
       }
 
-      buf = next + 1;
+    // if no Points section, each read line has point coords
+
+    } else {
+      for (int i = 0; i < nchunk; i++) {
+        next = strchr(buf,'\n');
+        id = ATOSURFINT(strtok(buf," \t\n\r\f"));
+        if (id < 1 || id > nline)
+          error->all(FLERR,"Invalid line ID in Lines section");
+        id += nsurf_old;
+
+        // only add this line if I own the ID
+
+        if ((id-1) % nprocs == me) {
+          if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          else type = 1;
+          x1[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x1[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x2[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x2[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          surf->add_line_own(id,type,x1,x2);
+        }
+        
+        buf = next + 1;
+      }
     }
 
     nread += nchunk;
@@ -667,14 +784,26 @@ void ReadSurf::read_lines_distributed()
 }
 
 /* ----------------------------------------------------------------------
-   read/store all triangles
-   alter p1,p2,p3 indices to point to newest set of stored points
+   read Triangles section of file
+   store copy of all tris on each proc
+     store in local Tris data struct
+     with indices to points in local Points data struct
+   this is so that clipping can optionally be performed
+   if no Points section in file, create it here
 ------------------------------------------------------------------------- */
 
-void ReadSurf::read_tris()
+void ReadSurf::read_tris_all()
 {
-  int i,m,n,nchunk,type,p1,p2,p3;
+  int i,m,n,nchunk,type,p1,p2,p3,ipt;
+  surfint id;
   char *next,*buf;
+
+  // if no Points section create local data struct for it
+
+  if (!npoint) {
+    bigint nbytes = (bigint) 3 * ntri*sizeof(Point);
+    pts = (Point *) memory->smalloc(nbytes,"readsurf:pts");
+  }
 
   // read and broadcast one CHUNK of triangles at a time
 
@@ -702,33 +831,82 @@ void ReadSurf::read_tris()
     int nwords = input->count_words(buf);
     *next = '\n';
 
-    // allow for optional type in each tri element
+    // allow for optional type in each line element
+    // different logic depending on whether points included with each line
 
-    if (nwords != 4 && nwords != 5)
-      error->all(FLERR,"Incorrect line format in surf file");
     int typeflag = 0;
-    if (nwords == 5) typeflag = 1;
+
+    if (npoint) {
+      if (nwords != 4 && nwords != 5)
+        error->all(FLERR,"Incorrect triangle format in surf file");
+      if (nwords == 5) typeflag = 1;
+    } else {
+      if (nwords != 13 && nwords != 14)
+        error->all(FLERR,"Incorrect triangle format in surf file");
+      if (nwords == 14) typeflag = 1;
+    }
 
     n = nread;
+    ipt = n*2;
 
-    for (int i = 0; i < nchunk; i++) {
-      next = strchr(buf,'\n');
-      strtok(buf," \t\n\r\f");
-      if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      else type = 1;
-      p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-      if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || 
-	  p3 < 1 || p3 > npoint || p1 == p2 || p2 == p3)
-	error->all(FLERR,"Invalid point index in triangle");
-      tris[n].type = type;
-      tris[n].mask = 1;
-      tris[n].p1 = p1-1;
-      tris[n].p2 = p2-1;
-      tris[n].p3 = p3-1;
-      n++;
-      buf = next + 1;
+    // if Points section in file, each read line has indices into it
+
+    if (npoint) {
+      for (int i = 0; i < nchunk; i++) {
+        next = strchr(buf,'\n');
+        id = ATOSURFINT(strtok(buf," \t\n\r\f"));
+        if (id < 1 || id > ntri)
+          error->all(FLERR,"Invalid triangle ID in Triangles section");
+        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else type = 1;
+        p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || 
+            p3 < 1 || p3 > npoint || p1 == p2 || p2 == p3)
+          error->all(FLERR,"Invalid point index in Triangles section");
+        tris[n].id = id;
+        tris[n].type = type;
+        tris[n].mask = 1;
+        tris[n].p1 = p1-1;
+        tris[n].p2 = p2-1;
+        tris[n].p3 = p3-1;
+        n++;
+        buf = next + 1;
+      }
+
+    // if no Points section, each read line has point coords
+    // add point coords to local Points data struct
+
+    } else {
+      for (int i = 0; i < nchunk; i++) {
+        next = strchr(buf,'\n');
+        id = ATOSURFINT(strtok(buf," \t\n\r\f"));
+        if (id < 1 || id > ntri)
+          error->all(FLERR,"Invalid triangle ID in Triangles section");
+        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+        else type = 1;
+        tris[n].id = id;
+        tris[n].type = type;
+        tris[n].mask = 1;
+        tris[n].p1 = ipt;
+        tris[n].p2 = ipt+1;
+        tris[n].p3 = ipt+2;
+        n++;
+        pts[ipt].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        ipt++;
+        pts[ipt].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        ipt++;
+        pts[ipt].x[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        pts[ipt].x[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+        ipt++;
+        buf = next + 1;
+      }
     }
 
     nread += nchunk;
@@ -741,25 +919,33 @@ void ReadSurf::read_tris()
 }
 
 /* ----------------------------------------------------------------------
-   read all tris, each proc only stores every 1/Pth tri
+   read Triangles section of file
+   each proc only stores every 1/Pth triangle, based on triangle ID
+   store in surf->mytris data struct
+   store with point coords from either 
+     local Points data struct or from line read from file
 ------------------------------------------------------------------------- */
 
 void ReadSurf::read_tris_distributed()
 {
   int i,m,n,nchunk,type,p1,p2,p3;
-  bigint index;
+  surfint id;
   char *next,*buf;
+  double x1[3],x2[3],x3[3];
+
+  // grow Surf->mytris to size needed for tris this file adds
 
   int nprocs = comm->nprocs;
   bigint nsurf = surf->nsurf;
-  nsurf_old = nsurf;
   ntri_old = surf->nown;
-  ntri_new = (nsurf + ntri) / nprocs;
+  bigint ntri_new = (nsurf + ntri) / nprocs;
   if (me < nsurf+ntri % nprocs) ntri_new++;
+  if (ntri_new > MAXSMALLINT) 
+    error->one(FLERR,"Too many distributed triangles per processor");
 
-  surf->maxown = ntri_new;
-  surf->grow_own();
-  Surf::Tri *mytris = surf->mytris;
+  int maxown_old = surf->maxown;
+  surf->nown = surf->maxown = ntri_new;
+  surf->grow_own(maxown_old);
 
   // read and broadcast one CHUNK of tris at a time
 
@@ -787,35 +973,77 @@ void ReadSurf::read_tris_distributed()
     int nwords = input->count_words(buf);
     *next = '\n';
 
-    // allow for optional type in each tri element
+    // allow for optional type in each line element
+    // different logic depending on whether points included with each line
 
-    if (nwords != 4 && nwords != 5)
-      error->all(FLERR,"Incorrect tri format in surf file");
     int typeflag = 0;
-    if (nwords == 5) typeflag = 1;
 
-    for (int i = 0; i < nchunk; i++) {
-      next = strchr(buf,'\n');
+    if (npoint) {
+      if (nwords != 4 && nwords != 5)
+        error->all(FLERR,"Incorrect triangle format in surf file");
+      if (nwords == 5) typeflag = 1;
+    } else {
+      if (nwords != 13 && nwords != 14)
+        error->all(FLERR,"Incorrect triangle format in surf file");
+      if (nwords == 14) typeflag = 1;
+    }
 
-      // only add next tri if I own it
+    // if Points section in file, each read line has indices into it
 
-      index = nsurf + nread + i;
+    if (npoint) {
+      for (int i = 0; i < nchunk; i++) {
+        next = strchr(buf,'\n');
+        id = ATOSURFINT(strtok(buf," \t\n\r\f"));
+        if (id < 1 || id > ntri)
+          error->all(FLERR,"Invalid line ID in Triangles section");
+        id += nsurf_old;
 
-      if (index % nprocs == me) {
-        strtok(buf," \t\n\r\f");
-        if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        else type = 1;
-        p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
-        if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || 
-            p3 < 1 || p3 > npoint || p1 == p2 || p2 == p3)
-          error->all(FLERR,"Invalid point index in tri");
-        surf->add_tri_own(type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
-        surf->mytris[surf->nown-1].id = static_cast<surfint> (index+1);
+        // only add this triangle if I own the ID
+
+        if ((id-1) % nprocs == me) {
+          if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          else type = 1;
+          p1 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          p2 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          p3 = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          if (p1 < 1 || p1 > npoint || p2 < 1 || p2 > npoint || 
+              p3 < 1 || p3 > npoint || p1 == p2 || p2 == p3)
+            error->all(FLERR,"Invalid point index in Triangles section");
+          surf->add_tri_own(id,type,pts[p1-1].x,pts[p2-1].x,pts[p3-1].x);
+        }
+        
+        buf = next + 1;
       }
 
-      buf = next + 1;
+    // if no Points section, each read line has point coords
+
+    } else {
+      for (int i = 0; i < nchunk; i++) {
+        next = strchr(buf,'\n');
+        id = ATOSURFINT(strtok(buf," \t\n\r\f"));
+        if (id < 1 || id > nline)
+          error->all(FLERR,"Invalid line ID in Lines section");
+        id += nsurf_old;
+
+        // only add this triangle if I own the ID
+
+        if ((id-1) % nprocs == me) {
+          if (typeflag) type = input->inumeric(FLERR,strtok(NULL," \t\n\r\f"));
+          else type = 1;
+          x1[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x1[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x1[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x2[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x2[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x2[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x3[0] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x3[1] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          x3[2] = input->numeric(FLERR,strtok(NULL," \t\n\r\f"));
+          surf->add_tri_own(id,type,x1,x2,x3);
+        }
+        
+        buf = next + 1;
+      }
     }
 
     nread += nchunk;
@@ -835,7 +1063,7 @@ void ReadSurf::read_tris_distributed()
    store optional keyword for file output
 ------------------------------------------------------------------------- */
 
-void ReadSurf::process_args(int narg, char **arg)
+void ReadSurf::process_args(int start, int narg, char **arg)
 {
   origin[0] = origin[1] = origin[2] = 0.0;
   int grouparg = 0;
@@ -843,7 +1071,7 @@ void ReadSurf::process_args(int narg, char **arg)
   partflag = NONE;
   filearg = 0;
 
-  int iarg = 0;
+  int iarg = start;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"origin") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Invalid read_surf command");
@@ -973,9 +1201,12 @@ void ReadSurf::process_args(int narg, char **arg)
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"file") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_surf command");
+      if (iarg+3 > narg) error->all(FLERR,"Invalid read_surf command");
       filearg = iarg+1;
-      iarg += 2;
+      if (strcmp(arg[iarg+2],"yes") == 0) file_pflag = 1;
+      else if (strcmp(arg[iarg+2],"no") == 0) file_pflag = 0;
+      else error->all(FLERR,"Illegal read_surf command");
+      iarg += 3;
 
     } else error->all(FLERR,"Invalid read_surf command");
   }
@@ -1670,7 +1901,7 @@ void ReadSurf::clip3d()
 }
 
 /* ----------------------------------------------------------------------
-   add surfs from local data struct to Surfs data strucs
+   add surfs from local data struct to Surfs lines/tris data structs
    only called when distributed = 0
 ------------------------------------------------------------------------- */
 
@@ -1680,11 +1911,11 @@ void ReadSurf::add_surfs()
     bigint nsurf = surf->nsurf + nline;
     if (nsurf > MAXSMALLINT) error->all(FLERR,"Too many non-distributed surfs");
 
-    nsurf_old = surf->nsurf;
     nline_old = static_cast<int> (surf->nsurf);
     nline_new = nline_old + nline;
+    int nmax_old = surf->nmax;
     surf->nmax = nline_new;
-    surf->grow();
+    surf->grow(nmax_old);
     Surf::Line *newlines = surf->lines;
 
     int m = nline_old;
@@ -1703,11 +1934,11 @@ void ReadSurf::add_surfs()
     bigint nsurf = surf->nsurf + ntri;
     if (nsurf > MAXSMALLINT) error->all(FLERR,"Too many non-distributed surfs");
 
-    nsurf_old = surf->nsurf;
     ntri_old = static_cast<int> (surf->nsurf);
     ntri_new = ntri_old + ntri;
+    int nmax_old = surf->nmax;
     surf->nmax = ntri_new;
-    surf->grow();
+    surf->grow(nmax_old);
     Surf::Tri *newtris = surf->tris;
 
     int m = ntri_old;

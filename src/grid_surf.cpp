@@ -453,8 +453,9 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
     // copy entire rendezvous output buf into realloced Surf lines/tris
 
     surf->nlocal = surf->nghost = 0;
+    int nmax_old = surf->nmax;
     surf->nmax = surf->nlocal = nreturn2;
-    surf->grow();
+    surf->grow(nmax_old);
 
     if (dim == 2) memcpy(surf->lines,outbuf2,nreturn2*sizeof(Surf::Line));
     else memcpy(surf->tris,outbuf2,nreturn2*sizeof(Surf::Tri));

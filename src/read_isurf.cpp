@@ -27,6 +27,7 @@
 #include "grid.h"
 #include "comm.h"
 #include "input.h"
+#include "write_surf.h"
 #include "irregular.h"
 #include "geometry.h"
 #include "lookup_table.h"
@@ -112,7 +113,7 @@ void ReadISurf::command(int narg, char **arg)
 
   // process command line args
 
-  process_args(narg-6,&arg[6]);
+  process_args(6,narg,arg);
 
   // verify that grid group is a set of uniform child cells
   // must comprise a 3d contiguous block
@@ -175,6 +176,26 @@ void ReadISurf::command(int narg, char **arg)
       Surf::Line *lines = surf->lines;
       for (int i = 0; i < nsurf; i++) lines[i].mask |= sgroupbit;
     }
+  }
+
+  // write out new surf file if requested
+  // do this before further checks, in case an error occurs
+
+  if (filearg) {
+    WriteSurf *wf = new WriteSurf(sparta);
+    FILE *fp;
+    if (comm->me == 0) {
+      fp = fopen(arg[filearg],"w");
+      if (!fp) {
+	char str[128];
+	sprintf(str,"Cannot open surface file %s",arg[filearg]);
+	error->one(FLERR,str);
+      }
+    }
+    printf("FILEARG %d %d %s\n",filearg,file_pflag,arg[filearg]);
+    wf->write_file(fp,file_pflag);
+    if (me == 0) fclose(fp);
+    delete wf;
   }
 
   // output extent of implicit surfs, some may be tiny
@@ -522,12 +543,13 @@ void ReadISurf::assign_types(int n, bigint offset, int *buf)
    process command line args
 ------------------------------------------------------------------------- */
 
-void ReadISurf::process_args(int narg, char **arg)
+void ReadISurf::process_args(int start, int narg, char **arg)
 {
   sgrouparg = 0;
   typefile = NULL;
+  filearg = 0;
 
-  int iarg = 0;
+  int iarg = start;
   while (iarg < narg) {
     if (strcmp(arg[iarg],"group") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
@@ -537,6 +559,13 @@ void ReadISurf::process_args(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       typefile = arg[iarg+1];
       iarg += 2;
+    } else if (strcmp(arg[iarg],"file") == 0) {
+      if (iarg+3 > narg) error->all(FLERR,"Invalid read_isurf command");
+      filearg = iarg+1;
+      if (strcmp(arg[iarg+2],"yes") == 0) file_pflag = 1;
+      else if (strcmp(arg[iarg+2],"no") == 0) file_pflag = 0;
+      else error->all(FLERR,"Illegal read_isurf command");
+      iarg += 3;
     } else error->all(FLERR,"Invalid read_isurf command");
   }
 }

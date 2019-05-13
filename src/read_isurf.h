@@ -44,7 +44,7 @@ class ReadISurf : protected Pointers {
  protected:
   int me;
   int dimension;
-  int count,iggroup,sgrouparg;
+  int count,iggroup,sgrouparg,filearg,file_pflag;
   int nx,ny,nz;
   double thresh;
   double corner[3],xyzsize[3];
@@ -85,7 +85,7 @@ class ReadISurf : protected Pointers {
 
   MyHash *hash;
 
-  void process_args(int, char **);
+  void process_args(int, int, char **);
 
   void read_corners(char *);
   void read_types(char *);

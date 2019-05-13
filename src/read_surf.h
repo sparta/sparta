@@ -40,28 +40,31 @@ class ReadSurf : protected Pointers {
   FILE *fp;
   int compressed;
   int distributed;
-  int partflag,filearg;
+  int partflag,filearg,file_pflag;
 
   int dim;
   double origin[3];
 
   struct Point {
-    double x[3];
+    double x[3];            // point coords
   };
 
   struct Line {
+    surfint id;             // ID of line
     int type,mask;          // type and mask of the line
-    int p1,p2;              // indices of points in line segment
+    int p1,p2;              // indices of end points for line
   };
 
   struct Tri {
+    surfint id;             // ID of triangle
     int type,mask;          // type and mask of the triangle
-    int p1,p2,p3;           // indices of points in triangle
+    int p1,p2,p3;           // indices of corner points for triangle
   };
 
   Point *pts;
   Line *lines;
   Tri *tris;
+
   int npoint,nline,ntri;
   int maxpoint,maxline,maxtri;
   bigint nsurf_old;
@@ -84,12 +87,12 @@ class ReadSurf : protected Pointers {
 
   void header();
   void read_points();
-  void read_lines();
+  void read_lines_all();
   void read_lines_distributed();
-  void read_tris();
+  void read_tris_all();
   void read_tris_distributed();
 
-  void process_args(int, char **);
+  void process_args(int, int, char **);
 
   void translate(double, double, double);
   void scale(double, double, double);

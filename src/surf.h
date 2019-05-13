@@ -143,10 +143,10 @@ class Surf : protected Pointers {
   void remove_ghosts();
   void add_line(int, double *, double *);
   void add_line_copy(int, Line *);
-  void add_line_own(int, double *, double *);
+  void add_line_own(surfint, int, double *, double *);
   void add_tri(int, double *, double *, double *);
   void add_tri_copy(int, Tri *);
-  void add_tri_own(int, double *, double *, double *);
+  void add_tri_own(surfint, int, double *, double *, double *);
   void rehash();
   void setup_owned();
   void setup_bbox();
@@ -197,11 +197,12 @@ class Surf : protected Pointers {
 
   void write_restart(FILE *);
   void read_restart(FILE *);
-  virtual void grow();
-  virtual void grow_own();
+  virtual void grow(int);
+  virtual void grow_own(int);
   bigint memory_usage();
 
  protected:
+  int me,nprocs;
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
   
