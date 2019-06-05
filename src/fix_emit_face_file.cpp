@@ -292,7 +292,7 @@ int FixEmitFaceFile::create_task(int icell)
         for (j = 0; j < cells[icell].nsurf; j++) {
           n = cells[icell].csurfs[j];
           if (Geometry::
-              line_quad_face_touch(lines[n].p1,lines[n].p2,
+              line_touch_quad_face(lines[n].p1,lines[n].p2,
                                    iface,cells[icell].lo,cells[icell].hi)) {
             flag = 0;
             break;
@@ -302,7 +302,7 @@ int FixEmitFaceFile::create_task(int icell)
         for (j = 0; j < cells[icell].nsurf; j++) {
           n = cells[icell].csurfs[j];
           if (Geometry::
-              tri_hex_face_touch(tris[n].p1,tris[n].p2,tris[n].p3,
+              tri_touch_hex_face(tris[n].p1,tris[n].p2,tris[n].p3,
                                  iface,cells[icell].lo,cells[icell].hi)) {
             flag = 0;
             break;
@@ -417,7 +417,7 @@ void FixEmitFaceFile::perform_task()
 	  
           v[ndim] = beta_un*vscale[isp]*normal[ndim] + vstream[ndim];
 
-          theta = MY_PI * random->uniform();
+          theta = MY_2PI * random->uniform();
           vr = vscale[isp] * sqrt(-log(random->uniform()));
           v[pdim] = vr * sin(theta) + vstream[pdim];
           v[qdim] = vr * cos(theta) + vstream[qdim];
@@ -536,12 +536,14 @@ void FixEmitFaceFile::read_file(char *file, char *section)
       nskip = atoi(word);
       word = strtok(NULL," \t\n\r");
       nskip *= atoi(word);
+      fgets(line,MAXLINE,fp);                         // NV line
       fgets(line,MAXLINE,fp);                         // values line
       fgets(line,MAXLINE,fp);                         // imesh line
       fgets(line,MAXLINE,fp);                         // jmesh line
     } else if (strcmp(word,"NI") == 0) {
       word = strtok(NULL," \t\n\r");
       nskip = atoi(word);
+      fgets(line,MAXLINE,fp);                         // NV line
       fgets(line,MAXLINE,fp);                         // values line
       fgets(line,MAXLINE,fp);                         // imesh line
     } else error->one(FLERR,"Misformatted section in inflow file");

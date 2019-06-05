@@ -95,6 +95,15 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
 
   // loop over all particles, skip species not in mixture group
 
+  need_dup = sparta->kokkos->need_dup<DeviceType>();
+  if (particle_kk->sorted_kk && sparta->kokkos->need_atomics && !sparta->kokkos->atomic_reduction)
+    need_dup = 0;
+
+  if (need_dup)
+    dup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_tally);
+  else
+    ndup_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_tally);
+
   copymode = 1;
   if (particle_kk->sorted_kk && sparta->kokkos->need_atomics && !sparta->kokkos->atomic_reduction)
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeThermalGrid_compute_per_grid>(0,nglocal),*this);
@@ -107,6 +116,11 @@ void ComputeThermalGridKokkos::compute_per_grid_kokkos()
   DeviceType::fence();
   copymode = 0;
 
+  if (need_dup) {
+    Kokkos::Experimental::contribute(d_tally, dup_tally);
+    dup_tally = decltype(dup_tally)(); // free duplicated memory
+  }
+
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
   d_plist = DAT::t_int_2d(); // destroy reference to reduce memory use
 }
@@ -117,8 +131,10 @@ template<int NEED_ATOMICS>
 KOKKOS_INLINE_FUNCTION
 void ComputeThermalGridKokkos::operator()(TagComputeThermalGrid_compute_per_grid_atomic<NEED_ATOMICS>, const int &i) const {
 
-  // The tally array is atomic
-  Kokkos::View<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::MemoryTraits<AtomicView<NEED_ATOMICS>::value> > a_tally = d_tally;
+  // The tally array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
+
+  auto v_tally = ScatterViewHelper<NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_tally),decltype(ndup_tally)>::get(dup_tally,ndup_tally);
+  auto a_tally = v_tally.template access<AtomicDup<NEED_ATOMICS,DeviceType>::value>();
 
   const int ispecies = d_particles[i].ispecies;
   const int igroup = d_s2g(imix,ispecies);

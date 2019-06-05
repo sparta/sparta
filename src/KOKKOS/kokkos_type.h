@@ -18,6 +18,7 @@
 #include <Kokkos_DualView.hpp>
 #include <impl/Kokkos_Timer.hpp>
 #include <Kokkos_Vectorization.hpp>
+#include <Kokkos_ScatterView.hpp>
 
 #include "particle.h"
 #include "grid.h"
@@ -117,7 +118,7 @@ template<>
 struct ExecutionSpaceFromDevice<SPAHostType> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Host;
 };
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template<>
 struct ExecutionSpaceFromDevice<Kokkos::Cuda> {
   static const SPARTA_NS::ExecutionSpace space = SPARTA_NS::Device;
@@ -135,8 +136,87 @@ struct AtomicView<1> {
   enum {value = Kokkos::Atomic|Kokkos::Unmanaged};
 };
 
+// Determine memory traits for array
+// Do atomic trait when running with CUDA
+template<int NEED_ATOMICS, class DeviceType>
+struct AtomicDup {
+  enum {value = Kokkos::Experimental::ScatterNonAtomic};
+};
+
+#ifdef KOKKOS_ENABLE_CUDA
+template<>
+struct AtomicDup<1,Kokkos::Cuda> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
+#endif
+
+#ifdef SPARTA_KOKKOS_USE_ATOMICS
+
+#ifdef KOKKOS_ENABLE_OPENMP
+template<>
+struct AtomicDup<1,Kokkos::OpenMP> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
+#endif
+
+#ifdef KOKKOS_ENABLE_THREADS
+template<>
+struct AtomicDup<1,Kokkos::Threads> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
+#endif
+
+#endif
+
+
+// Determine duplication traits for array
+// Use duplication when running threaded and not using atomics
+template<int NEED_ATOMICS, class DeviceType>
+struct NeedDup {
+  enum {value = Kokkos::Experimental::ScatterNonDuplicated};
+};
+
+#ifndef SPARTA_KOKKOS_USE_ATOMICS
+
+#ifdef KOKKOS_ENABLE_OPENMP
+template<>
+struct NeedDup<1,Kokkos::OpenMP> {
+  enum {value = Kokkos::Experimental::ScatterDuplicated};
+};
+#endif
+
+#ifdef KOKKOS_ENABLE_THREADS
+template<>
+struct NeedDup<1,Kokkos::Threads> {
+  enum {value = Kokkos::Experimental::ScatterDuplicated};
+};
+#endif
+
+#endif
+
+template<int value, typename T1, typename T2>
+class ScatterViewHelper {};
+
+template<typename T1, typename T2>
+class ScatterViewHelper<Kokkos::Experimental::ScatterDuplicated,T1,T2> {
+public:
+  KOKKOS_INLINE_FUNCTION
+  static T1 get(const T1 &dup, const T2 &nondup) {
+    return dup;
+  }
+};
+
+template<typename T1, typename T2>
+class ScatterViewHelper<Kokkos::Experimental::ScatterNonDuplicated,T1,T2> {
+public:
+  KOKKOS_INLINE_FUNCTION
+  static T2 get(const T1 &dup, const T2 &nondup) {
+    return nondup;
+  }
+};
+
+
 // define precision
-// handle global precision, force, energy, positions, kspace separately
 
 #ifndef PRECISION
 #define PRECISION 2
@@ -567,7 +647,7 @@ typedef tdual_float_1d_strided::t_dev t_float_1d_strided;
 typedef tdual_float_1d_strided::t_dev_um t_float_1d_strided_um;
 };
 
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template <>
 struct ArrayTypes<SPAHostType> {
 
@@ -856,11 +936,11 @@ template<class ViewType>
 void memset_kokkos (ViewType &view) {
   static MemsetZeroFunctor<typename ViewType::execution_space> f;
   f.ptr = view.data();
-  Kokkos::parallel_for(view.capacity()*sizeof(typename ViewType::value_type)/4, f);
+  Kokkos::parallel_for(view.scan()*sizeof(typename ViewType::value_type)/4, f);
   ViewType::execution_space::fence();
 }
 
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 #define SPARTA_LAMBDA [=] __device__
 #else
 #define SPARTA_LAMBDA [=]

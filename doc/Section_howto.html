@@ -26,7 +26,8 @@ SPARTA works.
 6.9 <A HREF = "#howto_9">Details of surfaces in SPARTA</A><BR>
 6.10 <A HREF = "#howto_10">Restarting a simulation</A><BR>
 6.11 <A HREF = "#howto_11">Using the ambipolar approximation</A><BR>
-6.12 <A HREF = "#howto_12">Using multiple vibrational energy levels</A> <BR>
+6.12 <A HREF = "#howto_12">Using multiple vibrational energy levels</A><BR>
+6.13 <A HREF = "#howto_13">Surface elements: explicit, implicit, distributed</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -1124,5 +1125,66 @@ species.
 <P>The <A HREF = "read_restart.html">read_restart</A> doc page explains how to restart
 simulations where a fix like <A HREF = "fix_vibmode.html">fix vibmode</A> has been
 used to store extra per-particle properties.
+</P>
+<HR>
+
+<A NAME = "howto_13"></A><H4>6.13 Surface elements: explicit, implicit, distributed 
+</H4>
+<P>SPARTA can work with two kinds of surface elements: explicit and
+implicit.  Explicit surfaces are lines (2d) or triangles (3d) defined
+in surface data files read by the <A HREF = "read_surf.html">read_surf</A> command.
+An individual element can be any size; a single surface element can
+intersect many grid cells.  Implicit surfaces are lines (2d) or
+triangles (3d) defined by grid corner point data files read by the
+<A HREF = "read_isurf.html">read_isurf</A> command.  The corner point values define
+lines or triangles that are wholly contained with single grid cells.
+</P>
+<P>Note that you cannot mix explicit and implicit surfaces in the same
+simulation.
+</P>
+<P>The data and attributes of explicit surface elements can be stored in
+one of two ways.  Each processor stores a copy of all the elements,
+which is the default.  Memory-wise, this is fine for most models.  The
+other option is distributed, where each processor only stores copies
+of surface elements assigned to grid cells it owns or has a ghost copy
+of.  For models with huge numbers of surface elements, distributing
+them will use much less memory per processor.  Note that a surface
+element requires about 100 bytes of storage, so storing a million
+requires about 100 MBytes.
+</P>
+<P>Implicit surfaces are always stored in a distributed fashion.  Each
+processor only stores a copy of surface elements assigned to grid
+cells it owns or has a ghost copy of.  Note that 3d implicit surfs are
+not yet fully implemented.  Specifically, the
+<A HREF = "read_isurf.html">read_isurf</A> command will not yet read and create
+them.
+</P>
+<P>The <A HREF = "global.html">global surfs</A> command has options for explicit versus
+implicit, and distributed versus non-distributed.
+</P>
+<P>The following surface related commands work with either explict or
+implicit surfaces, whether they are distributed or not.
+</P>
+<UL><LI><A HREF = "dump.html">dump surf</A>
+<LI><A HREF = "dump_image.html">dump image</A>
+<LI><A HREF = "group.html">group surf</A>
+<LI><A HREF = "surf_modify.html">surf_modify</A> 
+</UL>
+<P>Because distributed surfaces (explicit or implicit) are new to SPARTA,
+these commands do not yet support them:
+</P>
+<UL><LI><A HREF = "write_surf.html">write_surf</A>
+<LI><A HREF = "move_surf.html">move_surf</A>
+<LI><A HREF = "remove_surf.html">remove_surf</A>
+<LI><A HREF = "fix_move_surf.html">fix move/surf</A>
+<LI><A HREF = "fix_emit_surf.html">fix emit/surf</A>
+<LI><A HREF = "read_surf.html">read_surf clip option</A>
+<LI><A HREF = "adapt_grid.html">adapt_grid coarsen</A>
+<LI><A HREF = "fix_adapt_grid.html">fix adapt/grid coarsen</A> 
+</UL>
+<P>Also, the <A HREF = "compute_surf.html">compute_surf</A> command only works for
+explicit surfaces (distributed or not).  A new, similar compute needs
+to be implemented to work with implicit surfaces.  It will likely be
+called the <A HREF = "compute_isurf_grid.html">compute isurf/grid</A> command.
 </P>
 </HTML>

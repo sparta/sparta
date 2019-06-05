@@ -202,7 +202,7 @@ typically in this order:
 
 "create_box"_create_box.html for the simulation box
 "create_grid"_create_grid.html or "read_grid"_read_grid.html for grid cells
-"read_surf"_read_surf.html for surfaces
+"read_surf"_read_surf.html or "read_isurf"_read_isurf.html for surfaces
 "species"_species.html for particle species properties
 "create_particles"_create_particles.html for particles :ul
 
@@ -256,9 +256,9 @@ Problem definition:
 "boundary"_boundary.html, "bound_modify"_bound_modify.html,
 "create_box"_create_box.html, "create_grid"_create_grid.html,
 "create_particles"_create_particles.html, "mixture"_mixture.html,
-"read_grid"_read_grid.html, "read_particles"_read_particles.html,
-"read_surf"_read_surf.html, "read_restart"_read_restart.html,
-"species"_species.html,
+"read_grid"_read_grid.html, "read_isurf"_read_isurf.html,
+"read_particles"_read_particles.html, "read_surf"_read_surf.html,
+"read_restart"_read_restart.html, "species"_species.html,
 
 Settings:
 
@@ -334,6 +334,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "react"_react.html,
 "react_modify"_react_modify.html,
 "read_grid"_read_grid.html,
+"read_isurf"_read_isurf.html,
 "read_particles"_read_particles.html,
 "read_restart"_read_restart.html,
 "read_surf"_read_surf.html,

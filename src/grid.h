@@ -19,6 +19,7 @@
 #include "pointers.h"
 #include "hash3.h"
 #include "my_page.h"
+#include "surf.h"
 
 namespace SPARTA_NS {
 
@@ -33,7 +34,7 @@ class Grid : protected Pointers {
   bigint nunsplit;      // global count of unsplit cells
   int nsplit;           // global count of split cells
   int nsub;             // global count of split sub cells
-  int maxsurfpercell;   // max surf elements in one child cell
+
   int maxlevel;         // max level of any child cell in grid, 0 = root
   int uniform;          // 1 if all child cells are at same level, else 0
   int unx,uny,unz;      // if uniform, effective global Nx,Ny,Nz of finest grid
@@ -41,10 +42,17 @@ class Grid : protected Pointers {
   double cell_epsilon;  // half of smallest cellside of any cell in any dim
   int cellweightflag;   // 0/1+ for no/yes usage of cellwise fnum weighting
 
+  int surfgrid_algorithm;  // algorithm for overlap of surfs & grid cells
+  int maxsurfpercell;   // max surf elements in one child cell
+  int maxcellpersurf;   // max cells overlapping one surf element
+  int maxsplitpercell;  // max split cells in one child cell
+  
   int ngroup;               // # of defined groups
   char **gnames;            // name of each group
   int *bitmask;             // one-bit mask for each group
   int *inversemask;         // inverse mask for each group
+
+  double tmap,trvous1,trvous2,tsplit;    // timing breakdown of grid2surf()
 
   int copy,copymode;    // 1 if copy of class (prevents deallocation of
                         //  base class when child copy is destroyed)
@@ -64,12 +72,13 @@ class Grid : protected Pointers {
 
   // list data structs
 
-  MyPage<int> *csurfs;        // lists of surf indices for
+  MyPage<surfint> *csurfs;    // lists of surf indices for
                               // owned + ghost child cells with surfs
   MyPage<int> *csplits;       // lists of sub cell offsets for
                               // owned + ghost split info
   MyPage<int> *csubs;         // lists of sub cell indices for
                               // owned + ghost split info
+  MyPage<cellint> *cpsurf;    // lists of cell IDs that overlap with my surfs
 
   // owned or ghost child cell
   // includes unsplit cells, split cells, sub cells in any order
@@ -101,7 +110,8 @@ class Grid : protected Pointers {
     double lo[3],hi[3];       // opposite corner pts of cell
     int nsurf;                // # of surf elements in cell
                               // -1 = empty ghost cell
-    int *csurfs;              // indices of surf elements in cell
+    surfint *csurfs;          // indices of surf elements in cell
+                              // sometimes global surf IDs are stored
                               // for sub cells, lo/hi/nsurf/csurfs
                               //   are same as in split cell containing them
 
@@ -214,12 +224,14 @@ class Grid : protected Pointers {
   void group(int, char **);
   int add_group(const char *);
   int find_group(const char *);
+  int check_uniform_group(int, int *, double *, double *);
 
   virtual void grow_pcells(int);
 
   void write_restart(FILE *);
   void read_restart(FILE *);
   int size_restart();
+  int size_restart(int);
   int pack_restart(char *);
   int unpack_restart(char *);
 
@@ -240,12 +252,14 @@ class Grid : protected Pointers {
   // grid_surf.cpp
 
   void surf2grid(int, int outflag=1);
+  void surf2grid_implicit(int, int outflag=1);
   void surf2grid_one(int, int, int, int, class Cut3d *, class Cut2d *);
   void clear_surf();
   void clear_surf_restart();
   void combine_split_cell_particles(int, int);
   void assign_split_cell_particles(int);
   void allocate_surf_arrays();
+  void allocate_cell_arrays();
   int *csubs_request(int);
 
   // grid_id.cpp
@@ -288,6 +302,9 @@ class Grid : protected Pointers {
   int neighmask[6];        // bit-masks for each face in nmask
   int neighshift[6];       // bit-shifts for each face in nmask
 
+  class Cut2d *cut2d;
+  class Cut3d *cut3d;
+
   // connection between one of my cells and a neighbor cell on another proc
 
   struct Connect {
@@ -303,12 +320,56 @@ class Grid : protected Pointers {
     int proc;              // proc that owns it
   };
 
+  // data structs for rendezvous comm
+
+  struct InRvous {
+    int proc;
+    cellint cellID;
+    surfint surfID;
+  };
+
+  struct OutRvous {
+    cellint cellID;
+    surfint surfID;
+  };
+
+  struct InRvous2 {
+    int proc;
+    surfint surfID;
+  };
+
+  struct OutRvous2line {
+    Surf::Line line;
+  };
+
+  struct OutRvous2tri {
+    Surf::Tri tri;
+  };
+
+#ifdef SPARTA_MAP
+    typedef std::map<surfint,int> MySurfHash;
+    typedef std::map<surfint,int>::iterator MyIterator;
+#elif SPARTA_UNORDERED_MAP
+    typedef std::unordered_map<surfint,int> MySurfHash;
+    typedef std::unordered_map<surfint,int>::iterator MyIterator;
+#else
+    typedef std::tr1::unordered_map<surfint,int> MySurfHash;
+    typedef std::tr1::unordered_map<surfint,int>::iterator MyIterator;
+#endif
+
   // Particle class values used for packing/unpacking particles in grid comm
 
   int ncustom;
   int nbytes_particle,nbytes_custom,nbytes_total;
 
   // private methods
+
+  void surf2grid_cell_algorithm(int);
+  void surf2grid_surf_algorithm(int, int);
+  void surf2grid_split(int, int);
+  int find_overlaps(int, cellint *);
+  void recurse2d(int, double *, double *, int, int &, cellint *);
+  void recurse3d(int, double *, double *, int, int &, cellint *);
 
   void acquire_ghosts_all();
   void acquire_ghosts_near();
@@ -331,6 +392,11 @@ class Grid : protected Pointers {
 
   static Grid *gptr;
   static void unpack_ghosts(int, char *);
+
+  // callback functions for rendezvous communication
+
+  static int rendezvous_surflist(int, char *, int &, int *&, char *&, void *);
+  static int rendezvous_surfrequest(int, char *, int &, int *&, char *&, void *);
 };
 
 }
