@@ -1,4 +1,4 @@
-# 2d flow around porous media
+# 2d flow around a circle
 
 seed	    	    12345
 dimension   	    2
@@ -6,8 +6,8 @@ global              gridcut 0.0 comm/sort yes
 
 boundary	    o r p
 
-create_box  	    0 150 0 150 -0.5 0.5
-create_grid 	    150 150 1 
+create_box  	    0 10 0 10 -0.5 0.5
+create_grid 	    20 20 1 
 balance_grid        rcb cell
 
 global		    nrho 1.0 fnum 0.001
@@ -15,26 +15,29 @@ global		    nrho 1.0 fnum 0.001
 species		    air.species N O
 mixture		    air N O vstream 100.0 0 0 
 
-region              inner block 25.5 74.5 25.5 124.5 INF INF
-group               inner grid region inner one
-
-global              surfs implicit
-read_isurf          inner 50 100 1 binary.51x101 180.5
-
+read_surf           data.circle
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
 
 collide             vss air air.vss
 
+compute             1 grid all species n u v w usq vsq wsq
+compute             2 surf all species n nwt mflux fx fx fz press ke
+fix                 1 ave/grid all 1 100 100 c_1[*]
+fix                 2 ave/surf all 1 100 100 c_2[*]
+dump                1 grid all 100 tmp_flow.* id f_1[*]
+dump                2 surf all 100 tmp_surf.* id f_2[*]
+
 fix		    in emit/face air xlo # subsonic 0.1 NULL
+
+write_grid          parent data.grid
 
 timestep 	    0.0001
 
 #dump                2 image all 50 image.*.ppm type type pdiam 0.1 &
-#                    surf proc 0.004 size 1024 1024 zoom 1.75
+#                    surf proc 0.01 size 512 512 zoom 1.75 &
+#                    gline yes 0.005 
 #dump_modify	    2 pad 4
-
-#dump                3 surf all 1000 tmp.dump id v1x v1y v2x v2y
 
 stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck

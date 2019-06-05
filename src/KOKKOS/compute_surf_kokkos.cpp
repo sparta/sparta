@@ -149,7 +149,7 @@ void ComputeSurfKokkos::post_surf_tally()
    return ptr to norm vector used by column N
 ------------------------------------------------------------------------- */
 
-int ComputeSurfKokkos::surfinfo(int *&locptr)
+int ComputeSurfKokkos::tallyinfo(int *&locptr)
 {
   k_tally2surf.modify<DeviceType>();
   k_tally2surf.sync<SPAHostType>();

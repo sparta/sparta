@@ -701,7 +701,7 @@ rendezvous_irregular(int n, char *inbuf, int insize, int inorder, int *procs,
                                                "rendezvous:inbuf");
   irregular->exchange_uniform(inbuf,insize,inbuf_rvous);
 
-  bigint irregular1_bytes = 0; //irregular->irregular_bytes;
+  bigint irregular1_bytes = 0;   // irregular->irregular_bytes;
   delete irregular;
 
   // peform rendezvous computation via callback()
@@ -730,7 +730,7 @@ rendezvous_irregular(int n, char *inbuf, int insize, int inorder, int *procs,
                                     "rendezvous:outbuf");
   irregular->exchange_uniform(outbuf_rvous,outsize,outbuf);
 
-  bigint irregular2_bytes = 0; //irregular->irregular_bytes;
+  bigint irregular2_bytes = 0;   // irregular->irregular_bytes;
   delete irregular;
 
   memory->destroy(procs_rvous);
@@ -740,76 +740,7 @@ rendezvous_irregular(int n, char *inbuf, int insize, int inorder, int *procs,
 
   if (!statflag) return nout;
 
-  // memory info for caller and rendezvous decompositions
-
-  bigint size_in_all,size_in_max,size_in_min;
-  bigint size_out_all,size_out_max,size_out_min;
-  bigint size_inrvous_all,size_inrvous_max,size_inrvous_min;
-  bigint size_outrvous_all,size_outrvous_max,size_outrvous_min;
-
-  bigint size = (bigint) n*insize;
-  MPI_Allreduce(&size,&size_in_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&size,&size_in_max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
-  MPI_Allreduce(&size,&size_in_min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
-
-  size = (bigint) nout*outsize;
-  MPI_Allreduce(&size,&size_out_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&size,&size_out_max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
-  MPI_Allreduce(&size,&size_out_min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
-
-  size = (bigint) nrvous*insize;
-  MPI_Allreduce(&size,&size_inrvous_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&size,&size_inrvous_max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
-  MPI_Allreduce(&size,&size_inrvous_min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
-
-  size = (bigint) nrvous_out*insize;
-  MPI_Allreduce(&size,&size_outrvous_all,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-  MPI_Allreduce(&size,&size_outrvous_max,1,MPI_SPARTA_BIGINT,MPI_MAX,world);
-  MPI_Allreduce(&size,&size_outrvous_min,1,MPI_SPARTA_BIGINT,MPI_MIN,world);
-
-  int mbytes = 1024*1024;
-
-  if (me == 0) {
-    if (screen) {
-      fprintf(screen,"Rendezvous balance and memory info:\n");
-      fprintf(screen,"  input datum count "
-              "(tot,ave,max,min): " BIGINT_FORMAT " %g "
-              BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-              size_in_all/insize,1.0*size_in_all/nprocs/insize,
-              size_in_max/insize,size_in_min/insize);
-      fprintf(screen,"  input data (MB) "
-              "(tot,ave,max,min): %g %g %g %g\n",
-              1.0*size_in_all/mbytes,1.0*size_in_all/nprocs/mbytes,
-              1.0*size_in_max/mbytes,1.0*size_in_min/mbytes);
-      fprintf(screen,"  output datum count "
-              "(tot,ave,max,min): " BIGINT_FORMAT " %g "
-              BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-              size_out_all/outsize,1.0*size_out_all/nprocs/outsize,
-              size_out_max/outsize,size_out_min/outsize);
-      fprintf(screen,"  output data (MB) "
-              "(tot,ave,max,min): %g %g %g %g\n",
-              1.0*size_out_all/mbytes,1.0*size_out_all/nprocs/mbytes,
-              1.0*size_out_max/mbytes,1.0*size_out_min/mbytes);
-      fprintf(screen,"  input rvous datum count "
-              "(tot,ave,max,min): " BIGINT_FORMAT " %g "
-              BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-              size_inrvous_all/insize,1.0*size_inrvous_all/nprocs/insize,
-              size_inrvous_max/insize,size_inrvous_min/insize);
-      fprintf(screen,"  input rvous data (MB) "
-              "(tot,ave,max,min): %g %g %g %g\n",
-              1.0*size_inrvous_all/mbytes,1.0*size_inrvous_all/nprocs/mbytes,
-              1.0*size_inrvous_max/mbytes,1.0*size_inrvous_min/mbytes);
-      fprintf(screen,"  output rvous datum count "
-              "(tot,ave,max,min): " BIGINT_FORMAT " %g "
-              BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-              size_outrvous_all/outsize,1.0*size_outrvous_all/nprocs/outsize,
-              size_outrvous_max/outsize,size_outrvous_min/outsize);
-      fprintf(screen,"  output rvous data (MB) "
-              "(tot,ave,max,min): %g %g %g %g\n",
-              1.0*size_outrvous_all/mbytes,1.0*size_outrvous_all/nprocs/mbytes,
-              1.0*size_outrvous_max/mbytes,1.0*size_outrvous_min/mbytes);
-    }
-  }
+  rendezvous_stats(n,insize,nout,outsize,nrvous,nrvous_out);
 
   /*
   rvous_bytes = 0;
@@ -1027,8 +958,29 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
 
   if (!statflag) return nout;
 
-  // memory info for caller and rendezvous decompositions
+  rendezvous_stats(n,insize,nout,outsize,nrvous,nrvous_out);
 
+  /*
+  rvous_bytes = 0;
+  rvous_bytes += n*insize;                                // inbuf
+  rvous_bytes += nout*outsize;                            // outbuf
+  rvous_bytes += nrvous*insize;                           // inbuf_rvous
+  rvous_bytes += nrvous_out*outsize;                      // outbuf_rvous
+  rvous_bytes += nrvous_out*sizeof(int);                  // procs_rvous
+  rvous_bytes += 4*nprocs*sizeof(int);                    // all2all vectors
+  rvous_bytes += MAX(all2all1_bytes,all2all2_bytes);      // reorder ops
+  */
+
+  return nout;
+}
+
+/* ----------------------------------------------------------------------
+   memory info for caller and rendezvous decompositions
+------------------------------------------------------------------------- */
+
+void Comm::rendezvous_stats(int n, int insize, int nout, int outsize, 
+                            int nrvous, int nrvous_out)
+{
   bigint size_in_all,size_in_max,size_in_min;
   bigint size_out_all,size_out_max,size_out_min;
   bigint size_inrvous_all,size_inrvous_max,size_inrvous_min;
@@ -1097,17 +1049,4 @@ rendezvous_all2all(int n, char *inbuf, int insize, int inorder, int *procs,
               1.0*size_outrvous_max/mbytes,1.0*size_outrvous_min/mbytes);
     }
   }
-
-  /*
-  rvous_bytes = 0;
-  rvous_bytes += n*insize;                                // inbuf
-  rvous_bytes += nout*outsize;                            // outbuf
-  rvous_bytes += nrvous*insize;                           // inbuf_rvous
-  rvous_bytes += nrvous_out*outsize;                      // outbuf_rvous
-  rvous_bytes += nrvous_out*sizeof(int);                  // procs_rvous
-  rvous_bytes += 4*nprocs*sizeof(int);                    // all2all vectors
-  rvous_bytes += MAX(all2all1_bytes,all2all2_bytes);      // reorder ops
-  */
-
-  return nout;
 }

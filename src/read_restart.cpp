@@ -129,8 +129,8 @@ void ReadRestart::command(int narg, char **arg)
   int incompatible = version_numeric();
 
   // read header info which creates simulation box
-  // also defines particle params: species, mixture, custom attributes
-  // also defines grid, surfs
+  // also read particle params: species, mixture, custom attributes
+  // also read parent grid and surfs
 
   header(incompatible);
 
@@ -328,7 +328,8 @@ void ReadRestart::command(int narg, char **arg)
   // sends chunks round-robin to other procs in its cluster
   // each proc keeps all cells/particles in its perproc chunks in file
 
-  else if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal)) {
+  else if (update->global_mem_limit > 0 || 
+           (update->mem_limit_grid_flag && !grid->nlocal)) {
   
   // what to do if split particle??
 
@@ -419,9 +420,12 @@ void ReadRestart::command(int narg, char **arg)
         }
 
         // number of particles per pass
+
         step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
 
-        npasses = ceil((double)particle_nlocal/step_size)+1; // extra pass for grid
+        // extra pass for grid
+
+        npasses = ceil((double)particle_nlocal/step_size)+1; 
 
         if (i % nclusterprocs) {
           iproc = me + (i % nclusterprocs);
@@ -651,11 +655,15 @@ void ReadRestart::command(int narg, char **arg)
 
   if (me == 0 && surf->exist) {
     if (domain->dimension == 2) {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf lines\n",surf->nsurf);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf lines\n",surf->nsurf);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf lines\n",
+                          surf->nsurf);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf lines\n",
+                           surf->nsurf);
     } else {
-      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf triangles\n",surf->nsurf);
-      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf triangles\n",surf->nsurf);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf triangles\n",
+                          surf->nsurf);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf triangles\n",
+                           surf->nsurf);
     }
   }
 
@@ -1045,9 +1053,10 @@ void ReadRestart::create_child_cells(int skipflag)
     id = ids[i];
     nsplit = nsplits[i];
 
-    // NOTE: need more doc of this method
-
     // unsplit or split cell
+    // for skipflag, add only if I own this cell
+    // add as child cell to grid->cells
+    // if split cell, also add split cell to sinfo
     // add unsplit/split cells (not sub cells) to Grid::hash as create them
 
     if (nsplit > 0) {
@@ -1069,6 +1078,8 @@ void ReadRestart::create_child_cells(int skipflag)
 
     // sub cell
     // for skipflag, add only if I also own the corresponding split cell
+    // add as sub cell to grid->cells
+    // set nsplit for new sub cell and csubs in owning cell's sinfo
 
     } else {
       if (skipflag && hash->find(id) == hash->end()) continue;

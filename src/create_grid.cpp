@@ -277,12 +277,18 @@ void CreateGrid::command(int narg, char **arg)
             ix = m % nx;
             iy = (m / nx) % ny;
             iz = m / ((cellint) nx*ny);
-            if (order == XYZ) nth = (cellint) iz*nx*ny + (cellint) iy*nx + ix;
-            else if (order == XZY) nth = (cellint) iy*nx*nz + (cellint) iz*nx + ix;
-            else if (order == YXZ) nth = (cellint) iz*ny*nx + (cellint) ix*ny + iy;
-            else if (order == YZX) nth = (cellint) ix*ny*nz + (cellint) iz*ny + iy;
-            else if (order == ZXY) nth = (cellint) iy*nz*nx + (cellint) ix*nz + iz;
-            else if (order == ZYX) nth = (cellint) ix*nz*ny + (cellint) iy*nz + iz;
+            if (order == XYZ) 
+              nth = (cellint) iz*nx*ny + (cellint) iy*nx + ix;
+            else if (order == XZY) 
+              nth = (cellint) iy*nx*nz + (cellint) iz*nx + ix;
+            else if (order == YXZ) 
+              nth = (cellint) iz*ny*nx + (cellint) ix*ny + iy;
+            else if (order == YZX) 
+              nth = (cellint) ix*ny*nz + (cellint) iz*ny + iy;
+            else if (order == ZXY) 
+              nth = (cellint) iy*nz*nx + (cellint) ix*nz + iz;
+            else if (order == ZYX) 
+              nth = (cellint) ix*nz*ny + (cellint) iy*nz + iz;
             nth++;
             if (bstyle == STRIDE) proc = nth % nprocs;
             else proc = static_cast<int> (1.0*nth/ntotal * nprocs);

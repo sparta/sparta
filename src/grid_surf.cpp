@@ -274,7 +274,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   memory->create(proclist,ncount,"surf2grid2:proclist");
   InRvous *inbuf = (InRvous *) memory->smalloc((bigint) ncount*sizeof(InRvous),
                                                "surf2grid:inbuf");
-    
+
   // setup input buf to rendezvous comm
   // input datums = pairs of surfIDs and cellIDs
   // owning proc for each datum = random hash of cellID
@@ -1011,7 +1011,7 @@ void Grid::allocate_surf_arrays()
 
   csurfs = new MyPage<surfint>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
   csplits = new MyPage<int>(maxsurfpercell,MAX(100*maxsurfpercell,1024));
-  csubs = new MyPage<int>(maxsplitpercell,128);
+  csubs = new MyPage<int>(maxsplitpercell,MAX(100*maxsplitpercell,128));
 }
 
 void Grid::allocate_cell_arrays()
@@ -1028,7 +1028,7 @@ void Grid::allocate_cell_arrays()
 int *Grid::csubs_request(int n)
 {
   int *ptr = csubs->vget();
-  cpsurf->vgot(n);
+  csubs->vgot(n);
   return ptr;
 }
 
@@ -1230,8 +1230,8 @@ int Grid::find_overlaps(int isurf, cellint *list)
 void Grid::recurse2d(int iline, double *slo, double *shi, int iparent, 
                      int &n, cellint *list)
 {
-  int ix,iy,ichild,newparent,index,parentflag,overlap;
-  cellint idchild;
+  int ix,iy,newparent,index,parentflag,overlap;
+  cellint ichild,idchild;
   double celledge;
   double newslo[2],newshi[2];
   double clo[3],chi[3];
@@ -1291,8 +1291,8 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
 
   for (iy = jlo; iy <= jhi; iy++) {
     for (ix = ilo; ix <= ihi; ix++) {
-      ichild = iy*nx + ix + 1;
-      idchild = p->id | ((cellint) ichild << p->nbits);
+      ichild = (cellint) iy*nx + ix + 1;
+      idchild = p->id | (ichild << p->nbits);
       grid->id_child_lohi(iparent,ichild,clo,chi);
 
       if (hash->find(idchild) == hash->end()) parentflag = 0;
@@ -1330,8 +1330,8 @@ void Grid::recurse2d(int iline, double *slo, double *shi, int iparent,
 void Grid::recurse3d(int itri, double *slo, double *shi, int iparent, 
                      int &n, cellint *list)
 {
-  int ix,iy,iz,ichild,newparent,index,parentflag,overlap;
-  cellint idchild;
+  int ix,iy,iz,newparent,index,parentflag,overlap;
+  cellint ichild,idchild;
   double celledge;
   double newslo[3],newshi[3];
   double clo[3],chi[3];
@@ -1407,7 +1407,7 @@ void Grid::recurse3d(int itri, double *slo, double *shi, int iparent,
     for (iy = jlo; iy <= jhi; iy++) {
       for (ix = ilo; ix <= ihi; ix++) {
         ichild = (cellint) iz*nx*ny + (cellint) iy*nx + ix + 1;
-        idchild = p->id | ((cellint) ichild << p->nbits);
+        idchild = p->id | (ichild << p->nbits);
         grid->id_child_lohi(iparent,ichild,clo,chi);
 
         if (hash->find(idchild) == hash->end()) parentflag = 0;
@@ -1594,9 +1594,9 @@ void Grid::flow_stats()
 
 /* ----------------------------------------------------------------------
    compute flow volume for entire box, using list of surfs
-   volume for one surf is projection to lower z face
+   volume for one surf is projection to lower z face (3d) or y face (2d)
    NOTE: this does not work if any surfs are clipped to zlo or zhi faces in 3d
-         this does not work if any surfs are clipped to ylo or yhi faces in 3d
+         this does not work if any surfs are clipped to ylo or yhi faces in 2d
          need to add contribution due to closing surfs on those faces
          fairly easy to add in 2d, not so easy in 3d
 ------------------------------------------------------------------------- */

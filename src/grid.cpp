@@ -355,7 +355,6 @@ void Grid::setup_owned()
   MPI_Allreduce(&one,&nunsplit,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&nsplitlocal,&nsplit,1,MPI_INT,MPI_SUM,world);
   MPI_Allreduce(&nsublocal,&nsub,1,MPI_INT,MPI_SUM,world);
-  one = nunsplitlocal = nlocal - nsplitlocal - nsublocal;
 
   // set cell_epsilon to 1/2 the smallest dimension of any grid cell
 
@@ -619,7 +618,7 @@ void Grid::acquire_ghosts_near()
   memory->destroy(list);
   delete [] boxall;
 
-  // perform irregular communication of list on ghost cells
+  // perform irregular communication of list of ghost cells
 
   Irregular *irregular = new Irregular(sparta);
   int recvsize;
@@ -1312,9 +1311,9 @@ void Grid::set_inout()
                 //setnew[nsetnew++] = jcell;
               } else {
                 if (jtype != marktype) {
-                  printf("ICELL1 %d id %d iface %d jcell %d id %d "
-                         "marktype %d jtype %d\n",
-                         icell,cells[icell].id,iface,jcell,cells[jcell].id,
+                  printf("CELL1 proc %d icell %d id " CELLINT_FORMAT " iface %d "
+                         "jcell %d id " CELLINT_FORMAT " marktype %d jtype %d\n",
+                         me,icell,cells[icell].id,iface,jcell,cells[jcell].id,
                          marktype,jtype);
                   error->one(FLERR,"Cell type mis-match when marking on self");
                 }
@@ -1393,9 +1392,11 @@ void Grid::set_inout()
                   //setnew[nsetnew++] = jcell;
                 } else {
                   if (jtype != marktype) {
-                    printf("ICELL2 %d id %d iface %d jcell %d id %d "
-                           "marktype %d jtype %d\n",
-                           icell,cells[icell].id,iface,jcell,cells[jcell].id,
+                    printf("CELL2 proc %d icell %d id " CELLINT_FORMAT 
+                           " iface %d "
+                           "jcell %d id " CELLINT_FORMAT " marktype %d "
+                           "jtype %d\n",
+                           me,icell,cells[icell].id,iface,jcell,cells[jcell].id,
                            marktype,jtype);
                     error->one(FLERR,
                                "Cell type mis-match when marking on self");
@@ -1434,7 +1435,7 @@ void Grid::set_inout()
         setnew = set2;
       }
     }
-    
+
     // if no proc has info to communicate, then done iterating
 
     int anysend;
@@ -1489,8 +1490,9 @@ void Grid::set_inout()
         //set[nset++] = jcell;
       } else {
         if (marktype != jtype) {
-          printf("JCELL3 %d id %d marktype %d jtype %d\n",
-                 jcell,cells[jcell].id,marktype,jtype);
+          printf("CELL3 me %d jcell %d id " CELLINT_FORMAT 
+                 " marktype %d jtype %d\n",
+                 me,jcell,cells[jcell].id,marktype,jtype);
           error->one(FLERR,"Cell type mis-match when marking on neigh proc");
         }
       }
@@ -2056,15 +2058,20 @@ void Grid::group(int narg, char **arg)
 
   // print stats for changed group
 
-  int n = 0;
+  bigint n = 0;
   for (i = 0; i < nlocal; i++) 
     if (cinfo[i].mask & bit) n++;
 
+  bigint nall;
+  MPI_Allreduce(&n,&nall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
   if (comm->me == 0) {
     if (screen) 
-      fprintf(screen,"%d grid cells in group %s\n",n,gnames[igroup]);
+      fprintf(screen,BIGINT_FORMAT " grid cells in group %s\n",
+              nall,gnames[igroup]);
     if (logfile)
-      fprintf(logfile,"%d grid cells in group %s\n",n,gnames[igroup]);
+      fprintf(logfile,BIGINT_FORMAT " grid cells in group %s\n",
+              nall,gnames[igroup]);
   }
 }
 
@@ -2261,7 +2268,7 @@ void Grid::read_restart(FILE *fp)
 
 /* ----------------------------------------------------------------------
    return size of child grid restart info for this proc
-   count of all owned cells
+   using count of all owned cells
   // NOTE: worry about N overflowing int, and in IROUNDUP ???
 ------------------------------------------------------------------------- */
 
@@ -2277,8 +2284,8 @@ int Grid::size_restart()
 }
 
 /* ----------------------------------------------------------------------
-   return size of child grid restart info using
-     arbitrary count of all owned cells
+   return size of child grid restart info
+   using nlocal_restart count of all owned cells
 ------------------------------------------------------------------------- */
 
 int Grid::size_restart(int nlocal_restart)
