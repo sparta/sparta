@@ -310,8 +310,6 @@ void WriteRestart::write(char *file)
     MPI_Request request;
     
     if (filewriter) {
-    
-    
       for (int iproc = 0; iproc < nclusterprocs; iproc++) {
         if (iproc) {
           MPI_Irecv(buf,max_size,MPI_CHAR,me+iproc,0,world,&request);
@@ -323,22 +321,16 @@ void WriteRestart::write(char *file)
         write_char_vec(PERPROC,recv_size,buf);
       }
       fclose(fp);
-    
-    
-    
-    
-    
-    
     } else {
       MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
       MPI_Rsend(buf,send_size,MPI_CHAR,fileproc,0,world);
-    
     }
   }
 
   // clean up
 
   memory->destroy(buf);
+  if (mpiioflag) delete mpiio;
 }
 
 /* ----------------------------------------------------------------------

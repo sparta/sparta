@@ -94,6 +94,7 @@ void ReadRestart::command(int narg, char **arg)
       error->all(FLERR,"Reading from MPI-IO filename when "
                  "MPIIO package is not installed");
   }
+
   // open single restart file or base file for multiproc case
 
   if (me == 0) {
@@ -625,6 +626,7 @@ void ReadRestart::command(int narg, char **arg)
 
   delete [] file;
   memory->destroy(buf);
+  if (mpiioflag) delete mpiio;
 
   // clear Grid::hash since overwrote it and now done using it
 
