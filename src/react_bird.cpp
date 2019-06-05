@@ -237,10 +237,7 @@ void ReactBird::init()
 
     // average DOFs participating in the reaction
 
-    double z = 0.0;  
-    if (r->type == EXCHANGE) z = 0.0;
-    if (r->type == DISSOCIATION) z = 1.0;
-    if (r->type == IONIZATION) z = 0.0;
+    double z = r->coeff[0];
     
     // add additional coeff for effective DOF
     // added MAX() limit, 24Aug18

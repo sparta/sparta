@@ -35,16 +35,17 @@ ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta, int narg, char **arg) :
   kokkos_flag = 1;
   d_which = DAT::t_int_1d("surf:which",nvalue);
 
-  d_nlocal = DAT::t_int_scalar("surf:nlocal");
+  d_ntally = DAT::t_int_scalar("surf:ntally");
 }
 
 ComputeSurfKokkos::ComputeSurfKokkos(SPARTA *sparta) :
   ComputeSurf(sparta)
 {
   which = NULL;
-  glob2loc = NULL;
-  loc2glob = NULL;
+  surf2tally = NULL;
+  tally2surf = NULL;
   array_surf_tally = NULL;
+  vector_surf = NULL;
   normflux = NULL;
   id = NULL;
   style = NULL;
@@ -57,7 +58,7 @@ ComputeSurfKokkos::~ComputeSurfKokkos()
 {
   if (copy || copymode) return;
 
-  memoryKK->destroy_kokkos(k_loc2glob,loc2glob);
+  memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
   memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
 }
 
@@ -72,8 +73,8 @@ void ComputeSurfKokkos::init()
     h_which(n) = which[n];
   Kokkos::deep_copy(d_which,h_which);
 
-  d_glob2loc = DAT::t_int_1d("surf:glob2loc",nsurf);
-  Kokkos::deep_copy(d_glob2loc,-1);
+  d_surf2tally = DAT::t_int_1d("surf:surf2tally",nsurf);
+  Kokkos::deep_copy(d_surf2tally,-1);
 
   d_normflux = DAT::t_float_1d("surf:normflux",nsurf);
   auto h_normflux = Kokkos::create_mirror_view(d_normflux);
@@ -81,12 +82,12 @@ void ComputeSurfKokkos::init()
     h_normflux(n) = normflux[n];
   Kokkos::deep_copy(d_normflux,h_normflux);
 
-  // Cannot realloc inside a Kokkos parallel region, so size loc2glob the 
-  //  same as glob2loc 
+  // Cannot realloc inside a Kokkos parallel region, so size tally2surf the 
+  //  same as surf2tally 
 
-  memoryKK->destroy_kokkos(k_loc2glob,loc2glob);
-  memoryKK->create_kokkos(k_loc2glob,loc2glob,nsurf,"surf:loc2glob");
-  d_loc2glob = k_loc2glob.d_view;
+  memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
+  memoryKK->create_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
+  d_tally2surf = k_tally2surf.d_view;
 
   memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
   memoryKK->create_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
@@ -97,26 +98,26 @@ void ComputeSurfKokkos::init()
 
 void ComputeSurfKokkos::clear()
 {
-  // reset all set glob2loc values to -1
+  // reset all set surf2tally values to -1
   // called by Update at beginning of timesteps surf tallying is done
 
-  auto h_nlocal = Kokkos::create_mirror_view(d_nlocal);
-  Kokkos::deep_copy(h_nlocal,d_nlocal);
-  nlocal = h_nlocal();
+  auto h_ntally = Kokkos::create_mirror_view(d_ntally);
+  Kokkos::deep_copy(h_ntally,d_ntally);
+  ntally = h_ntally();
 
   copymode = 1;
-  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSurf_clear>(0,nlocal),*this);
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeSurf_clear>(0,ntally),*this);
   DeviceType::fence();
   copymode = 0;
 
-  nlocal = 0;
-  Kokkos::deep_copy(d_nlocal,0);
+  ntally = 0;
+  Kokkos::deep_copy(d_ntally,0);
   Kokkos::deep_copy(d_array_surf_tally,0);
 }
 
 KOKKOS_INLINE_FUNCTION
 void ComputeSurfKokkos::operator()(TagComputeSurf_clear, const int &i) const {
-  d_glob2loc[d_loc2glob[i]] = -1;
+  d_surf2tally[d_tally2surf[i]] = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -148,13 +149,13 @@ void ComputeSurfKokkos::post_surf_tally()
    return ptr to norm vector used by column N
 ------------------------------------------------------------------------- */
 
-int ComputeSurfKokkos::surfinfo(int *&locptr)
+int ComputeSurfKokkos::tallyinfo(int *&locptr)
 {
-  k_loc2glob.modify<DeviceType>();
-  k_loc2glob.sync<SPAHostType>();
-  locptr = loc2glob;
+  k_tally2surf.modify<DeviceType>();
+  k_tally2surf.sync<SPAHostType>();
+  locptr = tally2surf;
 
-  auto h_nlocal = Kokkos::create_mirror_view(d_nlocal);
-  Kokkos::deep_copy(h_nlocal,d_nlocal);
-  return h_nlocal();
+  auto h_ntally = Kokkos::create_mirror_view(d_ntally);
+  Kokkos::deep_copy(h_ntally,d_ntally);
+  return h_ntally();
 }

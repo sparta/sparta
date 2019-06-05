@@ -129,8 +129,8 @@ void ReadRestart::command(int narg, char **arg)
   int incompatible = version_numeric();
 
   // read header info which creates simulation box
-  // also defines particle params: species, mixture, custom attributes
-  // also defines grid, surfs
+  // also read particle params: species, mixture, custom attributes
+  // also read parent grid and surfs
 
   header(incompatible);
 
@@ -328,7 +328,173 @@ void ReadRestart::command(int narg, char **arg)
   // sends chunks round-robin to other procs in its cluster
   // each proc keeps all cells/particles in its perproc chunks in file
 
-  else {
+  else if (update->global_mem_limit > 0 || 
+           (update->mem_limit_grid_flag && !grid->nlocal)) {
+  
+  // what to do if split particle??
+
+    // nclusterprocs = # of procs in my cluster that read from one file
+    // filereader = 1 if this proc reads file, else 0
+    // fileproc = ID of proc in my cluster who reads from file
+    // clustercomm = MPI communicator within my cluster of procs
+    // procmatch = 1 if each proc in cluster gets one chunk
+
+    int nfile = multiproc_file;
+    int icluster = static_cast<int> ((bigint) me * nfile/nprocs);
+    int fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
+    int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
+    if (fcluster < icluster) fileproc++;
+    int fileprocnext = 
+      static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
+    fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
+    if (fcluster < icluster+1) fileprocnext++;
+    int nclusterprocs = fileprocnext - fileproc;
+    int filereader = 0;
+    if (me == fileproc) filereader = 1;
+    MPI_Comm clustercomm;
+    MPI_Comm_split(world,icluster,0,&clustercomm);
+
+    if (filereader) {
+      char *procfile = new char[strlen(file) + 16];
+      char *ptr = strchr(file,'%');
+      *ptr = '\0';
+      sprintf(procfile,"%s%d%s",file,icluster,ptr+1);
+      *ptr = '%';
+      fp = fopen(procfile,"rb");
+      if (fp == NULL) {
+        char str[128];
+        sprintf(str,"Cannot open restart file %s",procfile);
+        error->one(FLERR,str);
+      }
+      delete [] procfile;
+    }
+
+    int flag,procsperfile;
+
+    if (filereader) {
+      fread(&flag,sizeof(int),1,fp);
+      if (flag != PROCSPERFILE) 
+        error->one(FLERR,"Invalid flag in peratom section of restart file");
+      fread(&procsperfile,sizeof(int),1,fp);
+    }
+    MPI_Bcast(&procsperfile,1,MPI_INT,0,clustercomm);
+
+    procmatch_check = 1;
+    if (procsperfile == nclusterprocs) procmatch = 1;
+    else procmatch = 0;
+
+    int tmp,iproc;
+    MPI_Status status;
+    MPI_Request request;
+
+    int step_size,npasses;
+
+    for (int i = 0; i < procsperfile; i++) {
+      if (filereader) {
+        fread(&flag,sizeof(int),1,fp);
+        if (flag != PERPROC) 
+          error->one(FLERR,"Invalid flag in peratom section of restart file");
+
+        fread(&n,sizeof(int),1,fp);
+
+        int grid_nlocal;
+        fread(&grid_nlocal,sizeof(int),1,fp);
+        fseek(fp,-sizeof(int),SEEK_CUR);
+        int grid_read_size = grid->size_restart(grid_nlocal);
+        int particle_read_size = n - grid_read_size;
+        int particle_nlocal;
+        fseek(fp,grid_read_size,SEEK_CUR);
+        fread(&particle_nlocal,sizeof(int),1,fp);
+        fseek(fp,-(sizeof(int)+grid_read_size),SEEK_CUR);
+
+        if (update->mem_limit_grid_flag)
+          update->global_mem_limit = grid_nlocal*sizeof(Grid::ChildCell);
+
+        int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
+        maxbuf_new = MAX(maxbuf_new,sizeof(Particle::OnePartRestart));
+        maxbuf_new += 128; // extra for size and ROUNDUP(ptr)
+        if (maxbuf_new > maxbuf) {
+          maxbuf = maxbuf_new;
+          memory->destroy(buf);
+          memory->create(buf,maxbuf,"read_restart:buf");
+        }
+
+        // number of particles per pass
+
+        step_size = update->global_mem_limit/sizeof(Particle::OnePartRestart);
+
+        // extra pass for grid
+
+        npasses = ceil((double)particle_nlocal/step_size)+1; 
+
+        if (i % nclusterprocs) {
+          iproc = me + (i % nclusterprocs);
+          MPI_Send(&npasses,1,MPI_INT,iproc,0,world);
+          MPI_Send(&step_size,1,MPI_INT,iproc,0,world);
+        }
+
+        int nlocal_restart = 0;
+        int total_read_part = 0;
+        for (int ii = 0; ii < npasses; ii++) {
+          if (ii == 0)
+            n = grid_read_size;
+          else {
+            n = step_size*sizeof(Particle::OnePartRestart);
+            if (ii == 1) n += ((sizeof(int) + 7) & ~7); // ROUNDUP(ptr)
+            if (total_read_part + n > particle_read_size)
+              n = particle_read_size - total_read_part;
+            total_read_part += n;
+          }
+          fread(buf,sizeof(char),n,fp);
+
+          if (i % nclusterprocs) {
+            iproc = me + (i % nclusterprocs);
+            MPI_Send(&n,1,MPI_INT,iproc,0,world);
+            MPI_Recv(&tmp,0,MPI_INT,iproc,0,world,&status);
+            MPI_Rsend(buf,n,MPI_CHAR,iproc,0,world);
+          } else if (i % nclusterprocs == me - fileproc) {
+            int n = 0;
+            if (ii == 0) {
+              n = grid->unpack_restart(buf);
+              create_child_cells(0);
+            } else {
+              n = particle->unpack_restart(&buf[n],nlocal_restart,step_size,ii-1);
+              assign_particles(0);
+            }
+          }
+        }
+
+      } else if (i % nclusterprocs == me - fileproc) {
+        MPI_Recv(&npasses,1,MPI_INT,fileproc,0,world,&status);
+        MPI_Recv(&step_size,1,MPI_INT,fileproc,0,world,&status);
+        int nlocal_restart = 0;
+        for (int ii = 0; ii < npasses; ii++) {
+          MPI_Recv(&n,1,MPI_INT,fileproc,0,world,&status);
+          if (n > maxbuf) {
+            maxbuf = n;
+            memory->destroy(buf);
+            memory->create(buf,maxbuf,"read_restart:buf");
+          }
+          MPI_Irecv(buf,n,MPI_CHAR,fileproc,0,world,&request);
+          MPI_Send(&tmp,0,MPI_INT,fileproc,0,world);
+          MPI_Wait(&request,&status);
+
+          int n = 0;
+          if (ii == 0) {
+            n = grid->unpack_restart(buf);
+            create_child_cells(0);
+          } else {
+            n = particle->unpack_restart(&buf[n],nlocal_restart,step_size,ii-1);
+            assign_particles(0);
+          }
+        }
+      }
+    }
+
+    if (filereader) fclose(fp);
+    MPI_Comm_free(&clustercomm);
+
+  } else {
 
     // nclusterprocs = # of procs in my cluster that read from one file
     // filereader = 1 if this proc reads file, else 0
@@ -489,11 +655,15 @@ void ReadRestart::command(int narg, char **arg)
 
   if (me == 0 && surf->exist) {
     if (domain->dimension == 2) {
-      if (screen) fprintf(screen,"  %d surf lines\n",surf->nline);
-      if (logfile) fprintf(logfile,"  %d surf lines\n",surf->nline);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf lines\n",
+                          surf->nsurf);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf lines\n",
+                           surf->nsurf);
     } else {
-      if (screen) fprintf(screen,"  %d surf triangles\n",surf->ntri);
-      if (logfile) fprintf(logfile,"  %d surf triangles\n",surf->ntri);
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " surf triangles\n",
+                          surf->nsurf);
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " surf triangles\n",
+                           surf->nsurf);
     }
   }
 
@@ -504,7 +674,7 @@ void ReadRestart::command(int narg, char **arg)
   double time2 = MPI_Wtime();
 
   if (surf->exist) {
-    surf->setup_surf();
+    surf->setup_owned();
     grid->clear_surf_restart();
     grid->surf2grid(0);
   }
@@ -751,7 +921,7 @@ void ReadRestart::header(int incompatible)
     } else if (flag == NSUB) {
       nsub_file = read_int();
     } else if (flag == NSURF) {
-      nsurf_file = read_int();
+      nsurf_file = read_bigint();
 
     } else error->all(FLERR,"Invalid flag in header section of restart file");
 
@@ -883,9 +1053,10 @@ void ReadRestart::create_child_cells(int skipflag)
     id = ids[i];
     nsplit = nsplits[i];
 
-    // NOTE: need more doc of this method
-
     // unsplit or split cell
+    // for skipflag, add only if I own this cell
+    // add as child cell to grid->cells
+    // if split cell, also add split cell to sinfo
     // add unsplit/split cells (not sub cells) to Grid::hash as create them
 
     if (nsplit > 0) {
@@ -907,6 +1078,8 @@ void ReadRestart::create_child_cells(int skipflag)
 
     // sub cell
     // for skipflag, add only if I also own the corresponding split cell
+    // add as sub cell to grid->cells
+    // set nsplit for new sub cell and csubs in owning cell's sinfo
 
     } else {
       if (skipflag && hash->find(id) == hash->end()) continue;

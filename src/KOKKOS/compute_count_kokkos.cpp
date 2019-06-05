@@ -156,6 +156,12 @@ void ComputeCountKokkos::per_species_tally_kokkos()
   particle_kk->sync(Device,PARTICLE_MASK);
   d_particles = particle_kk->k_particles.d_view;
 
+  need_dup = sparta->kokkos->need_dup<DeviceType>();
+  if (need_dup)
+    dup_count = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_count);
+  else
+    ndup_count = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_count);
+
   // loop over all particles
   int nlocal = particle->nlocal;
   copymode = 1;
@@ -166,6 +172,11 @@ void ComputeCountKokkos::per_species_tally_kokkos()
   DeviceType::fence();
   copymode = 0;
 
+  if (need_dup) {
+    Kokkos::Experimental::contribute(d_count, dup_count);
+    dup_count = decltype(dup_count)(); // free duplicated memory
+  }
+
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
 }
 
@@ -175,13 +186,10 @@ template<int NEED_ATOMICS>
 KOKKOS_INLINE_FUNCTION
 void ComputeCountKokkos::operator()(TagComputeCount_per_species_tally_atomic<NEED_ATOMICS>, const int& i) const {
 
-  if (NEED_ATOMICS)
-    Kokkos::atomic_fetch_add(&d_count[d_particles[i].ispecies],1);
-  else
-    d_count[d_particles[i].ispecies]++;
+  // The tally (count) array is duplicated for OpenMP, atomic for CUDA, and neither for Serial
 
-  // Alternative approach---------
-  //   The tally vector is atomic
-  //   Kokkos::View<int*,DeviceType,Kokkos::MemoryTraits<AtomicView<NEED_ATOMICS>::value> > a_count = d_count;
-  //   a_count[d_particles[i].ispecies]++;
+  auto v_count = ScatterViewHelper<NeedDup<NEED_ATOMICS,DeviceType>::value,decltype(dup_count),decltype(ndup_count)>::get(dup_count,ndup_count);
+  auto a_count = v_count.template access<AtomicDup<NEED_ATOMICS,DeviceType>::value>();
+
+  a_count[d_particles[i].ispecies] += 1;
 }

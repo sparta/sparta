@@ -23,7 +23,8 @@ SPARTA works.
 6.9 "Details of surfaces in SPARTA"_#howto_9
 6.10 "Restarting a simulation"_#howto_10
 6.11 "Using the ambipolar approximation"_#howto_11
-6.12 "Using multiple vibrational energy levels"_#howto_12 :all(b)
+6.12 "Using multiple vibrational energy levels"_#howto_12
+6.13 "Surface elements: explicit, implicit, distributed"_#howto_13 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
@@ -1114,3 +1115,64 @@ species.
 The "read_restart"_read_restart.html doc page explains how to restart
 simulations where a fix like "fix vibmode"_fix_vibmode.html has been
 used to store extra per-particle properties.
+
+:line
+
+6.13 Surface elements: explicit, implicit, distributed :link(howto_13),h4
+
+SPARTA can work with two kinds of surface elements: explicit and
+implicit.  Explicit surfaces are lines (2d) or triangles (3d) defined
+in surface data files read by the "read_surf"_read_surf.html command.
+An individual element can be any size; a single surface element can
+intersect many grid cells.  Implicit surfaces are lines (2d) or
+triangles (3d) defined by grid corner point data files read by the
+"read_isurf"_read_isurf.html command.  The corner point values define
+lines or triangles that are wholly contained with single grid cells.
+
+Note that you cannot mix explicit and implicit surfaces in the same
+simulation.
+
+The data and attributes of explicit surface elements can be stored in
+one of two ways.  Each processor stores a copy of all the elements,
+which is the default.  Memory-wise, this is fine for most models.  The
+other option is distributed, where each processor only stores copies
+of surface elements assigned to grid cells it owns or has a ghost copy
+of.  For models with huge numbers of surface elements, distributing
+them will use much less memory per processor.  Note that a surface
+element requires about 100 bytes of storage, so storing a million
+requires about 100 MBytes.
+
+Implicit surfaces are always stored in a distributed fashion.  Each
+processor only stores a copy of surface elements assigned to grid
+cells it owns or has a ghost copy of.  Note that 3d implicit surfs are
+not yet fully implemented.  Specifically, the
+"read_isurf"_read_isurf.html command will not yet read and create
+them.
+
+The "global surfs"_global.html command has options for explicit versus
+implicit, and distributed versus non-distributed.
+
+The following surface related commands work with either explict or
+implicit surfaces, whether they are distributed or not.
+
+"dump surf"_dump.html
+"dump image"_dump_image.html
+"group surf"_group.html
+"surf_modify"_surf_modify.html :ul
+
+Because distributed surfaces (explicit or implicit) are new to SPARTA,
+these commands do not yet support them:
+
+"write_surf"_write_surf.html
+"move_surf"_move_surf.html
+"remove_surf"_remove_surf.html
+"fix move/surf"_fix_move_surf.html
+"fix emit/surf"_fix_emit_surf.html
+"read_surf clip option"_read_surf.html
+"adapt_grid coarsen"_adapt_grid.html
+"fix adapt/grid coarsen"_fix_adapt_grid.html :ul
+
+Also, the "compute_surf"_compute_surf.html command only works for
+explicit surfaces (distributed or not).  A new, similar compute needs
+to be implemented to work with implicit surfaces.  It will likely be
+called the "compute isurf/grid"_compute_isurf_grid.html command.

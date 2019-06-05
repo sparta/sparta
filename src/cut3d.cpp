@@ -102,7 +102,7 @@ Cut3d::~Cut3d()
 ------------------------------------------------------------------------- */
 
 int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
-                     int *surfs_caller, int max)
+                     surfint *surfs_caller, int max)
 {
   id = id_caller;
   lo = lo_caller;
@@ -110,13 +110,13 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
   surfs = surfs_caller;
 
   Surf::Tri *tris = surf->tris;
-  int ntri = surf->ntri;
+  int ntotal = surf->nsurf;
 
   double value;
   double *x1,*x2,*x3;
 
   nsurf = 0;
-  for (int m = 0; m < ntri; m++) {
+  for (int m = 0; m < ntotal; m++) {
     x1 = tris[m].p1;
     x2 = tris[m].p2;
     x3 = tris[m].p3;
@@ -167,8 +167,8 @@ int Cut3d::surf2grid(cellint id_caller, double *lo_caller, double *hi_caller,
 
 int Cut3d::surf2grid_list(cellint id_caller, 
                           double *lo_caller, double *hi_caller,
-                          int nlist, int *list,
-                          int *surfs_caller, int max)
+                          int nlist, surfint *list,
+                          surfint *surfs_caller, int max)
 {
   id = id_caller;
   lo = lo_caller;
@@ -415,7 +415,7 @@ int Cut3d::clip_external(double *p0, double *p1, double *p2,
 ------------------------------------------------------------------------- */
 
 int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller, 
-                 int nsurf_caller, int *surfs_caller,
+                 int nsurf_caller, surfint *surfs_caller,
                  double *&vols_caller, int *surfmap, 
                  int *corners, int &xsub, double *xsplit)
 {
@@ -2182,7 +2182,7 @@ void Cut3d::failed_cell()
 
   printf("  lo corner %g %g %g\n",lo[0],lo[1],lo[2]);
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
-  printf("  # of surfs = %d out of %d\n",nsurf,surf->ntri);
+  printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
   printf("  surfs:");
   for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
   printf("\n");

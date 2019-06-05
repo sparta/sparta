@@ -429,7 +429,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
 
   if (NEARCP) {
     if (int(d_nn_last_partner.extent(0)) < nglocal || int(d_nn_last_partner.extent(1)) < maxcellcount_kk)
-      d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount_kk);
+      d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
     //Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCollideZeroNN>(0,nglocal),*this);
   }
 
@@ -459,7 +459,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     if (d_plist.extent(1) < maxcellcount*sparta->kokkos->collide_extra) {
       Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount*sparta->kokkos->collide_extra);
       d_plist = grid_kk->d_plist;
-      d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount+3);
+      d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount+3);
       maxcellcount_kk = maxcellcount*sparta->kokkos->collide_extra;
     }
 
@@ -514,7 +514,7 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
         maxcellcount_kk = h_maxcellcount();
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_kk);
         d_plist = grid_kk->d_plist;
-        d_nn_last_partner = typename AT::t_int_2d("collide:nn_last_partner",nglocal,maxcellcount_kk);
+        d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
         particle_kk->set_maxcellcount(maxcellcount_kk);
       }
 
@@ -953,20 +953,20 @@ void CollideVSSKokkos::SCATTER_TwoBodyScattering(Particle::OnePart *ip,
                                          vrc[0]*vrc[2]*sin(eps))/d );
     } else {
       ua = scale * ( cosX*vrc[0] ); 
-      vb = scale * ( sinX*vrc[1]*cos(eps) ); 
-      wc = scale * ( sinX*vrc[2]*sin(eps) );
+      vb = scale * ( sinX*vrc[0]*cos(eps) ); 
+      wc = scale * ( sinX*vrc[0]*sin(eps) );
     }
   }
   
   // new velocities for the products
 
   double divisor = 1.0 / (mass_i + mass_j);
-  vi[0] = precoln.ucmf - (mass_j*divisor)*ua;
-  vi[1] = precoln.vcmf - (mass_j*divisor)*vb;
-  vi[2] = precoln.wcmf - (mass_j*divisor)*wc;
-  vj[0] = precoln.ucmf + (mass_i*divisor)*ua;
-  vj[1] = precoln.vcmf + (mass_i*divisor)*vb;
-  vj[2] = precoln.wcmf + (mass_i*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_j*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_j*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_j*divisor)*wc;
+  vj[0] = precoln.ucmf - (mass_i*divisor)*ua;
+  vj[1] = precoln.vcmf - (mass_i*divisor)*vb;
+  vj[2] = precoln.wcmf - (mass_i*divisor)*wc;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1130,20 +1130,20 @@ void CollideVSSKokkos::SCATTER_ThreeBodyScattering(Particle::OnePart *ip,
                                         vrc[0]*vrc[2]*sin(eps))/d);
     } else {
       ua = scale * cosX*vrc[0]; 
-      vb = scale * sinX*vrc[1]*cos(eps); 
-      wc = scale * sinX*vrc[2]*sin(eps);
+      vb = scale * sinX*vrc[0]*cos(eps); 
+      wc = scale * sinX*vrc[0]*sin(eps);
     }
   }
 
   // new velocities for the products
 
   double divisor = 1.0 / (mass_ij + mass_k);
-  vi[0] = precoln.ucmf - (mass_ij*divisor)*ua;
-  vi[1] = precoln.vcmf - (mass_ij*divisor)*vb;
-  vi[2] = precoln.wcmf - (mass_ij*divisor)*wc;
-  vk[0] = precoln.ucmf + (mass_k*divisor)*ua;
-  vk[1] = precoln.vcmf + (mass_k*divisor)*vb;
-  vk[2] = precoln.wcmf + (mass_k*divisor)*wc;
+  vi[0] = precoln.ucmf + (mass_ij*divisor)*ua;
+  vi[1] = precoln.vcmf + (mass_ij*divisor)*vb;
+  vi[2] = precoln.wcmf + (mass_ij*divisor)*wc;
+  vk[0] = precoln.ucmf - (mass_k*divisor)*ua;
+  vk[1] = precoln.vcmf - (mass_k*divisor)*vb;
+  vk[2] = precoln.wcmf - (mass_k*divisor)*wc;
   vj[0] = vi[0];
   vj[1] = vi[1];
   vj[2] = vi[2];

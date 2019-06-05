@@ -58,11 +58,11 @@ keyword = {iterate} or {maxlevel} or {minlevel} or {thresh} or {combine} or {cel
 
 [Examples:]
 
-adapt_grid refine particle 10 50
-adapt_grid coarsen particle 10 50
-adapt_grid refine coarsen particle 10 50
-adapt_grid refine surf 0.15 iterate 1 dir 1 0 0 
-adapt_grid refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
+adapt_grid all refine particle 10 50
+adapt_grid all coarsen particle 10 50
+adapt_grid all refine coarsen particle 10 50
+adapt_grid all refine surf all 0.15 iterate 1 dir 1 0 0 
+adapt_grid all refine coarsen value c_1[1] 5.0 10.0 iterate 2 :pre
 
 [Description:]
 

@@ -161,7 +161,9 @@ class Particle : protected Pointers {
 
   int size_restart();
   int pack_restart(char *);
+  int pack_restart(char *, int, int);
   int unpack_restart(char *);
+  int unpack_restart(char *, int &, int, int);
 
   int find_custom(char *);
   void error_custom();

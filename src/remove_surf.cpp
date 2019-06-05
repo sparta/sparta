@@ -38,6 +38,10 @@ void RemoveSurf::command(int narg, char **arg)
   if (!surf->exist) 
     error->all(FLERR,"Cannot remove_surf before surf elements are defined");
 
+  if (surf->distributed)
+    error->all(FLERR,
+               "Cannot yet use remove_surf with distributed surf elements");
+
   if (narg < 1) error->all(FLERR,"Illegal remove_surf command");
 
   int igroup = surf->find_group(arg[0]);
@@ -65,16 +69,15 @@ void RemoveSurf::command(int narg, char **arg)
 
   if (domain->dimension == 2) {
     remove_2d(groupbit);
-    surf->check_watertight_2d(0);
-    if (surf->nline == 0) surf->exist = 0 ;
+    surf->check_watertight_2d();
+    if (surf->nsurf == 0) surf->exist = 0 ;
   } else {
     remove_3d(groupbit);
-    surf->check_watertight_3d(0);
-    if (surf->ntri == 0) surf->exist = 0 ;
+    surf->check_watertight_3d();
+    if (surf->nsurf == 0) surf->exist = 0 ;
   }
 
-  surf->setup_surf();
-
+  surf->setup_owned();
   grid->unset_neighbors();
   grid->remove_ghosts();
 
@@ -149,11 +152,11 @@ void RemoveSurf::remove_2d(int groupbit)
   int i;
 
   Surf::Line *lines = surf->lines;
-  int nline_old = surf->nline;
+  int nline_old = surf->nsurf;
 
   // remove lines not in group
 
-  int nline = surf->nline;
+  int nline = surf->nsurf;
   int nbytes = sizeof(Surf::Line);
 
   int n = 0;
@@ -163,20 +166,20 @@ void RemoveSurf::remove_2d(int groupbit)
     n++;
   }
 
-  surf->nline = nline = n;
+  surf->nsurf = nline = n;
 
   // print stats after removal
 
-  int nline_remove = nline_old - surf->nline;
+  int nline_remove = nline_old - surf->nsurf;
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  removed %d lines\n",nline_remove);
-      fprintf(screen,"  %d lines remain\n",surf->nline);
+      fprintf(screen,"  " BIGINT_FORMAT " lines remain\n",surf->nsurf);
     }
     if (logfile) {
       fprintf(logfile,"  removed %d lines\n",nline_remove);
-      fprintf(logfile,"  %d lines remain\n",surf->nline);
+      fprintf(logfile,"  " BIGINT_FORMAT " lines remain\n",surf->nsurf);
     }
   }
 }
@@ -191,11 +194,11 @@ void RemoveSurf::remove_3d(int groupbit)
   int i;
 
   Surf::Tri *tris = surf->tris;
-  int ntri_old = surf->ntri;
+  int ntri_old = surf->nsurf;
 
   // remove triangles not in group
 
-  int ntri = surf->ntri;
+  int ntri = surf->nsurf;
   int nbytes = sizeof(Surf::Tri);
 
   int n = 0;
@@ -205,20 +208,20 @@ void RemoveSurf::remove_3d(int groupbit)
     n++;
   }
 
-  surf->ntri = ntri = n;
+  surf->nsurf = ntri = n;
 
   // print stats after removal
 
-  int ntri_remove = ntri_old - surf->ntri;
+  int ntri_remove = ntri_old - surf->nsurf;
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  removed %d tris\n",ntri_remove);
-      fprintf(screen,"  %d tris remain\n",surf->ntri);
+      fprintf(screen,"  " BIGINT_FORMAT " tris remain\n",surf->nsurf);
     }
     if (logfile) {
       fprintf(logfile,"  removed %d tris\n",ntri_remove);
-      fprintf(logfile,"  %d tris remain\n",surf->ntri);
+      fprintf(logfile,"  " BIGINT_FORMAT " tris remain\n",surf->nsurf);
     }
   }
 }
