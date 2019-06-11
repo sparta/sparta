@@ -49,6 +49,19 @@ output and subsequent input on parallel machines that support parallel
 I/O.  The optional {fileper} and {nfile} keywords discussed below can
 alter the number of files written.
 
+The restart file can also be written in parallel as one large binary
+file via the MPI-IO library, which is part of the MPI standard for
+versions 2.0 and above.  Using MPI-IO requires two steps.  First,
+build SPARTA with its MPIIO package installed, e.g.
+
+make yes-mpiio    # installs the MPIIO package
+make mpi          # build SPARTA for your platform :pre
+
+Second, use a restart filename which contains ".mpiio".  Note that it
+does not have to end in ".mpiio", just contain those characters.
+A particular restart file must be both written and read using MPI-IO,
+and the same number of MPI ranks must be used for both reading and writing.
+
 Restart files can be read by a "read_restart"_read_restart.html
 command to restart a simulation from a particular state.  Because the
 file is binary, it may not be readable on another machine.
@@ -83,7 +96,12 @@ next 3 processors and write it to a restart file.
 
 :line
 
-[Restrictions:] none
+[Restrictions:]
+
+
+To write and read restart files in parallel with MPI-IO, the MPIIO
+package must be installed. The same number of MPI ranks must be
+used for both reading and writing MPIIO restart files.
 
 [Related commands:]
 
