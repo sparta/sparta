@@ -1143,14 +1143,14 @@ lines or triangles that are wholly contained with single grid cells.
 simulation.
 </P>
 <P>The data and attributes of explicit surface elements can be stored in
-one of two ways.  Each processor stores a copy of all the elements,
-which is the default.  Memory-wise, this is fine for most models.  The
+one of two ways.  The default is for each processor to store a copy of
+all the elements.  Memory-wise, this is fine for most models.  The
 other option is distributed, where each processor only stores copies
 of surface elements assigned to grid cells it owns or has a ghost copy
 of.  For models with huge numbers of surface elements, distributing
 them will use much less memory per processor.  Note that a surface
-element requires about 100 bytes of storage, so storing a million
-requires about 100 MBytes.
+element requires about 150 bytes of storage, so storing a million
+requires about 150 MBytes.
 </P>
 <P>Implicit surfaces are always stored in a distributed fashion.  Each
 processor only stores a copy of surface elements assigned to grid
@@ -1162,25 +1162,26 @@ them.
 <P>The <A HREF = "global.html">global surfs</A> command has options for explicit versus
 implicit, and distributed versus non-distributed.
 </P>
-<P>The following surface related commands work with either explict or
-implicit surfaces, whether they are distributed or not.
+<P>The following surface-related commands work with either explict or
+implicit surfaces, whether they are distributed or not.  For large
+data sets, the read and write surf commands have options to use
+multiple files which can reduce I/O times.
 </P>
-<UL><LI><A HREF = "dump.html">dump surf</A>
+<UL><LI><A HREF = "adapt_grid.html">adapt_grid</A>
+<LI><A HREF = "dump.html">dump surf</A>
 <LI><A HREF = "dump_image.html">dump image</A>
-<LI><A HREF = "group.html">group surf</A>
-<LI><A HREF = "surf_modify.html">surf_modify</A> 
-</UL>
-<P>Because distributed surfaces (explicit or implicit) are new to SPARTA,
-these commands do not yet support them:
-</P>
-<UL><LI><A HREF = "write_surf.html">write_surf</A>
-<LI><A HREF = "move_surf.html">move_surf</A>
-<LI><A HREF = "remove_surf.html">remove_surf</A>
-<LI><A HREF = "fix_move_surf.html">fix move/surf</A>
+<LI><A HREF = "fix_adapt_grid.html">fix adapt/grid</A>
 <LI><A HREF = "fix_emit_surf.html">fix emit/surf</A>
-<LI><A HREF = "read_surf.html">read_surf clip option</A>
-<LI><A HREF = "adapt_grid.html">adapt_grid coarsen</A>
-<LI><A HREF = "fix_adapt_grid.html">fix adapt/grid coarsen</A> 
+<LI><A HREF = "group.html">group surf</A>
+<LI><A HREF = "read_surf.html">read_surf</A>
+<LI><A HREF = "surf_modify.html">surf_modify</A>
+<LI><A HREF = "write_surf.html">write_surf</A> 
+</UL>
+<P>These command do not yet support distributed surfaces:
+</P>
+<UL><LI><A HREF = "move_surf.html">move_surf</A>
+<LI><A HREF = "fix_move_surf.html">fix move/surf</A>
+<LI><A HREF = "remove_surf.html">remove_surf</A> 
 </UL>
 <P>Also, the <A HREF = "compute_surf.html">compute_surf</A> command only works for
 explicit surfaces (distributed or not).  A new, similar compute needs

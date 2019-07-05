@@ -116,7 +116,8 @@ it gives quick access to documentation for all SPARTA commands.
   6.9 "Details of surfaces in SPARTA"_howto_9 :b
   6.10 "Restarting a simulation"_howto_10 :b
   6.11 "Using the ambipolar approximation"_howto_11 :b
-  6.12 "Using multiple vibrational energy levels"_howto_12 :ule,b
+  6.12 "Using multiple vibrational energy levels"_howto_12 :b
+  6.13 "Surface elements: explicit, implicit, distributed"_howto_13 :ule,b
 "Example problems"_Section_example.html :l
 "Performance & scalability"_Section_perf.html :l
 "Additional tools"_Section_tools.html :l

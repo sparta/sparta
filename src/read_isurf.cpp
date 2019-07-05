@@ -183,18 +183,8 @@ void ReadISurf::command(int narg, char **arg)
 
   if (filearg) {
     WriteSurf *wf = new WriteSurf(sparta);
-    FILE *fp;
-    if (comm->me == 0) {
-      fp = fopen(arg[filearg],"w");
-      if (!fp) {
-	char str[128];
-	sprintf(str,"Cannot open surface file %s",arg[filearg]);
-	error->one(FLERR,str);
-      }
-    }
-    printf("FILEARG %d %d %s\n",filearg,file_pflag,arg[filearg]);
-    wf->write_file(fp,file_pflag);
-    if (me == 0) fclose(fp);
+    wf->statflag = 0;
+    wf->command(narg-filearg,&arg[filearg]);
     delete wf;
   }
 
@@ -559,13 +549,14 @@ void ReadISurf::process_args(int start, int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       typefile = arg[iarg+1];
       iarg += 2;
+
+    // file must be last keyword, else WriteSurf will flag error
+
     } else if (strcmp(arg[iarg],"file") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Invalid read_isurf command");
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       filearg = iarg+1;
-      if (strcmp(arg[iarg+2],"yes") == 0) file_pflag = 1;
-      else if (strcmp(arg[iarg+2],"no") == 0) file_pflag = 0;
-      else error->all(FLERR,"Illegal read_isurf command");
-      iarg += 3;
+      iarg = narg;
+
     } else error->all(FLERR,"Invalid read_isurf command");
   }
 }
@@ -813,12 +804,11 @@ void ReadISurf::marching_squares(int igroup)
 
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      if (svalues) surf->add_line(svalues[icell],pt[ipt],pt[ipt+1]);
-      else surf->add_line(1,pt[ipt],pt[ipt+1]);
+      if (svalues) 
+        surf->add_line(cells[icell].id,svalues[icell],pt[ipt],pt[ipt+1]);
+      else surf->add_line(cells[icell].id,1,pt[ipt],pt[ipt+1]);
       ipt += 2;
-      isurf = surf->nlocal - 1;
-      surf->lines[isurf].id = cells[icell].id;
-      ptr[i] = isurf;
+      ptr[i] = surf->nlocal - 1;
     }
 
     cells[icell].nsurf = nsurf;
@@ -1175,12 +1165,11 @@ void ReadISurf::marching_cubes(int igroup)
         
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      if (svalues) surf->add_tri(svalues[icell],pt[ipt+2],pt[ipt+1],pt[ipt]);
-      else surf->add_tri(1,pt[ipt+2],pt[ipt+1],pt[ipt]);
+      if (svalues) 
+        surf->add_tri(cells[icell].id,svalues[icell],pt[ipt+2],pt[ipt+1],pt[ipt]);
+      else surf->add_tri(cells[icell].id,1,pt[ipt+2],pt[ipt+1],pt[ipt]);
       ipt += 3;
-      isurf = surf->nlocal - 1;
-      surf->tris[isurf].id = cells[icell].id;
-      ptr[i] = isurf;
+      ptr[i] = surf->nlocal - 1;
     }
         
     cells[icell].nsurf = nsurf;
@@ -2401,10 +2390,12 @@ void ReadISurf::cleanup_MC()
 
     if (nfacetri[icell][iface] == 0) {
       int nslocal = surf->nlocal;
-      surf->add_tri(1,bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
+      surf->add_tri(0,1,
+                    bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
       memcpy(&surf->tris[nslocal],&bufrecv[i].tri1,sizeof(Surf::Tri));
       surf->tris[nslocal].id = cells[icell].id;
-      surf->add_tri(1,bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
+      surf->add_tri(0,1,
+                    bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
       memcpy(&surf->tris[nslocal+1],&bufrecv[i].tri2,sizeof(Surf::Tri));
       surf->tris[nslocal+1].id = cells[icell].id;
       

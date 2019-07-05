@@ -327,12 +327,12 @@ void ReadRestart::command(int narg, char **arg)
   // 1st proc in each cluster reads per-proc chunks from file
   // sends chunks round-robin to other procs in its cluster
   // each proc keeps all cells/particles in its perproc chunks in file
+  // 2 versions of this: limited memory and unlimimited memory
 
   else if (update->global_mem_limit > 0 || 
            (update->mem_limit_grid_flag && !grid->nlocal)) {
-  
-  // what to do if split particle??
 
+    // limited-memory version
     // nclusterprocs = # of procs in my cluster that read from one file
     // filereader = 1 if this proc reads file, else 0
     // fileproc = ID of proc in my cluster who reads from file
@@ -496,6 +496,7 @@ void ReadRestart::command(int narg, char **arg)
 
   } else {
 
+    // unlimited-memory version
     // nclusterprocs = # of procs in my cluster that read from one file
     // filereader = 1 if this proc reads file, else 0
     // fileproc = ID of proc in my cluster who reads from file

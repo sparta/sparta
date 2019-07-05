@@ -206,7 +206,7 @@ void FixBalance::end_of_step()
       timer_cell_weights(wt);
     }
 
-    rcb->compute(nbalance,x,wt);
+    rcb->compute(nbalance,x,wt,0);
     rcb->invert();
 
     nbalance = 0;
@@ -230,11 +230,13 @@ void FixBalance::end_of_step()
 
   // migrate grid cells and their particles to new owners
   // invoke grid methods to complete grid setup
+  // some fixes have post migration operations to perform
 
   grid->unset_neighbors();
   grid->remove_ghosts();
 
   comm->migrate_cells(nmigrate);
+  modify->post_migrate();
 
   grid->setup_owned();
   grid->acquire_ghosts();

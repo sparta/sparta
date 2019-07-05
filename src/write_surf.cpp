@@ -15,8 +15,10 @@
 #include "mpi.h"
 #include "spatype.h"
 #include "string.h"
+#include "stdlib.h"
 #include "write_surf.h"
 #include "surf.h"
+#include "update.h"
 #include "comm.h"
 #include "domain.h"
 #include "memory.h"
@@ -28,7 +30,10 @@ using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-WriteSurf::WriteSurf(SPARTA *sparta) : Pointers(sparta) {}
+WriteSurf::WriteSurf(SPARTA *sparta) : Pointers(sparta)
+{
+  statflag = 1;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -39,54 +44,117 @@ void WriteSurf::command(int narg, char **arg)
 
   if (narg < 1) error->all(FLERR,"Illegal write_surf command");
 
+  if (statflag && me == 0)
+    if (screen) fprintf(screen,"Writing surface file ...\n");
+
+  me = comm->me;
+  nprocs = comm->nprocs;
+  dim = domain->dimension;
+
+  // if filename contains a "*", replace with current timestep
+
+  char *ptr;
+  int n = strlen(arg[0]) + 16;
+  char *file = new char[n];
+
+  if ((ptr = strchr(arg[0],'*'))) {
+    *ptr = '\0';
+    sprintf(file,"%s" BIGINT_FORMAT "%s",arg[0],update->ntimestep,ptr+1);
+  } else strcpy(file,arg[0]);
+
+  // check for multiproc output
+
+  if (strchr(arg[0],'%')) multiproc = nprocs;
+  else multiproc = 0;
+
   // optional args
 
-  int pflag = 1;
+  pointflag = 1;
+
+  if (multiproc) {
+    nclusterprocs = 1;
+    filewriter = 1;
+    fileproc = me;
+    icluster = me;
+  } else {
+    nclusterprocs = nprocs;
+    filewriter = 0;
+    if (me == 0) filewriter = 1;
+    fileproc = 0;
+  }
 
   int iarg = 1;
   while (iarg < narg) {
-    if (strcmp(arg[1],"points") == 0) {
+    if (strcmp(arg[iarg],"points") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal write_surf command");
-      if (strcmp(arg[2],"yes") == 0) pflag = 1;
-      else if (strcmp(arg[2],"no") == 0) pflag = 0;
+      if (strcmp(arg[iarg+1],"yes") == 0) pointflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) pointflag = 0;
       else error->all(FLERR,"Illegal write_surf command");
       iarg += 2;
+
+    } else if (strcmp(arg[iarg],"fileper") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal write_sirf command");
+      if (!multiproc)
+	error->all(FLERR,"Cannot use write_surf fileper "
+                   "without % in surface file name");
+      int nper = atoi(arg[iarg+1]);
+      if (nper <= 0) error->all(FLERR,"Illegal write_surf command");
+      
+      multiproc = nprocs/nper;
+      if (nprocs % nper) multiproc++;
+      fileproc = me/nper * nper;
+      int fileprocnext = MIN(fileproc+nper,nprocs);
+      nclusterprocs = fileprocnext - fileproc;
+      if (me == fileproc) filewriter = 1;
+      else filewriter = 0;
+      icluster = fileproc/nper;
+      iarg += 2;
+
+    } else if (strcmp(arg[iarg],"nfile") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal write_surf command");
+      if (!multiproc)
+	error->all(FLERR,"Cannot use write_surf nfile "
+                   "without % in surface file name");
+      int nfile = atoi(arg[iarg+1]);
+      if (nfile <= 0) error->all(FLERR,"Illegal write_surf command");
+      nfile = MIN(nfile,nprocs);
+
+      multiproc = nfile;
+      icluster = static_cast<int> ((bigint) me * nfile/nprocs);
+      fileproc = static_cast<int> ((bigint) icluster * nprocs/nfile);
+      int fcluster = static_cast<int> ((bigint) fileproc * nfile/nprocs);
+      if (fcluster < icluster) fileproc++;
+      int fileprocnext = 
+        static_cast<int> ((bigint) (icluster+1) * nprocs/nfile);
+      fcluster = static_cast<int> ((bigint) fileprocnext * nfile/nprocs);
+      if (fcluster < icluster+1) fileprocnext++;
+      nclusterprocs = fileprocnext - fileproc;
+      if (me == fileproc) filewriter = 1;
+      else filewriter = 0;
+      iarg += 2;
+
     } else error->all(FLERR,"Illegal write_surf command");
   }
 
-  // open file
+  // write file(s)
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
-  FILE *fp;
-
-  if (comm->me == 0) {
-    if (screen) fprintf(screen,"Writing surf file ...\n");
-    fp = fopen(arg[0],"w");
-    if (!fp) {
-      char str[128];
-      sprintf(str,"Cannot open surface file %s",arg[0]);
-      error->one(FLERR,str);
-    }
-  }
-
-  // write file
-
-  write_file(fp,pflag);
-
-  // close file
-
-  if (comm->me == 0) fclose(fp);
+  write_file(file);
+  delete [] file;
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
-  // stats
+  // output stats on surfs written out
+  // if called from ReadSurf or ReadIsurf, statflag is unset by caller
+
+  if (!statflag) return;
 
   double time_total = time2-time1;
 
-  if (comm->me == 0) {
+  if (me == 0) {
     if (screen) {
       fprintf(screen,"  surf elements = " BIGINT_FORMAT "\n",surf->nsurf);
       fprintf(screen,"  CPU time = %g secs\n",time_total);
@@ -101,118 +169,148 @@ void WriteSurf::command(int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-void WriteSurf::write_file(FILE *fp, int pflag)
+void WriteSurf::write_file(char *file)
 {
-  me = comm->me;
-  nprocs = comm->nprocs;
-
-  if (!surf->distributed && pflag) {
-    if (me == 0) write_file_all_points(fp);
-  } else if (!surf->distributed && !pflag) {
-    if (me == 0) write_file_all_nopoints(fp);
-  } else if (pflag) {
-    write_file_distributed_points(fp);
-  } else if (!pflag) {
-    write_file_distributed_nopoints(fp);
+  if (surf->distributed) {
+    if (pointflag) write_file_distributed_points(file);
+    else write_file_distributed_nopoints(file);
+  } else {
+    if (pointflag) write_file_all_points(file);
+    else write_file_all_nopoints(file);
   }
 }
 
 /* ----------------------------------------------------------------------
-   write surf file for explicit non-distributed elements
-   only called by proc 0
-   write Point section with duplicate points
+   write surf file to single or multiple files with Points section
+   each proc has copy of all surfs
 ------------------------------------------------------------------------- */
 
-void WriteSurf::write_file_all_points(FILE *fp)
+void WriteSurf::write_file_all_points(char *file)
 {
-  int dim = domain->dimension;
+  // if multiproc, write base file
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
+  if (multiproc && me == 0) write_base(file);
 
-  int nsurf = surf->nlocal;
+  // open single surface file or multi file for multiproc
 
-  // header section
+  if (filewriter) open(file);
 
-  fprintf(fp,"# Surface element file written by SPARTA\n\n");
-  if (dim == 2) {
-    bigint n = (bigint) 2 * nsurf;
-    fprintf(fp,BIGINT_FORMAT " points\n",n);
-    fprintf(fp,"%d lines\n",nsurf);
-  } else if (dim == 3) {
-    bigint n = (bigint) 3 * nsurf;
-    fprintf(fp,BIGINT_FORMAT " points\n",n);
-    fprintf(fp,"%d triangles\n",nsurf);
-  }
+  // nmine = # of surfs I contribute to this file
+  // my fraction of all surfs
+
+  int first = static_cast<int> (1.0*me/nprocs * surf->nlocal);
+  int next = static_cast<int> (1.0*(me+1)/nprocs * surf->nlocal);
+  int nmine = next - first;
+
+  // write header info
+
+  write_header(nmine);
+
+  if (!filewriter) return;
+
+  // istart/istop = lower/upper bound of surfs written by this proc
+
+  int istart = static_cast<int> (1.0*me/nprocs * surf->nlocal);
+  int istop = static_cast<int> (1.0*(me+nclusterprocs)/nprocs * surf->nlocal);
+
+  // points
 
   fprintf(fp,"\nPoints\n\n");
 
   if (dim == 2) {
-    for (int i = 0; i < nsurf; i++) {
+    Surf::Line *lines = surf->lines;
+    bigint m = 0;
+    for (int i = istart; i < istop; i++) {
       fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g\n",
-              (bigint) 2*i+1,lines[i].p1[0],lines[i].p1[1]);
+              m+1,lines[i].p1[0],lines[i].p1[1]);
       fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g\n",
-              (bigint) 2*i+2,lines[i].p2[0],lines[i].p2[1]);
+              m+2,lines[i].p2[0],lines[i].p2[1]);
+      m += 2;
     }
   } else {
-    for (int i = 0; i < nsurf; i++) {
+    Surf::Tri *tris = surf->tris;
+    bigint m = 0;
+    for (int i = istart; i < istop; i++) {
       fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g %20.15g\n",
-              (bigint) 3*i+1,tris[i].p1[0],tris[i].p1[1],tris[i].p1[2]);
+              m+1,tris[i].p1[0],tris[i].p1[1],tris[i].p1[2]);
       fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g %20.15g\n",
-              (bigint) 3*i+2,tris[i].p2[0],tris[i].p2[1],tris[i].p2[2]);
+              m+2,tris[i].p2[0],tris[i].p2[1],tris[i].p2[2]);
       fprintf(fp,BIGINT_FORMAT " %20.15g %20.15g %20.15g\n",
-              (bigint) 3*i+3,tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+              m+3,tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
+      m += 3;
     }
   }
 
   // lines
 
   if (dim == 2) {
+    Surf::Line *lines = surf->lines;
     fprintf(fp,"\nLines\n\n");
-    for (int i = 0; i < nsurf; i++)
+    bigint m = 0;
+    for (int i = istart; i < istop; i++) {
       fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-              lines[i].id,lines[i].type,
-              (bigint) 2*i+1, (bigint) 2*i+2);
+              lines[i].id,lines[i].type,m+1,m+2);
+      m += 2;
+    }
   }
   
   // triangles
 
   if (dim == 3) {
+    Surf::Tri *tris = surf->tris;
     fprintf(fp,"\nTriangles\n\n");
-    for (int i = 0; i < nsurf; i++)
+    bigint m = 0;
+    for (int i = istart; i < istop; i++) {
       fprintf(fp,SURFINT_FORMAT " %d " BIGINT_FORMAT " " 
               BIGINT_FORMAT " " BIGINT_FORMAT "\n",
-              tris[i].id,tris[i].type,
-              (bigint) 3*i+1, (bigint) 3*i+2, (bigint) 3*i+3);
+              tris[i].id,tris[i].type,m+1,m+2,m+3);
+      m += 3;
+    }
   }
+
+  fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
-   write surf file for explicit non-distributed elements
-   only called by proc 0
-   no Point section, include point coords with Lines/Triangles
+   write surf file to single or multiple files with no Points section
+   each proc has copy of all surfs
 ------------------------------------------------------------------------- */
 
-void WriteSurf::write_file_all_nopoints(FILE *fp)
+void WriteSurf::write_file_all_nopoints(char *file)
+
 {
-  int dim = domain->dimension;
+  // if multiproc, write base file
 
-  Surf::Line *lines = surf->lines;
-  Surf::Tri *tris = surf->tris;
+  if (multiproc && me == 0) write_base(file);
 
-  int nsurf = surf->nlocal;
+  // open single surface file or multi file for multiproc
 
-  // header section
+  if (filewriter) open(file);
 
-  fprintf(fp,"# Surface element file written by SPARTA\n\n");
-  if (dim == 2) fprintf(fp,"%d lines\n",nsurf);
-  else fprintf(fp,"%d triangles\n",nsurf);
+  // nmine = # of surfs I contribute to this file
+  // my fraction of all surfs
+
+  int first = static_cast<int> (1.0*me/nprocs * surf->nlocal);
+  int next = static_cast<int> (1.0*(me+1)/nprocs * surf->nlocal);
+  int nmine = next - first;
+
+  // write header info
+
+  write_header(nmine);
+
+  if (!filewriter) return;
+
+  // istart/istop = lower/upper bound of surfs written by this proc
+
+  int istart = static_cast<int> (1.0*me/nprocs * surf->nlocal);
+  int istop = static_cast<int> (1.0*(me+nclusterprocs)/nprocs * surf->nlocal);
 
   // lines
 
   if (dim == 2) {
+    Surf::Line *lines = surf->lines;
     fprintf(fp,"\nLines\n\n");
-    for (int i = 0; i < nsurf; i++)
+    for (int i = istart; i < istop; i++)
       fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g %20.15g\n",
               lines[i].id,lines[i].type,
               lines[i].p1[0],lines[i].p1[1],
@@ -222,8 +320,9 @@ void WriteSurf::write_file_all_nopoints(FILE *fp)
   // triangles
 
   if (dim == 3) {
+    Surf::Tri *tris = surf->tris;
     fprintf(fp,"\nTriangles\n\n");
-    for (int i = 0; i < nsurf; i++)
+    for (int i = istart; i < istop; i++)
       fprintf(fp,SURFINT_FORMAT " %d %20.15g %20.15g %20.15g "
               "%20.15g %20.15g %20.15g %20.15g %20.15g %20.15g\n",
               tris[i].id,tris[i].type,
@@ -231,20 +330,27 @@ void WriteSurf::write_file_all_nopoints(FILE *fp)
               tris[i].p2[0],tris[i].p2[1],tris[i].p2[2],
               tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
   }
+
+  fclose(fp);
 }
 
 /* ----------------------------------------------------------------------
-   write surf file for explicit or implicit distributed elements
-   all procs participate
-   write Point section with duplicate points
+   write surf file to single or multiple files with Points section
+   surfs are distributed across procs (explicit or implicit)
 ------------------------------------------------------------------------- */
 
-void WriteSurf::write_file_distributed_points(FILE *fp)
+void WriteSurf::write_file_distributed_points(char *file)
 {
-  int dim = domain->dimension;
-  bigint nsurf = surf->nsurf;
+  // if multiproc, write base file
 
-  // nmine = my implicit or explicit surf count
+  if (multiproc && me == 0) write_base(file);
+
+  // open single surface file or multi file for multiproc
+
+  if (filewriter) open(file);
+
+  // nmine = # of surfs I contribute to this file
+  // nown/nlocal depending on explicit/implicit
 
   int nmine;
   if (surf->implicit) nmine = surf->nlocal;
@@ -262,24 +368,12 @@ void WriteSurf::write_file_distributed_points(FILE *fp)
     nchar = (bigint) nmine * sizeof(SurfIDType);
   }
 
-  printf("WRITESURF %d\n",nmine);
-
-
   if (ndouble > MAXSMALLINT || nchar > MAXSMALLINT) 
     error->one(FLERR,"Too much distributed data to communicate");
 
-  // header section
+  // write header info
 
-  if (me == 0) {
-    fprintf(fp,"# Surface element file written by SPARTA\n\n");
-    if (dim == 2) {
-      fprintf(fp,BIGINT_FORMAT " points\n",(bigint) 2*nsurf);
-      fprintf(fp,BIGINT_FORMAT " lines\n",nsurf);
-    } else {
-      fprintf(fp,BIGINT_FORMAT " points\n",(bigint) 3*nsurf);
-      fprintf(fp,BIGINT_FORMAT " triangles\n",nsurf);
-    }
-  }
+  write_header(nmine);
 
   // each proc contributes explicit or implicit distributed points
   // nmine = element count, npoint = point count
@@ -344,21 +438,22 @@ void WriteSurf::write_file_distributed_points(FILE *fp)
     }
   }
 
-  // if proc 0: ping each proc, receive its point data, write data to file
-  // else: wait for ping from proc 0, send my data to proc 0
+  // filewriter = 1 = this proc writes to file
+  // ping each proc in my cluster, receive its data, write data to file
+  // else wait for ping from fileproc, send my data to fileproc
 
-  int tmp,recv_size,ncount;
-  MPI_Status status;
+  int recv_size,ncount,tmp;
   MPI_Request request;
+  MPI_Status status;
 
-  if (me == 0) fprintf(fp,"\nPoints\n\n");
+  if (filewriter) {
+    fprintf(fp,"\nPoints\n\n");
 
-  if (me == 0) {
     bigint index = 0;
-    for (int iproc = 0; iproc < nprocs; iproc++) {
+    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
       if (iproc) {
-        MPI_Irecv(pbuf,max_size_point*dim,MPI_DOUBLE,iproc,0,world,&request);
-        MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
+        MPI_Irecv(pbuf,max_size_point*dim,MPI_DOUBLE,me+iproc,0,world,&request);
+        MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_DOUBLE,&recv_size);
       } else recv_size = npoint*dim;
@@ -384,10 +479,10 @@ void WriteSurf::write_file_distributed_points(FILE *fp)
     }
 
   } else {
-    MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
-    MPI_Rsend(pbuf,npoint*dim,MPI_DOUBLE,0,0,world);
+    MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+    MPI_Rsend(pbuf,npoint*dim,MPI_DOUBLE,fileproc,0,world);
   }
-  
+
   memory->sfree(pbuf);
 
   // max_size_surf = largest surf buffer needed by any proc
@@ -415,20 +510,19 @@ void WriteSurf::write_file_distributed_points(FILE *fp)
     }
   }
 
-  // if proc 0: ping each proc, receive its point data, write data to file
-  // else: wait for ping from proc 0, send my data to proc 0
+  // filewriter = 1 = this proc writes to file
+  // ping each proc in my cluster, receive its data, write data to file
+  // else wait for ping from fileproc, send my data to fileproc
 
-  if (me == 0) {
+  if (filewriter) {
     if (dim == 2) fprintf(fp,"\nLines\n\n");
     else fprintf(fp,"\nTriangles\n\n");
-  }
 
-  if (me == 0) {
     bigint index = 0;
-    for (int iproc = 0; iproc < nprocs; iproc++) {
+    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
       if (iproc) {
-        MPI_Irecv(sbuf,max_size_surf*nper,MPI_CHAR,iproc,0,world,&request);
-        MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
+        MPI_Irecv(sbuf,max_size_surf*nper,MPI_CHAR,me+iproc,0,world,&request);
+        MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = nmine*nper;
@@ -449,27 +543,33 @@ void WriteSurf::write_file_distributed_points(FILE *fp)
 	}
       }
     }
+    fclose(fp);
 
   } else {
-    MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
-    MPI_Rsend(sbuf,nmine*nper,MPI_CHAR,0,0,world);
+    MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+    MPI_Rsend(sbuf,nmine*nper,MPI_CHAR,fileproc,0,world);
   }
-  
+
   memory->sfree(sbuf);
 }
 
 /* ----------------------------------------------------------------------
-   write surf file for explicit or implicit distributed elements
-   all procs participate
-   no Point section, include point coords with Lines/Triangles
+   write surf file to single or multiple files with no Points section
+   surfs are distributed across procs (explicit or implicit)
 ------------------------------------------------------------------------- */
 
-void WriteSurf::write_file_distributed_nopoints(FILE *fp)
+void WriteSurf::write_file_distributed_nopoints(char *file)
 {
-  int dim = domain->dimension;
-  bigint nsurf = surf->nsurf;
+  // if multiproc, write base file
 
-  // nmine = my implicit or explicit surf count
+  if (multiproc && me == 0) write_base(file);
+
+  // open single surface file or multi file for multiproc
+
+  if (filewriter) open(file);
+ 
+  // nmine = # of surfs I contribute to this file
+  // nown/nlocal depending on explicit/implicit
 
   int nmine;
   if (surf->implicit) nmine = surf->nlocal;
@@ -485,15 +585,9 @@ void WriteSurf::write_file_distributed_nopoints(FILE *fp)
   if (nchar > MAXSMALLINT) 
     error->one(FLERR,"Too much distributed data to communicate");
 
-  // header section
+  // write header info
 
-  if (me == 0) {
-    fprintf(fp,"# Surface element file written by SPARTA\n\n");
-    if (dim == 2)
-      fprintf(fp,BIGINT_FORMAT " lines\n",nsurf);
-    else if (dim == 3)
-      fprintf(fp,BIGINT_FORMAT " triangles\n",nsurf);
-  }
+  write_header(nmine);
 
   // each proc contributes explicit or implicit distributed surfs
   // nmine = element count
@@ -536,23 +630,22 @@ void WriteSurf::write_file_distributed_nopoints(FILE *fp)
     buf = (char *) tris;
   }
 
-  // if proc 0: ping each proc, receive its surf data, write data to file
-  // else: wait for ping from proc 0, send my data to proc 0
+  // filewriter = 1 = this proc writes to file
+  // ping each proc in my cluster, receive its data, write data to file
+  // else wait for ping from fileproc, send my data to fileproc
 
-  int tmp,recv_size,ncount;
-  MPI_Status status;
+  int recv_size,ncount,tmp;
   MPI_Request request;
-
-  if (me == 0) {
+  MPI_Status status;
+  
+  if (filewriter) {
     if (dim == 2) fprintf(fp,"\nLines\n\n");
     else fprintf(fp,"\nTriangles\n\n");
-  }
 
-  if (me == 0) {
-    for (int iproc = 0; iproc < nprocs; iproc++) {
+    for (int iproc = 0; iproc < nclusterprocs; iproc++) {
       if (iproc) {
-        MPI_Irecv(buf,max_size*nper,MPI_CHAR,iproc,0,world,&request);
-        MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
+        MPI_Irecv(buf,max_size*nper,MPI_CHAR,me+iproc,0,world,&request);
+        MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
         MPI_Wait(&request,&status);
         MPI_Get_count(&status,MPI_CHAR,&recv_size);
       } else recv_size = nmine*nper;
@@ -576,11 +669,124 @@ void WriteSurf::write_file_distributed_nopoints(FILE *fp)
 		  tris[i].p3[0],tris[i].p3[1],tris[i].p3[2]);
       }
     }
+    fclose(fp);
 
   } else {
-    MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
-    MPI_Rsend(buf,nmine*nper,MPI_CHAR,0,0,world);
+    MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+    MPI_Rsend(buf,nmine*nper,MPI_CHAR,fileproc,0,world);
+  }
+
+  memory->sfree(buf);
+}
+
+/* ----------------------------------------------------------------------
+   write base file for multiproc output
+   only called by proc 0
+------------------------------------------------------------------------- */
+
+void WriteSurf::write_base(char *file)
+{
+  char *hfile = new char[strlen(file) + 16];
+  char *ptr = strchr(file,'%');
+  *ptr = '\0';
+  sprintf(hfile,"%s%s%s",file,"base",ptr+1);
+  *ptr = '%';
+
+  fp = fopen(hfile,"w");
+  if (fp == NULL) {
+    char str[128];
+    sprintf(str,"Cannot open surface base file %s",hfile);
+    error->one(FLERR,str);
   }
   
-  memory->sfree(buf);
+  delete [] hfile;
+
+  fprintf(fp,"# Surface element multiproc file written by SPARTA\n\n");
+  fprintf(fp,"%d files\n",multiproc);
+  if (dim == 2)
+    fprintf(fp,BIGINT_FORMAT " lines\n",surf->nsurf);
+  else if (dim == 3)
+    fprintf(fp,BIGINT_FORMAT " triangles\n",surf->nsurf);
+
+  fclose(fp);
+}
+
+/* ----------------------------------------------------------------------
+   open a single file or a single multiproc file
+   only called by a filewriter proc
+------------------------------------------------------------------------- */
+
+void WriteSurf::open(char *file)
+{
+  char *onefile = file;
+
+  if (multiproc) {
+    onefile = new char[strlen(file) + 16];
+    char *ptr = strchr(file,'%');
+    *ptr = '\0';
+    sprintf(onefile,"%s%d%s",file,icluster,ptr+1);
+    *ptr = '%';
+  }
+    
+  fp = fopen(onefile,"w");
+  if (fp == NULL) {
+    char str[128];
+    sprintf(str,"Cannot open surface file %s",onefile);
+    error->one(FLERR,str);
+  }
+
+  if (multiproc) delete [] onefile;
+}
+
+/* ----------------------------------------------------------------------
+   write header info into a single file or multiproc file
+   called by all procs
+   nmine = surf count contributed by this proc,
+           only used for multiproc output
+------------------------------------------------------------------------- */
+
+void WriteSurf::write_header(int nmine)
+{
+  // nfile = # of surfs written to this surface file
+  // single file: nfile = surf->nsurf
+  // multiproc file = sum of nmine over procs contributing to this file
+
+  bigint nfile = surf->nsurf;
+
+  if (multiproc) {
+    int tmp,nother;
+    MPI_Status status;
+    MPI_Request request;
+
+    nfile = 0;
+    if (filewriter) {
+      for (int iproc = 0; iproc < nclusterprocs; iproc++) {
+        if (iproc) {
+          MPI_Irecv(&nother,1,MPI_INT,me+iproc,0,world,&request);
+          MPI_Send(&tmp,0,MPI_INT,me+iproc,0,world);
+          MPI_Wait(&request,&status);
+        } else nother = nmine;
+        nfile += nother;
+      }
+    } else {
+      MPI_Recv(&tmp,0,MPI_INT,fileproc,0,world,&status);
+      MPI_Rsend(&nmine,1,MPI_INT,fileproc,0,world);
+    }
+  }
+
+  if (filewriter) {
+    if (!multiproc)
+      fprintf(fp,"# Surface element file written by SPARTA\n\n");
+    else
+      fprintf(fp,"# Surface element multiproc file written by SPARTA\n\n");
+    if (dim == 2) {
+      if (pointflag)
+        fprintf(fp,BIGINT_FORMAT " points\n",(bigint) 2*nfile);
+      fprintf(fp,BIGINT_FORMAT " lines\n",nfile);
+    } else if (dim == 3) {
+      if (pointflag)
+        fprintf(fp,BIGINT_FORMAT " points\n",(bigint) 3*nfile);
+      fprintf(fp,BIGINT_FORMAT " triangles\n",nfile);
+    }
+  }
 }

@@ -22,15 +22,16 @@ keyword = {group} or {type} or {file} :l
     group-ID = new or existing surface group to assign the surface elements to
   type arg = tfile
     tfile = binary file with per grid cell surface type values
-  file args = filename yes/no
-    filename = file to write surfaces to
-    yes/no = whether to include Points section in file or not :pre
+  file args = identical to those defined for the "write_surf"_write_surf.html command
+    this keyword must be last :pre
 :ule
 
 [Examples:]
 
 read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type :pre
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type
+read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs
+read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs.% oints no nfile 32 :pre
 
 [Description:]
 
@@ -239,22 +240,29 @@ each surface element created in that grid cell by the marching cubes
 or squares algorithm.
 
 If the {file} keyword is used, the surfaces will be written out to the
-specified {filename} immediately after they are read in.  The format
-for the file is the same as the one written by the
-"write_surf"_write_surf.html command, or read by the
-"read_surf"_read_surf.html command.  This can be useful for
-visualizing the implicit surfaces with a tool that uses a SPARTA
-surface data file as input.  As explained on the
-"read_surf"_read_surf.html doc page, the Points section is optional in
-a surface data file.  The {yes/no} argument determines whether a
-Points section is included in the file, or whether the point
-coordinates are included with individual lines or triangles.
+specified {filename} immediately after they are read in.  The
+arguments for this keyword are identical to those used for the
+"write_surf"_write_surf.html command.  This includes a file name with
+optional "*" and "%" wildcard characters, as well as its optional
+keywords.
 
-IMPORTANT NOTE: You cannot use the "read_surf"_read_surf.html command
-to read in a surface data file and treat the surface elements as
-implicit surfaces.  If you use that command to read the surface data
-file produced by the {file} option, the surface elements will be
-treated as explicit surfaces in the new simulation.
+IMPORTANT NOTE: The {file} keyword must be the last keyword specified
+with the read_isurf command.  This is because all the remaining arguments
+are passed to the "write_surf"_write_surf.html command.
+
+The format for the output file is the same as the one written by the
+"write_surf"_write_surf.html command, or that is read by the
+"read_surf"_read_surf.html command.  This can be useful for
+visualizing the implicit surfaces with a tool that uses SPARTA surface
+data as input.
+
+IMPORTANT NOTE: If you write out implicit surfaces via the {file}
+keyword, they are written as if they were explicit surfaces.  Thus the
+file can only be read back into SPARTA via the
+"read_surf"_read_surf.html command, which will treat them as explicit
+surfaces.  At some point we will add a write_isurf command, so that
+dynamics implicit surfaces can be written in a format that allows them
+be be read back in as implicit surfaces.
 
 :line
 

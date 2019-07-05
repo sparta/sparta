@@ -187,8 +187,9 @@ void FixAdapt::end_of_step()
     grid->type_check(0);
   }
 
-  // final update of any per grid fixes for all new child cells
+  // final update of any post_adapt or per grid fixes for all new child cells
   
+  modify->post_adapt();
   if (modify->n_pergrid) adapt->add_grid_fixes();
 
   // reallocate per grid cell arrays in per grid computes

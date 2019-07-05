@@ -280,6 +280,10 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   // owning proc for each datum = random hash of cellID
   // one datum for each owned cell: datum = owning proc, cellID
   // one datum for each surf/cell pair: datum = cellID, surfID
+  // for non-distributed surfs, surfID is just local index
+  //   surfs are not necessarily in ID order (if read from multifile)
+  //   but are ordered the same on every proc
+  //   so this avoids having to lookup the indcies of surf IDs in a hash
 
   m = 0;
   for (i = 0; i < nlocal; i++) {
@@ -297,8 +301,8 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
       if (dim == 2) surfID = surf_lines[i].id;
       else surfID = surf_tris[i].id;
     } else {
-      if (dim == 2) surfID = surf_lines[me+i*nprocs].id;
-      else surfID = surf_tris[me+i*nprocs].id;
+      if (dim == 2) surfID = me+i*nprocs;    // just local index, not ID
+      else surfID = me+i*nprocs;   
     }
 
     for (j = 0; j < cellcount[i]; j++) {
@@ -362,13 +366,14 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
   }
 
   // non-distributed surfs:
-  // store surfIDs as local indices in each cell's csurfs list
+  // store received surfID in each cell's csurfs vector
+  // received surfIDs are already local indices, same on all procs
   // for performance, sort each cell's csurfs list, same order as cell alg
 
   if (!distributed) {
     for (m = 0; m < nreturn; m++) {
       icell = (*hash)[outbuf[m].cellID] - 1;
-      cells[icell].csurfs[cells[icell].nsurf++] = outbuf[m].surfID - 1;
+      cells[icell].csurfs[cells[icell].nsurf++] = outbuf[m].surfID;
     }
 
     for (icell = 0; icell < nlocal; icell++)
