@@ -40,7 +40,7 @@ class RCB : protected Pointers {
 
   RCB(class SPARTA *);
   ~RCB();
-  void compute(int, double **, double *, int flip=0);
+  void compute(int, double **, double *, char *, int flip=0);
   void invert();
   void check();
   void stats(int);
