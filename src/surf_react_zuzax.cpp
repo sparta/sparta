@@ -70,6 +70,43 @@ void SurfReactZuzax::init_reactions()
 
 int SurfReactZuzax::react(Particle::OnePart *&ip, double *tmpp, Particle::OnePart *&jp)
 {
+   // We are hear when we have decided that the particle in ip will collide with the
+   // current surface. This may or may not cause a reaction event to occur. The particle
+   // may be replaced with another particle or another two particles. If two particles are
+   // created then the jp return argument is used.
+
+   // For particle collisions of type ip, we've created a probability table within the
+   // implicit solver.
+
+
+
+
+   // Roll the dice for the probability table
+
+
+
+   // Do the event indicated by the roll
+
+
+
+   // Calculate the energy depositied into the surface -> this is new for sparta
+   // because the energy deposited on surfaces hasn't been tracked previously.
+
+
+
+   // Create a return partice ( one or two) rolling dice again to determine the properties
+
+
+
+
+   // Decide on whether we recalculate the probability table.
+
+
+   
+
+
+
+
   return 0;
 }
 //=================================================================================================
