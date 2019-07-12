@@ -2517,7 +2517,7 @@ void Surf::reset_csurfs_implicit()
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector(int nrow, int *tally2surf, 
+void Surf::collate_vector(int nrow, surfint *tally2surf, 
                           double *in, int instride, double *out)
 {
   // collate version depends on tally_comm setting
@@ -2537,7 +2537,7 @@ void Surf::collate_vector(int nrow, int *tally2surf,
    allreduce version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector_reduce(int nrow, int *tally2surf, 
+void Surf::collate_vector_reduce(int nrow, surfint *tally2surf, 
                                  double *in, int instride, double *out)
 {
   int i,j,m;
@@ -2588,7 +2588,7 @@ void Surf::collate_vector_reduce(int nrow, int *tally2surf,
    rendezvous version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector_rendezvous(int nrow, int *tally2surf, 
+void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf, 
                                      double *in, int instride, double *out)
 {
   // allocate memory for rvous input
@@ -2682,7 +2682,7 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array(int nrow, int ncol, surfint *tally2surf, 
                          double **in, double **out)
 {
   // collate version depends on tally_comm setting
@@ -2702,7 +2702,7 @@ void Surf::collate_array(int nrow, int ncol, int *tally2surf,
    allreduce version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf, 
                                 double **in, double **out)
 {
   int i,j,m;
@@ -2757,7 +2757,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf,
    rendezvous version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array_rendezvous(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf, 
                                     double **in, double **out)
 {
   int i,j,m;

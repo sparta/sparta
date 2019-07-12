@@ -196,13 +196,13 @@ class Surf : protected Pointers {
   void compress_rebalance_implicit();
   void reset_csurfs_implicit();
 
-  void collate_vector(int, int *, double *, int, double *);
-  void collate_vector_reduce(int, int *, double *, int, double *);
-  void collate_vector_rendezvous(int, int *, double *, int, double *);
+  void collate_vector(int, surfint *, double *, int, double *);
+  void collate_vector_reduce(int, surfint *, double *, int, double *);
+  void collate_vector_rendezvous(int, surfint *, double *, int, double *);
 
-  void collate_array(int, int, int *, double **, double **);
-  void collate_array_reduce(int, int, int *, double **, double **);
-  void collate_array_rendezvous(int, int, int *, double **, double **);
+  void collate_array(int, int, surfint *, double **, double **);
+  void collate_array_reduce(int, int, surfint *, double **, double **);
+  void collate_array_rendezvous(int, int, surfint *, double **, double **);
 
   void redistribute_lines_clip(int, int);
   void redistribute_lines_temporary(int);
