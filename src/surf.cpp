@@ -2730,7 +2730,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf,
   int dim = domain->dimension;
 
   for (i = 0; i < nrow; i++) {
-    m = tally2surf[i];
+    m = (int) tally2surf[i] - 1;
     for (j = 0; j < ncol; j++) 
       one[m][j] = in[i][j];
   }
