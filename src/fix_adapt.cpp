@@ -192,11 +192,14 @@ void FixAdapt::end_of_step()
   modify->post_adapt();
   if (modify->n_pergrid) adapt->add_grid_fixes();
 
-  // reallocate per grid cell arrays in per grid computes
+  // reallocate data in per grid and per surf computes
+  // that depends on which cells and surfs a proc owns
 
   Compute **compute = modify->compute;
-  for (int i = 0; i < modify->ncompute; i++)
+  for (int i = 0; i < modify->ncompute; i++) {
     if (compute[i]->per_grid_flag) compute[i]->reallocate();
+    if (compute[i]->per_surf_flag) compute[i]->reallocate();
+  }
 
   // reallocate per grid arrays in per grid dumps
 

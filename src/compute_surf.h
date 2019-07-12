@@ -23,13 +23,13 @@ ComputeStyle(surf,ComputeSurf)
 
 #include "compute.h"
 #include "surf.h"
+#include "hash3.h"
 
 namespace SPARTA_NS {
 
 class ComputeSurf : public Compute {
  public:
   ComputeSurf(class SPARTA *, int, char **);
-  ComputeSurf(class SPARTA* sparta) : Compute(sparta) {}
   ~ComputeSurf();
   virtual void init();
   void compute_per_surf();
@@ -38,32 +38,41 @@ class ComputeSurf : public Compute {
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(int *&);
   virtual void tallysum(int);
+  void reallocate();
   bigint memory_usage();
 
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
   int *which;
-  bigint last_tallysum;    // last timestep tallysum was called
-
-  int nsurf;               // # of lines/tris I own
-                           // surf->nlocal+nghost for explicit all or distributed
+  bigint last_tallysum;      // last timestep tallysum was called
+  double nfactor_inverse;
 
   int ntally;              // # of surfs I have tallied for
   int maxtally;            // # of tallies currently allocated
-  int *surf2tally;         // surf2tally[I] = tally index of Ith surf
-  int *tally2surf;         // tally2surf[I] = surf index of Ith tally
   double **array;          // tally values, maxtally in length
+  surfint *tally2surf;     // tally2surf[I] = surf ID of Ith tally
 
-  int dimension;           // local copies
+  // hash for surf IDs
+
+#ifdef SPARTA_MAP
+  typedef std::map<surfint,int> MyHash;
+#elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<surfint,int> MyHash;
+#else
+  typedef std::tr1::unordered_map<surfint,int> MyHash;
+#endif
+
+  MyHash *hash;
+
+  int dim;                 // local copies
   Surf::Line *lines;
   Surf::Tri *tris;
 
   int weightflag;          // 1 if cell weighting is enabled
   double weight;           // particle weight, based on initial cell
-  double nfactor;          // dt/fnum for normalization
-  double nfactor_inverse;  // fnum/dt for normalization
   double *normflux;        // normalization factor for each surf element
-  double nfactor_previous; // nfactor from previous run
+
+  void init_normflux();
   void grow_tally();
 };
 

@@ -22,6 +22,7 @@ FixStyle(ave/surf,FixAveSurf)
 #define SPARTA_FIX_AVE_SURF_H
 
 #include "fix.h"
+#include "hash3.h"
 
 namespace SPARTA_NS {
 
@@ -53,10 +54,21 @@ class FixAveSurf : public Fix {
 
   int ntally;              // # of surfs I have tallies for
   int maxtally;            // # of tallies currently allocated
-  int *surf2tally;         // surf2tally[I] = tally index of Ith surf
-  int *tally2surf;         // tally2surf[I] = surf index of Ith tally
+  surfint *tally2surf;     // tally2surf[I] = surf ID of Ith tally
   double *vec_tally;       // tally values, maxtally in length
   double **array_tally;
+
+  // hash for surf IDs
+
+#ifdef SPARTA_MAP
+  typedef std::map<surfint,int> MyHash;
+#elif defined SPARTA_UNORDERED_MAP
+  typedef std::unordered_map<surfint,int> MyHash;
+#else
+  typedef std::tr1::unordered_map<surfint,int> MyHash;
+#endif
+
+  MyHash *hash;
 
   void options(int, int, char **);
   void grow_tally();

@@ -2563,8 +2563,7 @@ void Surf::collate_vector_reduce(int nrow, int *tally2surf,
 
   j = 0;
   for (i = 0; i < nrow; i++) {
-    if (dim == 2) m = (int) lines[tally2surf[i]].id - 1;
-    else m = (int) tris[tally2surf[i]].id - 1;
+    m = (int) tally2surf[i] - 1;
     one[m] = in[j];
     j += instride;
   }
@@ -2613,8 +2612,7 @@ void Surf::collate_vector_rendezvous(int nrow, int *tally2surf,
   
   int m = 0;
   for (int i = 0; i < nrow; i++) {
-    if (dim == 2) id = lines[tally2surf[i]].id;
-    else id = tris[tally2surf[i]].id;
+    id = tally2surf[i];
     proclist[i] = (id-1) % nprocs;
     in_rvous[i].id = id;
     in_rvous[i].value = in[m];
@@ -2732,8 +2730,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf,
   int dim = domain->dimension;
 
   for (i = 0; i < nrow; i++) {
-    if (dim == 2) m = (int) lines[tally2surf[i]].id - 1;
-    else m = (int) tris[tally2surf[i]].id - 1;
+    m = tally2surf[i];
     for (j = 0; j < ncol; j++) 
       one[m][j] = in[i][j];
   }
@@ -2784,8 +2781,7 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, int *tally2surf,
   
   m = 0;
   for (int i = 0; i < nrow; i++) {
-    if (dim == 2) id = lines[tally2surf[i]].id;
-    else id = tris[tally2surf[i]].id;
+    id = tally2surf[i];
     proclist[i] = (id-1) % nprocs;
     in_rvous[m++] = ubuf(id).d;
     for (j = 0; j < ncol; j++)
