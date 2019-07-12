@@ -26,6 +26,8 @@
 #include "domain.h"
 #include "grid.h"
 #include "comm.h"
+#include "modify.h"
+#include "fix_ablate.h"
 #include "input.h"
 #include "irregular.h"
 #include "geometry.h"
@@ -92,7 +94,7 @@ void ReadISurf::command(int narg, char **arg)
 
   if (narg < 6) error->all(FLERR,"Illegal read_isurf command");
 
-  int ggroup = grid->find_group(arg[0]);
+  ggroup = grid->find_group(arg[0]);
   if (ggroup < 0) error->all(FLERR,"Read_isurf grid group ID does not exist");
 
   nx = input->inumeric(FLERR,arg[1]);
@@ -118,7 +120,7 @@ void ReadISurf::command(int narg, char **arg)
   // must comprise a 3d contiguous block
 
   int nxyz[3];
-  count = grid->check_uniform_group(ggroup,nxyz,corner,xyzsize);
+  int count = grid->check_uniform_group(ggroup,nxyz,corner,xyzsize);
   if (nx != nxyz[0] || ny != nxyz[1] || nz != nxyz[2])
     error->all(FLERR,"Read_isurf grid group does not match nx,ny,nz");
 
@@ -131,10 +133,15 @@ void ReadISurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
-  create_hash(count,ggroup);
+  create_hash(count);
 
-  if (dimension == 3) memory->create(cvalues,grid->nlocal,8,"readisurf:cvalues");
-  else memory->create(cvalues,grid->nlocal,4,"readisurf:cvalues");
+  if (dimension == 3) {
+    memory->create(cvalues,grid->nlocal,8,"readisurf:cvalues");
+    memset(&cvalues[0][0],0,grid->nlocal*8*sizeof(int));
+  } else {
+    memory->create(cvalues,grid->nlocal,4,"readisurf:cvalues");
+    memset(&cvalues[0][0],0,grid->nlocal*4*sizeof(int));
+  }
 
   read_corners(gridfile);
 
@@ -155,8 +162,8 @@ void ReadISurf::command(int narg, char **arg)
 
   grid->clear_surf();
 
-  if (dimension == 3) marching_cubes(ggroup);
-  else marching_squares(ggroup);
+  if (dimension == 3) marching_cubes();
+  else marching_squares();
 
   surf->nown = surf->nlocal;
   bigint nlocal = surf->nlocal;
@@ -236,19 +243,28 @@ void ReadISurf::command(int narg, char **arg)
   MPI_Barrier(world);
   double time7 = MPI_Wtime();
 
+  // store corner point values in FixAblate if requested
+  // cannot do until now, b/c need split cells to exist via surf2grid()
+
+  if (storeflag) ablate->store_corners(cvalues);
+
+  MPI_Barrier(world);
+  double time8 = MPI_Wtime();
+
   // stats
 
-  double time_total = time6-time1;
+  double time_total = time8-time1;
   double time_s2g = time5-time4;
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/marching/check/surf2grid/ghost/inout percent = "
-              "%g %g %g %g %g %g\n",
+      fprintf(screen,"  read/marching/check/surf2grid/ghost/inout/store "
+              "percent = %g %g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
-              100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total);
+              100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
+              100.0*(time8-time7)/time_total);
       fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
       fprintf(screen,"  map/rvous/split percent = %g %g %g\n",
               100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
@@ -256,11 +272,12 @@ void ReadISurf::command(int narg, char **arg)
     }
     if (logfile) {
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/marching/check/surf2grid/ghost/inout percent = "
-              "%g %g %g %g %g %g\n",
+      fprintf(logfile,"  read/marching/check/surf2grid/ghost/inout/store "
+              "percent = %g %g %g %g %g %g %g\n",
               100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
               100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
-              100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total);
+              100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
+              100.0*(time8-time7)/time_total);
       fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
       fprintf(logfile,"  map/rvous/split percent = %g %g %g\n",
               100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
@@ -406,16 +423,17 @@ void ReadISurf::read_types(char *typefile)
    create hash for my grid cells in group
    key = index (0 to N-1) of grid cell in Nx by Ny by Nz contiguous block
    value = my local icell
+   NOTE: could use count to prealloc the hash size
 ------------------------------------------------------------------------- */
 
-void ReadISurf::create_hash(int count, int igroup)
+void ReadISurf::create_hash(int count)
 {
   hash = new MyHash;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   int nglocal = grid->nlocal;
-  int groupbit = grid->bitmask[igroup];
+  int groupbit = grid->bitmask[ggroup];
 
   int ix,iy,iz;
   bigint index;
@@ -526,6 +544,7 @@ void ReadISurf::process_args(int narg, char **arg)
 {
   sgrouparg = 0;
   typefile = NULL;
+  storeflag = 0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -536,6 +555,19 @@ void ReadISurf::process_args(int narg, char **arg)
     } else if (strcmp(arg[iarg],"type") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       typefile = arg[iarg+1];
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"store") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      storeflag = 1;
+      storeID = arg[iarg+1];
+      int ifix = modify->find_fix(storeID);
+      if (ifix < 0)
+        error->all(FLERR,"Fix ID for read_isurf store does not exist");
+      if (strcmp(modify->fix[ifix]->style,"ablate") != 0)
+        error->all(FLERR,"Fix for read_isurf store is not a fix ablate");
+      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
+      if (ggroup != ablate->igroup)
+        error->all(FLERR,"Read_isurf group does not match fix ablate group");
       iarg += 2;
     } else error->all(FLERR,"Invalid read_isurf command");
   }
@@ -579,7 +611,7 @@ double ReadISurf::interpolate(int v0, int v1, double lo, double hi)
      based on ave value at cell center
 ------------------------------------------------------------------------- */
 
-void ReadISurf::marching_squares(int igroup)
+void ReadISurf::marching_squares()
 {
   int i,ipt,isurf,nsurf,which,splitflag;
   int v00,v01,v10,v11,bit0,bit1,bit2,bit3;
@@ -594,7 +626,7 @@ void ReadISurf::marching_squares(int igroup)
   Grid::ChildInfo *cinfo = grid->cinfo;
   MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
-  int groupbit = grid->bitmask[igroup];
+  int groupbit = grid->bitmask[ggroup];
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
@@ -804,7 +836,7 @@ void ReadISurf::marching_squares(int igroup)
    create 3d implicit surfs from grid point values
 ------------------------------------------------------------------------- */
 
-void ReadISurf::marching_cubes(int igroup)
+void ReadISurf::marching_cubes()
 {
   int i,j,ipt,isurf,nsurf,icase,which;
   surfint *ptr;
@@ -813,7 +845,7 @@ void ReadISurf::marching_cubes(int igroup)
   Grid::ChildInfo *cinfo = grid->cinfo;
   MyPage<surfint> *csurfs = grid->csurfs;
   int nglocal = grid->nlocal;
-  int groupbit = grid->bitmask[igroup];
+  int groupbit = grid->bitmask[ggroup];
     
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;

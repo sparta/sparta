@@ -800,7 +800,7 @@ template < int DIM, int SURF > void Update::move()
 
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)
-                  slist_active[m]->surf_tally(minsurf,&iorig,ipart,jpart);
+                  slist_active[m]->surf_tally(minsurf,icell,&iorig,ipart,jpart);
               
               // nstuck = consective iterations particle is immobile
 

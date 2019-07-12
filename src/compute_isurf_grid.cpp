@@ -13,14 +13,14 @@
 ------------------------------------------------------------------------- */
 
 #include "string.h"
-#include "compute_surf.h"
+#include "compute_isurf_grid.h"
 #include "particle.h"
 #include "mixture.h"
 #include "surf.h"
 #include "grid.h"
 #include "update.h"
-#include "modify.h"
 #include "domain.h"
+#include "comm.h"
 #include "math_extra.h"
 #include "memory.h"
 #include "error.h"
@@ -30,24 +30,22 @@ using namespace SPARTA_NS;
 enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
      XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
-#define DELTA 4096
-
 /* ---------------------------------------------------------------------- */
 
-ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
+ComputeISurfGrid::ComputeISurfGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg < 5) error->all(FLERR,"Illegal compute surf command");
+  if (narg < 5) error->all(FLERR,"Illegal compute isurf/grid command");
 
-  if (surf->implicit) 
-    error->all(FLERR,"Cannot use compute surf with implicit surfs");
+  if (!surf->implicit) 
+    error->all(FLERR,"Cannot use compute isurf/grid with explicit surfs");
 
-  int igroup = surf->find_group(arg[2]);
-  if (igroup < 0) error->all(FLERR,"Compute surf group ID does not exist");
+  int igroup = grid->find_group(arg[2]);
+  if (igroup < 0) error->all(FLERR,"Compute isurf/grid group ID does not exist");
   groupbit = surf->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
-  if (imix < 0) error->all(FLERR,"Compute surf mixture ID does not exist");
+  if (imix < 0) error->all(FLERR,"Compute isurf/grid mixture ID does not exist");
   ngroup = particle->mixture[imix]->ngroup;
 
   nvalue = narg - 4;
@@ -73,46 +71,49 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
     else if (strcmp(arg[iarg],"erot") == 0) which[nvalue++] = EROT;
     else if (strcmp(arg[iarg],"evib") == 0) which[nvalue++] = EVIB;
     else if (strcmp(arg[iarg],"etot") == 0) which[nvalue++] = ETOT;
-    else error->all(FLERR,"Illegal compute surf command");
+    else error->all(FLERR,"Illegal compute isurf/grid command");
     iarg++;
   }
 
   ntotal = ngroup*nvalue;
 
+  per_grid_flag = 1;
+  size_per_grid_cols = ntotal;
+  post_process_grid_flag = 1;
+
   surf_tally_flag = 1;
   timeflag = 1;
-  per_surf_flag = 1;
-  size_per_surf_cols = ntotal;
 
-  ntally = maxtally = 0;
-  surf2tally = tally2surf = NULL;
-  array_surf_tally = NULL;
-  vector_surf = NULL;
+  ngtotal = 0;
+  vector_grid = NULL;
+  array_grid = NULL;
   normflux = NULL;
   nfactor_previous = 0.0;
-  last_tallysum = -1;
+
+  maxsend = 0;
+  proclist = NULL;
+  sbuf = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
 
-ComputeSurf::~ComputeSurf()
+ComputeISurfGrid::~ComputeISurfGrid()
 {
-  if (copy || copymode) return;
-
   delete [] which;
-  memory->destroy(surf2tally);
-  memory->destroy(tally2surf);
-  memory->destroy(array_surf_tally);
-  memory->destroy(vector_surf);
+  memory->destroy(vector_grid);
+  memory->destroy(array_grid);
   memory->destroy(normflux);
+  memory->destroy(proclist);
+  memory->destroy(sbuf);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeSurf::init()
+void ComputeISurfGrid::init()
 {
   if (ngroup != particle->mixture[imix]->ngroup)
-    error->all(FLERR,"Number of groups in compute surf mixture has changed");
+    error->all(FLERR,
+               "Number of groups in compute isurf/grid mixture has changed");
 
   // local copies
 
@@ -120,14 +121,7 @@ void ComputeSurf::init()
   lines = surf->lines;
   tris = surf->tris;
 
-  // allocate and initialize surf2tally indices
-  // nsurf = all explicit surfs in this procs grid cells
-
   nsurf = surf->nlocal + surf->nghost;
-
-  memory->destroy(surf2tally);
-  memory->create(surf2tally,nsurf,"surf:surf2tally");
-  for (int i = 0; i < nsurf; i++) surf2tally[i] = -1;
 
   // normalization nfactor = dt/fnum
 
@@ -138,6 +132,8 @@ void ComputeSurf::init()
   // store inverse, so can multipy by scale factor when tally
   // store for all surf elements, b/c don't know which ones I need to normalize
   // one-time only initialization unless timestep or fnum changes between runs
+  // NOTE: needs to be done for owned and ghost surfs
+  // NOTE: when grid cells migrate or adapt, may have new surfs
 
   if (nfactor != nfactor_previous)  {
     memory->destroy(normflux);
@@ -164,31 +160,58 @@ void ComputeSurf::init()
   if (grid->cellweightflag) weightflag = 1;
   else weightflag = 0;
 
-  // initialize tally array in case accessed before a tally timestep
+  // allocate per grid cell array
+  // zero array in case dump invokes post_process_grid() before run
 
-  clear();
+  reallocate();
+
+  collapsed = 0;
+
+  int i,j;
+
+  int n = grid->nlocal + grid->nghost;
+  for (i = 0; i < n; i++)
+    for (j = 0; j < ntotal; j++)
+      array_grid[i][j] = 0.0;
 }
 
 /* ----------------------------------------------------------------------
-   no operations here, since compute results are stored in tally array
+   no operations here, since compute results are stored in array_grid
    just used by callers to indicate compute was used
    enables prediction of next step when update needs to tally
+   NOTE: also need to mark invoked_per_surf?
 ------------------------------------------------------------------------- */
 
-void ComputeSurf::compute_per_surf()
+void ComputeISurfGrid::compute_per_grid()
 {
-  invoked_per_surf = update->ntimestep;
+  invoked_per_grid = update->ntimestep;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeSurf::clear()
+void ComputeISurfGrid::clear()
 {
-  // reset all set surf2tally values to -1 and ntally to 0
+  // reset array_grid - could do this with memset()
   // called by Update at beginning of timesteps surf tallying is done
+  // NOTE: how to decide when to do this
+  //       should not do it until caller sums tallies with ghost cells
+  // NOTE: how to detect when local grid has changed (balance, adapt)
 
-  for (int i = 0; i < ntally; i++) surf2tally[tally2surf[i]] = -1;
-  ntally = 0;
+  int i,j;
+
+  int n = grid->nlocal + grid->nghost;
+  printf("CLEAR me %d: %d %d\n",comm->me,grid->nlocal,grid->nghost);
+  for (i = 0; i < n; i++)
+    for (j = 0; j < ntotal; j++)
+      array_grid[i][j] = 0.0;
+
+  collapsed = 0;
+
+  cells = grid->cells;
+  cinfo = grid->cinfo;
+  sinfo = grid->sinfo;
+  lines = surf->lines;
+  tris = surf->tris;
 }
 
 /* ----------------------------------------------------------------------
@@ -199,40 +222,22 @@ void ComputeSurf::clear()
    ip = NULL means no particles after collision
    jp = NULL means one particle after collision
    jp != NULL means two particles after collision
+   this method is almost exactly like ComputeSurf::surf_tally()
+     except sum tally to to per-grid-cell array_grid
 ------------------------------------------------------------------------- */
 
-void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig, 
-                             Particle::OnePart *ip, Particle::OnePart *jp)
+void ComputeISurfGrid::surf_tally(int isurf, int icell, Particle::OnePart *iorig, 
+                                  Particle::OnePart *ip, Particle::OnePart *jp)
 {
-  // skip if isurf not in surface group
+  // skip if icell not in grid group
 
-  if (dimension == 2) {
-    if (!(lines[isurf].mask & groupbit)) return;
-  } else {
-    if (!(tris[isurf].mask & groupbit)) return;
-  }
+  if (!(cinfo[icell].mask & groupbit)) return;
 
   // skip if species not in mixture group
 
   int origspecies = iorig->ispecies;
   int igroup = particle->mixture[imix]->species2group[origspecies];
   if (igroup < 0) return;
-
-  // itally = tally index of isurf
-  // if 1st particle hitting isurf, add isurf to tally list
-  // grow tally list if needed
-
-  double *vec;
-
-  int itally = surf2tally[isurf];
-  if (itally < 0) {
-    if (ntally == maxtally) grow_tally();
-    itally = ntally++;
-    tally2surf[itally] = isurf;
-    surf2tally[isurf] = itally;
-    vec = array_surf_tally[itally];
-    for (int i = 0; i < ntotal; i++) vec[i] = 0.0;
-  }
 
   double fluxscale = normflux[isurf];
 
@@ -259,7 +264,15 @@ void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig,
   double *vorig = iorig->v;
   double mvv2e = update->mvv2e;
 
-  vec = array_surf_tally[itally];
+  // if icell is a sub-cell, reset icell to its parent split cell
+
+  if (cells[icell].nsplit <= 0)
+    icell = sinfo[cells[icell].isplit].icell;
+
+  // sum into grid cell array
+  // icell may be an owned or ghost cell
+
+  double *vec = array_grid[icell];      
   int k = igroup*nvalue;
   int fflag = 0;
   int nflag = 0;
@@ -416,62 +429,121 @@ void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig,
 }
 
 /* ----------------------------------------------------------------------
-   return # of tallies and their indices into my local surf list
+   sum ghost cell tallies to owning cells via irregular communication
+   also copy split cell values to sub-cells for use by dump grid
+   NOTE: function args are currently ignored
 ------------------------------------------------------------------------- */
 
-int ComputeSurf::tallyinfo(int *&ptr)
+double ComputeISurfGrid::post_process_grid(int index, int onecell, int nsample,
+                                           double **etally, int *emap,
+                                           double *vec, int nstride)
 {
-  ptr = tally2surf;
-  return ntally;
+  cells = grid->cells;
+  sinfo = grid->sinfo;
+  int nglocal = grid->nlocal;
+  int ngghost = grid->nghost;
+  int n = nglocal + ngghost;
+
+  // one-time collapse of ghost cell values into owned cells 
+
+  if (!collapsed) {
+    collapsed = 1;
+
+    if (ngghost > maxsend) {
+      maxsend = ngghost;
+      memory->destroy(proclist);
+      memory->create(proclist,maxsend,"isurf/grid:proclist");
+      memory->destroy(sbuf);
+      memory->create(sbuf,maxsend*(ntotal+1),"isurf/grid:sbuf");
+    }
+
+    // pack ghost cell data into sbuf
+    // skip cells with no surfs and sub-cells
+    // data = ilocal (of icell on other proc) + Ntotal values
+    
+    int m = 0;
+    int nsend = 0;
+    for (int icell = nglocal; icell < n; icell++) {
+      if (cells[icell].nsurf <= 0) continue;
+      if (cells[icell].nsplit <= 0) continue;
+      proclist[nsend] = cells[icell].proc;
+      sbuf[m++] = cells[icell].ilocal;    // NOTE: need ubuf
+      memcpy(&sbuf[m],array_grid[icell],ntotal*sizeof(double));
+      m += ntotal;
+      nsend++;
+    }
+
+    printf("NSEND %d %ld: %d %d\n",comm->me,update->ntimestep,nsend,n);
+
+    // perform irregular comm
+
+    double *rbuf;
+    int nrecv = comm->irregular_uniform_neighs(nsend,proclist,(char *) sbuf,
+                                               (ntotal+1)*sizeof(double),
+                                               (char **) &rbuf);
+    
+    printf("NRECV %d %d\n",comm->me,nrecv);
+
+    // unpack received data and sum Ntotal values into array_grid
+
+    int j,ilocal;
+
+    m = 0;
+    for (int i = 0; i < nrecv; i++) {
+      ilocal = static_cast<int> (rbuf[m++]);   // NOTE: need ubuf
+      for (j = 0; j < ntotal; j++)
+        array_grid[ilocal][j] += rbuf[m++];
+    }
+
+    // copy split cell values to each of its sub cells
+    // for use by dump grid
+
+    int jcell,nsplit;
+    int *csubs;
+
+    for (int icell = nglocal; icell < n; icell++) {
+      if (cells[icell].nsplit <= 1) continue;
+      nsplit = cells[icell].nsplit;
+      csubs = sinfo[cells[icell].isplit].csubs;
+      for (int j = 0; j < nsplit; j++) {
+        jcell = csubs[j];
+        memcpy(array_grid[jcell],array_grid[icell],ntotal*sizeof(double));
+      }
+    }
+  }
+
+  // copy values for array_grid column index into vector_grid
+
+  index--;
+  for (int icell = 0; icell < nglocal; icell++)
+    vector_grid[icell] = array_grid[icell][index];
+
+  return 0.0;
 }
 
 /* ----------------------------------------------------------------------
-   sum tally values to per-surf values
-   index = 0 if this compute produces a vector
-   index = 1 to N if this compute produces an array with 1 to N columns
-   regardless, result is stored in vector_surf for Nown surfs this proc owns
+   reallocate data storage if nglocal has changed
+   called by init() and whenever grid changes
 ------------------------------------------------------------------------- */
 
-void ComputeSurf::tallysum(int index)
+void ComputeISurfGrid::reallocate()
 {
-  // skip if result has already been computed on this timestep
-  // NOTE: doing this for repeated index would require 
-  //       storing multiple vector_surfs
+  if (grid->nlocal + grid->nghost == ngtotal) return;
 
-  if (update->ntimestep == last_tallysum) return;
-  last_tallysum = update->ntimestep;
-
-  // allocate vector surf if necessary
-
-  if (!vector_surf) memory->create(vector_surf,surf->nown,"surf:vector_surf");
-
-  // array_surf_tally can be NULL if this proc has performed no tallies
-
-  if (array_surf_tally)
-    surf->collate_vector(ntally,tally2surf,
-                         &array_surf_tally[0][index-1],ntotal,vector_surf);
-  else 
-    surf->collate_vector(ntally,tally2surf,NULL,ntotal,vector_surf);
-}
-
-/* ---------------------------------------------------------------------- */
-
-void ComputeSurf::grow_tally()
-{
-  maxtally += DELTA;
-  memory->grow(tally2surf,maxtally,"surf:tally2surf");
-  memory->grow(array_surf_tally,maxtally,ntotal,"surf:array_surf_tally");
+  memory->destroy(vector_grid);
+  memory->destroy(array_grid);
+  ngtotal = grid->nlocal + grid->nghost;
+  memory->create(vector_grid,ngtotal,"isurf/grid:vector_grid");
+  memory->create(array_grid,ngtotal,ntotal,"isurf/grid:array_grid");
 }
 
 /* ----------------------------------------------------------------------
    memory usage
 ------------------------------------------------------------------------- */
 
-bigint ComputeSurf::memory_usage()
+bigint ComputeISurfGrid::memory_usage()
 {
   bigint bytes = 0;
-  bytes += ntotal*maxtally * sizeof(double);    // array_surf_tally
-  bytes += maxtally * sizeof(int);              // tally2surf
-  bytes += nsurf * sizeof(int);                 // surf2tally
+  bytes += ntotal*ngtotal * sizeof(double);     // array_grid
   return bytes;
 }

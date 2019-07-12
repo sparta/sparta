@@ -86,7 +86,7 @@ class Compute : protected Pointers {
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
   virtual void clear() {}
-  virtual void surf_tally(int, Particle::OnePart *,  
+  virtual void surf_tally(int, int, Particle::OnePart *,  
                           Particle::OnePart *, Particle::OnePart *) {}
   virtual void boundary_tally(int, int, Particle::OnePart *,
                               Particle::OnePart *, Particle::OnePart *) {}

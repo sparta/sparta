@@ -550,17 +550,63 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 }
 
 /* ----------------------------------------------------------------------
-   wrapper on irregular comm of datums on uniform size
+   wrapper on irregular comm of datums of uniform size
+   receiving procs are neighbor procs of my owned grid cells, not including self
+   so can use same comm calls as migrate_particles (if neighflag is set)
+     via iparticle->augment_data_uniform() and exchange_uniform()
+     otherwise same logic as irregular_uniform()
+   called from FixAblate and ComputeISurfGrid
+------------------------------------------------------------------------- */
+
+int Comm::irregular_uniform_neighs(int nsend, int *procsend, 
+                                   char *inbuf, int nsize, char **outbuf)
+{
+  // if neighflag, use iparticle
+  // else one-time create of irregular comm plan with constant size datums
+  // nrecv = # of incoming grid cells
+
+  if (!neighflag && !iuniform) iuniform = new Irregular(sparta);
+
+  int nrecv;
+  if (neighflag)
+    nrecv = iparticle->augment_data_uniform(nsend,procsend);
+  else 
+    nrecv = iuniform->create_data_uniform(nsend,procsend,commsortflag);
+
+  // reallocate rbuf as needed
+
+  if (nrecv*nsize > maxrecvbuf) {
+    memory->destroy(rbuf);
+    maxrecvbuf = nrecv*nsize;
+    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+    memset(rbuf,0,maxrecvbuf);
+  }
+
+  // perform irregular communication
+
+  if (neighflag)
+    iparticle->exchange_uniform(inbuf,nsize,rbuf);
+  else 
+    iuniform->exchange_uniform(inbuf,nsize,rbuf);
+
+  // return rbuf and grid cell count
+
+  *outbuf = rbuf;
+  return nrecv;
+}
+
+/* ----------------------------------------------------------------------
+   wrapper on irregular comm of datums of uniform size
+   receiving procs can be anyone, including self
+   use create_data_uniform() and exchange_uniform()
    called from AdaptGrid
 ------------------------------------------------------------------------- */
 
 int Comm::irregular_uniform(int nsend, int *procsend, 
                             char *inbuf, int nsize, char **outbuf)
 {
-  // create irregular communication plan with constant size datums
+  // one-time create of irregular comm plan with constant size datums
   // nrecv = # of incoming grid cells
-  // DEBUG: append a sort=1 arg so that messages from other procs
-  //        are received in repeatable order, thus grid cells stay in order
 
   if (!iuniform) iuniform = new Irregular(sparta);
   int nrecv = iuniform->create_data_uniform(nsend,procsend,commsortflag);

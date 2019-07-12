@@ -504,7 +504,7 @@ void FixAveSurf::end_of_step()
           for (i = 0; i < nown; i++) accarray[i][m] += fix_array[i][jm1];
       }
 
-    // evaluete surf-style variable
+    // evaluate surf-style variable
       
     } else if (which[m] == VARIABLE) {
     }

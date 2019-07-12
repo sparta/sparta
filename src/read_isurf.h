@@ -44,14 +44,16 @@ class ReadISurf : protected Pointers {
  protected:
   int me;
   int dimension;
-  int count,iggroup,sgrouparg;
+  int ggroup,sgrouparg,storeflag;
   int nx,ny,nz;
   double thresh;
   double corner[3],xyzsize[3];
-  char *typefile;
+  char *typefile,*storeID;
 
-  int **cvalues;
-  int *svalues;
+  class FixAblate *ablate;
+
+  int **cvalues;           // array of corner point values
+  int *svalues;            // vector of per grid cell types
 
   // extra data for 3d marching cubes
 
@@ -90,14 +92,14 @@ class ReadISurf : protected Pointers {
   void read_corners(char *);
   void read_types(char *);
 
-  void create_hash(int, int);
+  void create_hash(int);
   void destroy_hash();
 
   void assign_corners(int, bigint, uint8_t *);
   void assign_types(int, bigint, int *);
 
-  void marching_cubes(int);
-  void marching_squares(int);
+  void marching_cubes();
+  void marching_squares();
   double interpolate(int, int, double, double);
 
   // extra functions for 3d marching cubes

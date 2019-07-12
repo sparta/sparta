@@ -2111,6 +2111,7 @@ int Grid::find_group(const char *id)
    all child cells are at same level (i.e. parents are at same level)
    all child cells are same size
    group forms a contiguous 3d block of cells
+   return count of my child cells in the group
 ------------------------------------------------------------------------- */
 
 int Grid::check_uniform_group(int igroup, int *nxyz, 
