@@ -18,6 +18,8 @@
 #include "update.h"
 #include "comm.h"
 #include "particle.h"
+#include "modify.h"
+#include "collide.h"
 #include "surf.h"
 #include "cut2d.h"
 #include "cut3d.h"
@@ -509,7 +511,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 /* ----------------------------------------------------------------------
    compute split cells for implicit surfs
    surfs per cell already created
-   called from ReadISurf
+   called from ReadISurf and FixAblate
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid_implicit(int subflag, int outflag)
@@ -600,9 +602,14 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
 	ptr = s->csubs = csubs->vget();
 
+        // add nsplitone sub cells
+        // collide and fixes also need to add cells
+
 	for (i = 0; i < nsplitone; i++) {
 	  isub = nlocal;
 	  add_sub_cell(icell,1);
+          if (collide) collide->add_grid_one();
+          if (modify->n_pergrid) modify->add_grid_one();
 	  cells[isub].nsplit = -i;
 	  cinfo[isub].volume = vols[i];
 	  ptr[i] = isub;
@@ -796,10 +803,15 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
     else s->xsplit[2] = 0.0;
     
     iptr = s->csubs = csubs->vget();
-    
+
+    // add nsplitone sub cells
+    // collide and fixes also need to add cells
+
     for (int i = 0; i < nsplitone; i++) {
       isub = nlocal;
       add_sub_cell(icell,1);
+      if (collide) collide->add_grid_one();
+      if (modify->n_pergrid) modify->add_grid_one();
       cells[isub].nsplit = -i;
       cinfo[isub].volume = vols[i];
       iptr[i] = isub;
@@ -832,13 +844,20 @@ void Grid::clear_surf()
   int celltype = UNKNOWN;
   if (!surf->exist) celltype = OUTSIDE;
 
+  // compress cell list
+  // collide and fixes also need to do the same
+
   int nlocal_prev = nlocal;
 
   int icell = 0;
   while (icell < nlocal) {
     if (cells[icell].nsplit <= 0) {
-      memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
-      memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
+      if (icell != nlocal-1) {
+        memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
+        memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
+        if (collide) collide->copy_grid_one(nlocal-1,icell);
+        if (modify->n_pergrid) modify->copy_grid_one(nlocal-1,icell);
+      }
       nlocal--;
     } else {
       cells[icell].ilocal = icell;
@@ -859,6 +878,11 @@ void Grid::clear_surf()
       icell++;
     }
   }
+
+  // reset final grid cell count in collide and fixes
+
+  if (collide) collide->reset_grid_count(nlocal);
+  if (modify->n_pergrid) modify->reset_grid_count(nlocal);
 
   // if particles exist and local cell count changed
   // repoint particles to new icell indices

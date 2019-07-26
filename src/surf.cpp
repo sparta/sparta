@@ -267,6 +267,20 @@ void Surf::init()
 }
 
 /* ----------------------------------------------------------------------
+   remove all surfs
+   called by FixAblate
+------------------------------------------------------------------------- */
+
+void Surf::clear()
+{
+  nsurf = 0;
+  nlocal = nghost = 0;
+  nown = 0;
+  hash->clear();
+  hashfilled = 0;
+}
+
+/* ----------------------------------------------------------------------
    remove ghost surfs
 ------------------------------------------------------------------------- */
 
@@ -2346,7 +2360,7 @@ void Surf::reset_csurfs_implicit()
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector(int nrow, int *tally2surf, 
+void Surf::collate_vector(int nrow, surfint *tally2surf, 
                           double *in, int instride, double *out)
 {
   // collate version depends on tally_comm setting
@@ -2366,7 +2380,7 @@ void Surf::collate_vector(int nrow, int *tally2surf,
    allreduce version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector_reduce(int nrow, int *tally2surf, 
+void Surf::collate_vector_reduce(int nrow, surfint *tally2surf, 
                                  double *in, int instride, double *out)
 {
   int i,j,m;
@@ -2392,8 +2406,7 @@ void Surf::collate_vector_reduce(int nrow, int *tally2surf,
 
   j = 0;
   for (i = 0; i < nrow; i++) {
-    if (dim == 2) m = (int) lines[tally2surf[i]].id - 1;
-    else m = (int) tris[tally2surf[i]].id - 1;
+    m = (int) tally2surf[i] - 1;
     one[m] = in[j];
     j += instride;
   }
@@ -2421,7 +2434,7 @@ void Surf::collate_vector_reduce(int nrow, int *tally2surf,
    rendezvous version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector_rendezvous(int nrow, int *tally2surf, 
+void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf, 
                                      double *in, int instride, double *out)
 {
   // allocate memory for rvous input
@@ -2446,8 +2459,7 @@ void Surf::collate_vector_rendezvous(int nrow, int *tally2surf,
   
   int m = 0;
   for (int i = 0; i < nrow; i++) {
-    if (dim == 2) id = lines[tally2surf[i]].id;
-    else id = tris[tally2surf[i]].id;
+    id = tally2surf[i];
     proclist[i] = (id-1) % nprocs;
     in_rvous[i].id = id;
     in_rvous[i].value = in[m];
@@ -2517,7 +2529,7 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array(int nrow, int ncol, surfint *tally2surf, 
                          double **in, double **out)
 {
   // collate version depends on tally_comm setting
@@ -2537,7 +2549,7 @@ void Surf::collate_array(int nrow, int ncol, int *tally2surf,
    allreduce version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf, 
                                 double **in, double **out)
 {
   int i,j,m;
@@ -2565,8 +2577,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf,
   int dim = domain->dimension;
 
   for (i = 0; i < nrow; i++) {
-    if (dim == 2) m = (int) lines[tally2surf[i]].id - 1;
-    else m = (int) tris[tally2surf[i]].id - 1;
+    m = (int) tally2surf[i] - 1;
     for (j = 0; j < ncol; j++) 
       one[m][j] = in[i][j];
   }
@@ -2596,7 +2607,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf,
    rendezvous version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array_rendezvous(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf, 
                                     double **in, double **out)
 {
   int i,j,m;
@@ -2621,8 +2632,7 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, int *tally2surf,
   
   m = 0;
   for (int i = 0; i < nrow; i++) {
-    if (dim == 2) id = lines[tally2surf[i]].id;
-    else id = tris[tally2surf[i]].id;
+    id = tally2surf[i];
     proclist[i] = (id-1) % nprocs;
     in_rvous[m++] = ubuf(id).d;
     for (j = 0; j < ncol; j++)
@@ -2692,6 +2702,340 @@ int Surf::rendezvous_array(int n, char *inbuf,
 
   flag = 0;
   return 0;
+}
+
+/* ----------------------------------------------------------------------
+   comm of tallies across all procs
+   called from compute isurf/grid and fix ave/grid
+     for implicit surf tallies by grid cell
+   nrow = # of tallies
+   tally2surf = surf ID for each tally (same as cell ID)
+   in = vectir of tally values
+   return out = summed tallies for grid cells I own
+   done via rendezvous algorithm
+------------------------------------------------------------------------- */
+
+void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
+                                   double *in, double *out)
+{
+  int i,j,m,icell;
+  cellint cellID;
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+
+  // create a grid cell hash for only my owned cells
+
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  MyCellHash hash;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    hash[cells[icell].id] = icell+1;
+  }
+
+  // for implicit surfs, tally2surf stores cellIDs
+
+  cellint *tally2cell = (cellint *) tally2surf;
+
+  // if I own tally grid cell, sum tallies to out directly
+  // else nsend = # of tallies to contribute to rendezvous
+
+  int nsend = 0;
+  for (i = 0; i < nrow; i++) {
+    if (hash.find(tally2cell[i]) == hash.end()) nsend++;
+    else {
+      icell = hash[tally2cell[i]] - 1;
+      out[icell] += in[i];
+    }
+  }
+
+  // done if just one proc
+
+  if (nprocs == 1) return;
+
+  // ncell = # of owned grid cells with implicit surfs, excluding sub cells
+  // NOTE: could limit to cell group of caller
+
+  int ncell = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsurf <= 0) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    ncell++;
+  }
+
+  // allocate memory for rvous input
+  // ncount = ncell + nsend
+  // 3 doubles for each input = proc, cellID, tally
+
+  int ncount = ncell + nsend;
+
+  int *proclist;
+  double *in_rvous;
+  memory->create(proclist,ncount,"surf:proclist");
+  memory->create(in_rvous,3*ncount,"surf:in_rvous");
+
+  // create rvous inputs
+  // owning proc for each datum = random hash of cellID
+  // flavor 1: one per ncell with proc and cellID, no tally
+  // flavor 2: one per nsend with proc = -1, cellID, one tally
+
+  ncount = m = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsurf <= 0) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    proclist[ncount] = hashlittle(&cells[icell].id,sizeof(cellint),0) % nprocs;
+    in_rvous[m++] = me;
+    in_rvous[m++] = cells[icell].id;    // NOTE: should use ubuf
+    in_rvous[m++] = 0.0;
+    ncount++;
+  }
+
+  for (i = 0; i < nrow; i++) {
+    if (hash.find(tally2cell[i]) == hash.end()) {
+      proclist[ncount] = hashlittle(&tally2cell[i],sizeof(cellint),0) % nprocs;
+      in_rvous[m++] = -1;
+      in_rvous[m++] = tally2cell[i];    // NOTE: should use ubuf
+      in_rvous[m++] = in[i];
+      ncount++;
+    }
+  }
+
+  // perform rendezvous operation
+
+  ncol_rvous = 1;
+  char *buf;
+  int nout = comm->rendezvous(1,ncount,(char *) in_rvous,3*sizeof(double),
+			      0,proclist,rendezvous_implicit,
+			      0,buf,2*sizeof(double),(void *) this);
+  double *out_rvous = (double *) buf;
+
+  memory->destroy(proclist);
+  memory->destroy(in_rvous);
+
+  // sum tallies returned for grid cells I own into out
+
+  m = 0;
+  for (i = 0; i < nout; i++) {
+    cellID = out_rvous[m++];      // NOTE: should use ubuf
+    icell = hash[cellID] - 1;     // subtract one for child cell index
+    out[icell] += out_rvous[m++];
+  }
+
+  // clean-up
+
+  memory->destroy(out_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   comm of tallies across all procs
+   called from compute isurf/grid and fix ave/grid
+     for implicit surf tallies by grid cell
+   nrow = # of tallies
+   ncol = # of values per tally
+   tally2surf = surf ID for each tally (same as cell ID)
+   in = array of tally values, nrow by ncol
+   return out = summed tallies for grid cells I own, nlocal by ncol
+   done via rendezvous algorithm
+------------------------------------------------------------------------- */
+
+void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
+                                  double **in, double **out)
+{
+  int i,j,m,icell;
+  cellint cellID;
+
+  int me = comm->me;
+  int nprocs = comm->nprocs;
+
+  // create a grid cell hash for only my owned cells
+
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  MyCellHash hash;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    hash[cells[icell].id] = icell+1;
+  }
+
+  // for implicit surfs, tally2surf stores cellIDs
+
+  cellint *tally2cell = (cellint *) tally2surf;
+
+  // if I own tally grid cell, sum tallies to out directly
+  // else nsend = # of tallies to contribute to rendezvous
+
+  int nsend = 0;
+  for (i = 0; i < nrow; i++) {
+    if (hash.find(tally2cell[i]) == hash.end()) nsend++;
+    else {
+      icell = hash[tally2cell[i]] - 1;
+      for (j = 0; j < ncol; j++)
+        out[icell][j] += in[i][j];
+    }
+  }
+
+  // done if just one proc
+
+  if (nprocs == 1) return;
+
+  // ncell = # of owned grid cells with implicit surfs, excluding sub cells
+  // NOTE: could limit to cell group of caller
+
+  int ncell = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsurf <= 0) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    ncell++;
+  }
+
+  // allocate memory for rvous input
+  // ncount = ncell + nsend
+  // ncol+2 doubles for each input = proc, cellID, ncol values
+
+  int ncount = ncell + nsend;
+
+  int *proclist;
+  double *in_rvous;
+  memory->create(proclist,ncount,"surf:proclist");
+  memory->create(in_rvous,ncount*(ncol+2),"surf:in_rvous");
+
+  // create rvous inputs
+  // owning proc for each datum = random hash of cellID
+  // flavor 1: one per ncell with proc and cellID, no tallies
+  // flavor 2: one per nsend with proc = -1, cellID, tallies
+
+  ncount = m = 0;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (cells[icell].nsurf <= 0) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    proclist[ncount] = hashlittle(&cells[icell].id,sizeof(cellint),0) % nprocs;
+    in_rvous[m++] = me;
+    in_rvous[m++] = cells[icell].id;    // NOTE: should use ubuf
+    for (j = 0; j < ncol; j++)
+      in_rvous[m++] = 0.0;
+    ncount++;
+  }
+
+  for (i = 0; i < nrow; i++) {
+    if (hash.find(tally2cell[i]) == hash.end()) {
+      proclist[ncount] = hashlittle(&tally2cell[i],sizeof(cellint),0) % nprocs;
+      in_rvous[m++] = -1;
+      in_rvous[m++] = tally2cell[i];    // NOTE: should use ubuf
+      for (j = 0; j < ncol; j++)
+        in_rvous[m++] = in[i][j];
+      ncount++;
+    }
+  }
+
+  // perform rendezvous operation
+
+  ncol_rvous = ncol;
+  char *buf;
+  int nout = comm->rendezvous(1,ncount,(char *) in_rvous,
+                              (ncol+2)*sizeof(double),
+			      0,proclist,rendezvous_implicit,
+			      0,buf,(ncol+1)*sizeof(double),(void *) this);
+  double *out_rvous = (double *) buf;
+
+  memory->destroy(proclist);
+  memory->destroy(in_rvous);
+
+  // sum tallies returned for grid cells I own into out
+
+  m = 0;
+  for (i = 0; i < nout; i++) {
+    cellID = out_rvous[m++];      // NOTE: should use ubuf
+    icell = hash[cellID] - 1;     // subtract one for child cell index
+    for (j = 0; j < ncol; j++)
+      out[icell][j] += out_rvous[m++];
+  }
+
+  // clean-up
+
+  memory->destroy(out_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   callback from rendezvous operation
+   create summed tallies for each grid cell assigned to me
+   inbuf = list of N input datums
+   send cellID + Ncol values back to owning proc of each grid cell
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_implicit(int n, char *inbuf, 
+                              int &flag, int *&proclist, char *&outbuf, void *ptr)
+{
+  int i,j,k,m,proc,iout;
+  cellint cellID;
+
+  Surf *sptr = (Surf *) ptr;
+  Memory *memory = sptr->memory;
+  int ncol = sptr->ncol_rvous;
+  
+  // scan inbuf for (proc,cellID) entries
+  // create phash so can lookup the proc for each cellID
+
+  double *in_rvous = (double *) inbuf;
+  MyCellHash phash;
+
+  m = 0;
+  for (i = 0; i < n; i++) {
+    proc = static_cast<int> (in_rvous[m++]);
+    cellID = static_cast<cellint> (in_rvous[m++]);
+    if (proc >= 0 && phash.find(cellID) == phash.end()) phash[cellID] = proc;
+    m += ncol;
+  }
+
+  // allocate proclist & outbuf, based on size of max-size of phash
+
+  int nmax = phash.size();
+  memory->create(proclist,nmax,"surf:proclist");
+  double *out;
+  memory->create(out,nmax*(ncol+1),"surf:out");
+
+  // scan inbuf for (cellID,tallies) entries
+  // create a 2nd hash so can lookup the outbuf entry for each cellID
+  // create proclist and outbuf with summed tallies for every cellID
+
+  MyCellHash ohash;
+
+  int nout = 0;
+  k = m = 0;
+
+  for (i = 0; i < n; i++) {
+    proc = static_cast<int> (in_rvous[m++]);
+    cellID = static_cast<cellint> (in_rvous[m++]);
+    if (proc >= 0) {
+      m += ncol;                         // skip entries with novalues
+      continue;
+    }
+    if (ohash.find(cellID) == phash.end()) {  
+      ohash[cellID] = nout;              // add a new set of out values
+      proclist[nout] = phash[cellID];
+      out[k++] = cellID;
+      for (j = 0; j < ncol; j++)
+        out[k++] = in_rvous[m++];
+      nout++;
+    } else {
+      iout = ohash[cellID] * (ncol+1);   // offset into existing out values
+      iout++;                            // skip cellID;
+      for (j = 0; j < ncol; j++)
+        out[iout++] += in_rvous[m++];    // sum to existing values
+    }
+  }
+
+  // flag = 2: new outbuf
+
+  flag = 2;
+  outbuf = (char *) out;
+  return nout;
 }
 
 /* ----------------------------------------------------------------------

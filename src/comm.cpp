@@ -233,7 +233,8 @@ void Comm::migrate_cells(int nmigrate)
 {
   if (update->mem_limit_grid_flag)
     update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
-  if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal))
+  if (update->global_mem_limit > 0 || 
+      (update->mem_limit_grid_flag && !grid->nlocal))
     return migrate_cells_less_memory(nmigrate);
 
   int i,n;
@@ -555,7 +556,7 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
    so can use same comm calls as migrate_particles (if neighflag is set)
      via iparticle->augment_data_uniform() and exchange_uniform()
      otherwise same logic as irregular_uniform()
-   called from FixAblate and ComputeISurfGrid
+   called from FixAblate
 ------------------------------------------------------------------------- */
 
 int Comm::irregular_uniform_neighs(int nsend, int *procsend, 

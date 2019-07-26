@@ -601,12 +601,6 @@ void Grid::unpack_particles_adapt(int np, char *buf)
 
 void Grid::compress()
 {
-  // must compress per-cell arrays in collide and fixes before
-  // cells data structure changes
-
-  if (collide) collide->compress_grid();
-  if (modify->n_pergrid) modify->compress_grid(0);
-
   // copy of integer lists
   // create new lists
 
@@ -646,9 +640,14 @@ void Grid::compress()
     if (cells[icell].nsplit <= 1) {
       if (cells[icell].proc != me) continue;
 
+      // copy cell from nlocal to icell
+      // collide and fixes also need to do the same
+
       if (icell != nlocal) {
         memcpy(&cells[nlocal],&cells[icell],sizeof(ChildCell));
         memcpy(&cinfo[nlocal],&cinfo[icell],sizeof(ChildInfo));
+        if (collide) collide->copy_grid_one(icell,nlocal);
+        if (modify->n_pergrid) modify->copy_grid_one(icell,nlocal);
       }
 
       cells[nlocal].ilocal = nlocal;
@@ -688,9 +687,14 @@ void Grid::compress()
         continue;
       }
 
+      // copy cell from nlocal to icell
+      // collide and fixes also need to do the same
+
       if (icell != nlocal) {
         memcpy(&cells[nlocal],&cells[icell],sizeof(ChildCell));
         memcpy(&cinfo[nlocal],&cinfo[icell],sizeof(ChildInfo));
+        if (collide) collide->copy_grid_one(icell,nlocal);
+        if (modify->n_pergrid) modify->copy_grid_one(icell,nlocal);
       }
 
       cells[nlocal].ilocal = nlocal;
@@ -737,7 +741,10 @@ void Grid::compress()
     }
   }
 
-  hashfilled = 0;
+  // reset final grid cell count in collide and fixes
+
+  if (collide) collide->reset_grid_count(nlocal);
+  if (modify->n_pergrid) modify->reset_grid_count(nlocal);
 
   // delete old integer lists
 
@@ -761,8 +768,4 @@ void Grid::compress()
       ip = next[ip];
     }
   }
-
-  // some fixes have post-compress operations to perform
-
-  if (modify->n_pergrid) modify->compress_grid(1);
 }

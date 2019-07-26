@@ -128,6 +128,10 @@ FixEmitFace::~FixEmitFace()
 
 void FixEmitFace::init()
 {
+  // invoke FixEmit::init() to set flags
+  
+  FixEmit::init();
+
   // copies of class data before invoking parent init() and count_task()
 
   dimension = domain->dimension;
@@ -199,11 +203,9 @@ void FixEmitFace::init()
 
   realloc_nspecies();
 
-  // invoke FixEmit::init() to populate task list
-  // it calls create_task() for each grid cell
-
-  ntask = 0;
-  FixEmit::init();
+  // create tasks for all grid cells
+  
+  create_tasks();
 
   // if Np > 0, nper = # of insertions per task
   // set nthresh so as to achieve exactly Np insertions
@@ -226,9 +228,12 @@ void FixEmitFace::init()
   }
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   create tasks for one grid cell
+   add them to tasks list and increment ntasks
+------------------------------------------------------------------------- */
 
-int FixEmitFace::create_task(int icell)
+void FixEmitFace::create_task(int icell)
 {
   int i,j,n,iface,flag,isp,extflag;
   int *cflags;
@@ -305,7 +310,7 @@ int FixEmitFace::create_task(int icell)
         }
       }
     }
-    
+
     // no insertions on this face
 
     if (!flag) continue;
@@ -425,10 +430,6 @@ int FixEmitFace::create_task(int icell)
 
     ntask++;
   }
-
-  // return # of tasks for this cell
-
-  return ntask-ntaskorig;
 }
 
 /* ----------------------------------------------------------------------
@@ -1057,106 +1058,6 @@ void FixEmitFace::subsonic_grid()
 }
 
 /* ----------------------------------------------------------------------
-   pack one task into buf
-   return # of bytes packed
-   if not memflag, only return count, do not fill buf
-------------------------------------------------------------------------- */
-
-int FixEmitFace::pack_task(int itask, char *buf, int memflag)
-{
-  char *ptr = buf;
-  if (memflag) memcpy(ptr,&tasks[itask],sizeof(Task));
-  ptr += sizeof(Task);
-  ptr = ROUNDUP(ptr);
-
-  // pack task vectors
-  // vscale is allocated, but not communicated, since updated every step
-
-  if (perspecies) {
-    if (memflag) memcpy(ptr,tasks[itask].ntargetsp,nspecies*sizeof(double));
-    ptr += nspecies*sizeof(double);
-  }
-
-  return ptr-buf;
-}
-
-/* ----------------------------------------------------------------------
-   unpack one task from buf
-------------------------------------------------------------------------- */
-
-int FixEmitFace::unpack_task(char *buf, int icell)
-{
-  char *ptr = buf;
-
-  if (ntask == ntaskmax) grow_task();
-  double *ntargetsp = tasks[ntask].ntargetsp;
-  double *vscale = tasks[ntask].vscale;
-
-  memcpy(&tasks[ntask],ptr,sizeof(Task));
-  ptr += sizeof(Task);
-  ptr = ROUNDUP(ptr);
-
-  // unpack task vectors
-  // vscale is allocated, but not communicated, since updated every step
-
-  if (perspecies) {
-    memcpy(ntargetsp,ptr,nspecies*sizeof(double));
-    ptr += nspecies*sizeof(double);
-  }
-
-  tasks[ntask].ntargetsp = ntargetsp;
-  tasks[ntask].vscale = vscale;
-
-  // reset task icell and pcell
-  // if a split cell, set pcell via split() which calls update->split()
-  //   which will use current sub cells of icell
-
-  tasks[ntask].icell = icell;
-  if (grid->cells[icell].nsplit == 1) tasks[ntask].pcell = icell;
-  else tasks[ntask].pcell = split(icell,tasks[ntask].iface);
-
-  ntask++;
-  return ptr-buf;
-}
-
-/* ----------------------------------------------------------------------
-   copy N tasks starting at index oldfirst to index first
-------------------------------------------------------------------------- */
-
-void FixEmitFace::copy_task(int icell, int n, int first, int oldfirst)
-{
-  // reset icell in each copied task
-  // copy task vectors
-  // vscale is allocated, but not copied, since updated every step
-
-  if (first == oldfirst) {
-    for (int i = 0; i < n; i++) {
-      tasks[first].icell = icell;
-      first++;
-    }
-
-  } else {
-    for (int i = 0; i < n; i++) {
-      double *ntargetsp = tasks[first].ntargetsp;
-      double *vscale = tasks[first].vscale;
-
-      memcpy(&tasks[first],&tasks[oldfirst],sizeof(Task));
-      if (perspecies)
-        memcpy(ntargetsp,tasks[oldfirst].ntargetsp,nspecies*sizeof(double));
-
-      tasks[first].ntargetsp = ntargetsp;
-      tasks[first].vscale = vscale;
-
-      tasks[first].icell = icell;
-      first++;
-      oldfirst++;
-    }
-  }
-
-  ntask += n;
-}
-
-/* ----------------------------------------------------------------------
    grow task list
 ------------------------------------------------------------------------- */
 
@@ -1208,25 +1109,6 @@ void FixEmitFace::realloc_nspecies()
       delete [] tasks[i].vscale;
       tasks[i].vscale = new double[nspecies];
     }
-  }
-}
-
-/* ----------------------------------------------------------------------
-   reset pcell for all compress task entries
-   called from Grid::compress() after grid cells have been compressed
-   wait to do this until now b/c split cells accessed by split()
-     are setup in Grid::compress() between compress_grid() 
-     and post_compress_grid()
-------------------------------------------------------------------------- */
-
-void FixEmitFace::post_compress_grid()
-{
-  Grid::ChildCell *cells = grid->cells;
-
-  for (int i = 0; i < ntask; i++) {
-    int icell = tasks[i].icell;
-    if (cells[icell].nsplit == 1) tasks[i].pcell = icell;
-    else tasks[i].pcell = split(icell,tasks[i].iface);
   }
 }
 

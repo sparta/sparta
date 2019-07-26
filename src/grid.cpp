@@ -19,6 +19,11 @@
 #include "region.h"
 #include "surf.h"
 #include "comm.h"
+#include "modify.h"
+#include "fix.h"
+#include "compute.h"
+#include "output.h"
+#include "dump.h"
 #include "irregular.h"
 #include "math_const.h"
 #include "memory.h"
@@ -329,20 +334,26 @@ void Grid::add_sub_cell(int icell, int ownflag)
 }
 
 /* ----------------------------------------------------------------------
-   remove ghost grid cells and any allocated data they have
-     currently, cells just have ptrs into pages that are deallocated separately
-   also remove ghost surfaces, either explicit or implicit
+   called during a run when per-processor list of grid cells may have changed
+   trigger fixes, computes, dumps to change their allocated per-grid data
 ------------------------------------------------------------------------- */
 
-void Grid::remove_ghosts()
+void Grid::notify_changed()
 {
-  exist_ghost = 0;
-  nghost = nunsplitghost = nsplitghost = nsubghost = 0;
-  surf->remove_ghosts();
+  if (modify->n_pergrid) modify->grid_changed();
+
+  Compute **compute = modify->compute;
+  for (int i = 0; i < modify->ncompute; i++) {
+    if (compute[i]->per_grid_flag) compute[i]->reallocate();
+    if (compute[i]->per_surf_flag) compute[i]->reallocate();
+  }
+
+  for (int i = 0; i < output->ndump; i++)
+    output->dump[i]->reset_grid_count();
 }
 
 /* ----------------------------------------------------------------------
-   set grid stats and cpart list of owned cells with particles
+   set grid stats for onwed cells
 ------------------------------------------------------------------------- */
 
 void Grid::setup_owned()
@@ -370,6 +381,19 @@ void Grid::setup_owned()
 
   MPI_Allreduce(&eps,&cell_epsilon,1,MPI_DOUBLE,MPI_MIN,world);
   cell_epsilon *= 0.5;
+}
+
+/* ----------------------------------------------------------------------
+   remove ghost grid cells and any allocated data they have
+     currently, cells just have ptrs into pages that are deallocated separately
+   also remove ghost surfaces, either explicit or implicit
+------------------------------------------------------------------------- */
+
+void Grid::remove_ghosts()
+{
+  exist_ghost = 0;
+  nghost = nunsplitghost = nsplitghost = nsubghost = 0;
+  surf->remove_ghosts();
 }
 
 /* ----------------------------------------------------------------------
@@ -756,7 +780,7 @@ int Grid::box_periodic(double *lo, double *hi, Box *box)
 
 void Grid::rehash()
 {
-  // hash all child and parent cell IDs
+  // hash all owned/ghost child and parent cell IDs
   // key = ID, value = index+1 for child cells, value = -(index+1) for parents
   // skip sub cells
 

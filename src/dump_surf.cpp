@@ -648,15 +648,21 @@ void DumpSurf::pack_compute(int n)
 {
   int index = argindex[n];
   Compute *c = compute[field2index[n]];
-  c->tallysum(index);
+  c->post_process_surf();
 
-  // index is 0 for a compute vector, 1-N for a column of compute array
-  // either way, compute creates vector_surf
-
-  double *vector = c->vector_surf;
-  for (int i = 0; i < nchoose; i++) {
-    buf[n] = vector[clocal[i]];
-    n += size_one;
+  if (index == 0) {
+    double *vector = c->vector_surf;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = vector[clocal[i]];
+      n += size_one;
+    }
+  } else {
+    index--;
+    double **array = c->array_surf;
+    for (int i = 0; i < nchoose; i++) {
+      buf[n] = array[clocal[i]][index];
+      n += size_one;
+    }
   }
 }
 

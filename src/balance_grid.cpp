@@ -386,6 +386,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   grid->unset_neighbors();
   grid->remove_ghosts();
   comm->migrate_cells(nmigrate);
+  grid->hashfilled = 0;
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
@@ -395,11 +396,6 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   if (ghost_previous) grid->reset_neighbors();
   else grid->find_neighbors();
   comm->reset_neighbors();
-
-  // reallocate per grid arrays in per grid dumps
-
-  for (int i = 0; i < output->ndump; i++)
-    output->dump[i]->reset_grid();
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();

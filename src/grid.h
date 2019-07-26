@@ -203,8 +203,9 @@ class Grid : protected Pointers {
   void add_parent_cell(cellint, int, int, int, int, double *, double *);
   void add_split_cell(int);
   void add_sub_cell(int, int);
+  void notify_changed();
+  void setup_owned(); 
   void remove_ghosts();
-  void setup_owned();
   void acquire_ghosts();
   void rehash();
   void find_neighbors();

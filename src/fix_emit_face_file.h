@@ -32,7 +32,6 @@ class FixEmitFaceFile : public FixEmit {
   FixEmitFaceFile(class SPARTA *, int, char **);
   ~FixEmitFaceFile();
   void init();
-  void post_compress_grid();
 
  private:
   int imix,iface,subsonic,subsonic_style,subsonic_warning;
@@ -126,11 +125,8 @@ class FixEmitFaceFile : public FixEmit {
   void subsonic_sort();
   void subsonic_grid();
 
-  int create_task(int);
+  void create_task(int);
   void perform_task();
-  int pack_task(int, char *, int);
-  int unpack_task(char *, int);
-  void copy_task(int, int, int, int);
   void grow_task();
 
   int option(int, char **);

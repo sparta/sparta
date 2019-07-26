@@ -1610,38 +1610,47 @@ int Collide::unpack_grid_one(int icell, char *buf)
 }
 
 /* ----------------------------------------------------------------------
-   compress per-cell arrays due to cells migrating to new procs
-   criteria for keeping/discarding a cell is same as in Grid::compress()
-   this keeps final ordering of per-cell arrays consistent with Grid class
+   copy per-cell collision info from Icell to Jcell
+   called whenever a grid cell is removed from this processor's list
+   caller checks that Icell != Jcell
 ------------------------------------------------------------------------- */
 
-void Collide::compress_grid()
+void Collide::copy_grid_one(int icell, int jcell)
 {
   int nbytes = ngroups*ngroups*sizeof(double);
 
-  int me = comm->me;
-  Grid::ChildCell *cells = grid->cells;
+  //printf("COLL CGO %d %d %d\n",icell,jcell,nglocal);
+  memcpy(&vremax[jcell][0][0],&vremax[icell][0][0],nbytes);
+  if (remainflag) 
+    memcpy(&remain[jcell][0][0],&remain[icell][0][0],nbytes);
+}
 
-  // keep an unsplit or split cell if staying on this proc
-  // keep a sub cell if its split cell is staying on this proc
+/* ----------------------------------------------------------------------
+   reset final grid cell count after grid cell removals
+------------------------------------------------------------------------- */
 
-  int ncurrent = nglocal;
-  nglocal = 0;
-  for (int icell = 0; icell < ncurrent; icell++) {
-    if (cells[icell].nsplit >= 1) {
-      if (cells[icell].proc != me) continue;
-    } else {
-      int isplit = cells[icell].isplit;
-      if (cells[grid->sinfo[isplit].icell].proc != me) continue;
+void Collide::reset_grid_count(int nlocal)
+{
+  nglocal = nlocal;
+}
+
+/* ----------------------------------------------------------------------
+   add a grid cell
+   called when a grid cell is added to this processor's list
+   initialize values to 0.0
+------------------------------------------------------------------------- */
+
+void Collide::add_grid_one()
+{
+  grow_percell(1);
+
+  for (int igroup = 0; igroup < ngroups; igroup++)
+    for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+      vremax[nglocal][igroup][jgroup] = vremax_initial[igroup][jgroup];
+      if (remainflag) remain[nglocal][igroup][jgroup] = 0.0;
     }
 
-    if (nglocal != icell) { 
-      memcpy(&vremax[nglocal][0][0],&vremax[icell][0][0],nbytes);
-      if (remainflag) 
-        memcpy(&remain[nglocal][0][0],&remain[icell][0][0],nbytes);
-    }
-    nglocal++;
-  }
+  nglocal++;
 }
 
 /* ----------------------------------------------------------------------

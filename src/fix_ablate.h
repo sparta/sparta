@@ -27,7 +27,7 @@ namespace SPARTA_NS {
 
 class FixAblate : public Fix {
  public:
-  int igroup;
+  int igroup,dim;
 
   FixAblate(class SPARTA *, int, char **);
   ~FixAblate();
@@ -38,21 +38,57 @@ class FixAblate : public Fix {
 
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
-  void compress_grid();
+  void copy_grid_one(int, int);
+  void reset_grid_count(int);
+  void add_grid_one();
+  double compute_scalar();
   double memory_usage();
 
-  void store_corners(int **);
+  void store_corners(int, int, int, double *, double *,
+                     double **, int *, double);
 
  protected:
   int me;
-  int groupbit,which,argindex,icompute,ifix,ncols;
+  int groupbit,which,argindex,icompute,ifix;
+  double scale;
   char *idsource;
   int storeflag;
+  int nx,ny,nz,ncorner;
+  double thresh;
+  double sum_delta;
    
-  int nglocal;               // # of owned grid cells
-  int nglocalmax;            // max size of per-cell vectors/arrays
+  int nglocal;            // # of owned grid cells
 
-  virtual void grow_percell(int);
+  int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
+                          // in 2d/3d ablate grid (iz = 1 for 2d)
+
+  double *celldelta;      // per-cell delta from compute or fix source
+  double **cdelta;        // per-corner point deltas
+  double **cdelta_ghost;  // ditto for my ghost cells communicated to me
+  int maxgrid;            // max size of per-cell vectors/arrays
+  int maxghost;           // max size of cdelta_ghost
+
+  int *proclist;
+  int *locallist;
+  int *numsend;
+  int maxsend;
+
+  double *sbuf;
+  int maxbuf;
+
+  class MarchingSquares *ms;
+  class MarchingCubes *mc;
+  class RanPark *random;
+
+  void set_delta_random();
+  void set_delta();
+  void decrement();
+  void sync();
+  int walk_to_neigh(int, int, int, int);
+  void push2d() {}
+  void push3d() {}
+  void grow_percell(int);
+  void grow_send();
 };
 
 }

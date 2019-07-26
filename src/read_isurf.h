@@ -42,8 +42,7 @@ class ReadISurf : protected Pointers {
   virtual void command(int, char **);
 
  protected:
-  int me;
-  int dimension;
+  int me,dim;
   int ggroup,sgrouparg,storeflag;
   int nx,ny,nz;
   double thresh;
@@ -52,29 +51,9 @@ class ReadISurf : protected Pointers {
 
   class FixAblate *ablate;
 
-  int **cvalues;           // array of corner point values
+  double **cvalues;        // array of corner point values
   int *svalues;            // vector of per grid cell types
-
-  // extra data for 3d marching cubes
-
-  double *lo,*hi;
-  int v000,v001,v010,v011,v100,v101,v110,v111;
-  double v000iso,v001iso,v010iso,v011iso,v100iso,v101iso,v110iso,v111iso;
-  int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
-  double pt[36][3];
     
-  int config;     // configuration of the active cube
-  int subconfig;  // subconfiguration of the active cube
-    
-  // message datums for cleanup_MC()
-
-  struct SendDatum {
-    int sendcell,sendface;
-    int othercell,otherface;
-    int inwardnorm;            // for sending cell
-    Surf::Tri tri1,tri2;
-  };
-
   // hash for assigning grid corner points to grid cells
 
 #ifdef SPARTA_MAP
@@ -97,22 +76,6 @@ class ReadISurf : protected Pointers {
 
   void assign_corners(int, bigint, uint8_t *);
   void assign_types(int, bigint, int *);
-
-  void marching_cubes();
-  void marching_squares();
-  double interpolate(int, int, double, double);
-
-  // extra functions for 3d marching cubes
-
-  int add_triangle(int *, int);
-  bool test_face(int);
-  bool test_interior(int, int);
-  bool modified_test_interior(int, int);
-  int interior_ambiguity(int, int);
-  int interior_ambiguity_verification(int);
-  bool interior_test_case13();
-  void cleanup_MC();
-  void print_cube();
 };
 
 }
