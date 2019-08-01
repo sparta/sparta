@@ -158,7 +158,7 @@ void Grid::refine_cell(int icell, int iparent,
     // reset ichild = index of sub cell
     
     if (cells[ichild].nsplit > 1) {
-      if (dim == 3) ichild = update->split3d(ichild,p->x);
+      if (dim == 3) ichild = update->split3d(ichild,p->x,p->id);
       else ichild = update->split2d(ichild,p->x);
     }
     
@@ -319,7 +319,7 @@ void Grid::coarsen_cell(int iparent, int nchild,
         
         if (cells[inew].nsplit == 1) icell = inew;
         else {
-          if (dim == 3) icell = update->split3d(inew,p->x);
+          if (dim == 3) icell = update->split3d(inew,p->x,p->id);
           else icell = update->split2d(inew,p->x);
         }
         
@@ -358,7 +358,7 @@ void Grid::coarsen_cell(int iparent, int nchild,
         
         if (cells[inew].nsplit == 1) icell = inew;
         else {
-          if (dim == 3) icell = update->split3d(inew,particles[ip].x);
+          if (dim == 3) icell = update->split3d(inew,particles[ip].x,particles[ip].id);
           else icell = update->split2d(inew,particles[ip].x);
         }
         

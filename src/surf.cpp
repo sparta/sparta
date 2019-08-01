@@ -2282,7 +2282,7 @@ int Surf::find_group(const char *id)
 /* ----------------------------------------------------------------------
    compress owned implicit surfs to account for migrating grid cells
    migrating grid cells are ones with proc != me
-   store info on reordered nlocal surfs in shash
+   store info on reordered nlocal surfs in hash
    only called for implicit surfs
 ------------------------------------------------------------------------- */
 
@@ -2293,6 +2293,8 @@ void Surf::compress_rebalance()
 
   if (hashfilled) hash->clear();
   hashfilled = 1;
+
+  if (!grid->hashfilled) grid->rehash();
 
   Grid::ChildCell *cells = grid->cells;
   Grid::MyHash *ghash = grid->hash;
@@ -2311,11 +2313,11 @@ void Surf::compress_rebalance()
 
   } else {
     for (int i = 0; i < nlocal; i++) {
-      icell = (*ghash)[tris[i].id];
+      icell = (*ghash)[tris[i].id] - 1;
       if (cells[icell].proc != me) continue;
       if (i != n) memcpy(&tris[n],&tris[i],sizeof(Tri));
-      if (hash->find(lines[n].id) == hash->end())
-        (*hash)[lines[n].id] = n;
+      if (hash->find(tris[n].id) == hash->end())
+        (*hash)[tris[n].id] = n;
       n++;
     }
   }
@@ -2331,7 +2333,7 @@ void Surf::compress_rebalance()
 
 void Surf::reset_csurfs_implicit()
 {
-  int m,isurf,nsurf;
+  int m,n,isurf;
 
   Grid::ChildCell *cells = grid->cells;
   int nslocal = grid->nlocal;
@@ -2340,8 +2342,8 @@ void Surf::reset_csurfs_implicit()
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].nsurf == 0) continue;
     isurf = (*hash)[cells[icell].id];
-    nsurf = cells[icell].nsurf;
-    for (m = 0; m < nsurf; m++)
+    n = cells[icell].nsurf;
+    for (m = 0; m < n; m++)
       cells[icell].csurfs[m] = isurf++;
   }
 

@@ -16,6 +16,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include "fix_ablate.h"
+#include "update.h"
 #include "grid.h"
 #include "domain.h"
 #include "comm.h"
@@ -26,13 +27,10 @@
 #include "dump.h"
 #include "marching_squares.h"
 #include "marching_cubes.h"
-#include "memory.h"
-#include "error.h"
-
-// DEBUG
-#include "update.h"
 #include "random_mars.h"
 #include "random_park.h"
+#include "memory.h"
+#include "error.h"
 
 using namespace SPARTA_NS;
 
@@ -75,7 +73,7 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   Fix(sparta, narg, arg)
 {
-  if (narg != 6) error->all(FLERR,"Illegal fix ablate command");
+  if (narg < 6) error->all(FLERR,"Illegal fix ablate command");
 
   igroup = grid->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Could not find fix ablate group ID");
@@ -111,7 +109,9 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     delete [] suffix;
 
   } else if (strcmp(arg[5],"random") == 0) {
+    if (narg != 7) error->all(FLERR,"Illegal fix ablate command");
     which = RANDOM;
+    maxrandom = atoi(arg[6]);
 
   } else error->all(FLERR,"Illegal fix ablate command");
 
@@ -338,15 +338,6 @@ void FixAblate::init()
 
 void FixAblate::end_of_step()
 {
-  // DEBUG
-  //for (int i = 0; i < particle->nlocal; i++)
-  //  if (particle->particles[i].id == 609364211) 
-  //    printf("PRE-ABLATE i %d id %d icell %d %d %d\n",
-  //           i,particle->particles[i].id,
-  //           particle->particles[i].icell,
-  //           grid->cells[particle->particles[i].icell].id,
-  //          grid->nlocal);
-
   // set per-cell delta vector randomly or from compute/fix source
 
   if (which == RANDOM) set_delta_random();
@@ -368,6 +359,8 @@ void FixAblate::end_of_step()
   grid->unset_neighbors();
   grid->remove_ghosts();
 
+  // reassign particles in sub cells to all be in parent split cell
+
   if (grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
     for (int icell = 0; icell < nglocal; icell++)
@@ -388,10 +381,22 @@ void FixAblate::end_of_step()
   if (dim == 2) surf->compute_line_normal(0);
   else surf->compute_tri_normal(0);
 
-  if (dim == 3) mc->cleanup();
+  // cleanup() checks for consistent triangles on grid cell faces
+  // needs to come after normals are computed
+  // it requires neighbor indices and ghost cell info
+  // so acquire ghosts (which will also grab surfs) 
+
+  if (dim == 3) {
+    grid->acquire_ghosts(0);
+    grid->reset_neighbors();
+    mc->cleanup();
+    surf->remove_ghosts();
+    grid->unset_neighbors();
+    grid->remove_ghosts();
+  }
 
   // re-assign mask, surf collision model, surf reaction model to new surfs
-  // NOTE: needs to be a better way to do this
+  // NOTE: have to do this in a better way - but how
 
   int nslocal = surf->nlocal;
 
@@ -434,8 +439,9 @@ void FixAblate::end_of_step()
   grid->set_inout();
   grid->type_check(0);
 
-  // reassign particles in split cells to sub cell owner
+  // reassign particles in a split cell to sub cell owner
   // particles are unsorted afterwards, within new sub cells
+  // NOTE: do same in read_isurf, if particles can exist there
 
   if (grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
@@ -445,37 +451,26 @@ void FixAblate::end_of_step()
     particle->sorted = 0;
   }
 
-  // notify all classes that store per-grid data that grid may have changed
-  
-  grid->notify_changed();
+  // notify all classes that store per-grid data that grid has changed
 
-  // DEBUG
-  //  for (int i = 0; i < particle->nlocal; i++)
-  // if (particle->particles[i].id == 609364211) 
-  //   printf("POST-ABLATE i %d id %d icell %d %d %d\n",
-  //          i,particle->particles[i].id,
-  //         particle->particles[i].icell,
-  //         grid->cells[particle->particles[i].icell].id,
-  //         grid->nlocal);
+  grid->notify_changed();
 }
 
 /* ----------------------------------------------------------------------
    set per-cell delta vector randomly
-   celldelta = random integer between 0 and maxrand with prob scale
+   celldelta = random integer between 0 and maxrandom
+   scale = fraction of cells that are decremented
 ------------------------------------------------------------------------- */
 
 void FixAblate::set_delta_random()
 {
-  int delta;
-  int maxrand = 10;   // NOTE needs to be user settable somehow
-
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
     if (random->uniform() > scale) celldelta[icell] = 0.0;
     else celldelta[icell] = 
-           static_cast<int> (random->uniform()*maxrand*scale) + 1.0;
+           static_cast<int> (random->uniform()*maxrandom) + 1.0;
   }
 
   Grid::ChildCell *cells = grid->cells;

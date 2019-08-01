@@ -24,6 +24,7 @@
 #include "cut2d.h"
 #include "cut3d.h"
 #include "irregular.h"
+#include "geometry.h"
 #include "math_const.h"
 #include "hashlittle.h"
 #include "my_page.h"
@@ -42,6 +43,7 @@ int compare_surfIDs(const void *, const void *);
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
 enum{PERAUTO,PERCELL,PERSURF};          // several files
+enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
 
 // operations for surfaces in grid cells
 
@@ -838,6 +840,8 @@ void Grid::clear_surf()
   if (dimension == 2) ncorner = 4;
   double *lo,*hi;
 
+  hashfilled = 0;
+
   // if surfs no longer exist, set cell type to OUTSIDE, else UNKNOWN
   // set corner points of every cell to UNKNOWN
 
@@ -997,7 +1001,7 @@ void Grid::combine_split_cell_particles(int icell, int relabel)
 }
 
 /* ----------------------------------------------------------------------
-   assign all particles in split icell to appropriate sub cells
+   assign all particles in a split icell to appropriate sub cells
    assumes particles are sorted, are NOT sorted by sub cell when done
    also change particle icell label
 ------------------------------------------------------------------------- */
@@ -1012,7 +1016,7 @@ void Grid::assign_split_cell_particles(int icell)
 
   ip = cinfo[icell].first;
   while (ip >= 0) {
-    if (dim == 3) jcell = update->split3d(icell,particles[ip].x);
+    if (dim == 3) jcell = update->split3d(icell,particles[ip].x,particles[ip].id);
     else jcell = update->split2d(icell,particles[ip].x);
     particles[ip].icell = jcell;
     ip = next[ip];
@@ -1020,6 +1024,87 @@ void Grid::assign_split_cell_particles(int icell)
 
   cinfo[icell].count = 0;
   cinfo[icell].first = -1;
+}
+
+/* ----------------------------------------------------------------------
+   check is particle at x is outside any surfs in icell
+   icell can be split or unsplit cell, not a sub cell
+   if outside, return 1, else return 0
+   // NOTE: make this only for implicit surfs
+------------------------------------------------------------------------- */
+
+int Grid::outside_surfs(int icell, double *x, 
+                        Cut3d *cut3d_caller, Cut2d *cut2d_caller)
+{
+  if (cells[icell].nsurf == 0) {
+    if (cinfo[icell].type == INSIDE) return 0;
+    else return 1;
+  }
+
+  // set xnew to midpt of first line or center pt of first triangle
+  // for implicit surfs this is guaranteed to be a pt in or on icell
+  // NOTE: is is actually guaranteed to be inside?
+  // by not being a common (end or corner) point with another surf
+  //   avoids issues with ray tracing to follow
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  surfint *csurfs = cells[icell].csurfs;
+
+  int dim = domain->dimension;
+  double xnew[3];
+
+  int isurf = csurfs[0];
+
+  if (dim == 2) {
+    xnew[0] = 0.5 * (lines[isurf].p1[0] + lines[isurf].p2[0]);
+    xnew[1] = 0.5 * (lines[isurf].p1[1] + lines[isurf].p2[1]);
+    xnew[2] = 0.0;
+  } else {
+    double onethird = 1.0/3.0;
+    xnew[0] = onethird * 
+      (tris[isurf].p1[0] + tris[isurf].p2[0] + tris[isurf].p3[0]);
+    xnew[1] = onethird * 
+      (tris[isurf].p1[1] + tris[isurf].p2[1] + tris[isurf].p3[1]);
+    xnew[2] = onethird * 
+      (tris[isurf].p1[2] + tris[isurf].p2[2] + tris[isurf].p3[2]);
+  }
+
+  // loop over surfs, ray-trace from x to xnew, see which surf is hit first
+  // if no surf is hit (roundoff), assume particle is outside
+
+  int m,cflag,hitflag,side,minside;
+  double param,minparam;
+  double xc[3];
+  Surf::Line *line;
+  Surf::Tri *tri;
+
+  int nsurf = cells[icell].nsurf;
+
+  cflag = 0;
+  minparam = 2.0;
+  for (m = 0; m < nsurf; m++) {
+    isurf = csurfs[m];
+    if (dim == 3) {
+      tri = &tris[isurf];
+      hitflag = Geometry::
+        line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+                           tri->norm,xc,param,side);
+    } else {
+      line = &lines[isurf];
+      hitflag = Geometry::
+        line_line_intersect(x,xnew,line->p1,line->p2,line->norm,xc,param,side);
+    }
+    if (hitflag && param < minparam) {
+      cflag = 1;
+      minparam = param;
+      minside = side;
+    }
+  }
+
+  if (!cflag) return 1;
+  if (minside == SOUTSIDE || minside == ONSURF2OUT) return 1;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

@@ -261,7 +261,7 @@ void Comm::migrate_cells(int nmigrate)
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
     gproc[nsend] = cells[icell].proc;
-    n = grid->pack_one(icell,NULL,1,1,0);
+    n = grid->pack_one(icell,NULL,1,1,1,0);
     gsize[nsend++] = n;
     boffset += n;
   }
@@ -286,7 +286,7 @@ void Comm::migrate_cells(int nmigrate)
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
-    offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
+    offset += grid->pack_one(icell,&sbuf[offset],1,1,1,1);
   }
 
   // compress my list of owned implicit surfs
@@ -331,7 +331,7 @@ void Comm::migrate_cells(int nmigrate)
 
   offset = 0;
   for (i = 0; i < nrecv; i++)
-    offset += grid->unpack_one(&rbuf[offset],1,1);
+    offset += grid->unpack_one(&rbuf[offset],1,1,1);
 }
 
 /* ----------------------------------------------------------------------
@@ -372,7 +372,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
       if (cells[icell].nsplit <= 0) continue;
       if (cells[icell].proc == me) continue;
       gproc[nsend] = cells[icell].proc;
-      n = grid->pack_one(icell,NULL,1,1,0);
+      n = grid->pack_one(icell,NULL,1,1,1,0);
       if (n > 0 && boffset > 0 && boffset+n > update->global_mem_limit) {
         icell_end -= 1;
         break;
@@ -401,7 +401,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
     for (int icell = icell_start; icell < icell_end; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (cells[icell].proc == me) continue;
-      offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
+      offset += grid->pack_one(icell,&sbuf[offset],1,1,1,1);
     }
 
     // compress particle list to remove particles in migrating cells
@@ -437,7 +437,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
 
     offset = 0;
     for (i = 0; i < nrecv; i++)
-      offset += grid->unpack_one(&rbuf[offset],1,1,1);
+      offset += grid->unpack_one(&rbuf[offset],1,1,1,1);
 
     // deallocate large buffers to reduce memory footprint
     // also deallocate igrid for same reason
@@ -641,7 +641,8 @@ int Comm::irregular_uniform(int nsend, int *procsend,
 ------------------------------------------------------------------------- */
 
 void Comm::ring(int n, int nper, void *inbuf, int messtag,
-                void (*callback)(int, char *), void *outbuf, int self)
+                void (*callback)(int, char *, void *), void *outbuf, int self, 
+                void *ptr)
 {
   MPI_Request request;
   MPI_Status status;
@@ -668,7 +669,7 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
       MPI_Get_count(&status,MPI_CHAR,&nbytes);
       memcpy(buf,bufcopy,nbytes);
     }
-    if (self || loop != nprocs-1) callback(nbytes/nper,buf);
+    if (self || loop != nprocs-1) callback(nbytes/nper,buf,ptr);
   }
 
   if (outbuf) memcpy(outbuf,buf,nbytes);

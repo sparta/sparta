@@ -29,28 +29,32 @@ using namespace SPARTA_NS;
    pack single icell into buf
    only called for owned unsplit and split cells, not for sub cells
    include its cinfo, surfs, split info, sub cells if necessary
-   ownflag = 1/0 = owned or ghost cell
+   ownflag = 1/0 = receiver stores cell as owned or ghost
      for owned cell, also pack cinfo and auxiliary collision/fix info
-     if nsurf < 0, is an empty ghost cell, pack only cells
-   molflag = 0/1 = no/yes to also pack particles
+     if nsurf < 0, is an empty ghost cell, pack only the cell
+   partflag = 0/1 = no/yes to also pack particles
+   surfflag = 0/1 = no/yes to also pack surface info
+     surfflag = no always called with and ownflag = 0 and partflag = 0
    memflag = 0/1 = no/yes to actually pack into buf, 0 = just length
    return length of packing in bytes
    called from Grid::acquire_ghosts(), Comm::migrate_cells()
 ------------------------------------------------------------------------- */
 
 int Grid::pack_one(int icell, char *buf, 
-                   int ownflag, int molflag, int memflag)
+                   int ownflag, int partflag, int surfflag, int memflag)
 {
   char *ptr = buf;
 
-  // pack child cell and its csurfs and cinfo
-  // just pack child cell if nsurf < 0 which is EMPTY ghost
-  //   unpack_one() will reset other fields (csurfs, nsplit, isplit)
+  // pack child cell data struct, csurf ptr will be reset when unpacked
 
   if (memflag) memcpy(ptr,&cells[icell],sizeof(ChildCell));
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
 
+  // no surfs or any other info
+  // ditto for sending empty ghost
+
+  if (!surfflag) return ptr - buf;
   if (cells[icell].nsurf < 0) return ptr - buf;
 
   // if nsurfs, pack different info for explicit vs implicit surfs
@@ -135,7 +139,7 @@ int Grid::pack_one(int icell, char *buf,
 
   // pack particles for unsplit cell or split cell
 
-  if (!molflag) return ptr - buf;
+  if (!partflag) return ptr - buf;
 
   ptr += pack_particles(icell,ptr,memflag);
 
@@ -158,27 +162,33 @@ int Grid::pack_one(int icell, char *buf,
    unpack received ghost cells into cell lists
 ------------------------------------------------------------------------- */
 
-void Grid::unpack_ghosts(int nsize, char *buf)
+void Grid::unpack_ghosts(int nsize, char *buf, void *ptr)
 {
+  Grid *gptr = (Grid *) ptr;
+  int surfflag = gptr->unpack_ghosts_surfflag;
+
   int n = 0;
   while (n < nsize)
-    n += gptr->unpack_one(&buf[n],0,0);
+    n += gptr->unpack_one(&buf[n],0,0,surfflag);
 }
 
 /* ----------------------------------------------------------------------
    unpack single icell from buf
    include its cinfo, surfs, split info, sub cells if necessary
-   ownflag = 1/0 = owned or ghost cell
+   ownflag = 1/0 = receiver stores cell as owned or ghost
      for owned cell, also unpack cinfo and auxiliary collision/fix info
-   molflag = 0/1 = no/yes to also unpack particles
+   partflag = 0/1 = no/yes to also unpack particles
+   surfflag = 0/1 = no/yes to also unpack surface info
+     surfflag = 0 always called with ownflag = 0 and partflag = 0
    return length of unpacking in bytes
 ------------------------------------------------------------------------- */
 
-int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
+int Grid::unpack_one(char *buf, 
+                     int ownflag, int partflag, int surfflag, int sortflag)
 {
   char *ptr = buf;
 
-  // unpack child cell and its csurfs and cinfo, add to ghost cells
+  // unpack child cell as owned or ghost
 
   int icell;
   if (ownflag) icell = nlocal;
@@ -191,19 +201,20 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
   ptr += sizeof(ChildCell);
   ptr = ROUNDUP(ptr);
 
-  // nsurf < 0 means EMPTY ghost
+  if (ownflag) {
+    cells[icell].proc = me;
+    cells[icell].ilocal = icell;
+  }
+
+  // no surfs or any other info
+  // ditto for EMPTY ghost with nsurf < 0
   // reset other fields for ghost cell (csurfs, nsplit, isplit)
 
-  if (cells[icell].nsurf < 0) {
+  if (!surfflag || cells[icell].nsurf < 0) {
     cells[icell].csurfs = NULL;
     cells[icell].nsplit = 1;
     cells[icell].isplit = -1;
     return ptr - buf;
-  }
-
-  if (ownflag) {
-    cells[icell].proc = me;
-    cells[icell].ilocal = icell;
   }
 
   // if nsurfs, unpack different info for explicit vs implicit
@@ -365,7 +376,7 @@ int Grid::unpack_one(char *buf, int ownflag, int molflag, int sortflag)
   
   // unpack particles, for unsplit cell or split cell
 
-  if (!molflag) return ptr - buf;
+  if (!partflag) return ptr - buf;
 
   ptr += unpack_particles(ptr,icell,sortflag);
 
@@ -614,13 +625,15 @@ void Grid::compress()
   // compress cells and cinfo and sinfo arrays
   // 4 cases:
   // discard unsplit or sub cell:
+  //   b/c assigned to another procs
   //   continue
   // keep unsplit or sub cell:
   //   memcpy of cells and cinfo, setup csurfs
   //   reset cells.ilocal and sinfo.csubs
   //   increment nlocal, nunsplitlocal, nsublocal
   // discard split cell:
-  //   flag all sub cells with other proc
+  //   b/c assigned to another proc
+  //   flag all its sub cells with other proc (come later in list)
   //   continue
   // keep split cell:
   //   memcpy of cells and cinfo and sinfo, setup csurfs/csplits/csubs
@@ -677,6 +690,9 @@ void Grid::compress()
     // split cells
 
     } else {
+
+      // discard and mark sub cells (appear later in list) with other proc
+
       if (cells[icell].proc != me) {
         int isplit = cells[icell].isplit;
         int nsplit = cells[icell].nsplit;

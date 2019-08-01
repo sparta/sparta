@@ -24,6 +24,9 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+#include "update.h"
+
 using namespace SPARTA_NS;
 
 // prototype for non-class function
@@ -476,6 +479,10 @@ void MarchingCubes::cleanup()
   double *lo,*hi;
   double *norm;
 
+  // this method requires grid hash to find neighbor cells and sort deleted tris
+
+  if (!grid->hashfilled) grid->rehash();
+
   Surf::Tri *tris = surf->tris;
   Grid::ChildCell *cells = grid->cells;
   MyPage<surfint> *csurfs = grid->csurfs;
@@ -565,9 +572,6 @@ void MarchingCubes::cleanup()
       nflag = grid->neigh_decode(cells[icell].nmask,iface);
       if (nflag != NCHILD && nflag != NPBCHILD) 
         error->one(FLERR,"Invalid neighbor cell in cleanup_MC()");
-      othercell = (int) cells[icell].neigh[iface];
-      if (othercell == icell)
-        error->one(FLERR,"Invalid neighbor cell in cleanup_MC()");
 
       norm = tris[facetris[icell][iface][0]].norm;
       idim = iface/2;
@@ -576,6 +580,7 @@ void MarchingCubes::cleanup()
       else inwardnorm = 0;
       if (iface % 2) otherface = iface-1;
       else otherface = iface+1;
+      othercell = (int) cells[icell].neigh[iface];
       otherproc = cells[othercell].proc;
       otherlocal = cells[othercell].ilocal;
 
@@ -820,6 +825,7 @@ void MarchingCubes::cleanup()
   // descending, not ascending, so that a surf is not moved from end-of-list
   //   that is flagged for later deletion
   // must repoint one location in cells->csurfs to moved surf
+  // note that ghost surfs exist at this point, but caller will clear them
 
   qsort(dellist,ndelete,sizeof(int),compare_indices);
 
@@ -828,7 +834,7 @@ void MarchingCubes::cleanup()
   cellint celllID;
   for (i = 0; i < ndelete; i++) {
     m = dellist[i];
-    memcpy(&tris[m],&tris[nslocal-1],sizeof(Surf::Tri));
+    if (m != nslocal-1) memcpy(&tris[m],&tris[nslocal-1],sizeof(Surf::Tri));
     nslocal--;
 
     icell = (*grid->hash)[tris[m].id] - 1;

@@ -72,9 +72,6 @@ class FixEmitFace : public FixEmit {
   double fnum,dt;
   double *fraction,*cummulative;
 
-  Surf::Line *lines;
-  Surf::Tri *tris;
-
                          // ntask = # of tasks is stored by parent class
   Task *tasks;           // list of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated

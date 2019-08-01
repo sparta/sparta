@@ -49,7 +49,7 @@ class FixAblate : public Fix {
 
  protected:
   int me;
-  int groupbit,which,argindex,icompute,ifix;
+  int groupbit,which,argindex,icompute,ifix,maxrandom;
   double scale;
   char *idsource;
   int storeflag;

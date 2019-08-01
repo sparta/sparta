@@ -57,10 +57,6 @@ enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 enum{NOWEIGHT,VOLWEIGHT,RADWEIGHT};
 
-// allocate space for static class variable
-
-Grid *Grid::gptr;
-
 // corners[i][j] = J corner points of face I of a grid cell
 // works for 2d quads and 3d hexes
 
@@ -391,6 +387,7 @@ void Grid::setup_owned()
 
 void Grid::remove_ghosts()
 {
+  hashfilled = 0;
   exist_ghost = 0;
   nghost = nunsplitghost = nsplitghost = nsubghost = 0;
   surf->remove_ghosts();
@@ -404,12 +401,12 @@ void Grid::remove_ghosts()
    no-op if grid is not clumped and want to acquire only nearby ghosts
 ------------------------------------------------------------------------- */
 
-void Grid::acquire_ghosts()
+void Grid::acquire_ghosts(int surfflag)
 {
   if (surf->distributed && !surf->implicit) surf->rehash();
 
-  if (cutoff < 0.0) acquire_ghosts_all();
-  else if (clumped) acquire_ghosts_near();
+  if (cutoff < 0.0) acquire_ghosts_all(surfflag);
+  else if (clumped) acquire_ghosts_near(surfflag);
   else if (comm->me == 0) 
     error->warning(FLERR,"Could not acquire nearby ghost cells b/c "
                    "grid partition is not clumped");
@@ -425,7 +422,7 @@ void Grid::acquire_ghosts()
    use ring comm to get copy of all other cells in global system
 ------------------------------------------------------------------------- */
 
-void Grid::acquire_ghosts_all()
+void Grid::acquire_ghosts_all(int surfflag)
 {
   exist_ghost = 1;
   nempty = 0;
@@ -442,7 +439,7 @@ void Grid::acquire_ghosts_all()
   int sendsize = 0;
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    sendsize += pack_one(icell,NULL,0,0,0);
+    sendsize += pack_one(icell,NULL,0,0,surfflag,0);
   }
 
   char *sbuf;
@@ -455,14 +452,14 @@ void Grid::acquire_ghosts_all()
   sendsize = 0;
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    sendsize += pack_one(icell,&sbuf[sendsize],0,0,1);
+    sendsize += pack_one(icell,&sbuf[sendsize],0,0,surfflag,1);
   }
 
   // circulate buf of my grid cells around to all procs
   // unpack augments my ghost cells with info from other procs
 
-  gptr = this;
-  comm->ring(sendsize,sizeof(char),sbuf,1,unpack_ghosts,NULL,0);
+  unpack_ghosts_surfflag = surfflag;
+  comm->ring(sendsize,sizeof(char),sbuf,1,unpack_ghosts,NULL,0,(void *) this);
 
   memory->destroy(sbuf);
 }
@@ -473,7 +470,7 @@ void Grid::acquire_ghosts_all()
    within extended bounding box = bounding box of owned cells + cutoff
 ------------------------------------------------------------------------- */
 
-void Grid::acquire_ghosts_near()
+void Grid::acquire_ghosts_near(int surfflag)
 {
   exist_ghost = 1;
 
@@ -590,7 +587,7 @@ void Grid::acquire_ghosts_near()
         nsurf_hold = cells[icell].nsurf;
         cells[icell].nsurf = -1;
       }
-      sendsize += pack_one(icell,NULL,0,0,0);
+      sendsize += pack_one(icell,NULL,0,0,surfflag,0);
       if (oflag == 2) cells[icell].nsurf = nsurf_hold;
       nsend++;
     }
@@ -629,7 +626,7 @@ void Grid::acquire_ghosts_near()
         nsurf_hold = cells[icell].nsurf;
         cells[icell].nsurf = -1;
       }
-      sizelist[nsend] = pack_one(icell,&sbuf[sendsize],0,0,1);
+      sizelist[nsend] = pack_one(icell,&sbuf[sendsize],0,0,surfflag,1);
       if (oflag == 2) cells[icell].nsurf = nsurf_hold;
       proclist[nsend] = lastproc;
       sendsize += sizelist[nsend];
@@ -660,7 +657,7 @@ void Grid::acquire_ghosts_near()
 
   int offset = 0;
   for (i = 0; i < nrecv; i++)
-    offset += grid->unpack_one(&rbuf[offset],0,0);
+    offset += grid->unpack_one(&rbuf[offset],0,0,surfflag);
 
   // more clean up
 

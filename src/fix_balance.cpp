@@ -31,9 +31,6 @@
 #include "error.h"
 #include "timer.h"
 
-// DEBUG
-#include "surf.h"
-
 using namespace SPARTA_NS;
 
 enum{RANDOM,PROC,BISECTION};

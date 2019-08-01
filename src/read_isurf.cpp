@@ -157,6 +157,15 @@ void ReadISurf::command(int narg, char **arg)
   grid->unset_neighbors();
   grid->remove_ghosts();
   grid->clear_surf();
+  surf->clear();
+
+  // NOTE: what about reassign particles in sub cells, like in fix ablate
+  // NOTE: does there need to be a surf->clear() right here like in fix ablate
+  // if want to be able to invoke read_isurf multiple times
+  //   for different sections of grid, that might be necessary
+  //   b/c clear_surf() already wiped out any previous implicit surfs
+  // so need to think about how to enable multiple read_isurf
+  // likewise for logic in fix ablate to call grid->combine_split_cell_particles
 
   MarchingSquares *ms;
   MarchingCubes *mc;
@@ -206,7 +215,12 @@ void ReadISurf::command(int narg, char **arg)
 
   if (dim == 2) delete ms;
   else {
+    grid->acquire_ghosts();
+    grid->reset_neighbors();
     mc->cleanup();
+    surf->remove_ghosts();
+    grid->unset_neighbors();
+    grid->remove_ghosts();
     delete mc;
   }
 

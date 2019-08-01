@@ -129,7 +129,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   // re-assign each of my local child cells to a proc
   // only assign unsplit and split cells
-  // do not assign sub-cells since they migrate with their split cell
+  // do not assign sub cells since they migrate with their split cell
   // set nmigrate = # of cells that will migrate to a new proc
   // reset proc field in cells for migrating cells
   // style NONE performs no re-assignment
@@ -328,7 +328,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     memory->destroy(wt);
   }
 
-  // set clumped of not, depending on style
+  // set clumped or not, depending on style
   // NONE style does not change clumping
 
   if (nprocs == 1 || bstyle == CLUMP || bstyle == BLOCK || bstyle == BISECTION) 

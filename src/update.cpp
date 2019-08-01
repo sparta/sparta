@@ -55,10 +55,10 @@ enum{PERAUTO,PERCELL,PERSURF};                  // several files
 // either set ID or PROC/INDEX, set other to -1
 
 //#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 537898343   // particle ID
+#define MOVE_DEBUG_ID 1355903003  // particle ID
 #define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 16617       // particle index on owning proc
-#define MOVE_DEBUG_STEP 16    // timestep
+#define MOVE_DEBUG_INDEX -1   // particle index on owning proc
+#define MOVE_DEBUG_STEP 201    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -385,7 +385,7 @@ template < int DIM, int SURF > void Update::move()
       } else if (pflag == PENTRY) {
         icell = particles[i].icell;
         if (cells[icell].nsplit > 1) {
-          if (DIM == 3 && SURF) icell = split3d(icell,x);
+          if (DIM == 3 && SURF) icell = split3d(icell,x,particles[i].id);
           if (DIM < 3 && SURF) icell = split2d(icell,x);
           particles[i].icell = icell;
         }
@@ -933,7 +933,7 @@ template < int DIM, int SURF > void Update::move()
           icell = neigh[outface];
           if (DIM == 3 && SURF) {
             if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
-              icell = split3d(icell,x);
+              icell = split3d(icell,x,particles[i].id);
           }
           if (DIM < 3 && SURF) {
             if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -944,7 +944,7 @@ template < int DIM, int SURF > void Update::move()
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
-                icell = split3d(icell,x);
+                icell = split3d(icell,x,particles[i].id);
             }
             if (DIM < 3 && SURF) {
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -999,7 +999,7 @@ template < int DIM, int SURF > void Update::move()
               icell = neigh[outface];
               if (DIM == 3 && SURF) {
                 if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
-                  icell = split3d(icell,x);
+                  icell = split3d(icell,x,particles[i].id);
               }
               if (DIM < 3 && SURF) {
                 if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1010,7 +1010,7 @@ template < int DIM, int SURF > void Update::move()
               if (icell >= 0) {
                 if (DIM == 3 && SURF) {
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
-                    icell = split3d(icell,x);
+                    icell = split3d(icell,x,particles[i].id);
                 }
                 if (DIM < 3 && SURF) {
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1159,7 +1159,7 @@ template < int DIM, int SURF > void Update::move()
    return index of sub-cell in ChildCell
 ------------------------------------------------------------------------- */
 
-int Update::split3d(int icell, double *x)
+int Update::split3d(int icell, double *x, int id)
 {
   int m,cflag,isurf,hitflag,side,minsurfindex;
   double param,minparam;
@@ -1175,6 +1175,7 @@ int Update::split3d(int icell, double *x)
   // only consider tris that are mapped via csplits to a split cell
   //   unmapped tris only touch cell surf at xnew
   //   another mapped tri should include same xnew
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particles starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
@@ -1186,6 +1187,7 @@ int Update::split3d(int icell, double *x)
 
   cflag = 0;
   minparam = 2.0;
+
   for (m = 0; m < nsurf; m++) {
     if (csplits[m] < 0) continue;
     isurf = csurfs[m];
@@ -1193,13 +1195,25 @@ int Update::split3d(int icell, double *x)
     hitflag = Geometry::
       line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
                          tri->norm,xc,param,side);
-    
+
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
       minparam = param;
       minsurfindex = m;
     }
   }
+  
+  /*
+  if (id == 1423968910 && cells[icell].id == 5382) {
+    int index = csplits[minsurfindex];
+    printf("SPLIT step %ld me %d icell %d %d nsurf %d "
+           "cflag %d minsurf %d subcell %d scell %d "
+           "x %g %g %g xnew %g %g %g\n",
+           ntimestep,me,icell,cells[icell].id,cells[icell].nsurf,
+           cflag,minsurfindex,index,sinfo[isplit].csubs[index],
+           x[0],x[1],x[2],xnew[0],xnew[1],xnew[2]);
+  }
+  */
 
   if (!cflag) return sinfo[isplit].csubs[sinfo[isplit].xsub];
   int index = csplits[minsurfindex];
@@ -1227,7 +1241,8 @@ int Update::split2d(int icell, double *x)
   // find 1st surface hit via minparam
   // only consider lines that are mapped via csplits to a split cell
   //   unmapped lines only touch cell surf at xnew
-  //   another mapped line should include same xnew
+  //   another mapped line should include same xnew 
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particle starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
