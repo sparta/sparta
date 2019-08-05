@@ -39,6 +39,7 @@ enum{COMPUTE,FIX,RANDOM};
 #define INVOKED_PER_GRID 16
 #define DELTAGRID 1024            // must be bigger than split cells per cell
 #define DELTASEND 1024
+#define EPSILON 1.0e-4            // this is on a scale of 0 to 255
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
@@ -304,6 +305,10 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   else mc = new MarchingCubes(sparta,igroup,thresh);
 
   // push fully external/internal corner pt values to 0 or 255
+  // NOTE: should this also happen for read isurf, at least as an option?
+  // call this method in FixStore?
+  // NOTE: maybe FixStore could always be defined,
+  //      but ablate only be optionally enabled
 
   if (dim == 2) push2d();
   else push3d();
@@ -536,10 +541,10 @@ void FixAblate::set_delta()
   }
 
   // NOTE: this does not get invoked on step 100,
-  // b/c needs to also be done in constructor
-  // ditto for fix adapt?
-  // they need nextvalid() methods like fix_ave_time
-  // or do it how output calcs next_stats for next thermo step
+  //   b/c needs to also be done in constructor
+  //   ditto for fix adapt?
+  //   they need nextvalid() methods like fix_ave_time
+  //   or do it how output calcs next_stats for next thermo step
 
   modify->addstep_compute(update->ntimestep + nevery);
 
@@ -675,6 +680,7 @@ void FixAblate::sync()
               if (nsend == maxsend) grow_send();
               proclist[nsend] = proc;
               // NOTE: change locallist to another name
+              // NOTE: what about cellint vs int
               locallist[nsend++] = cells[icell].id;   // no longer an int
             }
           }
@@ -741,7 +747,7 @@ void FixAblate::sync()
 
   m = 0;
   for (i = 0; i < nrecv; i++) {
-    cellID = static_cast<int> (rbuf[m++]);   // NOTE: need ubuf
+    cellID = static_cast<int> (rbuf[m++]);   // NOTE: need ubuf logic
     ilocal = (*hash)[cellID] - 1;
     icell = ilocal - nglocal;
     for (j = 0; j < ncorner; j++)
@@ -774,6 +780,7 @@ void FixAblate::sync()
       else izfirst = (i / 4) - 1;
 
       // loop over 2x2x2 stencil of cells that share the corner point
+      // also works for 2d, since izfirst = 0
 
       total = 0.0;
       jcorner = ncorner;
@@ -805,6 +812,20 @@ void FixAblate::sync()
       if (total > array_grid[icell][i]) array_grid[icell][i] = 0.0;
       else array_grid[icell][i] -= total;
     }
+  }
+
+  // insure no corner point is within EPSILON of threshold
+  // if so, set it to threshold - EPSILON
+  // NOTE: also needs to be done by read_isurf and store_corners() ??
+  //       maybe should make read_isurf use this class's methods always
+
+  for (icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    for (int i = 0; i < ncorner; i++)
+      if (fabs(array_grid[icell][i]-thresh) < EPSILON)
+        array_grid[icell][i] = thresh - EPSILON;
   }
 }
 
