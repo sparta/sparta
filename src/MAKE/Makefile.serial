@@ -36,9 +36,7 @@ SPARTA_INC =	-DSPARTA_GZIP
 
 ZUZAX_HOME = /home/hkmoffa/arch/linux64_gcc720_rh7/Zzuzax_master_dbg
 
-
-
-include $(ZUZAX_HOME)/include/cantera/Cantera.mak
+include $(ZUZAX_HOME)/include/zuzax/Cantera.mak
 
 
 
@@ -46,7 +44,6 @@ ZUZAX_DEF = -DUSE_ZUZAX
 ZSURF_DEF = -DUSE_ZSURF
 ZUZAX_INC = -I$(ZUZAX_HOME)/include $(ZUZAX_DEF) $(ZSURF_DEF)
 ZUZAX_PATH = -L$(ZUZAX_HOME)/lib
-#ZUZAX_LIB =  -lcantera -lctmath -lexecstream -lmpfit
 ZUZAX_LIB = $(CANTERA_TOTAL_LIBS)
 
 # MPI library, REQUIRED

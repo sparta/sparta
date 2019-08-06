@@ -35,7 +35,7 @@ SPARTA_INC =	-DSPARTA_GZIP
 # and etching of bulk phases
 
 ZUZAX_HOME = /home/hkmoffa/arch/linux64_gcc720_rh7/Zzuzax_master_dbg
-include $(ZUZAX_HOME)/include/cantera/Cantera.mak
+include $(ZUZAX_HOME)/include/zuzax/Cantera.mak
 
 ZUZAX_DEF = -DUSE_ZUZAX
 ZSURF_DEF = -DUSE_ZSURF
