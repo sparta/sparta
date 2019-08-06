@@ -1,0 +1,28 @@
+#
+# cttables silane.inp
+# This is comment line
+#
+#
+Number of Cantera Files = 1
+Cantera File Name = airSM.xml
+
+DebugPrinting = true
+Bath Temperature = 1000.
+Bath Pressure = 1.0 bar
+Output Units = KJoule
+
+
+START BLOCK Temperature Table Format
+  Number of Points = 14
+END BLOCK Temperature Table Format
+
+start block Bath specification for Phase airSM
+  Bath Species ID = N2
+  start block Bath Species Mole Fraction
+    N2 = 0.9
+    O2 = 0.1
+  End block Bath Species Mole Fraction
+end block Bath specification for Phase airSM
+
+
+# the above were empty lines

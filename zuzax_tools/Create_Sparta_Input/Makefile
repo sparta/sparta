@@ -20,14 +20,19 @@ OBJ_FILES = $(PROGRAM).o
 ##########################################################################
 #           Setup The Zuzax Directory locations
 #########################################################################
+
+all:  $(PROGRAM)
 #
-# The directory where Zuzax include files may be found.
+# Point to the Sparta MAKE include file for serial_debug. This must include the path to a Zuzax
+# installation. Include the whole Makefile (or just include the directory location!)
 #
-CANTERA_INCROOT=@ct_incroot@
+MSERIALDEBUG_MAK = ../../src/MAKE/Makefile.serial_debug
+include $(MSERIALDEBUG_MAK)
 #
-include $(CANTERA_INCROOT)/zuzax/Zuzax.mak
+#CANTERA_INCROOT=/ascldap/users/hkmoffa/arch/linux64_gcc720_rh7/Zzuzax_master_dbg/include
 #
-TOPDIR = @abs_top_srcdir@
+#include $(CANTERA_INCROOT)/zuzax/Zuzax.mak
+#
 #
 # Set up the various local and global defines
 #
@@ -39,7 +44,7 @@ INCLUDE_DIRS = -I../../src $(CANTERA_TOTAL_INCLUDES)
 #
 # the C++ compiler
 #
-CXX = @CXX@
+CXX = /projects/sierra/linux_rh7/SDK/compilers/gcc/7.2.0-RHEL6/bin/g++
 
 debug_mode = 0
 ifeq ($(debug_mode), 1)
@@ -48,11 +53,11 @@ else
    DEBUG_FLAG=
 endif
 
-CXXFLAGS = @CXXFLAGS@ $(DEBUG_FLAG)
-LCXX_FLAGS = @LCXX_FLAGS@
-LCXX_END_LIBS = @LCXX_END_LIBS@
+CXXFLAGS = -std=c++11 -g -Wall -DDEBUG_MODE $(DEBUG_FLAG)
+LCXX_FLAGS = -std=c++11 -g -Wall -DDEBUG_MODE
+LCXX_END_LIBS =  -lrt -lgfortran -lm -lstdc++ 
 CXXLDR = $(CXX)
-CFLAGS=@CXXFLAGS@
+CFLAGS=-std=c++11 -g -Wall -DDEBUG_MODE
 #
 # Both the C and C++ compiler predefines
 #
@@ -79,7 +84,7 @@ SRCDIR=../../src
 DEPENDS = $(PROGRAM).d
 
 .cpp.d:
-	@CXX_DEPENDS@ $(CXXFLAGS) $(CCFLAGS) -c $*.cpp > $*.d
+	/projects/sierra/linux_rh7/SDK/mpi/openmpi/1.10.2-gcc-7.2.0-RHEL6/bin/mpiCC -MM $(CXXFLAGS) $(CCFLAGS) -c $*.cpp > $*.d
 
 .dependsT: $(DEPENDS)
 	cat *.d > .depends
@@ -100,17 +105,7 @@ $(PROGRAM): $(OBJ_FILES)  $(CANTERA_CORE_LIBS_DEP)
                   $(OBJ_FILES) \
                    $(CANTERA_TOTAL_LIBS) $(LCXX_END_LIBS) 
 
-test: 
-	@ $(MAKE) -s
-	@ echo -n 'Checking need to run test ' $(TESTNAME) ': '
-	@ $(MAKE) -q -s  runGood ; ss=$$? ; if test $$ss = "0" ; then echo '   NOT NEEDED' ; else  gmake -s runGood ; fi
 
-runGood: $(PROGRAM) $(DATA) Makefile $(BLESSED_FILES)
-	@echo 'RUNNING TEST ' $(TESTNAME)
-	$(TOPDIR)/bin/runtest_Exec
-
-rebaseline:
-	cp out.txt output_blessed.txt
 
 ############################################################################
 #           Section to set up the clean steps
