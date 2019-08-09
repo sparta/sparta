@@ -521,19 +521,25 @@ void FixAblate::create_surfs(int outflag)
   grid->notify_changed();
 
   // ------------------------------------------------------------------------
-  // DEBUG
-  // NOTE: should not have to do this once marching cubes is perfect
-  // delete any particles now inside surf
+  // DEBUG - should not have to do any of this once marching cubes is perfect
   // only necessary for 3d
-  // same code as in fix grid/check
 
   if (dim == 2) return;
+
+  // DEBUG - if this line is uncommented, code will do delete no particles
+  //         eventually this should work
+
   //if (dim == 3) return;
 
-  // DEBUG - just remove all particles
+  // DEBUG - remove all particles
+  // if these 2 lines are uncommented, all particles are wiped out
 
   particle->nlocal = 0;
   return;
+
+  // DEBUG - remove only the particles that are inside the surfs
+  //         after ablation
+  // similar code as in fix grid/check
 
   Cut3d *cut3d = new Cut3d(sparta);
   Cut2d *cut2d = NULL;
@@ -569,7 +575,7 @@ void FixAblate::create_surfs(int outflag)
   delete cut3d;
 
   // compress out the deleted particles
-  // NOTE: if keep this, need logic for custom particle vectors
+  // NOTE: if end up keeping this, need logic for custom particle vectors
   //       see Particle::compress_rebalance()
 
   int nbytes = sizeof(Particle::OnePart);
