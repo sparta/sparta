@@ -29,8 +29,6 @@
 #include "modify.h"
 #include "fix_ablate.h"
 #include "input.h"
-#include "marching_squares.h"
-#include "marching_cubes.h"
 #include "memory.h"
 #include "error.h"
 
@@ -51,7 +49,7 @@ ReadISurf::ReadISurf(SPARTA *sparta) : Pointers(sparta)
   dim = domain->dimension;
 
   cvalues = NULL;
-  svalues = NULL;
+  tvalues = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -59,7 +57,7 @@ ReadISurf::ReadISurf(SPARTA *sparta) : Pointers(sparta)
 ReadISurf::~ReadISurf()
 {
   memory->destroy(cvalues);
-  memory->destroy(svalues);
+  memory->destroy(tvalues);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -67,7 +65,6 @@ ReadISurf::~ReadISurf()
 void ReadISurf::command(int narg, char **arg)
 {
   // NOTE: at some point could allow another chunk of isurfs to be read
-  //       see note below about clear_surf()
 
   if (!grid->exist)
     error->all(FLERR,"Cannot read_isurf before grid is defined");
@@ -82,7 +79,7 @@ void ReadISurf::command(int narg, char **arg)
 
   surf->exist = 1;
 
-  if (narg < 6) error->all(FLERR,"Illegal read_isurf command");
+  if (narg < 7) error->all(FLERR,"Illegal read_isurf command");
 
   ggroup = grid->find_group(arg[0]);
   if (ggroup < 0) error->all(FLERR,"Read_isurf grid group ID does not exist");
@@ -102,9 +99,19 @@ void ReadISurf::command(int narg, char **arg)
   if (ithresh == thresh) 
     error->all(FLERR,"An integer value for read_isurf thresh is not allowed");
 
+  char *ablateID = arg[6];
+  int ifix = modify->find_fix(ablateID);
+  if (ifix < 0)
+    error->all(FLERR,"Fix ID for read_isurf does not exist");
+  if (strcmp(modify->fix[ifix]->style,"ablate") != 0)
+    error->all(FLERR,"Fix for read_surf is not a fix ablate");
+  ablate = (FixAblate *) modify->fix[ifix];
+  if (ggroup != ablate->igroup)
+    error->all(FLERR,"Read_isurf group does not match fix ablate group");
+
   // process command line args
 
-  process_args(narg-6,&arg[6]);
+  process_args(narg-7,&arg[7]);
 
   // verify that grid group is a set of uniform child cells
   // must comprise a 3d contiguous block
@@ -140,169 +147,44 @@ void ReadISurf::command(int narg, char **arg)
   read_corners(gridfile);
 
   if (typefile) {
-    memory->create(svalues,grid->nlocal,"readisurf:svalues");
+    memory->create(tvalues,grid->nlocal,"readisurf:tvalues");
     read_types(typefile);
   }
 
   delete hash;
 
-  // create surfs in each grid cell based on corner point values
-  // call clear_surf first so cell/corner flags are all set
-  // set surf->nsurf and surf->nown
-  // if specified, apply group keyword to reset per-surf mask info
+  // pass corner point cvalues and type values to FixAblate
+  // also pass it the geometry of the 3d grid of cells and threshold
+  // it will invoke Marchining Cubes/Squares and create triangles
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
-  grid->unset_neighbors();
-  grid->remove_ghosts();
-  grid->clear_surf();
-  surf->clear();
+  char *sgroupID = NULL;
+  if (sgrouparg) sgroupID = arg[sgrouparg];
 
-  // NOTE: what about reassign particles in sub cells, like in fix ablate
-  // NOTE: does there need to be a surf->clear() right here like in fix ablate
-  // if want to be able to invoke read_isurf multiple times
-  //   for different sections of grid, that might be necessary
-  //   b/c clear_surf() already wiped out any previous implicit surfs
-  // so need to think about how to enable multiple read_isurf
-  // likewise for logic in fix ablate to call grid->combine_split_cell_particles
+  ablate->store_corners(nx,ny,nz,corner,xyzsize,
+                        cvalues,tvalues,thresh,sgroupID);
 
-  MarchingSquares *ms;
-  MarchingCubes *mc;
-
-  if (dim == 2) {
-    ms = new MarchingSquares(sparta,ggroup,thresh);
-    ms->invoke(cvalues,svalues);
-  } else {
-    mc = new MarchingCubes(sparta,ggroup,thresh);
-    mc->invoke(cvalues,svalues);
-  }
-
-  surf->nown = surf->nlocal;
-  bigint nlocal = surf->nlocal;
-  MPI_Allreduce(&nlocal,&surf->nsurf,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
-
-  if (sgrouparg) {
-    int sgroup = surf->find_group(arg[sgrouparg]);
-    if (sgroup < 0) sgroup = surf->add_group(arg[sgrouparg]);
-    int sgroupbit = surf->bitmask[sgroup];
- 
-    int nsurf = surf->nlocal;
-    if (dim == 3) {
-      Surf::Tri *tris = surf->tris;
-      for (int i = 0; i < nsurf; i++) tris[i].mask |= sgroupbit;
-    } else {
-      Surf::Line *lines = surf->lines;
-      for (int i = 0; i < nsurf; i++) lines[i].mask |= sgroupbit;
-    }
-  }
-
-  // output extent of implicit surfs, some may be tiny
-
-  if (dim == 2) surf->output_extent(0);
-  else surf->output_extent(0);
+  if (ablate->nevery == 0) modify->delete_fix(ablateID);
 
   MPI_Barrier(world);
   double time3 = MPI_Wtime();
 
-  // compute normals of new surfs
-
-  if (dim == 2) surf->compute_line_normal(0);
-  else surf->compute_tri_normal(0);
-
-  // cleanup() checks for consistent triangles on grid cell faces
-  // needs to come after normals are computed
-
-  if (dim == 2) delete ms;
-  else {
-    grid->acquire_ghosts();
-    grid->reset_neighbors();
-    mc->cleanup();
-    surf->remove_ghosts();
-    grid->unset_neighbors();
-    grid->remove_ghosts();
-    delete mc;
-  }
-
-  // watertight check can be done before surfs are mapped to grid cells
-
-  if (dim == 2) surf->check_watertight_2d();
-  else surf->check_watertight_3d();
-
-  MPI_Barrier(world);
-  double time4 = MPI_Wtime();
-
-  // -----------------------
-  // map surfs to grid cells
-  // -----------------------
-
-  // surfs are already assigned to grid cells
-  // create split cells due to new surfs
-
-  grid->surf2grid_implicit(1,1);
-
-  MPI_Barrier(world);
-  double time5 = MPI_Wtime();
-
-  // re-setup grid ghosts and neighbors
-
-  grid->setup_owned();
-  grid->acquire_ghosts();
-  grid->reset_neighbors();
-  comm->reset_neighbors();
-
-  MPI_Barrier(world);
-  double time6 = MPI_Wtime();
-
-  // flag cells and corners as OUTSIDE or INSIDE
-
-  grid->set_inout();
-  grid->type_check();
-
-  MPI_Barrier(world);
-  double time7 = MPI_Wtime();
-
-  // store corner point cvalues and type values in FixAblate if requested
-  // also pass it the geometry of the 3d grid of cells
-  // cannot do until now, b/c need split cells to exist via surf2grid()
-
-  if (storeflag) ablate->store_corners(nx,ny,nz,corner,xyzsize,
-                                       cvalues,svalues,thresh);
-
-  MPI_Barrier(world);
-  double time8 = MPI_Wtime();
-
   // stats
 
-  double time_total = time8-time1;
-  double time_s2g = time5-time4;
+  double time_total = time3-time1;
 
   if (comm->me == 0) {
     if (screen) {
       fprintf(screen,"  CPU time = %g secs\n",time_total);
-      fprintf(screen,"  read/marching/check/surf2grid/ghost/inout/store "
-              "percent = %g %g %g %g %g %g %g\n",
-              100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
-              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
-              100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
-              100.0*(time8-time7)/time_total);
-      fprintf(screen,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(screen,"  map/rvous/split percent = %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
-              100.0*grid->tsplit/time_s2g);
+      fprintf(screen,"  read/create-surfs percent = %g %g\n",
+              100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
     }
     if (logfile) {
       fprintf(logfile,"  CPU time = %g secs\n",time_total);
-      fprintf(logfile,"  read/marching/check/surf2grid/ghost/inout/store "
-              "percent = %g %g %g %g %g %g %g\n",
-              100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total,
-              100.0*(time4-time3)/time_total,100.0*(time5-time4)/time_total,
-              100.0*(time6-time5)/time_total,100.0*(time7-time6)/time_total,
-              100.0*(time8-time7)/time_total);
-      fprintf(logfile,"  surf2grid time = %g secs\n",time_s2g);
-      fprintf(logfile,"  map/rvous/split percent = %g %g %g\n",
-              100.0*grid->tmap/time_s2g,100.0*grid->trvous1/time_s2g,
-              100.0*grid->tsplit/time_s2g);
+      fprintf(logfile,"  read/create-surfs percent = %g %g\n",
+              100.0*(time2-time1)/time_total,100.0*(time3-time2)/time_total);
     }
   }
 }
@@ -553,7 +435,7 @@ void ReadISurf::assign_types(int n, bigint offset, int *buf)
     cellindex = offset + i;
     if (hash->find(cellindex) == hash->end()) continue;
     icell = (*hash)[cellindex];
-    svalues[icell] = buf[i];
+    tvalues[icell] = buf[i];
   }
 }
 
@@ -565,7 +447,6 @@ void ReadISurf::process_args(int narg, char **arg)
 {
   sgrouparg = 0;
   typefile = NULL;
-  storeflag = 0;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -577,20 +458,6 @@ void ReadISurf::process_args(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       typefile = arg[iarg+1];
       iarg += 2;
-    } else if (strcmp(arg[iarg],"store") == 0)  {
-      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      storeflag = 1;
-      storeID = arg[iarg+1];
-      int ifix = modify->find_fix(storeID);
-      if (ifix < 0)
-        error->all(FLERR,"Fix ID for read_isurf store does not exist");
-      if (strcmp(modify->fix[ifix]->style,"ablate") != 0)
-        error->all(FLERR,"Fix for read_isurf store is not a fix ablate");
-      ablate = (FixAblate *) modify->fix[ifix];
-      if (ggroup != ablate->igroup)
-        error->all(FLERR,"Read_isurf group does not match fix ablate group");
-      iarg += 2;
     } else error->all(FLERR,"Invalid read_isurf command");
   }
 }
-

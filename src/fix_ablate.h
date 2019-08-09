@@ -42,10 +42,11 @@ class FixAblate : public Fix {
   void reset_grid_count(int);
   void add_grid_one();
   double compute_scalar();
+  double compute_vector(int);
   double memory_usage();
 
   void store_corners(int, int, int, double *, double *,
-                     double **, int *, double);
+                     double **, int *, double, char *);
 
  protected:
   int me;
@@ -54,10 +55,15 @@ class FixAblate : public Fix {
   char *idsource;
   int storeflag;
   int nx,ny,nz,ncorner;
+  int sgroupbit;
   double thresh;
   double sum_delta;
    
   int nglocal;            // # of owned grid cells
+
+  double **cvalues;       // corner point values
+  int *tvalues;           // per-cell type value
+  int tvalues_flag;       // 1 if tvalues is defined (by ReadIsurf)
 
   int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
                           // in 2d/3d ablate grid (iz = 1 for 2d)
@@ -80,6 +86,7 @@ class FixAblate : public Fix {
   class MarchingCubes *mc;
   class RanPark *random;
 
+  void create_surfs(int);
   void set_delta_random();
   void set_delta();
   void decrement();

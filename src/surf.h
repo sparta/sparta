@@ -187,8 +187,7 @@ class Surf : protected Pointers {
   int add_group(const char *);
   int find_group(const char *);
   
-  void compress_rebalance();
-  void reset_csurfs_implicit();
+  void compress_implicit_rebalance();
 
   void collate_vector(int, surfint *, double *, int, double *);
   void collate_vector_reduce(int, surfint *, double *, int, double *);

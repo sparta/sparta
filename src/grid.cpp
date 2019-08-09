@@ -29,6 +29,9 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+#include "update.h"
+
 using namespace SPARTA_NS;
 using namespace MathConst;
 
@@ -754,7 +757,7 @@ int Grid::box_periodic(double *lo, double *hi, Box *box)
         plo[1] = lo[1] + j*prd[1];
         phi[1] = hi[1] + j*prd[1];
         plo[2] = lo[2] + k*prd[2];
-        phi[2] = hi[2] + k*prd[2];
+        phi[2] = hi[2] + k*prd[2]; 
         box_intersect(plo,phi,boxlo,boxhi,olo,ohi);
         if (olo[0] >= ohi[0] || olo[1] >= ohi[1] || olo[2] >= ohi[2]) continue;
 

@@ -93,6 +93,8 @@ ComputeISurfGrid::ComputeISurfGrid(SPARTA *sparta, int narg, char **arg) :
   combined = 0;
 
   hash = new MyHash;
+
+  dim = domain->dimension;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -111,7 +113,6 @@ ComputeISurfGrid::~ComputeISurfGrid()
 
 void ComputeISurfGrid::init()
 {
-
   if (!surf->exist)
     error->all(FLERR,"Cannot use compute isurf/grid when surfs do not exist");
   if (!surf->implicit) 
@@ -120,10 +121,6 @@ void ComputeISurfGrid::init()
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,
                "Number of groups in compute isurf/grid mixture has changed");
-
-  // local copies
-
-  dim = domain->dimension;
 
   // set normflux for all owned + ghost surfs
 
@@ -178,7 +175,6 @@ void ComputeISurfGrid::init_normflux()
     normflux[i] = 1.0/normflux[i];
   }
 }
-
 
 /* ----------------------------------------------------------------------
    no operations here, since compute results are stored in array_grid

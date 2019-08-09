@@ -39,6 +39,9 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+#include "fix_ablate.h"
+
 using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -54,11 +57,11 @@ enum{PERAUTO,PERCELL,PERSURF};                  // several files
 
 // either set ID or PROC/INDEX, set other to -1
 
-//#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 1355903003  // particle ID
-#define MOVE_DEBUG_PROC 0        // owning proc
+#define MOVE_DEBUG 1              // un-comment to debug one particle
+#define MOVE_DEBUG_ID 562805009  // particle ID
+#define MOVE_DEBUG_PROC -1        // owning proc
 #define MOVE_DEBUG_INDEX -1   // particle index on owning proc
-#define MOVE_DEBUG_STEP 201    // timestep
+#define MOVE_DEBUG_STEP 3701    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -272,6 +275,93 @@ void Update::run(int nsteps)
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
+
+    // DEBUG
+
+    /*
+    if (ntimestep == 3600) {
+      Grid::ChildCell *cells = grid->cells;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+      int nglocal = grid->nlocal;
+
+      int ifix = modify->find_fix("FOO");
+      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
+      int groupbit = grid->bitmask[ablate->igroup];
+
+      for (int icell = 0; icell < nglocal; icell++) {
+        if (!(cinfo[icell].mask & groupbit)) continue;
+        if (cells[icell].nsplit <= 0) continue;
+        cellint id = cells[icell].id;
+        char prefix[32],bif[8],pad[16],fname[32];
+        sprintf(prefix,"corners.%d.%ld.",comm->nprocs,update->ntimestep);
+        strcpy(bif,CELLINT_FORMAT);
+        sprintf(pad,"%%s%%0%d%s",6,&bif[1]);
+        sprintf(fname,pad,prefix,id);
+        FILE *fp = fopen(fname,"w");
+        fprintf(fp,"%d: %g %g %g %g %g %g %g %g\n",id,
+                ablate->array_grid[icell][0],
+                ablate->array_grid[icell][1],
+                ablate->array_grid[icell][2],
+                ablate->array_grid[icell][3],
+                ablate->array_grid[icell][4],
+                ablate->array_grid[icell][5],
+                ablate->array_grid[icell][6],
+                ablate->array_grid[icell][7]);
+        fclose(fp);
+      }
+    }
+
+    if (ntimestep == 3600) {
+      Surf::Tri *tris = surf->tris;
+      Grid::ChildCell *cells = grid->cells;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+      int nglocal = grid->nlocal;
+
+      int ifix = modify->find_fix("FOO");
+      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
+      int groupbit = grid->bitmask[ablate->igroup];
+
+      for (int icell = 0; icell < nglocal; icell++) {
+        if (!(cinfo[icell].mask & groupbit)) continue;
+        if (cells[icell].nsplit <= 0) continue;
+        if (cells[icell].nsurf == 0) continue;
+        cellint id = cells[icell].id;
+        char prefix[32],bif[8],pad[16],fname[32];
+        sprintf(prefix,"impsurf.%d.%ld.",comm->nprocs,update->ntimestep);
+        strcpy(bif,CELLINT_FORMAT);
+        sprintf(pad,"%%s%%0%d%s",6,&bif[1]);
+        sprintf(fname,pad,prefix,id);
+        FILE *fp = fopen(fname,"w");
+        fprintf(fp,"%d: %d\n",id,cells[icell].nsurf);
+        for (int j = 0; j < cells[icell].nsurf; j++) {
+          int m = cells[icell].csurfs[j];
+          fprintf(fp,"  %d: id %d tmii %d %d %d %d\n",j+1,
+                  tris[m].id,
+                  tris[m].type,
+                  tris[m].mask,
+                  tris[m].isc,
+                  tris[m].isr);
+          fprintf(fp,"  %d: p1 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p1[0],
+                  tris[m].p1[1],
+                  tris[m].p1[2]);
+          fprintf(fp,"  %d: p2 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p2[0],
+                  tris[m].p2[1],
+                  tris[m].p2[2]);
+          fprintf(fp,"  %d: p3 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p3[0],
+                  tris[m].p3[1],
+                  tris[m].p3[2]);
+          fprintf(fp,"  %d: norm %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].norm[0],
+                  tris[m].norm[1],
+                  tris[m].norm[2]);
+        }
+        fclose(fp);
+      }
+    }
+    */
   }
 }
 

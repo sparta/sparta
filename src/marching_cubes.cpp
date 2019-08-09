@@ -610,6 +610,7 @@ void MarchingCubes::cleanup()
           cells[othercell].csurfs = ptr;
           tris[facetris[icell][iface][0]].id = cells[othercell].id;
           tris[facetris[icell][iface][1]].id = cells[othercell].id;
+          //printf("MC add1 %d %d\n",cells[icell].id,cells[othercell].id);
           //nadd += 2;
         }
 
@@ -635,6 +636,7 @@ void MarchingCubes::cleanup()
           cells[othercell].csurfs[k] = cells[othercell].csurfs[othernsurf-1];
           othernsurf--;
           cells[othercell].nsurf -= 2;
+          //printf("MC del1 %d %d\n",cells[icell].id,cells[othercell].id);
           //ndel += 2;
         }
 
@@ -654,6 +656,7 @@ void MarchingCubes::cleanup()
         cells[icell].csurfs[k] = cells[icell].csurfs[nsurf-1];
         nsurf--;
         cells[icell].nsurf -= 2;
+        //printf("MC dele %d %d\n",cells[icell].id,cells[othercell].id);
         //ndel += 2;
 
         // add 4 tris to delete list if both cells deleted them

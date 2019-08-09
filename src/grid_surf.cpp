@@ -532,7 +532,7 @@ void Grid::surf2grid_implicit(int subflag, int outflag)
    compute cut volume of each cell and any split cell info
    nsurf and csurfs list for each grid cell have already been computed
    if subflag = 1, create new owned split and sub cells as needed
-     called from ReadSurf, RemoveSurf, MoveSurf
+     called from ReadSurf, RemoveSurf, MoveSurf, FixAblate
    if subflag = 0, split/sub cells already exist
      called from ReadRestart
    in cells: set nsplit, isplit

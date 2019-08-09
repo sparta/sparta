@@ -289,17 +289,15 @@ void Comm::migrate_cells(int nmigrate)
     offset += grid->pack_one(icell,&sbuf[offset],1,1,1,1);
   }
 
-  // compress my list of owned implicit surfs
+  // compress my list of owned implicit surfs, resets csurfs in kept cells
   // compress my list of owned grid cells to remove migrating cells
-  // reset csurf pointers to implicit surfs since they were compressed
   // compress particle list to remove particles in migrating cells
   // procs with no migrating cells must also unset particle sorted
   //   since compress_rebalance() unsets it
 
   if (nmigrate) {
-    if (surf->implicit) surf->compress_rebalance();
+    if (surf->implicit) surf->compress_implicit_rebalance();
     grid->compress();
-    if (surf->implicit) surf->reset_csurfs_implicit();
     particle->compress_rebalance();
   } else particle->sorted = 0;
 
@@ -458,12 +456,12 @@ void Comm::migrate_cells_less_memory(int nmigrate)
     MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world); 
   }
 
+  // compress my list of owned implicit surfs, resets csurfs in kept cells
   // compress my list of owned grid cells to remove migrated cells
 
   if (nmigrate) {
-    if (surf->implicit) surf->compress_rebalance();
+    if (surf->implicit) surf->compress_implicit_rebalance();
     grid->compress();
-    if (surf->implicit) surf->reset_csurfs_implicit();
   }
 }
 

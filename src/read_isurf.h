@@ -43,16 +43,16 @@ class ReadISurf : protected Pointers {
 
  protected:
   int me,dim;
-  int ggroup,sgrouparg,storeflag;
+  int ggroup,sgrouparg;
   int nx,ny,nz;
   double thresh;
   double corner[3],xyzsize[3];
-  char *typefile,*storeID;
+  char *typefile;
 
   class FixAblate *ablate;
 
   double **cvalues;        // array of corner point values
-  int *svalues;            // vector of per grid cell types
+  int *tvalues;            // vector of per grid cell surf types
     
   // hash for assigning grid corner points to grid cells
 
@@ -70,10 +70,7 @@ class ReadISurf : protected Pointers {
 
   void read_corners(char *);
   void read_types(char *);
-
   void create_hash(int);
-  void destroy_hash();
-
   void assign_corners(int, bigint, uint8_t *);
   void assign_types(int, bigint, int *);
 };

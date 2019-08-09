@@ -478,6 +478,7 @@ void Surf::rehash()
   // key = ID, value = index into lines or tris
 
   hash->clear();
+  hashfilled = 1;
 
   if (domain->dimension == 2) {
     for (int isurf = 0; isurf < nlocal; isurf++)
@@ -486,8 +487,6 @@ void Surf::rehash()
     for (int isurf = 0; isurf < nlocal; isurf++)
       (*hash)[tris[isurf].id] = isurf;
   }
-
-  hashfilled = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -2282,17 +2281,16 @@ int Surf::find_group(const char *id)
 /* ----------------------------------------------------------------------
    compress owned implicit surfs to account for migrating grid cells
    migrating grid cells are ones with proc != me
-   store info on reordered nlocal surfs in hash
+   reset csurfs indices for kept cells
    only called for implicit surfs
+   called from Comm::migrate_cells()
 ------------------------------------------------------------------------- */
 
-void Surf::compress_rebalance()
+void Surf::compress_implicit_rebalance()
 {
-  int icell;
+  int j,icell,nsurf;
   cellint cellID;
-
-  if (hashfilled) hash->clear();
-  hashfilled = 1;
+  int *csurfs;
 
   if (!grid->hashfilled) grid->rehash();
 
@@ -2305,9 +2303,17 @@ void Surf::compress_rebalance()
     for (int i = 0; i < nlocal; i++) {
       icell = (*ghash)[lines[i].id] - 1;
       if (cells[icell].proc != me) continue;
-      if (i != n) memcpy(&lines[n],&lines[i],sizeof(Line));
-      if (hash->find(lines[n].id) == hash->end())
-        (*hash)[lines[n].id] = n;
+      if (i != n) {
+        memcpy(&lines[n],&lines[i],sizeof(Line));
+        // reset matching csurfs index from i to n
+        csurfs = cells[icell].csurfs;
+        nsurf = cells[icell].nsurf;
+        for (j = 0; j < nsurf; j++)
+          if (csurfs[j] == i) {
+            csurfs[j] = n;
+            break;
+          }
+      }
       n++;
     }
 
@@ -2315,42 +2321,22 @@ void Surf::compress_rebalance()
     for (int i = 0; i < nlocal; i++) {
       icell = (*ghash)[tris[i].id] - 1;
       if (cells[icell].proc != me) continue;
-      if (i != n) memcpy(&tris[n],&tris[i],sizeof(Tri));
-      if (hash->find(tris[n].id) == hash->end())
-        (*hash)[tris[n].id] = n;
+      if (i != n) {
+        memcpy(&tris[n],&tris[i],sizeof(Tri));
+        // reset matching csurfs index from i to n
+        csurfs = cells[icell].csurfs;
+        nsurf = cells[icell].nsurf;
+        for (j = 0; j < nsurf; j++)
+          if (csurfs[j] == i) {
+            csurfs[j] = n;
+            break;
+          }
+      }
       n++;
     }
   }
 
   nlocal = n;
-}
-
-/* ----------------------------------------------------------------------
-   reset grid csurfs values for all my owned grid cells with surfs
-   called for implicit surfs after grid cell compression
-   b/c local surf list was also compressed
-------------------------------------------------------------------------- */
-
-void Surf::reset_csurfs_implicit()
-{
-  int m,n,isurf;
-
-  Grid::ChildCell *cells = grid->cells;
-  int nslocal = grid->nlocal;
-
-  for (int icell = 0; icell < nslocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    if (cells[icell].nsurf == 0) continue;
-    isurf = (*hash)[cells[icell].id];
-    n = cells[icell].nsurf;
-    for (m = 0; m < n; m++)
-      cells[icell].csurfs[m] = isurf++;
-  }
-
-  // can now clear surf hash created by compress_rebalance()
-
-  hash->clear();
-  hashfilled = 0;
 }
 
 /* ----------------------------------------------------------------------

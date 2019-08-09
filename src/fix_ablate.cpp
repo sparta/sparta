@@ -32,7 +32,14 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+
+#include "cut3d.h"
+
 using namespace SPARTA_NS;
+
+// DEBUG
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // several files
 
 enum{COMPUTE,FIX,RANDOM};
 
@@ -168,11 +175,14 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   gridmigrate = 1;
 
   scalar_flag = 1;
+  vector_flag = 1;
+  size_vector = 4;
   global_freq = 1;
   sum_delta = 0.0;
 
   storeflag = 0;
-  array_grid = NULL;
+  array_grid = cvalues = NULL;
+  tvalues = NULL;
   ncorner = size_per_grid_cols;
 
   // local storage
@@ -201,6 +211,11 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
     double seed = update->ranmaster->uniform();
     random->reset(seed,comm->me,100);
   }
+
+  // DEBUG random, same for all procs
+
+  delete random;
+  random = new RanPark(update->ranmaster->uniform());
 }
 
 /* ---------------------------------------------------------------------- */
@@ -208,7 +223,8 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
 FixAblate::~FixAblate()
 {
   delete [] idsource;
-  memory->destroy(array_grid);
+  memory->destroy(cvalues);
+  memory->destroy(tvalues);
 
   memory->destroy(ixyz);
   memory->destroy(celldelta);
@@ -237,14 +253,15 @@ int FixAblate::setmask()
 }
 
 /* ----------------------------------------------------------------------
-   store grid corner point values in array_grid
+   store grid corner point and type values in cvalues and tvalues
+   then create implicit surfaces
    called by ReadIsurf when corner point grid is read in
 ------------------------------------------------------------------------- */
 
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo, double *xyzsize, 
-                              double **cvalues, int *svalues,
-                              double thresh_caller)
+                              double **cvalues_caller, int *tvalues_caller,
+                              double thresh_caller, char *sgroupID)
 {
   storeflag = 1;
 
@@ -253,8 +270,16 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   nz = nz_caller;
   thresh = thresh_caller;
 
+  tvalues_flag = 0;
+  if (tvalues_caller) tvalues_flag = 1;
+
+  if (sgroupID) {
+    int sgroup = surf->find_group(sgroupID);
+    if (sgroup < 0) sgroup = surf->add_group(sgroupID);
+    sgroupbit = surf->bitmask[sgroup];
+  } else sgroupbit = 0;
+
   // allocate per-grid cell data storage
-  // zero array in case used by dump or load balancer
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
@@ -263,25 +288,15 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
 
   grow_percell(0);
 
-  for (int i = 0; i < nglocal; i++)
-    for (int m = 0; m < ncorner; m++) array_grid[i][m] = 0.0;
-
-  // copy cvalues into array_grid
-  // assumes cvalues is in same per-cell order as cells
-  //   with any split cells added to tge end
+  // copy caller values into local values of FixAblate
 
   for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit > 0) {
-      for (int m = 0; m < ncorner; m++) 
-        array_grid[icell][m] = cvalues[icell][m];
-    } else {
-      int splitcell = sinfo[cells[icell].isplit].icell;
-      for (int m = 0; m < ncorner; m++) 
-        array_grid[icell][m] = array_grid[splitcell][m];
-    }
+    for (int m = 0; m < ncorner; m++) 
+      cvalues[icell][m] = cvalues_caller[icell][m];
+    if (tvalues_flag) tvalues[icell] = tvalues_caller[icell];
   }
 
-  // set ix,iy,iz indices for each of my owned grid cells
+  // set ix,iy,iz indices from 1 to Nxyz for each of my owned grid cells
   // same logic as ReadIsurf::create_hash()
 
   for (int i = 0; i < nglocal; i++)
@@ -299,19 +314,20 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  // can now create marching squares/cubes classes
+  // push corner pt values that are fully external/internal 0 or 255
+  // NOTE: could make this a FixAblate option
+
+  if (dim == 2) push2d();
+  else push3d();
+
+  // create marching squares/cubes classes, now that have group & threshold
 
   if (dim == 2) ms = new MarchingSquares(sparta,igroup,thresh);
   else mc = new MarchingCubes(sparta,igroup,thresh);
 
-  // push fully external/internal corner pt values to 0 or 255
-  // NOTE: should this also happen for read isurf, at least as an option?
-  // call this method in FixStore?
-  // NOTE: maybe FixStore could always be defined,
-  //      but ablate only be optionally enabled
+  // create implicit surfaces
 
-  if (dim == 2) push2d();
-  else push3d();
+  create_surfs(1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -356,13 +372,18 @@ void FixAblate::end_of_step()
 
   sync();
 
-  // perform Marching Squares/Cubes to create new implicit surfs
-  // sort particles since may be clearing split cells
+  // re-create implicit surfs
+
+  create_surfs(0);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixAblate::create_surfs(int outflag)
+{
+  // sort existing particles since may be clearing split cells
 
   if (!particle->sorted) particle->sort();
-
-  grid->unset_neighbors();
-  grid->remove_ghosts();
 
   // reassign particles in sub cells to all be in parent split cell
 
@@ -373,23 +394,43 @@ void FixAblate::end_of_step()
 	grid->combine_split_cell_particles(icell,1);
   }
 
+  // call clear_surf before create new surfs, so cell/corner flags are all set
+
+  grid->unset_neighbors();
+  grid->remove_ghosts();
   grid->clear_surf();
   surf->clear();
 
-  if (dim == 2) ms->invoke(array_grid,NULL);
-  else mc->invoke(array_grid,NULL);
+  // perform Marching Squares/Cubes to create new implicit surfs
+  // cvalues = corner point values
+  // tvalues = surf type for surfs in each grid cell
+
+  if (dim == 2) ms->invoke(cvalues,tvalues);
+  else mc->invoke(cvalues,tvalues);
+
+  // set surf->nsurf and surf->nown
 
   surf->nown = surf->nlocal;
   bigint nlocal = surf->nlocal;
   MPI_Allreduce(&nlocal,&surf->nsurf,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
+  // output extent of implicit surfs, some may be tiny
+
+  if (outflag) {
+    if (dim == 2) surf->output_extent(0);
+    else surf->output_extent(0);
+  }
+
+  // compute normals of new surfs
+
   if (dim == 2) surf->compute_line_normal(0);
   else surf->compute_tri_normal(0);
 
-  // cleanup() checks for consistent triangles on grid cell faces
+  // MC->cleanup() checks for consistent triangles on grid cell faces
   // needs to come after normals are computed
   // it requires neighbor indices and ghost cell info
-  // so acquire ghosts (which will also grab surfs) 
+  // so first acquire ghosts (which will also grab surfs),
+  //   then remove ghost surfs and ghost grid cells again
 
   if (dim == 3) {
     grid->acquire_ghosts(0);
@@ -400,8 +441,24 @@ void FixAblate::end_of_step()
     grid->remove_ghosts();
   }
 
-  // re-assign mask, surf collision model, surf reaction model to new surfs
+  // assign optional surf group to masks of new surfs
+
+  if (sgroupbit) {
+    int nsurf = surf->nlocal;
+    if (dim == 3) {
+      Surf::Tri *tris = surf->tris;
+      for (int i = 0; i < nsurf; i++) tris[i].mask |= sgroupbit;
+    } else {
+      Surf::Line *lines = surf->lines;
+      for (int i = 0; i < nsurf; i++) lines[i].mask |= sgroupbit;
+    }
+  }
+
+  // assign surf collision model, surf reaction model to new surfs
   // NOTE: have to do this in a better way - but how
+  // NOTE: what if user assigns surfs to groups after they are created
+  //       how can those persist?
+  //       maybe should use grid cell groups for imp surf
 
   int nslocal = surf->nlocal;
 
@@ -427,10 +484,14 @@ void FixAblate::end_of_step()
     grid->clear_surf();
   }
 
+  // -----------------------
+  // map surfs to grid cells
+  // -----------------------
+
   // surfs are already assigned to grid cells
   // create split cells due to new surfs
 
-  grid->surf2grid_implicit(1,0);
+  grid->surf2grid_implicit(1,outflag);
 
   // re-setup grid ghosts and neighbors
 
@@ -446,7 +507,6 @@ void FixAblate::end_of_step()
 
   // reassign particles in a split cell to sub cell owner
   // particles are unsorted afterwards, within new sub cells
-  // NOTE: do same in read_isurf, if particles can exist there
 
   if (grid->nsplitlocal) {
     Grid::ChildCell *cells = grid->cells;
@@ -459,6 +519,73 @@ void FixAblate::end_of_step()
   // notify all classes that store per-grid data that grid has changed
 
   grid->notify_changed();
+
+  // ------------------------------------------------------------------------
+  // DEBUG
+  // NOTE: should not have to do this once marching cubes is perfect
+  // delete any particles now inside surf
+  // only necessary for 3d
+  // same code as in fix grid/check
+
+  if (dim == 2) return;
+  //if (dim == 3) return;
+
+  // DEBUG - just remove all particles
+
+  particle->nlocal = 0;
+  return;
+
+  Cut3d *cut3d = new Cut3d(sparta);
+  Cut2d *cut2d = NULL;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::SplitInfo *sinfo = grid->sinfo;
+  Particle::OnePart *particles = particle->particles;
+  int pnlocal = particle->nlocal;
+
+  int ncount;
+  int icell,splitcell,subcell,flag;
+  double *x;
+
+  ncount = 0;
+  for (int i = 0; i < pnlocal; i++) {
+    particles[i].flag = PKEEP;
+    icell = particles[i].icell;
+    if (cells[icell].nsurf == 0) continue;
+
+    x = particles[i].x;
+    flag = 1;
+    if (cells[icell].nsplit <= 0) {
+      splitcell = sinfo[cells[icell].isplit].icell;
+      flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
+    } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
+
+    if (!flag) {
+      particles[i].flag = PDISCARD;
+      ncount++;
+    }
+  }
+
+  delete cut3d;
+
+  // compress out the deleted particles
+  // NOTE: if keep this, need logic for custom particle vectors
+  //       see Particle::compress_rebalance()
+
+  int nbytes = sizeof(Particle::OnePart);
+
+  int i = 0;
+  while (i < pnlocal) {
+    if (particles[i].flag == PDISCARD) {
+      memcpy(&particles[i],&particles[pnlocal-1],nbytes);
+      pnlocal--;
+    } else i++;
+  }
+
+  //printf("ABLATE particles deleted %d\n",ncount);
+
+  particle->nlocal = pnlocal;
+  particle->sorted = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -469,16 +596,39 @@ void FixAblate::end_of_step()
 
 void FixAblate::set_delta_random()
 {
+  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
+  
+  // DEBUG - so same decrement no matter who owns which cells
 
+  if (!grid->hashfilled) grid->rehash();
+  Grid::MyHash *hash = grid->hash;
+  cellint cellID;
+  int rn2,icell;
+  double rn1;
+  for (int i = 0; i < grid->ncell; i++) {
+    rn1 = random->uniform();
+    rn2 = static_cast<int> (random->uniform()*maxrandom) + 1.0;
+    cellID = i+1;
+    if (hash->find(cellID) == hash->end()) continue;
+    icell = (*hash)[cellID] - 1;
+    if (icell >= nglocal) continue;     // ghost cell
+    //printf("AAA me %d i %d icell %d nglocal %d\n",me,i,icell,nglocal);
+    if (rn1 > scale) celldelta[icell] = 0.0;
+    else celldelta[icell] = rn2;
+  }
+
+  // KEEP THIS
+  /*
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
     if (random->uniform() > scale) celldelta[icell] = 0.0;
     else celldelta[icell] = 
            static_cast<int> (random->uniform()*maxrandom) + 1.0;
   }
-
-  Grid::ChildCell *cells = grid->cells;
+  */
+  // total decrement for output
 
   double sum = 0.0;
   for (int icell = 0; icell < nglocal; icell++) {
@@ -493,6 +643,7 @@ void FixAblate::set_delta_random()
 /* ----------------------------------------------------------------------
    set per-cell delta vector from compute/fix source
    celldelta = nevery * scale * source-value
+   // NOTE: how does this work for split cells?  should only do parent split
 ------------------------------------------------------------------------- */
 
 void FixAblate::set_delta()
@@ -590,7 +741,7 @@ void FixAblate::decrement()
     for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
 
     total = celldelta[icell];
-    corners = array_grid[icell];
+    corners = cvalues[icell];
     while (total > 0.0) {
       imin = -1;
       minvalue = 256.0;
@@ -809,8 +960,8 @@ void FixAblate::sync()
         }
       }
 
-      if (total > array_grid[icell][i]) array_grid[icell][i] = 0.0;
-      else array_grid[icell][i] -= total;
+      if (total > cvalues[icell][i]) cvalues[icell][i] = 0.0;
+      else cvalues[icell][i] -= total;
     }
   }
 
@@ -824,8 +975,8 @@ void FixAblate::sync()
     if (cells[icell].nsplit <= 0) continue;
 
     for (int i = 0; i < ncorner; i++)
-      if (fabs(array_grid[icell][i]-thresh) < EPSILON)
-        array_grid[icell][i] = thresh - EPSILON;
+      if (fabs(cvalues[icell][i]-thresh) < EPSILON)
+        cvalues[icell][i] = thresh - EPSILON;
   }
 }
 
@@ -887,8 +1038,16 @@ int FixAblate::pack_grid_one(int icell, char *buf, int memflag)
   Grid::ChildCell *cells = grid->cells;
   Grid::SplitInfo *sinfo = grid->sinfo;
 
-  if (memflag)  memcpy(ptr,array_grid[icell],ncorner*sizeof(double));
+  if (memflag) memcpy(ptr,cvalues[icell],ncorner*sizeof(double));
   ptr += ncorner*sizeof(double);
+
+  if (tvalues_flag) {
+    if (memflag) {
+      double *dbuf = (double *) ptr;
+      dbuf[0] = tvalues[icell];
+    }
+    ptr += sizeof(double);
+  }
 
   if (memflag) {
     double *dbuf = (double *) ptr;
@@ -903,7 +1062,7 @@ int FixAblate::pack_grid_one(int icell, char *buf, int memflag)
     int nsplit = cells[icell].nsplit;
     for (int i = 0; i < nsplit; i++) {
       int jcell = sinfo[isplit].csubs[i];
-      if (memflag) memcpy(ptr,array_grid[jcell],ncorner*sizeof(double));
+      if (memflag) memcpy(ptr,cvalues[jcell],ncorner*sizeof(double));
       ptr += ncorner*sizeof(double);
     }
   }
@@ -923,8 +1082,15 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
   Grid::SplitInfo *sinfo = grid->sinfo;
 
   grow_percell(1);
-  memcpy(array_grid[icell],ptr,ncorner*sizeof(double));
+
+  memcpy(cvalues[icell],ptr,ncorner*sizeof(double));
   ptr += ncorner*sizeof(double);
+
+  if (tvalues_flag) {
+    double *dbuf = (double *) ptr;
+    tvalues[icell] = static_cast<int> (dbuf[0]);
+    ptr += sizeof(double);
+  }
 
   double *dbuf = (double *) ptr;
   ixyz[icell][0] = static_cast<int> (dbuf[0]);
@@ -940,7 +1106,7 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
     grow_percell(nsplit);
     for (int i = 0; i < nsplit; i++) {
       int jcell = sinfo[isplit].csubs[i];
-      memcpy(array_grid[jcell],ptr,ncorner*sizeof(double));
+      memcpy(cvalues[jcell],ptr,ncorner*sizeof(double));
       ptr += ncorner*sizeof(double);
     }
     nglocal += nsplit;
@@ -957,7 +1123,8 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
 
 void FixAblate::copy_grid_one(int icell, int jcell)
 {
-  memcpy(array_grid[jcell],array_grid[icell],ncorner*sizeof(double));
+  memcpy(cvalues[jcell],cvalues[icell],ncorner*sizeof(double));
+  if (tvalues_flag) tvalues[jcell] = tvalues[icell];
 
   ixyz[jcell][0] = ixyz[icell][0];
   ixyz[jcell][1] = ixyz[icell][1];
@@ -974,7 +1141,8 @@ void FixAblate::add_grid_one()
 {
   grow_percell(1);
 
-  for (int i = 0; i < ncorner; i++) array_grid[nglocal][i] = 0.0;
+  for (int i = 0; i < ncorner; i++) cvalues[nglocal][i] = 0.0;
+  if (tvalues_flag) tvalues[nglocal] = 0;
   ixyz[nglocal][0] = 0;
   ixyz[nglocal][1] = 0;
   ixyz[nglocal][2] = 0;
@@ -1000,11 +1168,14 @@ void FixAblate::grow_percell(int nnew)
   if (nglocal+nnew < maxgrid) return;
   if (nnew == 0) maxgrid = nglocal;
   else maxgrid += DELTAGRID;
-  memory->grow(array_grid,maxgrid,ncorner,"ablate:array_grid");
+  memory->grow(cvalues,maxgrid,ncorner,"ablate:cvalues");
+  if (tvalues_flag) memory->grow(tvalues,maxgrid,"ablate:tvalues");
   memory->grow(ixyz,maxgrid,3,"ablate:ixyz");
   memory->grow(celldelta,maxgrid,"ablate:celldelta");
   memory->grow(cdelta,maxgrid,ncorner,"ablate:celldelta");
   memory->grow(numsend,maxgrid,"ablate:numsend");
+
+  array_grid = cvalues;
 }
 
 /* ----------------------------------------------------------------------
@@ -1028,13 +1199,81 @@ double FixAblate::compute_scalar()
 }
 
 /* ----------------------------------------------------------------------
+   vector outputs
+------------------------------------------------------------------------- */
+
+double FixAblate::compute_vector(int i)
+{
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  if (i == 0) {
+  int sum = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    sum += array_grid[icell][0];
+  }
+
+  int sumall;
+  MPI_Allreduce(&sum,&sumall,1,MPI_INT,MPI_SUM,world);
+
+  return (double) sumall;
+  }
+
+  if (i == 1) {
+  int sum = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    sum += array_grid[icell][0] + array_grid[icell][1];
+  }
+
+  int sumall;
+  MPI_Allreduce(&sum,&sumall,1,MPI_INT,MPI_SUM,world);
+
+  return (double) sumall/2.0;
+  }
+
+  if (i == 2) {
+  int sum = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    sum += array_grid[icell][0] + array_grid[icell][1] + array_grid[icell][2];
+  }
+
+  int sumall;
+  MPI_Allreduce(&sum,&sumall,1,MPI_INT,MPI_SUM,world);
+
+  return (double) sumall/3.0;
+  }
+
+  if (i == 3) {
+  int sum = 0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+    sum += array_grid[icell][0] + array_grid[icell][1] + 
+      array_grid[icell][2] + array_grid[icell][3];
+  }
+
+  int sumall;
+  MPI_Allreduce(&sum,&sumall,1,MPI_INT,MPI_SUM,world);
+
+  return (double) sumall/4.0;
+  }
+}
+
+/* ----------------------------------------------------------------------
    memory usage
 ------------------------------------------------------------------------- */
 
 double FixAblate::memory_usage()
 {
   double bytes = 0.0;
-  bytes += maxgrid*ncorner * sizeof(double);   // array_grid
+  bytes += maxgrid*ncorner * sizeof(double);   // cvalues
+  if (tvalues_flag) bytes += maxgrid * sizeof(int);   // tvalues
   bytes += maxgrid*3 * sizeof(int);            // ixyz
   bytes += maxgrid * sizeof(double);           // celldelta
   bytes += maxgrid*ncorner * sizeof(double);   // cdelta
