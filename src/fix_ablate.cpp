@@ -534,8 +534,8 @@ void FixAblate::create_surfs(int outflag)
   // DEBUG - remove all particles
   // if these 2 lines are uncommented, all particles are wiped out
 
-  particle->nlocal = 0;
-  return;
+  //particle->nlocal = 0;
+  //return;
 
   // DEBUG - remove only the particles that are inside the surfs
   //         after ablation
@@ -565,7 +565,7 @@ void FixAblate::create_surfs(int outflag)
       splitcell = sinfo[cells[icell].isplit].icell;
       flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
     } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
-
+    
     if (!flag) {
       particles[i].flag = PDISCARD;
       ncount++;
@@ -588,7 +588,9 @@ void FixAblate::create_surfs(int outflag)
     } else i++;
   }
 
-  //printf("ABLATE particles deleted %d\n",ncount);
+  int ncountall;
+  MPI_Allreduce(&ncount,&ncountall,1,MPI_INT,MPI_SUM,world);
+  if (me == 0) printf("ABLATE particles deleted %d\n",ncountall);
 
   particle->nlocal = pnlocal;
   particle->sorted = 0;

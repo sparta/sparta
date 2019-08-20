@@ -58,10 +58,10 @@ enum{PERAUTO,PERCELL,PERSURF};                  // several files
 // either set ID or PROC/INDEX, set other to -1
 
 #define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 562805009  // particle ID
+#define MOVE_DEBUG_ID 316507228  // particle ID
 #define MOVE_DEBUG_PROC -1        // owning proc
 #define MOVE_DEBUG_INDEX -1   // particle index on owning proc
-#define MOVE_DEBUG_STEP 3701    // timestep
+#define MOVE_DEBUG_STEP 505    // timestep
 
 /* ---------------------------------------------------------------------- */
 

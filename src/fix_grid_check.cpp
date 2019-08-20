@@ -25,6 +25,10 @@
 #include "cut3d.h"
 #include "error.h"
 
+// DEBUG
+#include "modify.h"
+#include "fix_ablate.h"
+
 using namespace SPARTA_NS;
 
 enum{ERROR,WARNING,SILENT};
@@ -228,6 +232,7 @@ void FixGridCheck::end_of_step()
                 i,particles[i].id,comm->me,cells[icell].id,
                 update->ntimestep);
         // DEBUG
+        printf("CELL SURFS %d %d\n",cells[icell].nsurf,cells[icell].nsplit);
         printf("PART COORDS %g %g %g: cell bounds: %g %g %g %g %g %g\n",
                particles[i].x[0],
                particles[i].x[1],
@@ -238,6 +243,79 @@ void FixGridCheck::end_of_step()
                cells[icell].hi[0],
                cells[icell].hi[1],
                cells[icell].hi[2]);
+
+        // MORE DEBUG
+
+        for (int mm = 0; mm < 1; mm++) {
+          int m;
+          if (mm == 0) m = 493;
+          if (mm == 1) m = 593;
+          if (mm == 2) m = 583;
+          if (mm == 3) m = 582;
+          if (mm == 4) m = 572;
+
+          Surf::Tri *tris = surf->tris;
+          Grid::ChildCell *cells = grid->cells;
+          int nglocal = grid->nlocal;
+
+          for (i = 0; i < nglocal; i++) {
+            if (cells[i].id != m) continue;
+            if (cells[i].nsplit <= 0) continue;
+            
+            printf("CELL id %d lo %g %g %g hi %g %g %g\n",
+                   cells[i].id,
+                   cells[i].lo[0],
+                   cells[i].lo[1],
+                   cells[i].lo[2],
+                   cells[i].hi[0],
+                   cells[i].hi[1],
+                   cells[i].hi[2]);
+
+            printf("CELL surfs: nsurf %d nsplit %d\n",
+                   cells[i].nsurf,
+                   cells[i].nsplit);
+
+            for (int j = 0; j < cells[i].nsurf; j++) {
+              int n = cells[i].csurfs[j];
+              printf("  %d: id %d tmii %d %d %d %d\n",j+1,
+                      tris[n].id,
+                      tris[n].type,
+                      tris[n].mask,
+                      tris[n].isc,
+                      tris[n].isr);
+              printf("  %d: p1 %20.15g %20.15g %20.15g\n",j+1,
+                      tris[n].p1[0],
+                      tris[n].p1[1],
+                      tris[n].p1[2]);
+              printf("  %d: p2 %20.15g %20.15g %20.15g\n",j+1,
+                      tris[n].p2[0],
+                      tris[n].p2[1],
+                      tris[n].p2[2]);
+              printf("  %d: p3 %20.15g %20.15g %20.15g\n",j+1,
+                      tris[n].p3[0],
+                      tris[n].p3[1],
+                      tris[n].p3[2]);
+              printf("  %d: norm %20.15g %20.15g %20.15g\n",j+1,
+                      tris[n].norm[0],
+                      tris[n].norm[1],
+                      tris[n].norm[2]);
+            }
+
+            int ifix = modify->find_fix("FOO");
+            FixAblate *ablate = (FixAblate *) modify->fix[ifix];
+            int groupbit = grid->bitmask[ablate->igroup];
+            
+            printf("MC CORNERS %d: %g %g %g %g %g %g %g %g\n",m,
+                    ablate->array_grid[i][0],
+                    ablate->array_grid[i][1],
+                    ablate->array_grid[i][2],
+                    ablate->array_grid[i][3],
+                    ablate->array_grid[i][4],
+                    ablate->array_grid[i][5],
+                    ablate->array_grid[i][6],
+                    ablate->array_grid[i][7]);
+          }
+        }
         error->one(FLERR,str);
       }
       nflag++;
@@ -245,11 +323,6 @@ void FixGridCheck::end_of_step()
 
     if (cells[icell].nsplit <= 0) {
       int subcell;
-      /*
-      if (particles[i].id == 1423968910 && cells[splitcell].id == 5382)
-        printf("GCHECK %d %d pcell %d\n",particles[i].id,cells[splitcell].id,
-               icell);
-      */
       if (dim == 2) subcell = update->split2d(splitcell,x);
       else subcell = update->split3d(splitcell,x,particles[i].id);
 

@@ -28,6 +28,7 @@
 #include "math_const.h"
 #include "hashlittle.h"
 #include "my_page.h"
+#include "math_extra.h"
 #include "memory.h"
 #include "error.h"
 
@@ -40,6 +41,7 @@ int compare_surfIDs(const void *, const void *);
 
 #define BIG 1.0e20
 #define CHUNK 16
+#define EPSSURF 1.0e-4
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
 enum{PERAUTO,PERCELL,PERSURF};          // several files
@@ -1043,16 +1045,21 @@ int Grid::outside_surfs(int icell, double *x,
 
   // set xnew to midpt of first line or center pt of first triangle
   // for implicit surfs this is guaranteed to be a pt in or on icell
-  // NOTE: is is actually guaranteed to be inside?
-  // by not being a common (end or corner) point with another surf
-  //   avoids issues with ray tracing to follow
+  // then displace it by EPSSURF in the line/tri norm direction
+  // reason for this:
+  //   want to insure an inside particle is flagged
+  //   requires a ray from inside particle x to xnew intersects a surf
+  //   if no intersection, logic below assumes particle is outside
+  //   if xnew is midpt of tri, then an inside particle may have no intersection
+  //     due to round-off
 
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   surfint *csurfs = cells[icell].csurfs;
 
   int dim = domain->dimension;
-  double xnew[3];
+  double xnew[3],edge[3];
+  double edgelen,minedge,displace;
 
   int isurf = csurfs[0];
 
@@ -1060,6 +1067,10 @@ int Grid::outside_surfs(int icell, double *x,
     xnew[0] = 0.5 * (lines[isurf].p1[0] + lines[isurf].p2[0]);
     xnew[1] = 0.5 * (lines[isurf].p1[1] + lines[isurf].p2[1]);
     xnew[2] = 0.0;
+
+    MathExtra::sub3(lines[isurf].p1,lines[isurf].p2,edge);
+    minedge = MathExtra::len3(edge);
+
   } else {
     double onethird = 1.0/3.0;
     xnew[0] = onethird * 
@@ -1068,8 +1079,22 @@ int Grid::outside_surfs(int icell, double *x,
       (tris[isurf].p1[1] + tris[isurf].p2[1] + tris[isurf].p3[1]);
     xnew[2] = onethird * 
       (tris[isurf].p1[2] + tris[isurf].p2[2] + tris[isurf].p3[2]);
+
+    MathExtra::sub3(tris[isurf].p1,tris[isurf].p2,edge);
+    edgelen = MathExtra::len3(edge);
+    minedge = edgelen;
+    MathExtra::sub3(tris[isurf].p2,tris[isurf].p3,edge);
+    edgelen = MathExtra::len3(edge);
+    minedge = MIN(minedge,edgelen);
+    MathExtra::sub3(tris[isurf].p3,tris[isurf].p1,edge);
+    minedge = MIN(minedge,edgelen);
   }
 
+  displace = EPSSURF * minedge;
+  xnew[0] += displace*tris[isurf].norm[0];
+  xnew[1] += displace*tris[isurf].norm[1];
+  xnew[2] += displace*tris[isurf].norm[2];
+  
   // loop over surfs, ray-trace from x to xnew, see which surf is hit first
   // if no surf is hit (roundoff), assume particle is outside
 
