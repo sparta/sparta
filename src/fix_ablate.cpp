@@ -188,6 +188,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   // local storage
 
   ixyz = NULL;
+  mcflags = NULL;
   celldelta = NULL;
   cdelta = NULL;
   cdelta_ghost = NULL;
@@ -227,6 +228,7 @@ FixAblate::~FixAblate()
   memory->destroy(tvalues);
 
   memory->destroy(ixyz);
+  memory->destroy(mcflags);
   memory->destroy(celldelta);
   memory->destroy(cdelta);
   memory->destroy(cdelta_ghost);
@@ -381,6 +383,14 @@ void FixAblate::end_of_step()
 
 void FixAblate::create_surfs(int outflag)
 {
+  // DEBUG 
+  // store copy of last ablation's per-cell MC flags before a new ablation
+
+  int **mcflags_old = mcflags;
+  memory->create(mcflags,maxgrid,4,"ablate:mcflags");
+  for (int i = 0; i < maxgrid; i++)
+    mcflags[i][0] = mcflags[i][1] = mcflags[i][2] = mcflags[i][3] = -1;
+  
   // sort existing particles since may be clearing split cells
 
   if (!particle->sorted) particle->sort();
@@ -406,7 +416,7 @@ void FixAblate::create_surfs(int outflag)
   // tvalues = surf type for surfs in each grid cell
 
   if (dim == 2) ms->invoke(cvalues,tvalues);
-  else mc->invoke(cvalues,tvalues);
+  else mc->invoke(cvalues,tvalues,mcflags);
 
   // set surf->nsurf and surf->nown
 
@@ -524,18 +534,25 @@ void FixAblate::create_surfs(int outflag)
   // DEBUG - should not have to do any of this once marching cubes is perfect
   // only necessary for 3d
 
-  if (dim == 2) return;
+  if (dim == 2) {
+    memory->destroy(mcflags_old);
+    return;
+  }
 
   // DEBUG - if this line is uncommented, code will do delete no particles
   //         eventually this should work
 
-  //if (dim == 3) return;
+  // if (dim == 3) {
+  //   memory->destroy(mcflags_old);
+  //   return;
+  // }
 
   // DEBUG - remove all particles
-  // if these 2 lines are uncommented, all particles are wiped out
+  // if these lines are uncommented, all particles are wiped out
 
-  //particle->nlocal = 0;
-  //return;
+  // particle->nlocal = 0;
+  // memory->destroy(mcflags_old);
+  // return;
 
   // DEBUG - remove only the particles that are inside the surfs
   //         after ablation
@@ -568,11 +585,25 @@ void FixAblate::create_surfs(int outflag)
     
     if (!flag) {
       particles[i].flag = PDISCARD;
+      // DEBUG - print message about MC flags for cell of deleted particle
+      printf("INSIDE PART: me %d id %d coords %g %g %g "
+             "cellID %d MCflags old %d %d %d %d MCflags now %d %d %d %d\n",
+             comm->me,particles[i].id,x[0],x[1],x[2],
+             cells[icell].id,
+             mcflags_old[icell][0],
+             mcflags_old[icell][1],
+             mcflags_old[icell][2],
+             mcflags_old[icell][3],
+             mcflags[icell][0],
+             mcflags[icell][1],
+             mcflags[icell][2],
+             mcflags[icell][3]);
       ncount++;
     }
   }
 
   delete cut3d;
+  memory->destroy(mcflags_old);
 
   // compress out the deleted particles
   // NOTE: if end up keeping this, need logic for custom particle vectors
@@ -1065,6 +1096,17 @@ int FixAblate::pack_grid_one(int icell, char *buf, int memflag)
   }
   ptr += 3*sizeof(double);
 
+  // DEBUG
+
+  if (memflag) {
+    double *dbuf = (double *) ptr;
+    dbuf[0] = mcflags[icell][0];
+    dbuf[1] = mcflags[icell][1];
+    dbuf[2] = mcflags[icell][2];
+    dbuf[3] = mcflags[icell][3];
+  }
+  ptr += 4*sizeof(double);
+
   if (cells[icell].nsplit > 1) {
     int isplit = cells[icell].isplit;
     int nsplit = cells[icell].nsplit;
@@ -1106,6 +1148,13 @@ int FixAblate::unpack_grid_one(int icell, char *buf)
   ixyz[icell][2] = static_cast<int> (dbuf[2]);
   ptr += 3*sizeof(double);
 
+  dbuf = (double *) ptr;
+  mcflags[icell][0] = static_cast<int> (dbuf[0]);
+  mcflags[icell][1] = static_cast<int> (dbuf[1]);
+  mcflags[icell][2] = static_cast<int> (dbuf[2]);
+  mcflags[icell][3] = static_cast<int> (dbuf[3]);
+  ptr += 4*sizeof(double);
+
   nglocal++;
 
  if (cells[icell].nsplit > 1) {
@@ -1137,6 +1186,11 @@ void FixAblate::copy_grid_one(int icell, int jcell)
   ixyz[jcell][0] = ixyz[icell][0];
   ixyz[jcell][1] = ixyz[icell][1];
   ixyz[jcell][2] = ixyz[icell][2];
+
+  mcflags[jcell][0] = mcflags[icell][0];
+  mcflags[jcell][1] = mcflags[icell][1];
+  mcflags[jcell][2] = mcflags[icell][2];
+  mcflags[jcell][3] = mcflags[icell][3];
 }
 
 /* ----------------------------------------------------------------------
@@ -1154,6 +1208,11 @@ void FixAblate::add_grid_one()
   ixyz[nglocal][0] = 0;
   ixyz[nglocal][1] = 0;
   ixyz[nglocal][2] = 0;
+
+  mcflags[nglocal][0] = -1;
+  mcflags[nglocal][1] = -1;
+  mcflags[nglocal][2] = -1;
+  mcflags[nglocal][3] = -1;
 
   nglocal++;
 }
@@ -1179,6 +1238,7 @@ void FixAblate::grow_percell(int nnew)
   memory->grow(cvalues,maxgrid,ncorner,"ablate:cvalues");
   if (tvalues_flag) memory->grow(tvalues,maxgrid,"ablate:tvalues");
   memory->grow(ixyz,maxgrid,3,"ablate:ixyz");
+  memory->grow(mcflags,maxgrid,4,"ablate:mcflags");
   memory->grow(celldelta,maxgrid,"ablate:celldelta");
   memory->grow(cdelta,maxgrid,ncorner,"ablate:celldelta");
   memory->grow(numsend,maxgrid,"ablate:numsend");
@@ -1283,6 +1343,7 @@ double FixAblate::memory_usage()
   bytes += maxgrid*ncorner * sizeof(double);   // cvalues
   if (tvalues_flag) bytes += maxgrid * sizeof(int);   // tvalues
   bytes += maxgrid*3 * sizeof(int);            // ixyz
+  // NOTE: add for mcflags if keep
   bytes += maxgrid * sizeof(double);           // celldelta
   bytes += maxgrid*ncorner * sizeof(double);   // cdelta
   bytes += maxghost*ncorner * sizeof(double);  // cdelta_ghost

@@ -69,7 +69,7 @@ MarchingCubes::MarchingCubes(SPARTA *sparta, int ggroup_caller,
      based on ave value at cell center
 ------------------------------------------------------------------------- */
 
-void MarchingCubes::invoke(double **cvalues, int *svalues)
+void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
 {
   int i,j,ipt,isurf,nsurf,icase,which;
   surfint *ptr;
@@ -400,7 +400,14 @@ void MarchingCubes::invoke(double **cvalues, int *svalues)
       nsurf = add_triangle(tiling14[config], 4);
       break;
     };
-        
+       
+    // store 4 MC labels for FixAblate caller
+
+    mcflags[icell][0] = icase;
+    mcflags[icell][1] = config;
+    mcflags[icell][2] = subconfig;
+    mcflags[icell][3] = nsurf;
+
     // populate Grid and Surf data structs
     // points will be duplicated, not unique
     // surf ID = cell ID for all surfs in cell

@@ -67,6 +67,8 @@ class FixAblate : public Fix {
 
   int **ixyz;             // ix,iy,iz indices (1 to Nxyz) of my cells
                           // in 2d/3d ablate grid (iz = 1 for 2d)
+  // DEBUG
+  int **mcflags;
 
   double *celldelta;      // per-cell delta from compute or fix source
   double **cdelta;        // per-corner point deltas
