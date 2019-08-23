@@ -1,4 +1,4 @@
-# astra_kokkos = KOKKOS package with OpenMP backend, MPI compiler, default MPI, ARMv8-TX2 architecture
+# astra_kokkos = Arm ThunderX2 architecture, KOKKOS package with OpenMP backend, MPI compiler, default MPI
 
 SHELL = /bin/sh
 
