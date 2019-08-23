@@ -93,9 +93,9 @@ class FixAblate : public Fix {
   void set_delta();
   void decrement();
   void sync();
+  void push_lohi();
+  void comm_neigh_corners(int);
   int walk_to_neigh(int, int, int, int);
-  void push2d() {}
-  void push3d() {}
   void grow_percell(int);
   void grow_send();
 };
