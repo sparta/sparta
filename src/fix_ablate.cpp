@@ -562,6 +562,7 @@ void FixAblate::create_surfs(int outflag)
   Cut2d *cut2d = NULL;
 
   Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
   Grid::SplitInfo *sinfo = grid->sinfo;
   Particle::OnePart *particles = particle->particles;
   int pnlocal = particle->nlocal;
@@ -576,10 +577,11 @@ void FixAblate::create_surfs(int outflag)
     icell = particles[i].icell;
     if (cells[icell].nsurf == 0) continue;
 
+    int mcell = icell;
     x = particles[i].x;
     flag = 1;
     if (cells[icell].nsplit <= 0) {
-      splitcell = sinfo[cells[icell].isplit].icell;
+      mcell = splitcell = sinfo[cells[icell].isplit].icell;
       flag = grid->outside_surfs(splitcell,x,cut3d,cut2d);
     } else flag = grid->outside_surfs(icell,x,cut3d,cut2d);
     
@@ -587,17 +589,26 @@ void FixAblate::create_surfs(int outflag)
       particles[i].flag = PDISCARD;
       // DEBUG - print message about MC flags for cell of deleted particle
       printf("INSIDE PART: me %d id %d coords %g %g %g "
-             "cellID %d MCflags old %d %d %d %d MCflags now %d %d %d %d\n",
+             "cellID %d celltype %d nsplit %d MCflags old %d %d %d %d "
+             "MCflags now %d %d %d %d corners %g %g %g %g %g %g %g %g\n",
              comm->me,particles[i].id,x[0],x[1],x[2],
-             cells[icell].id,
-             mcflags_old[icell][0],
-             mcflags_old[icell][1],
-             mcflags_old[icell][2],
-             mcflags_old[icell][3],
-             mcflags[icell][0],
-             mcflags[icell][1],
-             mcflags[icell][2],
-             mcflags[icell][3]);
+             cells[mcell].id,cinfo[mcell].type,cells[mcell].nsplit,
+             mcflags_old[mcell][0],
+             mcflags_old[mcell][1],
+             mcflags_old[mcell][2],
+             mcflags_old[mcell][3],
+             mcflags[mcell][0],
+             mcflags[mcell][1],
+             mcflags[mcell][2],
+             mcflags[mcell][3],
+             cvalues[mcell][0],
+             cvalues[mcell][1],
+             cvalues[mcell][2],
+             cvalues[mcell][3],
+             cvalues[mcell][4],
+             cvalues[mcell][5],
+             cvalues[mcell][6],
+             cvalues[mcell][7]);
       ncount++;
     }
   }
