@@ -59,8 +59,6 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 // option to write out corner-pt file periodically
 // 2 fix outputs: total decrement on this step, current total of unique corner pts
 // flesh out memory_usage()
-// error check that grid group size for this fix and read isurf are the same
-//   so know it is the exact same cells
 
 // NOTE: way to set random decrement magnitude by user (now hardwired to 10)
 // NOTE: how to preserve svalues and set type of new surfs
@@ -264,7 +262,7 @@ int FixAblate::setmask()
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
                               double *cornerlo, double *xyzsize, 
                               double **cvalues_caller, int *tvalues_caller,
-                              double thresh_caller, char *sgroupID)
+                              double thresh_caller, char *sgroupID, int pushflag)
 {
   storeflag = 1;
 
@@ -317,9 +315,9 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
       static_cast<int> ((cells[icell].lo[2]-cornerlo[2]) / xyzsize[2] + 0.5) + 1;
   }
 
-  // push corner pt values that are fully external/internal 0 or 255
+  // push corner pt values that are fully external/internal to 0 or 255
 
-  push_lohi();
+  if (pushflag) push_lohi();
 
   // create marching squares/cubes classes, now that have group & threshold
 

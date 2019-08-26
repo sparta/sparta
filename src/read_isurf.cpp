@@ -164,7 +164,7 @@ void ReadISurf::command(int narg, char **arg)
   if (sgrouparg) sgroupID = arg[sgrouparg];
 
   ablate->store_corners(nx,ny,nz,corner,xyzsize,
-                        cvalues,tvalues,thresh,sgroupID);
+                        cvalues,tvalues,thresh,sgroupID,pushflag);
 
   if (ablate->nevery == 0) modify->delete_fix(ablateID);
 
@@ -447,6 +447,7 @@ void ReadISurf::process_args(int narg, char **arg)
 {
   sgrouparg = 0;
   typefile = NULL;
+  pushflag = 1;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -457,6 +458,12 @@ void ReadISurf::process_args(int narg, char **arg)
     } else if (strcmp(arg[iarg],"type") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
       typefile = arg[iarg+1];
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"push") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      if (strcmp(arg[iarg],"yes") == 0) pushflag = 1;
+      else if (strcmp(arg[iarg],"no") == 0) pushflag = 0;
+      else error->all(FLERR,"Invalid read_isurf command");
       iarg += 2;
     } else error->all(FLERR,"Invalid read_isurf command");
   }

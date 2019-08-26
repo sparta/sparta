@@ -46,7 +46,7 @@ class FixAblate : public Fix {
   double memory_usage();
 
   void store_corners(int, int, int, double *, double *,
-                     double **, int *, double, char *);
+                     double **, int *, double, char *, int);
 
  protected:
   int me;

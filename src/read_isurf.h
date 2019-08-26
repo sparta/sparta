@@ -43,7 +43,7 @@ class ReadISurf : protected Pointers {
 
  protected:
   int me,dim;
-  int ggroup,sgrouparg;
+  int ggroup,sgrouparg,pushflag;
   int nx,ny,nz;
   double thresh;
   double corner[3],xyzsize[3];
