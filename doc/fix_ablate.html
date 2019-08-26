@@ -1,0 +1,172 @@
+<HTML>
+<CENTER><A HREF = "http://sparta.sandia.gov">SPARTA WWW Site</A> - <A HREF = "Manual.html">SPARTA Documentation</A> - <A HREF = "Section_commands.html#comm">SPARTA Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix ablate command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID ablate group-ID N scale source maxrandom 
+</PRE>
+<UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>ablate = style name of this fix command 
+
+<LI>group-ID = ID of group of grid cells that contain implicit surfaces 
+
+<LI>N = perform ablation once every N steps 
+
+<LI>scale = scale factor to convert source to grid corner point value decrement 
+
+<LI>source = computeID or fixID or random 
+
+<PRE>  computeID = c_ID or c_ID[n] for a compute that calculates per grid cell values
+  fixID = f_ID or f_ID[n] for a fix that calculates per grid cell values
+  random = perform a random decrement 
+</PRE>
+<LI>maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) 
+
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 ablate surfcells 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Perform ablation once every N steps on a set of grid cell corner
+points to induce new implicit surface elements in those grid cells.
+This command is also used as an argument to the
+<A HREF = "read_isurf.html">read_isurf</A> command so that the grid corner point
+values it reads from a file can be assigned to and stored by each grid
+cell.
+</P>
+<P>The specified <I>group-ID</I> must be the name of a grid cell group, as
+defined by the <A HREF = "group.html">group grid</A> command, which contains a set
+of grid cells, all of which are the same size, and which comprise a
+contiguous 3d array.  It must be the same as group-ID used with the
+<A HREF = "read_isurf.html">read_isurf</A> command, which specifies its <I>Nx</I> by <I>Ny</I>
+by <I>Nz</I> extent.  See the <A HREF = "read_isurf.html">read_isurf</A> command for more
+details.  This command reads the initial values for grid cell corner
+points, which are stored by this fix.
+</P>
+<P>The specfied <I>N</I> determines how often an ablation operation is
+performed.  If <I>N</I> = 0, ablation is never performed.  The grid cell
+corner point values and the surface elements they induce will remain
+static for the duration of subsequent simulations.
+</P>
+<P>The specified <I>scale</I> is a pre-factor on the specified <I>source</I> of
+ablation strength.  It converts the per grid cell numeric quantities
+produced by the <I>source</I> (which may have associated units) to a
+unitless decrement value for the grid cell corner points, which range
+from 0 to 255 inclusive.  A value of 255 represents solid material and
+a value of 0 is void (flow volume for particles).  Values in between
+represent partially ablated material.
+</P>
+<P>The <I>source</I> can be specified as a per grid cell quantity calculated
+by a compute, such as <A HREF = "compute_isurf_grid.html">compute isurf/grid</A>,
+e.g. the number of collisions of particles with the surfaces in each
+grid cell or the amount of energy transferred to the surface by the
+collisions.  It can also be specified a per grid cell quantity
+calculated by a fix, such as <A HREF = "fix_ave_grid.html">fix ave/grid</A>.  That
+fix could time average per-grid cell quantities from per grid cell
+computes.  In that case the <I>scale</I> factor should account for applying
+a time-averaged quantity at an interval of <I>N</I> steps.
+</P>
+<P>For debugging purposes, the <I>source</I> can also be specified as <I>random</I>
+with an additional integer <I>maxrandom</I> value also specified.  In this
+case, the <I>scale</I> factor should be floating point value between 0.0
+and 1.0.  Each time ablation is performed, two random numbers are
+generated for each grid cell.  The first is a random value between 0.0
+and 1.0.  The second is a random integer between 1 and maxrandom.  If
+the first random # < <I>scale</I>, then the second random integer is the
+decrement value for the cell.  Thus <I>scale</I> is effectively the
+fraction of grid cells whose corner point values are decremented.
+</P>
+<HR>
+
+<P>As explained on the <A HREF = "read_isurf.html">read_isurf</A> doc page, the
+marching cubes (3d) or marching squares (2d) algorithm is used to
+convert a set of grid corner point values to a set of implicit
+triangles in each grid cell which represent the current surface of
+porous material which is undergoing dynamic ablation.  This uses a
+threshold value, defined by the <A HREF = "read_isurf.html">read_isurf</A> command,
+to set the boundary between solid material and void.
+</P>
+<P>The ablation operation decrements the corner point values of each grid
+cell containing porous material.  The marching cubes or squares
+algorithm is re-invoked on the new corner point values to create a new
+set of implicit surfaces, which effectively recess due to the
+decrement produced byt the ablative <I>source</I> factor.
+</P>
+<P>The manner in which the per-grid source decrement value is applied to
+the grid corner points is as follows.  Note that each grid cell has 4
+(2d) or 8 (3d) corner point values.  Except at the boundary of the 2d
+of 3d array of grid cells containing porous materials, each corner
+point is similarly shared by 4 (2d) or 8 (3d) grid cells.
+</P>
+<P>Within each grid cell, the decrement value is subtracted from the
+smallest corner point value.  Except that a corner point value cannot
+become smaller than 0.0.  If this would occur, only a portion of the
+decrement is used to set the corner point to 0.0; the remainder is
+applid to the next smallest corner point value.  And so forth on
+successive corner points until all of the decrement is used.
+</P>
+<P>The amount of decrement applied to each corner point is next shared
+between all the grid cells (4 or 8) sharing each corner point value.
+The sum of those decrements is subtracted from the corner point,
+except that it's final value is set no smaller than 0.0.  All the
+copies of each corner point value are now identical.
+</P>
+<P>Finally, no corner point value can be nearly equal to the marching
+cubes/squares threshold value, else line segments or triangles of zero
+or epsilon size will result.  So corner points with values X where
+thresh-epsilon < X < thresh+epsilon are reset to thresh-epsilon.
+Thresh is defined by the <A HREF = "read_isurf.html">read_isurf</A> command.
+Epsilon is set to 1.0e-4 in src/fix_ablate.cpp.  Note that this is on
+the scale of corner point values from 0 to 255.
+</P>
+<HR>
+
+<P><B>Restart, output info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.
+</P>
+<P>This fix computes a global scalar and a global vector of length 2.
+The global scalar is the current sum of unique corner point values
+across the entire grid (not counting duplicate values).  This sum
+assumes that corner point values are 0.0 on the boundary of the 2d or
+3d array of grid cells containing implicit surface elements.
+</P>
+<P>The 2 vector values are the sum decrement values for each grid cell in
+the most recent ablation operation, and the # of particles deleted
+during the most recent ablation operation that ended up "inside" the
+newly ablated surface.  The latter quantity should be 0.  A non-zero
+value indicates a corner case in the marching cubes or marching
+squares algorithm the developers still need to address.
+</P>
+<P>These values can be accessed by any command that uses global values
+from a fix as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A> for
+an overview of SPARTA output options.
+</P>
+<P>The scalar and vector values are unitless.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>This fix can only be used in simulations that define implicit surfaces.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "read_isurf.html">read isurf</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

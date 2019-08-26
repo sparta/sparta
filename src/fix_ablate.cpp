@@ -53,11 +53,9 @@ enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 
 // NOTES
-// doc: fix ID ablate group-ID Nevery scale sourceID (can be random)
 // should I store one value or 8 per cell
 // how to restart and create correct array_grid?
 // option to write out corner-pt file periodically
-// 2 fix outputs: total decrement on this step, current total of unique corner pts
 // flesh out memory_usage()
 
 // NOTE: way to set random decrement magnitude by user (now hardwired to 10)
@@ -68,10 +66,11 @@ enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 //       just testing for surfs is not enough
 // NOTE: need to update neigh corner points even if neigh cell
 //       is not in group?
-// NOTE: do a run-time test for gridcut = 0.0
+// NOTE: do a run-time test for gridcut = 0.0 ?
 // NOTE: worry about array_grid having updated values for sub cells?
 //       line in store()
 // NOTE: after create new surfs, need to assign group, sc, sr
+// NOTE: can I output both per-grid and global values?
 
 /* ---------------------------------------------------------------------- */
 
@@ -175,9 +174,10 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
 
   scalar_flag = 1;
   vector_flag = 1;
-  size_vector = 4;
+  size_vector = 2;
   global_freq = 1;
   sum_delta = 0.0;
+  ndelete = 0;
 
   storeflag = 0;
   array_grid = cvalues = NULL;
@@ -213,6 +213,7 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   }
 
   // DEBUG random, same for all procs
+  // NOTE: need to change this, which RN style to choose?
 
   delete random;
   random = new RanPark(update->ranmaster->uniform());
@@ -625,9 +626,7 @@ void FixAblate::create_surfs(int outflag)
     } else i++;
   }
 
-  int ncountall;
-  MPI_Allreduce(&ncount,&ncountall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("ABLATE particles deleted %d\n",ncountall);
+  MPI_Allreduce(&ncount,&ndelete,1,MPI_INT,MPI_SUM,world);
 
   particle->nlocal = pnlocal;
   particle->sorted = 0;
@@ -663,16 +662,6 @@ void FixAblate::set_delta_random()
     else celldelta[icell] = rn2;
   }
 
-  // KEEP THIS
-  /*
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    if (random->uniform() > scale) celldelta[icell] = 0.0;
-    else celldelta[icell] = 
-           static_cast<int> (random->uniform()*maxrandom) + 1.0;
-  }
-  */
   // total decrement for output
 
   double sum = 0.0;
@@ -763,7 +752,7 @@ void FixAblate::set_delta()
    algorithm:
      no corner pt value can be < 0.0
      decrement smallest corner pt by full delta
-     if cannot, decrement to 0.0, then decrement next smallest, etc
+     if cannot, decrement to 0.0, decrement next smallest by remainder, etc
 ------------------------------------------------------------------------- */
 
 void FixAblate::decrement()
@@ -1395,79 +1384,48 @@ void FixAblate::grow_send()
 }
 
 /* ----------------------------------------------------------------------
-   output of last ablation decrement
+   output sum of grid cell corner point values
+   assume boundary corner points have value = 0.0
+   NOTE: else would have to apply duplication weights to each of 4/8 corner pts
 ------------------------------------------------------------------------- */
 
 double FixAblate::compute_scalar()
 {
-  return sum_delta;
+  int ix,iy,iz;
+
+  Grid::ChildCell *cells = grid->cells;
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  double sum = 0.0;
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
+    ix = ixyz[icell][0];
+    iy = ixyz[icell][1];
+    iz = ixyz[icell][2];
+
+    if (dim == 2 && (ix == 0 || iy == 0)) continue;
+    if (dim == 3 && (ix == 0 || iy == 0 || iz == 0)) continue;
+    sum += cvalues[icell][0];
+  }
+
+  double sumall;
+  MPI_Allreduce(&sum,&sumall,1,MPI_DOUBLE,MPI_SUM,world);
+  return sumall;
 }
 
 /* ----------------------------------------------------------------------
    vector outputs
+   1 = last ablation decrement
+   2 = # of deleted inside particles at last ablation
 ------------------------------------------------------------------------- */
 
 double FixAblate::compute_vector(int i)
 {
-  Grid::ChildCell *cells = grid->cells;
-  Grid::ChildInfo *cinfo = grid->cinfo;
 
-  if (i == 0) {
-  int sum = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    sum += cvalues[icell][0];
-  }
-
-  int sumall;
-  MPI_Allreduce(&sum,&sumall,1,MPI_INT,MPI_SUM,world);
-
-  return (double) sumall;
-  }
-
-  if (i == 1) {
-  int sum = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    sum += cvalues[icell][0] + cvalues[icell][1];
-  }
-
-  int sumall;
-  MPI_Allreduce(&sum,&sumall,1,MPI_INT,MPI_SUM,world);
-
-  return (double) sumall/2.0;
-  }
-
-  if (i == 2) {
-  int sum = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    sum += cvalues[icell][0] + cvalues[icell][1] + cvalues[icell][2];
-  }
-
-  int sumall;
-  MPI_Allreduce(&sum,&sumall,1,MPI_INT,MPI_SUM,world);
-
-  return (double) sumall/3.0;
-  }
-
-  if (i == 3) {
-  int sum = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    sum += cvalues[icell][0] + cvalues[icell][1] + 
-      cvalues[icell][2] + cvalues[icell][3];
-  }
-
-  int sumall;
-  MPI_Allreduce(&sum,&sumall,1,MPI_INT,MPI_SUM,world);
-
-  return (double) sumall/4.0;
-  }
+  if (i == 0) return sum_delta;
+  if (i == 1) return 1.0*ndelete;
 }
 
 /* ----------------------------------------------------------------------

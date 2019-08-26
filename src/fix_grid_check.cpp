@@ -64,6 +64,9 @@ FixGridCheck::FixGridCheck(SPARTA *sparta, int narg, char **arg) :
     }
   }
 
+  if (outside_check && !surf->implicit) 
+    error->all(FLERR,"Fix grid/check outside yes requires implicit surfs");
+
   // setup
 
   dim = domain->dimension;
@@ -211,7 +214,6 @@ void FixGridCheck::end_of_step()
     // check if particle in a cell with surfs is outside the surfs
     // for split cell, also verify particle is in correct sub cell
     // expensive, so only do this check if requested
-    // NOTE: make this only invokeable if implicit surfs
 
     if (!outside_check) continue;
     if (cells[icell].nsurf == 0) continue;

@@ -58,6 +58,7 @@ class FixAblate : public Fix {
   int sgroupbit;
   double thresh;
   double sum_delta;
+  int ndelete;
    
   int nglocal;            // # of owned grid cells
 
