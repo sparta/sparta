@@ -192,10 +192,6 @@ void ComputeISurfGrid::compute_per_grid()
 
 void ComputeISurfGrid::clear()
 {
-  // NOTE: should move these 3 lines into surf_tally
-  // in case arrays are realloced during timesteps due to comm migrate
-
-  cinfo = grid->cinfo;
   lines = surf->lines;
   tris = surf->tris;
 
