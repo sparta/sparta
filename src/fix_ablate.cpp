@@ -217,6 +217,16 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
 
   delete random;
   random = new RanPark(update->ranmaster->uniform());
+
+  // nvalid = next step on which end_of_step does something
+  // add nvalid to all computes that store invocation times
+  // since don't know a priori which are invoked by this fix
+  // once in end_of_step() can set timestep for ones actually invoked
+
+  if (nevery) {
+    bigint nvalid = (update->ntimestep/nevery)*nevery + nevery;
+    modify->addstep_compute_all(nvalid);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -250,7 +260,7 @@ FixAblate::~FixAblate()
 int FixAblate::setmask()
 {
   int mask = 0;
-  mask |= END_OF_STEP;
+  if (nevery) mask |= END_OF_STEP;
   return mask;
 }
 
@@ -584,6 +594,7 @@ void FixAblate::create_surfs(int outflag)
     if (!flag) {
       particles[i].flag = PDISCARD;
       // DEBUG - print message about MC flags for cell of deleted particle
+      /*
       printf("INSIDE PART: me %d id %d coords %g %g %g "
              "cellID %d celltype %d nsplit %d MCflags old %d %d %d %d "
              "MCflags now %d %d %d %d corners %g %g %g %g %g %g %g %g\n",
@@ -605,6 +616,7 @@ void FixAblate::create_surfs(int outflag)
              cvalues[mcell][5],
              cvalues[mcell][6],
              cvalues[mcell][7]);
+      */
       ncount++;
     }
   }
@@ -643,7 +655,8 @@ void FixAblate::set_delta_random()
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
   
-  // DEBUG - so same decrement no matter who owns which cells
+  // enforce same decrement no matter who owns which cells
+  // NOTE: could change this at some point
 
   if (!grid->hashfilled) grid->rehash();
   Grid::MyHash *hash = grid->hash;
@@ -657,7 +670,6 @@ void FixAblate::set_delta_random()
     if (hash->find(cellID) == hash->end()) continue;
     icell = (*hash)[cellID] - 1;
     if (icell >= nglocal) continue;     // ghost cell
-    //printf("AAA me %d i %d icell %d nglocal %d\n",me,i,icell,nglocal);
     if (rn1 > scale) celldelta[icell] = 0.0;
     else celldelta[icell] = rn2;
   }
@@ -997,11 +1009,16 @@ void FixAblate::push_lohi()
     }
   }
 
-  // DEBUG
   int ploall,phiall;
   MPI_Allreduce(&plo,&ploall,1,MPI_INT,MPI_SUM,world);
   MPI_Allreduce(&phi,&phiall,1,MPI_INT,MPI_SUM,world);
-  if (me == 0) printf("PUSH corners %d %d\n",ploall,phiall);
+
+  if (me == 0) {
+    if (screen)
+      fprintf(screen,"  %d %d pushed corner pt values\n",ploall,phiall);
+    if (logfile) 
+      fprintf(logfile,"  %d %d pushed corner pt values\n",ploall,phiall);
+  }
 }
 
 /* ----------------------------------------------------------------------

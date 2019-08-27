@@ -376,7 +376,7 @@ void Surf::add_line_own(int itype, double *p1, double *p2)
 
 /* ----------------------------------------------------------------------
    add a triangle to owned list
-   called by ReadISurf
+   called by ReadISurf via FixAblate and Marching Cubes/Squares
 ------------------------------------------------------------------------- */
 
 void Surf::add_tri(int itype, double *p1, double *p2, double *p3)

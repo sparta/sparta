@@ -41,7 +41,7 @@ ComputeISurfGrid::ComputeISurfGrid(SPARTA *sparta, int narg, char **arg) :
 
   int igroup = grid->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Compute isurf/grid group ID does not exist");
-  groupbit = surf->bitmask[igroup];
+  groupbit = grid->bitmask[igroup];
 
   imix = particle->find_mixture(arg[3]);
   if (imix < 0) error->all(FLERR,"Compute isurf/grid mixture ID does not exist");
@@ -192,6 +192,9 @@ void ComputeISurfGrid::compute_per_grid()
 
 void ComputeISurfGrid::clear()
 {
+  // NOTE: should move these 3 lines into surf_tally
+  // in case arrays are realloced during timesteps due to comm migrate
+
   cinfo = grid->cinfo;
   lines = surf->lines;
   tris = surf->tris;
@@ -220,10 +223,6 @@ void ComputeISurfGrid::surf_tally(int isurf, int icell,
                                    Particle::OnePart *iorig, 
                                    Particle::OnePart *ip, Particle::OnePart *jp)
 {
-  // skip if icell not in grid group
-
-  if (!(cinfo[icell].mask & groupbit)) return;
-
   // skip if species not in mixture group
 
   int origspecies = iorig->ispecies;
@@ -477,6 +476,19 @@ void ComputeISurfGrid::post_process_isurf_grid()
   surf->collate_array_implicit(ntally,ntotal,tally2surf,
                                array_surf_tally,array_grid);
   
+  // zero out result if icell not in grid group
+  // can't apply until now, b/c tally included surfs in ghost cells and
+  // cinfo does not have mask values for ghost cells
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
+
+  for (int icell = 0; icell < nglocal; icell++) {
+    if (!(cinfo[icell].mask & groupbit)) {
+      for (j = 0; j < ntotal; j++)
+        array_grid[icell][j] = 0.0;
+    }
+  }
+
   // copy split cell values to their sub cells, used by dump grid
 
   Grid::ChildCell *cells = grid->cells;
