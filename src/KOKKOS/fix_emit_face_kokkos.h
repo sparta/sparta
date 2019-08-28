@@ -40,7 +40,6 @@ class FixEmitFaceKokkos : public FixEmitFace {
   void init();
   void perform_task() override;
   void perform_task_twopass() override { perform_task(); }
-  void post_compress_grid();
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixEmitFace_ninsert, const int&) const;
@@ -96,6 +95,7 @@ class FixEmitFaceKokkos : public FixEmitFace {
   DAT::t_float_1d d_cummulative;
   DAT::t_int_1d d_species;
 
+  void grow_task();
   void realloc_nspecies();
 };
 

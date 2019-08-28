@@ -476,6 +476,50 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
 }
 
 /* ----------------------------------------------------------------------
+   grow task list
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::grow_task()
+{
+  ntaskmax += DELTATASK;
+
+  if (tasks == NULL)
+    k_tasks = tdual_task_1d("emit/face:tasks",ntaskmax);
+  else {
+    k_tasks.sync<SPAHostType>();
+    k_tasks.modify<SPAHostType>(); // force resize on host
+    k_tasks.resize(ntaskmax);
+  }
+  d_tasks = k_tasks.d_view;
+  tasks = k_tasks.h_view.data();
+
+  // set all new task bytes to 0 so valgrind won't complain
+  // if bytes between fields are uninitialized
+
+  //memset(&tasks[oldmax],0,(ntaskmax-oldmax)*sizeof(Task));
+
+  // allocate vectors in each new task or set to NULL
+
+  if (perspecies) {
+    k_ntargetsp.sync<SPAHostType>();
+    k_ntargetsp.modify<SPAHostType>(); // force resize on host
+    k_ntargetsp.resize(ntaskmax,nspecies);
+    d_ntargetsp = k_ntargetsp.d_view;
+    for (int i = 0; i < ntaskmax; i++)
+      tasks[i].ntargetsp = k_ntargetsp.h_view.data() + i*k_ntargetsp.h_view.extent(1);
+  }
+  
+  if (subsonic_style == PONLY) {
+    k_vscale.modify<SPAHostType>(); // force resize on host
+    k_vscale.sync<SPAHostType>();
+    k_vscale.resize(ntaskmax,nspecies);
+    d_vscale = k_vscale.d_view;
+    for (int i = 0; i < ntaskmax; i++)
+      tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
+  }
+}
+
+/* ----------------------------------------------------------------------
    reallocate nspecies arrays
 ------------------------------------------------------------------------- */
 
@@ -493,19 +537,4 @@ void FixEmitFaceKokkos::realloc_nspecies()
     for (int i = 0; i < ntaskmax; i++)
       tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
   }
-}
-
-/* ----------------------------------------------------------------------
-   reset pcell for all compress task entries
-   called from Grid::compress() after grid cells have been compressed
-   wait to do this until now b/c split cells accessed by split()
-     are setup in Grid::compress() between compress_grid() 
-     and post_compress_grid()
-------------------------------------------------------------------------- */
-
-void FixEmitFaceKokkos::post_compress_grid()
-{
-  k_tasks.sync<SPAHostType>();
-  FixEmitFace::post_compress_grid();
-  k_tasks.modify<SPAHostType>();
 }
