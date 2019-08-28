@@ -110,10 +110,10 @@ void SurfKokkos::wrap_kokkos()
 /* ----------------------------------------------------------------------
    grow surface data structures
 ------------------------------------------------------------------------- */
-void SurfKokkos::grow()
+void SurfKokkos::grow(int old)
 {
   if (sparta->kokkos->prewrap) {
-    Surf::grow();
+    Surf::grow(old);
   } else {
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
@@ -143,10 +143,10 @@ void SurfKokkos::grow()
 /* ----------------------------------------------------------------------
    grow surface data structures
 ------------------------------------------------------------------------- */
-void SurfKokkos::grow_own()
+void SurfKokkos::grow_own(int old)
 {
   if (sparta->kokkos->prewrap) {
-    Surf::grow_own();
+    Surf::grow_own(old);
   } else {
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
