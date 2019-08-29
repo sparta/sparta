@@ -141,8 +141,8 @@ void ComputeSurfKokkos::pre_surf_tally()
 
 void ComputeSurfKokkos::post_surf_tally()
 {
+  k_tally2surf.modify<DeviceType>();
   k_array_surf_tally.modify<DeviceType>();
-  k_array_surf_tally.sync<SPAHostType>();
 }
 
 /* ----------------------------------------------------------------------
@@ -151,9 +151,10 @@ void ComputeSurfKokkos::post_surf_tally()
 
 int ComputeSurfKokkos::tallyinfo(int *&locptr)
 {
-  k_tally2surf.modify<DeviceType>();
   k_tally2surf.sync<SPAHostType>();
   locptr = tally2surf;
+
+  k_array_surf_tally.sync<SPAHostType>();
 
   auto h_ntally = Kokkos::create_mirror_view(d_ntally);
   Kokkos::deep_copy(h_ntally,d_ntally);
