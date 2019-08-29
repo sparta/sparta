@@ -28,6 +28,7 @@
 #include "variable.h"
 #include "memory.h"
 #include "error.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -293,6 +294,9 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   irepeat = 0;
   nvalid = nextvalid();
   modify->addstep_compute_all(nvalid);
+
+  datamask_read = EMPTY_MASK;
+  datamask_modify = EMPTY_MASK;
 }
 
 /* ---------------------------------------------------------------------- */
