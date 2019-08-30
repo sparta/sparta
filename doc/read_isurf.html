@@ -40,7 +40,9 @@
 <P><B>Examples:</B>
 </P>
 <PRE>read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type 
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type
+read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs
+read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs.% oints no nfile 32 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -140,7 +142,11 @@ then y, and their z indices very slowest.
 </P>
 <P>The 8 corner point values (4 in 2d) for each grid cell are used with a
 marching cubes algorithm (marching squares in 2d) to infer a set of
-triangles (line segments in 2d) which are created in the grid cell.
+triangles (line segments in 2d) which are created in each grid cell.
+</P>
+<P>IMPORTANT NOTE: All triangles (line segments in 2d) created within the
+same grid cell are assigned the same surface ID, which is the grid
+cell ID.
 </P>
 <P>A good description of the two algorithms is given on these Wikipedia
 webpages:

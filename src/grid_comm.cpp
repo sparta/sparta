@@ -273,7 +273,7 @@ int Grid::unpack_one(char *buf,
         surfint *csurfs = cells[icell].csurfs;
         for (int m = 0; m < nsurf; m++) {
           Surf::Line *line = (Surf::Line *) ptr;
-          if (shash->find(line->id) == shash->end()) {
+          if (shash->find(line->id) == shash->end()) {  
             surf->add_line_copy(ownflag,line);
             if (ownflag) csurfs[m] = surf->nlocal-1;
             else csurfs[m] = surf->nlocal+surf->nghost-1;
@@ -373,7 +373,7 @@ int Grid::unpack_one(char *buf,
       ptr = ROUNDUP(ptr);
     }
   }
-  
+
   // unpack particles, for unsplit cell or split cell
 
   if (!partflag) return ptr - buf;

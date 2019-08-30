@@ -2183,6 +2183,8 @@ void Cut3d::failed_cell()
 {
   printf("Cut3d failed in cell ID: " CELLINT_FORMAT "\n",id);
 
+  Surf::Tri *tris = surf->tris;
+  
   cellint ichild;
   int iparent = grid->id_find_parent(id,ichild);
   while (iparent >= 0) {
@@ -2207,7 +2209,8 @@ void Cut3d::failed_cell()
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
   printf("  surfs:");
-  for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
+  for (int i = 0; i < nsurf; i++) printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
+  //for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
   printf("\n");
 
   /*

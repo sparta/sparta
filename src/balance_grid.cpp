@@ -57,14 +57,15 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   int bstyle,order;
   int px,py,pz;
-  int rcbwt,rcbflip;
+  int rcbwt;
+  int iarg;
 
   if (strcmp(arg[0],"none") == 0) {
-    if (narg != 1) error->all(FLERR,"Illegal balance_grid command");
+    if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = NONE;
 
   } else if (strcmp(arg[0],"stride") == 0) {
-    if (narg != 2) error->all(FLERR,"Illegal balance_grid command");
+    if (narg < 2) error->all(FLERR,"Illegal balance_grid command");
     bstyle = STRIDE;
     if (strcmp(arg[1],"xyz") == 0) order = XYZ;
     else if (strcmp(arg[1],"xzy") == 0) order = XZY;
@@ -73,9 +74,10 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     else if (strcmp(arg[1],"zxy") == 0) order = ZXY;
     else if (strcmp(arg[1],"zyx") == 0) order = ZYX;
     else error->all(FLERR,"Illegal balance_grid command");
+    iarg = 1;
 
   } else if (strcmp(arg[0],"clump") == 0) {
-    if (narg != 2) error->all(FLERR,"Illegal balance_grid command");
+    if (narg < 2) error->all(FLERR,"Illegal balance_grid command");
     bstyle = CLUMP;
     if (strcmp(arg[1],"xyz") == 0) order = XYZ;
     else if (strcmp(arg[1],"xzy") == 0) order = XZY;
@@ -84,9 +86,10 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     else if (strcmp(arg[1],"zxy") == 0) order = ZXY;
     else if (strcmp(arg[1],"zyx") == 0) order = ZYX;
     else error->all(FLERR,"Illegal balance_grid command");
+    iarg = 2;
 
   } else if (strcmp(arg[0],"block") == 0) {
-    if (narg != 4) error->all(FLERR,"Illegal balance_grid command");
+    if (narg < 4) error->all(FLERR,"Illegal balance_grid command");
     bstyle = BLOCK;
     if (strcmp(arg[1],"*") == 0) px = 0;
     else px = atoi(arg[1]);
@@ -94,32 +97,59 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     else py = atoi(arg[2]);
     if (strcmp(arg[3],"*") == 0) pz = 0;
     else pz = atoi(arg[3]);
+    iarg = 4;
     
   } else if (strcmp(arg[0],"random") == 0) {
-    if (narg != 1) error->all(FLERR,"Illegal balance_grid command");
+    if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = RANDOM;
+    iarg = 0;
 
   } else if (strcmp(arg[0],"proc") == 0) {
-    if (narg != 1) error->all(FLERR,"Illegal balance_grid command");
+    if (narg < 1) error->all(FLERR,"Illegal balance_grid command");
     bstyle = PROC;
+    iarg = 0;
 
   } else if (strcmp(arg[0],"rcb") == 0) {
-    if (narg != 2 && narg != 3) 
-      error->all(FLERR,"Illegal balance_grid command");
+    if (narg < 2) error->all(FLERR,"Illegal balance_grid command");
     bstyle = BISECTION;
     if (strcmp(arg[1],"cell") == 0) rcbwt = CELL;
     else if (strcmp(arg[1],"part") == 0) rcbwt = PARTICLE;
     else if (strcmp(arg[1],"time") == 0) rcbwt = TIME;
     else error->all(FLERR,"Illegal balance_grid command");
-    // undocumented optional 3rd arg
-    // rcbflip = 3rd arg = 1 forces rcb->compute() to flip sign
-    //           of all grid cell "dots" to force totally different
-    //           assignment of grid cells to procs and induce
-    //           complete rebalance data migration
-    rcbflip = 0;
-    if (narg == 3) rcbflip = atoi(arg[2]);
+    iarg = 2;
+  }
 
-  } else error->all(FLERR,"Illegal balance_grid command");
+  // optional args
+
+  char eligible[4];
+  strcpy(eligible,"xyz");
+  int rcbflip = 0;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"axes") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal balance_grid command");
+      if (strlen(arg[iarg+1]) > 3)
+        error->all(FLERR,"Illegal balance_grid command");
+      strcpy(eligible,arg[iarg+1]);
+      int xdim = 0;
+      int ydim = 0;
+      int zdim = 0;
+      if (strchr(eligible,'x')) xdim = 1;
+      if (strchr(eligible,'y')) ydim = 1;
+      if (strchr(eligible,'z')) zdim = 1;
+      if (zdim && domain->dimension == 2)
+        error->all(FLERR,"Illegal balance_grid command");
+      if (xdim+ydim+zdim != strlen(eligible)) 
+        error->all(FLERR,"Illegal balance_grid command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"flip") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal balance_grid command");
+      if (strcmp(arg[iarg+1],"yes") == 0) rcbflip = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) rcbflip = 0;
+      else error->all(FLERR,"Illegal balance_grid command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal balance_grid command");
+  }
 
   // error check on methods only allowed for a uniform grid
 
@@ -298,7 +328,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
       timer_cell_weights(wt);
     }
 
-    rcb->compute(nbalance,x,wt,rcbflip);
+    rcb->compute(nbalance,x,wt,eligible,rcbflip);
 
     // DEBUG info for dump image
 
@@ -385,6 +415,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   grid->unset_neighbors();
   grid->remove_ghosts();
+
   comm->migrate_cells(nmigrate);
   grid->hashfilled = 0;
 

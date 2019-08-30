@@ -21,6 +21,7 @@
 #include "grid.h"
 #include "surf.h"
 #include "update.h"
+#include "modify.h"
 #include "adapt_grid.h"
 #include "memory.h"
 #include "error.h"
@@ -233,6 +234,7 @@ void Comm::migrate_cells(int nmigrate)
 {
   if (update->mem_limit_grid_flag)
     update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
+
   if (update->global_mem_limit > 0 || 
       (update->mem_limit_grid_flag && !grid->nlocal))
     return migrate_cells_less_memory(nmigrate);
@@ -291,6 +293,7 @@ void Comm::migrate_cells(int nmigrate)
 
   // compress my list of owned implicit surfs, resets csurfs in kept cells
   // compress my list of owned grid cells to remove migrating cells
+  // compress my list of owned distributed/explicit surfs
   // compress particle list to remove particles in migrating cells
   // procs with no migrating cells must also unset particle sorted
   //   since compress_rebalance() unsets it
@@ -298,6 +301,7 @@ void Comm::migrate_cells(int nmigrate)
   if (nmigrate) {
     if (surf->implicit) surf->compress_implicit_rebalance();
     grid->compress();
+    if (surf->distributed && !surf->implicit) surf->compress_explicit_rebalance();
     particle->compress_rebalance();
   } else particle->sorted = 0;
 
@@ -462,6 +466,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
   if (nmigrate) {
     if (surf->implicit) surf->compress_implicit_rebalance();
     grid->compress();
+    if (surf->distributed && !surf->implicit) surf->compress_explicit_rebalance();
   }
 }
 

@@ -22,6 +22,11 @@ style = {none} or {stride} or {clump} or {block} or {random} or {proc} or {rcb} 
   {proc} args = none
   {rcb} args = weight
     weight = {cell} or {part} or {time} :pre
+zero or more keyword/value(s) pairs may be appended :l
+keyword = {axes} or {flip} :l
+  {axes} value = dims
+    dims = string with any of "x", "y", or "z" characters in it
+  {flip} value = yes or no :pre
 :ule
 
 [Examples:]
@@ -30,7 +35,8 @@ balance_grid block * * *
 balance_grid block * 4 *
 balance_grid clump yxz
 balance_grid random
-balance_grid rcb part :pre
+balance_grid rcb part
+balance_grid rcb part axes xz :pre
 
 [Description:]
 
@@ -152,6 +158,29 @@ image.
 
 :c,image(JPG/partition_small.jpg,JPG/partition.jpg)
 
+:line
+
+The optional keywords {axes} and {flip} only apply to the {rcb}
+style.  Otherwise they are ignored.
+
+The {axes} keyword allows limiting the partitioning created by the RCB
+algorithm to a subset of dimensions.  The default is to allow cuts in
+all dimension, e.g. x,y,z for 3d simulations.  The dims value is a
+string with 1, 2, or 3 characters.  The characters must be one of "x",
+"y", or "z".  They can be in any order and must be unique.  For
+example, in 3d, a dims = xz would only partition the 3d grid only in
+the x and z dimensions.
+
+The {flip} keyword is useful for debugging.  If it is set to {yes}
+then each time an RCB partitioning is done, the coordinates of grid
+cells will (internally only) undergo a sign flip to insure that the
+new owner of each grid cell is a different processor than the previous
+owner, at least when more than a few processors are used.  This will
+insure all particle and grid data moves to new processors, fully
+exercising the rebalancing code.
+
+:line
+
 [Restrictions:]
 
 This command can only be used after the grid has been created by the
@@ -169,4 +198,7 @@ performed.
 
 "fix balance"_fix_balance.html
 
-[Default:] none
+[Default:]
+
+The default settings for the optional keywords are axes = xyz, flip =
+no.

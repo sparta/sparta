@@ -463,6 +463,24 @@ typedef tdual_cellint_2d::t_dev_const_um t_cellint_2d_const_um;
 typedef tdual_cellint_2d::t_dev_const_randomread t_cellint_2d_randomread;
 
 typedef Kokkos::
+  DualView<SPARTA_NS::surfint*, SPADeviceType::array_layout, SPADeviceType>
+  tdual_surfint_1d;
+typedef tdual_surfint_1d::t_dev t_surfint_1d;
+typedef tdual_surfint_1d::t_dev_const t_surfint_1d_const;
+typedef tdual_surfint_1d::t_dev_um t_surfint_1d_um;
+typedef tdual_surfint_1d::t_dev_const_um t_surfint_1d_const_um;
+typedef tdual_surfint_1d::t_dev_const_randomread t_surfint_1d_randomread;
+
+typedef Kokkos::
+  DualView<SPARTA_NS::surfint**, Kokkos::LayoutRight, SPADeviceType>
+  tdual_surfint_2d;
+typedef tdual_surfint_2d::t_dev t_surfint_2d;
+typedef tdual_surfint_2d::t_dev_const t_surfint_2d_const;
+typedef tdual_surfint_2d::t_dev_um t_surfint_2d_um;
+typedef tdual_surfint_2d::t_dev_const_um t_surfint_2d_const_um;
+typedef tdual_surfint_2d::t_dev_const_randomread t_surfint_2d_randomread;
+
+typedef Kokkos::
   DualView<double*, Kokkos::LayoutRight, SPADeviceType> tdual_double_1d;
 typedef tdual_double_1d::t_dev t_double_1d;
 typedef tdual_double_1d::t_dev_const t_double_1d_const;
@@ -710,6 +728,22 @@ typedef tdual_cellint_2d::t_host_const t_cellint_2d_const;
 typedef tdual_cellint_2d::t_host_um t_cellint_2d_um;
 typedef tdual_cellint_2d::t_host_const_um t_cellint_2d_const_um;
 typedef tdual_cellint_2d::t_host_const_randomread t_cellint_2d_randomread;
+
+typedef Kokkos::DualView<SPARTA_NS::surfint*, SPADeviceType::array_layout, SPADeviceType> tdual_surfint_1d;
+typedef tdual_surfint_1d::t_host t_surfint_1d;
+typedef tdual_surfint_1d::t_host_const t_surfint_1d_const;
+typedef tdual_surfint_1d::t_host_um t_surfint_1d_um;
+typedef tdual_surfint_1d::t_host_const_um t_surfint_1d_const_um;
+typedef tdual_surfint_1d::t_host_const_randomread t_surfint_1d_randomread;
+
+typedef Kokkos::
+  DualView<SPARTA_NS::surfint**, Kokkos::LayoutRight, SPADeviceType>
+  tdual_surfint_2d;
+typedef tdual_surfint_2d::t_host t_surfint_2d;
+typedef tdual_surfint_2d::t_host_const t_surfint_2d_const;
+typedef tdual_surfint_2d::t_host_um t_surfint_2d_um;
+typedef tdual_surfint_2d::t_host_const_um t_surfint_2d_const_um;
+typedef tdual_surfint_2d::t_host_const_randomread t_surfint_2d_randomread;
 
 typedef Kokkos::
   DualView<double*, Kokkos::LayoutRight, SPADeviceType> tdual_double_1d;

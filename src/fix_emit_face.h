@@ -95,7 +95,7 @@ class FixEmitFace : public FixEmit {
   void subsonic_sort();
   void subsonic_grid();
 
-  void realloc_nspecies();
+  virtual void realloc_nspecies();
   int option(int, char **);
 };
 

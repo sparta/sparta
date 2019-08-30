@@ -476,63 +476,6 @@ void FixEmitFaceKokkos::operator()(TagFixEmitFace_perform_task, const int &i, in
 }
 
 /* ----------------------------------------------------------------------
-   pack one task into buf
-   return # of bytes packed
-   if not memflag, only return count, do not fill buf
-------------------------------------------------------------------------- */
-
-int FixEmitFaceKokkos::pack_task(int itask, char *buf, int memflag)
-{
-  k_tasks.sync<SPAHostType>();
-  k_ntargetsp.sync<SPAHostType>();
-  k_vscale.sync<SPAHostType>();
-
-  int n = FixEmitFace::pack_task(itask,buf,memflag);
-
-  k_tasks.modify<SPAHostType>();
-  k_ntargetsp.modify<SPAHostType>();
-  k_vscale.modify<SPAHostType>();
-
-  return n;
-}
-
-/* ----------------------------------------------------------------------
-   unpack one task from buf
-------------------------------------------------------------------------- */
-
-int FixEmitFaceKokkos::unpack_task(char *buf, int icell)
-{
-  k_tasks.sync<SPAHostType>();
-  k_ntargetsp.sync<SPAHostType>();
-  k_vscale.sync<SPAHostType>();
-
-  int n = FixEmitFace::unpack_task(buf,icell);
-
-  k_tasks.modify<SPAHostType>();
-  k_ntargetsp.modify<SPAHostType>();
-  k_vscale.modify<SPAHostType>();
-
-  return n;
-}
-
-/* ----------------------------------------------------------------------
-   copy N tasks starting at index oldfirst to index first
-------------------------------------------------------------------------- */
-
-void FixEmitFaceKokkos::copy_task(int icell, int n, int first, int oldfirst)
-{
-  k_tasks.sync<SPAHostType>();
-  k_ntargetsp.sync<SPAHostType>();
-  k_vscale.sync<SPAHostType>();
-
-  FixEmitFace::copy_task(icell,n,first,oldfirst);
-
-  k_tasks.modify<SPAHostType>();
-  k_ntargetsp.modify<SPAHostType>();
-  k_vscale.modify<SPAHostType>();
-}
-
-/* ----------------------------------------------------------------------
    grow task list
 ------------------------------------------------------------------------- */
 
@@ -594,19 +537,4 @@ void FixEmitFaceKokkos::realloc_nspecies()
     for (int i = 0; i < ntaskmax; i++)
       tasks[i].vscale = k_vscale.h_view.data() + i*k_vscale.h_view.extent(1);
   }
-}
-
-/* ----------------------------------------------------------------------
-   reset pcell for all compress task entries
-   called from Grid::compress() after grid cells have been compressed
-   wait to do this until now b/c split cells accessed by split()
-     are setup in Grid::compress() between compress_grid() 
-     and post_compress_grid()
-------------------------------------------------------------------------- */
-
-void FixEmitFaceKokkos::post_compress_grid()
-{
-  k_tasks.sync<SPAHostType>();
-  FixEmitFace::post_compress_grid();
-  k_tasks.modify<SPAHostType>();
 }
