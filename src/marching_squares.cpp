@@ -254,11 +254,11 @@ void MarchingSquares::invoke(double **cvalues, int *svalues)
 
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      if (svalues) surf->add_line(svalues[icell],pt[ipt],pt[ipt+1]);
-      else surf->add_line(1,pt[ipt],pt[ipt+1]);
+      if (svalues) surf->add_line(cells[icell].id,svalues[icell],
+                                  pt[ipt],pt[ipt+1]);
+      else surf->add_line(cells[icell].id,1,pt[ipt],pt[ipt+1]);
       ipt += 2;
       isurf = surf->nlocal - 1;
-      surf->lines[isurf].id = cells[icell].id;
       ptr[i] = isurf;
     }
 

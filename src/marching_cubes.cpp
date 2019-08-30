@@ -416,11 +416,11 @@ void MarchingCubes::invoke(double **cvalues, int *svalues, int **mcflags)
         
     ipt = 0;
     for (i = 0; i < nsurf; i++) {
-      if (svalues) surf->add_tri(svalues[icell],pt[ipt+2],pt[ipt+1],pt[ipt]);
-      else surf->add_tri(1,pt[ipt+2],pt[ipt+1],pt[ipt]);
+      if (svalues) surf->add_tri(cells[icell].id,svalues[icell],
+                                 pt[ipt+2],pt[ipt+1],pt[ipt]);
+      else surf->add_tri(cells[icell].id,1,pt[ipt+2],pt[ipt+1],pt[ipt]);
       ipt += 3;
       isurf = surf->nlocal - 1;
-      surf->tris[isurf].id = cells[icell].id;
       ptr[i] = isurf;
     }
         
@@ -763,16 +763,17 @@ void MarchingCubes::cleanup()
     if (nfacetri[icell][iface] == 0 && bufrecv[i].inwardnorm) continue;
 
     // add 2 tris to icell and this processor's Surf::tris list
-    // reset tri IDs to new owning cell
+    // sets tri IDs to new owning cell
+    // NOTE: what about tri types?
 
     if (nfacetri[icell][iface] == 0) {
       int nslocal = surf->nlocal;
-      surf->add_tri(1,bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
+      surf->add_tri(cells[icell].id,1,
+                    bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
       memcpy(&surf->tris[nslocal],&bufrecv[i].tri1,sizeof(Surf::Tri));
-      surf->tris[nslocal].id = cells[icell].id;
-      surf->add_tri(1,bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
+      surf->add_tri(cells[icell].id,1,
+                    bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
       memcpy(&surf->tris[nslocal+1],&bufrecv[i].tri2,sizeof(Surf::Tri));
-      surf->tris[nslocal+1].id = cells[icell].id;
       
       nsurf = cells[icell].nsurf;
       oldcsurfs = cells[icell].csurfs;

@@ -87,9 +87,6 @@ class Fix : protected Pointers {
   virtual void reset_grid_count(int) {}
   virtual void grid_changed() {}
 
-  virtual void post_migrate() {}
-  virtual void post_adapt() {}
-
   virtual double compute_scalar() {return 0.0;}
   virtual double compute_vector(int) {return 0.0;}
   virtual double compute_array(int,int) {return 0.0;}
