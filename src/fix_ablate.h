@@ -28,6 +28,9 @@ namespace SPARTA_NS {
 class FixAblate : public Fix {
  public:
   int igroup,dim;
+  int nx,ny,nz;
+  double cornerlo[3];
+  double xyzsize[3];
 
   FixAblate(class SPARTA *, int, char **);
   ~FixAblate();
@@ -54,7 +57,7 @@ class FixAblate : public Fix {
   double scale;
   char *idsource;
   int storeflag;
-  int nx,ny,nz,ncorner;
+  int ncorner;
   int sgroupbit;
   double thresh;
   double sum_delta;

@@ -38,6 +38,7 @@ enum{NEITHER,BAD,GOOD};
 enum{NONE,CHECK,KEEP};
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
+enum{INT,DOUBLE};
 
 #define CHUNK 8192
 
@@ -109,7 +110,7 @@ void ReadISurf::command(int narg, char **arg)
   if (ggroup != ablate->igroup)
     error->all(FLERR,"Read_isurf group does not match fix ablate group");
 
-  // process command line args
+  // process optional command line args
 
   process_args(narg-7,&arg[7]);
 
@@ -191,6 +192,7 @@ void ReadISurf::command(int narg, char **arg)
 
 /* ----------------------------------------------------------------------
    read/store all grid corner point values
+   file stores corner point values as 1-byte integers or double precision FP
 ------------------------------------------------------------------------- */
 
 void ReadISurf::read_corners(char *gridfile)
@@ -199,8 +201,11 @@ void ReadISurf::read_corners(char *gridfile)
   int nxyz[3];
   FILE *fp;
 
-  uint8_t *buf;
-  memory->create(buf,CHUNK,"readisurf:buf");
+  uint8_t *ibuf = NULL;
+  double *dbuf = NULL;
+
+  if (precision == INT) memory->create(ibuf,CHUNK,"readisurf:ibuf");
+  else if (precision == DOUBLE) memory->create(dbuf,CHUNK,"readisurf:dbuf");
 
   // proc 0 opens and reads binary file
   // error check the file grid matches input script extent
@@ -239,10 +244,15 @@ void ReadISurf::read_corners(char *gridfile)
     if (ncorners-nread > CHUNK) nchunk = CHUNK;
     else nchunk = ncorners-nread;
 
-    if (me == 0) fread(buf,sizeof(uint8_t),nchunk,fp);
-    MPI_Bcast(buf,nchunk,MPI_CHAR,0,world);
+    if (precision == INT) {
+      if (me == 0) fread(ibuf,sizeof(uint8_t),nchunk,fp);
+      MPI_Bcast(ibuf,nchunk,MPI_CHAR,0,world);
+    } else if (precision == DOUBLE) {
+      if (me == 0) fread(dbuf,sizeof(double),nchunk,fp);
+      MPI_Bcast(dbuf,nchunk,MPI_DOUBLE,0,world);
+    }
 
-    assign_corners(nchunk,nread,buf);
+    assign_corners(nchunk,nread,ibuf,dbuf);
     nread += nchunk;
   }
 
@@ -251,7 +261,8 @@ void ReadISurf::read_corners(char *gridfile)
     if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " corner points\n",ncorners);
   }
 
-  memory->destroy(buf);
+  memory->destroy(ibuf);
+  memory->destroy(dbuf);
 
   // close file
 
@@ -358,7 +369,7 @@ void ReadISurf::create_hash(int count)
    check that corner point values = 0 on boundary of grid block
 ------------------------------------------------------------------------- */
 
-void ReadISurf::assign_corners(int n, bigint offset, uint8_t *buf)
+void ReadISurf::assign_corners(int n, bigint offset, uint8_t *ibuf, double *dbuf)
 {
   int icell,ncorner,zeroflag;
   int pix,piy,piz;
@@ -370,8 +381,11 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *buf)
     piy = (pointindex / (nx+1)) % (ny+1);
     piz = pointindex / ((nx+1)*(ny+1));
 
+    // check that a boundary value is 0
+
     zeroflag = 0;
-    if (buf[i]) {
+    if ((precision == INT && ibuf[i]) || 
+        (precision == DOUBLE && dbuf[i] != 0.0)) {
       if (pix == 0 || piy == 0) zeroflag = 1;
       if (pix == nx || piy == ny) zeroflag = 1;
       if (dim == 3 && (piz == 0 || piz == nz)) zeroflag = 1;
@@ -396,7 +410,8 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *buf)
             cellindex = (bigint) nx * ny*ciz + nx*ciy + cix;
             if (hash->find(cellindex) == hash->end()) continue;
             icell = (*hash)[cellindex];
-            cvalues[icell][ncorner] = buf[i];
+            if (precision == INT) cvalues[icell][ncorner] = ibuf[i];
+            else cvalues[icell][ncorner] = dbuf[i];
           }
         }
       }
@@ -414,7 +429,8 @@ void ReadISurf::assign_corners(int n, bigint offset, uint8_t *buf)
           cellindex = (bigint) nx * ciy + cix;
           if (hash->find(cellindex) == hash->end()) continue;
           icell = (*hash)[cellindex];
-          cvalues[icell][ncorner] = buf[i];
+          if (precision == INT) cvalues[icell][ncorner] = ibuf[i];
+          else cvalues[icell][ncorner] = dbuf[i];
         }
       }
     }
@@ -448,6 +464,7 @@ void ReadISurf::process_args(int narg, char **arg)
   sgrouparg = 0;
   typefile = NULL;
   pushflag = 1;
+  precision = INT;
 
   int iarg = 0;
   while (iarg < narg) {
@@ -461,8 +478,14 @@ void ReadISurf::process_args(int narg, char **arg)
       iarg += 2;
     } else if (strcmp(arg[iarg],"push") == 0)  {
       if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
-      if (strcmp(arg[iarg],"yes") == 0) pushflag = 1;
-      else if (strcmp(arg[iarg],"no") == 0) pushflag = 0;
+      if (strcmp(arg[iarg+1],"yes") == 0) pushflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) pushflag = 0;
+      else error->all(FLERR,"Invalid read_isurf command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"precision") == 0)  {
+      if (iarg+2 > narg) error->all(FLERR,"Invalid read_isurf command");
+      if (strcmp(arg[iarg+1],"int") == 0) precision = INT;
+      else if (strcmp(arg[iarg+1],"double") == 0) precision = DOUBLE;
       else error->all(FLERR,"Invalid read_isurf command");
       iarg += 2;
     } else error->all(FLERR,"Invalid read_isurf command");

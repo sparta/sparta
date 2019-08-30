@@ -43,7 +43,7 @@ class ReadISurf : protected Pointers {
 
  protected:
   int me,dim;
-  int ggroup,sgrouparg,pushflag;
+  int ggroup,sgrouparg,pushflag,precision;
   int nx,ny,nz;
   double thresh;
   double corner[3],xyzsize[3];
@@ -71,7 +71,7 @@ class ReadISurf : protected Pointers {
   void read_corners(char *);
   void read_types(char *);
   void create_hash(int);
-  void assign_corners(int, bigint, uint8_t *);
+  void assign_corners(int, bigint, uint8_t *, double *);
   void assign_types(int, bigint, int *);
 };
 

@@ -747,11 +747,18 @@ void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
 
   MathExtra::cross3 (d1, d2, normal);
   MathExtra::norm3 (normal);
-  invndotd = 1.0 / MathExtra::dot3(normal, camDir);
+
+  // new code to possibly avoid speckles and tiny white lines in porour media tris
+
+  //invndotd = 1.0 / MathExtra::dot3(normal, camDir);
 
   // invalid triangle (parallel)
 
-  if (invndotd == 0) return;
+  //if (invndotd == 0) return;
+
+  double ndotd = MathExtra::dot3(normal,camDir);
+  if (ndotd >= 0.0) return;
+  invndotd = 1.0 / ndotd;
 
   double r[3],u[3];
 

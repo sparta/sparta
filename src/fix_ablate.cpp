@@ -271,7 +271,7 @@ int FixAblate::setmask()
 ------------------------------------------------------------------------- */
 
 void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
-                              double *cornerlo, double *xyzsize, 
+                              double *cornerlo_caller, double *xyzsize_caller, 
                               double **cvalues_caller, int *tvalues_caller,
                               double thresh_caller, char *sgroupID, int pushflag)
 {
@@ -280,6 +280,12 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   nx = nx_caller;
   ny = ny_caller;
   nz = nz_caller;
+  cornerlo[0] = cornerlo_caller[0];
+  cornerlo[1] = cornerlo_caller[1];
+  cornerlo[2] = cornerlo_caller[2];
+  xyzsize[0] = xyzsize_caller[0];
+  xyzsize[1] = xyzsize_caller[1];
+  xyzsize[2] = xyzsize_caller[2];
   thresh = thresh_caller;
 
   tvalues_flag = 0;
