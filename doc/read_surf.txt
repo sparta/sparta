@@ -14,7 +14,7 @@ read_surf filename keyword args ... :pre
 
 filename = name of surface file :ulb,l
 zero or more keyword/args pairs may be appended :l
-keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {typeadd} or {file} or {particle} :l
+keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {typeadd} or {particle} or {file} :l
   origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   trans args = Dx Dy Dz
@@ -376,9 +376,6 @@ periodicity.  If the surface you are reading does not clip in this
 manner, then SPARTA will likely generate an error about mis-matched or
 inconsistent cells when it attempts to mark all the grid cells and
 their corner points as inside vs outside the surface.
-
-IMPORTANT NOTE: The clip keyword cannot uet be used with explicit
-distributed surfaces.
 
 If you use the {clip} keyword, you should check the resulting
 statistics of the clipped surface printed out by this command,

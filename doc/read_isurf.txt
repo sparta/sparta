@@ -18,20 +18,19 @@ filename = binary file with grid corner point values :l
 thresh = threshold for surface definition, value > 0.0 and < 255.0 :l
 ablateID = ID of a "fix ablate"_fix_ablate.html command :l
 zero or more keyword/args pairs may be appended :l
-keyword = {group} or {type} or {push} :l
+keyword = {group} or {type} or {push} or {precision} :l
   group arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
   type arg = tfile
     tfile = binary file with per grid cell surface type values
-  push arg = yes or no = whether to push corner point values to 0/255 :pre
+  push arg = yes or no = whether to push corner point values to 0/255
+  precision arg = int or double :pre
 :ule
 
 [Examples:]
 
 read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type
-read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs
-read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs.% oints no nfile 32 :pre
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type :pre
 
 [Description:]
 
@@ -115,10 +114,21 @@ Nxfile = Nx+1, Nyfile = Ny+1, Nzfile = Nz+1 is required.  SPARTA will
 give an error if the read_isurf Nx,Ny,Nz arguments do not match the
 first 2 or 3 integers in the file.
 
-The remaining N bytes of the file are a series of one-byte integer
-values.  There are N = Nxfile * Nyfile values in 2d, and N = Nxfile *
-Nyfile * Nzfile values in 3d.  Each value is a single byte integer
-from 0 to 255 inclusive.
+The remaining N bytes of the file are a series of corner point values.
+There are N = Nxfile * Nyfile values in 2d, and N = Nxfile * Nyfile *
+Nzfile values in 3d.
+
+If the {precision} keyword is set to {int}, which is the default, then
+the values are one-byte integers, from 0 to 255 inclusive.  If the
+{precision} keyword is set to {double}, then they are double-precision
+floating point values, from 0.0 to 255.0 inclusive.  The one-byte
+integer format is what is typically used for tomographic images.  The
+double-precision format is what is written by the
+"write_isurf"_write_isurf.html command.  The latter is typically used
+when running an ablation model via the "fix ablate"_fix_ablate.html
+command, where material is removed incrementally (from the corner
+point values) due to collisions of particles with the implicit
+surfaces.
 
 IMPORTANT NOTE: The corner point values are a 2d or 3d regular array
 which must be ordered as follows.  The x indices (1 to Nxfile) vary
@@ -131,7 +141,7 @@ then y, and their z indices very slowest.
 
 The 8 corner point values (4 in 2d) for each grid cell are used with a
 marching cubes algorithm (marching squares in 2d) to infer a set of
-triangles (line segments in 2d) which are created in each grid cell.
+triangles (line segments in 2d) which are created in the grid cell.
 
 IMPORTANT NOTE: All triangles (line segments in 2d) created within the
 same grid cell are assigned the same surface ID, which is the grid
@@ -176,7 +186,8 @@ periodic boundary.
 
 The specified {ablateID} is the fix ID of a "fix
 ablate"_fix_ablate.html command which has been previously specified in
-the input script.  It has the code logic for converting grid corner
+the input script.  It stores the grid corner point values for each
+grid cell.  It also has the code logic for converting grid corner
 point values to surface elements (line segments or triangles) and also
 optinally allows for the surface to be ablated during a simulation due
 to particles colliding with the surface elements.
@@ -284,4 +295,5 @@ ablate"_fix_ablate.html
 
 [Default:]
 
-The optional keyword defaults are group = all, type = no, push = yes.
+The optional keyword defaults are group = all, type = no, push = yes,
+and precision int.
