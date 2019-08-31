@@ -44,7 +44,7 @@ void WriteISurf::command(int narg, char **arg)
   dim = domain->dimension;
 
   if (!surf->exist || surf->implicit == 0)
-    error->all(FLERR,"Cannot write isurf when implicit surfs do not exist");
+    error->all(FLERR,"Cannot write_isurf when implicit surfs do not exist");
 
   if (narg < 6) error->all(FLERR,"Illegal write_isurf command");
 
@@ -83,6 +83,7 @@ void WriteISurf::command(int narg, char **arg)
 
   if (ggroup != ablate->igroup)
     error->all(FLERR,"Write_isurf group does not match fix ablate group");
+
   if (nx != ablate->nx || ny != ablate->ny || nz != ablate->nz)
     error->all(FLERR,"Write_isurf Nxyz does not match fix ablate Nxyz");
 

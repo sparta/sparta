@@ -44,12 +44,12 @@ void WriteSurf::command(int narg, char **arg)
 
   if (narg < 1) error->all(FLERR,"Illegal write_surf command");
 
-  if (statflag && me == 0)
-    if (screen) fprintf(screen,"Writing surface file ...\n");
-
   me = comm->me;
   nprocs = comm->nprocs;
   dim = domain->dimension;
+
+  if (statflag && me == 0)
+    if (screen) fprintf(screen,"Writing surface file ...\n");
 
   // if filename contains a "*", replace with current timestep
 

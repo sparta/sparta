@@ -42,8 +42,8 @@ class ReadISurf : protected Pointers {
   virtual void command(int, char **);
 
  protected:
-  int me,dim;
-  int ggroup,sgrouparg,pushflag,precision;
+  int me,nprocs,dim;
+  int ggroup,sgrouparg,pushflag,precision,readflag;
   int nx,ny,nz;
   double thresh;
   double corner[3],xyzsize[3];
@@ -66,13 +66,35 @@ class ReadISurf : protected Pointers {
 
   MyHash *hash;
 
+  struct SendDatum {
+    int proc,icell,icorner;
+    bigint cindex;
+  };
+
+  struct RecvDatum {
+    int icell,icorner;
+    double cvalue;
+  };
+
+  bigint offset_rvous;
+  int nvalues_rvous;
+  uint8_t *ibuf_rvous;
+  double *dbuf_rvous;
+  int precision_rvous;
+
   void process_args(int, char **);
 
-  void read_corners(char *);
-  void read_types(char *);
   void create_hash(int);
+  void read_corners_serial(char *);
   void assign_corners(int, bigint, uint8_t *, double *);
+  void read_types_serial(char *);
   void assign_types(int, bigint, int *);
+
+  void read_corners_parallel(char *);
+
+  // callback function for rendezvous communication
+ 
+  static int rendezvous_corners(int, char *, int &, int *&, char *&, void *);
 };
 
 }

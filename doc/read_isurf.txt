@@ -18,19 +18,21 @@ filename = binary file with grid corner point values :l
 thresh = threshold for surface definition, value > 0.0 and < 255.0 :l
 ablateID = ID of a "fix ablate"_fix_ablate.html command :l
 zero or more keyword/args pairs may be appended :l
-keyword = {group} or {type} or {push} or {precision} :l
+keyword = {group} or {type} or {push} or {precision} or {read} :l
   group arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
   type arg = tfile
     tfile = binary file with per grid cell surface type values
   push arg = yes or no = whether to push corner point values to 0/255
-  precision arg = int or double :pre
+  precision arg = int or double
+  read arg = serial or parallel :pre
 :ule
 
 [Examples:]
 
 read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type :pre
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 read parallel :pre
 
 [Description:]
 
@@ -195,7 +197,7 @@ to particles colliding with the surface elements.
 :line
 
 The following optional keywords affect attributes of the read-in
-surface elements.
+surface elements and how they are read.
 
 Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
@@ -278,6 +280,19 @@ created by the marching cubes or marching squares algorithms.
 
 The default for the {push} keyword is {yes}.
 
+The {read} keyword specifies how the input file of grid corner point
+values is read.  If the value is {serial}, which is the default, then
+only a single proc reads the file, a chunk of values at at time.  They
+are broadcast to other processors, and each scans them for corner
+point values that correspond to grid cells it owns.  If the value is
+{parallel}, then each proc opens the input file and reads a N/P
+portion of the corner point values, where N is the # of corner point
+values, and P is the # of procs.  Additional communication is then
+performed to communicate the corner point values where they are needed
+by each grid cell that owns one of the corner point values.  The
+{parallel} option can be faster for simulations with large grid corner
+point files and large numbers of processors.
+
 :line
 
 [Restrictions:]
@@ -296,4 +311,4 @@ ablate"_fix_ablate.html
 [Default:]
 
 The optional keyword defaults are group = all, type = no, push = yes,
-and precision int.
+precision int, and read serial.

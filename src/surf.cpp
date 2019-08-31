@@ -2461,7 +2461,7 @@ void Surf::compress_implicit_rebalance()
 {
   int j,icell,nsurf;
   cellint cellID;
-  int *csurfs;
+  surfint *csurfs;
 
   if (!grid->hashfilled) grid->rehash();
 
