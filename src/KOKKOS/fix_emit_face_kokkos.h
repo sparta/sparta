@@ -95,6 +95,7 @@ class FixEmitFaceKokkos : public FixEmitFace {
   DAT::t_float_1d d_cummulative;
   DAT::t_int_1d d_species;
 
+  void create_task(int);
   void grow_task();
   void realloc_nspecies();
 };

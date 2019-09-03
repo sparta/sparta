@@ -128,6 +128,17 @@ void FixEmitFaceKokkos::init()
   k_species    .modify<SPAHostType>();
 }
 
+/* ----------------------------------------------------------------------
+   create tasks for one grid cell
+   add them to tasks list and increment ntasks
+------------------------------------------------------------------------- */
+
+void FixEmitFaceKokkos::create_task(int icell)
+{
+  FixEmitFace::create_task(icell);
+  k_tasks.modify<SPAHostType>();
+}
+
 /* ---------------------------------------------------------------------- */
 
 void FixEmitFaceKokkos::perform_task()
