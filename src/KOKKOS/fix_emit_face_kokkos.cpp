@@ -137,6 +137,8 @@ void FixEmitFaceKokkos::create_task(int icell)
 {
   FixEmitFace::create_task(icell);
   k_tasks.modify<SPAHostType>();
+  k_ntargetsp.modify<SPAHostType>();
+  k_vscale.modify<SPAHostType>();
 }
 
 /* ---------------------------------------------------------------------- */
