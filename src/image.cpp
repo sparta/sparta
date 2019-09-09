@@ -948,7 +948,9 @@ void Image::compute_SSAO()
       double sy = surfaceBuffer[index * 2 + 1];
       double sin_t = -sqrt(sx*sx + sy*sy);
 
-      double mytheta = random->uniform() * SSAOJitter;
+      // DEBUG - remove randomness so image is same on any proc count
+      double mytheta = 0.5 * SSAOJitter;
+      //double mytheta = random->uniform() * SSAOJitter;
       double ao = 0.0;
 
       for (s = 0; s < SSAOSamples; s ++) {
