@@ -33,7 +33,6 @@ class FixEmitSurf : public FixEmit {
   ~FixEmitSurf();
   void init();
   void setup();
-  void post_compress_grid();
 
  private:
   int imix,groupbit,np,normalflag,subsonic,subsonic_style,subsonic_warning;
@@ -47,9 +46,6 @@ class FixEmitSurf : public FixEmit {
   double fnum,dt;
   double nrho,temp_thermal,temp_rot,temp_vib;
   double *fraction,*cummulative;
-
-  Surf::Line *lines;
-  Surf::Tri *tris;
 
   class Cut2d *cut2d;
   class Cut3d *cut3d;
@@ -74,7 +70,7 @@ class FixEmitSurf : public FixEmit {
     double *fracarea;           // fractional area for each sub tri in path
 
     int icell;                  // associated cell index, unsplit or split cell
-    int isurf;                  // surf index
+    surfint isurf;              // surf index, sometimes a surf ID
     int pcell;                  // associated cell index for particles
                                 // unsplit or sub cell (not split cell)
     int npoint;                 // # of points in path
@@ -94,17 +90,13 @@ class FixEmitSurf : public FixEmit {
 
   // private methods
 
-  int create_task(int);
+  void create_task(int);
   void perform_task();
+  void grow_task();
 
   void subsonic_inflow();
   void subsonic_sort();
   void subsonic_grid();
-
-  int pack_task(int, char *, int);
-  int unpack_task(char *, int);
-  void copy_task(int, int, int, int);
-  void grow_task();
 
   int option(int, char **);
 };

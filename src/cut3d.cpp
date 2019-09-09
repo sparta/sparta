@@ -517,13 +517,8 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     double lo2d[2],hi2d[2];
 
     for (int iface = 0; iface < 6; iface++) {
-
-
-
       // debug 
       //if (id == VERBOSE_ID) printf("FACE %d\n",iface);
-
-
 
       if (facelist[iface].n) {
         face_from_cell(iface,lo2d,hi2d);
@@ -2160,6 +2155,8 @@ void Cut3d::failed_cell()
 {
   printf("Cut3d failed in cell ID: " CELLINT_FORMAT "\n",id);
 
+  Surf::Tri *tris = surf->tris;
+  
   cellint ichild;
   int iparent = grid->id_find_parent(id,ichild);
   while (iparent >= 0) {
@@ -2184,7 +2181,8 @@ void Cut3d::failed_cell()
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
   printf("  surfs:");
-  for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
+  for (int i = 0; i < nsurf; i++) printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
+  //for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
   printf("\n");
 
   /*

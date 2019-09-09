@@ -21,6 +21,7 @@ CommandStyle(read_surf,ReadSurf)
 #ifndef SPARTA_READ_SURF_H
 #define SPARTA_READ_SURF_H
 
+#include "mpi.h"
 #include "stdio.h"
 #include "pointers.h"
 #include "hash3.h"
@@ -35,41 +36,35 @@ class ReadSurf : protected Pointers {
   virtual void command(int, char **);
 
  protected:
-  int me;
+  int me,nprocs;
   char *line,*keyword,*buffer;
   FILE *fp;
   int compressed;
   int distributed;
   int partflag,filearg;
 
+  int multiproc;            // 1 if multiple files to read from
+  int nfiles;               // # of proc files along with base file
+  bigint nsurf_basefile;    // surface count in base file
+  int me_file,nprocs_file;  // info for cluster of procs that read a file
+
   int dim;
   double origin[3];
 
   struct Point {
-    double x[3];
+    double x[3];            // point coords
   };
 
-  struct Line {
-    int type,mask;          // type and mask of the line
-    int p1,p2;              // indices of points in line segment
-  };
+  Point *pts;               // storage for points read from input file
 
-  struct Tri {
-    int type,mask;          // type and mask of the triangle
-    int p1,p2,p3;           // indices of points in triangle
-  };
+  bigint nsurf_total_old;   // # of total system surfs before read
+  int nsurf_old;            // # of surfs on this proc before read
+  int nsurf_new;            // # of surfs on this proc after read
+  int npoint_file;          // # of points in one file
+  int nsurf_file;           // # of surfs in one file
 
-  Point *pts;
-  Line *lines;
-  Tri *tris;
-  int npoint,nline,ntri;
-  int maxpoint,maxline,maxtri;
-  bigint nsurf_old;
-  int nline_old,nline_new;
-  int ntri_old,ntri_new;
-
-  int **edge;
-  int nedge,maxedge;
+  int filereader;
+  MPI_Comm filecomm;
 
 #ifdef SPARTA_MAP
   typedef std::map<bigint,int> MyHash;
@@ -82,14 +77,19 @@ class ReadSurf : protected Pointers {
   typedef std::tr1::unordered_map<bigint,int>::iterator MyIterator;
 #endif
 
-  void header();
-  void read_points();
-  void read_lines();
-  void read_lines_distributed();
-  void read_tris();
-  void read_tris_distributed();
+  void read_single(char *);
+  void read_multiple(char *);
 
-  void process_args(int, char **);
+  void surf_counts();
+  void header();
+  void base(char *file);
+
+  void read_file(char *, int);
+  void read_points();
+  void read_lines(int);
+  void read_tris(int);
+
+  void process_args(int, int, char **);
 
   void translate(double, double, double);
   void scale(double, double, double);
@@ -98,15 +98,13 @@ class ReadSurf : protected Pointers {
   void clip2d();
   void clip3d();
 
-  void add_surfs();
+  void check_consecutive();
   void push_points_to_boundary(double);
   void check_neighbor_norm_2d();
   void check_neighbor_norm_3d();
 
-  int find_edge(int, int);
-  void add_edge(int, int, int);
-
   void open(char *);
+  void file_search(char *, char *);
   void parse_keyword(int);
   int count_words(char *);
 };

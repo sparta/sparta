@@ -12,9 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "spatype.h"
 #include "mpi.h"
+#include "spatype.h"
 #include "string.h"
+#include "stdlib.h"
 #include "write_restart.h"
 #include "universe.h"
 #include "update.h"

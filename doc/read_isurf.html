@@ -25,19 +25,23 @@
 
 <LI>zero or more keyword/args pairs may be appended 
 
-<LI>keyword = <I>group</I> or <I>type</I> 
+<LI>keyword = <I>group</I> or <I>type</I> or <I>file</I> 
 
 <PRE>  group arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
   type arg = tfile
-    tfile = binary file with per grid cell surface type values 
+    tfile = binary file with per grid cell surface type values
+  file args = identical to those defined for the <A HREF = "write_surf.html">write_surf</A> command
+    this keyword must be last 
 </PRE>
 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh
-read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type 
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type
+read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs
+read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs.% oints no nfile 32 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -137,7 +141,11 @@ then y, and their z indices very slowest.
 </P>
 <P>The 8 corner point values (4 in 2d) for each grid cell are used with a
 marching cubes algorithm (marching squares in 2d) to infer a set of
-triangles (line segments in 2d) which are created in the grid cell.
+triangles (line segments in 2d) which are created in each grid cell.
+</P>
+<P>IMPORTANT NOTE: All triangles (line segments in 2d) created within the
+same grid cell are assigned the same surface ID, which is the grid
+cell ID.
 </P>
 <P>A good description of the two algorithms is given on these Wikipedia
 webpages:
@@ -178,8 +186,8 @@ periodic boundary.
 </P>
 <HR>
 
-<P>The following optional keywords affect group and type settings of the
-read-in surface elements.
+<P>The following optional keywords affect group and type settings for the
+read-in surface elements and output of the elements.
 </P>
 <P>Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
@@ -240,6 +248,31 @@ indices very slowest.
 <P>The type value for each grid cell is used to assign a type value to
 each surface element created in that grid cell by the marching cubes
 or squares algorithm.
+</P>
+<P>If the <I>file</I> keyword is used, the surfaces will be written out to the
+specified <I>filename</I> immediately after they are read in.  The
+arguments for this keyword are identical to those used for the
+<A HREF = "write_surf.html">write_surf</A> command.  This includes a file name with
+optional "*" and "%" wildcard characters, as well as its optional
+keywords.
+</P>
+<P>IMPORTANT NOTE: The <I>file</I> keyword must be the last keyword specified
+with the read_isurf command.  This is because all the remaining arguments
+are passed to the <A HREF = "write_surf.html">write_surf</A> command.
+</P>
+<P>The format for the output file is the same as the one written by the
+<A HREF = "write_surf.html">write_surf</A> command, or that is read by the
+<A HREF = "read_surf.html">read_surf</A> command.  This can be useful for
+visualizing the implicit surfaces with a tool that uses SPARTA surface
+data as input.
+</P>
+<P>IMPORTANT NOTE: If you write out implicit surfaces via the <I>file</I>
+keyword, they are written as if they were explicit surfaces.  Thus the
+file can only be read back into SPARTA via the
+<A HREF = "read_surf.html">read_surf</A> command, which will treat them as explicit
+surfaces.  At some point we will add a write_isurf command, so that
+dynamics implicit surfaces can be written in a format that allows them
+be be read back in as implicit surfaces.
 </P>
 <HR>
 
