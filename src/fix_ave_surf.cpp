@@ -28,6 +28,7 @@
 #include "variable.h"
 #include "memory.h"
 #include "error.h"
+#include "sparta_masks.h"
 
 using namespace SPARTA_NS;
 
@@ -292,6 +293,9 @@ FixAveSurf::FixAveSurf(SPARTA *sparta, int narg, char **arg) :
   // hash for mapping surfIDs to tally indices
 
   hash = new MyHash;
+
+  datamask_read = EMPTY_MASK;
+  datamask_modify = EMPTY_MASK;
 }
 
 /* ---------------------------------------------------------------------- */

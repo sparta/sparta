@@ -467,18 +467,18 @@ DumpImage::DumpImage(SPARTA *sparta, int narg, char **arg) :
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"ssao") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal dump image command");
+      if (iarg+4 > narg) error->all(FLERR,"Illegal dump image command");
       if (strcmp(arg[iarg+1],"yes") == 0) image->ssao = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) image->ssao = 0;
       else error->all(FLERR,"Illegal dump image command");
       int seed = atoi(arg[iarg+2]);
       if (seed <= 0) error->all(FLERR,"Illegal dump image command");
       image->seed = seed;
-      double ssaoint = atof(arg[iarg+2]);
+      double ssaoint = atof(arg[iarg+3]);
       if (ssaoint < 0.0 || ssaoint > 1.0)
 	error->all(FLERR,"Illegal dump image command");
       image->ssaoint = ssaoint;
-      iarg += 3;
+      iarg += 4;
 
     } else error->all(FLERR,"Illegal dump image command");
   }

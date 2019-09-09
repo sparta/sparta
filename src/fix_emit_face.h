@@ -83,7 +83,7 @@ class FixEmitFace : public FixEmit {
 
   // protected methods
 
-  void create_task(int);
+  virtual void create_task(int);
   virtual void perform_task();
   void perform_task_onepass();
   virtual void perform_task_twopass();
