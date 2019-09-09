@@ -748,7 +748,8 @@ void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
   MathExtra::cross3 (d1, d2, normal);
   MathExtra::norm3 (normal);
 
-  // new code to possibly avoid speckles and tiny white lines in porour media tris
+  // ----------------
+  // old code
 
   //invndotd = 1.0 / MathExtra::dot3(normal, camDir);
 
@@ -756,9 +757,14 @@ void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
 
   //if (invndotd == 0) return;
 
+  // ----------------
+  // new code
+
   double ndotd = MathExtra::dot3(normal,camDir);
   if (ndotd >= 0.0) return;
   invndotd = 1.0 / ndotd;
+
+  // ----------------
 
   double r[3],u[3];
 
@@ -798,10 +804,18 @@ void Image::draw_triangle(double *x, double *y, double *z, double *surfaceColor)
   double pixelRightFull = rasterRight / pixelWidth;
   double pixelDownFull = rasterDown / pixelWidth;
   double pixelUpFull = rasterUp / pixelWidth;
-  int pixelLeft = static_cast<int> (pixelLeftFull + 0.5);
-  int pixelRight = static_cast<int> (pixelRightFull + 0.5);
-  int pixelDown = static_cast<int> (pixelDownFull + 0.5);
-  int pixelUp = static_cast<int> (pixelUpFull + 0.5);
+
+  //old
+  //int pixelLeft = static_cast<int> (pixelLeftFull + 0.5);
+  //int pixelRight = static_cast<int> (pixelRightFull + 0.5);
+  //int pixelDown = static_cast<int> (pixelDownFull + 0.5);
+  //int pixelUp = static_cast<int> (pixelUpFull + 0.5);
+
+  // new
+  int pixelLeft = static_cast<int> (pixelLeftFull + 1.0);
+  int pixelRight = static_cast<int> (pixelRightFull + 1.0);
+  int pixelDown = static_cast<int> (pixelDownFull + 1.0);
+  int pixelUp = static_cast<int> (pixelUpFull + 1.0);
 
   for (int iy = yc - pixelDown; iy <= yc + pixelUp; iy ++) {
     for (int ix = xc - pixelLeft; ix <= xc + pixelRight; ix ++) {
