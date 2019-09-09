@@ -182,6 +182,7 @@ it gives quick access to documentation for all SPARTA commands.
 :link(howto_10,Section_howto.html#howto_10)
 :link(howto_11,Section_howto.html#howto_11)
 :link(howto_12,Section_howto.html#howto_12)
+:link(howto_13,Section_howto.html#howto_13)
 
 :link(mod_1,Section_python.html#mod_1)
 :link(mod_2,Section_python.html#mod_2)
