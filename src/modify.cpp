@@ -207,6 +207,28 @@ void Modify::compress_grid(int flag)
 }
 
 /* ----------------------------------------------------------------------
+   post_migrate call, only for relevant fixes
+   invoked by fix balance when grid cells migrate
+------------------------------------------------------------------------- */
+
+void Modify::post_migrate()
+{
+  for (int i = 0; i < n_pergrid; i++)
+    fix[list_pergrid[i]]->post_migrate();
+}
+
+/* ----------------------------------------------------------------------
+   post_adapt call, only for relevant fixes
+   invoked by fix adapt when grid cells are adapted
+------------------------------------------------------------------------- */
+
+void Modify::post_adapt()
+{
+  for (int i = 0; i < n_pergrid; i++)
+    fix[list_pergrid[i]]->post_adapt();
+}
+
+/* ----------------------------------------------------------------------
    invoke add_particle() method, only for relevant fixes
 ------------------------------------------------------------------------- */
 

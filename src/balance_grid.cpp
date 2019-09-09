@@ -415,6 +415,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   grid->unset_neighbors();
   grid->remove_ghosts();
+
   comm->migrate_cells(nmigrate);
 
   MPI_Barrier(world);

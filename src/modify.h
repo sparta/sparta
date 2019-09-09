@@ -43,6 +43,8 @@ class Modify : protected Pointers {
   virtual int pack_grid_one(int, char *, int);
   virtual int unpack_grid_one(int, char *);
   virtual void compress_grid(int);
+  virtual void post_migrate();
+  virtual void post_adapt();
 
   void add_fix(int, char **);
   void delete_fix(const char *);
