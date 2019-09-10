@@ -194,7 +194,8 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   numsend = NULL;
   maxgrid = maxghost = 0;
 
-  proclist = locallist = NULL;
+  proclist = NULL;
+  locallist = NULL;
   maxsend = 0;
   
   sbuf = NULL;
@@ -1028,7 +1029,7 @@ void FixAblate::push_lohi()
 }
 
 /* ----------------------------------------------------------------------
-   comm my cdelta values that are shared by neighbor
+   comm my cdelta values that are shared by neighbor cells
    each corner point is shared by N cells, less on borders
    done via irregular comm
 ------------------------------------------------------------------------- */
@@ -1160,7 +1161,7 @@ void FixAblate::comm_neigh_corners(int which)
 
   m = 0;
   for (i = 0; i < nrecv; i++) {
-    cellID = static_cast<int> (rbuf[m++]);   // NOTE: need ubuf logic
+    cellID = static_cast<cellint> (rbuf[m++]);   // NOTE: need ubuf logic
     ilocal = (*hash)[cellID] - 1;
     icell = ilocal - nglocal;
     for (j = 0; j < ncorner; j++)

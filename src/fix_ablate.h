@@ -81,7 +81,7 @@ class FixAblate : public Fix {
   int maxghost;           // max size of cdelta_ghost
 
   int *proclist;
-  int *locallist;
+  cellint *locallist;
   int *numsend;
   int maxsend;
 
