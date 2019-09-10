@@ -37,7 +37,7 @@ class ComputeSurf : public Compute {
   virtual void clear();
   virtual void surf_tally(int, Particle::OnePart *, 
                           Particle::OnePart *, Particle::OnePart *);
-  virtual int tallyinfo(int *&);
+  virtual int tallyinfo(surfint *&);
   virtual void tallysum(int);
   void reallocate();
   bigint memory_usage();

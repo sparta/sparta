@@ -98,7 +98,7 @@ class Compute : protected Pointers {
   // NOTE: get rid of this method at some point
   virtual void post_process_grid_old(void *, void *, int, int, double *, int) {}
 
-  virtual int tallyinfo(int *&) {return 0;}
+  virtual int tallyinfo(surfint *&) {return 0;}
   virtual void tallysum(int) {}
 
   virtual void reallocate() {}
