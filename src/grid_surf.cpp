@@ -706,14 +706,20 @@ void Grid::surf2grid_split(int subflag, int outflag)
         if (cinfo[icell].corner[0] == UNKNOWN) ncorner++;
       }
     }
-    int ncornerall,noverlapall;
-    MPI_Allreduce(&ncorner,&ncornerall,1,MPI_INT,MPI_SUM,world);
-    MPI_Allreduce(&noverlap,&noverlapall,1,MPI_INT,MPI_SUM,world);
+
+    bigint bncorner = ncorner;
+    bigint bnoverlap = noverlap;
+    bigint ncornerall,noverlapall;
+    MPI_Allreduce(&bncorner,&ncornerall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&bnoverlap,&noverlapall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
     if (comm->me == 0) {
-      if (screen) fprintf(screen,"  %d %d = cells overlapping surfs, "
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+                          " = cells overlapping surfs, "
                           "overlap cells with unmarked corner pts\n",
                           noverlapall,ncornerall);
-      if (logfile) fprintf(logfile,"  %d %d = cells overlapping surfs, "
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+                           " = cells overlapping surfs, "
                            "overlap cells with unmarked corner pts\n",
                            noverlapall,ncornerall);
     }
@@ -1603,6 +1609,7 @@ void Grid::surf2grid_stats()
   int stotal = 0;
   int smax = 0;
   double sratio = BIG;
+
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].nsurf) scount++;
@@ -1633,23 +1640,28 @@ void Grid::surf2grid_stats()
     }
   }
   
-  int scountall,stotalall,smaxall;
+  bigint bscount = scount;
+  bigint bstotal = stotal;
+  bigint scountall,stotalall;
+  int smaxall;
   double sratioall;
-  MPI_Allreduce(&scount,&scountall,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&stotal,&stotalall,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&bscount,&scountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&bstotal,&stotalall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&smax,&smaxall,1,MPI_INT,MPI_MAX,world);
   MPI_Allreduce(&sratio,&sratioall,1,MPI_DOUBLE,MPI_MIN,world);
   
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"  %d = cells with surfs\n",scountall);
-      fprintf(screen,"  %d = total surfs in all grid cells\n",stotalall);
+      fprintf(screen,"  " BIGINT_FORMAT " = cells with surfs\n",scountall);
+      fprintf(screen,"  " BIGINT_FORMAT 
+              " = total surfs in all grid cells\n",stotalall);
       fprintf(screen,"  %d = max surfs in one grid cell\n",smaxall);
       fprintf(screen,"  %g = min surf-size/cell-size ratio\n",sratioall);
     }
     if (logfile) {
-      fprintf(logfile,"  %d = cells with surfs\n",scountall);
-      fprintf(logfile,"  %d = total surfs in all grid cells\n",stotalall);
+      fprintf(logfile,"  " BIGINT_FORMAT " = cells with surfs\n",scountall);
+      fprintf(logfile,"  " BIGINT_FORMAT 
+              " = total surfs in all grid cells\n",stotalall);
       fprintf(logfile,"  %d = max surfs in one grid cell\n",smaxall);
       fprintf(logfile,"  %g = min surf-size/cell-size ratio\n",sratioall);
     }

@@ -1016,15 +1016,19 @@ void FixAblate::push_lohi()
     }
   }
 
-  int ploall,phiall;
-  MPI_Allreduce(&plo,&ploall,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&phi,&phiall,1,MPI_INT,MPI_SUM,world);
+  bigint bplo = plo;
+  bigint bphi = phi;
+  bigint ploall,phiall;
+  MPI_Allreduce(&bplo,&ploall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&bphi,&phiall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
 
   if (me == 0) {
     if (screen)
-      fprintf(screen,"  %d %d pushed corner pt values\n",ploall,phiall);
+      fprintf(screen,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+              " pushed corner pt values\n",ploall,phiall);
     if (logfile) 
-      fprintf(logfile,"  %d %d pushed corner pt values\n",ploall,phiall);
+      fprintf(logfile,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+              " pushed corner pt values\n",ploall,phiall);
   }
 }
 
