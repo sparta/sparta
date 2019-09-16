@@ -453,7 +453,7 @@ double MarchingCubes::interpolate(double v0, double v1, double lo, double hi)
    what MC does:
      may generate 0 or 2 triangles on the face of a cell
      the cell sharing the face may also generate 0 or 2 triangles
-     the normals for the 2 triangles may be into or out of the cell
+     the normals for the 2 triangles may be into or out of the owning cell
    what SPARTA needs:
      let cell1 and cell2 be two cells that share a face
      if cell1 has 2 tris on face and cell2 has none:
@@ -462,7 +462,7 @@ double MarchingCubes::interpolate(double v0, double v1, double lo, double hi)
      if both cell1 and cell2 have 2 tris on face: delete all 4 tris
    algorithm to do this:
      loop over all my cells with implicit tris:
-       tally how many surfs on each face
+       count how many surfs on each face
      loop over all my cells with implicit tris:
        loop over faces with 2 tris:
          if I own adjoining cell:
@@ -485,10 +485,6 @@ void MarchingCubes::cleanup()
   cellint cellID;
   double *lo,*hi;
   double *norm;
-
-  // this method requires grid hash to find neighbor cells and sort deleted tris
-
-  if (!grid->hashfilled) grid->rehash();
 
   Surf::Tri *tris = surf->tris;
   Grid::ChildCell *cells = grid->cells;
@@ -836,7 +832,10 @@ void MarchingCubes::cleanup()
   // descending, not ascending, so that a surf is not moved from end-of-list
   //   that is flagged for later deletion
   // must repoint one location in cells->csurfs to moved surf
+  //   requires grid hash to find owning cell of moved surf
   // note that ghost surfs exist at this point, but caller will clear them
+
+  if (!grid->hashfilled) grid->rehash();
 
   qsort(dellist,ndelete,sizeof(int),compare_indices);
 

@@ -526,7 +526,7 @@ void FixAblate::create_surfs(int outflag)
   // flag cells and corners as OUTSIDE or INSIDE
 
   grid->set_inout();
-  grid->type_check(0);
+  grid->type_check(outflag);
 
   // reassign particles in a split cell to sub cell owner
   // particles are unsorted afterwards, within new sub cells

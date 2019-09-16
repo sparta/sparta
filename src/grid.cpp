@@ -1647,7 +1647,7 @@ void Grid::check_uniform()
    flag = 1 to output flow stats (default)
 ------------------------------------------------------------------------- */
 
-void Grid::type_check(int flag)
+void Grid::type_check(int outflag)
 {
   int i;
 
@@ -1743,7 +1743,7 @@ void Grid::type_check(int flag)
     error->all(FLERR,str);
   }
 
-  if (flag) flow_stats();
+  if (outflag) flow_stats();
 }
 
 /* ----------------------------------------------------------------------

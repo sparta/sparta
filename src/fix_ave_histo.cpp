@@ -535,14 +535,6 @@ void FixAveHisto::init()
       value2index[i] = ivariable;
     }
   }
-
-  // need to reset nvalid if nvalid < ntimestep b/c minimize was performed
-
-  if (nvalid < update->ntimestep) {
-    irepeat = 0;
-    nvalid = nextvalid();
-    modify->addstep_compute_all(nvalid);
-  }
 }
 
 /* ----------------------------------------------------------------------
