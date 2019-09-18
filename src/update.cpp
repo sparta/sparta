@@ -88,6 +88,9 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   slist_compute = blist_compute = NULL;
   slist_active = blist_active = NULL;
 
+  nulist_surfcollide  = 0;
+  ulist_surfcollide = NULL;
+
   ranmaster = new RanMars(sparta);
 
   reorder_period = 0;
@@ -109,6 +112,7 @@ Update::~Update()
   delete [] blist_compute;
   delete [] slist_active;
   delete [] blist_active;
+  delete [] ulist_surfcollide;
   delete ranmaster;
 }
 
@@ -202,6 +206,9 @@ void Update::setup()
   collide_react = collide_react_setup();
   bounce_tally = bounce_setup();
 
+  dynamic = 0;
+  dynamic_setup();
+
   modify->setup();
   output->setup(1);
 }
@@ -212,7 +219,6 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
-  //int dynamic = 0;
 
   // cellweightflag = 1 if grid-based particle weighting is ON
 
@@ -230,14 +236,16 @@ void Update::run(int nsteps)
 
     timer->stamp();
 
+    // dynamic parameter updates
+
+    if (dynamic) dynamic_update();
+
     // start of step fixes
 
     if (n_start_of_step) {
       modify->start_of_step();
       timer->stamp(TIME_MODIFY);
     }
-
-    //if (dynamic) domain->dynamic();
 
     // move particles
 
@@ -1296,8 +1304,8 @@ int Update::bounce_setup()
   delete [] blist_compute;
   delete [] slist_active;
   delete [] blist_active;
-
   slist_compute = blist_compute = NULL;
+
   nslist_compute = nblist_compute = 0;
   for (int i = 0; i < modify->ncompute; i++) {
     if (modify->compute[i]->surf_tally_flag) nslist_compute++;
@@ -1348,6 +1356,43 @@ void Update::bounce_set(bigint ntimestep)
         blist_active[nboundary_tally++] = blist_compute[i];
         blist_compute[i]->clear();
       }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   make list of classes that reset dynamic parameters
+   currently only surf collision models
+------------------------------------------------------------------------- */
+
+void Update::dynamic_setup()
+{
+  delete [] ulist_surfcollide;
+  ulist_surfcollide = NULL;
+
+  nulist_surfcollide = 0;
+  for (int i = 0; i < surf->nsc; i++)
+    if (surf->sc[i]->dynamicflag) nulist_surfcollide++;
+
+  if (nulist_surfcollide) 
+    ulist_surfcollide = new SurfCollide*[nulist_surfcollide];
+
+  nulist_surfcollide = 0;
+  for (int i = 0; i < surf->nsc; i++)
+    if (surf->sc[i]->dynamicflag) 
+      ulist_surfcollide[nulist_surfcollide++] = surf->sc[i];
+
+  if (nulist_surfcollide) dynamic = 1;
+}
+
+/* ----------------------------------------------------------------------
+   invoke class methods that reset dynamic parameters
+------------------------------------------------------------------------- */
+
+void Update::dynamic_update()
+{
+  if (nulist_surfcollide) {
+    for (int i = 0; i < nulist_surfcollide; i++)
+      ulist_surfcollide[i]->dynamic();
   }
 }
 
