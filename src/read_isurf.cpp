@@ -145,13 +145,16 @@ void ReadISurf::command(int narg, char **arg)
         cvalues[i][j] = 0.0;
   }
 
+  // serial or parallel read of grid corner point file
+  // NOTE: need to have a parallel read_types as well
+  // serial read uses a hash 
+
   if (readflag == SERIAL) {
     create_hash(count);
     read_corners_serial(gridfile);
   } else if (readflag == PARALLEL) 
     read_corners_parallel(gridfile);
 
-  // NOTE: need to have parallel read_types as well
   if (typefile) {
     memory->create(tvalues,grid->nlocal,"readisurf:tvalues");
     read_types_serial(typefile);
@@ -160,8 +163,9 @@ void ReadISurf::command(int narg, char **arg)
   if (readflag == SERIAL) delete hash;
 
   // pass corner point cvalues and type values to FixAblate
-  // also pass it the geometry of the 3d grid of cells and threshold
+  // also pass it the geometry of the 3d grid of cells and the threshold value
   // it will invoke Marchining Cubes/Squares and create triangles
+  // if fix ablate is never re-invoked, can just delete it
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();

@@ -67,7 +67,7 @@ void WriteISurf::command(int narg, char **arg)
   if ((ptr = strchr(arg[4],'*'))) {
     *ptr = '\0';
     sprintf(file,"%s" BIGINT_FORMAT "%s",arg[4],update->ntimestep,ptr+1);
-  } else strcpy(file,arg[0]);
+  } else strcpy(file,arg[4]);
 
   // ablation fix ID
 

@@ -759,7 +759,7 @@ void MarchingCubes::cleanup()
     if (nfacetri[icell][iface] == 0 && bufrecv[i].inwardnorm) continue;
 
     // add 2 tris to icell and this processor's Surf::tris list
-    // sets tri IDs to new owning cell
+    // set tri IDs to new owning cell, must be done after memcpy()
     // NOTE: what about tri types?
 
     if (nfacetri[icell][iface] == 0) {
@@ -767,10 +767,12 @@ void MarchingCubes::cleanup()
       surf->add_tri(cells[icell].id,1,
                     bufrecv[i].tri1.p1,bufrecv[i].tri1.p2,bufrecv[i].tri1.p3);  
       memcpy(&surf->tris[nslocal],&bufrecv[i].tri1,sizeof(Surf::Tri));
+      surf->tris[nslocal].id = cells[icell].id;
       surf->add_tri(cells[icell].id,1,
                     bufrecv[i].tri2.p1,bufrecv[i].tri2.p2,bufrecv[i].tri2.p3);
       memcpy(&surf->tris[nslocal+1],&bufrecv[i].tri2,sizeof(Surf::Tri));
-      
+      surf->tris[nslocal+1].id = cells[icell].id;
+
       nsurf = cells[icell].nsurf;
       oldcsurfs = cells[icell].csurfs;
       ptr = csurfs->get(nsurf+2);
