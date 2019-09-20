@@ -530,6 +530,7 @@ void ReadISurf::read_corners_parallel(char *gridfile)
   // each proc seeks into file and reads only its Nvalues
   // nvalues = # of corner point values this proc owns
   // offset = offset into N = (Nx+1)*(Ny+1)*(Nz+1) total values
+  // NOTE: need to avoid overflows here
 
   bigint n,offset,offsetextra;
 
@@ -552,9 +553,13 @@ void ReadISurf::read_corners_parallel(char *gridfile)
   else if (precision == DOUBLE) memory->create(dbuf,nvalues,"readisurf:dbuf");
 
   fp = fopen(gridfile,"rb");
-  fseek(fp,offset+dim*sizeof(int),SEEK_SET);
-  if (precision == INT) fread(ibuf,sizeof(uint8_t),nvalues,fp);
-  else if (precision == DOUBLE) fread(dbuf,sizeof(double),nvalues,fp);
+  if (precision == INT) {
+    fseek(fp,offset*sizeof(uint8_t)+dim*sizeof(int),SEEK_SET);
+    fread(ibuf,sizeof(uint8_t),nvalues,fp);
+  } else if (precision == DOUBLE) {
+    fseek(fp,offset*sizeof(double)+dim*sizeof(int),SEEK_SET);
+    fread(dbuf,sizeof(double),nvalues,fp);
+  }
   fclose(fp);
 
   bigint ntotal;
