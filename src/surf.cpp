@@ -49,6 +49,9 @@ enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 
 Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 {
+  me = comm->me;
+  nprocs = comm->nprocs;
+
   exist = 0;
   implicit = 0;
   distributed = 0;
@@ -74,7 +77,7 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
   tris = NULL;
   pushflag = 1;
 
-  nown = 0;
+  nown = maxown = 0;
   mylines = NULL;
   mytris = NULL;
 
@@ -276,19 +279,20 @@ void Surf::remove_ghosts()
 }
 
 /* ----------------------------------------------------------------------
-   add a line to owned list
-   called by ReadISurf
+   add a line to lines list
+   called by ReadSurf (for non-distributed surfs) and ReadISurf
 ------------------------------------------------------------------------- */
 
-void Surf::add_line(int itype, double *p1, double *p2)
+void Surf::add_line(surfint id, int itype, double *p1, double *p2)
 {
   if (nlocal == nmax) {
     if ((bigint) nmax + DELTA > MAXSMALLINT)
       error->one(FLERR,"Surf add_line overflowed");
     nmax += DELTA;
-    grow();
+    grow(nmax-DELTA);
   }
   
+  lines[nlocal].id = id;
   lines[nlocal].type = itype;
   lines[nlocal].mask = 1;
   lines[nlocal].isc = lines[nlocal].isr = -1;
@@ -302,7 +306,7 @@ void Surf::add_line(int itype, double *p1, double *p2)
 }
 
 /* ----------------------------------------------------------------------
-   add a line to owned or ghost list, depending on ownflag
+   add a line to owned or ghost lines list, depending on ownflag
    called by Grid::unpack_one
 ------------------------------------------------------------------------- */
 
@@ -315,7 +319,7 @@ void Surf::add_line_copy(int ownflag, Line *line)
       if ((bigint) nmax + DELTA > MAXSMALLINT)
         error->one(FLERR,"Surf add_line_copy overflowed");
       nmax += DELTA;
-      grow();
+      grow(nmax-DELTA);
     }
     index = nlocal;
     nlocal++;
@@ -325,7 +329,7 @@ void Surf::add_line_copy(int ownflag, Line *line)
       if ((bigint) nmax + DELTA > MAXSMALLINT)
         error->one(FLERR,"Surf add_line_copy overflowed");
       nmax += DELTA;
-      grow();
+      grow(nmax-DELTA);
     }
     index = nlocal+nghost;
     nghost++;
@@ -337,43 +341,69 @@ void Surf::add_line_copy(int ownflag, Line *line)
 /* ----------------------------------------------------------------------
    add a line to mylines list
    called by ReadSurf for distributed surfs
+   NOT adding one line at a time, rather inserting at location M based on ID
+   assume mylines has been pre-allocated to correct length
+   caller sets surf->nown
 ------------------------------------------------------------------------- */
 
-void Surf::add_line_own(int itype, double *p1, double *p2)
+void Surf::add_line_own(surfint id, int itype, double *p1, double *p2)
 {
-  if (nown == maxown) {
-    if ((bigint) maxown + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_line_own overflowed");
-    maxown += DELTA;
-    grow_own();
-  }
-  
-  mylines[nown].type = itype;
-  mylines[nown].mask = 1;
-  mylines[nown].isc = mylines[nown].isr = -1;
-  mylines[nown].p1[0] = p1[0];
-  mylines[nown].p1[1] = p1[1];
-  mylines[nown].p1[2] = 0.0;
-  mylines[nown].p2[0] = p2[0];
-  mylines[nown].p2[1] = p2[1];
-  mylines[nown].p2[2] = 0.0;
-  nown++;
+  int m = (id-1) / nprocs;
+
+  mylines[m].id = id;
+  mylines[m].type = itype;
+  mylines[m].mask = 1;
+  mylines[m].isc = mylines[m].isr = -1;
+  mylines[m].p1[0] = p1[0];
+  mylines[m].p1[1] = p1[1];
+  mylines[m].p1[2] = 0.0;
+  mylines[m].p2[0] = p2[0];
+  mylines[m].p2[1] = p2[1];
+  mylines[m].p2[2] = 0.0;
 }
 
 /* ----------------------------------------------------------------------
-   add a triangle to owned list
-   called by ReadISurf
+   add a line to tmplines list
+   called by ReadSurf for multiple file input
 ------------------------------------------------------------------------- */
 
-void Surf::add_tri(int itype, double *p1, double *p2, double *p3)
+void Surf::add_line_temporary(surfint id, int itype, double *p1, double *p2)
+{
+  if (ntmp == nmaxtmp) {
+    if ((bigint) nmaxtmp + DELTA > MAXSMALLINT)
+      error->one(FLERR,"Surf add_line_tmeporary overflowed");
+    nmaxtmp += DELTA;
+    grow_temporary(nmaxtmp-DELTA);
+  }
+
+  tmplines[ntmp].id = id;
+  tmplines[ntmp].type = itype;
+  tmplines[ntmp].mask = 1;
+  tmplines[ntmp].isc = tmplines[ntmp].isr = -1;
+  tmplines[ntmp].p1[0] = p1[0];
+  tmplines[ntmp].p1[1] = p1[1];
+  tmplines[ntmp].p1[2] = 0.0;
+  tmplines[ntmp].p2[0] = p2[0];
+  tmplines[ntmp].p2[1] = p2[1];
+  tmplines[ntmp].p2[2] = 0.0;
+  ntmp++;
+}
+
+/* ----------------------------------------------------------------------
+   add a triangle to tris list
+   called by ReadSurf (for non-distributed surfs) and ReadISurf
+------------------------------------------------------------------------- */
+
+void Surf::add_tri(surfint id, int itype, double *p1, double *p2, double *p3)
 {
   if (nlocal == nmax) {
     if ((bigint) nmax + DELTA > MAXSMALLINT)
       error->one(FLERR,"Surf add_tri overflowed");
     nmax += DELTA;
-    grow();
+    grow(nmax-DELTA);
   }
 
+  tris[nlocal].id = id;
   tris[nlocal].type = itype;
   tris[nlocal].mask = 1;
   tris[nlocal].isc = tris[nlocal].isr = -1;
@@ -390,6 +420,37 @@ void Surf::add_tri(int itype, double *p1, double *p2, double *p3)
 }
 
 /* ----------------------------------------------------------------------
+   add a triangle to tmptris list
+   called by ReadSurf for mutliple file input
+------------------------------------------------------------------------- */
+
+void Surf::add_tri_temporary(surfint id, int itype, 
+                             double *p1, double *p2, double *p3)
+{
+  if (ntmp == nmaxtmp) {
+    if ((bigint) nmaxtmp + DELTA > MAXSMALLINT)
+      error->one(FLERR,"Surf add_tri_temporary overflowed");
+    nmaxtmp += DELTA;
+    grow_temporary(nmaxtmp-DELTA);
+  }
+
+  tmptris[ntmp].id = id;
+  tmptris[ntmp].type = itype;
+  tmptris[ntmp].mask = 1;
+  tmptris[ntmp].isc = tmptris[ntmp].isr = -1;
+  tmptris[ntmp].p1[0] = p1[0];
+  tmptris[ntmp].p1[1] = p1[1];
+  tmptris[ntmp].p1[2] = p1[2];
+  tmptris[ntmp].p2[0] = p2[0];
+  tmptris[ntmp].p2[1] = p2[1];
+  tmptris[ntmp].p2[2] = p2[2];
+  tmptris[ntmp].p3[0] = p3[0];
+  tmptris[ntmp].p3[1] = p3[1];
+  tmptris[ntmp].p3[2] = p3[2];
+  ntmp++;
+}
+
+/* ----------------------------------------------------------------------
    add a triangle to owned or ghost list, depending on ownflag
    called by Grid::unpack_one
 ------------------------------------------------------------------------- */
@@ -403,7 +464,7 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
       if ((bigint) nmax + DELTA > MAXSMALLINT)
         error->one(FLERR,"Surf add_tri_copy overflowed");
       nmax += DELTA;
-      grow();
+      grow(nmax-DELTA);
     }
     index = nlocal;
     nlocal++;
@@ -413,7 +474,7 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
       if ((bigint) nmax + DELTA > MAXSMALLINT)
         error->one(FLERR,"Surf add_tri_copy overflowed");
       nmax += DELTA;
-      grow();
+      grow(nmax-DELTA);
     }
     index = nlocal+nghost;
     nghost++;
@@ -423,19 +484,52 @@ void Surf::add_tri_copy(int ownflag, Tri *tri)
 }
 
 /* ----------------------------------------------------------------------
-   add a tri to mytris list
+   add a triangls's info to mytris list
    called by ReadSurf for distributed surfs
+   NOT adding one tri at a time, rather inserting at location M based on ID
+   assume mytris has been pre-allocated to correct length
+   caller sets surf->nown
 ------------------------------------------------------------------------- */
 
-void Surf::add_tri_own(int itype, double *p1, double *p2, double *p3)
+void Surf::add_tri_own(surfint id, int itype, double *p1, double *p2, double *p3)
+{
+  int m = (id-1) / nprocs;
+
+  mytris[m].id = id;
+  mytris[m].type = itype;
+  mytris[m].mask = 1;
+  mytris[m].isc = mytris[m].isr = -1;
+  mytris[m].p1[0] = p1[0];
+  mytris[m].p1[1] = p1[1];
+  mytris[m].p1[2] = p1[2];
+  mytris[m].p2[0] = p2[0];
+  mytris[m].p2[1] = p2[1];
+  mytris[m].p2[2] = p2[2];
+  mytris[m].p3[0] = p3[0];
+  mytris[m].p3[1] = p3[1];
+  mytris[m].p3[2] = p3[2];
+}
+
+/* ----------------------------------------------------------------------
+   add a triangls's info to mytris list
+   called by ReadSurf for distributed surfs when clip3d adds one
+   ARE adding one tri at a time, IDs will be renumbered after
+     and tris re-distributed to procs
+   check if mytris needs to be reallocated
+   increment nown
+------------------------------------------------------------------------- */
+
+void Surf::add_tri_own_clip(surfint id, int itype,
+                            double *p1, double *p2, double *p3)
 {
   if (nown == maxown) {
     if ((bigint) maxown + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_tri_own overflowed");
+      error->one(FLERR,"Surf add_tri overflowed");
     maxown += DELTA;
-    grow_own();
+    grow_own(maxown-DELTA);
   }
-  
+
+  mytris[nown].id = id;
   mytris[nown].type = itype;
   mytris[nown].mask = 1;
   mytris[nown].isc = mytris[nown].isr = -1;
@@ -448,6 +542,7 @@ void Surf::add_tri_own(int itype, double *p1, double *p2, double *p3)
   mytris[nown].p3[0] = p3[0];
   mytris[nown].p3[1] = p3[1];
   mytris[nown].p3[2] = p3[2];
+
   nown++;
 }
 
@@ -486,8 +581,8 @@ void Surf::setup_owned()
 {
   if (distributed) return;
 
-  nown = nsurf/comm->nprocs;
-  if (comm->me < nsurf % comm->nprocs) nown++;
+  nown = nsurf/nprocs;
+  if (comm->me < nsurf % nprocs) nown++;
 }
 
 /* ----------------------------------------------------------------------
@@ -855,8 +950,6 @@ void Surf::check_watertight_2d_distributed()
   // each line end point is sent with flag indicating first/second
   // hash of point coord (xy) determines which proc to send to
 
-  int nprocs = comm->nprocs;
-  
   int nrvous = 0;
   for (int i = 0; i < n; i++) {
     proclist[nrvous] = hashlittle(lines_rvous[i].p1,2*sizeof(double),0) % nprocs;
@@ -1112,7 +1205,6 @@ void Surf::check_watertight_3d_distributed()
   double edge[6];
   double *p1,*p2,*p3;
 
-  int nprocs = comm->nprocs;
   int nbytes = 3*sizeof(double);
 
   int nrvous = 0;
@@ -2266,19 +2358,96 @@ int Surf::find_group(const char *id)
 }
 
 /* ----------------------------------------------------------------------
+   compress owned explicit distributed surfs to account for migrating grid cells
+   discard nlocal surfs that are no longer referenced by owned grid cells
+   use hash to store referenced surfs
+   only called for explicit distributed surfs
+------------------------------------------------------------------------- */
+
+void Surf::compress_rebalance_explicit()
+{
+  int i,m;
+  int nsurf;
+  surfint *csurfs;
+
+  int dim = domain->dimension;
+
+  // keep = 1 if a local surf is referenced by a compressed local grid cell
+
+  int *keep;
+  memory->create(keep,nlocal,"surf:keep");
+  for (i = 0; i < nlocal; i++) keep[i] = 0;
+
+  // convert grid cell csurfs to surf IDs so can reset after surf compression
+  // skip cells with no surfs or sub-cells
+
+  Grid::ChildCell *cells = grid->cells;
+  int nglocal = grid->nlocal;
+
+  for (i = 0; i < nglocal; i++) {
+    if (!cells[i].nsurf) continue;
+    if (cells[i].nsplit <= 0) continue;
+    csurfs = cells[i].csurfs;
+    nsurf = cells[i].nsurf;
+    if (dim == 2) {
+      for (m = 0; m < nsurf; m++) {
+        keep[csurfs[m]] = 1;
+        csurfs[m] = lines[csurfs[m]].id;
+      }
+    } else {
+      for (m = 0; m < nsurf; m++) {
+        keep[csurfs[m]] = 1;
+        csurfs[m] = tris[csurfs[m]].id;
+      }
+    }
+  }
+
+  // compress nlocal surfs based on keep flags
+
+  m = 0;
+  while (i < nlocal) {
+    if (!keep[i]) {
+      if (dim == 2) memcpy(&lines[i],&lines[nlocal-1],sizeof(Line));
+      else memcpy(&tris[i],&tris[nlocal-1],sizeof(Tri));
+      keep[i] = keep[nlocal-1];
+      nlocal--;
+    } else i++;
+  }
+
+  memory->destroy(keep);
+
+  // reset grid cell csurfs IDs back to local surf indices
+  // hash compressed surf list, then clear hash
+  // skip cells with no surfs or sub-cells
+
+  rehash();
+
+  for (i = 0; i < nglocal; i++) {
+    if (!cells[i].nsurf) continue;
+    if (cells[i].nsplit <= 0) continue;
+    csurfs = cells[i].csurfs;
+    nsurf = cells[i].nsurf;
+    for (m = 0; m < nsurf; m++) csurfs[m] = (*hash)[csurfs[m]];
+  }
+
+  hash->clear();
+  hashfilled = 0;
+}
+
+/* ----------------------------------------------------------------------
    compress owned implicit surfs to account for migrating grid cells
    migrating grid cells are ones with proc != me
-   store info on reordered nlocal surfs in shash
+   store info on reordered nlocal surfs in hash
+   hash will be cleared after grid compression by call to reset_csurfs_implicit()
    only called for implicit surfs
 ------------------------------------------------------------------------- */
 
-void Surf::compress_rebalance()
+void Surf::compress_rebalance_implicit()
 {
   int icell;
   cellint cellID;
 
   if (hashfilled) hash->clear();
-  hashfilled = 1;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::MyHash *ghash = grid->hash;
@@ -2305,6 +2474,8 @@ void Surf::compress_rebalance()
       n++;
     }
   }
+
+  hashfilled = 1;
 
   nlocal = n;
 }
@@ -2346,13 +2517,13 @@ void Surf::reset_csurfs_implicit()
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector(int nrow, int *tally2surf, 
+void Surf::collate_vector(int nrow, surfint *tally2surf, 
                           double *in, int instride, double *out)
 {
   // collate version depends on tally_comm setting
 
   if (tally_comm == TALLYAUTO) {
-    if (comm->nprocs > nsurf) 
+    if (nprocs > nsurf) 
       collate_vector_reduce(nrow,tally2surf,in,instride,out);
     else collate_vector_rendezvous(nrow,tally2surf,in,instride,out);
   } else if (tally_comm == TALLYREDUCE) {
@@ -2366,7 +2537,7 @@ void Surf::collate_vector(int nrow, int *tally2surf,
    allreduce version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector_reduce(int nrow, int *tally2surf, 
+void Surf::collate_vector_reduce(int nrow, surfint *tally2surf, 
                                  double *in, int instride, double *out)
 {
   int i,j,m;
@@ -2392,8 +2563,7 @@ void Surf::collate_vector_reduce(int nrow, int *tally2surf,
 
   j = 0;
   for (i = 0; i < nrow; i++) {
-    if (dim == 2) m = (int) lines[tally2surf[i]].id - 1;
-    else m = (int) tris[tally2surf[i]].id - 1;
+    m = (int) tally2surf[i] - 1;
     one[m] = in[j];
     j += instride;
   }
@@ -2403,9 +2573,6 @@ void Surf::collate_vector_reduce(int nrow, int *tally2surf,
   MPI_Allreduce(one,all,nglobal,MPI_DOUBLE,MPI_SUM,world);
 
   // out = only surfs I own
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
 
   m = 0;
   for (i = me; i < nglobal; i += nprocs)
@@ -2421,7 +2588,7 @@ void Surf::collate_vector_reduce(int nrow, int *tally2surf,
    rendezvous version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_vector_rendezvous(int nrow, int *tally2surf, 
+void Surf::collate_vector_rendezvous(int nrow, surfint *tally2surf, 
                                      double *in, int instride, double *out)
 {
   // allocate memory for rvous input
@@ -2440,14 +2607,12 @@ void Surf::collate_vector_rendezvous(int nrow, int *tally2surf,
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int dim = domain->dimension;
-  int nprocs = comm->nprocs;
   
   surfint id;
   
   int m = 0;
   for (int i = 0; i < nrow; i++) {
-    if (dim == 2) id = lines[tally2surf[i]].id;
-    else id = tris[tally2surf[i]].id;
+    id = tally2surf[i];
     proclist[i] = (id-1) % nprocs;
     in_rvous[i].id = id;
     in_rvous[i].value = in[m];
@@ -2485,7 +2650,7 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
   double *out = sptr->out_rvous;
   int nprocs = sptr->comm->nprocs;
   int me = sptr->comm->me;
-  
+
   // zero my owned surf values
 
   for (int i = 0; i < nown; i++) out[i] = 0.0;
@@ -2517,13 +2682,13 @@ int Surf::rendezvous_vector(int n, char *inbuf, int &flag, int *&proclist,
    return out = summed tallies for explicit surfs I own
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array(int nrow, int ncol, surfint *tally2surf, 
                          double **in, double **out)
 {
   // collate version depends on tally_comm setting
 
   if (tally_comm == TALLYAUTO) {
-    if (comm->nprocs > nsurf) 
+    if (nprocs > nsurf) 
       collate_array_reduce(nrow,ncol,tally2surf,in,out);
     else collate_array_rendezvous(nrow,ncol,tally2surf,in,out);
   } else if (tally_comm == TALLYREDUCE) {
@@ -2537,7 +2702,7 @@ void Surf::collate_array(int nrow, int ncol, int *tally2surf,
    allreduce version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array_reduce(int nrow, int ncol, surfint *tally2surf, 
                                 double **in, double **out)
 {
   int i,j,m;
@@ -2565,8 +2730,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf,
   int dim = domain->dimension;
 
   for (i = 0; i < nrow; i++) {
-    if (dim == 2) m = (int) lines[tally2surf[i]].id - 1;
-    else m = (int) tris[tally2surf[i]].id - 1;
+    m = (int) tally2surf[i] - 1;
     for (j = 0; j < ncol; j++) 
       one[m][j] = in[i][j];
   }
@@ -2576,9 +2740,6 @@ void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf,
   MPI_Allreduce(&one[0][0],&all[0][0],ntotal,MPI_DOUBLE,MPI_SUM,world);
 
   // out = only surfs I own
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
 
   m = 0;
   for (i = me; i < nglobal; i += nprocs) {
@@ -2596,7 +2757,7 @@ void Surf::collate_array_reduce(int nrow, int ncol, int *tally2surf,
    rendezvous version of collate
 ------------------------------------------------------------------------- */
 
-void Surf::collate_array_rendezvous(int nrow, int ncol, int *tally2surf, 
+void Surf::collate_array_rendezvous(int nrow, int ncol, surfint *tally2surf, 
                                     double **in, double **out)
 {
   int i,j,m;
@@ -2616,13 +2777,11 @@ void Surf::collate_array_rendezvous(int nrow, int ncol, int *tally2surf,
   Surf::Line *lines = surf->lines;
   Surf::Tri *tris = surf->tris;
   int dim = domain->dimension;
-  int nprocs = comm->nprocs;
   surfint id;
   
   m = 0;
   for (int i = 0; i < nrow; i++) {
-    if (dim == 2) id = lines[tally2surf[i]].id;
-    else id = tris[tally2surf[i]].id;
+    id = tally2surf[i];
     proclist[i] = (id-1) % nprocs;
     in_rvous[m++] = ubuf(id).d;
     for (j = 0; j < ncol; j++)
@@ -2686,6 +2845,289 @@ int Surf::rendezvous_array(int n, char *inbuf,
     k = (id-1-me) / nprocs * ncol;
     for (j = 0; j < ncol; j++)
       out[k++] += in_rvous[m++];
+  }
+
+  // flag = 0: no second comm needed in rendezvous
+
+  flag = 0;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   redistribute newly created distributed lines to owing procs
+   nold = original nown value before new surfs were read in
+   nown = current nown value that includes my new surfs to redistribute
+   nnew = nown value after new surfs from all procs are assigned to me
+   called by ReadSurf:clip() after proc creates new surfs via clipping
+   only called for distributed surfs
+------------------------------------------------------------------------- */
+
+void Surf::redistribute_lines_clip(int nold, int nnew)
+{
+  // allocate memory for rvous input
+
+  int nsend = nown - nold;
+
+  int *proclist;
+  memory->create(proclist,nsend,"surf:proclist");
+  Line *in_rvous = (Line *) memory->smalloc(nsend*sizeof(Line),"surf:in_rvous");
+
+  // create rvous inputs
+  // proclist = owner of each surf = (id-1) % nprocs
+
+  surfint id;
+  
+  int i = nold;
+  for (int m = 0; m < nsend; m++) {
+    id = mylines[i].id;
+    proclist[m] = (id-1) % nprocs;
+    memcpy(&in_rvous[m],&mylines[i],sizeof(Line));
+    i++;
+  }
+
+  // insure mylines is allocated sufficient for new lines
+  // reset nown to new value after rendezvous
+
+  if (nnew > maxown) {
+    int old = maxown;
+    maxown = nnew;
+    grow_own(old);
+  }
+  nown = nnew;
+
+  // perform rendezvous operation
+  // each proc owns subset of new surfs
+  // receives them from other procs
+
+  char *buf;
+  int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Line),
+			      0,proclist,rendezvous_lines,
+			      0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
+  memory->sfree(in_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   redistribute newly created distributed lines to owing procs
+   nnew = nown value after new surfs from all procs are assigned to me
+   called by ReadSurf:read_multiple()
+   only called for distributed surfs
+------------------------------------------------------------------------- */
+
+void Surf::redistribute_lines_temporary(int nnew)
+{
+  // allocate memory for rvous input
+
+  int nsend = ntmp;
+
+  int *proclist;
+  memory->create(proclist,nsend,"surf:proclist");
+  Line *in_rvous = (Line *) memory->smalloc(nsend*sizeof(Line),"surf:in_rvous");
+
+  // create rvous inputs
+  // proclist = owner of each surf = (id-1) % nprocs
+
+  surfint id;
+  
+  for (int i = 0; i < nsend; i++) {
+    id = tmplines[i].id;
+    proclist[i] = (id-1) % nprocs;
+    memcpy(&in_rvous[i],&tmplines[i],sizeof(Line));
+  }
+
+  // insure mylines is allocated sufficient for new lines
+  // reset nown to new value after rendezvous
+  
+  if (nnew > maxown) {
+    int old = maxown;
+    maxown = nnew;
+    grow_own(old);
+  }
+  nown = nnew;
+
+  // perform rendezvous operation
+  // each proc owns subset of new surfs
+  // receives them from other procs
+
+  char *buf;
+  int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Line),
+			      0,proclist,rendezvous_lines,
+			      0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
+  memory->sfree(in_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   callback from rendezvous operation
+   store received surfs assigned to me in correct location in mylines
+   inbuf = list of N Inbuf datums
+   no outbuf
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_lines(int n, char *inbuf,
+                           int &flag, int *&proclist, char *&outbuf,
+                           void *ptr)
+{
+  int i,j,k,m;
+
+  Surf *sptr = (Surf *) ptr;
+  Line *lines = sptr->mylines;
+  int nprocs = sptr->comm->nprocs;
+  int me = sptr->comm->me;
+
+  // zero my owned surf values
+
+  Line *in_rvous = (Line *) inbuf;
+  surfint id;
+
+  for (int i = 0; i < n; i++) {
+    id = in_rvous[i].id;
+    m = (id-1-me) / nprocs;
+    memcpy(&lines[m],&in_rvous[i],sizeof(Line));
+  }
+
+  // flag = 0: no second comm needed in rendezvous
+
+  flag = 0;
+  return 0;
+}
+
+/* ----------------------------------------------------------------------
+   redistribute newly created distributed tris to owing procs
+   nold = original nown value before new surfs were read in
+   nown = current nown value that includes my new surfs to redistribute
+   nnew = nown value after new surfs from all procs are assigned to me
+   old = starting index that skips previously distributed surfs
+   called by ReadSurf:clip() after proc create new surfs via clipping
+   only called for distributed surfs
+------------------------------------------------------------------------- */
+
+void Surf::redistribute_tris_clip(int nold, int nnew)
+{
+  // allocate memory for rvous input
+
+  int nsend = nown - nold;
+
+  int *proclist;
+  memory->create(proclist,nsend,"surf:proclist");
+  Tri *in_rvous = (Tri *) memory->smalloc(nsend*sizeof(Tri),"surf:in_rvous");
+
+  // create rvous inputs
+  // proclist = owner of each surf = (id-1) % nprocs
+
+  surfint id;
+  
+  int i = nold;
+  for (int m = 0; m < nsend; m++) {
+    id = mytris[i].id;
+    proclist[m] = (id-1) % nprocs;
+    memcpy(&in_rvous[m],&mytris[i],sizeof(Tri));
+    i++;
+  }
+
+  // insure mytris is allocated sufficient for new tris
+  // reset nown to new value after rendezvous
+
+  if (nnew > maxown) {
+    int old = maxown;
+    maxown = nnew;
+    grow_own(old);
+  }
+  nown = nnew;
+
+  // perform rendezvous operation
+  // each proc owns subset of new surfs
+  // receives them from other procs
+
+  char *buf;
+  int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Tri),
+			      0,proclist,rendezvous_tris,
+			      0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
+  memory->sfree(in_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   redistribute newly created distributed tris to owing procs
+   nnew = nown value after new surfs from all procs are assigned to me
+   called by ReadSurf:read_multiple()
+   only called for distributed surfs
+------------------------------------------------------------------------- */
+
+void Surf::redistribute_tris_temporary(int nnew)
+{
+  // allocate memory for rvous input
+
+  int nsend = ntmp;
+
+  int *proclist;
+  memory->create(proclist,nsend,"surf:proclist");
+  Tri *in_rvous = (Tri *) memory->smalloc(nsend*sizeof(Tri),"surf:in_rvous");
+
+  // create rvous inputs
+  // proclist = owner of each surf = (id-1) % nprocs
+
+  surfint id;
+  
+  for (int i = 0; i < nsend; i++) {
+    id = tmptris[i].id;
+    proclist[i] = (id-1) % nprocs;
+    memcpy(&in_rvous[i],&tmptris[i],sizeof(Tri));
+  }
+
+  // insure mytris is allocated sufficient for new tris
+  // reset nown to new value after rendezvous
+
+  if (nnew > maxown) {
+    int old = maxown;
+    maxown = nnew;
+    grow_own(old);
+  }
+  nown = nnew;
+
+  // perform rendezvous operation
+  // each proc owns subset of new surfs
+  // receives them from other procs
+
+  char *buf;
+  int nout = comm->rendezvous(1,nsend,(char *) in_rvous,sizeof(Tri),
+			      0,proclist,rendezvous_tris,
+			      0,buf,0,(void *) this);
+
+  memory->destroy(proclist);
+  memory->sfree(in_rvous);
+}
+
+/* ----------------------------------------------------------------------
+   callback from rendezvous operation
+   store received surfs assigned to me in correct location in mytris
+   inbuf = list of N Inbuf datums
+   no outbuf
+------------------------------------------------------------------------- */
+
+int Surf::rendezvous_tris(int n, char *inbuf,
+                          int &flag, int *&proclist, char *&outbuf,
+                          void *ptr)
+{
+  int i,j,k,m;
+
+  Surf *sptr = (Surf *) ptr;
+  Tri *tris = sptr->mytris;
+  int nprocs = sptr->comm->nprocs;
+  int me = sptr->comm->me;
+
+  // zero my owned surf values
+
+  Tri *in_rvous = (Tri *) inbuf;
+  surfint id;
+
+  for (int i = 0; i < n; i++) {
+    id = in_rvous[i].id;
+    m = (id-1-me) / nprocs;
+    memcpy(&tris[m],&in_rvous[i],sizeof(Tri));
   }
 
   // flag = 0: no second comm needed in rendezvous
@@ -2786,7 +3228,7 @@ void Surf::read_restart(FILE *fp)
         lines[i].norm[0] = lines[i].norm[1] = lines[i].norm[2] = 0.0;
       }
     }
-    if (nsurf*sizeof(Line) > INT_MAX)
+    if (nsurf*sizeof(Line) > MAXSMALLINT)
       error->all(FLERR,"Surf restart memory exceeded");
     MPI_Bcast(lines,nsurf*sizeof(Line),MPI_CHAR,0,world);
   }
@@ -2810,7 +3252,7 @@ void Surf::read_restart(FILE *fp)
         tris[i].norm[0] = tris[i].norm[1] = tris[i].norm[2] = 0.0;
       }
     }
-    if (nsurf*sizeof(Tri) > INT_MAX)
+    if (nsurf*sizeof(Tri) > MAXSMALLINT)
       error->all(FLERR,"Surf restart memory exceeded");
     MPI_Bcast(tris,nsurf*sizeof(Tri),MPI_CHAR,0,world);
   }
@@ -2818,27 +3260,47 @@ void Surf::read_restart(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-void Surf::grow()
+void Surf::grow(int old)
 {
-  if (domain->dimension == 2)
+  if (domain->dimension == 2) {
     lines = (Surf::Line *) 
-      memory->srealloc(lines,nmax*sizeof(Surf::Line),"surf:lines");
-  else 
+      memory->srealloc(lines,nmax*sizeof(Line),"surf:lines");
+    memset(&lines[old],0,(nmax-old)*sizeof(Line));
+  } else {
     tris = (Surf::Tri *) 
-      memory->srealloc(tris,nmax*sizeof(Surf::Tri),"surf:tris");
+      memory->srealloc(tris,nmax*sizeof(Tri),"surf:tris");
+    memset(&tris[old],0,(nmax-old)*sizeof(Tri));
+  }
 }
-
 
 /* ---------------------------------------------------------------------- */
 
-void Surf::grow_own()
+void Surf::grow_own(int old)
 {
-  if (domain->dimension == 2)
+  if (domain->dimension == 2) {
     mylines = (Surf::Line *) 
-      memory->srealloc(mylines,maxown*sizeof(Surf::Line),"surf:lines");
-  else 
+      memory->srealloc(mylines,maxown*sizeof(Line),"surf:mylines");
+    memset(&mylines[old],0,(maxown-old)*sizeof(Line));
+  } else {
     mytris = (Surf::Tri *) 
-      memory->srealloc(mytris,maxown*sizeof(Surf::Tri),"surf:tris");
+      memory->srealloc(mytris,maxown*sizeof(Tri),"surf:mytris");
+    memset(&mytris[old],0,(maxown-old)*sizeof(Tri));
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Surf::grow_temporary(int old)
+{
+  if (domain->dimension == 2) {
+    tmplines = (Surf::Line *) 
+      memory->srealloc(tmplines,nmaxtmp*sizeof(Line),"surf:lines");
+    memset(&tmplines[old],0,(nmaxtmp-old)*sizeof(Line));
+  } else {
+    tmptris = (Surf::Tri *) 
+      memory->srealloc(tmptris,nmaxtmp*sizeof(Tri),"surf:tris");
+    memset(&tmptris[old],0,(nmaxtmp-old)*sizeof(Tri));
+  }
 }
 
 /* ---------------------------------------------------------------------- */

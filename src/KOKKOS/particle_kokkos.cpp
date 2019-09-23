@@ -180,10 +180,13 @@ void ParticleKokkos::sort_kokkos()
 
   ngrid = grid->nlocal;
   GridKokkos* grid_kk = (GridKokkos*)grid;
+  d_cellcount = grid_kk->d_cellcount;
+  d_plist = grid_kk->d_plist;
 
-  if (ngrid > int(d_cellcount.extent(0)))
-    d_cellcount = typename AT::t_int_1d("particle:cellcount",ngrid);
-  else {
+  if (ngrid > int(d_cellcount.extent(0))) {
+    grid_kk->d_cellcount = typename AT::t_int_1d("particle:cellcount",ngrid);
+    d_cellcount = grid_kk->d_cellcount;
+  } else {
     copymode = 1;
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagParticleZero_cellcount>(0,d_cellcount.extent(0)),*this);
     DeviceType::fence();
@@ -192,8 +195,8 @@ void ParticleKokkos::sort_kokkos()
 
   if (ngrid > int(d_plist.extent(0)) || maxcellcount > int(d_plist.extent(1))) {
     grid_kk->d_plist = typename AT::t_int_2d(); // destroy reference to reduce memory use
-    d_plist = typename AT::t_int_2d();
-    d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+    grid_kk->d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+    d_plist = grid_kk->d_plist;
   }
 
   this->sync(Device,PARTICLE_MASK);
@@ -224,8 +227,8 @@ void ParticleKokkos::sort_kokkos()
       copymode = 0;
       maxcellcount += DELTACELLCOUNT;
       grid_kk->d_plist = typename AT::t_int_2d(); // destroy reference to reduce memory use
-      d_plist = typename AT::t_int_2d();
-      d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+      grid_kk->d_plist = typename AT::t_int_2d(Kokkos::view_alloc("particle:plist",Kokkos::WithoutInitializing),ngrid,maxcellcount);
+      d_plist = grid_kk->d_plist;
 
       Kokkos::deep_copy(d_fail_flag,0);
     }
@@ -295,9 +298,6 @@ void ParticleKokkos::sort_kokkos()
       d_pswap2 = t_particle_1d();
     }
   }
-
-  grid_kk->d_cellcount = d_cellcount;
-  grid_kk->d_plist = d_plist;
 
   d_particles = t_particle_1d(); // destroy reference to reduce memory use
 }

@@ -67,9 +67,9 @@ SurfKokkos::~SurfKokkos()
 void SurfKokkos::wrap_kokkos()
 {
   if (domain->dimension == 2) {
-    if (lines != NULL && nlocal+nghost > 0) {
+    if (lines != NULL && nmax > 0) {
       if (lines != k_lines.h_view.data()) {
-        memoryKK->wrap_kokkos(k_lines,lines,nlocal+nghost,"surf:lines");
+        memoryKK->wrap_kokkos(k_lines,lines,nmax,"surf:lines");
         k_lines.modify<SPAHostType>();
         k_lines.sync<DeviceType>();
         memory->sfree(lines);
@@ -86,9 +86,9 @@ void SurfKokkos::wrap_kokkos()
       }
     }
   } else {
-    if (tris != NULL && nlocal+nghost > 0) {
+    if (tris != NULL && nmax > 0) {
       if (tris != k_tris.h_view.data()) {
-        memoryKK->wrap_kokkos(k_tris,tris,nlocal+nghost,"surf:tris");
+        memoryKK->wrap_kokkos(k_tris,tris,nmax,"surf:tris");
         k_tris.modify<SPAHostType>();
         k_tris.sync<DeviceType>();
         memory->sfree(tris);
@@ -110,10 +110,10 @@ void SurfKokkos::wrap_kokkos()
 /* ----------------------------------------------------------------------
    grow surface data structures
 ------------------------------------------------------------------------- */
-void SurfKokkos::grow()
+void SurfKokkos::grow(int old)
 {
   if (sparta->kokkos->prewrap) {
-    Surf::grow();
+    Surf::grow(old);
   } else {
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
 
@@ -143,10 +143,10 @@ void SurfKokkos::grow()
 /* ----------------------------------------------------------------------
    grow surface data structures
 ------------------------------------------------------------------------- */
-void SurfKokkos::grow_own()
+void SurfKokkos::grow_own(int old)
 {
   if (sparta->kokkos->prewrap) {
-    Surf::grow_own();
+    Surf::grow_own(old);
   } else {
     SurfKokkos* surf_kk = (SurfKokkos*) surf;
 

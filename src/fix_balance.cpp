@@ -19,6 +19,7 @@
 #include "update.h"
 #include "grid.h"
 #include "particle.h"
+#include "domain.h"
 #include "comm.h"
 #include "rcb.h"
 #include "modify.h"
@@ -58,20 +59,53 @@ FixBalance::FixBalance(SPARTA *sparta, int narg, char **arg) :
   nevery = atoi(arg[2]);
   thresh = atof(arg[3]);
 
+  int iarg;
   if (strcmp(arg[4],"random") == 0) {
-    if (narg != 5) error->all(FLERR,"Illegal fix balance command");
     bstyle = RANDOM;
+    iarg = 5;
   } else if (strcmp(arg[4],"proc") == 0) {
-    if (narg != 5) error->all(FLERR,"Illegal fix balance command");
     bstyle = PROC;
+    iarg = 5;
   } else if (strcmp(arg[4],"rcb") == 0) {
-    if (narg != 6) error->all(FLERR,"Illegal fix balance command");
+    if (narg < 6) error->all(FLERR,"Illegal fix balance command");
     bstyle = BISECTION;
     if (strcmp(arg[5],"cell") == 0) rcbwt = CELL;
     else if (strcmp(arg[5],"part") == 0) rcbwt = PARTICLE;
     else if (strcmp(arg[5],"time") == 0) rcbwt = TIME;
     else error->all(FLERR,"Illegal fix balance command");
+    iarg = 6;
   } else error->all(FLERR,"Illegal fix balance command");
+
+  // optional args
+
+  strcpy(eligible,"xyz");
+  rcbflip = 0;
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"axes") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix balance command");
+      if (strlen(arg[iarg+1]) > 3)
+        error->all(FLERR,"Illegal fix balance command");
+      strcpy(eligible,arg[iarg+1]);
+      int xdim = 0;
+      int ydim = 0;
+      int zdim = 0;
+      if (strchr(eligible,'x')) xdim = 1;
+      if (strchr(eligible,'y')) ydim = 1;
+      if (strchr(eligible,'z')) zdim = 1;
+      if (zdim && domain->dimension == 2)
+        error->all(FLERR,"Illegal balance_grid command");
+      if (xdim+ydim+zdim != strlen(eligible)) 
+        error->all(FLERR,"Illegal fix balance command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"flip") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix balance command");
+      if (strcmp(arg[iarg+1],"yes") == 0) rcbflip = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) rcbflip = 0;
+      else error->all(FLERR,"Illegal fix balance command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal fix balance command");
+  }
 
   // error check
 
@@ -206,7 +240,7 @@ void FixBalance::end_of_step()
       timer_cell_weights(wt);
     }
 
-    rcb->compute(nbalance,x,wt);
+    rcb->compute(nbalance,x,wt,eligible,rcbflip);
     rcb->invert();
 
     nbalance = 0;
@@ -230,11 +264,13 @@ void FixBalance::end_of_step()
 
   // migrate grid cells and their particles to new owners
   // invoke grid methods to complete grid setup
+  // some fixes have post migration operations to perform
 
   grid->unset_neighbors();
   grid->remove_ghosts();
 
   comm->migrate_cells(nmigrate);
+  modify->post_migrate();
 
   grid->setup_owned();
   grid->acquire_ghosts();
@@ -242,11 +278,14 @@ void FixBalance::end_of_step()
   grid->reset_neighbors();
   comm->reset_neighbors();
 
-  // reallocate per grid cell arrays in per grid computes
+  // reallocate data in per grid and per surf computes
+  // that depends on which cells and surfs a proc owns
 
   Compute **compute = modify->compute;
-  for (int i = 0; i < modify->ncompute; i++)
+  for (int i = 0; i < modify->ncompute; i++) {
     if (compute[i]->per_grid_flag) compute[i]->reallocate();
+    if (compute[i]->per_surf_flag) compute[i]->reallocate();
+  }
 
   // reallocate per grid arrays in per grid dumps
 

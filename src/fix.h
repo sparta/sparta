@@ -60,7 +60,7 @@ class Fix : protected Pointers {
 
   int START_OF_STEP,END_OF_STEP;    // mask settings
 
-  int kokkos_flag;                // 0/1 if Kokkos fix
+  int kokkos_flag;              // 0/1 if Kokkos fix
   int copymode;                 // 1 if copy of class (prevents deallocation of
                                 //  base class when child copy is destroyed)
   ExecutionSpace execution_space;
@@ -83,8 +83,12 @@ class Fix : protected Pointers {
   virtual void add_grid_one(int, int) {}
   virtual int pack_grid_one(int, char *, int) {return 0;}
   virtual int unpack_grid_one(int, char *) {return 0;}
+
   virtual void compress_grid() {}
   virtual void post_compress_grid() {}
+
+  virtual void post_migrate() {}
+  virtual void post_adapt() {}
 
   virtual double compute_scalar() {return 0.0;}
   virtual double compute_vector(int) {return 0.0;}

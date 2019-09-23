@@ -26,7 +26,7 @@ keyword = {n} or {nevery} or {perspecies} or {region} or {subsonic} or {twopass}
   {subsonic} values = Psub Tsub
     Psub = pressure setting at inflow boundary (pressure units)
     Tsub = temperature setting at inflow boundary, can be NULL (temperature units)
-  {twopass} values = none
+  {twopass} values = none :pre
 :ule
 
 [Examples:]
