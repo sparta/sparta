@@ -75,7 +75,6 @@ void surf_tally_kk(int isurf, Particle::OnePart *iorig,
   if (igroup < 0) return;
 
   // itally = tally index of isurf
-  // if 1st particle hitting isurf, add surf ID to hash
   // grow tally list if needed
 
   int itally;
@@ -84,18 +83,13 @@ void surf_tally_kk(int isurf, Particle::OnePart *iorig,
   if (dim == 2) surfID = d_lines[isurf].id;
   else surfID = d_tris[isurf].id;
 
-  typedef hash_type::size_type size_type;    // uint32_t
-
-  size_type h_index = hash_kk.find(surfID);
-  if (hash_kk.valid_at(h_index))
-    itally = hash_kk.value_at(h_index);
+  int h_index = d_surf2tally(surfID);
+  if (h_index != -1)
+    itally = h_index;
   else {
     itally = d_ntally();
 
-    auto insert_result = hash_kk.insert(surfID, itally);
-    int failed = insert_result.failed() ? 1 : 0;
-    if (failed)
-      Kokkos::abort("Failed insertion in ComputeSurfKokkos hash");
+    d_surf2tally(surfID) = itally;
 
     d_tally2surf[itally] = surfID;
     if (ATOMIC_REDUCTION != 0)
@@ -295,6 +289,7 @@ void surf_tally_kk(int isurf, Particle::OnePart *iorig,
   DAT::tdual_float_2d k_array_surf_tally;
   DAT::t_surfint_1d d_tally2surf;           // tally2surf[I] = surf ID of Ith tally
   DAT::tdual_surfint_1d k_tally2surf;
+  DAT::t_int_1d d_surf2tally;         // using Kokkos::UnorderedMap::insert uses too many registers on GPUs
 
   DAT::t_float_1d d_normflux;         // normalization factor for each surf element
 
@@ -303,9 +298,6 @@ void surf_tally_kk(int isurf, Particle::OnePart *iorig,
 
   t_line_1d d_lines;
   t_tri_1d d_tris;
-
-  typedef Kokkos::UnorderedMap<surfint,int> hash_type;
-  hash_type hash_kk;
 };
 
 }
