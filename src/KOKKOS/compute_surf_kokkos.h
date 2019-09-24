@@ -83,13 +83,13 @@ void surf_tally_kk(int isurf, Particle::OnePart *iorig,
   if (dim == 2) surfID = d_lines[isurf].id;
   else surfID = d_tris[isurf].id;
 
-  int h_index = d_surf2tally(surfID);
-  if (h_index != -1)
-    itally = h_index;
+  int index = d_surf2tally(isurf);
+  if (index != -1)
+    itally = index;
   else {
     itally = d_ntally();
 
-    d_surf2tally(surfID) = itally;
+    d_surf2tally(isurf) = itally;
 
     d_tally2surf[itally] = surfID;
     if (ATOMIC_REDUCTION != 0)
