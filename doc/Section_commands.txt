@@ -326,7 +326,7 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "log"_log.html,
 "mixture"_mixture.html,
 "move_surf"_move_surf.html,
-"next"_next.html,"
+"next"_next.html,
 "package"_package.html,
 "partition"_partition.html,
 "print"_print.html,
