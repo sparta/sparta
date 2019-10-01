@@ -28,6 +28,7 @@ using namespace SPARTA_NS;
 using namespace MathConst;
 
 #define DELTA 8192
+#define LARGE 256000
 #define BIG 1.0e20
 #define MAXGROUP 32
 
@@ -407,9 +408,16 @@ void Grid::acquire_ghosts_all()
   nempty = 0;
 
   // compute total # of ghosts so can pre-allocate cells array
+  // issue a memory warning if grid cell count >= LARGE and 
+  //   user has not specified a grid cutoff
 
   int nghost_new;
   MPI_Allreduce(&nlocal,&nghost_new,1,MPI_INT,MPI_SUM,world);
+
+  if (nghost_new >= LARGE && comm->nprocs > 1 && comm->me == 0)
+    error->warning(FLERR,"Per-processor grid cell memory will be large "
+                   "because global gridcut < 0.0");
+
   nghost_new -= nlocal;
   grow_cells(nghost_new,0);
 
