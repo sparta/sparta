@@ -414,7 +414,7 @@ void Grid::acquire_ghosts_all()
   int nghost_new;
   MPI_Allreduce(&nlocal,&nghost_new,1,MPI_INT,MPI_SUM,world);
 
-  if (nghost_new >= LARGE && comm->nprocs > 1 && && comm->me == 0)
+  if (nghost_new >= LARGE && comm->nprocs > 1 && comm->me == 0)
     error->warning(FLERR,"Per-processor grid cell memory will be large "
                    "because global gridcut < 0.0");
 
