@@ -209,7 +209,6 @@ void Surf::init()
 
   // check that every element is assigned to a surf collision model
   // skip if caller turned off the check, e.g. BalanceGrid
-  // NOTE: add distributed logic
 
   int dim = domain->dimension;
   bigint flag,allflag;

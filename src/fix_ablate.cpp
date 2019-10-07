@@ -25,6 +25,8 @@
 #include "fix.h"
 #include "output.h"
 #include "dump.h"
+#include "cut2d.h"     // remove if fix particles-inside-surfs issue
+#include "cut3d.h"
 #include "marching_squares.h"
 #include "marching_cubes.h"
 #include "random_mars.h"
@@ -32,14 +34,7 @@
 #include "memory.h"
 #include "error.h"
 
-// DEBUG
-
-#include "cut3d.h"
-
 using namespace SPARTA_NS;
-
-// DEBUG
-enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // several files
 
 enum{COMPUTE,FIX,RANDOM};
 enum{CVALUE,CDELTA};
@@ -52,25 +47,21 @@ enum{CVALUE,CDELTA};
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 
+// remove if fix particles-inside-surfs issue
+enum{PKEEP,PINSERT,PDONE,PDISCARD,PENTRY,PEXIT,PSURF};  // several files
+
 // NOTES
 // should I store one value or 8 per cell
-// how to restart and create correct array_grid?
-// option to write out corner-pt file periodically
-// flesh out memory_usage()
-
-// NOTE: way to set random decrement magnitude by user (now hardwired to 10)
-// NOTE: how to preserve svalues and set type of new surfs
-//       maybe need local per-cell type
-// NOTE: how to impose sgroup like ReadIsurf does after surfs created
-// NOTE: how to prevent adaptation of any cells in the implicit grid group(s)?
-//       just testing for surfs is not enough
-// NOTE: need to update neigh corner points even if neigh cell
-//       is not in group?
-// NOTE: do a run-time test for gridcut = 0.0 ?
-// NOTE: worry about array_grid having updated values for sub cells?
-//       line in store()
-// NOTE: after create new surfs, need to assign group, sc, sr
-// NOTE: can I output both per-grid and global values?
+// how to preserve svalues and set type of new surfs,
+//   maybe need local per-cell type
+// after create new surfs, need to assign group, sc, sr
+// how to impose sgroup like ReadIsurf does after surfs created
+// how to prevent adaptation of any cells in the implicit grid group(s)?
+//   just testing for surfs is not enough, since it may have no surfs
+// need to update neigh corner points even if neigh cell is not in group?
+// do a run-time test for gridcut = 0.0 ?
+// worry about array_grid having updated values for sub cells?  line in store()
+// can I output both per-grid and global values?
 
 /* ---------------------------------------------------------------------- */
 
@@ -205,19 +196,16 @@ FixAblate::FixAblate(SPARTA *sparta, int narg, char **arg) :
   mc = NULL;
 
   // RNG for random decrements
+  // for now, use same RNG on every proc
+  // uncomment two lines if want to change that
+  // b/c set_delta_random() is decrementing the same no matter who owns a cell
 
   random = NULL;
   if (which == RANDOM) {
     random = new RanPark(update->ranmaster->uniform());
-    double seed = update->ranmaster->uniform();
-    random->reset(seed,comm->me,100);
+    //double seed = update->ranmaster->uniform();
+    //random->reset(seed,comm->me,100);
   }
-
-  // DEBUG random, same for all procs
-  // NOTE: need to change this, which RN style to choose?
-
-  delete random;
-  random = new RanPark(update->ranmaster->uniform());
 
   // nvalid = next step on which end_of_step does something
   // add nvalid to all computes that store invocation times
@@ -336,6 +324,7 @@ void FixAblate::store_corners(int nx_caller, int ny_caller, int nz_caller,
   // push corner pt values that are fully external/internal to 0 or 255
 
   if (pushflag) push_lohi();
+  epsilon_adjust();
 
   // create marching squares/cubes classes, now that have group & threshold
 
@@ -386,6 +375,7 @@ void FixAblate::end_of_step()
   // sync shared corner point values
 
   sync();
+  epsilon_adjust();
 
   // re-create implicit surfs
 
@@ -481,7 +471,7 @@ void FixAblate::create_surfs(int outflag)
   // NOTE: have to do this in a better way - but how
   // NOTE: what if user assigns surfs to groups after they are created
   //       how can those persist?
-  //       maybe should use grid cell groups for imp surf
+  //       maybe should use grid cell groups for implicit surfs
 
   int nslocal = surf->nlocal;
 
@@ -632,7 +622,7 @@ void FixAblate::create_surfs(int outflag)
   memory->destroy(mcflags_old);
 
   // compress out the deleted particles
-  // NOTE: if end up keeping this, need logic for custom particle vectors
+  // NOTE: if end up keeping this section, need logic for custom particle vectors
   //       see Particle::compress_rebalance()
 
   int nbytes = sizeof(Particle::OnePart);
@@ -663,7 +653,7 @@ void FixAblate::set_delta_random()
   Grid::ChildInfo *cinfo = grid->cinfo;
   
   // enforce same decrement no matter who owns which cells
-  // NOTE: could change this at some point
+  // NOTE: could change this at some point, use differnet RNG for each proc
 
   if (!grid->hashfilled) grid->rehash();
   Grid::MyHash *hash = grid->hash;
@@ -696,7 +686,7 @@ void FixAblate::set_delta_random()
 /* ----------------------------------------------------------------------
    set per-cell delta vector from compute/fix source
    celldelta = nevery * scale * source-value
-   // NOTE: how does this work for split cells?  should only do parent split
+   // NOTE: how does this work for split cells? should only do parent split?
 ------------------------------------------------------------------------- */
 
 void FixAblate::set_delta()
@@ -788,7 +778,7 @@ void FixAblate::decrement()
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
-    //if (cells[icell].nsurf == 0) continue;
+    if (cells[icell].nsurf == 0) continue;
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
@@ -898,24 +888,34 @@ void FixAblate::sync()
       else cvalues[icell][i] -= total;
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   adjust corner point values by epsilon of too close to threshold
+   to avoid creating tiny or zero-size surface elements
+------------------------------------------------------------------------- */
+
+void FixAblate::epsilon_adjust()
+{
+  int i,icell;
 
   // insure no corner point is within EPSILON of threshold
   // if so, set it to threshold - EPSILON
-  // NOTE: also needs to be done by read_isurf and store_corners() ??
-  //       maybe should make read_isurf use this class's methods always
+
+  Grid::ChildInfo *cinfo = grid->cinfo;
 
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsplit <= 0) continue;
-
-    for (int i = 0; i < ncorner; i++)
+    for (i = 0; i < ncorner; i++)
       if (fabs(cvalues[icell][i]-thresh) < EPSILON)
         cvalues[icell][i] = thresh - EPSILON;
   }
 }
 
 /* ----------------------------------------------------------------------
-   push all sync all copies of corner points values for all owned grid cells
+   push corner points value to 0 or 255
+     if all surrounding neighs are below or above threshold
+     do this for all N copies of an affected corner point
    algorithm:
      comm my cdelta values that are shared by neighbor
      each corner point is shared by N cells, less on borders
