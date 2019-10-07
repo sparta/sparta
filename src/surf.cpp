@@ -2381,8 +2381,7 @@ int Surf::find_group(const char *id)
 
 void Surf::compress_explicit_rebalance()
 {
-  int i,m;
-  int nsurf;
+  int i,m,ns;
   surfint *csurfs;
 
   int dim = domain->dimension;
@@ -2403,14 +2402,14 @@ void Surf::compress_explicit_rebalance()
     if (!cells[i].nsurf) continue;
     if (cells[i].nsplit <= 0) continue;
     csurfs = cells[i].csurfs;
-    nsurf = cells[i].nsurf;
+    ns = cells[i].nsurf;
     if (dim == 2) {
-      for (m = 0; m < nsurf; m++) {
+      for (m = 0; m < ns; m++) {
         keep[csurfs[m]] = 1;
         csurfs[m] = lines[csurfs[m]].id;
       }
     } else {
-      for (m = 0; m < nsurf; m++) {
+      for (m = 0; m < ns; m++) {
         keep[csurfs[m]] = 1;
         csurfs[m] = tris[csurfs[m]].id;
       }
@@ -2441,8 +2440,8 @@ void Surf::compress_explicit_rebalance()
     if (!cells[i].nsurf) continue;
     if (cells[i].nsplit <= 0) continue;
     csurfs = cells[i].csurfs;
-    nsurf = cells[i].nsurf;
-    for (m = 0; m < nsurf; m++) csurfs[m] = (*hash)[csurfs[m]];
+    ns = cells[i].nsurf;
+    for (m = 0; m < ns; m++) csurfs[m] = (*hash)[csurfs[m]];
   }
 
   hash->clear();
@@ -2459,7 +2458,7 @@ void Surf::compress_explicit_rebalance()
 
 void Surf::compress_implicit_rebalance()
 {
-  int j,icell,nsurf;
+  int j,ns,icell;
   cellint cellID;
   surfint *csurfs;
 
@@ -2479,8 +2478,8 @@ void Surf::compress_implicit_rebalance()
         memcpy(&lines[n],&lines[i],sizeof(Line));
         // reset matching csurfs index in grid cell from i to n
         csurfs = cells[icell].csurfs;
-        nsurf = cells[icell].nsurf;
-        for (j = 0; j < nsurf; j++)
+        ns = cells[icell].nsurf;
+        for (j = 0; j < ns; j++)
           if (csurfs[j] == i) {
             csurfs[j] = n;
             break;
@@ -2498,8 +2497,8 @@ void Surf::compress_implicit_rebalance()
         memcpy(&tris[n],&tris[i],sizeof(Tri));
         // reset matching csurfs index in grid cell from i to n
         csurfs = cells[icell].csurfs;
-        nsurf = cells[icell].nsurf;
-        for (j = 0; j < nsurf; j++)
+        ns = cells[icell].nsurf;
+        for (j = 0; j < ns; j++)
           if (csurfs[j] == i) {
             csurfs[j] = n;
             break;
