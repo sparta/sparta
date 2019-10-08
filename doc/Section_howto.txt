@@ -1184,10 +1184,10 @@ These command do not yet support distributed surfaces:
 
 6.14 Implicit surface ablation :link(howto_14),h4
 
-The implicit surface described in the previous section can
-be used to perform ablation simulations, where the set of implicit
-surface elements evolve over time to model a receding surface.
-These are the relevant commands:
+The implicit surfaces described in the previous section can be used to
+perform ablation simulations, where the set of implicit surface
+elements evolve over time to model a receding surface.  These are the
+relevant commands:
 
 "global surfs implicit"_global.html
 "read isurf"_read_isurf.html
@@ -1249,5 +1249,5 @@ and "write_isurf"_write_isurf.html commands have options to work with
 both kinds of files.  The "write_surf"_write_surf.html command can
 also output implicit surface elements for visualization by tools such
 as ParaView which can read SPARTA surface element files after suitable
-post-processing.  See the "Section tools"_Section_tools.html doc page
-for more details.
+post-processing.  See the "Section tools
+paraview"_Section_tools.html#paraview doc page for more details.
