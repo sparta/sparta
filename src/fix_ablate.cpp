@@ -778,7 +778,6 @@ void FixAblate::decrement()
 
   for (int icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
-    if (cells[icell].nsurf == 0) continue;
     if (cells[icell].nsplit <= 0) continue;
 
     for (i = 0; i < ncorner; i++) cdelta[icell][i] = 0.0;
@@ -902,10 +901,13 @@ void FixAblate::epsilon_adjust()
   // insure no corner point is within EPSILON of threshold
   // if so, set it to threshold - EPSILON
 
+  Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;
 
   for (icell = 0; icell < nglocal; icell++) {
     if (!(cinfo[icell].mask & groupbit)) continue;
+    if (cells[icell].nsplit <= 0) continue;
+
     for (i = 0; i < ncorner; i++)
       if (fabs(cvalues[icell][i]-thresh) < EPSILON)
         cvalues[icell][i] = thresh - EPSILON;
