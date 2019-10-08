@@ -13,7 +13,7 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>fix ID ablate group-ID N scale source maxrandom 
+<PRE>fix ID ablate group-ID Nevery scale source maxrandom 
 </PRE>
 <UL><LI>ID is documented in <A HREF = "fix.html">fix</A> command 
 
@@ -21,7 +21,7 @@
 
 <LI>group-ID = ID of group of grid cells that contain implicit surfaces 
 
-<LI>N = perform ablation once every N steps 
+<LI>Nevery = perform ablation once every Nevery steps 
 
 <LI>scale = scale factor to convert source to grid corner point value decrement 
 
@@ -41,7 +41,7 @@
 </PRE>
 <P><B>Description:</B>
 </P>
-<P>Perform ablation once every N steps on a set of grid cell corner
+<P>Perform ablation once every Nevery steps on a set of grid cell corner
 points to induce new implicit surface elements in those grid cells.
 This command is also used as an argument to the
 <A HREF = "read_isurf.html">read_isurf</A> command so that the grid corner point
@@ -57,10 +57,10 @@ by <I>Nz</I> extent.  See the <A HREF = "read_isurf.html">read_isurf</A> command
 details.  This command reads the initial values for grid cell corner
 points, which are stored by this fix.
 </P>
-<P>The specfied <I>N</I> determines how often an ablation operation is
-performed.  If <I>N</I> = 0, ablation is never performed.  The grid cell
-corner point values and the surface elements they induce will remain
-static for the duration of subsequent simulations.
+<P>The specfied <I>Nevery</I> determines how often an ablation operation is
+performed.  If <I>Nevery</I> = 0, ablation is never performed.  The grid
+cell corner point values and the surface elements they induce will
+remain static for the duration of subsequent simulations.
 </P>
 <P>The specified <I>scale</I> is a pre-factor on the specified <I>source</I> of
 ablation strength.  It converts the per grid cell numeric quantities
@@ -146,12 +146,12 @@ across the entire grid (not counting duplicate values).  This sum
 assumes that corner point values are 0.0 on the boundary of the 2d or
 3d array of grid cells containing implicit surface elements.
 </P>
-<P>The 2 vector values are the sum decrement values for each grid cell in
-the most recent ablation operation, and the # of particles deleted
-during the most recent ablation operation that ended up "inside" the
-newly ablated surface.  The latter quantity should be 0.  A non-zero
-value indicates a corner case in the marching cubes or marching
-squares algorithm the developers still need to address.
+<P>The 2 vector values are the (1) sum of decrement values for each grid
+cell in the most recent ablation operation, and (2) the # of particles
+deleted during the most recent ablation operation that ended up
+"inside" the newly ablated surface.  The latter quantity should be 0.
+A non-zero value indicates a corner case in the marching cubes or
+marching squares algorithm the developers still need to address.
 </P>
 <P>These values can be accessed by any command that uses global values
 from a fix as input.  See <A HREF = "Section_howto.html#howto_4">Section 6.4</A> for
