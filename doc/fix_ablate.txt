@@ -37,6 +37,20 @@ This command is also used as an argument to the
 values it reads from a file can be assigned to and stored by each grid
 cell.
 
+Here are simulation snapshots of 2d and 3d implicit surface models
+through which particles flow.  Click on any image for a larger image.
+The 1st and 3rd images are the initial states of the porous media.
+The 2nd and 4th images are snapshots midway through an ablation
+simulation.  In the 2d case, the colorings are by processor for
+sub-domains each owns.  Particles flow from left to right.  The
+implicit triangles for the 3d case were created via Marching Cubes
+(discussed on the "read_isurf"_read_isurf.html command doc page) from
+a tomographic image of a sample of NASA FiberForm (TM) material, used
+as a heat shield material on spacecraft.  Particles flow from top to
+bottom.
+
+:c,image(JPG/porous2d_initial_small.png,JPG/porous2d_initial.png),image(JPG/porous2d_ablated_small.png,JPG/porous2d_ablated.png),image(JPG/porous3d_initial_small.png,JPG/porous3d_initial.png),image(JPG/porous3d_ablated_small.png,JPG/porous3d_ablated.png)
+
 The specified {group-ID} must be the name of a grid cell group, as
 defined by the "group grid"_group.html command, which contains a set
 of grid cells, all of which are the same size, and which comprise a

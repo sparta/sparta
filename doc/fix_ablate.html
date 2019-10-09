@@ -48,6 +48,20 @@ This command is also used as an argument to the
 values it reads from a file can be assigned to and stored by each grid
 cell.
 </P>
+<P>Here are simulation snapshots of 2d and 3d implicit surface models
+through which particles flow.  Click on any image for a larger image.
+The 1st and 3rd images are the initial states of the porous media.
+The 2nd and 4th images are snapshots midway through an ablation
+simulation.  In the 2d case, the colorings are by processor for
+sub-domains each owns.  Particles flow from left to right.  The
+implicit triangles for the 3d case were created via Marching Cubes
+(discussed on the <A HREF = "read_isurf.html">read_isurf</A> command doc page) from
+a tomographic image of a sample of NASA FiberForm (TM) material, used
+as a heat shield material on spacecraft.  Particles flow from top to
+bottom.
+</P>
+<CENTER><A HREF = "JPG/porous2d_initial.png"><IMG SRC = "JPG/porous2d_initial_small.png"></A><A HREF = "JPG/porous2d_ablated.png"><IMG SRC = "JPG/porous2d_ablated_small.png"></A><A HREF = "JPG/porous3d_initial.png"><IMG SRC = "JPG/porous3d_initial_small.png"></A><A HREF = "JPG/porous3d_ablated.png"><IMG SRC = "JPG/porous3d_ablated_small.png"></A>
+</CENTER>
 <P>The specified <I>group-ID</I> must be the name of a grid cell group, as
 defined by the <A HREF = "group.html">group grid</A> command, which contains a set
 of grid cells, all of which are the same size, and which comprise a

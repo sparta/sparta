@@ -56,6 +56,18 @@ connected set that tile the entire surface of the object.  See the
 discussion of watertight surfaces below.  Implicit surfaces will
 always be watertight, due to the algorithm that defines them.
 
+Here are simulation snapshots of 2d and 3d implicit surface models
+through which particles could flow.  Click on either image for a
+larger image.  In the 2d case, the colorings are by processor for
+sub-domains each owns.  The implicit triangles for the 3d case were
+created via Marching Cubes (discussed below) from a tomographic image
+of a sample of NASA FiberForm (TM) material, used as a heat shield
+material on spacecraft.
+
+:c,image(JPG/porous2d_initial_small.png,JPG/porous2d_initial.png),image(JPG/porous3d_initial_small.png,JPG/porous3d_initial.png)
+
+:image()
+
 Particles collide with surface elements as they advect.  Each surface
 element is assigned to a collision model, specified by the
 "surf_collide"_surf_collide.html command which affects how a particle
