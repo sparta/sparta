@@ -109,7 +109,7 @@ DumpGrid::DumpGrid(SPARTA *sparta, int narg, char **arg) :
 
   // max length of per-grid variable vectors
 
-  maxlocal = 0;
+  maxgrid = 0;
 
   // setup format strings
 
@@ -226,7 +226,7 @@ void DumpGrid::init_style()
 
   // create cpart index of owned grid cells with particles in grid group
 
-  reset_grid();
+  reset_grid_count();
 
   // open single file, one time only
 
@@ -281,11 +281,11 @@ int DumpGrid::count()
   // grow variable vbuf arrays if needed
 
   int nglocal = grid->nlocal;
-  if (nglocal > maxlocal) {
-    maxlocal = grid->maxlocal;
+  if (nglocal > maxgrid) {
+    maxgrid = grid->maxlocal;
     for (int i = 0; i < nvariable; i++) {
       memory->destroy(vbuf[i]);
-      memory->create(vbuf[i],maxlocal,"dump:vbuf");
+      memory->create(vbuf[i],maxgrid,"dump:vbuf");
     }
   }
 
@@ -601,10 +601,11 @@ int DumpGrid::add_variable(char *id)
 
 /* ----------------------------------------------------------------------
    create cpart array to index owned grid cells with particles in grid group
-   also called from comm->migrate_cells() due to fix_balance
+   called by init or by any operation which changes the grid during a run
+     e.g. fix balance, fix adapt, fix ablate
 ------------------------------------------------------------------------- */
 
-void DumpGrid::reset_grid()
+void DumpGrid::reset_grid_count()
 {
   memory->destroy(cpart);
   int nglocal = grid->nlocal;
@@ -641,13 +642,16 @@ void DumpGrid::pack_compute(int n)
   int index = argindex[n];
   Compute *c = compute[field2index[n]];
 
-  // if post_process_flag is set, invoke post_process() to fill vector_grid
+  // if one of post_process flags is set, 
+  //   invoke post_process_grid() or invoke post_process_tally()
   // else extract from compute's vector_grid and array_grid directly
   // dump buf only stores values for grid cells with particles
   //   use cpart indices to extract needed subset
 
   if (c->post_process_grid_flag) 
-    c->post_process_grid(index,-1,1,NULL,NULL,NULL,1);
+    c->post_process_grid(index,1,NULL,NULL,NULL,1);
+  else if (c->post_process_isurf_grid_flag) 
+    c->post_process_isurf_grid();
 
   if (index == 0 || c->post_process_grid_flag) {
     double *vector = c->vector_grid;

@@ -19,10 +19,18 @@
 #include "region.h"
 #include "surf.h"
 #include "comm.h"
+#include "modify.h"
+#include "fix.h"
+#include "compute.h"
+#include "output.h"
+#include "dump.h"
 #include "irregular.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
+
+// DEBUG
+#include "update.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -52,10 +60,6 @@ enum{PERAUTO,PERCELL,PERSURF};                  // several files
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};           // several files
 enum{NCHILD,NPARENT,NUNKNOWN,NPBCHILD,NPBPARENT,NPBUNKNOWN,NBOUND};  // Update
 enum{NOWEIGHT,VOLWEIGHT,RADWEIGHT};
-
-// allocate space for static class variable
-
-Grid *Grid::gptr;
 
 // corners[i][j] = J corner points of face I of a grid cell
 // works for 2d quads and 3d hexes
@@ -330,20 +334,26 @@ void Grid::add_sub_cell(int icell, int ownflag)
 }
 
 /* ----------------------------------------------------------------------
-   remove ghost grid cells and any allocated data they have
-     currently, cells just have ptrs into pages that are deallocated separately
-   also remove ghost surfaces, either explicit or implicit
+   called during a run when per-processor list of grid cells may have changed
+   trigger fixes, computes, dumps to change their allocated per-grid data
 ------------------------------------------------------------------------- */
 
-void Grid::remove_ghosts()
+void Grid::notify_changed()
 {
-  exist_ghost = 0;
-  nghost = nunsplitghost = nsplitghost = nsubghost = 0;
-  surf->remove_ghosts();
+  if (modify->n_pergrid) modify->grid_changed();
+
+  Compute **compute = modify->compute;
+  for (int i = 0; i < modify->ncompute; i++) {
+    if (compute[i]->per_grid_flag) compute[i]->reallocate();
+    if (compute[i]->per_surf_flag) compute[i]->reallocate();
+  }
+
+  for (int i = 0; i < output->ndump; i++)
+    output->dump[i]->reset_grid_count();
 }
 
 /* ----------------------------------------------------------------------
-   set grid stats and cpart list of owned cells with particles
+   set grid stats for onwed cells
 ------------------------------------------------------------------------- */
 
 void Grid::setup_owned()
@@ -374,6 +384,20 @@ void Grid::setup_owned()
 }
 
 /* ----------------------------------------------------------------------
+   remove ghost grid cells and any allocated data they have
+     currently, cells just have ptrs into pages that are deallocated separately
+   also remove ghost surfaces, either explicit or implicit
+------------------------------------------------------------------------- */
+
+void Grid::remove_ghosts()
+{
+  hashfilled = 0;
+  exist_ghost = 0;
+  nghost = nunsplitghost = nsplitghost = nsubghost = 0;
+  surf->remove_ghosts();
+}
+
+/* ----------------------------------------------------------------------
    acquire ghost cells from local cells of other procs
    if surfs are distributed, also acquire ghost cell surfs
      explicit distributed surfs require use of hash
@@ -381,12 +405,12 @@ void Grid::setup_owned()
    no-op if grid is not clumped and want to acquire only nearby ghosts
 ------------------------------------------------------------------------- */
 
-void Grid::acquire_ghosts()
+void Grid::acquire_ghosts(int surfflag)
 {
   if (surf->distributed && !surf->implicit) surf->rehash();
 
-  if (cutoff < 0.0) acquire_ghosts_all();
-  else if (clumped) acquire_ghosts_near();
+  if (cutoff < 0.0) acquire_ghosts_all(surfflag);
+  else if (clumped) acquire_ghosts_near(surfflag);
   else if (comm->me == 0) 
     error->warning(FLERR,"Could not acquire nearby ghost cells b/c "
                    "grid partition is not clumped");
@@ -402,7 +426,7 @@ void Grid::acquire_ghosts()
    use ring comm to get copy of all other cells in global system
 ------------------------------------------------------------------------- */
 
-void Grid::acquire_ghosts_all()
+void Grid::acquire_ghosts_all(int surfflag)
 {
   exist_ghost = 1;
   nempty = 0;
@@ -426,7 +450,7 @@ void Grid::acquire_ghosts_all()
   int sendsize = 0;
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    sendsize += pack_one(icell,NULL,0,0,0);
+    sendsize += pack_one(icell,NULL,0,0,surfflag,0);
   }
 
   char *sbuf;
@@ -439,14 +463,14 @@ void Grid::acquire_ghosts_all()
   sendsize = 0;
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
-    sendsize += pack_one(icell,&sbuf[sendsize],0,0,1);
+    sendsize += pack_one(icell,&sbuf[sendsize],0,0,surfflag,1);
   }
 
   // circulate buf of my grid cells around to all procs
   // unpack augments my ghost cells with info from other procs
 
-  gptr = this;
-  comm->ring(sendsize,sizeof(char),sbuf,1,unpack_ghosts,NULL,0);
+  unpack_ghosts_surfflag = surfflag;
+  comm->ring(sendsize,sizeof(char),sbuf,1,unpack_ghosts,NULL,0,(void *) this);
 
   memory->destroy(sbuf);
 }
@@ -457,7 +481,7 @@ void Grid::acquire_ghosts_all()
    within extended bounding box = bounding box of owned cells + cutoff
 ------------------------------------------------------------------------- */
 
-void Grid::acquire_ghosts_near()
+void Grid::acquire_ghosts_near(int surfflag)
 {
   exist_ghost = 1;
 
@@ -574,7 +598,7 @@ void Grid::acquire_ghosts_near()
         nsurf_hold = cells[icell].nsurf;
         cells[icell].nsurf = -1;
       }
-      sendsize += pack_one(icell,NULL,0,0,0);
+      sendsize += pack_one(icell,NULL,0,0,surfflag,0);
       if (oflag == 2) cells[icell].nsurf = nsurf_hold;
       nsend++;
     }
@@ -613,7 +637,7 @@ void Grid::acquire_ghosts_near()
         nsurf_hold = cells[icell].nsurf;
         cells[icell].nsurf = -1;
       }
-      sizelist[nsend] = pack_one(icell,&sbuf[sendsize],0,0,1);
+      sizelist[nsend] = pack_one(icell,&sbuf[sendsize],0,0,surfflag,1);
       if (oflag == 2) cells[icell].nsurf = nsurf_hold;
       proclist[nsend] = lastproc;
       sendsize += sizelist[nsend];
@@ -644,7 +668,7 @@ void Grid::acquire_ghosts_near()
 
   int offset = 0;
   for (i = 0; i < nrecv; i++)
-    offset += grid->unpack_one(&rbuf[offset],0,0);
+    offset += grid->unpack_one(&rbuf[offset],0,0,surfflag);
 
   // more clean up
 
@@ -741,7 +765,7 @@ int Grid::box_periodic(double *lo, double *hi, Box *box)
         plo[1] = lo[1] + j*prd[1];
         phi[1] = hi[1] + j*prd[1];
         plo[2] = lo[2] + k*prd[2];
-        phi[2] = hi[2] + k*prd[2];
+        phi[2] = hi[2] + k*prd[2]; 
         box_intersect(plo,phi,boxlo,boxhi,olo,ohi);
         if (olo[0] >= ohi[0] || olo[1] >= ohi[1] || olo[2] >= ohi[2]) continue;
 
@@ -764,7 +788,7 @@ int Grid::box_periodic(double *lo, double *hi, Box *box)
 
 void Grid::rehash()
 {
-  // hash all child and parent cell IDs
+  // hash all owned/ghost child and parent cell IDs
   // key = ID, value = index+1 for child cells, value = -(index+1) for parents
   // skip sub cells
 
@@ -1631,7 +1655,7 @@ void Grid::check_uniform()
    flag = 1 to output flow stats (default)
 ------------------------------------------------------------------------- */
 
-void Grid::type_check(int flag)
+void Grid::type_check(int outflag)
 {
   int i;
 
@@ -1727,7 +1751,7 @@ void Grid::type_check(int flag)
     error->all(FLERR,str);
   }
 
-  if (flag) flow_stats();
+  if (outflag) flow_stats();
 }
 
 /* ----------------------------------------------------------------------
@@ -2119,6 +2143,7 @@ int Grid::find_group(const char *id)
    all child cells are at same level (i.e. parents are at same level)
    all child cells are same size
    group forms a contiguous 3d block of cells
+   return count of my child cells in the group
 ------------------------------------------------------------------------- */
 
 int Grid::check_uniform_group(int igroup, int *nxyz, 

@@ -24,7 +24,8 @@ SPARTA works.
 6.10 "Restarting a simulation"_#howto_10
 6.11 "Using the ambipolar approximation"_#howto_11
 6.12 "Using multiple vibrational energy levels"_#howto_12
-6.13 "Surface elements: explicit, implicit, distributed"_#howto_13 :all(b)
+6.13 "Surface elements: explicit, implicit, distributed"_#howto_13
+6.14 "Implicit surface ablation"_#howto_14 :all(b)
 
 The example input scripts included in the SPARTA distribution and
 highlighted in "Section 5"_Section_example.html of the manual also
@@ -1149,22 +1150,28 @@ not yet fully implemented.  Specifically, the
 "read_isurf"_read_isurf.html command will not yet read and create
 them.
 
-The "global surfs"_global.html command has options for explicit versus
-implicit, and distributed versus non-distributed.
+The "global surfs"_global.html command is used to specify the use of
+explicit versus implicit, and distributed versus non-distributed
+surface elements.
 
-The following surface-related commands work with either explict or
-implicit surfaces, whether they are distributed or not.  For large
-data sets, the read and write surf commands have options to use
-multiple files which can reduce I/O times.
+Unless noted, the following surface-related commands work with either
+explict or implicit surfaces, whether they are distributed or not.
+For large data sets, the read and write surf and isurf commands have
+options to use multiple files and/or operate in parallel which can
+reduce I/O times.
 
 "adapt_grid"_adapt_grid.html
+"compute_isurf/grid"_compute_isurf_grid.html    # for implicit surfs
+"compute_surf"_compute_surf.html                # for explicit surfs
 "dump surf"_dump.html
 "dump image"_dump_image.html
 "fix adapt/grid"_fix_adapt_grid.html
 "fix emit/surf"_fix_emit_surf.html
 "group surf"_group.html
-"read_surf"_read_surf.html
-"surf_modify"_surf_modify.html
+"read_isurf"_read_isurf.html                    # for implicit surfs
+"read_surf"_read_surf.html                      # for explicit surfs
+"surf_modify"_surf_modify.html 
+"write_isurf"_write_surf.html                   # for implicit surfs
 "write_surf"_write_surf.html :ul
 
 These command do not yet support distributed surfaces:
@@ -1173,7 +1180,74 @@ These command do not yet support distributed surfaces:
 "fix move/surf"_fix_move_surf.html
 "remove_surf"_remove_surf.html :ul
 
-Also, the "compute_surf"_compute_surf.html command only works for
-explicit surfaces (distributed or not).  A new, similar compute needs
-to be implemented to work with implicit surfaces.  It will likely be
-called the "compute isurf/grid"_compute_isurf_grid.html command.
+:line
+
+6.14 Implicit surface ablation :link(howto_14),h4
+
+The implicit surfaces described in the previous section can be used to
+perform ablation simulations, where the set of implicit surface
+elements evolve over time to model a receding surface.  These are the
+relevant commands:
+
+"global surfs implicit"_global.html
+"read isurf"_read_isurf.html
+"fix ablate"_fix_ablate.html
+"compute isurf/grid"_compute_isurf_grid.html
+"fix ave/grid"_fix_ave_grid.html
+"write isurf"_write_isurf.html 
+"write_surf"_write_surf.html :ul
+
+The "read_isurf"_read_isurf.html command takes a binary file as an
+argument which contains a pixelated (2d) or voxelated (3d)
+representation of the surface (e.g. a porous heat shield material).
+It reads the file and assigns the pixel/voxel values to corner points
+of a region of the SPARTA grid.
+
+The "read_isurf"_read_isurf.html command also takes the ID of a "fix
+ablate"_fix_ablate.html command as an argument.  This fix is invoked
+to perform a Marching Squares (2d) or Marching Cubes (3d) algorithm to
+convert the corner point values to a set of line segments (2d) or
+triangles (3d) each of which is wholly contained in a grid cell.  It
+also stores the per grid cell corner point values.
+
+If the {Nevery} argument of the "fix ablate"_fix_ablate.html command
+is 0, ablation is never performed, the implicit surfaces are static.
+If it is non-zero, an ablation operation is performed every {Nevery}
+steps.  A per-grid cell value is used to decrement the corner point
+values in each grid cell.  The values can be (1) from a compute such
+as "compute isurf/grid"_compute_isurf_grid.html which tallies
+statistics about gas particle collisions with surfaces within each
+grid cell, or (2) from a fix such as "fix ave/grid"_fix_ave_grid.html
+which time averages these statistics over many timesteps, or (3)
+generated randomly, which is useful for debugging.  In the future, we
+plan to also allow surface reaction statistics to drive the ablation.
+
+The decrement of grid corner point values is done in a manner that
+models recession of the surface elements within in each grid cell.
+All the current implicit surface elements are then discarded, and new
+ones are generated from the new corner point values via the Marching
+Squares or Marching Cubes algorithm. 
+
+IMPORTANT NOTE: Ideally these algorithms should preserve the gas flow
+volume inferred by the previous surfaces and only add to it with the
+new surfaces.  However there are a few cases for the 3d Marching Cubes
+algorithm where the gas flow volume is not strictly preserved.  This
+can trap existing particles inside the new surfaces.  Currently SPARTA
+checks for this condition and deletes the trapped particles.  In the
+future, we plan to modify the standard Marching Cubes algorithm to
+prevent this from happening.  In our testing, the fraction of trapped
+particles in an ablation operation is tiny (around 0.005% or 5 in
+100000).  The number of deleted particles can be monitored as an
+output option by the "fix ablate"_fix_ablate.html command.
+
+The "write_isurf"_write_isurf.html command can be used to periodically
+write out a pixelated/voxelated file of corner point values, in the
+same format that the "read_isurf"_read_isurf.html command reads.  Note
+that after ablation, corner point values are typically no longer
+integers, but floating point values.  The "read_isurf"_read_isurf.html
+and "write_isurf"_write_isurf.html commands have options to work with
+both kinds of files.  The "write_surf"_write_surf.html command can
+also output implicit surface elements for visualization by tools such
+as ParaView which can read SPARTA surface element files after suitable
+post-processing.  See the "Section tools
+paraview"_Section_tools.html#paraview doc page for more details.

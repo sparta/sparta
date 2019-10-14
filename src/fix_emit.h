@@ -28,8 +28,7 @@ class FixEmit : public Fix {
   void start_of_step();
   double compute_vector(int);
 
-  void post_migrate();
-  void post_adapt();
+  void grid_changed();
 
  protected:
   int perspecies;

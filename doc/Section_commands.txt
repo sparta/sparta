@@ -276,7 +276,8 @@ Output:
 "dump_modify"_dump_modify.html, "restart"_restart.html,
 "stats"_stats.html, "stats_modify"_stats_modify.html,
 "stats_style"_stats_style.html, "undump"_undump.html,
-"write_grid"_write_grid.html, "write_restart"_write_restart.html
+"write_grid"_write_grid.html, "write_isurf"_write_isurf.html,
+"write_surf"_write_surf.html, "write_restart"_write_restart.html
 
 Actions:
 
@@ -359,10 +360,11 @@ section"_#cmd_4 lists many of the same commands, grouped by category.
 "undump"_undump.html,
 "unfix"_unfix.html,
 "units"_units.html,
-"variable"_variable.html,
+"variable"_variable.html,x
 "write_grid"_write_grid.html,
-"write_surf"_write_surf.html,
-"write_restart"_write_restart.html :tb(c=6,ea=c)
+"write_isurf"_write_isurf.html,
+"write_restart"_write_restart.html,
+"write_surf"_write_surf.html :tb(c=6,ea=c)
 
 :line
 
@@ -374,6 +376,7 @@ styles have accelerated versions, which can be used if SPARTA is built
 with the "appropriate accelerated package"_Section_accelerate.html.
 This is indicated by additional letters in parenthesis: k = KOKKOS.
 
+"ablate"_fix_ablate.html,
 "adapt (k)"_fix_adapt.html,
 "ambipolar"_fix_ambipolar.html,
 "ave/grid (k)"_fix_ave_grid.html,
@@ -407,6 +410,7 @@ letters in parenthesis: k = KOKKOS.
 "eflux/grid (k)"_compute_eflux_grid.html,
 "fft/grid"_compute_fft_grid.html,
 "grid (k)"_compute_grid.html,
+"isurf/grid"_compute_isurf_grid.html,
 "ke/particle (k)"_compute_ke_particle.html,
 "lambda/grid (k)"_compute_lambda_grid.html,
 "pflux/grid (k)"_compute_pflux_grid.html,

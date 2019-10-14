@@ -29,7 +29,6 @@ class Surf : protected Pointers {
   int implicit;             // 1 = implicit surfs, 0 = explicit surfs
   int distributed;          // 1 = surfs spread across procs (exp or impl)
                             // 0 = each proc owns all
-  //int dynamic;              // 1 = implicit surfs change, 0 = static
   int surf_collision_check; // flag for whether init() check is required
                             // for assign of collision models to surfs
 
@@ -120,13 +119,15 @@ class Surf : protected Pointers {
   typedef std::map<OnePoint2d,int> MyHashPoint;
   typedef std::map<OnePoint2d,int>::iterator MyPointIt;
   typedef std::map<TwoPoint3d,int> MyHash2Point;
-  typedef std::map<TwoPoint3d,int>::iterator My2PointIt;
+  typedef std::map<TwoPoint3d,int>::iterator My2PointIt;#
+  typedef std::map<cellint,int> MyCellHash;
 #elif defined SPARTA_UNORDERED_MAP
   typedef std::unordered_map<surfint,int> MySurfHash;
   typedef std::unordered_map<OnePoint2d,int,OnePoint2dHash> MyHashPoint;
   typedef std::unordered_map<OnePoint2d,int,OnePoint2dHash>::iterator MyPointIt;
   typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash2Point;
   typedef std::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::iterator My2PointIt;
+  typedef std::unordered_map<cellint,int> MyCellHash;
 #else
   typedef std::tr1::unordered_map<surfint,int> MySurfHash;
   typedef std::tr1::unordered_map<OnePoint2d,int,OnePoint2dHash> MyHashPoint;
@@ -135,6 +136,7 @@ class Surf : protected Pointers {
   typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash> MyHash2Point;
   typedef std::tr1::unordered_map<TwoPoint3d,int,TwoPoint3dHash>::
     iterator My2PointIt;
+  typedef std::tr1::unordered_map<cellint,int> MyCellHash;
 #endif
 
   MySurfHash *hash;           // hash for nlocal surf IDs
@@ -145,6 +147,7 @@ class Surf : protected Pointers {
   void global(char *);
   void modify_params(int, char **);
   void init();
+  void clear();
   void remove_ghosts();
   void add_line(surfint, int, double *, double *);
   void add_line_copy(int, Line *);
@@ -192,9 +195,8 @@ class Surf : protected Pointers {
   int add_group(const char *);
   int find_group(const char *);
   
-  void compress_rebalance_explicit();
-  void compress_rebalance_implicit();
-  void reset_csurfs_implicit();
+  void compress_implicit_rebalance();
+  void compress_explicit_rebalance();
 
   void collate_vector(int, surfint *, double *, int, double *);
   void collate_vector_reduce(int, surfint *, double *, int, double *);
@@ -203,6 +205,8 @@ class Surf : protected Pointers {
   void collate_array(int, int, surfint *, double **, double **);
   void collate_array_reduce(int, int, surfint *, double **, double **);
   void collate_array_rendezvous(int, int, surfint *, double **, double **);
+  void collate_vector_implicit(int, surfint *, double *, double *);
+  void collate_array_implicit(int, int, surfint *, double **, double **);
 
   void redistribute_lines_clip(int, int);
   void redistribute_lines_temporary(int);
@@ -221,7 +225,7 @@ class Surf : protected Pointers {
   int maxsc;                // max # of models in sc
   int maxsr;                // max # of models in sr
   
-  // collate rendezvous data
+  // collate vector rendezvous data
 
   struct InRvousVec {
     surfint id;             // surface ID
@@ -282,6 +286,7 @@ class Surf : protected Pointers {
  
   static int rendezvous_vector(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_array(int, char *, int &, int *&, char *&, void *);
+  static int rendezvous_implicit(int, char *, int &, int *&, char *&, void *);
   static int rendezvous_watertight_2d(int, char *, 
                                       int &, int *&, char *&, void *);
   static int rendezvous_watertight_3d(int, char *, 

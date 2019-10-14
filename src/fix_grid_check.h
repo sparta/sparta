@@ -28,7 +28,7 @@ namespace SPARTA_NS {
 class FixGridCheck : public Fix {
  public:
   FixGridCheck(class SPARTA *, int, char **);
-  ~FixGridCheck() {}
+  ~FixGridCheck();
   int setmask();
   void init();
   void end_of_step();
@@ -36,6 +36,11 @@ class FixGridCheck : public Fix {
 
  protected:
   int ntotal,outflag;
+  int outside_check;
+  int dim;
+
+  class Cut2d *cut2d;
+  class Cut3d *cut3d;
 };
 
 }

@@ -95,7 +95,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
     }
 
     if (cnrho->post_process_grid_flag)
-      computeKKBase->post_process_grid_kokkos(nrhoindex,-1,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
+      computeKKBase->post_process_grid_kokkos(nrhoindex,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (nrhoindex == 0 || cnrho->post_process_grid_flag)
       Kokkos::deep_copy(d_nrho_vector, computeKKBase->d_vector);
@@ -131,7 +131,7 @@ void ComputeLambdaGridKokkos::compute_per_grid_kokkos()
     }
 
     if (ctemp->post_process_grid_flag)
-      computeKKBase->post_process_grid_kokkos(tempindex,-1,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
+      computeKKBase->post_process_grid_kokkos(tempindex,1,DAT::t_float_2d_lr(),NULL,DAT::t_float_1d_strided());
 
     if (tempindex == 0 || ctemp->post_process_grid_flag)
       Kokkos::deep_copy(d_temp_vector, computeKKBase->d_vector);

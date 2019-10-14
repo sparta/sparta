@@ -80,15 +80,12 @@ class Fix : protected Pointers {
   virtual void gas_react(int) {}
   virtual void surf_react(Particle::OnePart *, int &, int &) {}
 
-  virtual void add_grid_one(int, int) {}
   virtual int pack_grid_one(int, char *, int) {return 0;}
   virtual int unpack_grid_one(int, char *) {return 0;}
-
-  virtual void compress_grid() {}
-  virtual void post_compress_grid() {}
-
-  virtual void post_migrate() {}
-  virtual void post_adapt() {}
+  virtual void copy_grid_one(int, int) {}
+  virtual void add_grid_one() {}
+  virtual void reset_grid_count(int) {}
+  virtual void grid_changed() {}
 
   virtual double compute_scalar() {return 0.0;}
   virtual double compute_vector(int) {return 0.0;}

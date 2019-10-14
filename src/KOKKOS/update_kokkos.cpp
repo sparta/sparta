@@ -999,7 +999,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (nsurf_tally)
             for (m = 0; m < nsurf_tally; m++)
               slist_active_copy[m].obj.
-                    surf_tally_kk<ATOMIC_REDUCTION>(minsurf,&iorig,ipart,jpart);
+                    surf_tally_kk<ATOMIC_REDUCTION>(minsurf,icell,&iorig,ipart,jpart);
 
           // nstuck = consective iterations particle is immobile
 
@@ -1356,6 +1356,7 @@ int UpdateKokkos::split3d(int icell, double *x) const
   // only consider tris that are mapped via csplits to a split cell
   //   unmapped tris only touch cell surf at xnew
   //   another mapped tri should include same xnew
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particles starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
@@ -1365,6 +1366,7 @@ int UpdateKokkos::split3d(int icell, double *x) const
 
   cflag = 0;
   minparam = 2.0;
+
   auto csplits_begin = d_csplits.row_map(isplit);
   auto csurfs_begin = d_csurfs.row_map(isplit);
   for (m = 0; m < nsurf; m++) {
@@ -1408,6 +1410,7 @@ int UpdateKokkos::split2d(int icell, double *x) const
   // only consider lines that are mapped via csplits to a split cell
   //   unmapped lines only touch cell surf at xnew
   //   another mapped line should include same xnew
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particle starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
@@ -1469,6 +1472,8 @@ void UpdateKokkos::bounce_set(bigint ntimestep)
 
   if (nsurf_tally) {
     for (i = 0; i < nsurf_tally; i++) {
+      if (strcmp(slist_active[i]->style,"isurf/grid") == 0)
+        error->all(FLERR,"Kokkos doesn't yet support compute isurf/grid");
       ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[i]);
       compute_surf_kk->pre_surf_tally();
       slist_active_copy[i].copy(compute_surf_kk);

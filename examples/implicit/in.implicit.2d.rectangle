@@ -19,7 +19,8 @@ region              inner block 25.5 74.5 25.5 124.5 INF INF
 group               inner grid region inner one
 
 global              surfs implicit
-read_isurf          inner 50 100 1 binary.51x101 180.5
+fix                 ablate ablate inner 0 0.2 random 10
+read_isurf          inner 50 100 1 binary.51x101 180.5 ablate
 
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1

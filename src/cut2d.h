@@ -85,6 +85,8 @@ class Cut2d : protected Pointers {
 
  private:
   int axisymmetric;
+  int implicit;
+
   cellint id;            // ID of cell being worked on
   double *lo,*hi;        // opposite corner pts of cell
   int nsurf;             // # of surf elements in cell
@@ -104,7 +106,8 @@ class Cut2d : protected Pointers {
   void weiler_loops();
   int loop2pg();
   void create_surfmap(int *);
-  int split_point(int *, double *, int &);
+  int split_point_explicit(int *, double *, int &);
+  int split_point_implicit(int *, double *, int &);
 
   int cliptest(double *, double *);
   void clip(double *, double *, double *, double *);

@@ -142,9 +142,6 @@ void FixEmitFace::init()
   fraction = particle->mixture[imix]->fraction;
   cummulative = particle->mixture[imix]->cummulative;
 
-  lines = surf->lines;
-  tris = surf->tris;
-
   // subsonic prefactor
 
   tprefactor = update->mvv2e / (3.0*update->boltz);
@@ -238,6 +235,9 @@ void FixEmitFace::create_task(int icell)
   int i,j,n,iface,flag,isp,extflag;
   int *cflags;
   double indot,area,ntargetsp;
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
 
   Grid::ChildCell *cells = grid->cells;
   Grid::ChildInfo *cinfo = grid->cinfo;

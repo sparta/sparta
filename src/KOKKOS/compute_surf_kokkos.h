@@ -47,7 +47,8 @@ enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
      XSHEAR,YSHEAR,ZSHEAR,KE,EROT,EVIB,ETOT};
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle colliding with surface element isurf
+   tally values for a single particle in icell
+     colliding with surface element isurf
    iorig = particle ip before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision
@@ -57,7 +58,7 @@ enum{NUM,NUMWT,MFLUX,FX,FY,FZ,PRESS,XPRESS,YPRESS,ZPRESS,
 
 template <int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
-void surf_tally_kk(int isurf, Particle::OnePart *iorig, 
+void surf_tally_kk(int isurf, int icell, Particle::OnePart *iorig, 
                    Particle::OnePart *ip, Particle::OnePart *jp) const
 {
   // skip if isurf not in surface group
