@@ -248,7 +248,6 @@ void UpdateKokkos::run(int nsteps)
 
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
-  //int dynamic = 0;
 
   // cellweightflag = 1 if grid-based particle weighting is ON
 
@@ -265,15 +264,16 @@ void UpdateKokkos::run(int nsteps)
 
     timer->stamp();
 
+    // dynamic parameter updates
+
+    if (dynamic) dynamic_update();
+
     // start of step fixes
 
     if (n_start_of_step) {
       modify->start_of_step();
       timer->stamp(TIME_MODIFY);
     }
-
-
-    //if (dynamic) domain->dynamic();
 
     // move particles
 
