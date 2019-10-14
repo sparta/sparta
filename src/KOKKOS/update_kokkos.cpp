@@ -1472,8 +1472,8 @@ void UpdateKokkos::bounce_set(bigint ntimestep)
 
   if (nsurf_tally) {
     for (i = 0; i < nsurf_tally; i++) {
-      if (strcmp(slist_active[i]->style,"isurf") == 0)
-        error->all(FLERR,"Kokkos doesn't yet support compute isurf");
+      if (strcmp(slist_active[i]->style,"isurf/grid") == 0)
+        error->all(FLERR,"Kokkos doesn't yet support compute isurf/grid");
       ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[i]);
       compute_surf_kk->pre_surf_tally();
       slist_active_copy[i].copy(compute_surf_kk);

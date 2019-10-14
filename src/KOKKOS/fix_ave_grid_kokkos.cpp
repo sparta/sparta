@@ -50,6 +50,9 @@ FixAveGridKokkos::FixAveGridKokkos(SPARTA *sparta, int narg, char **arg) :
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;
 
+  if (flavor == PERGRIDSURF)
+    error->all(FLERR,"Cannot yet use Kokkos with fix ave/grid for grid/surf inputs");
+
   nglocal = maxgrid = grid->nlocal;
 
   // allocate per-grid cell data storage
