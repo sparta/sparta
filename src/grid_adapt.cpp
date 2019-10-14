@@ -45,9 +45,9 @@ void Grid::refine_cell(int icell, int iparent,
   ncorner = 8;
   if (dim == 2) ncorner = 4;
 
-  // remove icell from grid hash
+  // convert cell ID stored by grid hash from child to parent
 
-  hash->erase(cells[icell].id);
+  (*hash)[pcells[iparent].id] = -(iparent+1);
 
   // loop over creation of new child cells
 

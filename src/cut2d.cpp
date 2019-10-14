@@ -18,6 +18,7 @@
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
+#include "comm.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "error.h"
@@ -1208,7 +1209,7 @@ int Cut2d::whichside(double *pt)
 
 void Cut2d::failed_cell()
 {
-  printf("Cut2d failed in cell ID: " CELLINT_FORMAT "\n",id);
+  printf("Cut2d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
 
   cellint ichild;
   int iparent = grid->id_find_parent(id,ichild);
