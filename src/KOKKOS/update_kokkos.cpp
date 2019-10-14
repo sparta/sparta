@@ -666,7 +666,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   } else if (pflag == PENTRY) {
     icell = particle_i.icell;
     if (d_cells[icell].nsplit > 1) {
-      if (DIM == 3 && SURF) icell = split3d(icell,x,particle_i.id);
+      if (DIM == 3 && SURF) icell = split3d(icell,x);
       if (DIM < 3 && SURF) icell = split2d(icell,x);
       particle_i.icell = icell;
     }
@@ -1111,7 +1111,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       icell = neigh[outface];
       if (DIM == 3 && SURF) {
         if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
-          icell = split3d(icell,x,particle_i.id);
+          icell = split3d(icell,x);
       }
       if (DIM < 3 && SURF) {
         if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1122,7 +1122,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (icell >= 0) {
         if (DIM == 3 && SURF) {
           if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
-            icell = split3d(icell,x,particle_i.id);
+            icell = split3d(icell,x);
         }
         if (DIM < 3 && SURF) {
           if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1219,7 +1219,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           icell = neigh[outface];
           if (DIM == 3 && SURF) {
             if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
-              icell = split3d(icell,x,particle_i.id);
+              icell = split3d(icell,x);
           }
           if (DIM < 3 && SURF) {
             if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1230,7 +1230,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
-                icell = split3d(icell,x,particle_i.id);
+                icell = split3d(icell,x);
             }
             if (DIM < 3 && SURF) {
               if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1344,7 +1344,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-int UpdateKokkos::split3d(int icell, double *x, int id) const
+int UpdateKokkos::split3d(int icell, double *x) const
 {
   int m,cflag,isurf,hitflag,side,minsurfindex;
   double param,minparam;
@@ -1472,6 +1472,8 @@ void UpdateKokkos::bounce_set(bigint ntimestep)
 
   if (nsurf_tally) {
     for (i = 0; i < nsurf_tally; i++) {
+      if (strcmp(slist_active[i]->style,"isurf") == 0)
+        error->all(FLERR,"Kokkos doesn't yet support compute isurf");
       ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[i]);
       compute_surf_kk->pre_surf_tally();
       slist_active_copy[i].copy(compute_surf_kk);

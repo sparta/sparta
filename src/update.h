@@ -84,7 +84,7 @@ class Update : protected Pointers {
   void global(int, char **);
   void reset_timestep(int, char **);
 
-  int split3d(int, double *, int);
+  int split3d(int, double *);
   int split2d(int, double *);
 
  protected:

@@ -475,7 +475,7 @@ template < int DIM, int SURF > void Update::move()
       } else if (pflag == PENTRY) {
         icell = particles[i].icell;
         if (cells[icell].nsplit > 1) {
-          if (DIM == 3 && SURF) icell = split3d(icell,x,particles[i].id);
+          if (DIM == 3 && SURF) icell = split3d(icell,x);
           if (DIM < 3 && SURF) icell = split2d(icell,x);
           particles[i].icell = icell;
         }
@@ -1023,7 +1023,7 @@ template < int DIM, int SURF > void Update::move()
           icell = neigh[outface];
           if (DIM == 3 && SURF) {
             if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
-              icell = split3d(icell,x,particles[i].id);
+              icell = split3d(icell,x);
           }
           if (DIM < 3 && SURF) {
             if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1034,7 +1034,7 @@ template < int DIM, int SURF > void Update::move()
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
-                icell = split3d(icell,x,particles[i].id);
+                icell = split3d(icell,x);
             }
             if (DIM < 3 && SURF) {
               if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1089,7 +1089,7 @@ template < int DIM, int SURF > void Update::move()
               icell = neigh[outface];
               if (DIM == 3 && SURF) {
                 if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
-                  icell = split3d(icell,x,particles[i].id);
+                  icell = split3d(icell,x);
               }
               if (DIM < 3 && SURF) {
                 if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1100,7 +1100,7 @@ template < int DIM, int SURF > void Update::move()
               if (icell >= 0) {
                 if (DIM == 3 && SURF) {
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
-                    icell = split3d(icell,x,particles[i].id);
+                    icell = split3d(icell,x);
                 }
                 if (DIM < 3 && SURF) {
                   if (cells[icell].nsplit > 1 && cells[icell].nsurf >= 0)
@@ -1249,7 +1249,7 @@ template < int DIM, int SURF > void Update::move()
    return index of sub-cell in ChildCell
 ------------------------------------------------------------------------- */
 
-int Update::split3d(int icell, double *x, int id)
+int Update::split3d(int icell, double *x)
 {
   int m,cflag,isurf,hitflag,side,minsurfindex;
   double param,minparam;
@@ -1292,18 +1292,6 @@ int Update::split3d(int icell, double *x, int id)
       minsurfindex = m;
     }
   }
-  
-  /*
-  if (id == 1423968910 && cells[icell].id == 5382) {
-    int index = csplits[minsurfindex];
-    printf("SPLIT step %ld me %d icell %d %d nsurf %d "
-           "cflag %d minsurf %d subcell %d scell %d "
-           "x %g %g %g xnew %g %g %g\n",
-           ntimestep,me,icell,cells[icell].id,cells[icell].nsurf,
-           cflag,minsurfindex,index,sinfo[isplit].csubs[index],
-           x[0],x[1],x[2],xnew[0],xnew[1],xnew[2]);
-  }
-  */
 
   if (!cflag) return sinfo[isplit].csubs[sinfo[isplit].xsub];
   int index = csplits[minsurfindex];

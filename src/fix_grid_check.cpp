@@ -326,7 +326,7 @@ void FixGridCheck::end_of_step()
     if (cells[icell].nsplit <= 0) {
       int subcell;
       if (dim == 2) subcell = update->split2d(splitcell,x);
-      else subcell = update->split3d(splitcell,x,particles[i].id);
+      else subcell = update->split3d(splitcell,x);
 
       if (subcell != icell) {
         if (outflag == ERROR) {

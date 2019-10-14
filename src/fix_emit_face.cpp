@@ -832,7 +832,7 @@ int FixEmitFace::split(int icell, int iface)
 
   int splitcell;
   if (dimension == 2) splitcell = update->split2d(icell,x);
-  else splitcell = update->split3d(icell,x,0);
+  else splitcell = update->split3d(icell,x);
   return splitcell;
 }
 

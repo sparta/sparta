@@ -1030,7 +1030,7 @@ void Grid::assign_split_cell_particles(int icell)
 
   ip = cinfo[icell].first;
   while (ip >= 0) {
-    if (dim == 3) jcell = update->split3d(icell,particles[ip].x,particles[ip].id);
+    if (dim == 3) jcell = update->split3d(icell,particles[ip].x);
     else jcell = update->split2d(icell,particles[ip].x);
     particles[ip].icell = jcell;
     ip = next[ip];
