@@ -114,6 +114,7 @@ void ComputeSurfKokkos::clear()
   // called by Update at beginning of timesteps surf tallying is done
 
   ntally = 0;
+  combined = 0;
   Kokkos::deep_copy(d_ntally,0);
   Kokkos::deep_copy(d_array_surf_tally,0);
 

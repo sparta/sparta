@@ -32,11 +32,13 @@
 
 using namespace SPARTA_NS;
 
+enum{PERGRID,PERGRIDSURF};
 enum{COMPUTE,FIX,VARIABLE};
 enum{ONE,RUNNING};                // multiple files
 
 #define INVOKED_PER_GRID 16
 #define DELTAGRID 1024            // must be bigger than split cells per cell
+#define DELTASURF 1024;
 
 /* ---------------------------------------------------------------------- */
 
@@ -48,7 +50,7 @@ FixAveGridKokkos::FixAveGridKokkos(SPARTA *sparta, int narg, char **arg) :
   datamask_read = EMPTY_MASK;
   datamask_modify = EMPTY_MASK;
 
-  nglocal = nglocalmax = grid->nlocal;
+  nglocal = maxgrid = grid->nlocal;
 
   // allocate per-grid cell data storage
   // zero vector/array grid in case used by dump or load balancer
@@ -270,7 +272,7 @@ void FixAveGridKokkos::end_of_step()
       j = argindex[0];
       Compute *c = modify->compute[n];
       KokkosBase* cKKBase = dynamic_cast<KokkosBase*>(c);
-      cKKBase->post_process_grid_kokkos(j,-1,nsample,d_tally,map[0],d_vector);
+      cKKBase->post_process_grid_kokkos(j,nsample,d_tally,map[0],d_vector);
     } else {
       k = map[0][0];
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixAveGrid_Norm_vector_grid>(0,nglocal),*this);
@@ -284,7 +286,7 @@ void FixAveGridKokkos::end_of_step()
         j = argindex[m];
         Compute *c = modify->compute[n];
         KokkosBase* cKKBase = dynamic_cast<KokkosBase*>(c);
-        if (d_array_grid.data()) cKKBase->post_process_grid_kokkos(j,-1,nsample,d_tally,map[m],
+        if (d_array_grid.data()) cKKBase->post_process_grid_kokkos(j,nsample,d_tally,map[m],
                              Kokkos::subview(d_array_grid,Kokkos::ALL(),m)); // need to use subview
       } else {
         k = map[m][0];
@@ -401,9 +403,9 @@ void FixAveGridKokkos::operator()(TagFixAveGrid_Norm_array_grid, const int &i) c
 
 void FixAveGridKokkos::grow_percell(int nnew)
 {
-  if (nglocal+nnew < nglocalmax) return;
-  nglocalmax += DELTAGRID;
-  int n = nglocalmax;
+  if (nglocal+nnew < maxgrid) return;
+  maxgrid += DELTAGRID;
+  int n = maxgrid;
 
   if (nvalues == 1) {
     memoryKK->grow_kokkos(k_vector_grid,vector_grid,n,"ave/grid:vector_grid");

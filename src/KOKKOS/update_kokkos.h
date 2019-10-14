@@ -208,7 +208,7 @@ class UpdateKokkos : public Update {
   //// adjust end-of-move x,v due to perturbation on straight-line advection
 
   KOKKOS_INLINE_FUNCTION
-  int split3d(int, double*) const;
+  int split3d(int, double*, int) const;
 
   KOKKOS_INLINE_FUNCTION
   int split2d(int, double*) const;

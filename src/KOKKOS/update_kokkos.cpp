@@ -666,7 +666,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   } else if (pflag == PENTRY) {
     icell = particle_i.icell;
     if (d_cells[icell].nsplit > 1) {
-      if (DIM == 3 && SURF) icell = split3d(icell,x);
+      if (DIM == 3 && SURF) icell = split3d(icell,x,particle_i.id);
       if (DIM < 3 && SURF) icell = split2d(icell,x);
       particle_i.icell = icell;
     }
@@ -999,7 +999,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (nsurf_tally)
             for (m = 0; m < nsurf_tally; m++)
               slist_active_copy[m].obj.
-                    surf_tally_kk<ATOMIC_REDUCTION>(minsurf,&iorig,ipart,jpart);
+                    surf_tally_kk<ATOMIC_REDUCTION>(minsurf,icell,&iorig,ipart,jpart);
 
           // nstuck = consective iterations particle is immobile
 
@@ -1111,7 +1111,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       icell = neigh[outface];
       if (DIM == 3 && SURF) {
         if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
-          icell = split3d(icell,x);
+          icell = split3d(icell,x,particle_i.id);
       }
       if (DIM < 3 && SURF) {
         if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1122,7 +1122,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (icell >= 0) {
         if (DIM == 3 && SURF) {
           if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
-            icell = split3d(icell,x);
+            icell = split3d(icell,x,particle_i.id);
         }
         if (DIM < 3 && SURF) {
           if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1219,7 +1219,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           icell = neigh[outface];
           if (DIM == 3 && SURF) {
             if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
-              icell = split3d(icell,x);
+              icell = split3d(icell,x,particle_i.id);
           }
           if (DIM < 3 && SURF) {
             if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1230,7 +1230,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (icell >= 0) {
             if (DIM == 3 && SURF) {
               if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
-                icell = split3d(icell,x);
+                icell = split3d(icell,x,particle_i.id);
             }
             if (DIM < 3 && SURF) {
               if (d_cells[icell].nsplit > 1 && d_cells[icell].nsurf >= 0)
@@ -1344,7 +1344,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-int UpdateKokkos::split3d(int icell, double *x) const
+int UpdateKokkos::split3d(int icell, double *x, int id) const
 {
   int m,cflag,isurf,hitflag,side,minsurfindex;
   double param,minparam;
@@ -1356,6 +1356,7 @@ int UpdateKokkos::split3d(int icell, double *x) const
   // only consider tris that are mapped via csplits to a split cell
   //   unmapped tris only touch cell surf at xnew
   //   another mapped tri should include same xnew
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particles starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
@@ -1365,6 +1366,7 @@ int UpdateKokkos::split3d(int icell, double *x) const
 
   cflag = 0;
   minparam = 2.0;
+
   auto csplits_begin = d_csplits.row_map(isplit);
   auto csurfs_begin = d_csurfs.row_map(isplit);
   for (m = 0; m < nsurf; m++) {
@@ -1408,6 +1410,7 @@ int UpdateKokkos::split2d(int icell, double *x) const
   // only consider lines that are mapped via csplits to a split cell
   //   unmapped lines only touch cell surf at xnew
   //   another mapped line should include same xnew
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particle starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 

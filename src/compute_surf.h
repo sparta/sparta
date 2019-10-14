@@ -30,6 +30,7 @@ namespace SPARTA_NS {
 class ComputeSurf : public Compute {
  public:
   ComputeSurf(class SPARTA *, int, char **);
+  ComputeSurf(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
   ~ComputeSurf();
   virtual void init();
   void compute_per_surf();
@@ -71,7 +72,7 @@ class ComputeSurf : public Compute {
   double weight;           // particle weight, based on initial cell
   double *normflux;        // normalization factor for each surf element
 
-  void init_normflux();
+  virtual void init_normflux();
   void grow_tally();
 };
 
