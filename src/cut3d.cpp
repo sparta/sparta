@@ -19,6 +19,7 @@
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
+#include "comm.h"
 #include "math_extra.h"
 #include "memory.h"
 #include "error.h"
@@ -2153,7 +2154,7 @@ void Cut3d::push(double *pt)
 
 void Cut3d::failed_cell()
 {
-  printf("Cut3d failed in cell ID: " CELLINT_FORMAT "\n",id);
+  printf("Cut3d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
 
   Surf::Tri *tris = surf->tris;
   
