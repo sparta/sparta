@@ -31,9 +31,16 @@ class ReactBird : public React {
   void ambi_check();
   virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
                       double, double, double, double &, int &) = 0;
+  char *reactionID(int);
+  double extract_tally(int);
 
  protected:
   FILE *fp;
+
+  // tallies for reactions
+
+  int *tally_reactions,*tally_reactions_all;
+  int tally_flag;
 
   struct OneReaction {
     int active;                    // 1 if reaction is active
@@ -45,10 +52,10 @@ class ReactBird : public React {
     char **id_reactants,**id_products;  // species IDs of reactants/products
     int *reactants,*products;      // species indices of reactants/products
     double *coeff;                 // numerical coeffs for reaction
+    char *id;                      // reaction ID (formula)
   };
 
   OneReaction *rlist;              // list of all reactions read from file
-  int nlist;                       // # of reactions read from file
   int maxlist;                     // max # of reactions in rlist
 
   // all reactions a pair of reactant species is part of

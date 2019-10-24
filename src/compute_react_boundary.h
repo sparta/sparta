@@ -12,27 +12,36 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#ifdef SURF_COLLIDE_CLASS
+#ifdef COMPUTE_CLASS
 
-SurfCollideStyle(vanish,SurfCollideVanish)
+ComputeStyle(react/boundary,ComputeReactBoundary)
 
 #else
 
-#ifndef SPARTA_SURF_COLLIDE_VANISH_H
-#define SPARTA_SURF_COLLIDE_VANISH_H
+#ifndef SPARTA_REACT_BOUNDARY_SURF_H
+#define SPARTA_REACT_BOUNDARY_SURF_H
 
-#include "surf_collide.h"
+#include "compute.h"
 #include "particle.h"
 
 namespace SPARTA_NS {
 
-class SurfCollideVanish : public SurfCollide {
+class ComputeReactBoundary : public Compute {
  public:
-  SurfCollideVanish(class SPARTA *, int, char **);
-  SurfCollideVanish(class SPARTA *sparta) : SurfCollide(sparta) {}
-  virtual ~SurfCollideVanish() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, 
-                             int, int &);
+  ComputeReactBoundary(class SPARTA *, int, char **);
+  ~ComputeReactBoundary();
+  virtual void init();
+  virtual void compute_array();
+  virtual void clear();
+  virtual void boundary_tally(int, int, int, Particle::OnePart *,
+                              Particle::OnePart *, Particle::OnePart *);
+
+ protected:
+  int isr,ntotal,nrow;
+
+  int *surf_react;
+
+  double **myarray;              // local accumulator array
 };
 
 }

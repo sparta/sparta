@@ -92,6 +92,8 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
   combined = 0;
 
   hash = new MyHash;
+
+  dim = domain->dimension;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -118,10 +120,6 @@ void ComputeSurf::init()
 
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute surf mixture has changed");
-
-  // local copies
-
-  dim = domain->dimension;
 
   // set normflux for all owned + ghost surfs
 
@@ -205,7 +203,7 @@ void ComputeSurf::clear()
 
 /* ----------------------------------------------------------------------
    tally values for a single particle in icell
-     colliding with surface element isurf
+     colliding with surface element isurf, performing reaction (1 to N)
    iorig = particle ip before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision
@@ -213,7 +211,8 @@ void ComputeSurf::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig, 
+void ComputeSurf::surf_tally(int isurf, int icell, int reaction,
+                             Particle::OnePart *iorig, 
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if isurf not in surface group

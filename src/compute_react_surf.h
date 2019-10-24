@@ -14,12 +14,12 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(surf,ComputeSurf)
+ComputeStyle(react/surf,ComputeReactSurf)
 
 #else
 
-#ifndef SPARTA_COMPUTE_SURF_H
-#define SPARTA_COMPUTE_SURF_H
+#ifndef SPARTA_COMPUTE_REACT_SURF_H
+#define SPARTA_COMPUTE_REACT_SURF_H
 
 #include "compute.h"
 #include "surf.h"
@@ -27,11 +27,10 @@ ComputeStyle(surf,ComputeSurf)
 
 namespace SPARTA_NS {
 
-class ComputeSurf : public Compute {
+class ComputeReactSurf : public Compute {
  public:
-  ComputeSurf(class SPARTA *, int, char **);
-  ComputeSurf(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
-  ~ComputeSurf();
+  ComputeReactSurf(class SPARTA *, int, char **);
+  ~ComputeReactSurf();
   virtual void init();
   void compute_per_surf();
   virtual void clear();
@@ -39,14 +38,13 @@ class ComputeSurf : public Compute {
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
   virtual void post_process_surf();
-  void reallocate();
   bigint memory_usage();
 
  protected:
-  int groupbit,imix,nvalue,ngroup,ntotal;
+  int groupbit;
+  int isr;                 // index of surface reaction model
+  int ntotal;
   int maxsurf,combined;
-  double nfactor_inverse;
-  int *which;
 
   int ntally;              // # of surfs I have tallied for
   int maxtally;            // # of tallies currently allocated
@@ -68,11 +66,6 @@ class ComputeSurf : public Compute {
   Surf::Line *lines;
   Surf::Tri *tris;
 
-  int weightflag;          // 1 if cell weighting is enabled
-  double weight;           // particle weight, based on initial cell
-  double *normflux;        // normalization factor for each surf element
-
-  virtual void init_normflux();
   void grow_tally();
 };
 
@@ -88,14 +81,5 @@ E: Illegal ... command
 Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running SPARTA to see the offending line.
-
-E: Compute surf mixture ID does not exist
-
-Self-explanatory.
-
-E: Number of groups in compute surf mixture has changed
-
-This mixture property cannot be changed after this compute command is
-issued.
 
 */

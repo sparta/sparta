@@ -31,6 +31,8 @@ class SurfReactGlobal : public SurfReact {
   ~SurfReactGlobal();
   int react(Particle::OnePart *&, double *, Particle::OnePart *&);
 
+  char *reactionID(int);
+
  private:
   double prob_create,prob_destroy;
   class RanPark *random;     // RNG for reaction probabilities

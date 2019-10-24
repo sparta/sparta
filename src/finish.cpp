@@ -22,7 +22,9 @@
 #include "particle.h"
 #include "grid.h"
 #include "collide.h"
+#include "react.h"
 #include "surf.h"
+#include "surf_react.h"
 #include "comm.h"
 #include "math_extra.h"
 #include "timer.h"
@@ -282,6 +284,70 @@ void Finish::end(int flag, double time_multiple_runs)
         fprintf(logfile,"Collision-attempts/particle/step: %g\n",caps);
         fprintf(logfile,"Collisions/particle/step: %g\n",cps);
         fprintf(logfile,"Reactions/particle/step: %g\n",rps);
+      }
+    }
+  }
+
+  // gas per-reaction stats
+
+  if (react) {
+    if (me == 0) {
+      if (screen) fprintf(screen,"\nGas reaction tallies:\n");
+      if (logfile) fprintf(logfile,"\nGas reaction tallies:\n");
+    }
+
+    double tally;
+    char *rID;
+    int nlist = react->nlist;
+    if (me == 0) {
+      if (screen) fprintf(screen,"  style %s #-of-reactions %d\n",
+                          react->style,nlist);
+      if (logfile) fprintf(logfile,"  style %s #-of-reactions %d\n",
+                           react->style,nlist);
+    }
+    for (int m = 0; m < nlist; m++) {
+      tally = react->extract_tally(m);
+      if (tally == 0.0) continue;
+      rID = react->reactionID(m);
+      if (me == 0) {
+        if (screen) fprintf(screen,"  reaction %s: %g\n",rID,tally);
+        if (logfile) fprintf(logfile,"  reaction %s: %g\n",rID,tally);
+      }
+    }
+  }
+
+  // surface per-reaction stats
+
+  if (surf->nsr) {
+    if (me == 0) {
+      if (screen) fprintf(screen,"\nSurface reaction tallies:\n");
+      if (logfile) fprintf(logfile,"\nSurface reaction tallies:\n");
+    }
+
+    double tally;
+    char *rID;
+    for (int i = 0; i < surf->nsr; i++) {
+      SurfReact *sr = surf->sr[i];
+      int nlist = sr->nlist;
+      if (me == 0) {
+        if (screen) fprintf(screen,"  id %s style %s #-of-reactions %d\n",
+                            sr->id,sr->style,nlist);
+        if (logfile) fprintf(logfile,"  id %s style %s #-of-reactions %d\n",
+                             sr->id,sr->style,nlist);
+      }
+      tally = sr->compute_vector(1);
+      if (me == 0) {
+        if (screen) fprintf(screen,"    reaction all: %g\n",tally);
+        if (logfile) fprintf(logfile,"    reaction all: %g\n",tally);
+      }
+      for (int m = 0; m < nlist; m++) {
+        tally = sr->compute_vector(2+nlist+m);
+        if (tally == 0.0) continue;
+        rID = sr->reactionID(m);
+        if (me == 0) {
+          if (screen) fprintf(screen,"    reaction %s: %g\n",rID,tally);
+          if (logfile) fprintf(logfile,"    reaction %s: %g\n",rID,tally);
+        }
       }
     }
   }

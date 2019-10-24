@@ -14,39 +14,36 @@
 
 #ifdef COMPUTE_CLASS
 
-ComputeStyle(surf,ComputeSurf)
+ComputeStyle(react/isurf/grid,ComputeReactISurfGrid)
 
 #else
 
-#ifndef SPARTA_COMPUTE_SURF_H
-#define SPARTA_COMPUTE_SURF_H
+#ifndef SPARTA_COMPUTE_REACT_ISURF_GRID_H
+#define SPARTA_COMPUTE_REACT_ISURF_GRID_H
 
 #include "compute.h"
+#include "grid.h"
 #include "surf.h"
 #include "hash3.h"
 
 namespace SPARTA_NS {
 
-class ComputeSurf : public Compute {
+class ComputeReactISurfGrid : public Compute {
  public:
-  ComputeSurf(class SPARTA *, int, char **);
-  ComputeSurf(class SPARTA* sparta) : Compute(sparta) {} // needed for Kokkos
-  ~ComputeSurf();
+  ComputeReactISurfGrid(class SPARTA *, int, char **);
+  ~ComputeReactISurfGrid();
   virtual void init();
-  void compute_per_surf();
+  void compute_per_grid();
   virtual void clear();
   virtual void surf_tally(int, int, int, Particle::OnePart *, 
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
-  virtual void post_process_surf();
-  void reallocate();
+  void post_process_isurf_grid();
   bigint memory_usage();
 
  protected:
-  int groupbit,imix,nvalue,ngroup,ntotal;
-  int maxsurf,combined;
-  double nfactor_inverse;
-  int *which;
+  int isr,groupbit,ntotal;
+  int maxgrid,combined;
 
   int ntally;              // # of surfs I have tallied for
   int maxtally;            // # of tallies currently allocated
@@ -65,14 +62,10 @@ class ComputeSurf : public Compute {
   MyHash *hash;
 
   int dim;                 // local copies
+  Grid::ChildInfo *cinfo;
   Surf::Line *lines;
   Surf::Tri *tris;
 
-  int weightflag;          // 1 if cell weighting is enabled
-  double weight;           // particle weight, based on initial cell
-  double *normflux;        // normalization factor for each surf element
-
-  virtual void init_normflux();
   void grow_tally();
 };
 

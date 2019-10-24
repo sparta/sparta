@@ -35,6 +35,13 @@ SurfReactProb::SurfReactProb(SPARTA *sparta, int narg, char **arg) :
 
   readfile(arg[2]);
 
+  tally_single = new int[nlist];
+  tally_total = new int[nlist];
+  tally_single_all = new int[nlist];
+  tally_total_all = new int[nlist];
+
+  size_vector = 2 + 2*nlist;
+
   // initialize RNG
 
   random = new RanPark(update->ranmaster->uniform());
@@ -57,7 +64,12 @@ void SurfReactProb::init()
   init_reactions();
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   select surface reaction to perform for particle with ptr IP on surface
+   return 0 if no reaction
+   return 1 = destroy reaction
+   if dissociation, add particle and return ptr JP
+------------------------------------------------------------------------- */
 
 int SurfReactProb::react(Particle::OnePart *&ip, double *, 
                          Particle::OnePart *&jp)
@@ -86,6 +98,7 @@ int SurfReactProb::react(Particle::OnePart *&ip, double *,
 
     if (react_prob > random_prob) {
       nsingle++;
+      tally_single[list[i]]++;
       switch (r->type) {
       case DISSOCIATION:
         {
@@ -99,17 +112,17 @@ int SurfReactProb::react(Particle::OnePart *&ip, double *,
             particle->add_particle(id,r->products[1],ip->icell,x,v,0.0,0.0);
           if (reallocflag) ip = particle->particles + (ip - particles);
           jp = &particle->particles[particle->nlocal-1];
-          return 1;
+          return list[i] + 1;
         }
       case EXCHANGE:
         {
           ip->ispecies = r->products[0];
-          return 1;
+          return list[i] + 1;
         }
       case RECOMBINATION:
         {
           ip = NULL;
-          return 1;
+          return list[i] + 1;
         }
       }
     }
