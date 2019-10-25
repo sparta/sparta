@@ -25,7 +25,6 @@ class SurfCollide : protected Pointers {
   char *id;
   char *style;
  
-  int dynamicflag;          // 1 if any param is dynamically updated
   int allowreact;           // 1 if allows for surface reactions
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector

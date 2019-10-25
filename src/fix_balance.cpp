@@ -32,6 +32,9 @@
 #include "error.h"
 #include "timer.h"
 
+// DEBUG
+#include "surf.h"
+
 using namespace SPARTA_NS;
 
 enum{RANDOM,PROC,BISECTION};
@@ -163,6 +166,9 @@ void FixBalance::init()
 
 void FixBalance::end_of_step()
 {
+  // DEBUG
+  //if (update->ntimestep >= 600) return;
+
   // return if imbalance < threshhold
 
   imbnow = imbalance_factor(maxperproc);
@@ -254,7 +260,7 @@ void FixBalance::end_of_step()
 
   // sort particles
 
-  if (!particle->sorted) particle->sort();
+  particle->sort();
 
   // migrate grid cells and their particles to new owners
   // invoke grid methods to complete grid setup
@@ -264,7 +270,7 @@ void FixBalance::end_of_step()
   grid->remove_ghosts();
 
   comm->migrate_cells(nmigrate);
-  grid->hashfilled = 0;
+  modify->post_migrate();
 
   grid->setup_owned();
   grid->acquire_ghosts();
@@ -272,9 +278,19 @@ void FixBalance::end_of_step()
   grid->reset_neighbors();
   comm->reset_neighbors();
 
-  // notify all classes that store per-grid data that grid may have changed
-  
-  grid->notify_changed();
+  // reallocate data in per grid and per surf computes
+  // that depends on which cells and surfs a proc owns
+
+  Compute **compute = modify->compute;
+  for (int i = 0; i < modify->ncompute; i++) {
+    if (compute[i]->per_grid_flag) compute[i]->reallocate();
+    if (compute[i]->per_surf_flag) compute[i]->reallocate();
+  }
+
+  // reallocate per grid arrays in per grid dumps
+
+  for (int i = 0; i < output->ndump; i++)
+    output->dump[i]->reset_grid();
 
   // final imbalance factor
 

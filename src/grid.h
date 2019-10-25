@@ -143,11 +143,11 @@ class Grid : protected Pointers {
     double weight;            // fnum weighting for this cell
   };
 
-  // additional info for owned or ghost split cell or sub cell
+  // additional info for owned or ghost split cell
   // ghost split cell info is appended to owned split cell info
 
   struct SplitInfo {
-    int icell;                // index of split cell this sub cell belongs to
+    int icell;                // index of split cell in cells this belongs to
     int xsub;                 // which sub cell (0 to Nsplit-1) xsplit is in
     double xsplit[3];         // coords of point in split cell
     int *csplits;             // sub cell (0 to Nsplit-1) each Nsurf belongs to
@@ -203,10 +203,9 @@ class Grid : protected Pointers {
   void add_parent_cell(cellint, int, int, int, int, double *, double *);
   void add_split_cell(int);
   void add_sub_cell(int, int);
-  void notify_changed();
-  void setup_owned(); 
   void remove_ghosts();
-  void acquire_ghosts(int surfflag=1);
+  void setup_owned();
+  void acquire_ghosts();
   void rehash();
   void find_neighbors();
   void unset_neighbors();
@@ -242,8 +241,8 @@ class Grid : protected Pointers {
 
   // grid_comm.cpp
 
-  int pack_one(int, char *, int, int, int, int);
-  int unpack_one(char *, int, int, int, int sortflag=0);
+  int pack_one(int, char *, int, int, int);
+  int unpack_one(char *, int, int, int sortflag=0);
   int pack_one_adapt(char *, char *, int);
   int pack_particles(int, char *, int);
   int unpack_particles(char *, int, int);
@@ -259,7 +258,6 @@ class Grid : protected Pointers {
   void clear_surf_restart();
   void combine_split_cell_particles(int, int);
   void assign_split_cell_particles(int);
-  int outside_surfs(int, double *, class Cut3d *, class Cut2d *);
   void allocate_surf_arrays();
   void allocate_cell_arrays();
   int *csubs_request(int);
@@ -373,8 +371,8 @@ class Grid : protected Pointers {
   void recurse2d(int, double *, double *, int, int &, cellint *);
   void recurse3d(int, double *, double *, int, int &, cellint *);
 
-  void acquire_ghosts_all(int);
-  void acquire_ghosts_near(int);
+  void acquire_ghosts_all();
+  void acquire_ghosts_near();
 
   void box_intersect(double *, double *, double *, double *, 
                      double *, double *);
@@ -388,10 +386,12 @@ class Grid : protected Pointers {
   void flow_stats();
   double flow_volume();
 
-  // callback function for ring communication and class variable to access
+  // grid_comm.cpp
+  // static variable for ring communication callback to access class data
+  // callback function for ring communication
 
-  int unpack_ghosts_surfflag;
-  static void unpack_ghosts(int, char *, void *);
+  static Grid *gptr;
+  static void unpack_ghosts(int, char *);
 
   // callback functions for rendezvous communication
 

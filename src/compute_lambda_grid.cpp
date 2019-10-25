@@ -266,7 +266,7 @@ void ComputeLambdaGrid::compute_per_grid()
     }
 
     if (cnrho->post_process_grid_flag)
-      cnrho->post_process_grid(nrhoindex,1,NULL,NULL,NULL,1);
+      cnrho->post_process_grid(nrhoindex,-1,1,NULL,NULL,NULL,1);
 
     if (nrhoindex == 0 || cnrho->post_process_grid_flag)
       memcpy(nrho,cnrho->vector_grid,nglocal*sizeof(double));
@@ -295,7 +295,7 @@ void ComputeLambdaGrid::compute_per_grid()
     }
 
     if (ctemp->post_process_grid_flag)
-      ctemp->post_process_grid(tempindex,1,NULL,NULL,NULL,1);
+      ctemp->post_process_grid(tempindex,-1,1,NULL,NULL,NULL,1);
 
     if (tempindex == 0 || ctemp->post_process_grid_flag)
       memcpy(temp,ctemp->vector_grid,nglocal*sizeof(double));

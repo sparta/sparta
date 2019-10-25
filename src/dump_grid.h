@@ -29,7 +29,7 @@ class DumpGrid : public Dump {
  public:
   DumpGrid(class SPARTA *, int, char **);
   ~DumpGrid();
-  void reset_grid_count();
+  void reset_grid();
   bigint memory_usage();
 
  private:
@@ -57,9 +57,9 @@ class DumpGrid : public Dump {
   int *variable;             // list of indices for the Variables
   double **vbuf;             // local storage for variable evaluation
 
-  int *cpart;                // indices into grid->cells for cells with particles
+  int *cpart;                // indices into grid->cells of cells with particles
   int ncpart;                // # of owned grid cells with particles
-  int maxgrid;               // max length of per-grid variable vectors
+  int maxlocal;              // max length of per-grid variable vectors
 
   int dimension;
 

@@ -678,7 +678,7 @@ bool line_line_intersect(double *start, double *stop,
   if (MathExtra::dot3(edge,pvec) > EPSSQ) return false;
 
   // there is a valid intersection with line B
-  // set side to ONSURF, OUTSIDE, or INSIDE
+  // set side to ONSUFR, OUTSIDE, or INSIDE
   // if start point is inside or outside then side = same
   // if particle started on line B, side = ONSURF OUT/IN based on dotstop
 

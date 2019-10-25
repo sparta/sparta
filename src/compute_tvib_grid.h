@@ -32,7 +32,7 @@ class ComputeTvibGrid : public Compute {
   void init();
   void compute_per_grid();
   int query_tally_grid(int, double **&, int *&);
-  void post_process_grid(int, int, double **, int *, double *, int);
+  double post_process_grid(int, int, int, double **, int *, double *, int);
   void reallocate();
   bigint memory_usage();
 

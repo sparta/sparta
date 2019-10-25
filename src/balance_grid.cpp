@@ -159,7 +159,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
 
   // re-assign each of my local child cells to a proc
   // only assign unsplit and split cells
-  // do not assign sub cells since they migrate with their split cell
+  // do not assign sub-cells since they migrate with their split cell
   // set nmigrate = # of cells that will migrate to a new proc
   // reset proc field in cells for migrating cells
   // style NONE performs no re-assignment
@@ -358,7 +358,7 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
     memory->destroy(wt);
   }
 
-  // set clumped or not, depending on style
+  // set clumped of not, depending on style
   // NONE style does not change clumping
 
   if (nprocs == 1 || bstyle == CLUMP || bstyle == BLOCK || bstyle == BISECTION) 
@@ -417,7 +417,6 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   grid->remove_ghosts();
 
   comm->migrate_cells(nmigrate);
-  grid->hashfilled = 0;
 
   MPI_Barrier(world);
   double time4 = MPI_Wtime();
@@ -427,6 +426,11 @@ void BalanceGrid::command(int narg, char **arg, int outflag)
   if (ghost_previous) grid->reset_neighbors();
   else grid->find_neighbors();
   comm->reset_neighbors();
+
+  // reallocate per grid arrays in per grid dumps
+
+  for (int i = 0; i < output->ndump; i++)
+    output->dump[i]->reset_grid();
 
   MPI_Barrier(world);
   double time5 = MPI_Wtime();

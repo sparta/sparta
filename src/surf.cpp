@@ -209,6 +209,7 @@ void Surf::init()
 
   // check that every element is assigned to a surf collision model
   // skip if caller turned off the check, e.g. BalanceGrid
+  // NOTE: add distributed logic
 
   int dim = domain->dimension;
   bigint flag,allflag;
@@ -266,20 +267,6 @@ void Surf::init()
 
   for (int i = 0; i < nsc; i++) sc[i]->init();
   for (int i = 0; i < nsr; i++) sr[i]->init();
-}
-
-/* ----------------------------------------------------------------------
-   remove all surfs
-   called by FixAblate
-------------------------------------------------------------------------- */
-
-void Surf::clear()
-{
-  nsurf = 0;
-  nlocal = nghost = 0;
-  nown = 0;
-  hash->clear();
-  hashfilled = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -404,8 +391,7 @@ void Surf::add_line_temporary(surfint id, int itype, double *p1, double *p2)
 
 /* ----------------------------------------------------------------------
    add a triangle to tris list
-   called by ReadSurf (for non-distributed surfs) and
-     by ReadISurf via FixAblate and Marching Cubes/Squares
+   called by ReadSurf (for non-distributed surfs) and ReadISurf
 ------------------------------------------------------------------------- */
 
 void Surf::add_tri(surfint id, int itype, double *p1, double *p2, double *p3)
@@ -573,7 +559,6 @@ void Surf::rehash()
   // key = ID, value = index into lines or tris
 
   hash->clear();
-  hashfilled = 1;
 
   if (domain->dimension == 2) {
     for (int isurf = 0; isurf < nlocal; isurf++)
@@ -582,6 +567,8 @@ void Surf::rehash()
     for (int isurf = 0; isurf < nlocal; isurf++)
       (*hash)[tris[isurf].id] = isurf;
   }
+
+  hashfilled = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -2372,15 +2359,15 @@ int Surf::find_group(const char *id)
 
 /* ----------------------------------------------------------------------
    compress owned explicit distributed surfs to account for migrating grid cells
-   called from Comm::migrate_cells() AFTER grid cells are compressed
    discard nlocal surfs that are no longer referenced by owned grid cells
    use hash to store referenced surfs
    only called for explicit distributed surfs
 ------------------------------------------------------------------------- */
 
-void Surf::compress_explicit_rebalance()
+void Surf::compress_rebalance_explicit()
 {
-  int i,m,ns;
+  int i,m;
+  int nsurf;
   surfint *csurfs;
 
   int dim = domain->dimension;
@@ -2401,14 +2388,14 @@ void Surf::compress_explicit_rebalance()
     if (!cells[i].nsurf) continue;
     if (cells[i].nsplit <= 0) continue;
     csurfs = cells[i].csurfs;
-    ns = cells[i].nsurf;
+    nsurf = cells[i].nsurf;
     if (dim == 2) {
-      for (m = 0; m < ns; m++) {
+      for (m = 0; m < nsurf; m++) {
         keep[csurfs[m]] = 1;
         csurfs[m] = lines[csurfs[m]].id;
       }
     } else {
-      for (m = 0; m < ns; m++) {
+      for (m = 0; m < nsurf; m++) {
         keep[csurfs[m]] = 1;
         csurfs[m] = tris[csurfs[m]].id;
       }
@@ -2439,8 +2426,8 @@ void Surf::compress_explicit_rebalance()
     if (!cells[i].nsurf) continue;
     if (cells[i].nsplit <= 0) continue;
     csurfs = cells[i].csurfs;
-    ns = cells[i].nsurf;
-    for (m = 0; m < ns; m++) csurfs[m] = (*hash)[csurfs[m]];
+    nsurf = cells[i].nsurf;
+    for (m = 0; m < nsurf; m++) csurfs[m] = (*hash)[csurfs[m]];
   }
 
   hash->clear();
@@ -2449,19 +2436,18 @@ void Surf::compress_explicit_rebalance()
 
 /* ----------------------------------------------------------------------
    compress owned implicit surfs to account for migrating grid cells
-   called from Comm::migrate_cells() BEFORE grid cells are compressed
    migrating grid cells are ones with proc != me
-   reset csurfs indices for kept cells
+   store info on reordered nlocal surfs in hash
+   hash will be cleared after grid compression by call to reset_csurfs_implicit()
    only called for implicit surfs
 ------------------------------------------------------------------------- */
 
-void Surf::compress_implicit_rebalance()
+void Surf::compress_rebalance_implicit()
 {
-  int j,ns,icell;
+  int icell;
   cellint cellID;
-  surfint *csurfs;
 
-  if (!grid->hashfilled) grid->rehash();
+  if (hashfilled) hash->clear();
 
   Grid::ChildCell *cells = grid->cells;
   Grid::MyHash *ghash = grid->hash;
@@ -2472,42 +2458,54 @@ void Surf::compress_implicit_rebalance()
     for (int i = 0; i < nlocal; i++) {
       icell = (*ghash)[lines[i].id] - 1;
       if (cells[icell].proc != me) continue;
-      if (i != n) {
-        // compress my surf list
-        memcpy(&lines[n],&lines[i],sizeof(Line));
-        // reset matching csurfs index in grid cell from i to n
-        csurfs = cells[icell].csurfs;
-        ns = cells[icell].nsurf;
-        for (j = 0; j < ns; j++)
-          if (csurfs[j] == i) {
-            csurfs[j] = n;
-            break;
-          }
-      }
+      if (i != n) memcpy(&lines[n],&lines[i],sizeof(Line));
+      if (hash->find(lines[n].id) == hash->end())
+        (*hash)[lines[n].id] = n;
       n++;
     }
 
   } else {
     for (int i = 0; i < nlocal; i++) {
-      icell = (*ghash)[tris[i].id] - 1;
+      icell = (*ghash)[tris[i].id];
       if (cells[icell].proc != me) continue;
-      if (i != n) {
-        // compress my surf list
-        memcpy(&tris[n],&tris[i],sizeof(Tri));
-        // reset matching csurfs index in grid cell from i to n
-        csurfs = cells[icell].csurfs;
-        ns = cells[icell].nsurf;
-        for (j = 0; j < ns; j++)
-          if (csurfs[j] == i) {
-            csurfs[j] = n;
-            break;
-          }
-      }
+      if (i != n) memcpy(&tris[n],&tris[i],sizeof(Tri));
+      if (hash->find(lines[n].id) == hash->end())
+        (*hash)[lines[n].id] = n;
       n++;
     }
   }
 
+  hashfilled = 1;
+
   nlocal = n;
+}
+
+/* ----------------------------------------------------------------------
+   reset grid csurfs values for all my owned grid cells with surfs
+   called for implicit surfs after grid cell compression
+   b/c local surf list was also compressed
+------------------------------------------------------------------------- */
+
+void Surf::reset_csurfs_implicit()
+{
+  int m,isurf,nsurf;
+
+  Grid::ChildCell *cells = grid->cells;
+  int nslocal = grid->nlocal;
+
+  for (int icell = 0; icell < nslocal; icell++) {
+    if (cells[icell].nsplit <= 0) continue;
+    if (cells[icell].nsurf == 0) continue;
+    isurf = (*hash)[cells[icell].id];
+    nsurf = cells[icell].nsurf;
+    for (m = 0; m < nsurf; m++)
+      cells[icell].csurfs[m] = isurf++;
+  }
+
+  // can now clear surf hash created by compress_rebalance()
+
+  hash->clear();
+  hashfilled = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -2853,340 +2851,6 @@ int Surf::rendezvous_array(int n, char *inbuf,
 
   flag = 0;
   return 0;
-}
-
-/* ----------------------------------------------------------------------
-   comm of tallies across all procs
-   called from compute isurf/grid and fix ave/grid
-     for implicit surf tallies by grid cell
-   nrow = # of tallies
-   tally2surf = surf ID for each tally (same as cell ID)
-   in = vectir of tally values
-   return out = summed tallies for grid cells I own
-   done via rendezvous algorithm
-------------------------------------------------------------------------- */
-
-void Surf::collate_vector_implicit(int nrow, surfint *tally2surf,
-                                   double *in, double *out)
-{
-  int i,j,m,icell;
-  cellint cellID;
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-
-  // create a grid cell hash for only my owned cells
-
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  MyCellHash hash;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    hash[cells[icell].id] = icell+1;
-  }
-
-  // for implicit surfs, tally2surf stores cellIDs
-
-  cellint *tally2cell = (cellint *) tally2surf;
-
-  // if I own tally grid cell, sum tallies to out directly
-  // else nsend = # of tallies to contribute to rendezvous
-
-  int nsend = 0;
-  for (i = 0; i < nrow; i++) {
-    if (hash.find(tally2cell[i]) == hash.end()) nsend++;
-    else {
-      icell = hash[tally2cell[i]] - 1;
-      out[icell] += in[i];
-    }
-  }
-
-  // done if just one proc
-
-  if (nprocs == 1) return;
-
-  // ncell = # of owned grid cells with implicit surfs, excluding sub cells
-  // NOTE: could limit to cell group of caller
-
-  int ncell = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsurf <= 0) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    ncell++;
-  }
-
-  // allocate memory for rvous input
-  // ncount = ncell + nsend
-  // 3 doubles for each input = proc, cellID, tally
-
-  int ncount = ncell + nsend;
-
-  int *proclist;
-  double *in_rvous;
-  memory->create(proclist,ncount,"surf:proclist");
-  memory->create(in_rvous,3*ncount,"surf:in_rvous");
-
-  // create rvous inputs
-  // owning proc for each datum = random hash of cellID
-  // flavor 1: one per ncell with proc and cellID, no tally
-  // flavor 2: one per nsend with proc = -1, cellID, one tally
-
-  ncount = m = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsurf <= 0) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    proclist[ncount] = hashlittle(&cells[icell].id,sizeof(cellint),0) % nprocs;
-    in_rvous[m++] = me;
-    in_rvous[m++] = cells[icell].id;    // NOTE: should use ubuf
-    in_rvous[m++] = 0.0;
-    ncount++;
-  }
-
-  for (i = 0; i < nrow; i++) {
-    if (hash.find(tally2cell[i]) == hash.end()) {
-      proclist[ncount] = hashlittle(&tally2cell[i],sizeof(cellint),0) % nprocs;
-      in_rvous[m++] = -1;
-      in_rvous[m++] = tally2cell[i];    // NOTE: should use ubuf
-      in_rvous[m++] = in[i];
-      ncount++;
-    }
-  }
-
-  // perform rendezvous operation
-
-  ncol_rvous = 1;
-  char *buf;
-  int nout = comm->rendezvous(1,ncount,(char *) in_rvous,3*sizeof(double),
-			      0,proclist,rendezvous_implicit,
-			      0,buf,2*sizeof(double),(void *) this);
-  double *out_rvous = (double *) buf;
-
-  memory->destroy(proclist);
-  memory->destroy(in_rvous);
-
-  // sum tallies returned for grid cells I own into out
-
-  m = 0;
-  for (i = 0; i < nout; i++) {
-    cellID = out_rvous[m++];      // NOTE: should use ubuf
-    icell = hash[cellID] - 1;     // subtract one for child cell index
-    out[icell] += out_rvous[m++];
-  }
-
-  // clean-up
-
-  memory->destroy(out_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   comm of tallies across all procs
-   called from compute isurf/grid and fix ave/grid
-     for implicit surf tallies by grid cell
-   nrow = # of tallies
-   ncol = # of values per tally
-   tally2surf = surf ID for each tally (same as cell ID)
-   in = array of tally values, nrow by ncol
-   return out = summed tallies for grid cells I own, nlocal by ncol
-   done via rendezvous algorithm
-------------------------------------------------------------------------- */
-
-void Surf::collate_array_implicit(int nrow, int ncol, surfint *tally2surf,
-                                  double **in, double **out)
-{
-  int i,j,m,icell;
-  cellint cellID;
-
-  int me = comm->me;
-  int nprocs = comm->nprocs;
-
-  // create a grid cell hash for only my owned cells
-
-  Grid::ChildCell *cells = grid->cells;
-  int nglocal = grid->nlocal;
-
-  MyCellHash hash;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsplit <= 0) continue;
-    hash[cells[icell].id] = icell+1;
-  }
-
-  // for implicit surfs, tally2surf stores cellIDs
-
-  cellint *tally2cell = (cellint *) tally2surf;
-
-  // if I own tally grid cell, sum tallies to out directly
-  // else nsend = # of tallies to contribute to rendezvous
-
-  int nsend = 0;
-  for (i = 0; i < nrow; i++) {
-    if (hash.find(tally2cell[i]) == hash.end()) nsend++;
-    else {
-      icell = hash[tally2cell[i]] - 1;
-      for (j = 0; j < ncol; j++)
-        out[icell][j] += in[i][j];
-    }
-  }
-
-  // done if just one proc
-
-  if (nprocs == 1) return;
-
-  // ncell = # of owned grid cells with implicit surfs, excluding sub cells
-  // NOTE: could limit to cell group of caller
-
-  int ncell = 0;
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsurf <= 0) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    ncell++;
-  }
-
-  // allocate memory for rvous input
-  // ncount = ncell + nsend
-  // ncol+2 doubles for each input = proc, cellID, ncol values
-
-  int ncount = ncell + nsend;
-
-  int *proclist;
-  double *in_rvous;
-  memory->create(proclist,ncount,"surf:proclist");
-  memory->create(in_rvous,ncount*(ncol+2),"surf:in_rvous");
-
-  // create rvous inputs
-  // owning proc for each datum = random hash of cellID
-  // flavor 1: one per ncell with proc and cellID, no tallies
-  // flavor 2: one per nsend with proc = -1, cellID, tallies
-
-  ncount = m = 0;
-
-  for (int icell = 0; icell < nglocal; icell++) {
-    if (cells[icell].nsurf <= 0) continue;
-    if (cells[icell].nsplit <= 0) continue;
-    proclist[ncount] = hashlittle(&cells[icell].id,sizeof(cellint),0) % nprocs;
-    in_rvous[m++] = me;
-    in_rvous[m++] = cells[icell].id;    // NOTE: should use ubuf
-    for (j = 0; j < ncol; j++)
-      in_rvous[m++] = 0.0;
-    ncount++;
-  }
-
-  for (i = 0; i < nrow; i++) {
-    if (hash.find(tally2cell[i]) == hash.end()) {
-      proclist[ncount] = hashlittle(&tally2cell[i],sizeof(cellint),0) % nprocs;
-      in_rvous[m++] = -1;
-      in_rvous[m++] = tally2cell[i];    // NOTE: should use ubuf
-      for (j = 0; j < ncol; j++)
-        in_rvous[m++] = in[i][j];
-      ncount++;
-    }
-  }
-
-  // perform rendezvous operation
-
-  ncol_rvous = ncol;
-  char *buf;
-  int nout = comm->rendezvous(1,ncount,(char *) in_rvous,
-                              (ncol+2)*sizeof(double),
-			      0,proclist,rendezvous_implicit,
-			      0,buf,(ncol+1)*sizeof(double),(void *) this);
-  double *out_rvous = (double *) buf;
-
-  memory->destroy(proclist);
-  memory->destroy(in_rvous);
-
-  // sum tallies returned for grid cells I own into out
-
-  m = 0;
-  for (i = 0; i < nout; i++) {
-    cellID = out_rvous[m++];      // NOTE: should use ubuf
-    icell = hash[cellID] - 1;     // subtract one for child cell index
-    for (j = 0; j < ncol; j++)
-      out[icell][j] += out_rvous[m++];
-  }
-
-  // clean-up
-
-  memory->destroy(out_rvous);
-}
-
-/* ----------------------------------------------------------------------
-   callback from rendezvous operation
-   create summed tallies for each grid cell assigned to me
-   inbuf = list of N input datums
-   send cellID + Ncol values back to owning proc of each grid cell
-------------------------------------------------------------------------- */
-
-int Surf::rendezvous_implicit(int n, char *inbuf, 
-                              int &flag, int *&proclist, char *&outbuf, void *ptr)
-{
-  int i,j,k,m,proc,iout;
-  cellint cellID;
-
-  Surf *sptr = (Surf *) ptr;
-  Memory *memory = sptr->memory;
-  int ncol = sptr->ncol_rvous;
-  
-  // scan inbuf for (proc,cellID) entries
-  // create phash so can lookup the proc for each cellID
-
-  double *in_rvous = (double *) inbuf;
-  MyCellHash phash;
-
-  m = 0;
-  for (i = 0; i < n; i++) {
-    proc = static_cast<int> (in_rvous[m++]);
-    cellID = static_cast<cellint> (in_rvous[m++]);
-    if (proc >= 0 && phash.find(cellID) == phash.end()) phash[cellID] = proc;
-    m += ncol;
-  }
-
-  // allocate proclist & outbuf, based on size of max-size of phash
-
-  int nmax = phash.size();
-  memory->create(proclist,nmax,"surf:proclist");
-  double *out;
-  memory->create(out,nmax*(ncol+1),"surf:out");
-
-  // scan inbuf for (cellID,tallies) entries
-  // create a 2nd hash so can lookup the outbuf entry for each cellID
-  // create proclist and outbuf with summed tallies for every cellID
-
-  MyCellHash ohash;
-
-  int nout = 0;
-  k = m = 0;
-
-  for (i = 0; i < n; i++) {
-    proc = static_cast<int> (in_rvous[m++]);
-    cellID = static_cast<cellint> (in_rvous[m++]);
-    if (proc >= 0) {
-      m += ncol;                         // skip entries with novalues
-      continue;
-    }
-    if (ohash.find(cellID) == phash.end()) {  
-      ohash[cellID] = nout;              // add a new set of out values
-      proclist[nout] = phash[cellID];
-      out[k++] = cellID;
-      for (j = 0; j < ncol; j++)
-        out[k++] = in_rvous[m++];
-      nout++;
-    } else {
-      iout = ohash[cellID] * (ncol+1);   // offset into existing out values
-      iout++;                            // skip cellID;
-      for (j = 0; j < ncol; j++)
-        out[iout++] += in_rvous[m++];    // sum to existing values
-    }
-  }
-
-  // flag = 2: new outbuf
-
-  flag = 2;
-  outbuf = (char *) out;
-  return nout;
 }
 
 /* ----------------------------------------------------------------------

@@ -92,6 +92,26 @@ void ModifyKokkos::end_of_step()
 }
 
 /* ----------------------------------------------------------------------
+   add_grid_one call, only for relevant fixes
+   invoked by adapt_grid and fix adapt when new child cells are created
+------------------------------------------------------------------------- */
+
+void ModifyKokkos::add_grid_one(int icell, int flag)
+{
+  for (int i = 0; i < n_pergrid; i++) {
+    int j = list_pergrid[i];
+    particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
+    int prev_auto_sync = sparta->kokkos->auto_sync;
+    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
+
+    fix[list_pergrid[i]]->add_grid_one(icell,flag);
+
+    sparta->kokkos->auto_sync = prev_auto_sync;
+    particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
+  }
+}
+
+/* ----------------------------------------------------------------------
    pack_grid_one call, only for relevant fixes
    invoked by load balancer when grid cells migrate
 ------------------------------------------------------------------------- */
@@ -136,11 +156,44 @@ int ModifyKokkos::unpack_grid_one(int icell, char *buf)
 }
 
 /* ----------------------------------------------------------------------
-   copy_grid call, only for relevant fixes
-   invoked when a grod cell is removed
+   compress_grid call, only for relevant fixes
+   invoked by load balancer when grid cells migrate
 ------------------------------------------------------------------------- */
 
-void ModifyKokkos::copy_grid_one(int icell, int jcell)
+void ModifyKokkos::compress_grid(int flag)
+{
+  if (flag == 0)
+      for (int i = 0; i < n_pergrid; i++) {
+      int j = list_pergrid[i];
+      particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
+      int prev_auto_sync = sparta->kokkos->auto_sync;
+      if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
+
+      fix[list_pergrid[i]]->compress_grid();
+
+      sparta->kokkos->auto_sync = prev_auto_sync;
+      particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
+    }
+  else
+      for (int i = 0; i < n_pergrid; i++) {
+      int j = list_pergrid[i];
+      particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
+      int prev_auto_sync = sparta->kokkos->auto_sync;
+      if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
+
+      fix[list_pergrid[i]]->post_compress_grid();
+
+      sparta->kokkos->auto_sync = prev_auto_sync;
+      particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
+    }
+}
+
+/* ----------------------------------------------------------------------
+   post_migrate call, only for relevant fixes
+   invoked by fix balance when grid cells migrate
+------------------------------------------------------------------------- */
+
+void ModifyKokkos::post_migrate()
 {
   for (int i = 0; i < n_pergrid; i++) {
     int j = list_pergrid[i];
@@ -148,7 +201,7 @@ void ModifyKokkos::copy_grid_one(int icell, int jcell)
     int prev_auto_sync = sparta->kokkos->auto_sync;
     if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
-    fix[j]->copy_grid_one(icell,jcell);
+    fix[j]->post_migrate();
 
     sparta->kokkos->auto_sync = prev_auto_sync;
     particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
@@ -156,11 +209,11 @@ void ModifyKokkos::copy_grid_one(int icell, int jcell)
 }
 
 /* ----------------------------------------------------------------------
-   add_grid_one call, only for relevant fixes
-   invoked by adapt_grid and fix adapt when new child cells are created
+   post_adapt call, only for relevant fixes
+   invoked by fix adapt when grid cells are adapted
 ------------------------------------------------------------------------- */
 
-void ModifyKokkos::add_grid_one()
+void ModifyKokkos::post_adapt()
 {
   for (int i = 0; i < n_pergrid; i++) {
     int j = list_pergrid[i];
@@ -168,47 +221,7 @@ void ModifyKokkos::add_grid_one()
     int prev_auto_sync = sparta->kokkos->auto_sync;
     if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
 
-    fix[j]->add_grid_one();
-
-    sparta->kokkos->auto_sync = prev_auto_sync;
-    particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   reset_grid call, only for relevant fixes
-   invoked after all grid cell removals
-------------------------------------------------------------------------- */
-
-void ModifyKokkos::reset_grid_count(int nlocal)
-{
-  for (int i = 0; i < n_pergrid; i++) {
-    int j = list_pergrid[i];
-    particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
-    int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
-
-    fix[j]->reset_grid_count(nlocal);
-
-    sparta->kokkos->auto_sync = prev_auto_sync;
-    particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   grid_changed call, only for relevant fixes
-   invoked after per-processor list of grid cells has changed
-------------------------------------------------------------------------- */
-
-void ModifyKokkos::grid_changed()
-{
-  for (int i = 0; i < n_pergrid; i++) {
-    int j = list_pergrid[i];
-    particle_kk->sync(fix[j]->execution_space,fix[j]->datamask_read);
-    int prev_auto_sync = sparta->kokkos->auto_sync;
-    if (!fix[j]->kokkos_flag) sparta->kokkos->auto_sync = 1;
-
-    fix[j]->grid_changed();
+    fix[j]->post_adapt();
 
     sparta->kokkos->auto_sync = prev_auto_sync;
     particle_kk->modify(fix[j]->execution_space,fix[j]->datamask_modify);

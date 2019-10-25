@@ -42,18 +42,37 @@ class ReadISurf : protected Pointers {
   virtual void command(int, char **);
 
  protected:
-  int me,nprocs,dim;
-  int ggroup,sgrouparg,pushflag,precision,readflag;
+  int me;
+  int dimension;
+  int count,iggroup,sgrouparg,filearg;
   int nx,ny,nz;
   double thresh;
   double corner[3],xyzsize[3];
   char *typefile;
 
-  class FixAblate *ablate;
+  int **cvalues;
+  int *svalues;
 
-  double **cvalues;        // array of corner point values
-  int *tvalues;            // vector of per grid cell surf types
+  // extra data for 3d marching cubes
+
+  double *lo,*hi;
+  int v000,v001,v010,v011,v100,v101,v110,v111;
+  double v000iso,v001iso,v010iso,v011iso,v100iso,v101iso,v110iso,v111iso;
+  int bit0,bit1,bit2,bit3,bit4,bit5,bit6,bit7;
+  double pt[36][3];
     
+  int config;     // configuration of the active cube
+  int subconfig;  // subconfiguration of the active cube
+    
+  // message datums for cleanup_MC()
+
+  struct SendDatum {
+    int sendcell,sendface;
+    int othercell,otherface;
+    int inwardnorm;            // for sending cell
+    Surf::Tri tri1,tri2;
+  };
+
   // hash for assigning grid corner points to grid cells
 
 #ifdef SPARTA_MAP
@@ -66,35 +85,32 @@ class ReadISurf : protected Pointers {
 
   MyHash *hash;
 
-  struct SendDatum {
-    int proc,icell,icorner;
-    bigint cindex;
-  };
+  void process_args(int, int, char **);
 
-  struct RecvDatum {
-    int icell,icorner;
-    double cvalue;
-  };
+  void read_corners(char *);
+  void read_types(char *);
 
-  bigint offset_rvous;
-  int nvalues_rvous;
-  uint8_t *ibuf_rvous;
-  double *dbuf_rvous;
-  int precision_rvous;
+  void create_hash(int, int);
+  void destroy_hash();
 
-  void process_args(int, char **);
-
-  void create_hash(int);
-  void read_corners_serial(char *);
-  void assign_corners(int, bigint, uint8_t *, double *);
-  void read_types_serial(char *);
+  void assign_corners(int, bigint, uint8_t *);
   void assign_types(int, bigint, int *);
 
-  void read_corners_parallel(char *);
+  void marching_cubes(int);
+  void marching_squares(int);
+  double interpolate(int, int, double, double);
 
-  // callback function for rendezvous communication
- 
-  static int rendezvous_corners(int, char *, int &, int *&, char *&, void *);
+  // extra functions for 3d marching cubes
+
+  int add_triangle(int *, int);
+  bool test_face(int);
+  bool test_interior(int, int);
+  bool modified_test_interior(int, int);
+  int interior_ambiguity(int, int);
+  int interior_ambiguity_verification(int);
+  bool interior_test_case13();
+  void cleanup_MC();
+  void print_cube();
 };
 
 }

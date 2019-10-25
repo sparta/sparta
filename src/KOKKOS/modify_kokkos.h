@@ -26,12 +26,12 @@ class ModifyKokkos : public Modify {
   void start_of_step();
   void end_of_step();
 
+  void add_grid_one(int, int);
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
-  void copy_grid_one(int, int);
-  void add_grid_one();
-  void reset_grid_count(int);
-  void grid_changed();
+  void compress_grid(int);
+  void post_migrate();
+  void post_adapt();
 
   void add_particle(int, double, double, double, double *);
   void gas_react(int);
