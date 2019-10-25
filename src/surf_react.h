@@ -34,8 +34,11 @@ class SurfReact : protected Pointers {
   virtual void init();
   virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&) = 0;
 
-  void tally_update();
   virtual char *reactionID(int);
+  virtual int match_reactant(char *, int);
+  virtual int match_product(char *, int);
+
+  void tally_update();
   double compute_vector(int i);
 
  protected:

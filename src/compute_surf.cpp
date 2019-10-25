@@ -105,6 +105,7 @@ ComputeSurf::~ComputeSurf()
   delete [] which;
   memory->destroy(array_surf_tally);
   memory->destroy(tally2surf);
+  memory->destroy(array_surf);
   memory->destroy(normflux);
   delete hash;
 }

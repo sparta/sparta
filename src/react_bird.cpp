@@ -65,8 +65,7 @@ ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-ReactBird::ReactBird(SPARTA *sparta) :
-  React(sparta)
+ReactBird::ReactBird(SPARTA *sparta) : React(sparta)
 {
   rlist = NULL;
   reactions = NULL;
@@ -79,6 +78,9 @@ ReactBird::ReactBird(SPARTA *sparta) :
 ReactBird::~ReactBird()
 {
   if (copy) return;
+
+  delete [] tally_reactions;
+  delete [] tally_reactions_all;
 
   if (rlist) {
     for (int i = 0; i < maxlist; i++) {

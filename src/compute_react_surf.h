@@ -43,8 +43,10 @@ class ComputeReactSurf : public Compute {
  protected:
   int groupbit;
   int isr;                 // index of surface reaction model
-  int ntotal;
+  int ntotal,rpflag;
   int maxsurf,combined;
+
+  int **reaction2col;      // 1 if ireaction triggers tally for icol
 
   int ntally;              // # of surfs I have tallied for
   int maxtally;            // # of tallies currently allocated

@@ -28,6 +28,7 @@
 
 using namespace SPARTA_NS;
 
+enum{REACTANT,PRODUCT};
 #define DELTA 4096
 
 /* ---------------------------------------------------------------------- */
@@ -36,7 +37,7 @@ ComputeReactISurfGrid::
 ComputeReactISurfGrid(SPARTA *sparta, int narg, char **arg) :
   Compute(sparta, narg, arg)
 {
-  if (narg != 4) error->all(FLERR,"Illegal compute react/isurf/grid command");
+  if (narg < 4) error->all(FLERR,"Illegal compute react/isurf/grid command");
 
   int igroup = grid->find_group(arg[2]);
   if (igroup < 0) 
@@ -48,6 +49,49 @@ ComputeReactISurfGrid(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Compute react/isurf/grid reaction ID does not exist");
 
   ntotal = surf->sr[isr]->nlist;
+  rpflag = 0;
+  reaction2col = NULL;
+
+  // parse per-column reactant/product args
+  // reset rpflag = 1 and ntotal = # of args
+
+  if (narg > 4) {
+    rpflag = 1;
+    int ncol = narg - 4;
+    memory->create(reaction2col,ntotal,ncol,"react/surf:reaction2col");
+    for (int i = 0; i < ntotal; i++)
+      for (int j = 0; j < ncol; j++)
+        reaction2col[i][j] = 0;
+    int which;
+    int icol = 0;
+    int iarg = 4;
+    while (iarg < narg) {
+      if (strncmp(arg[iarg],"r:",2) == 0) which = REACTANT;
+      else if (strncmp(arg[iarg],"p:",2) == 0) which = PRODUCT;
+      else error->all(FLERR,"Illegal compute react/surf command");
+      int n = strlen(&arg[iarg][2]) + 1;
+      char *copy = new char[n];
+      strcpy(copy,&arg[iarg][2]);
+      char *ptr = copy;
+      while (ptr = strtok(ptr,"/")) {
+        for (int ireaction = 0; ireaction < ntotal; ireaction++) {
+          reaction2col[ireaction][icol] = 0;
+          if (which == REACTANT) {
+            if (surf->sr[isr]->match_reactant(ptr,ireaction))
+              reaction2col[ireaction][icol] = 1;
+          } else if (which == PRODUCT) {
+            if (surf->sr[isr]->match_product(ptr,ireaction))
+              reaction2col[ireaction][icol] = 1;
+          }
+        }
+        ptr = NULL;
+      }
+      delete [] copy;
+      icol++;
+      iarg++;
+    }
+    ntotal = narg - 4;
+  }
 
   per_grid_flag = 1;
   size_per_grid_cols = ntotal;
@@ -73,6 +117,7 @@ ComputeReactISurfGrid(SPARTA *sparta, int narg, char **arg) :
 
 ComputeReactISurfGrid::~ComputeReactISurfGrid()
 {
+  memory->destroy(reaction2col);
   memory->destroy(array_surf_tally);
   memory->destroy(tally2surf);
   memory->destroy(array_grid);
@@ -84,14 +129,40 @@ ComputeReactISurfGrid::~ComputeReactISurfGrid()
 void ComputeReactISurfGrid::init()
 {
   if (!surf->exist)
-    error->all(FLERR,"Cannot use compute react/isurf/grid when surfs do not exist");
+    error->all(FLERR,"Cannot use compute react/isurf/grid "
+               "when surfs do not exist");
   if (!surf->implicit) 
     error->all(FLERR,"Cannot use compute react/isurf/grid with explicit surfs");
 
-  // NOTE: warn if some surfs are assigned to different surf react model
+  // warn if any surfs in group are assigned to different surf react model
 
+  lines = surf->lines;
+  tris = surf->tris;
+  int nslocal = surf->nlocal;
 
+  bigint flag = 0;
+  if (dim == 2) {
+    for (int i = 0; i < nslocal; i++) {
+      if (!(lines[i].mask & groupbit)) return;
+      if (lines[i].isr != isr) flag++;
+    }
+  } else {
+    for (int i = 0; i < nslocal; i++) {
+      if (!(tris[i].mask & groupbit)) return;
+      if (tris[i].isr != isr) flag++;
+    }
+  }
 
+  bigint flagall;
+  MPI_Allreduce(&flag,&flagall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
+  if (flagall && comm->me == 0) {
+    char str[128];
+    sprintf(str,
+            "Compute react/isurf/grid %ld surfs "
+            "are not assigned to surf react model",flagall);
+    error->warning(FLERR,str);
+  }
 
   // initialize tally array in case accessed before a tally timestep
 
@@ -146,6 +217,7 @@ void ComputeReactISurfGrid::surf_tally(int isurf, int icell, int reaction,
   // skip if no reaction
 
   if (reaction == 0) return;
+  reaction--;
 
   // skip if isurf not in surface group
   // or if this surf's reaction model is not a match
@@ -159,7 +231,7 @@ void ComputeReactISurfGrid::surf_tally(int isurf, int icell, int reaction,
   }
 
   // itally = tally index of isurf
-  // if 1st particle hitting isurf, add surf ID to hash
+  // if 1st reaction on this isurf, add surf ID to hash
   // grow tally list if needed
   // for implicit surfs, surfID is really a cellID
 
@@ -182,9 +254,16 @@ void ComputeReactISurfGrid::surf_tally(int isurf, int icell, int reaction,
   }
 
   // tally the reaction
+  // for rpflag, tally each column if r2c is 1 for this reaction
+  // for rpflag = 0, tally the reaction directly
 
   vec = array_surf_tally[itally];
-  vec[reaction-1] += 1.0;
+
+  if (rpflag) {
+    int *r2c = reaction2col[reaction];
+    for (int i = 0; i < ntotal; i++)
+      if (r2c[i]) vec[i] += 1.0;
+  } else vec[reaction] += 1.0;
 }
 
 /* ----------------------------------------------------------------------

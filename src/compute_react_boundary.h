@@ -37,11 +37,12 @@ class ComputeReactBoundary : public Compute {
                               Particle::OnePart *, Particle::OnePart *);
 
  protected:
-  int isr,ntotal,nrow;
-
+  int isr,ntotal,nrow,rpflag;
   int *surf_react;
 
-  double **myarray;              // local accumulator array
+  int **reaction2col;      // 1 if ireaction triggers tally for icol
+
+  double **myarray;        // local accumulator array
 };
 
 }

@@ -42,8 +42,12 @@ class ComputeReactISurfGrid : public Compute {
   bigint memory_usage();
 
  protected:
-  int isr,groupbit,ntotal;
+  int groupbit;
+  int isr;                 // index of surface reaction model
+  int ntotal,rpflag;
   int maxgrid,combined;
+
+  int **reaction2col;      // 1 if ireaction triggers tally for icol
 
   int ntally;              // # of surfs I have tallied for
   int maxtally;            // # of tallies currently allocated
@@ -62,7 +66,6 @@ class ComputeReactISurfGrid : public Compute {
   MyHash *hash;
 
   int dim;                 // local copies
-  Grid::ChildInfo *cinfo;
   Surf::Line *lines;
   Surf::Tri *tris;
 

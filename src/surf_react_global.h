@@ -32,6 +32,8 @@ class SurfReactGlobal : public SurfReact {
   int react(Particle::OnePart *&, double *, Particle::OnePart *&);
 
   char *reactionID(int);
+  int match_reactant(char *, int) {return 1;}
+  int match_product(char *, int) {return 1;}
 
  private:
   double prob_create,prob_destroy;

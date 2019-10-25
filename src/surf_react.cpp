@@ -96,6 +96,11 @@ SurfReact::~SurfReact()
   }
   memory->destroy(rlist);
 
+  delete [] tally_single;
+  delete [] tally_total;
+  delete [] tally_single_all;
+  delete [] tally_total_all;
+
   memory->destroy(reactions);
   memory->destroy(indices);
 }
@@ -377,6 +382,24 @@ void SurfReact::tally_update()
 char *SurfReact::reactionID(int m)
 {
   return rlist[m].id;
+}
+
+/* ---------------------------------------------------------------------- */
+
+int SurfReact::match_reactant(char *species, int m)
+{
+  for (int i = 0; i < rlist[m].nreactant; i++)
+    if (strcmp(species,rlist[m].id_reactants[i]) == 0) return 1;
+  return 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+int SurfReact::match_product(char *species, int m)
+{
+  for (int i = 0; i < rlist[m].nproduct; i++)
+    if (strcmp(species,rlist[m].id_products[i]) == 0) return 1;
+  return 0;
 }
 
 /* ---------------------------------------------------------------------- */
