@@ -39,7 +39,8 @@ class FixBalance : public Fix {
  private:
   int me,nprocs;
   double thresh;
-  int bstyle,rcbwt;
+  int bstyle,rcbwt,rcbflip;
+  char eligible[4];
   double last,my_timer_cost;
 
   double imbnow;                // current imbalance factor

@@ -12,9 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "spatype.h"
 #include "mpi.h"
+#include "spatype.h"
 #include "string.h"
+#include "stdlib.h"
 #include "write_restart.h"
 #include "universe.h"
 #include "update.h"
@@ -175,7 +176,8 @@ void WriteRestart::write(char *file)
 {
   if (update->mem_limit_grid_flag)
     update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
-  if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal))
+  if (update->global_mem_limit > 0 || 
+      (update->mem_limit_grid_flag && !grid->nlocal))
     return write_less_memory(file);
 
   // open single restart file or base file for multiproc case

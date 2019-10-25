@@ -18,6 +18,7 @@
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
+#include "comm.h"
 #include "math_extra.h"
 #include "math_const.h"
 #include "error.h"
@@ -42,6 +43,7 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut3d
 Cut2d::Cut2d(SPARTA *sparta, int caller_axisymmetric) : Pointers(sparta)
 {
   axisymmetric = caller_axisymmetric;
+  implicit = surf->implicit;
 
   npushmax = 2;    // if increase this, increase push vec size in cut2d.h
 
@@ -380,7 +382,8 @@ int Cut2d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     nsplit = pgs.n;
     if (nsplit > 1) {
       create_surfmap(surfmap);
-      errflag = split_point(surfmap,xsplit,xsub);
+      if (implicit) errflag = split_point_implicit(surfmap,xsplit,xsub);
+      else errflag = split_point_explicit(surfmap,xsplit,xsub);
     }
     if (errflag) {
       if (push_increment()) continue;
@@ -1008,9 +1011,14 @@ void Cut2d::create_surfmap(int *surfmap)
 }
 
 /* ----------------------------------------------------------------------
+   find a surf point that is inside or on the boundary of the current cell
+   for explicit surfs and cells already been flagged as a split cell
+   surfmap = sub-cell index each surf is part of (-1 if not eligible)
+   return xsplit = coords of point
+   return xsub = sub-cell index the chosen surf is in
 ------------------------------------------------------------------------- */
 
-int Cut2d::split_point(int *surfmap, double *xsplit, int &xsub)
+int Cut2d::split_point_explicit(int *surfmap, double *xsplit, int &xsub)
 {
   int iline;
   double *x1,*x2;
@@ -1053,6 +1061,35 @@ int Cut2d::split_point(int *surfmap, double *xsplit, int &xsub)
   // error return
 
   return 7;
+}
+
+/* ----------------------------------------------------------------------
+   find a surf point that is inside or on the boundary of the current cell
+   for implicit surfs and cells already flagged as a split cell
+   surfmap = sub-cell index each surf is part of (-1 if not eligible)
+   return xsplit = coords of point
+   return xsub = sub-cell index the chosen surf is in
+------------------------------------------------------------------------- */
+
+int Cut2d::split_point_implicit(int *surfmap, double *xsplit, int &xsub)
+{
+  Surf::Line *lines = surf->lines;
+
+  // i = 1st surf with non-negative surfmap
+
+  int i = 0;
+  while (surfmap[i] < 0 && i < nsurf) i++;
+  if (i == nsurf) return 7;
+
+  // xsplit = center point of line segment wholly contained in cell
+
+  int iline = surfs[i];
+  xsplit[0] = 0.5 * (lines[iline].p1[0] + lines[iline].p2[0]);
+  xsplit[1] = 0.5 * (lines[iline].p1[1] + lines[iline].p2[1]);
+  xsplit[2] = 0.0;
+  xsub = surfmap[i];
+
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -1208,7 +1245,7 @@ int Cut2d::whichside(double *pt)
 
 void Cut2d::failed_cell()
 {
-  printf("Cut2d failed in cell ID: " CELLINT_FORMAT "\n",id);
+  printf("Cut2d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
 
   cellint ichild;
   int iparent = grid->id_find_parent(id,ichild);

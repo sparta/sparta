@@ -21,6 +21,7 @@
 #include "grid.h"
 #include "surf.h"
 #include "update.h"
+#include "modify.h"
 #include "adapt_grid.h"
 #include "memory.h"
 #include "error.h"
@@ -233,7 +234,9 @@ void Comm::migrate_cells(int nmigrate)
 {
   if (update->mem_limit_grid_flag)
     update->global_mem_limit = grid->nlocal*sizeof(Grid::ChildCell);
-  if (update->global_mem_limit > 0 || (update->mem_limit_grid_flag && !grid->nlocal))
+
+  if (update->global_mem_limit > 0 || 
+      (update->mem_limit_grid_flag && !grid->nlocal))
     return migrate_cells_less_memory(nmigrate);
 
   int i,n;
@@ -260,7 +263,7 @@ void Comm::migrate_cells(int nmigrate)
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
     gproc[nsend] = cells[icell].proc;
-    n = grid->pack_one(icell,NULL,1,1,0);
+    n = grid->pack_one(icell,NULL,1,1,1,0);
     gsize[nsend++] = n;
     boffset += n;
   }
@@ -285,20 +288,20 @@ void Comm::migrate_cells(int nmigrate)
   for (int icell = 0; icell < nglocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].proc == me) continue;
-    offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
+    offset += grid->pack_one(icell,&sbuf[offset],1,1,1,1);
   }
 
-  // compress my list of owned implicit surfs
+  // compress my list of owned implicit surfs, resets csurfs in kept cells
   // compress my list of owned grid cells to remove migrating cells
-  // reset csurf pointers to implicit surfs since they were compressed
+  // compress my list of owned distributed/explicit surfs
   // compress particle list to remove particles in migrating cells
   // procs with no migrating cells must also unset particle sorted
   //   since compress_rebalance() unsets it
 
   if (nmigrate) {
-    if (surf->implicit) surf->compress_rebalance();
+    if (surf->implicit) surf->compress_implicit_rebalance();
     grid->compress();
-    if (surf->implicit) surf->reset_csurfs_implicit();
+    if (surf->distributed && !surf->implicit) surf->compress_explicit_rebalance();
     particle->compress_rebalance();
   } else particle->sorted = 0;
 
@@ -330,7 +333,7 @@ void Comm::migrate_cells(int nmigrate)
 
   offset = 0;
   for (i = 0; i < nrecv; i++)
-    offset += grid->unpack_one(&rbuf[offset],1,1);
+    offset += grid->unpack_one(&rbuf[offset],1,1,1);
 }
 
 /* ----------------------------------------------------------------------
@@ -371,7 +374,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
       if (cells[icell].nsplit <= 0) continue;
       if (cells[icell].proc == me) continue;
       gproc[nsend] = cells[icell].proc;
-      n = grid->pack_one(icell,NULL,1,1,0);
+      n = grid->pack_one(icell,NULL,1,1,1,0);
       if (n > 0 && boffset > 0 && boffset+n > update->global_mem_limit) {
         icell_end -= 1;
         break;
@@ -400,7 +403,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
     for (int icell = icell_start; icell < icell_end; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (cells[icell].proc == me) continue;
-      offset += grid->pack_one(icell,&sbuf[offset],1,1,1);
+      offset += grid->pack_one(icell,&sbuf[offset],1,1,1,1);
     }
 
     // compress particle list to remove particles in migrating cells
@@ -436,7 +439,7 @@ void Comm::migrate_cells_less_memory(int nmigrate)
 
     offset = 0;
     for (i = 0; i < nrecv; i++)
-      offset += grid->unpack_one(&rbuf[offset],1,1,1);
+      offset += grid->unpack_one(&rbuf[offset],1,1,1,1);
 
     // deallocate large buffers to reduce memory footprint
     // also deallocate igrid for same reason
@@ -457,12 +460,13 @@ void Comm::migrate_cells_less_memory(int nmigrate)
     MPI_Allreduce(&not_done_local,&not_done,1,MPI_INT,MPI_SUM,world); 
   }
 
+  // compress my list of owned implicit surfs, resets csurfs in kept cells
   // compress my list of owned grid cells to remove migrated cells
 
   if (nmigrate) {
-    if (surf->implicit) surf->compress_rebalance();
+    if (surf->implicit) surf->compress_implicit_rebalance();
     grid->compress();
-    if (surf->implicit) surf->reset_csurfs_implicit();
+    if (surf->distributed && !surf->implicit) surf->compress_explicit_rebalance();
   }
 }
 
@@ -550,17 +554,63 @@ int Comm::send_cells_adapt(int nsend, int *procsend, char *inbuf, char **outbuf)
 }
 
 /* ----------------------------------------------------------------------
-   wrapper on irregular comm of datums on uniform size
+   wrapper on irregular comm of datums of uniform size
+   receiving procs are neighbor procs of my owned grid cells, not including self
+   so can use same comm calls as migrate_particles (if neighflag is set)
+     via iparticle->augment_data_uniform() and exchange_uniform()
+     otherwise same logic as irregular_uniform()
+   called from FixAblate
+------------------------------------------------------------------------- */
+
+int Comm::irregular_uniform_neighs(int nsend, int *procsend, 
+                                   char *inbuf, int nsize, char **outbuf)
+{
+  // if neighflag, use iparticle
+  // else one-time create of irregular comm plan with constant size datums
+  // nrecv = # of incoming grid cells
+
+  if (!neighflag && !iuniform) iuniform = new Irregular(sparta);
+
+  int nrecv;
+  if (neighflag)
+    nrecv = iparticle->augment_data_uniform(nsend,procsend);
+  else 
+    nrecv = iuniform->create_data_uniform(nsend,procsend,commsortflag);
+
+  // reallocate rbuf as needed
+
+  if (nrecv*nsize > maxrecvbuf) {
+    memory->destroy(rbuf);
+    maxrecvbuf = nrecv*nsize;
+    memory->create(rbuf,maxrecvbuf,"comm:rbuf");
+    memset(rbuf,0,maxrecvbuf);
+  }
+
+  // perform irregular communication
+
+  if (neighflag)
+    iparticle->exchange_uniform(inbuf,nsize,rbuf);
+  else 
+    iuniform->exchange_uniform(inbuf,nsize,rbuf);
+
+  // return rbuf and grid cell count
+
+  *outbuf = rbuf;
+  return nrecv;
+}
+
+/* ----------------------------------------------------------------------
+   wrapper on irregular comm of datums of uniform size
+   receiving procs can be anyone, including self
+   use create_data_uniform() and exchange_uniform()
    called from AdaptGrid
 ------------------------------------------------------------------------- */
 
 int Comm::irregular_uniform(int nsend, int *procsend, 
                             char *inbuf, int nsize, char **outbuf)
 {
-  // create irregular communication plan with constant size datums
+  // one-time create of irregular comm plan with constant size datums
   // nrecv = # of incoming grid cells
-  // DEBUG: append a sort=1 arg so that messages from other procs
-  //        are received in repeatable order, thus grid cells stay in order
 
   if (!iuniform) iuniform = new Irregular(sparta);
   int nrecv = iuniform->create_data_uniform(nsend,procsend,commsortflag);
@@ -594,7 +644,8 @@ int Comm::irregular_uniform(int nsend, int *procsend,
 ------------------------------------------------------------------------- */
 
 void Comm::ring(int n, int nper, void *inbuf, int messtag,
-                void (*callback)(int, char *), void *outbuf, int self)
+                void (*callback)(int, char *, void *), void *outbuf, int self, 
+                void *ptr)
 {
   MPI_Request request;
   MPI_Status status;
@@ -621,7 +672,7 @@ void Comm::ring(int n, int nper, void *inbuf, int messtag,
       MPI_Get_count(&status,MPI_CHAR,&nbytes);
       memcpy(buf,bufcopy,nbytes);
     }
-    if (self || loop != nprocs-1) callback(nbytes/nper,buf);
+    if (self || loop != nprocs-1) callback(nbytes/nper,buf,ptr);
   }
 
   if (outbuf) memcpy(outbuf,buf,nbytes);

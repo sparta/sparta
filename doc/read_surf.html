@@ -19,7 +19,7 @@
 
 <LI>zero or more keyword/args pairs may be appended 
 
-<LI>keyword = <I>origin</I> or <I>trans</I> or <I>atrans</I> or <I>ftrans</I> or <I>scale</I> or <I>rotate</I> or <I>invert</I> or <I>clip</I> or <I>group</I> or <I>typeadd</I> or <I>particle</I> 
+<LI>keyword = <I>origin</I> or <I>trans</I> or <I>atrans</I> or <I>ftrans</I> or <I>scale</I> or <I>rotate</I> or <I>invert</I> or <I>clip</I> or <I>group</I> or <I>typeadd</I> or <I>particle</I> or <I>file</I> 
 
 <PRE>  origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
@@ -42,9 +42,11 @@
   typeadd arg = Noffset
     Noffset = add Noffset to the type value of each element
   particle args = <I>none</I> or <I>check</I> or <I>keep</I>
-    none = allow no particles in simulation when read surfs
+    none = allow no particles in simulation when read surfs (default)
     check = delete particles inside surfs or in cells intersected by surfs
-    keep = keep all particles 
+    keep = keep all particles
+  file args = identical to those defined for the <A HREF = "write_surf.html">write_surf</A> command
+    this keyword must be last 
 </PRE>
 
 </UL>
@@ -53,7 +55,9 @@
 <PRE>read_surf surf.sphere
 read_surf surf.sphere group sphere2 typeadd 1
 read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip
-read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6 
+read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip 1.0e-6
+read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip file tmp.surfs
+read_surf surf.file trans 10 5 0 scale 3 3 3 invert clip file tmp.surfs.% points no nfile 32 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -72,7 +76,7 @@ surfaces in the same simulation.
 <P>Surface elements are triangles in 3d or line segments in 2d.  Surface
 elements for each physical object are required to be a complete,
 connected set that tile the entire surface of the object.  See the
-discussion of watertight surfaces below.
+discussion of watertight objects below.
 </P>
 <P>Particles collide with surface elements as they advect.  Each surface
 element is assigned to a collision model, specified by the
@@ -95,8 +99,8 @@ different elements or different objects to different groups.
 <P>Explicit surface elements can be stored in a distributed fashion (each
 processor only stores elements which overlap grid cells it owns or has
 a ghost cell copy of).  Or each processor can store a copy of all
-surface elements (the default).  See the <A HREF = "global.html">global surfs</A> to
-change this setting.
+surface elements (the default).  See the <A HREF = "global.html">global surfs</A>
+command to change this setting.
 </P>
 <P>Note that the read_surf command can be used multiple times to read
 multiple objects from multiple files and add them to the simulation
@@ -114,17 +118,43 @@ program.
 </P>
 <HR>
 
-<P>The specified file can be a text file or a gzipped text file (detected
-by a .gz suffix).
+<P>If all the surface elements are contained in a single file, the
+specified file can be a text file or a gzipped text file (detected by
+a .gz suffix).
 </P>
-<P>A surface file for explicit surfaces has a header and a body.  The
-header appears first.  The first line of the header is always skipped;
-it typically contains a description of the file.  Then lines are read
-one at a time.  Lines can have a trailing comment starting with '#'
-that is ignored.  If the line is blank (only whitespace after comment
-is deleted), it is skipped.  If the line contains a header keyword,
-the corresponding value is read from the line.  If it doesn't contain
-a header keyword, the line begins the body of the file.
+<P>If a "%" character appears in the surface filename, SPARTA expects a
+set of multiple files to exist.  The <A HREF = "write_surf.html">write_surf</A>
+command explains how such sets are created.  Read_surf will first read
+a filename where "%" is replaced by "base".  This file tells SPARTA
+how many total surfaces and files are in the set (i.e. just the header
+information described below).  The read_surf command then reads the
+additional files.  For example, if the surface file was specified as
+save.% when it was written, then read_surf reads the files save.base,
+save.0, save.1, ... save.P-1, where P is the number of processors that
+created the surface file.
+</P>
+<P>Note that P could be the total number of processors in the previous
+simulation, or some subset of those processors, if the <I>fileper</I> or
+<I>nfile</I> options were used when the surface file was written; see the
+<A HREF = "write_surf.html">write_surf</A> command for details.  The processors in
+the current SPARTA simulation share the work of reading these files;
+each reads a roughly equal subset of the files.  The number of
+processors which created the set can be different than the number of
+processors in the current SPARTA simulation.  This can be a fast mode
+of input on parallel machines that support parallel I/O.
+</P>
+<P>The remainder of this section describes the format of a single surface
+file, whether it is the only file or one of multiple files flagged
+with a processor number.
+</P>
+<P>A surface file for explicit surfaces has a header and a body.
+The header appears first.  The first line of the header is always
+skipped; it typically contains a description of the file.  Then lines
+are read one at a time.  Lines can have a trailing comment starting
+with '#' that is ignored.  If the line is blank (only whitespace after
+comment is deleted), it is skipped.  If the line contains a header
+keyword, the corresponding value is read from the line.  If it doesn't
+contain a header keyword, the line begins the body of the file.
 </P>
 <P>The body of the file contains one or more sections.  The first line of
 a section has only a keyword.  The next line is skipped.  The
@@ -142,10 +172,26 @@ white space between their words.
 any order.  The value(s) are read from the beginning of the line.
 Thus the keyword <I>points</I> should be in a line like "1000 points".
 </P>
-<UL><LI><I>points</I> = # of points in surface
+<UL><LI><I>files</I> = # of files in set (only for base file, see below)
+<LI><I>points</I> = # of points in surface (optional, see below)
 <LI><I>lines</I> = # of line segments in surface (only allowed for 2d)
 <LI><I>triangles</I> = # of triangles in surface (only allowed for 3d) 
 </UL>
+<P>The <I>files</I> keyword only appears in the "base" file for a set of
+multiple files indicated by the "%" character in the filename.  It
+tells SPARTA how many additional files exist in the set.  A "base"
+file has no additional sections, i.e. no body.
+</P>
+<P>The <I>points</I> keyword is optional (see below).  For a set of multiple
+files, it cannot appear in the "base" file, but only in individual
+files in the set.
+</P>
+<P>The <I>points</I>, <I>lines</I>, <I>triangles</I> keywords refer to the number of
+points, lines, triangles in an individual file.  Except in the case of
+a "base" file for a set of multiple files.  In that case, the <I>lines</I>
+and <I>triangles</I> keywords give the number of lines or triangles in the
+entire set.
+</P>
 <P>These are the recognized section keywords for the body of the file.
 </P>
 <UL><LI><I>Points, Lines, Triangles</I> 
@@ -153,52 +199,105 @@ Thus the keyword <I>points</I> should be in a line like "1000 points".
 <P>The <I>Points</I> section consists of N consecutive entries, where N = # of
 points, each of this form:
 </P>
-<PRE>point-ID x y z    (for 3d) 
-point-ID x y      (for 2d) 
+<PRE>index x y z    (for 3d) 
+index x y      (for 2d) 
 </PRE>
-<P>The point-ID is ignored; it is only added to assist in examining the
-file.  The point-IDs should run consecutively from 1 to N.  <I>X,y,z</I>
-are the coordinates of the point in distance units.  Note that for 2d
-simulations, <I>z</I> should be omitted.
+<P>The index value is ignored; it is only added to assist in examining
+the file.  When lines and triangles reference point indices they are
+simply ordered from 1 to N, regardless of the actual value of the
+index in the file.  <I>X,y,z</I> are the coordinates of the point in
+distance units.  Note that for 2d simulations, <I>z</I> should be omitted.
+</P>
+<P>IMPORTANT NOTE: Unless points are on the surface of the simulation
+box, they will be part of multiple lines or triangles.  However, there
+is no requirement that each point appear exactly once in the <I>Points</I>
+list.  For example, a point that is the common corner point of M
+triangles, could appear 1 or 2 or up to M times.  However, if the same
+point appears multiple times in the <I>Points</I> list, the coordinates of
+all copies must be numerically identical, in order for SPARTA to
+verify the surface is a watertight object, as discussed below.
+</P>
+<P>IMPORTANT NOTE: The <I>points</I> keyword and <I>Points</I> section are not
+required.  You must either use both or neither.  As explained next, an
+optional format for the <I>Lines</I> or <I>Triangles</I> sections includes point
+coordinates directly with each line or triangle.
 </P>
 <P>The <I>Lines</I> section is only allowed for 2d simulations and consists of
-N entries, where N = # of lines, each of this form:
+N entries, where N = # of lines.  All entries must be in the same
+format, either A or B.  If a Points section was included, use format
+A.  If it was not, use format B.
 </P>
-<PRE>line-ID (type) p1 p2 
+<PRE>line-ID (type) p1 p2               # format A
+line-ID (type) p1x p1y p2x p2y     # format B 
 </PRE>
-<P>The line-ID is ignored; it is only added to assist in examining the
-file.  <I>Type</I> is an optional integer value which must be specified for
-all or none of the lines.  If used, it must be a positive integer
+<P>The line-ID is stored internally with the line.  If the read_surf
+commmand is reading a single file, the line-IDs should be unique
+values from 1 to N where N is the number of lines specified in the
+header of the file.  For a set of multiple files, each line in the
+collection of all files should have a unique ID, and the IDs should
+range from 1 to N, where N is the number of lines specified in the
+base file.  SPARTA does not check line-IDs for uniqueness.  Note that
+lines in an individual file (single or multiple) do not need to be
+listed by ID order; they can be in any order.
+</P>
+<P>IMPORTANT NOTE: If the read_surf command is used when lines already
+exist, i.e. to add new lines, then each line-ID is incremented by
+Nprevious = the # of lines that already exist.
+</P>
+<P><I>Type</I> is an optional integer value which must be specified for all or
+none of the lines in the file.  If used, it must be a positive integer
 value for each line.  If not specified, the type of each line is set
-to 1.  Line types can be used to assign lines to surface groups via
-the <A HREF = "group.html">group surf</A> command.
+to 1.  Line IDs and types can be used to assign lines to surface
+groups via the <A HREF = "group.html">group surf</A> command.
 </P>
-<P><I>P1</I> and <I>p2</I> are the point-IDs of the 2 end points of the line
-segment.  Each is a value from 1 to Npoints, as described above.
+<P>For format A, <I>p1</I> and <I>p2</I> are the indices of the 2 end points of the
+line segment, as found in the Points section.  Each is a value from 1
+to the # of points, as described above.  For format B, (p1x,p1y) and
+(p2x,p2y) are the (x,y) coordinates of the two points (1,2) in the
+line.
 </P>
-<P>The ordering of <I>p1</I> and <I>p2</I> is important as it defines the direction
-of the outward normal for the line segment when a particle collides
-with it.  Molecules only collide with the "outer" edge of a line
-segment.  This is defined by a right-hand rule.  The outward normal N
-= (0,0,1) x (p2-p1).  In other words, a unit z-direction vector is
-crossed into the vector from <I>p1</I> to <I>p2</I> to determine the normal.
+<P>The ordering of <I>p1</I>, <I>p2</I> is important as it defines the direction of
+the outward normal for the line segment when a particle collides with
+it.  Molecules only collide with the "outer" edge of a line segment.
+This is defined by a right-hand rule.  The outward normal N = (0,0,1)
+x (p2-p1).  In other words, a unit z-direction vector is crossed into
+the vector from <I>p1</I> to <I>p2</I> to determine the normal.
 </P>
 <P>The <I>Triangles</I> section is only allowed for 3d simulations and
-consists of N entries, where N = # of triangles, each of this form:
+consists of N entries, where N = # of triangles.  All entries must be
+in the same format, either A or B.  If a Points section was included,
+use format A.  If it was not, use format B.
 </P>
-<PRE>tri-ID (type) p1 p2 p3 
+<PRE>tri-ID (type) p1 p2 p3                                  # format A
+tri-ID (type) p1x p1y p1z p2x p2y p2z p3x p3y p3z       # format B 
 </PRE>
-<P>The tri-ID is ignored; it is only added to assist in examining the
-file.  <I>Type</I> is an optional integer value which must be specified for
-all or none of the triangles.  If used, it must be a positive integer
-value for each triangle.  If not specified, the type of each triangle
-is set to 1.  Triangle types can be used to assign triangles to
-surface groups via the <A HREF = "group.html">group surf</A> command.
+<P>The tri-ID is stored internally with the line.  If the read_surf
+commmand is reading a single file, the tri-IDs should be unique values
+from 1 to N where N is the number of triangles specified in the header
+of the file.  For a set of multiple files, each triangle in the
+collection of all files should have a unique ID, and the IDs should
+range from 1 to N, where N is the number of triangles specified in the
+base file.  SPARTA does not check tri-IDs for uniqueness.  Note that
+triangles in an individual file (single or multiple) do not need to be
+listed by ID order; they can be in any order.
 </P>
-<P><I>P1</I> and <I>p2</I> and <I>p3</I> are the point-IDs of the 3 corner points of the
-triangle.  Each is a value from 1 to Npoints, as described above.
+<P>IMPORTANT NOTE: If the read_surf command is used when triangles
+already exist, i.e. to add new triangles, then each tri-ID is
+incremented by Nprevious = the # of triangles that already exist.
 </P>
-<P>The ordering of <I>p1</I> and <I>p2</I> and <I>p3</I> is important as it defines the
+<P><I>Type</I> is an optional integer value which must be specified for all or
+none of the triangles in the file.  If used, it must be a positive
+integer value for each triangle.  If not specified, the type of each
+triangle is set to 1.  Triangle IDs and types can be used to assign
+triangles to surface groups via the <A HREF = "group.html">group surf</A> command.
+</P>
+<P>For format A, <I>p1</I>, <I>p2</I>, and <I>p3</I> are the indices of the 3 corner
+points of the triangle, as found in the Points section.  Each is a
+value from 1 to the # of points, as described above.  For format B,
+(p1x,p1y,p1z), (p2x,p2y,p2z), and (p3x,p3y,p3z) are the (x,y,z)
+coordinates of the three corner points (1,2,3) of the triangle.
+</P>
+<P>The ordering of <I>p1</I>, <I>p2</I>, <I>p3</I> is important as it defines the
 direction of the outward normal for the triangle when a particle
 collides with it.  Molecules only collide with the "outer" face of a
 triangle. This is defined by a right-hand rule.  The outward normal N
@@ -212,7 +311,8 @@ surface elements.  The geometric transformations they describe are
 performed in the order they are listed, which gives flexibility in how
 surfaces can be manipulated.  Note that the order may be important;
 e.g. performing an <I>origin</I> operation followed by a <I>rotate</I> operation
-may not be the same as a <I>rotate</I> followed by a <I>origin</I>.
+may not be the same as a <I>rotate</I> operation followed by an <I>origin</I>
+operation.
 </P>
 <P>Most of the keywords perform a geometric transformation on all the
 vertices in the surface file with respect to an origin point.  By
@@ -309,10 +409,17 @@ resulting altered set of surface elements can be written out to a file
 by the <A HREF = "write_surf.html">write_surf</A> command, which can then be used an
 input to a new simulation or for post-processing and visualization.
 </P>
+<P>IMPORTANT NOTE: When the <I>clip</I> operation deletes or adds surface
+elements, the line-IDs or tri-IDs will be renumbered to produce IDs
+that are consective values from 1 to the # of surface elements.  The
+ID of a surface element that is unclipped may change due to this
+reordering.
+</P>
 <HR>
 
-<P>The following optional keywords affect group and type settings of the
-read-in surface elements.
+<P>The following optional keywords affect group and type settings for the
+read-in surface elements and output of the elements.  Also how
+particles are treated when surface elements are added.
 </P>
 <P>Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
@@ -358,6 +465,24 @@ be useful if a <A HREF = "remove_surf.html">remove_surf</A> was used to remove
 a surface object, and a new object is being read in, and you know
 the new object is smaller than the one it replaced.  E.g. for a model
 of a shrinking or ablating object.
+</P>
+<P>If the <I>file</I> keyword is used, the surfaces will be written out to the
+specified <I>filename</I> immediately after they are read in.  The
+arguments for this keyword are identical to those used for the
+<A HREF = "write_surf.html">write_surf</A> command.  This includes a file name with
+optional "*" and "%" wildcard characters, as well as its optional
+keywords.
+</P>
+<P>IMPORTANT NOTE: The <I>file</I> keyword must be the last keyword specified
+with the read_isurf command.  This is because all the remaining arguments
+are passed to the <A HREF = "write_surf.html">write_surf</A> command.
+</P>
+<P>The format for the output file is the same as the one written by the
+<A HREF = "write_surf.html">write_surf</A> command, or read by this command.  Note
+that it can be useful to write out a new surface file after reading
+one if clipping was performed; the new file will contain the surface
+element altered by clipping and will not contain any surface elements
+removed by clipping.
 </P>
 <HR>
 
@@ -415,7 +540,7 @@ lead to unphysical particle dynamics.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "write_surf.html">write_surf</A>
+<P><A HREF = "read_isurf.html">read_isurf</A>, <A HREF = "write_surf.html">write_surf</A>
 </P>
 <P><B>Default:</B>
 </P>

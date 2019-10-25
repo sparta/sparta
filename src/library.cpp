@@ -134,10 +134,11 @@ void *sparta_extract_global(void *ptr, char *name)
    id = compute ID
    style = 0 for global data, 1 for per particle data,
      2 for per grid data, 3 for per surf data
-   type = 0 for scalar, 1 for vector, 2 for array
-     for style = compute,
-     type = 0 if compute produces a vector
-     type = 1 to N if compute produces an array, type = which column of array
+   type
+     for style global: 0 for scalar, 1 for vector, 2 for array
+     for style = particle, grid, surf:
+       type = 0 if compute produces a vector
+       type = 1 to N if compute produces an array, type = which column of array
    for global data, returns a pointer to the
      compute's internal data structure for the entity
      caller should cast it to (double *) for a scalar or vector
@@ -190,7 +191,7 @@ void *sparta_extract_compute(void *ptr, char *id, int style, int type)
         compute->compute_per_particle();
       return (void *) compute->vector_particle;
     }
-    if (type == 2) {
+    if (type > 1) {
       if (compute->invoked_per_particle != sparta->update->ntimestep)
         compute->compute_per_particle();
       return (void *) compute->array_particle;
@@ -202,19 +203,41 @@ void *sparta_extract_compute(void *ptr, char *id, int style, int type)
     if (type == 1) {
       if (compute->invoked_per_grid != sparta->update->ntimestep)
         compute->compute_per_grid();
+      if (compute->post_process_grid_flag) 
+        compute->post_process_grid(0,1,NULL,NULL,NULL,1);
+      else if (compute->post_process_isurf_grid_flag) 
+        compute->post_process_isurf_grid();
       return (void *) compute->vector_grid;
     }
-    if (type == 2) {
+    if (type > 1) {
       if (compute->invoked_per_grid != sparta->update->ntimestep)
         compute->compute_per_grid();
+      if (compute->post_process_grid_flag) {
+        compute->post_process_grid(type,1,NULL,NULL,NULL,1);
+        return (void *) compute->vector_grid;
+      }
+      if (compute->post_process_isurf_grid_flag) {
+        compute->post_process_isurf_grid();
+        return (void *) compute->array_grid;
+      }
       return (void *) compute->array_grid;
     }
   }
 
   if (style == 3) {
     if (!compute->per_surf_flag) return NULL;
-    compute->tallysum(type);
-    return (void *) compute->vector_surf;
+    if (type == 1) {
+      if (compute->invoked_per_surf != sparta->update->ntimestep)
+        compute->compute_per_surf();
+      compute->post_process_surf();
+      return (void *) compute->vector_surf;
+    }
+    if (type > 1) {
+      if (compute->invoked_per_surf != sparta->update->ntimestep)
+        compute->compute_per_surf();
+      compute->post_process_surf();
+      return (void *) compute->array_surf;
+    }
   }
 
   return NULL;

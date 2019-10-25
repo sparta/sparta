@@ -14,6 +14,7 @@
 
 #include "string.h"
 #include "grid.h"
+#include "error.h"
 
 using namespace SPARTA_NS;
 
@@ -80,6 +81,8 @@ int Grid::id_find_parent(cellint id, cellint &ichild)
     ichild = (id >> nbits) & mask;
     idnew = idparent | (ichild << nbits);
     if (idnew == id) break;
+    if (hash->find(idnew) == hash->end())
+      error->one(FLERR,"Grid::id_find_new() not in hash");
     index = (*hash)[idnew];
     iparent = -index-1;
   }

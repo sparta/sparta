@@ -19,6 +19,7 @@
 #include "surf.h"
 #include "domain.h"
 #include "grid.h"
+#include "comm.h"
 #include "math_extra.h"
 #include "memory.h"
 #include "error.h"
@@ -42,6 +43,8 @@ enum{ENTRY,EXIT,TWO,CORNER};              // same as Cut2d
 
 Cut3d::Cut3d(SPARTA *sparta) : Pointers(sparta)
 {
+  implicit = surf->implicit;
+
   cut2d = new Cut2d(sparta,0);
   for (int i = 0; i <= cut2d->npushmax; i++) cut2d->npushcell[i] = 0;
   memory->create(path1,12,3,"cut3d:path1");
@@ -239,7 +242,6 @@ int Cut3d::surf2grid_one(double *p0, double *p1, double *p2,
   return clip(p0,p1,p2);
 }
 
-
 /* ----------------------------------------------------------------------
    Sutherland-Hodgman clipping algorithm
    don't need to delete duplicate points since touching counts as intersection
@@ -433,12 +435,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
   int nsplit,errflag;
   pushflag = 0;
 
-
-  // debug 
-  //if (id == VERBOSE_ID) npushmax = 0;
-
-
-
   while (1) {
     errflag = add_tris();
     if (errflag) {
@@ -517,14 +513,6 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     double lo2d[2],hi2d[2];
 
     for (int iface = 0; iface < 6; iface++) {
-
-
-
-      // debug 
-      //if (id == VERBOSE_ID) printf("FACE %d\n",iface);
-
-
-
       if (facelist[iface].n) {
         face_from_cell(iface,lo2d,hi2d);
         edge2clines(iface);
@@ -571,7 +559,8 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
     nsplit = phs.n;
     if (nsplit > 1) {
       create_surfmap(surfmap);
-      errflag = split_point(surfmap,xsplit,xsub);
+      if (implicit) errflag = split_point_implicit(surfmap,xsplit,xsub);
+      else errflag = split_point_explicit(surfmap,xsplit,xsub);
     }
     if (errflag) {
       if (push_increment()) continue;
@@ -1673,9 +1662,14 @@ void Cut3d::create_surfmap(int *surfmap)
 }
 
 /* ----------------------------------------------------------------------
+   find a surf point that is inside or on the boundary of the current cell
+   for external surfs and cells already been flagged as a split cell
+   surfmap = sub-cell index each surf is part of (-1 if not eligible)
+   return xsplit = coords of point
+   return xsub = sub-cell index the chosen surf is in
 ------------------------------------------------------------------------- */
 
-int Cut3d::split_point(int *surfmap, double *xsplit, int &xsub)
+int Cut3d::split_point_explicit(int *surfmap, double *xsplit, int &xsub)
 {
   int itri;
   double *x1,*x2,*x3;
@@ -1726,6 +1720,36 @@ int Cut3d::split_point(int *surfmap, double *xsplit, int &xsub)
   return 7;
 }
 
+/* ----------------------------------------------------------------------
+   find a surf point that is inside or on the boundary of the current cell
+   for implicit surfs and cells already been flagged as a split cell
+   surfmap = sub-cell index each surf is part of (-1 if not eligible)
+   return xsplit = coords of point
+   return xsub = sub-cell index the chosen surf is in
+------------------------------------------------------------------------- */
+
+int Cut3d::split_point_implicit(int *surfmap, double *xsplit, int &xsub)
+{
+  Surf::Tri *tris = surf->tris;
+
+  // i = 1st surf with non-negative surfmap
+
+  int i = 0;
+  while (surfmap[i] < 0 && i < nsurf) i++;
+  if (i == nsurf) return 7;
+
+  // xsplit = center point of triangle wholly contained in cell
+
+  int itri = surfs[i];
+  double onethird = 1.0/3.0;
+  xsplit[0] = onethird * (tris[itri].p1[0] + tris[itri].p2[0] + tris[itri].p3[0]);
+  xsplit[1] = onethird * (tris[itri].p1[1] + tris[itri].p2[1] + tris[itri].p3[1]);
+  xsplit[2] = onethird * (tris[itri].p1[2] + tris[itri].p2[2] + tris[itri].p3[2]);
+
+  xsub = surfmap[i];
+
+  return 0;
+}
 
 /* ----------------------------------------------------------------------
    insert edge IEDGE in DIR for ivert
@@ -2158,8 +2182,10 @@ void Cut3d::push(double *pt)
 
 void Cut3d::failed_cell()
 {
-  printf("Cut3d failed in cell ID: " CELLINT_FORMAT "\n",id);
+  printf("Cut3d failed on proc %d in cell ID: " CELLINT_FORMAT "\n",comm->me,id);
 
+  Surf::Tri *tris = surf->tris;
+  
   cellint ichild;
   int iparent = grid->id_find_parent(id,ichild);
   while (iparent >= 0) {
@@ -2184,7 +2210,8 @@ void Cut3d::failed_cell()
   printf("  hi corner %g %g %g\n",hi[0],hi[1],hi[2]);
   printf("  # of surfs = %d out of " BIGINT_FORMAT "\n",nsurf,surf->nsurf);
   printf("  surfs:");
-  for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
+  for (int i = 0; i < nsurf; i++) printf(" " SURFINT_FORMAT " %g",tris[surfs[i]].id,tris[surfs[i]].p1[0]);
+  //for (int i = 0; i < nsurf; i++) printf(" %d",surfs[i]+1);
   printf("\n");
 
   /*

@@ -833,9 +833,10 @@ are intended for computational work like running SPARTA.  By default
 Ng = 1 and Ns is not set.
 </P>
 <P>Depending on which flavor of MPI you are running, SPARTA will look for
-one of these 3 environment variables
+one of these 4 environment variables
 </P>
 <PRE>SLURM_LOCALID (various MPI variants compiled with SLURM support)
+MPT_LRANK (HPE MPI)
 MV2_COMM_WORLD_LOCAL_RANK (Mvapich)
 OMPI_COMM_WORLD_LOCAL_RANK (OpenMPI) 
 </PRE>

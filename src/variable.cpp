@@ -110,7 +110,7 @@ Variable::Variable(SPARTA *sparta) : Pointers(sparta)
   precedence[UNARY] = precedence[NOT] = 8;
 
   // local storage of compute vector_grid values
-  // stored when a grid-style variable compute uses post_process_grid_flag
+  // stored when a grid-style variable compute uses post_process() method
 
   maxvec_storage = 0;
   vec_storage = NULL;
@@ -1260,7 +1260,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	  }
 
           if (compute->post_process_grid_flag)
-            compute->post_process_grid(0,-1,1,NULL,NULL,NULL,1);
+            compute->post_process_grid(0,1,NULL,NULL,NULL,1);
+          else if (compute->post_process_isurf_grid_flag) 
+            compute->post_process_isurf_grid();
 
 	  Tree *newtree = new Tree();
 	  newtree->type = ARRAY;
@@ -1296,7 +1298,9 @@ double Variable::evaluate(char *str, Tree **tree)
 	  }
 
           if (compute->post_process_grid_flag)
-            compute->post_process_grid(index1,-1,1,NULL,NULL,NULL,1);
+            compute->post_process_grid(index1,1,NULL,NULL,NULL,1);
+          else if (compute->post_process_isurf_grid_flag) 
+            compute->post_process_isurf_grid();
 
 	  Tree *newtree = new Tree();
 	  newtree->type = ARRAY;

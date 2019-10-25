@@ -18,7 +18,8 @@ mixture		    air N O vstream 100.0 0 0
 
 global              surfs implicit
 
-read_isurf          all 100 100 100 binary.101x101x101 99.5
+fix                 ablate ablate all 0 0.2 random 10
+read_isurf          all 100 100 100 binary.101x101x101 99.5 ablate
 
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1
@@ -41,4 +42,4 @@ timestep 	    1e-3
 
 stats		    100
 stats_style	    step cpu np nattempt ncoll nscoll nscheck f_check
-run 		    1000
+run 		    400

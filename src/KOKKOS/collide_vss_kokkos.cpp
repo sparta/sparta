@@ -456,11 +456,13 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
     }
 
     auto maxcellcount = particle_kk->get_maxcellcount();
-    if (d_plist.extent(1) < maxcellcount*sparta->kokkos->collide_extra) {
-      Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount*sparta->kokkos->collide_extra);
+    int maxcellcount_extra = MAX((double)maxcellcount*sparta->kokkos->collide_extra,maxcellcount+1);
+    if (d_plist.extent(1) < maxcellcount_extra) {
+      Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_extra);
       d_plist = grid_kk->d_plist;
-      d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount+3);
-      maxcellcount_kk = maxcellcount*sparta->kokkos->collide_extra;
+      if (NEARCP)
+        d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount+3);
+      maxcellcount_kk = maxcellcount_extra;
     }
 
     if (d_particles.extent(0) < particle->nlocal*sparta->kokkos->collide_extra) {
@@ -514,7 +516,8 @@ template < int NEARCP > void CollideVSSKokkos::collisions_one(COLLIDE_REDUCE &re
         maxcellcount_kk = h_maxcellcount();
         Kokkos::resize(grid_kk->d_plist,nglocal,maxcellcount_kk);
         d_plist = grid_kk->d_plist;
-        d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
+        if (NEARCP)
+          d_nn_last_partner = typename AT::t_int_2d(Kokkos::view_alloc("collide:nn_last_partner",Kokkos::WithoutInitializing),nglocal,maxcellcount_kk);
         particle_kk->set_maxcellcount(maxcellcount_kk);
       }
 
@@ -1488,44 +1491,52 @@ int CollideVSSKokkos::unpack_grid_one(int icell, char *buf_char)
 }
 
 /* ----------------------------------------------------------------------
-   compress per-cell arrays due to cells migrating to new procs
-   criteria for keeping/discarding a cell is same as in Grid::compress()
-   this keeps final ordering of per-cell arrays consistent with Grid class
+   copy per-cell collision info from Icell to Jcell
+   called whenever a grid cell is removed from this processor's list
+   caller checks that Icell != Jcell
 ------------------------------------------------------------------------- */
 
-void CollideVSSKokkos::compress_grid()
+void CollideVSSKokkos::copy_grid_one(int icell, int jcell)
 {
-  int me = comm->me;
-  Grid::ChildCell *cells = grid->cells;
+  this->sync(Host,ALL_MASK);
+  for (int igroup = 0; igroup < ngroups; igroup++) {
+    for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+      k_vremax.h_view(jcell,igroup,jgroup) = k_vremax.h_view(icell,igroup,jgroup);
+      if (remainflag)
+        k_remain.h_view(jcell,igroup,jgroup) = k_remain.h_view(icell,igroup,jgroup);
+    }
+  }
+  this->modify(Host,ALL_MASK);
+}
+
+/* ----------------------------------------------------------------------
+   reset final grid cell count after grid cell removals
+------------------------------------------------------------------------- */
+
+void CollideVSSKokkos::reset_grid_count(int nlocal)
+{
+  nglocal = nlocal;
+}
+
+/* ----------------------------------------------------------------------
+   add a grid cell
+   called when a grid cell is added to this processor's list
+   initialize values to 0.0
+------------------------------------------------------------------------- */
+
+void CollideVSSKokkos::add_grid_one()
+{
+  grow_percell(1);
 
   this->sync(Host,ALL_MASK);
-
-  // keep an unsplit or split cell if staying on this proc
-  // keep a sub cell if its split cell is staying on this proc
-
-  int ncurrent = nglocal;
-  nglocal = 0;
-  for (int icell = 0; icell < ncurrent; icell++) {
-    if (cells[icell].nsplit >= 1) {
-      if (cells[icell].proc != me) continue;
-    } else {
-      int isplit = cells[icell].isplit;
-      if (cells[grid->sinfo[isplit].icell].proc != me) continue;
+  for (int igroup = 0; igroup < ngroups; igroup++)
+    for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+      k_vremax.h_view(nglocal,igroup,jgroup) = vremax_initial[igroup][jgroup];
+      if (remainflag) k_remain.h_view(nglocal,igroup,jgroup) = 0.0;
     }
-
-    if (nglocal != icell) {
-      for (int igroup = 0; igroup < ngroups; igroup++) {
-        for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-          k_vremax.h_view(nglocal,igroup,jgroup) = k_vremax.h_view(icell,igroup,jgroup);
-          if (remainflag) 
-            k_remain.h_view(nglocal,igroup,jgroup) = k_remain.h_view(icell,igroup,jgroup);
-        }
-      }
-    }
-    nglocal++;
-  }
-
   this->modify(Host,ALL_MASK);
+
+  nglocal++;
 }
 
 /* ----------------------------------------------------------------------

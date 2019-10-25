@@ -79,6 +79,7 @@ SurfCollideDiffuseKokkos::SurfCollideDiffuseKokkos(SPARTA *sparta) :
       error->all(FLERR,"Surf_collide ID must be alphanumeric or "
                  "underscore characters");
 
+  dynamicflag = 1;
   n = strlen(arg[1]) + 1;
   style = new char[n];
   strcpy(style,arg[1]);

@@ -106,13 +106,14 @@ RCB::~RCB()
    perform RCB balancing
 ------------------------------------------------------------------------- */
 
-void RCB::compute(int n, double **x, double *wt, int flip)
+void RCB::compute(int n, double **x, double *wt, char *eligible, int flip)
 {
   int i,j,k;
   int keep,outgoing,incoming,incoming2;
   int dim,markactive;
   int indexlo,indexhi;
   int first_iteration,breakflag;
+  int xeligible,yeligible,zeligible;
   double wttot,wtlo,wthi,wtsum,wtok,wtupto,wtmax;
   double targetlo,targethi;
   double valuemin,valuemax,valuehalf;
@@ -121,6 +122,13 @@ void RCB::compute(int n, double **x, double *wt, int flip)
   MPI_Request request,request2;
   MPI_Status status;
   Median med,medme;
+
+  // set dims eligible for RCB cutting
+
+  xeligible = yeligible = zeligible = 0;
+  if (strchr(eligible,'x')) xeligible = 1;
+  if (strchr(eligible,'y')) yeligible = 1;
+  if (strchr(eligible,'z')) zeligible = 1;
 
   // create list of my Dots
 
@@ -239,16 +247,17 @@ void RCB::compute(int n, double **x, double *wt, int flip)
     targethi = wttot - targetlo;
 
     // dim = dimension to bisect on
+    // exclude dims that are not eligible
 
-    dim = 0;
-    if (rcbbox.hi[1] - rcbbox.lo[1] > rcbbox.hi[0] - rcbbox.lo[0])
-      dim = 1;
-    if (dim == 0 && rcbbox.hi[2] - rcbbox.lo[2] >
-        rcbbox.hi[0] - rcbbox.lo[0])
-      dim = 2;
-    if (dim == 1 && rcbbox.hi[2] - rcbbox.lo[2] >
-	rcbbox.hi[1] - rcbbox.lo[1])
-      dim = 2;
+    if (xeligible) dim = 0;
+    else if (yeligible) dim = 1;
+    else if (zeligible) dim = 2;
+    if (yeligible && dim == 0 && 
+        rcbbox.hi[1] - rcbbox.lo[1] > rcbbox.hi[0] - rcbbox.lo[0]) dim = 1;
+    if (zeligible && dim == 0 && 
+        rcbbox.hi[2] - rcbbox.lo[2] > rcbbox.hi[0] - rcbbox.lo[0]) dim = 2;
+    if (zeligible && dim == 1 && 
+        rcbbox.hi[2] - rcbbox.lo[2] > rcbbox.hi[1] - rcbbox.lo[1]) dim = 2;
     
     // create active list and mark array for dots
     // initialize active list to all dots
