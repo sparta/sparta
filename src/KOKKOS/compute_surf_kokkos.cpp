@@ -99,12 +99,11 @@ void ComputeSurfKokkos::init_normflux()
   memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
   memoryKK->create_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
   d_tally2surf = k_tally2surf.d_view;
+  d_surf2tally = DAT::t_int_1d("surf:surf2tally",nsurf);
 
   memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
   memoryKK->create_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
   d_array_surf_tally = k_array_surf_tally.d_view;
-
-  hash_kk = hash_type(2*nsurf);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -115,10 +114,11 @@ void ComputeSurfKokkos::clear()
   // called by Update at beginning of timesteps surf tallying is done
 
   ntally = 0;
+  combined = 0;
   Kokkos::deep_copy(d_ntally,0);
   Kokkos::deep_copy(d_array_surf_tally,0);
 
-  hash_kk.clear();
+  Kokkos::deep_copy(d_surf2tally,-1);
 }
 
 /* ---------------------------------------------------------------------- */

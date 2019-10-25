@@ -39,6 +39,9 @@
 #include "memory.h"
 #include "error.h"
 
+// DEBUG
+#include "fix_ablate.h"
+
 using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -54,11 +57,11 @@ enum{PERAUTO,PERCELL,PERSURF};                  // several files
 
 // either set ID or PROC/INDEX, set other to -1
 
-//#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 537898343   // particle ID
-#define MOVE_DEBUG_PROC 0        // owning proc
-#define MOVE_DEBUG_INDEX 16617       // particle index on owning proc
-#define MOVE_DEBUG_STEP 16    // timestep
+#define MOVE_DEBUG 1              // un-comment to debug one particle
+#define MOVE_DEBUG_ID 316507228  // particle ID
+#define MOVE_DEBUG_PROC -1        // owning proc
+#define MOVE_DEBUG_INDEX -1   // particle index on owning proc
+#define MOVE_DEBUG_STEP 505    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -88,6 +91,9 @@ Update::Update(SPARTA *sparta) : Pointers(sparta)
   slist_compute = blist_compute = NULL;
   slist_active = blist_active = NULL;
 
+  nulist_surfcollide  = 0;
+  ulist_surfcollide = NULL;
+
   ranmaster = new RanMars(sparta);
 
   reorder_period = 0;
@@ -109,6 +115,7 @@ Update::~Update()
   delete [] blist_compute;
   delete [] slist_active;
   delete [] blist_active;
+  delete [] ulist_surfcollide;
   delete ranmaster;
 }
 
@@ -202,6 +209,9 @@ void Update::setup()
   collide_react = collide_react_setup();
   bounce_tally = bounce_setup();
 
+  dynamic = 0;
+  dynamic_setup();
+
   modify->setup();
   output->setup(1);
 }
@@ -212,7 +222,6 @@ void Update::run(int nsteps)
 {
   int n_start_of_step = modify->n_start_of_step;
   int n_end_of_step = modify->n_end_of_step;
-  //int dynamic = 0;
 
   // cellweightflag = 1 if grid-based particle weighting is ON
 
@@ -230,14 +239,16 @@ void Update::run(int nsteps)
 
     timer->stamp();
 
+    // dynamic parameter updates
+
+    if (dynamic) dynamic_update();
+
     // start of step fixes
 
     if (n_start_of_step) {
       modify->start_of_step();
       timer->stamp(TIME_MODIFY);
     }
-
-    //if (dynamic) domain->dynamic();
 
     // move particles
 
@@ -272,6 +283,93 @@ void Update::run(int nsteps)
       output->write(ntimestep);
       timer->stamp(TIME_OUTPUT);
     }
+
+    // DEBUG
+
+    /*
+    if (ntimestep == 3600) {
+      Grid::ChildCell *cells = grid->cells;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+      int nglocal = grid->nlocal;
+
+      int ifix = modify->find_fix("FOO");
+      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
+      int groupbit = grid->bitmask[ablate->igroup];
+
+      for (int icell = 0; icell < nglocal; icell++) {
+        if (!(cinfo[icell].mask & groupbit)) continue;
+        if (cells[icell].nsplit <= 0) continue;
+        cellint id = cells[icell].id;
+        char prefix[32],bif[8],pad[16],fname[32];
+        sprintf(prefix,"corners.%d.%ld.",comm->nprocs,update->ntimestep);
+        strcpy(bif,CELLINT_FORMAT);
+        sprintf(pad,"%%s%%0%d%s",6,&bif[1]);
+        sprintf(fname,pad,prefix,id);
+        FILE *fp = fopen(fname,"w");
+        fprintf(fp,"%d: %g %g %g %g %g %g %g %g\n",id,
+                ablate->array_grid[icell][0],
+                ablate->array_grid[icell][1],
+                ablate->array_grid[icell][2],
+                ablate->array_grid[icell][3],
+                ablate->array_grid[icell][4],
+                ablate->array_grid[icell][5],
+                ablate->array_grid[icell][6],
+                ablate->array_grid[icell][7]);
+        fclose(fp);
+      }
+    }
+
+    if (ntimestep == 3600) {
+      Surf::Tri *tris = surf->tris;
+      Grid::ChildCell *cells = grid->cells;
+      Grid::ChildInfo *cinfo = grid->cinfo;
+      int nglocal = grid->nlocal;
+
+      int ifix = modify->find_fix("FOO");
+      FixAblate *ablate = (FixAblate *) modify->fix[ifix];
+      int groupbit = grid->bitmask[ablate->igroup];
+
+      for (int icell = 0; icell < nglocal; icell++) {
+        if (!(cinfo[icell].mask & groupbit)) continue;
+        if (cells[icell].nsplit <= 0) continue;
+        if (cells[icell].nsurf == 0) continue;
+        cellint id = cells[icell].id;
+        char prefix[32],bif[8],pad[16],fname[32];
+        sprintf(prefix,"impsurf.%d.%ld.",comm->nprocs,update->ntimestep);
+        strcpy(bif,CELLINT_FORMAT);
+        sprintf(pad,"%%s%%0%d%s",6,&bif[1]);
+        sprintf(fname,pad,prefix,id);
+        FILE *fp = fopen(fname,"w");
+        fprintf(fp,"%d: %d\n",id,cells[icell].nsurf);
+        for (int j = 0; j < cells[icell].nsurf; j++) {
+          int m = cells[icell].csurfs[j];
+          fprintf(fp,"  %d: id %d tmii %d %d %d %d\n",j+1,
+                  tris[m].id,
+                  tris[m].type,
+                  tris[m].mask,
+                  tris[m].isc,
+                  tris[m].isr);
+          fprintf(fp,"  %d: p1 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p1[0],
+                  tris[m].p1[1],
+                  tris[m].p1[2]);
+          fprintf(fp,"  %d: p2 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p2[0],
+                  tris[m].p2[1],
+                  tris[m].p2[2]);
+          fprintf(fp,"  %d: p3 %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].p3[0],
+                  tris[m].p3[1],
+                  tris[m].p3[2]);
+          fprintf(fp,"  %d: norm %20.15g %20.15g %20.15g\n",j+1,
+                  tris[m].norm[0],
+                  tris[m].norm[1],
+                  tris[m].norm[2]);
+        }
+        fclose(fp);
+      }
+    }
+    */
   }
 }
 
@@ -800,7 +898,7 @@ template < int DIM, int SURF > void Update::move()
 
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)
-                  slist_active[m]->surf_tally(minsurf,&iorig,ipart,jpart);
+                  slist_active[m]->surf_tally(minsurf,icell,&iorig,ipart,jpart);
               
               // nstuck = consective iterations particle is immobile
 
@@ -1175,6 +1273,7 @@ int Update::split3d(int icell, double *x)
   // only consider tris that are mapped via csplits to a split cell
   //   unmapped tris only touch cell surf at xnew
   //   another mapped tri should include same xnew
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particles starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
@@ -1186,6 +1285,7 @@ int Update::split3d(int icell, double *x)
 
   cflag = 0;
   minparam = 2.0;
+
   for (m = 0; m < nsurf; m++) {
     if (csplits[m] < 0) continue;
     isurf = csurfs[m];
@@ -1193,7 +1293,7 @@ int Update::split3d(int icell, double *x)
     hitflag = Geometry::
       line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
                          tri->norm,xc,param,side);
-    
+
     if (hitflag && side != INSIDE && param < minparam) {
       cflag = 1;
       minparam = param;
@@ -1227,7 +1327,8 @@ int Update::split2d(int icell, double *x)
   // find 1st surface hit via minparam
   // only consider lines that are mapped via csplits to a split cell
   //   unmapped lines only touch cell surf at xnew
-  //   another mapped line should include same xnew
+  //   another mapped line should include same xnew 
+  // NOTE: these next 2 lines do not seem correct compared to code
   // not considered a collision if particle starts on surf, moving out
   // not considered a collision if 2 params are tied and one is INSIDE surf
 
@@ -1296,8 +1397,8 @@ int Update::bounce_setup()
   delete [] blist_compute;
   delete [] slist_active;
   delete [] blist_active;
-
   slist_compute = blist_compute = NULL;
+
   nslist_compute = nblist_compute = 0;
   for (int i = 0; i < modify->ncompute; i++) {
     if (modify->compute[i]->surf_tally_flag) nslist_compute++;
@@ -1348,6 +1449,43 @@ void Update::bounce_set(bigint ntimestep)
         blist_active[nboundary_tally++] = blist_compute[i];
         blist_compute[i]->clear();
       }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   make list of classes that reset dynamic parameters
+   currently only surf collision models
+------------------------------------------------------------------------- */
+
+void Update::dynamic_setup()
+{
+  delete [] ulist_surfcollide;
+  ulist_surfcollide = NULL;
+
+  nulist_surfcollide = 0;
+  for (int i = 0; i < surf->nsc; i++)
+    if (surf->sc[i]->dynamicflag) nulist_surfcollide++;
+
+  if (nulist_surfcollide) 
+    ulist_surfcollide = new SurfCollide*[nulist_surfcollide];
+
+  nulist_surfcollide = 0;
+  for (int i = 0; i < surf->nsc; i++)
+    if (surf->sc[i]->dynamicflag) 
+      ulist_surfcollide[nulist_surfcollide++] = surf->sc[i];
+
+  if (nulist_surfcollide) dynamic = 1;
+}
+
+/* ----------------------------------------------------------------------
+   invoke class methods that reset dynamic parameters
+------------------------------------------------------------------------- */
+
+void Update::dynamic_update()
+{
+  if (nulist_surfcollide) {
+    for (int i = 0; i < nulist_surfcollide; i++)
+      ulist_surfcollide[i]->dynamic();
   }
 }
 

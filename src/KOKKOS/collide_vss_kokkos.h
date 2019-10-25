@@ -117,7 +117,9 @@ class CollideVSSKokkos : public CollideVSS {
  private:
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
-  void compress_grid();
+  void copy_grid_one(int, int);
+  void reset_grid_count(int);
+  void add_grid_one();
   void adapt_grid();
   void grow_percell(int);
 
