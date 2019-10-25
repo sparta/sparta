@@ -102,11 +102,6 @@ class FixAveGridKokkos : public FixAveGrid, public KokkosBase {
 
   int j,k,kk,jm1,m,ntally;
 
-  int pack_one(int, char *, int);
-  int unpack_one(char *, int);
-  void options(int, char **);
-  void grow();
-  bigint nextvalid();
   void grow_percell(int);
 };
 

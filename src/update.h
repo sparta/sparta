@@ -116,6 +116,14 @@ class Update : protected Pointers {
 
   int bounce_setup();
   virtual void bounce_set(bigint);
+
+  int nulist_surfcollide;
+  SurfCollide **ulist_surfcollide;
+
+  int dynamic;              // 1 if any classes do dynamic updates of params
+  void dynamic_setup();
+  void dynamic_update();
+
   void reset_timestep(bigint);
 
   //int axi_vertical_line(double, double *, double *, double, double, double,

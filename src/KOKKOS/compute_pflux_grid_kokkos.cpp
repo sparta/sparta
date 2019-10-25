@@ -275,9 +275,8 @@ int ComputePFluxGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_array)
    index = which column of output (0 for vec, 1 to N for array)
    for etally = NULL:
      use internal tallied info for single timestep
-     if onecell = -1, compute values for all grid cells
+     compute values for all grid cells
        store results in vector_grid with nstride = 1 (single col of array_grid)
-     if onecell >= 0, compute single value for onecell and return it
    for etaylly = ptr to caller array:
      use external tallied info for many timesteps
      emap = list of etally columns to use, # of columns determined by index
@@ -285,7 +284,7 @@ int ComputePFluxGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_array)
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-double ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int onecell, int nsample,
+void ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int nsample,
                          DAT::t_float_2d_lr d_etally, int *emap, DAT::t_float_1d_strided d_vec)
 {
   index--;
@@ -299,10 +298,6 @@ double ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int onecell, 
     emap = map[index];
     d_vec = d_vector;
     nstride = 1;
-    if (onecell >= 0) {
-      lo = onecell;
-      hi = lo + 1;
-    }
   }
 
   this->d_etally = d_etally;
@@ -353,9 +348,6 @@ double ComputePFluxGridKokkos::post_process_grid_kokkos(int index, int onecell, 
       break;
     }
   } // end switch
-
-  if (onecell < 0) return 0.0;
-  return d_vec[onecell];
 }
 
 /* ---------------------------------------------------------------------- */

@@ -1,0 +1,173 @@
+"SPARTA WWW Site"_sws - "SPARTA Documentation"_sd - "SPARTA Commands"_sc :c
+
+:link(sws,http://sparta.sandia.gov)
+:link(sd,Manual.html)
+:link(sc,Section_commands.html#comm)
+
+:line
+
+fix ablate command :h3
+
+[Syntax:]
+
+fix ID ablate group-ID Nevery scale source maxrandom :pre
+
+ID is documented in "fix"_fix.html command :ulb,l
+ablate = style name of this fix command :l
+group-ID = ID of group of grid cells that contain implicit surfaces :l
+Nevery = perform ablation once every Nevery steps :l
+scale = scale factor to convert source to grid corner point value decrement :l
+source = computeID or fixID or random :l
+  computeID = c_ID or c_ID\[n\] for a compute that calculates per grid cell values
+  fixID = f_ID or f_ID\[n\] for a fix that calculates per grid cell values
+  random = perform a random decrement :pre
+maxrandom = maximum per grid cell decrement as an integer (only specified if source = random) :l
+:ule
+
+[Examples:]
+
+fix 1 ablate surfcells :pre
+
+[Description:]
+
+Perform ablation once every Nevery steps on a set of grid cell corner
+points to induce new implicit surface elements in those grid cells.
+This command is also used as an argument to the
+"read_isurf"_read_isurf.html command so that the grid corner point
+values it reads from a file can be assigned to and stored by each grid
+cell.
+
+Here are simulation snapshots of 2d and 3d implicit surface models
+through which particles flow.  Click on any image for a larger image.
+The 1st and 3rd images are the initial states of the porous media.
+The 2nd and 4th images are snapshots midway through an ablation
+simulation.  In the 2d case, the colorings are by processor for
+sub-domains each owns.  Particles flow from left to right.  The
+implicit triangles for the 3d case were created via Marching Cubes
+(discussed on the "read_isurf"_read_isurf.html command doc page) from
+a tomographic image of a sample of NASA FiberForm (TM) material, used
+as a heat shield material on spacecraft.  Particles flow from top to
+bottom.
+
+:c,image(JPG/porous2d_initial_small.png,JPG/porous2d_initial.png),image(JPG/porous2d_ablated_small.png,JPG/porous2d_ablated.png),image(JPG/porous3d_initial_small.png,JPG/porous3d_initial.png),image(JPG/porous3d_ablated_small.png,JPG/porous3d_ablated.png)
+
+The specified {group-ID} must be the name of a grid cell group, as
+defined by the "group grid"_group.html command, which contains a set
+of grid cells, all of which are the same size, and which comprise a
+contiguous 3d array.  It must be the same as group-ID used with the
+"read_isurf"_read_isurf.html command, which specifies its {Nx} by {Ny}
+by {Nz} extent.  See the "read_isurf"_read_isurf.html command for more
+details.  This command reads the initial values for grid cell corner
+points, which are stored by this fix.
+
+The specfied {Nevery} determines how often an ablation operation is
+performed.  If {Nevery} = 0, ablation is never performed.  The grid
+cell corner point values and the surface elements they induce will
+remain static for the duration of subsequent simulations.
+
+The specified {scale} is a pre-factor on the specified {source} of
+ablation strength.  It converts the per grid cell numeric quantities
+produced by the {source} (which may have associated units) to a
+unitless decrement value for the grid cell corner points, which range
+from 0 to 255 inclusive.  A value of 255 represents solid material and
+a value of 0 is void (flow volume for particles).  Values in between
+represent partially ablated material.
+
+The {source} can be specified as a per grid cell quantity calculated
+by a compute, such as "compute isurf/grid"_compute_isurf_grid.html,
+e.g. the number of collisions of particles with the surfaces in each
+grid cell or the amount of energy transferred to the surface by the
+collisions.  It can also be specified a per grid cell quantity
+calculated by a fix, such as "fix ave/grid"_fix_ave_grid.html.  That
+fix could time average per-grid cell quantities from per grid cell
+computes.  In that case the {scale} factor should account for applying
+a time-averaged quantity at an interval of {N} steps.
+
+For debugging purposes, the {source} can also be specified as {random}
+with an additional integer {maxrandom} value also specified.  In this
+case, the {scale} factor should be floating point value between 0.0
+and 1.0.  Each time ablation is performed, two random numbers are
+generated for each grid cell.  The first is a random value between 0.0
+and 1.0.  The second is a random integer between 1 and maxrandom.  If
+the first random # < {scale}, then the second random integer is the
+decrement value for the cell.  Thus {scale} is effectively the
+fraction of grid cells whose corner point values are decremented.
+
+:line
+
+As explained on the "read_isurf"_read_isurf.html doc page, the
+marching cubes (3d) or marching squares (2d) algorithm is used to
+convert a set of grid corner point values to a set of implicit
+triangles in each grid cell which represent the current surface of
+porous material which is undergoing dynamic ablation.  This uses a
+threshold value, defined by the "read_isurf"_read_isurf.html command,
+to set the boundary between solid material and void.
+
+The ablation operation decrements the corner point values of each grid
+cell containing porous material.  The marching cubes or squares
+algorithm is re-invoked on the new corner point values to create a new
+set of implicit surfaces, which effectively recess due to the
+decrement produced byt the ablative {source} factor.
+
+The manner in which the per-grid source decrement value is applied to
+the grid corner points is as follows.  Note that each grid cell has 4
+(2d) or 8 (3d) corner point values.  Except at the boundary of the 2d
+of 3d array of grid cells containing porous materials, each corner
+point is similarly shared by 4 (2d) or 8 (3d) grid cells.
+
+Within each grid cell, the decrement value is subtracted from the
+smallest corner point value.  Except that a corner point value cannot
+become smaller than 0.0.  If this would occur, only a portion of the
+decrement is used to set the corner point to 0.0; the remainder is
+applid to the next smallest corner point value.  And so forth on
+successive corner points until all of the decrement is used.
+
+The amount of decrement applied to each corner point is next shared
+between all the grid cells (4 or 8) sharing each corner point value.
+The sum of those decrements is subtracted from the corner point,
+except that it's final value is set no smaller than 0.0.  All the
+copies of each corner point value are now identical.
+
+Finally, no corner point value can be nearly equal to the marching
+cubes/squares threshold value, else line segments or triangles of zero
+or epsilon size will result.  So corner points with values X where
+thresh-epsilon < X < thresh+epsilon are reset to thresh-epsilon.
+Thresh is defined by the "read_isurf"_read_isurf.html command.
+Epsilon is set to 1.0e-4 in src/fix_ablate.cpp.  Note that this is on
+the scale of corner point values from 0 to 255.
+
+:line
+
+[Restart, output info:]
+
+No information about this fix is written to "binary restart
+files"_restart.html.
+
+This fix computes a global scalar and a global vector of length 2.
+The global scalar is the current sum of unique corner point values
+across the entire grid (not counting duplicate values).  This sum
+assumes that corner point values are 0.0 on the boundary of the 2d or
+3d array of grid cells containing implicit surface elements.
+
+The 2 vector values are the (1) sum of decrement values for each grid
+cell in the most recent ablation operation, and (2) the # of particles
+deleted during the most recent ablation operation that ended up
+"inside" the newly ablated surface.  The latter quantity should be 0.
+A non-zero value indicates a corner case in the marching cubes or
+marching squares algorithm the developers still need to address.
+
+These values can be accessed by any command that uses global values
+from a fix as input.  See "Section 6.4"_Section_howto.html#howto_4 for
+an overview of SPARTA output options.
+
+The scalar and vector values are unitless.
+
+[Restrictions:]
+
+This fix can only be used in simulations that define implicit surfaces.
+
+[Related commands:]
+
+"read isurf"_read_isurf.html
+
+[Default:] none
