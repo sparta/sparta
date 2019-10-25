@@ -14,7 +14,7 @@ read_surf filename keyword args ... :pre
 
 filename = name of surface file :ulb,l
 zero or more keyword/args pairs may be appended :l
-keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {typeadd} or {particle} or {file} :l
+keyword = {origin} or {trans} or {atrans} or {ftrans} or {scale} or {rotate} or {invert} or {clip} or {group} or {typeadd} or {file} or {particle} :l
   origin args = Ox Oy Oz
     Ox,Oy,Oz = set origin of surface to this point (distance units)
   trans args = Dx Dy Dz

@@ -155,6 +155,17 @@ void Modify::end_of_step()
 }
 
 /* ----------------------------------------------------------------------
+   add_grid_one call, only for relevant fixes
+   invoked by adapt_grid and fix adapt when new child cells are created
+------------------------------------------------------------------------- */
+
+void Modify::add_grid_one(int icell, int flag)
+{
+  for (int i = 0; i < n_pergrid; i++)
+    fix[list_pergrid[i]]->add_grid_one(icell,flag);
+}
+
+/* ----------------------------------------------------------------------
    pack_grid_one call, only for relevant fixes
    invoked by load balancer when grid cells migrate
 ------------------------------------------------------------------------- */
@@ -181,47 +192,40 @@ int Modify::unpack_grid_one(int icell, char *buf)
 }
 
 /* ----------------------------------------------------------------------
-   copy_grid call, only for relevant fixes
-   invoked when a grod cell is removed
+   compress_grid call, only for relevant fixes
+   invoked by load balancer when grid cells migrate
 ------------------------------------------------------------------------- */
 
-void Modify::copy_grid_one(int icell, int jcell)
+void Modify::compress_grid(int flag)
 {
-  for (int i = 0; i < n_pergrid; i++)
-    fix[list_pergrid[i]]->copy_grid_one(icell,jcell);
+  if (flag == 0)
+    for (int i = 0; i < n_pergrid; i++)
+      fix[list_pergrid[i]]->compress_grid();
+  else
+    for (int i = 0; i < n_pergrid; i++)
+      fix[list_pergrid[i]]->post_compress_grid();
 }
 
 /* ----------------------------------------------------------------------
-   add_grid_one call, only for relevant fixes
-   invoked by adapt_grid and fix adapt when new child cells are created
+   post_migrate call, only for relevant fixes
+   invoked by fix balance when grid cells migrate
 ------------------------------------------------------------------------- */
 
-void Modify::add_grid_one()
+void Modify::post_migrate()
 {
   for (int i = 0; i < n_pergrid; i++)
-    fix[list_pergrid[i]]->add_grid_one();
+    fix[list_pergrid[i]]->post_migrate();
 }
 
 /* ----------------------------------------------------------------------
-   reset_grid call, only for relevant fixes
-   invoked after all grid cell removals
+   post_adapt call, only for relevant fixes
+   invoked by fix adapt when grid cells are adapted
 ------------------------------------------------------------------------- */
 
-void Modify::reset_grid_count(int nlocal)
+void Modify::post_adapt()
 {
   for (int i = 0; i < n_pergrid; i++)
-    fix[list_pergrid[i]]->reset_grid_count(nlocal);
-}
-
-/* ----------------------------------------------------------------------
-   grid_changed call, only for relevant fixes
-   invoked after per-processor list of grid cells has changed
-------------------------------------------------------------------------- */
-
-void Modify::grid_changed()
-{
-  for (int i = 0; i < n_pergrid; i++)
-    fix[list_pergrid[i]]->grid_changed();
+    fix[list_pergrid[i]]->post_adapt();
 }
 
 /* ----------------------------------------------------------------------

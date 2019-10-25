@@ -22,7 +22,6 @@ FixStyle(ave/grid,FixAveGrid)
 #define SPARTA_FIX_AVE_GRID_H
 
 #include "fix.h"
-#include "hash3.h"
 
 namespace SPARTA_NS {
 
@@ -37,15 +36,14 @@ class FixAveGrid : public Fix {
   void setup();
   void end_of_step();
 
+  void add_grid_one(int, int);
   int pack_grid_one(int, char *, int);
   int unpack_grid_one(int, char *);
-  void copy_grid_one(int, int);
-  void reset_grid_count(int);
-  void add_grid_one();
+  void compress_grid();
   double memory_usage();
 
  protected:
-  int tmax,flavor;
+  int tmax;
   int groupbit,nvalues,maxvalues;
   int nrepeat,irepeat,nsample;
   bigint nvalid;
@@ -56,11 +54,9 @@ class FixAveGrid : public Fix {
   int *value2index;          // index of compute,fix,variable
   int *post_process;         // 1 if need compute->post_process() on value
 
-  // for PERGRID tallies for implicit surf collisions on per-cell basis
-
   int ntotal;                // total # of columns in tally array
   double **tally;            // array of tally quantities, cells by ntotal
-                             // can be multiple tally quantities per value
+                             // can be multiple tally quants per value
 
                              // used when normalizing tallies
   int *nmap;                 // # of tally quantities for each value
@@ -75,27 +71,7 @@ class FixAveGrid : public Fix {
                              //   in compute/fix tally array, for each value
 
   int nglocal;               // # of owned grid cells
-  int maxgrid;               // max size of per-cell vectors/arrays
-
-  // for PERGRIDSURF tallies for implicit surf collisions on per-cell basis
-
-  int ntallyID;            // # of cells I have tallies for
-  int maxtallyID;          // # of tallies currently allocated
-  surfint *tally2cell;     // tally2cell[I] = cell ID of Ith tally
-  double *vec_tally;       // tally values, maxtally in length
-  double **array_tally;
-
-  // hash for cell IDs
-
-#ifdef SPARTA_MAP
-  typedef std::map<cellint,int> MyHash;
-#elif defined SPARTA_UNORDERED_MAP
-  typedef std::unordered_map<cellint,int> MyHash;
-#else
-  typedef std::tr1::unordered_map<cellint,int> MyHash;
-#endif
-
-  MyHash *hash;
+  int nglocalmax;            // max size of per-cell vectors/arrays
 
   int pack_one(int, char *, int);
   int unpack_one(char *, int);
@@ -103,7 +79,6 @@ class FixAveGrid : public Fix {
   void grow();
   bigint nextvalid();
   virtual void grow_percell(int);
-  void grow_tally();
 };
 
 }

@@ -826,29 +826,10 @@ void DumpImage::write()
     if (flag) error->all(FLERR,"Invalid color map min/max values");
   }
 
-  Compute *c;
-  Fix *f;
-  int ppgflag;
-
   if (gridflag && gcolor == ATTRIBUTE && image->map_dynamic(GRID)) {
     double value,two[2],twoall[2];
     double lo = BIG;
     double hi = -BIG;
-
-    if (gridwhich == COMPUTE) {
-      c = modify->compute[gridindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
-      }
-      ppgflag = 0;
-      if (c->post_process_grid_flag) {
-        c->post_process_grid(gridcol,1,NULL,NULL,NULL,1);
-        ppgflag = 1;
-      } else if (c->post_process_isurf_grid_flag) c->post_process_isurf_grid();
-    } else if (gridwhich == FIX) {
-      f = modify->fix[gridindex];
-    }
 
     Grid::ChildCell *cells = grid->cells;
     int nglocal = grid->nlocal;
@@ -856,11 +837,19 @@ void DumpImage::write()
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (gridwhich == COMPUTE) {
-        if (gridcol == 0 || ppgflag) value = c->vector_grid[icell];
+        Compute *c = modify->compute[gridindex];
+        if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+          c->compute_per_grid();
+          c->invoked_flag |= INVOKED_PER_GRID;
+        }
+        if (c->post_process_grid_flag)
+          value = c->post_process_grid(gridcol,icell,1,NULL,NULL,NULL,1);
+        else if (gridcol == 0) value = c->vector_grid[icell];
         else value = c->array_grid[icell][gridcol-1];
       } else if (gridwhich == FIX) {
-        if (gridcol == 0) value = f->vector_grid[icell];
-        else value = f->array_grid[icell][gridcol-1];
+        Fix *fix = modify->fix[gridindex];
+        if (gridcol == 0) value = fix->vector_grid[icell];
+        else value = fix->array_grid[icell][gridcol-1];
       }
       lo = MIN(lo,value);
       hi = MAX(hi,value);
@@ -877,32 +866,25 @@ void DumpImage::write()
     double lo = BIG;
     double hi = -BIG;
 
-    if (gridxwhich == COMPUTE) {
-      c = modify->compute[gridxindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
-      }
-      ppgflag = 0;
-      if (c->post_process_grid_flag) {
-        c->post_process_grid(gridxcol,1,NULL,NULL,NULL,1);
-        ppgflag = 1;
-      } else if (c->post_process_isurf_grid_flag) c->post_process_isurf_grid();
-    } else if (gridxwhich == FIX) {
-      f = modify->fix[gridxindex];
-    }
-
     Grid::ChildCell *cells = grid->cells;
     int nglocal = grid->nlocal;
 
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (gridxwhich == COMPUTE) {
-        if (gridxcol == 0 || ppgflag) value = c->vector_grid[icell];
+        Compute *c = modify->compute[gridxindex];
+        if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+          c->compute_per_grid();
+          c->invoked_flag |= INVOKED_PER_GRID;
+        }
+        if (c->post_process_grid_flag)
+          value = c->post_process_grid(gridxcol,icell,1,NULL,NULL,NULL,1);
+        else if (gridxcol == 0) value = c->vector_grid[icell];
         else value = c->array_grid[icell][gridxcol-1];
       } else if (gridxwhich == FIX) {
-        if (gridxcol == 0) value = f->vector_grid[icell];
-        else value = f->array_grid[icell][gridxcol-1];
+        Fix *fix = modify->fix[gridxindex];
+        if (gridxcol == 0) value = fix->vector_grid[icell];
+        else value = fix->array_grid[icell][gridxcol-1];
       }
       lo = MIN(lo,value);
       hi = MAX(hi,value);
@@ -919,32 +901,25 @@ void DumpImage::write()
     double lo = BIG;
     double hi = -BIG;
 
-    if (gridywhich == COMPUTE) {
-      c = modify->compute[gridyindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
-      }
-      ppgflag = 0;
-      if (c->post_process_grid_flag) {
-        c->post_process_grid(gridycol,1,NULL,NULL,NULL,1);
-        ppgflag = 1;
-      } else if (c->post_process_isurf_grid_flag) c->post_process_isurf_grid();
-    } else if (gridywhich == FIX) {
-      f = modify->fix[gridyindex];
-    }
-
     Grid::ChildCell *cells = grid->cells;
     int nglocal = grid->nlocal;
 
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (gridywhich == COMPUTE) {
-        if (gridycol == 0 || ppgflag) value = c->vector_grid[icell];
+        Compute *c = modify->compute[gridyindex];
+        if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+          c->compute_per_grid();
+          c->invoked_flag |= INVOKED_PER_GRID;
+        }
+        if (c->post_process_grid_flag)
+          value = c->post_process_grid(gridycol,icell,1,NULL,NULL,NULL,1);
+        else if (gridycol == 0) value = c->vector_grid[icell];
         else value = c->array_grid[icell][gridycol-1];
       } else if (gridywhich == FIX) {
-        if (gridycol == 0) value = f->vector_grid[icell];
-        else value = f->array_grid[icell][gridycol-1];
+        Fix *fix = modify->fix[gridyindex];
+        if (gridycol == 0) value = fix->vector_grid[icell];
+        else value = fix->array_grid[icell][gridycol-1];
       }
       lo = MIN(lo,value);
       hi = MAX(hi,value);
@@ -961,32 +936,25 @@ void DumpImage::write()
     double lo = BIG;
     double hi = -BIG;
 
-    if (gridzwhich == COMPUTE) {
-      c = modify->compute[gridzindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
-      }
-      ppgflag = 0;
-      if (c->post_process_grid_flag) {
-        c->post_process_grid(gridzcol,1,NULL,NULL,NULL,1);
-        ppgflag = 1;
-      } else if (c->post_process_isurf_grid_flag) c->post_process_isurf_grid();
-    } else if (gridzwhich == FIX) {
-      f = modify->fix[gridzindex];
-    }
-
     Grid::ChildCell *cells = grid->cells;
     int nglocal = grid->nlocal;
 
     for (int icell = 0; icell < nglocal; icell++) {
       if (cells[icell].nsplit <= 0) continue;
       if (gridzwhich == COMPUTE) {
-        if (gridzcol == 0 || ppgflag) value = c->vector_grid[icell];
+        Compute *c = modify->compute[gridzindex];
+        if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+          c->compute_per_grid();
+          c->invoked_flag |= INVOKED_PER_GRID;
+        }
+        if (c->post_process_grid_flag)
+          value = c->post_process_grid(gridzcol,icell,1,NULL,NULL,NULL,1);
+        else if (gridzcol == 0) value = c->vector_grid[icell];
         else value = c->array_grid[icell][gridzcol-1];
       } else if (gridzwhich == FIX) {
-        if (gridzcol == 0) value = f->vector_grid[icell];
-        else value = f->array_grid[icell][gridzcol-1];
+        Fix *fix = modify->fix[gridzindex];
+        if (gridzcol == 0) value = fix->vector_grid[icell];
+        else value = fix->array_grid[icell][gridzcol-1];
       }
       lo = MIN(lo,value);
       hi = MAX(hi,value);
@@ -1003,28 +971,23 @@ void DumpImage::write()
     double lo = BIG;
     double hi = -BIG;
 
-    if (surfwhich == COMPUTE) {
-      c = modify->compute[surfindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
-      }
-      c->post_process_surf();
-    } else if (surfwhich == FIX) {
-      f = modify->fix[surfindex];
-    }
-
     // only computes/fixes for explicit surfs allowed for this setting
 
     int nsurf = surf->nown;
 
     for (int isurf = 0; isurf < nsurf; isurf++) {
       if (surfwhich == COMPUTE) {
-        if (surfcol == 0) value = c->vector_surf[isurf];
-        else value = c->array_surf[isurf][surfcol-1];
+        Compute *compute = modify->compute[surfindex];
+        if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
+          compute->compute_per_surf();
+          compute->invoked_flag |= INVOKED_PER_SURF;
+        }
+        compute->tallysum(surfcol);
+        value = compute->vector_surf[isurf];
       } else if (surfwhich == FIX) {
-        if (surfcol == 0) value = f->vector_surf[isurf];
-        else value = f->array_surf[isurf][surfcol-1];
+        Fix *fix = modify->fix[surfindex];
+        if (surfcol == 0) value = fix->vector_surf[isurf];
+        else value = fix->array_surf[isurf][surfcol-1];
       }
       lo = MIN(lo,value);
       hi = MAX(hi,value);
@@ -1189,25 +1152,6 @@ void DumpImage::create_image()
     double x[3],diam[3];
     double *lo,*hi;
 
-    Compute *c;
-    Fix *f;
-    int ppgflag;
-
-    if (gcolor == ATTRIBUTE && gridwhich == COMPUTE) {
-      c = modify->compute[gridindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
-      }
-      ppgflag = 0;
-      if (c->post_process_grid_flag) {
-        c->post_process_grid(gridcol,1,NULL,NULL,NULL,1);
-        ppgflag = 1;
-      } else if (c->post_process_isurf_grid_flag) c->post_process_isurf_grid();
-    } else if (gcolor == ATTRIBUTE && gridwhich == FIX) {
-      f = modify->fix[gridindex];
-    }
-
     Region *region = NULL;
     if (iregion >= 0) region = domain->regions[iregion];
 
@@ -1222,11 +1166,19 @@ void DumpImage::create_image()
 	color = gcolorproc;
       } else if (gcolor == ATTRIBUTE) {
         if (gridwhich == COMPUTE) {
-          if (gridcol == 0 || ppgflag) value = c->vector_grid[icell];
+          Compute *c = modify->compute[gridindex];
+          if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+            c->compute_per_grid();
+            c->invoked_flag |= INVOKED_PER_GRID;
+          }
+          if (c->post_process_grid_flag)
+            value = c->post_process_grid(gridcol,icell,1,NULL,NULL,NULL,1);
+          else if (gridcol == 0) value = c->vector_grid[icell];
           else value = c->array_grid[icell][gridcol-1];
         } else if (gridwhich == FIX) {
-          if (gridcol == 0) value = f->vector_grid[icell];
-          else value = f->array_grid[icell][gridcol-1];
+          Fix *fix = modify->fix[gridindex];
+          if (gridcol == 0) value = fix->vector_grid[icell];
+          else value = fix->array_grid[icell][gridcol-1];
         }
         color = image->map_value2color(GRID,value);
       }
@@ -1257,64 +1209,6 @@ void DumpImage::create_image()
     double x[3],diam[3];
     double *lo,*hi;
 
-    Compute *cx,*cy,*cz;
-    Fix *fx,*fy,*fz;
-    int ppgflagx,ppgflagy,ppgflagz;
-
-    if (gridxflag && gxcolor == ATTRIBUTE) {
-      if (gridxwhich == COMPUTE) {
-        cx = modify->compute[gridxindex];
-        if (!(cx->invoked_flag & INVOKED_PER_GRID)) {
-          cx->compute_per_grid();
-          cx->invoked_flag |= INVOKED_PER_GRID;
-        }
-        ppgflagx = 0;
-        if (cx->post_process_grid_flag) {
-          cx->post_process_grid(gridxcol,1,NULL,NULL,NULL,1);
-          ppgflagx = 1;
-        } else if (cx->post_process_isurf_grid_flag) 
-          cx->post_process_isurf_grid();
-      } else if (gridxwhich == FIX) {
-        fx = modify->fix[gridxindex];
-      }
-    }
-
-    if (gridyflag && gycolor == ATTRIBUTE) {
-      if (gridywhich == COMPUTE) {
-        cy = modify->compute[gridyindex];
-        if (!(cy->invoked_flag & INVOKED_PER_GRID)) {
-          cy->compute_per_grid();
-          cy->invoked_flag |= INVOKED_PER_GRID;
-        }
-        ppgflagy = 0;
-        if (cy->post_process_grid_flag) {
-          cy->post_process_grid(gridycol,1,NULL,NULL,NULL,1);
-          ppgflagy = 1;
-        } else if (cy->post_process_isurf_grid_flag) 
-          cy->post_process_isurf_grid();
-      } else if (gridywhich == FIX) {
-        fy = modify->fix[gridyindex];
-      }
-    }
-
-    if (gridzflag && gzcolor == ATTRIBUTE) {
-      if (gridzwhich == COMPUTE) {
-        cz = modify->compute[gridzindex];
-        if (!(cz->invoked_flag & INVOKED_PER_GRID)) {
-          cz->compute_per_grid();
-          cz->invoked_flag |= INVOKED_PER_GRID;
-        }
-        ppgflagz = 0;
-        if (cz->post_process_grid_flag) {
-          cz->post_process_grid(gridzcol,1,NULL,NULL,NULL,1);
-          ppgflagz = 1;
-        } else if (cz->post_process_isurf_grid_flag) 
-          cz->post_process_isurf_grid();
-      } else if (gridzwhich == FIX) {
-        fz = modify->fix[gridzindex];
-      }
-    }
-
     Region *region = NULL;
 
     Grid::ChildCell *cells = grid->cells;
@@ -1334,11 +1228,19 @@ void DumpImage::create_image()
             color = gcolorproc;
           } else if (gxcolor == ATTRIBUTE) {
             if (gridxwhich == COMPUTE) {
-              if (gridxcol == 0 || ppgflagx) value = cx->vector_grid[icell];
-              else value = cx->array_grid[icell][gridxcol-1];
+              Compute *c = modify->compute[gridxindex];
+              if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+                c->compute_per_grid();
+                c->invoked_flag |= INVOKED_PER_GRID;
+              }
+              if (c->post_process_grid_flag)
+                value = c->post_process_grid(gridxcol,icell,1,NULL,NULL,NULL,1);
+              else if (gridxcol == 0) value = c->vector_grid[icell];
+              else value = c->array_grid[icell][gridxcol-1];
             } else if (gridxwhich == FIX) {
-              if (gridxcol == 0) value = fx->vector_grid[icell];
-              else value = fx->array_grid[icell][gridxcol-1];
+              Fix *fix = modify->fix[gridxindex];
+              if (gridxcol == 0) value = fix->vector_grid[icell];
+              else value = fix->array_grid[icell][gridxcol-1];
             }
             color = image->map_value2color(XPLANE,value);
           }
@@ -1351,18 +1253,25 @@ void DumpImage::create_image()
           if (!region || region->match(x)) image->draw_brick(x,color,diam);
         }
       }
-
       if (gridyflag) {
         if (gridycoord >= lo[1] && gridycoord < hi[1]) {
           if (gycolor == PROC) {
             color = gcolorproc;
           } else if (gycolor == ATTRIBUTE) {
             if (gridywhich == COMPUTE) {
-              if (gridycol == 0) value = cy->vector_grid[icell];
-              else value = cy->array_grid[icell][gridycol-1];
+              Compute *c = modify->compute[gridyindex];
+              if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+                c->compute_per_grid();
+                c->invoked_flag |= INVOKED_PER_GRID;
+              }
+              if (c->post_process_grid_flag)
+                value = c->post_process_grid(gridycol,icell,1,NULL,NULL,NULL,1);
+              else if (gridycol == 0) value = c->vector_grid[icell];
+              else value = c->array_grid[icell][gridycol-1];
             } else if (gridywhich == FIX) {
-              if (gridycol == 0) value = fy->vector_grid[icell];
-              else value = fy->array_grid[icell][gridycol-1];
+              Fix *fix = modify->fix[gridyindex];
+              if (gridycol == 0) value = fix->vector_grid[icell];
+              else value = fix->array_grid[icell][gridycol-1];
             }
             color = image->map_value2color(YPLANE,value);
           }
@@ -1375,18 +1284,25 @@ void DumpImage::create_image()
           if (!region || region->match(x)) image->draw_brick(x,color,diam);
         }
       }
-
       if (gridzflag) {
         if (gridzcoord >= lo[2] && gridzcoord < hi[2]) {
           if (gzcolor == PROC) {
             color = gcolorproc;
           } else if (gzcolor == ATTRIBUTE) {
             if (gridzwhich == COMPUTE) {
-              if (gridzcol == 0) value = cz->vector_grid[icell];
-              else value = cz->array_grid[icell][gridzcol-1];
+              Compute *c = modify->compute[gridzindex];
+              if (!(c->invoked_flag & INVOKED_PER_GRID)) {
+                c->compute_per_grid();
+                c->invoked_flag |= INVOKED_PER_GRID;
+              }
+              if (c->post_process_grid_flag)
+                value = c->post_process_grid(gridzcol,icell,1,NULL,NULL,NULL,1);
+              else if (gridzcol == 0) value = c->vector_grid[icell];
+              else value = c->array_grid[icell][gridzcol-1];
             } else if (gridzwhich == FIX) {
-              if (gridzcol == 0) value = fz->vector_grid[icell];
-              else value = fz->array_grid[icell][gridzcol-1];
+              Fix *fix = modify->fix[gridzindex];
+              if (gridzcol == 0) value = fix->vector_grid[icell];
+              else value = fix->array_grid[icell][gridzcol-1];
             }
             color = image->map_value2color(ZPLANE,value);
           }
@@ -1520,20 +1436,6 @@ void DumpImage::create_image()
   if (surfflag) {
     double value;
 
-    Compute *c;
-    Fix *f;
-
-    if (scolor == ATTRIBUTE && surfwhich == COMPUTE) {
-      c = modify->compute[surfindex];
-      if (!(c->invoked_flag & INVOKED_PER_GRID)) {
-        c->compute_per_grid();
-        c->invoked_flag |= INVOKED_PER_GRID;
-      }
-      c->post_process_surf();
-    } else if (scolor == ATTRIBUTE && surfwhich == FIX) {
-      f = modify->fix[surfindex];
-    }
-
     diameter = MIN(boxxhi-boxxlo,boxyhi-boxylo);
     if (domain->dimension == 3) diameter = MIN(diameter,boxzhi-boxzlo);
     diameter *= sdiamvalue;
@@ -1569,11 +1471,17 @@ void DumpImage::create_image()
         color = scolorproc;
       } else if (scolor == ATTRIBUTE) {
         if (surfwhich == COMPUTE) {
-          if (surfcol == 0) value = c->vector_surf[isurf];
-          else value = c->array_surf[isurf][surfcol-1];
+          Compute *compute = modify->compute[surfindex];
+          if (!(compute->invoked_flag & INVOKED_PER_SURF)) {
+            compute->compute_per_surf();
+            compute->invoked_flag |= INVOKED_PER_SURF;
+          }
+          compute->tallysum(surfcol);
+          value = compute->vector_surf[isurf];
         } else if (surfwhich == FIX) {
-          if (surfcol == 0) value = f->vector_surf[isurf];
-          else value = f->array_surf[isurf][surfcol-1];
+          Fix *fix = modify->fix[surfindex];
+          if (surfcol == 0) value = fix->vector_surf[isurf];
+          else value = fix->array_surf[isurf][surfcol-1];
         }
         color = image->map_value2color(SURF,value);
       }
@@ -1712,7 +1620,7 @@ void DumpImage::create_image()
   image->draw_box2d(box,boxcolor,diameter);
 
 #endif
-  
+
 }
 
 /* ---------------------------------------------------------------------- */

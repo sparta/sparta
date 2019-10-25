@@ -17,7 +17,6 @@ identical answers to those in the included log files.
 These are the sample problems in the various sub-directories.  Many
 are 2d problems so that they run quickly and can be easily visualized.
 
-ablation = 2d and 3d ablation of implicit surfaces
 adapt = static and on-the-fly grid adaptation
 ambi = amibpolar approxiation for ionized flow around a cylinder
 axi = axisymmetric flow around a sphere

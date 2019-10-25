@@ -46,7 +46,6 @@ SurfCollideDiffuse::SurfCollideDiffuse(SPARTA *sparta, int narg, char **arg) :
   tstr = NULL;
 
   if (strstr(arg[2],"v_") == arg[2]) {
-    dynamicflag = 1;
     int n = strlen(&arg[2][2]) + 1;
     tstr = new char[n];
     strcpy(tstr,&arg[2][2]);

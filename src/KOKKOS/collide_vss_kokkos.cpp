@@ -1491,52 +1491,44 @@ int CollideVSSKokkos::unpack_grid_one(int icell, char *buf_char)
 }
 
 /* ----------------------------------------------------------------------
-   copy per-cell collision info from Icell to Jcell
-   called whenever a grid cell is removed from this processor's list
-   caller checks that Icell != Jcell
+   compress per-cell arrays due to cells migrating to new procs
+   criteria for keeping/discarding a cell is same as in Grid::compress()
+   this keeps final ordering of per-cell arrays consistent with Grid class
 ------------------------------------------------------------------------- */
 
-void CollideVSSKokkos::copy_grid_one(int icell, int jcell)
+void CollideVSSKokkos::compress_grid()
 {
+  int me = comm->me;
+  Grid::ChildCell *cells = grid->cells;
+
   this->sync(Host,ALL_MASK);
-  for (int igroup = 0; igroup < ngroups; igroup++) {
-    for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      k_vremax.h_view(jcell,igroup,jgroup) = k_vremax.h_view(icell,igroup,jgroup);
-      if (remainflag)
-        k_remain.h_view(jcell,igroup,jgroup) = k_remain.h_view(icell,igroup,jgroup);
+
+  // keep an unsplit or split cell if staying on this proc
+  // keep a sub cell if its split cell is staying on this proc
+
+  int ncurrent = nglocal;
+  nglocal = 0;
+  for (int icell = 0; icell < ncurrent; icell++) {
+    if (cells[icell].nsplit >= 1) {
+      if (cells[icell].proc != me) continue;
+    } else {
+      int isplit = cells[icell].isplit;
+      if (cells[grid->sinfo[isplit].icell].proc != me) continue;
     }
+
+    if (nglocal != icell) {
+      for (int igroup = 0; igroup < ngroups; igroup++) {
+        for (int jgroup = 0; jgroup < ngroups; jgroup++) {
+          k_vremax.h_view(nglocal,igroup,jgroup) = k_vremax.h_view(icell,igroup,jgroup);
+          if (remainflag) 
+            k_remain.h_view(nglocal,igroup,jgroup) = k_remain.h_view(icell,igroup,jgroup);
+        }
+      }
+    }
+    nglocal++;
   }
+
   this->modify(Host,ALL_MASK);
-}
-
-/* ----------------------------------------------------------------------
-   reset final grid cell count after grid cell removals
-------------------------------------------------------------------------- */
-
-void CollideVSSKokkos::reset_grid_count(int nlocal)
-{
-  nglocal = nlocal;
-}
-
-/* ----------------------------------------------------------------------
-   add a grid cell
-   called when a grid cell is added to this processor's list
-   initialize values to 0.0
-------------------------------------------------------------------------- */
-
-void CollideVSSKokkos::add_grid_one()
-{
-  grow_percell(1);
-
-  this->sync(Host,ALL_MASK);
-  for (int igroup = 0; igroup < ngroups; igroup++)
-    for (int jgroup = 0; jgroup < ngroups; jgroup++) {
-      k_vremax.h_view(nglocal,igroup,jgroup) = vremax_initial[igroup][jgroup];
-      if (remainflag) k_remain.h_view(nglocal,igroup,jgroup) = 0.0;
-    }
-  this->modify(Host,ALL_MASK);
-
-  nglocal++;
 }
 
 /* ----------------------------------------------------------------------

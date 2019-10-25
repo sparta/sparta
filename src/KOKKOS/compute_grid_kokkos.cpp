@@ -315,7 +315,7 @@ int ComputeGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_array)
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
+double ComputeGridKokkos::post_process_grid_kokkos(int index, int onecell, int nsample,
                                       DAT::t_float_2d_lr d_etally, int *emap,
                                       DAT::t_float_1d_strided d_vec)
 {
@@ -331,6 +331,10 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
     emap = map[index];
     d_vec = d_vector;
     nstride = 1;
+    if (onecell >= 0) {
+      lo = onecell;
+      hi = lo + 1;
+    }
   }
 
   this->nsample = nsample;
@@ -464,6 +468,9 @@ void ComputeGridKokkos::post_process_grid_kokkos(int index, int nsample,
     }
   }
   copymode = 0;
+
+  if (onecell < 0) return 0.0;
+  return d_vec[onecell];
 }
 
 /* ---------------------------------------------------------------------- */

@@ -96,12 +96,23 @@ void FixEmit::start_of_step()
 }
 
 /* ----------------------------------------------------------------------
-   grid changed operation
+   post migrate operation
    invoke create_tasks() to rebuild entire task list
-   invoked after per-processor list of grid cells has changed
+   called from fix balance after load balancing
 ------------------------------------------------------------------------- */
 
-void FixEmit::grid_changed()
+void FixEmit::post_migrate()
+{
+  create_tasks();
+}
+
+/* ----------------------------------------------------------------------
+   post adapt operation
+   invoke create_tasks() to rebuild entire task list
+   called from fix adapt after grid adaptation
+------------------------------------------------------------------------- */
+
+void FixEmit::post_adapt()
 {
   create_tasks();
 }

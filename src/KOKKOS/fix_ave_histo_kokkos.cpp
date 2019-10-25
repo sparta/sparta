@@ -106,6 +106,14 @@ void FixAveHistoKokkos::init()
       value2index[i] = ivariable;
     }
   }
+
+  // need to reset nvalid if nvalid < ntimestep b/c minimize was performed
+
+  if (nvalid < update->ntimestep) {
+    irepeat = 0;
+    nvalid = nextvalid();
+    modify->addstep_compute_all(nvalid);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -229,16 +237,12 @@ void FixAveHistoKokkos::end_of_step()
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
           computeKKBase->compute_per_grid_kokkos();
           compute->invoked_flag |= INVOKED_PER_GRID;
+          if (compute->post_process_grid_flag) {
+            DAT::t_float_2d_lr d_etally;
+            DAT::t_float_1d_strided d_vec;
+            computeKKBase->post_process_grid_kokkos(j,-1,1,d_etally,NULL,d_vec);
+          }
         }
-
-        if (compute->post_process_grid_flag) {
-          DAT::t_float_2d_lr d_etally;
-          DAT::t_float_1d_strided d_vec;
-          computeKKBase->post_process_grid_kokkos(j,1,d_etally,NULL,d_vec);
-        }
-        else if (compute->post_process_isurf_grid_flag) 
-          compute->post_process_isurf_grid();
-
         if (j == 0 || compute->post_process_grid_flag)
           bin_grid_cells(reducer, computeKKBase->d_vector);
         else if (computeKKBase->d_array_grid.data())

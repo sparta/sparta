@@ -535,6 +535,14 @@ void FixAveHisto::init()
       value2index[i] = ivariable;
     }
   }
+
+  // need to reset nvalid if nvalid < ntimestep b/c minimize was performed
+
+  if (nvalid < update->ntimestep) {
+    irepeat = 0;
+    nvalid = nextvalid();
+    modify->addstep_compute_all(nvalid);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -635,13 +643,9 @@ void FixAveHisto::end_of_step()
         if (!(compute->invoked_flag & INVOKED_PER_GRID)) {
           compute->compute_per_grid();
           compute->invoked_flag |= INVOKED_PER_GRID;
+          if (compute->post_process_grid_flag) 
+            compute->post_process_grid(j,-1,1,NULL,NULL,NULL,1);
         }
-
-        if (compute->post_process_grid_flag) 
-          compute->post_process_grid(j,1,NULL,NULL,NULL,1);
-        else if (compute->post_process_isurf_grid_flag) 
-          compute->post_process_isurf_grid();
-
         if (j == 0 || compute->post_process_grid_flag)
           bin_grid_cells(compute->vector_grid,1);
         else if (compute->array_grid)

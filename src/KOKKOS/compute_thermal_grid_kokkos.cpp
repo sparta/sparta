@@ -211,8 +211,9 @@ int ComputeThermalGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_arra
    index = which column of output (0 for vec, 1 to N for array)
    for etally = NULL:
      use internal tallied info for single timestep, set nsample = 1
-     compute values for all grid cells
+     if onecell = -1, compute values for all grid cells
        store results in vector_grid with nstride = 1 (single col of array_grid)
+     if onecell >= 0, compute single value for onecell and return it
    for etaylly = ptr to caller array:
      use external tallied info for many timesteps
      nsample = additional normalization factor used by some values
@@ -221,8 +222,8 @@ int ComputeThermalGridKokkos::query_tally_grid_kokkos(DAT::t_float_2d_lr &d_arra
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-void ComputeThermalGridKokkos::
-post_process_grid_kokkos(int index, int nsample,
+double ComputeThermalGridKokkos::
+post_process_grid_kokkos(int index, int onecell, int nsample,
                   DAT::t_float_2d_lr d_etally, int *emap, DAT::t_float_1d_strided d_vec)
 {
   index--;
@@ -238,6 +239,11 @@ post_process_grid_kokkos(int index, int nsample,
     emap = map[index];
     d_vec = d_vector;
     nstride = 1;
+    if (onecell >= 0) {
+      lo = onecell;
+      hi = lo + 1;
+      //k = lo;
+    }
   }
 
   this->d_etally = d_etally;
@@ -270,6 +276,9 @@ post_process_grid_kokkos(int index, int nsample,
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagComputeThermalGrid_post_process_grid>(lo,hi),*this);
   DeviceType::fence();
   copymode = 0;
+
+  if (onecell < 0) return 0.0;
+  return d_vec[onecell];
 }
 
 /* ---------------------------------------------------------------------- */

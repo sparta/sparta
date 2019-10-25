@@ -447,7 +447,7 @@ int Dump::convert_string(int n, double *mybuf)
     for (j = 0; j < size_one; j++) {
       if (vtype[j] == INT) 
         offset += sprintf(&sbuf[offset],vformat[j],static_cast<int> (mybuf[m]));
-      else if (vtype[j] == DOUBLE)
+      else if (vtype[j] == DOUBLE) 
         offset += sprintf(&sbuf[offset],vformat[j],mybuf[m]);
       else if (vtype[j] == BIGINT) 
         offset += sprintf(&sbuf[offset],vformat[j],

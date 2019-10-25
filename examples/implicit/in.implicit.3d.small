@@ -18,8 +18,7 @@ mixture		    air N O vstream 100.0 0 0
 
 global              surfs implicit
 
-fix                 ablate ablate all 0 0.2 random 10
-read_isurf          all 20 20 20 binary.21x21x21 99.5 ablate
+read_isurf          all 20 20 20 binary.21x21x21 99.5
 
 surf_collide	    1 diffuse 300.0 0.0
 surf_modify         all collide 1

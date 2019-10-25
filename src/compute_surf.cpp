@@ -39,6 +39,9 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg < 5) error->all(FLERR,"Illegal compute surf command");
 
+  if (surf->implicit) 
+    error->all(FLERR,"Cannot use compute surf with implicit surfs");
+
   int igroup = surf->find_group(arg[2]);
   if (igroup < 0) error->all(FLERR,"Compute surf group ID does not exist");
   groupbit = surf->bitmask[igroup];
@@ -76,22 +79,20 @@ ComputeSurf::ComputeSurf(SPARTA *sparta, int narg, char **arg) :
 
   ntotal = ngroup*nvalue;
 
-  per_surf_flag = 1;
-  size_per_surf_cols = ntotal;
-
   surf_tally_flag = 1;
   timeflag = 1;
+  per_surf_flag = 1;
+  size_per_surf_cols = ntotal;
 
   ntally = maxtally = 0;
   array_surf_tally = NULL;
   tally2surf = NULL;
 
-  maxsurf = 0;
-  array_surf = NULL;
-  normflux = NULL;
-  combined = 0;
-
   hash = new MyHash;
+
+  vector_surf = NULL;
+  normflux = NULL;
+  last_tallysum = -1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -103,19 +104,15 @@ ComputeSurf::~ComputeSurf()
   delete [] which;
   memory->destroy(array_surf_tally);
   memory->destroy(tally2surf);
-  memory->destroy(normflux);
   delete hash;
+  memory->destroy(vector_surf);
+  memory->destroy(normflux);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeSurf::init()
 {
-  if (!surf->exist)
-    error->all(FLERR,"Cannot use compute surf when surfs do not exist");
-  if (surf->implicit) 
-    error->all(FLERR,"Cannot use compute surf with implicit surfs");
-
   if (ngroup != particle->mixture[imix]->ngroup)
     error->all(FLERR,"Number of groups in compute surf mixture has changed");
 
@@ -137,8 +134,6 @@ void ComputeSurf::init()
   // initialize tally array in case accessed before a tally timestep
 
   clear();
-
-  combined = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -200,12 +195,10 @@ void ComputeSurf::clear()
 
   hash->clear();
   ntally = 0;
-  combined = 0;
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle in icell
-     colliding with surface element isurf
+  tally values for a single particle colliding with surface element isurf
    iorig = particle ip before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision
@@ -213,7 +206,7 @@ void ComputeSurf::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeSurf::surf_tally(int isurf, int icell, Particle::OnePart *iorig, 
+void ComputeSurf::surf_tally(int isurf, Particle::OnePart *iorig, 
                              Particle::OnePart *ip, Particle::OnePart *jp)
 {
   // skip if isurf not in surface group
@@ -444,44 +437,33 @@ int ComputeSurf::tallyinfo(surfint *&ptr)
 }
 
 /* ----------------------------------------------------------------------
-   sum tally values to owning surfs via surf->collate()
+   sum tally values to per-surf values
+   index = 0 if this compute produces a vector
+   index = 1 to N if this compute produces an array with 1 to N columns
+   regardless, result is stored in vector_surf for Nown surfs this proc owns
 ------------------------------------------------------------------------- */
 
-void ComputeSurf::post_process_surf()
+void ComputeSurf::tallysum(int index)
 {
-  if (combined) return;
-  combined = 1;
+  // NOTE: could have a way to skip indices that have already been
+  //       tallysum() on this timestep
+  //       would require storing multiple vector_surfs, or in array_surfs
 
-  // reallocate array_surf if necessary
+  //  if (update->ntimestep == last_tallysum) return;
+  last_tallysum = update->ntimestep;
 
-  int nown = surf->nown;
+  // allocate vector surf if necessary
 
-  if (nown > maxsurf) {
-    memory->destroy(array_surf);
-    maxsurf = nown;
-    memory->create(array_surf,maxsurf,ntotal,"surf:array_surf");
-  }
+  if (!vector_surf) memory->create(vector_surf,surf->nown,"surf:vector_surf");
+  
+  // array_surf_tally can be NULL if this proc has performed no tallies
 
-  // zero array_surf
-
-  int i,j;
-  for (i = 0; i < nown; i++)
-    for (j = 0; j < ntotal; j++)
-      array_surf[i][j] = 0.0;
-
-  // collate entire array of results
-
-  surf->collate_array(ntally,ntotal,tally2surf,array_surf_tally,array_surf);
-
-  /*
   if (array_surf_tally)
     surf->collate_vector(ntally,tally2surf,
                          &array_surf_tally[0][index-1],ntotal,vector_surf);
   else 
     surf->collate_vector(ntally,tally2surf,NULL,ntotal,vector_surf);
-  */
 }
-
 
 /* ---------------------------------------------------------------------- */
 
@@ -510,6 +492,6 @@ bigint ComputeSurf::memory_usage()
 {
   bigint bytes = 0;
   bytes += ntotal*maxtally * sizeof(double);    // array_surf_tally
-  bytes += maxtally * sizeof(surfint);          // tally2surf
+  bytes += maxtally * sizeof(int);              // tally2surf
   return bytes;
 }

@@ -68,23 +68,17 @@ stats_style step cpu np c_2[1] c_2[2]
 <P><B>Description:</B>
 </P>
 <P>Define a computation that calculates one or more values for each
-explicit surface element in a surface element group, based on the
-particles that collide with that element.  The values are summed for
-each group of species in the specified mixture.  See the
-<A HREF = "mixture.html">mixture</A> command for how a set of species can be
-partitioned into groups.  Only surface elements in the surface group
-specified by <I>group-ID</I> are included in the calculations.  See the
-<A HREF = "group.html">group surf</A> command for info on how surface elements can
-be assigned to surface groups.
+surface element in a surface element group, based on the particles
+that collide with that element.  The values are summed for each group
+of species in the specified mixture.  See the <A HREF = "mixture.html">mixture</A>
+command for how a set of species can be partitioned into groups.  Only
+surface elements in the surface group specified by <I>group-ID</I> are
+included in the calculations.  See the <A HREF = "group.html">group surf</A> command
+for info on how surface elements can be assigned to surface groups.
 </P>
-<P>Explicit surface elements are triangles for 3d simulations and line
-segments for 2d simulations.  Unlike implicit surface elements, each
-explicit triangle or line segment may span multiple grid cells.  See
-the <A HREF = "read_surf.html">read_surf</A> command for details.
-</P>
-<P>This command can only be used for simulations with explicit surface
-elements.  See the similar <A HREF = "compute_isurfrid.html">compute isurf/grid</A>
-command for use with simulations with implicit surface elements.
+<P>Surface elements are triangles for 3d simulations and line segments
+for 2d simulations.  See the <A HREF = "read_surf.html">read_surf</A> command for
+details.
 </P>
 <P>Note that when a particle collides with a surface element, it can
 bounce off (possibly as a different species), be captured by the
@@ -302,8 +296,7 @@ effectively.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "fix_ave_surf.html">fix ave/surf</A>, <A HREF = "dump.html">dump surf</A>, <A HREF = "compute_isurf_grid.html">compute
-isurf/grid</A>
+<P><A HREF = "fix_ave_surf.html">fix ave/surf</A>, <A HREF = "dump.html">dump surf</A>
 </P>
 <P><B>Default:</B> none
 </P>

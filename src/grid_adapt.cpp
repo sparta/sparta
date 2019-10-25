@@ -45,9 +45,9 @@ void Grid::refine_cell(int icell, int iparent,
   ncorner = 8;
   if (dim == 2) ncorner = 4;
 
-  // convert cell ID stored by grid hash from child to parent
+  // remove icell from grid hash
 
-  (*hash)[pcells[iparent].id] = -(iparent+1);
+  hash->erase(cells[icell].id);
 
   // loop over creation of new child cells
 
@@ -68,7 +68,7 @@ void Grid::refine_cell(int icell, int iparent,
 
         // update any per grid fixes for the new child cell
 
-        if (modify->n_pergrid) modify->add_grid_one();
+        if (modify->n_pergrid) modify->add_grid_one(nlocal-1,0);
 
         // if surfs in parent cell, intersect them with child cell
         // add_child_cell marked child type as OUTSIDE
@@ -86,7 +86,7 @@ void Grid::refine_cell(int icell, int iparent,
           
           if (modify->n_pergrid)
             for (i = ichild+1; i < nlocal; i++)
-              modify->add_grid_one();
+              modify->add_grid_one(i,0);
         }
       }
 
@@ -213,7 +213,7 @@ void Grid::coarsen_cell(int iparent, int nchild,
   // update any per grid fixes for the new child cell
   // add new child cell to newcells for later processing
   
-  if (modify->n_pergrid) modify->add_grid_one();
+  if (modify->n_pergrid) modify->add_grid_one(nlocal-1,0);
 
   // if any children have surfs, add union to new child cell
   // NOTE: any way to avoid N^2 loop for unique surfs
@@ -262,7 +262,7 @@ void Grid::coarsen_cell(int iparent, int nchild,
       
     if (modify->n_pergrid)
       for (i = inew+1; i < nlocal; i++)
-        modify->add_grid_one();
+        modify->add_grid_one(i,0);
 
   // if new cell has no surfs,
   // set type = INSIDE if one of its children was INSIDE

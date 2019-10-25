@@ -276,6 +276,11 @@ void AdaptGrid::command(int narg, char **arg)
   
   if (modify->n_pergrid) add_grid_fixes();
 
+  // reallocate per grid arrays in per grid dumps
+
+  for (int i = 0; i < output->ndump; i++)
+    output->dump[i]->reset_grid();
+
   // write out new parent grid file
 
   if (file) write_file();
@@ -671,8 +676,6 @@ int AdaptGrid::refine()
       }
   }
 
-  grid->rehash();
-
   return nrefine;
 }
 
@@ -729,8 +732,6 @@ int AdaptGrid::coarsen(int pstop)
         compute[i]->invoked_flag = 0;
       }
   }
-
-  grid->rehash();
 
   return ncoarsen;
 }
@@ -900,7 +901,7 @@ void AdaptGrid::refine_value()
       }
     }
 
-    //printf("REF VALUE %d %d: %g %g\n",
+    //printf("AAA %d %d: %g %g\n",
     //       icell,cells[icell].id,value,rvalue);
 
     if (rdecide == LESS) {
@@ -951,7 +952,7 @@ void AdaptGrid::add_grid_fixes()
     if (hash->find(newcells[i]) == hash->end()) continue;
     icell = (*hash)[newcells[i]];
     if (icell < 0) continue;
-    modify->add_grid_one();
+    modify->add_grid_one(icell-1,1);
   }
 }
 
@@ -2135,10 +2136,9 @@ void AdaptGrid::gather_parents_coarsen(int delta, int nrefine)
   memory->sfree(delparentall);
 }
 
+
 /* ----------------------------------------------------------------------
    extract a value for icell,valindex from a compute
-   NOTE: post_process_grid_old() is a NO-OP at this point
-         how to insure that compute value in vec/array is current
 ------------------------------------------------------------------------- */
 
 double AdaptGrid::value_compute(int icell)
