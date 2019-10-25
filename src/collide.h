@@ -54,7 +54,9 @@ class Collide : protected Pointers {
 
   virtual int pack_grid_one(int, char *, int);
   virtual int unpack_grid_one(int, char *);
-  virtual void compress_grid();
+  virtual void copy_grid_one(int, int);
+  virtual void reset_grid_count(int);
+  virtual void add_grid_one();
   virtual void adapt_grid();
 
  protected:

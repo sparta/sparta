@@ -26,8 +26,8 @@ class KokkosBase {
   // Compute
   virtual void compute_per_grid_kokkos() {}
   virtual int query_tally_grid_kokkos(DAT::t_float_2d_lr&) {return 0;}
-  virtual double post_process_grid_kokkos(int, int, int, DAT::t_float_2d_lr, int *,
-                                   DAT::t_float_1d_strided) {return 0.0;}
+  virtual void post_process_grid_kokkos(int, int, DAT::t_float_2d_lr, int *,
+                                   DAT::t_float_1d_strided) {}
 
   DAT::t_float_1d d_vector;          // Kokkos version of computed vector
   DAT::t_float_2d_lr d_array_grid;   // Kokkos version of computed per-grid array

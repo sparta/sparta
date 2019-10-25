@@ -13,7 +13,7 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<PRE>read_isurf group-ID Nx Ny Nz filename thresh keyword args ... 
+<PRE>read_isurf group-ID Nx Ny Nz filename thresh ablateID keyword args ... 
 </PRE>
 <UL><LI>group-ID = group ID for which grid cells to perform calculation on 
 
@@ -23,16 +23,19 @@
 
 <LI>thresh = threshold for surface definition, value > 0.0 and < 255.0 
 
+<LI>ablateID = ID of a <A HREF = "fix_ablate.html">fix ablate</A> command 
+
 <LI>zero or more keyword/args pairs may be appended 
 
-<LI>keyword = <I>group</I> or <I>type</I> or <I>file</I> 
+<LI>keyword = <I>group</I> or <I>type</I> or <I>push</I> or <I>precision</I> or <I>read</I> 
 
 <PRE>  group arg = group-ID
     group-ID = new or existing surface group to assign the surface elements to
   type arg = tfile
     tfile = binary file with per grid cell surface type values
-  file args = identical to those defined for the <A HREF = "write_surf.html">write_surf</A> command
-    this keyword must be last 
+  push arg = yes or no = whether to push corner point values to 0/255
+  precision arg = int or double
+  read arg = serial or parallel 
 </PRE>
 
 </UL>
@@ -40,19 +43,19 @@
 </P>
 <PRE>read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh
 read_isurf subset 150 100 50 isurf.materials.3d 120.5 type isurf.type
-read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs
-read_isurf portion 100 100 1 isurf.material.2d 180.5 group mesh file tmp.isurfs.% oints no nfile 32 
+read_isurf subset 150 100 50 isurf.materials.3d 120.5 read parallel 
 </PRE>
 <P><B>Description:</B>
 </P>
 <P>Read the geometry of a surface from the specified file.  In SPARTA, a
 "surface" is a collection of surface elements that represent the
 surface of one or more physical objects which will be embedded in the
-global simulation box.  Surfaces can be explicit or implicit.  This
-command reads implicit surfaces from a file containing grid corner
-point values which implicitly define the surface elements.  See the
-<A HREF = "read_surf.html">read_surf</A> command to read explicit surfaces from a
-different kind of file.  See the <A HREF = "Section_howto.html#howto_13">Howto
+global simulation box.  Surfaces can be explicit or implicit.  
+</P>
+<P>This command reads implicit surfaces from a file containing grid
+corner point values which implicitly define the surface elements.  See
+the <A HREF = "read_surf.html">read_surf</A> command to read explicit surfaces from
+a different kind of file.  See the <A HREF = "Section_howto.html#howto_13">Howto
 6.13</A> section of the manual for an
 explantion of explicit versus implicit surfaces as well as distributed
 versus non-distributed storage.  You cannot mix explicit and implicit
@@ -64,6 +67,18 @@ connected set that tile the entire surface of the object.  See the
 discussion of watertight surfaces below.  Implicit surfaces will
 always be watertight, due to the algorithm that defines them.
 </P>
+<P>Here are simulation snapshots of 2d and 3d implicit surface models
+through which particles could flow.  Click on either image for a
+larger image.  In the 2d case, the colorings are by processor for
+sub-domains each owns.  The implicit triangles for the 3d case were
+created via Marching Cubes (discussed below) from a tomographic image
+of a sample of NASA FiberForm (TM) material, used as a heat shield
+material on spacecraft.
+</P>
+<CENTER><A HREF = "JPG/porous2d_initial.png"><IMG SRC = "JPG/porous2d_initial_small.png"></A><A HREF = "JPG/porous3d_initial.png"><IMG SRC = "JPG/porous3d_initial_small.png"></A>
+</CENTER>
+<IMG SRC = "">
+
 <P>Particles collide with surface elements as they advect.  Each surface
 element is assigned to a collision model, specified by the
 <A HREF = "surf_collide.html">surf_collide</A> command which affects how a particle
@@ -76,20 +91,19 @@ the <A HREF = "compute_isurf_grid.html">compute isurf/grid</A> command,
 time-averaged via the <A HREF = "fix_ave_grid.html">fix ave/grid</A> command, and
 ouput via the <A HREF = "dump.html">dump surface</A> command.
 </P>
-<P>IMPORTANT NOTE: The <A HREF = "compute_isurf_grid.html">compute isurf/grid</A>
-command has not yet been implemented.
-</P>
 <P>Surface elememts can be assigned to surface groups via the <A HREF = "group.html">group
 surf</A> command.  Surface group IDs are used by other
 commands to operate on selected sets of elements.  This command has a
 <I>type</I> keyword which can be used to help assign different elements to
 different groups.
 </P>
-<P>Note that the read_isurf command can be used multiple times to read
-multiple objects from multiple files and add them to the simulation
-domain, so long as the grid extent of the different commands does not
-overlap.  The format of a surface file for implicit surfaces is
-discussed below.
+<P>Note that at some point, it will be possible to use the read_isurf
+command multiple times to read surfaces from multiple files and add
+them to the simulation domain, so long as the grid extent of the
+different commands does not overlap.  However currently, that is not
+yet possible.
+</P>
+<P>The format of a surface file for implicit surfaces is discussed below.
 </P>
 <P>The tools directory contains a implicit_grid.py tool which can create
 implicit surface files in a randomized manner for different grid
@@ -125,10 +139,21 @@ Nxfile = Nx+1, Nyfile = Ny+1, Nzfile = Nz+1 is required.  SPARTA will
 give an error if the read_isurf Nx,Ny,Nz arguments do not match the
 first 2 or 3 integers in the file.
 </P>
-<P>The remaining N bytes of the file are a series of one-byte integer
-values.  There are N = Nxfile * Nyfile values in 2d, and N = Nxfile *
-Nyfile * Nzfile values in 3d.  Each value is a single byte integer
-from 0 to 255 inclusive.
+<P>The remaining N bytes of the file are a series of corner point values.
+There are N = Nxfile * Nyfile values in 2d, and N = Nxfile * Nyfile *
+Nzfile values in 3d.
+</P>
+<P>If the <I>precision</I> keyword is set to <I>int</I>, which is the default, then
+the values are one-byte integers, from 0 to 255 inclusive.  If the
+<I>precision</I> keyword is set to <I>double</I>, then they are double-precision
+floating point values, from 0.0 to 255.0 inclusive.  The one-byte
+integer format is what is typically used for tomographic images.  The
+double-precision format is what is written by the
+<A HREF = "write_isurf.html">write_isurf</A> command.  The latter is typically used
+when running an ablation model via the <A HREF = "fix_ablate.html">fix ablate</A>
+command, where material is removed incrementally (from the corner
+point values) due to collisions of particles with the implicit
+surfaces.
 </P>
 <P>IMPORTANT NOTE: The corner point values are a 2d or 3d regular array
 which must be ordered as follows.  The x indices (1 to Nxfile) vary
@@ -141,7 +166,7 @@ then y, and their z indices very slowest.
 </P>
 <P>The 8 corner point values (4 in 2d) for each grid cell are used with a
 marching cubes algorithm (marching squares in 2d) to infer a set of
-triangles (line segments in 2d) which are created in each grid cell.
+triangles (line segments in 2d) which are created in the grid cell.
 </P>
 <P>IMPORTANT NOTE: All triangles (line segments in 2d) created within the
 same grid cell are assigned the same surface ID, which is the grid
@@ -170,10 +195,10 @@ generate an error.  The marching cube and square algorithms guarantee
 this.  However, if the Nx by Ny by Nz array of grid cells is interior
 to the simulation box, the entire outer boundary of the Nxfile by
 Nyfile by Nzfile grid of corner points should have values = 0.  This
-will insure no surface element touches that outer boundary (which
-would induce a non-watertight surface).  If the array of grid cells
-touches the simulation box face, then this is not a requirement (the
-same as if a set of explicit surfs were clipped at the box boundary).
+will insure no surface element touches the outer boundary (which would
+induce a non-watertight surface).  If the array of grid cells touches
+the simulation box face, then this is not a requirement (the same as
+if a set of explicit surfs were clipped at the box boundary).
 However, if a boundary is periodic in a particular dimension and the
 array of grid cells touches that boundary, then you must insure the
 Nxfile by Nyfile by Nzfile grid of corner points spans that entire
@@ -184,10 +209,18 @@ corner point values at the y = 1 and y = Nyfile lines or planes of the
 aggregate set of implicit surfaces will not be consistent across the y
 periodic boundary.
 </P>
+<P>The specified <I>ablateID</I> is the fix ID of a <A HREF = "fix_ablate.html">fix
+ablate</A> command which has been previously specified in
+the input script.  It stores the grid corner point values for each
+grid cell.  It also has the code logic for converting grid corner
+point values to surface elements (line segments or triangles) and also
+optinally allows for the surface to be ablated during a simulation due
+to particles colliding with the surface elements.
+</P>
 <HR>
 
-<P>The following optional keywords affect group and type settings for the
-read-in surface elements and output of the elements.
+<P>The following optional keywords affect attributes of the read-in
+surface elements and how they are read.
 </P>
 <P>Surface groups are collections of surface elements.  Each surface
 element belongs to one or more surface groups; all elements belong to
@@ -201,12 +234,12 @@ For example, implicit surface elemnts in different regions of the
 simulation box.  Surface element types can be used to define surface
 groups.  See the <A HREF = "group.html">group surf</A> command for details.
 </P>
-<P>The <I>group</I> keyword specifies an extra surface <I>group-ID</I> to which to
-assign all the implicit surface elements created by the read-in file.
-All the created implicit elements are assigned to the "all" group and
-to <I>group-ID</I>.  If <I>group-ID</I> does not exist, a new surface group is
-created.  If it does exist the create implicit surface elements are
-added to that group.
+<P>The <I>group</I> keyword specifies an extra surface <I>group-ID</I> to which all
+the implicit surface elements are assigned when created by the read-in
+corner points.  All the created implicit elements are also assigned to
+the "all" group and to <I>group-ID</I>.  If <I>group-ID</I> does not exist, a
+new surface group is created.  If it does exist the create implicit
+surface elements are added to that group.
 </P>
 <P>The <I>type</I> keyword triggers the reading of a per grid cell type file
 with the specified name <I>tfile</I>.  
@@ -249,30 +282,39 @@ indices very slowest.
 each surface element created in that grid cell by the marching cubes
 or squares algorithm.
 </P>
-<P>If the <I>file</I> keyword is used, the surfaces will be written out to the
-specified <I>filename</I> immediately after they are read in.  The
-arguments for this keyword are identical to those used for the
-<A HREF = "write_surf.html">write_surf</A> command.  This includes a file name with
-optional "*" and "%" wildcard characters, as well as its optional
-keywords.
+<P>The <I>push</I> keyword specifies whether or not (<I>yes</I> or <I>no</I>) to "push"
+grid corner points values to their minimum/maximum possible values,
+i.e. 0 or 255 respectively.  Each corner point value which is below
+(above) the specified <I>thresh</I> value is and is also entirely
+surrounded by neighbor corner point values which are also below
+(above) the <I>thresh</I> value is reset to 0 (255).  In 2d, there are 8
+corner points surrouding each interior corner point, i.e. all corner
+points on the face of the 2x2 set of grid cells which surround the
+interior point.  In 3d, there are 26 corner points surrouding each
+interior corner point, i.e. all corner points on the face of the 2x2x2
+set of grid cells which surround the interior point.  The purpose of
+this operation is to reset corner point values to 0 if they are fully
+exterior to the surface object(s), and likewise to 255 if they are
+fully interior to the surface object(s).
 </P>
-<P>IMPORTANT NOTE: The <I>file</I> keyword must be the last keyword specified
-with the read_isurf command.  This is because all the remaining arguments
-are passed to the <A HREF = "write_surf.html">write_surf</A> command.
+<P>Note that the push is a one-time operation, performed when the corner
+point values are read in, before the first set of surface elements are
+created by the marching cubes or marching squares algorithms.
 </P>
-<P>The format for the output file is the same as the one written by the
-<A HREF = "write_surf.html">write_surf</A> command, or that is read by the
-<A HREF = "read_surf.html">read_surf</A> command.  This can be useful for
-visualizing the implicit surfaces with a tool that uses SPARTA surface
-data as input.
+<P>The default for the <I>push</I> keyword is <I>yes</I>.
 </P>
-<P>IMPORTANT NOTE: If you write out implicit surfaces via the <I>file</I>
-keyword, they are written as if they were explicit surfaces.  Thus the
-file can only be read back into SPARTA via the
-<A HREF = "read_surf.html">read_surf</A> command, which will treat them as explicit
-surfaces.  At some point we will add a write_isurf command, so that
-dynamics implicit surfaces can be written in a format that allows them
-be be read back in as implicit surfaces.
+<P>The <I>read</I> keyword specifies how the input file of grid corner point
+values is read.  If the value is <I>serial</I>, which is the default, then
+only a single proc reads the file, a chunk of values at at time.  They
+are broadcast to other processors, and each scans them for corner
+point values that correspond to grid cells it owns.  If the value is
+<I>parallel</I>, then each proc opens the input file and reads a N/P
+portion of the corner point values, where N is the # of corner point
+values, and P is the # of procs.  Additional communication is then
+performed to communicate the corner point values where they are needed
+by each grid cell that owns one of the corner point values.  The
+<I>parallel</I> option can be faster for simulations with large grid corner
+point files and large numbers of processors.
 </P>
 <HR>
 
@@ -286,10 +328,12 @@ up inside the set of implicit surfaces.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "write_surf.html">write_surf</A>
+<P><A HREF = "read_surf.html">read_surf</A>, <A HREF = "write_surf.html">write_surf</A>, <A HREF = "fix_ablate.html">fix
+ablate</A>
 </P>
 <P><B>Default:</B>
 </P>
-<P>The optional keyword defaults are group = all and type = no.
+<P>The optional keyword defaults are group = all, type = no, push = yes,
+precision int, and read serial.
 </P>
 </HTML>

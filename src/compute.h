@@ -50,10 +50,10 @@ class Compute : protected Pointers {
   int per_particle_flag;      // 0/1 if compute_per_particle() function exists
   int size_per_particle_cols; // 0 = vector, N = columns in per-particle array
 
-  int per_grid_flag;          // 0/1 if compute_per_grid() function exists
-  int size_per_grid_cols;     // 0 = vector, N = columns in per-grid array
-
-  int post_process_grid_flag;   // 1 if requires post_processing for output
+  int per_grid_flag;            // 0/1 if compute_per_grid() function exists
+  int size_per_grid_cols;       // 0 = vector, N = columns in per-grid array
+  int post_process_grid_flag;   // 1 if requires post_process_grid() for output
+  int post_process_isurf_grid_flag; // 1 if requires post_process_tally() for out
 
   int per_surf_flag;          // 0/1 if compute_per_surf() function exists
   int size_per_surf_cols;     // 0 = vector, N = columns in per-surf array
@@ -86,20 +86,19 @@ class Compute : protected Pointers {
   virtual void compute_per_grid() {}
   virtual void compute_per_surf() {}
   virtual void clear() {}
-  virtual void surf_tally(int, Particle::OnePart *,  
+  virtual void surf_tally(int, int, Particle::OnePart *,  
                           Particle::OnePart *, Particle::OnePart *) {}
   virtual void boundary_tally(int, int, Particle::OnePart *,
                               Particle::OnePart *, Particle::OnePart *) {}
 
-  virtual int query_tally_grid(int, double **&, int *&) {return 0;}
-  virtual double post_process_grid(int, int, int, double **, int *, 
-                                   double *, int) {return 0.0;}
-
+  virtual void post_process_grid(int, int, double **, int *, double *, int) {}
   // NOTE: get rid of this method at some point
   virtual void post_process_grid_old(void *, void *, int, int, double *, int) {}
+  virtual void post_process_isurf_grid() {}
 
+  virtual int query_tally_grid(int, double **&, int *&) {return 0;}
   virtual int tallyinfo(surfint *&) {return 0;}
-  virtual void tallysum(int) {}
+  virtual void post_process_surf() {}
 
   virtual void reallocate() {}
   virtual bigint memory_usage();

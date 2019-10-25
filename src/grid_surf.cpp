@@ -18,13 +18,17 @@
 #include "update.h"
 #include "comm.h"
 #include "particle.h"
+#include "modify.h"
+#include "collide.h"
 #include "surf.h"
 #include "cut2d.h"
 #include "cut3d.h"
 #include "irregular.h"
+#include "geometry.h"
 #include "math_const.h"
 #include "hashlittle.h"
 #include "my_page.h"
+#include "math_extra.h"
 #include "memory.h"
 #include "error.h"
 
@@ -37,9 +41,11 @@ int compare_surfIDs(const void *, const void *);
 
 #define BIG 1.0e20
 #define CHUNK 16
+#define EPSSURF 1.0e-4
 
 enum{UNKNOWN,OUTSIDE,INSIDE,OVERLAP};   // several files
 enum{PERAUTO,PERCELL,PERSURF};          // several files
+enum{SOUTSIDE,SINSIDE,ONSURF2OUT,ONSURF2IN};  // several files (changed 2 words)
 
 // operations for surfaces in grid cells
 
@@ -515,7 +521,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 /* ----------------------------------------------------------------------
    compute split cells for implicit surfs
    surfs per cell already created
-   called from ReadISurf
+   called from ReadISurf and FixAblate
 ------------------------------------------------------------------------- */
 
 void Grid::surf2grid_implicit(int subflag, int outflag)
@@ -534,7 +540,7 @@ void Grid::surf2grid_implicit(int subflag, int outflag)
    compute cut volume of each cell and any split cell info
    nsurf and csurfs list for each grid cell have already been computed
    if subflag = 1, create new owned split and sub cells as needed
-     called from ReadSurf, RemoveSurf, MoveSurf
+     called from ReadSurf, RemoveSurf, MoveSurf, FixAblate
    if subflag = 0, split/sub cells already exist
      called from ReadRestart
    in cells: set nsplit, isplit
@@ -606,9 +612,14 @@ void Grid::surf2grid_split(int subflag, int outflag)
 
 	ptr = s->csubs = csubs->vget();
 
+        // add nsplitone sub cells
+        // collide and fixes also need to add cells
+
 	for (i = 0; i < nsplitone; i++) {
 	  isub = nlocal;
 	  add_sub_cell(icell,1);
+          if (collide) collide->add_grid_one();
+          if (modify->n_pergrid) modify->add_grid_one();
 	  cells[isub].nsplit = -i;
 	  cinfo[isub].volume = vols[i];
 	  ptr[i] = isub;
@@ -695,14 +706,20 @@ void Grid::surf2grid_split(int subflag, int outflag)
         if (cinfo[icell].corner[0] == UNKNOWN) ncorner++;
       }
     }
-    int ncornerall,noverlapall;
-    MPI_Allreduce(&ncorner,&ncornerall,1,MPI_INT,MPI_SUM,world);
-    MPI_Allreduce(&noverlap,&noverlapall,1,MPI_INT,MPI_SUM,world);
+
+    bigint bncorner = ncorner;
+    bigint bnoverlap = noverlap;
+    bigint ncornerall,noverlapall;
+    MPI_Allreduce(&bncorner,&ncornerall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    MPI_Allreduce(&bnoverlap,&noverlapall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+
     if (comm->me == 0) {
-      if (screen) fprintf(screen,"  %d %d = cells overlapping surfs, "
+      if (screen) fprintf(screen,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+                          " = cells overlapping surfs, "
                           "overlap cells with unmarked corner pts\n",
                           noverlapall,ncornerall);
-      if (logfile) fprintf(logfile,"  %d %d = cells overlapping surfs, "
+      if (logfile) fprintf(logfile,"  " BIGINT_FORMAT " " BIGINT_FORMAT 
+                           " = cells overlapping surfs, "
                            "overlap cells with unmarked corner pts\n",
                            noverlapall,ncornerall);
     }
@@ -802,10 +819,15 @@ void Grid::surf2grid_one(int flag, int icell, int iparent, int nsurf_caller,
     else s->xsplit[2] = 0.0;
     
     iptr = s->csubs = csubs->vget();
-    
+
+    // add nsplitone sub cells
+    // collide and fixes also need to add cells
+
     for (int i = 0; i < nsplitone; i++) {
       isub = nlocal;
       add_sub_cell(icell,1);
+      if (collide) collide->add_grid_one();
+      if (modify->n_pergrid) modify->add_grid_one();
       cells[isub].nsplit = -i;
       cinfo[isub].volume = vols[i];
       iptr[i] = isub;
@@ -832,19 +854,28 @@ void Grid::clear_surf()
   if (dimension == 2) ncorner = 4;
   double *lo,*hi;
 
+  hashfilled = 0;
+
   // if surfs no longer exist, set cell type to OUTSIDE, else UNKNOWN
   // set corner points of every cell to UNKNOWN
 
   int celltype = UNKNOWN;
   if (!surf->exist) celltype = OUTSIDE;
 
+  // compress cell list
+  // collide and fixes also need to do the same
+
   int nlocal_prev = nlocal;
 
   int icell = 0;
   while (icell < nlocal) {
     if (cells[icell].nsplit <= 0) {
-      memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
-      memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
+      if (icell != nlocal-1) {
+        memcpy(&cells[icell],&cells[nlocal-1],sizeof(ChildCell));
+        memcpy(&cinfo[icell],&cinfo[nlocal-1],sizeof(ChildInfo));
+        if (collide) collide->copy_grid_one(nlocal-1,icell);
+        if (modify->n_pergrid) modify->copy_grid_one(nlocal-1,icell);
+      }
       nlocal--;
     } else {
       cells[icell].ilocal = icell;
@@ -865,6 +896,11 @@ void Grid::clear_surf()
       icell++;
     }
   }
+
+  // reset final grid cell count in collide and fixes
+
+  if (collide) collide->reset_grid_count(nlocal);
+  if (modify->n_pergrid) modify->reset_grid_count(nlocal);
 
   // if particles exist and local cell count changed
   // repoint particles to new icell indices
@@ -979,7 +1015,7 @@ void Grid::combine_split_cell_particles(int icell, int relabel)
 }
 
 /* ----------------------------------------------------------------------
-   assign all particles in split icell to appropriate sub cells
+   assign all particles in a split icell to appropriate sub cells
    assumes particles are sorted, are NOT sorted by sub cell when done
    also change particle icell label
 ------------------------------------------------------------------------- */
@@ -1002,6 +1038,110 @@ void Grid::assign_split_cell_particles(int icell)
 
   cinfo[icell].count = 0;
   cinfo[icell].first = -1;
+}
+
+/* ----------------------------------------------------------------------
+   check is particle at x is outside any surfs in icell
+   icell can be split or unsplit cell, not a sub cell
+   if outside, return 1, else return 0
+   // NOTE: make this only for implicit surfs
+------------------------------------------------------------------------- */
+
+int Grid::outside_surfs(int icell, double *x, 
+                        Cut3d *cut3d_caller, Cut2d *cut2d_caller)
+{
+  if (cells[icell].nsurf == 0) {
+    if (cinfo[icell].type == INSIDE) return 0;
+    else return 1;
+  }
+
+  // set xnew to midpt of first line or center pt of first triangle
+  // for implicit surfs this is guaranteed to be a pt in or on icell
+  // then displace it by EPSSURF in the line/tri norm direction
+  // reason for this:
+  //   want to insure an inside particle is flagged
+  //   requires a ray from inside particle x to xnew intersects a surf
+  //   if no intersection, logic below assumes particle is outside
+  //   if xnew is midpt of tri, then an inside particle may have no intersection
+  //     due to round-off
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
+  surfint *csurfs = cells[icell].csurfs;
+
+  int dim = domain->dimension;
+  double xnew[3],edge[3];
+  double edgelen,minedge,displace;
+
+  int isurf = csurfs[0];
+
+  if (dim == 2) {
+    xnew[0] = 0.5 * (lines[isurf].p1[0] + lines[isurf].p2[0]);
+    xnew[1] = 0.5 * (lines[isurf].p1[1] + lines[isurf].p2[1]);
+    xnew[2] = 0.0;
+
+    MathExtra::sub3(lines[isurf].p1,lines[isurf].p2,edge);
+    minedge = MathExtra::len3(edge);
+
+  } else {
+    double onethird = 1.0/3.0;
+    xnew[0] = onethird * 
+      (tris[isurf].p1[0] + tris[isurf].p2[0] + tris[isurf].p3[0]);
+    xnew[1] = onethird * 
+      (tris[isurf].p1[1] + tris[isurf].p2[1] + tris[isurf].p3[1]);
+    xnew[2] = onethird * 
+      (tris[isurf].p1[2] + tris[isurf].p2[2] + tris[isurf].p3[2]);
+
+    MathExtra::sub3(tris[isurf].p1,tris[isurf].p2,edge);
+    edgelen = MathExtra::len3(edge);
+    minedge = edgelen;
+    MathExtra::sub3(tris[isurf].p2,tris[isurf].p3,edge);
+    edgelen = MathExtra::len3(edge);
+    minedge = MIN(minedge,edgelen);
+    MathExtra::sub3(tris[isurf].p3,tris[isurf].p1,edge);
+    minedge = MIN(minedge,edgelen);
+  }
+
+  displace = EPSSURF * minedge;
+  xnew[0] += displace*tris[isurf].norm[0];
+  xnew[1] += displace*tris[isurf].norm[1];
+  xnew[2] += displace*tris[isurf].norm[2];
+  
+  // loop over surfs, ray-trace from x to xnew, see which surf is hit first
+  // if no surf is hit (roundoff), assume particle is outside
+
+  int m,cflag,hitflag,side,minside;
+  double param,minparam;
+  double xc[3];
+  Surf::Line *line;
+  Surf::Tri *tri;
+
+  int nsurf = cells[icell].nsurf;
+
+  cflag = 0;
+  minparam = 2.0;
+  for (m = 0; m < nsurf; m++) {
+    isurf = csurfs[m];
+    if (dim == 3) {
+      tri = &tris[isurf];
+      hitflag = Geometry::
+        line_tri_intersect(x,xnew,tri->p1,tri->p2,tri->p3,
+                           tri->norm,xc,param,side);
+    } else {
+      line = &lines[isurf];
+      hitflag = Geometry::
+        line_line_intersect(x,xnew,line->p1,line->p2,line->norm,xc,param,side);
+    }
+    if (hitflag && param < minparam) {
+      cflag = 1;
+      minparam = param;
+      minside = side;
+    }
+  }
+
+  if (!cflag) return 1;
+  if (minside == SOUTSIDE || minside == ONSURF2OUT) return 1;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -1469,6 +1609,7 @@ void Grid::surf2grid_stats()
   int stotal = 0;
   int smax = 0;
   double sratio = BIG;
+
   for (int icell = 0; icell < nlocal; icell++) {
     if (cells[icell].nsplit <= 0) continue;
     if (cells[icell].nsurf) scount++;
@@ -1499,23 +1640,28 @@ void Grid::surf2grid_stats()
     }
   }
   
-  int scountall,stotalall,smaxall;
+  bigint bscount = scount;
+  bigint bstotal = stotal;
+  bigint scountall,stotalall;
+  int smaxall;
   double sratioall;
-  MPI_Allreduce(&scount,&scountall,1,MPI_INT,MPI_SUM,world);
-  MPI_Allreduce(&stotal,&stotalall,1,MPI_INT,MPI_SUM,world);
+  MPI_Allreduce(&bscount,&scountall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&bstotal,&stotalall,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
   MPI_Allreduce(&smax,&smaxall,1,MPI_INT,MPI_MAX,world);
   MPI_Allreduce(&sratio,&sratioall,1,MPI_DOUBLE,MPI_MIN,world);
   
   if (comm->me == 0) {
     if (screen) {
-      fprintf(screen,"  %d = cells with surfs\n",scountall);
-      fprintf(screen,"  %d = total surfs in all grid cells\n",stotalall);
+      fprintf(screen,"  " BIGINT_FORMAT " = cells with surfs\n",scountall);
+      fprintf(screen,"  " BIGINT_FORMAT 
+              " = total surfs in all grid cells\n",stotalall);
       fprintf(screen,"  %d = max surfs in one grid cell\n",smaxall);
       fprintf(screen,"  %g = min surf-size/cell-size ratio\n",sratioall);
     }
     if (logfile) {
-      fprintf(logfile,"  %d = cells with surfs\n",scountall);
-      fprintf(logfile,"  %d = total surfs in all grid cells\n",stotalall);
+      fprintf(logfile,"  " BIGINT_FORMAT " = cells with surfs\n",scountall);
+      fprintf(logfile,"  " BIGINT_FORMAT 
+              " = total surfs in all grid cells\n",stotalall);
       fprintf(logfile,"  %d = max surfs in one grid cell\n",smaxall);
       fprintf(logfile,"  %g = min surf-size/cell-size ratio\n",sratioall);
     }

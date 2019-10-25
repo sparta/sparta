@@ -35,22 +35,21 @@ class ComputeSurf : public Compute {
   virtual void init();
   void compute_per_surf();
   virtual void clear();
-  virtual void surf_tally(int, Particle::OnePart *, 
+  virtual void surf_tally(int, int, Particle::OnePart *, 
                           Particle::OnePart *, Particle::OnePart *);
   virtual int tallyinfo(surfint *&);
-  virtual void tallysum(int);
+  virtual void post_process_surf();
   void reallocate();
   bigint memory_usage();
 
  protected:
   int groupbit,imix,nvalue,ngroup,ntotal;
-  int *which;
-  bigint last_tallysum;      // last timestep tallysum was called
+  int maxsurf,combined;
   double nfactor_inverse;
+  int *which;
 
   int ntally;              // # of surfs I have tallied for
   int maxtally;            // # of tallies currently allocated
-  double **array;          // tally values, maxtally in length
   surfint *tally2surf;     // tally2surf[I] = surf ID of Ith tally
 
   // hash for surf IDs

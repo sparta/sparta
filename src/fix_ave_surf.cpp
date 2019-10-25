@@ -36,7 +36,7 @@ enum{COMPUTE,FIX,VARIABLE};
 enum{ONE,RUNNING};
 
 #define INVOKED_PER_SURF 32
-#define DELTA 8;
+#define DELTA 1024;
 
 /* ---------------------------------------------------------------------- */
 
@@ -414,7 +414,7 @@ void FixAveSurf::end_of_step()
     n = value2index[m];
     j = argindex[m];
 
-    // do not invoke compute_per_surf(), just access tallies
+    // access list of tallies from compute, add to my list
     
     if (which[m] == COMPUTE) {
       Compute *compute = modify->compute[n];
@@ -510,7 +510,7 @@ void FixAveSurf::end_of_step()
           for (i = 0; i < nown; i++) accarray[i][m] += fix_array[i][jm1];
       }
 
-    // evaluete surf-style variable
+    // evaluate surf-style variable
       
     } else if (which[m] == VARIABLE) {
     }
@@ -531,20 +531,17 @@ void FixAveSurf::end_of_step()
   nvalid = ntimestep+per_surf_freq - (nrepeat-1)*nevery;
   modify->addstep_compute(nvalid);
 
-  // for values from computes, 
-  //   invoke surf->collate() on tallies this fix stores for multiple steps
-  //   this merges tallies to owned surf elements
+  // invoke surf->collate() on tallies this fix stores for multiple steps
+  // this merges tallies to owned surfs
 
-  if (which[0] == COMPUTE) {
-    if (nvalues == 1) {
-      surf->collate_vector(ntally,tally2surf,vec_tally,1,bufvec);
-      for (i = 0; i < nown; i++) accvec[i] += bufvec[i];
-    } else {
-      surf->collate_array(ntally,nvalues,tally2surf,array_tally,bufarray);
-      for (i = 0; i < nown; i++)
-        for (m = 0; m < nvalues; m++)
-          accarray[i][m] += bufarray[i][m];
-    }
+  if (nvalues == 1) {
+    surf->collate_vector(ntally,tally2surf,vec_tally,1,bufvec);
+    for (i = 0; i < nown; i++) accvec[i] += bufvec[i];
+  } else {
+    surf->collate_array(ntally,nvalues,tally2surf,array_tally,bufarray);
+    for (i = 0; i < nown; i++)
+      for (m = 0; m < nvalues; m++)
+        accarray[i][m] += bufarray[i][m];
   }
 
   // normalize the accumulators for output on Nfreq timestep

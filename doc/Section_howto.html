@@ -27,7 +27,8 @@ SPARTA works.
 6.10 <A HREF = "#howto_10">Restarting a simulation</A><BR>
 6.11 <A HREF = "#howto_11">Using the ambipolar approximation</A><BR>
 6.12 <A HREF = "#howto_12">Using multiple vibrational energy levels</A><BR>
-6.13 <A HREF = "#howto_13">Surface elements: explicit, implicit, distributed</A> <BR>
+6.13 <A HREF = "#howto_13">Surface elements: explicit, implicit, distributed</A><BR>
+6.14 <A HREF = "#howto_14">Implicit surface ablation</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -1159,22 +1160,28 @@ not yet fully implemented.  Specifically, the
 <A HREF = "read_isurf.html">read_isurf</A> command will not yet read and create
 them.
 </P>
-<P>The <A HREF = "global.html">global surfs</A> command has options for explicit versus
-implicit, and distributed versus non-distributed.
+<P>The <A HREF = "global.html">global surfs</A> command is used to specify the use of
+explicit versus implicit, and distributed versus non-distributed
+surface elements.
 </P>
-<P>The following surface-related commands work with either explict or
-implicit surfaces, whether they are distributed or not.  For large
-data sets, the read and write surf commands have options to use
-multiple files which can reduce I/O times.
+<P>Unless noted, the following surface-related commands work with either
+explict or implicit surfaces, whether they are distributed or not.
+For large data sets, the read and write surf and isurf commands have
+options to use multiple files and/or operate in parallel which can
+reduce I/O times.
 </P>
 <UL><LI><A HREF = "adapt_grid.html">adapt_grid</A>
+<LI><A HREF = "compute_isurf_grid.html">compute_isurf/grid</A>    # for implicit surfs
+<LI><A HREF = "compute_surf.html">compute_surf</A>                # for explicit surfs
 <LI><A HREF = "dump.html">dump surf</A>
 <LI><A HREF = "dump_image.html">dump image</A>
 <LI><A HREF = "fix_adapt_grid.html">fix adapt/grid</A>
 <LI><A HREF = "fix_emit_surf.html">fix emit/surf</A>
 <LI><A HREF = "group.html">group surf</A>
-<LI><A HREF = "read_surf.html">read_surf</A>
-<LI><A HREF = "surf_modify.html">surf_modify</A>
+<LI><A HREF = "read_isurf.html">read_isurf</A>                    # for implicit surfs
+<LI><A HREF = "read_surf.html">read_surf</A>                      # for explicit surfs
+<LI><A HREF = "surf_modify.html">surf_modify</A> 
+<LI><A HREF = "write_surf.html">write_isurf</A>                   # for implicit surfs
 <LI><A HREF = "write_surf.html">write_surf</A> 
 </UL>
 <P>These command do not yet support distributed surfaces:
@@ -1183,9 +1190,76 @@ multiple files which can reduce I/O times.
 <LI><A HREF = "fix_move_surf.html">fix move/surf</A>
 <LI><A HREF = "remove_surf.html">remove_surf</A> 
 </UL>
-<P>Also, the <A HREF = "compute_surf.html">compute_surf</A> command only works for
-explicit surfaces (distributed or not).  A new, similar compute needs
-to be implemented to work with implicit surfaces.  It will likely be
-called the <A HREF = "compute_isurf_grid.html">compute isurf/grid</A> command.
+<HR>
+
+<A NAME = "howto_14"></A><H4>6.14 Implicit surface ablation 
+</H4>
+<P>The implicit surfaces described in the previous section can be used to
+perform ablation simulations, where the set of implicit surface
+elements evolve over time to model a receding surface.  These are the
+relevant commands:
+</P>
+<UL><LI><A HREF = "global.html">global surfs implicit</A>
+<LI><A HREF = "read_isurf.html">read isurf</A>
+<LI><A HREF = "fix_ablate.html">fix ablate</A>
+<LI><A HREF = "compute_isurf_grid.html">compute isurf/grid</A>
+<LI><A HREF = "fix_ave_grid.html">fix ave/grid</A>
+<LI><A HREF = "write_isurf.html">write isurf</A> 
+<LI><A HREF = "write_surf.html">write_surf</A> 
+</UL>
+<P>The <A HREF = "read_isurf.html">read_isurf</A> command takes a binary file as an
+argument which contains a pixelated (2d) or voxelated (3d)
+representation of the surface (e.g. a porous heat shield material).
+It reads the file and assigns the pixel/voxel values to corner points
+of a region of the SPARTA grid.
+</P>
+<P>The <A HREF = "read_isurf.html">read_isurf</A> command also takes the ID of a <A HREF = "fix_ablate.html">fix
+ablate</A> command as an argument.  This fix is invoked
+to perform a Marching Squares (2d) or Marching Cubes (3d) algorithm to
+convert the corner point values to a set of line segments (2d) or
+triangles (3d) each of which is wholly contained in a grid cell.  It
+also stores the per grid cell corner point values.
+</P>
+<P>If the <I>Nevery</I> argument of the <A HREF = "fix_ablate.html">fix ablate</A> command
+is 0, ablation is never performed, the implicit surfaces are static.
+If it is non-zero, an ablation operation is performed every <I>Nevery</I>
+steps.  A per-grid cell value is used to decrement the corner point
+values in each grid cell.  The values can be (1) from a compute such
+as <A HREF = "compute_isurf_grid.html">compute isurf/grid</A> which tallies
+statistics about gas particle collisions with surfaces within each
+grid cell, or (2) from a fix such as <A HREF = "fix_ave_grid.html">fix ave/grid</A>
+which time averages these statistics over many timesteps, or (3)
+generated randomly, which is useful for debugging.  In the future, we
+plan to also allow surface reaction statistics to drive the ablation.
+</P>
+<P>The decrement of grid corner point values is done in a manner that
+models recession of the surface elements within in each grid cell.
+All the current implicit surface elements are then discarded, and new
+ones are generated from the new corner point values via the Marching
+Squares or Marching Cubes algorithm. 
+</P>
+<P>IMPORTANT NOTE: Ideally these algorithms should preserve the gas flow
+volume inferred by the previous surfaces and only add to it with the
+new surfaces.  However there are a few cases for the 3d Marching Cubes
+algorithm where the gas flow volume is not strictly preserved.  This
+can trap existing particles inside the new surfaces.  Currently SPARTA
+checks for this condition and deletes the trapped particles.  In the
+future, we plan to modify the standard Marching Cubes algorithm to
+prevent this from happening.  In our testing, the fraction of trapped
+particles in an ablation operation is tiny (around 0.005% or 5 in
+100000).  The number of deleted particles can be monitored as an
+output option by the <A HREF = "fix_ablate.html">fix ablate</A> command.
+</P>
+<P>The <A HREF = "write_isurf.html">write_isurf</A> command can be used to periodically
+write out a pixelated/voxelated file of corner point values, in the
+same format that the <A HREF = "read_isurf.html">read_isurf</A> command reads.  Note
+that after ablation, corner point values are typically no longer
+integers, but floating point values.  The <A HREF = "read_isurf.html">read_isurf</A>
+and <A HREF = "write_isurf.html">write_isurf</A> commands have options to work with
+both kinds of files.  The <A HREF = "write_surf.html">write_surf</A> command can
+also output implicit surface elements for visualization by tools such
+as ParaView which can read SPARTA surface element files after suitable
+post-processing.  See the <A HREF = "Section_tools.html#paraview">Section tools
+paraview</A> doc page for more details.
 </P>
 </HTML>

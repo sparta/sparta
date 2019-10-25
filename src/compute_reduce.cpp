@@ -517,7 +517,7 @@ double ComputeReduce::compute_one(int m, int flag)
     } else one = particles[flag].evib;
 
   // invoke compute if not previously invoked
-  // for per-grid compute, invoke post_process_grid() if necessary
+  // for per-grid compute, invoke post_process() method if necessary
 
   } else if (which[m] == COMPUTE) {
     Compute *c = modify->compute[vidx];
@@ -552,8 +552,10 @@ double ComputeReduce::compute_one(int m, int flag)
       }
 
       if (c->post_process_grid_flag) 
-        c->post_process_grid(aidx,-1,1,NULL,NULL,NULL,1);
-      
+        c->post_process_grid(aidx,1,NULL,NULL,NULL,1);
+      else if (c->post_process_isurf_grid_flag) 
+        c->post_process_isurf_grid();
+
       if (aidx == 0 || c->post_process_grid_flag) {
         double *cvec = c->vector_grid;
         int n = grid->nlocal;

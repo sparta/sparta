@@ -187,24 +187,13 @@ void FixAdapt::end_of_step()
     grid->type_check(0);
   }
 
-  // final update of any post_adapt or per grid fixes for all new child cells
-  
-  modify->post_adapt();
+  // final update of any per grid fixes for all new child cells
+
   if (modify->n_pergrid) adapt->add_grid_fixes();
 
-  // reallocate data in per grid and per surf computes
-  // that depends on which cells and surfs a proc owns
-
-  Compute **compute = modify->compute;
-  for (int i = 0; i < modify->ncompute; i++) {
-    if (compute[i]->per_grid_flag) compute[i]->reallocate();
-    if (compute[i]->per_surf_flag) compute[i]->reallocate();
-  }
-
-  // reallocate per grid arrays in per grid dumps
-
-  for (int i = 0; i < output->ndump; i++)
-    output->dump[i]->reset_grid();
+  // notify all classes that store per-grid data that grid may have changed
+  
+  grid->notify_changed();
 
   // write out new parent grid file
 

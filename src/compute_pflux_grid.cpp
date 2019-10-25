@@ -250,9 +250,8 @@ int ComputePFluxGrid::query_tally_grid(int index, double **&array, int *&cols)
    index = which column of output (0 for vec, 1 to N for array)
    for etally = NULL:
      use internal tallied info for single timestep
-     if onecell = -1, compute values for all grid cells
+     compute values for all grid cells
        store results in vector_grid with nstride = 1 (single col of array_grid)
-     if onecell >= 0, compute single value for onecell and return it
    for etaylly = ptr to caller array:
      use external tallied info for many timesteps
      emap = list of etally columns to use, # of columns determined by index
@@ -260,9 +259,9 @@ int ComputePFluxGrid::query_tally_grid(int index, double **&array, int *&cols)
    if norm = 0.0, set result to 0.0 directly so do not divide by 0.0
 ------------------------------------------------------------------------- */
 
-double ComputePFluxGrid::post_process_grid(int index, int onecell, int,
-                                      double **etally, int *emap,
-                                      double *vec, int nstride)
+void ComputePFluxGrid::post_process_grid(int index, int nsample,
+                                         double **etally, int *emap,
+                                         double *vec, int nstride)
 {
   index--;
   int ivalue = index % nvalue;
@@ -272,15 +271,11 @@ double ComputePFluxGrid::post_process_grid(int index, int onecell, int,
   int k = 0;
 
   if (!etally) {
+    nsample = 1;
     etally = tally;
     emap = map[index];
     vec = vector_grid;
     nstride = 1;
-    if (onecell >= 0) {
-      lo = onecell;
-      hi = lo + 1;
-      k = lo;
-    }
   }
 
   // compute normalized final value for each grid cell
@@ -344,9 +339,6 @@ double ComputePFluxGrid::post_process_grid(int index, int onecell, int,
       break;
     }
   }
-
-  if (onecell < 0) return 0.0;
-  return vec[onecell];
 }
 
 /* ----------------------------------------------------------------------
