@@ -1012,51 +1012,85 @@ the simulation.  It then appends statistics about the CPU time and
 size of information stored for the simulation.  An example set of
 statistics is shown here:
 </P>
-<PRE>Loop time of 36.3787 on 8 procs for 100 steps with 10000000 particles 
+<P>Loop time of 0.639973 on 4 procs for 1000 steps with 45792 particles
+</P>
+<PRE>MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Move    | 0.10948    | 0.26191    | 0.42049    |  27.6 | 40.92
+Coll    | 0.013711   | 0.041659   | 0.070985   |  13.5 |  6.51
+Sort    | 0.01733    | 0.040286   | 0.063573   |  10.6 |  6.29
+Comm    | 0.02276    | 0.023555   | 0.02493    |   0.6 |  3.68
+Modify  | 0.00018167 | 0.024758   | 0.051345   |  15.6 |  3.87
+Output  | 0.0002172  | 0.0007354  | 0.0012152  |   0.0 |  0.11
+Other   |            | 0.2471     |            |       | 38.61 
 </PRE>
-<PRE>Particle moves    = 1000000000 (1B)
-Cells touched     = 1395597726 (1.4B)
-Particle comms    = 3990284 (3.99M)
-Boundary collides = 4003287 (4M)
-Boundary exits    = 0 (0K)
-SurfColl checks   = 0 (0K)
-SurfColl occurs   = 0 (0K)
-Collide attempts  = 93689476 (93.7M)
-Collide occurs    = 70166679 (70.2M)
-Reactions         = 847837 (848K)
+<PRE>Particle moves    = 38096354 (38.1M)
+Cells touched     = 43236871 (43.2M)
+Particle comms    = 146623 (0.147M)
+Boundary collides = 182782 (0.183M)
+Boundary exits    = 181792 (0.182M)
+SurfColl checks   = 7670863 (7.67M)
+SurfColl occurs   = 177740 (0.178M)
+Surf reactions    = 124169 (0.124M)
+Collide attempts  = 1232 (1K)
+Collide occurs    = 553 (0.553K)
+Gas reactions     = 23 (0.023K)
 Particles stuck   = 0 
 </PRE>
-<PRE>Particle-moves/CPUsec/proc: 3.43607e+06
-Particle-moves/step: 1e+07
-Cell-touches/particle/step: 1.3956
-Particle comm iterations/step: 1
-Particle fraction communicated: 0.00399028
-Particle fraction colliding with boundary: 0.00400329
-Particle fraction exiting boundary: 0
-Surface-checks/particle/step: 0
-Surface-collisions/particle/step: 0
-Collision-attempts/particle/step: 0.0936895
-Collisions/particle/step: 0.0701667
-Reactions/particle/step: 0.0008478 
+<PRE>Particle-moves/CPUsec/proc: 1.4882e+07
+Particle-moves/step: 38096.4
+Cell-touches/particle/step: 1.13493
+Particle comm iterations/step: 1.999
+Particle fraction communicated: 0.00384874
+Particle fraction colliding with boundary: 0.00479789
+Particle fraction exiting boundary: 0.0047719
+Surface-checks/particle/step: 0.201354
+Surface-collisions/particle/step: 0.00466554
+Surface-reactions/particle/step: 0.00325934
+Collision-attempts/particle/step: 1.232
+Collisions/particle/step: 0.553
+Gas-reactions/particle/step: 0.023 
 </PRE>
-<PRE>Move  time (%) = 16.6921 (45.8842)
-Coll  time (%) = 11.9058 (32.7275)
-Sort  time (%) = 7.24376 (19.9121)
-Comm  time (%) = 0.17353 (0.47701)
-Outpt time (%) = 0.363323 (0.998723)
-Other time (%) = 0.000194222 (0.000533888) 
-</PRE>
-<PRE>Particles: 1.25e+06 ave 1.25283e+06 max 1.24835e+06 min
-Histogram: 3 1 0 0 1 1 1 0 0 1
-Cells:     125000 ave 125000 max 125000 min
-Histogram: 8 0 0 0 0 0 0 0 0 0
-GhostCell: 15608 ave 15608 max 15608 min
-Histogram: 8 0 0 0 0 0 0 0 0 0
-EmptyCell: 7957 ave 7957 max 7957 min
-Histogram: 8 0 0 0 0 0 0 0 0 0 
+<P>Gas reaction tallies:
+  style tce #-of-reactions 45
+  reaction O2 + N --> O + O + N: 10
+  reaction O2 + O --> O + O + O: 5
+  reaction N2 + O --> N + N + O: 8
+</P>
+<P>Surface reaction tallies:
+  id 1 style global #-of-reactions 2
+    reaction all: 124025
+    reaction delete: 53525
+    reaction create: 70500
+</P>
+<PRE>Particles: 11448 ave 17655 max 5306 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Cells:     100 ave 100 max 100 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostCell: 21 ave 21 max 21 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+EmptyCell: 21 ave 21 max 21 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+Surfs:     50 ave 50 max 50 min
+Histogram: 4 0 0 0 0 0 0 0 0 0
+GhostSurf: 0 ave 0 max 0 min
+Histogram: 4 0 0 0 0 0 0 0 0 0 
 </PRE>
 <P>The first line gives the total CPU run time for the simulation, in
 seconds.
+</P>
+<P>The next section gives a breakdown of the CPU timing (in seconds) in
+7 categories.  The first four are timings for particles moves, which
+includes interaction with surface elements, then particle collisions,
+then sorting of particles (required to perform collisions), and
+communication of particles between processors.  The Modify section is
+time for operations invoked by fixes and computes.  The Output section
+is for dump command and statistical output.  The Other category is
+typically for load-imbalance, as some MPI tasks wait for others MPI
+tasks to complete.  In each category the min,ave,max time across
+processors is shown, as well as a variation, and the percentage of
+total time.
 </P>
 <P>The next section gives some statistics about the run.  These are total
 counts of particle moves, grid cells touched by particles, the number
@@ -1067,12 +1101,17 @@ problem), as well as collision and reaction statistics.
 <P>The next section gives additional statistics, normalized by timestep
 or processor count.
 </P>
-<P>The next to last section gives a breakdown of the CPU timing (in
-seconds) in 6 categories.  The first four are timings for particles
-moves, which includes interaction with surface elements, then particle
-collisions, then sorting of particles (required to perform
-collisions), and communication of particles between processors.  The
-percentage of CPU time for each category is shown in parenthesis.
+<P>The next 2 sections are optional.  The "Gas reaction tallies" section
+is only output if the <A HREF = "react.html">react</A> command is used.  For each
+reaction with a non-zero tally, the number of those reactions that
+occurred during the run is printed.  The "Surface reaction tallies"
+section is only output if the <A HREF = "surf_react.html">surf_react</A> command was
+used one or more times, to assign the reaction model to individual
+surface elements or the box boundaries.  For each of the commands, and
+each of its reactions with a non-zero tally, the number of those
+reactions that occurred during the run is printed.  Note that this is
+effectively a summation over all the surface elements and/or box
+boundaries the surf_react command was assigned to.
 </P>
 <P>The last section is a histogramming across processors of various
 per-processor statistics: particle count, owned grid cells, processor,

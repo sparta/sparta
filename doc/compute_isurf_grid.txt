@@ -13,7 +13,7 @@ compute isurf/grid command :h3
 compute ID isurf/grid group-ID mix-ID value1 value2 ... :pre
 
 ID is documented in "compute"_compute.html command :ulb,l
-boundary = style name of this compute command :l
+isurf/grid = style name of this compute command :l
 group-ID = group ID for which grid cells to perform calculation on :l
 mix-ID = mixture ID for particles to perform calculation on :l
 one or more values can be appended :l

@@ -53,26 +53,18 @@ which reaction (if any) takes place.  A check is made that the sum of
 probabilities for all possible reactions is <= 1.0, which should
 normally be the case if reasonable reaction coefficients are defined.
 
-IMPORTANT NOTE: A surface reaction model can only be specified for
-surfaces whose surface collision model is {diffuse}.  This is partly
-because reactions do not make physical sense with the other current
-surface collision models.  And because the {diffuse} model defines a
-surface temperature, which is used to initialize the rotational and
-vibrational energies of new particles appearing due to dissociation
-reactions.  Note that the {diffuse} model can effectively perform
-specular reflections if its {acc} parameter is set to 0.0.  This is a
-way to to perform surface reactions with specular reflection, which
-you cannot do directly using the "surf_collide
-specular"_surf_collide.html model.  See the
+IMPORTANT NOTE: A surface reaction model can not be specified for
+surfaces whose surface collision style does not support reactions.
+Currently this is only the {vanish} collision style.  See the
 "surf_collide"_surf_collide.html doc page for details.
 
 :line
 
 The {global} style is a simple model that can be used to test whether
 surface reactions are occurring as expected.  There is no list of
-raactions for different species; all species are treated the same.
+reactions for different species; all species are treated the same.
 
-The {global} style takes two paramters, {pdelete} and {pcreate}. The
+The {global} style takes two parameters, {pdelete} and {pcreate}. The
 first is the probability that a "deletion" reaction takes place when a
 collision occurs.  If it does, the particle is deleted.  The second is
 the probablity that a "creation" reaction occurs, which clones the
@@ -179,7 +171,7 @@ two products must be specified in this order.
 
 [Output info:]
 
-All the surface reaction models calculate a global vector of length 2.
+All the surface reaction models calculate a global vector of values.
 The values can be used by the "stats_style"_stats_style.html command
 and by "variables"_variable.html that define formulas.  The latter
 means they can be used by any command that uses a variable as input,
@@ -187,11 +179,19 @@ e.g. "the "fix ave/time"_fix_ave_time.html command.  See "Section
 4.4"_Section_howto.html#howto_4 for an overview of SPARTA output
 options.
 
+The {global} and {prob} styles each compute a vector of length 2 +
+2*nlist.  For the {global} style, nlist = 2, for "delete" and "create"
+reactions.  For the {prob} style, nlist is the number of reactions
+listed in the file is read as input.
+
 The first element of the vector is the count of particles that
 performed surface reactions for surface elements assigned to this
 reaction model during the current timestep.  The second element is the
 cummulative count of particles that have performed reactions since the
-beginning of the current run.
+beginning of the current run.  The next nlist elements are the count
+of each individual reaction that occurred during the current timestep.
+The final nlist elements are the cummulative count of each individual
+reaction since the beginning of the current run.
 
 :line
 
