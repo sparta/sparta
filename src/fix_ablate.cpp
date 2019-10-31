@@ -467,11 +467,12 @@ void FixAblate::create_surfs(int outflag)
     }
   }
 
-  // assign surf collision model, surf reaction model to new surfs
-  // NOTE: have to do this in a better way - but how
-  // NOTE: what if user assigns surfs to groups after they are created
-  //       how can those persist?
-  //       maybe should use grid cell groups for implicit surfs
+  // assign surf collision/reaction models to newly created surfs
+  // this assignment can be made in input script via surf_modify 
+  //   after implicit surfs are created
+  // for active ablation, must be re-assigned at every ablation atep
+  // for now just assume all surfs are assigned to first collide/react model
+  // NOTE: need a more flexible way to do this
 
   int nslocal = surf->nlocal;
 
@@ -479,10 +480,16 @@ void FixAblate::create_surfs(int outflag)
     Surf::Line *lines = surf->lines;
     for (int i = 0; i < nslocal; i++)
       lines[i].isc = 0;
+    if (surf->nsr)
+      for (int i = 0; i < nslocal; i++)
+        lines[i].isr = 0;
   } else {
     Surf::Tri *tris = surf->tris;
     for (int i = 0; i < nslocal; i++)
       tris[i].isc = 0;
+    if (surf->nsr)
+      for (int i = 0; i < nslocal; i++)
+        tris[i].isr = 0;
   }
 
   // watertight check can be done before surfs are mapped to grid cells
