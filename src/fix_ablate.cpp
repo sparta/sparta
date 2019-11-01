@@ -478,15 +478,17 @@ void FixAblate::create_surfs(int outflag)
 
   if (dim == 2) {
     Surf::Line *lines = surf->lines;
-    for (int i = 0; i < nslocal; i++)
-      lines[i].isc = 0;
+    if (surf->nsc)
+      for (int i = 0; i < nslocal; i++)
+        lines[i].isc = 0;
     if (surf->nsr)
       for (int i = 0; i < nslocal; i++)
         lines[i].isr = 0;
   } else {
     Surf::Tri *tris = surf->tris;
-    for (int i = 0; i < nslocal; i++)
-      tris[i].isc = 0;
+    if (surf->nsc)
+      for (int i = 0; i < nslocal; i++)
+        tris[i].isc = 0;
     if (surf->nsr)
       for (int i = 0; i < nslocal; i++)
         tris[i].isr = 0;
