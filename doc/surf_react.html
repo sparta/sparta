@@ -70,6 +70,8 @@ Currently this is only the <I>vanish</I> collision style.  See the
 <P>The <I>global</I> style is a simple model that can be used to test whether
 surface reactions are occurring as expected.  There is no list of
 reactions for different species; all species are treated the same.
+This style thus defines two universal reactions, the first for
+particle deletion, the second for particle creation.
 </P>
 <P>The <I>global</I> style takes two parameters, <I>pdelete</I> and <I>pcreate</I>. The
 first is the probability that a "deletion" reaction takes place when a
@@ -97,7 +99,8 @@ Only reactions for which all the reactants and all the products are
 currently defined as species-IDs will be active for the simulation.
 Thus the file can contain more reactions than are used in a particular
 simulation.  See the <A HREF = "species.html">species</A> command for how species
-IDs are defined.
+IDs are defined.  This style thus defines N reactions, where
+N is the number of reactions listed in the specified file.
 </P>
 <P>As explained below each reaction has a specified probability between
 0.0 and 1.0.  That probability is used to choose which reaction (if
