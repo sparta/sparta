@@ -1101,12 +1101,13 @@ is only output if the "react"_react.html command is used.  For each
 reaction with a non-zero tally, the number of those reactions that
 occurred during the run is printed.  The "Surface reaction tallies"
 section is only output if the "surf_react"_surf_react.html command was
-used one or more times, to assign the reaction model to individual
+used one or more times, to assign reaction models to individual
 surface elements or the box boundaries.  For each of the commands, and
 each of its reactions with a non-zero tally, the number of those
 reactions that occurred during the run is printed.  Note that this is
 effectively a summation over all the surface elements and/or box
-boundaries the surf_react command was assigned to.
+boundaries the "surf_react"_surf_react.html command was used to assign
+a reaction model to.
 
 The last section is a histogramming across processors of various
 per-processor statistics: particle count, owned grid cells, processor,
