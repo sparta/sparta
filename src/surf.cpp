@@ -599,7 +599,6 @@ void Surf::add_tri_temporary(surfint id, int itype,
   ntmp++;
 }
 
-
 /* ----------------------------------------------------------------------
    hash all my nlocal surfs with key = ID, value = index
    called only for distributed explicit surfs
@@ -622,6 +621,38 @@ void Surf::rehash()
     for (int isurf = 0; isurf < nlocal; isurf++)
       (*hash)[tris[isurf].id] = isurf;
   }
+}
+
+/* ----------------------------------------------------------------------
+   return 1 if all surfs are transparent, else return 0
+   called by set_inout()
+------------------------------------------------------------------------- */
+
+int Surf::all_transparent()
+{
+  // implicit surfs cannot be transparent
+
+  if (implicit) return 0;
+
+  // explicit surfs may be transparent
+
+  int flag = 0;
+  if (domain->dimension == 2) {
+    for (int i = 0; i < nlocal; i++)
+      if (!lines[i].transparent) flag = 1;
+  } 
+  if (domain->dimension == 3) {
+    for (int i = 0; i < nlocal; i++)
+      if (!tris[i].transparent) flag = 1;
+  } 
+  
+  int allflag;
+  if (distributed)
+    MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_SUM,world);
+  else allflag = flag;
+
+  if (allflag) return 0;
+  return 1;
 }
 
 /* ----------------------------------------------------------------------

@@ -161,6 +161,8 @@ class Surf : protected Pointers {
   void add_tri_own_clip(surfint, int, double *, double *, double *);
   void add_tri_temporary(surfint, int, double *, double *, double *);
   void rehash();
+  int all_transparent();
+
   void setup_owned();
   void setup_bbox();
 
