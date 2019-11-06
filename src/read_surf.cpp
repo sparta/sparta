@@ -1293,6 +1293,10 @@ void ReadSurf::process_args(int start, int narg, char **arg)
       else error->all(FLERR,"Invalid read_surf command");
       iarg += 2;
 
+    } else if (strcmp(arg[iarg],"transparent") == 0) {
+      transparent();
+      iarg++;
+
     // file must be last keyword, else WriteSurf will flag error
 
     } else if (strcmp(arg[iarg],"file") == 0) {
@@ -1963,6 +1967,30 @@ void ReadSurf::clip3d()
   if (me == 0) {
     if (screen) fprintf(screen,"  clipped to " BIGINT_FORMAT " tris\n",delta);
     if (logfile) fprintf(logfile,"  clipped to " BIGINT_FORMAT " tris\n",delta);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   set transparent flag of all surface elements read in
+------------------------------------------------------------------------- */
+
+void ReadSurf::transparent()
+{
+  if (dim == 2) {
+    Surf::Line *lines;
+    if (distributed) lines = surf->mylines;
+    else lines = surf->lines;
+
+    for (int i = nsurf_old; i < nsurf_new; i++)
+      lines[i].transparent = 1;
+
+  } else if (dim == 3) {
+    Surf::Tri *tris;
+    if (distributed) tris = surf->mytris;
+    else tris = surf->tris;
+
+    for (int i = nsurf_old; i < nsurf_new; i++)
+      tris[i].transparent = 1;
   }
 }
 

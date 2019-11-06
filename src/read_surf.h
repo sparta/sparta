@@ -97,6 +97,7 @@ class ReadSurf : protected Pointers {
   void invert();
   void clip2d();
   void clip3d();
+  void transparent();
 
   void check_consecutive();
   void push_points_to_boundary(double);

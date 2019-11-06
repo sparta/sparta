@@ -27,6 +27,7 @@ class SurfCollide : protected Pointers {
  
   int dynamicflag;          // 1 if any param is dynamically updated
   int allowreact;           // 1 if allows for surface reactions
+  int transparent;          // 1 if transparent collision model
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
 

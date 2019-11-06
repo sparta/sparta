@@ -17,7 +17,7 @@
 </PRE>
 <UL><LI>ID = user-assigned name for the surface collision model 
 
-<LI>style = <I>specular</I> or <I>diffuse</I> or <I>vanish</I> 
+<LI>style = <I>specular</I> or <I>diffuse</I> or <I>piston</I> or <I>transparent</I> or <I>vanish</I> 
 
 <LI>args = arguments for specific style 
 
@@ -28,6 +28,7 @@
     acc = accommodation coefficient
   <I>piston</I> args = Vwall
     Vwall = velocity of boundary wall (velocity units)
+  <I>transparent</I> args = none 
   <I>vanish</I> args = none 
   <I>specular/kk</I> args = none
   <I>diffuse/kk</I> args = Tsurf acc
@@ -55,6 +56,7 @@
 <P><B>Examples:</B>
 </P>
 <PRE>surf_collide 1 specular
+surf_collide 1 transparent
 surf_collide 1 diffuse 273.15 0.9
 surf_collide heatwall diffuse v_ramp 0.8
 surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 
@@ -150,6 +152,19 @@ surface is moving away from the incident particle.  For example, in
 the z-dimension, if the upper box face is assigned <I>Vwall</I>, it is
 moving upward.  Similarly if the lower box face is assigned <I>Vwall</I>,
 it is moving downward.
+</P>
+<HR>
+
+<P>The <I>transparent</I> style simply allows particles to pass through the
+surface without altering the particle properties.
+</P>
+<P>This is useful for tallying flow statistics.  The surface elements
+must have been flagged as transparent when they were read in, via the
+<A HREF = "read_surf.html">read_surf</A> command and its transparent keyword.  The
+<A HREF = "compute_surf.html">compute surf</A> command will tally fluxes differently
+for transparent surf elements.  The <A HREF = "Section_howto.html#howto_15">Section
+6.15</A> doc page provides an overview of
+transparent surfaces.  See those doc pages for details.
 </P>
 <HR>
 
