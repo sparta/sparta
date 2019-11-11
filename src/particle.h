@@ -33,7 +33,7 @@ class Particle : protected Pointers {
     double charge;          // multiple of electron charge
     double rotrel;          // inverse rotational relaxation number
     double rottemp[3];      // rotational temperature(s)
-    double vibtemp[4];      // vibrational tempearture(s)
+    double vibtemp[4];      // vibrational temperature(s)
     double vibrel[4];       // inverse vibrational relaxation number(s)
     int vibdegen[4];        // vibrational mode degeneracies
     int rotdof,vibdof;      // rotational/vibrational DOF
