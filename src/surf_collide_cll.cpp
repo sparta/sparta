@@ -12,6 +12,10 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Krishnan Gopalan (NASA Ames)
+------------------------------------------------------------------------- */
+
 #include "collide.h"
 #include "mpi.h"
 #include "stdio.h"
@@ -177,7 +181,6 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
   }
   
   // CLL reflection for each particle
-  // resets v, roteng, vibeng
   // if new particle J created, also need to trigger any fixes
 
   if (ip) cll(ip,norm);
