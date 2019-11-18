@@ -111,7 +111,7 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
       slow_alpha = atof(arg[iarg+2]); 
       slow_u0_a = atof(arg[iarg+3]);
       slow_u0_b = atof(arg[iarg+4]); 
-      slow_barrier = atof(arg[iarg+5]);          
+      slow_barrier = atof(arg[iarg+5]);
       if (slow_alpha < 0.0) 
         error->all(FLERR,"Illegal surf_collide impulsive slow alpha");
       iarg += 6;
