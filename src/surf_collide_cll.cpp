@@ -370,7 +370,8 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
     }
     
   // vibrational component
-    
+  // NOTE: check all references to species[]->vibtmp
+
   int vibdof = species[ispecies].vibdof;
   double r_vib, cos_theta_vib, A_vib, X_vib, evib_mag, evib_val;
 
@@ -380,15 +381,15 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
   else if (sparta->collide->vibstyle == DISCRETE && vibdof == 2) {
     double evib_star = 
       -log(1 - random->uniform() * 
-           (1 - exp(-update->boltz*species[ispecies].vibtemp)));    
+           (1 - exp(-update->boltz*species[ispecies].vibtemp[0])));    
     evib_val = p->evib + evib_star;      
     evib_mag = sqrt(evib_val*(1-acc_vib)/(update->boltz*twall));
     r_vib = sqrt(-acc_vib*log(random->uniform()));
     cos_theta_vib = cos(MY_2PI*random->uniform());
     evib_val = update->boltz * twall * 
       (r_vib*r_vib + evib_mag*evib_mag + 2*r_vib*evib_mag*cos_theta_vib);
-    int ivib =  evib_val / (update->boltz*species[ispecies].vibtemp);
-    p->evib = ivib * update->boltz * species[ispecies].vibtemp;
+    int ivib =  evib_val / (update->boltz*species[ispecies].vibtemp[0]);
+    p->evib = ivib * update->boltz * species[ispecies].vibtemp[0];
   } 
 
   else if (sparta->collide->vibstyle == SMOOTH || vibdof >= 2) {

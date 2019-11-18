@@ -63,6 +63,7 @@ class SurfCollideCLLImpulsive : public SurfCollide {
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
 
+  double vstream[3];
   class RanPark *random;     // RNG for particle reflection
 
   void cll_impulsive(Particle::OnePart *, double *);

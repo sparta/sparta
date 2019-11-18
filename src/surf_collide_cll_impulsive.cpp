@@ -92,7 +92,7 @@ SurfCollideCLLImpulsive(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Surf_collide cll/impulsive accommodation coeffs "
                "must be >= 0 and <= 1");  
   
-  eng_thresh /= update->J2eV;
+  //eng_thresh /= update->J2eV;    // NOTE: what is this setting in update?
   theta_peak *= MY_PI/180; 
   var_alpha_sq = var_alpha * var_alpha;
 
@@ -178,6 +178,8 @@ SurfCollideCLLImpulsive(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Illegal surf_collide cll/impulsive command");
   if (tflag || rflag) trflag = 1;
   else trflag = 0;
+
+  vstream[0] = vstream[1] = vstream[2] = 0.0;
 
   // initialize RNG
 
@@ -288,7 +290,7 @@ void SurfCollideCLLImpulsive::cll_impulsive(Particle::OnePart *p, double *norm)
     
   double vperp, vtan1, vtan2;
   double mass = species[ispecies].mass;
-  double vrm = sqrt(2.0*update->boltz * surf->twall / mass);
+  double vrm = sqrt(2.0*update->boltz * twall / mass);
     
   double *v = p->v;
   double dot = MathExtra::dot3(v,norm);
@@ -318,8 +320,7 @@ void SurfCollideCLLImpulsive::cll_impulsive(Particle::OnePart *p, double *norm)
   if (E_i > eng_thresh) {
     
     if (slow_flag && random->uniform() < slow_frac) {
-      double vrm_n = sqrt(2.0*update->boltz * 
-                          (surf->twall + slow_barrier) / mass);
+      double vrm_n = sqrt(2.0*update->boltz * (twall + slow_barrier) / mass);
       double vrm_t = vrm;
       double slow_vf_max = 0.5 * 
         (slow_u0 + sqrt(slow_u0*slow_u0 + 6*slow_alpha_sq));
@@ -412,7 +413,7 @@ void SurfCollideCLLImpulsive::cll_impulsive(Particle::OnePart *p, double *norm)
 
   } else {
     
-    vrm = sqrt(2.0*update->boltz * surf->twall / species[ispecies].mass);
+    vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
     
     // CLL model normal velocity
 
@@ -511,8 +512,8 @@ void SurfCollideCLLImpulsive::cll_impulsive(Particle::OnePart *p, double *norm)
     v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
   }
 
-  p->erot = particle->erot(ispecies,surf->twall,random);
-  p->evib = particle->evib(ispecies,surf->twall,random);
+  p->erot = particle->erot(ispecies,twall,random);
+  p->evib = particle->evib(ispecies,twall,random);
 }
 
 /* ----------------------------------------------------------------------
@@ -521,5 +522,5 @@ void SurfCollideCLLImpulsive::cll_impulsive(Particle::OnePart *p, double *norm)
 
 void SurfCollideCLLImpulsive::dynamic()
 {
-  surf->twall = input->variable->compute_equal(tvar);
+  twall = input->variable->compute_equal(tvar);
 }
