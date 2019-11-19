@@ -14,48 +14,42 @@
 
 #ifdef SURF_COLLIDE_CLASS
 
-SurfCollideStyle(cll,SurfCollideCLL)
+SurfCollideStyle(supra,SurfCollideSupra)
 
 #else
 
-#ifndef SPARTA_SURF_COLLIDE_CLL_H
-#define SPARTA_SURF_COLLIDE_CLL_H
+#ifndef SPARTA_SURF_COLLIDE_SUPRA_H
+#define SPARTA_SURF_COLLIDE_SUPRA_H
 
-#include "pointers.h"
 #include "surf_collide.h"
 
 namespace SPARTA_NS {
 
-class SurfCollideCLL : public SurfCollide {
+class SurfCollideSupra : public SurfCollide {
  public:
-  SurfCollideCLL(class SPARTA *, int, char **);
-  ~SurfCollideCLL();
+  SurfCollideSupra(class SPARTA *, int, char **);
+  ~SurfCollideSupra();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
-
+  
   void dynamic();
 
  private:
-  double twall;                         // surface temperature
-  double acc_n,acc_t,acc_rot,acc_vib;   // surface accomodation coeffs
-  double vx,vy,vz;                      // translational velocity of surface
-  double wx,wy,wz;                      // angular velocity of surface
-  double px,py,pz;                      // point to rotate surface around
-  double eccen;                         // 1 if fully diffuse scattering
-                                        // < 1 if partial diffuse scattering
-
+  double twall;              // surface temperature
+  double e;                  // surface accomodation coeff
+  double vx,vy,vz;           // translational velocity of surface
+  double wx,wy,wz;           // angular velocity of surface
+  double px,py,pz;           // point to rotate surface around
   int tflag,rflag;           // flags for translation and rotation
   int trflag;                // 1 if either tflag or rflag is set
-  int pflag;                 // 1 if partially energy accommodation 
-                             // with partial/fully diffuse scattering
-  
+
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
 
   double vstream[3];
   class RanPark *random;     // RNG for particle reflection
 
-  void cll(Particle::OnePart *, double *);
+  void supra(Particle::OnePart *, double *);
 };
 
 }

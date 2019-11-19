@@ -19,7 +19,7 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
-#include "surf_collide_impulsive.h"
+#include "surf_collide_supra.h"
 #include "surf.h"
 #include "surf_react.h"
 #include "input.h"
@@ -40,10 +40,10 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg) :
+SurfCollideSupra::SurfCollideSupra(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
-  if (narg < 9) error->all(FLERR,"Illegal surf_collide impulsive command");
+  if (narg < 4) error->all(FLERR,"Illegal surf_collide supra command");
 
   tstr = NULL;
 
@@ -53,79 +53,27 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
     strcpy(tstr,&arg[2][2]);
   } else {
     twall = atof(arg[2]);
-    if (twall < 0.0) error->all(FLERR,"Illegal surf_collide impulsive command");
+    if (twall < 0.0) error->all(FLERR,"Illegal surf_collide supra command");
   }
 
-  eng_ratio = atof(arg[3]);
-  eff_mass = atof(arg[4]);
-  var_alpha = atof(arg[5]);
-  theta_peak = atof(arg[6]);
-  cos_theta_pow = atof(arg[7]);
-  cos_phi_pow = atof(arg[8]);
-  
-  if (eng_ratio > 1.0) 
-    error->all(FLERR,"Illegal surf_collide impulsive energy ratio");
-  if (eff_mass <= 0.0) 
-    error->all(FLERR,"Illegal surf_collide impulsive effective mass");
-  if (var_alpha < 0.0) 
-    error->all(FLERR,"Illegal surf_collide impulsive alpha");
-  if (theta_peak < 0.0 || theta_peak > 90.0) 
-    error->all(FLERR,"Illegal surf_collide impulsive theta peak");
-  if (cos_theta_pow < 0.0 || cos_phi_pow < 0.0) 
-    error->all(FLERR,"Illegal surf_collide impulsive cosine power");
-
-  theta_peak *= MY_PI/180; 
-  var_alpha_sq = var_alpha * var_alpha;
+  e = atof(arg[3]);
+  if (e < 0.0 || e > 1.0) error->all(FLERR,"Illegal surf_collide supra command");
 
   // optional args
 
-  step_flag = double_flag = slow_flag = 0;
   tflag = rflag = 0;
-  step_size = 0;
-  cos_theta_pow_2 = 0;
-  slow_frac = slow_alpha = slow_u0_a = slow_u0_b = slow_u0 = slow_barrier = 0;
 
-  int iarg = 9;
+  int iarg = 4;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"step") == 0) {
-      if (iarg+2 > narg)
-        error->all(FLERR,"Illegal surf_collide impulsive command");
-      step_flag = 1;
-      step_size = atof(arg[iarg+1]);
-      if (step_size < 0.0) 
-        error->all(FLERR,"Illegal surf_collide impulsive step size");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"double") == 0) {
-      if (iarg+2 > narg)
-        error->all(FLERR,"Illegal surf_collide impulsive command");
-      double_flag = 1;
-      cos_theta_pow_2 = atof(arg[iarg+1]);
-      if (cos_theta_pow_2 < 0.0) 
-        error->all(FLERR,"Illegal surf_collide impulsive cosine power2");
-      iarg += 2;
-    } else if (strcmp(arg[iarg],"slow") == 0) {
-      if (iarg+6 > narg)
-        error->all(FLERR,"Illegal surf_collide impulsive command");
-      slow_flag = 1;
-      slow_frac = atof(arg[iarg+1]);
-      slow_alpha = atof(arg[iarg+2]); 
-      slow_u0_a = atof(arg[iarg+3]);
-      slow_u0_b = atof(arg[iarg+4]); 
-      slow_barrier = atof(arg[iarg+5]);
-      if (slow_alpha < 0.0) 
-        error->all(FLERR,"Illegal surf_collide impulsive slow alpha");
-      iarg += 6;
-    } else if (strcmp(arg[iarg],"translate") == 0) {
-      if (iarg+4 > narg) 
-        error->all(FLERR,"Illegal surf_collide impulsive command");
+    if (strcmp(arg[iarg],"translate") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Illegal surf_collide supra command");
       tflag = 1;
       vx = atof(arg[iarg+1]);
       vy = atof(arg[iarg+2]);
       vz = atof(arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"rotate") == 0) {
-      if (iarg+7 > narg) 
-        error->all(FLERR,"Illegal surf_collide impulsive command");
+      if (iarg+7 > narg) error->all(FLERR,"Illegal surf_collide supra command");
       rflag = 1;
       px = atof(arg[iarg+1]);
       py = atof(arg[iarg+2]);
@@ -134,26 +82,21 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
       wy = atof(arg[iarg+5]);
       wz = atof(arg[iarg+6]);
       if (domain->dimension == 2 && pz != 0.0) 
-        error->all(FLERR,"Surf_collide impulsive rotation invalid for 2d");
+        error->all(FLERR,"Surf_collide supra rotation invalid for 2d");
       if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))
-        error->all(FLERR,"Surf_collide impulsive rotation invalid for 2d");
+        error->all(FLERR,"Surf_collide supra rotation invalid for 2d");
       iarg += 7;
-    } else error->all(FLERR,"Illegal surf_collide impulsive command");
+    } else error->all(FLERR,"Illegal surf_collide supra command");
   }
 
-  if (tflag && rflag) error->all(FLERR,"Illegal surf_collide impulsive command");
+  if (tflag && rflag) error->all(FLERR,"Illegal surf_collide supra command");
   if (tflag || rflag) trflag = 1;
   else trflag = 0;
-  
-  if (slow_flag) {
-    slow_u0 = slow_u0_a * twall + slow_u0_b;
-    slow_alpha_sq = slow_alpha * slow_alpha;
-  }
 
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
   // initialize RNG
-
+  
   random = new RanPark(update->ranmaster->uniform());
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
@@ -161,7 +104,7 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollideImpulsive::~SurfCollideImpulsive()
+SurfCollideSupra::~SurfCollideSupra()
 {
   delete [] tstr;
   delete random;
@@ -169,7 +112,7 @@ SurfCollideImpulsive::~SurfCollideImpulsive()
 
 /* ---------------------------------------------------------------------- */
 
-void SurfCollideImpulsive::init()
+void SurfCollideSupra::init()
 {
   SurfCollide::init();
 
@@ -178,9 +121,9 @@ void SurfCollideImpulsive::init()
   if (tstr) {
     tvar = input->variable->find(tstr);
     if (tvar < 0) 
-      error->all(FLERR,"Surf_collide impulsive variable name does not exist");
+      error->all(FLERR,"Surf_collide supra variable name does not exist");
     if (!input->variable->equal_style(tvar))
-      error->all(FLERR,"Surf_collide impulsive variable is invalid style");
+      error->all(FLERR,"Surf_collide supra variable is invalid style");
   }
 }
 
@@ -193,7 +136,7 @@ void SurfCollideImpulsive::init()
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
-Particle::OnePart *SurfCollideImpulsive::
+Particle::OnePart *SurfCollideSupra::
 collide(Particle::OnePart *&ip, double *norm, double &, int isr)
 {
   nsingle++;
@@ -203,26 +146,26 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
-  int reaction = 0;
-  
+  int reaction = 0, ad_react = 0;
+
   if (isr >= 0) {
-    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));    
+    if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
     reaction = surf->sr[isr]->react(ip,norm,jp);
-    if (reaction) surf->nreact_one++;    
+    if (reaction) surf->nreact_one++;
   }
 
-  // impulsive reflection for each particle
+  // supra reflection for each particle
   // if new particle J created, also need to trigger any fixes
 
-  if (ip) impulsive(ip,norm);
+  if (ip) supra(ip,norm);
   if (jp) {
-    impulsive(jp,norm);
+    supra(jp,norm);
     if (modify->n_add_particle) {
       int j = jp - particle->particles;
       modify->add_particle(j,twall,twall,twall,vstream);
     }
   }
-  
+
   // call any fixes with a surf_react() method
   // they may reset j to -1, e.g. fix ambipolar
   //   in which case newly created j is deleted
@@ -243,7 +186,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
 }
 
 /* ----------------------------------------------------------------------
-   impulsive reflection
+   supra reflection
    vrm = most probable speed of species, eqns (4.1) and (4.7)
    vperp = velocity component perpendicular to surface along norm, eqn (12.3)
    vtan12 = 2 velocity components tangential to surface
@@ -253,19 +196,16 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
    tangent12 are both unit vectors
 ------------------------------------------------------------------------- */
 
-void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
+void SurfCollideSupra::supra(Particle::OnePart *p, double *norm)
 {
   double tangent1[3],tangent2[3];
   Particle::Species *species = particle->species;
   int ispecies = p->ispecies;
-    
-  double vperp, vtan1, vtan2;
-  double mass = species[ispecies].mass;
-  double vrm = sqrt(2.0*update->boltz * twall / mass);
+  double beta_un,normalized_distbn_fn;
     
   double *v = p->v;
   double dot = MathExtra::dot3(v,norm);
-    
+        
   tangent1[0] = v[0] - dot*norm[0];
   tangent1[1] = v[1] - dot*norm[1];
   tangent1[2] = v[2] - dot*norm[2];
@@ -275,112 +215,50 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
     tangent2[1] = random->uniform();
     tangent2[2] = random->uniform();
     MathExtra::cross3(norm,tangent2,tangent1);
-  }
-    
+  } 
+
   MathExtra::norm3(tangent1);
   MathExtra::cross3(norm,tangent1,tangent2);
     
-  if (slow_flag && random->uniform() < slow_frac) {
-    double vrm_n = sqrt(2.0*update->boltz * (twall + slow_barrier) / mass);
-    double vrm_t = vrm;
+  double v_mag = MathExtra::lensq3(v);
+  double tan1 = MathExtra::dot3(v,tangent1);
+  double tan2 = MathExtra::dot3(v,tangent2);
     
-    double slow_vf_max = 0.5 * 
-      (slow_u0 + sqrt(slow_u0*slow_u0 + 6*slow_alpha_sq));
-    double slow_f_max = slow_vf_max*slow_vf_max*slow_vf_max * 
-      exp(-(slow_vf_max - slow_u0)*(slow_vf_max - slow_u0)/(slow_alpha_sq));
+  double theta_i = acos(dot/v_mag);
+  double psi_i = acos(cos(theta_i)*cos(theta_i));
+  double phi_i = atan2(tan2,tan1);
+    
+  double P = 0;
+  double phi_f,psi_f,cos_beta;
+    
+  while (random->uniform() > P) {
+    phi_f = MY_2PI *  random->uniform();
+    psi_f = acos(random->uniform());
+    cos_beta = cos(psi_f)*cos(psi_i) + sin(psi_f)*sin(psi_i)*cos(phi_f - phi_i);
+    P = (1-e)/(1-e*cos_beta);
+  } 
+    
+  double theta_f = acos(sqrt(cos(psi_f)));
+  double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
+    
+  // SUPRA model normal velocity
 
-    double P = 0, slow_vf_mag;
-    while (random->uniform() > P) {
-      slow_vf_mag = slow_vf_max + 3 * slow_alpha * ( 2 * random->uniform() - 1 );
-      P = slow_vf_mag*slow_vf_mag*slow_vf_mag/(slow_f_max) * 
-        exp(-(slow_vf_mag - slow_u0)*(slow_vf_mag - slow_u0)/(slow_alpha_sq));
-    }
+  double vperp = vrm * cos(theta_f);
     
-    double slow_phi = MY_2PI * random->uniform();
-    double slow_theta = atan2(vrm_t * sqrt(-log(random->uniform())),
-                              vrm_n * sqrt(-log(random->uniform())));
-    
-    vperp = slow_vf_mag * cos(slow_theta);
-    vtan1 = slow_vf_mag * sin(slow_theta) * cos(slow_phi);
-    vtan2 = slow_vf_mag * sin(slow_theta) * sin(slow_phi);   
-    
-  } else {
-    double mu = species[ispecies].molwt/eff_mass;
-    double tan1 = MathExtra::dot3(v,tangent1);
-    double tan2 = MathExtra::dot3(v,tangent2);   
-    
-    double v_i_mag_sq = MathExtra::lensq3(v);
-    double E_i = 0.5 * mass * v_i_mag_sq;
-    double theta_i = acos(-dot/sqrt(v_i_mag_sq));
-    double phi_i = atan2(tan2,tan1);
-    double phi_peak = MY_2PI - phi_i;
-    
-    double theta_f, phi_f;
-    double P = 0.0; 
-    while (random->uniform() > P) {
-      theta_f = MY_PI2 * random->uniform();
-      P = pow(cos( theta_f - theta_peak ),cos_theta_pow) * sin(theta_f); 
-      if (double_flag) {
-        if (theta_f > theta_peak) 
-          P = pow(cos( theta_f - theta_peak ),cos_theta_pow_2) * sin(theta_f);
-      }
-        
-      if (step_flag) {
-        double func_step = 0.0;
-        double tan_theta = tan(theta_f);
-        double cotangent = 1.0/tan_theta;
-        if (cotangent > step_size) func_step = 1 - step_size*tan_theta;
-        P *= func_step;
-      }      
-    }
-    
-    P = 0.0; 
-    while (random->uniform() > P) {
-      phi_f = phi_peak + MY_PI * (2*random->uniform() - 1);
-      P = pow(cos( 0.5*(phi_f - phi_peak) ),cos_phi_pow);        
-    }
-    
-    if (phi_f > MY_PI) phi_f -= MY_2PI;
-    else if (phi_f < -MY_PI) phi_f += MY_2PI;
-    
-    double cos_khi = cos(MY_PI - theta_i - theta_f);
-    double sin_khi_sq = 1 - cos_khi*cos_khi;
-    double E_f_avg, v_f_avg, v_f_mag;
-    
-    E_f_avg = E_i * (1 - 2*mu/((mu+1)*(mu+1)) * 
-                     (1 + mu*sin_khi_sq + eng_ratio*(mu+1)/(2*mu) - 
-                      cos_khi*sqrt(1 - mu*mu*sin_khi_sq - eng_ratio*(mu + 1))));
-    v_f_avg = var_alpha_sq * sqrt(mass/(2*E_f_avg)) * 
-      (2*E_f_avg/(mass*var_alpha_sq) - 1);
-    
-    double v_f_max = 0.5 * (v_f_avg + sqrt(v_f_avg*v_f_avg + 6*var_alpha_sq));
-    double f_max = v_f_max*v_f_max*v_f_max * 
-      exp(-(v_f_max - v_f_avg) * (v_f_max - v_f_avg)/(var_alpha_sq));
+  // SUPRA model tangential velocities
 
-    P = 0.0;
-    while (random->uniform() > P) {
-      v_f_mag = v_f_max + 3 * var_alpha * ( 2 * random->uniform() - 1 );
-      P = v_f_mag*v_f_mag*v_f_mag/(f_max) * 
-        exp(-(v_f_mag-v_f_avg)*(v_f_mag-v_f_avg)/(var_alpha_sq));
-    }
-    
-    vperp = v_f_mag * cos(theta_f);
-    vtan1 = v_f_mag * sin(theta_f) * cos(phi_f);
-    vtan2 = v_f_mag * sin(theta_f) * sin(phi_f); 
-  }
+  double vtan1 = vrm * sin(theta_f) * cos(phi_f);
+  double vtan2 = vrm * sin(theta_f) * sin(phi_f);
 
   // add in translation or rotation vector if specified
   // only keep portion of vector tangential to surface element
-    
-  double beta_un,normalized_distbn_fn;
 
   if (trflag) {
     double vxdelta,vydelta,vzdelta;
     if (tflag) {
-      fprintf(screen,"t flag\n");
       vxdelta = vx; vydelta = vy; vzdelta = vz;
       double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
-      
+     
       if (fabs(dot) > 0.001) {
         dot /= vrm;
         do {
@@ -394,7 +272,7 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
         } while (normalized_distbn_fn < random->uniform());
         vperp = beta_un*vrm;
       }
-      
+
     } else {
       double *x = p->x;
       vxdelta = wy*(x[2]-pz) - wz*(x[1]-py);
@@ -410,7 +288,7 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
     v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1] + vydelta;
     v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2] + vzdelta;
 
-    // no translation or rotation
+  // no translation or rotation
     
   } else {
     v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0];
@@ -426,7 +304,7 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
    set current surface temperature
 ------------------------------------------------------------------------- */
 
-void SurfCollideImpulsive::dynamic()
+void SurfCollideSupra::dynamic()
 {
   twall = input->variable->compute_equal(tvar);
 }

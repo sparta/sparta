@@ -370,7 +370,8 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
     }
     
   // vibrational component
-    
+  // NOTE: check all references to species[]->vibtmp
+
   int vibdof = species[ispecies].vibdof;
   double r_vib, cos_theta_vib, A_vib, X_vib, evib_mag, evib_val;
 
