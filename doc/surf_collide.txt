@@ -13,13 +13,20 @@ surf_collide command :h3
 surf_collide ID style args keyword values ... :pre
 
 ID = user-assigned name for the surface collision model :ulb,l
-style = {specular} or {diffuse} or {vanish} :l
+style = {specular} or {diffuse} or {cll} or {piston} or {vanish} :l
 args = arguments for specific style :l
   {specular} args = none
   {diffuse} args = Tsurf acc
     Tsurf = temperature of surface (temperature units)
             Tsurf can be a variable (see below)
     acc = accommodation coefficient
+  {cll} args = Tsurf acc_n acc_t acc_rot acc_vib
+    Tsurf = temperature of surface (temperature units)
+            Tsurf can be a variable (see below)
+    acc_n = accommodation coefficient in the surface normal direction
+    acc_t = accommodation coefficient in the surface tangential direction
+    acc_rot = accommodation coefficient for the rotational modes
+    acc_vib = accommodation coefficient for the vibrational modes
   {piston} args = Vwall
     Vwall = velocity of boundary wall (velocity units)
   {vanish} args = none 
@@ -32,19 +39,24 @@ args = arguments for specific style :l
     Vwall = velocity of boundary wall (velocity units)
   {vanish/kk} args = none :pre
 zero or more keyword/arg pairs may be appended :l
-keyword = {translate} or {rotate} :l
+keyword = {translate} or {rotate} or {partial} :l
 values = values for specific keyword :l
   {translate} args = Vx Vy Vz
     Vx,Vy,Vz = translational velocity of surface (velocity units)
   {rotate} args = Pz Py Pz Wx Wy Wz
     Px,Py,Pz = point to rotate surface around (distance units)
-    Wx,Wy,Wz = angular velocity of surface around point (radians/time) :pre
+    Wx,Wy,Wz = angular velocity of surface around point (radians/time) 
+  {partial} args = eccen (only for the {cll} model)
+    eccen = eccentricity parameter :pre
 :ule
+  
 
 [Examples:]
 
 surf_collide 1 specular
 surf_collide 1 diffuse 273.15 0.9
+surf_collide 1 cll 273.15 0.8 0.8 0.5 0.1
+surf_collide 1 cll 273.15 1.0 1.0 0.1 0.1 partial 0.5
 surf_collide heatwall diffuse v_ramp 0.8
 surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 :pre
 
@@ -108,6 +120,17 @@ time.  Thus it is easy to specify a time-dependent temperature.
 
 :line
 
+The {cll} style computes the surface collision model proposed by Cercignani, Lampis and Lord. The model has 5 parameters set by the {Tsurf}, {acc_n}, {acc_t}, {acc_rot}, and {acc_vib} arguments. {Tsurf} is the temperature of the surface.  {acc_n}, {acc_t}, {acc_rot}, and {acc_vib} are the accommodation coefficient for the surface normal direction, surface tangential directions, rotational energy mode, and vibrational energy mode respectively. The rotational and vibrational energy accommodation values must be specified even for an atomic species; however these values are simply ignored.
+
+The theoretical scattering kernel was proposed by Cercignani and Lampis "(Cercignani71)"_#Cercignani71. In this original model, two accommodation coefficients for the normal and tangential directions are employed. Each of these quantities can take a value between 0 and 1. Specular reflection is achieved by using the values (0,0), while complete thermal accommodation with the surface and cosine angular distributions is obtained using (1,1). There is smooth variation of both the energy and angular distribution for values in between these limits leading to lobular distributions similar to those observed in experiments. 
+The implementation details of this model within DSMC was given by Lord "(Lord90)"_#Lord90, along with extension to rotational and vibrational modes with both continuous and discrete levels "(Lord91)"_#Lord91.      
+
+The {Tsurf} value can be specified as an equal-style "variable"_variable.html.  If the value is a variable, it should be specified as v_name, where name is the variable name.  In this case, the variable will be evaluated each timestep, and its value used to determine the current surface temperature.
+
+Equal-style variables can specify formulas with various mathematical functions and include "stats_style"_status_style.html command keywords for the simulation box parameters and timestep and elapsed time.  Thus, it is easy to specify a time-dependent temperature.
+
+:line
+
 The {piston} style models a subsonic pressure boundary condition.  It
 can only be assigned to the simulation box boundaries via the
 "bound_modify"_bound_modify.html command or to surface elements which
@@ -158,13 +181,13 @@ parameter to 1.0.  Using a surf_collide vanish command is simpler.
 
 :line
 
-The keyword {translate} can only be applied to the {diffuse} style.
+The keyword {translate} can only be applied to the {diffuse} and {cll} style.
 It models the surface as if it were translating with a constant
 velocity, specified by the vector (Vx,Vy,Vz).  This velocity is added
 to the final post-collisional velocity of each particle that collides
 with the surface.
 
-The keyword {rotate} can only be applied to the {diffuse} style.  It
+The keyword {rotate} can only be applied to the {diffuse} and {cll} style.  It
 models the surface as if it were rotating with a constant angular
 velocity, specified by the vector W = (Wx,Wy,Wz), around the specified
 point P = (Px,Py,Pz).  Note that W and P define the rotation axis.
@@ -192,6 +215,8 @@ rotation produces a tangential velocity.  However if does enforce the
 condition by subtracting off any component of the added velocity that
 is normal to the simulation box boundary or individual surface
 element.
+
+The keyword {partial} can only be applied to the {cll} style. Within the CLL model, the energy and angular distribution are linked. Lord "(Lord95)"_#Lord95 proposed a way to decouple the energy accommodation from the angular distribution. This case of partially diffuse scattering with incomplete energy accommodation can be activated in SPARTA using the optional keyword {partial}. It requires an additional parameter eccentricity set by the {eccen} argument. For this case, the energy accommodation is calculated using the accommodation coefficients, but the angular distribution is computed using the additional parameter eccentricity. The {eccen} parameter can vary between 0 and 1. A value of 0 represents fully diffuse scattering and gives a cosine angular distribution. Increasing value of {eccen} presents more peaked and lobular distribution "(Lord95)"_#Lord95. 
 
 :line
 
@@ -253,4 +278,16 @@ twice in the same input script (active at the same time).
 :link(Bird94)
 [(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+
+:link(Cercignani71)
+[(Cercignani71)] Cercignani C, Lampis M, Kinetic models for gas-surface interactions, Transport theory and statistical physics, Jan (1971).
+
+:link(Lord90)
+[(Lord90)] R. G. Lord, presented at the 17th International Symposium on Rarefied Gas Dynamics, Germany, July (1990).
+
+:link(Lord91)
+[(Lord91)] R. G. Lord, Some extensions of the Cercignani-Lampis gas-surface interaction model, Physics of Fluids A: Fluid Dynamics, Jan (1991).
+
+:link(Lord95)
+[(Lord95)] R. G. Lord, Some further extensions of the Cercignani-Lampis gas-surface interaction model, Physics of Fluids, May (1995).
 
