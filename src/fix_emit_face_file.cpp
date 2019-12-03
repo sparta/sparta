@@ -362,7 +362,7 @@ void FixEmitFaceFile::perform_task()
   if (subsonic) subsonic_inflow();
 
   // insert particles for each task = cell
-  // ntarget/ninsert is either perspecies or for all species
+  // ntarget/ninsert is either per species or for all species
   // for one particle:
   //   x = random position on subset of face that overlaps with file grid
   //   v = randomized thermal velocity + vstream

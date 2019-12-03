@@ -17,13 +17,21 @@
 
 #include "cstdio"
 #include "pointers.h"
+#include "particle.h"
 
 #ifdef USE_ZUZAX
 #include "zuzax/base/ct_defs.h"
 #include "zuzax/thermo/ThermoPhase.h"
 
+//----------------------------------------------------------------------------------------------------------------------------------
 namespace SPARTA_NS {
 
+//==================================================================================================================================
+//! class to help set up Zuzax
+/*!
+ *  Note, this class must be set up on all processors. How is this done?
+ *
+ */
 class ZuzaxSetup : protected Pointers {
 public:
 
@@ -44,30 +52,45 @@ public:
     /*!
      *  Nasa polynomials allow for a consistent energy level between gas, surf, and solid species.
      *
-     *  This will contain one argument, the name of the gas ThermoPhase file.
+     *  This will contain one argument, the name of the gas, ThermoPhase file.
      *  There must be zuzax species for every sparta species. Extra zuzax species are treated as
      *  having zero concentrations.
+     *  If there isn't a zuzax species for a sparta species, then an error is thrown.
      *
      *  @param[in]           nargs               number of args
      *  @param[in]           args                vector of args
      */
     void initGasSetup(int nargs, char** args);
 
+    //! Calculate the ezero value
+    /*!
+     *  @param[in]           spk                 Species structure
+     *  @param[in]           kgas                index within the gasThermo_ corresponding to the species
+     *
+     *  @param[in]                               Returns the internal energy offset needed for comparison to NASA polynomials.
+     *                                             (units Joules/kmol)
+     */
+    double calcEzero(Particle::Species& spk, int kgas);
+
 
  protected:
 
-    Zuzax::thermo_t_double* gasThermo;
+    //! Pointer to the Gas ThermoPhase object
+    Zuzax::thermo_t_double* gasThermo_;
 
     //! Sparta to Zuzax species map
     /*!
      *  Maps the sparta species index into the Zuzax species index within the gasThermo ThermoPhase routine
      *  Length:   particle->nspecies 
+     *  Index:    index of the species within Sparta's list of species
+     *  Value:    index of the species within the Zuzax Gas phase ThermoPhase class
      */
     int* SptoZu_speciesMap;
 
 };
-
+//==================================================================================================================================
 }
+//----------------------------------------------------------------------------------------------------------------------------------
 #endif
 
 #endif

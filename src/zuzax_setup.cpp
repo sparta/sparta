@@ -32,14 +32,14 @@ namespace SPARTA_NS {
 //=================================================================================================
 ZuzaxSetup::ZuzaxSetup(SPARTA *sparta) : 
     Pointers(sparta) ,
-    gasThermo(nullptr),
+    gasThermo_(nullptr),
     SptoZu_speciesMap(nullptr)
 {
 }
 //=================================================================================================
 ZuzaxSetup::~ZuzaxSetup()
 {
-   delete (gasThermo);
+   delete (gasThermo_);
    memory->destroy(SptoZu_speciesMap);
 }
 //=================================================================================================
@@ -50,16 +50,18 @@ void ZuzaxSetup::init()
 void ZuzaxSetup::initGasSetup(int nargs, char** args)
 {
   bool found = false;
-  gasThermo =  new Zuzax::IdealGasPhase(args[0], "");
+  gasThermo_ =  new Zuzax::IdealGasPhase(args[0], "");
   Particle::Species *species = particle->species;
   memory->create(SptoZu_speciesMap, particle->nspecies, "ZuzaxSetup::SptoZu_speciesMap");
 
+  // Loop over all of the gas species that are currently defined within sparta
   for (int k = 0; k < particle->nspecies; ++k) {
+      SptoZu_speciesMap[k] = -1; 
       Particle::Species& spk = species[k]; 
       found = false;
       std::string sspName(spk.id);
-      for (size_t kz = 0; kz < gasThermo->nSpecies(); ++kz) {
-          if (sspName == gasThermo->speciesName(kz)) {
+      for (size_t kz = 0; kz < gasThermo_->nSpecies(); ++kz) {
+          if (sspName == gasThermo_->speciesName(kz)) {
               found = true;
               SptoZu_speciesMap[k] = (int) kz;
               break;
@@ -72,9 +74,17 @@ void ZuzaxSetup::initGasSetup(int nargs, char** args)
         error->all(FLERR, estring);
       } 
       spk.zuzax_indexGasPhase = SptoZu_speciesMap[k];
+
+      // Calculate the ezero value with the Sparta's Species struct.
+      double ezero = calcEzero(spk, spk.zuzax_indexGasPhase);
   }
 
    
+
+}
+//=================================================================================================
+double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas)
+{
 
 }
 //=================================================================================================
