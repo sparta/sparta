@@ -1,0 +1,250 @@
+# 2d flow in a box with a surface
+
+###################################
+# Constants     kb ->  Rgas = Avrog * kb
+###################################
+# boltz units = kg m2 s-2 K-1
+variable            boltz equal 1.380658E-23
+
+###################################
+# Trajectory inputs
+###################################
+#  V is in m s-1
+variable            V equal 2072.640
+# nden is the number density in # per m3
+variable            P_pa equal 1.0E2
+#variable            nden equal 1.0E30
+variable            temp equal 300.
+# plug that into P_pa = nden * boltz * T = 2.2235 Pa
+
+variable            nden equal ${P_pa}/(${boltz}*${temp})
+
+variable            surftemp equal 300.00
+variable            Lbody equal 1.000
+variable            beta equal 0
+
+###################################
+# Gas parameters (Air)  
+###################################
+# Viscosity of air = kg m-1 s-1
+variable            mue equal 1.656E-5
+# Mass of N2 molecule in kg
+variable            mass equal 46.5E-27
+# Cp / Cv
+variable            gamma equal 1.4
+# density of gas in kg / m3
+variable            rho equal ${nden}*${mass}
+
+
+
+###################################
+# Simulation initialization standards
+###################################
+#  (not sure what ppc is!)
+variable            ppc equal 100
+#variable            nmfp equal 200
+# ( not sure what cpmfp is)
+variable            cpmfp equal 0.1
+
+###################################
+# Parameter calculations
+###################################
+# velocity separated in x and y
+variable            Vx equal ${V}*cos(${beta}*2*PI/360)
+variable            Vy equal ${V}*sin(${beta}*2*PI/360)
+
+#  cbar is equal to 1/beta, or the most likely thermal velocity
+#  The mean speed = is equal to 2 / sqrt(pi) / beta = sqrt( 8 k T / Pi M_k)
+variable            cbar equal sqrt(8.*${boltz}*${temp}/(${mass}*PI))
+# mfp is the mean free path ( this has the correct units at least)
+variable            mfp equal 2*${mue}/(${nden}*${mass}*${cbar})
+# uspeed is the sound speed (has the correct units
+variable            uspeed equal sqrt(${gamma}*${boltz}*${temp}/${mass})
+
+# Change the box size to 10.0E-6 -> micron sized
+variable            xmin equal 0.0
+variable            xmax equal 1.0E-4
+variable            ymin equal 0.0
+variable            ymax equal 1.0E-4
+variable            delz equal ${xmax}/10.
+
+# Number of cells is set so that cell distance is 0.1 of the mean free path -> flow is resolved wrt mean free path
+#         ( therefore, particles will mostly go through a single  cell without a collision)
+variable            xncells equal (${xmax}-${xmin})/${mfp}*${cpmfp}
+variable            yncells equal (${ymax}-${ymin})/${mfp}*${cpmfp}
+
+# Number of cells is set so that cell distance is 0.1 of the mean free path -> flow is resolved wrt mean free path
+#         ( therefore, particles will mostly go through a single  cell without a collision)
+variable            xncells equal (${xmax}-${xmin})/${mfp}*${cpmfp}
+variable            yncells equal (${ymax}-${ymin})/${mfp}*${cpmfp}
+
+#
+variable            extra_speed equal 30.0
+variable            Fnum equal  ${nden}*(${xmax}-${xmin})*(${ymax}-${ymin})*${delz}/${ppc}/${xncells}/${yncells}*${extra_speed}
+
+#variable            tstep equal (-${xmin}+${xmax})/${Vx}/${xncells}/300
+variable            tstep equal 2.5E-6
+
+############################################################################################################################
+# Print variable values to log file
+############################################################################################################################
+print               " Density  = ${rho}"
+print               " Number Density  = ${nden} molecules per m3"
+print               " Pressure  = ${P_pa} Pa"
+print               " Temp  = ${temp}"
+print               " cbar  = ${cbar}"
+print               " mean free path  = ${mfp}"
+print               " cells per free stream mean free path = ${cpmfp}"
+print               " sound speed  = ${uspeed}"
+#print               " number of mean free paths = ${nmfp}"
+print               " x-min = ${xmin}"
+print               " x-max = ${xmax}"
+print               " y-min = 0.0"
+print               " y-max = ${ymax}"
+print               " x-cells = ${xncells}"
+print               " y-cells = ${yncells}"
+print               " Simulation Ratio = ${Fnum}"
+print               " Timestep = ${tstep}"
+
+
+
+seed	    	    12345
+dimension   	    2
+
+# Not sure what this does
+global              gridcut 0.0 comm/sort yes
+
+# set the X boundary as outflow.
+#  -> note the left will be reflective and the right will be a fixed resevoir type value.
+#  -> The y boundary is periodic. This looks solid
+#boundary	    so r p
+boundary   so r p
+# Create a box with 0 < x < 1E-5, 0 < y < 1E-5, -0.5E-6 < z < 0.5E-6
+#  -> the z coordinates are typical for a 2D simulation
+create_box  	    0 ${xmax} 0 ${ymax} -${delz}/2.0  ${delz}/2.0
+#
+# Create a 2D 20 x 20 grid
+create_grid 	    20 20 1
+#
+# The grid is load balanced using geometrically compact algorithm, rcb
+#
+balance_grid        rcb cell
+#
+# nrho is the number density of particles (# per length^3) -> so I guess this means there are ~100 particles
+#  -> question is this value the simulation particle density of the physical particle density? not clear
+# fnum ratio of physical particles to simulation particles -> It seems that most realistic examples have
+#            fnum ~7.0E6, i.e., number of physical particles are more greater than simulation particles?
+#             question becomes how do you determine the pressure ? How do you implement an ideal gas EOS?
+global		    nrho ${nden}
+global		    fnum ${Fnum}
+#
+# add species to the list of species that the simulation understands
+#
+species		    air.species N2 O2
+
+# 
+# Specify the zuzax input file. 
+#  -> all species should be identified with a zuzax species
+zuzax_gas_species   airSM.xml 
+#
+#  Set the mixture to be 90% N2 10% O2
+#  Note without the frac keyword, the N and O mole fractions are 0.5 respectively
+#
+mixture             mix N2 frac 0.9
+mixture             mix O2 frac 0.1
+mixture             mix group species
+mixture             mix vstream 0.0 0.0 0.0 temp 300. trot 300. tvib 300.
+
+
+#
+# Read the circle geometry from the file, data.circle,
+#  -> Set the origin to (x,y,z) = 5 5 0, This is what is in the file as the center of the circle
+#  -> Translate it up +2 y, so the origin is 5 3 0 
+#  -> scale the surface by 1/3 -> so the radius is 1 instead of 3
+#  -> all surface elements are assigned to group "1"
+#read_surf           data.circle origin 5 5 0 trans 0.0 2.0 0.0 &
+#                    scale 0.33 0.33 1 group 1
+
+
+
+
+# Define a model for particle surface collisions
+#       Temperature = 300. K
+#       accomodation coefficient = 0.0  -> all collisions are diffuse
+#       Call the model 1
+surf_collide	    1 diffuse ${surftemp} 0.0
+
+# Set the left boundary model to be a diffuse collider
+#   Sets the left x boundary to have collision model 1 (xlo had to have been set to an "s" boundary first"
+bound_modify xlo collide 1
+
+#  Set parameters for a group of surface elements in the specified group-ID
+#  all -> all surfaces
+#    -> set the surface collision model to sc-ID = 1 which we just identified in the last card
+surf_modify         all collide 1
+
+#  Define what style of particle-particle collisions will be performed by SPARTA each timestep. 
+#    vss =  The vss style implements the Variable Soft Sphere (VSS) model for collision
+#            air is the mixture ID, identified in the mixture card above
+#                (air.vss is the file with the collision parameters)
+# collide             vss air air.vss
+collide             vss all air.vss relax constant
+collide_modify      vibrate smooth rotate smooth
+
+create_particles    all n 0 
+
+
+#  emit particles from the right side of the domain.
+#         the mixture air is used
+#         this card is called "in"
+fix		    in emit/face mix xhi subsonic  ${P_pa} ${temp}
+# set the timestep -> no info on what constitutes a good value
+timestep 	    ${tstep}
+
+#  Dump an image file containing all every 50 time steps
+#     (from the dump_image page:
+#                pdiam is the particle diameter
+#
+#dump                2 image all 50 image.*.ppm type type pdiam 5.0E-7 &
+#                    surf proc 0.01 size 512 512 zoom 1.75
+#dump_modify	    2 pad 4
+
+variable            collrate equal "ncoll*step*2/np"
+stats		    100
+# I'm getting nattempt = ncoll nscoll = nscheck = 0 . What's going on?
+#stats_style	    step  np v_collrate nattempt ncoll nscoll nscheck nbound ntouch
+###################################
+# Unsteady Output
+###################################
+
+# Define a grid calculation named calc1 for all species that calculates number density and temperature
+#                 all all - Creates one thing to compute nrho is the number density
+compute    myGrid grid all all nrho 
+
+# Calculate per grid grid cell time-averaged quantitites
+#                              group-ID stating all grids
+#                                  Nevery use values for every 10th timestep
+#                                     Nrepeat -> # of times to use in calculating the average
+#                                          Nfreq -> calculate every this many time steps Nevery*Nrepeat >= Nfreq 
+fix              1 ave/grid all 10 100  1000 c_myGrid[*] 
+
+# Dump all grid values every 100000 secs
+#   This will create a table of values for each cell, One line per cell, 
+dump             d1 grid all 1000 dump_nrhod.* id xlo ylo  f_1[*] 
+
+compute 1s boundary all n mflux press ke erot evib etot
+
+#fix     1s ave/time 10 100 1000 c_1s[1][1] mode scalar
+ fix     1s ave/time 10 100 1000 c_1s[1] mode vector  file partCol_Surf.txt
+ fix     fXLO ave/time 10 100 1000 c_1s[1][1] c_1s[1][2]  c_1s[1][3]  c_1s[1][4] c_1s[1][5] c_1s[1][6] c_1s[1][7] mode scalar  file partCol_XLO.txt
+#fix     1s XLO ave/surf 10 100 1000 c_1s[*] 
+#fix     1s ave/time 10 100 1000 c_1s[1][0] mode scalar
+
+stats_style	    step  np v_collrate nattempt ncoll nscoll nscheck nbound ntouch c_1s[1][1]
+
+run 		    50000
+
+
+#  have to say this again to get the collisions on the second surface
+
+

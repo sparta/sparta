@@ -18,6 +18,8 @@
 #include <cstring>
 #include "zuzax_setup.h"
 #include "zuzax/thermo/IdealGasPhase.h"
+#include "zuzax/thermo/SpeciesThermo.h"
+#include "zuzax/thermo/StatMech.h"
 
 #include "particle.h"
 #include "memory.h"
@@ -71,9 +73,7 @@ void ZuzaxSetup::initGasSetup(int nargs, char** args)
         char estring[128];
         sprintf(estring, "Can't find a corresponding Zuzax species for the Sparta species, %s",
                         sspName.c_str());
-        error->all(FLERR, estring);
-      } 
-      spk.zuzax_indexGasPhase = SptoZu_speciesMap[k];
+        error->all(FLERR, estring); } spk.zuzax_indexGasPhase = SptoZu_speciesMap[k];
 
       // Calculate the ezero value with the Sparta's Species struct.
       double ezero = calcEzero(spk, spk.zuzax_indexGasPhase);
@@ -83,9 +83,62 @@ void ZuzaxSetup::initGasSetup(int nargs, char** args)
 
 }
 //=================================================================================================
-double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas)
+// Calculations follow the notes in SurfaceAblationNotes.docx by hkm
+double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas, int doTDep, double temp_thermal)
 {
+    double T = 298.15;
+    if (doTDep) {
+        T = temp_thermal;
+    }
+    const Zuzax::SpeciesThermoInterpType* stit = gasThermo_->speciesThermo().provideTempDepSTIT(kgas, T);
+    const Zuzax::StatMech* sm = dynamic_cast<const Zuzax::StatMech*>(stit);
+    const Zuzax::StatMech::speciesStatMechInput& sI = sm->statMechInput();
 
+    if (!sm) {
+        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", " Not StatMech type for species %s",
+                                gasThermo_->speciesName(kgas).c_str());
+    }
+
+    double Hf298 = gasThermo_->Hf298SS(kgas) / Zuzax::Avogadro;
+    double H_pv298 = Zuzax::Boltzmann * 298.15;
+    double UtranT = 3./2. * Zuzax::Boltzmann * T;
+    double Utran298 = 3./2. * Zuzax::Boltzmann * 298.15;
+    int nrotdof = spk.rotdof;
+    if (nrotdof != 0 && nrotdof != 2 && nrotdof != 3) {
+        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", " unknown rotation option");
+    }
+    double UrotT = nrotdof / 2.0 * Zuzax::Boltzmann * T;
+    double Urot298 = nrotdof / 2.0 * Zuzax::Boltzmann * 298.15;
+
+    // Note, until Sparta has electron partition function coverage, Uelectron not worth it.
+    double UelectronT = 0.0;
+    double Uelectron298 = 0.0;
+    double theta0 = sI.theta[0];
+    double theta0_sp = spk.vibtemp[0];
+    if (theta0 != theta0_sp) {
+        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", "%s: zuzax and Sparta different theta0: %g %g", 
+                                gasThermo_->speciesName(kgas).c_str(), theta0 , theta0_sp); 
+    }
+    double tstar = theta0 / T;
+    double UvibT = Zuzax::Boltzmann *  theta0 / 2.0 + Zuzax::Boltzmann *  theta0 / (exp(tstar) + 1.0);
+    double tstar298 = theta0 / 298.15;
+    double Uvib298 = Zuzax::Boltzmann *  theta0 / 2.0 + Zuzax::Boltzmann *  theta0 / (exp(tstar298) + 1.0);
+    double Etran_sp = 3./2. * Zuzax::Boltzmann * T; 
+    // Assume smooth rotational modes;
+    // get rotdofs
+    double nrotdof_sp = spk.rotdof;
+    if (nrotdof_sp != nrotdof) {
+        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", "zuzax and Sparta different nrotdofs: %d %d", 
+                                nrotdof, nrotdof_sp);
+    }
+    double Erot_sp = nrotdof / 2.0 * Zuzax::Boltzmann * T;
+
+    double Evib_sp = Zuzax::Boltzmann * theta0 / (exp(tstar) + 1.0);
+
+    double U_z = Hf298 - H_pv298 + UtranT - Utran298 + UrotT - Urot298
+               + UvibT - Uvib298 + UelectronT - Uelectron298;
+    double Ezero = U_z - Etran_sp - Erot_sp - Evib_sp;
+    return Ezero;
 }
 //=================================================================================================
 }

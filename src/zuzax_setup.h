@@ -69,8 +69,10 @@ public:
      *
      *  @param[in]                               Returns the internal energy offset needed for comparison to NASA polynomials.
      *                                             (units Joules/kmol)
+     *  @param[in]           doTDep              calculate the Ezero value as a function of the thermal temperature
+     *  @param[in]           temp_thermal        Current Thermal temperature (used if doTDep is true)
      */
-    double calcEzero(Particle::Species& spk, int kgas);
+    double calcEzero(Particle::Species& spk, int kgas, int doTDep = false, double temp_thermal = 298.15);
 
 
  protected:

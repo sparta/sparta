@@ -1048,6 +1048,8 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
   eng = 0.0;
 
   if (vibstyle == DISCRETE && species[isp].vibdof == 2) {
+    // This will give the harmonic oscillator partition function exactly except for the
+    // zero point energy.
     int ivib = -log(erandom->uniform()) * temp_thermal / 
       particle->species[isp].vibtemp[0];
     eng = ivib * update->boltz * particle->species[isp].vibtemp[0];
@@ -1064,6 +1066,9 @@ double Particle::evib(int isp, double temp_thermal, RanPark *erandom)
       }
       eng = erm * update->boltz * temp_thermal;
     }
+    // Note -> there doesn't seem to be an option to include sets of vibrational energies
+    //         given by the harmonic oscillator partition function.
+    //         Therefore, the Cp for many multiatom molecules can't be reproduced.
   }
 
   return eng;
