@@ -135,6 +135,7 @@ int attempt_kk(Particle::OnePart *ip, Particle::OnePart *jp,
     //      nothing that is I-specific or J-specific
 
     if (react_prob > random_prob) {
+      Kokkos::atomic_fetch_add(&d_tally_reactions[d_list[i]],1);
       ip->ispecies = r->d_products[0];
 
       // Previous statment did not destroy the 2nd species (B) if

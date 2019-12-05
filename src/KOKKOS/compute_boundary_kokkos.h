@@ -52,7 +52,7 @@ class ComputeBoundaryKokkos : public ComputeBoundary, public KokkosBase {
 ------------------------------------------------------------------------- */
 
 KOKKOS_INLINE_FUNCTION
-void boundary_tally_kk(int iface, int istyle,
+void boundary_tally_kk(int iface, int istyle, int reaction,
                        Particle::OnePart *iorig, 
                        Particle::OnePart *ip, 
                        Particle::OnePart *jp,

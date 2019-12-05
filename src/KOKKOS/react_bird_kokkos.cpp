@@ -28,6 +28,8 @@
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
+#include "kokkos.h"
+#include "memory_kokkos.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -48,7 +50,11 @@ ReactBirdKokkos::ReactBirdKokkos(SPARTA *sparta, int narg, char **arg) :
 #endif
             )
 {
-
+  delete [] tally_reactions;
+  delete [] tally_reactions_all;
+  memoryKK->create_kokkos(k_tally_reactions,tally_reactions,nlist,"react_bird:tally_reactions");
+  memoryKK->create_kokkos(k_tally_reactions_all,tally_reactions_all,nlist,"react_bird:tally_reactions_all");
+  d_tally_reactions = k_tally_reactions.d_view;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -56,6 +62,9 @@ ReactBirdKokkos::ReactBirdKokkos(SPARTA *sparta, int narg, char **arg) :
 ReactBirdKokkos::~ReactBirdKokkos()
 {
   if (copy) return;
+
+  tally_reactions = NULL;
+  tally_reactions_all = NULL;
 
   // deallocate views of views in serial to prevent race conditions in external tools
 
@@ -138,3 +147,29 @@ void ReactBirdKokkos::init()
   rand_pool.init(random);
 #endif
 }
+
+/* ----------------------------------------------------------------------
+   return tally associated with a reaction
+------------------------------------------------------------------------- */
+
+double ReactBirdKokkos::extract_tally(int m) 
+{
+  if (!tally_flag) {
+    tally_flag = 1;
+
+    if (sparta->kokkos->gpu_direct_flag) {
+      MPI_Allreduce(d_tally_reactions.data(),k_tally_reactions_all.d_view.data(),nlist,
+                    MPI_INT,MPI_SUM,world);
+      k_tally_reactions_all.modify<DeviceType>();
+      k_tally_reactions_all.sync<SPAHostType>();
+    } else {
+      k_tally_reactions.modify<DeviceType>();
+      k_tally_reactions.sync<SPAHostType>();
+      MPI_Allreduce(k_tally_reactions.h_view.data(),k_tally_reactions_all.h_view.data(),nlist,
+                    MPI_INT,MPI_SUM,world);
+    }
+
+  }
+
+  return 1.0*tally_reactions_all[m];
+};

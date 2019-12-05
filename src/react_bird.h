@@ -32,7 +32,7 @@ class ReactBird : public React {
   virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
                       double, double, double, double &, int &) = 0;
   char *reactionID(int);
-  double extract_tally(int);
+  virtual double extract_tally(int);
 
  protected:
   FILE *fp;
