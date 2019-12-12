@@ -64,10 +64,14 @@ surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0
 <P>Define a model for particle-surface collisions.  One or more models
 can be defined and assigned to different surfaces or simulation box
 boundaries via the <A HREF = "surf_modify.html">surf_modify</A> or
-<A HREF = "bound_modify.html">bound_modify</A> commands.  See <A HREF = "Section_howto.html#howto_9">Section
+<A HREF = "bound_modify.html">bound_modify</A> commands.  See <A HREF = "Section_howto.html#howto_9<A HREF = "surf_react.html">>Section
 4.9</A> for more details of how SPARTA defines
 surfaces as collections of geometric elements, triangles in 3d and
-line segments in 2d.
+line segments in 2d.  Chemical reactions can also be part of a
+particle-surface interaction model.  See the
+surf_react</A> command for details.  All of the collision
+styles listed here support optional reactions, except the <I>vanish</I>
+style.
 </P>
 <P>The ID for a surface collision model is used to identify it in other
 commands.  Each surface collision model ID must be unique.  The ID can

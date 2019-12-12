@@ -138,20 +138,21 @@ void SurfCollideDiffuse::init()
    isr = index of reaction model if >= 0, -1 for no chemistry
    ip = set to NULL if destroyed by chemsitry
    return jp = new particle if created by chemistry
+   return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideDiffuse::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place
+  // reaction > 0 if reaction took place
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
-  int reaction = 0;
+  reaction = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));

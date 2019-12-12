@@ -62,6 +62,8 @@ SurfCollideSpecularKokkos::SurfCollideSpecularKokkos(SPARTA *sparta) :
   copy = 0;
 
   if (narg != 2) error->all(FLERR,"Illegal surf_collide specular command");
+ 
+  allowreact = 1;
 
   k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
   d_nsingle = k_nsingle.view<DeviceType>();

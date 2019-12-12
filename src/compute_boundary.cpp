@@ -153,7 +153,8 @@ void ComputeBoundary::clear()
 }
 
 /* ----------------------------------------------------------------------
-   tally values for a single particle colliding with boundary iface/istyle
+   tally values for a single particle colliding with boundary iface/istyle,
+     performing reaction (1 to N)
    iorig = particle ip before collision
    ip,jp = particles after collision
    ip = NULL means no particles after collision
@@ -161,7 +162,7 @@ void ComputeBoundary::clear()
    jp != NULL means two particles after collision
 ------------------------------------------------------------------------- */
 
-void ComputeBoundary::boundary_tally(int iface, int istyle,
+void ComputeBoundary::boundary_tally(int iface, int istyle, int reaction,
                                      Particle::OnePart *iorig, 
                                      Particle::OnePart *ip, 
                                      Particle::OnePart *jp)

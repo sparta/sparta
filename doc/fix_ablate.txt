@@ -26,7 +26,8 @@ maxrandom = maximum per grid cell decrement as an integer (only specified if sou
 
 [Examples:]
 
-fix 1 ablate surfcells :pre
+fix 1 ablate surfcells 0 0.0 random 10
+fix 1 ablate surfcells 1000 10.0 c_tally :pre
 
 [Description:]
 
@@ -92,6 +93,47 @@ and 1.0.  The second is a random integer between 1 and maxrandom.  If
 the first random # < {scale}, then the second random integer is the
 decrement value for the cell.  Thus {scale} is effectively the
 fraction of grid cells whose corner point values are decremented.
+
+:line
+
+Here is an example of commands that will couple ablation to surface
+reaction statistics to modulate ablation of a set of implicit
+surfaces.  These lines are taken from the
+examples/ablation/in.ablation.3d.reactions input script:
+
+surf_collide	    1 diffuse 300.0 1.0
+surf_react	    2 prob air.surf :pre
+
+compute             10 react/isurf/grid all 2
+fix                 10 ave/grid all 1 100 100 c_10[*]
+dump                10 grid all 100 tmp.grid id c_10[1] :pre
+
+global              surfs implicit
+fix                 ablate ablate all 100 2.0 c_10[1]   # could be f_10
+read_isurf          all 20 20 20 binary.21x21x21 99.5 ablate :pre
+
+surf_modify         all collide 1 react 2 :pre
+
+The order of these commands matter, so here is the explanation.
+
+The "surf_modify"_surf_modify.html command must come after the
+"read_isurf"_read_isurf.html command, because surfaces must exist
+before assigning collision and reaction models to them.  The "fix
+ablate"_fix_ablate.html command must come before the
+"read_isurf"_read_isurf.html command, since it uses the ID of the "fix
+ablate"_fix_ablate command as an argument to create implicit surfaces.
+The "fix ablate"_fix_ablate.html command takes a compute or fix as an
+argument, in this case the ID of the "compute
+react/isurf/grid"_compute_react_isurf_grid.html command.  This is to
+specify what calculation drives the ablation.  In this case, it is the
+"compute react/isurf/grid"_compute_react_isurf_grid.html command (or
+could be the "fix ave/grid"_fix_ave_grid.html command) which tallies
+counts of surface reactions for implicit triangles in each grid cell.
+The "compute react/isurf/grid"_compute react/isurf/grid command
+requires the ID of a surface reaction model, so that it knows the list
+of possible reactions to tally.  In this case the reaction is set by
+the "surf_react"_surf_react.html command, which must therefore comes
+near the beginning of this list of commands.
 
 :line
 
