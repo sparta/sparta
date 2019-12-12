@@ -151,6 +151,7 @@ void Surf::modify_params(int narg, char **arg)
   while (iarg < narg) {
     if (strcmp(arg[iarg],"collide") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal surf_modify command");
+      if (!exist) error->all(FLERR,"Surf_modify when surfs do not yet exist");
 
       int isc = find_collide(arg[iarg+1]);
       if (isc < 0) error->all(FLERR,"Could not find surf_modify sc-ID");
@@ -171,7 +172,8 @@ void Surf::modify_params(int narg, char **arg)
 
     } else if (strcmp(arg[iarg],"react") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal surf_modify command");
-      
+      if (!exist) error->all(FLERR,"Surf_modify when surfs do not yet exist");
+
       int isr;
       if (strcmp(arg[iarg+1],"none") == 0) isr = -1;
       else {

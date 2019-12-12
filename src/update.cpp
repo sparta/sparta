@@ -385,7 +385,7 @@ template < int DIM, int SURF > void Update::move()
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
-  int pstart,pstop,entryexit,any_entryexit;
+  int pstart,pstop,entryexit,any_entryexit,reaction;
   surfint *csurfs;
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
@@ -846,10 +846,10 @@ template < int DIM, int SURF > void Update::move()
 
               if (DIM == 3)
                 jpart = surf->sc[tri->isc]->
-                  collide(ipart,tri->norm,dtremain,tri->isr);
+                  collide(ipart,tri->norm,dtremain,tri->isr,reaction);
               if (DIM != 3)
                 jpart = surf->sc[line->isc]->
-                  collide(ipart,line->norm,dtremain,line->isr);
+                  collide(ipart,line->norm,dtremain,line->isr,reaction);
 
               if (jpart) {
                 particles = particle->particles;
@@ -863,7 +863,8 @@ template < int DIM, int SURF > void Update::move()
 
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)
-                  slist_active[m]->surf_tally(minsurf,icell,&iorig,ipart,jpart);
+                  slist_active[m]->surf_tally(minsurf,icell,reaction,
+                                              &iorig,ipart,jpart);
               
               // nstuck = consective iterations particle is immobile
 
@@ -1033,7 +1034,8 @@ template < int DIM, int SURF > void Update::move()
           if (nboundary_tally) 
             memcpy(&iorig,&particles[i],sizeof(Particle::OnePart));
 
-          bflag = domain->collide(ipart,outface,icell,xnew,dtremain,jpart);
+          bflag = domain->collide(ipart,outface,icell,xnew,dtremain,
+                                  jpart,reaction);
 
           if (jpart) {
             particles = particle->particles;
@@ -1044,7 +1046,7 @@ template < int DIM, int SURF > void Update::move()
           if (nboundary_tally)
             for (m = 0; m < nboundary_tally; m++)
               blist_active[m]->
-                boundary_tally(outface,bflag,&iorig,ipart,jpart);
+                boundary_tally(outface,bflag,reaction,&iorig,ipart,jpart);
 
           if (DIM == 1) {
             xnew[0] = x[0] + dtremain*v[0];
@@ -1325,7 +1327,7 @@ int Update::split2d(int icell, double *x)
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of all computes that tally surface and boundary bounce info
+   setup lists of all computes that tally surface collision/reaction info
    return 1 if there are any, 0 if not
 ------------------------------------------------------------------------- */
 
@@ -1341,8 +1343,7 @@ int Update::collide_react_setup()
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of all computes that tally surface and boundary bounce info
-   return 1 if there are any, 0 if not
+   zero counters in all computes that tally surface collision/reaction info
 ------------------------------------------------------------------------- */
 
 void Update::collide_react_update()
@@ -1390,7 +1391,8 @@ int Update::bounce_setup()
 
 /* ----------------------------------------------------------------------
    set bounce tally flags for current timestep
-   nsurf_tally = # of computes needing bounce info on this step
+   nsurf_tally = # of surface computes needing bounce info on this step
+   nboundary_tally = # of boundary computes needing bounce info on this step
    clear accumulators in computes that will be invoked this step
 ------------------------------------------------------------------------- */
 

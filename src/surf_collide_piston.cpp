@@ -32,6 +32,8 @@ SurfCollidePiston::SurfCollidePiston(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg != 3) error->all(FLERR,"Illegal surf_collide piston command");
 
+  allowreact = 1;
+
   vwall = input->numeric(FLERR,arg[2]); 
   if (vwall <= 0.0) error->all(FLERR,"Surf_collide piston velocity <= 0.0");
 }
@@ -84,20 +86,22 @@ void SurfCollidePiston::init()
    isr = index of reaction model if >= 0, -1 for no chemistry
    ip = set to NULL if destroyed by chemsitry
    return jp = new particle if created by chemistry
+   return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollidePiston::
-collide(Particle::OnePart *&ip, double *norm, double &dtremain, int isr)
+collide(Particle::OnePart *&ip, double *norm, double &dtremain, 
+        int isr, int & reaction)
 {
   nsingle++;
 
   // if surface chemistry defined, attempt reaction
-  // reaction = 1 if reaction took place
+  // reaction > 0 if reaction took place
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
-  int reaction = 0;
+  reaction = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));

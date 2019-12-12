@@ -616,6 +616,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   double *x,*v;
   Surf::Tri *tri;
   Surf::Line *line;
+  int reaction; // not yet used
 
   Particle::OnePart &particle_i = d_particles[i];
   pflag = particle_i.flag;
@@ -961,29 +962,29 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (DIM == 3)
             if (sc_type == 0)
               jpart = sc_kk_specular_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr);/////
+                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
             else if (sc_type == 1)
               jpart = sc_kk_diffuse_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr);/////
+                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
             else if (sc_type == 2)
               jpart = sc_kk_vanish_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr);/////
+                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
             else if (sc_type == 3)
               jpart = sc_kk_piston_copy[m].obj.
-                collide_kokkos(ipart,tri->norm,dtremain,tri->isr);/////
+                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
           if (DIM != 3)
             if (sc_type == 0)
               jpart = sc_kk_specular_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr);////
+                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
             else if (sc_type == 1)
               jpart = sc_kk_diffuse_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr);////
+                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
             else if (sc_type == 2)
               jpart = sc_kk_vanish_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr);////
+                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
             else if (sc_type == 3)
               jpart = sc_kk_piston_copy[m].obj.
-                collide_kokkos(ipart,line->norm,dtremain,line->isr);////
+                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
 
           ////Need to error out for now if surface reactions create (or destroy?) particles////
           //if (jpart) {
@@ -999,7 +1000,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
           if (nsurf_tally)
             for (m = 0; m < nsurf_tally; m++)
               slist_active_copy[m].obj.
-                    surf_tally_kk<ATOMIC_REDUCTION>(minsurf,icell,&iorig,ipart,jpart);
+                    surf_tally_kk<ATOMIC_REDUCTION>(minsurf,icell,reaction,&iorig,ipart,jpart);
 
           // nstuck = consective iterations particle is immobile
 
@@ -1165,16 +1166,16 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 
         if (sc_type == 0)
           jpart = sc_kk_specular_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface]);/////
+            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
         else if (sc_type == 1)
           jpart = sc_kk_diffuse_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface]);/////
+            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
         else if (sc_type == 2)
           jpart = sc_kk_vanish_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface]);/////
+            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
         else if (sc_type == 3)
           jpart = sc_kk_piston_copy[m].obj.
-            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface]);/////
+            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
 
         if (ipart) {
           double *x = ipart->x;
@@ -1185,7 +1186,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
         }
         bflag = SURFACE;
       } else {
-        bflag = domain_kk_copy.obj.collide_kokkos(ipart,outface,lo,hi,xnew/*,dtremain*/);
+        bflag = domain_kk_copy.obj.collide_kokkos(ipart,outface,lo,hi,xnew/*,dtremain*/,reaction);
       }
 
       //if (jpart) {
@@ -1197,7 +1198,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (nboundary_tally)
         for (int m = 0; m < nboundary_tally; m++)
           blist_active_copy[m].obj.
-            boundary_tally_kk(outface,bflag,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
+            boundary_tally_kk(outface,bflag,reaction,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
 
       if (DIM == 1) {
         xnew[0] = x[0] + dtremain*v[0];

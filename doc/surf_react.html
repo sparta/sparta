@@ -60,26 +60,20 @@ which reaction (if any) takes place.  A check is made that the sum of
 probabilities for all possible reactions is <= 1.0, which should
 normally be the case if reasonable reaction coefficients are defined.
 </P>
-<P>IMPORTANT NOTE: A surface reaction model can only be specified for
-surfaces whose surface collision model is <I>diffuse</I>.  This is partly
-because reactions do not make physical sense with the other current
-surface collision models.  And because the <I>diffuse</I> model defines a
-surface temperature, which is used to initialize the rotational and
-vibrational energies of new particles appearing due to dissociation
-reactions.  Note that the <I>diffuse</I> model can effectively perform
-specular reflections if its <I>acc</I> parameter is set to 0.0.  This is a
-way to to perform surface reactions with specular reflection, which
-you cannot do directly using the <A HREF = "surf_collide.html">surf_collide
-specular</A> model.  See the
+<P>IMPORTANT NOTE: A surface reaction model can not be specified for
+surfaces whose surface collision style does not support reactions.
+Currently this is only the <I>vanish</I> collision style.  See the
 <A HREF = "surf_collide.html">surf_collide</A> doc page for details.
 </P>
 <HR>
 
 <P>The <I>global</I> style is a simple model that can be used to test whether
 surface reactions are occurring as expected.  There is no list of
-raactions for different species; all species are treated the same.
+reactions for different species; all species are treated the same.
+This style thus defines two universal reactions, the first for
+particle deletion, the second for particle creation.
 </P>
-<P>The <I>global</I> style takes two paramters, <I>pdelete</I> and <I>pcreate</I>. The
+<P>The <I>global</I> style takes two parameters, <I>pdelete</I> and <I>pcreate</I>. The
 first is the probability that a "deletion" reaction takes place when a
 collision occurs.  If it does, the particle is deleted.  The second is
 the probablity that a "creation" reaction occurs, which clones the
@@ -105,7 +99,8 @@ Only reactions for which all the reactants and all the products are
 currently defined as species-IDs will be active for the simulation.
 Thus the file can contain more reactions than are used in a particular
 simulation.  See the <A HREF = "species.html">species</A> command for how species
-IDs are defined.
+IDs are defined.  This style thus defines N reactions, where
+N is the number of reactions listed in the specified file.
 </P>
 <P>As explained below each reaction has a specified probability between
 0.0 and 1.0.  That probability is used to choose which reaction (if
@@ -186,7 +181,7 @@ two products must be specified in this order.
 
 <P><B>Output info:</B>
 </P>
-<P>All the surface reaction models calculate a global vector of length 2.
+<P>All the surface reaction models calculate a global vector of values.
 The values can be used by the <A HREF = "stats_style.html">stats_style</A> command
 and by <A HREF = "variable.html">variables</A> that define formulas.  The latter
 means they can be used by any command that uses a variable as input,
@@ -194,11 +189,19 @@ e.g. "the <A HREF = "fix_ave_time.html">fix ave/time</A> command.  See <A HREF =
 4.4</A> for an overview of SPARTA output
 options.
 </P>
+<P>The <I>global</I> and <I>prob</I> styles each compute a vector of length 2 +
+2*nlist.  For the <I>global</I> style, nlist = 2, for "delete" and "create"
+reactions.  For the <I>prob</I> style, nlist is the number of reactions
+listed in the file is read as input.
+</P>
 <P>The first element of the vector is the count of particles that
 performed surface reactions for surface elements assigned to this
 reaction model during the current timestep.  The second element is the
 cummulative count of particles that have performed reactions since the
-beginning of the current run.
+beginning of the current run.  The next nlist elements are the count
+of each individual reaction that occurred during the current timestep.
+The final nlist elements are the cummulative count of each individual
+reaction since the beginning of the current run.
 </P>
 <HR>
 

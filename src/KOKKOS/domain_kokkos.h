@@ -35,13 +35,16 @@ class DomainKokkos : public Domain {
    called by Update::move()
    xnew = final position of particle at end of move
    return boundary type of global boundary
+   return reaction = index of reaction (1 to N) that took place, 0 = no reaction
    if needed, update particle x,v,xnew due to collision
 ------------------------------------------------------------------------- */
 
   KOKKOS_INLINE_FUNCTION
-  int collide_kokkos(Particle::OnePart *&ip, int face, double* lo, double* hi, double *xnew/*,double &dtremain*/) const
+  int collide_kokkos(Particle::OnePart *&ip, int face, double* lo, double* hi, double *xnew,
+                     /*double &dtremain,*/ int &reaction) const
   {
     //jp = NULL;
+    reaction = 0;
   
     switch (bflag[face]) {
   

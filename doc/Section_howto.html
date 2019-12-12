@@ -1204,6 +1204,7 @@ relevant commands:
 <LI><A HREF = "read_isurf.html">read isurf</A>
 <LI><A HREF = "fix_ablate.html">fix ablate</A>
 <LI><A HREF = "compute_isurf_grid.html">compute isurf/grid</A>
+<LI><A HREF = "compute_react_isurf_grid.html">compute react/isurf/grid</A>
 <LI><A HREF = "fix_ave_grid.html">fix ave/grid</A>
 <LI><A HREF = "write_isurf.html">write isurf</A> 
 <LI><A HREF = "write_surf.html">write_surf</A> 
@@ -1228,10 +1229,12 @@ steps.  A per-grid cell value is used to decrement the corner point
 values in each grid cell.  The values can be (1) from a compute such
 as <A HREF = "compute_isurf_grid.html">compute isurf/grid</A> which tallies
 statistics about gas particle collisions with surfaces within each
-grid cell, or (2) from a fix such as <A HREF = "fix_ave_grid.html">fix ave/grid</A>
-which time averages these statistics over many timesteps, or (3)
-generated randomly, which is useful for debugging.  In the future, we
-plan to also allow surface reaction statistics to drive the ablation.
+grid cell.  Or <A HREF = "compute_react_isurf_grid.html">compute
+react/isurf/grid</A> which tallies the
+number of surface reactions that take place.  Or values can be (2)
+from a fix such as <A HREF = "fix_ave_grid.html">fix ave/grid</A> which time
+averages these statistics over many timesteps.  Or they can be (3)
+generated randomly, which is useful for debugging.
 </P>
 <P>The decrement of grid corner point values is done in a manner that
 models recession of the surface elements within in each grid cell.
