@@ -31,7 +31,8 @@ class SurfCollideTransparent : public SurfCollide {
   SurfCollideTransparent(class SPARTA *, int, char **);
   SurfCollideTransparent(class SPARTA *sparta) : SurfCollide(sparta) {}
   virtual ~SurfCollideTransparent() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
+  Particle::OnePart *collide(Particle::OnePart *&, double *, 
+                             double &, int, int &);
 };
 
 }
