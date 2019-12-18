@@ -19,7 +19,7 @@
 #include "math.h"
 #include "stdlib.h"
 #include "string.h"
-#include "surf_collide_supra.h"
+#include "surf_collide_td.h"
 #include "surf.h"
 #include "surf_react.h"
 #include "input.h"
@@ -40,10 +40,10 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollideSupra::SurfCollideSupra(SPARTA *sparta, int narg, char **arg) :
+SurfCollideTd::SurfCollideTd(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
-  if (narg < 4) error->all(FLERR,"Illegal surf_collide supra command");
+  if (narg < 3) error->all(FLERR,"Illegal surf_collide td command");
 
   tstr = NULL;
 
@@ -53,45 +53,38 @@ SurfCollideSupra::SurfCollideSupra(SPARTA *sparta, int narg, char **arg) :
     strcpy(tstr,&arg[2][2]);
   } else {
     twall = atof(arg[2]);
-    if (twall < 0.0) error->all(FLERR,"Illegal surf_collide supra command");
+    if (twall < 0.0) error->all(FLERR,"Illegal surf_collide td command");
   }
-
-  e = atof(arg[3]);
-  if (e < 0.0 || e > 1.0) error->all(FLERR,"Illegal surf_collide supra command");
 
   // optional args
+  barrier_flag = initen_flag = bond_flag = 0;
 
-  tflag = rflag = 0;
-
-  int iarg = 4;
+  int iarg = 3;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"translate") == 0) {
-      if (iarg+4 > narg) error->all(FLERR,"Illegal surf_collide supra command");
-      tflag = 1;
-      vx = atof(arg[iarg+1]);
-      vy = atof(arg[iarg+2]);
-      vz = atof(arg[iarg+3]);
+    if (strcmp(arg[iarg],"barrier") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal surf_collide td command");
+      barrier_flag = 1;
+      barrier_val = atof(arg[iarg+1]);
+      if (barrier_val < 0.0) error->all(FLERR,"Illegal surf_collide td barrier value");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"initenergy") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Illegal surf_collide td command");
+      initen_flag = 1;
+      initen_trans = atof(arg[iarg+1]);
+      initen_rot = atof(arg[iarg+2]);
+      initen_vib = atof(arg[iarg+3]);
+      if (initen_trans < 0.0 || initen_rot < 0.0 || initen_vib < 0.0) error->all(FLERR,"Illegal surf_collide td initenergy value");
       iarg += 4;
-    } else if (strcmp(arg[iarg],"rotate") == 0) {
-      if (iarg+7 > narg) error->all(FLERR,"Illegal surf_collide supra command");
-      rflag = 1;
-      px = atof(arg[iarg+1]);
-      py = atof(arg[iarg+2]);
-      pz = atof(arg[iarg+3]);
-      wx = atof(arg[iarg+4]);
-      wy = atof(arg[iarg+5]);
-      wz = atof(arg[iarg+6]);
-      if (domain->dimension == 2 && pz != 0.0) 
-        error->all(FLERR,"Surf_collide supra rotation invalid for 2d");
-      if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))
-        error->all(FLERR,"Surf_collide supra rotation invalid for 2d");
-      iarg += 7;
-    } else error->all(FLERR,"Illegal surf_collide supra command");
+    } else if (strcmp(arg[iarg],"bond") == 0) {
+      if (iarg+4 > narg) error->all(FLERR,"Illegal surf_collide td command");
+      bond_flag = 1;
+      bond_trans = atof(arg[iarg+1]);
+      bond_rot = atof(arg[iarg+2]);
+      bond_vib = atof(arg[iarg+3]);
+      if (bond_trans < 0.0 || bond_rot < 0.0 || bond_vib < 0.0) error->all(FLERR,"Illegal surf_collide td bond value");
+      iarg += 4;
+    } else error->all(FLERR,"Illegal surf_collide td command");
   }
-
-  if (tflag && rflag) error->all(FLERR,"Illegal surf_collide supra command");
-  if (tflag || rflag) trflag = 1;
-  else trflag = 0;
 
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
@@ -104,7 +97,7 @@ SurfCollideSupra::SurfCollideSupra(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollideSupra::~SurfCollideSupra()
+SurfCollideTd::~SurfCollideTd()
 {
   delete [] tstr;
   delete random;
@@ -112,7 +105,7 @@ SurfCollideSupra::~SurfCollideSupra()
 
 /* ---------------------------------------------------------------------- */
 
-void SurfCollideSupra::init()
+void SurfCollideTd::init()
 {
   SurfCollide::init();
 
@@ -121,9 +114,9 @@ void SurfCollideSupra::init()
   if (tstr) {
     tvar = input->variable->find(tstr);
     if (tvar < 0) 
-      error->all(FLERR,"Surf_collide supra variable name does not exist");
+      error->all(FLERR,"Surf_collide td variable name does not exist");
     if (!input->variable->equal_style(tvar))
-      error->all(FLERR,"Surf_collide supra variable is invalid style");
+      error->all(FLERR,"Surf_collide td variable is invalid style");
   }
 }
 
@@ -136,7 +129,7 @@ void SurfCollideSupra::init()
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
-Particle::OnePart *SurfCollideSupra::
+Particle::OnePart *SurfCollideTd::
 collide(Particle::OnePart *&ip, double *norm, double &, int isr)
 {
   nsingle++;
@@ -154,12 +147,12 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
     if (reaction) surf->nreact_one++;
   }
 
-  // supra reflection for each particle
+  // td reflection for each particle
   // if new particle J created, also need to trigger any fixes
 
-  if (ip) supra(ip,norm);
+  if (ip) td(ip,norm);
   if (jp) {
-    supra(jp,norm);
+    td(jp,norm);
     if (modify->n_add_particle) {
       int j = jp - particle->particles;
       modify->add_particle(j,twall,twall,twall,vstream);
@@ -186,7 +179,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
 }
 
 /* ----------------------------------------------------------------------
-   supra reflection
+   td reflection
    vrm = most probable speed of species, eqns (4.1) and (4.7)
    vperp = velocity component perpendicular to surface along norm, eqn (12.3)
    vtan12 = 2 velocity components tangential to surface
@@ -196,12 +189,12 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
    tangent12 are both unit vectors
 ------------------------------------------------------------------------- */
 
-void SurfCollideSupra::supra(Particle::OnePart *p, double *norm)
+void SurfCollideTd::td(Particle::OnePart *p, double *norm)
 {
   double tangent1[3],tangent2[3];
   Particle::Species *species = particle->species;
   int ispecies = p->ispecies;
-  double beta_un,normalized_distbn_fn;
+  double boltz = update->boltz;
     
   double *v = p->v;
   double dot = MathExtra::dot3(v,norm);
@@ -219,92 +212,45 @@ void SurfCollideSupra::supra(Particle::OnePart *p, double *norm)
 
   MathExtra::norm3(tangent1);
   MathExtra::cross3(norm,tangent1,tangent2);
-    
-  double v_mag = MathExtra::lensq3(v);
-  double tan1 = MathExtra::dot3(v,tangent1);
-  double tan2 = MathExtra::dot3(v,tangent2);
-    
-  double theta_i = acos(dot/v_mag);
-  double psi_i = acos(cos(theta_i)*cos(theta_i));
-  double phi_i = atan2(tan2,tan1);
-    
-  double P = 0;
-  double phi_f,psi_f,cos_beta;
-    
-  while (random->uniform() > P) {
-    phi_f = MY_2PI *  random->uniform();
-    psi_f = acos(random->uniform());
-    cos_beta = cos(psi_f)*cos(psi_i) + sin(psi_f)*sin(psi_i)*cos(phi_f - phi_i);
-    P = (1-e)/(1-e*cos_beta);
-  } 
-    
-  double theta_f = acos(sqrt(cos(psi_f)));
-  double vrm = sqrt(2.0*update->boltz * twall / species[ispecies].mass);
-    
-  // SUPRA model normal velocity
+  
+  double mass = species[ispecies].mass;
+  double E_i = 0.5 * mass * MathExtra::lensq3(v);
+  
+  double E_t = boltz*twall;
+  if (bond_flag) E_t += boltz*bond_trans;
+  if (initen_flag) E_t += E_i*initen_trans;
+  
+  double E_n = E_t;
+  if (barrier_flag) E_n += boltz*barrier_val;
+  
+  double vrm_n = sqrt(2.0*E_n / mass);
+  double vrm_t = sqrt(2.0*E_t / mass);
+  double vperp = vrm_n * sqrt(-log(random->uniform()));
 
-  double vperp = vrm * cos(theta_f);
-    
-  // SUPRA model tangential velocities
+  double theta = MY_2PI * random->uniform();
+  double vtangent = vrm_t * sqrt(-log(random->uniform()));
+  double vtan1 = vtangent * sin(theta);
+  double vtan2 = vtangent * cos(theta);
 
-  double vtan1 = vrm * sin(theta_f) * cos(phi_f);
-  double vtan2 = vrm * sin(theta_f) * sin(phi_f);
-
-  // add in translation or rotation vector if specified
-  // only keep portion of vector tangential to surface element
-
-  if (trflag) {
-    double vxdelta,vydelta,vzdelta;
-    if (tflag) {
-      vxdelta = vx; vydelta = vy; vzdelta = vz;
-      double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
-     
-      if (fabs(dot) > 0.001) {
-        dot /= vrm;
-        do {
-          do {
-            beta_un = (6.0*random->gaussian() - 3.0);
-          } while (beta_un + dot < 0.0);
-          normalized_distbn_fn = 2.0 * (beta_un + dot) /
-            (dot + sqrt(dot*dot + 2.0)) *
-            exp(0.5 + (0.5*dot)*(dot-sqrt(dot*dot + 2.0)) -
-                beta_un*beta_un);
-        } while (normalized_distbn_fn < random->uniform());
-        vperp = beta_un*vrm;
-      }
-
-    } else {
-      double *x = p->x;
-      vxdelta = wy*(x[2]-pz) - wz*(x[1]-py);
-      vydelta = wz*(x[0]-px) - wx*(x[2]-pz);
-      vzdelta = wx*(x[1]-py) - wy*(x[0]-px);
-      double dot = vxdelta*norm[0] + vydelta*norm[1] + vzdelta*norm[2];
-      vxdelta -= dot*norm[0];
-      vydelta -= dot*norm[1];
-      vzdelta -= dot*norm[2];
-    }
-      
-    v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0] + vxdelta;
-    v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1] + vydelta;
-    v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2] + vzdelta;
-
-  // no translation or rotation
-    
-  } else {
-    v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0];
-    v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1];
-    v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
-  }
-
-  p->erot = particle->erot(ispecies,twall,random);
-  p->evib = particle->evib(ispecies,twall,random);
+  v[0] = vperp*norm[0] + vtan1*tangent1[0] + vtan2*tangent2[0];
+  v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1];
+  v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
+  
+  double twall_rot = twall;
+  double twall_vib = twall;
+  
+  if (bond_flag)   {twall_rot += bond_rot; twall_vib += bond_vib;}
+  if (initen_flag) {twall_rot += E_i*initen_rot/boltz; twall_vib += E_i*initen_vib/boltz;}
+  
+  p->erot = particle->erot(ispecies,twall_rot,random); 
+  p->evib = particle->evib(ispecies,twall_vib,random);
 }
 
 /* ----------------------------------------------------------------------
    set current surface temperature
 ------------------------------------------------------------------------- */
 
-void SurfCollideSupra::dynamic()
+void SurfCollideTd::dynamic()
 {
   twall = input->variable->compute_equal(tvar);
 }

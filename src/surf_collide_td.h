@@ -14,21 +14,21 @@
 
 #ifdef SURF_COLLIDE_CLASS
 
-SurfCollideStyle(supra,SurfCollideSupra)
+SurfCollideStyle(td,SurfCollideTd)
 
 #else
 
-#ifndef SPARTA_SURF_COLLIDE_SUPRA_H
-#define SPARTA_SURF_COLLIDE_SUPRA_H
+#ifndef SPARTA_SURF_COLLIDE_TD_H
+#define SPARTA_SURF_COLLIDE_TD_H
 
 #include "surf_collide.h"
 
 namespace SPARTA_NS {
 
-class SurfCollideSupra : public SurfCollide {
+class SurfCollideTd : public SurfCollide {
  public:
-  SurfCollideSupra(class SPARTA *, int, char **);
-  ~SurfCollideSupra();
+  SurfCollideTd(class SPARTA *, int, char **);
+  ~SurfCollideTd();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
   
@@ -36,12 +36,16 @@ class SurfCollideSupra : public SurfCollide {
 
  private:
   double twall;              // surface temperature
-  double e;                  // surface accomodation coeff
+  
+  double barrier_val;
+  double initen_trans, initen_rot, initen_vib;
+  double bond_trans, bond_rot, bond_vib;                   
+  
   double vx,vy,vz;           // translational velocity of surface
   double wx,wy,wz;           // angular velocity of surface
   double px,py,pz;           // point to rotate surface around
-  int tflag,rflag;           // flags for translation and rotation
-  int trflag;                // 1 if either tflag or rflag is set
+  
+  int barrier_flag, initen_flag,bond_flag; // optional flags
 
   char *tstr;                // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
@@ -49,7 +53,7 @@ class SurfCollideSupra : public SurfCollide {
   double vstream[3];
   class RanPark *random;     // RNG for particle reflection
 
-  void supra(Particle::OnePart *, double *);
+  void td(Particle::OnePart *, double *);
 };
 
 }
