@@ -108,19 +108,12 @@ void Grid::surf2grid_cell_algorithm(int outflag)
   if (dim == 3) cut3d = new Cut3d(sparta);
   else cut2d = new Cut2d(sparta,domain->axisymmetric);
 
-  Surf::Line *surf_lines;
-  Surf::Tri *surf_tris;
-  if (surf->distributed) {
-    surf_lines = surf->mylines;
-    surf_tris = surf->mytris;
-  } else {
-    surf_lines = surf->lines;
-    surf_tris = surf->tris;
-  }
-
   // compute overlap of surfs with each cell I own
   // info stored in nsurf,csurfs
   // skip if nsplit <= 0 b/c split cells could exist if restarting
+
+  Surf::Line *lines = surf->lines;
+  Surf::Tri *tris = surf->tris;
 
   int max = 0;
   
@@ -155,12 +148,12 @@ void Grid::surf2grid_cell_algorithm(int outflag)
       if (dim == 2) {
  
         for (i = 0; i < nsurf; i++) {
-          if (!surf_lines[ptr[i]].transparent) nontrans = 1;
+          if (!lines[ptr[i]].transparent) nontrans = 1;
           break;
         }
       } else {
         for (i = 0; i < nsurf; i++) {
-          if (!surf_tris[ptr[i]].transparent) nontrans = 1;
+          if (!tris[ptr[i]].transparent) nontrans = 1;
           break;
         }
       }
@@ -411,6 +404,9 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
       cells[icell].csurfs[cells[icell].nsurf++] = outbuf[m].surfID;
     }
 
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+
     for (icell = 0; icell < nlocal; icell++)
       if (cells[icell].nsurf) {
 
@@ -422,12 +418,12 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 
         if (dim == 2) {
           for (i = 0; i < n; i++) {
-            if (!surf_lines[list[i]].transparent) nontrans = 1;
+            if (!lines[list[i]].transparent) nontrans = 1;
             break;
           }
         } else {
           for (i = 0; i < n; i++) {
-            if (!surf_tris[list[i]].transparent) nontrans = 1;
+            if (!tris[list[i]].transparent) nontrans = 1;
             break;
           }
         }
@@ -523,14 +519,15 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 
     // reset Surf hash to point to surf list in lines/tris
 
+    Surf::Line *lines = surf->lines;
+    Surf::Tri *tris = surf->tris;
+
     if (dim == 2) {
-      Surf::Line *lines = surf->lines;
       for (i = 0; i < nreturn2; i++) {
         surfID = lines[i].id;
         shash[surfID] = i;
       }
     } else {
-      Surf::Tri *tris = surf->tris;
       for (i = 0; i < nreturn2; i++) {
         surfID = tris[i].id;
         shash[surfID] = i;
@@ -558,12 +555,12 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 
         if (dim == 2) {
           for (i = 0; i < n; i++) {
-            if (!surf_lines[list[i]].transparent) nontrans = 1;
+            if (!lines[list[i]].transparent) nontrans = 1;
             break;
           }
         } else {
           for (i = 0; i < n; i++) {
-            if (!surf_tris[list[i]].transparent) nontrans = 1;
+            if (!tris[list[i]].transparent) nontrans = 1;
             break;
           }
         }
