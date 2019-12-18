@@ -40,7 +40,7 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollideTd::SurfCollideTd(SPARTA *sparta, int narg, char **arg) :
+SurfCollideTD::SurfCollideTD(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
   if (narg < 3) error->all(FLERR,"Illegal surf_collide td command");
@@ -57,6 +57,7 @@ SurfCollideTd::SurfCollideTd(SPARTA *sparta, int narg, char **arg) :
   }
 
   // optional args
+
   barrier_flag = initen_flag = bond_flag = 0;
 
   int iarg = 3;
@@ -65,7 +66,8 @@ SurfCollideTd::SurfCollideTd(SPARTA *sparta, int narg, char **arg) :
       if (iarg+2 > narg) error->all(FLERR,"Illegal surf_collide td command");
       barrier_flag = 1;
       barrier_val = atof(arg[iarg+1]);
-      if (barrier_val < 0.0) error->all(FLERR,"Illegal surf_collide td barrier value");
+      if (barrier_val < 0.0) 
+        error->all(FLERR,"Illegal surf_collide td barrier value");
       iarg += 2;
     } else if (strcmp(arg[iarg],"initenergy") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal surf_collide td command");
@@ -73,7 +75,8 @@ SurfCollideTd::SurfCollideTd(SPARTA *sparta, int narg, char **arg) :
       initen_trans = atof(arg[iarg+1]);
       initen_rot = atof(arg[iarg+2]);
       initen_vib = atof(arg[iarg+3]);
-      if (initen_trans < 0.0 || initen_rot < 0.0 || initen_vib < 0.0) error->all(FLERR,"Illegal surf_collide td initenergy value");
+      if (initen_trans < 0.0 || initen_rot < 0.0 || initen_vib < 0.0) 
+        error->all(FLERR,"Illegal surf_collide td initenergy value");
       iarg += 4;
     } else if (strcmp(arg[iarg],"bond") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal surf_collide td command");
@@ -81,7 +84,8 @@ SurfCollideTd::SurfCollideTd(SPARTA *sparta, int narg, char **arg) :
       bond_trans = atof(arg[iarg+1]);
       bond_rot = atof(arg[iarg+2]);
       bond_vib = atof(arg[iarg+3]);
-      if (bond_trans < 0.0 || bond_rot < 0.0 || bond_vib < 0.0) error->all(FLERR,"Illegal surf_collide td bond value");
+      if (bond_trans < 0.0 || bond_rot < 0.0 || bond_vib < 0.0) 
+        error->all(FLERR,"Illegal surf_collide td bond value");
       iarg += 4;
     } else error->all(FLERR,"Illegal surf_collide td command");
   }
@@ -97,7 +101,7 @@ SurfCollideTd::SurfCollideTd(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollideTd::~SurfCollideTd()
+SurfCollideTD::~SurfCollideTD()
 {
   delete [] tstr;
   delete random;
@@ -105,7 +109,7 @@ SurfCollideTd::~SurfCollideTd()
 
 /* ---------------------------------------------------------------------- */
 
-void SurfCollideTd::init()
+void SurfCollideTD::init()
 {
   SurfCollide::init();
 
@@ -129,7 +133,7 @@ void SurfCollideTd::init()
    resets particle(s) to post-collision outward velocity
 ------------------------------------------------------------------------- */
 
-Particle::OnePart *SurfCollideTd::
+Particle::OnePart *SurfCollideTD::
 collide(Particle::OnePart *&ip, double *norm, double &, int isr)
 {
   nsingle++;
@@ -179,7 +183,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
 }
 
 /* ----------------------------------------------------------------------
-   td reflection
+   TD reflection
    vrm = most probable speed of species, eqns (4.1) and (4.7)
    vperp = velocity component perpendicular to surface along norm, eqn (12.3)
    vtan12 = 2 velocity components tangential to surface
@@ -189,7 +193,7 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr)
    tangent12 are both unit vectors
 ------------------------------------------------------------------------- */
 
-void SurfCollideTd::td(Particle::OnePart *p, double *norm)
+void SurfCollideTD::td(Particle::OnePart *p, double *norm)
 {
   double tangent1[3],tangent2[3];
   Particle::Species *species = particle->species;
@@ -239,8 +243,15 @@ void SurfCollideTd::td(Particle::OnePart *p, double *norm)
   double twall_rot = twall;
   double twall_vib = twall;
   
-  if (bond_flag)   {twall_rot += bond_rot; twall_vib += bond_vib;}
-  if (initen_flag) {twall_rot += E_i*initen_rot/boltz; twall_vib += E_i*initen_vib/boltz;}
+  if (bond_flag) {
+    twall_rot += bond_rot;
+    twall_vib += bond_vib;
+  }
+
+  if (initen_flag) {
+    twall_rot += E_i*initen_rot/boltz;
+    twall_vib += E_i*initen_vib/boltz;
+  }
   
   p->erot = particle->erot(ispecies,twall_rot,random); 
   p->evib = particle->evib(ispecies,twall_vib,random);
@@ -250,7 +261,7 @@ void SurfCollideTd::td(Particle::OnePart *p, double *norm)
    set current surface temperature
 ------------------------------------------------------------------------- */
 
-void SurfCollideTd::dynamic()
+void SurfCollideTD::dynamic()
 {
   twall = input->variable->compute_equal(tvar);
 }

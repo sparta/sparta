@@ -63,8 +63,10 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
   if (strcmp(arg[3],"softsphere") == 0) {
       eng_ratio = atof(arg[4]);
       eff_mass = atof(arg[5]);
-      if (eng_ratio > 1.0) error->all(FLERR,"Illegal surf_collide impulsive energy ratio");
-      if (eff_mass <= 0.0) error->all(FLERR,"Illegal surf_collide impulsive effective mass"); 
+      if (eng_ratio > 1.0) 
+        error->all(FLERR,"Illegal surf_collide impulsive energy ratio");
+      if (eff_mass <= 0.0) 
+        error->all(FLERR,"Illegal surf_collide impulsive effective mass"); 
       softsphere_flag = 1;  
     } else if (strcmp(arg[3],"tempvar") == 0) {
       u0_a = atof(arg[4]);
@@ -77,8 +79,10 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
   cos_phi_pow = atof(arg[9]);  
 
   if (var_alpha < 0.0) error->all(FLERR,"Illegal surf_collide impulsive alpha");
-  if (theta_peak < 0.0 || theta_peak > 90.0) error->all(FLERR,"Illegal surf_collide impulsive theta peak");
-  if (cos_theta_pow < 0.0 || cos_phi_pow < 0.0) error->all(FLERR,"Illegal surf_collide impulsive cosine power");
+  if (theta_peak < 0.0 || theta_peak > 90.0) 
+    error->all(FLERR,"Illegal surf_collide impulsive theta peak");
+  if (cos_theta_pow < 0.0 || cos_phi_pow < 0.0) 
+    error->all(FLERR,"Illegal surf_collide impulsive cosine power");
 
   theta_peak *= MY_PI/180; 
   var_alpha_sq = var_alpha * var_alpha;
@@ -108,13 +112,20 @@ SurfCollideImpulsive::SurfCollideImpulsive(SPARTA *sparta, int narg, char **arg)
         error->all(FLERR,"Illegal surf_collide impulsive cosine power2");
       iarg += 2;
     } else if (strcmp(arg[iarg],"intenergy") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal surf_collide impulsive command");
+      if (iarg+3 > narg) 
+        error->all(FLERR,"Illegal surf_collide impulsive command");
       intenergy_flag = 1;
       rot_frac = atof(arg[iarg+1]);
       vib_frac = atof(arg[iarg+2]);
-      if (rot_frac < 0.0 || rot_frac > 1.0 ) error->all(FLERR,"Illegal surf_collide impulsive internal energy rotational fraction");
-      if (vib_frac < 0.0 || vib_frac > 1.0 ) error->all(FLERR,"Illegal surf_collide impulsive internal energy vibrational fraction");
-      if (rot_frac + vib_frac > 1.0) error->all(FLERR,"Illegal surf_collide impulsive internal energy rot-vib fraction sum");
+      if (rot_frac < 0.0 || rot_frac > 1.0 ) 
+        error->all(FLERR,"Illegal surf_collide impulsive internal energy "
+                   "rotational fraction");
+      if (vib_frac < 0.0 || vib_frac > 1.0 ) 
+        error->all(FLERR,"Illegal surf_collide impulsive internal energy "
+                   "vibrational fraction");
+      if (rot_frac + vib_frac > 1.0) 
+        error->all(FLERR,"Illegal surf_collide impulsive internal energy "
+                   "rot-vib fraction sum");
       iarg += 3;      
     } else error->all(FLERR,"Illegal surf_collide impulsive command");
   }
@@ -249,7 +260,8 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
   MathExtra::norm3(tangent1);
   MathExtra::cross3(norm,tangent1,tangent2);
   
-  // Code for computing the final polar (theta) and azimuthal (phi) angles    
+  // compute final polar (theta) and azimuthal (phi) angles
+
   double tan1 = MathExtra::dot3(v,tangent1);
   double tan2 = MathExtra::dot3(v,tangent2); 
   
@@ -263,17 +275,16 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
   double P = 0.0; 
   
   // theta_f calculation
-  while (random->uniform() > P) 
-  {
+
+  while (random->uniform() > P) {
     theta_f = MY_PI2 * random->uniform();
     P = pow(cos( theta_f - theta_peak ),cos_theta_pow) * sin(theta_f); 
-    if (double_flag) 
-    {
-      if (theta_f > theta_peak) P = pow(cos( theta_f - theta_peak ),cos_theta_pow_2) * sin(theta_f);
+    if (double_flag) {
+      if (theta_f > theta_peak) 
+        P = pow(cos( theta_f - theta_peak ),cos_theta_pow_2) * sin(theta_f);
     }
         
-    if (step_flag) 
-    {
+    if (step_flag) {
       double func_step = 0.0;
       double tan_theta = tan(theta_f);
       double cotangent = 1.0/tan_theta;
@@ -283,9 +294,9 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
   }
     
   // phi_f calculations  
+
   P = 0.0; 
-  while (random->uniform() > P) 
-  {
+  while (random->uniform() > P) {
     phi_f = phi_peak + MY_PI * (2*random->uniform() - 1);
     P = pow(cos( 0.5*(phi_f - phi_peak) ),cos_phi_pow);        
   }
@@ -294,30 +305,33 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
   else if (phi_f < -MY_PI) phi_f += MY_2PI;
   
   v_f_avg = 0.0;
-  if (softsphere_flag) 
-  {    
+  if (softsphere_flag) {    
     double mu = species[ispecies].molwt/eff_mass;    
     double cos_khi = cos(MY_PI - theta_i - theta_f);
     double sin_khi_sq = 1 - cos_khi*cos_khi;    
-    
     double dE, E_f_avg, v_f_mag;
     
-    dE = 2*mu/((mu+1)*(mu+1)) * (1 + mu*sin_khi_sq + eng_ratio*(mu+1)/(2*mu) - cos_khi*sqrt(1 - mu*mu*sin_khi_sq - eng_ratio*(mu + 1)));  
+    dE = 2*mu/((mu+1)*(mu+1)) * 
+      (1 + mu*sin_khi_sq + eng_ratio*(mu+1)/(2*mu) - 
+       cos_khi*sqrt(1 - mu*mu*sin_khi_sq - eng_ratio*(mu + 1)));  
     E_f_avg = E_i * (1 - dE);
-    v_f_avg = var_alpha_sq * sqrt(mass/(2*E_f_avg)) * (2*E_f_avg/(mass*var_alpha_sq) - 1);
+    v_f_avg = var_alpha_sq * sqrt(mass/(2*E_f_avg)) * 
+      (2*E_f_avg/(mass*var_alpha_sq) - 1);
+  } else {
+    v_f_avg = u0_a*twall + u0_b;
   }
-  else {v_f_avg = u0_a*twall + u0_b;}
   
   double v_f_max = 0.5 * (v_f_avg + sqrt(v_f_avg*v_f_avg + 6*var_alpha_sq));
-  double f_max = v_f_max*v_f_max*v_f_max * exp(-(v_f_max - v_f_avg) * (v_f_max - v_f_avg)/(var_alpha_sq));  
+  double f_max = v_f_max*v_f_max*v_f_max * 
+    exp(-(v_f_max - v_f_avg) * (v_f_max - v_f_avg)/(var_alpha_sq));  
   
   double v_f_mag;
-  P = 0;
-  while (random->uniform() > P) 
-  {
+  P = 0.0;
+  while (random->uniform() > P) {
     v_f_mag = v_f_max + 3 * var_alpha * ( 2 * random->uniform() - 1 );
-    P = v_f_mag*v_f_mag*v_f_mag/(f_max) * exp(-(v_f_mag - v_f_avg)*(v_f_mag - v_f_avg)/(var_alpha_sq));
-  }    
+    P = v_f_mag*v_f_mag*v_f_mag/(f_max) * 
+      exp(-(v_f_mag - v_f_avg)*(v_f_mag - v_f_avg)/(var_alpha_sq));
+  } 
  
   vperp = v_f_mag * cos(theta_f);
   vtan1 = v_f_mag * sin(theta_f) * cos(phi_f);
@@ -327,50 +341,45 @@ void SurfCollideImpulsive::impulsive(Particle::OnePart *p, double *norm)
   v[1] = vperp*norm[1] + vtan1*tangent1[1] + vtan2*tangent2[1];
   v[2] = vperp*norm[2] + vtan1*tangent1[2] + vtan2*tangent2[2];
 
-
   //p->erot = particle->erot(ispecies,twall,random);
   //p->evib = particle->evib(ispecies,twall,random);
   
-  if (intenergy_flag)
-  {    
+  if (intenergy_flag) {    
     double E_f = 0.5 * mass * v_f_mag * v_f_mag;
     double extra_energy = E_i - E_f; 
     
     // rotational component
-    if (!sparta->collide || sparta->collide->rotstyle == NONE || species[ispecies].rotdof < 2) p->erot = 0.0;
+
+    if (!sparta->collide || sparta->collide->rotstyle == NONE || 
+        species[ispecies].rotdof < 2) p->erot = 0.0;
     else p->erot += rot_frac*extra_energy;
     
     // vibrational component
+
     int vibdof = species[ispecies].vibdof;
     
-    
-    if (!sparta->collide || sparta->collide->vibstyle == NONE || vibdof < 2)  p->evib = 0.0;
-    else 
-    {
+    if (!sparta->collide || sparta->collide->vibstyle == NONE || vibdof < 2) {
+      p->evib = 0.0;
+    } else {
       double *vibtemp = species[ispecies].vibtemp;
-      
       double evib_val = p->evib + vib_frac*extra_energy;      
       
       if (sparta->collide->vibstyle == SMOOTH) p->evib = evib_val;
-      if (sparta->collide->vibstyle == DISCRETE && vibdof==2) 
-      {
+      if (sparta->collide->vibstyle == DISCRETE && vibdof==2) {
         int ivib =  evib_val / (update->boltz*vibtemp[0]);
         p->evib = ivib * update->boltz * vibtemp[0];
-      }
-      else
-      {
+      } else {
         int nvibmode = species[ispecies].nvibmode;
         int *vibdegen = species[ispecies].vibdegen;
-        
         double tot_temp=0.0;
         double evib_sum = 0.0;
         
-        for (int imode=0; imode<nvibmode; imode++) tot_temp += vibtemp[imode]*vibdegen[imode];
-        
         for (int imode=0; imode<nvibmode; imode++) 
-        {
+          tot_temp += vibtemp[imode]*vibdegen[imode];
+        
+        for (int imode=0; imode<nvibmode; imode++) {
           int ivib = evib_val / (update->boltz*tot_temp);
-          evib_sum += ivib * update->boltz * vibtemp[imode]*vibdegen[imode];          
+          evib_sum += ivib * update->boltz * vibtemp[imode]*vibdegen[imode];
         }
         
         p->evib = evib_sum;

@@ -256,7 +256,7 @@ void SurfCollideCLL::cll(Particle::OnePart *p, double *norm)
   double r_1 = sqrt(-acc_n*log(random->uniform()));
   double theta_1 = MY_2PI * random->uniform();
   double dot_norm = dot/vrm * sqrt(1-acc_n);
-  vperp = vrm * sqrt( r_1*r_1 + dot_norm*dot_norm + 2*r_1*dot_norm*cos(theta_1) );
+  vperp = vrm * sqrt(r_1*r_1 + dot_norm*dot_norm + 2*r_1*dot_norm*cos(theta_1));
   
   // CLL model tangential velocities
 

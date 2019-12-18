@@ -14,7 +14,7 @@
 
 #ifdef SURF_COLLIDE_CLASS
 
-SurfCollideStyle(td,SurfCollideTd)
+SurfCollideStyle(td,SurfCollideTD)
 
 #else
 
@@ -25,10 +25,10 @@ SurfCollideStyle(td,SurfCollideTd)
 
 namespace SPARTA_NS {
 
-class SurfCollideTd : public SurfCollide {
+class SurfCollideTD : public SurfCollide {
  public:
-  SurfCollideTd(class SPARTA *, int, char **);
-  ~SurfCollideTd();
+  SurfCollideTD(class SPARTA *, int, char **);
+  ~SurfCollideTD();
   void init();
   Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
   

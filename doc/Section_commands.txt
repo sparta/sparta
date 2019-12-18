@@ -444,9 +444,12 @@ used if SPARTA is built with the "appropriate accelerated
 package"_Section_accelerate.html.  This is indicated by additional
 letters in parenthesis: k = KOKKOS.
 
+"cll"_surf_collide.html,
 "diffuse (k)"_surf_collide.html,
+"impulsive"_surf_collide.html,
 "piston (k)"_surf_collide.html,
 "specular (k)"_surf_collide.html,
+"td"_surf_collide.html,
 "vanish (k)"_surf_collide.html :tb(c=3,ea=c)
 
 :line
