@@ -52,6 +52,8 @@ class SurfCollideTransparentKokkos : public SurfCollideTransparent {
   collide_kokkos(Particle::OnePart *&ip, const double *, double &, int, int&) const
   {
     Kokkos::atomic_fetch_add(&d_nsingle(),1);
+
+    return NULL;
   }
 };
 
