@@ -425,7 +425,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     if (surf->nsc > 0) {
       int nspec,ndiff,nvan,npist,ntrans;
-      nspec = ndiff = nvan = npist = 0;
+      nspec = ndiff = nvan = npist = ntrans = 0;
       for (int n = 0; n < surf->nsc; n++) {
         if (strcmp(surf->sc[n]->style,"specular") == 0) {
           sc_kk_specular_copy[nspec].copy((SurfCollideSpecularKokkos*)(surf->sc[n]));
