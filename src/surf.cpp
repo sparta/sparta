@@ -210,7 +210,7 @@ void Surf::init()
       error->warning(FLERR,"Surfs are distributed with infinite grid cutoff");
 
   // check that every element is assigned to a surf collision model
-  // skip if caller turned off the check, e.g. BalanceGrid
+  // skip if caller turned off the check, e.g. BalanceGrid, b/c too early
 
   int dim = domain->dimension;
   bigint flag,allflag;
@@ -262,7 +262,40 @@ void Surf::init()
               "but invalid collision model",allflag);
       error->all(FLERR,str);
     }
-  }    
+  }
+
+  // checks on transparent surfaces
+  // must be assigned to transparent surf collision model
+  // must not be assigned to any surf reaction model
+
+  if (surf_collision_check) {
+    flag = 0;
+    if (dim == 2) {
+      for (int i = 0; i < nlocal+nghost; i++) {
+        if (!lines[i].transparent) continue;
+        if (!sc[lines[i].isc]->transparent) flag++;
+        if (lines[i].isr >= 0) flag++;
+      }
+    } 
+    if (dim == 3) {
+      for (int i = 0; i < nlocal+nghost; i++) {
+        if (!tris[i].transparent) continue;
+        if (!sc[tris[i].isc]->transparent) flag++;
+        if (tris[i].isr >= 0) flag++;
+      }
+    } 
+
+    if (distributed)
+      MPI_Allreduce(&flag,&allflag,1,MPI_SPARTA_BIGINT,MPI_SUM,world);
+    else allflag = flag;
+
+    if (allflag) {
+      char str[64];
+      sprintf(str,BIGINT_FORMAT " transparent surface elements "
+              "with invalid collision model or reaction model",allflag);
+      error->all(FLERR,str);
+    }
+  }
 
   // initialize surf collision and reaction models
 
@@ -317,6 +350,7 @@ void Surf::add_line(surfint id, int itype, double *p1, double *p2)
   lines[nlocal].p2[0] = p2[0];
   lines[nlocal].p2[1] = p2[1];
   lines[nlocal].p2[2] = 0.0;
+  lines[nlocal].transparent = 0;
   nlocal++;
 }
 
@@ -375,6 +409,7 @@ void Surf::add_line_own(surfint id, int itype, double *p1, double *p2)
   mylines[m].p2[0] = p2[0];
   mylines[m].p2[1] = p2[1];
   mylines[m].p2[2] = 0.0;
+  mylines[m].transparent = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -401,6 +436,7 @@ void Surf::add_line_temporary(surfint id, int itype, double *p1, double *p2)
   tmplines[ntmp].p2[0] = p2[0];
   tmplines[ntmp].p2[1] = p2[1];
   tmplines[ntmp].p2[2] = 0.0;
+  tmplines[ntmp].transparent = 0;
   ntmp++;
 }
 
@@ -432,38 +468,8 @@ void Surf::add_tri(surfint id, int itype, double *p1, double *p2, double *p3)
   tris[nlocal].p3[0] = p3[0];
   tris[nlocal].p3[1] = p3[1];
   tris[nlocal].p3[2] = p3[2];
+  tris[nlocal].transparent = 0;
   nlocal++;
-}
-
-/* ----------------------------------------------------------------------
-   add a triangle to tmptris list
-   called by ReadSurf for mutliple file input
-------------------------------------------------------------------------- */
-
-void Surf::add_tri_temporary(surfint id, int itype, 
-                             double *p1, double *p2, double *p3)
-{
-  if (ntmp == nmaxtmp) {
-    if ((bigint) nmaxtmp + DELTA > MAXSMALLINT)
-      error->one(FLERR,"Surf add_tri_temporary overflowed");
-    nmaxtmp += DELTA;
-    grow_temporary(nmaxtmp-DELTA);
-  }
-
-  tmptris[ntmp].id = id;
-  tmptris[ntmp].type = itype;
-  tmptris[ntmp].mask = 1;
-  tmptris[ntmp].isc = tmptris[ntmp].isr = -1;
-  tmptris[ntmp].p1[0] = p1[0];
-  tmptris[ntmp].p1[1] = p1[1];
-  tmptris[ntmp].p1[2] = p1[2];
-  tmptris[ntmp].p2[0] = p2[0];
-  tmptris[ntmp].p2[1] = p2[1];
-  tmptris[ntmp].p2[2] = p2[2];
-  tmptris[ntmp].p3[0] = p3[0];
-  tmptris[ntmp].p3[1] = p3[1];
-  tmptris[ntmp].p3[2] = p3[2];
-  ntmp++;
 }
 
 /* ----------------------------------------------------------------------
@@ -524,6 +530,7 @@ void Surf::add_tri_own(surfint id, int itype, double *p1, double *p2, double *p3
   mytris[m].p3[0] = p3[0];
   mytris[m].p3[1] = p3[1];
   mytris[m].p3[2] = p3[2];
+  mytris[m].transparent = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -558,8 +565,40 @@ void Surf::add_tri_own_clip(surfint id, int itype,
   mytris[nown].p3[0] = p3[0];
   mytris[nown].p3[1] = p3[1];
   mytris[nown].p3[2] = p3[2];
-
+  mytris[nown].transparent = 0;
   nown++;
+}
+
+/* ----------------------------------------------------------------------
+   add a triangle to tmptris list
+   called by ReadSurf for mutliple file input
+------------------------------------------------------------------------- */
+
+void Surf::add_tri_temporary(surfint id, int itype, 
+                             double *p1, double *p2, double *p3)
+{
+  if (ntmp == nmaxtmp) {
+    if ((bigint) nmaxtmp + DELTA > MAXSMALLINT)
+      error->one(FLERR,"Surf add_tri_temporary overflowed");
+    nmaxtmp += DELTA;
+    grow_temporary(nmaxtmp-DELTA);
+  }
+
+  tmptris[ntmp].id = id;
+  tmptris[ntmp].type = itype;
+  tmptris[ntmp].mask = 1;
+  tmptris[ntmp].isc = tmptris[ntmp].isr = -1;
+  tmptris[ntmp].p1[0] = p1[0];
+  tmptris[ntmp].p1[1] = p1[1];
+  tmptris[ntmp].p1[2] = p1[2];
+  tmptris[ntmp].p2[0] = p2[0];
+  tmptris[ntmp].p2[1] = p2[1];
+  tmptris[ntmp].p2[2] = p2[2];
+  tmptris[ntmp].p3[0] = p3[0];
+  tmptris[ntmp].p3[1] = p3[1];
+  tmptris[ntmp].p3[2] = p3[2];
+  tmptris[ntmp].transparent = 0;
+  ntmp++;
 }
 
 /* ----------------------------------------------------------------------
@@ -584,6 +623,38 @@ void Surf::rehash()
     for (int isurf = 0; isurf < nlocal; isurf++)
       (*hash)[tris[isurf].id] = isurf;
   }
+}
+
+/* ----------------------------------------------------------------------
+   return 1 if all surfs are transparent, else return 0
+   called by set_inout()
+------------------------------------------------------------------------- */
+
+int Surf::all_transparent()
+{
+  // implicit surfs cannot be transparent
+
+  if (implicit) return 0;
+
+  // explicit surfs may be transparent
+
+  int flag = 0;
+  if (domain->dimension == 2) {
+    for (int i = 0; i < nlocal; i++)
+      if (!lines[i].transparent) flag = 1;
+  } 
+  if (domain->dimension == 3) {
+    for (int i = 0; i < nlocal; i++)
+      if (!tris[i].transparent) flag = 1;
+  } 
+  
+  int allflag;
+  if (distributed)
+    MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_SUM,world);
+  else allflag = flag;
+
+  if (allflag) return 0;
+  return 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -884,6 +955,7 @@ void Surf::check_watertight_2d_all()
 
   int ndup = 0;
   for (int i = 0; i < nsurf; i++) {
+    if (lines[i].transparent) continue;
     p1 = lines[i].p1;
     key.pt[0] = p1[0]; key.pt[1] = p1[1];
     if (phash.find(key) == phash.end()) phash[key] = 1;
@@ -1112,6 +1184,7 @@ void Surf::check_watertight_3d_all()
 
   int ndup = 0;
   for (int i = 0; i < nsurf; i++) {
+    if (tris[i].transparent) continue;
     p1 = tris[i].p1;
     p2 = tris[i].p2;
     p3 = tris[i].p3;
@@ -1489,6 +1562,8 @@ void Surf::check_point_near_surf_2d()
     csurfs = cells[icell].csurfs;
     for (i = 0; i < n; i++) {
       line = &lines[csurfs[i]];
+      // skip transparent surf elements
+      if (line->transparent) continue;
       for (j = 0; j < n; j++) {
         if (i == j) continue;
         p1 = lines[csurfs[j]].p1;
@@ -1551,6 +1626,8 @@ void Surf::check_point_near_surf_3d()
     csurfs = cells[icell].csurfs;
     for (i = 0; i < n; i++) {
       tri = &tris[csurfs[i]];
+      // skip transparent surf elements
+      if (tri->transparent) continue;
       for (j = 0; j < n; j++) {
         if (i == j) continue;
         p1 = tris[csurfs[j]].p1;

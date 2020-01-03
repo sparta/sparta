@@ -13,7 +13,7 @@ surf_collide command :h3
 surf_collide ID style args keyword values ... :pre
 
 ID = user-assigned name for the surface collision model :ulb,l
-style = {specular} or {diffuse} or {vanish} :l
+style = {specular} or {diffuse} or {piston} or {transparent} or {vanish} :l
 args = arguments for specific style :l
   {specular} args = none
   {diffuse} args = Tsurf acc
@@ -22,6 +22,7 @@ args = arguments for specific style :l
     acc = accommodation coefficient
   {piston} args = Vwall
     Vwall = velocity of boundary wall (velocity units)
+  {transparent} args = none 
   {vanish} args = none 
   {specular/kk} args = none
   {diffuse/kk} args = Tsurf acc
@@ -44,6 +45,7 @@ values = values for specific keyword :l
 [Examples:]
 
 surf_collide 1 specular
+surf_collide 1 transparent
 surf_collide 1 diffuse 273.15 0.9
 surf_collide heatwall diffuse v_ramp 0.8
 surf_collide heatwall diffuse v_ramp 0.8 translate 5.0 0.0 0.0 :pre
@@ -143,6 +145,19 @@ surface is moving away from the incident particle.  For example, in
 the z-dimension, if the upper box face is assigned {Vwall}, it is
 moving upward.  Similarly if the lower box face is assigned {Vwall},
 it is moving downward.
+
+:line
+
+The {transparent} style simply allows particles to pass through the
+surface without altering the particle properties.
+
+This is useful for tallying flow statistics.  The surface elements
+must have been flagged as transparent when they were read in, via the
+"read_surf"_read_surf.html command and its transparent keyword.  The
+"compute surf"_compute_surf.html command will tally fluxes differently
+for transparent surf elements.  The "Section
+6.15"_Section_howto.html#howto_15 doc page provides an overview of
+transparent surfaces.  See those doc pages for details.
 
 :line
 

@@ -12,21 +12,30 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
-#include "mpi.h"
-#include "ctype.h"
-#include "string.h"
-#include "surf_collide.h"
+#include "math.h"
+#include "surf_collide_transparent_kokkos.h"
 #include "error.h"
 
 using namespace SPARTA_NS;
 
 /* ---------------------------------------------------------------------- */
 
-SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) : 
-  Pointers(sparta)
+SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta, int narg, char **arg) :
+  SurfCollideTransparent(sparta, narg, arg)
+{
+  k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
+  d_nsingle = k_nsingle.view<DeviceType>();
+  h_nsingle = k_nsingle.h_view;
+}
+
+SurfCollideTransparentKokkos::SurfCollideTransparentKokkos(SPARTA *sparta) :
+  SurfCollideTransparent(sparta)
 {
   // ID and style
   // ID must be all alphanumeric chars or underscores
+
+  int narg = 2;
+  const char* arg[] = {"sc_kk_transparent_copy","transparent"};
 
   int n = strlen(arg[0]) + 1;
   id = new char[n];
@@ -41,49 +50,18 @@ SurfCollide::SurfCollide(SPARTA *sparta, int, char **arg) :
   style = new char[n];
   strcpy(style,arg[1]);
 
-  dynamicflag = 0;
-  allowreact = 0;
-  transparent = 0;
   vector_flag = 1;
   size_vector = 2;
     
   nsingle = ntotal = 0;
 
-  copy = copymode = 0;
-}
+  copy = 0;
 
-/* ---------------------------------------------------------------------- */
+  if (narg != 2) error->all(FLERR,"Illegal surf_collide transparent command");
 
-SurfCollide::~SurfCollide()
-{
-  if (copy) return;
+  transparent = 1;
 
-  delete [] id;
-  delete [] style;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void SurfCollide::init()
-{
-  nsingle = ntotal = 0;
-}
-
-/* ---------------------------------------------------------------------- */
-
-void SurfCollide::tally_update()
-{
-  ntotal += nsingle;
-  nsingle = 0;
-}
-
-/* ---------------------------------------------------------------------- */
-
-double SurfCollide::compute_vector(int i)
-{
-  one[0] = nsingle;
-  one[1] = ntotal + nsingle;
-  MPI_Allreduce(one,all,2,MPI_DOUBLE,MPI_SUM,world);
-
-  return all[i];
+  k_nsingle = DAT::tdual_int_scalar("SurfCollide:nsingle");
+  d_nsingle = k_nsingle.view<DeviceType>();
+  h_nsingle = k_nsingle.h_view;
 }

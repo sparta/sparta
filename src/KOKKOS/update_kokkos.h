@@ -25,6 +25,7 @@
 #include "surf_collide_specular_kokkos.h"
 #include "surf_collide_vanish_kokkos.h"
 #include "surf_collide_piston_kokkos.h"
+#include "surf_collide_transparent_kokkos.h"
 #include "compute_boundary_kokkos.h"
 #include "compute_surf_kokkos.h"
 
@@ -131,6 +132,7 @@ class UpdateKokkos : public Update {
   KKCopy<SurfCollideDiffuseKokkos> sc_kk_diffuse_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollideVanishKokkos> sc_kk_vanish_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<SurfCollidePistonKokkos> sc_kk_piston_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
+  KKCopy<SurfCollideTransparentKokkos> sc_kk_transparent_copy[KOKKOS_MAX_SURF_COLL_PER_TYPE];
   KKCopy<ComputeBoundaryKokkos> blist_active_copy[KOKKOS_MAX_BLIST];
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 

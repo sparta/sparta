@@ -76,6 +76,7 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
   sc_kk_diffuse_copy{VAL_2(KKCopy<SurfCollideDiffuseKokkos>(sparta))},
   sc_kk_vanish_copy{VAL_2(KKCopy<SurfCollideVanishKokkos>(sparta))},
   sc_kk_piston_copy{VAL_2(KKCopy<SurfCollidePistonKokkos>(sparta))},
+  sc_kk_transparent_copy{VAL_2(KKCopy<SurfCollideTransparentKokkos>(sparta))},
   blist_active_copy{VAL_2(KKCopy<ComputeBoundaryKokkos>(sparta))},
   slist_active_copy{VAL_2(KKCopy<ComputeSurfKokkos>(sparta))}
 {
@@ -129,6 +130,7 @@ UpdateKokkos::~UpdateKokkos()
     sc_kk_diffuse_copy[i].uncopy();
     sc_kk_vanish_copy[i].uncopy();
     sc_kk_piston_copy[i].uncopy();
+    sc_kk_transparent_copy[i].uncopy();
   }
 
   for (int i=0; i<KOKKOS_MAX_BLIST; i++) {
@@ -422,8 +424,8 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
 
     if (surf->nsc > 0) {
-      int nspec,ndiff,nvan,npist;
-      nspec = ndiff = nvan = npist = 0;
+      int nspec,ndiff,nvan,npist,ntrans;
+      nspec = ndiff = nvan = npist = ntrans = 0;
       for (int n = 0; n < surf->nsc; n++) {
         if (strcmp(surf->sc[n]->style,"specular") == 0) {
           sc_kk_specular_copy[nspec].copy((SurfCollideSpecularKokkos*)(surf->sc[n]));
@@ -446,11 +448,18 @@ template < int DIM, int SURF > void UpdateKokkos::move()
           sc_type_list[n] = 3;
           sc_map[n] = npist;
           npist++;
+        } else if (strcmp(surf->sc[n]->style,"transparent") == 0) {
+          sc_kk_transparent_copy[ntrans].copy((SurfCollideTransparentKokkos*)(surf->sc[n]));
+          sc_type_list[n] = 4;
+          sc_map[n] = ntrans;
+          ntrans++;
         } else {
           error->all(FLERR,"Unknown Kokkos surface collide method");
         }
       }
-      if (nspec > KOKKOS_MAX_SURF_COLL_PER_TYPE || ndiff > KOKKOS_MAX_SURF_COLL_PER_TYPE || nvan > KOKKOS_MAX_SURF_COLL_PER_TYPE)
+      if (nspec > KOKKOS_MAX_SURF_COLL_PER_TYPE || ndiff > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
+          nvan > KOKKOS_MAX_SURF_COLL_PER_TYPE || npist > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
+          ntrans > KOKKOS_MAX_SURF_COLL_PER_TYPE)
         error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
     }
 
@@ -972,6 +981,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
             else if (sc_type == 3)
               jpart = sc_kk_piston_copy[m].obj.
                 collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
+            else if (sc_type == 4)
+              jpart = sc_kk_transparent_copy[m].obj.
+                collide_kokkos(ipart,tri->norm,dtremain,tri->isr,reaction);/////
           if (DIM != 3)
             if (sc_type == 0)
               jpart = sc_kk_specular_copy[m].obj.
@@ -984,6 +996,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
                 collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
             else if (sc_type == 3)
               jpart = sc_kk_piston_copy[m].obj.
+                collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
+            else if (sc_type == 4)
+              jpart = sc_kk_transparent_copy[m].obj.
                 collide_kokkos(ipart,line->norm,dtremain,line->isr,reaction);////
 
           ////Need to error out for now if surface reactions create (or destroy?) particles////
@@ -1175,6 +1190,9 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
             collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
         else if (sc_type == 3)
           jpart = sc_kk_piston_copy[m].obj.
+            collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
+        else if (sc_type == 4)
+          jpart = sc_kk_transparent_copy[m].obj.
             collide_kokkos(ipart,domain_kk_copy.obj.norm[outface],dtremain,domain_kk_copy.obj.surf_react[outface],reaction);/////
 
         if (ipart) {

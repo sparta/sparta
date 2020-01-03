@@ -79,11 +79,16 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   // itally = tally index of isurf
   // grow tally list if needed
 
-  int itally;
+  int itally,transparent;
 
   surfint surfID;
-  if (dim == 2) surfID = d_lines[isurf].id;
-  else surfID = d_tris[isurf].id;
+  if (dim == 2) {
+    surfID = d_lines[isurf].id;
+    transparent = d_lines[isurf].transparent;
+  } else {
+    surfID = d_tris[isurf].id;
+    transparent = d_tris[isurf].transparent;
+  }
 
   int index = d_surf2tally(isurf);
   if (index != -1)
@@ -107,6 +112,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   // particle weight used for all keywords except NUM
   // forcescale factor applied for keywords FX,FY,FZ
   // fluxscale factor applied for all keywords except NUM,FX,FY,FZ
+  // if surf is transparent, all flux tallying is for incident particle only
 
   double vsqpre,ivsqpost,jvsqpost;
   double ierot,jerot,ievib,jevib,iother,jother,otherpre,etot;
@@ -141,8 +147,10 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       break;
     case MFLUX:
       d_array_surf_tally(itally,k++) += origmass;
-      if (ip) d_array_surf_tally(itally,k++) -= imass;
-      if (jp) d_array_surf_tally(itally,k++) -= jmass;
+      if (!transparent) {
+        if (ip) d_array_surf_tally(itally,k++) -= imass;
+        if (jp) d_array_surf_tally(itally,k++) -= jmass;
+      }
       break;
     case FX:
       if (!fflag) {
@@ -246,21 +254,30 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       else ivsqpost = 0.0;
       if (jp) jvsqpost = jmass * MathExtraKokkos::lensq3(jp->v);
       else jvsqpost = 0.0;
-      d_array_surf_tally(itally,k++) -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
+      if (transparent)
+        d_array_surf_tally(itally,k++) += 0.5*mvv2e * vsqpre * fluxscale;
+      else
+        d_array_surf_tally(itally,k++) -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
       break;
     case EROT:
       if (ip) ierot = ip->erot;
       else ierot = 0.0;
       if (jp) jerot = jp->erot;
       else jerot = 0.0;
-      d_array_surf_tally(itally,k++) -= weight * (ierot + jerot - iorig->erot) * fluxscale;
+      if (transparent)
+        d_array_surf_tally(itally,k++) += weight * iorig->erot * fluxscale;
+      else
+        d_array_surf_tally(itally,k++) -= weight * (ierot + jerot - iorig->erot) * fluxscale;
       break;
     case EVIB:
       if (ip) ievib = ip->evib;
       else ievib = 0.0;
       if (jp) jevib = jp->evib;
       else jevib = 0.0;
-      d_array_surf_tally(itally,k++) -= weight * (ievib + jevib - iorig->evib) * fluxscale;
+      if (transparent)
+        d_array_surf_tally(itally,k++) += weight * iorig->evib * fluxscale;
+      else
+        d_array_surf_tally(itally,k++) -= weight * (ievib + jevib - iorig->evib) * fluxscale;
       break;
     case ETOT:
       vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
@@ -273,8 +290,11 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         jvsqpost = jmass * MathExtraKokkos::lensq3(jp->v);
         jother = jp->erot + jp->evib;
       } else jvsqpost = jother = 0.0;
-      etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
-        weight * (iother + jother - otherpre);
+      if (transparent)
+        etot = -0.5*mvv2e*vsqpre - weight*otherpre;
+      else
+        etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
+          weight * (iother + jother - otherpre);
       d_array_surf_tally(itally,k++) -= etot * fluxscale;
       break;
     }

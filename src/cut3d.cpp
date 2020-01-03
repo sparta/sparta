@@ -662,6 +662,7 @@ int Cut3d::split(cellint id_caller, double *lo_caller, double *hi_caller,
 /* ----------------------------------------------------------------------
    add each triangle as vertex and edges to BPG
    add full edge even if outside cell, clipping comes later
+   skip transparent surfs
 ------------------------------------------------------------------------- */
 
 int Cut3d::add_tris()
@@ -684,6 +685,7 @@ int Cut3d::add_tris()
   for (i = 0; i < nsurf; i++) {
     m = surfs[i];
     tri = &tris[m];
+    if (tri->transparent) continue;
     memcpy(p1,tri->p1,3*sizeof(double));
     memcpy(p2,tri->p2,3*sizeof(double));
     memcpy(p3,tri->p3,3*sizeof(double));

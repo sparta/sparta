@@ -97,6 +97,11 @@ contributions from 0, 1, or 2 outgoing particles.  The exception is
 the <I>n</I> and <I>nwt</I> values which simply tally counts of particles
 colliding with the surface element.
 </P>
+<P>If the surface element is transparent, the particle will pass through
+the surface unaltered.  The flux of particle count, mass, or energy to
+the surface can still be tallied by this compute.  See details on
+transparent surface elements below.
+</P>
 <P>Also note that all values for a collision are tallied based on the
 species group of the incident particle.  Quantities associated with
 outgoing particles are part of the same tally, even if they are in
@@ -248,6 +253,32 @@ surface element by particles in the group, such that energy lost by a
 particle is a positive flux.  This is simply the sum of kinetic,
 rotational, and vibrational energies.  Thus the total energy flux is
 the sum of what is computed by the <I>ke</I>, <I>erot</I>, and <I>evib</I> values.
+</P>
+<HR>
+
+<P><B>Transparent surface elements:</B>
+</P>
+<P>This compute will tally information on particles that pass through
+transparent surface elements.  The <A HREF = "Section_howto.html#howto_15">Section
+6.15</A> doc page provides an overview of
+transparent surfaces and how to create them.
+</P>
+<P>The <I>n</I> and <I>nwt</I> value are calculated the same for transparent
+surfaces.  I.e. they are the count and weighted count of particles
+passing through the surface.
+</P>
+<P>The <I>mflux</I>, <I>ke</I>, <I>erot</I>. <I>evib</I>, and <I>etot</I> values are fluxes.  For
+transparent surfaces, they are calculated for the incident particle as
+if they had struck the surface.  The outgoing particle is ignored.
+This means the tally quantity is the flux of particles onto the
+outward face of the surface.  No tallying is done for particles
+hitting the inward face of the surface.  See <A HREF = "Section_howto.html#howto_15">Section
+6.15</A> for how to do tallying in both
+directions.
+</P>
+<P>All the other values are calculated as described above.  This means
+they will be zero, since the incident particle and outgoing particle
+have the same mass and velocity.
 </P>
 <HR>
 
