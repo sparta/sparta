@@ -13,7 +13,8 @@ surf_collide command :h3
 surf_collide ID style args keyword values ... :pre
 
 ID = user-assigned name for the surface collision model :ulb,l
-style = {specular} or {diffuse} or {cll} or {impulsive} or {td} or {piston} or {vanish} :l
+style = {specular} or {diffuse} or {cll} or {impulsive} or {td} or {piston} or {vanish} or {specular/kk} or {diffuse/kk} or {piston/kk} or {vanish/kk} :l
+style = {specular} or {diffuse} or {piston} or {transparent} or {vanish} :l
 args = arguments for specific style :l
   {specular} or {specular/kk} args = none
   {diffuse} or {diffuse/kk} args = Tsurf acc
@@ -32,11 +33,11 @@ args = arguments for specific style :l
             Tsurf can be a variable (see below)
     {model} can be softsphere or tempvar
       {softsphere} args = en_ratio eff_mass
-        en_ratio = fraction of energy lost in the collision
-        eff_mass = effective mass of the surface atom
+        param1 = en_ratio = fraction of energy lost in the collision
+        param2 = eff_mass = effective mass of the surface atom
       {tempvar} args = a1 a0
-        a1 = linear term in the variation with temperature
-        a0 = constant term in the variation with temperature
+        param1 = a1 = linear term in the variation with temperature
+        param2 = a0 = constant term in the variation with temperature
     var = variance of the scattered particle velocity distribution
     theta_peak = peak location of the polar angle distribution
     pol_pow = cosine power represeting the polar angular distribution
@@ -75,11 +76,11 @@ values = values for specific keyword :l
     frac_rot = fraction of lost translational energy going into the rotational mode
     frac_vib = fraction of lost translational energy going into the vibrational mode :pre
 :ule
-  
 
 [Examples:]
 
 surf_collide 1 specular
+surf_collide 1 transparent
 surf_collide 1 diffuse 273.15 0.9
 surf_collide 1 cll 273.15 0.8 0.8 0.5 0.1
 surf_collide 1 cll 273.15 1.0 1.0 0.1 0.1 partial 0.5
@@ -98,7 +99,11 @@ boundaries via the "surf_modify"_surf_modify.html or
 "bound_modify"_bound_modify.html commands.  See "Section
 4.9"_Section_howto.html#howto_9 for more details of how SPARTA defines
 surfaces as collections of geometric elements, triangles in 3d and
-line segments in 2d.
+line segments in 2d.  Chemical reactions can also be part of a
+particle-surface interaction model.  See the
+surf_react"_surf_react.html command for details.  All of the collision
+styles listed here support optional reactions, except the {vanish}
+style.
 
 The ID for a surface collision model is used to identify it in other
 commands.  Each surface collision model ID must be unique.  The ID can
@@ -325,6 +330,19 @@ it is moving downward.
 
 :line
 
+The {transparent} style simply allows particles to pass through the
+surface without altering the particle properties.
+
+This is useful for tallying flow statistics.  The surface elements
+must have been flagged as transparent when they were read in, via the
+"read_surf"_read_surf.html command and its transparent keyword.  The
+"compute surf"_compute_surf.html command will tally fluxes differently
+for transparent surf elements.  The "Section
+6.15"_Section_howto.html#howto_15 doc page provides an overview of
+transparent surfaces.  See those doc pages for details.
+
+:line
+
 The {vanish} style simply deletes any particle which hits the surface.
 
 This is useful if a surface is defined to be an inflow boundary on the
@@ -527,6 +545,7 @@ twice in the same input script (active at the same time).
 :link(Bird94)
 [(Bird94)] G. A. Bird, Molecular Gas Dynamics and the Direct
 Simulation of Gas Flows, Clarendon Press, Oxford (1994).
+<<<<<<< HEAD
 
 :link(Cercignani71)
 [(Cercignani71)] Cercignani C, Lampis M, Kinetic models for
@@ -589,3 +608,5 @@ specular scattering in the H-LiF (001) system, Surface Science, (1974)
 
 
 
+=======
+>>>>>>> master

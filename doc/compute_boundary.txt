@@ -74,11 +74,11 @@ in different species groups.
 
 The results of this compute can be used by different commands in
 different ways.  The values for a single timestep can be output by the
-"stats_style"_dump.html command.
+"stats_style"_stats_style.html command.
 
 The values over many sampling timesteps can be averaged by the "fix
-ave/surf"_fix_ave_surf.html command.  It does its averaging as if the
-particles striking the surface element at each sampling timestep were
+ave/time"_fix_ave_time.html command.  It does its averaging as if the
+particles striking the boundary at each sampling timestep were
 combined together into one large set to compute the formulas below.
 The answer is then divided by the number of sampling timesteps if it
 is not otherwise normalized by the number of particles.  Note that in

@@ -136,8 +136,8 @@ for iz in range(nzspike):
     
     gentris(p1,p2,p4,nzslice)    # lower y triangle
     gentris(p1,p5,p3,nzslice)    # upper y triangle
-    gentris(p1,p3,p2,nzslice)    # lower z triangle
-    gentris(p1,p4,p5,nzslice)    # upper z triangle
+    gentris(p1,p3,p2,nyslice)    # lower z triangle
+    gentris(p1,p4,p5,nyslice)    # upper z triangle
 
 # add triangles to close the surface
 # 4 small, skinny faces on yz perimeter, one large cap at x = 1+delta

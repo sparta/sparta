@@ -39,6 +39,13 @@ class ReactBirdKokkos : public ReactBird {
   virtual void init();
   virtual int attempt(Particle::OnePart *, Particle::OnePart *, 
                       double, double, double, double &, int &) = 0;
+  double extract_tally(int);
+
+  // tallies for reactions
+
+  DAT::tdual_int_1d k_tally_reactions;
+  DAT::t_int_1d d_tally_reactions;
+  DAT::tdual_int_1d k_tally_reactions_all;
 
   struct OneReactionKokkos {
     int active;                    // 1 if reaction is active

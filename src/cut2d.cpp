@@ -498,6 +498,7 @@ int Cut2d::split_face(int id_caller, int, double *onelo, double *onehi)
 
 /* ----------------------------------------------------------------------
    create clines = list of lines clipped to cell
+   skip transparent surfs
 ------------------------------------------------------------------------- */
 
 int Cut2d::build_clines()
@@ -521,6 +522,7 @@ int Cut2d::build_clines()
   for (int i = 0; i < nsurf; i++) {
     m = surfs[i];
     line = &lines[m];
+    if (line->transparent) continue;
     memcpy(p1,line->p1,2*sizeof(double));
     memcpy(p2,line->p2,2*sizeof(double));
 

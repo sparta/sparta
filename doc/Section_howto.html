@@ -28,7 +28,8 @@ SPARTA works.
 6.11 <A HREF = "#howto_11">Using the ambipolar approximation</A><BR>
 6.12 <A HREF = "#howto_12">Using multiple vibrational energy levels</A><BR>
 6.13 <A HREF = "#howto_13">Surface elements: explicit, implicit, distributed</A><BR>
-6.14 <A HREF = "#howto_14">Implicit surface ablation</A> <BR>
+6.14 <A HREF = "#howto_14">Implicit surface ablation</A><BR>
+6.15 <A HREF = "#howto_15">Transparent surface elements</A> <BR>
 
 <P>The example input scripts included in the SPARTA distribution and
 highlighted in <A HREF = "Section_example.html">Section 5</A> of the manual also
@@ -1203,6 +1204,7 @@ relevant commands:
 <LI><A HREF = "read_isurf.html">read isurf</A>
 <LI><A HREF = "fix_ablate.html">fix ablate</A>
 <LI><A HREF = "compute_isurf_grid.html">compute isurf/grid</A>
+<LI><A HREF = "compute_react_isurf_grid.html">compute react/isurf/grid</A>
 <LI><A HREF = "fix_ave_grid.html">fix ave/grid</A>
 <LI><A HREF = "write_isurf.html">write isurf</A> 
 <LI><A HREF = "write_surf.html">write_surf</A> 
@@ -1227,10 +1229,12 @@ steps.  A per-grid cell value is used to decrement the corner point
 values in each grid cell.  The values can be (1) from a compute such
 as <A HREF = "compute_isurf_grid.html">compute isurf/grid</A> which tallies
 statistics about gas particle collisions with surfaces within each
-grid cell, or (2) from a fix such as <A HREF = "fix_ave_grid.html">fix ave/grid</A>
-which time averages these statistics over many timesteps, or (3)
-generated randomly, which is useful for debugging.  In the future, we
-plan to also allow surface reaction statistics to drive the ablation.
+grid cell.  Or <A HREF = "compute_react_isurf_grid.html">compute
+react/isurf/grid</A> which tallies the
+number of surface reactions that take place.  Or values can be (2)
+from a fix such as <A HREF = "fix_ave_grid.html">fix ave/grid</A> which time
+averages these statistics over many timesteps.  Or they can be (3)
+generated randomly, which is useful for debugging.
 </P>
 <P>The decrement of grid corner point values is done in a manner that
 models recession of the surface elements within in each grid cell.
@@ -1261,5 +1265,66 @@ also output implicit surface elements for visualization by tools such
 as ParaView which can read SPARTA surface element files after suitable
 post-processing.  See the <A HREF = "Section_tools.html#paraview">Section tools
 paraview</A> doc page for more details.
+</P>
+<HR>
+
+<A NAME = "howto_15"></A><H4>6.15 Transparent surface elements 
+</H4>
+<P>Transparent surfaces are useful for tallying flow statistics.
+Particles pass through them unaffected.  However the flux of particles
+through those surface elements can be tallied and output.
+</P>
+<P>Transparent surfaces are treated differently than regular surfaces.
+They do not need to be watertight.  E.g. you can define a set of line
+segments that form a straight (or curved) line in 2d.  Or a set of
+triangle that form a plane (or curved surface) in 3d.  You can define
+multiple such surfaces, e.g. multiple disjoint planes, and tally flow
+statistics through each of them.  To tally or sum the statistics
+separately, you may want to assign the triangles in each plane to a
+different surface group via the <A HREF = "read_surf.html">read_surf group</A> or
+<A HREF = "group.html">group surf</A> commands.
+</P>
+<P>Note that for purposes of collisions, transparent surface elements are
+one-sided.  A collision is only tallied for particles passing through
+the outward face of the element.  If you want to tally particles
+passing through in both directions, then define 2 transparent
+surfaces, with opposite orientation.  Again, you may want to put the 2
+surfaces in separate groups.
+</P>
+<P>There also should be no restriction on transparent surfaces
+intersecting each other or intersecting regular surfaces.  Though
+there may be some corner cases we haven't thought about or tested.
+</P>
+<P>These are the relevant commands.  See their doc pages for details:
+</P>
+<UL><LI><A HREF = "read_surf.html">read_surf transparent</A>
+<LI><A HREF = "surf_collide.html">surf_collide transparent</A>
+<LI><A HREF = "compute_surf.html">compute surf</A> 
+</UL>
+<P>The <A HREF = "read_surf.html">read_surf</A> command with its <I>transparent</I> keyword
+is used to flag all the read-in surface elements as transparent.  This
+means they must be in a file separate from regular non-transparent
+elements.
+</P>
+<P>The <A HREF = "surf_collide.html">surf_collide</A> command must be used with its
+<I>transparent</I> model and assigned to all transparent surface elements
+via the <A HREF = "surf_modify.html">surf_modify</A> command.
+</P>
+<P>The <A HREF = "compute_surf.html">compute_surf</A> command can be used to tally the
+count, mass flux, and energy flux of particles that pass through
+transparent surface elements.  These quantities can then be time
+averaged via the <A HREF = "fix_ave_surf.html">fix ave/surf</A> command or output
+via the <A HREF = "dump_surf.html">dump surf</A> command in the usual ways,
+as described in <A HREF = "Section_howto.html#howto_4">Section 6.4</A>.
+</P>
+<P>The examples/circle/in.circle.transparent script shows how to use
+these commands when modeling flow around a 2d circle.  Two additional
+transparent line segments are placed in front of the circle to tally
+particle count and kinetic energy flux in both directions in front of
+the object.  These are defined in the data.plane1 and data.plane2
+files.  The resulting tallies are output with the
+<A HREF = "stats_style.html">stats_style</A> command.  They could also be output
+with a <A HREF = "dump_surf.html">dump surf</A> command for more resolution if the 2
+lines were each defined as multiple line segments.
 </P>
 </HTML>

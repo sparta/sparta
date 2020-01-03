@@ -373,6 +373,8 @@ void IrregularKokkos::exchange_uniform(DAT::t_char_1d d_sendbuf_in, int nbytes_i
   if (sendmax*nbytes > bufmax) {
     bufmax = sendmax*nbytes;
     d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
+  } else if (d_buf.extent(0) < bufmax) {
+    d_buf = DAT::t_char_1d("Irregular:buf",bufmax);
   }
 
   // send each message

@@ -141,6 +141,7 @@ int ReactTCE::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
     //      nothing that is I-specific or J-specific
 
     if (react_prob > random_prob) {
+      tally_reactions[list[i]]++;
       ip->ispecies = r->products[0];
 
       // Previous statment did not destroy the 2nd species (B) if
