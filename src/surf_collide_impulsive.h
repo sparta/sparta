@@ -30,7 +30,8 @@ class SurfCollideImpulsive : public SurfCollide {
   SurfCollideImpulsive(class SPARTA *, int, char **);
   ~SurfCollideImpulsive();
   void init();
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int);
+  Particle::OnePart *collide(Particle::OnePart *&, double *, 
+                             double &, int, int &);
   
   void dynamic();
 
