@@ -144,7 +144,6 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, int &reaction)
 
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
-  int ad_react = 0;
 
   if (isr >= 0) {
     if (modify->n_surf_react) memcpy(&iorig,ip,sizeof(Particle::OnePart));
