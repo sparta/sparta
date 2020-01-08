@@ -54,7 +54,10 @@ Modify::Modify(SPARTA *sparta) : Pointers(sparta)
   ncompute = maxcompute = 0;
   compute = NULL;
 
-  n_pergrid = n_add_particle = n_gas_react = n_surf_react = 0;
+  // n_pergrid needs to be initialized here because ReadSurf calls
+  //  Modify::reset_grid_count without calling Modify::init
+
+  n_pergrid = 0;
 }
 
 /* ---------------------------------------------------------------------- */
