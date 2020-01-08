@@ -369,7 +369,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   nscheck_one = nscollide_one = 0;
   surf->nreact_one = 0;
 
-  if (sparta->kokkos->atomic_reduction) {
+  if (!sparta->kokkos->need_atomics || sparta->kokkos->atomic_reduction) {
     h_ntouch_one() = 0;
     h_nexit_one() = 0;
     h_nboundary_one() = 0;
@@ -510,7 +510,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     int error_flag;
 
-    if (sparta->kokkos->atomic_reduction) {
+    if (!sparta->kokkos->need_atomics || sparta->kokkos->atomic_reduction) {
       ntouch_one = h_ntouch_one();
       nexit_one = h_nexit_one();
       nboundary_one = h_nboundary_one();
