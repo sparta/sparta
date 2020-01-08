@@ -53,6 +53,8 @@ Modify::Modify(SPARTA *sparta) : Pointers(sparta)
 
   ncompute = maxcompute = 0;
   compute = NULL;
+
+  n_pergrid = n_add_particle = n_gas_react = n_surf_react = 0;
 }
 
 /* ---------------------------------------------------------------------- */
