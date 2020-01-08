@@ -489,15 +489,12 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     //k_mlist.sync<SPADeviceType>();
     copymode = 1;
-    if (sparta->kokkos->atomic_reduction) {
-      if (sparta->kokkos->need_atomics) {
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,1> >(pstart,pstop),*this);
-      } else {
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,0> >(pstart,pstop),*this);
-      }
-    } else {
+    if (!sparta->kokkos->need_atomics)
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,0> >(pstart,pstop),*this);
+    else if (sparta->kokkos->atomic_reduction)
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,1> >(pstart,pstop),*this);
+    else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,-1> >(pstart,pstop),*this,reduce);
-    }
     copymode = 0;
 
     Kokkos::deep_copy(h_scalars,d_scalars);
