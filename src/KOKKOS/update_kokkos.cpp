@@ -369,7 +369,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   nscheck_one = nscollide_one = 0;
   surf->nreact_one = 0;
 
-  if (sparta->kokkos->atomic_reduction) {
+  if (!sparta->kokkos->need_atomics || sparta->kokkos->atomic_reduction) {
     h_ntouch_one() = 0;
     h_nexit_one() = 0;
     h_nboundary_one() = 0;
@@ -489,15 +489,12 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     //k_mlist.sync<SPADeviceType>();
     copymode = 1;
-    if (sparta->kokkos->atomic_reduction) {
-      if (sparta->kokkos->need_atomics) {
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,1> >(pstart,pstop),*this);
-      } else {
-        Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,0> >(pstart,pstop),*this);
-      }
-    } else {
+    if (!sparta->kokkos->need_atomics)
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,0> >(pstart,pstop),*this);
+    else if (sparta->kokkos->atomic_reduction)
+      Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,1> >(pstart,pstop),*this);
+    else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,-1> >(pstart,pstop),*this,reduce);
-    }
     copymode = 0;
 
     Kokkos::deep_copy(h_scalars,d_scalars);
@@ -513,7 +510,7 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     int error_flag;
 
-    if (sparta->kokkos->atomic_reduction) {
+    if (!sparta->kokkos->need_atomics || sparta->kokkos->atomic_reduction) {
       ntouch_one = h_ntouch_one();
       nexit_one = h_nexit_one();
       nboundary_one = h_nboundary_one();
@@ -595,9 +592,19 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   nscollide_running += nscollide_one;
   surf->nreact_running += surf->nreact_one;
 
-  if (nsurf_tally)
-    for (int m = 0; m < nsurf_tally; m++)
-      slist_active_copy[m].obj.post_surf_tally();
+  if (nsurf_tally) {
+    for (int m = 0; m < nsurf_tally; m++) {
+      ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[m]);
+      compute_surf_kk->post_surf_tally();
+    }
+  }
+
+  if (nboundary_tally) {
+    for (int m = 0; m < nboundary_tally; m++) {
+      ComputeBoundaryKokkos* compute_boundary_kk = (ComputeBoundaryKokkos*)(blist_active[m]);
+      compute_boundary_kk->post_boundary_tally();
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1216,7 +1223,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (nboundary_tally)
         for (int m = 0; m < nboundary_tally; m++)
           blist_active_copy[m].obj.
-            boundary_tally_kk(outface,bflag,reaction,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
+            boundary_tally_kk<ATOMIC_REDUCTION>(outface,bflag,reaction,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
 
       if (DIM == 1) {
         xnew[0] = x[0] + dtremain*v[0];
