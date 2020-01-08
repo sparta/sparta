@@ -24,7 +24,6 @@ ComputeStyle(surf/kk,ComputeSurfKokkos)
 #include "compute_surf.h"
 #include "kokkos_type.h"
 #include "math_extra_kokkos.h"
-#include <Kokkos_UnorderedMap.hpp>
 
 namespace SPARTA_NS {
 
@@ -93,16 +92,16 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   int index = d_surf2tally(isurf);
   if (index != -1)
     itally = index;
-  else {
-    itally = d_ntally();
-
-    d_surf2tally(isurf) = itally;
-
-    d_tally2surf[itally] = surfID;
+  else { // OK if two threads hit this at the same time
     if (ATOMIC_REDUCTION != 0)
-      Kokkos::atomic_fetch_add(&d_ntally(),1);
-    else
+      itally = Kokkos::atomic_fetch_add(&d_ntally(),1);
+    else {
+      itally = d_ntally();
       d_ntally()++;
+    }
+
+    d_tally2surf(itally) = surfID;
+    d_surf2tally(isurf) = itally;
   }
 
   double fluxscale = d_normflux(isurf);
@@ -137,19 +136,22 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   int nflag = 0;
   int tflag = 0;
 
+  auto v_array_surf_tally = ScatterViewHelper<NeedDup<ATOMIC_REDUCTION,DeviceType>::value,decltype(dup_array_surf_tally),decltype(ndup_array_surf_tally)>::get(dup_array_surf_tally,ndup_array_surf_tally);
+  auto a_array_surf_tally = v_array_surf_tally.template access<AtomicDup<ATOMIC_REDUCTION,DeviceType>::value>();
+
   for (int m = 0; m < nvalue; m++) {
     switch (d_which(m)) {
     case NUM:
-      d_array_surf_tally(itally,k++) += 1.0;
+      a_array_surf_tally(itally,k++) += 1.0;
       break;
     case NUMWT:
-      d_array_surf_tally(itally,k++) += weight;
+      a_array_surf_tally(itally,k++) += weight;
       break;
     case MFLUX:
-      d_array_surf_tally(itally,k++) += origmass;
+      a_array_surf_tally(itally,k++) += origmass;
       if (!transparent) {
-        if (ip) d_array_surf_tally(itally,k++) -= imass;
-        if (jp) d_array_surf_tally(itally,k++) -= jmass;
+        if (ip) a_array_surf_tally(itally,k++) -= imass;
+        if (jp) a_array_surf_tally(itally,k++) -= jmass;
       }
       break;
     case FX:
@@ -159,7 +161,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
       }
-      d_array_surf_tally(itally,k++) -= pdelta_force[0] * nfactor_inverse;
+      a_array_surf_tally(itally,k++) -= pdelta_force[0] * nfactor_inverse;
       break;
     case FY:
       if (!fflag) {
@@ -168,7 +170,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
       }
-      d_array_surf_tally(itally,k++) -= pdelta_force[1] * nfactor_inverse;
+      a_array_surf_tally(itally,k++) -= pdelta_force[1] * nfactor_inverse;
       break;
     case FZ:
       if (!fflag) {
@@ -177,13 +179,13 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta_force);
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta_force);
       }
-      d_array_surf_tally(itally,k++) -= pdelta_force[2] * nfactor_inverse;
+      a_array_surf_tally(itally,k++) -= pdelta_force[2] * nfactor_inverse;
       break;
     case PRESS:
       MathExtraKokkos::scale3(-origmass,vorig,pdelta);
       if (ip) MathExtraKokkos::axpy3(imass,ip->v,pdelta);
       if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
-      d_array_surf_tally(itally,k++) += MathExtraKokkos::dot3(pdelta,norm) * fluxscale;
+      a_array_surf_tally(itally,k++) += MathExtraKokkos::dot3(pdelta,norm) * fluxscale;
       break;
     case XPRESS:
       if (!nflag) {
@@ -193,7 +195,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
       }
-      d_array_surf_tally(itally,k++) -= pnorm[0] * fluxscale;
+      a_array_surf_tally(itally,k++) -= pnorm[0] * fluxscale;
       break;
     case YPRESS:
       if (!nflag) {
@@ -203,7 +205,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
       }
-      d_array_surf_tally(itally,k++) -= pnorm[1] * fluxscale;
+      a_array_surf_tally(itally,k++) -= pnorm[1] * fluxscale;
       break;
     case ZPRESS:
       if (!nflag) {
@@ -213,7 +215,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         if (jp) MathExtraKokkos::axpy3(jmass,jp->v,pdelta);
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
       }
-      d_array_surf_tally(itally,k++) -= pnorm[2] * fluxscale;
+      a_array_surf_tally(itally,k++) -= pnorm[2] * fluxscale;
       break;
     case XSHEAR:
       if (!tflag) {
@@ -224,7 +226,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
         MathExtraKokkos::sub3(pdelta,pnorm,ptang);
       }
-      d_array_surf_tally(itally,k++) -= ptang[0] * fluxscale;
+      a_array_surf_tally(itally,k++) -= ptang[0] * fluxscale;
       break;
     case YSHEAR:
       if (!tflag) {
@@ -235,7 +237,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
         MathExtraKokkos::sub3(pdelta,pnorm,ptang);
       }
-      d_array_surf_tally(itally,k++) -= ptang[1] * fluxscale;
+      a_array_surf_tally(itally,k++) -= ptang[1] * fluxscale;
       break;
     case ZSHEAR:
       if (!tflag) {
@@ -246,7 +248,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
         MathExtraKokkos::scale3(MathExtraKokkos::dot3(pdelta,norm),norm,pnorm);
         MathExtraKokkos::sub3(pdelta,pnorm,ptang);
       }
-      d_array_surf_tally(itally,k++) -= ptang[2] * fluxscale;
+      a_array_surf_tally(itally,k++) -= ptang[2] * fluxscale;
       break;
     case KE:
       vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
@@ -255,9 +257,9 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       if (jp) jvsqpost = jmass * MathExtraKokkos::lensq3(jp->v);
       else jvsqpost = 0.0;
       if (transparent)
-        d_array_surf_tally(itally,k++) += 0.5*mvv2e * vsqpre * fluxscale;
+        a_array_surf_tally(itally,k++) += 0.5*mvv2e * vsqpre * fluxscale;
       else
-        d_array_surf_tally(itally,k++) -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
+        a_array_surf_tally(itally,k++) -= 0.5*mvv2e * (ivsqpost + jvsqpost - vsqpre) * fluxscale;
       break;
     case EROT:
       if (ip) ierot = ip->erot;
@@ -265,9 +267,9 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       if (jp) jerot = jp->erot;
       else jerot = 0.0;
       if (transparent)
-        d_array_surf_tally(itally,k++) += weight * iorig->erot * fluxscale;
+        a_array_surf_tally(itally,k++) += weight * iorig->erot * fluxscale;
       else
-        d_array_surf_tally(itally,k++) -= weight * (ierot + jerot - iorig->erot) * fluxscale;
+        a_array_surf_tally(itally,k++) -= weight * (ierot + jerot - iorig->erot) * fluxscale;
       break;
     case EVIB:
       if (ip) ievib = ip->evib;
@@ -275,9 +277,9 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       if (jp) jevib = jp->evib;
       else jevib = 0.0;
       if (transparent)
-        d_array_surf_tally(itally,k++) += weight * iorig->evib * fluxscale;
+        a_array_surf_tally(itally,k++) += weight * iorig->evib * fluxscale;
       else
-        d_array_surf_tally(itally,k++) -= weight * (ievib + jevib - iorig->evib) * fluxscale;
+        a_array_surf_tally(itally,k++) -= weight * (ievib + jevib - iorig->evib) * fluxscale;
       break;
     case ETOT:
       vsqpre = origmass * MathExtraKokkos::lensq3(vorig);
@@ -295,7 +297,7 @@ void surf_tally_kk(int isurf, int icell, int reaction,
       else
         etot = 0.5*mvv2e*(ivsqpost + jvsqpost - vsqpre) + 
           weight * (iother + jother - otherpre);
-      d_array_surf_tally(itally,k++) -= etot * fluxscale;
+      a_array_surf_tally(itally,k++) -= etot * fluxscale;
       break;
     }
   }
@@ -307,8 +309,13 @@ void surf_tally_kk(int isurf, int icell, int reaction,
   DAT::t_int_scalar d_ntally;
   DAT::t_int_1d d_which;
 
-  DAT::t_float_2d d_array_surf_tally;  // tally values for local surfs
-  DAT::tdual_float_2d k_array_surf_tally;
+  DAT::tdual_float_2d_lr k_array_surf_tally;
+  DAT::t_float_2d_lr d_array_surf_tally;  // tally values for local surfs
+
+  int need_dup;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_array_surf_tally;
+  Kokkos::Experimental::ScatterView<F_FLOAT**, typename DAT::t_float_2d_lr::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_array_surf_tally;
+ 
   DAT::t_surfint_1d d_tally2surf;           // tally2surf[I] = surf ID of Ith tally
   DAT::tdual_surfint_1d k_tally2surf;
   DAT::t_int_1d d_surf2tally;         // using Kokkos::UnorderedMap::insert uses too many registers on GPUs

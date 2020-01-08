@@ -24,6 +24,7 @@
 #include "memory_kokkos.h"
 #include "error.h"
 #include "sparta_masks.h"
+#include "kokkos.h"
 
 using namespace SPARTA_NS;
 
@@ -137,12 +138,23 @@ void ComputeSurfKokkos::pre_surf_tally()
   surf_kk->sync(Device,ALL_MASK);
   d_lines = surf_kk->k_lines.d_view;
   d_tris = surf_kk->k_tris.d_view;
+
+  need_dup = sparta->kokkos->need_dup<DeviceType>();
+  if (need_dup)
+    dup_array_surf_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_array_surf_tally);
+  else
+    ndup_array_surf_tally = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_array_surf_tally);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void ComputeSurfKokkos::post_surf_tally()
 {
+  if (need_dup) {
+    Kokkos::Experimental::contribute(d_array_surf_tally, dup_array_surf_tally);
+    dup_array_surf_tally = decltype(dup_array_surf_tally)(); // free duplicated memory
+  }
+
   k_tally2surf.modify<DeviceType>();
   k_array_surf_tally.modify<DeviceType>();
 }

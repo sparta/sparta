@@ -595,9 +595,19 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   nscollide_running += nscollide_one;
   surf->nreact_running += surf->nreact_one;
 
-  if (nsurf_tally)
-    for (int m = 0; m < nsurf_tally; m++)
-      slist_active_copy[m].obj.post_surf_tally();
+  if (nsurf_tally) {
+    for (int m = 0; m < nsurf_tally; m++) {
+      ComputeSurfKokkos* compute_surf_kk = (ComputeSurfKokkos*)(slist_active[m]);
+      compute_surf_kk->post_surf_tally();
+    }
+  }
+
+  if (nboundary_tally) {
+    for (int m = 0; m < nboundary_tally; m++) {
+      ComputeBoundaryKokkos* compute_boundary_kk = (ComputeBoundaryKokkos*)(blist_active[m]);
+      compute_boundary_kk->post_boundary_tally();
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1216,7 +1226,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
       if (nboundary_tally)
         for (int m = 0; m < nboundary_tally; m++)
           blist_active_copy[m].obj.
-            boundary_tally_kk(outface,bflag,reaction,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
+            boundary_tally_kk<ATOMIC_REDUCTION>(outface,bflag,reaction,&iorig,ipart,jpart,domain_kk_copy.obj.norm[outface]);
 
       if (DIM == 1) {
         xnew[0] = x[0] + dtremain*v[0];
