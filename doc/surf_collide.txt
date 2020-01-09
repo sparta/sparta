@@ -14,7 +14,6 @@ surf_collide ID style args keyword values ... :pre
 
 ID = user-assigned name for the surface collision model :ulb,l
 style = {specular} or {diffuse} or {cll} or {impulsive} or {td} or {piston} or {vanish} or {specular/kk} or {diffuse/kk} or {piston/kk} or {vanish/kk} :l
-style = {specular} or {diffuse} or {piston} or {transparent} or {vanish} :l
 args = arguments for specific style :l
   {specular} or {specular/kk} args = none
   {diffuse} or {diffuse/kk} args = Tsurf acc
@@ -605,8 +604,3 @@ Experiments and simulations, The Journal of Chemical Physics, (1990).
 [(Goodman74)] F. O. Goodman, Determination of characteristic surface
 vibration temperatures by molecular beam scattering: Application to
 specular scattering in the H-LiF (001) system, Surface Science, (1974)
-
-
-
-=======
->>>>>>> master
