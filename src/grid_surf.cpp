@@ -196,7 +196,7 @@ void Grid::surf2grid_surf_algorithm(int subflag, int outflag)
 {
   int i,j,m,n,icell,isurf,nontrans;
   double t1,t2,t3,t4;
-  int *list;
+  surfint *list;
 
   int dim = domain->dimension;
   int distributed = surf->distributed;
