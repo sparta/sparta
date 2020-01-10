@@ -187,10 +187,6 @@ void FixAdapt::end_of_step()
     grid->type_check(0);
   }
 
-  // final update of any per grid fixes for all new child cells
-
-  if (modify->n_pergrid) adapt->add_grid_fixes();
-
   // notify all classes that store per-grid data that grid may have changed
   
   grid->notify_changed();
