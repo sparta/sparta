@@ -73,7 +73,7 @@ class ComputeSurf : public Compute {
   double *normflux;        // normalization factor for each surf element
 
   virtual void init_normflux();
-  void grow_tally();
+  virtual void grow_tally();
 };
 
 }
