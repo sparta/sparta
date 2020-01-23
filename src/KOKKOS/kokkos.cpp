@@ -20,7 +20,6 @@
 #include "sparta.h"
 #include "error.h"
 #include "memory_kokkos.h"
-#include "comm.h"
 
 using namespace SPARTA_NS;
 
@@ -128,7 +127,7 @@ KokkosSPARTA::KokkosSPARTA(SPARTA *sparta, int narg, char **arg) : Pointers(spar
 #endif
 
 #ifndef KOKKOS_ENABLE_SERIAL
-  if (nthreads == 1 && comm->me == 0)
+  if (nthreads == 1 && me == 0)
     error->warning(FLERR,"When using a single thread, the Kokkos Serial backend "
                          "(i.e. Makefile.kokkos_mpi_only) gives better performance "
                          "than the OpenMP backend");
