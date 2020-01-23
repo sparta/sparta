@@ -336,7 +336,10 @@ void ReactBird::init()
     for (int j = 0; j < nspecies; j++) {
       int n = reactions[i][j].n;
       int *list = reactions[i][j].list;
-      reactions[i][j].sp2recomb = &sp2recomb_ij[offset];
+      if (offset < nij*nspecies)
+        reactions[i][j].sp2recomb = &sp2recomb_ij[offset];
+      else
+        reactions[i][j].sp2recomb = NULL; // Needed for Kokkos
       for (int m = 0; m < n; m++) {
         r = &rlist[list[m]];
         if (r->type == RECOMBINATION) {

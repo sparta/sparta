@@ -130,7 +130,7 @@ void ReactBirdKokkos::init()
         h_list(k) = reactions[i][j].list[k];
       Kokkos::deep_copy(k_reactions.h_view(i,j).d_list,h_list);
 
-      if (!recombflag) continue;
+      if (!recombflag || !reactions[i][j].sp2recomb) continue;
 
       k_reactions.h_view(i,j).d_sp2recomb = DAT::t_int_1d("react/bird:sp2recomb",nspecies);
       auto h_sp2recomb = Kokkos::create_mirror_view(k_reactions.h_view(i,j).d_sp2recomb);
