@@ -97,14 +97,11 @@ void ComputeSurfKokkos::init_normflux()
   Kokkos::deep_copy(d_normflux,h_normflux);
 
   // Cannot realloc inside a Kokkos parallel region, so size tally2surf as nsurf 
-
-  memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
-  memoryKK->create_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
+  memoryKK->grow_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
   d_tally2surf = k_tally2surf.d_view;
   d_surf2tally = DAT::t_int_1d("surf:surf2tally",nsurf);
 
-  memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
-  memoryKK->create_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
+  memoryKK->grow_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
   d_array_surf_tally = k_array_surf_tally.d_view;
 }
 
@@ -184,12 +181,10 @@ void ComputeSurfKokkos::grow_tally()
 
   int nsurf = surf->nlocal + surf->nghost;
 
-  memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
-  memoryKK->create_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
+  memoryKK->grow_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
   d_tally2surf = k_tally2surf.d_view;
 
-  memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
-  memoryKK->create_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
+  memoryKK->grow_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
   d_array_surf_tally = k_array_surf_tally.d_view;
 }
 
