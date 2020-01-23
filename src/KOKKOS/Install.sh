@@ -114,10 +114,10 @@ action surf_collide_piston_kokkos.cpp
 action surf_collide_piston_kokkos.h
 action surf_collide_specular_kokkos.cpp
 action surf_collide_specular_kokkos.h
-action surf_collide_vanish_kokkos.cpp
-action surf_collide_vanish_kokkos.h
 action surf_collide_transparent_kokkos.cpp
 action surf_collide_transparent_kokkos.h
+action surf_collide_vanish_kokkos.cpp
+action surf_collide_vanish_kokkos.h
 action surf_kokkos.cpp
 action surf_kokkos.h
 action update_kokkos.cpp

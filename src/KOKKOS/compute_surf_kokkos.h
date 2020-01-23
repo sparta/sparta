@@ -327,6 +327,8 @@ void surf_tally_kk(int isurf, int icell, int reaction,
 
   t_line_1d d_lines;
   t_tri_1d d_tris;
+
+  void grow_tally();
 };
 
 }

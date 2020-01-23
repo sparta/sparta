@@ -174,3 +174,22 @@ int ComputeSurfKokkos::tallyinfo(surfint *&ptr)
   Kokkos::deep_copy(h_ntally,d_ntally);
   return h_ntally();
 }
+
+/* ---------------------------------------------------------------------- */
+
+void ComputeSurfKokkos::grow_tally()
+{
+  // Cannot realloc inside a Kokkos parallel region, so size tally2surf the 
+  //  same as surf2tally
+
+  int nsurf = surf->nlocal + surf->nghost;
+
+  memoryKK->destroy_kokkos(k_tally2surf,tally2surf);
+  memoryKK->create_kokkos(k_tally2surf,tally2surf,nsurf,"surf:tally2surf");
+  d_tally2surf = k_tally2surf.d_view;
+
+  memoryKK->destroy_kokkos(k_array_surf_tally,array_surf_tally);
+  memoryKK->create_kokkos(k_array_surf_tally,array_surf_tally,nsurf,ntotal,"surf:array_surf_tally");
+  d_array_surf_tally = k_array_surf_tally.d_view;
+}
+
