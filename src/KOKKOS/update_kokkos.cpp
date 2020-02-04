@@ -43,6 +43,8 @@
 #include "sparta_masks.h"
 #include "surf_collide_specular_kokkos.h"
 
+static bool setCellMinDistToSurfThisCycle = true;
+
 using namespace SPARTA_NS;
 
 enum{XLO,XHI,YLO,YHI,ZLO,ZHI,INTERIOR};         // same as Domain
@@ -54,6 +56,7 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYLOCAL};         // same as Surf
 
 #define MAXSTUCK 20
 #define EPSPARAM 1.0e-7
+#define BIG 1.0e20
 
 // either set ID or PROC/INDEX, set other to -1
 
@@ -83,32 +86,34 @@ UpdateKokkos::UpdateKokkos(SPARTA *sparta) : Update(sparta),
 
   // use 1D view for scalars to reduce GPU memory operations
 
-  d_scalars = t_int_11("collide:scalars");
-  h_scalars = t_host_int_11("collide:scalars_mirror");
+  d_scalars = t_int_12("collide:scalars");
+  h_scalars = t_host_int_12("collide:scalars_mirror");
 
   d_ncomm_one     = Kokkos::subview(d_scalars,0);
   d_nexit_one     = Kokkos::subview(d_scalars,1);
   d_nboundary_one = Kokkos::subview(d_scalars,2);
   d_nmigrate      = Kokkos::subview(d_scalars,3);
-  d_entryexit     = Kokkos::subview(d_scalars,4);
-  d_ntouch_one    = Kokkos::subview(d_scalars,5);
-  d_nscheck_one   = Kokkos::subview(d_scalars,6);
-  d_nscollide_one = Kokkos::subview(d_scalars,7);
-  d_nreact_one    = Kokkos::subview(d_scalars,8);
-  d_nstuck        = Kokkos::subview(d_scalars,9);
-  d_error_flag    = Kokkos::subview(d_scalars,10);
+  d_nmigrate_opt  = Kokkos::subview(d_scalars,4);
+  d_entryexit     = Kokkos::subview(d_scalars,5);
+  d_ntouch_one    = Kokkos::subview(d_scalars,6);
+  d_nscheck_one   = Kokkos::subview(d_scalars,7);
+  d_nscollide_one = Kokkos::subview(d_scalars,8);
+  d_nreact_one    = Kokkos::subview(d_scalars,9);
+  d_nstuck        = Kokkos::subview(d_scalars,10);
+  d_error_flag    = Kokkos::subview(d_scalars,11);
 
   h_ncomm_one     = Kokkos::subview(h_scalars,0);
   h_nexit_one     = Kokkos::subview(h_scalars,1);
   h_nboundary_one = Kokkos::subview(h_scalars,2);
   h_nmigrate      = Kokkos::subview(h_scalars,3);
-  h_entryexit     = Kokkos::subview(h_scalars,4);
-  h_ntouch_one    = Kokkos::subview(h_scalars,5);
-  h_nscheck_one   = Kokkos::subview(h_scalars,6);
-  h_nscollide_one = Kokkos::subview(h_scalars,7);
-  h_nreact_one    = Kokkos::subview(h_scalars,8);
-  h_nstuck        = Kokkos::subview(h_scalars,9);
-  h_error_flag    = Kokkos::subview(h_scalars,10);
+  h_nmigrate_opt  = Kokkos::subview(h_scalars,4);
+  h_entryexit     = Kokkos::subview(h_scalars,5);
+  h_ntouch_one    = Kokkos::subview(h_scalars,6);
+  h_nscheck_one   = Kokkos::subview(h_scalars,7);
+  h_nscollide_one = Kokkos::subview(h_scalars,8);
+  h_nreact_one    = Kokkos::subview(h_scalars,9);
+  h_nstuck        = Kokkos::subview(h_scalars,10);
+  h_error_flag    = Kokkos::subview(h_scalars,11);
 
   nboundary_tally = 0;
 }
@@ -191,6 +196,23 @@ void UpdateKokkos::init()
   if (moveperturb) perturbflag = 1;
   else perturbflag = 0;
 
+  if (enableOptParticleMoves) {
+    xlo = domain->boxlo[0];
+    ylo = domain->boxlo[1];
+    zlo = domain->boxlo[2];
+    xhi = domain->boxhi[0];
+    yhi = domain->boxhi[1];
+    zhi = domain->boxhi[2];
+    Lx = xhi-xlo;
+    Ly = yhi-ylo;
+    Lz = zhi-zlo;
+    ncx = grid->unx;
+    ncy = grid->uny;
+    ncz = grid->unz;
+    dx = Lx/ncx;
+    dy = Ly/ncy;
+    dz = Lz/ncz;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -228,6 +250,7 @@ void UpdateKokkos::setup()
       grid_kk->wrap_kokkos_graphs();
     }
   }
+  hash_kk = grid_kk->hash_kk;
 
   Update::setup(); // must come after prewrap since computes are called by setup()
 
@@ -257,7 +280,7 @@ void UpdateKokkos::run(int nsteps)
   if (grid->cellweightflag) cellweightflag = 1;
 
   // loop over timesteps
-
+  int oldmaxlevel = grid->maxlevel;
   for (int i = 0; i < nsteps; i++) {
 
     ntimestep++;
@@ -279,8 +302,24 @@ void UpdateKokkos::run(int nsteps)
 
     // move particles
 
+    if (grid->uniform && enableOptParticleMoves) {
+      optParticleMovesThisCycle = true;
+      if (i==0)
+	setCellMinDistToSurfThisCycle = true;
+      else {
+	if (grid->maxlevel != oldmaxlevel)
+	  setCellMinDistToSurfThisCycle = true;
+	else
+	  setCellMinDistToSurfThisCycle = false;
+      }
+    }
+    else {
+      optParticleMovesThisCycle = false;
+      setCellMinDistToSurfThisCycle = false;
+    }
     if (cellweightflag) particle->pre_weight();
     (this->*moveptr)();
+    oldmaxlevel = grid->maxlevel;
     timer->stamp(TIME_MOVE);
 
     // communicate particles
@@ -322,10 +361,7 @@ void UpdateKokkos::run(int nsteps)
     }
   }
   particle_kk->sync(Host,ALL_MASK);
-
 }
-
-//make randomread versions of d_particles?
 
 /* ----------------------------------------------------------------------
    advect particles thru grid
@@ -336,30 +372,531 @@ void UpdateKokkos::run(int nsteps)
 
 template < int DIM, int SURF > void UpdateKokkos::move()
 {
-  //bool hitflag;
-  //int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
-  //int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
-  //int pstart,pstop,entryexit,any_entryexit;
-  //cellint *neigh;
-  //double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
-  //double xnew[3],xhold[3],xc[3],vc[3],minxc[3],minvc[3];
-  //double *x,*v,*lo,*hi;
-  //Particle::OnePart iorig;
-  //Particle::OnePart *particles;
-  //Particle::OnePart *ipart,*jpart;
+  ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
+  d_particles = particle_kk->k_particles.d_view;
+  GridKokkos* grid_kk = ((GridKokkos*)grid);
+  d_cells = grid_kk->k_cells.d_view;
+  particle_kk->sync(Device,PARTICLE_MASK);
+  grid_kk->sync(Device,CELL_MASK);
+  grid_kk_copy.copy(grid_kk);
+  domain_kk_copy.copy((DomainKokkos*)domain);
+  if (SURF) {
+    SurfKokkos* surf_kk = ((SurfKokkos*)surf);
+    surf_kk->sync(Device,ALL_MASK);
+    d_lines = surf_kk->k_lines.d_view;
+    d_tris = surf_kk->k_tris.d_view;
+    d_csurfs = grid_kk->d_csurfs;
+  }
+  dt = update->dt;
 
-  int pstart,pstop,entryexit,any_entryexit;
+  if (setCellMinDistToSurfThisCycle)
+    setCellMinDistToSurfDriver<DIM,SURF>();
+
+  // set particle opt move flags even if optimized moves are not activated
+  // for this cycle.  This handles the scenario where AMR refinement requires
+  // standard particle moves and the particle opt move flags need to be reset
+  // to false.
+  if (enableOptParticleMoves) {
+    int nlocal = particle->nlocal;
+    copymode = 1;
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagSetParticleOptMoveFlags<DIM,SURF> >(0,nlocal),*this);
+    DeviceType::fence();
+    copymode = 0;
+  }
 
   // extend migration list if necessary
-
   int nlocal = particle->nlocal;
   int maxlocal = particle->maxlocal;
-
   if (nlocal > maxmigrate) {
     maxmigrate = maxlocal;
     memoryKK->destroy_kokkos(k_mlist,mlist);
     memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
   }
+  h_nmigrate() = 0;
+  h_entryexit() = 0;
+  nmigrate = 0;
+
+  // optimized particle moves
+  // note:  this must be called before standardMove so that optimized move
+  //        particles can be flagged for a standard move if they are moving
+  //        outside the ghost halo.
+  if (optParticleMovesThisCycle)
+    optSingleStepMove<DIM>();
+
+  // standard particle moves
+  standardMove<DIM,SURF>();
+
+  particle->sorted = 0;
+  particle_kk->sorted_kk = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+template <int DIM, int SURF>
+void UpdateKokkos::setCellMinDistToSurfDriver() {
+  int nlocal = grid->nlocal;
+  copymode = 1;
+  Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagSetCellMinDistToSurf<DIM,SURF> >(0,nlocal),*this);
+  DeviceType::fence();
+  if (grid->nsplit > 0) {
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagCheckCellMinDistToSplitCell<DIM,SURF> >(0,nlocal),*this);
+    DeviceType::fence();
+  }
+  copymode = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+template <int DIM, int SURF>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagSetCellMinDistToSurf<DIM,SURF>, const int &i) const {
+
+  d_cells[i].minDistToSurf = BIG;
+  if (SURF) {
+    if (d_cells[i].nsurf > 0) {
+      d_cells[i].minDistToSurf = 0.0;
+      return;
+    }
+    else {
+
+      // cell surface lines
+      double S[4][2][3];
+      setCellSurfaceFaces2D(S,i);
+      double minDistToSurf = BIG;
+      double P[3],Q[3];
+      double T[2][3];
+      double VEC[3];
+      double Sv[3],Tv[3];
+      double V[3];
+      Surf::Line *line;
+      for (bigint isurf=0; isurf<d_lines.size(); ++isurf) {
+
+	line = &d_lines[isurf];
+	T[0][0] = line->p1[0];
+	T[0][1] = line->p1[1];
+	T[0][2] = 0.0;
+	T[1][0] = line->p2[0];
+	T[1][1] = line->p2[1];
+	T[1][2] = 0.0;
+
+	for (int cline = 0; cline < 4; ++cline) {
+	  GeometryKokkos_PQP::VmV(Sv,S[cline][1],S[cline][0]);
+	  GeometryKokkos_PQP::VmV(Tv,T[1],T[0]);
+	  GeometryKokkos_PQP::SegPoints_kokkos(VEC,P,Q,S[cline][0],Sv,T[0],Tv);
+	  GeometryKokkos_PQP::VmV(V,Q,P);
+	  double dist = sqrt(GeometryKokkos_PQP::VdotV(V,V));
+	  minDistToSurf = (dist < minDistToSurf) ? dist : minDistToSurf;
+	}
+      }
+      d_cells[i].minDistToSurf = minDistToSurf;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+// specialization for DIM=3
+template <int SURF>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagSetCellMinDistToSurf<3,SURF>, const int &i) const {
+
+  d_cells[i].minDistToSurf = BIG;
+  if (SURF) {
+    if (d_cells[i].nsurf > 0) {
+      d_cells[i].minDistToSurf = 0.0;
+      return;
+    }
+    else {
+      double S[12][3][3];
+      setCellSurfaceFaces3D(S,i);
+      double minDistToSurf = BIG;
+      double P[3],Q[3];
+      double T[3][3];
+      Surf::Tri *tri;
+      for (bigint isurf=0; isurf<d_tris.size(); ++isurf) {
+
+	tri = &d_tris[isurf];
+	T[0][0] = tri->p1[0];
+	T[0][1] = tri->p1[1];
+	T[0][2] = tri->p1[2];
+	T[1][0] = tri->p2[0];
+	T[1][1] = tri->p2[1];
+	T[1][2] = tri->p2[2];
+	T[2][0] = tri->p3[0];
+	T[2][1] = tri->p3[1];
+	T[2][2] = tri->p3[2];
+
+	for (int ctri = 0; ctri < 12; ++ctri) {
+	  double dist = GeometryKokkos_PQP::TriDist_kokkos(P,Q,S[ctri],T);
+	  minDistToSurf = (dist < minDistToSurf) ? dist : minDistToSurf;
+	}
+      }
+      d_cells[i].minDistToSurf = minDistToSurf;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::setCellSurfaceFaces2D(double S[4][2][3], const int &i) const {
+
+  // left vertical line segment
+  S[0][0][0] = d_cells[i].lo[0];
+  S[0][0][1] = d_cells[i].lo[1];
+  S[0][0][2] = 0.0;
+
+  S[0][1][0] = d_cells[i].lo[0];
+  S[0][1][1] = d_cells[i].hi[1];
+  S[0][1][2] = 0.0;
+
+  // right vertical line segment
+  S[1][0][0] = d_cells[i].hi[0];
+  S[1][0][1] = d_cells[i].lo[1];
+  S[1][0][2] = 0.0;
+
+  S[1][1][0] = d_cells[i].hi[0];
+  S[1][1][1] = d_cells[i].hi[1];
+  S[1][1][2] = 0.0;
+
+  // bottom horizontal line segment
+  S[2][0][0] = d_cells[i].lo[0];
+  S[2][0][1] = d_cells[i].lo[1];
+  S[2][0][2] = 0.0;
+
+  S[2][1][0] = d_cells[i].hi[0];
+  S[2][1][1] = d_cells[i].lo[1];
+  S[2][1][2] = 0.0;
+
+  // top horizontal line segment
+  S[3][0][0] = d_cells[i].lo[0];
+  S[3][0][1] = d_cells[i].hi[1];
+  S[3][0][2] = 0.0;
+
+  S[3][1][0] = d_cells[i].hi[0];
+  S[3][1][1] = d_cells[i].hi[1];
+  S[3][1][2] = 0.0;
+}
+
+/* ---------------------------------------------------------------------- */
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::setCellSurfaceFaces3D(double S[12][3][3], const int &i) const {
+
+  // front xy face triangle #1
+  S[0][0][0] = d_cells[i].lo[0];
+  S[0][0][1] = d_cells[i].lo[1];
+  S[0][0][2] = d_cells[i].hi[2];
+
+  S[0][1][0] = d_cells[i].hi[0];
+  S[0][1][1] = d_cells[i].lo[1];
+  S[0][1][2] = d_cells[i].hi[2];
+
+  S[0][2][0] = d_cells[i].lo[0];
+  S[0][2][1] = d_cells[i].hi[1];
+  S[0][2][2] = d_cells[i].hi[2];
+
+  // back xy face triangle #1
+  S[1][0][0] = d_cells[i].lo[0];
+  S[1][0][1] = d_cells[i].lo[1];
+  S[1][0][2] = d_cells[i].lo[2];
+
+  S[1][1][0] = d_cells[i].hi[0];
+  S[1][1][1] = d_cells[i].lo[1];
+  S[1][1][2] = d_cells[i].lo[2];
+
+  S[1][2][0] = d_cells[i].lo[0];
+  S[1][2][1] = d_cells[i].hi[1];
+  S[1][2][2] = d_cells[i].lo[2];
+
+  // front xy face triangle #2
+  S[2][0][0] = d_cells[i].lo[0];
+  S[2][0][1] = d_cells[i].hi[1];
+  S[2][0][2] = d_cells[i].hi[2];
+
+  S[2][1][0] = d_cells[i].hi[0];
+  S[2][1][1] = d_cells[i].lo[1];
+  S[2][1][2] = d_cells[i].hi[2];
+
+  S[2][2][0] = d_cells[i].hi[0];
+  S[2][2][1] = d_cells[i].hi[1];
+  S[2][2][2] = d_cells[i].hi[2];
+
+  // back xy face triangle #2
+  S[3][0][0] = d_cells[i].lo[0];
+  S[3][0][1] = d_cells[i].hi[1];
+  S[3][0][2] = d_cells[i].lo[2];
+
+  S[3][1][0] = d_cells[i].hi[0];
+  S[3][1][1] = d_cells[i].lo[1];
+  S[3][1][2] = d_cells[i].lo[2];
+
+  S[3][2][0] = d_cells[i].hi[0];
+  S[3][2][1] = d_cells[i].hi[1];
+  S[3][2][2] = d_cells[i].lo[2];
+
+  // front yz face triangle #1
+  S[4][0][0] = d_cells[i].hi[0];
+  S[4][0][1] = d_cells[i].lo[1];
+  S[4][0][2] = d_cells[i].hi[2];
+
+  S[4][1][0] = d_cells[i].hi[0];
+  S[4][1][1] = d_cells[i].lo[1];
+  S[4][1][2] = d_cells[i].lo[2];
+
+  S[4][2][0] = d_cells[i].hi[0];
+  S[4][2][1] = d_cells[i].hi[1];
+  S[4][2][2] = d_cells[i].hi[2];
+
+  // back yz face triangle #1
+  S[5][0][0] = d_cells[i].lo[0];
+  S[5][0][1] = d_cells[i].lo[1];
+  S[5][0][2] = d_cells[i].hi[2];
+
+  S[5][1][0] = d_cells[i].lo[0];
+  S[5][1][1] = d_cells[i].lo[1];
+  S[5][1][2] = d_cells[i].lo[2];
+
+  S[5][2][0] = d_cells[i].lo[0];
+  S[5][2][1] = d_cells[i].hi[1];
+  S[5][2][2] = d_cells[i].hi[2];
+
+  // front yz face triangle #2
+  S[6][0][0] = d_cells[i].hi[0];
+  S[6][0][1] = d_cells[i].hi[1];
+  S[6][0][2] = d_cells[i].hi[2];
+
+  S[6][1][0] = d_cells[i].hi[0];
+  S[6][1][1] = d_cells[i].lo[1];
+  S[6][1][2] = d_cells[i].lo[2];
+
+  S[6][2][0] = d_cells[i].hi[0];
+  S[6][2][1] = d_cells[i].hi[1];
+  S[6][2][2] = d_cells[i].lo[2];
+
+  // back yz face triangle #2
+  S[7][0][0] = d_cells[i].lo[0];
+  S[7][0][1] = d_cells[i].hi[1];
+  S[7][0][2] = d_cells[i].hi[2];
+
+  S[7][1][0] = d_cells[i].lo[0];
+  S[7][1][1] = d_cells[i].lo[1];
+  S[7][1][2] = d_cells[i].lo[2];
+
+  S[7][2][0] = d_cells[i].lo[0];
+  S[7][2][1] = d_cells[i].hi[1];
+  S[7][2][2] = d_cells[i].lo[2];
+
+  // front xz face triangle #1
+  S[8][0][0] = d_cells[i].lo[0];
+  S[8][0][1] = d_cells[i].hi[1];
+  S[8][0][2] = d_cells[i].hi[2];
+
+  S[8][1][0] = d_cells[i].hi[0];
+  S[8][1][1] = d_cells[i].hi[1];
+  S[8][1][2] = d_cells[i].hi[2];
+
+  S[8][2][0] = d_cells[i].lo[0];
+  S[8][2][1] = d_cells[i].hi[1];
+  S[8][2][2] = d_cells[i].lo[2];
+
+  // back xz face triangle #1
+  S[9][0][0] = d_cells[i].lo[0];
+  S[9][0][1] = d_cells[i].lo[1];
+  S[9][0][2] = d_cells[i].hi[2];
+
+  S[9][1][0] = d_cells[i].hi[0];
+  S[9][1][1] = d_cells[i].lo[1];
+  S[9][1][2] = d_cells[i].hi[2];
+
+  S[9][2][0] = d_cells[i].lo[0];
+  S[9][2][1] = d_cells[i].lo[1];
+  S[9][2][2] = d_cells[i].lo[2];
+
+  // front xz face triangle #2
+  S[10][0][0] = d_cells[i].lo[0];
+  S[10][0][1] = d_cells[i].hi[1];
+  S[10][0][2] = d_cells[i].lo[2];
+
+  S[10][1][0] = d_cells[i].hi[0];
+  S[10][1][1] = d_cells[i].hi[1];
+  S[10][1][2] = d_cells[i].hi[2];
+
+  S[10][2][0] = d_cells[i].hi[0];
+  S[10][2][1] = d_cells[i].hi[1];
+  S[10][2][2] = d_cells[i].lo[2];
+
+  // back xz face triangle #2
+  S[11][0][0] = d_cells[i].lo[0];
+  S[11][0][1] = d_cells[i].lo[1];
+  S[11][0][2] = d_cells[i].lo[2];
+
+  S[11][1][0] = d_cells[i].hi[0];
+  S[11][1][1] = d_cells[i].lo[1];
+  S[11][1][2] = d_cells[i].hi[2];
+
+  S[11][2][0] = d_cells[i].hi[0];
+  S[11][2][1] = d_cells[i].lo[1];
+  S[11][2][2] = d_cells[i].lo[2];
+}
+
+/* ---------------------------------------------------------------------- */
+template <int DIM, int SURF>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagCheckCellMinDistToSplitCell<DIM,SURF>, const int &i) const {
+
+  double sA[4][2][3];
+  double sB[4][2][3];
+  double P[3],Q[3];
+  double VEC[3];
+  double Sv[3],Tv[3];
+  double V[3];
+  double minDistToSurf = d_cells[i].minDistToSurf;
+
+  setCellSurfaceFaces2D(sA, i);
+  for (int cB = 0; cB < grid_kk_copy.obj.nlocal + grid_kk_copy.obj.nghost; ++cB) {
+    if (cB != i) {
+      if (d_cells[cB].nsplit > 1) {
+	setCellSurfaceFaces2D(sB, cB);
+	for (int clineA = 0; clineA < 4; ++clineA) {
+	  for (int clineB = 0; clineB < 4; ++clineB) {
+	    GeometryKokkos_PQP::VmV(Sv,sA[clineA][1],sA[clineA][0]);
+	    GeometryKokkos_PQP::VmV(Tv,sB[clineB][1],sB[clineB][0]);
+	    GeometryKokkos_PQP::SegPoints_kokkos(VEC,P,Q,sA[clineA][0],Sv,sB[clineB][0],Tv);
+	    GeometryKokkos_PQP::VmV(V,Q,P);
+	    double dist = sqrt(GeometryKokkos_PQP::VdotV(V,V));
+	    minDistToSurf = (dist < minDistToSurf) ? dist : minDistToSurf;
+	  }
+	}
+      }
+    }
+  }
+  d_cells[i].minDistToSurf = minDistToSurf;
+}
+
+/* -----specialization for DIM=3-------------------------------------------------------------- */
+template <int SURF>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagCheckCellMinDistToSplitCell<3,SURF>, const int &i) const {
+
+  double sA[12][3][3];
+  double sB[12][3][3];
+  double P[3],Q[3];
+  double minDistToSurf = d_cells[i].minDistToSurf;
+
+  setCellSurfaceFaces3D(sA, i);
+  for (int cB = 0; cB < grid_kk_copy.obj.nlocal + grid_kk_copy.obj.nghost; ++cB) {
+    if (cB != i) {
+      if (d_cells[cB].nsplit > 1) {
+	setCellSurfaceFaces3D(sB, cB);
+	for (int ctriA = 0; ctriA < 12; ++ctriA) {
+	  for (int ctriB = 0; ctriB < 12; ++ctriB) {
+	    double dist = GeometryKokkos_PQP::TriDist_kokkos(P,Q,sA[ctriA],sB[ctriB]);
+	    minDistToSurf = (dist < minDistToSurf) ? dist : minDistToSurf;
+	  }
+	}
+      }
+    }
+  }
+  d_cells[i].minDistToSurf = minDistToSurf;
+}
+
+/* ---------------------------------------------------------------------- */
+template <int DIM, int SURF>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagSetParticleOptMoveFlags<DIM,SURF>, const int &i) const {
+
+  Particle::OnePart &particle_i = d_particles[i];
+  if (!optParticleMovesThisCycle) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+
+  double xnew[2];
+  double *x,*v;
+  x = particle_i.x;
+  v = particle_i.v;
+
+  double distx = dt*v[0];
+  double disty = dt*v[1];
+
+  xnew[0] = x[0] + distx;
+  xnew[1] = x[1] + disty;
+
+  if (xnew[0] < domain_kk_copy.obj.boxlo[0] || xnew[0] > domain_kk_copy.obj.boxhi[0]) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+  if (xnew[1] < domain_kk_copy.obj.boxlo[1] || xnew[1] > domain_kk_copy.obj.boxhi[1]) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+
+  if (SURF) {
+    double dist = sqrt(distx*distx + disty*disty);
+    int icell = particle_i.icell;
+    if (dist >= d_cells[icell].minDistToSurf) {
+      particle_i.optMoveFlag = false;
+      return;
+    }
+  }
+  particle_i.optMoveFlag = true;
+}
+
+/* ---------------------------------------------------------------------- */
+// specialization for DIM=3
+template <int SURF>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagSetParticleOptMoveFlags<3,SURF>, const int &i) const {
+  Particle::OnePart &particle_i = d_particles[i];
+  if (!optParticleMovesThisCycle) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+
+  double xnew[3];
+  double *x,*v;
+  x = particle_i.x;
+  v = particle_i.v;
+
+  double distx = dt*v[0];
+  double disty = dt*v[1];
+  double distz = dt*v[2];
+
+  xnew[0] = x[0] + distx;
+  xnew[1] = x[1] + disty;
+  xnew[2] = x[2] + distz;
+
+  if (xnew[0] < domain_kk_copy.obj.boxlo[0] || xnew[0] > domain_kk_copy.obj.boxhi[0]) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+  if (xnew[1] < domain_kk_copy.obj.boxlo[1] || xnew[1] > domain_kk_copy.obj.boxhi[1]) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+  if (xnew[2] < domain_kk_copy.obj.boxlo[2] || xnew[2] > domain_kk_copy.obj.boxhi[2]) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+
+  if (SURF) {
+    double dist = sqrt(distx*distx + disty*disty + distz*distz);
+    int icell = particle_i.icell;
+    if (dist >= d_cells[icell].minDistToSurf) {
+      particle_i.optMoveFlag = false;
+      return;
+    }
+  }
+  particle_i.optMoveFlag = true;
+}
+
+/* ----------------------------------------------------------------------
+   advect particles thru grid
+   DIM = 2/3 for 2d/3d, 1 for 2d axisymmetric
+   SURF = 0/1 for no surfs or surfs
+   use multiple iterations of move/comm if necessary
+------------------------------------------------------------------------- */
+
+template < int DIM, int SURF > void UpdateKokkos::standardMove() {
+  int pstart,pstop,entryexit,any_entryexit;
+
+  int nlocal = particle->nlocal;
 
   // counters
 
@@ -385,8 +922,8 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
   dt = update->dt;
   int notfirst = 0;
-
   ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
+  h_nmigrate_opt() = h_nmigrate();
 
   while (1) {
 
@@ -396,29 +933,11 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     niterate++;
 
-    d_particles = particle_kk->k_particles.d_view;
-    
     GridKokkos* grid_kk = ((GridKokkos*)grid);
-    d_cells = grid_kk->k_cells.d_view;
     d_sinfo = grid_kk->k_sinfo.d_view;
-
     d_csurfs = grid_kk->d_csurfs;
     d_csplits = grid_kk->d_csplits;
     d_csubs = grid_kk->d_csubs;
-
-    if (surf->exist) {
-      SurfKokkos* surf_kk = ((SurfKokkos*)surf);
-      surf_kk->sync(Device,ALL_MASK);
-      d_lines = surf_kk->k_lines.d_view;
-      d_tris = surf_kk->k_tris.d_view;
-    }
-
-    particle_kk->sync(Device,PARTICLE_MASK);
-    grid_kk->sync(Device,CELL_MASK|SINFO_MASK);
-
-    // may be able to move this outside of the while loop
-    grid_kk_copy.copy(grid_kk);
-    domain_kk_copy.copy((DomainKokkos*)domain);
 
     if (surf->nsc > KOKKOS_TOT_SURF_COLL)
       error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
@@ -427,40 +946,40 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       int nspec,ndiff,nvan,npist,ntrans;
       nspec = ndiff = nvan = npist = ntrans = 0;
       for (int n = 0; n < surf->nsc; n++) {
-        if (strcmp(surf->sc[n]->style,"specular") == 0) {
-          sc_kk_specular_copy[nspec].copy((SurfCollideSpecularKokkos*)(surf->sc[n]));
-          sc_type_list[n] = 0;
-          sc_map[n] = nspec;
-          nspec++;
-        } else if (strcmp(surf->sc[n]->style,"diffuse") == 0) {
-          sc_kk_diffuse_copy[ndiff].copy((SurfCollideDiffuseKokkos*)(surf->sc[n]));
-          sc_kk_diffuse_copy[ndiff].obj.pre_collide();
-          sc_type_list[n] = 1;
-          sc_map[n] = ndiff;
-          ndiff++;
-        } else if (strcmp(surf->sc[n]->style,"vanish") == 0) {
-          sc_kk_vanish_copy[nvan].copy((SurfCollideVanishKokkos*)(surf->sc[n]));
-          sc_type_list[n] = 2;
-          sc_map[n] = nvan;
-          nvan++;
-        } else if (strcmp(surf->sc[n]->style,"piston") == 0) {
-          sc_kk_piston_copy[npist].copy((SurfCollidePistonKokkos*)(surf->sc[n]));
-          sc_type_list[n] = 3;
-          sc_map[n] = npist;
-          npist++;
+	if (strcmp(surf->sc[n]->style,"specular") == 0) {
+	  sc_kk_specular_copy[nspec].copy((SurfCollideSpecularKokkos*)(surf->sc[n]));
+	  sc_type_list[n] = 0;
+	  sc_map[n] = nspec;
+	  nspec++;
+	} else if (strcmp(surf->sc[n]->style,"diffuse") == 0) {
+	  sc_kk_diffuse_copy[ndiff].copy((SurfCollideDiffuseKokkos*)(surf->sc[n]));
+	  sc_kk_diffuse_copy[ndiff].obj.pre_collide();
+	  sc_type_list[n] = 1;
+	  sc_map[n] = ndiff;
+	  ndiff++;
+	} else if (strcmp(surf->sc[n]->style,"vanish") == 0) {
+	  sc_kk_vanish_copy[nvan].copy((SurfCollideVanishKokkos*)(surf->sc[n]));
+	  sc_type_list[n] = 2;
+	  sc_map[n] = nvan;
+	  nvan++;
+	} else if (strcmp(surf->sc[n]->style,"piston") == 0) {
+	  sc_kk_piston_copy[npist].copy((SurfCollidePistonKokkos*)(surf->sc[n]));
+	  sc_type_list[n] = 3;
+	  sc_map[n] = npist;
+	  npist++;
         } else if (strcmp(surf->sc[n]->style,"transparent") == 0) {
           sc_kk_transparent_copy[ntrans].copy((SurfCollideTransparentKokkos*)(surf->sc[n]));
           sc_type_list[n] = 4;
           sc_map[n] = ntrans;
-          ntrans++;
-        } else {
-          error->all(FLERR,"Unknown Kokkos surface collide method");
-        }
+          ntrans++;	  
+	} else {
+	  error->all(FLERR,"Unknown Kokkos surface collide method");
+	}
       }
       if (nspec > KOKKOS_MAX_SURF_COLL_PER_TYPE || ndiff > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
           nvan > KOKKOS_MAX_SURF_COLL_PER_TYPE || npist > KOKKOS_MAX_SURF_COLL_PER_TYPE ||
-          ntrans > KOKKOS_MAX_SURF_COLL_PER_TYPE)
-        error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
+          ntrans > KOKKOS_MAX_SURF_COLL_PER_TYPE)	
+	error->all(FLERR,"Kokkos currently supports two instances of each surface collide method");
     }
 
     if (surf->nsr)
@@ -468,7 +987,6 @@ template < int DIM, int SURF > void UpdateKokkos::move()
 
     h_nmigrate() = 0;
     h_entryexit() = 0;
-
     nmigrate = 0;
     entryexit = 0;
 
@@ -481,13 +999,14 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     UPDATE_REDUCE reduce;
 
     /* ATOMIC_REDUCTION: 1 = use atomics
-                         0 = don't need atomics
-                        -1 = use parallel_reduce
+			 0 = don't need atomics
+			-1 = use parallel_reduce
     */
 
     Kokkos::deep_copy(d_scalars,h_scalars);
 
-    //k_mlist.sync<SPADeviceType>();
+    // k_mlist.sync<SPADeviceType>();
+    d_particles = particle_kk->k_particles.d_view;
     copymode = 1;
     if (!sparta->kokkos->need_atomics)
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,0> >(pstart,pstop),*this);
@@ -495,13 +1014,14 @@ template < int DIM, int SURF > void UpdateKokkos::move()
       Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,1> >(pstart,pstop),*this);
     else
       Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateMove<DIM,SURF,-1> >(pstart,pstop),*this,reduce);
+    DeviceType::fence();
     copymode = 0;
+
 
     Kokkos::deep_copy(h_scalars,d_scalars);
 
     particle_kk->modify(Device,PARTICLE_MASK);
     d_particles = t_particle_1d(); // destroy reference to reduce memory use
-
     k_mlist.modify<DeviceType>();
 
     // END of pstart/pstop loop advecting all particles
@@ -537,12 +1057,12 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     if (error_flag) {
       char str[128];
       sprintf(str,
-              "Particle being sent to self proc "
-              "on step " BIGINT_FORMAT,
-              update->ntimestep);
+	  "Particle being sent to self proc "
+	  "on step " BIGINT_FORMAT,
+	  update->ntimestep);
       error->one(FLERR,str);
     }
-    
+
     // if gridcut >= 0.0, check if another iteration of move is required
     // only the case if some particle flag = PENTRY/PEXIT
     //   in which case perform particle migration
@@ -555,27 +1075,32 @@ template < int DIM, int SURF > void UpdateKokkos::move()
     MPI_Allreduce(&entryexit,&any_entryexit,1,MPI_INT,MPI_MAX,world);
     timer->stamp();
     if (any_entryexit) {
-      if (nmigrate) {
-        k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,nmigrate));
-        k_mlist_small.sync<SPAHostType>();
+      if (h_nmigrate_opt() + nmigrate) {
+	k_mlist_small = Kokkos::subview(k_mlist,std::make_pair(0,h_nmigrate_opt() + nmigrate));
+	k_mlist_small.sync<SPAHostType>();
       }
       auto mlist_small = k_mlist_small.h_view.data();
       timer->stamp(TIME_MOVE);
-      pstart = ((CommKokkos*)comm)->migrate_particles(nmigrate,mlist_small,k_mlist_small.d_view);
+      pstart = ((CommKokkos*)comm)->migrate_particles(h_nmigrate_opt() + nmigrate,mlist_small,k_mlist_small.d_view);
       timer->stamp(TIME_COMM);
+      h_nmigrate_opt() = 0;
       pstop = particle->nlocal;
       if (pstop-pstart > maxmigrate) {
-        maxmigrate = pstop-pstart;
-        memoryKK->destroy_kokkos(k_mlist,mlist);
-        memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
+	maxmigrate = pstop-pstart;
+	memoryKK->destroy_kokkos(k_mlist,mlist);
+	memoryKK->create_kokkos(k_mlist,mlist,maxmigrate,"particle:mlist");
       }
     } else break;
 
     // END of single move/migrate iteration
-
   }
 
   // END of all move/migrate iterations
+
+  if (h_nmigrate_opt() > 0) {
+    nmigrate += h_nmigrate_opt();
+    h_nmigrate() = nmigrate;
+  }
 
   particle->sorted = 0;
   particle_kk->sorted_kk = 0;
@@ -607,6 +1132,196 @@ template < int DIM, int SURF > void UpdateKokkos::move()
   }
 }
 
+/*-----------------------------------------------------------------------------*/
+template<int DIM, int ATOMIC_REDUCTION>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagUpdateOptSingleStepMove<DIM,ATOMIC_REDUCTION>, const int &i) const {
+  UPDATE_REDUCE reduce;
+  this->template operator()<DIM,ATOMIC_REDUCTION>(TagUpdateOptSingleStepMove<DIM,ATOMIC_REDUCTION>(), i, reduce);
+}
+
+/*-----------------------------------------------------------------------------*/
+// specialization for DIM=3
+template<int ATOMIC_REDUCTION>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagUpdateOptSingleStepMove<3,ATOMIC_REDUCTION>, const int &i) const {
+  UPDATE_REDUCE reduce;
+  this->template operator()<ATOMIC_REDUCTION>(TagUpdateOptSingleStepMove<3,ATOMIC_REDUCTION>(), i, reduce);
+}
+
+/*-----------------------------------------------------------------------------*/
+template<int DIM>
+void UpdateKokkos::optSingleStepMove() {
+  int pstart,pstop;
+
+  int nlocal = particle->nlocal;
+  h_error_flag() = 0;
+
+  // move/migrate iterations
+
+  dt = update->dt;
+  ParticleKokkos* particle_kk = ((ParticleKokkos*)particle);
+  d_particles = particle_kk->k_particles.d_view;
+  GridKokkos* grid_kk = ((GridKokkos*)grid);
+  d_cells = grid_kk->k_cells.d_view;
+  particle_kk->sync(Device,PARTICLE_MASK);
+  grid_kk->sync(Device,CELL_MASK|SINFO_MASK);
+
+  pstart = 0;
+  pstop = nlocal;
+
+  UPDATE_REDUCE reduce;
+
+  /* ATOMIC_REDUCTION: 1 = use atomics
+     0 = don't need atomics
+     -1 = use parallel_reduce
+  */
+
+  Kokkos::deep_copy(d_scalars,h_scalars);
+
+  d_particles = particle_kk->k_particles.d_view;
+  copymode = 1;
+  if (!sparta->kokkos->need_atomics)
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateOptSingleStepMove<DIM,0> >(pstart,pstop),*this);
+  else if (sparta->kokkos->atomic_reduction)
+    Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagUpdateOptSingleStepMove<DIM,1> >(pstart,pstop),*this);
+  else
+    Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagUpdateOptSingleStepMove<DIM,-1> >(pstart,pstop),*this,reduce);
+  DeviceType::fence();
+  copymode = 0;
+
+  Kokkos::deep_copy(h_scalars,d_scalars);
+}
+
+/*-----------------------------------------------------------------------------*/
+
+template<int DIM, int ATOMIC_REDUCTION>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagUpdateOptSingleStepMove<DIM,ATOMIC_REDUCTION>, const int &i, UPDATE_REDUCE &reduce) const {
+
+  if (d_error_flag() || !d_particles[i].optMoveFlag) return;
+
+  double xnew[3];
+  double *x,*v;
+
+  Particle::OnePart &particle_i = d_particles[i];
+  x = particle_i.x;
+  v = particle_i.v;
+
+  double dtremain = dt;
+  if (d_particles[i].flag == PINSERT)
+    dtremain = d_particles[i].dtremain;
+
+  xnew[0] = x[0] + dtremain*v[0];
+  xnew[1] = x[1] + dtremain*v[1];
+  xnew[2] = 0.0;
+
+  int ip = static_cast<int>((xnew[0] - xlo)/dx);
+  int jp = static_cast<int>((xnew[1] - ylo)/dy);
+
+  int cellIdx = jp*ncx + ip + 1;
+  GridKokkos::size_type h_index = hash_kk.find(static_cast<GridKokkos::key_type>(cellIdx));
+  int idx = static_cast<int>(hash_kk.value_at(h_index));
+
+  // particle moving outside ghost halo will be flagged for standard move
+  if (idx == 0) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+
+  // reset particle cell and coordinates
+  int icell = idx - 1;
+  particle_i.icell = icell;
+  particle_i.flag = PKEEP;
+  x[0] = xnew[0];
+  x[1] = xnew[1];
+  x[2] = xnew[2];
+
+  if (d_cells[icell].proc != me) {
+    int indx;
+    if (ATOMIC_REDUCTION == 0) {
+      indx = d_nmigrate();
+      d_nmigrate()++;
+    } else {
+      indx = Kokkos::atomic_fetch_add(&d_nmigrate(),1);
+    }
+    k_mlist.d_view[indx] = i;
+
+    // AKS:  might need some logic to detect if particle is being discarded, and if not, then increment ncomm_one
+    //      if (ATOMIC_REDUCTION == 1)
+    //  Kokkos::atomic_fetch_add(&d_ncomm_one(),1);
+    //      else if (ATOMIC_REDUCTION == 0)
+    //  d_ncomm_one()++;
+    //      else
+    //  reduce.ncomm_one++;
+  }
+}
+
+/*-----------------------------------------------------------------------------*/
+// specialization for DIM=3
+template<int ATOMIC_REDUCTION>
+KOKKOS_INLINE_FUNCTION
+void UpdateKokkos::operator()(TagUpdateOptSingleStepMove<3,ATOMIC_REDUCTION>, const int &i, UPDATE_REDUCE &reduce) const {
+
+  if (d_error_flag() || !d_particles[i].optMoveFlag) return;
+
+  double xnew[3];
+  double *x,*v;
+
+  Particle::OnePart &particle_i = d_particles[i];
+  x = particle_i.x;
+  v = particle_i.v;
+
+  double dtremain = dt;
+  if (d_particles[i].flag == PINSERT)
+    dtremain = d_particles[i].dtremain;
+
+  xnew[0] = x[0] + dtremain*v[0];
+  xnew[1] = x[1] + dtremain*v[1];
+  xnew[2] = x[2] + dtremain*v[2];
+
+  int ip = static_cast<int>((xnew[0] - xlo)/dx);
+  int jp = static_cast<int>((xnew[1] - ylo)/dy);
+  int kp = static_cast<int>((xnew[2] - zlo)/dz);
+
+  int cellIdx = (kp*ncy + jp)*ncx + ip + 1;
+  GridKokkos::size_type h_index = hash_kk.find(static_cast<GridKokkos::key_type>(cellIdx));
+  int idx = static_cast<int>(hash_kk.value_at(h_index));
+
+  // particle moving outside ghost halo will be flagged for standard move
+  if (idx == 0) {
+    particle_i.optMoveFlag = false;
+    return;
+  }
+
+  // reset particle cell and coordinates
+  int icell = idx - 1;
+  particle_i.icell = icell;
+  particle_i.flag = PKEEP;
+  x[0] = xnew[0];
+  x[1] = xnew[1];
+  x[2] = xnew[2];
+
+  if (d_cells[icell].proc != me) {
+    int indx;
+    if (ATOMIC_REDUCTION == 0) {
+      indx = d_nmigrate();
+      d_nmigrate()++;
+    } else {
+      indx = Kokkos::atomic_fetch_add(&d_nmigrate(),1);
+    }
+    k_mlist.d_view[indx] = i;
+
+    // might need some logic to detect if particle is being discarded, and if not, then increment ncomm_one
+    //      if (ATOMIC_REDUCTION == 1)
+    //  Kokkos::atomic_fetch_add(&d_ncomm_one(),1);
+    //      else if (ATOMIC_REDUCTION == 0)
+    //  d_ncomm_one()++;
+    //      else
+    //  reduce.ncomm_one++;
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
 template<int DIM, int SURF, int ATOMIC_REDUCTION>
@@ -621,7 +1336,7 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
 template<int DIM, int SURF, int ATOMIC_REDUCTION>
 KOKKOS_INLINE_FUNCTION
 void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const int &i, UPDATE_REDUCE &reduce) const {
-  if (d_error_flag()) return;
+  if (d_error_flag() || d_particles[i].optMoveFlag) return;
 
   // int m;
   bool hitflag;
@@ -1342,10 +2057,11 @@ void UpdateKokkos::operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const in
   if (particle_i.flag != PKEEP) {
     int index;
     if (ATOMIC_REDUCTION == 0) {
-      index = d_nmigrate();
+      index = d_nmigrate_opt() + d_nmigrate();
       d_nmigrate()++;
     } else {
       index = Kokkos::atomic_fetch_add(&d_nmigrate(),1);
+      index += d_nmigrate_opt();
     }
     k_mlist.d_view[index] = i;
     if (particle_i.flag != PDISCARD) {

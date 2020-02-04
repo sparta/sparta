@@ -18,6 +18,7 @@
 #include "update.h"
 #include "kokkos_type.h"
 #include "particle.h"
+#include "particle_kokkos.h"
 #include "grid_kokkos.h"
 #include "domain_kokkos.h"
 #include "kokkos_copy.h"
@@ -82,6 +83,19 @@ typedef struct s_UPDATE_REDUCE UPDATE_REDUCE;
 template<int DIM, int SURF, int ATOMIC_REDUCTION>
 struct TagUpdateMove{};
 
+template<int DIM, int ATOMIC_REDUCTION>
+struct TagUpdateOptSingleStepMove{};
+
+template<int DIM, int SURF>
+struct TagSetParticleOptMoveFlags{};
+
+template<int DIM, int SURF>
+struct TagSetCellMinDistToSurf{};
+
+template<int DIM, int SURF>
+struct TagCheckCellMinDistToSplitCell{};
+
+
 class UpdateKokkos : public Update {
  public:
   typedef ArrayTypes<DeviceType> AT;
@@ -107,9 +121,57 @@ class UpdateKokkos : public Update {
   KOKKOS_INLINE_FUNCTION
   void operator()(TagUpdateMove<DIM,SURF,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
 
+  template<int DIM, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateOptSingleStepMove<DIM,ATOMIC_REDUCTION>, const int&) const;
+
+  template<int DIM, int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateOptSingleStepMove<DIM,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
+
+  template<int DIM, int SURF>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagSetParticleOptMoveFlags<DIM,SURF>, const int&) const;
+
+  template<int DIM, int SURF>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagSetCellMinDistToSurf<DIM,SURF>, const int&) const;
+
+  template<int DIM, int SURF>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCheckCellMinDistToSplitCell<DIM,SURF>, const int&) const;
+
+  // specializations for DIM=3 -----------------------------------------
+  template<int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateOptSingleStepMove<3,ATOMIC_REDUCTION>, const int&) const;
+
+  template<int ATOMIC_REDUCTION>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagUpdateOptSingleStepMove<3,ATOMIC_REDUCTION>, const int&, UPDATE_REDUCE&) const;
+
+  template<int SURF>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagSetCellMinDistToSurf<3,SURF>, const int&) const;
+
+  template<int SURF>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagCheckCellMinDistToSplitCell<3,SURF>, const int&) const;
+
+  template<int SURF>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagSetParticleOptMoveFlags<3,SURF>, const int&) const;
+
+
  private:
 
   double dt;
+
+  // data for optimized particle moves
+  double dx,dy,dz,Lx,Ly,Lz;
+  double xlo,ylo,zlo,xhi,yhi,zhi;
+  int ncx,ncy,ncz;
+  GridKokkos::hash_type hash_kk;
 
   t_cell_1d d_cells;
   t_sinfo_1d d_sinfo;
@@ -137,11 +199,11 @@ class UpdateKokkos : public Update {
   KKCopy<ComputeSurfKokkos> slist_active_copy[KOKKOS_MAX_SLIST];
 
 
-  typedef Kokkos::DualView<int[11], SPADeviceType::array_layout, SPADeviceType> tdual_int_11;
-  typedef tdual_int_11::t_dev t_int_11;
-  typedef tdual_int_11::t_host t_host_int_11;
-  t_int_11 d_scalars;
-  t_host_int_11 h_scalars;
+  typedef Kokkos::DualView<int[12], SPADeviceType::array_layout, SPADeviceType> tdual_int_12;
+  typedef tdual_int_12::t_dev t_int_12;
+  typedef tdual_int_12::t_host t_host_int_12;
+  t_int_12 d_scalars;
+  t_host_int_12 h_scalars;
 
   typename AT::t_int_scalar d_ntouch_one;
   HAT::t_int_scalar h_ntouch_one;
@@ -154,6 +216,9 @@ class UpdateKokkos : public Update {
 
   typename AT::t_int_scalar d_nmigrate;
   HAT::t_int_scalar h_nmigrate;
+
+  typename AT::t_int_scalar d_nmigrate_opt;
+  HAT::t_int_scalar h_nmigrate_opt;
 
   typename AT::t_int_scalar d_entryexit;
   HAT::t_int_scalar h_entryexit;
@@ -239,6 +304,26 @@ class UpdateKokkos : public Update {
     v[1] += dt*gravity[1];
     v[2] += dt*gravity[2];
   };
+
+  // define 2D cell surface faces for use in distance calculations (for opt particle moves)
+  KOKKOS_INLINE_FUNCTION
+  void setCellSurfaceFaces2D(double S[4][2][3], const int &i) const;
+
+  // define 3D cell surface faces for use in distance calculations (for opt particle moves)  
+  KOKKOS_INLINE_FUNCTION
+  void setCellSurfaceFaces3D(double S[12][3][3], const int &i) const;
+
+  // original move logic by particle (non-optimized move)  
+  template<int DIM, int SURF>
+  void standardMove();
+
+  // optimized single step move by particle (requires structured grid)  
+  template<int DIM>
+  void optSingleStepMove();
+
+  // driver to compute minimum distance from each cell to a surface (or to a split cell's faces)
+  template<int DIM, int SURF>
+  void setCellMinDistToSurfDriver();
 };
 
 }

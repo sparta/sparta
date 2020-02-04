@@ -24,6 +24,10 @@ namespace SPARTA_NS {
 class GridKokkos : public Grid {
  public:
   typedef ArrayTypes<DeviceType> AT;
+  typedef Kokkos::UnorderedMap<cellint,int> hash_type;
+  typedef hash_type::size_type size_type;    // uint32_t
+  typedef hash_type::key_type key_type;      // cellint
+  typedef hash_type::value_type value_type;  // int
 
   // make into a view
   //ChildCell *cells;           // list of owned and ghost child cells
@@ -51,10 +55,6 @@ class GridKokkos : public Grid {
   KOKKOS_INLINE_FUNCTION
   int id_find_child(int iparent, double *x) const
   {
-    typedef hash_type::size_type size_type;    // uint32_t
-    typedef hash_type::key_type key_type;      // cellint
-    typedef hash_type::value_type value_type;  // int
-
     ParentCell *p = &k_pcells.d_view[iparent];
     double *lo = p->lo;
     double *hi = p->hi;
@@ -110,17 +110,14 @@ class GridKokkos : public Grid {
   typename AT::t_int_1d d_cellcount;
   typename AT::t_int_2d d_plist;
 
+  // hash for all cell IDs (owned,ghost,parent).  The _d postfix refers to the
+  // fact that this hash lives on "device"
+  hash_type hash_kk;
+
  private:
   void grow_cells(int, int);
   void grow_pcells(int);
   void grow_sinfo(int);
-
-  // hash for all cell IDs (owned,ghost,parent).  The _d postfix refers to the
-  // fact that this hash lives on "device"
-
-  typedef Kokkos::UnorderedMap<cellint,int> hash_type;
-  hash_type hash_kk; 
-
 };
 
 }
