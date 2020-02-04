@@ -31,8 +31,8 @@ class SurfCollideVanish : public SurfCollide {
   SurfCollideVanish(class SPARTA *, int, char **);
   SurfCollideVanish(class SPARTA *sparta) : SurfCollide(sparta) {}
   virtual ~SurfCollideVanish() {}
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, 
-                             int, int &);
+  virtual Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int,
+                                     void * surfaceCollide = nullptr);
 };
 
 }

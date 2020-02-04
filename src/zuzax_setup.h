@@ -52,10 +52,10 @@ public:
     /*!
      *  Nasa polynomials allow for a consistent energy level between gas, surf, and solid species.
      *
-     *  This will contain one argument, the name of the gas, ThermoPhase file.
-     *  There must be zuzax species for every sparta species. Extra zuzax species are treated as
+     *  This will contain one argument, the name of the gas phase ThermoPhase file.
+     *  There must be a zuzax species for every sparta species. Extra zuzax species are treated as
      *  having zero concentrations.
-     *  If there isn't a zuzax species for a sparta species, then an error is thrown.
+     *  If there isn't a zuzax species for every sparta species, then an error is thrown.
      *
      *  @param[in]           nargs               number of args
      *  @param[in]           args                vector of args

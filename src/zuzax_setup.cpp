@@ -28,17 +28,16 @@
 
 #ifdef USE_ZUZAX
 
+//----------------------------------------------------------------------------------------------------------------------------------
 namespace SPARTA_NS {
-
-
-//=================================================================================================
+//==================================================================================================================================
 ZuzaxSetup::ZuzaxSetup(SPARTA *sparta) : 
     Pointers(sparta) ,
     gasThermo_(nullptr),
     SptoZu_speciesMap(nullptr)
 {
 }
-//=================================================================================================
+//==================================================================================================================================
 ZuzaxSetup::~ZuzaxSetup()
 {
    delete (gasThermo_);
@@ -60,8 +59,10 @@ void ZuzaxSetup::initGasSetup(int nargs, char** args)
   for (int k = 0; k < particle->nspecies; ++k) {
       SptoZu_speciesMap[k] = -1; 
       Particle::Species& spk = species[k]; 
-      found = false;
       std::string sspName(spk.id);
+      // Establish the mapping between the Sparta species into the Zuzax ThermoPhase
+      // -> The mapping is carried out via a string comparison on the species name
+      found = false;
       for (size_t kz = 0; kz < gasThermo_->nSpecies(); ++kz) {
           if (sspName == gasThermo_->speciesName(kz)) {
               found = true;
@@ -76,10 +77,9 @@ void ZuzaxSetup::initGasSetup(int nargs, char** args)
         error->all(FLERR, estring); } spk.zuzax_indexGasPhase = SptoZu_speciesMap[k];
 
       // Calculate the ezero value with the Sparta's Species struct.
-      double ezero = calcEzero(spk, spk.zuzax_indexGasPhase);
+      spk.ezero = calcEzero(spk, spk.zuzax_indexGasPhase);
+      spk.zuzax_indexGasPhase = SptoZu_speciesMap[k]; 
   }
-
-   
 
 }
 //=================================================================================================
@@ -140,7 +140,8 @@ double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas, int doTDep, doubl
     double Ezero = U_z - Etran_sp - Erot_sp - Evib_sp;
     return Ezero;
 }
-//=================================================================================================
+//==================================================================================================================================
 }
+//----------------------------------------------------------------------------------------------------------------------------------
 #endif
 

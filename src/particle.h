@@ -43,6 +43,21 @@ class Particle : protected Pointers {
 #ifdef USE_ZUZAX
     double ezero;           // Zero point energy that corresponds to NASA thermochemical conventions
     int zuzax_indexGasPhase; // Index 
+    int numElectronicStates;
+
+    //! Degeneracy of each of the electronic states
+    /*!
+     *   defaults to 1. Length 5 until there needs to be more electronic states
+     */
+    double degenElectronicStates[5];
+
+    //! Energy levels of all electronic states (units of Kelvin)
+    /*!
+     *  The ground state, i.e. the first state, defaults to a theta of 0.0;
+     *  The other states are defined as relative to the ground state energy level.
+     */
+    double thetaElectronicStates[5];
+
 #endif
   };
 

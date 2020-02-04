@@ -56,6 +56,7 @@ class Surf : protected Pointers {
 
   bigint nsurf;             // total # of surf elements, lines or tris
 
+  //! Structure that actually identifies each surface in 2D space
   struct Line {
     surfint id;             // unique ID for explicit surf
                             // cell ID for implicit surf
@@ -68,6 +69,7 @@ class Surf : protected Pointers {
     int transparent;        // 1 if surf is transparent
   };
 
+  //! Structure that actually identifies each surface in 3D space
   struct Tri {
     surfint id;             // unique ID for explicit surf
                             // cell ID for implicit surf
@@ -77,7 +79,9 @@ class Surf : protected Pointers {
     double p1[3],p2[3],p3[3];  // corner points of triangle
                             // rhand rule: (p2-p1) x (p3-p1) = outward normal
     double norm[3];         // outward normal to triangle
-    int transparent;        // 1 if surf is transparent
+    
+    void* surfaceState;     // Pointer to a malloced structure that describes the surface
+                            // state of the Tri
   };
 
   Line *lines;              // list of lines for surface collisions

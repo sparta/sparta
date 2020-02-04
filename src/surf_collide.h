@@ -35,8 +35,18 @@ class SurfCollide : protected Pointers {
   SurfCollide(class SPARTA *sparta) : Pointers(sparta) {}
   virtual ~SurfCollide();
   virtual void init();
-  virtual Particle::OnePart *collide(Particle::OnePart *&, double *, 
-                                     double &, int, int &) = 0;
+
+  //! Main member function for SurfCollide class where one particle 
+  //! collides with a surface.
+  /*!
+   *  @param[in,out]  ipart       Reference to the pointer to the incoming particle
+   *  @param[in]      norm        value of the surface normal
+   *  @param[in,out]  dtremain    Remaining time
+   *  @param[in]      isr         Index of the surface collision model
+   *  @param[in,out]  surfaceState   Pointer to the surface state
+   */
+  virtual Particle::OnePart *collide(Particle::OnePart *& ipart, double * norm, 
+                                     double & dtremain, int isr, void * surfaceState = nullptr) = 0;
 
   virtual void dynamic() {}
   void tally_update();

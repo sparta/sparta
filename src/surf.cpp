@@ -876,7 +876,7 @@ double Surf::axi_line_size(Line *line)
 }
 
 /* ----------------------------------------------------------------------
-   compute side length and area of triangle M from tri list (not mytri)
+   compute side length and area of triangle m from tri list (not mytri)
    return len = length of shortest edge of triangle M
    return area = area of triangle M
 ------------------------------------------------------------------------- */

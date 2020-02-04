@@ -20,6 +20,7 @@
 #include "surf_react.h"
 #ifdef USE_ZSURF
 #include "zuzax/base/ct_defs.h"
+#include "zuzax/zeroD/SurfPropagationSparta.h"
 #endif
 
 namespace SPARTA_NS {
@@ -47,6 +48,13 @@ public:
     virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&)  override;
 
  private:
+
+    //! Create the object that will propagate the surface reactor forward in time
+    /*!
+     *  This is built on top of the normal ODE solver that propagates the reactor in time using BDF methods
+     */
+    Zuzax::SurfPropagationSparta net;
+
 
      class RanPark *random;     // RNG for reaction probabilities
 };
