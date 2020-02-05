@@ -170,9 +170,14 @@ mixture             mix vstream 0.0 0.0 0.0 temp 300. trot 300. tvib 300.
 
 # Define a model for particle surface collisions
 #       Temperature = 300. K
-#       accomodation coefficient = 0.0  -> all collisions are diffuse
+#       accomodation coefficient = 1.0  -> all collisions are diffuse
 #       Call the model 1
-surf_collide	    1 diffuse ${surftemp} 0.0
+#surf_collide	    1 diffuse ${surftemp} 1.0
+surf_collide	    1 zuzax ${surftemp} 1.0
+
+
+# sample surf_react statement with zuzax in it.
+surf_react        1Z zuzax surf.xml
 
 # Set the left boundary model to be a diffuse collider
 #   Sets the left x boundary to have collision model 1 (xlo had to have been set to an "s" boundary first"
@@ -236,7 +241,9 @@ compute 1s boundary all n mflux press ke erot evib etot
 
 #fix     1s ave/time 10 100 1000 c_1s[1][1] mode scalar
  fix     1s ave/time 10 100 1000 c_1s[1] mode vector  file partCol_Surf.txt
- fix     fXLO ave/time 10 100 1000 c_1s[1][1] c_1s[1][2]  c_1s[1][3]  c_1s[1][4] c_1s[1][5] c_1s[1][6] c_1s[1][7] mode scalar  file partCol_XLO.txt
+
+#  This card currently produces an error
+# fix     fXLO ave/time 10 100 1000 c_1s[1][1] c_1s[1][2]  c_1s[1][3]  c_1s[1][4] c_1s[1][5] c_1s[1][6] c_1s[1][7] mode scalar  file partCol_XLO.txt
 #fix     1s XLO ave/surf 10 100 1000 c_1s[*] 
 #fix     1s ave/time 10 100 1000 c_1s[1][0] mode scalar
 

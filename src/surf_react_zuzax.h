@@ -12,13 +12,25 @@
    See the README file in the top-level SPARTA directory.
 ------------------------------------------------------------------------- */
 
+#ifdef SURF_REACT_CLASS
+
+// Turn off recognition of zuzax reactions if this is not defined
+#ifdef USE_ZSURF
+// This section is used surf::add_react() to create a 
+//    sr[nsr] = new SurfReactZuzax(sparta,narg,arg);
+// statement
+SurfReactStyle(zuzax,SurfReactZuzax)
+#endif
+
+#else
+
 #ifndef SPARTA_SURF_REACT_ZUZAX_H
 #define SPARTA_SURF_REACT_ZUZAX_H
 
+#ifdef USE_ZSURF
 #include "pointers.h"
 #include "particle.h"
 #include "surf_react.h"
-#ifdef USE_ZSURF
 #include "zuzax/base/ct_defs.h"
 #include "zuzax/zeroD/SurfPropagationSparta.h"
 #endif
@@ -62,6 +74,7 @@ public:
 #endif
 
 }
+#endif
 #endif
 
 /* ERROR/WARNING messages:
