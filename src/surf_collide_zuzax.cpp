@@ -31,70 +31,59 @@
 #include "math_extra.h"
 #include "error.h"
 
+#ifdef USE_ZSURF
+
 using namespace SPARTA_NS;
 using namespace MathConst;
+
+#include "zuzax/base/xml.h"
+#include "zuzax/numerics/SolnMaterialDomain.h"
+#include "zuzax/multiphase/PhaseList.h"
+#include "zuzax/kinetics.h"
+#include "zuzax/zeroD/ReactorNetDAE.h"
+#include "zuzax/zerodim.h"
+#include "zuzax/zeroD/IdealGasConstPressureReactor.h"
+#include "zuzax/zeroD/RBdry.h"
+
+#include "zuzax/zeroD/SubstrateElement.h"
+#include "zuzax/zeroD/SurfPropagationSparta.h"
+
 
 /* ---------------------------------------------------------------------- */
 
 SurfCollideZuzax::SurfCollideZuzax(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
-  if (narg < 4) error->all(FLERR,"Illegal surf_collide diffuse command");
+  if (narg < 5) error->all(FLERR,"Illegal surf_collide zuzax command: id zuzax fileName twall acc");
 
   allowreact = 1;
 
   tstr = NULL;
 
-  if (strstr(arg[2],"v_") == arg[2]) {
-    int n = strlen(&arg[2][2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&arg[2][2]);
-  } else {
-    twall = input->numeric(FLERR,arg[2]); 
-    if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
+  inputConfigFile = arg[2];
+  if (strlen(inputConfigFile) < 2) {
+      error->all(FLERR,"Expecting non-zero fileName");
+  }
+  FILE* fp = fopen(inputConfigFile, "r");
+  if (!fp) {
+     error->all(FLERR,"can't open inputConfigFile");
+  }
+  fclose(fp);
+
+  twall = input->numeric(FLERR, arg[3]); 
+  if (twall <= 0.0) {
+    error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
   }
 
-  acc = input->numeric(FLERR,arg[3]); 
-  if (acc < 0.0 || acc > 1.0) 
+  // Read the accomodation coefficient
+  acc = input->numeric(FLERR,arg[4]); 
+  if (acc < 0.0 || acc > 1.0) {
     error->all(FLERR,"Illegal surf_collide diffuse command");
-
-  // optional args
-
-  tflag = rflag = 0;
-
-  int iarg = 4;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"translate") == 0) {
-      if (iarg+4 > narg) 
-        error->all(FLERR,"Illegal surf_collide diffuse command");
-      tflag = 1;
-      vx = atof(arg[iarg+1]);
-      vy = atof(arg[iarg+2]);
-      vz = atof(arg[iarg+3]);
-      iarg += 4;
-    } else if (strcmp(arg[iarg],"rotate") == 0) {
-      if (iarg+7 > narg) 
-        error->all(FLERR,"Illegal surf_collide diffuse command");
-      rflag = 1;
-      px = atof(arg[iarg+1]);
-      py = atof(arg[iarg+2]);
-      pz = atof(arg[iarg+3]);
-      wx = atof(arg[iarg+4]);
-      wy = atof(arg[iarg+5]);
-      wz = atof(arg[iarg+6]);
-      if (domain->dimension == 2 && pz != 0.0) 
-        error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
-      if (domain->dimension == 2 && (wx != 0.0 || wy != 0.0))
-        error->all(FLERR,"Surf_collide diffuse rotation invalid for 2d");
-      iarg += 7;
-    } else error->all(FLERR,"Illegal surf_collide diffuse command");
   }
-
-  if (tflag && rflag) error->all(FLERR,"Illegal surf_collide diffuse command");
-  if (tflag || rflag) trflag = 1;
-  else trflag = 0;
-
   vstream[0] = vstream[1] = vstream[2] = 0.0;
+
+  // Initialize zuzax
+  
 
   // initialize RNG
 
@@ -111,6 +100,7 @@ SurfCollideZuzax::~SurfCollideZuzax()
 
   delete [] tstr;
   delete random;
+  delete inputConfigFile;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -129,7 +119,119 @@ void SurfCollideZuzax::init()
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
   }
 }
+//==================================================================================================================================
+void SurfCollideZuzax::initNetwork()
+{
+  Zuzax::XML_Node* xPhase =  Zuzax::get_XML_File(inputConfigFile);
+  Zuzax::SolnMaterialDomain smd(*xPhase);
+  Zuzax::PhaseList* pl = new Zuzax::PhaseList(smd);   
 
+  Zuzax::IdealGasPhase* igp = dynamic_cast<Zuzax::IdealGasPhase*>(&(pl->volPhase(0)));
+  if (!igp) {
+    throw Zuzax::ZuzaxError("SurfCollideZuzax::initNetwork()", "First phase isn't an IdealGasPhase"); 
+  }
+  igp->setState_TP(twall, pwall);
+
+
+  Zuzax::SubstrateElement ablateFilm("Ablator");
+
+  /*
+   *  Geometry of simulation (meters)
+   */
+  // This should be obtained from the geometry of the surface
+  // TODO - connect
+  double areaOfSurface = 1.0E-4;
+  // The film depth will be needed eventually but is not significant now. We don't change the depth of the surface
+  double filmDepth = 0.001;
+
+  // Each bulk phase has a volume fraction associated with it. Here, we just assign the volume fraction
+  // of the first phase to 1 and the rest to zero.
+  double volumeFraction[10];
+  volumeFraction[0] = 1.0;
+  volumeFraction[1] = 0.0;
+  volumeFraction[2] = 0.0;
+  volumeFraction[3] = 0.0;
+
+
+  
+  size_t nVolPhases = pl->nVolPhases();
+  for (size_t i = 1; i < nVolPhases; ++i) {
+    double volPhase = areaOfSurface *filmDepth * volumeFraction[i];
+    ablateFilm.addVolumePhase((pl->volPhase(i)), volPhase);
+  }
+  Zuzax::Reservoir gasR;
+  gasR.setThermoMgr(*igp);
+
+
+  ablateFilm.addLinkToAssociatedReactorVolume(&gasR);
+
+  // Create the object that will propagate the surface reactor forward in time
+  /*
+   *  This is built on top of the normal ODE solver that propagates the reactor in time using BDF methods
+   */
+  Zuzax::SurfPropagationSparta net;
+  // Add the surface reactor to the propagator
+  /*
+   * The surface reactor consists of the bulk volume phases and the interface
+   */
+  net.addReactor(ablateFilm);
+
+       // Setup the interface between the reactor and the substrate where the reactions will occur
+        // -> this will be a RBdry element which connects two reactors with an interfacial element
+        Zuzax::RBdry abFace_rrr("AirGraphite_rrr");
+
+        // Define the area
+        abFace_rrr.setArea(1.0E-7);
+
+        // Turn on extended ROP analysis
+        abFace_rrr.setKinBreakdownToggle(true);
+
+        // Set up the InterfaceKinetics object that controls the surface reactions
+        //   -> first we need a list of ThermoPhase objects
+        std::vector<Zuzax::thermo_t_double*> thVec_abFace_rrr;
+        thVec_abFace_rrr.push_back(igp);
+        Zuzax::thermo_t_double* volPhase = ablateFilm.volPhasePtr(0);
+        thVec_abFace_rrr.push_back(volPhase);
+        Zuzax::InterfaceKinetics* abFaceKin_rrr = 
+            (Zuzax::InterfaceKinetics*) Zuzax::newInterfaceKineticsMgrFromFile(thVec_abFace_rrr, "carbon_ablate.xml");
+
+        Zuzax::thermo_t_double& sp = abFaceKin_rrr->reactionPhaseThermo();
+        Zuzax::SurfPhase& surfPhase = dynamic_cast<Zuzax::SurfPhase&>(sp);
+        abFace_rrr.setKinetics(abFaceKin_rrr);
+
+        // Install the interface so that the equations reside in the SubstrateElement
+        abFace_rrr.install(&ablateFilm, &gasR);
+
+        double scl = 1;
+        net.setTMScaleFactor(scl);
+
+        net.addReservoir(gasR);
+
+        size_t is_c = surfPhase.speciesIndex("(s)");
+        size_t is_H = surfPhase.speciesIndex("H(s)");
+        size_t is_O = surfPhase.speciesIndex("O(s)");
+        size_t is_N = surfPhase.speciesIndex("N(s)");
+
+        //size_t ig_OH = air.speciesIndex("OH");
+        //size_t ig_O = air.speciesIndex("O");
+        //size_t ig_H = air.speciesIndex("H");
+        //size_t ig_H2O = air.speciesIndex("H2O");
+        size_t ig_CO2 = igp->speciesIndex("CO2");
+        size_t ig_CO = igp->speciesIndex("CO");
+
+        double etchRate;
+        double xmf[100];
+        double theta[20];
+        double press, uval, enth, vol, tt;
+        FILE* FP = fopen("reactor_results.csv", "w");
+        FILE* FP2 = fopen("step_results.csv", "w");
+        net.initialize();
+        net.printInitialSolution();
+
+        net.solveInitialConditions();
+
+}
+//==================================================================================================================================
 /* ----------------------------------------------------------------------
    particle collision with surface with optional chemistry
    ip = particle with current x = collision pt, current v = incident v
@@ -312,3 +414,5 @@ void SurfCollideZuzax::dynamic()
   twall = input->variable->compute_equal(tvar);
   if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
 }
+
+#endif

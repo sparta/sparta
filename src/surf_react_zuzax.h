@@ -14,7 +14,8 @@
 
 #ifdef SURF_REACT_CLASS
 
-// Turn off recognition of zuzax reactions if this is not defined
+// Turn off recognition of zuzax reactions if this is not defined. This is the
+// desired behavior because it will produce an error when reading the input file.
 #ifdef USE_ZSURF
 // This section is used surf::add_react() to create a 
 //    sr[nsr] = new SurfReactZuzax(sparta,narg,arg);
@@ -40,7 +41,9 @@ namespace SPARTA_NS {
 #ifdef USE_ZSURF
 //! Class which carries out complex surface reactions with etching or growth
 /*!
- *
+ *  This class is stored in the surf structure, and is common to all surfaces.
+ *  Therefore it can't be used to store the state of any particular surface.
+ *  
  */
 class SurfReactZuzax : public SurfReact
 {

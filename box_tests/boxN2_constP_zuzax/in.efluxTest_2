@@ -173,7 +173,7 @@ mixture             mix vstream 0.0 0.0 0.0 temp 300. trot 300. tvib 300.
 #       accomodation coefficient = 1.0  -> all collisions are diffuse
 #       Call the model 1
 #surf_collide	    1 diffuse ${surftemp} 1.0
-surf_collide	    1 zuzax ${surftemp} 1.0
+surf_collide	    1 zuzax phases.xml ${surftemp} 1.0
 
 
 # sample surf_react statement with zuzax in it.
