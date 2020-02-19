@@ -1681,7 +1681,7 @@ void Update::set_mem_limit_grid()
 {
   bigint global_mem_limit_big = static_cast<bigint> (grid->nlocal*sizeof(Grid::ChildCell));
 
-  if global_mem_limit_big > MAXSMALLINT)
+  if (global_mem_limit_big > MAXSMALLINT)
     error->all(FLERR,"Global mem/limit setting cannot exceed 2GB");
   global_mem_limit = global_mem_limit_big;
 }
