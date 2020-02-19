@@ -95,8 +95,9 @@ double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas, int doTDep, doubl
     const Zuzax::StatMech::speciesStatMechInput& sI = sm->statMechInput();
 
     if (!sm) {
-        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", " Not StatMech type for species %s",
-                                gasThermo_->speciesName(kgas).c_str());
+        Zuzax::writelogf("ZuzaxSetup::calcEzero Warning(): Not StatMech type for species %s, Setting to zero",
+                         gasThermo_->speciesName(kgas).c_str());
+        return 0.0;
     }
 
     double Hf298 = gasThermo_->Hf298SS(kgas) / Zuzax::Avogadro;
