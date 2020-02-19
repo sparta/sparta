@@ -408,7 +408,7 @@ void ReadRestart::command(int narg, char **arg)
         fseek(fp,-(sizeof(int)+grid_read_size),SEEK_CUR);
 
         if (update->mem_limit_grid_flag)
-          update->global_mem_limit = grid_nlocal*sizeof(Grid::ChildCell);
+          update->set_mem_limit_grid();
 
         int maxbuf_new = MAX(grid_read_size,update->global_mem_limit);
         maxbuf_new = MAX(maxbuf_new,sizeof(Particle::OnePartRestart));

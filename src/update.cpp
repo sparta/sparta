@@ -1611,8 +1611,11 @@ void Update::global(int narg, char **arg)
       if (strcmp(arg[iarg+1],"grid") == 0) mem_limit_grid_flag = 1;
       else {
         double factor = input->numeric(FLERR,arg[iarg+1]);
-        global_mem_limit = static_cast<int> (factor * 1024*1024);
-        if (global_mem_limit < 0) error->all(FLERR,"Illegal global command");
+        bigint global_mem_limit_big = static_cast<bigint> (factor * 1024*1024);
+        if (global_mem_limit_big < 0) error->all(FLERR,"Illegal global command");
+        if (global_mem_limit_big > MAXSMALLINT)
+          error->all(FLERR,"Global mem/limit setting cannot exceed 2GB");
+        global_mem_limit = global_mem_limit_big;
       }
       iarg += 2;
     } else error->all(FLERR,"Illegal global command");
@@ -1669,3 +1672,17 @@ void Update::reset_timestep(bigint newstep)
   for (int i = 0; i < modify->ncompute; i++)
     if (modify->compute[i]->timeflag) modify->compute[i]->clearstep();
 }
+
+/* ----------------------------------------------------------------------
+   get mem/limit based on grid memory
+------------------------------------------------------------------------- */
+
+void Update::set_mem_limit_grid()
+{
+  bigint global_mem_limit_big = static_cast<bigint> (grid->nlocal*sizeof(Grid::ChildCell));
+
+  if global_mem_limit_big > MAXSMALLINT)
+    error->all(FLERR,"Global mem/limit setting cannot exceed 2GB");
+  global_mem_limit = global_mem_limit_big;
+}
+
