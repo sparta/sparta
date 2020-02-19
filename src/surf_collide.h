@@ -55,7 +55,10 @@ class SurfCollide : protected Pointers {
   int copy,copymode;
 
  protected:
-  int nsingle,ntotal;
+  //! Number of collisions during the current time step
+  int nsingle;
+  //! Number of total collisions
+  int ntotal;
   double one[2],all[2];
 };
 
