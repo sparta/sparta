@@ -802,7 +802,7 @@ void Particle::add_species(int narg, char **arg)
     for (j = 0; j < nfile; j++)
       if (strcmp(names[i],filespecies[j].id) == 0) break;
     if (j == nfile)
-      error->all(FLERR,"Species ID does not appear in species file");
+      error->allf(FLERR,"Species ID, %s, does not appear in species file", names[i]);
     memcpy(&species[nspecies],&filespecies[j],sizeof(Species));
     nspecies++;
 
