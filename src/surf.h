@@ -65,6 +65,7 @@ class Surf : protected Pointers {
     double p1[3],p2[3];     // end points of line segment
                             // rhand rule: Z x (p2-p1) = outward normal
     double norm[3];         // outward normal to line segment
+    int transparent;        // 1 if surf is transparent
   };
 
   struct Tri {
@@ -76,6 +77,7 @@ class Surf : protected Pointers {
     double p1[3],p2[3],p3[3];  // corner points of triangle
                             // rhand rule: (p2-p1) x (p3-p1) = outward normal
     double norm[3];         // outward normal to triangle
+    int transparent;        // 1 if surf is transparent
   };
 
   Line *lines;              // list of lines for surface collisions
@@ -159,6 +161,8 @@ class Surf : protected Pointers {
   void add_tri_own_clip(surfint, int, double *, double *, double *);
   void add_tri_temporary(surfint, int, double *, double *, double *);
   void rehash();
+  int all_transparent();
+
   void setup_owned();
   void setup_bbox();
 

@@ -54,6 +54,10 @@ ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
   readfile(arg[1]);
   check_duplicate();
 
+  tally_reactions = new int[nlist];
+  tally_reactions_all = new int[nlist];
+  tally_flag = 0;
+
   reactions = NULL;
   list_ij = NULL;
   sp2recomb_ij = NULL;
@@ -61,8 +65,7 @@ ReactBird::ReactBird(SPARTA *sparta, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-ReactBird::ReactBird(SPARTA *sparta) :
-  React(sparta)
+ReactBird::ReactBird(SPARTA *sparta) : React(sparta)
 {
   rlist = NULL;
   reactions = NULL;
@@ -76,6 +79,9 @@ ReactBird::~ReactBird()
 {
   if (copy) return;
 
+  delete [] tally_reactions;
+  delete [] tally_reactions_all;
+
   if (rlist) {
     for (int i = 0; i < maxlist; i++) {
       for (int j = 0; j < rlist[i].nreactant; j++)
@@ -87,6 +93,7 @@ ReactBird::~ReactBird()
       delete [] rlist[i].reactants;
       delete [] rlist[i].products;
       delete [] rlist[i].coeff;
+      delete [] rlist[i].id;
     }
   }
   memory->destroy(rlist);
@@ -100,6 +107,8 @@ ReactBird::~ReactBird()
 
 void ReactBird::init() 
 {
+  for (int i = 0; i < nlist; i++) tally_reactions[i] = 0;
+
   // convert species IDs to species indices
   // flag reactions as active/inactive depending on whether all species exist
   // mark recombination reactions inactive if recombflag_user = 0
@@ -327,7 +336,10 @@ void ReactBird::init()
     for (int j = 0; j < nspecies; j++) {
       int n = reactions[i][j].n;
       int *list = reactions[i][j].list;
-      reactions[i][j].sp2recomb = &sp2recomb_ij[offset];
+      if (offset < nij*nspecies)
+        reactions[i][j].sp2recomb = &sp2recomb_ij[offset];
+      else
+        reactions[i][j].sp2recomb = NULL; // Needed for Kokkos
       for (int m = 0; m < n; m++) {
         r = &rlist[list[m]];
         if (r->type == RECOMBINATION) {
@@ -569,6 +581,7 @@ void ReactBird::readfile(char *fname)
         r->reactants = new int[MAXREACTANT];
         r->products = new int[MAXPRODUCT];
         r->coeff = new double[MAXCOEFF];
+        r->id = NULL;
       }
     }
 
@@ -580,6 +593,11 @@ void ReactBird::readfile(char *fname)
 
     int side = 0;
     int species = 1;
+
+    n = strlen(line1) - 1;
+    r->id = new char[n+1];
+    strncpy(r->id,line1,n);
+    r->id[n] = '\0';
 
     word = strtok(line1," \t\n\r");
 
@@ -769,9 +787,11 @@ void ReactBird::check_duplicate()
       }
       if (!product_match) continue;
 
-      printf("MATCH %d %d %d: %d\n",i,j,nlist,product_match);
-      printf("MATCH %d %d %d %d\n",
-             r->products[0],r->products[1],s->products[0],s->products[1]);
+      if (comm->me == 0) {
+        printf("MATCH %d %d %d: %d\n",i,j,nlist,product_match);
+        printf("MATCH %d %d %d %d\n",
+               r->products[0],r->products[1],s->products[0],s->products[1]);
+      }
       print_reaction(r);
       print_reaction(s);
       error->all(FLERR,"Duplicate reactions in reaction file");
@@ -847,4 +867,28 @@ void ReactBird::print_reaction_ambipolar(OneReaction *r)
   for (int i = 0; i < r->ncoeff; i++)
     printf(" %g",r->coeff[i]);
   printf("\n");
+};
+
+/* ----------------------------------------------------------------------
+   return reaction ID = chemical formula
+------------------------------------------------------------------------- */
+
+char *ReactBird::reactionID(int m) 
+{
+  return rlist[m].id;
+};
+
+/* ----------------------------------------------------------------------
+   return tally associated with a reaction
+------------------------------------------------------------------------- */
+
+double ReactBird::extract_tally(int m) 
+{
+  if (!tally_flag) {
+    tally_flag = 1;
+    MPI_Allreduce(tally_reactions,tally_reactions_all,nlist,
+                  MPI_INT,MPI_SUM,world);
+  }
+
+  return 1.0*tally_reactions_all[m];
 };

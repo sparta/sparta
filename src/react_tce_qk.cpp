@@ -92,6 +92,8 @@ int ReactTCEQK::attempt(Particle::OnePart *ip, Particle::OnePart *jp,
       reaction = attempt_qk(ip,jp,r,
                             pre_etrans,pre_erot,
                             pre_evib,post_etotal,kspecies);
+
+    if (reaction) tally_reactions[list[i]]++;
   }
   
   return 0;

@@ -272,10 +272,6 @@ void AdaptGrid::command(int narg, char **arg)
     grid->type_check();
   }
 
-  // final update of any per grid fixes for all new child cells
-  
-  if (modify->n_pergrid) add_grid_fixes();
-
   // write out new parent grid file
 
   if (file) write_file();
@@ -586,7 +582,6 @@ void AdaptGrid::check_args(int nevery)
 void AdaptGrid::setup(int iter)
 {
   // zero new child cell counter on first iteration
-  // used in add_grid_fixes after all new child cells have been added
 
   if (iter == 0) nnew = 0;
 
@@ -932,27 +927,6 @@ void AdaptGrid::refine_random()
   rnum = n;
 
   //printf("RNUM2 %d: %d\n",me,rnum);
-}
-
-/* ----------------------------------------------------------------------
-   final add of new child cells to fixes
-   allow for each cell ID to no longer exist or be for a parent cell
-     due to subsequent iterations
-   NOTE: first stage must happen earlier so fix memory for new cell is valid
-------------------------------------------------------------------------- */
-
-void AdaptGrid::add_grid_fixes()
-{
-  Grid::MyHash *hash = grid->hash;
-  grid->rehash();
-
-  int icell;
-  for (int i = 0; i < nnew; i++) {
-    if (hash->find(newcells[i]) == hash->end()) continue;
-    icell = (*hash)[newcells[i]];
-    if (icell < 0) continue;
-    modify->add_grid_one();
-  }
 }
 
 /* ----------------------------------------------------------------------

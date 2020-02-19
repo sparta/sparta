@@ -54,14 +54,17 @@ SurfReact::SurfReact(SPARTA *sparta, int, char **arg) :
       error->all(FLERR,"Surf_react ID must be alphanumeric or "
                  "underscore characters");
 
-  n = strlen(arg[0]) + 1;
+  n = strlen(arg[1]) + 1;
   style = new char[n];
-  strcpy(style,arg[0]);
+  strcpy(style,arg[1]);
 
   vector_flag = 1;
   size_vector = 2;
     
+  // tallies
+
   nsingle = ntotal = 0;
+  tally_two_flag = tally_single_flag = tally_total_flag = 0;
 
   // surface reaction data structs
 
@@ -89,8 +92,14 @@ SurfReact::~SurfReact()
     delete [] rlist[i].reactants;
     delete [] rlist[i].products;
     delete [] rlist[i].coeff;
+    delete [] rlist[i].id;
   }
   memory->destroy(rlist);
+
+  delete [] tally_single;
+  delete [] tally_total;
+  delete [] tally_single_all;
+  delete [] tally_total_all;
 
   memory->destroy(reactions);
   memory->destroy(indices);
@@ -101,6 +110,8 @@ SurfReact::~SurfReact()
 void SurfReact::init()
 {
   nsingle = ntotal = 0;
+  for (int i = 0; i < nlist; i++)
+    tally_single[i] = tally_total[i] = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -218,7 +229,7 @@ void SurfReact::readfile(char *fname)
     if (nlist == maxlist) {
       maxlist += DELTALIST;
       rlist = (OneReaction *) 
-        memory->srealloc(rlist,maxlist*sizeof(OneReaction),"react/tce:rlist");
+        memory->srealloc(rlist,maxlist*sizeof(OneReaction),"surf_react:rlist");
       for (int i = nlist; i < maxlist; i++) {
         r = &rlist[i];
         r->nreactant = r->nproduct = 0;
@@ -227,6 +238,7 @@ void SurfReact::readfile(char *fname)
         r->reactants = new int[MAXREACTANT];
         r->products = new int[MAXPRODUCT];
         r->coeff = new double[MAXCOEFF];
+        r->id = NULL;
       }
     }
 
@@ -234,6 +246,11 @@ void SurfReact::readfile(char *fname)
 
     int side = 0;
     int species = 1;
+
+    n = strlen(line1) - 1;
+    r->id = new char[n+1];
+    strncpy(r->id,line1,n);
+    r->id[n] = '\0';
 
     word = strtok(line1," \t\n");
 
@@ -351,15 +368,65 @@ void SurfReact::tally_update()
 {
   ntotal += nsingle;
   nsingle = 0;
+
+  for (int i = 0; i < nlist; i++) {
+    tally_total[i] += tally_single[i];
+    tally_single[i] = 0;
+  }
+
+  tally_two_flag = tally_single_flag = tally_total_flag = 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+char *SurfReact::reactionID(int m)
+{
+  return rlist[m].id;
+}
+
+/* ---------------------------------------------------------------------- */
+
+int SurfReact::match_reactant(char *species, int m)
+{
+  for (int i = 0; i < rlist[m].nreactant; i++)
+    if (strcmp(species,rlist[m].id_reactants[i]) == 0) return 1;
+  return 0;
+}
+
+/* ---------------------------------------------------------------------- */
+
+int SurfReact::match_product(char *species, int m)
+{
+  for (int i = 0; i < rlist[m].nproduct; i++)
+    if (strcmp(species,rlist[m].id_products[i]) == 0) return 1;
+  return 0;
 }
 
 /* ---------------------------------------------------------------------- */
 
 double SurfReact::compute_vector(int i)
 {
-  one[0] = nsingle;
-  one[1] = ntotal + nsingle;
-  MPI_Allreduce(&one,&all,2,MPI_DOUBLE,MPI_SUM,world);
+  if (i < 2) {
+    if (!tally_two_flag) {
+      tally_two_flag = 1;
+      one[0] = nsingle;
+      one[1] = ntotal;
+      MPI_Allreduce(one,all,2,MPI_DOUBLE,MPI_SUM,world);
+    }
+    return all[i];
+  }
+    
+  if (i < 2+nlist) {
+    if (!tally_single_flag) {
+      tally_single_flag = 1;
+      MPI_Allreduce(tally_single,tally_single_all,nlist,MPI_INT,MPI_SUM,world);
+    }
+    return 1.0*tally_single_all[i-2];
+  }
 
-  return all[i];
+  if (!tally_total_flag) {
+    tally_total_flag = 1;
+    MPI_Allreduce(tally_total,tally_total_all,nlist,MPI_INT,MPI_SUM,world);
+  }
+  return 1.0*tally_total_all[i-nlist-2];
 }

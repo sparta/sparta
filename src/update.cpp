@@ -57,11 +57,11 @@ enum{PERAUTO,PERCELL,PERSURF};                  // several files
 
 // either set ID or PROC/INDEX, set other to -1
 
-#define MOVE_DEBUG 1              // un-comment to debug one particle
-#define MOVE_DEBUG_ID 316507228  // particle ID
+//#define MOVE_DEBUG 1              // un-comment to debug one particle
+#define MOVE_DEBUG_ID 707672596  // particle ID
 #define MOVE_DEBUG_PROC -1        // owning proc
 #define MOVE_DEBUG_INDEX -1   // particle index on owning proc
-#define MOVE_DEBUG_STEP 505    // timestep
+#define MOVE_DEBUG_STEP 94    // timestep
 
 /* ---------------------------------------------------------------------- */
 
@@ -385,7 +385,7 @@ template < int DIM, int SURF > void Update::move()
   bool hitflag;
   int m,icell,icell_original,nmask,outface,bflag,nflag,pflag,itmp;
   int side,minside,minsurf,nsurf,cflag,isurf,exclude,stuck_iterate;
-  int pstart,pstop,entryexit,any_entryexit;
+  int pstart,pstop,entryexit,any_entryexit,reaction;
   surfint *csurfs;
   cellint *neigh;
   double dtremain,frac,newfrac,param,minparam,rnew,dtsurf,tc,tmp;
@@ -798,31 +798,6 @@ template < int DIM, int SURF > void Update::move()
 #endif
               
               if (hitflag && param < minparam && side == OUTSIDE) {
-
-                // NOTE: these were the old checks
-                //       think it is now sufficient to test for particle
-                //       in an INSIDE cell in fix grid/check
-
-              //if (hitflag && side != ONSURF2OUT && param <= minparam) {
-
-                // this if test is to avoid case where particle
-                // previously hit 1 of 2 (or more) touching angled surfs at
-                // common edge/corner, on this iteration first surf
-                // is excluded, but others may be hit on inside:
-                // param will be epsilon and exclude must be set
-                // skip the hits of other touching surfs
-
-                //if (side == INSIDE && param < EPSPARAM && exclude >= 0) 
-                // continue;
-
-                // this if test is to avoid case where particle
-                // hits 2 touching angled surfs at common edge/corner
-                // from far away:
-                // param is same, but hits one on outside, one on inside
-                // only keep surf hit on outside
-
-                //if (param == minparam && side == INSIDE) continue;
-
                 cflag = 1;
                 minparam = param;
                 minside = side;
@@ -841,16 +816,6 @@ template < int DIM, int SURF > void Update::move()
             nscheck_one += nsurf;
             
             if (cflag) {
-              // NOTE: this check is no longer needed?
-              if (minside == INSIDE) {
-                char str[128];
-                sprintf(str,
-                        "Particle %d on proc %d hit inside of "
-                        "surf %d on step " BIGINT_FORMAT,
-                        i,me,minsurf,update->ntimestep);
-                error->one(FLERR,str);
-              }
-
               if (DIM == 3) tri = &tris[minsurf];
               if (DIM != 3) line = &lines[minsurf];
 
@@ -881,10 +846,10 @@ template < int DIM, int SURF > void Update::move()
 
               if (DIM == 3)
                 jpart = surf->sc[tri->isc]->
-                  collide(ipart,tri->norm,dtremain,tri->isr);
+                  collide(ipart,tri->norm,dtremain,tri->isr,reaction);
               if (DIM != 3)
                 jpart = surf->sc[line->isc]->
-                  collide(ipart,line->norm,dtremain,line->isr);
+                  collide(ipart,line->norm,dtremain,line->isr,reaction);
 
               if (jpart) {
                 particles = particle->particles;
@@ -898,7 +863,8 @@ template < int DIM, int SURF > void Update::move()
 
               if (nsurf_tally)
                 for (m = 0; m < nsurf_tally; m++)
-                  slist_active[m]->surf_tally(minsurf,icell,&iorig,ipart,jpart);
+                  slist_active[m]->surf_tally(minsurf,icell,reaction,
+                                              &iorig,ipart,jpart);
               
               // nstuck = consective iterations particle is immobile
 
@@ -1068,7 +1034,8 @@ template < int DIM, int SURF > void Update::move()
           if (nboundary_tally) 
             memcpy(&iorig,&particles[i],sizeof(Particle::OnePart));
 
-          bflag = domain->collide(ipart,outface,icell,xnew,dtremain,jpart);
+          bflag = domain->collide(ipart,outface,icell,xnew,dtremain,
+                                  jpart,reaction);
 
           if (jpart) {
             particles = particle->particles;
@@ -1079,7 +1046,7 @@ template < int DIM, int SURF > void Update::move()
           if (nboundary_tally)
             for (m = 0; m < nboundary_tally; m++)
               blist_active[m]->
-                boundary_tally(outface,bflag,&iorig,ipart,jpart);
+                boundary_tally(outface,bflag,reaction,&iorig,ipart,jpart);
 
           if (DIM == 1) {
             xnew[0] = x[0] + dtremain*v[0];
@@ -1360,7 +1327,7 @@ int Update::split2d(int icell, double *x)
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of all computes that tally surface and boundary bounce info
+   setup lists of all computes that tally surface collision/reaction info
    return 1 if there are any, 0 if not
 ------------------------------------------------------------------------- */
 
@@ -1376,8 +1343,7 @@ int Update::collide_react_setup()
 }
 
 /* ----------------------------------------------------------------------
-   setup lists of all computes that tally surface and boundary bounce info
-   return 1 if there are any, 0 if not
+   zero counters in all computes that tally surface collision/reaction info
 ------------------------------------------------------------------------- */
 
 void Update::collide_react_update()
@@ -1425,7 +1391,8 @@ int Update::bounce_setup()
 
 /* ----------------------------------------------------------------------
    set bounce tally flags for current timestep
-   nsurf_tally = # of computes needing bounce info on this step
+   nsurf_tally = # of surface computes needing bounce info on this step
+   nboundary_tally = # of boundary computes needing bounce info on this step
    clear accumulators in computes that will be invoked this step
 ------------------------------------------------------------------------- */
 

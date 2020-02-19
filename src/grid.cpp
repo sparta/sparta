@@ -1215,6 +1215,15 @@ void Grid::set_inout()
     error->all(FLERR,"Cannot mark grid cells as inside/outside surfs because "
                "ghost cells do not exist");
 
+  // if all surfs are transparent, just mark all cells as OUTSIDE
+
+  if (surf->all_transparent()) {
+    for (icell = 0; icell < nlocal; icell++) cinfo[icell].type = OUTSIDE;
+    return;
+  }
+
+  // set dimensional dependent quantities
+
   int faceflip[6] = {XHI,XLO,YHI,YLO,ZHI,ZLO};
 
   int me = comm->me;

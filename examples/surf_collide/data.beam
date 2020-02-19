@@ -1,0 +1,13 @@
+# fix emit/face/file for beam
+
+beam_area          
+NIJ 2 2
+NV 1
+VALUES temp 
+IMESH -1 1
+JMESH -11 -9
+
+1 1 0.0001
+1 2 0.0001
+2 1 0.0001
+2 2 0.0001
