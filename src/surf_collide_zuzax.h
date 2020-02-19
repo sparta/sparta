@@ -63,7 +63,7 @@ class SurfCollideZuzax : public SurfCollide {
   char *inputConfigFile {nullptr};       // input file
 
   double vstream[3];
-  class RanPark *random;     // RNG for particle reflection
+  class RanPark *random {nullptr};     // RNG for particle reflection
 
   void diffuse(Particle::OnePart *, double *);
 

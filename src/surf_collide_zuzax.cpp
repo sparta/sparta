@@ -60,7 +60,11 @@ SurfCollideZuzax::SurfCollideZuzax(SPARTA *sparta, int narg, char **arg) :
 
   tstr = NULL;
 
-  inputConfigFile = arg[2];
+
+  int n = strlen(arg[2]) + 1;
+  inputConfigFile = new char[n];
+  strcpy(inputConfigFile, arg[2]);
+  
   if (strlen(inputConfigFile) < 2) {
       error->all(FLERR,"Expecting non-zero fileName");
   }
@@ -118,6 +122,8 @@ void SurfCollideZuzax::init()
     if (!input->variable->equal_style(tvar))
       error->all(FLERR,"Surf_collide diffuse variable is invalid style");
   }
+
+  initNetwork();
 }
 //==================================================================================================================================
 void SurfCollideZuzax::initNetwork()

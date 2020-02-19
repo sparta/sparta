@@ -3,7 +3,7 @@
   <validate reactions="yes" species="yes"/>
 
   <!-- phase air     -->
-  <phase dim="3" id="airSM">
+  <phase dim="3" id="air">
     <elementArray datasrc="elements.xml">O  N  Ar </elementArray>
     <speciesArray datasrc="#species_data">O  O2  N  NO  NO2  N2O  N2  AR </speciesArray>
     <reactionArray datasrc="#reaction_data"/>

@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<ctml>
+    <SolnMaterialDomain>
+      <SolnMaterialDomain_ID>
+        <PL_baseName> PL_0_0 </PL_baseName>
+        <nDims> 3 </nDims>
+      </SolnMaterialDomain_ID>
+      <smd_index> 0 </smd_index>
+      <file_ID vtype="string"> 
+         gasAblate.xml#air
+         carbon_ablate.xml#carbon_surf
+         Graphite_solid.xml#Graphite(s)
+         Al.xml#Al(s) 
+      </file_ID>
+    </SolnMaterialDomain>
+</ctml>

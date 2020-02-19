@@ -140,12 +140,13 @@ global		    fnum ${Fnum}
 #
 # add species to the list of species that the simulation understands
 #
-species		    air.species N2 O2
+species		    air.species N2 O2 CO
 
 # 
 # Specify the zuzax input file. 
 #  -> all species should be identified with a zuzax species
-zuzax_gas_species   airSM.xml 
+#zuzax_gas_species   airSM.xml 
+zuzax_gas_species   gasAblate.xml 
 #
 #  Set the mixture to be 90% N2 10% O2
 #  Note without the frac keyword, the N and O mole fractions are 0.5 respectively
@@ -179,13 +180,15 @@ surf_collide	    1 zuzax phases.xml ${surftemp} 1.0
 # sample surf_react statement with zuzax in it.
 surf_react        1Z zuzax surf.xml
 
-# Set the left boundary model to be a diffuse collider
+# Set the left boundary model to be a zuzax collider
 #   Sets the left x boundary to have collision model 1 (xlo had to have been set to an "s" boundary first"
 bound_modify xlo collide 1
 
 #  Set parameters for a group of surface elements in the specified group-ID
 #  all -> all surfaces
 #    -> set the surface collision model to sc-ID = 1 which we just identified in the last card
+#       -> hkm do I need this key command?
+#
 surf_modify         all collide 1
 
 #  Define what style of particle-particle collisions will be performed by SPARTA each timestep. 
@@ -213,6 +216,7 @@ timestep 	    ${tstep}
 #dump                2 image all 50 image.*.ppm type type pdiam 5.0E-7 &
 #                    surf proc 0.01 size 512 512 zoom 1.75
 #dump_modify	    2 pad 4
+
 
 variable            collrate equal "ncoll*step*2/np"
 stats		    100
