@@ -31,8 +31,8 @@ class SurfCollideDiffuse : public SurfCollide {
   SurfCollideDiffuse(class SPARTA *sparta) : SurfCollide(sparta) {}
   ~SurfCollideDiffuse();
   void init();
-  Particle::OnePart *collide(Particle::OnePart *&, double *, double &, 
-                             int, int &);
+  Particle::OnePart *collide(Particle::OnePart *&, double &,
+                             int, double *, int, int &);
 
   void dynamic();
 

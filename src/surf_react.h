@@ -32,7 +32,8 @@ class SurfReact : protected Pointers {
   SurfReact(class SPARTA *, int, char **);
   virtual ~SurfReact();
   virtual void init();
-  virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&) = 0;
+  virtual int react(Particle::OnePart *&, int, double *, 
+                    Particle::OnePart *&) = 0;
 
   virtual char *reactionID(int);
   virtual int match_reactant(char *, int);

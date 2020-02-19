@@ -348,11 +348,12 @@ int Domain::collide(Particle::OnePart *&ip, int face, int icell, double *xnew,
   // dtremain may be changed by collision model
   // reset all components of xnew, in case dtremain changed
   // if axisymmetric, caller will reset again, including xnew[2]
+  // pass -face to collide() to distinguish from surf element collision
 
   case SURFACE: 
     {
       jp = surf->sc[surf_collide[face]]->
-        collide(ip,norm[face],dtremain,surf_react[face],reaction);
+        collide(ip,dtremain,-(face+1),norm[face],surf_react[face],reaction);
       
       if (ip) {
         double *x = ip->x;
