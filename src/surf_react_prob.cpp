@@ -66,12 +66,12 @@ void SurfReactProb::init()
 
 /* ----------------------------------------------------------------------
    select surface reaction to perform for particle with ptr IP on surface
-   return 0 if no reaction
-   return 1 = destroy reaction
+   return 0 = no reaction
+   return 1 = which reaction
    if dissociation, add particle and return ptr JP
 ------------------------------------------------------------------------- */
 
-int SurfReactProb::react(Particle::OnePart *&ip, double *, 
+int SurfReactProb::react(Particle::OnePart *&ip, int, double *, 
                          Particle::OnePart *&jp)
 {
   int n = reactions[ip->ispecies].n;

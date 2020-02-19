@@ -37,6 +37,7 @@ enum{TALLYAUTO,TALLYREDUCE,TALLYRVOUS};         // same as Update
 enum{REGION_ALL,REGION_ONE,REGION_CENTER};      // same as Grid
 enum{TYPE,MOLECULE,ID};
 enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
+enum{INT,DOUBLE};                      // several files
 
 #define DELTA 1024
 #define DELTAMODEL 4
@@ -88,6 +89,26 @@ Surf::Surf(SPARTA *sparta) : Pointers(sparta)
 
   tally_comm = TALLYAUTO;
 
+  // custom per-surf vectors/arrays
+
+  ncustom = 0;
+  ename = NULL;
+  etype = esize = ewhich = NULL;
+
+  ncustom_ivec = ncustom_iarray = 0;
+  icustom_ivec = icustom_iarray = NULL;
+  eivec = NULL;
+  eiarray = NULL;
+  eicol = NULL;
+
+  ncustom_dvec = ncustom_darray = 0;
+  icustom_dvec = icustom_darray = NULL;
+  edvec = NULL;
+  edarray = NULL;
+  edcol = NULL;
+
+  custom_restart_flag = NULL;
+
   // allocate hash for surf IDs
 
   hash = new MySurfHash();
@@ -115,6 +136,28 @@ Surf::~Surf()
 
   hash->clear();
   delete hash;
+
+  for (int i = 0; i < ncustom; i++) delete [] ename[i];
+  memory->sfree(ename);
+  memory->destroy(etype);
+  memory->destroy(esize);
+  memory->destroy(ewhich);
+
+  for (int i = 0; i < ncustom_ivec; i++) memory->destroy(eivec[i]);
+  for (int i = 0; i < ncustom_iarray; i++) memory->destroy(eiarray[i]);
+  for (int i = 0; i < ncustom_dvec; i++) memory->destroy(edvec[i]);
+  for (int i = 0; i < ncustom_darray; i++) memory->destroy(edarray[i]);
+
+  memory->destroy(icustom_ivec);
+  memory->destroy(icustom_iarray);
+  memory->sfree(eivec);
+  memory->sfree(eiarray);
+  memory->destroy(eicol);
+  memory->destroy(icustom_dvec);
+  memory->destroy(icustom_darray);
+  memory->sfree(edvec);
+  memory->sfree(edarray);
+  memory->destroy(edcol);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -3551,6 +3594,212 @@ int Surf::rendezvous_tris(int n, char *inbuf,
   return 0;
 }
 
+// ----------------------------------------------------------------------
+// methods for per-surf custom attributes
+// ----------------------------------------------------------------------
+
+/* ----------------------------------------------------------------------
+   find custom per-atom vector/array with name
+   return index if found
+   return -1 if not found
+------------------------------------------------------------------------- */
+
+int Surf::find_custom(char *name)
+{
+  for (int i = 0; i < ncustom; i++)
+    if (ename[i] && strcmp(ename[i],name) == 0) return i;
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   add a custom attribute with name
+   assumes name does not already exist, except in case of restart
+   type = 0/1 for int/double
+   size = 0 for vector, size > 0 for array with size columns
+   return index of its location;
+------------------------------------------------------------------------- */
+
+int Surf::add_custom(char *name, int type, int size)
+{
+  int index;
+
+  // if name already exists
+  // just return index if a restart script and re-defining the name
+  // else error
+
+  index = find_custom(name);
+  if (index >= 0) {
+    if (custom_restart_flag == NULL || custom_restart_flag[index] == 1)
+      error->all(FLERR,"Custom surf attribute name already exists");
+    custom_restart_flag[index] = 1;
+    return index;
+  }
+
+  // use first available NULL entry or allocate a new one
+
+  for (index = 0; index < ncustom; index++)
+    if (ename[index] == NULL) break;
+
+  if (index == ncustom) {
+    ncustom++;
+    ename = (char **) memory->srealloc(ename,ncustom*sizeof(char *),
+                                       "surf:ename");
+    memory->grow(etype,ncustom,"surf:etype");
+    memory->grow(esize,ncustom,"surf:etype");
+    memory->grow(ewhich,ncustom,"surf:etype");
+  }
+
+  int n = strlen(name) + 1;
+  ename[index] = new char[n];
+  strcpy(ename[index],name);
+  etype[index] = type;
+  esize[index] = size;
+
+  if (type == INT) {
+    if (size == 0) {
+      ewhich[index] = ncustom_ivec++;
+      eivec = (int **) 
+        memory->srealloc(eivec,ncustom_ivec*sizeof(int *),"surf:eivec");
+      eivec[ncustom_ivec-1] = NULL;
+      memory->grow(icustom_ivec,ncustom_ivec,"surf:icustom_ivec");
+      icustom_ivec[ncustom_ivec-1] = index;
+    } else {
+      ewhich[index] = ncustom_iarray++;
+      eiarray = (int ***) 
+        memory->srealloc(eiarray,ncustom_iarray*sizeof(int **),
+                         "surf:eiarray");
+      eiarray[ncustom_iarray-1] = NULL;
+      memory->grow(icustom_iarray,ncustom_iarray,"surf:icustom_iarray");
+      icustom_iarray[ncustom_iarray-1] = index;
+      memory->grow(eicol,ncustom_iarray,"surf:eicol");
+      eicol[ncustom_iarray-1] = size;
+    }
+  } else if (type == DOUBLE) {
+    if (size == 0) {
+      ewhich[index] = ncustom_dvec++;
+      edvec = (double **) 
+        memory->srealloc(edvec,ncustom_dvec*sizeof(double *),"surf:edvec");
+      edvec[ncustom_dvec-1] = NULL;
+      memory->grow(icustom_dvec,ncustom_dvec,"surf:icustom_dvec");
+      icustom_dvec[ncustom_dvec-1] = index;
+    } else {
+      ewhich[index] = ncustom_darray++;
+      edarray = (double ***) 
+        memory->srealloc(edarray,ncustom_darray*sizeof(double **),
+                         "surf:edarray");
+      edarray[ncustom_darray-1] = NULL;
+      memory->grow(icustom_darray,ncustom_darray,"surf:icustom_darray");
+      icustom_darray[ncustom_darray-1] = index;
+      memory->grow(edcol,ncustom_darray,"surf:edcol");
+      edcol[ncustom_darray-1] = size;
+    }
+  }
+
+  allocate_custom(index,nlocal);
+
+  return index;
+}
+
+/* ----------------------------------------------------------------------
+   grow the vector/array associated with custom attribute with index
+   nold = old length, nnew = new length (typically maxlocal)
+   set new values to 0 via memset()
+------------------------------------------------------------------------- */
+
+void Surf::allocate_custom(int index, int n)
+{
+  if (etype[index] == INT) {
+    if (esize[index] == 0) {
+      int *ivector = eivec[ewhich[index]];
+      memory->create(ivector,n,"surf:eivec");
+      if (ivector) memset(ivector,0,n*sizeof(int));
+      eivec[ewhich[index]] = ivector;
+    } else {
+      int **iarray = eiarray[ewhich[index]];
+      memory->create(iarray,n,esize[index],"surf:eiarray");
+      if (iarray) memset(&iarray[0][0],0,n*esize[index]*sizeof(int));
+      eiarray[ewhich[index]] = iarray;
+    }
+
+  } else {
+    if (esize[index] == 0) {
+      double *dvector = edvec[ewhich[index]];
+      memory->create(dvector,n,"surf:edvec");
+      if (dvector) memset(dvector,0,n*sizeof(double));
+      edvec[ewhich[index]] = dvector;
+    } else {
+      double **darray = edarray[ewhich[index]];
+      memory->create(darray,n,esize[index],"surf:edarray");
+      if (darray) memset(&darray[0][0],0,n*esize[index]*sizeof(double));
+      edarray[ewhich[index]] = darray;
+    }
+  }
+}
+
+/* ----------------------------------------------------------------------
+   remove a custom attribute at location index
+   free memory for name and vector/array and set ptrs to NULL
+   ncustom lists never shrink, but indices stored between
+     the ncustom list and the dense vector/array lists must be reset
+------------------------------------------------------------------------- */
+
+void Surf::remove_custom(int index)
+{
+  delete [] ename[index];
+  ename[index] = NULL;
+
+  if (etype[index] == INT) {
+    if (esize[index] == 0) {
+      memory->destroy(eivec[ewhich[index]]);
+      ncustom_ivec--;
+      for (int i = ewhich[index]; i < ncustom_ivec; i++) {
+        icustom_ivec[i] = icustom_ivec[i+1];
+        ewhich[icustom_ivec[i]] = i;
+        eivec[i] = eivec[i+1];
+      }
+    } else{
+      memory->destroy(eiarray[ewhich[index]]);
+      ncustom_iarray--;
+      for (int i = ewhich[index]; i < ncustom_iarray; i++) {
+        icustom_iarray[i] = icustom_iarray[i+1];
+        ewhich[icustom_iarray[i]] = i;
+        eiarray[i] = eiarray[i+1];
+        eicol[i] = eicol[i+1];
+      }
+    }
+  } else if (etype[index] == DOUBLE) {
+    if (esize[index] == 0) {
+      memory->destroy(edvec[ewhich[index]]);
+      ncustom_dvec--;
+      for (int i = ewhich[index]; i < ncustom_dvec; i++) {
+        icustom_dvec[i] = icustom_dvec[i+1];
+        ewhich[icustom_dvec[i]] = i;
+        edvec[i] = edvec[i+1];
+      }
+    } else{
+      memory->destroy(edarray[ewhich[index]]);
+      ncustom_darray--;
+      for (int i = ewhich[index]; i < ncustom_darray; i++) {
+        icustom_darray[i] = icustom_darray[i+1];
+        ewhich[icustom_darray[i]] = i;
+        edarray[i] = edarray[i+1];
+        edcol[i] = edcol[i+1];
+      }
+    }
+  }
+
+  // set ncustom = 0 if custom list is now entirely empty
+
+  int empty = 1;
+  for (int i = 0; i < ncustom; i++) 
+    if (ename[i]) empty = 0;
+  if (empty) ncustom = 0;
+}
+
+// ----------------------------------------------------------------------
+// methods for write/read restart info
+// ----------------------------------------------------------------------
+
 /* ----------------------------------------------------------------------
    proc 0 writes surf geometry to restart file
    NOTE: needs to be generalized for different surf styles
@@ -3631,7 +3880,6 @@ void Surf::read_restart(FILE *fp)
     lines = (Line *) memory->smalloc(nsurf*sizeof(Line),"surf:lines");
     // NOTE: need different logic for different surf styles
     nlocal = nsurf;
-    nmax = nsurf;
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
@@ -3655,7 +3903,6 @@ void Surf::read_restart(FILE *fp)
     tris = (Tri *) memory->smalloc(nsurf*sizeof(Tri),"surf:tris");
     // NOTE: need different logic for different surf styles
     nlocal = nsurf;
-    nmax = nsurf;
 
     if (me == 0) {
       for (int i = 0; i < nsurf; i++) {
@@ -3742,3 +3989,4 @@ bigint Surf::memory_usage()
 
   return bytes;
 }
+

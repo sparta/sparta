@@ -61,13 +61,13 @@ SurfReactGlobal::~SurfReactGlobal()
 
 /* ----------------------------------------------------------------------
    select surface reaction to perform for particle with ptr IP on surface
-   return 0 if no reaction
+   return 0 = no reaction
    return 1 = destroy reaction
    return 2 = create reaction
    if create, add particle and return ptr JP
 ------------------------------------------------------------------------- */
 
-int SurfReactGlobal::react(Particle::OnePart *&ip, double *, 
+int SurfReactGlobal::react(Particle::OnePart *&ip, int, double *, 
                            Particle::OnePart *&jp)
 {
   double r = random->uniform();
