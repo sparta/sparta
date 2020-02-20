@@ -111,19 +111,19 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
 
   // initialize reaction data structs
 
-  nlist_gs = maxlist_gs = 0;
-  rlist_gs = NULL;
+  if (model == GS) {
+    nlist_gs = maxlist_gs = 0;
+    rlist_gs = NULL;
+    reactions_gs = NULL;
+    indices_gs = NULL;
+  }
 
-  reactions_gs = NULL;
-  indices_gs = NULL;
-
-  /* PS model
-  nlist_ps = maxlist_ps = 0;
-  rlist_ps = NULL;
-  nactive_ps = 0;
-
-  n_PS_react = 0;
-  */
+  if (model == PS) {
+    nlist_ps = maxlist_ps = 0;
+    rlist_ps = NULL;
+    nactive_ps = 0;
+    n_PS_react = 0;
+  }
 
   // read the file defining GS or PS reactions
 
