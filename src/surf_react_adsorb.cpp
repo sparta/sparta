@@ -109,10 +109,8 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
     iarg++;
   }
 
-  // zero stats
+  // initialize reaction data structs
 
-  nsingle = ntotal = 0;
-    
   nlist_gs = maxlist_gs = 0;
   rlist_gs = NULL;
 
@@ -132,6 +130,12 @@ SurfReactAdsorb::SurfReactAdsorb(SPARTA *sparta, int narg, char **arg) :
   if (model == GS) readfile_gs(arg[3]);
   //if (model == PS) readfile_ps(arg[3]);
 
+  // setup the reaction tallies
+
+  nsingle = ntotal = 0;    
+
+  if (model == GS) nlist = nlist_gs;
+  if (model == PS) nlist = nlist_ps;
   tally_single = new int[nlist];
   tally_total = new int[nlist];
   tally_single_all = new int[nlist];
@@ -1128,8 +1132,6 @@ void SurfReactAdsorb::readfile_gs(char *fname)
   }
 
   if (comm->me == 0) fclose(fp);
-
-  nlist = nlist_gs;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1438,8 +1440,6 @@ void SurfReactAdsorb::readfile_ps(char *fname)
   }
 
   if (comm->me == 0) fclose(fp);
-
-  nlist = nlist_ps;
 }
 */
 
