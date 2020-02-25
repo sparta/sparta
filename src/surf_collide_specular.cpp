@@ -28,8 +28,6 @@ SurfCollideSpecular::SurfCollideSpecular(SPARTA *sparta, int narg, char **arg) :
   SurfCollide(sparta, narg, arg)
 {
   if (narg != 2) error->all(FLERR,"Illegal surf_collide specular command");
-
-  allowreact = 1;
 }
 
 /* ----------------------------------------------------------------------

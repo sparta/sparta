@@ -371,7 +371,7 @@ int SurfReactAdsorb::react(Particle::OnePart *&ip, int isurf, double *norm,
     area = surf->edvec[area_direct];
     weight = surf->edvec[weight_direct];
   } else {
-    isurf = -isurf + 1;
+    isurf = -(isurf+1);
     nstick = nstick_face;
     nstick_total = &nstick_total_face[0];
     area = &area_face[0];

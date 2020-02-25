@@ -27,6 +27,7 @@ SurfCollideTransparent(SPARTA *sparta, int narg, char **arg) :
 {
   if (narg != 2) error->all(FLERR,"Illegal surf_collide transparent command");
 
+  allowreact = 0;
   transparent = 1;
 }
 

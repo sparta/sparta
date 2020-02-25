@@ -309,7 +309,6 @@ void Surf::init()
 
   // checks on transparent surfaces
   // must be assigned to transparent surf collision model
-  // must not be assigned to any surf reaction model
 
   if (surf_collision_check) {
     flag = 0;
@@ -317,14 +316,12 @@ void Surf::init()
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!lines[i].transparent) continue;
         if (!sc[lines[i].isc]->transparent) flag++;
-        if (lines[i].isr >= 0) flag++;
       }
     } 
     if (dim == 3) {
       for (int i = 0; i < nlocal+nghost; i++) {
         if (!tris[i].transparent) continue;
         if (!sc[tris[i].isc]->transparent) flag++;
-        if (tris[i].isr >= 0) flag++;
       }
     } 
 
