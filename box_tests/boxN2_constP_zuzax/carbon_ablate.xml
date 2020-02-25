@@ -9,7 +9,7 @@
     <reactionArray datasrc="#reaction_data"/>
     <state>
       <temperature units="K">1200.0</temperature>
-      <coverages> (s):0.8 O(s):1.0 N(s):1.0 </coverages>
+      <coverages> (s):0.2857144 O(s):0.3571428 N(s):0.3571428 </coverages>
     </state>
     <thermo model="Surface">
       <site_density units="gmol/cm2"> 5.811886e-09 </site_density>

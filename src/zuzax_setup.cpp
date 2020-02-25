@@ -42,6 +42,7 @@ ZuzaxSetup::~ZuzaxSetup()
 {
    delete (gasThermo_);
    memory->destroy(SptoZu_speciesMap);
+   memory->destroy(ZutoSp_speciesMap);
 }
 //=================================================================================================
 void ZuzaxSetup::init()
@@ -50,35 +51,46 @@ void ZuzaxSetup::init()
 //=================================================================================================
 void ZuzaxSetup::initGasSetup(int nargs, char** args)
 {
+  int k;
   bool found = false;
   gasThermo_ =  new Zuzax::IdealGasPhase(args[0], "");
   Particle::Species *species = particle->species;
+  size_t nsp = gasThermo_->nSpecies();
   memory->create(SptoZu_speciesMap, particle->nspecies, "ZuzaxSetup::SptoZu_speciesMap");
+  memory->create(ZutoSp_speciesMap, nsp, "ZuzaxSetup::ZutoSp_speciesMap");
+  for (k = 0; k < nsp; ++k) {
+    ZutoSp_speciesMap[k] = -1;
+  }
 
   // Loop over all of the gas species that are currently defined within sparta
-  for (int k = 0; k < particle->nspecies; ++k) {
+  for (k = 0; k < particle->nspecies; ++k) {
       SptoZu_speciesMap[k] = -1; 
       Particle::Species& spk = species[k]; 
       std::string sspName(spk.id);
       // Establish the mapping between the Sparta species into the Zuzax ThermoPhase
       // -> The mapping is carried out via a string comparison on the species name
       found = false;
-      for (size_t kz = 0; kz < gasThermo_->nSpecies(); ++kz) {
+      for (size_t kz = 0; kz < nsp; ++kz) {
           if (sspName == gasThermo_->speciesName(kz)) {
-              found = true;
-              SptoZu_speciesMap[k] = (int) kz;
-              break;
+              if (ZutoSp_speciesMap[kz] == -1) { 
+                  ZutoSp_speciesMap[kz] = k;
+                  found = true;
+                  SptoZu_speciesMap[k] = (int) kz;
+                  break;
+              }
           }
       }
       if (!found) {
         char estring[128];
-        sprintf(estring, "Can't find a corresponding Zuzax species for the Sparta species, %s",
+        sprintf(estring, "Can't find a corresponding Zuzax species for the Sparta species, %s\n",
                         sspName.c_str());
-        error->all(FLERR, estring); } spk.zuzax_indexGasPhase = SptoZu_speciesMap[k];
+        error->all(FLERR, estring); 
+      } 
+      // insert the Zuzax species index into the particle class
+      spk.zuzax_indexGasPhase = SptoZu_speciesMap[k];
 
       // Calculate the ezero value with the Sparta's Species struct.
       spk.ezero = calcEzero(spk, spk.zuzax_indexGasPhase);
-      spk.zuzax_indexGasPhase = SptoZu_speciesMap[k]; 
   }
 
 }
@@ -95,7 +107,7 @@ double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas, int doTDep, doubl
     const Zuzax::StatMech::speciesStatMechInput& sI = sm->statMechInput();
 
     if (!sm) {
-        Zuzax::writelogf("ZuzaxSetup::calcEzero Warning(): Not StatMech type for species %s, Setting to zero",
+        Zuzax::writelogf("ZuzaxSetup::calcEzero Warning(): Not StatMech type for species %s, Setting to zero\n",
                          gasThermo_->speciesName(kgas).c_str());
         return 0.0;
     }
@@ -106,7 +118,7 @@ double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas, int doTDep, doubl
     double Utran298 = 3./2. * Zuzax::Boltzmann * 298.15;
     int nrotdof = spk.rotdof;
     if (nrotdof != 0 && nrotdof != 2 && nrotdof != 3) {
-        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", " unknown rotation option");
+        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", " unknown rotation option\n");
     }
     double UrotT = nrotdof / 2.0 * Zuzax::Boltzmann * T;
     double Urot298 = nrotdof / 2.0 * Zuzax::Boltzmann * 298.15;
@@ -117,7 +129,7 @@ double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas, int doTDep, doubl
     double theta0 = sI.theta[0];
     double theta0_sp = spk.vibtemp[0];
     if (theta0 != theta0_sp) {
-        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", "%s: zuzax and Sparta different theta0: %g %g", 
+        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", "%s: zuzax and Sparta different theta0: %g %g\n", 
                                 gasThermo_->speciesName(kgas).c_str(), theta0 , theta0_sp); 
     }
     double tstar = theta0 / T;
@@ -129,7 +141,7 @@ double ZuzaxSetup::calcEzero(Particle::Species& spk, int kgas, int doTDep, doubl
     // get rotdofs
     double nrotdof_sp = spk.rotdof;
     if (nrotdof_sp != nrotdof) {
-        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", "zuzax and Sparta different nrotdofs: %d %d", 
+        throw Zuzax::ZuzaxError("ZuzaxSetup::calcEzero", "zuzax and Sparta different nrotdofs: %d %d\n", 
                                 nrotdof, nrotdof_sp);
     }
     double Erot_sp = nrotdof / 2.0 * Zuzax::Boltzmann * T;

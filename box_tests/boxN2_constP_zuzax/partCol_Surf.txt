@@ -1,3 +1,0 @@
-# Time-averaged data for fix 1s
-# TimeStep Number-of-rows
-# Row c_1s[1]

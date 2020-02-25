@@ -594,7 +594,7 @@ void Particle::grow(int nextra)
   while (newmax < target) newmax += DELTA;
   
   if (newmax > MAXSMALLINT) 
-    error->one(FLERR,"Per-processor particle count is too big");
+    error->one(FLERR,"Per-processor particle count is too big\n");
 
   maxlocal = newmax;
   particles = (OnePart *)

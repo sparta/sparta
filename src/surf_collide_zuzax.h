@@ -49,8 +49,8 @@ class SurfCollideZuzax : public SurfCollide {
 
 
  protected:
-  double twall;              // surface temperature
-  double pwall;              // surface pressure
+  double twall;              // surface temperature (Kelvin)
+  double pwall;              // surface pressure ( Pascal )
   double acc;                // surface accomodation coeff
   double vx,vy,vz;           // translational velocity of surface
   double wx,wy,wz;           // angular velocity of surface

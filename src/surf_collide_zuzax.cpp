@@ -79,8 +79,13 @@ SurfCollideZuzax::SurfCollideZuzax(SPARTA *sparta, int narg, char **arg) :
     error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
   }
 
+  pwall = input->numeric(FLERR, arg[4]); 
+  if (pwall <= 0.0) {
+    error->all(FLERR,"Surf_collide diffuse press <= 0.0");
+  }
+
   // Read the accomodation coefficient
-  acc = input->numeric(FLERR,arg[4]); 
+  acc = input->numeric(FLERR,arg[5]); 
   if (acc < 0.0 || acc > 1.0) {
     error->all(FLERR,"Illegal surf_collide diffuse command");
   }
@@ -141,6 +146,7 @@ void SurfCollideZuzax::initNetwork()
 
   Zuzax::SubstrateElement ablateFilm("Ablator");
 
+
   /*
    *  Geometry of simulation (meters)
    */
@@ -169,7 +175,8 @@ void SurfCollideZuzax::initNetwork()
   gasR.setThermoMgr(*igp);
 
 
-  ablateFilm.addLinkToAssociatedReactorVolume(&gasR);
+  ablateFilm.addLinkToAssociatedReactorVolume(&gasR, false, true);
+  ablateFilm.setState_TP(twall, pwall);
 
   // Create the object that will propagate the surface reactor forward in time
   /*
@@ -182,36 +189,37 @@ void SurfCollideZuzax::initNetwork()
    */
   net.addReactor(ablateFilm);
 
-       // Setup the interface between the reactor and the substrate where the reactions will occur
-        // -> this will be a RBdry element which connects two reactors with an interfacial element
-        Zuzax::RBdry abFace_rrr("AirGraphite_rrr");
+  // Setup the interface between the reactor and the substrate where the reactions will occur
+  // -> this will be a RBdry element which connects two reactors with an interfacial element
+  Zuzax::RBdry abFace_rrr("AirGraphite_rrr");
 
-        // Define the area
-        abFace_rrr.setArea(1.0E-7);
+  // Define the area
+  abFace_rrr.setArea(1.0E-7);
 
-        // Turn on extended ROP analysis
-        abFace_rrr.setKinBreakdownToggle(true);
+  // Turn on extended ROP analysis
+  abFace_rrr.setKinBreakdownToggle(true);
 
-        // Set up the InterfaceKinetics object that controls the surface reactions
-        //   -> first we need a list of ThermoPhase objects
-        std::vector<Zuzax::thermo_t_double*> thVec_abFace_rrr;
-        thVec_abFace_rrr.push_back(igp);
-        Zuzax::thermo_t_double* volPhase = ablateFilm.volPhasePtr(0);
-        thVec_abFace_rrr.push_back(volPhase);
-        Zuzax::InterfaceKinetics* abFaceKin_rrr = 
+  // Set up the InterfaceKinetics object that controls the surface reactions
+  //   -> first we need a list of ThermoPhase objects
+  std::vector<Zuzax::thermo_t_double*> thVec_abFace_rrr;
+  thVec_abFace_rrr.push_back(igp);
+  Zuzax::thermo_t_double* volPhase = ablateFilm.volPhasePtr(0);
+  thVec_abFace_rrr.push_back(volPhase);
+  Zuzax::InterfaceKinetics* abFaceKin_rrr = 
             (Zuzax::InterfaceKinetics*) Zuzax::newInterfaceKineticsMgrFromFile(thVec_abFace_rrr, "carbon_ablate.xml");
 
-        Zuzax::thermo_t_double& sp = abFaceKin_rrr->reactionPhaseThermo();
-        Zuzax::SurfPhase& surfPhase = dynamic_cast<Zuzax::SurfPhase&>(sp);
-        abFace_rrr.setKinetics(abFaceKin_rrr);
+  Zuzax::thermo_t_double& sp = abFaceKin_rrr->reactionPhaseThermo();
+  Zuzax::SurfPhase& surfPhase = dynamic_cast<Zuzax::SurfPhase&>(sp);
+  abFace_rrr.setKinetics(abFaceKin_rrr);
 
-        // Install the interface so that the equations reside in the SubstrateElement
-        abFace_rrr.install(&ablateFilm, &gasR);
+  // Install the interface so that the equations reside in the SubstrateElement
+  abFace_rrr.install(&ablateFilm, &gasR);
 
-        double scl = 1;
-        net.setTMScaleFactor(scl);
+  double scl = 1;
+  net.setTMScaleFactor(scl);
 
-        net.addReservoir(gasR);
+  // The gas phase is added in as a reservoir
+  net.addReservoir(gasR);
 
         size_t is_c = surfPhase.speciesIndex("(s)");
         size_t is_H = surfPhase.speciesIndex("H(s)");

@@ -89,6 +89,19 @@ public:
      */
     int* SptoZu_speciesMap;
 
+
+    //! Zuzax to Sparta species map
+    /*!
+     *  Maps the zuzax species index into the sparta species index within the gasThermo ThermoPhase routine
+     *  Note, species which are not assigned with Sparta have a -1 index. We allow species in Zuzax to not have
+     *  a corresponding entry within the Sparta species class.
+     *
+     *  Length:   nsp in gas ThermoPhase
+     *  Index:    index of the zuzax species
+     *  Value:    index of the species within the sparta species class
+     */
+    int* ZutoSp_speciesMap;
+
 };
 //==================================================================================================================================
 }
