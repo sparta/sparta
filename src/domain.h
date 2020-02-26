@@ -63,6 +63,7 @@ class Domain : protected Pointers {
   int surf_collide[6];              // index of SurfCollide model
   int surf_react[6];                // index of SurfReact model
                                     // for each bflag = SURFACE boundary
+  void *boundSurfState[6] {0, 0, 0, 0, 0, 0}; // Pointer to the surface state object, if any
 };
 
 }

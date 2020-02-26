@@ -29,10 +29,23 @@ SurfCollideStyle(zuzax,SurfCollideZuzax)
 #define SPARTA_SURF_COLLIDE_ZUZAX_H
 
 #include "surf_collide.h"
+#ifdef USE_ZSURF
+#include "zuzax/zeroD/SurfPropagationSparta.h"
+#include "zuzax/zeroD/ReactorNetDAE.h"
+#endif
 
 namespace SPARTA_NS {
 
 #ifdef USE_ZSURF
+//! Surface Collision class for zuzax integration
+/*!
+ *  This class sets up a surface which will be modeled with the continuum code Zuzax.
+ *
+ *  Mass balances of all substances will be created.
+ *
+ *  
+ *
+ */
 class SurfCollideZuzax : public SurfCollide {
  public:
   SurfCollideZuzax(class SPARTA *, int, char **);
@@ -42,7 +55,17 @@ class SurfCollideZuzax : public SurfCollide {
   virtual Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int,
                                      void * surfaceState = nullptr) override;
 
-  void dynamic();
+  virtual void dynamic();
+
+  //! Provide a state object that will be assigned to each surface that will hold the state of 
+  //! of the surface
+  /*!
+   *  (virtual from surf_collide)
+   *
+   *  @return                                    Returns a pointer to void that will be used
+   */
+  virtual SurfState* provideStateObject() const override;
+
 
   //! Initialize the Network model with all of the ThermoPhase classes
   void initNetwork();
@@ -66,6 +89,10 @@ class SurfCollideZuzax : public SurfCollide {
   class RanPark *random {nullptr};     // RNG for particle reflection
 
   void diffuse(Particle::OnePart *, double *);
+
+  //! Pointer to a malloced net that will be used as a base in a copy constructor
+  //! to malloc state objects for all surfaces
+  Zuzax::SurfPropagationSparta* baseNet;
 
 
 };

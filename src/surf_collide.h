@@ -20,6 +20,8 @@
 
 namespace SPARTA_NS {
 
+class SurfState;
+
 class SurfCollide : protected Pointers {
  public:
   char *id;
@@ -30,6 +32,7 @@ class SurfCollide : protected Pointers {
   int transparent;          // 1 if transparent collision model
   int vector_flag;          // 0/1 if compute_vector() function exists
   int size_vector;          // length of global vector
+  int hasState {0};         // 1 if the surface has a state object 
 
   SurfCollide(class SPARTA *, int, char **);
   SurfCollide(class SPARTA *sparta) : Pointers(sparta) {}
@@ -49,6 +52,16 @@ class SurfCollide : protected Pointers {
                                      double & dtremain, int isr, void * surfaceState = nullptr) = 0;
 
   virtual void dynamic() {}
+
+  //! Provide a state object that will be assigned to each surface that will hold the state of 
+  //! of the surface
+  /*!
+   *  (virtual from surf_collide)
+   *
+   *  @return                                    Returns a pointer to void that will be used
+   */
+  virtual SurfState* provideStateObject() const { return nullptr; }
+
   void tally_update();
   double compute_vector(int i);
 

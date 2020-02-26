@@ -24,6 +24,10 @@
 #include "memory.h"
 #include "error.h"
 
+#include "random_mars.h"
+#include "random_park.h"
+#include "math_extra.h"
+#include "surf.h"
 
 enum{DISSOCIATION,EXCHANGE,RECOMBINATION};        // other surf react files
 enum{SIMPLE};                                     // other surf react files
@@ -44,6 +48,29 @@ namespace SPARTA_NS {
 SurfReactZuzax::SurfReactZuzax(SPARTA *sparta, int narg, char **arg) : 
     SurfReact(sparta, narg, arg)
 {
+  if (narg != 3) error->all(FLERR,"Illegal surf_react zuzax command");
+
+  int n = strlen(arg[2]) + 1;
+  inputAssocSurfCollideID = new char[n];
+  strcpy(inputAssocSurfCollideID, arg[2]);
+
+  isc = surf->find_collide(arg[2]);
+  if (isc == -1) {
+    error->allf(FLERR,"Illegal surf_react_zuzax command: can't find surf_collide ID, %s", arg[2]);
+  }
+
+  sc_linked = dynamic_cast<SurfCollideZuzax*>(surf->sc[isc]);
+  if (!sc_linked) {
+    error->allf(FLERR,"surf_react_zuzax command: surf_collide ID, %s, isn't of type zuzax", arg[2]);
+  }
+
+  // initialize RNG
+
+  random = new RanPark(update->ranmaster->uniform());
+  double seed = update->ranmaster->uniform();
+  random->reset(seed,comm->me,100);
+
+  printf("We are here\n");
 
 }
 

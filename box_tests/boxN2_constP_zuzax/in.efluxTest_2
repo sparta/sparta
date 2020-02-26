@@ -139,14 +139,14 @@ balance_grid        rcb cell
 global		    nrho ${nden}
 global		    fnum ${Fnum}
 #
-# add species to the list of species that the simulation understands
+# Add species to the list of species that the simulation understands
 #
-species		    air.species N2 O2 CO CO2 C
-
+species		    air.species N2 O2 CO CO2 C C2 C3 N O
 # 
 # Specify the zuzax input file. 
-#  -> all species should be identified with a zuzax species
-#zuzax_gas_species   airSM.xml 
+#  -> All sparta species should be identified with a zuzax species
+#     However, not all zuzax species in the ThermoPhase object need to be specified in the Sparta object.
+#     
 zuzax_gas_species   gasAblate.xml 
 #
 #  Set the mixture to be 90% N2 10% O2
@@ -168,29 +168,43 @@ mixture             mix vstream 0.0 0.0 0.0 temp 300. trot 300. tvib 300.
 #                    scale 0.33 0.33 1 group 1
 
 
-
-
-# Define a model for particle surface collisions
-#       Temperature = 300. K
-#       accomodation coefficient = 1.0  -> all collisions are diffuse
-#       Call the model 1
+#
 #surf_collide	    1 diffuse ${surftemp} 1.0
-surf_collide	    1 zuzax phases.xml ${surftemp} ${P_pa} 1.0
 
+# Define a model for particle surface collisions Zuzax
+#    Set the model for zuzax 
+#       Call the model 1Z
+#       List of phases = phases.xml
+#       Temperature = 1000. K
+#       P_pa = 100 Pascals
+#       accomodation coefficient = 1.0  -> all collisions are diffuse
+#
+#    The initial conditions of the surface will be set within the surface phase file listed in phases.xml
+#    (working on a capability to solve a pseudo-steady state capability within zuzax that would
+#     initialize the surface to a pseudo state state calculated from continuum assumptions using 
+#     the surface T and P and gas phase ThermoPhase specified in the zuzax_gas_species card
+#
+surf_collide	  1Z zuzax phases.xml ${surftemp} ${P_pa} 1.0 
 
+#
 # sample surf_react statement with zuzax in it.
-surf_react        1Z zuzax surf.xml
+#      zuzax is the new style command
+#      Takes one argument, the name of the surf_collide ID statement.
+#         -> We've defined the surface to have a certain number of phases in the surf_collide card.
+#         -> I't seems easiest to link surf_collide and surf_react together for the first attempt.
+#
+surf_react        1RZ zuzax 1Z 
 
 # Set the left boundary model to be a zuzax collider
 #   Sets the left x boundary to have collision model 1 (xlo had to have been set to an "s" boundary first"
-bound_modify xlo collide 1
+bound_modify xlo collide 1Z
 
 #  Set parameters for a group of surface elements in the specified group-ID
 #  all -> all surfaces
 #    -> set the surface collision model to sc-ID = 1 which we just identified in the last card
 #       -> hkm do I need this key command?
 #
-surf_modify         all collide 1
+surf_modify         all collide 1Z
 
 #  Define what style of particle-particle collisions will be performed by SPARTA each timestep. 
 #    vss =  The vss style implements the Variable Soft Sphere (VSS) model for collision

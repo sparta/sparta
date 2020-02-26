@@ -34,7 +34,9 @@ SurfReactStyle(zuzax,SurfReactZuzax)
 #include "surf_react.h"
 #include "zuzax/base/ct_defs.h"
 #include "zuzax/zeroD/SurfPropagationSparta.h"
+
 #endif
+#include "surf_collide_zuzax.h"
 
 namespace SPARTA_NS {
 
@@ -64,11 +66,16 @@ public:
 
  private:
 
+    char* inputAssocSurfCollideID;
+    int isc;
+
+    SurfCollideZuzax*  sc_linked;
+
     //! Create the object that will propagate the surface reactor forward in time
     /*!
      *  This is built on top of the normal ODE solver that propagates the reactor in time using BDF methods
      */
-    Zuzax::SurfPropagationSparta net;
+    //Zuzax::SurfPropagationSparta net;
 
 
      class RanPark *random;     // RNG for reaction probabilities
@@ -79,11 +86,3 @@ public:
 }
 #endif
 #endif
-
-/* ERROR/WARNING messages:
-
-E: Surf_react ID must be alphanumeric or underscore characters
-
-Self-explanatory.
-
-*/

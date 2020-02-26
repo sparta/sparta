@@ -236,11 +236,14 @@ void Domain::boundary_modify(int narg, char **arg)
       if (iarg + 2 > narg) error->all(FLERR,"Illegal bound_modify command");
       int index = surf->find_collide(arg[iarg+1]);
       if (index < 0) 
-        error->all(FLERR,"Bound_modify surf_collide ID is unknown");
+        error->allf(FLERR,"Bound_modify surf_collide ID, %s, is unknown", arg[iarg+1]);
       for (int i = 0; i < nface; i++) {
         if (bflag[faces[i]] != SURFACE)
           error->all(FLERR,"Bound_modify surf requires boundary be a surface");
         surf_collide[faces[i]] = index;
+        if (surf->sc[index]->hasState) {
+          boundSurfState[faces[i]] = surf->sc[index]->provideStateObject();
+        }
       }
       iarg += 2;
     } else if (strcmp(arg[iarg],"react") == 0) {

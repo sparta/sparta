@@ -48,6 +48,7 @@ using namespace MathConst;
 #include "zuzax/zeroD/SubstrateElement.h"
 #include "zuzax/zeroD/SurfPropagationSparta.h"
 
+#include "surf_state.h"
 
 /* ---------------------------------------------------------------------- */
 
@@ -107,6 +108,7 @@ SurfCollideZuzax::~SurfCollideZuzax()
 {
   if (copy) return;
 
+  delete baseNet;
   delete [] tstr;
   delete random;
   delete inputConfigFile;
@@ -144,7 +146,7 @@ void SurfCollideZuzax::initNetwork()
   igp->setState_TP(twall, pwall);
 
 
-  Zuzax::SubstrateElement ablateFilm("Ablator");
+  Zuzax::SubstrateElement* ablateFilm = new Zuzax::SubstrateElement("Ablator");
 
 
   /*
@@ -169,80 +171,79 @@ void SurfCollideZuzax::initNetwork()
   size_t nVolPhases = pl->nVolPhases();
   for (size_t i = 1; i < nVolPhases; ++i) {
     double volPhase = areaOfSurface *filmDepth * volumeFraction[i];
-    ablateFilm.addVolumePhase((pl->volPhase(i)), volPhase);
+    ablateFilm->addVolumePhase((pl->volPhase(i)), volPhase);
   }
-  Zuzax::Reservoir gasR;
-  gasR.setThermoMgr(*igp);
+  Zuzax::Reservoir* gasR = new Zuzax::Reservoir();
+  gasR->setThermoMgr(*igp);
 
 
-  ablateFilm.addLinkToAssociatedReactorVolume(&gasR, false, true);
-  ablateFilm.setState_TP(twall, pwall);
+  ablateFilm->addLinkToAssociatedReactorVolume(gasR, false, true);
+  ablateFilm->setState_TP(twall, pwall);
 
   // Create the object that will propagate the surface reactor forward in time
   /*
    *  This is built on top of the normal ODE solver that propagates the reactor in time using BDF methods
    */
-  Zuzax::SurfPropagationSparta net;
+  baseNet = new Zuzax::SurfPropagationSparta();
   // Add the surface reactor to the propagator
   /*
    * The surface reactor consists of the bulk volume phases and the interface
    */
-  net.addReactor(ablateFilm);
+  baseNet->addReactor(*ablateFilm, true);
 
   // Setup the interface between the reactor and the substrate where the reactions will occur
   // -> this will be a RBdry element which connects two reactors with an interfacial element
-  Zuzax::RBdry abFace_rrr("AirGraphite_rrr");
+  Zuzax::RBdry* abFace_rrr = new Zuzax::RBdry("AirGraphite_rrr");
 
   // Define the area
-  abFace_rrr.setArea(1.0E-7);
+  abFace_rrr->setArea(1.0E-7);
 
   // Turn on extended ROP analysis
-  abFace_rrr.setKinBreakdownToggle(true);
+  abFace_rrr->setKinBreakdownToggle(true);
 
   // Set up the InterfaceKinetics object that controls the surface reactions
   //   -> first we need a list of ThermoPhase objects
   std::vector<Zuzax::thermo_t_double*> thVec_abFace_rrr;
   thVec_abFace_rrr.push_back(igp);
-  Zuzax::thermo_t_double* volPhase = ablateFilm.volPhasePtr(0);
+  Zuzax::thermo_t_double* volPhase = ablateFilm->volPhasePtr(0);
   thVec_abFace_rrr.push_back(volPhase);
   Zuzax::InterfaceKinetics* abFaceKin_rrr = 
             (Zuzax::InterfaceKinetics*) Zuzax::newInterfaceKineticsMgrFromFile(thVec_abFace_rrr, "carbon_ablate.xml");
 
   Zuzax::thermo_t_double& sp = abFaceKin_rrr->reactionPhaseThermo();
   Zuzax::SurfPhase& surfPhase = dynamic_cast<Zuzax::SurfPhase&>(sp);
-  abFace_rrr.setKinetics(abFaceKin_rrr);
+  abFace_rrr->setKinetics(abFaceKin_rrr);
 
   // Install the interface so that the equations reside in the SubstrateElement
-  abFace_rrr.install(&ablateFilm, &gasR);
+  abFace_rrr->install(ablateFilm, gasR);
 
   double scl = 1;
-  net.setTMScaleFactor(scl);
+  baseNet->setTMScaleFactor(scl);
 
   // The gas phase is added in as a reservoir
-  net.addReservoir(gasR);
+  baseNet->addReservoir(*gasR, true);
 
-        size_t is_c = surfPhase.speciesIndex("(s)");
-        size_t is_H = surfPhase.speciesIndex("H(s)");
-        size_t is_O = surfPhase.speciesIndex("O(s)");
-        size_t is_N = surfPhase.speciesIndex("N(s)");
+  // Add this so that abFace_rrr is deleted in the destructor
+  baseNet->addUniqueConnector(abFace_rrr, true);
 
-        //size_t ig_OH = air.speciesIndex("OH");
-        //size_t ig_O = air.speciesIndex("O");
-        //size_t ig_H = air.speciesIndex("H");
-        //size_t ig_H2O = air.speciesIndex("H2O");
-        size_t ig_CO2 = igp->speciesIndex("CO2");
-        size_t ig_CO = igp->speciesIndex("CO");
+  size_t is_c = surfPhase.speciesIndex("(s)");
+  size_t is_H = surfPhase.speciesIndex("H(s)");
+  size_t is_O = surfPhase.speciesIndex("O(s)");
+  size_t is_N = surfPhase.speciesIndex("N(s)");
 
-        double etchRate;
-        double xmf[100];
-        double theta[20];
-        double press, uval, enth, vol, tt;
-        FILE* FP = fopen("reactor_results.csv", "w");
-        FILE* FP2 = fopen("step_results.csv", "w");
-        net.initialize();
-        net.printInitialSolution();
+  size_t ig_CO2 = igp->speciesIndex("CO2");
+  size_t ig_CO = igp->speciesIndex("CO");
 
-        net.solveInitialConditions();
+  double etchRate;
+  double xmf[100];
+  double theta[20];
+  double press, uval, enth, vol, tt;
+  FILE* FP = fopen("reactor_results.csv", "w");
+  FILE* FP2 = fopen("step_results.csv", "w");
+  baseNet->initialize();
+  baseNet->printInitialSolution();
+
+  baseNet->solveInitialConditions();
 
 }
 //==================================================================================================================================
@@ -427,6 +428,17 @@ void SurfCollideZuzax::dynamic()
 {
   twall = input->variable->compute_equal(tvar);
   if (twall <= 0.0) error->all(FLERR,"Surf_collide diffuse temp <= 0.0");
+}
+
+/* ----------------------------------------------------------------------
+    Provides a surface state object
+------------------------------------------------------------------------- */
+
+SurfState* SurfCollideZuzax::provideStateObject() const
+{
+    SurfState *ss = new SurfState();
+    ss->net = new Zuzax::SurfPropagationSparta(*baseNet);
+    return ss; 
 }
 
 #endif
