@@ -1,0 +1,43 @@
+/* ----------------------------------------------------------------------
+   SPARTA - Stochastic PArallel Rarefied-gas Time-accurate Analyzer
+   http://sparta.sandia.gov
+   Steve Plimpton, sjplimp@sandia.gov
+   Michael Gallis, magalli@sandia.gov
+   Sandia National Laboratories
+
+   Copyright (2014) Sandia Corporation.  Under the terms of Contract
+   DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
+   certain rights in this software.  This software is distributed under 
+   the GNU General Public License.
+
+   See the README file in the top-level SPARTA directory.
+------------------------------------------------------------------------- */
+
+#ifndef SPARTA_SURF_STATE_H
+#define SPARTA_SURF_STATE_H
+
+#include "stdio.h"
+#include "pointers.h"
+#ifdef USE_ZSURF
+#include "zuzax/zeroD/SurfPropagationSparta.h"
+#endif
+
+namespace SPARTA_NS {
+
+class SurfState {
+  public:
+
+  SurfState();
+
+  virtual ~SurfState();
+
+#ifdef USE_ZSURF
+  Zuzax::SurfPropagationSparta* net {nullptr};
+#endif   
+
+};
+
+}
+
+#endif
+

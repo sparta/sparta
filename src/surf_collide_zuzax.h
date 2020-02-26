@@ -94,6 +94,7 @@ class SurfCollideZuzax : public SurfCollide {
   //! to malloc state objects for all surfaces
   Zuzax::SurfPropagationSparta* baseNet;
 
+  int initAsPseudoSteadyState {1};
 
 };
 

@@ -241,9 +241,18 @@ void SurfCollideZuzax::initNetwork()
   FILE* FP = fopen("reactor_results.csv", "w");
   FILE* FP2 = fopen("step_results.csv", "w");
   baseNet->initialize();
-  baseNet->printInitialSolution();
+
+  // If the initialize as PseudoSteadyState option is set
+  // the surface state is set up so that coverage time derivs are zero.
+  if (initAsPseudoSteadyState) {
+    abFaceKin_rrr->solvePseudoSteadyStateProblem(1, 1.0E-15);
+    // get the surface concentrations and put them in the solution vector
+    baseNet->reinitialize();
+
+  }
 
   baseNet->solveInitialConditions();
+  baseNet->printInitialSolution();
 
 }
 //==================================================================================================================================

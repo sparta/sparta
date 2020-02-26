@@ -5,7 +5,7 @@
   <!-- phase carbon_surf     -->
   <phase dim="2" id="carbon_surf">
     <elementArray datasrc="elements.xml"> H C O N </elementArray>
-    <speciesArray datasrc="#species_data"> O(s) (s) H(s)  N(s) </speciesArray>
+    <speciesArray datasrc="#species_data"> O(s) (s)  N(s) </speciesArray>
     <reactionArray datasrc="#reaction_data"/>
     <state>
       <temperature units="K">1200.0</temperature>
