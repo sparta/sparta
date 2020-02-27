@@ -18,6 +18,7 @@
 #include "universe.h"
 #include "output.h"
 #include "memory.h"
+#include "accelerator_kokkos.h"
 
 using namespace SPARTA_NS;
 
@@ -48,6 +49,7 @@ void Error::universe_all(const char *file, int line, const char *str)
   }
   if (universe->ulogfile) fclose(universe->ulogfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }
@@ -87,6 +89,7 @@ void Error::all(const char *file, int line, const char *str)
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }
@@ -150,6 +153,7 @@ void Error::done()
   if (screen && screen != stdout) fclose(screen);
   if (logfile) fclose(logfile);
 
+  if (sparta->kokkos) Kokkos::finalize();
   MPI_Finalize();
   exit(1);
 }
