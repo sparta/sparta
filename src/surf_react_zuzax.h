@@ -34,6 +34,8 @@ SurfReactStyle(zuzax,SurfReactZuzax)
 #include "surf_react.h"
 #include "zuzax/base/ct_defs.h"
 #include "zuzax/zeroD/SurfPropagationSparta.h"
+#include "surf_state.h"
+#include "zuzax_setup.h"
 
 #endif
 #include "surf_collide_zuzax.h"
@@ -63,6 +65,12 @@ public:
 
     //! Main routine which handles collisions
     virtual int react(Particle::OnePart *&, double *, Particle::OnePart *&)  override;
+
+
+    void rollDiceOnParticleSurfInteraction(Particle::OnePart *&ip, SurfState* surfState,
+                                           int& irxn, int& idir);
+
+
 
  private:
 

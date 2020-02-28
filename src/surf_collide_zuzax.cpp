@@ -32,6 +32,7 @@
 #include "error.h"
 
 #ifdef USE_ZSURF
+#include "zuzax_setup.h"
 
 using namespace SPARTA_NS;
 using namespace MathConst;
@@ -61,6 +62,7 @@ SurfCollideZuzax::SurfCollideZuzax(SPARTA *sparta, int narg, char **arg) :
 
   tstr = NULL;
 
+  hasState = 1;
 
   int n = strlen(arg[2]) + 1;
   inputConfigFile = new char[n];
@@ -93,7 +95,7 @@ SurfCollideZuzax::SurfCollideZuzax(SPARTA *sparta, int narg, char **arg) :
   vstream[0] = vstream[1] = vstream[2] = 0.0;
 
   // Initialize zuzax
-  
+  initNetwork();
 
   // initialize RNG
 
@@ -135,6 +137,11 @@ void SurfCollideZuzax::init()
 //==================================================================================================================================
 void SurfCollideZuzax::initNetwork()
 {
+  if (m_initNetwork) {
+    // Do other reevalualtions here
+    return;
+  }
+  m_initNetwork = 1;
   Zuzax::XML_Node* xPhase =  Zuzax::get_XML_File(inputConfigFile);
   Zuzax::SolnMaterialDomain smd(*xPhase);
   Zuzax::PhaseList* pl = new Zuzax::PhaseList(smd);   
@@ -246,14 +253,40 @@ void SurfCollideZuzax::initNetwork()
   // the surface state is set up so that coverage time derivs are zero.
   if (initAsPseudoSteadyState) {
     abFaceKin_rrr->solvePseudoSteadyStateProblem(1, 1.0E-15);
-    // get the surface concentrations and put them in the solution vector
+    // get the surface concentrations and put them into the ODE solution vector
     baseNet->reinitialize();
-
   }
 
   baseNet->solveInitialConditions();
   baseNet->printInitialSolution();
 
+}
+//==================================================================================================================================
+void SurfCollideZuzax::setupNewTimeStep()
+{
+   int ntimestep = update->ntimestep;
+   double dt = update->dt;
+   double fnum = update->fnum;
+   Surf::Line* lines = surf->lines;
+   Surf::Tri*  tris  = surf->tris;
+   for (int i = 0; i < surf->nlocal; ++i) {
+     Surf::Line* line = lines+i;
+     if (line->surfaceState) {
+       line->surfaceState->setupNewTimeStep(ntimestep, dt, fnum);
+     }  
+   }
+   for (int i = 0; i < surf->nlocal; ++i) {
+     Surf::Tri* tri = tris + i;
+     if (tri->surfaceState) {
+       tri->surfaceState->setupNewTimeStep(ntimestep, dt, fnum);
+     }  
+   }
+ 
+   for (int i = 0; i < 6; ++i) {
+     if (domain->boundSurfState[i]) {
+       domain->boundSurfState[i]->setupNewTimeStep(ntimestep, dt, fnum);
+     }
+   }
 }
 //==================================================================================================================================
 /* ----------------------------------------------------------------------
@@ -267,9 +300,37 @@ void SurfCollideZuzax::initNetwork()
 ------------------------------------------------------------------------- */
 
 Particle::OnePart *SurfCollideZuzax::
-collide(Particle::OnePart *&ip, double *norm, double &, int isr, void* surfState)
+collide(Particle::OnePart *&ip, double *norm, double &, int isr, SurfState* surfState)
 {
+  int ntimestep = update->ntimestep;
+  double dt = update->dt;
+  
+  // Increment the counter for the number of collisions handled by this collider model
+  // in the current time step (multiple surfaces).
   nsingle++;
+
+  // Grab the pointer in surfState to use as the implementor
+  // -> this means that eventually we can have multiple implementors.
+  Zuzax::SurfPropagationSparta* net = surfState->net;
+
+  // Identify the species id for the particle
+  int ispecies = ip->ispecies;
+
+  // Translate identity into Zuzax species number
+  int kZ = zuzax_setup->ZutoSp_speciesMap[ispecies];
+
+  // We are given the surface state object. Install the state into net.
+  surfState->setState(ntimestep, dt);
+
+  int irxn;   //(-1 specular, -2 diffusive)
+  int idir;
+  int kGas;
+  bool doChanges = true;
+
+  // Since the event occurred from a gas phase collision of a particle
+  //  -> determine what happend from the particle surface collision
+  rollDiceOnParticleSurfInteraction(ip, surfState, irxn, idir);
+
 
   // if surface chemistry defined, attempt reaction
   // reaction = 1 if reaction took place
@@ -277,6 +338,8 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, void* surfState
   Particle::OnePart iorig;
   Particle::OnePart *jp = NULL;
   int reaction = 0;
+
+  // At this point we have a particle collision with a surface
 
   if (isr >= 0) {
     // Save the original particle
@@ -315,7 +378,48 @@ collide(Particle::OnePart *&ip, double *norm, double &, int isr, void* surfState
     }
   }
 
+  // Update and save the state of this surface (this object may be
+  // called on another surface during the next collision incident).
+
+  surfState->saveState();
+
   return jp;
+}
+
+/* ---------------------------------------------------------------------- */
+/*
+const struct Zuzax::probEvent& rollEvenDice(const std::vector < struct Zuzax::probEvent >& pm, double droll)
+{
+    for (const struct Zuzax::probEvent& pe : pm) {
+        if (droll <= pe.probULvl) {
+            return pe;
+        }
+    }
+    return pm.back();
+}
+*/
+
+/* ---------------------------------------------------------------------- */
+
+void SurfCollideZuzax::
+rollDiceOnParticleSurfInteraction(Particle::OnePart *&ip, SurfState* surfState, 
+                                  int& irxn, int& idir)
+{
+  // Identify the species id for the particle
+  int ispecies = ip->ispecies;
+
+  // Translate identity into Zuzax species number
+  int kZ = zuzax_setup->ZutoSp_speciesMap[ispecies];
+
+  // Get the probability table for this Surface and pick out the correct species
+  Zuzax::ProbMap& pm = surfState->m_probMapGasSpecies[kZ];
+
+  double random_prob = random->uniform();
+
+  const struct Zuzax::probEvent& pE = Zuzax::rollEvenDice(pm, random_prob);
+
+  irxn = pE.eventType;
+  idir = pE.eventDir;
 }
 
 /* ----------------------------------------------------------------------
@@ -446,7 +550,8 @@ void SurfCollideZuzax::dynamic()
 SurfState* SurfCollideZuzax::provideStateObject() const
 {
     SurfState *ss = new SurfState();
-    ss->net = new Zuzax::SurfPropagationSparta(*baseNet);
+    ss->net = baseNet;
+    ss->init();
     return ss; 
 }
 

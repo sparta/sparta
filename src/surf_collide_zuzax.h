@@ -53,7 +53,7 @@ class SurfCollideZuzax : public SurfCollide {
   virtual ~SurfCollideZuzax();
   void init();
   virtual Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int,
-                                     void * surfaceState = nullptr) override;
+                                     SurfState* surfaceState) override;
 
   virtual void dynamic();
 
@@ -70,6 +70,17 @@ class SurfCollideZuzax : public SurfCollide {
   //! Initialize the Network model with all of the ThermoPhase classes
   void initNetwork();
 
+  //! Setup a new time step
+  /*!
+   *  Zuzax uses this hook to calculate the probability table for reactions on a surface
+   *  and the event table for surface initiated events that will take place during
+   *  the next time step.
+   */
+  virtual void setupNewTimeStep() override;
+
+  void rollDiceOnParticleSurfInteraction(Particle::OnePart *&ip, SurfState* surfState,
+                                         int& irxn, int& idir);
+
 
  protected:
   double twall;              // surface temperature (Kelvin)
@@ -83,6 +94,7 @@ class SurfCollideZuzax : public SurfCollide {
 
   char *tstr {nullptr};      // temperature variable name (NULL if constant)
   int tvar;                  // index of equal-style variable
+  int m_initNetwork {0};     // Flag indicating network has been initialized
   char *inputConfigFile {nullptr};       // input file
 
   double vstream[3];
@@ -94,7 +106,9 @@ class SurfCollideZuzax : public SurfCollide {
   //! to malloc state objects for all surfaces
   Zuzax::SurfPropagationSparta* baseNet;
 
-  int initAsPseudoSteadyState {1};
+  //! If this is true, the surface site fractions are adjusted to a pseudo-steady
+  //! state condition at the start of the calculation.
+  int initAsPseudoSteadyState {0};
 
 };
 
@@ -104,24 +118,3 @@ class SurfCollideZuzax : public SurfCollide {
 #endif
 #endif
 
-/* ERROR/WARNING messages:
-
-E: Illegal ... command
-
-Self-explanatory.  Check the input script syntax and compare to the
-documentation for the command.  You can use -echo screen as a
-command-line option when running SPARTA to see the offending line.
-
-E: Surf_collide diffuse rotation invalid for 2d
-
-Specified rotation vector must be in z-direction.
-
-E: Surf_collide diffuse variable name does not exist
-
-Self-explanatory.
-
-E: Surf_collide diffuse variable is invalid style
-
-It must be an equal-style variable.
-
-*/

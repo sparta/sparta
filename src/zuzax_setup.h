@@ -89,7 +89,7 @@ public:
      */
     int* SptoZu_speciesMap;
 
-
+ public:
     //! Zuzax to Sparta species map
     /*!
      *  Maps the zuzax species index into the sparta species index within the gasThermo ThermoPhase routine

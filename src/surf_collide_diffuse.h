@@ -32,7 +32,7 @@ class SurfCollideDiffuse : public SurfCollide {
   ~SurfCollideDiffuse();
   void init();
   virtual Particle::OnePart *collide(Particle::OnePart *&, double *, double &, int,
-                                     void * surfaceState = nullptr) override;
+                                     SurfState* surfaceState) override;
 
   void dynamic();
 

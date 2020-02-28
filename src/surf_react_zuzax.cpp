@@ -70,8 +70,6 @@ SurfReactZuzax::SurfReactZuzax(SPARTA *sparta, int narg, char **arg) :
   double seed = update->ranmaster->uniform();
   random->reset(seed,comm->me,100);
 
-  printf("We are here\n");
-
 }
 
 //=================================================================================================
@@ -91,6 +89,34 @@ void SurfReactZuzax::init()
 
 void SurfReactZuzax::init_reactions() 
 {
+} 
+
+/* ---------------------------------------------------------------------- */
+
+void SurfReactZuzax::
+rollDiceOnParticleSurfInteraction(Particle::OnePart *&ip, SurfState* surfState,
+                                           int& irxn, int& idir)
+{
+  // Identify the species id for the particle
+  int ispecies = ip->ispecies;
+
+  // Translate identity into Zuzax species number
+  int kZ = zuzax_setup->ZutoSp_speciesMap[ispecies];
+
+  // Get the probability table for this Surface and pick out the correct species
+  Zuzax::ProbMap& pm = surfState->m_probMapGasSpecies[kZ];
+
+  // roll the dice
+  double random_prob = random->uniform();
+
+  // Look up the result of the dice roll 
+  const struct Zuzax::probEvent& pE = Zuzax::rollEvenDice(pm, random_prob);
+
+  // irxn >= 0 is tue reaction number
+  //        -1 specular nonreaction
+  //        -2 diffuse  nonreaction
+  irxn = pE.eventType;
+  idir = pE.eventDir;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -105,6 +131,7 @@ int SurfReactZuzax::react(Particle::OnePart *&ip, double *tmpp, Particle::OnePar
    // For particle collisions of type ip, we've created a probability table within the
    // implicit solver.
 
+   printf("we are here\n");
 
 
 

@@ -198,6 +198,7 @@ surf_react        1RZ zuzax 1Z
 # Set the left boundary model to be a zuzax collider
 #   Sets the left x boundary to have collision model 1 (xlo had to have been set to an "s" boundary first"
 bound_modify xlo collide 1Z
+bound_modify xlo react 1RZ
 
 #  Set parameters for a group of surface elements in the specified group-ID
 #  all -> all surfaces

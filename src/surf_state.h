@@ -24,6 +24,8 @@
 
 namespace SPARTA_NS {
 
+// Could add the sparta* pointer  to SurfState 
+
 class SurfState {
   public:
 
@@ -32,8 +34,68 @@ class SurfState {
   virtual ~SurfState();
 
 #ifdef USE_ZSURF
-  Zuzax::SurfPropagationSparta* net {nullptr};
+  mutable Zuzax::SurfPropagationSparta* net {nullptr};
 #endif   
+
+  virtual void init();
+
+  //! Hook into setting up the Surface calculations for the new time step
+  /*!
+   *
+   */
+  virtual void setupNewTimeStep(int ntimestep, double dt, double fnum);
+
+  //! Write the state from the net object to the SurfState object
+  /*!
+   *  We need to store the state of the surface after every operation, because
+   *  the implementation object is reused.
+   */
+  virtual void saveState();
+
+  //! Read in the state of the surface into the net object
+  /*!
+   *
+   */
+  virtual void setState(int ntimestep, double dt) const;
+
+  // ----------------------------------------------- DATA -----------------------------------------
+  //! Surface temperature
+  double Temp {300.0};
+
+  double Press {1.0E5};
+
+  //! Unknowns in the substrate element problem
+  double* yUnknowns {nullptr};
+
+  //! State of the gas
+  double* gasState {nullptr};
+
+
+  //! Probability map for all the gas phase species
+  /*!
+   *  This is a map from 0 to one containing the probabilities of what happens when a species collides with this surface
+   *
+   *    Length:  nsp in the gas phase
+   *    index:   gas phase species index
+   *    value:   ProbMap struct for each gas phase species. Determines the probability of what happens to the gas species
+   *             as it hits the surface.
+   */
+  std::vector<Zuzax::ProbMap> m_probMapGasSpecies;
+
+  //! Vector of surface initiated events to be handled by this surface in this time step
+  /*!
+   *  This is unexpanded list of events where each type of event is listed with a number of times
+   *  per time step counter. Thus, its size is small.
+   *  This list is created in getSurfaceInitiatedEventTables().
+   *
+   *    Length:  Number of event types
+   *    index:   event index
+   *    value:   ProbMap struct for each gas phase species. Determines the probability of what happens to the gas species
+   *             as it hits the surface.
+   */
+  std::vector< struct Zuzax::PartToSurf > m_surfInitPSTaskList;
+
+
 
 };
 
