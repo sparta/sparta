@@ -64,7 +64,7 @@ class Fix : protected Pointers {
   int copymode;                 // 1 if copy of class (prevents deallocation of
                                 //  base class when child copy is destroyed)
   ExecutionSpace execution_space;
-  unsigned int datamask_read,datamask_modify;
+  unsigned int datamask_read, datamask_modify;
 
   Fix(class SPARTA *, int, char **);
   virtual ~Fix();

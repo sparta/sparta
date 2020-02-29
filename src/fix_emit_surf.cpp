@@ -421,6 +421,7 @@ void FixEmitSurf::perform_task()
   Particle::OnePart *p;
   
   double dt = update->dt;
+  // Create a local copy of species vector
   int *species = particle->mixture[imix]->species;
 
   // if subsonic, re-compute particle inflow counts for each task
@@ -428,7 +429,7 @@ void FixEmitSurf::perform_task()
 
   if (subsonic) subsonic_inflow();
   
-  // insert particles for each task = cell/surf pair
+  // Insert particles for each task = cell/surf pair
   // ntarget/ninsert is either perspecies or for all species
   // for one particle:
   //   x = random position with overlap of surf with cell

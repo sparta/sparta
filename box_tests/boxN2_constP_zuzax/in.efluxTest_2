@@ -200,6 +200,12 @@ surf_react        1RZ zuzax 1Z
 bound_modify xlo collide 1Z
 bound_modify xlo react 1RZ
 
+fix 1FZ emit/zface all xlo zuzaxReact 1RZ
+
+# fix 1FZ emit/zsurf all xlo zuzaxReact 1RZ
+
+
+
 #  Set parameters for a group of surface elements in the specified group-ID
 #  all -> all surfaces
 #    -> set the surface collision model to sc-ID = 1 which we just identified in the last card

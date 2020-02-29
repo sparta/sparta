@@ -19,6 +19,7 @@
 
 namespace SPARTA_NS {
 
+//! Intermediate class that is common to all fix emit classes
 class FixEmit : public Fix {
  public:
   FixEmit(class SPARTA *, int, char **);

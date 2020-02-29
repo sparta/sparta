@@ -1121,38 +1121,18 @@ void FixEmitZSurf::post_compress_grid()
 
 int FixEmitZSurf::option(int narg, char **arg)
 {
-  if (strcmp(arg[0],"n") == 0) {
-    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf/normal command");
-    np = atoi(arg[1]);
-    if (np <= 0) error->all(FLERR,"Illegal fix emit/surf/normal command");
+  if (strcmp(arg[0],"zuzaxReact") == 0) {
+    if (2 > narg)
+      error->all(FLERR,"fix emit/zsurf keyword requires an additional react ID arg");
+
+    isrZuzax = surf->find_react(arg[1]);
+    if (isrZuzax < 0)
+      error->allf(FLERR,"Could not find surfReact sr-ID, %s", arg[1]);
+
     return 2;
   }
-  
-  if (strcmp(arg[0],"normal") == 0) {
-    if (2 > narg) error->all(FLERR,"Illegal fix emit/surf/normal command");
-    if (strcmp(arg[1],"yes") == 0) normalflag = 1;
-    else if (strcmp(arg[1],"no") == 0) normalflag = 0;
-    else error->all(FLERR,"Illegal fix emit/surf/normal command");
-    return 2;
-  }
-  
-  if (strcmp(arg[0],"subsonic") == 0) {
-    if (3 > narg) error->all(FLERR,"Illegal fix emit/face command");
-    subsonic = 1;
-    subsonic_style = PTBOTH;
-    psubsonic = input->numeric(FLERR,arg[1]);
-    if (psubsonic < 0.0) error->all(FLERR,"Illegal fix emit/face command");
-    if (strcmp(arg[2],"NULL") == 0) subsonic_style = PONLY;
-    else {
-      tsubsonic = input->numeric(FLERR,arg[2]);
-      if (tsubsonic <= 0.0) 
-        error->all(FLERR,"Subsonic temperature cannot be <= 0.0");
-      nsubsonic = psubsonic / (update->boltz * tsubsonic);
-    }
-    return 3;
-  }
-  
-  error->all(FLERR,"Illegal fix emit/surf/normal command");
+
+  error->allf(FLERR,"Illegal fix emit/zsurf keyword: %s", arg[0]);
   return 0;
 }
 

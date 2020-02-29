@@ -14,16 +14,12 @@
 
 #ifdef FIX_CLASS
 
-#ifdef USE_ZSURF
-FixStyle(emit/zsurf,FixEmitZSurf)
-#endif
+FixStyle(emit/zface,FixEmitZFace)
 
 #else
 
-#ifndef SPARTA_FIX_EMIT_ZSURF_H
-#define SPARTA_FIX_EMIT_ZSURF_H
-
-
+#ifndef SPARTA_FIX_EMIT_ZFACE_H
+#define SPARTA_FIX_EMIT_ZFACE_H
 
 #include "fix_emit.h"
 #include "surf.h"
@@ -31,44 +27,21 @@ FixStyle(emit/zsurf,FixEmitZSurf)
 
 namespace SPARTA_NS {
 
-#ifdef USE_ZSURF
-
-class FixEmitZSurf : public FixEmit {
+class FixEmitZFace : public FixEmit {
  public:
-  FixEmitZSurf(class SPARTA *, int, char **);
-  ~FixEmitZSurf();
-  void init();
-  void setup();
-  void post_compress_grid();
+  FixEmitZFace(class SPARTA *, int, char **);
+  virtual ~FixEmitZFace();
+  virtual void init();
+  virtual void post_compress_grid();
 
- private:
-  int imix,groupbit,np,normalflag,subsonic,subsonic_style,subsonic_warning;
-  int npertask,nthresh;
-  double psubsonic,tsubsonic,nsubsonic;
-  double tprefactor,soundspeed_mixture;
+  // one insertion task for a cell and a face
 
-  // copies of data from other classes
-
-  int dimension,nspecies;
-  double fnum,dt;
-  double nrho,temp_thermal,temp_rot,temp_vib;
-  double *fraction,*cummulative;
-
-  Surf::Line *lines;
-  Surf::Tri *tris;
-
-  class Cut2d *cut2d;
-  class Cut3d *cut3d;
-
-  //! The Task structure holds one insertion task for a single cell and a surf
-  //! combination
-  /*!
-   *
-   */
   struct Task {
-    double area;                // area of overlap of surf with cell
+    double lo[3];               // lower-left corner of face
+    double hi[3];               // upper-right corner of face
+    double normal[3];           // inward normal from external boundary
+    double area;                // area of cell face
     double ntarget;             // # of mols to insert for all species
-    double tan1[3],tan2[3];     // 2 normalized tangent vectors to surf normal
     double nrho;                // from mixture or adjacent subsonic cell
     double temp_thermal;        // from mixture or adjacent subsonic cell
     double temp_rot;            // from mixture or subsonic temp_thermal
@@ -79,51 +52,64 @@ class FixEmitZSurf : public FixEmit {
     double *vscale;             // vscale for each species,
                                 //   only defined for subsonic_style PONLY
 
-    double *path;               // path of points for overlap of surf with cell
-    double *fracarea;           // fractional area for each sub tri in path
-
     int icell;                  // associated cell index, unsplit or split cell
-    int isurf;                  // surf index
+    int iface;                  // which face of unsplit or split cell
     int pcell;                  // associated cell index for particles
                                 // unsplit or sub cell (not split cell)
-    int npoint;                 // # of points in path
+    int ndim;                   // dim (0,1,2) normal to face
+    int pdim,qdim;              // 2 dims (0,1,2) parallel to face
   };
 
-  int isrZuzax;          // int representing the Zuzax reaction mechanism
+ protected:
+  int isrZuzax;
+  int imix,np,subsonic,subsonic_style,subsonic_warning;
+  int faces[6];
+  int npertask,nthresh,twopass;
+  double psubsonic,tsubsonic,nsubsonic;
+  double tprefactor,soundspeed_mixture;
 
-                         // ntask = # of tasks is stored by parent class, fix
-  Task *tasks;           // List of particle insertion tasks
+  // copies of data from other classes
+
+  int dimension,nspecies;
+  double fnum,dt;
+  double *fraction,*cummulative;
+
+  Surf::Line *lines;
+  Surf::Tri *tris;
+
+                         // ntask = # of tasks is stored by parent class
+  Task *tasks;           // list of particle insertion tasks
   int ntaskmax;          // max # of tasks allocated
-
-  double magvstream;       // magnitude of mixture vstream
-  double norm_vstream[3];  // direction of mixture vstream
 
   // active grid cells assigned to tasks, used by subsonic sorting
 
   int maxactive;
   int *activecell;
 
-  // private methods
+  // protected methods
 
   int create_task(int);
-  void perform_task();
+  virtual void perform_task();
+  void perform_task_onepass();
+  virtual void perform_task_twopass();
+
+  int split(int, int);
 
   void subsonic_inflow();
   void subsonic_sort();
   void subsonic_grid();
 
-  int pack_task(int, char *, int);
-  int unpack_task(char *, int);
-  void copy_task(int, int, int, int);
-  void grow_task();
+  virtual int pack_task(int, char *, int);
+  virtual int unpack_task(char *, int);
+  virtual void copy_task(int, int, int, int);
+  virtual void grow_task();
+  virtual void realloc_nspecies();
 
   int option(int, char **);
 };
-#endif
 
 }
 
 #endif
 #endif
-
 
